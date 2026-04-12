@@ -95,7 +95,15 @@
   /* --- SCREEN 2: Studio --- */
   .spec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 40px; width: 100%;}
   .blueprint-wrapper { border: 1px solid var(--teal); background: rgba(29,158,117,0.03); border-radius: 8px; padding: 32px; width: 100%; margin-top: 20px;}
-  .bp-room { border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.02); padding: 16px; border-radius: 6px; display: flex; flex-direction: column; transition: all 0.2s;}
+  .bp-room { border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.02); padding: 16px; border-radius: 6px; display: flex; flex-direction: column; transition: all 0.2s; position: relative; }
+  .room-remove { position: absolute; top: 7px; right: 10px; background: none; border: none; color: rgba(255,255,255,0.2); font-size: 15px; line-height: 1; cursor: pointer; padding: 2px 4px; font-family: var(--font-mono); transition: color 0.2s; z-index: 2; }
+  .room-remove:hover { color: rgba(201,92,92,0.75); }
+  /* DOB / date selects inside mock-input */
+  .dob-row { display: flex; gap: 8px; }
+  .dob-row .mock-input { flex: 1; }
+  .date-select { background: transparent; border: none; color: var(--white); font-family: var(--font-mono); font-size: 15px; outline: none; width: 100%; cursor: pointer; }
+  /* Add-room panel */
+  .add-room-select { background: rgba(9,18,33,0.9); border: 1px solid rgba(29,158,117,0.5); color: var(--white); font-family: var(--font-mono); font-size: 12px; padding: 10px 14px; border-radius: 4px; outline: none; cursor: pointer; min-width: 220px; }
   .bp-room.has-val { border-color: rgba(79,170,230,0.5); background: rgba(79,170,230,0.05); }
   .r-name { font-family: var(--font-serif); font-size: 16px; color: var(--white); margin-bottom: 2px; }
   .r-type { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); margin-bottom: 12px; }
@@ -350,14 +358,26 @@
       </div>
       
       <div class="spec-grid">
-        <div><label class="input-label">Architect</label><div class="mock-input"><input type="number" id="p-age" placeholder="Your Age" value="43"></div></div>
+        <div>
+          <label class="input-label">Date of Birth</label>
+          <div class="dob-row">
+            <div class="mock-input"><select id="p-dob-month" class="date-select"></select></div>
+            <div class="mock-input"><select id="p-dob-year" class="date-select"></select></div>
+          </div>
+        </div>
         <div>
             <label class="input-label" style="display:flex; justify-content:space-between;">Co-Architect <span style="text-transform: none; color: var(--muted); cursor: pointer;"><input type="checkbox" id="p-co-check" onchange="document.getElementById('co-arch-inputs').style.display = this.checked ? 'grid' : 'none'"> Add</span></label>
             <div class="mock-input" style="border: 1px dashed rgba(255,255,255,0.1); background: transparent;"><input type="text" disabled placeholder="Optional" style="opacity:0.3;"></div>
         </div>
         
         <div id="co-arch-inputs" style="display: none; grid-column: 1 / -1; grid-template-columns: 1fr 1fr; gap: 24px; padding: 24px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.1);">
-            <div><label class="input-label">Co-Architect Age</label><div class="mock-input"><input type="number" id="p-co-age" placeholder="Age"></div></div>
+            <div>
+              <label class="input-label">Co-Architect Date of Birth</label>
+              <div class="dob-row">
+                <div class="mock-input"><select id="p-co-dob-month" class="date-select"></select></div>
+                <div class="mock-input"><select id="p-co-dob-year" class="date-select"></select></div>
+              </div>
+            </div>
             <div><label class="input-label">Co-Architect SS Strategy</label>
                 <div class="ss-cards" id="p-co-ss" data-value="Optimal (Age 70)">
                     <button type="button" class="ss-card active" onclick="selectSSCard(this,'Optimal (Age 70)')"><div class="ss-card-age">70</div><div class="ss-card-label">Optimal</div></button>
@@ -368,7 +388,13 @@
         </div>
 
         <div><label class="input-label">Location</label><div class="mock-input"><input type="text" value="Florida"></div></div>
-        <div><label class="input-label">Target Retirement Age</label><div class="mock-input"><input type="number" id="p-retire-age" value="53"></div></div>
+        <div>
+          <label class="input-label">Target Retirement Date</label>
+          <div class="dob-row">
+            <div class="mock-input"><select id="p-ret-month" class="date-select"></select></div>
+            <div class="mock-input"><select id="p-ret-year" class="date-select"></select></div>
+          </div>
+        </div>
         <div>
             <label class="input-label">Social Security Strategy</label>
             <div class="ss-cards" id="p-ss-strategy" data-value="Optimal (Age 70)">
@@ -401,7 +427,14 @@
               <div class="bp-room has-val" data-account-type="taxable"><div class="r-name">Taxable Brokerage</div><div class="r-val"><span>$</span><input type="text" class="room-input" value="250,000"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Capital gains and dividends. Highly liquid.</div></div>
               <div class="bp-room" data-account-type="hysa"><div class="r-name">High Yield Savings</div><div class="r-val"><span>$</span><input type="text" class="room-input" value="0"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Cash buffer. No market risk.</div></div>
               <div class="bp-room" data-account-type="pension"><div class="r-name">Pension (Annual Income)</div><div class="r-val"><span>$</span><input type="text" class="room-input" value="0"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Secure, fixed income floor.</div></div>
-              <div style="grid-column: 1 / -1; text-align: center; margin-top: 12px;"><button class="btn" style="padding: 12px 24px;">+ Draft Additional Space</button></div>
+              <div id="add-room-row" style="grid-column: 1 / -1; text-align: center; margin-top: 12px;">
+                  <button class="btn btn-scroll" style="padding: 12px 24px;" onclick="showAddRoomPanel()">+ Draft Additional Space</button>
+                  <div id="add-room-panel" style="display:none; margin-top:16px; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap;">
+                      <select id="add-room-select" class="add-room-select" onchange="if(this.value) addRoom(this.value)">
+                          <option value="">— Select account type —</option>
+                      </select>
+                  </div>
+              </div>
           </div>
       </div>
 
@@ -630,10 +663,154 @@
         currentOutlook = type;
     }
 
+    // ─── Account type definitions ─────────────────────────────────────────────
+    const ACCOUNT_DEFS = {
+        pretax_401k: { name: 'Pre-Tax 401(k)',       desc: 'Taxed as ordinary income. First in line for RMDs.' },
+        pretax_457b: { name: 'Pre-Tax 457(b)',        desc: 'Accessible penalty-free before 59.5 upon separation.' },
+        pretax_ira:  { name: 'Pre-Tax IRA',           desc: 'Consolidated pre-tax capital.' },
+        roth_401k:   { name: 'Roth 401(k)',           desc: 'Tax-free growth from employer plan.' },
+        roth_457b:   { name: 'Roth 457(b)',           desc: 'Tax-free growth, accessible early.' },
+        roth_ira:    { name: 'Roth IRA',              desc: 'Aspirational, completely tax-free expansion space.' },
+        taxable:     { name: 'Taxable Brokerage',     desc: 'Capital gains and dividends. Highly liquid.' },
+        hysa:        { name: 'High Yield Savings',    desc: 'Cash buffer. No market risk.' },
+        pension:     { name: 'Pension (Annual Income)', desc: 'Secure, fixed income floor.' },
+    };
+
+    // ─── DOB / date helpers ───────────────────────────────────────────────────
+    function getAgeFromDOB(monthId, yearId) {
+        const m = parseInt($(monthId) ? $(monthId).value : '0', 10);
+        const y = parseInt($(yearId)  ? $(yearId).value  : '0', 10);
+        if (!m || !y) return null;
+        const today = new Date();
+        let age = today.getFullYear() - y;
+        if (today.getMonth() + 1 < m) age--;
+        return Math.max(1, age);
+    }
+
+    function getRetirementAge(retMonthId, retYearId) {
+        const rm = parseInt($(retMonthId) ? $(retMonthId).value : '0', 10);
+        const ry = parseInt($(retYearId)  ? $(retYearId).value  : '0', 10);
+        const dm = parseInt($('p-dob-month') ? $('p-dob-month').value : '0', 10);
+        const dy = parseInt($('p-dob-year')  ? $('p-dob-year').value  : '0', 10);
+        if (!rm || !ry || !dm || !dy) return null;
+        let age = ry - dy;
+        if (rm < dm) age--;
+        return Math.max(1, age);
+    }
+
+    function populateDateDropdowns() {
+        const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const thisYear = new Date().getFullYear();
+
+        function fillMonths(id, defaultVal) {
+            const el = $(id); if (!el) return;
+            MONTHS.forEach((name, i) => {
+                const opt = document.createElement('option');
+                opt.value = i + 1; opt.textContent = name;
+                if (i + 1 === defaultVal) opt.selected = true;
+                el.appendChild(opt);
+            });
+        }
+        function fillYears(id, from, to, defaultVal) {
+            const el = $(id); if (!el) return;
+            for (let y = from; y <= to; y++) {
+                const opt = document.createElement('option');
+                opt.value = y; opt.textContent = y;
+                if (y === defaultVal) opt.selected = true;
+                el.appendChild(opt);
+            }
+        }
+
+        // Architect DOB — default Jan 1983 (age ~43)
+        fillMonths('p-dob-month', 1);
+        fillYears('p-dob-year', 1940, thisYear - 18, 1983);
+
+        // Co-Architect DOB — default Jan 1983
+        fillMonths('p-co-dob-month', 1);
+        fillYears('p-co-dob-year', 1940, thisYear - 18, 1983);
+
+        // Target Retirement Date — default Jan 2036 (~10yr horizon)
+        fillMonths('p-ret-month', 1);
+        fillYears('p-ret-year', thisYear, thisYear + 50, thisYear + 10);
+    }
+
+    // ─── Portfolio total helper ───────────────────────────────────────────────
+    function updatePortfolioTotal() {
+        let total = 0;
+        document.querySelectorAll('.room-input').forEach(i => { total += parseInt((i.value || '0').replace(/[^\d]/g, ''), 10) || 0; });
+        const lSq = $('live-sqft-input');
+        if (lSq) lSq.value = total.toLocaleString('en-US');
+    }
+
+    // ─── Room HTML factory ────────────────────────────────────────────────────
+    function makeRoomInnerHTML(name, desc) {
+        return `<button class="room-remove" onclick="removeRoom(this)" title="Remove account">×</button>` +
+            `<div class="r-name">${name}</div>` +
+            `<div class="r-val"><span>$</span><input type="text" class="room-input" value="0" inputmode="numeric"></div>` +
+            `<div class="r-contrib">` +
+              `<select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select>` +
+              `<span>+$</span><input type="text" value="0" inputmode="numeric">` +
+            `</div>` +
+            `<div style="font-size:9px;color:var(--muted);margin-top:12px;border-top:1px dotted rgba(255,255,255,0.1);padding-top:8px;">${desc}</div>`;
+    }
+
+    // ─── Remove a room ────────────────────────────────────────────────────────
+    function removeRoom(btn) {
+        const room = btn.closest('.bp-room');
+        const balInput = room.querySelector('.room-input');
+        const bal = parseInt((balInput?.value || '0').replace(/[^\d]/g, ''), 10) || 0;
+        if (bal > 0 && !confirm('Remove this account?')) return;
+        room.remove();
+        updatePortfolioTotal();
+    }
+
+    // ─── Add room panel ───────────────────────────────────────────────────────
+    function showAddRoomPanel() {
+        const panel = $('add-room-panel');
+        if (!panel) return;
+        const existing = new Set([...document.querySelectorAll('.bp-room[data-account-type]')].map(r => r.dataset.accountType));
+        const sel = $('add-room-select');
+        sel.innerHTML = '<option value="">— Select account type —</option>';
+        Object.entries(ACCOUNT_DEFS).forEach(([key, def]) => {
+            if (!existing.has(key)) {
+                const opt = document.createElement('option');
+                opt.value = key; opt.textContent = def.name;
+                sel.appendChild(opt);
+            }
+        });
+        panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
+    }
+
+    function addRoom(type) {
+        if (!type || !ACCOUNT_DEFS[type]) return;
+        const def  = ACCOUNT_DEFS[type];
+        const addRow = $('add-room-row');
+        const container = addRow?.parentNode;
+        if (!container) return;
+
+        const div = document.createElement('div');
+        div.className = 'bp-room';
+        div.setAttribute('data-account-type', type);
+        div.innerHTML = makeRoomInnerHTML(def.name, def.desc);
+        container.insertBefore(div, addRow);
+
+        // Wire balance input
+        const inp = div.querySelector('.room-input');
+        if (inp) inp.addEventListener('input', function(e) {
+            const raw = e.target.value.replace(/[^\d]/g, '');
+            e.target.value = raw ? parseInt(raw, 10).toLocaleString('en-US') : '';
+            div.classList.toggle('has-val', parseInt(raw, 10) > 0);
+            updatePortfolioTotal();
+        });
+
+        $('add-room-panel').style.display = 'none';
+        $('add-room-select').value = '';
+    }
+
     // ─── Build API request body from form ─────────────────────────────────────
     function buildAPIRequest() {
-        const currentAge  = parseInt($('p-age').value, 10) || 43;
-        const retireAge   = parseInt($('p-retire-age').value, 10) || 53;
+        const currentAge  = getAgeFromDOB('p-dob-month', 'p-dob-year') || 43;
+        const retireAge   = getRetirementAge('p-ret-month', 'p-ret-year') || 53;
         const datumSpend  = parseInt($('datum-input').value.replace(/[^\d]/g, ''), 10) || 120000;
         const ssPrimary   = SS_MAP[$('p-ss-strategy').dataset.value] || 'optimal_70';
         const outlook     = OUTLOOK_API_MAP[currentOutlook] || 'valuations_matter';
@@ -654,10 +831,12 @@
 
         const coCheck = $('p-co-check');
         if (coCheck && coCheck.checked) {
-            const coAge = parseInt($('p-co-age').value, 10);
+            const coAge = getAgeFromDOB('p-co-dob-month', 'p-co-dob-year');
             const coSS  = SS_MAP[$('p-co-ss').dataset.value] || 'optimal_70';
-            if (!isNaN(coAge)) { body.co_architect_age = coAge; body.ss_strategy_secondary = coSS; }
+            if (coAge !== null) { body.co_architect_age = coAge; body.ss_strategy_secondary = coSS; }
         }
+
+        console.log('[DATUM FI] API request:', JSON.parse(JSON.stringify(body)));
         return body;
     }
 
@@ -1322,6 +1501,21 @@
 
     // ─── Input wiring ─────────────────────────────────────────────────────────
     function setupInputs() {
+        // Populate date dropdowns
+        populateDateDropdowns();
+
+        // Add × remove buttons to existing rooms
+        document.querySelectorAll('#rooms-container .bp-room').forEach(room => {
+            if (!room.querySelector('.room-remove')) {
+                const btn = document.createElement('button');
+                btn.className = 'room-remove';
+                btn.title = 'Remove account';
+                btn.textContent = '×';
+                btn.onclick = function() { removeRoom(this); };
+                room.insertBefore(btn, room.firstChild);
+            }
+        });
+
         const d1 = $('datum-input');
         const d2 = $('inline-datum-input');
 
@@ -1352,10 +1546,7 @@
             input.addEventListener('input', function(e) {
                 const raw = e.target.value.replace(/[^\d]/g, '');
                 e.target.value = raw ? parseInt(raw, 10).toLocaleString('en-US') : '';
-                let total = 0;
-                document.querySelectorAll('.room-input').forEach(i => { total += parseInt(i.value.replace(/[^\d]/g, ''), 10) || 0; });
-                const lSq = $('live-sqft-input');
-                if (lSq) lSq.value = total.toLocaleString('en-US');
+                updatePortfolioTotal();
             });
         });
 
