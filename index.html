@@ -891,7 +891,7 @@
     <div class="cinematic-stage" id="cin-stage">
         <div class="cin-text-layer">
             <div id="cin-subtitle" class="status-subtitle">Phase I / Multiverse Variance</div>
-            <div id="cin-title1" class="status-title">Modeling a forty-thousand path multiverse.</div>
+            <div id="cin-title1" class="status-title">Modeling a ten-thousand path multiverse.</div>
             <div id="cin-title2" class="status-title">Singularity established.</div>
         </div>
         <svg class="wave-canvas" id="cin-canvas" viewBox="0 0 800 400" preserveAspectRatio="none">
@@ -909,7 +909,7 @@
 
     <!-- Pulsing wait message: shown after cinematic completes while API is still running -->
     <div id="s3-pulsing" style="display:none; position:absolute; bottom:calc(50% - 120px); left:0; right:0; text-align:center; padding:20px;">
-        <div style="font-family:var(--font-mono); font-size:12px; text-transform:uppercase; letter-spacing:0.25em; color:var(--teal-mid); animation:pulse 1.8s ease-in-out infinite;">Simulating futures...</div>
+        <div style="font-family:var(--font-mono); font-size:12px; text-transform:uppercase; letter-spacing:0.2em; color:var(--teal-mid); animation:pulse 1.8s ease-in-out infinite;">Modeling 10,000 futures... Forging your Range</div>
     </div>
 
     <!-- Error overlay -->
@@ -2039,14 +2039,49 @@
 
         // ────────────────────────────────────────────────────────────────────
         // Timeline (all ms from animation start):
-        // Phase 1 Chaos (0.1s):      MC waves + subtitle/title appear
-        // Phase 2 Collapse (1.6s):   Waves compress to centerline
+        // Phase 1 Chaos (0.1s):       MC waves + subtitle/title appear
+        // Phase 2 Collapse (1.6s):    Waves compress to centerline
         // Phase 3 Singularity (2.9s): Gold dot ignites at center
-        // Phase 4 Anchor (4.3s):     Dot floats left to anchor position
-        // Phase 5 Zip (6.1s):        Dot fires right with beam trail (~700ms)
-        // ANIM_DONE (7500ms):        Cinematic done; begin API wait phase
+        // Phase 4 Anchor (4.3s):      Dot floats left to anchor position
+        // Phase 5 Zip (6.1s):         Dot fires right with beam trail (~700ms)
+        // Phase 5 ends (~6.8s):       Mutual-check: if API done → instant S4
+        //                             else show pulsing and wait for API
         // ────────────────────────────────────────────────────────────────────
-        const ANIM_DONE = 7500;
+
+        // Mutual-completion flags: both must be true before transitioning
+        let _animComplete = false;
+        let _apiComplete  = false;
+        let _apiPayload   = null;
+
+        function _doReveal() {
+            if (!_animComplete || !_apiComplete) return;
+            if (pulsingEl) pulsingEl.style.display = 'none';
+            populateScreen4(_apiPayload);
+            setTimeout(() => {
+                goToScreen(4);
+                setTimeout(() => {
+                    void $('screen4').offsetWidth;
+                    const ys = [75, 125, 175, 225, 275, 325, 375];
+                    ephPaths.forEach((p, i) => { p.setAttribute('d', getFunnelPath(ys[i])); p.style.opacity = '1'; });
+                    handleSliderChange();
+                    if (lblC) lblC.style.opacity = '1';
+                    if (lblF) lblF.style.opacity = '1';
+                    setTimeout(() => {
+                        if (datumPath) datumPath.style.opacity = '1';
+                        if (dynDat)   { dynDat.style.opacity = '1'; dynDat.style.pointerEvents = 'auto'; }
+                        if ($('controls-panel')) $('controls-panel').classList.add('active');
+                        if (btn) { btn.disabled = false; btn.innerText = 'Reveal Your Range'; }
+                    }, 800);
+                }, 100);
+            }, 400);
+        }
+
+        // Wire up API promise — resolves whenever the server responds
+        apiPromise.then(data => {
+            _apiPayload  = data;
+            _apiComplete = true;
+            _doReveal();
+        }).catch(() => showAPIError());
 
         setTimeout(() => {
             // ── Phase 1: Chaos / Multiverse Variance ─────────────────────────
@@ -2080,51 +2115,19 @@
                 if (cinSub) cinSub.classList.remove('text-visible');
                 if (cinDot) cinDot.classList.add('dot-zip');
             }, 6000);
+
+            // ── After zip completes (~6800ms): mark anim done, check API ─────
+            // Zip animation: 700ms duration + 100ms buffer = 6800ms from here
+            setTimeout(() => {
+                _animComplete = true;
+                if (!_apiComplete) {
+                    // API still running — show pulsing state until it responds
+                    if (pulsingEl) pulsingEl.style.display = 'block';
+                }
+                _doReveal(); // no-op if API not done yet; fires instantly if done
+            }, 6800);
+
         }, 100);
-
-        // ════════════════════════════════════════════════════════════════════
-        // ANIM_DONE (7500ms) — cinematic complete.
-        // If API already resolved, Phase 7 fires immediately.
-        // Otherwise Phase 6 shows pulsing state until API resolves.
-        // ════════════════════════════════════════════════════════════════════
-        const animDelay = new Promise(resolve => setTimeout(resolve, ANIM_DONE));
-
-        animDelay
-            .then(() => {
-                // ── Phase 6 — Pulsing wait (fills until API responds) ─────────
-                if (pulsingEl) pulsingEl.style.display = 'block';
-                return apiPromise;
-            })
-            .then(data => {
-                // ── Phase 7 — API responded; transition to Screen 4 ──────────
-                if (pulsingEl) pulsingEl.style.display = 'none';
-
-                populateScreen4(data);
-
-                setTimeout(() => {
-                    goToScreen(4);
-                    setTimeout(() => {
-                        void $('screen4').offsetWidth;
-
-                        const ys = [75, 125, 175, 225, 275, 325, 375];
-                        ephPaths.forEach((p, i) => { p.setAttribute('d', getFunnelPath(ys[i])); p.style.opacity = '1'; });
-
-                        handleSliderChange();
-                        if (lblC) lblC.style.opacity = '1';
-                        if (lblF) lblF.style.opacity = '1';
-
-                        setTimeout(() => {
-                            if (datumPath) datumPath.style.opacity = '1';
-                            if (dynDat)   { dynDat.style.opacity = '1'; dynDat.style.pointerEvents = 'auto'; }
-                            if ($('controls-panel')) $('controls-panel').classList.add('active');
-                            if (btn) { btn.disabled = false; btn.innerText = 'Reveal Your Range'; }
-                        }, 800);
-                    }, 100);
-                }, 400);
-            })
-            .catch(() => {
-                showAPIError();
-            });
     }
 
     // ─── Test recommendation (Key Sensitivity button) ─────────────────────────
