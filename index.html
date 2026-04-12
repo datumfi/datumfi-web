@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Datum FI — V1 Production Master</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {--bg-navy:#091221; --grid-line:rgba(100,180,255,0.05); --teal:#1D9E75; --teal-mid:#5DCAA5; --gold:#C9A84C; --orange:#e68a4f; --keystone-blue:#4faae6; --bedrock-red:#c95c5c; --danger-red:#e24b4a; --white:#ffffff; --muted:rgba(255,255,255,0.4); --font-serif:'Fraunces', serif; --font-mono:'DM Mono', monospace;}
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background-color: var(--bg-navy); background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px); background-size: 30px 30px; font-family: var(--font-mono); color: var(--white); overflow-x: hidden; }
+  
+  /* Layout & Screens */
+  .screen { width: 100%; display: none; flex-direction: column; align-items: center; opacity: 0; transition: opacity 0.4s ease; }
+  .screen.active { display: flex; opacity: 1; }
+  .min-vh { min-height: 100vh; }
+  .content-bounds { width: 100%; max-width: 800px; padding: 40px; margin: 0 auto; position: relative; z-index: 10; }
+  
+  /* Typography */
+  h1 { font-family: var(--font-serif); font-style: italic; font-weight: 300; font-size: 48px; line-height: 1.2; margin-bottom: 16px; }
+  h2 { font-family: var(--font-serif); font-style: italic; font-weight: 300; font-size: 36px; line-height: 1.2; margin-bottom: 16px; }
+  .subtext { font-size: 14px; color: var(--muted); line-height: 1.6; max-width: 500px; margin: 0 auto; }
+  .tagline { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--teal); margin-bottom: 24px; }
+  .context-line { font-family: var(--font-serif); font-style: italic; font-size: 18px; color: rgba(255,255,255,0.6); margin-bottom: 8px; }
+  
+  /* Brand Signature (Flexbox for perfect wide kerning) */
+  .brand-signature { position: absolute; top: 40px; right: 40px; display: flex; align-items: center; z-index: 100; }
+  .sig-datum { font-family: var(--font-serif); font-size: 14px; font-weight: 300; letter-spacing: 0.1em; color: var(--white); margin-right: 14px; }
+  .sig-block { display: flex; align-items: center; gap: 4px; }
+  .sig-f, .sig-i { font-family: var(--font-mono); font-size: 13px; font-weight: 300; color: var(--teal-mid); }
+  /* Production Standard: 125% cap height bar */
+  .sig-bar { width: 2px; height: 18px; background-color: var(--gold); border-radius: 1px; }
+
+  /* Buttons */
+  .btn { display: inline-flex; justify-content: center; align-items: center; background: var(--teal); color: var(--bg-navy); font-family: var(--font-mono); font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; padding: 16px 32px; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s ease; z-index: 10; position: relative;}
+  .btn:hover { background: #5DCAA5; transform: translateY(-1px); }
+  .btn-outline { background: transparent; border: 1px solid var(--gold); color: var(--gold); }
+  .btn-outline:hover { background: rgba(201,168,76,0.1); }
+  .btn-scroll { background: transparent; color: var(--teal); border: 1px solid rgba(29,158,117,0.3); }
+  .btn-scroll:hover { background: rgba(29,158,117,0.1); border-color: var(--teal); }
+  .btn-back { background: transparent; border: none; color: var(--teal-mid); font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; margin-bottom: 24px; display: inline-flex; align-items: center; gap: 6px; padding: 0; }
+  .btn-back:hover { color: var(--teal); }
+  
+  /* Inputs */
+  .input-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--teal-mid); margin-bottom: 4px; display: block; }
+  .mock-input { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; padding: 12px 16px; border-radius: 4px; width: 100%; position: relative; }
+  .mock-input span { color: var(--muted); margin-right: 8px; font-size: 18px;}
+  .mock-input input, .mock-input select { background: transparent; border: none; color: var(--white); font-family: var(--font-mono); font-size: 18px; outline: none; width: 100%; }
+
+  /* Custom Range Sliders */
+  input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; margin: 8px 0; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: var(--teal-mid); cursor: pointer; margin-top: -6px; box-shadow: 0 0 10px rgba(93,202,165,0.5); transition: transform 0.1s; }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+  input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: rgba(255,255,255,0.1); border-radius: 2px; }
+  input[type=range]:focus { outline: none; }
+  input[type=range]:focus::-webkit-slider-runnable-track { background: rgba(255,255,255,0.2); }
+
+  /* --- SCREEN 1: Landing --- */
+  .landing-hero-container { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; text-align: center; position: relative; min-height: 100vh; padding: 120px 0;}     
+  .hero-bg-grid { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0; background-image: linear-gradient(rgba(100,180,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(100,180,255,0.08) 1px, transparent 1px); background-size: 40px 40px; opacity: 0.5; mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 30%, transparent 95%); -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 30%, transparent 95%); animation: gridDrift 60s linear infinite; }
+  @keyframes gridDrift { 100% { background-position: 80px 80px; } }
+  .anim-fade-up { opacity: 0; transform: translateY(20px); animation: fadeUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+  .anim-delay-1 { animation-delay: 0.3s; } .anim-delay-2 { animation-delay: 0.6s; } .anim-delay-3 { animation-delay: 0.9s; } .anim-delay-4 { animation-delay: 1.2s; }
+  @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+  
+  /* Fixed Spacing Pair */
+  .hero-preview { margin: 80px auto 60px auto; display: flex; align-items: center; justify-content: center; gap: 24px; opacity: 0.8; position: relative; z-index: 5; pointer-events: none;}
+  .mini-label { position: absolute; top: -36px; left: 50%; transform: translateX(-50%); font-family: var(--font-serif); font-style: italic; font-size: 20px; color: rgba(255,255,255,0.8); font-weight: 300; letter-spacing: 0.05em; white-space: nowrap; }
+  
+  /* Screen 1 Mini Blueprint Tree */
+  .mini-fp { border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 6px; display: flex; flex-direction: column; align-items: center; gap: 12px; width: 200px; height: 140px; background: rgba(9, 18, 33, 0.8); position: relative;}
+  .node-top { width: 80px; height: 14px; background: rgba(79,170,230,0.3); border: 1px solid rgba(79,170,230,0.6); border-radius: 2px; z-index: 2;}
+  .node-row { display: flex; gap: 12px; width: 100%; justify-content: center; position: relative; z-index: 2;}
+  .node-box { width: 45px; height: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 2px; }
+  .tree-lines { position: absolute; top: 30px; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;}
+  
+  /* --- SCREEN 2: Studio --- */
+  .spec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 40px; width: 100%;}
+  .blueprint-wrapper { border: 1px solid var(--teal); background: rgba(29,158,117,0.03); border-radius: 8px; padding: 32px; width: 100%; margin-top: 20px;}
+  .bp-room { border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.02); padding: 16px; border-radius: 6px; display: flex; flex-direction: column; transition: all 0.2s;}
+  .bp-room.has-val { border-color: rgba(79,170,230,0.5); background: rgba(79,170,230,0.05); }
+  .r-name { font-family: var(--font-serif); font-size: 16px; color: var(--white); margin-bottom: 2px; }
+  .r-type { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); margin-bottom: 12px; }
+  .r-val { display: flex; align-items: baseline; font-size: 20px; border-bottom: 1px dashed rgba(255,255,255,0.3); padding-bottom: 4px; margin-bottom: 8px;}
+  .r-val input { background: transparent; border: none; color: var(--white); font-family: var(--font-mono); font-size: 20px; width: 100%; outline: none; margin-left: 4px;}
+  .r-contrib { display: flex; align-items: center; justify-content: space-between; font-size: 10px; color: var(--teal-mid); }
+  .r-contrib input { background: transparent; border: none; border-bottom: 1px solid rgba(29,158,117,0.4); color: var(--teal-mid); font-family: var(--font-mono); font-size: 11px; width: 60px; text-align: right; outline: none; }
+  
+  /* Collapsible Blueprint Styling */
+  #rooms-container { transition: max-height 0.4s ease, opacity 0.4s ease; overflow: hidden; }
+  .rooms-collapsed { max-height: 0; opacity: 0; pointer-events: none; }
+  .rooms-expanded { max-height: 2000px; opacity: 1; pointer-events: auto; }
+  
+  .outlook-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-top: 24px; width: 100%;}
+  .outlook-card { border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.02); border-radius: 6px; padding: 16px; cursor: pointer; transition: all 0.2s; }
+  .outlook-card.active { border-color: var(--teal-mid); background: rgba(29,158,117,0.05); }
+  .outlook-title { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--white); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;}
+  .outlook-card.active .outlook-title { color: var(--teal-mid); }
+
+  /* --- SCREEN 3: Cinematic Catalyst Sequence --- */
+  #screen3 { position: relative; justify-content: center; overflow: hidden; }
+  .s3-container { position: relative; width: 100%; height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .s3-text-top { font-family: var(--font-serif); font-style: italic; font-weight: 300; font-size: 36px; color: var(--white); position: absolute; bottom: calc(50% + 40px); opacity: 0; text-align: center; width: 100%; transition: opacity 0.6s ease;}
+  .s3-text-bottom { font-family: var(--font-mono); font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); position: absolute; top: calc(50% + 40px); opacity: 0; text-align: center; width: 100%; transition: opacity 0.6s ease;}
+  .show-text { opacity: 1 !important; }
+  .bullet-track { position: absolute; top: 50%; left: 0; width: 100%; height: 2px; transform: translateY(-50%); z-index: 10; }
+  .bullet-line { position: absolute; top: 0; left: 40px; height: 2px; background: var(--gold); width: 0; transition: width 0.6s cubic-bezier(0.8, 0, 0.2, 1); }
+  /* Brand signature text fades during animation */
+  .sig-datum, .sig-f, .sig-i { transition: opacity 0.4s ease; }
+  .sig-bar { transition: opacity 0.3s ease; }
+
+  /* Flying catalyst — absolutely positioned within Screen 3 */
+  #flying-catalyst { position: absolute; background: var(--gold); border-radius: 1px; box-shadow: 0 0 8px rgba(201,168,76,0.4); opacity: 0; z-index: 200; pointer-events: none; transform-origin: center center; }
+
+  /* --- SCREEN 4: Multiverse Funnel Reveal --- */
+  .v-range-container { position: relative; width: 100%; height: 400px; margin: 60px 0 20px 0; }
+  .v-origin { position: absolute; left: 40px; top: 50%; width: 16px; height: 16px; background: var(--gold); border-radius: 50%; transform: translate(-8px, -50%); z-index: 5; box-shadow: 0 0 20px rgba(201,168,76,0.8); transition: opacity 0.5s ease; opacity: 0; }
+  .v-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;}
+  
+  /* Arc Transitions */
+  .v-line { fill: none; stroke-width: 1.5; transition: d 0.6s cubic-bezier(0.25, 1, 0.5, 1); }
+  .v-line.ceiling { stroke: rgba(201,168,76,0.8); }
+  .v-line.floor { stroke: rgba(201,92,92,0.8); }
+  .v-line.datum { stroke: #1D9E75; stroke-width: 2; stroke-dasharray: 4 2; opacity: 0; transition: opacity 0.8s ease, d 0.1s ease-out; }
+  .v-line.ephemeral { stroke: rgba(201,168,76,0.15); stroke-width: 1; transition: d 1.2s cubic-bezier(0.25, 1, 0.5, 1), opacity 1s; opacity: 0; }
+  
+  .tier-label { position: absolute; right: 0; text-align: right; width: 280px; padding-left: 20px; pointer-events: auto; transform: translateY(-50%); opacity: 0; transition: top 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.8s ease; }
+  .t-val-balance { font-family: var(--font-serif); font-style: italic; font-size: 28px; font-weight: 300; line-height: 1; margin-bottom: 4px; transition: color 0.3s;}
+  .t-val-spend { font-family: var(--font-mono); font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+  .t-name { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); display: flex; justify-content: flex-end; align-items: center; gap: 8px; transition: color 0.3s;}
+  .t-desc { font-size: 11px; color: rgba(255,255,255,0.7); line-height: 1.5; margin-top: 8px; }
+  
+  .tier-ceiling .t-val-balance { color: rgba(201,168,76,0.5); }
+  .tier-floor .t-val-balance { color: rgba(201,92,92,0.5); }
+  
+  /* Fixed Snapping Green Datum Box (Modern Embedded style) */
+  .v-datum-wrapper { position: absolute; left: 40px; right: 0; display: flex; justify-content: flex-end; align-items: center; z-index: 10; transition: top 0.1s ease-out, opacity 0.8s ease; opacity: 0; pointer-events: none; }
+  .v-datum-box { background: linear-gradient(135deg, #0e1b30 0%, #050a14 100%); border: 1px solid var(--teal); border-radius: 12px; padding: 28px; text-align: right; transform: translateY(-50%); box-shadow: inset 0px 4px 10px rgba(0,0,0,0.6), 0 10px 30px rgba(0,0,0,0.5); min-width: 180px; position: relative; display: flex; flex-direction: column; align-items: flex-end; pointer-events: auto; transition: border-color 0.3s;}
+  
+  .v-datum-val { font-family: var(--font-serif); font-style: italic; font-size: 28px; color: var(--teal); display: flex; align-items: baseline; justify-content: flex-end; gap: 4px; transition: color 0.2s;}
+  .v-datum-val input { background: transparent; border: none; border-bottom: 1px dashed rgba(29,158,117,0.5); color: var(--teal); font-family: var(--font-serif); font-style: italic; font-size: 28px; width: 125px; outline: none; text-align: right; margin-left: 4px; transition: color 0.2s, border-color 0.2s; pointer-events: auto;}
+  .v-datum-val input:focus { border-bottom-color: var(--teal-mid); }
+  
+  /* Buffer display line (above/below survival floor) */
+  .buffer-metric { position: absolute; top: 100%; right: 24px; font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-top: 8px; white-space: nowrap; pointer-events: none; transition: color 0.3s;}
+
+  /* Focused Target Spend Dashboard */
+  .quick-toggles-panel { display: flex; flex-direction: column; align-items: center; max-width: 500px; margin: 0 auto 40px auto; text-align: center; background: rgba(255,255,255,0.02); padding: 24px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); opacity: 0; transition: opacity 0.8s ease; pointer-events: none; }
+  .quick-toggles-panel.active { opacity: 1; pointer-events: auto; }
+  .slider-header { display: flex; justify-content: center; gap: 16px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; }
+  .slider-val-disp { color: var(--white); font-family: var(--font-mono); }
+
+  /* Verdict Box */
+  .verdict-box { padding: 24px; background: rgba(29,158,117,0.05); border-left: 2px solid var(--teal); margin-bottom: 32px; border-radius: 0 8px 8px 0; transition: all 0.3s;}
+  .verdict-line { font-family: var(--font-serif); font-style: italic; font-size: 18px; color: var(--white); margin-bottom: 4px; }
+  .verdict-sub { font-size: 11px; color: var(--muted); margin-bottom: 16px; line-height: 1.6;}
+  
+  /* Verdict State colors (border and action desc) */
+  .verdict-box.state-blue { border-color: var(--keystone-blue); } .verdict-box.state-blue #va-desc { color: var(--keystone-blue) !important; }
+  .verdict-box.state-amber { border-color: var(--gold); } .verdict-box.state-amber #va-desc { color: var(--gold) !important; }
+  .verdict-box.state-red { border-color: var(--danger-red); } .verdict-box.state-red #va-desc { color: var(--danger-red) !important; }
+
+  .frag-test-bar { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); padding: 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); margin-top: 16px; cursor: pointer; transition: border-color 0.2s; }
+  .frag-test-bar:hover { border-color: var(--teal-mid); }
+  .frag-grid { gap: 16px; margin-top: 24px;}
+  .frag-card { background: rgba(255,255,255,0.02); padding: 20px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); }
+  .ia-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 32px;}
+
+  /* Footer Math Toggle */
+  .reveal-footer { margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.1); padding-bottom: 30px; z-index: 10; position: relative;}
+  .footer-summary { padding: 20px 0; font-size: 11px; color: rgba(255,255,255,0.5); line-height: 1.6; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: color 0.2s;}
+  .footer-summary:hover { color: var(--white); }
+  .footer-details { display: none; padding: 30px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px; font-family: var(--font-mono); }
+  .footer-details.open { display: block; }
+  .math-title { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--teal); margin-bottom: 12px; }
+  .math-text { font-size: 11px; color: var(--muted); line-height: 1.6; display: flex; gap: 10px; margin-bottom: 6px; align-items: baseline;}
+
+  /* Click-Toggle State Classes (Replaces CSS Hover for Mobile) */
+  .v-datum-box .view-balance { display: block; }
+  .v-datum-box .view-edit { display: none; }
+  .v-datum-box.expanded .view-balance { display: none; }
+  .v-datum-box.expanded .view-edit { display: block; }
+  .view-edit .v-datum-val { display: flex; align-items: baseline; justify-content: flex-end; }
+
+  @media (prefers-reduced-motion: reduce) {
+      .hero-bg-grid { animation: none !important; }
+      .v-line { transition: none !important; }
+      .tier-label { transition: none !important; }
+      .catalyst-bar, .icon-letter { transition: none !important; }
+  }
+  @media (max-width: 650px) {
+    .spec-grid, .bp-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 36px; } h2 { font-size: 28px; }
+    .v-origin { left: 20px; }
+    .v-svg { left: 20px; }
+    .v-datum-wrapper { left: 20px; }
+    .tier-label { right: 10px; width: auto; }
+    .s3-monolith-container { width: 100px; height: 100px; }
+    .icon-letter { font-size: 38px; }
+    .catalyst-bar { height: 50px; }
+  }
+
+  /* Pulsing keyframe for loading states */
+  @keyframes pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+
+  /* Screen 4 fast-path loading overlay */
+  .s4-loading-overlay { position: fixed; inset: 0; background: rgba(9,18,33,0.85); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 200; text-align: center; }
+  .s4-loading-overlay.visible { display: flex; }
+</style>
+</head>
+<body>
+
+  <div class="brand-signature" id="brand-sig">
+      <span class="sig-datum" id="sig-datum-text">DATUM</span>
+      <span class="sig-block">
+          <span class="sig-f" id="sig-f-text">F</span>
+          <span class="sig-bar" id="sig-bar-real"></span>
+          <span class="sig-i" id="sig-i-text">I</span>
+      </span>
+  </div>
+
+  <div id="screen1" class="screen active">
+    <div class="landing-hero-container">
+      <div class="hero-bg-grid"></div>
+      <div class="content-bounds" style="text-align: center; padding-top: 60px;">
+        <h1 class="anim-fade-up anim-delay-1">Data in.<br>Confidence out.</h1>
+        <div class="subtext anim-fade-up anim-delay-2" style="font-size: 16px;">Retirement spending isn't a number. It's a Range.</div>
+        <div class="subtext anim-fade-up anim-delay-2" style="margin-top: 12px;">A new way to understand retirement: tax‑aware, crash‑aware, and grounded in your actual financial architecture.</div>
+        
+        <div class="hero-preview anim-fade-up anim-delay-3">
+            <div class="mini-fp-container" style="position: relative;">
+                <div class="mini-label">Estate Blueprint</div>
+                <div class="mini-fp">
+                   <svg class="tree-lines" viewBox="0 0 200 140" preserveAspectRatio="xMidYMid meet">
+                       <path d="M100,10 L100,30 M100,30 L40,30 L40,40 M100,30 L100,40 M100,30 L160,30 L160,40 M40,60 L40,70 M160,60 L160,70 M100,60 L100,70 M100,90 L100,100" stroke="rgba(79,170,230,0.4)" fill="none" stroke-width="1.5" />
+                   </svg>
+                   <div class="node-top"></div>
+                   <div class="node-row" style="margin-top: 8px;"><div class="node-box"></div><div class="node-box"></div><div class="node-box"></div></div>
+                   <div class="node-row" style="margin-top: 8px;"><div class="node-box"></div><div class="node-box"></div></div>
+                   <div class="node-row" style="margin-top: 8px; width: 50%;"><div class="node-box"></div></div>
+                </div>
+            </div>
+            <div class="mini-range-container" style="position: relative;">
+                <div class="mini-label">The Range</div>
+                <svg width="160" height="120" viewBox="0 0 160 120" style="overflow: visible;">
+                    <circle cx="0" cy="60" r="4" fill="#C9A84C" />
+                    <path d="M0,60 C 40,60 50,30 160,30" stroke="#C9A84C" stroke-width="1" fill="none" opacity="0.2"/>
+                    <path d="M0,60 C 40,60 50,45 160,45" stroke="#C9A84C" stroke-width="1" fill="none" opacity="0.2"/>
+                    <path d="M0,60 C 40,60 50,75 160,75" stroke="#C9A84C" stroke-width="1" fill="none" opacity="0.2"/>
+                    <path d="M0,60 C 40,60 50,90 160,90" stroke="#C9A84C" stroke-width="1" fill="none" opacity="0.2"/>
+                    <path d="M0,60 C 40,60 50,10 160,10" stroke="#C9A84C" stroke-width="1.5" fill="none" opacity="0.8"/>
+                    <path d="M0,60 C 40,60 50,110 160,110" stroke="#e24b4a" stroke-width="1.5" fill="none" opacity="0.9"/>
+                    <path d="M0,60 C 40,60 50,60 160,60" stroke="#1D9E75" stroke-width="2" stroke-dasharray="4 2" fill="none"/>
+                </svg>
+            </div>
+        </div>
+
+        <div class="anim-fade-up anim-delay-4" style="display: flex; flex-direction: column; align-items: center; gap: 24px;">
+          <button class="btn" onclick="goToScreen(2)">Define Your Datum</button>
+          <button class="btn-back" style="margin:0;" onclick="document.getElementById('learn-more').scrollIntoView({behavior: 'smooth'})">How it works ↓</button>
+        </div>
+      </div>
+    </div>
+    
+    <div id="learn-more" style="width: 100%; border-top: 1px solid rgba(255,255,255,0.05); background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.02) 100%);">
+      <div class="content-bounds" style="padding: 80px 40px;">
+        
+        <div style="text-align: left; margin-bottom: 60px; padding: 24px; background: rgba(255,255,255,0.02); border-left: 2px solid var(--teal-mid); border-radius: 0 12px 12px 0;">
+          <div style="font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--teal-mid); margin-bottom: 8px;">The Paradigm Shift</div>
+          <div style="font-family: var(--font-serif); font-style: italic; font-size: 24px; color: #fff; font-weight: 300;">Not a calculator. Not a simulator. But a decision system.</div>
+        </div>
+        
+        <h2 style="font-size: 24px; color: var(--teal-mid); margin-bottom: 24px;">Datum Intelligence™</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; margin-bottom: 40px;">
+          <div style="padding: 24px; background: rgba(255,255,255,0.02); border-top: 2px solid var(--white); border-radius: 4px;">
+            <div style="font-family: var(--font-serif); font-size: 18px; margin-bottom: 8px;">Datum Interpretation</div>
+            <div style="font-size: 11px; color: var(--muted); line-height: 1.6;">Your spending target is measured against the Range. Not a recommendation. Not a judgment. A clear picture of mathematical reality.</div>
+          </div>
+          <div style="padding: 24px; background: rgba(255,255,255,0.02); border-top: 2px solid var(--teal-mid); border-radius: 4px;">
+            <div style="font-family: var(--font-serif); font-size: 18px; margin-bottom: 8px;">Model Alignment</div>
+            <div style="font-size: 11px; color: var(--muted); line-height: 1.6;">We run four probabilistic models plus a dedicated stress battery. When they agree, your Range tightens. When they diverge, we show you why.</div>
+          </div>
+          <div style="padding: 24px; background: rgba(255,255,255,0.02); border-top: 2px solid var(--gold); border-radius: 4px;">
+            <div style="font-family: var(--font-serif); font-size: 18px; margin-bottom: 8px;">Fragility Insights</div>
+            <div style="font-size: 11px; color: var(--muted); line-height: 1.6;">Your plan reacts to change. We show you how. Retire two years earlier. Increase spending. See exactly how your Range shifts under the shocks that matter most.</div>
+          </div>
+        </div>
+
+        <div style="font-family: var(--font-serif); font-style: italic; font-size: 20px; color: var(--white); margin-top: 60px; margin-bottom: 8px;">The Invisible Architecture</div>
+        <div style="font-size: 12px; color: var(--gold); margin-bottom: 32px;">What makes this different isn't what you see. It's what you don't have to.</div>
+        <div class="ia-grid" style="margin-bottom: 80px;">
+            <div class="frag-card"><div style="font-family:var(--font-mono); font-size:9px; color:var(--teal-mid); text-transform:uppercase; margin-bottom:8px;">Tax Engine</div><div style="font-family:var(--font-serif); font-size:16px; margin-bottom:4px;">41-Year Sequencing</div><div style="font-size:11px; color:var(--muted); line-height:1.5;">We model exact withdrawal order and bracket fills across all 41 years in every simulation.</div></div>
+            <div class="frag-card"><div style="font-family:var(--font-mono); font-size:9px; color:var(--teal-mid); text-transform:uppercase; margin-bottom:8px;">Dynamic Behavior</div><div style="font-family:var(--font-serif); font-size:16px; margin-bottom:4px;">Spending Guardrails</div><div style="font-size:11px; color:var(--muted); line-height:1.5;">The engine automatically cuts spending during crashes and raises it during booms to protect the portfolio.</div></div>
+            <div class="frag-card"><div style="font-family:var(--font-mono); font-size:9px; color:var(--teal-mid); text-transform:uppercase; margin-bottom:8px;">Portfolio Math</div><div style="font-family:var(--font-serif); font-size:16px; margin-bottom:4px;">Allocation Glide-Path</div><div style="font-size:11px; color:var(--muted); line-height:1.5;">We recompute volatility automatically as you de-risk from equities over time.</div></div>
+            <div class="frag-card"><div style="font-family:var(--font-mono); font-size:9px; color:var(--teal-mid); text-transform:uppercase; margin-bottom:8px;">Cost Drag</div><div style="font-family:var(--font-serif); font-size:16px; margin-bottom:4px;">Fee-Aware Returns</div><div style="font-size:11px; color:var(--muted); line-height:1.5;">Every basis point has a name. We compute the exact drag of your holdings.</div></div>
+            <div class="frag-card"><div style="font-family:var(--font-mono); font-size:9px; color:var(--teal-mid); text-transform:uppercase; margin-bottom:8px;">Cashflow Timeline</div><div style="font-family:var(--font-serif); font-size:16px; margin-bottom:4px;">Income Layering</div><div style="font-size:11px; color:var(--muted); line-height:1.5;">Income has seasons. We map every one: from bridge-years, to your pension's real decay.</div></div>
+            <div class="frag-card"><div style="font-family:var(--font-mono); font-size:9px; color:var(--teal-mid); text-transform:uppercase; margin-bottom:8px;">Valuation Intelligence</div><div style="font-family:var(--font-serif); font-size:16px; margin-bottom:4px;">CAPE-Dynamic Weights</div><div style="font-size:11px; color:var(--muted); line-height:1.5;">When markets are expensive, we automatically shift trust toward conservative models.</div></div>
+        </div>
+
+        <h2 style="font-size: 24px; margin-bottom: 12px;">Four Probabilistic Models.<br>One Stress Battery.</h2>
+        <div style="font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 32px;">No consumer retirement tool runs 40,000 futures per profile across four simulation methods plus a dedicated stress battery. Running them together produces an output fundamentally more credible than any single model.</div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+             <div style="padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;"><div style="font-family: var(--font-serif); font-style: italic; font-size: 16px; color: #fff; margin-bottom: 8px;">Parametric Monte Carlo</div><div style="font-size: 11px; color: var(--muted); line-height: 1.5;">Generates 10,000 return sequences from a log-normal distribution calibrated to your asset allocation.</div></div>
+             <div style="padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;"><div style="font-family: var(--font-serif); font-style: italic; font-size: 16px; color: #fff; margin-bottom: 8px;">Historical Bootstrapping</div><div style="font-size: 11px; color: var(--muted); line-height: 1.5;">Randomly draws actual annual return sequences from 1926–2025. Preserves extreme outcomes.</div></div>
+             <div style="padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;"><div style="font-family: var(--font-serif); font-style: italic; font-size: 16px; color: #fff; margin-bottom: 8px;">CAPE-Adjusted</div><div style="font-size: 11px; color: var(--muted); line-height: 1.5;">Uses the current Shiller CAPE ratio to dynamically shift expected returns.</div></div>
+             <div style="padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;"><div style="font-family: var(--font-serif); font-style: italic; font-size: 16px; color: #fff; margin-bottom: 8px;">Regime Block Bootstrap</div><div style="font-size: 11px; color: var(--muted); line-height: 1.5;">Samples multi-year blocks from historical economic regimes similar to current conditions.</div></div>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.02); padding: 32px; border-radius: 8px; border-left: 2px solid var(--danger-red); margin-bottom: 80px;">
+            <div style="font-family: var(--font-serif); font-style: italic; font-size: 20px; margin-bottom: 8px;">Adverse Scenario Stress Battery</div>
+            <div style="font-size: 12px; color: var(--muted); line-height: 1.6;">What happens when history rhymes worse? We explicitly test your plan against the 1929 crash, 1970s stagflation, and the Japanese lost-decade to establish your absolute Survival Floor.</div>
+        </div>
+
+        <div style="text-align: center; padding: 40px; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;">
+            <div style="font-family: var(--font-serif); font-style: italic; font-size: 20px; margin-bottom: 12px;">Historically Resilient</div>
+            <div style="font-size: 12px; color: var(--muted); line-height: 1.6; max-width: 500px; margin: 0 auto 24px auto;">We show you the exact spending level — tax-aware, in today's dollars — that remains viable across all 40,000 modeled scenarios and historical stress tests.</div>
+            <button class="btn" onclick="goToScreen(2)">Define Your Datum</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen2" class="screen min-vh">
+    <div class="content-bounds builder-bounds">
+      <button class="btn-back" onclick="goToScreen(1)">← Back to Overview</button>
+      
+      <div style="text-align: center; margin-bottom: 40px;">
+        <div style="width: 2px; height: 40px; background: var(--gold); margin: 0 auto 24px auto;"></div>
+        <h2 style="font-size: 28px; margin-bottom: 8px;">Every structure begins with a fixed point. A <span style="color: var(--teal);">Datum</span>.</h2>
+        <div style="font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold); margin-bottom: 40px;">Let's find yours in the studio.</div>
+      </div>
+      
+      <div class="spec-grid">
+        <div><label class="input-label">Architect</label><div class="mock-input"><input type="number" id="p-age" placeholder="Your Age" value="43"></div></div>
+        <div>
+            <label class="input-label" style="display:flex; justify-content:space-between;">Co-Architect <span style="text-transform: none; color: var(--muted); cursor: pointer;"><input type="checkbox" id="p-co-check" onchange="document.getElementById('co-arch-inputs').style.display = this.checked ? 'grid' : 'none'"> Add</span></label>
+            <div class="mock-input" style="border: 1px dashed rgba(255,255,255,0.1); background: transparent;"><input type="text" disabled placeholder="Optional" style="opacity:0.3;"></div>
+        </div>
+        
+        <div id="co-arch-inputs" style="display: none; grid-column: 1 / -1; grid-template-columns: 1fr 1fr; gap: 24px; padding: 24px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.1);">
+            <div><label class="input-label">Co-Architect Age</label><div class="mock-input"><input type="number" id="p-co-age" placeholder="Age"></div></div>
+            <div><label class="input-label">Co-Architect SS Strategy</label><div class="mock-input" style="padding:0;"><select id="p-co-ss" style="padding: 12px 16px;"><option>Optimal (Age 70)</option><option>Full (Age 67)</option><option>Early (Age 62)</option></select></div></div>
+        </div>
+
+        <div><label class="input-label">Location</label><div class="mock-input"><input type="text" value="Florida"></div></div>
+        <div><label class="input-label">Target Retirement Age</label><div class="mock-input"><input type="number" id="p-retire-age" value="53"></div></div>
+        <div>
+            <label class="input-label">Social Security Strategy</label>
+            <div class="mock-input" style="padding:0;"><select id="p-ss-strategy" style="padding: 12px 16px;"><option>Optimal (Age 70)</option><option>Full (Age 67)</option><option>Early (Age 62)</option></select></div>
+        </div>
+      </div>
+
+      <div class="blueprint-wrapper">
+          <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; border-bottom: 1px solid rgba(29,158,117,0.3); padding-bottom: 12px;">
+              <div class="bp-title" style="font-family: var(--font-serif); font-style: italic; font-size: 24px; color: var(--teal-mid); cursor: pointer;" onclick="const r = document.getElementById('rooms-container'); r.classList.contains('rooms-expanded') ? (r.classList.remove('rooms-expanded'), r.classList.add('rooms-collapsed')) : (r.classList.remove('rooms-collapsed'), r.classList.add('rooms-expanded'))">Build your Estate <span style="font-size: 14px; opacity: 0.5;">↕</span></div>
+              <div style="text-align: right;">
+                  <div style="font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">Current Value</div>
+                  <div class="mock-input" style="padding: 4px 8px; width: 140px; border-color: var(--teal-mid); background: rgba(29, 158, 117, 0.05); margin-left: auto;">
+                    <span style="color:var(--teal-mid); font-size: 16px; margin-right: 2px;">$</span>
+                    <input type="text" inputmode="numeric" id="live-sqft-input" value="1,215,000" style="color:var(--teal-mid); font-size: 18px; text-align: right; font-family: var(--font-mono); font-weight: 500;">
+                  </div>
+              </div>
+          </div>
+          
+          <div class="rooms-expanded" id="rooms-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+              <div class="bp-room has-val" data-account-type="pretax_401k"><div class="r-name">Pre-Tax 401(k)</div><div class="r-val"><span>$</span><input type="text" class="room-input" value="845,000"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Taxed as ordinary income. First in line for RMDs.</div></div>
+              <div class="bp-room" data-account-type="pretax_457b"><div class="r-name">Pre-Tax 457(b)</div><div class="r-val"><span>$</span><input type="text" class="room-input" value="0"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Accessible penalty-free before 59.5 upon separation.</div></div>
+              <div class="bp-room" data-account-type="pretax_ira"><div class="r-name">Pre-Tax IRA</div><div class="r-val"><span>$</span><input type="text" class="room-input" value="0"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Consolidated pre-tax capital.</div></div>
+              <div class="bp-room" data-account-type="roth_401k"><div class="r-name">Roth 401(k)</div><div class="r-val"><span>$</span><input type="text" class="room-input" value="0"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Tax-free growth from employer plan.</div></div>
+              <div class="bp-room" data-account-type="roth_457b"><div class="r-name">Roth 457(b)</div><div class="r-val"><span>$</span><input type="text" class="room-input" value="0"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Tax-free growth, accessible early.</div></div>
+              <div class="bp-room has-val" data-account-type="roth_ira"><div class="r-name">Roth IRA</div><div class="r-val"><span>$</span><input type="text" class="room-input" value="120,000"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Aspirational, completely tax-free expansion space.</div></div>
+              <div class="bp-room has-val" data-account-type="taxable"><div class="r-name">Taxable Brokerage</div><div class="r-val"><span>$</span><input type="text" class="room-input" value="250,000"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Capital gains and dividends. Highly liquid.</div></div>
+              <div class="bp-room" data-account-type="hysa"><div class="r-name">High Yield Savings</div><div class="r-val"><span>$</span><input type="text" class="room-input" value="0"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Cash buffer. No market risk.</div></div>
+              <div class="bp-room" data-account-type="pension"><div class="r-name">Pension (Annual Income)</div><div class="r-val"><span>$</span><input type="text" class="room-input" value="0"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Secure, fixed income floor.</div></div>
+              <div style="grid-column: 1 / -1; text-align: center; margin-top: 12px;"><button class="btn" style="padding: 12px 24px;">+ Draft Additional Space</button></div>
+          </div>
+      </div>
+
+      <div style="margin-top: 60px; display: flex; flex-direction: column; align-items: center; text-align: center;">
+        <label class="input-label" style="color: var(--teal-mid);">Your Datum (Target Spend)</label>
+        <div style="font-size: 10px; color: var(--muted); margin-bottom: 16px;">Your preferred annual living space inside the Range.</div>
+        <div class="mock-input" style="border-color: var(--teal-mid); background: rgba(29, 158, 117, 0.05); padding: 16px 20px; max-width: 300px; justify-content: center;">
+          <span style="color:var(--teal-mid); font-size: 28px; margin-right: 4px;">$</span><input type="text" inputmode="numeric" id="datum-input" value="120,000" style="color:var(--teal-mid); font-size: 28px; text-align: center;">
+        </div>
+      </div>
+
+      <div style="margin-top: 60px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 40px;">
+        <div style="font-family: var(--font-serif); font-style: italic; font-size: 22px; margin-bottom: 8px;">Market Outlook</div>
+        <div style="font-size: 12px; color: var(--muted); margin-bottom: 24px;">We don't ask you to predict the future. We ask you how much you trust each version of the past. Choose your philosophical approach to our models.</div>
+        
+        <div class="outlook-grid">
+          <div class="outlook-card" onclick="selectOutlook(this, 'history')"><div class="outlook-title">History Repeats <span style="font-size:14px;">📚</span></div><div style="font-size:10px; color:var(--muted);">Equal trust in all models. The full historical record speaks equally.</div></div>
+          <div class="outlook-card active" onclick="selectOutlook(this, 'cape')"><div class="outlook-title">Valuations Matter <span style="font-size:8px; border:1px solid var(--muted); padding:2px 4px; border-radius:2px;">DEFAULT</span></div><div style="font-size:10px; color:var(--muted);">Current high CAPE predicts lower returns. Trusts valuation-aware models more.</div></div>
+          <div class="outlook-card" onclick="selectOutlook(this, 'cautious')"><div class="outlook-title">Cautious <span style="font-size:14px;">🛡️</span></div><div style="font-size:10px; color:var(--muted);">Structurally pessimistic. Overweights the regime model mapping expensive markets.</div></div>
+          <div class="outlook-card" onclick="selectOutlook(this, 'optimistic')"><div class="outlook-title">Optimistic <span style="font-size:14px;">🚀</span></div><div style="font-size:10px; color:var(--muted);">Trusts the full historical record more — markets have always eventually recovered.</div></div>
+          <div class="outlook-card" onclick="selectOutlook(this, 'custom')"><div class="outlook-title">Custom <span style="font-size:14px;">⚙️</span></div><div style="font-size:10px; color:var(--muted);">Manually define your exact confidence weighting across all 4 probabilistic models.</div></div>
+        </div>
+      </div>
+      
+      <div style="text-align: center; margin-top: 60px; margin-bottom: 40px;"><button class="btn" id="trigger-btn" style="width: 100%; max-width: 350px; font-size: 14px; padding: 20px;" onclick="startLoading()">Reveal Your Range</button></div>
+    </div>
+  </div>
+
+  <div id="screen3" class="screen min-vh">
+    <div class="s3-container">
+        <div class="s3-text-top" id="s3-top">Forty thousand futures.</div>
+        <div class="bullet-track">
+            <div class="bullet-line" id="s3-line"></div>
+        </div>
+        <div class="s3-text-bottom" id="s3-bot">One Range.</div>
+    </div>
+
+    <!-- Flying catalyst bar — animated from brand sig position through all phases -->
+    <div id="flying-catalyst"></div>
+
+    <!-- Pulsing wait message: shown after Phase 5 completes while API is still running -->
+    <div id="s3-pulsing" style="display:none; position:absolute; bottom:calc(50% - 120px); left:0; right:0; text-align:center; padding:20px;">
+        <div style="font-family:var(--font-mono); font-size:12px; text-transform:uppercase; letter-spacing:0.25em; color:var(--teal-mid); animation:pulse 1.8s ease-in-out infinite;">Simulating 40,000 futures...</div>
+    </div>
+
+    <!-- Error overlay -->
+    <div id="s3-error" style="display:none; position:absolute; inset:0; background:rgba(9,18,33,0.96); flex-direction:column; align-items:center; justify-content:center; z-index:50; text-align:center; padding:40px;">
+        <div style="font-size:10px; letter-spacing:0.2em; text-transform:uppercase; color:var(--danger-red); margin-bottom:16px;">Error</div>
+        <div style="font-family:var(--font-serif); font-style:italic; font-size:28px; color:var(--white); margin-bottom:8px;">Something went wrong.</div>
+        <div style="font-size:13px; color:var(--muted); margin-bottom:32px; line-height:1.6;">The calculation service could not be reached.<br>Please check your connection and try again.</div>
+        <button class="btn btn-outline" onclick="hideAPIError(); goToScreen(2);">Try Again</button>
+    </div>
+  </div>
+
+  <div id="screen4" class="screen">
+    <div class="content-bounds" style="padding-top: 40px; padding-bottom: 80px;">
+      
+      <div style="margin-bottom: 32px;">
+          <div style="font-family: var(--font-serif); font-style: italic; font-size: 28px; color: var(--white); margin-bottom: 4px;">Your estate has been measured.</div>
+          <div style="font-family: var(--font-mono); font-size: 11px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em;">These are your boundaries.</div>
+      </div>
+      
+      <div class="v-range-container" id="v-container">
+          <div class="v-origin" id="v-origin"></div>
+          
+          <svg class="v-svg" preserveAspectRatio="none">
+              <path class="v-line ephemeral eph-path" d="" />
+              <path class="v-line ephemeral eph-path" d="" />
+              <path class="v-line ephemeral eph-path" d="" />
+              <path class="v-line ephemeral eph-path" d="" />
+              <path class="v-line ephemeral eph-path" d="" />
+              <path class="v-line ephemeral eph-path" d="" />
+              <path class="v-line ephemeral eph-path" d="" />
+
+              <path id="svg-ceiling" class="v-line ceiling" d="" />
+              <path id="svg-floor"   class="v-line floor"   d="" />
+              <path id="svg-datum"   class="v-line datum"   d="" />
+          </svg>
+          
+          <div class="tier-label tier-ceiling" id="lbl-ceiling" style="top: 12.5%;">
+              <div class="t-name">Structural Ceiling</div>
+              <div class="t-val-balance" id="bal-capstone">$4.12M</div>
+              <div class="t-val-spend" id="val-capstone">$165,000 / yr</div>
+              <div class="t-desc">The mathematical limit of your plan's capacity. A structural constraint, not an aspirational target.</div>
+          </div>
+          
+          <div class="tier-label tier-floor" id="lbl-floor" style="top: 87.5%;">
+              <div class="t-name">Survival Floor <span style="font-size:8px; border:1px solid rgba(255,255,255,0.2); padding:2px 4px; border-radius:2px; margin-left:4px;">FIXED</span></div>
+              <div class="t-val-balance" id="bal-bedrock">$2.60M</div>
+              <div class="t-val-spend" id="val-bedrock">$122,000 / yr</div>
+              <div class="t-desc">Floor holds in 99% of simulations + all stress scenarios. Survives the 1929 crash. Survives everything.</div>
+          </div>
+
+          <div class="v-datum-wrapper" id="dynamic-datum" style="top: 50%;">
+              <div class="v-datum-box state-green" id="datum-drag-box" style="border-color: var(--teal); cursor: pointer; padding-top: 28px;" onclick="this.classList.toggle('expanded')">
+                  <div style="position: absolute; top: 8px; right: 24px; font-family: var(--font-serif); font-style: italic; font-size: 14px; color: var(--teal);" id="your-datum-label">Your Datum</div>
+                  
+                  <div class="view-balance">
+                      <div class="v-datum-val" id="datum-bal-display" style="font-size: 28px; color: var(--teal); pointer-events: none;">$3.00M</div>
+                      <div style="font-size: 10px; color: var(--muted); margin-top: 4px; text-align: right; pointer-events: none;">Target Portfolio Balance</div>
+                  </div>
+                  
+                  <div class="view-edit">
+                      <div class="v-datum-val" style="pointer-events: none;">
+                          $<input type="text" id="inline-datum-input" value="120,000" style="color: var(--teal); pointer-events: auto;" onclick="event.stopPropagation()"> <span style="font-size: 14px; margin-left: 2px; color: var(--teal); pointer-events: none;">/ yr</span>
+                      </div>
+                      <div class="legacy-metric" id="legacy-text-span" style="margin-top: 8px; color: var(--teal-mid); pointer-events: none;">Est. Legacy: $3.00M</div>
+                  </div>
+
+                  <div class="buffer-metric" id="buffer-display"></div>
+              </div>
+          </div>
+      </div>
+
+      <div class="quick-toggles-panel active" id="controls-panel" style="display: flex; flex-direction: column; align-items: center; max-width: 500px; margin: 0 auto 40px auto; text-align: center;">
+          <div style="width: 100%;">
+              <div class="slider-header" style="justify-content: center; gap: 16px; font-size: 12px; margin-bottom: 16px;">
+                  <span style="color: var(--teal-mid);">Target Spend</span>
+                  <span class="slider-val-disp" id="val-disp-spend" style="color: var(--teal);">$120,000 / yr</span>
+              </div>
+              <input type="range" id="slider-spend" min="50000" max="300000" step="1000" value="120000">
+          </div>
+          <div style="font-size: 10px; color: var(--muted); margin-top: 16px; line-height: 1.5;">
+              Moving your Datum instantly stress-tests your lifestyle against your portfolio's solved capacity. Altering core architecture (Age, Capital) requires a full model recalculation.
+          </div>
+      </div>
+
+      <div id="verdict-container" class="verdict-box state-green" style="margin-bottom: 32px;">
+        <div id="verdict-line" class="verdict-line">Your plan is highly secure.</div>
+        <div id="verdict-sub" class="verdict-sub">You are maximizing plan durability and legacy.</div>
+        
+        <div id="verdict-action" class="frag-test-bar">
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+                <span id="va-label" style="font-family: var(--font-mono); font-size: 9px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em;">KEY SENSITIVITY</span>
+                <span id="va-desc" style="font-size: 12px; color: var(--white);">Inflation → 4% (Impact: −$29K to Capacity)</span>
+            </div>
+            <button class="btn" style="padding: 10px 16px; margin: 0; font-size: 10px;" onclick="testRecommendation()">Test Impact</button>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin-bottom: 60px;">
+          <button class="btn btn-outline" id="btn-toggle-fragility" style="font-size: 10px; padding: 12px 24px;">See All Fragility Insights ↓</button>
+      </div>
+      
+      <div id="fragility-expanded-section" style="display: none; opacity: 0; transition: opacity 0.4s ease;">
+          <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 40px;">
+              <div style="font-family: var(--font-serif); font-style: italic; font-size: 24px; margin-bottom: 8px;">What Moves Your Range</div>
+              <div style="font-size: 12px; color: var(--muted); line-height: 1.6; max-width: 600px;">Your plan has a shape. Fragility shows you where it bends. One clear picture of where your plan is strongest and where it needs attention.</div>
+              <div class="frag-grid" id="frag-cards" style="display: grid;"></div>
+          </div>
+      </div>
+
+      <div class="reveal-footer">
+        <div class="footer-summary" onclick="toggleDetails()"><span>Not a guess. A range — built from four probabilistic models, a dedicated stress battery, and your actual financial life.</span><span id="toggle-icon">[+] Show Math</span></div>
+        <div id="footer-details" class="footer-details">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+              <div>
+                <div class="math-title">Active Methodology & Weighting</div>
+                <div class="math-text"><span>├──</span> <strong>40%</strong> CAPE-Adjusted Monte Carlo</div>
+                <div class="math-text"><span>├──</span> <strong>30%</strong> Regime Block Bootstrap</div>
+                <div class="math-text"><span>├──</span> <strong>15%</strong> Historical Bootstrap</div>
+                <div class="math-text"><span>├──</span> <strong>15%</strong> Parametric Log-Normal</div>
+                <div class="math-text"><span>└──</span> <strong style="color: var(--danger-red);">Stress Battery</strong> (Unweighted): 1929, Stagflation, Japan</div>
+              </div>
+              <div>
+                <div class="math-title">Model Alignment Diagnostics</div>
+                <div id="conv-math-container"></div>
+              </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 40px; text-align: center;">
+        <button class="btn" onclick="goToScreen(2)">Reset Blueprint</button>
+      </div>
+    </div>
+
+    <!-- Fast-path (hasLoadedOnce) loading overlay for Screen 4 -->
+    <div id="s4-loading-overlay" class="s4-loading-overlay">
+        <div style="font-family:var(--font-mono); font-size:12px; text-transform:uppercase; letter-spacing:0.25em; color:var(--teal-mid); animation:pulse 1.8s ease-in-out infinite; margin-bottom:12px;">Recalculating...</div>
+        <div style="font-size:11px; color:var(--muted);">Applying your updated inputs</div>
+    </div>
+  </div>
+
+  <script>
+    if ('scrollRestoration' in history) { history.scrollRestoration = 'manual'; }
+    const $ = id => document.getElementById(id);
+
+    // ─── State ────────────────────────────────────────────────────────────────
+    let BEDROCK = 104000, CAPSTONE = 165000, FOUNDATION = 0, KEYSTONE = 0;
+    let LEGACY_P50 = 10778000, API_DATUM_SPEND = 120000;
+    let hasLoadedOnce = false;
+    let currentOutlook = 'cape';
+
+    // Defaults for verdict bar before first API call
+    window._highestYieldAction = 'Inflation → 4%';
+    window._highestYieldDelta  = -20000;
+
+    // ─── Formatters ───────────────────────────────────────────────────────────
+    const formatMoney = n => '$' + Math.round(n).toLocaleString('en-US');
+    const formatM     = n => '$' + (n / 1000000).toFixed(2) + 'M';
+    const formatDelta = n => n > 0 ? `+$${(Math.abs(n)/1000).toFixed(0)}K` : `−$${(Math.abs(n)/1000).toFixed(0)}K`;
+
+    // ─── Outlook & SS maps ────────────────────────────────────────────────────
+    const OUTLOOK_API_MAP = {
+        history: 'history_repeats', cape: 'valuations_matter',
+        cautious: 'cautious', optimistic: 'optimistic', custom: 'custom'
+    };
+    const SS_MAP = {
+        'Optimal (Age 70)': 'optimal_70',
+        'Full (Age 67)':    'full_67',
+        'Early (Age 62)':   'early_62'
+    };
+
+    // ─── Outlook selector ─────────────────────────────────────────────────────
+    function selectOutlook(el, type) {
+        document.querySelectorAll('.outlook-card').forEach(c => c.classList.remove('active'));
+        el.classList.add('active');
+        currentOutlook = type;
+    }
+
+    // ─── Build API request body from form ─────────────────────────────────────
+    function buildAPIRequest() {
+        const currentAge  = parseInt($('p-age').value, 10) || 43;
+        const retireAge   = parseInt($('p-retire-age').value, 10) || 53;
+        const datumSpend  = parseInt($('datum-input').value.replace(/[^\d]/g, ''), 10) || 120000;
+        const ssPrimary   = SS_MAP[$('p-ss-strategy').value] || 'optimal_70';
+        const outlook     = OUTLOOK_API_MAP[currentOutlook] || 'valuations_matter';
+
+        const accounts = [];
+        document.querySelectorAll('.bp-room[data-account-type]').forEach(room => {
+            const accountType  = room.getAttribute('data-account-type');
+            const balInput     = room.querySelector('.room-input');
+            const contribInput = room.querySelector('.r-contrib input[type="text"]');
+            const freqSelect   = room.querySelector('.r-contrib select');
+            const balance      = parseInt((balInput?.value  || '0').replace(/[^\d]/g, ''), 10) || 0;
+            const rawContrib   = parseInt((contribInput?.value || '0').replace(/[^\d]/g, ''), 10) || 0;
+            const isMonthly    = freqSelect?.value === 'Monthly';
+            accounts.push({ type: accountType, balance, annual_contribution: isMonthly ? rawContrib * 12 : rawContrib });
+        });
+
+        const body = { current_age: currentAge, retirement_age: retireAge, location: 'FL', datum_spend: datumSpend, market_outlook: outlook, ss_strategy_primary: ssPrimary, accounts };
+
+        const coCheck = $('p-co-check');
+        if (coCheck && coCheck.checked) {
+            const coAge = parseInt($('p-co-age').value, 10);
+            const coSS  = SS_MAP[$('p-co-ss').value] || 'optimal_70';
+            if (!isNaN(coAge)) { body.co_architect_age = coAge; body.ss_strategy_secondary = coSS; }
+        }
+        return body;
+    }
+
+    // ─── API call ─────────────────────────────────────────────────────────────
+    function callAPI() {
+        return fetch('https://api.datumfi.com/api/calculate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(buildAPIRequest())
+        }).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+    }
+
+    // ─── Error overlay ────────────────────────────────────────────────────────
+    function showAPIError() {
+        hasLoadedOnce = false;
+        const btn = $('trigger-btn');
+        if (btn) { btn.disabled = false; btn.innerText = 'Reveal Your Range'; }
+        const pulsing = $('s3-pulsing');
+        if (pulsing) pulsing.style.display = 'none';
+        goToScreen(3);
+        setTimeout(() => {
+            const err = $('s3-error');
+            if (err) err.style.display = 'flex';
+        }, 100);
+    }
+    function hideAPIError() {
+        const err = $('s3-error');
+        if (err) err.style.display = 'none';
+    }
+
+    // ─── Populate Screen 4 from API data ──────────────────────────────────────
+    function populateScreen4(data) {
+        BEDROCK         = data.tiers.blended.bedrock;
+        CAPSTONE        = data.tiers.blended.capstone;
+        FOUNDATION      = data.tiers.blended.foundation;
+        KEYSTONE        = data.tiers.blended.keystone;
+        LEGACY_P50      = data.legacy.blended_p50;
+        API_DATUM_SPEND = data.params.datum_spend;
+
+        // Tier spend labels
+        if ($('val-capstone'))  $('val-capstone').innerText  = formatMoney(CAPSTONE)  + ' / yr';
+        if ($('bal-capstone'))  $('bal-capstone').innerText  = formatM(CAPSTONE * 25);
+        if ($('val-bedrock'))   $('val-bedrock').innerText   = formatMoney(BEDROCK)   + ' / yr';
+        if ($('bal-bedrock'))   $('bal-bedrock').innerText   = formatM(BEDROCK * 25);
+        if ($('val-foundation'))$('val-foundation').innerText = formatMoney(FOUNDATION) + ' / yr';
+        if ($('val-keystone'))  $('val-keystone').innerText  = formatMoney(KEYSTONE)  + ' / yr';
+
+        // Slider range
+        const slider = $('slider-spend');
+        if (slider) {
+            slider.min   = Math.round(BEDROCK * 0.65);
+            slider.max   = Math.round(CAPSTONE * 1.25);
+            slider.value = API_DATUM_SPEND;
+        }
+        if ($('inline-datum-input')) $('inline-datum-input').value = API_DATUM_SPEND.toLocaleString('en-US');
+        if ($('val-disp-spend'))     $('val-disp-spend').innerText  = formatMoney(API_DATUM_SPEND) + ' / yr';
+
+        // Fragility & show-math sections
+        initFragilityFromAPI(data);
+        renderShowMath(data);
+    }
+
+    // ─── Fragility cards from API ──────────────────────────────────────────────
+    function initFragilityFromAPI(data) {
+        const scenarios = data.fragility.scenarios;
+        const fragScore = data.fragility.fragility_score;
+        const fragLabel = data.fragility.fragility_label;
+
+        // Highest-yield: largest absolute negative delta
+        let highestKey = null, highestDelta = 0;
+        Object.entries(scenarios).forEach(([k, s]) => {
+            if (s.delta < highestDelta) { highestDelta = s.delta; highestKey = k; }
+        });
+        window._highestYieldAction = highestKey ? scenarios[highestKey].label : 'Portfolio −20%';
+        window._highestYieldDelta  = highestDelta;
+
+        // Build fragility cards
+        let html = '';
+        Object.entries(scenarios).forEach(([, s]) => {
+            const color = s.delta >= 0 ? 'var(--teal-mid)' : 'var(--danger-red)';
+            html += `<div class="frag-card" style="border-left: 2px solid ${color};">
+                <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;">
+                    <div style="font-family:var(--font-serif); font-style:italic; font-size:18px;">${s.label}</div>
+                    <div style="font-family:var(--font-mono); font-size:12px; flex-shrink:0; margin-left:8px;">Keystone → <span style="color:${color}">${formatDelta(s.delta)}</span></div>
+                </div>
+                <div style="font-size:11px; color:var(--muted); line-height:1.5;">${s.description}</div>
+            </div>`;
+        });
+        if ($('frag-cards')) $('frag-cards').innerHTML = html;
+
+        // Fragility score in "Show Math"
+        const fragEl = $('frag-score-display');
+        if (fragEl) fragEl.innerText = `${fragScore}/100 — ${fragLabel}`;
+
+        // Toggle button (attach only once)
+        const btn = $('btn-toggle-fragility');
+        if (btn && !btn._listenerAdded) {
+            btn._listenerAdded = true;
+            btn.addEventListener('click', function() {
+                const sec = $('fragility-expanded-section');
+                if (sec.style.display === 'none') {
+                    sec.style.display = 'block';
+                    setTimeout(() => { sec.style.opacity = '1'; }, 50);
+                    this.innerText = 'Hide Fragility Insights ↑';
+                } else {
+                    sec.style.opacity = '0';
+                    setTimeout(() => { sec.style.display = 'none'; }, 400);
+                    this.innerText = 'See All Fragility Insights ↓';
+                }
+            });
+        }
+    }
+
+    // ─── Show Math section from API ────────────────────────────────────────────
+    function renderShowMath(data) {
+        const w  = data.tiers.weights;
+        const sr = data.success_rates;
+        const p  = n => (n * 100).toFixed(0) + '%';
+        const s  = k => sr[k] !== undefined ? (sr[k] * 100).toFixed(2) + '%' : 'N/A';
+
+        const stressHTML = data.stress.all_survived
+            ? '<span style="color:var(--teal)">All Survived ✓</span>'
+            : '<span style="color:var(--danger-red)">Not All Survived</span>';
+
+        const lhsHtml = `
+            <div class="math-title">Active Methodology &amp; Weighting</div>
+            <div class="math-text"><span>├──</span> <strong>${p(w.cape)}</strong> CAPE-Adjusted — ${s('cape')} success</div>
+            <div class="math-text"><span>├──</span> <strong>${p(w.regime)}</strong> Regime Bootstrap — ${s('regime')} success</div>
+            <div class="math-text"><span>├──</span> <strong>${p(w.bootstrap)}</strong> Historical Bootstrap — ${s('bootstrap')} success</div>
+            <div class="math-text"><span>├──</span> <strong>${p(w.parametric)}</strong> Parametric Log-Normal — ${s('parametric')} success</div>
+            <div class="math-text"><span>└──</span> <strong style="color:var(--danger-red)">Stress Battery</strong>: ${stressHTML}</div>
+        `;
+        const rhsHtml = `
+            <div class="math-title">Model Alignment Diagnostics</div>
+            <div class="math-text"><span>▶</span> <strong>Alignment Score:</strong> ${data.convergence.score}/100 — ${data.convergence.label}</div>
+            <div class="math-text"><span>▶</span> <strong>Fragility Score:</strong> ${data.fragility.fragility_score}/100 — ${data.fragility.fragility_label}</div>
+            <div class="math-text"><span>▶</span> <strong>Portfolio @ Retirement:</strong> ${formatM(data.params.portfolio_at_retirement)}</div>
+            <div class="math-text"><span>▶</span> <strong>Foundation Tier:</strong> ${formatMoney(data.tiers.blended.foundation)} / yr</div>
+            <div class="math-text"><span>▶</span> <strong>Keystone Tier:</strong> ${formatMoney(data.tiers.blended.keystone)} / yr</div>
+            <div class="math-text"><span>▶</span> <strong>Est. Legacy P50:</strong> ${formatM(data.legacy.blended_p50)}</div>
+            <div class="math-text"><span>▶</span> <strong>Computation:</strong> ${data.computation_time_s.toFixed(2)}s across 40,000 simulations</div>
+        `;
+
+        const fd = $('footer-details');
+        if (fd) fd.innerHTML = `<div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;"><div>${lhsHtml}</div><div>${rhsHtml}</div></div>`;
+    }
+
+    // ─── Geometry helpers ─────────────────────────────────────────────────────
+    function valToY(val) {
+        return 350 - ((val - BEDROCK) / (CAPSTONE - BEDROCK)) * 300;
+    }
+    function clampLabel(y) { return Math.max(20, Math.min(380, y)); }
+    function getFunnelPath(targetY) {
+        const ox = window.innerWidth <= 650 ? 20 : 40;
+        const oy = 200, cx = 300;
+        const W  = window.innerWidth <= 650 ? window.innerWidth - 60 : 760;
+        return `M${ox},${oy} C${ox+100},${oy} ${cx-100},${targetY} ${cx},${targetY} L${W},${targetY}`;
+    }
+
+    // ─── Slider handler (local interpolation only, no API call) ───────────────
+    function handleSliderChange() {
+        const spend = parseInt($('slider-spend').value);
+        if ($('val-disp-spend')) $('val-disp-spend').innerText = formatMoney(spend) + ' / yr';
+        updateVRange(spend, true);
+    }
+
+    // ─── Main visual update ───────────────────────────────────────────────────
+    function updateVRange(datumVal, updateInput = true) {
+        const H      = 400;
+        const CEIL_Y = valToY(CAPSTONE);
+        const FLOR_Y = valToY(BEDROCK);
+        const yDat   = valToY(datumVal);
+
+        // Tier spend labels
+        if ($('val-capstone'))   $('val-capstone').innerText   = formatMoney(CAPSTONE)   + ' / yr';
+        if ($('bal-capstone'))   $('bal-capstone').innerText   = formatM(CAPSTONE * 25);
+        if ($('val-bedrock'))    $('val-bedrock').innerText    = formatMoney(BEDROCK)     + ' / yr';
+        if ($('bal-bedrock'))    $('bal-bedrock').innerText    = formatM(BEDROCK * 25);
+
+        // Tier label positions
+        if ($('lbl-ceiling'))    $('lbl-ceiling').style.top    = `${(clampLabel(CEIL_Y)/H)*100}%`;
+        if ($('lbl-floor'))      $('lbl-floor').style.top      = `${(clampLabel(FLOR_Y)/H)*100}%`;
+        if (FOUNDATION > 0 && $('lbl-foundation')) {
+            $('lbl-foundation').style.top = `${(clampLabel(valToY(FOUNDATION))/H)*100}%`;
+        }
+        if (KEYSTONE > 0 && $('lbl-keystone')) {
+            $('lbl-keystone').style.top = `${(clampLabel(valToY(KEYSTONE))/H)*100}%`;
+        }
+
+        // Datum box position
+        const dynDatum = $('dynamic-datum');
+        if (dynDatum) dynDatum.style.top = `${(clampLabel(yDat)/H)*100}%`;
+
+        // SVG paths
+        if ($('svg-ceiling'))    $('svg-ceiling').setAttribute('d', getFunnelPath(CEIL_Y));
+        if ($('svg-floor'))      $('svg-floor').setAttribute('d',   getFunnelPath(FLOR_Y));
+        if ($('svg-datum'))      $('svg-datum').setAttribute('d',    getFunnelPath(yDat));
+        if (FOUNDATION > 0 && $('svg-foundation')) $('svg-foundation').setAttribute('d', getFunnelPath(valToY(FOUNDATION)));
+        if (KEYSTONE   > 0 && $('svg-keystone'))   $('svg-keystone').setAttribute('d',   getFunnelPath(valToY(KEYSTONE)));
+
+        // Legacy (linear interpolation from API datum spend)
+        const legacyEst = Math.max(0, LEGACY_P50 + (API_DATUM_SPEND - datumVal) * 150);
+        if ($('legacy-text-span'))  $('legacy-text-span').innerText  = 'Est. Legacy: ' + formatM(legacyEst);
+        if ($('datum-bal-display')) $('datum-bal-display').innerText = formatM(datumVal * 25);
+
+        // Buffer display (below floor = good = green)
+        const bufDisp   = $('buffer-display');
+        const bufferAmt = datumVal - BEDROCK;
+        if (bufDisp) {
+            if (bufferAmt >= 0) {
+                bufDisp.innerText    = formatMoney(bufferAmt) + ' / yr Buffer above Survival Floor';
+                bufDisp.style.color  = 'var(--teal)';
+            } else {
+                bufDisp.innerText    = formatMoney(Math.abs(bufferAmt)) + ' / yr below Survival Floor — maximum safety margin';
+                bufDisp.style.color  = 'var(--teal)';
+            }
+        }
+
+        // Verdict zone
+        const RANGE_SPREAD = CAPSTONE - BEDROCK;
+        const pct = RANGE_SPREAD > 0 ? (datumVal - BEDROCK) / RANGE_SPREAD : 0;
+
+        const vBox = $('verdict-container');
+        const vLine = $('verdict-line');
+        const vSub  = $('verdict-sub');
+        const vAct  = $('verdict-action');
+        const vaL   = $('va-label');
+        const vaD   = $('va-desc');
+        if (vBox) vBox.className = 'verdict-box';
+
+        const HA  = window._highestYieldAction;
+        const HD  = window._highestYieldDelta;
+        const keySensText = `${HA} (Impact: ${formatDelta(HD)} to Capacity)`;
+
+        if (pct < 0) {
+            vBox?.classList.add('state-green');
+            if (vLine) vLine.innerText = 'Your spending target is well below the Survival Floor — maximum durability.';
+            if (vSub)  vSub.innerText  = 'Ultra-conservative positioning producing maximum surplus and legacy.';
+            if (vaL)   { vaL.innerText = 'KEY SENSITIVITY'; vaL.style.color = 'var(--orange)'; if(vAct) vAct.style.borderColor = 'rgba(255,255,255,0.1)'; if(vaD) vaD.innerText = keySensText; }
+        } else if (pct <= 0.3) {
+            vBox?.classList.add('state-green');
+            if (vLine) vLine.innerText = 'Your plan is highly secure.';
+            if (vSub)  vSub.innerText  = 'You are maximizing plan durability and legacy.';
+            if (vaL)   { vaL.innerText = 'KEY SENSITIVITY'; vaL.style.color = 'var(--orange)'; if(vAct) vAct.style.borderColor = 'rgba(255,255,255,0.1)'; if(vaD) vaD.innerText = keySensText; }
+        } else if (pct <= 0.7) {
+            vBox?.classList.add('state-blue');
+            if (vLine) vLine.innerText = 'Your plan is operating safely.';
+            if (vSub)  vSub.innerText  = 'You are well within the core capacity of your mathematical range.';
+            if (vaL)   { vaL.innerText = 'KEY SENSITIVITY'; vaL.style.color = 'var(--orange)'; if(vAct) vAct.style.borderColor = 'rgba(255,255,255,0.1)'; if(vaD) vaD.innerText = keySensText; }
+        } else if (pct <= 1) {
+            vBox?.classList.add('state-amber');
+            if (vLine) vLine.innerText = 'Your plan is pushing against its structural limits.';
+            if (vSub)  vSub.innerText  = 'You are maximizing lifestyle at the expense of legacy buffer.';
+            if (vaL)   { vaL.innerText = 'KEY SENSITIVITY'; vaL.style.color = 'var(--orange)'; if(vAct) vAct.style.borderColor = 'rgba(255,255,255,0.1)'; if(vaD) vaD.innerText = keySensText; }
+        } else {
+            vBox?.classList.add('state-red');
+            const reduction = datumVal - CAPSTONE;
+            if (vLine) vLine.innerText = 'Target spend exceeds structural ceiling!';
+            if (vSub)  vSub.innerText  = 'A structural revision is required.';
+            if (vaL)   { vaL.innerText = 'REQUIRED STABILIZATION'; vaL.style.color = 'var(--danger-red)'; if(vAct) vAct.style.borderColor = 'rgba(226,75,74,0.3)'; if(vaD) vaD.innerText = `Reduce spending by ${formatMoney(reduction)}/yr — or test a delay.`; }
+        }
+
+        if (updateInput && $('inline-datum-input') && document.activeElement !== $('inline-datum-input')) {
+            $('inline-datum-input').value = datumVal.toLocaleString('en-US');
+        }
+    }
+
+    // ─── Screen navigation ────────────────────────────────────────────────────
+    function goToScreen(n) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        setTimeout(() => { if ($('screen' + n)) $('screen' + n).classList.add('active'); window.scrollTo(0, 0); }, 50);
+        // Restore brand signature whenever leaving Screen 3
+        if (n !== 3) {
+            const els = [$('sig-datum-text'), $('sig-f-text'), $('sig-i-text'), $('sig-bar-real')];
+            els.forEach(el => { if (el) { el.style.transition = 'opacity 0.5s ease'; el.style.opacity = '1'; } });
+        }
+    }
+
+    // ─── startLoading: entry point for "Reveal Your Range" ───────────────────
+    function startLoading() {
+        hideAPIError();
+        const rawVal = parseInt($('datum-input').value.replace(/[^\d]/g, ''), 10) || 120000;
+        if ($('inline-datum-input')) $('inline-datum-input').value = rawVal.toLocaleString('en-US');
+        if ($('slider-spend'))       $('slider-spend').value = rawVal;
+
+        // ── Fast path: skip all animation, go straight to Screen 4 ──────────
+        if (hasLoadedOnce) {
+            goToScreen(4);
+            const overlay = $('s4-loading-overlay');
+            if (overlay) overlay.classList.add('visible');
+            callAPI()
+                .then(data => {
+                    if (overlay) overlay.classList.remove('visible');
+                    populateScreen4(data);
+                    handleSliderChange();
+                })
+                .catch(() => {
+                    if (overlay) overlay.classList.remove('visible');
+                    showAPIError();
+                });
+            return;
+        }
+
+        // ── First-time cinematic path ────────────────────────────────────────
+        hasLoadedOnce = true;
+        const btn = $('trigger-btn');
+        if (btn) { btn.disabled = true; btn.innerText = 'Simulating Range...'; }
+
+        // Start API fetch immediately — runs in parallel with the entire animation
+        const apiPromise = callAPI();
+
+        // Shorthand refs
+        const fc        = $('flying-catalyst');
+        const line      = $('s3-line');
+        const tTop      = $('s3-top'),      tBot    = $('s3-bot');
+        const sigDatum  = $('sig-datum-text'), sigF  = $('sig-f-text'),
+              sigI      = $('sig-i-text'),   sigBar  = $('sig-bar-real');
+        const pulsingEl = $('s3-pulsing');
+        const datumPath = $('svg-datum'),   dynDat  = $('dynamic-datum');
+        const ceilPath  = $('svg-ceiling'), floorPath = $('svg-floor');
+        const lblC      = $('lbl-ceiling'), lblF    = $('lbl-floor');
+        const vCon      = $('v-origin');
+        const ephPaths  = document.querySelectorAll('.eph-path');
+
+        // ── Reset Screen 4 state ──────────────────────────────────────────────
+        if (datumPath) datumPath.style.opacity = '0';
+        if (dynDat)   { dynDat.style.opacity = '0'; dynDat.style.pointerEvents = 'none'; }
+        if (vCon)       vCon.style.opacity = '1';
+        if (ceilPath)   ceilPath.setAttribute('d', getFunnelPath(200));
+        if (floorPath)  floorPath.setAttribute('d', getFunnelPath(200));
+        if (lblC)      { lblC.style.top = '50%'; lblC.style.opacity = '0'; }
+        if (lblF)      { lblF.style.top = '50%'; lblF.style.opacity = '0'; }
+        if ($('controls-panel')) $('controls-panel').classList.remove('active');
+        ephPaths.forEach(p => { p.setAttribute('d', getFunnelPath(200)); p.style.opacity = '0'; });
+
+        // ── Reset Screen 3 state ──────────────────────────────────────────────
+        if (line)      { line.style.transition = 'none'; line.style.width = '0'; line.style.opacity = '1'; }
+        if (tTop)      { tTop.style.transition = 'none'; tTop.classList.remove('show-text'); }
+        if (tBot)      { tBot.style.transition = 'none'; tBot.classList.remove('show-text'); }
+        if (pulsingEl)   pulsingEl.style.display = 'none';
+
+        // ── Measure brand-sig container position before switching screens ────────
+        // We'll clone the entire brand sig and float it to center as a fixed overlay.
+        const brandSig  = $('brand-sig');
+        const brandRect = brandSig ? brandSig.getBoundingClientRect()
+                                   : { left: window.innerWidth - 80, top: 16, width: 64, height: 22 };
+
+        // ── Create fixed clone of brand sig — overlays the real one ─────────────
+        // The clone floats to screen center at 3x scale, then dissolves.
+        const sigClone = brandSig ? brandSig.cloneNode(true) : null;
+        if (sigClone) {
+            sigClone.id = 'brand-sig-float';
+            sigClone.style.cssText = [
+                'position:fixed',
+                'top:'    + brandRect.top  + 'px',
+                'left:'   + brandRect.left + 'px',
+                'transform:scale(1)',
+                'transform-origin:top left',
+                'transition:none',
+                'z-index:300',
+                'pointer-events:none',
+                'margin:0',
+                'padding:0',
+            ].join(';');
+            document.body.appendChild(sigClone);
+        }
+
+        // ── Pre-position fc offscreen (invisible) — repositioned during handoff ─
+        if (fc) {
+            fc.style.transition   = 'none';
+            fc.style.opacity      = '0';
+            fc.style.width        = '2px';
+            fc.style.height       = '18px';
+            fc.style.borderRadius = '1px';
+            fc.style.boxShadow    = '0 0 8px rgba(201,168,76,0.4)';
+            fc.style.transform    = 'none';
+            fc.style.left         = '-200px';
+            fc.style.top          = '-200px';
+        }
+
+        // Switch to Screen 3; hide the original brand sig elements behind the clone
+        goToScreen(3);
+        if (sigDatum) { sigDatum.style.transition = 'none'; sigDatum.style.opacity = '0'; }
+        if (sigF)     { sigF.style.transition     = 'none'; sigF.style.opacity     = '0'; }
+        if (sigI)     { sigI.style.transition     = 'none'; sigI.style.opacity     = '0'; }
+        if (sigBar)   { sigBar.style.transition   = 'none'; sigBar.style.opacity   = '0'; }
+        if (fc) void fc.offsetWidth; // force reflow
+
+        // ────────────────────────────────────────────────────────────────────────
+        // Timeline constants (all ms from animation start)
+        // ────────────────────────────────────────────────────────────────────────
+        // Phase 0  Float:       50 → 1550ms  (1.5s glide + 1s hold = 2550ms total)
+        // Phase 1  Dissolution: 2550 → 3850ms (DATUM 0.8s, F/I 0.5s)
+        // Phase 1→2 Handoff:    3850ms        (fc appears at clone bar position)
+        // Phase 2  Pivot:       3950 → 4700ms (center + rotate)
+        // Phase 3  Collapse:    4600 → 5100ms
+        // Phase 4  Sweep left:  5100 → 5600ms
+        // Phase 5  Ignition:    5600ms → 10500ms (bullet 3s + text sequence ~5s)
+        //   "Forty thousand futures." in 0.5s | hold 1.5s | out 0.5s
+        //   "One Range."             in 0.5s | hold 1.5s | out 0.5s  (sequential)
+        // Phase 6  Drift:       11000ms+ (fills API wait)
+        // ────────────────────────────────────────────────────────────────────────
+        const P1_START = 2550;              // dissolution begins after float+hold
+        const P2_START = P1_START + 1300;   // 3850ms — handoff after F/I gone
+        const P3_START = P2_START + 750;    // 4600ms
+        const P4_START = P3_START + 500;    // 5100ms
+        const P5_START = P4_START + 500;    // 5600ms
+        // Text done: P5_START + 900+1500+500 + 500+1500+500 = P5_START+5400 = 11000ms
+        const ANIM_DONE = P5_START + 5400 + 500; // 11500ms with 500ms buffer
+
+        // ════════════════════════════════════════════════════════════════════
+        // PHASE 0 — Float brand to center (50ms → 2550ms)
+        // Clone glides from top-right to screen center, scaling to 3x.
+        // Holds ~1s so the user sees the brand prominently before dissolution.
+        // ════════════════════════════════════════════════════════════════════
+        setTimeout(() => {
+            if (!sigClone) return;
+            // Center the 3x-scaled clone: shift by (width*3)/2 and (height*3)/2
+            const targetX = Math.round(window.innerWidth  / 2 - (brandRect.width  * 3) / 2);
+            const targetY = Math.round(window.innerHeight / 2 - (brandRect.height * 3) / 2);
+            sigClone.style.transition = [
+                'transform 1.5s cubic-bezier(0.4,0,0.2,1)',
+                'top 1.5s cubic-bezier(0.4,0,0.2,1)',
+                'left 1.5s cubic-bezier(0.4,0,0.2,1)',
+            ].join(',');
+            sigClone.style.transform = 'scale(3)';
+            sigClone.style.top       = targetY + 'px';
+            sigClone.style.left      = targetX + 'px';
+        }, 50);
+
+        // ════════════════════════════════════════════════════════════════════
+        // PHASE 1 — Brand Dissolution (2550ms → 3850ms)
+        // Clone is centered at 3x. DATUM fades (0.8s), then F and I fade (0.5s).
+        // Gold bar remains floating at screen center — it is the catalyst.
+        // ════════════════════════════════════════════════════════════════════
+        setTimeout(() => {
+            if (!sigClone) return;
+            const cDatum = sigClone.querySelector('[id="sig-datum-text"]');
+            const cF     = sigClone.querySelector('[id="sig-f-text"]');
+            const cI     = sigClone.querySelector('[id="sig-i-text"]');
+
+            if (cDatum) { cDatum.style.transition = 'opacity 0.8s ease'; cDatum.style.opacity = '0'; }
+
+            // F and I follow 700ms after DATUM starts
+            setTimeout(() => {
+                if (cF) { cF.style.transition = 'opacity 0.5s ease'; cF.style.opacity = '0'; }
+                if (cI) { cI.style.transition = 'opacity 0.5s ease'; cI.style.opacity = '0'; }
+            }, 700);
+        }, P1_START);
+
+        // ════════════════════════════════════════════════════════════════════
+        // PHASE 1→2 HANDOFF (3850ms)
+        // F/I fully gone. Measure clone bar's actual rendered position via
+        // getBoundingClientRect() (works through CSS transforms). Position fc
+        // there, crossfade: fc fades in, clone bar fades out. Remove clone.
+        // Then Phase 2: fc glides to exact center + rotates.
+        // ════════════════════════════════════════════════════════════════════
+        setTimeout(() => {
+            const cBar   = sigClone ? sigClone.querySelector('[id="sig-bar-real"]') : null;
+            const cbRect = cBar ? cBar.getBoundingClientRect()
+                                : { left: window.innerWidth / 2, top: window.innerHeight / 2 - 27, width: 6, height: 54 };
+
+            // Position fc at clone bar's rendered position (Screen 3 absolute = viewport coords)
+            if (fc) {
+                fc.style.transition   = 'none';
+                fc.style.width        = cbRect.width  + 'px';
+                fc.style.height       = cbRect.height + 'px';
+                fc.style.left         = cbRect.left   + 'px';
+                fc.style.top          = cbRect.top    + 'px';
+                fc.style.borderRadius = '2px';
+                fc.style.boxShadow    = '0 0 16px rgba(201,168,76,0.7)';
+                fc.style.transform    = 'none';
+                void fc.offsetWidth;
+                fc.style.transition   = 'opacity 0.3s ease';
+                fc.style.opacity      = '1';
+            }
+            // Fade out clone bar as fc fades in
+            if (cBar) { cBar.style.transition = 'opacity 0.3s ease'; cBar.style.opacity = '0'; }
+            // Remove clone after crossfade
+            setTimeout(() => {
+                if (sigClone && sigClone.parentNode) sigClone.parentNode.removeChild(sigClone);
+            }, 400);
+
+            // ── PHASE 2 — Center & Pivot (fc is already near center; refine + rotate)
+            setTimeout(() => {
+                const cx = Math.round(window.innerWidth  / 2 - cbRect.width  / 2);
+                const cy = Math.round(window.innerHeight / 2 - cbRect.height / 2);
+                if (fc) {
+                    fc.style.transition = 'left 0.5s cubic-bezier(0.4,0,0.2,1), top 0.5s cubic-bezier(0.4,0,0.2,1)';
+                    fc.style.left = cx + 'px';
+                    fc.style.top  = cy + 'px';
+                }
+                // Rotate to horizontal 250ms into the glide
+                setTimeout(() => {
+                    if (fc) {
+                        fc.style.transition = 'left 0.3s ease, top 0.3s ease, transform 0.5s cubic-bezier(0.4,0,0.2,1)';
+                        fc.style.transform  = 'rotate(90deg)';
+                    }
+                }, 250);
+            }, 100);
+        }, P2_START);
+
+        // ════════════════════════════════════════════════════════════════════
+        // PHASE 3 — Collapse to dot (4600ms → 5100ms)
+        // ════════════════════════════════════════════════════════════════════
+        setTimeout(() => {
+            if (fc) {
+                fc.style.transition   = 'width 0.5s ease, height 0.5s ease, border-radius 0.5s ease, box-shadow 0.4s ease, transform 0.3s ease';
+                fc.style.width        = '12px';
+                fc.style.height       = '12px';
+                fc.style.borderRadius = '50%';
+                fc.style.boxShadow    = '0 0 22px rgba(201,168,76,0.9)';
+                fc.style.transform    = 'none';
+            }
+        }, P3_START);
+
+        // ════════════════════════════════════════════════════════════════════
+        // PHASE 4 — Sweep left (5100ms → 5600ms)
+        // ════════════════════════════════════════════════════════════════════
+        setTimeout(() => {
+            const trackTop = Math.round(window.innerHeight / 2 - 6);
+            if (fc) {
+                fc.style.transition = 'left 0.5s cubic-bezier(0.4,0,0.2,1), top 0.5s cubic-bezier(0.4,0,0.2,1)';
+                fc.style.left = '40px';
+                fc.style.top  = trackTop + 'px';
+            }
+        }, P4_START);
+
+        // ════════════════════════════════════════════════════════════════════
+        // PHASE 5 — Ignition + Text (5600ms → 11000ms)
+        // Bullet shoots right (3s). Text is sequential, not overlapping:
+        //   "Forty thousand futures." — fade in 0.5s | hold 1.5s | fade out 0.5s
+        //   "One Range."             — fade in 0.5s | hold 1.5s | fade out 0.5s
+        // Both lines are fully readable; total text sequence ~5s.
+        // ════════════════════════════════════════════════════════════════════
+        setTimeout(() => {
+            const rightEdge  = window.innerWidth - 40 - 12;
+            const trailWidth = rightEdge - 40;
+
+            if (fc) {
+                fc.style.transition = 'left 3.0s cubic-bezier(0.6,0,0.2,1)';
+                fc.style.left = rightEdge + 'px';
+            }
+            if (line) {
+                line.style.transition = 'width 3.0s cubic-bezier(0.6,0,0.2,1)';
+                line.style.width = trailWidth + 'px';
+            }
+
+            // "Forty thousand futures." fades in as dot crosses ~30% of screen (~900ms)
+            setTimeout(() => {
+                if (tTop) { tTop.style.transition = 'opacity 0.5s ease'; tTop.classList.add('show-text'); }
+                // Hold 1.5s, then fade out over 0.5s
+                setTimeout(() => {
+                    if (tTop) { tTop.style.transition = 'opacity 0.5s ease'; tTop.classList.remove('show-text'); }
+                    // "One Range." starts only AFTER "Forty thousand futures." is fully gone (500ms = fade duration)
+                    setTimeout(() => {
+                        if (tBot) { tBot.style.transition = 'opacity 0.5s ease'; tBot.classList.add('show-text'); }
+                        // Hold 1.5s, then fade out over 0.5s
+                        setTimeout(() => {
+                            if (tBot) { tBot.style.transition = 'opacity 0.5s ease'; tBot.classList.remove('show-text'); }
+                        }, 1500);
+                    }, 500); // wait for tTop fade-out to complete
+                }, 1500);
+            }, 900);
+        }, P5_START);
+
+        // ════════════════════════════════════════════════════════════════════
+        // Animation milestone: ANIM_DONE (11500ms) — full cinematic complete.
+        // Phase 6 drift fills the remaining ~4s until API responds (~16s).
+        // If API already resolved during Phase 5, Phase 7 runs immediately
+        // after animDelay fires (both promises must resolve before Phase 7).
+        // ════════════════════════════════════════════════════════════════════
+        const animDelay = new Promise(resolve => setTimeout(resolve, ANIM_DONE));
+
+        animDelay
+            .then(() => {
+                // Ensure text is hidden before drift begins (safety flush)
+                if (tTop) { tTop.style.transition = 'opacity 0.3s ease'; tTop.classList.remove('show-text'); }
+                if (tBot) { tBot.style.transition = 'opacity 0.3s ease'; tBot.classList.remove('show-text'); }
+
+                // ── PHASE 6 — Drift (slow crawl right → left, ~25s full crossing)
+                // Interrupted by Phase 7 snap-back the moment API responds.
+                if (fc) {
+                    fc.style.transition = 'left 25s linear';
+                    fc.style.left = '40px';
+                }
+
+                if (pulsingEl) pulsingEl.style.display = 'block';
+
+                return apiPromise; // chains: waits for API if not yet done
+            })
+            .then(data => {
+                // ── PHASE 7 — Snap-back (API responded)
+                if (pulsingEl) pulsingEl.style.display = 'none';
+
+                if (fc) {
+                    // Freeze at current interpolated position, then snap
+                    const curLeft = parseFloat(getComputedStyle(fc).left);
+                    fc.style.transition = 'none';
+                    fc.style.left = curLeft + 'px';
+                    void fc.offsetWidth; // reflow to apply freeze
+                    fc.style.transition = 'left 0.3s cubic-bezier(0.8,0,0.1,1), opacity 0.3s ease 0.15s';
+                    fc.style.left    = '40px';
+                    fc.style.opacity = '0';
+                }
+                // Fade trail simultaneously
+                if (line) { line.style.transition = 'opacity 0.3s ease'; line.style.opacity = '0'; }
+
+                // Populate data, then reveal Screen 4 after snap completes
+                populateScreen4(data);
+
+                setTimeout(() => {
+                    goToScreen(4);
+                    setTimeout(() => {
+                        void $('screen4').offsetWidth;
+
+                        const ys = [75, 125, 175, 225, 275, 325, 375];
+                        ephPaths.forEach((p, i) => { p.setAttribute('d', getFunnelPath(ys[i])); p.style.opacity = '1'; });
+
+                        handleSliderChange();
+                        if (lblC) lblC.style.opacity = '1';
+                        if (lblF) lblF.style.opacity = '1';
+
+                        setTimeout(() => {
+                            if (datumPath) datumPath.style.opacity = '1';
+                            if (dynDat)   { dynDat.style.opacity = '1'; dynDat.style.pointerEvents = 'auto'; }
+                            if ($('controls-panel')) $('controls-panel').classList.add('active');
+                            if (btn) { btn.disabled = false; btn.innerText = 'Reveal Your Range'; }
+                        }, 800);
+                    }, 100);
+                }, 400); // wait for snap + fade to finish
+            })
+            .catch(() => {
+                showAPIError();
+            });
+    }
+
+    // ─── Test recommendation (Key Sensitivity button) ─────────────────────────
+    function testRecommendation() {
+        const HD = window._highestYieldDelta || -20000;
+        const newDatum = Math.max(
+            Math.round(BEDROCK * 0.65),
+            Math.round((KEYSTONE > 0 ? KEYSTONE : CAPSTONE) + HD)
+        );
+        if ($('inline-datum-input')) $('inline-datum-input').value = newDatum.toLocaleString('en-US');
+        if ($('slider-spend')) $('slider-spend').value = newDatum;
+        handleSliderChange();
+        if ($('v-container')) window.scrollTo({ top: $('v-container').offsetTop, behavior: 'smooth' });
+    }
+
+    // ─── Show Math toggle ─────────────────────────────────────────────────────
+    function toggleDetails() {
+        const details = $('footer-details');
+        const icon    = $('toggle-icon');
+        if (!details || !icon) return;
+        if (details.classList.contains('open')) {
+            details.classList.remove('open'); icon.innerText = '[+] Show Math';
+        } else {
+            details.classList.add('open'); icon.innerText = '[-] Hide Math';
+        }
+    }
+
+    // ─── Input wiring ─────────────────────────────────────────────────────────
+    function setupInputs() {
+        const d1 = $('datum-input');
+        const d2 = $('inline-datum-input');
+
+        const sync = val => {
+            const num = parseInt(val.replace(/[^\d]/g, ''), 10) || 1000;
+            if (d1) d1.value = num.toLocaleString('en-US');
+            if ($('slider-spend')) $('slider-spend').value = num;
+            handleSliderChange();
+        };
+        if (d1) d1.addEventListener('blur', e => sync(e.target.value));
+        if (d2) {
+            d2.addEventListener('input', e => {
+                const num = parseInt(e.target.value.replace(/[^\d]/g, ''), 10);
+                if (!isNaN(num)) {
+                    if (d1) d1.value = e.target.value;
+                    if ($('slider-spend')) $('slider-spend').value = num;
+                    handleSliderChange();
+                }
+            });
+            d2.addEventListener('blur', e => sync(e.target.value));
+            d2.addEventListener('click', e => e.stopPropagation());
+        }
+
+        if ($('slider-spend')) $('slider-spend').addEventListener('input', handleSliderChange);
+
+        // Room balance inputs: auto-format and update total
+        document.querySelectorAll('.room-input').forEach(input => {
+            input.addEventListener('input', function(e) {
+                const raw = e.target.value.replace(/[^\d]/g, '');
+                e.target.value = raw ? parseInt(raw, 10).toLocaleString('en-US') : '';
+                let total = 0;
+                document.querySelectorAll('.room-input').forEach(i => { total += parseInt(i.value.replace(/[^\d]/g, ''), 10) || 0; });
+                const lSq = $('live-sqft-input');
+                if (lSq) lSq.value = total.toLocaleString('en-US');
+            });
+        });
+
+        const lSq = $('live-sqft-input');
+        if (lSq) lSq.addEventListener('input', e => {
+            const raw = e.target.value.replace(/[^\d]/g, '');
+            e.target.value = raw ? parseInt(raw, 10).toLocaleString('en-US') : '';
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        setupInputs();
+        const dBox = $('datum-drag-box');
+        if (dBox) {
+            dBox.addEventListener('click', function(e) {
+                if (e.target.tagName.toLowerCase() === 'input') return;
+                this.classList.toggle('expanded');
+            });
+        }
+    });
+  </script>
+</body>
+</html>
