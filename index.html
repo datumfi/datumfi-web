@@ -9,7 +9,7 @@
   :root {--bg-navy:#091221; --grid-line:rgba(100,180,255,0.05); --teal:#1D9E75; --teal-mid:#5DCAA5; --gold:#C9A84C; --orange:#e68a4f; --keystone-blue:#4faae6; --bedrock-red:#c95c5c; --danger-red:#e24b4a; --white:#ffffff; --muted:rgba(255,255,255,0.4); --font-serif:'Fraunces', serif; --font-mono:'DM Mono', monospace;}
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
-  body { background-color: var(--bg-navy); background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px); background-size: 30px 30px; font-family: var(--font-mono); color: var(--white); overflow-x: hidden; }
+  body { background-color: var(--bg-navy); background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px); background-size: 30px 30px; font-family: var(--font-mono); color: var(--white); overflow-x: hidden; padding-top: 56px; }
   
   /* Layout & Screens */
   .screen { width: 100%; display: none; flex-direction: column; align-items: center; opacity: 0; transition: opacity 0.4s ease; }
@@ -25,7 +25,7 @@
   .context-line { font-family: var(--font-serif); font-style: italic; font-size: 18px; color: rgba(255,255,255,0.6); margin-bottom: 8px; }
   
   /* Brand Signature (Flexbox for perfect wide kerning) */
-  .brand-signature { position: absolute; top: 40px; right: 40px; display: flex; align-items: center; z-index: 100; }
+  .brand-signature { display: flex; align-items: center; cursor: pointer; }
   .sig-datum { font-family: var(--font-serif); font-size: 14px; font-weight: 300; letter-spacing: 0.1em; color: var(--teal); margin-right: 14px; }
   .sig-block { display: flex; align-items: center; gap: 4px; }
   .sig-f, .sig-i { font-family: var(--font-mono); font-size: 13px; font-weight: 300; color: var(--teal); }
@@ -253,6 +253,102 @@
     .catalyst-bar { height: 50px; }
   }
 
+  /* ── Fixed Navigation Bar ── */
+  #app-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 600;
+      height: 56px; background: rgba(9, 18, 33, 0.96);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex; align-items: center; justify-content: space-between; padding: 0 32px;
+  }
+  .nav-links { display: flex; align-items: center; gap: 4px; }
+  .nav-link {
+      font-family: var(--font-mono); font-size: 10px; text-transform: uppercase;
+      letter-spacing: 0.12em; color: rgba(255,255,255,0.35);
+      background: none; border: none; cursor: pointer;
+      padding: 6px 12px; border-radius: 4px; transition: color 0.2s; position: relative;
+  }
+  .nav-link:hover { color: rgba(255,255,255,0.7); }
+  .nav-link.active { color: var(--teal-mid); }
+  .nav-link.active::after {
+      content: ''; position: absolute; bottom: -1px; left: 12px; right: 12px;
+      height: 2px; background: var(--teal); border-radius: 1px;
+  }
+  #nav-link-range { display: none; }
+  .nav-hamburger {
+      display: none; flex-direction: column; gap: 5px;
+      cursor: pointer; background: none; border: none; padding: 6px;
+  }
+  .nav-hamburger span {
+      display: block; width: 20px; height: 2px;
+      background: rgba(255,255,255,0.5); border-radius: 1px; transition: all 0.2s;
+  }
+  .nav-mobile-menu {
+      position: fixed; top: 56px; left: 0; right: 0; z-index: 599;
+      background: rgba(9, 18, 33, 0.99);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 8px 24px 16px; display: none; flex-direction: column; gap: 0;
+  }
+  .nav-mobile-menu.open { display: flex; }
+  .nav-mobile-link {
+      font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+      letter-spacing: 0.12em; color: rgba(255,255,255,0.5);
+      background: none; border: none; cursor: pointer; padding: 13px 4px;
+      text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); transition: color 0.2s;
+  }
+  .nav-mobile-link:hover, .nav-mobile-link.active { color: var(--teal-mid); }
+  .nav-mobile-link:last-child { border-bottom: none; }
+  #nav-mob-range { display: none; }
+  @media (max-width: 650px) {
+      .nav-links { display: none; }
+      .nav-hamburger { display: flex; }
+  }
+
+  /* ── Screen 5: Philosophy ── */
+  #screen5 { align-items: stretch; }
+  .s5-body { width: 100%; max-width: 800px; margin: 0 auto; padding: 48px 40px 100px; }
+  .s5-hero-visual { position: relative; width: 100%; height: 180px; margin: 28px 0; }
+  .s5-hero-visual svg { width: 100%; height: 100%; display: block;
+      clip-path: inset(0 100% 0 0);
+      animation: s5RevealPaths 2.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+      animation-delay: 0.5s; }
+  @keyframes s5RevealPaths { to { clip-path: inset(0 0 0 0); } }
+  .s5-origin-dot { opacity: 0; animation: s5FadeIn 0.5s ease forwards; animation-delay: 0.2s; }
+  @keyframes s5FadeIn { to { opacity: 1; } }
+  .s5-title { font-family: var(--font-serif); font-style: italic; font-weight: 300; font-size: 52px; line-height: 1.1; color: var(--white); margin-bottom: 12px; }
+  .s5-lead { font-family: var(--font-mono); font-size: 11px; color: var(--gold); letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 48px; }
+  .s5-h2 { font-family: var(--font-mono); font-weight: 500; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--teal-mid); margin-bottom: 20px; margin-top: 40px; }
+  .s5-body p { font-family: var(--font-serif); font-size: 17px; color: rgba(255,255,255,0.85); margin-bottom: 18px; font-weight: 300; line-height: 1.75; }
+  .s5-body ul { list-style: none; margin-bottom: 20px; padding-left: 20px; }
+  .s5-body li { font-family: var(--font-serif); font-size: 16px; color: rgba(255,255,255,0.8); margin-bottom: 8px; font-weight: 300; position: relative; line-height: 1.6; }
+  .s5-body li::before { content: '—'; position: absolute; left: -20px; color: var(--teal-mid); }
+  .s5-body hr { border: none; height: 1px; background: rgba(255,255,255,0.08); margin: 40px 0; }
+  .s5-tier-list li::before { content: ''; }
+  .s5-tier-list li { padding-left: 0; margin-bottom: 14px; font-size: 15px; }
+  .s5-tier-list strong { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; margin-right: 10px; }
+  /* Inline brand-mark for use inside body text (baseline-aligned) */
+  .bmi { display: inline-flex; align-items: baseline; vertical-align: middle; }
+  .bmi .bm-datum { font-family: var(--font-serif); font-weight: 300; letter-spacing: 0.1em; color: var(--teal); margin-right: 6px; }
+  .bmi .bm-block { display: inline-flex; align-items: center; gap: 3px; }
+  .bmi .bm-fi { font-family: var(--font-mono); font-weight: 300; color: var(--teal); font-size: 0.85em; }
+  .bmi .bm-bar { width: 2px; height: 14px; background: var(--gold); border-radius: 1px; }
+
+  /* ── Financial Disclosure Footer ── */
+  #disclosure-footer {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 580;
+      background: rgba(9, 18, 33, 0.97);
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding: 10px 40px; text-align: center;
+  }
+  #disclosure-footer p {
+      font-family: var(--font-mono); font-size: 10px;
+      color: rgba(255,255,255,0.25); line-height: 1.6; margin: 0;
+  }
+  @media (max-width: 650px) {
+      #disclosure-footer { padding: 10px 20px; }
+      #disclosure-footer p { font-size: 9px; line-height: 1.5; }
+  }
+
   /* Pulsing keyframe for loading states */
   @keyframes pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
 
@@ -263,13 +359,32 @@
 </head>
 <body>
 
-  <div class="brand-signature" id="brand-sig">
-      <span class="sig-datum" id="sig-datum-text">DATUM</span>
-      <span class="sig-block">
-          <span class="sig-f" id="sig-f-text">F</span>
-          <span class="sig-bar" id="sig-bar-real"></span>
-          <span class="sig-i" id="sig-i-text">I</span>
-      </span>
+  <!-- ── Fixed Navigation Bar ── -->
+  <nav id="app-nav">
+      <div class="brand-signature" id="brand-sig" onclick="goToScreen(1)" title="Home">
+          <span class="sig-datum" id="sig-datum-text">DATUM</span>
+          <span class="sig-block">
+              <span class="sig-f" id="sig-f-text">F</span>
+              <span class="sig-bar" id="sig-bar-real"></span>
+              <span class="sig-i" id="sig-i-text">I</span>
+          </span>
+      </div>
+      <div class="nav-links">
+          <button class="nav-link active" id="nav-link-home"        onclick="navTo(1)">Home</button>
+          <button class="nav-link"        id="nav-link-studio"      onclick="navTo(2)">Studio</button>
+          <button class="nav-link"        id="nav-link-range"       onclick="navTo(4)">Range</button>
+          <button class="nav-link"        id="nav-link-philosophy"  onclick="navTo(5)">Philosophy</button>
+      </div>
+      <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
+          <span></span><span></span><span></span>
+      </button>
+  </nav>
+  <!-- Mobile nav menu -->
+  <div class="nav-mobile-menu" id="nav-mobile-menu">
+      <button class="nav-mobile-link active" id="nav-mob-home"        onclick="navTo(1); closeMobileNav()">Home</button>
+      <button class="nav-mobile-link"        id="nav-mob-studio"      onclick="navTo(2); closeMobileNav()">Studio</button>
+      <button class="nav-mobile-link"        id="nav-mob-range"       onclick="navTo(4); closeMobileNav()">Range</button>
+      <button class="nav-mobile-link"        id="nav-mob-philosophy"  onclick="navTo(5); closeMobileNav()">Philosophy</button>
   </div>
 
   <div id="screen1" class="screen active">
@@ -663,8 +778,9 @@
         </div>
       </div>
 
-      <div style="margin-top: 40px; text-align: center;">
+      <div style="margin-top: 40px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 16px;">
         <button class="btn" onclick="goToScreen(2)">Reset Blueprint</button>
+        <button class="btn-back" style="margin:0; font-size:11px;" onclick="goToScreen(5)">Read Our Philosophy →</button>
       </div>
     </div>
 
@@ -673,6 +789,151 @@
         <div style="font-family:var(--font-mono); font-size:12px; text-transform:uppercase; letter-spacing:0.25em; color:var(--teal-mid); animation:pulse 1.8s ease-in-out infinite; margin-bottom:12px;">Recalculating...</div>
         <div style="font-size:11px; color:var(--muted);">Applying your updated inputs</div>
     </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <!-- SCREEN 5: Philosophy                                                 -->
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <div id="screen5" class="screen">
+    <div class="s5-body">
+
+      <div style="text-align: center; margin-bottom: 48px;">
+        <h1 class="s5-title">Data in.<br>Confidence out.</h1>
+        <div class="s5-lead">The Philosophy</div>
+
+        <div class="s5-hero-visual">
+          <svg viewBox="0 0 800 200" preserveAspectRatio="none">
+            <path d="M 20 100 C 200 100 300 30 800 10"  stroke="rgba(201,168,76,0.12)" stroke-width="1.5" fill="none"/>
+            <path d="M 20 100 C 200 100 400 60 800 45"  stroke="rgba(201,168,76,0.12)" stroke-width="1.5" fill="none"/>
+            <path d="M 20 100 C 250 100 500 115 800 120" stroke="rgba(201,168,76,0.12)" stroke-width="1.5" fill="none"/>
+            <path d="M 20 100 C 200 100 400 145 800 160" stroke="rgba(201,168,76,0.12)" stroke-width="1.5" fill="none"/>
+            <path d="M 20 100 C 200 100 300 175 800 190" stroke="rgba(201,168,76,0.12)" stroke-width="1.5" fill="none"/>
+            <path d="M 20 100 C 200 100 400 15 800 5"   stroke="rgba(201,168,76,0.75)" stroke-width="2" fill="none"/>
+            <path d="M 20 100 C 200 100 400 185 800 195" stroke="rgba(226,75,74,0.75)"  stroke-width="2" fill="none"/>
+            <path d="M 20 100 C 300 100 500 72 800 64"  stroke="#1D9E75" stroke-width="3" stroke-dasharray="6 6" fill="none"/>
+            <circle cx="20" cy="100" r="6" fill="#C9A84C" class="s5-origin-dot" style="filter: drop-shadow(0 0 12px rgba(201,168,76,0.9));"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="s5-section">
+        <div class="s5-h2">1. Every structure begins with a fixed point.</div>
+        <p>In architecture, surveying, and engineering, nothing meaningful can be built until you establish a DATUM — a reference point that does not move.</p>
+        <p>It is the anchor.<br>The origin.<br>The truth everything else is measured from.</p>
+        <p>Your financial life has never had one.<br>Retirement tools give you guesses, probabilities, and sliders — but never a fixed point.</p>
+        <p><span class="bmi"><span class="bm-datum">DATUM</span><span class="bm-block"><span class="bm-fi">F</span><span class="bm-bar"></span><span class="bm-fi">I</span></span></span> <em>changes that.</em></p>
+      </div>
+
+      <hr>
+
+      <div class="s5-section">
+        <div class="s5-h2">2. Your life deserves a reference, not a recommendation.</div>
+        <p>Most tools tell you what you "should" spend.<br>They collapse uncertainty into a single number.<br>They hide risk behind a percentage.<br>They turn your future into a score.</p>
+        <p>We reject that.</p>
+        <p>You bring your number — your DATUM.<br>Not a target.<br>Not a prescription.<br>A reference.</p>
+        <p>A fixed point that reflects your intent, not our opinion.</p>
+      </div>
+
+      <hr>
+
+      <div class="s5-section">
+        <div class="s5-h2">3. Complexity belongs in the engine, not on your shoulders.</div>
+        <p>Your financial life is complicated:</p>
+        <ul>
+          <li>accounts</li><li>taxes</li><li>timelines</li><li>market cycles</li>
+          <li>sequence risk</li><li>inflation</li><li>longevity</li><li>valuation extremes</li>
+        </ul>
+        <p>You shouldn't have to manage that complexity.<br>You shouldn't have to guess.<br>You shouldn't have to "play with sliders" until the answer feels right.</p>
+        <p>That's why we built the Studio — the architectural drafting room for your retirement.</p>
+        <p>You map your reality.<br>We handle the structure.</p>
+      </div>
+
+      <hr>
+
+      <div class="s5-section">
+        <div class="s5-h2">4. We don't guess. We measure.</div>
+        <p>Once your Estate is drafted in the Studio, we run it through:</p>
+        <ul>
+          <li>40,000 market futures</li><li>four independent simulation methods</li>
+          <li>every major crash since 1926</li><li>valuation-aware scenarios</li>
+          <li>stress tests</li><li>dynamic spending behavior</li>
+        </ul>
+        <p>We don't hide uncertainty.<br>We reveal it.</p>
+        <p>Not as a probability.<br>Not as a score.<br>As a Range.</p>
+      </div>
+
+      <hr>
+
+      <div class="s5-section">
+        <div class="s5-h2">5. Retirement spending isn't a number. It's a Range.</div>
+        <p>Your Range is the truth of your plan:</p>
+        <ul class="s5-tier-list">
+          <li><strong style="color: var(--gold);">Structural Ceiling</strong> What the data says your plan's ultimate capacity can reach.</li>
+          <li><strong style="color: var(--teal);">Your DATUM</strong> Your number, your plan. Measured against mathematical reality.</li>
+          <li><strong style="color: var(--danger-red);">Survival Floor</strong> Even if history's worst repeats. Holds in 99% of simulations.</li>
+        </ul>
+        <p>This is not a recommendation.<br>This is not a guess.<br>This is the world your plan lives inside.</p>
+      </div>
+
+      <hr>
+
+      <div class="s5-section">
+        <div class="s5-h2">6. Intelligence is clarity, not complexity.</div>
+        <p>We built DATUM Intelligence™ to interpret your Range with honesty and restraint.</p>
+        <p><strong style="font-family:var(--font-mono); font-size:13px;">DATUM Interpretation</strong><br>What your DATUM means inside the Range — without judgment, without prescription.</p>
+        <p><strong style="font-family:var(--font-mono); font-size:13px;">Convergence</strong><br>How closely independent models agree — a quiet signal of structural robustness.</p>
+        <p><strong style="font-family:var(--font-mono); font-size:13px;">Fragility Insights</strong><br>How your Range shifts when the assumptions that matter most change.</p>
+        <p>This is intelligence that clarifies, not overwhelms.<br>Insight without noise.<br>Rigor without anxiety.</p>
+      </div>
+
+      <hr>
+
+      <div class="s5-section">
+        <div class="s5-h2">7. Confidence is not a feeling. It's a structure.</div>
+        <p>Confidence doesn't come from optimism.<br>It doesn't come from a single number.<br>It doesn't come from a probability score.</p>
+        <p>Confidence comes from understanding:</p>
+        <ul>
+          <li>your floor</li><li>your possibilities</li><li>your intent</li>
+          <li>your sensitivity</li><li>your structure</li>
+        </ul>
+        <p>Confidence comes from seeing your financial life the way an architect sees a building — anchored, measured, load‑tested, and honest.</p>
+        <p>Confidence comes from a fixed point.<br>Confidence comes from your DATUM.</p>
+      </div>
+
+      <hr>
+
+      <div class="s5-section">
+        <div class="s5-h2">8. This is not a calculator. This is a way of thinking.</div>
+        <p><span class="bmi"><span class="bm-datum">DATUM</span><span class="bm-block"><span class="bm-fi">F</span><span class="bm-bar"></span><span class="bm-fi">I</span></span></span> is not here to tell you what to do.<br>It's here to show you the world around your choices.</p>
+        <p>It's not here to simplify your life into a single number.<br>It's here to reveal the structure beneath it.</p>
+        <p>It's not here to guess.<br>It's here to measure.</p>
+        <p>It's not here to predict the future.<br>It's here to prepare you for it.</p>
+      </div>
+
+      <hr>
+
+      <div class="s5-section">
+        <div class="s5-h2">9. Data in. Confidence out.</div>
+        <p>This is the promise.<br>This is the philosophy.<br>This is the brand.</p>
+        <p><span class="bmi"><span class="bm-datum">DATUM</span><span class="bm-block"><span class="bm-fi">F</span><span class="bm-bar"></span><span class="bm-fi">I</span></span></span> exists to give people something they've never had:</p>
+        <p>A fixed point.<br>A clear structure.<br>A measured range.<br>A calm understanding of uncertainty.<br>A way to live with confidence.</p>
+        <p>Not a guess.<br>Not a score.<br>A reference.</p>
+        <div style="margin-top: 56px; display: flex; align-items: baseline; gap: 8px;">
+          <span style="font-size: 22px; color: var(--white);">A</span>
+          <span style="font-family: var(--font-serif); font-size: 22px; font-weight: 300; letter-spacing: 0.1em; color: var(--teal);">DATUM.</span>
+        </div>
+      </div>
+
+      <div style="margin-top: 56px; padding-top: 32px; border-top: 1px solid rgba(255,255,255,0.08); text-align: center;">
+        <button class="btn-back" style="margin:0;" onclick="goToScreen(4)">← Back to Your Range</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Financial Disclosure Footer ── -->
+  <div id="disclosure-footer">
+    <p>DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. Past performance does not guarantee future outcomes.</p>
   </div>
 
   <script>
@@ -1229,6 +1490,40 @@
             const els = [$('sig-datum-text'), $('sig-f-text'), $('sig-i-text'), $('sig-bar-real')];
             els.forEach(el => { if (el) { el.style.transition = 'opacity 0.5s ease'; el.style.opacity = '1'; } });
         }
+        setNavActive(n);
+    }
+
+    // ─── Nav active state helpers ─────────────────────────────────────────────
+    function setNavActive(n) {
+        const linkMap = { 1: 'home', 2: 'studio', 4: 'range', 5: 'philosophy' };
+        const key = linkMap[n];
+        // Desktop nav
+        ['home','studio','range','philosophy'].forEach(k => {
+            const el = $('nav-link-' + k);
+            if (el) el.classList.toggle('active', k === key);
+        });
+        // Mobile nav
+        ['home','studio','range','philosophy'].forEach(k => {
+            const el = $('nav-mob-' + k);
+            if (el) el.classList.toggle('active', k === key);
+        });
+    }
+
+    function navTo(n) {
+        closeMobileNav();
+        // Only allow Range nav if calculation has been run
+        if (n === 4 && !hasLoadedOnce) { goToScreen(2); return; }
+        goToScreen(n);
+    }
+
+    function toggleMobileNav() {
+        const menu = $('nav-mobile-menu');
+        if (menu) menu.classList.toggle('open');
+    }
+
+    function closeMobileNav() {
+        const menu = $('nav-mobile-menu');
+        if (menu) menu.classList.remove('open');
     }
 
     // ─── startLoading: entry point for "Reveal Your Range" ───────────────────
@@ -1258,6 +1553,11 @@
 
         // ── First-time cinematic path ────────────────────────────────────────
         hasLoadedOnce = true;
+        // Reveal the Range nav link now that a calculation has been run
+        const rangeLink    = $('nav-link-range');
+        const rangeLinkMob = $('nav-mob-range');
+        if (rangeLink)    { rangeLink.style.display = ''; }
+        if (rangeLinkMob) { rangeLinkMob.style.display = ''; }
         const btn = $('trigger-btn');
         if (btn) { btn.disabled = true; btn.innerText = 'Simulating Range...'; }
 
