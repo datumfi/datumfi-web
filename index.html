@@ -74,7 +74,7 @@
   input[type=range]:focus::-webkit-slider-runnable-track { background: rgba(255,255,255,0.2); }
 
   /* --- SCREEN 1: Landing --- */
-  .landing-hero-container { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; text-align: center; position: relative; min-height: 100vh; padding: 120px 0;}     
+  .landing-hero-container { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; text-align: center; position: relative; min-height: 100vh; padding: 80px 0 60px;}     
   .hero-bg-grid { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0; background-image: linear-gradient(rgba(100,180,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(100,180,255,0.08) 1px, transparent 1px); background-size: 40px 40px; opacity: 0.5; mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 30%, transparent 95%); -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 30%, transparent 95%); animation: gridDrift 60s linear infinite; }
   @keyframes gridDrift { 100% { background-position: 80px 80px; } }
   .anim-fade-up { opacity: 0; transform: translateY(20px); animation: fadeUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
@@ -101,7 +101,9 @@
   /* DOB / date selects inside mock-input */
   .dob-row { display: flex; gap: 8px; }
   .dob-row .mock-input { flex: 1; }
-  .date-select { background: transparent; border: none; color: var(--white); font-family: var(--font-mono); font-size: 15px; outline: none; width: 100%; cursor: pointer; }
+  .date-select { background: rgba(9,18,33,0.95); border: none; color: var(--white); font-family: var(--font-mono); font-size: 15px; outline: none; width: 100%; cursor: pointer; }
+  .date-select option { background: #091221; color: #ffffff; }
+  .mock-input select option { background: #091221; color: #ffffff; }
   /* Add-room panel */
   .add-room-select { background: rgba(9,18,33,0.9); border: 1px solid rgba(29,158,117,0.5); color: var(--white); font-family: var(--font-mono); font-size: 12px; padding: 10px 14px; border-radius: 4px; outline: none; cursor: pointer; min-width: 220px; }
   .bp-room.has-val { border-color: rgba(79,170,230,0.5); background: rgba(79,170,230,0.05); }
@@ -156,15 +158,9 @@
   .t-name { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); display: flex; justify-content: flex-end; align-items: center; gap: 8px; transition: color 0.3s;}
   .t-desc { font-size: 11px; color: rgba(255,255,255,0.7); line-height: 1.5; margin-top: 8px; }
 
-  /* Tier values hidden by default; revealed on hover or tap (.revealed class) */
-  .tier-label .t-val-balance,
-  .tier-label .t-val-spend,
+  /* Only the descriptive paragraph is hidden by default; names + amounts always visible */
   .tier-label .t-desc { opacity: 0; transition: opacity 0.3s ease; }
-  .tier-label:hover .t-val-balance,
-  .tier-label:hover .t-val-spend,
   .tier-label:hover .t-desc,
-  .tier-label.revealed .t-val-balance,
-  .tier-label.revealed .t-val-spend,
   .tier-label.revealed .t-desc { opacity: 1; }
   /* Legacy hint inside tier labels */
   .t-legacy-hint { font-size: 10px; color: var(--teal-mid); margin-top: 6px; opacity: 0; transition: opacity 0.3s ease 0.1s; }
@@ -335,17 +331,17 @@
 
   /* ── Financial Disclosure Footer ── */
   #disclosure-footer {
-      position: fixed; bottom: 0; left: 0; right: 0; z-index: 580;
+      width: 100%;
       background: rgba(9, 18, 33, 0.97);
       border-top: 1px solid rgba(255,255,255,0.05);
-      padding: 10px 40px; text-align: center;
+      padding: 20px 40px 24px; text-align: center;
   }
   #disclosure-footer p {
       font-family: var(--font-mono); font-size: 10px;
       color: rgba(255,255,255,0.25); line-height: 1.6; margin: 0;
   }
   @media (max-width: 650px) {
-      #disclosure-footer { padding: 10px 20px; }
+      #disclosure-footer { padding: 16px 20px 20px; }
       #disclosure-footer p { font-size: 9px; line-height: 1.5; }
   }
 
@@ -431,7 +427,7 @@
     </div>
     
     <div id="learn-more" style="width: 100%; border-top: 1px solid rgba(255,255,255,0.05); background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.02) 100%);">
-      <div class="content-bounds" style="padding: 80px 40px;">
+      <div class="content-bounds" style="padding: 40px 40px 80px;">
         
         <div style="text-align: left; margin-bottom: 60px; padding: 24px; background: rgba(255,255,255,0.02); border-left: 2px solid var(--teal-mid); border-radius: 0 12px 12px 0;">
           <div style="font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--teal-mid); margin-bottom: 8px;">The Paradigm Shift</div>
@@ -670,7 +666,7 @@
           </svg>
           
           <div class="tier-label tier-ceiling" id="lbl-ceiling" style="top: 12.5%;">
-              <div class="t-name">Structural Ceiling <span style="font-size:9px; opacity:0.5; font-family:var(--font-mono);">hover</span></div>
+              <div class="t-name">Structural Ceiling</div>
               <div class="t-val-balance" id="bal-capstone">$4.12M</div>
               <div class="t-val-spend" id="val-capstone">$165,000 / yr</div>
               <div class="t-legacy-hint" id="hint-ceiling"></div>
@@ -678,7 +674,7 @@
           </div>
 
           <div class="tier-label tier-floor" id="lbl-floor" style="top: 87.5%;">
-              <div class="t-name">Survival Floor <span style="font-size:8px; border:1px solid rgba(255,255,255,0.2); padding:2px 4px; border-radius:2px; margin-left:4px;">FIXED</span> <span style="font-size:9px; opacity:0.5; font-family:var(--font-mono);">hover</span></div>
+              <div class="t-name">Survival Floor <span style="font-size:8px; border:1px solid rgba(255,255,255,0.2); padding:2px 4px; border-radius:2px; margin-left:4px;">FIXED</span></div>
               <div class="t-val-balance" id="bal-bedrock">$2.60M</div>
               <div class="t-val-spend" id="val-bedrock">$122,000 / yr</div>
               <div class="t-legacy-hint" id="hint-floor"></div>
@@ -1211,9 +1207,9 @@
         // Slider range
         const slider = $('slider-spend');
         if (slider) {
-            slider.min   = Math.round(BEDROCK * 0.65);
-            slider.max   = Math.round(CAPSTONE * 1.25);
-            slider.value = API_DATUM_SPEND;
+            slider.min   = BEDROCK;
+            slider.max   = Math.round(CAPSTONE * 1.15);
+            slider.value = Math.max(BEDROCK, Math.min(Math.round(CAPSTONE * 1.15), API_DATUM_SPEND));
         }
         if ($('inline-datum-input')) $('inline-datum-input').value = API_DATUM_SPEND.toLocaleString('en-US');
         if ($('val-disp-spend'))     $('val-disp-spend').innerText  = formatMoney(API_DATUM_SPEND) + ' / yr';
@@ -1398,14 +1394,18 @@
             $('lbl-keystone').style.top = `${(clampLabel(valToY(KEYSTONE))/H)*100}%`;
         }
 
+        // Clamp datum Y to stay within ceiling/floor visual bounds
+        // valToY is inverted: higher spend → lower Y pixel value (ceiling < floor in pixels)
+        const yDatClamped = Math.max(CEIL_Y, Math.min(FLOR_Y, yDat));
+
         // Datum box position
         const dynDatum = $('dynamic-datum');
-        if (dynDatum) dynDatum.style.top = `${(clampLabel(yDat)/H)*100}%`;
+        if (dynDatum) dynDatum.style.top = `${(clampLabel(yDatClamped)/H)*100}%`;
 
         // SVG paths
         if ($('svg-ceiling'))    $('svg-ceiling').setAttribute('d', getFunnelPath(CEIL_Y));
         if ($('svg-floor'))      $('svg-floor').setAttribute('d',   getFunnelPath(FLOR_Y));
-        if ($('svg-datum'))      $('svg-datum').setAttribute('d',    getFunnelPath(yDat));
+        if ($('svg-datum'))      $('svg-datum').setAttribute('d',    getFunnelPath(yDatClamped));
         if (FOUNDATION > 0 && $('svg-foundation')) $('svg-foundation').setAttribute('d', getFunnelPath(valToY(FOUNDATION)));
         if (KEYSTONE   > 0 && $('svg-keystone'))   $('svg-keystone').setAttribute('d',   getFunnelPath(valToY(KEYSTONE)));
 
