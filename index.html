@@ -91,23 +91,23 @@
   .mini-fp { display: none; }
 
   /* Hero Estate Animation */
-  .he-wrapper { position: relative; width: 300px; height: 210px; border: 1px solid rgba(255,255,255,0.06); background: rgba(9,18,33,0.65); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+  .he-wrapper { position: relative; width: 420px; height: 360px; border: 1px solid rgba(255,255,255,0.06); background: rgba(9,18,33,0.65); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
   .he-lines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; overflow: visible; }
   .he-b-line { fill: none; stroke: rgba(93,202,165,0.18); stroke-width: 1.5; stroke-dasharray: 300; stroke-dashoffset: 300; }
   .he-p-line { fill: none; stroke: var(--gold); stroke-width: 2; stroke-dasharray: 12 70; stroke-dashoffset: 82; stroke-linecap: round; opacity: 0; }
   .he-nodes { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; }
-  .he-node { position: absolute; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-left: 2px solid var(--teal-mid); border-radius: 4px; padding: 5px 8px; display: flex; align-items: center; width: 78px; transform: translateX(-20px); opacity: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+  .he-node { position: absolute; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-left: 2px solid var(--teal-mid); border-radius: 4px; padding: 8px 12px; display: flex; align-items: center; width: 110px; transform: translateX(-20px); opacity: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
   .he-node-text { display: flex; flex-direction: column; }
-  .he-node-title { font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
-  .he-node-val { font-family: var(--font-serif); font-style: italic; font-size: 13px; color: var(--white); margin-top: 2px; }
-  .he-n-tax  { top: 17px;  left: 14px; }
-  .he-n-roth { top: 52px;  left: 14px; }
-  .he-n-brok { top: 87px;  left: 14px; }
-  .he-n-prop { top: 122px; left: 14px; }
-  .he-n-cash { top: 157px; left: 14px; }
-  .he-n-root { top: 64px; left: 186px; width: 86px; height: 70px; background: linear-gradient(135deg, rgba(201,168,76,0.12) 0%, rgba(9,18,33,0.85) 100%); border: 1px solid var(--gold); border-left: 1px solid var(--gold); border-radius: 50%; flex-direction: column; justify-content: center; text-align: center; transform: scale(0.8); opacity: 0; box-shadow: 0 0 0 rgba(201,168,76,0); }
-  .he-n-root .he-node-title { color: var(--gold); font-size: 8px; margin-bottom: 2px; }
-  .he-n-root .he-node-val { color: var(--gold); font-size: 16px; margin-top: 0; }
+  .he-node-title { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  .he-node-val { font-family: var(--font-serif); font-style: italic; font-size: 15px; color: var(--white); margin-top: 2px; }
+  .he-n-tax  { top: 30px;  left: 20px; }
+  .he-n-roth { top: 90px;  left: 20px; }
+  .he-n-brok { top: 150px; left: 20px; }
+  .he-n-prop { top: 210px; left: 20px; }
+  .he-n-cash { top: 270px; left: 20px; }
+  .he-n-root { top: 110px; left: 260px; width: 120px; height: 120px; background: linear-gradient(135deg, rgba(201,168,76,0.12) 0%, rgba(9,18,33,0.85) 100%); border: 1px solid var(--gold); border-left: 1px solid var(--gold); border-radius: 50%; flex-direction: column; justify-content: center; text-align: center; transform: scale(0.8); opacity: 0; box-shadow: 0 0 0 rgba(201,168,76,0); }
+  .he-n-root .he-node-title { color: var(--gold); font-size: 10px; margin-bottom: 4px; }
+  .he-n-root .he-node-val { color: var(--gold); font-size: 22px; margin-top: 0; }
 
   .he-active .he-node:not(.he-n-root) { animation: heSlideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
   .he-active .he-n-tax  { animation-delay: 0.1s; }
@@ -133,7 +133,34 @@
   @keyframes heDrawPath { to { stroke-dashoffset: 0; } }
   @keyframes hePopRoot { 0% { transform: scale(0.8); opacity: 0; box-shadow: 0 0 0 rgba(201,168,76,0); } 50% { transform: scale(1.05); opacity: 1; box-shadow: 0 0 30px rgba(201,168,76,0.4); } 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 15px rgba(201,168,76,0.2); } }
   @keyframes heFlowPulse { 0% { stroke-dashoffset: 82; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
-  
+
+  /* --- HERO Hourglass Stage Layout --- */
+  .hourglass-stage { display: flex; align-items: center; justify-content: center; width: 100%; max-width: 1100px; margin: 36px auto 40px auto; pointer-events: none; }
+  .hero-connector { flex: 1; min-width: 24px; height: 2px; background: linear-gradient(90deg, rgba(201,168,76,0.8) 0%, rgba(29,158,117,0.8) 100%); box-shadow: 0 0 10px rgba(201,168,76,0.4); position: relative; }
+  .connector-dot { position: absolute; width: 12px; height: 12px; background: var(--white); border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); animation: pulseCore 2s ease-in-out infinite; }
+  @keyframes pulseCore { 0%,100% { box-shadow: 0 0 10px rgba(255,255,255,0.4); } 50% { box-shadow: 0 0 30px rgba(255,255,255,1); } }
+  .hero-range-wrapper { position: relative; width: 420px; height: 360px; }
+  .hero-range-wrapper svg { width: 100%; height: 100%; }
+  .m-wave { fill: none; stroke-width: 1.5; stroke-linecap: round; opacity: 0.8; }
+  .m-teal { stroke: rgba(93,202,165,0.4); }
+  .m-gold { stroke: rgba(201,168,76,0.4); }
+  .m-light { stroke: rgba(255,255,255,0.1); }
+  .m-danger { stroke: rgba(226,75,74,0.6); stroke-width: 2; }
+  .m-ceiling { stroke: rgba(201,168,76,0.8); stroke-width: 2; }
+  .m-datum { stroke: var(--teal); stroke-width: 3; stroke-dasharray: 6 6; animation: heFlowDash 1.2s linear infinite; }
+  @keyframes heFlowDash { to { stroke-dashoffset: -12; } }
+  @media (max-width: 960px) {
+    .hourglass-stage { flex-direction: column; margin: 24px auto 32px auto; }
+    .hero-connector { width: 2px; height: 48px; min-width: 0; background: linear-gradient(180deg, rgba(201,168,76,0.8) 0%, rgba(29,158,117,0.8) 100%); }
+    .he-wrapper, .hero-range-wrapper { width: 320px; height: 274px; }
+    .he-n-tax  { top: 23px;  left: 15px; }
+    .he-n-roth { top: 69px;  left: 15px; }
+    .he-n-brok { top: 115px; left: 15px; }
+    .he-n-prop { top: 161px; left: 15px; }
+    .he-n-cash { top: 207px; left: 15px; }
+    .he-n-root { top: 84px; left: 198px; width: 92px; height: 92px; }
+  }
+
   /* --- SCREEN 2: Studio --- */
   .spec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 40px; width: 100%;}
   .blueprint-wrapper { border: 1px solid var(--teal); background: rgba(29,158,117,0.03); border-radius: 8px; padding: 32px; width: 100%; margin-top: 20px;}
@@ -183,7 +210,7 @@
   #flying-catalyst { position: absolute; background: var(--gold); border-radius: 1px; box-shadow: 0 0 8px rgba(201,168,76,0.4); opacity: 0; z-index: 200; pointer-events: none; transform-origin: center center; }
 
   /* --- SCREEN 4: Multiverse Funnel Reveal --- */
-  .v-range-container { position: relative; width: 100%; height: 400px; margin: 8px 0 20px 0; }
+  .v-range-container { position: relative; width: 100%; height: 370px; margin: 4px 0 16px 0; }
   .v-origin { position: absolute; left: 40px; top: 50%; width: 16px; height: 16px; background: var(--gold); border-radius: 50%; transform: translate(-8px, -50%); z-index: 5; box-shadow: 0 0 20px rgba(201,168,76,0.8); transition: opacity 0.5s ease; opacity: 0; }
   .v-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;}
   
@@ -622,25 +649,24 @@
     <div class="landing-hero-container">
       <div class="hero-bg-grid"></div>
       <div class="content-bounds" style="text-align: center; padding-top: 20px;">
-        <h1 class="anim-fade-up anim-delay-1">Data in.<br>Confidence out.</h1>
-        <div class="subtext anim-fade-up anim-delay-2" style="font-size: 16px;">Retirement spending isn't a number. It's a Range.</div>
-        <div class="subtext anim-fade-up anim-delay-2" style="margin-top: 12px;">A new way to understand retirement: tax‑aware, crash‑aware, and grounded in your actual financial architecture.</div>
-        
-        <div class="hero-preview anim-fade-up anim-delay-3">
-            <div class="mini-fp-container" style="position: relative;">
+        <h1 class="anim-fade-up anim-delay-1" style="font-size: 64px; line-height: 1.1; margin-bottom: 20px;">Data In.<br><span style="color: var(--teal-mid);">Confidence Out.</span></h1>
+        <div class="anim-fade-up anim-delay-2" style="font-family: var(--font-serif); font-weight: 300; font-size: 18px; line-height: 1.6; color: rgba(255,255,255,0.8); max-width: 600px; margin: 0 auto 8px auto;">Retirement spending isn't a number. It's a Range.</div>
+
+        <div class="hourglass-stage anim-fade-up anim-delay-3">
+            <div style="position: relative;">
                 <div class="mini-label">The Estate</div>
                 <div class="he-wrapper" id="he-stage">
-                    <svg class="he-lines" viewBox="0 0 300 210" preserveAspectRatio="none">
-                        <path class="he-b-line he-d1" d="M 92,33 C 137,33 143,99 186,99" />
-                        <path class="he-p-line he-p1" d="M 92,33 C 137,33 143,99 186,99" />
-                        <path class="he-b-line he-d2" d="M 92,68 C 137,68 143,99 186,99" />
-                        <path class="he-p-line he-p2" d="M 92,68 C 137,68 143,99 186,99" />
-                        <path class="he-b-line he-d3" d="M 92,103 C 137,103 143,99 186,99" />
-                        <path class="he-p-line he-p3" d="M 92,103 C 137,103 143,99 186,99" />
-                        <path class="he-b-line he-d4" d="M 92,138 C 137,138 143,99 186,99" />
-                        <path class="he-p-line he-p4" d="M 92,138 C 137,138 143,99 186,99" />
-                        <path class="he-b-line he-d5" d="M 92,173 C 137,173 143,99 186,99" />
-                        <path class="he-p-line he-p5" d="M 92,173 C 137,173 143,99 186,99" />
+                    <svg class="he-lines" viewBox="0 0 420 360" preserveAspectRatio="none">
+                        <path class="he-b-line he-d1" d="M 130,50 C 190,50 200,170 260,170" />
+                        <path class="he-p-line he-p1" d="M 130,50 C 190,50 200,170 260,170" />
+                        <path class="he-b-line he-d2" d="M 130,110 C 190,110 200,170 260,170" />
+                        <path class="he-p-line he-p2" d="M 130,110 C 190,110 200,170 260,170" />
+                        <path class="he-b-line he-d3" d="M 130,170 C 190,170 200,170 260,170" />
+                        <path class="he-p-line he-p3" d="M 130,170 C 190,170 200,170 260,170" />
+                        <path class="he-b-line he-d4" d="M 130,230 C 190,230 200,170 260,170" />
+                        <path class="he-p-line he-p4" d="M 130,230 C 190,230 200,170 260,170" />
+                        <path class="he-b-line he-d5" d="M 130,290 C 190,290 200,170 260,170" />
+                        <path class="he-p-line he-p5" d="M 130,290 C 190,290 200,170 260,170" />
                     </svg>
                     <div class="he-nodes">
                         <div class="he-node he-n-tax"><div class="he-node-text"><div class="he-node-title">Pre-Tax</div><div class="he-node-val">$1.4M</div></div></div>
@@ -652,35 +678,30 @@
                     </div>
                 </div>
             </div>
-            <div class="mini-range-container" style="position: relative;">
+            <div class="hero-connector">
+                <div class="connector-dot"></div>
+            </div>
+            <div style="position: relative;">
                 <div class="mini-label">The Range</div>
-                <svg width="240" height="180" viewBox="0 0 160 120" style="overflow: visible;">
-                  <style>
-                    @keyframes rangePulse { 0%,100%{opacity:0.15} 50%{opacity:0.35} }
-                    @keyframes datumDash { to{stroke-dashoffset:-16} }
-                    @keyframes orbitGlow { 0%,100%{r:4;opacity:1} 50%{r:5.5;opacity:0.7} }
-                    .mini-ghost { animation: rangePulse 3s ease-in-out infinite; }
-                    .mini-ghost:nth-child(2) { animation-delay: 0.4s; }
-                    .mini-ghost:nth-child(3) { animation-delay: 0.8s; }
-                    .mini-ghost:nth-child(4) { animation-delay: 1.2s; }
-                    .mini-datum-line { animation: datumDash 1.2s linear infinite; }
-                    .mini-origin { animation: orbitGlow 2s ease-in-out infinite; }
-                  </style>
-                  <circle class="mini-origin" cx="0" cy="60" r="4" fill="#C9A84C" />
-                  <path class="mini-ghost" d="M0,60 C 40,60 50,30 160,30" stroke="#C9A84C" stroke-width="1" fill="none"/>
-                  <path class="mini-ghost" d="M0,60 C 40,60 50,45 160,45" stroke="#C9A84C" stroke-width="1" fill="none"/>
-                  <path class="mini-ghost" d="M0,60 C 40,60 50,75 160,75" stroke="#C9A84C" stroke-width="1" fill="none"/>
-                  <path class="mini-ghost" d="M0,60 C 40,60 50,90 160,90" stroke="#C9A84C" stroke-width="1" fill="none"/>
-                  <path d="M0,60 C 40,60 50,10 160,10" stroke="#C9A84C" stroke-width="1.5" fill="none" opacity="0.85"/>
-                  <path d="M0,60 C 40,60 50,110 160,110" stroke="#e24b4a" stroke-width="1.5" fill="none" opacity="0.9"/>
-                  <path class="mini-datum-line" d="M0,60 C 40,60 50,60 160,60" stroke="#1D9E75" stroke-width="2" stroke-dasharray="4 2" fill="none"/>
-                </svg>
+                <div class="hero-range-wrapper">
+                    <svg viewBox="0 0 420 360" preserveAspectRatio="none">
+                        <path class="m-wave m-light"   d="M 0,170 C 100,170 250,20  420,10" />
+                        <path class="m-wave m-gold"    d="M 0,170 C 100,170 200,80  420,60" />
+                        <path class="m-wave m-teal"    d="M 0,170 C 150,170 300,100 420,130" />
+                        <path class="m-wave m-light"   d="M 0,170 C 100,170 300,280 420,300" />
+                        <path class="m-wave m-gold"    d="M 0,170 C 150,170 250,330 420,350" />
+                        <path class="m-wave m-ceiling" d="M 0,170 C 100,170 200,10  420,5" />
+                        <path class="m-wave m-danger"  d="M 0,170 C 100,170 250,340 420,355" />
+                        <path class="m-wave m-datum"   d="M 0,170 C 150,170 250,140 420,120" />
+                    </svg>
+                </div>
             </div>
         </div>
 
-        <div class="anim-fade-up anim-delay-4" style="display: flex; flex-direction: column; align-items: center; gap: 24px;">
+        <div class="anim-fade-up anim-delay-4" style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
           <button class="btn" onclick="goToScreen(2)">Define Your DATUM</button>
           <button class="btn-back" style="margin:0;" onclick="document.getElementById('learn-more').scrollIntoView({behavior: 'smooth'})">How it works ↓</button>
+          <div style="font-family: var(--font-serif); font-weight: 300; font-size: 18px; line-height: 1.6; color: rgba(255,255,255,0.8); max-width: 600px; text-align: center; margin-top: 4px;">A new way to understand retirement: tax‑aware, crash‑aware, and grounded in your actual financial architecture.</div>
         </div>
       </div>
     </div>
@@ -922,16 +943,16 @@
   </div>
 
   <div id="screen4" class="screen">
-    <div class="content-bounds" style="padding-top: 40px; padding-bottom: 80px;">
-      
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 8px; flex-wrap: wrap;">
+    <div class="content-bounds" style="padding-top: 20px; padding-bottom: 80px;">
+
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 4px; flex-wrap: wrap;">
           <div style="padding-top: 4px;">
               <div style="font-family: var(--font-serif); font-style: italic; font-size: 28px; color: var(--white); margin-bottom: 4px;">Your estate has been measured.</div>
               <div style="font-family: var(--font-mono); font-size: 11px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em;">These are your boundaries.</div>
           </div>
-          <div class="quick-toggles-panel active" id="controls-panel" style="background: linear-gradient(135deg, #0e1b30 0%, #050a14 100%); border: 1px solid var(--teal); border-radius: 12px; padding: 20px 24px; min-width: 200px; text-align: right; box-shadow: inset 0 4px 10px rgba(0,0,0,0.6), 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: flex-end; margin: 0; flex-shrink: 0; max-width: 260px;">
-              <div style="font-family: var(--font-mono); font-size: 10px; color: var(--teal-mid); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 6px;">Target Spend</div>
-              <div style="font-family: var(--font-serif); font-style: italic; font-size: 28px; color: var(--teal); line-height: 1.1;"><span id="val-disp-spend">$120,000</span> <span style="font-size: 13px; opacity: 0.7;">/ yr</span></div>
+          <div class="quick-toggles-panel active" id="controls-panel" style="background: linear-gradient(135deg, #0e1b30 0%, #050a14 100%); border: 1px solid var(--teal); border-radius: 12px; padding: 14px 18px; min-width: 180px; text-align: right; box-shadow: inset 0 4px 10px rgba(0,0,0,0.6), 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: flex-end; margin: 0; flex-shrink: 0; max-width: 240px;">
+              <div style="font-family: var(--font-mono); font-size: 9px; color: var(--teal-mid); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 5px;">Target Spend</div>
+              <div style="font-family: var(--font-serif); font-style: italic; font-size: 25px; color: var(--teal); line-height: 1.1;"><span id="val-disp-spend">$120,000</span> <span style="font-size: 12px; opacity: 0.7;">/ yr</span></div>
               <input type="range" id="slider-spend" min="50000" max="500000" step="1000" value="120000" data-clarity-mask="true" style="width: 100%; margin-top: 14px;">
           </div>
       </div>
