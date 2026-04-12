@@ -502,6 +502,13 @@
   .s4-loading-overlay { position: fixed; inset: 0; background: rgba(9,18,33,0.85); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 200; text-align: center; }
   .s4-loading-overlay.visible { display: flex; }
 </style>
+<script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "wam8t5p132");
+</script>
 </head>
 <body>
 
@@ -614,7 +621,7 @@
         </div>
 
         <h2 style="font-size: 24px; margin-bottom: 12px;">Four Probabilistic Models.<br>One Stress Battery.</h2>
-        <div style="font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 32px;">No consumer retirement tool runs 40,000 futures per profile across four simulation methods plus a dedicated stress battery. Running them together produces an output fundamentally more credible than any single model.</div>
+        <div style="font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 32px;">No consumer retirement tool runs 10,000 futures per profile across four simulation methods plus a dedicated stress battery. Running them together produces an output fundamentally more credible than any single model.</div>
         
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
              <div style="padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;"><div style="font-family: var(--font-serif); font-style: italic; font-size: 16px; color: #fff; margin-bottom: 8px;">Parametric Monte Carlo</div><div style="font-size: 11px; color: var(--muted); line-height: 1.5;">Generates 10,000 return sequences from a log-normal distribution calibrated to your asset allocation.</div></div>
@@ -630,7 +637,7 @@
 
         <div style="text-align: center; padding: 40px; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;">
             <div style="font-family: var(--font-serif); font-style: italic; font-size: 20px; margin-bottom: 12px;">Historically Resilient</div>
-            <div style="font-size: 12px; color: var(--muted); line-height: 1.6; max-width: 500px; margin: 0 auto 24px auto;">We show you the exact spending level — tax-aware, in today's dollars — that remains viable across all 40,000 modeled scenarios and historical stress tests.</div>
+            <div style="font-size: 12px; color: var(--muted); line-height: 1.6; max-width: 500px; margin: 0 auto 24px auto;">We show you the exact spending level — tax-aware, in today's dollars — that remains viable across all 10,000 modeled scenarios and historical stress tests.</div>
             <button class="btn" onclick="goToScreen(2)">Define Your DATUM</button>
         </div>
       </div>
@@ -651,8 +658,8 @@
         <div>
           <label class="input-label">Date of Birth</label>
           <div class="dob-row">
-            <div class="mock-input"><select id="p-dob-month" class="date-select"></select></div>
-            <div class="mock-input"><select id="p-dob-year" class="date-select"></select></div>
+            <div class="mock-input"><select id="p-dob-month" class="date-select" data-clarity-mask="true"></select></div>
+            <div class="mock-input"><select id="p-dob-year" class="date-select" data-clarity-mask="true"></select></div>
           </div>
         </div>
         <div>
@@ -664,8 +671,8 @@
             <div>
               <label class="input-label">Co-Architect Date of Birth</label>
               <div class="dob-row">
-                <div class="mock-input"><select id="p-co-dob-month" class="date-select"></select></div>
-                <div class="mock-input"><select id="p-co-dob-year" class="date-select"></select></div>
+                <div class="mock-input"><select id="p-co-dob-month" class="date-select" data-clarity-mask="true"></select></div>
+                <div class="mock-input"><select id="p-co-dob-year" class="date-select" data-clarity-mask="true"></select></div>
               </div>
             </div>
             <div><label class="input-label">Co-Architect SS Strategy</label>
@@ -678,7 +685,7 @@
             <div><label class="input-label" style="color:var(--muted);">Est. Annual SS at 67 — Co-Architect <span style="font-size:9px;">(optional)</span></label>
                 <div class="mock-input" style="padding: 10px 16px;">
                     <span style="color:var(--muted); font-size:16px; margin-right:4px;">$</span>
-                    <input type="text" inputmode="numeric" id="p-co-ss-benefit" placeholder="e.g. 24,000" style="color:var(--white); font-size:16px;">
+                    <input type="text" inputmode="numeric" id="p-co-ss-benefit" placeholder="e.g. 24,000" style="color:var(--white); font-size:16px;" data-clarity-mask="true">
                 </div>
             </div>
         </div>
@@ -687,8 +694,8 @@
         <div>
           <label class="input-label">Target Retirement Date</label>
           <div class="dob-row">
-            <div class="mock-input"><select id="p-ret-month" class="date-select"></select></div>
-            <div class="mock-input"><select id="p-ret-year" class="date-select"></select></div>
+            <div class="mock-input"><select id="p-ret-month" class="date-select" data-clarity-mask="true"></select></div>
+            <div class="mock-input"><select id="p-ret-year" class="date-select" data-clarity-mask="true"></select></div>
           </div>
         </div>
         <div>
@@ -703,9 +710,14 @@
             <label class="input-label" style="color:var(--muted);">Est. Annual SS at 67 — Primary <span style="font-size:9px;">(optional)</span></label>
             <div class="mock-input" style="padding: 10px 16px;">
                 <span style="color:var(--muted); font-size:16px; margin-right:4px;">$</span>
-                <input type="text" inputmode="numeric" id="p-ss-benefit" placeholder="e.g. 28,000" style="color:var(--white); font-size:16px;">
+                <input type="text" inputmode="numeric" id="p-ss-benefit" placeholder="e.g. 28,000" style="color:var(--white); font-size:16px;" data-clarity-mask="true">
             </div>
         </div>
+      </div>
+
+      <div style="margin-top: 16px; text-align: center;">
+        <div style="font-family: var(--font-mono); font-size: 12px; font-style: italic; color: rgba(0,201,167,0.45); line-height: 1.6;">Your data generates your Range — nothing else. Precision in, precision out.</div>
+        <div style="font-family: var(--font-mono); font-size: 12px; font-style: italic; color: rgba(0,201,167,0.45); line-height: 1.6;">Your numbers stay in your browser. We don't store, sell, or share your financial data — ever. Your inputs exist only for the seconds it takes to compute your Range.</div>
       </div>
 
       <div class="blueprint-wrapper">
@@ -715,21 +727,21 @@
                   <div style="font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">Current Value</div>
                   <div class="mock-input" style="padding: 4px 8px; width: 140px; border-color: var(--teal-mid); background: rgba(29, 158, 117, 0.05); margin-left: auto;">
                     <span style="color:var(--teal-mid); font-size: 16px; margin-right: 2px;">$</span>
-                    <input type="text" inputmode="numeric" id="live-sqft-input" value="1,215,000" style="color:var(--teal-mid); font-size: 18px; text-align: right; font-family: var(--font-mono); font-weight: 500;">
+                    <input type="text" inputmode="numeric" id="live-sqft-input" value="1,215,000" style="color:var(--teal-mid); font-size: 18px; text-align: right; font-family: var(--font-mono); font-weight: 500;" data-clarity-mask="true">
                   </div>
               </div>
           </div>
           
           <div class="rooms-expanded" id="rooms-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
-              <div class="bp-room has-val" data-account-type="pretax_401k"><div class="r-name">Pre-Tax 401(k)</div><div class="r-val"><span>$</span><input type="text" class="room-input" value="845,000"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Taxed as ordinary income. First in line for RMDs.</div></div>
-              <div class="bp-room" data-account-type="pretax_457b"><div class="r-name">Pre-Tax 457(b)</div><div class="r-val"><span>$</span><input type="text" class="room-input" value="0"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Accessible penalty-free before 59.5 upon separation.</div></div>
-              <div class="bp-room" data-account-type="pretax_ira"><div class="r-name">Pre-Tax IRA</div><div class="r-val"><span>$</span><input type="text" class="room-input" value="0"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Consolidated pre-tax capital.</div></div>
-              <div class="bp-room" data-account-type="roth_401k"><div class="r-name">Roth 401(k)</div><div class="r-val"><span>$</span><input type="text" class="room-input" value="0"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Tax-free growth from employer plan.</div></div>
-              <div class="bp-room" data-account-type="roth_457b"><div class="r-name">Roth 457(b)</div><div class="r-val"><span>$</span><input type="text" class="room-input" value="0"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Tax-free growth, accessible early.</div></div>
-              <div class="bp-room has-val" data-account-type="roth_ira"><div class="r-name">Roth IRA</div><div class="r-val"><span>$</span><input type="text" class="room-input" value="120,000"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Aspirational, completely tax-free expansion space.</div></div>
-              <div class="bp-room has-val" data-account-type="taxable"><div class="r-name">Taxable Brokerage</div><div class="r-val"><span>$</span><input type="text" class="room-input" value="250,000"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Capital gains and dividends. Highly liquid.</div></div>
-              <div class="bp-room" data-account-type="hysa"><div class="r-name">High Yield Savings</div><div class="r-val"><span>$</span><input type="text" class="room-input" value="0"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Cash buffer. No market risk.</div></div>
-              <div class="bp-room" data-account-type="pension"><div class="r-name">Pension (Annual Income)</div><div class="r-val"><span>$</span><input type="text" class="room-input" value="0"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Secure, fixed income floor.</div></div>
+              <div class="bp-room has-val" data-account-type="pretax_401k"><div class="r-name">Pre-Tax 401(k)</div><div class="r-val"><span>$</span><input type="text" class="room-input" data-clarity-mask="true" value="845,000"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0" data-clarity-mask="true"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Taxed as ordinary income. First in line for RMDs.</div></div>
+              <div class="bp-room" data-account-type="pretax_457b"><div class="r-name">Pre-Tax 457(b)</div><div class="r-val"><span>$</span><input type="text" class="room-input" data-clarity-mask="true" value="0"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0" data-clarity-mask="true"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Accessible penalty-free before 59.5 upon separation.</div></div>
+              <div class="bp-room" data-account-type="pretax_ira"><div class="r-name">Pre-Tax IRA</div><div class="r-val"><span>$</span><input type="text" class="room-input" data-clarity-mask="true" value="0"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0" data-clarity-mask="true"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Consolidated pre-tax capital.</div></div>
+              <div class="bp-room" data-account-type="roth_401k"><div class="r-name">Roth 401(k)</div><div class="r-val"><span>$</span><input type="text" class="room-input" data-clarity-mask="true" value="0"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0" data-clarity-mask="true"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Tax-free growth from employer plan.</div></div>
+              <div class="bp-room" data-account-type="roth_457b"><div class="r-name">Roth 457(b)</div><div class="r-val"><span>$</span><input type="text" class="room-input" data-clarity-mask="true" value="0"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0" data-clarity-mask="true"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Tax-free growth, accessible early.</div></div>
+              <div class="bp-room has-val" data-account-type="roth_ira"><div class="r-name">Roth IRA</div><div class="r-val"><span>$</span><input type="text" class="room-input" data-clarity-mask="true" value="120,000"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0" data-clarity-mask="true"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Aspirational, completely tax-free expansion space.</div></div>
+              <div class="bp-room has-val" data-account-type="taxable"><div class="r-name">Taxable Brokerage</div><div class="r-val"><span>$</span><input type="text" class="room-input" data-clarity-mask="true" value="250,000"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0" data-clarity-mask="true"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Capital gains and dividends. Highly liquid.</div></div>
+              <div class="bp-room" data-account-type="hysa"><div class="r-name">High Yield Savings</div><div class="r-val"><span>$</span><input type="text" class="room-input" data-clarity-mask="true" value="0"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0" data-clarity-mask="true"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Cash buffer. No market risk.</div></div>
+              <div class="bp-room" data-account-type="pension"><div class="r-name">Pension (Annual Income)</div><div class="r-val"><span>$</span><input type="text" class="room-input" data-clarity-mask="true" value="0"></div><div class="r-contrib"><select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select><span>+$</span><input type="text" value="0" data-clarity-mask="true"></div><div style="font-size:9px; color:var(--muted); margin-top:12px; border-top:1px dotted rgba(255,255,255,0.1); padding-top:8px;">Secure, fixed income floor.</div></div>
               <div id="add-room-row" style="grid-column: 1 / -1; text-align: center; margin-top: 12px;">
                   <button class="btn btn-scroll" style="padding: 12px 24px;" onclick="showAddRoomPanel()">+ Draft Additional Space</button>
                   <div id="add-room-panel" style="display:none; margin-top:16px; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap;">
@@ -745,7 +757,7 @@
         <label class="input-label" style="color: var(--teal-mid);">Your DATUM (Target Spend)</label>
         <div style="font-size: 10px; color: var(--muted); margin-bottom: 16px;">Your preferred annual living space inside the Range.</div>
         <div class="mock-input" style="border-color: var(--teal-mid); background: rgba(29, 158, 117, 0.05); padding: 16px 20px; max-width: 300px; justify-content: center;">
-          <span style="color:var(--teal-mid); font-size: 28px; margin-right: 4px;">$</span><input type="text" inputmode="numeric" id="datum-input" value="120,000" style="color:var(--teal-mid); font-size: 28px; text-align: center;">
+          <span style="color:var(--teal-mid); font-size: 28px; margin-right: 4px;">$</span><input type="text" inputmode="numeric" id="datum-input" value="120,000" style="color:var(--teal-mid); font-size: 28px; text-align: center;" data-clarity-mask="true">
         </div>
       </div>
 
@@ -768,7 +780,7 @@
 
   <div id="screen3" class="screen min-vh">
     <div class="s3-container">
-        <div class="s3-text-top" id="s3-top">Forty thousand futures.</div>
+        <div class="s3-text-top" id="s3-top">Ten thousand futures.</div>
         <div class="bullet-track">
             <div class="bullet-line" id="s3-line"></div>
         </div>
@@ -780,7 +792,7 @@
 
     <!-- Pulsing wait message: shown after Phase 5 completes while API is still running -->
     <div id="s3-pulsing" style="display:none; position:absolute; bottom:calc(50% - 120px); left:0; right:0; text-align:center; padding:20px;">
-        <div style="font-family:var(--font-mono); font-size:12px; text-transform:uppercase; letter-spacing:0.25em; color:var(--teal-mid); animation:pulse 1.8s ease-in-out infinite;">Simulating 40,000 futures...</div>
+        <div style="font-family:var(--font-mono); font-size:12px; text-transform:uppercase; letter-spacing:0.25em; color:var(--teal-mid); animation:pulse 1.8s ease-in-out infinite;">Simulating 10,000 futures...</div>
     </div>
 
     <!-- Error overlay -->
@@ -845,7 +857,7 @@
                   
                   <div class="view-edit">
                       <div class="v-datum-val" style="pointer-events: none;">
-                          $<input type="text" id="inline-datum-input" value="120,000" style="color: var(--teal); pointer-events: auto;" onclick="event.stopPropagation()"> <span style="font-size: 14px; margin-left: 2px; color: var(--teal); pointer-events: none;">/ yr</span>
+                          $<input type="text" id="inline-datum-input" value="120,000" style="color: var(--teal); pointer-events: auto;" onclick="event.stopPropagation()" data-clarity-mask="true"> <span style="font-size: 14px; margin-left: 2px; color: var(--teal); pointer-events: none;">/ yr</span>
                       </div>
                       <div class="legacy-metric" id="legacy-text-span" style="margin-top: 8px; color: var(--teal-mid); pointer-events: none;">Est. Legacy: $3.00M</div>
                   </div>
@@ -1002,7 +1014,7 @@
         <div class="s5-h2">4. We don't guess. We measure.</div>
         <p>Once your Estate is drafted in the Studio, we run it through:</p>
         <ul>
-          <li>40,000 market futures</li><li>four independent simulation methods</li>
+          <li>10,000 market futures</li><li>four independent simulation methods</li>
           <li>every major crash since 1926</li><li>valuation-aware scenarios</li>
           <li>stress tests</li><li>dynamic spending behavior</li>
         </ul>
@@ -1307,7 +1319,7 @@
     function makeRoomInnerHTML(name, desc) {
         return `<button class="room-remove" onclick="removeRoom(this)" title="Remove account">×</button>` +
             `<div class="r-name">${name}</div>` +
-            `<div class="r-val"><span>$</span><input type="text" class="room-input" value="0" inputmode="numeric"></div>` +
+            `<div class="r-val"><span>$</span><input type="text" class="room-input" data-clarity-mask="true" value="0" inputmode="numeric"></div>` +
             `<div class="r-contrib">` +
               `<select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select>` +
               `<span>+$</span><input type="text" value="0" inputmode="numeric">` +
@@ -1591,7 +1603,7 @@
             <div class="math-text"><span>▶</span> <strong>Foundation Tier:</strong> ${formatMoney(data.tiers.blended.foundation)} / yr</div>
             <div class="math-text"><span>▶</span> <strong>Keystone Tier:</strong> ${formatMoney(data.tiers.blended.keystone)} / yr</div>
             <div class="math-text"><span>▶</span> <strong>Est. Legacy P50:</strong> ${formatM(data.legacy.blended_p50)}</div>
-            <div class="math-text"><span>▶</span> <strong>Computation:</strong> ${data.computation_time_s.toFixed(2)}s across 40,000 simulations</div>
+            <div class="math-text"><span>▶</span> <strong>Computation:</strong> ${data.computation_time_s.toFixed(2)}s across 10,000 simulations</div>
         `;
 
         const fd = $('footer-details');
@@ -1640,18 +1652,29 @@
             $('lbl-keystone').style.top = `${(clampLabel(valToY(KEYSTONE))/H)*100}%`;
         }
 
-        // Clamp datum Y to stay within ceiling/floor visual bounds
-        // valToY is inverted: higher spend → lower Y pixel value (ceiling < floor in pixels)
-        const yDatClamped = Math.max(CEIL_Y, Math.min(FLOR_Y, yDat));
+        // Allow datum to overshoot ceiling/floor by 12px — position caps slightly, calculation never does
+        const OVERSHOOT_PX = 12;
+        const yDatClamped = Math.max(CEIL_Y - OVERSHOOT_PX, Math.min(FLOR_Y + OVERSHOOT_PX, yDat));
+        const aboveCeiling = datumVal > CAPSTONE;
 
         // Datum box position
         const dynDatum = $('dynamic-datum');
         if (dynDatum) dynDatum.style.top = `${(clampLabel(yDatClamped)/H)*100}%`;
 
+        // Datum box border + input color: red when above ceiling
+        const dragBox = $('datum-drag-box');
+        if (dragBox) dragBox.style.borderColor = aboveCeiling ? 'var(--danger-red)' : 'var(--teal)';
+        const inlineDatum = $('inline-datum-input');
+        if (inlineDatum) inlineDatum.style.color = aboveCeiling ? 'var(--danger-red)' : 'var(--teal)';
+
         // SVG paths
         if ($('svg-ceiling'))    $('svg-ceiling').setAttribute('d', getFunnelPath(CEIL_Y));
         if ($('svg-floor'))      $('svg-floor').setAttribute('d',   getFunnelPath(FLOR_Y));
-        if ($('svg-datum'))      $('svg-datum').setAttribute('d',    getFunnelPath(yDatClamped));
+        const datumSvgEl = $('svg-datum');
+        if (datumSvgEl) {
+            datumSvgEl.setAttribute('d', getFunnelPath(yDatClamped));
+            datumSvgEl.style.stroke = aboveCeiling ? 'var(--danger-red)' : '#1D9E75';
+        }
         if (FOUNDATION > 0 && $('svg-foundation')) $('svg-foundation').setAttribute('d', getFunnelPath(valToY(FOUNDATION)));
         if (KEYSTONE   > 0 && $('svg-keystone'))   $('svg-keystone').setAttribute('d',   getFunnelPath(valToY(KEYSTONE)));
 
@@ -1899,7 +1922,7 @@
         // Phase 3  Collapse:    4600 → 5100ms
         // Phase 4  Sweep left:  5100 → 5600ms
         // Phase 5  Ignition:    5600ms → 10500ms (bullet 3s + text sequence ~5s)
-        //   "Forty thousand futures." in 0.5s | hold 1.5s | out 0.5s
+        //   "Ten thousand futures." in 0.5s | hold 1.5s | out 0.5s
         //   "One Range."             in 0.5s | hold 1.5s | out 0.5s  (sequential)
         // Phase 6  Drift:       11000ms+ (fills API wait)
         // ────────────────────────────────────────────────────────────────────────
@@ -2032,7 +2055,7 @@
         // ════════════════════════════════════════════════════════════════════
         // PHASE 5 — Ignition + Text (5600ms → 11000ms)
         // Bullet shoots right (3s). Text is sequential, not overlapping:
-        //   "Forty thousand futures." — fade in 0.5s | hold 1.5s | fade out 0.5s
+        //   "Ten thousand futures." — fade in 0.5s | hold 1.5s | fade out 0.5s
         //   "One Range."             — fade in 0.5s | hold 1.5s | fade out 0.5s
         // Both lines are fully readable; total text sequence ~5s.
         // ════════════════════════════════════════════════════════════════════
@@ -2049,13 +2072,13 @@
                 line.style.width = trailWidth + 'px';
             }
 
-            // "Forty thousand futures." fades in as dot crosses ~30% of screen (~900ms)
+            // "Ten thousand futures." fades in as dot crosses ~30% of screen (~900ms)
             setTimeout(() => {
                 if (tTop) { tTop.style.transition = 'opacity 0.5s ease'; tTop.classList.add('show-text'); }
                 // Hold 1.5s, then fade out over 0.5s
                 setTimeout(() => {
                     if (tTop) { tTop.style.transition = 'opacity 0.5s ease'; tTop.classList.remove('show-text'); }
-                    // "One Range." starts only AFTER "Forty thousand futures." is fully gone (500ms = fade duration)
+                    // "One Range." starts only AFTER "Ten thousand futures." is fully gone (500ms = fade duration)
                     setTimeout(() => {
                         if (tBot) { tBot.style.transition = 'opacity 0.5s ease'; tBot.classList.add('show-text'); }
                         // Hold 1.5s, then fade out over 0.5s
