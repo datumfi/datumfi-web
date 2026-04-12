@@ -155,6 +155,33 @@
   .t-val-spend { font-family: var(--font-mono); font-size: 14px; color: var(--muted); margin-bottom: 8px; }
   .t-name { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); display: flex; justify-content: flex-end; align-items: center; gap: 8px; transition: color 0.3s;}
   .t-desc { font-size: 11px; color: rgba(255,255,255,0.7); line-height: 1.5; margin-top: 8px; }
+
+  /* Tier values hidden by default; revealed on hover or tap (.revealed class) */
+  .tier-label .t-val-balance,
+  .tier-label .t-val-spend,
+  .tier-label .t-desc { opacity: 0; transition: opacity 0.3s ease; }
+  .tier-label:hover .t-val-balance,
+  .tier-label:hover .t-val-spend,
+  .tier-label:hover .t-desc,
+  .tier-label.revealed .t-val-balance,
+  .tier-label.revealed .t-val-spend,
+  .tier-label.revealed .t-desc { opacity: 1; }
+  /* Legacy hint inside tier labels */
+  .t-legacy-hint { font-size: 10px; color: var(--teal-mid); margin-top: 6px; opacity: 0; transition: opacity 0.3s ease 0.1s; }
+  .tier-label:hover .t-legacy-hint,
+  .tier-label.revealed .t-legacy-hint { opacity: 1; }
+  /* Legacy hint on datum box (hover) */
+  .datum-legacy-hint { font-size: 10px; color: var(--teal-mid); margin-top: 4px; text-align: right; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
+  .v-datum-box:hover .datum-legacy-hint,
+  .v-datum-box:focus-within .datum-legacy-hint { opacity: 1; }
+  /* SS Insights table */
+  .ss-insight-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); }
+  .ss-insight-table th { font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); text-align: left; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .ss-insight-table td { font-size: 12px; padding: 11px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); color: rgba(255,255,255,0.7); }
+  .ss-insight-table td:first-child { font-family: var(--font-serif); font-style: italic; font-size: 14px; color: var(--white); }
+  .ss-insight-table tr.ss-row-active { background: rgba(29,158,117,0.08); }
+  .ss-insight-table tr.ss-row-active td { color: var(--teal-mid); }
+  .ss-insight-table tr.ss-row-active td:first-child { color: var(--teal); }
   
   .tier-ceiling .t-val-balance { color: rgba(201,168,76,0.5); }
   .tier-floor .t-val-balance { color: rgba(201,92,92,0.5); }
@@ -380,9 +407,15 @@
             </div>
             <div><label class="input-label">Co-Architect SS Strategy</label>
                 <div class="ss-cards" id="p-co-ss" data-value="Optimal (Age 70)">
-                    <button type="button" class="ss-card active" onclick="selectSSCard(this,'Optimal (Age 70)')"><div class="ss-card-age">70</div><div class="ss-card-label">Optimal</div></button>
-                    <button type="button" class="ss-card" onclick="selectSSCard(this,'Full (Age 67)')"><div class="ss-card-age">67</div><div class="ss-card-label">Full</div></button>
                     <button type="button" class="ss-card" onclick="selectSSCard(this,'Early (Age 62)')"><div class="ss-card-age">62</div><div class="ss-card-label">Early</div></button>
+                    <button type="button" class="ss-card" onclick="selectSSCard(this,'Full (Age 67)')"><div class="ss-card-age">67</div><div class="ss-card-label">Full</div></button>
+                    <button type="button" class="ss-card active" onclick="selectSSCard(this,'Optimal (Age 70)')"><div class="ss-card-age">70</div><div class="ss-card-label">Optimal</div></button>
+                </div>
+            </div>
+            <div><label class="input-label" style="color:var(--muted);">Est. Annual SS at 67 — Co-Architect <span style="font-size:9px;">(optional)</span></label>
+                <div class="mock-input" style="padding: 10px 16px;">
+                    <span style="color:var(--muted); font-size:16px; margin-right:4px;">$</span>
+                    <input type="text" inputmode="numeric" id="p-co-ss-benefit" placeholder="e.g. 24,000" style="color:var(--white); font-size:16px;">
                 </div>
             </div>
         </div>
@@ -398,9 +431,16 @@
         <div>
             <label class="input-label">Social Security Strategy</label>
             <div class="ss-cards" id="p-ss-strategy" data-value="Optimal (Age 70)">
-                <button type="button" class="ss-card active" onclick="selectSSCard(this,'Optimal (Age 70)')"><div class="ss-card-age">70</div><div class="ss-card-label">Optimal</div></button>
-                <button type="button" class="ss-card" onclick="selectSSCard(this,'Full (Age 67)')"><div class="ss-card-age">67</div><div class="ss-card-label">Full</div></button>
                 <button type="button" class="ss-card" onclick="selectSSCard(this,'Early (Age 62)')"><div class="ss-card-age">62</div><div class="ss-card-label">Early</div></button>
+                <button type="button" class="ss-card" onclick="selectSSCard(this,'Full (Age 67)')"><div class="ss-card-age">67</div><div class="ss-card-label">Full</div></button>
+                <button type="button" class="ss-card active" onclick="selectSSCard(this,'Optimal (Age 70)')"><div class="ss-card-age">70</div><div class="ss-card-label">Optimal</div></button>
+            </div>
+        </div>
+        <div>
+            <label class="input-label" style="color:var(--muted);">Est. Annual SS at 67 — Primary <span style="font-size:9px;">(optional)</span></label>
+            <div class="mock-input" style="padding: 10px 16px;">
+                <span style="color:var(--muted); font-size:16px; margin-right:4px;">$</span>
+                <input type="text" inputmode="numeric" id="p-ss-benefit" placeholder="e.g. 28,000" style="color:var(--white); font-size:16px;">
             </div>
         </div>
       </div>
@@ -515,16 +555,18 @@
           </svg>
           
           <div class="tier-label tier-ceiling" id="lbl-ceiling" style="top: 12.5%;">
-              <div class="t-name">Structural Ceiling</div>
+              <div class="t-name">Structural Ceiling <span style="font-size:9px; opacity:0.5; font-family:var(--font-mono);">hover</span></div>
               <div class="t-val-balance" id="bal-capstone">$4.12M</div>
               <div class="t-val-spend" id="val-capstone">$165,000 / yr</div>
+              <div class="t-legacy-hint" id="hint-ceiling"></div>
               <div class="t-desc">The mathematical limit of your plan's capacity. A structural constraint, not an aspirational target.</div>
           </div>
-          
+
           <div class="tier-label tier-floor" id="lbl-floor" style="top: 87.5%;">
-              <div class="t-name">Survival Floor <span style="font-size:8px; border:1px solid rgba(255,255,255,0.2); padding:2px 4px; border-radius:2px; margin-left:4px;">FIXED</span></div>
+              <div class="t-name">Survival Floor <span style="font-size:8px; border:1px solid rgba(255,255,255,0.2); padding:2px 4px; border-radius:2px; margin-left:4px;">FIXED</span> <span style="font-size:9px; opacity:0.5; font-family:var(--font-mono);">hover</span></div>
               <div class="t-val-balance" id="bal-bedrock">$2.60M</div>
               <div class="t-val-spend" id="val-bedrock">$122,000 / yr</div>
+              <div class="t-legacy-hint" id="hint-floor"></div>
               <div class="t-desc">Floor holds in 99% of simulations + all stress scenarios. Survives the 1929 crash. Survives everything.</div>
           </div>
 
@@ -535,6 +577,7 @@
                   <div class="view-balance">
                       <div class="v-datum-val" id="datum-bal-display" style="font-size: 28px; color: var(--teal); pointer-events: none;">$3.00M</div>
                       <div style="font-size: 10px; color: var(--muted); margin-top: 4px; text-align: right; pointer-events: none;">Target Portfolio Balance</div>
+                      <div class="datum-legacy-hint" id="hint-datum">Est. Legacy: —</div>
                   </div>
                   
                   <div class="view-edit">
@@ -575,11 +618,24 @@
         </div>
       </div>
 
-      <div style="text-align: center; margin-bottom: 60px;">
-          <button class="btn btn-outline" id="btn-toggle-fragility" style="font-size: 10px; padding: 12px 24px;">See All Fragility Insights ↓</button>
+      <div style="text-align: center; margin-bottom: 24px;">
+          <button class="btn btn-outline" id="btn-toggle-ss" style="font-size: 10px; padding: 12px 24px; margin-right: 12px;">📊 Social Security Insights ↓</button>
+          <button class="btn btn-outline" id="btn-toggle-fragility" style="font-size: 10px; padding: 12px 24px;">Fragility Insights ↓</button>
       </div>
-      
-      <div id="fragility-expanded-section" style="display: none; opacity: 0; transition: opacity 0.4s ease;">
+
+      <div id="ss-expanded-section" style="display: none; opacity: 0; transition: opacity 0.4s ease; margin-bottom: 40px;">
+          <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 32px;">
+              <div style="font-family: var(--font-serif); font-style: italic; font-size: 22px; margin-bottom: 4px;">Social Security Claiming Strategy</div>
+              <div style="font-size: 12px; color: var(--muted); margin-bottom: 24px; line-height: 1.6;">Annual benefit at each claiming age relative to your full retirement benefit (FRA = 67). Highlight shows your current selection.</div>
+              <div id="ss-insights-table-wrap"></div>
+              <div style="font-size: 10px; color: var(--muted); margin-top: 16px; font-style: italic;">
+                  * Amounts estimated using standard SSA reduction / delayed-credit factors (62 = 70%, 67 = 100%, 70 = 124% of FRA benefit).
+                  Enter your estimated annual SS benefit on the previous screen for dollar amounts.
+              </div>
+          </div>
+      </div>
+
+      <div id="fragility-expanded-section" style="display: none; opacity: 0; transition: opacity 0.4s ease; margin-bottom: 40px;">
           <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 40px;">
               <div style="font-family: var(--font-serif); font-style: italic; font-size: 24px; margin-bottom: 8px;">What Moves Your Range</div>
               <div style="font-size: 12px; color: var(--muted); line-height: 1.6; max-width: 600px;">Your plan has a shape. Fragility shows you where it bends. One clear picture of where your plan is strongest and where it needs attention.</div>
@@ -628,6 +684,8 @@
     let LEGACY_P50 = 10778000, API_DATUM_SPEND = 120000;
     let hasLoadedOnce = false;
     let currentOutlook = 'cape';
+    let LAST_SS_PRIMARY = 'optimal_70', LAST_SS_SECONDARY = null;
+    let SS_BENEFIT_FULL = 0, SS_BENEFIT_CO_FULL = 0;
 
     // Defaults for verdict bar before first API call
     window._highestYieldAction = 'Inflation → 4%';
@@ -827,14 +885,19 @@
             accounts.push({ type: accountType, balance, annual_contribution: isMonthly ? rawContrib * 12 : rawContrib });
         });
 
+        // Capture SS benefit estimates from optional inputs
+        SS_BENEFIT_FULL    = parseInt(($('p-ss-benefit')?.value    || '0').replace(/[^\d]/g,''), 10) || 0;
+        SS_BENEFIT_CO_FULL = parseInt(($('p-co-ss-benefit')?.value || '0').replace(/[^\d]/g,''), 10) || 0;
+
         const body = { current_age: currentAge, retirement_age: retireAge, location: 'FL', datum_spend: datumSpend, market_outlook: outlook, ss_strategy_primary: ssPrimary, accounts };
+        LAST_SS_PRIMARY = ssPrimary;
 
         const coCheck = $('p-co-check');
         if (coCheck && coCheck.checked) {
             const coAge = getAgeFromDOB('p-co-dob-month', 'p-co-dob-year');
             const coSS  = SS_MAP[$('p-co-ss').dataset.value] || 'optimal_70';
-            if (coAge !== null) { body.co_architect_age = coAge; body.ss_strategy_secondary = coSS; }
-        }
+            if (coAge !== null) { body.co_architect_age = coAge; body.ss_strategy_secondary = coSS; LAST_SS_SECONDARY = coSS; }
+        } else { LAST_SS_SECONDARY = null; }
 
         console.log('[DATUM FI] API request:', JSON.parse(JSON.stringify(body)));
         return body;
@@ -894,9 +957,57 @@
         if ($('inline-datum-input')) $('inline-datum-input').value = API_DATUM_SPEND.toLocaleString('en-US');
         if ($('val-disp-spend'))     $('val-disp-spend').innerText  = formatMoney(API_DATUM_SPEND) + ' / yr';
 
-        // Fragility & show-math sections
+        // Fragility, SS insights & show-math sections
         initFragilityFromAPI(data);
+        renderSSInsights();
         renderShowMath(data);
+    }
+
+    // ─── SS Insights panel ────────────────────────────────────────────────────
+    const SS_FACTORS = { early_62: 0.70, full_67: 1.00, optimal_70: 1.24 };
+    const SS_LABELS  = { early_62: 'Claim at 62 (Early)', full_67: 'Claim at 67 (Full)', optimal_70: 'Claim at 70 (Optimal)' };
+
+    function renderSSInsights() {
+        const wrap = $('ss-insights-table-wrap');
+        if (!wrap) return;
+
+        const fmt = n => n > 0 ? formatMoney(n) + ' / yr' : '—';
+        const rows = ['early_62', 'full_67', 'optimal_70'].map(key => {
+            const isPrimaryActive = LAST_SS_PRIMARY === key;
+            const isCoActive      = LAST_SS_SECONDARY === key;
+            const primAmt  = SS_BENEFIT_FULL    > 0 ? Math.round(SS_BENEFIT_FULL    * SS_FACTORS[key]) : null;
+            const coAmt    = SS_BENEFIT_CO_FULL > 0 ? Math.round(SS_BENEFIT_CO_FULL * SS_FACTORS[key]) : null;
+            const active   = isPrimaryActive || (LAST_SS_SECONDARY && isCoActive);
+            return `<tr class="${active ? 'ss-row-active' : ''}">
+                <td>${SS_LABELS[key]}${active ? ' ✓' : ''}</td>
+                <td>${fmt(primAmt)} <span style="font-size:9px;opacity:0.5;">(${Math.round(SS_FACTORS[key]*100)}%)</span></td>
+                ${LAST_SS_SECONDARY ? `<td>${fmt(coAmt)} <span style="font-size:9px;opacity:0.5;">(${Math.round(SS_FACTORS[key]*100)}%)</span></td>` : ''}
+            </tr>`;
+        }).join('');
+
+        const coHeader = LAST_SS_SECONDARY ? '<th>Co-Architect Benefit</th>' : '';
+        wrap.innerHTML = `<table class="ss-insight-table">
+            <thead><tr><th>Claiming Age</th><th>Primary Benefit</th>${coHeader}</tr></thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+
+        // Wire toggle (once)
+        const btn = $('btn-toggle-ss');
+        if (btn && !btn._listenerAdded) {
+            btn._listenerAdded = true;
+            btn.addEventListener('click', function() {
+                const sec = $('ss-expanded-section');
+                if (sec.style.display === 'none') {
+                    sec.style.display = 'block';
+                    setTimeout(() => { sec.style.opacity = '1'; }, 50);
+                    this.innerText = '📊 Social Security Insights ↑';
+                } else {
+                    sec.style.opacity = '0';
+                    setTimeout(() => { sec.style.display = 'none'; }, 400);
+                    this.innerText = '📊 Social Security Insights ↓';
+                }
+            });
+        }
     }
 
     // ─── Fragility cards from API ──────────────────────────────────────────────
@@ -1038,9 +1149,14 @@
         if (KEYSTONE   > 0 && $('svg-keystone'))   $('svg-keystone').setAttribute('d',   getFunnelPath(valToY(KEYSTONE)));
 
         // Legacy (linear interpolation from API datum spend)
-        const legacyEst = Math.max(0, LEGACY_P50 + (API_DATUM_SPEND - datumVal) * 150);
+        const legacyEst        = Math.max(0, LEGACY_P50 + (API_DATUM_SPEND - datumVal)  * 150);
+        const legacyAtCeiling  = Math.max(0, LEGACY_P50 + (API_DATUM_SPEND - CAPSTONE)  * 150);
+        const legacyAtFloor    = Math.max(0, LEGACY_P50 + (API_DATUM_SPEND - BEDROCK)   * 150);
         if ($('legacy-text-span'))  $('legacy-text-span').innerText  = 'Est. Legacy: ' + formatM(legacyEst);
         if ($('datum-bal-display')) $('datum-bal-display').innerText = formatM(datumVal * 25);
+        if ($('hint-datum'))    $('hint-datum').innerText    = 'Est. Legacy: ' + formatM(legacyEst);
+        if ($('hint-ceiling'))  $('hint-ceiling').innerText  = 'Est. Legacy at ceiling: ' + formatM(legacyAtCeiling);
+        if ($('hint-floor'))    $('hint-floor').innerText    = 'Est. Legacy at floor: '   + formatM(legacyAtFloor);
 
         // Buffer display (below floor = good = green)
         const bufDisp   = $('buffer-display');
@@ -1566,6 +1682,13 @@
                 this.classList.toggle('expanded');
             });
         }
+
+        // Mobile tap-to-reveal for tier labels (ceiling/floor)
+        document.querySelectorAll('.tier-label').forEach(lbl => {
+            lbl.addEventListener('click', function() {
+                this.classList.toggle('revealed');
+            });
+        });
     });
   </script>
 </body>
