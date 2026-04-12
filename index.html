@@ -495,6 +495,41 @@
   }
   .nav-mobile-feedback:hover { color: var(--teal-mid); }
 
+  /* Scrollbar styling for select dropdowns (Fix 1) */
+  select::-webkit-scrollbar { width: 8px; }
+  select::-webkit-scrollbar-track { background: rgba(9, 18, 33, 0.95); }
+  select::-webkit-scrollbar-thumb { background: rgba(0, 201, 167, 0.4); border-radius: 4px; }
+  select::-webkit-scrollbar-thumb:hover { background: rgba(0, 201, 167, 0.6); }
+  select { scrollbar-color: rgba(0,201,167,0.4) rgba(9,18,33,0.95); }
+
+  /* Architect Profile box label (Fix 2) */
+  .arch-profile-title { font-family: var(--font-serif); font-style: italic; font-size: 24px; color: var(--teal-mid); margin-bottom: 12px; margin-top: 8px; }
+
+  /* ── Cinematic Stage (Screen 3) — Fix 3 ── */
+  .cinematic-stage { position: relative; width: 100%; max-width: 800px; height: 400px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .cin-text-layer { position: absolute; text-align: center; width: 100%; z-index: 10; pointer-events: none; }
+  .status-title { font-family: var(--font-serif); font-style: italic; font-weight: 300; font-size: 36px; color: var(--white); position: absolute; bottom: -100px; width: 100%; opacity: 0; transform: translateY(10px); transition: all 0.8s cubic-bezier(0.25, 1, 0.5, 1); }
+  .status-subtitle { font-family: var(--font-mono); font-size: 13px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--teal-mid); position: absolute; top: -100px; width: 100%; opacity: 0; transform: translateY(-10px); transition: all 0.8s cubic-bezier(0.25, 1, 0.5, 1); }
+  .text-visible { opacity: 1 !important; transform: translateY(0) !important; }
+  .wave-canvas { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; height: 400px; overflow: visible; }
+  .mc-wave { fill: none; stroke-width: 1.5; stroke-linecap: round; vector-effect: non-scaling-stroke; transform-origin: 50% 50%; opacity: 0; transition: transform 1.8s cubic-bezier(0.5, 0, 0.2, 1), opacity 0.8s ease; }
+  .w-teal { stroke: rgba(93, 202, 165, 0.4); }
+  .w-gold { stroke: rgba(201, 168, 76, 0.4); }
+  .w-light { stroke: rgba(255, 255, 255, 0.2); }
+  .waves-active .mc-wave { opacity: 1; }
+  .waves-collapsed .mc-wave { transform: scaleY(0.005); }
+  .waves-hidden .mc-wave { opacity: 0; transition: opacity 0.4s ease; }
+  .singularity-dot { position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; background: var(--gold); border-radius: 50%; transform: translate(-50%, -50%) scale(0); box-shadow: 0 0 0px rgba(201,168,76,0); z-index: 6; }
+  .singularity-dot::after { content: ''; position: absolute; top: 50%; right: 10px; width: 0px; height: 4px; background: var(--gold); transform: translateY(-50%); border-radius: 2px; box-shadow: 0 0 15px rgba(201,168,76,0.8); opacity: 0; z-index: -1; }
+  @keyframes igniteDot { 0% { transform: translate(-50%, -50%) scale(0); box-shadow: 0 0 0px rgba(201,168,76,0); } 50% { transform: translate(-50%, -50%) scale(1.2); box-shadow: 0 0 40px rgba(201,168,76,1); } 100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 20px rgba(201,168,76,0.8); } }
+  @keyframes floatToAnchor { 0% { left: 50%; transform: translate(-50%, -50%) scale(1); } 100% { left: 40px; transform: translate(-50%, -50%) scale(0.7); box-shadow: 0 0 15px rgba(201,168,76,0.6); } }
+  @keyframes zipRight { 0% { left: 40px; transform: translate(-50%, -50%) scale(0.7); opacity: 1; } 100% { left: 120%; transform: translate(-50%, -50%) scale(0.7); opacity: 0; } }
+  @keyframes shootBeam { 0% { width: 0px; opacity: 1; } 30% { width: 400px; opacity: 1; } 100% { width: 400px; opacity: 0; } }
+  .dot-ignite { animation: igniteDot 1s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+  .dot-float  { animation: floatToAnchor 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+  .dot-zip    { animation: zipRight 0.7s cubic-bezier(0.8, 0, 0.2, 1) forwards; }
+  .dot-zip::after { animation: shootBeam 0.7s cubic-bezier(0.8, 0, 0.2, 1) forwards; }
+
   /* Pulsing keyframe for loading states */
   @keyframes pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
 
@@ -654,50 +689,63 @@
         <div style="font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold); margin-bottom: 40px;">Let's find yours in the studio.</div>
       </div>
       
-      <div class="spec-grid">
-        <div>
-          <label class="input-label">Date of Birth</label>
-          <div class="dob-row">
-            <div class="mock-input"><select id="p-dob-month" class="date-select" data-clarity-mask="true"></select></div>
-            <div class="mock-input"><select id="p-dob-year" class="date-select" data-clarity-mask="true"></select></div>
+      <!-- ── Architect Profile ── -->
+      <div class="arch-profile-title">Architect Profile</div>
+      <div class="blueprint-wrapper" style="margin-top: 0; margin-bottom: 24px;">
+        <div class="spec-grid" style="margin-bottom: 24px;">
+          <div>
+            <label class="input-label">Date of Birth</label>
+            <div class="dob-row">
+              <div class="mock-input"><select id="p-dob-month" class="date-select" data-clarity-mask="true"></select></div>
+              <div class="mock-input"><select id="p-dob-year" class="date-select" data-clarity-mask="true"></select></div>
+            </div>
           </div>
-        </div>
-        <div>
-            <label class="input-label" style="display:flex; justify-content:space-between;">Co-Architect <span style="text-transform: none; color: var(--muted); cursor: pointer;"><input type="checkbox" id="p-co-check" onchange="document.getElementById('co-arch-inputs').style.display = this.checked ? 'grid' : 'none'"> Add</span></label>
-            <div class="mock-input" style="border: 1px dashed rgba(255,255,255,0.1); background: transparent;"><input type="text" disabled placeholder="Optional" style="opacity:0.3;"></div>
-        </div>
-        
-        <div id="co-arch-inputs" style="display: none; grid-column: 1 / -1; grid-template-columns: 1fr 1fr; gap: 24px; padding: 24px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.1);">
-            <div>
-              <label class="input-label">Co-Architect Date of Birth</label>
-              <div class="dob-row">
-                <div class="mock-input"><select id="p-co-dob-month" class="date-select" data-clarity-mask="true"></select></div>
-                <div class="mock-input"><select id="p-co-dob-year" class="date-select" data-clarity-mask="true"></select></div>
-              </div>
-            </div>
-            <div><label class="input-label">Co-Architect SS Strategy</label>
-                <div class="ss-cards" id="p-co-ss" data-value="Optimal (Age 70)">
-                    <button type="button" class="ss-card" onclick="selectSSCard(this,'Early (Age 62)')"><div class="ss-card-age">62</div><div class="ss-card-label">Early</div></button>
-                    <button type="button" class="ss-card" onclick="selectSSCard(this,'Full (Age 67)')"><div class="ss-card-age">67</div><div class="ss-card-label">Full</div></button>
-                    <button type="button" class="ss-card active" onclick="selectSSCard(this,'Optimal (Age 70)')"><div class="ss-card-age">70</div><div class="ss-card-label">Optimal</div></button>
-                </div>
-            </div>
-            <div><label class="input-label" style="color:var(--muted);">Est. Annual SS at 67 — Co-Architect <span style="font-size:9px;">(optional)</span></label>
-                <div class="mock-input" style="padding: 10px 16px;">
-                    <span style="color:var(--muted); font-size:16px; margin-right:4px;">$</span>
-                    <input type="text" inputmode="numeric" id="p-co-ss-benefit" placeholder="e.g. 24,000" style="color:var(--white); font-size:16px;" data-clarity-mask="true">
-                </div>
-            </div>
-        </div>
+          <div>
+              <label class="input-label" style="display:flex; justify-content:space-between;">Co-Architect <span style="text-transform: none; color: var(--muted); cursor: pointer;"><input type="checkbox" id="p-co-check" onchange="document.getElementById('co-arch-inputs').style.display = this.checked ? 'grid' : 'none'"> Add</span></label>
+              <div class="mock-input" style="border: 1px dashed rgba(255,255,255,0.1); background: transparent;"><input type="text" disabled placeholder="Optional" style="opacity:0.3;"></div>
+          </div>
 
-        <div><label class="input-label">Location</label><div class="mock-input"><input type="text" value="Florida"></div></div>
-        <div>
-          <label class="input-label">Target Retirement Date</label>
-          <div class="dob-row">
-            <div class="mock-input"><select id="p-ret-month" class="date-select" data-clarity-mask="true"></select></div>
-            <div class="mock-input"><select id="p-ret-year" class="date-select" data-clarity-mask="true"></select></div>
+          <div id="co-arch-inputs" style="display: none; grid-column: 1 / -1; grid-template-columns: 1fr 1fr; gap: 24px; padding: 24px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.1);">
+              <div>
+                <label class="input-label">Co-Architect Date of Birth</label>
+                <div class="dob-row">
+                  <div class="mock-input"><select id="p-co-dob-month" class="date-select" data-clarity-mask="true"></select></div>
+                  <div class="mock-input"><select id="p-co-dob-year" class="date-select" data-clarity-mask="true"></select></div>
+                </div>
+              </div>
+              <div><label class="input-label">Co-Architect SS Strategy</label>
+                  <div class="ss-cards" id="p-co-ss" data-value="Optimal (Age 70)">
+                      <button type="button" class="ss-card" onclick="selectSSCard(this,'Early (Age 62)')"><div class="ss-card-age">62</div><div class="ss-card-label">Early</div></button>
+                      <button type="button" class="ss-card" onclick="selectSSCard(this,'Full (Age 67)')"><div class="ss-card-age">67</div><div class="ss-card-label">Full</div></button>
+                      <button type="button" class="ss-card active" onclick="selectSSCard(this,'Optimal (Age 70)')"><div class="ss-card-age">70</div><div class="ss-card-label">Optimal</div></button>
+                  </div>
+              </div>
+              <div><label class="input-label" style="color:var(--muted);">Est. Annual SS at 67 — Co-Architect <span style="font-size:9px;">(optional)</span></label>
+                  <div class="mock-input" style="padding: 10px 16px;">
+                      <span style="color:var(--muted); font-size:16px; margin-right:4px;">$</span>
+                      <input type="text" inputmode="numeric" id="p-co-ss-benefit" placeholder="e.g. 24,000" style="color:var(--white); font-size:16px;" data-clarity-mask="true">
+                  </div>
+              </div>
+          </div>
+
+          <div>
+            <label class="input-label">Target Retirement Date</label>
+            <div class="dob-row">
+              <div class="mock-input"><select id="p-ret-month" class="date-select" data-clarity-mask="true"></select></div>
+              <div class="mock-input"><select id="p-ret-year" class="date-select" data-clarity-mask="true"></select></div>
+            </div>
           </div>
         </div>
+        <!-- Trust message inside the Architect Profile box -->
+        <div style="border-top: 1px solid rgba(29,158,117,0.2); padding-top: 16px; text-align: center;">
+          <div style="font-family: var(--font-mono); font-size: 12px; font-style: italic; color: rgba(0,201,167,0.45); line-height: 1.6;">Your data generates your Range — nothing else. Precision in, precision out.</div>
+          <div style="font-family: var(--font-mono); font-size: 12px; font-style: italic; color: rgba(0,201,167,0.45); line-height: 1.6;">Your numbers stay in your browser. We don't store, sell, or share your financial data — ever.</div>
+        </div>
+      </div>
+
+      <!-- Remaining studio inputs outside the Architect Profile box -->
+      <div class="spec-grid">
+        <div><label class="input-label">Location</label><div class="mock-input"><input type="text" value="Florida"></div></div>
         <div>
             <label class="input-label">Social Security Strategy</label>
             <div class="ss-cards" id="p-ss-strategy" data-value="Optimal (Age 70)">
@@ -713,11 +761,6 @@
                 <input type="text" inputmode="numeric" id="p-ss-benefit" placeholder="e.g. 28,000" style="color:var(--white); font-size:16px;" data-clarity-mask="true">
             </div>
         </div>
-      </div>
-
-      <div style="margin-top: 16px; text-align: center;">
-        <div style="font-family: var(--font-mono); font-size: 12px; font-style: italic; color: rgba(0,201,167,0.45); line-height: 1.6;">Your data generates your Range — nothing else. Precision in, precision out.</div>
-        <div style="font-family: var(--font-mono); font-size: 12px; font-style: italic; color: rgba(0,201,167,0.45); line-height: 1.6;">Your numbers stay in your browser. We don't store, sell, or share your financial data — ever. Your inputs exist only for the seconds it takes to compute your Range.</div>
       </div>
 
       <div class="blueprint-wrapper">
@@ -779,20 +822,29 @@
   </div>
 
   <div id="screen3" class="screen min-vh">
-    <div class="s3-container">
-        <div class="s3-text-top" id="s3-top">Ten thousand futures.</div>
-        <div class="bullet-track">
-            <div class="bullet-line" id="s3-line"></div>
+    <!-- Cinematic stage: Monte Carlo multiverse → singularity convergence -->
+    <div class="cinematic-stage" id="cin-stage">
+        <div class="cin-text-layer">
+            <div id="cin-subtitle" class="status-subtitle">Phase I / Multiverse Variance</div>
+            <div id="cin-title1" class="status-title">Modeling a forty-thousand path multiverse.</div>
+            <div id="cin-title2" class="status-title">Singularity established.</div>
         </div>
-        <div class="s3-text-bottom" id="s3-bot">One Range.</div>
+        <svg class="wave-canvas" id="cin-canvas" viewBox="0 0 800 400" preserveAspectRatio="none">
+            <path class="mc-wave w-light" d="M -50,200 Q 150,-150 400,200 T 850,200" />
+            <path class="mc-wave w-gold"  d="M -50,200 Q 200,550 400,200 T 850,200" />
+            <path class="mc-wave w-teal"  d="M -50,200 Q 250,50 400,200 T 850,200" />
+            <path class="mc-wave w-light" d="M -50,200 Q 300,450 400,200 T 850,200" />
+            <path class="mc-wave w-gold"  d="M -50,200 Q 100,-50 400,200 T 850,200" />
+            <path class="mc-wave w-teal"  d="M -50,200 Q 350,600 400,200 T 850,200" />
+            <path class="mc-wave w-light" d="M -50,200 Q 150,100 400,200 T 850,200" />
+            <path class="mc-wave w-gold"  d="M -50,200 Q 250,300 400,200 T 850,200" />
+        </svg>
+        <div id="cin-dot" class="singularity-dot"></div>
     </div>
 
-    <!-- Flying catalyst bar — animated from brand sig position through all phases -->
-    <div id="flying-catalyst"></div>
-
-    <!-- Pulsing wait message: shown after Phase 5 completes while API is still running -->
+    <!-- Pulsing wait message: shown after cinematic completes while API is still running -->
     <div id="s3-pulsing" style="display:none; position:absolute; bottom:calc(50% - 120px); left:0; right:0; text-align:center; padding:20px;">
-        <div style="font-family:var(--font-mono); font-size:12px; text-transform:uppercase; letter-spacing:0.25em; color:var(--teal-mid); animation:pulse 1.8s ease-in-out infinite;">Simulating 10,000 futures...</div>
+        <div style="font-family:var(--font-mono); font-size:12px; text-transform:uppercase; letter-spacing:0.25em; color:var(--teal-mid); animation:pulse 1.8s ease-in-out infinite;">Simulating futures...</div>
     </div>
 
     <!-- Error overlay -->
@@ -873,7 +925,7 @@
                   <span style="color: var(--teal-mid);">Target Spend</span>
                   <span class="slider-val-disp" id="val-disp-spend" style="color: var(--teal);">$120,000 / yr</span>
               </div>
-              <input type="range" id="slider-spend" min="50000" max="300000" step="1000" value="120000">
+              <input type="range" id="slider-spend" min="50000" max="500000" step="1000" value="120000">
           </div>
           <div style="font-size: 10px; color: var(--muted); margin-top: 16px; line-height: 1.5;">
               Moving your DATUM instantly stress-tests your lifestyle against your portfolio's solved capacity. Altering core architecture (Age, Capital) requires a full model recalculation.
@@ -1465,9 +1517,9 @@
         // Slider range
         const slider = $('slider-spend');
         if (slider) {
-            slider.min   = BEDROCK;
-            slider.max   = Math.round(CAPSTONE * 1.15);
-            slider.value = Math.max(BEDROCK, Math.min(Math.round(CAPSTONE * 1.15), API_DATUM_SPEND));
+            slider.min   = Math.max(20000, Math.round(BEDROCK * 0.5));  // Fix 5: allow below floor
+            slider.max   = Math.round(CAPSTONE * 3);                   // Fix 4: allow 3x above ceiling
+            slider.value = Math.max(parseInt(slider.min), Math.min(Math.round(CAPSTONE * 3), API_DATUM_SPEND));
         }
         if ($('inline-datum-input')) $('inline-datum-input').value = API_DATUM_SPEND.toLocaleString('en-US');
         if ($('val-disp-spend'))     $('val-disp-spend').innerText  = formatMoney(API_DATUM_SPEND) + ' / yr';
@@ -1678,14 +1730,17 @@
         if (FOUNDATION > 0 && $('svg-foundation')) $('svg-foundation').setAttribute('d', getFunnelPath(valToY(FOUNDATION)));
         if (KEYSTONE   > 0 && $('svg-keystone'))   $('svg-keystone').setAttribute('d',   getFunnelPath(valToY(KEYSTONE)));
 
-        // Legacy (linear interpolation from API datum spend)
-        const legacyEst        = Math.max(0, LEGACY_P50 + (API_DATUM_SPEND - datumVal)  * 150);
-        const legacyAtCeiling  = Math.max(0, LEGACY_P50 + (API_DATUM_SPEND - CAPSTONE)  * 150);
-        const legacyAtFloor    = Math.max(0, LEGACY_P50 + (API_DATUM_SPEND - BEDROCK)   * 150);
-        if ($('legacy-text-span'))  $('legacy-text-span').innerText  = 'Est. Legacy: ' + formatM(legacyEst);
+        // Legacy (linear interpolation from API datum spend) — allows negative (shortfall)
+        const legacyEst       = LEGACY_P50 + (API_DATUM_SPEND - datumVal) * 150;
+        const legacyAtCeiling = LEGACY_P50 + (API_DATUM_SPEND - CAPSTONE) * 150;
+        const legacyAtFloor   = LEGACY_P50 + (API_DATUM_SPEND - BEDROCK)  * 150;
+        const fmtLegacy = n => n >= 0 ? formatM(n) : formatM(n) + ' (shortfall)';
+        const legacyColor = legacyEst < 0 ? 'var(--danger-red)' : 'var(--teal-mid)';
+        const legSpan = $('legacy-text-span');
+        if (legSpan)  { legSpan.innerText = 'Est. Legacy: ' + fmtLegacy(legacyEst); legSpan.style.color = legacyColor; }
         if ($('datum-bal-display')) $('datum-bal-display').innerText = formatM(datumVal * 25);
-        if ($('hint-datum'))    $('hint-datum').innerText    = 'Est. Legacy: ' + formatM(legacyEst);
-        if ($('hint-ceiling'))  $('hint-ceiling').innerText  = 'Est. Legacy at ceiling: ' + formatM(legacyAtCeiling);
+        if ($('hint-datum'))    $('hint-datum').innerText    = 'Est. Legacy: ' + fmtLegacy(legacyEst);
+        if ($('hint-ceiling'))  $('hint-ceiling').innerText  = 'Est. Legacy at ceiling: ' + fmtLegacy(legacyAtCeiling);
         if ($('hint-floor'))    $('hint-floor').innerText    = 'Est. Legacy at floor: '   + formatM(legacyAtFloor);
 
         // Buffer display (below floor = good = green)
@@ -1822,7 +1877,7 @@
             return;
         }
 
-        // ── First-time cinematic path ────────────────────────────────────────
+        // ── First-time cinematic path (new: MC waves + singularity) ─────────
         hasLoadedOnce = true;
         // Reveal the Range nav link now that a calculation has been run
         const rangeLink    = $('nav-link-range');
@@ -1832,19 +1887,13 @@
         const btn = $('trigger-btn');
         if (btn) { btn.disabled = true; btn.innerText = 'Simulating Range...'; }
 
-        // Start API fetch immediately — runs in parallel with the entire animation
+        // Start API fetch immediately — runs in parallel with entire cinematic
         const apiPromise = callAPI();
 
-        // Shorthand refs
-        const fc        = $('flying-catalyst');
-        const line      = $('s3-line');
-        const tTop      = $('s3-top'),      tBot    = $('s3-bot');
-        const sigDatum  = $('sig-datum-text'), sigF  = $('sig-f-text'),
-              sigI      = $('sig-i-text'),   sigBar  = $('sig-bar-real');
         const pulsingEl = $('s3-pulsing');
-        const datumPath = $('svg-datum'),   dynDat  = $('dynamic-datum');
+        const datumPath = $('svg-datum'),   dynDat    = $('dynamic-datum');
         const ceilPath  = $('svg-ceiling'), floorPath = $('svg-floor');
-        const lblC      = $('lbl-ceiling'), lblF    = $('lbl-floor');
+        const lblC      = $('lbl-ceiling'), lblF      = $('lbl-floor');
         const vCon      = $('v-origin');
         const ephPaths  = document.querySelectorAll('.eph-path');
 
@@ -1859,280 +1908,83 @@
         if ($('controls-panel')) $('controls-panel').classList.remove('active');
         ephPaths.forEach(p => { p.setAttribute('d', getFunnelPath(200)); p.style.opacity = '0'; });
 
-        // ── Reset Screen 3 state ──────────────────────────────────────────────
-        if (line)      { line.style.transition = 'none'; line.style.width = '0'; line.style.opacity = '1'; }
-        if (tTop)      { tTop.style.transition = 'none'; tTop.classList.remove('show-text'); }
-        if (tBot)      { tBot.style.transition = 'none'; tBot.classList.remove('show-text'); }
-        if (pulsingEl)   pulsingEl.style.display = 'none';
+        // ── Cinematic element refs ────────────────────────────────────────────
+        const cinCanvas = $('cin-canvas');
+        const cinDot    = $('cin-dot');
+        const cinSub    = $('cin-subtitle');
+        const cinT1     = $('cin-title1');
+        const cinT2     = $('cin-title2');
 
-        // ── Measure brand-sig container position before switching screens ────────
-        // We'll clone the entire brand sig and float it to center as a fixed overlay.
-        const brandSig  = $('brand-sig');
-        const brandRect = brandSig ? brandSig.getBoundingClientRect()
-                                   : { left: window.innerWidth - 80, top: 16, width: 64, height: 22 };
+        // ── Reset cinematic state ─────────────────────────────────────────────
+        if (cinDot)    cinDot.className = 'singularity-dot';
+        if (cinCanvas) cinCanvas.className = 'wave-canvas';
+        [cinSub, cinT1, cinT2].forEach(el => { if (el) el.classList.remove('text-visible'); });
+        if (pulsingEl) pulsingEl.style.display = 'none';
 
-        // ── Create fixed clone of brand sig — overlays the real one ─────────────
-        // The clone floats to screen center at 3x scale, then dissolves.
-        const sigClone = brandSig ? brandSig.cloneNode(true) : null;
-        if (sigClone) {
-            sigClone.id = 'brand-sig-float';
-            sigClone.style.cssText = [
-                'position:fixed',
-                'top:'    + brandRect.top  + 'px',
-                'left:'   + brandRect.left + 'px',
-                'transform:scale(1)',
-                'transform-origin:top left',
-                'transition:none',
-                'z-index:300',
-                'pointer-events:none',
-                'margin:0',
-                'padding:0',
-            ].join(';');
-            document.body.appendChild(sigClone);
-        }
-
-        // ── Pre-position fc offscreen (invisible) — repositioned during handoff ─
-        if (fc) {
-            fc.style.transition   = 'none';
-            fc.style.opacity      = '0';
-            fc.style.width        = '2px';
-            fc.style.height       = '18px';
-            fc.style.borderRadius = '1px';
-            fc.style.boxShadow    = '0 0 8px rgba(201,168,76,0.4)';
-            fc.style.transform    = 'none';
-            fc.style.left         = '-200px';
-            fc.style.top          = '-200px';
-        }
-
-        // Switch to Screen 3; hide the original brand sig elements behind the clone
         goToScreen(3);
-        if (sigDatum) { sigDatum.style.transition = 'none'; sigDatum.style.opacity = '0'; }
-        if (sigF)     { sigF.style.transition     = 'none'; sigF.style.opacity     = '0'; }
-        if (sigI)     { sigI.style.transition     = 'none'; sigI.style.opacity     = '0'; }
-        if (sigBar)   { sigBar.style.transition   = 'none'; sigBar.style.opacity   = '0'; }
-        if (fc) void fc.offsetWidth; // force reflow
 
-        // ────────────────────────────────────────────────────────────────────────
-        // Timeline constants (all ms from animation start)
-        // ────────────────────────────────────────────────────────────────────────
-        // Phase 0  Float:       50 → 1550ms  (1.5s glide + 1s hold = 2550ms total)
-        // Phase 1  Dissolution: 2550 → 3850ms (DATUM 0.8s, F/I 0.5s)
-        // Phase 1→2 Handoff:    3850ms        (fc appears at clone bar position)
-        // Phase 2  Pivot:       3950 → 4700ms (center + rotate)
-        // Phase 3  Collapse:    4600 → 5100ms
-        // Phase 4  Sweep left:  5100 → 5600ms
-        // Phase 5  Ignition:    5600ms → 10500ms (bullet 3s + text sequence ~5s)
-        //   "Ten thousand futures." in 0.5s | hold 1.5s | out 0.5s
-        //   "One Range."             in 0.5s | hold 1.5s | out 0.5s  (sequential)
-        // Phase 6  Drift:       11000ms+ (fills API wait)
-        // ────────────────────────────────────────────────────────────────────────
-        const P1_START = 2550;              // dissolution begins after float+hold
-        const P2_START = P1_START + 1300;   // 3850ms — handoff after F/I gone
-        const P3_START = P2_START + 750;    // 4600ms
-        const P4_START = P3_START + 500;    // 5100ms
-        const P5_START = P4_START + 500;    // 5600ms
-        // Text done: P5_START + 900+1500+500 + 500+1500+500 = P5_START+5400 = 11000ms
-        const ANIM_DONE = P5_START + 5400 + 500; // 11500ms with 500ms buffer
+        // ────────────────────────────────────────────────────────────────────
+        // Timeline (all ms from animation start):
+        // Phase 1 Chaos (0.1s):      MC waves + subtitle/title appear
+        // Phase 2 Collapse (1.6s):   Waves compress to centerline
+        // Phase 3 Singularity (2.9s): Gold dot ignites at center
+        // Phase 4 Anchor (4.3s):     Dot floats left to anchor position
+        // Phase 5 Zip (6.1s):        Dot fires right with beam trail (~700ms)
+        // ANIM_DONE (7500ms):        Cinematic done; begin API wait phase
+        // ────────────────────────────────────────────────────────────────────
+        const ANIM_DONE = 7500;
 
-        // ════════════════════════════════════════════════════════════════════
-        // PHASE 0 — Float brand to center (50ms → 2550ms)
-        // Clone glides from top-right to screen center, scaling to 3x.
-        // Holds ~1s so the user sees the brand prominently before dissolution.
-        // ════════════════════════════════════════════════════════════════════
         setTimeout(() => {
-            if (!sigClone) return;
-            // Center the 3x-scaled clone: shift by (width*3)/2 and (height*3)/2
-            const targetX = Math.round(window.innerWidth  / 2 - (brandRect.width  * 3) / 2);
-            const targetY = Math.round(window.innerHeight / 2 - (brandRect.height * 3) / 2);
-            sigClone.style.transition = [
-                'transform 1.5s cubic-bezier(0.4,0,0.2,1)',
-                'top 1.5s cubic-bezier(0.4,0,0.2,1)',
-                'left 1.5s cubic-bezier(0.4,0,0.2,1)',
-            ].join(',');
-            sigClone.style.transform = 'scale(3)';
-            sigClone.style.top       = targetY + 'px';
-            sigClone.style.left      = targetX + 'px';
-        }, 50);
+            // ── Phase 1: Chaos / Multiverse Variance ─────────────────────────
+            if (cinSub) { cinSub.innerText = 'Phase I / Multiverse Variance'; cinSub.classList.add('text-visible'); }
+            if (cinT1)  cinT1.classList.add('text-visible');
+            if (cinCanvas) cinCanvas.classList.add('waves-active');
 
-        // ════════════════════════════════════════════════════════════════════
-        // PHASE 1 — Brand Dissolution (2550ms → 3850ms)
-        // Clone is centered at 3x. DATUM fades (0.8s), then F and I fade (0.5s).
-        // Gold bar remains floating at screen center — it is the catalyst.
-        // ════════════════════════════════════════════════════════════════════
-        setTimeout(() => {
-            if (!sigClone) return;
-            const cDatum = sigClone.querySelector('[id="sig-datum-text"]');
-            const cF     = sigClone.querySelector('[id="sig-f-text"]');
-            const cI     = sigClone.querySelector('[id="sig-i-text"]');
-
-            if (cDatum) { cDatum.style.transition = 'opacity 0.8s ease'; cDatum.style.opacity = '0'; }
-
-            // F and I follow 700ms after DATUM starts
+            // ── Phase 2: Collapse (1500ms) ────────────────────────────────────
             setTimeout(() => {
-                if (cF) { cF.style.transition = 'opacity 0.5s ease'; cF.style.opacity = '0'; }
-                if (cI) { cI.style.transition = 'opacity 0.5s ease'; cI.style.opacity = '0'; }
-            }, 700);
-        }, P1_START);
+                if (cinSub) cinSub.classList.remove('text-visible');
+                if (cinT1)  cinT1.classList.remove('text-visible');
+                if (cinCanvas) cinCanvas.classList.add('waves-collapsed');
+            }, 1500);
 
-        // ════════════════════════════════════════════════════════════════════
-        // PHASE 1→2 HANDOFF (3850ms)
-        // F/I fully gone. Measure clone bar's actual rendered position via
-        // getBoundingClientRect() (works through CSS transforms). Position fc
-        // there, crossfade: fc fades in, clone bar fades out. Remove clone.
-        // Then Phase 2: fc glides to exact center + rotates.
-        // ════════════════════════════════════════════════════════════════════
-        setTimeout(() => {
-            const cBar   = sigClone ? sigClone.querySelector('[id="sig-bar-real"]') : null;
-            const cbRect = cBar ? cBar.getBoundingClientRect()
-                                : { left: window.innerWidth / 2, top: window.innerHeight / 2 - 27, width: 6, height: 54 };
-
-            // Position fc at clone bar's rendered position (Screen 3 absolute = viewport coords)
-            if (fc) {
-                fc.style.transition   = 'none';
-                fc.style.width        = cbRect.width  + 'px';
-                fc.style.height       = cbRect.height + 'px';
-                fc.style.left         = cbRect.left   + 'px';
-                fc.style.top          = cbRect.top    + 'px';
-                fc.style.borderRadius = '2px';
-                fc.style.boxShadow    = '0 0 16px rgba(201,168,76,0.7)';
-                fc.style.transform    = 'none';
-                void fc.offsetWidth;
-                fc.style.transition   = 'opacity 0.3s ease';
-                fc.style.opacity      = '1';
-            }
-            // Fade out clone bar as fc fades in
-            if (cBar) { cBar.style.transition = 'opacity 0.3s ease'; cBar.style.opacity = '0'; }
-            // Remove clone after crossfade
+            // ── Phase 3: Singularity ignites (2800ms) ────────────────────────
             setTimeout(() => {
-                if (sigClone && sigClone.parentNode) sigClone.parentNode.removeChild(sigClone);
-            }, 400);
+                if (cinSub) { cinSub.innerText = 'Phase II / Ordered Alignment'; cinSub.classList.add('text-visible'); }
+                if (cinT2)  cinT2.classList.add('text-visible');
+                if (cinCanvas) cinCanvas.classList.add('waves-hidden');
+                if (cinDot) cinDot.classList.add('dot-ignite');
+            }, 2800);
 
-            // ── PHASE 2 — Center & Pivot (fc is already near center; refine + rotate)
+            // ── Phase 4: Float to anchor (4200ms) ────────────────────────────
             setTimeout(() => {
-                const cx = Math.round(window.innerWidth  / 2 - cbRect.width  / 2);
-                const cy = Math.round(window.innerHeight / 2 - cbRect.height / 2);
-                if (fc) {
-                    fc.style.transition = 'left 0.5s cubic-bezier(0.4,0,0.2,1), top 0.5s cubic-bezier(0.4,0,0.2,1)';
-                    fc.style.left = cx + 'px';
-                    fc.style.top  = cy + 'px';
-                }
-                // Rotate to horizontal 250ms into the glide
-                setTimeout(() => {
-                    if (fc) {
-                        fc.style.transition = 'left 0.3s ease, top 0.3s ease, transform 0.5s cubic-bezier(0.4,0,0.2,1)';
-                        fc.style.transform  = 'rotate(90deg)';
-                    }
-                }, 250);
-            }, 100);
-        }, P2_START);
+                if (cinT2) cinT2.classList.remove('text-visible');
+                if (cinDot) cinDot.classList.add('dot-float');
+            }, 4200);
 
-        // ════════════════════════════════════════════════════════════════════
-        // PHASE 3 — Collapse to dot (4600ms → 5100ms)
-        // ════════════════════════════════════════════════════════════════════
-        setTimeout(() => {
-            if (fc) {
-                fc.style.transition   = 'width 0.5s ease, height 0.5s ease, border-radius 0.5s ease, box-shadow 0.4s ease, transform 0.3s ease';
-                fc.style.width        = '12px';
-                fc.style.height       = '12px';
-                fc.style.borderRadius = '50%';
-                fc.style.boxShadow    = '0 0 22px rgba(201,168,76,0.9)';
-                fc.style.transform    = 'none';
-            }
-        }, P3_START);
-
-        // ════════════════════════════════════════════════════════════════════
-        // PHASE 4 — Sweep left (5100ms → 5600ms)
-        // ════════════════════════════════════════════════════════════════════
-        setTimeout(() => {
-            const trackTop = Math.round(window.innerHeight / 2 - 6);
-            if (fc) {
-                fc.style.transition = 'left 0.5s cubic-bezier(0.4,0,0.2,1), top 0.5s cubic-bezier(0.4,0,0.2,1)';
-                fc.style.left = '40px';
-                fc.style.top  = trackTop + 'px';
-            }
-        }, P4_START);
-
-        // ════════════════════════════════════════════════════════════════════
-        // PHASE 5 — Ignition + Text (5600ms → 11000ms)
-        // Bullet shoots right (3s). Text is sequential, not overlapping:
-        //   "Ten thousand futures." — fade in 0.5s | hold 1.5s | fade out 0.5s
-        //   "One Range."             — fade in 0.5s | hold 1.5s | fade out 0.5s
-        // Both lines are fully readable; total text sequence ~5s.
-        // ════════════════════════════════════════════════════════════════════
-        setTimeout(() => {
-            const rightEdge  = window.innerWidth - 40 - 12;
-            const trailWidth = rightEdge - 40;
-
-            if (fc) {
-                fc.style.transition = 'left 3.0s cubic-bezier(0.6,0,0.2,1)';
-                fc.style.left = rightEdge + 'px';
-            }
-            if (line) {
-                line.style.transition = 'width 3.0s cubic-bezier(0.6,0,0.2,1)';
-                line.style.width = trailWidth + 'px';
-            }
-
-            // "Ten thousand futures." fades in as dot crosses ~30% of screen (~900ms)
+            // ── Phase 5: Zip right + beam trail (6000ms) ─────────────────────
             setTimeout(() => {
-                if (tTop) { tTop.style.transition = 'opacity 0.5s ease'; tTop.classList.add('show-text'); }
-                // Hold 1.5s, then fade out over 0.5s
-                setTimeout(() => {
-                    if (tTop) { tTop.style.transition = 'opacity 0.5s ease'; tTop.classList.remove('show-text'); }
-                    // "One Range." starts only AFTER "Ten thousand futures." is fully gone (500ms = fade duration)
-                    setTimeout(() => {
-                        if (tBot) { tBot.style.transition = 'opacity 0.5s ease'; tBot.classList.add('show-text'); }
-                        // Hold 1.5s, then fade out over 0.5s
-                        setTimeout(() => {
-                            if (tBot) { tBot.style.transition = 'opacity 0.5s ease'; tBot.classList.remove('show-text'); }
-                        }, 1500);
-                    }, 500); // wait for tTop fade-out to complete
-                }, 1500);
-            }, 900);
-        }, P5_START);
+                if (cinSub) cinSub.classList.remove('text-visible');
+                if (cinDot) cinDot.classList.add('dot-zip');
+            }, 6000);
+        }, 100);
 
         // ════════════════════════════════════════════════════════════════════
-        // Animation milestone: ANIM_DONE (11500ms) — full cinematic complete.
-        // Phase 6 drift fills the remaining ~4s until API responds (~16s).
-        // If API already resolved during Phase 5, Phase 7 runs immediately
-        // after animDelay fires (both promises must resolve before Phase 7).
+        // ANIM_DONE (7500ms) — cinematic complete.
+        // If API already resolved, Phase 7 fires immediately.
+        // Otherwise Phase 6 shows pulsing state until API resolves.
         // ════════════════════════════════════════════════════════════════════
         const animDelay = new Promise(resolve => setTimeout(resolve, ANIM_DONE));
 
         animDelay
             .then(() => {
-                // Ensure text is hidden before drift begins (safety flush)
-                if (tTop) { tTop.style.transition = 'opacity 0.3s ease'; tTop.classList.remove('show-text'); }
-                if (tBot) { tBot.style.transition = 'opacity 0.3s ease'; tBot.classList.remove('show-text'); }
-
-                // ── PHASE 6 — Drift (slow crawl right → left, ~25s full crossing)
-                // Interrupted by Phase 7 snap-back the moment API responds.
-                if (fc) {
-                    fc.style.transition = 'left 25s linear';
-                    fc.style.left = '40px';
-                }
-
+                // ── Phase 6 — Pulsing wait (fills until API responds) ─────────
                 if (pulsingEl) pulsingEl.style.display = 'block';
-
-                return apiPromise; // chains: waits for API if not yet done
+                return apiPromise;
             })
             .then(data => {
-                // ── PHASE 7 — Snap-back (API responded)
+                // ── Phase 7 — API responded; transition to Screen 4 ──────────
                 if (pulsingEl) pulsingEl.style.display = 'none';
 
-                if (fc) {
-                    // Freeze at current interpolated position, then snap
-                    const curLeft = parseFloat(getComputedStyle(fc).left);
-                    fc.style.transition = 'none';
-                    fc.style.left = curLeft + 'px';
-                    void fc.offsetWidth; // reflow to apply freeze
-                    fc.style.transition = 'left 0.3s cubic-bezier(0.8,0,0.1,1), opacity 0.3s ease 0.15s';
-                    fc.style.left    = '40px';
-                    fc.style.opacity = '0';
-                }
-                // Fade trail simultaneously
-                if (line) { line.style.transition = 'opacity 0.3s ease'; line.style.opacity = '0'; }
-
-                // Populate data, then reveal Screen 4 after snap completes
                 populateScreen4(data);
 
                 setTimeout(() => {
@@ -2154,7 +2006,7 @@
                             if (btn) { btn.disabled = false; btn.innerText = 'Reveal Your Range'; }
                         }, 800);
                     }, 100);
-                }, 400); // wait for snap + fade to finish
+                }, 400);
             })
             .catch(() => {
                 showAPIError();
