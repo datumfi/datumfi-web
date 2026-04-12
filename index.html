@@ -68,15 +68,15 @@
 
   /* Custom Range Sliders */
   input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; margin: 8px 0; }
-  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%; background: #00C9A7; cursor: pointer; margin-top: -10px; box-shadow: 0 0 10px rgba(0,201,167,0.5); transition: transform 0.1s; }
-  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
-  input[type=range]::-moz-range-thumb { height: 24px; width: 24px; border-radius: 50%; background: #00C9A7; cursor: pointer; border: none; box-shadow: 0 0 10px rgba(0,201,167,0.5); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 28px; width: 28px; border-radius: 50%; background: #00C9A7; cursor: grab; margin-top: -12px; border: 2px solid white; box-shadow: 0 0 12px rgba(0,201,167,0.6); transition: transform 0.1s; }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  input[type=range]::-moz-range-thumb { height: 28px; width: 28px; border-radius: 50%; background: #00C9A7; cursor: grab; border: 2px solid white; box-shadow: 0 0 12px rgba(0,201,167,0.6); }
   input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: rgba(255,255,255,0.1); border-radius: 2px; }
   input[type=range]:focus { outline: none; }
   input[type=range]:focus::-webkit-slider-runnable-track { background: rgba(255,255,255,0.2); }
 
   /* --- SCREEN 1: Landing --- */
-  .landing-hero-container { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; text-align: center; position: relative; min-height: 100vh; padding: 80px 0 60px;}     
+  .landing-hero-container { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; text-align: center; position: relative; min-height: 100vh; padding: 0 0 60px;}     
   .hero-bg-grid { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0; background-image: linear-gradient(rgba(100,180,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(100,180,255,0.08) 1px, transparent 1px); background-size: 40px 40px; opacity: 0.5; mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 30%, transparent 95%); -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 30%, transparent 95%); animation: gridDrift 60s linear infinite; }
   @keyframes gridDrift { 100% { background-position: 80px 80px; } }
   .anim-fade-up { opacity: 0; transform: translateY(20px); animation: fadeUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
@@ -84,15 +84,55 @@
   @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
   
   /* Fixed Spacing Pair */
-  .hero-preview { margin: 80px auto 60px auto; display: flex; align-items: center; justify-content: center; gap: 24px; opacity: 0.8; position: relative; z-index: 5; pointer-events: none;}
+  .hero-preview { margin: 32px auto 40px auto; display: flex; align-items: center; justify-content: center; gap: 32px; flex-wrap: wrap; opacity: 0.9; position: relative; z-index: 5; pointer-events: none;}
   .mini-label { position: absolute; top: -36px; left: 50%; transform: translateX(-50%); font-family: var(--font-serif); font-style: italic; font-size: 20px; color: rgba(255,255,255,0.8); font-weight: 300; letter-spacing: 0.05em; white-space: nowrap; }
   
-  /* Screen 1 Mini Blueprint Tree */
-  .mini-fp { border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 6px; display: flex; flex-direction: column; align-items: center; gap: 12px; width: 200px; height: 140px; background: rgba(9, 18, 33, 0.8); position: relative;}
-  .node-top { width: 80px; height: 14px; background: rgba(79,170,230,0.3); border: 1px solid rgba(79,170,230,0.6); border-radius: 2px; z-index: 2;}
-  .node-row { display: flex; gap: 12px; width: 100%; justify-content: center; position: relative; z-index: 2;}
-  .node-box { width: 45px; height: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 2px; }
-  .tree-lines { position: absolute; top: 30px; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;}
+  /* Screen 1 Mini Blueprint Tree (legacy — replaced by he-* animated estate) */
+  .mini-fp { display: none; }
+
+  /* Hero Estate Animation */
+  .he-wrapper { position: relative; width: 300px; height: 210px; border: 1px solid rgba(255,255,255,0.06); background: rgba(9,18,33,0.65); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+  .he-lines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; overflow: visible; }
+  .he-b-line { fill: none; stroke: rgba(93,202,165,0.18); stroke-width: 1.5; stroke-dasharray: 300; stroke-dashoffset: 300; }
+  .he-p-line { fill: none; stroke: var(--gold); stroke-width: 2; stroke-dasharray: 12 70; stroke-dashoffset: 82; stroke-linecap: round; opacity: 0; }
+  .he-nodes { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; }
+  .he-node { position: absolute; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-left: 2px solid var(--teal-mid); border-radius: 4px; padding: 5px 8px; display: flex; align-items: center; width: 78px; transform: translateX(-20px); opacity: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+  .he-node-text { display: flex; flex-direction: column; }
+  .he-node-title { font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .he-node-val { font-family: var(--font-serif); font-style: italic; font-size: 13px; color: var(--white); margin-top: 2px; }
+  .he-n-tax  { top: 17px;  left: 14px; }
+  .he-n-roth { top: 52px;  left: 14px; }
+  .he-n-brok { top: 87px;  left: 14px; }
+  .he-n-prop { top: 122px; left: 14px; }
+  .he-n-cash { top: 157px; left: 14px; }
+  .he-n-root { top: 64px; left: 186px; width: 86px; height: 70px; background: linear-gradient(135deg, rgba(201,168,76,0.12) 0%, rgba(9,18,33,0.85) 100%); border: 1px solid var(--gold); border-left: 1px solid var(--gold); border-radius: 50%; flex-direction: column; justify-content: center; text-align: center; transform: scale(0.8); opacity: 0; box-shadow: 0 0 0 rgba(201,168,76,0); }
+  .he-n-root .he-node-title { color: var(--gold); font-size: 8px; margin-bottom: 2px; }
+  .he-n-root .he-node-val { color: var(--gold); font-size: 16px; margin-top: 0; }
+
+  .he-active .he-node:not(.he-n-root) { animation: heSlideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+  .he-active .he-n-tax  { animation-delay: 0.1s; }
+  .he-active .he-n-roth { animation-delay: 0.2s; }
+  .he-active .he-n-brok { animation-delay: 0.3s; }
+  .he-active .he-n-prop { animation-delay: 0.4s; }
+  .he-active .he-n-cash { animation-delay: 0.5s; }
+  .he-active .he-b-line { animation: heDrawPath 1s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+  .he-active .he-d1 { animation-delay: 0.8s; }
+  .he-active .he-d2 { animation-delay: 0.9s; }
+  .he-active .he-d3 { animation-delay: 1.0s; }
+  .he-active .he-d4 { animation-delay: 1.1s; }
+  .he-active .he-d5 { animation-delay: 1.2s; }
+  .he-active .he-n-root { animation: hePopRoot 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 1.8s forwards; }
+  .he-active .he-p-line { animation: heFlowPulse 2s linear infinite; }
+  .he-active .he-p1 { animation-delay: 2.5s; }
+  .he-active .he-p2 { animation-delay: 2.7s; }
+  .he-active .he-p3 { animation-delay: 2.4s; }
+  .he-active .he-p4 { animation-delay: 2.9s; }
+  .he-active .he-p5 { animation-delay: 2.6s; }
+
+  @keyframes heSlideIn { 0% { transform: translateX(-20px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
+  @keyframes heDrawPath { to { stroke-dashoffset: 0; } }
+  @keyframes hePopRoot { 0% { transform: scale(0.8); opacity: 0; box-shadow: 0 0 0 rgba(201,168,76,0); } 50% { transform: scale(1.05); opacity: 1; box-shadow: 0 0 30px rgba(201,168,76,0.4); } 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 15px rgba(201,168,76,0.2); } }
+  @keyframes heFlowPulse { 0% { stroke-dashoffset: 82; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
   
   /* --- SCREEN 2: Studio --- */
   .spec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 40px; width: 100%;}
@@ -143,7 +183,7 @@
   #flying-catalyst { position: absolute; background: var(--gold); border-radius: 1px; box-shadow: 0 0 8px rgba(201,168,76,0.4); opacity: 0; z-index: 200; pointer-events: none; transform-origin: center center; }
 
   /* --- SCREEN 4: Multiverse Funnel Reveal --- */
-  .v-range-container { position: relative; width: 100%; height: 400px; margin: 60px 0 20px 0; }
+  .v-range-container { position: relative; width: 100%; height: 400px; margin: 8px 0 20px 0; }
   .v-origin { position: absolute; left: 40px; top: 50%; width: 16px; height: 16px; background: var(--gold); border-radius: 50%; transform: translate(-8px, -50%); z-index: 5; box-shadow: 0 0 20px rgba(201,168,76,0.8); transition: opacity 0.5s ease; opacity: 0; }
   .v-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;}
   
@@ -581,7 +621,7 @@
   <div id="screen1" class="screen active">
     <div class="landing-hero-container">
       <div class="hero-bg-grid"></div>
-      <div class="content-bounds" style="text-align: center; padding-top: 60px;">
+      <div class="content-bounds" style="text-align: center; padding-top: 20px;">
         <h1 class="anim-fade-up anim-delay-1">Data in.<br>Confidence out.</h1>
         <div class="subtext anim-fade-up anim-delay-2" style="font-size: 16px;">Retirement spending isn't a number. It's a Range.</div>
         <div class="subtext anim-fade-up anim-delay-2" style="margin-top: 12px;">A new way to understand retirement: tax‑aware, crash‑aware, and grounded in your actual financial architecture.</div>
@@ -589,19 +629,32 @@
         <div class="hero-preview anim-fade-up anim-delay-3">
             <div class="mini-fp-container" style="position: relative;">
                 <div class="mini-label">The Estate</div>
-                <div class="mini-fp">
-                   <svg class="tree-lines" viewBox="0 0 200 140" preserveAspectRatio="xMidYMid meet">
-                       <path d="M100,10 L100,30 M100,30 L40,30 L40,40 M100,30 L100,40 M100,30 L160,30 L160,40 M40,60 L40,70 M160,60 L160,70 M100,60 L100,70 M100,90 L100,100" stroke="rgba(79,170,230,0.4)" fill="none" stroke-width="1.5" />
-                   </svg>
-                   <div class="node-top"></div>
-                   <div class="node-row" style="margin-top: 8px;"><div class="node-box"></div><div class="node-box"></div><div class="node-box"></div></div>
-                   <div class="node-row" style="margin-top: 8px;"><div class="node-box"></div><div class="node-box"></div></div>
-                   <div class="node-row" style="margin-top: 8px; width: 50%;"><div class="node-box"></div></div>
+                <div class="he-wrapper" id="he-stage">
+                    <svg class="he-lines" viewBox="0 0 300 210" preserveAspectRatio="none">
+                        <path class="he-b-line he-d1" d="M 92,33 C 137,33 143,99 186,99" />
+                        <path class="he-p-line he-p1" d="M 92,33 C 137,33 143,99 186,99" />
+                        <path class="he-b-line he-d2" d="M 92,68 C 137,68 143,99 186,99" />
+                        <path class="he-p-line he-p2" d="M 92,68 C 137,68 143,99 186,99" />
+                        <path class="he-b-line he-d3" d="M 92,103 C 137,103 143,99 186,99" />
+                        <path class="he-p-line he-p3" d="M 92,103 C 137,103 143,99 186,99" />
+                        <path class="he-b-line he-d4" d="M 92,138 C 137,138 143,99 186,99" />
+                        <path class="he-p-line he-p4" d="M 92,138 C 137,138 143,99 186,99" />
+                        <path class="he-b-line he-d5" d="M 92,173 C 137,173 143,99 186,99" />
+                        <path class="he-p-line he-p5" d="M 92,173 C 137,173 143,99 186,99" />
+                    </svg>
+                    <div class="he-nodes">
+                        <div class="he-node he-n-tax"><div class="he-node-text"><div class="he-node-title">Pre-Tax</div><div class="he-node-val">$1.4M</div></div></div>
+                        <div class="he-node he-n-roth"><div class="he-node-text"><div class="he-node-title">Roth</div><div class="he-node-val">$350k</div></div></div>
+                        <div class="he-node he-n-brok"><div class="he-node-text"><div class="he-node-title">Taxable</div><div class="he-node-val">$600k</div></div></div>
+                        <div class="he-node he-n-prop"><div class="he-node-text"><div class="he-node-title">Property</div><div class="he-node-val">$800k</div></div></div>
+                        <div class="he-node he-n-cash"><div class="he-node-text"><div class="he-node-title">Cash</div><div class="he-node-val">$50k</div></div></div>
+                        <div class="he-node he-n-root"><div class="he-node-title">The Estate</div><div class="he-node-val">$3.2M</div></div>
+                    </div>
                 </div>
             </div>
             <div class="mini-range-container" style="position: relative;">
                 <div class="mini-label">The Range</div>
-                <svg width="160" height="120" viewBox="0 0 160 120" style="overflow: visible;">
+                <svg width="240" height="180" viewBox="0 0 160 120" style="overflow: visible;">
                   <style>
                     @keyframes rangePulse { 0%,100%{opacity:0.15} 50%{opacity:0.35} }
                     @keyframes datumDash { to{stroke-dashoffset:-16} }
@@ -871,17 +924,15 @@
   <div id="screen4" class="screen">
     <div class="content-bounds" style="padding-top: 40px; padding-bottom: 80px;">
       
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 24px; flex-wrap: wrap;">
-          <div>
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 8px; flex-wrap: wrap;">
+          <div style="padding-top: 4px;">
               <div style="font-family: var(--font-serif); font-style: italic; font-size: 28px; color: var(--white); margin-bottom: 4px;">Your estate has been measured.</div>
               <div style="font-family: var(--font-mono); font-size: 11px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em;">These are your boundaries.</div>
           </div>
-          <div class="quick-toggles-panel active" id="controls-panel" style="display: flex; flex-direction: column; width: 210px; flex-shrink: 0; padding: 0;">
-              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
-                  <span style="font-family: var(--font-mono); font-size: 10px; color: var(--teal-mid); text-transform: uppercase; letter-spacing: 0.1em;">Target Spend</span>
-                  <span class="slider-val-disp" id="val-disp-spend" style="font-family: var(--font-mono); font-size: 12px; color: var(--teal);">$120,000 / yr</span>
-              </div>
-              <input type="range" id="slider-spend" min="50000" max="500000" step="1000" value="120000">
+          <div class="quick-toggles-panel active" id="controls-panel" style="background: linear-gradient(135deg, #0e1b30 0%, #050a14 100%); border: 1px solid var(--teal); border-radius: 12px; padding: 20px 24px; min-width: 200px; text-align: right; box-shadow: inset 0 4px 10px rgba(0,0,0,0.6), 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: flex-end; margin: 0; flex-shrink: 0; max-width: 260px;">
+              <div style="font-family: var(--font-mono); font-size: 10px; color: var(--teal-mid); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 6px;">Target Spend</div>
+              <div style="font-family: var(--font-serif); font-style: italic; font-size: 28px; color: var(--teal); line-height: 1.1;"><span id="val-disp-spend">$120,000</span> <span style="font-size: 13px; opacity: 0.7;">/ yr</span></div>
+              <input type="range" id="slider-spend" min="50000" max="500000" step="1000" value="120000" data-clarity-mask="true" style="width: 100%; margin-top: 14px;">
           </div>
       </div>
 
@@ -1346,15 +1397,15 @@
         }
         function fillYears(id, from, to, defaultVal, descending) {
             const el = $(id); if (!el) return;
-            const start = descending ? to   : from;
-            const end   = descending ? from : to;
-            const step  = descending ? -1   : 1;
-            for (let y = start; descending ? y >= end : y <= end; y += step) {
+            const years = [];
+            for (let y = from; y <= to; y++) years.push(y);
+            if (descending) years.reverse();
+            years.forEach(function(y) {
                 const opt = document.createElement('option');
                 opt.value = y; opt.textContent = y;
                 if (y === defaultVal) opt.selected = true;
                 el.appendChild(opt);
-            }
+            });
         }
 
         // Architect DOB — descending so recent years show near top; default 1983
@@ -1385,7 +1436,7 @@
             `<div class="r-val"><span>$</span><input type="text" class="room-input" data-clarity-mask="true" value="0" inputmode="numeric"></div>` +
             `<div class="r-contrib">` +
               `<select style="background:transparent;border:none;color:var(--teal-mid);font-size:10px;outline:none;"><option>Annually</option><option>Monthly</option></select>` +
-              `<span>+$</span><input type="text" value="0" inputmode="numeric">` +
+              `<span>+$</span><input type="text" value="0" inputmode="numeric" data-clarity-mask="true">` +
             `</div>` +
             `<div style="font-size:9px;color:var(--muted);margin-top:12px;border-top:1px dotted rgba(255,255,255,0.1);padding-top:8px;">${desc}</div>`;
     }
@@ -1533,7 +1584,7 @@
             slider.value = Math.max(parseInt(slider.min), Math.min(Math.round(CAPSTONE * 3), API_DATUM_SPEND));
         }
         if ($('inline-datum-input')) $('inline-datum-input').value = API_DATUM_SPEND.toLocaleString('en-US');
-        if ($('val-disp-spend'))     $('val-disp-spend').innerText  = formatMoney(API_DATUM_SPEND) + ' / yr';
+        if ($('val-disp-spend'))     $('val-disp-spend').innerText  = formatMoney(API_DATUM_SPEND);
 
         // Fragility, SS insights & show-math sections
         initFragilityFromAPI(data);
@@ -1717,7 +1768,7 @@
             const clamped = Math.max(parseInt(sldr.min), Math.min(parseInt(sldr.max), raw));
 
             sldr.value = clamped;
-            if ($('val-disp-spend'))      $('val-disp-spend').innerText      = formatMoney(clamped) + ' / yr';
+            if ($('val-disp-spend'))      $('val-disp-spend').innerText      = formatMoney(clamped);
             if ($('inline-datum-input'))  $('inline-datum-input').value       = clamped.toLocaleString('en-US');
             updateVRange(clamped, true);
         });
@@ -1740,7 +1791,7 @@
     // ─── Slider handler (local interpolation only, no API call) ───────────────
     function handleSliderChange() {
         const spend = parseInt($('slider-spend').value);
-        if ($('val-disp-spend')) $('val-disp-spend').innerText = formatMoney(spend) + ' / yr';
+        if ($('val-disp-spend')) $('val-disp-spend').innerText = formatMoney(spend);
         updateVRange(spend, true);
     }
 
@@ -2199,9 +2250,19 @@
         });
     }
 
+    // ─── Hero Estate Animation ────────────────────────────────────────────────
+    function runHeroEstate() {
+        const stage = document.getElementById('he-stage');
+        if (!stage) return;
+        stage.classList.remove('he-active');
+        void stage.offsetWidth;
+        stage.classList.add('he-active');
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         setupInputs();
         setupDatumDrag();
+        runHeroEstate();
         const dBox = $('datum-drag-box');
         if (dBox) {
         }
