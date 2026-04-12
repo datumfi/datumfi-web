@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Datum FI — V1 Production Master</title>
+<title>DATUM FI — V1 Production Master</title>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {--bg-navy:#091221; --grid-line:rgba(100,180,255,0.05); --teal:#1D9E75; --teal-mid:#5DCAA5; --gold:#C9A84C; --orange:#e68a4f; --keystone-blue:#4faae6; --bedrock-red:#c95c5c; --danger-red:#e24b4a; --white:#ffffff; --muted:rgba(255,255,255,0.4); --font-serif:'Fraunces', serif; --font-mono:'DM Mono', monospace;}
@@ -15,7 +15,7 @@
   .screen { width: 100%; display: none; flex-direction: column; align-items: center; opacity: 0; transition: opacity 0.4s ease; }
   .screen.active { display: flex; opacity: 1; }
   .min-vh { min-height: 100vh; }
-  .content-bounds { width: 100%; max-width: 800px; padding: 40px; margin: 0 auto; position: relative; z-index: 10; }
+  .content-bounds { width: 100%; max-width: 1120px; padding: 40px; margin: 0 auto; position: relative; z-index: 10; }
   
   /* Typography */
   h1 { font-family: var(--font-serif); font-style: italic; font-weight: 300; font-size: 48px; line-height: 1.2; margin-bottom: 16px; }
@@ -26,11 +26,28 @@
   
   /* Brand Signature (Flexbox for perfect wide kerning) */
   .brand-signature { position: absolute; top: 40px; right: 40px; display: flex; align-items: center; z-index: 100; }
-  .sig-datum { font-family: var(--font-serif); font-size: 14px; font-weight: 300; letter-spacing: 0.1em; color: var(--white); margin-right: 14px; }
+  .sig-datum { font-family: var(--font-serif); font-size: 14px; font-weight: 300; letter-spacing: 0.1em; color: var(--teal); margin-right: 14px; }
   .sig-block { display: flex; align-items: center; gap: 4px; }
-  .sig-f, .sig-i { font-family: var(--font-mono); font-size: 13px; font-weight: 300; color: var(--teal-mid); }
+  .sig-f, .sig-i { font-family: var(--font-mono); font-size: 13px; font-weight: 300; color: var(--teal); }
   /* Production Standard: 125% cap height bar */
   .sig-bar { width: 2px; height: 18px; background-color: var(--gold); border-radius: 1px; }
+
+  /* Reusable brand mark: DATUM [gold bar] FI — all teal, gold bar separator */
+  .brand-mark { display: inline-flex; align-items: center; }
+  .brand-mark .bm-datum { font-family: var(--font-serif); font-weight: 300; letter-spacing: 0.1em; color: var(--teal); margin-right: 10px; }
+  .brand-mark .bm-block { display: inline-flex; align-items: center; gap: 4px; }
+  .brand-mark .bm-fi { font-family: var(--font-mono); font-weight: 300; color: var(--teal); }
+  .brand-mark .bm-bar { width: 3px; border-radius: 2px; background-color: var(--gold); align-self: stretch; min-height: 1em; }
+
+  /* SS strategy card selector — blueprint dark style */
+  .ss-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
+  .ss-card { background: rgba(9,18,33,0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 14px 8px; cursor: pointer; transition: all 0.2s; text-align: center; color: var(--white); font-family: var(--font-mono); }
+  .ss-card:hover { border-color: rgba(29,158,117,0.5); background: rgba(29,158,117,0.06); }
+  .ss-card.active { border-color: var(--teal-mid); background: rgba(29,158,117,0.1); }
+  .ss-card-age { font-size: 22px; color: var(--teal); font-family: var(--font-serif); font-style: italic; font-weight: 300; line-height: 1; }
+  .ss-card-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-top: 5px; }
+  .ss-card.active .ss-card-age { color: var(--teal-mid); }
+  .ss-card.active .ss-card-label { color: var(--teal-mid); }
 
   /* Buttons */
   .btn { display: inline-flex; justify-content: center; align-items: center; background: var(--teal); color: var(--bg-navy); font-family: var(--font-mono); font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; padding: 16px 32px; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s ease; z-index: 10; position: relative;}
@@ -257,7 +274,7 @@
         </div>
 
         <div class="anim-fade-up anim-delay-4" style="display: flex; flex-direction: column; align-items: center; gap: 24px;">
-          <button class="btn" onclick="goToScreen(2)">Define Your Datum</button>
+          <button class="btn" onclick="goToScreen(2)">Define Your DATUM</button>
           <button class="btn-back" style="margin:0;" onclick="document.getElementById('learn-more').scrollIntoView({behavior: 'smooth'})">How it works ↓</button>
         </div>
       </div>
@@ -271,10 +288,10 @@
           <div style="font-family: var(--font-serif); font-style: italic; font-size: 24px; color: #fff; font-weight: 300;">Not a calculator. Not a simulator. But a decision system.</div>
         </div>
         
-        <h2 style="font-size: 24px; color: var(--teal-mid); margin-bottom: 24px;">Datum Intelligence™</h2>
+        <h2 style="font-size: 24px; color: var(--teal-mid); margin-bottom: 24px;">DATUM Intelligence™</h2>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; margin-bottom: 40px;">
           <div style="padding: 24px; background: rgba(255,255,255,0.02); border-top: 2px solid var(--white); border-radius: 4px;">
-            <div style="font-family: var(--font-serif); font-size: 18px; margin-bottom: 8px;">Datum Interpretation</div>
+            <div style="font-family: var(--font-serif); font-size: 18px; margin-bottom: 8px;">DATUM Interpretation</div>
             <div style="font-size: 11px; color: var(--muted); line-height: 1.6;">Your spending target is measured against the Range. Not a recommendation. Not a judgment. A clear picture of mathematical reality.</div>
           </div>
           <div style="padding: 24px; background: rgba(255,255,255,0.02); border-top: 2px solid var(--teal-mid); border-radius: 4px;">
@@ -316,7 +333,7 @@
         <div style="text-align: center; padding: 40px; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;">
             <div style="font-family: var(--font-serif); font-style: italic; font-size: 20px; margin-bottom: 12px;">Historically Resilient</div>
             <div style="font-size: 12px; color: var(--muted); line-height: 1.6; max-width: 500px; margin: 0 auto 24px auto;">We show you the exact spending level — tax-aware, in today's dollars — that remains viable across all 40,000 modeled scenarios and historical stress tests.</div>
-            <button class="btn" onclick="goToScreen(2)">Define Your Datum</button>
+            <button class="btn" onclick="goToScreen(2)">Define Your DATUM</button>
         </div>
       </div>
     </div>
@@ -328,7 +345,7 @@
       
       <div style="text-align: center; margin-bottom: 40px;">
         <div style="width: 2px; height: 40px; background: var(--gold); margin: 0 auto 24px auto;"></div>
-        <h2 style="font-size: 28px; margin-bottom: 8px;">Every structure begins with a fixed point. A <span style="color: var(--teal);">Datum</span>.</h2>
+        <h2 style="font-size: 28px; margin-bottom: 8px;">Every structure begins with a fixed point. A <span style="color: var(--teal);">DATUM</span>.</h2>
         <div style="font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold); margin-bottom: 40px;">Let's find yours in the studio.</div>
       </div>
       
@@ -341,14 +358,24 @@
         
         <div id="co-arch-inputs" style="display: none; grid-column: 1 / -1; grid-template-columns: 1fr 1fr; gap: 24px; padding: 24px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.1);">
             <div><label class="input-label">Co-Architect Age</label><div class="mock-input"><input type="number" id="p-co-age" placeholder="Age"></div></div>
-            <div><label class="input-label">Co-Architect SS Strategy</label><div class="mock-input" style="padding:0;"><select id="p-co-ss" style="padding: 12px 16px;"><option>Optimal (Age 70)</option><option>Full (Age 67)</option><option>Early (Age 62)</option></select></div></div>
+            <div><label class="input-label">Co-Architect SS Strategy</label>
+                <div class="ss-cards" id="p-co-ss" data-value="Optimal (Age 70)">
+                    <button type="button" class="ss-card active" onclick="selectSSCard(this,'Optimal (Age 70)')"><div class="ss-card-age">70</div><div class="ss-card-label">Optimal</div></button>
+                    <button type="button" class="ss-card" onclick="selectSSCard(this,'Full (Age 67)')"><div class="ss-card-age">67</div><div class="ss-card-label">Full</div></button>
+                    <button type="button" class="ss-card" onclick="selectSSCard(this,'Early (Age 62)')"><div class="ss-card-age">62</div><div class="ss-card-label">Early</div></button>
+                </div>
+            </div>
         </div>
 
         <div><label class="input-label">Location</label><div class="mock-input"><input type="text" value="Florida"></div></div>
         <div><label class="input-label">Target Retirement Age</label><div class="mock-input"><input type="number" id="p-retire-age" value="53"></div></div>
         <div>
             <label class="input-label">Social Security Strategy</label>
-            <div class="mock-input" style="padding:0;"><select id="p-ss-strategy" style="padding: 12px 16px;"><option>Optimal (Age 70)</option><option>Full (Age 67)</option><option>Early (Age 62)</option></select></div>
+            <div class="ss-cards" id="p-ss-strategy" data-value="Optimal (Age 70)">
+                <button type="button" class="ss-card active" onclick="selectSSCard(this,'Optimal (Age 70)')"><div class="ss-card-age">70</div><div class="ss-card-label">Optimal</div></button>
+                <button type="button" class="ss-card" onclick="selectSSCard(this,'Full (Age 67)')"><div class="ss-card-age">67</div><div class="ss-card-label">Full</div></button>
+                <button type="button" class="ss-card" onclick="selectSSCard(this,'Early (Age 62)')"><div class="ss-card-age">62</div><div class="ss-card-label">Early</div></button>
+            </div>
         </div>
       </div>
 
@@ -379,7 +406,7 @@
       </div>
 
       <div style="margin-top: 60px; display: flex; flex-direction: column; align-items: center; text-align: center;">
-        <label class="input-label" style="color: var(--teal-mid);">Your Datum (Target Spend)</label>
+        <label class="input-label" style="color: var(--teal-mid);">Your DATUM (Target Spend)</label>
         <div style="font-size: 10px; color: var(--muted); margin-bottom: 16px;">Your preferred annual living space inside the Range.</div>
         <div class="mock-input" style="border-color: var(--teal-mid); background: rgba(29, 158, 117, 0.05); padding: 16px 20px; max-width: 300px; justify-content: center;">
           <span style="color:var(--teal-mid); font-size: 28px; margin-right: 4px;">$</span><input type="text" inputmode="numeric" id="datum-input" value="120,000" style="color:var(--teal-mid); font-size: 28px; text-align: center;">
@@ -470,7 +497,7 @@
 
           <div class="v-datum-wrapper" id="dynamic-datum" style="top: 50%;">
               <div class="v-datum-box state-green" id="datum-drag-box" style="border-color: var(--teal); cursor: pointer; padding-top: 28px;" onclick="this.classList.toggle('expanded')">
-                  <div style="position: absolute; top: 8px; right: 24px; font-family: var(--font-serif); font-style: italic; font-size: 14px; color: var(--teal);" id="your-datum-label">Your Datum</div>
+                  <div style="position: absolute; top: 8px; right: 24px; font-family: var(--font-serif); font-style: italic; font-size: 14px; color: var(--teal);" id="your-datum-label">Your DATUM</div>
                   
                   <div class="view-balance">
                       <div class="v-datum-val" id="datum-bal-display" style="font-size: 28px; color: var(--teal); pointer-events: none;">$3.00M</div>
@@ -498,7 +525,7 @@
               <input type="range" id="slider-spend" min="50000" max="300000" step="1000" value="120000">
           </div>
           <div style="font-size: 10px; color: var(--muted); margin-top: 16px; line-height: 1.5;">
-              Moving your Datum instantly stress-tests your lifestyle against your portfolio's solved capacity. Altering core architecture (Age, Capital) requires a full model recalculation.
+              Moving your DATUM instantly stress-tests your lifestyle against your portfolio's solved capacity. Altering core architecture (Age, Capital) requires a full model recalculation.
           </div>
       </div>
 
@@ -589,6 +616,13 @@
         'Early (Age 62)':   'early_62'
     };
 
+    // ─── SS card selector ─────────────────────────────────────────────────────
+    function selectSSCard(el, val) {
+        el.closest('.ss-cards').querySelectorAll('.ss-card').forEach(c => c.classList.remove('active'));
+        el.classList.add('active');
+        el.closest('.ss-cards').dataset.value = val;
+    }
+
     // ─── Outlook selector ─────────────────────────────────────────────────────
     function selectOutlook(el, type) {
         document.querySelectorAll('.outlook-card').forEach(c => c.classList.remove('active'));
@@ -601,7 +635,7 @@
         const currentAge  = parseInt($('p-age').value, 10) || 43;
         const retireAge   = parseInt($('p-retire-age').value, 10) || 53;
         const datumSpend  = parseInt($('datum-input').value.replace(/[^\d]/g, ''), 10) || 120000;
-        const ssPrimary   = SS_MAP[$('p-ss-strategy').value] || 'optimal_70';
+        const ssPrimary   = SS_MAP[$('p-ss-strategy').dataset.value] || 'optimal_70';
         const outlook     = OUTLOOK_API_MAP[currentOutlook] || 'valuations_matter';
 
         const accounts = [];
@@ -621,7 +655,7 @@
         const coCheck = $('p-co-check');
         if (coCheck && coCheck.checked) {
             const coAge = parseInt($('p-co-age').value, 10);
-            const coSS  = SS_MAP[$('p-co-ss').value] || 'optimal_70';
+            const coSS  = SS_MAP[$('p-co-ss').dataset.value] || 'optimal_70';
             if (!isNaN(coAge)) { body.co_architect_age = coAge; body.ss_strategy_secondary = coSS; }
         }
         return body;
