@@ -68,8 +68,9 @@
 
   /* Custom Range Sliders */
   input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; margin: 8px 0; }
-  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: var(--teal-mid); cursor: pointer; margin-top: -6px; box-shadow: 0 0 10px rgba(93,202,165,0.5); transition: transform 0.1s; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%; background: #00C9A7; cursor: pointer; margin-top: -10px; box-shadow: 0 0 10px rgba(0,201,167,0.5); transition: transform 0.1s; }
   input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+  input[type=range]::-moz-range-thumb { height: 24px; width: 24px; border-radius: 50%; background: #00C9A7; cursor: pointer; border: none; box-shadow: 0 0 10px rgba(0,201,167,0.5); }
   input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: rgba(255,255,255,0.1); border-radius: 2px; }
   input[type=range]:focus { outline: none; }
   input[type=range]:focus::-webkit-slider-runnable-track { background: rgba(255,255,255,0.2); }
@@ -601,14 +602,25 @@
             <div class="mini-range-container" style="position: relative;">
                 <div class="mini-label">The Range</div>
                 <svg width="160" height="120" viewBox="0 0 160 120" style="overflow: visible;">
-                    <circle cx="0" cy="60" r="4" fill="#C9A84C" />
-                    <path d="M0,60 C 40,60 50,30 160,30" stroke="#C9A84C" stroke-width="1" fill="none" opacity="0.2"/>
-                    <path d="M0,60 C 40,60 50,45 160,45" stroke="#C9A84C" stroke-width="1" fill="none" opacity="0.2"/>
-                    <path d="M0,60 C 40,60 50,75 160,75" stroke="#C9A84C" stroke-width="1" fill="none" opacity="0.2"/>
-                    <path d="M0,60 C 40,60 50,90 160,90" stroke="#C9A84C" stroke-width="1" fill="none" opacity="0.2"/>
-                    <path d="M0,60 C 40,60 50,10 160,10" stroke="#C9A84C" stroke-width="1.5" fill="none" opacity="0.8"/>
-                    <path d="M0,60 C 40,60 50,110 160,110" stroke="#e24b4a" stroke-width="1.5" fill="none" opacity="0.9"/>
-                    <path d="M0,60 C 40,60 50,60 160,60" stroke="#1D9E75" stroke-width="2" stroke-dasharray="4 2" fill="none"/>
+                  <style>
+                    @keyframes rangePulse { 0%,100%{opacity:0.15} 50%{opacity:0.35} }
+                    @keyframes datumDash { to{stroke-dashoffset:-16} }
+                    @keyframes orbitGlow { 0%,100%{r:4;opacity:1} 50%{r:5.5;opacity:0.7} }
+                    .mini-ghost { animation: rangePulse 3s ease-in-out infinite; }
+                    .mini-ghost:nth-child(2) { animation-delay: 0.4s; }
+                    .mini-ghost:nth-child(3) { animation-delay: 0.8s; }
+                    .mini-ghost:nth-child(4) { animation-delay: 1.2s; }
+                    .mini-datum-line { animation: datumDash 1.2s linear infinite; }
+                    .mini-origin { animation: orbitGlow 2s ease-in-out infinite; }
+                  </style>
+                  <circle class="mini-origin" cx="0" cy="60" r="4" fill="#C9A84C" />
+                  <path class="mini-ghost" d="M0,60 C 40,60 50,30 160,30" stroke="#C9A84C" stroke-width="1" fill="none"/>
+                  <path class="mini-ghost" d="M0,60 C 40,60 50,45 160,45" stroke="#C9A84C" stroke-width="1" fill="none"/>
+                  <path class="mini-ghost" d="M0,60 C 40,60 50,75 160,75" stroke="#C9A84C" stroke-width="1" fill="none"/>
+                  <path class="mini-ghost" d="M0,60 C 40,60 50,90 160,90" stroke="#C9A84C" stroke-width="1" fill="none"/>
+                  <path d="M0,60 C 40,60 50,10 160,10" stroke="#C9A84C" stroke-width="1.5" fill="none" opacity="0.85"/>
+                  <path d="M0,60 C 40,60 50,110 160,110" stroke="#e24b4a" stroke-width="1.5" fill="none" opacity="0.9"/>
+                  <path class="mini-datum-line" d="M0,60 C 40,60 50,60 160,60" stroke="#1D9E75" stroke-width="2" stroke-dasharray="4 2" fill="none"/>
                 </svg>
             </div>
         </div>
@@ -630,11 +642,11 @@
         
         <h2 style="font-size: 24px; color: var(--teal-mid); margin-bottom: 24px;">DATUM Intelligence™</h2>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; margin-bottom: 40px;">
-          <div style="padding: 24px; background: rgba(255,255,255,0.02); border-top: 2px solid var(--white); border-radius: 4px;">
+          <div style="padding: 24px; background: rgba(255,255,255,0.02); border-top: 2px solid var(--gold); border-radius: 4px;">
             <div style="font-family: var(--font-serif); font-size: 18px; margin-bottom: 8px;">DATUM Interpretation</div>
             <div style="font-size: 11px; color: var(--muted); line-height: 1.6;">Your spending target is measured against the Range. Not a recommendation. Not a judgment. A clear picture of mathematical reality.</div>
           </div>
-          <div style="padding: 24px; background: rgba(255,255,255,0.02); border-top: 2px solid var(--teal-mid); border-radius: 4px;">
+          <div style="padding: 24px; background: rgba(255,255,255,0.02); border-top: 2px solid var(--gold); border-radius: 4px;">
             <div style="font-family: var(--font-serif); font-size: 18px; margin-bottom: 8px;">Model Alignment</div>
             <div style="font-size: 11px; color: var(--muted); line-height: 1.6;">We run four probabilistic models plus a dedicated stress battery. When they agree, your Range tightens. When they diverge, we show you why.</div>
           </div>
@@ -644,7 +656,7 @@
           </div>
         </div>
 
-        <div style="font-family: var(--font-serif); font-style: italic; font-size: 20px; color: var(--white); margin-top: 60px; margin-bottom: 8px;">The Invisible Architecture</div>
+        <div style="font-family: var(--font-serif); font-style: italic; font-size: 20px; color: var(--white); margin-top: 60px; margin-bottom: 8px;"><span style="color:#00C9A7">The Invisible Architecture</span></div>
         <div style="font-size: 12px; color: var(--gold); margin-bottom: 32px;">What makes this different isn't what you see. It's what you don't have to.</div>
         <div class="ia-grid" style="margin-bottom: 80px;">
             <div class="frag-card"><div style="font-family:var(--font-mono); font-size:9px; color:var(--teal-mid); text-transform:uppercase; margin-bottom:8px;">Tax Engine</div><div style="font-family:var(--font-serif); font-size:16px; margin-bottom:4px;">41-Year Sequencing</div><div style="font-size:11px; color:var(--muted); line-height:1.5;">We model exact withdrawal order and bracket fills across all 41 years in every simulation.</div></div>
@@ -655,7 +667,7 @@
             <div class="frag-card"><div style="font-family:var(--font-mono); font-size:9px; color:var(--teal-mid); text-transform:uppercase; margin-bottom:8px;">Valuation Intelligence</div><div style="font-family:var(--font-serif); font-size:16px; margin-bottom:4px;">CAPE-Dynamic Weights</div><div style="font-size:11px; color:var(--muted); line-height:1.5;">When markets are expensive, we automatically shift trust toward conservative models.</div></div>
         </div>
 
-        <h2 style="font-size: 24px; margin-bottom: 12px;">Four Probabilistic Models.<br>One Stress Battery.</h2>
+        <h2 style="font-size: 24px; margin-bottom: 12px;"><span style="color:#00C9A7">Four Probabilistic Models.<br>One Stress Battery.</span></h2>
         <div style="font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 32px;">No consumer retirement tool runs 10,000 futures per profile across four simulation methods plus a dedicated stress battery. Running them together produces an output fundamentally more credible than any single model.</div>
         
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
@@ -666,12 +678,12 @@
         </div>
 
         <div style="background: rgba(255,255,255,0.02); padding: 32px; border-radius: 8px; border-left: 2px solid var(--danger-red); margin-bottom: 80px;">
-            <div style="font-family: var(--font-serif); font-style: italic; font-size: 20px; margin-bottom: 8px;">Adverse Scenario Stress Battery</div>
+            <div style="font-family: var(--font-serif); font-style: italic; font-size: 20px; margin-bottom: 8px;"><span style="color:#00C9A7">Adverse Scenario Stress Battery</span></div>
             <div style="font-size: 12px; color: var(--muted); line-height: 1.6;">What happens when history rhymes worse? We explicitly test your plan against the 1929 crash, 1970s stagflation, and the Japanese lost-decade to establish your absolute Survival Floor.</div>
         </div>
 
         <div style="text-align: center; padding: 40px; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;">
-            <div style="font-family: var(--font-serif); font-style: italic; font-size: 20px; margin-bottom: 12px;">Historically Resilient</div>
+            <div style="font-family: var(--font-serif); font-style: italic; font-size: 20px; margin-bottom: 12px;"><span style="color:#00C9A7">Historically Resilient</span></div>
             <div style="font-size: 12px; color: var(--muted); line-height: 1.6; max-width: 500px; margin: 0 auto 24px auto;">We show you the exact spending level — tax-aware, in today's dollars — that remains viable across all 10,000 modeled scenarios and historical stress tests.</div>
             <button class="btn" onclick="goToScreen(2)">Define Your DATUM</button>
         </div>
@@ -691,7 +703,7 @@
       
       <!-- ── Architect Profile ── -->
       <div class="arch-profile-title">Architect Profile</div>
-      <div class="blueprint-wrapper" style="margin-top: 0; margin-bottom: 24px;">
+      <div class="blueprint-wrapper" style="margin-top: 0; margin-bottom: 24px; border: 1px solid #00C9A7; box-shadow: 0 0 15px rgba(0,201,167,0.1); border-radius: 12px; padding: 24px;">
         <div class="spec-grid" style="margin-bottom: 24px;">
           <div>
             <label class="input-label">Date of Birth</label>
@@ -765,7 +777,7 @@
 
       <div class="blueprint-wrapper">
           <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; border-bottom: 1px solid rgba(29,158,117,0.3); padding-bottom: 12px;">
-              <div class="bp-title" style="font-family: var(--font-serif); font-style: italic; font-size: 24px; color: var(--teal-mid); cursor: pointer;" onclick="const r = document.getElementById('rooms-container'); r.classList.contains('rooms-expanded') ? (r.classList.remove('rooms-expanded'), r.classList.add('rooms-collapsed')) : (r.classList.remove('rooms-collapsed'), r.classList.add('rooms-expanded'))">Build your Estate <span style="font-size: 14px; opacity: 0.5;">↕</span></div>
+              <div class="bp-title" style="font-family: var(--font-serif); font-style: italic; font-size: 24px; color: var(--teal-mid); cursor: pointer;" onclick="const r = document.getElementById('rooms-container'); r.classList.contains('rooms-expanded') ? (r.classList.remove('rooms-expanded'), r.classList.add('rooms-collapsed')) : (r.classList.remove('rooms-collapsed'), r.classList.add('rooms-expanded'))">The Estate <span style="font-size: 14px; opacity: 0.5;">↕</span></div>
               <div style="text-align: right;">
                   <div style="font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">Current Value</div>
                   <div class="mock-input" style="padding: 4px 8px; width: 140px; border-color: var(--teal-mid); background: rgba(29, 158, 117, 0.05); margin-left: auto;">
@@ -863,7 +875,20 @@
           <div style="font-family: var(--font-serif); font-style: italic; font-size: 28px; color: var(--white); margin-bottom: 4px;">Your estate has been measured.</div>
           <div style="font-family: var(--font-mono); font-size: 11px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em;">These are your boundaries.</div>
       </div>
-      
+
+      <div class="quick-toggles-panel active" id="controls-panel" style="display: flex; flex-direction: column; align-items: center; max-width: 500px; margin: 0 auto 32px auto; text-align: center;">
+          <div style="width: 100%;">
+              <div class="slider-header" style="justify-content: center; gap: 16px; font-size: 12px; margin-bottom: 16px;">
+                  <span style="color: var(--teal-mid);">Target Spend</span>
+                  <span class="slider-val-disp" id="val-disp-spend" style="color: var(--teal);">$120,000 / yr</span>
+              </div>
+              <input type="range" id="slider-spend" min="50000" max="500000" step="1000" value="120000">
+          </div>
+          <div style="font-size: 10px; color: var(--muted); margin-top: 16px; line-height: 1.5;">
+              Moving your DATUM instantly stress-tests your lifestyle against your portfolio's solved capacity. Altering core architecture (Age, Capital) requires a full model recalculation.
+          </div>
+      </div>
+
       <div class="v-range-container" id="v-container">
           <div class="v-origin" id="v-origin"></div>
           
@@ -898,7 +923,7 @@
           </div>
 
           <div class="v-datum-wrapper" id="dynamic-datum" style="top: 50%;">
-              <div class="v-datum-box state-green" id="datum-drag-box" style="border-color: var(--teal); cursor: pointer; padding-top: 28px;" onclick="this.classList.toggle('expanded')">
+              <div class="v-datum-box state-green" id="datum-drag-box" style="border-color: var(--teal); cursor: grab; padding-top: 28px;">
                   <div style="position: absolute; top: 8px; right: 24px; font-family: var(--font-serif); font-style: italic; font-size: 14px; color: var(--teal);" id="your-datum-label">Your DATUM</div>
                   
                   <div class="view-balance">
@@ -916,19 +941,6 @@
 
                   <div class="buffer-metric" id="buffer-display"></div>
               </div>
-          </div>
-      </div>
-
-      <div class="quick-toggles-panel active" id="controls-panel" style="display: flex; flex-direction: column; align-items: center; max-width: 500px; margin: 0 auto 40px auto; text-align: center;">
-          <div style="width: 100%;">
-              <div class="slider-header" style="justify-content: center; gap: 16px; font-size: 12px; margin-bottom: 16px;">
-                  <span style="color: var(--teal-mid);">Target Spend</span>
-                  <span class="slider-val-disp" id="val-disp-spend" style="color: var(--teal);">$120,000 / yr</span>
-              </div>
-              <input type="range" id="slider-spend" min="50000" max="500000" step="1000" value="120000">
-          </div>
-          <div style="font-size: 10px; color: var(--muted); margin-top: 16px; line-height: 1.5;">
-              Moving your DATUM instantly stress-tests your lifestyle against your portfolio's solved capacity. Altering core architecture (Age, Capital) requires a full model recalculation.
           </div>
       </div>
 
@@ -1156,10 +1168,9 @@
     <div class="fp-body">
       <div id="feedback-form-wrap">
         <form id="feedback-form" onsubmit="submitFeedback(event)">
-          <!-- Hidden context fields -->
-          <input type="hidden" name="datum_spend"     id="fb-datum-spend">
-          <input type="hidden" name="market_outlook"  id="fb-market-outlook">
-          <input type="hidden" name="screen_reached"  id="fb-screen-reached">
+          <!-- Web3Forms config -->
+          <input type="hidden" name="access_key" value="0e411fb0-cdcb-45b6-9f4e-39178aafb171">
+          <input type="hidden" name="subject" value="DATUM FI Feedback Received">
 
           <!-- Q1 -->
           <div class="fp-q">
@@ -1224,6 +1235,7 @@
             </div>
           </div>
 
+          <div class="h-captcha" data-captcha="true" data-theme="dark" data-size="compact" style="margin-bottom: 12px;"></div>
           <button type="submit" class="btn" style="width:100%; margin-top: 8px;">Send Feedback</button>
         </form>
       </div>
@@ -1666,7 +1678,59 @@
     function valToY(val) {
         return 350 - ((val - BEDROCK) / (CAPSTONE - BEDROCK)) * 300;
     }
+    function yToVal(y) {
+        return BEDROCK + (350 - y) / 300 * (CAPSTONE - BEDROCK);
+    }
     function clampLabel(y) { return Math.max(20, Math.min(380, y)); }
+
+    // ─── Datum box drag ───────────────────────────────────────────────────────
+    function setupDatumDrag() {
+        const wrapper   = $('dynamic-datum');
+        const container = $('v-container');
+        const dragBox   = $('datum-drag-box');
+        if (!wrapper || !container || !dragBox) return;
+
+        wrapper.style.pointerEvents = 'auto';
+
+        let isDragging = false;
+        let hasMoved   = false;
+        let startY     = 0;
+
+        wrapper.addEventListener('pointerdown', function(e) {
+            if (e.target.tagName.toLowerCase() === 'input') return;
+            isDragging = true;
+            hasMoved   = false;
+            startY     = e.clientY;
+            wrapper.setPointerCapture(e.pointerId);
+            dragBox.style.cursor = 'grabbing';
+            e.preventDefault();
+        });
+
+        wrapper.addEventListener('pointermove', function(e) {
+            if (!isDragging) return;
+            if (Math.abs(e.clientY - startY) > 4) hasMoved = true;
+            if (!hasMoved) return;
+
+            const rect    = container.getBoundingClientRect();
+            const relY    = Math.max(0, Math.min(400, e.clientY - rect.top));
+            const raw     = Math.round(yToVal(relY) / 1000) * 1000;
+            const sldr    = $('slider-spend');
+            const clamped = Math.max(parseInt(sldr.min), Math.min(parseInt(sldr.max), raw));
+
+            sldr.value = clamped;
+            if ($('val-disp-spend'))      $('val-disp-spend').innerText      = formatMoney(clamped) + ' / yr';
+            if ($('inline-datum-input'))  $('inline-datum-input').value       = clamped.toLocaleString('en-US');
+            updateVRange(clamped, true);
+        });
+
+        wrapper.addEventListener('pointerup', function(e) {
+            if (!isDragging) return;
+            isDragging = false;
+            wrapper.releasePointerCapture(e.pointerId);
+            dragBox.style.cursor = 'grab';
+            if (!hasMoved) dragBox.classList.toggle('expanded');
+        });
+    }
     function getFunnelPath(targetY) {
         const ox = window.innerWidth <= 650 ? 20 : 40;
         const oy = 200, cx = 300;
@@ -2028,15 +2092,6 @@
 
     // ─── Feedback panel ──────────────────────────────────────────────────────
     function openFeedback() {
-        // Populate hidden context fields
-        const spendEl = $('datum-input');
-        const fbSpend = $('fb-datum-spend');
-        const fbOutlook = $('fb-market-outlook');
-        const fbScreen = $('fb-screen-reached');
-        if (fbSpend)   fbSpend.value   = spendEl ? spendEl.value.replace(/[^\d]/g,'') : '';
-        if (fbOutlook) fbOutlook.value = currentOutlook || '';
-        if (fbScreen)  fbScreen.value  = maxScreenReached;
-
         // Reset to form view if previously submitted
         const wrap = $('feedback-form-wrap');
         const ty   = $('fp-thank-you');
@@ -2058,26 +2113,20 @@
         e.preventDefault();
         const form = $('feedback-form');
         const data = new FormData(form);
+        const showThanks = () => {
+            const wrap = $('feedback-form-wrap');
+            const ty   = $('fp-thank-you');
+            if (wrap) wrap.style.display = 'none';
+            if (ty)   ty.style.display   = 'block';
+            setTimeout(() => closeFeedback(), 2200);
+        };
 
-        fetch('https://formspree.io/f/xpqkadyg', {
+        fetch('https://api.web3forms.com/submit', {
             method: 'POST', body: data,
             headers: { 'Accept': 'application/json' }
         })
-        .then(r => {
-            const wrap = $('feedback-form-wrap');
-            const ty   = $('fp-thank-you');
-            if (wrap) wrap.style.display = 'none';
-            if (ty)   ty.style.display   = 'block';
-            setTimeout(() => closeFeedback(), 2200);
-        })
-        .catch(() => {
-            // On network error, still show thank-you to avoid user frustration
-            const wrap = $('feedback-form-wrap');
-            const ty   = $('fp-thank-you');
-            if (wrap) wrap.style.display = 'none';
-            if (ty)   ty.style.display   = 'block';
-            setTimeout(() => closeFeedback(), 2200);
-        });
+        .then(r => showThanks())
+        .catch(() => showThanks());
     }
 
     // ─── Show Math toggle ─────────────────────────────────────────────────────
@@ -2096,6 +2145,15 @@
     function setupInputs() {
         // Populate date dropdowns
         populateDateDropdowns();
+
+        // Auto-scroll year dropdowns to selected value on open
+        document.querySelectorAll('.date-select').forEach(sel => {
+            sel.addEventListener('focus', function() {
+                const idx = this.selectedIndex;
+                this.selectedIndex = -1;
+                this.selectedIndex = idx;
+            });
+        });
 
         // Add × remove buttons to existing rooms
         document.querySelectorAll('#rooms-container .bp-room').forEach(room => {
@@ -2152,12 +2210,9 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         setupInputs();
+        setupDatumDrag();
         const dBox = $('datum-drag-box');
         if (dBox) {
-            dBox.addEventListener('click', function(e) {
-                if (e.target.tagName.toLowerCase() === 'input') return;
-                this.classList.toggle('expanded');
-            });
         }
 
         // Mobile tap-to-reveal for tier labels (ceiling/floor)
@@ -2168,5 +2223,6 @@
         });
     });
   </script>
+  <script src="https://web3forms.com/client/script.js" async defer></script>
 </body>
 </html>
