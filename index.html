@@ -223,14 +223,14 @@
   .t-name { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); display: flex; justify-content: flex-end; align-items: center; gap: 8px; transition: color 0.3s;}
   .t-desc { font-size: 11px; color: rgba(255,255,255,0.7); line-height: 1.5; margin-top: 8px; }
 
-  /* Only the descriptive paragraph is hidden by default; names + amounts always visible */
-  .tier-label .t-desc { opacity: 0; transition: opacity 0.3s ease; }
+  /* Collapsed by default — max-height:0 physically removes the space (opacity:0 alone does not) */
+  .tier-label .t-desc { max-height: 0; overflow: hidden; opacity: 0; margin-top: 0; transition: max-height 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease; }
   .tier-label:hover .t-desc,
-  .tier-label.revealed .t-desc { opacity: 1; }
+  .tier-label.revealed .t-desc { max-height: 120px; opacity: 1; margin-top: 8px; }
   /* Legacy hint inside tier labels */
-  .t-legacy-hint { font-size: 10px; color: var(--teal-mid); margin-top: 6px; opacity: 0; transition: opacity 0.3s ease 0.1s; }
+  .t-legacy-hint { font-size: 10px; color: var(--teal-mid); max-height: 0; overflow: hidden; opacity: 0; margin-top: 0; transition: max-height 0.3s ease 0.1s, opacity 0.3s ease 0.1s, margin-top 0.3s ease 0.1s; }
   .tier-label:hover .t-legacy-hint,
-  .tier-label.revealed .t-legacy-hint { opacity: 1; }
+  .tier-label.revealed .t-legacy-hint { max-height: 40px; opacity: 1; margin-top: 6px; }
   /* Legacy hint on datum box (hover) */
   .datum-legacy-hint { font-size: 10px; color: var(--teal-mid); margin-top: 4px; text-align: right; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
   .v-datum-box:hover .datum-legacy-hint,
@@ -258,7 +258,7 @@
   .tier-floor .t-name { font-size: 9px; }
 
   /* RNG4: Inline datum status text */
-  .datum-status { position: absolute; left: 64px; top: 0; transform: translateY(-50%); max-width: 260px; text-align: left; opacity: 0; transition: opacity 0.5s ease; pointer-events: none; z-index: 11; }
+  .datum-status { position: absolute; left: 100px; transform: translateY(-50%); max-width: 260px; text-align: left; opacity: 0; transition: opacity 0.5s ease; pointer-events: none; z-index: 11; }
   .datum-status .ds-line { font-family: var(--font-mono); font-size: 11px; color: rgba(255,255,255,0.55); line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .datum-status .ds-sub { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,0.35); line-height: 1.4; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .datum-status.visible { opacity: 1; }
@@ -296,7 +296,7 @@
   .slider-val-disp { color: var(--white); font-family: var(--font-mono); }
 
   /* Verdict Box */
-  .verdict-box { padding: 24px; background: rgba(29,158,117,0.05); border-left: 2px solid var(--teal); margin-bottom: 32px; border-radius: 0 8px 8px 0; transition: all 0.3s;}
+  .verdict-box { padding: 6px 10px; background: rgba(29,158,117,0.05); border-left: 2px solid var(--teal); margin-bottom: 12px; border-radius: 0 6px 6px 0; transition: border-color 0.3s; }
   .verdict-line { font-family: var(--font-serif); font-style: italic; font-size: 18px; color: var(--white); margin-bottom: 4px; }
   .verdict-sub { font-size: 11px; color: var(--muted); margin-bottom: 16px; line-height: 1.6;}
   
@@ -1014,11 +1014,12 @@
               <div class="t-desc">Floor holds in 99% of simulations + all stress scenarios. Survives the 1929 crash. Survives everything.</div>
           </div>
 
+          <div id="datum-status" class="datum-status" style="top: 50%;">
+              <div class="ds-line" id="ds-line-text">Your plan is highly secure.</div>
+              <div class="ds-sub" id="ds-sub-text">Maximizing durability and legacy.</div>
+          </div>
+
           <div class="v-datum-wrapper" id="dynamic-datum" style="top: 50%;">
-              <div id="datum-status" class="datum-status">
-                  <div class="ds-line" id="ds-line-text">Your plan is highly secure.</div>
-                  <div class="ds-sub" id="ds-sub-text">Maximizing durability and legacy.</div>
-              </div>
               <div class="v-datum-box state-green" id="datum-drag-box" style="border-color: var(--teal); cursor: grab; padding-top: 28px;">
                   <div style="position: absolute; top: 8px; right: 24px; font-family: var(--font-serif); font-style: italic; font-size: 14px; color: var(--teal);" id="your-datum-label">Your DATUM</div>
                   
@@ -1881,9 +1882,12 @@
         const yDatClamped = Math.max(CEIL_Y - OVERSHOOT_PX, Math.min(FLOR_Y + OVERSHOOT_PX, yDat));
         const aboveCeiling = datumVal > CAPSTONE;
 
-        // Datum box position
+        // Datum box position + status text tracks the same line
         const dynDatum = $('dynamic-datum');
-        if (dynDatum) dynDatum.style.top = `${(clampLabel(yDatClamped)/H)*100}%`;
+        const datumPct = `${(clampLabel(yDatClamped)/H)*100}%`;
+        if (dynDatum) dynDatum.style.top = datumPct;
+        const dsEl = $('datum-status');
+        if (dsEl) dsEl.style.top = datumPct;
 
         // Datum box border + input color: red when above ceiling
         const dragBox = $('datum-drag-box');
