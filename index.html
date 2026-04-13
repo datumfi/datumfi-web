@@ -246,6 +246,31 @@
   
   .tier-ceiling .t-val-balance { color: rgba(201,168,76,0.5); }
   .tier-floor .t-val-balance { color: rgba(201,92,92,0.5); }
+
+  /* RNG2/RNG3: Gold/Red bordered tier boxes */
+  .tier-ceiling { border: 1px solid rgba(201,168,76,0.45); box-shadow: 0 0 14px rgba(201,168,76,0.1); border-radius: 8px; padding: 12px 16px 12px 20px; background: rgba(201,168,76,0.03); }
+  .tier-floor { border: 1px solid rgba(226,75,74,0.45); box-shadow: 0 0 14px rgba(226,75,74,0.1); border-radius: 8px; padding: 12px 16px 12px 20px; background: rgba(226,75,74,0.03); }
+
+  /* RNG4: Inline datum status text */
+  .datum-status { position: absolute; left: 8px; top: 0; transform: translateY(-50%); max-width: 300px; text-align: left; opacity: 0; transition: opacity 0.5s ease; pointer-events: none; z-index: 11; }
+  .datum-status .ds-line { font-family: var(--font-mono); font-size: 11px; color: rgba(255,255,255,0.55); line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .datum-status .ds-sub { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,0.35); line-height: 1.4; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .datum-status.visible { opacity: 1; }
+
+  /* DD1: Custom date dropdown */
+  .hidden-select { display: none !important; }
+  .cds-outer { position: relative; width: 100%; }
+  .cds-trigger { display: flex; align-items: center; justify-content: space-between; cursor: pointer; background: transparent; border: none; color: var(--white); font-family: var(--font-mono); font-size: 15px; width: 100%; padding: 0; user-select: none; }
+  .cds-trigger-val { flex: 1; }
+  .cds-arrow { font-size: 10px; color: var(--muted); margin-left: 4px; transition: transform 0.15s; }
+  .cds-outer.open .cds-arrow { transform: rotate(180deg); }
+  .cds-panel { position: fixed; background: #050e1a; border: 1px solid var(--teal); border-radius: 6px; max-height: 200px; overflow-y: scroll; z-index: 99999; box-shadow: 0 8px 24px rgba(0,0,0,0.7); display: none; scrollbar-width: thin; scrollbar-color: var(--teal) rgba(255,255,255,0.05); }
+  .cds-panel::-webkit-scrollbar { width: 12px; }
+  .cds-panel::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); }
+  .cds-panel::-webkit-scrollbar-thumb { background: var(--teal); border-radius: 6px; min-height: 40px; }
+  .cds-option { padding: 8px 14px; font-family: var(--font-mono); font-size: 14px; color: rgba(255,255,255,0.75); cursor: pointer; white-space: nowrap; }
+  .cds-option:hover { background: rgba(29,158,117,0.18); color: var(--teal-mid); }
+  .cds-option.cds-selected { background: rgba(29,158,117,0.1); color: var(--teal-mid); }
   
   /* Fixed Snapping Green Datum Box (Modern Embedded style) */
   .v-datum-wrapper { position: absolute; left: 40px; right: 0; display: flex; justify-content: flex-end; align-items: center; z-index: 10; transition: top 0.1s ease-out, opacity 0.8s ease; opacity: 0; pointer-events: none; }
@@ -738,10 +763,10 @@
         <div style="font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 32px;">No consumer retirement tool runs 10,000 futures per profile across four simulation methods plus a dedicated stress battery. Running them together produces an output fundamentally more credible than any single model.</div>
         
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
-             <div style="padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;"><div style="font-family: var(--font-serif); font-style: italic; font-size: 16px; color: #fff; margin-bottom: 8px;">Parametric Monte Carlo</div><div style="font-size: 11px; color: var(--muted); line-height: 1.5;">Generates 10,000 return sequences from a log-normal distribution calibrated to your asset allocation.</div></div>
-             <div style="padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;"><div style="font-family: var(--font-serif); font-style: italic; font-size: 16px; color: #fff; margin-bottom: 8px;">Historical Bootstrapping</div><div style="font-size: 11px; color: var(--muted); line-height: 1.5;">Randomly draws actual annual return sequences from 1926–2025. Preserves extreme outcomes.</div></div>
-             <div style="padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;"><div style="font-family: var(--font-serif); font-style: italic; font-size: 16px; color: #fff; margin-bottom: 8px;">CAPE-Adjusted</div><div style="font-size: 11px; color: var(--muted); line-height: 1.5;">Uses the current Shiller CAPE ratio to dynamically shift expected returns.</div></div>
-             <div style="padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;"><div style="font-family: var(--font-serif); font-style: italic; font-size: 16px; color: #fff; margin-bottom: 8px;">Regime Block Bootstrap</div><div style="font-size: 11px; color: var(--muted); line-height: 1.5;">Samples multi-year blocks from historical economic regimes similar to current conditions.</div></div>
+             <div style="padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;"><div style="font-family:var(--font-mono); font-size:9px; color:var(--teal-mid); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:6px;">Model I / Statistical</div><div style="font-family: var(--font-serif); font-size: 16px; margin-bottom: 6px;">Parametric Monte Carlo</div><div style="font-size: 11px; color: var(--muted); line-height: 1.5;">Generates 10,000 return sequences from a log-normal distribution calibrated to your asset allocation.</div></div>
+             <div style="padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;"><div style="font-family:var(--font-mono); font-size:9px; color:var(--teal-mid); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:6px;">Model II / Empirical</div><div style="font-family: var(--font-serif); font-size: 16px; margin-bottom: 6px;">Historical Bootstrapping</div><div style="font-size: 11px; color: var(--muted); line-height: 1.5;">Randomly draws actual annual return sequences from 1926–2025. Preserves extreme outcomes.</div></div>
+             <div style="padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;"><div style="font-family:var(--font-mono); font-size:9px; color:var(--teal-mid); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:6px;">Model III / Valuation</div><div style="font-family: var(--font-serif); font-size: 16px; margin-bottom: 6px;">CAPE-Adjusted</div><div style="font-size: 11px; color: var(--muted); line-height: 1.5;">Uses the current Shiller CAPE ratio to dynamically shift expected returns.</div></div>
+             <div style="padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;"><div style="font-family:var(--font-mono); font-size:9px; color:var(--teal-mid); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:6px;">Model IV / Regime</div><div style="font-family: var(--font-serif); font-size: 16px; margin-bottom: 6px;">Regime Block Bootstrap</div><div style="font-size: 11px; color: var(--muted); line-height: 1.5;">Samples multi-year blocks from historical economic regimes similar to current conditions.</div></div>
         </div>
 
         <div style="background: rgba(255,255,255,0.02); padding: 32px; border-radius: 8px; border-left: 2px solid var(--danger-red); margin-bottom: 80px;">
@@ -775,8 +800,8 @@
           <div>
             <label class="input-label">Date of Birth</label>
             <div class="dob-row">
-              <div class="mock-input"><select id="p-dob-month" class="date-select" data-clarity-mask="true"></select></div>
-              <div class="mock-input"><select id="p-dob-year" class="date-select" data-clarity-mask="true"></select></div>
+              <div class="mock-input cds-outer" id="cds-p-dob-month"><div class="cds-trigger" onclick="cdsToggle(this)"><span class="cds-trigger-val">Month</span><span class="cds-arrow">▾</span></div><div class="cds-panel"></div><select id="p-dob-month" class="date-select hidden-select" data-clarity-mask="true"></select></div>
+              <div class="mock-input cds-outer" id="cds-p-dob-year"><div class="cds-trigger" onclick="cdsToggle(this)"><span class="cds-trigger-val">Year</span><span class="cds-arrow">▾</span></div><div class="cds-panel"></div><select id="p-dob-year" class="date-select hidden-select" data-clarity-mask="true"></select></div>
             </div>
           </div>
           <div>
@@ -788,8 +813,8 @@
               <div>
                 <label class="input-label">Co-Architect Date of Birth</label>
                 <div class="dob-row">
-                  <div class="mock-input"><select id="p-co-dob-month" class="date-select" data-clarity-mask="true"></select></div>
-                  <div class="mock-input"><select id="p-co-dob-year" class="date-select" data-clarity-mask="true"></select></div>
+                  <div class="mock-input cds-outer" id="cds-p-co-dob-month"><div class="cds-trigger" onclick="cdsToggle(this)"><span class="cds-trigger-val">Month</span><span class="cds-arrow">▾</span></div><div class="cds-panel"></div><select id="p-co-dob-month" class="date-select hidden-select" data-clarity-mask="true"></select></div>
+                  <div class="mock-input cds-outer" id="cds-p-co-dob-year"><div class="cds-trigger" onclick="cdsToggle(this)"><span class="cds-trigger-val">Year</span><span class="cds-arrow">▾</span></div><div class="cds-panel"></div><select id="p-co-dob-year" class="date-select hidden-select" data-clarity-mask="true"></select></div>
                 </div>
               </div>
               <div><label class="input-label">Co-Architect SS Strategy</label>
@@ -810,8 +835,8 @@
           <div>
             <label class="input-label">Target Retirement Date</label>
             <div class="dob-row">
-              <div class="mock-input"><select id="p-ret-month" class="date-select" data-clarity-mask="true"></select></div>
-              <div class="mock-input"><select id="p-ret-year" class="date-select" data-clarity-mask="true"></select></div>
+              <div class="mock-input cds-outer" id="cds-p-ret-month"><div class="cds-trigger" onclick="cdsToggle(this)"><span class="cds-trigger-val">Month</span><span class="cds-arrow">▾</span></div><div class="cds-panel"></div><select id="p-ret-month" class="date-select hidden-select" data-clarity-mask="true"></select></div>
+              <div class="mock-input cds-outer" id="cds-p-ret-year"><div class="cds-trigger" onclick="cdsToggle(this)"><span class="cds-trigger-val">Year</span><span class="cds-arrow">▾</span></div><div class="cds-panel"></div><select id="p-ret-year" class="date-select hidden-select" data-clarity-mask="true"></select></div>
             </div>
           </div>
         </div>
@@ -943,7 +968,7 @@
               <div style="font-family: var(--font-serif); font-style: italic; font-size: 28px; color: var(--white); margin-bottom: 4px;">Your estate has been measured.</div>
               <div style="font-family: var(--font-mono); font-size: 11px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em;">These are your boundaries.</div>
           </div>
-          <div class="quick-toggles-panel active" id="controls-panel" style="background: linear-gradient(135deg, #0e1b30 0%, #050a14 100%); border: 1px solid var(--teal); border-radius: 10px; padding: 10px 14px; min-width: 160px; text-align: right; box-shadow: inset 0 4px 10px rgba(0,0,0,0.6), 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: flex-end; margin: 0; flex-shrink: 0; max-width: 220px;">
+          <div class="quick-toggles-panel active" id="controls-panel" style="background: linear-gradient(135deg, #0e1b30 0%, #050a14 100%); border: 1px solid var(--teal); border-radius: 10px; padding: 10px 14px; min-width: 160px; text-align: right; box-shadow: inset 0 4px 10px rgba(0,0,0,0.6), 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: flex-end; margin: 0 290px 0 0; flex-shrink: 0; max-width: 220px;">
               <div style="font-family: var(--font-mono); font-size: 9px; color: var(--teal-mid); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 4px;">Target Spend</div>
               <div style="font-family: var(--font-serif); font-style: italic; font-size: 22px; color: var(--teal); line-height: 1.1;"><span id="val-disp-spend">$120,000</span> <span style="font-size: 11px; opacity: 0.7;">/ yr</span></div>
               <input type="range" id="slider-spend" min="50000" max="500000" step="1000" value="120000" data-clarity-mask="true" style="width: 100%; margin-top: 14px;">
@@ -984,6 +1009,10 @@
           </div>
 
           <div class="v-datum-wrapper" id="dynamic-datum" style="top: 50%;">
+              <div id="datum-status" class="datum-status">
+                  <div class="ds-line" id="ds-line-text">Your plan is highly secure.</div>
+                  <div class="ds-sub" id="ds-sub-text">Maximizing durability and legacy.</div>
+              </div>
               <div class="v-datum-box state-green" id="datum-drag-box" style="border-color: var(--teal); cursor: grab; padding-top: 28px;">
                   <div style="position: absolute; top: 8px; right: 24px; font-family: var(--font-serif); font-style: italic; font-size: 14px; color: var(--teal);" id="your-datum-label">Your DATUM</div>
                   
@@ -1005,16 +1034,17 @@
           </div>
       </div>
 
-      <div id="verdict-container" class="verdict-box state-green" style="margin-bottom: 32px;">
-        <div id="verdict-line" class="verdict-line">Your plan is highly secure.</div>
-        <div id="verdict-sub" class="verdict-sub">You are maximizing plan durability and legacy.</div>
-        
-        <div id="verdict-action" class="frag-test-bar">
-            <div style="display: flex; flex-direction: column; gap: 4px;">
+      <!-- verdict-line / verdict-sub kept hidden for JS compatibility -->
+      <div id="verdict-line" style="display:none;"></div>
+      <div id="verdict-sub" style="display:none;"></div>
+
+      <div id="verdict-container" style="margin-bottom: 20px; border: 1px solid rgba(201,168,76,0.3); border-left: 2px solid var(--gold); border-radius: 0 6px 6px 0; padding: 12px 16px; background: rgba(201,168,76,0.03);">
+        <div id="verdict-action" style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+            <div style="display: flex; flex-direction: column; gap: 3px;">
                 <span id="va-label" style="font-family: var(--font-mono); font-size: 9px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em;">KEY SENSITIVITY</span>
-                <span id="va-desc" style="font-size: 12px; color: var(--white);">Inflation → 4% (Impact: −$29K to Capacity)</span>
+                <span id="va-desc" style="font-size: 11px; color: rgba(255,255,255,0.75);">Inflation → 4% (Impact: −$29K to Capacity)</span>
             </div>
-            <button class="btn" style="padding: 10px 16px; margin: 0; font-size: 10px;" onclick="testRecommendation()">Test Impact</button>
+            <button class="btn" style="padding: 8px 14px; margin: 0; font-size: 9px; white-space: nowrap; flex-shrink: 0;" onclick="testRecommendation()">Test Impact</button>
         </div>
       </div>
 
@@ -1232,6 +1262,7 @@
           <!-- Web3Forms config -->
           <input type="hidden" name="access_key" value="0e411fb0-cdcb-45b6-9f4e-39178aafb171">
           <input type="hidden" name="subject" value="DATUM FI Feedback Received">
+          <input type="hidden" name="from_name" value="DATUM FI Website">
 
           <!-- Q1 -->
           <div class="fp-q">
@@ -1901,39 +1932,58 @@
         const vAct  = $('verdict-action');
         const vaL   = $('va-label');
         const vaD   = $('va-desc');
+        const dsLine = $('ds-line-text');
+        const dsSub  = $('ds-sub-text');
+        const dsEl   = $('datum-status');
         if (vBox) vBox.className = 'verdict-box';
 
         const HA  = window._highestYieldAction;
         const HD  = window._highestYieldDelta;
         const keySensText = `${HA} (Impact: ${formatDelta(HD)} to Capacity)`;
 
+        let _dsLine = '', _dsSub = '';
+
         if (pct < 0) {
             vBox?.classList.add('state-green');
+            _dsLine = 'Well below Survival Floor — maximum durability.';
+            _dsSub  = 'Ultra-conservative positioning.';
             if (vLine) vLine.innerText = 'Your spending target is well below the Survival Floor — maximum durability.';
             if (vSub)  vSub.innerText  = 'Ultra-conservative positioning producing maximum surplus and legacy.';
             if (vaL)   { vaL.innerText = 'KEY SENSITIVITY'; vaL.style.color = 'var(--orange)'; if(vAct) vAct.style.borderColor = 'rgba(255,255,255,0.1)'; if(vaD) vaD.innerText = keySensText; }
         } else if (pct <= 0.3) {
             vBox?.classList.add('state-green');
+            _dsLine = 'Plan is highly secure.';
+            _dsSub  = 'Maximizing durability and legacy.';
             if (vLine) vLine.innerText = 'Your plan is highly secure.';
             if (vSub)  vSub.innerText  = 'You are maximizing plan durability and legacy.';
             if (vaL)   { vaL.innerText = 'KEY SENSITIVITY'; vaL.style.color = 'var(--orange)'; if(vAct) vAct.style.borderColor = 'rgba(255,255,255,0.1)'; if(vaD) vaD.innerText = keySensText; }
         } else if (pct <= 0.7) {
             vBox?.classList.add('state-blue');
+            _dsLine = 'Plan is operating safely.';
+            _dsSub  = 'Well within core capacity of the Range.';
             if (vLine) vLine.innerText = 'Your plan is operating safely.';
             if (vSub)  vSub.innerText  = 'You are well within the core capacity of your mathematical range.';
             if (vaL)   { vaL.innerText = 'KEY SENSITIVITY'; vaL.style.color = 'var(--orange)'; if(vAct) vAct.style.borderColor = 'rgba(255,255,255,0.1)'; if(vaD) vaD.innerText = keySensText; }
         } else if (pct <= 1) {
             vBox?.classList.add('state-amber');
+            _dsLine = 'Pushing against structural limits.';
+            _dsSub  = 'Lifestyle maximized — legacy buffer thin.';
             if (vLine) vLine.innerText = 'Your plan is pushing against its structural limits.';
             if (vSub)  vSub.innerText  = 'You are maximizing lifestyle at the expense of legacy buffer.';
             if (vaL)   { vaL.innerText = 'KEY SENSITIVITY'; vaL.style.color = 'var(--orange)'; if(vAct) vAct.style.borderColor = 'rgba(255,255,255,0.1)'; if(vaD) vaD.innerText = keySensText; }
         } else {
             vBox?.classList.add('state-red');
             const reduction = datumVal - CAPSTONE;
+            _dsLine = 'Target spend exceeds ceiling!';
+            _dsSub  = `Reduce by ${formatMoney(reduction)}/yr to stabilize.`;
             if (vLine) vLine.innerText = 'Target spend exceeds structural ceiling!';
             if (vSub)  vSub.innerText  = 'A structural revision is required.';
             if (vaL)   { vaL.innerText = 'REQUIRED STABILIZATION'; vaL.style.color = 'var(--danger-red)'; if(vAct) vAct.style.borderColor = 'rgba(226,75,74,0.3)'; if(vaD) vaD.innerText = `Reduce spending by ${formatMoney(reduction)}/yr — or test a delay.`; }
         }
+
+        if (dsLine) dsLine.innerText = _dsLine;
+        if (dsSub)  dsSub.innerText  = _dsSub;
+        if (dsEl)   dsEl.classList.add('visible');
 
         if (updateInput && $('inline-datum-input') && document.activeElement !== $('inline-datum-input')) {
             $('inline-datum-input').value = datumVal.toLocaleString('en-US');
@@ -2199,7 +2249,8 @@
             method: 'POST', body: data,
             headers: { 'Accept': 'application/json' }
         })
-        .then(r => showThanks())
+        .then(r => r.json())
+        .then(result => { if (result.success) showThanks(); else showThanks(); })
         .catch(() => showThanks());
     }
 
@@ -2216,9 +2267,84 @@
     }
 
     // ─── Input wiring ─────────────────────────────────────────────────────────
+    // ─── Custom date-select dropdowns (DD1) ──────────────────────────────────
+    function cdsToggle(trigger) {
+        const outer = trigger.closest('.cds-outer');
+        if (!outer) return;
+        const isOpen = outer.classList.contains('open');
+        // Close all open panels
+        document.querySelectorAll('.cds-outer.open').forEach(o => {
+            o.classList.remove('open');
+            const p = o.querySelector('.cds-panel');
+            if (p) p.style.display = 'none';
+        });
+        if (!isOpen) {
+            outer.classList.add('open');
+            const panel = outer.querySelector('.cds-panel');
+            if (panel) {
+                panel.style.display = 'block';
+                const rect = outer.getBoundingClientRect();
+                panel.style.position = 'fixed';
+                panel.style.left = rect.left + 'px';
+                panel.style.top  = (rect.bottom + 2) + 'px';
+                panel.style.minWidth = rect.width + 'px';
+            }
+        }
+    }
+
+    function initCustomDateSelects() {
+        document.querySelectorAll('.cds-outer').forEach(outer => {
+            const sel    = outer.querySelector('select');
+            const tv     = outer.querySelector('.cds-trigger-val');
+            const panel  = outer.querySelector('.cds-panel');
+            if (!sel || !tv || !panel) return;
+
+            // Build options from the native select
+            function rebuildPanel() {
+                panel.innerHTML = '';
+                Array.from(sel.options).forEach(opt => {
+                    const div = document.createElement('div');
+                    div.className = 'cds-option' + (opt.selected ? ' cds-selected' : '');
+                    div.textContent = opt.text;
+                    div.addEventListener('click', e => {
+                        e.stopPropagation();
+                        sel.value = opt.value;
+                        tv.textContent = opt.text;
+                        panel.querySelectorAll('.cds-option').forEach(d => d.classList.remove('cds-selected'));
+                        div.classList.add('cds-selected');
+                        outer.classList.remove('open');
+                        panel.style.display = 'none';
+                        sel.dispatchEvent(new Event('change', { bubbles: true }));
+                    });
+                    panel.appendChild(div);
+                });
+                // Show selected value in trigger
+                const chosen = sel.options[sel.selectedIndex];
+                if (chosen) tv.textContent = chosen.text;
+            }
+
+            rebuildPanel();
+            // Re-sync after fillYears/fillMonths populate the native select
+            const obs = new MutationObserver(rebuildPanel);
+            obs.observe(sel, { childList: true });
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', e => {
+            if (!e.target.closest('.cds-outer')) {
+                document.querySelectorAll('.cds-outer.open').forEach(o => {
+                    o.classList.remove('open');
+                    const p = o.querySelector('.cds-panel');
+                    if (p) p.style.display = 'none';
+                });
+            }
+        });
+    }
+
     function setupInputs() {
         // Populate date dropdowns
         populateDateDropdowns();
+        initCustomDateSelects();
 
 
         // Add × remove buttons to existing rooms
