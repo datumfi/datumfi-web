@@ -135,10 +135,7 @@
   @keyframes heFlowPulse { 0% { stroke-dashoffset: 82; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
 
   /* --- HERO Hourglass Stage Layout --- */
-  .hourglass-stage { display: flex; align-items: center; justify-content: center; width: 100%; max-width: 1100px; margin: 36px auto 40px auto; pointer-events: none; }
-  .hero-connector { flex: 1; min-width: 24px; height: 2px; background: linear-gradient(90deg, rgba(201,168,76,0.8) 0%, rgba(29,158,117,0.8) 100%); box-shadow: 0 0 10px rgba(201,168,76,0.4); position: relative; }
-  .connector-dot { position: absolute; width: 12px; height: 12px; background: var(--white); border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); animation: pulseCore 2s ease-in-out infinite; }
-  @keyframes pulseCore { 0%,100% { box-shadow: 0 0 10px rgba(255,255,255,0.4); } 50% { box-shadow: 0 0 30px rgba(255,255,255,1); } }
+  .hourglass-stage { display: flex; align-items: center; justify-content: center; gap: 40px; width: 100%; max-width: 1000px; margin: 36px auto 40px auto; pointer-events: none; }
   .hero-range-wrapper { position: relative; width: 420px; height: 360px; }
   .hero-range-wrapper svg { width: 100%; height: 100%; }
   .m-wave { fill: none; stroke-width: 1.5; stroke-linecap: round; opacity: 0.8; }
@@ -150,8 +147,7 @@
   .m-datum { stroke: var(--teal); stroke-width: 3; stroke-dasharray: 6 6; animation: heFlowDash 1.2s linear infinite; }
   @keyframes heFlowDash { to { stroke-dashoffset: -12; } }
   @media (max-width: 960px) {
-    .hourglass-stage { flex-direction: column; margin: 24px auto 32px auto; }
-    .hero-connector { width: 2px; height: 48px; min-width: 0; background: linear-gradient(180deg, rgba(201,168,76,0.8) 0%, rgba(29,158,117,0.8) 100%); }
+    .hourglass-stage { flex-direction: column; gap: 24px; margin: 24px auto 32px auto; }
     .he-wrapper, .hero-range-wrapper { width: 320px; height: 274px; }
     .he-n-tax  { top: 23px;  left: 15px; }
     .he-n-roth { top: 69px;  left: 15px; }
@@ -210,7 +206,7 @@
   #flying-catalyst { position: absolute; background: var(--gold); border-radius: 1px; box-shadow: 0 0 8px rgba(201,168,76,0.4); opacity: 0; z-index: 200; pointer-events: none; transform-origin: center center; }
 
   /* --- SCREEN 4: Multiverse Funnel Reveal --- */
-  .v-range-container { position: relative; width: 100%; height: 370px; margin: 4px 0 16px 0; }
+  .v-range-container { position: relative; width: 100%; height: 400px; margin: 4px 0 16px 0; }
   .v-origin { position: absolute; left: 40px; top: 50%; width: 16px; height: 16px; background: var(--gold); border-radius: 50%; transform: translate(-8px, -50%); z-index: 5; box-shadow: 0 0 20px rgba(201,168,76,0.8); transition: opacity 0.5s ease; opacity: 0; }
   .v-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;}
   
@@ -654,7 +650,7 @@
 
         <div class="hourglass-stage anim-fade-up anim-delay-3">
             <div style="position: relative;">
-                <div class="mini-label">The Estate</div>
+                <div class="mini-label" style="left: 20px; transform: none;">The Estate</div>
                 <div class="he-wrapper" id="he-stage">
                     <svg class="he-lines" viewBox="0 0 420 360" preserveAspectRatio="none">
                         <path class="he-b-line he-d1" d="M 130,50 C 190,50 200,170 260,170" />
@@ -678,11 +674,8 @@
                     </div>
                 </div>
             </div>
-            <div class="hero-connector">
-                <div class="connector-dot"></div>
-            </div>
             <div style="position: relative;">
-                <div class="mini-label">The Range</div>
+                <div class="mini-label" style="left: auto; right: 0; transform: none;">The Range</div>
                 <div class="hero-range-wrapper">
                     <svg viewBox="0 0 420 360" preserveAspectRatio="none">
                         <path class="m-wave m-light"   d="M 0,170 C 100,170 250,20  420,10" />
@@ -776,8 +769,8 @@
       </div>
       
       <!-- ── Architect Profile ── -->
-      <div class="arch-profile-title">Architect Profile</div>
       <div class="blueprint-wrapper" style="margin-top: 0; margin-bottom: 24px; border: 1px solid #00C9A7; box-shadow: 0 0 15px rgba(0,201,167,0.1); border-radius: 12px; padding: 24px;">
+        <div class="arch-profile-title" style="margin-top: 0; margin-bottom: 20px;">Architect Profile</div>
         <div class="spec-grid" style="margin-bottom: 24px;">
           <div>
             <label class="input-label">Date of Birth</label>
@@ -851,7 +844,7 @@
 
       <div class="blueprint-wrapper">
           <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; border-bottom: 1px solid rgba(29,158,117,0.3); padding-bottom: 12px;">
-              <div class="bp-title" style="font-family: var(--font-serif); font-style: italic; font-size: 24px; color: var(--teal-mid); cursor: pointer;" onclick="const r = document.getElementById('rooms-container'); r.classList.contains('rooms-expanded') ? (r.classList.remove('rooms-expanded'), r.classList.add('rooms-collapsed')) : (r.classList.remove('rooms-collapsed'), r.classList.add('rooms-expanded'))">The Estate <span style="font-size: 14px; opacity: 0.5;">↕</span></div>
+              <div class="bp-title" style="font-family: var(--font-serif); font-style: italic; font-size: 24px; color: var(--white); cursor: pointer;" onclick="const r = document.getElementById('rooms-container'); r.classList.contains('rooms-expanded') ? (r.classList.remove('rooms-expanded'), r.classList.add('rooms-collapsed')) : (r.classList.remove('rooms-collapsed'), r.classList.add('rooms-expanded'))">The Estate <span style="font-size: 14px; opacity: 0.5;">↕</span></div>
               <div style="text-align: right;">
                   <div style="font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">Current Value</div>
                   <div class="mock-input" style="padding: 4px 8px; width: 140px; border-color: var(--teal-mid); background: rgba(29, 158, 117, 0.05); margin-left: auto;">
@@ -950,9 +943,9 @@
               <div style="font-family: var(--font-serif); font-style: italic; font-size: 28px; color: var(--white); margin-bottom: 4px;">Your estate has been measured.</div>
               <div style="font-family: var(--font-mono); font-size: 11px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em;">These are your boundaries.</div>
           </div>
-          <div class="quick-toggles-panel active" id="controls-panel" style="background: linear-gradient(135deg, #0e1b30 0%, #050a14 100%); border: 1px solid var(--teal); border-radius: 12px; padding: 14px 18px; min-width: 180px; text-align: right; box-shadow: inset 0 4px 10px rgba(0,0,0,0.6), 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: flex-end; margin: 0; flex-shrink: 0; max-width: 240px;">
-              <div style="font-family: var(--font-mono); font-size: 9px; color: var(--teal-mid); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 5px;">Target Spend</div>
-              <div style="font-family: var(--font-serif); font-style: italic; font-size: 25px; color: var(--teal); line-height: 1.1;"><span id="val-disp-spend">$120,000</span> <span style="font-size: 12px; opacity: 0.7;">/ yr</span></div>
+          <div class="quick-toggles-panel active" id="controls-panel" style="background: linear-gradient(135deg, #0e1b30 0%, #050a14 100%); border: 1px solid var(--teal); border-radius: 10px; padding: 10px 14px; min-width: 160px; text-align: right; box-shadow: inset 0 4px 10px rgba(0,0,0,0.6), 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: flex-end; margin: 0; flex-shrink: 0; max-width: 220px;">
+              <div style="font-family: var(--font-mono); font-size: 9px; color: var(--teal-mid); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 4px;">Target Spend</div>
+              <div style="font-family: var(--font-serif); font-style: italic; font-size: 22px; color: var(--teal); line-height: 1.1;"><span id="val-disp-spend">$120,000</span> <span style="font-size: 11px; opacity: 0.7;">/ yr</span></div>
               <input type="range" id="slider-spend" min="50000" max="500000" step="1000" value="120000" data-clarity-mask="true" style="width: 100%; margin-top: 14px;">
           </div>
       </div>
@@ -1418,15 +1411,22 @@
         }
         function fillYears(id, from, to, defaultVal, descending) {
             const el = $(id); if (!el) return;
-            const years = [];
-            for (let y = from; y <= to; y++) years.push(y);
-            if (descending) years.reverse();
-            years.forEach(function(y) {
-                const opt = document.createElement('option');
-                opt.value = y; opt.textContent = y;
-                if (y === defaultVal) opt.selected = true;
-                el.appendChild(opt);
-            });
+            // Direct iteration in the desired direction — no intermediate array
+            if (descending) {
+                for (let y = to; y >= from; y--) {
+                    const opt = document.createElement('option');
+                    opt.value = y; opt.textContent = y;
+                    if (y === defaultVal) opt.selected = true;
+                    el.appendChild(opt);
+                }
+            } else {
+                for (let y = from; y <= to; y++) {
+                    const opt = document.createElement('option');
+                    opt.value = y; opt.textContent = y;
+                    if (y === defaultVal) opt.selected = true;
+                    el.appendChild(opt);
+                }
+            }
         }
 
         // Architect DOB — descending so recent years show near top; default 1983
