@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#091221">
 <title>Datum FI — The Range</title>
 <link rel="stylesheet" href="/styles/typography.css">
+<link rel="stylesheet" href="/styles/header.css">
 <style>
   body { overflow-x: hidden; overflow-y: auto; }
 
@@ -172,18 +173,28 @@
 </head>
 <body>
 
-  <header class="main-header">
-    <div class="header-inner">
-      <a href="/" class="brand-lockup" style="font-size:22px;"><span class="brand-datum">DATUM</span><span class="brand-fi">FI</span></a>
-      <nav class="header-nav">
-        <a href="/" class="nav-link">Home</a>
-        <a href="/sketch.html" class="nav-link">Sketch</a>
-        <a href="/studio.html" class="nav-link">Studio</a>
-        <a href="/range.html" class="nav-link active" id="nav-range-link" style="display:none;">Range</a>
-        <a href="/philosophy.html" class="nav-link">Philosophy</a>
-      </nav>
+  <nav id="app-nav">
+    <a href="/" class="brand-header"><span class="brand-datum">DATUM</span><span class="brand-fi">FI</span></a>
+    <div class="nav-links">
+      <a href="/" class="nav-link">Home</a>
+      <a href="/sketch.html" class="nav-link">Sketch</a>
+      <a href="/studio.html" class="nav-link">Studio</a>
+      <a href="/range.html" class="nav-link active" id="nav-range-link" style="display:none;">Range</a>
+      <a href="/philosophy.html" class="nav-link">Philosophy</a>
+      <button class="nav-feedback-btn">Share Feedback</button>
     </div>
-  </header>
+    <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+  <div class="nav-mobile-menu" id="nav-mobile-menu">
+    <a href="/" class="nav-mobile-link">Home</a>
+    <a href="/sketch.html" class="nav-mobile-link">Sketch</a>
+    <a href="/studio.html" class="nav-mobile-link">Studio</a>
+    <a href="/range.html" class="nav-mobile-link active" id="nav-mob-range" style="display:none;">Range</a>
+    <a href="/philosophy.html" class="nav-mobile-link">Philosophy</a>
+    <button class="nav-mobile-feedback">Share Feedback</button>
+  </div>
 
   <div class="fixed-stage">
       <div style="flex: 0 0 35%;"></div>
@@ -474,8 +485,7 @@
     // D3: Ensure back button goes to /studio
     history.replaceState({}, "", "/studio.html");
     history.pushState({}, "", "/range.html");
-    // D2: Show Range nav if session flag set
-    if (sessionStorage.getItem('datum_range_revealed')) { const rl = document.getElementById('nav-range-link'); if (rl) rl.style.display = ''; }
   </script>
+  <script src="/nav.js"></script>
 </body>
 </html>

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Datum FI — Structural Scale Sheet</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-navy: #091221;
+    --teal-mid: #5DCAA5;
+    --gold: #C9A84C;
+    --font-serif: 'Fraunces', serif;
+    --font-mono: 'DM Mono', monospace;
+    --grid-line: rgba(100, 180, 255, 0.05);
+    --muted: rgba(255,255,255,0.4);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background-color: var(--bg-navy);
+    background-image: 
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    font-family: var(--font-mono);
+    color: var(--white);
+    -webkit-font-smoothing: antialiased;
+    padding: 60px 5%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+
+  .sheet-header {
+    text-align: center;
+    margin-bottom: 60px;
+  }
+
+  .sheet-header h1 {
+    font-family: var(--font-serif);
+    font-size: 32px;
+    font-style: italic;
+    font-weight: 300;
+    color: var(--gold);
+    margin-bottom: 12px;
+  }
+
+  .sheet-header p {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+  }
+
+  /* ── THE RESPONSIVE LOGO ARCHITECTURE ── */
+  /* By using 'em' units, the entire logo scales automatically based purely on the font-size of the .brand-lockup container. */
+  
+  .brand-lockup {
+    display: inline-flex;
+    align-items: baseline;
+    text-decoration: none;
+    user-select: none;
+  }
+
+  .brand-datum {
+    font-family: var(--font-serif);
+    font-size: 1em; /* Base scale */
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    color: var(--teal-mid);
+    position: relative;
+    padding-bottom: 0.12em; /* Relative breathing room */
+  }
+
+  .brand-datum::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 4%;
+    width: 92%; /* The 92% Inset */
+    height: 0.05em; /* Thickness scales with logo */
+    background-color: var(--gold);
+    border-radius: 2px;
+    box-shadow: 0 0.02em 0.1em rgba(201, 168, 76, 0.4);
+  }
+
+  .brand-fi {
+    font-family: var(--font-mono);
+    font-size: 0.73em; /* FI is precisely 73% the size of DATUM */
+    font-weight: 300;
+    letter-spacing: 0.1em;
+    color: var(--teal-mid);
+    margin-left: 0.35em; /* Spacing scales with logo */
+    transform: translateY(0.05em); /* Optical baseline alignment scales perfectly */
+  }
+
+  /* ── INTERACTIVE SCALER SECTION ── */
+  .interactive-zone {
+    width: 100%;
+    max-width: 900px;
+    background: rgba(9, 18, 33, 0.85);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 60px 40px;
+    margin-bottom: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    backdrop-filter: blur(10px);
+  }
+
+  .logo-stage {
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    border-bottom: 1px dashed rgba(255,255,255,0.1);
+    margin-bottom: 40px;
+  }
+
+  .controls {
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+  }
+
+  .controls label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--teal-mid);
+    margin-bottom: 16px;
+  }
+
+  .controls span {
+    color: var(--white);
+    font-weight: bold;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    background: transparent;
+  }
+  input[type=range]:focus { outline: none; }
+  input[type=range]::-webkit-slider-runnable-track {
+    width: 100%; height: 2px; cursor: pointer;
+    background: rgba(255,255,255,0.15); border-radius: 2px;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    height: 16px; width: 16px; border-radius: 50%;
+    background: var(--teal-mid); border: none;
+    cursor: pointer; -webkit-appearance: none; margin-top: -7px;
+    box-shadow: 0 0 10px rgba(93, 202, 165, 0.4);
+  }
+
+  /* ── FIXED SCALE REFERENCE GRID ── */
+  .scale-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 40px;
+    width: 100%;
+    max-width: 900px;
+  }
+
+  .scale-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 30px 40px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 8px;
+  }
+
+  .scale-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .scale-name {
+    font-size: 13px;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+
+  .scale-spec {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  @media (max-width: 768px) {
+    .scale-row { flex-direction: column; align-items: flex-start; gap: 24px; padding: 24px; }
+  }
+
+</style>
+</head>
+<body>
+
+  <div class="sheet-header">
+    <h1>Master Scale Sheet</h1>
+    <p>Option 1 + Option 4 (Inset Anchor & Optical Alignment)</p>
+  </div>
+
+  <div class="interactive-zone">
+    <div class="logo-stage">
+      <div class="brand-lockup" id="dynamic-logo" style="font-size: 56px;">
+        <span class="brand-datum">DATUM</span>
+        <span class="brand-fi">FI</span>
+      </div>
+    </div>
+    
+    <div class="controls">
+      <label>Dynamic Parameter Test: <span id="size-readout">56px</span></label>
+      <input type="range" id="size-slider" min="12" max="120" value="56" step="1">
+    </div>
+  </div>
+
+  <div class="scale-grid">
+    
+    <div class="scale-row">
+      <div class="scale-meta">
+        <div class="scale-name">The Marquee</div>
+        <div class="scale-spec">Size: 72px | Use: Print, Hero Video, Presentations</div>
+      </div>
+      <div class="brand-lockup" style="font-size: 72px;">
+        <span class="brand-datum">DATUM</span>
+        <span class="brand-fi">FI</span>
+      </div>
+    </div>
+
+    <div class="scale-row">
+      <div class="scale-meta">
+        <div class="scale-name">The Studio Nav</div>
+        <div class="scale-spec">Size: 24px | Use: Desktop Header, App Chrome</div>
+      </div>
+      <div class="brand-lockup" style="font-size: 24px;">
+        <span class="brand-datum">DATUM</span>
+        <span class="brand-fi">FI</span>
+      </div>
+    </div>
+
+    <div class="scale-row">
+      <div class="scale-meta">
+        <div class="scale-name">Mobile Interface</div>
+        <div class="scale-spec">Size: 18px | Use: Android App Bar, Mobile Web Header</div>
+      </div>
+      <div class="brand-lockup" style="font-size: 18px;">
+        <span class="brand-datum">DATUM</span>
+        <span class="brand-fi">FI</span>
+      </div>
+    </div>
+
+    <div class="scale-row">
+      <div class="scale-meta">
+        <div class="scale-name">The Micro Watermark</div>
+        <div class="scale-spec">Size: 12px | Use: PDF Exports, App Footer, Copyright</div>
+      </div>
+      <div class="brand-lockup" style="font-size: 12px;">
+        <span class="brand-datum">DATUM</span>
+        <span class="brand-fi">FI</span>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const slider = document.getElementById('size-slider');
+    const logo = document.getElementById('dynamic-logo');
+    const readout = document.getElementById('size-readout');
+
+    slider.addEventListener('input', (e) => {
+      const newSize = e.target.value;
+      logo.style.fontSize = `${newSize}px`;
+      readout.textContent = `${newSize}px`;
+    });
+  </script>
+
+</body>
+</html>

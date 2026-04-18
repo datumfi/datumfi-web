@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Datum FI — Establish Origin</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,700;1,9..144,300;1,9..144,400;1,9..144,700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-navy: #091221;
+    --teal: #1D9E75;
+    --teal-mid: #5DCAA5;
+    --gold: #C9A84C;
+    --white: #ffffff;
+    --muted: rgba(255,255,255,0.4);
+    --grid-line: rgba(100, 180, 255, 0.05);
+    --danger-red: #e24b4a;
+    --font-serif: 'Fraunces', serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background-color: var(--bg-navy);
+    background-image: 
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    font-family: var(--font-serif);
+    color: var(--white);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+  }
+
+  /* --- NEW HORIZONTAL ANCHOR LOGO --- */
+  .brand-header {
+    position: absolute;
+    top: 40px;
+    left: 40px;
+    display: inline-flex;
+    align-items: baseline;
+    text-decoration: none;
+    user-select: none;
+  }
+  .brand-datum {
+    font-family: var(--font-serif);
+    font-size: 22px;
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    color: var(--teal-mid);
+    position: relative;
+    padding-bottom: 4px;
+  }
+  .brand-datum::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 4%;
+    width: 92%;
+    height: 2px;
+    background-color: var(--gold);
+    border-radius: 2px;
+    box-shadow: 0 1px 4px rgba(201, 168, 76, 0.4);
+  }
+  .brand-fi {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    font-weight: 300;
+    letter-spacing: 0.1em;
+    color: var(--teal-mid);
+    margin-left: 10px;
+    transform: translateY(1px); /* Optical baseline alignment */
+  }
+
+  /* --- AUTH CONTAINER --- */
+  .auth-wrapper {
+    width: 100%;
+    max-width: 520px;
+    background: rgba(9, 18, 33, 0.75);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    overflow: hidden;
+    position: relative;
+    z-index: 10;
+  }
+
+  .auth-header {
+    padding: 40px 40px 20px 40px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .auth-header h1 { font-size: 32px; font-weight: 300; font-style: italic; color: var(--white); margin-bottom: 8px; }
+  .auth-header p { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gold); }
+
+  .auth-body {
+    padding: 40px;
+    position: relative;
+  }
+
+  /* --- FORMS & INPUTS --- */
+  .input-group { margin-bottom: 24px; }
+  .input-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--teal-mid); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .mock-input { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; padding: 14px 16px; border-radius: 6px; width: 100%; transition: border-color 0.3s; }
+  .mock-input:focus-within { border-color: var(--teal-mid); background: rgba(255,255,255,0.05); }
+  .mock-input input, .mock-input select { background: transparent; border: none; color: var(--white); font-family: var(--font-mono); font-size: 15px; outline: none; width: 100%; }
+  .mock-input input::placeholder { color: rgba(255,255,255,0.2); }
+
+  /* Dates Row */
+  .dob-row { display: flex; gap: 12px; }
+  .dob-row .mock-input { flex: 1; }
+  .mock-input select option { background: var(--bg-navy); color: var(--white); }
+
+  /* --- BUTTONS --- */
+  .btn { display: inline-flex; justify-content: center; align-items: center; background: transparent; border: 1px solid var(--teal-mid); color: var(--teal-mid); font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.15em; padding: 16px; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; width: 100%; font-weight: bold; }
+  .btn:hover { background: var(--teal-mid); color: var(--bg-navy); }
+  
+  .btn-social { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); color: var(--white); border-radius: 6px; padding: 14px; font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 12px; width: 100%; margin-bottom: 12px; transition: all 0.3s; }
+  .btn-social:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.3); }
+  .btn-social img { width: 18px; height: 18px; }
+
+  .divider { display: flex; align-items: center; text-align: center; margin: 32px 0; }
+  .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .divider span { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--muted); padding: 0 16px; }
+
+  /* --- STEP LOGIC --- */
+  .step { display: none; animation: fadeIn 0.4s ease forwards; }
+  .step.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Co-Architect Toggle */
+  .co-arch-toggle { font-family: var(--font-mono); font-size: 10px; color: var(--muted); cursor: pointer; text-transform: uppercase; letter-spacing: 0.1em; display: flex; align-items: center; gap: 6px; }
+  .co-arch-toggle input { cursor: pointer; }
+  .co-arch-panel { display: none; margin-top: 16px; padding-top: 16px; border-top: 1px dashed rgba(255,255,255,0.1); animation: fadeIn 0.3s ease; }
+
+  /* --- VERIFICATION STATE --- */
+  .verify-state { text-align: center; padding: 20px 0; }
+  .verify-icon { width: 64px; height: 64px; border: 2px solid var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; color: var(--gold); font-size: 24px; animation: pulseGold 2s infinite; }
+  @keyframes pulseGold { 0% { box-shadow: 0 0 0 0 rgba(201, 168, 76, 0.4); } 70% { box-shadow: 0 0 0 20px rgba(201, 168, 76, 0); } 100% { box-shadow: 0 0 0 0 rgba(201, 168, 76, 0); } }
+  .verify-state p { font-size: 16px; color: rgba(255,255,255,0.8); line-height: 1.6; margin-bottom: 24px; }
+
+  /* Subtext links */
+  .auth-footer { text-align: center; margin-top: 24px; font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 0.05em; }
+  .auth-footer a { color: var(--gold); text-decoration: none; transition: color 0.3s; }
+  .auth-footer a:hover { color: var(--white); }
+
+  /* --- ZERO KNOWLEDGE ARCHITECTURE BADGE --- */
+  .zk-wrapper {
+    width: 100%;
+    max-width: 520px;
+    margin-top: 24px;
+    padding: 24px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    z-index: 10;
+  }
+  .zk-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .zk-icon { color: var(--gold); }
+  .zk-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--white);
+  }
+  .zk-list { list-style: none; padding: 0; margin: 0; }
+  .zk-list li {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .zk-list li:last-child { margin-bottom: 0; }
+  .zk-bullet {
+    color: var(--teal-mid);
+    font-size: 14px;
+    line-height: 1;
+    margin-top: 1px;
+  }
+  .zk-strong { color: rgba(255,255,255,0.85); }
+
+</style>
+</head>
+<body>
+
+  <a href="#" class="brand-header">
+    <span class="brand-datum">DATUM</span>
+    <span class="brand-fi">FI</span>
+  </a>
+
+  <div class="auth-wrapper">
+    <div class="auth-header">
+      <h1 id="header-title">Establish Origin.</h1>
+      <p id="header-sub">Phase I / Identity Verification</p>
+    </div>
+
+    <div class="auth-body">
+      
+      <div id="step-1" class="step active">
+        
+        <button class="btn-social" onclick="simulateSocialLogin('Google')">
+          <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+          Continue with Google
+        </button>
+        
+        <button class="btn-social" onclick="simulateSocialLogin('Apple')">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M16.365 1.488c1.144-.892 2.378-1.488 3.51-1.488.168 0 .324.012.48.036-.18 1.344-.924 2.808-1.932 3.828-.948 1.008-2.316 1.656-3.576 1.656-.036 0-.072 0-.108-.012-.132-1.332.612-2.916 1.626-4.02zm-3.036 4.548c-1.896-.06-3.804 1.152-4.788 1.152-.96 0-2.484-1.068-3.96-1.044-2.04.024-3.924 1.188-4.968 3.012-2.124 3.66-.54 9.072 1.512 12.06 1.008 1.452 2.196 3.12 3.756 3.072 1.476-.048 2.052-.948 3.84-.948 1.776 0 2.304.948 3.852.912 1.608-.036 2.628-1.524 3.612-2.976 1.14-1.668 1.608-3.288 1.644-3.372-.036-.012-3.156-1.212-3.192-4.812-.036-3.012 2.46-4.464 2.568-4.536-1.428-2.088-3.624-2.364-4.404-2.436z"/></svg>
+          Continue with Apple
+        </button>
+
+        <div class="divider"><span>Or use email</span></div>
+
+        <div class="input-group">
+          <label class="input-label">Email</label>
+          <div class="mock-input"><input type="email" id="auth-email" placeholder="name@domain.com"></div>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Password</label>
+          <div class="mock-input"><input type="password" placeholder="••••••••••••"></div>
+        </div>
+
+        <button class="btn" onclick="nextStep(2)">Proceed to Profile →</button>
+        
+        <div class="auth-footer">
+          Already have a blueprint? <a href="#">Access Studio.</a>
+        </div>
+      </div>
+
+      <div id="step-2" class="step">
+        
+        <div class="input-group" style="margin-bottom: 24px;">
+          <div style="font-family: var(--font-serif); font-style: italic; font-size: 20px; margin-bottom: 8px;">Welcome, <span id="display-name" style="color: var(--teal-mid);">Architect</span>.</div>
+          <div style="font-size: 13px; color: var(--muted); line-height: 1.5;">To generate your mathematical range, the engine requires your structural timeline.</div>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Your Name</label>
+          <div class="mock-input">
+            <input type="text" id="primary-name" placeholder="First Name" oninput="document.getElementById('display-name').innerText = this.value.trim() || 'Architect'">
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Date of Birth</label>
+          <div class="dob-row">
+            <div class="mock-input">
+              <select id="p-dob-month">
+                <option value="" disabled selected>Month</option>
+                <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option><option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option><option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option><option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+              </select>
+            </div>
+            <div class="mock-input">
+              <select id="p-dob-year">
+                <option value="" disabled selected>Year</option>
+                <script>for(let y=2006; y>=1940; y--) document.write(`<option value="${y}">${y}</option>`);</script>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-group" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 16px; border-radius: 6px;">
+          <label class="co-arch-toggle">
+            <input type="checkbox" id="co-arch-check" onchange="toggleCoArch()"> Include Co-Architect in Engine
+          </label>
+          
+          <div id="co-arch-panel" class="co-arch-panel">
+            <div class="input-group" style="margin-bottom: 16px;">
+              <label class="input-label">Co-Architect Name</label>
+              <div class="mock-input">
+                <input type="text" placeholder="First Name">
+              </div>
+            </div>
+            
+            <label class="input-label">Co-Architect Date of Birth</label>
+            <div class="dob-row">
+              <div class="mock-input">
+                <select>
+                  <option value="" disabled selected>Month</option>
+                  <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option><option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option><option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option><option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+                </select>
+              </div>
+              <div class="mock-input">
+                <select>
+                  <option value="" disabled selected>Year</option>
+                  <script>for(let y=2006; y>=1940; y--) document.write(`<option value="${y}">${y}</option>`);</script>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-group" style="margin-bottom: 32px;">
+          <label class="input-label">Target Retirement Date</label>
+          <div class="dob-row">
+            <div class="mock-input">
+              <select>
+                <option value="" disabled selected>Month</option>
+                <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option><option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option><option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option><option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+              </select>
+            </div>
+            <div class="mock-input">
+              <select>
+                <option value="" disabled selected>Year</option>
+                <script>for(let y=2026; y<=2070; y++) document.write(`<option value="${y}">${y}</option>`);</script>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn" style="background: var(--teal-mid); color: var(--bg-navy);" onclick="nextStep(3)">Initialize Blueprint</button>
+        <button class="btn" style="border: none; margin-top: 8px; color: var(--muted);" onclick="nextStep(1)">← Back</button>
+      </div>
+
+      <div id="step-3" class="step verify-state">
+        <div class="verify-icon">🗝</div>
+        <h2 style="font-family: var(--font-serif); font-size: 28px; font-style: italic; margin-bottom: 12px;">Enter the Vault.</h2>
+        <p>A structural verification key has been sent to <br><span id="verify-email-display" style="color: var(--teal-mid); font-family: var(--font-mono); font-size: 13px;">your email</span>.</p>
+        <p style="font-size: 13px; color: var(--muted);">Click the link to verify your identity and enter the Studio.</p>
+        
+        <div style="margin-top: 40px;">
+          <button class="btn" style="border-color: rgba(255,255,255,0.2); color: var(--white);">Open Mail App</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="zk-wrapper">
+    <div class="zk-header">
+      <svg class="zk-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+      <span class="zk-title">Zero-Knowledge Architecture</span>
+    </div>
+    <ul class="zk-list">
+      <li>
+        <span class="zk-bullet">✓</span> 
+        <span><span class="zk-strong">Local Computation:</span> The Monte Carlo engine runs entirely inside your browser. Your data never touches our servers.</span>
+      </li>
+      <li>
+        <span class="zk-bullet">✓</span> 
+        <span><span class="zk-strong">Minimal Retention:</span> The Sketch stores nothing. The Studio stores only your profile—never sold, never shared, and deletable on request.</span>
+      </li>
+      <li>
+        <span class="zk-bullet">✓</span> 
+        <span><span class="zk-strong">No Tracking:</span> No ad-retargeting. No data brokering. No invisible pixels monitoring your wealth.</span>
+      </li>
+      <li>
+        <span class="zk-bullet">✓</span> 
+        <span><span class="zk-strong">Session-Scoped State:</span> Blueprints live only for your active session. Close the Vault, and your numbers are gone—never written to disk, never recoverable.</span>
+      </li>
+    </ul>
+  </div>
+
+  <script>
+    // Handles transitioning between the 3 form states
+    function nextStep(stepNum) {
+      // Hide all steps
+      document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+      
+      // Update Headers and specific data based on the step
+      const title = document.getElementById('header-title');
+      const sub = document.getElementById('header-sub');
+      
+      if (stepNum === 2) {
+        title.innerHTML = 'Architect Profile.';
+        sub.innerHTML = 'Phase II / Structural Timeline';
+        
+        // If coming from Social Login, populate the name input automatically
+        const nameInput = document.getElementById('primary-name');
+        if (window.socialName && !nameInput.value) {
+            nameInput.value = window.socialName;
+        }
+        
+        // Update display text
+        document.getElementById('display-name').innerText = nameInput.value.trim() || 'Architect';
+      } 
+      else if (stepNum === 3) {
+        title.innerHTML = 'Clearance Required.';
+        sub.innerHTML = 'Phase III / Protocol Verification';
+        
+        // Display the email they entered
+        const email = document.getElementById('auth-email').value.trim() || 'your secure email';
+        document.getElementById('verify-email-display').innerText = email;
+      }
+      else {
+        title.innerHTML = 'Establish Origin.';
+        sub.innerHTML = 'Phase I / Identity Verification';
+      }
+
+      // Show the requested step
+      document.getElementById('step-' + stepNum).classList.add('active');
+    }
+
+    // Toggle the Co-Architect Dropdown panel
+    function toggleCoArch() {
+      const panel = document.getElementById('co-arch-panel');
+      const isChecked = document.getElementById('co-arch-check').checked;
+      panel.style.display = isChecked ? 'block' : 'none';
+    }
+
+    // Simulates a smooth, frictionless Social Login pulling data automatically
+    function simulateSocialLogin(provider) {
+      // Set global variable to be picked up by Step 2
+      window.socialName = "Jonathan"; 
+      
+      // Auto-fill mock data to simulate pulling from Google/Apple
+      const emailInput = document.getElementById('auth-email');
+      if (emailInput) emailInput.value = `jonathan@${provider.toLowerCase()}.com`;
+      
+      // Instantly push them to Step 2 (Profile)
+      nextStep(2);
+    }
+  </script>
+
+</body>
+</html>

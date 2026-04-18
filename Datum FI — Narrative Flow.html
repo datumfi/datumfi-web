@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Datum FI — Narrative Flow</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-navy: #091221;
+    --teal: #1D9E75;
+    --teal-mid: #5DCAA5;
+    --gold: #C9A84C;
+    --white: #ffffff;
+    --muted: rgba(255,255,255,0.4);
+    --grid-line: rgba(100, 180, 255, 0.05);
+    --danger-red: #e24b4a;
+    --font-serif: 'Fraunces', serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  html { scroll-behavior: smooth; }
+
+  body {
+    background-color: var(--bg-navy);
+    background-image: 
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    font-family: var(--font-serif);
+    color: var(--white);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* --- HEADER NAVIGATION --- */
+  .main-header {
+    position: fixed;
+    top: 0; 
+    left: 0; 
+    width: 100%;
+    background: transparent;
+    border-bottom: none;
+    z-index: 1000;
+  }
+  
+  .header-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px 40px;
+  }
+  
+  .header-left {
+    display: flex;
+    align-items: center;
+  }
+  .brand { 
+    font-family: var(--font-serif); 
+    font-size: 22px; 
+    letter-spacing: 0.15em; 
+    color: var(--teal-mid); 
+    text-decoration: none; 
+  }
+  .brand .mono-part { font-family: var(--font-mono); }
+  .brand .gold-pipe { color: var(--gold); }
+  
+  .header-nav {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+  }
+  .nav-link {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: rgba(255,255,255,0.5);
+    text-decoration: none;
+    transition: 0.3s;
+    position: relative;
+    padding-bottom: 6px;
+  }
+  .nav-link:hover { color: var(--white); }
+  .nav-link.active { color: var(--teal-mid); }
+  .nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; width: 100%;
+    height: 2px;
+    background: var(--teal-mid);
+  }
+
+  .feedback-btn {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.5);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    padding: 10px 16px;
+    border-radius: 4px;
+    text-decoration: none;
+    transition: all 0.3s;
+    margin-left: 20px;
+  }
+  .feedback-btn:hover {
+    border-color: var(--teal-mid);
+    color: var(--white);
+  }
+
+  /* --- TYPOGRAPHY & BUTTONS --- */
+  h1 { font-family: var(--font-serif); font-style: italic; font-weight: 300; font-size: 80px; line-height: 1.1; margin-bottom: 24px; text-shadow: 0 4px 20px rgba(0,0,0,0.5);}
+  h2 { font-family: var(--font-serif); font-weight: 300; font-size: 36px; color: var(--white); margin-bottom: 24px; }
+  h3 { font-family: var(--font-mono); font-size: 14px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold); margin-bottom: 16px; }
+  p { font-size: 18px; line-height: 1.6; color: rgba(255,255,255,0.8); margin-bottom: 24px; font-weight: 300; }
+  
+  .conf-teal { color: var(--teal-mid); font-weight: 400; }
+
+  .primary-btn {
+    display: inline-block;
+    background: transparent;
+    border: 1px solid var(--teal-mid);
+    color: var(--teal-mid);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 16px 32px;
+    cursor: pointer;
+    border-radius: 4px;
+    text-decoration: none;
+    transition: all 0.3s;
+    margin-top: 24px;
+  }
+  .primary-btn:hover { background: var(--teal-mid); color: var(--bg-navy); box-shadow: 0 0 15px rgba(93, 202, 165, 0.3);}
+
+  .secondary-link {
+    display: block;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    text-decoration: none;
+    margin-top: 24px;
+    transition: color 0.3s;
+  }
+  .secondary-link:hover { color: var(--gold); }
+
+  /* --- FOOTER / LEGAL --- */
+  .footer-legal {
+    padding: 60px 40px;
+    max-width: 1000px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  .legal-text {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.8;
+    color: rgba(255,255,255,0.2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* --- 1. HERO SECTION --- */
+  .hero-section {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 40px;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  .hero-sub { font-size: 22px; color: var(--white); margin-bottom: 16px; }
+
+  /* --- 2. STICKY SCROLL SECTION --- */
+  .narrative-container {
+    position: relative;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 40px;
+    display: flex;
+    align-items: flex-start;
+  }
+
+  .visual-stage {
+    position: sticky;
+    top: 15vh; 
+    width: 50%;
+    height: 70vh; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .viz-slot {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+    transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255,255,255,0.05);
+    background: rgba(9, 18, 33, 0.6);
+    border-radius: 8px;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    overflow: hidden;
+  }
+
+  .viz-slot.active { opacity: 1; transform: translateY(0) scale(1); }
+
+  .text-scroller {
+    width: 50%;
+    padding-left: 80px;
+    padding-bottom: 40vh; 
+  }
+
+  .scroll-step {
+    min-height: 100vh; 
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    opacity: 0.3;
+    transition: opacity 0.5s ease;
+    margin-bottom: 20vh; 
+  }
+
+  .scroll-step.active { opacity: 1; }
+
+  .model-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-top: 24px;
+  }
+  .model-card { border-left: 2px solid var(--teal-mid); padding-left: 16px; }
+  .model-card h4 { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; color: var(--gold); letter-spacing: 0.1em; margin-bottom: 8px; }
+  .model-card p { font-size: 14px; margin-bottom: 0; }
+  .stress-battery { border-left-color: var(--danger-red); margin-top: 24px; }
+  .stress-battery h4 { color: var(--danger-red); }
+
+  /* --- 3. CLOSING SECTION --- */
+  .closing-section {
+    min-height: 60vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    padding: 0 40px;
+  }
+
+  /* ========================================================
+     ANIMATION 1: THE AUTOMATED DRAFT
+     ======================================================== */
+  
+  .anim-container { width: 100%; height: 100%; position: relative; }
+  .draft-svg { width: 100%; height: 100%; overflow: visible; }
+  .hero-crosshair { stroke: rgba(201,168,76,0.3); stroke-width: 1; }
+  .hero-crosshair-dot { fill: var(--gold); }
+  .crosshair-group { animation: sweep 8s cubic-bezier(0.25, 1, 0.5, 1) infinite; }
+
+  @keyframes sweep {
+      0% { transform: translate(100px, 100px); opacity: 0; }
+      5% { transform: translate(100px, 100px); opacity: 1; }
+      15% { transform: translate(320px, 100px); opacity: 1; }
+      30% { transform: translate(320px, 260px); opacity: 1; }
+      45% { transform: translate(100px, 260px); opacity: 1; }
+      55% { transform: translate(210px, 400px); opacity: 1; }
+      70% { transform: translate(210px, 400px); opacity: 0; }
+      100% { transform: translate(100px, 100px); opacity: 0; }
+  }
+
+  .draft-rect { fill: var(--teal-mid); stroke: var(--teal-mid); stroke-width: 1.5; stroke-dasharray: 1500; }
+  .room-1 .draft-rect { animation: drawRect1 8s infinite; }
+  .room-1 .draft-text { animation: fadeText1 8s infinite; }
+  
+  @keyframes drawRect1 {
+      0%, 5% { stroke-dashoffset: 1500; fill-opacity: 0; opacity: 0; }
+      6% { opacity: 1; }
+      20% { stroke-dashoffset: 0; fill-opacity: 0; }
+      25%, 85% { stroke-dashoffset: 0; fill-opacity: 0.05; opacity: 1; }
+      90%, 100% { stroke-dashoffset: 1500; fill-opacity: 0; opacity: 0; }
+  }
+  @keyframes fadeText1 {
+      0%, 15% { opacity: 0; transform: translateY(5px); }
+      25%, 85% { opacity: 1; transform: translateY(0); }
+      90%, 100% { opacity: 0; transform: translateY(-5px); }
+  }
+
+  .room-2 .draft-rect { animation: drawRect2 8s infinite; }
+  .room-2 .draft-text { animation: fadeText2 8s infinite; }
+  
+  @keyframes drawRect2 {
+      0%, 20% { stroke-dashoffset: 1500; fill-opacity: 0; opacity: 0; }
+      21% { opacity: 1; }
+      35% { stroke-dashoffset: 0; fill-opacity: 0; }
+      40%, 85% { stroke-dashoffset: 0; fill-opacity: 0.05; opacity: 1; }
+      90%, 100% { stroke-dashoffset: 1500; fill-opacity: 0; opacity: 0; }
+  }
+  @keyframes fadeText2 {
+      0%, 30% { opacity: 0; transform: translateY(5px); }
+      40%, 85% { opacity: 1; transform: translateY(0); }
+      90%, 100% { opacity: 0; transform: translateY(-5px); }
+  }
+
+  .room-3 .draft-rect { animation: drawRect3 8s infinite; }
+  .room-3 .draft-text { animation: fadeText3 8s infinite; }
+  
+  @keyframes drawRect3 {
+      0%, 35% { stroke-dashoffset: 1500; fill-opacity: 0; opacity: 0; }
+      36% { opacity: 1; }
+      50% { stroke-dashoffset: 0; fill-opacity: 0; }
+      55%, 85% { stroke-dashoffset: 0; fill-opacity: 0.05; opacity: 1; }
+      90%, 100% { stroke-dashoffset: 1500; fill-opacity: 0; opacity: 0; }
+  }
+  @keyframes fadeText3 {
+      0%, 45% { opacity: 0; transform: translateY(5px); }
+      55%, 85% { opacity: 1; transform: translateY(0); }
+      90%, 100% { opacity: 0; transform: translateY(-5px); }
+  }
+
+  .total-text { animation: fadeTextTotal 8s infinite; }
+  @keyframes fadeTextTotal {
+      0%, 55% { opacity: 0; transform: scale(0.95); }
+      65%, 85% { opacity: 1; transform: scale(1); }
+      90%, 100% { opacity: 0; transform: scale(0.95); }
+  }
+
+  .ht-title { font-family: var(--font-mono); font-size: 10px; fill: var(--teal-mid); text-transform: uppercase; letter-spacing: 0.2em; text-anchor: middle; font-weight: bold;}
+  .ht-sub { font-family: var(--font-mono); font-size: 8px; fill: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; text-anchor: middle;}
+  .ht-val { font-family: var(--font-serif); font-size: 24px; font-style: italic; fill: var(--white); text-anchor: middle; font-weight: bold;}
+  .ht-total-lbl { font-family: var(--font-mono); font-size: 11px; fill: var(--gold); text-transform: uppercase; letter-spacing: 0.2em; text-anchor: middle;}
+  .ht-total-val { font-family: var(--font-serif); font-size: 42px; font-style: italic; fill: var(--white); text-anchor: middle;}
+
+
+  /* ========================================================
+     ANIMATION 2: THE STRUCTURAL CHAMBER 
+     ======================================================== */
+  
+  .chamber-svg { width: 100%; height: 100%; overflow: visible; }
+  .estate-block { fill: rgba(29, 158, 117, 0.05); stroke: var(--teal-mid); stroke-width: 1.5; }
+  .scanner-line { stroke: var(--gold); stroke-width: 2; stroke-dasharray: 4 8; opacity: 0; animation: scanSweep 5s linear infinite; }
+
+  @keyframes scanSweep {
+      0% { transform: translateY(60px); opacity: 0; }
+      5% { opacity: 0.8; }
+      90% { opacity: 0.8; }
+      95% { transform: translateY(540px); opacity: 0; }
+      100% { transform: translateY(540px); opacity: 0; }
+  }
+
+  .model-log text { font-family: var(--font-mono); font-size: 13px; fill: rgba(255,255,255,0.2); text-transform: uppercase; letter-spacing: 0.1em; }
+  .m-log-1 { animation: logPulse 5s infinite; animation-delay: 0s; }
+  .m-log-2 { animation: logPulse 5s infinite; animation-delay: 1.25s; }
+  .m-log-3 { animation: logPulse 5s infinite; animation-delay: 2.5s; }
+  .m-log-4 { animation: logPulse 5s infinite; animation-delay: 3.75s; }
+
+  @keyframes logPulse {
+      0%, 100% { fill: rgba(255,255,255,0.2); }
+      10%, 25% { fill: var(--gold); }
+      30%, 95% { fill: rgba(255,255,255,0.2); }
+  }
+
+  .stress-wave { fill: none; stroke: var(--danger-red); stroke-width: 2; opacity: 0; animation: shockwave 5s cubic-bezier(0.2, 0.8, 0.2, 1) infinite; animation-delay: 2.5s; }
+  .structural-shield { fill: rgba(93, 202, 165, 0.05); stroke: var(--teal-mid); stroke-width: 2; stroke-dasharray: 8 8; opacity: 0; transform-origin: 300px 390px; animation: shieldPulse 5s cubic-bezier(0.2, 0.8, 0.2, 1) infinite; animation-delay: 2.5s; }
+
+  @keyframes shockwave {
+      0% { r: 450; opacity: 0; stroke-width: 1;}
+      10% { opacity: 0.6; stroke-width: 4;}
+      25% { r: 200; opacity: 0; stroke-width: 1;} 
+      100% { r: 200; opacity: 0;}
+  }
+
+  @keyframes shieldPulse {
+      0% { opacity: 0; transform: scale(0.95); }
+      20% { opacity: 1; transform: scale(1.02); }
+      25% { opacity: 1; transform: scale(1); }
+      40% { opacity: 0; transform: scale(1); }
+      100% { opacity: 0; }
+  }
+
+  .stress-alert { font-family: var(--font-mono); font-size: 14px; fill: var(--danger-red); text-transform: uppercase; letter-spacing: 0.2em; text-anchor: middle; opacity: 0; animation: alertFlash 5s infinite; animation-delay: 2.5s; }
+  .shield-success { font-family: var(--font-mono); font-size: 13px; fill: var(--teal-mid); text-transform: uppercase; letter-spacing: 0.2em; text-anchor: middle; opacity: 0; animation: successFade 5s infinite; animation-delay: 3.5s; }
+
+  @keyframes alertFlash {
+      0%, 100% { opacity: 0; }
+      10%, 20%, 30% { opacity: 1; }
+      15%, 25% { opacity: 0.2; }
+      35% { opacity: 0; }
+  }
+
+  @keyframes successFade {
+      0%, 100% { opacity: 0; transform: translateY(5px); }
+      10%, 40% { opacity: 1; transform: translateY(0); }
+      50% { opacity: 0; transform: translateY(-5px); }
+  }
+
+
+  /* ========================================================
+     ANIMATION 3: THE TOLERANCE GAUGE
+     ======================================================== */
+  
+  .range-svg { width: 100%; height: 100%; overflow: visible; }
+  .grid-tick { stroke: rgba(255,255,255,0.05); stroke-width: 1; stroke-dasharray: 2 4; }
+  .grid-label { font-family: var(--font-mono); font-size: 10px; fill: rgba(255,255,255,0.2); }
+  .range-column { stroke: rgba(93, 202, 165, 0.15); stroke-width: 140; stroke-linecap: butt; stroke-dasharray: 300; stroke-dashoffset: 300; animation: buildPillar 8s cubic-bezier(0.25, 1, 0.5, 1) infinite; }
+
+  @keyframes buildPillar {
+      0%, 10% { stroke-dashoffset: 300; opacity: 0; }
+      15%, 85% { stroke-dashoffset: 0; opacity: 1; }
+      90%, 100% { stroke-dashoffset: 0; opacity: 0; }
+  }
+
+  .boundary-line { stroke-width: 2; stroke-dasharray: 400; stroke-dashoffset: 400; }
+  .b-floor { stroke: var(--danger-red); animation: drawBoundary 8s cubic-bezier(0.25, 1, 0.5, 1) infinite; animation-delay: 0s; }
+  .b-ceiling { stroke: var(--gold); animation: drawBoundary 8s cubic-bezier(0.25, 1, 0.5, 1) infinite; animation-delay: 0.2s; }
+
+  @keyframes drawBoundary {
+      0%, 15% { stroke-dashoffset: 400; opacity: 0; }
+      25%, 85% { stroke-dashoffset: 0; opacity: 1; }
+      90%, 100% { stroke-dashoffset: 0; opacity: 0; }
+  }
+
+  .range-label { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0; }
+  .range-val { font-family: var(--font-serif); font-size: 24px; font-style: italic; font-weight: bold; opacity: 0;}
+
+  .l-floor { animation: fadeBoundaryText 8s infinite; animation-delay: 0s; }
+  .l-ceiling { animation: fadeBoundaryText 8s infinite; animation-delay: 0.2s; }
+
+  @keyframes fadeBoundaryText {
+      0%, 25% { opacity: 0; }
+      30%, 85% { opacity: 1; }
+      90%, 100% { opacity: 0; }
+  }
+
+  .datum-line { stroke: var(--teal-mid); stroke-width: 3; stroke-dasharray: 500; stroke-dashoffset: 500; animation: strikeDatum 8s cubic-bezier(0.1, 0.9, 0.2, 1) infinite; }
+  .datum-group { animation: floatDatum 8s ease-in-out infinite; }
+  .l-datum { animation: fadeDatumText 8s infinite; }
+
+  @keyframes strikeDatum {
+      0%, 35% { stroke-dashoffset: 500; opacity: 0; }
+      45%, 85% { stroke-dashoffset: 0; opacity: 1; }
+      90%, 100% { stroke-dashoffset: 0; opacity: 0; }
+  }
+
+  @keyframes fadeDatumText {
+      0%, 45% { opacity: 0; }
+      50%, 85% { opacity: 1; }
+      90%, 100% { opacity: 0; }
+  }
+
+  @keyframes floatDatum {
+      0%, 45% { transform: translateY(0); }
+      60% { transform: translateY(-15px); }
+      75% { transform: translateY(5px); }
+      85%, 100% { transform: translateY(0); }
+  }
+
+  .legacy-hud { opacity: 0; animation: bootHud 8s infinite; }
+  @keyframes bootHud {
+      0%, 55% { opacity: 0; transform: scale(0.95); }
+      60%, 85% { opacity: 1; transform: scale(1); }
+      90%, 100% { opacity: 0; }
+  }
+
+</style>
+</head>
+<body>
+
+  <header class="main-header">
+    <div class="header-inner">
+      <div class="header-left">
+        <a href="#" class="brand">DATUM&nbsp;<span class="mono-part">F<span class="gold-pipe">|</span>I</span></a>
+      </div>
+      <nav class="header-nav">
+        <a href="#" class="nav-link active">Home</a>
+        <a href="#" class="nav-link">Studio</a>
+        <a href="#" class="nav-link">Philosophy</a>
+        <a href="#" class="feedback-btn">Share Feedback</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero-section">
+    <h1>Data In.<br><span class="conf-teal">Confidence Out.</span></h1>
+    <p class="hero-sub">Retirement spending isn't a number. It's a Range.</p>
+    <p>A new way to understand retirement: tax‑aware, crash‑aware, and grounded in your actual financial architecture.</p>
+    <a href="#" class="primary-btn">Define Your Datum</a>
+    <a href="#narrative-start" class="secondary-link">Analyze the Architecture ↓</a>
+  </section>
+
+  <section class="narrative-container" id="narrative-start">
+    
+    <div class="visual-stage">
+      
+      <div class="viz-slot active" id="viz-1">
+        <div class="anim-container">
+            <svg class="draft-svg" viewBox="0 0 600 600">
+                <g class="crosshair-group">
+                    <line x1="-300" y1="0" x2="300" y2="0" class="hero-crosshair" />
+                    <line x1="0" y1="-300" x2="0" y2="300" class="hero-crosshair" />
+                    <circle cx="0" cy="0" r="4" class="hero-crosshair-dot" />
+                </g>
+                <g class="room-1">
+                    <rect x="80" y="120" width="200" height="120" class="draft-rect" />
+                    <g transform="translate(180, 160)">
+                        <g class="draft-text">
+                            <text class="ht-title" x="0" y="0">THE VAULT</text>
+                            <text class="ht-sub" x="0" y="15">PRE-TAX 401(K)</text>
+                            <text class="ht-val" x="0" y="45">$1.24M</text>
+                        </g>
+                    </g>
+                </g>
+                <g class="room-2">
+                    <rect x="300" y="120" width="220" height="120" class="draft-rect" />
+                    <g transform="translate(410, 160)">
+                        <g class="draft-text">
+                            <text class="ht-title" x="0" y="0">THE LIVING ROOM</text>
+                            <text class="ht-sub" x="0" y="15">TAXABLE BROKERAGE</text>
+                            <text class="ht-val" x="0" y="45">$450k</text>
+                        </g>
+                    </g>
+                </g>
+                <g class="room-3">
+                    <rect x="80" y="260" width="440" height="160" class="draft-rect" />
+                    <g transform="translate(300, 320)">
+                        <g class="draft-text">
+                            <text class="ht-title" x="0" y="0">THE GROUNDS</text>
+                            <text class="ht-sub" x="0" y="16">PRIMARY REAL ESTATE</text>
+                            <text class="ht-val" x="0" y="50">$850k</text>
+                        </g>
+                    </g>
+                </g>
+                <g transform="translate(300, 480)">
+                    <g class="total-text">
+                        <text class="ht-total-lbl" x="0" y="0">ESTATE SQUARE FOOTAGE</text>
+                        <text class="ht-total-val" x="0" y="45">$2.54M</text>
+                    </g>
+                </g>
+            </svg>
+        </div>
+      </div>
+      
+      <div class="viz-slot" id="viz-2">
+        <div class="anim-container">
+            <svg class="chamber-svg" viewBox="0 0 600 600">
+                <g class="model-log" transform="translate(30, 40)">
+                    <text class="m-log-1" x="0" y="0">SYSTEM : PARAMETRIC LOG-NORMAL [ACTIVE]</text>
+                    <text class="m-log-2" x="0" y="25">SYSTEM : EMPIRICAL 1926-2025 [ACTIVE]</text>
+                    <text class="m-log-3" x="0" y="50">SYSTEM : CAPE VALUATION [ACTIVE]</text>
+                    <text class="m-log-4" x="0" y="75">SYSTEM : REGIME BOOTSTRAP [ACTIVE]</text>
+                </g>
+                <g transform="translate(150, 310)">
+                    <line x1="-110" y1="180" x2="410" y2="180" stroke="var(--teal-mid)" stroke-width="2" />
+                    <rect x="-80" y="80" width="130" height="100" class="estate-block" />
+                    <rect x="-60" y="100" width="90" height="60" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.4" />
+                    <line x1="-100" y1="80" x2="60" y2="80" stroke="var(--teal-mid)" stroke-width="2" />
+                    <rect x="50" y="0" width="200" height="180" class="estate-block" />
+                    <rect x="70" y="20" width="160" height="60" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.4" />
+                    <rect x="110" y="100" width="80" height="80" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.4" />
+                    <line x1="30" y1="0" x2="270" y2="0" stroke="var(--teal-mid)" stroke-width="2" />
+                    <rect x="250" y="40" width="130" height="140" class="estate-block" />
+                    <rect x="270" y="60" width="90" height="100" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.4" />
+                    <line x1="230" y1="40" x2="400" y2="40" stroke="var(--teal-mid)" stroke-width="2" />
+                    <text class="ht-title" x="150" y="205" style="fill:rgba(255,255,255,0.6);">THE ESTATE</text>
+                </g>
+                <line x1="40" y1="0" x2="560" y2="0" class="scanner-line" />
+                <g class="stress-fx">
+                    <circle cx="300" cy="390" r="10" class="stress-wave" />
+                    <circle cx="300" cy="390" r="200" class="structural-shield" />
+                    <text class="stress-alert" x="300" y="165">ADVERSE SCENARIO SHOCK DETECTED</text>
+                    <text class="shield-success" x="300" y="185">STRUCTURAL INTEGRITY HOLDING</text>
+                </g>
+            </svg>
+        </div>
+      </div>
+      
+      <div class="viz-slot" id="viz-3">
+        <div class="anim-container">
+            <svg class="range-svg" viewBox="0 0 600 600">
+                <g>
+                    <line x1="80" y1="150" x2="520" y2="150" class="grid-tick" />
+                    <text x="70" y="153" text-anchor="end" class="grid-label">$200k</text>
+                    <line x1="80" y1="250" x2="520" y2="250" class="grid-tick" />
+                    <text x="70" y="253" text-anchor="end" class="grid-label">$150k</text>
+                    <line x1="80" y1="350" x2="520" y2="350" class="grid-tick" />
+                    <text x="70" y="353" text-anchor="end" class="grid-label">$100k</text>
+                    <line x1="80" y1="450" x2="520" y2="450" class="grid-tick" />
+                    <text x="70" y="453" text-anchor="end" class="grid-label">$50k</text>
+                </g>
+                <line x1="220" y1="450" x2="220" y2="150" class="range-column" />
+                <line x1="120" y1="400" x2="480" y2="400" class="boundary-line b-floor" />
+                <text class="range-label l-floor" x="320" y="425" style="fill: var(--danger-red);">SURVIVAL FLOOR</text>
+                <text class="range-val l-floor" x="320" y="455" style="fill: var(--danger-red);">$75,000 / YR</text>
+                <line x1="120" y1="180" x2="480" y2="180" class="boundary-line b-ceiling" />
+                <text class="range-label l-ceiling" x="320" y="165" style="fill: var(--gold);">STRUCTURAL CEILING</text>
+                <text class="range-val l-ceiling" x="320" y="145" style="fill: var(--gold);">$185,000 / YR</text>
+                <g class="datum-group">
+                    <line x1="100" y1="280" x2="500" y2="280" class="datum-line" />
+                    <circle cx="220" cy="280" r="6" fill="var(--bg-navy)" stroke="var(--teal-mid)" stroke-width="2" class="datum-line" style="stroke-dasharray: none;" />
+                    <text class="range-label l-datum" x="320" y="265" style="fill: var(--teal-mid);">YOUR DATUM TARGET</text>
+                    <text class="range-val l-datum" x="320" y="310" style="font-size: 32px; fill: var(--teal-mid);">$120,000 <tspan style="font-size: 16px; font-family: var(--font-mono); font-style: normal; fill: var(--teal-mid);">/ YR</tspan></text>
+                </g>
+                <g class="legacy-hud" transform="translate(320, 470)">
+                    <rect x="0" y="0" width="220" height="60" fill="rgba(9, 18, 33, 0.8)" stroke="rgba(255,255,255,0.1)" stroke-width="1" rx="4" />
+                    <text class="ht-title" x="110" y="22" style="fill: rgba(255,255,255,0.4);">PROJECTED ESTATE LEGACY</text>
+                    <text class="ht-val" x="110" y="48" style="font-size: 22px;">$1.82M</text>
+                </g>
+            </svg>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="text-scroller">
+      <div class="scroll-step active" data-step="1">
+        <h3>Phase I / The Blueprint</h3>
+        <h2>Map your financial reality.</h2>
+        <p>Every structure requires a foundation. In the Studio, you don't just enter numbers—you draft the specific architecture of your estate. Define your pre-tax boundaries, Roth allocations, property assets, and target timelines.</p>
+        <p>You provide the absolute facts of your life; we build the mathematical framework to support them.</p>
+      </div>
+
+      <div class="scroll-step" data-step="2">
+        <h3>Phase II / The Multiverse</h3>
+        <h2>Four models. One Range.</h2>
+        <p>Your Range is built from the convergence of four independent, probabilistic Monte Carlo engines—each approaching uncertainty differently. This engine produces an output fundamentally more credible than any single model.</p>
+        <div class="model-grid">
+          <div class="model-card">
+            <h4>Model I / Parametric</h4>
+            <p>Generates 10,000 return sequences from a log-normal distribution calibrated precisely to your asset allocation.</p>
+          </div>
+          <div class="model-card">
+            <h4>Model II / Empirical</h4>
+            <p>Randomly draws actual annual return sequences from 1926–2025, preserving extreme market outcomes.</p>
+          </div>
+          <div class="model-card">
+            <h4>Model III / Valuation</h4>
+            <p>Uses the current Shiller CAPE ratio to dynamically shift expected returns based on current valuations.</p>
+          </div>
+          <div class="model-card">
+            <h4>Model IV / Regime</h4>
+            <p>Samples multi-year blocks from historical economic regimes structurally similar to current conditions.</p>
+          </div>
+        </div>
+        <div class="model-card stress-battery">
+          <h4>Adverse Scenario Stress Battery</h4>
+          <p>What happens when history rhymes worse? We explicitly test your architecture against the 1929 Crash, 1970s Stagflation, and the Japanese Lost Decade to establish an absolute Survival Floor.</p>
+        </div>
+      </div>
+
+      <div class="scroll-step" data-step="3">
+        <h3>Phase III / Convergence</h3>
+        <h2>Intelligence is clarity, not complexity.</h2>
+        <p>After navigating a 10,000-path multiverse, the noise collapses into DATUM Intelligence™. We don't give you a probability score; we give you the exact boundaries of your financial future.</p>
+        <div class="model-card" style="margin-top: 16px;">
+          <h4>DATUM Interpretation</h4>
+          <p>Your spending target is measured against your Range. Not a recommendation. Not a judgment. A clear picture of mathematical reality.</p>
+        </div>
+        <div class="model-card" style="margin-top: 16px;">
+          <h4>Model Alignment</h4>
+          <p>When our independent models agree, your Range tightens. When they diverge, we show you exactly where and why.</p>
+        </div>
+        <div class="model-card" style="margin-top: 16px;">
+          <h4>Fragility Insights</h4>
+          <p>Your plan reacts to change. Retire two years earlier. Increase spending. See exactly how your Range shifts under the shocks that matter most.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="closing-section">
+    <h2>Mathematically Sound.<br>Architecturally Certain.</h2>
+    <p style="max-width: 600px; margin: 0 auto 32px auto;">We identify the exact spending level—tax-aware and inflation-adjusted—engineered to withstand all 10,000 modeled scenarios and a century of historical stress tests.</p>
+    <a href="#" class="primary-btn">Define Your Datum</a>
+  </section>
+
+  <footer class="footer-legal">
+    <p class="legal-text">
+      DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. Past performance does not guarantee future outcomes.
+    </p>
+  </footer>
+
+  <script>
+    const steps = document.querySelectorAll('.scroll-step');
+    const visuals = document.querySelectorAll('.viz-slot');
+    const observerOptions = { root: null, rootMargin: '-40% 0px -40% 0px', threshold: 0 };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          steps.forEach(s => s.classList.remove('active'));
+          visuals.forEach(v => v.classList.remove('active'));
+          entry.target.classList.add('active');
+          const stepIndex = entry.target.getAttribute('data-step');
+          const targetVisual = document.getElementById(`viz-${stepIndex}`);
+          if (targetVisual) { targetVisual.classList.add('active'); }
+        }
+      });
+    }, observerOptions);
+
+    steps.forEach(step => observer.observe(step));
+  </script>
+
+</body>
+</html>

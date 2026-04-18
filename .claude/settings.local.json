@@ -1,0 +1,47 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(where node:*)",
+      "Bash(where nodejs:*)",
+      "Bash(where python:*)",
+      "Bash(where python3:*)",
+      "Bash(python 'C:\\\\Users\\\\tmnte\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python314\\\\python.exe' -c ':*)",
+      "Bash('C:\\\\Users\\\\tmnte\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python314\\\\python.exe' -c ':*)",
+      "Bash(gh auth:*)",
+      "Bash(where gh:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(npm install:*)",
+      "Bash(winget install:*)",
+      "Bash(npx wrangler:*)",
+      "Skill(update-config)",
+      "Bash(grep -l \"narrative\" /c/Users/tmnte/datumfi-web/*.html)",
+      "Bash(grep -l \"scroll-step\\\\|narrative-container\\\\|viz-1\\\\|viz-2\\\\|viz-3\" /c/Users/tmnte/datumfi-web/*.html)",
+      "Bash(curl -s https://datumfi.com)",
+      "Bash(mv \"Datum FI — The Studio.html\" studio.html)",
+      "Bash(mv \"Datum FI — The Range.html\" range.html)",
+      "Bash(mv \"Datum FI — The Philosophy.html\" philosophy-new.html)",
+      "Bash(mv \"Datum FI — Analyzing Architecture.html\" _cinematic-source.html)",
+      "Bash(rm cinematic.html philosophy.html)",
+      "Bash(mv philosophy-new.html philosophy.html)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"C:/Users/tmnte/datumfi-web\" && npx wrangler pages deploy . --project-name=datumfi-web --commit-dirty=true",
+            "if": "Bash(git push*)",
+            "timeout": 120,
+            "statusMessage": "Deploying to Cloudflare Pages..."
+          }
+        ]
+      }
+    ]
+  }
+}

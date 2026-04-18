@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Datum FI — Brand Manifesto</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-navy: #091221;
+    --teal: #1D9E75;
+    --teal-mid: #5DCAA5;
+    --gold: #C9A84C;
+    --white: #ffffff;
+    --muted: rgba(255,255,255,0.5);
+    --grid-line: rgba(100, 180, 255, 0.05);
+    --danger-red: #e24b4a;
+    --font-serif: 'Fraunces', serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  /* Print Optimization */
+  @page {
+    size: letter;
+    margin: 0;
+  }
+  @media print {
+    body {
+       -webkit-print-color-adjust: exact !important;
+       print-color-adjust: exact !important;
+     }
+    .page-break { page-break-before: always; }
+    .no-break { page-break-inside: avoid; }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background-color: var(--bg-navy);
+    background-image: 
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    font-family: var(--font-serif);
+    color: var(--white);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .document-container {
+    width: 100%;
+    max-width: 8.5in; /* Standard Letter Width */
+    margin: 0 auto;
+    padding: 60px 40px;
+  }
+
+  /* Typography */
+  h1 { 
+    font-family: var(--font-serif); 
+    font-style: italic; 
+    font-weight: 300; 
+    font-size: 64px; 
+    line-height: 1.1; 
+    margin-bottom: 16px; 
+    color: var(--white);
+  }
+  
+  h2 { 
+    font-family: var(--font-mono); 
+    font-weight: 500; 
+    font-size: 14px; 
+    letter-spacing: 0.15em; 
+    text-transform: uppercase; 
+    color: var(--teal-mid); 
+    margin-bottom: 24px; 
+    margin-top: 48px;
+  }
+
+  .lead {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--gold);
+    margin-bottom: 32px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  p { 
+    font-size: 17px; 
+    color: rgba(255,255,255,0.85); 
+    margin-bottom: 20px; 
+    font-weight: 300;
+  }
+
+  .stanza {
+    margin-bottom: 32px;
+  }
+
+  ul {
+    list-style: none;
+    margin-bottom: 24px;
+    padding-left: 20px;
+  }
+
+  li {
+    font-size: 16px;
+    color: rgba(255,255,255,0.85);
+    margin-bottom: 8px;
+    font-weight: 300;
+    position: relative;
+  }
+
+  li::before {
+    content: '—';
+    position: absolute;
+    left: -20px;
+    color: var(--teal-mid);
+  }
+
+  .tier-list li::before { content: ''; }
+  .tier-list li { padding-left: 0; margin-bottom: 12px;}
+  .tier-list strong { 
+    font-family: var(--font-mono); 
+    font-size: 12px; 
+    text-transform: uppercase; 
+    letter-spacing: 0.1em; 
+    margin-right: 12px; 
+  }
+
+  hr {
+    border: none;
+    height: 1px;
+    background: rgba(255,255,255,0.1);
+    margin: 48px 0;
+  }
+
+  .title-page {
+    min-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+
+  /* Brand Signature Lockup */
+  .brand-signature { 
+      display: flex; 
+      align-items: center; 
+      margin-bottom: 80px; 
+  }
+  .sig-datum { 
+      font-family: var(--font-serif); 
+      font-size: 18px; 
+      font-weight: 300; 
+      letter-spacing: 0.1em; 
+      color: var(--white); 
+      margin-right: 16px; 
+  }
+  .sig-block { 
+      display: flex; 
+      align-items: center; 
+      gap: 6px; 
+  }
+  .sig-f, .sig-i { 
+      font-family: var(--font-mono); 
+      font-size: 16px; 
+      font-weight: 300; 
+      color: var(--teal-mid); 
+  }
+  .sig-bar { 
+      width: 2px; 
+      height: 22px; 
+      background-color: var(--gold); 
+      border-radius: 1px; 
+  }
+
+  /* Dynamic Manifesto Visual */
+  .hero-visual {
+      position: relative;
+      width: 100%;
+      height: 250px;
+      margin: 40px 0;
+  }
+  .hero-visual svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      /* The clip-path ensures all lines sweep in together from left to right */
+      clip-path: inset(0 100% 0 0); 
+      animation: revealPaths 2.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+      animation-delay: 0.8s;
+  }
+  @keyframes revealPaths {
+      to { clip-path: inset(0 0 0 0); }
+  }
+  .origin-dot {
+      opacity: 0;
+      animation: fadeIn 0.5s ease forwards;
+      animation-delay: 0.3s;
+  }
+  @keyframes fadeIn {
+      to { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+  <div class="document-container">
+    
+    <div class="title-page page-break">
+      <div class="brand-signature">
+          <span class="sig-datum">DATUM</span>
+          <span class="sig-block">
+              <span class="sig-f">F</span>
+              <span class="sig-bar"></span>
+              <span class="sig-i">I</span>
+          </span>
+      </div>
+      
+      <h1>Data in.<br>Confidence out.</h1>
+      <div class="lead">The Brand Manifesto</div>
+
+      <div class="hero-visual">
+          <svg viewBox="0 0 800 250" preserveAspectRatio="none">
+              <path d="M 20 125 C 200 125 300 40 800 20" stroke="rgba(201,168,76,0.15)" stroke-width="1.5" fill="none" />
+              <path d="M 20 125 C 200 125 400 80 800 60" stroke="rgba(201,168,76,0.15)" stroke-width="1.5" fill="none" />
+              <path d="M 20 125 C 250 125 500 140 800 150" stroke="rgba(201,168,76,0.15)" stroke-width="1.5" fill="none" />
+              <path d="M 20 125 C 200 125 400 180 800 200" stroke="rgba(201,168,76,0.15)" stroke-width="1.5" fill="none" />
+              <path d="M 20 125 C 200 125 300 220 800 240" stroke="rgba(201,168,76,0.15)" stroke-width="1.5" fill="none" />
+              
+              <path d="M 20 125 C 200 125 400 20 800 5" stroke="rgba(201,168,76,0.8)" stroke-width="2" fill="none" />
+              <path d="M 20 125 C 200 125 400 230 800 245" stroke="rgba(226,75,74,0.8)" stroke-width="2" fill="none" />
+              
+              <path d="M 20 125 C 300 125 500 90 800 80" stroke="#1D9E75" stroke-width="3" stroke-dasharray="6 6" fill="none" />
+              
+              <circle cx="20" cy="125" r="6" fill="#C9A84C" class="origin-dot" style="filter: drop-shadow(0 0 12px rgba(201,168,76,0.9));" />
+          </svg>
+      </div>
+
+      <div style="margin-top: auto; font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase;">Confidential / Internal Architecture</div>
+    </div>
+
+    <div>
+      <div class="no-break stanza">
+        <h2>1. Every structure begins with a fixed point.</h2>
+        <p>In architecture, surveying, and engineering, nothing meaningful can be built until you establish a DATUM — a reference point that does not move.</p>
+        <p>It is the anchor.<br>The origin.<br>The truth everything else is measured from.</p>
+        <p>Your financial life has never had one.<br>Retirement tools give you guesses, probabilities, and sliders — but never a fixed point.</p>
+        <p style="color: var(--teal-mid); font-style: italic;">Datum FI changes that.</p>
+      </div>
+
+      <hr>
+
+      <div class="no-break stanza">
+        <h2>2. Your life deserves a reference, not a recommendation.</h2>
+        <p>Most tools tell you what you “should” spend.<br>They collapse uncertainty into a single number.<br>They hide risk behind a percentage.<br>They turn your future into a score.</p>
+        <p>We reject that.</p>
+        <p>You bring your number — your DATUM.<br>Not a target.<br>Not a prescription.<br>A reference.</p>
+        <p>A fixed point that reflects your intent, not our opinion.</p>
+      </div>
+
+      <hr>
+
+      <div class="no-break stanza">
+        <h2>3. Complexity belongs in the engine, not on your shoulders.</h2>
+        <p>Your financial life is complicated:</p>
+        <ul>
+          <li>accounts</li>
+          <li>taxes</li>
+          <li>timelines</li>
+          <li>market cycles</li>
+          <li>sequence risk</li>
+          <li>inflation</li>
+          <li>longevity</li>
+          <li>valuation extremes</li>
+        </ul>
+        <p>You shouldn’t have to manage that complexity.<br>You shouldn’t have to guess.<br>You shouldn’t have to “play with sliders” until the answer feels right.</p>
+        <p>That’s why we built the Studio — the architectural drafting room for your retirement.</p>
+        <p>You map your reality.<br>We handle the structure.</p>
+      </div>
+    </div>
+
+    <div class="page-break">
+      <div class="no-break stanza">
+        <h2>4. We don’t guess. We measure.</h2>
+        <p>Once your Estate is drafted in the Studio, we run it through:</p>
+        <ul>
+          <li>40,000 market futures</li>
+          <li>four independent simulation methods</li>
+          <li>every major crash since 1926</li>
+          <li>valuation-aware scenarios</li>
+          <li>stress tests</li>
+          <li>dynamic spending behavior</li>
+        </ul>
+        <p>We don’t hide uncertainty.<br>We reveal it.</p>
+        <p>Not as a probability.<br>Not as a score.<br>As a Range.</p>
+      </div>
+
+      <hr>
+
+      <div class="no-break stanza">
+        <h2>5. Retirement spending isn’t a number. It’s a Range.</h2>
+        <p>Your Range is the truth of your plan:</p>
+        <ul class="tier-list">
+          <li><strong style="color: var(--danger-red);">Survival Floor</strong> Even if history’s worst repeats. Holds in 99% of simulations.</li>
+          <li><strong style="color: var(--teal);">Your DATUM</strong> Your number, your plan. Measured against mathematical reality.</li>
+          <li><strong style="color: var(--gold);">Structural Ceiling</strong> What the data says your plan's ultimate capacity can reach.</li>
+        </ul>
+        <p>This is not a recommendation.<br>This is not a guess.<br>This is the world your plan lives inside.</p>
+      </div>
+
+      <hr>
+
+      <div class="no-break stanza">
+        <h2>6. Intelligence is clarity, not complexity.</h2>
+        <p>We built Datum Intelligence™ to interpret your Range with honesty and restraint.</p>
+        <p><strong>Datum Interpretation</strong><br>What your DATUM means inside the Range — without judgment, without prescription.</p>
+        <p><strong>Convergence</strong><br>How closely independent models agree — a quiet signal of structural robustness.</p>
+        <p><strong>Fragility Insights</strong><br>How your Range shifts when the assumptions that matter most change.</p>
+        <p>This is intelligence that clarifies, not overwhelms.<br>Insight without noise.<br>Rigor without anxiety.</p>
+      </div>
+    </div>
+
+    <div class="page-break">
+      <div class="no-break stanza">
+        <h2>7. Confidence is not a feeling. It’s a structure.</h2>
+        <p>Confidence doesn’t come from optimism.<br>It doesn’t come from a single number.<br>It doesn’t come from a probability score.</p>
+        <p>Confidence comes from understanding:</p>
+        <ul>
+          <li>your floor</li>
+          <li>your possibilities</li>
+          <li>your intent</li>
+          <li>your sensitivity</li>
+          <li>your structure</li>
+        </ul>
+        <p>Confidence comes from seeing your financial life the way an architect sees a building — anchored, measured, load‑tested, and honest.</p>
+        <p>Confidence comes from a fixed point.<br>Confidence comes from your DATUM.</p>
+      </div>
+
+      <hr>
+
+      <div class="no-break stanza">
+        <h2>8. This is not a calculator. This is a way of thinking.</h2>
+        <p>Datum FI is not here to tell you what to do.<br>It’s here to show you the world around your choices.</p>
+        <p>It’s not here to simplify your life into a single number.<br>It’s here to reveal the structure beneath it.</p>
+        <p>It’s not here to guess.<br>It’s here to measure.</p>
+        <p>It’s not here to predict the future.<br>It’s here to prepare you for it.</p>
+      </div>
+
+      <hr>
+
+      <div class="no-break stanza">
+        <h2>9. Data in. Confidence out.</h2>
+        <p>This is the promise.<br>This is the philosophy.<br>This is the brand.</p>
+        <p>Datum FI exists to give people something they’ve never had:</p>
+        <p>A fixed point.<br>A clear structure.<br>A measured range.<br>A calm understanding of uncertainty.<br>A way to live with confidence.</p>
+        <p>Not a guess.<br>Not a score.<br>A reference.</p>
+        
+        <div style="margin-top: 64px; display: flex; align-items: baseline; justify-content: center; gap: 8px;">
+            <span style="font-size: 24px; font-style: italic; color: var(--gold);">A</span>
+            <span style="font-family: var(--font-serif); font-size: 24px; font-weight: 300; letter-spacing: 0.1em; color: var(--teal);">DATUM</span><span style="font-family: var(--font-mono); font-weight: 300; font-size: 24px; color: var(--teal-mid);">.</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

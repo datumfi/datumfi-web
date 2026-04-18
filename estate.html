@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Datum FI — The Estate Aggregator</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-navy: #091221;
+    --teal: #1D9E75;
+    --teal-mid: #5DCAA5;
+    --gold: #C9A84C;
+    --white: #ffffff;
+    --muted: rgba(255,255,255,0.4);
+    --grid-line: rgba(100, 180, 255, 0.05);
+    --danger-red: #e24b4a;
+    --font-serif: 'Fraunces', serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background-color: var(--bg-navy);
+    background-image: 
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    font-family: var(--font-serif);
+    color: var(--white);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  .stage {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    height: 450px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* The Blueprint Container */
+  .blueprint-wrapper {
+    position: relative;
+    width: 420px;
+    height: 360px;
+    border: 1px solid rgba(255,255,255,0.05);
+    background: rgba(9, 18, 33, 0.6);
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+  }
+
+  .mini-label {
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 18px;
+    color: rgba(255,255,255,0.8);
+    font-weight: 300;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    opacity: 0;
+  }
+
+  /* SVG Connecting Lines */
+  .bp-lines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .b-line {
+    fill: none;
+    stroke: rgba(93, 202, 165, 0.15); /* Faint Teal */
+    stroke-width: 1.5;
+    stroke-dasharray: 300;
+    stroke-dashoffset: 300; /* Hidden initially for drawing animation */
+  }
+
+  /* Flowing Data Particles (Staggered Bars) */
+  .p-line {
+    fill: none;
+    stroke: var(--gold);
+    stroke-width: 2;
+    /* 12px dash (the laser), 70px gap (spacing). Creates multiple lasers per line. */
+    stroke-dasharray: 12 70; 
+    stroke-dashoffset: 82; 
+    stroke-linecap: round;
+    opacity: 0;
+  }
+
+  /* HTML Nodes (Accounts) */
+  .nodes-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+  }
+
+  .node {
+    position: absolute;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-left: 2px solid var(--teal-mid);
+    border-radius: 4px;
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 110px; /* Narrower width per request */
+    transform: translateX(-20px);
+    opacity: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  .node-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .node-title {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+
+  .node-val {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 15px;
+    color: var(--white);
+    margin-top: 2px;
+    transition: color 0.3s;
+  }
+
+  /* Left Side Nodes (Y-axis spacing) */
+  .n-tax  { top: 30px; left: 20px; }
+  .n-roth { top: 90px; left: 20px; }
+  .n-brok { top: 150px; left: 20px; }
+  .n-prop { top: 210px; left: 20px; }
+  .n-cash { top: 270px; left: 20px; }
+
+  /* Right Side Node (The Estate Total / Prism) */
+  .n-root {
+    top: 110px; 
+    left: 260px; 
+    width: 120px;
+    height: 120px;
+    background: linear-gradient(135deg, rgba(201,168,76,0.1) 0%, rgba(9,18,33,0.8) 100%);
+    border: 1px solid var(--gold);
+    border-left: 1px solid var(--gold); /* Override teal border */
+    border-radius: 50%;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+    transform: scale(0.8);
+    opacity: 0;
+    box-shadow: 0 0 0 rgba(201, 168, 76, 0);
+  }
+  .n-root .node-title { color: var(--gold); margin-bottom: 4px; font-size: 10px;}
+  .n-root .node-val { color: var(--gold); font-size: 22px; }
+
+  /* Floating Micro-Data (The Computation Effect) */
+  .micro-data {
+    position: absolute;
+    font-family: var(--font-mono);
+    font-size: 8px;
+    color: rgba(255,255,255,0.6);
+    pointer-events: none;
+    z-index: 10;
+    opacity: 0;
+  }
+
+  /* =========================================
+     ANIMATION CHOREOGRAPHY 
+     ========================================= */
+
+  .build-active .mini-label { animation: fadeIn 1s ease forwards; }
+
+  /* Nodes Slide In (Left to Right) */
+  .build-active .node:not(.n-root) { animation: slideInNode 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+  .build-active .n-tax  { animation-delay: 0.1s; }
+  .build-active .n-roth { animation-delay: 0.2s; }
+  .build-active .n-brok { animation-delay: 0.3s; }
+  .build-active .n-prop { animation-delay: 0.4s; }
+  .build-active .n-cash { animation-delay: 0.5s; }
+
+  /* Draw Connecting Lines */
+  .build-active .b-line { animation: drawPath 1s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+  .build-active .d1 { animation-delay: 0.8s; }
+  .build-active .d2 { animation-delay: 0.9s; }
+  .build-active .d3 { animation-delay: 1.0s; }
+  .build-active .d4 { animation-delay: 1.1s; }
+  .build-active .d5 { animation-delay: 1.2s; }
+
+  /* Ignite Estate Root */
+  .build-active .n-root {
+    animation: popRoot 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    animation-delay: 1.8s;
+  }
+
+  /* Ignite Data Pulses (Accounts -> Estate) */
+  .build-active .p-line {
+    /* Linear infinite movement so the dashes constantly travel along the path */
+    animation: flowPulse 2s linear infinite;
+  }
+  .build-active .p1 { animation-delay: 2.5s; }
+  .build-active .p2 { animation-delay: 2.7s; }
+  .build-active .p3 { animation-delay: 2.4s; }
+  .build-active .p4 { animation-delay: 2.9s; }
+  .build-active .p5 { animation-delay: 2.6s; }
+
+  /* Keyframes */
+  @keyframes fadeIn { to { opacity: 1; top: -36px; } }
+
+  @keyframes slideInNode {
+    0% { transform: translateX(-20px); opacity: 0; }
+    100% { transform: translateX(0); opacity: 1; }
+  }
+
+  @keyframes drawPath { to { stroke-dashoffset: 0; } }
+
+  @keyframes popRoot {
+    0% { transform: scale(0.8); opacity: 0; box-shadow: 0 0 0 rgba(201, 168, 76, 0); }
+    50% { transform: scale(1.05); opacity: 1; box-shadow: 0 0 30px rgba(201, 168, 76, 0.4); }
+    100% { transform: scale(1); opacity: 1; box-shadow: 0 0 15px rgba(201, 168, 76, 0.2); }
+  }
+
+  /* Animates the dashes moving left to right */
+  @keyframes flowPulse {
+    0% { stroke-dashoffset: 82; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { stroke-dashoffset: 0; opacity: 0; }
+  }
+
+  /* Subtle pulsing class applied by JS to the values */
+  .val-update { color: var(--teal-mid) !important; }
+
+  @keyframes floatUp {
+    0% { transform: translate(-50%, 0); opacity: 0; }
+    20% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { transform: translate(-50%, -25px); opacity: 0; }
+  }
+
+  /* Replay Button */
+  .replay-btn {
+    margin-top: 60px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.2);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 12px 24px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+  .replay-btn:hover {
+    border-color: var(--teal-mid);
+    color: var(--teal-mid);
+  }
+</style>
+</head>
+<body>
+
+  <div class="stage">
+    
+    <div class="blueprint-wrapper" id="blueprint">
+        <div class="mini-label">The Blueprint</div>
+        
+        <svg class="bp-lines" viewBox="0 0 420 360" preserveAspectRatio="none">
+            <path class="b-line d1" d="M 130,50 C 190,50 200,170 260,170" />
+            <path class="p-line p1" d="M 130,50 C 190,50 200,170 260,170" />
+            
+            <path class="b-line d2" d="M 130,110 C 190,110 200,170 260,170" />
+            <path class="p-line p2" d="M 130,110 C 190,110 200,170 260,170" />
+            
+            <path class="b-line d3" d="M 130,170 C 190,170 200,170 260,170" />
+            <path class="p-line p3" d="M 130,170 C 190,170 200,170 260,170" />
+            
+            <path class="b-line d4" d="M 130,230 C 190,230 200,170 260,170" />
+            <path class="p-line p4" d="M 130,230 C 190,230 200,170 260,170" />
+            
+            <path class="b-line d5" d="M 130,290 C 190,290 200,170 260,170" />
+            <path class="p-line p5" d="M 130,290 C 190,290 200,170 260,170" />
+        </svg>
+
+        <div class="nodes-layer">
+            <div class="node n-tax" id="v-tax">
+                <div class="node-text">
+                    <div class="node-title">Pre-Tax</div>
+                    <div class="node-val">$1.40M</div>
+                </div>
+            </div>
+            
+            <div class="node n-roth" id="v-roth">
+                <div class="node-text">
+                    <div class="node-title">Roth</div>
+                    <div class="node-val">$350k</div>
+                </div>
+            </div>
+            
+            <div class="node n-brok" id="v-brok">
+                <div class="node-text">
+                    <div class="node-title">Taxable</div>
+                    <div class="node-val">$600k</div>
+                </div>
+            </div>
+
+            <div class="node n-prop" id="v-prop">
+                <div class="node-text">
+                    <div class="node-title">Property</div>
+                    <div class="node-val">$800k</div>
+                </div>
+            </div>
+            
+            <div class="node n-cash" id="v-cash">
+                <div class="node-text">
+                    <div class="node-title">Cash</div>
+                    <div class="node-val">$50k</div>
+                </div>
+            </div>
+
+            <div class="node n-root" id="v-estate">
+                <div class="node-title">The Estate</div>
+                <div class="node-val">$3.20M</div>
+            </div>
+        </div>
+
+    </div>
+
+    <button class="replay-btn" onclick="runAssembly()">Rebuild Aggregator</button>
+  </div>
+
+  <script>
+    const blueprint = document.getElementById('blueprint');
+    const nodes = ['v-tax', 'v-roth', 'v-brok', 'v-prop', 'v-cash'];
+    const calcData = ["+4.2%", "-1.1%", "RMD: $42k", "Tax: 24%", "Rebalance", "Yield: 3.8%", "Sim: 14k"];
+    
+    let computeInterval;
+    let dataInterval;
+
+    function resetAssembly() {
+        blueprint.classList.remove('build-active');
+        clearInterval(computeInterval);
+        clearInterval(dataInterval);
+        
+        nodes.forEach(id => {
+            const el = document.getElementById(id).querySelector('.node-val');
+            el.classList.remove('val-update');
+        });
+        
+        document.querySelectorAll('.micro-data').forEach(el => el.remove());
+        
+        // Force DOM reflow
+        void blueprint.offsetWidth;
+    }
+
+    function pulseData() {
+        const randomNodeId = nodes[Math.floor(Math.random() * nodes.length)];
+        const valEl = document.getElementById(randomNodeId).querySelector('.node-val');
+        
+        valEl.classList.add('val-update');
+        
+        setTimeout(() => {
+            valEl.classList.remove('val-update');
+        }, 300);
+    }
+
+    function spawnMicroData() {
+        const targetNode = document.getElementById('v-estate');
+        const randomText = calcData[Math.floor(Math.random() * calcData.length)];
+        
+        const el = document.createElement('div');
+        el.className = 'micro-data';
+        el.innerText = randomText;
+        
+        const wrapperRect = blueprint.getBoundingClientRect();
+        const nodeRect = targetNode.getBoundingClientRect();
+        
+        const topPos = nodeRect.top - wrapperRect.top;
+        const leftPos = nodeRect.left - wrapperRect.left + (nodeRect.width / 2);
+        
+        el.style.top = `${topPos - 10}px`; 
+        el.style.left = `${leftPos}px`;
+        
+        const colors = ['var(--teal-mid)', 'rgba(255,255,255,0.8)', 'var(--gold)'];
+        el.style.color = colors[Math.floor(Math.random() * colors.length)];
+        
+        el.style.animation = 'floatUp 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards';
+        
+        blueprint.appendChild(el);
+        
+        setTimeout(() => {
+            if(el.parentNode) el.remove();
+        }, 1200);
+    }
+
+    function runAssembly() {
+        resetAssembly();
+
+        setTimeout(() => {
+            blueprint.classList.add('build-active');
+        }, 100);
+
+        setTimeout(() => {
+            // Pulse the account values to look like active data tracking
+            computeInterval = setInterval(pulseData, 800);
+            
+            // Spawn data processing numbers out of The Estate
+            dataInterval = setInterval(spawnMicroData, 600);
+        }, 2800);
+    }
+
+    window.onload = runAssembly;
+  </script>
+</body>
+</html>
