@@ -504,7 +504,7 @@
                 <input type="text" class="small-field" id="target-ret" value="03 / 2035" oninput="updateSVGs()">
               </div>
               <div>
-                <div class="input-label">Structural Lifespan (Years)</div>
+                <div class="input-label">Retirement Duration (Years)</div>
                 <input type="number" class="small-field" value="40" min="1" max="100">
               </div>
             </div>
@@ -563,7 +563,7 @@
       <div class="studio-section">
         <div class="section-header-wrapper">
             <button class="section-tag" onclick="toggleSection('sec-drafting', this)" style="border:none; margin:0; padding:0; flex:1;">
-                <span>02 / Estate Drafting</span> <span class="toggle-icon">+</span>
+                <span>02 / Estate Drafting — Accounts & Assets</span> <span class="toggle-icon">+</span>
             </button>
             <button class="pin-btn" onclick="togglePin('sec-drafting', this)" title="Pin section open">📌</button>
         </div>
@@ -573,10 +573,10 @@
             </div>
 
           <div class="add-space-wrapper">
-            <button class="add-space-btn" id="add-space-btn" type="button">+ Draft Additional Space</button>
+            <button class="add-space-btn" id="add-space-btn" type="button">+ Draft Additional Space — Add Account</button>
             <div class="space-dropdown" id="space-dropdown">
               </div>
-            <button class="measure-btn" id="measure-btn" type="button">⤓ ANALYZE STRUCTURAL LOAD</button>
+            <button class="measure-btn" id="measure-btn" type="button">⤓ REVEAL YOUR RANGE</button>
           </div>
         </div>
       </div>
@@ -584,24 +584,24 @@
       <div class="studio-section">
         <div class="section-header-wrapper">
             <button class="section-tag" onclick="toggleSection('sec-upkeep', this)" style="border:none; margin:0; padding:0; flex:1;">
-                <span>03 / Operating Upkeep</span> <span class="toggle-icon">+</span>
+                <span>03 / Operating Upkeep — Living Expenses</span> <span class="toggle-icon">+</span>
             </button>
             <button class="pin-btn" onclick="togglePin('sec-upkeep', this)" title="Pin section open">📌</button>
         </div>
         <div id="sec-upkeep" class="section-content" style="display: none;">
-          <div class="panel-sub" style="margin-bottom: 15px; text-transform:none; color:var(--muted); font-size:11px;">Fixed structural overhead. These do not factor into your Range.</div>
+          <div class="panel-sub" style="margin-bottom: 15px; text-transform:none; color:var(--muted); font-size:11px;">Fixed monthly and annual expenses</div>
           
           <div class="plumbing-list" id="plumbing-list">
              </div>
           
-          <button class="add-space-btn" type="button" style="margin-top: 10px; padding: 8px; border-style:dashed;" onclick="addUpkeepItem()">+ ADD SYSTEM OVERHEAD</button>
+          <button class="add-space-btn" type="button" style="margin-top: 10px; padding: 8px; border-style:dashed;" onclick="addUpkeepItem()">+ ADD EXPENSE</button>
 
-          <div class="panel-sub" style="margin-top: 25px; margin-bottom: 15px; text-transform:none; color:var(--muted); font-size:11px;">Philanthropic Allocations. Voluntary wealth transfer.</div>
+          <div class="panel-sub" style="margin-top: 25px; margin-bottom: 15px; text-transform:none; color:var(--muted); font-size:11px;">Charitable Giving & Donations</div>
           
           <div class="plumbing-list" id="charity-list">
              </div>
           
-          <button class="add-space-btn" type="button" style="margin-top: 10px; padding: 8px; border-style:dashed; color:var(--gold); border-color:var(--gold);" onclick="addCharityItem()">+ ADD PHILANTHROPIC OUTFLOW</button>
+          <button class="add-space-btn" type="button" style="margin-top: 10px; padding: 8px; border-style:dashed; color:var(--gold); border-color:var(--gold);" onclick="addCharityItem()">+ ADD DONATION</button>
 
           <div class="plumbing-summary">
             <div class="plumbing-summary-row">
@@ -609,7 +609,7 @@
               <span id="total-upkeep-val" style="color:var(--danger); font-size:14px; font-weight:bold;">$0</span>
             </div>
             <div class="plumbing-summary-row" style="margin-bottom:0; align-items:center; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px; margin-top:8px;">
-              <span>Capacity Load (Overhead vs. Income):</span>
+              <span>Expense-to-Income Ratio (Overhead vs. Income):</span>
               <span id="upkeep-load-pct" class="load-pct">0%</span>
             </div>
           </div>
@@ -635,13 +635,13 @@
       <div class="studio-section">
         <div class="section-header-wrapper">
             <button class="section-tag" onclick="toggleSection('sec-climate', this)" style="border:none; margin:0; padding:0; flex:1;">
-                <span>05 / Climate Control</span> <span class="toggle-icon">+</span>
+                <span>05 / Climate Control — Market Outlook</span> <span class="toggle-icon">+</span>
             </button>
             <button class="pin-btn" onclick="togglePin('sec-climate', this)" title="Pin section open">📌</button>
         </div>
         
         <div id="sec-climate" class="section-content" style="display: none;">
-          <div class="panel-sub" style="margin-bottom: 15px; text-transform:none; color:var(--muted); font-size:11px; line-height:1.4;">Establish the macroeconomic weather conditions your architecture must withstand. This calibrates the algorithmic blend used to stress-test your estate and project your Range.</div>
+          <div class="panel-sub" style="margin-bottom: 15px; text-transform:none; color:var(--muted); font-size:11px; line-height:1.4;">Establish the market conditions your portfolio will face. This calibrates the algorithmic blend used to stress-test your estate and project your Range.</div>
           
           <div class="climate-grid">
             
@@ -735,7 +735,7 @@
       <div class="reveal-container">
         <button class="action-btn" type="button">REVEAL YOUR RANGE</button>
         <div class="reveal-tooltip">
-          <strong>THE PHYSICS OF YOUR RANGE</strong>
+          <strong>HOW YOUR PROJECTION IS CALCULATED</strong>
           The simulation engine relies on the exact coordinates you provide. Core structural metrics—Age, Retirement Horizon, Target Spend (Datum), Tax Rates, and heavily-weighted assets (401k, IRAs, Pensions)—directly calibrate the thousands of market scenarios in your projected Range. Liabilities map your Net Worth, but do not dictate the survival rate. Calibrate your inputs truthfully to generate a structurally sound projection.
         </div>
       </div>
@@ -768,9 +768,9 @@
           
           <div class="system-diagnostics" id="hud-diag">
              <div class="diag-row"><span class="v-lbl">System Velocity</span><span class="v-in" id="v-net-val" style="color:var(--white); font-weight:bold;">$0 / YR</span></div>
-             <div class="diag-row"><span class="v-lbl">Capacity Load</span><span class="v-in" id="hud-load-pct" style="color:var(--danger); font-weight:bold;">0%</span></div>
+             <div class="diag-row"><span class="v-lbl">Expense-to-Income Ratio</span><span class="v-in" id="hud-load-pct" style="color:var(--danger); font-weight:bold;">0%</span></div>
              <div class="diag-row" id="charity-hud-row" style="display:none;"><span class="v-lbl">Philanthropic Yield</span><span class="v-in" id="hud-charity-val" style="color:var(--gold); font-weight:bold;">$0 (0%)</span></div>
-             <div class="diag-row"><span class="v-lbl">Capital Injection</span><span class="v-in" id="c-mo" style="color:var(--teal-mid); font-weight:bold;">$0 / MO</span></div>
+             <div class="diag-row"><span class="v-lbl">Contributions</span><span class="v-in" id="c-mo" style="color:var(--teal-mid); font-weight:bold;">$0 / MO</span></div>
              <div class="diag-row"><span class="v-lbl">Compound Yield</span><span class="v-in" id="ie-mo" style="color:var(--teal-mid); font-weight:bold;">$0 / MO</span></div>
              <div class="diag-row"><span class="v-lbl">Interest Drag</span><span class="v-in" id="ip-mo" style="color:var(--danger); font-weight:bold;">$0 / MO</span></div>
           </div>
@@ -793,7 +793,7 @@
            </div>
            <div class="lens-tt-wrap">
                <button class="lens-btn" id="btn-routing" onclick="toggleRouting()">🔄 OUTFLOW ROUTING</button>
-               <div class="lens-tt"><strong>Visualize Plumbing</strong>Traces the algorithmic sequence of capital extraction (Liquid → Pre-Tax → Roth). It also maps high-velocity pipelines from your Liquid reserves to any liability explicitly marked 'Prioritize for Demolition'.</div>
+               <div class="lens-tt"><strong>Visualize Plumbing</strong>Traces the algorithmic sequence of capital extraction (Liquid → Pre-Tax → Roth). It also maps high-velocity pipelines from your Liquid reserves to any liability explicitly marked 'Target for Accelerated Payoff'.</div>
            </div>
            <div class="lens-tt-wrap">
                <button class="lens-btn" id="btn-datum" onclick="toggleDatum()">📏 DATUM ELEVATION</button>
@@ -1289,7 +1289,7 @@
         if (base.hasInflow && base.taxCode !== 'debt') {
             extraRows += `
             <div class="contribution-row">
-              <span class="inflow-label">Capital Injection</span>
+              <span class="inflow-label">Contributions</span>
               <div class="inflow-input-group">
                  <input type="text" class="inflow-input curr-format" placeholder="$0" value="${inflowStr}" oninput="updateInflow('${acc.id}', this.value)">
                  <select class="inflow-freq" onchange="updateFreq('${acc.id}', this.value)">
@@ -1371,7 +1371,7 @@
         // SURGICAL: Physics Toggles with explicit mathematical tooltips
         html += `
         <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
-            <span class="toggle-label" style="color:var(--gold);">Include in Architecture & Velocity</span>
+            <span class="toggle-label" style="color:var(--gold);">Include in Simulation</span>
             <label class="switch">
               <input type="checkbox" ${!acc.exclude ? 'checked' : ''} onchange="updateAccToggle('${id}', 'exclude', !this.checked)">
               <span class="slider"></span>
@@ -1392,7 +1392,7 @@
         if (base.taxCode === 'debt') {
              html += `
              <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
-                 <span class="toggle-label" style="color:var(--danger);">Prioritize for Demolition</span>
+                 <span class="toggle-label" style="color:var(--danger);">Target for Accelerated Payoff</span>
                  <label class="switch">
                    <input type="checkbox" ${acc.isPriority ? 'checked' : ''} onchange="updateAccToggle('${id}', 'isPriority', this.checked)">
                    <span class="slider"></span>
@@ -1513,7 +1513,7 @@
 
             html += `
             <div style="margin-top:20px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px;">
-                <div class="input-label" style="color:var(--gold); margin-bottom:10px;">STRUCTURAL INJECTION LIMITS (${limitName})</div>
+                <div class="input-label" style="color:var(--gold); margin-bottom:10px;">CONTRIBUTION LIMITS (${limitName})</div>
                 
                 <div class="field-row" style="margin-bottom:10px;">
                     <div><div class="input-label">Base Limit</div><input type="number" class="small-field" value="${baseLim}" oninput="updateAccField('${id}', 'baseLimit', this.value)"></div>
@@ -1569,7 +1569,7 @@
                 html += `
                 <div class="field-row" style="grid-template-columns: 1fr; margin-bottom: 5px;">
                     <div>
-                        <div class="input-label" style="color:var(--teal-mid);">Associate with Physical Structure (Calculate Equity)</div>
+                        <div class="input-label" style="color:var(--teal-mid);">Link to Physical Asset (Calculate Equity)</div>
                         <select class="small-field" style="background: var(--bg-navy);" onchange="updateAccField('${id}', 'linkedAssetId', this.value)">
                             ${linkOpts}
                         </select>
@@ -1615,7 +1615,7 @@
                     let equity = (linkedAsset.value || 0) - (acc.value || 0);
                     html += `
                     <div style="display:flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span class="input-label" style="color:var(--teal-mid);">Structural Equity (Asset - Debt)</span>
+                        <span class="input-label" style="color:var(--teal-mid);">Net Equity (Asset — Debt)</span>
                         <span id="modal-calc-equity-${id}" style="font-family: var(--font-mono); color: ${equity >= 0 ? 'var(--teal-mid)' : 'var(--danger)'}; font-weight:bold;">$${equity.toLocaleString('en-US')}</span>
                     </div>`;
                 }
@@ -1682,7 +1682,7 @@
         if (base.id.includes('collectibles')) {
             html += `
             <button class="add-space-btn" type="button" style="margin-top: 15px; width: 100%;" onclick="toggleHoldings('${id}')">
-                ❖ CURATE COLLECTION (ITEMIZED LEDGER)
+                ❖ CURATE COLLECTION (ITEMIZE ASSETS)
             </button>`;
             
             if(acc.showHoldings) {
@@ -1723,7 +1723,7 @@
         } else if(base.isInvestment) {
             html += `
             <button class="add-space-btn" type="button" style="margin-top: 15px; width: 100%;" onclick="toggleHoldings('${id}')">
-                ❖ BEGIN INTERIOR DECORATING (GRANULAR HOLDINGS)
+                ❖ BEGIN INTERIOR DECORATING (PORTFOLIO HOLDINGS)
             </button>`;
             
             if(acc.showHoldings) {

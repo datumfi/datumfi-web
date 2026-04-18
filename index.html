@@ -1033,10 +1033,6 @@
                 </g>
               </svg>
             </div>
-            <!-- Step 3: Illustrative caption -->
-            <p class="legal-text" style="margin-top: 16px; opacity: 0.4; padding: 0 16px 16px; text-align: center;">
-              Illustrative scenario. Your Range is calculated from your actual inputs.
-            </p>
           </div>
         </div>
 
@@ -1083,7 +1079,7 @@
 
         <!-- Phase III — 2d copy -->
         <div class="scroll-step" data-step="3">
-          <h3>Phase III / Convergence</h3>
+          <h3 style="margin-top: 32px;">Phase III / Convergence</h3>
           <h2>Intelligence is clarity, not complexity.</h2>
           <p>Four models. Ten thousand simulated paths. A century of market history. The noise collapses into DATUM Intelligence™ — not a probability score, but the exact boundaries of your financial future.</p>
           <div class="model-card" style="margin-top: 16px;">
@@ -1108,11 +1104,6 @@
       <h2 style="font-family: var(--font-serif); font-weight: 300; font-size: 36px; margin-bottom: 24px;">Mathematically Sound.<br>Architecturally Certain.</h2>
       <p style="font-family: var(--font-serif); font-size: 18px; line-height: 1.6; color: rgba(255,255,255,0.8); max-width: 600px; margin: 0 auto 32px auto; font-weight: 300;">We find the spending level — tax-aware, inflation-adjusted, engineered — that withstands 10,000 modeled futures and a century of historical stress.</p>
       <button class="btn-hero" onclick="goToScreen(2)">Define Your Datum</button>
-    </div>
-
-    <!-- Footer legal -->
-    <div style="padding: 40px; max-width: 1000px; margin: 0 auto; text-align: center;">
-      <p class="legal-text">DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. Past performance does not guarantee future outcomes.</p>
     </div>
 
   </div>
@@ -2767,6 +2758,19 @@
                     const stepIndex = entry.target.getAttribute('data-step');
                     const targetVisual = document.getElementById('viz-' + stepIndex);
                     if (targetVisual) { targetVisual.classList.add('active'); }
+                } else {
+                    // Scrolling upward: step exited zone from below → activate previous step
+                    if (entry.boundingClientRect.top > 0) {
+                        const stepIndex = parseInt(entry.target.getAttribute('data-step'), 10);
+                        const prevStep = document.querySelector(`.scroll-step[data-step="${stepIndex - 1}"]`);
+                        if (prevStep) {
+                            steps.forEach(s => s.classList.remove('active'));
+                            visuals.forEach(v => v.classList.remove('active'));
+                            prevStep.classList.add('active');
+                            const prevVisual = document.getElementById('viz-' + (stepIndex - 1));
+                            if (prevVisual) prevVisual.classList.add('active');
+                        }
+                    }
                 }
             });
         }, observerOptions);
