@@ -2,21 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#091221">
 <title>Datum FI — The Range</title>
 <link rel="stylesheet" href="/styles/typography.css">
 <style>
   body { overflow-x: hidden; overflow-y: auto; }
 
-  /* --- HEADER NAVIGATION --- */
-  .header-left { display: flex; align-items: center; }
-
-  .feedback-btn {
-    background: transparent; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.5);
-    font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em;
-    padding: 10px 16px; border-radius: 4px; text-decoration: none; transition: all 0.3s; margin-left: 20px;
-  }
-  .feedback-btn:hover { border-color: var(--teal-mid); color: var(--white); }
 
   /* --- STUDIO LAYOUT ARCHITECTURE --- */
   .fixed-stage {
@@ -182,16 +174,13 @@
 
   <header class="main-header">
     <div class="header-inner">
-      <div class="header-left">
-        <a href="/" class="brand">DATUM&nbsp;<span class="mono-part">F<span class="gold-pipe">|</span>I</span></a>
-      </div>
+      <a href="/" class="brand-lockup" style="font-size:22px;"><span class="brand-datum">DATUM</span><span class="brand-fi">FI</span></a>
       <nav class="header-nav">
         <a href="/" class="nav-link">Home</a>
         <a href="/sketch.html" class="nav-link">Sketch</a>
         <a href="/studio.html" class="nav-link">Studio</a>
         <a href="/range.html" class="nav-link active" id="nav-range-link" style="display:none;">Range</a>
         <a href="/philosophy.html" class="nav-link">Philosophy</a>
-        <a href="#" class="feedback-btn">Share Feedback</a>
       </nav>
     </div>
   </header>
@@ -482,7 +471,11 @@
     window.addEventListener('touchmove', (e) => { if (isDragging) { const pt = svg.createSVGPoint(); pt.x = 0; pt.y = e.touches[0].clientY; const svgP = pt.matrixTransform(svg.getScreenCTM().inverse()); updateDatumFromY(svgP.y); } }, {passive: false});
     window.addEventListener('touchend', () => { isDragging = false; document.body.style.userSelect = ''; svgWrap.classList.remove('is-dragging'); });
     setTimeout(() => { updateDatumFromY(balToY(State.datumBal)); }, 100);
-    if (sessionStorage.getItem('datumfi_range')) { const rl = document.getElementById('nav-range-link'); if (rl) rl.style.display = ''; }
+    // D3: Ensure back button goes to /studio
+    history.replaceState({}, "", "/studio.html");
+    history.pushState({}, "", "/range.html");
+    // D2: Show Range nav if session flag set
+    if (sessionStorage.getItem('datum_range_revealed')) { const rl = document.getElementById('nav-range-link'); if (rl) rl.style.display = ''; }
   </script>
 </body>
 </html>

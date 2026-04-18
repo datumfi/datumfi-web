@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#091221">
 <title>Datum FI — The Studio</title>
 <link rel="stylesheet" href="/styles/typography.css">
 <style>
@@ -19,6 +20,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    padding-top: 73px;
   }
 
   ::-webkit-scrollbar { width: 6px; }
@@ -26,25 +28,9 @@
   ::-webkit-scrollbar-thumb { background: rgba(93, 202, 165, 0.2); border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--teal-mid); }
 
-  /* --- HEADER --- */
-  header {
-    width: 100%; padding: 10px 40px; display: flex; justify-content: space-between; align-items: center;
-    border-bottom: none; background: transparent; z-index: 100;
-  }
-  .header-left { display: flex; align-items: center; }
-  .header-right { display: flex; align-items: center; gap: 40px; }
-
-  .brand { font-family: var(--font-serif); font-size: 20px; letter-spacing: 0.15em; color: var(--teal-mid); text-decoration: none; cursor: pointer; display: flex; align-items: center; gap: 10px;}
-  .brand span { font-family: var(--font-mono); font-weight: 300; letter-spacing: 0.1em; color: var(--teal-mid); }
-  .brand span .pipe { color: var(--gold); margin: 0 4px; }
-
-  .feedback-btn { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: var(--muted); font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.15em; padding: 10px 18px; border-radius: 4px; cursor: pointer; transition: 0.2s;}
+  /* --- HEADER OVERRIDES (Studio-specific extras) --- */
+  .feedback-btn { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: var(--muted); font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.15em; padding: 10px 18px; border-radius: 4px; cursor: pointer; transition: 0.2s; white-space: nowrap; }
   .feedback-btn:hover { border-color: var(--teal-mid); color: var(--white); }
-
-  .global-nav { display: flex; gap: 30px; align-items: center; }
-  .nav-link { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); text-decoration: none; padding-bottom: 6px; transition: 0.2s; border-bottom: 2px solid transparent;}
-  .nav-link:hover { color: var(--white); }
-  .nav-link.active { color: var(--teal-mid); border-bottom-color: var(--teal-mid); }
 
   /* ── Viewport Isolation: 3-mode toggle ── */
   .view-toggle { display: flex; gap: 3px; align-items: center; }
@@ -86,7 +72,7 @@
   /* LEFT: Drafting Column */
   .drafting-panel {
     width: 480px; padding: 30px 40px 40px 40px; border-right: 1px solid rgba(255,255,255,0.05);
-    height: calc(100vh - 50px); overflow-y: auto; background: rgba(9, 18, 33, 0.5); z-index: 50;
+    height: calc(100vh - 73px); overflow-y: auto; background: rgba(9, 18, 33, 0.5); z-index: 50;
   }
 
   .return-home { display: inline-block; font-family: var(--font-mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; text-decoration: none; margin-bottom: 30px; transition: 0.2s; }
@@ -410,6 +396,21 @@
   #trust-firewall-tooltip { position: absolute; background: #060b14; border: 1px solid var(--shield); padding: 15px; border-radius: 4px; opacity: 0; pointer-events: none; transition: 0.2s; z-index: 200; font-family: var(--font-serif); font-size: 11px; color: var(--muted); line-height: 1.5; width: 280px; box-shadow: 0 10px 25px rgba(0,0,0,0.9); }
   #trust-firewall-tooltip strong { font-family: var(--font-mono); color: var(--shield); text-transform: uppercase; letter-spacing: 0.1em; font-size: 10px; display: block; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px;}
 
+  /* --- MOBILE LAYOUT (H3) --- */
+  @media (max-width: 900px) {
+    body { overflow: auto; padding-top: 73px; }
+    .studio-layout { flex-direction: column; overflow: auto; }
+    .drafting-panel { width: 100%; height: auto; max-height: none; overflow-y: visible; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .canvas-wrapper { width: 100%; min-height: 400px; flex: none; }
+    .blueprint-svg, .crosshair-layer { width: 100%; height: 100%; }
+  }
+  @media (max-width: 900px) {
+    input[type=range] { min-height: 48px; }
+    .ss-btn { min-height: 48px; }
+    .btn { min-height: 48px; }
+    .feedback-btn { min-height: 48px; }
+  }
+
   /* === CINEMATIC OVERLAY === */
   #cinematic-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-navy); background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px); background-size: 40px 40px; z-index: 9999; display: none; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
   #cinematic-overlay.active { display: flex; }
@@ -440,24 +441,24 @@
 </head>
 <body>
 
-  <header>
-    <div class="header-left">
-      <a href="/" class="brand">DATUM <span>F<span class="pipe">|</span>I</span></a>
-    </div>
-    <div class="header-right">
-      <nav class="global-nav">
-        <a href="/" class="nav-link">HOME</a>
-        <a href="/sketch.html" class="nav-link">SKETCH</a>
-        <a href="/studio.html" class="nav-link active">STUDIO</a>
-        <a href="/range.html" class="nav-link" id="nav-range-link" style="display:none;">RANGE</a>
-        <a href="/philosophy.html" class="nav-link">PHILOSOPHY</a>
-      </nav>
-      <div class="view-toggle">
-        <button class="view-btn" id="btn-blueprint" onclick="setViewMode('blueprint')" title="Blueprint Focus">◼ Blueprint</button>
-        <button class="view-btn active" id="btn-split" onclick="setViewMode('split')" title="Split View">◼◻ Split</button>
-        <button class="view-btn" id="btn-draft" onclick="setViewMode('draft')" title="Drafting Focus">◼ Drafting</button>
+  <header class="main-header">
+    <div class="header-inner">
+      <a href="/" class="brand-lockup" style="font-size:22px;"><span class="brand-datum">DATUM</span><span class="brand-fi">FI</span></a>
+      <div style="display:flex; align-items:center; gap:24px;">
+        <nav class="header-nav">
+          <a href="/" class="nav-link">Home</a>
+          <a href="/sketch.html" class="nav-link">Sketch</a>
+          <a href="/studio.html" class="nav-link active">Studio</a>
+          <a href="/range.html" class="nav-link" id="nav-range-link" style="display:none;">Range</a>
+          <a href="/philosophy.html" class="nav-link">Philosophy</a>
+        </nav>
+        <div class="view-toggle">
+          <button class="view-btn" id="btn-blueprint" onclick="setViewMode('blueprint')" title="Blueprint Focus">◼ Blueprint</button>
+          <button class="view-btn active" id="btn-split" onclick="setViewMode('split')" title="Split View">◼◻ Split</button>
+          <button class="view-btn" id="btn-draft" onclick="setViewMode('draft')" title="Drafting Focus">◼ Drafting</button>
+        </div>
+        <button class="feedback-btn">SHARE FEEDBACK</button>
       </div>
-      <button class="feedback-btn">SHARE FEEDBACK</button>
     </div>
   </header>
 
@@ -825,7 +826,7 @@
            </div>
         </div>
 
-        <svg class="crosshair-layer" viewBox="0 0 1400 1100">
+        <svg class="crosshair-layer" viewBox="0 0 1400 1100" preserveAspectRatio="xMidYMid meet">
            <defs>
             <pattern id="friction-pattern" patternUnits="userSpaceOnUse" width="10" height="10" patternTransform="rotate(45)">
               <rect width="10" height="10" fill="rgba(29, 158, 117, 0.05)"/>
@@ -839,7 +840,7 @@
           </g>
         </svg>
 
-        <svg class="blueprint-svg" viewBox="0 0 1400 1100" id="bp-svg">
+        <svg class="blueprint-svg" viewBox="0 0 1400 1100" id="bp-svg" preserveAspectRatio="xMidYMid meet">
            </svg>
 
       </div>
@@ -2729,7 +2730,7 @@
     renderUpkeep();
     renderInputs();
     updateSVGs();
-    if (sessionStorage.getItem('datumfi_range')) { const rl = document.getElementById('nav-range-link'); if (rl) rl.style.display = ''; }
+    if (sessionStorage.getItem('datum_range_revealed')) { const rl = document.getElementById('nav-range-link'); if (rl) rl.style.display = ''; }
 
     // === CINEMATIC OVERLAY + REVEAL RANGE ===
     (function() {
@@ -2811,6 +2812,7 @@
               new Promise(r => setTimeout(r, 4500))
             ]);
             if (apiResult) sessionStorage.setItem('datumfi_range', JSON.stringify(apiResult));
+            sessionStorage.setItem('datum_range_revealed', 'true');
           } catch(e) {
             // navigate regardless
           }

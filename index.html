@@ -3,11 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#091221">
 <title>DATUM FI — V1 Production Master</title>
 <link rel="stylesheet" href="/styles/typography.css">
 <style>
   :root { --orange:#e68a4f; --keystone-blue:#4faae6; --bedrock-red:#c95c5c; }
-  body { background-size: 30px 30px; font-family: var(--font-mono); overflow-x: hidden; padding-top: 56px; }
+  body { background-size: 30px 30px; font-family: var(--font-mono); overflow-x: clip; padding-top: 56px; }
   
   /* Layout & Screens */
   .screen { width: 100%; display: none; flex-direction: column; align-items: center; }
@@ -624,7 +625,7 @@
   .hero-display-teal { color: var(--teal-mid); margin-bottom: 40px; }
   .hero-tagline { font-family: var(--font-serif); font-weight: 300; font-size: clamp(16px, 3.5vw, 22px); color: var(--white); max-width: 600px; margin: 0 auto 16px auto; }
   .hero-body-copy { font-family: var(--font-serif); font-weight: 300; font-size: clamp(14px, 2.5vw, 18px); line-height: 1.6; color: rgba(255,255,255,0.8); max-width: 600px; margin: 0 auto 36px auto; }
-  .closing-cta { min-height: 50vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border-top: 1px solid rgba(255,255,255,0.1); padding: 80px 40px; }
+  .closing-cta { min-height: 50vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border-top: 1px solid rgba(255,255,255,0.1); padding: 80px 40px; position: relative; z-index: 50; background: var(--bg-navy); }
   .closing-h2 { font-family: var(--font-serif); font-weight: 300; font-size: clamp(24px, 5vw, 36px); margin-bottom: 24px; }
   .closing-body { font-family: var(--font-serif); font-size: clamp(14px, 2.5vw, 18px); line-height: 1.6; color: rgba(255,255,255,0.8); max-width: 600px; margin: 0 auto 32px auto; font-weight: 300; }
   .studio-entry-link { font-family: var(--font-mono); font-size: 11px; color: rgba(255,255,255,0.4); text-decoration: none; margin-top: 16px; display: block; transition: color 0.3s; }
@@ -636,10 +637,10 @@
 
   /* MOB1: Mobile layout */
   @media (max-width: 900px) {
-    .narrative-container { flex-direction: column; }
-    .visual-stage { position: static; width: 100%; height: auto; order: 2; display: flex; }
-    .text-scroller { width: 100%; padding-left: 0; order: 1; }
-    .scroll-step { min-height: auto; margin-bottom: 60px; opacity: 1 !important; }
+    .narrative-container { flex-direction: column; overflow-x: clip; }
+    .visual-stage { position: sticky; top: 0; height: 100dvh; z-index: 1; pointer-events: none; width: 100%; }
+    .text-scroller { width: 100%; padding-left: 0; order: 1; position: relative; z-index: 10; }
+    .scroll-step { min-height: auto; margin-bottom: 60px; opacity: 1 !important; position: relative; z-index: 10; }
     .model-grid { grid-template-columns: 1fr; }
     /* Reduced section padding for mobile */
     .narrative-container { padding: 0 20px; }
@@ -877,14 +878,7 @@
 
   <!-- ── Fixed Navigation Bar ── -->
   <nav id="app-nav">
-      <div class="brand-signature" id="brand-sig" onclick="goToScreen(1)" title="Home">
-          <span class="sig-datum" id="sig-datum-text">DATUM</span>
-          <span class="sig-block">
-              <span class="sig-f" id="sig-f-text">F</span>
-              <span class="sig-bar" id="sig-bar-real"></span>
-              <span class="sig-i" id="sig-i-text">I</span>
-          </span>
-      </div>
+      <a href="/" class="brand-lockup" id="brand-sig" style="font-size:20px;"><span class="brand-datum" id="sig-datum-text">DATUM</span><span class="brand-fi" id="sig-fi-text">FI</span></a>
       <div class="nav-links">
           <button class="nav-link active" id="nav-link-home"        onclick="navTo(1)">Home</button>
           <a class="nav-link"             id="nav-link-sketch"      href="/sketch.html">Sketch</a>
@@ -2341,9 +2335,9 @@
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         const next = $('screen' + n);
         if (next) { next.classList.add('active'); window.scrollTo(0, 0); }
-        // Restore brand signature whenever leaving Screen 3
+        // Restore brand logo whenever leaving Screen 3
         if (n !== 3) {
-            const els = [$('sig-datum-text'), $('sig-f-text'), $('sig-i-text'), $('sig-bar-real')];
+            const els = [$('sig-datum-text'), $('sig-fi-text')];
             els.forEach(el => { if (el) { el.style.transition = 'opacity 0.5s ease'; el.style.opacity = '1'; } });
         }
         setNavActive(n);
@@ -2410,11 +2404,6 @@
 
         // ── First-time cinematic path (new: MC waves + singularity) ─────────
         hasLoadedOnce = true;
-        // Reveal the Range nav link now that a calculation has been run
-        const rangeLink    = $('nav-link-range');
-        const rangeLinkMob = $('nav-mob-range');
-        if (rangeLink)    { rangeLink.style.display = ''; }
-        if (rangeLinkMob) { rangeLinkMob.style.display = ''; }
         const btn = $('trigger-btn');
         if (btn) { btn.disabled = true; btn.innerText = 'Simulating Range...'; }
 
@@ -2472,6 +2461,12 @@
 
         function _doReveal() {
             if (!_animComplete || !_apiComplete) return;
+            // D1: Set range revealed flag when cinematic completes
+            sessionStorage.setItem('datum_range_revealed', 'true');
+            const rangeLink    = $('nav-link-range');
+            const rangeLinkMob = $('nav-mob-range');
+            if (rangeLink)    { rangeLink.style.display = ''; }
+            if (rangeLinkMob) { rangeLinkMob.style.display = ''; }
             if (pulsingEl) pulsingEl.style.display = 'none';
             populateScreen4(_apiPayload);
             setTimeout(() => {
@@ -2799,7 +2794,7 @@
         setupDatumDrag();
         runHeroEstate();
         initNarrativeScroll();
-        if (sessionStorage.getItem('datumfi_range')) { const rl = $('nav-link-range'); if (rl) rl.style.display = ''; }
+        if (sessionStorage.getItem('datum_range_revealed')) { const rl = $('nav-link-range'); if (rl) rl.style.display = ''; const mob = $('nav-mob-range'); if (mob) mob.style.display = ''; }
         const dBox = $('datum-drag-box');
         if (dBox) {
         }

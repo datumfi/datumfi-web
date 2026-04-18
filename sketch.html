@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#091221">
 <title>Datum FI — The Sketch</title>
 <link rel="stylesheet" href="/styles/typography.css">
 <style>
@@ -14,9 +15,6 @@
   ::-webkit-scrollbar-thumb { background: rgba(93, 202, 165, 0.2); border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--teal-mid); }
 
-  /* sketch header uses wider max-width than canonical */
-  .header-inner { max-width: 1800px; }
-  
   /* --- SCREEN 1: SPLIT LAYOUT --- */
   .hero-screen {
     display: flex;
@@ -211,6 +209,16 @@
   }
   .studio-btn:hover { background: var(--teal-mid); color: var(--bg-navy); }
 
+  /* --- MOBILE LAYOUT (H2) --- */
+  @media (max-width: 900px) {
+    .hero-screen { flex-direction: column; height: auto; min-height: 100vh; overflow-y: auto; }
+    .panel-left { width: 100%; height: auto; padding: 100px 5% 40px 5%; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .panel-right { width: 100%; height: 60vh; min-height: 450px; }
+    input[type=range] { min-height: 48px; }
+    .toggle-container label { min-height: 48px; display: flex; align-items: center; justify-content: center; }
+    .studio-btn { min-height: 48px; }
+  }
+
   /* --- LEGAL FOOTER --- */
   .legal-footer {
     max-width: 1000px;
@@ -229,7 +237,7 @@
 
   <header class="main-header">
     <div class="header-inner">
-      <a href="/" class="brand">DATUM&nbsp;<span class="mono-part">F<span class="gold-pipe">|</span>I</span></a>
+      <a href="/" class="brand-lockup" style="font-size:22px;"><span class="brand-datum">DATUM</span><span class="brand-fi">FI</span></a>
       <nav class="header-nav">
         <a href="/" class="nav-link">Home</a>
         <a href="/sketch.html" class="nav-link active">Sketch</a>
@@ -340,7 +348,7 @@
                       <rect class="hover-bg" x="0" y="0" width="410" height="115" rx="4" />
                       <text class="tt-head" x="15" y="25" style="fill: var(--gold);">STRUCTURAL CEILING</text>
                       <text class="text-data" id="ceil-val-txt" x="15" y="45" style="fill: var(--white);">$2.98M &nbsp;|&nbsp; $119,000 / yr</text>
-                      <text class="text-data" id="ceil-leg-txt" x="15" y="65" style="fill: rgba(255,255,255,0.4); font-style: italic;">Legacy is a measurement, not an estimate. Studio only →</text>
+                      <text class="text-data" id="ceil-leg-txt" x="15" y="65" style="fill: var(--gold); font-style: italic;">Legacy is a measurement, not an estimate. Studio only →</text>
                       <text class="text-highlight" x="15" y="85">The mathematical limit of your plan's capacity.</text>
                       <text class="text-highlight" x="15" y="105">A structural constraint, not an aspirational target.</text>
                   </g>
@@ -355,7 +363,7 @@
                       <rect class="hover-bg" x="0" y="0" width="410" height="115" rx="4" />
                       <text class="tt-head" x="15" y="25" style="fill: var(--danger-red);">SURVIVAL FLOOR (FIXED)</text>
                       <text class="text-data" id="floor-val-txt" x="15" y="45" style="fill: var(--white);">$2.08M &nbsp;|&nbsp; $83,000 / yr</text>
-                      <text class="text-data" id="floor-leg-txt" x="15" y="65" style="fill: rgba(255,255,255,0.4); font-style: italic;">Legacy is a measurement, not an estimate. Studio only →</text>
+                      <text class="text-data" id="floor-leg-txt" x="15" y="65" style="fill: var(--gold); font-style: italic;">Legacy is a measurement, not an estimate. Studio only →</text>
                       <text class="text-highlight" x="15" y="85">Floor holds in 99% of simulations + all stress scenarios.</text>
                       <text class="text-highlight" x="15" y="105">Survives the 1929 crash. Survives everything.</text>
                   </g>
@@ -372,7 +380,7 @@
                       <rect id="datum-box" class="hover-bg" x="0" y="0" width="410" height="90" rx="4" stroke="var(--teal-mid)" />
                       <text id="datum-tt-head" class="tt-head" x="15" y="25" style="fill: var(--teal-mid);">YOUR DATUM</text>
                       <text class="text-data" id="datum-val-txt" x="15" y="45" style="fill: var(--white);">$100,000 / yr</text>
-                      <text class="text-data" id="datum-leg-txt" x="15" y="65" style="fill: rgba(255,255,255,0.4); font-style: italic;">Legacy is a measurement, not an estimate. Studio only →</text>
+                      <text class="text-data" id="datum-leg-txt" x="15" y="65" style="fill: var(--gold); font-style: italic;">Legacy is a measurement, not an estimate. Studio only →</text>
                   </g>
               </g>
 
@@ -717,7 +725,7 @@
 
     // Initial boot
     updateEngine();
-    if (sessionStorage.getItem('datumfi_range')) { const rl = document.getElementById('nav-range-link'); if (rl) rl.style.display = ''; }
+    if (sessionStorage.getItem('datum_range_revealed')) { const rl = document.getElementById('nav-range-link'); if (rl) rl.style.display = ''; }
 
   </script>
 

@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#091221">
 <title>Datum FI — The Philosophy</title>
 <link rel="stylesheet" href="/styles/typography.css">
 <style>
 
-  body { overflow-x: hidden; }
+  body { overflow-x: hidden; display: flex; flex-direction: column; min-height: 100vh; }
 
   /* --- THE RANGE SPINE (Fixed Left Column) --- */
   body::before {
@@ -63,11 +64,16 @@
   .stanza h2 { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold); margin-bottom: 12px; }
   .stanza p { font-size: 20px; line-height: 1.5; color: var(--white); opacity: 0.9; }
 
-  /* --- FOOTER --- */
-  footer { width: 100%; margin-top: 60px; }
-  .back-link { display: inline-block; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--teal-mid); text-decoration: none; transition: 0.3s; padding: 20px 40px 12px; }
-  .back-link:hover { color: var(--white); }
-  #disclosure-footer { width: 100%; background: rgba(9, 18, 33, 0.97); border-top: 1px solid rgba(255,255,255,0.05); padding: 20px 40px 24px; text-align: center; }
+  /* --- FOOTER (E1: matches landing #disclosure-footer exactly) --- */
+  .main-content { flex: 1; }
+  #disclosure-footer {
+    width: 100%;
+    background: rgba(9, 18, 33, 0.97);
+    border-top: 1px solid rgba(255,255,255,0.05);
+    padding: 20px 40px 24px;
+    text-align: center;
+    margin-top: auto;
+  }
   #disclosure-footer p { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,0.25); line-height: 1.6; margin: 0; }
 
 </style>
@@ -76,7 +82,7 @@
 
   <header class="main-header">
     <div class="header-inner">
-      <a href="/" class="brand">DATUM&nbsp;<span class="mono-part">F<span class="gold-pipe">|</span>I</span></a>
+      <a href="/" class="brand-lockup" style="font-size:22px;"><span class="brand-datum">DATUM</span><span class="brand-fi">FI</span></a>
       <nav class="header-nav">
         <a href="/" class="nav-link">Home</a>
         <a href="/sketch.html" class="nav-link">Sketch</a>
@@ -137,18 +143,14 @@
       <p>We exist to give you a fixed point in a shifting world. A clear structure. A measured range. A way to live with a calm understanding of uncertainty.</p>
     </div>
 
-    <footer>
-        <a href="/" class="back-link">← Return to Home</a>
-        
-        <div id="disclosure-footer">
-          <p>DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. Past performance does not guarantee future outcomes.</p>
-        </div>
-    </footer>
-
   </main>
 
+  <div id="disclosure-footer">
+    <p>DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. Past performance does not guarantee future outcomes.</p>
+  </div>
+
   <script>
-    if (sessionStorage.getItem('datumfi_range')) { const rl = document.getElementById('nav-range-link'); if (rl) rl.style.display = ''; }
+    if (sessionStorage.getItem('datum_range_revealed')) { const rl = document.getElementById('nav-range-link'); if (rl) rl.style.display = ''; }
   </script>
 </body>
 </html>
