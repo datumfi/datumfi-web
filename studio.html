@@ -4,38 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Datum FI — The Studio</title>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles/typography.css">
 <style>
   :root {
-    --bg-navy: #091221;
-    --teal: #1D9E75;
-    --teal-mid: #5DCAA5;
-    --gold: #C9A84C;
-    --white: #ffffff;
     --muted: rgba(255,255,255,0.3);
-    --grid-line: rgba(100, 180, 255, 0.05);
-    --font-serif: 'Fraunces', serif;
-    --font-mono: 'DM Mono', monospace;
     --danger: #e24b4a;
     --cold: #64b4ff;
     --hot: #ffb864;
     --shield: #8a64ff;
   }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  
   body {
-    background-color: var(--bg-navy);
-    background-image: 
-      linear-gradient(var(--grid-line) 1px, transparent 1px),
-      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-    background-size: 40px 40px;
-    font-family: var(--font-serif);
-    color: var(--white);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    overflow: hidden; 
+    overflow: hidden;
   }
 
   ::-webkit-scrollbar { width: 6px; }
@@ -430,6 +413,7 @@
     <div class="header-right">
       <nav class="global-nav">
         <a href="/" class="nav-link">HOME</a>
+        <a href="/sketch.html" class="nav-link">SKETCH</a>
         <a href="/studio.html" class="nav-link active">STUDIO</a>
         <a href="/philosophy.html" class="nav-link">PHILOSOPHY</a>
         <a href="/range.html" class="nav-link" id="nav-range-link" style="display:none;">RANGE</a>
@@ -465,7 +449,7 @@
             <div class="field-row">
               <div>
                 <div class="input-label">Date of Birth</div>
-                <input type="text" class="small-field" id="pri-dob" value="08 / 1982">
+                <input type="text" class="small-field" id="pri-dob" data-field="current_age" value="08 / 1982">
               </div>
               <div>
                 <div class="input-label">Location (Tax Base)</div>
@@ -502,7 +486,7 @@
             <div class="field-row" style="margin-top: 15px;">
               <div>
                 <div class="input-label">Target Retirement Date</div>
-                <input type="text" class="small-field" id="target-ret" value="03 / 2035" oninput="updateSVGs()">
+                <input type="text" class="small-field" id="target-ret" data-field="retirement_age" value="03 / 2035" oninput="updateSVGs()">
               </div>
               <div>
                 <div class="input-label">Retirement Duration (Years)</div>
@@ -627,7 +611,7 @@
         <div id="sec-datum" class="section-content" style="display: none;">
           <div class="datum-group">
             <div class="input-label">Target Annual Spend</div>
-            <input type="text" class="datum-input curr-format" id="spend-input" value="$120,000" oninput="updateSVGs()">
+            <input type="text" class="datum-input curr-format" id="spend-input" data-field="datum_spend" value="$120,000" oninput="updateSVGs()">
             <div class="metaphor-hint">The benchmark elevation for your financial future.</div>
           </div>
         </div>
@@ -2637,6 +2621,29 @@
       currentY = e.touches[0].clientY - startY;
       updateTransform();
     }, { passive: true });
+
+    // Prefill from Sketch if user came through that flow
+    (function prefillFromSketch() {
+      const sketchAge      = sessionStorage.getItem('datum_currentAge');
+      const sketchRetireAge = sessionStorage.getItem('datum_retireAge');
+      const sketchSpend    = sessionStorage.getItem('datum_targetSpend');
+      const currentYear    = new Date().getFullYear();
+
+      if (sketchAge) {
+        const birthYear = currentYear - parseInt(sketchAge, 10);
+        const dobField = document.querySelector('[data-field="current_age"]');
+        if (dobField) dobField.value = `06 / ${birthYear}`;
+      }
+      if (sketchRetireAge && sketchAge) {
+        const retireYear = currentYear + (parseInt(sketchRetireAge, 10) - parseInt(sketchAge, 10));
+        const retField = document.querySelector('[data-field="retirement_age"]');
+        if (retField) retField.value = `01 / ${retireYear}`;
+      }
+      if (sketchSpend) {
+        const spendField = document.querySelector('[data-field="datum_spend"]');
+        if (spendField) spendField.value = `$${(parseInt(sketchSpend, 10) * 1000).toLocaleString('en-US')}`;
+      }
+    })();
 
     // Init
     fitToScreen();

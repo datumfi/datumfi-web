@@ -4,35 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Datum FI — The Sketch</title>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,700;1,9..144,300;1,9..144,400;1,9..144,700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles/typography.css">
 <style>
-  :root {
-    --bg-navy: #091221;
-    --teal: #1D9E75;
-    --teal-mid: #5DCAA5;
-    --gold: #C9A84C;
-    --white: #ffffff;
-    --muted: rgba(255,255,255,0.4);
-    --grid-line: rgba(100, 180, 255, 0.05);
-    --danger-red: #e24b4a;
-    --font-serif: 'Fraunces', serif;
-    --font-mono: 'DM Mono', monospace;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  
-  html { scroll-behavior: smooth; overflow-x: hidden; }
-
-  body {
-    background-color: var(--bg-navy);
-    background-image: 
-      linear-gradient(var(--grid-line) 1px, transparent 1px),
-      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-    background-size: 40px 40px;
-    font-family: var(--font-serif);
-    color: var(--white);
-    -webkit-font-smoothing: antialiased;
-  }
+  html { overflow-x: hidden; }
 
   /* --- CUSTOM SCROLLBAR --- */
   ::-webkit-scrollbar { width: 6px; }
@@ -251,6 +225,7 @@
       <a href="/" class="brand">DATUM&nbsp;<span class="mono-part">F<span class="gold-pipe">|</span>I</span></a>
       <nav class="header-nav">
         <a href="/" class="nav-link">Home</a>
+        <a href="/sketch.html" class="nav-link active">Sketch</a>
         <a href="/studio.html" class="nav-link">Studio</a>
         <a href="/philosophy.html" class="nav-link">Philosophy</a>
         <a href="/range.html" class="nav-link" id="nav-range-link" style="display:none;">Range</a>
@@ -262,7 +237,7 @@
       <div class="panel-left">
         <div class="title-block">
             <h1>The Sketch.</h1>
-            <div class="sub-head">Sketch the dimensions of your wealth</div>
+            <div class="sub-head">Free. No signup. Just your numbers.</div>
         </div>
 
         <div class="control-group">
@@ -319,19 +294,19 @@
           <svg class="range-svg" viewBox="0 0 800 800" preserveAspectRatio="xMidYMid meet">
               <g>
                   <line x1="100" y1="150" x2="700" y2="150" class="grid-tick" />
-                  <text x="80" y="155" text-anchor="end" class="grid-label">$400k</text>
-                  
+                  <text id="grid-lbl-1" x="80" y="155" text-anchor="end" class="grid-label">$400k</text>
+
                   <line x1="100" y1="287.5" x2="700" y2="287.5" class="grid-tick" />
-                  <text x="80" y="292.5" text-anchor="end" class="grid-label">$300k</text>
-                  
+                  <text id="grid-lbl-2" x="80" y="292.5" text-anchor="end" class="grid-label">$300k</text>
+
                   <line x1="100" y1="425" x2="700" y2="425" class="grid-tick" />
-                  <text x="80" y="430" text-anchor="end" class="grid-label">$200k</text>
-                  
+                  <text id="grid-lbl-3" x="80" y="430" text-anchor="end" class="grid-label">$200k</text>
+
                   <line x1="100" y1="562.5" x2="700" y2="562.5" class="grid-tick" />
-                  <text x="80" y="567.5" text-anchor="end" class="grid-label">$100k</text>
-                  
+                  <text id="grid-lbl-4" x="80" y="567.5" text-anchor="end" class="grid-label">$100k</text>
+
                   <line x1="100" y1="700" x2="700" y2="700" class="grid-tick" />
-                  <text x="80" y="705" text-anchor="end" class="grid-label">$0k</text>
+                  <text id="grid-lbl-5" x="80" y="705" text-anchor="end" class="grid-label">$0k</text>
               </g>
 
               <rect id="vol-pillar" x="250" y="300" width="120" height="200" class="range-column" />
@@ -552,11 +527,29 @@
         const ceilSpend = Math.round(futurePortfolio * ceilRate); 
         const floorSpend = Math.round(futurePortfolio * floorRate);
 
-        // 3. FIXED Y-AXIS
+        // 3. DYNAMIC Y-AXIS — always keeps the 3 lines visually separated
+        const allValues = [ceilSpend, floorSpend, targetSpend];
+        const valMin = Math.min(...allValues);
+        const valMax = Math.max(...allValues);
+        const valRange = valMax - valMin;
+        const paddedRange = Math.max(valRange * 2.5, 60);
+        const midpoint = (valMin + valMax) / 2;
+        const yMin = Math.max(0, midpoint - paddedRange / 2);
+        const yMax = midpoint + paddedRange / 2;
+        globalYMin = yMin;
+        globalYMax = yMax;
+
         function spendToY(spend) {
-            let clamped = Math.max(-50, Math.min(450, spend)); 
-            return 700 - (clamped / 400) * 550;
+            const clamped = Math.max(yMin, Math.min(yMax, spend));
+            return 700 - ((clamped - yMin) / (yMax - yMin)) * 550;
         }
+
+        // Update axis labels
+        document.getElementById('grid-lbl-1').textContent = `$${Math.round(yMax)}k`;
+        document.getElementById('grid-lbl-2').textContent = `$${Math.round(yMax - (yMax - yMin) * 0.25)}k`;
+        document.getElementById('grid-lbl-3').textContent = `$${Math.round((yMax + yMin) / 2)}k`;
+        document.getElementById('grid-lbl-4').textContent = `$${Math.round(yMin + (yMax - yMin) * 0.25)}k`;
+        document.getElementById('grid-lbl-5').textContent = `$${Math.round(yMin)}k`;
 
         // 4. Map to Coordinates
         const cY = spendToY(ceilSpend);
@@ -659,9 +652,9 @@
             const svgP = pt.matrixTransform(svgCanvas.getScreenCTM().inverse());
             let svgY = svgP.y;
             
-            // Reverse math from spendToY
-            let newSpend = ((700 - svgY) / 550) * 400;
-            newSpend = Math.max(20, Math.min(400, newSpend)); // Clamp to slider attributes
+            // Reverse dynamic spendToY: spend = (700-y)/550 * (yMax-yMin) + yMin
+            let newSpend = ((700 - svgY) / 550) * (globalYMax - globalYMin) + globalYMin;
+            newSpend = Math.max(20, Math.min(400, newSpend));
             
             slDatum.value = newSpend;
             updateEngine();
@@ -687,7 +680,7 @@
             const svgP = pt.matrixTransform(svgCanvas.getScreenCTM().inverse());
             let svgY = svgP.y;
             
-            let newSpend = ((700 - svgY) / 550) * 400;
+            let newSpend = ((700 - svgY) / 550) * (globalYMax - globalYMin) + globalYMin;
             newSpend = Math.max(20, Math.min(400, newSpend));
             
             slDatum.value = newSpend;
