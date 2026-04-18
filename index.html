@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>DATUM FI — V1 Production Master</title>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -620,6 +620,16 @@
   .stress-battery h4 { color: var(--danger-red) !important; }
   .mobile-viz-container { display: none; margin-bottom: 32px; width: 100%; text-align: center; }
 
+  /* ── MOB2: Fluid Hero Typography (extracted from inline styles) ── */
+  .hero-display { font-family: var(--font-serif); font-style: italic; font-weight: 300; font-size: clamp(42px, 8vw, 76px); line-height: 1.05; }
+  .hero-display-white { color: var(--white); }
+  .hero-display-teal { color: var(--teal-mid); margin-bottom: 40px; }
+  .hero-tagline { font-family: var(--font-serif); font-weight: 300; font-size: clamp(16px, 3.5vw, 22px); color: var(--white); max-width: 600px; margin: 0 auto 16px auto; }
+  .hero-body-copy { font-family: var(--font-serif); font-weight: 300; font-size: clamp(14px, 2.5vw, 18px); line-height: 1.6; color: rgba(255,255,255,0.8); max-width: 600px; margin: 0 auto 36px auto; }
+  .closing-cta { min-height: 50vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border-top: 1px solid rgba(255,255,255,0.1); padding: 80px 40px; }
+  .closing-h2 { font-family: var(--font-serif); font-weight: 300; font-size: clamp(24px, 5vw, 36px); margin-bottom: 24px; }
+  .closing-body { font-family: var(--font-serif); font-size: clamp(14px, 2.5vw, 18px); line-height: 1.6; color: rgba(255,255,255,0.8); max-width: 600px; margin: 0 auto 32px auto; font-weight: 300; }
+
   /* LP5 Slot 2: Convergence radial pulse animation */
   .conv-ring { position: absolute; border-radius: 50%; border: 1px solid rgba(201,168,76,0.4); animation: convPulse 2.5s ease-in-out infinite; }
   @keyframes convPulse { 0% { transform: scale(0.4); opacity: 0.8; border-color: rgba(201,168,76,0.6); } 100% { transform: scale(1.8); opacity: 0; border-color: rgba(29,158,117,0.1); } }
@@ -627,13 +637,17 @@
   /* MOB1: Mobile layout */
   @media (max-width: 900px) {
     .narrative-container { flex-direction: column; }
-    .visual-stage { display: none !important; }
-    .mobile-viz-container { display: block; }
-    .text-scroller { width: 100%; padding-left: 0; }
+    .visual-stage { position: static; width: 100%; height: auto; order: 2; display: flex; }
+    .text-scroller { width: 100%; padding-left: 0; order: 1; }
     .scroll-step { min-height: auto; margin-bottom: 60px; opacity: 1 !important; }
     .model-grid { grid-template-columns: 1fr; }
-    .mobile-viz-container svg { width: 100%; height: auto; max-width: 350px; margin: 0 auto; display: block; }
-    .mobile-viz-container .he-wrapper { width: 100%; max-width: 350px; height: auto; aspect-ratio: 420/360; margin: 0 auto; }
+    /* Reduced section padding for mobile */
+    .narrative-container { padding: 0 20px; }
+    section { padding: 60px 20px; }
+    /* 48px touch targets */
+    .btn-hero { min-height: 48px; padding: 14px 28px; display: inline-flex; align-items: center; justify-content: center; }
+    .nav-link { min-height: 48px; display: inline-flex; align-items: center; }
+    .hero-block { text-align: center; }
   }
 
   /* CIN1: Skip button on cinematic screen */
@@ -650,14 +664,14 @@
   .status-subtitle { font-family: var(--font-mono); font-size: 13px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--teal-mid); position: absolute; top: -100px; width: 100%; opacity: 0; transform: translateY(-10px); transition: all 0.8s cubic-bezier(0.25, 1, 0.5, 1); }
   .text-visible { opacity: 1 !important; transform: translateY(0) !important; }
   .wave-canvas { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; height: 400px; overflow: visible; }
-  .mc-wave { fill: none; stroke-width: 1.5; stroke-linecap: round; vector-effect: non-scaling-stroke; transform-origin: 50% 50%; opacity: 0; transition: transform 1.8s cubic-bezier(0.5, 0, 0.2, 1), opacity 0.8s ease; }
+  .mc-wave { fill: none; stroke-width: 1.5; stroke-linecap: round; vector-effect: non-scaling-stroke; transform-origin: 50% 50%; opacity: 0; transition: transform 1.8s cubic-bezier(0.5, 0, 0.2, 1), opacity 0.8s ease; will-change: transform, opacity; }
   .w-teal { stroke: rgba(93, 202, 165, 0.4); }
   .w-gold { stroke: rgba(201, 168, 76, 0.4); }
   .w-light { stroke: rgba(255, 255, 255, 0.2); }
   .waves-active .mc-wave { opacity: 1; }
   .waves-collapsed .mc-wave { transform: scaleY(0.005); }
   .waves-hidden .mc-wave { opacity: 0; transition: opacity 0.4s ease; }
-  .singularity-dot { position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; background: var(--gold); border-radius: 50%; transform: translate(-50%, -50%) scale(0); box-shadow: 0 0 0px rgba(201,168,76,0); z-index: 6; }
+  .singularity-dot { position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; background: var(--gold); border-radius: 50%; transform: translate(-50%, -50%) scale(0); box-shadow: 0 0 0px rgba(201,168,76,0); z-index: 6; will-change: transform, opacity; }
   .singularity-dot::after { content: ''; position: absolute; top: 50%; right: 10px; width: 0px; height: 4px; background: var(--gold); transform: translateY(-50%); border-radius: 2px; box-shadow: 0 0 15px rgba(201,168,76,0.8); opacity: 0; z-index: -1; }
   @keyframes igniteDot { 0% { transform: translate(-50%, -50%) scale(0); box-shadow: 0 0 0px rgba(201,168,76,0); } 50% { transform: translate(-50%, -50%) scale(1.2); box-shadow: 0 0 40px rgba(201,168,76,1); } 100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 20px rgba(201,168,76,0.8); } }
   @keyframes floatToAnchor { 0% { left: 50%; transform: translate(-50%, -50%) scale(1); } 100% { left: 40px; transform: translate(-50%, -50%) scale(0.7); box-shadow: 0 0 15px rgba(201,168,76,0.6); } }
@@ -698,7 +712,7 @@
     70% { transform: translate(210px, 400px); opacity: 0; }
     100% { transform: translate(100px, 100px); opacity: 0; }
   }
-  .draft-rect { fill: var(--teal-mid); stroke: var(--teal-mid); stroke-width: 1.5; stroke-dasharray: 1500; }
+  .draft-rect { fill: var(--teal-mid); stroke: var(--teal-mid); stroke-width: 1.5; stroke-dasharray: 1500; will-change: transform, opacity; transform: translateZ(0); }
   .room-1 .draft-rect { animation: drawRect1 8s infinite; }
   .room-1 .draft-text { animation: fadeText1 8s infinite; }
   @keyframes drawRect1 {
@@ -826,7 +840,7 @@
     90%, 100% { opacity: 0; }
   }
   .datum-line { stroke: var(--teal-mid); stroke-width: 3; stroke-dasharray: 500; stroke-dashoffset: 500; animation: strikeDatum 8s cubic-bezier(0.1, 0.9, 0.2, 1) infinite; }
-  .datum-group { animation: floatDatum 8s ease-in-out infinite; }
+  .datum-group { animation: floatDatum 8s ease-in-out infinite; will-change: transform, opacity; transform: translateZ(0); }
   .l-datum { animation: fadeDatumText 8s infinite; }
   @keyframes strikeDatum {
     0%, 35% { stroke-dashoffset: 500; opacity: 0; }
@@ -895,13 +909,13 @@
     <div class="landing-hero-container">
       <div class="hero-bg-grid"></div>
       <!-- LP1/LP2/LP3: Simplified hero — text only, no animations -->
-      <div class="content-bounds" style="text-align: center; padding-top: 80px;">
+      <div class="content-bounds hero-block" style="text-align: center; padding-top: 80px;">
         <div class="anim-fade-up anim-delay-1">
-          <div style="font-family: var(--font-serif); font-style: italic; font-weight: 300; font-size: 76px; line-height: 1.05; color: var(--white);">Data In.</div>
-          <div style="font-family: var(--font-serif); font-style: italic; font-weight: 300; font-size: 76px; line-height: 1.05; margin-bottom: 40px; color: var(--teal-mid);">Confidence Out.</div>
+          <div class="hero-display hero-display-white">Data In.</div>
+          <div class="hero-display hero-display-teal">Confidence Out.</div>
         </div>
-        <div class="anim-fade-up anim-delay-2" style="font-family: var(--font-serif); font-weight: 300; font-size: 22px; color: var(--white); max-width: 600px; margin: 0 auto 16px auto;">Retirement spending isn't a number. It's a Range.</div>
-        <div class="anim-fade-up anim-delay-3" style="font-family: var(--font-serif); font-weight: 300; font-size: 18px; line-height: 1.6; color: rgba(255,255,255,0.8); max-width: 600px; margin: 0 auto 36px auto;">Tax-aware. Crash-tested. Grounded in your actual accounts.</div>
+        <div class="anim-fade-up anim-delay-2 hero-tagline">Retirement spending isn't a number. It's a Range.</div>
+        <div class="anim-fade-up anim-delay-3 hero-body-copy">Tax-aware. Crash-tested. Grounded in your actual accounts.</div>
         <div class="anim-fade-up anim-delay-4" style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
           <a href="/sketch.html" class="btn-hero">Define your Datum</a>
           <button class="btn-back" style="margin:0;" onclick="document.getElementById('how-it-works').scrollIntoView({behavior: 'smooth'})">How it works ↓</button>
@@ -1100,9 +1114,9 @@
     </section>
 
     <!-- Closing CTA — 2e copy -->
-    <div style="min-height: 50vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border-top: 1px solid rgba(255,255,255,0.1); padding: 80px 40px;">
-      <h2 style="font-family: var(--font-serif); font-weight: 300; font-size: 36px; margin-bottom: 24px;">Mathematically Sound.<br>Architecturally Certain.</h2>
-      <p style="font-family: var(--font-serif); font-size: 18px; line-height: 1.6; color: rgba(255,255,255,0.8); max-width: 600px; margin: 0 auto 32px auto; font-weight: 300;">We find the spending level — tax-aware, inflation-adjusted, engineered — that withstands 10,000 modeled futures and a century of historical stress.</p>
+    <div class="closing-cta">
+      <h2 class="closing-h2">Mathematically Sound.<br>Architecturally Certain.</h2>
+      <p class="closing-body">We find the spending level — tax-aware, inflation-adjusted, engineered — that withstands 10,000 modeled futures and a century of historical stress.</p>
       <a href="/sketch.html" class="btn-hero">Define Your Datum</a>
       <a href="/studio.html" style="font-family: var(--font-mono); font-size: 11px; color: rgba(255,255,255,0.4); text-decoration: none; margin-top: 16px; display: block;">Already have an account? Enter the Studio →</a>
     </div>
