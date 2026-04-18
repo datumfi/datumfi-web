@@ -1,0 +1,2776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Datum FI — The Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-navy: #091221;
+    --teal: #1D9E75;
+    --teal-mid: #5DCAA5;
+    --gold: #C9A84C;
+    --white: #ffffff;
+    --muted: rgba(255,255,255,0.3);
+    --grid-line: rgba(100, 180, 255, 0.05);
+    --font-serif: 'Fraunces', serif;
+    --font-mono: 'DM Mono', monospace;
+    --danger: #e24b4a;
+    --cold: #64b4ff;
+    --hot: #ffb864;
+    --shield: #8a64ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background-color: var(--bg-navy);
+    background-image: 
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    font-family: var(--font-serif);
+    color: var(--white);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; 
+  }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg-navy); }
+  ::-webkit-scrollbar-thumb { background: rgba(93, 202, 165, 0.2); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--teal-mid); }
+
+  /* --- HEADER --- */
+  header {
+    width: 100%; padding: 10px 40px; display: flex; justify-content: space-between; align-items: center;
+    border-bottom: none; background: transparent; z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; }
+  .header-right { display: flex; align-items: center; gap: 40px; }
+
+  .brand { font-family: var(--font-serif); font-size: 20px; letter-spacing: 0.15em; color: var(--teal-mid); text-decoration: none; cursor: pointer; display: flex; align-items: center; gap: 10px;}
+  .brand span { font-family: var(--font-mono); font-weight: 300; letter-spacing: 0.1em; color: var(--teal-mid); }
+  .brand span .pipe { color: var(--gold); margin: 0 4px; }
+
+  .feedback-btn { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: var(--muted); font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.15em; padding: 10px 18px; border-radius: 4px; cursor: pointer; transition: 0.2s;}
+  .feedback-btn:hover { border-color: var(--teal-mid); color: var(--white); }
+
+  .global-nav { display: flex; gap: 30px; align-items: center; }
+  .nav-link { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); text-decoration: none; padding-bottom: 6px; transition: 0.2s; border-bottom: 2px solid transparent;}
+  .nav-link:hover { color: var(--white); }
+  .nav-link.active { color: var(--teal-mid); border-bottom-color: var(--teal-mid); }
+
+  /* --- STUDIO LAYOUT --- */
+  .studio-layout { display: flex; flex: 1; width: 100%; margin: 0 auto; }
+
+  /* LEFT: Drafting Column */
+  .drafting-panel {
+    width: 480px; padding: 30px 40px 40px 40px; border-right: 1px solid rgba(255,255,255,0.05);
+    height: calc(100vh - 50px); overflow-y: auto; background: rgba(9, 18, 33, 0.5); z-index: 50;
+  }
+
+  .return-home { display: inline-block; font-family: var(--font-mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; text-decoration: none; margin-bottom: 30px; transition: 0.2s; }
+  .return-home:hover { color: var(--teal-mid); }
+
+  h1 { font-size: 32px; font-weight: 300; margin-bottom: 5px; }
+  .panel-sub { font-family: var(--font-mono); font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 40px; }
+
+  .studio-section { margin-bottom: 20px; }
+  
+  /* ACCORDION PIN TAGS */
+  .section-header-wrapper {
+      display: flex; justify-content: space-between; align-items: center; width: 100%; 
+      border-bottom: 1px solid rgba(201,168,76,0.2); margin-bottom: 15px; padding-bottom: 4px;
+  }
+  .section-tag { 
+      font-family: var(--font-mono); font-size: 10px; color: var(--gold); 
+      letter-spacing: 0.1em; text-transform: uppercase; display: flex; justify-content: space-between; 
+      align-items: center; background: transparent; border: none; cursor: pointer; outline: none; transition: color 0.3s; flex: 1;
+  }
+  .section-tag:hover { color: var(--teal-mid); }
+  .toggle-icon { font-size: 14px; font-weight: bold; margin-right: 10px; }
+  .pin-btn { background: none; border: none; cursor: pointer; font-size: 12px; opacity: 0.3; transition: 0.3s; padding: 0 5px; }
+  .pin-btn:hover { opacity: 0.8; }
+
+  /* Architect Profile Box */
+  .precision-motto { font-family: var(--font-mono); font-size: 10px; color: var(--teal-mid); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 15px; margin-top: -5px; }
+  .architect-box { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; padding: 20px; }
+  .name-input { background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.2); color: var(--gold); font-family: var(--font-serif); font-size: 20px; font-style: italic; padding: 4px 0; transition: 0.3s; width: 100%; margin-bottom: 15px; }
+  .name-input:focus { outline: none; border-bottom-color: var(--teal); }
+
+  .toggle-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px; }
+  .toggle-label { font-family: var(--font-mono); font-size: 11px; color: var(--white); text-transform: uppercase; }
+  .switch { position: relative; display: inline-block; width: 36px; height: 18px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); transition: .4s; border-radius: 20px; }
+  .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: var(--muted); transition: .4s; border-radius: 50%; }
+  input:checked + .slider { background-color: var(--teal); }
+  input:checked + .slider:before { transform: translateX(18px); background-color: white; }
+
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+  .input-label { font-family: var(--font-mono); font-size: 10px; color: var(--muted); text-transform: uppercase; margin-bottom: 5px; }
+  .small-field { width: 100%; background: transparent; border: 1px solid rgba(255,255,255,0.1); padding: 8px; color: white; font-family: var(--font-mono); font-size: 12px; border-radius: 3px; transition: 0.3s; }
+  .small-field:focus { border-color: var(--teal-mid); outline: none; }
+  
+  .salary-tooltip { position: absolute; bottom: 105%; left: 0; background: #060b14; border: 1px solid rgba(255,255,255,0.1); padding: 10px; border-radius: 4px; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 60; width: max-content; box-shadow: 0 10px 30px rgba(0,0,0,0.8);}
+  .salary-container:hover .salary-tooltip { opacity: 1; pointer-events: auto; }
+  .sal-tt-row { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 9px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; gap: 15px;}
+  .sal-tt-val { color: var(--teal-mid); font-weight: bold;}
+
+  .ss-group { display: flex; gap: 8px; margin-top: 5px; }
+  .ss-btn { flex: 1; background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; color: var(--muted); padding: 8px 4px; text-align: center; cursor: pointer; font-family: var(--font-mono); transition: 0.3s; }
+  .ss-btn.active { border-color: var(--teal-mid); color: var(--white); background: rgba(29, 158, 117, 0.1); }
+  .ss-btn span { display: block; font-size: 8px; text-transform: uppercase; letter-spacing: 0.1em; color: inherit; margin-top: 2px; }
+  .ss-btn strong { font-size: 14px; font-weight: 500; }
+
+  /* Operating Upkeep */
+  .plumbing-list { margin-top: 10px; }
+  .plumbing-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+  .plumbing-name { flex: 2; }
+  .plumbing-cost { flex: 1; }
+  .plumbing-delete { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; transition: 0.2s;}
+  .plumbing-delete:hover { color: var(--danger); }
+  .plumbing-summary { background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 4px; margin-top: 15px; }
+  .plumbing-summary-row { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11px; margin-bottom: 8px; color: var(--white); text-transform: uppercase;}
+  .load-pct { color: var(--danger); font-weight: bold; font-size: 14px;}
+  .load-pct.healthy { color: var(--teal-mid); }
+
+  /* Datum Input */
+  .datum-group { margin-bottom: 20px; }
+  .datum-input { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.2); color: var(--white); font-family: var(--font-serif); font-size: 36px; padding: 10px 0; transition: border-color 0.3s; }
+  .datum-input:focus { outline: none; border-bottom-color: var(--teal); }
+  .metaphor-hint { font-family: var(--font-serif); font-style: italic; font-size: 13px; color: var(--muted); margin-top: 5px; }
+
+  /* Dynamic Estate Rooms */
+  .room-input-container { margin-bottom: 15px; position: relative; padding-left: 10px; border-left: 2px solid rgba(255,255,255,0.1); transition: 0.3s; }
+  .room-input-container.active { border-left-color: var(--teal-mid); }
+  .room-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; padding-right: 35px;}
+  .editable-room-name { background: transparent; border: 1px dashed transparent; color: var(--white); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; width: 140px; padding: 2px; transition: 0.2s; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;}
+  .editable-room-name:hover { border-color: rgba(255,255,255,0.2); cursor: text; }
+  .editable-room-name:focus { outline: none; border-color: var(--teal-mid); background: rgba(0,0,0,0.2); }
+  .room-owner { font-size: 9px; color: var(--gold); margin-left: 6px; }
+  .room-meta { font-family: var(--font-serif); font-style: italic; font-size: 12px; color: var(--muted); }
+  
+  .room-input { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--white); font-family: var(--font-serif); font-size: 24px; padding: 4px 0; transition: 0.3s; }
+  .room-input:focus { outline: none; border-bottom-color: var(--teal-mid); }
+  
+  .contribution-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px; }
+  .inflow-label { font-family: var(--font-mono); font-size: 9px; color: var(--teal-mid); text-transform: uppercase; letter-spacing: 0.1em; }
+  .inflow-input-group { display: flex; align-items: center; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; padding: 2px 6px; transition: 0.3s; }
+  .inflow-input-group:focus-within { border-color: var(--teal-mid); }
+  .inflow-input { width: 70px; background: transparent; border: none; color: var(--white); font-family: var(--font-mono); font-size: 11px; text-align: right; }
+  .inflow-input:focus { outline: none; }
+  .inflow-freq { background: transparent; border: none; color: var(--muted); font-family: var(--font-mono); font-size: 9px; margin-left: 4px; cursor: pointer; outline: none;}
+  .inflow-freq:focus { color: var(--white); }
+  .inflow-freq option { background: var(--bg-navy); color: var(--white); }
+
+  .debt-row .inflow-label { color: var(--danger); }
+  .debt-row .inflow-input-group { border-color: rgba(226, 75, 74, 0.3); }
+  .debt-row .inflow-input-group:focus-within { border-color: var(--danger); }
+  .debt-row .inflow-input { color: var(--danger); width: 40px;}
+
+  .delete-room { position: absolute; right: 0; top: -5px; font-family: var(--font-mono); color: rgba(255,255,255,0.2); background: none; border: none; cursor: pointer; font-size: 18px; padding: 4px; transition: 0.2s; z-index: 10; line-height: 1;}
+  .delete-room:hover { color: var(--danger); }
+  .room-desc { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 8px; line-height: 1.4; }
+  
+  .details-btn { font-family: var(--font-mono); font-size: 9px; color: var(--teal-mid); background: rgba(29, 158, 117, 0.1); border: 1px solid var(--teal-mid); border-radius: 3px; padding: 3px 6px; cursor: pointer; transition: 0.2s; margin-left: 10px; margin-top: 5px; float: right;}
+  .details-btn:hover { background: var(--teal-mid); color: #000; }
+
+  /* Add Space Toggle & Analyze Load */
+  .add-space-wrapper { margin-top: 20px; position: relative; display: flex; flex-direction: column; gap: 10px; }
+  .add-space-btn { background: rgba(29, 158, 117, 0.1); border: 1px dashed var(--teal-mid); color: var(--teal-mid); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; width: 100%; padding: 12px; cursor: pointer; border-radius: 4px; transition: 0.3s; text-align: center; }
+  .add-space-btn:hover { background: rgba(29, 158, 117, 0.2); }
+  
+  .measure-btn { background: transparent; border: 1px solid var(--gold); color: var(--gold); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; width: 100%; padding: 12px; cursor: pointer; border-radius: 4px; transition: 0.3s; text-align: center; display: flex; justify-content: center; gap: 8px; align-items: center;}
+  .measure-btn:hover { background: rgba(201,168,76,0.1); }
+  .measure-btn.active { background: var(--gold); color: var(--bg-navy); }
+
+  .space-dropdown { display: none; position: absolute; top: 45px; left: 0; width: 100%; background: #0c182c; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; z-index: 10; max-height: 250px; overflow-y: auto; margin-top: 5px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+  .space-dropdown.open { display: block; }
+  .dropdown-group-lbl { font-family: var(--font-mono); font-size: 9px; color: var(--gold); padding: 10px 15px 4px 15px; background: rgba(0,0,0,0.2); text-transform: uppercase; letter-spacing: 0.1em;}
+  .space-option { padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--white); display: flex; justify-content: space-between; }
+  .space-option:hover { background: rgba(255,255,255,0.05); }
+  .space-option span { font-family: var(--font-serif); font-style: italic; color: var(--muted); text-transform: none; letter-spacing: 0; }
+
+  /* HVAC Climate Control */
+  .climate-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  .climate-option { padding: 15px; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; cursor: pointer; transition: 0.2s; position: relative; }
+  .climate-option:hover { border-color: var(--teal-mid); }
+  .climate-option.active { border-color: var(--teal); background: rgba(29, 158, 117, 0.05); }
+  
+  .hvac-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .climate-name { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; color: var(--white); }
+  .hvac-badge { font-family: var(--font-mono); font-size: 9px; padding: 2px 6px; border-radius: 2px; letter-spacing: 0.1em; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); }
+  
+  .climate-option[data-outlook="History Repeats"] .hvac-badge { color: var(--white); border-color: rgba(255,255,255,0.3); }
+  .climate-option.active[data-outlook="Valuations Matter"] .hvac-badge { color: var(--gold); border-color: var(--gold); background: rgba(201,168,76,0.1);}
+  .climate-option[data-outlook="Valuations Matter"] .hvac-badge { color: var(--gold); border-color: rgba(201,168,76,0.3); }
+  .climate-option[data-outlook="Cautious"] .hvac-badge { color: var(--cold); border-color: rgba(100, 180, 255, 0.3); }
+  .climate-option[data-outlook="Optimistic"] .hvac-badge { color: var(--danger); border-color: rgba(226, 75, 74, 0.3); }
+  .climate-option[data-outlook="Custom Matrix"] .hvac-badge { color: var(--muted); }
+
+  .climate-desc { font-size: 12px; color: var(--muted); line-height: 1.4; }
+  
+  .climate-tooltip { position: absolute; bottom: 105%; left: 50%; transform: translateX(-50%); background: #060b14; border: 1px solid rgba(93, 202, 165, 0.4); padding: 12px; width: 280px; border-radius: 4px; z-index: 50; display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.8); pointer-events: none; }
+  .climate-option:hover .climate-tooltip { display: block; }
+  .tt-title { font-family: var(--font-mono); font-size: 9px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px;}
+  .tt-row { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 9px; color: var(--white); margin-bottom: 4px; text-transform: uppercase;}
+  .tt-val { color: var(--teal-mid); }
+
+  /* Custom Matrix Override */
+  .custom-climate-box { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); cursor: default; }
+  .custom-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .custom-row label { font-family: var(--font-mono); font-size: 9px; color: var(--white); text-transform: uppercase; }
+  .custom-row input { width: 50px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: var(--gold); font-family: var(--font-mono); font-size: 11px; padding: 4px; text-align: right; border-radius: 3px; }
+  .custom-row input:focus { outline: none; border-color: var(--teal-mid); }
+  .custom-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
+  .sum-counter { font-family: var(--font-mono); font-size: 11px; color: var(--danger); }
+  .sum-counter.valid { color: var(--teal-mid); }
+  .custom-save { background: var(--teal); border: none; color: black; font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; padding: 6px 12px; border-radius: 3px; cursor: pointer; opacity: 0.5; pointer-events: none; transition: 0.2s;}
+  .custom-save.valid { opacity: 1; pointer-events: auto; }
+  .custom-save.saved { background: var(--gold); }
+
+  /* The Big Green Button & Privacy */
+  .reveal-container { position: relative; margin-top: 20px; }
+  .action-btn { width: 100%; background: var(--teal); color: #000000; border: none; font-family: var(--font-mono); font-size: 14px; text-transform: uppercase; letter-spacing: 0.2em; padding: 22px; border-radius: 4px; cursor: pointer; transition: 0.3s; font-weight: 700; box-shadow: 0 4px 15px rgba(29, 158, 117, 0.3); }
+  .action-btn:hover { background: var(--teal-mid); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(29, 158, 117, 0.5); color: #000000;}
+  
+  .reveal-tooltip { position: absolute; bottom: 100%; left: 0; width: 100%; background: #060b14; border: 1px solid var(--teal-mid); padding: 15px; border-radius: 4px; opacity: 0; pointer-events: none; transition: 0.3s; transform: translateY(-10px); box-shadow: 0 10px 30px rgba(0,0,0,0.8); font-family: var(--font-serif); font-size: 11px; color: var(--muted); line-height: 1.5; z-index: 60;}
+  .reveal-tooltip strong { font-family: var(--font-mono); font-size: 10px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em; display: block; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px;}
+  .reveal-container:hover .reveal-tooltip { opacity: 1; transform: translateY(-15px); pointer-events: auto; }
+
+  .privacy-note { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,0.4); text-align: center; margin-top: 20px; line-height: 1.6; padding-bottom: 20px;}
+
+  /* RIGHT: Drawing Canvas (With Panning & Zooming) */
+  .canvas-wrapper { flex: 1; position: relative; background: radial-gradient(circle at center, rgba(29,158,117,0.05) 0%, transparent 70%); overflow: hidden; cursor: grab; }
+  .canvas-wrapper:active { cursor: grabbing; }
+  
+  /* UNIFIED HUD STYLING */
+  /* SURGICAL: z-index elevated to 30 to beat the SVG layer */
+  .hud-panel { background: rgba(9, 18, 33, 0.85); border: 1px solid rgba(255,255,255,0.05); padding: 20px 30px; border-radius: 8px; backdrop-filter: blur(8px); box-shadow: 0 10px 30px rgba(0,0,0,0.8); pointer-events: auto; z-index: 30; position: absolute; transition: border-color 0.3s ease;}
+  .hud-title { font-family: var(--font-mono); font-size: 10px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; }
+  
+  /* TOP LEFT: OVERVIEW DASHBOARD */
+  .hud-overview { top: 40px; left: 40px; width: 350px; cursor: pointer; transition: border-color 0.3s;}
+  .hud-overview:hover { border-color: var(--teal-mid); }
+  .estate-total-val { font-family: var(--font-serif); font-size: 54px; font-style: italic; color: var(--white); text-shadow: 0 4px 10px rgba(0,0,0,0.8); line-height: 1; margin-bottom: 5px; margin-top: 10px;}
+  
+  /* The Toggled Diag Menu */
+  .hud-header-flex { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-bottom: 12px;}
+  .system-diagnostics { display: none; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; flex-direction: column; gap: 10px; }
+  .system-diagnostics.open { display: flex; }
+  .diag-row { display: flex; justify-content: space-between; align-items: center; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase;}
+  .v-lbl { color: var(--muted); }
+  .v-in { color: var(--teal-mid); font-weight: bold; font-size: 12px;}
+  .v-out { color: var(--danger); font-weight: bold; font-size: 12px;}
+  .v-net { color: var(--white); font-family: var(--font-serif); font-size: 22px; font-style: italic; text-align: right; display: block;}
+
+  /* Timeframe Select */
+  .hud-timeframe { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: var(--gold); font-family: var(--font-mono); font-size: 9px; outline: none; cursor: pointer; padding: 2px 4px; border-radius: 3px; }
+  .hud-timeframe option { background: var(--bg-navy); color: var(--white); }
+
+  /* TOP RIGHT: STRUCTURAL LOAD */
+  .hud-analysis { top: 40px; right: 40px; width: 380px; opacity: 0; pointer-events: none; border-color: rgba(201,168,76,0.3); }
+  .hud-analysis.visible { opacity: 1; pointer-events: auto; }
+  .analysis-text { font-size: 14px; color: var(--white); line-height: 1.6; font-family: var(--font-serif); }
+  .analysis-text span { font-family: var(--font-mono); font-size: 12px;}
+
+  /* SURGICAL: Restored Lens Array with proper spacing and exact tooltips */
+  .lens-controls { bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; padding: 15px 25px; border-radius: 40px; top: auto; width: max-content; }
+  .lens-tt-wrap { position: relative; }
+  .lens-btn { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: var(--muted); font-family: var(--font-mono); font-size: 9px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; padding: 10px 18px; border-radius: 20px; cursor: pointer; transition: 0.3s; white-space: nowrap;}
+  .lens-btn:hover { border-color: var(--teal-mid); color: var(--white); }
+  .lens-btn.active { background: rgba(93, 202, 165, 0.1); border-color: var(--teal-mid); color: var(--teal-mid); }
+  .lens-btn#btn-shock.active { background: rgba(226, 75, 74, 0.1); border-color: var(--danger); color: var(--danger); }
+  .lens-btn#btn-thermal.active { background: rgba(255, 184, 100, 0.1); border-color: var(--hot); color: var(--hot); }
+  .lens-btn#btn-datum.active { background: rgba(201, 168, 76, 0.1); border-color: var(--danger); color: var(--danger); }
+  
+  .lens-tt { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%) translateY(-10px); background: #060b14; border: 1px solid var(--teal-mid); padding: 15px; border-radius: 4px; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 100; font-family: var(--font-serif); font-size: 11px; color: var(--muted); line-height: 1.4; width: 280px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.9); }
+  .lens-tt strong { font-family: var(--font-mono); color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em; font-size: 10px; display: block; margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px;}
+  .lens-tt-wrap:hover .lens-tt { opacity: 1; transform: translateX(-50%) translateY(-20px); }
+
+  /* BLUEPRINT SVG CANVAS & ANIMATIONS */
+  .blueprint-container { position: absolute; width: 1400px; height: 1100px; top: 50%; left: 50%; border: none; transform-origin: center center; }
+  
+  .crosshair-layer { position:absolute; width:100%; height:100%; top:0; left:0; pointer-events:none; z-index: 10; }
+  .crosshair { stroke: rgba(201,168,76,0.3); stroke-width: 1; }
+  .crosshair-dot { fill: var(--gold); filter: drop-shadow(0 0 8px rgba(201,168,76,0.8)); }
+
+  .blueprint-svg { width: 100%; height: 100%; overflow: visible; position: relative; z-index: 2; pointer-events: auto; } 
+  
+  .room-grp { opacity: 0; transition: opacity 0.6s cubic-bezier(0.25, 1, 0.5, 1); cursor: pointer; }
+  .room-grp.visible { opacity: 1; }
+  .room-rect { fill: rgba(29, 158, 117, 0.05); stroke: var(--teal-mid); stroke-width: 1; transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1); }
+  .room-grp.debt-room .room-rect { stroke: var(--danger); fill: rgba(226, 75, 74, 0.05); }
+
+  /* SURGICAL: Physics Toggles on Rooms */
+  .room-rect.liquidity-friction { fill: url(#friction-pattern); }
+  .room-grp.debt-room .room-rect.structural-priority { stroke-width: 3px; filter: drop-shadow(0 0 8px var(--gold)); stroke: var(--gold); }
+
+  /* SURGICAL: Thermal Mode Overrides (Explicit colors) */
+  .blueprint-svg.thermal-mode .room-rect.tax-roth { fill: rgba(100, 180, 255, 0.2); stroke: var(--cold); stroke-width: 2px;}
+  .blueprint-svg.thermal-mode .room-rect.tax-pretax { fill: rgba(255, 184, 100, 0.2); stroke: var(--hot); stroke-width: 2px;}
+  .blueprint-svg.thermal-mode .room-rect.tax-liquid { fill: rgba(29, 158, 117, 0.05); stroke: var(--teal-mid); }
+  .blueprint-svg.thermal-mode .room-grp.debt-room .room-rect { fill: rgba(226, 75, 74, 0.2); stroke: var(--danger); }
+  .blueprint-svg.thermal-mode .room-grp.trust-room .room-rect { fill: rgba(138, 100, 255, 0.2); stroke: var(--shield); stroke-width: 2px; }
+
+  /* Routing Lines */
+  .outflow-route { fill: none; stroke: var(--teal-mid); stroke-width: 2px; stroke-dasharray: 8 8; animation: dashFlow 2s linear infinite; pointer-events: none; opacity: 0.8;}
+  .demolition-route { fill: none; stroke: var(--gold); stroke-width: 3px; stroke-dasharray: 8 8; animation: dashFlow 1s linear infinite; pointer-events: none; opacity: 0.9;}
+  @keyframes dashFlow { from { stroke-dashoffset: 32; } to { stroke-dashoffset: 0; } }
+
+  /* Archway Flow Indicators */
+  .wall-cutout { stroke: var(--bg-navy); stroke-width: 4px; stroke-linecap: butt; fill: none; }
+  .arch-marker { fill: none; stroke: var(--teal-mid); stroke-width: 1.5px; opacity: 0.7; }
+
+  @keyframes drawBlueprint {
+    0% { stroke-dasharray: 0, 3000; fill: transparent; stroke: var(--gold); stroke-width: 2px;}
+    100% { stroke-dasharray: 3000, 0; fill: rgba(29, 158, 117, 0.05); stroke: var(--teal-mid); stroke-width: 1px; }
+  }
+  @keyframes drawBlueprintDebt {
+    0% { stroke-dasharray: 0, 3000; fill: transparent; stroke: var(--gold); stroke-width: 2px;}
+    100% { stroke-dasharray: 3000, 0; fill: rgba(226, 75, 74, 0.05); stroke: var(--danger); stroke-width: 1px; }
+  }
+  @keyframes drawBlueprintTrust {
+    0% { stroke-dasharray: 0, 3000; fill: transparent; stroke: var(--gold); stroke-width: 2px;}
+    100% { stroke-dasharray: 3000, 0; fill: rgba(138, 100, 255, 0.05); stroke: var(--shield); stroke-width: 1px; }
+  }
+  .room-rect.animate-draw { animation: drawBlueprint 1.35s 0.27s linear forwards; }
+  .room-grp.debt-room .room-rect.animate-draw { animation: drawBlueprintDebt 1.35s 0.27s linear forwards; }
+  .room-grp.trust-room .room-rect.animate-draw { animation: drawBlueprintTrust 1.35s 0.27s linear forwards; }
+  
+  /* Golden Measurement Outline */
+  @keyframes drawOutline {
+    0% { stroke-dasharray: 0, 4000; opacity: 0; }
+    100% { stroke-dasharray: 4000, 0; opacity: 1; }
+  }
+  .estate-measure-outline {
+    fill: rgba(201,168,76, 0.02);
+    stroke: var(--gold);
+    stroke-width: 2;
+    stroke-dasharray: 8 8;
+    pointer-events: none;
+    animation: drawOutline 1.5s ease-out forwards;
+  }
+
+  .bp-title { font-family: var(--font-mono); font-size: 14px; fill: var(--teal-mid); text-transform: uppercase; letter-spacing: 0.15em; transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1); text-anchor: middle; font-weight: bold;}
+  .room-grp.debt-room .bp-title { fill: var(--danger); }
+  .room-grp.trust-room .bp-title { fill: var(--shield); }
+  
+  .bp-val { font-family: var(--font-serif); font-size: 32px; font-style: italic; fill: var(--white); transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1); text-anchor: middle; font-weight: bold;}
+  .room-grp.debt-room .bp-val { fill: var(--danger); }
+
+  .map-delete { fill: rgba(255,255,255,0.4); font-family: var(--font-mono); font-size: 20px; cursor: pointer; pointer-events: auto; transition: all 0.2s; text-anchor: end; }
+  .map-delete:hover { fill: var(--danger); font-weight: bold;}
+  
+  /* STATIC GROUNDS */
+  .grounds-rect { fill: transparent; stroke: rgba(255,255,255,0.2); stroke-dasharray: 12 12; stroke-width: 1; pointer-events: none;}
+  .grounds-title { font-family: var(--font-mono); font-size: 14px; fill: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.2em; text-anchor: middle; }
+
+  /* DETAILS MODAL (BACK OF CARD) */
+  .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px);}
+  .modal-card { width: 550px; max-height: 90vh; overflow-y: auto; background: var(--bg-navy); border: 1px solid rgba(255,255,255,0.1); padding: 30px; border-radius: 8px; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.9); pointer-events: auto;}
+  .modal-close { position: absolute; top: 20px; right: 20px; background: transparent; border: none; color: var(--muted); font-size: 28px; cursor: pointer; transition: 0.2s; line-height: 1;}
+  .modal-close:hover { color: var(--danger); }
+  
+  /* HOLDINGS TABLE */
+  .holdings-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 10px; margin-top: 15px; }
+  .holdings-table th { color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em; padding: 6px; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left; }
+  .holdings-table td { padding: 6px; }
+  .holding-input { width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: var(--white); font-family: var(--font-mono); font-size: 11px; padding: 4px; border-radius: 2px; }
+  .holding-input:focus { border-color: var(--teal-mid); outline: none; }
+
+  /* SURGICAL: Modal Tooltip Engine */
+  .modal-tt-wrap { position: relative; width: 100%; display: flex; justify-content: space-between; align-items: center; }
+  .modal-tt { position: absolute; bottom: 100%; right: auto; left: 0; background: #060b14; border: 1px solid var(--teal-mid); padding: 12px; border-radius: 4px; opacity: 0; pointer-events: none; transition: 0.3s; transform: translateY(-5px); z-index: 100; font-family: var(--font-serif); font-size: 11px; color: var(--muted); line-height: 1.4; width: 280px; text-transform: none; letter-spacing: normal; font-weight: normal; box-shadow: 0 10px 25px rgba(0,0,0,0.9); }
+  .modal-tt strong { font-family: var(--font-mono); color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em; font-size: 9px; display: block; margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 3px;}
+  .modal-tt-wrap:hover .modal-tt { opacity: 1; transform: translateY(-10px); }
+
+  /* SURGICAL: Floating Trust Tooltip */
+  #trust-firewall-tooltip { position: absolute; background: #060b14; border: 1px solid var(--shield); padding: 15px; border-radius: 4px; opacity: 0; pointer-events: none; transition: 0.2s; z-index: 200; font-family: var(--font-serif); font-size: 11px; color: var(--muted); line-height: 1.5; width: 280px; box-shadow: 0 10px 25px rgba(0,0,0,0.9); }
+  #trust-firewall-tooltip strong { font-family: var(--font-mono); color: var(--shield); text-transform: uppercase; letter-spacing: 0.1em; font-size: 10px; display: block; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px;}
+
+  /* === CINEMATIC OVERLAY === */
+  #cinematic-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-navy); background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px); background-size: 40px 40px; z-index: 9999; display: none; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
+  #cinematic-overlay.active { display: flex; }
+  #cinematic-overlay .c-stage { width: 100%; max-width: 1500px; display: flex; flex-direction: column; align-items: center; }
+  #cinematic-overlay .c-svg { width: 100%; height: auto; max-height: 80vh; overflow: visible; }
+  #cinematic-overlay .c-estate-block { fill: rgba(29,158,117,0.05); stroke: #5DCAA5; stroke-width: 1.5; }
+  #cinematic-overlay .c-scanner { stroke: #C9A84C; stroke-width: 2; stroke-dasharray: 4 8; opacity: 0; animation: cScan 5s linear infinite; }
+  @keyframes cScan { 0% { transform: translateY(-50px); opacity: 0; } 5% { opacity: 0.8; } 90% { opacity: 0.8; } 95% { transform: translateY(650px); opacity: 0; } 100% { transform: translateY(650px); opacity: 0; } }
+  #cinematic-overlay .c-log text { font-family: var(--font-mono); font-size: 11px; fill: rgba(255,255,255,0.2); text-transform: uppercase; letter-spacing: 0.1em; }
+  #cinematic-overlay .c-log-1 { animation: cLogPulse 5s infinite 0s; }
+  #cinematic-overlay .c-log-2 { animation: cLogPulse 5s infinite 1.25s; }
+  #cinematic-overlay .c-log-3 { animation: cLogPulse 5s infinite 2.5s; }
+  #cinematic-overlay .c-log-4 { animation: cLogPulse 5s infinite 3.75s; }
+  @keyframes cLogPulse { 0%, 100% { fill: rgba(255,255,255,0.2); } 10%, 25% { fill: #C9A84C; } 30%, 95% { fill: rgba(255,255,255,0.2); } }
+  #cinematic-overlay .c-wave { fill: none; stroke: #e24b4a; stroke-width: 2; opacity: 0; animation: cShock 5s cubic-bezier(0.2,0.8,0.2,1) infinite 2.5s; }
+  #cinematic-overlay .c-shield { fill: rgba(93,202,165,0.05); stroke: #5DCAA5; stroke-width: 2; stroke-dasharray: 8 8; opacity: 0; transform-origin: 562.5px 330px; animation: cShield 5s cubic-bezier(0.2,0.8,0.2,1) infinite 2.5s; }
+  @keyframes cShock { 0% { r: 500; opacity: 0; stroke-width: 1; } 10% { opacity: 0.6; stroke-width: 4; } 25% { r: 240; opacity: 0; stroke-width: 1; } 100% { r: 240; opacity: 0; } }
+  @keyframes cShield { 0% { opacity: 0; transform: scale(0.95); } 20% { opacity: 1; transform: scale(1.02); } 25% { opacity: 1; transform: scale(1); } 40% { opacity: 0; transform: scale(1); } 100% { opacity: 0; } }
+  #cinematic-overlay .c-alert { font-family: var(--font-mono); font-size: 14px; fill: #e24b4a; text-transform: uppercase; letter-spacing: 0.2em; text-anchor: middle; opacity: 0; animation: cAlert 5s infinite 2.5s; }
+  #cinematic-overlay .c-success { font-family: var(--font-mono); font-size: 13px; fill: #5DCAA5; text-transform: uppercase; letter-spacing: 0.2em; text-anchor: middle; opacity: 0; animation: cSucc 5s infinite 3.5s; }
+  @keyframes cAlert { 0%, 100% { opacity: 0; } 10%, 20%, 30% { opacity: 1; } 15%, 25% { opacity: 0.2; } 35% { opacity: 0; } }
+  @keyframes cSucc { 0%, 100% { opacity: 0; transform: translateY(5px); } 10%, 40% { opacity: 1; transform: translateY(0); } 50% { opacity: 0; transform: translateY(-5px); } }
+  #cinematic-overlay .c-ht { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; text-anchor: middle; font-weight: bold; }
+  #cinematic-status { font-family: var(--font-mono); font-size: 12px; color: #C9A84C; text-transform: uppercase; letter-spacing: 0.4em; margin-top: 60px; animation: cPulse 2s infinite; }
+  @keyframes cPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+</style>
+</head>
+<body>
+
+  <header>
+    <div class="header-left">
+      <a href="#" class="brand">DATUM <span>F<span class="pipe">|</span>I</span></a>
+    </div>
+    <div class="header-right">
+      <nav class="global-nav">
+        <a href="/" class="nav-link">HOME</a>
+        <a href="/studio.html" class="nav-link active">STUDIO</a>
+        <a href="/philosophy.html" class="nav-link">PHILOSOPHY</a>
+      </nav>
+      <button class="feedback-btn">SHARE FEEDBACK</button>
+    </div>
+  </header>
+
+  <div class="studio-layout">
+    
+    <div class="drafting-panel">
+      
+      <a href="#" class="return-home">← Return to Overview</a>
+
+      <h1>Draft Your Estate</h1>
+      <div class="panel-sub">Map the dimensions of your wealth</div>
+
+      <div class="studio-section">
+        <div class="section-header-wrapper">
+            <button class="section-tag" onclick="toggleSection('sec-profile', this)" style="border:none; margin:0; padding:0; flex:1;">
+                <span>01 / Architect Profile</span> <span class="toggle-icon">+</span>
+            </button>
+            <button class="pin-btn" onclick="togglePin('sec-profile', this)" title="Pin section open">📌</button>
+        </div>
+        <div id="sec-profile" class="section-content" style="display: none;">
+          
+          <div class="precision-motto">Precision in. Precision out.</div>
+
+          <div class="architect-box">
+            
+            <input type="text" id="primary-name" class="name-input" value="Primary Architect" maxlength="20">
+            
+            <div class="field-row">
+              <div>
+                <div class="input-label">Date of Birth</div>
+                <input type="text" class="small-field" id="pri-dob" value="08 / 1982">
+              </div>
+              <div>
+                <div class="input-label">Location (Tax Base)</div>
+                <input type="text" class="small-field" value="Wesley Chapel, FL">
+              </div>
+            </div>
+            
+            <div class="field-row">
+              <div class="salary-container" style="position: relative;">
+                <div class="input-label">Gross Annual Salary</div>
+                <input type="text" class="small-field curr-format" id="pri-salary" value="$100,000" oninput="updateSalaryTT('pri'); calculateUpkeepLoad(); updateAnalysisText();">
+                <div class="salary-tooltip" id="pri-salary-tt"></div>
+              </div>
+              <div>
+                <div class="input-label">Effective Tax Rate</div>
+                <div style="display: flex; align-items: center; background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; padding: 2px 6px;">
+                   <input type="number" id="eff-tax-rate" class="small-field" value="22" style="border:none; padding: 2px; width:100%;" oninput="updateAnalysisText()">
+                   <span style="color:var(--muted); font-family:var(--font-mono); font-size:9px;">%</span>
+                </div>
+              </div>
+            </div>
+            <div class="field-row" style="grid-template-columns: 1fr;">
+              <div>
+                <div class="input-label">Filing Status</div>
+                <select class="small-field" style="background: var(--bg-navy); color: white; border: 1px solid rgba(255,255,255,0.1);">
+                   <option>Single / Individual</option>
+                   <option selected>Married Filing Jointly</option>
+                   <option>Married Filing Separately</option>
+                   <option>Head of Household</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field-row" style="margin-top: 15px;">
+              <div>
+                <div class="input-label">Target Retirement Date</div>
+                <input type="text" class="small-field" id="target-ret" value="03 / 2035" oninput="updateSVGs()">
+              </div>
+              <div>
+                <div class="input-label">Structural Lifespan (Years)</div>
+                <input type="number" class="small-field" value="40" min="1" max="100">
+              </div>
+            </div>
+
+            <div class="input-label" style="margin-top: 15px;">Social Security Strategy</div>
+            <div class="ss-group">
+              <button class="ss-btn" type="button"><strong>62</strong><span>Early</span></button>
+              <button class="ss-btn active" type="button"><strong>67</strong><span>Full</span></button>
+              <button class="ss-btn" type="button"><strong>70</strong><span>Optimal</span></button>
+            </div>
+
+            <div class="field-row" style="margin-top: 15px;">
+              <div>
+                <div class="input-label">Est. Annual SS</div>
+                <input type="text" class="small-field curr-format" value="$38,000">
+              </div>
+            </div>
+
+            <div class="toggle-row" style="margin-top: 25px; margin-bottom: 15px; padding-bottom: 0; border: none;">
+              <span class="toggle-label">Co-Architect / Spouse</span>
+              <label class="switch">
+                <input type="checkbox" id="co-arch-toggle">
+                <span class="slider"></span>
+              </label>
+            </div>
+            
+            <div id="co-arch-fields" style="display: none; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
+              <input type="text" id="co-name" class="name-input" value="Co-Architect" maxlength="20">
+              <div class="field-row">
+                <div>
+                  <div class="input-label">Co-Architect DOB</div>
+                  <input type="text" class="small-field" id="co-dob" value="05 / 1980">
+                </div>
+                <div>
+                  <div class="input-label">Est. Annual SS</div>
+                  <input type="text" class="small-field curr-format" value="$24,000">
+                </div>
+              </div>
+              <div class="field-row">
+                <div class="salary-container" style="position: relative;">
+                  <div class="input-label">Co-Arch Salary</div>
+                  <input type="text" class="small-field curr-format" id="co-salary" value="$80,000" oninput="updateSalaryTT('co'); calculateUpkeepLoad(); updateAnalysisText();">
+                  <div class="salary-tooltip" id="co-salary-tt"></div>
+                </div>
+                <div>
+                  <div class="input-label">Target Retirement Date</div>
+                  <input type="text" class="small-field" value="05 / 2040">
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="studio-section">
+        <div class="section-header-wrapper">
+            <button class="section-tag" onclick="toggleSection('sec-drafting', this)" style="border:none; margin:0; padding:0; flex:1;">
+                <span>02 / Estate Drafting</span> <span class="toggle-icon">+</span>
+            </button>
+            <button class="pin-btn" onclick="togglePin('sec-drafting', this)" title="Pin section open">📌</button>
+        </div>
+        <div id="sec-drafting" class="section-content" style="display: none;">
+          
+          <div id="rooms-container">
+            </div>
+
+          <div class="add-space-wrapper">
+            <button class="add-space-btn" id="add-space-btn" type="button">+ Draft Additional Space</button>
+            <div class="space-dropdown" id="space-dropdown">
+              </div>
+            <button class="measure-btn" id="measure-btn" type="button">⤓ ANALYZE STRUCTURAL LOAD</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="studio-section">
+        <div class="section-header-wrapper">
+            <button class="section-tag" onclick="toggleSection('sec-upkeep', this)" style="border:none; margin:0; padding:0; flex:1;">
+                <span>03 / Operating Upkeep</span> <span class="toggle-icon">+</span>
+            </button>
+            <button class="pin-btn" onclick="togglePin('sec-upkeep', this)" title="Pin section open">📌</button>
+        </div>
+        <div id="sec-upkeep" class="section-content" style="display: none;">
+          <div class="panel-sub" style="margin-bottom: 15px; text-transform:none; color:var(--muted); font-size:11px;">Fixed structural overhead. These do not factor into your Range.</div>
+          
+          <div class="plumbing-list" id="plumbing-list">
+             </div>
+          
+          <button class="add-space-btn" type="button" style="margin-top: 10px; padding: 8px; border-style:dashed;" onclick="addUpkeepItem()">+ ADD SYSTEM OVERHEAD</button>
+
+          <div class="panel-sub" style="margin-top: 25px; margin-bottom: 15px; text-transform:none; color:var(--muted); font-size:11px;">Philanthropic Allocations. Voluntary wealth transfer.</div>
+          
+          <div class="plumbing-list" id="charity-list">
+             </div>
+          
+          <button class="add-space-btn" type="button" style="margin-top: 10px; padding: 8px; border-style:dashed; color:var(--gold); border-color:var(--gold);" onclick="addCharityItem()">+ ADD PHILANTHROPIC OUTFLOW</button>
+
+          <div class="plumbing-summary">
+            <div class="plumbing-summary-row">
+              <span>Total Operating Overhead:</span>
+              <span id="total-upkeep-val" style="color:var(--danger); font-size:14px; font-weight:bold;">$0</span>
+            </div>
+            <div class="plumbing-summary-row" style="margin-bottom:0; align-items:center; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px; margin-top:8px;">
+              <span>Capacity Load (Overhead vs. Income):</span>
+              <span id="upkeep-load-pct" class="load-pct">0%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="studio-section">
+        <div class="section-header-wrapper">
+            <button class="section-tag" onclick="toggleSection('sec-datum', this)" style="border:none; margin:0; padding:0; flex:1;">
+                <span>04 / DEFINE YOUR DATUM</span> <span class="toggle-icon">+</span>
+            </button>
+            <button class="pin-btn" onclick="togglePin('sec-datum', this)" title="Pin section open">📌</button>
+        </div>
+        <div id="sec-datum" class="section-content" style="display: none;">
+          <div class="datum-group">
+            <div class="input-label">Target Annual Spend</div>
+            <input type="text" class="datum-input curr-format" id="spend-input" value="$120,000" oninput="updateSVGs()">
+            <div class="metaphor-hint">The benchmark elevation for your financial future.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="studio-section">
+        <div class="section-header-wrapper">
+            <button class="section-tag" onclick="toggleSection('sec-climate', this)" style="border:none; margin:0; padding:0; flex:1;">
+                <span>05 / Climate Control</span> <span class="toggle-icon">+</span>
+            </button>
+            <button class="pin-btn" onclick="togglePin('sec-climate', this)" title="Pin section open">📌</button>
+        </div>
+        
+        <div id="sec-climate" class="section-content" style="display: none;">
+          <div class="panel-sub" style="margin-bottom: 15px; text-transform:none; color:var(--muted); font-size:11px; line-height:1.4;">Establish the macroeconomic weather conditions your architecture must withstand. This calibrates the algorithmic blend used to stress-test your estate and project your Range.</div>
+          
+          <div class="climate-grid">
+            
+            <div class="climate-option" data-outlook="History Repeats">
+              <div class="climate-tooltip">
+                <div class="tt-title">Active Methodology & Weighting</div>
+                <div class="tt-row"><span>Historical Bootstrap</span><span class="tt-val">25%</span></div>
+                <div class="tt-row"><span>Parametric Log-Normal</span><span class="tt-val">25%</span></div>
+                <div class="tt-row"><span>Regime Bootstrap</span><span class="tt-val">25%</span></div>
+                <div class="tt-row"><span>CAPE-Adjusted</span><span class="tt-val">25%</span></div>
+              </div>
+              <div class="hvac-header">
+                <span class="climate-name">History Repeats</span>
+                <span class="hvac-badge">[ AMB ]</span>
+              </div>
+              <div class="climate-desc">Equal trust in all models. The full historical record speaks equally.</div>
+            </div>
+            
+            <div class="climate-option active" data-outlook="Valuations Matter">
+              <div class="climate-tooltip">
+                <div class="tt-title">Active Methodology & Weighting</div>
+                <div class="tt-row"><span>Historical Bootstrap</span><span class="tt-val">40%</span></div>
+                <div class="tt-row"><span>Parametric Log-Normal</span><span class="tt-val">30%</span></div>
+                <div class="tt-row"><span>Regime Bootstrap</span><span class="tt-val">15%</span></div>
+                <div class="tt-row"><span>CAPE-Adjusted</span><span class="tt-val">15%</span></div>
+              </div>
+              <div class="hvac-header">
+                <span class="climate-name">Valuations Matter</span>
+                <span class="hvac-badge">[ BARO ]</span>
+              </div>
+              <div class="climate-desc">Current high CAPE predicts lower returns. Trusts valuation-aware models more.</div>
+            </div>
+
+            <div class="climate-option" data-outlook="Cautious">
+              <div class="climate-tooltip">
+                <div class="tt-title">Active Methodology & Weighting</div>
+                <div class="tt-row"><span>Parametric Log-Normal</span><span class="tt-val">50%</span></div>
+                <div class="tt-row"><span>Historical Bootstrap</span><span class="tt-val">30%</span></div>
+                <div class="tt-row"><span>Regime Bootstrap</span><span class="tt-val">10%</span></div>
+                <div class="tt-row"><span>CAPE-Adjusted</span><span class="tt-val">10%</span></div>
+              </div>
+              <div class="hvac-header">
+                <span class="climate-name">Cautious</span>
+                <span class="hvac-badge">[ CRYO ]</span>
+              </div>
+              <div class="climate-desc">Structurally pessimistic. Overweights the regime model mapping expensive markets.</div>
+            </div>
+
+            <div class="climate-option" data-outlook="Optimistic">
+              <div class="climate-tooltip">
+                <div class="tt-title">Active Methodology & Weighting</div>
+                <div class="tt-row"><span>Regime Bootstrap</span><span class="tt-val">35%</span></div>
+                <div class="tt-row"><span>Historical Bootstrap</span><span class="tt-val">25%</span></div>
+                <div class="tt-row"><span>CAPE-Adjusted</span><span class="tt-val">25%</span></div>
+                <div class="tt-row"><span>Parametric Log-Normal</span><span class="tt-val">15%</span></div>
+              </div>
+              <div class="hvac-header">
+                <span class="climate-name">Optimistic</span>
+                <span class="hvac-badge">[ THRM ]</span>
+              </div>
+              <div class="climate-desc">Trusts the full historical record more — markets have always eventually recovered.</div>
+            </div>
+            
+            <div class="climate-option" id="custom-climate-btn" data-outlook="Custom Matrix" onclick="openCustomMatrix(event)">
+               <div class="climate-tooltip" id="custom-tt">
+                <div class="tt-title">Active Methodology & Weighting</div>
+                <div class="tt-row"><span>User Defined Matrix</span><span class="tt-val">100%</span></div>
+              </div>
+              <div class="hvac-header">
+                <span class="climate-name">Custom Matrix</span>
+                <span class="hvac-badge">[ OVR ]</span>
+              </div>
+              <div class="climate-desc">Manually define your exact confidence weighting across all 4 models.</div>
+              
+              <div class="custom-climate-box" id="custom-climate-box" onclick="event.stopPropagation();">
+                <div class="custom-row"><label>Historical</label><input type="number" class="c-weight" value="25" min="0" max="100"></div>
+                <div class="custom-row"><label>Parametric</label><input type="number" class="c-weight" value="25" min="0" max="100"></div>
+                <div class="custom-row"><label>Regime</label><input type="number" class="c-weight" value="25" min="0" max="100"></div>
+                <div class="custom-row"><label>CAPE</label><input type="number" class="c-weight" value="25" min="0" max="100"></div>
+                <div class="custom-footer">
+                  <span class="sum-counter valid" id="c-sum">100 / 100</span>
+                  <button class="custom-save valid" id="c-save" type="button" onclick="closeCustomMatrix(event)">Confirm Matrix</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal-container">
+        <button class="action-btn" type="button">REVEAL YOUR RANGE</button>
+        <div class="reveal-tooltip">
+          <strong>THE PHYSICS OF YOUR RANGE</strong>
+          The simulation engine relies on the exact coordinates you provide. Core structural metrics—Age, Retirement Horizon, Target Spend (Datum), Tax Rates, and heavily-weighted assets (401k, IRAs, Pensions)—directly calibrate the thousands of market scenarios in your projected Range. Liabilities map your Net Worth, but do not dictate the survival rate. Calibrate your inputs truthfully to generate a structurally sound projection.
+        </div>
+      </div>
+      
+      <div class="privacy-note">
+        Your architecture is computed entirely in your browser.<br>We never store, sell, or see your data.
+      </div>
+      
+    </div>
+
+    <div class="canvas-wrapper" id="canvas-wrapper">
+      
+      <div id="trust-firewall-tooltip">
+         <strong>LEGAL FIREWALL</strong>Capital housed within this wing is legally decoupled from the primary Estate. It is immune to core structural collapse, shielded from standard liability modeling, and designated exclusively for generational transfer.
+      </div>
+
+      <div class="blueprint-container" id="blueprint-container">
+        
+        <div class="hud-panel hud-overview" onclick="document.getElementById('hud-diag').classList.toggle('open')" style="cursor:pointer; transition: border-color 0.3s;" onmouseover="this.style.borderColor='var(--teal-mid)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
+          <div class="hud-header-flex">
+             <div class="hud-title" style="margin-bottom:0; padding-bottom:0; border:none;">ESTATE SQUARE FOOTAGE</div>
+             <select class="hud-timeframe" id="hud-timeframe" onchange="updateSVGs()" onclick="event.stopPropagation()">
+                <option value="1">ANNUALLY</option>
+                <option value="12">MONTHLY</option>
+                <option value="52">WEEKLY</option>
+                <option value="365">DAILY</option>
+             </select>
+          </div>
+          <div class="estate-total-val" id="gross-estate-val">$0</div>
+          
+          <div class="system-diagnostics" id="hud-diag">
+             <div class="diag-row"><span class="v-lbl">System Velocity</span><span class="v-in" id="v-net-val" style="color:var(--white); font-weight:bold;">$0 / YR</span></div>
+             <div class="diag-row"><span class="v-lbl">Capacity Load</span><span class="v-in" id="hud-load-pct" style="color:var(--danger); font-weight:bold;">0%</span></div>
+             <div class="diag-row" id="charity-hud-row" style="display:none;"><span class="v-lbl">Philanthropic Yield</span><span class="v-in" id="hud-charity-val" style="color:var(--gold); font-weight:bold;">$0 (0%)</span></div>
+             <div class="diag-row"><span class="v-lbl">Capital Injection</span><span class="v-in" id="c-mo" style="color:var(--teal-mid); font-weight:bold;">$0 / MO</span></div>
+             <div class="diag-row"><span class="v-lbl">Compound Yield</span><span class="v-in" id="ie-mo" style="color:var(--teal-mid); font-weight:bold;">$0 / MO</span></div>
+             <div class="diag-row"><span class="v-lbl">Interest Drag</span><span class="v-in" id="ip-mo" style="color:var(--danger); font-weight:bold;">$0 / MO</span></div>
+          </div>
+        </div>
+
+        <div class="hud-panel hud-analysis" id="estate-analysis">
+          <div class="hud-title" style="color: var(--gold);">ESTATE STRUCTURAL LOAD</div>
+          <div class="analysis-text" id="analysis-text-body">
+            </div>
+        </div>
+
+        <div class="hud-panel lens-controls">
+           <div class="lens-tt-wrap">
+               <button class="lens-btn" id="btn-shock" onclick="toggleShock()">⚡ THERMODYNAMIC SHOCK</button>
+               <div class="lens-tt"><strong>Simulate Collapse</strong>Applies a -30% volatility shock to all liquid equities. Maps structural contraction and velocity decay in real-time.</div>
+           </div>
+           <div class="lens-tt-wrap">
+               <button class="lens-btn" id="btn-thermal" onclick="toggleThermal()">🌡️ THERMAL IMAGING</button>
+               <div class="lens-tt"><strong>Tax-Drag Topography</strong>Visualizes tax friction. Pre-Tax (hot orange) indicates trapped tax liabilities. Roth (cool blue) indicates zero-friction capital. Trusts glow shielded purple, and active Debts burn red.</div>
+           </div>
+           <div class="lens-tt-wrap">
+               <button class="lens-btn" id="btn-routing" onclick="toggleRouting()">🔄 OUTFLOW ROUTING</button>
+               <div class="lens-tt"><strong>Visualize Plumbing</strong>Traces the algorithmic sequence of capital extraction (Liquid → Pre-Tax → Roth). It also maps high-velocity pipelines from your Liquid reserves to any liability explicitly marked 'Prioritize for Demolition'.</div>
+           </div>
+           <div class="lens-tt-wrap">
+               <button class="lens-btn" id="btn-datum" onclick="toggleDatum()">📏 DATUM ELEVATION</button>
+               <div class="lens-tt"><strong>Target Spend Benchmark</strong>Draws a fixed laser line representing your Target Annual Spend to visually scale Estate coverage.</div>
+           </div>
+        </div>
+
+        <svg class="crosshair-layer" viewBox="0 0 1400 1100">
+           <defs>
+            <pattern id="friction-pattern" patternUnits="userSpaceOnUse" width="10" height="10" patternTransform="rotate(45)">
+              <rect width="10" height="10" fill="rgba(29, 158, 117, 0.05)"/>
+              <line x1="0" y1="0" x2="0" y2="10" stroke="rgba(255,255,255,0.15)" stroke-width="2" />
+            </pattern>
+          </defs>
+          <g id="ch-machine">
+            <line x1="700" y1="-5000" x2="700" y2="5000" class="crosshair" />
+            <line x1="-5000" y1="550" x2="5000" y2="550" class="crosshair" />
+            <circle cx="700" cy="550" r="4" class="crosshair-dot" />
+          </g>
+        </svg>
+
+        <svg class="blueprint-svg" viewBox="0 0 1400 1100" id="bp-svg">
+           </svg>
+
+      </div>
+    </div>
+
+  </div>
+
+  <div id="account-modal-overlay" class="modal-overlay">
+     <div class="modal-card" id="modal-card">
+         <button class="modal-close" onclick="closeAccountModal()">×</button>
+         <div class="hud-title" id="modal-acc-title" style="color:var(--white); font-size:16px; margin-bottom: 20px; text-transform:none;">Account Details</div>
+         <div id="modal-dynamic-content"></div>
+     </div>
+  </div>
+
+  <script>
+    // --- FORMATTING LOGIC ---
+    function formatCurrency(val) {
+      if (!val) return '';
+      let num = val.replace(/[^0-9.-]/g, '');
+      if (num === '') return '';
+      let isNeg = num.startsWith('-');
+      num = num.replace(/-/g, '');
+      let parsed = parseInt(num, 10);
+      if (isNaN(parsed)) return '';
+      return (isNeg ? '-' : '') + '$' + parsed.toLocaleString('en-US');
+    }
+
+    document.addEventListener('input', function (e) {
+      if (e.target.classList.contains('curr-format')) {
+        let originalLen = e.target.value.length;
+        let caretPos = e.target.selectionStart;
+        e.target.value = formatCurrency(e.target.value);
+        let newLen = e.target.value.length;
+        e.target.setSelectionRange(caretPos + (newLen - originalLen), caretPos + (newLen - originalLen));
+      }
+    });
+
+    // --- DOM DATE INTERCEPTOR ---
+    window.enforceDateCap = function(e) {
+        let val = e.target.value;
+        if(!val) return;
+        let parts = val.split('-');
+        if(parts[0] && parts[0].length > 4) {
+            parts[0] = parts[0].substring(0, 4);
+            e.target.value = parts.join('-');
+        }
+    };
+
+    const spendInput = document.getElementById('spend-input');
+    spendInput.addEventListener('input', (e) => { 
+        updateSVGs();
+    });
+
+    // --- ACCORDION PINNING LOGIC ---
+    const pinnedSections = {
+        'sec-profile': false,
+        'sec-drafting': false,
+        'sec-upkeep': false,
+        'sec-datum': false,
+        'sec-climate': false
+    };
+    const allSections = Object.keys(pinnedSections);
+
+    window.toggleSection = function(id, btn) {
+        const el = document.getElementById(id);
+        const icon = btn.querySelector('.toggle-icon');
+        const isOpening = el.style.display === 'none';
+
+        if (isOpening) {
+            allSections.forEach(sec => {
+                if (sec !== id && !pinnedSections[sec]) {
+                    document.getElementById(sec).style.display = 'none';
+                    const otherBtn = document.querySelector(`[onclick="toggleSection('${sec}', this)"]`);
+                    if(otherBtn) otherBtn.querySelector('.toggle-icon').innerText = '+';
+                }
+            });
+            el.style.display = 'block';
+            icon.innerText = '−';
+        } else {
+            el.style.display = 'none';
+            icon.innerText = '+';
+        }
+    }
+
+    window.togglePin = function(id, btn) {
+        pinnedSections[id] = !pinnedSections[id];
+        btn.style.opacity = pinnedSections[id] ? '1' : '0.3';
+        if(pinnedSections[id]) {
+            document.getElementById(id).style.display = 'block';
+            const secBtn = document.querySelector(`[onclick="toggleSection('${id}', this)"]`);
+            if(secBtn) secBtn.querySelector('.toggle-icon').innerText = '−';
+        }
+    }
+
+    // --- SALARY TOOLTIP LOGIC ---
+    window.updateSalaryTT = function(type) {
+        let val = document.getElementById(type + '-salary').value;
+        let num = parseInt(val.replace(/[^0-9]/g, ''), 10) || 0;
+        let biweekly = Math.round(num / 26);
+        let monthly = Math.round(num / 12);
+        let daily = Math.round(num / 365);
+        
+        const tt = document.getElementById(type + '-salary-tt');
+        if(tt) {
+            tt.innerHTML = `
+                <div class="sal-tt-row"><span>Monthly</span><span class="sal-tt-val">$${monthly.toLocaleString()}</span></div>
+                <div class="sal-tt-row"><span>Bi-Weekly</span><span class="sal-tt-val">$${biweekly.toLocaleString()}</span></div>
+                <div class="sal-tt-row"><span>Daily</span><span class="sal-tt-val">$${daily.toLocaleString()}</span></div>
+            `;
+        }
+    }
+    updateSalaryTT('pri');
+    updateSalaryTT('co');
+
+    // --- EDITABLE NAMES SYNC ---
+    const primaryNameInput = document.getElementById('primary-name');
+    const coNameInput = document.getElementById('co-name');
+
+    function updateArchitectNames() {
+        updateSVGs(); 
+        renderInputs();
+    }
+    primaryNameInput.addEventListener('input', updateArchitectNames);
+    coNameInput.addEventListener('input', updateArchitectNames);
+
+    // --- SS STRATEGY & CLIMATE BUTTONS ---
+    const btns = document.querySelectorAll('.ss-btn');
+    btns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        btns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+
+    const climateOpts = document.querySelectorAll('.climate-option:not(#custom-climate-btn)');
+    const customBtn = document.getElementById('custom-climate-btn');
+    const customBox = document.getElementById('custom-climate-box');
+
+    climateOpts.forEach(opt => {
+      opt.addEventListener('click', () => {
+        document.querySelectorAll('.climate-option').forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+        customBox.style.display = 'none'; 
+      });
+    });
+
+    window.openCustomMatrix = function(e) {
+        document.querySelectorAll('.climate-option').forEach(o => o.classList.remove('active'));
+        customBtn.classList.add('active');
+        customBox.style.display = 'block';
+    }
+
+    window.closeCustomMatrix = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const cSave = document.getElementById('c-save');
+        cSave.classList.add('saved');
+        cSave.innerText = "Saved ✓";
+        setTimeout(() => {
+          customBox.style.display = 'none';
+          cSave.classList.remove('saved');
+          cSave.innerText = "Confirm Matrix";
+        }, 800);
+    }
+
+    const cWeights = document.querySelectorAll('.c-weight');
+    const cSum = document.getElementById('c-sum');
+    const cSave = document.getElementById('c-save');
+    cWeights.forEach(w => {
+      w.addEventListener('input', () => {
+        let sum = 0;
+        cWeights.forEach(inp => sum += Number(inp.value) || 0);
+        cSum.innerText = `${sum} / 100`;
+        if(sum === 100) {
+          cSum.classList.add('valid');
+          cSave.classList.add('valid');
+        } else {
+          cSum.classList.remove('valid');
+          cSave.classList.remove('valid');
+        }
+      });
+    });
+
+    // --- CO-ARCHITECT LOGIC ---
+    const coToggle = document.getElementById('co-arch-toggle');
+    const coArchFields = document.getElementById('co-arch-fields');
+    
+    coToggle.addEventListener('change', () => {
+      coArchFields.style.display = coToggle.checked ? 'block' : 'none';
+      if(!coToggle.checked) {
+        let i = state.accounts.length;
+        while (i--) {
+            if (getBaseType(state.accounts[i].baseId).type === 'coarch') {
+                state.accounts.splice(i, 1);
+            }
+        }
+      }
+      updateArchitectNames();
+      updateSVGs();
+      calculateUpkeepLoad();
+    });
+
+    // --- PLUMBING / UPKEEP LOGIC & CHARITY LOGIC ---
+    let upkeepItems = [
+      { id: 'upk_1', name: 'Housing Utilities', cost: 350 },
+      { id: 'upk_2', name: 'Groceries / Provisions', cost: 800 }
+    ];
+    let charityItems = [];
+
+    window.renderUpkeep = function() {
+        const list = document.getElementById('plumbing-list');
+        const cList = document.getElementById('charity-list');
+        list.innerHTML = '';
+        cList.innerHTML = '';
+        let total = 0;
+        let cTotal = 0;
+
+        upkeepItems.forEach((item, index) => {
+            total += item.cost;
+            list.innerHTML += `
+              <div class="plumbing-row">
+                 <input type="text" class="small-field plumbing-name" value="${item.name}" placeholder="Expense Name" oninput="updateUpkeepItem('${item.id}', 'name', this.value, false)">
+                 <input type="text" class="small-field plumbing-cost curr-format" value="$${item.cost.toLocaleString('en-US')}" placeholder="$0" oninput="updateUpkeepItem('${item.id}', 'cost', this.value, false)">
+                 <button class="plumbing-delete" onclick="removeUpkeepItem('${item.id}', false)">×</button>
+              </div>
+            `;
+        });
+
+        charityItems.forEach((item, index) => {
+            cTotal += item.cost;
+            cList.innerHTML += `
+              <div class="plumbing-row">
+                 <input type="text" class="small-field plumbing-name" value="${item.name}" placeholder="Philanthropic Org" oninput="updateUpkeepItem('${item.id}', 'name', this.value, true)">
+                 <input type="text" class="small-field plumbing-cost curr-format" value="$${item.cost.toLocaleString('en-US')}" placeholder="$0" oninput="updateUpkeepItem('${item.id}', 'cost', this.value, true)">
+                 <button class="plumbing-delete" onclick="removeUpkeepItem('${item.id}', true)">×</button>
+              </div>
+            `;
+        });
+
+        document.getElementById('total-upkeep-val').innerText = `$${total.toLocaleString('en-US')}`;
+        
+        let cRow = document.getElementById('charity-hud-row');
+        if(cTotal > 0) {
+             cRow.style.display = 'flex';
+        } else {
+             cRow.style.display = 'none';
+        }
+
+        calculateUpkeepLoad(total, cTotal);
+    }
+
+    window.addUpkeepItem = function() {
+        upkeepItems.push({ id: 'upk_' + Math.random().toString(36).substr(2, 9), name: '', cost: 0 });
+        renderUpkeep();
+    }
+    
+    window.addCharityItem = function() {
+        charityItems.push({ id: 'char_' + Math.random().toString(36).substr(2, 9), name: '', cost: 0 });
+        renderUpkeep();
+    }
+
+    window.removeUpkeepItem = function(id, isCharity) {
+        if(isCharity) charityItems = charityItems.filter(item => item.id !== id);
+        else upkeepItems = upkeepItems.filter(item => item.id !== id);
+        renderUpkeep();
+    }
+
+    window.updateUpkeepItem = function(id, field, val, isCharity) {
+        let arr = isCharity ? charityItems : upkeepItems;
+        const item = arr.find(i => i.id === id);
+        if(item) {
+            if(field === 'cost') item.cost = parseInt(val.replace(/[^0-9]/g, ''), 10) || 0;
+            else item.name = val;
+            
+            if(field === 'cost') {
+               let total = upkeepItems.reduce((sum, i) => sum + i.cost, 0);
+               let cTotal = charityItems.reduce((sum, i) => sum + i.cost, 0);
+               document.getElementById('total-upkeep-val').innerText = `$${total.toLocaleString('en-US')}`;
+               
+               let cRow = document.getElementById('charity-hud-row');
+               if(cTotal > 0) cRow.style.display = 'flex'; else cRow.style.display = 'none';
+
+               calculateUpkeepLoad(total, cTotal);
+               updateAnalysisText(); 
+               updateSVGs();
+            }
+        }
+    }
+
+    window.calculateUpkeepLoad = function(manualTotal = null, cTotal = null) {
+        let totalUpkeep = manualTotal !== null ? manualTotal : upkeepItems.reduce((sum, i) => sum + i.cost, 0);
+        let totalCharity = cTotal !== null ? cTotal : charityItems.reduce((sum, i) => sum + i.cost, 0);
+        
+        let priSal = parseInt(document.getElementById('pri-salary').value.replace(/[^0-9]/g, ''), 10) || 0;
+        let coSal = 0;
+        if(document.getElementById('co-arch-toggle').checked) {
+            coSal = parseInt(document.getElementById('co-salary').value.replace(/[^0-9]/g, ''), 10) || 0;
+        }
+        
+        let monthlyGrossIncome = (priSal + coSal) / 12;
+        let loadPct = 0;
+        let charPct = 0;
+        if(monthlyGrossIncome > 0) {
+            loadPct = Math.round((totalUpkeep / monthlyGrossIncome) * 100);
+            charPct = Math.round((totalCharity / monthlyGrossIncome) * 100);
+        }
+        
+        const pctEl = document.getElementById('upkeep-load-pct');
+        const hudPctEl = document.getElementById('hud-load-pct');
+        
+        if(pctEl) pctEl.innerText = loadPct + '%';
+        if(hudPctEl) hudPctEl.innerText = loadPct + '%';
+
+        if(pctEl) {
+            if(loadPct < 50) {
+                pctEl.classList.add('healthy');
+                if(hudPctEl) hudPctEl.style.color = "var(--teal-mid)";
+            } else {
+                pctEl.classList.remove('healthy');
+                if(hudPctEl) hudPctEl.style.color = "var(--danger)";
+            }
+        }
+    }
+
+
+    // --- DYNAMIC DATA & SVG ENGINE ---
+    const rDataList = [
+      { id: 'property', type: 'joint', taxCode: 'physical', title: 'Real Estate', meta: 'The Grounds', desc: 'Physical asset footprint.' },
+      { id: 'auto', type: 'joint', taxCode: 'physical', title: 'Vehicle', meta: 'The Driveway', desc: 'Depreciating physical asset.' },
+      { id: 'checking', type: 'joint', taxCode: 'liquid', hasInflow: true, hasInterest: true, title: 'Checking', meta: 'The Foyer', desc: 'Operating cash flow.' },
+      { id: 'taxable', type: 'joint', taxCode: 'liquid', hasInflow: true, hasInterest: false, isInvestment: true, title: 'Taxable Brokerage', meta: 'The Living Room', desc: 'Capital gains and dividends. Highly liquid.' },
+      { id: 'savings', type: 'joint', taxCode: 'liquid', hasInflow: true, hasInterest: true, title: 'Savings', meta: 'The Safe', desc: 'Cash buffer.' },
+      { id: 'crypto', type: 'joint', taxCode: 'liquid', hasInflow: true, hasInterest: false, isInvestment: true, title: 'Crypto', meta: 'The Game Room', desc: 'High volatility, speculative assets.' },
+      { id: 'collectibles', type: 'joint', taxCode: 'physical', title: 'Collectibles', meta: 'The Arcade', desc: 'Excluded from Range models. Tracks physical net worth.' },
+      
+      { id: 'mortgage_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Mortgage', meta: 'The Moat', desc: 'Liability. Subtracts from Estate Sq Footage.' },
+      { id: 'auto_debt_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Auto Loan', meta: 'The Garage', desc: 'Liability. Subtracts from Estate Sq Footage.' },
+      { id: 'rev_debt_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Revolving Debt', meta: 'The Furnace', desc: 'Liability. Subtracts from Estate Sq Footage.' },
+      { id: 'personal_loan_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Personal Loan', meta: 'The Ledger', desc: 'Liability. Subtracts from Estate Sq Footage.' },
+
+      // SURGICAL: GENERATIONAL TRANSFER VEHICLES
+      { id: 'trust', type: 'joint', taxCode: 'trust', title: 'Irrevocable Trust', meta: 'The Vault Annex', desc: 'Generational wealth transfer. Shielded from core liability footprint.' },
+      { id: '529plan', type: 'joint', taxCode: 'trust', isInvestment: true, title: '529 Education Plan', meta: 'The Academy', desc: 'Tax-advantaged generational education transfer.' },
+
+      { id: 'checking_primary', type: 'primary', taxCode: 'liquid', hasInflow: true, hasInterest: true, title: 'Checking', meta: 'The Foyer', desc: 'Operating cash flow.' },
+      { id: 'savings_primary', type: 'primary', taxCode: 'liquid', hasInflow: true, hasInterest: true, title: 'Savings', meta: 'The Safe', desc: 'Cash buffer.' },
+      { id: 'crypto_primary', type: 'primary', taxCode: 'liquid', hasInflow: true, hasInterest: false, isInvestment: true, title: 'Crypto', meta: 'The Game Room', desc: 'High volatility, speculative assets.' },
+      { id: 'collectibles_primary', type: 'primary', taxCode: 'physical', title: 'Collectibles', meta: 'The Arcade', desc: 'Excluded from Range models. Tracks physical net worth.' },
+      { id: 'auto_primary', type: 'primary', taxCode: 'physical', title: 'Vehicle', meta: 'The Driveway', desc: 'Depreciating physical asset.' },
+
+      { id: 'pretax401k', type: 'primary', taxCode: 'pretax', hasInflow: true, isInvestment: true, title: 'Pre-Tax 401(k)', meta: 'The Vault', desc: 'Taxed as ordinary income.' },
+      { id: 'roth401k', type: 'primary', taxCode: 'roth', hasInflow: true, isInvestment: true, title: 'Roth 401(k)', meta: 'The Treasury', desc: 'Tax-free growth from employer plan.' },
+      { id: 'tradira', type: 'primary', taxCode: 'pretax', hasInflow: true, isInvestment: true, title: 'Traditional IRA', meta: 'The Library', desc: 'Consolidated pre-tax capital.' },
+      { id: 'rothira', type: 'primary', taxCode: 'roth', hasInflow: true, isInvestment: true, title: 'Roth IRA', meta: 'The Conservatory', desc: 'The tax-free growth environment.' },
+      { id: 'pretax457b', type: 'primary', taxCode: 'pretax', hasInflow: true, isInvestment: true, title: 'Pre-Tax 457(b)', meta: 'The Workshop', desc: 'Accessible penalty-free before 59.5.' },
+      { id: 'roth457b', type: 'primary', taxCode: 'roth', hasInflow: true, isInvestment: true, title: 'Roth 457(b)', meta: 'The Annex', desc: 'Tax-free growth, accessible early.' },
+      { id: 'pension', type: 'primary', taxCode: 'income', hasCOLA: true, title: 'Pension (Annual)', meta: 'The Foundation', desc: 'Secure, fixed income floor.' },
+      
+      { id: 'mortgage_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'Mortgage', meta: 'The Moat', desc: 'Liability. Subtracts from Estate Sq Footage.' },
+      { id: 'auto_debt_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'Auto Loan', meta: 'The Garage', desc: 'Liability. Subtracts from Estate Sq Footage.' },
+      { id: 'student_loan_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'Student Loan', meta: 'The Study', desc: 'Liability. Subtracts from Estate Sq Footage.' },
+      { id: 'rev_debt_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'Revolving Debt', meta: 'The Furnace', desc: 'Liability. Subtracts from Estate Sq Footage.' },
+      { id: 'personal_loan_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'Personal Loan', meta: 'The Ledger', desc: 'Liability. Subtracts from Estate Sq Footage.' },
+
+      { id: 'checking_co', type: 'coarch', taxCode: 'liquid', hasInflow: true, hasInterest: true, title: 'Checking', meta: 'Co-Foyer', desc: 'Operating cash flow.' },
+      { id: 'savings_co', type: 'coarch', taxCode: 'liquid', hasInflow: true, hasInterest: true, title: 'Savings', meta: 'Co-Safe', desc: 'Cash buffer.' },
+      { id: 'crypto_co', type: 'coarch', taxCode: 'liquid', hasInflow: true, hasInterest: false, isInvestment: true, title: 'Crypto', meta: 'Co-Game Room', desc: 'High volatility, speculative assets.' },
+      { id: 'collectibles_co', type: 'coarch', taxCode: 'physical', title: 'Collectibles', meta: 'Co-Arcade', desc: 'Excluded from Range models. Tracks physical net worth.' },
+      { id: 'auto_co', type: 'coarch', taxCode: 'physical', title: 'Vehicle', meta: 'Co-Driveway', desc: 'Depreciating physical asset.' },
+
+      { id: 'pretax401k_co', type: 'coarch', taxCode: 'pretax', hasInflow: true, isInvestment: true, title: 'Pre-Tax 401(k)', meta: 'Co-Vault', desc: 'Taxed as ordinary income.' },
+      { id: 'roth401k_co', type: 'coarch', taxCode: 'roth', hasInflow: true, isInvestment: true, title: 'Roth 401(k)', meta: 'Co-Treasury', desc: 'Tax-free employer growth.' },
+      { id: 'tradira_co', type: 'coarch', taxCode: 'pretax', hasInflow: true, isInvestment: true, title: 'Traditional IRA', meta: 'Co-Library', desc: 'Pre-tax capital.' },
+      { id: 'rothira_co', type: 'coarch', taxCode: 'roth', hasInflow: true, isInvestment: true, title: 'Roth IRA', meta: 'Co-Conservatory', desc: 'Tax-free environment.' },
+      { id: 'pretax457b_co', type: 'coarch', taxCode: 'pretax', hasInflow: true, isInvestment: true, title: 'Pre-Tax 457(b)', meta: 'Co-Workshop', desc: 'Accessible before 59.5.' },
+      { id: 'roth457b_co', type: 'coarch', taxCode: 'roth', hasInflow: true, isInvestment: true, title: 'Roth 457(b)', meta: 'Co-Annex', desc: 'Tax-free growth.' },
+      { id: 'pension_co', type: 'coarch', taxCode: 'income', hasCOLA: true, title: 'Pension (Annual)', meta: 'Co-Foundation', desc: 'Secure income floor.' },
+      
+      { id: 'mortgage_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'Mortgage', meta: 'Co-Moat', desc: 'Liability. Subtracts from Estate Sq Footage.' },
+      { id: 'auto_debt_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'Auto Loan', meta: 'Co-Garage', desc: 'Liability. Subtracts from Estate Sq Footage.' },
+      { id: 'student_loan_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'Student Loan', meta: 'Co-Study', desc: 'Liability. Subtracts from Estate Sq Footage.' },
+      { id: 'rev_debt_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'Revolving Debt', meta: 'Co-Furnace', desc: 'Liability. Subtracts from Estate Sq Footage.' },
+      { id: 'personal_loan_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'Personal Loan', meta: 'Co-Ledger', desc: 'Liability. Subtracts from Estate Sq Footage.' }
+    ];
+
+    const getBaseType = (id) => rDataList.find(r => r.id === id);
+
+    let state = {
+      accounts: [] // Start Blank!
+    };
+
+    let isMeasured = false; 
+    let activeModalId = null;
+
+    // SURGICAL: Lens Machine State
+    let isShocked = false;
+    let isThermal = false;
+    let isRouting = false;
+    let isDatum = false;
+
+    const roomsContainer = document.getElementById('rooms-container');
+    const svgContainer = document.getElementById('bp-svg');
+    const spaceDropdown = document.getElementById('space-dropdown');
+    const addSpaceBtn = document.getElementById('add-space-btn');
+    const measureBtn = document.getElementById('measure-btn');
+    const grossEstateVal = document.getElementById('gross-estate-val');
+    
+    // Lens Engine Toggles
+    window.toggleShock = function() {
+        isShocked = !isShocked;
+        document.getElementById('btn-shock').classList.toggle('active');
+        updateSVGs();
+        updateAnalysisText();
+    }
+    window.toggleThermal = function() {
+        isThermal = !isThermal;
+        document.getElementById('btn-thermal').classList.toggle('active');
+        document.getElementById('bp-svg').classList.toggle('thermal-mode');
+        updateSVGs();
+    }
+    window.toggleRouting = function() {
+        isRouting = !isRouting;
+        document.getElementById('btn-routing').classList.toggle('active');
+        updateSVGs();
+    }
+    window.toggleDatum = function() {
+        isDatum = !isDatum;
+        document.getElementById('btn-datum').classList.toggle('active');
+        updateSVGs();
+    }
+
+    // Trust Firewall Hover
+    window.showTrustTooltip = function(e) {
+        let tt = document.getElementById('trust-firewall-tooltip');
+        tt.style.opacity = 1;
+        tt.style.left = (e.clientX + 20) + 'px';
+        tt.style.top = (e.clientY - 20) + 'px';
+    }
+    window.hideTrustTooltip = function() {
+        document.getElementById('trust-firewall-tooltip').style.opacity = 0;
+    }
+
+    // HUD Toggle
+    window.toggleHUD = function() {
+        document.getElementById('hud-diag').classList.toggle('open');
+    }
+
+    function renderInputs() {
+      const scrollTop = roomsContainer.scrollTop;
+      roomsContainer.innerHTML = '';
+      
+      const isCo = coToggle.checked;
+      const priName = document.getElementById('primary-name').value.toUpperCase() || 'PRIMARY';
+      const coName = document.getElementById('co-name').value.toUpperCase() || 'CO-ARCH';
+
+      state.accounts.forEach(acc => {
+        const base = getBaseType(acc.baseId);
+        if(!base) return;
+        
+        let ownerTag = '';
+        if (base.type === 'coarch') ownerTag = `(${coName})`;
+        else if (base.type === 'primary') ownerTag = `(${priName})`;
+        else if (base.type === 'joint' && isCo) ownerTag = `(JOINT)`;
+        
+        let valStr = acc.value ? formatCurrency(acc.value.toString()) : '';
+        let inflowStr = acc.inflow ? formatCurrency(acc.inflow.toString()) : '';
+
+        let extraRows = '';
+        
+        if (base.hasInflow && base.taxCode !== 'debt') {
+            extraRows += `
+            <div class="contribution-row">
+              <span class="inflow-label">Capital Injection</span>
+              <div class="inflow-input-group">
+                 <input type="text" class="inflow-input curr-format" placeholder="$0" value="${inflowStr}" oninput="updateInflow('${acc.id}', this.value)">
+                 <select class="inflow-freq" onchange="updateFreq('${acc.id}', this.value)">
+                   <option value="1" ${acc.freq==1?'selected':''}>/ YR</option>
+                   <option value="12" ${acc.freq==12?'selected':''}>/ MO</option>
+                   <option value="52" ${acc.freq==52?'selected':''}>/ WK</option>
+                   <option value="365" ${acc.freq==365?'selected':''}>/ DY</option>
+                 </select>
+              </div>
+            </div>`;
+        }
+
+        let opacStyle = acc.exclude ? 'opacity: 0.4;' : '';
+        let isReadOnly = (acc.holdings && acc.holdings.length > 0) ? 'readonly' : '';
+
+        roomsContainer.innerHTML += `
+          <div class="room-input-container active" id="inp-wrapper-${acc.id}" style="${opacStyle}">
+            <button class="delete-room" type="button" onclick="removeInstance('${acc.id}')">×</button>
+            <div class="room-header">
+              <div>
+                 <input type="text" class="editable-room-name" value="${acc.name}" maxlength="20" onchange="updateName('${acc.id}', this.value)">
+                 <span class="room-owner">${ownerTag}</span>
+              </div>
+              <span class="room-meta">${base.meta}</span>
+            </div>
+            <input type="text" id="room-val-inp-${acc.id}" class="room-input curr-format" placeholder="$0" value="${valStr}" oninput="updateValueWithoutRender('${acc.id}', this.value)" style="color: ${base.taxCode==='debt' ? 'var(--danger)' : 'var(--white)'};" ${isReadOnly}>
+            ${extraRows}
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+               <div class="room-desc" style="margin-top:0;">${base.desc}</div>
+               <button class="details-btn" type="button" onclick="openAccountModal('${acc.id}')">⚙️ DETAILS</button>
+            </div>
+          </div>
+        `;
+      });
+      roomsContainer.scrollTop = scrollTop;
+
+      let dropdownHTML = '';
+      const addDropOption = (r) => { dropdownHTML += `<div class="space-option" onclick="addInstance('${r.id}')">${r.title} <span>${r.meta}</span></div>`; };
+      
+      const available = rDataList; 
+      
+      if(isCo) {
+          const joint = available.filter(r => r.type === 'joint' && r.taxCode !== 'trust');
+          if(joint.length > 0) { dropdownHTML += `<div class="dropdown-group-lbl">Joint Spaces</div>`; joint.forEach(addDropOption); }
+      } else {
+          const jointAsPrimary = available.filter(r => r.type === 'joint' && r.taxCode !== 'trust');
+          if(jointAsPrimary.length > 0) { dropdownHTML += `<div class="dropdown-group-lbl">Additional Spaces</div>`; jointAsPrimary.forEach(addDropOption); }
+      }
+      
+      const primary = available.filter(r => r.type === 'primary');
+      if(primary.length > 0) { dropdownHTML += `<div class="dropdown-group-lbl">Primary Architect Spaces</div>`; primary.forEach(addDropOption); }
+      
+      if(isCo) {
+        const coarch = available.filter(r => r.type === 'coarch');
+        if(coarch.length > 0) { dropdownHTML += `<div class="dropdown-group-lbl">Co-Architect Spaces</div>`; coarch.forEach(addDropOption); }
+      }
+
+      // SURGICAL: Trust Wing Menu Option
+      const trusts = available.filter(r => r.taxCode === 'trust');
+      if (trusts.length > 0) {
+          dropdownHTML += `<div class="dropdown-group-lbl" style="color:var(--shield);">Generational Transfer</div>`;
+          trusts.forEach(addDropOption);
+      }
+
+      spaceDropdown.innerHTML = dropdownHTML;
+    }
+
+    // --- MODAL ENGINE (BACK OF CARD) ---
+    window.openAccountModal = function(id) {
+        activeModalId = id;
+        const acc = state.accounts.find(a => a.id === id);
+        if(!acc) return;
+        const base = getBaseType(acc.baseId);
+        
+        document.getElementById('modal-acc-title').innerText = (acc.name || base.title) + " Details";
+        
+        let html = '';
+        
+        // SURGICAL: Physics Toggles with explicit mathematical tooltips
+        html += `
+        <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
+            <span class="toggle-label" style="color:var(--gold);">Include in Architecture & Velocity</span>
+            <label class="switch">
+              <input type="checkbox" ${!acc.exclude ? 'checked' : ''} onchange="updateAccToggle('${id}', 'exclude', !this.checked)">
+              <span class="slider"></span>
+            </label>
+            <div class="modal-tt"><strong>Physics Disconnect</strong>Isolates this room from all Estate Square Footage and Cash Flow calculations.</div>
+        </div>`;
+
+        html += `
+        <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
+            <span class="toggle-label" style="color:var(--teal-mid);">Liquidity Friction (Asset Accessibility)</span>
+            <label class="switch">
+              <input type="checkbox" ${acc.isFriction ? 'checked' : ''} onchange="updateAccToggle('${id}', 'isFriction', this.checked)">
+              <span class="slider"></span>
+            </label>
+            <div class="modal-tt"><strong>Apply Liquidity Drag</strong>Discounts the availability of these funds in the simulation, preventing the engine from tapping this capital to cover structural bleed during market stress.</div>
+        </div>`;
+
+        if (base.taxCode === 'debt') {
+             html += `
+             <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
+                 <span class="toggle-label" style="color:var(--danger);">Prioritize for Demolition</span>
+                 <label class="switch">
+                   <input type="checkbox" ${acc.isPriority ? 'checked' : ''} onchange="updateAccToggle('${id}', 'isPriority', this.checked)">
+                   <span class="slider"></span>
+                 </label>
+                 <div class="modal-tt"><strong>Target For Demolition</strong>Programs the engine to route all Free Cash Flow directly into this liability, mathematically accelerating its payoff date and minimizing lifetime interest drag.</div>
+             </div>`;
+        }
+
+        // SURGICAL: Trust Settings with tooltips
+        if (base.taxCode === 'trust') {
+            html += `
+            <div style="margin-top:20px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px;">
+                <div class="input-label" style="color:var(--shield); margin-bottom:10px;">TRUST ARCHITECTURE & DISBURSEMENT</div>
+                <div class="field-row">
+                    <div class="modal-tt-wrap" style="flex-direction:column; align-items:flex-start;">
+                        <div class="input-label" style="width:100%;">Trust Structure</div>
+                        <select class="small-field" style="background: var(--bg-navy);" onchange="updateAccField('${id}', 'trustType', this.value)">
+                            <option value="Irrevocable" ${acc.trustType==='Irrevocable'?'selected':''}>Irrevocable (Decoupled)</option>
+                            <option value="Revocable" ${acc.trustType==='Revocable'?'selected':''}>Revocable (Living)</option>
+                        </select>
+                        <div class="modal-tt" style="left:0; right:auto; bottom:100%; transform:translateY(-10px);"><strong>Entity Status</strong>Defines whether the capital is permanently decoupled from the primary Estate (Irrevocable) or remains a revocable living structure.</div>
+                    </div>
+                    <div class="modal-tt-wrap" style="flex-direction:column; align-items:flex-start;">
+                        <div class="input-label" style="width:100%;">Disbursement Logic</div>
+                        <select class="small-field" style="background: var(--bg-navy);" onchange="updateAccField('${id}', 'disbursement', this.value)">
+                            <option value="Discretionary" ${acc.disbursement==='Discretionary'?'selected':''}>Discretionary</option>
+                            <option value="Staggered" ${acc.disbursement==='Staggered'?'selected':''}>Staggered (Age-Based)</option>
+                            <option value="Education/HEMS" ${acc.disbursement==='Education/HEMS'?'selected':''}>HEMS Standard</option>
+                        </select>
+                        <div class="modal-tt" style="left:0; right:auto; bottom:100%; transform:translateY(-10px);"><strong>Extraction Rules</strong>Dictates the mathematical conditions under which capital can escape the Trust and re-enter the standard velocity flow.</div>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        let notePH = "e.g. Important notes...";
+        if(base.taxCode === 'debt') notePH = "e.g. Lender name, escrow details, account number...";
+        if(base.taxCode === 'liquid') {
+             if(base.id.includes('savings')) notePH = "e.g. Emergency Fund, Sinking Fund, Tax Reserve...";
+             else notePH = "e.g. Primary Operations, Joint Expenses, Vacation Fund...";
+        }
+        if(base.taxCode === 'physical') {
+             if(base.id.includes('collectibles')) notePH = "e.g. Storage location, provenance, condition details, insurance riders...";
+             else notePH = "e.g. Address, Zillow link, appraisal notes...";
+        }
+        
+        html += `
+        <div style="margin-bottom: 20px;">
+            <div class="input-label">Purpose / Notes</div>
+            <textarea class="small-field" style="width:100%; height: 60px; resize:none; font-family: var(--font-serif);" placeholder="${notePH}" oninput="updateAccField('${id}', 'notes', this.value)">${acc.notes || ''}</textarea>
+        </div>`;
+
+        if(base.taxCode === 'pretax' || base.taxCode === 'roth') {
+            let is401k = base.id.includes('401k');
+            let ownerPrefix = base.type === 'coarch' ? 'co' : 'pri';
+            let dobVal = document.getElementById(ownerPrefix + '-dob').value;
+            
+            let birthYear = new Date().getFullYear();
+            let birthMonth = 1;
+            if(dobVal) {
+                let parts = dobVal.split('/');
+                if(parts.length > 1) {
+                    birthMonth = parseInt(parts[0].trim()) || 1;
+                    birthYear = parseInt(parts[1].trim()) || birthYear;
+                }
+            }
+
+            let stdYear = birthYear + 59;
+            let stdMonth = birthMonth + 6;
+            if(stdMonth > 12) { stdMonth -= 12; stdYear += 1; }
+            let stdAccessDate = `${stdMonth.toString().padStart(2, '0')} / ${stdYear}`;
+
+            let r55Year = birthYear + 55;
+            let r55AccessDate = `${birthMonth.toString().padStart(2, '0')} / ${r55Year}`;
+
+            let currentAccessDate = acc.useRule55 ? r55AccessDate : stdAccessDate;
+            let currentAccessAge = acc.useRule55 ? "55.0" : "59.5";
+
+            html += `
+            <div style="margin-top:20px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px;">
+                <div class="input-label" style="color:var(--gold); margin-bottom:10px;">WITHDRAWAL RULES & ACCESSIBILITY</div>
+                <div style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">Standard Penalty-Free Access</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px;">Age 59.5 (Est. ${stdAccessDate})</span>
+                </div>
+            `;
+            
+            if (is401k) {
+                html += `
+                <div class="toggle-row modal-tt-wrap" style="border-bottom:none; padding-bottom: 0; margin-bottom: 8px; margin-top: 15px;">
+                    <span class="toggle-label" style="color:var(--teal-mid);">Enable Rule of 55 Access</span>
+                    <label class="switch">
+                      <input type="checkbox" ${acc.useRule55 ? 'checked' : ''} onchange="updateAccToggle('${id}', 'useRule55', this.checked)">
+                      <span class="slider"></span>
+                    </label>
+                    <div class="modal-tt"><strong>Accelerate Horizon</strong>Calibrates the engine to assume penalty-free capital extraction at age 55 due to separation of service.</div>
+                </div>
+                <div style="font-size: 10px; color: var(--muted); font-family: var(--font-serif); font-style: italic; margin-bottom: 12px; line-height: 1.4;">Separation from service in or after the year turning 55 allows penalty-free access to this specific 401(k) architecture.</div>
+                `;
+            }
+            
+            html += `
+                <div style="display:flex; justify-content: space-between; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 12px; margin-top: 8px;">
+                    <span class="input-label" style="color:var(--teal-mid);">Active Availability Benchmark</span>
+                    <span style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold; font-size:13px;">Age ${currentAccessAge} (${currentAccessDate})</span>
+                </div>
+            </div>`;
+
+            // SURGICAL: Structural Injection Limits (Editable constraints)
+            let limitName = is401k ? "401(k) / 457(b) Limits" : "IRA Limits";
+            let baseLim = acc.baseLimit !== undefined ? acc.baseLimit : (is401k ? 24500 : 7000);
+            let c50 = acc.catchUpLimit !== undefined ? acc.catchUpLimit : (is401k ? 8000 : 1000);
+            let sc60 = acc.superCatchUpLimit !== undefined ? acc.superCatchUpLimit : (is401k ? 11250 : 0); 
+
+            let currentLimit = parseInt(baseLim);
+            if(acc.superCatchUp) currentLimit += parseInt(sc60);
+            else if(acc.catchUp50) currentLimit += parseInt(c50);
+
+            html += `
+            <div style="margin-top:20px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px;">
+                <div class="input-label" style="color:var(--gold); margin-bottom:10px;">STRUCTURAL INJECTION LIMITS (${limitName})</div>
+                
+                <div class="field-row" style="margin-bottom:10px;">
+                    <div><div class="input-label">Base Limit</div><input type="number" class="small-field" value="${baseLim}" oninput="updateAccField('${id}', 'baseLimit', this.value)"></div>
+                    <div><div class="input-label">Catch-Up (50+)</div><input type="number" class="small-field" value="${c50}" oninput="updateAccField('${id}', 'catchUpLimit', this.value)"></div>
+                </div>
+                ${is401k ? `
+                <div class="field-row" style="margin-bottom:15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
+                    <div><div class="input-label">Super Catch-Up (60-63)</div><input type="number" class="small-field" value="${sc60}" oninput="updateAccField('${id}', 'superCatchUpLimit', this.value)"></div>
+                </div>` : `<div style="border-bottom:1px solid rgba(255,255,255,0.05); margin-bottom:15px;"></div>`}
+
+                <div class="toggle-row" style="border-bottom:none; padding-bottom: 0; margin-bottom: 8px;">
+                    <span class="toggle-label" style="color:var(--teal-mid);">Enable Catch-Up (Age 50+)</span>
+                    <label class="switch">
+                      <input type="checkbox" ${acc.catchUp50 ? 'checked' : ''} onchange="updateAccToggle('${id}', 'catchUp50', this.checked)">
+                      <span class="slider"></span>
+                    </label>
+                </div>
+            `;
+            if(is401k) {
+                html += `
+                <div class="toggle-row" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 12px; margin-bottom: 8px; margin-top: 8px;">
+                    <span class="toggle-label" style="color:var(--gold);">Enable Super Catch-Up (Age 60-63)</span>
+                    <label class="switch">
+                      <input type="checkbox" ${acc.superCatchUp ? 'checked' : ''} onchange="updateAccToggle('${id}', 'superCatchUp', this.checked)">
+                      <span class="slider"></span>
+                    </label>
+                </div>
+                `;
+            } else {
+                 html += `<div style="border-bottom:1px solid rgba(255,255,255,0.05); margin-bottom:8px; padding-bottom:12px;"></div>`;
+            }
+
+            html += `
+                <div style="display:flex; justify-content: space-between; padding-top: 5px;">
+                    <span class="input-label" style="color:var(--teal-mid);">Active Maximum Injection</span>
+                    <span style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold; font-size:13px;" id="limit-calc-${id}">$${currentLimit.toLocaleString()} / YR</span>
+                </div>
+            </div>`;
+        }
+
+        if (base.taxCode === 'debt') {
+            let isStudentLoan = base.id.includes('student_loan');
+            
+            if (!isStudentLoan) {
+                let linkOpts = `<option value="">None (Unsecured / Isolated Liability)</option>`;
+                state.accounts.forEach(a => {
+                    let aBase = getBaseType(a.baseId);
+                    if(aBase && aBase.taxCode === 'physical' && !aBase.id.includes('collectibles')) {
+                        linkOpts += `<option value="${a.id}" ${acc.linkedAssetId === a.id ? 'selected' : ''}>Map to: ${a.name} (${aBase.meta})</option>`;
+                    }
+                });
+
+                html += `
+                <div class="field-row" style="grid-template-columns: 1fr; margin-bottom: 5px;">
+                    <div>
+                        <div class="input-label" style="color:var(--teal-mid);">Associate with Physical Structure (Calculate Equity)</div>
+                        <select class="small-field" style="background: var(--bg-navy);" onchange="updateAccField('${id}', 'linkedAssetId', this.value)">
+                            ${linkOpts}
+                        </select>
+                    </div>
+                </div>
+                <div style="text-align: right; margin-bottom: 20px;">
+                   <button class="add-space-btn" style="width:auto; padding: 4px 8px; border: none; background: transparent; border-bottom: 1px dashed var(--teal-mid);" onclick="createLinkedAsset('${id}')">+ Draft New Structure</button>
+                </div>`;
+            }
+            
+            html += `
+            <div class="field-row">
+                <div><div class="input-label" style="color:var(--gold);">Current Balance</div><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.value?.toString()||'')}" oninput="updateValueWithoutRender('${id}', this.value)"></div>
+                <div><div class="input-label">Original Amount</div><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.origAmount||'')}" oninput="updateAccField('${id}', 'origAmount', this.value)"></div>
+            </div>
+            <div class="field-row">
+                <div><div class="input-label">Interest Rate (APR) %</div><input type="number" class="small-field" placeholder="0" value="${acc.intRate||''}" oninput="updateAccField('${id}', 'intRate', this.value)"></div>
+                <div><div class="input-label">Rate Type</div>
+                    <select class="small-field" style="background: var(--bg-navy);" onchange="updateAccField('${id}', 'rateType', this.value)">
+                        <option value="Fixed" ${acc.rateType==='Fixed'?'selected':''}>Fixed</option>
+                        <option value="Variable" ${acc.rateType==='Variable'?'selected':''}>Variable</option>
+                    </select>
+                </div>
+            </div>
+            <div class="field-row">
+                <div><div class="input-label">Origination Date</div><input type="date" class="small-field" value="${acc.origDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'origDate', this.value)"></div>
+                <div><div class="input-label">Maturity Date</div><input type="date" class="small-field" value="${acc.maturityDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'maturityDate', this.value)"></div>
+            </div>
+            <div class="field-row">
+                <div><div class="input-label">Minimum Payment</div><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.minPmt||'')}" oninput="updateAccField('${id}', 'minPmt', this.value)"></div>
+                <div><div class="input-label">Additional Payment</div><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.addPmt||'')}" oninput="updateAccField('${id}', 'addPmt', this.value)"></div>
+            </div>
+            <div class="field-row" style="grid-template-columns: 1fr;">
+                <div><div class="input-label">Next Payment Date</div><input type="date" class="small-field" value="${acc.nextPmtDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'nextPmtDate', this.value)"></div>
+            </div>
+            
+            <div style="margin-top:20px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px;">
+                `;
+            
+            if(acc.linkedAssetId && !isStudentLoan) {
+                let linkedAsset = state.accounts.find(a => a.id === acc.linkedAssetId);
+                if(linkedAsset) {
+                    let equity = (linkedAsset.value || 0) - (acc.value || 0);
+                    html += `
+                    <div style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span class="input-label" style="color:var(--teal-mid);">Structural Equity (Asset - Debt)</span>
+                        <span id="modal-calc-equity-${id}" style="font-family: var(--font-mono); color: ${equity >= 0 ? 'var(--teal-mid)' : 'var(--danger)'}; font-weight:bold;">$${equity.toLocaleString('en-US')}</span>
+                    </div>`;
+                }
+            }
+
+            html += `
+                <div style="display:flex; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">Total Monthly Payment</span>
+                    <span id="modal-calc-pmt-${id}" style="font-family: var(--font-mono); color: var(--danger); font-weight:bold;">$${calculateTotalPmt(acc).toLocaleString('en-US')}</span>
+                </div>
+                <div style="display:flex; justify-content: space-between;">
+                    <span class="input-label" style="color:var(--teal-mid);">Expected Payoff Date</span>
+                    <span id="modal-calc-payoff-${id}" style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold; font-size:14px;">${calculatePayoff(acc)}</span>
+                </div>
+            </div>
+            `;
+        } else if (base.taxCode === 'physical' && !base.id.includes('collectibles')) {
+            let myDebts = state.accounts.filter(a => a.linkedAssetId === id);
+            let linkOpts = `<option value="">Select a liability to link...</option>`;
+            state.accounts.forEach(a => {
+                let aBase = getBaseType(a.baseId);
+                if(aBase && aBase.taxCode === 'debt' && !aBase.id.includes('student_loan')) {
+                    linkOpts += `<option value="${a.id}">${a.name} (${aBase.meta})</option>`;
+                }
+            });
+
+            html += `
+            <div class="field-row" style="grid-template-columns: 1fr; margin-bottom: 5px;">
+                <div>
+                    <div class="input-label" style="color:var(--danger);">Map Existing Liability to this Structure</div>
+                    <select class="small-field" style="background: var(--bg-navy);" onchange="linkDebtToAsset('${id}', this.value); this.value='';">
+                        ${linkOpts}
+                    </select>
+                </div>
+            </div>
+            <div style="text-align: right; margin-bottom: 10px;">
+               <button class="add-space-btn" style="width:auto; padding: 4px 8px; border: none; background: transparent; border-bottom: 1px dashed var(--danger); color: var(--danger);" onclick="createLinkedLiability('${id}')">+ Draft New Liability</button>
+            </div>
+            `;
+            if (myDebts.length > 0) {
+                 html += `<div style="margin-bottom: 20px; font-family: var(--font-mono); font-size: 10px; color: var(--danger);">Linked Liabilities: ${myDebts.map(d => d.name).join(', ')}</div>`;
+            } else {
+                 html += `<div style="margin-bottom: 20px;"></div>`;
+            }
+        } 
+        
+        if (base.hasInterest && base.taxCode !== 'debt') {
+            html += `
+            <div class="field-row" style="grid-template-columns: 1fr;">
+                <div><div class="input-label">Interest Rate (APY) %</div><input type="number" class="small-field" placeholder="0" value="${acc.intRate||''}" oninput="updateAccField('${id}', 'intRate', this.value)"></div>
+            </div>`;
+        }
+
+        if(base.hasCOLA) {
+            html += `
+            <div class="field-row" style="grid-template-columns: 1fr;">
+                <div>
+                    <div class="input-label">Cost of Living Adjustment (COLA) %</div>
+                    <input type="number" class="small-field" placeholder="0" value="${acc.cola||''}" oninput="updateAccField('${id}', 'cola', this.value)" step="0.01">
+                </div>
+            </div>`;
+        }
+
+        if (base.id.includes('collectibles')) {
+            html += `
+            <button class="add-space-btn" type="button" style="margin-top: 15px; width: 100%;" onclick="toggleHoldings('${id}')">
+                ❖ CURATE COLLECTION (ITEMIZED LEDGER)
+            </button>`;
+            
+            if(acc.showHoldings) {
+                document.getElementById('modal-card').style.width = "700px";
+                html += `
+                <div style="margin-top: 15px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 4px; overflow-x: auto;">
+                    <table class="holdings-table">
+                        <tr>
+                            <th>Item Description</th>
+                            <th style="width: 120px;">Appraised Value</th>
+                            <th style="width: 120px;">Last Appraised</th>
+                            <th></th>
+                        </tr>
+                `;
+                
+                (acc.holdings || []).forEach((h, i) => {
+                    html += `
+                        <tr>
+                            <td><input type="text" class="holding-input" value="${h.name||''}" placeholder="e.g. AFA 90 Vintage TMNT" oninput="updateHolding('${id}', ${i}, 'name', this.value)"></td>
+                            <td><input type="number" class="holding-input" value="${h.price||''}" placeholder="0" oninput="updateHolding('${id}', ${i}, 'price', this.value)"></td>
+                            <td><input type="date" class="holding-input" value="${h.date||''}" oninput="enforceDateCap(event); updateHolding('${id}', ${i}, 'date', this.value)"></td>
+                            <td><button onclick="removeHolding('${id}', ${i})" style="background:none; border:none; color:var(--muted); cursor:pointer;">×</button></td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                    </table>
+                    <button class="add-space-btn" type="button" style="margin-top: 10px; width: max-content; padding: 6px 12px; border-style: solid; color:var(--white);" onclick="addHolding('${id}')">+ Add Item</button>
+                    <div style="text-align:right; margin-top: 10px; color: var(--muted); font-family: var(--font-mono); font-size: 11px;">
+                        TOTAL COLLECTION VALUE: <span id="modal-total-val" style="color:var(--white); font-size: 16px; font-weight:bold;">$${(acc.value||0).toLocaleString('en-US')}</span>
+                    </div>
+                </div>
+                `;
+            } else {
+                document.getElementById('modal-card').style.width = "550px";
+            }
+        } else if(base.isInvestment) {
+            html += `
+            <button class="add-space-btn" type="button" style="margin-top: 15px; width: 100%;" onclick="toggleHoldings('${id}')">
+                ❖ BEGIN INTERIOR DECORATING (GRANULAR HOLDINGS)
+            </button>`;
+            
+            if(acc.showHoldings) {
+                document.getElementById('modal-card').style.width = "900px";
+                html += `
+                <div style="margin-top: 15px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 4px; overflow-x: auto;">
+                    <table class="holdings-table">
+                        <tr>
+                            <th style="width: 80px;">Ticker</th>
+                            <th style="width: 150px;">Name</th>
+                            <th style="width: 80px;">Price</th>
+                            <th style="width: 80px;">Shares</th>
+                            <th style="width: 100px;">Value</th>
+                            <th style="width: 80px;" class="modal-tt-wrap" style="justify-content:flex-start;">
+                                Inv. Corr.
+                                <div class="modal-tt" style="left:0; right:auto;"><strong>Inverse Correlation</strong>Configures the simulation to dynamically increase this asset's yield during market drawdowns, mathematically hedging your Estate against systemic shocks.</div>
+                            </th>
+                            <th style="width: 100px;">Sector</th>
+                            <th style="width: 60px;">Exp Ratio</th>
+                            <th style="width: 100px;">Asset Class</th>
+                            <th></th>
+                        </tr>
+                `;
+                
+                (acc.holdings || []).forEach((h, i) => {
+                    html += `
+                        <tr>
+                            <td><input type="text" class="holding-input" value="${h.ticker||''}" placeholder="AAPL" onchange="fetchMockData('${id}', ${i}, this.value)"></td>
+                            <td><input type="text" class="holding-input" value="${h.name||''}" placeholder="Apple Inc." oninput="updateHolding('${id}', ${i}, 'name', this.value)"></td>
+                            <td><input type="number" class="holding-input" value="${h.price||''}" placeholder="0" oninput="updateHolding('${id}', ${i}, 'price', this.value)"></td>
+                            <td><input type="number" class="holding-input" value="${h.shares||''}" placeholder="0" oninput="updateHolding('${id}', ${i}, 'shares', this.value)"></td>
+                            <td style="color:var(--teal-mid); font-weight:bold;" id="holding-val-${i}">$${((parseFloat(h.price)||0)*(parseFloat(h.shares)||0)).toLocaleString('en-US')}</td>
+                            <td style="text-align:center;"><input type="checkbox" ${h.invCorr ? 'checked' : ''} onchange="updateHolding('${id}', ${i}, 'invCorr', this.checked)"></td>
+                            <td><input type="text" class="holding-input" value="${h.sector||''}" oninput="updateHolding('${id}', ${i}, 'sector', this.value)"></td>
+                            <td><input type="number" class="holding-input" value="${h.expRatio||''}" placeholder="0" oninput="updateHolding('${id}', ${i}, 'expRatio', this.value)"></td>
+                            <td><input type="text" class="holding-input" value="${h.assetClass||''}" oninput="updateHolding('${id}', ${i}, 'assetClass', this.value)"></td>
+                            <td><button onclick="removeHolding('${id}', ${i})" style="background:none; border:none; color:var(--muted); cursor:pointer;">×</button></td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                    </table>
+                    <button class="add-space-btn" type="button" style="margin-top: 10px; width: max-content; padding: 6px 12px; border-style: solid; color:var(--white);" onclick="addHolding('${id}')">+ Add Holding</button>
+                    <div style="text-align:right; margin-top: 10px; color: var(--muted); font-family: var(--font-mono); font-size: 11px;">
+                        TOTAL PORTFOLIO VALUE: <span id="modal-total-val" style="color:var(--white); font-size: 16px; font-weight:bold;">$${(acc.value||0).toLocaleString('en-US')}</span>
+                    </div>
+                </div>
+                `;
+            } else {
+                document.getElementById('modal-card').style.width = "550px";
+            }
+        } else {
+             document.getElementById('modal-card').style.width = "550px";
+        }
+
+        document.getElementById('modal-dynamic-content').innerHTML = html;
+        document.getElementById('account-modal-overlay').style.display = 'flex';
+    };
+
+    window.closeAccountModal = function() {
+        document.getElementById('account-modal-overlay').style.display = 'none';
+        activeModalId = null;
+    };
+
+    window.updateAccField = function(id, field, value) {
+        const acc = state.accounts.find(a => a.id === id);
+        if(acc) {
+            if(field === 'origAmount' || field === 'minPmt' || field === 'addPmt') {
+                acc[field] = value.replace(/[^0-9.-]/g, '');
+            } else if (field === 'intRate' || field === 'cola') {
+                acc[field] = parseFloat(value) || 0;
+            } else {
+                acc[field] = value;
+            }
+
+            if(field === 'linkedAssetId') openAccountModal(id); 
+
+            // Live DOM update for limits calculation
+            if(field === 'baseLimit' || field === 'catchUpLimit' || field === 'superCatchUpLimit') {
+                 let el = document.getElementById(`limit-calc-${id}`);
+                 if(el) {
+                     let cLim = parseInt(acc.baseLimit !== undefined ? acc.baseLimit : (acc.baseId.includes('401k') ? 24500 : 7000));
+                     if(acc.superCatchUp) cLim += parseInt(acc.superCatchUpLimit !== undefined ? acc.superCatchUpLimit : (acc.baseId.includes('401k') ? 11250 : 0));
+                     else if (acc.catchUp50) cLim += parseInt(acc.catchUpLimit !== undefined ? acc.catchUpLimit : (acc.baseId.includes('401k') ? 8000 : 1000));
+                     el.innerText = `$${cLim.toLocaleString()} / YR`;
+                 }
+            }
+
+            updateSVGs();
+            updateAnalysisText();
+            
+            if(activeModalId === id) {
+                const pmtEl = document.getElementById(`modal-calc-pmt-${id}`);
+                const payoffEl = document.getElementById(`modal-calc-payoff-${id}`);
+                const eqEl = document.getElementById(`modal-calc-equity-${id}`);
+                
+                if(pmtEl) pmtEl.innerText = '$' + calculateTotalPmt(acc).toLocaleString('en-US');
+                if(payoffEl) payoffEl.innerText = calculatePayoff(acc);
+                if(eqEl && acc.linkedAssetId) {
+                    let lAst = state.accounts.find(a => a.id === acc.linkedAssetId);
+                    let eq = (lAst ? lAst.value || 0 : 0) - (acc.value || 0);
+                    eqEl.innerText = '$' + eq.toLocaleString('en-US');
+                    eqEl.style.color = eq >= 0 ? 'var(--teal-mid)' : 'var(--danger)';
+                }
+            }
+        }
+    };
+
+    window.updateValueWithoutRender = function(id, valStr) {
+        const acc = state.accounts.find(a => a.id === id);
+        if(acc) {
+            acc.value = parseInt(valStr.replace(/[^0-9]/g, ''), 10) || 0;
+            // Instantly sync the front input field if it exists
+            let frontInp = document.getElementById('room-val-inp-' + id);
+            if(frontInp) frontInp.value = formatCurrency(acc.value.toString());
+            
+            updateSVGs();
+            updateAnalysisText();
+            
+            if(activeModalId === id) {
+                const pmtEl = document.getElementById(`modal-calc-pmt-${id}`);
+                const payoffEl = document.getElementById(`modal-calc-payoff-${id}`);
+                const eqEl = document.getElementById(`modal-calc-equity-${id}`);
+                
+                if(pmtEl) pmtEl.innerText = '$' + calculateTotalPmt(acc).toLocaleString('en-US');
+                if(payoffEl) payoffEl.innerText = calculatePayoff(acc);
+                if(eqEl && acc.linkedAssetId) {
+                    let lAst = state.accounts.find(a => a.id === acc.linkedAssetId);
+                    let eq = (lAst ? lAst.value || 0 : 0) - (acc.value || 0);
+                    eqEl.innerText = '$' + eq.toLocaleString('en-US');
+                    eqEl.style.color = eq >= 0 ? 'var(--teal-mid)' : 'var(--danger)';
+                }
+            }
+        }
+    };
+
+    window.updateAccToggle = function(id, field, val) {
+        const acc = state.accounts.find(a => a.id === id);
+        if(acc) {
+            if (field === 'superCatchUp' && val) acc.catchUp50 = false;
+            if (field === 'catchUp50' && val) acc.superCatchUp = false;
+            
+            acc[field] = val;
+            renderInputs(); 
+            updateSVGs();
+            updateAnalysisText();
+            if(activeModalId === id) openAccountModal(id); 
+        }
+    };
+    
+    // SURGICAL: Bi-Directional Mapping Functions
+    window.linkDebtToAsset = function(assetId, debtId) {
+        if(!debtId) return;
+        let debt = state.accounts.find(a => a.id === debtId);
+        if(debt) {
+            debt.linkedAssetId = assetId;
+            openAccountModal(assetId); 
+            updateSVGs();
+        }
+    }
+    
+    window.createLinkedAsset = function(debtId) {
+        let debt = state.accounts.find(a => a.id === debtId);
+        let debtBase = getBaseType(debt.baseId);
+        let newBaseId = 'property';
+        if (debtBase.id.includes('auto')) newBaseId = debtBase.type === 'primary' ? 'auto_primary' : (debtBase.type === 'coarch' ? 'auto_co' : 'auto');
+
+        let newBase = getBaseType(newBaseId);
+        let newId = 'inst_' + Math.random().toString(36).substr(2, 9);
+        state.accounts.push({ id: newId, baseId: newBaseId, name: newBase.title, value: 0, inflow: 0, freq: 12, intRate: 0, exclude: false, notes: '', cola: 0, linkedAssetId: null, useRule55: false, isNew: true, isFriction: false, isPriority: false, holdings: [], trustType: 'Irrevocable', disbursement: 'Discretionary' });
+        
+        debt.linkedAssetId = newId;
+        renderInputs(); updateSVGs(); updateAnalysisText(); openAccountModal(newId);
+    }
+    
+    window.createLinkedLiability = function(assetId) {
+        let asset = state.accounts.find(a => a.id === assetId);
+        let assetBase = getBaseType(asset.baseId);
+        let newBaseId = 'mortgage_joint';
+        if (assetBase.id.includes('auto')) newBaseId = assetBase.type === 'primary' ? 'auto_debt_primary' : (assetBase.type === 'coarch' ? 'auto_debt_co' : 'auto_debt_joint');
+        else if (assetBase.type === 'primary') newBaseId = 'mortgage_primary';
+        else if (assetBase.type === 'coarch') newBaseId = 'mortgage_co';
+
+        let newBase = getBaseType(newBaseId);
+        let newId = 'inst_' + Math.random().toString(36).substr(2, 9);
+        state.accounts.push({ id: newId, baseId: newBaseId, name: newBase.title, value: 0, inflow: 0, freq: 12, intRate: 0, exclude: false, notes: '', cola: 0, linkedAssetId: assetId, useRule55: false, isNew: true, isFriction: false, isPriority: false, holdings: [] });
+        
+        renderInputs(); updateSVGs(); updateAnalysisText(); openAccountModal(newId);
+    }
+
+    window.toggleHoldings = function(id) {
+        let acc = state.accounts.find(a=>a.id===id);
+        acc.showHoldings = !acc.showHoldings;
+        let base = getBaseType(acc.baseId);
+        if (acc.showHoldings && (!acc.holdings || acc.holdings.length===0)) {
+             if(base.id.includes('collectibles')) acc.holdings = [{name:'', price:0, date:''}];
+             else acc.holdings = [{ticker:'', name:'', price:0, shares:0, sector:'', expRatio:'', assetClass:'', invCorr: false}];
+        }
+        openAccountModal(id); 
+    }
+    
+    window.addHolding = function(id) {
+        let acc = state.accounts.find(a=>a.id===id);
+        let base = getBaseType(acc.baseId);
+        if(base.id.includes('collectibles')) acc.holdings.push({name:'', price:0, date:''});
+        else acc.holdings.push({ticker:'', name:'', price:0, shares:0, sector:'', expRatio:'', assetClass:'', invCorr: false});
+        openAccountModal(id);
+    }
+    
+    window.removeHolding = function(id, index) {
+        let acc = state.accounts.find(a=>a.id===id);
+        acc.holdings.splice(index, 1);
+        recalcPortfolio(acc);
+        openAccountModal(id);
+    }
+
+    window.updateHolding = function(id, index, field, val) {
+        let acc = state.accounts.find(a=>a.id===id);
+        let h = acc.holdings[index];
+        let base = getBaseType(acc.baseId);
+        if(field === 'price' || field === 'shares' || field === 'expRatio') h[field] = parseFloat(val) || 0;
+        else h[field] = val;
+        
+        if(field === 'price' || field === 'shares') {
+            recalcPortfolio(acc);
+            let valEl = document.getElementById(`holding-val-${index}`);
+            if(valEl) {
+                 let calcVal = base.id.includes('collectibles') ? (h.price||0) : ((h.price||0) * (h.shares||0));
+                 valEl.innerText = '$' + calcVal.toLocaleString('en-US');
+            }
+            let totalEl = document.getElementById('modal-total-val');
+            if(totalEl) totalEl.innerText = '$' + acc.value.toLocaleString('en-US');
+        }
+    }
+    
+    // SURGICAL: Expanded Database
+    window.fetchMockData = function(id, index, ticker) {
+        ticker = ticker.toUpperCase();
+        let acc = state.accounts.find(a=>a.id===id);
+        let h = acc.holdings[index];
+        h.ticker = ticker;
+        
+        const mockData = {
+            'VEA': {name: 'Vanguard Developed Markets ETF', price: 50.25, sector: 'Equity', expRatio: 0.05, assetClass: 'International'},
+            'VTI': {name: 'Vanguard Total Stock Market ETF', price: 250.10, sector: 'Equity', expRatio: 0.03, assetClass: 'US Equity'},
+            'AAPL': {name: 'Apple Inc.', price: 175.50, sector: 'Technology', expRatio: 0.00, assetClass: 'US Equity'},
+            'MSFT': {name: 'Microsoft Corp.', price: 420.30, sector: 'Technology', expRatio: 0.00, assetClass: 'US Equity'},
+            'TSLA': {name: 'Tesla, Inc.', price: 185.20, sector: 'Consumer Cyclical', expRatio: 0.00, assetClass: 'US Equity'},
+            'BHF': {name: 'Brighthouse Financial', price: 48.75, sector: 'Financial Services', expRatio: 0.00, assetClass: 'US Equity'},
+            'SPY': {name: 'SPDR S&P 500 ETF', price: 510.40, sector: 'Equity', expRatio: 0.09, assetClass: 'US Equity'},
+            'QQQ': {name: 'Invesco QQQ Trust', price: 440.10, sector: 'Equity', expRatio: 0.20, assetClass: 'US Equity'},
+            'NVDA': {name: 'NVIDIA Corp.', price: 890.50, sector: 'Technology', expRatio: 0.00, assetClass: 'US Equity'},
+            'AMZN': {name: 'Amazon.com, Inc.', price: 178.30, sector: 'Consumer Cyclical', expRatio: 0.00, assetClass: 'US Equity'},
+            'GOOG': {name: 'Alphabet Inc.', price: 145.20, sector: 'Communication Services', expRatio: 0.00, assetClass: 'US Equity'},
+            'BTC': {name: 'Bitcoin', price: 68500.00, sector: 'Digital Asset', expRatio: 0.00, assetClass: 'Cryptocurrency'},
+            'VOO': {name: 'Vanguard S&P 500 ETF', price: 470.10, sector: 'Equity', expRatio: 0.03, assetClass: 'US Equity'},
+            'ARKK': {name: 'ARK Innovation ETF', price: 50.10, sector: 'Equity', expRatio: 0.75, assetClass: 'US Equity'}
+        };
+        
+        if(mockData[ticker]) {
+            Object.assign(h, mockData[ticker]);
+            recalcPortfolio(acc);
+            openAccountModal(id); 
+        }
+    }
+    
+    function recalcPortfolio(acc) {
+        const base = getBaseType(acc.baseId);
+        if (base.id.includes('collectibles')) {
+             acc.value = acc.holdings.reduce((sum, h) => sum + (parseFloat(h.price) || 0), 0);
+        } else {
+             acc.value = acc.holdings.reduce((sum, h) => sum + ((parseFloat(h.price)||0) * (parseFloat(h.shares)||0)), 0);
+        }
+        updateSVGs();
+        updateAnalysisText();
+        renderInputs(); 
+    }
+
+    function calculateTotalPmt(acc) {
+        let min = parseFloat(acc.minPmt) || 0;
+        let add = parseFloat(acc.addPmt) || 0;
+        return min + add;
+    }
+
+    function calculatePayoff(acc) {
+        let pmt = calculateTotalPmt(acc);
+        let bal = parseFloat(acc.value) || 0;
+        let r = (parseFloat(acc.intRate) || 0) / 100 / 12;
+        
+        if (bal <= 0) return "Paid Off";
+        if (pmt <= 0) return "No Payment Set";
+        if (r * bal >= pmt) return "Payment too low (Negative Amortization)";
+        
+        let months = 0;
+        if (r === 0) {
+            months = bal / pmt;
+        } else {
+            months = -Math.log(1 - (r * bal) / pmt) / Math.log(1 + r);
+        }
+        months = Math.ceil(months);
+        
+        let startDate = acc.nextPmtDate ? new Date(acc.nextPmtDate + 'T00:00:00') : new Date();
+        if(isNaN(startDate)) startDate = new Date();
+        
+        startDate.setMonth(startDate.getMonth() + months);
+        return startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+
+    function updateSVGs() {
+      svgContainer.innerHTML = '';
+      const isCo = coToggle.checked;
+      let grandTotal = 0;
+      let totalContrib = 0;
+      let totalInterestIn = 0;
+      let totalInterestOut = 0;
+
+      let cols = { primary: [], joint: [], coarch: [] };
+      let propertyAccount = null;
+      let newRoomToTrace = null;
+      let trustAccounts = [];
+      
+      // FIRST PASS: Sort & Calculate Globals
+      state.accounts.forEach(acc => {
+        if(acc.exclude) return;
+
+        const base = getBaseType(acc.baseId);
+        if(!base) return;
+
+        // SURGICAL: Shock Math
+        let isVolatile = base.isInvestment || base.taxCode === 'liquid';
+        let shockMult = (isShocked && isVolatile && base.taxCode !== 'debt') ? 0.70 : 1;
+        let effectiveValue = acc.value * shockMult;
+
+        if (base.taxCode === 'debt') grandTotal -= effectiveValue || 0;
+        else grandTotal += effectiveValue || 0;
+        
+        if(base.hasInflow && acc.inflow && acc.freq) totalContrib += (acc.inflow * acc.freq);
+
+        if(base.hasInterest && acc.intRate && acc.value) {
+            let r = acc.intRate / 100;
+            let earnedAnnual = effectiveValue * (Math.pow(1 + r/365, 365) - 1);
+            if (base.taxCode === 'debt') totalInterestOut += earnedAnnual;
+            else totalInterestIn += earnedAnnual;
+        }
+
+        if (base.id === 'property') {
+            propertyAccount = acc; 
+        } else if (base.taxCode === 'trust') {
+            trustAccounts.push(acc);
+        } else {
+            if (base.type === 'primary') cols.primary.push(acc);
+            else if (base.type === 'coarch' && isCo) cols.coarch.push(acc);
+            else cols.joint.push(acc);
+        }
+      });
+
+      let totalAnnualInflow = totalContrib + totalInterestIn;
+      let netVel = totalAnnualInflow - totalInterestOut;
+      
+      // Update HUD Values
+      let tf = parseInt(document.getElementById('hud-timeframe').value) || 1;
+      let tfLabel = tf === 1 ? '/ YR' : (tf === 12 ? '/ MO' : (tf === 52 ? '/ WK' : '/ DY'));
+
+      let displayNetVel = netVel / tf;
+      let displayContrib = totalContrib / tf;
+      let displayEarned = totalInterestIn / tf;
+      let displayPaid = totalInterestOut / tf;
+
+      document.getElementById('v-net-val').innerText = `${displayNetVel >= 0 ? '+' : '-'}$${Math.abs(Math.round(displayNetVel)).toLocaleString('en-US')} ${tfLabel}`;
+      document.getElementById('v-net-val').style.color = displayNetVel >= 0 ? "var(--white)" : "var(--danger)";
+      
+      document.getElementById('c-mo').innerText = `+$${Math.round(displayContrib).toLocaleString('en-US')} ${tfLabel}`;
+      document.getElementById('ie-mo').innerText = `+$${Math.round(displayEarned).toLocaleString('en-US')} ${tfLabel}`;
+      document.getElementById('ip-mo').innerText = `-$${Math.round(displayPaid).toLocaleString('en-US')} ${tfLabel}`;
+
+      let totalCharityAnnual = charityItems.reduce((sum, i) => sum + i.cost, 0) * 12; 
+      let displayCharity = totalCharityAnnual / tf;
+
+      let priSal = parseInt(document.getElementById('pri-salary').value.replace(/[^0-9]/g, ''), 10) || 0;
+      let coSal = document.getElementById('co-arch-toggle').checked ? (parseInt(document.getElementById('co-salary').value.replace(/[^0-9]/g, ''), 10) || 0) : 0;
+      let grossAnnual = priSal + coSal;
+      let charPct = grossAnnual > 0 ? Math.round((totalCharityAnnual / grossAnnual) * 100) : 0;
+      
+      let charHudVal = document.getElementById('hud-charity-val');
+      if(charHudVal) charHudVal.innerText = `$${Math.round(displayCharity).toLocaleString('en-US')} ${tfLabel} (${charPct}%)`;
+
+      // DRAWING PHYSICS: PROPORTIONAL SQUARIFY RENDERING
+      let gX = 200, gY = 160, gW = 1000, gH = 850; 
+      let pVal = propertyAccount ? propertyAccount.value || 0 : 0;
+      let pValStr = pVal >= 1000000 ? '$'+(pVal/1000000).toFixed(2)+'M' : (pVal >= 1000 ? '$'+(pVal/1000).toFixed(0)+'k' : (pVal > 0 ? '$'+pVal : ''));
+
+      let gSVG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      gSVG.innerHTML = `
+          <title>Physical asset footprint.</title>
+          <rect x="${gX}" y="${gY}" width="${gW}" height="${gH}" class="grounds-rect" />
+          <text x="${gX + gW/2}" y="${gY + gH - 30}" class="grounds-title">THE GROUNDS</text>
+          <text x="${gX + gW/2}" y="${gY + gH - 10}" class="grounds-title" style="fill: var(--gold); font-size:16px;">${pValStr}</text>
+      `;
+      svgContainer.appendChild(gSVG);
+
+      // SURGICAL: Datum Line Rendering
+      if (isDatum) {
+          let spendStr = document.getElementById('spend-input').value;
+          let spendVal = parseInt(spendStr.replace(/[^0-9]/g, ''), 10) || 0;
+          let datumY = (gY + gH) - Math.min((spendVal / 250), gH); 
+          let dSVG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+          dSVG.innerHTML = `
+              <line x1="${gX - 50}" y1="${datumY}" x2="${gX + gW + 50}" y2="${datumY}" stroke="var(--danger)" stroke-width="2" stroke-dasharray="10 5" opacity="0.8" />
+              <text x="${gX - 60}" y="${datumY + 4}" font-family="var(--font-mono)" font-size="12" fill="var(--danger)" text-anchor="end" font-weight="bold">DATUM: $${spendVal.toLocaleString()}</text>
+          `;
+          svgContainer.appendChild(dSVG);
+      }
+
+      // SURGICAL: GENERATIONAL TRUST WING RENDER (Purple Shield Styling)
+      if (trustAccounts.length > 0) {
+          let tX = gX + gW + 60; 
+          let tW = 280;
+          let tSVG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+          tSVG.innerHTML = `
+              <rect x="${tX}" y="${gY}" width="${tW}" height="${gH}" class="grounds-rect" stroke-dasharray="6 6" stroke="var(--shield)" stroke-width="2" fill="rgba(138, 100, 255, 0.05)" onmouseenter="showTrustTooltip(event)" onmouseleave="hideTrustTooltip()"/>
+              <text x="${tX + tW/2}" y="${gY + gH - 30}" font-family="var(--font-mono)" font-size="14" fill="var(--shield)" text-anchor="middle" font-weight="bold" letter-spacing="0.1em">GENERATIONAL TRUST WING</text>
+          `;
+          svgContainer.appendChild(tSVG);
+          
+          let tTotals = 0; 
+          trustAccounts.forEach(a => { 
+              let v = Math.max(Math.abs(a.value||0),1000); 
+              a._renderVal=v; 
+              tTotals+=v;
+          });
+          
+          let availH = (gH - 100); 
+          let cY = gY + 20;
+          
+          trustAccounts.forEach(acc => {
+              let base = getBaseType(acc.baseId);
+              let h = 75; 
+              if(tTotals>0) h += availH * (acc._renderVal / tTotals);
+              let d = { x: tX + 20, y: cY, w: tW - 40, h: h, cx: tX+20+(tW-40)/2, cy: cY+h/2 };
+              if(acc.isNew) newRoomToTrace = d;
+              
+              let valStr = acc.value >= 1000000 ? '$'+(acc.value/1000000).toFixed(2)+'M' : (acc.value >= 1000 ? '$'+(acc.value/1000).toFixed(0)+'k' : (acc.value > 0 ? '$'+acc.value : ''));
+              
+              let g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+              g.setAttribute('class', `room-grp visible trust-room`); 
+              g.style.cursor = 'pointer'; 
+              g.setAttribute('onclick', `openAccountModal('${acc.id}')`);
+              
+              let taxClass = isThermal ? `tax-${base.taxCode}` : '';
+              let animClass = acc.isNew ? 'animate-draw' : '';
+              
+              g.innerHTML = `
+                  <title>${base.desc}</title>
+                  <rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" class="room-rect active ${taxClass} ${animClass}" />
+                  <text x="${d.cx}" y="${d.cy - 10}" class="bp-title" style="fill:var(--shield)">${base.meta.toUpperCase()}</text>
+                  <text x="${d.cx}" y="${d.cy + 30}" class="bp-val" style="fill:var(--white)">${valStr}</text>
+              `;
+              svgContainer.appendChild(g); 
+              cY += h + 12; 
+          });
+      }
+
+      let activeCols = [];
+      if(cols.primary.length > 0) activeCols.push('primary');
+      if(cols.joint.length > 0) activeCols.push('joint');
+      if(cols.coarch.length > 0) activeCols.push('coarch');
+      
+      let numCols = activeCols.length;
+      let drawnRooms = [];
+
+      if(numCols > 0) {
+          
+          let minW = 200; 
+          let minH = 75;  
+          
+          let gap = 0;
+          let colGap = 0;
+
+          let totalGlobalRender = 0;
+          let colTotals = { primary: 0, joint: 0, coarch: 0 };
+
+          activeCols.forEach(c => {
+             cols[c].forEach(acc => {
+                 let base = getBaseType(acc.baseId);
+                 let isVolatile = base.isInvestment || base.taxCode === 'liquid';
+                 let shockMult = (isShocked && isVolatile && base.taxCode !== 'debt') ? 0.70 : 1;
+                 
+                 let val = Math.max(Math.abs((acc.value || 0) * shockMult), 1000); 
+                 acc._renderVal = val;
+                 colTotals[c] += val;
+                 totalGlobalRender += val;
+             });
+          });
+
+          let availW = (gW - 40) - (numCols * minW);
+          availW = Math.max(0, availW);
+
+          let currentX = gX + 20;
+          let bounds = { minX: 9999, minY: 9999, maxX: 0, maxY: 0 }; 
+
+          activeCols.forEach((colName, index) => {
+              let accounts = cols[colName];
+              
+              let colW = minW;
+              if (totalGlobalRender > 0) {
+                  colW += availW * (colTotals[colName] / totalGlobalRender);
+              }
+
+              let availH = (gH - 100) - (accounts.length * minH);
+              availH = Math.max(0, availH);
+              let currentY = gY + 20;
+
+              accounts.forEach((acc, i) => {
+                  let base = getBaseType(acc.baseId);
+                  let valStr = '';
+
+                  let isVolatile = base.isInvestment || base.taxCode === 'liquid';
+                  let shockMult = (isShocked && isVolatile && base.taxCode !== 'debt') ? 0.70 : 1;
+                  let effectiveValue = (acc.value || 0) * shockMult;
+                  let absSum = Math.abs(effectiveValue);
+
+                  if(absSum >= 1000000) valStr = '$' + (absSum / 1000000).toFixed(2) + 'M';
+                  else if (absSum >= 1000) valStr = '$' + (absSum / 1000).toFixed(0) + 'k';
+                  else if (absSum > 0) valStr = '$' + Math.round(absSum);
+
+                  let isDebt = base.taxCode === 'debt';
+                  if(isDebt && absSum > 0) valStr = '-' + valStr;
+
+                  let h = minH;
+                  if(colTotals[colName] > 0) {
+                      h += availH * (acc._renderVal / colTotals[colName]);
+                  }
+
+                  let d = { x: currentX, y: currentY, w: colW, h: h };
+                  d.cx = d.x + d.w / 2;
+                  d.cy = d.y + d.h / 2;
+                  
+                  drawnRooms.push({ id: acc.id, taxCode: base.taxCode, isDebt: isDebt, isPriority: acc.isPriority, cx: d.cx, cy: d.cy });
+
+                  if(acc.isNew) newRoomToTrace = d; 
+
+                  bounds.minX = Math.min(bounds.minX, currentX);
+                  bounds.minY = Math.min(bounds.minY, currentY);
+                  bounds.maxX = Math.max(bounds.maxX, currentX + colW);
+                  bounds.maxY = Math.max(bounds.maxY, currentY + h);
+
+                  let tooltipHTML = '';
+                  if(base.taxCode === 'physical' || base.taxCode === 'debt' || base.hasInterest) {
+                      tooltipHTML = `<title>${base.desc}</title>`;
+                  }
+
+                  const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                  g.setAttribute('class', `room-grp visible ${isDebt ? 'debt-room' : ''}`);
+                  g.setAttribute('onclick', `openAccountModal('${acc.id}')`);
+                  g.style.cursor = 'pointer';
+                  
+                  let doorHTML = '';
+                  
+                  if (i < accounts.length - 1) {
+                      doorHTML += `<path d="M ${d.cx - 20} ${d.y + d.h} L ${d.cx + 20} ${d.y + d.h}" class="wall-cutout"/>`;
+                      doorHTML += `<path d="M ${d.cx - 15} ${d.y + d.h + 10} Q ${d.cx} ${d.y + d.h + 3} ${d.cx + 15} ${d.y + d.h + 10}" class="arch-marker"/>`;
+                      doorHTML += `<path d="M ${d.cx - 15} ${d.y + d.h - 10} Q ${d.cx} ${d.y + d.h - 3} ${d.cx + 15} ${d.y + d.h - 10}" class="arch-marker"/>`;
+                  }
+                  
+                  if (index < activeCols.length - 1 && i === 0) {
+                      let doorY = d.y + 40;
+                      if(doorY + 20 < d.y + d.h) { 
+                          doorHTML += `<path d="M ${d.x + d.w} ${doorY - 20} L ${d.x + d.w} ${doorY + 20}" class="wall-cutout"/>`;
+                          doorHTML += `<path d="M ${d.x + d.w - 10} ${doorY - 15} Q ${d.x + d.w - 3} ${doorY} ${d.x + d.w - 10} ${doorY + 15}" class="arch-marker"/>`;
+                          doorHTML += `<path d="M ${d.x + d.w + 10} ${doorY - 15} Q ${d.x + d.w + 3} ${doorY} ${d.x + d.w + 10} ${doorY + 15}" class="arch-marker"/>`;
+                      }
+                  }
+
+                  let animClass = acc.isNew ? 'animate-draw' : '';
+                  let frictionClass = acc.isFriction ? 'liquidity-friction' : '';
+                  let priorityClass = acc.isPriority ? 'structural-priority' : '';
+                  
+                  let shockColor = (isShocked && isVolatile && !isDebt) ? 'var(--danger)' : (isDebt ? 'var(--danger)' : 'var(--white)');
+                  
+                  let taxClass = '';
+                  if(isThermal) taxClass = `tax-${base.taxCode}`;
+
+                  g.innerHTML = `
+                    ${tooltipHTML}
+                    <rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" class="room-rect active ${animClass} ${frictionClass} ${priorityClass} ${taxClass}" />
+                    <text x="${d.cx}" y="${d.cy - 10}" class="bp-title">${base.meta.toUpperCase()}</text>
+                    <text x="${d.cx}" y="${d.cy + 30}" class="bp-val" style="fill:${shockColor}; transition: 0.6s ease;">${valStr}</text>
+                    ${doorHTML}
+                  `;
+                  svgContainer.appendChild(g);
+
+                  currentY += h + gap;
+              });
+
+              currentX += colW + colGap;
+          });
+
+          if (isMeasured && bounds.maxX > 0) {
+              let outline = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+              outline.setAttribute("x", bounds.minX - 10);
+              outline.setAttribute("y", bounds.minY - 10);
+              outline.setAttribute("width", (bounds.maxX - bounds.minX) + 20);
+              outline.setAttribute("height", (bounds.maxY - bounds.minY) + 20);
+              outline.setAttribute("class", "estate-measure-outline");
+              svgContainer.appendChild(outline);
+          }
+      }
+
+      // SURGICAL: Outflow Routing Lines
+      if (isRouting && drawnRooms.length > 0) {
+          let liq = drawnRooms.filter(r => r.taxCode === 'liquid');
+          let pre = drawnRooms.filter(r => r.taxCode === 'pretax');
+          let roth = drawnRooms.filter(r => r.taxCode === 'roth');
+          let debts = drawnRooms.filter(r => r.isDebt && r.isPriority);
+
+          let sequence = [...liq, ...pre, ...roth];
+
+          if(sequence.length > 1) {
+              let p = `M ${sequence[0].cx} ${sequence[0].cy}`;
+              for(let k=1; k<sequence.length; k++) {
+                  p += ` L ${sequence[k].cx} ${sequence[k].cy}`;
+              }
+              let routePath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+              routePath.setAttribute("d", p);
+              routePath.setAttribute("class", "outflow-route");
+              svgContainer.appendChild(routePath);
+          }
+
+          if (debts.length > 0 && liq.length > 0) {
+              debts.forEach(d => {
+                  let p = `M ${liq[0].cx} ${liq[0].cy} L ${d.cx} ${d.cy}`;
+                  let demoPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                  demoPath.setAttribute("d", p);
+                  demoPath.setAttribute("class", "demolition-route");
+                  svgContainer.appendChild(demoPath);
+              });
+          }
+      }
+
+      const formattedTotal = grandTotal === 0 ? '$0' : (grandTotal < 0 ? '-$' + Math.abs(Math.round(grandTotal)).toLocaleString('en-US') : '$' + Math.round(grandTotal).toLocaleString('en-US'));
+      grossEstateVal.innerText = formattedTotal;
+      if (isShocked) grossEstateVal.style.color = "var(--danger)";
+      else grossEstateVal.style.color = "var(--white)";
+
+      if (newRoomToTrace) {
+          let machine = document.getElementById('ch-machine');
+          let d = newRoomToTrace;
+          if(machine) {
+              machine.animate([
+                { transform: `translate(0px, 0px)`, offset: 0 },
+                { transform: `translate(${d.x - 700}px, ${d.y - 550}px)`, offset: 0.15 },
+                { transform: `translate(${d.x + d.w - 700}px, ${d.y - 550}px)`, offset: 0.35 },
+                { transform: `translate(${d.x + d.w - 700}px, ${d.y + d.h - 550}px)`, offset: 0.55 },
+                { transform: `translate(${d.x - 700}px, ${d.y + d.h - 550}px)`, offset: 0.75 },
+                { transform: `translate(${d.x - 700}px, ${d.y - 550}px)`, offset: 0.90 },
+                { transform: `translate(0px, 0px)`, offset: 1 }
+              ], {
+                duration: 1800,
+                easing: 'linear'
+              });
+          }
+      }
+
+      state.accounts.forEach(a => a.isNew = false);
+    }
+
+    function updateAnalysisText() {
+        const analysisBox = document.getElementById('estate-analysis');
+        const textBody = document.getElementById('analysis-text-body');
+        
+        if(!isMeasured) {
+            analysisBox.classList.remove('visible');
+            return;
+        }
+
+        let catSums = { pretax: 0, roth: 0, liquid: 0, physical: 0, income: 0, debt: 0 };
+        let validAssetTotal = 0;
+
+        let smallestRoom = null;
+        let biggestDebt = null;
+
+        state.accounts.forEach(acc => {
+            if(acc.exclude) return; 
+
+            const base = getBaseType(acc.baseId);
+            if(base && Math.abs(acc.value || 0) > 0) {
+                
+                let isVolatile = base.isInvestment || base.taxCode === 'liquid';
+                let shockMult = (isShocked && isVolatile && base.taxCode !== 'debt') ? 0.70 : 1;
+                let effectiveValue = acc.value * shockMult;
+
+                if (base.taxCode === 'debt') {
+                    catSums.debt += Math.abs(effectiveValue);
+                    if(!biggestDebt || effectiveValue > biggestDebt.value) biggestDebt = acc;
+                } else {
+                    catSums[base.taxCode] += effectiveValue;
+                    if(base.taxCode !== 'income') {
+                        validAssetTotal += effectiveValue;
+                        if(!smallestRoom || effectiveValue < smallestRoom.value) smallestRoom = acc;
+                    }
+                }
+            }
+        });
+
+        if(validAssetTotal === 0) {
+             textBody.innerHTML = "No structural load established. Begin drafting to analyze architecture.";
+             analysisBox.classList.add('visible');
+             return;
+        }
+
+        const pct = (val) => Math.round((val / validAssetTotal) * 100);
+        let report = `Total gross asset architecture spans <span style="color:var(--gold);">$${(validAssetTotal/1000000).toFixed(2)}M</span>. `;
+        
+        let loadKeys = Object.keys(catSums).filter(k => k !== 'debt' && k !== 'income');
+        let domKey = loadKeys.reduce((a, b) => catSums[a] > catSums[b] ? a : b);
+        let secKey = loadKeys.filter(k => k !== domKey).reduce((a, b) => catSums[a] > catSums[b] ? a : b);
+        
+        if (domKey === 'pretax') report += `Heavy structural reliance on <span>Pre-Tax Vehicles (${pct(catSums.pretax)}%)</span> subject to future tax liabilities. `;
+        if (domKey === 'liquid') report += `Architecture is heavily weighted in <span>Liquid Assets (${pct(catSums.liquid)}%)</span> providing high immediate agility. `;
+        if (domKey === 'roth') report += `Extremely efficient tax-structure, anchored by <span>Tax-Free Growth (${pct(catSums.roth)}%)</span>. `;
+        if (domKey === 'physical') report += `High illiquidity. Capital is locked firmly in <span>Physical Assets (${pct(catSums.physical)}%)</span>. `;
+
+        if (catSums[secKey] > 0) {
+            let secName = secKey === 'pretax' ? 'The Vault/Pre-Tax' : (secKey === 'liquid' ? 'Liquid Capital' : (secKey === 'roth' ? 'Tax-Free Space' : 'Physical Property'));
+            report += `Secondary load is supported by <span>${secName} (${pct(catSums[secKey])}%)</span>.`;
+        }
+
+        if(catSums.debt > 0) {
+            report += `<br><br>Total structural integrity is reduced by <span style="color:var(--danger)">$${(catSums.debt >= 1000000 ? (catSums.debt/1000000).toFixed(2)+'M' : (catSums.debt/1000).toFixed(0)+'k')}</span> in active liabilities.`;
+        }
+
+        // Cash Flow Physics Module
+        let priSal = parseInt(document.getElementById('pri-salary').value.replace(/[^0-9]/g, ''), 10) || 0;
+        let coSal = document.getElementById('co-arch-toggle').checked ? (parseInt(document.getElementById('co-salary').value.replace(/[^0-9]/g, ''), 10) || 0) : 0;
+        let effTax = parseFloat(document.getElementById('eff-tax-rate').value) || 0;
+        
+        let grossAnnual = priSal + coSal;
+        let netAnnual = grossAnnual * (1 - (effTax / 100));
+        let monthlyNetIncome = Math.round(netAnnual / 12);
+        let totalUpkeep = upkeepItems.reduce((sum, i) => sum + i.cost, 0);
+        let totalCharity = charityItems.reduce((sum, i) => sum + i.cost, 0);
+        let freeCashFlow = monthlyNetIncome - totalUpkeep - totalCharity;
+
+        if (grossAnnual > 0) {
+            report += `<br><br><strong style="color:var(--gold);">CASH FLOW DIAGNOSTICS:</strong><br>Your combined net monthly income is estimated at $${monthlyNetIncome.toLocaleString('en-US')}. After deducting Operating Overhead and Philanthropic Allocations, you possess <span style="color:var(--teal-mid); font-weight:bold;">$${freeCashFlow.toLocaleString('en-US')} in Free Cash Flow</span> every month. `;
+            
+            if (freeCashFlow > 0) {
+                if (biggestDebt && biggestDebt.isPriority) {
+                     report += `Deploying excess velocity to accelerate the demolition of ${biggestDebt.name} (Priority Engaged).`;
+                } else if (biggestDebt) {
+                     report += `Consider deploying this excess velocity to accelerate the demolition of ${biggestDebt.name || 'your largest debt'}.`;
+                } else if (smallestRoom) {
+                     report += `Consider deploying this excess velocity to expand restricted spaces like your ${smallestRoom.name || 'smallest account'}.`;
+                }
+            } else if (freeCashFlow < 0) {
+                report += `<span style="color:var(--danger);">Warning: You are running a monthly structural deficit.</span> Over-leverage detected.`;
+            }
+        }
+
+        textBody.innerHTML = report;
+        analysisBox.classList.add('visible');
+    }
+
+    const analyzeLoadBtn = document.getElementById('measure-btn');
+    analyzeLoadBtn.addEventListener('click', () => {
+        isMeasured = !isMeasured;
+        analyzeLoadBtn.classList.toggle('active');
+        analyzeLoadBtn.innerText = isMeasured ? "⤓ CLOSE ANALYSIS" : "⤓ ANALYZE STRUCTURAL LOAD";
+        updateSVGs(); 
+        updateAnalysisText();
+    });
+
+    window.addInstance = function(baseId) {
+      const base = getBaseType(baseId);
+      const newId = 'inst_' + Math.random().toString(36).substr(2, 9);
+      state.accounts.push({ id: newId, baseId: baseId, name: base.title, value: 0, inflow: 0, freq: 12, intRate: 0, term: null, exclude: false, notes: '', cola: 0, linkedAssetId: null, useRule55: false, isNew: true, isFriction: false, isPriority: false, holdings: [], trustType: 'Irrevocable', disbursement: 'Discretionary' });
+      renderInputs();
+      updateSVGs();
+      updateAnalysisText();
+      spaceDropdown.classList.remove('open');
+    };
+
+    window.removeInstance = function(id) {
+      state.accounts = state.accounts.filter(a => a.id !== id);
+      state.accounts.forEach(a => { if(a.linkedAssetId === id) a.linkedAssetId = null; });
+      renderInputs();
+      updateSVGs();
+      updateAnalysisText();
+    };
+    
+    window.removeInstanceSum = function(baseId) {
+        let idsToRemove = state.accounts.filter(a => a.baseId === baseId).map(a => a.id);
+        state.accounts = state.accounts.filter(a => a.baseId !== baseId);
+        state.accounts.forEach(a => { if(idsToRemove.includes(a.linkedAssetId)) a.linkedAssetId = null; });
+        renderInputs(); 
+        updateSVGs(); 
+        updateAnalysisText(); 
+    }
+
+    window.updateName = function(id, newName) {
+      const acc = state.accounts.find(a => a.id === id);
+      if(acc) {
+          acc.name = newName;
+          if(activeModalId === id) document.getElementById('modal-acc-title').innerText = newName + " Details";
+      }
+    };
+
+    window.updateValue = function(id, valStr) {
+      const acc = state.accounts.find(a => a.id === id);
+      if(acc) {
+        acc.value = parseInt(valStr.replace(/[^0-9]/g, ''), 10) || 0;
+        updateSVGs();
+        updateAnalysisText();
+        if(activeModalId === id) {
+            const pmtEl = document.getElementById(`modal-calc-pmt-${id}`);
+            const payoffEl = document.getElementById(`modal-calc-payoff-${id}`);
+            const eqEl = document.getElementById(`modal-calc-equity-${id}`);
+            
+            if(pmtEl) pmtEl.innerText = '$' + calculateTotalPmt(acc).toLocaleString('en-US');
+            if(payoffEl) payoffEl.innerText = calculatePayoff(acc);
+            if(eqEl && acc.linkedAssetId) {
+                let lAst = state.accounts.find(a => a.id === acc.linkedAssetId);
+                let eq = (lAst ? lAst.value || 0 : 0) - (acc.value || 0);
+                eqEl.innerText = '$' + eq.toLocaleString('en-US');
+                eqEl.style.color = eq >= 0 ? 'var(--teal-mid)' : 'var(--danger)';
+            }
+        }
+      }
+    };
+    
+    window.updateInflow = function(id, valStr) {
+      const acc = state.accounts.find(a => a.id === id);
+      if(acc) {
+        acc.inflow = parseInt(valStr.replace(/[^0-9]/g, ''), 10) || 0;
+        updateSVGs();
+      }
+    };
+    
+    window.updateFreq = function(id, freqVal) {
+      const acc = state.accounts.find(a => a.id === id);
+      if(acc) {
+        acc.freq = parseInt(freqVal, 10) || 12;
+        updateSVGs();
+      }
+    };
+
+    addSpaceBtn.addEventListener('click', () => { spaceDropdown.classList.toggle('open'); });
+    document.addEventListener('click', (e) => {
+      if(!addSpaceBtn.contains(e.target) && !spaceDropdown.contains(e.target)) spaceDropdown.classList.remove('open');
+    });
+
+    // --- CANVAS ZOOM & PAN LOGIC ---
+    const canvasWrapper = document.getElementById('canvas-wrapper');
+    const blueprintContainer = document.getElementById('blueprint-container');
+    
+    let scale = 1;
+    let isDragging = false;
+    let startX, startY, currentX = 0, currentY = 0;
+
+    function fitToScreen() {
+       const wrapperRect = canvasWrapper.getBoundingClientRect();
+       const scaleX = wrapperRect.width / 1400;
+       const scaleY = wrapperRect.height / 1100;
+       scale = Math.min(scaleX, scaleY, 0.95); 
+       updateTransform();
+    }
+    
+    function updateTransform() {
+        blueprintContainer.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px)) scale(${scale})`;
+    }
+
+    window.addEventListener('resize', fitToScreen);
+    
+    canvasWrapper.addEventListener('wheel', (e) => {
+       e.preventDefault();
+       scale += e.deltaY * -0.001;
+       scale = Math.min(Math.max(0.3, scale), 2.0); 
+       updateTransform();
+    }, { passive: false });
+
+    canvasWrapper.addEventListener('mousedown', (e) => {
+      if(e.target.closest('.hud-panel') || e.target.closest('.map-delete') || e.target.closest('.room-grp') || e.target.closest('.lens-controls')) return;
+      isDragging = true;
+      startX = e.clientX - currentX;
+      startY = e.clientY - currentY;
+      canvasWrapper.style.cursor = 'grabbing';
+    });
+    canvasWrapper.addEventListener('mouseleave', () => { isDragging = false; canvasWrapper.style.cursor = 'grab'; });
+    canvasWrapper.addEventListener('mouseup', () => { isDragging = false; canvasWrapper.style.cursor = 'grab'; });
+    canvasWrapper.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      e.preventDefault();
+      currentX = e.clientX - startX;
+      currentY = e.clientY - startY;
+      updateTransform();
+    });
+
+    canvasWrapper.addEventListener('touchstart', (e) => {
+      if(e.touches.length === 1) {
+        isDragging = true;
+        startX = e.touches[0].clientX - currentX;
+        startY = e.touches[0].clientY - currentY;
+      }
+    }, { passive: true });
+    canvasWrapper.addEventListener('touchend', () => { isDragging = false; });
+    canvasWrapper.addEventListener('touchmove', (e) => {
+      if (!isDragging || e.touches.length !== 1) return;
+      currentX = e.touches[0].clientX - startX;
+      currentY = e.touches[0].clientY - startY;
+      updateTransform();
+    }, { passive: true });
+
+    // Init
+    fitToScreen();
+    updateArchitectNames();
+    renderUpkeep();
+    renderInputs();
+    updateSVGs();
+
+    // === CINEMATIC OVERLAY + REVEAL RANGE ===
+    (function() {
+      const STATUS_MESSAGES = [
+        'Drafting your estate\u2026',
+        'Running 10,000 path simulation\u2026',
+        'Stress testing architecture\u2026',
+        'Measuring convergence\u2026',
+        'Finalizing your Range\u2026'
+      ];
+
+      const OUTLOOK_MAP = {
+        'History Repeats': 'history_repeats',
+        'Valuations Matter': 'valuations_matter',
+        'Cautious': 'cautious',
+        'Optimistic': 'optimistic',
+        'Custom Matrix': 'valuations_matter'
+      };
+
+      const SS_AGE_MAP = { '62': 'early_62', '67': 'full_67', '70': 'optimal_70' };
+
+      function parseAgeFromDob(dobStr) {
+        if (!dobStr) return null;
+        const parts = dobStr.replace(/\s/g, '').split('/');
+        if (parts.length < 2) return null;
+        const month = parseInt(parts[0], 10);
+        const year = parseInt(parts[1], 10);
+        if (!year) return null;
+        const now = new Date();
+        let age = now.getFullYear() - year;
+        if (now.getMonth() + 1 < month) age--;
+        return age;
+      }
+
+      function buildStudioRequest() {
+        const dobVal   = document.getElementById('pri-dob')?.value || '';
+        const retVal   = document.getElementById('target-ret')?.value || '';
+        const spendVal = document.getElementById('spend-input')?.value || '';
+
+        const currentAge  = parseAgeFromDob(dobVal) || 43;
+        const retYear     = parseInt((retVal.replace(/\s/g, '').split('/')[1] || ''), 10);
+        const retireAge   = retYear ? (retYear - (new Date().getFullYear() - currentAge)) : 55;
+        const datumSpend  = parseInt(spendVal.replace(/[^\d]/g, ''), 10) || 120000;
+
+        const activeClimate = document.querySelector('.climate-option.active');
+        const outlook       = OUTLOOK_MAP[activeClimate?.dataset?.outlook] || 'valuations_matter';
+
+        const activeSS   = document.querySelector('.ss-btn.active strong');
+        const ssStrategy = SS_AGE_MAP[activeSS?.textContent?.trim()] || 'optimal_70';
+
+        const accounts = state.accounts
+          .filter(a => (a.value || 0) > 0 || (a.inflow || 0) > 0)
+          .map(a => ({ type: a.baseId, balance: a.value || 0, annual_contribution: a.inflow || 0 }));
+
+        return { current_age: currentAge, retirement_age: retireAge, location: 'FL', datum_spend: datumSpend, market_outlook: outlook, ss_strategy_primary: ssStrategy, accounts };
+      }
+
+      const revealBtn = document.querySelector('.action-btn');
+      if (revealBtn) {
+        revealBtn.addEventListener('click', async function() {
+          const overlay  = document.getElementById('cinematic-overlay');
+          const statusEl = document.getElementById('cinematic-status');
+          overlay.classList.add('active');
+          revealBtn.disabled = true;
+
+          let msgIdx = 0;
+          const rotator = setInterval(() => {
+            msgIdx = (msgIdx + 1) % STATUS_MESSAGES.length;
+            statusEl.textContent = STATUS_MESSAGES[msgIdx];
+          }, 1100);
+
+          try {
+            const [apiResult] = await Promise.all([
+              fetch('https://api.datumfi.com/api/calculate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(buildStudioRequest())
+              }).then(r => r.ok ? r.json() : null).catch(() => null),
+              new Promise(r => setTimeout(r, 4500))
+            ]);
+            if (apiResult) sessionStorage.setItem('datumfi_range', JSON.stringify(apiResult));
+          } catch(e) {
+            // navigate regardless
+          }
+
+          clearInterval(rotator);
+          window.location.href = '/range.html';
+        });
+      }
+    })();
+
+  </script>
+
+  <!-- CINEMATIC OVERLAY -->
+  <div id="cinematic-overlay">
+    <div class="c-stage">
+      <svg class="c-svg" viewBox="0 0 1125 600">
+        <g class="c-log" transform="translate(10, 60)">
+          <text class="c-log-1" x="0" y="0">SYSTEM : PARAMETRIC LOG-NORMAL [ACTIVE]</text>
+          <text class="c-log-2" x="0" y="25">SYSTEM : EMPIRICAL 1926-2025 [ACTIVE]</text>
+          <text class="c-log-3" x="0" y="50">SYSTEM : CAPE VALUATION [ACTIVE]</text>
+          <text class="c-log-4" x="0" y="75">SYSTEM : REGIME BOOTSTRAP [ACTIVE]</text>
+        </g>
+        <g transform="translate(412.5, 250)">
+          <line x1="-110" y1="180" x2="410" y2="180" stroke="#5DCAA5" stroke-width="2" />
+          <rect x="-80" y="80" width="130" height="100" class="c-estate-block" />
+          <rect x="-60" y="100" width="90" height="60" fill="none" stroke="#5DCAA5" stroke-width="1" opacity="0.4" />
+          <line x1="-100" y1="80" x2="60" y2="80" stroke="#5DCAA5" stroke-width="2" />
+          <rect x="50" y="0" width="200" height="180" class="c-estate-block" />
+          <rect x="70" y="20" width="160" height="60" fill="none" stroke="#5DCAA5" stroke-width="1" opacity="0.4" />
+          <rect x="110" y="100" width="80" height="80" fill="none" stroke="#5DCAA5" stroke-width="1" opacity="0.4" />
+          <line x1="30" y1="0" x2="270" y2="0" stroke="#5DCAA5" stroke-width="2" />
+          <rect x="250" y="40" width="130" height="140" class="c-estate-block" />
+          <rect x="270" y="60" width="90" height="100" fill="none" stroke="#5DCAA5" stroke-width="1" opacity="0.4" />
+          <line x1="230" y1="40" x2="400" y2="40" stroke="#5DCAA5" stroke-width="2" />
+          <text class="c-ht" x="150" y="205" style="fill:rgba(255,255,255,0.6);">THE ESTATE</text>
+        </g>
+        <line x1="0" y1="0" x2="1125" y2="0" class="c-scanner" />
+        <g>
+          <circle cx="562.5" cy="330" r="10" class="c-wave" />
+          <circle cx="562.5" cy="330" r="240" class="c-shield" />
+          <text class="c-alert" x="562.5" y="150">ADVERSE SCENARIO SHOCK DETECTED</text>
+          <text class="c-success" x="562.5" y="170">STRUCTURAL INTEGRITY HOLDING</text>
+        </g>
+      </svg>
+      <p id="cinematic-status">Drafting your estate&hellip;</p>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Datum FI — Analyzing Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-navy: #091221;
+    --teal: #1D9E75;
+    --teal-mid: #5DCAA5;
+    --gold: #C9A84C;
+    --white: #ffffff;
+    --muted: rgba(255,255,255,0.4);
+    --grid-line: rgba(100, 180, 255, 0.05);
+    --danger-red: #e24b4a;
+    --font-serif: 'Fraunces', serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background-color: var(--bg-navy);
+    background-image: 
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    color: var(--white);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  .stage-container {
+    width: 100%;
+    max-width: 1500px; /* Increased Max Width to accommodate the larger canvas */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .cinematic-svg {
+    width: 100%;
+    height: auto;
+    max-height: 80vh;
+    overflow: visible;
+  }
+
+  /* --- ANIMATION STYLES --- */
+  .estate-block {
+      fill: rgba(29, 158, 117, 0.05);
+      stroke: var(--teal-mid);
+      stroke-width: 1.5;
+  }
+
+  .scanner-line {
+      stroke: var(--gold);
+      stroke-width: 2;
+      stroke-dasharray: 4 8;
+      opacity: 0;
+      animation: scanSweep 5s linear infinite;
+  }
+
+  @keyframes scanSweep {
+      0% { transform: translateY(-50px); opacity: 0; }
+      5% { opacity: 0.8; }
+      90% { opacity: 0.8; }
+      95% { transform: translateY(650px); opacity: 0; }
+      100% { transform: translateY(650px); opacity: 0; }
+  }
+
+  .model-log text {
+      font-family: var(--font-mono);
+      font-size: 11px; 
+      fill: rgba(255,255,255,0.2);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+  }
+
+  .m-log-1 { animation: logPulse 5s infinite; animation-delay: 0s; }
+  .m-log-2 { animation: logPulse 5s infinite; animation-delay: 1.25s; }
+  .m-log-3 { animation: logPulse 5s infinite; animation-delay: 2.5s; }
+  .m-log-4 { animation: logPulse 5s infinite; animation-delay: 3.75s; }
+
+  @keyframes logPulse {
+      0%, 100% { fill: rgba(255,255,255,0.2); }
+      10%, 25% { fill: var(--gold); }
+      30%, 95% { fill: rgba(255,255,255,0.2); }
+  }
+
+  .stress-wave {
+      fill: none;
+      stroke: var(--danger-red);
+      stroke-width: 2;
+      opacity: 0;
+      animation: shockwave 5s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+      animation-delay: 2.5s; 
+  }
+
+  .structural-shield {
+      fill: rgba(93, 202, 165, 0.05); 
+      stroke: var(--teal-mid);
+      stroke-width: 2;
+      stroke-dasharray: 8 8;
+      opacity: 0;
+      transform-origin: 562.5px 330px; /* Corrected to center in the 1125x600 ViewBox */
+      animation: shieldPulse 5s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+      animation-delay: 2.5s;
+  }
+
+  @keyframes shockwave {
+      0% { r: 500; opacity: 0; stroke-width: 1;}
+      10% { opacity: 0.6; stroke-width: 4;}
+      25% { r: 240; opacity: 0; stroke-width: 1;} 
+      100% { r: 240; opacity: 0;}
+  }
+
+  @keyframes shieldPulse {
+      0% { opacity: 0; transform: scale(0.95); }
+      20% { opacity: 1; transform: scale(1.02); }
+      25% { opacity: 1; transform: scale(1); }
+      40% { opacity: 0; transform: scale(1); }
+      100% { opacity: 0; }
+  }
+
+  .stress-alert {
+      font-family: var(--font-mono);
+      font-size: 14px; 
+      fill: var(--danger-red);
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      text-anchor: middle;
+      opacity: 0;
+      animation: alertFlash 5s infinite;
+      animation-delay: 2.5s;
+  }
+
+  .shield-success {
+      font-family: var(--font-mono);
+      font-size: 13px; 
+      fill: var(--teal-mid);
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      text-anchor: middle;
+      opacity: 0;
+      animation: successFade 5s infinite;
+      animation-delay: 3.5s;
+  }
+
+  @keyframes alertFlash {
+      0%, 100% { opacity: 0; }
+      10%, 20%, 30% { opacity: 1; }
+      15%, 25% { opacity: 0.2; }
+      35% { opacity: 0; }
+  }
+
+  @keyframes successFade {
+      0%, 100% { opacity: 0; transform: translateY(5px); }
+      10%, 40% { opacity: 1; transform: translateY(0); }
+      50% { opacity: 0; transform: translateY(-5px); }
+  }
+
+  .status-text {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 0.4em;
+    margin-top: 60px;
+    animation: pulseMuted 2s infinite;
+  }
+
+  @keyframes pulseMuted {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .ht-title { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; text-anchor: middle; font-weight: bold;}
+
+</style>
+</head>
+<body>
+
+  <main class="stage-container">
+    
+    <svg class="cinematic-svg" viewBox="0 0 1125 600">
+        
+        <g class="model-log" transform="translate(10, 60)">
+            <text class="m-log-1" x="0" y="0">SYSTEM : PARAMETRIC LOG-NORMAL [ACTIVE]</text>
+            <text class="m-log-2" x="0" y="25">SYSTEM : EMPIRICAL 1926-2025 [ACTIVE]</text>
+            <text class="m-log-3" x="0" y="50">SYSTEM : CAPE VALUATION [ACTIVE]</text>
+            <text class="m-log-4" x="0" y="75">SYSTEM : REGIME BOOTSTRAP [ACTIVE]</text>
+        </g>
+
+        <g transform="translate(412.5, 250)">
+            <line x1="-110" y1="180" x2="410" y2="180" stroke="var(--teal-mid)" stroke-width="2" />
+            
+            <rect x="-80" y="80" width="130" height="100" class="estate-block" />
+            <rect x="-60" y="100" width="90" height="60" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.4" />
+            <line x1="-100" y1="80" x2="60" y2="80" stroke="var(--teal-mid)" stroke-width="2" />
+
+            <rect x="50" y="0" width="200" height="180" class="estate-block" />
+            <rect x="70" y="20" width="160" height="60" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.4" />
+            <rect x="110" y="100" width="80" height="80" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.4" />
+            <line x1="30" y1="0" x2="270" y2="0" stroke="var(--teal-mid)" stroke-width="2" />
+
+            <rect x="250" y="40" width="130" height="140" class="estate-block" />
+            <rect x="270" y="60" width="90" height="100" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.4" />
+            <line x1="230" y1="40" x2="400" y2="40" stroke="var(--teal-mid)" stroke-width="2" />
+            
+            <text class="ht-title" x="150" y="205" style="fill:rgba(255,255,255,0.6);">THE ESTATE</text>
+        </g>
+
+        <line x1="0" y1="0" x2="1125" y2="0" class="scanner-line" />
+
+        <g class="stress-fx">
+            <circle cx="562.5" cy="330" r="10" class="stress-wave" />
+            <circle cx="562.5" cy="330" r="240" class="structural-shield" />
+            
+            <text class="stress-alert" x="562.5" y="150">ADVERSE SCENARIO SHOCK DETECTED</text>
+            <text class="shield-success" x="562.5" y="170">STRUCTURAL INTEGRITY HOLDING</text>
+        </g>
+
+    </svg>
+
+    <p class="status-text">Executing 10,000 Path Multiverse Simulation...</p>
+
+  </main>
+
+</body>
+</html>
