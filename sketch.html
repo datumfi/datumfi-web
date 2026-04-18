@@ -190,41 +190,28 @@
   .arch-card { background: rgba(9, 18, 33, 0.6); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 24px; transition: border-color 0.3s ease; position: relative; }
   .arch-card:hover { border-color: var(--teal-mid); }
 
-  /* --- ARCH-CARD TOOLTIPS --- */
+  /* --- ARCH-CARD TOOLTIPS (position:fixed to escape stacking contexts) --- */
   .arch-tooltip {
-    position: absolute; bottom: calc(100% + 12px); left: 50%;
-    transform: translateX(-50%) translateY(6px);
-    width: 340px; max-width: 95vw;
-    background: rgba(9, 18, 33, 0.95); border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 6px; padding: 20px; z-index: 200;
-    opacity: 0; pointer-events: none;
-    transition: opacity 0.3s ease, transform 0.3s ease;
+    position: fixed; width: 340px; max-width: calc(100vw - 20px);
+    background: rgba(9, 18, 33, 0.95);
+    border: 1px solid var(--gold);
+    box-shadow: 0 0 20px rgba(201, 168, 76, 0.15);
+    border-radius: 6px; padding: 20px; z-index: 1000;
+    opacity: 0; pointer-events: none; display: none;
+    transition: opacity 0.3s ease;
   }
-  .arch-card:hover .arch-tooltip,
-  .arch-card.tt-active .arch-tooltip {
-    opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto;
-  }
+  .arch-tooltip.tt-visible { opacity: 1; pointer-events: auto; }
   .arch-tooltip::after {
-    content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
-    border: 6px solid transparent; border-top-color: rgba(9, 18, 33, 0.95);
+    content: ''; position: absolute; left: 50%; transform: translateX(-50%);
+    border: 6px solid transparent;
   }
-  .arch-tooltip.tt-flip {
-    bottom: auto; top: calc(100% + 12px);
-    transform: translateX(-50%) translateY(-6px);
-  }
-  .arch-card:hover .arch-tooltip.tt-flip,
-  .arch-card.tt-active .arch-tooltip.tt-flip {
-    transform: translateX(-50%) translateY(0);
-  }
-  .arch-tooltip.tt-flip::after {
-    top: auto; bottom: 100%;
-    border-top-color: transparent; border-bottom-color: rgba(9, 18, 33, 0.95);
-  }
+  .arch-tooltip:not(.tt-flip)::after { top: 100%; border-top-color: rgba(9, 18, 33, 0.95); }
+  .arch-tooltip.tt-flip::after { bottom: 100%; border-bottom-color: rgba(9, 18, 33, 0.95); }
   .tt-head-1 { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--teal-mid); margin-bottom: 8px; }
   .tt-body-1 { font-family: var(--font-mono); font-size: 11px; color: var(--white); line-height: 1.6; margin-bottom: 0; }
   .tt-divider { border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 14px 0; }
   .tt-head-2 { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gold); margin-bottom: 8px; }
-  .tt-body-2 { font-family: var(--font-mono); font-size: 11px; color: rgba(255,255,255,0.6); line-height: 1.6; }
+  .tt-body-2 { font-family: var(--font-mono); font-size: 11px; color: var(--gold); line-height: 1.6; }
   .card-tag { font-family: var(--font-mono); font-size: 10px; color: var(--teal-mid); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 8px; }
   .card-title { font-family: var(--font-serif); font-size: 20px; font-style: italic; color: var(--white); margin-bottom: 8px; }
   .card-desc { font-family: var(--font-mono); font-size: 12px; color: var(--muted); line-height: 1.5; }
@@ -265,6 +252,69 @@
   }
   .studio-btn:hover { background: var(--teal-mid); color: var(--bg-navy); }
 
+  /* --- STUDIO CARD (screen-3) --- */
+  .studio-card {
+    max-width: 1100px; width: 100%; background: rgba(9, 18, 33, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px;
+    padding: 48px; margin: 0 auto 40px;
+  }
+  .studio-card-header { text-align: center; margin-bottom: 48px; }
+  .sc-title { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.3em; color: var(--gold); margin-bottom: 12px; }
+  .sc-subtitle { font-family: var(--font-serif); font-size: 32px; font-style: italic; font-weight: 700; color: var(--white); margin-bottom: 12px; }
+  .sc-scope { font-family: var(--font-mono); font-size: 12px; color: rgba(255,255,255,0.5); letter-spacing: 0.05em; }
+  .pillar-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 40px; }
+  .pillar-card {
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px; padding: 24px; cursor: pointer; transition: border-color 0.3s ease; position: relative;
+  }
+  .pillar-card:hover { border-color: var(--gold); }
+  .pillar-num { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.2em; color: rgba(255,255,255,0.3); margin-bottom: 4px; }
+  .pillar-title { font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gold); margin-bottom: 6px; }
+  .pillar-sub { font-family: var(--font-serif); font-size: 18px; font-style: italic; color: var(--white); margin-bottom: 12px; }
+  .pillar-count { font-family: var(--font-mono); font-size: 10px; color: var(--gold); }
+  .pillar-tooltip {
+    position: fixed; width: 360px; max-width: calc(100vw - 20px);
+    background: rgba(9, 18, 33, 0.97); border: 1px solid var(--gold);
+    box-shadow: 0 0 20px rgba(201, 168, 76, 0.15);
+    border-radius: 6px; padding: 20px; z-index: 1000;
+    opacity: 0; pointer-events: none; display: none; transition: opacity 0.3s ease;
+  }
+  .pillar-tooltip.tt-visible { opacity: 1; pointer-events: auto; }
+  .pillar-tooltip::after {
+    content: ''; position: absolute; left: 50%; transform: translateX(-50%); border: 6px solid transparent;
+  }
+  .pillar-tooltip:not(.tt-flip)::after { top: 100%; border-top-color: rgba(9, 18, 33, 0.97); }
+  .pillar-tooltip.tt-flip::after { bottom: 100%; border-bottom-color: rgba(9, 18, 33, 0.97); }
+  .pillar-cap-list { list-style: none; padding: 0; margin: 0; }
+  .pillar-cap-item { font-family: var(--font-mono); font-size: 11px; color: var(--white); line-height: 1.5; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .pillar-cap-item:last-child { border-bottom: none; }
+  .cap-ledger { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,0.4); display: block; margin-top: 3px; }
+  .see-comparison-wrap { text-align: center; margin-bottom: 40px; }
+  .see-comparison-btn {
+    background: transparent; border: 1px solid var(--gold); color: var(--gold);
+    font-family: var(--font-mono); font-size: 12px; text-transform: uppercase;
+    letter-spacing: 0.15em; padding: 12px 28px; border-radius: 4px; cursor: pointer; transition: all 0.3s ease;
+  }
+  .see-comparison-btn:hover { background: var(--gold); color: var(--bg-navy); }
+  .comparison-matrix { margin-top: 40px; overflow-x: auto; }
+  .comp-table { width: 100%; border-collapse: collapse; min-width: 600px; }
+  .comp-table thead tr { border-bottom: 2px solid var(--gold); }
+  .comp-table th { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; padding: 16px 20px; text-align: left; }
+  .comp-table th:first-child { color: rgba(255,255,255,0.5); }
+  .comp-table th:nth-child(2) { color: rgba(255,255,255,0.5); }
+  .comp-table th:nth-child(3) { color: var(--gold); }
+  .comp-table td { font-family: var(--font-mono); font-size: 12px; padding: 14px 20px; border-bottom: 1px dashed rgba(255,255,255,0.08); vertical-align: middle; }
+  .comp-table td:first-child { color: rgba(255,255,255,0.7); }
+  .comp-table td:nth-child(2) { color: rgba(255,255,255,0.5); }
+  .comp-table td:nth-child(3) { color: var(--gold); }
+  .cell-check { color: var(--gold); }
+  .cell-x { color: rgba(226, 75, 74, 0.4); }
+  .doctrine-note {
+    font-family: var(--font-serif); font-size: 12px; font-style: italic;
+    color: rgba(255,255,255,0.35); line-height: 1.6; text-align: center;
+    margin-top: 32px; max-width: 700px; margin-left: auto; margin-right: auto;
+  }
+
   /* --- MOBILE LAYOUT (H2) --- */
   @media (max-width: 900px) {
     .hero-screen { flex-direction: column; height: auto; min-height: 100vh; overflow-y: auto; }
@@ -273,6 +323,8 @@
     input[type=range] { min-height: 48px; }
     .toggle-container label { min-height: 48px; display: flex; align-items: center; justify-content: center; }
     .studio-btn { min-height: 48px; }
+    .pillar-grid { grid-template-columns: 1fr; }
+    .studio-card { padding: 24px; }
   }
 
   /* --- LEGAL FOOTER --- */
@@ -348,9 +400,9 @@
         <div class="control-group">
             <div class="control-header">
                 <span class="control-label" style="color: var(--teal-mid);">Your Datum (Target Spend)</span>
-                <span class="control-value" id="val-datum">$100k / yr</span>
+                <span class="control-value" id="val-datum">$165k / yr</span>
             </div>
-            <input type="range" id="slider-datum" min="20" max="400" value="100" step="5">
+            <input type="range" id="slider-datum" min="20" max="400" value="165" step="5">
         </div>
 
         <div class="control-group" style="margin-top: 20px;">
@@ -546,36 +598,108 @@
           <h3 class="insights-h3 hero-subtitle" style="text-transform: none; letter-spacing: 0.05em; font-size: 14px; color: var(--gold);">The Sketch above is a baseline. The Studio is the exact measurement of your life.</h3>
       </div>
 
-      <div class="comparison-container">
-          
-          <div class="comp-card">
-              <div class="comp-title">The Sketch</div>
-              <div class="comp-sub">Free Baseline Engine</div>
-              <ul class="comp-list">
-                  <li class="comp-item"><span class="icon-check">✓</span> Dynamic Range Physics</li>
-                  <li class="comp-item"><span class="icon-check">✓</span> Basic Growth Projection</li>
-                  <li class="comp-item muted"><span class="icon-x">✕</span> Assumes static 3.5% real return</li>
-                  <li class="comp-item muted"><span class="icon-x">✕</span> Assumes linear tax distribution</li>
-                  <li class="comp-item muted"><span class="icon-x">✕</span> Assumes median fee decay</li>
-                  <li class="comp-item muted"><span class="icon-x">✕</span> No external income layered</li>
-              </ul>
+      <div class="studio-card">
+          <div class="studio-card-header">
+              <div class="sc-title">THE STUDIO</div>
+              <div class="sc-subtitle">Your plan. Engineered at full depth.</div>
+              <div class="sc-scope">Four pillars. Seventeen capabilities. One engine calibrated to your actual life.</div>
           </div>
 
-          <div class="comp-card comp-pro">
-              <div class="comp-title">Datum Studio</div>
-              <div class="comp-sub" style="color: var(--gold);">High-Fidelity Engineering</div>
-              <ul class="comp-list">
-                  <li class="comp-item"><span class="icon-check">✓</span> 41-Year Exact Tax Sequencing</li>
-                  <li class="comp-item"><span class="icon-check">✓</span> Dynamic CAPE-Adjusted Models</li>
-                  <li class="comp-item"><span class="icon-check">✓</span> Regime & Historical Bootstrap Sims</li>
-                  <li class="comp-item"><span class="icon-check">✓</span> Automated Spending Guardrails</li>
-                  <li class="comp-item"><span class="icon-check">✓</span> Pension & Cashflow Layering</li>
-                  <li class="comp-item"><span class="icon-check">✓</span> Social Security Yield Optimization</li>
-                  <li class="comp-item"><span class="icon-check">✓</span> Interactive Fragility Insights</li>
-                  <li class="comp-item"><span class="icon-check">✓</span> Fee-Aware Drag Calculation</li>
-              </ul>
+          <div class="pillar-grid">
+
+              <div class="pillar-card">
+                  <div class="pillar-num">PILLAR I</div>
+                  <div class="pillar-title">THE ESTATE</div>
+                  <div class="pillar-sub">Assets, Trusts, Liabilities</div>
+                  <div class="pillar-count">5 capabilities inside →</div>
+                  <div class="pillar-tooltip">
+                      <ul class="pillar-cap-list">
+                          <li class="pillar-cap-item"><strong>Multi-Architect Synchronization</strong> — Spouse as co-pilot. Joint tax burdens, dual Social Security timelines, staggered retirement dates, combined operating overhead.</li>
+                          <li class="pillar-cap-item"><strong>Micro-Asset Itemization</strong> — Individual equities, expense ratios, hedging flags. Every holding, named.</li>
+                          <li class="pillar-cap-item"><strong>Physical Asset &amp; Collectibles Tracking ✦</strong> — Living appraisal ledger for physical assets and collectibles.<span class="cap-ledger">[LEDGER ROOM]</span></li>
+                          <li class="pillar-cap-item"><strong>Generational Trust Firewalls ✦</strong> — Revocable and Irrevocable trusts with HEMS disbursement logic. Capital decoupled from standard liability footprint.<span class="cap-ledger">[LEDGER ROOM]</span></li>
+                          <li class="pillar-cap-item"><strong>Liability Demolition &amp; Equity Mapping</strong> — Debts linked to physical assets for real-time Net Equity. Accelerated Payoff routing.</li>
+                      </ul>
+                  </div>
+              </div>
+
+              <div class="pillar-card">
+                  <div class="pillar-num">PILLAR II</div>
+                  <div class="pillar-title">FINANCIAL PLUMBING</div>
+                  <div class="pillar-sub">Cash Flow &amp; Overhead</div>
+                  <div class="pillar-count">4 capabilities inside →</div>
+                  <div class="pillar-tooltip">
+                      <ul class="pillar-cap-list">
+                          <li class="pillar-cap-item"><strong>Operating Overhead Analysis</strong> — Expense-to-Income Ratio with structural leverage alerts.</li>
+                          <li class="pillar-cap-item"><strong>Philanthropic Yield Tracking</strong> — Charitable giving as percentage of gross cash flow.</li>
+                          <li class="pillar-cap-item"><strong>System Velocity Diagnostics ✦</strong> — Real-time telemetry: compound yield + contributions weighted against interest drag.<span class="cap-ledger">[OBSERVATIONAL]</span></li>
+                          <li class="pillar-cap-item"><strong>Dynamic Liquidity Friction ✦</strong> — Mark accounts as functionally illiquid during crashes.<span class="cap-ledger">[BEHAVIORAL TAG]</span></li>
+                      </ul>
+                  </div>
+              </div>
+
+              <div class="pillar-card">
+                  <div class="pillar-num">PILLAR III</div>
+                  <div class="pillar-title">PRECISION REGULATORY</div>
+                  <div class="pillar-sub">Tax &amp; Withdrawal Mechanics</div>
+                  <div class="pillar-count">3 capabilities inside →</div>
+                  <div class="pillar-tooltip">
+                      <ul class="pillar-cap-list">
+                          <li class="pillar-cap-item"><strong>Algorithmic Contribution Gating</strong> — IRS limits auto-enforced: Base, Catch-Up (50+), Super Catch-Up (60–63).</li>
+                          <li class="pillar-cap-item"><strong>Advanced Penalty-Free Extraction</strong> — Age 59.5 and Rule of 55 pathways.</li>
+                          <li class="pillar-cap-item"><strong>41-Year Exact Tax Sequencing</strong> — Marginal bracket drift, standard deduction scaling, RMD bumps over four decades.</li>
+                      </ul>
+                  </div>
+              </div>
+
+              <div class="pillar-card">
+                  <div class="pillar-num">PILLAR IV</div>
+                  <div class="pillar-title">THE PHYSICS ENGINE</div>
+                  <div class="pillar-sub">Simulation &amp; Visualization</div>
+                  <div class="pillar-count">5 capabilities inside →</div>
+                  <div class="pillar-tooltip">
+                      <ul class="pillar-cap-list">
+                          <li class="pillar-cap-item"><strong>Thermodynamic Shock</strong> — Instant −30% volatility simulation to visualize structural contraction.</li>
+                          <li class="pillar-cap-item"><strong>Thermal Imaging ✦</strong> — Heat-map trapped tax liabilities (Pre-Tax), zero-friction capital (Roth), burning interest drag (Debt).<span class="cap-ledger">[VISUALIZATION]</span></li>
+                          <li class="pillar-cap-item"><strong>Outflow Routing</strong> — Visual capital extraction sequence: Liquid → Pre-Tax → Roth.</li>
+                          <li class="pillar-cap-item"><strong>Datum Elevation Benchmark</strong> — Fixed laser line representing Target Annual Spend.</li>
+                          <li class="pillar-cap-item"><strong>Custom Climate Matrices</strong> — Manual confidence weighting across CAPE, Regime, Parametric, and Historical models.</li>
+                          <li class="pillar-cap-item"><strong>Social Security &amp; Pension Layering</strong> — Optimized claiming strategies with COLA-adjusted fixed-income floors.</li>
+                      </ul>
+                  </div>
+              </div>
+
           </div>
 
+          <div class="see-comparison-wrap">
+              <button class="see-comparison-btn" id="see-comparison-btn" onclick="toggleComparison()">See Full Comparison →</button>
+          </div>
+
+          <div class="comparison-matrix" id="comparison-matrix" style="display:none;">
+              <table class="comp-table">
+                  <thead>
+                      <tr>
+                          <th>System Capability</th>
+                          <th>Datum FI (Free)</th>
+                          <th>The Studio (Premium)</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      <tr><td>Growth &amp; Market Modeling</td><td>Basic Static Growth</td><td>CAPE, Regime, &amp; Historical Simulations</td></tr>
+                      <tr><td>Tax Architecture</td><td>Assumes Linear Impact</td><td>41-Year Exact Sequencing &amp; Thermal Imaging</td></tr>
+                      <tr><td>Spousal Planning</td><td>Single User Only</td><td><span class="cell-check">✓</span> Multi-Architect Synchronization</td></tr>
+                      <tr><td>Generational Transfer</td><td><span class="cell-x">✕</span></td><td><span class="cell-check">✓</span> Trust Firewalls &amp; Disbursement Logic</td></tr>
+                      <tr><td>Debt Strategy</td><td>Static Subtraction</td><td><span class="cell-check">✓</span> Equity Mapping &amp; Accelerated Demolition</td></tr>
+                      <tr><td>Cash Flow Diagnostics</td><td><span class="cell-x">✕</span></td><td><span class="cell-check">✓</span> System Velocity &amp; Operating Overhead</td></tr>
+                      <tr><td>Philanthropy Tracking</td><td><span class="cell-x">✕</span></td><td><span class="cell-check">✓</span> Philanthropic Yield Calculation</td></tr>
+                      <tr><td>Asset Deep-Dive</td><td>Total Balances Only</td><td><span class="cell-check">✓</span> Micro-Itemization &amp; Collectibles Appraisal</td></tr>
+                      <tr><td>Regulatory Intelligence</td><td><span class="cell-x">✕</span></td><td><span class="cell-check">✓</span> Rule of 55, Super Catch-Ups, RMDs</td></tr>
+                      <tr><td>Stress Testing</td><td>Basic Volatility</td><td><span class="cell-check">✓</span> Thermodynamic Shock Lens</td></tr>
+                      <tr><td>Withdrawal Sequencing</td><td>Static Depletion</td><td><span class="cell-check">✓</span> Visual Outflow Routing &amp; Guardrails</td></tr>
+                  </tbody>
+              </table>
+              <div class="doctrine-note">Features marked ✦ in the pillar detail are ledger rooms — capital or preferences tracked inside your Studio for organizational clarity. These do not project into your Range calculation. Range math is driven exclusively by architecture-level inputs: assets, liabilities, income, tax sequencing, and market modeling.</div>
+          </div>
       </div>
 
       <div class="final-cta">
@@ -909,37 +1033,81 @@
       });
     })();
 
-    // --- ARCH-CARD TOOLTIPS (flip + mobile tap) ---
-    (function() {
-      var cards = document.querySelectorAll('.arch-card');
+    // --- FIXED-POSITION TOOLTIP ENGINE ---
+    function initFixedTooltips(cardSel, tipSel) {
+      var cards = document.querySelectorAll(cardSel);
+
+      function positionTip(card, tip) {
+        var rect = card.getBoundingClientRect();
+        var tw = tip.offsetWidth || 360;
+        var vw = window.innerWidth;
+        var vh = window.innerHeight;
+        var left = rect.left + rect.width / 2 - tw / 2;
+        left = Math.max(10, Math.min(left, vw - tw - 10));
+        tip.style.left = left + 'px';
+        if (rect.top > 280) {
+          tip.style.bottom = (vh - rect.top + 12) + 'px';
+          tip.style.top = '';
+          tip.classList.remove('tt-flip');
+        } else {
+          tip.style.top = (rect.bottom + 12) + 'px';
+          tip.style.bottom = '';
+          tip.classList.add('tt-flip');
+        }
+      }
+
+      function showTip(card, tip) {
+        tip.style.display = 'block';
+        positionTip(card, tip);
+        requestAnimationFrame(function() {
+          requestAnimationFrame(function() { tip.classList.add('tt-visible'); });
+        });
+      }
+
+      function hideTip(tip) {
+        tip.classList.remove('tt-visible');
+        setTimeout(function() { if (!tip.classList.contains('tt-visible')) tip.style.display = ''; }, 310);
+      }
 
       cards.forEach(function(card) {
-        var tooltip = card.querySelector('.arch-tooltip');
-        if (!tooltip) return;
-
-        card.addEventListener('mouseenter', function() {
-          var rect = card.getBoundingClientRect();
-          tooltip.classList.toggle('tt-flip', rect.top < 380);
-        });
-
+        var tip = card.querySelector(tipSel);
+        if (!tip) return;
+        card.addEventListener('mouseenter', function() { showTip(card, tip); });
+        card.addEventListener('mouseleave', function() { hideTip(tip); });
         card.addEventListener('touchend', function(e) {
           e.stopPropagation();
           var wasActive = card.classList.contains('tt-active');
-          cards.forEach(function(c) { c.classList.remove('tt-active'); });
-          if (!wasActive) {
-            var rect = card.getBoundingClientRect();
-            tooltip.classList.toggle('tt-flip', rect.top < 380);
-            card.classList.add('tt-active');
-          }
+          document.querySelectorAll(cardSel).forEach(function(c) {
+            c.classList.remove('tt-active');
+            var t = c.querySelector(tipSel);
+            if (t) hideTip(t);
+          });
+          if (!wasActive) { showTip(card, tip); card.classList.add('tt-active'); }
         });
       });
 
       document.addEventListener('touchend', function(e) {
-        if (!e.target.closest('.arch-card')) {
-          cards.forEach(function(c) { c.classList.remove('tt-active'); });
+        if (!e.target.closest(cardSel)) {
+          document.querySelectorAll(cardSel).forEach(function(c) {
+            c.classList.remove('tt-active');
+            var t = c.querySelector(tipSel);
+            if (t) hideTip(t);
+          });
         }
       });
-    })();
+    }
+
+    initFixedTooltips('.arch-card', '.arch-tooltip');
+    initFixedTooltips('.pillar-card', '.pillar-tooltip');
+
+    window.toggleComparison = function() {
+      var matrix = document.getElementById('comparison-matrix');
+      var btn = document.getElementById('see-comparison-btn');
+      if (!matrix || !btn) return;
+      var isOpen = matrix.style.display !== 'none';
+      matrix.style.display = isOpen ? 'none' : 'block';
+      btn.textContent = isOpen ? 'See Full Comparison \u2192' : 'Hide Comparison \u2191';
+    };
 
   </script>
   <script src="/feedback.js"></script>
