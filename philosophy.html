@@ -108,29 +108,17 @@
   .stanza h2 { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold); margin-bottom: 12px; }
   .stanza p { font-size: 20px; line-height: 1.5; color: var(--white); opacity: 0.9; }
 
-  /* --- SIMPLIFIED SINGLE-ROW FOOTER --- */
-  footer {
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 10%;
-    background-color: var(--bg-navy);
-    border-top: 1px solid rgba(255,255,255,0.05);
-    margin-top: 60px;
-  }
-  .back-link { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--teal-mid); text-decoration: none; transition: 0.3s; white-space: nowrap; }
+  /* --- FOOTER --- */
+  footer { width: 100%; margin-top: 60px; }
+  .back-link { display: inline-block; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--teal-mid); text-decoration: none; transition: 0.3s; padding: 20px 40px 12px; }
   .back-link:hover { color: var(--white); }
-
   .legal-footer {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    line-height: 1.4;
-    color: rgba(255,255,255,0.25);
-    text-transform: none;
-    letter-spacing: 0.02em;
-    text-align: right;
-    padding-left: 40px;
+    width: 100%;
+    background: rgba(9, 18, 33, 0.97);
+    border-top: 1px solid rgba(255,255,255,0.05);
+    padding: 20px 40px 24px; text-align: center;
+    font-family: var(--font-mono); font-size: 10px;
+    color: rgba(255,255,255,0.25); line-height: 1.6;
   }
 
 </style>
@@ -144,6 +132,7 @@
         <a href="/" class="nav-link">Home</a>
         <a href="/studio.html" class="nav-link">Studio</a>
         <a href="/philosophy.html" class="nav-link active">Philosophy</a>
+        <a href="/range.html" class="nav-link" id="nav-range-link" style="display:none;">Range</a>
       </nav>
     </div>
   </header>
@@ -199,7 +188,7 @@
     </div>
 
     <footer>
-        <a href="index.html" class="back-link">← Return to Home</a>
+        <a href="/" class="back-link">← Return to Home</a>
         
         <div class="legal-footer">
             DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. Past performance does not guarantee future outcomes.
@@ -208,5 +197,8 @@
 
   </main>
 
+  <script>
+    if (sessionStorage.getItem('datumfi_range')) { const rl = document.getElementById('nav-range-link'); if (rl) rl.style.display = ''; }
+  </script>
 </body>
 </html>

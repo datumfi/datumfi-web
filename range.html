@@ -235,6 +235,7 @@
         <a href="/" class="nav-link">Home</a>
         <a href="/studio.html" class="nav-link">Studio</a>
         <a href="/philosophy.html" class="nav-link">Philosophy</a>
+        <a href="/range.html" class="nav-link active" id="nav-range-link" style="display:none;">Range</a>
         <a href="#" class="feedback-btn">Share Feedback</a>
       </nav>
     </div>
@@ -526,6 +527,7 @@
     window.addEventListener('touchmove', (e) => { if (isDragging) { const pt = svg.createSVGPoint(); pt.x = 0; pt.y = e.touches[0].clientY; const svgP = pt.matrixTransform(svg.getScreenCTM().inverse()); updateDatumFromY(svgP.y); } }, {passive: false});
     window.addEventListener('touchend', () => { isDragging = false; document.body.style.userSelect = ''; svgWrap.classList.remove('is-dragging'); });
     setTimeout(() => { updateDatumFromY(balToY(State.datumBal)); }, 100);
+    if (sessionStorage.getItem('datumfi_range')) { const rl = document.getElementById('nav-range-link'); if (rl) rl.style.display = ''; }
   </script>
 </body>
 </html>

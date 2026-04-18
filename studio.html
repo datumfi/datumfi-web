@@ -432,6 +432,7 @@
         <a href="/" class="nav-link">HOME</a>
         <a href="/studio.html" class="nav-link active">STUDIO</a>
         <a href="/philosophy.html" class="nav-link">PHILOSOPHY</a>
+        <a href="/range.html" class="nav-link" id="nav-range-link" style="display:none;">RANGE</a>
       </nav>
       <button class="feedback-btn">SHARE FEEDBACK</button>
     </div>
@@ -449,11 +450,11 @@
       <div class="studio-section">
         <div class="section-header-wrapper">
             <button class="section-tag" onclick="toggleSection('sec-profile', this)" style="border:none; margin:0; padding:0; flex:1;">
-                <span>01 / Architect Profile</span> <span class="toggle-icon">+</span>
+                <span>01 / Architect Profile</span> <span class="toggle-icon">−</span>
             </button>
             <button class="pin-btn" onclick="togglePin('sec-profile', this)" title="Pin section open">📌</button>
         </div>
-        <div id="sec-profile" class="section-content" style="display: none;">
+        <div id="sec-profile" class="section-content" style="display: block;">
           
           <div class="precision-motto">Precision in. Precision out.</div>
 
@@ -576,7 +577,7 @@
             <button class="add-space-btn" id="add-space-btn" type="button">+ Draft Additional Space — Add Account</button>
             <div class="space-dropdown" id="space-dropdown">
               </div>
-            <button class="measure-btn" id="measure-btn" type="button">⤓ REVEAL YOUR RANGE</button>
+            <button class="measure-btn" id="measure-btn" type="button">⤓ DIAGNOSE MY FINANCES</button>
           </div>
         </div>
       </div>
@@ -2492,7 +2493,7 @@
     analyzeLoadBtn.addEventListener('click', () => {
         isMeasured = !isMeasured;
         analyzeLoadBtn.classList.toggle('active');
-        analyzeLoadBtn.innerText = isMeasured ? "⤓ CLOSE ANALYSIS" : "⤓ ANALYZE STRUCTURAL LOAD";
+        analyzeLoadBtn.innerText = isMeasured ? "⤓ CLOSE ANALYSIS" : "⤓ DIAGNOSE MY FINANCES";
         updateSVGs(); 
         updateAnalysisText();
     });
@@ -2643,6 +2644,7 @@
     renderUpkeep();
     renderInputs();
     updateSVGs();
+    if (sessionStorage.getItem('datumfi_range')) { const rl = document.getElementById('nav-range-link'); if (rl) rl.style.display = ''; }
 
     // === CINEMATIC OVERLAY + REVEAL RANGE ===
     (function() {
