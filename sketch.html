@@ -40,6 +40,7 @@
   .panel-right {
     width: 60%;
     height: 100vh;
+    min-height: 600px;
     position: relative;
     display: flex;
     align-items: center;
@@ -53,7 +54,25 @@
   .control-group { margin-bottom: 25px; }
   .control-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px; }
   .control-label { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); }
-  .control-value { font-family: var(--font-serif); font-size: 24px; font-weight: 700; font-style: italic; color: var(--teal-mid); }
+  .control-value { font-family: var(--font-serif); font-size: 24px; font-weight: 700; font-style: italic; color: var(--white); cursor: text; }
+  .control-value:hover { opacity: 0.8; }
+
+  /* --- CLICK-TO-EDIT INPUT --- */
+  .ctrl-edit-input {
+    font-family: var(--font-serif); font-size: 24px; font-weight: 700; font-style: italic;
+    color: var(--white); background: transparent; border: none;
+    border-bottom: 1px solid var(--teal-mid); outline: none;
+    width: 90px; text-align: right; padding: 0;
+  }
+  .ctrl-edit-input::-webkit-inner-spin-button,
+  .ctrl-edit-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .ctrl-edit-input[type=number] { -moz-appearance: textfield; }
+  @keyframes ctrl-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+  .ctrl-edit-input.shake { animation: ctrl-shake 0.25s ease; }
 
   /* Custom Slider Styling */
   input[type=range] {
@@ -168,8 +187,44 @@
   .insights-h3 { font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--white); opacity: 0.7; }
 
   .arch-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 1100px; margin: 0 auto; width: 100%; }
-  .arch-card { background: rgba(9, 18, 33, 0.6); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 24px; transition: border-color 0.3s ease; }
+  .arch-card { background: rgba(9, 18, 33, 0.6); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 24px; transition: border-color 0.3s ease; position: relative; }
   .arch-card:hover { border-color: var(--teal-mid); }
+
+  /* --- ARCH-CARD TOOLTIPS --- */
+  .arch-tooltip {
+    position: absolute; bottom: calc(100% + 12px); left: 50%;
+    transform: translateX(-50%) translateY(6px);
+    width: 340px; max-width: 95vw;
+    background: rgba(9, 18, 33, 0.95); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px; padding: 20px; z-index: 200;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  .arch-card:hover .arch-tooltip,
+  .arch-card.tt-active .arch-tooltip {
+    opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto;
+  }
+  .arch-tooltip::after {
+    content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+    border: 6px solid transparent; border-top-color: rgba(9, 18, 33, 0.95);
+  }
+  .arch-tooltip.tt-flip {
+    bottom: auto; top: calc(100% + 12px);
+    transform: translateX(-50%) translateY(-6px);
+  }
+  .arch-card:hover .arch-tooltip.tt-flip,
+  .arch-card.tt-active .arch-tooltip.tt-flip {
+    transform: translateX(-50%) translateY(0);
+  }
+  .arch-tooltip.tt-flip::after {
+    top: auto; bottom: 100%;
+    border-top-color: transparent; border-bottom-color: rgba(9, 18, 33, 0.95);
+  }
+  .tt-head-1 { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--teal-mid); margin-bottom: 8px; }
+  .tt-body-1 { font-family: var(--font-mono); font-size: 11px; color: var(--white); line-height: 1.6; margin-bottom: 0; }
+  .tt-divider { border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 14px 0; }
+  .tt-head-2 { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gold); margin-bottom: 8px; }
+  .tt-body-2 { font-family: var(--font-mono); font-size: 11px; color: rgba(255,255,255,0.6); line-height: 1.6; }
   .card-tag { font-family: var(--font-mono); font-size: 10px; color: var(--teal-mid); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 8px; }
   .card-title { font-family: var(--font-serif); font-size: 20px; font-style: italic; color: var(--white); margin-bottom: 8px; }
   .card-desc { font-family: var(--font-mono); font-size: 12px; color: var(--muted); line-height: 1.5; }
@@ -214,7 +269,7 @@
   @media (max-width: 900px) {
     .hero-screen { flex-direction: column; height: auto; min-height: 100vh; overflow-y: auto; }
     .panel-left { width: 100%; height: auto; padding: 100px 5% 40px 5%; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    .panel-right { width: 100%; height: 60vh; min-height: 450px; }
+    .panel-right { width: 100%; height: 60vh; min-height: 600px; }
     input[type=range] { min-height: 48px; }
     .toggle-container label { min-height: 48px; display: flex; align-items: center; justify-content: center; }
     .studio-btn { min-height: 48px; }
@@ -409,32 +464,74 @@
               <div class="card-tag">TAX ENGINE</div>
               <div class="card-title">41-Year Sequencing</div>
               <div class="card-desc">We model exact withdrawal order and bracket fills across all 41 years in every simulation.</div>
+              <div class="arch-tooltip">
+                <div class="tt-head-1">What this means for you</div>
+                <div class="tt-body-1">Most retirement calculators apply a flat "tax rate" and move on. We sequence every withdrawal across 41 years — Traditional 457(b) first to fill the standard deduction and low brackets, then Traditional 401K via Rule of 55, then Roth for the rest — minimizing lifetime tax drag to the dollar. For your plan specifically, Traditional accounts deplete around Year 4 of retirement, after which every withdrawal is tax-free.</div>
+                <hr class="tt-divider">
+                <div class="tt-head-2">What Studio reveals</div>
+                <div class="tt-body-2">Your year-by-year federal tax bill, effective tax rate per year, standard deduction headroom available for Roth conversions, and the exact crossover year where your plan becomes 100% tax-free.</div>
+              </div>
           </div>
           <div class="arch-card">
               <div class="card-tag">DYNAMIC BEHAVIOR</div>
               <div class="card-title">Spending Guardrails</div>
               <div class="card-desc">The engine automatically cuts spending during crashes and raises it during booms to protect the portfolio.</div>
+              <div class="arch-tooltip">
+                <div class="tt-head-1">What this means for you</div>
+                <div class="tt-body-1">Your Range isn't a one-time number — it's a living boundary. When markets drop hard, the engine automatically reduces spending to preserve the architecture. When markets boom, it gives you permission to spend more. This is how real retirees survive bad decades without running out of money. Static "4% rules" can't do this.</div>
+                <hr class="tt-divider">
+                <div class="tt-head-2">What Studio reveals</div>
+                <div class="tt-body-2">The exact spending cuts triggered in each stress scenario (1929 Crash, 1970s Stagflation, Japanese Lost Decade), plus the upside adjustments during favorable regimes — so you know in advance what flexibility your plan requires.</div>
+              </div>
           </div>
           <div class="arch-card">
               <div class="card-tag">PORTFOLIO MATH</div>
               <div class="card-title">Allocation Glide-Path</div>
               <div class="card-desc">We recompute volatility automatically as you de-risk from equities over time.</div>
+              <div class="arch-tooltip">
+                <div class="tt-head-1">What this means for you</div>
+                <div class="tt-body-1">Your portfolio today is heavily weighted to equity. At age 75, it probably shouldn't be. Most retirement tools lock volatility at one number and pretend it never changes. We recompute your expected volatility every year as you de-risk — because a 60/40 portfolio in 2050 behaves mathematically differently than an 80/20 portfolio in 2030.</div>
+                <hr class="tt-divider">
+                <div class="tt-head-2">What Studio reveals</div>
+                <div class="tt-body-2">Your full glide-path from today through age 90, the volatility at each age, and how your Range tightens or widens as the portfolio shifts — so your architecture stays honest as your life changes.</div>
+              </div>
           </div>
           
           <div class="arch-card">
               <div class="card-tag">CASHFLOW TIMELINE</div>
               <div class="card-title">Income Layering</div>
               <div class="card-desc">Income has seasons. We map every one: from bridge-years, to your pension's real decay.</div>
+              <div class="arch-tooltip">
+                <div class="tt-head-1">What this means for you</div>
+                <div class="tt-body-1">Retirement income has seasons. Bridge years (no Social Security yet, no Medicare yet) are the hardest. Then pension begins. Then Social Security layers in. Then pension loses real purchasing power to inflation. We map every transition — so your plan knows which years are heavy-lift and which are coasting.</div>
+                <hr class="tt-divider">
+                <div class="tt-head-2">What Studio reveals</div>
+                <div class="tt-body-2">Your exact income layering map from retirement through age 90 — including pension real decay, Social Security start-age optimization, and the specific years your portfolio bears the heaviest weight.</div>
+              </div>
           </div>
           <div class="arch-card">
               <div class="card-tag">VALUATION INTELLIGENCE</div>
               <div class="card-title">CAPE-Dynamic Weights</div>
               <div class="card-desc">When markets are expensive, we automatically shift trust toward conservative models.</div>
+              <div class="arch-tooltip">
+                <div class="tt-head-1">What this means for you</div>
+                <div class="tt-body-1">When the market is expensive (high CAPE), historical averages lie about the future. Most retirement tools blend their models with equal weights forever. We don't. When CAPE is high, we automatically shift trust toward conservative models — because that's when the optimistic ones are most likely wrong. When CAPE is low, we shift back. Your Range reflects the market you're retiring into, not the market your grandfather retired from.</div>
+                <hr class="tt-divider">
+                <div class="tt-head-2">What Studio reveals</div>
+                <div class="tt-body-2">Your current CAPE regime, the exact weight shift applied to each of the four engines, and how your Range would change under a normal CAPE environment.</div>
+              </div>
           </div>
           <div class="arch-card">
               <div class="card-tag">COST DRAG</div>
               <div class="card-title">Fee-Aware Returns</div>
               <div class="card-desc">Every basis point has a name. We compute the exact drag of your holdings.</div>
+              <div class="arch-tooltip">
+                <div class="tt-head-1">What this means for you</div>
+                <div class="tt-body-1">Every basis point compounds. A 0.5% expense ratio on a $1.3M portfolio is roughly $6,750 per year — the cost of a family vacation every year for 40 years. Most tools ignore fees. We compute the exact drag of your specific holdings across every account, every fund, every year — and build it into your Range.</div>
+                <hr class="tt-divider">
+                <div class="tt-head-2">What Studio reveals</div>
+                <div class="tt-body-2">Your total annual fees across all accounts, the highest-cost funds flagged for review, and the lifetime fee drag your architecture will absorb versus a low-cost alternative.</div>
+              </div>
           </div>
       </div>
       
@@ -736,6 +833,113 @@
 
     // Initial boot
     updateEngine();
+
+    // --- CLICK-TO-EDIT ---
+    (function() {
+      var editConfig = [
+        {
+          valId: 'val-age', sliderId: 'slider-age',
+          parseVal: function(v) { return parseInt(v, 10); },
+          getMin: function() { return 18; }, validateMax: 85,
+          format: function(v) { return v + ' yrs'; }
+        },
+        {
+          valId: 'val-activation', sliderId: 'slider-activation',
+          parseVal: function(v) { return parseInt(v, 10); },
+          getMin: function() { return parseInt(document.getElementById('slider-age').value, 10) + 1; }, validateMax: 85,
+          format: function(v) { return v + ' yrs'; }
+        },
+        {
+          valId: 'val-portfolio', sliderId: 'slider-portfolio',
+          parseVal: function(v) { return parseFloat(v); },
+          getMin: function() { return 0.01; }, validateMax: 100,
+          format: function(v) { return '$' + parseFloat(v).toFixed(2) + 'M'; }
+        },
+        {
+          valId: 'val-datum', sliderId: 'slider-datum',
+          parseVal: function(v) { return parseInt(v, 10); },
+          getMin: function() { return 1; }, validateMax: 1000,
+          format: function(v) { return '$' + v + 'k / yr'; }
+        }
+      ];
+
+      editConfig.forEach(function(cfg) {
+        var valEl = document.getElementById(cfg.valId);
+        var slider = document.getElementById(cfg.sliderId);
+
+        var inp = document.createElement('input');
+        inp.type = 'number';
+        inp.className = 'ctrl-edit-input';
+        inp.style.display = 'none';
+        valEl.parentNode.insertBefore(inp, valEl.nextSibling);
+
+        valEl.addEventListener('click', function() {
+          inp.value = slider.value;
+          valEl.style.display = 'none';
+          inp.style.display = '';
+          inp.focus();
+          inp.select();
+        });
+
+        function commitEdit() {
+          var raw = cfg.parseVal(inp.value);
+          var minVal = cfg.getMin();
+          var isValid = !isNaN(raw) && raw >= minVal && raw <= cfg.validateMax;
+
+          if (!isValid) {
+            inp.classList.add('shake');
+            setTimeout(function() { inp.classList.remove('shake'); }, 300);
+            inp.value = slider.value;
+            return;
+          }
+
+          var slMin = parseFloat(slider.min);
+          var slMax = parseFloat(slider.max);
+          slider.value = Math.max(slMin, Math.min(slMax, raw));
+          inp.style.display = 'none';
+          valEl.style.display = '';
+          updateEngine();
+        }
+
+        inp.addEventListener('blur', commitEdit);
+        inp.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') { inp.blur(); }
+          else if (e.key === 'Escape') { inp.style.display = 'none'; valEl.style.display = ''; }
+        });
+      });
+    })();
+
+    // --- ARCH-CARD TOOLTIPS (flip + mobile tap) ---
+    (function() {
+      var cards = document.querySelectorAll('.arch-card');
+
+      cards.forEach(function(card) {
+        var tooltip = card.querySelector('.arch-tooltip');
+        if (!tooltip) return;
+
+        card.addEventListener('mouseenter', function() {
+          var rect = card.getBoundingClientRect();
+          tooltip.classList.toggle('tt-flip', rect.top < 380);
+        });
+
+        card.addEventListener('touchend', function(e) {
+          e.stopPropagation();
+          var wasActive = card.classList.contains('tt-active');
+          cards.forEach(function(c) { c.classList.remove('tt-active'); });
+          if (!wasActive) {
+            var rect = card.getBoundingClientRect();
+            tooltip.classList.toggle('tt-flip', rect.top < 380);
+            card.classList.add('tt-active');
+          }
+        });
+      });
+
+      document.addEventListener('touchend', function(e) {
+        if (!e.target.closest('.arch-card')) {
+          cards.forEach(function(c) { c.classList.remove('tt-active'); });
+        }
+      });
+    })();
 
   </script>
   <script src="/feedback.js"></script>
