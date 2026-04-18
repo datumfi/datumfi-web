@@ -28,3 +28,33 @@ body {
   color: var(--white);
   -webkit-font-smoothing: antialiased;
 }
+
+/* ── Shared page header (sketch, philosophy, range) ── */
+.main-header {
+  position: fixed; top: 0; left: 0; width: 100%; z-index: 1000;
+  background: rgba(9, 18, 33, 0.9); backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.header-inner {
+  display: flex; justify-content: space-between; align-items: center;
+  width: 100%; max-width: 1400px; margin: 0 auto; padding: 24px 40px;
+}
+.brand { font-family: var(--font-serif); font-size: 22px; letter-spacing: 0.15em; color: var(--teal-mid); text-decoration: none; }
+.brand .mono-part { font-family: var(--font-mono); }
+.brand .gold-pipe { color: var(--gold); }
+.header-nav { display: flex; align-items: center; gap: 32px; }
+.nav-link { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: rgba(255,255,255,0.5); text-decoration: none; transition: 0.3s; position: relative; padding-bottom: 6px; }
+.nav-link:hover { color: var(--white); }
+.nav-link.active { color: var(--teal-mid); }
+.nav-link.active::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: var(--teal-mid); }
+
+/* ── Shared page H1 ── */
+.page-h1 {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-style: italic;
+  font-size: clamp(42px, 8vw, 76px);
+  color: var(--gold);
+  line-height: 1.05;
+  margin-bottom: 8px;
+}

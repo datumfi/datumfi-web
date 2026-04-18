@@ -46,6 +46,40 @@
   .nav-link:hover { color: var(--white); }
   .nav-link.active { color: var(--teal-mid); border-bottom-color: var(--teal-mid); }
 
+  /* ── Viewport Isolation: 3-mode toggle ── */
+  .view-toggle { display: flex; gap: 3px; align-items: center; }
+  .view-btn {
+    font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: var(--muted);
+    padding: 6px 11px; border-radius: 3px; cursor: pointer; transition: 0.2s; white-space: nowrap;
+  }
+  .view-btn:hover { border-color: rgba(93,202,165,0.4); color: var(--white); }
+  .view-btn.active { background: rgba(29,158,117,0.12); border-color: var(--teal-mid); color: var(--teal-mid); }
+
+  /* Mode: split (default — no changes, drafting panel + canvas side by side) */
+  .studio-layout.mode-split .drafting-panel { display: block; width: 480px; }
+  .studio-layout.mode-split .canvas-wrapper { display: block; flex: 1; }
+
+  /* Mode: blueprint — hide drafting panel, canvas fills */
+  .studio-layout.mode-blueprint .drafting-panel { display: none !important; }
+  .studio-layout.mode-blueprint .canvas-wrapper { flex: 1; width: 100%; }
+
+  /* Mode: draft — hide canvas, drafting panel fills width */
+  .studio-layout.mode-draft .canvas-wrapper { display: none !important; }
+  .studio-layout.mode-draft .drafting-panel { width: 100%; max-width: none; height: calc(100vh - 50px); }
+
+  /* Drafting Focus: rooms reflow to grid */
+  .studio-layout.mode-draft #rooms-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+    gap: 20px;
+  }
+
+  /* Drafting Focus: hide modal trigger, show inline details */
+  .studio-layout.mode-draft .details-btn { display: none !important; }
+  .inline-details { display: none; margin-top: 14px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 14px; }
+  .studio-layout.mode-draft .inline-details { display: block; }
+
   /* --- STUDIO LAYOUT --- */
   .studio-layout { display: flex; flex: 1; width: 100%; margin: 0 auto; }
 
@@ -408,22 +442,27 @@
 
   <header>
     <div class="header-left">
-      <a href="#" class="brand">DATUM <span>F<span class="pipe">|</span>I</span></a>
+      <a href="/" class="brand">DATUM <span>F<span class="pipe">|</span>I</span></a>
     </div>
     <div class="header-right">
       <nav class="global-nav">
         <a href="/" class="nav-link">HOME</a>
         <a href="/sketch.html" class="nav-link">SKETCH</a>
         <a href="/studio.html" class="nav-link active">STUDIO</a>
-        <a href="/philosophy.html" class="nav-link">PHILOSOPHY</a>
         <a href="/range.html" class="nav-link" id="nav-range-link" style="display:none;">RANGE</a>
+        <a href="/philosophy.html" class="nav-link">PHILOSOPHY</a>
       </nav>
+      <div class="view-toggle">
+        <button class="view-btn" id="btn-blueprint" onclick="setViewMode('blueprint')" title="Blueprint Focus">◼ Blueprint</button>
+        <button class="view-btn active" id="btn-split" onclick="setViewMode('split')" title="Split View">◼◻ Split</button>
+        <button class="view-btn" id="btn-draft" onclick="setViewMode('draft')" title="Drafting Focus">◼ Drafting</button>
+      </div>
       <button class="feedback-btn">SHARE FEEDBACK</button>
     </div>
   </header>
 
-  <div class="studio-layout">
-    
+  <div class="studio-layout mode-split" id="studio-layout">
+
     <div class="drafting-panel">
       
       <a href="#" class="return-home">← Return to Overview</a>
@@ -1306,10 +1345,16 @@
                <div class="room-desc" style="margin-top:0;">${base.desc}</div>
                <button class="details-btn" type="button" onclick="openAccountModal('${acc.id}')">⚙️ DETAILS</button>
             </div>
+            <div class="inline-details" id="inline-${acc.id}"></div>
           </div>
         `;
       });
       roomsContainer.scrollTop = scrollTop;
+
+      // Populate inline details in Drafting Focus mode
+      if (document.getElementById('studio-layout').classList.contains('mode-draft')) {
+        populateInlineDetails();
+      }
 
       let dropdownHTML = '';
       const addDropOption = (r) => { dropdownHTML += `<div class="space-option" onclick="addInstance('${r.id}')">${r.title} <span>${r.meta}</span></div>`; };
@@ -2621,6 +2666,39 @@
       currentY = e.touches[0].clientY - startY;
       updateTransform();
     }, { passive: true });
+
+    // ── Viewport Isolation Engine ──
+    window.setViewMode = function(mode) {
+      const layout = document.getElementById('studio-layout');
+      layout.classList.remove('mode-split', 'mode-blueprint', 'mode-draft');
+      layout.classList.add('mode-' + mode);
+      document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+      const btn = document.getElementById('btn-' + mode);
+      if (btn) btn.classList.add('active');
+      if (mode === 'draft') {
+        renderInputs();
+      } else {
+        fitToScreen();
+      }
+    };
+
+    function populateInlineDetails() {
+      state.accounts.forEach(acc => {
+        const inlineEl = document.getElementById('inline-' + acc.id);
+        if (!inlineEl) return;
+        openAccountModal(acc.id);
+        inlineEl.innerHTML = document.getElementById('modal-dynamic-content').innerHTML;
+        document.getElementById('account-modal-overlay').style.display = 'none';
+        activeModalId = null;
+      });
+    }
+
+    // ResizeObserver keeps SVG math correct during panel transitions
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(() => fitToScreen());
+      const cw = document.querySelector('.canvas-wrapper');
+      if (cw) ro.observe(cw);
+    }
 
     // Prefill from Sketch if user came through that flow
     (function prefillFromSketch() {
