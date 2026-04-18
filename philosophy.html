@@ -35,6 +35,14 @@
 
   .page-h1 { margin-bottom: 60px; }
 
+  .blueprint-controls { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 60px 0 20px; gap: 20px; }
+  .reset-btn {
+    background: transparent; border: 2px solid var(--teal-mid); color: var(--teal-mid);
+    font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.2em;
+    padding: 14px 28px; border-radius: 4px; cursor: pointer; transition: all 0.3s ease; font-weight: bold;
+  }
+  .reset-btn:hover { background: var(--teal-mid); color: var(--bg-navy); }
+
   /* --- RANGE BOUNDARIES (FAR RIGHT ALIGNED) --- */
   .boundary {
     width: 100vw;
@@ -89,7 +97,7 @@
       <a href="/studio.html" class="nav-link">Studio</a>
       <a href="/range.html" class="nav-link" id="nav-range-link" style="display:none;">Range</a>
       <a href="/philosophy.html" class="nav-link active">Philosophy</a>
-      <button class="nav-feedback-btn">Share Feedback</button>
+      <button class="nav-feedback-btn" onclick="openFeedback()">Share Feedback</button>
     </div>
     <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
       <span></span><span></span><span></span>
@@ -101,7 +109,7 @@
     <a href="/studio.html" class="nav-mobile-link">Studio</a>
     <a href="/range.html" class="nav-mobile-link" id="nav-mob-range" style="display:none;">Range</a>
     <a href="/philosophy.html" class="nav-mobile-link active">Philosophy</a>
-    <button class="nav-mobile-feedback">Share Feedback</button>
+    <button class="nav-mobile-feedback" onclick="closeMobileNav(); openFeedback()">Share Feedback</button>
   </div>
 
   <main class="container">
@@ -156,10 +164,21 @@
 
   </main>
 
+  <div class="blueprint-controls">
+    <button class="reset-btn" onclick="resetBlueprint()">RESET BLUEPRINT</button>
+  </div>
+
   <div id="disclosure-footer">
     <p>DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. Past performance does not guarantee future outcomes.</p>
   </div>
 
+  <script>
+    function resetBlueprint() {
+      ['datum_range_revealed','datumfi_range','datum_currentAge','datum_retireAge','datum_targetSpend'].forEach(function(k){ sessionStorage.removeItem(k); });
+      window.location.href = '/studio.html';
+    }
+  </script>
+  <script src="/feedback.js"></script>
   <script src="/nav.js"></script>
 </body>
 </html>
