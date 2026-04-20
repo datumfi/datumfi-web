@@ -66,6 +66,24 @@
 }
 .nav-mobile-feedback:hover { border-color: var(--teal); color: var(--teal-mid); }
 
+/* Nav login button */
+.nav-login-btn {
+  font-family: var(--font-mono); font-size: 9px; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--teal-mid); background: none;
+  border: 1px solid var(--teal-mid); border-radius: 3px; cursor: pointer;
+  padding: 5px 10px; transition: all 0.2s; margin-left: 8px;
+  white-space: nowrap; text-decoration: none; display: inline-block;
+}
+.nav-login-btn:hover { background: rgba(93,202,165,0.1); }
+.nav-mobile-login {
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+  letter-spacing: 0.12em; color: var(--teal-mid); background: none;
+  border: 1px solid rgba(93,202,165,0.3); border-radius: 3px; cursor: pointer;
+  padding: 11px 4px; text-align: left; transition: all 0.2s;
+  display: block; width: 100%; margin-top: 4px; text-decoration: none;
+}
+.nav-mobile-login:hover { border-color: var(--teal-mid); background: rgba(93,202,165,0.06); }
+
 /* Nav feedback button */
 .nav-feedback-btn {
   font-family: var(--font-mono); font-size: 9px; text-transform: uppercase;
@@ -91,4 +109,76 @@
   .nav-hamburger { display: flex; }
   .view-toggle { display: none; }
   .nav-feedback-btn { display: none; }
+}
+
+/* ── Datum FI Glossary Tooltips ── */
+.df-tooltip {
+  border-bottom: 1px dotted rgba(93,202,165,0.5);
+  cursor: help;
+  position: relative;
+  display: inline;
+}
+.df-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #060b14;
+  border: 1px solid rgba(93,202,165,0.3);
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 400;
+  color: rgba(255,255,255,0.8);
+  line-height: 1.5;
+  width: 240px;
+  white-space: normal;
+  z-index: 1000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+}
+.df-tooltip:hover::after,
+.df-tooltip:focus::after {
+  opacity: 1;
+}
+/* Keep tooltip on-screen at page edges */
+.df-tooltip.tip-right::after { left: 0; transform: none; }
+.df-tooltip.tip-left::after  { left: auto; right: 0; transform: none; }
+@media (max-width: 650px) {
+  .df-tooltip::after { width: 200px; font-size: 10px; }
+}
+
+/* ── Accessibility: Skip Link (3D) ── */
+.skip-link {
+  position: absolute; top: -40px; left: 8px; z-index: 9999;
+  background: var(--gold); color: var(--bg-navy);
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+  letter-spacing: 0.1em; padding: 8px 16px; border-radius: 4px;
+  text-decoration: none; transition: top 0.15s;
+}
+.skip-link:focus { top: 8px; }
+
+/* ── Accessibility: Focus Visible (3C) ── */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--teal-mid);
+  outline-offset: 2px;
+}
+
+/* ── Accessibility: Global Reduced Motion (3A) ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

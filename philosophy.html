@@ -5,23 +5,45 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#091221">
 <title>Datum FI — The Philosophy</title>
+<meta name="description" content="A fixed point. A clear structure. A measured range. The philosophy behind Datum FI.">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Datum FI">
+<meta property="og:title" content="Datum FI — The Philosophy">
+<meta property="og:description" content="A fixed point. A clear structure. A measured range. The philosophy behind Datum FI.">
+<meta property="og:image" content="/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Datum FI — The Philosophy">
+<meta name="twitter:image" content="/og-image.png">
 <link rel="stylesheet" href="/styles/typography.css">
 <link rel="stylesheet" href="/styles/header.css">
 <style>
+  :root {
+    --bg-navy: #091221;
+    --teal: #1D9E75;
+    --teal-mid: #5DCAA5;
+    --gold: #C9A84C;
+    --danger-red: #e24b4a;
+    --white: #ffffff;
+    --muted: rgba(255,255,255,0.4);
+    --grid-line: rgba(100, 180, 255, 0.05);
+    --font-serif: 'Fraunces', serif;
+    --font-mono: 'DM Mono', monospace;
+  }
 
-  body { overflow-x: hidden; display: flex; flex-direction: column; min-height: 100vh; }
-
-  /* --- THE RANGE SPINE (Fixed Left Column) --- */
-  body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 20%;
-    width: 200px;
-    height: 100vh;
-    background: rgba(93, 202, 165, 0.06); 
-    z-index: 1;
-    pointer-events: none;
+  body {
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: var(--bg-navy);
+    color: var(--white);
+    font-family: var(--font-serif);
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
   }
 
   /* --- CONTENT CONTAINER --- */
@@ -29,19 +51,53 @@
     position: relative;
     max-width: 900px;
     margin: 0 auto;
-    padding: 96px 40px 60px;
+    padding: 96px 40px 20px;
     z-index: 10;
+    flex: 1;
   }
 
-  .page-h1 { margin-bottom: 60px; }
+  /* --- TYPOGRAPHY UPDATES FOR MANIFESTO --- */
+  .page-h1 {
+    margin-bottom: 8px;
+    font-size: 64px;
+    font-weight: 300;
+    font-style: italic;
+    line-height: 1.1;
+    color: var(--white);
+  }
 
-  .blueprint-controls { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 60px 0 20px; gap: 20px; }
+  .page-subtitle {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--gold);
+    margin-bottom: 60px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .blueprint-controls { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 40px 0 40px; gap: 20px; }
   .reset-btn {
     background: transparent; border: 2px solid var(--teal-mid); color: var(--teal-mid);
     font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.2em;
     padding: 14px 28px; border-radius: 4px; cursor: pointer; transition: all 0.3s ease; font-weight: bold;
   }
   .reset-btn:hover { background: var(--teal-mid); color: var(--bg-navy); }
+
+  /* --- SPECIFIC RANGE WRAPPER TO CONTAIN THE BACKGROUND TIER --- */
+  .range-wrapper {
+    position: relative;
+    margin-bottom: 60px;
+  }
+
+  .range-tier {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 20%;
+    width: 200px;
+    background: rgba(93, 202, 165, 0.06);
+    z-index: -1;
+  }
 
   /* --- RANGE BOUNDARIES (FAR RIGHT ALIGNED) --- */
   .boundary {
@@ -54,6 +110,10 @@
     flex-direction: column;
     align-items: flex-end;
   }
+
+  /* Remove top margin for ceiling, bottom margin for floor to tightly contain the tier */
+  .b-ceiling { margin-top: 0; }
+  .b-floor { margin-bottom: 0; }
 
   .line { height: 2px; width: 100%; opacity: 0.8; }
   .label-group { padding-right: 10%; margin-bottom: 8px; text-align: right; }
@@ -69,21 +129,48 @@
   .b-floor .lbl { color: var(--danger-red); }
 
   /* --- STANZA TYPOGRAPHY --- */
-  .stanza { max-width: 650px; margin: 0 auto 100px; padding-left: 5%; }
-  .stanza h2 { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold); margin-bottom: 12px; }
-  .stanza p { font-size: 20px; line-height: 1.5; color: var(--white); opacity: 0.9; }
+  .stanza { max-width: 650px; margin: 0 auto 80px; padding-left: 5%; position: relative; z-index: 2; }
+  .stanza h2 { font-family: var(--font-mono); font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold); margin-bottom: 16px; }
+  .stanza p { font-size: 20px; line-height: 1.5; color: var(--white); opacity: 0.9; margin-bottom: 20px; font-weight: 300; }
+  .stanza strong { color: var(--white); font-weight: 500; }
 
-  /* --- FOOTER (E1: matches landing #disclosure-footer exactly) --- */
-  .main-content { flex: 1; }
+  /* Embedded Manifesto Lists */
+  .stanza ul { list-style: none; margin-bottom: 24px; padding-left: 20px; }
+  .stanza li { font-size: 20px; color: rgba(255,255,255,0.9); margin-bottom: 8px; font-weight: 300; position: relative; line-height: 1.5; }
+  .stanza li::before { content: '—'; position: absolute; left: -24px; color: var(--teal-mid); }
+
+  .tier-list li::before { content: ''; }
+  .tier-list li { padding-left: 0; margin-bottom: 16px; }
+  .tier-list strong { font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; margin-right: 12px; }
+
+  .final-signoff {
+    margin-top: 40px;
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-start;
+    gap: 8px;
+    padding-left: 5%;
+    max-width: 650px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* --- FOOTER --- */
   #disclosure-footer {
     width: 100%;
     background: rgba(9, 18, 33, 0.97);
     border-top: 1px solid rgba(255,255,255,0.05);
     padding: 20px 40px 24px;
     text-align: center;
-    margin-top: auto;
+    margin-top: 20px;
   }
   #disclosure-footer p { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,0.25); line-height: 1.6; margin: 0; }
+
+  @media (max-width: 768px) {
+    .range-tier { left: 5%; width: 100px; }
+    .page-h1 { font-size: 42px; }
+    .stanza p, .stanza li { font-size: 16px; }
+  }
 
 </style>
 </head>
@@ -92,11 +179,11 @@
   <nav id="app-nav">
     <a href="/" class="brand-header"><span class="brand-datum">DATUM</span><span class="brand-fi">FI</span></a>
     <div class="nav-links">
-      <a href="/" class="nav-link">Home</a>
       <a href="/sketch.html" class="nav-link">Sketch</a>
       <a href="/studio.html" class="nav-link">Studio</a>
-      <a href="/range.html" class="nav-link" id="nav-range-link" style="display:none;">Range</a>
+      <a href="/range.html" class="nav-link" id="nav-range-link">Range</a>
       <a href="/philosophy.html" class="nav-link active">Philosophy</a>
+      <a href="/vault.html" class="nav-login-btn">Login</a>
       <button class="nav-feedback-btn" onclick="openFeedback()">Share Feedback</button>
     </div>
     <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
@@ -104,78 +191,161 @@
     </button>
   </nav>
   <div class="nav-mobile-menu" id="nav-mobile-menu">
-    <a href="/" class="nav-mobile-link">Home</a>
     <a href="/sketch.html" class="nav-mobile-link">Sketch</a>
     <a href="/studio.html" class="nav-mobile-link">Studio</a>
-    <a href="/range.html" class="nav-mobile-link" id="nav-mob-range" style="display:none;">Range</a>
+    <a href="/range.html" class="nav-mobile-link" id="nav-mob-range">Range</a>
     <a href="/philosophy.html" class="nav-mobile-link active">Philosophy</a>
+    <a href="/vault.html" class="nav-mobile-login">Login</a>
     <button class="nav-mobile-feedback" onclick="closeMobileNav(); openFeedback()">Share Feedback</button>
   </div>
 
   <main class="container">
-    
-    <h1 class="page-h1 hero-title">The Philosophy of Structure.</h1>
 
-    <div class="boundary b-ceiling">
-        <div class="label-group">
-            <span class="lbl">Structural Ceiling</span>
-        </div>
-        <div class="line"></div>
+    <h1 class="page-h1 hero-title">Data in.<br>Confidence out.</h1>
+    <h2 class="page-subtitle">The Philosophy</h2>
+
+    <div class="range-wrapper">
+      <div class="range-tier"></div>
+
+      <div class="boundary b-ceiling">
+          <div class="label-group">
+              <span class="lbl">Structural Ceiling</span>
+          </div>
+          <div class="line"></div>
+      </div>
+
+      <div class="stanza">
+        <h2>1. Every structure begins with a fixed point.</h2>
+        <p>In architecture, surveying, and engineering, nothing meaningful can be built until you establish a DATUM — a reference point that does not move.</p>
+        <p>It is the anchor.<br>The origin.<br>The truth everything else is measured from.</p>
+        <p>Your financial life has never had one.<br>Retirement tools give you guesses, probabilities, and sliders — but never a fixed point.</p>
+        <p style="color: var(--teal-mid); font-style: italic;">DATUM FI changes that.</p>
+      </div>
+
+      <div class="stanza">
+        <h2>2. Your life deserves a reference, not a recommendation.</h2>
+        <p>Most tools tell you what you "should" spend.<br>They collapse uncertainty into a single number.<br>They hide risk behind a percentage.<br>They turn your future into a score.</p>
+        <p>We reject that.</p>
+        <p>You bring your number — your DATUM.<br>Not a target.<br>Not a prescription.<br>A reference.</p>
+        <p>A fixed point that reflects your intent, not our opinion.</p>
+      </div>
+
+      <div class="stanza">
+        <h2>3. Complexity belongs in the engine, not on your shoulders.</h2>
+        <p>Your financial life is complicated:</p>
+        <ul>
+          <li>accounts</li>
+          <li>taxes</li>
+          <li>timelines</li>
+          <li>market cycles</li>
+          <li>sequence risk</li>
+          <li>inflation</li>
+          <li>longevity</li>
+          <li>valuation extremes</li>
+        </ul>
+        <p>You shouldn't have to manage that complexity.<br>You shouldn't have to guess.<br>You shouldn't have to "play with sliders" until the answer feels right.</p>
+        <p>That's why we built the Studio — the architectural drafting room for your retirement.</p>
+        <p>You map your reality.<br>We handle the structure.</p>
+      </div>
+
+      <div class="boundary b-datum">
+          <div class="label-group">
+              <span class="lbl">Your Datum</span>
+          </div>
+          <div class="line"></div>
+      </div>
+
+      <div class="stanza">
+        <h2>4. We don't guess. We measure.</h2>
+        <p>Once your Estate is drafted in the Studio, we run it through:</p>
+        <ul>
+          <li>40,000 market futures</li>
+          <li>four independent simulation methods</li>
+          <li>every major crash since 1926</li>
+          <li>valuation-aware scenarios</li>
+          <li>stress tests</li>
+          <li>dynamic spending behavior</li>
+        </ul>
+        <p>We don't hide uncertainty.<br>We reveal it.</p>
+        <p>Not as a probability.<br>Not as a score.<br>As a Range.</p>
+      </div>
+
+      <div class="stanza">
+        <h2>5. Retirement spending isn't a number. It's a Range.</h2>
+        <p>Your Range is the truth of your plan:</p>
+        <ul class="tier-list">
+          <li><strong style="color: var(--danger-red);">Survival Floor</strong> Even if history's worst repeats. Holds in 99% of simulations.</li>
+          <li><strong style="color: var(--teal-mid);">Your DATUM</strong> Your number, your plan. Measured against mathematical reality.</li>
+          <li><strong style="color: var(--gold);">Structural Ceiling</strong> What the data says your plan's ultimate capacity can reach.</li>
+        </ul>
+        <p>This is not a recommendation.<br>This is not a guess.<br>This is the world your plan lives inside.</p>
+      </div>
+
+      <div class="stanza">
+        <h2>6. Intelligence is clarity, not complexity.</h2>
+        <p>We built Datum Intelligence to interpret your Range with honesty and restraint.</p>
+        <p><strong>Datum Interpretation</strong><br>What your DATUM means inside the Range — without judgment, without prescription.</p>
+        <p><strong>Convergence</strong><br>How closely independent models agree — a quiet signal of structural robustness.</p>
+        <p><strong>Fragility Insights</strong><br>How your Range shifts when the assumptions that matter most change.</p>
+        <p>This is intelligence that clarifies, not overwhelms.<br>Insight without noise.<br>Rigor without anxiety.</p>
+      </div>
+
+      <div class="boundary b-floor">
+          <div class="label-group">
+              <span class="lbl">Survival Floor</span>
+          </div>
+          <div class="line"></div>
+      </div>
     </div>
 
     <div class="stanza">
-      <h2>1. The estate is an object.</h2>
-      <p>Financial planning has spent decades treating your life as a series of spreadsheets. We treat it as an architectural form. Like any structure, it has weight, tension, and load-bearing limits.</p>
+      <h2>7. Confidence is not a feeling. It's a structure.</h2>
+      <p>Confidence doesn't come from optimism.<br>It doesn't come from a single number.<br>It doesn't come from a probability score.</p>
+      <p>Confidence comes from understanding:</p>
+      <ul>
+        <li>your floor</li>
+        <li>your possibilities</li>
+        <li>your intent</li>
+        <li>your sensitivity</li>
+        <li>your structure</li>
+      </ul>
+      <p>Confidence comes from seeing your financial life the way an architect sees a building — anchored, measured, load‑tested, and honest.</p>
+      <p>Confidence comes from a fixed point.<br>Confidence comes from your DATUM.</p>
     </div>
 
     <div class="stanza">
-      <h2>2. Stability over certainty.</h2>
-      <p>The market is a chaotic system. You cannot control it, but you can build a plan that absorbs its shocks. We don't look for the "best" return; we look for the most durable boundary.</p>
+      <h2>8. This is not a calculator. This is a way of thinking.</h2>
+      <p>DATUM FI is not here to tell you what to do.<br>It's here to show you the world around your choices.</p>
+      <p>It's not here to simplify your life into a single number.<br>It's here to reveal the structure beneath it.</p>
+      <p>It's not here to guess.<br>It's here to measure.</p>
+      <p>It's not here to predict the future.<br>It's here to prepare you for it.</p>
     </div>
 
-    <div class="boundary b-datum">
-        <div class="label-group">
-            <span class="lbl">Your Datum</span>
-        </div>
-        <div class="line"></div>
+    <div class="stanza" style="margin-bottom: 20px;">
+      <h2>9. Data in. Confidence out.</h2>
+      <p>This is the promise.<br>This is the philosophy.<br>This is the brand.</p>
+      <p>DATUM FI exists to give people something they've never had:</p>
+      <p>A fixed point.<br>A clear structure.<br>A measured range.<br>A calm understanding of uncertainty.<br>A way to live with confidence.</p>
+      <p>Not a guess.<br>Not a score.<br>A reference.</p>
     </div>
 
-    <div class="stanza">
-      <h2>3. Capacity is measured, not guessed.</h2>
-      <p>Your estate has been measured. The space between your "Structural Ceiling"—the limit of support—and your "Survival Floor"—the baseline required to withstand a century of stress—is where you live.</p>
+    <div class="final-signoff" style="font-family: var(--font-serif);">
+        <span style="font-family: var(--font-serif); font-size: 24px; font-style: italic; font-weight: 300; color: var(--white);">A</span>
+        <span style="font-family: var(--font-serif); font-size: 24px; font-weight: 300; letter-spacing: 0.1em; color: var(--white);">DATUM.</span>
     </div>
 
-    <div class="stanza">
-      <h2>4. The Invisible Architecture.</h2>
-      <p>What makes a building stay up isn't the paint; it's the rebar. Your plan's strength comes from tax sequencing, spending guardrails, and automated math. You shouldn't have to see the complexity to feel the safety.</p>
+    <div class="blueprint-controls" style="margin-top: 60px; margin-bottom: 20px;">
+      <button class="reset-btn" onclick="returnToOrigin()">RETURN TO ORIGIN</button>
     </div>
-
-    <div class="boundary b-floor">
-        <div class="label-group">
-            <span class="lbl">Survival Floor</span>
-        </div>
-        <div class="line"></div>
-    </div>
-
-    <div class="stanza">
-      <h2>5. Confidence is a byproduct of clarity.</h2>
-      <p>We exist to give you a fixed point in a shifting world. A clear structure. A measured range. A way to live with a calm understanding of uncertainty.</p>
-    </div>
-
   </main>
 
-  <div class="blueprint-controls">
-    <button class="reset-btn" onclick="resetBlueprint()">RESET BLUEPRINT</button>
-  </div>
-
   <div id="disclosure-footer">
-    <p>DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. Past performance does not guarantee future outcomes.</p>
+    <p>DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. Past performance does not guarantee future outcomes. &nbsp;|&nbsp; <a href="/privacy.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Privacy Policy</a> &nbsp;|&nbsp; <a href="/terms.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Terms of Service</a> &nbsp;|&nbsp; <a href="mailto:accessibility@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">Accessibility</a> &nbsp;|&nbsp; <a href="mailto:privacy@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">privacy@datumfi.com</a> &nbsp;|&nbsp; <a href="mailto:feedback@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">feedback@datumfi.com</a> &nbsp;|&nbsp; <span style="color:rgba(255,255,255,0.3);cursor:pointer;text-decoration:underline;" onclick="openDeleteDataModal()">Delete My Data</span> &nbsp;|&nbsp; <a href="/privacy-choices.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Do Not Sell My Information</a> &nbsp;|&nbsp; Build&nbsp;2026.04.19&nbsp;&bull;&nbsp;v1.0.0</p>
   </div>
 
   <script>
-    function resetBlueprint() {
-      ['datum_range_revealed','datumfi_range','datum_currentAge','datum_retireAge','datum_targetSpend'].forEach(function(k){ sessionStorage.removeItem(k); });
-      window.location.href = '/studio.html';
+    function returnToOrigin() {
+      window.location.href = '/';
     }
   </script>
   <script src="/feedback.js"></script>

@@ -4,11 +4,26 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#091221">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://eu.i.posthog.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.datumfi.com https://eu.i.posthog.com https://api.stripe.com;">
 <title>Datum FI — The Sketch</title>
+<meta name="description" content="Map your retirement landscape in 60 seconds. See your Range before you build.">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Datum FI">
+<meta property="og:title" content="Datum FI — The Sketch">
+<meta property="og:description" content="Map your retirement landscape in 60 seconds. See your Range before you build.">
+<meta property="og:image" content="/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Datum FI — The Sketch">
+<meta name="twitter:image" content="/og-image.png">
 <link rel="stylesheet" href="/styles/typography.css">
 <link rel="stylesheet" href="/styles/header.css">
 <style>
-  html { overflow-x: hidden; }
+  html { overflow-x: clip; }
+  body { overflow-x: clip; }
 
   /* --- CUSTOM SCROLLBAR --- */
   ::-webkit-scrollbar { width: 6px; }
@@ -45,6 +60,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    background-color: var(--bg-navy);
+    background-image: linear-gradient(rgba(100,180,255,0.05) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(100,180,255,0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
   }
 
   /* --- LEFT PANEL TYPOGRAPHY & CONTROLS --- */
@@ -95,7 +114,7 @@
   input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.3); }
 
   /* Segmented Toggle for Market Conditions */
-  .toggle-wrapper { position: relative; }
+  .toggle-wrapper { position: relative; overflow: visible; }
   .toggle-container {
       display: flex; background: rgba(255,255,255,0.05); border-radius: 6px;
       overflow: visible; border: 1px solid rgba(255,255,255,0.1); margin-top: 5px;
@@ -217,9 +236,11 @@
   .comparison-container { display: flex; gap: 30px; max-width: 1000px; width: 100%; margin: 40px auto; }
   
   .comp-card {
-      flex: 1; background: rgba(9, 18, 33, 0.6); border: 1px solid rgba(255,255,255,0.05);
+      flex: 1; background: rgba(9, 18, 33, 0.6); border: 2px solid var(--teal-mid);
       border-radius: 8px; padding: 40px; display: flex; flex-direction: column;
+      box-shadow: 0 0 24px rgba(93, 202, 165, 0.15);
   }
+  .comp-card .comp-title { color: var(--teal-mid); }
   .comp-pro { border-color: var(--gold); background: rgba(201, 168, 76, 0.03); position: relative; }
   .comp-pro::before {
       content: 'THE FULL ENGINE'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
@@ -314,6 +335,25 @@
   .activate-link:hover { text-decoration: underline; }
   .studio-compare-wrap { width: 100%; max-width: 1100px; margin: 0 auto 20px; overflow-x: auto; }
 
+  /* --- GATE NAVIGATION (screen-3 progressive disclosure) --- */
+  .gate-label {
+    font-family: var(--font-mono); font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.3em; color: var(--teal-mid); text-align: center; margin-bottom: 24px;
+  }
+  .gate-nav-btn {
+    display: block; margin: 40px auto;
+    background: transparent; border: 1px solid var(--gold); color: var(--gold);
+    font-family: var(--font-mono); font-size: 12px; text-transform: uppercase;
+    letter-spacing: 0.2em; padding: 18px 42px; border-radius: 4px; cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .gate-nav-btn:hover { background: var(--gold); color: var(--bg-navy); }
+  .gate3-header {
+    font-family: var(--font-serif); font-size: 20px; font-style: italic;
+    color: var(--white); text-align: center; margin-bottom: 32px;
+  }
+  .gate3-wrap { width: 100%; max-width: 1100px; margin: 0 auto; overflow-x: auto; }
+
   /* --- MOBILE LAYOUT (H2) --- */
   @media (max-width: 900px) {
     .hero-screen { flex-direction: column; height: auto; min-height: 100vh; overflow-y: auto; }
@@ -325,6 +365,50 @@
     .pillar-grid { grid-template-columns: 1fr; }
     .studio-card { padding: 24px; }
   }
+
+  /* --- EMAIL CAPTURE BLOCK --- */
+  .email-capture-block {
+    max-width: 1000px; margin: 40px auto 0; padding: 28px 32px;
+    background: rgba(255,255,255,0.02); border: 1px solid rgba(93,202,165,0.15);
+    border-radius: 8px;
+  }
+  .email-capture-block h3 { font-family: var(--font-serif); font-size: 22px; font-weight: 300; font-style: italic; color: var(--white); margin-bottom: 6px; }
+  .email-capture-block p { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-bottom: 18px; line-height: 1.5; }
+  .email-row { display: flex; gap: 10px; }
+  .email-row input[type=email] {
+    flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 4px; color: var(--white); font-family: var(--font-mono); font-size: 12px;
+    padding: 11px 14px; outline: none; transition: border-color 0.2s; min-width: 0;
+  }
+  .email-row input[type=email]::placeholder { color: rgba(255,255,255,0.25); }
+  .email-row input[type=email]:focus { border-color: var(--teal-mid); }
+  .email-row button {
+    background: transparent; border: 1px solid var(--teal-mid); color: var(--teal-mid);
+    font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.1em; padding: 11px 20px; border-radius: 4px; cursor: pointer;
+    transition: all 0.2s; white-space: nowrap; flex-shrink: 0;
+  }
+  .email-row button:hover { background: rgba(93,202,165,0.1); }
+  .email-fine-print { font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.25); margin-top: 10px; }
+  .email-success { font-family: var(--font-mono); font-size: 12px; color: var(--teal-mid); display: none; margin-top: 12px; }
+  @media (max-width: 650px) { .email-row { flex-direction: column; } }
+
+  /* --- ZERO-KNOWLEDGE TRUST BLOCK --- */
+  .sketch-zk-block {
+    max-width: 1000px; margin: 40px auto 0; padding: 28px 32px;
+    background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px;
+  }
+  .sketch-zk-header {
+    display: flex; align-items: center; font-family: var(--font-mono); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.15em; color: var(--white);
+    margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .sketch-zk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .sketch-zk-item { display: flex; gap: 10px; font-family: var(--font-mono); font-size: 10px; color: var(--muted); line-height: 1.6; }
+  .sketch-zk-item strong { color: rgba(255,255,255,0.7); }
+  .sketch-zk-check { color: var(--teal); flex-shrink: 0; font-size: 12px; margin-top: 1px; }
+  @media (max-width: 650px) { .sketch-zk-grid { grid-template-columns: 1fr; } }
 
   /* --- LEGAL FOOTER --- */
   .legal-footer {
@@ -341,15 +425,16 @@
 </style>
 </head>
 <body>
+  <a href="#sketch-main" class="skip-link">Skip to main content</a>
 
   <nav id="app-nav">
     <a href="/" class="brand-header"><span class="brand-datum">DATUM</span><span class="brand-fi">FI</span></a>
     <div class="nav-links">
-      <a href="/" class="nav-link">Home</a>
       <a href="/sketch.html" class="nav-link active">Sketch</a>
       <a href="/studio.html" class="nav-link">Studio</a>
       <a href="/range.html" class="nav-link" id="nav-range-link" style="display:none;">Range</a>
       <a href="/philosophy.html" class="nav-link">Philosophy</a>
+      <a href="/vault.html" class="nav-login-btn">Login</a>
       <button class="nav-feedback-btn" onclick="openFeedback()">Share Feedback</button>
     </div>
     <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
@@ -357,18 +442,18 @@
     </button>
   </nav>
   <div class="nav-mobile-menu" id="nav-mobile-menu">
-    <a href="/" class="nav-mobile-link">Home</a>
     <a href="/sketch.html" class="nav-mobile-link active">Sketch</a>
     <a href="/studio.html" class="nav-mobile-link">Studio</a>
     <a href="/range.html" class="nav-mobile-link" id="nav-mob-range" style="display:none;">Range</a>
     <a href="/philosophy.html" class="nav-mobile-link">Philosophy</a>
+    <a href="/vault.html" class="nav-mobile-login">Login</a>
     <button class="nav-mobile-feedback" onclick="closeMobileNav(); openFeedback()">Share Feedback</button>
   </div>
 
-  <div class="hero-screen">
+  <div class="hero-screen" id="sketch-main">
       <div class="panel-left">
         <div class="title-block">
-            <h1 class="page-h1 hero-title" style="color:var(--white);">The Sketch.</h1>
+            <h1 class="page-h1 hero-title" style="color:var(--white);">The <span class="df-tooltip" tabindex="0" data-tooltip="A fast, browser-based retirement estimate. No account required. Uses broad-stroke math to reveal your approximate Range in seconds.">Sketch</span>.</h1>
             <div class="sub-head hero-subtitle" style="color:var(--gold);">Free. No signup. Just your numbers.</div>
         </div>
 
@@ -377,7 +462,7 @@
                 <span class="control-label">Current Age</span>
                 <span class="control-value" id="val-age">40 yrs</span>
             </div>
-            <input type="range" id="slider-age" min="30" max="65" value="40" step="1">
+            <input type="range" id="slider-age" min="18" max="65" value="40" step="1" aria-label="Current age in years" aria-valuemin="18" aria-valuemax="65" aria-valuenow="40">
         </div>
 
         <div class="control-group">
@@ -385,7 +470,7 @@
                 <span class="control-label">Retirement Age</span>
                 <span class="control-value" id="val-activation">70 yrs</span>
             </div>
-            <input type="range" id="slider-activation" min="50" max="75" value="70" step="1">
+            <input type="range" id="slider-activation" min="50" max="75" value="70" step="1" aria-label="Retirement age" aria-valuemin="50" aria-valuemax="75" aria-valuenow="70">
         </div>
 
         <div class="control-group">
@@ -393,15 +478,23 @@
                 <span class="control-label">Current Portfolio Balance</span>
                 <span class="control-value" id="val-portfolio">$1.50M</span>
             </div>
-            <input type="range" id="slider-portfolio" min="0.1" max="10.0" value="1.5" step="0.05">
+            <input type="range" id="slider-portfolio" min="0.01" max="10.0" value="1.5" step="0.005" aria-label="Current portfolio balance in millions of dollars" aria-valuemin="0.01" aria-valuemax="10" aria-valuenow="1.5">
         </div>
 
         <div class="control-group">
             <div class="control-header">
-                <span class="control-label" style="color: var(--teal-mid);">Your Datum (Target Spend)</span>
+                <span class="control-label">Annual Contributions</span>
+                <span class="control-value" id="val-contrib">$92,000</span>
+            </div>
+            <input type="range" id="slider-contrib" min="0" max="150000" value="92000" step="1000" aria-label="Annual contributions in dollars" aria-valuemin="0" aria-valuemax="150000" aria-valuenow="92000">
+        </div>
+
+        <div class="control-group">
+            <div class="control-header">
+                <span class="control-label" style="color: var(--teal-mid);">Your <span class="df-tooltip" tabindex="0" data-tooltip="Your chosen annual spending target in retirement — the fixed reference point everything else is measured against.">Datum</span> (Target Spend)</span>
                 <span class="control-value" id="val-datum">$165k / yr</span>
             </div>
-            <input type="range" id="slider-datum" min="20" max="400" value="165" step="5">
+            <input type="range" id="slider-datum" min="20" max="400" value="165" step="5" aria-label="Target annual spending in retirement in thousands of dollars" aria-valuemin="20" aria-valuemax="400" aria-valuenow="165">
         </div>
 
         <div class="control-group" style="margin-top: 20px;">
@@ -415,7 +508,7 @@
                   <label for="market-avg">Historical Average</label>
                   <div class="mkt-tooltip">
                     <div class="mkt-tooltip-head">Historical Average</div>
-                    <div class="mkt-tooltip-body">The market behaves like the last 100 years — crashes, booms, and everything between, proportionally. Your Range is calibrated against this full history.</div>
+                    <div class="mkt-tooltip-body">Uses a baseline real return (~3.5%) reflecting the long-run historical average. Your <span class="df-tooltip" tabindex="0" data-tooltip="The full spectrum of sustainable annual spending — from Survival Floor to Structural Ceiling — revealed by running your estate through thousands of market scenarios.">Range</span> tiers are calibrated against 100 years of Monte Carlo analysis — full scenario sequencing lives in the Studio.</div>
                   </div>
                 </div>
                 <div class="toggle-option">
@@ -423,7 +516,7 @@
                   <label for="market-stress">Stress Test</label>
                   <div class="mkt-tooltip" style="border-color: rgba(226,75,74,0.4);">
                     <div class="mkt-tooltip-head" style="color: var(--danger-red);">Stress Test</div>
-                    <div class="mkt-tooltip-body">The market behaves like the 1929 crash, 1970s stagflation, or Japan's Lost Decade — the worst scenarios in modern history. If your Range survives this, it survives anything.</div>
+                    <div class="mkt-tooltip-body">Applies a reduced-return environment — approximately 1.5% real annual return, matching the worst 40-year historical periods in market history. Your Range tightens accordingly. For scenario-specific sequencing (1929 crash patterns, 1970s stagflation paths, Japan's Lost Decade modeling), see the full Studio.</div>
                   </div>
                 </div>
               </div>
@@ -592,41 +685,9 @@
   </div>
 
   <div class="full-width-section" id="screen-3" style="padding-top: 80px;">
-      <div class="arch-header">
-          <h2 class="insights-h2 hero-title">Unlock the Blueprint.</h2>
-          <h3 class="insights-h3 hero-subtitle" style="text-transform: none; letter-spacing: 0.05em; font-size: 14px; color: var(--gold);">The Sketch above is a baseline. The Studio is the exact measurement of your life.</h3>
-      </div>
 
-      <!-- PART A: Comparison table — always visible on load -->
-      <div class="studio-compare-wrap">
-          <table class="comp-table">
-              <thead>
-                  <tr>
-                      <th>System Capability</th>
-                      <th>Datum FI (Free)</th>
-                      <th>The Studio (Premium)</th>
-                  </tr>
-              </thead>
-              <tbody>
-                  <tr><td>Growth &amp; Market Modeling</td><td>Basic Static Growth</td><td>CAPE, Regime, &amp; Historical Simulations</td></tr>
-                  <tr><td>Tax Architecture</td><td>Assumes Linear Impact</td><td>41-Year Exact Sequencing &amp; Thermal Imaging</td></tr>
-                  <tr><td>Spousal Planning</td><td>Single User Only</td><td><span class="cell-check">✓</span> Multi-Architect Synchronization</td></tr>
-                  <tr><td>Generational Transfer</td><td><span class="cell-x">✕</span></td><td><span class="cell-check">✓</span> Trust Firewalls &amp; Disbursement Logic</td></tr>
-                  <tr><td>Debt Strategy</td><td>Static Subtraction</td><td><span class="cell-check">✓</span> Equity Mapping &amp; Accelerated Demolition</td></tr>
-                  <tr><td>Cash Flow Diagnostics</td><td><span class="cell-x">✕</span></td><td><span class="cell-check">✓</span> System Velocity &amp; Operating Overhead</td></tr>
-                  <tr><td>Philanthropy Tracking</td><td><span class="cell-x">✕</span></td><td><span class="cell-check">✓</span> Philanthropic Yield Calculation</td></tr>
-                  <tr><td>Asset Deep-Dive</td><td>Total Balances Only</td><td><span class="cell-check">✓</span> Micro-Itemization &amp; Collectibles Appraisal</td></tr>
-                  <tr><td>Regulatory Intelligence</td><td><span class="cell-x">✕</span></td><td><span class="cell-check">✓</span> Rule of 55, Super Catch-Ups, RMDs</td></tr>
-                  <tr><td>Stress Testing</td><td>Basic Volatility</td><td><span class="cell-check">✓</span> Thermodynamic Shock Lens</td></tr>
-                  <tr><td>Withdrawal Sequencing</td><td>Static Depletion</td><td><span class="cell-check">✓</span> Visual Outflow Routing &amp; Guardrails</td></tr>
-              </tbody>
-          </table>
-      </div>
-
-      <!-- PART B: Explore button + pillar deep-dive -->
-      <button class="explore-studio-btn" id="explore-studio-btn" onclick="revealPillars()">Explore The Studio ↓</button>
-
-      <div class="pillar-deep-dive" id="pillar-deep-dive" style="display:none;">
+      <!-- GATE 2: 4-pillar deep-dive -->
+      <div id="gate2" class="pillar-deep-dive">
           <div class="studio-card">
               <div class="studio-card-header">
                   <div class="sc-title">THE STUDIO</div>
@@ -645,8 +706,8 @@
                       <ul class="pillar-cap-list">
                           <li class="pillar-cap-item"><strong>Multi-Architect Synchronization</strong> — Spouse as co-pilot. Joint tax burdens, dual Social Security timelines, staggered retirement dates, combined operating overhead.</li>
                           <li class="pillar-cap-item"><strong>Micro-Asset Itemization</strong> — Individual equities, expense ratios, hedging flags. Every holding, named.</li>
-                          <li class="pillar-cap-item"><strong>Physical Asset &amp; Collectibles Tracking ✦</strong> — Living appraisal ledger for physical assets and collectibles.<span class="cap-ledger">[LEDGER ROOM]</span></li>
-                          <li class="pillar-cap-item"><strong>Generational Trust Firewalls ✦</strong> — Revocable and Irrevocable trusts with HEMS disbursement logic. Capital decoupled from standard liability footprint.<span class="cap-ledger">[LEDGER ROOM]</span></li>
+                          <li class="pillar-cap-item"><strong>Physical Asset &amp; Collectibles Tracking ✦</strong> — Living appraisal ledger for physical assets and collectibles.</li>
+                          <li class="pillar-cap-item"><strong>Generational Trust Firewalls ✦</strong> — Revocable and Irrevocable trusts with HEMS disbursement logic. Capital decoupled from standard liability footprint.</li>
                           <li class="pillar-cap-item"><strong>Liability Demolition &amp; Equity Mapping</strong> — Debts linked to physical assets for real-time Net Equity. Accelerated Payoff routing.</li>
                       </ul>
                   </div>
@@ -661,8 +722,8 @@
                       <ul class="pillar-cap-list">
                           <li class="pillar-cap-item"><strong>Operating Overhead Analysis</strong> — Expense-to-Income Ratio with structural leverage alerts.</li>
                           <li class="pillar-cap-item"><strong>Philanthropic Yield Tracking</strong> — Charitable giving as percentage of gross cash flow.</li>
-                          <li class="pillar-cap-item"><strong>System Velocity Diagnostics ✦</strong> — Real-time telemetry: compound yield + contributions weighted against interest drag.<span class="cap-ledger">[OBSERVATIONAL]</span></li>
-                          <li class="pillar-cap-item"><strong>Dynamic Liquidity Friction ✦</strong> — Mark accounts as functionally illiquid during crashes.<span class="cap-ledger">[BEHAVIORAL TAG]</span></li>
+                          <li class="pillar-cap-item"><strong>System Velocity Diagnostics ✦</strong> — Real-time telemetry: compound yield + contributions weighted against interest drag.</li>
+                          <li class="pillar-cap-item"><strong>Dynamic Liquidity Friction ✦</strong> — Mark accounts as functionally illiquid during crashes.</li>
                       </ul>
                   </div>
               </div>
@@ -689,7 +750,7 @@
                   <div class="pillar-tooltip">
                       <ul class="pillar-cap-list">
                           <li class="pillar-cap-item"><strong>Thermodynamic Shock</strong> — Instant −30% volatility simulation to visualize structural contraction.</li>
-                          <li class="pillar-cap-item"><strong>Thermal Imaging ✦</strong> — Heat-map trapped tax liabilities (Pre-Tax), zero-friction capital (Roth), burning interest drag (Debt).<span class="cap-ledger">[VISUALIZATION]</span></li>
+                          <li class="pillar-cap-item"><strong>Thermal Imaging ✦</strong> — Heat-map trapped tax liabilities (Pre-Tax), zero-friction capital (Roth), burning interest drag (Debt).</li>
                           <li class="pillar-cap-item"><strong>Outflow Routing</strong> — Visual capital extraction sequence: Liquid → Pre-Tax → Roth.</li>
                           <li class="pillar-cap-item"><strong>Datum Elevation Benchmark</strong> — Fixed laser line representing Target Annual Spend.</li>
                           <li class="pillar-cap-item"><strong>Custom Climate Matrices</strong> — Manual confidence weighting across CAPE, Regime, Parametric, and Historical models.</li>
@@ -699,21 +760,74 @@
               </div>
 
               </div>
-
-              <div class="doctrine-note">Features marked ✦ in the pillar detail are ledger rooms — capital or preferences tracked inside your Studio for organizational clarity. These do not project into your Range calculation. Range math is driven exclusively by architecture-level inputs: assets, liabilities, income, tax sequencing, and market modeling.</div>
           </div>
+      </div>
+      <button class="gate-nav-btn" onclick="document.getElementById('gate3').scrollIntoView({behavior:'smooth'})">See Full Comparison ↓</button>
 
-          <div class="activate-cta">
-              Ready to architect your plan? <a href="/studio.html" class="activate-link">Activate The Studio →</a>
+      <!-- GATE 3: Full 11-row comparison matrix -->
+      <div id="gate3" style="width: 100%; max-width: 1100px; margin: 0 auto;">
+          <div class="gate3-header">Every dimension. Every system. Every decision.</div>
+          <div class="gate3-wrap">
+              <table class="comp-table">
+                  <thead>
+                      <tr>
+                          <th>System Capability</th>
+                          <th>Datum FI (Free)</th>
+                          <th>The <span class="df-tooltip tip-left" tabindex="0" data-tooltip="The full Datum FI planning environment. Maps your complete estate — accounts, taxes, liabilities, timelines — and runs it through institutional-grade simulation.">Studio</span> (Premium)</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      <tr><td>Growth &amp; Market Modeling</td><td>Basic Static Growth</td><td>CAPE, Regime, &amp; Historical Simulations</td></tr>
+                      <tr><td>Tax Architecture</td><td>Assumes Linear Impact</td><td>41-Year Exact Sequencing &amp; Thermal Imaging</td></tr>
+                      <tr><td>Spousal Planning</td><td>Single User Only</td><td><span class="cell-check">✓</span> Multi-Architect Synchronization</td></tr>
+                      <tr><td>Generational Transfer</td><td><span class="cell-x">✕</span></td><td><span class="cell-check">✓</span> Trust Firewalls &amp; Disbursement Logic</td></tr>
+                      <tr><td>Debt Strategy</td><td>Static Subtraction</td><td><span class="cell-check">✓</span> Equity Mapping &amp; Accelerated Demolition</td></tr>
+                      <tr><td>Cash Flow Diagnostics</td><td><span class="cell-x">✕</span></td><td><span class="cell-check">✓</span> System Velocity &amp; Operating Overhead</td></tr>
+                      <tr><td>Philanthropy Tracking</td><td><span class="cell-x">✕</span></td><td><span class="cell-check">✓</span> Philanthropic Yield Calculation</td></tr>
+                      <tr><td>Asset Deep-Dive</td><td>Total Balances Only</td><td><span class="cell-check">✓</span> Micro-Itemization &amp; Collectibles Appraisal</td></tr>
+                      <tr><td>Regulatory Intelligence</td><td><span class="cell-x">✕</span></td><td><span class="cell-check">✓</span> Rule of 55, Super Catch-Ups, RMDs</td></tr>
+                      <tr><td>Stress Testing</td><td>Basic Volatility</td><td><span class="cell-check">✓</span> Thermodynamic Shock Lens</td></tr>
+                      <tr><td>Withdrawal Sequencing</td><td>Static Depletion</td><td><span class="cell-check">✓</span> Visual Outflow Routing &amp; Guardrails</td></tr>
+                  </tbody>
+              </table>
           </div>
+          <div class="doctrine-note">Features marked ✦ in the pillar detail are ledger rooms — capital or preferences tracked inside your Studio for organizational clarity. These do not project into your Range calculation. Range math is driven exclusively by architecture-level inputs: assets, liabilities, income, tax sequencing, and market modeling.</div>
+      </div>
+
+      <div class="activate-cta" style="margin-top: 60px;">
+          Ready to architect your plan? <a href="/vault.html" class="activate-link">Activate The Studio →</a>
+      </div>
+
+      <div class="email-capture-block" id="email-capture-sketch">
+        <h3>Get your weekly Datum Briefing.</h3>
+        <p>Architecture insights, market commentary, and your Range — delivered Sundays.</p>
+        <div class="email-row">
+          <input type="email" id="sketch-email-input" placeholder="name@domain.com" aria-label="Email address">
+          <button onclick="submitSketchEmail()">Subscribe</button>
+        </div>
+        <p class="email-fine-print">Unsubscribe anytime. We never sell or share your email.</p>
+        <p class="email-success" id="sketch-email-success">Subscribed — check your inbox for confirmation.</p>
+      </div>
+
+      <div class="sketch-zk-block">
+        <div class="sketch-zk-header">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Zero-Knowledge Architecture
+        </div>
+        <div class="sketch-zk-grid">
+          <div class="sketch-zk-item"><span class="sketch-zk-check">✓</span><span><strong>Local Computation</strong> — The Monte Carlo engine runs entirely inside your browser. Your Sketch inputs never touch our servers.</span></div>
+          <div class="sketch-zk-item"><span class="sketch-zk-check">✓</span><span><strong>Minimal Retention</strong> — The Sketch stores nothing. The Studio stores only your profile — never sold, never shared, deletable on request.</span></div>
+          <div class="sketch-zk-item"><span class="sketch-zk-check">✓</span><span><strong>No Tracking</strong> — No ad-retargeting. No data brokering. No invisible pixels monitoring your wealth.</span></div>
+          <div class="sketch-zk-item"><span class="sketch-zk-check">✓</span><span><strong>Session-Scoped State</strong> — <span class="df-tooltip" tabindex="0" data-tooltip="Your complete estate model inside the Studio: all accounts, liabilities, income streams, and preferences combined into a single computational input.">Blueprints</span> live only for your active session. Close the tab, and your numbers are gone — never written to disk, never recoverable.</span></div>
+        </div>
       </div>
 
       <div class="final-cta">
-          <a href="/studio.html" class="studio-btn">ENTER THE STUDIO →</a>
+          <a href="/studio-showcase.html" class="studio-btn" onclick="if(window.dfTrack)dfTrack('sketch_reveal_clicked')">SEE WHAT STUDIO UNLOCKS →</a>
       </div>
 
       <div class="legal-footer">
-          DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. Past performance does not guarantee future outcomes.
+          DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. Past performance does not guarantee future outcomes. &nbsp;|&nbsp; <a href="/privacy.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Privacy Policy</a> &nbsp;|&nbsp; <a href="/terms.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Terms of Service</a> &nbsp;|&nbsp; <a href="mailto:accessibility@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">Accessibility</a> &nbsp;|&nbsp; <a href="mailto:privacy@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">privacy@datumfi.com</a> &nbsp;|&nbsp; <a href="mailto:feedback@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">feedback@datumfi.com</a> &nbsp;|&nbsp; <span style="color:rgba(255,255,255,0.3);cursor:pointer;text-decoration:underline;" onclick="openDeleteDataModal()">Delete My Data</span> &nbsp;|&nbsp; <a href="/privacy-choices.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Do Not Sell My Information</a> &nbsp;|&nbsp; Build&nbsp;2026.04.19&nbsp;&bull;&nbsp;v1.0.0
       </div>
   </div>
 
@@ -724,11 +838,13 @@
     const slAge = document.getElementById('slider-age');
     const slAct = document.getElementById('slider-activation');
     const slPort = document.getElementById('slider-portfolio');
+    const slContrib = document.getElementById('slider-contrib');
     const slDatum = document.getElementById('slider-datum');
 
     const valAge = document.getElementById('val-age');
     const valAct = document.getElementById('val-activation');
     const valPort = document.getElementById('val-portfolio');
+    const valContrib = document.getElementById('val-contrib');
     const valDatum = document.getElementById('val-datum');
 
     const ceilLine = document.getElementById('ceil-line');
@@ -767,21 +883,31 @@
         const currentAge = parseInt(slAge.value);
         const activationAge = parseInt(slAct.value);
         const portfolioVol = parseFloat(slPort.value);
+        const annualContrib = parseInt(slContrib.value);
         const targetSpend = parseInt(slDatum.value);
         const isStress = document.getElementById('market-stress').checked;
 
         // Display updates
         valAge.innerHTML = `${currentAge} yrs`;
         valAct.innerHTML = `${activationAge} yrs`;
-        valPort.innerHTML = `$${portfolioVol.toFixed(2)}M`;
+        valPort.innerHTML = portfolioVol < 1
+            ? `$${Math.round(portfolioVol * 1000000).toLocaleString('en-US')}`
+            : `$${portfolioVol.toFixed(2)}M`;
+        valContrib.innerHTML = `$${annualContrib.toLocaleString('en-US')}`;
         valDatum.innerHTML = `$${targetSpend}k / yr`;
 
         // 2. Conservative Physics Math
         const yearsToGrow = Math.max(0, activationAge - currentAge);
-        
+
         // The Sketch uses broad strokes: 3.5% real vs Studio's 4.12%. Stress drops to 1.5%.
-        const growthRate = isStress ? 1.015 : 1.035; 
-        const futurePortfolio = portfolioVol * Math.pow(growthRate, yearsToGrow); 
+        const growthRate = isStress ? 1.015 : 1.035;
+        const realRate = growthRate - 1;
+        const portfolioFV = portfolioVol * Math.pow(growthRate, yearsToGrow);
+        // Contributions compound from now to retirement (annuity FV, end-of-period)
+        const contribFV = realRate > 0
+            ? (annualContrib / 1000000) * ((Math.pow(growthRate, yearsToGrow) - 1) / realRate)
+            : (annualContrib / 1000000) * yearsToGrow;
+        const futurePortfolio = portfolioFV + contribFV; 
         
         // Formatted String for Future Portfolio (ex: $2.98M)
         const fvStr = (futurePortfolio >= 1) ? '$' + futurePortfolio.toFixed(2) + 'M' : '$' + Math.round(futurePortfolio * 1000) + 'k';
@@ -892,6 +1018,16 @@
         sessionStorage.setItem('datum_retireAge', activationAge);
         sessionStorage.setItem('datum_portfolio', portfolioVol);
         sessionStorage.setItem('datum_targetSpend', targetSpend);
+
+        // 8. Persist state to localStorage keyed by session (2A)
+        var sid = localStorage.getItem('datumfi_session_id');
+        if (sid) {
+            localStorage.setItem('datumfi_state_' + sid, JSON.stringify({
+                age: currentAge, retireAge: activationAge,
+                portfolio: portfolioVol, targetSpend: targetSpend,
+                ts: new Date().toISOString()
+            }));
+        }
     }
 
     // --- INTERACTIVE DRAG LOGIC FOR SVG DATUM ---
@@ -958,11 +1094,13 @@
     slAge.addEventListener('input', updateEngine);
     slAct.addEventListener('input', updateEngine);
     slPort.addEventListener('input', updateEngine);
+    slContrib.addEventListener('input', updateEngine);
     slDatum.addEventListener('input', updateEngine);
     marketRadios.forEach(r => r.addEventListener('change', updateEngine));
 
     // Initial boot
     updateEngine();
+    if (window.dfTrack) dfTrack('sketch_completed');
 
     // --- CLICK-TO-EDIT (FIX 1+2: strict integer bounds, bidirectional slider sync) ---
     (function() {
@@ -988,7 +1126,7 @@
           // User types in whole dollars (e.g. 1500000); slider is in millions
           getEditVal: function() { return String(Math.round(parseFloat(slPort.value) * 1000000)); },
           clean: function(s) { return s.replace(/[^0-9]/g, ''); },
-          validate: function(v) { return v >= 0 && v <= 50000000; },
+          validate: function(v) { return v >= 10000 && v <= 50000000; },
           toSlider: function(v) { return v / 1000000; }
         },
         {
@@ -1140,27 +1278,60 @@
       attach('.pillar-card');
     })();
 
-    // --- EXPLORE THE STUDIO TOGGLE (FIX 4) ---
-    window.revealPillars = function() {
-      var section = document.getElementById('pillar-deep-dive');
-      var btn = document.getElementById('explore-studio-btn');
-      if (!section || !btn) return;
-      var isOpen = section.style.display !== 'none';
-      if (isOpen) {
-        section.style.opacity = '0';
-        setTimeout(function() { section.style.display = 'none'; }, 400);
-        btn.textContent = 'Explore The Studio \u2193';
-      } else {
-        section.style.display = 'block';
-        section.style.opacity = '0';
-        requestAnimationFrame(function() {
-          requestAnimationFrame(function() { section.style.opacity = '1'; });
-        });
-        setTimeout(function() { section.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50);
-        btn.textContent = 'Hide Details \u2191';
-      }
-    };
+  </script>
+  <script>
+    // TODO: Wire to SendGrid/Postmark when available.
+    function submitSketchEmail() {
+      var input = document.getElementById('sketch-email-input');
+      var success = document.getElementById('sketch-email-success');
+      var email = (input.value || '').trim();
+      if (!email || !email.includes('@')) { input.focus(); return; }
+      sessionStorage.setItem('df_email_pending', email);
+      input.style.display = 'none';
+      document.querySelector('#email-capture-sketch button').style.display = 'none';
+      success.style.display = 'block';
+    }
+  </script>
+  <!-- Session resume prompt (2A) -->
+  <script>
+    (function() {
+      var sid = localStorage.getItem('datumfi_session_id');
+      if (!sid) return;
+      var saved = null;
+      try { saved = JSON.parse(localStorage.getItem('datumfi_state_' + sid) || 'null'); } catch(e) {}
+      if (!saved || !saved.ts) return;
+      // Only show if saved state is less than 72 hours old and sessionStorage is empty
+      var age = Date.now() - new Date(saved.ts).getTime();
+      if (age > 259200000) return; // 72 hours
+      if (sessionStorage.getItem('datum_currentAge')) return; // already have session data
+      var banner = document.createElement('div');
+      banner.id = 'resume-banner';
+      banner.style.cssText = 'position:fixed;top:56px;left:0;right:0;z-index:200;background:rgba(9,18,33,0.97);border-bottom:1px solid rgba(93,202,165,0.2);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;font-family:"DM Mono",monospace;font-size:11px;color:rgba(255,255,255,0.6);';
+      var when = new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(saved.ts));
+      banner.innerHTML = '<span>You have a saved Sketch from ' + when + '. <span style="color:rgba(93,202,165,0.7);">Age: ' + saved.age + ', Portfolio: $' + Math.round(saved.portfolio * 1000000).toLocaleString() + '</span></span>'
+        + '<div style="display:flex;gap:8px;flex-shrink:0;">'
+        + '<button onclick="resumeSketchSession()" style="background:rgba(93,202,165,0.1);border:1px solid rgba(93,202,165,0.4);color:rgba(93,202,165,0.8);font-family:\'DM Mono\',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;padding:6px 14px;border-radius:3px;cursor:pointer;">Resume →</button>'
+        + '<button onclick="document.getElementById(\'resume-banner\').remove()" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.4);font-family:\'DM Mono\',monospace;font-size:10px;padding:6px 10px;border-radius:3px;cursor:pointer;">✕</button>'
+        + '</div>';
+      document.body.appendChild(banner);
 
+      window.resumeSketchSession = function() {
+        try {
+          var s = JSON.parse(localStorage.getItem('datumfi_state_' + localStorage.getItem('datumfi_session_id')) || 'null');
+          if (!s) return;
+          sessionStorage.setItem('datum_currentAge', s.age);
+          sessionStorage.setItem('datum_retireAge', s.retireAge);
+          sessionStorage.setItem('datum_portfolio', s.portfolio);
+          sessionStorage.setItem('datum_targetSpend', s.targetSpend);
+          // Sync sliders
+          var slAge = document.getElementById('slider-age');
+          var slPort = document.getElementById('slider-portfolio');
+          if (slAge) { slAge.value = s.age; slAge.dispatchEvent(new Event('input')); }
+          if (slPort) { slPort.value = s.portfolio; slPort.dispatchEvent(new Event('input')); }
+        } catch(e) {}
+        document.getElementById('resume-banner').remove();
+      };
+    })();
   </script>
   <script src="/feedback.js"></script>
   <script src="/nav.js"></script>
