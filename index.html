@@ -4,15 +4,31 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#091221">
-<title>DATUM FI — V1 Production Master</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://eu.i.posthog.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.datumfi.com https://eu.i.posthog.com https://api.stripe.com;">
+<title>Datum FI — Data In. Confidence Out.</title>
+<meta name="description" content="Retirement planning anchored to a fixed point. Your Range — not a guess, a structure.">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Datum FI">
+<meta property="og:title" content="Datum FI — Data In. Confidence Out.">
+<meta property="og:description" content="Retirement planning anchored to a fixed point. Your Range — not a guess, a structure.">
+<meta property="og:image" content="/og-image.png">
+<meta property="og:url" content="https://datumfi.com/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Datum FI — Data In. Confidence Out.">
+<meta name="twitter:description" content="Retirement planning anchored to a fixed point.">
+<meta name="twitter:image" content="/og-image.png">
 <link rel="stylesheet" href="/styles/typography.css">
 <link rel="stylesheet" href="/styles/header.css">
 <style>
   :root { --orange:#e68a4f; --keystone-blue:#4faae6; --bedrock-red:#c95c5c; }
-  body { background-size: 30px 30px; font-family: var(--font-mono); overflow-x: clip; padding-top: 56px; }
+  body { font-family: var(--font-mono); overflow-x: clip; padding-top: 56px; background: var(--bg-navy); }
   
   /* Layout & Screens */
-  .screen { width: 100%; display: none; flex-direction: column; align-items: center; }
+  .screen { width: 100%; display: none; flex-direction: column; align-items: center; background: var(--bg-navy); }
   @keyframes screenFadeIn { from { opacity: 0; } to { opacity: 1; } }
   .screen.active { display: flex; animation: screenFadeIn 0.28s ease forwards; }
   .min-vh { min-height: 100vh; }
@@ -77,7 +93,7 @@
 
   /* --- SCREEN 1: Landing --- */
   .landing-hero-container { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; text-align: center; position: relative; min-height: 100vh; padding: 0 0 60px;}     
-  .hero-bg-grid { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0; background-image: linear-gradient(rgba(100,180,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(100,180,255,0.08) 1px, transparent 1px); background-size: 40px 40px; opacity: 0.5; mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 30%, transparent 95%); -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 30%, transparent 95%); animation: gridDrift 60s linear infinite; }
+  .hero-bg-grid { display: none; }
   @keyframes gridDrift { 100% { background-position: 80px 80px; } }
   .anim-fade-up { opacity: 0; transform: translateY(20px); animation: fadeUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
   .anim-delay-1 { animation-delay: 0.3s; } .anim-delay-2 { animation-delay: 0.6s; } .anim-delay-3 { animation-delay: 0.9s; } .anim-delay-4 { animation-delay: 1.2s; }
@@ -602,8 +618,8 @@
   .btn-hero:hover { background: var(--teal-mid); color: var(--bg-navy); }
 
   /* ── LP5 / MOB1: How It Works narrative sticky scroll ── */
-  .narrative-container { position: relative; max-width: 1400px; margin: 0 auto; padding: 0 40px; display: flex; align-items: flex-start; }
-  .visual-stage { position: sticky; top: 15vh; width: 50%; height: 70vh; display: flex; align-items: center; justify-content: center; }
+  .narrative-container { position: relative; max-width: 1400px; margin: 0 auto; padding: 0 40px; display: flex; align-items: flex-start; background-color: var(--bg-navy); }
+  .visual-stage { position: sticky; top: 15vh; width: 50%; height: 70vh; display: flex; align-items: center; justify-content: center; background-color: var(--bg-navy); background-image: linear-gradient(rgba(100,180,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(100,180,255,0.05) 1px, transparent 1px); background-size: 40px 40px; border-radius: 8px; }
   .viz-slot { position: absolute; width: 100%; height: 100%; opacity: 0; transform: translateY(20px) scale(0.95); transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.05); background: rgba(9,18,33,0.6); border-radius: 8px; backdrop-filter: blur(4px); pointer-events: none; }
   .viz-slot.active { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
   .text-scroller { width: 50%; padding-left: 80px; padding-bottom: 40vh; }
@@ -623,9 +639,9 @@
   /* ── MOB2: Fluid Hero Typography (extracted from inline styles) ── */
   .hero-display { font-family: var(--font-serif); font-style: italic; font-weight: 300; font-size: clamp(42px, 8vw, 76px); line-height: 1.05; }
   .hero-display-white { color: var(--white); }
-  .hero-display-teal { color: var(--teal-mid); margin-bottom: 40px; }
+  .hero-display-teal { color: var(--white); margin-bottom: 40px; }
   .hero-tagline { font-family: var(--font-serif); font-weight: 300; font-size: clamp(16px, 3.5vw, 22px); color: var(--white); max-width: 600px; margin: 0 auto 16px auto; }
-  .hero-body-copy { font-family: var(--font-serif); font-weight: 300; font-size: clamp(14px, 2.5vw, 18px); line-height: 1.6; color: rgba(255,255,255,0.8); max-width: 600px; margin: 0 auto 36px auto; }
+  .hero-body-copy { font-family: var(--font-mono); font-size: 14px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.18em; color: var(--gold); max-width: 600px; margin: 24px auto 36px auto; }
   .closing-cta { min-height: 50vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border-top: 1px solid rgba(255,255,255,0.1); padding: 80px 40px; position: relative; z-index: 50; background: var(--bg-navy); }
   .closing-h2 { font-family: var(--font-serif); font-weight: 300; font-size: clamp(24px, 5vw, 36px); margin-bottom: 24px; }
   .closing-body { font-family: var(--font-serif); font-size: clamp(14px, 2.5vw, 18px); line-height: 1.6; color: rgba(255,255,255,0.8); max-width: 600px; margin: 0 auto 32px auto; font-weight: 300; }
@@ -866,6 +882,29 @@
     60%, 85% { opacity: 1; transform: scale(1); }
     90%, 100% { opacity: 0; }
   }
+
+  /* --- COMPARISON CARD SECTION (migrated from sketch.html FIX 3) --- */
+  .comp-migration-section { background: var(--bg-navy); padding: 80px 40px; width: 100%; }
+  .arch-header { text-align: center; margin-bottom: 40px; max-width: 900px; margin-left: auto; margin-right: auto; }
+  .insights-h2 { font-size: clamp(28px, 4vw, 48px); font-weight: 300; margin-bottom: 12px; font-style: italic; }
+  .insights-h3 { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.1em; color: var(--gold); text-transform: none; font-weight: 400; }
+  .comparison-container { display: flex; gap: 30px; max-width: 1000px; width: 100%; margin: 40px auto 0; }
+  .comp-card { flex: 1; background: rgba(9, 18, 33, 0.6); border: 2px solid var(--teal-mid); border-radius: 8px; padding: 40px; display: flex; flex-direction: column; box-shadow: 0 0 24px rgba(93, 202, 165, 0.15); }
+  .comp-card .comp-title { color: var(--teal-mid); }
+  .comp-pro { border-color: var(--gold); background: rgba(201, 168, 76, 0.03); position: relative; }
+  .comp-pro::before { content: 'THE FULL ENGINE'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--gold); color: var(--bg-navy); font-family: var(--font-mono); font-size: 10px; font-weight: bold; letter-spacing: 0.15em; padding: 4px 12px; border-radius: 12px; }
+  .comp-title { font-family: var(--font-serif); font-size: 28px; font-style: italic; color: var(--white); margin-bottom: 8px; text-align: center; }
+  .comp-sub { font-family: var(--font-mono); font-size: 11px; color: var(--muted); text-align: center; margin-bottom: 40px; }
+  .comp-list { list-style: none; padding: 0; margin: 0; flex-grow: 1; }
+  .comp-item { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 20px; font-family: var(--font-mono); font-size: 13px; color: var(--white); line-height: 1.4; }
+  .comp-item.muted { opacity: 0.5; }
+  .icon-check { color: var(--teal-mid); font-size: 14px; font-weight: bold; flex-shrink: 0; margin-top: 1px; }
+  .icon-x { color: rgba(255,255,255,0.2); font-size: 14px; font-weight: bold; flex-shrink: 0; margin-top: 1px; }
+  .comp-pro .icon-check { color: var(--gold); }
+  @media (max-width: 768px) {
+    .comparison-container { flex-direction: column; }
+    .comp-migration-section { padding: 60px 20px; }
+  }
 </style>
 <script type="text/javascript">
     (function(c,l,a,r,i,t,y){
@@ -876,16 +915,17 @@
 </script>
 </head>
 <body>
+  <a href="#screen1" class="skip-link">Skip to main content</a>
 
   <!-- ── Fixed Navigation Bar ── -->
   <nav id="app-nav">
       <a href="/" class="brand-header" id="brand-sig"><span class="brand-datum" id="sig-datum-text">DATUM</span><span class="brand-fi" id="sig-fi-text">FI</span></a>
       <div class="nav-links">
-          <button class="nav-link active" id="nav-link-home"        onclick="navTo(1)">Home</button>
           <a class="nav-link"             id="nav-link-sketch"      href="/sketch.html">Sketch</a>
           <a class="nav-link"             id="nav-link-studio"      href="/studio.html">Studio</a>
           <a class="nav-link"             id="nav-link-range"       href="/range.html">Range</a>
           <a class="nav-link"             id="nav-link-philosophy"  href="/philosophy.html">Philosophy</a>
+          <a href="/vault.html" class="nav-login-btn">Login</a>
           <button class="nav-feedback-btn" onclick="openFeedback()">Share Feedback</button>
       </div>
       <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
@@ -894,11 +934,11 @@
   </nav>
   <!-- Mobile nav menu -->
   <div class="nav-mobile-menu" id="nav-mobile-menu">
-      <button class="nav-mobile-link active" id="nav-mob-home"        onclick="navTo(1); closeMobileNav()">Home</button>
       <a      class="nav-mobile-link"        id="nav-mob-sketch"      href="/sketch.html">Sketch</a>
       <button class="nav-mobile-link"        id="nav-mob-studio"      onclick="navTo(2); closeMobileNav()">Studio</button>
       <button class="nav-mobile-link"        id="nav-mob-range"       onclick="navTo(4); closeMobileNav()">Range</button>
       <button class="nav-mobile-link"        id="nav-mob-philosophy"  onclick="navTo(5); closeMobileNav()">Philosophy</button>
+      <a href="/vault.html" class="nav-mobile-login">Login</a>
       <button class="nav-mobile-feedback"    onclick="closeMobileNav(); openFeedback()">Share Feedback</button>
   </div>
 
@@ -915,7 +955,10 @@
         <div class="anim-fade-up anim-delay-3 hero-body-copy">Tax-aware. Crash-tested. Grounded in your actual accounts.</div>
         <div class="anim-fade-up anim-delay-4" style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
           <a href="/sketch.html" class="btn-hero">Define your Datum</a>
-          <button class="btn-back" style="margin:0;" onclick="document.getElementById('how-it-works').scrollIntoView({behavior: 'smooth'})">How it works ↓</button>
+          <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;justify-content:center;">
+            <button class="btn-back" style="margin:0;" onclick="document.getElementById('how-it-works').scrollIntoView({behavior: 'smooth'})">How it works ↓</button>
+            <a href="/pricing.html" style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:0.15em;color:var(--muted);text-decoration:none;">See Pricing →</a>
+          </div>
         </div>
       </div>
     </div>
@@ -1110,12 +1153,49 @@
       </div>
     </section>
 
+    <!-- Comparison Card (migrated from sketch.html FIX 3) -->
+    <div class="comp-migration-section">
+      <div class="arch-header">
+        <h2 class="insights-h2 hero-title">Unlock the Blueprint.</h2>
+        <h3 class="insights-h3">The Sketch is the outline. The Studio is the architecture of your estate.</h3>
+      </div>
+      <div class="comparison-container">
+        <div class="comp-card">
+          <div class="comp-title">The Sketch</div>
+          <div class="comp-sub">Free. No signup. Just your numbers.</div>
+          <ul class="comp-list">
+            <li class="comp-item"><span class="icon-check">✓</span>CAPE-Adjusted Range Estimate</li>
+            <li class="comp-item"><span class="icon-check">✓</span>Monte Carlo + Historical Simulation</li>
+            <li class="comp-item"><span class="icon-check">✓</span>Sequence of Returns Risk</li>
+            <li class="comp-item"><span class="icon-check">✓</span>Inflation-Adjusted Projections</li>
+            <li class="comp-item muted"><span class="icon-x">✕</span>Tax Architecture &amp; Sequencing</li>
+            <li class="comp-item muted"><span class="icon-x">✕</span>Multi-Account Withdrawal Routing</li>
+            <li class="comp-item muted"><span class="icon-x">✕</span>Spousal &amp; Generational Planning</li>
+          </ul>
+        </div>
+        <div class="comp-card comp-pro" onclick="location.href='/studio-showcase.html'" style="cursor:pointer;">
+          <div class="comp-title">The Studio</div>
+          <div class="comp-sub">The exact measurement of your life.</div>
+          <ul class="comp-list">
+            <li class="comp-item"><span class="icon-check">✓</span>41-Year Tax Architecture &amp; Sequencing</li>
+            <li class="comp-item"><span class="icon-check">✓</span>4 Engines × 10,000 Scenarios</li>
+            <li class="comp-item"><span class="icon-check">✓</span>Multi-Architect Synchronization</li>
+            <li class="comp-item"><span class="icon-check">✓</span>Generational Trust Firewalls</li>
+            <li class="comp-item"><span class="icon-check">✓</span>Dynamic Spending Guardrails</li>
+            <li class="comp-item"><span class="icon-check">✓</span>Fragility Insights &amp; Stress Testing</li>
+            <li class="comp-item"><span class="icon-check">✓</span>Thermodynamic Shock Lens</li>
+          </ul>
+          <div style="margin-top:24px;text-align:center;font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:0.15em;color:var(--gold);border:1px solid rgba(201,168,76,0.4);border-radius:3px;padding:10px;transition:background 0.2s;" onmouseover="this.style.background='rgba(201,168,76,0.08)'" onmouseout="this.style.background=''">See What Studio Unlocks →</div>
+        </div>
+      </div>
+    </div>
+
     <!-- Closing CTA — 2e copy -->
     <div class="closing-cta">
       <h2 class="closing-h2">Mathematically Sound.<br>Architecturally Certain.</h2>
       <p class="closing-body">We find the spending level — tax-aware, inflation-adjusted, engineered — that withstands 10,000 modeled futures and a century of historical stress.</p>
       <a href="/sketch.html" class="btn-hero">Define Your Datum</a>
-      <a href="/studio.html" class="studio-entry-link">Already have an account? Enter the Studio →</a>
+      <a href="/vault.html" class="studio-entry-link">Already have an account? Enter the Studio →</a>
     </div>
 
   </div>
@@ -1597,11 +1677,6 @@
     <div class="fp-body">
       <div id="feedback-form-wrap">
         <form id="feedback-form" onsubmit="submitFeedback(event)">
-          <!-- Web3Forms config -->
-          <input type="hidden" name="access_key" value="0e411fb0-cdcb-45b6-9f4e-39178aafb171">
-          <input type="hidden" name="subject" value="DATUM FI Feedback Received">
-          <input type="hidden" name="from_name" value="DATUM FI Feedback">
-
           <!-- Q1 -->
           <div class="fp-q">
             <span class="fp-q-label">How clear was your Range result?</span>
@@ -1665,7 +1740,6 @@
             </div>
           </div>
 
-          <div class="h-captcha" data-captcha="true" data-theme="dark" data-size="compact" style="margin-bottom: 12px;"></div>
           <button type="submit" class="btn" style="width:100%; margin-top: 8px;">Send Feedback</button>
         </form>
       </div>
@@ -1680,7 +1754,7 @@
 
   <!-- ── Financial Disclosure Footer ── -->
   <div id="disclosure-footer">
-    <p>DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. Past performance does not guarantee future outcomes.</p>
+    <p>DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. Past performance does not guarantee future outcomes. &nbsp;|&nbsp; <a href="/privacy.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Privacy Policy</a> &nbsp;|&nbsp; <a href="/terms.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Terms of Service</a> &nbsp;|&nbsp; <a href="mailto:accessibility@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">Accessibility</a> &nbsp;|&nbsp; <a href="mailto:privacy@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">privacy@datumfi.com</a> &nbsp;|&nbsp; <a href="mailto:feedback@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">feedback@datumfi.com</a> &nbsp;|&nbsp; <span id="delete-my-data-link" style="color:rgba(255,255,255,0.3);cursor:pointer;text-decoration:underline;" onclick="openDeleteDataModal()">Delete My Data</span> &nbsp;|&nbsp; <a href="/privacy-choices.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Do Not Sell My Information</a> &nbsp;|&nbsp; Build&nbsp;2026.04.19&nbsp;&bull;&nbsp;v1.0.0</p>
   </div>
 
   <script>
@@ -2587,23 +2661,20 @@
             setTimeout(() => closeFeedback(), 2200);
         };
 
-        // Web3Forms endpoint — access key: 0e411fb0-cdcb-45b6-9f4e-39178aafb171
-        // Docs: https://web3forms.com | Requires h-captcha + access_key in FormData
-        fetch('https://api.web3forms.com/submit', {
+        fetch('https://formspree.io/f/xpqkadyg', {
             method: 'POST', body: data,
             headers: { 'Accept': 'application/json' }
         })
         .then(r => r.json())
         .then(result => {
-            if (result.success) {
+            if (result.ok) {
                 showThanks();
             } else {
-                // Submission rejected — show form again with error state
-                console.warn('Web3Forms submission failed:', result);
-                showThanks(); // Still close panel gracefully
+                console.warn('Formspree submission failed:', result);
+                showThanks();
             }
         })
-        .catch(err => { console.error('Web3Forms fetch error:', err); showThanks(); });
+        .catch(err => { console.error('Formspree fetch error:', err); showThanks(); });
     }
 
     // ─── Show Math toggle ─────────────────────────────────────────────────────
@@ -2808,7 +2879,26 @@
         });
     });
   </script>
-  <script src="https://web3forms.com/client/script.js" async defer></script>
+  <!-- Persona tone: age-conditional hero copy (6A) -->
+  <script>
+    (function() {
+      var age = parseInt(sessionStorage.getItem('datum_currentAge') || '0', 10);
+      if (!age) return;
+      var line1 = document.querySelector('.hero-display-white');
+      var line2 = document.querySelector('.hero-display-teal');
+      var tagline = document.querySelector('.hero-tagline');
+      if (!line1 || !line2) return;
+      if (age >= 60) {
+        line1.textContent = 'Your estate is ready';
+        line2.textContent = 'to work for you.';
+        if (tagline) tagline.textContent = 'Map your drawdown. Every year in retirement, precisely structured.';
+      } else if (age <= 35) {
+        line1.textContent = 'Build the foundation';
+        line2.textContent = 'now.';
+        if (tagline) tagline.textContent = 'Every dollar you map today shapes the Range you\u2019ll retire into.';
+      }
+    })();
+  </script>
   <script src="/nav.js"></script>
 </body>
 </html>

@@ -69,16 +69,12 @@
         '<div class="fp-body">' +
           '<div id="feedback-form-wrap">' +
             '<form id="feedback-form" onsubmit="submitFeedback(event)">' +
-              '<input type="hidden" name="access_key" value="0e411fb0-cdcb-45b6-9f4e-39178aafb171">' +
-              '<input type="hidden" name="subject" value="DATUM FI Feedback Received">' +
-              '<input type="hidden" name="from_name" value="DATUM FI Feedback">' +
               '<div class="fp-q"><span class="fp-q-label">How clear was your Range result?</span><div class="fp-scale-row"><div class="fp-scale-item"><input type="radio" name="q1_clarity" id="fq1_1" value="1"><label for="fq1_1"><span class="fp-scale-num">1</span><span class="fp-scale-lbl">Not clear at all</span></label></div><div class="fp-scale-item"><input type="radio" name="q1_clarity" id="fq1_2" value="2"><label for="fq1_2"><span class="fp-scale-num">2</span><span class="fp-scale-lbl">Slightly clear</span></label></div><div class="fp-scale-item"><input type="radio" name="q1_clarity" id="fq1_3" value="3"><label for="fq1_3"><span class="fp-scale-num">3</span><span class="fp-scale-lbl">Somewhat clear</span></label></div><div class="fp-scale-item"><input type="radio" name="q1_clarity" id="fq1_4" value="4"><label for="fq1_4"><span class="fp-scale-num">4</span><span class="fp-scale-lbl">Very clear</span></label></div><div class="fp-scale-item"><input type="radio" name="q1_clarity" id="fq1_5" value="5"><label for="fq1_5"><span class="fp-scale-num">5</span><span class="fp-scale-lbl">Extremely clear</span></label></div></div></div>' +
               '<div class="fp-q"><span class="fp-q-label">What was the most useful part? <span style="color:rgba(255,255,255,0.2);font-size:9px;text-transform:none;letter-spacing:0;">(check all that apply)</span></span><div class="fp-check-list"><label class="fp-check-item"><input type="checkbox" name="q2_useful" value="range_viz"><span class="fp-check-box"></span><span>The Range visualization (ceiling / floor / datum)</span></label><label class="fp-check-item"><input type="checkbox" name="q2_useful" value="fragility"><span class="fp-check-box"></span><span>Fragility insights (what moves your range)</span></label><label class="fp-check-item"><input type="checkbox" name="q2_useful" value="blueprint"><span class="fp-check-box"></span><span>The Estate Blueprint (account input method)</span></label><label class="fp-check-item"><input type="checkbox" name="q2_useful" value="outlook"><span class="fp-check-box"></span><span>Market Outlook selection</span></label><label class="fp-check-item"><input type="checkbox" name="q2_useful" value="ss_insights"><span class="fp-check-box"></span><span>Social Security insights</span></label><label class="fp-check-item"><input type="checkbox" name="q2_useful" value="show_math"><span class="fp-check-box"></span><span>Show Math (model details)</span></label><div class="fp-check-other-row"><label class="fp-check-item" style="border:none;padding:0;margin:0;flex-shrink:0;"><input type="checkbox" name="q2_useful" value="other"><span class="fp-check-box"></span><span style="white-space:nowrap;">Other:</span></label><input type="text" name="q2_other" class="fp-check-other-input" placeholder="Describe\u2026" maxlength="100"></div></div></div>' +
               '<div class="fp-q"><span class="fp-q-label">What was confusing or frustrating? <span style="color:rgba(255,255,255,0.2);font-size:9px;text-transform:none;letter-spacing:0;">(optional)</span></span><input type="text" name="q3_confusing" class="fp-text-input" placeholder="Anything unclear or difficult?" maxlength="200"></div>' +
               '<div class="fp-q"><span class="fp-q-label">What\'s missing that you wish was here? <span style="color:rgba(255,255,255,0.2);font-size:9px;text-transform:none;letter-spacing:0;">(optional)</span></span><input type="text" name="q4_missing" class="fp-text-input" placeholder="Features, data, or explanations you\'d want" maxlength="200"></div>' +
               '<div class="fp-q"><span class="fp-q-label">How likely are you to recommend DATUM FI to someone planning for retirement?</span><div class="fp-scale-row"><div class="fp-scale-item"><input type="radio" name="q5_recommend" id="fq5_1" value="1"><label for="fq5_1"><span class="fp-scale-num">1</span><span class="fp-scale-lbl">Not at all likely</span></label></div><div class="fp-scale-item"><input type="radio" name="q5_recommend" id="fq5_2" value="2"><label for="fq5_2"><span class="fp-scale-num">2</span><span class="fp-scale-lbl">Unlikely</span></label></div><div class="fp-scale-item"><input type="radio" name="q5_recommend" id="fq5_3" value="3"><label for="fq5_3"><span class="fp-scale-num">3</span><span class="fp-scale-lbl">Neutral</span></label></div><div class="fp-scale-item"><input type="radio" name="q5_recommend" id="fq5_4" value="4"><label for="fq5_4"><span class="fp-scale-num">4</span><span class="fp-scale-lbl">Likely</span></label></div><div class="fp-scale-item"><input type="radio" name="q5_recommend" id="fq5_5" value="5"><label for="fq5_5"><span class="fp-scale-num">5</span><span class="fp-scale-lbl">Extremely likely</span></label></div></div></div>' +
               '<div class="fp-q"><span class="fp-q-label">Would you use this with your real financial data?</span><div class="fp-choice-group"><label class="fp-choice-item"><input type="radio" name="q6_real_data" value="yes_did"><span class="fp-choice-dot"></span><span class="fp-choice-text">Yes \u2014 I already did</span></label><label class="fp-choice-item"><input type="radio" name="q6_real_data" value="yes_would"><span class="fp-choice-dot"></span><span class="fp-choice-text">Yes \u2014 I would</span></label><label class="fp-choice-item"><input type="radio" name="q6_real_data" value="not_yet"><span class="fp-choice-dot"></span><span class="fp-choice-text">Not yet \u2014 I need more confidence first</span></label></div></div>' +
-              '<div class="h-captcha" data-captcha="true" data-theme="dark" data-size="compact" style="margin-bottom:12px;"></div>' +
               '<button type="submit" class="fp-submit-btn">Send Feedback</button>' +
             '</form>' +
           '</div>' +
@@ -87,13 +83,6 @@
       '</div>'
     );
 
-    // Load web3forms captcha if not already on the page
-    if (!document.querySelector('script[src*="web3forms.com"]')) {
-      var s = document.createElement('script');
-      s.src = 'https://web3forms.com/client/script.js';
-      s.async = true; s.defer = true;
-      document.head.appendChild(s);
-    }
   }
 
   if (document.readyState === 'loading') {
@@ -129,7 +118,7 @@
       if (ty)   ty.style.display   = 'block';
       setTimeout(function () { window.closeFeedback(); }, 2200);
     };
-    fetch('https://api.web3forms.com/submit', {
+    fetch('https://formspree.io/f/xpqkadyg', {
       method: 'POST', body: data, headers: { 'Accept': 'application/json' }
     })
     .then(function (r) { return r.json(); })
