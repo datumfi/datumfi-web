@@ -118,7 +118,7 @@
       if (ty)   ty.style.display   = 'block';
       setTimeout(function () { window.closeFeedback(); }, 2200);
     };
-    fetch('https://formspree.io/f/xpqkadyg', {
+    fetch('https://formspree.io/f/xdayleyl', {
       method: 'POST', body: data, headers: { 'Accept': 'application/json' }
     })
     .then(function (r) { return r.json(); })

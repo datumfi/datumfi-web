@@ -739,7 +739,7 @@
             <div class="field-row">
               <div>
                 <div class="input-label">Date of Birth</div>
-                <input type="text" class="small-field" id="pri-dob" data-field="current_age" value="08 / 1982">
+                <input type="text" class="small-field" id="pri-dob" data-field="current_age" value="08 / 1982" onfocus="this.select()">
               </div>
               <div>
                 <div class="input-label">Location (Tax Base)</div>
@@ -776,7 +776,7 @@
             <div class="field-row" style="margin-top: 15px;">
               <div>
                 <div class="input-label">Target Retirement Date</div>
-                <input type="text" class="small-field" id="target-ret" data-field="retirement_age" value="03 / 2035" oninput="updateSVGs()">
+                <input type="text" class="small-field" id="target-ret" data-field="retirement_age" value="03 / 2035" onfocus="this.select()" oninput="updateSVGs()">
               </div>
               <div>
                 <div class="input-label">Retirement Duration (Years)</div>
@@ -838,11 +838,11 @@
       <div class="studio-section">
         <div class="section-header-wrapper">
             <button class="section-tag" onclick="toggleSection('sec-drafting', this)" style="border:none; margin:0; padding:0; flex:1;">
-                <span>02 / Estate Drafting — Accounts & Assets</span> <span class="toggle-icon">+</span>
+                <span>02 / Estate Drafting — Accounts & Assets</span> <span class="toggle-icon">−</span>
             </button>
             <button class="pin-btn" onclick="togglePin('sec-drafting', this)" title="Pin section open">📌</button>
         </div>
-        <div id="sec-drafting" class="section-content" style="display: none;">
+        <div id="sec-drafting" class="section-content" style="display: block;">
           
           <div id="rooms-container">
             </div>
@@ -859,11 +859,11 @@
       <div class="studio-section">
         <div class="section-header-wrapper">
             <button class="section-tag" onclick="toggleSection('sec-upkeep', this)" style="border:none; margin:0; padding:0; flex:1;">
-                <span>03 / Operating Upkeep — Living Expenses</span> <span class="toggle-icon">+</span>
+                <span>03 / Operating Upkeep — Living Expenses</span> <span class="toggle-icon">−</span>
             </button>
             <button class="pin-btn" onclick="togglePin('sec-upkeep', this)" title="Pin section open">📌</button>
         </div>
-        <div id="sec-upkeep" class="section-content" style="display: none;">
+        <div id="sec-upkeep" class="section-content" style="display: block;">
           <div class="panel-sub" style="margin-bottom: 15px; text-transform:none; color:var(--muted); font-size:11px;">Fixed monthly and annual expenses</div>
           
           <div class="plumbing-list" id="plumbing-list">
@@ -894,14 +894,14 @@
       <div class="studio-section">
         <div class="section-header-wrapper">
             <button class="section-tag" onclick="toggleSection('sec-datum', this)" style="border:none; margin:0; padding:0; flex:1;">
-                <span>04 / DEFINE YOUR DATUM</span> <span class="toggle-icon">+</span>
+                <span>04 / DEFINE YOUR DATUM</span> <span class="toggle-icon">−</span>
             </button>
             <button class="pin-btn" onclick="togglePin('sec-datum', this)" title="Pin section open">📌</button>
         </div>
-        <div id="sec-datum" class="section-content" style="display: none;">
+        <div id="sec-datum" class="section-content" style="display: block;">
           <div class="datum-group">
             <div class="input-label">Target Annual Spend</div>
-            <input type="text" class="datum-input curr-format" id="spend-input" data-field="datum_spend" value="$120,000" oninput="updateSVGs()">
+            <input type="text" class="datum-input curr-format" id="spend-input" data-field="datum_spend" value="$120,000" onfocus="this.select()" oninput="updateSVGs()">
             <div class="metaphor-hint">The benchmark elevation for your financial future.</div>
           </div>
         </div>
@@ -910,12 +910,12 @@
       <div class="studio-section">
         <div class="section-header-wrapper">
             <button class="section-tag" onclick="toggleSection('sec-climate', this)" style="border:none; margin:0; padding:0; flex:1;">
-                <span>05 / Climate Control — Market Outlook</span> <span class="toggle-icon">+</span>
+                <span>05 / Climate Control — Market Outlook</span> <span class="toggle-icon">−</span>
             </button>
             <button class="pin-btn" onclick="togglePin('sec-climate', this)" title="Pin section open">📌</button>
         </div>
         
-        <div id="sec-climate" class="section-content" style="display: none;">
+        <div id="sec-climate" class="section-content" style="display: block;">
           <div class="panel-sub" style="margin-bottom: 15px; text-transform:none; color:var(--muted); font-size:11px; line-height:1.4;">Establish the market conditions your portfolio will face. This calibrates the algorithmic blend used to stress-test your estate and project your Range.</div>
           
           <div class="climate-grid">
@@ -1000,6 +1000,7 @@
                   <span class="sum-counter valid" id="c-sum">100 / 100</span>
                   <button class="custom-save valid" id="c-save" type="button" onclick="closeCustomMatrix(event)">Confirm Matrix</button>
                 </div>
+                <div id="c-weight-error" style="display:none;font-family:var(--font-mono);font-size:10px;color:var(--danger);text-align:center;margin-top:6px;letter-spacing:0.05em;">Climate weights must sum to 100%</div>
               </div>
             </div>
 
@@ -1432,7 +1433,7 @@
       { id: 'checking', type: 'joint', taxCode: 'liquid', hasInflow: true, hasInterest: true, title: 'Checking', meta: 'The Foyer', desc: 'Operating cash flow.' },
       { id: 'taxable', type: 'joint', taxCode: 'liquid', hasInflow: true, hasInterest: false, isInvestment: true, title: 'Taxable Brokerage', meta: 'The Living Room', desc: 'Capital gains and dividends. Highly liquid.' },
       { id: 'savings', type: 'joint', taxCode: 'liquid', hasInflow: true, hasInterest: true, title: 'Savings', meta: 'The Safe', desc: 'Cash buffer.' },
-      { id: 'crypto', type: 'joint', taxCode: 'liquid', hasInflow: true, hasInterest: false, isInvestment: true, title: 'Crypto', meta: 'The Game Room', desc: 'High volatility, speculative assets.' },
+      { id: 'crypto', type: 'joint', taxCode: 'liquid', hasInflow: true, hasInterest: false, isInvestment: true, title: 'Crypto', meta: 'The Game Room', desc: 'Crypto ETFs & brokerage holdings (e.g., IBIT, ETHA, Fidelity Crypto). Modeled as taxable. Not for self-custody wallets.' },
       { id: 'collectibles', type: 'joint', taxCode: 'physical', title: 'Collectibles', meta: 'The Arcade', desc: 'Excluded from Range models. Tracks physical net worth.' },
       
       { id: 'mortgage_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Mortgage', meta: 'The Moat', desc: 'Liability. Subtracts from Estate Sq Footage.' },
@@ -1446,7 +1447,7 @@
 
       { id: 'checking_primary', type: 'primary', taxCode: 'liquid', hasInflow: true, hasInterest: true, title: 'Checking', meta: 'The Foyer', desc: 'Operating cash flow.' },
       { id: 'savings_primary', type: 'primary', taxCode: 'liquid', hasInflow: true, hasInterest: true, title: 'Savings', meta: 'The Safe', desc: 'Cash buffer.' },
-      { id: 'crypto_primary', type: 'primary', taxCode: 'liquid', hasInflow: true, hasInterest: false, isInvestment: true, title: 'Crypto', meta: 'The Game Room', desc: 'High volatility, speculative assets.' },
+      { id: 'crypto_primary', type: 'primary', taxCode: 'liquid', hasInflow: true, hasInterest: false, isInvestment: true, title: 'Crypto', meta: 'The Game Room', desc: 'Crypto ETFs & brokerage holdings (e.g., IBIT, ETHA, Fidelity Crypto). Modeled as taxable. Not for self-custody wallets.' },
       { id: 'collectibles_primary', type: 'primary', taxCode: 'physical', title: 'Collectibles', meta: 'The Arcade', desc: 'Excluded from Range models. Tracks physical net worth.' },
       { id: 'auto_primary', type: 'primary', taxCode: 'physical', title: 'Vehicle', meta: 'The Driveway', desc: 'Depreciating physical asset.' },
 
@@ -1466,7 +1467,7 @@
 
       { id: 'checking_co', type: 'coarch', taxCode: 'liquid', hasInflow: true, hasInterest: true, title: 'Checking', meta: 'Co-Foyer', desc: 'Operating cash flow.' },
       { id: 'savings_co', type: 'coarch', taxCode: 'liquid', hasInflow: true, hasInterest: true, title: 'Savings', meta: 'Co-Safe', desc: 'Cash buffer.' },
-      { id: 'crypto_co', type: 'coarch', taxCode: 'liquid', hasInflow: true, hasInterest: false, isInvestment: true, title: 'Crypto', meta: 'Co-Game Room', desc: 'High volatility, speculative assets.' },
+      { id: 'crypto_co', type: 'coarch', taxCode: 'liquid', hasInflow: true, hasInterest: false, isInvestment: true, title: 'Crypto', meta: 'Co-Game Room', desc: 'Crypto ETFs & brokerage holdings (e.g., IBIT, ETHA, Fidelity Crypto). Modeled as taxable. Not for self-custody wallets.' },
       { id: 'collectibles_co', type: 'coarch', taxCode: 'physical', title: 'Collectibles', meta: 'Co-Arcade', desc: 'Excluded from Range models. Tracks physical net worth.' },
       { id: 'auto_co', type: 'coarch', taxCode: 'physical', title: 'Vehicle', meta: 'Co-Driveway', desc: 'Depreciating physical asset.' },
 
@@ -1574,7 +1575,7 @@
             <div class="contribution-row">
               <span class="inflow-label">Contributions</span>
               <div class="inflow-input-group">
-                 <input type="text" class="inflow-input curr-format" placeholder="$0" value="${inflowStr}" oninput="updateInflow('${acc.id}', this.value)">
+                 <input type="text" class="inflow-input curr-format" placeholder="$0" value="${inflowStr}" onfocus="this.select()" oninput="updateInflow('${acc.id}', this.value)">
                  <select class="inflow-freq" onchange="updateFreq('${acc.id}', this.value)">
                    <option value="1" ${acc.freq==1?'selected':''}>/ YR</option>
                    <option value="12" ${acc.freq==12?'selected':''}>/ MO</option>
@@ -1598,7 +1599,7 @@
               </div>
               <span class="room-meta">${base.meta}</span>
             </div>
-            <input type="text" id="room-val-inp-${acc.id}" class="room-input curr-format" placeholder="$0" value="${valStr}" oninput="updateValueWithoutRender('${acc.id}', this.value)" style="color: ${base.taxCode==='debt' ? 'var(--danger)' : 'var(--white)'};" ${isReadOnly}>
+            <input type="text" id="room-val-inp-${acc.id}" class="room-input curr-format" placeholder="$0" value="${valStr}" onfocus="this.select()" oninput="updateValueWithoutRender('${acc.id}', this.value)" style="color: ${base.taxCode==='debt' ? 'var(--danger)' : 'var(--white)'};" ${isReadOnly}>
             ${extraRows}
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
                <div class="room-desc" style="margin-top:0;">${base.desc}</div>
@@ -2990,6 +2991,85 @@
       if (cw) ro.observe(cw);
     }
 
+    // STU-021: Session draft — save/restore across navigation
+    var _draftSaveTimer = null;
+    function saveDraft() {
+      clearTimeout(_draftSaveTimer);
+      _draftSaveTimer = setTimeout(function() {
+        try {
+          var draft = {
+            ts: Date.now(),
+            priDob:       (document.getElementById('pri-dob')    || {}).value || '',
+            targetRet:    (document.getElementById('target-ret') || {}).value || '',
+            spendInput:   (document.getElementById('spend-input') || {}).value || '',
+            activeClimate:((document.querySelector('.climate-option.active') || {}).dataset || {}).outlook || '',
+            activeSS:     ((document.querySelector('.ss-btn.active strong') || {}).textContent || '').trim(),
+            coArchEnabled:!!(document.getElementById('co-arch-toggle') || {}).checked,
+            accounts:     JSON.parse(JSON.stringify(state.accounts))
+          };
+          sessionStorage.setItem('datum_studio_draft', JSON.stringify(draft));
+          sessionStorage.setItem('datum_studio_draft_ts', String(draft.ts));
+        } catch(e) {}
+      }, 400);
+    }
+    function showRestoredBanner() {
+      if (document.getElementById('draft-restored-banner')) return;
+      var b = document.createElement('div');
+      b.id = 'draft-restored-banner';
+      b.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(29,158,117,0.12);border:1px solid rgba(29,158,117,0.4);color:var(--teal);font-family:var(--font-mono);font-size:11px;letter-spacing:0.06em;padding:8px 16px;border-radius:4px;display:flex;gap:16px;align-items:center;white-space:nowrap;';
+      b.innerHTML = 'Restored from your last session. <button onclick="clearDraftAndRefresh()" style="background:none;border:1px solid rgba(29,158,117,0.5);color:var(--teal);font-family:var(--font-mono);font-size:10px;cursor:pointer;padding:2px 8px;border-radius:2px;letter-spacing:0.05em;">Start Fresh</button>';
+      document.body.appendChild(b);
+      setTimeout(function() { b.style.transition = 'opacity 0.5s'; b.style.opacity = '0'; setTimeout(function() { if (b.parentNode) b.remove(); }, 500); }, 9000);
+    }
+    window.clearDraftAndRefresh = function() {
+      sessionStorage.removeItem('datum_studio_draft');
+      sessionStorage.removeItem('datum_studio_draft_ts');
+      state.accounts = [];
+      var d = document.getElementById('pri-dob');    if (d) d.value = '08 / 1982';
+      var r = document.getElementById('target-ret'); if (r) r.value = '03 / 2035';
+      var s = document.getElementById('spend-input'); if (s) s.value = '$120,000';
+      renderInputs(); updateSVGs();
+      var ban = document.getElementById('draft-restored-banner'); if (ban) ban.remove();
+    };
+    function restoreDraft() {
+      var raw = sessionStorage.getItem('datum_studio_draft');
+      if (!raw) return;
+      // Sketch-wins-tie: Sketch keys present → clear draft, let prefillFromSketch run
+      if (sessionStorage.getItem('datum_currentAge') || sessionStorage.getItem('datum_targetSpend')) {
+        sessionStorage.removeItem('datum_studio_draft');
+        sessionStorage.removeItem('datum_studio_draft_ts');
+        return;
+      }
+      try {
+        var draft = JSON.parse(raw);
+        if (!draft || !draft.accounts) return;
+        state.accounts = draft.accounts;
+        renderInputs(); updateSVGs();
+        if (draft.priDob)    { var d = document.getElementById('pri-dob');    if (d) d.value = draft.priDob; }
+        if (draft.targetRet) { var r = document.getElementById('target-ret'); if (r) r.value = draft.targetRet; }
+        if (draft.spendInput){ var s = document.getElementById('spend-input'); if (s) s.value = draft.spendInput; }
+        if (draft.activeClimate) {
+          document.querySelectorAll('.climate-option').forEach(function(el) {
+            el.classList.toggle('active', el.dataset.outlook === draft.activeClimate);
+          });
+        }
+        if (draft.activeSS) {
+          document.querySelectorAll('.ss-btn').forEach(function(btn) {
+            var t = ((btn.querySelector('strong') || {}).textContent || '').trim();
+            btn.classList.toggle('active', t === draft.activeSS);
+          });
+        }
+        if (draft.coArchEnabled) {
+          var tog = document.getElementById('co-arch-toggle');
+          if (tog && !tog.checked) { tog.checked = true; tog.dispatchEvent(new Event('change')); }
+        }
+        showRestoredBanner();
+      } catch(e) { sessionStorage.removeItem('datum_studio_draft'); }
+    }
+    restoreDraft();
+    document.addEventListener('input', saveDraft);
+    document.addEventListener('change', saveDraft);
+
     // Prefill from Sketch if user came through that flow
     (function prefillFromSketch() {
       const sketchAge      = sessionStorage.getItem('datum_currentAge');
@@ -3021,13 +3101,39 @@
     updateSVGs();
     // === CINEMATIC OVERLAY V2 + REVEAL RANGE ===
     (function() {
+      // STU-023: 'history_repeats' confirmed valid in engine v1.7 — unchanged
       const OUTLOOK_MAP = {
-        'History Repeats': 'history_repeats',
+        'History Repeats':   'history_repeats',
         'Valuations Matter': 'valuations_matter',
-        'Cautious': 'cautious',
-        'Optimistic': 'optimistic',
-        'Custom Matrix': 'valuations_matter'
+        'Cautious':          'cautious',
+        'Optimistic':        'optimistic'
+        // 'Custom Matrix' handled inline in buildStudioRequest — sends market_outlook:'custom' + custom_weights
       };
+
+      // STU-010: engine enum map — Groups 1 (retirement) + 2 (liquid) + 3 (pension)
+      const ACCOUNT_TYPE_MAP = {
+        pretax401k:    'pretax_401k',  pretax401k_co:    'pretax_401k',
+        roth401k:      'roth_401k',    roth401k_co:      'roth_401k',
+        pretax457b:    'pretax_457b',  pretax457b_co:    'pretax_457b',
+        roth457b:      'roth_457b',    roth457b_co:      'roth_457b',
+        tradira:       'pretax_ira',   tradira_co:       'pretax_ira',
+        rothira:       'roth_ira',     rothira_co:       'roth_ira',
+        taxable:       'taxable',
+        savings:       'hysa',         savings_primary:  'hysa',      savings_co: 'hysa',
+        crypto:        'taxable',      crypto_primary:   'taxable',   crypto_co:  'taxable',
+        pension:       'pension',      pension_co:       'pension'
+      };
+
+      // STU-010: Group 4 — filter before sending to engine (physical, cash, generational, debt)
+      const FILTERED_TYPES = new Set([
+        'checking', 'checking_primary', 'checking_co',
+        'property', 'auto', 'auto_primary', 'auto_co',
+        'collectibles', 'collectibles_primary', 'collectibles_co',
+        'trust', '529plan',
+        'mortgage_joint',   'auto_debt_joint',   'rev_debt_joint',   'personal_loan_joint',
+        'mortgage_primary', 'auto_debt_primary', 'student_loan_primary', 'rev_debt_primary', 'personal_loan_primary',
+        'mortgage_co',      'auto_debt_co',      'student_loan_co',  'rev_debt_co', 'personal_loan_co'
+      ]);
 
       const SS_AGE_MAP = { '62': 'early_62', '67': 'full_67', '70': 'optimal_70' };
 
@@ -3044,6 +3150,7 @@
         return age;
       }
 
+      // STU-010 + STU-022: enum mapping, Group 4 filter, custom_weights for Custom Matrix
       function buildStudioRequest() {
         const dobVal   = document.getElementById('pri-dob')?.value || '';
         const retVal   = document.getElementById('target-ret')?.value || '';
@@ -3055,16 +3162,41 @@
         const datumSpend  = parseInt(spendVal.replace(/[^\d]/g, ''), 10) || 120000;
 
         const activeClimate = document.querySelector('.climate-option.active');
-        const outlook       = OUTLOOK_MAP[activeClimate?.dataset?.outlook] || 'valuations_matter';
+        const climateLabel  = activeClimate?.dataset?.outlook || '';
+
+        // STU-022: Custom Matrix — validate weights, build custom_weights payload
+        let outlookValue, customWeights;
+        if (climateLabel === 'Custom Matrix') {
+          const cWeightEls = document.querySelectorAll('.c-weight');
+          const vals = Array.from(cWeightEls).map(el => parseFloat(el.value) || 0);
+          const total = vals.reduce((s, v) => s + v, 0);
+          if (Math.abs(total - 100) > 1) {
+            const errEl = document.getElementById('c-weight-error');
+            if (errEl) { errEl.style.display = 'block'; setTimeout(() => errEl.style.display = 'none', 4000); }
+            return null; // caller must halt — weights invalid
+          }
+          // UI order: Historical→bootstrap, Parametric, Regime, CAPE (Engine Spec v1.7 §4)
+          outlookValue  = 'custom';
+          customWeights = { bootstrap: vals[0] / 100, parametric: vals[1] / 100, regime: vals[2] / 100, cape: vals[3] / 100 };
+        } else {
+          outlookValue = OUTLOOK_MAP[climateLabel] || 'valuations_matter';
+        }
 
         const activeSS   = document.querySelector('.ss-btn.active strong');
         const ssStrategy = SS_AGE_MAP[activeSS?.textContent?.trim()] || 'optimal_70';
 
+        // STU-010: filter Group 4, remap to engine enums, warn on unmapped future additions
         const accounts = state.accounts
+          .filter(a => !FILTERED_TYPES.has(a.baseId))
           .filter(a => (a.value || 0) > 0 || (a.inflow || 0) > 0)
-          .map(a => ({ type: a.baseId, balance: a.value || 0, annual_contribution: a.inflow || 0 }));
+          .map(a => {
+            if (!ACCOUNT_TYPE_MAP[a.baseId]) console.warn('[DATUM FI] Unmapped account type:', a.baseId);
+            return { type: ACCOUNT_TYPE_MAP[a.baseId] || a.baseId, balance: a.value || 0, annual_contribution: a.inflow || 0 };
+          });
 
-        return { current_age: currentAge, retirement_age: retireAge, location: 'FL', datum_spend: datumSpend, market_outlook: outlook, ss_strategy_primary: ssStrategy, accounts };
+        const body = { current_age: currentAge, retirement_age: retireAge, location: 'FL', datum_spend: datumSpend, market_outlook: outlookValue, ss_strategy_primary: ssStrategy, accounts };
+        if (customWeights) body.custom_weights = customWeights;
+        return body;
       }
 
       window._buildStudioRequest = buildStudioRequest;
@@ -3093,6 +3225,8 @@
       document.addEventListener('change', updateEmptyStateHints);
       setTimeout(updateEmptyStateHints, 500);
 
+      // STU-011: Two Network rows = CORS OPTIONS preflight (expected browser behavior) + POST.
+      // Reduced-motion path (below) and full-animation path are mutually exclusive — no double-fire.
       const revealBtn = document.querySelector('.action-btn');
       if (revealBtn) {
         revealBtn.addEventListener('click', async function() {
@@ -3164,6 +3298,7 @@
             ['log-1','log-2','log-3','log-4','log-5','log-6','log-7'].forEach(showLog);
 
             const req = buildStudioRequest();
+            if (!req) { resetOverlayState(); return; } // STU-022: custom_weights validation failed
             let apiResult = null, timedOut = false;
             try {
               apiResult = await Promise.race([
@@ -3194,6 +3329,7 @@
             announce('Datum locked. Your Range is ready.');
             if (window.dfTrack) dfTrack('studio_reveal_completed', { api_success: !!apiResult, reduced_motion: true });
             await new Promise(function(r) { setTimeout(r, 500); });
+            sessionStorage.removeItem('datum_studio_draft'); sessionStorage.removeItem('datum_studio_draft_ts');
             window.location.href = '/range.html';
             return;
           }
@@ -3223,6 +3359,7 @@
 
           // Kick off API in parallel with Phase 1 theater
           const req = buildStudioRequest();
+          if (!req) { resetOverlayState(); return; } // STU-022: custom_weights validation failed
           let apiResult = null, timedOut = false, apiSettled = false;
 
           fetch('https://api.datumfi.com/api/calculate', {
@@ -3305,6 +3442,7 @@
           if (window.dfTrack) dfTrack('studio_reveal_completed', { api_success: !!apiResult });
 
           await new Promise(function(r) { setTimeout(r, 2000); });
+          sessionStorage.removeItem('datum_studio_draft'); sessionStorage.removeItem('datum_studio_draft_ts');
           window.location.href = '/range.html';
         });
       }
