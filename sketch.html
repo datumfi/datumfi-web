@@ -19,17 +19,40 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Datum FI — The Sketch">
 <meta name="twitter:image" content="/og-image.png">
+
 <link rel="stylesheet" href="/styles/typography.css">
 <link rel="stylesheet" href="/styles/header.css">
+
 <style>
-  html { overflow-x: clip; }
+  html { overflow-x: clip; }  
   body { overflow-x: clip; }
 
+  /* Safety Net: Ensure padding doesn't break local layout grids */
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  /* Restored Root Variables for local environment testing */
+  :root {
+    --bg-navy: #091221;
+    --teal-mid: #5DCAA5;
+    --gold: #C9A84C;
+    --danger-red: #e24b4a;
+    --white: #ffffff;
+    --muted: rgba(255,255,255,0.4);
+    --font-serif: 'Fraunces', serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  body {
+    background-color: var(--bg-navy);
+    font-family: var(--font-serif);
+    margin: 0;
+    color: var(--white);
+  }
+
   /* --- CUSTOM SCROLLBAR --- */
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: var(--bg-navy); }
-  ::-webkit-scrollbar-thumb { background: rgba(93, 202, 165, 0.2); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--teal-mid); }
+  ::-webkit-scrollbar { width: 6px; }  ::-webkit-scrollbar-track { background: var(--bg-navy); }  ::-webkit-scrollbar-thumb { background: rgba(93, 202, 165, 0.2); border-radius: 3px; }  ::-webkit-scrollbar-thumb:hover { background: var(--teal-mid); }
 
   /* --- SCREEN 1: SPLIT LAYOUT --- */
   .hero-screen {
@@ -69,6 +92,7 @@
   /* --- LEFT PANEL TYPOGRAPHY & CONTROLS --- */
   .title-block { margin-bottom: 30px; }
   .sub-head { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.25em; color: var(--gold); }
+  .page-h1 { font-family: var(--font-serif); font-size: 48px; font-weight: 300; margin: 0 0 10px 0; }
   
   .control-group { margin-bottom: 25px; }
   .control-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px; }
@@ -94,11 +118,7 @@
   .ctrl-edit-input.shake { animation: ctrl-shake 0.25s ease; }
 
   /* Custom Slider Styling */
-  input[type=range] {
-    -webkit-appearance: none;
-    width: 100%;
-    background: transparent;
-  }
+  input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
   input[type=range]:focus { outline: none; }
   input[type=range]::-webkit-slider-runnable-track {
     width: 100%; height: 2px; cursor: pointer;
@@ -113,7 +133,25 @@
   }
   input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.3); }
 
-  /* Segmented Toggle for Market Conditions */
+  /* --- DOMINANT DATUM SLIDER --- */
+  #slider-datum::-webkit-slider-runnable-track {
+    height: 4px;
+    background: rgba(93, 202, 165, 0.3);
+  }
+  #slider-datum::-webkit-slider-thumb {
+    height: 20px; width: 20px; margin-top: -8px;
+    box-shadow: 0 0 15px rgba(93, 202, 165, 0.6);
+  }
+  @keyframes thumb-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(93, 202, 165, 0.7); }
+    70% { box-shadow: 0 0 0 12px rgba(93, 202, 165, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(93, 202, 165, 0); }
+  }
+  .datum-pulse::-webkit-slider-thumb {
+    animation: thumb-pulse 2s infinite;
+  }
+
+  /* --- SEGMENTED TOGGLES --- */
   .toggle-wrapper { position: relative; overflow: visible; }
   .toggle-container {
       display: flex; background: rgba(255,255,255,0.05); border-radius: 6px;
@@ -128,10 +166,21 @@
   }
   .toggle-container input:checked + label { font-weight: bold; }
 
-  #market-avg:checked + label { background: var(--teal-mid); color: var(--bg-navy); border-radius: 5px 0 0 5px; }
+  /* Market Toggle Colors */
+  #market-opt:checked + label { background: var(--gold); color: var(--bg-navy); border-radius: 5px 0 0 5px; }
+  #market-avg:checked + label { background: var(--teal-mid); color: var(--bg-navy); }
   #market-stress:checked + label { background: var(--danger-red); color: var(--white); border-radius: 0 5px 5px 0; }
 
-  /* Market Condition Tooltips */
+  /* Inflation Toggle Colors */
+  #infl-real:checked + label { background: var(--teal-mid); color: var(--bg-navy); border-radius: 5px 0 0 5px; }
+  #infl-nom:checked + label { background: var(--gold); color: var(--bg-navy); border-radius: 0 5px 5px 0; }
+
+  /* Tax Presets Colors */
+  input[name="tax-preset"]:checked + label { background: var(--teal-mid); color: var(--bg-navy); }
+  .tax-opt-1 label { border-radius: 5px 0 0 5px; }
+  .tax-opt-3 label { border-radius: 0 5px 5px 0; }
+
+  /* Toggle Tooltips */
   .mkt-tooltip {
     display: none; position: absolute; bottom: calc(100% + 10px); left: 50%;
     transform: translateX(-50%); width: 280px; z-index: 200;
@@ -153,29 +202,65 @@
   }
   .toggle-option:hover .mkt-tooltip { display: block; }
 
-  /* --- DYNAMIC SCROLL PROMPTS --- */
-  .scroll-prompt {
-    margin-top: 20px; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em;
-    color: var(--muted); cursor: pointer; transition: color 0.3s ease; display: inline-flex; align-items: center; justify-content: flex-start;
-    padding: 20px 0; border-top: 1px solid rgba(255,255,255,0.05);
+  /* Tooltip cutoffs fix */
+  .toggle-option:first-child .mkt-tooltip { left: 0; transform: none; }
+  .toggle-option:first-child .mkt-tooltip::after { left: 30px; transform: none; }
+  .toggle-option:last-child .mkt-tooltip { left: auto; right: 0; transform: none; }
+  .toggle-option:last-child .mkt-tooltip::after { left: auto; right: 30px; transform: none; }
+
+  /* --- ADVANCED DRAWER CSS --- */
+  .advanced-trigger {
+    font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em;
+    color: var(--teal-mid); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 0; margin-top: 10px; transition: color 0.2s;
   }
-  .scroll-prompt.center { margin-top: 60px; justify-content: center; width: 100%; border: none; }
-  .scroll-prompt:hover { color: var(--gold); }
-  .scroll-prompt span { margin-left: 8px; font-size: 14px; animation: bounce 2s infinite; }
-  
-  @keyframes bounce { 0%, 20%, 50%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(4px); } 60% { transform: translateY(2px); } }
+  .advanced-trigger:hover { color: var(--gold); }
+  .advanced-panel { display: none; padding-top: 20px; border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 10px; }
+  .advanced-panel.open { display: block; animation: fade-in 0.3s ease; }
+
+  /* Contextual CTA */
+  .contextual-cta {
+    display: none; margin-top: 20px; padding: 15px;
+    background: rgba(226, 75, 74, 0.1); border: 1px solid rgba(226, 75, 74, 0.3);
+    border-radius: 6px; animation: fade-in 0.3s ease;
+  }
+  .cta-title { color: var(--danger-red); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 5px; font-weight: bold; }
+  .cta-desc { font-family: var(--font-serif); font-size: 14px; color: rgba(255,255,255,0.8); margin-bottom: 10px; line-height: 1.4; }
+  .cta-link { color: var(--white); font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; text-decoration: underline; text-decoration-color: var(--danger-red); }
+  @keyframes fade-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Canvas Actions & Custom Hover Tooltip */
+  .canvas-actions { position: absolute; top: 30px; right: 40px; display: flex; gap: 10px; z-index: 20; }
+  .canvas-btn-wrap { position: relative; display: inline-block; }
+  .canvas-btn { background: rgba(9, 18, 33, 0.8); border: 1px solid rgba(255,255,255,0.2); color: var(--white); font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; padding: 8px 12px; border-radius: 4px; cursor: pointer; transition: all 0.2s; }
+  .canvas-btn:hover { border-color: var(--teal-mid); color: var(--teal-mid); }
+  .pin-tooltip {
+    display: none; position: absolute; top: 100%; right: 0; margin-top: 10px; width: 240px;
+    background: rgba(6, 11, 20, 0.97); border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px; padding: 12px; font-family: var(--font-serif); font-size: 12px; font-style: italic;
+    color: rgba(255,255,255,0.7); line-height: 1.5; text-align: left; z-index: 100; box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  }
+  .canvas-btn-wrap:hover .pin-tooltip { display: block; animation: fade-in 0.2s ease; }
 
   /* --- SVG RANGE ARCHITECTURE --- */
   .range-svg { width: 100%; max-width: 900px; height: 100%; overflow: visible; }
-  
   .grid-tick { stroke: rgba(255,255,255,0.05); stroke-width: 1; stroke-dasharray: 4 4; }
-  .grid-label { font-family: var(--font-mono); font-size: 12px; fill: rgba(255,255,255,0.2); }
-  .range-column { fill: rgba(93, 202, 165, 0.08); transition: y 0.4s cubic-bezier(0.25, 1, 0.5, 1), height 0.4s cubic-bezier(0.25, 1, 0.5, 1); }
+  .grid-label { font-family: var(--font-mono); font-size: 12px; fill: rgba(255,255,255,0.4); }
+  .grid-label.midpoint { font-weight: bold; fill: rgba(255,255,255,0.7); }
 
-  .boundary-line { stroke-width: 2; stroke-linecap: round; transition: y1 0.4s cubic-bezier(0.25, 1, 0.5, 1), y2 0.4s cubic-bezier(0.25, 1, 0.5, 1); }
+  .time-axis-line { stroke: rgba(255,255,255,0.2); stroke-width: 1; }
+  .time-label { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+
+  .cone-fill { fill: url(#thermal-grad); }
+  .ghost-line { stroke-width: 2; stroke-linecap: round; fill: none; stroke-dasharray: 2 4; opacity: 0; transition: opacity 0.3s; }
+  .ghost-ceil { stroke: var(--gold); }
+  .ghost-floor { stroke: var(--danger-red); }
+
+  .boundary-line { stroke-width: 2; stroke-linecap: round; fill: none; }
   .b-ceiling { stroke: var(--gold); }
   .b-floor { stroke: var(--danger-red); }
-  .b-datum { stroke: var(--teal-mid); }
+  .b-datum { stroke: var(--teal-mid); stroke-dasharray: 4 4;}
+  .b-lifestyle { stroke: var(--muted); stroke-dasharray: 4 4; opacity: 0.5; }
 
   .range-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1); }
 
@@ -186,12 +271,39 @@
   .text-data { font-family: var(--font-mono); font-size: 14px; fill: var(--white); transition: fill 0.3s ease; }
   .text-highlight { font-family: var(--font-serif); font-size: 11px; font-style: italic; fill: var(--muted); pointer-events: none; }
 
-  /* Interaction Groups */
   .boundary-group { cursor: default; }
   .boundary-group:hover .hover-detail { opacity: 1; }
   .datum-group { cursor: grab; }
   .datum-group:active { cursor: grabbing; }
   .datum-group:hover .hover-detail { opacity: 1; }
+
+  /* Mobile Layout Fixes */
+  @media (max-width: 900px) {
+    .hero-screen { flex-direction: column; height: auto; min-height: 100vh; overflow-y: auto; }
+    .panel-left { width: 100%; height: auto; padding: 100px 5% 40px 5%; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .panel-right { width: 100%; height: 50vh; min-height: 380px; padding-top: 20px; }
+    input[type=range] { min-height: 48px; }
+    .toggle-container label { min-height: 48px; display: flex; align-items: center; justify-content: center; }
+    .range-svg { min-height: 300px; }
+    .grid-label { font-size: 16px; }
+    .time-label { font-size: 14px; }
+    .range-label { font-size: 13px; }
+    .text-data { font-size: 16px; }
+    .text-highlight { font-size: 13px; }
+    .tt-head { font-size: 12px; }
+    .canvas-actions { top: 10px; right: 10px; }
+  }
+
+  /* --- DYNAMIC SCROLL PROMPTS --- */
+  .scroll-prompt {
+    margin-top: 20px; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em;
+    color: var(--muted); cursor: pointer; transition: color 0.3s ease; display: inline-flex; align-items: center; justify-content: flex-start;
+    padding: 20px 0; border-top: 1px solid rgba(255,255,255,0.05);
+  }
+  .scroll-prompt.center { margin-top: 60px; justify-content: center; width: 100%; border: none; }
+  .scroll-prompt:hover { color: var(--gold); }
+  .scroll-prompt span { margin-left: 8px; font-size: 14px; animation: bounce 2s infinite; }
+  @keyframes bounce { 0%, 20%, 50%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(4px); } 60% { transform: translateY(2px); } }
 
   /* --- SCREEN 2: INVISIBLE ARCHITECTURE --- */
   .full-width-section {
@@ -234,7 +346,6 @@
 
   /* --- SCREEN 3: BENEFITS COMPARISON --- */
   .comparison-container { display: flex; gap: 30px; max-width: 1000px; width: 100%; margin: 40px auto; }
-  
   .comp-card {
       flex: 1; background: rgba(9, 18, 33, 0.6); border: 2px solid var(--teal-mid);
       border-radius: 8px; padding: 40px; display: flex; flex-direction: column;
@@ -250,14 +361,12 @@
 
   .comp-title { font-family: var(--font-serif); font-size: 28px; font-style: italic; color: var(--white); margin-bottom: 8px; text-align: center; }
   .comp-sub { font-family: var(--font-mono); font-size: 11px; color: var(--muted); text-align: center; margin-bottom: 40px; }
-  
   .comp-list { list-style: none; padding: 0; margin: 0; flex-grow: 1; }
   .comp-item {
       display: flex; align-items: flex-start; gap: 12px; margin-bottom: 20px;
       font-family: var(--font-mono); font-size: 13px; color: var(--white); line-height: 1.4;
   }
   .comp-item.muted { color: var(--muted); }
-  
   .icon-check { color: var(--teal-mid); font-size: 14px; font-weight: bold; }
   .icon-x { color: rgba(255,255,255,0.2); font-size: 12px; font-weight: bold; }
   .comp-pro .icon-check { color: var(--gold); }
@@ -356,11 +465,6 @@
 
   /* --- MOBILE LAYOUT (H2) --- */
   @media (max-width: 900px) {
-    .hero-screen { flex-direction: column; height: auto; min-height: 100vh; overflow-y: auto; }
-    .panel-left { width: 100%; height: auto; padding: 100px 5% 40px 5%; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    .panel-right { width: 100%; height: 60vh; min-height: 600px; }
-    input[type=range] { min-height: 48px; }
-    .toggle-container label { min-height: 48px; display: flex; align-items: center; justify-content: center; }
     .studio-btn { min-height: 48px; }
     .pillar-grid { grid-template-columns: 1fr; }
     .studio-card { padding: 24px; }
@@ -422,11 +526,11 @@
     text-align: center;
   }
 
-</style>
-</head>
-<body>
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style></head><body>
   <a href="#sketch-main" class="skip-link">Skip to main content</a>
-
   <nav id="app-nav">
     <a href="/" class="brand-header"><span class="brand-datum">DATUM</span><span class="brand-fi">FI</span></a>
     <div class="nav-links">
@@ -453,7 +557,7 @@
   <div class="hero-screen" id="sketch-main">
       <div class="panel-left">
         <div class="title-block">
-            <h1 class="page-h1 hero-title" style="color:var(--white);">The <span class="df-tooltip" tabindex="0" data-tooltip="A fast, browser-based retirement estimate. No account required. Uses broad-stroke math to reveal your approximate Range in seconds.">Sketch</span>.</h1>
+            <h1 class="page-h1 hero-title" style="color:var(--white);">The Sketch.</h1>
             <div class="sub-head hero-subtitle" style="color:var(--gold);">Free. No signup. Just your numbers.</div>
         </div>
 
@@ -462,15 +566,15 @@
                 <span class="control-label">Current Age</span>
                 <span class="control-value" id="val-age">40 yrs</span>
             </div>
-            <input type="range" id="slider-age" min="18" max="65" value="40" step="1" aria-label="Current age in years" aria-valuemin="18" aria-valuemax="65" aria-valuenow="40">
+            <input type="range" id="slider-age" min="18" max="65" value="40" step="1">
         </div>
 
         <div class="control-group">
             <div class="control-header">
-                <span class="control-label">Retirement Age</span>
+                <span class="control-label" id="lbl-retire">Retirement Age</span>
                 <span class="control-value" id="val-activation">70 yrs</span>
             </div>
-            <input type="range" id="slider-activation" min="50" max="75" value="70" step="1" aria-label="Retirement age" aria-valuemin="50" aria-valuemax="75" aria-valuenow="70">
+            <input type="range" id="slider-activation" min="50" max="75" value="70" step="1">
         </div>
 
         <div class="control-group">
@@ -478,122 +582,244 @@
                 <span class="control-label">Current Portfolio Balance</span>
                 <span class="control-value" id="val-portfolio">$1.50M</span>
             </div>
-            <input type="range" id="slider-portfolio" min="0.01" max="10.0" value="1.5" step="0.005" aria-label="Current portfolio balance in millions of dollars" aria-valuemin="0.01" aria-valuemax="10" aria-valuenow="1.5">
+            <input type="range" id="slider-portfolio" min="0.01" max="10.0" value="1.5" step="0.005">
         </div>
 
         <div class="control-group">
             <div class="control-header">
-                <span class="control-label">Annual Contributions</span>
-                <span class="control-value" id="val-contrib">$92,000</span>
-            </div>
-            <input type="range" id="slider-contrib" min="0" max="150000" value="92000" step="1000" aria-label="Annual contributions in dollars" aria-valuemin="0" aria-valuemax="150000" aria-valuenow="92000">
-        </div>
-
-        <div class="control-group">
-            <div class="control-header">
-                <span class="control-label" style="color: var(--teal-mid);">Your <span class="df-tooltip" tabindex="0" data-tooltip="Your chosen annual spending target in retirement — the fixed reference point everything else is measured against.">Datum</span> (Target Spend)</span>
+                <span class="control-label" style="color: var(--teal-mid);">Your Datum (Future Retirement Spend)</span>
                 <span class="control-value" id="val-datum">$165k / yr</span>
             </div>
-            <input type="range" id="slider-datum" min="20" max="400" value="165" step="5" aria-label="Target annual spending in retirement in thousands of dollars" aria-valuemin="20" aria-valuemax="400" aria-valuenow="165">
+            <input type="range" id="slider-datum" class="datum-pulse" min="20" max="1000" value="165" step="1">
         </div>
 
-        <div class="control-group" style="margin-top: 20px;">
-            <div class="control-header">
-                <span class="control-label">Market Conditions</span>
+        <div class="advanced-trigger" onclick="document.getElementById('advanced-panel').classList.toggle('open')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            Show advanced controls
+        </div>
+
+        <div id="advanced-panel" class="advanced-panel">
+            <div class="control-group">
+                <div class="control-header">
+                    <span class="control-label">Annual Contributions</span>
+                    <span class="control-value" id="val-contrib">$25,000</span>
+                </div>
+                <input type="range" id="slider-contrib" min="0" max="300000" value="25000" step="1000">
             </div>
-            <div class="toggle-wrapper">
-              <div class="toggle-container">
-                <div class="toggle-option">
-                  <input type="radio" id="market-avg" name="market" value="average" checked>
-                  <label for="market-avg">Historical Average</label>
-                  <div class="mkt-tooltip">
-                    <div class="mkt-tooltip-head">Historical Average</div>
-                    <div class="mkt-tooltip-body">Uses a baseline real return (~3.5%) reflecting the long-run historical average. Your <span class="df-tooltip" tabindex="0" data-tooltip="The full spectrum of sustainable annual spending — from Survival Floor to Structural Ceiling — revealed by running your estate through thousands of market scenarios.">Range</span> tiers are calibrated against 100 years of Monte Carlo analysis — full scenario sequencing lives in the Studio.</div>
+
+            <div class="control-group">
+                <div class="control-header">
+                    <span class="control-label">Your Foundation (Current Lifestyle Spend)</span>
+                    <span class="control-value" id="val-lifestyle">$0k / yr</span>
+                </div>
+                <input type="range" id="slider-lifestyle" min="0" max="1000" value="0" step="1">
+            </div>
+
+            <div class="control-group" style="margin-top: 20px;">
+                <div class="control-header">
+                    <span class="control-label">Market Conditions</span>
+                </div>
+                <div class="toggle-wrapper">
+                  <div class="toggle-container">
+                    <div class="toggle-option">
+                      <input type="radio" id="market-opt" name="market" value="optimistic">
+                      <label for="market-opt">Optimistic</label>
+                      <div class="mkt-tooltip" style="border-color: rgba(201,168,76,0.4);">
+                        <div class="mkt-tooltip-head" style="color: var(--gold);">Optimistic Projection</div>
+                        <div class="mkt-tooltip-body">Best-case modeling — useful as upside reference, not as planning baseline.</div>
+                      </div>
+                    </div>
+                    <div class="toggle-option">
+                      <input type="radio" id="market-avg" name="market" value="average" checked>
+                      <label for="market-avg">Historical Average</label>
+                      <div class="mkt-tooltip">
+                        <div class="mkt-tooltip-head" style="color: var(--teal-mid);">Historical Average</div>
+                        <div class="mkt-tooltip-body">Uses a baseline real return (~3.5%) reflecting the long-run historical average. Calibrated against 100 years of Monte Carlo analysis.</div>
+                      </div>
+                    </div>
+                    <div class="toggle-option">
+                      <input type="radio" id="market-stress" name="market" value="stress">
+                      <label for="market-stress">Stress Test</label>
+                      <div class="mkt-tooltip" style="border-color: rgba(226,75,74,0.4);">
+                        <div class="mkt-tooltip-head" style="color: var(--danger-red);">Stress Test</div>
+                        <div class="mkt-tooltip-body">Applies a reduced-return environment (~1.5% real annual return), matching the worst 40-year historical periods in market history.</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div class="toggle-option">
-                  <input type="radio" id="market-stress" name="market" value="stress">
-                  <label for="market-stress">Stress Test</label>
-                  <div class="mkt-tooltip" style="border-color: rgba(226,75,74,0.4);">
-                    <div class="mkt-tooltip-head" style="color: var(--danger-red);">Stress Test</div>
-                    <div class="mkt-tooltip-body">Applies a reduced-return environment — approximately 1.5% real annual return, matching the worst 40-year historical periods in market history. Your Range tightens accordingly. For scenario-specific sequencing (1929 crash patterns, 1970s stagflation paths, Japan's Lost Decade modeling), see the full Studio.</div>
+            </div>
+
+            <div class="control-group" style="margin-top: 15px;">
+                <div class="control-header">
+                    <span class="control-label">Inflation Engine</span>
+                </div>
+                <div class="toggle-wrapper">
+                  <div class="toggle-container">
+                    <div class="toggle-option">
+                      <input type="radio" id="infl-real" name="inflation" value="real" checked>
+                      <label for="infl-real">Real (Today's $)</label>
+                      <div class="mkt-tooltip">
+                        <div class="mkt-tooltip-head">Real Dollars</div>
+                        <div class="mkt-tooltip-body">Strips out inflation so you can map your future spending capacity in today's purchasing power.</div>
+                      </div>
+                    </div>
+                    <div class="toggle-option">
+                      <input type="radio" id="infl-nom" name="inflation" value="nominal">
+                      <label for="infl-nom">Nominal (Future $)</label>
+                      <div class="mkt-tooltip" style="border-color: rgba(201,168,76,0.4);">
+                        <div class="mkt-tooltip-head" style="color: var(--gold);">Nominal Dollars</div>
+                        <div class="mkt-tooltip-body">Applies a 2.5% annual inflation drag. Watch your target spend curve upwards to show what you'll actually need to withdraw to maintain your lifestyle.</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+            </div>
+
+            <div class="control-group" style="margin-top: 15px;">
+                <div class="control-header">
+                    <span class="control-label">Effective Tax Drag</span>
+                    <span class="control-value" id="val-tax">20%</span>
+                </div>
+                <div class="toggle-wrapper" style="margin-bottom: 10px;">
+                    <div class="toggle-container">
+                        <div class="toggle-option tax-opt-1"><input type="radio" id="tax-10" name="tax-preset" value="10" onchange="document.getElementById('slider-tax').value=10; updateEngine();"><label for="tax-10">Low (10%)</label></div>
+                        <div class="toggle-option"><input type="radio" id="tax-20" name="tax-preset" value="20" checked onchange="document.getElementById('slider-tax').value=20; updateEngine();"><label for="tax-20">Avg (20%)</label></div>
+                        <div class="toggle-option tax-opt-3"><input type="radio" id="tax-30" name="tax-preset" value="30" onchange="document.getElementById('slider-tax').value=30; updateEngine();"><label for="tax-30">High (30%)</label></div>
+                    </div>
+                </div>
+                <input type="range" id="slider-tax" min="0" max="40" value="20" step="1">
             </div>
         </div>
 
-        <div class="scroll-prompt" onclick="document.getElementById('screen-2').scrollIntoView({behavior: 'smooth'})">
+        <div id="danger-cta" class="contextual-cta">
+          <div class="cta-title">Architecture Warning</div>
+          <div class="cta-desc">Your target exceeds your structural capacity. The Studio can help you close the gap.</div>
+          <a href="/studio.html" class="cta-link">Enter the Studio to find the gap →</a>
+        </div>
+        
+        <div class="scroll-prompt" id="scroll-prompt-arch" onclick="document.getElementById('screen-2').scrollIntoView({behavior: 'smooth'})">
             EXPLORE THE INVISIBLE ARCHITECTURE <span>↓</span>
         </div>
       </div>
 
       <div class="panel-right">
-          <svg class="range-svg" viewBox="0 0 800 800" preserveAspectRatio="xMidYMid meet">
-              <g>
-                  <line x1="100" y1="150" x2="700" y2="150" class="grid-tick" />
-                  <text id="grid-lbl-1" x="80" y="155" text-anchor="end" class="grid-label">$400k</text>
+          <div class="canvas-actions">
+            <div class="canvas-btn-wrap">
+                <button class="canvas-btn" onclick="pinScenario()">Pin Scenario</button>
+                <div class="pin-tooltip">Stamps a ghosted copy of your current Range to the canvas so you can instantly visually compare changes to your Timeline or Contributions.</div>
+            </div>
+            <button class="canvas-btn" onclick="saveSnapshot()">Save Snapshot</button>
+          </div>
 
-                  <line x1="100" y1="287.5" x2="700" y2="287.5" class="grid-tick" />
-                  <text id="grid-lbl-2" x="80" y="292.5" text-anchor="end" class="grid-label">$300k</text>
+          <svg class="range-svg" id="sketch-canvas" viewBox="0 0 800 760" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                  <linearGradient id="thermal-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stop-color="rgba(226, 75, 74, 0.25)" />
+                      <stop offset="40%" stop-color="rgba(201, 168, 76, 0.15)" />
+                      <stop offset="100%" stop-color="rgba(93, 202, 165, 0.2)" />
+                  </linearGradient>
+              </defs>
 
-                  <line x1="100" y1="425" x2="700" y2="425" class="grid-tick" />
-                  <text id="grid-lbl-3" x="80" y="430" text-anchor="end" class="grid-label">$200k</text>
-
-                  <line x1="100" y1="562.5" x2="700" y2="562.5" class="grid-tick" />
-                  <text id="grid-lbl-4" x="80" y="567.5" text-anchor="end" class="grid-label">$100k</text>
-
-                  <line x1="100" y1="700" x2="700" y2="700" class="grid-tick" />
-                  <text id="grid-lbl-5" x="80" y="705" text-anchor="end" class="grid-label">$0k</text>
+              <g id="canvas-title-group">
+                  <text x="100" y="50" text-anchor="start" fill="var(--white)" font-size="28" style="font-family: var(--font-serif);">You don't have one future — you have</text>
+                  <text x="100" y="85" text-anchor="start" fill="var(--white)" font-size="28" style="font-family: var(--font-serif);">a <tspan fill="var(--teal-mid)" font-style="italic">Range</tspan>.</text>
+                  <text x="100" y="115" text-anchor="start" fill="var(--muted)" font-size="10" style="font-family: var(--font-mono); letter-spacing: 0.2em; text-transform: uppercase;">The farther out you look, the wider it becomes.</text>
               </g>
 
-              <rect id="vol-pillar" x="250" y="300" width="120" height="200" class="range-column" />
+              <g>
+                  <text x="80" y="135" text-anchor="end" fill="rgba(255,255,255,0.2)" font-size="10" style="font-family: var(--font-mono); letter-spacing: 0.2em;">ANNUAL SPEND</text>
+
+                  <line x1="100" y1="170" x2="700" y2="170" class="grid-tick" />
+                  <text id="grid-lbl-1" x="80" y="175" text-anchor="end" class="grid-label">$400k</text>
+
+                  <line x1="100" y1="295" x2="700" y2="295" class="grid-tick" />
+                  <text id="grid-lbl-2" x="80" y="300" text-anchor="end" class="grid-label">$300k</text>
+
+                  <line x1="100" y1="420" x2="700" y2="420" class="grid-tick" />
+                  <text id="grid-lbl-3" x="80" y="425" text-anchor="end" class="grid-label midpoint">$200k</text>
+
+                  <line x1="100" y1="545" x2="700" y2="545" class="grid-tick" />
+                  <text id="grid-lbl-4" x="80" y="550" text-anchor="end" class="grid-label">$100k</text>
+
+                  <line x1="100" y1="670" x2="700" y2="670" class="grid-tick" />
+                  <text id="grid-lbl-5" x="80" y="675" text-anchor="end" class="grid-label">$0k</text>
+              </g>
+
+              <g>
+                  <line x1="150" y1="700" x2="650" y2="700" class="time-axis-line" />
+                  <line x1="150" y1="695" x2="150" y2="705" class="time-axis-line" />
+                  <line x1="650" y1="695" x2="650" y2="705" class="time-axis-line" />
+                  
+                  <text id="time-start" x="150" y="725" text-anchor="middle" class="time-label">AGE 40</text>
+                  <text id="time-end" x="650" y="725" text-anchor="middle" class="time-label" style="fill: var(--teal-mid);">RETIRE: 70</text>
+                  <text x="400" y="745" text-anchor="middle" fill="rgba(255,255,255,0.2)" font-size="10" style="font-family: var(--font-mono); letter-spacing: 0.2em;">AGE UNTIL RETIREMENT</text>
+              </g>
+
+              <path id="ghost-cone" class="cone-fill" style="opacity:0; transition: opacity 0.3s ease;" d="" />
+              <path id="ghost-ceil" class="ghost-line ghost-ceil" d="" />
+              <path id="ghost-floor" class="ghost-line ghost-floor" d="" />
+
+              <path id="cone-area" class="cone-fill" d="" />
+
+              <g id="lifestyle-group">
+                  <path id="lifestyle-line" class="boundary-line b-lifestyle" d="" />
+                  <text id="lifestyle-lbl" class="range-label" x="665" y="0" text-anchor="start" style="fill: var(--muted);">CURRENT SPEND</text>
+              </g>
 
               <g class="boundary-group">
-                  <rect id="ceil-hitbox" x="100" y="280" width="600" height="40" fill="transparent" />
-                  <line id="ceil-line" x1="100" y1="300" x2="700" y2="300" class="boundary-line b-ceiling" />
-                  <text id="ceil-lbl" class="range-label" x="700" y="285" text-anchor="end" style="fill: var(--gold);">STRUCTURAL CEILING</text>
+                  <rect id="ceil-hitbox" x="150" y="280" width="500" height="40" fill="transparent" />
+                  <path id="ceil-line" class="boundary-line b-ceiling" d="" />
                   
-                  <g id="ceil-hover" class="hover-detail" transform="translate(370, 315)">
+                  <circle id="node-ceil" cx="650" cy="0" r="5" fill="var(--gold)" />
+                  <circle id="ceil-drag-hitbox" cx="650" cy="0" r="20" fill="transparent" style="cursor: ew-resize;" />
+
+                  <text id="ceil-lbl" class="range-label" x="665" y="285" text-anchor="start" style="fill: var(--gold);">STRUCTURAL CEILING</text>
+                  
+                  <g id="ceil-hover" class="hover-detail" transform="translate(230, 315)">
                       <rect class="hover-bg" x="0" y="0" width="410" height="115" rx="4" />
-                      <text class="tt-head" x="15" y="25" style="fill: var(--gold);">STRUCTURAL CEILING</text>
-                      <text class="text-data" id="ceil-val-txt" x="15" y="45" style="fill: var(--white);">$2.98M &nbsp;|&nbsp; $119,000 / yr</text>
-                      <text class="text-data" id="ceil-leg-txt" x="15" y="65" style="fill: var(--gold); font-style: italic;">Legacy is a measurement, not an estimate. Studio only →</text>
+                      <text class="tt-head" id="ceil-tt-head" x="15" y="25" style="fill: var(--gold);">STRUCTURAL CEILING</text>
+                      <text class="text-data" id="ceil-val-txt" x="15" y="45" style="fill: var(--white);"></text>
+                      <text class="text-data" x="15" y="65" style="fill: var(--gold); font-style: italic;">Year-by-year ceiling modeled across 41 years. Studio only.</text>
                       <text class="text-highlight" x="15" y="85">The mathematical limit of your plan's capacity.</text>
                       <text class="text-highlight" x="15" y="105">A structural constraint, not an aspirational target.</text>
                   </g>
               </g>
 
               <g class="boundary-group">
-                  <rect id="floor-hitbox" x="100" y="480" width="600" height="40" fill="transparent" />
-                  <line id="floor-line" x1="100" y1="500" x2="700" y2="500" class="boundary-line b-floor" />
-                  <text id="floor-lbl" class="range-label" x="700" y="520" text-anchor="end" style="fill: var(--danger-red);">SURVIVAL FLOOR</text>
+                  <rect id="floor-hitbox" x="150" y="480" width="500" height="40" fill="transparent" />
+                  <path id="floor-line" class="boundary-line b-floor" d="" />
                   
-                  <g id="floor-hover" class="hover-detail" transform="translate(370, 525)">
+                  <circle id="node-floor" cx="650" cy="0" r="5" fill="var(--danger-red)" />
+                  <circle id="floor-drag-hitbox" cx="650" cy="0" r="20" fill="transparent" style="cursor: ew-resize;" />
+
+                  <text id="floor-lbl" class="range-label" x="665" y="520" text-anchor="start" style="fill: var(--danger-red);">SURVIVAL FLOOR</text>
+                  
+                  <g id="floor-hover" class="hover-detail" transform="translate(230, 525)">
                       <rect class="hover-bg" x="0" y="0" width="410" height="115" rx="4" />
-                      <text class="tt-head" x="15" y="25" style="fill: var(--danger-red);">SURVIVAL FLOOR (FIXED)</text>
-                      <text class="text-data" id="floor-val-txt" x="15" y="45" style="fill: var(--white);">$2.08M &nbsp;|&nbsp; $83,000 / yr</text>
-                      <text class="text-data" id="floor-leg-txt" x="15" y="65" style="fill: var(--gold); font-style: italic;">Legacy is a measurement, not an estimate. Studio only →</text>
-                      <text class="text-highlight" x="15" y="85">Floor holds in 99% of simulations + all stress scenarios.</text>
-                      <text class="text-highlight" x="15" y="105">Survives the 1929 crash. Survives everything.</text>
+                      <text class="tt-head" id="floor-tt-head" x="15" y="25" style="fill: var(--danger-red);">SURVIVAL FLOOR (FIXED)</text>
+                      <text class="text-data" id="floor-val-txt" x="15" y="45" style="fill: var(--white);"></text>
+                      <text class="text-data" x="15" y="65" style="fill: var(--gold); font-style: italic;">Holds through 1929 conditions. Studio stress-maps your floor.</text>
+                      <text class="text-highlight" x="15" y="85">.</text>
+                      <text class="text-highlight" x="15" y="105">Survives the 1929 crash and all modeled stress scenarios.</text>
                   </g>
               </g>
 
               <g id="datum-dragger" class="datum-group">
-                  <rect id="datum-hitbox" x="80" y="380" width="640" height="40" fill="transparent" />
+                  <rect id="datum-hitbox" x="150" y="380" width="500" height="40" fill="transparent" />
                   
-                  <line id="datum-line" x1="100" y1="400" x2="700" y2="400" class="boundary-line b-datum" />
-                  <circle id="datum-circle" cx="310" cy="400" r="8" fill="var(--teal-mid)" stroke="none" style="transition: fill 0.3s ease;" />
-                  <text id="datum-lbl" class="range-label" x="700" y="385" text-anchor="end" style="fill: var(--teal-mid);">YOUR DATUM</text>
+                  <path id="datum-line" class="boundary-line b-datum" d="" />
                   
-                  <g id="datum-hover" class="hover-detail" transform="translate(370, 415)">
+                  <circle id="node-datum" cx="650" cy="0" r="6" fill="var(--teal-mid)" style="transition: fill 0.3s ease;" />
+                  <circle id="datum-circle" cx="150" cy="400" r="8" fill="var(--teal-mid)" stroke="none" style="transition: fill 0.3s ease;" />
+                  <text id="datum-lbl" class="range-label" x="665" y="385" text-anchor="start" style="fill: var(--teal-mid);">YOUR DATUM</text>
+                  
+                  <g id="datum-hover" class="hover-detail" transform="translate(230, 415)">
                       <rect id="datum-box" class="hover-bg" x="0" y="0" width="410" height="90" rx="4" stroke="var(--teal-mid)" />
                       <text id="datum-tt-head" class="tt-head" x="15" y="25" style="fill: var(--teal-mid);">YOUR DATUM</text>
-                      <text class="text-data" id="datum-val-txt" x="15" y="45" style="fill: var(--white);">$100,000 / yr</text>
-                      <text class="text-data" id="datum-leg-txt" x="15" y="65" style="fill: var(--gold); font-style: italic;">Legacy is a measurement, not an estimate. Studio only →</text>
+                      <text class="text-data" id="datum-val-txt" x="15" y="45" style="fill: var(--white);"></text>
+                      <text class="text-data" x="15" y="65" style="fill: var(--gold); font-style: italic;">How this number performs at 75, 85, and 95. Studio only.</text>
                   </g>
               </g>
-
           </svg>
       </div>
   </div>
@@ -679,14 +905,16 @@
           </div>
       </div>
       
+      <div class="activate-cta" style="margin-top: 40px; margin-bottom: 20px;">
+          This is where Datum ends and The Studio begins. <a href="/vault.html" class="activate-link">Activate The Studio →</a>
+      </div>
+      
       <div class="scroll-prompt center" onclick="document.getElementById('screen-3').scrollIntoView({behavior: 'smooth'})">
           SEE STUDIO BENEFITS <span>↓</span>
       </div>
   </div>
 
   <div class="full-width-section" id="screen-3" style="padding-top: 80px;">
-
-      <!-- GATE 2: 4-pillar deep-dive -->
       <div id="gate2" class="pillar-deep-dive">
           <div class="studio-card">
               <div class="studio-card-header">
@@ -696,7 +924,6 @@
               </div>
 
               <div class="pillar-grid">
-
               <div class="pillar-card">
                   <div class="pillar-num">PILLAR I</div>
                   <div class="pillar-title">THE ESTATE</div>
@@ -712,7 +939,6 @@
                       </ul>
                   </div>
               </div>
-
               <div class="pillar-card">
                   <div class="pillar-num">PILLAR II</div>
                   <div class="pillar-title">FINANCIAL PLUMBING</div>
@@ -727,7 +953,6 @@
                       </ul>
                   </div>
               </div>
-
               <div class="pillar-card">
                   <div class="pillar-num">PILLAR III</div>
                   <div class="pillar-title">PRECISION REGULATORY</div>
@@ -741,7 +966,6 @@
                       </ul>
                   </div>
               </div>
-
               <div class="pillar-card">
                   <div class="pillar-num">PILLAR IV</div>
                   <div class="pillar-title">THE PHYSICS ENGINE</div>
@@ -758,13 +982,11 @@
                       </ul>
                   </div>
               </div>
-
               </div>
           </div>
       </div>
       <button class="gate-nav-btn" onclick="document.getElementById('gate3').scrollIntoView({behavior:'smooth'})">See Full Comparison ↓</button>
 
-      <!-- GATE 3: Full 11-row comparison matrix -->
       <div id="gate3" style="width: 100%; max-width: 1100px; margin: 0 auto;">
           <div class="gate3-header">Every dimension. Every system. Every decision.</div>
           <div class="gate3-wrap">
@@ -802,7 +1024,7 @@
         <h3>Get your weekly Datum Briefing.</h3>
         <p>Architecture insights, market commentary, and your Range — delivered Sundays.</p>
         <div class="email-row">
-          <input type="email" id="sketch-email-input" placeholder="name@domain.com" aria-label="Email address">
+          <input type="email" id="sketch-email-input" placeholder="you@email.com" aria-label="Email address">
           <button onclick="submitSketchEmail()">Subscribe</button>
         </div>
         <p class="email-fine-print">Unsubscribe anytime. We never sell or share your email.</p>
@@ -815,10 +1037,10 @@
           Zero-Knowledge Architecture
         </div>
         <div class="sketch-zk-grid">
-          <div class="sketch-zk-item"><span class="sketch-zk-check">✓</span><span><strong>Local Computation</strong> — The Monte Carlo engine runs entirely inside your browser. Your Sketch inputs never touch our servers.</span></div>
-          <div class="sketch-zk-item"><span class="sketch-zk-check">✓</span><span><strong>Minimal Retention</strong> — The Sketch stores nothing. The Studio stores only your profile — never sold, never shared, deletable on request.</span></div>
+          <div class="sketch-zk-item"><span class="sketch-zk-check">✓</span><span><strong>Local Computation</strong> — The The Sketch runs locally in the browser using a broad-stroke deterministic projection model. Your Sketch inputs never touch our servers.</span></div>
+          <div class="sketch-zk-item"><span class="sketch-zk-check">✓</span><span><strong>Minimal Retention</strong> — The The Sketch runs locally in the browser using a broad-stroke deterministic projection model. The Studio stores only your profile — never sold, never shared, deletable on request.</span></div>
           <div class="sketch-zk-item"><span class="sketch-zk-check">✓</span><span><strong>No Tracking</strong> — No ad-retargeting. No data brokering. No invisible pixels monitoring your wealth.</span></div>
-          <div class="sketch-zk-item"><span class="sketch-zk-check">✓</span><span><strong>Session-Scoped State</strong> — <span class="df-tooltip" tabindex="0" data-tooltip="Your complete estate model inside the Studio: all accounts, liabilities, income streams, and preferences combined into a single computational input.">Blueprints</span> live only for your active session. Close the tab, and your numbers are gone — never written to disk, never recoverable.</span></div>
+          <div class="sketch-zk-item"><span class="sketch-zk-check">✓</span><span><strong>Session-Scoped State</strong> — <span class="df-tooltip" tabindex="0" data-tooltip="Your complete estate model inside the Studio: all accounts, liabilities, income streams, and preferences combined into a single computational input.">Blueprints</span> live only for your active session. Close the tab, and your numbers are gone — inputs are stored in session storage for handoff.</span></div>
         </div>
       </div>
 
@@ -831,33 +1053,41 @@
       </div>
   </div>
 
+  
   <script>
-    // --- SCHEMATIC ENGINE (FIXED AXIS MATH WITH DRAG CAPABILITY) ---
-    
-    // Elements
     const slAge = document.getElementById('slider-age');
     const slAct = document.getElementById('slider-activation');
     const slPort = document.getElementById('slider-portfolio');
     const slContrib = document.getElementById('slider-contrib');
     const slDatum = document.getElementById('slider-datum');
+    const slLifestyle = document.getElementById('slider-lifestyle');
+    
+    const slTax = document.getElementById('slider-tax');
+    const valTax = document.getElementById('val-tax');
 
     const valAge = document.getElementById('val-age');
     const valAct = document.getElementById('val-activation');
     const valPort = document.getElementById('val-portfolio');
     const valContrib = document.getElementById('val-contrib');
     const valDatum = document.getElementById('val-datum');
+    const valLifestyle = document.getElementById('val-lifestyle');
+
+    const timeStart = document.getElementById('time-start');
+    const timeEnd = document.getElementById('time-end');
+    const lblRetire = document.getElementById('lbl-retire');
+    const coneArea = document.getElementById('cone-area');
 
     const ceilLine = document.getElementById('ceil-line');
     const ceilLbl = document.getElementById('ceil-lbl');
     const ceilHover = document.getElementById('ceil-hover');
     const ceilValTxt = document.getElementById('ceil-val-txt');
-    const ceilHitbox = document.getElementById('ceil-hitbox');
+    const ceilTtHead = document.getElementById('ceil-tt-head');
 
     const floorLine = document.getElementById('floor-line');
     const floorLbl = document.getElementById('floor-lbl');
     const floorHover = document.getElementById('floor-hover');
     const floorValTxt = document.getElementById('floor-val-txt');
-    const floorHitbox = document.getElementById('floor-hitbox');
+    const floorTtHead = document.getElementById('floor-tt-head');
 
     const datumLine = document.getElementById('datum-line');
     const datumCirc = document.getElementById('datum-circle');
@@ -867,329 +1097,623 @@
     const datumBox = document.getElementById('datum-box');
     const datumHitbox = document.getElementById('datum-hitbox');
     
-    // Extracted specific text elements for precise updates
+    const lifestyleGroup = document.getElementById('lifestyle-group');
+    const lifestyleLine = document.getElementById('lifestyle-line');
+    const lifestyleLbl = document.getElementById('lifestyle-lbl');
+
     const datumTtHead = document.getElementById('datum-tt-head');
+    const dangerCta = document.getElementById('danger-cta');
+    const archPrompt = document.getElementById('scroll-prompt-arch'); 
 
+    const nodeCeil = document.getElementById('node-ceil');
+    const nodeFloor = document.getElementById('node-floor');
+    const nodeDatum = document.getElementById('node-datum');
 
-    const volPillar = document.getElementById('vol-pillar');
+    const ceilDragger = document.getElementById('ceil-drag-hitbox');
+    const floorDragger = document.getElementById('floor-drag-hitbox');
+
     const marketRadios = document.querySelectorAll('input[name="market"]');
+    const inflRadios = document.querySelectorAll('input[name="inflation"]');
 
-    // Drag State globals
     let globalYMin = 0;
     let globalYMax = 400;
 
+    function formatYLabel(valInThousands) {
+        if (valInThousands >= 1000) {
+            let valM = (valInThousands / 1000).toFixed(2);
+            valM = valM.replace(/\.00$/, ''); 
+            return `$${valM}M`;
+        }
+        return `$${Math.round(valInThousands)}k`;
+    }
+
+    function getYOnPath(pathNode, targetX) {
+        let length = pathNode.getTotalLength();
+        let min = 0, max = length;
+        for(let i=0; i<15; i++){
+            let mid = (min+max)/2;
+            let pt = pathNode.getPointAtLength(mid);
+            if(pt.x < targetX) min = mid;
+            else max = mid;
+        }
+        return pathNode.getPointAtLength((min+max)/2).y;
+    }
+
     function updateEngine() {
-        // 1. Read Inputs
         const currentAge = parseInt(slAge.value);
-        const activationAge = parseInt(slAct.value);
+        let activationAge = parseInt(slAct.value);
         const portfolioVol = parseFloat(slPort.value);
         const annualContrib = parseInt(slContrib.value);
         const targetSpend = parseInt(slDatum.value);
-        const isStress = document.getElementById('market-stress').checked;
+        const lifestyleSpend = parseInt(slLifestyle.value);
+        
+        let paradigm = 'average';
+        const activeRadio = document.querySelector('input[name="market"]:checked');
+        if (activeRadio) paradigm = activeRadio.value;
 
-        // Display updates
+        let isNominal = false;
+        const activeInfl = document.querySelector('input[name="inflation"]:checked');
+        if (activeInfl && activeInfl.value === 'nominal') isNominal = true;
+        
+        const taxRate = parseInt(slTax.value) / 100;
+        const taxMult = 1.0 - taxRate;
+        valTax.innerHTML = `${slTax.value}%`;
+
+        slAct.min = currentAge;
+        if (parseInt(slAct.value) < currentAge) {
+            slAct.value = currentAge;
+            activationAge = currentAge;
+        }
+
+        let yearsToGrow = activationAge - currentAge;
+        if (yearsToGrow <= 0) {
+            yearsToGrow = 0;
+            activationAge = currentAge;
+            lblRetire.innerHTML = "Status";
+            valAct.innerHTML = "Already Retired";
+            valAct.style.color = "var(--gold)";
+            timeEnd.textContent = "TODAY";
+        } else {
+            lblRetire.innerHTML = "Retirement Age";
+            valAct.innerHTML = `${activationAge} yrs`;
+            valAct.style.color = "var(--white)";
+            timeEnd.textContent = `RETIRE: ${activationAge}`;
+        }
+
         valAge.innerHTML = `${currentAge} yrs`;
-        valAct.innerHTML = `${activationAge} yrs`;
+        timeStart.textContent = `AGE ${currentAge}`;
         valPort.innerHTML = portfolioVol < 1
             ? `$${Math.round(portfolioVol * 1000000).toLocaleString('en-US')}`
             : `$${portfolioVol.toFixed(2)}M`;
         valContrib.innerHTML = `$${annualContrib.toLocaleString('en-US')}`;
-        valDatum.innerHTML = `$${targetSpend}k / yr`;
+        
+        let targetStr = targetSpend >= 1000 ? `$${(targetSpend/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${targetSpend}k`;
+        valDatum.innerHTML = `${targetStr} / yr`;
+        
+        let lifeStr = lifestyleSpend >= 1000 ? `$${(lifestyleSpend/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${lifestyleSpend}k`;
+        valLifestyle.innerHTML = `${lifeStr} / yr`;
 
-        // 2. Conservative Physics Math
-        const yearsToGrow = Math.max(0, activationAge - currentAge);
+        if (lifestyleGroup) {
+            if (lifestyleSpend === 0) {
+                lifestyleGroup.style.display = 'none';
+            } else {
+                lifestyleGroup.style.display = '';
+            }
+        }
 
-        // The Sketch uses broad strokes: 3.5% real vs Studio's 4.12%. Stress drops to 1.5%.
-        const growthRate = isStress ? 1.015 : 1.035;
+        let growthRate, ceilRate, floorRate;
+        if (paradigm === 'optimistic') {
+            growthRate = 1.055; ceilRate = 50; floorRate = 38;
+        } else if (paradigm === 'average') {
+            growthRate = 1.035; ceilRate = 47; floorRate = 32;
+        } else { // stress
+            growthRate = 1.015; ceilRate = 38; floorRate = 28;
+        }
+
         const realRate = growthRate - 1;
         const portfolioFV = portfolioVol * Math.pow(growthRate, yearsToGrow);
-        // Contributions compound from now to retirement (annuity FV, end-of-period)
         const contribFV = realRate > 0
             ? (annualContrib / 1000000) * ((Math.pow(growthRate, yearsToGrow) - 1) / realRate)
             : (annualContrib / 1000000) * yearsToGrow;
+        
         const futurePortfolio = portfolioFV + contribFV; 
-        
-        // Formatted String for Future Portfolio (ex: $2.98M)
-        const fvStr = (futurePortfolio >= 1) ? '$' + futurePortfolio.toFixed(2) + 'M' : '$' + Math.round(futurePortfolio * 1000) + 'k';
 
-        // WIDENED SPREAD: A true "Sketch" needs visual space. Floor anchors low, Ceiling reaches higher.
-        const ceilRate = isStress ? 38 : 47; // 3.8% vs 4.7% of future assets
-        const floorRate = isStress ? 30 : 32; // 3.0% vs 3.2% of future assets
-        
-        const ceilSpend = Math.round(futurePortfolio * ceilRate); 
-        const floorSpend = Math.round(futurePortfolio * floorRate);
+        const inflRate = 0.025;
+        const inflMult = isNominal ? Math.pow(1 + inflRate, yearsToGrow) : 1;
 
-        // 3. DYNAMIC Y-AXIS — always keeps the 3 lines visually separated
-        const allValues = [ceilSpend, floorSpend, targetSpend];
+        const startSpend = Math.round((portfolioVol * 1000) * 0.04 * taxMult);
+        
+        const futCeil = Math.round((futurePortfolio * 1000) * (ceilRate / 1000) * inflMult * taxMult); 
+        const futFloor = Math.round((futurePortfolio * 1000) * (floorRate / 1000) * inflMult * taxMult);
+        
+        const targetSpendEnd = targetSpend * inflMult;
+        const lifestyleSpendEnd = lifestyleSpend * inflMult;
+
+        const portCeilK = futCeil / (ceilRate / 1000) / taxMult;
+        const portFloorK = futFloor / (floorRate / 1000) / taxMult;
+        
+        const fvCeilStr = portCeilK >= 1000 ? `$${(portCeilK/1000).toFixed(2)}M` : `$${Math.round(portCeilK)}k`;
+        const fvFloorStr = portFloorK >= 1000 ? `$${(portFloorK/1000).toFixed(2)}M` : `$${Math.round(portFloorK)}k`;
+
+        const allValues = [startSpend, futCeil, futFloor, targetSpend, targetSpendEnd, lifestyleSpend, lifestyleSpendEnd];
         const valMin = Math.min(...allValues);
         const valMax = Math.max(...allValues);
         const valRange = valMax - valMin;
         const paddedRange = Math.max(valRange * 2.5, 60);
         const midpoint = (valMin + valMax) / 2;
+        
         const yMin = Math.max(0, midpoint - paddedRange / 2);
         const yMax = midpoint + paddedRange / 2;
+        
         globalYMin = yMin;
         globalYMax = yMax;
 
         function spendToY(spend) {
             const clamped = Math.max(yMin, Math.min(yMax, spend));
-            return 700 - ((clamped - yMin) / (yMax - yMin)) * 550;
+            return 650 - ((clamped - yMin) / (yMax - yMin)) * 500;
         }
 
-        // Update axis labels
-        document.getElementById('grid-lbl-1').textContent = `$${Math.round(yMax)}k`;
-        document.getElementById('grid-lbl-2').textContent = `$${Math.round(yMax - (yMax - yMin) * 0.25)}k`;
-        document.getElementById('grid-lbl-3').textContent = `$${Math.round((yMax + yMin) / 2)}k`;
-        document.getElementById('grid-lbl-4').textContent = `$${Math.round(yMin + (yMax - yMin) * 0.25)}k`;
-        document.getElementById('grid-lbl-5').textContent = `$${Math.round(yMin)}k`;
+        document.getElementById('grid-lbl-1').textContent = formatYLabel(yMax);
+        document.getElementById('grid-lbl-2').textContent = formatYLabel(yMax - (yMax - yMin) * 0.25);
+        document.getElementById('grid-lbl-3').textContent = formatYLabel((yMax + yMin) / 2);
+        document.getElementById('grid-lbl-4').textContent = formatYLabel(yMin + (yMax - yMin) * 0.25);
+        document.getElementById('grid-lbl-5').textContent = formatYLabel(yMin);
 
-        // 4. Map to Coordinates
-        const cY = spendToY(ceilSpend);
-        const fY = spendToY(floorSpend);
-        const dY = spendToY(targetSpend);
+        const xStart = 150;
+        const xEnd = 650;
+        
+        const cY_s = spendToY(startSpend); 
+        const cY_e = spendToY(futCeil);
+        const fY_s = spendToY(startSpend); 
+        const fY_e = spendToY(futFloor);
+        const dY_s = spendToY(targetSpend);
+        const dY_e = spendToY(targetSpendEnd);
+        const lY_s = spendToY(lifestyleSpend);
+        const lY_e = spendToY(lifestyleSpendEnd);
 
-        // 5. Update SVG Visuals natively
-        ceilLine.setAttribute('y1', cY); ceilLine.setAttribute('y2', cY);
-        ceilHitbox.setAttribute('y', cY - 20); // Keep hitbox centered on line
-        ceilLbl.setAttribute('y', cY - 15);
-        
-        // POSITION SURGERY: Anchor OVER the line
-        ceilHover.setAttribute('transform', `translate(370, ${cY - 125})`);
-        
-        // Compound Hovers: Displays Balance + Spend
-        ceilValTxt.innerHTML = `${fvStr} &nbsp;|&nbsp; $${(ceilSpend * 1000).toLocaleString('en-US')} / yr`;
+        const dCeil = `M ${xStart} ${cY_s} C ${xStart + 200} ${cY_s}, ${xEnd - 200} ${cY_e}, ${xEnd} ${cY_e}`;
+        const dFloor = `M ${xStart} ${fY_s} C ${xStart + 200} ${fY_s}, ${xEnd - 200} ${fY_e}, ${xEnd} ${fY_e}`;
+        const dDatum = `M ${xStart} ${dY_s} C ${xStart + 200} ${dY_s}, ${xEnd - 200} ${dY_e}, ${xEnd} ${dY_e}`;
+        const dLifestyle = `M ${xStart} ${lY_s} C ${xStart + 200} ${lY_s}, ${xEnd - 200} ${lY_e}, ${xEnd} ${lY_e}`;
+        const dCone = `M ${xStart} ${cY_s} C ${xStart + 200} ${cY_s}, ${xEnd - 200} ${cY_e}, ${xEnd} ${cY_e} L ${xEnd} ${fY_e} C ${xEnd - 200} ${fY_e}, ${xStart + 200} ${fY_s}, ${xStart} ${fY_s} Z`;
 
-        floorLine.setAttribute('y1', fY); floorLine.setAttribute('y2', fY);
-        floorHitbox.setAttribute('y', fY - 20); // Keep hitbox centered on line
-        floorLbl.setAttribute('y', fY + 25);
-        
-        // POSITION SURGERY: Anchor UNDER the line
-        floorHover.setAttribute('transform', `translate(370, ${fY + 15})`);
-        
-        floorValTxt.innerHTML = `${fvStr} &nbsp;|&nbsp; $${(floorSpend * 1000).toLocaleString('en-US')} / yr`;
+        ceilLine.setAttribute('d', dCeil);
+        floorLine.setAttribute('d', dFloor);
+        datumLine.setAttribute('d', dDatum);
+        lifestyleLine.setAttribute('d', dLifestyle);
+        coneArea.setAttribute('d', dCone);
 
-        // Pillar strictly spans Ceiling to Floor
-        volPillar.setAttribute('y', cY);
-        volPillar.setAttribute('height', Math.max(2, fY - cY));
-
-        datumLine.setAttribute('y1', dY); datumLine.setAttribute('y2', dY);
-        datumCirc.setAttribute('cy', dY);
-        datumHitbox.setAttribute('y', dY - 20); // Keep hitbox centered on datum
-        datumLbl.setAttribute('y', dY - 15);
+        nodeCeil.setAttribute('cx', xEnd); nodeCeil.setAttribute('cy', cY_e);
+        ceilDragger.setAttribute('cx', xEnd); ceilDragger.setAttribute('cy', cY_e);
+        ceilLbl.setAttribute('x', xEnd + 15); ceilLbl.setAttribute('y', cY_e + 4);
+        ceilHover.setAttribute('transform', `translate(230, ${cY_e - 125})`);
         
-        // Position hover intelligently so it doesn't clip off top
-        let dHoverY = dY > 200 ? dY - 100 : dY + 15;
-        datumHover.setAttribute('transform', `translate(370, ${dHoverY})`);
-        
-        datumValTxt.innerHTML = `$${(targetSpend * 1000).toLocaleString('en-US')} / yr`;
+        let cSpendStr = futCeil >= 1000 ? `$${(futCeil/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${futCeil.toLocaleString('en-US')}k`;
+        ceilValTxt.textContent = `${fvCeilStr}  |  ${cSpendStr} / yr`;
 
-        // 6. Overflow / Danger Intelligence
-        if (targetSpend > ceilSpend) {
+        nodeFloor.setAttribute('cx', xEnd); nodeFloor.setAttribute('cy', fY_e);
+        floorDragger.setAttribute('cx', xEnd); floorDragger.setAttribute('cy', fY_e);
+        floorLbl.setAttribute('x', xEnd + 15); floorLbl.setAttribute('y', fY_e + 4);
+        floorHover.setAttribute('transform', `translate(230, ${fY_e + 15})`);
+        
+        let fSpendStr = futFloor >= 1000 ? `$${(futFloor/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${futFloor.toLocaleString('en-US')}k`;
+        floorValTxt.textContent = `${fvFloorStr}  |  ${fSpendStr} / yr`;
+
+        nodeDatum.setAttribute('cy', dY_e);
+        datumCirc.setAttribute('cy', dY_s);
+        datumHitbox.setAttribute('y', Math.min(dY_s, dY_e) - 20); 
+        datumHitbox.setAttribute('height', Math.abs(dY_s - dY_e) + 40);
+        datumLbl.setAttribute('y', dY_e + 4);
+        
+        lifestyleLbl.setAttribute('y', lY_e + 4);
+
+        let dHoverY = dY_e > 200 ? dY_e - 100 : dY_e + 15;
+        datumHover.setAttribute('transform', `translate(230, ${dHoverY})`);
+        
+        let targetEndStr = Math.round(targetSpendEnd) >= 1000 ? `$${(targetSpendEnd/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${Math.round(targetSpendEnd).toLocaleString('en-US')}k`;
+        datumValTxt.textContent = `${targetEndStr} / yr`;
+
+        if (targetSpendEnd > futCeil) {
             datumLine.style.stroke = 'var(--danger-red)';
             datumCirc.style.fill = 'var(--danger-red)';
+            nodeDatum.style.fill = 'var(--danger-red)';
             datumLbl.style.fill = 'var(--danger-red)';
-            datumLbl.innerHTML = 'EXCEEDS CAPACITY';
+            datumLbl.textContent = 'EXCEEDS CAPACITY';
             datumBox.style.stroke = 'var(--danger-red)';
             datumValTxt.style.fill = 'var(--danger-red)';
             datumTtHead.style.fill = 'var(--danger-red)';
-            datumTtHead.innerHTML = 'WARNING: EXCEEDS CEILING';
-        } else if (targetSpend < floorSpend) {
+            datumTtHead.textContent = 'WARNING: EXCEEDS CEILING';
+            if(dangerCta) dangerCta.style.display = 'block';
+            if (archPrompt) archPrompt.innerHTML = 'See why your plan needs Studio → EXPLORE THE ENGINE <span>↓</span>';
+            
+        } else if (targetSpendEnd < futFloor) {
             datumLine.style.stroke = 'var(--teal-mid)';
             datumCirc.style.fill = 'var(--teal-mid)';
+            nodeDatum.style.fill = 'var(--teal-mid)';
             datumLbl.style.fill = 'var(--teal-mid)';
-            datumLbl.innerHTML = 'ULTRA-CONSERVATIVE';
+            datumLbl.textContent = 'WELL BELOW FLOOR';
             datumBox.style.stroke = 'var(--teal-mid)';
             datumValTxt.style.fill = 'var(--white)';
             datumTtHead.style.fill = 'var(--teal-mid)';
-            datumTtHead.innerHTML = 'ULTRA-CONSERVATIVE';
+            datumTtHead.textContent = 'WELL BELOW FLOOR';
+            if(dangerCta) dangerCta.style.display = 'none';
+            if (archPrompt) archPrompt.innerHTML = 'EXPLORE THE INVISIBLE ARCHITECTURE <span>↓</span>';
+            
         } else {
             datumLine.style.stroke = 'var(--teal-mid)';
             datumCirc.style.fill = 'var(--teal-mid)';
+            nodeDatum.style.fill = 'var(--teal-mid)';
             datumLbl.style.fill = 'var(--teal-mid)';
-            datumLbl.innerHTML = 'YOUR DATUM';
+            datumLbl.textContent = 'YOUR DATUM';
             datumBox.style.stroke = 'var(--teal-mid)';
             datumValTxt.style.fill = 'var(--white)';
             datumTtHead.style.fill = 'var(--teal-mid)';
-            datumTtHead.innerHTML = 'YOUR DATUM';
+            datumTtHead.textContent = 'YOUR DATUM';
+            if(dangerCta) dangerCta.style.display = 'none';
+            if (archPrompt) archPrompt.innerHTML = 'EXPLORE THE INVISIBLE ARCHITECTURE <span>↓</span>';
         }
         
-        // 7. SessionStorage Handoff
         sessionStorage.setItem('datum_currentAge', currentAge);
         sessionStorage.setItem('datum_retireAge', activationAge);
         sessionStorage.setItem('datum_portfolio', portfolioVol);
         sessionStorage.setItem('datum_targetSpend', targetSpend);
+        sessionStorage.setItem('datum_lifestyleSpend', lifestyleSpend);
+        sessionStorage.setItem('datum_marketParadigm', paradigm);
+        sessionStorage.setItem('datum_inflationMode', isNominal ? 'nominal' : 'real');
+        sessionStorage.setItem('datum_taxDrag', slTax.value);
 
-        // 8. Persist state to localStorage keyed by session (2A)
-        var sid = localStorage.getItem('datumfi_session_id');
-        if (sid) {
-            localStorage.setItem('datumfi_state_' + sid, JSON.stringify({
-                age: currentAge, retireAge: activationAge,
-                portfolio: portfolioVol, targetSpend: targetSpend,
-                ts: new Date().toISOString()
-            }));
-        }
+        try {
+          var _sid = localStorage.getItem('datumfi_session_id');
+          if (!_sid) { _sid = 'sk_' + Date.now(); localStorage.setItem('datumfi_session_id', _sid); }
+          localStorage.setItem('datumfi_state_' + _sid, JSON.stringify({
+            ts: new Date().toISOString(),
+            age: currentAge, retireAge: activationAge, portfolio: portfolioVol,
+            targetSpend: targetSpend, lifestyle: lifestyleSpend,
+            contrib: annualContrib, market: paradigm,
+            inflation: isNominal ? 'nominal' : 'real', tax: parseInt(slTax.value)
+          }));
+        } catch(e) {}
     }
 
-    // --- INTERACTIVE DRAG LOGIC FOR SVG DATUM ---
+    function pinScenario() {
+        const cLine = document.getElementById('ceil-line').getAttribute('d');
+        const fLine = document.getElementById('floor-line').getAttribute('d');
+        const cArea = document.getElementById('cone-area').getAttribute('d');
+
+        const gCeil = document.getElementById('ghost-ceil');
+        const gFloor = document.getElementById('ghost-floor');
+        const gCone = document.getElementById('ghost-cone');
+
+        gCeil.setAttribute('d', cLine);
+        gFloor.setAttribute('d', fLine);
+        gCone.setAttribute('d', cArea);
+
+        gCeil.style.opacity = '0.6';
+        gFloor.style.opacity = '0.6';
+        gCone.style.opacity = '0.4';
+    }
+
+    function saveSnapshot() {
+        const svg = document.getElementById('sketch-canvas');
+        const clone = svg.cloneNode(true);
+        
+        clone.setAttribute('viewBox', '0 -200 800 1300');
+        
+        const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        bg.setAttribute("x", "-100");
+        bg.setAttribute("y", "-250");
+        bg.setAttribute("width", "1000");
+        bg.setAttribute("height", "1600");
+        bg.setAttribute("fill", "#091221");
+        clone.insertBefore(bg, clone.firstChild);
+
+        const style = document.createElementNS("http://www.w3.org/2000/svg", "style");
+        style.textContent = `
+            :root { --bg-navy: #091221; --teal-mid: #5DCAA5; --gold: #C9A84C; --danger-red: #e24b4a; --white: #ffffff; --muted: rgba(255,255,255,0.4); }
+            .grid-tick { stroke: rgba(255,255,255,0.05); stroke-width: 1; stroke-dasharray: 4 4; }
+            .grid-label { font-family: var(--font-mono); font-size: 12px; fill: rgba(255,255,255,0.4); }
+            .grid-label.midpoint { font-weight: bold; fill: rgba(255,255,255,0.7); }
+            .time-axis-line { stroke: rgba(255,255,255,0.2); stroke-width: 1; }
+            .time-label { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+            .cone-fill { fill: url(#thermal-grad); }
+            .ghost-line { stroke-width: 2; stroke-linecap: round; fill: none; stroke-dasharray: 2 4; opacity: 0; }
+            .ghost-ceil { stroke: var(--gold); }
+            .ghost-floor { stroke: var(--danger-red); }
+            .boundary-line { stroke-width: 2; stroke-linecap: round; fill: none; }
+            .b-ceiling { stroke: var(--gold); }
+            .b-floor { stroke: var(--danger-red); }
+            .b-datum { stroke: var(--teal-mid); stroke-dasharray: 4 4; }
+            .b-lifestyle { stroke: var(--muted); stroke-dasharray: 4 4; opacity: 0.5; }
+            .range-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; }
+            .hover-detail { display: none; }
+        `;
+        clone.insertBefore(style, clone.firstChild);
+
+        clone.querySelectorAll('circle[id$="-hitbox"], rect[id$="-hitbox"], #drag-hint').forEach(el => el.remove());
+
+        const headerGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        headerGroup.innerHTML = `
+            <text x="400" y="-80" text-anchor="middle" fill="#ffffff" style="font-family: var(--font-serif); font-size: 32px; font-style: italic; font-weight: 300;">Datum FI</text>
+            <text x="400" y="-40" text-anchor="middle" fill="#C9A84C" style="font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.25em;">YOUR PRE-RETIREMENT SKETCH</text>
+            <line x1="100" y1="-10" x2="700" y2="-10" stroke="rgba(255,255,255,0.05)" stroke-width="1" />
+        `;
+        clone.appendChild(headerGroup);
+
+        const footerGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        footerGroup.setAttribute("transform", "translate(0, 880)");
+        footerGroup.innerHTML = `
+            <rect x="150" y="0" width="500" height="55" rx="6" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.05)"/>
+            <text x="400" y="24" text-anchor="middle" fill="#C9A84C" style="font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.2em;">[ D + A ] × [ T + U ] = M</text>
+            <line x1="190" y1="35" x2="610" y2="35" stroke="rgba(255,255,255,0.05)" stroke-dasharray="2 4" />
+            <text x="400" y="46" text-anchor="middle" fill="rgba(255,255,255,0.4)" style="font-family: var(--font-mono); font-size: 6px; letter-spacing: 0.15em;">
+              <tspan fill="#5DCAA5">D</tspan>ATA 
+              <tspan fill="#5DCAA5" dx="10">A</tspan>RCHITECTURE 
+              <tspan fill="#5DCAA5" dx="10">T</tspan>ENSION 
+              <tspan fill="#5DCAA5" dx="10">U</tspan>NCERTAINTY 
+              <tspan fill="#5DCAA5" dx="10">M</tspan>EASUREMENT
+            </text>
+            
+            <text x="400" y="80" text-anchor="middle" fill="rgba(255,255,255,0.25)" style="font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.05em;">DATUM FI is an educational tool and does not constitute financial, investment, or tax advice.</text>
+            <text x="400" y="95" text-anchor="middle" fill="rgba(255,255,255,0.25)" style="font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.05em;">All projections are hypothetical and do not guarantee future results.</text>
+        `;
+        clone.appendChild(footerGroup);
+
+        const serializer = new XMLSerializer();
+        let source = serializer.serializeToString(clone);
+        if(!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)){
+            source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+        }
+        source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
+        const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "DatumFI_Sketch.svg";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    let isDraggingCeil = false;
+    let isDraggingFloor = false;
     let isDraggingDatum = false;
     const svgCanvas = document.querySelector('.range-svg');
+
+    ceilDragger.addEventListener('mousedown', () => { isDraggingCeil = true; document.body.style.userSelect = 'none'; svgCanvas.style.cursor = 'ew-resize'; });
+    floorDragger.addEventListener('mousedown', () => { isDraggingFloor = true; document.body.style.userSelect = 'none'; svgCanvas.style.cursor = 'ew-resize'; });
     const datumDragger = document.getElementById('datum-dragger');
+    datumDragger.addEventListener('mousedown', () => { isDraggingDatum = true; document.body.style.userSelect = 'none'; svgCanvas.style.cursor = 'grabbing'; });
 
-    datumDragger.addEventListener('mousedown', () => { 
-        isDraggingDatum = true; 
-        document.body.style.userSelect = 'none'; 
-        svgCanvas.style.cursor = 'grabbing'; 
-    });
-
-    window.addEventListener('mouseup', () => { 
-        isDraggingDatum = false; 
-        document.body.style.userSelect = ''; 
-        svgCanvas.style.cursor = ''; 
-    });
+    window.addEventListener('mouseup', () => { isDraggingCeil = false; isDraggingFloor = false; isDraggingDatum = false; document.body.style.userSelect = ''; svgCanvas.style.cursor = ''; });
 
     window.addEventListener('mousemove', (e) => {
+        const pt = svgCanvas.createSVGPoint();
+        pt.x = e.clientX; pt.y = e.clientY;
+        const svgP = pt.matrixTransform(svgCanvas.getScreenCTM().inverse());
+        
         if (isDraggingDatum) {
-            const pt = svgCanvas.createSVGPoint();
-            pt.x = 0; pt.y = e.clientY;
-            const svgP = pt.matrixTransform(svgCanvas.getScreenCTM().inverse());
-            let svgY = svgP.y;
-            
-            // Reverse dynamic spendToY: spend = (700-y)/550 * (yMax-yMin) + yMin
-            let newSpend = ((700 - svgY) / 550) * (globalYMax - globalYMin) + globalYMin;
-            newSpend = Math.max(20, Math.min(400, newSpend));
-            
-            slDatum.value = newSpend;
+            let newSpend = ((650 - svgP.y) / 500) * (globalYMax - globalYMin) + globalYMin;
+            slDatum.value = Math.max(20, Math.min(1000, newSpend));
             updateEngine();
+        } else if (isDraggingCeil || isDraggingFloor) {
+            let x = Math.max(150, Math.min(650, svgP.x));
+            const currentAge = parseInt(slAge.value);
+            const yearsToGrow = parseInt(slAct.value) - currentAge;
+            const dragAge = Math.round(currentAge + ((x - 150) / 500) * yearsToGrow);
+            const dragYears = Math.max(0, dragAge - currentAge);
+
+            let paradigm = 'average';
+            const activeRadio = document.querySelector('input[name="market"]:checked');
+            if (activeRadio) paradigm = activeRadio.value;
+            
+            let isNominal = false;
+            const activeInfl = document.querySelector('input[name="inflation"]:checked');
+            if (activeInfl && activeInfl.value === 'nominal') isNominal = true;
+            
+            const taxRate = parseInt(slTax.value) / 100;
+            const taxMult = 1.0 - taxRate;
+
+            let growthRate = paradigm === 'optimistic' ? 1.055 : (paradigm === 'average' ? 1.035 : 1.015);
+            const realRate = growthRate - 1;
+            const portfolioVol = parseFloat(slPort.value);
+            const annualContrib = parseInt(slContrib.value);
+            
+            const dragPortFV = portfolioVol * Math.pow(growthRate, dragYears);
+            const dragContribFV = realRate > 0
+                ? (annualContrib / 1000000) * ((Math.pow(growthRate, dragYears) - 1) / realRate)
+                : (annualContrib / 1000000) * dragYears;
+            
+            const exactDragPort = dragPortFV + dragContribFV;
+            const exactDragPortK = exactDragPort * 1000;
+            const fvStr = exactDragPort >= 1 ? `$${exactDragPort.toFixed(2)}M` : `$${Math.round(exactDragPortK)}k`;
+
+            const inflRate = 0.025;
+            const inflMult = isNominal ? Math.pow(1 + inflRate, dragYears) : 1;
+
+            const ceilRate = paradigm === 'optimistic' ? 50 : (paradigm === 'average' ? 47 : 38);
+            const floorRate = paradigm === 'optimistic' ? 38 : (paradigm === 'average' ? 32 : 28);
+
+            if (isDraggingCeil) {
+                const y = getYOnPath(ceilLine, x);
+                const spend = Math.round((exactDragPortK * (ceilRate / 1000)) * inflMult * taxMult);
+                
+                nodeCeil.setAttribute('cx', x); nodeCeil.setAttribute('cy', y);
+                ceilDragger.setAttribute('cx', x); ceilDragger.setAttribute('cy', y);
+                ceilLbl.setAttribute('x', x + 15); ceilLbl.setAttribute('y', y + 4);
+                
+                ceilHover.setAttribute('transform', `translate(${x - 120}, ${y - 125})`);
+                ceilTtHead.textContent = `CEILING @ AGE ${dragAge}`;
+                
+                let cSpendStr = spend >= 1000 ? `$${(spend/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${spend.toLocaleString('en-US')}k`;
+                ceilValTxt.textContent = `${fvStr}  |  ${cSpendStr} / yr`;
+            }
+
+            if (isDraggingFloor) {
+                const y = getYOnPath(floorLine, x);
+                const spend = Math.round((exactDragPortK * (floorRate / 1000)) * inflMult * taxMult);
+                
+                nodeFloor.setAttribute('cx', x); nodeFloor.setAttribute('cy', y);
+                floorDragger.setAttribute('cx', x); floorDragger.setAttribute('cy', y);
+                floorLbl.setAttribute('x', x + 15); floorLbl.setAttribute('y', y + 4);
+                
+                floorHover.setAttribute('transform', `translate(${x - 120}, ${y + 15})`);
+                floorTtHead.textContent = `FLOOR @ AGE ${dragAge}`;
+                
+                let fSpendStr = spend >= 1000 ? `$${(spend/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${spend.toLocaleString('en-US')}k`;
+                floorValTxt.textContent = `${fvStr}  |  ${fSpendStr} / yr`;
+            }
         }
     });
 
-    // Touch Support for Mobile Dragging
-    datumDragger.addEventListener('touchstart', (e) => { 
-        isDraggingDatum = true; 
-        document.body.style.userSelect = 'none'; 
-    }, {passive: false});
-
-    window.addEventListener('touchend', () => { 
-        isDraggingDatum = false; 
-        document.body.style.userSelect = ''; 
-    });
+    ceilDragger.addEventListener('touchstart', () => { isDraggingCeil = true; document.body.style.userSelect = 'none'; }, {passive: false});
+    floorDragger.addEventListener('touchstart', () => { isDraggingFloor = true; document.body.style.userSelect = 'none'; }, {passive: false});
+    datumDragger.addEventListener('touchstart', () => { isDraggingDatum = true; document.body.style.userSelect = 'none'; }, {passive: false});
+    
+    window.addEventListener('touchend', () => { isDraggingCeil = false; isDraggingFloor = false; isDraggingDatum = false; document.body.style.userSelect = ''; });
 
     window.addEventListener('touchmove', (e) => {
-        if (isDraggingDatum) {
-            e.preventDefault(); // Stop mobile page scrolling while calibrating Datum
+        if (isDraggingDatum || isDraggingCeil || isDraggingFloor) {
+            e.preventDefault();
             const pt = svgCanvas.createSVGPoint();
-            pt.x = 0; pt.y = e.touches[0].clientY;
+            pt.x = e.touches[0].clientX; pt.y = e.touches[0].clientY;
             const svgP = pt.matrixTransform(svgCanvas.getScreenCTM().inverse());
-            let svgY = svgP.y;
             
-            let newSpend = ((700 - svgY) / 550) * (globalYMax - globalYMin) + globalYMin;
-            newSpend = Math.max(20, Math.min(400, newSpend));
-            
-            slDatum.value = newSpend;
-            updateEngine();
+            if (isDraggingDatum) {
+                let newSpend = ((650 - svgP.y) / 500) * (globalYMax - globalYMin) + globalYMin;
+                slDatum.value = Math.max(20, Math.min(1000, newSpend));
+                updateEngine();
+            } else {
+                let x = Math.max(150, Math.min(650, svgP.x));
+                const currentAge = parseInt(slAge.value);
+                const yearsToGrow = parseInt(slAct.value) - currentAge;
+                const dragAge = Math.round(currentAge + ((x - 150) / 500) * yearsToGrow);
+                const dragYears = Math.max(0, dragAge - currentAge);
+
+                let paradigm = 'average';
+                const activeRadio = document.querySelector('input[name="market"]:checked');
+                if (activeRadio) paradigm = activeRadio.value;
+                
+                let isNominal = false;
+                const activeInfl = document.querySelector('input[name="inflation"]:checked');
+                if (activeInfl && activeInfl.value === 'nominal') isNominal = true;
+                
+                const taxRate = parseInt(slTax.value) / 100;
+                const taxMult = 1.0 - taxRate;
+
+                let growthRate = paradigm === 'optimistic' ? 1.055 : (paradigm === 'average' ? 1.035 : 1.015);
+                const realRate = growthRate - 1;
+                const portfolioVol = parseFloat(slPort.value);
+                const annualContrib = parseInt(slContrib.value);
+                
+                const dragPortFV = portfolioVol * Math.pow(growthRate, dragYears);
+                const dragContribFV = realRate > 0
+                    ? (annualContrib / 1000000) * ((Math.pow(growthRate, dragYears) - 1) / realRate)
+                    : (annualContrib / 1000000) * dragYears;
+                
+                const exactDragPort = dragPortFV + dragContribFV;
+                const exactDragPortK = exactDragPort * 1000;
+                const fvStr = exactDragPort >= 1 ? `$${exactDragPort.toFixed(2)}M` : `$${Math.round(exactDragPortK)}k`;
+
+                const inflRate = 0.025;
+                const inflMult = isNominal ? Math.pow(1 + inflRate, dragYears) : 1;
+
+                const ceilRate = paradigm === 'optimistic' ? 50 : (paradigm === 'average' ? 47 : 38);
+                const floorRate = paradigm === 'optimistic' ? 38 : (paradigm === 'average' ? 32 : 28);
+
+                if (isDraggingCeil) {
+                    const y = getYOnPath(ceilLine, x);
+                    const spend = Math.round((exactDragPortK * (ceilRate / 1000)) * inflMult * taxMult);
+                    nodeCeil.setAttribute('cx', x); nodeCeil.setAttribute('cy', y);
+                    ceilDragger.setAttribute('cx', x); ceilDragger.setAttribute('cy', y);
+                    ceilLbl.setAttribute('x', x + 15); ceilLbl.setAttribute('y', y + 4);
+                    ceilHover.setAttribute('transform', `translate(${x - 120}, ${y - 125})`);
+                    ceilTtHead.textContent = `CEILING @ AGE ${dragAge}`;
+                    
+                    let cSpendStr = spend >= 1000 ? `$${(spend/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${spend.toLocaleString('en-US')}k`;
+                    ceilValTxt.textContent = `${fvStr}  |  ${cSpendStr} / yr`;
+                }
+
+                if (isDraggingFloor) {
+                    const y = getYOnPath(floorLine, x);
+                    const spend = Math.round((exactDragPortK * (floorRate / 1000)) * inflMult * taxMult);
+                    nodeFloor.setAttribute('cx', x); nodeFloor.setAttribute('cy', y);
+                    floorDragger.setAttribute('cx', x); floorDragger.setAttribute('cy', y);
+                    floorLbl.setAttribute('x', x + 15); floorLbl.setAttribute('y', y + 4);
+                    floorHover.setAttribute('transform', `translate(${x - 120}, ${y + 15})`);
+                    floorTtHead.textContent = `FLOOR @ AGE ${dragAge}`;
+                    
+                    let fSpendStr = spend >= 1000 ? `$${(spend/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${spend.toLocaleString('en-US')}k`;
+                    floorValTxt.textContent = `${fvStr}  |  ${fSpendStr} / yr`;
+                }
+            }
         }
     }, {passive: false});
 
-    // Attach Standard Listeners
+    slDatum.addEventListener('input', function() { this.classList.remove('datum-pulse'); });
+    
     slAge.addEventListener('input', updateEngine);
     slAct.addEventListener('input', updateEngine);
     slPort.addEventListener('input', updateEngine);
     slContrib.addEventListener('input', updateEngine);
     slDatum.addEventListener('input', updateEngine);
-    marketRadios.forEach(r => r.addEventListener('change', updateEngine));
+    slLifestyle.addEventListener('input', updateEngine);
+    
+    slTax.addEventListener('input', () => { document.querySelectorAll('input[name="tax-preset"]').forEach(r => r.checked = false); updateEngine(); });
+    document.getElementById('tax-10').addEventListener('change', (e) => { if(e.target.checked) { slTax.value = 10; updateEngine(); }});
+    document.getElementById('tax-20').addEventListener('change', (e) => { if(e.target.checked) { slTax.value = 20; updateEngine(); }});
+    document.getElementById('tax-30').addEventListener('change', (e) => { if(e.target.checked) { slTax.value = 30; updateEngine(); }});
 
-    // Initial boot
+    marketRadios.forEach(r => r.addEventListener('change', updateEngine));
+    inflRadios.forEach(r => r.addEventListener('change', updateEngine));
+
     updateEngine();
     if (window.dfTrack) dfTrack('sketch_completed');
 
-    // --- CLICK-TO-EDIT (FIX 1+2: strict integer bounds, bidirectional slider sync) ---
     (function() {
-      // Each config: getEditVal returns the string to show in the input box on click
-      // toSlider converts user-typed value to slider units; validate checks user value
       var cfg = [
-        {
-          valId: 'val-age', slider: slAge, w: '80px',
-          getEditVal: function() { return String(Math.round(parseFloat(slAge.value))); },
-          clean: function(s) { return s.replace(/[^0-9]/g, ''); },
-          validate: function(v) { return v >= 18 && v <= 85; },
-          toSlider: function(v) { return v; }
-        },
-        {
-          valId: 'val-activation', slider: slAct, w: '80px',
-          getEditVal: function() { return String(Math.round(parseFloat(slAct.value))); },
-          clean: function(s) { return s.replace(/[^0-9]/g, ''); },
-          validate: function(v) { return v > Math.round(parseFloat(slAge.value)) && v <= 90; },
-          toSlider: function(v) { return v; }
-        },
-        {
-          valId: 'val-portfolio', slider: slPort, w: '130px',
-          // User types in whole dollars (e.g. 1500000); slider is in millions
-          getEditVal: function() { return String(Math.round(parseFloat(slPort.value) * 1000000)); },
-          clean: function(s) { return s.replace(/[^0-9]/g, ''); },
-          validate: function(v) { return v >= 10000 && v <= 50000000; },
-          toSlider: function(v) { return v / 1000000; }
-        },
-        {
-          valId: 'val-datum', slider: slDatum, w: '130px',
-          // User types in whole dollars (e.g. 165000); slider is in thousands
-          getEditVal: function() { return String(Math.round(parseFloat(slDatum.value) * 1000)); },
-          clean: function(s) { return s.replace(/[^0-9]/g, ''); },
-          validate: function(v) { return v >= 10000 && v <= 2000000; },
-          toSlider: function(v) { return v / 1000; }
-        }
+        { valId: 'val-age', slider: slAge, w: '80px', getEditVal: () => String(Math.round(parseFloat(slAge.value))), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 18 && v <= 85, toSlider: v => v },
+        { valId: 'val-activation', slider: slAct, w: '80px', getEditVal: () => String(Math.round(parseFloat(slAct.value))), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= Math.round(parseFloat(slAge.value)) && v <= 90, toSlider: v => v },
+        { valId: 'val-portfolio', slider: slPort, w: '130px', getEditVal: () => String(Math.round(parseFloat(slPort.value) * 1000000)), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 10000 && v <= 50000000, toSlider: v => v / 1000000 },
+        { valId: 'val-contrib', slider: slContrib, w: '130px', getEditVal: () => String(Math.round(parseFloat(slContrib.value))), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 0 && v <= 300000, toSlider: v => v },
+        { valId: 'val-datum', slider: slDatum, w: '130px', getEditVal: () => String(Math.round(parseFloat(slDatum.value) * 1000)), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 20000 && v <= 1000000, toSlider: v => v / 1000 },
+        { valId: 'val-lifestyle', slider: slLifestyle, w: '130px', getEditVal: () => String(Math.round(parseFloat(slLifestyle.value) * 1000)), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 0 && v <= 1000000, toSlider: v => v / 1000 }
       ];
 
       cfg.forEach(function(c) {
         var valEl = document.getElementById(c.valId);
         var slider = c.slider;
-
         var inp = document.createElement('input');
-        inp.type = 'number';
-        inp.step = '1';
-        inp.inputMode = 'numeric';
-        inp.className = 'ctrl-edit-input';
-        inp.style.cssText = 'display:none;width:' + c.w;
+        inp.type = 'number'; inp.step = '1'; inp.inputMode = 'numeric';
+        inp.className = 'ctrl-edit-input'; inp.style.cssText = 'display:none;width:' + c.w;
         valEl.parentNode.insertBefore(inp, valEl.nextSibling);
 
         valEl.addEventListener('click', function() {
           inp.value = c.getEditVal();
-          valEl.style.display = 'none';
-          inp.style.display = '';
-          inp.focus();
-          inp.select();
+          valEl.style.display = 'none'; inp.style.display = '';
+          inp.focus(); inp.select();
         });
 
         function commitEdit() {
           var cleaned = c.clean(inp.value.trim());
           var raw = parseInt(cleaned, 10);
           if (isNaN(raw) || !c.validate(raw)) {
-            inp.classList.add('shake');
-            setTimeout(function() { inp.classList.remove('shake'); }, 300);
-            inp.value = c.getEditVal();
-            return;
+            inp.classList.add('shake'); setTimeout(() => inp.classList.remove('shake'), 300);
+            inp.value = c.getEditVal(); return;
           }
-          var sliderVal = c.toSlider(raw);
-          slider.value = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), sliderVal));
-          inp.style.display = 'none';
-          valEl.style.display = '';
+          slider.value = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), c.toSlider(raw)));
+          inp.style.display = 'none'; valEl.style.display = '';
           updateEngine();
         }
-
         inp.addEventListener('blur', commitEdit);
-        inp.addEventListener('keydown', function(e) {
-          if (e.key === 'Enter') { inp.blur(); }
-          else if (e.key === 'Escape') { inp.style.display = 'none'; valEl.style.display = ''; }
-        });
+        inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); else if (e.key === 'Escape') { inp.style.display = 'none'; valEl.style.display = ''; } });
       });
     })();
 
-    // --- TOOLTIP PORTAL ENGINE (FIX 3) ---
     (function() {
       var portal = null;
       var portalArrow = null;
       var activeTrigger = null;
       var hideTimer = null;
-      var NAV_H = 64; // nav height clearance
+      var NAV_H = 64; 
 
       function ensurePortal() {
         if (portal) return;
@@ -1277,10 +1801,9 @@
       attach('.arch-card');
       attach('.pillar-card');
     })();
-
   </script>
+
   <script>
-    // TODO: Wire to SendGrid/Postmark when available.
     function submitSketchEmail() {
       var input = document.getElementById('sketch-email-input');
       var success = document.getElementById('sketch-email-success');
@@ -1292,7 +1815,7 @@
       success.style.display = 'block';
     }
   </script>
-  <!-- Session resume prompt (2A) -->
+
   <script>
     (function() {
       var sid = localStorage.getItem('datumfi_session_id');
@@ -1300,10 +1823,9 @@
       var saved = null;
       try { saved = JSON.parse(localStorage.getItem('datumfi_state_' + sid) || 'null'); } catch(e) {}
       if (!saved || !saved.ts) return;
-      // Only show if saved state is less than 72 hours old and sessionStorage is empty
       var age = Date.now() - new Date(saved.ts).getTime();
-      if (age > 259200000) return; // 72 hours
-      if (sessionStorage.getItem('datum_currentAge')) return; // already have session data
+      if (age > 259200000) return; 
+      if (sessionStorage.getItem('datum_currentAge')) return; 
       var banner = document.createElement('div');
       banner.id = 'resume-banner';
       banner.style.cssText = 'position:fixed;top:56px;left:0;right:0;z-index:200;background:rgba(9,18,33,0.97);border-bottom:1px solid rgba(93,202,165,0.2);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;font-family:"DM Mono",monospace;font-size:11px;color:rgba(255,255,255,0.6);';
@@ -1319,20 +1841,47 @@
         try {
           var s = JSON.parse(localStorage.getItem('datumfi_state_' + localStorage.getItem('datumfi_session_id')) || 'null');
           if (!s) return;
-          sessionStorage.setItem('datum_currentAge', s.age);
-          sessionStorage.setItem('datum_retireAge', s.retireAge);
-          sessionStorage.setItem('datum_portfolio', s.portfolio);
-          sessionStorage.setItem('datum_targetSpend', s.targetSpend);
-          // Sync sliders
           var slAge = document.getElementById('slider-age');
+          var slAct = document.getElementById('slider-activation');
           var slPort = document.getElementById('slider-portfolio');
-          if (slAge) { slAge.value = s.age; slAge.dispatchEvent(new Event('input')); }
-          if (slPort) { slPort.value = s.portfolio; slPort.dispatchEvent(new Event('input')); }
+          var slDatum = document.getElementById('slider-datum');
+          var slLife = document.getElementById('slider-lifestyle');
+          var slContrib = document.getElementById('slider-contrib');
+          var slTax = document.getElementById('slider-tax');
+          if (slAge && s.age) slAge.value = s.age;
+          if (slAct && s.retireAge) slAct.value = s.retireAge;
+          if (slPort && s.portfolio) slPort.value = s.portfolio;
+          if (slDatum && s.targetSpend) slDatum.value = s.targetSpend;
+          if (slLife && s.lifestyle != null) slLife.value = s.lifestyle;
+          if (slContrib && s.contrib != null) slContrib.value = s.contrib;
+          if (slTax && s.tax != null) {
+            slTax.value = s.tax;
+            var taxRadio = document.querySelector('input[name="tax-preset"][value="' + s.tax + '"]');
+            if (taxRadio) taxRadio.checked = true;
+          }
+          if (s.market) {
+            var mRadio = document.querySelector('input[name="market"][value="' + s.market + '"]');
+            if (mRadio) mRadio.checked = true;
+          }
+          if (s.inflation) {
+            var inflRadio = document.getElementById(s.inflation === 'nominal' ? 'infl-nom' : 'infl-real');
+            if (inflRadio) inflRadio.checked = true;
+          }
+          sessionStorage.setItem('datum_currentAge', s.age || '');
+          sessionStorage.setItem('datum_retireAge', s.retireAge || '');
+          sessionStorage.setItem('datum_portfolio', s.portfolio || '');
+          sessionStorage.setItem('datum_targetSpend', s.targetSpend || '');
+          sessionStorage.setItem('datum_lifestyleSpend', s.lifestyle || 0);
+          sessionStorage.setItem('datum_marketParadigm', s.market || 'average');
+          sessionStorage.setItem('datum_inflationMode', s.inflation || 'real');
+          sessionStorage.setItem('datum_taxDrag', s.tax != null ? s.tax : 20);
+          if (typeof updateEngine === 'function') updateEngine();
         } catch(e) {}
         document.getElementById('resume-banner').remove();
       };
     })();
   </script>
+
   <script src="/feedback.js"></script>
   <script src="/nav.js"></script>
 </body>
