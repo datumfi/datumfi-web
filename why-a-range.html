@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#091221">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://eu.i.posthog.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://eu.i.posthog.com https://formspree.io;">
+<title>Datum FI — Why a Range?</title>
+<meta name="description" content="Retirement isn't a fixed target. Discover why a Range is the mathematically honest shape of your future.">
+<meta property="og:title" content="Datum FI — Why a Range?">
+<meta property="og:description" content="Retirement isn't a fixed target. Discover why a Range is the mathematically honest shape of your future.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://datumfi.com/why-a-range.html">
+<meta property="og:image" content="https://datumfi.com/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Datum FI — Why a Range?">
+<meta name="twitter:description" content="Retirement isn't a fixed target. Discover why a Range is the mathematically honest shape of your future.">
+<link rel="manifest" href="/manifest.json">
+<link rel="stylesheet" href="/styles/typography.css">
+<link rel="stylesheet" href="/styles/header.css">
+<style>
+  :root {
+    --blueprint-grid: rgba(93, 202, 165, 0.05);
+  }
+
+  body {
+    background-image: linear-gradient(var(--grid-line) 1px, transparent 1px),
+                      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* --- CONTENT CONTAINER --- */
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 150px 40px 80px;
+    flex: 1;
+  }
+
+  /* --- HERO SECTION --- */
+  .hero {
+    margin-bottom: 80px;
+    border-bottom: 1px dashed rgba(255,255,255,0.1);
+    padding-bottom: 60px;
+  }
+
+  .hero-label {
+    font-family: var(--font-mono);
+    color: var(--white);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin-bottom: 20px;
+    display: block;
+  }
+
+  .hero-h1 {
+    color: var(--gold);
+    font-size: 56px;
+    font-weight: 300;
+    line-height: 1.1;
+    margin-bottom: 30px;
+    letter-spacing: -0.01em;
+  }
+
+  .hero-lead {
+    font-size: 22px;
+    line-height: 1.6;
+    color: rgba(255,255,255,0.8);
+    max-width: 800px;
+    font-weight: 300;
+    margin-bottom: 25px;
+  }
+
+  .hero-sub {
+    font-size: 22px;
+    line-height: 1.6;
+    color: var(--teal-mid);
+    max-width: 800px;
+    font-weight: 400;
+  }
+
+  /* --- GRID LAYOUT --- */
+  .briefing-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    margin-bottom: 60px;
+  }
+
+  .briefing-card {
+    background: rgba(12, 18, 30, 0.4);
+    border: 1px solid rgba(255,255,255,0.05);
+    padding: 40px;
+    border-radius: 4px;
+    transition: border-color 0.3s;
+  }
+
+  .briefing-card:hover {
+    border-color: rgba(93, 202, 165, 0.3);
+  }
+
+  .card-h2 {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 20px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card-h2::before { content: '§'; color: var(--muted); }
+
+  .card-body {
+    font-size: 18px;
+    line-height: 1.6;
+    color: rgba(255,255,255,0.7);
+    font-weight: 300;
+  }
+
+  .c-ceil { color: var(--gold); font-weight: 400; }
+  .c-datum { color: var(--teal-mid); font-weight: 400; }
+  .c-floor { color: var(--danger-red); font-weight: 400; }
+
+  /* --- SEQUENCE GRID (INSTRUMENTS OF TIME) --- */
+  .sequence-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 40px;
+    margin-top: 40px;
+    text-align: center;
+    position: relative;
+  }
+
+  .sequence-line {
+    position: absolute;
+    top: 5px;
+    left: 16.66%;
+    width: 66.66%;
+    height: 1px;
+    background: rgba(255,255,255,0.1);
+    z-index: 1;
+  }
+
+  .sequence-step {
+    position: relative;
+    z-index: 2;
+  }
+
+  .step-marker {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--bg-navy);
+    border: 1px solid var(--teal-mid);
+    margin: 0 auto 25px auto;
+    box-shadow: 0 0 8px rgba(93, 202, 165, 0.4);
+  }
+
+  .step-phase {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .step-phase span {
+    color: var(--gold);
+  }
+
+  .step-instrument {
+    font-family: var(--font-serif);
+    font-size: 24px;
+    color: var(--white);
+    margin-bottom: 15px;
+    font-weight: 300;
+    font-style: italic;
+  }
+
+  .step-desc {
+    font-size: 16px;
+    line-height: 1.6;
+    color: rgba(255,255,255,0.7);
+    font-weight: 300;
+  }
+
+  /* --- HIGH-PERFORMANCE ANIMATED DEMO --- */
+  .anim-visual-block {
+    max-width: 1000px;
+    margin: 0 auto 60px auto;
+    position: relative;
+    background: rgba(12, 18, 30, 0.4);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 4px;
+    padding-bottom: 40px;
+    overflow: hidden;
+  }
+
+  .anim-replay-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(9, 18, 33, 0.8);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.6);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    padding: 8px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+    z-index: 10;
+  }
+  .anim-replay-btn:hover {
+    border-color: var(--teal-mid);
+    color: var(--teal-mid);
+    box-shadow: 0 0 10px rgba(93, 202, 165, 0.2);
+  }
+
+  .anim-svg-container {
+    width: 100%;
+    height: auto;
+    max-height: 400px;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  .anim-example-panel {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 30px;
+    max-width: fit-content;
+    margin: 0 auto 0 auto;
+    background: rgba(9, 18, 33, 0.6);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 4px;
+    padding: 15px 30px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.6;
+    color: rgba(255,255,255,0.7);
+    z-index: 10;
+  }
+  .anim-example-group { display: flex; flex-direction: column; }
+  .anim-example-title {
+    color: var(--white);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    font-weight: bold;
+  }
+  .anim-example-divider {
+    width: 1px;
+    height: 40px;
+    background: rgba(255,255,255,0.1);
+  }
+
+  .anim-subcaption {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    font-style: normal;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    line-height: 1.6;
+  }
+
+  /* --- SVG TIMELINE ANIMATIONS --- */
+  .anim-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; font-weight: bold; }
+  .anim-zone-label { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.25em; text-transform: uppercase; }
+
+  @keyframes a-reveal {
+    0% { width: 0; }
+    80%, 95% { width: 880px; }
+    100% { width: 880px; opacity: 0; }
+  }
+  .anim-reveal-rect { animation: a-reveal 12s infinite ease-in-out; }
+
+  @keyframes a-scan-line {
+    0% { transform: translateX(60px); opacity: 0; }
+    5% { opacity: 1; }
+    80% { transform: translateX(880px); opacity: 1; }
+    85%, 100% { transform: translateX(880px); opacity: 0; }
+  }
+  .anim-scanner-line { animation: a-scan-line 12s infinite ease-in-out; }
+
+  @keyframes a-breathe {
+    0%, 48% { transform: scaleY(0); opacity: 0; }
+    52% { transform: scaleY(1); opacity: 1; }
+    62% { transform: scaleY(1.1); opacity: 0.8; }
+    75% { transform: scaleY(0.9); opacity: 1; }
+    85% { transform: scaleY(1); opacity: 0.9; }
+    92% { transform: scaleY(1); opacity: 1; }
+    95%, 100% { opacity: 0; }
+  }
+  .anim-breathe {
+    animation: a-breathe 12s infinite ease-in-out;
+    transform-origin: 560px 160px;
+  }
+
+  .lbl-phase-1, .lbl-phase-2, .lbl-phase-3 { opacity: 0; animation: 12s infinite ease-in-out; }
+  @keyframes a-fade-1 { 5%, 95% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes a-fade-2 { 0%, 35% { opacity: 0; } 40%, 95% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes a-fade-3 { 0%, 55% { opacity: 0; } 60%, 95% { opacity: 1; } 100% { opacity: 0; } }
+
+  .lbl-phase-1 { animation-name: a-fade-1; }
+  .lbl-phase-2 { animation-name: a-fade-2; }
+  .lbl-phase-3 { animation-name: a-fade-3; }
+
+  /* --- NARRATIVE BRIDGE --- */
+  .interstitial-block {
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto 60px auto;
+    padding: 0 20px;
+  }
+  .interstitial-main {
+    font-family: var(--font-serif);
+    font-size: 36px;
+    font-style: italic;
+    font-weight: 300;
+    line-height: 1.4;
+    color: var(--white);
+  }
+
+  /* --- FULL WIDTH CARDS --- */
+  .full-width-card {
+    max-width: 800px;
+    margin: 0 auto 60px auto;
+    background: rgba(12, 18, 30, 0.4);
+    border: 1px solid rgba(255,255,255,0.05);
+    padding: 60px 40px;
+    border-radius: 4px;
+  }
+
+  .full-width-card .card-h2 {
+    justify-content: center;
+  }
+
+  .full-width-card .card-body {
+    text-align: center;
+  }
+
+  .manifesto-list {
+    border-left: 2px solid var(--teal-mid);
+    padding-left: 20px;
+    margin: 25px 0;
+    font-size: 16px;
+    color: rgba(255,255,255,0.9);
+    text-align: left;
+    display: inline-block;
+    max-width: 500px;
+  }
+
+  /* --- BLUEPRINT SCHEMATIC SECTION --- */
+  .blueprint-wrapper {
+    margin: 80px auto;
+    max-width: 750px;
+    text-align: center;
+  }
+
+  .bridge-text {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 30px;
+  }
+
+  .blueprint-panel {
+    background: rgba(9, 18, 33, 0.9);
+    border: 1px solid rgba(93, 202, 165, 0.3);
+    background-image: linear-gradient(var(--blueprint-grid) 1px, transparent 1px),
+                      linear-gradient(90deg, var(--blueprint-grid) 1px, transparent 1px);
+    background-size: 20px 20px;
+    border-radius: 4px;
+    padding: 50px 40px;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+  }
+
+  .ap-formula {
+    font-family: var(--font-mono);
+    color: var(--gold);
+    font-size: 28px;
+    letter-spacing: 0.3em;
+    font-weight: 500;
+    margin-bottom: 30px;
+    white-space: nowrap;
+  }
+
+  .ap-divider {
+    height: 1px;
+    width: 100%;
+    border-top: 1px dashed rgba(255,255,255,0.15);
+    margin-bottom: 30px;
+  }
+
+  .ap-words {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 0.2em;
+    color: rgba(255,255,255,0.65);
+  }
+
+  .ap-highlight {
+    color: var(--teal-mid);
+    font-weight: bold;
+  }
+
+  .manifesto-tag {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 20px;
+    color: rgba(255,255,255,0.8);
+    line-height: 1.6;
+    font-weight: 300;
+  }
+  .manifesto-tag .highlight {
+    color: var(--teal-mid);
+    font-style: normal;
+  }
+
+  /* --- BRAND QUOTE --- */
+  .brand-quote {
+    text-align: center;
+    margin: 0 auto 80px auto;
+    max-width: 800px;
+    padding: 0 40px;
+  }
+  .brand-quote-text {
+    font-family: var(--font-serif);
+    font-size: 32px;
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.5;
+    font-weight: 300;
+  }
+
+  /* --- CLOSING CTA BLOCK --- */
+  .cta-block {
+    text-align: center;
+    padding: 40px 0 40px;
+    border-top: 1px dashed rgba(255,255,255,0.1);
+  }
+
+  .closing-line {
+    font-size: 32px;
+    font-weight: 300;
+    font-style: normal;
+    margin-bottom: 40px;
+    color: var(--white);
+  }
+
+  .button-group {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    align-items: center;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--teal-mid);
+    color: var(--bg-navy);
+    font-family: var(--font-mono);
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    padding: 18px 32px;
+    border-radius: 4px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    min-width: 240px;
+  }
+  .btn-primary:hover {
+    background: var(--white);
+    box-shadow: 0 0 15px rgba(93, 202, 165, 0.4);
+  }
+
+  .btn-gold {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--gold);
+    color: var(--bg-navy);
+    font-family: var(--font-mono);
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    padding: 18px 32px;
+    border-radius: 4px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    min-width: 240px;
+  }
+  .btn-gold:hover {
+    background: var(--white);
+    box-shadow: 0 0 15px rgba(201, 168, 76, 0.4);
+  }
+
+  .btn-subtext {
+    font-size: 9px;
+    opacity: 0.8;
+    text-transform: none;
+    margin-top: 4px;
+    letter-spacing: 0.1em;
+    font-weight: normal;
+  }
+
+  .cta-note {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    margin-top: 24px;
+    letter-spacing: 0.05em;
+  }
+
+  /* --- INSTITUTIONAL FOOTER --- */
+  #disclosure-footer {
+    width: 100%;
+    background: rgba(9, 18, 33, 0.97);
+    border-top: 1px solid rgba(255,255,255,0.05);
+    padding: 30px 40px;
+    text-align: center;
+    margin-top: 40px;
+    box-sizing: border-box;
+  }
+
+  #disclosure-footer p {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: rgba(255,255,255,0.25);
+    line-height: 1.8;
+    margin: 0;
+  }
+
+  #disclosure-footer a, #disclosure-footer span {
+    color: rgba(255,255,255,0.4);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  #disclosure-footer a:hover, #disclosure-footer span:hover {
+    color: var(--white);
+  }
+
+  /* Accessibility: Prefers Reduced Motion */
+  @media (prefers-reduced-motion: reduce) {
+    .anim-svg-container * { animation: none !important; }
+    .anim-reveal-rect { width: 880px !important; opacity: 1 !important; }
+    .anim-scanner-line { display: none !important; }
+    .lbl-phase-1, .lbl-phase-2, .lbl-phase-3 { opacity: 1 !important; }
+    .anim-breathe { opacity: 1 !important; transform: scaleY(1) !important; }
+    .anim-replay-btn { display: none; }
+  }
+
+  @media (max-width: 900px) {
+    .ap-formula { font-size: 18px; }
+    .ap-words { flex-direction: column; gap: 15px; font-size: 11px; }
+  }
+
+  @media (max-width: 768px) {
+    .briefing-grid { grid-template-columns: 1fr; gap: 30px; }
+    .hero-h1 { font-size: 42px; }
+    .hero-lead { font-size: 18px; }
+    .hero-sub { font-size: 18px; }
+
+    .anim-svg-container { min-height: 260px; height: auto; }
+
+    .anim-example-panel {
+      flex-direction: column;
+      gap: 15px;
+      width: auto;
+      margin: 0 20px 15px 20px;
+    }
+    .anim-example-divider {
+      width: 100%;
+      height: 1px;
+      margin: 0;
+    }
+
+    .interstitial-main { font-size: 26px; }
+    .blueprint-panel { padding: 30px 20px; }
+    .brand-quote-text { font-size: 24px; }
+    .button-group { flex-direction: column; width: 100%; }
+    .btn-primary, .btn-gold { width: 100%; box-sizing: border-box; min-width: auto; }
+
+    .sequence-grid { grid-template-columns: 1fr; gap: 40px; margin-top: 30px; }
+    .sequence-line { display: none; }
+  }
+</style>
+</head>
+<body>
+
+  <a href="#range-why-main" class="skip-link">Skip to main content</a>
+
+  <nav id="app-nav">
+    <a href="/" class="brand-header"><span class="brand-datum">DATUM</span><span class="brand-fi">FI</span></a>
+    <div class="nav-links">
+      <a href="/sketch.html" class="nav-link">Sketch</a>
+      <a href="/studio.html" class="nav-link">Studio</a>
+      <a href="/why-a-range.html" class="nav-link active" id="nav-range-link">Range</a>
+      <a href="/philosophy.html" class="nav-link">Philosophy</a>
+      <a href="/vault.html" class="nav-login-btn">Login</a>
+      <button class="nav-feedback-btn" onclick="openFeedback()">Share Feedback</button>
+    </div>
+    <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <div class="nav-mobile-menu" id="nav-mobile-menu">
+    <a href="/sketch.html" class="nav-mobile-link">Sketch</a>
+    <a href="/studio.html" class="nav-mobile-link">Studio</a>
+    <a href="/why-a-range.html" class="nav-mobile-link active" id="nav-mob-range">Range</a>
+    <a href="/philosophy.html" class="nav-mobile-link">Philosophy</a>
+    <a href="/vault.html" class="nav-mobile-login">Login</a>
+    <button class="nav-mobile-feedback" onclick="closeMobileNav(); openFeedback()">Share Feedback</button>
+  </div>
+
+  <main class="container" id="range-why-main">
+
+    <div class="hero">
+      <span class="hero-label">Why a Range?</span>
+      <h1 class="hero-h1">Because reality isn't a single number.</h1>
+      <div class="hero-lead">
+        Retirement isn't a fixed target. Markets expand and contract. Life shifts. A single number pretends uncertainty doesn't exist — and that's how plans quietly drift off course.
+      </div>
+      <div class="hero-sub">
+        The Floor is what you must respect. The Ceiling is what you can safely reach. The Datum is where you choose to live — with full structural integrity beneath it.
+      </div>
+    </div>
+
+    <div class="briefing-grid">
+      <div class="briefing-card">
+        <div class="card-h2">The Problem With "Your Number"</div>
+        <div class="card-body">
+          Most financial tools spit out a single target. That number assumes markets grow in straight lines and history never repeats its worst days. It hides reality behind a false sense of precision. Markets don't compound on a spreadsheet.
+        </div>
+      </div>
+
+      <div class="briefing-card">
+        <div class="card-h2">What a Range Reveals</div>
+        <div class="card-body">
+          A Range is the honest shape of what the math will support. The <span class="c-ceil">Ceiling</span> marks the upper structural limit. The <span class="c-floor">Floor</span> marks the threshold you must respect. The <span class="c-datum">Datum</span> is where you choose to live between them. The band that holds that choice year‑to‑year — adapting when markets change, widening when uncertainty grows — is your Datum Range.
+        </div>
+      </div>
+    </div>
+
+    <div class="full-width-card" style="margin-bottom: 80px; text-align: center; border:none; background:transparent; padding:0;">
+      <div class="card-h2" style="justify-content: center;">The Chronology of Measurement</div>
+
+      <div class="sequence-grid">
+        <div class="sequence-line"></div>
+
+        <div class="sequence-step">
+          <div class="step-marker"></div>
+          <div class="step-phase">Before Retirement &mdash; <span>Formation</span></div>
+          <div class="step-instrument">The Sketch</div>
+          <div class="step-desc">
+            Your pre-retirement structural cone takes shape as contributions, tax friction, and market physics interact over time.
+          </div>
+        </div>
+
+        <div class="sequence-step">
+          <div class="step-marker"></div>
+          <div class="step-phase">At Retirement &mdash; <span>Revelation</span></div>
+          <div class="step-instrument">The Studio Range</div>
+          <div class="step-desc">
+            The blueprint crystallizes. Your <span class="c-ceil">Ceiling</span>, <span class="c-datum">Datum</span>, and <span class="c-floor">Floor</span> settle into place, establishing your absolute structural limits.
+          </div>
+        </div>
+
+        <div class="sequence-step">
+          <div class="step-marker"></div>
+          <div class="step-phase">After Retirement &mdash; <span>Experience</span></div>
+          <div class="step-instrument">The Datum Range</div>
+          <div class="step-desc">
+            Your target becomes a lived envelope—lifted upward by strong years, and safely compressed by stress years.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="anim-visual-block" id="demo-visual">
+      <button class="anim-replay-btn" onclick="replayAnimation()" aria-label="Replay range animation">&#x21bb; Replay Animation</button>
+
+      <svg class="anim-svg-container" viewBox="0 0 880 320">
+        <defs>
+          <filter id="glowTeal" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+
+          <linearGradient id="sketchGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="rgba(201, 168, 76, 0.15)" />
+            <stop offset="100%" stop-color="rgba(226, 75, 74, 0.15)" />
+          </linearGradient>
+          <linearGradient id="datumFanGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="rgba(201, 168, 76, 0.3)" />
+            <stop offset="100%" stop-color="rgba(226, 75, 74, 0.2)" />
+          </linearGradient>
+
+          <clipPath id="reveal-clip">
+            <rect x="0" y="0" height="320" class="anim-reveal-rect" />
+          </clipPath>
+        </defs>
+
+        <g clip-path="url(#reveal-clip)">
+          <line x1="360" y1="50" x2="360" y2="280" stroke="rgba(255,255,255,0.2)" stroke-dasharray="4 4" />
+          <line x1="560" y1="50" x2="560" y2="280" stroke="rgba(255,255,255,0.2)" stroke-dasharray="4 4" />
+
+          <path d="M 60 260 C 200 260, 250 80, 360 80 L 360 240 C 250 240, 200 260, 60 260 Z" fill="url(#sketchGrad)" />
+
+          <rect x="360" y="80" width="200" height="160" fill="url(#sketchGrad)" />
+
+          <g class="anim-breathe">
+            <path d="M 560 160 C 640 100, 740 120, 840 130 L 840 200 C 740 210, 640 220, 560 160 Z" fill="url(#datumFanGrad)" />
+            <path d="M 560 160 C 640 100, 740 120, 840 130" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-dasharray="4 4" />
+            <path d="M 560 160 C 640 220, 740 210, 840 200" fill="none" stroke="var(--danger-red)" stroke-width="1.5" stroke-dasharray="4 4" />
+          </g>
+
+          <path d="M 60 260 C 200 260, 250 80, 360 80 L 560 80" fill="none" stroke="var(--gold)" stroke-width="2" />
+          <circle cx="360" cy="80" r="4" fill="var(--bg-navy)" stroke="var(--gold)" stroke-width="2"/>
+
+          <path d="M 60 260 C 200 260, 250 240, 360 240 L 560 240" fill="none" stroke="var(--danger-red)" stroke-width="2" />
+          <circle cx="360" cy="240" r="4" fill="var(--bg-navy)" stroke="var(--danger-red)" stroke-width="2"/>
+
+          <path d="M 60 260 C 200 260, 250 160, 360 160 L 840 160" fill="none" stroke="var(--teal-mid)" stroke-width="2" />
+          <circle cx="360" cy="160" r="4" fill="var(--bg-navy)" stroke="var(--teal-mid)" stroke-width="2"/>
+
+          <circle cx="560" cy="160" r="5" fill="var(--teal-mid)" filter="url(#glowTeal)" />
+          <circle cx="60" cy="260" r="4" fill="var(--white)" />
+        </g>
+
+        <line class="anim-scanner-line" y1="40" y2="290" stroke="rgba(93, 202, 165, 0.8)" stroke-width="2" filter="url(#glowTeal)" />
+
+        <g class="lbl-phase-1">
+          <text x="60" y="280" class="anim-label" fill="rgba(255,255,255,0.5)">AGE 40</text>
+          <text x="210" y="305" class="anim-zone-label" fill="rgba(255,255,255,0.6)" text-anchor="middle">THE SKETCH</text>
+        </g>
+
+        <g class="lbl-phase-2">
+          <text x="360" y="280" class="anim-label" fill="var(--white)" text-anchor="middle">RETIRE: 53</text>
+          <text x="460" y="305" class="anim-zone-label" fill="rgba(255,255,255,0.6)" text-anchor="middle">STUDIO RANGE</text>
+
+          <text x="370" y="75" class="anim-label" fill="var(--gold)">STRUCTURAL CEILING</text>
+          <text x="370" y="155" class="anim-label" fill="var(--teal-mid)">TARGET DATUM</text>
+          <text x="370" y="235" class="anim-label" fill="var(--danger-red)">SURVIVAL FLOOR</text>
+        </g>
+
+        <g class="lbl-phase-3">
+          <text x="700" y="305" class="anim-zone-label" fill="rgba(255,255,255,0.6)" text-anchor="middle">THE DATUM RANGE</text>
+          <text x="840" y="280" class="anim-label" fill="rgba(255,255,255,0.5)" text-anchor="end">AGE 95</text>
+
+          <text x="700" y="115" class="anim-label" fill="var(--gold)" text-anchor="middle">LIVING CEILING</text>
+          <text x="700" y="225" class="anim-label" fill="var(--danger-red)" text-anchor="middle">LIVING FLOOR</text>
+        </g>
+      </svg>
+
+      <div class="anim-example-panel">
+        <div class="anim-example-group">
+          <div class="anim-example-title">Example Framework</div>
+          <div style="color: var(--white);">Planning Horizon: Age 40 to 95</div>
+          <div>Structural Anchor: Age 53</div>
+        </div>
+        <div class="anim-example-divider"></div>
+        <div class="anim-example-group">
+          <div class="anim-example-title" style="margin-top: 2px;">Visual Output</div>
+          <div style="color: var(--teal-mid);">A dynamic envelope mapped to</div>
+          <div style="color: var(--teal-mid);">real market sequences over time.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="interstitial-block">
+      <div class="interstitial-main">
+        The Studio Range shows what's possible.<br>
+        <span style="color: var(--teal-mid);">The Datum Range shows what's livable.</span>
+      </div>
+    </div>
+
+    <div class="briefing-grid">
+      <div class="briefing-card">
+        <div class="card-h2">The Datum Range</div>
+        <div class="card-body">
+          Markets don't ask permission. Your Datum Range is what they deliver around your chosen target. It is the living spending band for the year ahead. A healthy plan doesn't live on a needle‑thin line. In real life, your spending moves inside a <strong style="color: var(--white); font-weight: normal;">Datum Range</strong> — a lived band shaped by market sequences.<br><br>In strong markets, outcomes lift toward the Living Ceiling. In stress markets, they compress toward the Living Floor. <strong>Choosing to honor that compression is what compounds resilience.</strong> Your job isn't to predict each year — it's to choose a Datum the Range can hold.
+        </div>
+      </div>
+
+      <div class="briefing-card">
+        <div class="card-h2">The Math Behind It</div>
+        <div class="card-body">
+          Engineered using four independent Monte Carlo models, 10,000 simulated paths, and 100 years of market history. Stress-tested against the 1929 crash, 1970s stagflation, and high‑valuation low‑return regimes.
+
+          <div class="manifesto-list">
+            Built for engineers, planners, and serious early retirees.<br>
+            Designed for households with complex retirement decisions.<br>
+            Made for FIRE-minded professionals seeking real ranges, not guesses.
+          </div>
+
+          <span style="color: rgba(255,255,255,0.5); display: block;">The Studio handles the math; you see the structure.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="full-width-card" style="margin-bottom: 80px;">
+      <div class="card-h2">The Architecture of Confidence</div>
+      <div class="card-body">
+        A single number hides risk. A Range reveals it. You don't need a probability score masquerading as certainty. You need a <span class="c-ceil">Structural Ceiling</span>, a <span class="c-floor">Survival Floor</span>, and the realism of a <span class="c-datum">Datum Range</span>. Confidence comes from knowing exactly where your limits are.
+      </div>
+    </div>
+
+    <div class="blueprint-wrapper">
+      <div class="bridge-text">The logic behind the Range can be expressed simply.</div>
+
+      <div class="blueprint-panel">
+        <div class="ap-formula">[ D + A ] &times; [ T + U ] = M</div>
+        <div class="ap-divider"></div>
+        <div class="ap-words">
+          <span class="ap-word"><span class="ap-highlight">D</span>ATA</span>
+          <span class="ap-word"><span class="ap-highlight">A</span>RCHITECTURE</span>
+          <span class="ap-word"><span class="ap-highlight">T</span>ENSION</span>
+          <span class="ap-word"><span class="ap-highlight">U</span>NCERTAINTY</span>
+          <span class="ap-word"><span class="ap-highlight">M</span>EASUREMENT</span>
+        </div>
+      </div>
+
+      <div class="manifesto-tag">
+        When <span class="highlight">D</span>ata meets <span class="highlight">A</span>rchitecture under <span class="highlight">T</span>ension and <span class="highlight">U</span>ncertainty, <span class="highlight">M</span>easurement is <span class="highlight">F</span>orged &mdash; and <span class="highlight">I</span>ntelligence emerges.
+      </div>
+    </div>
+
+    <div class="brand-quote">
+      <div class="brand-quote-text">
+        "I thought I needed one number.<br>Then I realized I needed a framework."
+      </div>
+    </div>
+
+    <div class="cta-block">
+      <div class="closing-line">You don't need to predict the future. You need to structure for it.</div>
+
+      <div class="button-group">
+        <a href="/sketch.html" class="btn-primary">
+          <div>START WITH THE SKETCH &rarr;</div>
+          <div class="btn-subtext">Free. 30 seconds. No login.</div>
+        </a>
+        <a href="/studio.html" class="btn-gold">
+          <div>ENTER THE STUDIO &rarr;</div>
+          <div class="btn-subtext">Full Blueprint. Deeper Analysis.</div>
+        </a>
+      </div>
+      <p class="cta-note">This page explains what a Range is. To compute yours, start with the Sketch — or go deeper in the Studio.</p>
+    </div>
+
+  </main>
+
+  <div id="disclosure-footer">
+    <p>DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. Past performance does not guarantee future outcomes. &nbsp;|&nbsp; <a href="/privacy.html">Privacy Policy</a> &nbsp;|&nbsp; <a href="/terms.html">Terms of Service</a> &nbsp;|&nbsp; <a href="mailto:accessibility@datumfi.com">Accessibility</a> &nbsp;|&nbsp; <a href="mailto:privacy@datumfi.com">privacy@datumfi.com</a> &nbsp;|&nbsp; <a href="mailto:feedback@datumfi.com">feedback@datumfi.com</a> &nbsp;|&nbsp; <span style="cursor:pointer;text-decoration:underline;" onclick="openDeleteDataModal()">Delete My Data</span> &nbsp;|&nbsp; <a href="/privacy-choices.html">Do Not Sell My Information</a> &nbsp;|&nbsp; Build&nbsp;2026.04.27&nbsp;&bull;&nbsp;v1.0.21</p>
+  </div>
+
+  <script src="/feedback.js"></script>
+  <script src="/nav.js"></script>
+  <script>
+    function replayAnimation() {
+      var animBlock = document.getElementById('demo-visual');
+      if (!animBlock) return;
+      var svg = animBlock.querySelector('.anim-svg-container');
+      if (!svg) return;
+      var newSvg = svg.cloneNode(true);
+      svg.parentNode.replaceChild(newSvg, svg);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      var animBlock = document.getElementById('demo-visual');
+      if (!animBlock) return;
+      var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          var svg = animBlock.querySelector('.anim-svg-container');
+          if (!svg) return;
+          var state = entry.isIntersecting ? 'running' : 'paused';
+          svg.style.animationPlayState = state;
+          svg.querySelectorAll('*').forEach(function(el) {
+            el.style.animationPlayState = state;
+          });
+        });
+      }, { threshold: 0.1 });
+      observer.observe(animBlock);
+    });
+  </script>
+</body>
+</html>
