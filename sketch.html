@@ -81,8 +81,10 @@
     min-height: 600px;
     position: relative;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
+    padding-top: 50px;
+    overflow-y: auto;
     background-color: var(--bg-navy);
     background-image: linear-gradient(rgba(100,180,255,0.05) 1px, transparent 1px),
                       linear-gradient(90deg, rgba(100,180,255,0.05) 1px, transparent 1px);
@@ -243,7 +245,7 @@
   .canvas-btn-wrap:hover .pin-tooltip { display: block; animation: fade-in 0.2s ease; }
 
   /* --- SVG RANGE ARCHITECTURE --- */
-  .range-svg { width: 100%; max-width: 900px; height: 100%; overflow: visible; }
+  .range-svg { width: 100%; max-width: 900px; height: auto; aspect-ratio: 800 / 760; max-height: calc(100vh - 60px); overflow: visible; }
   .grid-tick { stroke: rgba(255,255,255,0.05); stroke-width: 1; stroke-dasharray: 4 4; }
   .grid-label { font-family: var(--font-mono); font-size: 12px; fill: rgba(255,255,255,0.4); }
   .grid-label.midpoint { font-weight: bold; fill: rgba(255,255,255,0.7); }
@@ -513,6 +515,9 @@
   .sketch-zk-item strong { color: rgba(255,255,255,0.7); }
   .sketch-zk-check { color: var(--teal); flex-shrink: 0; font-size: 12px; margin-top: 1px; }
   @media (max-width: 650px) { .sketch-zk-grid { grid-template-columns: 1fr; } }
+  .sketch-methodology-note { margin-top: 24px; padding: 16px 20px; border-left: 2px solid rgba(93,202,165,0.3); background: rgba(93,202,165,0.04); border-radius: 0 4px 4px 0; }
+  .sketch-methodology-head { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--teal-mid); margin-bottom: 8px; }
+  .sketch-methodology-body { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,0.4); line-height: 1.7; margin: 0; }
 
   /* --- LEGAL FOOTER --- */
   .legal-footer {
@@ -721,9 +726,8 @@
               </defs>
 
               <g id="canvas-title-group">
-                  <text x="100" y="50" text-anchor="start" fill="var(--white)" font-size="28" style="font-family: var(--font-serif);">You don't have one future — you have</text>
-                  <text x="100" y="85" text-anchor="start" fill="var(--white)" font-size="28" style="font-family: var(--font-serif);">a <tspan fill="var(--teal-mid)" font-style="italic">Range</tspan>.</text>
-                  <text x="100" y="115" text-anchor="start" fill="var(--muted)" font-size="10" style="font-family: var(--font-mono); letter-spacing: 0.2em; text-transform: uppercase;">The farther out you look, the wider it becomes.</text>
+                  <text x="100" y="65" text-anchor="start" fill="var(--white)" font-size="28" style="font-family: var(--font-serif);">You don't have one future — you have a <tspan fill="var(--teal-mid)" font-style="italic">Range</tspan>.</text>
+                  <text x="100" y="95" text-anchor="start" fill="var(--muted)" font-size="10" style="font-family: var(--font-mono); letter-spacing: 0.2em; text-transform: uppercase;">The farther out you look, the wider it becomes.</text>
               </g>
 
               <g>
@@ -779,9 +783,9 @@
                       <rect class="hover-bg" x="0" y="0" width="410" height="115" rx="4" />
                       <text class="tt-head" id="ceil-tt-head" x="15" y="25" style="fill: var(--gold);">STRUCTURAL CEILING</text>
                       <text class="text-data" id="ceil-val-txt" x="15" y="45" style="fill: var(--white);"></text>
-                      <text class="text-data" x="15" y="65" style="fill: var(--gold); font-style: italic;">Year-by-year ceiling modeled across 41 years. Studio only.</text>
-                      <text class="text-highlight" x="15" y="85">The mathematical limit of your plan's capacity.</text>
-                      <text class="text-highlight" x="15" y="105">A structural constraint, not an aspirational target.</text>
+                      <text class="text-data" x="15" y="65" style="fill: var(--gold); font-style: italic;">A favorable-path limit, not a promise.</text>
+                      <text class="text-highlight" x="15" y="85">Studio tests this boundary with full simulation,</text>
+                      <text class="text-highlight" x="15" y="105">tax sequencing, and account-level detail.</text>
                   </g>
               </g>
 
@@ -796,11 +800,11 @@
                   
                   <g id="floor-hover" class="hover-detail" transform="translate(230, 525)">
                       <rect class="hover-bg" x="0" y="0" width="410" height="115" rx="4" />
-                      <text class="tt-head" id="floor-tt-head" x="15" y="25" style="fill: var(--danger-red);">SURVIVAL FLOOR (FIXED)</text>
+                      <text class="tt-head" id="floor-tt-head" x="15" y="25" style="fill: var(--danger-red);">SURVIVAL FLOOR</text>
                       <text class="text-data" id="floor-val-txt" x="15" y="45" style="fill: var(--white);"></text>
-                      <text class="text-data" x="15" y="65" style="fill: var(--gold); font-style: italic;">Holds through 1929 conditions. Studio stress-maps your floor.</text>
-                      <text class="text-highlight" x="15" y="85">.</text>
-                      <text class="text-highlight" x="15" y="105">Survives the 1929 crash and all modeled stress scenarios.</text>
+                      <text class="text-data" x="15" y="65" style="fill: var(--danger-red); font-style: italic;">Built from a low-return path and a resilient draw-rate assumption.</text>
+                      <text class="text-highlight" x="15" y="85">Studio stress-maps this boundary against historical</text>
+                      <text class="text-highlight" x="15" y="105">and simulated regimes.</text>
                   </g>
               </g>
 
@@ -814,10 +818,12 @@
                   <text id="datum-lbl" class="range-label" x="665" y="385" text-anchor="start" style="fill: var(--teal-mid);">YOUR DATUM</text>
                   
                   <g id="datum-hover" class="hover-detail" transform="translate(230, 415)">
-                      <rect id="datum-box" class="hover-bg" x="0" y="0" width="410" height="90" rx="4" stroke="var(--teal-mid)" />
+                      <rect id="datum-box" class="hover-bg" x="0" y="0" width="410" height="115" rx="4" stroke="var(--teal-mid)" />
                       <text id="datum-tt-head" class="tt-head" x="15" y="25" style="fill: var(--teal-mid);">YOUR DATUM</text>
                       <text class="text-data" id="datum-val-txt" x="15" y="45" style="fill: var(--white);"></text>
-                      <text class="text-data" x="15" y="65" style="fill: var(--gold); font-style: italic;">How this number performs at 75, 85, and 95. Studio only.</text>
+                      <text class="text-data" x="15" y="65" style="fill: var(--teal-mid); font-style: italic;">This is where you choose to live.</text>
+                      <text class="text-highlight" x="15" y="85">Studio tests this choice through time, taxes,</text>
+                      <text class="text-highlight" x="15" y="105">income layers, and market sequences.</text>
                   </g>
               </g>
           </svg>
@@ -1044,6 +1050,11 @@
         </div>
       </div>
 
+      <div class="sketch-methodology-note">
+        <div class="sketch-methodology-head">Sketch draws the envelope. Studio runs the engine.</div>
+        <p class="sketch-methodology-body">The Sketch uses broad-stroke conservative, baseline, and upside paths to estimate a preliminary spending envelope. It is designed to show the shape of the question, not deliver the final answer. The Studio replaces this sketch with full simulation, account-level inputs, tax sequencing, income layering, and stress testing.</p>
+      </div>
+
       <div class="final-cta">
           <a href="/studio-showcase.html" class="studio-btn" onclick="if(window.dfTrack)dfTrack('sketch_reveal_clicked')">SEE WHAT STUDIO UNLOCKS →</a>
       </div>
@@ -1201,39 +1212,43 @@
             }
         }
 
-        let growthRate, ceilRate, floorRate;
+        // Three-path scenario envelope (real return rates)
+        let conservativeRate, baselineRate, upsideRate;
         if (paradigm === 'optimistic') {
-            growthRate = 1.055; ceilRate = 50; floorRate = 38;
+            conservativeRate = 1.020; baselineRate = 1.040; upsideRate = 1.065;
         } else if (paradigm === 'average') {
-            growthRate = 1.035; ceilRate = 47; floorRate = 32;
-        } else { // stress
-            growthRate = 1.015; ceilRate = 38; floorRate = 28;
+            conservativeRate = 1.015; baselineRate = 1.035; upsideRate = 1.055;
+        } else {
+            conservativeRate = 1.005; baselineRate = 1.015; upsideRate = 1.035;
         }
 
-        const realRate = growthRate - 1;
-        const portfolioFV = portfolioVol * Math.pow(growthRate, yearsToGrow);
-        const contribFV = realRate > 0
-            ? (annualContrib / 1000000) * ((Math.pow(growthRate, yearsToGrow) - 1) / realRate)
-            : (annualContrib / 1000000) * yearsToGrow;
-        
-        const futurePortfolio = portfolioFV + contribFV; 
+        function computeEnvFV(rate) {
+            const r = rate - 1;
+            const pFV = portfolioVol * Math.pow(rate, yearsToGrow);
+            const cFV = r > 0
+                ? (annualContrib / 1000000) * ((Math.pow(rate, yearsToGrow) - 1) / r)
+                : (annualContrib / 1000000) * yearsToGrow;
+            return pFV + cFV;
+        }
+
+        const fvConservative = computeEnvFV(conservativeRate);
+        const fvBaseline = computeEnvFV(baselineRate);
+        const fvUpside = computeEnvFV(upsideRate);
 
         const inflRate = 0.025;
         const inflMult = isNominal ? Math.pow(1 + inflRate, yearsToGrow) : 1;
 
         const startSpend = Math.round((portfolioVol * 1000) * 0.04 * taxMult);
-        
-        const futCeil = Math.round((futurePortfolio * 1000) * (ceilRate / 1000) * inflMult * taxMult); 
-        const futFloor = Math.round((futurePortfolio * 1000) * (floorRate / 1000) * inflMult * taxMult);
-        
+
+        const futFloor = Math.round(fvConservative * 1000 * 0.028 * inflMult * taxMult);
+        const futCeil  = Math.round(fvUpside * 1000 * 0.050 * inflMult * taxMult);
+
         const targetSpendEnd = targetSpend * inflMult;
         const lifestyleSpendEnd = lifestyleSpend * inflMult;
 
-        const portCeilK = futCeil / (ceilRate / 1000) / taxMult;
-        const portFloorK = futFloor / (floorRate / 1000) / taxMult;
-        
-        const fvCeilStr = portCeilK >= 1000 ? `$${(portCeilK/1000).toFixed(2)}M` : `$${Math.round(portCeilK)}k`;
-        const fvFloorStr = portFloorK >= 1000 ? `$${(portFloorK/1000).toFixed(2)}M` : `$${Math.round(portFloorK)}k`;
+        const fvCeilStr  = fvUpside >= 1 ? `$${fvUpside.toFixed(2)}M` : `$${Math.round(fvUpside * 1000).toLocaleString('en-US')}k`;
+        const fvFloorStr = fvConservative >= 1 ? `$${fvConservative.toFixed(2)}M` : `$${Math.round(fvConservative * 1000).toLocaleString('en-US')}k`;
+        const fvBaseStr  = fvBaseline >= 1 ? `$${fvBaseline.toFixed(2)}M` : `$${Math.round(fvBaseline * 1000).toLocaleString('en-US')}k`;
 
         const allValues = [startSpend, futCeil, futFloor, targetSpend, targetSpendEnd, lifestyleSpend, lifestyleSpendEnd];
         const valMin = Math.min(...allValues);
@@ -1289,7 +1304,7 @@
         ceilHover.setAttribute('transform', `translate(230, ${cY_e - 125})`);
         
         let cSpendStr = futCeil >= 1000 ? `$${(futCeil/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${futCeil.toLocaleString('en-US')}k`;
-        ceilValTxt.textContent = `${fvCeilStr}  |  ${cSpendStr} / yr`;
+        ceilValTxt.textContent = `Upside path: ${fvCeilStr}  |  ${cSpendStr} / yr`;
 
         nodeFloor.setAttribute('cx', xEnd); nodeFloor.setAttribute('cy', fY_e);
         floorDragger.setAttribute('cx', xEnd); floorDragger.setAttribute('cy', fY_e);
@@ -1297,7 +1312,7 @@
         floorHover.setAttribute('transform', `translate(230, ${fY_e + 15})`);
         
         let fSpendStr = futFloor >= 1000 ? `$${(futFloor/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${futFloor.toLocaleString('en-US')}k`;
-        floorValTxt.textContent = `${fvFloorStr}  |  ${fSpendStr} / yr`;
+        floorValTxt.textContent = `Conservative path: ${fvFloorStr}  |  ${fSpendStr} / yr`;
 
         nodeDatum.setAttribute('cy', dY_e);
         datumCirc.setAttribute('cy', dY_s);
@@ -1311,7 +1326,7 @@
         datumHover.setAttribute('transform', `translate(230, ${dHoverY})`);
         
         let targetEndStr = Math.round(targetSpendEnd) >= 1000 ? `$${(targetSpendEnd/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${Math.round(targetSpendEnd).toLocaleString('en-US')}k`;
-        datumValTxt.textContent = `${targetEndStr} / yr`;
+        datumValTxt.textContent = `Baseline path: ${fvBaseStr}  |  ${targetEndStr} / yr`;
 
         if (targetSpendEnd > futCeil) {
             datumLine.style.stroke = 'var(--danger-red)';
@@ -1512,54 +1527,51 @@
             const taxRate = parseInt(slTax.value) / 100;
             const taxMult = 1.0 - taxRate;
 
-            let growthRate = paradigm === 'optimistic' ? 1.055 : (paradigm === 'average' ? 1.035 : 1.015);
-            const realRate = growthRate - 1;
+            const dragConservativeRate = paradigm === 'optimistic' ? 1.020 : (paradigm === 'average' ? 1.015 : 1.005);
+            const dragUpsideRate = paradigm === 'optimistic' ? 1.065 : (paradigm === 'average' ? 1.055 : 1.035);
             const portfolioVol = parseFloat(slPort.value);
             const annualContrib = parseInt(slContrib.value);
-            
-            const dragPortFV = portfolioVol * Math.pow(growthRate, dragYears);
-            const dragContribFV = realRate > 0
-                ? (annualContrib / 1000000) * ((Math.pow(growthRate, dragYears) - 1) / realRate)
-                : (annualContrib / 1000000) * dragYears;
-            
-            const exactDragPort = dragPortFV + dragContribFV;
-            const exactDragPortK = exactDragPort * 1000;
-            const fvStr = exactDragPort >= 1 ? `$${exactDragPort.toFixed(2)}M` : `$${Math.round(exactDragPortK)}k`;
+
+            function computeDragFV(rate, years) {
+                const r = rate - 1;
+                const pFV = portfolioVol * Math.pow(rate, years);
+                const cFV = r > 0
+                    ? (annualContrib / 1000000) * ((Math.pow(rate, years) - 1) / r)
+                    : (annualContrib / 1000000) * years;
+                return pFV + cFV;
+            }
 
             const inflRate = 0.025;
             const inflMult = isNominal ? Math.pow(1 + inflRate, dragYears) : 1;
 
-            const ceilRate = paradigm === 'optimistic' ? 50 : (paradigm === 'average' ? 47 : 38);
-            const floorRate = paradigm === 'optimistic' ? 38 : (paradigm === 'average' ? 32 : 28);
-
             if (isDraggingCeil) {
+                const fv = computeDragFV(dragUpsideRate, dragYears);
+                const fvK = fv * 1000;
+                const fvStr = fv >= 1 ? `$${fv.toFixed(2)}M` : `$${Math.round(fvK)}k`;
+                const spend = Math.round(fvK * 0.050 * inflMult * taxMult);
                 const y = getYOnPath(ceilLine, x);
-                const spend = Math.round((exactDragPortK * (ceilRate / 1000)) * inflMult * taxMult);
-                
                 nodeCeil.setAttribute('cx', x); nodeCeil.setAttribute('cy', y);
                 ceilDragger.setAttribute('cx', x); ceilDragger.setAttribute('cy', y);
                 ceilLbl.setAttribute('x', x + 15); ceilLbl.setAttribute('y', y + 4);
-                
                 ceilHover.setAttribute('transform', `translate(${x - 120}, ${y - 125})`);
                 ceilTtHead.textContent = `CEILING @ AGE ${dragAge}`;
-                
                 let cSpendStr = spend >= 1000 ? `$${(spend/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${spend.toLocaleString('en-US')}k`;
-                ceilValTxt.textContent = `${fvStr}  |  ${cSpendStr} / yr`;
+                ceilValTxt.textContent = `Upside path: ${fvStr}  |  ${cSpendStr} / yr`;
             }
 
             if (isDraggingFloor) {
+                const fv = computeDragFV(dragConservativeRate, dragYears);
+                const fvK = fv * 1000;
+                const fvStr = fv >= 1 ? `$${fv.toFixed(2)}M` : `$${Math.round(fvK)}k`;
+                const spend = Math.round(fvK * 0.028 * inflMult * taxMult);
                 const y = getYOnPath(floorLine, x);
-                const spend = Math.round((exactDragPortK * (floorRate / 1000)) * inflMult * taxMult);
-                
                 nodeFloor.setAttribute('cx', x); nodeFloor.setAttribute('cy', y);
                 floorDragger.setAttribute('cx', x); floorDragger.setAttribute('cy', y);
                 floorLbl.setAttribute('x', x + 15); floorLbl.setAttribute('y', y + 4);
-                
                 floorHover.setAttribute('transform', `translate(${x - 120}, ${y + 15})`);
                 floorTtHead.textContent = `FLOOR @ AGE ${dragAge}`;
-                
                 let fSpendStr = spend >= 1000 ? `$${(spend/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${spend.toLocaleString('en-US')}k`;
-                floorValTxt.textContent = `${fvStr}  |  ${fSpendStr} / yr`;
+                floorValTxt.textContent = `Conservative path: ${fvStr}  |  ${fSpendStr} / yr`;
             }
         }
     });
@@ -1599,50 +1611,51 @@
                 const taxRate = parseInt(slTax.value) / 100;
                 const taxMult = 1.0 - taxRate;
 
-                let growthRate = paradigm === 'optimistic' ? 1.055 : (paradigm === 'average' ? 1.035 : 1.015);
-                const realRate = growthRate - 1;
+                const touchConservativeRate = paradigm === 'optimistic' ? 1.020 : (paradigm === 'average' ? 1.015 : 1.005);
+                const touchUpsideRate = paradigm === 'optimistic' ? 1.065 : (paradigm === 'average' ? 1.055 : 1.035);
                 const portfolioVol = parseFloat(slPort.value);
                 const annualContrib = parseInt(slContrib.value);
-                
-                const dragPortFV = portfolioVol * Math.pow(growthRate, dragYears);
-                const dragContribFV = realRate > 0
-                    ? (annualContrib / 1000000) * ((Math.pow(growthRate, dragYears) - 1) / realRate)
-                    : (annualContrib / 1000000) * dragYears;
-                
-                const exactDragPort = dragPortFV + dragContribFV;
-                const exactDragPortK = exactDragPort * 1000;
-                const fvStr = exactDragPort >= 1 ? `$${exactDragPort.toFixed(2)}M` : `$${Math.round(exactDragPortK)}k`;
+
+                function computeTouchFV(rate, years) {
+                    const r = rate - 1;
+                    const pFV = portfolioVol * Math.pow(rate, years);
+                    const cFV = r > 0
+                        ? (annualContrib / 1000000) * ((Math.pow(rate, years) - 1) / r)
+                        : (annualContrib / 1000000) * years;
+                    return pFV + cFV;
+                }
 
                 const inflRate = 0.025;
                 const inflMult = isNominal ? Math.pow(1 + inflRate, dragYears) : 1;
 
-                const ceilRate = paradigm === 'optimistic' ? 50 : (paradigm === 'average' ? 47 : 38);
-                const floorRate = paradigm === 'optimistic' ? 38 : (paradigm === 'average' ? 32 : 28);
-
                 if (isDraggingCeil) {
+                    const fv = computeTouchFV(touchUpsideRate, dragYears);
+                    const fvK = fv * 1000;
+                    const fvStr = fv >= 1 ? `$${fv.toFixed(2)}M` : `$${Math.round(fvK)}k`;
+                    const spend = Math.round(fvK * 0.050 * inflMult * taxMult);
                     const y = getYOnPath(ceilLine, x);
-                    const spend = Math.round((exactDragPortK * (ceilRate / 1000)) * inflMult * taxMult);
                     nodeCeil.setAttribute('cx', x); nodeCeil.setAttribute('cy', y);
                     ceilDragger.setAttribute('cx', x); ceilDragger.setAttribute('cy', y);
                     ceilLbl.setAttribute('x', x + 15); ceilLbl.setAttribute('y', y + 4);
                     ceilHover.setAttribute('transform', `translate(${x - 120}, ${y - 125})`);
                     ceilTtHead.textContent = `CEILING @ AGE ${dragAge}`;
-                    
                     let cSpendStr = spend >= 1000 ? `$${(spend/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${spend.toLocaleString('en-US')}k`;
-                    ceilValTxt.textContent = `${fvStr}  |  ${cSpendStr} / yr`;
+                    ceilValTxt.textContent = `Upside path: ${fvStr}  |  ${cSpendStr} / yr`;
                 }
 
                 if (isDraggingFloor) {
+                    const fv = computeTouchFV(touchConservativeRate, dragYears);
+                    const fvK = fv * 1000;
+                    const fvStr = fv >= 1 ? `$${fv.toFixed(2)}M` : `$${Math.round(fvK)}k`;
+                    const spend = Math.round(fvK * 0.028 * inflMult * taxMult);
                     const y = getYOnPath(floorLine, x);
-                    const spend = Math.round((exactDragPortK * (floorRate / 1000)) * inflMult * taxMult);
                     nodeFloor.setAttribute('cx', x); nodeFloor.setAttribute('cy', y);
                     floorDragger.setAttribute('cx', x); floorDragger.setAttribute('cy', y);
                     floorLbl.setAttribute('x', x + 15); floorLbl.setAttribute('y', y + 4);
                     floorHover.setAttribute('transform', `translate(${x - 120}, ${y + 15})`);
                     floorTtHead.textContent = `FLOOR @ AGE ${dragAge}`;
-                    
                     let fSpendStr = spend >= 1000 ? `$${(spend/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${spend.toLocaleString('en-US')}k`;
-                    floorValTxt.textContent = `${fvStr}  |  ${fSpendStr} / yr`;
+                    floorValTxt.textContent = `Conservative path: ${fvStr}  |  ${fSpendStr} / yr`;
                 }
             }
         }
