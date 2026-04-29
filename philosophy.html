@@ -4,19 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#091221">
-<title>Datum FI — The Philosophy</title>
-<meta name="description" content="A fixed point. A clear structure. A measured range. The philosophy behind Datum FI.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://eu.i.posthog.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.datumfi.com https://eu.i.posthog.com https://api.stripe.com;">
+<title>Datum FI — First Principles</title>
+<meta name="description" content="A fixed point. A clear structure. A measured range. The first principles behind Datum FI.">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Datum FI">
-<meta property="og:title" content="Datum FI — The Philosophy">
-<meta property="og:description" content="A fixed point. A clear structure. A measured range. The philosophy behind Datum FI.">
+<meta property="og:title" content="Datum FI — First Principles">
+<meta property="og:description" content="A fixed point. A clear structure. A measured range. The first principles behind Datum FI.">
 <meta property="og:image" content="/og-image.png">
+<meta property="og:url" content="https://datumfi.com/philosophy.html">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Datum FI — The Philosophy">
+<meta name="twitter:title" content="Datum FI — First Principles">
 <meta name="twitter:image" content="/og-image.png">
 <link rel="stylesheet" href="/styles/typography.css">
 <link rel="stylesheet" href="/styles/header.css">
@@ -33,6 +35,22 @@
     --font-serif: 'Fraunces', serif;
     --font-mono: 'DM Mono', monospace;
   }
+
+  /* --- SKIP LINK --- */
+  .skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--teal-mid);
+    color: var(--bg-navy);
+    padding: 8px 16px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-decoration: none;
+    z-index: 9999;
+    transition: top 0.2s;
+  }
+  .skip-link:focus { top: 0; }
 
   body {
     overflow-x: hidden;
@@ -51,14 +69,16 @@
     position: relative;
     max-width: 900px;
     margin: 0 auto;
-    padding: 96px 40px 20px;
+    padding: 150px 40px 20px;
     z-index: 10;
     flex: 1;
   }
 
-  /* --- TYPOGRAPHY UPDATES FOR MANIFESTO --- */
+  /* --- HERO --- */
+  .hero-block { margin-bottom: 80px; }
+
   .page-h1 {
-    margin-bottom: 8px;
+    margin-bottom: 16px;
     font-size: 64px;
     font-weight: 300;
     font-style: italic;
@@ -66,24 +86,16 @@
     color: var(--white);
   }
 
-  .page-subtitle {
+  .page-subhead {
     font-family: var(--font-mono);
     font-size: 14px;
     color: var(--gold);
-    margin-bottom: 60px;
-    letter-spacing: 0.1em;
     text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-weight: 500;
   }
 
-  .blueprint-controls { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 40px 0 40px; gap: 20px; }
-  .reset-btn {
-    background: transparent; border: 2px solid var(--teal-mid); color: var(--teal-mid);
-    font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.2em;
-    padding: 14px 28px; border-radius: 4px; cursor: pointer; transition: all 0.3s ease; font-weight: bold;
-  }
-  .reset-btn:hover { background: var(--teal-mid); color: var(--bg-navy); }
-
-  /* --- SPECIFIC RANGE WRAPPER TO CONTAIN THE BACKGROUND TIER --- */
+  /* --- RANGE WRAPPER & BOUNDARIES --- */
   .range-wrapper {
     position: relative;
     margin-bottom: 60px;
@@ -99,7 +111,6 @@
     z-index: -1;
   }
 
-  /* --- RANGE BOUNDARIES (FAR RIGHT ALIGNED) --- */
   .boundary {
     width: 100vw;
     position: relative;
@@ -111,7 +122,6 @@
     align-items: flex-end;
   }
 
-  /* Remove top margin for ceiling, bottom margin for floor to tightly contain the tier */
   .b-ceiling { margin-top: 0; }
   .b-floor { margin-bottom: 0; }
 
@@ -128,32 +138,192 @@
   .b-floor .line { background: var(--danger-red); }
   .b-floor .lbl { color: var(--danger-red); }
 
+  /* --- DATUM FLOAT ANIMATION --- */
+  @keyframes floatDatum {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(-6px); }
+  }
+
+  .b-datum.is-floating { animation: floatDatum 4s ease-in-out infinite; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .b-datum.is-floating { animation: none; }
+  }
+
   /* --- STANZA TYPOGRAPHY --- */
   .stanza { max-width: 650px; margin: 0 auto 80px; padding-left: 5%; position: relative; z-index: 2; }
   .stanza h2 { font-family: var(--font-mono); font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold); margin-bottom: 16px; }
-  .stanza p { font-size: 20px; line-height: 1.5; color: var(--white); opacity: 0.9; margin-bottom: 20px; font-weight: 300; }
+  .stanza p { font-size: 20px; line-height: 1.6; color: var(--white); opacity: 0.9; margin-bottom: 20px; font-weight: 300; }
   .stanza strong { color: var(--white); font-weight: 500; }
 
-  /* Embedded Manifesto Lists */
   .stanza ul { list-style: none; margin-bottom: 24px; padding-left: 20px; }
   .stanza li { font-size: 20px; color: rgba(255,255,255,0.9); margin-bottom: 8px; font-weight: 300; position: relative; line-height: 1.5; }
   .stanza li::before { content: '—'; position: absolute; left: -24px; color: var(--teal-mid); }
 
-  .tier-list li::before { content: ''; }
-  .tier-list li { padding-left: 0; margin-bottom: 16px; }
-  .tier-list strong { font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; margin-right: 12px; }
-
-  .final-signoff {
-    margin-top: 40px;
-    display: flex;
-    align-items: baseline;
-    justify-content: flex-start;
-    gap: 8px;
-    padding-left: 5%;
-    max-width: 650px;
-    margin-left: auto;
-    margin-right: auto;
+  /* --- IDENTITY PANEL (Stanza 9) --- */
+  .acronym-panel {
+    background: rgba(12, 18, 30, 0.6);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 8px;
+    padding: 30px 40px;
+    width: 100%;
+    margin: 40px 0;
+    box-sizing: border-box;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
   }
+
+  .ap-formula {
+    font-family: var(--font-mono);
+    color: var(--gold);
+    font-size: 22px;
+    letter-spacing: 0.2em;
+    font-weight: 500;
+    margin-bottom: 25px;
+    white-space: nowrap;
+    text-align: center;
+  }
+
+  .ap-divider {
+    height: 1px;
+    width: 100%;
+    border-top: 1px dashed rgba(255,255,255,0.15);
+    margin-bottom: 25px;
+  }
+
+  .ap-words {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: rgba(255,255,255,0.4);
+  }
+
+  .ap-highlight { color: var(--teal-mid); font-weight: bold; }
+
+  .mark-text {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 18px;
+    color: rgba(255,255,255,0.7);
+    display: block;
+    line-height: 1.6;
+    font-weight: 300;
+    text-align: center;
+    max-width: 700px;
+    margin: 0 auto;
+  }
+  .mark-text .highlight { color: var(--teal-mid); font-style: normal; }
+
+  /* --- CTA SECTION --- */
+  .fp-cta-section {
+    max-width: 650px;
+    margin: 0 auto 80px;
+    padding-left: 5%;
+  }
+
+  .fp-cta-lead {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--gold);
+    margin-bottom: 28px;
+  }
+
+  .fp-cta-grid {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .fp-cta-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 200px;
+    border: 1px solid rgba(93,202,165,0.35);
+    border-radius: 4px;
+    padding: 18px 24px;
+    text-decoration: none;
+    transition: border-color 0.3s, background 0.3s;
+    background: rgba(93,202,165,0.03);
+  }
+  .fp-cta-card:hover { border-color: var(--teal-mid); background: rgba(93,202,165,0.08); }
+
+  .fp-cta-card--studio {
+    border-color: rgba(201,168,76,0.35);
+    background: rgba(201,168,76,0.03);
+  }
+  .fp-cta-card--studio:hover { border-color: var(--gold); background: rgba(201,168,76,0.08); }
+
+  .fp-cta-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--teal-mid);
+    font-weight: bold;
+  }
+  .fp-cta-card--studio .fp-cta-label { color: var(--gold); }
+
+  .fp-cta-sub {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  /* --- POETIC SIGN-OFF --- */
+  .poetic-signoff {
+    text-align: center;
+    margin-top: 100px;
+    margin-bottom: 40px;
+    padding-top: 60px;
+    border-top: 1px dashed rgba(255,255,255,0.1);
+  }
+
+  .poetic-staccato {
+    font-size: 20px;
+    line-height: 1.8;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 40px;
+    font-weight: 300;
+  }
+
+  .poetic-climax {
+    font-size: 48px;
+    font-style: italic;
+    font-weight: 300;
+    line-height: 1.2;
+    color: var(--white);
+  }
+
+  /* --- RETURN TO ORIGIN (secondary) --- */
+  .return-secondary {
+    text-align: center;
+    margin: 40px auto 60px;
+  }
+
+  .return-link {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+    padding-bottom: 2px;
+    transition: color 0.2s, border-color 0.2s;
+    cursor: pointer;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+  }
+  .return-link:hover { color: var(--white); border-color: rgba(255,255,255,0.4); }
 
   /* --- FOOTER --- */
   #disclosure-footer {
@@ -167,14 +337,23 @@
   #disclosure-footer p { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,0.25); line-height: 1.6; margin: 0; }
 
   @media (max-width: 768px) {
+    .container { padding: 120px 24px 20px; }
     .range-tier { left: 5%; width: 100px; }
     .page-h1 { font-size: 42px; }
+    .page-subhead { font-size: 12px; }
     .stanza p, .stanza li { font-size: 16px; }
+    .acronym-panel { padding: 20px 15px; }
+    .ap-formula { font-size: 14px; letter-spacing: 0.1em; margin-bottom: 20px; }
+    .ap-divider { margin-bottom: 20px; }
+    .ap-words { flex-direction: column; gap: 10px; font-size: 11px; }
+    .poetic-climax { font-size: 36px; }
+    .fp-cta-grid { flex-direction: column; }
   }
-
 </style>
 </head>
 <body>
+
+  <a href="#main-content" class="skip-link">Skip to main content</a>
 
   <nav id="app-nav">
     <a href="/" class="brand-header"><span class="brand-datum">DATUM</span><span class="brand-fi">FI</span></a>
@@ -199,144 +378,171 @@
     <button class="nav-mobile-feedback" onclick="closeMobileNav(); openFeedback()">Share Feedback</button>
   </div>
 
-  <main class="container">
+  <main class="container" id="main-content">
 
-    <h1 class="page-h1 hero-title">Data in.<br>Confidence out.</h1>
-    <h2 class="page-subtitle">The Philosophy</h2>
+    <div class="hero-block">
+      <h1 class="page-h1">First Principles</h1>
+      <div class="page-subhead">A fixed point. A clear structure. A measured range.</div>
+    </div>
 
     <div class="range-wrapper">
       <div class="range-tier"></div>
 
       <div class="boundary b-ceiling">
-          <div class="label-group">
-              <span class="lbl">Structural Ceiling</span>
-          </div>
-          <div class="line"></div>
+        <div class="label-group">
+          <span class="lbl">Structural Ceiling</span>
+        </div>
+        <div class="line"></div>
       </div>
 
       <div class="stanza">
         <h2>1. Every structure begins with a fixed point.</h2>
-        <p>In architecture, surveying, and engineering, nothing meaningful can be built until you establish a DATUM — a reference point that does not move.</p>
+        <p>In architecture, surveying, and engineering, nothing meaningful can be built until you establish a datum —<br>a reference that does not move.</p>
         <p>It is the anchor.<br>The origin.<br>The truth everything else is measured from.</p>
-        <p>Your financial life has never had one.<br>Retirement tools give you guesses, probabilities, and sliders — but never a fixed point.</p>
-        <p style="color: var(--teal-mid); font-style: italic;">DATUM FI changes that.</p>
+        <p>Most financial lives are never given one.</p>
+        <p style="color: var(--teal-mid); font-style: italic;">DATUM FI exists to change that.</p>
       </div>
 
       <div class="stanza">
-        <h2>2. Your life deserves a reference, not a recommendation.</h2>
-        <p>Most tools tell you what you "should" spend.<br>They collapse uncertainty into a single number.<br>They hide risk behind a percentage.<br>They turn your future into a score.</p>
-        <p>We reject that.</p>
-        <p>You bring your number — your DATUM.<br>Not a target.<br>Not a prescription.<br>A reference.</p>
-        <p>A fixed point that reflects your intent, not our opinion.</p>
+        <h2>2. A life cannot be reduced to a recommendation.</h2>
+        <p>We don't tell you what you should spend.<br>We don't collapse uncertainty into a single number.<br>We don't turn your future into a score.</p>
+        <p>You bring your number — your Datum.<br>Not a forecast.<br>Not a prescription.<br>A reference.</p>
+        <p>A fixed point that reflects your intent, not anyone else's opinion.</p>
       </div>
 
       <div class="stanza">
-        <h2>3. Complexity belongs in the engine, not on your shoulders.</h2>
-        <p>Your financial life is complicated:</p>
+        <h2>3. Complexity belongs in the structure, not on your shoulders.</h2>
+        <p>Your financial life is full of forces:</p>
         <ul>
-          <li>accounts</li>
+          <li>time</li>
+          <li>uncertainty</li>
+          <li>volatility</li>
           <li>taxes</li>
-          <li>timelines</li>
-          <li>market cycles</li>
-          <li>sequence risk</li>
-          <li>inflation</li>
-          <li>longevity</li>
-          <li>valuation extremes</li>
+          <li>constraints</li>
+          <li>commitments</li>
+          <li>aspirations</li>
         </ul>
-        <p>You shouldn't have to manage that complexity.<br>You shouldn't have to guess.<br>You shouldn't have to "play with sliders" until the answer feels right.</p>
-        <p>That's why we built the Studio — the architectural drafting room for your retirement.</p>
-        <p>You map your reality.<br>We handle the structure.</p>
+        <p>You shouldn't have to simplify them.<br>You shouldn't have to pretend they don't exist.<br>You shouldn't have to guess.</p>
+        <p>A structure should hold complexity for you —<br>not demand that you hold it yourself.</p>
+      </div>
+
+      <div class="stanza">
+        <h2>4. We don't predict. We measure.</h2>
+        <p>Prediction is a story.<br>Measurement is a structure.</p>
+        <p>Prediction asks you to believe.<br>Measurement asks you to understand.</p>
+        <p>Prediction collapses uncertainty.<br>Measurement reveals it.</p>
+        <p>We choose measurement.</p>
       </div>
 
       <div class="boundary b-datum">
-          <div class="label-group">
-              <span class="lbl">Your Datum</span>
-          </div>
-          <div class="line"></div>
+        <div class="label-group">
+          <span class="lbl">Your Datum</span>
+        </div>
+        <div class="line"></div>
       </div>
 
       <div class="stanza">
-        <h2>4. We don't guess. We measure.</h2>
-        <p>Once your Estate is drafted in the Studio, we run it through:</p>
-        <ul>
-          <li>40,000 market futures</li>
-          <li>four independent simulation methods</li>
-          <li>every major crash since 1926</li>
-          <li>valuation-aware scenarios</li>
-          <li>stress tests</li>
-          <li>dynamic spending behavior</li>
-        </ul>
-        <p>We don't hide uncertainty.<br>We reveal it.</p>
-        <p>Not as a probability.<br>Not as a score.<br>As a Range.</p>
-      </div>
-
-      <div class="stanza">
-        <h2>5. Retirement spending isn't a number. It's a Range.</h2>
-        <p>Your Range is the truth of your plan:</p>
-        <ul class="tier-list">
-          <li><strong style="color: var(--danger-red);">Survival Floor</strong> Even if history's worst repeats. Holds in 99% of simulations.</li>
-          <li><strong style="color: var(--teal-mid);">Your DATUM</strong> Your number, your plan. Measured against mathematical reality.</li>
-          <li><strong style="color: var(--gold);">Structural Ceiling</strong> What the data says your plan's ultimate capacity can reach.</li>
-        </ul>
-        <p>This is not a recommendation.<br>This is not a guess.<br>This is the world your plan lives inside.</p>
+        <h2>5. Reality is not a point. It is a shape.</h2>
+        <p>Life does not unfold in straight lines.<br>Markets do not move on command.<br>Uncertainty is not a flaw — it is a condition.</p>
+        <p>A single number pretends otherwise.<br>A structure acknowledges the world as it is.</p>
+        <p>Your financial life has a ceiling.<br>It has a floor.<br>It has a place you choose to stand.</p>
+        <p>This is not optimism.<br>This is not pessimism.<br>This is geometry.</p>
       </div>
 
       <div class="stanza">
         <h2>6. Intelligence is clarity, not complexity.</h2>
-        <p>We built Datum Intelligence to interpret your Range with honesty and restraint.</p>
-        <p><strong>Datum Interpretation</strong><br>What your DATUM means inside the Range — without judgment, without prescription.</p>
-        <p><strong>Convergence</strong><br>How closely independent models agree — a quiet signal of structural robustness.</p>
-        <p><strong>Fragility Insights</strong><br>How your Range shifts when the assumptions that matter most change.</p>
-        <p>This is intelligence that clarifies, not overwhelms.<br>Insight without noise.<br>Rigor without anxiety.</p>
+        <p>Intelligence is not noise.<br>It is not dashboards.<br>It is not performance theater.</p>
+        <p>Intelligence is:</p>
+        <ul>
+          <li>understanding what matters</li>
+          <li>ignoring what doesn't</li>
+          <li>seeing the structure beneath the surface</li>
+          <li>knowing how things behave under tension</li>
+        </ul>
+        <p>Intelligence is the quiet confidence that comes from clarity.</p>
       </div>
 
       <div class="boundary b-floor">
-          <div class="label-group">
-              <span class="lbl">Survival Floor</span>
-          </div>
-          <div class="line"></div>
+        <div class="label-group">
+          <span class="lbl">Survival Floor</span>
+        </div>
+        <div class="line"></div>
       </div>
     </div>
 
     <div class="stanza">
-      <h2>7. Confidence is not a feeling. It's a structure.</h2>
-      <p>Confidence doesn't come from optimism.<br>It doesn't come from a single number.<br>It doesn't come from a probability score.</p>
-      <p>Confidence comes from understanding:</p>
+      <h2>7. Confidence is not a feeling. It is a structure.</h2>
+      <p>Confidence does not come from hope.<br>It does not come from a forecast.<br>It does not come from a perfect scenario.</p>
+      <p>Confidence comes from:</p>
       <ul>
-        <li>your floor</li>
-        <li>your possibilities</li>
-        <li>your intent</li>
-        <li>your sensitivity</li>
-        <li>your structure</li>
+        <li>knowing your floor</li>
+        <li>knowing your possibilities</li>
+        <li>knowing your sensitivity</li>
+        <li>knowing your structure</li>
+        <li>knowing your reference</li>
       </ul>
-      <p>Confidence comes from seeing your financial life the way an architect sees a building — anchored, measured, load‑tested, and honest.</p>
-      <p>Confidence comes from a fixed point.<br>Confidence comes from your DATUM.</p>
+      <p>Confidence comes from seeing your financial life the way an architect sees a building — anchored, measured, load&#8209;tested, and honest.</p>
+      <p>Confidence comes from a fixed point.<br>Confidence comes from your Datum.</p>
     </div>
 
     <div class="stanza">
-      <h2>8. This is not a calculator. This is a way of thinking.</h2>
-      <p>DATUM FI is not here to tell you what to do.<br>It's here to show you the world around your choices.</p>
-      <p>It's not here to simplify your life into a single number.<br>It's here to reveal the structure beneath it.</p>
-      <p>It's not here to guess.<br>It's here to measure.</p>
-      <p>It's not here to predict the future.<br>It's here to prepare you for it.</p>
+      <h2>8. This is not a calculator. This is a philosophy.</h2>
+      <p>DATUM FI is not here to simplify your life into a single number.<br>It is here to reveal the structure beneath it.</p>
+      <p>It is not here to guess.<br>It is here to measure.</p>
+      <p>It is not here to predict the future.<br>It is here to prepare you for it.</p>
+      <p>It is not here to remove uncertainty.<br>It is here to give you a way to live with it.</p>
     </div>
 
-    <div class="stanza" style="margin-bottom: 20px;">
-      <h2>9. Data in. Confidence out.</h2>
-      <p>This is the promise.<br>This is the philosophy.<br>This is the brand.</p>
-      <p>DATUM FI exists to give people something they've never had:</p>
-      <p>A fixed point.<br>A clear structure.<br>A measured range.<br>A calm understanding of uncertainty.<br>A way to live with confidence.</p>
-      <p>Not a guess.<br>Not a score.<br>A reference.</p>
+    <div class="stanza">
+      <h2>9. The identity of the system.</h2>
+
+      <div class="acronym-panel">
+        <div class="ap-formula">[ D + A ] &times; [ T + U ] = M</div>
+        <div class="ap-divider"></div>
+        <div class="ap-words">
+          <span class="ap-word"><span class="ap-highlight">D</span>ATA</span>
+          <span class="ap-word"><span class="ap-highlight">A</span>RCHITECTURE</span>
+          <span class="ap-word"><span class="ap-highlight">T</span>ENSION</span>
+          <span class="ap-word"><span class="ap-highlight">U</span>NCERTAINTY</span>
+          <span class="ap-word"><span class="ap-highlight">M</span>EASUREMENT</span>
+        </div>
+      </div>
+
+      <span class="mark-text">
+        When <span class="highlight">D</span>ata meets <span class="highlight">A</span>rchitecture under <span class="highlight">T</span>ension and <span class="highlight">U</span>ncertainty, <span class="highlight">M</span>easurement is <span class="highlight">F</span>orged &mdash; and <span class="highlight">I</span>ntelligence emerges.
+      </span>
     </div>
 
-    <div class="final-signoff" style="font-family: var(--font-serif);">
-        <span style="font-family: var(--font-serif); font-size: 24px; font-style: italic; font-weight: 300; color: var(--white);">A</span>
-        <span style="font-family: var(--font-serif); font-size: 24px; font-weight: 300; letter-spacing: 0.1em; color: var(--white);">DATUM.</span>
+    <section class="fp-cta-section" aria-label="Get started">
+      <p class="fp-cta-lead">Ready to see the structure?</p>
+      <div class="fp-cta-grid">
+        <a href="/sketch.html" class="fp-cta-card">
+          <span class="fp-cta-label">START WITH THE SKETCH →</span>
+          <span class="fp-cta-sub">Free. 30 seconds. No login.</span>
+        </a>
+        <a href="/studio.html" class="fp-cta-card fp-cta-card--studio">
+          <span class="fp-cta-label">ENTER THE STUDIO →</span>
+          <span class="fp-cta-sub">Full Blueprint. Deeper Analysis.</span>
+        </a>
+      </div>
+    </section>
+
+    <div class="poetic-signoff">
+      <div class="poetic-staccato">
+        This is the philosophy.<br>
+        This is the brand.<br>
+        This is the fixed point.
+      </div>
+      <div class="poetic-climax">
+        Data in.<br>
+        <span style="color: var(--teal-mid);">Confidence out.</span>
+      </div>
     </div>
 
-    <div class="blueprint-controls" style="margin-top: 60px; margin-bottom: 20px;">
-      <button class="reset-btn" onclick="returnToOrigin()">RETURN TO ORIGIN</button>
+    <div class="return-secondary">
+      <button class="return-link" onclick="returnToOrigin()">RETURN TO ORIGIN</button>
     </div>
+
   </main>
 
   <div id="disclosure-footer">
@@ -347,6 +553,21 @@
     function returnToOrigin() {
       window.location.href = '/';
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      var datumBar = document.querySelector('.b-datum');
+      if (!datumBar) return;
+      var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) {
+            datumBar.classList.add('is-floating');
+          } else {
+            datumBar.classList.remove('is-floating');
+          }
+        });
+      }, { threshold: 0.5 });
+      observer.observe(datumBar);
+    });
   </script>
   <script src="/feedback.js"></script>
   <script src="/nav.js"></script>
