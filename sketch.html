@@ -298,6 +298,14 @@
     .canvas-actions { top: 50px; right: 10px; }
   }
 
+  /* --- STATUS LINE + STUDIO BRIDGE --- */
+  .studio-bridge {
+    margin-top: 8px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.28);
+  }
+  .studio-bridge a { color: var(--teal-mid); text-decoration: none; opacity: 0.75; transition: opacity 0.2s; }
+  .studio-bridge a:hover { opacity: 1; }
+
   /* --- DYNAMIC SCROLL PROMPTS --- */
   .scroll-prompt {
     margin-top: 20px; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em;
@@ -705,7 +713,9 @@
           <div class="cta-desc">Your target exceeds your structural capacity. The Studio can help you close the gap.</div>
           <a href="/studio.html" class="cta-link">Enter the Studio to find the gap →</a>
         </div>
-        
+
+        <div class="studio-bridge">Sketch previews the envelope. Studio runs the engine. &nbsp;<a href="/studio-showcase.html">Enter the Studio →</a></div>
+
         <div class="scroll-prompt" id="scroll-prompt-arch" onclick="document.getElementById('screen-2').scrollIntoView({behavior: 'smooth'})">
             EXPLORE THE INVISIBLE ARCHITECTURE <span>↓</span>
         </div>
@@ -1351,7 +1361,7 @@
             datumTtHead.textContent = 'WARNING: EXCEEDS CEILING';
             if(dangerCta) dangerCta.style.display = 'block';
             if (archPrompt) archPrompt.innerHTML = 'See why your plan needs Studio → EXPLORE THE ENGINE <span>↓</span>';
-            
+
         } else if (targetSpendEnd < futFloor) {
             datumLine.style.stroke = 'var(--teal-mid)';
             datumCirc.style.fill = 'var(--teal-mid)';
@@ -1364,7 +1374,7 @@
             datumTtHead.textContent = 'WELL BELOW FLOOR';
             if(dangerCta) dangerCta.style.display = 'none';
             if (archPrompt) archPrompt.innerHTML = 'EXPLORE THE INVISIBLE ARCHITECTURE <span>↓</span>';
-            
+
         } else {
             datumLine.style.stroke = 'var(--teal-mid)';
             datumCirc.style.fill = 'var(--teal-mid)';
