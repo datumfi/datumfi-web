@@ -232,7 +232,7 @@
   @keyframes fade-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
   /* Canvas Actions & Custom Hover Tooltip */
-  .canvas-actions { position: absolute; top: 108px; right: 40px; display: flex; gap: 10px; z-index: 20; }
+  .canvas-actions { position: absolute; top: 92px; right: 40px; display: flex; gap: 10px; z-index: 20; }
   .canvas-btn-wrap { position: relative; display: inline-block; }
   .canvas-btn { background: rgba(9, 18, 33, 0.8); border: 1px solid rgba(255,255,255,0.2); color: var(--white); font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; padding: 8px 12px; border-radius: 4px; cursor: pointer; transition: all 0.2s; }
   .canvas-btn:hover { border-color: var(--teal-mid); color: var(--teal-mid); }
@@ -1261,11 +1261,13 @@
         const fvFloorStr = fvConservative >= 1 ? `$${fvConservative.toFixed(2)}M` : `$${Math.round(fvConservative * 1000).toLocaleString('en-US')}k`;
         const fvBaseStr  = fvBaseline >= 1 ? `$${fvBaseline.toFixed(2)}M` : `$${Math.round(fvBaseline * 1000).toLocaleString('en-US')}k`;
 
-        const allValues = [startSpend, futCeil, futFloor, targetSpend, targetSpendEnd, lifestyleSpend, lifestyleSpendEnd];
+        const allValues = lifestyleSpend > 0
+            ? [startSpend, futCeil, futFloor, targetSpend, targetSpendEnd, lifestyleSpend, lifestyleSpendEnd]
+            : [startSpend, futCeil, futFloor, targetSpend, targetSpendEnd];
         const valMin = Math.min(...allValues);
         const valMax = Math.max(...allValues);
         const valRange = valMax - valMin;
-        const paddedRange = Math.max(valRange * 2.5, 60);
+        const paddedRange = Math.max(valRange * 1.25, 60);
         const midpoint = (valMin + valMax) / 2;
         
         const yMin = Math.max(0, midpoint - paddedRange / 2);
@@ -1297,11 +1299,11 @@
         const lY_s = spendToY(lifestyleSpend);
         const lY_e = spendToY(lifestyleSpendEnd);
 
-        const dCeil = `M ${xStart} ${cY_s} C ${xStart + 200} ${cY_s}, ${xEnd - 200} ${cY_e}, ${xEnd} ${cY_e}`;
-        const dFloor = `M ${xStart} ${fY_s} C ${xStart + 200} ${fY_s}, ${xEnd - 200} ${fY_e}, ${xEnd} ${fY_e}`;
-        const dDatum = `M ${xStart} ${dY_s} C ${xStart + 200} ${dY_s}, ${xEnd - 200} ${dY_e}, ${xEnd} ${dY_e}`;
-        const dLifestyle = `M ${xStart} ${lY_s} C ${xStart + 200} ${lY_s}, ${xEnd - 200} ${lY_e}, ${xEnd} ${lY_e}`;
-        const dCone = `M ${xStart} ${cY_s} C ${xStart + 200} ${cY_s}, ${xEnd - 200} ${cY_e}, ${xEnd} ${cY_e} L ${xEnd} ${fY_e} C ${xEnd - 200} ${fY_e}, ${xStart + 200} ${fY_s}, ${xStart} ${fY_s} Z`;
+        const dCeil = `M ${xStart} ${cY_s} C ${xStart + 100} ${cY_s}, ${xEnd - 100} ${cY_e}, ${xEnd} ${cY_e}`;
+        const dFloor = `M ${xStart} ${fY_s} C ${xStart + 100} ${fY_s}, ${xEnd - 100} ${fY_e}, ${xEnd} ${fY_e}`;
+        const dDatum = `M ${xStart} ${dY_s} C ${xStart + 100} ${dY_s}, ${xEnd - 100} ${dY_e}, ${xEnd} ${dY_e}`;
+        const dLifestyle = `M ${xStart} ${lY_s} C ${xStart + 100} ${lY_s}, ${xEnd - 100} ${lY_e}, ${xEnd} ${lY_e}`;
+        const dCone = `M ${xStart} ${cY_s} C ${xStart + 100} ${cY_s}, ${xEnd - 100} ${cY_e}, ${xEnd} ${cY_e} L ${xEnd} ${fY_e} C ${xEnd - 100} ${fY_e}, ${xStart + 100} ${fY_s}, ${xStart} ${fY_s} Z`;
 
         ceilLine.setAttribute('d', dCeil);
         floorLine.setAttribute('d', dFloor);
