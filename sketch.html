@@ -232,7 +232,7 @@
   @keyframes fade-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
   /* Canvas Actions & Custom Hover Tooltip */
-  .canvas-actions { position: absolute; top: 30px; right: 40px; display: flex; gap: 10px; z-index: 20; }
+  .canvas-actions { position: absolute; top: 108px; right: 40px; display: flex; gap: 10px; z-index: 20; }
   .canvas-btn-wrap { position: relative; display: inline-block; }
   .canvas-btn { background: rgba(9, 18, 33, 0.8); border: 1px solid rgba(255,255,255,0.2); color: var(--white); font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; padding: 8px 12px; border-radius: 4px; cursor: pointer; transition: all 0.2s; }
   .canvas-btn:hover { border-color: var(--teal-mid); color: var(--teal-mid); }
@@ -245,7 +245,8 @@
   .canvas-btn-wrap:hover .pin-tooltip { display: block; animation: fade-in 0.2s ease; }
 
   /* --- SVG RANGE ARCHITECTURE --- */
-  .range-svg { width: 100%; max-width: 900px; height: auto; aspect-ratio: 800 / 760; max-height: calc(100vh - 60px); overflow: visible; }
+  .canvas-wrap { position: relative; width: 100%; max-width: 900px; }
+  .range-svg { width: 100%; height: auto; aspect-ratio: 840 / 780; max-height: calc(100vh - 60px); overflow: visible; }
   .grid-tick { stroke: rgba(255,255,255,0.05); stroke-width: 1; stroke-dasharray: 4 4; }
   .grid-label { font-family: var(--font-mono); font-size: 12px; fill: rgba(255,255,255,0.4); }
   .grid-label.midpoint { font-weight: bold; fill: rgba(255,255,255,0.7); }
@@ -283,17 +284,18 @@
   @media (max-width: 900px) {
     .hero-screen { flex-direction: column; height: auto; min-height: 100vh; overflow-y: auto; }
     .panel-left { width: 100%; height: auto; padding: 100px 5% 40px 5%; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    .panel-right { width: 100%; height: 50vh; min-height: 380px; padding-top: 20px; }
+    .panel-right { width: 100%; height: auto; min-height: 400px; padding-top: 20px; padding-bottom: 20px; }
+    .canvas-wrap { max-width: 100%; }
     input[type=range] { min-height: 48px; }
     .toggle-container label { min-height: 48px; display: flex; align-items: center; justify-content: center; }
-    .range-svg { min-height: 300px; }
+    .range-svg { min-height: 320px; max-height: none; }
     .grid-label { font-size: 16px; }
     .time-label { font-size: 14px; }
     .range-label { font-size: 13px; }
     .text-data { font-size: 16px; }
     .text-highlight { font-size: 13px; }
     .tt-head { font-size: 12px; }
-    .canvas-actions { top: 10px; right: 10px; }
+    .canvas-actions { top: 50px; right: 10px; }
   }
 
   /* --- DYNAMIC SCROLL PROMPTS --- */
@@ -708,6 +710,7 @@
       </div>
 
       <div class="panel-right">
+        <div class="canvas-wrap">
           <div class="canvas-actions">
             <div class="canvas-btn-wrap">
                 <button class="canvas-btn" onclick="pinScenario()">Pin Scenario</button>
@@ -716,7 +719,7 @@
             <button class="canvas-btn" onclick="saveSnapshot()">Save Snapshot</button>
           </div>
 
-          <svg class="range-svg" id="sketch-canvas" viewBox="0 0 800 760" preserveAspectRatio="xMidYMid meet">
+          <svg class="range-svg" id="sketch-canvas" viewBox="0 0 840 780" preserveAspectRatio="xMidYMid meet">
               <defs>
                   <linearGradient id="thermal-grad" x1="0%" y1="0%" x2="0%" y2="100%">
                       <stop offset="0%" stop-color="rgba(226, 75, 74, 0.25)" />
@@ -827,6 +830,7 @@
                   </g>
               </g>
           </svg>
+        </div>
       </div>
   </div>
 
