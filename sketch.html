@@ -580,9 +580,9 @@
         <div class="control-group">
             <div class="control-header">
                 <span class="control-label">Current Age</span>
-                <span class="control-value" id="val-age">40 yrs</span>
+                <span class="control-value" id="val-age">25 yrs</span>
             </div>
-            <input type="range" id="slider-age" min="18" max="65" value="40" step="1">
+            <input type="range" id="slider-age" min="18" max="65" value="25" step="1">
         </div>
 
         <div class="control-group">
@@ -596,17 +596,17 @@
         <div class="control-group">
             <div class="control-header">
                 <span class="control-label">Current Portfolio Balance</span>
-                <span class="control-value" id="val-portfolio">$1.50M</span>
+                <span class="control-value" id="val-portfolio">$10,000</span>
             </div>
-            <input type="range" id="slider-portfolio" min="0.01" max="10.0" value="1.5" step="0.005">
+            <input type="range" id="slider-portfolio" min="0.01" max="10.0" value="0.01" step="0.005">
         </div>
 
         <div class="control-group">
             <div class="control-header">
                 <span class="control-label" style="color: var(--teal-mid);">Your Datum (Future Retirement Spend)</span>
-                <span class="control-value" id="val-datum">$165k / yr</span>
+                <span class="control-value" id="val-datum">$100k / yr</span>
             </div>
-            <input type="range" id="slider-datum" class="datum-pulse" min="20" max="1000" value="165" step="1">
+            <input type="range" id="slider-datum" class="datum-pulse" min="20" max="1000" value="100" step="1">
         </div>
 
         <div class="advanced-trigger" onclick="document.getElementById('advanced-panel').classList.toggle('open')">
@@ -1003,9 +1003,9 @@
               </div>
           </div>
       </div>
-      <button class="gate-nav-btn" onclick="document.getElementById('gate3').scrollIntoView({behavior:'smooth'})">See Full Comparison ↓</button>
+      <button class="gate-nav-btn" id="comparison-toggle-btn" onclick="toggleComparison(this)">See Full Comparison ↓</button>
 
-      <div id="gate3" style="width: 100%; max-width: 1100px; margin: 0 auto;">
+      <div id="gate3" style="width: 100%; max-width: 1100px; margin: 0 auto; display: none;">
           <div class="gate3-header">Every dimension. Every system. Every decision.</div>
           <div class="gate3-wrap">
               <table class="comp-table">
@@ -1408,6 +1408,14 @@
             inflation: isNominal ? 'nominal' : 'real', tax: parseInt(slTax.value)
           }));
         } catch(e) {}
+    }
+
+    function toggleComparison(btn) {
+        const gate = document.getElementById('gate3');
+        const isOpen = gate.style.display !== 'none';
+        gate.style.display = isOpen ? 'none' : '';
+        btn.textContent = isOpen ? 'See Full Comparison ↓' : 'Hide Full Comparison ↑';
+        if (!isOpen) gate.scrollIntoView({ behavior: 'smooth' });
     }
 
     function pinScenario() {
