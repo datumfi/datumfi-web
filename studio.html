@@ -125,10 +125,10 @@
   .sal-tt-val { color: var(--teal-mid); font-weight: bold;}
 
   .ss-group { display: flex; gap: 8px; margin-top: 5px; }
-  .ss-btn { flex: 1; background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; color: var(--muted); padding: 8px 4px; text-align: center; cursor: pointer; font-family: var(--font-mono); transition: 0.3s; }
-  .ss-btn.active { border-color: var(--teal-mid); color: var(--white); background: rgba(29, 158, 117, 0.1); }
-  .ss-btn span { display: block; font-size: 8px; text-transform: uppercase; letter-spacing: 0.1em; color: inherit; margin-top: 2px; }
-  .ss-btn strong { font-size: 14px; font-weight: 500; }
+  .ss-btn, .ss-sec-btn { flex: 1; background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; color: var(--muted); padding: 8px 4px; text-align: center; cursor: pointer; font-family: var(--font-mono); transition: 0.3s; }
+  .ss-btn.active, .ss-sec-btn.active { border-color: var(--teal-mid); color: var(--white); background: rgba(29, 158, 117, 0.1); }
+  .ss-btn span, .ss-sec-btn span { display: block; font-size: 8px; text-transform: uppercase; letter-spacing: 0.1em; color: inherit; margin-top: 2px; }
+  .ss-btn strong, .ss-sec-btn strong { font-size: 14px; font-weight: 500; }
 
   /* Operating Upkeep */
   .plumbing-list { margin-top: 10px; }
@@ -425,7 +425,7 @@
   }
   @media (max-width: 900px) {
     input[type=range] { min-height: 48px; }
-    .ss-btn { min-height: 48px; }
+    .ss-btn, .ss-sec-btn { min-height: 48px; }
     .btn { min-height: 48px; }
     .feedback-btn { min-height: 48px; }
   }
@@ -659,6 +659,9 @@
   .diag-section:last-child { margin-bottom: 0; }
   .diag-section-title { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gold); margin-bottom: 12px; }
 
+  /* --- INCOME LAYER — SS TIMING HALL --- */
+  .ss-map-grid-placeholder { min-height: 56px; border: 1px dashed rgba(255,255,255,0.06); border-radius: 4px; margin-bottom: 14px; }
+
 </style>
 </head>
 <body>
@@ -784,19 +787,6 @@
               </div>
             </div>
 
-            <div class="input-label" style="margin-top: 15px;">Social Security Strategy</div>
-            <div class="ss-group">
-              <button class="ss-btn" type="button"><strong>62</strong><span>Early</span></button>
-              <button class="ss-btn active" type="button"><strong>67</strong><span>Full</span></button>
-              <button class="ss-btn" type="button"><strong>70</strong><span>Optimal</span></button>
-            </div>
-
-            <div class="field-row" style="margin-top: 15px;">
-              <div>
-                <div class="input-label">Est. Annual SS</div>
-                <input type="text" class="small-field curr-format" value="$38,000">
-              </div>
-            </div>
 
             <div class="toggle-row" style="margin-top: 25px; margin-bottom: 15px; padding-bottom: 0; border: none;">
               <span class="toggle-label">Co-Architect / Spouse</span>
@@ -813,11 +803,8 @@
                   <div class="input-label">Co-Architect DOB</div>
                   <input type="text" class="small-field" id="co-dob" value="05 / 1980">
                 </div>
-                <div>
-                  <div class="input-label">Est. Annual SS</div>
-                  <input type="text" class="small-field curr-format" value="$24,000">
-                </div>
               </div>
+
               <div class="field-row">
                 <div class="salary-container" style="position: relative;">
                   <div class="input-label">Co-Arch Salary</div>
@@ -909,8 +896,121 @@
 
       <div class="studio-section">
         <div class="section-header-wrapper">
+            <button class="section-tag" onclick="toggleSection('sec-income-layer', this)" style="border:none; margin:0; padding:0; flex:1;">
+                <span>05 / Income Timing — Social Security &amp; Pensions</span> <span class="toggle-icon">−</span>
+            </button>
+            <button class="pin-btn" onclick="togglePin('sec-income-layer', this)" title="Pin section open">📌</button>
+        </div>
+        <div id="sec-income-layer" class="section-content" style="display: block;"
+             role="region" aria-labelledby="ss-hall-heading">
+
+          <div class="panel-sub" style="margin-bottom: 15px; text-transform:none; color:var(--muted); font-size:11px; line-height:1.4;">When you claim Social Security changes how long your portfolio has to carry you.</div>
+
+          <!-- Income Timing Hall -->
+          <div class="architect-box" id="ss-timing-hall">
+
+            <div id="ss-hall-heading" class="precision-motto">Income Timing Hall</div>
+
+            <div class="panel-sub" style="margin-bottom: 10px; text-transform:none; color:var(--muted); font-size:11px; line-height:1.5;">
+              Your current claiming plan is the baseline. Each option shows how timing changes your guaranteed income, supported spend, and conservative floor.
+            </div>
+
+            <details style="margin-bottom:14px;">
+              <summary style="font-family:var(--font-mono);font-size:10px;color:var(--teal-mid);cursor:pointer;letter-spacing:0.06em;text-transform:uppercase;list-style:none;-webkit-appearance:none;outline:none;">How this works ▾</summary>
+              <div style="margin-top:8px;padding:8px 10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);border-radius:4px;font-family:var(--font-serif);font-size:11px;color:var(--muted);line-height:1.65;">
+                This is not just a Social Security benefit estimate. The Studio tests each claiming path against your current accounts and spending target to see how timing affects the whole retirement structure.<br><br>
+                Delaying both benefits usually creates the largest monthly check, but it also forces your portfolio to carry more years alone. Starting earlier can reduce that pressure — sometimes enough to support more spending overall.
+              </div>
+            </details>
+
+            <!-- Current Claiming Plan -->
+            <div style="margin-bottom:16px;">
+              <div class="input-label" style="margin-bottom:8px;">Current Claiming Plan</div>
+              <div style="font-size:9px;color:var(--muted);font-family:var(--font-mono);letter-spacing:0.04em;text-transform:uppercase;margin-bottom:6px;">Primary</div>
+              <div class="ss-group">
+                <button class="ss-btn" type="button"><strong>62</strong><span>Early</span></button>
+                <button class="ss-btn active" type="button"><strong>67</strong><span>Full</span></button>
+                <button class="ss-btn" type="button"><strong>70</strong><span>Optimal</span></button>
+              </div>
+              <div id="ss-co-arch-strategy" style="display:none;margin-top:12px;">
+                <div style="font-size:9px;color:var(--muted);font-family:var(--font-mono);letter-spacing:0.04em;text-transform:uppercase;margin-bottom:6px;">Co-Architect</div>
+                <div class="ss-group">
+                  <button class="ss-sec-btn" type="button"><strong>62</strong><span>Early</span></button>
+                  <button class="ss-sec-btn active" type="button"><strong>67</strong><span>Full</span></button>
+                  <button class="ss-sec-btn" type="button"><strong>70</strong><span>Optimal</span></button>
+                </div>
+              </div>
+            </div>
+
+            <!-- SSA.gov Annual Estimates -->
+            <div style="margin-bottom:16px;">
+              <div class="input-label" style="margin-bottom:4px;">SSA.gov Annual Estimates</div>
+              <div style="font-size:9px;color:var(--muted);font-family:var(--font-mono);margin-bottom:10px;line-height:1.5;">Use your SSA.gov annual estimates. Age 67 is treated as Full Retirement Age in this model.</div>
+              <div id="ss-plausibility-warn" style="display:none;font-size:9px;color:var(--gold);font-family:var(--font-mono);margin-bottom:8px;line-height:1.5;"></div>
+              <div style="font-size:9px;color:var(--muted);font-family:var(--font-mono);letter-spacing:0.04em;text-transform:uppercase;margin-bottom:5px;">Primary</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
+                <div>
+                  <div class="input-label">Age 62 annual</div>
+                  <input type="text" id="ss-pri-62" class="small-field curr-format" placeholder="$0">
+                </div>
+                <div>
+                  <div class="input-label">Age 67 annual (FRA)</div>
+                  <input type="text" id="ss-pri-67" class="small-field curr-format" placeholder="$0">
+                </div>
+                <div>
+                  <div class="input-label">Age 70 annual</div>
+                  <input type="text" id="ss-pri-70" class="small-field curr-format" placeholder="$0">
+                </div>
+              </div>
+              <div id="ss-co-arch-estimates" style="display:none;">
+                <div style="font-size:9px;color:var(--muted);font-family:var(--font-mono);letter-spacing:0.04em;text-transform:uppercase;margin-bottom:5px;">Co-Architect</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+                  <div>
+                    <div class="input-label">Age 62 annual</div>
+                    <input type="text" id="ss-sec-62" class="small-field curr-format" placeholder="$0">
+                  </div>
+                  <div>
+                    <div class="input-label">Age 67 annual (FRA)</div>
+                    <input type="text" id="ss-sec-67" class="small-field curr-format" placeholder="$0">
+                  </div>
+                  <div>
+                    <div class="input-label">Age 70 annual</div>
+                    <input type="text" id="ss-sec-70" class="small-field curr-format" placeholder="$0">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Grid container — populated by renderMatrixGrid() in A306; hidden until data is ready -->
+            <div id="ss-matrix-grid" class="ss-map-grid-placeholder"
+                 aria-label="Social Security claiming paths — not yet tested"
+                 style="display:none;"></div>
+
+            <!-- Test Claiming Paths button — onclick wired in A305 -->
+            <button class="measure-btn" id="ss-map-compute-btn" type="button">
+              Test Claiming Paths &#x2192;
+            </button>
+
+            <!-- State panels — skeleton containers, populated by A305/A306 JS -->
+            <div id="ss-map-status" style="display:none;" aria-live="polite" aria-atomic="true"></div>
+            <div id="ss-map-recommendation" style="display:none;"></div>
+            <div id="ss-map-sensitivity" style="display:none;"></div>
+
+            <div class="metaphor-hint" style="margin-top:14px;">
+              Path inspection will be added next. For now, use this comparison to decide which timing path is worth inspecting.
+            </div>
+
+          </div>
+
+          <!-- Pension / DROP / survivor-election reserved for future Income Layer expansion -->
+
+        </div>
+      </div>
+
+      <div class="studio-section">
+        <div class="section-header-wrapper">
             <button class="section-tag" onclick="toggleSection('sec-climate', this)" style="border:none; margin:0; padding:0; flex:1;">
-                <span>05 / Climate Control — Market Outlook</span> <span class="toggle-icon">−</span>
+                <span>06 / Climate Control — Market Outlook</span> <span class="toggle-icon">−</span>
             </button>
             <button class="pin-btn" onclick="togglePin('sec-climate', this)" title="Pin section open">📌</button>
         </div>
@@ -1160,6 +1260,7 @@
         'sec-drafting': false,
         'sec-upkeep': false,
         'sec-datum': false,
+        'sec-income-layer': false,
         'sec-climate': false
     };
     const allSections = Object.keys(pinnedSections);
@@ -1235,6 +1336,15 @@
       });
     });
 
+    // Co-Architect SS strategy buttons — independent group from primary
+    const secBtns = document.querySelectorAll('.ss-sec-btn');
+    secBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        secBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+
     const climateOpts = document.querySelectorAll('.climate-option:not(#custom-climate-btn)');
     const customBtn = document.getElementById('custom-climate-btn');
     const customBox = document.getElementById('custom-climate-box');
@@ -1290,6 +1400,10 @@
     
     coToggle.addEventListener('change', () => {
       coArchFields.style.display = coToggle.checked ? 'block' : 'none';
+      var _ssStrat = document.getElementById('ss-co-arch-strategy');
+      var _ssEst   = document.getElementById('ss-co-arch-estimates');
+      if (_ssStrat) _ssStrat.style.display = coToggle.checked ? 'block' : 'none';
+      if (_ssEst)   _ssEst.style.display   = coToggle.checked ? 'block' : 'none';
       if(!coToggle.checked) {
         let i = state.accounts.length;
         while (i--) {
@@ -3150,6 +3264,40 @@
         return age;
       }
 
+      // SS override helper — reads monthly inputs, returns {state, dict}
+      // state: 'full' | 'fra_only' | 'partial' | 'empty'
+      // Inputs are annual — no ×12 conversion needed (engine is annual-native)
+      function _readSSOverride(prefix) {
+        function _pa(id) { var el = document.getElementById(id); return parseInt(((el && el.value) || '').replace(/[^\d]/g, ''), 10) || 0; }
+        var v62 = _pa(prefix + '-62');
+        var v67 = _pa(prefix + '-67');
+        var v70 = _pa(prefix + '-70');
+        var n   = (v62 > 0 ? 1 : 0) + (v67 > 0 ? 1 : 0) + (v70 > 0 ? 1 : 0);
+
+        // Plausibility check — run on any non-empty input, warn without blocking
+        var warnEl = document.getElementById('ss-plausibility-warn');
+        if (warnEl) {
+          var vals = [v62, v67, v70].filter(function(v) { return v > 0; });
+          var tooHigh = vals.some(function(v) { return v > 100000; });
+          var tooLow  = vals.some(function(v) { return v > 0 && v < 1000; });
+          if (tooHigh) {
+            warnEl.textContent = 'This looks high for an annual Social Security estimate. Check that you did not enter a monthly amount incorrectly.';
+            warnEl.style.display = 'block';
+          } else if (tooLow) {
+            warnEl.textContent = 'This looks low for an annual estimate. Check that you entered the annual amount.';
+            warnEl.style.display = 'block';
+          } else {
+            warnEl.style.display = 'none';
+          }
+        }
+
+        if (n === 0) return { state: 'empty',    dict: null };
+        if (n === 3) return { state: 'full',     dict: { early_62: v62, full_67: v67, optimal_70: v70 } };
+        if (n === 1 && v67 > 0) return { state: 'fra_only', dict: { early_62: Math.round(v67 * 0.70), full_67: Math.round(v67), optimal_70: Math.round(v67 * 1.24) } };
+        return { state: 'partial', dict: null };
+      }
+      window._readSSOverride = _readSSOverride;
+
       // STU-010 + STU-022: enum mapping, Group 4 filter, custom_weights for Custom Matrix
       function buildStudioRequest() {
         const dobVal   = document.getElementById('pri-dob')?.value || '';
@@ -3196,6 +3344,14 @@
 
         const body = { current_age: currentAge, retirement_age: retireAge, location: 'FL', datum_spend: datumSpend, market_outlook: outlookValue, ss_strategy_primary: ssStrategy, accounts };
         if (customWeights) body.custom_weights = customWeights;
+        // SS overrides — monthly → annual (×12); included when user has entered valid estimates
+        const priSS = _readSSOverride('ss-pri');
+        if (priSS.dict) body.ss_primary_benefit_overrides = priSS.dict;
+        const coEl = document.getElementById('co-arch-toggle');
+        if (coEl && coEl.checked) {
+          const secSS = _readSSOverride('ss-sec');
+          if (secSS.dict) body.ss_secondary_benefit_overrides = secSS.dict;
+        }
         return body;
       }
 
@@ -3697,6 +3853,579 @@
         if (sessionStorage.getItem('scenario_b')) document.getElementById('btn-snapshot').disabled = true;
       }
     })();
+  </script>
+
+  <!-- A306 — SS Matrix grid CSS -->
+  <style>
+  .ss-matrix-wrap{display:grid;grid-template-columns:44px repeat(3,1fr);gap:4px;padding:4px;}
+  .ss-matrix-corner{display:flex;align-items:flex-end;justify-content:flex-end;padding-bottom:4px;}
+  .ss-matrix-col-hdr{text-align:center;font-size:10px;color:var(--muted);padding:4px 2px 6px;font-family:var(--font-mono);letter-spacing:0.04em;}
+  .ss-matrix-row-hdr{display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-size:11px;color:var(--muted);font-family:var(--font-mono);font-weight:600;}
+  .ss-matrix-cell{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:4px;padding:8px 7px 7px;cursor:pointer;transition:background 0.15s,border-color 0.15s;position:relative;min-height:110px;}
+  .ss-matrix-cell:hover{background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.16);}
+  .ss-cell-empty{background:rgba(255,255,255,0.01);border-color:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;}
+  .ss-cell-current{border-color:rgba(212,175,55,0.4)!important;background:rgba(212,175,55,0.06)!important;}
+  .ss-cell-top-spend{border-color:rgba(29,158,117,0.28)!important;}
+  .ss-cell-top-floor{border-color:rgba(100,180,200,0.25)!important;}
+  .ss-cell-badge{display:block;font-size:8px;font-family:var(--font-mono);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:3px;line-height:1.2;}
+  .ss-badge-current{color:var(--gold);}
+  .ss-cell-ss{font-size:11px;font-family:var(--font-mono);color:#e2e2e2;line-height:1.2;margin-bottom:5px;}
+  .ss-cell-spend-label,.ss-cell-floor-label{font-size:8px;color:var(--muted);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.04em;line-height:1.2;margin-top:4px;}
+  .ss-cell-spend-val,.ss-cell-floor-val{font-size:10px;color:#d0d0d0;font-family:var(--font-mono);line-height:1.3;}
+  @keyframes ss-shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
+  .ss-progress-bar{height:2px;background:rgba(29,158,117,0.12);border-radius:1px;overflow:hidden;margin:10px 0 8px;position:relative;}
+  .ss-progress-bar::after{content:'';position:absolute;top:0;left:0;width:35%;bottom:0;background:linear-gradient(90deg,transparent,rgba(29,158,117,0.75),transparent);animation:ss-shimmer 1.7s ease-in-out infinite;}
+  </style>
+
+  <!-- A305/A306 — SS Matrix async state machine + grid renderer -->
+  <script>
+  (function() {
+    'use strict';
+
+    var API_BASE    = 'https://api.datumfi.com';
+    var MAX_POLLS   = 60;
+    var _currentJobId = null;
+
+    // ── Minimal HTML escape for API-sourced strings ────────────────────────
+    function esc(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // ── Number formatters ─────────────────────────────────────────────────
+    function fmtK(n) { return '$' + Math.round(n / 1000) + 'K'; }
+    function fmt(n)  { return Math.round(n).toLocaleString('en-US'); }
+
+    // ── Render 3×3 SS Matrix grid into #ss-matrix-grid ────────────────────
+    function renderMatrixGrid(result) {
+      var grid   = document.getElementById('ss-matrix-grid');
+      var recEl  = document.getElementById('ss-map-recommendation');
+      var sensEl = document.getElementById('ss-map-sensitivity');
+      if (!grid || !result || !result.cases || !result.cases.length) return;
+
+      var cases          = result.cases;
+      var currentPlanKey = result.current_plan_key || null;
+
+      var strats   = ['early_62', 'full_67', 'optimal_70'];
+      var ageLabel = { early_62: '62', full_67: '67', optimal_70: '70' };
+      var lookup   = {};
+      cases.forEach(function(c) { lookup[c.case_key] = c; });
+
+      var currentCase = currentPlanKey ? lookup[currentPlanKey] : null;
+
+      // Spread + cluster detection
+      var allSpend = cases.map(function(c) { return c.tiers.keystone; });
+      var allFloor = cases.map(function(c) { return c.mc_99_floor; });
+      var maxSpend = Math.max.apply(null, allSpend);
+      var minSpend = Math.min.apply(null, allSpend);
+      var maxFloor = Math.max.apply(null, allFloor);
+      var minFloor = Math.min.apply(null, allFloor);
+      var supportedSpread    = maxSpend - minSpend;
+      var floorSpread        = maxFloor - minFloor;
+      var supportedClustered = supportedSpread < 10000;
+      var floorClustered     = floorSpread     < 10000;
+
+      // Top-2 spend / floor keys for subtle cell outline (no label)
+      var sortedBySpend = cases.slice().sort(function(a, b) { return b.tiers.keystone - a.tiers.keystone; });
+      var sortedByFloor = cases.slice().sort(function(a, b) { return b.mc_99_floor    - a.mc_99_floor;    });
+      var topSpendKeys  = {};
+      var topFloorKeys  = {};
+      sortedBySpend.slice(0, 2).forEach(function(c) { topSpendKeys[c.case_key] = 1; });
+      sortedByFloor.slice(0, 2).forEach(function(c) { topFloorKeys[c.case_key] = 1; });
+
+      // Delta magnitude color — visual weight only, not statistical
+      function _dColor(delta) {
+        var abs = Math.abs(delta);
+        if (delta >= 0) {
+          if (abs < 3000) return 'rgba(29,158,117,0.45)';
+          if (abs < 7500) return 'rgba(29,158,117,0.82)';
+          return '#26c491';
+        } else {
+          if (abs < 3000) return 'rgba(180,180,180,0.55)';
+          if (abs < 7500) return 'rgba(220,100,100,0.75)';
+          return '#e24b4a';
+        }
+      }
+
+      // Arrow legend + axis label
+      var html = '<div style="font-size:9px;color:var(--muted);font-family:var(--font-mono);'
+        + 'letter-spacing:0.04em;margin-bottom:8px;line-height:1.5;padding:5px 0 4px;'
+        + 'border-bottom:1px solid rgba(255,255,255,0.06);">'
+        + '▲ higher than your plan &nbsp;·&nbsp; ▼ lower than your plan &nbsp;·&nbsp; mixed arrows = tradeoff'
+        + '</div>'
+        + '<div style="font-size:9px;color:var(--muted);font-family:var(--font-mono);'
+        + 'text-align:center;margin-bottom:4px;letter-spacing:0.06em;text-transform:uppercase;">'
+        + 'Secondary / Spousal Claims At</div>'
+        + '<div class="ss-matrix-wrap">';
+
+      // Corner + column headers
+      html += '<div class="ss-matrix-corner"><div style="font-size:8px;color:var(--muted);'
+        + 'text-align:right;line-height:1.3;">Primary<br>claims at</div></div>';
+      strats.forEach(function(s) {
+        html += '<div class="ss-matrix-col-hdr">' + ageLabel[s] + '</div>';
+      });
+
+      // Data rows
+      strats.forEach(function(p) {
+        html += '<div class="ss-matrix-row-hdr">' + ageLabel[p] + '</div>';
+        strats.forEach(function(s) {
+          var key = p + '_x_' + s;
+          var c   = lookup[key];
+          if (!c) { html += '<div class="ss-matrix-cell ss-cell-empty">—</div>'; return; }
+          var isCurrent  = !!(currentPlanKey && key === currentPlanKey);
+          var isTopSpend = !isCurrent && topSpendKeys[key];
+          var isTopFloor = !isCurrent && !topSpendKeys[key] && topFloorKeys[key];
+          var cls = 'ss-matrix-cell'
+            + (isCurrent   ? ' ss-cell-current'   : '')
+            + (isTopSpend  ? ' ss-cell-top-spend'  : '')
+            + (isTopFloor  ? ' ss-cell-top-floor'  : '');
+          html += '<div class="' + cls + '" data-case-key="' + esc(key)
+            + '" title="' + esc(c.interpretation) + '">';
+
+          // Only "Your Plan" badge — no comparative labels
+          if (isCurrent) html += '<span class="ss-cell-badge ss-badge-current">Your Plan</span>';
+
+          // Guaranteed income
+          html += '<div class="ss-cell-ss">$' + fmt(Math.round(c.combined_ss / 12)) + '/mo guaranteed</div>';
+
+          // Supported Spend with delta
+          html += '<div class="ss-cell-spend-label">Supported Spend</div>';
+          if (!currentCase || isCurrent) {
+            html += '<div class="ss-cell-spend-val">' + fmtK(c.tiers.keystone) + '/yr'
+              + (isCurrent ? ' <span style="font-size:8px;color:var(--muted);">baseline</span>' : '')
+              + '</div>';
+          } else {
+            var ksDelta = c.tiers.keystone - currentCase.tiers.keystone;
+            var ksAbs   = Math.round(Math.abs(ksDelta) / 1000);
+            html += '<div class="ss-cell-spend-val">' + fmtK(c.tiers.keystone) + '/yr'
+              + (ksAbs > 0
+                ? ' <span style="color:' + _dColor(ksDelta) + ';">'
+                  + (ksDelta >= 0 ? '▲' : '▼') + ' ' + (ksDelta >= 0 ? '+' : '−')
+                  + '$' + ksAbs + 'K</span>'
+                : '')
+              + '</div>';
+          }
+
+          // Conservative Floor with delta
+          html += '<div class="ss-cell-floor-label">Conservative Floor</div>';
+          if (!currentCase || isCurrent) {
+            html += '<div class="ss-cell-floor-val">' + fmtK(c.mc_99_floor) + '/yr'
+              + (isCurrent ? ' <span style="font-size:8px;color:var(--muted);">baseline</span>' : '')
+              + '</div>';
+          } else {
+            var flDelta = c.mc_99_floor - currentCase.mc_99_floor;
+            var flAbs   = Math.round(Math.abs(flDelta) / 1000);
+            html += '<div class="ss-cell-floor-val">' + fmtK(c.mc_99_floor) + '/yr'
+              + (flAbs > 0
+                ? ' <span style="color:' + _dColor(flDelta) + ';">'
+                  + (flDelta >= 0 ? '▲' : '▼') + ' ' + (flDelta >= 0 ? '+' : '−')
+                  + '$' + flAbs + 'K</span>'
+                : '')
+              + '</div>';
+          }
+
+          html += '</div>';
+        });
+      });
+      html += '</div>';
+
+      grid.innerHTML = html;
+      grid.style.display = 'block';
+      grid.setAttribute('aria-label', 'Social Security claiming paths — 9 options');
+
+      // Dynamic summary — Range Intelligence panel
+      if (sensEl) {
+        var summaryBody;
+
+        if (supportedClustered && floorClustered) {
+          summaryBody = 'The tested paths are tightly clustered in this quick comparison. No single path clearly dominates, but the arrows show how each timing choice shifts supported spend and conservative floor versus your current plan.';
+        } else if (currentCase) {
+          if (currentPlanKey === 'early_62_x_early_62') {
+            summaryBody = 'Claiming both benefits at 62 is structurally weaker in this quick comparison. Delaying at least one benefit improved both supported spend and conservative floor versus your current plan. Use the arrows to see which delay produces the larger shift.';
+          } else if (currentPlanKey === 'full_67_x_full_67') {
+            summaryBody = 'Your 67 / 67 plan is a balanced baseline in this quick comparison. Delaying one or both benefits can raise supported spend, but it may trim the conservative floor. If spending room matters more, inspect the later-claiming paths. If downside resilience matters more, compare the paths that keep the floor closer to baseline.';
+          } else if (currentPlanKey === 'full_67_x_optimal_70') {
+            summaryBody = 'Your 67 / 70 plan is already near the top of supported spend in this quick comparison. Moving both benefits to 70 increases guaranteed income, but does not materially improve supported spend and may slightly lower the conservative floor. Use the arrows to confirm the magnitude before treating any shift as meaningful.';
+          } else if (currentPlanKey === 'optimal_70_x_optimal_70') {
+            summaryBody = 'Your 70 / 70 plan maximizes guaranteed income and sits near the top of supported spend. Earlier claiming may modestly improve the conservative floor by reducing bridge-year pressure, but it lowers guaranteed income and usually reduces supported spend. This is a floor-vs-income timing tradeoff, not a clear improvement.';
+          } else {
+            summaryBody = 'The arrows show how each claiming path changes supported spend and conservative floor versus your current plan. Mixed arrows are tradeoffs, not errors. Use guaranteed income and conservative floor together to decide which path is worth inspecting next.';
+          }
+        } else {
+          summaryBody = 'Supported spend ranges ' + fmtK(minSpend) + '–' + fmtK(maxSpend) + ' across the 9 tested paths. Use the arrows in each cell to see how timing shifts the structure versus any reference point.';
+        }
+
+        // Cluster addendum when several paths share near-identical top-end spend
+        var nearTopCount = cases.filter(function(c) { return maxSpend - c.tiers.keystone < 3000; }).length;
+        var clusterNote  = (!supportedClustered && nearTopCount >= 3)
+          ? ' Several paths may be close at the top end. Use guaranteed income and conservative floor to decide which timing path is worth inspecting next.' : '';
+
+        sensEl.innerHTML = '<div style="margin-top:8px;padding:8px 10px;'
+          + 'background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);'
+          + 'border-radius:4px;">'
+          + '<div style="font-family:var(--font-mono);font-size:9px;color:var(--teal-mid);'
+          + 'text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">'
+          + 'Range Intelligence</div>'
+          + '<div style="font-family:var(--font-serif);font-size:11px;color:var(--muted);'
+          + 'line-height:1.5;">' + summaryBody + clusterNote + '</div>'
+          + '</div>';
+        sensEl.style.display = 'block';
+      }
+
+      // Hide stale recommendation panel
+      if (recEl) { recEl.innerHTML = ''; recEl.style.display = 'none'; }
+    }
+
+    // ── Cycling loading animation ─────────────────────────────────────────
+    var _LOAD_MSGS = [
+      'Testing claiming paths…',
+      'Testing early vs delayed claims…',
+      'Measuring portfolio bridge pressure…',
+      'Comparing income timing strategies…',
+    ];
+    var _loadMsgIdx   = 0;
+    var _loadInterval = null;
+
+    function startLoadAnim() {
+      _loadMsgIdx = 0;
+      var el = document.getElementById('ss-load-msg');
+      if (el) el.textContent = _LOAD_MSGS[0];
+      if (_loadInterval) clearInterval(_loadInterval);
+      _loadInterval = setInterval(function() {
+        _loadMsgIdx = (_loadMsgIdx + 1) % _LOAD_MSGS.length;
+        var msgEl = document.getElementById('ss-load-msg');
+        if (msgEl) msgEl.textContent = _LOAD_MSGS[_loadMsgIdx];
+      }, 4000);
+    }
+
+    function stopLoadAnim() {
+      if (_loadInterval) { clearInterval(_loadInterval); _loadInterval = null; }
+    }
+
+    function loadingBox() {
+      return '<div style="margin-top:14px;padding:12px;background:rgba(255,255,255,0.02);'
+        + 'border:1px solid rgba(255,255,255,0.08);border-radius:4px;">'
+        + '<div id="ss-load-msg" style="font-family:var(--font-mono);font-size:10px;'
+        + 'color:var(--teal-mid);text-transform:uppercase;letter-spacing:0.1em;'
+        + 'margin-bottom:8px;">Testing claiming paths…</div>'
+        + '<div class="ss-progress-bar"></div>'
+        + '<div style="font-family:var(--font-serif);font-size:11px;color:var(--muted);'
+        + 'line-height:1.5;">The rest of Studio stays available while this runs.</div>'
+        + '</div>';
+    }
+
+    // ── Reusable status box template ───────────────────────────────────────
+    function statusBox(borderColor, titleColor, title, body, extraHtml) {
+      return '<div style="margin-top:14px;padding:12px;background:rgba(255,255,255,0.02);border:1px solid '
+        + borderColor + ';border-radius:4px;">'
+        + '<div style="font-family:var(--font-mono);font-size:10px;color:' + titleColor
+        + ';text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">' + title + '</div>'
+        + '<div id="ss-map-poll-sub" style="font-family:var(--font-serif);font-size:11px;'
+        + 'color:var(--muted);line-height:1.5;">' + body + '</div>'
+        + (extraHtml || '')
+        + '</div>';
+    }
+
+    function setStatus(html) {
+      var el = document.getElementById('ss-map-status');
+      if (!el) return;
+      el.innerHTML = html;
+      el.style.display = html ? 'block' : 'none';
+    }
+
+    function setBtn(label, disabled) {
+      var btn = document.getElementById('ss-map-compute-btn');
+      if (!btn) return;
+      btn.innerHTML = label;
+      btn.disabled  = !!disabled;
+    }
+
+    // ── Build matrix payload by extending the existing Studio request ──────
+    // Does NOT modify buildStudioRequest. Extends its output only.
+    function buildMatrixRequest() {
+      if (typeof window._buildStudioRequest !== 'function') {
+        console.warn('[SS Matrix] _buildStudioRequest not available — Studio not ready.');
+        return null;
+      }
+      var base = window._buildStudioRequest();
+      if (!base) return null; // custom_weights validation failed upstream
+
+      // Co-architect age (derive from co-dob if co-arch is enabled)
+      var coToggle = document.getElementById('co-arch-toggle');
+      if (coToggle && coToggle.checked) {
+        var coDobEl  = document.getElementById('co-dob');
+        var coDobVal = coDobEl ? (coDobEl.value || '') : '';
+        var parts    = coDobVal.replace(/\s/g, '').split('/');
+        if (parts.length >= 2) {
+          var coYear  = parseInt(parts[1], 10);
+          var coMonth = parseInt(parts[0], 10);
+          if (coYear) {
+            var now    = new Date();
+            var coAge  = now.getFullYear() - coYear;
+            if (now.getMonth() + 1 < coMonth) coAge--;
+            base.co_architect_age = coAge;
+          }
+        }
+        // Read co-architect SS strategy from Income Timing Hall selector
+        var _ssSecMap   = { '62': 'early_62', '67': 'full_67', '70': 'optimal_70' };
+        var _ssSecBtn   = document.querySelector('.ss-sec-btn.active strong');
+        base.ss_strategy_secondary = _ssSecMap[(_ssSecBtn && _ssSecBtn.textContent || '').trim()] || 'full_67';
+      }
+
+      // current_ss_plan — tells the engine which cell gets the CURRENT PLAN badge
+      base.current_ss_plan = {
+        primary:   base.ss_strategy_primary   || 'full_67',
+        secondary: base.ss_strategy_secondary || 'optimal_70',
+      };
+
+      base.matrix_depth = 'quick';
+      return base;
+    }
+
+    // ── Start job ──────────────────────────────────────────────────────────
+    async function startMatrixJob() {
+      if (!document.getElementById('ss-map-status')) {
+        console.warn('[SS Matrix] #ss-map-status not found — cannot start job.');
+        return;
+      }
+
+      var req = buildMatrixRequest();
+      if (!req) {
+        setStatus(statusBox(
+          'rgba(226,75,74,0.3)', 'var(--danger)',
+          'Cannot build map request',
+          'Check your inputs and try again.',
+          '<button onclick="startMatrixJob()" class="measure-btn" style="margin-top:10px;font-size:10px;padding:8px;">Try Again</button>'
+        ));
+        return;
+      }
+
+      // Preflight: accounts required — SS timing tests paths against bridge-carrying assets
+      if (!req.accounts || !req.accounts.length) {
+        setBtn('Test Claiming Paths &#x2192;', false);
+        setStatus(statusBox(
+          'rgba(212,175,55,0.15)', 'var(--gold)',
+          'Accounts required',
+          'Add at least one account balance first. This test compares Social Security timing against the assets that must carry your bridge years.'
+        ));
+        return;
+      }
+
+      // Preflight: SS estimates required — matrix must use your benefits, not generic defaults
+      var _priSS = (typeof window._readSSOverride === 'function') ? window._readSSOverride('ss-pri') : { state: 'empty' };
+      if (_priSS.state === 'empty') {
+        setBtn('Test Claiming Paths &#x2192;', false);
+        setStatus(statusBox(
+          'rgba(212,175,55,0.15)', 'var(--gold)',
+          'Social Security estimates required',
+          'Add your Social Security estimates first. Use your SSA.gov annual estimates for age 62, age 67, and age 70 so Studio can compare claiming paths using your benefits.'
+        ));
+        return;
+      }
+      if (_priSS.state === 'partial') {
+        setBtn('Test Claiming Paths &#x2192;', false);
+        setStatus(statusBox(
+          'rgba(212,175,55,0.15)', 'var(--gold)',
+          'Incomplete Social Security estimates',
+          'Enter all three Social Security estimates, or enter only the Age 67 estimate and Studio will approximate age 62 and age 70.'
+        ));
+        return;
+      }
+      var _coEl = document.getElementById('co-arch-toggle');
+      if (_coEl && _coEl.checked) {
+        var _secSS = window._readSSOverride('ss-sec');
+        if (_secSS.state === 'empty') {
+          setBtn('Test Claiming Paths &#x2192;', false);
+          setStatus(statusBox(
+            'rgba(212,175,55,0.15)', 'var(--gold)',
+            'Co-Architect Social Security estimates required',
+            'Add Social Security estimates for your co-architect. Use your SSA.gov annual estimates for age 62, age 67, and age 70.'
+          ));
+          return;
+        }
+        if (_secSS.state === 'partial') {
+          setBtn('Test Claiming Paths &#x2192;', false);
+          setStatus(statusBox(
+            'rgba(212,175,55,0.15)', 'var(--gold)',
+            'Incomplete Co-Architect Social Security estimates',
+            'Enter all three Social Security estimates for your co-architect, or enter only the Age 67 estimate and Studio will approximate age 62 and age 70.'
+          ));
+          return;
+        }
+      }
+
+      setBtn('Testing Paths…', true);
+      // Clear stale grid and panels before new computation
+      var _grid = document.getElementById('ss-matrix-grid');
+      var _rec  = document.getElementById('ss-map-recommendation');
+      var _sens = document.getElementById('ss-map-sensitivity');
+      if (_grid)  { _grid.innerHTML  = ''; _grid.style.display  = 'none'; }
+      if (_rec)   { _rec.innerHTML   = ''; _rec.style.display   = 'none'; }
+      if (_sens)  { _sens.innerHTML  = ''; _sens.style.display  = 'none'; }
+      setStatus(loadingBox());
+      startLoadAnim();
+
+      var startData;
+      try {
+        var resp = await fetch(API_BASE + '/api/ss-matrix/start', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(req),
+        });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        startData = await resp.json();
+      } catch (err) {
+        setBtn('Test Claiming Paths &#x2192;', false);
+        setStatus(statusBox(
+          'rgba(226,75,74,0.3)', 'var(--danger)',
+          'Could not start map computation',
+          esc(err.message || 'Network error') + ' — check your connection and try again.',
+          '<button onclick="startMatrixJob()" class="measure-btn" style="margin-top:10px;font-size:10px;padding:8px;">Recompute</button>'
+        ));
+        return;
+      }
+
+      _currentJobId = startData.job_id;
+      sessionStorage.setItem('ss_matrix_job_id', _currentJobId);
+
+      await pollMatrixJob(_currentJobId, startData.poll_interval_s || 3);
+    }
+
+    // ── Poll loop ──────────────────────────────────────────────────────────
+    async function pollMatrixJob(jobId, intervalSecs) {
+      var ms = Math.max(2000, (intervalSecs || 3) * 1000);
+
+      for (var poll = 1; poll <= MAX_POLLS; poll++) {
+        await new Promise(function(r) { setTimeout(r, ms); });
+
+        var pollData;
+        try {
+          var r = await fetch(API_BASE + '/api/ss-matrix/' + jobId);
+
+          if (r.status === 404) {
+            stopLoadAnim();
+            sessionStorage.removeItem('ss_matrix_job_id');
+            sessionStorage.removeItem('ss_matrix_result');
+            setBtn('Test Claiming Paths &#x2192;', false);
+            setStatus(statusBox(
+              'rgba(255,255,255,0.06)', 'var(--gold)',
+              'Job result expired',
+              'The server restarted mid-run. Tap Recompute to try again.',
+              '<button onclick="startMatrixJob()" class="measure-btn" style="margin-top:10px;font-size:10px;padding:8px;">Recompute</button>'
+            ));
+            return;
+          }
+
+          if (!r.ok) { if (poll < MAX_POLLS) continue; throw new Error('HTTP ' + r.status); }
+          pollData = await r.json();
+        } catch (e) {
+          if (poll < MAX_POLLS) continue;
+          break; // fall through to timeout handler
+        }
+
+        var status = pollData.status;
+        var result = pollData.result;
+        var error  = pollData.error;
+
+        if (status === 'succeeded') {
+          stopLoadAnim();
+          sessionStorage.setItem('ss_matrix_result', JSON.stringify(result));
+          setBtn('Retest Paths &#x2192;', false);
+          setStatus(statusBox(
+            'rgba(29,158,117,0.2)', 'var(--teal-mid)',
+            'Comparison complete.',
+            'Your current plan is the baseline — explore what changes.'
+          ));
+          renderMatrixGrid(result);
+          return;
+        }
+
+        if (status === 'failed') {
+          stopLoadAnim();
+          sessionStorage.removeItem('ss_matrix_job_id');
+          setBtn('Test Claiming Paths &#x2192;', false);
+          setStatus(statusBox(
+            'rgba(226,75,74,0.3)', 'var(--danger)',
+            'Map computation failed',
+            esc(error || 'Unknown error'),
+            '<button onclick="startMatrixJob()" class="measure-btn" style="margin-top:10px;font-size:10px;padding:8px;">Recompute</button>'
+          ));
+          return;
+        }
+
+        // pending / running — cycling animation handles messaging
+      }
+
+      // Timeout
+      stopLoadAnim();
+      setBtn('Test Claiming Paths &#x2192;', false);
+      setStatus(statusBox(
+        'rgba(255,255,255,0.06)', 'var(--gold)',
+        'Taking longer than expected',
+        'Still working. Tap to check status once more.',
+        '<button onclick="checkMatrixStatus()" class="measure-btn" style="margin-top:10px;font-size:10px;padding:8px;">Check Status</button>'
+      ));
+    }
+
+    // ── One-shot status check (used by timeout Check Status button) ────────
+    window.checkMatrixStatus = async function() {
+      var jobId = sessionStorage.getItem('ss_matrix_job_id');
+      if (!jobId) return;
+      try {
+        var r = await fetch(API_BASE + '/api/ss-matrix/' + jobId);
+        if (!r.ok) return;
+        var d = await r.json();
+        if (d.status === 'succeeded') {
+          stopLoadAnim();
+          sessionStorage.setItem('ss_matrix_result', JSON.stringify(d.result));
+          setBtn('Retest Paths &#x2192;', false);
+          setStatus(statusBox(
+            'rgba(29,158,117,0.2)', 'var(--teal-mid)',
+            'Comparison complete.',
+            'Your current plan is the baseline — explore what changes.'
+          ));
+          renderMatrixGrid(d.result);
+        } else if (d.status === 'failed') {
+          stopLoadAnim();
+          setBtn('Test Claiming Paths &#x2192;', false);
+          setStatus(statusBox(
+            'rgba(226,75,74,0.3)', 'var(--danger)',
+            'Map computation failed',
+            esc(d.error || 'Unknown error'),
+            '<button onclick="startMatrixJob()" class="measure-btn" style="margin-top:10px;font-size:10px;padding:8px;">Recompute</button>'
+          ));
+        }
+      } catch(e) { console.warn('[SS Matrix] checkMatrixStatus error:', e); }
+    };
+
+    // ── Restore map from sessionStorage on page load ───────────────────────
+    (function restoreSession() {
+      var cached = sessionStorage.getItem('ss_matrix_result');
+      if (!cached) return;
+      try {
+        var result = JSON.parse(cached);
+        setBtn('Retest Paths &#x2192;', false);
+        setStatus(statusBox(
+          'rgba(29,158,117,0.2)', 'var(--teal-mid)',
+          'Comparison complete.',
+          'Your current plan is the baseline — explore what changes.'
+        ));
+        renderMatrixGrid(result);
+      } catch(e) {
+        sessionStorage.removeItem('ss_matrix_result');
+      }
+    })();
+
+    // ── Wire Compute Map button ────────────────────────────────────────────
+    var computeBtn = document.getElementById('ss-map-compute-btn');
+    if (computeBtn) {
+      computeBtn.addEventListener('click', startMatrixJob);
+    } else {
+      console.warn('[SS Matrix] #ss-map-compute-btn not found — SS matrix wiring skipped.');
+    }
+
+    window.startMatrixJob = startMatrixJob;
+
+  })();
   </script>
 
   <script src="/feedback.js"></script>
