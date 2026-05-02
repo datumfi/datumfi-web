@@ -996,8 +996,14 @@
             <div id="ss-map-recommendation" style="display:none;"></div>
             <div id="ss-map-sensitivity" style="display:none;"></div>
 
-            <div class="metaphor-hint" style="margin-top:14px;">
-              Path inspection will be added next. For now, use this comparison to decide which timing path is worth inspecting.
+            <!-- A308-b: Inspect panel shell — populated on cell selection; hidden until a cell is selected -->
+            <div id="ss-inspect-panel" style="display:none;" aria-live="polite" aria-atomic="false">
+              <div class="ss-inspect-header">Selected timing path</div>
+              <div id="ss-inspect-path" class="ss-inspect-path"></div>
+              <div id="ss-inspect-metrics" class="ss-inspect-metrics"></div>
+              <div id="ss-inspect-perpath"></div>
+              <button id="ss-inspect-btn" class="measure-btn" type="button" style="margin-top:10px;font-size:10px;padding:9px 14px;">Set This Timing Path &#x2192;</button>
+              <div id="ss-lock-confirm" style="display:none;"></div>
             </div>
 
           </div>
@@ -1115,7 +1121,7 @@
       </div>
 
       <div class="reveal-container">
-        <div id="empty-state-hints" style="display:none;font-family:var(--font-mono);font-size:10px;letter-spacing:0.05em;text-transform:none;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:4px;padding:12px 16px;margin-bottom:12px;line-height:2;"></div>
+        <div id="range-readiness-panel" style="margin-bottom:12px;"></div>
         <button class="action-btn" type="button">REVEAL YOUR RANGE</button>
         <div id="reveal-zero-error" style="display:none;font-family:var(--font-mono);font-size:11px;color:rgba(226,75,74,0.8);text-align:center;padding:10px 0;text-transform:uppercase;letter-spacing:0.1em;">Add at least one account with a balance to reveal your Range.</div>
         <div class="reveal-tooltip">
@@ -3357,29 +3363,41 @@
 
       window._buildStudioRequest = buildStudioRequest;
 
-      // Empty-state hints: update when accounts change
-      function updateEmptyStateHints() {
-        var hints = document.getElementById('empty-state-hints');
-        if (!hints) return;
-        var accts = state.accounts || [];
-        function tc(a) { var b = getBaseType(a.baseId); return b ? b.taxCode : ''; }
-        var hasRetirement = accts.some(function(a) { return (tc(a) === 'pretax' || tc(a) === 'roth') && (a.value||0) > 0; });
-        var hasTaxable    = accts.some(function(a) { return tc(a) === 'liquid' && (a.value||0) > 0; });
-        var hasDebt       = accts.some(function(a) { return tc(a) === 'debt' && ((a.value||0) > 0 || (a.inflow||0) > 0); });
-        var hasPension    = accts.some(function(a) { return (a.baseId||'').toLowerCase().includes('pension') && (a.inflow||0) > 0; });
-        var hasSS         = !!document.querySelector('.ss-btn.active');
-        var msgs = [];
-        if (!hasRetirement) msgs.push('No retirement accounts (401k/IRA) \u2014 add balances in Estate Drafting');
-        if (!hasTaxable)    msgs.push('No taxable/liquid accounts mapped \u2014 add balances in Estate Drafting');
-        if (!hasDebt)       msgs.push('No liabilities mapped \u2014 consider adding mortgage or loans if applicable');
-        if (!hasPension)    msgs.push('No pension income \u2014 add one in Estate Drafting if applicable');
-        if (!hasSS)         msgs.push('Social Security strategy not selected \u2014 choose a claiming age in Architect Profile');
-        hints.innerHTML = msgs.length ? msgs.map(function(m) { return '<div style="padding:4px 0;color:rgba(255,255,255,0.35);">\u25cb ' + m + '</div>'; }).join('') : '';
-        hints.style.display = msgs.length ? 'block' : 'none';
+      // Range Readiness \u2014 informational only, not a gate
+      function updateRangeReadiness() {
+        var panel = document.getElementById('range-readiness-panel');
+        if (!panel) return;
+
+        var dobVal   = (document.getElementById('pri-dob')    || {}).value || '';
+        var retVal   = (document.getElementById('target-ret') || {}).value || '';
+        var spendEl  =  document.getElementById('spend-input');
+        var age      = parseAgeFromDob(dobVal);
+        var retYear  = parseInt((retVal.replace(/\s/g, '').split('/')[1] || ''), 10);
+        var spendVal = parseInt(((spendEl && spendEl.value) || '').replace(/[^\d]/g, ''), 10) || 0;
+        var accts    = state.accounts || [];
+
+        var items = [
+          { label: 'Profile',        ok: !!(age && retYear) },
+          { label: 'Estate',         ok: accts.some(function(a) { return (a.value || 0) > 0; }) },
+          { label: 'Datum',          ok: spendVal > 0 },
+          { label: 'SS Timing',      ok: !!sessionStorage.getItem('ss_timing_locked_key') },
+          { label: 'Market Outlook', ok: !!document.querySelector('.climate-option.active') },
+        ];
+
+        panel.innerHTML = '<div class="rr-row">'
+          + items.map(function(item) {
+              return '<span class="rr-item">'
+                + '<span class="rr-dot ' + (item.ok ? 'rr-dot-on' : 'rr-dot-off') + '">'
+                + (item.ok ? '\u25cf' : '\u25cb') + '</span>'
+                + '<span class="rr-label">' + item.label + '</span>'
+                + '</span>';
+            }).join('')
+          + '</div>';
       }
-      document.addEventListener('input', updateEmptyStateHints);
-      document.addEventListener('change', updateEmptyStateHints);
-      setTimeout(updateEmptyStateHints, 500);
+      window.updateRangeReadiness = updateRangeReadiness;
+      document.addEventListener('input',  updateRangeReadiness);
+      document.addEventListener('change', updateRangeReadiness);
+      setTimeout(updateRangeReadiness, 500);
 
       // STU-011: Two Network rows = CORS OPTIONS preflight (expected browser behavior) + POST.
       // Reduced-motion path (below) and full-animation path are mutually exclusive — no double-fire.
@@ -3861,20 +3879,43 @@
   .ss-matrix-corner{display:flex;align-items:flex-end;justify-content:flex-end;padding-bottom:4px;}
   .ss-matrix-col-hdr{text-align:center;font-size:10px;color:var(--muted);padding:4px 2px 6px;font-family:var(--font-mono);letter-spacing:0.04em;}
   .ss-matrix-row-hdr{display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-size:11px;color:var(--muted);font-family:var(--font-mono);font-weight:600;}
-  .ss-matrix-cell{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:4px;padding:8px 7px 7px;cursor:pointer;transition:background 0.15s,border-color 0.15s;position:relative;min-height:110px;}
+  .ss-matrix-cell{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:4px;padding:8px 7px 7px;cursor:pointer;transition:background 0.15s,border-color 0.15s,box-shadow 0.15s,transform 0.15s;position:relative;min-height:110px;}
   .ss-matrix-cell:hover{background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.16);}
   .ss-cell-empty{background:rgba(255,255,255,0.01);border-color:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;}
-  .ss-cell-current{border-color:rgba(212,175,55,0.4)!important;background:rgba(212,175,55,0.06)!important;}
+  .ss-cell-current{border-color:rgba(212,175,55,0.85)!important;background:rgba(212,175,55,0.10)!important;box-shadow:0 0 0 1px rgba(212,175,55,0.4),0 3px 10px rgba(212,175,55,0.15)!important;}
+  .ss-cell-current::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:rgba(212,175,55,0.85);border-radius:3px 3px 0 0;}
   .ss-cell-top-spend{border-color:rgba(29,158,117,0.28)!important;}
   .ss-cell-top-floor{border-color:rgba(100,180,200,0.25)!important;}
+  .ss-cell-selected{border-color:rgba(255,255,255,0.70)!important;background:rgba(255,255,255,0.09)!important;box-shadow:0 0 0 1px rgba(255,255,255,0.22),0 4px 14px rgba(0,0,0,0.25)!important;transform:translateY(-2px)!important;z-index:1;}
+  .ss-cell-current.ss-cell-selected{border-color:rgba(212,175,55,0.85)!important;background:rgba(212,175,55,0.12)!important;box-shadow:0 0 0 1px rgba(212,175,55,0.5),0 0 0 3px rgba(255,255,255,0.10),0 4px 14px rgba(212,175,55,0.18)!important;}
+  .ss-cell-locked{border-color:rgba(29,158,117,0.8)!important;background:rgba(29,158,117,0.09)!important;box-shadow:0 0 0 1px rgba(29,158,117,0.3),0 3px 10px rgba(29,158,117,0.12)!important;}
+  .ss-cell-locked::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:rgba(29,158,117,0.75);border-radius:3px 3px 0 0;}
+  .ss-matrix-cell:focus-visible{outline:2px solid rgba(255,255,255,0.45);outline-offset:2px;}
   .ss-cell-badge{display:block;font-size:8px;font-family:var(--font-mono);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:3px;line-height:1.2;}
   .ss-badge-current{color:var(--gold);}
   .ss-cell-ss{font-size:11px;font-family:var(--font-mono);color:#e2e2e2;line-height:1.2;margin-bottom:5px;}
   .ss-cell-spend-label,.ss-cell-floor-label{font-size:8px;color:var(--muted);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.04em;line-height:1.2;margin-top:4px;}
   .ss-cell-spend-val,.ss-cell-floor-val{font-size:10px;color:#d0d0d0;font-family:var(--font-mono);line-height:1.3;}
+  .ss-cell-delta{display:block;font-size:10px;font-family:var(--font-mono);font-weight:600;line-height:1.5;margin-top:2px;letter-spacing:0.01em;}
   @keyframes ss-shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
   .ss-progress-bar{height:2px;background:rgba(29,158,117,0.12);border-radius:1px;overflow:hidden;margin:10px 0 8px;position:relative;}
   .ss-progress-bar::after{content:'';position:absolute;top:0;left:0;width:35%;bottom:0;background:linear-gradient(90deg,transparent,rgba(29,158,117,0.75),transparent);animation:ss-shimmer 1.7s ease-in-out infinite;}
+  #ss-inspect-panel{margin-top:12px;padding:12px 14px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.12);border-radius:4px;}
+  .ss-inspect-header{font-family:var(--font-mono);font-size:9px;color:var(--teal-mid);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;}
+  .ss-inspect-path{font-family:var(--font-mono);font-size:12px;color:var(--white);line-height:1.4;margin-bottom:10px;}
+  .ss-inspect-metrics{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:0;}
+  .ss-inspect-metric{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:3px;padding:7px 8px;}
+  .ss-inspect-metric-label{font-family:var(--font-mono);font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px;}
+  .ss-inspect-metric-val{font-family:var(--font-mono);font-size:11px;color:#e2e2e2;}
+  #ss-lock-confirm{font-family:var(--font-mono);font-size:10px;color:var(--teal-mid);margin-top:8px;letter-spacing:0.04em;line-height:1.5;}
+  #range-readiness-panel{padding:10px 14px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:4px;}
+  .rr-row{display:flex;flex-wrap:wrap;gap:5px 16px;}
+  .rr-item{display:flex;align-items:center;gap:5px;}
+  .rr-dot{font-size:9px;line-height:1;}
+  .rr-dot-on{color:var(--teal-mid);}
+  .rr-dot-off{color:rgba(255,255,255,0.18);}
+  .rr-label{font-family:var(--font-mono);font-size:10px;letter-spacing:0.05em;text-transform:uppercase;color:rgba(255,255,255,0.4);}
+  @media(max-width:480px){.ss-inspect-metrics{grid-template-columns:1fr 1fr;}.rr-row{gap:5px 10px;}}
   </style>
 
   <!-- A305/A306 — SS Matrix async state machine + grid renderer -->
@@ -3979,7 +4020,8 @@
             + (isTopSpend  ? ' ss-cell-top-spend'  : '')
             + (isTopFloor  ? ' ss-cell-top-floor'  : '');
           html += '<div class="' + cls + '" data-case-key="' + esc(key)
-            + '" title="' + esc(c.interpretation) + '">';
+            + '" title="' + esc(c.interpretation) + '"'
+            + ' tabindex="0" role="gridcell" aria-selected="false">';
 
           // Only "Your Plan" badge — no comparative labels
           if (isCurrent) html += '<span class="ss-cell-badge ss-badge-current">Your Plan</span>';
@@ -3998,7 +4040,7 @@
             var ksAbs   = Math.round(Math.abs(ksDelta) / 1000);
             html += '<div class="ss-cell-spend-val">' + fmtK(c.tiers.keystone) + '/yr'
               + (ksAbs > 0
-                ? ' <span style="color:' + _dColor(ksDelta) + ';">'
+                ? ' <span class="ss-cell-delta" style="color:' + _dColor(ksDelta) + ';">'
                   + (ksDelta >= 0 ? '▲' : '▼') + ' ' + (ksDelta >= 0 ? '+' : '−')
                   + '$' + ksAbs + 'K</span>'
                 : '')
@@ -4016,7 +4058,7 @@
             var flAbs   = Math.round(Math.abs(flDelta) / 1000);
             html += '<div class="ss-cell-floor-val">' + fmtK(c.mc_99_floor) + '/yr'
               + (flAbs > 0
-                ? ' <span style="color:' + _dColor(flDelta) + ';">'
+                ? ' <span class="ss-cell-delta" style="color:' + _dColor(flDelta) + ';">'
                   + (flDelta >= 0 ? '▲' : '▼') + ' ' + (flDelta >= 0 ? '+' : '−')
                   + '$' + flAbs + 'K</span>'
                 : '')
@@ -4032,32 +4074,44 @@
       grid.style.display = 'block';
       grid.setAttribute('aria-label', 'Social Security claiming paths — 9 options');
 
-      // Dynamic summary — Range Intelligence panel
+      // Dynamic summary — Range Intelligence panel (macro: computed facts across all 9 paths)
       if (sensEl) {
-        var summaryBody;
+        var allSS   = cases.map(function(c) { return c.combined_ss || 0; }).filter(function(v) { return v > 0; });
+        var maxSS   = allSS.length ? Math.max.apply(null, allSS) : 0;
+        var minSS   = allSS.length ? Math.min.apply(null, allSS) : 0;
+        var n       = cases.length;
+        var topSame = sortedBySpend[0].case_key === sortedByFloor[0].case_key;
 
-        if (supportedClustered && floorClustered) {
-          summaryBody = 'The tested paths are tightly clustered in this quick comparison. No single path clearly dominates, but the arrows show how each timing choice shifts supported spend and conservative floor versus your current plan.';
-        } else if (currentCase) {
-          if (currentPlanKey === 'early_62_x_early_62') {
-            summaryBody = 'Claiming both benefits at 62 is structurally weaker in this quick comparison. Delaying at least one benefit improved both supported spend and conservative floor versus your current plan. Use the arrows to see which delay produces the larger shift.';
-          } else if (currentPlanKey === 'full_67_x_full_67') {
-            summaryBody = 'Your 67 / 67 plan is a balanced baseline in this quick comparison. Delaying one or both benefits can raise supported spend, but it may trim the conservative floor. If spending room matters more, inspect the later-claiming paths. If downside resilience matters more, compare the paths that keep the floor closer to baseline.';
-          } else if (currentPlanKey === 'full_67_x_optimal_70') {
-            summaryBody = 'Your 67 / 70 plan is already near the top of supported spend in this quick comparison. Moving both benefits to 70 increases guaranteed income, but does not materially improve supported spend and may slightly lower the conservative floor. Use the arrows to confirm the magnitude before treating any shift as meaningful.';
-          } else if (currentPlanKey === 'optimal_70_x_optimal_70') {
-            summaryBody = 'Your 70 / 70 plan maximizes guaranteed income and sits near the top of supported spend. Earlier claiming may modestly improve the conservative floor by reducing bridge-year pressure, but it lowers guaranteed income and usually reduces supported spend. This is a floor-vs-income timing tradeoff, not a clear improvement.';
-          } else {
-            summaryBody = 'The arrows show how each claiming path changes supported spend and conservative floor versus your current plan. Mixed arrows are tradeoffs, not errors. Use guaranteed income and conservative floor together to decide which path is worth inspecting next.';
-          }
+        // Sentence 1: spans across all paths
+        var s1 = n + ' paths span ' + fmtK(minSpend) + '–' + fmtK(maxSpend) + ' supported spend'
+          + (supportedClustered ? ' (clustered)' : '')
+          + ' and ' + fmtK(minFloor) + '–' + fmtK(maxFloor) + ' conservative floor'
+          + (floorClustered ? ' (clustered)' : '');
+        if (maxSS > 0 && maxSS > minSS) {
+          s1 += ', with ' + fmtK(minSS) + '–' + fmtK(maxSS) + ' guaranteed income.';
+        } else if (maxSS > 0) {
+          s1 += ', all at ' + fmtK(maxSS) + ' guaranteed income.';
         } else {
-          summaryBody = 'Supported spend ranges ' + fmtK(minSpend) + '–' + fmtK(maxSpend) + ' across the 9 tested paths. Use the arrows in each cell to see how timing shifts the structure versus any reference point.';
+          s1 += '.';
         }
 
-        // Cluster addendum when several paths share near-identical top-end spend
-        var nearTopCount = cases.filter(function(c) { return maxSpend - c.tiers.keystone < 3000; }).length;
-        var clusterNote  = (!supportedClustered && nearTopCount >= 3)
-          ? ' Several paths may be close at the top end. Use guaranteed income and conservative floor to decide which timing path is worth inspecting next.' : '';
+        // Sentence 2: current plan ranks (only when a current plan is identified)
+        var s2 = '';
+        if (currentCase) {
+          var spendRank = sortedBySpend.findIndex(function(c) { return c.case_key === currentPlanKey; }) + 1;
+          var floorRank = sortedByFloor.findIndex(function(c) { return c.case_key === currentPlanKey; }) + 1;
+          if (spendRank > 0 && floorRank > 0) {
+            s2 = 'Current plan ranks ' + spendRank + ' of ' + n + ' in supported spend and '
+              + floorRank + ' of ' + n + ' in conservative floor.';
+          }
+        }
+
+        // Sentence 3: whether top spend and top floor converge on the same path
+        var s3 = topSame
+          ? 'Top supported spend and top conservative floor occur on the same timing path.'
+          : 'Top supported spend and top conservative floor occur on different timing paths.';
+
+        var riBody = [s1, s2, s3].filter(Boolean).join(' ');
 
         sensEl.innerHTML = '<div style="margin-top:8px;padding:8px 10px;'
           + 'background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);'
@@ -4066,7 +4120,7 @@
           + 'text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">'
           + 'Range Intelligence</div>'
           + '<div style="font-family:var(--font-serif);font-size:11px;color:var(--muted);'
-          + 'line-height:1.5;">' + summaryBody + clusterNote + '</div>'
+          + 'line-height:1.5;">' + riBody + '</div>'
           + '</div>';
         sensEl.style.display = 'block';
       }
@@ -4261,6 +4315,12 @@
       if (_grid)  { _grid.innerHTML  = ''; _grid.style.display  = 'none'; }
       if (_rec)   { _rec.innerHTML   = ''; _rec.style.display   = 'none'; }
       if (_sens)  { _sens.innerHTML  = ''; _sens.style.display  = 'none'; }
+      var _ip = document.getElementById('ss-inspect-panel');
+      if (_ip) _ip.style.display = 'none';
+      sessionStorage.removeItem('ss_matrix_selected_key');
+      sessionStorage.removeItem('ss_timing_locked_key');
+      sessionStorage.removeItem('ss_timing_locked_at');
+      if (typeof window.updateRangeReadiness === 'function') window.updateRangeReadiness();
       setStatus(loadingBox());
       startLoadAnim();
 
@@ -4397,6 +4457,43 @@
       } catch(e) { console.warn('[SS Matrix] checkMatrixStatus error:', e); }
     };
 
+    // ── A310-b: lock selected SS timing path — stays in Studio, no API call ─
+    function lockTimingPath(caseKey) {
+      if (!caseKey) return;
+      var _AGE  = { early_62: '62', full_67: '67', optimal_70: '70' };
+      var grid  = document.getElementById('ss-matrix-grid');
+      var hadPrevious = !!sessionStorage.getItem('ss_timing_locked_key');
+
+      // Move locked class to new cell
+      if (grid) {
+        grid.querySelectorAll('.ss-cell-locked').forEach(function(el) {
+          el.classList.remove('ss-cell-locked');
+        });
+        var target = grid.querySelector('[data-case-key="' + caseKey + '"]');
+        if (target) target.classList.add('ss-cell-locked');
+      }
+
+      // Persist
+      sessionStorage.setItem('ss_timing_locked_key', caseKey);
+      sessionStorage.setItem('ss_timing_locked_at', new Date().toISOString());
+
+      // Confirmation line
+      var confirmEl = document.getElementById('ss-lock-confirm');
+      if (confirmEl) {
+        if (hadPrevious) {
+          confirmEl.textContent = 'Timing path updated.';
+        } else {
+          var parts = caseKey.split('_x_');
+          var text  = 'SS Timing set: Primary ' + (_AGE[parts[0]] || parts[0]);
+          var coEl  = document.getElementById('co-arch-toggle');
+          if (coEl && coEl.checked && parts[1]) text += ' · Co-Architect ' + (_AGE[parts[1]] || parts[1]);
+          confirmEl.textContent = text;
+        }
+        confirmEl.style.display = 'block';
+      }
+      if (typeof window.updateRangeReadiness === 'function') window.updateRangeReadiness();
+    }
+
     // ── Restore map from sessionStorage on page load ───────────────────────
     (function restoreSession() {
       var cached = sessionStorage.getItem('ss_matrix_result');
@@ -4415,6 +4512,181 @@
       }
     })();
 
+    // ── A308-a/b: cell selectability + inspect panel population ──────────
+    (function() {
+      var _selGrid = document.getElementById('ss-matrix-grid');
+      if (!_selGrid) return;
+      var _AGE_LBL = { early_62: '62', full_67: '67', optimal_70: '70' };
+
+      function _fmtK(n)  { return '$' + Math.round(n / 1000) + 'K'; }
+      function _fmtMo(n) { return '$' + Math.round(n / 12).toLocaleString('en-US') + '/mo'; }
+
+      function _populateInspectPanel(caseKey) {
+        var panel = document.getElementById('ss-inspect-panel');
+        if (!panel) return;
+
+        var parts  = (caseKey || '').split('_x_');
+        var priKey = parts[0];
+        var secKey = parts[1];
+
+        var pathEl = document.getElementById('ss-inspect-path');
+        if (pathEl) {
+          var coEl     = document.getElementById('co-arch-toggle');
+          var pathHtml = 'Primary claims at ' + (_AGE_LBL[priKey] || priKey);
+          if (coEl && coEl.checked && secKey) {
+            pathHtml += ' &nbsp;&middot;&nbsp; Co-Architect claims at ' + (_AGE_LBL[secKey] || secKey);
+          }
+          pathEl.innerHTML = pathHtml;
+        }
+
+        var metricsEl = document.getElementById('ss-inspect-metrics');
+        if (metricsEl) {
+          var caseData = null;
+          try {
+            var raw = sessionStorage.getItem('ss_matrix_result');
+            if (raw) {
+              var parsed = JSON.parse(raw);
+              if (parsed && parsed.cases) {
+                parsed.cases.forEach(function(c) { if (c.case_key === caseKey) caseData = c; });
+              }
+            }
+          } catch(e) {}
+          if (caseData) {
+            metricsEl.innerHTML =
+              '<div class="ss-inspect-metric">'
+              + '<div class="ss-inspect-metric-label">Guaranteed Income</div>'
+              + '<div class="ss-inspect-metric-val">' + _fmtMo(caseData.combined_ss) + '</div>'
+              + '</div>'
+              + '<div class="ss-inspect-metric">'
+              + '<div class="ss-inspect-metric-label">Supported Spend</div>'
+              + '<div class="ss-inspect-metric-val">' + _fmtK(caseData.tiers.keystone) + '/yr</div>'
+              + '</div>'
+              + '<div class="ss-inspect-metric">'
+              + '<div class="ss-inspect-metric-label">Conservative Floor</div>'
+              + '<div class="ss-inspect-metric-val">' + _fmtK(caseData.mc_99_floor) + '/yr</div>'
+              + '</div>';
+          } else {
+            metricsEl.innerHTML = '';
+          }
+        }
+
+        // Per-path Range Intelligence
+        var perpathEl = document.getElementById('ss-inspect-perpath');
+        if (perpathEl) {
+          var _ppData = null, _ppAll = [], _ppCurKey = null;
+          try {
+            var _ppRaw = sessionStorage.getItem('ss_matrix_result');
+            if (_ppRaw) {
+              var _ppParsed = JSON.parse(_ppRaw);
+              if (_ppParsed && _ppParsed.cases) {
+                _ppAll    = _ppParsed.cases;
+                _ppCurKey = _ppParsed.current_plan_key || null;
+                _ppAll.forEach(function(c) { if (c.case_key === caseKey) _ppData = c; });
+              }
+            }
+          } catch(e) {}
+
+          if (_ppData && _ppAll.length > 0) {
+            var _ord = function(n) {
+              if (n === 1) return '1st'; if (n === 2) return '2nd'; if (n === 3) return '3rd';
+              return n + 'th';
+            };
+            var _total = _ppAll.length;
+            var _srtSS    = _ppAll.slice().sort(function(a, b) { return b.combined_ss       - a.combined_ss; });
+            var _srtSpend = _ppAll.slice().sort(function(a, b) { return b.tiers.keystone    - a.tiers.keystone; });
+            var _srtFloor = _ppAll.slice().sort(function(a, b) { return b.mc_99_floor       - a.mc_99_floor; });
+            var _rkSS    = _srtSS.findIndex(function(c)    { return c.case_key === caseKey; }) + 1;
+            var _rkSpend = _srtSpend.findIndex(function(c) { return c.case_key === caseKey; }) + 1;
+            var _rkFloor = _srtFloor.findIndex(function(c) { return c.case_key === caseKey; }) + 1;
+            var _curData = null;
+            var _isCur   = caseKey === _ppCurKey;
+            if (_ppCurKey && !_isCur) {
+              _ppAll.forEach(function(c) { if (c.case_key === _ppCurKey) _curData = c; });
+            }
+            var _dYr = function(delta) {
+              var abs = Math.abs(delta);
+              if (abs < 500) return 'unchanged vs current plan';
+              return (delta > 0 ? '+' : '-') + _fmtK(abs) + '/yr vs current plan';
+            };
+            var l1 = 'Guaranteed income sits ' + _ord(_rkSS) + ' of ' + _total + '.';
+            var l2 = 'Supported spend sits ' + _ord(_rkSpend) + ' of ' + _total;
+            if (_isCur) { l2 += ' (current plan).'; }
+            else if (_curData) { l2 += ', ' + _dYr(_ppData.tiers.keystone - _curData.tiers.keystone) + '.'; }
+            else { l2 += '.'; }
+            var l3 = 'Conservative floor sits ' + _ord(_rkFloor) + ' of ' + _total;
+            if (_isCur) { l3 += ' (current plan).'; }
+            else if (_curData) { l3 += ', ' + _dYr(_ppData.mc_99_floor - _curData.mc_99_floor) + '.'; }
+            else { l3 += '.'; }
+            perpathEl.innerHTML = '<div style="margin-top:10px;padding:8px 10px;'
+              + 'background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:3px;">'
+              + '<div style="font-family:var(--font-mono);font-size:8px;color:var(--teal-mid);'
+              + 'text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">Path Intelligence</div>'
+              + '<div style="font-family:var(--font-serif);font-size:11px;color:var(--muted);line-height:1.6;">'
+              + l1 + '<br>' + l2 + '<br>' + l3
+              + '</div></div>';
+          } else {
+            perpathEl.innerHTML = '';
+          }
+        }
+
+        panel.style.display = 'block';
+      }
+
+      function _selectCell(cell) {
+        _selGrid.querySelectorAll('[data-case-key]').forEach(function(el) {
+          el.classList.remove('ss-cell-selected');
+          el.setAttribute('aria-selected', 'false');
+        });
+        cell.classList.add('ss-cell-selected');
+        cell.setAttribute('aria-selected', 'true');
+        var key = cell.getAttribute('data-case-key');
+        sessionStorage.setItem('ss_matrix_selected_key', key);
+        _populateInspectPanel(key);
+      }
+
+      _selGrid.addEventListener('click', function(e) {
+        var cell = e.target.closest('[data-case-key]');
+        if (cell) _selectCell(cell);
+      });
+      _selGrid.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          var cell = e.target.closest('[data-case-key]');
+          if (cell) { e.preventDefault(); _selectCell(cell); }
+        }
+      });
+
+      var _inspBtn = document.getElementById('ss-inspect-btn');
+      if (_inspBtn) {
+        _inspBtn.addEventListener('click', function() {
+          var key = sessionStorage.getItem('ss_matrix_selected_key');
+          if (key) lockTimingPath(key);
+        });
+      }
+
+      // A308-d: restore selected cell state after session restore
+      var _savedKey = sessionStorage.getItem('ss_matrix_selected_key');
+      if (_savedKey) {
+        var _savedCell = _selGrid.querySelector('[data-case-key="' + _savedKey + '"]');
+        if (_savedCell) {
+          _selectCell(_savedCell);
+        } else {
+          sessionStorage.removeItem('ss_matrix_selected_key');
+        }
+      }
+
+      // A310-b: restore locked cell visual state after session restore
+      var _lockedKey = sessionStorage.getItem('ss_timing_locked_key');
+      if (_lockedKey) {
+        var _lockedCell = _selGrid.querySelector('[data-case-key="' + _lockedKey + '"]');
+        if (_lockedCell) {
+          _lockedCell.classList.add('ss-cell-locked');
+        } else {
+          sessionStorage.removeItem('ss_timing_locked_key');
+          sessionStorage.removeItem('ss_timing_locked_at');
+        }
+      }
+    })();
+
     // ── Wire Compute Map button ────────────────────────────────────────────
     var computeBtn = document.getElementById('ss-map-compute-btn');
     if (computeBtn) {
@@ -4423,7 +4695,8 @@
       console.warn('[SS Matrix] #ss-map-compute-btn not found — SS matrix wiring skipped.');
     }
 
-    window.startMatrixJob = startMatrixJob;
+    window.startMatrixJob      = startMatrixJob;
+    window.lockTimingPath = lockTimingPath;
 
   })();
   </script>
