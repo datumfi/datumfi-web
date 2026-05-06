@@ -944,47 +944,60 @@
 
             <!-- SSA.gov Annual Estimates -->
             <div style="margin-bottom:16px;">
-              <div class="input-label" style="margin-bottom:4px;">SSA.gov Annual Estimates</div>
-              <div style="font-size:9px;color:var(--muted);font-family:var(--font-mono);margin-bottom:10px;line-height:1.5;">Use your SSA.gov annual estimates. Age 67 is treated as Full Retirement Age in this model.</div>
+              <div class="input-label" style="margin-bottom:4px;">SSA.gov Monthly Estimates</div>
+              <div style="font-size:9px;color:var(--muted);font-family:var(--font-mono);margin-bottom:10px;line-height:1.5;">Enter the <strong style="color:rgba(255,255,255,0.6);">monthly benefit amounts</strong> shown on your SSA.gov statement — not the annual total. Studio annualizes them for the engine. Age 67 is treated as Full Retirement Age in this model.</div>
               <div id="ss-plausibility-warn" style="display:none;font-size:9px;color:var(--gold);font-family:var(--font-mono);margin-bottom:8px;line-height:1.5;"></div>
               <div style="font-size:9px;color:var(--muted);font-family:var(--font-mono);letter-spacing:0.04em;text-transform:uppercase;margin-bottom:5px;">Primary</div>
               <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
                 <div>
-                  <div class="input-label">Age 62 annual</div>
-                  <input type="text" id="ss-pri-62" class="small-field curr-format" placeholder="$0">
+                  <div class="input-label">Age 62 /mo</div>
+                  <input type="text" id="ss-pri-62" class="small-field curr-format" placeholder="e.g. 1,850">
                 </div>
                 <div>
-                  <div class="input-label">Age 67 annual (FRA)</div>
-                  <input type="text" id="ss-pri-67" class="small-field curr-format" placeholder="$0">
+                  <div class="input-label">Age 67 /mo (FRA)</div>
+                  <input type="text" id="ss-pri-67" class="small-field curr-format" placeholder="e.g. 2,400">
                 </div>
                 <div>
-                  <div class="input-label">Age 70 annual</div>
-                  <input type="text" id="ss-pri-70" class="small-field curr-format" placeholder="$0">
+                  <div class="input-label">Age 70 /mo</div>
+                  <input type="text" id="ss-pri-70" class="small-field curr-format" placeholder="e.g. 3,050">
                 </div>
               </div>
               <div id="ss-co-arch-estimates" style="display:none;">
                 <div style="font-size:9px;color:var(--muted);font-family:var(--font-mono);letter-spacing:0.04em;text-transform:uppercase;margin-bottom:5px;">Co-Architect</div>
                 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
                   <div>
-                    <div class="input-label">Age 62 annual</div>
-                    <input type="text" id="ss-sec-62" class="small-field curr-format" placeholder="$0">
+                    <div class="input-label">Age 62 /mo</div>
+                    <input type="text" id="ss-sec-62" class="small-field curr-format" placeholder="e.g. 1,850">
                   </div>
                   <div>
-                    <div class="input-label">Age 67 annual (FRA)</div>
-                    <input type="text" id="ss-sec-67" class="small-field curr-format" placeholder="$0">
+                    <div class="input-label">Age 67 /mo (FRA)</div>
+                    <input type="text" id="ss-sec-67" class="small-field curr-format" placeholder="e.g. 2,400">
                   </div>
                   <div>
-                    <div class="input-label">Age 70 annual</div>
-                    <input type="text" id="ss-sec-70" class="small-field curr-format" placeholder="$0">
+                    <div class="input-label">Age 70 /mo</div>
+                    <input type="text" id="ss-sec-70" class="small-field curr-format" placeholder="e.g. 3,050">
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Grid container — populated by renderMatrixGrid() in A306; hidden until data is ready -->
-            <div id="ss-matrix-grid" class="ss-map-grid-placeholder"
-                 aria-label="Social Security claiming paths — not yet tested"
-                 style="display:none;"></div>
+            <!-- A310-g2: matrix + path intelligence — side-by-side on desktop, stacked on mobile -->
+            <div class="ss-matrix-layout">
+              <!-- Grid container — populated by renderMatrixGrid() in A306; hidden until data is ready -->
+              <div id="ss-matrix-grid" class="ss-map-grid-placeholder"
+                   aria-label="Social Security claiming paths — not yet tested"
+                   style="display:none;"></div>
+
+              <!-- A308-b: Inspect panel shell — populated on cell selection; hidden until a cell is selected -->
+              <div id="ss-inspect-panel" style="display:none;" aria-live="polite" aria-atomic="false">
+                <div class="ss-inspect-header">Selected timing path</div>
+                <div id="ss-inspect-path" class="ss-inspect-path"></div>
+                <div id="ss-inspect-metrics" class="ss-inspect-metrics"></div>
+                <div id="ss-inspect-perpath"></div>
+                <button id="ss-inspect-btn" class="measure-btn" type="button" style="margin-top:10px;font-size:10px;padding:9px 14px;">Set This Timing Path &#x2192;</button>
+                <div id="ss-lock-confirm" style="display:none;"></div>
+              </div>
+            </div>
 
             <!-- Test Claiming Paths button — onclick wired in A305 -->
             <button class="measure-btn" id="ss-map-compute-btn" type="button">
@@ -995,16 +1008,6 @@
             <div id="ss-map-status" style="display:none;" aria-live="polite" aria-atomic="true"></div>
             <div id="ss-map-recommendation" style="display:none;"></div>
             <div id="ss-map-sensitivity" style="display:none;"></div>
-
-            <!-- A308-b: Inspect panel shell — populated on cell selection; hidden until a cell is selected -->
-            <div id="ss-inspect-panel" style="display:none;" aria-live="polite" aria-atomic="false">
-              <div class="ss-inspect-header">Selected timing path</div>
-              <div id="ss-inspect-path" class="ss-inspect-path"></div>
-              <div id="ss-inspect-metrics" class="ss-inspect-metrics"></div>
-              <div id="ss-inspect-perpath"></div>
-              <button id="ss-inspect-btn" class="measure-btn" type="button" style="margin-top:10px;font-size:10px;padding:9px 14px;">Set This Timing Path &#x2192;</button>
-              <div id="ss-lock-confirm" style="display:none;"></div>
-            </div>
 
           </div>
 
@@ -3280,17 +3283,17 @@
         var v70 = _pa(prefix + '-70');
         var n   = (v62 > 0 ? 1 : 0) + (v67 > 0 ? 1 : 0) + (v70 > 0 ? 1 : 0);
 
-        // Plausibility check — run on any non-empty input, warn without blocking
+        // Plausibility check — calibrated for monthly benefit amounts ($300–$6,000/mo is the realistic range)
         var warnEl = document.getElementById('ss-plausibility-warn');
         if (warnEl) {
           var vals = [v62, v67, v70].filter(function(v) { return v > 0; });
-          var tooHigh = vals.some(function(v) { return v > 100000; });
-          var tooLow  = vals.some(function(v) { return v > 0 && v < 1000; });
+          var tooHigh = vals.some(function(v) { return v > 6000; });
+          var tooLow  = vals.some(function(v) { return v > 0 && v < 300; });
           if (tooHigh) {
-            warnEl.textContent = 'This looks high for an annual Social Security estimate. Check that you did not enter a monthly amount incorrectly.';
+            warnEl.textContent = 'That looks like an annual amount. Please enter the monthly SSA.gov amount instead, e.g. 2,400.';
             warnEl.style.display = 'block';
           } else if (tooLow) {
-            warnEl.textContent = 'This looks low for an annual estimate. Check that you entered the annual amount.';
+            warnEl.textContent = 'That looks unusually low. Check that you entered the monthly benefit shown on SSA.gov.';
             warnEl.style.display = 'block';
           } else {
             warnEl.style.display = 'none';
@@ -3298,11 +3301,24 @@
         }
 
         if (n === 0) return { state: 'empty',    dict: null };
-        if (n === 3) return { state: 'full',     dict: { early_62: v62, full_67: v67, optimal_70: v70 } };
-        if (n === 1 && v67 > 0) return { state: 'fra_only', dict: { early_62: Math.round(v67 * 0.70), full_67: Math.round(v67), optimal_70: Math.round(v67 * 1.24) } };
+        // Multiply by 12: UI captures monthly benefit; engine expects annual values
+        if (n === 3) return { state: 'full',     dict: { early_62: v62 * 12, full_67: v67 * 12, optimal_70: v70 * 12 } };
+        if (n === 1 && v67 > 0) return { state: 'fra_only', dict: { early_62: Math.round(v67 * 0.70) * 12, full_67: v67 * 12, optimal_70: Math.round(v67 * 1.24) * 12 } };
         return { state: 'partial', dict: null };
       }
       window._readSSOverride = _readSSOverride;
+
+      // Live plausibility — fire on input so warnings appear before Test Claiming Paths
+      (function() {
+        ['ss-pri-62','ss-pri-67','ss-pri-70'].forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el) el.addEventListener('input', function() { _readSSOverride('ss-pri'); });
+        });
+        ['ss-sec-62','ss-sec-67','ss-sec-70'].forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el) el.addEventListener('input', function() { _readSSOverride('ss-sec'); });
+        });
+      })();
 
       // STU-010 + STU-022: enum mapping, Group 4 filter, custom_weights for Custom Matrix
       function buildStudioRequest() {
@@ -3350,7 +3366,7 @@
 
         const body = { current_age: currentAge, retirement_age: retireAge, location: 'FL', datum_spend: datumSpend, market_outlook: outlookValue, ss_strategy_primary: ssStrategy, accounts };
         if (customWeights) body.custom_weights = customWeights;
-        // SS overrides — monthly → annual (×12); included when user has entered valid estimates
+        // SS overrides — _readSSOverride captures monthly inputs and returns annual (×12) dicts
         const priSS = _readSSOverride('ss-pri');
         if (priSS.dict) body.ss_primary_benefit_overrides = priSS.dict;
         const coEl = document.getElementById('co-arch-toggle');
@@ -3886,11 +3902,19 @@
   .ss-cell-current::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:rgba(212,175,55,0.85);border-radius:3px 3px 0 0;}
   .ss-cell-top-spend{border-color:rgba(29,158,117,0.28)!important;}
   .ss-cell-top-floor{border-color:rgba(100,180,200,0.25)!important;}
-  .ss-cell-selected{border-color:rgba(255,255,255,0.70)!important;background:rgba(255,255,255,0.09)!important;box-shadow:0 0 0 1px rgba(255,255,255,0.22),0 4px 14px rgba(0,0,0,0.25)!important;transform:translateY(-2px)!important;z-index:1;}
-  .ss-cell-current.ss-cell-selected{border-color:rgba(212,175,55,0.85)!important;background:rgba(212,175,55,0.12)!important;box-shadow:0 0 0 1px rgba(212,175,55,0.5),0 0 0 3px rgba(255,255,255,0.10),0 4px 14px rgba(212,175,55,0.18)!important;}
+  .ss-cell-selected{border-color:rgba(29,158,117,0.75)!important;background:rgba(29,158,117,0.08)!important;box-shadow:0 0 0 1px rgba(29,158,117,0.35),0 4px 14px rgba(0,0,0,0.25)!important;transform:translateY(-2px)!important;z-index:1;}
+  .ss-cell-current.ss-cell-selected{border-color:rgba(212,175,55,0.85)!important;background:rgba(212,175,55,0.12)!important;box-shadow:0 0 0 1px rgba(212,175,55,0.5),0 0 0 3px rgba(29,158,117,0.2),0 4px 14px rgba(212,175,55,0.18)!important;}
   .ss-cell-locked{border-color:rgba(29,158,117,0.8)!important;background:rgba(29,158,117,0.09)!important;box-shadow:0 0 0 1px rgba(29,158,117,0.3),0 3px 10px rgba(29,158,117,0.12)!important;}
   .ss-cell-locked::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:rgba(29,158,117,0.75);border-radius:3px 3px 0 0;}
   .ss-matrix-cell:focus-visible{outline:2px solid rgba(255,255,255,0.45);outline-offset:2px;}
+  .ss-matrix-layout{display:block;}
+  .ss-matrix-layout .ss-map-grid-placeholder{margin-bottom:0;}
+  .ss-matrix-layout #ss-inspect-panel{margin-top:12px;background:#101e30;border-color:rgba(255,255,255,0.16);}
+  .ss-matrix-layout .ss-inspect-metrics{grid-template-columns:1fr 1fr;}
+  .ss-cell-exp{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.07);}
+  .ss-cell-exp-intel{font-family:var(--font-serif);font-size:10px;color:var(--muted);line-height:1.5;margin-bottom:7px;}
+  .ss-cell-exp-btn{font-size:9px!important;padding:6px 10px!important;margin-top:0!important;width:100%;}
+  .ss-cell-exp-confirm{font-family:var(--font-mono);font-size:9px;color:var(--teal-mid);margin-top:5px;letter-spacing:0.04em;}
   .ss-cell-badge{display:block;font-size:8px;font-family:var(--font-mono);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:3px;line-height:1.2;}
   .ss-badge-current{color:var(--gold);}
   .ss-cell-ss{font-size:11px;font-family:var(--font-mono);color:#e2e2e2;line-height:1.2;margin-bottom:5px;}
@@ -3952,6 +3976,14 @@
       cases.forEach(function(c) { lookup[c.case_key] = c; });
 
       var currentCase = currentPlanKey ? lookup[currentPlanKey] : null;
+
+      // Role-aware insight: read Primary and Co-Architect FRA monthly estimates from DOM
+      var _raPri67El  = document.getElementById('ss-pri-67');
+      var _raSec67El  = document.getElementById('ss-sec-67');
+      var _raPriMo    = _raPri67El ? parseInt((_raPri67El.value || '').replace(/[^\d]/g, ''), 10) || 0 : 0;
+      var _raSecMo    = _raSec67El ? parseInt((_raSec67El.value || '').replace(/[^\d]/g, ''), 10) || 0 : 0;
+      var _raPriLarger = (_raPriMo - _raSecMo) >= 500;
+      var _raSecLarger = (_raSecMo - _raPriMo) >= 500;
 
       // Spread + cluster detection
       var allSpend = cases.map(function(c) { return c.tiers.keystone; });
@@ -4026,11 +4058,10 @@
           // Only "Your Plan" badge — no comparative labels
           if (isCurrent) html += '<span class="ss-cell-badge ss-badge-current">Your Plan</span>';
 
-          // Guaranteed income
-          html += '<div class="ss-cell-ss">$' + fmt(Math.round(c.combined_ss / 12)) + '/mo guaranteed</div>';
+          // Social Security (monthly)
+          html += '<div class="ss-cell-ss">$' + fmt(Math.round(c.combined_ss / 12)) + '/mo Social Security</div>';
 
-          // Supported Spend with delta
-          html += '<div class="ss-cell-spend-label">Supported Spend</div>';
+          // Total spending with delta — number first
           if (!currentCase || isCurrent) {
             html += '<div class="ss-cell-spend-val">' + fmtK(c.tiers.keystone) + '/yr'
               + (isCurrent ? ' <span style="font-size:8px;color:var(--muted);">baseline</span>' : '')
@@ -4046,9 +4077,10 @@
                 : '')
               + '</div>';
           }
+          html += '<div class="ss-cell-spend-label">Total spending</div>'
+            + '<div style="font-size:7px;color:var(--muted);font-family:var(--font-mono);line-height:1.2;margin-bottom:3px;">SS + portfolio combined</div>';
 
-          // Conservative Floor with delta
-          html += '<div class="ss-cell-floor-label">Conservative Floor</div>';
+          // Lower spending estimate with delta — number first
           if (!currentCase || isCurrent) {
             html += '<div class="ss-cell-floor-val">' + fmtK(c.mc_99_floor) + '/yr'
               + (isCurrent ? ' <span style="font-size:8px;color:var(--muted);">baseline</span>' : '')
@@ -4064,6 +4096,87 @@
                 : '')
               + '</div>';
           }
+          html += '<div class="ss-cell-floor-label">Lower spending estimate</div>'
+            + '<div style="font-size:7px;color:var(--muted);font-family:var(--font-mono);line-height:1.2;margin-bottom:3px;">if markets disappoint</div>';
+
+          // Inline expansion — architecture-effect path insight, hidden until cell is selected
+          var _dVerb = function(d) {
+            if (Math.abs(d) < 500) return 'is about unchanged';
+            return (d > 0 ? 'rises by about ' : 'falls by about ') + '$' + Math.round(Math.abs(d) / 1000) + 'K/yr';
+          };
+          var _priKey = key.split('_x_')[0];
+          var _secKey = key.split('_x_')[1] || '';
+          var _tradeoff;
+          if (_secKey && _priKey === _secKey) {
+            _tradeoff = _priKey === 'early_62'
+              ? 'Both benefits start early, easing early portfolio withdrawals. The tradeoff is lower monthly Social Security for life.'
+              : _priKey === 'optimal_70'
+              ? 'Higher monthly Social Security arrives later, but bridge years require more portfolio support. Higher checks do not automatically mean higher total spending.'
+              : 'Both benefits start at full retirement age — a moderate architecture with no extreme tradeoffs in either direction.';
+          } else if (_secKey) {
+            var _raKey = _priKey + '_x_' + _secKey;
+            if (_raPriLarger) {
+              _tradeoff = _raKey === 'early_62_x_full_67'
+                ? "The larger benefit claims early, permanently lowering the household's biggest monthly check. The bridge improves, but long-term guaranteed income weakens."
+                : _raKey === 'full_67_x_early_62'
+                ? "The larger benefit preserves its full retirement age rate. Delaying it further still would add more — this path is a practical middle ground."
+                : _raKey === 'early_62_x_optimal_70'
+                ? "The larger benefit claims early, locking in a permanently lower rate. Delaying the smaller benefit to 70 adds some income, but it was not the bigger lever."
+                : _raKey === 'optimal_70_x_early_62'
+                ? "The larger benefit delays to 70, maximizing the household's biggest monthly check. The smaller benefit covers early years without sacrificing much."
+                : _raKey === 'full_67_x_optimal_70'
+                ? "The smaller benefit delays to 70, but it is not the bigger lever here. Delaying the larger benefit further would move total spending more."
+                : _raKey === 'optimal_70_x_full_67'
+                ? "The larger benefit delays to 70, maximizing the household's biggest monthly check. Bridge years are longer, but the gain in monthly income can be substantial."
+                : 'Higher Social Security arrives later — bridge years draw more from the portfolio first.';
+            } else if (_raSecLarger) {
+              _tradeoff = _raKey === 'early_62_x_full_67'
+                ? "The larger benefit waits for full retirement age while the smaller one helps cover early years. The bigger lever is delaying the larger benefit even further."
+                : _raKey === 'full_67_x_early_62'
+                ? "The larger benefit claims early, permanently lowering the household's biggest monthly check. The bridge improves, but long-term guaranteed income weakens."
+                : _raKey === 'early_62_x_optimal_70'
+                ? "The smaller benefit covers early years; the larger one delays to 70. Higher monthly Social Security arrives later — bridge years draw more from the portfolio first."
+                : _raKey === 'optimal_70_x_early_62'
+                ? "The larger benefit claims early, locking in a lower rate. Delaying the smaller benefit to 70 adds proportionally less income than delaying the bigger check would."
+                : _raKey === 'full_67_x_optimal_70'
+                ? "The larger benefit delays to 70, maximizing the household's biggest monthly check. Bridge years are longer, but the gain in monthly income can be substantial."
+                : _raKey === 'optimal_70_x_full_67'
+                ? "The smaller benefit delays to 70, but it is not the bigger lever here. Delaying the larger benefit further would move total spending more."
+                : 'Higher Social Security arrives later — bridge years draw more from the portfolio first.';
+            } else {
+              var _comboArr = [_priKey, _secKey].sort();
+              var _combo = _comboArr[0] + '_x_' + _comboArr[1];
+              _tradeoff = _combo === 'early_62_x_optimal_70'
+                ? 'One benefit covers early years; the other delays for maximum monthly income. Higher Social Security arrives later — bridge years draw more from the portfolio first.'
+                : _combo === 'early_62_x_full_67'
+                ? 'One benefit covers early years at a lower rate; the other waits for full retirement age. The bridge is partially eased, and the spending range reflects that split.'
+                : _combo === 'full_67_x_optimal_70'
+                ? 'One benefit delays for maximum monthly income; the other starts at full retirement age. The delay adds income later but extends the period of heavier portfolio support.'
+                : 'Higher Social Security arrives later — bridge years draw more from the portfolio first.';
+            }
+          } else {
+            _tradeoff = _priKey === 'early_62'
+              ? 'Claiming early eases early portfolio withdrawals but locks in a permanently lower monthly benefit for life.'
+              : _priKey === 'optimal_70'
+              ? 'Higher monthly Social Security arrives later, but bridge years require more portfolio support. The net effect on total spending depends on the bridge length.'
+              : 'Full retirement age balances bridge length and monthly benefit size — a moderate architecture with no extreme tradeoffs.';
+          }
+          var _expLines = [];
+          if (isCurrent) {
+            _expLines.push('This is your current timing plan — the baseline for all comparisons.');
+          } else if (currentCase) {
+            _expLines.push('Compared with your current plan, total spending ' + _dVerb(c.tiers.keystone - currentCase.tiers.keystone) + ' and the lower spending estimate ' + _dVerb(c.mc_99_floor - currentCase.mc_99_floor) + '.');
+            _expLines.push(_tradeoff);
+          } else {
+            _expLines.push(_tradeoff);
+          }
+          html += '<div class="ss-cell-exp" style="display:none">'
+            + '<div style="font-family:var(--font-mono);font-size:8px;color:var(--teal-mid);'
+            + 'text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">Path insight</div>'
+            + '<div class="ss-cell-exp-intel">' + _expLines.join('<br>') + '</div>'
+            + '<button class="measure-btn ss-cell-exp-btn" type="button">Set This Timing Path &#x2192;</button>'
+            + '<div class="ss-cell-exp-confirm" style="display:none"></div>'
+            + '</div>';
 
           html += '</div>';
         });
@@ -4082,26 +4195,32 @@
         var n       = cases.length;
         var topSame = sortedBySpend[0].case_key === sortedByFloor[0].case_key;
 
-        // Sentence 1: spans across all paths
-        var s1 = n + ' paths span ' + fmtK(minSpend) + '–' + fmtK(maxSpend) + ' supported spend'
-          + (supportedClustered ? ' (clustered)' : '')
-          + ' and ' + fmtK(minFloor) + '–' + fmtK(maxFloor) + ' conservative floor'
-          + (floorClustered ? ' (clustered)' : '');
-        if (maxSS > 0 && maxSS > minSS) {
-          s1 += ', with ' + fmtK(minSS) + '–' + fmtK(maxSS) + ' guaranteed income.';
+        // Sentence 1: spans across all paths — no-spread copy avoids "$52K–$52K" when rounding collapses the range
+        var _spendSame = Math.round(minSpend / 1000) === Math.round(maxSpend / 1000);
+        var _floorSame = Math.round(minFloor / 1000) === Math.round(maxFloor / 1000);
+        var _spendPart = _spendSame
+          ? 'supported spend near ' + fmtK(minSpend)
+          : fmtK(minSpend) + '–' + fmtK(maxSpend) + ' supported spend' + (supportedClustered ? ' (clustered)' : '');
+        var _floorPart = _floorSame
+          ? 'conservative floor near ' + fmtK(minFloor)
+          : fmtK(minFloor) + '–' + fmtK(maxFloor) + ' conservative floor' + (floorClustered ? ' (clustered)' : '');
+        var s1 = n + ' paths span ' + _spendPart + ' and ' + _floorPart;
+        var _fmtMoMacro = function(v) { return '$' + Math.round(v / 12).toLocaleString('en-US') + '/mo'; };
+        if (maxSS > 0 && Math.round(minSS / 12) !== Math.round(maxSS / 12)) {
+          s1 += ', with ' + _fmtMoMacro(minSS) + '–' + _fmtMoMacro(maxSS) + ' guaranteed income.';
         } else if (maxSS > 0) {
-          s1 += ', all at ' + fmtK(maxSS) + ' guaranteed income.';
+          s1 += ', all at ' + _fmtMoMacro(maxSS) + ' guaranteed income.';
         } else {
           s1 += '.';
         }
 
-        // Sentence 2: current plan ranks (only when a current plan is identified)
+        // Sentence 2: current plan position (only when a current plan is identified)
         var s2 = '';
         if (currentCase) {
           var spendRank = sortedBySpend.findIndex(function(c) { return c.case_key === currentPlanKey; }) + 1;
           var floorRank = sortedByFloor.findIndex(function(c) { return c.case_key === currentPlanKey; }) + 1;
           if (spendRank > 0 && floorRank > 0) {
-            s2 = 'Current plan ranks ' + spendRank + ' of ' + n + ' in supported spend and '
+            s2 = 'Current plan sits ' + spendRank + ' of ' + n + ' in supported spend and '
               + floorRank + ' of ' + n + ' in conservative floor.';
           }
         }
@@ -4111,7 +4230,12 @@
           ? 'Top supported spend and top conservative floor occur on the same timing path.'
           : 'Top supported spend and top conservative floor occur on different timing paths.';
 
-        var riBody = [s1, s2, s3].filter(Boolean).join(' ');
+        // Sentence 4: when spending is stable, name the real tradeoff
+        var s4 = supportedClustered
+          ? 'Supported spending is relatively stable across these paths; the real tradeoff is income timing and when benefits begin.'
+          : '';
+
+        var riBody = [s1, s2, s3, s4].filter(Boolean).join(' ');
 
         sensEl.innerHTML = '<div style="margin-top:8px;padding:8px 10px;'
           + 'background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);'
@@ -4133,7 +4257,7 @@
     var _LOAD_MSGS = [
       'Testing claiming paths…',
       'Testing early vs delayed claims…',
-      'Measuring portfolio bridge pressure…',
+      'Comparing income timing and portfolio impact…',
       'Comparing income timing strategies…',
     ];
     var _loadMsgIdx   = 0;
@@ -4390,11 +4514,7 @@
           stopLoadAnim();
           sessionStorage.setItem('ss_matrix_result', JSON.stringify(result));
           setBtn('Retest Paths &#x2192;', false);
-          setStatus(statusBox(
-            'rgba(29,158,117,0.2)', 'var(--teal-mid)',
-            'Comparison complete.',
-            'Your current plan is the baseline — explore what changes.'
-          ));
+          setStatus('');
           renderMatrixGrid(result);
           return;
         }
@@ -4438,11 +4558,7 @@
           stopLoadAnim();
           sessionStorage.setItem('ss_matrix_result', JSON.stringify(d.result));
           setBtn('Retest Paths &#x2192;', false);
-          setStatus(statusBox(
-            'rgba(29,158,117,0.2)', 'var(--teal-mid)',
-            'Comparison complete.',
-            'Your current plan is the baseline — explore what changes.'
-          ));
+          setStatus('');
           renderMatrixGrid(d.result);
         } else if (d.status === 'failed') {
           stopLoadAnim();
@@ -4460,35 +4576,41 @@
     // ── A310-b: lock selected SS timing path — stays in Studio, no API call ─
     function lockTimingPath(caseKey) {
       if (!caseKey) return;
-      var _AGE  = { early_62: '62', full_67: '67', optimal_70: '70' };
-      var grid  = document.getElementById('ss-matrix-grid');
+      var grid        = document.getElementById('ss-matrix-grid');
       var hadPrevious = !!sessionStorage.getItem('ss_timing_locked_key');
 
-      // Move locked class to new cell
       if (grid) {
+        // Remove gold styling and "Your Plan" badge from any existing current cell
+        grid.querySelectorAll('.ss-cell-current').forEach(function(el) {
+          el.classList.remove('ss-cell-current');
+          var badge = el.querySelector('.ss-badge-current');
+          if (badge) badge.remove();
+        });
+        // Remove legacy locked class
         grid.querySelectorAll('.ss-cell-locked').forEach(function(el) {
           el.classList.remove('ss-cell-locked');
         });
+        // Apply gold styling and "Your Plan" badge to the newly locked cell
         var target = grid.querySelector('[data-case-key="' + caseKey + '"]');
-        if (target) target.classList.add('ss-cell-locked');
+        if (target) {
+          target.classList.add('ss-cell-current');
+          if (!target.querySelector('.ss-badge-current')) {
+            var badge = document.createElement('span');
+            badge.className = 'ss-cell-badge ss-badge-current';
+            badge.textContent = 'Your Plan';
+            target.insertBefore(badge, target.firstChild);
+          }
+        }
       }
 
       // Persist
       sessionStorage.setItem('ss_timing_locked_key', caseKey);
       sessionStorage.setItem('ss_timing_locked_at', new Date().toISOString());
 
-      // Confirmation line
+      // Legacy confirm element (inside hidden panel — kept for range readiness wiring)
       var confirmEl = document.getElementById('ss-lock-confirm');
       if (confirmEl) {
-        if (hadPrevious) {
-          confirmEl.textContent = 'Timing path updated.';
-        } else {
-          var parts = caseKey.split('_x_');
-          var text  = 'SS Timing set: Primary ' + (_AGE[parts[0]] || parts[0]);
-          var coEl  = document.getElementById('co-arch-toggle');
-          if (coEl && coEl.checked && parts[1]) text += ' · Co-Architect ' + (_AGE[parts[1]] || parts[1]);
-          confirmEl.textContent = text;
-        }
+        confirmEl.textContent = hadPrevious ? 'Timing path updated.' : 'Timing path set.';
         confirmEl.style.display = 'block';
       }
       if (typeof window.updateRangeReadiness === 'function') window.updateRangeReadiness();
@@ -4501,11 +4623,7 @@
       try {
         var result = JSON.parse(cached);
         setBtn('Retest Paths &#x2192;', false);
-        setStatus(statusBox(
-          'rgba(29,158,117,0.2)', 'var(--teal-mid)',
-          'Comparison complete.',
-          'Your current plan is the baseline — explore what changes.'
-        ));
+        setStatus('');
         renderMatrixGrid(result);
       } catch(e) {
         sessionStorage.removeItem('ss_matrix_result');
@@ -4633,20 +4751,53 @@
       }
 
       function _selectCell(cell) {
+        // Collapse all inline expansions
+        _selGrid.querySelectorAll('.ss-cell-exp').forEach(function(el) { el.style.display = 'none'; });
+        // Deselect all cells
         _selGrid.querySelectorAll('[data-case-key]').forEach(function(el) {
           el.classList.remove('ss-cell-selected');
           el.setAttribute('aria-selected', 'false');
         });
+        // Select and expand clicked cell
         cell.classList.add('ss-cell-selected');
         cell.setAttribute('aria-selected', 'true');
+        var exp = cell.querySelector('.ss-cell-exp');
+        if (exp) exp.style.display = 'block';
         var key = cell.getAttribute('data-case-key');
         sessionStorage.setItem('ss_matrix_selected_key', key);
-        _populateInspectPanel(key);
+        // Keep bottom panel hidden — detail lives inline
+        var _bp = document.getElementById('ss-inspect-panel');
+        if (_bp) _bp.style.display = 'none';
       }
 
       _selGrid.addEventListener('click', function(e) {
+        // Inline Set This Timing Path button — handle before cell-select dispatch
+        if (e.target.closest('.ss-cell-exp-btn')) {
+          var _btnCell = e.target.closest('[data-case-key]');
+          if (_btnCell) {
+            var _btnKey = _btnCell.getAttribute('data-case-key');
+            lockTimingPath(_btnKey);
+            // Collapse expansion — gold styling is the confirmation
+            var _exp = _btnCell.querySelector('.ss-cell-exp');
+            if (_exp) _exp.style.display = 'none';
+            _btnCell.classList.remove('ss-cell-selected');
+            _btnCell.setAttribute('aria-selected', 'false');
+            sessionStorage.removeItem('ss_matrix_selected_key');
+          }
+          return;
+        }
         var cell = e.target.closest('[data-case-key]');
-        if (cell) _selectCell(cell);
+        if (!cell) return;
+        // Toggle: clicking an already-expanded cell collapses it
+        if (cell.classList.contains('ss-cell-selected')) {
+          cell.classList.remove('ss-cell-selected');
+          cell.setAttribute('aria-selected', 'false');
+          var _exp2 = cell.querySelector('.ss-cell-exp');
+          if (_exp2) _exp2.style.display = 'none';
+          sessionStorage.removeItem('ss_matrix_selected_key');
+        } else {
+          _selectCell(cell);
+        }
       });
       _selGrid.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -4679,7 +4830,21 @@
       if (_lockedKey) {
         var _lockedCell = _selGrid.querySelector('[data-case-key="' + _lockedKey + '"]');
         if (_lockedCell) {
-          _lockedCell.classList.add('ss-cell-locked');
+          // Move gold to the locked cell if it differs from the API-defined current
+          if (!_lockedCell.classList.contains('ss-cell-current')) {
+            _selGrid.querySelectorAll('.ss-cell-current').forEach(function(el) {
+              el.classList.remove('ss-cell-current');
+              var b = el.querySelector('.ss-badge-current');
+              if (b) b.remove();
+            });
+            _lockedCell.classList.add('ss-cell-current');
+            if (!_lockedCell.querySelector('.ss-badge-current')) {
+              var _b = document.createElement('span');
+              _b.className = 'ss-cell-badge ss-badge-current';
+              _b.textContent = 'Your Plan';
+              _lockedCell.insertBefore(_b, _lockedCell.firstChild);
+            }
+          }
         } else {
           sessionStorage.removeItem('ss_timing_locked_key');
           sessionStorage.removeItem('ss_timing_locked_at');
