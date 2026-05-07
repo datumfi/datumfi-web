@@ -750,7 +750,7 @@
             <div class="field-row">
               <div>
                 <div class="input-label">Date of Birth</div>
-                <input type="text" class="small-field" id="pri-dob" data-field="current_age" value="08 / 1982" onfocus="this.select()">
+                <input type="text" class="small-field" id="pri-dob" data-field="current_age" value="08 / 1982" onfocus="this.select()" oninput="_updatePlanEndAge()">
               </div>
               <div>
                 <div class="input-label">Location (Tax Base)</div>
@@ -787,11 +787,11 @@
             <div class="field-row" style="margin-top: 15px;">
               <div>
                 <div class="input-label">Target Retirement Date</div>
-                <input type="text" class="small-field" id="target-ret" data-field="retirement_age" value="03 / 2035" onfocus="this.select()" oninput="updateSVGs()">
+                <input type="text" class="small-field" id="target-ret" data-field="retirement_age" value="03 / 2035" onfocus="this.select()" oninput="updateSVGs(); _updatePlanEndAge()">
               </div>
               <div>
-                <div class="input-label">Retirement Duration (Years)</div>
-                <input type="number" class="small-field" value="40" min="1" max="100">
+                <div class="input-label">Plan Through Age</div>
+                <input type="number" class="small-field" id="plan-end-age" value="93" min="75" max="120" title="The age through which your retirement plan is modeled. Updates automatically when you change your retirement date.">
               </div>
             </div>
 
@@ -991,6 +991,14 @@
 
             <!-- A310-g2: matrix + path intelligence — side-by-side on desktop, stacked on mobile -->
             <div class="ss-matrix-layout">
+              <!-- A310-e: Compare by strip — shown after grid populates -->
+              <div id="ss-compare-strip" style="display:none;">
+                <span class="ss-cb-label">Compare by:</span>
+                <button class="ss-cb-btn" data-metric="spend" type="button" data-tooltip="Shows which timing paths produce the highest modeled total annual spending.">Supported Spend</button>
+                <button class="ss-cb-btn" data-metric="floor" type="button" data-tooltip="Shows which timing paths provide the strongest lower-spending estimate if markets disappoint.">Conservative Floor</button>
+                <button class="ss-cb-btn" data-metric="ss" type="button" data-tooltip="Shows which timing paths create the highest monthly Social Security income.">Monthly SS</button>
+                <button class="ss-cb-btn" data-metric="lt" type="button" data-tooltip="Shows the estimated total difference versus your selected timing path over your modeled retirement horizon.">Long-Horizon Impact</button>
+              </div>
               <!-- Grid container — populated by renderMatrixGrid() in A306; hidden until data is ready -->
               <div id="ss-matrix-grid" class="ss-map-grid-placeholder"
                    aria-label="Social Security claiming paths — not yet tested"
@@ -3338,6 +3346,7 @@
         const retYear     = parseInt((retVal.replace(/\s/g, '').split('/')[1] || ''), 10);
         const retireAge   = retYear ? (retYear - (new Date().getFullYear() - currentAge)) : 55;
         const datumSpend  = parseInt(spendVal.replace(/[^\d]/g, ''), 10) || 120000;
+        const planEndAge  = parseInt((document.getElementById('plan-end-age')?.value) || '', 10) || 93;
 
         const activeClimate = document.querySelector('.climate-option.active');
         const climateLabel  = activeClimate?.dataset?.outlook || '';
@@ -3372,7 +3381,7 @@
             return { type: ACCOUNT_TYPE_MAP[a.baseId] || a.baseId, balance: a.value || 0, annual_contribution: a.inflow || 0 };
           });
 
-        const body = { current_age: currentAge, retirement_age: retireAge, location: 'FL', datum_spend: datumSpend, market_outlook: outlookValue, ss_strategy_primary: ssStrategy, accounts };
+        const body = { current_age: currentAge, retirement_age: retireAge, location: 'FL', datum_spend: datumSpend, market_outlook: outlookValue, ss_strategy_primary: ssStrategy, accounts, plan_end_age: planEndAge };
         if (customWeights) body.custom_weights = customWeights;
         // SS overrides — _readSSOverride captures monthly inputs and returns annual (×12) dicts
         const priSS = _readSSOverride('ss-pri');
@@ -3386,6 +3395,30 @@
       }
 
       window._buildStudioRequest = buildStudioRequest;
+
+      var _planEndAgeDefault = 93;
+      function _updatePlanEndAge() {
+        var dobVal = (document.getElementById('pri-dob') || {}).value || '';
+        var retVal = (document.getElementById('target-ret') || {}).value || '';
+        var currentAge = parseAgeFromDob(dobVal) || 43;
+        var retYear = parseInt((retVal.replace(/\s/g, '').split('/')[1] || ''), 10);
+        var retireAge = retYear ? (retYear - (new Date().getFullYear() - currentAge)) : 55;
+        var minPlanEnd    = Math.max(75, Math.ceil(retireAge + 20));
+        var defaultPlanEnd = Math.max(93, minPlanEnd);
+        var el = document.getElementById('plan-end-age');
+        if (!el) return;
+        el.min = String(minPlanEnd);
+        el.max = '120';
+        var cur = parseInt(el.value, 10);
+        if (isNaN(cur) || cur === _planEndAgeDefault) {
+          el.value = defaultPlanEnd;
+        } else if (cur < minPlanEnd) {
+          el.value = minPlanEnd;
+        }
+        _planEndAgeDefault = defaultPlanEnd;
+      }
+      window._updatePlanEndAge = _updatePlanEndAge;
+      _updatePlanEndAge();
 
       // Range Readiness \u2014 informational only, not a gate
       function updateRangeReadiness() {
@@ -3923,6 +3956,19 @@
   .ss-cell-exp-intel{font-family:var(--font-serif);font-size:10px;color:var(--muted);line-height:1.5;margin-bottom:7px;}
   .ss-cell-exp-btn{font-size:9px!important;padding:6px 10px!important;margin-top:0!important;width:100%;}
   .ss-cell-exp-confirm{font-family:var(--font-mono);font-size:9px;color:var(--teal-mid);margin-top:5px;letter-spacing:0.04em;}
+  .ss-compare-badge{font-family:var(--font-mono);font-size:7.5px;text-transform:uppercase;letter-spacing:0.05em;margin-top:6px;padding-top:5px;border-top:1px solid rgba(255,255,255,0.07);line-height:1.5;}
+  .ss-compare-badge span{display:none;}
+  .ss-cb-active-spend .ss-cb-spend,.ss-cb-active-floor .ss-cb-floor,.ss-cb-active-ss .ss-cb-ss{color:var(--teal-mid);display:block;}
+  .ss-cb-active-lt .ss-cb-lt{color:var(--teal-mid);display:block;}
+  #ss-compare-strip{font-family:var(--font-mono);font-size:8px;color:rgba(255,255,255,0.35);letter-spacing:0.04em;align-items:center;flex-wrap:wrap;gap:5px;margin-bottom:9px;}
+  .ss-cb-label{text-transform:uppercase;margin-right:3px;white-space:nowrap;color:rgba(255,255,255,0.35);}
+  .ss-cb-btn{position:relative;background:rgba(29,158,117,0.06);border:1px solid rgba(29,158,117,0.3);border-radius:4px;color:var(--teal-mid);font-family:var(--font-mono);font-size:8px;letter-spacing:0.04em;padding:4px 10px;cursor:pointer;text-transform:uppercase;transition:background 0.15s,border-color 0.15s,color 0.15s,box-shadow 0.15s;white-space:nowrap;opacity:0.7;}
+  .ss-cb-btn:hover:not(:disabled){background:rgba(29,158,117,0.14);border-color:rgba(29,158,117,0.65);color:var(--teal-mid);opacity:1;box-shadow:0 0 0 1px rgba(29,158,117,0.15);}
+  .ss-cb-btn:focus-visible{outline:2px solid var(--teal-mid);outline-offset:2px;opacity:1;}
+  .ss-cb-btn.ss-cb-active{background:rgba(29,158,117,0.18);border-color:var(--teal);color:#fff;opacity:1;box-shadow:0 0 0 1px rgba(29,158,117,0.3);}
+  .ss-cb-btn:disabled{opacity:0.25;cursor:default;border-color:rgba(255,255,255,0.1);background:none;color:rgba(255,255,255,0.3);}
+  .ss-cb-btn[data-tooltip]::after{content:attr(data-tooltip);position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#060b14;border:1px solid rgba(29,158,117,0.35);border-radius:4px;color:rgba(255,255,255,0.72);font-family:var(--font-serif);font-size:10px;font-weight:400;letter-spacing:0;text-transform:none;line-height:1.45;padding:7px 10px;width:210px;white-space:normal;box-shadow:0 6px 20px rgba(0,0,0,0.75);opacity:0;pointer-events:none;transition:opacity 0.15s;z-index:120;}
+  .ss-cb-btn[data-tooltip]:hover::after,.ss-cb-btn[data-tooltip]:focus-visible::after{opacity:1;}
   .ss-cell-badge{display:block;font-size:8px;font-family:var(--font-mono);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:3px;line-height:1.2;}
   .ss-badge-current{color:var(--gold);}
   .ss-cell-ss{font-size:11px;font-family:var(--font-mono);color:#e2e2e2;line-height:1.2;margin-bottom:5px;}
@@ -3978,6 +4024,12 @@
       var sensEl = document.getElementById('ss-map-sensitivity');
       if (!grid || !result || !result.cases || !result.cases.length) return;
 
+      var _rangeCache  = null;
+      try { _rangeCache = JSON.parse(sessionStorage.getItem('datumfi_range') || 'null'); } catch(e) {}
+      var _modeledYrs  = (_rangeCache && _rangeCache.params && _rangeCache.params.n_years > 0)
+        ? Math.round(_rangeCache.params.n_years) : null;
+      var _ltYrs = _modeledYrs || 25;
+
       var cases          = result.cases;
       var currentPlanKey = sessionStorage.getItem('ss_timing_locked_key') || result.current_plan_key || null;
 
@@ -4011,10 +4063,16 @@
       // Top-2 spend / floor keys for subtle cell outline (no label)
       var sortedBySpend = cases.slice().sort(function(a, b) { return b.tiers.keystone - a.tiers.keystone; });
       var sortedByFloor = cases.slice().sort(function(a, b) { return b.mc_99_floor    - a.mc_99_floor;    });
+      var sortedBySS    = cases.slice().sort(function(a, b) { return b.combined_ss    - a.combined_ss;    });
       var topSpendKeys  = {};
       var topFloorKeys  = {};
       sortedBySpend.slice(0, 2).forEach(function(c) { topSpendKeys[c.case_key] = 1; });
       sortedByFloor.slice(0, 2).forEach(function(c) { topFloorKeys[c.case_key] = 1; });
+
+      // A310-e: rank lookups (1 = highest) for Compare by strip
+      var rankSpend = {}; sortedBySpend.forEach(function(c, i) { rankSpend[c.case_key] = i + 1; });
+      var rankFloor = {}; sortedByFloor.forEach(function(c, i) { rankFloor[c.case_key] = i + 1; });
+      var rankSS    = {}; sortedBySS.forEach(function(c, i)    { rankSS[c.case_key]    = i + 1; });
 
       // Delta magnitude color — visual weight only, not statistical
       function _dColor(delta) {
@@ -4110,6 +4168,22 @@
           html += '<div class="ss-cell-floor-label">Lower spending estimate</div>'
             + '<div style="font-size:7px;color:var(--muted);font-family:var(--font-mono);line-height:1.2;margin-bottom:3px;">if markets disappoint</div>';
 
+          // A310-e: compare badge — 4 metric spans, one shown at a time via active class on grid
+          var _cbLtAnnual = currentCase ? (c.tiers.keystone - currentCase.tiers.keystone) : 0;
+          var _cbLtK      = Math.abs(Math.round(_cbLtAnnual * _ltYrs / 1000));
+          var _cbLtDir    = _cbLtAnnual >= 0 ? '+' : '−';
+          var _cbLtText   = isCurrent
+            ? 'Baseline path'
+            : (currentCase && _cbLtK > 0
+              ? _cbLtDir + '$' + _cbLtK + 'K total over ' + _ltYrs + ' modeled years'
+              : currentCase ? '+$0K' : '—');
+          html += '<div class="ss-compare-badge">'
+            + '<span class="ss-cb-spend">#' + rankSpend[key] + ' of 9 by supported spend</span>'
+            + '<span class="ss-cb-floor">#' + rankFloor[key] + ' of 9 by conservative floor</span>'
+            + '<span class="ss-cb-ss">#'    + rankSS[key]    + ' of 9 by monthly Social Security</span>'
+            + '<span class="ss-cb-lt">'     + _cbLtText      + '</span>'
+            + '</div>';
+
           // Inline expansion — architecture-effect path insight, hidden until cell is selected
           var _dVerb = function(d) {
             if (Math.abs(d) < 500) return 'is about unchanged';
@@ -4173,7 +4247,6 @@
               : 'Full retirement age balances bridge length and monthly benefit size — a moderate architecture with no extreme tradeoffs.';
           }
           var _expLines = [];
-          var _ltYrs    = 25;
           var _ltKsDiff = currentCase ? (c.tiers.keystone - currentCase.tiers.keystone) * _ltYrs : 0;
           var _ltKsAbs  = Math.abs(Math.round(_ltKsDiff / 1000));
           var _ltKsDir  = _ltKsDiff >= 0 ? '+' : '−';
@@ -4204,6 +4277,18 @@
       grid.innerHTML = html;
       grid.style.display = 'block';
       grid.setAttribute('aria-label', 'Social Security claiming paths — 9 options');
+      var _strip = document.getElementById('ss-compare-strip');
+      if (_strip) {
+        _strip.style.display = 'flex';
+        var _ltBtn = _strip.querySelector('[data-metric="lt"]');
+        if (_ltBtn) {
+          _ltBtn.disabled = !currentCase;
+          if (!currentCase) {
+            grid.classList.remove('ss-cb-active-lt');
+            _ltBtn.classList.remove('ss-cb-active');
+          }
+        }
+      }
 
       // Dynamic summary — Range Intelligence panel (macro: computed facts across all 9 paths)
       if (sensEl) {
@@ -4878,6 +4963,34 @@
     } else {
       console.warn('[SS Matrix] #ss-map-compute-btn not found — SS matrix wiring skipped.');
     }
+
+    // ── A310-e: Compare by strip wiring ──────────────────────────────────
+    (function() {
+      var _strip = document.getElementById('ss-compare-strip');
+      if (!_strip) return;
+      var _activeMetric = null;
+      _strip.addEventListener('click', function(e) {
+        var btn = e.target.closest('.ss-cb-btn');
+        if (!btn || btn.disabled) return;
+        var metric = btn.getAttribute('data-metric');
+        var grid = document.getElementById('ss-matrix-grid');
+        if (!grid) return;
+        if (_activeMetric === metric) {
+          grid.classList.remove('ss-cb-active-' + metric);
+          btn.classList.remove('ss-cb-active');
+          _activeMetric = null;
+          return;
+        }
+        if (_activeMetric) {
+          grid.classList.remove('ss-cb-active-' + _activeMetric);
+          var prev = _strip.querySelector('[data-metric="' + _activeMetric + '"]');
+          if (prev) prev.classList.remove('ss-cb-active');
+        }
+        grid.classList.add('ss-cb-active-' + metric);
+        btn.classList.add('ss-cb-active');
+        _activeMetric = metric;
+      });
+    })();
 
     window.startMatrixJob      = startMatrixJob;
     window.lockTimingPath = lockTimingPath;
