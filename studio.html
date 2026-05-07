@@ -787,11 +787,12 @@
             <div class="field-row" style="margin-top: 15px;">
               <div>
                 <div class="input-label">Target Retirement Date</div>
-                <input type="text" class="small-field" id="target-ret" data-field="retirement_age" value="03 / 2035" onfocus="this.select()" oninput="updateSVGs(); _updatePlanEndAge()">
+                <input type="text" class="small-field" id="target-ret" data-field="retirement_age" value="03 / 2035" onfocus="this.select()" oninput="_fmtRetDate(this); updateSVGs(); _updatePlanEndAge()" onblur="_validateRetDate(this)">
+                <div id="ret-date-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;">Retirement age exceeds 100 — plan capped at age 120.</div>
               </div>
               <div>
                 <div class="input-label">Plan Through Age</div>
-                <input type="number" class="small-field" id="plan-end-age" value="93" min="75" max="120" title="The age through which your retirement plan is modeled. Updates automatically when you change your retirement date.">
+                <input type="number" class="small-field" id="plan-end-age" value="93" min="75" max="120" title="The age through which your retirement plan is modeled. Updates automatically when you change your retirement date." oninput="_clampPlanEndAge(this,false)" onblur="_clampPlanEndAge(this,true)">
               </div>
             </div>
 
@@ -3338,6 +3339,7 @@
 
       // STU-010 + STU-022: enum mapping, Group 4 filter, custom_weights for Custom Matrix
       function buildStudioRequest() {
+        window._buildRequestError = null;
         const dobVal   = document.getElementById('pri-dob')?.value || '';
         const retVal   = document.getElementById('target-ret')?.value || '';
         const spendVal = document.getElementById('spend-input')?.value || '';
@@ -3345,8 +3347,31 @@
         const currentAge  = parseAgeFromDob(dobVal) || 43;
         const retYear     = parseInt((retVal.replace(/\s/g, '').split('/')[1] || ''), 10);
         const retireAge   = retYear ? (retYear - (new Date().getFullYear() - currentAge)) : 55;
+
+        // ── Retirement date gate: block invalid/incomplete dates before API call ──
+        const _retYearStr = (retVal.replace(/\s/g, '').split('/')[1] || '');
+        const _rw = document.getElementById('ret-date-warn');
+        if (_retYearStr.length !== 4) {
+          const _msg = 'Enter Target Retirement Date as MM / YYYY using a four-digit year.';
+          if (_rw) { _rw.textContent = _msg; _rw.style.display = 'block'; }
+          window._buildRequestError = _msg;
+          return null;
+        }
+        if (retireAge >= 100) {
+          const _msg = 'Target Retirement Date implies retirement age ' + Math.round(retireAge) + ' based on Date of Birth. Studio supports retirement ages under 100. Adjust Date of Birth or Target Retirement Date.';
+          if (_rw) { _rw.textContent = _msg; _rw.style.display = 'block'; }
+          window._buildRequestError = _msg;
+          return null;
+        }
+        if (retireAge <= currentAge) {
+          const _msg = 'Target Retirement Date must be after your current age. Check Date of Birth and Target Retirement Date.';
+          if (_rw) { _rw.textContent = _msg; _rw.style.display = 'block'; }
+          window._buildRequestError = _msg;
+          return null;
+        }
+
         const datumSpend  = parseInt(spendVal.replace(/[^\d]/g, ''), 10) || 120000;
-        const planEndAge  = parseInt((document.getElementById('plan-end-age')?.value) || '', 10) || 93;
+        const planEndAge  = Math.min(120, Math.max(_planEndAgeMin, parseInt((document.getElementById('plan-end-age')?.value) || '', 10) || 93));
 
         const activeClimate = document.querySelector('.climate-option.active');
         const climateLabel  = activeClimate?.dataset?.outlook || '';
@@ -3395,16 +3420,35 @@
       }
 
       window._buildStudioRequest = buildStudioRequest;
+      window._buildRequestError  = null;
 
       var _planEndAgeDefault = 93;
+      var _planEndAgeMin = 75;
       function _updatePlanEndAge() {
         var dobVal = (document.getElementById('pri-dob') || {}).value || '';
         var retVal = (document.getElementById('target-ret') || {}).value || '';
+        var retWarnEl = document.getElementById('ret-date-warn');
+        // Require exactly 4-digit year before treating date as valid
+        var yearStr = (retVal.replace(/\s/g, '').split('/')[1] || '');
+        var retYear = parseInt(yearStr, 10);
+        if (yearStr.length !== 4 || !retYear) {
+          if (retWarnEl) retWarnEl.style.display = 'none';
+          return; // incomplete — leave Plan Through Age unchanged
+        }
         var currentAge = parseAgeFromDob(dobVal) || 43;
-        var retYear = parseInt((retVal.replace(/\s/g, '').split('/')[1] || ''), 10);
-        var retireAge = retYear ? (retYear - (new Date().getFullYear() - currentAge)) : 55;
-        var minPlanEnd    = Math.max(75, Math.ceil(retireAge + 20));
-        var defaultPlanEnd = Math.max(93, minPlanEnd);
+        var retireAge = retYear - (new Date().getFullYear() - currentAge);
+        if (retireAge >= 100) {
+          if (retWarnEl) { retWarnEl.textContent = 'Target Retirement Date implies retirement age ' + Math.round(retireAge) + ' based on Date of Birth. Studio supports retirement ages under 100. Adjust Date of Birth or Target Retirement Date.'; retWarnEl.style.display = 'block'; }
+          return;
+        }
+        if (retireAge <= currentAge) {
+          if (retWarnEl) { retWarnEl.textContent = 'Target Retirement Date must be after your current age. Check Date of Birth and Target Retirement Date.'; retWarnEl.style.display = 'block'; }
+          return;
+        }
+        if (retWarnEl) retWarnEl.style.display = 'none';
+        var minPlanEnd    = Math.min(120, Math.max(75, Math.ceil(retireAge + 20)));
+        var defaultPlanEnd = Math.min(120, Math.max(93, minPlanEnd));
+        _planEndAgeMin = minPlanEnd;
         var el = document.getElementById('plan-end-age');
         if (!el) return;
         el.min = String(minPlanEnd);
@@ -3414,11 +3458,46 @@
           el.value = defaultPlanEnd;
         } else if (cur < minPlanEnd) {
           el.value = minPlanEnd;
+        } else if (cur > 120) {
+          el.value = 120;
         }
         _planEndAgeDefault = defaultPlanEnd;
       }
       window._updatePlanEndAge = _updatePlanEndAge;
       _updatePlanEndAge();
+
+      function _clampPlanEndAge(el, isBlur) {
+        var val = parseInt(el.value, 10);
+        if (isNaN(val) || val === 0) return;
+        if (val > 120) { el.value = 120; }
+        else if (isBlur && val < _planEndAgeMin) { el.value = _planEndAgeMin; }
+      }
+      window._clampPlanEndAge = _clampPlanEndAge;
+
+      function _fmtRetDate(el) {
+        var digits = el.value.replace(/\D/g, '').slice(0, 6);
+        if (digits.length >= 1 && parseInt(digits[0], 10) > 1) {
+          digits = '0' + digits.slice(0, 5);
+        }
+        if (digits.length >= 2) {
+          var mm = parseInt(digits.slice(0, 2), 10);
+          if (mm > 12) digits = '12' + digits.slice(2);
+          else if (mm === 0) digits = '01' + digits.slice(2);
+        }
+        el.value = digits.length <= 2 ? digits : digits.slice(0, 2) + ' / ' + digits.slice(2);
+      }
+      window._fmtRetDate = _fmtRetDate;
+
+      function _validateRetDate(el) {
+        var yearStr = ((el.value || '').replace(/\s/g, '').split('/')[1] || '');
+        var retWarnEl = document.getElementById('ret-date-warn');
+        if (!retWarnEl) return;
+        if (yearStr.length > 0 && yearStr.length < 4) {
+          retWarnEl.textContent = 'Enter Target Retirement Date as MM / YYYY using a four-digit year.';
+          retWarnEl.style.display = 'block';
+        }
+      }
+      window._validateRetDate = _validateRetDate;
 
       // Range Readiness \u2014 informational only, not a gate
       function updateRangeReadiness() {
@@ -4411,6 +4490,7 @@
       if (!el) return;
       el.innerHTML = html;
       el.style.display = html ? 'block' : 'none';
+      if (html) el.scrollIntoView({behavior: 'smooth', block: 'nearest'});
     }
 
     function setBtn(label, disabled) {
@@ -4471,10 +4551,12 @@
 
       var req = buildMatrixRequest();
       if (!req) {
+        var _reqErr = window._buildRequestError;
         setStatus(statusBox(
-          'rgba(226,75,74,0.3)', 'var(--danger)',
-          'Cannot build map request',
-          'Check your inputs and try again.',
+          _reqErr ? 'rgba(212,175,55,0.15)' : 'rgba(226,75,74,0.3)',
+          _reqErr ? 'var(--gold)'            : 'var(--danger)',
+          _reqErr ? 'Target Retirement Date' : 'Cannot build map request',
+          _reqErr || 'Check your inputs and try again.',
           '<button onclick="startMatrixJob()" class="measure-btn" style="margin-top:10px;font-size:10px;padding:8px;">Try Again</button>'
         ));
         return;
