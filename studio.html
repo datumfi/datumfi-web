@@ -3968,15 +3968,18 @@
     function fmtK(n) { return '$' + Math.round(n / 1000) + 'K'; }
     function fmt(n)  { return Math.round(n).toLocaleString('en-US'); }
 
+    var _lastMatrixResult = null;
+
     // ── Render 3×3 SS Matrix grid into #ss-matrix-grid ────────────────────
     function renderMatrixGrid(result) {
+      _lastMatrixResult = result;
       var grid   = document.getElementById('ss-matrix-grid');
       var recEl  = document.getElementById('ss-map-recommendation');
       var sensEl = document.getElementById('ss-map-sensitivity');
       if (!grid || !result || !result.cases || !result.cases.length) return;
 
       var cases          = result.cases;
-      var currentPlanKey = result.current_plan_key || null;
+      var currentPlanKey = sessionStorage.getItem('ss_timing_locked_key') || result.current_plan_key || null;
 
       var strats   = ['early_62', 'full_67', 'optimal_70'];
       var ageLabel = { early_62: '62', full_67: '67', optimal_70: '70' };
@@ -4170,10 +4173,17 @@
               : 'Full retirement age balances bridge length and monthly benefit size — a moderate architecture with no extreme tradeoffs.';
           }
           var _expLines = [];
+          var _ltYrs    = 25;
+          var _ltKsDiff = currentCase ? (c.tiers.keystone - currentCase.tiers.keystone) * _ltYrs : 0;
+          var _ltKsAbs  = Math.abs(Math.round(_ltKsDiff / 1000));
+          var _ltKsDir  = _ltKsDiff >= 0 ? '+' : '−';
           if (isCurrent) {
-            _expLines.push('This is your current timing plan — the baseline for all comparisons.');
+            _expLines.push('This is your selected timing path — the baseline for all comparisons.');
           } else if (currentCase) {
-            _expLines.push('Compared with your current plan, total spending ' + _dVerb(c.tiers.keystone - currentCase.tiers.keystone) + ' and the lower spending estimate ' + _dVerb(c.mc_99_floor - currentCase.mc_99_floor) + '.');
+            if (_ltKsAbs >= 25) {
+              _expLines.push('<span style="font-family:var(--font-mono);font-size:9px;color:var(--teal-mid);letter-spacing:0.04em;">Long-horizon impact: ' + _ltKsDir + '$' + _ltKsAbs + 'K total over ' + _ltYrs + ' modeled years vs. your current timing path.</span>');
+            }
+            _expLines.push('Compared with your current timing path, total spending ' + _dVerb(c.tiers.keystone - currentCase.tiers.keystone) + ' and the lower spending estimate ' + _dVerb(c.mc_99_floor - currentCase.mc_99_floor) + '.');
             _expLines.push(_tradeoff);
           } else {
             _expLines.push(_tradeoff);
@@ -4614,6 +4624,7 @@
       // Persist
       sessionStorage.setItem('ss_timing_locked_key', caseKey);
       sessionStorage.setItem('ss_timing_locked_at', new Date().toISOString());
+      if (_lastMatrixResult) { renderMatrixGrid(_lastMatrixResult); }
 
       // Legacy confirm element (inside hidden panel — kept for range readiness wiring)
       var confirmEl = document.getElementById('ss-lock-confirm');
