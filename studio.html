@@ -3169,7 +3169,6 @@
       sessionStorage.removeItem('datum_studio_draft_ts');
       // SS Matrix cache + state keys
       sessionStorage.removeItem('ss_matrix_result');
-      sessionStorage.removeItem('ss_matrix_payload_sig');
       sessionStorage.removeItem('ss_matrix_job_id');
       sessionStorage.removeItem('ss_matrix_selected_key');
       sessionStorage.removeItem('ss_timing_locked_key');
@@ -3438,6 +3437,7 @@
       window._buildStudioRequest = buildStudioRequest;
       window._buildRequestError  = null;
       window._buildRequestErrorField = null;
+      window.parseAgeFromDob = parseAgeFromDob;
 
       // ── Shared date-field validator ────────────────────────────────────────
       // kind: 'dob' | 'ret'  |  dobAge: numeric age or null  |  fieldName: optional label override
@@ -4159,7 +4159,6 @@
     var API_BASE    = 'https://api.datumfi.com';
     var MAX_POLLS   = 60;
     var _currentJobId = null;
-    var _pendingPayloadSig = null;
 
     // ── Minimal HTML escape for API-sourced strings ────────────────────────
     function esc(s) {
@@ -4601,7 +4600,7 @@
         var coRetEl  = document.getElementById('co-ret');
         var coRetVal = coRetEl ? (coRetEl.value || '') : '';
         var _crw = document.getElementById('co-ret-warn');
-        var _coRetError = _validateDateField(coRetVal, 'ret', _coDobError ? 43 : parseAgeFromDob(coDobVal), 'Co-Architect Target Retirement Date');
+        var _coRetError = _validateDateField(coRetVal, 'ret', _coDobError ? 43 : window.parseAgeFromDob(coDobVal), 'Co-Architect Target Retirement Date');
         if (_crw) { _crw.textContent = _coRetError || ''; _crw.style.display = _coRetError ? 'block' : 'none'; }
 
         if (_coDobError) { window._buildRequestError = _coDobError; window._buildRequestErrorField = 'Co-Architect DOB'; return null; }
@@ -4636,6 +4635,7 @@
 
     // ── Start job ──────────────────────────────────────────────────────────
     async function startMatrixJob() {
+      setStatus('Starting claiming map…');
       if (!document.getElementById('ss-map-status')) {
         console.warn('[SS Matrix] #ss-map-status not found — cannot start job.');
         return;
@@ -4707,35 +4707,6 @@
           ));
           return;
         }
-      }
-
-      // ── Payload hash cache — skip recompute if inputs unchanged ────────────
-      try {
-        var _hkeys = Object.keys(req).sort();
-        var _hobj = {}; _hkeys.forEach(function(k) { _hobj[k] = req[k]; });
-        _pendingPayloadSig = JSON.stringify(_hobj);
-        var _cachedSig = sessionStorage.getItem('ss_matrix_payload_sig');
-        var _cachedRaw = sessionStorage.getItem('ss_matrix_result');
-        if (_cachedSig && _cachedRaw && _cachedSig === _pendingPayloadSig) {
-          var _cachedResult; try { _cachedResult = JSON.parse(_cachedRaw); } catch(e) {}
-          if (_cachedResult) {
-            var _cg = document.getElementById('ss-matrix-grid');
-            var _cr = document.getElementById('ss-map-recommendation');
-            var _cs = document.getElementById('ss-map-sensitivity');
-            if (_cg) { _cg.innerHTML = ''; _cg.style.display = 'none'; }
-            if (_cr) { _cr.innerHTML = ''; _cr.style.display = 'none'; }
-            if (_cs) { _cs.innerHTML = ''; _cs.style.display = 'none'; }
-            var _cip = document.getElementById('ss-inspect-panel');
-            if (_cip) _cip.style.display = 'none';
-            setBtn('Retest Paths &#x2192;', false);
-            setStatus('<div style="background:rgba(212,175,55,0.12);border:1px solid rgba(212,175,55,0.3);border-radius:6px;padding:10px 14px;font-size:11px;color:var(--gold);">Showing cached claiming map — inputs unchanged.</div>');
-            renderMatrixGrid(_cachedResult);
-            return;
-          }
-        }
-      } catch (_cacheErr) {
-        console.warn('[SS Matrix] cache skipped:', _cacheErr);
-        _pendingPayloadSig = null;
       }
 
       setBtn('Testing Paths…', true);
@@ -4820,7 +4791,6 @@
         if (status === 'succeeded') {
           stopLoadAnim();
           sessionStorage.setItem('ss_matrix_result', JSON.stringify(result));
-          if (_pendingPayloadSig) sessionStorage.setItem('ss_matrix_payload_sig', _pendingPayloadSig);
           setBtn('Retest Paths &#x2192;', false);
           setStatus('');
           renderMatrixGrid(result);
@@ -4929,8 +4899,6 @@
     (function restoreSession() {
       var cached = sessionStorage.getItem('ss_matrix_result');
       if (!cached) return;
-      // Clear the payload sig so the first click after session restore always runs a fresh compute
-      sessionStorage.removeItem('ss_matrix_payload_sig');
       try {
         var result = JSON.parse(cached);
         setBtn('Retest Paths &#x2192;', false);
