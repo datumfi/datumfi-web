@@ -3167,6 +3167,28 @@
     window.clearDraftAndRefresh = function() {
       sessionStorage.removeItem('datum_studio_draft');
       sessionStorage.removeItem('datum_studio_draft_ts');
+      // SS Matrix cache + state keys
+      sessionStorage.removeItem('ss_matrix_result');
+      sessionStorage.removeItem('ss_matrix_payload_sig');
+      sessionStorage.removeItem('ss_matrix_job_id');
+      sessionStorage.removeItem('ss_matrix_selected_key');
+      sessionStorage.removeItem('ss_timing_locked_key');
+      sessionStorage.removeItem('ss_timing_locked_at');
+      // Visual SS Matrix reset
+      var _sfg = document.getElementById('ss-matrix-grid');
+      var _sfr = document.getElementById('ss-map-recommendation');
+      var _sfs = document.getElementById('ss-map-sensitivity');
+      var _sfi = document.getElementById('ss-inspect-panel');
+      var _sfst = document.getElementById('ss-map-status');
+      var _sfstrip = document.getElementById('ss-compare-strip');
+      var _sfbtn = document.getElementById('ss-map-compute-btn');
+      if (_sfg)     { _sfg.innerHTML = '';   _sfg.style.display = 'none'; }
+      if (_sfr)     { _sfr.innerHTML = '';   _sfr.style.display = 'none'; }
+      if (_sfs)     { _sfs.innerHTML = '';   _sfs.style.display = 'none'; }
+      if (_sfi)     { _sfi.style.display = 'none'; }
+      if (_sfst)    { _sfst.innerHTML = '';  _sfst.style.display = 'none'; }
+      if (_sfstrip) { _sfstrip.style.display = 'none'; }
+      if (_sfbtn)   { _sfbtn.innerHTML = 'Test Claiming Paths &#x2192;'; _sfbtn.disabled = false; }
       state.accounts = [];
       var d = document.getElementById('pri-dob');    if (d) d.value = '08 / 1982';
       var r = document.getElementById('target-ret'); if (r) r.value = '03 / 2035';
@@ -4688,27 +4710,32 @@
       }
 
       // ── Payload hash cache — skip recompute if inputs unchanged ────────────
-      var _hkeys = Object.keys(req).sort();
-      var _hobj = {}; _hkeys.forEach(function(k) { _hobj[k] = req[k]; });
-      _pendingPayloadSig = JSON.stringify(_hobj);
-      var _cachedSig = sessionStorage.getItem('ss_matrix_payload_sig');
-      var _cachedRaw = sessionStorage.getItem('ss_matrix_result');
-      if (_cachedSig && _cachedRaw && _cachedSig === _pendingPayloadSig) {
-        var _cachedResult; try { _cachedResult = JSON.parse(_cachedRaw); } catch(_) {}
-        if (_cachedResult) {
-          var _cg = document.getElementById('ss-matrix-grid');
-          var _cr = document.getElementById('ss-map-recommendation');
-          var _cs = document.getElementById('ss-map-sensitivity');
-          if (_cg) { _cg.innerHTML = ''; _cg.style.display = 'none'; }
-          if (_cr) { _cr.innerHTML = ''; _cr.style.display = 'none'; }
-          if (_cs) { _cs.innerHTML = ''; _cs.style.display = 'none'; }
-          var _cip = document.getElementById('ss-inspect-panel');
-          if (_cip) _cip.style.display = 'none';
-          setBtn('Retest Paths &#x2192;', false);
-          setStatus('<div style="background:rgba(212,175,55,0.12);border:1px solid rgba(212,175,55,0.3);border-radius:6px;padding:10px 14px;font-size:11px;color:var(--gold);">Showing cached claiming map — inputs unchanged.</div>');
-          renderMatrixGrid(_cachedResult);
-          return;
+      try {
+        var _hkeys = Object.keys(req).sort();
+        var _hobj = {}; _hkeys.forEach(function(k) { _hobj[k] = req[k]; });
+        _pendingPayloadSig = JSON.stringify(_hobj);
+        var _cachedSig = sessionStorage.getItem('ss_matrix_payload_sig');
+        var _cachedRaw = sessionStorage.getItem('ss_matrix_result');
+        if (_cachedSig && _cachedRaw && _cachedSig === _pendingPayloadSig) {
+          var _cachedResult; try { _cachedResult = JSON.parse(_cachedRaw); } catch(e) {}
+          if (_cachedResult) {
+            var _cg = document.getElementById('ss-matrix-grid');
+            var _cr = document.getElementById('ss-map-recommendation');
+            var _cs = document.getElementById('ss-map-sensitivity');
+            if (_cg) { _cg.innerHTML = ''; _cg.style.display = 'none'; }
+            if (_cr) { _cr.innerHTML = ''; _cr.style.display = 'none'; }
+            if (_cs) { _cs.innerHTML = ''; _cs.style.display = 'none'; }
+            var _cip = document.getElementById('ss-inspect-panel');
+            if (_cip) _cip.style.display = 'none';
+            setBtn('Retest Paths &#x2192;', false);
+            setStatus('<div style="background:rgba(212,175,55,0.12);border:1px solid rgba(212,175,55,0.3);border-radius:6px;padding:10px 14px;font-size:11px;color:var(--gold);">Showing cached claiming map — inputs unchanged.</div>');
+            renderMatrixGrid(_cachedResult);
+            return;
+          }
         }
+      } catch (_cacheErr) {
+        console.warn('[SS Matrix] cache skipped:', _cacheErr);
+        _pendingPayloadSig = null;
       }
 
       setBtn('Testing Paths…', true);
@@ -4902,6 +4929,8 @@
     (function restoreSession() {
       var cached = sessionStorage.getItem('ss_matrix_result');
       if (!cached) return;
+      // Clear the payload sig so the first click after session restore always runs a fresh compute
+      sessionStorage.removeItem('ss_matrix_payload_sig');
       try {
         var result = JSON.parse(cached);
         setBtn('Retest Paths &#x2192;', false);
