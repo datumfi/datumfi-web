@@ -3352,41 +3352,17 @@
         const retYear     = parseInt((retVal.replace(/\s/g, '').split('/')[1] || ''), 10);
         const retireAge   = retYear ? (retYear - (new Date().getFullYear() - currentAge)) : 55;
 
-        // ── Primary DOB gate (evaluated independently of ret date) ───────────
-        const _dobYearStr = (dobVal.replace(/\s/g, '').split('/')[1] || '');
+        // ── DOB + Target Retirement Date gates (evaluated independently) ───────
         const _dw = document.getElementById('pri-dob-warn');
-        let _dobError = null;
-        if (_dobYearStr.length !== 4) {
-          _dobError = 'Enter Date of Birth as MM / YYYY using a four-digit year.';
-        } else if (parseInt(_dobYearStr, 10) > new Date().getFullYear()) {
-          _dobError = 'Date of Birth cannot be in the future.';
-        }
+        const _dobError = _validateDateField(dobVal, 'dob', null);
         if (_dw) { _dw.textContent = _dobError || ''; _dw.style.display = _dobError ? 'block' : 'none'; }
 
-        // ── Retirement date gate (evaluated independently of DOB) ─────────────
-        const _retYearStr = (retVal.replace(/\s/g, '').split('/')[1] || '');
         const _rw = document.getElementById('ret-date-warn');
-        let _retError = null;
-        if (_retYearStr.length !== 4) {
-          _retError = 'Enter Target Retirement Date as MM / YYYY using a four-digit year.';
-        } else if (retireAge >= 100) {
-          _retError = 'Target Retirement Date implies retirement age ' + Math.round(retireAge) + ' based on Date of Birth. Studio supports retirement ages under 100. Adjust Date of Birth or Target Retirement Date.';
-        } else if (retireAge <= currentAge) {
-          _retError = 'Target Retirement Date must be after your current age. Check Date of Birth and Target Retirement Date.';
-        }
+        const _retError = _validateDateField(retVal, 'ret', _dobError ? null : parseAgeFromDob(dobVal));
         if (_rw) { _rw.textContent = _retError || ''; _rw.style.display = _retError ? 'block' : 'none'; }
 
-        // ── Block if either gate failed (DOB shown first in status card) ──────
-        if (_dobError) {
-          window._buildRequestError = _dobError;
-          window._buildRequestErrorField = 'Date of Birth';
-          return null;
-        }
-        if (_retError) {
-          window._buildRequestError = _retError;
-          window._buildRequestErrorField = 'Target Retirement Date';
-          return null;
-        }
+        if (_dobError) { window._buildRequestError = _dobError; window._buildRequestErrorField = 'Date of Birth'; return null; }
+        if (_retError) { window._buildRequestError = _retError; window._buildRequestErrorField = 'Target Retirement Date'; return null; }
 
         const datumSpend  = parseInt(spendVal.replace(/[^\d]/g, ''), 10) || 120000;
         const planEndAge  = Math.min(120, Math.max(_planEndAgeMin, parseInt((document.getElementById('plan-end-age')?.value) || '', 10) || 93));
@@ -3441,27 +3417,62 @@
       window._buildRequestError  = null;
       window._buildRequestErrorField = null;
 
+      // ── Shared date-field validator ────────────────────────────────────────
+      // kind: 'dob' | 'ret'  |  dobAge: numeric age or null  |  fieldName: optional label override
+      function _validateDateField(value, kind, dobAge, fieldName) {
+        var dobLabel = fieldName || 'Date of Birth';
+        var retLabel = fieldName || 'Target Retirement Date';
+        var yearStr = ((value || '').replace(/\s/g, '').split('/')[1] || '');
+        var currentYear = new Date().getFullYear();
+        if (yearStr.length !== 4) {
+          return kind === 'dob'
+            ? 'Enter ' + dobLabel + ' as MM / YYYY.'
+            : 'Enter ' + retLabel + ' as MM / YYYY.';
+        }
+        var year = parseInt(yearStr, 10);
+        if (kind === 'dob') {
+          if (year > currentYear) return dobLabel + ' cannot be in the future.';
+          if (year < 1900)        return 'Enter a realistic ' + dobLabel + '.';
+          return null;
+        }
+        // kind === 'ret'
+        if (year > 2120 || year < currentYear) return 'Enter a realistic ' + retLabel + '.';
+        if (dobAge != null) {
+          var retireAge = year - (currentYear - dobAge);
+          if (retireAge <= dobAge) return retLabel + ' must be after the current age.';
+          if (retireAge >= 100)    return fieldName
+            ? retLabel + ' implies retirement age over 100.'
+            : 'Target Retirement Date implies retirement age over 100. Check Date of Birth or Target Retirement Date.';
+        }
+        return null;
+      }
+      window._validateDateField = _validateDateField;
+
       var _planEndAgeDefault = 93;
       var _planEndAgeMin = 75;
       function _updatePlanEndAge() {
         var dobVal = (document.getElementById('pri-dob') || {}).value || '';
         var retVal = (document.getElementById('target-ret') || {}).value || '';
         var retWarnEl = document.getElementById('ret-date-warn');
-        // Require exactly 4-digit year before treating date as valid
         var yearStr = (retVal.replace(/\s/g, '').split('/')[1] || '');
         var retYear = parseInt(yearStr, 10);
+        var currentYear = new Date().getFullYear();
         if (yearStr.length !== 4 || !retYear) {
           if (retWarnEl) retWarnEl.style.display = 'none';
-          return; // incomplete — leave Plan Through Age unchanged
+          return;
+        }
+        if (retYear > 2120 || retYear < currentYear) {
+          if (retWarnEl) { retWarnEl.textContent = 'Enter a realistic Target Retirement Date.'; retWarnEl.style.display = 'block'; }
+          return;
         }
         var currentAge = parseAgeFromDob(dobVal) || 43;
-        var retireAge = retYear - (new Date().getFullYear() - currentAge);
+        var retireAge = retYear - (currentYear - currentAge);
         if (retireAge >= 100) {
-          if (retWarnEl) { retWarnEl.textContent = 'Target Retirement Date implies retirement age ' + Math.round(retireAge) + ' based on Date of Birth. Studio supports retirement ages under 100. Adjust Date of Birth or Target Retirement Date.'; retWarnEl.style.display = 'block'; }
+          if (retWarnEl) { retWarnEl.textContent = 'Target Retirement Date implies retirement age over 100. Check Date of Birth or Target Retirement Date.'; retWarnEl.style.display = 'block'; }
           return;
         }
         if (retireAge <= currentAge) {
-          if (retWarnEl) { retWarnEl.textContent = 'Target Retirement Date must be after your current age. Check Date of Birth and Target Retirement Date.'; retWarnEl.style.display = 'block'; }
+          if (retWarnEl) { retWarnEl.textContent = 'Target Retirement Date must be after the current age.'; retWarnEl.style.display = 'block'; }
           return;
         }
         if (retWarnEl) retWarnEl.style.display = 'none';
@@ -3508,56 +3519,37 @@
       window._fmtRetDate = _fmtRetDate;
 
       function _validateRetDate(el) {
-        var yearStr = ((el.value || '').replace(/\s/g, '').split('/')[1] || '');
-        var retWarnEl = document.getElementById('ret-date-warn');
-        if (!retWarnEl) return;
-        if (yearStr.length > 0 && yearStr.length < 4) {
-          retWarnEl.textContent = 'Enter Target Retirement Date as MM / YYYY using a four-digit year.';
-          retWarnEl.style.display = 'block';
-        }
+        var w = document.getElementById('ret-date-warn');
+        if (!w) return;
+        var dobVal = (document.getElementById('pri-dob') || {}).value || '';
+        var err = _validateDateField(el.value, 'ret', parseAgeFromDob(dobVal));
+        w.textContent = err || ''; w.style.display = err ? 'block' : 'none';
       }
       window._validateRetDate = _validateRetDate;
 
       function _validatePriDob(el) {
-        var yearStr = ((el.value || '').replace(/\s/g, '').split('/')[1] || '');
         var w = document.getElementById('pri-dob-warn');
         if (!w) return;
-        if (yearStr.length > 0 && yearStr.length < 4) {
-          w.textContent = 'Enter Date of Birth as MM / YYYY using a four-digit year.';
-          w.style.display = 'block';
-        } else if (yearStr.length === 4 && parseInt(yearStr, 10) > new Date().getFullYear()) {
-          w.textContent = 'Date of Birth cannot be in the future.';
-          w.style.display = 'block';
-        } else {
-          w.style.display = 'none';
-        }
+        var err = _validateDateField(el.value, 'dob', null);
+        w.textContent = err || ''; w.style.display = err ? 'block' : 'none';
       }
       window._validatePriDob = _validatePriDob;
 
       function _validateCoDob(el) {
-        var yearStr = ((el.value || '').replace(/\s/g, '').split('/')[1] || '');
         var w = document.getElementById('co-dob-warn');
         if (!w) return;
-        if (yearStr.length > 0 && yearStr.length < 4) {
-          w.textContent = 'Enter Co-Architect DOB as MM / YYYY using a four-digit year.';
-          w.style.display = 'block';
-        } else if (yearStr.length === 4 && parseInt(yearStr, 10) > new Date().getFullYear()) {
-          w.textContent = 'Co-Architect DOB cannot be in the future.';
-          w.style.display = 'block';
-        } else {
-          w.style.display = 'none';
-        }
+        var err = _validateDateField(el.value, 'dob', null, 'Co-Architect DOB');
+        w.textContent = err || ''; w.style.display = err ? 'block' : 'none';
       }
       window._validateCoDob = _validateCoDob;
 
       function _validateCoRet(el) {
-        var yearStr = ((el.value || '').replace(/\s/g, '').split('/')[1] || '');
         var w = document.getElementById('co-ret-warn');
         if (!w) return;
-        if (yearStr.length > 0 && yearStr.length < 4) {
-          w.textContent = 'Enter Co-Architect Target Retirement Date as MM / YYYY using a four-digit year.';
-          w.style.display = 'block';
-        }
+        var coDobVal = (document.getElementById('co-dob') || {}).value || '';
+        var coDobAge = parseAgeFromDob(coDobVal);
+        var err = _validateDateField(el.value, 'ret', coDobAge, 'Co-Architect Target Retirement Date');
+        w.textContent = err || ''; w.style.display = err ? 'block' : 'none';
       }
       window._validateCoRet = _validateCoRet;
 
@@ -4578,38 +4570,19 @@
         var coDobEl  = document.getElementById('co-dob');
         var coDobVal = coDobEl ? (coDobEl.value || '') : '';
 
-        // Co-arch DOB gate
-        var _coDobYearStr = (coDobVal.replace(/\s/g, '').split('/')[1] || '');
+        // Co-arch DOB + Target Retirement Date gates (evaluated independently)
         var _cdw = document.getElementById('co-dob-warn');
-        if (_coDobYearStr.length !== 4) {
-          var _coMsg = 'Enter Co-Architect DOB as MM / YYYY using a four-digit year.';
-          if (_cdw) { _cdw.textContent = _coMsg; _cdw.style.display = 'block'; }
-          window._buildRequestError = _coMsg;
-          window._buildRequestErrorField = 'Co-Architect DOB';
-          return null;
-        }
-        if (parseInt(_coDobYearStr, 10) > new Date().getFullYear()) {
-          var _coFutMsg = 'Co-Architect DOB cannot be in the future.';
-          if (_cdw) { _cdw.textContent = _coFutMsg; _cdw.style.display = 'block'; }
-          window._buildRequestError = _coFutMsg;
-          window._buildRequestErrorField = 'Co-Architect DOB';
-          return null;
-        }
-        if (_cdw) _cdw.style.display = 'none';
+        var _coDobError = _validateDateField(coDobVal, 'dob', null, 'Co-Architect DOB');
+        if (_cdw) { _cdw.textContent = _coDobError || ''; _cdw.style.display = _coDobError ? 'block' : 'none'; }
 
-        // Co-arch Target Retirement Date gate
         var coRetEl  = document.getElementById('co-ret');
         var coRetVal = coRetEl ? (coRetEl.value || '') : '';
-        var _coRetYearStr = (coRetVal.replace(/\s/g, '').split('/')[1] || '');
         var _crw = document.getElementById('co-ret-warn');
-        if (_coRetYearStr.length !== 4) {
-          var _crMsg = 'Enter Co-Architect Target Retirement Date as MM / YYYY using a four-digit year.';
-          if (_crw) { _crw.textContent = _crMsg; _crw.style.display = 'block'; }
-          window._buildRequestError = _crMsg;
-          window._buildRequestErrorField = 'Co-Architect Target Retirement Date';
-          return null;
-        }
-        if (_crw) _crw.style.display = 'none';
+        var _coRetError = _validateDateField(coRetVal, 'ret', _coDobError ? 43 : parseAgeFromDob(coDobVal), 'Co-Architect Target Retirement Date');
+        if (_crw) { _crw.textContent = _coRetError || ''; _crw.style.display = _coRetError ? 'block' : 'none'; }
+
+        if (_coDobError) { window._buildRequestError = _coDobError; window._buildRequestErrorField = 'Co-Architect DOB'; return null; }
+        if (_coRetError) { window._buildRequestError = _coRetError; window._buildRequestErrorField = 'Co-Architect Target Retirement Date'; return null; }
 
         var parts    = coDobVal.replace(/\s/g, '').split('/');
         if (parts.length >= 2) {
@@ -4619,18 +4592,6 @@
             var now    = new Date();
             var coAge  = now.getFullYear() - coYear;
             if (now.getMonth() + 1 < coMonth) coAge--;
-
-            // Co-arch retirement age gate
-            var coRetYear = parseInt(_coRetYearStr, 10);
-            var coRetireAge = coRetYear - (now.getFullYear() - coAge);
-            if (coRetireAge >= 100) {
-              var _craMsg = 'Co-Architect Target Retirement Date implies an unsupported retirement age. Check Co-Architect DOB and Target Retirement Date.';
-              if (_crw) { _crw.textContent = _craMsg; _crw.style.display = 'block'; }
-              window._buildRequestError = _craMsg;
-              window._buildRequestErrorField = 'Co-Architect Target Retirement Date';
-              return null;
-            }
-
             base.co_architect_age = coAge;
           }
         }
