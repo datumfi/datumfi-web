@@ -4137,6 +4137,7 @@
     var API_BASE    = 'https://api.datumfi.com';
     var MAX_POLLS   = 60;
     var _currentJobId = null;
+    var _pendingPayloadSig = null;
 
     // ── Minimal HTML escape for API-sourced strings ────────────────────────
     function esc(s) {
@@ -4686,6 +4687,30 @@
         }
       }
 
+      // ── Payload hash cache — skip recompute if inputs unchanged ────────────
+      var _hkeys = Object.keys(req).sort();
+      var _hobj = {}; _hkeys.forEach(function(k) { _hobj[k] = req[k]; });
+      _pendingPayloadSig = JSON.stringify(_hobj);
+      var _cachedSig = sessionStorage.getItem('ss_matrix_payload_sig');
+      var _cachedRaw = sessionStorage.getItem('ss_matrix_result');
+      if (_cachedSig && _cachedRaw && _cachedSig === _pendingPayloadSig) {
+        var _cachedResult; try { _cachedResult = JSON.parse(_cachedRaw); } catch(_) {}
+        if (_cachedResult) {
+          var _cg = document.getElementById('ss-matrix-grid');
+          var _cr = document.getElementById('ss-map-recommendation');
+          var _cs = document.getElementById('ss-map-sensitivity');
+          if (_cg) { _cg.innerHTML = ''; _cg.style.display = 'none'; }
+          if (_cr) { _cr.innerHTML = ''; _cr.style.display = 'none'; }
+          if (_cs) { _cs.innerHTML = ''; _cs.style.display = 'none'; }
+          var _cip = document.getElementById('ss-inspect-panel');
+          if (_cip) _cip.style.display = 'none';
+          setBtn('Retest Paths &#x2192;', false);
+          setStatus('<div style="background:rgba(212,175,55,0.12);border:1px solid rgba(212,175,55,0.3);border-radius:6px;padding:10px 14px;font-size:11px;color:var(--gold);">Showing cached claiming map — inputs unchanged.</div>');
+          renderMatrixGrid(_cachedResult);
+          return;
+        }
+      }
+
       setBtn('Testing Paths…', true);
       // Clear stale grid and panels before new computation
       var _grid = document.getElementById('ss-matrix-grid');
@@ -4768,6 +4793,7 @@
         if (status === 'succeeded') {
           stopLoadAnim();
           sessionStorage.setItem('ss_matrix_result', JSON.stringify(result));
+          if (_pendingPayloadSig) sessionStorage.setItem('ss_matrix_payload_sig', _pendingPayloadSig);
           setBtn('Retest Paths &#x2192;', false);
           setStatus('');
           renderMatrixGrid(result);
