@@ -4170,6 +4170,22 @@
     function fmt(n)  { return Math.round(n).toLocaleString('en-US'); }
 
     var _lastMatrixResult = null;
+    var _pendingReq = null;
+
+    // ── Payload signature for cache invalidation ──────────────────────────────
+    function _computeSig(r) {
+      var keys = [
+        'current_age', 'retirement_age', 'accounts', 'datum_spend',
+        'ss_strategy_primary', 'ss_strategy_secondary',
+        'ss_primary_benefit_overrides', 'ss_secondary_benefit_overrides',
+        'co_architect_age', 'co_architect_retirement_age',
+        'ss_haircut', 'current_cape', 'market_outlook',
+        'plan_end_age', 'bridge_access_mode'
+      ];
+      var obj = {};
+      keys.forEach(function(k) { obj[k] = r[k]; });
+      return JSON.stringify(obj);
+    }
 
     // ── Render 3×3 SS Matrix grid into #ss-matrix-grid ────────────────────
     function renderMatrixGrid(result) {
@@ -4709,6 +4725,33 @@
         }
       }
 
+      // ── Cache check — explicit prompt if inputs unchanged ─────────────────
+      var _cachedRaw = sessionStorage.getItem('ss_matrix_result');
+      if (_cachedRaw) {
+        try {
+          var _cached = JSON.parse(_cachedRaw);
+          if (_cached._payload_sig && _cached._payload_sig === _computeSig(req)) {
+            _pendingReq = req;
+            setStatus(statusBox(
+              'rgba(212,175,55,0.12)', 'var(--gold)',
+              'Inputs unchanged',
+              'Your claiming map is current — no inputs changed.',
+              '<div style="display:flex;gap:8px;margin-top:10px;">' +
+              '<button onclick="window._ssMatrixUseCached()" class="measure-btn" style="font-size:10px;padding:8px;">Use Previous Map</button>' +
+              '<button onclick="window._ssMatrixRecomputeNow()" class="measure-btn" style="font-size:10px;padding:8px;">Recompute Anyway</button>' +
+              '</div>'
+            ));
+            return;
+          }
+        } catch(e) { /* fall through to normal compute */ }
+      }
+
+      await _doStartJob(req);
+    }
+
+    // ── Backend job start + poll ───────────────────────────────────────────
+    async function _doStartJob(req) {
+      _pendingReq = req;
       setBtn('Testing Paths…', true);
       // Clear stale grid and panels before new computation
       var _grid = document.getElementById('ss-matrix-grid');
@@ -4790,7 +4833,9 @@
 
         if (status === 'succeeded') {
           stopLoadAnim();
-          sessionStorage.setItem('ss_matrix_result', JSON.stringify(result));
+          var _toStore = Object.assign({}, result, { _payload_sig: _pendingReq ? _computeSig(_pendingReq) : undefined });
+          sessionStorage.setItem('ss_matrix_result', JSON.stringify(_toStore));
+          _pendingReq = null;
           setBtn('Retest Paths &#x2192;', false);
           setStatus('');
           renderMatrixGrid(result);
@@ -4849,6 +4894,28 @@
           ));
         }
       } catch(e) { console.warn('[SS Matrix] checkMatrixStatus error:', e); }
+    };
+
+    // ── Cache prompt handlers ─────────────────────────────────────────────
+    window._ssMatrixUseCached = function() {
+      var _cachedRaw = sessionStorage.getItem('ss_matrix_result');
+      if (!_cachedRaw) { startMatrixJob(); return; }
+      try {
+        var _cached = JSON.parse(_cachedRaw);
+        setBtn('Retest Paths &#x2192;', false);
+        setStatus('');
+        renderMatrixGrid(_cached);
+      } catch(e) {
+        sessionStorage.removeItem('ss_matrix_result');
+        startMatrixJob();
+      }
+    };
+
+    window._ssMatrixRecomputeNow = function() {
+      var r = _pendingReq;
+      _pendingReq = null;
+      if (!r) { startMatrixJob(); return; }
+      _doStartJob(r);
     };
 
     // ── A310-b: lock selected SS timing path — stays in Studio, no API call ─
