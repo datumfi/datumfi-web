@@ -504,6 +504,9 @@
       .sim-fill, .sim-handle, .sim-toggle, .sim-toggle-knob, .sim-line.ceil, .sim-line.datum, .sim-line.floor { animation: none !important; }
   }
 
+  @keyframes mBarReveal { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0% 0 0); } }
+  @keyframes mBoxIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
   /* ── MOBILE MEDIA QUERIES ── */
   @media (max-width: 900px) {
     .narrative-container { flex-direction: column; overflow-x: clip; padding: 40px 20px; }
@@ -551,14 +554,11 @@
     .scroll-step { background: transparent; padding: 0; border-radius: 0; }
 
     /* ── MOBILE MINI-VISUAL ANIMATIONS ── */
-    .mbar { transform-box: fill-box; transform-origin: left center; }
-    .mbar-1 { animation: mBarFill 1.0s 0.2s cubic-bezier(0.2,0.8,0.2,1) both; }
-    .mbar-2 { animation: mBarFill 1.0s 0.5s cubic-bezier(0.2,0.8,0.2,1) both; }
-    @keyframes mBarFill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-    .mbox-1 { animation: mBoxIn 0.7s 0.15s ease both; }
-    .mbox-2 { animation: mBoxIn 0.7s 0.45s ease both; }
-    .mbox-3 { animation: mBoxIn 0.7s 0.75s ease both; }
-    @keyframes mBoxIn { from { opacity: 0; } to { opacity: 1; } }
+    .mbar-1 { animation: mBarReveal 1.4s 0.1s cubic-bezier(0.2,0.8,0.2,1) both; }
+    .mbar-2 { animation: mBarReveal 1.4s 0.45s cubic-bezier(0.2,0.8,0.2,1) both; }
+    .mbox-1 { animation: mBoxIn 0.75s 0.1s ease both; }
+    .mbox-2 { animation: mBoxIn 0.75s 0.4s ease both; }
+    .mbox-3 { animation: mBoxIn 0.75s 0.7s ease both; }
     .mdash-march { animation: mDashMarch 3s linear infinite; }
     @keyframes mDashMarch { to { stroke-dashoffset: -12; } }
     .mdatum-float { animation: mDatumFloat 4s ease-in-out infinite; }
@@ -568,8 +568,8 @@
     @keyframes mWaveCeil { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
     @keyframes mWaveFloor { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
     @media (prefers-reduced-motion: reduce) {
-      .mbar { transform: scaleX(1) !important; animation: none !important; }
-      .mbox-1, .mbox-2, .mbox-3 { opacity: 1 !important; animation: none !important; }
+      .mbar-1, .mbar-2 { clip-path: none !important; animation: none !important; }
+      .mbox-1, .mbox-2, .mbox-3 { opacity: 1 !important; transform: none !important; animation: none !important; }
       .mdash-march, .mdatum-float, .mwave-ceiling, .mwave-floor { animation: none !important; }
     }
 
