@@ -504,7 +504,7 @@
       .sim-fill, .sim-handle, .sim-toggle, .sim-toggle-knob, .sim-line.ceil, .sim-line.datum, .sim-line.floor { animation: none !important; }
   }
 
-  @keyframes mBarReveal { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0% 0 0); } }
+  @keyframes mBarReveal { from { opacity: 0; transform: scaleX(0); } to { opacity: 1; transform: scaleX(1); } }
   @keyframes mBoxIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
   /* ── MOBILE MEDIA QUERIES ── */
@@ -554,11 +554,12 @@
     .scroll-step { background: transparent; padding: 0; border-radius: 0; }
 
     /* ── MOBILE MINI-VISUAL ANIMATIONS ── */
-    .mbar-1 { animation: mBarReveal 1.4s 0.1s cubic-bezier(0.2,0.8,0.2,1) both; }
-    .mbar-2 { animation: mBarReveal 1.4s 0.45s cubic-bezier(0.2,0.8,0.2,1) both; }
-    .mbox-1 { animation: mBoxIn 0.75s 0.1s ease both; }
-    .mbox-2 { animation: mBoxIn 0.75s 0.4s ease both; }
-    .mbox-3 { animation: mBoxIn 0.75s 0.7s ease both; }
+    .mbar { transform-box: fill-box; transform-origin: left center; }
+    .scroll-step.active .mbar-1 { animation: mBarReveal 1.3s 0.05s cubic-bezier(0.2,0.8,0.2,1) both; }
+    .scroll-step.active .mbar-2 { animation: mBarReveal 1.3s 0.35s cubic-bezier(0.2,0.8,0.2,1) both; }
+    .scroll-step.active .mbox-1 { animation: mBoxIn 0.75s 0.05s ease both; }
+    .scroll-step.active .mbox-2 { animation: mBoxIn 0.75s 0.35s ease both; }
+    .scroll-step.active .mbox-3 { animation: mBoxIn 0.75s 0.65s ease both; }
     .mdash-march { animation: mDashMarch 3s linear infinite; }
     @keyframes mDashMarch { to { stroke-dashoffset: -12; } }
     .mdatum-float { animation: mDatumFloat 4s ease-in-out infinite; }
@@ -568,8 +569,8 @@
     @keyframes mWaveCeil { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
     @keyframes mWaveFloor { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
     @media (prefers-reduced-motion: reduce) {
-      .mbar-1, .mbar-2 { clip-path: none !important; animation: none !important; }
-      .mbox-1, .mbox-2, .mbox-3 { opacity: 1 !important; transform: none !important; animation: none !important; }
+      .scroll-step.active .mbar-1, .scroll-step.active .mbar-2 { animation: none !important; opacity: 1 !important; transform: none !important; }
+      .scroll-step.active .mbox-1, .scroll-step.active .mbox-2, .scroll-step.active .mbox-3 { animation: none !important; opacity: 1 !important; transform: none !important; }
       .mdash-march, .mdatum-float, .mwave-ceiling, .mwave-floor { animation: none !important; }
     }
 
@@ -942,11 +943,11 @@
               <text x="0" y="12" font-family="DM Mono, monospace" font-size="9" fill="rgba(255,255,255,0.45)" letter-spacing="0.1em">CURRENT AGE</text>
               <text x="280" y="12" font-family="DM Mono, monospace" font-size="9" fill="#5DCAA5" text-anchor="end">35</text>
               <rect x="0" y="18" width="280" height="4" rx="2" fill="rgba(255,255,255,0.06)"/>
-              <rect x="0" y="18" width="196" height="4" rx="2" fill="#1D9E75" opacity="0.85" class="mbar mbar-1"/>
+              <g class="mbar mbar-1"><rect x="0" y="18" width="196" height="4" rx="2" fill="#1D9E75" opacity="0.85"/></g>
               <text x="0" y="48" font-family="DM Mono, monospace" font-size="9" fill="rgba(255,255,255,0.45)" letter-spacing="0.1em">ANNUAL CONTRIBUTIONS</text>
               <text x="280" y="48" font-family="DM Mono, monospace" font-size="9" fill="#5DCAA5" text-anchor="end">$10,000</text>
               <rect x="0" y="54" width="280" height="4" rx="2" fill="rgba(255,255,255,0.06)"/>
-              <rect x="0" y="54" width="168" height="4" rx="2" fill="#1D9E75" opacity="0.85" class="mbar mbar-2"/>
+              <g class="mbar mbar-2"><rect x="0" y="54" width="168" height="4" rx="2" fill="#1D9E75" opacity="0.85"/></g>
             </svg>
           </div>
           <h3>Phase I / Data</h3>
