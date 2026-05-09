@@ -550,6 +550,29 @@
     .anim-phase { padding: 30px 20px; }
     .scroll-step { background: transparent; padding: 0; border-radius: 0; }
 
+    /* ── MOBILE MINI-VISUAL ANIMATIONS ── */
+    .mbar { transform-box: fill-box; transform-origin: left center; }
+    .mbar-1 { animation: mBarFill 1.0s 0.2s cubic-bezier(0.2,0.8,0.2,1) both; }
+    .mbar-2 { animation: mBarFill 1.0s 0.5s cubic-bezier(0.2,0.8,0.2,1) both; }
+    @keyframes mBarFill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+    .mbox-1 { animation: mBoxIn 0.7s 0.15s ease both; }
+    .mbox-2 { animation: mBoxIn 0.7s 0.45s ease both; }
+    .mbox-3 { animation: mBoxIn 0.7s 0.75s ease both; }
+    @keyframes mBoxIn { from { opacity: 0; } to { opacity: 1; } }
+    .mdash-march { animation: mDashMarch 3s linear infinite; }
+    @keyframes mDashMarch { to { stroke-dashoffset: -12; } }
+    .mdatum-float { animation: mDatumFloat 4s ease-in-out infinite; }
+    @keyframes mDatumFloat { 0%, 100% { transform: translateY(-5px); } 50% { transform: translateY(5px); } }
+    .mwave-ceiling { animation: mWaveCeil 5s ease-in-out infinite; }
+    .mwave-floor { animation: mWaveFloor 5s 0.5s ease-in-out infinite; }
+    @keyframes mWaveCeil { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+    @keyframes mWaveFloor { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
+    @media (prefers-reduced-motion: reduce) {
+      .mbar { transform: scaleX(1) !important; animation: none !important; }
+      .mbox-1, .mbox-2, .mbox-3 { opacity: 1 !important; animation: none !important; }
+      .mdash-march, .mdatum-float, .mwave-ceiling, .mwave-floor { animation: none !important; }
+    }
+
   }
 
   @media (max-width: 650px) { 
@@ -919,11 +942,11 @@
               <text x="0" y="12" font-family="DM Mono, monospace" font-size="9" fill="rgba(255,255,255,0.45)" letter-spacing="0.1em">CURRENT AGE</text>
               <text x="280" y="12" font-family="DM Mono, monospace" font-size="9" fill="#5DCAA5" text-anchor="end">35</text>
               <rect x="0" y="18" width="280" height="4" rx="2" fill="rgba(255,255,255,0.06)"/>
-              <rect x="0" y="18" width="196" height="4" rx="2" fill="#1D9E75" opacity="0.85"/>
+              <rect x="0" y="18" width="196" height="4" rx="2" fill="#1D9E75" opacity="0.85" class="mbar mbar-1"/>
               <text x="0" y="48" font-family="DM Mono, monospace" font-size="9" fill="rgba(255,255,255,0.45)" letter-spacing="0.1em">ANNUAL CONTRIBUTIONS</text>
               <text x="280" y="48" font-family="DM Mono, monospace" font-size="9" fill="#5DCAA5" text-anchor="end">$10,000</text>
               <rect x="0" y="54" width="280" height="4" rx="2" fill="rgba(255,255,255,0.06)"/>
-              <rect x="0" y="54" width="168" height="4" rx="2" fill="#1D9E75" opacity="0.85"/>
+              <rect x="0" y="54" width="168" height="4" rx="2" fill="#1D9E75" opacity="0.85" class="mbar mbar-2"/>
             </svg>
           </div>
           <h3>Phase I / Data</h3>
@@ -935,14 +958,20 @@
         <div class="scroll-step" data-step="2">
           <div class="mphase-visual" aria-hidden="true">
             <svg width="100%" height="auto" viewBox="0 0 280 96" fill="none" xmlns="http://www.w3.org/2000/svg" focusable="false">
-              <rect x="4" y="4" width="84" height="60" rx="1" stroke="#5DCAA5" stroke-width="1.5" fill="rgba(93,202,165,0.07)"/>
-              <text x="46" y="24" text-anchor="middle" font-family="DM Mono, monospace" font-size="7" fill="rgba(93,202,165,0.8)" letter-spacing="0.08em">TAXABLE BROKERAGE</text>
-              <text x="46" y="48" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-style="italic" fill="#ffffff">$450k</text>
-              <rect x="96" y="4" width="180" height="60" rx="1" stroke="#5DCAA5" stroke-width="1.5" fill="rgba(93,202,165,0.07)"/>
-              <text x="186" y="24" text-anchor="middle" font-family="DM Mono, monospace" font-size="8" fill="rgba(93,202,165,0.8)" letter-spacing="0.08em">PRIMARY REAL ESTATE</text>
-              <text x="186" y="48" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-style="italic" fill="#ffffff">$850k</text>
-              <rect x="4" y="72" width="272" height="20" rx="1" stroke="#5DCAA5" stroke-width="1.5" fill="rgba(93,202,165,0.07)"/>
-              <text x="140" y="85" text-anchor="middle" font-family="DM Mono, monospace" font-size="8" letter-spacing="0.08em"><tspan fill="rgba(93,202,165,0.8)">PRE-TAX 401(K) · </tspan><tspan fill="#ffffff">$1.24M</tspan></text>
+              <g class="mbox mbox-1">
+                <rect x="4" y="4" width="84" height="60" rx="1" stroke="#5DCAA5" stroke-width="1.5" fill="rgba(93,202,165,0.07)"/>
+                <text x="46" y="24" text-anchor="middle" font-family="DM Mono, monospace" font-size="7" fill="rgba(93,202,165,0.8)" letter-spacing="0.08em">TAXABLE BROKERAGE</text>
+                <text x="46" y="48" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-style="italic" fill="#ffffff">$450k</text>
+              </g>
+              <g class="mbox mbox-2">
+                <rect x="96" y="4" width="180" height="60" rx="1" stroke="#5DCAA5" stroke-width="1.5" fill="rgba(93,202,165,0.07)"/>
+                <text x="186" y="24" text-anchor="middle" font-family="DM Mono, monospace" font-size="8" fill="rgba(93,202,165,0.8)" letter-spacing="0.08em">PRIMARY REAL ESTATE</text>
+                <text x="186" y="48" text-anchor="middle" font-family="Fraunces, serif" font-size="16" font-style="italic" fill="#ffffff">$850k</text>
+              </g>
+              <g class="mbox mbox-3">
+                <rect x="4" y="72" width="272" height="20" rx="1" stroke="#5DCAA5" stroke-width="1.5" fill="rgba(93,202,165,0.07)"/>
+                <text x="140" y="85" text-anchor="middle" font-family="DM Mono, monospace" font-size="8" letter-spacing="0.08em"><tspan fill="rgba(93,202,165,0.8)">PRE-TAX 401(K) · </tspan><tspan fill="#ffffff">$1.24M</tspan></text>
+              </g>
             </svg>
           </div>
           <h3>Phase II / Architecture</h3>
@@ -960,7 +989,7 @@
               <rect x="96" y="16" width="88" height="24" stroke="#5DCAA5" stroke-width="0.75" fill="none" opacity="0.3"/>
               <rect x="208" y="14" width="64" height="50" stroke="#5DCAA5" stroke-width="1.5" fill="none" opacity="0.7"/>
               <rect x="216" y="22" width="48" height="20" stroke="#5DCAA5" stroke-width="0.75" fill="none" opacity="0.3"/>
-              <line x1="0" y1="36" x2="280" y2="36" stroke="#C9A84C" stroke-width="1.5" stroke-dasharray="8 4" opacity="0.8"/>
+              <line x1="0" y1="36" x2="280" y2="36" stroke="#C9A84C" stroke-width="1.5" stroke-dasharray="8 4" opacity="0.8" class="mdash-march"/>
             </svg>
           </div>
           <h3>Phase III / Tension</h3>
@@ -1008,9 +1037,11 @@
               <line x1="36" y1="8" x2="36" y2="64" stroke="rgba(255,255,255,0.12)" stroke-width="8" stroke-linecap="round"/>
               <line x1="16" y1="14" x2="196" y2="14" stroke="#C9A84C" stroke-width="1.5"/>
               <text x="204" y="18" font-family="DM Mono, monospace" font-size="8" fill="#C9A84C" letter-spacing="0.06em">CEILING</text>
-              <line x1="16" y1="36" x2="196" y2="36" stroke="#5DCAA5" stroke-width="2" stroke-dasharray="6 4"/>
-              <circle cx="36" cy="36" r="4" fill="#091221" stroke="#5DCAA5" stroke-width="2"/>
-              <text x="204" y="40" font-family="DM Mono, monospace" font-size="8" fill="#5DCAA5" letter-spacing="0.06em">DATUM</text>
+              <g class="mdatum-float">
+                <line x1="16" y1="36" x2="196" y2="36" stroke="#5DCAA5" stroke-width="2" stroke-dasharray="6 4"/>
+                <circle cx="36" cy="36" r="4" fill="#091221" stroke="#5DCAA5" stroke-width="2"/>
+                <text x="204" y="40" font-family="DM Mono, monospace" font-size="8" fill="#5DCAA5" letter-spacing="0.06em">DATUM</text>
+              </g>
               <line x1="16" y1="58" x2="196" y2="58" stroke="#e24b4a" stroke-width="1.5"/>
               <text x="204" y="62" font-family="DM Mono, monospace" font-size="8" fill="#e24b4a" letter-spacing="0.06em">FLOOR</text>
             </svg>
@@ -1028,11 +1059,15 @@
           <div class="mphase-visual" aria-hidden="true">
             <svg width="100%" height="auto" viewBox="0 0 280 84" fill="none" xmlns="http://www.w3.org/2000/svg" focusable="false">
               <text x="140" y="12" text-anchor="middle" font-family="DM Mono, monospace" font-size="8" fill="#5DCAA5" letter-spacing="0.2em" opacity="0.9">SHAPE RESOLVED</text>
-              <path d="M 0,24 Q 70,10 140,24 T 280,24" stroke="#C9A84C" stroke-width="1.5" fill="none" opacity="0.6"/>
-              <path d="M 0,32 Q 70,20 140,30 T 280,28" stroke="#C9A84C" stroke-width="1" fill="none" opacity="0.3"/>
+              <g class="mwave-ceiling">
+                <path d="M 0,24 Q 70,10 140,24 T 280,24" stroke="#C9A84C" stroke-width="1.5" fill="none" opacity="0.6"/>
+                <path d="M 0,32 Q 70,20 140,30 T 280,28" stroke="#C9A84C" stroke-width="1" fill="none" opacity="0.3"/>
+              </g>
               <line x1="0" y1="42" x2="280" y2="42" stroke="#5DCAA5" stroke-width="2.5" opacity="0.9"/>
-              <path d="M 0,56 Q 70,70 140,56 T 280,56" stroke="#e24b4a" stroke-width="1" fill="none" opacity="0.35"/>
-              <path d="M 0,62 Q 70,78 140,64 T 280,64" stroke="#e24b4a" stroke-width="1.5" fill="none" opacity="0.5"/>
+              <g class="mwave-floor">
+                <path d="M 0,56 Q 70,70 140,56 T 280,56" stroke="#e24b4a" stroke-width="1" fill="none" opacity="0.35"/>
+                <path d="M 0,62 Q 70,78 140,64 T 280,64" stroke="#e24b4a" stroke-width="1.5" fill="none" opacity="0.5"/>
+              </g>
               <text x="140" y="80" text-anchor="middle" font-family="DM Mono, monospace" font-size="8" fill="rgba(201,168,76,0.8)" letter-spacing="0.2em">DATUM INTELLIGENCE</text>
             </svg>
           </div>
