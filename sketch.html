@@ -556,6 +556,9 @@
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   }
+  .floating-feedback-btn { position: fixed; right: 18px; bottom: 18px; z-index: 650; background: rgba(9,18,33,0.92); color: var(--teal-mid); border: 1px solid rgba(93,202,165,0.45); border-radius: 999px; padding: 10px 14px; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.28); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: all 0.2s ease; }
+  .floating-feedback-btn:hover, .floating-feedback-btn:focus-visible { background: var(--teal-mid); color: var(--bg-navy); outline: none; transform: translateY(-1px); }
+  @media (max-width: 480px) { .floating-feedback-btn { right: 12px; bottom: 12px; padding: 8px 10px; font-size: 9px; } }
 </style></head><body>
   <a href="#sketch-main" class="skip-link">Skip to main content</a>
   <nav id="app-nav">
@@ -563,10 +566,8 @@
     <div class="nav-links">
       <a href="/sketch.html" class="nav-link active">Sketch</a>
       <a href="/studio-showcase.html" class="nav-link">Studio</a>
-      <a href="/why-a-range.html" class="nav-link" id="nav-range-link">Range</a>
-      <a href="/philosophy.html" class="nav-link">Philosophy</a>
+      <a href="/why-a-range.html" class="nav-link" id="nav-shape-link">Shape</a>
       <a href="/vault.html" class="nav-login-btn">Login</a>
-      <button class="nav-feedback-btn" onclick="openFeedback()">Share Feedback</button>
     </div>
     <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
       <span></span><span></span><span></span>
@@ -575,10 +576,8 @@
   <div class="nav-mobile-menu" id="nav-mobile-menu">
     <a href="/sketch.html" class="nav-mobile-link active">Sketch</a>
     <a href="/studio-showcase.html" class="nav-mobile-link">Studio</a>
-    <a href="/why-a-range.html" class="nav-mobile-link" id="nav-mob-range">Range</a>
-    <a href="/philosophy.html" class="nav-mobile-link">Philosophy</a>
+    <a href="/why-a-range.html" class="nav-mobile-link" id="nav-mob-shape">Shape</a>
     <a href="/vault.html" class="nav-mobile-login">Login</a>
-    <button class="nav-mobile-feedback" onclick="closeMobileNav(); openFeedback()">Share Feedback</button>
   </div>
 
   <div class="hero-screen" id="sketch-main">
@@ -1089,7 +1088,7 @@
       </div>
 
       <div class="legal-footer">
-          DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. Past performance does not guarantee future outcomes. &nbsp;|&nbsp; <a href="/privacy.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Privacy Policy</a> &nbsp;|&nbsp; <a href="/terms.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Terms of Service</a> &nbsp;|&nbsp; <a href="mailto:accessibility@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">Accessibility</a> &nbsp;|&nbsp; <a href="mailto:privacy@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">privacy@datumfi.com</a> &nbsp;|&nbsp; <a href="mailto:feedback@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">feedback@datumfi.com</a> &nbsp;|&nbsp; <span style="color:rgba(255,255,255,0.3);cursor:pointer;text-decoration:underline;" onclick="openDeleteDataModal()">Delete My Data</span> &nbsp;|&nbsp; <a href="/privacy-choices.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Do Not Sell My Information</a> &nbsp;|&nbsp; Build&nbsp;2026.04.19&nbsp;&bull;&nbsp;v1.0.0
+          DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. Past performance does not guarantee future outcomes. &nbsp;|&nbsp; <a href="/privacy.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Privacy Policy</a> &nbsp;|&nbsp; <a href="/terms.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Terms of Service</a> &nbsp;|&nbsp; <a href="mailto:accessibility@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">Accessibility</a> &nbsp;|&nbsp; <a href="mailto:privacy@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">privacy@datumfi.com</a> &nbsp;|&nbsp; <a href="mailto:feedback@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">feedback@datumfi.com</a> &nbsp;|&nbsp; <span style="color:rgba(255,255,255,0.3);cursor:pointer;text-decoration:underline;" onclick="openDeleteDataModal()">Delete My Data</span> &nbsp;|&nbsp; <a href="/privacy-choices.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Do Not Sell My Information</a> &nbsp;|&nbsp; <a href="/philosophy.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Philosophy</a> &nbsp;|&nbsp; Build&nbsp;2026.04.19&nbsp;&bull;&nbsp;v1.0.0
       </div>
   </div>
 
@@ -1448,80 +1447,228 @@
     }
 
     function saveSnapshot() {
-        const svg = document.getElementById('sketch-canvas');
-        const clone = svg.cloneNode(true);
-        
-        clone.setAttribute('viewBox', '0 -200 800 1300');
-        
-        const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        bg.setAttribute("x", "-100");
-        bg.setAttribute("y", "-250");
-        bg.setAttribute("width", "1000");
-        bg.setAttribute("height", "1600");
-        bg.setAttribute("fill", "#091221");
-        clone.insertBefore(bg, clone.firstChild);
+        const currentAge  = parseInt(document.getElementById('slider-age').value);
+        const activationAge = parseInt(document.getElementById('slider-activation').value);
+        const portfolioVol  = parseFloat(document.getElementById('slider-portfolio').value);
+        const annualContrib = parseInt(document.getElementById('slider-contrib').value);
+        const targetSpend   = parseInt(document.getElementById('slider-datum').value);
+        const taxRate       = parseInt(document.getElementById('slider-tax').value);
+        const taxMult = 1.0 - (taxRate / 100);
+        const yearsToGrow = Math.max(0, activationAge - currentAge);
 
-        const style = document.createElementNS("http://www.w3.org/2000/svg", "style");
-        style.textContent = `
-            :root { --bg-navy: #091221; --teal-mid: #5DCAA5; --gold: #C9A84C; --danger-red: #e24b4a; --white: #ffffff; --muted: rgba(255,255,255,0.4); }
-            .grid-tick { stroke: rgba(255,255,255,0.05); stroke-width: 1; stroke-dasharray: 4 4; }
-            .grid-label { font-family: var(--font-mono); font-size: 12px; fill: rgba(255,255,255,0.4); }
-            .grid-label.midpoint { font-weight: bold; fill: rgba(255,255,255,0.7); }
-            .time-axis-line { stroke: rgba(255,255,255,0.2); stroke-width: 1; }
-            .time-label { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
-            .cone-fill { fill: url(#thermal-grad); }
-            .ghost-line { stroke-width: 2; stroke-linecap: round; fill: none; stroke-dasharray: 2 4; opacity: 0; }
-            .ghost-ceil { stroke: var(--gold); }
-            .ghost-floor { stroke: var(--danger-red); }
-            .boundary-line { stroke-width: 2; stroke-linecap: round; fill: none; }
-            .b-ceiling { stroke: var(--gold); }
-            .b-floor { stroke: var(--danger-red); }
-            .b-datum { stroke: var(--teal-mid); stroke-dasharray: 4 4; }
-            .b-lifestyle { stroke: var(--muted); stroke-dasharray: 4 4; opacity: 0.5; }
-            .range-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; }
-            .hover-detail { display: none; }
-        `;
-        clone.insertBefore(style, clone.firstChild);
+        let paradigm = 'average';
+        const activeRadio = document.querySelector('input[name="market"]:checked');
+        if (activeRadio) paradigm = activeRadio.value;
+        const marketLabel = paradigm.toUpperCase();
 
-        clone.querySelectorAll('circle[id$="-hitbox"], rect[id$="-hitbox"], #drag-hint').forEach(el => el.remove());
+        let isNominal = false;
+        const activeInfl = document.querySelector('input[name="inflation"]:checked');
+        if (activeInfl && activeInfl.value === 'nominal') isNominal = true;
+        const inflLabel = isNominal ? 'NOMINAL $' : 'REAL $';
+        const inflLabelLong = isNominal ? 'NOMINAL DOLLARS' : 'REAL DOLLARS';
 
-        const headerGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        headerGroup.innerHTML = `
-            <text x="400" y="-80" text-anchor="middle" fill="#ffffff" style="font-family: var(--font-serif); font-size: 32px; font-style: italic; font-weight: 300;">Datum FI</text>
-            <text x="400" y="-40" text-anchor="middle" fill="#C9A84C" style="font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.25em;">YOUR PRE-RETIREMENT SKETCH</text>
-            <line x1="100" y1="-10" x2="700" y2="-10" stroke="rgba(255,255,255,0.05)" stroke-width="1" />
-        `;
-        clone.appendChild(headerGroup);
+        let cRate, bRate, uRate;
+        if (paradigm === 'optimistic') { cRate = 1.020; bRate = 1.040; uRate = 1.065; }
+        else if (paradigm === 'average') { cRate = 1.015; bRate = 1.035; uRate = 1.055; }
+        else { cRate = 1.005; bRate = 1.015; uRate = 1.035; }
 
-        const footerGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        footerGroup.setAttribute("transform", "translate(0, 880)");
-        footerGroup.innerHTML = `
-            <rect x="150" y="0" width="500" height="55" rx="6" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.05)"/>
-            <text x="400" y="24" text-anchor="middle" fill="#C9A84C" style="font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.2em;">[ D + A ] × [ T + U ] = M</text>
-            <line x1="190" y1="35" x2="610" y2="35" stroke="rgba(255,255,255,0.05)" stroke-dasharray="2 4" />
-            <text x="400" y="46" text-anchor="middle" fill="rgba(255,255,255,0.4)" style="font-family: var(--font-mono); font-size: 6px; letter-spacing: 0.15em;">
-              <tspan fill="#5DCAA5">D</tspan>ATA 
-              <tspan fill="#5DCAA5" dx="10">A</tspan>RCHITECTURE 
-              <tspan fill="#5DCAA5" dx="10">T</tspan>ENSION 
-              <tspan fill="#5DCAA5" dx="10">U</tspan>NCERTAINTY 
-              <tspan fill="#5DCAA5" dx="10">M</tspan>EASUREMENT
-            </text>
-            
-            <text x="400" y="80" text-anchor="middle" fill="rgba(255,255,255,0.25)" style="font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.05em;">DATUM FI is an educational tool and does not constitute financial, investment, or tax advice.</text>
-            <text x="400" y="95" text-anchor="middle" fill="rgba(255,255,255,0.25)" style="font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.05em;">All projections are hypothetical and do not guarantee future results.</text>
-        `;
-        clone.appendChild(footerGroup);
-
-        const serializer = new XMLSerializer();
-        let source = serializer.serializeToString(clone);
-        if(!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)){
-            source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+        function computeFV(rate, years) {
+            const r = rate - 1;
+            const pFV = portfolioVol * Math.pow(rate, years);
+            const cFV = r > 0 ? (annualContrib / 1000000) * ((Math.pow(rate, years) - 1) / r) : (annualContrib / 1000000) * years;
+            return pFV + cFV;
         }
-        source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
-        const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source);
+
+        const fvCon = computeFV(cRate, yearsToGrow);
+        const fvBase = computeFV(bRate, yearsToGrow);
+        const fvUp = computeFV(uRate, yearsToGrow);
+
+        const inflMult = isNominal ? Math.pow(1.025, yearsToGrow) : 1;
+        const futFloor = fvCon * 1000 * 0.028 * inflMult * taxMult;
+        const futCeil = fvUp * 1000 * 0.050 * inflMult * taxMult;
+        const targetSpendEnd = targetSpend * inflMult;
+
+        const formatMoney = (k) => k >= 1000 ? `$${(k/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${Math.round(k).toLocaleString('en-US')}K`;
+        const formatFV = (m) => m >= 1 ? `$${m.toFixed(2)}M` : `$${Math.round(m*1000).toLocaleString('en-US')}K`;
+
+        const dateStr = new Date().toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}).toUpperCase();
+        const portStr = formatMoney(portfolioVol * 1000);
+        const datumStr = formatMoney(targetSpend);
+        const contribStr = formatMoney(annualContrib / 1000);
+
+        const dCone = document.getElementById('cone-area').getAttribute('d');
+        const dFloor = document.getElementById('floor-line').getAttribute('d');
+        const dDatum = document.getElementById('datum-line').getAttribute('d');
+        const dCeil = document.getElementById('ceil-line').getAttribute('d');
+
+        const yCeil = parseFloat(document.getElementById('node-ceil').getAttribute('cy'));
+        const yDatumEnd = parseFloat(document.getElementById('node-datum').getAttribute('cy'));
+        const yFloor = parseFloat(document.getElementById('node-floor').getAttribute('cy'));
+
+        let bYCeil = yCeil;
+        let bYDatum = yDatumEnd;
+        let bYFloor = yFloor;
+        if (bYDatum - bYCeil < 30) bYCeil = bYDatum - 30;
+        if (bYFloor - bYDatum < 30) bYFloor = bYDatum + 30;
+
+        // ── Runtime text measurements for pixel-perfect layout ──
+        // Helper: measure a text element in a hidden SVG, return computed length
+        function _measure(attrs, txt) {
+            const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            s.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none';
+            for (const [k, v] of Object.entries(attrs)) t.setAttribute(k, v);
+            t.textContent = txt;
+            s.appendChild(t);
+            document.body.appendChild(s);
+            const w = t.getComputedTextLength();
+            document.body.removeChild(s);
+            return w;
+        }
+
+        const _datumW = _measure({'font-family':"Georgia,'Times New Roman',Times,serif",'font-size':'24','font-weight':'300','letter-spacing':'4'}, 'DATUM');
+        const _fiW    = _measure({'font-family':"'Courier New',Courier,monospace",'font-size':'17','font-weight':'300','letter-spacing':'2'}, 'FI');
+        // "ANNUAL SPEND" is the widest left-side label (x=80, text-anchor=end in chart coords).
+        // Its left edge = 80 - _lblW, which is the true leftmost chart content in chart-coord space.
+        const _lblW   = _measure({'font-family':"'Courier New',Courier,monospace",'font-size':'10','letter-spacing':'3'}, 'ANNUAL SPEND');
+
+        // ── Layout geometry (render-driven, not estimated) ──
+        // Chart coordinate space: content left edge = (80 - _lblW), right edge = 830 (badge right: 665+165).
+        // SNAP_MARGIN: equal nav margin on both sides of the full content block.
+        // _tx:    chart group x-translate  → content left lands at exactly SNAP_MARGIN from SVG left edge.
+        // _svgW:  SVG/viewBox width        → _tx + 830 + SNAP_MARGIN (badge right + right margin).
+        // _stripX: strip & footer left     = SNAP_MARGIN (matches content left margin).
+        // _stripW: strip & footer width    = chart content span (830 − (80 − _lblW)) = 750 + _lblW.
+        // _cx:    center x for header text = _svgW / 2.
+        // Result: badge right ≡ strip right ≡ _stripX + _stripW, no overhanging right content.
+        const SNAP_MARGIN = 44;
+        const _tx     = Math.round(SNAP_MARGIN - (80 - _lblW));  // exact chart translate x
+        const _svgW   = _tx + 830 + SNAP_MARGIN;                 // exact SVG width
+        const _cx     = Math.round(_svgW / 2);                   // header/subtitle center x
+        const _stripX = SNAP_MARGIN;                              // strip/footer left edge
+        const _stripW = _tx + 830 - SNAP_MARGIN;                 // strip/footer width
+
+        // Brand mark underline geometry (brand-datum::after: left:4%; width:92%)
+        const _totalW = _datumW + 10 + _fiW;
+        const _datumX = _cx - _totalW / 2;
+        const _ulX    = _datumX + _datumW * 0.04;
+        const _ulW    = _datumW * 0.92;
+
+        const svgString = `<?xml version="1.0" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${_svgW}" height="830" viewBox="0 0 ${_svgW} 830" style="background-color:#091221">
+    <style>
+        .grid-tick    { stroke: rgba(255,255,255,0.08); stroke-width: 1; stroke-dasharray: 4 4; }
+        .grid-label   { font-family: 'Courier New',Courier,monospace; font-size: 12px; fill: rgba(255,255,255,0.4); }
+        .grid-lbl-mid { font-family: 'Courier New',Courier,monospace; font-size: 12px; fill: rgba(255,255,255,0.7); font-weight: bold; }
+        .t-axis       { stroke: rgba(255,255,255,0.2); stroke-width: 1; }
+        .cone-fill    { fill: url(#snap-grad); }
+        .b-ceil  { stroke: #C9A84C; stroke-width: 2; fill: none; stroke-linecap: round; }
+        .b-floor { stroke: #e24b4a; stroke-width: 2; fill: none; stroke-dasharray: 6 4; stroke-linecap: round; }
+        .b-datum { stroke: #5DCAA5; stroke-width: 3; fill: none; stroke-linecap: round; }
+        .bdg-lbl { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size: 10px; font-weight: 600; }
+        .bdg-val { font-family: 'Courier New',Courier,monospace; font-size: 11px; font-weight: bold; }
+        .mono    { font-family: 'Courier New',Courier,monospace; }
+    </style>
+    <defs>
+        <linearGradient id="snap-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%"   stop-color="rgba(201,168,76,0.15)" />
+            <stop offset="50%"  stop-color="rgba(93,202,165,0.10)" />
+            <stop offset="100%" stop-color="rgba(226,75,74,0.15)"  />
+        </linearGradient>
+    </defs>
+
+    <!-- full-bleed background -->
+    <rect x="0" y="0" width="${_svgW}" height="830" fill="#091221" />
+
+    <!-- ── BRAND MARK ──
+         Source: sketch.html #app-nav .brand-header / typography.css .brand-datum / .brand-fi
+         brand-datum: teal (#5DCAA5) Georgia serif weight-300 letter-spacing 0.15em + gold ::after underline
+         brand-fi:    teal (#5DCAA5) Courier mono weight-300 letter-spacing 0.1em margin-left 10px
+         Underline x/width computed from measured DATUM text length at runtime. -->
+    <text x="${_cx}" y="28" text-anchor="middle">
+        <tspan fill="#5DCAA5" font-family="Georgia,'Times New Roman',Times,serif"
+               font-size="24" font-weight="300" letter-spacing="4">DATUM</tspan><tspan
+               fill="#5DCAA5" font-family="'Courier New',Courier,monospace"
+               font-size="17" font-weight="300" letter-spacing="2" dx="10">FI</tspan>
+    </text>
+    <rect x="${_ulX.toFixed(1)}" y="34" width="${_ulW.toFixed(1)}" height="2" rx="1" fill="#C9A84C" />
+
+    <text x="${_cx}" y="54" text-anchor="middle" class="mono" font-size="11" letter-spacing="4" fill="#C9A84C">YOUR RANGE PREVIEW</text>
+    <text x="${_cx}" y="68" text-anchor="middle" class="mono" font-size="9"  letter-spacing="2" fill="rgba(255,255,255,0.35)">A broad-stroke Sketch of retirement spending capacity</text>
+
+    <!-- ── SCENARIO STRIP — width matches chart content span; left/right edges align with content ── -->
+    <rect x="${_stripX}" y="82" width="${_stripW}" height="52" rx="4" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.05)" />
+    <text x="${_cx}" y="100" text-anchor="middle" class="mono" font-size="11" fill="rgba(255,255,255,0.4)" letter-spacing="1">
+        AGE <tspan fill="#fff">${currentAge}</tspan> → RETIRE <tspan fill="#fff">${activationAge}</tspan>  ·  PORTFOLIO <tspan fill="#fff">${portStr}</tspan>  ·  DATUM <tspan fill="#5DCAA5">${datumStr}/YR</tspan>  ·  MARKET <tspan fill="#fff">${marketLabel}</tspan>
+    </text>
+    <text x="${_cx}" y="120" text-anchor="middle" class="mono" font-size="11" fill="rgba(255,255,255,0.4)" letter-spacing="1">
+        CONTRIBUTIONS <tspan fill="#fff">${contribStr}/YR</tspan>  ·  INFLATION <tspan fill="#fff">${inflLabel}</tspan>  ·  TAX DRAG <tspan fill="#fff">${taxRate}%</tspan>
+    </text>
+
+    <!-- ── CHART ──
+         translate(${_tx}, 28): computed at runtime so "ANNUAL SPEND" (rightmost left label)
+         lands exactly SNAP_MARGIN px from SVG left. Badge right = _tx+830 = strip right = _stripX+_stripW.
+         +28y collapses the blank y=0–134 dead space above the live chart coordinate origin. -->
+    <g transform="translate(${_tx}, 28)">
+        <text x="80" y="135" text-anchor="end" fill="rgba(255,255,255,0.2)"
+              class="mono" font-size="10" letter-spacing="3">ANNUAL SPEND</text>
+
+        <line x1="100" y1="170" x2="700" y2="170" class="grid-tick" />
+        <text x="80" y="175" text-anchor="end" class="grid-label">${document.getElementById('grid-lbl-1').textContent}</text>
+        <line x1="100" y1="295" x2="700" y2="295" class="grid-tick" />
+        <text x="80" y="300" text-anchor="end" class="grid-label">${document.getElementById('grid-lbl-2').textContent}</text>
+        <line x1="100" y1="420" x2="700" y2="420" class="grid-tick" />
+        <text x="80" y="425" text-anchor="end" class="grid-lbl-mid">${document.getElementById('grid-lbl-3').textContent}</text>
+        <line x1="100" y1="545" x2="700" y2="545" class="grid-tick" />
+        <text x="80" y="550" text-anchor="end" class="grid-label">${document.getElementById('grid-lbl-4').textContent}</text>
+        <line x1="100" y1="670" x2="700" y2="670" class="grid-tick" />
+        <text x="80" y="675" text-anchor="end" class="grid-label">${document.getElementById('grid-lbl-5').textContent}</text>
+
+        <line x1="150" y1="700" x2="650" y2="700" class="t-axis" />
+        <line x1="150" y1="695" x2="150" y2="705" class="t-axis" />
+        <line x1="650" y1="695" x2="650" y2="705" class="t-axis" />
+        <text x="150" y="725" text-anchor="middle" class="mono" font-size="11" fill="rgba(255,255,255,0.4)" letter-spacing="2">AGE ${currentAge}</text>
+        <text x="650" y="725" text-anchor="middle" class="mono" font-size="11" fill="#5DCAA5" letter-spacing="2">RETIRE: ${activationAge}</text>
+
+        <path class="cone-fill" d="${dCone}" />
+        <path class="b-floor"   d="${dFloor}" />
+        <path class="b-datum"   d="${dDatum}" />
+        <path class="b-ceil"    d="${dCeil}" />
+
+        <circle cx="650" cy="${yCeil}"     r="4" fill="#C9A84C" />
+        <circle cx="650" cy="${yDatumEnd}" r="5" fill="#5DCAA5" />
+        <circle cx="650" cy="${yFloor}"    r="4" fill="#e24b4a" />
+
+        <g transform="translate(665, 0)">
+            <rect x="0" y="${bYCeil - 12}"  width="165" height="24" rx="4" fill="rgba(201,168,76,0.1)" stroke="#C9A84C" />
+            <text x="10" y="${bYCeil + 4}"  class="bdg-lbl" fill="#C9A84C">STRUCTURAL CEILING</text>
+            <text x="155" y="${bYCeil + 4}" text-anchor="end" class="bdg-val" fill="#ffffff">${formatMoney(futCeil)}</text>
+
+            <rect x="0" y="${bYDatum - 12}"  width="165" height="24" rx="4" fill="#5DCAA5" />
+            <text x="10" y="${bYDatum + 4}"  class="bdg-lbl" fill="#091221">YOUR DATUM</text>
+            <text x="155" y="${bYDatum + 4}" text-anchor="end" class="bdg-val" fill="#091221">${formatMoney(targetSpendEnd)}</text>
+
+            <rect x="0" y="${bYFloor - 12}"  width="165" height="24" rx="4" fill="rgba(226,75,74,0.1)" stroke="#e24b4a" />
+            <text x="10" y="${bYFloor + 4}"  class="bdg-lbl" fill="#e24b4a">SURVIVAL FLOOR</text>
+            <text x="155" y="${bYFloor + 4}" text-anchor="end" class="bdg-val" fill="#ffffff">${formatMoney(futFloor)}</text>
+        </g>
+    </g>
+
+    <!-- ── FOOTER — aligns with strip/chart; three non-overlapping rows ── -->
+    <g transform="translate(${_stripX}, 772)">
+        <line x1="0" y1="0" x2="${_stripW}" y2="0" stroke="rgba(255,255,255,0.06)" stroke-dasharray="2 4" />
+        <text x="0" y="14" text-anchor="start" class="mono" font-size="10" fill="rgba(255,255,255,0.3)" letter-spacing="1">
+            PROJECTED PATHS (AGE ${activationAge}): <tspan fill="#e24b4a">STRESS ${formatFV(fvCon)}</tspan>  ·  <tspan fill="rgba(255,255,255,0.6)">BASELINE ${formatFV(fvBase)}</tspan>  ·  <tspan fill="#C9A84C">CEILING PATH ${formatFV(fvUp)}</tspan>
+        </text>
+        <text x="0" y="28" text-anchor="start" class="mono" font-size="10" fill="rgba(255,255,255,0.3)" letter-spacing="1">GENERATED: ${dateStr}  |  ${inflLabelLong}</text>
+        <text x="${Math.round(_stripW / 2)}" y="44" text-anchor="middle" class="mono" font-size="9" fill="rgba(255,255,255,0.25)" letter-spacing="1">Educational only. Not financial, tax, or investment advice. Projections are hypothetical.</text>
+    </g>
+</svg>`;
+
+        const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgString);
         const a = document.createElement("a");
         a.href = url;
-        a.download = "DatumFI_Sketch.svg";
+        a.download = `DatumFI_Snapshot_${new Date().toISOString().slice(0,10)}.svg`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -1934,6 +2081,7 @@
     })();
   </script>
 
+  <button class="floating-feedback-btn" onclick="openFeedback()" aria-label="Share feedback">Feedback</button>
   <script src="/feedback.js"></script>
   <script src="/nav.js"></script>
 </body>

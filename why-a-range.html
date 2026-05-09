@@ -620,6 +620,9 @@
     .sequence-grid { grid-template-columns: 1fr; gap: 40px; margin-top: 30px; }
     .sequence-line { display: none; }
   }
+  .floating-feedback-btn { position: fixed; right: 18px; bottom: 18px; z-index: 650; background: rgba(9,18,33,0.92); color: var(--teal-mid); border: 1px solid rgba(93,202,165,0.45); border-radius: 999px; padding: 10px 14px; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.28); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: all 0.2s ease; }
+  .floating-feedback-btn:hover, .floating-feedback-btn:focus-visible { background: var(--teal-mid); color: var(--bg-navy); outline: none; transform: translateY(-1px); }
+  @media (max-width: 480px) { .floating-feedback-btn { right: 12px; bottom: 12px; padding: 8px 10px; font-size: 9px; } }
 </style>
 </head>
 <body>
@@ -631,10 +634,8 @@
     <div class="nav-links">
       <a href="/sketch.html" class="nav-link">Sketch</a>
       <a href="/studio-showcase.html" class="nav-link">Studio</a>
-      <a href="/why-a-range.html" class="nav-link active" id="nav-range-link">Range</a>
-      <a href="/philosophy.html" class="nav-link">Philosophy</a>
+      <a href="/why-a-range.html" class="nav-link active" id="nav-shape-link">Shape</a>
       <a href="/vault.html" class="nav-login-btn">Login</a>
-      <button class="nav-feedback-btn" onclick="openFeedback()">Share Feedback</button>
     </div>
     <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
       <span></span><span></span><span></span>
@@ -644,10 +645,8 @@
   <div class="nav-mobile-menu" id="nav-mobile-menu">
     <a href="/sketch.html" class="nav-mobile-link">Sketch</a>
     <a href="/studio-showcase.html" class="nav-mobile-link">Studio</a>
-    <a href="/why-a-range.html" class="nav-mobile-link active" id="nav-mob-range">Range</a>
-    <a href="/philosophy.html" class="nav-mobile-link">Philosophy</a>
+    <a href="/why-a-range.html" class="nav-mobile-link active" id="nav-mob-shape">Shape</a>
     <a href="/vault.html" class="nav-mobile-login">Login</a>
-    <button class="nav-mobile-feedback" onclick="closeMobileNav(); openFeedback()">Share Feedback</button>
   </div>
 
   <main class="container" id="range-why-main">
@@ -888,9 +887,10 @@
   </main>
 
   <div id="disclosure-footer">
-    <p>DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. Past performance does not guarantee future outcomes. &nbsp;|&nbsp; <a href="/privacy.html">Privacy Policy</a> &nbsp;|&nbsp; <a href="/terms.html">Terms of Service</a> &nbsp;|&nbsp; <a href="mailto:accessibility@datumfi.com">Accessibility</a> &nbsp;|&nbsp; <a href="mailto:privacy@datumfi.com">privacy@datumfi.com</a> &nbsp;|&nbsp; <a href="mailto:feedback@datumfi.com">feedback@datumfi.com</a> &nbsp;|&nbsp; <span style="cursor:pointer;text-decoration:underline;" onclick="openDeleteDataModal()">Delete My Data</span> &nbsp;|&nbsp; <a href="/privacy-choices.html">Do Not Sell My Information</a> &nbsp;|&nbsp; Build&nbsp;2026.04.27&nbsp;&bull;&nbsp;v1.0.21</p>
+    <p>DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. Past performance does not guarantee future outcomes. &nbsp;|&nbsp; <a href="/privacy.html">Privacy Policy</a> &nbsp;|&nbsp; <a href="/terms.html">Terms of Service</a> &nbsp;|&nbsp; <a href="mailto:accessibility@datumfi.com">Accessibility</a> &nbsp;|&nbsp; <a href="mailto:privacy@datumfi.com">privacy@datumfi.com</a> &nbsp;|&nbsp; <a href="mailto:feedback@datumfi.com">feedback@datumfi.com</a> &nbsp;|&nbsp; <span style="cursor:pointer;text-decoration:underline;" onclick="openDeleteDataModal()">Delete My Data</span> &nbsp;|&nbsp; <a href="/privacy-choices.html">Do Not Sell My Information</a> &nbsp;|&nbsp; <a href="/philosophy.html">Philosophy</a> &nbsp;|&nbsp; Build&nbsp;2026.04.27&nbsp;&bull;&nbsp;v1.0.21</p>
   </div>
 
+  <button class="floating-feedback-btn" onclick="openFeedback()" aria-label="Share feedback">Feedback</button>
   <script src="/feedback.js"></script>
   <script src="/nav.js"></script>
   <script>
