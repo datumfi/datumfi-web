@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#091221">
+<title>Datum FI — Data Subject Request</title>
+<link rel="stylesheet" href="/styles/typography.css">
+<link rel="stylesheet" href="/styles/header.css">
+<style>
+  body { background:#091221; color:#fff; font-family:'DM Mono',monospace; padding-top:56px; margin:0; }
+  .container { max-width:700px; margin:0 auto; padding:60px 40px 40px; }
+  h1 { font-family:'Fraunces',serif; font-style:italic; font-weight:300; font-size:42px; margin-bottom:8px; }
+  .subtitle { font-size:11px; text-transform:uppercase; letter-spacing:0.2em; color:#C9A84C; margin-bottom:40px; }
+  h2 { font-family:'DM Mono',monospace; font-size:12px; text-transform:uppercase; letter-spacing:0.15em; color:#5DCAA5; margin-top:36px; margin-bottom:12px; }
+  p, li { font-size:13px; line-height:1.7; color:rgba(255,255,255,0.65); margin-bottom:12px; }
+  ul { padding-left:20px; margin-bottom:16px; }
+  label { display:block; font-size:10px; text-transform:uppercase; letter-spacing:0.15em; color:rgba(255,255,255,0.5); margin-bottom:6px; margin-top:20px; }
+  input, select, textarea { width:100%; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#fff; font-family:'DM Mono',monospace; font-size:12px; padding:10px 14px; box-sizing:border-box; }
+  input:focus, select:focus, textarea:focus { outline:none; border-color:rgba(93,202,165,0.4); }
+  textarea { min-height:100px; resize:vertical; }
+  select option { background:#0d1a2e; }
+  .submit-btn { margin-top:28px; background:transparent; border:1px solid rgba(93,202,165,0.4); color:rgba(93,202,165,0.8); font-family:'DM Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.15em; padding:12px 28px; border-radius:4px; cursor:pointer; transition:all 0.2s; }
+  .submit-btn:hover { background:rgba(93,202,165,0.08); }
+  .notice-box { background:rgba(93,202,165,0.04); border:1px solid rgba(93,202,165,0.1); border-radius:6px; padding:20px 24px; margin:24px 0; }
+  .notice-box p { color:rgba(255,255,255,0.5); font-size:12px; }
+  #disclosure-footer { border-top:1px solid rgba(255,255,255,0.05); padding:20px 40px; text-align:center; margin-top:60px; }
+  #disclosure-footer p { font-family:'DM Mono',monospace; font-size:10px; color:rgba(255,255,255,0.25); line-height:1.6; margin:0; }
+</style>
+</head>
+<body>
+
+  <nav id="app-nav">
+    <a href="/" class="brand-header"><span class="brand-datum">DATUM</span><span class="brand-fi">FI</span></a>
+    <div class="nav-links">
+      <a href="/sketch.html" class="nav-link">Sketch</a>
+      <a href="/studio.html" class="nav-link">Studio</a>
+      <a href="/philosophy.html" class="nav-link">Philosophy</a>
+      <a href="/vault.html" class="nav-login-btn">Login</a>
+    </div>
+    <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+  <div class="nav-mobile-menu" id="nav-mobile-menu">
+    <a href="/sketch.html" class="nav-mobile-link">Sketch</a>
+    <a href="/studio.html" class="nav-mobile-link">Studio</a>
+    <a href="/philosophy.html" class="nav-mobile-link">Philosophy</a>
+    <a href="/vault.html" class="nav-mobile-login">Login</a>
+  </div>
+
+  <div class="container">
+    <h1>Data Subject Request</h1>
+    <div class="subtitle">GDPR Articles 15 / 16 / 17 / 20</div>
+
+    <div class="notice-box">
+      <p><strong style="color:rgba(93,202,165,0.8);">Important:</strong> DATUM FI is a browser-only tool. We do not store any personal data on our servers. All computation inputs are processed transiently and discarded. Your Sketch and Studio inputs exist only in your browser's sessionStorage (cleared on tab close). We therefore have no personal data to access, correct, delete, or export server-side.</p>
+      <p style="margin-top:8px;">To delete your local browser data immediately, use the <span onclick="openDeleteDataModal()" style="color:rgba(93,202,165,0.6);cursor:pointer;text-decoration:underline;">Delete My Data</span> tool. For questions about what we process, submit this form and we will respond within 30 days.</p>
+    </div>
+
+    <h2>Submit a Request</h2>
+    <p>Select the right type under GDPR (EU/UK) or applicable privacy law:</p>
+    <ul>
+      <li><strong style="color:rgba(255,255,255,0.7);">Art. 15</strong> — Right of access (what data we hold about you)</li>
+      <li><strong style="color:rgba(255,255,255,0.7);">Art. 16</strong> — Right to rectification (correct inaccurate data)</li>
+      <li><strong style="color:rgba(255,255,255,0.7);">Art. 17</strong> — Right to erasure ("right to be forgotten")</li>
+      <li><strong style="color:rgba(255,255,255,0.7);">Art. 20</strong> — Right to data portability</li>
+    </ul>
+
+    <form id="dsar-form" onsubmit="submitDSAR(event)" novalidate>
+      <label for="dsar-type">Request Type</label>
+      <span id="dsar-type-hint" style="display:block;font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:6px;">Select the GDPR article or applicable right that matches your request.</span>
+      <select id="dsar-type" required aria-describedby="dsar-type-hint dsar-type-err">
+        <option value="">— Select —</option>
+        <option value="access">Art. 15 — Access</option>
+        <option value="rectification">Art. 16 — Rectification</option>
+        <option value="erasure">Art. 17 — Erasure</option>
+        <option value="portability">Art. 20 — Portability</option>
+        <option value="other">Other / CCPA</option>
+      </select>
+      <span id="dsar-type-err" role="alert" style="display:none;font-size:10px;color:var(--danger-red);margin-top:4px;"></span>
+
+      <label for="dsar-email">Your Email Address</label>
+      <span id="dsar-email-hint" style="display:block;font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:6px;">We'll send our response to this address within 30 days.</span>
+      <input type="email" id="dsar-email" placeholder="you@example.com" required aria-describedby="dsar-email-hint dsar-email-err">
+      <span id="dsar-email-err" role="alert" style="display:none;font-size:10px;color:var(--danger-red);margin-top:4px;"></span>
+
+      <label for="dsar-name">Your Name (optional)</label>
+      <input type="text" id="dsar-name" placeholder="First Last" aria-describedby="dsar-name-hint">
+      <span id="dsar-name-hint" style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:4px;display:block;">Optional — helps us locate your account if you have one.</span>
+
+      <label for="dsar-detail">Details (optional)</label>
+      <textarea id="dsar-detail" placeholder="Describe your request..." aria-describedby="dsar-detail-hint"></textarea>
+      <span id="dsar-detail-hint" style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:4px;display:block;">Any additional context about your request.</span>
+
+      <button type="submit" class="submit-btn">Submit Request →</button>
+    </form>
+
+    <div id="dsar-success" style="display:none;margin-top:24px;background:rgba(93,202,165,0.06);border:1px solid rgba(93,202,165,0.2);border-radius:6px;padding:20px 24px;">
+      <div style="font-size:12px;color:rgba(93,202,165,0.8);text-transform:uppercase;letter-spacing:0.15em;margin-bottom:8px;">Request Submitted</div>
+      <p style="font-size:12px;color:rgba(255,255,255,0.5);">We will respond to <strong id="dsar-confirm-email" style="color:rgba(255,255,255,0.7);"></strong> within 30 days as required by GDPR Art. 12. For urgent erasure requests, <a href="mailto:privacy@datumfi.com" style="color:rgba(93,202,165,0.6);text-decoration:none;">email us directly</a>.</p>
+    </div>
+
+    <h2>Data Protection Contact</h2>
+    <p>DPO (Data Protection Officer): <a href="mailto:privacy@datumfi.com" style="color:rgba(93,202,165,0.6);text-decoration:none;">privacy@datumfi.com</a></p>
+    <p>Response window: 30 days (GDPR Art. 12), extensible to 90 days for complex requests with notice.</p>
+  </div>
+
+  <div id="disclosure-footer">
+    <p>DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. &nbsp;|&nbsp; <a href="/privacy.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Privacy Policy</a> &nbsp;|&nbsp; <a href="/terms.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Terms of Service</a> &nbsp;|&nbsp; Build&nbsp;2026.04.19&nbsp;&bull;&nbsp;v1.0.0</p>
+  </div>
+
+  <script>
+    function submitDSAR(e) {
+      e.preventDefault();
+      var email = document.getElementById('dsar-email').value;
+      var type = document.getElementById('dsar-type').value;
+      var name = document.getElementById('dsar-name').value;
+      var detail = document.getElementById('dsar-detail').value;
+      // Placeholder: POST to /api/dsar when backend is available
+      fetch('/api/dsar', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({type: type, email: email, name: name, detail: detail})
+      }).catch(function() {});
+      document.getElementById('dsar-confirm-email').textContent = email;
+      document.getElementById('dsar-form').style.display = 'none';
+      document.getElementById('dsar-success').style.display = 'block';
+    }
+  </script>
+  <script src="/feedback.js"></script>
+  <script src="/nav.js"></script>
+</body>
+</html>

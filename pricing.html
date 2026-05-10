@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#091221">
+<title>Datum FI — Pricing</title>
+<meta name="description" content="Institutional-grade retirement architecture. A traditional advisor charges 1% AUM. Datum FI is $79 per year.">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Datum FI">
+<meta property="og:title" content="Datum FI — Pricing">
+<meta property="og:description" content="Institutional-grade retirement architecture. A traditional advisor charges 1% AUM. Datum FI is $79 per year.">
+<meta property="og:image" content="/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Datum FI — Pricing">
+<meta name="twitter:image" content="/og-image.png">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://eu.i.posthog.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.datumfi.com https://eu.i.posthog.com https://api.stripe.com;">
+<link rel="stylesheet" href="/styles/typography.css">
+<link rel="stylesheet" href="/styles/header.css">
+<style>
+  :root {
+    --bg-navy: #091221; --teal: #1D9E75; --teal-mid: #5DCAA5;
+    --gold: #C9A84C; --white: #ffffff; --muted: rgba(255,255,255,0.4);
+    --danger-red: #e24b4a;
+    --font-serif: 'Fraunces', serif; --font-mono: 'DM Mono', monospace;
+  }
+  body { background: var(--bg-navy); color: var(--white); font-family: var(--font-serif); -webkit-font-smoothing: antialiased; margin: 0; }
+
+  /* Hero */
+  .pricing-hero { max-width: 800px; margin: 0 auto; padding: 110px 40px 60px; text-align: center; }
+  .pricing-eyebrow { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.25em; color: var(--gold); margin-bottom: 24px; }
+  .pricing-hero h1 { font-size: clamp(28px, 5vw, 48px); font-weight: 300; font-style: italic; line-height: 1.2; margin-bottom: 24px; }
+  .pricing-hero h1 em { color: var(--gold); font-style: inherit; }
+  .pricing-roi { font-family: var(--font-mono); font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.7; max-width: 620px; margin: 0 auto 16px; }
+  .pricing-roi strong { color: var(--teal-mid); }
+
+  /* Toggle */
+  .toggle-wrapper { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 48px auto 0; }
+  .toggle-label { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+  .toggle-label.active { color: var(--white); }
+  .billing-toggle { position: relative; width: 48px; height: 26px; background: rgba(255,255,255,0.1); border-radius: 13px; cursor: pointer; border: none; transition: background 0.2s; }
+  .billing-toggle.annual { background: rgba(29,158,117,0.4); }
+  .billing-toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; background: var(--white); border-radius: 50%; transition: transform 0.2s; }
+  .billing-toggle.annual::after { transform: translateX(22px); }
+  .save-badge { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; background: rgba(29,158,117,0.2); color: var(--teal-mid); padding: 3px 8px; border-radius: 10px; }
+
+  /* Pricing Cards */
+  .cards-row { display: flex; gap: 24px; max-width: 860px; margin: 48px auto; padding: 0 24px; }
+  @media (max-width: 680px) { .cards-row { flex-direction: column; } }
+
+  .pricing-card { flex: 1; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 32px 28px; }
+  .pricing-card.featured { border-color: rgba(201,168,76,0.35); background: rgba(201,168,76,0.04); position: relative; }
+  .featured-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--gold); color: var(--bg-navy); font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.15em; padding: 4px 14px; border-radius: 10px; white-space: nowrap; }
+
+  .card-tier { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--muted); margin-bottom: 12px; }
+  .card-price { font-size: 36px; font-weight: 300; font-style: italic; margin-bottom: 4px; }
+  .card-price sub { font-size: 16px; font-style: normal; }
+  .card-price-prev { font-family: var(--font-mono); font-size: 11px; color: rgba(255,255,255,0.25); text-decoration: line-through; margin-bottom: 4px; display: none; }
+  .card-period { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-bottom: 24px; }
+  .card-cta { display: block; width: 100%; text-align: center; padding: 14px; border-radius: 6px; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; font-weight: bold; text-decoration: none; cursor: pointer; border: none; transition: all 0.2s; margin-bottom: 8px; }
+  .card-cta-primary { background: var(--gold); color: var(--bg-navy); }
+  .card-cta-primary:hover { background: #d9b85c; transform: translateY(-1px); }
+  .card-cta-secondary { background: transparent; color: var(--teal-mid); border: 1px solid rgba(93,202,165,0.35) !important; }
+  .card-cta-secondary:hover { background: rgba(93,202,165,0.06); }
+  .card-guarantee { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,0.3); text-align: center; line-height: 1.5; }
+
+  /* Feature matrix */
+  .matrix-section { max-width: 860px; margin: 0 auto 60px; padding: 0 24px; }
+  .matrix-title { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold); margin-bottom: 20px; text-align: center; }
+  .matrix-table { width: 100%; border-collapse: collapse; }
+  .matrix-table th { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); padding: 10px 16px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .matrix-table th:first-child { text-align: left; }
+  .matrix-table td { font-family: var(--font-mono); font-size: 11px; color: rgba(255,255,255,0.6); padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); text-align: center; }
+  .matrix-table td:first-child { text-align: left; color: rgba(255,255,255,0.75); }
+  .matrix-table tr:last-child td { border-bottom: none; }
+  .check-y { color: var(--teal-mid); }
+  .check-n { color: rgba(255,255,255,0.2); }
+  .check-gold { color: var(--gold); }
+
+  /* Competitor table */
+  .comp-section { max-width: 680px; margin: 0 auto 60px; padding: 0 24px; }
+  .comp-title { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold); margin-bottom: 20px; text-align: center; }
+  .comp-table { width: 100%; border-collapse: collapse; }
+  .comp-table th { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); padding: 8px 16px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .comp-table td { font-family: var(--font-mono); font-size: 11px; color: rgba(255,255,255,0.6); padding: 11px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .comp-table tr:last-child td { border-bottom: none; }
+  .comp-table .datum-row td { color: var(--white); background: rgba(201,168,76,0.06); }
+  .comp-table .datum-row td:first-child { color: var(--gold); font-weight: bold; }
+
+  /* Bottom CTA */
+  .pricing-bottom-cta { text-align: center; padding: 60px 40px; border-top: 1px solid rgba(255,255,255,0.05); }
+  .pricing-bottom-cta p { font-family: var(--font-mono); font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 24px; line-height: 1.6; }
+
+  #disclosure-footer { border-top: 1px solid rgba(255,255,255,0.05); padding: 20px 40px; text-align: center; margin-top: 0; }
+  #disclosure-footer p { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,0.25); line-height: 1.6; margin: 0; }
+</style>
+</head>
+<body>
+
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <nav id="app-nav">
+    <a href="/" class="brand-header"><span class="brand-datum">DATUM</span><span class="brand-fi">FI</span></a>
+    <div class="nav-links">
+      <a href="/sketch.html" class="nav-link">Sketch</a>
+      <a href="/studio-showcase.html" class="nav-link">Studio</a>
+      <a href="/why-a-range.html" class="nav-link">Shape</a>
+      <a href="/vault.html" class="nav-login-btn">Login</a>
+    </div>
+    <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+  <div class="nav-mobile-menu" id="nav-mobile-menu">
+    <a href="/sketch.html" class="nav-mobile-link">Sketch</a>
+    <a href="/studio-showcase.html" class="nav-mobile-link">Studio</a>
+    <a href="/why-a-range.html" class="nav-mobile-link">Shape</a>
+    <a href="/vault.html" class="nav-mobile-login">Login</a>
+  </div>
+
+  <main id="main">
+
+    <!-- Hero (2A) -->
+    <section class="pricing-hero">
+      <div class="pricing-eyebrow">Pricing</div>
+      <h1>A traditional financial advisor charges <em>1% AUM</em>.<br>On a $1.5M portfolio, that is <em>$15,000 per year</em>.<br>Datum FI is <em>$79</em>.</h1>
+      <p class="pricing-roi">
+        <strong>A single better Roth conversion decision can save more than a decade of Datum subscriptions.</strong><br>
+        Institutional-grade Monte Carlo architecture. No AUM fees. No minimums. No advisor relationship required.
+      </p>
+
+      <!-- Monthly/Annual toggle (2C) -->
+      <div class="toggle-wrapper">
+        <span class="toggle-label" id="lbl-monthly">Monthly</span>
+        <button class="billing-toggle annual" id="billing-toggle" onclick="toggleBilling()" aria-label="Toggle billing period" aria-pressed="true"></button>
+        <span class="toggle-label active" id="lbl-annual">Annual <span class="save-badge">Save $29</span></span>
+      </div>
+    </section>
+
+    <!-- Pricing cards (2B, 2C) -->
+    <div class="cards-row">
+
+      <div class="pricing-card">
+        <div class="card-tier">Sketch</div>
+        <div class="card-price">$0<sub>/mo</sub></div>
+        <div class="card-price-prev">&nbsp;</div>
+        <div class="card-period">Always free. No account required.</div>
+        <a href="/sketch.html" class="card-cta card-cta-secondary">Start Sketching →</a>
+      </div>
+
+      <div class="pricing-card featured">
+        <div class="featured-badge">Most Popular</div>
+        <div class="card-tier">Studio</div>
+        <div class="card-price" id="price-display">$79<sub>/yr</sub></div>
+        <div class="card-price-prev" id="price-prev">$108/yr</div>
+        <div class="card-period" id="price-period">Billed annually. Cancel anytime.</div>
+        <!-- TODO: Replace STRIPE_CHECKOUT_URL_ANNUAL / STRIPE_CHECKOUT_URL_MONTHLY with live Stripe Payment Links -->
+        <a href="#" id="checkout-cta" class="card-cta card-cta-primary" onclick="handleCheckout(event)">Unlock Studio →</a>
+        <div class="card-guarantee">30-day money-back guarantee. Cancel anytime in one click.</div>
+      </div>
+
+    </div>
+
+    <!-- Feature matrix (2B) -->
+    <section class="matrix-section">
+      <div class="matrix-title">What's included</div>
+      <table class="matrix-table" aria-label="Feature comparison">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Sketch</th>
+            <th>Studio</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Monte Carlo simulation</td><td class="check-y">✓ 10K paths</td><td class="check-gold">✓ 40K paths</td></tr>
+          <tr><td>4-engine model ensemble</td><td class="check-n">—</td><td class="check-y">✓</td></tr>
+          <tr><td>Thermodynamic Tax Sequencing</td><td class="check-n">—</td><td class="check-y">✓</td></tr>
+          <tr><td>Adverse scenario stress tests</td><td class="check-n">—</td><td class="check-y">✓ 1929, 1970s, Lost Decade</td></tr>
+          <tr><td>Scenario Memory Bank</td><td class="check-n">—</td><td class="check-y">✓</td></tr>
+          <tr><td>Institutional PDF Dossier</td><td class="check-n">—</td><td class="check-y">✓</td></tr>
+          <tr><td>Weekly Datum Briefing emails</td><td class="check-n">—</td><td class="check-y">✓</td></tr>
+          <tr><td>No account required</td><td class="check-y">✓</td><td class="check-n">Account required</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Competitor table (2E) -->
+    <section class="comp-section">
+      <div class="comp-title">How we compare</div>
+      <table class="comp-table" aria-label="Competitor pricing comparison">
+        <thead>
+          <tr><th>Tool</th><th>Annual Price</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Boldin (NewRetirement)</td><td>$120 / yr</td></tr>
+          <tr><td>ProjectionLab</td><td>$108 / yr</td></tr>
+          <tr><td>MaxiFi Planner</td><td>$149 / yr</td></tr>
+          <tr class="datum-row"><td>Datum FI Studio</td><td>$79 / yr</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Bottom CTA -->
+    <div class="pricing-bottom-cta">
+      <p>Free Sketch available immediately — no account required.<br>Studio unlocks in seconds after checkout.</p>
+      <a href="/sketch.html" style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:0.15em;color:var(--muted);text-decoration:none;border:1px solid rgba(255,255,255,0.1);padding:12px 24px;border-radius:6px;display:inline-block;">Try Sketch Free First →</a>
+    </div>
+
+  </main>
+
+  <div id="disclosure-footer">
+    <p>DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. &nbsp;|&nbsp; <a href="/privacy.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Privacy Policy</a> &nbsp;|&nbsp; <a href="/terms.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Terms of Service</a> &nbsp;|&nbsp; <span style="color:rgba(255,255,255,0.3);cursor:pointer;text-decoration:underline;" onclick="openDeleteDataModal()">Delete My Data</span> &nbsp;|&nbsp; <a href="/privacy-choices.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Do Not Sell My Information</a> &nbsp;|&nbsp; <a href="/philosophy.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Philosophy</a> &nbsp;|&nbsp; Build&nbsp;2026.04.19&nbsp;&bull;&nbsp;v1.1.0</p>
+  </div>
+
+  <script>
+    // TODO: Replace with live Stripe Payment Links
+    var STRIPE_CHECKOUT_URL_ANNUAL  = 'https://buy.stripe.com/DATUMFI_STUDIO_79';
+    var STRIPE_CHECKOUT_URL_MONTHLY = 'https://buy.stripe.com/DATUMFI_STUDIO_9MO';
+
+    var billingAnnual = true;
+
+    function toggleBilling() {
+      billingAnnual = !billingAnnual;
+      var toggle = document.getElementById('billing-toggle');
+      var priceEl = document.getElementById('price-display');
+      var prevEl = document.getElementById('price-prev');
+      var periodEl = document.getElementById('price-period');
+      var lblMonthly = document.getElementById('lbl-monthly');
+      var lblAnnual = document.getElementById('lbl-annual');
+
+      toggle.setAttribute('aria-pressed', billingAnnual ? 'true' : 'false');
+      if (billingAnnual) {
+        toggle.classList.add('annual');
+        priceEl.innerHTML = '$79<sub>/yr</sub>';
+        prevEl.textContent = '$108/yr';
+        prevEl.style.display = '';
+        periodEl.textContent = 'Billed annually. Cancel anytime.';
+        lblMonthly.classList.remove('active');
+        lblAnnual.classList.add('active');
+      } else {
+        toggle.classList.remove('annual');
+        priceEl.innerHTML = '$9<sub>/mo</sub>';
+        prevEl.style.display = 'none';
+        periodEl.textContent = 'Billed monthly. Cancel anytime.';
+        lblMonthly.classList.add('active');
+        lblAnnual.classList.remove('active');
+      }
+    }
+
+    function handleCheckout(e) {
+      e.preventDefault();
+      if (window.dfTrack) dfTrack('checkout_initiated', { billing: billingAnnual ? 'annual' : 'monthly' });
+      var url = billingAnnual ? STRIPE_CHECKOUT_URL_ANNUAL : STRIPE_CHECKOUT_URL_MONTHLY;
+      window.location.href = url;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.dfTrack) dfTrack('pricing_viewed');
+    });
+  </script>
+  <script src="/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#091221">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://eu.i.posthog.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.datumfi.com https://eu.i.posthog.com https://api.stripe.com;">
+<title>Datum FI — Unlock the Studio</title>
+<meta name="description" content="Unlock the full Studio. Build your retirement estate and reveal your personalized Range.">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Datum FI">
+<meta property="og:title" content="Datum FI — Unlock the Studio">
+<meta property="og:description" content="Unlock the full Studio. Build your retirement estate and reveal your personalized Range.">
+<meta property="og:image" content="/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Datum FI — Unlock the Studio">
+<meta name="twitter:image" content="/og-image.png">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,700;1,9..144,300;1,9..144,400;1,9..144,700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  /* V1 paywall is intent-capture only. V2 will enforce via backend auth. */
+  :root {
+    --bg-navy: #091221;
+    --teal: #1D9E75;
+    --teal-mid: #5DCAA5;
+    --gold: #C9A84C;
+    --white: #ffffff;
+    --muted: rgba(255,255,255,0.4);
+    --danger-red: #e24b4a;
+    --grid-line: rgba(100, 180, 255, 0.05);
+    --font-serif: 'Fraunces', serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background-color: var(--bg-navy);
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    font-family: var(--font-serif);
+    color: var(--white);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+  }
+
+  /* --- BRAND ANCHOR --- */
+  .brand-header {
+    position: absolute; top: 40px; left: 40px;
+    display: inline-flex; align-items: baseline;
+    text-decoration: none; user-select: none;
+  }
+  .brand-datum {
+    font-family: var(--font-serif); font-size: 22px; font-weight: 300;
+    letter-spacing: 0.15em; color: var(--teal-mid); position: relative; padding-bottom: 4px;
+  }
+  .brand-datum::after {
+    content: ''; position: absolute; bottom: 0; left: 4%; width: 92%; height: 2px;
+    background-color: var(--gold); border-radius: 2px; box-shadow: 0 1px 4px rgba(201,168,76,0.4);
+  }
+  .brand-fi {
+    font-family: var(--font-mono); font-size: 16px; font-weight: 300; letter-spacing: 0.1em;
+    color: var(--teal-mid); margin-left: 10px; transform: translateY(1px);
+  }
+
+  /* --- PAYWALL CARD --- */
+  .paywall-wrapper {
+    width: 100%; max-width: 520px;
+    background: rgba(9,18,33,0.75); backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5); overflow: hidden;
+    position: relative; z-index: 10;
+  }
+
+  .paywall-header {
+    padding: 36px 40px 24px; text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .paywall-header h1 { font-size: 32px; font-weight: 300; font-style: italic; margin-bottom: 6px; }
+  .paywall-price {
+    font-family: var(--font-mono); font-size: 13px; text-transform: uppercase;
+    letter-spacing: 0.15em; color: var(--gold);
+  }
+
+  .paywall-body { padding: 32px 40px 36px; }
+
+  /* Feature list */
+  .feature-list { list-style: none; margin-bottom: 28px; }
+  .feature-list li {
+    display: flex; gap: 12px; font-family: var(--font-mono); font-size: 12px;
+    color: rgba(255,255,255,0.8); line-height: 1.5; margin-bottom: 14px;
+  }
+  .feature-check { color: var(--gold); flex-shrink: 0; font-size: 13px; }
+
+  /* CTAs */
+  .btn-primary {
+    display: block; width: 100%; background: var(--gold); color: var(--bg-navy);
+    font-family: var(--font-mono); font-size: 12px; text-transform: uppercase;
+    letter-spacing: 0.15em; padding: 16px; border-radius: 6px; border: none;
+    cursor: pointer; text-decoration: none; text-align: center; font-weight: bold;
+    transition: all 0.3s; margin-bottom: 12px;
+  }
+  .btn-primary:hover { background: #d9b85c; transform: translateY(-1px); }
+
+  .btn-secondary {
+    display: block; width: 100%; background: transparent; color: var(--muted);
+    font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.12em; padding: 12px; border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.1); cursor: pointer;
+    text-decoration: none; text-align: center; transition: all 0.3s;
+  }
+  .btn-secondary:hover { border-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.7); }
+
+  /* --- ZK BADGE --- */
+  .zk-wrapper {
+    width: 100%; max-width: 520px; margin-top: 20px; padding: 20px 24px;
+    background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 8px; z-index: 10;
+  }
+  .zk-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .zk-title { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--white); }
+  .zk-list { list-style: none; }
+  .zk-list li { font-family: var(--font-mono); font-size: 10px; color: var(--muted); line-height: 1.6; margin-bottom: 8px; display: flex; gap: 10px; }
+  .zk-list li:last-child { margin-bottom: 0; }
+  .zk-bullet { color: var(--teal-mid); flex-shrink: 0; }
+  .zk-strong { color: rgba(255,255,255,0.85); }
+
+  /* --- BACK LINK --- */
+  .vault-back-link { color: var(--muted); transition: color 0.2s; text-decoration: none; }
+  .vault-back-link:hover { color: var(--teal-mid); }
+
+  /* --- SUCCESS STATE --- */
+  .success-wrapper {
+    width: 100%; max-width: 520px; text-align: center;
+    background: rgba(9,18,33,0.75); backdrop-filter: blur(12px);
+    border: 1px solid rgba(93,202,165,0.3); border-radius: 12px;
+    padding: 48px 40px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    position: relative; z-index: 10;
+  }
+  .success-icon { font-size: 36px; margin-bottom: 20px; }
+  .success-wrapper h2 { font-size: 28px; font-weight: 300; font-style: italic; margin-bottom: 10px; }
+  .success-wrapper p { font-family: var(--font-mono); font-size: 12px; color: var(--muted); line-height: 1.6; margin-bottom: 28px; }
+
+  /* --- FOOTER --- */
+  .vault-footer {
+    margin-top: 24px; text-align: center; max-width: 520px; width: 100%;
+    font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.2);
+    line-height: 1.6;
+  }
+  .vault-footer a { color: rgba(255,255,255,0.25); text-decoration: none; }
+  .vault-footer a:hover { color: var(--muted); }
+</style>
+</head>
+<body>
+
+  <a href="/" class="brand-header">
+    <span class="brand-datum">DATUM</span>
+    <span class="brand-fi">FI</span>
+  </a>
+
+  <!-- PAYWALL STATE (default) -->
+  <div id="state-paywall">
+    <div class="paywall-wrapper">
+      <div class="paywall-header">
+        <h1>Unlock the Full Studio.</h1>
+        <p class="paywall-price">Institutional-grade architecture — $79 / year</p>
+      </div>
+      <div class="paywall-body">
+        <ul class="feature-list">
+          <li><span class="feature-check">✓</span>40,000-path Monte Carlo — 4× the resolution of Sketch</li>
+          <li><span class="feature-check">✓</span>Stress-tested against 1929, 1970s stagflation, and the Lost Decade</li>
+          <li><span class="feature-check">✓</span>Bedrock tier: structural floor guaranteed against all simulated scenarios</li>
+          <li><span class="feature-check">✓</span>Scenario Memory Bank — compare two versions of your plan side-by-side</li>
+          <li><span class="feature-check">✓</span>Institutional PDF Intelligence Dossier — exportable, printable</li>
+          <li><span class="feature-check">✓</span>Weekly Datum Briefing email — one signal per week, no noise</li>
+          <li><span class="feature-check">✓</span>30-day money-back guarantee. Cancel anytime in one click.</li>
+        </ul>
+
+        <a href="/pricing.html" class="btn-primary" id="checkout-btn">See Pricing &amp; Unlock Studio →</a>
+        <a href="/sketch.html" class="btn-secondary">Keep using Sketch for free</a>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:20px;">
+      <a href="/index.html" class="vault-back-link" style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:0.15em;">← Back to Site</a>
+    </div>
+
+    <div class="zk-wrapper">
+      <div class="zk-header">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--teal-mid)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span class="zk-title">Zero-Knowledge Architecture</span>
+      </div>
+      <ul class="zk-list">
+        <li><span class="zk-bullet">✓</span><span><span class="zk-strong">Local Computation:</span> The Sketch's Monte Carlo engine runs entirely inside your browser. Studio computation uses our servers — your inputs are never stored or sold.</span></li>
+        <li><span class="zk-bullet">✓</span><span><span class="zk-strong">Minimal Retention:</span> Studio stores only your profile — never sold, never shared, deletable on request.</span></li>
+        <li><span class="zk-bullet">✓</span><span><span class="zk-strong">No Tracking:</span> No ad-retargeting. No data brokering. No invisible pixels.</span></li>
+        <li><span class="zk-bullet">✓</span><span><span class="zk-strong">We see your inputs only long enough to compute your plan. We store nothing. We sell nothing.</span></span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- SUCCESS STATE (?checkout=success) -->
+  <div id="state-success" style="display:none;">
+    <div class="success-wrapper">
+      <div class="success-icon">✦</div>
+      <h2>Welcome to Studio.</h2>
+      <p>Check your email for access.<br>Your architecture awaits.</p>
+      <a href="/studio.html" class="btn-primary">Proceed to Studio →</a>
+    </div>
+  </div>
+
+  <div class="vault-footer">
+    DATUM FI is an educational tool and does not constitute financial, investment, or tax advice.<br>
+    <a href="/privacy.html">Privacy Policy</a> &nbsp;|&nbsp; <a href="/terms.html">Terms of Service</a> &nbsp;|&nbsp; <a href="mailto:privacy@datumfi.com">privacy@datumfi.com</a> &nbsp;|&nbsp; <span style="cursor:pointer;text-decoration:underline;" onclick="openDeleteDataModal()">Delete My Data</span> &nbsp;|&nbsp; <a href="/privacy-choices.html">Do Not Sell My Information</a> &nbsp;|&nbsp; Build&nbsp;2026.04.19&nbsp;&bull;&nbsp;v1.0.0
+  </div>
+
+  <script>
+    // Check auth state (default: anonymous)
+    var authState = sessionStorage.getItem('df_auth_state') || 'anonymous';
+    sessionStorage.setItem('df_auth_state', authState);
+
+    // Check for checkout success param
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('checkout') === 'success') {
+      sessionStorage.setItem('df_auth_state', 'authenticated');
+      document.getElementById('state-paywall').style.display = 'none';
+      document.getElementById('state-success').style.display = '';
+    }
+    // V1: always show paywall for anonymous state
+    // V2 will check authState === 'authenticated' and show Studio hub instead
+  </script>
+  <script src="/nav.js"></script>
+</body>
+</html>
