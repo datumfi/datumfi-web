@@ -323,8 +323,8 @@
         initiated = true;
 
         Clerk.load({
-          afterSignInUrl: '/vault.html',
-          afterSignUpUrl: '/vault.html'
+          signInForceRedirectUrl: '/vault.html',
+          signUpForceRedirectUrl: '/vault.html'
         }).then(function () {
           var loading   = document.getElementById('state-loading');
           var signedOut = document.getElementById('state-signed-out');
@@ -340,8 +340,7 @@
           } else {
             if (signedOut) signedOut.style.display = 'flex';
             Clerk.mountSignIn(document.getElementById('clerk-sign-in'), {
-              afterSignInUrl: '/vault.html',
-              afterSignUpUrl: '/vault.html',
+              forceRedirectUrl: '/vault.html',
               appearance: {
                 variables: {
                   colorPrimary:          '#5DCAA5',
@@ -384,7 +383,7 @@
 
     function handleSignOut() {
       if (typeof Clerk !== 'undefined' && typeof Clerk.signOut === 'function') {
-        Clerk.signOut().then(function () { window.location.reload(); });
+        Clerk.signOut().then(function () { window.location.href = '/'; });
       }
     }
   </script>
