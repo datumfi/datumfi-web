@@ -101,6 +101,15 @@
       if (rl)  rl.style.display  = '';
       if (mob) mob.style.display = '';
     }
+
+    // Cosmetic auth hint: show "Account" instead of "Login" when signed in.
+    // datum_auth_hint is a UI-only sessionStorage flag set by vault.html after
+    // Clerk confirms a valid session. Not a security gate — Studio gating is
+    // handled server-side. Hint is cleared on sign-out.
+    if (sessionStorage.getItem('datum_auth_hint')) {
+      var loginLinks = document.querySelectorAll('.nav-login-btn, .nav-mobile-login');
+      loginLinks.forEach(function(el) { el.textContent = 'Account'; });
+    }
   });
 })();
 

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#091221">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://alive-reindeer-79.clerk.accounts.dev https://eu.i.posthog.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://img.clerk.com; connect-src 'self' https://api.datumfi.com https://alive-reindeer-79.clerk.accounts.dev https://api.clerk.com https://eu.i.posthog.com; frame-src https://alive-reindeer-79.clerk.accounts.dev https://accounts.google.com https://appleid.apple.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://alive-reindeer-79.clerk.accounts.dev https://eu.i.posthog.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://img.clerk.com; connect-src 'self' https://api.datumfi.com https://alive-reindeer-79.clerk.accounts.dev https://api.clerk.com https://eu.i.posthog.com; frame-src https://alive-reindeer-79.clerk.accounts.dev https://accounts.google.com https://appleid.apple.com; worker-src 'self' blob:;">
 <title>Datum FI — Establish Origin</title>
 <meta name="description" content="Create or access your Datum FI Studio account.">
 <link rel="manifest" href="/manifest.json">
@@ -267,7 +267,7 @@
       </div>
       <div class="auth-body">
         <a href="/studio.html" class="btn-enter">Enter Studio →</a>
-        <button class="btn-account" onclick="Clerk.openUserProfile()">Manage Account</button>
+        <button class="btn-account" onclick="handleManageAccount()">Manage Account</button>
         <button class="btn-signout" onclick="handleSignOut()">Sign Out</button>
       </div>
     </div>
@@ -323,8 +323,8 @@
         initiated = true;
 
         Clerk.load({
-          signInForceRedirectUrl: '/vault.html',
-          signUpForceRedirectUrl: '/vault.html'
+          signInFallbackRedirectUrl: '/vault.html',
+          signUpFallbackRedirectUrl: '/vault.html'
         }).then(function () {
           var loading   = document.getElementById('state-loading');
           var signedOut = document.getElementById('state-signed-out');
@@ -333,6 +333,7 @@
           if (loading) loading.style.display = 'none';
 
           if (Clerk.user) {
+            sessionStorage.setItem('datum_auth_hint', '1');
             var addr = Clerk.user.primaryEmailAddress;
             var emailEl = document.getElementById('signed-in-email');
             if (emailEl && addr) emailEl.textContent = addr.emailAddress;
@@ -340,7 +341,7 @@
           } else {
             if (signedOut) signedOut.style.display = 'flex';
             Clerk.mountSignIn(document.getElementById('clerk-sign-in'), {
-              forceRedirectUrl: '/vault.html',
+              fallbackRedirectUrl: '/vault.html',
               appearance: {
                 variables: {
                   colorPrimary:          '#5DCAA5',
@@ -381,9 +382,17 @@
       }
     })();
 
+    function handleManageAccount() {
+      if (typeof Clerk !== 'undefined' && typeof Clerk.openUserProfile === 'function') {
+        try { Clerk.openUserProfile(); }
+        catch(e) { console.warn('[Datum] openUserProfile failed:', e); }
+      }
+    }
+
     function handleSignOut() {
+      sessionStorage.removeItem('datum_auth_hint');
       if (typeof Clerk !== 'undefined' && typeof Clerk.signOut === 'function') {
-        Clerk.signOut().then(function () { window.location.href = '/'; });
+        Clerk.signOut().then(function() { window.location.href = '/'; });
       }
     }
   </script>
