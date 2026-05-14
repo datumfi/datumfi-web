@@ -1210,20 +1210,19 @@
         </div>
 
         <div class="dialogue-block" style="border-bottom:none; margin-bottom: 0;">
-            <div class="dialogue-prompt mono-label">03 / YOUR SPENDING</div>
+            <div class="dialogue-prompt mono-label" style="color: var(--gold);">03 / YOUR DATUM</div>
             <div class="control-group" style="margin-bottom:0;">
                 <div class="control-header" style="flex-direction: column; align-items: flex-start;">
-                    <div style="display:flex; justify-content:space-between; width:100%; align-items:flex-end;">
-                        <label class="control-label" for="slider-datum" style="color: var(--teal-mid);">Your Datum</label>
+                    <div style="display:flex; justify-content:flex-end; width:100%; align-items:flex-end;">
                         <span class="control-value" id="val-datum" style="color: var(--teal-mid);">$100k / yr</span>
                     </div>
-                    <div style="font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.4); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.1em;">Your target annual retirement spending — the point you want to live at between Floor and Ceiling.</div>
+                    <div style="font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.4); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.1em;">Your target annual retirement spending — the point you choose to test inside your Shape.</div>
                 </div>
                 <input type="range" id="slider-datum" min="10" max="1000" value="100" step="1" tabindex="4">
             </div>
 
             <div class="dialogue-block" style="padding-top:14px; border-top:1px solid rgba(255,255,255,0.06);">
-              <div class="dialogue-prompt mono-label">04 YOUR CONTRIBUTIONS</div>
+              <div class="dialogue-prompt mono-label">04 / YOUR CONTRIBUTIONS</div>
               <div class="control-group" style="margin-bottom:0;">
                 <div class="control-header">
                   <label class="control-label" for="slider-contrib">Annual Contributions</label>
@@ -1234,7 +1233,7 @@
             </div>
 
             <div class="dialogue-block" style="border-bottom:none; padding-bottom:0;">
-              <div class="dialogue-prompt mono-label">05 MARKET CONDITIONS</div>
+              <div class="dialogue-prompt mono-label">05 / MARKET CONDITIONS</div>
               <div class="toggle-wrapper">
                 <div class="toggle-container">
                   <div class="toggle-option">
@@ -1339,7 +1338,7 @@
             </div>
             
             <div class="sketch-trust-copy anim-fade-up anim-delay-3">
-                Private by design. The Sketch runs locally in your browser using a broad-stroke deterministic model. Inputs are not sent to Datum FI servers unless you choose to continue into Studio or submit them. To support handoff or resume behavior, recent inputs may be stored locally on your device.
+                Private by design. The Sketch runs in your browser using a broad-stroke deterministic model. Inputs are not sent to Datum FI servers while using the Sketch. If you continue into Studio, your current inputs may be passed forward; recent inputs may be stored locally on your device for handoff or resume.
                 <button type="button" id="methodology-btn" class="methodology-trigger" aria-expanded="false">VIEW SKETCH METHODOLOGY</button>
                 <div id="methodology-panel" class="methodology-panel">
                     The Sketch uses geometric compounding. Each scenario runs a band of three growth paths — conservative, baseline, and upside — which form your Floor, middle projection, and Ceiling. <strong>Optimistic</strong>: 2.0–4.0–6.5% real (markets performing well above average). <strong>Historical</strong>: 1.5–3.5–5.5% real (anchored to long-run averages). <strong>Stress</strong>: 0.5–1.5–3.5% real (compressed returns, heavy downside guardrails). Inflation: <strong>Real</strong> strips inflation out — all values in today's dollars. <strong>Nominal</strong> adds 3.0%/yr inflation, showing the raw future dollar amounts.
@@ -1353,8 +1352,8 @@
           <div class="prog-steps">
             <div class="prog-step" id="prog-timeline">Timeline <span class="prog-dot"></span></div>
             <div class="prog-step" id="prog-capital">Capital <span class="prog-dot"></span></div>
-            <div class="prog-step" id="prog-spending">Spending <span class="prog-dot"></span></div>
-            <div class="prog-step" id="prog-refined">Refined <span class="prog-dot" style="background:transparent; border-color:rgba(255,255,255,0.3);"></span></div>
+            <div class="prog-step" id="prog-spending">Datum <span class="prog-dot"></span></div>
+            <div class="prog-step" id="prog-refined">Contributions <span class="prog-dot" style="background:transparent; border-color:rgba(255,255,255,0.3);"></span></div>
             <button type="button" class="prog-btn ready" id="btn-submit">Design Your Shape →</button>
           </div>
         </div>
@@ -1395,7 +1394,7 @@
                                             <div class="tt-row"><strong style="color:var(--teal-mid)">DEFINED:</strong> Floor & Ceiling are close together; predictable but inflexible.</div>
                                             <div class="tt-row"><strong style="color:var(--orange-warning)">COMPRESSED:</strong> Target spending is very close to the Survival Floor.</div>
                                             <div class="tt-row"><strong style="color:var(--blue-safe)">ABUNDANT:</strong> Target spending is well below the Survival Floor.</div>
-                                            <div class="tt-row"><strong style="color:var(--danger-red)">OVEREXTENDED:</strong> Target spending exceeds the safe Sketch limits.</div>
+                                            <div class="tt-row"><strong style="color:var(--danger-red)">OVEREXTENDED:</strong> Target spending sits above the Sketch's modeled Ceiling.</div>
                                         </div>
                                     </span>
                                 </div>
@@ -1536,13 +1535,19 @@
                   <g id="tt-g-ceil" transform="translate(650, 100)">
                      <rect x="15" y="-14" width="280" height="36" fill="#091221" fill-opacity="0.95" stroke="var(--gold)" rx="4" />
                      <text x="25" y="0" font-family="var(--font-mono)" font-size="10" fill="var(--gold)" font-weight="bold">CEILING @ <tspan id="tt-age-ceil">45</tspan> <tspan fill="var(--white)" font-family="var(--font-serif)" font-style="italic" id="tt-data-ceil">| $2.94M / $97k yr</tspan></text>
-                     <text x="25" y="14" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.6">Best realistic case — if markets perform above average</text>
+                     <text x="25" y="14" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.6">Favorable path — if returns run above the baseline.</text>
                   </g>
                   
                   <g id="tt-g-floor" transform="translate(650, 200)">
                      <rect x="15" y="-14" width="280" height="36" fill="#091221" fill-opacity="0.95" stroke="var(--danger-red)" rx="4" />
                      <text x="25" y="0" font-family="var(--font-mono)" font-size="10" fill="var(--danger-red)" font-weight="bold">FLOOR @ <tspan id="tt-age-floor">45</tspan> <tspan fill="var(--white)" font-family="var(--font-serif)" font-style="italic" id="tt-data-floor">| $1.61M / $36k yr</tspan></text>
-                     <text x="25" y="14" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.6">Worst realistic case — if returns stay low throughout</text>
+                     <text x="25" y="14" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.6">Stress path — if returns stay low.</text>
+                  </g>
+
+                  <g id="tt-g-datum" transform="translate(650, 300)">
+                     <rect x="15" y="-14" width="280" height="36" fill="#091221" fill-opacity="0.95" stroke="var(--teal-mid)" rx="4" />
+                     <text x="25" y="0" font-family="var(--font-mono)" font-size="10" fill="var(--teal-mid)" font-weight="bold">DATUM @ <tspan id="tt-age-datum">45</tspan> <tspan fill="var(--white)" font-family="var(--font-serif)" font-style="italic" id="tt-data-datum">| $100k/yr</tspan></text>
+                     <text x="25" y="14" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.6">Your chosen annual spending target.</text>
                   </g>
               </g>
               <text x="390" y="472" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="rgba(255,255,255,0.35)" letter-spacing="0.1em">YEARS IN RETIREMENT →</text>
@@ -2544,7 +2549,7 @@
         if (pts.datumSpend > pts.ceilSpend) {
             return { 
                 name: "OVEREXTENDED", color: "var(--danger-red)", cls: "hud-state-overextended",
-                physics: "You are planning to spend more than this Sketch can safely support at retirement. The plan may support it in strong markets, but not reliably across conditions.",
+                physics: "Your target sits above the Sketch's modeled Ceiling at retirement.",
                 action: "Delay retirement, save more, lower your target, or move to Studio to see what would have to change."
             };
         } else if (pts.datumSpend < pts.floorSpend) {
@@ -3070,65 +3075,71 @@
             </style>
             <rect width="1100" height="650" fill="#091221" />
             
-            <g transform="translate(50, 50)">
-                <text x="0" y="0" class="font-mono" font-size="32" font-weight="bold" fill="#ffffff" letter-spacing="4">DATUM <tspan fill="#5DCAA5">FI</tspan></text>
-                <text x="0" y="28" class="font-serif" font-style="italic" font-size="18" fill="#C9A84C">Your Pre-Retirement Sketch</text>
-                <text x="0" y="55" class="font-mono" font-size="12" fill="#ffffff" fill-opacity="0.4" text-transform="uppercase" letter-spacing="1">Generated: ${dateStr}</text>
+            <g transform="translate(50, 40)">
+                <g transform="scale(0.059)">
+                    <path d="M53.18,496.26l20.75-19.07,20.29-19.02,210.15-.28c15.58-1.13,28.89-4.2,43.23-9.04,31.67-11.94,58.24-32.35,78.64-59.73,24.51-32.5,37.75-70.67,40.36-110.96,1.02-4.95.7-10.06.36-15.4.39-20-1.96-38.85-7.3-57.84-9.33-34.07-27.43-64.18-53.39-88.3l-12.97-11.03c-16.45-11.62-33.88-21.1-53.37-26.68-10.81-3.25-20.66-4.57-32.41-5.8l-228.79-.14-14.5-13.2-15.91-14.46-19.97-18.21L10.06,10.25,0,.1l294.81.02c24.84-.81,46.8,2.43,70.54,9.08,42.08,12.59,78.91,35.93,108.55,68.17,2.3,1.97,3.95,3.8,5.18,6.17,12.55,13.88,21.95,28.97,31.11,45.62,16.16,31.27,26.18,64.71,29.97,100l1.35,12.37-.15,37.74c-1.05,23.81-5.54,46.54-12.36,69.47l-8.63,24.47-9.77,20.63c-9.71,19.13-21.21,35.89-35.41,52.38-20.83,23.97-45.06,42.88-73.19,57.55-28.31,15.03-57.28,22.84-89.72,25.75l-293.77.03,20.71-20.28,13.96-13.01Z" fill="#1d9e75"/>
+                    <polygon points="38.29 446.18 17.73 463.98 9.69 470.28 9.19 460.33 9.17 263.02 9.2 241.88 9.25 82.13 26.55 95.99 43.44 110.9 86.91 148.03 87.04 403.52 66.5 421.86 38.29 446.18" fill="#1d9e75"/>
+                    <rect x="153.15" y="257.56" width="226.89" height="18.06" fill="#c9a84c"/>
+                    <rect x="153.13" y="180.35" width="226.98" height="14.77" fill="#1d9e75"/>
+                    <rect x="153.12" y="340.53" width="226.99" height="14.92" fill="#1d9e75"/>
+                </g>
+                <text x="40" y="24" class="font-mono" font-size="28" font-weight="bold" fill="#ffffff" letter-spacing="3">DATUM <tspan fill="#5DCAA5">FI</tspan></text>
+                <text x="40" y="48" class="font-serif" font-style="italic" font-size="16" fill="#C9A84C">Your Pre-Retirement Sketch</text>
+                <text x="40" y="68" class="font-mono" font-size="11" fill="#ffffff" fill-opacity="0.4" letter-spacing="1">Generated: ${dateStr}</text>
             </g>
 
             <g transform="translate(360, 40)">
                 <rect x="0" y="0" width="700" height="90" fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.1" rx="8" />
                 <text x="20" y="25" class="font-mono" font-size="12" fill="#5DCAA5" text-transform="uppercase" letter-spacing="2" font-weight="bold">DATUM INTELLIGENCE</text>
-                
+
                 <text x="20" y="55" class="font-mono" font-size="11" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Shape State</text>
-                <text x="20" y="75" class="font-mono" font-size="14" fill="${_stateHex}" font-weight="bold">${window.currentShapeStateObj.name}</text>
-                
-                <g transform="translate(260, 0)">
-                    <text x="0" y="55" class="font-mono" font-size="11" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Struct. Ceiling</text>
-                    <text x="0" y="75" class="font-mono" font-size="18" fill="#C9A84C" font-weight="bold">${fvUpStr} / ${cSpendStr} yr</text>
+                <text x="20" y="75" class="font-mono" font-size="13" fill="${_stateHex}" font-weight="bold">${window.currentShapeStateObj.name}</text>
+
+                <g transform="translate(180, 0)">
+                    <text x="0" y="55" class="font-mono" font-size="11" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Ceiling</text>
+                    <text x="0" y="75" class="font-mono" font-size="12" fill="#C9A84C" font-weight="bold">${fvUpStr} / ${cSpendStr} yr</text>
                 </g>
 
-                <g transform="translate(430, 0)">
-                    <text x="0" y="55" class="font-mono" font-size="11" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Target Datum</text>
-                    <text x="0" y="75" class="font-mono" font-size="18" fill="#ffffff" font-weight="bold">${reqCapStr} / ${targetEndStr} yr</text>
+                <g transform="translate(360, 0)">
+                    <text x="0" y="55" class="font-mono" font-size="11" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Datum</text>
+                    <text x="0" y="75" class="font-mono" font-size="12" fill="#ffffff" font-weight="bold">${reqCapStr} / ${targetEndStr} yr</text>
                 </g>
 
-                <g transform="translate(580, 0)">
-                    <text x="0" y="55" class="font-mono" font-size="11" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Surv. Floor</text>
-                    <text x="0" y="75" class="font-mono" font-size="18" fill="#e24b4a" font-weight="bold">${fvConStr} / ${fSpendStr} yr</text>
+                <g transform="translate(535, 0)">
+                    <text x="0" y="55" class="font-mono" font-size="11" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Floor</text>
+                    <text x="0" y="75" class="font-mono" font-size="12" fill="#e24b4a" font-weight="bold">${fvConStr} / ${fSpendStr} yr</text>
                 </g>
             </g>
 
             <g transform="translate(50, 160)">
                 <text x="0" y="0" class="font-mono" font-size="14" fill="#5DCAA5" text-transform="uppercase" letter-spacing="2" font-weight="bold">SKETCH INPUTS</text>
-                <line x1="0" y1="15" x2="280" y2="15" stroke="#ffffff" stroke-opacity="0.1" stroke-width="1" />
-                
-                <text x="0" y="45" class="font-mono" font-size="12" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Current Age</text>
-                <text x="280" y="45" class="font-serif" font-size="16" fill="#ffffff" text-anchor="end" font-style="italic">${currentScenario.currentAge} yrs</text>
+                <line x1="0" y1="15" x2="240" y2="15" stroke="#ffffff" stroke-opacity="0.1" stroke-width="1" />
 
-                <text x="0" y="85" class="font-mono" font-size="12" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Retirement Age</text>
-                <text x="280" y="85" class="font-serif" font-size="16" fill="#ffffff" text-anchor="end" font-style="italic">${currentScenario.activationAge} yrs</text>
+                <text x="0" y="45" class="font-mono" font-size="12" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Your Timeline</text>
+                <text x="240" y="45" class="font-serif" font-size="16" fill="#ffffff" text-anchor="end" font-style="italic">${currentScenario.currentAge} → ${currentScenario.activationAge}</text>
 
-                <text x="0" y="125" class="font-mono" font-size="12" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Mass (Portfolio)</text>
-                <text x="280" y="125" class="font-serif" font-size="16" fill="#ffffff" text-anchor="end" font-style="italic">${document.getElementById('val-portfolio').innerHTML}</text>
+                <text x="0" y="85" class="font-mono" font-size="12" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Your Capital</text>
+                <text x="240" y="85" class="font-serif" font-size="16" fill="#ffffff" text-anchor="end" font-style="italic">${document.getElementById('val-portfolio').innerHTML}</text>
 
-                <text x="0" y="165" class="font-mono" font-size="12" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Contributions</text>
-                <text x="280" y="165" class="font-serif" font-size="16" fill="#ffffff" text-anchor="end" font-style="italic">${document.getElementById('val-contrib').innerHTML}</text>
+                <text x="0" y="125" class="font-mono" font-size="12" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Your Datum</text>
+                <text x="240" y="125" class="font-serif" font-size="16" fill="#5DCAA5" text-anchor="end" font-style="italic">${document.getElementById('val-datum').innerHTML.replace(' / yr', '')}</text>
 
-                <text x="0" y="205" class="font-mono" font-size="12" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Target Datum</text>
-                <text x="280" y="205" class="font-serif" font-size="16" fill="#5DCAA5" text-anchor="end" font-style="italic">${document.getElementById('val-datum').innerHTML.replace(' / yr', '')}</text>
-                
-                <text x="0" y="245" class="font-mono" font-size="12" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Market Cond.</text>
-                <text x="280" y="245" class="font-serif" font-size="16" fill="#ffffff" text-anchor="end" font-style="italic">${document.getElementById('s2-market').textContent}</text>
+                <text x="0" y="165" class="font-mono" font-size="12" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Your Contributions</text>
+                <text x="240" y="165" class="font-serif" font-size="16" fill="#ffffff" text-anchor="end" font-style="italic">${document.getElementById('val-contrib').innerHTML}</text>
 
-                <text x="0" y="285" class="font-mono" font-size="12" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Inflation</text>
-                <text x="280" y="285" class="font-serif" font-size="16" fill="#ffffff" text-anchor="end" font-style="italic">${document.getElementById('s2-infl').textContent}</text>
+                <text x="0" y="205" class="font-mono" font-size="12" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Market Conditions</text>
+                <text x="240" y="205" class="font-serif" font-size="16" fill="#ffffff" text-anchor="end" font-style="italic">${document.getElementById('s2-market').textContent}</text>
 
-                <text x="0" y="325" class="font-mono" font-size="12" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Tax Drag</text>
-                <text x="280" y="325" class="font-serif" font-size="16" fill="#ffffff" text-anchor="end" font-style="italic">${document.getElementById('s2-tax').textContent}</text>
+                <text x="0" y="245" class="font-mono" font-size="12" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Inflation</text>
+                <text x="240" y="245" class="font-serif" font-size="16" fill="#ffffff" text-anchor="end" font-style="italic">${document.getElementById('s2-infl').textContent}</text>
+
+                <text x="0" y="285" class="font-mono" font-size="12" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Effective Tax</text>
+                <text x="240" y="285" class="font-serif" font-size="16" fill="#ffffff" text-anchor="end" font-style="italic">${document.getElementById('s2-tax').textContent}</text>
             </g>
 
             <g transform="translate(284, 110) scale(0.95)">
+                <text transform="translate(10, 250) rotate(-90)" text-anchor="middle" class="font-mono" font-size="10" fill="#ffffff" fill-opacity="0.4" letter-spacing="1">ANNUAL SPEND</text>
+                <text x="385" y="510" text-anchor="middle" class="font-mono" font-size="10" fill="#ffffff" fill-opacity="0.4" letter-spacing="1">YEARS UNTIL RETIREMENT</text>
                 <line x1="80" y1="50" x2="700" y2="50" class="stark-grid" stroke-opacity="0" />
                 <text x="70" y="55" text-anchor="end" class="font-mono" font-size="12" fill="#ffffff" fill-opacity="0.6">${formatYLabel(globalYMax)}</text>
                 
@@ -3323,7 +3334,10 @@
         document.getElementById(`tt-age-${id}`).textContent = age;
         
         let text = formatTTHover(fv, spend);
-        if(id === 'datum') text = "| Baseline Path " + text.replace('| ', '');
+        if(id === 'datum') {
+            const spStr = spend >= 1000 ? '$' + (spend/1000).toFixed(2).replace(/\.00$/, '') + 'M/yr' : '$' + Math.round(spend) + 'k/yr';
+            text = '| ' + spStr;
+        }
         document.getElementById(`tt-data-${id}`).textContent = text;
         
         g.setAttribute('transform', `translate(${svgX}, ${svgY})`);
@@ -3367,6 +3381,7 @@
         
         showSvgTooltip('ceil', hoverAge, pts.fvUp, pts.ceilSpend, svgX, yC);
         showSvgTooltip('floor', hoverAge, pts.fvCon, pts.floorSpend, svgX, yF);
+        showSvgTooltip('datum', hoverAge, 0, pts.datumSpend, svgX, yD);
     }
 
     function hideScrubber() {
@@ -3649,11 +3664,11 @@
 
     (function() {
       var cfg = [
-        { valId: 'val-age', slider: slAge, w: '80px', isCurrency: false, getEditVal: () => String(Math.round(parseFloat(slAge.value))), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 18 && v <= 85, toSlider: v => v },
+        { valId: 'val-age', slider: slAge, w: '80px', isCurrency: false, getEditVal: () => String(Math.round(parseFloat(slAge.value))), clean: s => s.replace(/[^0-9]/g, ''), validate: () => true, toSlider: v => v },
         { valId: 'val-activation', slider: slAct, w: '80px', isCurrency: false, getEditVal: () => String(Math.round(parseFloat(slAct.value))), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= Math.round(parseFloat(slAge.value)) && v <= 90, toSlider: v => v },
         { valId: 'val-portfolio', slider: slPort, w: '140px', isCurrency: true, getEditVal: () => '$' + Math.round(parseFloat(slPort.value) * 1000000).toLocaleString('en-US'), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 0 && v <= 50000000, toSlider: v => v / 1000000 },
-        { valId: 'val-contrib', slider: slContrib, w: '140px', isCurrency: true, getEditVal: () => '$' + Math.round(parseFloat(slContrib.value)).toLocaleString('en-US'), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 0 && v <= 300000, toSlider: v => v },
-        { valId: 'val-datum', slider: slDatum, w: '140px', isCurrency: true, getEditVal: () => '$' + Math.round(parseFloat(slDatum.value) * 1000).toLocaleString('en-US'), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 20000 && v <= 1000000, toSlider: v => v / 1000 }
+        { valId: 'val-datum', slider: slDatum, w: '140px', isCurrency: true, getEditVal: () => '$' + Math.round(parseFloat(slDatum.value) * 1000).toLocaleString('en-US'), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 20000 && v <= 1000000, toSlider: v => v / 1000 },
+        { valId: 'val-contrib', slider: slContrib, w: '140px', isCurrency: true, getEditVal: () => '$' + Math.round(parseFloat(slContrib.value)).toLocaleString('en-US'), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 0 && v <= 300000, toSlider: v => v }
       ];
 
       cfg.forEach(function(c) {
@@ -3692,8 +3707,7 @@
           var cleaned = c.clean(inp.value.trim());
           var raw = parseInt(cleaned, 10);
           if (isNaN(raw)) {
-            // Empty field: snap to minimum instead of rejecting
-            raw = c.fromSlider(parseFloat(slider.min));
+            inp.style.display = 'none'; valEl.style.display = ''; return;
           }
           if (!c.validate(raw)) {
             inp.classList.add('shake'); setTimeout(() => inp.classList.remove('shake'), 300);
@@ -4973,7 +4987,7 @@
         var stateObj = (function(dc2, dd2, df2) {
           var spread = dc2 - df2; var spreadPct = dc2 > 0 ? spread / dc2 : 0; var margin = spread > 0 ? (dd2 - df2) / spread : 0.5;
           if (dd2 > dc2) return { name: "OVEREXTENDED", color: "var(--danger-red)",
-            physics: "You are planning to spend more than this shape can safely support. The Sketch may support it in strong markets, but not reliably across conditions.",
+            physics: "Your target sits above the Sketch's modeled Ceiling at retirement.",
             action: "Lower your Datum below the Ceiling, delay retirement, or use Studio to see exactly which levers would need to change to make this shape viable." };
           if (dd2 < df2) return { name: "ABUNDANT", color: "#4a9eff",
             physics: "Your target sits well below your Floor. You are planning to spend less than even your worst-case scenario suggests you can — there is meaningful structural room here.",
