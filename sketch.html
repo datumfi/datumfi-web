@@ -1241,7 +1241,7 @@
                     <label for="market-opt">Optimistic</label>
                     <div class="mkt-tooltip" style="border-color:rgba(201,168,76,0.4);">
                       <div class="mkt-tooltip-head" style="color:var(--gold);">Market Scenario</div>
-                      <div class="mkt-tooltip-body">Assumes markets perform above average (~4–6.5% real). Expands your Ceiling — shows your upside.</div>
+                      <div class="mkt-tooltip-body">Assumes markets grow faster than inflation, with upside real returns around 4%–6.5%.<br><br><strong>Plain English:</strong> This shows how your Shape can widen if markets help.</div>
                     </div>
                   </div>
                   <div class="toggle-option">
@@ -1249,7 +1249,7 @@
                     <label for="market-avg">Historical</label>
                     <div class="mkt-tooltip">
                       <div class="mkt-tooltip-head" style="color:var(--teal-mid);">Market Scenario</div>
-                      <div class="mkt-tooltip-body">Uses historical average returns (~3.5% real). The middle-of-the-road scenario — the most likely single outcome.</div>
+                      <div class="mkt-tooltip-body">Uses a middle-of-the-road real return baseline around 3.5% after inflation.<br><br><strong>Plain English:</strong> When people hear 7%–8% market returns, that is usually before inflation. This view shows purchasing-power growth.</div>
                     </div>
                   </div>
                   <div class="toggle-option">
@@ -1257,7 +1257,7 @@
                     <label for="market-stress">Stress</label>
                     <div class="mkt-tooltip" style="border-color:rgba(226,75,74,0.4);">
                       <div class="mkt-tooltip-head" style="color:var(--danger-red);">Market Scenario</div>
-                      <div class="mkt-tooltip-body">Assumes markets underperform (~0.5–3.5% real). Compresses both Ceiling and Floor — shows how bad it could get.</div>
+                      <div class="mkt-tooltip-body">Assumes real returns stay low, roughly 0.5%–3.5% after inflation.<br><br><strong>Plain English:</strong> This compresses the Shape and shows what may still hold if markets disappoint.</div>
                     </div>
                   </div>
                 </div>
@@ -1285,7 +1285,7 @@
                           <label for="infl-real">Real (Today's $)</label>
                           <div class="mkt-tooltip">
                               <div class="mkt-tooltip-head" style="color: var(--teal-mid);">Datum Intelligence</div>
-                              <div class="mkt-tooltip-body">Keeps the Shape mapped in today's purchasing power by stripping out inflation.</div>
+                              <div class="mkt-tooltip-body">Keeps the Shape in today's purchasing power by stripping out inflation.<br><br><strong>Plain English:</strong> $100k means what $100k buys today, even if the future dollar amount would be higher.</div>
                           </div>
                         </div>
                         <div class="toggle-option">
@@ -1293,7 +1293,7 @@
                           <label for="infl-nom">Nominal (Future $)</label>
                           <div class="mkt-tooltip" style="border-color: rgba(201,168,76,0.4);">
                               <div class="mkt-tooltip-head" style="color: var(--gold);">Datum Intelligence</div>
-                              <div class="mkt-tooltip-body">Bends the boundaries upward, showing the inflated future dollars required to maintain your lifestyle.</div>
+                              <div class="mkt-tooltip-body">Shows the future dollar amounts after inflation is added.<br><br><strong>Plain English:</strong> The same lifestyle may require a bigger number later, even if the buying power is the same.</div>
                           </div>
                         </div>
                       </div>
@@ -1312,7 +1312,7 @@
                                 <label for="tax-10">Low (10%)</label>
                                 <div class="mkt-tooltip">
                                   <div class="mkt-tooltip-head" style="color: var(--teal-mid);">Datum Intelligence</div>
-                                  <div class="mkt-tooltip-body">Studio can model account-level tax sequencing in more detail.</div>
+                                  <div class="mkt-tooltip-body">Light tax drag. More of each withdrawal is available for spending.<br><br><strong>Plain English:</strong> Your Shape expands because taxes take a smaller bite.</div>
                                 </div>
                             </div>
                             <div class="toggle-option">
@@ -1320,7 +1320,7 @@
                                 <label for="tax-20">Avg (20%)</label>
                                 <div class="mkt-tooltip">
                                   <div class="mkt-tooltip-head" style="color: var(--teal-mid);">Datum Intelligence</div>
-                                  <div class="mkt-tooltip-body">Studio can model account-level tax sequencing in more detail.</div>
+                                  <div class="mkt-tooltip-body">Middle tax drag assumption. A simple planning haircut, not a tax projection.<br><br><strong>Plain English:</strong> A balanced estimate before Studio models your actual accounts.</div>
                                 </div>
                             </div>
                             <div class="toggle-option">
@@ -1328,7 +1328,7 @@
                                 <label for="tax-30">High (30%)</label>
                                 <div class="mkt-tooltip" style="border-color: rgba(226,75,74,0.4);">
                                   <div class="mkt-tooltip-head" style="color: var(--danger-red);">Datum Intelligence</div>
-                                  <div class="mkt-tooltip-body">Studio can model account-level tax sequencing in more detail.</div>
+                                  <div class="mkt-tooltip-body">Heavy tax drag. More portfolio withdrawal is needed to support the same spending.<br><br><strong>Plain English:</strong> Your Shape compresses because taxes take a bigger bite.</div>
                                 </div>
                             </div>
                         </div>
@@ -1380,6 +1380,10 @@
                                     <span>SURVIVAL FLOOR</span>
                                     <span id="ri-floor-val">$0 / $0 yr</span>
                                 </div>
+                            </div>
+                            <div class="tel-metric" style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06);">
+                                <span>Growth Period</span>
+                                <span id="hud-growth-period" style="font-size:10px; font-weight:normal; color:rgba(255,255,255,0.4);">—</span>
                             </div>
                             <div class="hud-disclaimer">Projections are illustrative only. Not financial advice.</div>
                         </div>
@@ -1545,12 +1549,13 @@
                   </g>
 
                   <g id="tt-g-datum" transform="translate(650, 300)">
-                     <rect x="15" y="-14" width="280" height="36" fill="#091221" fill-opacity="0.95" stroke="var(--teal-mid)" rx="4" />
+                     <rect x="15" y="-14" width="310" height="52" fill="#091221" fill-opacity="0.95" stroke="var(--teal-mid)" rx="4" />
                      <text x="25" y="0" font-family="var(--font-mono)" font-size="10" fill="var(--teal-mid)" font-weight="bold">DATUM @ <tspan id="tt-age-datum">45</tspan> <tspan fill="var(--white)" font-family="var(--font-serif)" font-style="italic" id="tt-data-datum">| $100k/yr</tspan></text>
-                     <text x="25" y="14" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.6">Your chosen annual spending target.</text>
+                     <text x="25" y="14" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.6">Your chosen spending target.</text>
+                     <text x="25" y="26" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.4">Capital is a broad-stroke estimate, not a path projection.</text>
                   </g>
               </g>
-              <text x="390" y="472" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="rgba(255,255,255,0.35)" letter-spacing="0.1em">YEARS IN RETIREMENT →</text>
+              <text x="390" y="472" text-anchor="middle" class="axis-title">YEARS UNTIL RETIREMENT</text>
           </svg>
 
           
@@ -2853,8 +2858,10 @@
         const hudFloorVal = document.getElementById('ri-floor-val');
         
         if (hudCeilVal) { hudCeilVal.textContent = `${fvUpStr} / ${cSpendStr} yr`; }
-        if (hudDatumVal) { hudDatumVal.textContent = `${reqCapStr} / ${targetEndStr} yr`; }
+        if (hudDatumVal) { hudDatumVal.textContent = `${reqCapStr} needed / ${targetEndStr} yr`; }
         if (hudFloorVal) { hudFloorVal.textContent = `${fvConStr} / ${fSpendStr} yr`; }
+        const hudGrowthPeriod = document.getElementById('hud-growth-period');
+        if (hudGrowthPeriod) hudGrowthPeriod.textContent = yearsToGrow === 1 ? '1 yr until retirement' : `${yearsToGrow} yrs until retirement`;
 
         document.getElementById('s2-floor').textContent = fSpendStr + '/yr';
         document.getElementById('s2-ceil').textContent = cSpendStr + '/yr';
@@ -3030,7 +3037,7 @@
 
     function saveSnapshot() {
         if (!lastCalculatedPoints) return; // guard: no data yet
-        const viewBox = "0 0 1100 650";
+        const viewBox = "0 0 1100 720";
         // Resolve CSS custom property colors to hex for SVG export
         const _csvc = {
           'var(--danger-red)':     '#e24b4a',
@@ -3061,9 +3068,12 @@
         const fvConStr = ptsEnd.fvCon >= 1 ? `$${ptsEnd.fvCon.toFixed(2)}M` : `$${Math.round(ptsEnd.fvCon * 1000)}k`;
         const fSpendStr = ptsEnd.floorSpend >= 1000 ? `$${(ptsEnd.floorSpend/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${Math.round(ptsEnd.floorSpend).toLocaleString('en-US')}k`;
         const wrBase = 0.04;
-        const reqCapEnd = ptsEnd.datumSpend / (wrBase * currentScenario.taxMult); 
+        const reqCapEnd = ptsEnd.datumSpend / (wrBase * currentScenario.taxMult);
         const reqCapStr = reqCapEnd >= 1000 ? `$${(reqCapEnd/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${Math.round(reqCapEnd)}k`;
         const targetEndStr = Math.round(ptsEnd.datumSpend) >= 1000 ? `$${(ptsEnd.datumSpend/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${Math.round(ptsEnd.datumSpend).toLocaleString('en-US')}k`;
+        const growthStr = currentScenario.yearsToGrow === 1 ? '1 yr until retirement' : `${currentScenario.yearsToGrow} yrs until retirement`;
+        const _physicsLine = window.currentShapeStateObj.physics || '';
+        const _actionLine = (window.currentShapeStateObj.action || '').replace('this range', 'this Shape');
 
         const svgString = `
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="100%" height="100%">
@@ -3073,7 +3083,7 @@
                 .font-mono { font-family: ui-monospace, 'SFMono-Regular', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; }
                 .font-serif { font-family: ui-serif, 'Georgia', Cambria, 'Times New Roman', Times, serif; }
             </style>
-            <rect width="1100" height="650" fill="#091221" />
+            <rect width="1100" height="720" fill="#091221" />
             
             <g transform="translate(50, 40)">
                 <g transform="scale(0.059)">
@@ -3089,29 +3099,31 @@
             </g>
 
             <g transform="translate(360, 40)">
-                <rect x="0" y="0" width="700" height="90" fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.1" rx="8" />
-                <text x="20" y="25" class="font-mono" font-size="12" fill="#5DCAA5" text-transform="uppercase" letter-spacing="2" font-weight="bold">DATUM INTELLIGENCE</text>
+                <rect x="0" y="0" width="700" height="158" fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.1" rx="8" />
+                <text x="20" y="22" class="font-mono" font-size="12" fill="#5DCAA5" letter-spacing="2" font-weight="bold">DATUM INTELLIGENCE</text>
+                <line x1="0" y1="30" x2="700" y2="30" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1" />
 
-                <text x="20" y="55" class="font-mono" font-size="11" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Shape State</text>
-                <text x="20" y="75" class="font-mono" font-size="13" fill="${_stateHex}" font-weight="bold">${window.currentShapeStateObj.name}</text>
+                <text x="20" y="44" class="font-mono" font-size="10" fill="#ffffff" fill-opacity="0.5">STRUCTURAL CEILING</text>
+                <text x="20" y="59" class="font-mono" font-size="12" fill="#C9A84C" font-weight="bold">${fvUpStr} / ${cSpendStr} yr</text>
+                <text x="262" y="44" class="font-mono" font-size="10" fill="#ffffff" fill-opacity="0.5">TARGET DATUM</text>
+                <text x="262" y="59" class="font-mono" font-size="12" fill="#ffffff" font-weight="bold">${reqCapStr} needed / ${targetEndStr} yr</text>
+                <text x="505" y="44" class="font-mono" font-size="10" fill="#ffffff" fill-opacity="0.5">SURVIVAL FLOOR</text>
+                <text x="505" y="59" class="font-mono" font-size="12" fill="#e24b4a" font-weight="bold">${fvConStr} / ${fSpendStr} yr</text>
+                <line x1="0" y1="68" x2="700" y2="68" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1" />
 
-                <g transform="translate(180, 0)">
-                    <text x="0" y="55" class="font-mono" font-size="11" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Ceiling</text>
-                    <text x="0" y="75" class="font-mono" font-size="12" fill="#C9A84C" font-weight="bold">${fvUpStr} / ${cSpendStr} yr</text>
-                </g>
+                <text x="20" y="80" class="font-mono" font-size="9" fill="#ffffff" fill-opacity="0.5">SHAPE STATE</text>
+                <text x="20" y="93" class="font-mono" font-size="13" fill="${_stateHex}" font-weight="bold">${window.currentShapeStateObj.name}</text>
+                <text x="262" y="80" class="font-mono" font-size="9" fill="#ffffff" fill-opacity="0.5">GROWTH PERIOD</text>
+                <text x="262" y="93" class="font-mono" font-size="11" fill="#ffffff" fill-opacity="0.7">${growthStr}</text>
+                <line x1="0" y1="102" x2="700" y2="102" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1" />
 
-                <g transform="translate(360, 0)">
-                    <text x="0" y="55" class="font-mono" font-size="11" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Datum</text>
-                    <text x="0" y="75" class="font-mono" font-size="12" fill="#ffffff" font-weight="bold">${reqCapStr} / ${targetEndStr} yr</text>
-                </g>
-
-                <g transform="translate(535, 0)">
-                    <text x="0" y="55" class="font-mono" font-size="11" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Floor</text>
-                    <text x="0" y="75" class="font-mono" font-size="12" fill="#e24b4a" font-weight="bold">${fvConStr} / ${fSpendStr} yr</text>
-                </g>
+                <text x="20" y="114" class="font-mono" font-size="9" fill="#ffffff" fill-opacity="0.5">WHAT IT MEANS</text>
+                <text x="20" y="126" class="font-mono" font-size="9" fill="#ffffff" fill-opacity="0.75">${_physicsLine}</text>
+                <text x="20" y="140" class="font-mono" font-size="9" fill="#ffffff" fill-opacity="0.5">WHAT TO CONSIDER</text>
+                <text x="20" y="152" class="font-mono" font-size="9" fill="#ffffff" fill-opacity="0.75">${_actionLine}</text>
             </g>
 
-            <g transform="translate(50, 160)">
+            <g transform="translate(50, 250)">
                 <text x="0" y="0" class="font-mono" font-size="14" fill="#5DCAA5" text-transform="uppercase" letter-spacing="2" font-weight="bold">SKETCH INPUTS</text>
                 <line x1="0" y1="15" x2="240" y2="15" stroke="#ffffff" stroke-opacity="0.1" stroke-width="1" />
 
@@ -3137,8 +3149,8 @@
                 <text x="240" y="285" class="font-serif" font-size="16" fill="#ffffff" text-anchor="end" font-style="italic">${document.getElementById('s2-tax').textContent}</text>
             </g>
 
-            <g transform="translate(284, 110) scale(0.95)">
-                <text transform="translate(10, 250) rotate(-90)" text-anchor="middle" class="font-mono" font-size="10" fill="#ffffff" fill-opacity="0.4" letter-spacing="1">ANNUAL SPEND</text>
+            <g transform="translate(284, 165) scale(0.95)">
+                <text transform="translate(30, 250) rotate(-90)" text-anchor="middle" class="font-mono" font-size="10" fill="#ffffff" fill-opacity="0.4" letter-spacing="1">ANNUAL SPEND</text>
                 <text x="385" y="510" text-anchor="middle" class="font-mono" font-size="10" fill="#ffffff" fill-opacity="0.4" letter-spacing="1">YEARS UNTIL RETIREMENT</text>
                 <line x1="80" y1="50" x2="700" y2="50" class="stark-grid" stroke-opacity="0" />
                 <text x="70" y="55" text-anchor="end" class="font-mono" font-size="12" fill="#ffffff" fill-opacity="0.6">${formatYLabel(globalYMax)}</text>
@@ -3185,7 +3197,7 @@
                 </linearGradient>
             </defs>
 
-            <g transform="translate(550, 610)" text-anchor="middle">
+            <g transform="translate(550, 675)" text-anchor="middle">
                 <text y="0" class="font-serif" font-size="10" fill="#ffffff" fill-opacity="0.4">DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. All projections are estimated, preliminary, and do not guarantee future results.</text>
                 <text y="20" class="font-mono" font-size="12" fill="#ffffff" fill-opacity="0.8" letter-spacing="4" font-weight="bold">DATUMFI.COM</text>
             </g>
@@ -3335,8 +3347,9 @@
         
         let text = formatTTHover(fv, spend);
         if(id === 'datum') {
-            const spStr = spend >= 1000 ? '$' + (spend/1000).toFixed(2).replace(/\.00$/, '') + 'M/yr' : '$' + Math.round(spend) + 'k/yr';
-            text = '| ' + spStr;
+            const capStr = fv >= 1 ? '$' + fv.toFixed(2) + 'M' : '$' + Math.round(fv * 1000) + 'k';
+            const spStr  = spend >= 1000 ? '$' + (spend/1000).toFixed(2).replace(/\.00$/, '') + 'M/yr' : '$' + Math.round(spend) + 'k/yr';
+            text = '| ' + capStr + ' needed | ' + spStr;
         }
         document.getElementById(`tt-data-${id}`).textContent = text;
         
@@ -3381,7 +3394,9 @@
         
         showSvgTooltip('ceil', hoverAge, pts.fvUp, pts.ceilSpend, svgX, yC);
         showSvgTooltip('floor', hoverAge, pts.fvCon, pts.floorSpend, svgX, yF);
-        showSvgTooltip('datum', hoverAge, 0, pts.datumSpend, svgX, yD);
+        // reqCapM: capital needed to support datum spend at 4% withdrawal, pre-tax adjusted (fv param expects millions)
+        const _datumReqCapM = pts.datumSpend / (0.04 * (currentScenario.taxMult || 0.8)) / 1000;
+        showSvgTooltip('datum', hoverAge, _datumReqCapM, pts.datumSpend, svgX, yD);
     }
 
     function hideScrubber() {
