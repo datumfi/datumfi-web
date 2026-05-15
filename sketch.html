@@ -2929,32 +2929,188 @@
         if (chartSummary) chartSummary.textContent = `Preliminary retirement Shape updated. Floor $${Math.round(ptsEnd.floorSpend).toLocaleString()}/yr, Datum $${Math.round(ptsEnd.datumSpend).toLocaleString()}/yr, Ceiling $${Math.round(ptsEnd.ceilSpend).toLocaleString()}/yr. Retirement age ${activationAge}. State: ${stateObj.name}.`;
 
         if (pinnedState) {
+            // ── What Changed (input diff, max 4) ────────────────────────────
             let pChanged = [];
-            if (pinnedState.retire !== activationAge) pChanged.push(`Retirement age moved to ${activationAge}.`);
-            if (pinnedState.age !== currentAge) pChanged.push(`Current age moved to ${currentAge}.`);
-            if (pinnedState.port !== portfolioVol) {
-                let pStr = portfolioVol >= 1 ? `$${portfolioVol.toFixed(2)}M` : `$${Math.round(portfolioVol*1000)}k`;
-                pChanged.push(`Mass moved to ${pStr}.`);
+            if (pinnedState.retire !== activationAge) {
+                const _pDir = activationAge > pinnedState.retire ? 'later' : 'earlier';
+                pChanged.push(`Retirement age moved ${_pDir} to ${activationAge}.`);
             }
-            if (pinnedState.datum !== targetSpend) pChanged.push(`Target Datum moved to $${targetSpend}k.`);
-            if (pinnedState.contrib !== annualContrib) {
-                let cStr = `$${(annualContrib/1000).toFixed(0)}k`;
-                pChanged.push(`Contributions moved to ${cStr}.`);
+            if (pinnedState.age !== currentAge) {
+                pChanged.push(`Starting age moved to ${currentAge}.`);
+            }
+            if (Math.abs(pinnedState.port - portfolioVol) > 0.001) {
+                const _pDir = portfolioVol > pinnedState.port ? 'up' : 'down';
+                const _pStr = portfolioVol >= 1 ? `$${portfolioVol.toFixed(2)}M` : `$${Math.round(portfolioVol * 1000)}k`;
+                pChanged.push(`Capital moved ${_pDir} to ${_pStr}.`);
+            }
+            if (pinnedState.datum !== targetSpend) {
+                const _pDir = targetSpend > pinnedState.datum ? 'up' : 'down';
+                const _dStr = targetSpend >= 1000 ? `$${(targetSpend/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${targetSpend}k`;
+                pChanged.push(`Datum moved ${_pDir} to ${_dStr}/yr.`);
+            }
+            if (Math.abs(pinnedState.contrib - annualContrib) > 100) {
+                const _pDir = annualContrib > pinnedState.contrib ? 'up' : 'down';
+                const _cStr = annualContrib >= 1000 ? `$${(annualContrib/1000).toFixed(0)}k` : `$${annualContrib}`;
+                pChanged.push(`Contributions moved ${_pDir} to ${_cStr}/yr.`);
+            }
+            const _pinCurMkt  = paradigmName;
+            const _pinCurInfl = isNominal ? 'Nominal' : 'Real';
+            const _pinCurTax  = parseInt(slTax.value);
+            if (pinnedState.pinnedParadigm && pinnedState.pinnedParadigm !== _pinCurMkt) {
+                pChanged.push(`Market changed to ${_pinCurMkt}.`);
+            }
+            if (pinnedState.pinnedInflStr && pinnedState.pinnedInflStr !== _pinCurInfl) {
+                pChanged.push(`Inflation view changed to ${_pinCurInfl}.`);
+            }
+            if (pinnedState.pinnedTax !== undefined && pinnedState.pinnedTax !== _pinCurTax) {
+                const _pDir = _pinCurTax > pinnedState.pinnedTax ? 'higher' : 'lower';
+                pChanged.push(`Tax drag moved ${_pDir} to ${_pinCurTax}%.`);
+            }
+            if (pChanged.length > 4) pChanged = pChanged.slice(0, 4);
+
+            // ── Output deltas ────────────────────────────────────────────────
+            const _pFloorPin  = pinnedState.pinnedFloor       || 0;
+            const _pCeilPin   = pinnedState.pinnedCeil        || 0;
+            const _pDatumPin  = pinnedState.pinnedDatumSpend  || 0;
+            const _pRangePin  = Math.max(_pCeilPin - _pFloorPin, 1);
+            const _pRangeCur  = ptsEnd.ceilSpend - ptsEnd.floorSpend;
+            const _pWidthDelta = _pRangeCur - _pRangePin;
+            const _pMidDelta   = (ptsEnd.floorSpend + ptsEnd.ceilSpend) / 2 - (_pFloorPin + _pCeilPin) / 2;
+
+            // Datum position within Shape: 0 = at Floor, 1 = at Ceiling
+            const _pDatumPctPin = _pRangePin > 0 ? (_pDatumPin - _pFloorPin) / _pRangePin : 0.5;
+            const _pDatumPctCur = _pRangeCur > 0 ? (ptsEnd.datumSpend - ptsEnd.floorSpend) / _pRangeCur : 0.5;
+            const _pDatumNearCeil  = _pDatumPctCur > 0.78;
+            const _pDatumNearFloor = _pDatumPctCur < 0.22;
+
+            // Dominant output movement flags
+            const _pWidthSig   = Math.abs(_pWidthDelta) > Math.max(10, _pRangePin * 0.10);
+            const _pMidSig     = Math.abs(_pMidDelta)   > Math.max(8,  _pRangePin * 0.08);
+            const _pWidened    = _pWidthSig && _pWidthDelta > 0;
+            const _pCompressed = _pWidthSig && _pWidthDelta < 0;
+            const _pShiftUp    = !_pWidthSig && _pMidSig && _pMidDelta > 0;
+            const _pShiftDn    = !_pWidthSig && _pMidSig && _pMidDelta < 0;
+
+            // Input change flags for cause attribution
+            const _retireChg  = pinnedState.retire !== activationAge;
+            const _capitalChg = Math.abs(pinnedState.port - portfolioVol) > 0.001;
+            const _contribChg = Math.abs(pinnedState.contrib - annualContrib) > 100;
+            const _datumChg   = pinnedState.datum !== targetSpend;
+            const _mktChg     = !!(pinnedState.pinnedParadigm && pinnedState.pinnedParadigm !== _pinCurMkt);
+            const _taxChg     = !!(pinnedState.pinnedTax !== undefined && pinnedState.pinnedTax !== _pinCurTax);
+            const _inflChg    = !!(pinnedState.pinnedInflStr && pinnedState.pinnedInflStr !== _pinCurInfl);
+            const _multiChg   = pChanged.length > 1;
+
+            // ── What It Means + What To Consider (output-driven) ────────────
+            let _pinMeans = '';
+            let _pinConsider = '';
+
+            if (pChanged.length === 0) {
+                _pinMeans    = 'Inputs match the pinned Shape. Move sliders to compare.';
+                _pinConsider = 'Adjust any input to see how the Shape responds.';
+
+            } else if (_pWidened) {
+                let _cause = '';
+                if (!_multiChg && _retireChg && activationAge > pinnedState.retire) _cause = ' — more time for capital to compound';
+                else if (!_multiChg && _capitalChg)  _cause = ' — higher capital raised both boundaries';
+                else if (!_multiChg && _contribChg)  _cause = ' — higher contributions compounded over the growth period';
+                else if (!_multiChg && _mktChg && paradigm === 'optimistic') _cause = ' — optimistic assumptions raised the upside boundary';
+                else if (!_multiChg && _taxChg)       _cause = ' — lower tax drag expanded both boundaries';
+                const _datumNote = (_pDatumNearCeil && _datumChg) ? ' Your Datum now sits closer to the Ceiling of this wider range.' : '';
+                const _shiftNote = _pMidSig ? ` It also shifted ${_pMidDelta > 0 ? 'higher' : 'lower'} overall.` : '';
+                _pinMeans = `Compared with your pinned Shape, the Shape widened${_cause}.${_datumNote}${_shiftNote}`;
+                _pinConsider = _pDatumNearCeil
+                    ? 'Studio can test whether taxes, income timing, and account sequencing can support your Datum at this higher end of the range.'
+                    : 'Studio can test whether account types, tax sequencing, and contribution timing can sustain this wider range.';
+
+            } else if (_pCompressed) {
+                let _cause = '';
+                if (!_multiChg && _retireChg && activationAge < pinnedState.retire) _cause = ' — fewer years for capital to compound';
+                else if (!_multiChg && _capitalChg && portfolioVol < pinnedState.port) _cause = ' — lower capital lowered both boundaries';
+                else if (!_multiChg && _mktChg && paradigm === 'stress') _cause = ' — stress assumptions lowered the spending boundaries';
+                else if (!_multiChg && _taxChg && _pinCurTax > pinnedState.pinnedTax) _cause = ' — more portfolio withdrawal is needed to support the same spending';
+                const _datumNote = _pDatumNearCeil ? ' Your Datum now sits closer to the Ceiling of this tighter range.'
+                    : _pDatumNearFloor ? ' Your Datum now sits closer to the Floor of this tighter range.' : '';
+                const _shiftNote = _pMidSig ? ` It also shifted ${_pMidDelta > 0 ? 'higher' : 'lower'} overall.` : '';
+                _pinMeans = `Compared with your pinned Shape, the Shape compressed${_cause}.${_datumNote}${_shiftNote}`;
+                _pinConsider = _pDatumNearCeil
+                    ? 'Studio can test whether tax strategies, Social Security timing, or contribution changes can relieve pressure on this compressed Shape.'
+                    : _pDatumNearFloor
+                    ? 'Studio can inspect lower-bound resilience across bad sequences, early downturns, and spending drift.'
+                    : 'Studio can test whether contribution changes, tax strategies, or timeline adjustments can restore the spending boundaries.';
+
+            } else if (_pShiftUp) {
+                let _cause = '';
+                if (!_multiChg && _capitalChg)  _cause = ' — higher capital lifted both boundaries';
+                else if (!_multiChg && _contribChg) _cause = ' — higher contributions raised both boundaries';
+                else if (!_multiChg && _retireChg && activationAge > pinnedState.retire) _cause = ' — more compounding time raised both boundaries';
+                _pinMeans = `Compared with your pinned Shape, the Shape shifted higher${_cause}.`;
+                _pinConsider = _pDatumNearCeil
+                    ? 'Studio can test whether taxes, income timing, and account sequencing can support your Datum at this level.'
+                    : 'Studio can test whether account types and tax sequencing support this higher range.';
+
+            } else if (_pShiftDn) {
+                let _cause = '';
+                if (!_multiChg && _capitalChg)  _cause = ' — lower capital lowered both boundaries';
+                else if (!_multiChg && _contribChg) _cause = ' — lower contributions reduced both boundaries';
+                _pinMeans = `Compared with your pinned Shape, the Shape shifted lower${_cause}.`;
+                _pinConsider = _pDatumNearFloor
+                    ? 'Studio can inspect lower-bound resilience and test whether contribution or timing changes can restore the Floor.'
+                    : 'Studio can test whether contribution changes, tax strategies, or timeline adjustments can restore the spending boundaries.';
+
+            } else if (_datumChg && Math.abs(_pDatumPctCur - _pDatumPctPin) > 0.08) {
+                // Datum moved within a Shape that didn't change much
+                if (ptsEnd.datumSpend > _pDatumPin) {
+                    _pinMeans    = 'Compared with your pinned Shape, your Datum moved closer to the Ceiling, leaving less room for market disappointment.';
+                    _pinConsider = 'Studio can test whether taxes, income timing, and account sequencing can support this higher target across your actual account types.';
+                } else {
+                    _pinMeans    = 'Compared with your pinned Shape, your Datum moved closer to the Floor, adding buffer between your target and the survival boundary.';
+                    _pinConsider = 'Studio can test whether the additional margin creates room for an earlier date or additional savings goals.';
+                }
+
+            } else if (_mktChg) {
+                if (paradigm === 'stress') {
+                    _pinMeans = 'Compared with your pinned Shape, stress assumptions compressed the Shape and lowered the spending boundaries.';
+                    _pinConsider = "Studio can test this Shape across the full engine's probability-weighted paths instead of the Sketch's broad-stroke model.";
+                } else if (paradigm === 'optimistic') {
+                    _pinMeans = 'Compared with your pinned Shape, optimistic assumptions widened the Shape and raised the spending boundaries.';
+                    _pinConsider = "Studio can model how often this upside case occurs across thousands of simulated market paths.";
+                } else {
+                    _pinMeans = 'Compared with your pinned Shape, market conditions changed and shifted the spending boundaries.';
+                    _pinConsider = "Studio can test this Shape across the full engine instead of the Sketch's broad-stroke paths.";
+                }
+
+            } else if (_taxChg) {
+                _pinMeans = _pinCurTax > pinnedState.pinnedTax
+                    ? 'Compared with your pinned Shape, higher tax drag compressed the Shape — more portfolio withdrawal is needed to support the same spending.'
+                    : 'Compared with your pinned Shape, lower tax drag expanded the Shape — less withdrawal is needed to support the same spending.';
+                _pinConsider = 'Studio can replace this flat haircut with account-level tax sequencing across your actual accounts.';
+
+            } else if (_inflChg) {
+                _pinMeans = isNominal
+                    ? "Compared with your pinned Shape, switching to Nominal view shows the same spending in future dollars — purchasing power is unchanged."
+                    : "Compared with your pinned Shape, switching to Real view shows spending in today's purchasing power — the future dollar amount may be larger.";
+                _pinConsider = 'Studio can model both real and nominal projections against your actual account and income sequencing.';
+
+            } else {
+                _pinMeans    = 'Compared with your pinned Shape, the spending boundaries changed slightly.';
+                _pinConsider = 'Studio can model this change against your actual accounts and income sequencing.';
             }
 
             const pinnedBlock = document.getElementById('hud-pinned');
-            if(pinnedBlock) pinnedBlock.style.display = 'flex';
-            
-            if (pChanged.length > 0) {
-                const _pcEl = document.getElementById('pin-changed'); if (_pcEl) _pcEl.innerHTML = pChanged.join("<br>");
-            } else {
-                document.getElementById('pin-changed').innerHTML = "No inputs changed yet.";
-            }
+            if (pinnedBlock) pinnedBlock.style.display = 'flex';
 
-            document.getElementById('pin-state-name').textContent = pinnedState.stateObj.name;
-            document.getElementById('pin-state-name').style.color = pinnedState.stateObj.color;
-            document.getElementById('pin-means').innerHTML = pinnedState.stateObj.physics;
-            document.getElementById('pin-inspect').innerHTML = pinnedState.stateObj.action;
+            const _pcEl = document.getElementById('pin-changed');
+            if (_pcEl) _pcEl.innerHTML = pChanged.length > 0 ? pChanged.join('<br>') : 'No inputs changed yet.';
+
+            const _pnEl = document.getElementById('pin-state-name');
+            if (_pnEl) { _pnEl.textContent = pinnedState.stateObj.name; _pnEl.style.color = pinnedState.stateObj.color; }
+
+            const _pmEl = document.getElementById('pin-means');
+            if (_pmEl) _pmEl.innerHTML = _pinMeans;
+
+            const _piEl = document.getElementById('pin-inspect');
+            if (_piEl) _piEl.innerHTML = _pinConsider;
         }
 
         // Studio handoff — sessionStorage keys for cross-page state transfer
@@ -2972,19 +3128,43 @@
     }
 
     function pinScenario() {
+        const btn = document.getElementById('btn-pin-scenario');
+
+        // Toggle: release if already pinned
+        if (pinnedState) {
+            pinnedState = null;
+            document.getElementById('ghost-ceil').classList.remove('ghost-active');
+            document.getElementById('ghost-floor').classList.remove('ghost-active');
+            document.getElementById('ghost-cone').classList.remove('ghost-cone-active');
+            const gHatch = document.getElementById('ghost-hatch-area');
+            if (gHatch) gHatch.style.opacity = '0';
+            const gLabel = document.getElementById('ghost-label');
+            if (gLabel) gLabel.style.opacity = '0';
+            document.getElementById('pinned-legend').style.display = 'none';
+            const pinnedBlock = document.getElementById('hud-pinned');
+            if (pinnedBlock) pinnedBlock.style.display = 'none';
+            btn.textContent = 'Pin Scenario';
+            return;
+        }
+
         const ceilD  = document.getElementById('ceil-line').getAttribute('d');
         const floorD = document.getElementById('floor-line').getAttribute('d');
         const coneD  = document.getElementById('cone-area').getAttribute('d');
 
         // Guard: only pin when the canvas has been drawn (paths have real data)
         if (!ceilD || ceilD.trim() === '' || !lastCalculatedPoints) {
-            const btn = document.getElementById('btn-pin-scenario');
             btn.textContent = 'Move sliders first';
             setTimeout(() => { btn.textContent = 'Pin Scenario'; }, 1800);
             return;
         }
 
-        pinnedState = { ...getCurrentState(), stateObj: window.currentShapeStateObj };
+        pinnedState = { ...getCurrentState(), stateObj: window.currentShapeStateObj,
+            pinnedParadigm:  document.getElementById('s2-market').textContent,
+            pinnedInflStr:   document.getElementById('s2-infl').textContent,
+            pinnedTax:       parseInt(slTax.value),
+            pinnedFloor:     lastCalculatedPoints ? lastCalculatedPoints.floorSpend : 0,
+            pinnedCeil:      lastCalculatedPoints ? lastCalculatedPoints.ceilSpend  : 0,
+            pinnedDatumSpend: lastCalculatedPoints ? lastCalculatedPoints.datumSpend : 0 };
 
         document.getElementById('ghost-ceil').setAttribute('d',  ceilD);
         document.getElementById('ghost-floor').setAttribute('d', floorD);
@@ -3015,9 +3195,11 @@
             const pn = document.getElementById('pin-state-name');
             const pm = document.getElementById('pin-means');
             const pi = document.getElementById('pin-inspect');
+            const pc = document.getElementById('pin-changed');
             if (pn) { pn.textContent = window.currentShapeStateObj.name; pn.style.color = window.currentShapeStateObj.color; }
-            if (pm) pm.innerHTML = window.currentShapeStateObj.physics;
-            if (pi) pi.innerHTML = window.currentShapeStateObj.action;
+            if (pm) pm.innerHTML = 'Shape pinned. Move sliders to compare against this baseline.';
+            if (pi) pi.innerHTML = 'Adjust any input to see how the Shape responds.';
+            if (pc) pc.innerHTML = 'No inputs changed yet.';
         }
 
         const pinnedBlock = document.getElementById('hud-pinned');
@@ -3028,11 +3210,10 @@
             setTimeout(() => { pinnedBlock.style.borderColor = ''; }, 800);
         }
 
-        // Button feedback
-        const btn = document.getElementById('btn-pin-scenario');
-        btn.textContent = '✓ Pinned';
+        // Button feedback — stays as release toggle until user clicks again
+        btn.textContent = 'Release Pin';
         btn.style.color = 'var(--teal-mid)';
-        setTimeout(() => { btn.textContent = 'Pin Scenario'; btn.style.color = ''; }, 2000);
+        setTimeout(() => { btn.style.color = ''; }, 800);
     }
 
     function saveSnapshot() {
@@ -3233,26 +3414,6 @@
             saveBtn.style.color = 'var(--gold)';
             setTimeout(() => { saveBtn.textContent = 'Save Shape'; saveBtn.style.color = ''; }, 2000);
         }
-    }
-    function pinLastScenario() {
-      if (!lastCalculatedPoints || !window.currentShapeStateObj) return;
-      const hudPinned = document.getElementById('hud-pinned');
-      if (hudPinned) hudPinned.classList.add('visible');
-      const pv = document.getElementById('ri-ceiling-val');
-      const fv = document.getElementById('ri-floor-val');
-      const dv = document.getElementById('ri-datum-val');
-      // Populate pin-state card with current shape state
-      const stateObj = window.currentShapeStateObj;
-      const pinStateName = document.getElementById('pin-state-name');
-      const pinMeans    = document.getElementById('pin-means');
-      const pinConsider = document.getElementById('pin-consider');
-      if (pinStateName) { pinStateName.textContent = stateObj.name || 'UNKNOWN'; pinStateName.style.color = stateObj.color || 'var(--white)'; }
-      if (pinMeans)     pinMeans.textContent    = stateObj.physics || 'Shape pinned.';
-      if (pinConsider)  pinConsider.textContent = stateObj.action  || 'Move sliders to compare against this baseline.';
-      if (pv) pv.textContent = `$${Math.round(lastCalculatedPoints.ceilSpend)} / yr`;
-      if (fv) fv.textContent = `$${Math.round(lastCalculatedPoints.floorSpend)} / yr`;
-      if (dv) dv.textContent = `$${Math.round(lastCalculatedPoints.datumSpend)} / yr`;
-      pinnedState = { ...getCurrentState(), stateObj: window.currentShapeStateObj };
     }
 
 
