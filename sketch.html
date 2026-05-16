@@ -2936,7 +2936,7 @@
             // ── Magnitude bands per lever ──────────────────────────────────
             const _retireDelta  = activationAge - pinnedState.retire;
             const _retireAbs    = Math.abs(_retireDelta);
-            const _retireBand   = _retireAbs >= 10 ? 'dramatic' : _retireAbs >= 5 ? 'large' : _retireAbs >= 2 ? 'moderate' : 'small';
+            const _retireBand   = _retireAbs > 15 ? 'generational' : _retireAbs >= 10 ? 'dramatic' : _retireAbs >= 5 ? 'large' : _retireAbs >= 2 ? 'moderate' : 'small';
 
             const _capDelta     = portfolioVol - pinnedState.port;
             const _capPct       = Math.abs(_capDelta) / Math.max(Math.abs(pinnedState.port), 0.01);
@@ -2956,7 +2956,7 @@
 
             const _ageDelta     = currentAge - pinnedState.age;
             const _ageAbs       = Math.abs(_ageDelta);
-            const _ageBand      = _ageAbs > 7 ? 'large' : _ageAbs >= 3 ? 'moderate' : 'small';
+            const _ageBand      = _ageAbs > 12 ? 'dramatic' : _ageAbs >= 7 ? 'large' : _ageAbs >= 3 ? 'moderate' : 'small';
 
             const _pinCurMkt    = paradigmName;
             const _pinCurInfl   = isNominal ? 'Nominal' : 'Real';
@@ -3039,7 +3039,7 @@
             const _secDriving = !!(_sec && _twt > 0 && _sec.w / _twt > 0.30);
 
             // ── Magnitude adverbs + per-lever phrases ──────────────────────
-            const _mag = { small: 'slightly', moderate: 'moderately', large: 'meaningfully', dramatic: 'dramatically' };
+            const _mag = { small: 'slightly', moderate: 'moderately', large: 'meaningfully', dramatic: 'dramatically', generational: 'generationally' };
 
             const _dp = (() => {
                 if (!_dom) return '';
@@ -3077,8 +3077,9 @@
             })();
 
             const _retireWhy = _retireDelta > 0
-                ? (_retireBand === 'small'    ? 'one extra year of compounding'
-                   : _retireBand === 'dramatic' ? 'a full decade more of compounding lifted both Floor and Ceiling materially'
+                ? (_retireBand === 'small'         ? 'one extra year of compounding'
+                   : _retireBand === 'generational' ? 'that span of compounding fundamentally reshapes both Floor and Ceiling'
+                   : _retireBand === 'dramatic'     ? 'a full decade more of compounding lifted both Floor and Ceiling materially'
                    : `${_retireAbs} more years of compounding raised both boundaries`)
                 : (_retireBand === 'small'    ? 'one fewer year of compounding reduced the range'
                    :                           'fewer years for capital to compound reduced both boundaries');
@@ -3151,7 +3152,7 @@
                         case 'capital': _open = `${_dp} compressed the Shape — lower capital reduced both boundaries.`; break;
                         case 'market':  _open = `${_dp} compressed the Shape — stress assumptions lowered both boundaries.`; break;
                         case 'tax':     _open = `${_dp} compressed the Shape — more withdrawal needed to support the same spending.`; break;
-                        case 'age':     _open = `${_dp} compressed the Shape — fewer years remaining for capital to compound.`; break;
+                        case 'age':     _open = `${_dp} compressed the Shape — ${_ageBand === 'dramatic' ? 'that span of lost compounding heavily reduced both boundaries' : 'fewer years remaining for capital to compound'}.`; break;
                     }
                 }
                 const _secText = _secDriving && _secClause ? ` Of the two changes, ${_domNoun} drove most of the compression; ${_secClause}.` : '';
