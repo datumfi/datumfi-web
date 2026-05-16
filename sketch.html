@@ -322,20 +322,20 @@
   .state-pulse-gold { animation: statePulseGold 1.0s ease forwards; }
   .state-pulse-teal { animation: statePulseTeal 1.0s ease forwards; }
 
-  /* Fix 2 + 3 — ambient state tint on chart canvas + OVEREXTENDED entry pulse */
-  #sketch-canvas { transition: background-color 0.4s ease; }
-  #sketch-canvas.state-ambient-abundant     { background-color: rgba(77, 168, 218, 0.06); }
-  #sketch-canvas.state-ambient-grounded     { background-color: rgba(139, 111, 191, 0.06); }
-  #sketch-canvas.state-ambient-stretched    { background-color: rgba(229, 138, 38, 0.07); }
-  #sketch-canvas.state-ambient-overextended { background-color: rgba(226, 75, 74, 0.08); }
+  /* Fix 3 — ambient state tint via SVG rect (SVG fill animates reliably; background-color on SVG is unreliable) */
+  #state-tint-rect { transition: fill 0.4s ease; }
+  #state-tint-rect.state-ambient-abundant     { fill: rgba(77, 168, 218, 0.06); }
+  #state-tint-rect.state-ambient-grounded     { fill: rgba(139, 111, 191, 0.06); }
+  #state-tint-rect.state-ambient-stretched    { fill: rgba(229, 138, 38, 0.07); }
+  #state-tint-rect.state-ambient-overextended { fill: rgba(226, 75, 74, 0.10); }
   @keyframes overextendedEntryFlash {
-    0%   { background-color: rgba(226, 75, 74, 0.18); }
-    100% { background-color: rgba(226, 75, 74, 0.08); }
+    0%   { fill: rgba(226, 75, 74, 0.30); }
+    100% { fill: rgba(226, 75, 74, 0.10); }
   }
-  #sketch-canvas.state-ambient-overextended-entry { animation: overextendedEntryFlash 0.6s ease forwards; }
+  #state-tint-rect.state-ambient-overextended-entry { animation: overextendedEntryFlash 0.6s ease forwards; }
   @media (prefers-reduced-motion: reduce) {
-    #sketch-canvas { transition: none !important; }
-    #sketch-canvas.state-ambient-overextended-entry { animation: none !important; background-color: rgba(226, 75, 74, 0.08); }
+    #state-tint-rect { transition: none !important; }
+    #state-tint-rect.state-ambient-overextended-entry { animation: none !important; fill: rgba(226, 75, 74, 0.10); }
   }
 
   /* Grid Fade */
@@ -1363,7 +1363,7 @@
                 Private by design. The Sketch runs in your browser using a broad-stroke deterministic model. Inputs are not sent to Datum FI servers while using the Sketch. If you continue into Studio, your current inputs may be passed forward; recent inputs may be stored locally on your device for handoff or resume.
                 <button type="button" id="methodology-btn" class="methodology-trigger" aria-expanded="false">VIEW SKETCH METHODOLOGY</button>
                 <div id="methodology-panel" class="methodology-panel">
-                    The Sketch uses geometric compounding. Each scenario runs a band of three growth paths — conservative, baseline, and upside — which form your Floor, middle projection, and Ceiling. <strong>Optimistic</strong>: 2.0–4.0–6.5% real (markets performing well above average). <strong>Historical</strong>: 1.5–3.5–5.5% real (anchored to long-run averages). <strong>Stress</strong>: 0.5–1.5–3.5% real (compressed returns, heavy downside guardrails). Inflation: <strong>Real</strong> strips inflation out — all values in today's dollars. <strong>Nominal</strong> adds 3.0%/yr inflation, showing the raw future dollar amounts.<br><br>Each of the three lines in your Shape uses a withdrawal rate tuned to its purpose. Your Floor uses a reduced rate for resilience — it asks how much spending the conservative path can sustain under stress. Your Ceiling uses an elevated rate for capacity — it asks how much the upside path could support under favorable conditions. Your Datum sits on the baseline path — the middle projection between Floor and Ceiling. Most retirement tools apply a single 4% rule to everything. The Sketch tunes each path's rate to what it's actually measuring.
+                    The Sketch uses geometric compounding. Each scenario runs a band of three growth paths — conservative, baseline, and upside — which form your Floor, middle projection, and Ceiling. <strong>Optimistic</strong>: 2.0–4.0–6.5% real (markets performing well above average). <strong>Historical</strong>: 1.5–3.5–5.5% real (anchored to long-run averages). <strong>Stress</strong>: 0.5–1.5–3.5% real (compressed returns, heavy downside guardrails). Inflation: <strong>Real</strong> strips inflation out — all values in today's dollars. <strong>Nominal</strong> adds 3.0%/yr inflation, showing the raw future dollar amounts.<br><br>Each of the three lines in your Shape uses a withdrawal rate tuned to its purpose. Your Floor uses a reduced rate for resilience — it asks how much spending the conservative path can sustain under stress. Your Ceiling uses an elevated rate for capacity — it asks how much the upside path could support under favorable conditions. Your Datum sits on the baseline path — the middle projection between Floor and Ceiling. Your Datum reads differently depending on where it sits: inside the Shape, it shows the baseline path's projected capital — what you'll have. Outside the Shape, it shows the capital required at that boundary's rate — what you'd need to close the gap. Most retirement tools apply a single 4% rule to everything. The Sketch tunes each path's rate to what it's actually measuring.
                 </div>
             </div>
         </div>
@@ -1395,11 +1395,11 @@
                                     <span id="ri-ceiling-val">$0 / $0 yr</span>
                                 </div>
                                 <div class="tel-metric m-datum">
-                                    <span>TARGET DATUM</span>
+                                    <span class="lbl-has-tip" tabindex="0">TARGET DATUM<div id="ri-datum-tip" class="shape-info-tooltip">Capital your portfolio is projected to reach on the baseline path.</div></span>
                                     <span id="ri-datum-val">$0 / $0 yr</span>
                                 </div>
                                 <div class="tel-metric m-floor">
-                                    <span class="lbl-has-tip" tabindex="0">SURVIVAL FLOOR<div class="shape-info-tooltip">Survival Floor uses a haircut withdrawal rate (2.8% endpoint) to model resilience under stress. Your Datum is anchored at the canonical 4% reference.</div></span>
+                                    <span class="lbl-has-tip" tabindex="0">SURVIVAL FLOOR<div class="shape-info-tooltip">Survival Floor uses a reduced rate (2.8% at retirement) to model resilience under stress. The cone narrows here because conservative returns constrain what your portfolio can support long-term.</div></span>
                                     <span id="ri-floor-val">$0 / $0 yr</span>
                                 </div>
                             </div>
@@ -1483,6 +1483,7 @@
                       <path id="clip-cone-path" d="" />
                   </clipPath>
               </defs>
+              <rect id="state-tint-rect" x="0" y="0" width="840" height="480" fill="none" pointer-events="none"/>
 
               <g id="grid-axes-group" class="fade-in-early">
                   <text x="80" y="40" text-anchor="end" class="axis-title" style="fill: rgba(255,255,255,0.8);">ANNUAL SPEND</text>
@@ -2674,26 +2675,40 @@
             }
         }
 
-        // Fix 2 + 3: ambient state tint + OVEREXTENDED dramatic entry pulse
-        if (skCanvas) {
-            skCanvas.classList.remove(
+        // Fix 3: ambient state tint via SVG rect — fill animates reliably in SVG
+        const tintRect = document.getElementById('state-tint-rect');
+        if (tintRect) {
+            tintRect.classList.remove(
                 'state-ambient-abundant', 'state-ambient-grounded',
                 'state-ambient-stretched', 'state-ambient-overextended',
                 'state-ambient-overextended-entry'
             );
             if (s.name === 'OVEREXTENDED') {
-                skCanvas.classList.add(previousStateName === 'OVEREXTENDED'
+                if (previousStateName !== 'OVEREXTENDED') { void tintRect.getBoundingClientRect(); }
+                tintRect.classList.add(previousStateName === 'OVEREXTENDED'
                     ? 'state-ambient-overextended'
                     : 'state-ambient-overextended-entry');
             } else if (s.name === 'ABUNDANT') {
-                skCanvas.classList.add('state-ambient-abundant');
+                tintRect.classList.add('state-ambient-abundant');
             } else if (s.name === 'GROUNDED') {
-                skCanvas.classList.add('state-ambient-grounded');
+                tintRect.classList.add('state-ambient-grounded');
             } else if (s.name === 'STRETCHED') {
-                skCanvas.classList.add('state-ambient-stretched');
+                tintRect.classList.add('state-ambient-stretched');
             }
-            // EXPANSIVE: no tint (neutral brand background)
-            previousStateName = s.name;
+            // EXPANSIVE: no tint
+        }
+        previousStateName = s.name;
+
+        // Fix 2: state-switched tooltip copy on TARGET DATUM capital number
+        const datumTip = document.getElementById('ri-datum-tip');
+        if (datumTip) {
+            if (s.name === 'ABUNDANT') {
+                datumTip.textContent = 'Below the Floor — shows the conservative-path capital required to sustain your Datum spend.';
+            } else if (s.name === 'OVEREXTENDED') {
+                datumTip.textContent = 'Above the Ceiling — shows the upside-path capital required to sustain your Datum spend.';
+            } else {
+                datumTip.textContent = 'Capital your portfolio is projected to reach on the baseline path.';
+            }
         }
 
         document.getElementById('lbl-physics').style.display = 'inline';
@@ -2889,15 +2904,11 @@
         const fvConStr = ptsEnd.fvCon >= 1 ? `$${ptsEnd.fvCon.toFixed(2)}M` : `$${Math.round(ptsEnd.fvCon * 1000)}k`;
         const fvBaseStr = ptsEnd.fvBase >= 1 ? `$${ptsEnd.fvBase.toFixed(2)}M` : `$${Math.round(ptsEnd.fvBase * 1000)}k`;
         
-        const datumCapEndM = ptsEnd.fvBase; // baseline-path projected capital, $M
-        const datumCapStr = datumCapEndM >= 1 ? `$${datumCapEndM.toFixed(2)}M` : `$${Math.round(datumCapEndM * 1000)}k`;
-
         const hudCeilVal = document.getElementById('ri-ceiling-val');
         const hudDatumVal = document.getElementById('ri-datum-val');
         const hudFloorVal = document.getElementById('ri-floor-val');
 
         if (hudCeilVal) { hudCeilVal.textContent = `${fvUpStr} / ${cSpendStr} yr`; }
-        if (hudDatumVal) { hudDatumVal.textContent = `${datumCapStr} / ${targetEndStr} yr`; }
         if (hudFloorVal) { hudFloorVal.textContent = `${fvConStr} / ${fSpendStr} yr`; }
         const hudGrowthPeriod = document.getElementById('hud-growth-period');
         if (hudGrowthPeriod) hudGrowthPeriod.textContent = yearsToGrow === 1 ? '1 yr until retirement' : `${yearsToGrow} yrs until retirement`;
@@ -2909,6 +2920,15 @@
         // --- SHAPE STATE ENGINE ---
         let stateObj = getShapeStateObj(ptsEnd);
         window.currentShapeStateObj = stateObj;
+
+        // Fix 1: state-switched Datum capital for HUD
+        const _datumCapM = stateObj.name === 'ABUNDANT'
+            ? (ptsEnd.datumSpend / ptsEnd.floorSpend) * ptsEnd.fvCon
+            : stateObj.name === 'OVEREXTENDED'
+            ? (ptsEnd.datumSpend / ptsEnd.ceilSpend) * ptsEnd.fvUp
+            : ptsEnd.fvBase;
+        const datumCapStr = _datumCapM >= 1 ? `$${_datumCapM.toFixed(2)}M` : `$${Math.round(_datumCapM * 1000)}k`;
+        if (hudDatumVal) { hudDatumVal.textContent = `${datumCapStr} / ${targetEndStr} yr`; }
 
         // Apply colors to Datum architecture
         datumLine.style.stroke = stateObj.color;
@@ -3429,9 +3449,13 @@
         const cSpendStr = ptsEnd.ceilSpend >= 1000 ? `$${(ptsEnd.ceilSpend/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${Math.round(ptsEnd.ceilSpend).toLocaleString('en-US')}k`;
         const fvConStr = ptsEnd.fvCon >= 1 ? `$${ptsEnd.fvCon.toFixed(2)}M` : `$${Math.round(ptsEnd.fvCon * 1000)}k`;
         const fSpendStr = ptsEnd.floorSpend >= 1000 ? `$${(ptsEnd.floorSpend/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${Math.round(ptsEnd.floorSpend).toLocaleString('en-US')}k`;
-        const wrBase = 0.04;
-        const reqCapEnd = ptsEnd.datumSpend / (wrBase * currentScenario.taxMult);
-        const reqCapStr = reqCapEnd >= 1000 ? `$${(reqCapEnd/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${Math.round(reqCapEnd)}k`;
+        const _snapStateName = (window.currentShapeStateObj || {}).name;
+        const _snapDatumCapM = _snapStateName === 'ABUNDANT'
+            ? (ptsEnd.datumSpend / ptsEnd.floorSpend) * ptsEnd.fvCon
+            : _snapStateName === 'OVEREXTENDED'
+            ? (ptsEnd.datumSpend / ptsEnd.ceilSpend) * ptsEnd.fvUp
+            : ptsEnd.fvBase;
+        const reqCapStr = _snapDatumCapM >= 1 ? `$${_snapDatumCapM.toFixed(2)}M` : `$${Math.round(_snapDatumCapM * 1000)}k`;
         const targetEndStr = Math.round(ptsEnd.datumSpend) >= 1000 ? `$${(ptsEnd.datumSpend/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${Math.round(ptsEnd.datumSpend).toLocaleString('en-US')}k`;
         const growthStr = currentScenario.yearsToGrow === 1 ? '1 yr until retirement' : `${currentScenario.yearsToGrow} yrs until retirement`;
         const _physicsLine = window.currentShapeStateObj.physics || '';
@@ -3468,7 +3492,7 @@
                 <text x="20" y="44" class="font-mono" font-size="10" fill="#ffffff" fill-opacity="0.5">STRUCTURAL CEILING</text>
                 <text x="20" y="59" class="font-mono" font-size="12" fill="#C9A84C" font-weight="bold">${fvUpStr} / ${cSpendStr} yr</text>
                 <text x="262" y="44" class="font-mono" font-size="10" fill="#ffffff" fill-opacity="0.5">TARGET DATUM</text>
-                <text x="262" y="59" class="font-mono" font-size="12" fill="#ffffff" font-weight="bold">${reqCapStr} needed / ${targetEndStr} yr</text>
+                <text x="262" y="59" class="font-mono" font-size="12" fill="#ffffff" font-weight="bold">${reqCapStr} / ${targetEndStr} yr</text>
                 <text x="505" y="44" class="font-mono" font-size="10" fill="#ffffff" fill-opacity="0.5">SURVIVAL FLOOR</text>
                 <text x="505" y="59" class="font-mono" font-size="12" fill="#e24b4a" font-weight="bold">${fvConStr} / ${fSpendStr} yr</text>
                 <line x1="0" y1="68" x2="700" y2="68" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1" />
@@ -3691,7 +3715,7 @@
         if(id === 'datum') {
             const capStr = fv >= 1 ? '$' + fv.toFixed(2) + 'M' : '$' + Math.round(fv * 1000) + 'k';
             const spStr  = spend >= 1000 ? '$' + (spend/1000).toFixed(2).replace(/\.00$/, '') + 'M/yr' : '$' + Math.round(spend) + 'k/yr';
-            text = '| ' + capStr + ' needed | ' + spStr;
+            text = '| ' + capStr + ' | ' + spStr;
         }
         document.getElementById(`tt-data-${id}`).textContent = text;
         
@@ -3736,9 +3760,13 @@
         
         showSvgTooltip('ceil', hoverAge, pts.fvUp, pts.ceilSpend, svgX, yC);
         showSvgTooltip('floor', hoverAge, pts.fvCon, pts.floorSpend, svgX, yF);
-        // reqCapM: capital needed to support datum spend at 4% withdrawal, pre-tax adjusted (fv param expects millions)
-        const _datumReqCapM = pts.datumSpend / (0.04 * (currentScenario.taxMult || 0.8)) / 1000;
-        showSvgTooltip('datum', hoverAge, _datumReqCapM, pts.datumSpend, svgX, yD);
+        const _hoverState = (window.currentShapeStateObj || {}).name;
+        const _datumCapM = _hoverState === 'ABUNDANT'
+            ? (pts.datumSpend / pts.floorSpend) * pts.fvCon
+            : _hoverState === 'OVEREXTENDED'
+            ? (pts.datumSpend / pts.ceilSpend) * pts.fvUp
+            : pts.fvBase;
+        showSvgTooltip('datum', hoverAge, _datumCapM, pts.datumSpend, svgX, yD);
     }
 
     function hideScrubber() {
@@ -4723,9 +4751,13 @@
         const reqs    = calculateRequirements(designState.datumTarget);
         if (!reqs) return;
 
-        const wrBase   = 0.04;
         const taxMult  = currentScenario.taxMult || 0.85;
-        const reqPortM = (designState.datumTarget * 1000) / (wrBase * taxMult) / 1000000;
+        const _lcp     = lastCalculatedPoints || {};
+        const _dTarget = designState.datumTarget;
+        const _wr      = (_lcp.ceilSpend  && _dTarget > _lcp.ceilSpend)  ? 0.050
+                       : (_lcp.floorSpend && _dTarget < _lcp.floorSpend) ? 0.028
+                       : 0.04;
+        const reqPortM = (_dTarget * 1000) / (_wr * taxMult) / 1000000;
 
         const sugg = [];
         if (!designState.retireLocked) {
@@ -5440,8 +5472,12 @@
           } else if (dDat < dFlr) {
             datTxt = '<strong style="color:#4a9eff;">Your Datum ($' + Math.round(dDat) + 'k/yr) sits below your Floor ($' + Math.round(dFlr) + 'k/yr).</strong> Structural slack built in — even a bad market sequence keeps you above your target. Studio can show how to redirect that margin toward earlier retirement or legacy.';
           } else if (datDiff > 5) {
-            var capNeed = ((dDat  / 0.04) / 1000).toFixed(1);
-            var capHave = ((skDatumRef / 0.04) / 1000).toFixed(1);
+            var _lcp3   = lastCalculatedPoints || {};
+            var _wr3    = (dDat > (_lcp3.ceilSpend  || Infinity)) ? 0.050
+                        : (dDat < (_lcp3.floorSpend || 0))        ? 0.028
+                        : 0.04;
+            var capNeed = ((dDat / _wr3) / 1000).toFixed(1);
+            var capHave = (_lcp3.fvBase || 0).toFixed(1);
             datTxt = '<strong style="color:var(--teal-mid);">Datum: $' + Math.round(dDat) + 'k/yr</strong> — $' + Math.abs(datDiff) + 'k/yr above the Sketch baseline of $' + Math.round(skDatumRef) + 'k/yr. Sustaining this needs ~$' + capNeed + 'M at retirement vs. the $' + capHave + 'M the Sketch currently projects. Studio maps whether contributions, a later retirement, or sequence luck closes that gap.';
           } else if (datDiff < -5) {
             datTxt = '<strong style="color:var(--teal-mid);">Datum: $' + Math.round(dDat) + 'k/yr</strong> — $' + Math.abs(datDiff) + 'k/yr below the Sketch baseline. Conservative target. Your buffer above the Floor is $' + Math.round(dDat - dFlr) + 'k/yr — Studio can show whether pulling the Datum back up holds across 10,000 paths.';
