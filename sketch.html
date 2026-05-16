@@ -1227,7 +1227,7 @@
                     <label class="control-label" for="slider-portfolio">Current Portfolio Balance</label>
                     <span class="control-value" id="val-portfolio">$750k</span>
                 </div>
-                <input type="range" id="slider-portfolio" min="0.001" max="50.0" value="0.75" step="0.001" tabindex="3">
+                <input type="range" id="slider-portfolio" min="0" max="1000" value="612" step="1" tabindex="3">
             </div>
         </div>
 
@@ -1240,7 +1240,7 @@
                     </div>
                     <div style="font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.4); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.1em;">Your target annual retirement spending — the point you choose to test inside your Shape.</div>
                 </div>
-                <input type="range" id="slider-datum" min="10" max="1000" value="100" step="1" tabindex="4">
+                <input type="range" id="slider-datum" min="0" max="1000" value="500" step="1" tabindex="4">
             </div>
 
             <div class="dialogue-block" style="padding-top:14px; border-top:1px solid rgba(255,255,255,0.06);">
@@ -1250,7 +1250,7 @@
                   <label class="control-label" for="slider-contrib">Annual Contributions</label>
                   <span class="control-value" id="val-contrib">$25,000</span>
                 </div>
-                <input type="range" id="slider-contrib" min="0" max="300000" value="25000" step="1000" tabindex="5">
+                <input type="range" id="slider-contrib" min="0" max="1000" value="830" step="1" tabindex="5">
               </div>
             </div>
 
@@ -2295,6 +2295,17 @@
   <script>
     const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
 
+    // Log-scale helpers: sliders store position 0-1000; these convert to/from actual values.
+    // Portfolio: $1k–$50M stored as millions (0.001–50)
+    function portPosToVal(pos)   { return 0.001 * Math.pow(50000, pos / 1000); }
+    function portValToPos(val)   { return Math.round(1000 * Math.log(val / 0.001) / Math.log(50000)); }
+    // Datum spend: $20k–$500k stored in $k (20–500)
+    function datumPosToVal(pos)  { return 20 * Math.pow(25, pos / 1000); }
+    function datumValToPos(val)  { return Math.round(1000 * Math.log(Math.max(val, 20) / 20) / Math.log(25)); }
+    // Annual contributions: $0–$200k stored in raw dollars; pos=0 → $0 (shifted log, effective min $1)
+    function contribPosToVal(pos){ return pos <= 0 ? 0 : Math.round(Math.pow(200000, pos / 1000)); }
+    function contribValToPos(val){ return val <= 0 ? 0 : Math.round(1000 * Math.log(val) / Math.log(200000)); }
+
     const slAge = document.getElementById('slider-age');
     const slAct = document.getElementById('slider-activation');
     const slPort = document.getElementById('slider-portfolio');
@@ -2378,9 +2389,9 @@
         return {
             age: parseInt(slAge.value),
             retire: parseInt(slAct.value),
-            port: parseFloat(slPort.value),
-            contrib: parseInt(slContrib.value),
-            datum: parseInt(slDatum.value)
+            port: portPosToVal(parseInt(slPort.value)),
+            contrib: contribPosToVal(parseInt(slContrib.value)),
+            datum: datumPosToVal(parseInt(slDatum.value))
         };
     }
 
@@ -2688,14 +2699,8 @@
                 tintRect.classList.add(previousStateName === 'OVEREXTENDED'
                     ? 'state-ambient-overextended'
                     : 'state-ambient-overextended-entry');
-            } else if (s.name === 'ABUNDANT') {
-                tintRect.classList.add('state-ambient-abundant');
-            } else if (s.name === 'GROUNDED') {
-                tintRect.classList.add('state-ambient-grounded');
-            } else if (s.name === 'STRETCHED') {
-                tintRect.classList.add('state-ambient-stretched');
             }
-            // EXPANSIVE: no tint
+            // All non-OVEREXTENDED states: no canvas tint (boundary pulses handle load-bearing signals)
         }
         previousStateName = s.name;
 
@@ -2742,17 +2747,9 @@
         let currentAge    = clamp(currentAgeRaw, 18, 85);
         let activationAge = clamp(activationAgeRaw, currentAge + 1, 90);
         
-        let portfolioVolRaw = parseFloat(slPort.value);
-        let portfolioVol = clamp(portfolioVolRaw, 0.0, 50.0);
-        slPort.value = portfolioVol;
-        
-        let annualContribRaw = parseInt(slContrib.value);
-        let annualContrib = clamp(annualContribRaw, 0, 300000);
-        slContrib.value = annualContrib;
-        
-        let targetSpendRaw = parseInt(slDatum.value);
-        let targetSpend = clamp(targetSpendRaw, 20, 1000);
-        slDatum.value = targetSpend;
+        let portfolioVol  = clamp(portPosToVal(parseInt(slPort.value)),   0.001, 50.0);
+        let annualContrib = clamp(contribPosToVal(parseInt(slContrib.value)), 0, 200000);
+        let targetSpend   = Math.round(clamp(datumPosToVal(parseInt(slDatum.value)), 20, 500));
         
         let paradigm = 'average';
         let paradigmName = 'Historical';
@@ -3625,9 +3622,9 @@
     function resetSketch() {
         slAge.value = 40;
         slAct.value = 65;
-        slPort.value = 0.75;
-        slDatum.value = 100;
-        slContrib.value = 25000;
+        slPort.value   = portValToPos(0.75);
+        slDatum.value  = datumValToPos(100);
+        slContrib.value = contribValToPos(25000);
         document.getElementById('market-avg').checked = true;
         document.getElementById('infl-real').checked = true;
         document.getElementById('tax-20').checked = true;
@@ -3685,7 +3682,7 @@
         if (isDraggingDatum) {
             triggerInteraction();
             let newSpend = ((450 - svgP.y) / 400) * (globalYMax - globalYMin) + globalYMin;
-            slDatum.value = clamp(newSpend, 20, 1000);
+            slDatum.value = datumValToPos(clamp(newSpend, 20, 500));
             touched.spending = true; updateTracker();
             scheduleUpdate();
             return;
@@ -3834,7 +3831,7 @@
         // Y axis: top = globalYMax, bottom = globalYMin (from updateEngine)
         const pct    = Math.max(0, Math.min(1, (relY - 20) / (svgH - 60)));
         const val    = globalYMax - pct * (globalYMax - globalYMin);
-        return Math.max(parseFloat(slDatum.min), Math.min(parseFloat(slDatum.max), val));
+        return Math.max(20, Math.min(500, val));
       }
 
       datumDragger.addEventListener('pointerdown', (e) => {
@@ -3850,7 +3847,7 @@
       datumDragger.addEventListener('pointermove', (e) => {
         if (!isDraggingDatum) return;
         const val = svgYToValue(e.clientY);
-        slDatum.value = Math.round(val);
+        slDatum.value = datumValToPos(Math.round(val));
         slDatum.dispatchEvent(new Event('input'));
       });
 
@@ -4051,9 +4048,9 @@
       var cfg = [
         { valId: 'val-age', slider: slAge, w: '80px', isCurrency: false, getEditVal: () => String(Math.round(parseFloat(slAge.value))), clean: s => s.replace(/[^0-9]/g, ''), validate: () => true, toSlider: v => v },
         { valId: 'val-activation', slider: slAct, w: '80px', isCurrency: false, getEditVal: () => String(Math.round(parseFloat(slAct.value))), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= Math.round(parseFloat(slAge.value)) && v <= 90, toSlider: v => v },
-        { valId: 'val-portfolio', slider: slPort, w: '140px', isCurrency: true, getEditVal: () => '$' + Math.round(parseFloat(slPort.value) * 1000000).toLocaleString('en-US'), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 0 && v <= 50000000, toSlider: v => v / 1000000 },
-        { valId: 'val-datum', slider: slDatum, w: '140px', isCurrency: true, getEditVal: () => '$' + Math.round(parseFloat(slDatum.value) * 1000).toLocaleString('en-US'), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 20000 && v <= 1000000, toSlider: v => v / 1000 },
-        { valId: 'val-contrib', slider: slContrib, w: '140px', isCurrency: true, getEditVal: () => '$' + Math.round(parseFloat(slContrib.value)).toLocaleString('en-US'), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 0 && v <= 300000, toSlider: v => v }
+        { valId: 'val-portfolio', slider: slPort, w: '140px', isCurrency: true, getEditVal: () => '$' + Math.round(portPosToVal(parseInt(slPort.value)) * 1000000).toLocaleString('en-US'), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 1000 && v <= 50000000, toSlider: v => portValToPos(v / 1000000) },
+        { valId: 'val-datum', slider: slDatum, w: '140px', isCurrency: true, getEditVal: () => '$' + Math.round(datumPosToVal(parseInt(slDatum.value)) * 1000).toLocaleString('en-US'), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 20000 && v <= 500000, toSlider: v => datumValToPos(v / 1000) },
+        { valId: 'val-contrib', slider: slContrib, w: '140px', isCurrency: true, getEditVal: () => '$' + contribPosToVal(parseInt(slContrib.value)).toLocaleString('en-US'), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 0 && v <= 200000, toSlider: v => contribValToPos(v) }
       ];
 
       cfg.forEach(function(c) {
@@ -4725,7 +4722,7 @@
       const df  = Math.round(currentScenario._designedFloor || lastCalculatedPoints.floorSpend);
       const age    = parseInt(document.getElementById('slider-age').value, 10);
       const retire = parseInt(document.getElementById('slider-activation').value, 10);
-      const port   = Math.round(parseFloat(document.getElementById('slider-portfolio').value) * 1000);
+      const port   = Math.round(portPosToVal(parseInt(document.getElementById('slider-portfolio').value)) * 1000);
       const params = `?ceil=${dc}&datum=${dd}&floor=${df}&age=${age}&retire=${retire}&port=${port}k`;
       ['studio-cta-link','studio-cta-main'].forEach(id => {
         const el = document.getElementById(id);
@@ -4836,11 +4833,11 @@
 
       if (type === 'retire')  document.getElementById('slider-activation').value = Math.min(value, 90);
       if (type === 'contrib') {
-        document.getElementById('slider-contrib').value = Math.min(value, 300000);
+        document.getElementById('slider-contrib').value = contribValToPos(Math.min(value, 200000));
         const panel = document.getElementById('advanced-panel');
         if (!panel.classList.contains('open')) document.getElementById('advanced-trigger-btn').click();
       }
-      if (type === 'capital') document.getElementById('slider-portfolio').value = Math.min(value, 50);
+      if (type === 'capital') document.getElementById('slider-portfolio').value = portValToPos(Math.min(value, 50));
 
       scheduleUpdate();
       updateTracker();
@@ -5353,8 +5350,8 @@
         var age       = parseInt((el('slider-age')        ||{value:'40'}).value)||40;
         var retireAge = parseInt((el('slider-activation') ||{value:'65'}).value)||65;
         var lifeAge   = 90; // no lifespan slider — use standard planning horizon
-        var port      = parseFloat((el('slider-portfolio')||{value:'0.75'}).value)||0.75; // in millions
-        var contrib   = parseFloat((el('slider-contrib')  ||{value:'25000'}).value)||25000; // raw dollars
+        var port      = portPosToVal(parseInt((el('slider-portfolio')||{value:'612'}).value)||612); // in millions
+        var contrib   = contribPosToVal(parseInt((el('slider-contrib')||{value:'830'}).value)||830); // raw dollars
         var tax       = parseInt((el('slider-tax')        ||{value:'20'}).value)||20;
         var inflEl    = document.querySelector('input[name="inflation"]:checked');
         var mktEl     = document.querySelector('input[name="market"]:checked');
