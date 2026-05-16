@@ -1419,8 +1419,12 @@
                          <div class="hud-diff" style="border-left: none; padding-left: 0;">
                             <div class="tel-readout" id="pinned-readout">
                                 <div class="readout-row" style="margin-bottom: 6px;">
-                                    <span style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Pin State:</span> 
+                                    <span style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Pin State:</span>
                                     <strong id="pin-state-name" class="hud-state-label">UNKNOWN</strong>
+                                </div>
+                                <div class="readout-row" style="margin-bottom: 6px;">
+                                    <span style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Designed State:</span>
+                                    <strong id="pin-designed-state" class="hud-state-label">—</strong>
                                 </div>
                                 <div class="readout-row"><strong id="lbl-pin-means">What it Means:</strong> <span id="pin-means" class="data-line">Modify your timeline...</span></div>
                                 <div class="readout-row"><strong id="lbl-pin-inspect">What to Consider:</strong> <span id="pin-inspect" class="data-line">Ready to analyze differences.</span></div>
@@ -2929,79 +2933,189 @@
         if (chartSummary) chartSummary.textContent = `Preliminary retirement Shape updated. Floor $${Math.round(ptsEnd.floorSpend).toLocaleString()}/yr, Datum $${Math.round(ptsEnd.datumSpend).toLocaleString()}/yr, Ceiling $${Math.round(ptsEnd.ceilSpend).toLocaleString()}/yr. Retirement age ${activationAge}. State: ${stateObj.name}.`;
 
         if (pinnedState) {
-            // ── What Changed (input diff, max 4) ────────────────────────────
+            // ── Magnitude bands per lever ──────────────────────────────────
+            const _retireDelta  = activationAge - pinnedState.retire;
+            const _retireAbs    = Math.abs(_retireDelta);
+            const _retireBand   = _retireAbs >= 10 ? 'dramatic' : _retireAbs >= 5 ? 'large' : _retireAbs >= 2 ? 'moderate' : 'small';
+
+            const _capDelta     = portfolioVol - pinnedState.port;
+            const _capPct       = Math.abs(_capDelta) / Math.max(Math.abs(pinnedState.port), 0.01);
+            const _capBand      = _capPct > 0.5 ? 'dramatic' : _capPct >= 0.25 ? 'large' : _capPct >= 0.10 ? 'moderate' : 'small';
+            const _capPctStr    = `${Math.round(_capPct * 100)}%`;
+
+            const _contribDelta = annualContrib - pinnedState.contrib;
+            const _contribAbs   = Math.abs(_contribDelta);
+            const _contribBand  = _contribAbs > 40000 ? 'dramatic' : _contribAbs >= 15000 ? 'large' : _contribAbs >= 5000 ? 'moderate' : 'small';
+            const _contribKStr  = `$${Math.max(1, Math.round(_contribAbs / 1000))}k`;
+
+            const _datumDelta   = targetSpend - pinnedState.datum;
+            const _datumAbs     = Math.abs(_datumDelta);
+            const _datumBand    = _datumAbs > 25 ? 'large' : _datumAbs >= 10 ? 'moderate' : 'small';
+            const _datumPct     = Math.round(_datumAbs / Math.max(Math.abs(pinnedState.datum), 1) * 100);
+            const _dCur         = targetSpend >= 1000 ? `$${(targetSpend/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${targetSpend}k`;
+
+            const _ageDelta     = currentAge - pinnedState.age;
+            const _ageAbs       = Math.abs(_ageDelta);
+            const _ageBand      = _ageAbs > 7 ? 'large' : _ageAbs >= 3 ? 'moderate' : 'small';
+
+            const _pinCurMkt    = paradigmName;
+            const _pinCurInfl   = isNominal ? 'Nominal' : 'Real';
+            const _pinCurTax    = parseInt(slTax.value);
+            const _taxDelta     = _pinCurTax - (pinnedState.pinnedTax || 0);
+            const _taxAbs       = Math.abs(_taxDelta);
+            const _taxBand      = _taxAbs > 7 ? 'large' : _taxAbs >= 3 ? 'moderate' : 'small';
+
+            // ── Input change flags ─────────────────────────────────────────
+            const _retireChg    = pinnedState.retire !== activationAge;
+            const _ageChg       = pinnedState.age !== currentAge;
+            const _capitalChg   = Math.abs(pinnedState.port - portfolioVol) > 0.001;
+            const _contribChg   = Math.abs(pinnedState.contrib - annualContrib) > 100;
+            const _datumChg     = pinnedState.datum !== targetSpend;
+            const _mktChg       = !!(pinnedState.pinnedParadigm && pinnedState.pinnedParadigm !== _pinCurMkt);
+            const _taxChg       = !!(pinnedState.pinnedTax !== undefined && pinnedState.pinnedTax !== _pinCurTax);
+            const _inflChg      = !!(pinnedState.pinnedInflStr && pinnedState.pinnedInflStr !== _pinCurInfl);
+
+            // ── What Changed (all meaningful levers, no cap) ───────────────
             let pChanged = [];
-            if (pinnedState.retire !== activationAge) {
-                const _pDir = activationAge > pinnedState.retire ? 'later' : 'earlier';
-                pChanged.push(`Retirement age moved ${_pDir} to ${activationAge}.`);
+            if (_retireChg) {
+                const _dir = _retireDelta > 0 ? 'later' : 'earlier';
+                pChanged.push(`Retirement moved ${_dir} by ${_retireAbs} yr to ${activationAge}.`);
             }
-            if (pinnedState.age !== currentAge) {
-                pChanged.push(`Starting age moved to ${currentAge}.`);
+            if (_ageChg)     pChanged.push(`Current age moved to ${currentAge}.`);
+            if (_capitalChg) {
+                const _dir = _capDelta > 0 ? 'up' : 'down';
+                const _str = portfolioVol >= 1 ? `$${portfolioVol.toFixed(2)}M` : `$${Math.round(portfolioVol * 1000)}k`;
+                pChanged.push(`Capital moved ${_dir} to ${_str} (${_capPctStr}).`);
             }
-            if (Math.abs(pinnedState.port - portfolioVol) > 0.001) {
-                const _pDir = portfolioVol > pinnedState.port ? 'up' : 'down';
-                const _pStr = portfolioVol >= 1 ? `$${portfolioVol.toFixed(2)}M` : `$${Math.round(portfolioVol * 1000)}k`;
-                pChanged.push(`Capital moved ${_pDir} to ${_pStr}.`);
+            if (_datumChg) {
+                const _dir = _datumDelta > 0 ? 'up' : 'down';
+                pChanged.push(`Datum moved ${_dir} to ${_dCur}/yr.`);
             }
-            if (pinnedState.datum !== targetSpend) {
-                const _pDir = targetSpend > pinnedState.datum ? 'up' : 'down';
-                const _dStr = targetSpend >= 1000 ? `$${(targetSpend/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${targetSpend}k`;
-                pChanged.push(`Datum moved ${_pDir} to ${_dStr}/yr.`);
+            if (_contribChg) {
+                const _dir = _contribDelta > 0 ? 'up' : 'down';
+                const _str = annualContrib >= 1000 ? `$${(annualContrib/1000).toFixed(0)}k` : `$${annualContrib}`;
+                pChanged.push(`Contributions moved ${_dir} to ${_str}/yr.`);
             }
-            if (Math.abs(pinnedState.contrib - annualContrib) > 100) {
-                const _pDir = annualContrib > pinnedState.contrib ? 'up' : 'down';
-                const _cStr = annualContrib >= 1000 ? `$${(annualContrib/1000).toFixed(0)}k` : `$${annualContrib}`;
-                pChanged.push(`Contributions moved ${_pDir} to ${_cStr}/yr.`);
+            if (_mktChg)     pChanged.push(`Market changed to ${_pinCurMkt}.`);
+            if (_inflChg)    pChanged.push(`Inflation view changed to ${_pinCurInfl}.`);
+            if (_taxChg) {
+                const _dir = _taxDelta > 0 ? 'higher' : 'lower';
+                pChanged.push(`Tax drag moved ${_dir} to ${_pinCurTax}%.`);
             }
-            const _pinCurMkt  = paradigmName;
-            const _pinCurInfl = isNominal ? 'Nominal' : 'Real';
-            const _pinCurTax  = parseInt(slTax.value);
-            if (pinnedState.pinnedParadigm && pinnedState.pinnedParadigm !== _pinCurMkt) {
-                pChanged.push(`Market changed to ${_pinCurMkt}.`);
-            }
-            if (pinnedState.pinnedInflStr && pinnedState.pinnedInflStr !== _pinCurInfl) {
-                pChanged.push(`Inflation view changed to ${_pinCurInfl}.`);
-            }
-            if (pinnedState.pinnedTax !== undefined && pinnedState.pinnedTax !== _pinCurTax) {
-                const _pDir = _pinCurTax > pinnedState.pinnedTax ? 'higher' : 'lower';
-                pChanged.push(`Tax drag moved ${_pDir} to ${_pinCurTax}%.`);
-            }
-            if (pChanged.length > 4) pChanged = pChanged.slice(0, 4);
 
-            // ── Output deltas ────────────────────────────────────────────────
-            const _pFloorPin  = pinnedState.pinnedFloor       || 0;
-            const _pCeilPin   = pinnedState.pinnedCeil        || 0;
-            const _pDatumPin  = pinnedState.pinnedDatumSpend  || 0;
-            const _pRangePin  = Math.max(_pCeilPin - _pFloorPin, 1);
-            const _pRangeCur  = ptsEnd.ceilSpend - ptsEnd.floorSpend;
-            const _pWidthDelta = _pRangeCur - _pRangePin;
-            const _pMidDelta   = (ptsEnd.floorSpend + ptsEnd.ceilSpend) / 2 - (_pFloorPin + _pCeilPin) / 2;
-
-            // Datum position within Shape: 0 = at Floor, 1 = at Ceiling
+            // ── Output deltas ──────────────────────────────────────────────
+            const _pFloorPin    = pinnedState.pinnedFloor      || 0;
+            const _pCeilPin     = pinnedState.pinnedCeil       || 0;
+            const _pDatumPin    = pinnedState.pinnedDatumSpend || 0;
+            const _pRangePin    = Math.max(_pCeilPin - _pFloorPin, 1);
+            const _pRangeCur    = ptsEnd.ceilSpend - ptsEnd.floorSpend;
+            const _pWidthDelta  = _pRangeCur - _pRangePin;
+            const _pMidDelta    = (ptsEnd.floorSpend + ptsEnd.ceilSpend) / 2 - (_pFloorPin + _pCeilPin) / 2;
             const _pDatumPctPin = _pRangePin > 0 ? (_pDatumPin - _pFloorPin) / _pRangePin : 0.5;
             const _pDatumPctCur = _pRangeCur > 0 ? (ptsEnd.datumSpend - ptsEnd.floorSpend) / _pRangeCur : 0.5;
             const _pDatumNearCeil  = _pDatumPctCur > 0.78;
             const _pDatumNearFloor = _pDatumPctCur < 0.22;
+            const _pWidthSig    = Math.abs(_pWidthDelta) > Math.max(10, _pRangePin * 0.10);
+            const _pMidSig      = Math.abs(_pMidDelta)   > Math.max(8,  _pRangePin * 0.08);
+            const _pWidened     = _pWidthSig && _pWidthDelta > 0;
+            const _pCompressed  = _pWidthSig && _pWidthDelta < 0;
+            const _pShiftUp     = !_pWidthSig && _pMidSig && _pMidDelta > 0;
+            const _pShiftDn     = !_pWidthSig && _pMidSig && _pMidDelta < 0;
 
-            // Dominant output movement flags
-            const _pWidthSig   = Math.abs(_pWidthDelta) > Math.max(10, _pRangePin * 0.10);
-            const _pMidSig     = Math.abs(_pMidDelta)   > Math.max(8,  _pRangePin * 0.08);
-            const _pWidened    = _pWidthSig && _pWidthDelta > 0;
-            const _pCompressed = _pWidthSig && _pWidthDelta < 0;
-            const _pShiftUp    = !_pWidthSig && _pMidSig && _pMidDelta > 0;
-            const _pShiftDn    = !_pWidthSig && _pMidSig && _pMidDelta < 0;
+            // ── Dominant lever ranking ─────────────────────────────────────
+            const _lw = [];
+            if (_retireChg)  _lw.push({ key: 'retire',  w: _retireAbs * 10 });
+            if (_capitalChg) _lw.push({ key: 'capital', w: _capPct * 100 });
+            if (_contribChg) _lw.push({ key: 'contrib', w: _contribAbs / 600 });
+            if (_datumChg)   _lw.push({ key: 'datum',   w: _datumAbs / 3 });
+            if (_mktChg)     _lw.push({ key: 'market',  w: 55 });
+            if (_taxChg)     _lw.push({ key: 'tax',     w: _taxAbs * 7 });
+            if (_inflChg)    _lw.push({ key: 'infl',    w: 25 });
+            if (_ageChg)     _lw.push({ key: 'age',     w: _ageAbs * 4 });
+            _lw.sort((a, b) => b.w - a.w);
+            const _dom  = _lw[0];
+            const _sec  = _lw[1];
+            const _twt  = _lw.reduce((s, l) => s + l.w, 0);
+            const _secDriving = !!(_sec && _twt > 0 && _sec.w / _twt > 0.30);
 
-            // Input change flags for cause attribution
-            const _retireChg  = pinnedState.retire !== activationAge;
-            const _capitalChg = Math.abs(pinnedState.port - portfolioVol) > 0.001;
-            const _contribChg = Math.abs(pinnedState.contrib - annualContrib) > 100;
-            const _datumChg   = pinnedState.datum !== targetSpend;
-            const _mktChg     = !!(pinnedState.pinnedParadigm && pinnedState.pinnedParadigm !== _pinCurMkt);
-            const _taxChg     = !!(pinnedState.pinnedTax !== undefined && pinnedState.pinnedTax !== _pinCurTax);
-            const _inflChg    = !!(pinnedState.pinnedInflStr && pinnedState.pinnedInflStr !== _pinCurInfl);
-            const _multiChg   = pChanged.length > 1;
+            // ── Magnitude adverbs + per-lever phrases ──────────────────────
+            const _mag = { small: 'slightly', moderate: 'moderately', large: 'meaningfully', dramatic: 'dramatically' };
 
-            // ── What It Means + What To Consider (output-driven) ────────────
+            const _dp = (() => {
+                if (!_dom) return '';
+                switch (_dom.key) {
+                    case 'retire':  return _retireDelta > 0
+                        ? `A ${_retireAbs}-year delay ${_mag[_retireBand]}`
+                        : `Retiring ${_retireAbs} years earlier ${_mag[_retireBand]}`;
+                    case 'capital': return `A ${_capPctStr} capital ${_capDelta > 0 ? 'increase' : 'decrease'} ${_mag[_capBand]}`;
+                    case 'contrib': return `A ${_contribKStr} contribution ${_contribDelta > 0 ? 'increase' : 'reduction'} ${_mag[_contribBand]}`;
+                    case 'datum':   return `A ${_datumPct}% Datum ${_datumDelta > 0 ? 'increase' : 'decrease'} ${_mag[_datumBand]}`;
+                    case 'market':  return paradigm === 'optimistic' ? 'Optimistic market assumptions'
+                                         : paradigm === 'stress'    ? 'Stress market assumptions'
+                                         :                            'Changed market assumptions';
+                    case 'tax':     return `A ${_taxAbs}-point tax drag ${_taxDelta > 0 ? 'increase' : 'decrease'} ${_mag[_taxBand]}`;
+                    case 'infl':    return `Switching to ${_pinCurInfl} view`;
+                    case 'age':     return _ageDelta > 0
+                        ? `Starting ${_ageAbs} years later ${_mag[_ageBand]}`
+                        : `Starting ${_ageAbs} years earlier ${_mag[_ageBand]}`;
+                    default: return '';
+                }
+            })();
+
+            const _domNoun = (() => {
+                if (!_dom) return 'the change';
+                switch (_dom.key) {
+                    case 'retire':  return `the ${_retireAbs}-year ${_retireDelta > 0 ? 'delay' : 'earlier retirement'}`;
+                    case 'capital': return `the ${_capPctStr} capital ${_capDelta > 0 ? 'increase' : 'decrease'}`;
+                    case 'contrib': return `the ${_contribKStr} contribution ${_contribDelta > 0 ? 'lift' : 'reduction'}`;
+                    case 'datum':   return 'the Datum shift';
+                    case 'market':  return 'the market assumption change';
+                    case 'tax':     return `the ${_taxAbs}-point tax change`;
+                    case 'age':     return `the ${_ageAbs}-year timeline change`;
+                    default: return 'the change';
+                }
+            })();
+
+            const _retireWhy = _retireDelta > 0
+                ? (_retireBand === 'small'    ? 'one extra year of compounding'
+                   : _retireBand === 'dramatic' ? 'a full decade more of compounding lifted both Floor and Ceiling materially'
+                   : `${_retireAbs} more years of compounding raised both boundaries`)
+                : (_retireBand === 'small'    ? 'one fewer year of compounding reduced the range'
+                   :                           'fewer years for capital to compound reduced both boundaries');
+
+            const _secClause = (() => {
+                if (!_secDriving || !_sec) return '';
+                switch (_sec.key) {
+                    case 'retire':  return `the ${_retireAbs}-year ${_retireDelta > 0 ? 'delay' : 'pullback'} reinforced it`;
+                    case 'capital': return `the ${_capPctStr} capital ${_capDelta > 0 ? 'increase' : 'decrease'} reinforced it`;
+                    case 'contrib': return `the ${_contribKStr} contribution ${_contribDelta > 0 ? 'lift' : 'reduction'} reinforced it`;
+                    case 'datum':   return 'the Datum shift contributed';
+                    case 'market':  return 'the market assumption change reinforced it';
+                    case 'tax':     return `the ${_taxAbs}-point tax change reinforced it`;
+                    default: return '';
+                }
+            })();
+
+            const _bridge = (() => {
+                if (!_dom) return 'Studio can model this change against your actual accounts and income sequencing.';
+                switch (_dom.key) {
+                    case 'retire':  return `Studio can test whether SS timing, bridge years, and withdrawal order support this ${_retireAbs}-year shift.`;
+                    case 'capital': return `Studio can test whether account types and tax sequencing support this ${Math.round(_capPct * 100)}% capital change.`;
+                    case 'contrib': return `Studio can test whether contribution sequencing and account placement support this ${_contribKStr}/yr change.`;
+                    case 'datum':   return `Studio can test whether tax architecture and income timing support a Datum ${_datumPct}% ${_datumDelta > 0 ? 'higher' : 'lower'}.`;
+                    case 'market':  return paradigm === 'stress'
+                        ? "Studio can test this Shape across the full engine's probability-weighted paths instead of the Sketch's broad-stroke model."
+                        : paradigm === 'optimistic'
+                        ? "Studio can model how often this upside case occurs across thousands of simulated market paths."
+                        : "Studio can test this Shape across the full engine instead of the Sketch's broad-stroke paths.";
+                    case 'tax':     return 'Studio can replace this flat haircut with account-level tax sequencing across your actual accounts.';
+                    case 'infl':    return 'Studio can model both real and nominal projections against your actual account and income sequencing.';
+                    case 'age':     return 'Studio can model this timeline change against your actual account types and spending projections.';
+                    default: return 'Studio can model this change against your actual accounts and income sequencing.';
+                }
+            })();
+
+            // ── What It Means + What To Consider ──────────────────────────
             let _pinMeans = '';
             let _pinConsider = '';
 
@@ -3010,84 +3124,108 @@
                 _pinConsider = 'Adjust any input to see how the Shape responds.';
 
             } else if (_pWidened) {
-                let _cause = '';
-                if (!_multiChg && _retireChg && activationAge > pinnedState.retire) _cause = ' — more time for capital to compound';
-                else if (!_multiChg && _capitalChg)  _cause = ' — higher capital raised both boundaries';
-                else if (!_multiChg && _contribChg)  _cause = ' — higher contributions compounded over the growth period';
-                else if (!_multiChg && _mktChg && paradigm === 'optimistic') _cause = ' — optimistic assumptions raised the upside boundary';
-                else if (!_multiChg && _taxChg)       _cause = ' — lower tax drag expanded both boundaries';
+                let _open = 'Compared with your pinned Shape, the Shape widened.';
+                if (_dp) {
+                    switch (_dom.key) {
+                        case 'retire':  _open = `${_dp} widened the Shape — ${_retireWhy}.`; break;
+                        case 'capital': _open = `${_dp} widened the Shape — higher capital raised both boundaries.`; break;
+                        case 'contrib': _open = `${_dp} widened the Shape — more contributions compounded over the growth period.`; break;
+                        case 'market':  _open = `${_dp} widened the Shape — higher growth estimates raised both boundaries.`; break;
+                        case 'tax':     _open = `${_dp} widened the Shape — less withdrawal needed to support the same spending.`; break;
+                        case 'age':     _open = `${_dp} widened the Shape — more years remaining for capital to compound.`; break;
+                    }
+                }
+                const _secText = _secDriving && _secClause ? ` Of the two changes, ${_domNoun} drove most of the widening; ${_secClause}.` : '';
                 const _datumNote = (_pDatumNearCeil && _datumChg) ? ' Your Datum now sits closer to the Ceiling of this wider range.' : '';
                 const _shiftNote = _pMidSig ? ` It also shifted ${_pMidDelta > 0 ? 'higher' : 'lower'} overall.` : '';
-                _pinMeans = `Compared with your pinned Shape, the Shape widened${_cause}.${_datumNote}${_shiftNote}`;
+                _pinMeans    = `${_open}${_secText}${_datumNote}${_shiftNote}`;
                 _pinConsider = _pDatumNearCeil
                     ? 'Studio can test whether taxes, income timing, and account sequencing can support your Datum at this higher end of the range.'
-                    : 'Studio can test whether account types, tax sequencing, and contribution timing can sustain this wider range.';
+                    : _bridge;
 
             } else if (_pCompressed) {
-                let _cause = '';
-                if (!_multiChg && _retireChg && activationAge < pinnedState.retire) _cause = ' — fewer years for capital to compound';
-                else if (!_multiChg && _capitalChg && portfolioVol < pinnedState.port) _cause = ' — lower capital lowered both boundaries';
-                else if (!_multiChg && _mktChg && paradigm === 'stress') _cause = ' — stress assumptions lowered the spending boundaries';
-                else if (!_multiChg && _taxChg && _pinCurTax > pinnedState.pinnedTax) _cause = ' — more portfolio withdrawal is needed to support the same spending';
+                let _open = 'Compared with your pinned Shape, the Shape compressed.';
+                if (_dp) {
+                    switch (_dom.key) {
+                        case 'retire':  _open = `${_dp} compressed the Shape — ${_retireWhy}.`; break;
+                        case 'capital': _open = `${_dp} compressed the Shape — lower capital reduced both boundaries.`; break;
+                        case 'market':  _open = `${_dp} compressed the Shape — stress assumptions lowered both boundaries.`; break;
+                        case 'tax':     _open = `${_dp} compressed the Shape — more withdrawal needed to support the same spending.`; break;
+                        case 'age':     _open = `${_dp} compressed the Shape — fewer years remaining for capital to compound.`; break;
+                    }
+                }
+                const _secText = _secDriving && _secClause ? ` Of the two changes, ${_domNoun} drove most of the compression; ${_secClause}.` : '';
                 const _datumNote = _pDatumNearCeil ? ' Your Datum now sits closer to the Ceiling of this tighter range.'
                     : _pDatumNearFloor ? ' Your Datum now sits closer to the Floor of this tighter range.' : '';
                 const _shiftNote = _pMidSig ? ` It also shifted ${_pMidDelta > 0 ? 'higher' : 'lower'} overall.` : '';
-                _pinMeans = `Compared with your pinned Shape, the Shape compressed${_cause}.${_datumNote}${_shiftNote}`;
+                _pinMeans    = `${_open}${_secText}${_datumNote}${_shiftNote}`;
                 _pinConsider = _pDatumNearCeil
                     ? 'Studio can test whether tax strategies, Social Security timing, or contribution changes can relieve pressure on this compressed Shape.'
                     : _pDatumNearFloor
                     ? 'Studio can inspect lower-bound resilience across bad sequences, early downturns, and spending drift.'
-                    : 'Studio can test whether contribution changes, tax strategies, or timeline adjustments can restore the spending boundaries.';
+                    : _bridge;
 
             } else if (_pShiftUp) {
-                let _cause = '';
-                if (!_multiChg && _capitalChg)  _cause = ' — higher capital lifted both boundaries';
-                else if (!_multiChg && _contribChg) _cause = ' — higher contributions raised both boundaries';
-                else if (!_multiChg && _retireChg && activationAge > pinnedState.retire) _cause = ' — more compounding time raised both boundaries';
-                _pinMeans = `Compared with your pinned Shape, the Shape shifted higher${_cause}.`;
+                let _open = 'Compared with your pinned Shape, the Shape shifted higher.';
+                if (_dp) {
+                    switch (_dom.key) {
+                        case 'capital': _open = `${_dp} shifted the Shape higher — higher capital lifted both boundaries.`; break;
+                        case 'contrib': _open = `${_dp} shifted the Shape higher — more contributions raised both boundaries.`; break;
+                        case 'retire':  _open = `${_dp} shifted the Shape higher — more compounding time raised both boundaries.`; break;
+                        case 'age':     _open = `${_dp} shifted the Shape higher — more years remaining for capital to compound.`; break;
+                    }
+                }
+                const _secText = _secDriving && _secClause ? ` ${_secClause.charAt(0).toUpperCase() + _secClause.slice(1)}.` : '';
+                _pinMeans    = `${_open}${_secText}`;
                 _pinConsider = _pDatumNearCeil
                     ? 'Studio can test whether taxes, income timing, and account sequencing can support your Datum at this level.'
-                    : 'Studio can test whether account types and tax sequencing support this higher range.';
+                    : _bridge;
 
             } else if (_pShiftDn) {
-                let _cause = '';
-                if (!_multiChg && _capitalChg)  _cause = ' — lower capital lowered both boundaries';
-                else if (!_multiChg && _contribChg) _cause = ' — lower contributions reduced both boundaries';
-                _pinMeans = `Compared with your pinned Shape, the Shape shifted lower${_cause}.`;
+                let _open = 'Compared with your pinned Shape, the Shape shifted lower.';
+                if (_dp) {
+                    switch (_dom.key) {
+                        case 'capital': _open = `${_dp} shifted the Shape lower — lower capital reduced both boundaries.`; break;
+                        case 'contrib': _open = `${_dp} shifted the Shape lower — fewer contributions reduced both boundaries.`; break;
+                        case 'retire':  _open = `${_dp} shifted the Shape lower — earlier retirement compressed both boundaries.`; break;
+                        case 'age':     _open = `${_dp} shifted the Shape lower — starting later shortened the compounding window.`; break;
+                    }
+                }
+                const _secText = _secDriving && _secClause ? ` ${_secClause.charAt(0).toUpperCase() + _secClause.slice(1)}.` : '';
+                _pinMeans    = `${_open}${_secText}`;
                 _pinConsider = _pDatumNearFloor
                     ? 'Studio can inspect lower-bound resilience and test whether contribution or timing changes can restore the Floor.'
-                    : 'Studio can test whether contribution changes, tax strategies, or timeline adjustments can restore the spending boundaries.';
+                    : _bridge;
 
             } else if (_datumChg && Math.abs(_pDatumPctCur - _pDatumPctPin) > 0.08) {
-                // Datum moved within a Shape that didn't change much
                 if (ptsEnd.datumSpend > _pDatumPin) {
-                    _pinMeans    = 'Compared with your pinned Shape, your Datum moved closer to the Ceiling, leaving less room for market disappointment.';
-                    _pinConsider = 'Studio can test whether taxes, income timing, and account sequencing can support this higher target across your actual account types.';
+                    _pinMeans    = `Compared with your pinned Shape, your Datum moved ${_mag[_datumBand]} closer to the Ceiling, leaving less room for market disappointment.`;
+                    _pinConsider = `Studio can test whether tax architecture and income timing support a Datum ${_datumPct}% higher across your actual account types.`;
                 } else {
-                    _pinMeans    = 'Compared with your pinned Shape, your Datum moved closer to the Floor, adding buffer between your target and the survival boundary.';
+                    _pinMeans    = `Compared with your pinned Shape, your Datum moved ${_mag[_datumBand]} closer to the Floor, adding buffer between your target and the survival boundary.`;
                     _pinConsider = 'Studio can test whether the additional margin creates room for an earlier date or additional savings goals.';
                 }
 
             } else if (_mktChg) {
                 if (paradigm === 'stress') {
-                    _pinMeans = 'Compared with your pinned Shape, stress assumptions compressed the Shape and lowered the spending boundaries.';
+                    _pinMeans    = 'Compared with your pinned Shape, stress assumptions compressed the Shape and lowered the spending boundaries.';
                     _pinConsider = "Studio can test this Shape across the full engine's probability-weighted paths instead of the Sketch's broad-stroke model.";
                 } else if (paradigm === 'optimistic') {
-                    _pinMeans = 'Compared with your pinned Shape, optimistic assumptions widened the Shape and raised the spending boundaries.';
+                    _pinMeans    = 'Compared with your pinned Shape, optimistic assumptions widened the Shape and raised the spending boundaries.';
                     _pinConsider = "Studio can model how often this upside case occurs across thousands of simulated market paths.";
                 } else {
-                    _pinMeans = 'Compared with your pinned Shape, market conditions changed and shifted the spending boundaries.';
+                    _pinMeans    = 'Compared with your pinned Shape, market conditions changed and shifted the spending boundaries.';
                     _pinConsider = "Studio can test this Shape across the full engine instead of the Sketch's broad-stroke paths.";
                 }
 
             } else if (_taxChg) {
-                _pinMeans = _pinCurTax > pinnedState.pinnedTax
-                    ? 'Compared with your pinned Shape, higher tax drag compressed the Shape — more portfolio withdrawal is needed to support the same spending.'
-                    : 'Compared with your pinned Shape, lower tax drag expanded the Shape — less withdrawal is needed to support the same spending.';
+                _pinMeans    = _taxDelta > 0
+                    ? `Compared with your pinned Shape, a ${_taxAbs}-point tax drag increase compressed the Shape — more withdrawal is needed to support the same spending.`
+                    : `Compared with your pinned Shape, a ${_taxAbs}-point tax drag decrease expanded the Shape — less withdrawal is needed to support the same spending.`;
                 _pinConsider = 'Studio can replace this flat haircut with account-level tax sequencing across your actual accounts.';
 
             } else if (_inflChg) {
-                _pinMeans = isNominal
+                _pinMeans    = isNominal
                     ? "Compared with your pinned Shape, switching to Nominal view shows the same spending in future dollars — purchasing power is unchanged."
                     : "Compared with your pinned Shape, switching to Real view shows spending in today's purchasing power — the future dollar amount may be larger.";
                 _pinConsider = 'Studio can model both real and nominal projections against your actual account and income sequencing.';
@@ -3097,6 +3235,7 @@
                 _pinConsider = 'Studio can model this change against your actual accounts and income sequencing.';
             }
 
+            // ── DOM updates ────────────────────────────────────────────────
             const pinnedBlock = document.getElementById('hud-pinned');
             if (pinnedBlock) pinnedBlock.style.display = 'flex';
 
@@ -3105,6 +3244,9 @@
 
             const _pnEl = document.getElementById('pin-state-name');
             if (_pnEl) { _pnEl.textContent = pinnedState.stateObj.name; _pnEl.style.color = pinnedState.stateObj.color; }
+
+            const _pDesEl = document.getElementById('pin-designed-state');
+            if (_pDesEl && window.currentShapeStateObj) { _pDesEl.textContent = window.currentShapeStateObj.name; _pDesEl.style.color = window.currentShapeStateObj.color; }
 
             const _pmEl = document.getElementById('pin-means');
             if (_pmEl) _pmEl.innerHTML = _pinMeans;
@@ -3193,10 +3335,12 @@
         // Do NOT call updateEngine() here — it resets interactive-layer and kills slider pointer-events
         if (window.currentShapeStateObj) {
             const pn = document.getElementById('pin-state-name');
+            const pd = document.getElementById('pin-designed-state');
             const pm = document.getElementById('pin-means');
             const pi = document.getElementById('pin-inspect');
             const pc = document.getElementById('pin-changed');
             if (pn) { pn.textContent = window.currentShapeStateObj.name; pn.style.color = window.currentShapeStateObj.color; }
+            if (pd) { pd.textContent = window.currentShapeStateObj.name; pd.style.color = window.currentShapeStateObj.color; }
             if (pm) pm.innerHTML = 'Shape pinned. Move sliders to compare against this baseline.';
             if (pi) pi.innerHTML = 'Adjust any input to see how the Shape responds.';
             if (pc) pc.innerHTML = 'No inputs changed yet.';
