@@ -1240,7 +1240,7 @@
                     </div>
                     <div style="font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.4); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.1em;">Your target annual retirement spending — the point you choose to test inside your Shape.</div>
                 </div>
-                <input type="range" id="slider-datum" min="0" max="1000" value="500" step="1" tabindex="4">
+                <input type="range" id="slider-datum" min="0" max="1000" value="411" step="1" tabindex="4">
             </div>
 
             <div class="dialogue-block" style="padding-top:14px; border-top:1px solid rgba(255,255,255,0.06);">
@@ -2300,8 +2300,8 @@
     function portPosToVal(pos)   { return 0.001 * Math.pow(50000, pos / 1000); }
     function portValToPos(val)   { return Math.round(1000 * Math.log(val / 0.001) / Math.log(50000)); }
     // Datum spend: $20k–$500k stored in $k (20–500)
-    function datumPosToVal(pos)  { return 20 * Math.pow(25, pos / 1000); }
-    function datumValToPos(val)  { return Math.round(1000 * Math.log(Math.max(val, 20) / 20) / Math.log(25)); }
+    function datumPosToVal(pos)  { return 20 * Math.pow(50, pos / 1000); }
+    function datumValToPos(val)  { return Math.round(1000 * Math.log(Math.max(val, 20) / 20) / Math.log(50)); }
     // Annual contributions: $0–$200k stored in raw dollars; pos=0 → $0 (shifted log, effective min $1)
     function contribPosToVal(pos){ return pos <= 0 ? 0 : Math.round(Math.pow(200000, pos / 1000)); }
     function contribValToPos(val){ return val <= 0 ? 0 : Math.round(1000 * Math.log(val) / Math.log(200000)); }
@@ -2749,7 +2749,7 @@
         
         let portfolioVol  = clamp(portPosToVal(parseInt(slPort.value)),   0.001, 50.0);
         let annualContrib = clamp(contribPosToVal(parseInt(slContrib.value)), 0, 200000);
-        let targetSpend   = Math.round(clamp(datumPosToVal(parseInt(slDatum.value)), 20, 500));
+        let targetSpend   = Math.round(clamp(datumPosToVal(parseInt(slDatum.value)), 20, 1000));
         
         let paradigm = 'average';
         let paradigmName = 'Historical';
@@ -3682,7 +3682,7 @@
         if (isDraggingDatum) {
             triggerInteraction();
             let newSpend = ((450 - svgP.y) / 400) * (globalYMax - globalYMin) + globalYMin;
-            slDatum.value = datumValToPos(clamp(newSpend, 20, 500));
+            slDatum.value = datumValToPos(clamp(newSpend, 20, 1000));
             touched.spending = true; updateTracker();
             scheduleUpdate();
             return;
@@ -3831,7 +3831,7 @@
         // Y axis: top = globalYMax, bottom = globalYMin (from updateEngine)
         const pct    = Math.max(0, Math.min(1, (relY - 20) / (svgH - 60)));
         const val    = globalYMax - pct * (globalYMax - globalYMin);
-        return Math.max(20, Math.min(500, val));
+        return Math.max(20, Math.min(1000, val));
       }
 
       datumDragger.addEventListener('pointerdown', (e) => {
@@ -4049,7 +4049,7 @@
         { valId: 'val-age', slider: slAge, w: '80px', isCurrency: false, getEditVal: () => String(Math.round(parseFloat(slAge.value))), clean: s => s.replace(/[^0-9]/g, ''), validate: () => true, toSlider: v => v },
         { valId: 'val-activation', slider: slAct, w: '80px', isCurrency: false, getEditVal: () => String(Math.round(parseFloat(slAct.value))), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= Math.round(parseFloat(slAge.value)) && v <= 90, toSlider: v => v },
         { valId: 'val-portfolio', slider: slPort, w: '140px', isCurrency: true, getEditVal: () => '$' + Math.round(portPosToVal(parseInt(slPort.value)) * 1000000).toLocaleString('en-US'), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 1000 && v <= 50000000, toSlider: v => portValToPos(v / 1000000) },
-        { valId: 'val-datum', slider: slDatum, w: '140px', isCurrency: true, getEditVal: () => '$' + Math.round(datumPosToVal(parseInt(slDatum.value)) * 1000).toLocaleString('en-US'), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 20000 && v <= 500000, toSlider: v => datumValToPos(v / 1000) },
+        { valId: 'val-datum', slider: slDatum, w: '140px', isCurrency: true, getEditVal: () => '$' + Math.round(datumPosToVal(parseInt(slDatum.value)) * 1000).toLocaleString('en-US'), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 20000 && v <= 1000000, toSlider: v => datumValToPos(v / 1000) },
         { valId: 'val-contrib', slider: slContrib, w: '140px', isCurrency: true, getEditVal: () => '$' + contribPosToVal(parseInt(slContrib.value)).toLocaleString('en-US'), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 0 && v <= 200000, toSlider: v => contribValToPos(v) }
       ];
 
