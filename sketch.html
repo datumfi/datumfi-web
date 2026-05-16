@@ -46,6 +46,7 @@
     --danger-red: #e24b4a;
     --orange-warning: #E58E26;
     --blue-safe: #4da8da;
+    --purple-grounded: #8B6FBF;
     --white: #ffffff;
     --muted: rgba(255,255,255,0.4);
     --font-serif: 'Fraunces', Georgia, serif; 
@@ -185,7 +186,7 @@
   
   /* Dynamic Shape State HUD Colors */
   .hud-state-expansive { border-color: var(--teal-mid) !important; border-left-color: var(--teal-mid) !important; background: rgba(93, 202, 165, 0.05) !important; }
-  .hud-state-grounded { border-color: var(--teal-mid) !important; border-left-color: var(--teal-mid) !important; background: rgba(93, 202, 165, 0.05) !important; }
+  .hud-state-grounded { border-color: var(--purple-grounded) !important; border-left-color: var(--purple-grounded) !important; background: rgba(139, 111, 191, 0.05) !important; }
   .hud-state-stretched { border-color: var(--orange-warning) !important; border-left-color: var(--orange-warning) !important; background: rgba(229, 142, 38, 0.05) !important; }
   .hud-state-overextended { border-color: var(--danger-red) !important; border-left-color: var(--danger-red) !important; background: rgba(226, 75, 74, 0.05) !important; }
   .hud-state-abundant { border-color: var(--blue-safe) !important; border-left-color: var(--blue-safe) !important; background: rgba(77, 168, 218, 0.05) !important; }
@@ -201,7 +202,7 @@
   .tel-status { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; line-height: 1.3; color: var(--teal-mid); }
   
   .tel-metric-group { display: flex; flex-direction: column; gap: 6px; }
-  .tel-metric { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-family: var(--font-mono); }
+  .tel-metric { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-family: var(--font-mono); overflow: visible; }
   .tel-metric span:first-child { font-size: 9px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; display: flex; gap: 6px; width: auto; flex: 1; }
   .tel-metric span:last-child { font-size: 13px; font-weight: bold; text-align: right; width: auto; white-space: nowrap;}
   .tel-metric.m-ceil span:last-child { color: var(--gold); }
@@ -213,10 +214,15 @@
   /* Shape State Tooltip Styling */
   .shape-info-icon { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.3); font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.6); cursor: help; margin-left: 6px; position: relative; vertical-align: middle; top: -1px; transition: all 0.2s; }
   .shape-info-icon:hover { border-color: var(--teal-mid); color: var(--teal-mid); background: rgba(93,202,165,0.1); }
-  .shape-info-tooltip { display: none; position: absolute; top: calc(100% + 10px); bottom: auto; left: 50%; transform: translateX(-50%); width: 280px; background: rgba(9, 18, 33, 0.98); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 14px; z-index: var(--z-tooltip); box-shadow: 0 10px 30px rgba(0,0,0,0.6); font-family: var(--font-sans); font-size: 11px; font-weight: 300; color: rgba(255,255,255,0.8); text-transform: none; letter-spacing: normal; text-align: left; pointer-events: none; }
+  .shape-info-tooltip { display: none; position: absolute; top: calc(100% + 10px); bottom: auto; left: 50%; transform: translateX(-50%); width: 280px; max-width: min(280px, 90vw); background: rgba(9, 18, 33, 0.98); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 14px; z-index: var(--z-tooltip); box-shadow: 0 10px 30px rgba(0,0,0,0.6); font-family: var(--font-sans); font-size: 11px; font-weight: 300; color: rgba(255,255,255,0.8); text-transform: none; letter-spacing: normal; text-align: left; pointer-events: none; }
   .shape-info-icon:hover .shape-info-tooltip { display: block; animation: fade-in 0.2s ease; }
   .shape-info-icon:focus .shape-info-tooltip,
   .shape-info-icon:focus-within .shape-info-tooltip { display: block; }
+  .lbl-has-tip { position: relative; cursor: help; }
+  .lbl-has-tip .shape-info-tooltip { left: 0; transform: none; }
+  .lbl-has-tip:hover .shape-info-tooltip { display: block; animation: fade-in 0.2s ease; }
+  .lbl-has-tip:focus .shape-info-tooltip,
+  .lbl-has-tip:focus-within .shape-info-tooltip { display: block; }
   .tt-row { margin-bottom: 8px; line-height: 1.4; }
   .tt-row:last-child { margin-bottom: 0; }
 
@@ -1369,7 +1375,7 @@
                             <div class="tel-status" id="hud-status" style="color:var(--teal-mid);">DATUM INTELLIGENCE</div>
                             <div class="tel-metric-group">
                                 <div class="tel-metric m-ceil">
-                                    <span>STRUCTURAL CEILING<span class="shape-info-icon" tabindex="0">?<div class="shape-info-tooltip">Structural Ceiling uses an elevated 5% endpoint to model capacity in favorable conditions. The cone widens because time amplifies uncertainty.</div></span></span>
+                                    <span class="lbl-has-tip" tabindex="0">STRUCTURAL CEILING<div class="shape-info-tooltip">Structural Ceiling uses an elevated 5% endpoint to model capacity in favorable conditions. The cone widens because time amplifies uncertainty.</div></span>
                                     <span id="ri-ceiling-val">$0 / $0 yr</span>
                                 </div>
                                 <div class="tel-metric m-datum">
@@ -1377,7 +1383,7 @@
                                     <span id="ri-datum-val">$0 / $0 yr</span>
                                 </div>
                                 <div class="tel-metric m-floor">
-                                    <span>SURVIVAL FLOOR<span class="shape-info-icon" tabindex="0">?<div class="shape-info-tooltip">Survival Floor uses a haircut withdrawal rate (2.8% endpoint) to model resilience under stress. Your Datum is anchored at the canonical 4% reference.</div></span></span>
+                                    <span class="lbl-has-tip" tabindex="0">SURVIVAL FLOOR<div class="shape-info-tooltip">Survival Floor uses a haircut withdrawal rate (2.8% endpoint) to model resilience under stress. Your Datum is anchored at the canonical 4% reference.</div></span>
                                     <span id="ri-floor-val">$0 / $0 yr</span>
                                 </div>
                             </div>
@@ -1395,7 +1401,7 @@
                                     <span class="shape-info-icon" tabindex="0">?
                                         <div class="shape-info-tooltip">
                                             <div class="tt-row"><strong style="color:var(--teal-mid)">EXPANSIVE:</strong> Floor & Ceiling are far apart; high upside, high sensitivity.</div>
-                                            <div class="tt-row"><strong style="color:var(--teal-mid)">GROUNDED:</strong> Datum sits near the Floor — conservative positioning with room to expand.</div>
+                                            <div class="tt-row"><strong style="color:var(--purple-grounded)">GROUNDED:</strong> Datum sits near the Floor — conservative positioning with room to expand.</div>
                                             <div class="tt-row"><strong style="color:var(--orange-warning)">STRETCHED:</strong> Datum sits near the Ceiling — favorable conditions carry most of the weight.</div>
                                             <div class="tt-row"><strong style="color:var(--blue-safe)">ABUNDANT:</strong> Target spending is well below the Survival Floor.</div>
                                             <div class="tt-row"><strong style="color:var(--danger-red)">OVEREXTENDED:</strong> Target spending sits above the Sketch's modeled Ceiling.</div>
@@ -2565,7 +2571,7 @@
                 action: "You may be able to retire earlier, spend more, or use Studio to plan for gifts or legacy." };
         }
         if (_position <= 0.15) {
-            return { name: "GROUNDED", color: "var(--teal-mid)", cls: "hud-state-grounded",
+            return { name: "GROUNDED", color: "var(--purple-grounded)", cls: "hud-state-grounded",
                 physics: "Your Datum sits near the Floor of your Shape. The lower boundary already supports this lifestyle target.",
                 action: "You have room to test earlier retirement, higher spending, or stronger resilience." };
         }
@@ -3357,12 +3363,13 @@
         const viewBox = "0 0 1100 720";
         // Resolve CSS custom property colors to hex for SVG export
         const _csvc = {
-          'var(--danger-red)':     '#e24b4a',
-          'var(--teal-mid)':       '#5DCAA5',
-          'var(--gold)':           '#C9A84C',
-          'var(--orange-warning)': '#E58E26',
-          'var(--blue-safe)':      '#4da8da',
-          'var(--white)':          '#ffffff'
+          'var(--danger-red)':       '#e24b4a',
+          'var(--teal-mid)':         '#5DCAA5',
+          'var(--gold)':             '#C9A84C',
+          'var(--orange-warning)':   '#E58E26',
+          'var(--blue-safe)':        '#4da8da',
+          'var(--purple-grounded)':  '#8B6FBF',
+          'var(--white)':            '#ffffff'
         };
         const _stateHex = _csvc[window.currentShapeStateObj.color] ?? window.currentShapeStateObj.color;
         const dCone = document.getElementById('cone-area').getAttribute('d');
