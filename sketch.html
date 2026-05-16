@@ -2562,27 +2562,27 @@
 
         if (pts.datumSpend > pts.ceilSpend) {
             return { name: "OVEREXTENDED", color: "var(--danger-red)", cls: "hud-state-overextended",
-                physics: "Your target sits above the Sketch’s modeled Ceiling at retirement.",
-                action: "Delay retirement, save more, lower your target, or move to Studio to see what would have to change." };
+                physics: "Your Datum sits above the Ceiling of your Shape. Even the upper boundary — the cone’s most favorable path — projects less spending capacity than your current target. No modeled path reaches this lifestyle at your current inputs.<br><br>A structural gap. The Shape does not currently support this Datum across any modeled path. The honest question is which lever is willing to move — more time, more capital, lower spending, stronger contributions — to close the distance between where the Ceiling is and where the Datum sits.",
+                action: "Move the levers one at a time to see which has enough power to lift the Ceiling to meet the Datum. Or lower the Datum to where the Shape currently supports it — that’s the lifestyle the current inputs project, not a recommendation.<br><br>Studio can test whether real-world variables — tax-advantaged accounts, withdrawal sequencing, Social Security timing, income sources — close some of this gap before any lever needs to move. The Sketch holds those variables constant; Studio models them." };
         }
         if (pts.datumSpend < pts.floorSpend) {
             return { name: "ABUNDANT", color: "var(--blue-safe)", cls: "hud-state-abundant",
-                physics: "You are planning to spend much less than even your worst-case Floor suggests you can.",
-                action: "You may be able to retire earlier, spend more, or use Studio to plan for gifts or legacy." };
+                physics: "Your Datum sits below the Floor of your Shape. Even the lower boundary — the cone’s most conservative path — projects more spending capacity than your current target. Your lifestyle target is below what the Shape models as the floor of what’s sustainable.<br><br>An unusual position. Most Datums sit inside the Shape; yours sits below it. The structural question is whether this gap is intentional — for legacy, for resilience beyond what the Shape models, for simple preference — or whether the Shape is showing you capacity you haven’t tested yet.",
+                action: "Raise the Datum into the Shape to see what the boundary actually supports. Or hold the Datum where it is and decide what the unused capacity is for — earlier retirement, larger legacy, a higher Floor against unmodeled risks.<br><br>Studio can test whether your actual account architecture, tax sequencing, and income timing preserve this surplus — or whether some of the unused capacity is already absorbed by variables the Sketch holds constant." };
         }
         if (_position <= 0.15) {
             return { name: "GROUNDED", color: "var(--purple-grounded)", cls: "hud-state-grounded",
-                physics: "Your Datum sits near the Floor of your Shape. The lower boundary already supports this lifestyle target.",
-                action: "You have room to test earlier retirement, higher spending, or stronger resilience." };
+                physics: "Your Datum sits near the Floor of your Shape. The Floor already supports this lifestyle target, and the Ceiling sits well above it — leaving a wide gap between what you’re spending and what the Shape could support.<br><br>A conservative position. The Floor supports your Datum across most modeled paths, and the gap above the Datum is your spending headroom. The real question is whether you’re holding that headroom on purpose — for resilience, legacy, or flexibility — or whether the Shape supports more lifestyle than you’ve tested.",
+                action: "Raise the Datum to see how much spending the Shape supports before it stops feeling conservative. Or keep the Datum where it is and test whether the headroom does what you want it to — fund earlier retirement, absorb stress, or carry through to legacy.<br><br>Studio can confirm whether your actual account architecture, withdrawal order, and Social Security timing reinforce this conservative position — or whether some of the modeled headroom is already absorbed by real-world variables the Sketch holds constant." };
         }
         if (_position >= 0.85) {
             return { name: "STRETCHED", color: "var(--orange-warning)", cls: "hud-state-stretched",
-                physics: "Your Datum sits near the Ceiling of your Shape. Favorable conditions carry most of the weight.",
-                action: "Studio can test whether tax sequencing, account architecture, and income timing reinforce this target through the full engine." };
+                physics: "Your Datum sits near the Ceiling of your Shape. The upper boundary supports your target, but the Floor sits well below it — meaning most of the modeled paths that get you here run through favorable conditions, not stress.<br><br>An upper-edge position. The Shape supports your Datum, but only the upper paths comfortably do so. Markets, returns, and timing all need to lean your way for this target to hold across the full range of modeled outcomes.",
+                action: "Lower the Datum to see where the Shape’s middle paths start carrying the weight, or hold the Datum and test whether stronger inputs — more time, more capital, lower spending — pull the lower paths up to meet it.<br><br>Studio can test whether your actual tax sequencing, account architecture, withdrawal order, and Social Security timing reinforce this target through the full engine — variables the Sketch holds constant." };
         }
         return { name: "EXPANSIVE", color: "var(--teal-mid)", cls: "hud-state-expansive",
-            physics: "Your Floor and Ceiling are far apart. There is a lot of upside, but your results will be more sensitive to markets.",
-            action: "If you want to lean into this range, move to Studio to test tax strategies and glide paths." };
+            physics: "Your Datum sits comfortably inside a wide Shape. The Floor supports your target and the Ceiling sits well above it. The width reflects modeled uncertainty across return paths — your outcome could land anywhere across that range.<br><br>The Shape is wide because multiple unmodeled variables remain — outcomes could vary meaningfully even though the Datum is well-supported today.",
+            action: "Which edge to test first: shift the Datum higher to test capacity, lower to test resilience, or move retirement age to test the timeline.<br><br>Studio can narrow the Shape by testing your actual account types, tax sequencing, withdrawal order, and Social Security timing — variables the Sketch holds constant." };
     }
 
     // STRUCT 4: colour constants — single source of truth (27 hex refs → constants)
