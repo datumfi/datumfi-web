@@ -185,8 +185,8 @@
   
   /* Dynamic Shape State HUD Colors */
   .hud-state-expansive { border-color: var(--teal-mid) !important; border-left-color: var(--teal-mid) !important; background: rgba(93, 202, 165, 0.05) !important; }
-  .hud-state-defined { border-color: var(--teal-mid) !important; border-left-color: var(--teal-mid) !important; background: rgba(93, 202, 165, 0.05) !important; }
-  .hud-state-compressed { border-color: var(--orange-warning) !important; border-left-color: var(--orange-warning) !important; background: rgba(229, 142, 38, 0.05) !important; }
+  .hud-state-grounded { border-color: var(--teal-mid) !important; border-left-color: var(--teal-mid) !important; background: rgba(93, 202, 165, 0.05) !important; }
+  .hud-state-stretched { border-color: var(--orange-warning) !important; border-left-color: var(--orange-warning) !important; background: rgba(229, 142, 38, 0.05) !important; }
   .hud-state-overextended { border-color: var(--danger-red) !important; border-left-color: var(--danger-red) !important; background: rgba(226, 75, 74, 0.05) !important; }
   .hud-state-abundant { border-color: var(--blue-safe) !important; border-left-color: var(--blue-safe) !important; background: rgba(77, 168, 218, 0.05) !important; }
 
@@ -1395,8 +1395,8 @@
                                     <span class="shape-info-icon" tabindex="0">?
                                         <div class="shape-info-tooltip">
                                             <div class="tt-row"><strong style="color:var(--teal-mid)">EXPANSIVE:</strong> Floor & Ceiling are far apart; high upside, high sensitivity.</div>
-                                            <div class="tt-row"><strong style="color:var(--teal-mid)">DEFINED:</strong> Floor & Ceiling are close together; predictable but inflexible.</div>
-                                            <div class="tt-row"><strong style="color:var(--orange-warning)">COMPRESSED:</strong> Target spending is very close to the Survival Floor.</div>
+                                            <div class="tt-row"><strong style="color:var(--teal-mid)">GROUNDED:</strong> Datum sits near the Floor — conservative positioning with room to expand.</div>
+                                            <div class="tt-row"><strong style="color:var(--orange-warning)">STRETCHED:</strong> Datum sits near the Ceiling — favorable conditions carry most of the weight.</div>
                                             <div class="tt-row"><strong style="color:var(--blue-safe)">ABUNDANT:</strong> Target spending is well below the Survival Floor.</div>
                                             <div class="tt-row"><strong style="color:var(--danger-red)">OVEREXTENDED:</strong> Target spending sits above the Sketch's modeled Ceiling.</div>
                                         </div>
@@ -2432,7 +2432,7 @@
     function triggerMarketSweep(type) {
         marketSweep.classList.remove('sweep-active-stress', 'sweep-active-opt');
         void marketSweep.offsetWidth; 
-        hudMain.classList.remove('hud-alert-mode', 'hud-gold-mode', 'hud-state-expansive', 'hud-state-defined', 'hud-state-compressed', 'hud-state-abundant', 'hud-state-overextended');
+        hudMain.classList.remove('hud-alert-mode', 'hud-gold-mode', 'hud-state-expansive', 'hud-state-grounded', 'hud-state-stretched', 'hud-state-abundant', 'hud-state-overextended');
         
         // GEM F: pulse cone fill to match market condition
         const cgCeil  = document.getElementById('dg-ceil');
@@ -2443,7 +2443,7 @@
             document.getElementById('lbl-physics').style.display = 'none';
             document.getElementById('lbl-action').style.display = 'none';
             document.getElementById('val-physics').innerHTML = "Market pressure applied.";
-            document.getElementById('val-action').innerHTML = "The preliminary Shape compressed.";
+            document.getElementById('val-action').innerHTML = "The preliminary Shape narrowed.";
             document.getElementById('shape-state-name').textContent = "SIMULATING";
             document.getElementById('shape-state-name').style.color = "var(--danger-red)";
             if (cgFloor) { cgFloor.setAttribute('stop-opacity','0.45'); }
@@ -2551,41 +2551,32 @@
     }
 
     function getShapeStateObj(pts) {
-        let floorDiff = pts.datumSpend - pts.floorSpend;
-        let rangeGap = pts.ceilSpend - pts.floorSpend;
-        let rangeMargin = rangeGap === 0 ? 0.5 : floorDiff / rangeGap; 
+        const _width    = pts.ceilSpend - pts.floorSpend;
+        const _position = _width > 0 ? (pts.datumSpend - pts.floorSpend) / _width : 0.5;
 
         if (pts.datumSpend > pts.ceilSpend) {
-            return { 
-                name: "OVEREXTENDED", color: "var(--danger-red)", cls: "hud-state-overextended",
-                physics: "Your target sits above the Sketch's modeled Ceiling at retirement.",
-                action: "Delay retirement, save more, lower your target, or move to Studio to see what would have to change."
-            };
-        } else if (pts.datumSpend < pts.floorSpend) {
-            return { 
-                name: "ABUNDANT", color: "var(--blue-safe)", cls: "hud-state-abundant",
-                physics: "You are planning to spend much less than even your worst-case Floor suggests you can.",
-                action: "You may be able to retire earlier, spend more, or use Studio to plan for gifts or legacy."
-            };
-        } else if (rangeMargin > 0.85 || rangeMargin < 0.15) {
-            return { 
-                name: "COMPRESSED", color: "var(--orange-warning)", cls: "hud-state-compressed",
-                physics: "Your target spending is very close to the Survival Floor. There is little room for error.",
-                action: "Lower your spending target, delay retirement, or use Studio to see which levers relieve pressure fastest."
-            };
-        } else if (rangeGap < 40 || (pts.floorSpend > 0 && rangeGap / pts.floorSpend < 0.20)) {
-            return { 
-                name: "DEFINED", color: "var(--teal-mid)", cls: "hud-state-defined",
-                physics: "Your Floor and Ceiling are close together. The range is predictable, but there isn’t much room to change things.",
-                action: "Use Studio to test things like inflation shocks or Social Security timing against this narrow margin."
-            };
-        } else {
-            return { 
-                name: "EXPANSIVE", color: "var(--teal-mid)", cls: "hud-state-expansive",
-                physics: "Your Floor and Ceiling are far apart. There is a lot of upside, but your results will be more sensitive to markets.",
-                action: "If you want to lean into this range, move to Studio to test tax strategies and glide paths."
-            };
+            return { name: "OVEREXTENDED", color: "var(--danger-red)", cls: "hud-state-overextended",
+                physics: "Your target sits above the Sketch’s modeled Ceiling at retirement.",
+                action: "Delay retirement, save more, lower your target, or move to Studio to see what would have to change." };
         }
+        if (pts.datumSpend < pts.floorSpend) {
+            return { name: "ABUNDANT", color: "var(--blue-safe)", cls: "hud-state-abundant",
+                physics: "You are planning to spend much less than even your worst-case Floor suggests you can.",
+                action: "You may be able to retire earlier, spend more, or use Studio to plan for gifts or legacy." };
+        }
+        if (_position <= 0.15) {
+            return { name: "GROUNDED", color: "var(--teal-mid)", cls: "hud-state-grounded",
+                physics: "Your Datum sits near the Floor of your Shape. The lower boundary already supports this lifestyle target.",
+                action: "You have room to test earlier retirement, higher spending, or stronger resilience." };
+        }
+        if (_position >= 0.85) {
+            return { name: "STRETCHED", color: "var(--orange-warning)", cls: "hud-state-stretched",
+                physics: "Your Datum sits near the Ceiling of your Shape. Favorable conditions carry most of the weight.",
+                action: "Studio can test whether tax sequencing, account architecture, and income timing reinforce this target through the full engine." };
+        }
+        return { name: "EXPANSIVE", color: "var(--teal-mid)", cls: "hud-state-expansive",
+            physics: "Your Floor and Ceiling are far apart. There is a lot of upside, but your results will be more sensitive to markets.",
+            action: "If you want to lean into this range, move to Studio to test tax strategies and glide paths." };
     }
 
     // STRUCT 4: colour constants — single source of truth (27 hex refs → constants)
@@ -2651,7 +2642,7 @@
         if (skCanvas && previousShapeStatus !== s.key) {
             skCanvas.classList.remove('state-pulse-red','state-pulse-gold','state-pulse-teal');
             void skCanvas.offsetWidth;
-            if (s.key === 'overextended' || s.key === 'compressed') {
+            if (s.key === 'overextended' || s.key === 'stretched') {
                 skCanvas.classList.add('state-pulse-red');
             } else if (s.key === 'expansive' || s.key === 'abundant') {
                 skCanvas.classList.add('state-pulse-gold');
@@ -2900,7 +2891,7 @@
         sketchCanvas.classList.remove('shape-healthy', 'shape-under-pressure', 'shape-at-limit');
         if (stateObj.name === 'OVEREXTENDED' || stateObj.name === 'ABUNDANT') {
             sketchCanvas.classList.add('shape-at-limit');
-        } else if (stateObj.name === 'COMPRESSED') {
+        } else if (stateObj.name === 'STRETCHED') {
             sketchCanvas.classList.add('shape-under-pressure');
         } else {
             sketchCanvas.classList.add('shape-healthy');
@@ -3145,23 +3136,23 @@
                     : _bridge;
 
             } else if (_pCompressed) {
-                let _open = 'Compared with your pinned Shape, the Shape compressed.';
+                let _open = 'Compared with your pinned Shape, the Shape narrowed.';
                 if (_dp) {
                     switch (_dom.key) {
-                        case 'retire':  _open = `${_dp} compressed the Shape — ${_retireWhy}.`; break;
-                        case 'capital': _open = `${_dp} compressed the Shape — lower capital reduced both boundaries.`; break;
-                        case 'market':  _open = `${_dp} compressed the Shape — stress assumptions lowered both boundaries.`; break;
-                        case 'tax':     _open = `${_dp} compressed the Shape — more withdrawal needed to support the same spending.`; break;
-                        case 'age':     _open = `${_dp} compressed the Shape — ${_ageBand === 'dramatic' ? 'that span of lost compounding heavily reduced both boundaries' : 'fewer years remaining for capital to compound'}.`; break;
+                        case 'retire':  _open = `${_dp} narrowed the Shape — ${_retireWhy}.`; break;
+                        case 'capital': _open = `${_dp} narrowed the Shape — lower capital reduced both boundaries.`; break;
+                        case 'market':  _open = `${_dp} narrowed the Shape — stress assumptions lowered both boundaries.`; break;
+                        case 'tax':     _open = `${_dp} narrowed the Shape — more withdrawal needed to support the same spending.`; break;
+                        case 'age':     _open = `${_dp} narrowed the Shape — ${_ageBand === 'dramatic' ? 'that span of lost compounding heavily reduced both boundaries' : 'fewer years remaining for capital to compound'}.`; break;
                     }
                 }
-                const _secText = _secDriving && _secClause ? ` Of the two changes, ${_domNoun} drove most of the compression; ${_secClause}.` : '';
-                const _datumNote = _pDatumNearCeil ? ' Your Datum now sits closer to the Ceiling of this tighter range.'
-                    : _pDatumNearFloor ? ' Your Datum now sits closer to the Floor of this tighter range.' : '';
+                const _secText = _secDriving && _secClause ? ` Of the two changes, ${_domNoun} drove most of the narrowing; ${_secClause}.` : '';
+                const _datumNote = _pDatumNearCeil ? ' Your Datum now sits near the Ceiling — the Shape has moved toward stretched positioning.'
+                    : _pDatumNearFloor ? ' Your Datum now sits near the Floor — the Shape has moved toward grounded positioning.' : '';
                 const _shiftNote = _pMidSig ? ` It also shifted ${_pMidDelta > 0 ? 'higher' : 'lower'} overall.` : '';
                 _pinMeans    = `${_open}${_secText}${_datumNote}${_shiftNote}`;
                 _pinConsider = _pDatumNearCeil
-                    ? 'Studio can test whether tax strategies, Social Security timing, or contribution changes can relieve pressure on this compressed Shape.'
+                    ? 'Studio can test whether tax strategies, Social Security timing, or contribution changes can relieve pressure at the upper edge of this narrowed Shape.'
                     : _pDatumNearFloor
                     ? 'Studio can inspect lower-bound resilience across bad sequences, early downturns, and spending drift.'
                     : _bridge;
@@ -3188,7 +3179,7 @@
                     switch (_dom.key) {
                         case 'capital': _open = `${_dp} shifted the Shape lower — lower capital reduced both boundaries.`; break;
                         case 'contrib': _open = `${_dp} shifted the Shape lower — fewer contributions reduced both boundaries.`; break;
-                        case 'retire':  _open = `${_dp} shifted the Shape lower — earlier retirement compressed both boundaries.`; break;
+                        case 'retire':  _open = `${_dp} shifted the Shape lower — earlier retirement narrowed both boundaries.`; break;
                         case 'age':     _open = `${_dp} shifted the Shape lower — starting later shortened the compounding window.`; break;
                     }
                 }
@@ -3209,7 +3200,7 @@
 
             } else if (_mktChg) {
                 if (paradigm === 'stress') {
-                    _pinMeans    = 'Compared with your pinned Shape, stress assumptions compressed the Shape and lowered the spending boundaries.';
+                    _pinMeans    = 'Compared with your pinned Shape, stress assumptions narrowed the Shape and lowered the spending boundaries.';
                     _pinConsider = "Studio can test this Shape across the full engine's probability-weighted paths instead of the Sketch's broad-stroke model.";
                 } else if (paradigm === 'optimistic') {
                     _pinMeans    = 'Compared with your pinned Shape, optimistic assumptions widened the Shape and raised the spending boundaries.';
@@ -3221,7 +3212,7 @@
 
             } else if (_taxChg) {
                 _pinMeans    = _taxDelta > 0
-                    ? `Compared with your pinned Shape, a ${_taxAbs}-point tax drag increase compressed the Shape — more withdrawal is needed to support the same spending.`
+                    ? `Compared with your pinned Shape, a ${_taxAbs}-point tax drag increase narrowed the Shape — more withdrawal is needed to support the same spending.`
                     : `Compared with your pinned Shape, a ${_taxAbs}-point tax drag decrease expanded the Shape — less withdrawal is needed to support the same spending.`;
                 _pinConsider = 'Studio can replace this flat haircut with account-level tax sequencing across your actual accounts.';
 
