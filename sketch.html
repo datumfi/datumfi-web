@@ -1347,7 +1347,7 @@
                 Private by design. The Sketch runs in your browser using a broad-stroke deterministic model. Inputs are not sent to Datum FI servers while using the Sketch. If you continue into Studio, your current inputs may be passed forward; recent inputs may be stored locally on your device for handoff or resume.
                 <button type="button" id="methodology-btn" class="methodology-trigger" aria-expanded="false">VIEW SKETCH METHODOLOGY</button>
                 <div id="methodology-panel" class="methodology-panel">
-                    The Sketch uses geometric compounding. Each scenario runs a band of three growth paths — conservative, baseline, and upside — which form your Floor, middle projection, and Ceiling. <strong>Optimistic</strong>: 2.0–4.0–6.5% real (markets performing well above average). <strong>Historical</strong>: 1.5–3.5–5.5% real (anchored to long-run averages). <strong>Stress</strong>: 0.5–1.5–3.5% real (compressed returns, heavy downside guardrails). Inflation: <strong>Real</strong> strips inflation out — all values in today's dollars. <strong>Nominal</strong> adds 3.0%/yr inflation, showing the raw future dollar amounts.<br><br>Each path also uses a withdrawal rate tuned to its purpose — the Floor's rate is reduced for survival resilience, the Ceiling's is elevated for capacity, while your Datum is anchored at the canonical 4% reference. The cone is not just three growth rates; it's three views of how much your capital can sustainably support.
+                    The Sketch uses geometric compounding. Each scenario runs a band of three growth paths — conservative, baseline, and upside — which form your Floor, middle projection, and Ceiling. <strong>Optimistic</strong>: 2.0–4.0–6.5% real (markets performing well above average). <strong>Historical</strong>: 1.5–3.5–5.5% real (anchored to long-run averages). <strong>Stress</strong>: 0.5–1.5–3.5% real (compressed returns, heavy downside guardrails). Inflation: <strong>Real</strong> strips inflation out — all values in today's dollars. <strong>Nominal</strong> adds 3.0%/yr inflation, showing the raw future dollar amounts.<br><br>Each of the three lines in your Shape uses a withdrawal rate tuned to its purpose. Your Floor uses a reduced rate for resilience — it asks how much spending the conservative path can sustain under stress. Your Ceiling uses an elevated rate for capacity — it asks how much the upside path could support under favorable conditions. Your Datum sits on the baseline path — the middle projection between Floor and Ceiling. Most retirement tools apply a single 4% rule to everything. The Sketch tunes each path's rate to what it's actually measuring.
                 </div>
             </div>
         </div>
@@ -2850,16 +2850,15 @@
         const fvConStr = ptsEnd.fvCon >= 1 ? `$${ptsEnd.fvCon.toFixed(2)}M` : `$${Math.round(ptsEnd.fvCon * 1000)}k`;
         const fvBaseStr = ptsEnd.fvBase >= 1 ? `$${ptsEnd.fvBase.toFixed(2)}M` : `$${Math.round(ptsEnd.fvBase * 1000)}k`;
         
-        const wrBase = 0.04;
-        const reqCapEnd = ptsEnd.datumSpend / (wrBase * currentScenario.taxMult); 
-        const reqCapStr = reqCapEnd >= 1000 ? `$${(reqCapEnd/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${Math.round(reqCapEnd)}k`;
+        const datumCapEndM = ptsEnd.fvBase; // baseline-path projected capital, $M
+        const datumCapStr = datumCapEndM >= 1 ? `$${datumCapEndM.toFixed(2)}M` : `$${Math.round(datumCapEndM * 1000)}k`;
 
         const hudCeilVal = document.getElementById('ri-ceiling-val');
         const hudDatumVal = document.getElementById('ri-datum-val');
         const hudFloorVal = document.getElementById('ri-floor-val');
-        
+
         if (hudCeilVal) { hudCeilVal.textContent = `${fvUpStr} / ${cSpendStr} yr`; }
-        if (hudDatumVal) { hudDatumVal.textContent = `${reqCapStr} needed / ${targetEndStr} yr`; }
+        if (hudDatumVal) { hudDatumVal.textContent = `${datumCapStr} / ${targetEndStr} yr`; }
         if (hudFloorVal) { hudFloorVal.textContent = `${fvConStr} / ${fSpendStr} yr`; }
         const hudGrowthPeriod = document.getElementById('hud-growth-period');
         if (hudGrowthPeriod) hudGrowthPeriod.textContent = yearsToGrow === 1 ? '1 yr until retirement' : `${yearsToGrow} yrs until retirement`;
