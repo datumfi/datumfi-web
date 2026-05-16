@@ -321,7 +321,23 @@
   .state-pulse-red  { animation: statePulseRed  1.0s ease forwards; }
   .state-pulse-gold { animation: statePulseGold 1.0s ease forwards; }
   .state-pulse-teal { animation: statePulseTeal 1.0s ease forwards; }
-  
+
+  /* Fix 2 + 3 — ambient state tint on chart canvas + OVEREXTENDED entry pulse */
+  #sketch-canvas { transition: background-color 0.4s ease; }
+  #sketch-canvas.state-ambient-abundant     { background-color: rgba(77, 168, 218, 0.06); }
+  #sketch-canvas.state-ambient-grounded     { background-color: rgba(139, 111, 191, 0.06); }
+  #sketch-canvas.state-ambient-stretched    { background-color: rgba(229, 138, 38, 0.07); }
+  #sketch-canvas.state-ambient-overextended { background-color: rgba(226, 75, 74, 0.08); }
+  @keyframes overextendedEntryFlash {
+    0%   { background-color: rgba(226, 75, 74, 0.18); }
+    100% { background-color: rgba(226, 75, 74, 0.08); }
+  }
+  #sketch-canvas.state-ambient-overextended-entry { animation: overextendedEntryFlash 0.6s ease forwards; }
+  @media (prefers-reduced-motion: reduce) {
+    #sketch-canvas { transition: none !important; }
+    #sketch-canvas.state-ambient-overextended-entry { animation: none !important; background-color: rgba(226, 75, 74, 0.08); }
+  }
+
   /* Grid Fade */
   .fade-in-early { opacity: 0; animation: fadeInClean 0.5s ease forwards; }
 
@@ -2328,7 +2344,8 @@
     var anchorState = null;
     let activeInputId = null;
     var hasInteracted = false;
-    let previousShapeStatus = 'inside'; 
+    let previousShapeStatus = 'inside';
+    let previousStateName   = null; // Fix 3: tracks prior state name for OVEREXTENDED entry detection
     let hudSequenceActive = false; // STRUCT 2: gate removed — HUD shows real values immediately
 
     var touched = { timeline: false, capital: false, spending: false, refined: false };
@@ -2657,6 +2674,28 @@
             }
         }
 
+        // Fix 2 + 3: ambient state tint + OVEREXTENDED dramatic entry pulse
+        if (skCanvas) {
+            skCanvas.classList.remove(
+                'state-ambient-abundant', 'state-ambient-grounded',
+                'state-ambient-stretched', 'state-ambient-overextended',
+                'state-ambient-overextended-entry'
+            );
+            if (s.name === 'OVEREXTENDED') {
+                skCanvas.classList.add(previousStateName === 'OVEREXTENDED'
+                    ? 'state-ambient-overextended'
+                    : 'state-ambient-overextended-entry');
+            } else if (s.name === 'ABUNDANT') {
+                skCanvas.classList.add('state-ambient-abundant');
+            } else if (s.name === 'GROUNDED') {
+                skCanvas.classList.add('state-ambient-grounded');
+            } else if (s.name === 'STRETCHED') {
+                skCanvas.classList.add('state-ambient-stretched');
+            }
+            // EXPANSIVE: no tint (neutral brand background)
+            previousStateName = s.name;
+        }
+
         document.getElementById('lbl-physics').style.display = 'inline';
         document.getElementById('lbl-action').style.display = 'inline';
         document.getElementById('val-physics').innerHTML = s.physics;
@@ -2894,10 +2933,10 @@
         }
 
         sketchCanvas.classList.remove('shape-healthy', 'shape-under-pressure', 'shape-at-limit');
-        if (stateObj.name === 'OVEREXTENDED' || stateObj.name === 'ABUNDANT') {
-            sketchCanvas.classList.add('shape-at-limit');
+        if (stateObj.name === 'GROUNDED') {
+            sketchCanvas.classList.add('shape-under-pressure'); // Floor stop pulses: Datum near Floor ✅
         } else if (stateObj.name === 'STRETCHED') {
-            sketchCanvas.classList.add('shape-under-pressure');
+            sketchCanvas.classList.add('shape-at-limit');       // Ceiling stop pulses: Datum near Ceiling ✅
         } else {
             sketchCanvas.classList.add('shape-healthy');
         }
