@@ -3455,8 +3455,8 @@
         const reqCapStr = _snapDatumCapM >= 1 ? `$${_snapDatumCapM.toFixed(2)}M` : `$${Math.round(_snapDatumCapM * 1000)}k`;
         const targetEndStr = Math.round(ptsEnd.datumSpend) >= 1000 ? `$${(ptsEnd.datumSpend/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${Math.round(ptsEnd.datumSpend).toLocaleString('en-US')}k`;
         const growthStr = currentScenario.yearsToGrow === 1 ? '1 yr until retirement' : `${currentScenario.yearsToGrow} yrs until retirement`;
-        const _physicsLine = window.currentShapeStateObj.physics || '';
-        const _actionLine = (window.currentShapeStateObj.action || '').replace('this range', 'this Shape');
+        const _physicsLine = (window.currentShapeStateObj.physics || '').replace(/<br\s*\/?>/gi, ' ');
+        const _actionLine = (window.currentShapeStateObj.action || '').replace('this range', 'this Shape').replace(/<br\s*\/?>/gi, ' ');
 
         const svgString = `
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="100%" height="100%">
