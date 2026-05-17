@@ -207,8 +207,8 @@
     color: var(--teal-mid);
     text-transform: uppercase;
     letter-spacing: 0.15em;
-    margin: 12px 0 12px 0;
-    padding: 8px 0;
+    margin: 8px 0 8px 0;
+    padding: 4px 0;
     border-top: 1px dashed rgba(93, 202, 165, 0.18);
     border-bottom: 1px dashed rgba(93, 202, 165, 0.18);
   }
@@ -1506,7 +1506,7 @@
                                 </div>
                                 <div id="pin-changes-row" class="pin-changes-row" style="display:none;"></div>
                                 <div class="readout-row"><strong id="lbl-pin-means">What it Means:</strong> <span id="pin-means" class="data-line">Modify your timeline...</span></div>
-                                <div id="pin-inspect-row" class="readout-row"><strong id="lbl-pin-inspect">What to Consider:</strong> <span id="pin-inspect" class="data-line">Ready to analyze differences.</span></div>
+                                <div class="readout-row"><strong id="lbl-pin-inspect">What to Consider:</strong> <span id="pin-inspect" class="data-line">Ready to analyze differences.</span></div>
                                 <div class="pin-lever-row">
                                     <span class="lbl-pin-lever">Most Impactful Lever:</span>
                                     <span id="pin-lever-attribution">No movement yet — adjust a slider to see lever attribution</span>
@@ -2780,7 +2780,13 @@
         document.getElementById('lbl-physics').style.display = 'inline';
         document.getElementById('lbl-action').style.display = 'inline';
         document.getElementById('val-physics').innerHTML = s.physics;
-        document.getElementById('val-action').innerHTML = s.action;
+        // When pinned, strip the generic Studio-bridge appendix after <br><br>
+        let _actionContent = s.action;
+        if (pinnedState) {
+            const _split = s.action.split(/<br\s*\/?>\s*<br\s*\/?>/i);
+            if (_split.length > 1) _actionContent = _split[0];
+        }
+        document.getElementById('val-action').innerHTML = _actionContent;
 
         // F4: live datum context — updates on every slider change, not just confirm
         if (lastCalculatedPoints) {
@@ -3506,8 +3512,6 @@
             document.getElementById('hud-main').classList.remove('is-pinned');
             const _lsRelEl = document.getElementById('lbl-shape-state');
             if (_lsRelEl) _lsRelEl.textContent = 'Shape State:';
-            const _piRowRelEl = document.getElementById('pin-inspect-row');
-            if (_piRowRelEl) _piRowRelEl.style.display = '';
             btn.textContent = 'Pin Scenario';
             return;
         }
@@ -3587,10 +3591,6 @@
         // B3: initialize lever attribution to no-movement state
         const _plaInitEl = document.getElementById('pin-lever-attribution');
         if (_plaInitEl) _plaInitEl.textContent = 'No movement yet — adjust a slider to see lever attribution';
-
-        // B6: hide Studio-bridge paragraph in Pin HUD (redundant with unpinned HUD)
-        const _piRowActEl = document.getElementById('pin-inspect-row');
-        if (_piRowActEl) _piRowActEl.style.display = 'none';
 
         // B7: reset arrow-changes row to hidden on fresh pin
         const _pcrActEl = document.getElementById('pin-changes-row');
