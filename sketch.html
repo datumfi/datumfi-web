@@ -4431,6 +4431,9 @@
           <clipPath id="design-cone-clip">
             <path id="design-clip-cone-path" d="" />
           </clipPath>
+          <clipPath id="design-plot-clip">
+            <rect x="120" y="30" width="530" height="420"/>
+          </clipPath>
           <linearGradient id="design-thermal-grad" x1="0" y1="0" x2="0" y2="100%">
             <stop id="dg-ceil"  offset="0"    stop-color="#C9A84C" stop-opacity="0.2"/>
             <stop id="dg-mid1"  offset="35%"  stop-color="#5DCAA5" stop-opacity="0.1"/>
@@ -4439,18 +4442,20 @@
           </linearGradient>
         </defs>
         <g id="d-grid"></g>
-        <path id="d-ghost-cone"  class="design-ghost-cone"                   d=""/>
-        <path id="d-ghost-ceil"  class="design-ghost-line design-ghost-ceil"  d=""/>
-        <path id="d-ghost-floor" class="design-ghost-line design-ghost-floor" d=""/>
-        <path id="d-ghost-datum" class="design-ghost-line design-ghost-datum" d=""/>
-        <path id="d-cone"        class="design-cone-fill" d=""/>
-        <path id="d-ceil-line"   class="design-ceil-line"  d=""/>
+        <g clip-path="url(#design-plot-clip)">
+          <path id="d-ghost-cone"  class="design-ghost-cone"                   d=""/>
+          <path id="d-ghost-ceil"  class="design-ghost-line design-ghost-ceil"  d=""/>
+          <path id="d-ghost-floor" class="design-ghost-line design-ghost-floor" d=""/>
+          <path id="d-ghost-datum" class="design-ghost-line design-ghost-datum" d=""/>
+          <path id="d-cone"        class="design-cone-fill" d=""/>
+          <path id="d-ceil-line"   class="design-ceil-line"  d=""/>
+          <path id="d-floor-line"  class="design-floor-line" d=""/>
+          <path id="d-datum-line"  class="design-datum-line" d=""/>
+        </g>
         <path id="d-ceil-hit"  d="" stroke="transparent" stroke-width="16" fill="none" style="cursor:ns-resize;" pointer-events="stroke"/>
-        <path id="d-floor-line"  class="design-floor-line" d=""/>
         <path id="d-floor-hit" d="" stroke="transparent" stroke-width="16" fill="none" style="cursor:ns-resize;" pointer-events="stroke"/>
-        <path id="d-datum-line"  class="design-datum-line" d=""/>
         <path id="d-datum-hit"  d="" stroke="transparent" stroke-width="16" fill="none" style="cursor:ns-resize;" pointer-events="stroke"/>
-        
+
         <g id="d-handle-ceil"  class="design-handle" tabindex="0" role="slider" aria-label="Ceiling spending target">
           <circle id="d-node-ceil"  r="7" fill="#C9A84C"/>
           <line   id="d-handle-ceil-line"  stroke="#C9A84C" stroke-width="1" stroke-dasharray="2 3" stroke-opacity="0.4"/>
@@ -4465,7 +4470,7 @@
           <line   id="d-handle-datum-line" stroke="#5DCAA5" stroke-width="1" stroke-dasharray="2 3" stroke-opacity="0.4"/>
           <g id="d-lock-icon-datum" stroke="#5DCAA5">${lockIconStr}</g>
         </g>
-        
+
         <text id="d-lbl-ceil"  font-family="var(--font-mono)" font-size="10" fill="#C9A84C" letter-spacing="1.5">CEILING</text>
         <text id="d-lbl-floor" font-family="var(--font-mono)" font-size="10" fill="#e24b4a" letter-spacing="1.5">FLOOR</text>
         <text id="d-lbl-datum" font-family="var(--font-mono)" font-size="10" fill="#5DCAA5" letter-spacing="1.5">DATUM</text>
@@ -4473,9 +4478,9 @@
         <text x="-240" y="18" transform="rotate(-90)" font-family="var(--font-mono)" font-size="9" fill="rgba(255,255,255,0.35)" letter-spacing="0.1em" text-anchor="middle">ANNUAL SPEND</text>
         <!-- X axis bottom line and labels -->
         <line id="d-xaxis-line" x1="120" y1="450" x2="650" y2="450" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
-        <text id="d-xaxis-start" x="120" y="468" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="rgba(255,255,255,0.4)">RETIRE</text>
-        <text id="d-xaxis-end"   x="650" y="468" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="rgba(255,255,255,0.4)">END</text>
-        <text id="d-xaxis-mid"   x="385" y="475" text-anchor="middle" font-family="var(--font-mono)" font-size="8" fill="rgba(255,255,255,0.25)">YEARS IN RETIREMENT →</text>
+        <text id="d-xaxis-start" x="120" y="468" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="rgba(255,255,255,0.4)">AGE</text>
+        <text id="d-xaxis-end"   x="650" y="468" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--teal-mid)">RETIRE</text>
+        <text id="d-xaxis-mid"   x="385" y="475" text-anchor="middle" font-family="var(--font-mono)" font-size="8" fill="rgba(255,255,255,0.25)">YEARS UNTIL RETIREMENT</text>
         <rect id="d-tension-overlay" x="80" y="20" width="570" height="320"
               fill="none" stroke="#C9A84C" stroke-width="0" rx="2" opacity="0"/>
         <g clip-path="url(#design-cone-clip)">
@@ -4598,71 +4603,60 @@
     function renderDesignCanvas() {
       const pts = lastCalculatedPoints;
       if (!pts) return;
-      // (clamp moved after rescale)
-      // Update X axis labels with actual ages
+      // Update X axis labels — mirror Screen 1 frame (accumulation: now → retirement)
       const _s = currentScenario || {};
-      const _retAge  = _s.retireAge  || _s.activationAge || 65;
-      const _endAge  = _retAge + (_s.planYears || _s.yearsInRetirement || 30);
       const _xStart  = document.getElementById('d-xaxis-start');
       const _xEnd    = document.getElementById('d-xaxis-end');
-      if (_xStart) _xStart.textContent = `AGE ${_retAge}`;
-      if (_xEnd)   _xEnd.textContent   = `AGE ${_endAge}`;
+      if (_xStart) _xStart.textContent = `AGE ${_s.currentAge || '—'}`;
+      if (_xEnd)   _xEnd.textContent   = `RETIRE: ${_s.activationAge || '—'}`;
 
-      // ── Auto-rescale Y axis so all handles always stay visible ──────────
-      // Mirror Screen 1 midpoint scale for live rescaling
-      const _overExt  = designState.datumTarget > designState.ceilTarget;
-      let _newMax, _newMin;
-      if (_overExt) {
-        _newMax = Math.max(designState.ceilTarget * 4.0, 50);
-        _newMin = Math.max(0, designState.floorTarget * 0.75);
-      } else {
-        // During ceiling drag: freeze scale reference so handle tracks cursor instead of TV-car illusion
-        const _ceilRef = (activeDrag === 'ceil') ? Math.max(designState.ceilTarget, designYMax) : designState.ceilTarget;
-        const _rVals   = [_ceilRef, designState.floorTarget, designState.datumTarget];
-        const _rVMax   = Math.max(..._rVals);
-        const _rVMin   = Math.min(..._rVals);
-        const _rPadded = Math.max((_rVMax - _rVMin) * 1.25, 60);
-        const _rMid    = (_rVMax + _rVMin) / 2;
-        _newMax = _rMid + _rPadded / 2;
-        _newMin = Math.max(0, _rMid - _rPadded / 2);
-      }
+      // ── Auto-rescale Y axis — FROZEN during drag to prevent feedback loops ──────
       let _rescaled = false;
-      const _prevMax = designYMax, _prevMin = designYMin;
-      // During active drag: only EXPAND canvas, never shrink (prevents jarring zoom-in)
-      const _activeDragging = typeof activeDrag === 'string' && activeDrag !== null;
-      const _effectiveMax = _activeDragging ? Math.max(_newMax, designYMax) : _newMax;
-      const _effectiveMin = _activeDragging ? Math.min(_newMin, designYMin) : _newMin;
-      if (_effectiveMax !== designYMax || _effectiveMin !== designYMin) {
-        if (Math.abs(_effectiveMax - _prevMax) > 2 || Math.abs(_effectiveMin - _prevMin) > 2) _rescaled = true;
-        designYMax = _effectiveMax;
-        designYMin = _effectiveMin;
-        // Guarantee floor handle always stays on canvas — expand bottom if needed
-        if (designState && designState.floorTarget !== undefined) {
-          designYMin = Math.min(designYMin, Math.max(0, designState.floorTarget - 15));
+      const _activeDragging = activeDrag !== null;
+      if (!_activeDragging) {
+        // Only rescale when no handle is being dragged
+        const _overExt = designState.datumTarget > designState.ceilTarget;
+        let _newMax, _newMin;
+        if (_overExt) {
+          _newMax = Math.max(designState.ceilTarget * 4.0, 50);
+          _newMin = Math.max(0, designState.floorTarget * 0.75);
+        } else {
+          const _rVals   = [designState.ceilTarget, designState.floorTarget, designState.datumTarget];
+          const _rVMax   = Math.max(..._rVals);
+          const _rVMin   = Math.min(..._rVals);
+          const _rPadded = Math.max((_rVMax - _rVMin) * 1.25, 60);
+          const _rMid    = (_rVMax + _rVMin) / 2;
+          _newMax = _rMid + _rPadded / 2;
+          _newMin = Math.max(0, _rMid - _rPadded / 2);
+        }
+        const _prevMax = designYMax, _prevMin = designYMin;
+        if (Math.abs(_newMax - _prevMax) > 2 || Math.abs(_newMin - _prevMin) > 2) {
+          _rescaled = true;
+          designYMax = _newMax;
+          designYMin = _newMin;
+          if (designState && designState.floorTarget !== undefined) {
+            designYMin = Math.min(designYMin, Math.max(0, designState.floorTarget - 15));
+          }
         }
       }
       // Y axis labels handled by d-grid builder
       // ── Hard-clamp all targets to current visible spend range ──────────
       const _visMax = designYMax - 1;
       const _visMin = Math.max(designYMin + 1, 1);
+      // Floor: also clamp to keep handle clear of X-axis chrome (30px buffer above D_Y_MAX)
+      const _floorSpendMin = dYToSpend(D_Y_MAX - 30);
       // Only clamp floor/ceil to visible range; datum is free to sit above ceil (OVEREXTENDED)
       designState.ceilTarget  = Math.min(Math.max(designState.ceilTarget,  _visMin), _visMax);
-      designState.floorTarget = Math.min(Math.max(designState.floorTarget, _visMin), _visMax);
+      designState.floorTarget = Math.min(Math.max(designState.floorTarget, Math.max(_visMin, _floorSpendMin)), _visMax);
       designState.datumTarget = Math.max(designState.datumTarget, _visMin); // never snap below canvas
       if (designState.ceilTarget <= designState.floorTarget + 2)
         designState.ceilTarget = designState.floorTarget + 3;
       const xS = D_X_START;
       const xE = D_X_END;
 
-      // Ghost lines (Screen 1 computed)
-      const yGC = dSpendToY(pts.ceilSpend);
-      const yGF = dSpendToY(pts.floorSpend);
+      // Ghost reference values (Screen 1 endpoint for datum ghost)
       const yGD = dSpendToY(pts.datumSpend);
       const ptsStart = getMathPoint(0, currentScenario.yearsToGrow, currentScenario);
-      
-      document.getElementById('d-ghost-ceil').setAttribute('d',  `M${xS} ${dSpendToY(ptsStart.ceilSpend)} L${xE} ${yGC}`);
-      document.getElementById('d-ghost-floor').setAttribute('d', `M${xS} ${dSpendToY(ptsStart.floorSpend)} L${xE} ${yGF}`);
-      document.getElementById('d-ghost-datum').setAttribute('d', `M${xS} ${dSpendToY(ptsStart.datumSpend)} L${xE} ${yGD}`);
 
       // Active lines
       const yC  = dSpendToY(designState.ceilTarget);
@@ -4680,8 +4674,10 @@
       let _dFloorPath = `M${xS} ${dSpendToY(ptsStart.floorSpend)}`;
       const _dConeCeilPts  = [`${xS} ${dSpendToY(ptsStart.ceilSpend)}`];
       const _dConeFloorPts = [];
-      const _gConeCeilPts  = [`${xS} ${dSpendToY(ptsStart.ceilSpend)}`];
-      const _gConeFloorPts = [];
+      // Ghost cone + ghost lines: forward-order arrays for Screen 1 geometry
+      const _gConeCeilPts  = [`${xS} ${dSpendToY(ptsStart.ceilSpend)}`]; // fwd order (ceil = cone top)
+      const _gConeFloorPts = [];                                           // rev order (for closed fill)
+      const _gFloorFwdPts  = [`${xS} ${dSpendToY(ptsStart.floorSpend)}`]; // fwd order (for ghost-floor line)
       for (let _i = 1; _i <= _dSSteps; _i++) {
           const _t   = _i / _dSSteps;
           const _x   = xS + _t * (xE - xS);
@@ -4695,13 +4691,20 @@
           // Ghost cone: pure Screen 1 geometry (no design blend)
           _gConeCeilPts.push(`${_x} ${dSpendToY(_sp.ceilSpend)}`);
           _gConeFloorPts.unshift(`${_x} ${dSpendToY(_sp.floorSpend)}`);
+          _gFloorFwdPts.push(`${_x} ${dSpendToY(_sp.floorSpend)}`);
       }
       _dConeFloorPts.push(`${xS} ${dSpendToY(ptsStart.floorSpend)}`);
       const _dConePath = `M ${_dConeCeilPts[0]} ` + _dConeCeilPts.slice(1).map(p => `L ${p}`).join(' ') + ' ' + _dConeFloorPts.map(p => `L ${p}`).join(' ') + ' Z';
       _gConeFloorPts.push(`${xS} ${dSpendToY(ptsStart.floorSpend)}`);
       const _gConePath = `M ${_gConeCeilPts[0]} ` + _gConeCeilPts.slice(1).map(p => `L ${p}`).join(' ') + ' ' + _gConeFloorPts.map(p => `L ${p}`).join(' ') + ' Z';
+      // Ghost lines follow Screen 1 curve (not straight chord) so they overlap live at default state
+      const _ghostCeilD  = `M ${_gConeCeilPts[0]} ` + _gConeCeilPts.slice(1).map(p => `L ${p}`).join(' ');
+      const _ghostFloorD = `M ${_gFloorFwdPts[0]} ` + _gFloorFwdPts.slice(1).map(p => `L ${p}`).join(' ');
 
-      document.getElementById('d-ghost-cone').setAttribute('d', _gConePath);
+      document.getElementById('d-ghost-cone').setAttribute('d',  _gConePath);
+      document.getElementById('d-ghost-ceil').setAttribute('d',  _ghostCeilD);
+      document.getElementById('d-ghost-floor').setAttribute('d', _ghostFloorD);
+      document.getElementById('d-ghost-datum').setAttribute('d', `M${xS} ${dSpendToY(ptsStart.datumSpend)} L${xE} ${yGD}`);
       document.getElementById('d-ceil-line').setAttribute('d',  _dCeilPath);
       const _chit = document.getElementById('d-ceil-hit'); if(_chit) _chit.setAttribute('d', `M${xS} ${ySC} L${xE} ${yC}`);
       document.getElementById('d-floor-line').setAttribute('d', _dFloorPath);
@@ -5198,12 +5201,18 @@
         });
       });
 
-      // SVG lock icon click handlers — clicking icon in canvas toggles lock (same logic as HTML buttons)
+      // SVG lock icon click handlers — clicking icon in canvas toggles lock
+      // IMPORTANT: pointerdown must be stopped on the icon so the parent handle's
+      // pointerdown (which calls setPointerCapture) never fires — pointer capture
+      // would redirect the subsequent click event away from the icon.
       ['ceil', 'floor', 'datum'].forEach(n => {
         const icon = document.getElementById(`d-lock-icon-${n}`);
         if (!icon) return;
         icon.style.pointerEvents = 'all';
         icon.style.cursor = 'pointer';
+        icon.addEventListener('pointerdown', e => {
+          e.stopPropagation(); // prevents handle pointerdown → no setPointerCapture → click fires on icon
+        });
         icon.addEventListener('click', e => {
           e.stopPropagation();
           designState[n + 'Locked'] = !designState[n + 'Locked'];
