@@ -422,6 +422,7 @@
   .ghost-line { stroke-width: 1; stroke-linecap: round; fill: none; stroke-dasharray: 2 4; opacity: 0; transition: opacity 0.3s; }
   .ghost-ceil { stroke: var(--gold); }
   .ghost-floor { stroke: var(--danger-red); }
+  .ghost-datum { stroke: var(--teal-mid); }
   
   .ghost-active { opacity: 0.6 !important; }
   .ghost-cone-active { opacity: 0.4 !important; }
@@ -1578,6 +1579,7 @@
                   <path id="ghost-cone" class="cone-fill morph ghost-cone-init" d="" />
                   <path id="ghost-ceil" class="ghost-line ghost-ceil morph" d="" />
                   <path id="ghost-floor" class="ghost-line ghost-floor morph" d="" />
+                  <path id="ghost-datum" class="ghost-line ghost-datum morph" d="" />
                   <!-- GEM D: hatch overlay between ghost and current shapes -->
                   <defs>
                     <pattern id="ghost-hatch" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
@@ -2657,7 +2659,7 @@
             return { name: "OVEREXTENDED", color: "var(--danger-red)", cls: "hud-state-overextended",
                 physics: "Your Datum sits above the Ceiling of your Shape. Even the upper boundary — the cone’s most favorable path — projects less spending capacity than your current target. No modeled path reaches this lifestyle at your current inputs.<br><br>A structural gap. The Shape does not currently support this Datum across any modeled path. The honest question is which lever is willing to move — more time, more capital, lower spending, stronger contributions — to close the distance between where the Ceiling is and where the Datum sits.",
                 action: "Move the levers one at a time to see which has enough power to lift the Ceiling to meet the Datum. Or lower the Datum to where the Shape currently supports it — that’s the lifestyle the current inputs project, not a recommendation.<br><br>Studio can test whether real-world variables — tax-advantaged accounts, withdrawal sequencing, Social Security timing, income sources — close some of this gap before any lever needs to move. The Sketch holds those variables constant; Studio models them.",
-                physicsShort: "Your target sits above what any modeled path reaches. No condition structurally supports this lifestyle at these inputs.",
+                physicsShort: "Even the upper boundary projects less spending capacity than your target. No modeled path reaches this lifestyle at your current inputs.",
                 actionShort: "No structurally supported path exists. Lower the Datum, delay retirement, or use Studio to model exactly which levers close the gap." };
         }
         if (pts.datumSpend < pts.floorSpend) {
@@ -2671,8 +2673,8 @@
             return { name: "GROUNDED", color: "var(--purple-grounded)", cls: "hud-state-grounded",
                 physics: "Your Datum sits near the Floor of your Shape. The Floor already supports this lifestyle target, and the Ceiling sits well above it — leaving a wide gap between what you’re spending and what the Shape could support.<br><br>A conservative position. The Floor supports your Datum across most modeled paths, and the gap above the Datum is your spending headroom. The real question is whether you’re holding that headroom on purpose — for resilience, legacy, or flexibility — or whether the Shape supports more lifestyle than you’ve tested.",
                 action: "Raise the Datum to see how much spending the Shape supports before it stops feeling conservative. Or keep the Datum where it is and test whether the headroom does what you want it to — fund earlier retirement, absorb stress, or carry through to legacy.<br><br>Studio can confirm whether your actual account architecture, withdrawal order, and Social Security timing reinforce this conservative position — or whether some of the modeled headroom is already absorbed by real-world variables the Sketch holds constant.",
-                physicsShort: "Your Datum sits near the Floor. The Floor holds your target; the margin above is your buffer.",
-                actionShort: "The lower paths are doing the work. Studio can test whether tax sequencing preserves this Floor under stress." };
+                physicsShort: "Your Datum sits near the Floor. The Floor already supports this lifestyle target; the margin above is your buffer.",
+                actionShort: "The lower paths are doing the work. Keep the Datum where it is or test to fund earlier retirement, absorb stress, or carry through to legacy." };
         }
         if (_position >= 0.85) {
             return { name: "STRETCHED", color: "var(--orange-warning)", cls: "hud-state-stretched",
@@ -2684,8 +2686,8 @@
         return { name: "EXPANSIVE", color: "var(--teal-mid)", cls: "hud-state-expansive",
             physics: "Your Datum sits comfortably inside a wide Shape. The Floor supports your target and the Ceiling sits well above it. The width reflects modeled uncertainty across return paths — your outcome could land anywhere across that range.<br><br>The Shape is wide because multiple unmodeled variables remain — outcomes could vary meaningfully even though the Datum is well-supported today.",
             action: "Which edge to test first: shift the Datum higher to test capacity, lower to test resilience, or move retirement age to test the timeline.<br><br>Studio can narrow the Shape by testing your actual account types, tax sequencing, withdrawal order, and Social Security timing — variables the Sketch holds constant.",
-            physicsShort: "Your Datum sits in the middle of a wide Shape. Room exists in both directions; outcomes are model-sensitive.",
-            actionShort: "Multiple paths support your target across modeled conditions. Studio can narrow this range with tax strategies and glide paths across 10,000 sequences." };
+            physicsShort: "Your Datum sits comfortably inside a wide Shape. Room exists in both directions; outcomes are model-sensitive.",
+            actionShort: "Multiple paths support your target across modeled conditions. Shift the Datum higher to test capacity, lower to test resilience." };
     }
 
     // STRUCT 4: colour constants — single source of truth (27 hex refs → constants)
@@ -3515,6 +3517,7 @@
             document.getElementById('ghost-ceil').classList.remove('ghost-active');
             document.getElementById('ghost-floor').classList.remove('ghost-active');
             document.getElementById('ghost-cone').classList.remove('ghost-cone-active');
+            document.getElementById('ghost-datum').classList.remove('ghost-active');
             const gHatch = document.getElementById('ghost-hatch-area');
             if (gHatch) gHatch.style.opacity = '0';
             const gLabel = document.getElementById('ghost-label');
@@ -3556,10 +3559,12 @@
         document.getElementById('ghost-ceil').setAttribute('d',  ceilD);
         document.getElementById('ghost-floor').setAttribute('d', floorD);
         document.getElementById('ghost-cone').setAttribute('d',  coneD);
+        document.getElementById('ghost-datum').setAttribute('d', document.getElementById('datum-line').getAttribute('d'));
 
         document.getElementById('ghost-ceil').classList.add('ghost-active');
         document.getElementById('ghost-floor').classList.add('ghost-active');
         document.getElementById('ghost-cone').classList.add('ghost-cone-active');
+        document.getElementById('ghost-datum').classList.add('ghost-active');
 
         // GEM D: hatch area between ghost and live cone + label at retirement endpoint
         const gHatch = document.getElementById('ghost-hatch-area');
@@ -3809,6 +3814,10 @@
                       fill="none" stroke="#e24b4a" stroke-width="2"
                       stroke-dasharray="4 4" stroke-opacity="0.35"
                       stroke-linecap="round" />
+                <path d="${document.getElementById('ghost-datum').getAttribute('d') || ''}"
+                      fill="none" stroke="#5DCAA5" stroke-width="2"
+                      stroke-dasharray="4 4" stroke-opacity="0.35"
+                      stroke-linecap="round" />
                 ` : ''}
                 <path d="${dCone}" fill="url(#snapshot-grad)" />
                 <path d="${dCeil}" stroke="#C9A84C" stroke-width="3" stroke-linecap="round" fill="none" />
@@ -3899,6 +3908,7 @@
         document.getElementById('ghost-ceil').classList.remove('ghost-active');
         document.getElementById('ghost-floor').classList.remove('ghost-active');
         document.getElementById('ghost-cone').classList.remove('ghost-cone-active');
+        document.getElementById('ghost-datum').classList.remove('ghost-active');
         // GEM D: hide hatch + label on clear
         const gHatchClear = document.getElementById('ghost-hatch-area');
         if (gHatchClear) gHatchClear.style.opacity = '0';
