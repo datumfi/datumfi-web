@@ -183,15 +183,23 @@
   
   .telemetry-card { background: rgba(9, 18, 33, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1); border-left: 2px solid var(--teal-mid); border-radius: 4px; padding: 12px 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); transition: all 0.3s ease; display: flex; flex-direction: row; align-items: center; min-height: 84px;}
   .telemetry-card.pinned { background: rgba(93, 202, 165, 0.05); border-color: rgba(93, 202, 165, 0.2); border-left-color: var(--teal-mid); display: none; }
-  @keyframes hudPinnedPulse {
+  .telemetry-card { position: relative; }
+  @keyframes hudPinnedBorderPulse {
     0%, 100% { opacity: 1.0; }
-    50%      { opacity: 0.5; }
+    50%      { opacity: 0.3; }
   }
-  .telemetry-card.is-pinned {
-    animation: hudPinnedPulse 4s ease-in-out infinite;
+  .telemetry-card.is-pinned::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 2px solid;
+    border-color: inherit;
+    border-radius: 4px;
+    pointer-events: none;
+    animation: hudPinnedBorderPulse 4s ease-in-out infinite;
   }
   @media (prefers-reduced-motion: reduce) {
-    .telemetry-card.is-pinned { animation: none; }
+    .telemetry-card.is-pinned::before { animation: none; }
   }
   .pin-lever-row {
     font-family: var(--font-mono);
@@ -212,6 +220,25 @@
     color: var(--teal-mid);
     font-weight: 500;
   }
+  .pin-changes-row {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: rgba(255,255,255,0.75);
+    margin: 8px 0 14px 0;
+    padding: 8px 0;
+    border-bottom: 1px dashed rgba(255,255,255,0.08);
+    line-height: 1.6;
+  }
+  .pin-changes-row.is-inline .pin-change-item + .pin-change-item::before {
+    content: " · ";
+    color: rgba(255,255,255,0.3);
+    margin: 0 6px;
+  }
+  .pin-changes-row.is-stacked .pin-change-item { display: block; margin-bottom: 3px; }
+  .pin-change-arrow-up   { color: var(--teal-mid); font-weight: 500; margin: 0 4px; }
+  .pin-change-arrow-down { color: var(--muted);    font-weight: 500; margin: 0 4px; }
+  .pin-change-values     { color: rgba(255,255,255,0.6); margin-left: 2px; }
+  #pin-changed-row       { display: none; }
 
   /* Dynamic Shape State HUD Colors */
   .hud-state-expansive { border-color: var(--teal-mid) !important; border-left-color: var(--teal-mid) !important; background: rgba(93, 202, 165, 0.05) !important; }
@@ -1477,13 +1504,14 @@
                                     <span style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Designed State:</span>
                                     <strong id="pin-designed-state" class="hud-state-label">—</strong>
                                 </div>
+                                <div id="pin-changes-row" class="pin-changes-row" style="display:none;"></div>
                                 <div class="readout-row"><strong id="lbl-pin-means">What it Means:</strong> <span id="pin-means" class="data-line">Modify your timeline...</span></div>
-                                <div class="readout-row"><strong id="lbl-pin-inspect">What to Consider:</strong> <span id="pin-inspect" class="data-line">Ready to analyze differences.</span></div>
+                                <div id="pin-inspect-row" class="readout-row"><strong id="lbl-pin-inspect">What to Consider:</strong> <span id="pin-inspect" class="data-line">Ready to analyze differences.</span></div>
                                 <div class="pin-lever-row">
                                     <span class="lbl-pin-lever">Most Impactful Lever:</span>
                                     <span id="pin-lever-attribution">No movement yet — adjust a slider to see lever attribution</span>
                                 </div>
-                                <div class="readout-row"><strong id="lbl-pin-changed">What Changed:</strong> <span id="pin-changed" class="data-line">No inputs changed yet.</span></div>
+                                <div id="pin-changed-row" class="readout-row"><strong id="lbl-pin-changed">What Changed:</strong> <span id="pin-changed" class="data-line">No inputs changed yet.</span></div>
                             </div>
                         </div>
                     </div>
@@ -3344,6 +3372,41 @@
             const _piEl = document.getElementById('pin-inspect');
             if (_piEl) _piEl.innerHTML = _pinConsider;
 
+            // B7: arrow-format inline/stacked What Changed row
+            const _pcrEl = document.getElementById('pin-changes-row');
+            if (_pcrEl) {
+                if (pChanged.length === 0) {
+                    _pcrEl.style.display = 'none';
+                    _pcrEl.innerHTML = '';
+                } else {
+                    const _sn = { capital:'Capital', datum:'Datum', contrib:'Contributions',
+                                  retire:'Retirement', tax:'Tax', market:'Market', infl:'Inflation', age:'Age' };
+                    const _fCapV  = v => v >= 1 ? `$${v.toFixed(2)}M` : `$${Math.round(v*1000)}k`;
+                    const _fDatV  = v => v >= 1000 ? `$${(v/1000).toFixed(2).replace(/\.00$/,'')}M` : `$${Math.round(v)}k`;
+                    const _fConV  = v => v >= 1000 ? `$${Math.round(v/1000)}k` : `$${Math.round(v)}`;
+                    const _ci = [];
+                    if (_retireChg)  _ci.push({ k:'retire',  up:_retireDelta>0,  from:`${pinnedState.retire}`,   to:`${activationAge}` });
+                    if (_ageChg)     _ci.push({ k:'age',     up:_ageDelta>0,     from:`${pinnedState.age}`,      to:`${currentAge}` });
+                    if (_capitalChg) _ci.push({ k:'capital', up:_capDelta>0,     from:_fCapV(pinnedState.port),  to:_fCapV(portfolioVol) });
+                    if (_datumChg)   _ci.push({ k:'datum',   up:_datumDelta>0,   from:_fDatV(pinnedState.datum), to:_fDatV(targetSpend) });
+                    if (_contribChg) _ci.push({ k:'contrib', up:_contribDelta>0, from:_fConV(pinnedState.contrib), to:_fConV(annualContrib) });
+                    if (_mktChg)     _ci.push({ k:'market',  up:null, from:pinnedState.pinnedParadigm, to:_pinCurMkt });
+                    if (_inflChg)    _ci.push({ k:'infl',    up:null, from:pinnedState.pinnedInflStr,  to:_pinCurInfl });
+                    if (_taxChg)     _ci.push({ k:'tax',     up:_taxDelta>0, from:`${pinnedState.pinnedTax}%`, to:`${_pinCurTax}%` });
+                    _pcrEl.className = `pin-changes-row ${_ci.length <= 2 ? 'is-inline' : 'is-stacked'}`;
+                    _pcrEl.style.display = '';
+                    _pcrEl.innerHTML = _ci.map(it => {
+                        const _nl = `<span style="color:rgba(255,255,255,0.5)">${_sn[it.k]||it.k}</span>`;
+                        const _vl = `<span class="pin-change-values">${it.from} → ${it.to}</span>`;
+                        if (it.up === null) return `<span class="pin-change-item">${_nl}${_vl}</span>`;
+                        const _ar = it.up
+                            ? `<span class="pin-change-arrow-up">↑</span>`
+                            : `<span class="pin-change-arrow-down">↓</span>`;
+                        return `<span class="pin-change-item">${_nl}${_ar}${_vl}</span>`;
+                    }).join('');
+                }
+            }
+
             // B1: keep label flipped while pin is active (hudMain.className resets classes above)
             const _lsEl = document.getElementById('lbl-shape-state');
             if (_lsEl) _lsEl.textContent = 'Designed Shape State:';
@@ -3443,6 +3506,8 @@
             document.getElementById('hud-main').classList.remove('is-pinned');
             const _lsRelEl = document.getElementById('lbl-shape-state');
             if (_lsRelEl) _lsRelEl.textContent = 'Shape State:';
+            const _piRowRelEl = document.getElementById('pin-inspect-row');
+            if (_piRowRelEl) _piRowRelEl.style.display = '';
             btn.textContent = 'Pin Scenario';
             return;
         }
@@ -3522,6 +3587,14 @@
         // B3: initialize lever attribution to no-movement state
         const _plaInitEl = document.getElementById('pin-lever-attribution');
         if (_plaInitEl) _plaInitEl.textContent = 'No movement yet — adjust a slider to see lever attribution';
+
+        // B6: hide Studio-bridge paragraph in Pin HUD (redundant with unpinned HUD)
+        const _piRowActEl = document.getElementById('pin-inspect-row');
+        if (_piRowActEl) _piRowActEl.style.display = 'none';
+
+        // B7: reset arrow-changes row to hidden on fresh pin
+        const _pcrActEl = document.getElementById('pin-changes-row');
+        if (_pcrActEl) { _pcrActEl.style.display = 'none'; _pcrActEl.innerHTML = ''; }
 
         // Button feedback — stays as release toggle until user clicks again
         btn.textContent = 'Release Pin';
