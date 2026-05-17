@@ -181,7 +181,7 @@
 
   .hud-dashboard { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-bottom: 12px; z-index: 50; position: relative;}
   
-  .telemetry-card { background: rgba(9, 18, 33, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1); border-left: 2px solid var(--teal-mid); border-radius: 4px; padding: 12px 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); transition: all 0.3s ease; display: flex; flex-direction: row; align-items: center; min-height: 84px;}
+  .telemetry-card { background: rgba(9, 18, 33, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1); border-left: 2px solid var(--teal-mid); border-radius: 4px; padding: 12px 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); transition: background-color 0.3s ease, border-color 0.3s ease, border-left-color 0.3s ease, box-shadow 0.3s ease; display: flex; flex-direction: row; align-items: center; min-height: 84px;}
   .telemetry-card.pinned { background: rgba(93, 202, 165, 0.05); border-color: rgba(93, 202, 165, 0.2); border-left-color: var(--teal-mid); display: none; }
   .telemetry-card { position: relative; }
   @keyframes hudPinnedBorderPulse {
@@ -228,13 +228,16 @@
     padding: 8px 0;
     border-bottom: 1px dashed rgba(255,255,255,0.08);
     line-height: 1.6;
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 12px;
+    row-gap: 4px;
   }
-  .pin-changes-row.is-inline .pin-change-item + .pin-change-item::before {
+  .pin-changes-row .pin-change-item + .pin-change-item::before {
     content: " · ";
     color: rgba(255,255,255,0.3);
     margin: 0 6px;
   }
-  .pin-changes-row.is-stacked .pin-change-item { display: block; margin-bottom: 3px; }
   .pin-change-arrow-up   { color: var(--teal-mid); font-weight: 500; margin: 0 4px; }
   .pin-change-arrow-down { color: var(--muted);    font-weight: 500; margin: 0 4px; }
   .pin-change-values     { color: rgba(255,255,255,0.6); margin-left: 2px; }
@@ -3399,7 +3402,7 @@
                     if (_mktChg)     _ci.push({ k:'market',  up:null, from:pinnedState.pinnedParadigm, to:_pinCurMkt });
                     if (_inflChg)    _ci.push({ k:'infl',    up:null, from:pinnedState.pinnedInflStr,  to:_pinCurInfl });
                     if (_taxChg)     _ci.push({ k:'tax',     up:_taxDelta>0, from:`${pinnedState.pinnedTax}%`, to:`${_pinCurTax}%` });
-                    _pcrEl.className = `pin-changes-row ${_ci.length <= 2 ? 'is-inline' : 'is-stacked'}`;
+                    _pcrEl.className = 'pin-changes-row';
                     _pcrEl.style.display = '';
                     _pcrEl.innerHTML = _ci.map(it => {
                         const _nl = `<span style="color:rgba(255,255,255,0.5)">${_sn[it.k]||it.k}</span>`;
@@ -3571,6 +3574,13 @@
             if (pm) pm.innerHTML = 'Shape pinned. Move sliders to compare against this baseline.';
             if (pi) pi.innerHTML = 'Adjust any input to see how the Shape responds.';
             if (pc) pc.innerHTML = 'No inputs changed yet.';
+        }
+
+        // B6 v3: strip Studio-bridge from val-action immediately on pin activation
+        const _vaEl = document.getElementById('val-action');
+        if (_vaEl && window.currentShapeStateObj && window.currentShapeStateObj.action) {
+            const _vaSplit = window.currentShapeStateObj.action.split(/<br\s*\/?>\s*<br\s*\/?>/i);
+            _vaEl.innerHTML = _vaSplit.length > 1 ? _vaSplit[0] : window.currentShapeStateObj.action;
         }
 
         const pinnedBlock = document.getElementById('hud-pinned');
