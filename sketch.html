@@ -4665,16 +4665,38 @@
       const ySF = dSpendToY(ptsStart.floorSpend);
       const ySD = dSpendToY(ptsStart.datumSpend);
 
-      document.getElementById('d-ceil-line').setAttribute('d',  `M${xS} ${ySC} L${xE} ${yC}`);
+      // Build 50-segment sampled curves matching Screen 1 geometry.
+      // Left edge: pure getMathPoint curve. Right endpoint: blended toward design targets.
+      // At default (designState.ceilTarget === pts.ceilSpend), blend offset = 0 → identical to Screen 1.
+      const _dSSteps = 50;
+      let _dCeilPath  = `M${xS} ${dSpendToY(ptsStart.ceilSpend)}`;
+      let _dFloorPath = `M${xS} ${dSpendToY(ptsStart.floorSpend)}`;
+      const _dConeCeilPts  = [`${xS} ${dSpendToY(ptsStart.ceilSpend)}`];
+      const _dConeFloorPts = [];
+      for (let _i = 1; _i <= _dSSteps; _i++) {
+          const _t   = _i / _dSSteps;
+          const _x   = xS + _t * (xE - xS);
+          const _sp  = getMathPoint(_t * currentScenario.yearsToGrow, currentScenario.yearsToGrow, currentScenario);
+          const _yCb = dSpendToY(_sp.ceilSpend  + _t * (designState.ceilTarget  - pts.ceilSpend));
+          const _yFb = dSpendToY(_sp.floorSpend + _t * (designState.floorTarget - pts.floorSpend));
+          _dCeilPath  += ` L${_x} ${_yCb}`;
+          _dFloorPath += ` L${_x} ${_yFb}`;
+          _dConeCeilPts.push(`${_x} ${_yCb}`);
+          _dConeFloorPts.unshift(`${_x} ${_yFb}`);
+      }
+      _dConeFloorPts.push(`${xS} ${dSpendToY(ptsStart.floorSpend)}`);
+      const _dConePath = `M ${_dConeCeilPts[0]} ` + _dConeCeilPts.slice(1).map(p => `L ${p}`).join(' ') + ' ' + _dConeFloorPts.map(p => `L ${p}`).join(' ') + ' Z';
+
+      document.getElementById('d-ceil-line').setAttribute('d',  _dCeilPath);
       const _chit = document.getElementById('d-ceil-hit'); if(_chit) _chit.setAttribute('d', `M${xS} ${ySC} L${xE} ${yC}`);
-      document.getElementById('d-floor-line').setAttribute('d', `M${xS} ${ySF} L${xE} ${yF}`);
+      document.getElementById('d-floor-line').setAttribute('d', _dFloorPath);
       const _fhit = document.getElementById('d-floor-hit'); if(_fhit) _fhit.setAttribute('d', `M${xS} ${ySF} L${xE} ${yF}`);
       document.getElementById('d-datum-line').setAttribute('d', `M${xS} ${ySD} L${xE} ${yD}`);
       const _dhit = document.getElementById('d-datum-hit'); if(_dhit) _dhit.setAttribute('d', `M${xS} ${ySD} L${xE} ${yD}`);
-      document.getElementById('d-cone').setAttribute('d', `M${xS} ${ySC} L${xE} ${yC} L${xE} ${yF} L${xS} ${ySF} Z`);
+      document.getElementById('d-cone').setAttribute('d', _dConePath);
       // Keep clip path synced so design sweep stays inside the cone
       const dcc = document.getElementById('design-clip-cone-path');
-      if (dcc) dcc.setAttribute('d', `M${xS} ${ySC} L${xE} ${yC} L${xE} ${yF} L${xS} ${ySF} Z`);
+      if (dcc) dcc.setAttribute('d', _dConePath);
 
       // Node positions — direct from data coordinates, no visual offset that could cause snapping
       ['ceil','floor','datum'].forEach((n, i) => {
