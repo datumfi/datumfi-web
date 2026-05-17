@@ -2656,26 +2656,36 @@
         if (pts.datumSpend > pts.ceilSpend) {
             return { name: "OVEREXTENDED", color: "var(--danger-red)", cls: "hud-state-overextended",
                 physics: "Your Datum sits above the Ceiling of your Shape. Even the upper boundary — the cone’s most favorable path — projects less spending capacity than your current target. No modeled path reaches this lifestyle at your current inputs.<br><br>A structural gap. The Shape does not currently support this Datum across any modeled path. The honest question is which lever is willing to move — more time, more capital, lower spending, stronger contributions — to close the distance between where the Ceiling is and where the Datum sits.",
-                action: "Move the levers one at a time to see which has enough power to lift the Ceiling to meet the Datum. Or lower the Datum to where the Shape currently supports it — that’s the lifestyle the current inputs project, not a recommendation.<br><br>Studio can test whether real-world variables — tax-advantaged accounts, withdrawal sequencing, Social Security timing, income sources — close some of this gap before any lever needs to move. The Sketch holds those variables constant; Studio models them." };
+                action: "Move the levers one at a time to see which has enough power to lift the Ceiling to meet the Datum. Or lower the Datum to where the Shape currently supports it — that’s the lifestyle the current inputs project, not a recommendation.<br><br>Studio can test whether real-world variables — tax-advantaged accounts, withdrawal sequencing, Social Security timing, income sources — close some of this gap before any lever needs to move. The Sketch holds those variables constant; Studio models them.",
+                physicsShort: "Your target sits above what any modeled path reaches. No condition structurally supports this lifestyle at these inputs.",
+                actionShort: "No structurally supported path exists. Lower the Datum, delay retirement, or use Studio to model exactly which levers close the gap." };
         }
         if (pts.datumSpend < pts.floorSpend) {
             return { name: "ABUNDANT", color: "var(--blue-safe)", cls: "hud-state-abundant",
                 physics: "Your Datum sits below the Floor of your Shape. Even the lower boundary — the cone’s most conservative path — projects more spending capacity than your current target. Your lifestyle target is below what the Shape models as the floor of what’s sustainable.<br><br>An unusual position. Most Datums sit inside the Shape; yours sits below it. The structural question is whether this gap is intentional — for legacy, for resilience beyond what the Shape models, for simple preference — or whether the Shape is showing you capacity you haven’t tested yet.",
-                action: "Raise the Datum into the Shape to see what the boundary actually supports. Or hold the Datum where it is and decide what the unused capacity is for — earlier retirement, larger legacy, a higher Floor against unmodeled risks.<br><br>Studio can test whether your actual account architecture, tax sequencing, and income timing preserve this surplus — or whether some of the unused capacity is already absorbed by variables the Sketch holds constant." };
+                action: "Raise the Datum into the Shape to see what the boundary actually supports. Or hold the Datum where it is and decide what the unused capacity is for — earlier retirement, larger legacy, a higher Floor against unmodeled risks.<br><br>Studio can test whether your actual account architecture, tax sequencing, and income timing preserve this surplus — or whether some of the unused capacity is already absorbed by variables the Sketch holds constant.",
+                physicsShort: "Your Datum sits below your Floor — structurally surplus. Even your worst-case Floor supports more than you're asking.",
+                actionShort: "Multiple modeled paths exceed your target. Studio can deploy that slack as earlier retirement, higher spending, or legacy giving." };
         }
         if (_position <= 0.15) {
             return { name: "GROUNDED", color: "var(--purple-grounded)", cls: "hud-state-grounded",
                 physics: "Your Datum sits near the Floor of your Shape. The Floor already supports this lifestyle target, and the Ceiling sits well above it — leaving a wide gap between what you’re spending and what the Shape could support.<br><br>A conservative position. The Floor supports your Datum across most modeled paths, and the gap above the Datum is your spending headroom. The real question is whether you’re holding that headroom on purpose — for resilience, legacy, or flexibility — or whether the Shape supports more lifestyle than you’ve tested.",
-                action: "Raise the Datum to see how much spending the Shape supports before it stops feeling conservative. Or keep the Datum where it is and test whether the headroom does what you want it to — fund earlier retirement, absorb stress, or carry through to legacy.<br><br>Studio can confirm whether your actual account architecture, withdrawal order, and Social Security timing reinforce this conservative position — or whether some of the modeled headroom is already absorbed by real-world variables the Sketch holds constant." };
+                action: "Raise the Datum to see how much spending the Shape supports before it stops feeling conservative. Or keep the Datum where it is and test whether the headroom does what you want it to — fund earlier retirement, absorb stress, or carry through to legacy.<br><br>Studio can confirm whether your actual account architecture, withdrawal order, and Social Security timing reinforce this conservative position — or whether some of the modeled headroom is already absorbed by real-world variables the Sketch holds constant.",
+                physicsShort: "Your Datum sits near the Floor. The Floor holds your target; the margin above is your buffer.",
+                actionShort: "The lower paths are doing the work. Studio can test whether tax sequencing preserves this Floor under stress." };
         }
         if (_position >= 0.85) {
             return { name: "STRETCHED", color: "var(--orange-warning)", cls: "hud-state-stretched",
                 physics: "Your Datum sits near the Ceiling of your Shape. The upper boundary supports your target, but the Floor sits well below it — meaning most of the modeled paths that get you here run through favorable conditions, not stress.<br><br>An upper-edge position. The Shape supports your Datum, but only the upper paths comfortably do so. Markets, returns, and timing all need to lean your way for this target to hold across the full range of modeled outcomes.",
-                action: "Lower the Datum to see where the Shape’s middle paths start carrying the weight, or hold the Datum and test whether stronger inputs — more time, more capital, lower spending — pull the lower paths up to meet it.<br><br>Studio can test whether your actual tax sequencing, account architecture, withdrawal order, and Social Security timing reinforce this target through the full engine — variables the Sketch holds constant." };
+                action: "Lower the Datum to see where the Shape’s middle paths start carrying the weight, or hold the Datum and test whether stronger inputs — more time, more capital, lower spending — pull the lower paths up to meet it.<br><br>Studio can test whether your actual tax sequencing, account architecture, withdrawal order, and Social Security timing reinforce this target through the full engine — variables the Sketch holds constant.",
+                physicsShort: "Your Datum sits near the Ceiling. The Shape supports your target, but the upper paths carry the work.",
+                actionShort: "Margin is thin upward. Studio shows which lever — tax sequencing, Roth ladder, withdrawal order — buys back margin most efficiently." };
         }
         return { name: "EXPANSIVE", color: "var(--teal-mid)", cls: "hud-state-expansive",
             physics: "Your Datum sits comfortably inside a wide Shape. The Floor supports your target and the Ceiling sits well above it. The width reflects modeled uncertainty across return paths — your outcome could land anywhere across that range.<br><br>The Shape is wide because multiple unmodeled variables remain — outcomes could vary meaningfully even though the Datum is well-supported today.",
-            action: "Which edge to test first: shift the Datum higher to test capacity, lower to test resilience, or move retirement age to test the timeline.<br><br>Studio can narrow the Shape by testing your actual account types, tax sequencing, withdrawal order, and Social Security timing — variables the Sketch holds constant." };
+            action: "Which edge to test first: shift the Datum higher to test capacity, lower to test resilience, or move retirement age to test the timeline.<br><br>Studio can narrow the Shape by testing your actual account types, tax sequencing, withdrawal order, and Social Security timing — variables the Sketch holds constant.",
+            physicsShort: "Your Datum sits in the middle of a wide Shape. Room exists in both directions; outcomes are model-sensitive.",
+            actionShort: "Multiple paths support your target across modeled conditions. Studio can narrow this range with tax strategies and glide paths across 10,000 sequences." };
     }
 
     // STRUCT 4: colour constants — single source of truth (27 hex refs → constants)
@@ -3659,8 +3669,21 @@
         const reqCapStr = _snapDatumCapM >= 1 ? `$${_snapDatumCapM.toFixed(2)}M` : `$${Math.round(_snapDatumCapM * 1000)}k`;
         const targetEndStr = Math.round(ptsEnd.datumSpend) >= 1000 ? `$${(ptsEnd.datumSpend/1000).toFixed(2).replace(/\.00$/, '')}M` : `$${Math.round(ptsEnd.datumSpend).toLocaleString('en-US')}k`;
         const growthStr = currentScenario.yearsToGrow === 1 ? '1 yr until retirement' : `${currentScenario.yearsToGrow} yrs until retirement`;
-        const _physicsLine = (window.currentShapeStateObj.physics || '').replace(/<br\s*\/?>/gi, ' ');
-        const _actionLine = (window.currentShapeStateObj.action || '').replace('this range', 'this Shape').replace(/<br\s*\/?>/gi, ' ');
+        // Use short-copy variants for SVG (canvas cannot fit full prose).
+        // When pinned, use only the second sentence for additional space.
+        let _physicsLine = (window.currentShapeStateObj.physicsShort
+                            || window.currentShapeStateObj.physics
+                            || '').replace(/<br\s*\/?>/gi, ' ');
+        let _actionLine  = (window.currentShapeStateObj.actionShort
+                            || window.currentShapeStateObj.action
+                            || '').replace(/<br\s*\/?>/gi, ' ')
+                                  .replace('this range', 'this Shape');
+        if (pinnedState) {
+            const _pSplit = _physicsLine.split(/\.\s+/);
+            if (_pSplit.length > 1) _physicsLine = _pSplit.slice(1).join('. ').trim();
+            const _aSplit = _actionLine.split(/\.\s+/);
+            if (_aSplit.length > 1) _actionLine = _aSplit.slice(1).join('. ').trim();
+        }
 
         const svgString = `
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="100%" height="100%">
@@ -3671,7 +3694,11 @@
                 .font-serif { font-family: ui-serif, 'Georgia', Cambria, 'Times New Roman', Times, serif; }
             </style>
             <rect width="1100" height="720" fill="#091221" />
-            
+            ${pinnedState ? `
+            <text x="50" y="30" class="font-mono" font-size="10"
+                  fill="#5DCAA5" letter-spacing="3"
+                  font-weight="bold">PINNED COMPARISON</text>
+            ` : ''}
             <g transform="translate(50, 40)">
                 <g transform="scale(0.059)">
                     <path d="M53.18,496.26l20.75-19.07,20.29-19.02,210.15-.28c15.58-1.13,28.89-4.2,43.23-9.04,31.67-11.94,58.24-32.35,78.64-59.73,24.51-32.5,37.75-70.67,40.36-110.96,1.02-4.95.7-10.06.36-15.4.39-20-1.96-38.85-7.3-57.84-9.33-34.07-27.43-64.18-53.39-88.3l-12.97-11.03c-16.45-11.62-33.88-21.1-53.37-26.68-10.81-3.25-20.66-4.57-32.41-5.8l-228.79-.14-14.5-13.2-15.91-14.46-19.97-18.21L10.06,10.25,0,.1l294.81.02c24.84-.81,46.8,2.43,70.54,9.08,42.08,12.59,78.91,35.93,108.55,68.17,2.3,1.97,3.95,3.8,5.18,6.17,12.55,13.88,21.95,28.97,31.11,45.62,16.16,31.27,26.18,64.71,29.97,100l1.35,12.37-.15,37.74c-1.05,23.81-5.54,46.54-12.36,69.47l-8.63,24.47-9.77,20.63c-9.71,19.13-21.21,35.89-35.41,52.38-20.83,23.97-45.06,42.88-73.19,57.55-28.31,15.03-57.28,22.84-89.72,25.75l-293.77.03,20.71-20.28,13.96-13.01Z" fill="#1d9e75"/>
@@ -3698,7 +3725,7 @@
                 <text x="505" y="59" class="font-mono" font-size="12" fill="#e24b4a" font-weight="bold">${fvConStr} / ${fSpendStr} yr</text>
                 <line x1="0" y1="68" x2="700" y2="68" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1" />
 
-                <text x="20" y="80" class="font-mono" font-size="9" fill="#ffffff" fill-opacity="0.5">SHAPE STATE</text>
+                <text x="20" y="80" class="font-mono" font-size="9" fill="#ffffff" fill-opacity="0.5">${pinnedState ? 'DESIGNED SHAPE STATE' : 'SHAPE STATE'}</text>
                 <text x="20" y="93" class="font-mono" font-size="13" fill="${_stateHex}" font-weight="bold">${window.currentShapeStateObj.name}</text>
                 <text x="262" y="80" class="font-mono" font-size="9" fill="#ffffff" fill-opacity="0.5">GROWTH PERIOD</text>
                 <text x="262" y="93" class="font-mono" font-size="11" fill="#ffffff" fill-opacity="0.7">${growthStr}</text>
@@ -3708,6 +3735,16 @@
                 <text x="20" y="126" class="font-mono" font-size="9" fill="#ffffff" fill-opacity="0.75">${_physicsLine}</text>
                 <text x="20" y="140" class="font-mono" font-size="9" fill="#ffffff" fill-opacity="0.5">WHAT TO CONSIDER</text>
                 <text x="20" y="152" class="font-mono" font-size="9" fill="#ffffff" fill-opacity="0.75">${_actionLine}</text>
+                ${pinnedState ? `
+                <line x1="0" y1="165" x2="700" y2="165"
+                      stroke="#5DCAA5" stroke-opacity="0.25"
+                      stroke-width="1" stroke-dasharray="3 3" />
+                <text x="20" y="178" class="font-mono" font-size="9"
+                      fill="#5DCAA5" letter-spacing="2"
+                      font-weight="bold">PINNED COMPARISON</text>
+                <text x="20" y="192" class="font-mono" font-size="9"
+                      fill="#ffffff" fill-opacity="0.7">Pinned: <tspan fill="${_csvc[pinnedState.stateObj.color] ?? pinnedState.stateObj.color}" font-weight="bold">${pinnedState.stateObj.name}</tspan> → Designed: <tspan fill="${_stateHex}" font-weight="bold">${window.currentShapeStateObj.name}</tspan></text>
+                ` : ''}
             </g>
 
             <g transform="translate(50, 250)">
@@ -3760,6 +3797,19 @@
                 <text x="120" y="485" text-anchor="middle" class="font-mono" font-size="12" fill="#ffffff" fill-opacity="0.6">AGE ${currentScenario.currentAge}</text>
                 <text x="650" y="485" text-anchor="middle" class="font-mono" font-size="12" fill="#5DCAA5" font-weight="bold">RETIRE: ${currentScenario.activationAge}</text>
 
+                ${pinnedState ? `
+                <path d="${document.getElementById('ghost-cone').getAttribute('d') || ''}"
+                      fill="none" stroke="#5DCAA5" stroke-width="1.5"
+                      stroke-dasharray="4 4" stroke-opacity="0.35" />
+                <path d="${document.getElementById('ghost-ceil').getAttribute('d') || ''}"
+                      fill="none" stroke="#C9A84C" stroke-width="2"
+                      stroke-dasharray="4 4" stroke-opacity="0.35"
+                      stroke-linecap="round" />
+                <path d="${document.getElementById('ghost-floor').getAttribute('d') || ''}"
+                      fill="none" stroke="#e24b4a" stroke-width="2"
+                      stroke-dasharray="4 4" stroke-opacity="0.35"
+                      stroke-linecap="round" />
+                ` : ''}
                 <path d="${dCone}" fill="url(#snapshot-grad)" />
                 <path d="${dCeil}" stroke="#C9A84C" stroke-width="3" stroke-linecap="round" fill="none" />
                 <path d="${dFloor}" stroke="#e24b4a" stroke-width="3" stroke-linecap="round" fill="none" />
