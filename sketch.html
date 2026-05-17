@@ -191,7 +191,7 @@
   .telemetry-card.is-pinned::before {
     content: "";
     position: absolute;
-    inset: 0;
+    inset: -1px;
     border: 2px solid;
     border-color: inherit;
     border-radius: 4px;
@@ -207,8 +207,8 @@
     color: var(--teal-mid);
     text-transform: uppercase;
     letter-spacing: 0.15em;
-    margin: 8px 0 8px 0;
-    padding: 4px 0;
+    margin: 4px 0 4px 0;
+    padding: 2px 0;
     border-top: 1px dashed rgba(93, 202, 165, 0.18);
     border-bottom: 1px dashed rgba(93, 202, 165, 0.18);
   }
@@ -224,8 +224,8 @@
     font-family: var(--font-mono);
     font-size: 11px;
     color: rgba(255,255,255,0.75);
-    margin: 8px 0 14px 0;
-    padding: 8px 0;
+    margin: 4px 0 6px 0;
+    padding: 4px 0;
     border-bottom: 1px dashed rgba(255,255,255,0.08);
     line-height: 1.6;
     display: flex;
@@ -1499,11 +1499,11 @@
                          <div style="font-family:var(--font-mono); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; width: 90px; padding-right: 16px; border-right: 1px solid rgba(255,255,255,0.05); line-height: 1.2;">Pinned Scenario</div>
                          <div class="hud-diff" style="border-left: none; padding-left: 0;">
                             <div class="tel-readout" id="pinned-readout">
-                                <div class="readout-row" style="margin-bottom: 6px;">
+                                <div class="readout-row" style="margin-bottom: 3px;">
                                     <span style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Pin State:</span>
                                     <strong id="pin-state-name" class="hud-state-label">UNKNOWN</strong>
                                 </div>
-                                <div class="readout-row" style="margin-bottom: 6px;">
+                                <div class="readout-row" style="margin-bottom: 3px;">
                                     <span style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Designed State:</span>
                                     <strong id="pin-designed-state" class="hud-state-label">—</strong>
                                 </div>
@@ -3515,6 +3515,11 @@
             document.getElementById('hud-main').classList.remove('is-pinned');
             const _lsRelEl = document.getElementById('lbl-shape-state');
             if (_lsRelEl) _lsRelEl.textContent = 'Shape State:';
+            // B6-RELEASE: restore full action copy immediately (no slider move required)
+            const _vaRelEl = document.getElementById('val-action');
+            if (_vaRelEl && window.currentShapeStateObj && window.currentShapeStateObj.action) {
+                _vaRelEl.innerHTML = window.currentShapeStateObj.action;
+            }
             btn.textContent = 'Pin Scenario';
             return;
         }
