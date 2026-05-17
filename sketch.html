@@ -183,7 +183,36 @@
   
   .telemetry-card { background: rgba(9, 18, 33, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1); border-left: 2px solid var(--teal-mid); border-radius: 4px; padding: 12px 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); transition: all 0.3s ease; display: flex; flex-direction: row; align-items: center; min-height: 84px;}
   .telemetry-card.pinned { background: rgba(93, 202, 165, 0.05); border-color: rgba(93, 202, 165, 0.2); border-left-color: var(--teal-mid); display: none; }
-  
+  @keyframes hudPinnedPulse {
+    0%, 100% { opacity: 1.0; }
+    50%      { opacity: 0.5; }
+  }
+  .telemetry-card.is-pinned {
+    animation: hudPinnedPulse 4s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .telemetry-card.is-pinned { animation: none; }
+  }
+  .pin-lever-row {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--teal-mid);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin: 12px 0 12px 0;
+    padding: 8px 0;
+    border-top: 1px dashed rgba(93, 202, 165, 0.18);
+    border-bottom: 1px dashed rgba(93, 202, 165, 0.18);
+  }
+  .lbl-pin-lever {
+    color: var(--muted);
+    margin-right: 8px;
+  }
+  #pin-lever-attribution {
+    color: var(--teal-mid);
+    font-weight: 500;
+  }
+
   /* Dynamic Shape State HUD Colors */
   .hud-state-expansive { border-color: var(--teal-mid) !important; border-left-color: var(--teal-mid) !important; background: rgba(93, 202, 165, 0.05) !important; }
   .hud-state-grounded { border-color: var(--purple-grounded) !important; border-left-color: var(--purple-grounded) !important; background: rgba(139, 111, 191, 0.05) !important; }
@@ -1412,7 +1441,7 @@
                         <div class="hud-diff">
                             <div class="tel-readout" id="main-readout">
                                 <div class="readout-row readout-header" style="margin-bottom: 6px;">
-                                    <span style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Shape State:</span> 
+                                    <span id="lbl-shape-state" style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Shape State:</span>
                                     <strong id="shape-state-name" class="hud-state-label">INITIALIZING</strong>
                                     <span class="shape-info-icon" tabindex="0">?
                                         <div class="shape-info-tooltip">
@@ -1450,6 +1479,10 @@
                                 </div>
                                 <div class="readout-row"><strong id="lbl-pin-means">What it Means:</strong> <span id="pin-means" class="data-line">Modify your timeline...</span></div>
                                 <div class="readout-row"><strong id="lbl-pin-inspect">What to Consider:</strong> <span id="pin-inspect" class="data-line">Ready to analyze differences.</span></div>
+                                <div class="pin-lever-row">
+                                    <span class="lbl-pin-lever">Most Impactful Lever:</span>
+                                    <span id="pin-lever-attribution">No movement yet — adjust a slider to see lever attribution</span>
+                                </div>
                                 <div class="readout-row"><strong id="lbl-pin-changed">What Changed:</strong> <span id="pin-changed" class="data-line">No inputs changed yet.</span></div>
                             </div>
                         </div>
@@ -3188,7 +3221,9 @@
                         case 'age':     _open = `${_dp} widened the Shape — more years remaining for capital to compound.`; break;
                     }
                 }
-                const _secText = _secDriving && _secClause ? ` Of the two changes, ${_domNoun} drove most of the widening; ${_secClause}.` : '';
+                const _changeCount = pChanged.length;
+                const _countWord = _changeCount === 2 ? 'two' : String(_changeCount);
+                const _secText = _secDriving && _secClause ? ` Of the ${_countWord} changes, ${_domNoun} drove most of the widening; ${_secClause}.` : '';
                 const _datumNote = (_pDatumNearCeil && _datumChg) ? ' Your Datum now sits closer to the Ceiling of this wider range.' : '';
                 const _shiftNote = _pMidSig ? ` It also shifted ${_pMidDelta > 0 ? 'higher' : 'lower'} overall.` : '';
                 _pinMeans    = `${_open}${_secText}${_datumNote}${_shiftNote}`;
@@ -3207,7 +3242,9 @@
                         case 'age':     _open = `${_dp} narrowed the Shape — ${_ageBand === 'dramatic' ? 'that span of lost compounding heavily reduced both boundaries' : 'fewer years remaining for capital to compound'}.`; break;
                     }
                 }
-                const _secText = _secDriving && _secClause ? ` Of the two changes, ${_domNoun} drove most of the narrowing; ${_secClause}.` : '';
+                const _changeCount2 = pChanged.length;
+                const _countWord2 = _changeCount2 === 2 ? 'two' : String(_changeCount2);
+                const _secText = _secDriving && _secClause ? ` Of the ${_countWord2} changes, ${_domNoun} drove most of the narrowing; ${_secClause}.` : '';
                 const _datumNote = _pDatumNearCeil ? ' Your Datum now sits near the Ceiling — the Shape has moved toward stretched positioning.'
                     : _pDatumNearFloor ? ' Your Datum now sits near the Floor — the Shape has moved toward grounded positioning.' : '';
                 const _shiftNote = _pMidSig ? ` It also shifted ${_pMidDelta > 0 ? 'higher' : 'lower'} overall.` : '';
@@ -3306,6 +3343,71 @@
 
             const _piEl = document.getElementById('pin-inspect');
             if (_piEl) _piEl.innerHTML = _pinConsider;
+
+            // B1: keep label flipped while pin is active (hudMain.className resets classes above)
+            const _lsEl = document.getElementById('lbl-shape-state');
+            if (_lsEl) _lsEl.textContent = 'Designed Shape State:';
+
+            // B2: re-add is-pinned after hudMain.className was reset by updateEngine
+            hudMain.classList.add('is-pinned');
+
+            // B3: Most Impactful Lever attribution
+            const _plaEl = document.getElementById('pin-lever-attribution');
+            if (_plaEl) {
+                if (pChanged.length === 0 || !_dom) {
+                    _plaEl.textContent = pChanged.length === 0
+                        ? 'No movement yet — adjust a slider to see lever attribution'
+                        : 'No dominant lever — multiple small adjustments';
+                } else {
+                    const _leverNames = {
+                        capital: 'Portfolio Balance', datum: 'Datum Spend',
+                        contrib: 'Annual Contributions', retire: 'Retirement Age',
+                        tax: 'Tax Strategy', market: 'Market Paradigm',
+                        infl: 'Inflation', age: 'Current Age'
+                    };
+                    const _lName = _leverNames[_dom.key] || _dom.key;
+                    const _domPct = (_twt > 0 ? (_dom.w / _twt * 100) : 100).toFixed(1);
+                    let _lDetail = '';
+                    switch (_dom.key) {
+                        case 'capital': {
+                            const _sign = _capDelta >= 0 ? '+' : '−';
+                            const _absC = Math.abs(_capDelta);
+                            const _absStr = _absC >= 1 ? `$${_absC.toFixed(2)}M` : `$${Math.round(_absC * 1000)}k`;
+                            _lDetail = `${_sign}${_absStr}, ${_domPct}% of range`; break;
+                        }
+                        case 'datum': {
+                            const _sign = _datumDelta >= 0 ? '+' : '−';
+                            const _absD = Math.abs(_datumDelta);
+                            const _absStr = _absD >= 1000 ? `$${(_absD/1000).toFixed(2)}M` : `$${Math.round(_absD)}k`;
+                            _lDetail = `${_sign}${_absStr}, ${_domPct}% of range`; break;
+                        }
+                        case 'contrib': {
+                            const _sign = _contribDelta >= 0 ? '+' : '−';
+                            const _absStr = _contribAbs >= 1000 ? `$${Math.round(_contribAbs/1000)}k` : `$${Math.round(_contribAbs)}`;
+                            _lDetail = `${_sign}${_absStr}, ${_domPct}% of range`; break;
+                        }
+                        case 'retire': {
+                            const _sign = _retireDelta >= 0 ? '+' : '−';
+                            _lDetail = `${_sign}${_retireAbs} yr, ${_domPct}% of range`; break;
+                        }
+                        case 'age': {
+                            const _sign = _ageDelta >= 0 ? '+' : '−';
+                            _lDetail = `${_sign}${_ageAbs} yr, ${_domPct}% of range`; break;
+                        }
+                        case 'tax': {
+                            const _sign = _taxDelta >= 0 ? '+' : '−';
+                            _lDetail = `${_sign}${_taxAbs} pt, ${_domPct}% of range`; break;
+                        }
+                        case 'market':
+                            _lDetail = `→ ${paradigm}, ${_domPct}% of range`; break;
+                        case 'infl':
+                            _lDetail = `→ ${_pinCurInfl}, ${_domPct}% of range`; break;
+                        default:
+                            _lDetail = `${_domPct}% of range`;
+                    }
+                    _plaEl.textContent = `${_lName} (${_lDetail})`;
+                }
+            }
         }
 
         // Studio handoff — sessionStorage keys for cross-page state transfer
@@ -3338,6 +3440,9 @@
             document.getElementById('pinned-legend').style.display = 'none';
             const pinnedBlock = document.getElementById('hud-pinned');
             if (pinnedBlock) pinnedBlock.style.display = 'none';
+            document.getElementById('hud-main').classList.remove('is-pinned');
+            const _lsRelEl = document.getElementById('lbl-shape-state');
+            if (_lsRelEl) _lsRelEl.textContent = 'Shape State:';
             btn.textContent = 'Pin Scenario';
             return;
         }
@@ -3406,6 +3511,17 @@
             pinnedBlock.style.borderColor = 'var(--teal-mid)';
             setTimeout(() => { pinnedBlock.style.borderColor = ''; }, 800);
         }
+
+        // B1: flip main HUD label to Designed Shape State
+        const _lsActEl = document.getElementById('lbl-shape-state');
+        if (_lsActEl) _lsActEl.textContent = 'Designed Shape State:';
+
+        // B2: start border pulse on main HUD
+        document.getElementById('hud-main').classList.add('is-pinned');
+
+        // B3: initialize lever attribution to no-movement state
+        const _plaInitEl = document.getElementById('pin-lever-attribution');
+        if (_plaInitEl) _plaInitEl.textContent = 'No movement yet — adjust a slider to see lever attribution';
 
         // Button feedback — stays as release toggle until user clicks again
         btn.textContent = 'Release Pin';
