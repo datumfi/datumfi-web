@@ -570,17 +570,36 @@
     width: 100%;
   }
   .design-left {
-    width: 28%;
+    width: 35%;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
     gap: 0;
-    overflow: hidden;
+    overflow-y: auto;
     padding: 12px 4% 10px 5%;
     border-right: 1px solid rgba(255,255,255,0.05);
     background: rgba(9,18,33,0.95);
   }
   .design-left > * + * { margin-top: 12px; }
+  /* Screen 2 reference rail */
+  .d2-ref-rail { display: flex; flex-direction: column; gap: 0; }
+  .d2-ref-section { padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .d2-ref-section:last-child { border-bottom: none; }
+  .d2-ref-mono { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--gold); margin-bottom: 5px; }
+  .d2-ref-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px; }
+  .d2-ref-lbl { font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.1em; }
+  .d2-ref-val { font-family: var(--font-serif); font-size: 13px; font-style: italic; color: rgba(255,255,255,0.5); }
+  .d2-ref-ghost-note { font-family: var(--font-mono); font-size: 8px; color: rgba(255,255,255,0.2); letter-spacing: 0.06em; margin-top: 2px; }
+  /* Screen 2 Datum Intelligence HUD */
+  .d2-hud-card { background: rgba(9,18,33,0.85); border: 1px solid rgba(255,255,255,0.1); border-left: 2px solid var(--teal-mid); border-radius: 4px; padding: 10px 12px; transition: border-left-color 0.3s ease; }
+  .d2-hud-status { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--teal-mid); margin-bottom: 8px; }
+  .d2-hud-metrics { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+  .d2-hud-metric { display: flex; justify-content: space-between; align-items: center; font-family: var(--font-mono); font-size: 9px; }
+  .d2-hud-metric-lbl { color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.08em; }
+  .d2-hud-metric-val { font-size: 11px; font-weight: bold; }
+  .d2-hud-divider { border-top: 1px solid rgba(255,255,255,0.06); padding-top: 6px; }
+  .d2-hud-readout { font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.55); line-height: 1.5; display: flex; flex-direction: column; gap: 4px; }
+  .d2-hud-readout strong { color: var(--white); display: inline; margin-right: 3px; }
   .design-right {
     flex: 1;
     min-width: 0;
@@ -1683,12 +1702,116 @@
 
       <div class="design-left">
 
-        <!-- Requirements panel — TO REACH THIS DESIGN -->
-        <div class="requirements-panel" id="requirements-panel" style="flex:1; display:flex; flex-direction:column;">
-          <div class="req-head" id="req-head-label" style="margin-bottom:6px;">TO REACH THIS DESIGN:</div>
-          <div id="req-spotlight" style="display:none;"></div>
-          <div class="req-items" id="req-items" style="overflow-y:auto; flex:1; min-height:0;">
-            <div class="req-placeholder">Drag the Ceiling, Floor, or Datum handles to design your shape.</div>
+        <!-- Screen 1 Reference Rail (ghosted / read-only) -->
+        <div class="d2-ref-rail">
+
+          <div class="d2-ref-section" style="border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px;">
+            <div class="d2-ref-mono" style="color:rgba(255,255,255,0.4); margin-bottom:2px;">PHASE I — DATA</div>
+            <div class="d2-ref-ghost-note">Discovered shape — ghosted reference</div>
+          </div>
+
+          <!-- 01 / YOUR TIMELINE -->
+          <div class="d2-ref-section">
+            <div class="d2-ref-mono">01 / YOUR TIMELINE</div>
+            <div class="d2-ref-row">
+              <span class="d2-ref-lbl">Current Age</span>
+              <span class="d2-ref-val" id="d2-ref-age">—</span>
+            </div>
+            <div class="d2-ref-row">
+              <span class="d2-ref-lbl">Retirement Age</span>
+              <span class="d2-ref-val" id="d2-ref-retire">—</span>
+            </div>
+          </div>
+
+          <!-- 02 / YOUR CAPITAL -->
+          <div class="d2-ref-section">
+            <div class="d2-ref-mono">02 / YOUR CAPITAL</div>
+            <div class="d2-ref-row">
+              <span class="d2-ref-lbl">Portfolio Balance</span>
+              <span class="d2-ref-val" id="d2-ref-cap">—</span>
+            </div>
+          </div>
+
+          <!-- 03 / YOUR DATUM -->
+          <div class="d2-ref-section">
+            <div class="d2-ref-mono">03 / YOUR DATUM</div>
+            <div class="d2-ref-row">
+              <span class="d2-ref-lbl">$/yr Target</span>
+              <span class="d2-ref-val" id="d2-ref-datum" style="color:rgba(93,202,165,0.7);">—</span>
+            </div>
+          </div>
+
+          <!-- 04 / YOUR CONTRIBUTIONS -->
+          <div class="d2-ref-section">
+            <div class="d2-ref-mono">04 / YOUR CONTRIBUTIONS</div>
+            <div class="d2-ref-row">
+              <span class="d2-ref-lbl">Annual</span>
+              <span class="d2-ref-val" id="d2-ref-contrib">—</span>
+            </div>
+          </div>
+
+          <!-- 05 / MARKET CONDITIONS — LIVE -->
+          <div class="d2-ref-section">
+            <div class="d2-ref-mono">05 / MARKET CONDITIONS</div>
+            <div class="toggle-wrapper">
+              <div class="toggle-container" id="design-market-toggle">
+                <div class="toggle-option">
+                  <input type="radio" id="design-market-opt" name="design-market" value="optimistic" tabindex="0">
+                  <label for="design-market-opt">Optimistic</label>
+                </div>
+                <div class="toggle-option">
+                  <input type="radio" id="design-market-avg" name="design-market" value="average" checked tabindex="0">
+                  <label for="design-market-avg">Historical</label>
+                </div>
+                <div class="toggle-option">
+                  <input type="radio" id="design-market-stress" name="design-market" value="stress" tabindex="0">
+                  <label for="design-market-stress">Stress</label>
+                </div>
+              </div>
+            </div>
+            <div class="d2-ref-ghost-note" style="margin-top:4px;">Controls Screen 2 market scenario</div>
+          </div>
+
+          <!-- Private by design + back link -->
+          <div class="d2-ref-section" style="border-bottom:none;">
+            <div class="sketch-trust-copy" style="margin-top:0; padding-top:6px; border-top:1px dashed rgba(255,255,255,0.07);">
+              Private by design. Inputs are not sent to servers while using the Sketch.
+              <button type="button" class="btn-reset-sketch" onclick="document.getElementById('sketch-main').scrollIntoView({behavior:'smooth'});" style="display:block; margin-top:5px; color:rgba(255,255,255,0.3);">↑ Refine inputs on Screen 1</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Datum Intelligence HUD -->
+        <div class="d2-hud-card">
+          <div class="d2-hud-status">DATUM INTELLIGENCE</div>
+          <div class="d2-hud-metrics">
+            <div class="d2-hud-metric">
+              <span class="d2-hud-metric-lbl">STRUCTURAL CEILING</span>
+              <span class="d2-hud-metric-val" id="d2-hud-ceil-val" style="color:var(--gold);">—</span>
+            </div>
+            <div class="d2-hud-metric">
+              <span class="d2-hud-metric-lbl">TARGET DATUM</span>
+              <span class="d2-hud-metric-val" id="d2-hud-datum-val" style="color:var(--teal-mid); font-size:13px;">—</span>
+            </div>
+            <div class="d2-hud-metric">
+              <span class="d2-hud-metric-lbl">SURVIVAL FLOOR</span>
+              <span class="d2-hud-metric-val" id="d2-hud-floor-val" style="color:var(--danger-red);">—</span>
+            </div>
+            <div class="d2-hud-metric" style="margin-top:3px; padding-top:3px; border-top:1px solid rgba(255,255,255,0.06);">
+              <span class="d2-hud-metric-lbl">GROWTH PERIOD</span>
+              <span class="d2-hud-metric-val" id="d2-hud-growth" style="font-weight:normal; color:rgba(255,255,255,0.35); font-size:9px;">—</span>
+            </div>
+          </div>
+          <div class="d2-hud-divider">
+            <div class="d2-hud-readout">
+              <div style="margin-bottom:3px; display:flex; align-items:center; gap:4px;">
+                <span style="font-size:9px; color:rgba(255,255,255,0.3); text-transform:uppercase; letter-spacing:0.1em;">Shape State:</span>
+                <strong id="d2-hud-state" class="hud-state-label" style="font-size:11px;">—</strong>
+              </div>
+              <div><strong>What it Means:</strong> <span id="d2-hud-means" class="data-line">Drag a boundary to begin.</span></div>
+              <div><strong>What to Consider:</strong> <span id="d2-hud-action" class="data-line">Designed values update live.</span></div>
+            </div>
           </div>
         </div>
 
@@ -1706,7 +1829,69 @@
 
       <!-- RIGHT PANEL — full size draggable canvas -->
       <div class="design-right">
-        <div class="design-canvas-wrap" id="design-canvas-wrap"></div>
+        <svg id="d2-canvas" class="design-svg" viewBox="0 0 840 480" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <clipPath id="d2-plot-clip">
+              <rect x="120" y="30" width="530" height="420"/>
+            </clipPath>
+            <clipPath id="d2-cone-clip">
+              <path id="d2-clip-cone-path" d=""/>
+            </clipPath>
+            <linearGradient id="d2-thermal-grad" x1="0" y1="0" x2="0" y2="100%">
+              <stop id="d2g-ceil"  offset="0"    stop-color="#C9A84C" stop-opacity="0.2"/>
+              <stop id="d2g-mid1"  offset="35%"  stop-color="#5DCAA5" stop-opacity="0.1"/>
+              <stop id="d2g-mid2"  offset="65%"  stop-color="#5DCAA5" stop-opacity="0.1"/>
+              <stop id="d2g-floor" offset="100%" stop-color="#e24b4a" stop-opacity="0.2"/>
+            </linearGradient>
+          </defs>
+
+          <!-- State tint overlay (OVEREXTENDED flashes red) -->
+          <rect id="d2-state-tint-rect" x="0" y="0" width="840" height="480" fill="none" pointer-events="none"/>
+
+          <!-- Grid axes -->
+          <text x="112" y="20" text-anchor="end" font-family="var(--font-mono)" font-size="9" fill="rgba(255,255,255,0.55)" letter-spacing="0.08em">ANNUAL SPEND</text>
+          <g id="d2-grid"></g>
+
+          <g clip-path="url(#d2-plot-clip)">
+            <path id="d2-ghost-cone"  class="design-ghost-cone"                   d=""/>
+            <path id="d2-ghost-ceil"  class="design-ghost-line design-ghost-ceil"  d=""/>
+            <path id="d2-ghost-floor" class="design-ghost-line design-ghost-floor" d=""/>
+            <path id="d2-ghost-datum" class="design-ghost-line design-ghost-datum" d=""/>
+            <path id="d2-cone"        class="design-cone-fill"                     d=""/>
+            <path id="d2-ceil-line"   class="design-ceil-line"                     d=""/>
+            <path id="d2-floor-line"  class="design-floor-line"                    d=""/>
+            <path id="d2-datum-line"  class="design-datum-line"                    d=""/>
+          </g>
+          <path id="d2-ceil-hit"  d="" stroke="transparent" stroke-width="16" fill="none" style="cursor:ns-resize;" pointer-events="stroke"/>
+          <path id="d2-floor-hit" d="" stroke="transparent" stroke-width="16" fill="none" style="cursor:ns-resize;" pointer-events="stroke"/>
+          <path id="d2-datum-hit" d="" stroke="transparent" stroke-width="16" fill="none" style="cursor:ns-resize;" pointer-events="stroke"/>
+          <g id="d2-handle-ceil"  class="design-handle" tabindex="0" role="slider" aria-label="Structural Ceiling spending target">
+            <title>STRUCTURAL CEILING — Favorable path: if returns run above the baseline.</title>
+            <circle id="d2-node-ceil"  r="7" fill="#C9A84C"/>
+            <line   id="d2-handle-ceil-line" x1="650" y1="80" x2="650" y2="350" stroke="#C9A84C" stroke-width="1" stroke-dasharray="2 3" stroke-opacity="0.4"/>
+          </g>
+          <g id="d2-handle-floor" class="design-handle" aria-label="Survival Floor spending target">
+            <title>SURVIVAL FLOOR — Stress path: if returns stay low.</title>
+            <circle id="d2-node-floor" r="6" fill="#e24b4a"/>
+          </g>
+          <g id="d2-handle-datum" class="design-handle" tabindex="0" role="slider" aria-label="Target Datum spending target">
+            <title>TARGET DATUM — Your chosen spending target on the baseline path.</title>
+            <circle id="d2-node-datum" r="8" fill="#5DCAA5"/>
+            <line   id="d2-handle-datum-line" x1="650" y1="230" x2="650" y2="350" stroke="#5DCAA5" stroke-width="1" stroke-dasharray="2 3" stroke-opacity="0.4"/>
+          </g>
+          <text id="d2-lbl-ceil"  font-family="var(--font-mono)" font-size="9"  fill="#C9A84C"  letter-spacing="1.2">STRUCTURAL CEILING</text>
+          <text id="d2-lbl-floor" font-family="var(--font-mono)" font-size="9"  fill="#e24b4a"  letter-spacing="1.2">SURVIVAL FLOOR</text>
+          <text id="d2-lbl-datum" font-family="var(--font-mono)" font-size="10" fill="#5DCAA5"  letter-spacing="1.5">DATUM</text>
+          <line id="d2-xaxis-line" x1="120" y1="450" x2="650" y2="450" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+          <text id="d2-xaxis-start" x="120" y="468" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="rgba(255,255,255,0.4)">AGE</text>
+          <text id="d2-xaxis-end"   x="650" y="468" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--teal-mid)">RETIRE</text>
+          <text id="d2-xaxis-mid"   x="385" y="475" text-anchor="middle" font-family="var(--font-mono)" font-size="8" fill="rgba(255,255,255,0.25)">YEARS UNTIL RETIREMENT</text>
+          <rect id="d2-tension-overlay" x="80" y="20" width="570" height="320" fill="none" stroke="#C9A84C" stroke-width="0" rx="2" opacity="0"/>
+          <g clip-path="url(#d2-cone-clip)">
+            <rect id="design-market-sweep" class="market-sweep" x="-200" y="-100" width="250" height="700"
+                  fill="var(--danger-red)" opacity="0" style="pointer-events:none;"/>
+          </g>
+        </svg>
 
         <!-- Canvas HUD: tension overlay — position:absolute stays as-is -->
         <div id="canvas-hud" style="
@@ -1733,68 +1918,26 @@
           <div id="tension-explain" style="font-size:9px; color:rgba(255,255,255,0.5); line-height:1.55; font-family:var(--font-sans,sans-serif); margin-top:5px;">Move the Ceiling handle to see what the tension means.</div>
         </div>
 
+        <!-- Requirements panel — TO REACH THIS DESIGN (Part 5: right side, under Ceiling Tension) -->
+        <div class="requirements-panel" id="requirements-panel" style="flex:1; display:flex; flex-direction:column; margin-top:10px; min-height:0; max-height:220px; overflow-y:auto;">
+          <div class="req-head" id="req-head-label" style="margin-bottom:6px;">TO REACH THIS DESIGN:</div>
+          <div id="req-spotlight" style="display:none;"></div>
+          <div class="req-items" id="req-items" style="overflow-y:auto; flex:1; min-height:0;">
+            <div class="req-placeholder">Drag the Ceiling, Floor, or Datum handles to design your shape.</div>
+          </div>
+        </div>
+
         <div style="position:relative;z-index:25;pointer-events:auto;">
-        <!-- Lock controls -->
-        <div class="lock-controls" id="lock-controls" style="margin-top:8px;">
-          <div class="lock-row">
-            <button class="lock-btn" id="lock-ceiling-btn" aria-pressed="false">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              Lock Ceiling target
-            </button>
-          </div>
-          <div class="lock-row">
-            <button class="lock-btn lock-datum-btn" id="lock-datum-btn" aria-pressed="false">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              Lock Datum target
-            </button>
-          </div>
-          <div class="lock-row">
-            <button class="lock-btn" id="lock-retire-btn" aria-pressed="false">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              Lock retirement age
-            </button>
-          </div>
-        </div>
 
-        <!-- Shape State chip -->
-        <div style="margin-top:8px; padding:7px 10px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:3px;">
-          <div style="font-family:var(--font-mono); font-size:9px; color:rgba(255,255,255,0.4); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:5px;">SHAPE STATE</div>
-          <div style="font-family:var(--font-mono); font-size:11px; letter-spacing:0.15em; margin-bottom:6px;">
-            <strong id="d2-shape-state-name" style="color:var(--teal-mid);">—</strong>
-          </div>
-          <div id="d2-shape-state-meaning" style="font-size:11px; color:rgba(255,255,255,0.6); line-height:1.45;">Drag any handle to see your Shape State.</div>
-        </div>
-
-        <!-- Market Conditions toggle -->
-        <div style="margin-top:8px;">
-          <div class="cf-head" style="margin-bottom:8px;">MARKET CONDITIONS</div>
-          <div class="toggle-wrapper">
-            <div class="toggle-container" id="design-market-toggle">
-              <div class="toggle-option">
-                <input type="radio" id="design-market-opt" name="design-market" value="optimistic" tabindex="0">
-                <label for="design-market-opt">Optimistic</label>
-              </div>
-              <div class="toggle-option">
-                <input type="radio" id="design-market-avg" name="design-market" value="average" checked tabindex="0">
-                <label for="design-market-avg">Historical</label>
-              </div>
-              <div class="toggle-option">
-                <input type="radio" id="design-market-stress" name="design-market" value="stress" tabindex="0">
-                <label for="design-market-stress">Stress</label>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Set Your Shape button -->
+        <!-- Reset Design button -->
         <div style="margin-top:4px; padding:0 4px; position:relative; z-index:30; pointer-events:auto;">
-          <button type="button" id="btn-confirm-shape" class="btn-confirm-shape">
-            Set Your Shape →
+          <button type="button" id="btn-reset-design" class="btn-confirm-shape" style="background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.7);">
+            ↺ Reset Design
           </button>
           <div id="confirm-toast" style="font-family:var(--font-mono); font-size:9px; color:var(--teal-mid);
             text-transform:uppercase; letter-spacing:0.1em; margin-top:8px; opacity:0;
             transition:opacity 0.4s ease; text-align:center;">
-            ✓ Shape locked — Tension updated
+            ↺ Design reset to discovered shape
           </div>
         </div>
 
@@ -2316,7 +2459,7 @@
       if (s2d.classList.contains('revealed')) {
         try { updateEngine(); } catch(e) {}
         initDesignState();
-        renderDesignCanvas();
+        renderScreen2();
         updateScreen2Narrative();
         revealCarryForward();
         s2d.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
@@ -2336,12 +2479,10 @@
       setTimeout(function(){
         if (splash) splash.classList.add('out');
         try { updateEngine(); } catch(e) { console.error('updateEngine failed:', e); }
-        var designSVG = buildDesignCanvas();
         initDesignState();
         revealCarryForward();
-        initDesignDragHandlers(designSVG);
-        initDesignKeyboard();   // must follow drag handler build — handles exist now
-        renderDesignCanvas();
+        initD2DragHandlers();
+        renderScreen2();
         updateScreen2Narrative();
         requestAnimationFrame(function(){ s2d.classList.add('revealed'); });
         setTimeout(function(){ if (splash) splash.style.display = 'none'; }, 600);
@@ -2709,14 +2850,11 @@
             // Live-sync Screen 2 if already initialized
             const _s2live = document.getElementById('screen-2-design');
             if (_s2live && _s2live.classList.contains('revealed')) {
-              try { initDesignState(); renderDesignCanvas(); updateScreen2Narrative(); } catch(e) {}
+              try { renderScreen2(); } catch(e) {}
             }
             const s2dEl = document.getElementById('screen-2-design');
             if (s2dEl && s2dEl.classList.contains('revealed') && !s2dEl.hidden) {
-                // Re-init design state if not yet initialized (e.g. slider moved before click)
-                if (!designState.computedMax) initDesignState();
-                renderDesignCanvas();
-                updateScreen2Narrative();
+                try { renderScreen2(); } catch(e) {}
             }
             rafPending = false;
         });
@@ -4398,139 +4536,31 @@
 
   <script>
     // ============================================================
-    // SCREEN 2 — DESIGN CANVAS ENGINE
+    // SCREEN 2 — DESIGN CANVAS ENGINE  (PATH D REBUILD)
+    // Shares globalYMin/globalYMax with Screen 1. No separate autoscale.
+    // designOverrides: absolute offsets from Screen 1 discovered values.
     // ============================================================
 
-    var designState = {
-      ceilTarget:    null,
-      floorTarget:   null,
-      datumTarget:   null,
-      retireLocked:  false,
-      ceilLocked:    false,
-      floorLocked:   false,
-      datumLocked:   false,
-      isDraggingCeil:  false,
-      isDraggingDatum: false,
-      computedMax:   null,
-    };
+    // Entry state: all zero — handles sit exactly on the ghost lines.
+    var designOverrides = { ceilDelta: 0, floorDelta: 0, datumDelta: 0, isDirty: false };
 
-    // --- SVG Setup ---
-    function buildDesignCanvas() {
-      const wrap = document.getElementById('design-canvas-wrap');
-      wrap.innerHTML = '';
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      svg.setAttribute('viewBox', '0 0 840 480');
-      svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-      svg.classList.add('design-svg');
-      svg.id = 'design-canvas';
-      
-      const lockIconStr = `<svg class="design-lock-icon" x="-18" y="-6" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
+    // ── Coordinate constants — match Screen 1 viewBox 840×480 ──
+    var D_X_START = 120, D_X_END = 650, D_Y_MIN = 30, D_Y_MAX = 450;
 
-      svg.innerHTML = `
-        <defs>
-          <clipPath id="design-cone-clip">
-            <path id="design-clip-cone-path" d="" />
-          </clipPath>
-          <clipPath id="design-plot-clip">
-            <rect x="120" y="30" width="530" height="420"/>
-          </clipPath>
-          <linearGradient id="design-thermal-grad" x1="0" y1="0" x2="0" y2="100%">
-            <stop id="dg-ceil"  offset="0"    stop-color="#C9A84C" stop-opacity="0.2"/>
-            <stop id="dg-mid1"  offset="35%"  stop-color="#5DCAA5" stop-opacity="0.1"/>
-            <stop id="dg-mid2"  offset="65%"  stop-color="#5DCAA5" stop-opacity="0.1"/>
-            <stop id="dg-floor" offset="100%" stop-color="#e24b4a" stop-opacity="0.2"/>
-          </linearGradient>
-        </defs>
-        <g id="d-grid"></g>
-        <g clip-path="url(#design-plot-clip)">
-          <path id="d-ghost-cone"  class="design-ghost-cone"                   d=""/>
-          <path id="d-ghost-ceil"  class="design-ghost-line design-ghost-ceil"  d=""/>
-          <path id="d-ghost-floor" class="design-ghost-line design-ghost-floor" d=""/>
-          <path id="d-ghost-datum" class="design-ghost-line design-ghost-datum" d=""/>
-          <path id="d-cone"        class="design-cone-fill" d=""/>
-          <path id="d-ceil-line"   class="design-ceil-line"  d=""/>
-          <path id="d-floor-line"  class="design-floor-line" d=""/>
-          <path id="d-datum-line"  class="design-datum-line" d=""/>
-        </g>
-        <path id="d-ceil-hit"  d="" stroke="transparent" stroke-width="16" fill="none" style="cursor:ns-resize;" pointer-events="stroke"/>
-        <path id="d-floor-hit" d="" stroke="transparent" stroke-width="16" fill="none" style="cursor:ns-resize;" pointer-events="stroke"/>
-        <path id="d-datum-hit"  d="" stroke="transparent" stroke-width="16" fill="none" style="cursor:ns-resize;" pointer-events="stroke"/>
-
-        <g id="d-handle-ceil"  class="design-handle" tabindex="0" role="slider" aria-label="Ceiling spending target">
-          <circle id="d-node-ceil"  r="7" fill="#C9A84C"/>
-          <line   id="d-handle-ceil-line"  stroke="#C9A84C" stroke-width="1" stroke-dasharray="2 3" stroke-opacity="0.4"/>
-          <g id="d-lock-icon-ceil" stroke="#C9A84C">${lockIconStr}</g>
-        </g>
-        <g id="d-handle-floor" class="design-handle">
-          <circle id="d-node-floor" r="6" fill="#e24b4a"/>
-          <g id="d-lock-icon-floor" stroke="#e24b4a">${lockIconStr}</g>
-        </g>
-        <g id="d-handle-datum" class="design-handle" tabindex="0" role="slider" aria-label="Datum spending target">
-          <circle id="d-node-datum" r="8" fill="#5DCAA5"/>
-          <line   id="d-handle-datum-line" stroke="#5DCAA5" stroke-width="1" stroke-dasharray="2 3" stroke-opacity="0.4"/>
-          <g id="d-lock-icon-datum" stroke="#5DCAA5">${lockIconStr}</g>
-        </g>
-
-        <text id="d-lbl-ceil"  font-family="var(--font-mono)" font-size="10" fill="#C9A84C" letter-spacing="1.5">CEILING</text>
-        <text id="d-lbl-floor" font-family="var(--font-mono)" font-size="10" fill="#e24b4a" letter-spacing="1.5">FLOOR</text>
-        <text id="d-lbl-datum" font-family="var(--font-mono)" font-size="10" fill="#5DCAA5" letter-spacing="1.5">DATUM</text>
-        <g id="d-axis"></g>
-        <text x="-240" y="18" transform="rotate(-90)" font-family="var(--font-mono)" font-size="9" fill="rgba(255,255,255,0.35)" letter-spacing="0.1em" text-anchor="middle">ANNUAL SPEND</text>
-        <!-- X axis bottom line and labels -->
-        <line id="d-xaxis-line" x1="120" y1="450" x2="650" y2="450" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
-        <text id="d-xaxis-start" x="120" y="468" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="rgba(255,255,255,0.4)">AGE</text>
-        <text id="d-xaxis-end"   x="650" y="468" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--teal-mid)">RETIRE</text>
-        <text id="d-xaxis-mid"   x="385" y="475" text-anchor="middle" font-family="var(--font-mono)" font-size="8" fill="rgba(255,255,255,0.25)">YEARS UNTIL RETIREMENT</text>
-        <rect id="d-tension-overlay" x="80" y="20" width="570" height="320"
-              fill="none" stroke="#C9A84C" stroke-width="0" rx="2" opacity="0"/>
-        <g clip-path="url(#design-cone-clip)">
-          <rect id="design-market-sweep" class="market-sweep" x="-200" y="-100" width="250" height="700"
-                fill="var(--danger-red)" opacity="0" style="pointer-events:none;"/>
-        </g>
-        <!-- Delta badge: shows +$Xk/yr above your Sketch on ceiling handle -->
-        <g id="d-delta-badge" opacity="0" style="display:none; pointer-events:none;">
-          <rect id="d-delta-bg" x="0" y="0" width="140" height="26" rx="3"
-                fill="rgba(9,18,33,0.92)" stroke="#C9A84C" stroke-width="1"/>
-          <text id="d-delta-text" x="70" y="17" text-anchor="middle"
-                font-family="var(--font-mono)" font-size="10" fill="#C9A84C" letter-spacing="0.5">
-            +$0k/yr above Sketch
-          </text>
-        </g>
-      `;
-      wrap.appendChild(svg);
-      
-      const grid = document.getElementById('d-grid');
-      let gridHTML = '';
-      for(let i=0; i<=4; i++) {
-          const y   = D_Y_MIN + i * (D_Y_MAX - D_Y_MIN) / 4;
-          const val = globalYMax - (i/4)*(globalYMax - globalYMin);
-          gridHTML += `<line x1="${D_X_START}" y1="${y}" x2="${D_X_END}" y2="${y}" class="grid-tick"/>`;
-          gridHTML += `<text x="${D_X_START - 8}" y="${y+4}" text-anchor="end" class="grid-label">${formatYLabel(val)}</text>`;
-      }
-      grid.innerHTML = gridHTML;
-
-      return svg;
-    }
-
-    // --- Coordinate constants (match Screen 1 viewBox 840x480) ---
-    const D_X_START = 120;
-    const D_X_END   = 650;
-    const D_Y_MIN   = 30;
-    const D_Y_MAX   = 450;
-
-    function dSpendToY(spend) {
-      const range = designYMax - designYMin;
+    // ── Shared Y-axis — globalYMin/globalYMax set by Screen 1's updateEngine() ──
+    function d2SpendToY(spend) {
+      var range = globalYMax - globalYMin;
       if (range === 0) return D_Y_MAX;
-      const ratio = (spend - designYMin) / range;
-      const raw = D_Y_MAX - ratio * (D_Y_MAX - D_Y_MIN);
-      return Math.max(D_Y_MIN, Math.min(D_Y_MAX, raw)); // clamp to SVG bounds
+      var ratio = (spend - globalYMin) / range;
+      return Math.max(D_Y_MIN, Math.min(D_Y_MAX, D_Y_MAX - ratio * (D_Y_MAX - D_Y_MIN)));
+    }
+    function d2YToSpend(y) {
+      var range = globalYMax - globalYMin;
+      return globalYMin + ((D_Y_MAX - y) / (D_Y_MAX - D_Y_MIN)) * range;
     }
 
-    function dYToSpend(y) {
-      const range = designYMax - designYMin;
-      const ratio  = (D_Y_MAX - y) / (D_Y_MAX - D_Y_MIN);
-      return designYMin + ratio * range;
-    }
+    // ── Placeholder for old buildDesignCanvas — SVG is now static in HTML ──
+    function buildDesignCanvas() { return document.getElementById('d2-canvas'); }
 
     function calculateRequirements(targetCeilSpend) {
         let s = currentScenario;
@@ -4569,328 +4599,212 @@
         return { reqContrib, reqPort, reqAge };
     }
 
-    // --- Initialize from Screen 1 ---
+    // ── Reset design to Screen 1 discovered values ──
     function initDesignState() {
-      const pts = lastCalculatedPoints;
-      if (!pts) return;
-      designState.computedMax  = pts.ceilSpend;
-      designState.ceilTarget   = pts.ceilSpend;
-      designState.floorTarget  = pts.floorSpend;
-      designState.datumTarget  = pts.datumSpend;
-      // Mirror Screen 1's midpoint+paddedRange scale for visual continuity
-      const _isOvExt = pts.datumSpend > pts.ceilSpend;
-      if (_isOvExt) {
-        // OVEREXTENDED: scale from ceil so handles stay grabbable; datum is off-canvas top
-        designYMax = Math.max(pts.ceilSpend * 4.0, 50);
-        designYMin = Math.max(0, pts.floorSpend * 0.75);
-      } else {
-        // Normal: use same midpoint+paddedRange formula as Screen 1
-        const _vals   = [pts.ceilSpend, pts.floorSpend, pts.datumSpend];
-        const _vMax   = Math.max(..._vals);
-        const _vMin   = Math.min(..._vals);
-        const _padded = Math.max((_vMax - _vMin) * 1.25, 60);
-        const _mid    = (_vMax + _vMin) / 2;
-        designYMax = _mid + _padded / 2;
-        designYMin = Math.max(0, _mid - _padded / 2);
-      }
-      designState.ceilLocked   = false;
-      designState.datumLocked  = false;
-      designState.retireLocked = false;
-      designState.datumBreachState = pts.datumSpend > pts.ceilSpend ? 'above' : (pts.datumSpend < pts.floorSpend ? 'below' : 'inside');
+      designOverrides.ceilDelta  = 0;
+      designOverrides.floorDelta = 0;
+      designOverrides.datumDelta = 0;
+      designOverrides.isDirty    = false;
     }
 
-    // --- Main render ---
-    function renderDesignCanvas() {
-      const pts = lastCalculatedPoints;
+    // ── Main render — uses globalYMin/globalYMax shared with Screen 1 ──
+    function renderScreen2() {
+      var pts = lastCalculatedPoints;
       if (!pts) return;
-      // Update X axis labels — mirror Screen 1 frame (accumulation: now → retirement)
-      const _s = currentScenario || {};
-      const _xStart  = document.getElementById('d-xaxis-start');
-      const _xEnd    = document.getElementById('d-xaxis-end');
-      if (_xStart) _xStart.textContent = `AGE ${_s.currentAge || '—'}`;
-      if (_xEnd)   _xEnd.textContent   = `RETIRE: ${_s.activationAge || '—'}`;
+      var svg = document.getElementById('d2-canvas');
+      if (!svg) return;
 
-      // ── Auto-rescale Y axis — FROZEN during drag to prevent feedback loops ──────
-      let _rescaled = false;
-      const _activeDragging = activeDrag !== null;
-      if (!_activeDragging) {
-        // Only rescale when no handle is being dragged
-        const _overExt = designState.datumTarget > designState.ceilTarget;
-        let _newMax, _newMin;
-        if (_overExt) {
-          _newMax = Math.max(designState.ceilTarget * 4.0, 50);
-          _newMin = Math.max(0, designState.floorTarget * 0.75);
-        } else {
-          const _rVals   = [designState.ceilTarget, designState.floorTarget, designState.datumTarget];
-          const _rVMax   = Math.max(..._rVals);
-          const _rVMin   = Math.min(..._rVals);
-          const _rPadded = Math.max((_rVMax - _rVMin) * 1.25, 60);
-          const _rMid    = (_rVMax + _rVMin) / 2;
-          _newMax = _rMid + _rPadded / 2;
-          _newMin = Math.max(0, _rMid - _rPadded / 2);
-        }
-        const _prevMax = designYMax, _prevMin = designYMin;
-        if (Math.abs(_newMax - _prevMax) > 2 || Math.abs(_newMin - _prevMin) > 2) {
-          _rescaled = true;
-          designYMax = _newMax;
-          designYMin = _newMin;
-          if (designState && designState.floorTarget !== undefined) {
-            designYMin = Math.min(designYMin, Math.max(0, designState.floorTarget - 15));
-          }
-        }
+      var dCeil  = pts.ceilSpend  + designOverrides.ceilDelta;
+      var dFloor = pts.floorSpend + designOverrides.floorDelta;
+      var dDatum = pts.datumSpend + designOverrides.datumDelta;
+
+      // X axis labels
+      var _s = currentScenario || {};
+      var _xStart = document.getElementById('d2-xaxis-start');
+      var _xEnd   = document.getElementById('d2-xaxis-end');
+      if (_xStart) _xStart.textContent = 'AGE ' + (_s.currentAge || '—');
+      if (_xEnd)   _xEnd.textContent   = 'RETIRE: ' + (_s.activationAge || '—');
+
+      var xS = D_X_START, xE = D_X_END;
+      var ptsStart = getMathPoint(0, currentScenario.yearsToGrow, currentScenario);
+
+      // ── 50-segment curve build (ghost = Screen 1 baseline, live = blended toward design) ──
+      var _steps = 50;
+      var _lCeilPath  = 'M' + xS + ' ' + d2SpendToY(ptsStart.ceilSpend);
+      var _lFloorPath = 'M' + xS + ' ' + d2SpendToY(ptsStart.floorSpend);
+      var _lConeCeilPts  = [xS + ' ' + d2SpendToY(ptsStart.ceilSpend)];
+      var _lConeFloorPts = [];
+      var _gConeCeilPts  = [xS + ' ' + d2SpendToY(ptsStart.ceilSpend)];
+      var _gConeFloorPts = [];
+      var _gFloorFwdPts  = [xS + ' ' + d2SpendToY(ptsStart.floorSpend)];
+      for (var _i = 1; _i <= _steps; _i++) {
+        var _t  = _i / _steps;
+        var _x  = xS + _t * (xE - xS);
+        var _sp = getMathPoint(_t * currentScenario.yearsToGrow, currentScenario.yearsToGrow, currentScenario);
+        var _yCb = d2SpendToY(_sp.ceilSpend  + _t * designOverrides.ceilDelta);
+        var _yFb = d2SpendToY(_sp.floorSpend + _t * designOverrides.floorDelta);
+        _lCeilPath  += ' L' + _x + ' ' + _yCb;
+        _lFloorPath += ' L' + _x + ' ' + _yFb;
+        _lConeCeilPts.push(_x + ' ' + _yCb);
+        _lConeFloorPts.unshift(_x + ' ' + _yFb);
+        _gConeCeilPts.push(_x + ' ' + d2SpendToY(_sp.ceilSpend));
+        _gConeFloorPts.unshift(_x + ' ' + d2SpendToY(_sp.floorSpend));
+        _gFloorFwdPts.push(_x + ' ' + d2SpendToY(_sp.floorSpend));
       }
-      // Y axis labels handled by d-grid builder
-      // ── Hard-clamp all targets to current visible spend range ──────────
-      const _visMax = designYMax - 1;
-      const _visMin = Math.max(designYMin + 1, 1);
-      // Floor: also clamp to keep handle clear of X-axis chrome (30px buffer above D_Y_MAX)
-      const _floorSpendMin = dYToSpend(D_Y_MAX - 30);
-      // Only clamp floor/ceil to visible range; datum is free to sit above ceil (OVEREXTENDED)
-      designState.ceilTarget  = Math.min(Math.max(designState.ceilTarget,  _visMin), _visMax);
-      designState.floorTarget = Math.min(Math.max(designState.floorTarget, Math.max(_visMin, _floorSpendMin)), _visMax);
-      designState.datumTarget = Math.max(designState.datumTarget, _visMin); // never snap below canvas
-      if (designState.ceilTarget <= designState.floorTarget + 2)
-        designState.ceilTarget = designState.floorTarget + 3;
-      const xS = D_X_START;
-      const xE = D_X_END;
+      _lConeFloorPts.push(xS + ' ' + d2SpendToY(ptsStart.floorSpend));
+      var _lConePath = 'M ' + _lConeCeilPts[0] + ' ' +
+        _lConeCeilPts.slice(1).map(function(p){ return 'L ' + p; }).join(' ') + ' ' +
+        _lConeFloorPts.map(function(p){ return 'L ' + p; }).join(' ') + ' Z';
+      _gConeFloorPts.push(xS + ' ' + d2SpendToY(ptsStart.floorSpend));
+      var _gConePath = 'M ' + _gConeCeilPts[0] + ' ' +
+        _gConeCeilPts.slice(1).map(function(p){ return 'L ' + p; }).join(' ') + ' ' +
+        _gConeFloorPts.map(function(p){ return 'L ' + p; }).join(' ') + ' Z';
+      var _ghostCeilD  = 'M ' + _gConeCeilPts[0] + ' ' + _gConeCeilPts.slice(1).map(function(p){ return 'L ' + p; }).join(' ');
+      var _ghostFloorD = 'M ' + _gFloorFwdPts[0] + ' ' + _gFloorFwdPts.slice(1).map(function(p){ return 'L ' + p; }).join(' ');
 
-      // Ghost reference values (Screen 1 endpoint for datum ghost)
-      const yGD = dSpendToY(pts.datumSpend);
-      const ptsStart = getMathPoint(0, currentScenario.yearsToGrow, currentScenario);
+      var yD  = d2SpendToY(dDatum);
+      var yGD = d2SpendToY(pts.datumSpend);
+      var yC  = d2SpendToY(dCeil);
+      var yF  = d2SpendToY(dFloor);
 
-      // Active lines
-      const yC  = dSpendToY(designState.ceilTarget);
-      const yF  = dSpendToY(designState.floorTarget);
-      const yD  = dSpendToY(designState.datumTarget);
-      const ySC = dSpendToY(ptsStart.ceilSpend);
-      const ySF = dSpendToY(ptsStart.floorSpend);
-      const ySD = dSpendToY(ptsStart.datumSpend);
+      document.getElementById('d2-ghost-cone').setAttribute('d',  _gConePath);
+      document.getElementById('d2-ghost-ceil').setAttribute('d',  _ghostCeilD);
+      document.getElementById('d2-ghost-floor').setAttribute('d', _ghostFloorD);
+      document.getElementById('d2-ghost-datum').setAttribute('d', 'M' + xS + ' ' + yGD + ' L' + xE + ' ' + yGD);
+      document.getElementById('d2-ceil-line').setAttribute('d',  _lCeilPath);
+      document.getElementById('d2-floor-line').setAttribute('d', _lFloorPath);
+      document.getElementById('d2-datum-line').setAttribute('d', 'M' + xS + ' ' + yD + ' L' + xE + ' ' + yD);
+      document.getElementById('d2-cone').setAttribute('d', _lConePath);
+      var _dcc = document.getElementById('d2-clip-cone-path');
+      if (_dcc) _dcc.setAttribute('d', _lConePath);
 
-      // Build 50-segment sampled curves matching Screen 1 geometry.
-      // Left edge: pure getMathPoint curve. Right endpoint: blended toward design targets.
-      // At default (designState.ceilTarget === pts.ceilSpend), blend offset = 0 → identical to Screen 1.
-      const _dSSteps = 50;
-      let _dCeilPath  = `M${xS} ${dSpendToY(ptsStart.ceilSpend)}`;
-      let _dFloorPath = `M${xS} ${dSpendToY(ptsStart.floorSpend)}`;
-      const _dConeCeilPts  = [`${xS} ${dSpendToY(ptsStart.ceilSpend)}`];
-      const _dConeFloorPts = [];
-      // Ghost cone + ghost lines: forward-order arrays for Screen 1 geometry
-      const _gConeCeilPts  = [`${xS} ${dSpendToY(ptsStart.ceilSpend)}`]; // fwd order (ceil = cone top)
-      const _gConeFloorPts = [];                                           // rev order (for closed fill)
-      const _gFloorFwdPts  = [`${xS} ${dSpendToY(ptsStart.floorSpend)}`]; // fwd order (for ghost-floor line)
-      for (let _i = 1; _i <= _dSSteps; _i++) {
-          const _t   = _i / _dSSteps;
-          const _x   = xS + _t * (xE - xS);
-          const _sp  = getMathPoint(_t * currentScenario.yearsToGrow, currentScenario.yearsToGrow, currentScenario);
-          const _yCb = dSpendToY(_sp.ceilSpend  + _t * (designState.ceilTarget  - pts.ceilSpend));
-          const _yFb = dSpendToY(_sp.floorSpend + _t * (designState.floorTarget - pts.floorSpend));
-          _dCeilPath  += ` L${_x} ${_yCb}`;
-          _dFloorPath += ` L${_x} ${_yFb}`;
-          _dConeCeilPts.push(`${_x} ${_yCb}`);
-          _dConeFloorPts.unshift(`${_x} ${_yFb}`);
-          // Ghost cone: pure Screen 1 geometry (no design blend)
-          _gConeCeilPts.push(`${_x} ${dSpendToY(_sp.ceilSpend)}`);
-          _gConeFloorPts.unshift(`${_x} ${dSpendToY(_sp.floorSpend)}`);
-          _gFloorFwdPts.push(`${_x} ${dSpendToY(_sp.floorSpend)}`);
-      }
-      _dConeFloorPts.push(`${xS} ${dSpendToY(ptsStart.floorSpend)}`);
-      const _dConePath = `M ${_dConeCeilPts[0]} ` + _dConeCeilPts.slice(1).map(p => `L ${p}`).join(' ') + ' ' + _dConeFloorPts.map(p => `L ${p}`).join(' ') + ' Z';
-      _gConeFloorPts.push(`${xS} ${dSpendToY(ptsStart.floorSpend)}`);
-      const _gConePath = `M ${_gConeCeilPts[0]} ` + _gConeCeilPts.slice(1).map(p => `L ${p}`).join(' ') + ' ' + _gConeFloorPts.map(p => `L ${p}`).join(' ') + ' Z';
-      // Ghost lines follow Screen 1 curve (not straight chord) so they overlap live at default state
-      const _ghostCeilD  = `M ${_gConeCeilPts[0]} ` + _gConeCeilPts.slice(1).map(p => `L ${p}`).join(' ');
-      const _ghostFloorD = `M ${_gFloorFwdPts[0]} ` + _gFloorFwdPts.slice(1).map(p => `L ${p}`).join(' ');
+      // Hit areas
+      var ySC = d2SpendToY(ptsStart.ceilSpend);
+      var ySF = d2SpendToY(ptsStart.floorSpend);
+      var _chit = document.getElementById('d2-ceil-hit');  if (_chit) _chit.setAttribute('d', 'M'+xS+' '+ySC+' L'+xE+' '+yC);
+      var _fhit = document.getElementById('d2-floor-hit'); if (_fhit) _fhit.setAttribute('d', 'M'+xS+' '+ySF+' L'+xE+' '+yF);
+      var _dhit = document.getElementById('d2-datum-hit'); if (_dhit) _dhit.setAttribute('d', 'M'+xS+' '+yD+' L'+xE+' '+yD);
 
-      document.getElementById('d-ghost-cone').setAttribute('d',  _gConePath);
-      document.getElementById('d-ghost-ceil').setAttribute('d',  _ghostCeilD);
-      document.getElementById('d-ghost-floor').setAttribute('d', _ghostFloorD);
-      document.getElementById('d-ghost-datum').setAttribute('d', `M${xS} ${dSpendToY(ptsStart.datumSpend)} L${xE} ${yGD}`);
-      document.getElementById('d-ceil-line').setAttribute('d',  _dCeilPath);
-      const _chit = document.getElementById('d-ceil-hit'); if(_chit) _chit.setAttribute('d', `M${xS} ${ySC} L${xE} ${yC}`);
-      document.getElementById('d-floor-line').setAttribute('d', _dFloorPath);
-      const _fhit = document.getElementById('d-floor-hit'); if(_fhit) _fhit.setAttribute('d', `M${xS} ${ySF} L${xE} ${yF}`);
-      document.getElementById('d-datum-line').setAttribute('d', `M${xS} ${yD} L${xE} ${yD}`);
-      const _dhit = document.getElementById('d-datum-hit'); if(_dhit) _dhit.setAttribute('d', `M${xS} ${yD} L${xE} ${yD}`);
-      document.getElementById('d-cone').setAttribute('d', _dConePath);
-      // Keep clip path synced so design sweep stays inside the cone
-      const dcc = document.getElementById('design-clip-cone-path');
-      if (dcc) dcc.setAttribute('d', _dConePath);
-
-      // Node positions — direct from data coordinates, no visual offset that could cause snapping
-      ['ceil','floor','datum'].forEach((n, i) => {
-        const yy = [yC, yF, yD][i];
-        document.getElementById(`d-node-${n}`).setAttribute('cx', xE);
-        document.getElementById(`d-node-${n}`).setAttribute('cy', yy);
-        document.getElementById(`d-lbl-${n}`).setAttribute('x', xE - 12);
-        document.getElementById(`d-lbl-${n}`).setAttribute('y', yy + 4);
-        document.getElementById(`d-lbl-${n}`).setAttribute('text-anchor', 'end');
-
-        let icon = document.getElementById(`d-lock-icon-${n}`);
-        if(icon) {
-            icon.setAttribute('transform', `translate(${xE}, ${yy})`);
-        }
-
-        // Hover tooltip: sketch vs designed comparison
-        const _skVals = { ceil: pts.ceilSpend, floor: pts.floorSpend, datum: pts.datumSpend };
-        const _dsVals = { ceil: designState.ceilTarget, floor: designState.floorTarget, datum: designState.datumTarget };
-        const _lbls   = { ceil: 'Ceiling', floor: 'Floor', datum: 'Datum' };
-        const _sk  = Math.round(_skVals[n]);
-        const _ds  = Math.round(_dsVals[n]);
-        const _dir = _ds > _sk ? '\u2191 $' + (_ds - _sk) + 'k/yr above Sketch' : _ds < _sk ? '\u2193 $' + (_sk - _ds) + 'k/yr below Sketch' : '= matches Sketch';
-        const _tip = _lbls[n] + ': $' + _ds + 'k/yr (designed)' + '\nSketch: $' + _sk + 'k/yr  |  ' + _dir;
-        const hg = document.getElementById('d-handle-' + n);
-        if (hg) {
-          hg.setAttribute('aria-label', _tip);
-          let titleEl = hg.querySelector('title');
-          if (!titleEl) { titleEl = document.createElementNS('http://www.w3.org/2000/svg','title'); hg.insertBefore(titleEl, hg.firstChild); }
-          titleEl.textContent = _tip;
-        }
+      // Handle nodes and labels
+      [['ceil',yC],['floor',yF],['datum',yD]].forEach(function(pair) {
+        var n = pair[0], yy = pair[1];
+        var nd = document.getElementById('d2-node-' + n);
+        if (nd) { nd.setAttribute('cx', xE); nd.setAttribute('cy', yy); }
+        var lb = document.getElementById('d2-lbl-' + n);
+        if (lb) { lb.setAttribute('x', xE - 12); lb.setAttribute('y', yy + 4); lb.setAttribute('text-anchor','end'); }
       });
 
-      // Vertical dashed lines
-      document.getElementById('d-handle-ceil-line').setAttribute('x1', xE);
-      document.getElementById('d-handle-ceil-line').setAttribute('y1', yC + 7);
-      document.getElementById('d-handle-ceil-line').setAttribute('x2', xE);
-      document.getElementById('d-handle-ceil-line').setAttribute('y2', 350);
-      document.getElementById('d-handle-datum-line').setAttribute('x1', xE);
-      document.getElementById('d-handle-datum-line').setAttribute('y1', yD + 8);
-      document.getElementById('d-handle-datum-line').setAttribute('x2', xE);
-      document.getElementById('d-handle-datum-line').setAttribute('y2', 350);
+      // Vertical dashed lines on ceiling and datum handles
+      var _dhcl = document.getElementById('d2-handle-ceil-line');
+      if (_dhcl) { _dhcl.setAttribute('x1',xE); _dhcl.setAttribute('y1',yC+7); _dhcl.setAttribute('x2',xE); _dhcl.setAttribute('y2',350); }
+      var _dhdl = document.getElementById('d2-handle-datum-line');
+      if (_dhdl) { _dhdl.setAttribute('x1',xE); _dhdl.setAttribute('y1',yD+8); _dhdl.setAttribute('x2',xE); _dhdl.setAttribute('y2',350); }
 
-      // Tension
-      const overshoot = Math.max(0, designState.ceilTarget - designState.computedMax);
-      const tensionRatio = Math.min(1, overshoot / Math.max(1, designState.computedMax * 0.8));
-      updateTensionVisuals(tensionRatio);
-      updateRequirementsPanel(designState.ceilTarget, designState.computedMax);
+      // Tension: ceilDelta / discovered ceiling, capped at 100%
+      var _tensionRatio = Math.min(1, Math.max(0, designOverrides.ceilDelta / Math.max(1, pts.ceilSpend)));
+      updateTensionVisuals(_tensionRatio);
+      updateRequirementsPanel(dCeil, pts.ceilSpend);
 
-      // Update live design readout in left panel
-      const fmtD = v => v >= 1000 ? '$' + (v/1000).toFixed(1) + 'M/yr' : '$' + Math.round(v) + 'k/yr';
-      const drvCeil = document.getElementById('drv-ceil');
-      const drvDatum = document.getElementById('drv-datum');
-      const drvFloor = document.getElementById('drv-floor');
-      if (drvCeil)  drvCeil.textContent  = fmtD(designState.ceilTarget);
-      if (drvDatum) drvDatum.textContent = fmtD(designState.datumTarget);
-      if (drvFloor) drvFloor.textContent = fmtD(designState.floorTarget);
-      // --- Totals: annual × retirement years ---
-      (function() {
-        var retireAge = parseInt((document.getElementById('slider-retire')||{value:'65'}).value) || 65;
-        var curAge    = parseInt((document.getElementById('slider-age')||{value:'40'}).value)    || 40;
-        var lifeAge   = parseInt((document.getElementById('slider-life')||{value:'90'}).value)   || 90;
-        var yrs = Math.max(1, lifeAge - retireAge);
-        var fmtT = function(v) {
-          if (!v || isNaN(v)) return '—';
-          var t = Math.round(v * yrs);
-          return t >= 1000 ? '$' + (t/1000).toFixed(1) + 'M total' : '$' + t + 'k total';
-        };
-        var cT = document.getElementById('drv-ceil-total');
-        var dT = document.getElementById('drv-datum-total');
-        var fT = document.getElementById('drv-floor-total');
-        if (cT) cT.textContent = fmtT(designState.ceilTarget);
-        if (dT) dT.textContent = fmtT(designState.datumTarget);
-        if (fT) fT.textContent = fmtT(designState.floorTarget);
-      })();
-
-      // --- Delta badge removed — hover tooltip replaces it ---
-      const deltaBadge = null; // disabled
-      const deltaText  = document.getElementById('d-delta-text');
-      const deltaBg    = document.getElementById('d-delta-bg');
-      if (deltaBadge && deltaText && pts) {
-        const delta = designState.ceilTarget - pts.ceilSpend;
-        const ceilHandleY = dSpendToY(designState.ceilTarget);
-        if (delta > 0.5) {
-          const sign   = '+';
-          const absDelta = Math.abs(Math.round(delta));
-          deltaText.textContent = `${sign}$${absDelta}k/yr above your Sketch`;
-          // Position badge above the ceiling handle node
-          const bx = D_X_END - 70;
-          const by = ceilHandleY - 38;
-          deltaBadge.setAttribute('transform', `translate(${bx},${by})`);
-          deltaBg.setAttribute('width', '168');
-          deltaText.setAttribute('x', '84');
-          deltaBadge.style.opacity = '0';
-        } else if (delta < -0.5) {
-          const absDelta = Math.abs(Math.round(delta));
-          deltaText.textContent = `−$${absDelta}k/yr below Sketch`;
-          const bx = D_X_END - 70;
-          const by = ceilHandleY - 38;
-          deltaBadge.setAttribute('transform', `translate(${bx},${by})`);
-          deltaBg.setAttribute('fill', 'rgba(9,18,33,0.92)');
-          deltaBg.setAttribute('stroke', '#e24b4a');
-          deltaText.setAttribute('fill', '#e24b4a');
-          deltaBg.setAttribute('width', '148');
-          deltaText.setAttribute('x', '74');
-          deltaBadge.style.opacity = '0';
-        } else {
-          deltaBadge.style.opacity = '0';
-          // Reset colors for next drag
-          if (deltaBg) { deltaBg.setAttribute('stroke','#C9A84C'); deltaBg.setAttribute('fill','rgba(9,18,33,0.92)'); }
-          if (deltaText) deltaText.setAttribute('fill','#C9A84C');
-        }
-      }
-    
-      // (rescale moved to top of function)
-
-      // Rebuild grid labels with new scale every render
-      const _grid = document.getElementById('d-grid');
+      // Grid labels (shared Y-axis — globalYMin/globalYMax)
+      var _grid = document.getElementById('d2-grid');
       if (_grid) {
-        let _gHTML = '';
-        for (let _i = 0; _i <= 4; _i++) {
-          const _gy  = D_Y_MIN + _i * (D_Y_MAX - D_Y_MIN) / 4;
-          const _gv  = designYMax - (_i / 4) * (designYMax - designYMin);
-          _gHTML += `<line x1="${D_X_START}" y1="${_gy}" x2="${D_X_END}" y2="${_gy}" class="grid-tick"/>`;
-          _gHTML += `<text x="${D_X_START - 8}" y="${_gy+4}" text-anchor="end" class="grid-label">${formatYLabel(_gv)}</text>`;
+        var _gHTML = '';
+        for (var _gi = 0; _gi <= 4; _gi++) {
+          var _gy = D_Y_MIN + _gi * (D_Y_MAX - D_Y_MIN) / 4;
+          var _gv = globalYMax - (_gi / 4) * (globalYMax - globalYMin);
+          _gHTML += '<line x1="' + D_X_START + '" y1="' + _gy + '" x2="' + D_X_END + '" y2="' + _gy + '" class="grid-tick"/>';
+          _gHTML += '<text x="' + (D_X_START - 8) + '" y="' + (_gy + 4) + '" text-anchor="end" class="grid-label">' + formatYLabel(_gv) + '</text>';
         }
         _grid.innerHTML = _gHTML;
       }
-      // Physical jump flash on market rescale only — never during drag
-      if (_rescaled && !_activeDragging) {
-        const _svg = document.getElementById('design-canvas');
-        if (_svg) {
-          _svg.style.transition = 'none';
-          _svg.style.transform  = 'scaleY(0.97)';
-          requestAnimationFrame(() => {
-            _svg.style.transition = 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1)';
-            _svg.style.transform  = 'scaleY(1)';
-          });
-        }
-      }
+
+      // Live readout spans (hidden, downstream JS reads them for Screen 3)
+      var _fmtD = function(v) { return v >= 1000 ? '$' + (v/1000).toFixed(1) + 'M/yr' : '$' + Math.round(v) + 'k/yr'; };
+      var _drvC = document.getElementById('drv-ceil');
+      var _drvD = document.getElementById('drv-datum');
+      var _drvF = document.getElementById('drv-floor');
+      if (_drvC) _drvC.textContent = _fmtD(dCeil);
+      if (_drvD) _drvD.textContent = _fmtD(dDatum);
+      if (_drvF) _drvF.textContent = _fmtD(dFloor);
+      (function() {
+        var retireAge = parseInt((document.getElementById('slider-retire')||{value:'65'}).value)||65;
+        var lifeAge   = parseInt((document.getElementById('slider-life') ||{value:'90'}).value)||90;
+        var yrs = Math.max(1, lifeAge - retireAge);
+        var fmtT = function(v) { if (!v || isNaN(v)) return '—'; var t = Math.round(v * yrs); return t >= 1000 ? '$' + (t/1000).toFixed(1) + 'M total' : '$' + t + 'k total'; };
+        var cT = document.getElementById('drv-ceil-total');
+        var dT = document.getElementById('drv-datum-total');
+        var fT = document.getElementById('drv-floor-total');
+        if (cT) cT.textContent = fmtT(dCeil);
+        if (dT) dT.textContent = fmtT(dDatum);
+        if (fT) fT.textContent = fmtT(dFloor);
+      })();
+
+      // ── Datum Intelligence HUD + ghost rail sync ──
+      (function() {
+        var _fmt = function(v) { return '$' + Math.round(v) + 'k/yr'; };
+        var _hs = getShapeStateObj({ ceilSpend: dCeil, floorSpend: dFloor, datumSpend: dDatum });
+        var _s = function(id, txt, col) {
+          var el = document.getElementById(id);
+          if (!el) return;
+          el.textContent = txt;
+          if (col) el.style.color = col;
+        };
+        _s('d2-hud-ceil-val',  _fmt(dCeil),  '#C9A84C');
+        _s('d2-hud-datum-val', _fmt(dDatum), '#5DCAA5');
+        _s('d2-hud-floor-val', _fmt(dFloor), '#e24b4a');
+        _s('d2-hud-state', _hs.name, _hs.color);
+        _s('d2-hud-means',  _hs.physicsShort || '');
+        _s('d2-hud-action', _hs.actionShort  || '');
+        var _gYrs = currentScenario && currentScenario.yearsToGrow;
+        _s('d2-hud-growth', _gYrs ? _gYrs + ' yr accumulation' : '—');
+        var _hc = document.querySelector('.d2-hud-card');
+        if (_hc) _hc.style.borderLeftColor = _hs.color;
+        // State tint rect
+        var _sr = document.getElementById('d2-state-tint-rect');
+        if (_sr) _sr.setAttribute('fill', _hs.name === 'OVEREXTENDED' ? 'rgba(226,75,74,0.06)' : 'none');
+        // Ghost rail — mirror Screen 1 display values
+        var _pairs = [['val-age','d2-ref-age'],['val-activation','d2-ref-retire'],
+                      ['val-portfolio','d2-ref-cap'],['val-datum','d2-ref-datum'],
+                      ['val-contrib','d2-ref-contrib']];
+        _pairs.forEach(function(p) {
+          var src = document.getElementById(p[0]), dst = document.getElementById(p[1]);
+          if (src && dst) dst.textContent = src.textContent;
+        });
+      })();
 
       updateScreen2Narrative();
+
     }
 
-    // --- Tension visuals ---
+    // --- Tension visuals (d2- IDs) ---
     function updateTensionVisuals(ratio) {
-      const fill    = document.getElementById('tension-fill');
-      const pctEl   = document.getElementById('tension-pct');
-      const overlay = document.getElementById('d-tension-overlay');
-      const ceilLine = document.getElementById('d-ceil-line');
-      const gradCeil = document.getElementById('dg-ceil');
-
-      const pct = Math.round(ratio * 100);
-      fill.style.width = pct + '%';
-      pctEl.textContent = pct + '%';
-      pctEl.style.color = ratio > 0.6 ? '#ffffff' : 'var(--gold)';
-      fill.classList.toggle('high', ratio > 0.4);
-      fill.classList.toggle('max',  ratio > 0.75);
-
+      var fill    = document.getElementById('tension-fill');
+      var pctEl   = document.getElementById('tension-pct');
+      var overlay = document.getElementById('d2-tension-overlay');
+      var ceilLine = document.getElementById('d2-ceil-line');
+      var gradCeil = document.getElementById('d2g-ceil');
+      var pct = Math.round(ratio * 100);
+      if (fill) { fill.style.width = pct + '%'; }
+      if (pctEl) { pctEl.textContent = pct + '%'; pctEl.style.color = ratio > 0.6 ? '#ffffff' : 'var(--gold)'; }
+      if (fill) { fill.classList.toggle('high', ratio > 0.4); fill.classList.toggle('max', ratio > 0.75); }
+      if (!ceilLine) return;
       if (ratio === 0) {
         ceilLine.style.stroke = '#C9A84C';
         ceilLine.style.filter = 'none';
-        gradCeil.setAttribute('stop-opacity', '0.2');
-        overlay.setAttribute('stroke-width', '0');
+        if (gradCeil) gradCeil.setAttribute('stop-opacity', '0.2');
+        if (overlay) { overlay.setAttribute('stroke-width', '0'); overlay.setAttribute('opacity', '0'); }
       } else if (ratio < 0.4) {
         ceilLine.style.stroke = '#d4b055';
-        gradCeil.setAttribute('stop-opacity', String(0.2 + ratio * 0.3));
+        if (gradCeil) gradCeil.setAttribute('stop-opacity', String(0.2 + ratio * 0.3));
       } else if (ratio < 0.75) {
         ceilLine.style.stroke = '#f0d060';
-        ceilLine.style.filter = `drop-shadow(0 0 ${8 + ratio * 16}px rgba(240,208,80,0.7))`;
-        gradCeil.setAttribute('stop-opacity', String(0.35 + ratio * 0.3));
+        ceilLine.style.filter = 'drop-shadow(0 0 ' + (8 + ratio * 16) + 'px rgba(240,208,80,0.7))';
+        if (gradCeil) gradCeil.setAttribute('stop-opacity', String(0.35 + ratio * 0.3));
       } else {
         ceilLine.style.stroke = '#ffffff';
         ceilLine.style.filter = 'drop-shadow(0 0 18px rgba(255,255,255,0.9))';
-        gradCeil.setAttribute('stop-opacity', '0.7');
-        overlay.setAttribute('stroke-width', '1');
-        overlay.setAttribute('opacity', '0.2');
+        if (gradCeil) gradCeil.setAttribute('stop-opacity', '0.7');
+        if (overlay) { overlay.setAttribute('stroke-width', '1'); overlay.setAttribute('opacity', '0.2'); }
       }
     }
 
@@ -5006,15 +4920,15 @@
         if (dd > dc) {
           gapTxt2 = "Your Datum ($" + Math.round(dd) + "k/yr) sits above your Ceiling ($" + Math.round(dc) + "k/yr) — the shape has no valid range. The Sketch can show the conflict but not resolve it. Studio maps which levers — contributions, retirement age, a lower Datum, or a higher Ceiling — bring this into a structurally supportable position across 10,000 market paths.";
         } else if (cDelta2 > 0 && dDelta2 > 0) {
-          gapTxt2 = "Your designed Ceiling ($" + Math.round(dc) + "k/yr) is " + _ceilWord + " what the Sketch confirmed, and your Datum ($" + Math.round(dd) + "k/yr) is " + _datWord + " the Sketch baseline. Both gaps require capital the Sketch can\'t yet see — real account types, Social Security timing, and sequence-of-returns modeling. Studio closes both gaps with actual probabilities, not straight-line estimates.";
+          gapTxt2 = "Your designed Ceiling ($" + Math.round(dc) + "k/yr) is " + _ceilWord + " what the Sketch confirmed, and your Datum ($" + Math.round(dd) + "k/yr) is " + _datWord + " the Sketch baseline. Both gaps require capital the Sketch can't yet see — real account types, Social Security timing, and sequence-of-returns modeling. Studio closes both gaps with actual probabilities, not straight-line estimates.";
         } else if (cDelta2 > 0) {
           gapTxt2 = "Your Ceiling ($" + Math.round(dc) + "k/yr) is " + _ceilWord + " what the Sketch can confirm — a gap of roughly $" + (_capGap > 0 ? _capGap.toFixed(1) + "M in additional capital" : Math.abs(cDelta2) + "k/yr in spending room") + ". Your Datum ($" + Math.round(dd) + "k/yr) sits inside the confirmed range with $" + _floorBuf + "k/yr of floor cushion — a solid base. Studio maps whether contributions, a later retirement, or sequence luck closes the ceiling gap.";
         } else if (dDelta2 > 0) {
-          gapTxt2 = "Your Ceiling sits within the Sketch\'s confirmed range. Your Datum ($" + Math.round(dd) + "k/yr) is " + _datWord + " the Sketch baseline — meaning you\'re planning to spend $" + Math.abs(dDelta2) + "k/yr more than the straight-line projection supports. Studio stress-tests whether that Datum holds across 10,000 paths, or whether a bad first decade forces you below it.";
+          gapTxt2 = "Your Ceiling sits within the Sketch's confirmed range. Your Datum ($" + Math.round(dd) + "k/yr) is " + _datWord + " the Sketch baseline — meaning you're planning to spend $" + Math.abs(dDelta2) + "k/yr more than the straight-line projection supports. Studio stress-tests whether that Datum holds across 10,000 paths, or whether a bad first decade forces you below it.";
         } else if (cDelta2 < 0 && dDelta2 < 0) {
           gapTxt2 = "Your designed Ceiling ($" + Math.round(dc) + "k/yr) is " + _ceilWord + " the Sketch max, and your Datum ($" + Math.round(dd) + "k/yr) is " + _datWord + " the baseline — a deliberately conservative shape with $" + _floorBuf + "k/yr of cushion above your Floor. Studio can show whether pulling either number up is safe across market sequences, or how to redeploy the slack toward legacy or earlier retirement.";
         } else {
-          gapTxt2 = "Your designed Ceiling ($" + Math.round(dc) + "k/yr) and Datum ($" + Math.round(dd) + "k/yr) align with what the Sketch confirmed — ceiling " + _ceilWord + " the Sketch max, datum " + _datWord + " the baseline. The shape is structurally supported. What the Sketch can\'t show: which accounts to draw first, when Social Security maximizes your floor, and whether a bad first decade in retirement compresses your $" + _floorBuf + "k/yr buffer. Studio maps those answers across 10,000 sequences.";
+          gapTxt2 = "Your designed Ceiling ($" + Math.round(dc) + "k/yr) and Datum ($" + Math.round(dd) + "k/yr) align with what the Sketch confirmed — ceiling " + _ceilWord + " the Sketch max, datum " + _datWord + " the baseline. The shape is structurally supported. What the Sketch can't show: which accounts to draw first, when Social Security maximizes your floor, and whether a bad first decade in retirement compresses your $" + _floorBuf + "k/yr buffer. Studio maps those answers across 10,000 sequences.";
         }
         setEl("s3-gap-plain", gapTxt2);
       })();
@@ -5038,99 +4952,7 @@
     }
 
     function updateRequirementsPanel(ceilTarget, computedMax) {
-      const panel   = document.getElementById('req-items');
-      const reqHead = document.querySelector('#requirements-panel .req-head');
-
-      const mkItems = arr => arr.map(s => `
-        <div class="req-item" role="button" tabindex="0"
-             data-req-type="${s.type}" data-req-value="${s.value}">
-          <div class="req-item-action">${s.action}</div>
-          <div class="req-item-impact">${s.impact}</div>
-        </div>`).join('');
-
-      // ── DATUM-LOCKED MODE: reverse math to sustain the locked datum ──
-      if (designState.datumLocked && designState.datumTarget > 0) {
-        if (reqHead) reqHead.textContent = 'TO REACH YOUR DATUM:';
-        const datumK  = Math.round(designState.datumTarget);
-        const reqs    = calculateRequirements(designState.datumTarget);
-        if (!reqs) return;
-
-        const taxMult  = currentScenario.taxMult || 0.85;
-        const _lcp     = lastCalculatedPoints || {};
-        const _dTarget = designState.datumTarget;
-        const _wr      = (_lcp.ceilSpend  && _dTarget > _lcp.ceilSpend)  ? 0.050
-                       : (_lcp.floorSpend && _dTarget < _lcp.floorSpend) ? 0.028
-                       : 0.04;
-        const reqPortM = (_dTarget * 1000) / (_wr * taxMult) / 1000000;
-
-        const sugg = [];
-        if (!designState.retireLocked) {
-          sugg.push({
-            action: `Extend accumulation to age ${reqs.reqAge}`,
-            impact: `→ gives your portfolio more time to compound before withdrawals start`,
-            type: 'retire', value: reqs.reqAge
-          });
-        }
-        const contribDelta = Math.max(0, (reqs.reqContrib - currentScenario.annualContrib) / 1000);
-        sugg.push({
-          action: `Add ~$${contribDelta.toFixed(0)}k/yr to contributions`,
-          impact: `→ adds enough capital to reach your spending target without changing when you retire`,
-          type: 'contrib', value: reqs.reqContrib
-        });
-        sugg.push({
-          action: `Need $${reqPortM.toFixed(1)}M by retirement`,
-          impact: `→ at a 4% withdrawal rate, this balance sustains $${datumK}k/yr for a 30+ year retirement`,
-          type: 'capital', value: reqPortM
-        });
-
-        const lockNote = designState.retireLocked
-          ? ` Retirement locked at age ${currentScenario.activationAge}.` : '';
-        panel.innerHTML = mkItems(sugg) +
-          `<div class="req-footer">Datum locked at $${datumK}k/yr.${lockNote}</div>`;
-        return;
-      }
-
-      // ── CEILING MODE (default) ────────────────────────────────────────
-      if (reqHead) reqHead.textContent = 'TO REACH THIS TARGET:';
-      const gap = Math.max(0, ceilTarget - computedMax);
-
-      if (gap <= 0) {
-        panel.innerHTML = '<div class="req-placeholder">Drag the Ceiling above your current maximum to see what it takes.</div>';
-      const _sp = document.getElementById('req-spotlight'); if (_sp) { _sp.style.display='none'; _sp.innerHTML=''; };
-        return;
-      }
-
-      const gapK = Math.round(gap);
-      const reqs = calculateRequirements(ceilTarget);
-      if (!reqs) return;
-
-      const sugg = [];
-      // Only show age extension when retirement is NOT locked
-      if (!designState.retireLocked) {
-        sugg.push({
-          action: `Extend accumulation to age ${reqs.reqAge}`,
-          impact: `→ widens your Ceiling by ~$${gapK}k/yr`,
-          type: 'retire', value: reqs.reqAge
-        });
-      }
-      const delta = Math.max(0, (reqs.reqContrib - currentScenario.annualContrib) / 1000);
-      sugg.push({
-        action: `Add ~$${delta.toFixed(0)}k/yr to annual contributions`,
-        impact: `→ lifts your Ceiling by ~$${gapK}k/yr`,
-        type: 'contrib', value: reqs.reqContrib
-      });
-      sugg.push({
-        action: `Start with $${(reqs.reqPort).toFixed(1)}M today`,
-        impact: `→ achieves this Ceiling directly`,
-        type: 'capital', value: reqs.reqPort
-      });
-
-      const lockNote = designState.retireLocked
-        ? ` Retirement locked at age ${currentScenario.activationAge}.` : '';
-      const decumYears = Math.round(currentScenario.portfolioVol * 1000000 /
-        Math.max(1, designState.datumTarget * 1000));
-      panel.innerHTML = mkItems(sugg) +
-        `<div class="req-footer">${lockNote} At $${Math.round(designState.datumTarget)}k/yr datum, Ceiling lasts ~${Math.max(15, decumYears)} yrs.</div>`;
+      // content handled by updateScreen2Narrative
     }
 
     // --- Writeback to Screen 1 ---
@@ -5148,7 +4970,7 @@
 
       scheduleUpdate();
       updateTracker();
-      revealCarryForward(); 
+      revealCarryForward();
 
       const toast = document.getElementById('writeback-toast');
       toast.textContent = '↑ Applied to your Sketch above';
@@ -5161,473 +4983,206 @@
       }, 600);
     }
 
-    // --- Drag handlers ---
-    function initDesignDragHandlers(svg) {
-      // activeDrag is hoisted to script scope so renderDesignCanvas can read it
-      activeDrag = null;
-      let dragOffsetY = 0;
+    // --- Drag handlers (d2- IDs, designOverrides deltas) ---
+    function initD2DragHandlers() {
+      var svg = document.getElementById('d2-canvas');
+      if (!svg) return;
 
       function getSVGY(e) {
-        const pt = svg.createSVGPoint();
+        var pt = svg.createSVGPoint();
         pt.x = e.clientX;
         pt.y = e.clientY;
         return pt.matrixTransform(svg.getScreenCTM().inverse()).y;
       }
 
-      // Handle nodes + full drag lines all trigger drag
-      [['ceil', 'd-handle-ceil'], ['datum', 'd-handle-datum'], ['floor', 'd-handle-floor'],
-       ['ceil', 'd-ceil-hit'],    ['datum', 'd-datum-hit'],    ['floor', 'd-floor-hit']].forEach(([name, id]) => {
-        const el = document.getElementById(id);
+      [['ceil','d2-handle-ceil'],['datum','d2-handle-datum'],['floor','d2-handle-floor'],
+       ['ceil','d2-ceil-hit'],   ['datum','d2-datum-hit'],   ['floor','d2-floor-hit']].forEach(function(pair) {
+        var name = pair[0], id = pair[1];
+        var el = document.getElementById(id);
         if (!el) return;
-        // Make lines easier to grab — wider invisible hit area
-        if (id.endsWith('-line')) {
-          el.style.cursor = 'ns-resize';
-          el.setAttribute('stroke-width', '12');
-          el.setAttribute('stroke-opacity', '0');
-          el.setAttribute('pointer-events', 'stroke');
-          // Keep a visible clone — the original styled path stays, this is just hit area
-        }
-        el.addEventListener('pointerdown', e => {
+        el.addEventListener('pointerdown', function(e) {
           e.stopPropagation();
           activeDrag = name;
           el.setPointerCapture(e.pointerId);
           document.body.style.userSelect = 'none';
-          // Capture grab offset so bar stays under cursor
-          const clickY = getSVGY(e);
-          const curTarget = name === 'ceil' ? designState.ceilTarget
-                          : name === 'datum' ? designState.datumTarget
-                          : designState.floorTarget;
-          dragOffsetY = clickY - dSpendToY(curTarget);
         });
       });
 
-      // SVG lock icon click handlers — clicking icon in canvas toggles lock
-      // IMPORTANT: pointerdown must be stopped on the icon so the parent handle's
-      // pointerdown (which calls setPointerCapture) never fires — pointer capture
-      // would redirect the subsequent click event away from the icon.
-      ['ceil', 'floor', 'datum'].forEach(n => {
-        const icon = document.getElementById(`d-lock-icon-${n}`);
-        if (!icon) return;
-        icon.style.pointerEvents = 'all';
-        icon.style.cursor = 'pointer';
-        icon.addEventListener('pointerdown', e => {
-          e.stopPropagation(); // prevents handle pointerdown → no setPointerCapture → click fires on icon
-        });
-        icon.addEventListener('click', e => {
-          e.stopPropagation();
-          designState[n + 'Locked'] = !designState[n + 'Locked'];
-          document.getElementById(`d-handle-${n}`).classList.toggle('locked', designState[n + 'Locked']);
-          const htmlBtnId = n === 'ceil' ? 'lock-ceiling-btn' : `lock-${n}-btn`;
-          const htmlBtn = document.getElementById(htmlBtnId);
-          if (htmlBtn) htmlBtn.setAttribute('aria-pressed', String(designState[n + 'Locked']));
-          renderDesignCanvas();
-        });
-      });
-
-      svg.addEventListener('pointermove', e => {
+      svg.addEventListener('pointermove', function(e) {
         if (!activeDrag) return;
-        const rawY  = getSVGY(e);
-        const adjY  = rawY - dragOffsetY;
-        const safeY = Math.max(D_Y_MIN + 5, Math.min(adjY, D_Y_MAX - 5)); // clamp to SVG bounds
-        const spend = dYToSpend(safeY);
-        if (activeDrag === 'ceil' && !designState.ceilLocked) {
-          designState.ceilTarget = Math.max(designState.floorTarget + 5, Math.min(spend, designState.computedMax * 2.0));
-        } else if (activeDrag === 'datum' && !designState.datumLocked) {
-          designState.datumTarget = Math.max(1, spend); // no upper cap — OVEREXTENDED is valid
-          designState.datumBreachState = designState.datumTarget > designState.ceilTarget ? 'above'
-              : designState.datumTarget < designState.floorTarget ? 'below' : 'inside';
-        } else if (activeDrag === 'floor' && !designState.floorLocked) {
-          designState.floorTarget = Math.max(10, Math.min(spend, designState.ceilTarget - 5));
+        var pts = lastCalculatedPoints;
+        if (!pts) return;
+        var rawY  = getSVGY(e);
+        var safeY = Math.max(D_Y_MIN + 5, Math.min(rawY, D_Y_MAX - 5));
+        var spend = d2YToSpend(safeY);
+        var dFloor = pts.floorSpend + designOverrides.floorDelta;
+        var dCeil  = pts.ceilSpend  + designOverrides.ceilDelta;
+        if (activeDrag === 'ceil') {
+          var newCeil = Math.max(dFloor + 5, Math.min(spend, pts.ceilSpend * 2.0));
+          designOverrides.ceilDelta = newCeil - pts.ceilSpend;
+        } else if (activeDrag === 'datum') {
+          designOverrides.datumDelta = spend - pts.datumSpend;
+        } else if (activeDrag === 'floor') {
+          var newFloor = Math.max(10, Math.min(spend, dCeil - 5));
+          designOverrides.floorDelta = newFloor - pts.floorSpend;
         }
-        renderDesignCanvas();
+        designOverrides.isDirty = true;
+        renderScreen2();
       });
 
-      svg.addEventListener('pointerup', () => {
+      svg.addEventListener('pointerup', function() {
         activeDrag = null;
         document.body.style.userSelect = '';
-        // Full rescale after drag ends so canvas settles to correct bounds
-        renderDesignCanvas();
+        renderScreen2();
       });
-      svg.addEventListener('pointercancel', () => { activeDrag = null; });
+      svg.addEventListener('pointercancel', function() { activeDrag = null; });
+
+      function handleKey(e, which) {
+        if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+        e.preventDefault();
+        var pts = lastCalculatedPoints;
+        if (!pts) return;
+        var step = e.shiftKey ? 25 : 5;
+        var delta = e.key === 'ArrowUp' ? step : -step;
+        if (which === 'ceil') {
+          var newC = (pts.ceilSpend + designOverrides.ceilDelta) + delta;
+          newC = Math.max((pts.floorSpend + designOverrides.floorDelta) + 5, newC);
+          designOverrides.ceilDelta = newC - pts.ceilSpend;
+        } else if (which === 'datum') {
+          designOverrides.datumDelta += delta;
+        } else if (which === 'floor') {
+          var newF = (pts.floorSpend + designOverrides.floorDelta) + delta;
+          newF = Math.max(10, Math.min(newF, (pts.ceilSpend + designOverrides.ceilDelta) - 5));
+          designOverrides.floorDelta = newF - pts.floorSpend;
+        }
+        designOverrides.isDirty = true;
+        renderScreen2();
+      }
+      var hCeil  = document.getElementById('d2-handle-ceil');
+      var hDatum = document.getElementById('d2-handle-datum');
+      var hFloor = document.getElementById('d2-handle-floor');
+      if (hCeil)  hCeil.addEventListener('keydown',  function(e) { handleKey(e, 'ceil'); });
+      if (hDatum) hDatum.addEventListener('keydown', function(e) { handleKey(e, 'datum'); });
+      if (hFloor) hFloor.addEventListener('keydown', function(e) { handleKey(e, 'floor'); });
     }
 
-    // S5: Keyboard accessibility for design handles (ArrowUp/Down, Shift for x5)
-    
-    // ── Screen 2 Live Narrative ─────────────────────────────────────────────
+    // --- Screen 2 Narrative ---
     function updateScreen2Narrative() {
-      if (!lastCalculatedPoints || !designState) return;
-      const pts  = lastCalculatedPoints;
-      const ds   = designState;
-      const ceil = ds.ceilTarget  || pts.ceilSpend;
-      const dat  = ds.datumTarget || pts.datumSpend;
-      const flr  = ds.floorTarget || pts.floorSpend;
-      const computed = ds.computedMax || pts.ceilSpend;
-      const tension  = computed > 0 ? Math.max(0, (ceil - computed) / computed) : 0;
-      const tensionPct = Math.round(tension * 100);
-      const breach = ds.datumBreachState || 'inside';
+      if (!lastCalculatedPoints) return;
+      var pts  = lastCalculatedPoints;
+      var ceil = pts.ceilSpend  + designOverrides.ceilDelta;
+      var dat  = pts.datumSpend + designOverrides.datumDelta;
+      var flr  = pts.floorSpend + designOverrides.floorDelta;
+      var computed   = pts.ceilSpend;
+      var tensionPct = Math.round(Math.min(1, Math.max(0, designOverrides.ceilDelta / Math.max(1, computed))) * 100);
+      var fmt = function(v) { return '$' + Math.round(v) + 'k/yr'; };
+      var spread = ceil - flr;
+      var spreadPct = ceil > 0 ? spread / ceil : 0;
 
-      const fmt = (v) => '$' + Math.round(v) + 'k/yr';
-
-      // ── Shape State derive ─────────────────────────────────────────────
-      const spread = ceil - flr;
-      const spreadPct = ceil > 0 ? spread / ceil : 0;
-      let shapeName, shapeColor, shapeMeaning;
-      if (ceil <= flr) {
-        shapeName    = 'BROKEN SHAPE';
-        shapeColor   = 'var(--danger-red)';
-        shapeMeaning = 'Your Ceiling is below your Floor — this shape has no valid path. Raise your Ceiling above your Floor to define a real range, or lower your Floor.';
-      } else if (breach === 'above') {
-        shapeName    = 'OVEREXTENDED';
-        shapeColor   = 'var(--danger-red)';
-        shapeMeaning = 'Your Datum exceeds your Ceiling — your spending target is above your structural max. Studio can resolve this through tax strategy and account sequencing.';
-      } else if (breach === 'below') {
-        shapeName    = 'ABUNDANT';
-        shapeColor   = 'var(--blue-safe, #4a9eff)';
-        shapeMeaning = 'Your spending target sits below your Floor — you have structural room to spare. Consider raising your Datum or using Studio to plan for legacy or earlier retirement.';
-      } else if (spreadPct > 0.55) {
-        shapeName    = 'EXPANSIVE';
-        shapeColor   = 'var(--teal-mid)';
-        shapeMeaning = 'Wide range between Ceiling and Floor — high upside but high sensitivity to market conditions. Studio stress-tests whether this shape survives bad sequences.';
-      } else if (spreadPct > 0.25) {
-        shapeName    = 'DEFINED';
-        shapeColor   = 'var(--teal-mid)';
-        shapeMeaning = 'A moderate spread — reasonable upside with a protected Floor. The range is predictable. Use Studio to stress-test what holds this shape across market sequences.';
-      } else {
-        shapeName    = 'COMPRESSED';
-        shapeColor   = '#aaa';
-        shapeMeaning = 'A tight range — very little gap between Ceiling and Floor. Conservative but stable. Useful if certainty matters more than maximum income.';
-      }
-
-      // ── Live Shape State chip ─────────────────────────────────────────
-      const ssEl = document.getElementById('d2-shape-state-name');
-      const ssMeaning = document.getElementById('d2-shape-state-meaning');
-      if (ssEl) { ssEl.textContent = shapeName; ssEl.style.color = shapeColor; }
-      if (ssMeaning) ssMeaning.textContent = shapeMeaning;
-
-      // ── Tension explanation ───────────────────────────────────────────
-      const tensExplain = document.getElementById('tension-explain');
+      var tensExplain = document.getElementById('tension-explain');
       if (tensExplain) {
         if (tensionPct === 0) {
           tensExplain.textContent = 'Your Ceiling sits within what the Sketch can confirm. No tension — this shape is structurally supported.';
         } else if (tensionPct <= 20) {
-          tensExplain.textContent = `Your Ceiling is ${tensionPct}% above what the Sketch confirms. That's a small gap — modest above-average market performance could close it.`;
+          tensExplain.textContent = 'Your Ceiling is ' + tensionPct + '% above what the Sketch confirms. That\'s a small gap — modest above-average market performance could close it.';
         } else if (tensionPct <= 50) {
-          tensExplain.textContent = `Your Ceiling is ${tensionPct}% above what the Sketch confirms. Reaching it requires markets to outperform their historical average. Studio shows how often that actually happens across 10,000 paths.`;
+          tensExplain.textContent = 'Your Ceiling is ' + tensionPct + '% above what the Sketch confirms. Reaching it requires markets to outperform their historical average. Studio shows how often that actually happens across 10,000 paths.';
         } else if (tensionPct <= 80) {
-          tensExplain.textContent = `Your Ceiling is ${tensionPct}% above what the Sketch can confirm. Reaching it requires sustained above-average growth for most of your accumulation years. Studio quantifies the probability.`;
+          tensExplain.textContent = 'Your Ceiling is ' + tensionPct + '% above what the Sketch can confirm. Reaching it requires sustained above-average growth for most of your accumulation years. Studio quantifies the probability.';
         } else {
-          tensExplain.textContent = `Your Ceiling is ${tensionPct}% above what the Sketch can confirm — a highly aspirational target. Studio shows how many of 10,000 paths actually get there.`;
+          tensExplain.textContent = 'Your Ceiling is ' + tensionPct + '% above what the Sketch can confirm — a highly aspirational target. Studio shows how many of 10,000 paths actually get there.';
         }
       }
 
-      // ── Narrative panel ───────────────────────────────────────────────
-      const req = document.getElementById('req-items');
+      var req = document.getElementById('req-items');
       if (!req) return;
+      var html = '';
 
-      let html = '';
-
-      // ── Severely OVEREXTENDED guard — suppress garbage math, show warm message ──
-      const _severeOvExt = computed > 0 && (ds.datumTarget / computed) > 5;
-      if (_severeOvExt) {
-        const _gap = Math.round(ds.datumTarget - computed);
-        html = `<div style="padding:14px 16px;background:rgba(220,50,50,0.08);border-left:3px solid var(--danger-red);border-radius:4px;font-family:var(--font-mono);font-size:10px;line-height:1.7;color:rgba(255,255,255,0.8);">
-          <div style="color:var(--danger-red);font-weight:bold;letter-spacing:0.1em;margin-bottom:8px;">⚠ YOUR SHAPE NEEDS WORK FIRST</div>
-          Your spending target (<strong>$${Math.round(ds.datumTarget)}k/yr</strong>) is far above what this portfolio can structurally support right now (<strong>$${Math.round(computed)}k/yr</strong>). That gap is $${_gap}k/yr — and that's completely normal early on. This is exactly what the tool is for.<br><br>
-          <strong style="color:var(--gold);">The most powerful moves:</strong><br>
-          &bull; Increase your annual contributions<br>
-          &bull; Extend your timeline (retire later or work longer)<br>
-          &bull; Lower your spending target for now<br><br>
-          Return to Screen 1 and adjust those sliders. Screen 2 becomes much more useful once your target and portfolio are in the same range. Studio models exactly which combination closes this gap fastest.
-        </div>`;
+      if (computed > 0 && (dat / computed) > 5) {
+        var _gap = Math.round(dat - computed);
+        html = '<div style="padding:14px 16px;background:rgba(220,50,50,0.08);border-left:3px solid var(--danger-red);border-radius:4px;font-family:var(--font-mono);font-size:10px;line-height:1.7;color:rgba(255,255,255,0.8);">'
+          + '<div style="color:var(--danger-red);font-weight:bold;letter-spacing:0.1em;margin-bottom:8px;">&#9888; YOUR SHAPE NEEDS WORK FIRST</div>'
+          + 'Your spending target (<strong>$' + Math.round(dat) + 'k/yr</strong>) is far above what this portfolio can structurally support right now (<strong>$' + Math.round(computed) + 'k/yr</strong>). That gap is $' + _gap + 'k/yr — and that\'s completely normal early on. This is exactly what the tool is for.<br><br>'
+          + '<strong style="color:var(--gold);">The most powerful moves:</strong><br>'
+          + '&bull; Increase your annual contributions<br>&bull; Extend your timeline (retire later or work longer)<br>&bull; Lower your spending target for now<br><br>'
+          + 'Return to Screen 1 and adjust those sliders. Screen 2 becomes much more useful once your target and portfolio are in the same range. Studio models exactly which combination closes this gap fastest.</div>';
         req.innerHTML = html;
         return;
       }
 
-      // ── Retire Lock block — always shows when locked ────────────
-      if (designState.retireLocked) {
-        const lockedAge  = currentScenario.activationAge;
-        const yearsLeft  = Math.max(0, lockedAge - currentScenario.currentAge);
-        const impliedCap = (ceil * 1000) / (0.04 * (currentScenario.taxMult || 0.85));
-        const capNeeded  = (impliedCap / 1000000).toFixed(1);
-        const direction  = ceil > computed * 1.02 ? 'above' : ceil < computed * 0.98 ? 'below' : 'at';
-        const dirMsg = direction === 'above'
-          ? `Your Ceiling of ${fmt(ceil)} is above what the Sketch confirms at age ${lockedAge}. Reaching it requires ~$${capNeeded}M by retirement — contributions or growth must close that gap.`
-          : direction === 'below'
-          ? `With retirement fixed at age ${lockedAge} and a conservative Ceiling, your Floor can rise. You have ${yearsLeft} years to grow capital beyond what the Ceiling demands.`
-          : `Retirement locked at age ${lockedAge}. Your Ceiling sits within what the Sketch confirms — shape is structurally supported.`;
-        html += `<div class="req-item" style="border-left-color:var(--gold); background:rgba(201,168,76,0.06);">
-          <div class="req-item-label" style="color:var(--gold);">🔒 RETIRE LOCKED: AGE ${lockedAge}</div>
-          <div class="req-item-body">${dirMsg}</div>
-        </div>`;
-      }
-
-      // ── Ceiling Lock badge ──────────────────────────────────────────────
-      if (designState.ceilLocked) {
-        const _capGapM = Math.max(0, ceil - computed) / 0.04 / 1000;
-        const _r2 = currentScenario.baselineRate - 1 || 0.035;
-        const _n2 = currentScenario.yearsToGrow > 0 ? currentScenario.yearsToGrow : 20;
-        const _xC = _r2 > 0
-          ? Math.round((_capGapM * _r2 / (Math.pow(1 + _r2, _n2) - 1)) * 1000000 / 1000) * 1000
-          : Math.round(_capGapM * 1000000 / _n2 / 1000) * 1000;
-        const _ceilMsg = ceil > computed * 1.02
-          ? `Locked <strong>${Math.round((ceil/computed-1)*100)}% above</strong> the Sketch max (${fmt(computed)}). Sustaining this requires ~<strong>$${(_xC/1000).toFixed(0)}k/yr more</strong> in contributions or additional years of growth. Studio maps the exact path.`
-          : ceil < computed * 0.98
-          ? `Locked below the Sketch max (${fmt(computed)}) — a conservative choice. Your Floor could rise as high as <strong>${fmt(flr * 1.15)}</strong> with the same capital base.`
-          : `Locked at ${fmt(ceil)} — within the Sketch\'s confirmed range. Shape is structurally supported.`;
-        html += `<div class="req-item" style="border-left-color:var(--gold); background:rgba(201,168,76,0.06);">
-          <div class="req-item-label" style="color:var(--gold);">🔒 CEILING LOCKED: ${fmt(ceil)}</div>
-          <div class="req-item-body">${_ceilMsg}</div>
-        </div>`;
-      }
-
-      // ── Datum Lock badge ────────────────────────────────────────────────
-      if (designState.datumLocked) {
-        const _datMsg = breach === 'above'
-          ? `Locked above your Ceiling (${fmt(ceil)}) — this is an <strong style="color:var(--danger-red);">unsupported shape</strong>. The Sketch can\'t confirm a path where spending exceeds what the portfolio can generate. Studio resolves this through account sequencing and Social Security timing.`
-          : breach === 'below'
-          ? `Locked below your Floor (${fmt(flr)}) — unspent protected income. Consider raising your Datum or lowering your Floor to create a more meaningful shape.`
-          : dat > pts.datumSpend * 1.08
-          ? `Locked at ${fmt(dat)} — <strong>${Math.round((dat/pts.datumSpend-1)*100)}% above</strong> the Sketch baseline (${fmt(pts.datumSpend)}). At this rate you\'d need to retire later, increase contributions, or accept a lower Floor. Studio maps the exact tradeoff.`
-          : dat < pts.datumSpend * 0.92
-          ? `Locked at ${fmt(dat)} — <strong>${Math.round((1-dat/pts.datumSpend)*100)}% below</strong> the Sketch baseline (${fmt(pts.datumSpend)}). Conservative target — your Floor could rise or you could retire earlier. Studio maps the slack.`
-          : `Locked at ${fmt(dat)} — within the Sketch\'s confirmed baseline range. Shape is structurally supported.`;
-        html += `<div class="req-item" style="border-left-color:var(--teal-mid); background:rgba(93,202,165,0.06);">
-          <div class="req-item-label" style="color:var(--teal-mid);">🔒 DATUM LOCKED: ${fmt(dat)}</div>
-          <div class="req-item-body">${_datMsg}</div>
-        </div>`;
-      }
-
-      // ── Floor Lock badge ─────────────────────────────────────────────────
-      if (designState.floorLocked) {
-        const _baseFlr = pts.floorSpend;
-        const _flrMsg = flr > _baseFlr * 1.05
-          ? `Locked <strong>${Math.round((flr/_baseFlr-1)*100)}% above</strong> the Sketch\'s structural minimum (${fmt(_baseFlr)}). Sustaining ${fmt(flr)} even in bad markets requires more protected income — Social Security, annuity, or a larger bond sleeve. Studio stress-tests whether your current structure holds.`
-          : flr < _baseFlr * 0.95
-          ? `Locked below the Sketch minimum (${fmt(_baseFlr)}) — a conservative Floor. You need less guaranteed income, freeing capital to extend your Ceiling or retire earlier. Tradeoff: less protection if markets drop early.`
-          : `Locked at ${fmt(flr)} — within the Sketch\'s structural minimum range. Floor is supported.`;
-        html += `<div class="req-item" style="border-left-color:var(--danger-red); background:rgba(226,75,74,0.06);">
-          <div class="req-item-label" style="color:var(--danger-red);">🔒 FLOOR LOCKED: ${fmt(flr)}</div>
-          <div class="req-item-body">${_flrMsg}</div>
-        </div>`;
-      }
-
-
-
-      // Ceiling narrative — skip if locked (lock badge already shown above)
-      // Broken shape warning — ceiling at or below floor
       if (ceil <= flr) {
-        html += `<div class="req-item" style="border-left-color:var(--danger-red); background:rgba(226,75,74,0.08);">
-          <div class="req-item-label" style="color:var(--danger-red);">⚠ CEILING BELOW FLOOR</div>
-          <div class="req-item-body">Your best-case spending is below your minimum baseline — this shape has no valid path. <strong style="color:var(--danger-red);">Raise your Ceiling above your Floor</strong> to define a real range, or lower your Floor. This likely happened by accident while dragging.</div>
-        </div>`;
+        html += '<div class="req-item" style="border-left-color:var(--danger-red);background:rgba(226,75,74,0.08);">'
+          + '<div class="req-item-label" style="color:var(--danger-red);">&#9888; CEILING BELOW FLOOR</div>'
+          + '<div class="req-item-body">Your best-case spending is below your minimum baseline — this shape has no valid path. <strong style="color:var(--danger-red);">Raise your Ceiling above your Floor</strong> to define a real range, or lower your Floor.</div></div>';
         req.innerHTML = html;
         return;
       }
 
-      if (!designState.ceilLocked && ceil > computed * 1.02) {
-        const gap = ceil - computed;
-        const extraYears = Math.round(gap / (computed * 0.04));
-        // Back-solve: how much extra annual contribution closes the capital gap?
-        // gap is in k/yr spending; capital needed = gap / 4% rule (in $k), then to millions
-        const _capitalGapM = (gap / 0.04) / 1000;
-        const _r = currentScenario.baselineRate - 1 || 0.035;
-        const _n = currentScenario.yearsToGrow > 0 ? currentScenario.yearsToGrow : 20;
-        const extraContrib = _r > 0
+      if (dat > ceil) {
+        html += '<div class="req-item req-item-datum" style="border-left-color:var(--danger-red);">'
+          + '<div class="req-item-label" style="color:var(--danger-red);">&#9888; DATUM ABOVE CEILING: ' + fmt(dat) + '</div>'
+          + '<div class="req-item-body">Your target spending exceeds your structural Ceiling. This is an <strong style="color:var(--danger-red);">unsupported shape</strong> — the Sketch cannot confirm a path where you spend more than your portfolio can generate. Studio resolves this through account type optimization, Social Security timing, and glide path design.</div></div>';
+      } else if (dat < flr) {
+        html += '<div class="req-item req-item-datum"><div class="req-item-label" style="color:var(--gold);">&#9888; DATUM BELOW FLOOR: ' + fmt(dat) + '</div>'
+          + '<div class="req-item-body">Your target spending is below your protected Floor. Consider raising your Datum or lowering your Floor to create a more meaningful shape.</div></div>';
+      }
+
+      if (ceil > computed * 1.02) {
+        var gap = ceil - computed;
+        var extraYears = Math.round(gap / (computed * 0.04));
+        var _capitalGapM = (gap / 0.04) / 1000;
+        var _r = currentScenario.baselineRate - 1 || 0.035;
+        var _n = currentScenario.yearsToGrow > 0 ? currentScenario.yearsToGrow : 20;
+        var extraContrib = _r > 0
           ? Math.round((_capitalGapM * _r / (Math.pow(1 + _r, _n) - 1)) * 1000000 / 1000) * 1000
           : Math.round(_capitalGapM * 1000000 / _n / 1000) * 1000;
-        html += `<div class="req-item req-item-ceil">
-          <div class="req-item-label" style="color:var(--gold);">↑ CEILING TARGET: ${fmt(ceil)}</div>
-          <div class="req-item-body">Your Ceiling is <strong class="gold-txt">${Math.round((ceil/computed - 1)*100)}% above</strong> what the Sketch structurally supports 
-          (${fmt(computed)}). To reach it you'd need roughly <strong>${extraYears > 0 ? extraYears + ' extra years of growth' : 'strong sequence luck'}</strong> or 
-          ~<strong>$${(extraContrib/1000).toFixed(0)}k/yr more</strong> in contributions. Studio resolves this with actual probabilities.</div>
-        </div>`;
-      } else if (!designState.ceilLocked && ceil < computed * 0.98) {
-        html += `<div class="req-item req-item-ceil">
-          <div class="req-item-label" style="color:var(--gold);">↓ CEILING TARGET: ${fmt(ceil)}</div>
-          <div class="req-item-body">You've set a conservative Ceiling below your structural max (${fmt(computed)}). 
-          This reduces sequence-of-returns risk${designState.retireLocked 
-            ? ` — with retirement locked at <strong>age ${currentScenario.activationAge}</strong>, your Floor could rise to as high as <strong>${fmt(flr * 1.2)}</strong> with this capital base.`
-            : ` and means your Floor could rise to as high as <strong>${fmt(flr * 1.15)}</strong> with the same capital base. Retiring earlier would push it even higher.`
-          } A lower Ceiling is a valid choice if certainty matters more than maximum income.</div>
-        </div>`;
+        html += '<div class="req-item req-item-ceil"><div class="req-item-label" style="color:var(--gold);">&#8593; CEILING TARGET: ' + fmt(ceil) + '</div>'
+          + '<div class="req-item-body">Your Ceiling is <strong class="gold-txt">' + Math.round((ceil/computed-1)*100) + '% above</strong> what the Sketch structurally supports (' + fmt(computed) + '). To reach it you\'d need roughly <strong>' + (extraYears > 0 ? extraYears + ' extra years of growth' : 'strong sequence luck') + '</strong> or ~<strong>$' + (extraContrib/1000).toFixed(0) + 'k/yr more</strong> in contributions. Studio resolves this with actual probabilities.</div></div>';
+      } else if (ceil < computed * 0.98) {
+        html += '<div class="req-item req-item-ceil"><div class="req-item-label" style="color:var(--gold);">&#8595; CEILING TARGET: ' + fmt(ceil) + '</div>'
+          + '<div class="req-item-body">You\'ve set a conservative Ceiling below your structural max (' + fmt(computed) + '). This reduces sequence-of-returns risk and means your Floor could rise to as high as <strong>' + fmt(flr * 1.15) + '</strong> with the same capital base.</div></div>';
       }
 
-      // Floor narrative — skip if locked
-      const baseFloor = pts.floorSpend;
-      if (!designState.floorLocked && flr > baseFloor * 1.05) {
-        html += `<div class="req-item req-item-floor">
-          <div class="req-item-label" style="color:var(--danger-red);">↑ FLOOR TARGET: ${fmt(flr)}</div>
-          <div class="req-item-body">Raising your Floor to ${fmt(flr)} means your baseline spending must be guaranteed — 
-          this demands <strong style="color:var(--danger-red);">more protected income</strong> (Social Security, annuity income, or a larger 
-          bond sleeve). Studio can model whether your current structure supports this Floor across bad sequences.</div>
-        </div>`;
-      } else if (!designState.floorLocked && flr < baseFloor * 0.95) {
-        html += `<div class="req-item req-item-floor">
-          <div class="req-item-label" style="color:var(--danger-red);">↓ FLOOR TARGET: ${fmt(flr)}</div>
-          <div class="req-item-body">A lower Floor gives you more flexibility. With a reduced baseline of ${fmt(flr)}, 
-          you need less guaranteed income — which can free up capital to extend your Ceiling or retire earlier. 
-          The tradeoff: less protection if markets drop early in retirement.</div>
-        </div>`;
+      var baseFloor = pts.floorSpend;
+      if (flr > baseFloor * 1.05) {
+        html += '<div class="req-item req-item-floor"><div class="req-item-label" style="color:var(--danger-red);">&#8593; FLOOR TARGET: ' + fmt(flr) + '</div>'
+          + '<div class="req-item-body">Raising your Floor to ' + fmt(flr) + ' means your baseline spending must be guaranteed — this demands <strong style="color:var(--danger-red);">more protected income</strong> (Social Security, annuity income, or a larger bond sleeve). Studio can model whether your current structure supports this Floor across bad sequences.</div></div>';
+      } else if (flr < baseFloor * 0.95) {
+        html += '<div class="req-item req-item-floor"><div class="req-item-label" style="color:var(--danger-red);">&#8595; FLOOR TARGET: ' + fmt(flr) + '</div>'
+          + '<div class="req-item-body">A lower Floor gives you more flexibility. With a reduced baseline of ' + fmt(flr) + ', you need less guaranteed income — freeing capital to extend your Ceiling or retire earlier. Tradeoff: less protection if markets drop early.</div></div>';
       }
 
-      // Datum narrative — skip if locked
-      const baseDatum = pts.datumSpend;
-      if (!designState.datumLocked && breach === 'above') {
-        html += `<div class="req-item req-item-datum" style="border-left-color:var(--danger-red);">
-          <div class="req-item-label" style="color:var(--danger-red);">⚠ DATUM ABOVE CEILING: ${fmt(dat)}</div>
-          <div class="req-item-body">Your target spending exceeds your structural Ceiling. This is an <strong style="color:var(--danger-red);">unsupported shape</strong> — 
-          the Sketch can't confirm a path where you spend more than your portfolio can generate. 
-          Studio resolves this through account type optimization, Social Security timing, and glide path design.</div>
-        </div>`;
-      } else if (!designState.datumLocked && breach === 'below') {
-        html += `<div class="req-item req-item-datum">
-          <div class="req-item-label" style="color:var(--gold);">⚠ DATUM BELOW FLOOR: ${fmt(dat)}</div>
-          <div class="req-item-body">Your target spending is below your protected Floor. Consider raising your Datum 
-          or lowering your Floor to create a more meaningful shape — the gap between Datum and Floor represents 
-          unspent protected income.</div>
-        </div>`;
-      } else if (!designState.datumLocked && dat > baseDatum * 1.08) {
-        const yearsLater = Math.round((dat - baseDatum) / (baseDatum * 0.06));
-        html += `<div class="req-item req-item-datum">
-          <div class="req-item-label" style="color:var(--teal-mid);">↑ DATUM TARGET: ${fmt(dat)}</div>
-          <div class="req-item-body">Raising your target spend to ${fmt(dat)} reduces your runway. 
-          At this rate you'd either need to retire <strong>~${yearsLater} year${yearsLater!==1?'s':''} later</strong>, 
-          increase contributions, or accept a lower Floor. The Sketch reflects this in the tighter cone — 
-          Studio will show you the exact tradeoff.</div>
-        </div>`;
-      } else if (!designState.datumLocked && dat < baseDatum * 0.92) {
-        const yearsEarlier = Math.round((baseDatum - dat) / (baseDatum * 0.06));
-        const floorBonus   = Math.round((baseDatum - dat) * 0.4);
-        html += `<div class="req-item req-item-datum">
-          <div class="req-item-label" style="color:var(--teal-mid);">↓ DATUM TARGET: ${fmt(dat)}</div>
-          <div class="req-item-body">Spending less (${fmt(dat)}) extends your runway — you could potentially retire 
-          <strong>~${yearsEarlier} year${yearsEarlier!==1?'s':''} earlier</strong> or raise your Floor by 
-          ~${fmt(floorBonus)} with the same capital. Lower Datum = more structural room = a more resilient shape.</div>
-        </div>`;
+      var baseDatum = pts.datumSpend;
+      if (dat >= flr && dat <= ceil) {
+        if (dat > baseDatum * 1.08) {
+          var yearsLater = Math.round((dat - baseDatum) / (baseDatum * 0.06));
+          html += '<div class="req-item req-item-datum"><div class="req-item-label" style="color:var(--teal-mid);">&#8593; DATUM TARGET: ' + fmt(dat) + '</div>'
+            + '<div class="req-item-body">Raising your target spend to ' + fmt(dat) + ' reduces your runway. You\'d need to retire ~' + yearsLater + ' year' + (yearsLater !== 1 ? 's' : '') + ' later, increase contributions, or accept a lower Floor. Studio maps the exact tradeoff.</div></div>';
+        } else if (dat < baseDatum * 0.92) {
+          var yearsEarlier = Math.round((baseDatum - dat) / (baseDatum * 0.06));
+          var floorBonus = Math.round((baseDatum - dat) * 0.4);
+          html += '<div class="req-item req-item-datum"><div class="req-item-label" style="color:var(--teal-mid);">&#8595; DATUM TARGET: ' + fmt(dat) + '</div>'
+            + '<div class="req-item-body">Spending less (' + fmt(dat) + ') extends your runway — you could potentially retire ~' + yearsEarlier + ' year' + (yearsEarlier !== 1 ? 's' : '') + ' earlier or raise your Floor by ~' + fmt(floorBonus) + ' with the same capital. Lower Datum = more structural room = a more resilient shape.</div></div>';
+        }
       }
 
       if (!html) {
-        html = `<div class="req-placeholder">Drag the Ceiling, Floor, or Datum handles to design your shape — and see exactly what each move means.</div>`;
+        html = '<div class="req-placeholder">Drag the Ceiling, Floor, or Datum handles to design your shape — and see exactly what each move means.</div>';
       }
       req.innerHTML = html;
-
-      // req-spotlight disabled — req-items now fully visible, no scroll
-      const spotlight = document.getElementById('req-spotlight');
+      var spotlight = document.getElementById('req-spotlight');
       if (spotlight) { spotlight.style.display = 'none'; spotlight.innerHTML = ''; }
     }
 
-    function initDesignKeyboard() {
-      function handleKey(e, stateKey) {
-        if (!['ArrowUp','ArrowDown'].includes(e.key)) return;
-        e.preventDefault();
-        const step = e.shiftKey ? 25 : 5;
-        const delta = e.key === 'ArrowUp' ? step : -step;
-        const cur = designState[stateKey] || 0;
-        const min = globalYMin || 0;
-        const max = designState.computedMax || globalYMax || 500;
-        const clamped = Math.max(min, Math.min(max * 2, cur + delta));
-        if (stateKey === 'ceilTarget') {
-          designState.ceilTarget = Math.max(designState.datumTarget + 1, clamped);
-        } else {
-          // Datum can breach ceiling/floor — enables what-if narrative
-                    designState.datumTarget = Math.max(10, Math.min(clamped, designState.ceilTarget * 2));
-                    designState.datumBreachState = designState.datumTarget > designState.ceilTarget ? 'above'
-                        : designState.datumTarget < designState.floorTarget ? 'below' : 'inside';
-        }
-        renderDesignCanvas();
-      }
-      const hCeil  = document.getElementById('d-handle-ceil');
-      const hDatum = document.getElementById('d-handle-datum');
-      if (hCeil)  hCeil.addEventListener('keydown',  e => handleKey(e, 'ceilTarget'));
-      if (hDatum) hDatum.addEventListener('keydown', e => handleKey(e, 'datumTarget'));
-    }
-    // initDesignKeyboard() called inside revealScreen2() after handles are built
-
-    // --- Lock buttons ---
-    document.getElementById('lock-retire-btn').addEventListener('click', function() {
-      designState.retireLocked = !designState.retireLocked;
-      this.setAttribute('aria-pressed', String(designState.retireLocked));
-      renderDesignCanvas();
-    });
-    document.getElementById('lock-ceiling-btn').addEventListener('click', function() {
-      designState.ceilLocked = !designState.ceilLocked;
-      this.setAttribute('aria-pressed', String(designState.ceilLocked));
-      document.getElementById('d-handle-ceil').classList.toggle('locked', designState.ceilLocked);
-      renderDesignCanvas();
-    });
-    document.getElementById('lock-datum-btn').addEventListener('click', function() {
-      designState.datumLocked = !designState.datumLocked;
-      this.setAttribute('aria-pressed', String(designState.datumLocked));
-      document.getElementById('d-handle-datum').classList.toggle('locked', designState.datumLocked);
-      renderDesignCanvas();
-    });
-
     // --- Design canvas market toggle ---
-    document.querySelectorAll('input[name="design-market"]').forEach(r => {
-      r.addEventListener('change', (e) => {
-        // Sync to main market radio
-        const mainRadio = document.querySelector(`input[name="market"][value="${e.target.value}"]`);
+    document.querySelectorAll('input[name="design-market"]').forEach(function(r) {
+      r.addEventListener('change', function(e) {
+        var mainRadio = document.querySelector('input[name="market"][value="' + e.target.value + '"]');
         if (mainRadio) { mainRadio.checked = true; mainRadio.dispatchEvent(new Event('change')); }
-
-        // Re-render Screen 2 design canvas with new market paradigm
         try { updateEngine(); } catch(_e) {}
-        // Clamp targets to new computed max after market change
-        if (lastCalculatedPoints) {
-          const _newMax = lastCalculatedPoints.ceilSpend * 2.0;
-          designState.ceilTarget  = Math.min(designState.ceilTarget,  _newMax);
-          designState.datumTarget = Math.min(designState.datumTarget, _newMax);
-          designState.computedMax = lastCalculatedPoints.ceilSpend;
-        }
-        if (typeof renderDesignCanvas === 'function')     renderDesignCanvas();
-        if (typeof updateScreen2Narrative === 'function') updateScreen2Narrative();
-        if (typeof triggerDesignSweep === 'function')     triggerDesignSweep(e.target.value);      });
-    });
-
-    // --- Set Your Shape confirm button ---
-    document.getElementById('btn-confirm-shape').addEventListener('click', function() {
-      if (!designState.ceilTarget || !designState.datumTarget) return;
-      // Lock designed targets into currentScenario for Screen 3
-      currentScenario._designedCeil  = designState.ceilTarget;
-      currentScenario._designedDatum = designState.datumTarget;
-      currentScenario._designedFloor = designState.floorTarget;
-
-      // Recompute datumBreachState from actual design values
-      (function() {
-        var dc = designState.ceilTarget || 0;
-        var dd = designState.datumTarget || 0;
-        var df = designState.floorTarget || 0;
-        designState.datumBreachState = dd > dc ? "above" : dd < df ? "below" : "inside";
-      })();
-      if (typeof updateScreen2Narrative === "function") updateScreen2Narrative();
-
-      // Re-run screen 3 with designed targets
-      updateScreen3WithDesign();
-
-      // Flash the Screen 3 cards
-      document.querySelectorAll('.arch-card:not(.horizontal-card)').forEach((card, i) => {
-        setTimeout(() => {
-          card.style.borderColor = 'rgba(201,168,76,0.5)';
-          card.style.transition = 'border-color 0.3s';
-          setTimeout(() => { card.style.borderColor = ''; }, 600);
-        }, i * 80);
+        renderScreen2();
+        if (typeof triggerDesignSweep === 'function') triggerDesignSweep(e.target.value);
       });
-
-      // Flash Section 3 background briefly
-      const s3sec = document.getElementById('screen-2');
-      if (s3sec) {
-        s3sec.style.transition = 'background 0.15s ease';
-        s3sec.style.background = 'rgba(201,168,76,0.05)';
-        setTimeout(() => { s3sec.style.background = ''; }, 700);
-      }
-
-      // Toast — hold 3.5s
-      const toast = document.getElementById('confirm-toast');
-      toast.style.transition = 'opacity 0.3s ease';
-      toast.style.opacity = '1';
-      setTimeout(() => { toast.style.opacity = '0'; }, 3500);
-
-      // Writeback toast
-      showWritebackToast('Shape locked — Tension screen updated');
     });
 
     // --- Carry-forward ticking reveal ---
@@ -5647,7 +5202,18 @@
       });
     }
 
-  
+    // --- Reset Design ---
+    document.getElementById('btn-reset-design').addEventListener('click', function() {
+      initDesignState();
+      renderScreen2();
+      var toast = document.getElementById('confirm-toast');
+      if (toast) {
+        toast.style.transition = 'opacity 0.3s ease';
+        toast.style.opacity = '1';
+        setTimeout(function() { toast.style.opacity = '0'; }, 2500);
+      }
+    });
+
     // Know Your Shape → reveals Screen 3
     document.getElementById('btn-know-shape').addEventListener('click', function() {
       // Shockwave
@@ -5658,19 +5224,16 @@
         setTimeout(function(){ sw.classList.add('fade'); }, 550);
         setTimeout(function(){ sw.classList.remove('fire','fade'); }, 950);
       }
-      // Carry design state if set
-      if (designState && designState.ceilTarget) {
-        currentScenario._designedCeil  = designState.ceilTarget;
-        currentScenario._designedDatum = designState.datumTarget;
-        currentScenario._designedFloor = designState.floorTarget;
-        // Recompute breach from actual values
-        var _dc = designState.ceilTarget || 0;
-        var _dd = designState.datumTarget || 0;
-        var _df = designState.floorTarget || 0;
-        designState.datumBreachState = _dd > _dc ? "above" : _dd < _df ? "below" : "inside";
+      // Carry design values to Screen 3
+      if (lastCalculatedPoints) {
+        var _dc = lastCalculatedPoints.ceilSpend  + designOverrides.ceilDelta;
+        var _dd = lastCalculatedPoints.datumSpend + designOverrides.datumDelta;
+        var _df = lastCalculatedPoints.floorSpend + designOverrides.floorDelta;
+        currentScenario._designedCeil  = _dc;
+        currentScenario._designedDatum = _dd;
+        currentScenario._designedFloor = _df;
       }
-      if (typeof updateScreen2Narrative === "function") updateScreen2Narrative();
-      if (typeof updateScreen3WithDesign === "function") updateScreen3WithDesign();
+      if (typeof updateScreen3WithDesign === 'function') updateScreen3WithDesign();
 
       // Populate all Screen 3 fields
       (function() {
@@ -5695,11 +5258,10 @@
         var sketchDatum = pts.datumSpend || 0;
         var sketchFloor = pts.floorSpend || 0;
         var sketchPort  = pts.portfolioAtRetirement || pts.totalAtRetirement || 0;
-        var ds    = designState || {};
-        var dCeil = ds.ceilTarget  || sketchCeil;
-        var dDat  = ds.datumTarget || sketchDatum;
-        var dFlr  = ds.floorTarget || sketchFloor;
-        var computed = ds.computedMax || sketchCeil || 1;
+        var dCeil = sketchCeil  + designOverrides.ceilDelta;
+        var dDat  = sketchDatum + designOverrides.datumDelta;
+        var dFlr  = sketchFloor + designOverrides.floorDelta;
+        var computed = sketchCeil || 1;
         var tension  = computed>0 ? Math.max(0,Math.round((dCeil-computed)/computed*100)) : 0;
         var stateObj = (function(dc2, dd2, df2) {
           var spread = dc2 - df2; var spreadPct = dc2 > 0 ? spread / dc2 : 0; var margin = spread > 0 ? (dd2 - df2) / spread : 0.5;
@@ -5742,9 +5304,9 @@
         set('s3-sk-floor',      fmtAT(sketchFloor));
         set('s3-sk-meaning',    skStateObj.physics);
         // ── Row 2: Designed values with direction arrows ─────────
-        var _arrC = dCeil  > sketchCeil  + 1 ? ' <span style="color:var(--teal-mid);font-size:11px;">↑</span>' : dCeil  < sketchCeil  - 1 ? ' <span style="color:var(--danger-red);font-size:11px;">↓</span>' : ' <span style="color:rgba(255,255,255,0.3);font-size:11px;">=</span>';
-        var _arrD = dDat   > sketchDatum + 1 ? ' <span style="color:var(--teal-mid);font-size:11px;">↑</span>' : dDat   < sketchDatum - 1 ? ' <span style="color:var(--danger-red);font-size:11px;">↓</span>' : ' <span style="color:rgba(255,255,255,0.3);font-size:11px;">=</span>';
-        var _arrF = dFlr   > sketchFloor + 1 ? ' <span style="color:var(--teal-mid);font-size:11px;">↑</span>' : dFlr   < sketchFloor - 1 ? ' <span style="color:var(--danger-red);font-size:11px;">↓</span>' : ' <span style="color:rgba(255,255,255,0.3);font-size:11px;">=</span>';
+        var _arrC = dCeil  > sketchCeil  + 1 ? ' <span style="color:var(--teal-mid);font-size:11px;">&#8593;</span>' : dCeil  < sketchCeil  - 1 ? ' <span style="color:var(--danger-red);font-size:11px;">&#8595;</span>' : ' <span style="color:rgba(255,255,255,0.3);font-size:11px;">=</span>';
+        var _arrD = dDat   > sketchDatum + 1 ? ' <span style="color:var(--teal-mid);font-size:11px;">&#8593;</span>' : dDat   < sketchDatum - 1 ? ' <span style="color:var(--danger-red);font-size:11px;">&#8595;</span>' : ' <span style="color:rgba(255,255,255,0.3);font-size:11px;">=</span>';
+        var _arrF = dFlr   > sketchFloor + 1 ? ' <span style="color:var(--teal-mid);font-size:11px;">&#8593;</span>' : dFlr   < sketchFloor - 1 ? ' <span style="color:var(--danger-red);font-size:11px;">&#8595;</span>' : ' <span style="color:rgba(255,255,255,0.3);font-size:11px;">=</span>';
         set('s3-shape-name',    stateObj.name||'—', stateObj.color||'var(--teal-mid)');
         var _ceilEl = document.getElementById('s3-ceil-val');
         if (_ceilEl)  _ceilEl.innerHTML  = fmtAT(dCeil)  + _arrC;
