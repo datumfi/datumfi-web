@@ -2796,42 +2796,171 @@
     }
 
     function getShapeStateObj(pts) {
-        const _width    = pts.ceilSpend - pts.floorSpend;
-        const _position = _width > 0 ? (pts.datumSpend - pts.floorSpend) / _width : 0.5;
+        const spending   = pts.datumSpend;
+        const floorSpend = pts.floorSpend;
+        const ceilSpend  = pts.ceilSpend;
 
-        if (pts.datumSpend > pts.ceilSpend) {
-            return { name: "OVEREXTENDED", color: "var(--danger-red)", cls: "hud-state-overextended",
-                physics: "Your Datum sits above the Ceiling of your Shape. Even the upper boundary — the cone’s most favorable path — projects less spending capacity than your current target. No modeled path reaches this lifestyle at your current inputs.<br><br>A structural gap. The Shape does not currently support this Datum across any modeled path. The honest question is which lever is willing to move — more time, more capital, lower spending, stronger contributions — to close the distance between where the Ceiling is and where the Datum sits.",
-                action: "Move the levers one at a time to see which has enough power to lift the Ceiling to meet the Datum. Or lower the Datum to where the Shape currently supports it — that’s the lifestyle the current inputs project, not a recommendation.<br><br>Studio can test whether real-world variables — tax-advantaged accounts, withdrawal sequencing, Social Security timing, income sources — close some of this gap before any lever needs to move. The Sketch holds those variables constant; Studio models them.",
-                physicsShort: "Even the upper boundary projects less spending capacity than your target. No modeled path reaches this lifestyle at your current inputs.",
-                actionShort: "No structurally supported path exists. Lower the Datum, delay retirement, or use Studio to model exactly which levers close the gap." };
+        // ── OVEREXTENDED ──────────────────────────────────────────────────
+        /* KEY INSIGHT: OVEREXTENDED is the only state where the datum is
+           fully outside the shape. Para 1 swaps: ENTRY uses softer gap
+           language, STRUCTURAL uses stronger gap language. Para 2, What to
+           Consider, and Studio Line are shared. Pinned comparison copy must
+           name the gap in dollars and identify which lever has the most
+           closing power at the user’s specific inputs. */
+        if (spending >= ceilSpend) {
+            const overRatio = (spending - ceilSpend) / ceilSpend;
+            const subZone   = overRatio < 0.15 ? ‘ENTRY’ : ‘STRUCTURAL’;
+            const _p1 = subZone === ‘ENTRY’
+                ? "Your spending target is just above the ceiling — slightly higher than what even the plan’s most favorable path projects. The gap is small, but it means no modeled path currently reaches this target at your current inputs."
+                : "Your spending target sits above the ceiling — higher than what even the plan’s most favorable path projects. No modeled path reaches this lifestyle at your current inputs, and the gap between where the ceiling is and where your target sits is meaningful.";
+            const _p2  = "A structural mismatch — not a judgment. The plan isn’t saying this lifestyle is wrong; it’s saying the current combination of savings, contributions, time, and spending doesn’t produce it in any scenario the model runs. Something has to move: either the inputs rise or the target comes down. The honest question is which lever is willing to move, and which one has enough power to close the distance.";
+            const _con = "Move the levers one at a time — more portfolio, more contributions, a later retirement age, or a lower spending target — and watch which one does the most to close the gap. The lever that moves the ceiling the most is the one with the most power in your specific situation. Or lower the target to where the plan currently supports it: that number is information about what the current inputs produce, not a recommendation about what to want.";
+            const _stu = "Studio can test whether real-world variables — tax-advantaged accounts, withdrawal sequencing, Social Security timing, income sources outside the model — close some of this gap before any lever needs to move. The Sketch holds those variables constant; Studio models them, and they can make a meaningful difference between a gap that requires a lever change and one that doesn’t.";
+            const _ps  = subZone === ‘ENTRY’
+                ? "Your target is just above the ceiling — no modeled path reaches it at current inputs, but the gap is small."
+                : "Your target sits meaningfully above the ceiling — no modeled path reaches this lifestyle at current inputs, and the gap is real.";
+            const _as  = subZone === ‘ENTRY’
+                ? "Lower the target toward the ceiling or move a single lever — the gap is small enough that one change may close it."
+                : "Move the levers one at a time to find which closes the most ceiling gap — retirement age and portfolio are the fastest movers.";
+            return { name: ‘OVEREXTENDED’, color: ‘var(--danger-red)’, cls: ‘hud-state-overextended’,
+                key: ‘overextended’, subZone,
+                physics: _p1 + ‘<br><br>’ + _p2,
+                action:  _con + ‘<br><br>’ + _stu,
+                physicsShort: _ps, actionShort: _as };
         }
-        if (pts.datumSpend < pts.floorSpend) {
-            return { name: "ABUNDANT", color: "var(--blue-safe)", cls: "hud-state-abundant",
-                physics: "Your Datum sits below the Floor of your Shape. Even the lower boundary — the cone’s most conservative path — projects more spending capacity than your current target. Your lifestyle target is below what the Shape models as the floor of what’s sustainable.<br><br>An unusual position. Most Datums sit inside the Shape; yours sits below it. The structural question is whether this gap is intentional — for legacy, for resilience beyond what the Shape models, for simple preference — or whether the Shape is showing you capacity you haven’t tested yet.",
-                action: "Raise the Datum into the Shape to see what the boundary actually supports. Or hold the Datum where it is and decide what the unused capacity is for — earlier retirement, larger legacy, a higher Floor against unmodeled risks.<br><br>Studio can test whether your actual account architecture, tax sequencing, and income timing preserve this surplus — or whether some of the unused capacity is already absorbed by variables the Sketch holds constant.",
-                physicsShort: "Your Datum sits below your Floor — structurally surplus. Even your worst-case Floor supports more than you're asking.",
-                actionShort: "Multiple modeled paths exceed your target. Studio can deploy that slack as earlier retirement, higher spending, or legacy giving." };
+
+        // ── ABUNDANT ──────────────────────────────────────────────────────
+        /* KEY INSIGHT: The ABUNDANT paradox: in pinned comparison mode,
+           positive inputs (more portfolio, more contributions, more time)
+           raise the floor further above the spending target — deepening the
+           ABUNDANT position rather than improving it. The only escapes
+           without moving spending are: lower portfolio, lower contributions,
+           or fewer years to retirement. */
+        if (spending < floorSpend * 0.85) {
+            const abundantRatio = spending / floorSpend;
+            const subZone       = abundantRatio >= 0.75 ? ‘JUST_BELOW’ : ‘WELL_BELOW’;
+            const _p1 = subZone === ‘JUST_BELOW’
+                ? "Your spending target is just below what this plan’s conservative scenario projects — the gap between your target and the floor is moderate. You’re in a position the plan over-builds around, but not by a large margin."
+                : "Your spending target is well below what this plan would sustain even under its most conservative assumptions. The gap between your target and the floor is substantial — the plan is building significantly more than you’re currently asking for.";
+            const _p2  = "This is an uncommon position. Most spending targets land somewhere inside the range the plan models — yours sits below even the conservative end of it. The real question is whether that’s deliberate — you’re keeping expectations low by design, planning to leave more behind, or simply haven’t tested what the plan can carry — or whether this is capacity you haven’t looked at yet.";
+            const _con = "Try raising the spending target and watch where the plan starts to tighten. That number — where the pressure begins — is worth knowing regardless of what you decide to do with it. Or keep the target where it is and name what the extra capacity is actually for: retiring sooner, leaving more behind, or holding a larger cushion against things the Sketch doesn’t model — healthcare costs, family needs, or a difficult sequence of returns that averages don’t capture.";
+            const _stu = "Studio can confirm whether your actual account types, tax situation, and income sources preserve this position — or whether some of the gap closes when the Sketch’s averaged assumptions are replaced with your real numbers.";
+            const _ps  = subZone === ‘JUST_BELOW’
+                ? "Your target is just below the plan’s conservative floor — the gap is moderate, but the plan is over-built around what you’re asking for."
+                : "Your target sits well below the plan’s conservative floor — the plan projects substantially more than you’re asking for, even in stress.";
+            // actionShort shared at ABUNDANT state level (Decision 3 — both sub-zones return the same string)
+            const _as  = "Raise the spending target to find where the plan’s floor meets it — that’s the first threshold worth knowing.";
+            return { name: ‘ABUNDANT’, color: ‘var(--blue-safe)’, cls: ‘hud-state-abundant’,
+                key: ‘abundant’, subZone,
+                physics: _p1 + ‘<br><br>’ + _p2,
+                action:  _con + ‘<br><br>’ + _stu,
+                physicsShort: _ps, actionShort: _as };
         }
-        if (_position <= 0.15) {
-            return { name: "GROUNDED", color: "var(--purple-grounded)", cls: "hud-state-grounded",
-                physics: "Your Datum sits near the Floor of your Shape. The Floor already supports this lifestyle target, and the Ceiling sits well above it — leaving a wide gap between what you’re spending and what the Shape could support.<br><br>A conservative position. The Floor supports your Datum across most modeled paths, and the gap above the Datum is your spending headroom. The real question is whether you’re holding that headroom on purpose — for resilience, legacy, or flexibility — or whether the Shape supports more lifestyle than you’ve tested.",
-                action: "Raise the Datum to see how much spending the Shape supports before it stops feeling conservative. Or keep the Datum where it is and test whether the headroom does what you want it to — fund earlier retirement, absorb stress, or carry through to legacy.<br><br>Studio can confirm whether your actual account architecture, withdrawal order, and Social Security timing reinforce this conservative position — or whether some of the modeled headroom is already absorbed by real-world variables the Sketch holds constant.",
-                physicsShort: "Your Datum sits near the Floor. The Floor already supports this lifestyle target; the margin above is your buffer.",
-                actionShort: "The lower paths are doing the work. Keep the Datum where it is or test to fund earlier retirement, absorb stress, or carry legacy." };
+
+        // ── GROUNDED ──────────────────────────────────────────────────────
+        /* KEY INSIGHT: GROUNDED TIGHT paradox: in pinned comparison mode,
+           positive inputs (more portfolio, more contributions, more time)
+           can push the floor higher and DEEPEN the GROUNDED position — or
+           push the datum below the floor entirely into ABUNDANT. Copy for
+           TIGHT pinned comparisons must name this paradox explicitly.
+           STABLE pinned comparisons are generally straightforward
+           directional movement. */
+        if (spending <= floorSpend * 1.15) {
+            const groundRatio = (spending - floorSpend) / floorSpend;
+            const subZone     = groundRatio < 0.05 ? ‘TIGHT’ : ‘STABLE’;
+            const _p1 = subZone === ‘STABLE’
+                ? "Your spending target sits near the floor of what this plan models — the conservative edge of the range. The floor already carries your target, which means even the stress-case scenario supports this lifestyle. Above the target, there’s a wide gap between what you’re spending and what the plan shows the ceiling supporting."
+                : "Your spending target sits right at the floor of what this plan models — essentially on the conservative boundary. The floor carries your target, but just barely. There’s almost no gap between where your target is and where the plan’s stress case ends.";
+            const _p2  = "A conservative position. The floor holds your target across most of the modeled paths, and the space above represents lifestyle the plan can support — but you’re not currently asking for it. The real question is whether you’re holding that headroom intentionally — for resilience, legacy, or flexibility — or whether this is capacity you haven’t tested yet.";
+            const _con = "Try raising the spending target to see how much the plan supports before it starts to tighten. That number — where you begin to feel pressure — is worth knowing even if you don’t plan to spend up to it. Or keep the target where it is and be deliberate about what the headroom above is doing for you: funding an earlier retirement, absorbing a rough market, or carrying through to legacy.";
+            const _stu = "Studio can confirm whether your actual account types, withdrawal order, and Social Security timing reinforce this conservative position — or whether some of the modeled headroom is already absorbed by real-world variables the Sketch holds constant.";
+            const _ps  = subZone === ‘STABLE’
+                ? "Your target sits near the plan’s conservative edge — the floor already supports it, with a wide ceiling sitting unused above."
+                : "Your target sits right at the plan’s conservative edge — the floor carries it, but barely, with almost no buffer between target and floor.";
+            const _as  = subZone === ‘STABLE’
+                ? "Raise the spending target to find where the plan’s structurally supported range begins."
+                : "Raise the target to find where the plan supports it with real room above — or test what the ceiling looks like from here.";
+            return { name: ‘GROUNDED’, color: ‘var(--purple-grounded)’, cls: ‘hud-state-grounded’,
+                key: ‘grounded’, subZone,
+                physics: _p1 + ‘<br><br>’ + _p2,
+                action:  _con + ‘<br><br>’ + _stu,
+                physicsShort: _ps, actionShort: _as };
         }
-        if (_position >= 0.85) {
-            return { name: "STRETCHED", color: "var(--orange-warning)", cls: "hud-state-stretched",
-                physics: "Your Datum sits near the Ceiling of your Shape. The upper boundary supports your target, but the Floor sits well below it — meaning most of the modeled paths that get you here run through favorable conditions, not stress.<br><br>An upper-edge position. The Shape supports your Datum, but only the upper paths comfortably do so. Markets, returns, and timing all need to lean your way for this target to hold across the full range of modeled outcomes.",
-                action: "Lower the Datum to see where the Shape’s middle paths start carrying the weight, or hold the Datum and test whether stronger inputs — more time, more capital, lower spending — pull the lower paths up to meet it.<br><br>Studio can test whether your actual tax sequencing, account architecture, withdrawal order, and Social Security timing reinforce this target through the full engine — variables the Sketch holds constant.",
-                physicsShort: "Your Datum sits near the Ceiling. The Shape supports your target, but the upper paths carry the work.",
-                actionShort: "Margin is thin upward. Studio shows which lever — tax sequencing, Roth ladder, withdrawal order — buys back margin most efficiently." };
+
+        // ── STRETCHED ─────────────────────────────────────────────────────
+        /* KEY INSIGHT: STRETCHED is a narrow window (15% of the shape
+           range, from 85% to 100% of ceiling). Para 1 swaps between
+           STANDARD and HIGH_END — HIGH_END signals a near-ceiling position
+           with sharper language about proximity. Para 2, What to Consider,
+           and Studio Line are shared across both sub-zones. In pinned
+           comparison, STRETCHED is the last state before OVEREXTENDED —
+           any upward spending movement crosses the ceiling. */
+        if (spending >= ceilSpend * 0.85) {
+            const stretchRatio = spending / ceilSpend;
+            const subZone      = stretchRatio < 0.93 ? ‘STANDARD’ : ‘HIGH_END’;
+            const _p1 = subZone === ‘STANDARD’
+                ? "Your spending target sits near the top of what this plan models. The ceiling — the plan’s most favorable projected path — is close above your target. Most of the plan’s modeled range sits below you rather than around you, which means the floor is well below and the gap between target and ceiling is smaller than the gap between target and floor."
+                : "Your spending target is very close to the top of what this plan models — nearly at the ceiling. The plan’s most favorable path just barely clears your target. Almost all of the modeled range sits below you, and the ceiling has very little room above.";
+            const _p2  = "An upper-edge position. The plan can reach your target, but primarily through its favorable paths — strong returns, good timing, conditions that lean your way across the full retirement window. The moderate paths that carry most people’s targets are doing less of the work here. If conditions come in average rather than strong, this target starts to feel the pressure first.";
+            const _con = "Lower the spending target to see where the middle paths start carrying more of the weight — where the plan feels less dependent on favorable conditions. Or hold the target here and test whether stronger inputs — more time, more capital, more contributions — pull those lower paths up to meet it. The question is whether this position is where you want to live or a ceiling you’re testing on purpose.";
+            const _stu = "Studio can test whether your actual tax sequencing, account structure, withdrawal order, and Social Security timing reinforce this target through the full model — not just the favorable paths, but the moderate and stress-case ones too. The Sketch averages those details; Studio models them, and they can shift which paths comfortably support this target.";
+            const _ps  = subZone === ‘STANDARD’
+                ? "Your target sits near the plan’s ceiling — supported only through the most favorable scenarios, with limited room above."
+                : "Your target is nearly at the ceiling — the plan’s most favorable path just barely clears it, with almost no buffer remaining.";
+            const _as  = subZone === ‘STANDARD’
+                ? "Lower the spending target to move into the plan’s structurally supported range, where more paths carry the weight."
+                : "Even a small reduction gains meaningful ceiling room — you’re close enough to the boundary that small moves matter.";
+            return { name: ‘STRETCHED’, color: ‘var(--orange-warning)’, cls: ‘hud-state-stretched’,
+                key: ‘stretched’, subZone,
+                physics: _p1 + ‘<br><br>’ + _p2,
+                action:  _con + ‘<br><br>’ + _stu,
+                physicsShort: _ps, actionShort: _as };
         }
-        return { name: "EXPANSIVE", color: "var(--teal-mid)", cls: "hud-state-expansive",
-            physics: "Your Datum sits comfortably inside a wide Shape. The Floor supports your target and the Ceiling sits well above it. The width reflects modeled uncertainty across return paths — your outcome could land anywhere across that range.<br><br>The Shape is wide because multiple unmodeled variables remain — outcomes could vary meaningfully even though the Datum is well-supported today.",
-            action: "Which edge to test first: shift the Datum higher to test capacity, lower to test resilience, or move retirement age to test the timeline.<br><br>Studio can narrow the Shape by testing your actual account types, tax sequencing, withdrawal order, and Social Security timing — variables the Sketch holds constant.",
-            physicsShort: "Your Datum sits comfortably inside a wide Shape. Room exists in both directions; outcomes are model-sensitive.",
-            actionShort: "Multiple paths support your target across modeled conditions. Shift the Datum higher to test capacity, lower to test resilience." };
+
+        // ── EXPANSIVE ─────────────────────────────────────────────────────
+        /* KEY INSIGHT: EXPANSIVE has three distinct Para 1 + Para 2
+           variants, one per sub-zone. Para 1 and Para 2 both swap. The
+           What to Consider block also has sub-zone variants. The Studio
+           Line is shared. In pinned comparison, FLOOR_SIDE is subject to
+           a paradox when portfolio/contributions/retirement age increase —
+           the floor can rise and push the datum toward GROUNDED or ABUNDANT
+           even though the shape grew. */
+        {
+            const _w      = ceilSpend - floorSpend;
+            const position = _w > 0 ? (spending - floorSpend) / _w : 0.5;
+            const subZone  = position < 0.33 ? ‘FLOOR_SIDE’ : position <= 0.67 ? ‘CENTERED’ : ‘CEILING_SIDE’;
+            const _p1 = subZone === ‘FLOOR_SIDE’
+                ? "Your spending target sits in the lower portion of the range the plan models — comfortably inside the shape, but closer to the floor than the ceiling. The floor already supports your target, and there’s meaningful room above it before you approach the upper edge."
+                : subZone === ‘CENTERED’
+                ? "Your spending target sits near the middle of the range the plan models — roughly equidistant from the floor and the ceiling. The plan supports this lifestyle across a broad range of outcomes, and neither edge is close enough to create pressure right now."
+                : "Your spending target sits in the upper portion of the range the plan models — inside the shape, but closer to the ceiling than the floor. The plan supports this target today, but the ceiling isn’t far above it. A shift in conditions or inputs could close that gap quickly.";
+            const _p2 = subZone === ‘FLOOR_SIDE’
+                ? "The shape is wide here because multiple unmodeled variables remain — outcomes could vary meaningfully even though your target is well-supported today. You’re positioned toward the conservative end of that range, which means the floor is doing most of the carrying, and the ceiling is further away than it may appear."
+                : subZone === ‘CENTERED’
+                ? "The shape is wide because multiple unmodeled variables remain — outcomes could vary meaningfully even though the target is well-supported today. A centered position means the plan isn’t tilting heavily toward either stress or surplus at current inputs; the outcome space is roughly symmetric around where you’ve set your target."
+                : "The shape still holds your target, but the upper edge is the relevant reference now. The floor sits well below — most of the plan’s modeled paths reach your target — but the paths that comfortably support it are concentrated toward the favorable end of the range.";
+            const _con = subZone === ‘FLOOR_SIDE’
+                ? "Raise the spending target to see how far into the shape it can move before the pressure changes. Or test the timeline — moving retirement age shifts both edges and can change where your target sits within the range. The lower position here suggests the plan is over-building around your current target; the question is whether that’s intentional or unexplored capacity."
+                : subZone === ‘CENTERED’
+                ? "Raise the target to test how close the ceiling actually is, or lower it to see where the floor starts to carry more of the weight. Or shift the timeline — retirement age moves both edges at once and can reframe where a centered position ends up."
+                : "Lower the spending target to see where the middle paths start carrying more of the weight, or hold it here and test whether stronger inputs — more time, more capital, lower spending — create more distance between the target and the ceiling.";
+            const _stu = "Studio can narrow the shape by testing your actual account types, tax sequencing, withdrawal order, and Social Security timing — variables the Sketch holds constant. A narrower shape means a more specific answer about where this target actually lands.";
+            const _ps  = subZone === ‘FLOOR_SIDE’
+                ? "Your target is in the lower third of the plan’s range — the floor carries it comfortably, and the ceiling is well above."
+                : subZone === ‘CENTERED’
+                ? "Your target sits near the middle of the plan’s range — roughly equidistant from floor and ceiling, with room in both directions."
+                : "Your target is in the upper third of the plan’s range — the plan supports it, but the ceiling is close and conditions matter more here.";
+            const _as  = subZone === ‘FLOOR_SIDE’
+                ? "Raise the target to find where the plan’s range starts to feel like pressure — you’re leaving ceiling headroom on the table."
+                : subZone === ‘CENTERED’
+                ? "Test both directions — raise to see how close the ceiling is, lower to see where the floor starts carrying more of the weight."
+                : "Lower the target to move into a position the plan carries across more scenarios — the ceiling is close enough to feel it.";
+            return { name: ‘EXPANSIVE’, color: ‘var(--teal-mid)’, cls: ‘hud-state-expansive’,
+                key: ‘expansive’, subZone,
+                physics: _p1 + ‘<br><br>’ + _p2,
+                action:  _con + ‘<br><br>’ + _stu,
+                physicsShort: _ps, actionShort: _as };
+        }
     }
 
     // STRUCT 4: colour constants — single source of truth (27 hex refs → constants)
