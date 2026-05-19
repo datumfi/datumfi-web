@@ -2963,6 +2963,744 @@
         }
     }
 
+
+    // ── PINNED case data (Step 2a): workbook PINNED sheets — 88 single-lever cases ───
+    // _PC[caseId] = { physics, action, studio, paradox }
+    const _PC = {
+        'OE.0': {
+            physics: `Pinned position — no change. Spending is {aboveCeil} above the ceiling. No version of the plan currently supports this lifestyle at current inputs. ENTRY sub-zone (overRatio <0.15): the gap is narrow and a single lever may close it. STRUCTURAL sub-zone (overRatio >=0.15): the gap is significant and likely requires multiple levers or a spending recalibration.`,
+            action:  `From OVEREXTENDED, every lever move that closes the gap is information. The ceiling needs to rise, or spending needs to fall, or both. Start with whichever lever has the most room to move.`,
+            studio:  `Studio can test whether real-world variables — tax-advantaged accounts, withdrawal sequencing, Social Security timing, income sources — close some of the gap before any lever needs to move.`,
+            paradox: false },
+        'OE.S.1': {
+            physics: `Spending is {deltaSpendK} below pin and still above the ceiling, but the gap has narrowed to {aboveCeil}. Progress — but no version of the plan reaches this spending level yet. The ceiling remains at {ceilK}.`,
+            action:  `Continue lowering the spending target. The ceiling is {aboveCeil} away. The level where the ceiling and spending meet is the plan's current maximum at these inputs — worth knowing before any other lever moves.`,
+            studio:  `Studio can test whether real account types and income sources push the ceiling meaningfully toward this spending target.`,
+            paradox: false },
+        'OE.S.2': {
+            physics: `Spending is {deltaSpendK} below pin and has crossed below the ceiling — the plan now reaches this level, but only when conditions cooperate. Ceiling is {gapToCeil} above spending. You've moved from outside the plan's range to its upper edge.`,
+            action:  `The plan works at this level but without slack. Returns, timing, and taxes all carry more weight here than at lower positions. This is the spending level the current inputs can structurally reach, not comfortably hold. Studio can stress-test it.`,
+            studio:  `Studio can test whether your actual tax situation, account types, and Social Security timing hold this target through the full engine — variables the Sketch holds constant.`,
+            paradox: false },
+        'OE.S.3': {
+            physics: `Spending is {deltaSpendK} below pin and has moved into the plan's supported range — floor {gapToFloor} below, ceiling {gapToCeil} above. The plan now carries this level structurally. You've moved from outside the plan to inside it with room in both directions.`,
+            action:  `A meaningful move from your pin — from above the ceiling to inside the plan's core range. The ceiling is now {gapToCeil} above, and the plan carries this target across a broad range of futures.`,
+            studio:  `Studio can narrow the range by modeling your actual account types, tax sequencing, and Social Security timing — variables that determine where within the range you're likely to land.`,
+            paradox: false },
+        'OE.S.4': {
+            physics: `Spending is {deltaSpendK} below pin and has moved to the plan's lower boundary — near the floor. You've moved from above the ceiling to the floor's edge. Floor {gapToFloor} below, ceiling {gapToCeil} above. The plan carries this level through even its conservative scenario.`,
+            action:  `A large move from your pin. The question is whether this spending level is intentionally conservative, or whether this is more restraint than the goal calls for. There's {gapToCeil} of ceiling room above.`,
+            studio:  `Studio can confirm whether this conservative position is reinforced by real account variables or whether some of the modeled headroom gets absorbed.`,
+            paradox: false },
+        'OE.S.5': {
+            physics: `Spending is {deltaSpendK} below pin and has dropped below the floor entirely. Even the plan's conservative scenario projects {floorAboveSpend} more than you're asking for. You've gone from above the ceiling to below the floor.`,
+            action:  `This is a stress-test of minimum spend — the plan is over-built at this level even under adverse conditions. The floor shows what the plan projects in stress, and it still exceeds this target by {floorAboveSpend}.`,
+            studio:  `Studio can confirm whether the below-floor surplus survives real-world variables.`,
+            paradox: false },
+        'OE.S.6': {
+            physics: `Spending is +{deltaSpendK} above pin — now {aboveCeil} above the ceiling. No version of the plan reaches this level. The gap from ceiling to spending has widened.`,
+            action:  `A larger gap requires more lever movement to close. The ceiling is fixed at {ceilK} — to close {aboveCeil}, the ceiling needs to grow by that amount or spending needs to come down.`,
+            studio:  `Studio can test whether real account types and income sources move the ceiling at all before levers need to change.`,
+            paradox: false },
+        'OE.P.1': {
+            physics: `Raising portfolio by {deltaPortfolioK} grew the ceiling to {newCeilK} — up {deltaCeilK}. Still above the ceiling, but the gap has narrowed to {aboveCeil}. From ENTRY sub-zone, a single additional lever move may close it entirely.`,
+            action:  `The ceiling moved {deltaCeilK} toward spending. Continue raising portfolio to find the level at which the ceiling reaches spending — that's the minimum portfolio at which this target becomes plan-supported.`,
+            studio:  `Studio can test whether the ceiling growth holds across your actual account types — portfolio growth translates differently through pre-tax vs Roth vs taxable accounts.`,
+            paradox: false },
+        'OE.P.2': {
+            physics: `Raising portfolio by {deltaPortfolioK} grew the ceiling above spending — the plan now reaches this level when conditions cooperate. Ceiling is now {gapToCeil} above spending. Moved from outside the plan to its upper edge.`,
+            action:  `The plan now supports this spending but without slack. More portfolio growth would push the spending into EXPANSIVE for structural support. Or lower spending slightly to gain more ceiling room.`,
+            studio:  `Studio can confirm whether this ceiling level holds under real account types — the portfolio-to-ceiling math changes with pre-tax vs Roth vs taxable.`,
+            paradox: false },
+        'OE.P.3': {
+            physics: `Raising portfolio by {deltaPortfolioK} grew the ceiling well above spending — now structurally supported with floor {gapToFloor} below and ceiling {gapToCeil} above. Moved from outside the plan to inside its core range.`,
+            action:  `More capital closed the gap and moved spending into genuine structural support. The plan now carries this target across a broad range of futures. Studio can confirm this holds under real conditions.`,
+            studio:  `Studio can test whether the expanded ceiling holds across your actual account mix — Roth vs pre-tax vs taxable all respond differently to portfolio growth.`,
+            paradox: false },
+        'OE.P.4': {
+            physics: `Lowering portfolio by {deltaPortfolioK} reduced the ceiling to {newCeilK} — now {aboveCeil} below spending, a wider gap than at pin. Less capital, less ceiling, larger gap.`,
+            action:  `A lower portfolio widens the gap from the wrong direction. The ceiling moved away from spending. To close the gap, portfolio needs to rise, not fall.`,
+            studio:  `Studio can model what the minimum starting portfolio is to support this spending level across your actual account types.`,
+            paradox: false },
+        'OE.R.1': {
+            physics: `Extending retirement to age {newRetire} added {yearsDelta} year(s) of compounding, growing the ceiling to {newCeilK} — up {deltaCeilK}. Still above the ceiling, but the gap has narrowed to {aboveCeil}. Retirement age is typically the most powerful ceiling lever.`,
+            action:  `The ceiling moved {deltaCeilK} toward spending with {yearsDelta} year(s) more time. From ENTRY sub-zone, continued extension may close the gap entirely. Find the retirement age at which the ceiling first meets spending.`,
+            studio:  `Studio can model whether delaying retirement to age {newRetire} also improves Social Security timing and tax bracket positioning.`,
+            paradox: false },
+        'OE.R.2': {
+            physics: `Extending retirement to age {newRetire} grew the ceiling above spending — the plan now reaches this level when conditions cooperate. Ceiling is {gapToCeil} above spending. Retirement age is the strongest ceiling lever — {yearsDelta} year(s) moved the plan from none to some support.`,
+            action:  `The plan now supports this spending but without slack. Additional time, or a slight spending reduction, moves into EXPANSIVE. Studio can test whether age {newRetire} holds under real conditions.`,
+            studio:  `Studio can model whether age {newRetire} affects Social Security timing and tax brackets in ways that further improve the picture.`,
+            paradox: false },
+        'OE.R.3': {
+            physics: `Extending retirement to age {newRetire} grew the ceiling well above spending — now structurally supported with floor {gapToFloor} below and ceiling {gapToCeil} above. Retirement age is the most powerful ceiling lever and it's shown here — {yearsDelta} year(s) moved the plan from outside the range to inside it.`,
+            action:  `More time closed the gap entirely and moved spending into genuine structural support. The plan now carries this target across a broad range of futures at age {newRetire}. Studio can confirm this holds.`,
+            studio:  `Studio can model whether age {newRetire} creates meaningful Social Security or tax bracket opportunities beyond what the Sketch models.`,
+            paradox: false },
+        'OE.R.4': {
+            physics: `Moving retirement to age {newRetire} — {yearsDelta} year(s) earlier — reduced the ceiling to {newCeilK}. The gap has widened to {aboveCeil}. Less compounding time, lower ceiling, larger gap.`,
+            action:  `Earlier retirement moves the ceiling away from spending. To close the gap, the retirement date needs to stay where it is or move later, not earlier. This is a useful stress-test showing the direction to avoid.`,
+            studio:  `Studio can model what the minimum retirement age is to support this spending level under real conditions.`,
+            paradox: false },
+        'OE.C.1': {
+            physics: `Raising annual contributions to {newContribK}/yr grew the ceiling to {newCeilK} — up {deltaCeilK}. If the gap closes entirely, status crosses to STRETCHED; if not, it narrows within OVEREXTENDED. Contributions have less ceiling leverage than retirement age or portfolio, but still meaningful.`,
+            action:  `The ceiling moved {deltaCeilK} toward spending. Find the contribution rate at which the ceiling first reaches spending — that's the minimum rate at which this target becomes plan-supported.`,
+            studio:  `Studio can test whether higher contributions are better deployed through specific account types — Roth vs traditional affects how much of the added ceiling is accessible at retirement.`,
+            paradox: false },
+        'OE.C.2': {
+            physics: `Raising contributions to {newContribK}/yr grew the ceiling enough to move spending into genuine structural support — floor {gapToFloor} below, ceiling {gapToCeil} above. Contributions closed the gap and moved the plan into its core range.`,
+            action:  `More savings closed the gap entirely and moved spending into structural support. The plan now carries this target across more futures. Studio can confirm this holds and test whether the contribution rate is optimally structured.`,
+            studio:  `Studio can test whether higher contributions are optimally deployed across account types — Roth vs traditional timing affects how much added ceiling is accessible at retirement.`,
+            paradox: false },
+        'OE.C.3': {
+            physics: `Reducing contributions to {newContribK}/yr reduced the ceiling to {newCeilK}. The gap has widened to {aboveCeil}. Lower savings, lower ceiling, larger gap.`,
+            action:  `Lower contributions move the ceiling away from spending. To close the gap, contributions need to stay constant or rise, not fall. This shows the direction to avoid.`,
+            studio:  `Studio can model what the minimum contribution rate is to support this spending level under real conditions.`,
+            paradox: false },
+        'OE.A.1': {
+            physics: `Moving the age input younger extends the growth runway. At {newYears} years to retirement, the ceiling is now {newCeilK}. If the runway extension is large enough, spending crosses into STRETCHED or EXPANSIVE; if not, the gap narrows within OVEREXTENDED. Runway is the most powerful ceiling lever after retirement age.`,
+            action:  `More runway grows the ceiling toward spending. Find the minimum years to retirement at which the ceiling first meets spending — that's the planning horizon at which this target first becomes achievable.`,
+            studio:  `Studio can model what a longer runway means at the account level — Roth conversion windows, contribution limits, and Social Security timing all shift with more time.`,
+            paradox: false },
+        'OE.A.2': {
+            physics: `Moving the age input older shortens the growth runway. At {newYears} years to retirement, the ceiling is now {newCeilK} — the gap has widened to {aboveCeil}. Less runway, lower ceiling, larger gap.`,
+            action:  `A shorter runway widens the gap from the wrong direction. This shows the direction to avoid. The minimum runway at which this spending becomes plan-supported requires moving the input younger, not older.`,
+            studio:  `Studio can test whether a shorter timeline creates constraints around catch-up contributions or Social Security timing that make the gap even harder to close than the Sketch suggests.`,
+            paradox: false },
+        'ABU-01': {
+            physics: `You raised the Datum, but the Floor still sits above it — you remain ABUNDANT. The gap narrowed, but the Shape hasn't changed. The Floor is still projecting more spending capacity than you're targeting.`,
+            action:  `Keep raising the Datum to find where it crosses into GROUNDED — that's the threshold where the Floor begins to carry real weight. The current gap is still wide.`,
+            studio:  `Studio can verify whether real-world variables have already absorbed some of this surplus — the Sketch models it as pure headroom.`,
+            paradox: false },
+        'ABU-02': {
+            physics: `Raising the Datum brought it to the Floor's edge. You've crossed into GROUNDED — the Floor now supports your target. You traded unused capacity for alignment with the Shape's lower boundary.`,
+            action:  `The Floor is doing the work now. Test whether this feels like the right lifestyle target, or whether there's more Shape above worth exploring.`,
+            studio:  `Studio can confirm whether your actual withdrawal sequencing and account types preserve this floor-level alignment, or whether some headroom is already absorbed.`,
+            paradox: false },
+        'ABU-03': {
+            physics: `A meaningful increase moved the Datum past the Floor and into the Shape's interior — EXPANSIVE. The Floor now supports you, and the Ceiling sits well above. You traded below-floor surplus for a position inside the modeled range.`,
+            action:  `You're now inside the Shape. Where within EXPANSIVE you land — near the floor edge or approaching center — tells you how much of the modeled range you've claimed.`,
+            studio:  `Studio can test whether this interior position holds through actual tax sequencing and withdrawal architecture — the Sketch holds those constant.`,
+            paradox: false },
+        'ABU-04': {
+            physics: `The Datum moved all the way to the upper edge of the Shape. From below the Floor to near the Ceiling in one move — the Shape now supports this target only through its most favorable paths.`,
+            action:  `Upper paths require favorable conditions across markets, timing, and returns. Lowering the Datum toward the Shape's center carries more of those paths comfortably.`,
+            studio:  `Studio can test whether tax-advantaged account structure and Social Security timing reinforce this upper-edge target through the full engine.`,
+            paradox: false },
+        'ABU-05': {
+            physics: `A large Datum increase moved it past the Ceiling entirely — OVEREXTENDED. You went from below the Floor to above the Ceiling in a single move. No modeled path reaches this lifestyle at current inputs.`,
+            action:  `Pull the Datum back toward the Ceiling — or test which lever has enough power to lift the Ceiling to meet the new target. The Shape cannot carry this Datum as currently configured.`,
+            studio:  `Studio can test whether real-world variables close part of this gap before any lever needs to move — the Sketch holds those constant.`,
+            paradox: false },
+        'ABU-06': {
+            physics: `Lowering the Datum pushed it further below the Floor. The ABUNDANT position deepened — the gap between your lifestyle target and the Floor's projected capacity is now wider than before the pin.`,
+            action:  `The Shape is projecting more capacity than you're using. The question hasn't changed: is this gap intentional, or is the Shape showing you capacity you haven't claimed?`,
+            studio:  `Studio can test whether real-world variables preserve this surplus or absorb some of it before you decide what to do with the gap.`,
+            paradox: false },
+        'ABU-07': {
+            physics: `Adding capital raised both the Floor and Ceiling — but the Datum didn't move. The Floor grew faster than the lifestyle target, pushing the Datum further below it. More capital deepened the ABUNDANT position rather than resolving it.`,
+            action:  `This is the ABUNDANT paradox: positive inputs grow the Shape upward while the Datum stays fixed. To close the gap, the Datum needs to move — capital alone cannot do it from this position.`,
+            studio:  `Studio can test whether additional capital in tax-advantaged structures compounds differently against the Floor — the real-world effect may differ from the Sketch model.`,
+            paradox: true },
+        'ABU-08': {
+            physics: `Reducing the portfolio shrank the Shape — Floor and Ceiling both dropped — but the Datum still sits below the new Floor. You remain ABUNDANT with a slightly compressed shape above the target.`,
+            action:  `The gap is narrowing, but slowly. A larger portfolio reduction would be needed to bring the Floor down to the Datum level.`,
+            studio:  `Studio can model how portfolio reallocation affects real-world capacity versus the Sketch's modeled floor projection.`,
+            paradox: false },
+        'ABU-09': {
+            physics: `A significant portfolio reduction brought the Floor down to meet the Datum. You've crossed from ABUNDANT to GROUNDED — the Floor now supports the target, but the ceiling headroom is compressed with it.`,
+            action:  `The Shape now carries your target from below, but with a tighter ceiling. Consider whether this trade — less surplus headroom, more floor alignment — is what you actually want.`,
+            studio:  `Studio can test whether this floor alignment holds through your actual account architecture and withdrawal order.`,
+            paradox: false },
+        'ABU-10': {
+            physics: `A large portfolio reduction dropped the Floor past the Datum, placing it inside the Shape. You went from below-floor surplus to an interior EXPANSIVE position as the Shape contracted around the Datum.`,
+            action:  `The gap below the Floor has been replaced by modeled uncertainty on both sides of the Datum. Assess where within EXPANSIVE this positions you — the Shape is now bracketing the target.`,
+            studio:  `Studio can test whether this contracted shape holds against your actual tax sequencing and income sources — variables the Sketch holds constant.`,
+            paradox: false },
+        'ABU-11': {
+            physics: `Higher contributions grew the Floor above the Datum — the ABUNDANT gap widened. More savings compounds the Floor's projected capacity without moving the lifestyle target. More income going in deepened the surplus position.`,
+            action:  `The surplus is growing, but only the Datum can close the gap. Test what Datum level the stronger Shape would support inside its floor before committing to higher contributions.`,
+            studio:  `Studio can test whether additional contributions in Roth vs. traditional vehicles compound differently against the Floor in real-world scenarios.`,
+            paradox: true },
+        'ABU-12': {
+            physics: `Reducing contributions lowered the Floor toward the Datum, bringing it into GROUNDED alignment. Less compounding into the Shape moved the boundary down to meet the lifestyle target.`,
+            action:  `The Floor now supports the Datum at lower input levels. But the Ceiling compressed too — test whether you're comfortable with the reduced range above the target.`,
+            studio:  `Studio can model whether reduced contributions still support this position through actual account structure and sequencing.`,
+            paradox: false },
+        'ABU-13': {
+            physics: `Extending the retirement horizon compounded the Floor further above the Datum — the surplus deepened. More time grew the Shape, but the Datum stayed flat. Later retirement and same target means a wider gap below the Floor.`,
+            action:  `This is the time paradox in ABUNDANT: more runway grows the Shape upward, not toward the target. If you want to use more of the Shape, the Datum needs to move — or consider retiring sooner.`,
+            studio:  `Studio can test whether a delayed retirement also changes Social Security timing and tax-sequencing windows — which may shift the real-world floor separately from the Sketch model.`,
+            paradox: true },
+        'ABU-14': {
+            physics: `Retiring slightly sooner compressed the Shape, but the Floor still sits above the Datum. You remain ABUNDANT — the gap narrowed, but not enough to change the structural position.`,
+            action:  `Keep pulling the retirement age forward to find the threshold where the Floor drops to meet the Datum. There is still room to compress the Shape further from this direction.`,
+            studio:  `Studio can test whether earlier retirement meaningfully changes withdrawal sequencing and Social Security timing in ways the Sketch does not model.`,
+            paradox: false },
+        'ABU-15': {
+            physics: `Retiring significantly earlier compressed the Shape — the Floor dropped to meet the Datum. You've crossed into GROUNDED. Less time to compound brought the lower boundary down to the lifestyle target.`,
+            action:  `This is the clearest lever for closing the ABUNDANT gap: shorter runway, lower Floor, alignment achieved. Test whether the compressed ceiling still gives you the headroom you want above the target.`,
+            studio:  `Studio can model whether earlier retirement affects Social Security benefit timing and income sequencing in ways that shift the real-world floor.`,
+            paradox: false },
+        'ABU-16': {
+            physics: `A large compression of the retirement timeline dropped both Floor and Ceiling, placing the Datum inside the Shape as an EXPANSIVE position. The surplus gap has been replaced by modeled range on both sides of the Datum.`,
+            action:  `Earlier retirement changed the structural picture entirely — the Shape now brackets the target. Assess where within EXPANSIVE this positions you, and test the ceiling distance from the new position.`,
+            studio:  `Studio can test whether this compressed timeline still supports the Datum through real Social Security and withdrawal sequencing — variables the Sketch holds constant.`,
+            paradox: false },
+        'ABU-17': {
+            physics: `With fewer years to compound, the projected Floor dropped to meet the Datum. The position moved from ABUNDANT to GROUNDED — not by changing the target, but because time did less compounding work on the Shape.`,
+            action:  `This is a passive transition — the Shape contracted, not the target. Consider whether the resulting floor alignment feels intentional, and assess the ceiling compression that came with it.`,
+            studio:  `Studio can model whether fewer compounding years also change withdrawal sequencing assumptions in ways that shift the practical floor in real accounts.`,
+            paradox: false },
+        'ABU-18': {
+            physics: `A significant reduction in compounding years dropped the Shape past the Datum's floor alignment and into an interior EXPANSIVE position. The surplus position resolved — the Datum is now inside the Shape rather than below it.`,
+            action:  `The transition happened through Shape contraction, not Datum movement. Evaluate whether this interior position feels accurate or whether it reflects a compounding assumption worth revisiting.`,
+            studio:  `Studio can test whether fewer years changes how tax-advantaged growth compounds in real accounts — which may produce a different picture than the Sketch floor.`,
+            paradox: false },
+        'ABU-19': {
+            physics: `More years to compound grew the Floor further above the Datum — the ABUNDANT gap widened. Being younger means more runway, which grows the Shape upward, not toward the target.`,
+            action:  `The Shape responds to time by growing upward. If the plan is to hold this lifestyle target, more time deepens the surplus. Consider whether the target should scale with the extended runway.`,
+            studio:  `Studio can model whether additional compounding years open new tax-sequencing windows — Roth conversion ladders, Social Security delay — that affect the real-world floor separately.`,
+            paradox: true },
+        'GRD-01': {
+            physics: `You raised the Datum, but it remains inside GROUNDED — the Floor still supports it and the Ceiling sits well above. The position shifted slightly toward the Shape's interior, but the structural picture hasn't changed.`,
+            action:  `Test the edge: how much further can the Datum rise before crossing into EXPANSIVE? The current position still has room to move before the Floor-to-Datum relationship materially changes.`,
+            studio:  `Studio can confirm whether your actual withdrawal sequencing preserves this floor-level alignment or absorbs some of the apparent headroom above.`,
+            paradox: false },
+        'GRD-02': {
+            physics: `The Datum crossed the GROUNDED threshold and moved into EXPANSIVE — the Floor still supports the target, but the Datum now sits meaningfully inside the Shape's interior. The position shifted from the lower edge to the modeled range.`,
+            action:  `You've claimed more of the Shape. Where within EXPANSIVE you land tells you how much of the modeled ceiling remains above the target. The Shape's full range is now bracketing the Datum.`,
+            studio:  `Studio can test whether this interior position holds through actual tax sequencing, account architecture, and withdrawal order — variables the Sketch holds constant.`,
+            paradox: false },
+        'GRD-03': {
+            physics: `A meaningful Datum increase moved the position all the way to the upper edge of the Shape — STRETCHED. From the Floor's edge to near the Ceiling in one move; only the Shape's most favorable paths comfortably carry this target.`,
+            action:  `Upper-edge positions require favorable market conditions and timing to hold across the full range. Test whether the Shape's center paths could carry a slightly lower target more reliably.`,
+            studio:  `Studio can test whether tax sequencing and Social Security timing reinforce this upper-edge target through the full engine — variables the Sketch holds constant.`,
+            paradox: false },
+        'GRD-04': {
+            physics: `A very large Datum increase moved the target past the Ceiling entirely — OVEREXTENDED. From the Floor's edge to above the upper boundary in one move; no modeled path reaches this lifestyle at current inputs.`,
+            action:  `The Shape cannot carry this Datum. Pull the target back toward the Ceiling, or test which lever has enough power to lift the Ceiling to meet it. The gap is now structural, not marginal.`,
+            studio:  `Studio can test whether real-world variables close some of this gap before any lever needs to move — the Sketch holds those constant.`,
+            paradox: false },
+        'GRD-05': {
+            physics: `Lowering the Datum moved it below the Floor — ABUNDANT. The Floor's projected capacity now exceeds the lifestyle target; you've crossed from the lower edge of the Shape to below it entirely.`,
+            action:  `The surplus position is now structural — the Floor projects more capacity than the target. The question is whether this reflects intentional conservatism or a Datum that hasn't been fully explored.`,
+            studio:  `Studio can test whether real-world variables preserve this surplus or absorb some of the apparent below-floor gap.`,
+            paradox: false },
+        'GRD-06': {
+            physics: `Additional capital grew the Floor slightly, which may have nudged the Datum closer to or even below it in the TIGHT zone. If the groundRatio was already near zero, the Floor's upward movement deepened the gap rather than resolving it.`,
+            action:  `This is the TIGHT paradox: capital growth lifts the Floor faster than a fixed Datum. If you're right at the floor edge, more capital can push the boundary above the target temporarily.`,
+            studio:  `Studio can test whether capital in tax-advantaged accounts compounds differently against the real-world floor than the Sketch model projects.`,
+            paradox: true },
+        'GRD-07': {
+            physics: `A larger portfolio increase grew both the Floor and Ceiling, but the Ceiling's rise was proportionally larger — the Shape widened and the Datum moved toward its interior. The position shifted from the floor edge into EXPANSIVE.`,
+            action:  `The Shape expanded upward faster than the Floor crowded the Datum — you now sit inside the Shape's range. Evaluate where within EXPANSIVE the Datum lands and what the new ceiling distance means.`,
+            studio:  `Studio can model how a larger portfolio interacts with real account types and tax sequencing to produce a different interior position than the Sketch projects.`,
+            paradox: false },
+        'GRD-08': {
+            physics: `Reducing the portfolio shrank the Shape — both Floor and Ceiling dropped — and the Floor fell below the Datum. The position crossed from GROUNDED into ABUNDANT; the lifestyle target now sits above the lower boundary's projected capacity.`,
+            action:  `The surplus position resolved from the other direction — not by raising the Datum, but by dropping the Floor to meet it. Consider whether the compressed ceiling that came with it is still acceptable.`,
+            studio:  `Studio can model how a reduced portfolio changes real withdrawal sequencing assumptions relative to the Sketch floor projection.`,
+            paradox: false },
+        'GRD-09': {
+            physics: `Higher contributions grew the Floor, potentially tightening or reversing the GROUNDED position if the groundRatio was near zero. More savings compounded the lower boundary upward while the Datum held still.`,
+            action:  `In the TIGHT zone, contribution increases can briefly push the Floor above the Datum before the Ceiling's wider movement reasserts the interior position. Test the Datum at the new floor level.`,
+            studio:  `Studio can test whether Roth vs. traditional contribution allocation changes how the floor compounds in real accounts — the Sketch treats all contributions symmetrically.`,
+            paradox: true },
+        'GRD-10': {
+            physics: `Lower contributions reduced the Floor's projected capacity below the Datum — the position crossed from GROUNDED into ABUNDANT. Less compounding into the Shape dropped the lower boundary beneath the lifestyle target.`,
+            action:  `The surplus position is now below-floor. Consider whether reducing contributions is the right path — or whether the Datum should rise to use the headroom the lower Shape still projects above the target.`,
+            studio:  `Studio can model how reduced contributions change the practical withdrawal floor through real account architecture and sequencing.`,
+            paradox: false },
+        'GRD-11': {
+            physics: `Extending the retirement timeline compounded the Floor upward, which may have pushed the Datum below it in the TIGHT zone. More time grew the Shape, but the Floor moved up faster than the Datum.`,
+            action:  `More runway is a double-edged input in GROUNDED TIGHT: it grows the Shape but also lifts the Floor. If the Datum is right at the edge, a later retirement may briefly push it into ABUNDANT before the wider Ceiling resolves.`,
+            studio:  `Studio can test whether delayed retirement changes Social Security timing and Roth conversion windows — which shift the real-world floor in ways the Sketch cannot model.`,
+            paradox: true },
+        'GRD-12': {
+            physics: `A meaningful retirement extension grew the Shape enough that the Ceiling's rise outpaced the Floor's crowding effect — the Datum moved from the floor edge into EXPANSIVE's interior. More runway widened the Shape around the fixed target.`,
+            action:  `The Shape expanded significantly. Where the Datum sits within EXPANSIVE after this move tells you how much of the widened range sits above the target — and whether the ceiling distance now feels like true capacity.`,
+            studio:  `Studio can model whether a later retirement with this Datum level interacts with Social Security timing and withdrawal order in ways that shift the real position.`,
+            paradox: false },
+        'GRD-13': {
+            physics: `Retiring sooner compressed the Shape, and the Floor dropped below the Datum — the position crossed into ABUNDANT. Less compounding time shrunk the lower boundary's projected capacity beneath the lifestyle target.`,
+            action:  `The surplus position resolved through Shape compression, not Datum movement. Consider whether the compressed ceiling still gives you the range you want above the target before committing to the earlier date.`,
+            studio:  `Studio can model whether an earlier retirement materially changes Social Security benefit timing and income sequencing assumptions relative to the Sketch.`,
+            paradox: false },
+        'GRD-14': {
+            physics: `With fewer compounding years, the Floor dropped below the Datum — the position crossed from GROUNDED into ABUNDANT. The Shape contracted passively as the time horizon shortened, dropping the lower boundary beneath the target.`,
+            action:  `This is a passive transition — the Shape contracted, the Datum didn't move. Assess whether the resulting surplus position reflects your actual timeline, or whether the inputs need to be revisited.`,
+            studio:  `Studio can model whether fewer compounding years change how real account balances project against the Sketch's floor formula — the practical floor may differ.`,
+            paradox: false },
+        'GRD-15': {
+            physics: `More compounding years grew the Floor toward or past the Datum — the TIGHT paradox may have activated, pushing the boundary upward while the target held still. More time deepened or maintained the GROUNDED position.`,
+            action:  `Additional runway grows the Shape upward, which in TIGHT can push the Floor above the fixed target temporarily. If the Datum is right at the edge, test whether the higher target the Shape now projects changes the decision.`,
+            studio:  `Studio can model whether more years open additional Roth conversion windows or Social Security delay strategies that affect the practical floor separately from the Sketch formula.`,
+            paradox: true },
+        'EXP-01': {
+            physics: `You raised the Datum, and it moved further into the Shape — closer to the Ceiling but still inside EXPANSIVE. The Floor still supports the target, but the ceiling distance is narrowing. The Shape now has less headroom above the Datum than before the pin.`,
+            action:  `Watch the ceiling distance as you raise the Datum. At this position the Shape still carries the target, but you’re trading headroom for lifestyle. Test whether the remaining range above feels like enough buffer.`,
+            studio:  `Studio can model whether this higher Datum position holds through real tax sequencing and withdrawal order — the remaining ceiling distance may compress differently in actual accounts.`,
+            paradox: false },
+        'EXP-02': {
+            physics: `The Datum crossed the EXPANSIVE upper threshold and entered STRETCHED — the Shape still supports the target, but only through its most favorable modeled paths. The ceiling is now close.`,
+            action:  `Upper-edge positions require favorable conditions to hold. Test whether a slightly lower Datum allows more of the Shape’s paths to carry the weight comfortably — or whether the current target is the right call at this edge.`,
+            studio:  `Studio can test whether tax sequencing and Social Security timing reinforce this upper-edge position through the full engine, rather than relying on the Sketch’s most favorable path assumptions.`,
+            paradox: false },
+        'EXP-03': {
+            physics: `A large Datum increase moved the target past the Ceiling — OVEREXTENDED. The Shape no longer supports this lifestyle at any modeled path. The Datum went from inside the Shape’s interior to above its upper boundary.`,
+            action:  `Pull the Datum back toward the Ceiling, or test which lever has enough power to lift the Ceiling to meet the new target. The gap is now structural — no modeled path closes it at current inputs.`,
+            studio:  `Studio can test whether real-world variables close part of this gap before any lever needs to move — the Sketch holds those constant.`,
+            paradox: false },
+        'EXP-04': {
+            physics: `Lowering the Datum moved it toward the Shape’s floor edge — still inside EXPANSIVE but with more ceiling distance and less floor buffer. The position shifted within the Shape without crossing a state boundary.`,
+            action:  `More of the Shape sits above the Datum now. Test whether the lower lifestyle target feels right, or whether the additional ceiling headroom represents capacity worth claiming.`,
+            studio:  `Studio can model whether the lower Datum position holds differently through real withdrawal sequencing — the floor buffer may behave differently in actual accounts.`,
+            paradox: false },
+        'EXP-05': {
+            physics: `The Datum dropped to the Floor’s edge — GROUNDED. The Shape still supports the target, but the Datum now sits near the lower boundary rather than inside the interior. The wide ceiling headroom above is the dominant feature of this position.`,
+            action:  `You’ve traded interior range for conservative floor alignment. The headroom above the Datum is now wide — test whether that’s intentional capacity, or whether the Datum should move back toward the Shape’s center.`,
+            studio:  `Studio can confirm whether your actual account architecture preserves this floor alignment or absorbs some of the apparent headroom through real-world variables.`,
+            paradox: false },
+        'EXP-06': {
+            physics: `A large Datum decrease moved the target below the Floor entirely — ABUNDANT. The Floor’s projected capacity now exceeds the lifestyle target; the Shape is carrying more capacity than the Datum is using.`,
+            action:  `Below-floor is an unusual position. The question is whether this reflects intentional conservatism — legacy, resilience, preference — or a Datum that hasn’t been fully explored against what the Shape can support.`,
+            studio:  `Studio can test whether real-world variables preserve this surplus or absorb some of it — the Sketch models it as pure headroom.`,
+            paradox: false },
+        'EXP-07': {
+            physics: `More capital grew the Shape upward — both Floor and Ceiling rose, but the Floor’s growth may have pushed the position deeper into the floor-side sub-zone if the Datum was near the lower third. More capital widened the Shape without moving the Datum toward its center.`,
+            action:  `If you’re in FLOOR_SIDE, capital growth can counterintuitively deepen the floor-side position by lifting the boundary beneath the Datum. Test the Datum at the new ceiling level to see what the wider Shape now supports.`,
+            studio:  `Studio can model whether additional capital in tax-advantaged accounts compounds the floor and ceiling at different rates than the Sketch assumes — the real position may shift differently.`,
+            paradox: true },
+        'EXP-08': {
+            physics: `A large portfolio increase grew the Shape significantly — the Ceiling rose enough to pull the Datum’s relative position toward the upper edge, crossing into STRETCHED. More capital lifted the upper boundary past the fixed Datum.`,
+            action:  `The Ceiling moved up while the Datum held still — the Shape widened and the Datum’s relative position shifted to the upper edge. Consider whether the higher ceiling represents capacity worth testing, or whether this STRETCHED position is where you want to be.`,
+            studio:  `Studio can model how a larger portfolio interacts with real tax sequencing and account architecture to produce a different ceiling position than the Sketch projects.`,
+            paradox: false },
+        'EXP-09': {
+            physics: `Reducing the portfolio shrank the Shape — both Floor and Ceiling dropped, but the Ceiling fell more than the Floor, moving the Datum relatively closer to the upper boundary. The position shifted within EXPANSIVE toward CEILING_SIDE.`,
+            action:  `The Datum’s relative position moved toward the ceiling edge as the Shape compressed. Monitor the ceiling distance — a further portfolio reduction could push the position into STRETCHED or beyond.`,
+            studio:  `Studio can model whether a reduced portfolio changes real withdrawal sequencing assumptions in a way that compresses the ceiling differently than the Sketch formula.`,
+            paradox: false },
+        'EXP-10': {
+            physics: `A large portfolio reduction shrank the Shape enough that the Floor dropped toward the Datum, pushing it to the lower edge — GROUNDED. The Shape compressed significantly, leaving the Datum near the Floor with a tighter ceiling above.`,
+            action:  `The Shape contracted around the Datum from both sides. Assess whether the tighter ceiling range feels acceptable — and whether this compressed position reflects the plan you want to test.`,
+            studio:  `Studio can model how a smaller portfolio changes the practical ceiling and floor in real accounts through withdrawal sequencing and tax architecture.`,
+            paradox: false },
+        'EXP-11': {
+            physics: `Higher contributions grew the Floor faster than the Ceiling moved, which may have pushed the Datum deeper into the floor-side sub-zone if the position was already in the lower third. More savings compounded the lower boundary upward while the Datum held still.`,
+            action:  `This is the FLOOR_SIDE paradox: contributions lift the Floor, which can crowd the Datum toward the boundary rather than away from it. Test the Datum at the new floor level to see whether the higher Shape warrants a target adjustment.`,
+            studio:  `Studio can test whether Roth vs. traditional contribution type changes how the floor grows relative to the ceiling — the Sketch treats both symmetrically.`,
+            paradox: true },
+        'EXP-12': {
+            physics: `A large contribution increase grew the Shape, and the Ceiling rose enough to pull the Datum’s relative position toward the upper edge — STRETCHED. The Shape grew upward while the Datum stayed fixed, shifting the relative position to the ceiling side.`,
+            action:  `More contributions widened the Shape significantly, but the Datum held still — the Shape’s upper boundary grew past the fixed target. Test whether the higher ceiling represents capacity worth claiming, or whether the STRETCHED position is where you want to operate.`,
+            studio:  `Studio can model how contribution type and amount interact with the real-world ceiling through actual tax sequencing and withdrawal order.`,
+            paradox: false },
+        'EXP-13': {
+            physics: `Lower contributions compressed the Floor toward the Datum, pushing the position to the lower edge — GROUNDED. Less compounding into the Shape dropped the lower boundary toward the lifestyle target, tightening the floor alignment.`,
+            action:  `The Floor is now doing the carrying work. Assess whether this more conservative, floor-aligned position feels right — or whether restoring some contributions reclaims the interior position you pinned from.`,
+            studio:  `Studio can test whether reduced contributions in real account types change the practical floor through actual tax sequencing and withdrawal order.`,
+            paradox: false },
+        'EXP-14': {
+            physics: `Extending the retirement timeline grew the Shape, but the Floor grew proportionally faster in the lower-return path — which may have pushed the Datum deeper into the floor-side sub-zone if already in the lower third. More time widened the Shape without centering the Datum.`,
+            action:  `More runway compounds the Shape upward, but in FLOOR_SIDE the lower boundary moves faster than the Datum. Test the Datum at the new ceiling level to see if the extended timeline warrants a lifestyle adjustment.`,
+            studio:  `Studio can model whether a later retirement changes Social Security timing and Roth conversion windows in ways that shift the practical floor separately from the Sketch formula.`,
+            paradox: true },
+        'EXP-15': {
+            physics: `A meaningful retirement extension grew the Shape enough that the Ceiling rose past the Datum’s position — STRETCHED. More compounding time lifted the upper boundary while the Datum held still, shifting the relative position toward the ceiling edge.`,
+            action:  `The Shape grew significantly around a fixed Datum — the ceiling distance compressed. Test whether this upper-edge position with the extended timeline feels like the plan, or whether a higher Datum is now warranted given the longer runway.`,
+            studio:  `Studio can model whether extending the timeline changes Social Security delay strategy and withdrawal sequencing in ways that reinforce or shift this ceiling-side position.`,
+            paradox: false },
+        'EXP-16': {
+            physics: `Retiring sooner compressed the Shape — both Floor and Ceiling dropped — and the Floor fell toward the Datum, shifting the position to GROUNDED. Less compounding time shrank the lower boundary toward the lifestyle target.`,
+            action:  `The Shape contracted, and the Datum now sits near its lower edge. Consider whether an earlier retirement with this lifestyle target feels right, and whether the compressed ceiling above still represents adequate planning range.`,
+            studio:  `Studio can model whether earlier retirement changes Social Security benefit timing and withdrawal sequencing assumptions in ways that affect the practical floor relative to the Sketch.`,
+            paradox: false },
+        'EXP-17': {
+            physics: `A large retirement compression shrunk the Shape enough that the Floor dropped below the Datum — ABUNDANT. Retiring much earlier brought the lower boundary beneath the lifestyle target; the Shape is now projecting more floor capacity than the target uses.`,
+            action:  `This is an unusual result: retiring earlier moved you below the floor rather than into a tighter position. The Shape compressed, but the Datum’s conservatism relative to the smaller Shape created a surplus. Test whether this reflects the plan.`,
+            studio:  `Studio can model whether a much earlier retirement with this Datum creates real-world surplus through Social Security and withdrawal sequencing, or whether the Sketch is over-projecting the floor’s compression.`,
+            paradox: false },
+        'EXP-18': {
+            physics: `With fewer compounding years, the Shape compressed and the Floor dropped toward the Datum — GROUNDED. The timeline shortened passively, contracting the lower boundary toward the lifestyle target.`,
+            action:  `A passive transition through Shape compression, not Datum movement. Assess whether this floor-edge alignment feels right given the actual timeline, or whether the inputs should be revisited.`,
+            studio:  `Studio can model whether fewer compounding years change how real account balances project against the Sketch’s floor formula — the practical floor may differ meaningfully.`,
+            paradox: false },
+        'EXP-19': {
+            physics: `More compounding years grew the Shape upward — but if the position was already in FLOOR_SIDE, the Floor’s faster growth may have deepened the floor-side position rather than centering the Datum. More time widened the Shape without moving the target toward its center.`,
+            action:  `Additional runway grows the Shape upward, not toward the center. In FLOOR_SIDE, more years can compound the floor-side position deeper. Test the Datum at the new ceiling level to see if the extended runway warrants a target adjustment.`,
+            studio:  `Studio can model whether additional compounding years open Roth conversion windows and Social Security delay strategies that change the practical position relative to the Sketch’s projection.`,
+            paradox: true },
+        'STR-01': {
+            physics: `Raising the Datum — even slightly — moved it past the Ceiling. From the upper edge of the Shape to above its upper boundary; no modeled path reaches this lifestyle at current inputs. The ceiling distance was already small; a modest increase crossed the line.`,
+            action:  `Pull the Datum back toward the Ceiling, or test which lever has enough power to lift the Ceiling to meet the new target. At HIGH_END, even a small Datum increase exits the Shape.`,
+            studio:  `Studio can test whether real-world variables — tax-advantaged accounts, Social Security timing, withdrawal sequencing — close some of this gap before any lever needs to move.`,
+            paradox: false },
+        'STR-02': {
+            physics: `A slight Datum reduction moved the position slightly away from the Ceiling — still within STRETCHED, but with marginally more ceiling buffer than before the pin. The upper-edge character of the position hasn’t materially changed.`,
+            action:  `Even with the reduction, the Shape carries this target only through its most favorable paths. Consider whether a more meaningful reduction would move the Datum toward the Shape’s center paths — where more of the modeled range carries the weight.`,
+            studio:  `Studio can test whether your actual tax sequencing and Social Security timing reinforce this upper-edge target through the full engine rather than relying on favorable-path assumptions.`,
+            paradox: false },
+        'STR-03': {
+            physics: `Reducing the Datum brought it inside the Shape’s interior — EXPANSIVE. The Ceiling now sits meaningfully above the target; the Shape carries this lifestyle across a wider range of modeled paths than the STRETCHED position allowed.`,
+            action:  `You traded ceiling proximity for path resilience. Where within EXPANSIVE the Datum now sits tells you how much of the modeled range carries the weight — test whether the lower target feels right, or whether there’s still more to explore toward the center.`,
+            studio:  `Studio can test whether this interior position holds through actual tax sequencing, account architecture, and withdrawal order — variables the Sketch holds constant.`,
+            paradox: false },
+        'STR-04': {
+            physics: `A large Datum reduction moved the position all the way to the Floor’s edge — GROUNDED. From the Ceiling’s edge to the Floor’s edge in one move; the Shape now has wide ceiling headroom above the target.`,
+            action:  `You’ve shifted from upper-edge to lower-edge in one step. The headroom above the Datum is now substantial — test whether the lower lifestyle target feels like the right call, or whether there’s a better position between GROUNDED and EXPANSIVE.`,
+            studio:  `Studio can confirm whether your actual account architecture preserves this floor alignment or absorbs some of the apparent headroom through real-world variables the Sketch holds constant.`,
+            paradox: false },
+        'STR-05': {
+            physics: `A very large Datum decrease moved the target below the Floor entirely — ABUNDANT. From near the Ceiling to below the lower boundary in one move; the Shape is now projecting more capacity than the lifestyle target uses.`,
+            action:  `Below-floor is an unusual destination from STRETCHED. The question is whether this reflects intentional conservatism — or whether the Datum moved too far and should be walked back toward the Shape’s interior.`,
+            studio:  `Studio can test whether real-world variables preserve this surplus or absorb some of it — the Sketch models it as pure headroom.`,
+            paradox: false },
+        'STR-06': {
+            physics: `Additional capital grew the Ceiling — the Shape expanded upward and the Datum’s relative position improved slightly within STRETCHED. Still near the upper edge, but with slightly more ceiling distance than before the pin.`,
+            action:  `Capital is working to pull the Ceiling away from the Datum. A larger portfolio increase would move the position into EXPANSIVE — test how much capital is needed to carry the Datum through a wider range of modeled paths.`,
+            studio:  `Studio can model whether additional capital in tax-advantaged accounts compounds the ceiling differently in real accounts than the Sketch formula projects.`,
+            paradox: false },
+        'STR-07': {
+            physics: `A larger portfolio increase grew the Ceiling enough to pull the Datum’s relative position into EXPANSIVE — the Shape now carries the target across a meaningfully wider range of modeled paths. More capital lifted the upper boundary away from the Datum.`,
+            action:  `The Ceiling moved up while the Datum held still — the Shape’s upper range expanded and the Datum now sits inside the interior. Assess where within EXPANSIVE the position lands and whether the new ceiling distance feels like adequate buffer.`,
+            studio:  `Studio can model how a larger portfolio interacts with real tax sequencing and account architecture to produce a different ceiling-to-Datum relationship than the Sketch projects.`,
+            paradox: false },
+        'STR-08': {
+            physics: `Reducing the portfolio shrank the Ceiling below the Datum — OVEREXTENDED. Less capital compressed the upper boundary beneath the lifestyle target; no modeled path now reaches this lifestyle at current inputs.`,
+            action:  `The gap between the Datum and the Ceiling is now structural. Restore the portfolio, lower the Datum, or test which other lever has enough power to lift the Ceiling back above the target.`,
+            studio:  `Studio can model how a reduced portfolio changes the practical ceiling through real withdrawal sequencing — the gap may be smaller or larger in actual accounts.`,
+            paradox: false },
+        'STR-09': {
+            physics: `Higher contributions grew the Ceiling — the Shape expanded upward and the Datum’s relative position moved into EXPANSIVE. More savings compounded the upper boundary away from the fixed Datum, creating a wider modeled range above the target.`,
+            action:  `Contributions are pulling the Ceiling away from the Datum effectively. Assess where within EXPANSIVE the position lands — the center paths now carry more of the weight, which reduces the favorable-conditions dependency that characterized STRETCHED.`,
+            studio:  `Studio can test whether contribution type (Roth vs. traditional) and amount interact with the ceiling differently in real accounts than the Sketch’s uniform contribution formula.`,
+            paradox: false },
+        'STR-10': {
+            physics: `Reducing contributions compressed the Ceiling below the Datum — OVEREXTENDED. Less compounding into the Shape dropped the upper boundary beneath the lifestyle target; no modeled path currently closes this gap.`,
+            action:  `The Ceiling dropped out from under the Datum. Restore contributions, lower the Datum, or test which other lever has the power to lift the upper boundary back to meet the target.`,
+            studio:  `Studio can test whether reduced contributions in specific account types compress the ceiling differently through real tax sequencing than the Sketch’s uniform formula assumes.`,
+            paradox: false },
+        'STR-11': {
+            physics: `Extending the retirement timeline compounded the Ceiling further above the Datum — EXPANSIVE. More time grew the upper boundary away from the fixed lifestyle target; the Shape now carries the Datum across a wider range of modeled paths.`,
+            action:  `More runway is pulling the Ceiling away from the Datum — the favorable-conditions dependency of STRETCHED is easing. Test where within EXPANSIVE the position lands and whether the timeline extension feels like the right lever for this move.`,
+            studio:  `Studio can model whether a later retirement changes Social Security delay strategy and Roth conversion windows in ways that reinforce this ceiling expansion — variables the Sketch cannot capture.`,
+            paradox: false },
+        'STR-12': {
+            physics: `A very large retirement extension grew the Shape dramatically — the Floor rose significantly and the Datum, held fixed, ended up below the new Floor. More time compounded the lower boundary up and past the lifestyle target.`,
+            action:  `This is an unusual paradox at the retirement-age extreme: a very long extension can eventually grow the Floor above a fixed, conservative-for-the-new-shape Datum. The position resolved from STRETCHED all the way to ABUNDANT through compounding time.`,
+            studio:  `Studio can model whether this extended timeline opens Social Security and Roth strategies that maintain the STRETCHED position in real accounts — the practical ceiling may behave differently.`,
+            paradox: false },
+        'STR-13': {
+            physics: `Retiring sooner compressed the Ceiling below the Datum — OVEREXTENDED. Less compounding time shrank the upper boundary beneath the lifestyle target; no modeled path reaches this lifestyle at the shorter horizon.`,
+            action:  `The Ceiling fell below the Datum as the runway compressed. Either restore the timeline, lower the Datum, or test which other lever compensates for the lost compounding time.`,
+            studio:  `Studio can model whether an earlier retirement changes Social Security timing and withdrawal sequencing in ways that shift the practical ceiling relative to the Sketch formula.`,
+            paradox: false },
+        'STR-14': {
+            physics: `With fewer compounding years available, the Ceiling dropped below the Datum — OVEREXTENDED. The shorter horizon shrank the upper boundary beneath the lifestyle target; the gap is now structural at this timeline.`,
+            action:  `A passive transition: the Shape contracted as time shortened, dropping the Ceiling below the Datum. Either extend the retirement age to restore compounding runway, lower the Datum, or test other levers.`,
+            studio:  `Studio can model whether fewer compounding years change how real account balances project against the Sketch’s ceiling formula — the practical gap may be different in actual accounts.`,
+            paradox: false },
+        'STR-15': {
+            physics: `More compounding years grew the Ceiling away from the Datum — EXPANSIVE. The longer horizon expanded the upper boundary, pulling the Datum’s relative position into the Shape’s interior and widening the modeled range above the target.`,
+            action:  `More runway improved the position — the Ceiling grew faster than the Floor, which widened the modeled range around the fixed Datum. Test where within EXPANSIVE the position lands and whether the new ceiling distance feels like the planning range you want.`,
+            studio:  `Studio can model whether additional compounding years open Roth conversion windows and Social Security delay strategies that change the practical ceiling separately from the Sketch formula.`,
+            paradox: false },
+    };
+
+    // ── PINNED routing table (Step 2a): [pinnedState][lever][dir][resultState] → caseId
+    const _PR = {
+        OVEREXTENDED: {
+            none:      { none: { OVEREXTENDED: 'OE.0' } },
+            datum:     {
+                down: { OVEREXTENDED: 'OE.S.1', STRETCHED: 'OE.S.2', EXPANSIVE: 'OE.S.3', GROUNDED: 'OE.S.4', ABUNDANT: 'OE.S.5' },
+                up:   { OVEREXTENDED: 'OE.S.6' }
+            },
+            portfolio: {
+                up:   { OVEREXTENDED: 'OE.P.1', STRETCHED: 'OE.P.2', EXPANSIVE: 'OE.P.3' },
+                down: { OVEREXTENDED: 'OE.P.4' }
+            },
+            retire:    {
+                up:   { OVEREXTENDED: 'OE.R.1', STRETCHED: 'OE.R.2', EXPANSIVE: 'OE.R.3' },
+                down: { OVEREXTENDED: 'OE.R.4' }
+            },
+            contrib:   {
+                up:   { OVEREXTENDED: 'OE.C.1', STRETCHED: 'OE.C.1', EXPANSIVE: 'OE.C.2' },
+                down: { OVEREXTENDED: 'OE.C.3' }
+            },
+            age:       {
+                down: { OVEREXTENDED: 'OE.A.1', STRETCHED: 'OE.A.1', EXPANSIVE: 'OE.A.1' },
+                up:   { OVEREXTENDED: 'OE.A.2' }
+            }
+        },
+        ABUNDANT: {
+            datum:     {
+                up:   { ABUNDANT: 'ABU-01', GROUNDED: 'ABU-02', EXPANSIVE: 'ABU-03', STRETCHED: 'ABU-04', OVEREXTENDED: 'ABU-05' },
+                down: { ABUNDANT: 'ABU-06' }
+            },
+            portfolio: {
+                up:   { ABUNDANT: 'ABU-07' },
+                down: { ABUNDANT: 'ABU-08', GROUNDED: 'ABU-09', EXPANSIVE: 'ABU-10' }
+            },
+            contrib:   {
+                up:   { ABUNDANT: 'ABU-11' },
+                down: { GROUNDED: 'ABU-12' }
+            },
+            retire:    {
+                up:   { ABUNDANT: 'ABU-13' },
+                down: { ABUNDANT: 'ABU-14', GROUNDED: 'ABU-15', EXPANSIVE: 'ABU-16' }
+            },
+            age:       {
+                up:   { GROUNDED: 'ABU-17', EXPANSIVE: 'ABU-18' },
+                down: { ABUNDANT: 'ABU-19' }
+            }
+        },
+        GROUNDED: {
+            datum:     {
+                up:   { GROUNDED: 'GRD-01', EXPANSIVE: 'GRD-02', STRETCHED: 'GRD-03', OVEREXTENDED: 'GRD-04' },
+                down: { ABUNDANT: 'GRD-05' }
+            },
+            portfolio: {
+                up:   { GROUNDED: 'GRD-06', EXPANSIVE: 'GRD-07' },
+                down: { ABUNDANT: 'GRD-08' }
+            },
+            contrib:   {
+                up:   { GROUNDED: 'GRD-09' },
+                down: { ABUNDANT: 'GRD-10' }
+            },
+            retire:    {
+                up:   { GROUNDED: 'GRD-11', EXPANSIVE: 'GRD-12' },
+                down: { ABUNDANT: 'GRD-13' }
+            },
+            age:       {
+                up:   { ABUNDANT: 'GRD-14' },
+                down: { GROUNDED: 'GRD-15' }
+            }
+        },
+        EXPANSIVE: {
+            datum:     {
+                up:   { EXPANSIVE: 'EXP-01', STRETCHED: 'EXP-02', OVEREXTENDED: 'EXP-03' },
+                down: { EXPANSIVE: 'EXP-04', GROUNDED: 'EXP-05', ABUNDANT: 'EXP-06' }
+            },
+            portfolio: {
+                up:   { EXPANSIVE: 'EXP-07', STRETCHED: 'EXP-08' },
+                down: { EXPANSIVE: 'EXP-09', GROUNDED: 'EXP-10' }
+            },
+            contrib:   {
+                up:   { EXPANSIVE: 'EXP-11', STRETCHED: 'EXP-12' },
+                down: { GROUNDED: 'EXP-13' }
+            },
+            retire:    {
+                up:   { EXPANSIVE: 'EXP-14', STRETCHED: 'EXP-15' },
+                down: { GROUNDED: 'EXP-16', ABUNDANT: 'EXP-17' }
+            },
+            age:       {
+                up:   { GROUNDED: 'EXP-18' },
+                down: { EXPANSIVE: 'EXP-19' }
+            }
+        },
+        STRETCHED: {
+            datum:     {
+                up:   { OVEREXTENDED: 'STR-01' },
+                down: { STRETCHED: 'STR-02', EXPANSIVE: 'STR-03', GROUNDED: 'STR-04', ABUNDANT: 'STR-05' }
+            },
+            portfolio: {
+                up:   { STRETCHED: 'STR-06', EXPANSIVE: 'STR-07' },
+                down: { OVEREXTENDED: 'STR-08' }
+            },
+            contrib:   {
+                up:   { EXPANSIVE: 'STR-09' },
+                down: { OVEREXTENDED: 'STR-10' }
+            },
+            retire:    {
+                up:   { EXPANSIVE: 'STR-11', ABUNDANT: 'STR-12' },
+                down: { OVEREXTENDED: 'STR-13' }
+            },
+            age:       {
+                up:   { OVEREXTENDED: 'STR-14' },
+                down: { EXPANSIVE: 'STR-15' }
+            }
+        }
+    };
+
+    function _routeLookup(pinnedSt, lever, dir, resultSt) {
+        const byState = _PR[pinnedSt]; if (!byState) return null;
+        const byLever = byState[lever]; if (!byLever) return null;
+        const byDir   = byLever[dir];   if (!byDir)   return null;
+        return byDir[resultSt] || null;
+    }
+
+    // getPinnedCaseObj: workbook PINNED single-lever routing (Step 2a)
+    // Returns case object or null (null → heuristic multi-lever fallback)
+    function getPinnedCaseObj(pinnedState, pts, currentScenario) {
+        // Reconstruct pinned scenario from stored metadata
+        function _pRates(label) {
+            if (label === 'Optimistic') return { c: 1.020, b: 1.040, u: 1.065 };
+            if (label === 'Stress')     return { c: 1.005, b: 1.015, u: 1.035 };
+            return                             { c: 1.015, b: 1.035, u: 1.055 };
+        }
+        const _pR   = _pRates(pinnedState.pinnedParadigm || 'Historical');
+        const _pYTG = Math.max(0, (pinnedState.retire || 65) - (pinnedState.age || 40));
+        const _pSc  = {
+            portfolioVol:     pinnedState.port    || 0.75,
+            annualContrib:    pinnedState.contrib  || 25000,
+            targetSpend:      pinnedState.datum    || 100,
+            conservativeRate: _pR.c, baselineRate: _pR.b, upsideRate: _pR.u,
+            isNominal: (pinnedState.pinnedInflStr === 'Nominal'),
+            taxMult:   1.0 - ((pinnedState.pinnedTax || 0) / 100),
+            inflRate:  0.03
+        };
+        const _pPts = getMathPoint(_pYTG, _pYTG, _pSc);
+
+        // Current lever values
+        const _cAge    = currentScenario.currentAge;
+        const _cRetire = currentScenario.activationAge;
+        const _cPort   = currentScenario.portfolioVol;
+        const _cContrib = currentScenario.annualContrib;
+        const _cDatum  = currentScenario.targetSpend;
+        const _cYTG    = Math.max(0, _cRetire - _cAge);
+
+        // Detect changed levers
+        const _dRetire  = pinnedState.retire   !== _cRetire;
+        const _dAge     = pinnedState.age      !== _cAge;
+        const _dPort    = Math.abs(pinnedState.port    - _cPort)    > 0.001;
+        const _dContrib = Math.abs(pinnedState.contrib - _cContrib) > 100;
+        const _dDatum   = pinnedState.datum    !== _cDatum;
+
+        // Derive current paradigm label from rates (for tax/market detection)
+        const _curParadigmLabel = currentScenario.baselineRate === 1.040 ? 'Optimistic'
+                                : currentScenario.baselineRate === 1.015 ? 'Stress' : 'Historical';
+        const _curTaxPct = Math.round((1.0 - (currentScenario.taxMult || 1.0)) * 100);
+        const _dTax = pinnedState.pinnedTax !== undefined
+                   && pinnedState.pinnedTax !== _curTaxPct;
+        const _dMkt = !!(pinnedState.pinnedParadigm
+                   && pinnedState.pinnedParadigm !== _curParadigmLabel);
+
+        // Shape levers: those affecting ceilSpend/floorSpend
+        const _shapeMovers = [];
+        if (_dRetire)  _shapeMovers.push('retire');
+        if (_dAge)     _shapeMovers.push('age');
+        if (_dPort)    _shapeMovers.push('portfolio');
+        if (_dContrib) _shapeMovers.push('contrib');
+        if (_dTax)     _shapeMovers.push('tax');
+        if (_dMkt)     _shapeMovers.push('market');
+
+        const _anyMoved = _dDatum || _shapeMovers.length > 0;
+        if (!_anyMoved) {
+            // No-movement case: only OVEREXTENDED has OE.0
+            const _pinnedName = pinnedState.stateObj ? pinnedState.stateObj.name : '';
+            if (_pinnedName !== 'OVEREXTENDED') return null;
+            const _cid0 = 'OE.0';
+            const _cd0  = _PC[_cid0];
+            if (!_cd0) return null;
+            return { caseId: _cid0, lever: 'none', direction: 'none',
+                     resultState: 'OVEREXTENDED', resultSubZone: '',
+                     physics: _cd0.physics, action: _cd0.action, studio: _cd0.studio,
+                     paradox: false, isSingleLever: true, primaryPct: 1.0 };
+        }
+
+        let _lever = null, _dir = 'none', _primaryPct = 1.0;
+
+        if (_dDatum && _shapeMovers.length === 0) {
+            // Datum-only move
+            _lever = 'datum';
+            _dir   = _cDatum > pinnedState.datum ? 'up' : 'down';
+
+        } else if (_shapeMovers.length === 1 && !_dDatum) {
+            // Single shape lever, no datum change
+            _lever = _shapeMovers[0];
+            if (_lever === 'retire')    _dir = _cRetire  > pinnedState.retire   ? 'up' : 'down';
+            else if (_lever === 'age')  _dir = _cAge     > pinnedState.age      ? 'up' : 'down';
+            else if (_lever === 'portfolio') _dir = _cPort    > pinnedState.port    ? 'up' : 'down';
+            else if (_lever === 'contrib')   _dir = _cContrib > pinnedState.contrib ? 'up' : 'down';
+            else _dir = 'up'; // tax/market: no workbook case, will return null below
+
+        } else if (_shapeMovers.length >= 2 && !_dDatum) {
+            // Multiple shape levers — apply 70% threshold (Q1 Option A)
+            const _deltas = {};
+            let _totalD = 0;
+            for (const _lev of _shapeMovers) {
+                let _cfPts;
+                if (_lev === 'retire') {
+                    const _cfYTG = Math.max(0, _cRetire - (pinnedState.age || 40));
+                    _cfPts = getMathPoint(_cfYTG, _cfYTG, _pSc);
+                } else if (_lev === 'age') {
+                    const _cfYTG = Math.max(0, (pinnedState.retire || 65) - _cAge);
+                    _cfPts = getMathPoint(_cfYTG, _cfYTG, _pSc);
+                } else if (_lev === 'portfolio') {
+                    const _cfSc = Object.assign({}, _pSc, { portfolioVol: _cPort });
+                    _cfPts = getMathPoint(_pYTG, _pYTG, _cfSc);
+                } else if (_lev === 'contrib') {
+                    const _cfSc = Object.assign({}, _pSc, { annualContrib: _cContrib });
+                    _cfPts = getMathPoint(_pYTG, _pYTG, _cfSc);
+                } else if (_lev === 'tax') {
+                    const _cfSc = Object.assign({}, _pSc, { taxMult: currentScenario.taxMult });
+                    _cfPts = getMathPoint(_pYTG, _pYTG, _cfSc);
+                } else if (_lev === 'market') {
+                    const _cfSc = Object.assign({}, _pSc, {
+                        conservativeRate: currentScenario.conservativeRate,
+                        baselineRate: currentScenario.baselineRate,
+                        upsideRate: currentScenario.upsideRate
+                    });
+                    _cfPts = getMathPoint(_pYTG, _pYTG, _cfSc);
+                } else {
+                    _cfPts = _pPts;
+                }
+                const _d = Math.abs(_cfPts.ceilSpend  - _pPts.ceilSpend)
+                         + Math.abs(_cfPts.floorSpend - _pPts.floorSpend);
+                _deltas[_lev] = _d;
+                _totalD += _d;
+            }
+            if (_totalD <= 0) return null;
+            let _maxLev = null, _maxVal = 0;
+            for (const _k in _deltas) {
+                if (_deltas[_k] > _maxVal) { _maxVal = _deltas[_k]; _maxLev = _k; }
+            }
+            _primaryPct = _maxVal / _totalD;
+            if (_primaryPct < 0.70) return null; // no dominant lever → heuristic
+            _lever = _maxLev;
+            if (_lever === 'retire')    _dir = _cRetire  > pinnedState.retire   ? 'up' : 'down';
+            else if (_lever === 'age')  _dir = _cAge     > pinnedState.age      ? 'up' : 'down';
+            else if (_lever === 'portfolio') _dir = _cPort    > pinnedState.port    ? 'up' : 'down';
+            else if (_lever === 'contrib')   _dir = _cContrib > pinnedState.contrib ? 'up' : 'down';
+            else _dir = 'up';
+
+        } else {
+            // datum + shape lever(s) = always multi-lever fallback
+            return null;
+        }
+
+        // Tax/market as sole lever: no workbook case
+        if (_lever === 'tax' || _lever === 'market') return null;
+
+        // Resolve resulting state
+        const _resObj   = getShapeStateObj(pts);
+        const _resName  = _resObj ? _resObj.name     : 'UNKNOWN';
+        const _resSZ    = _resObj ? (_resObj.subZone || '') : '';
+
+        const _pinnedName = pinnedState.stateObj ? pinnedState.stateObj.name : 'UNKNOWN';
+        const _caseId = _routeLookup(_pinnedName, _lever, _dir, _resName);
+        if (!_caseId) return null;
+
+        const _cd = _PC[_caseId];
+        if (!_cd) return null;
+
+        return {
+            caseId:        _caseId,
+            lever:         _lever,
+            direction:     _dir,
+            resultState:   _resName,
+            resultSubZone: _resSZ,
+            physics:       _cd.physics,
+            action:        _cd.action,
+            studio:        _cd.studio,
+            paradox:       _cd.paradox,
+            isSingleLever: true,
+            primaryPct:    _primaryPct
+        };
+    }
+
     // STRUCT 4: colour constants — single source of truth (27 hex refs → constants)
     const C_GOLD  = '#C9A84C';
     const C_NAVY  = '#091221';
@@ -3522,10 +4260,17 @@
                 }
             })();
 
-            // ── What It Means + What To Consider ──────────────────────────
-            let _pinMeans = '';
+            // ── Workbook case lookup + heuristic fallback (Step 2a) ─────────────
+            let _pinMeans    = '';
             let _pinConsider = '';
 
+            const _wbCase = getPinnedCaseObj(pinnedState, ptsEnd, currentScenario);
+            if (_wbCase && _wbCase.isSingleLever) {
+                _pinMeans    = _wbCase.physics;
+                _pinConsider = _wbCase.action;
+                // _wbCase.studio: reserved for Screen 2 Design Mode (no DOM target Step 2a)
+                // _wbCase.paradox: reserved for Step 2b visual treatment
+            } else {
             if (pChanged.length === 0) {
                 _pinMeans    = 'Inputs match the pinned Shape. Move sliders to compare.';
                 _pinConsider = 'Adjust any input to see how the Shape responds.';
@@ -3644,6 +4389,7 @@
             } else {
                 _pinMeans    = 'Compared with your pinned Shape, the spending boundaries changed slightly.';
                 _pinConsider = 'Studio can model this change against your actual accounts and income sequencing.';
+            }
             }
 
             // ── DOM updates ────────────────────────────────────────────────
