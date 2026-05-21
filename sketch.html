@@ -322,10 +322,12 @@
   /* State: Under Pressure (Floor Pulse) */
   @keyframes pulseRed { 0%, 100% { stop-opacity: 0.25; } 50% { stop-opacity: 0.6; stop-color: #ff3333; } }
   .shape-under-pressure #stop-floor { animation: pulseRed 2s infinite ease-in-out; }
-  
+  #d2s-canvas.shape-under-pressure #d2s-stop-floor { animation: pulseRed 2s infinite ease-in-out; }
+
   /* State: At Limit (Ceiling Glow) */
   @keyframes pulseGold { 0%, 100% { stop-opacity: 0.25; } 50% { stop-opacity: 0.5; stop-color: #ffe680; } }
   .shape-at-limit #stop-ceil { animation: pulseGold 2s infinite ease-in-out; }
+  #d2s-canvas.shape-at-limit #d2s-stop-ceil { animation: pulseGold 2s infinite ease-in-out; }
 
   /* Visual Market Sweeps */
   .market-sweep { opacity: 0; filter: blur(25px); pointer-events: none; }
@@ -403,6 +405,7 @@
 
   @keyframes fadeInClean { to { opacity: 1; } }
   .cone-fill { fill: url(#thermal-grad); opacity: 0; } /* triggered by .draw-triggered */
+  .ghost-cone-fill { fill: url(#thermal-grad); } /* ghost-cone only — no animation association */
   .range-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0; }
   .draw-triggered .range-label { animation: fadeInClean 0.6s ease 0.45s forwards; }
   .boundary-group circle { opacity: 0; }
@@ -427,6 +430,19 @@
   
   .ghost-active { opacity: 0.6 !important; }
   .ghost-cone-active { opacity: 0.4 !important; }
+
+  /* Screen 2 canvas — bypass Screen 1 draw-animation gates */
+  #d2s-canvas .boundary-line { mask: none; }
+  #d2s-canvas .range-label { opacity: 1; animation: none; }
+  #d2s-canvas .boundary-group circle { opacity: 1; animation: none; }
+  #d2s-datum-hitbox { cursor: ns-resize; }
+
+  /* GAP 5: Screen 2 blueprint background — teal grid at 5% opacity */
+  #screen-2-design .canvas-wrap {
+    background-image:
+      repeating-linear-gradient(rgba(93,202,165,0.05) 0 1px, transparent 1px 40px),
+      repeating-linear-gradient(90deg, rgba(93,202,165,0.05) 0 1px, transparent 1px 40px);
+  }
 
   /* Pinned Comparison Legend */
   #pinned-legend { display: none; position: absolute; top: 16px; right: 24px; background: rgba(9, 18, 33, 0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 10px 14px; z-index: 20; font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.1em; }
@@ -590,6 +606,11 @@
   .d2-ref-lbl { font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.1em; }
   .d2-ref-val { font-family: var(--font-serif); font-size: 13px; font-style: italic; color: rgba(255,255,255,0.5); }
   .d2-ref-ghost-note { font-family: var(--font-mono); font-size: 8px; color: rgba(255,255,255,0.2); letter-spacing: 0.06em; margin-top: 2px; }
+  /* Phase 2.1: Screen 2 input panel ghost ticks */
+  .d2-slider-wrap { position: relative; }
+  .d2-ghost-tick { position: absolute; top: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 1; display: none; }
+  .d2-ghost-tick-line { width: 2px; height: 14px; background: rgba(255,255,255,0.28); border-radius: 1px; box-shadow: 0 0 3px rgba(255,255,255,0.08); }
+  .d2-ghost-tick.visible { display: block; }
   /* Screen 2 Datum Intelligence HUD */
   .d2-hud-card { background: rgba(9,18,33,0.85); border: 1px solid rgba(255,255,255,0.1); border-left: 2px solid var(--teal-mid); border-radius: 4px; padding: 10px 12px; transition: border-left-color 0.3s ease; }
   .d2-hud-status { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--teal-mid); margin-bottom: 8px; }
@@ -610,7 +631,8 @@
     background-color: var(--bg-navy);
     background-image: radial-gradient(circle at center, rgba(29,158,117,0.04) 0%, transparent 70%);
     background-size: 100% 100%;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   /* Carry-forward */
@@ -1597,7 +1619,7 @@
               </g>
 
               <g id="clean-layer">
-                  <path id="ghost-cone" class="cone-fill morph ghost-cone-init" d="" />
+                  <path id="ghost-cone" class="ghost-cone-fill morph ghost-cone-init" d="" />
                   <path id="ghost-ceil" class="ghost-line ghost-ceil morph" d="" />
                   <path id="ghost-floor" class="ghost-line ghost-floor morph" d="" />
                   <path id="ghost-datum" class="ghost-line ghost-datum morph" d="" />
@@ -1688,131 +1710,116 @@
     <div class="splash-bar"></div>
   </div>
 
-    <!-- Phase header bar -->
-    <div class="design-header">
-      <div class="sub-head" style="text-align:center; margin-bottom:6px;">PHASE II — ARCHITECTURE</div>
-      <div style="font-family:var(--font-serif); font-size:18px; font-style:italic; color:var(--gold); margin-bottom:6px; text-align:center;">Design Your Shape</div>
-      <p class="design-lead">
-        <span style="font-family:var(--font-mono); font-size:11px; color:var(--white); text-transform:uppercase; letter-spacing:0.18em;">Pull a boundary to test the retirement shape you want. The Sketch shows what would need to change.</span>
-      </p>
-    </div>
-
     <!-- Full hero split: left panel + right canvas -->
     <div class="design-split">
 
       <div class="design-left">
 
-        <!-- Screen 1 Reference Rail (ghosted / read-only) -->
-        <div class="d2-ref-rail">
-
-          <div class="d2-ref-section" style="border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px;">
-            <div class="d2-ref-mono" style="color:rgba(255,255,255,0.4); margin-bottom:2px;">PHASE I — DATA</div>
-            <div class="d2-ref-ghost-note">Discovered shape — ghosted reference</div>
-          </div>
-
-          <!-- 01 / YOUR TIMELINE -->
-          <div class="d2-ref-section">
-            <div class="d2-ref-mono">01 / YOUR TIMELINE</div>
-            <div class="d2-ref-row">
-              <span class="d2-ref-lbl">Current Age</span>
-              <span class="d2-ref-val" id="d2-ref-age">—</span>
-            </div>
-            <div class="d2-ref-row">
-              <span class="d2-ref-lbl">Retirement Age</span>
-              <span class="d2-ref-val" id="d2-ref-retire">—</span>
-            </div>
-          </div>
-
-          <!-- 02 / YOUR CAPITAL -->
-          <div class="d2-ref-section">
-            <div class="d2-ref-mono">02 / YOUR CAPITAL</div>
-            <div class="d2-ref-row">
-              <span class="d2-ref-lbl">Portfolio Balance</span>
-              <span class="d2-ref-val" id="d2-ref-cap">—</span>
-            </div>
-          </div>
-
-          <!-- 03 / YOUR DATUM -->
-          <div class="d2-ref-section">
-            <div class="d2-ref-mono">03 / YOUR DATUM</div>
-            <div class="d2-ref-row">
-              <span class="d2-ref-lbl">$/yr Target</span>
-              <span class="d2-ref-val" id="d2-ref-datum" style="color:rgba(93,202,165,0.7);">—</span>
-            </div>
-          </div>
-
-          <!-- 04 / YOUR CONTRIBUTIONS -->
-          <div class="d2-ref-section">
-            <div class="d2-ref-mono">04 / YOUR CONTRIBUTIONS</div>
-            <div class="d2-ref-row">
-              <span class="d2-ref-lbl">Annual</span>
-              <span class="d2-ref-val" id="d2-ref-contrib">—</span>
-            </div>
-          </div>
-
-          <!-- 05 / MARKET CONDITIONS — LIVE -->
-          <div class="d2-ref-section">
-            <div class="d2-ref-mono">05 / MARKET CONDITIONS</div>
-            <div class="toggle-wrapper">
-              <div class="toggle-container" id="design-market-toggle">
-                <div class="toggle-option">
-                  <input type="radio" id="design-market-opt" name="design-market" value="optimistic" tabindex="0">
-                  <label for="design-market-opt">Optimistic</label>
-                </div>
-                <div class="toggle-option">
-                  <input type="radio" id="design-market-avg" name="design-market" value="average" checked tabindex="0">
-                  <label for="design-market-avg">Historical</label>
-                </div>
-                <div class="toggle-option">
-                  <input type="radio" id="design-market-stress" name="design-market" value="stress" tabindex="0">
-                  <label for="design-market-stress">Stress</label>
-                </div>
-              </div>
-            </div>
-            <div class="d2-ref-ghost-note" style="margin-top:4px;">Controls Screen 2 market scenario</div>
-          </div>
-
-          <!-- Private by design + back link -->
-          <div class="d2-ref-section" style="border-bottom:none;">
-            <div class="sketch-trust-copy" style="margin-top:0; padding-top:6px; border-top:1px dashed rgba(255,255,255,0.07);">
-              Private by design. Inputs are not sent to servers while using the Sketch.
-              <button type="button" class="btn-reset-sketch" onclick="document.getElementById('sketch-main').scrollIntoView({behavior:'smooth'});" style="display:block; margin-top:5px; color:rgba(255,255,255,0.3);">↑ Refine inputs on Screen 1</button>
-            </div>
-          </div>
-
+        <div class="title-block anim-fade-up">
+            <div class="sub-head hero-subtitle">PHASE II — ARCHITECTURE</div>
+            <div style="font-family: var(--font-serif); font-size: 22px; font-style: italic; color: var(--gold); margin-bottom: 12px;">Design Your Shape</div>
+            <h1 class="page-h1 hero-title">The Sketch</h1>
+            <div class="page-lead">Move the inputs, pull a boundary. Shape the retirement you want.</div>
         </div>
 
-        <!-- Datum Intelligence HUD -->
-        <div class="d2-hud-card">
-          <div class="d2-hud-status">DATUM INTELLIGENCE</div>
-          <div class="d2-hud-metrics">
-            <div class="d2-hud-metric">
-              <span class="d2-hud-metric-lbl">STRUCTURAL CEILING</span>
-              <span class="d2-hud-metric-val" id="d2-hud-ceil-val" style="color:var(--gold);">—</span>
-            </div>
-            <div class="d2-hud-metric">
-              <span class="d2-hud-metric-lbl">TARGET DATUM</span>
-              <span class="d2-hud-metric-val" id="d2-hud-datum-val" style="color:var(--teal-mid); font-size:13px;">—</span>
-            </div>
-            <div class="d2-hud-metric">
-              <span class="d2-hud-metric-lbl">SURVIVAL FLOOR</span>
-              <span class="d2-hud-metric-val" id="d2-hud-floor-val" style="color:var(--danger-red);">—</span>
-            </div>
-            <div class="d2-hud-metric" style="margin-top:3px; padding-top:3px; border-top:1px solid rgba(255,255,255,0.06);">
-              <span class="d2-hud-metric-lbl">GROWTH PERIOD</span>
-              <span class="d2-hud-metric-val" id="d2-hud-growth" style="font-weight:normal; color:rgba(255,255,255,0.35); font-size:9px;">—</span>
-            </div>
-          </div>
-          <div class="d2-hud-divider">
-            <div class="d2-hud-readout">
-              <div style="margin-bottom:3px; display:flex; align-items:center; gap:4px;">
-                <span style="font-size:9px; color:rgba(255,255,255,0.3); text-transform:uppercase; letter-spacing:0.1em;">Shape State:</span>
-                <strong id="d2-hud-state" class="hud-state-label" style="font-size:11px;">—</strong>
+        <!-- Phase 2.1: Screen 2 input panel — d2-slider-* IDs, separate from Screen 1 -->
+        <div class="d2-input-panel">
+
+          <div class="dialogue-block">
+            <div class="dialogue-prompt mono-label">01 / YOUR TIMELINE</div>
+            <div class="control-group">
+              <div class="control-header">
+                <label class="control-label" for="d2-slider-age">Current Age</label>
+                <span class="control-value" id="d2-val-age">40 yrs</span>
               </div>
-              <div><strong>What it Means:</strong> <span id="d2-hud-means" class="data-line">Drag a boundary to begin.</span></div>
-              <div><strong>What to Consider:</strong> <span id="d2-hud-action" class="data-line">Designed values update live.</span></div>
+              <div class="d2-slider-wrap">
+                <input type="range" id="d2-slider-age" min="18" max="85" value="40" step="1">
+                <div class="d2-ghost-tick" id="d2-tick-age"><div class="d2-ghost-tick-line"></div></div>
+              </div>
+            </div>
+            <div class="control-group" style="margin-bottom:0;">
+              <div class="control-header">
+                <label class="control-label" id="d2-lbl-retire" for="d2-slider-activation">Retirement Age</label>
+                <span class="control-value" id="d2-val-activation">65 yrs</span>
+              </div>
+              <div class="d2-slider-wrap">
+                <input type="range" id="d2-slider-activation" min="45" max="90" value="65" step="1">
+                <div class="d2-ghost-tick" id="d2-tick-activation"><div class="d2-ghost-tick-line"></div></div>
+              </div>
+              <div id="d2-already-retired-msg" style="display:none; margin-top:8px; padding:8px 12px; background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.3); border-radius:4px; font-family:var(--font-mono); font-size:10px; color:var(--gold); letter-spacing:0.05em;">
+                🎉 Congrats — you're already retired! Move the slider right to model a future milestone.
+              </div>
             </div>
           </div>
+
+          <div class="dialogue-block">
+            <div class="dialogue-prompt mono-label">02 / YOUR CAPITAL</div>
+            <div class="control-group" style="margin-bottom:0;">
+              <div class="control-header">
+                <label class="control-label" for="d2-slider-portfolio">Current Portfolio Balance</label>
+                <span class="control-value" id="d2-val-portfolio">$750k</span>
+              </div>
+              <div class="d2-slider-wrap">
+                <input type="range" id="d2-slider-portfolio" min="0" max="1000" value="612" step="1">
+                <div class="d2-ghost-tick" id="d2-tick-portfolio"><div class="d2-ghost-tick-line"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="dialogue-block" style="border-bottom:none; margin-bottom:0;">
+            <div class="dialogue-prompt mono-label" style="color:var(--gold);">03 / YOUR DATUM</div>
+            <div class="control-group" style="margin-bottom:0;">
+              <div class="control-header" style="flex-direction:column; align-items:flex-start;">
+                <div style="display:flex; justify-content:flex-end; width:100%; align-items:flex-end;">
+                  <span class="control-value" id="d2-val-datum" style="color:var(--teal-mid);">$100k / yr</span>
+                </div>
+                <div style="font-family:var(--font-mono); font-size:9px; color:rgba(255,255,255,0.4); margin-top:4px; text-transform:uppercase; letter-spacing:0.1em;">Your target annual retirement spending.</div>
+              </div>
+              <div class="d2-slider-wrap">
+                <input type="range" id="d2-slider-datum" min="0" max="1000" value="411" step="1">
+                <div class="d2-ghost-tick" id="d2-tick-datum"><div class="d2-ghost-tick-line"></div></div>
+              </div>
+            </div>
+
+            <div class="dialogue-block" style="padding-top:14px; border-top:1px solid rgba(255,255,255,0.06);">
+              <div class="dialogue-prompt mono-label">04 / YOUR CONTRIBUTIONS</div>
+              <div class="control-group" style="margin-bottom:0;">
+                <div class="control-header">
+                  <label class="control-label" for="d2-slider-contrib">Annual Contributions</label>
+                  <span class="control-value" id="d2-val-contrib">$25,000</span>
+                </div>
+                <div class="d2-slider-wrap">
+                  <input type="range" id="d2-slider-contrib" min="0" max="1000" value="830" step="1">
+                  <div class="d2-ghost-tick" id="d2-tick-contrib"><div class="d2-ghost-tick-line"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="dialogue-block" style="border-bottom:none; padding-bottom:0;">
+              <div class="dialogue-prompt mono-label">05 / MARKET CONDITIONS</div>
+              <div class="toggle-wrapper">
+                <div class="toggle-container">
+                  <div class="toggle-option">
+                    <input type="radio" id="d2-market-opt" name="d2-market" value="optimistic">
+                    <label for="d2-market-opt">Optimistic</label>
+                  </div>
+                  <div class="toggle-option">
+                    <input type="radio" id="d2-market-avg" name="d2-market" value="average" checked>
+                    <label for="d2-market-avg">Historical</label>
+                  </div>
+                  <div class="toggle-option">
+                    <input type="radio" id="d2-market-stress" name="d2-market" value="stress">
+                    <label for="d2-market-stress">Stress</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="sketch-trust-copy" style="margin-top:8px;">
+              Private by design. Inputs are not sent to servers while using the Sketch.
+            </div>
+          </div>
+
         </div>
 
         <!-- Know Your Shape button -->
@@ -1829,69 +1836,153 @@
 
       <!-- RIGHT PANEL — full size draggable canvas -->
       <div class="design-right">
-        <svg id="d2-canvas" class="design-svg" viewBox="0 0 840 480" preserveAspectRatio="xMidYMid meet">
-          <defs>
-            <clipPath id="d2-plot-clip">
-              <rect x="120" y="30" width="530" height="420"/>
-            </clipPath>
-            <clipPath id="d2-cone-clip">
-              <path id="d2-clip-cone-path" d=""/>
-            </clipPath>
-            <linearGradient id="d2-thermal-grad" x1="0" y1="0" x2="0" y2="100%">
-              <stop id="d2g-ceil"  offset="0"    stop-color="#C9A84C" stop-opacity="0.2"/>
-              <stop id="d2g-mid1"  offset="35%"  stop-color="#5DCAA5" stop-opacity="0.1"/>
-              <stop id="d2g-mid2"  offset="65%"  stop-color="#5DCAA5" stop-opacity="0.1"/>
-              <stop id="d2g-floor" offset="100%" stop-color="#e24b4a" stop-opacity="0.2"/>
-            </linearGradient>
-          </defs>
+        <!-- Zone B: d2s- HUD card above canvas (permanent-pinned intelligence — Screen 2 design state) -->
+        <div class="interactive-layer active" id="d2s-hud-dash" style="position:relative; flex-shrink:0; margin-bottom:6px; opacity:0; transition:opacity 0.6s;">
+          <div class="hud-dashboard" style="display:block;">
+            <div class="telemetry-card pinned" id="d2s-hud-main" style="display:flex;">
+              <div class="hud-split">
+                <div style="min-width:190px; padding-right:16px; border-right:1px solid rgba(255,255,255,0.05); flex-shrink:0; font-family:var(--font-mono);">
+                  <div style="display:flex; flex-direction:column; gap:6px;">
+                    <div style="display:grid; grid-template-columns:1fr auto 1fr; gap:3px; align-items:center; font-size:8px; color:rgba(255,255,255,0.3); text-transform:uppercase; letter-spacing:0.1em; padding-bottom:4px; border-bottom:1px solid rgba(255,255,255,0.05);">
+                      <span style="text-align:right;">DISCOVER</span><span></span><span>DESIGNED</span>
+                    </div>
+                    <div>
+                      <div style="font-size:7px; color:rgba(255,255,255,0.28); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px;">Structural Ceiling</div>
+                      <div style="display:grid; grid-template-columns:1fr 14px 1fr; align-items:center; gap:2px;">
+                        <span id="d2s-cmp-ceil-disc"  style="text-align:right; color:var(--gold); font-size:11px;">—</span>
+                        <span id="d2s-cmp-ceil-arrow" style="text-align:center; color:rgba(255,255,255,0.4); font-size:10px;">—</span>
+                        <span id="d2s-cmp-ceil-des"   style="color:var(--gold); font-size:11px;">—</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div style="font-size:7px; color:rgba(255,255,255,0.28); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px;">Target Datum</div>
+                      <div style="display:grid; grid-template-columns:1fr 14px 1fr; align-items:center; gap:2px;">
+                        <span id="d2s-cmp-datum-disc"  style="text-align:right; color:var(--teal-mid); font-size:11px;">—</span>
+                        <span id="d2s-cmp-datum-arrow" style="text-align:center; color:rgba(255,255,255,0.4); font-size:10px;">—</span>
+                        <span id="d2s-cmp-datum-des"   style="color:var(--teal-mid); font-size:11px;">—</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div style="font-size:7px; color:rgba(255,255,255,0.28); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px;">Survival Floor</div>
+                      <div style="display:grid; grid-template-columns:1fr 14px 1fr; align-items:center; gap:2px;">
+                        <span id="d2s-cmp-floor-disc"  style="text-align:right; color:var(--danger-red); font-size:11px;">—</span>
+                        <span id="d2s-cmp-floor-arrow" style="text-align:center; color:rgba(255,255,255,0.4); font-size:10px;">—</span>
+                        <span id="d2s-cmp-floor-des"   style="color:var(--danger-red); font-size:11px;">—</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div style="font-size:7px; color:rgba(255,255,255,0.28); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px;">Growth Period</div>
+                      <div style="display:grid; grid-template-columns:1fr 14px 1fr; align-items:center; gap:2px;">
+                        <span id="d2s-cmp-yrs-disc"  style="text-align:right; color:rgba(255,255,255,0.65); font-size:11px;">—</span>
+                        <span id="d2s-cmp-yrs-arrow" style="text-align:center; color:rgba(255,255,255,0.4); font-size:10px;">—</span>
+                        <span id="d2s-cmp-yrs-des"   style="color:rgba(255,255,255,0.65); font-size:11px;">—</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="hud-diff" style="border-left: none; padding-left: 0;">
+                  <div class="tel-readout" id="d2s-pinned-readout">
+                    <div class="readout-row" style="margin-bottom: 3px;">
+                      <span style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Discover State:</span>
+                      <strong id="d2s-pin-state-name" class="hud-state-label">—</strong><span id="d2s-pin-state-opener" style="font-family:var(--font-mono); font-size:8px; color:rgba(255,255,255,0.45); margin-left:4px;"></span>
+                    </div>
+                    <div class="readout-row" style="margin-bottom: 3px;">
+                      <span style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Designed State:</span>
+                      <strong id="d2s-pin-designed-state" class="hud-state-label">—</strong><span id="d2s-pin-designed-opener" style="font-family:var(--font-mono); font-size:8px; color:rgba(255,255,255,0.45); margin-left:4px;"></span>
+                    </div>
+                    <div id="d2s-pin-changes-row" class="pin-changes-row" style="display:none;"></div>
+                    <div class="readout-row"><strong>What it Means:</strong> <span id="d2s-pin-means" class="data-line">Move a slider to begin.</span></div>
+                    <div class="readout-row"><strong>What to Consider:</strong> <span id="d2s-pin-inspect" class="data-line">Design values update live.</span></div>
+                    <div class="pin-lever-row">
+                      <span class="lbl-pin-lever">Most Impactful Lever:</span>
+                      <span id="d2s-pin-lever-attribution">—</span>
+                    </div>
+                    <div id="d2s-pin-changed-row" class="readout-row" style="display:none;"><strong>What Changed:</strong> <span id="d2s-pin-changed" class="data-line">No changes yet.</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-          <!-- State tint overlay (OVEREXTENDED flashes red) -->
-          <rect id="d2-state-tint-rect" x="0" y="0" width="840" height="480" fill="none" pointer-events="none"/>
-
-          <!-- Grid axes -->
-          <text x="112" y="20" text-anchor="end" font-family="var(--font-mono)" font-size="9" fill="rgba(255,255,255,0.55)" letter-spacing="0.08em">ANNUAL SPEND</text>
-          <g id="d2-grid"></g>
-
-          <g clip-path="url(#d2-plot-clip)">
-            <path id="d2-ghost-cone"  class="design-ghost-cone"                   d=""/>
-            <path id="d2-ghost-ceil"  class="design-ghost-line design-ghost-ceil"  d=""/>
-            <path id="d2-ghost-floor" class="design-ghost-line design-ghost-floor" d=""/>
-            <path id="d2-ghost-datum" class="design-ghost-line design-ghost-datum" d=""/>
-            <path id="d2-cone"        class="design-cone-fill"                     d=""/>
-            <path id="d2-ceil-line"   class="design-ceil-line"                     d=""/>
-            <path id="d2-floor-line"  class="design-floor-line"                    d=""/>
-            <path id="d2-datum-line"  class="design-datum-line"                    d=""/>
-          </g>
-          <path id="d2-ceil-hit"  d="" stroke="transparent" stroke-width="16" fill="none" style="cursor:ns-resize;" pointer-events="stroke"/>
-          <path id="d2-floor-hit" d="" stroke="transparent" stroke-width="16" fill="none" style="cursor:ns-resize;" pointer-events="stroke"/>
-          <path id="d2-datum-hit" d="" stroke="transparent" stroke-width="16" fill="none" style="cursor:ns-resize;" pointer-events="stroke"/>
-          <g id="d2-handle-ceil"  class="design-handle" tabindex="0" role="slider" aria-label="Structural Ceiling spending target">
-            <title>STRUCTURAL CEILING — Favorable path: if returns run above the baseline.</title>
-            <circle id="d2-node-ceil"  r="7" fill="#C9A84C"/>
-            <line   id="d2-handle-ceil-line" x1="650" y1="80" x2="650" y2="350" stroke="#C9A84C" stroke-width="1" stroke-dasharray="2 3" stroke-opacity="0.4"/>
-          </g>
-          <g id="d2-handle-floor" class="design-handle" aria-label="Survival Floor spending target">
-            <title>SURVIVAL FLOOR — Stress path: if returns stay low.</title>
-            <circle id="d2-node-floor" r="6" fill="#e24b4a"/>
-          </g>
-          <g id="d2-handle-datum" class="design-handle" tabindex="0" role="slider" aria-label="Target Datum spending target">
-            <title>TARGET DATUM — Your chosen spending target on the baseline path.</title>
-            <circle id="d2-node-datum" r="8" fill="#5DCAA5"/>
-            <line   id="d2-handle-datum-line" x1="650" y1="230" x2="650" y2="350" stroke="#5DCAA5" stroke-width="1" stroke-dasharray="2 3" stroke-opacity="0.4"/>
-          </g>
-          <text id="d2-lbl-ceil"  font-family="var(--font-mono)" font-size="9"  fill="#C9A84C"  letter-spacing="1.2">STRUCTURAL CEILING</text>
-          <text id="d2-lbl-floor" font-family="var(--font-mono)" font-size="9"  fill="#e24b4a"  letter-spacing="1.2">SURVIVAL FLOOR</text>
-          <text id="d2-lbl-datum" font-family="var(--font-mono)" font-size="10" fill="#5DCAA5"  letter-spacing="1.5">DATUM</text>
-          <line id="d2-xaxis-line" x1="120" y1="450" x2="650" y2="450" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
-          <text id="d2-xaxis-start" x="120" y="468" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="rgba(255,255,255,0.4)">AGE</text>
-          <text id="d2-xaxis-end"   x="650" y="468" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--teal-mid)">RETIRE</text>
-          <text id="d2-xaxis-mid"   x="385" y="475" text-anchor="middle" font-family="var(--font-mono)" font-size="8" fill="rgba(255,255,255,0.25)">YEARS UNTIL RETIREMENT</text>
-          <rect id="d2-tension-overlay" x="80" y="20" width="570" height="320" fill="none" stroke="#C9A84C" stroke-width="0" rx="2" opacity="0"/>
-          <g clip-path="url(#d2-cone-clip)">
-            <rect id="design-market-sweep" class="market-sweep" x="-200" y="-100" width="250" height="700"
-                  fill="var(--danger-red)" opacity="0" style="pointer-events:none;"/>
-          </g>
-        </svg>
+        <!-- Zone B: d2s- canvas (Screen 1 cone clone, slider-driven, no drag handles) -->
+        <div class="canvas-wrap" style="flex:1; position:relative;">
+          <svg class="range-svg" id="d2s-canvas" viewBox="0 0 840 480" preserveAspectRatio="xMidYMid meet" aria-hidden="true" style="cursor:default;">
+            <defs>
+              <linearGradient id="d2s-thermal-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop id="d2s-stop-ceil"  offset="0%"   stop-color="#C9A84C" stop-opacity="0.25" />
+                <stop id="d2s-stop-mid1"  offset="35%"  stop-color="#5DCAA5" stop-opacity="0.15" />
+                <stop id="d2s-stop-mid2"  offset="65%"  stop-color="#5DCAA5" stop-opacity="0.15" />
+                <stop id="d2s-stop-floor" offset="100%" stop-color="#e24b4a" stop-opacity="0.25" />
+              </linearGradient>
+            </defs>
+            <rect id="d2s-market-sweep" class="market-sweep" x="-250" y="-100" width="250" height="700" fill="transparent" />
+            <rect id="d2s-state-tint-rect" x="0" y="0" width="840" height="480" fill="none" pointer-events="none"/>
+            <g id="d2s-grid-axes-group">
+              <text x="80" y="40" text-anchor="end" class="axis-title" style="fill:rgba(255,255,255,0.8);">ANNUAL SPEND</text>
+              <line x1="80" y1="50"  x2="700" y2="50"  class="grid-tick" />
+              <text id="d2s-grid-lbl-1" x="70" y="54"  text-anchor="end" class="grid-label" style="fill:rgba(255,255,255,0.8);">$400k</text>
+              <line x1="80" y1="150" x2="700" y2="150" class="grid-tick" />
+              <text id="d2s-grid-lbl-2" x="70" y="154" text-anchor="end" class="grid-label" style="fill:rgba(255,255,255,0.8);">$300k</text>
+              <line x1="80" y1="250" x2="700" y2="250" class="grid-tick" />
+              <text id="d2s-grid-lbl-3" x="70" y="254" text-anchor="end" class="grid-label" style="fill:rgba(255,255,255,0.8); font-weight:bold;">$200k</text>
+              <line x1="80" y1="350" x2="700" y2="350" class="grid-tick" />
+              <text id="d2s-grid-lbl-4" x="70" y="354" text-anchor="end" class="grid-label" style="fill:rgba(255,255,255,0.8);">$100k</text>
+              <line x1="80" y1="450" x2="700" y2="450" class="grid-tick" />
+              <text id="d2s-grid-lbl-5" x="70" y="454" text-anchor="end" class="grid-label" style="fill:rgba(255,255,255,0.8);">$0k</text>
+              <line x1="120" y1="460" x2="650" y2="460" class="time-axis-line" />
+              <line x1="120" y1="455" x2="120" y2="465" class="time-axis-line" />
+              <line x1="650" y1="455" x2="650" y2="465" class="time-axis-line" />
+              <text id="d2s-time-start" x="120" y="475" text-anchor="middle" class="time-label" style="fill:rgba(255,255,255,0.8);">AGE 40</text>
+              <text id="d2s-time-end"   x="650" y="475" text-anchor="middle" class="time-label" style="fill:var(--teal-mid);">RETIRE: 65</text>
+            </g>
+            <g id="d2s-clean-layer">
+              <!-- Ghost cone: ghostBaseline — always visible (Screen 2 = permanently pinned) -->
+              <path id="d2s-ghost-cone"  fill="url(#d2s-thermal-grad)" opacity="0.3" d="" />
+              <path id="d2s-ghost-ceil"  class="ghost-line ghost-ceil  morph ghost-active" d="" />
+              <path id="d2s-ghost-floor" class="ghost-line ghost-floor morph ghost-active" d="" />
+              <path id="d2s-ghost-datum" class="ghost-line ghost-datum morph ghost-active" d="" />
+              <!-- Live cone: designScenario — redrawn by renderDesignCanvas() -->
+              <path id="d2s-cone" fill="url(#d2s-thermal-grad)" opacity="0" d="" />
+              <g class="boundary-group">
+                <path id="d2s-ceil-line" class="boundary-line b-ceiling morph" d="" />
+                <circle id="d2s-node-ceil" class="morph-node" cx="650" cy="0" r="4" fill="var(--gold)" />
+                <text id="d2s-ceil-lbl" class="range-label morph-node" x="665" y="0" text-anchor="start" style="fill:var(--gold);">STRUCTURAL CEILING</text>
+              </g>
+              <g class="boundary-group">
+                <path id="d2s-floor-line" class="boundary-line b-floor morph" d="" />
+                <circle id="d2s-node-floor" class="morph-node" cx="650" cy="0" r="4" fill="var(--danger-red)" />
+                <text id="d2s-floor-lbl" class="range-label morph-node" x="665" y="0" text-anchor="start" style="fill:var(--danger-red);">SURVIVAL FLOOR</text>
+              </g>
+              <g id="d2s-datum-dragger" class="datum-group">
+                <path id="d2s-datum-hitbox" class="boundary-line" stroke="transparent" stroke-width="30" fill="none" d="" pointer-events="stroke" />
+                <path id="d2s-datum-line" class="boundary-line b-datum" d="" />
+                <circle id="d2s-node-datum" class="morph-node" cx="650" cy="0" r="6" fill="var(--teal-mid)" style="opacity:0;" />
+                <text id="d2s-datum-lbl" class="range-label morph-node" x="665" y="0" text-anchor="start" style="fill:var(--teal-mid);">YOUR DATUM</text>
+              </g>
+            </g>
+            <g id="d2s-scrubber-group" style="opacity: 0; pointer-events: none; transition: opacity 0.2s;">
+              <line id="d2s-scrubber-line" x1="650" y1="50" x2="650" y2="460" stroke="#ffffff" stroke-opacity="0.4" stroke-width="1" stroke-dasharray="4 4" />
+              <g id="d2s-tt-g-ceil" transform="translate(650, 100)">
+                 <rect x="15" y="-14" width="280" height="36" fill="#091221" fill-opacity="0.95" stroke="var(--gold)" rx="4" />
+                 <text x="25" y="0" font-family="var(--font-mono)" font-size="10" fill="var(--gold)" font-weight="bold">CEILING @ <tspan id="d2s-tt-age-ceil">45</tspan> <tspan fill="var(--white)" font-family="var(--font-serif)" font-style="italic" id="d2s-tt-data-ceil">| $2.94M / $97k yr</tspan></text>
+                 <text x="25" y="14" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.6">Favorable path — if returns run above the baseline.</text>
+              </g>
+              <g id="d2s-tt-g-floor" transform="translate(650, 200)">
+                 <rect x="15" y="-14" width="280" height="36" fill="#091221" fill-opacity="0.95" stroke="var(--danger-red)" rx="4" />
+                 <text x="25" y="0" font-family="var(--font-mono)" font-size="10" fill="var(--danger-red)" font-weight="bold">FLOOR @ <tspan id="d2s-tt-age-floor">45</tspan> <tspan fill="var(--white)" font-family="var(--font-serif)" font-style="italic" id="d2s-tt-data-floor">| $1.61M / $36k yr</tspan></text>
+                 <text x="25" y="14" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.6">Stress path — if returns stay low.</text>
+              </g>
+              <g id="d2s-tt-g-datum" transform="translate(650, 300)">
+                 <rect x="15" y="-14" width="310" height="52" fill="#091221" fill-opacity="0.95" stroke="var(--teal-mid)" rx="4" />
+                 <text x="25" y="0" font-family="var(--font-mono)" font-size="10" fill="var(--teal-mid)" font-weight="bold">DATUM @ <tspan id="d2s-tt-age-datum">45</tspan> <tspan fill="var(--white)" font-family="var(--font-serif)" font-style="italic" id="d2s-tt-data-datum">| $100k/yr</tspan></text>
+                 <text x="25" y="14" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.6">Your chosen spending target.</text>
+                 <text x="25" y="26" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.4">Capital is a broad-stroke estimate, not a path projection.</text>
+              </g>
+            </g>
+            <text x="390" y="472" text-anchor="middle" class="axis-title">YEARS UNTIL RETIREMENT</text>
+          </svg>
+        </div>
 
         <!-- Canvas HUD: tension overlay — position:absolute stays as-is -->
         <div id="canvas-hud" style="
@@ -2455,10 +2546,12 @@
       }
 
       const s2d = document.getElementById('screen-2-design');
-      // Re-entry shortcut: skip splash + rebuild if already initialized
+      // Re-entry: re-capture ghostBaseline from current Screen 1 state and re-init
       if (s2d.classList.contains('revealed')) {
         try { updateEngine(); } catch(e) {}
+        ghostBaseline = Object.assign({}, currentScenario);
         initDesignState();
+        try { initDesignSliders(); } catch(e) {}
         renderScreen2();
         updateScreen2Narrative();
         revealCarryForward();
@@ -2478,8 +2571,12 @@
 
       setTimeout(function(){
         if (splash) splash.classList.add('out');
+        var _d2Hud = document.getElementById('d2s-hud-dash');
+        if (_d2Hud) _d2Hud.style.opacity = '1';
         try { updateEngine(); } catch(e) { console.error('updateEngine failed:', e); }
+        ghostBaseline = Object.assign({}, currentScenario);
         initDesignState();
+        try { initDesignSliders(); } catch(e) {}
         revealCarryForward();
         initD2DragHandlers();
         renderScreen2();
@@ -2718,19 +2815,23 @@
         }, 2100);
     }
 
-    function triggerDesignSweep(type) {
-        const dsweep = document.getElementById('design-market-sweep');
-        if (!dsweep) return;
-        dsweep.classList.remove('sweep-active-stress', 'sweep-active-opt');
-        void dsweep.offsetWidth;
+    // Shared sweep rect animator — used by design canvas and d2s-canvas market handlers
+    function triggerSweepRect(rectId, type) {
+        var el = document.getElementById(rectId);
+        if (!el) return;
+        el.classList.remove('sweep-active-stress', 'sweep-active-opt');
+        void el.offsetWidth;
         if (type === 'stress') {
-            dsweep.setAttribute('fill', '#e24b4a');
-            dsweep.classList.add('sweep-active-stress');
+            el.setAttribute('fill', '#e24b4a');
+            el.classList.add('sweep-active-stress');
         } else if (type === 'optimistic') {
-            dsweep.setAttribute('fill', '#C9A84C');
-            dsweep.classList.add('sweep-active-opt');
+            el.setAttribute('fill', '#C9A84C');
+            el.classList.add('sweep-active-opt');
         }
     }
+    // Legacy alias — design-market handler calls this; design-market-sweep rect was never added
+    // so it silently no-ops; preserved to avoid breaking the design-market mirror handler
+    function triggerDesignSweep(type) { triggerSweepRect('design-market-sweep', type); }
 
     function updateTracker() {
         if(touched.timeline) document.getElementById('prog-timeline').classList.add('active');
@@ -4990,6 +5091,7 @@
         document.getElementById('ghost-ceil').classList.remove('ghost-active');
         document.getElementById('ghost-floor').classList.remove('ghost-active');
         document.getElementById('ghost-cone').classList.remove('ghost-cone-active');
+        document.getElementById('ghost-cone').style.opacity = '0';
         document.getElementById('ghost-datum').classList.remove('ghost-active');
         // GEM D: hide hatch + label on clear
         const gHatchClear = document.getElementById('ghost-hatch-area');
@@ -5301,6 +5403,7 @@
         runEmergenceNarrative(); 
         applyMarketToggleColors('market');
         applyMarketToggleColors('design-market');
+        applyMarketToggleColors('d2-market');
         // Pin + Save wired once at page load (btn-submit block) — no re-wiring needed here
 
         // ── V17: wired listeners (replaced inline onclick / onmouseover) ──
@@ -5482,6 +5585,547 @@
 
     // Entry state: all zero — handles sit exactly on the ghost lines.
     var designOverrides = { ceilDelta: 0, floorDelta: 0, datumDelta: 0, isDirty: false };
+
+    // Phase 2.1: three-state architecture
+    // ghostBaseline  — frozen snapshot of currentScenario at Screen 1→2 entry ("Shape You Have")
+    // designScenario — Screen 2 working state, written by d2-slider-* inputs
+    var ghostBaseline  = null;
+    var designScenario = null;
+    var _d2LastEndpointCY = { ceil: 0, floor: 450, datum: 225 };
+    var _d2LastScenario   = null;
+
+    // Phase 2.1 STUB: read d2-slider-* into designScenario + update display values
+    function updateDesignEngine() {
+        if (!ghostBaseline) return;
+        var age     = parseInt(document.getElementById('d2-slider-age').value, 10);
+        var retire  = parseInt(document.getElementById('d2-slider-activation').value, 10);
+        var port    = portPosToVal(parseInt(document.getElementById('d2-slider-portfolio').value));
+        var datum   = datumPosToVal(parseInt(document.getElementById('d2-slider-datum').value));
+        var contrib = contribPosToVal(parseInt(document.getElementById('d2-slider-contrib').value));
+        designScenario = { age: age, retire: retire, port: port, datum: datum, contrib: contrib };
+        var _dv = function(id, txt) { var el = document.getElementById(id); if (el) el.textContent = txt; };
+        _dv('d2-val-age', age + ' yrs');
+        _dv('d2-val-activation', retire + ' yrs');
+        _dv('d2-val-portfolio', port < 1
+            ? '$' + Math.round(port * 1000).toLocaleString('en-US') + 'k'
+            : '$' + port.toFixed(2) + 'M');
+        var tgt = Math.round(datum);
+        _dv('d2-val-datum', (tgt >= 1000 ? '$' + (tgt / 1000).toFixed(2).replace(/\.00$/, '') + 'M' : '$' + tgt + 'k') + ' / yr');
+        _dv('d2-val-contrib', '$' + Math.round(contrib).toLocaleString('en-US'));
+        renderDesignCanvas();
+    }
+
+    // Position ghost tick marks on d2-slider-* at ghostBaseline values
+    function positionDesignGhostTicks() {
+        if (!ghostBaseline) return;
+        var defs = [
+            { id: 'd2-tick-age',        pct: (ghostBaseline.currentAge - 18) / (85 - 18),
+              label: ghostBaseline.currentAge + ' yrs' },
+            { id: 'd2-tick-activation', pct: (ghostBaseline.activationAge - 45) / (90 - 45),
+              label: ghostBaseline.activationAge + ' yrs' },
+            { id: 'd2-tick-portfolio',  pct: portValToPos(ghostBaseline.portfolioVol) / 1000,
+              label: ghostBaseline.portfolioVol < 1
+                  ? '$' + Math.round(ghostBaseline.portfolioVol * 1000) + 'k'
+                  : '$' + ghostBaseline.portfolioVol.toFixed(2) + 'M' },
+            { id: 'd2-tick-datum',      pct: datumValToPos(ghostBaseline.targetSpend) / 1000,
+              label: '$' + Math.round(ghostBaseline.targetSpend) + 'k / yr' },
+            { id: 'd2-tick-contrib',    pct: contribValToPos(ghostBaseline.annualContrib) / 1000,
+              label: '$' + Math.round(ghostBaseline.annualContrib || 0).toLocaleString('en-US') }
+        ];
+        defs.forEach(function(d) {
+            var el = document.getElementById(d.id);
+            if (!el) return;
+            var pct = Math.max(0, Math.min(1, d.pct));
+            el.style.left = (pct * 100) + '%';
+            el.title = 'Discover state: ' + d.label;
+            el.classList.add('visible');
+        });
+    }
+
+    // Copy ghostBaseline into d2-slider-* inputs and populate display values + ghost ticks
+    function initDesignSliders() {
+        if (!ghostBaseline) return;
+        var _sv = function(id, val) { var el = document.getElementById(id); if (el) el.value = val; };
+        _sv('d2-slider-age',        ghostBaseline.currentAge);
+        _sv('d2-slider-activation', ghostBaseline.activationAge);
+        _sv('d2-slider-portfolio',  portValToPos(ghostBaseline.portfolioVol));
+        _sv('d2-slider-datum',      datumValToPos(ghostBaseline.targetSpend));
+        _sv('d2-slider-contrib',    contribValToPos(ghostBaseline.annualContrib));
+        // Sync Screen 2 market radio to ghostBaseline so _dMkt starts false
+        var _gbParadigm = ghostBaseline.baselineRate === 1.040 ? 'optimistic'
+                        : ghostBaseline.baselineRate === 1.015 ? 'stress' : 'average';
+        var _gbMktEl = document.querySelector('input[name="d2-market"][value="' + _gbParadigm + '"]');
+        if (_gbMktEl) _gbMktEl.checked = true;
+        updateDesignEngine();
+        positionDesignGhostTicks();
+        renderDesignCanvas();
+    }
+
+    // Render the d2s- canvas + HUD from designScenario (live) vs ghostBaseline (ghost)
+    function renderDesignCanvas() {
+        if (!ghostBaseline || !designScenario) return;
+
+        var ds = designScenario;
+        var age    = ds.age;
+        var retire = ds.retire;
+        var yrs    = Math.max(0, retire - age);
+
+        // Build full scenario from designScenario + d2-market/inflation radio state
+        var mktEl = document.querySelector('input[name="d2-market"]:checked');
+        var paradigm = mktEl ? mktEl.value : 'average';
+        var cRate = 1.015, bRate = 1.035, uRate = 1.055;
+        if (paradigm === 'optimistic') { cRate = 1.020; bRate = 1.040; uRate = 1.065; }
+        else if (paradigm === 'stress') { cRate = 1.005; bRate = 1.015; uRate = 1.035; }
+        var isNom = ghostBaseline.isNominal || false;
+        var taxMult = ghostBaseline.taxMult || 0.8;
+
+        var s = {
+            currentAge: age, activationAge: retire, yearsToGrow: yrs,
+            portfolioVol: ds.port, annualContrib: ds.contrib, targetSpend: Math.round(ds.datum),
+            conservativeRate: cRate, baselineRate: bRate, upsideRate: uRate,
+            isNominal: isNom, taxMult: taxMult, inflRate: 0.03
+        };
+
+        var xStart = 120, xEnd = 650;
+        var ptsStart = getMathPoint(0, yrs, s);
+        var ptsEnd   = getMathPoint(yrs, yrs, s);
+
+        // Pre-compute ghost endpoints for Y-axis autoscale
+        var gb    = ghostBaseline;
+        var gbYrs = gb.yearsToGrow || Math.max(0, gb.activationAge - gb.currentAge);
+        var gbStart = getMathPoint(0,    gbYrs, gb);
+        var gbEnd   = getMathPoint(gbYrs, gbYrs, gb);
+
+        // Autoscale Y-axis — mirror Screen 1's formula for both live and ghost scenarios
+        // Screen 1 uses: [ptsStart.floorSpend, ptsEnd.ceilSpend, ptsEnd.floorSpend, ptsStart.datumSpend, ptsEnd.datumSpend]
+        var _d2AV = [
+            ptsStart.floorSpend, ptsEnd.ceilSpend, ptsEnd.floorSpend, ptsStart.datumSpend, ptsEnd.datumSpend,
+            gbStart.floorSpend,  gbEnd.ceilSpend,  gbEnd.floorSpend,  gbStart.datumSpend,  gbEnd.datumSpend
+        ];
+        var _d2VMin = Math.min.apply(null, _d2AV);
+        var _d2VMax = Math.max.apply(null, _d2AV);
+        var _d2PR   = Math.max((_d2VMax - _d2VMin) * 1.25, 60);
+        var _d2Mid  = (_d2VMin + _d2VMax) / 2;
+        globalYMin  = Math.max(0, _d2Mid - _d2PR / 2);
+        globalYMax  = _d2Mid + _d2PR / 2;
+
+        // Build live paths
+        var dCeil = 'M ' + xStart + ' ' + spendToY(ptsStart.ceilSpend);
+        var dFloor= 'M ' + xStart + ' ' + spendToY(ptsStart.floorSpend);
+        var dDatum= 'M ' + xStart + ' ' + spendToY(ptsStart.datumSpend);
+        var dConeCeil = [], dConeFloor = [];
+        for (var i = 0; i <= 50; i++) {
+            var off = (i / 50) * yrs;
+            var x   = xStart + (i / 50) * (xEnd - xStart);
+            var pts = getMathPoint(off, yrs, s);
+            if (i > 0) {
+                dCeil  += ' L ' + x + ' ' + spendToY(pts.ceilSpend);
+                dFloor += ' L ' + x + ' ' + spendToY(pts.floorSpend);
+                dDatum += ' L ' + x + ' ' + spendToY(pts.datumSpend);
+            }
+            dConeCeil.push(x + ' ' + spendToY(pts.ceilSpend));
+            dConeFloor.unshift(x + ' ' + spendToY(pts.floorSpend));
+        }
+        var dCone = 'M ' + dConeCeil[0] + ' ' +
+            dConeCeil.map(function(p){ return 'L ' + p; }).join(' ') + ' ' +
+            dConeFloor.map(function(p){ return 'L ' + p; }).join(' ') + ' Z';
+
+        // Build ghost paths from ghostBaseline (gbStart/gbEnd already computed above)
+        var gbCeil = 'M ' + xStart + ' ' + spendToY(gbStart.ceilSpend);
+        var gbFloor= 'M ' + xStart + ' ' + spendToY(gbStart.floorSpend);
+        var gbDatum= 'M ' + xStart + ' ' + spendToY(gbStart.datumSpend);
+        var gbCC = [], gbCF = [];
+        for (var i = 0; i <= 50; i++) {
+            var off = (i / 50) * gbYrs;
+            var x   = xStart + (i / 50) * (xEnd - xStart);
+            var pts = getMathPoint(off, gbYrs, gb);
+            if (i > 0) {
+                gbCeil  += ' L ' + x + ' ' + spendToY(pts.ceilSpend);
+                gbFloor += ' L ' + x + ' ' + spendToY(pts.floorSpend);
+                gbDatum += ' L ' + x + ' ' + spendToY(pts.datumSpend);
+            }
+            gbCC.push(x + ' ' + spendToY(pts.ceilSpend));
+            gbCF.unshift(x + ' ' + spendToY(pts.floorSpend));
+        }
+        var gbCone = 'M ' + gbCC[0] + ' ' +
+            gbCC.map(function(p){ return 'L ' + p; }).join(' ') + ' ' +
+            gbCF.map(function(p){ return 'L ' + p; }).join(' ') + ' Z';
+
+        var _sa = function(id, attr, val) { var el = document.getElementById(id); if (el) el.setAttribute(attr, val); };
+        var _st = function(id, txt)       { var el = document.getElementById(id); if (el) el.textContent = txt; };
+        var _ss = function(id, prop, val) { var el = document.getElementById(id); if (el) el.style[prop] = val; };
+
+        // Ghost paths
+        _sa('d2s-ghost-cone',  'd', gbCone);
+        _sa('d2s-ghost-ceil',  'd', gbCeil);
+        _sa('d2s-ghost-floor', 'd', gbFloor);
+        _sa('d2s-ghost-datum', 'd', gbDatum);
+        // Live paths
+        _sa('d2s-cone',         'd', dCone);
+        _sa('d2s-ceil-line',    'd', dCeil);
+        _sa('d2s-floor-line',   'd', dFloor);
+        _sa('d2s-datum-line',   'd', dDatum);
+        _sa('d2s-datum-hitbox', 'd', dDatum);
+        // Show live cone after first render
+        _ss('d2s-cone', 'opacity', '0.9');
+        _ss('d2s-node-datum', 'opacity', '1');
+
+        // Node positions + labels
+        _sa('d2s-node-ceil',  'cx', xEnd); _sa('d2s-node-ceil',  'cy', spendToY(ptsEnd.ceilSpend));
+        _sa('d2s-ceil-lbl',   'x', xEnd + 15); _sa('d2s-ceil-lbl',   'y', spendToY(ptsEnd.ceilSpend) + 4);
+        _sa('d2s-node-floor', 'cx', xEnd); _sa('d2s-node-floor', 'cy', spendToY(ptsEnd.floorSpend));
+        _sa('d2s-floor-lbl',  'x', xEnd + 15); _sa('d2s-floor-lbl',  'y', spendToY(ptsEnd.floorSpend) + 4);
+        _sa('d2s-node-datum', 'cx', xEnd); _sa('d2s-node-datum', 'cy', spendToY(ptsEnd.datumSpend));
+        _sa('d2s-datum-lbl',  'x', xEnd + 15); _sa('d2s-datum-lbl',  'y', spendToY(ptsEnd.datumSpend) + 4);
+        _d2LastEndpointCY.ceil  = spendToY(ptsEnd.ceilSpend);
+        _d2LastEndpointCY.floor = spendToY(ptsEnd.floorSpend);
+        _d2LastEndpointCY.datum = spendToY(ptsEnd.datumSpend);
+
+        // Grid labels (share Screen 1 Y-axis scale)
+        _st('d2s-grid-lbl-1', formatYLabel(globalYMax));
+        _st('d2s-grid-lbl-2', formatYLabel(globalYMax - (globalYMax - globalYMin) * 0.25));
+        _st('d2s-grid-lbl-3', formatYLabel((globalYMax + globalYMin) / 2));
+        _st('d2s-grid-lbl-4', formatYLabel(globalYMin + (globalYMax - globalYMin) * 0.25));
+        _st('d2s-grid-lbl-5', formatYLabel(globalYMin));
+        _st('d2s-time-start', 'AGE ' + age);
+        _st('d2s-time-end',   yrs > 0 ? 'RETIRE: ' + retire : 'TODAY');
+
+        // Shape state for designed scenario (live)
+        var stateObj = getShapeStateObj(ptsEnd);
+        _ss('d2s-datum-line', 'stroke', stateObj.color);
+        _ss('d2s-node-datum', 'fill',   stateObj.color);
+        _ss('d2s-datum-lbl',  'fill',   stateObj.color);
+        var tintEl = document.getElementById('d2s-state-tint-rect');
+        if (tintEl) tintEl.setAttribute('fill', stateObj.name === 'OVEREXTENDED' ? 'rgba(226,75,74,0.06)' : 'none');
+        // Detail 6: datum proximity pulse — mirror Screen 1 shape class on d2s-canvas
+        var _d2CanvasEl = document.getElementById('d2s-canvas');
+        if (_d2CanvasEl) {
+            _d2CanvasEl.classList.remove('shape-healthy', 'shape-under-pressure', 'shape-at-limit');
+            if (stateObj.name === 'GROUNDED')  _d2CanvasEl.classList.add('shape-under-pressure');
+            else if (stateObj.name === 'STRETCHED') _d2CanvasEl.classList.add('shape-at-limit');
+            else _d2CanvasEl.classList.add('shape-healthy');
+        }
+
+        var fmt = function(v) { return v >= 1000 ? '$' + (v/1000).toFixed(2).replace(/\.00$/,'') + 'M' : '$' + Math.round(v) + 'k'; };
+
+        // Discover state from ghostBaseline endpoint (gbEnd already computed above)
+        var gbStateObj = getShapeStateObj(gbEnd);
+
+        // Cache full scenario for scrubber (rates defined locally in this function)
+        _d2LastScenario = s;
+
+        // Discover / Designed state lines
+        var _dnEl = document.getElementById('d2s-pin-state-name');
+        var _doEl = document.getElementById('d2s-pin-state-opener');
+        var _gnEl = document.getElementById('d2s-pin-designed-state');
+        var _goEl = document.getElementById('d2s-pin-designed-opener');
+        if (_dnEl) { _dnEl.textContent = gbStateObj.name; _dnEl.style.color = gbStateObj.color; }
+        if (_doEl) _doEl.textContent = gbStateObj.physicsShort ? '— ' + gbStateObj.physicsShort : '';
+        if (_gnEl) { _gnEl.textContent = stateObj.name; _gnEl.style.color = stateObj.color; }
+        if (_goEl) _goEl.textContent = stateObj.physicsShort ? '— ' + stateObj.physicsShort : '';
+
+        // PINNED comparison: getPinnedCaseObj(ghostBaseline-as-pinnedState, ptsEnd, s)
+        var _d2Fill = function(tmpl, vars) {
+            return tmpl.replace(/\{(\w+)\}/g, function(m, k) { return (k in vars) ? vars[k] : m; });
+        };
+        var _d2Vars = {
+            aboveCeil:          fmt(Math.abs(ptsEnd.datumSpend - ptsEnd.ceilSpend)),
+            gapToCeil:          fmt(Math.abs(ptsEnd.ceilSpend  - ptsEnd.datumSpend)),
+            gapToFloor:         fmt(Math.abs(ptsEnd.datumSpend - ptsEnd.floorSpend)),
+            floorAboveSpend:    fmt(Math.abs(ptsEnd.floorSpend - ptsEnd.datumSpend)),
+            ceilK:              fmt(ptsEnd.ceilSpend),
+            deltaCeilK:         fmt(Math.abs(ptsEnd.ceilSpend  - gbEnd.ceilSpend)),
+            newCeilK:           fmt(ptsEnd.ceilSpend),
+            yearsDelta:         Math.abs(retire - gb.activationAge),
+            newRetire:          retire,
+            newContribK:        '$' + Math.round((ds.contrib || 0) / 1000) + 'k',
+            newYears:           yrs,
+            floorK:             fmt(ptsEnd.floorSpend),
+            deltaFloorK:        fmt(Math.abs(ptsEnd.floorSpend - gbEnd.floorSpend)),
+            newFloorAboveSpend: fmt(Math.abs(ptsEnd.floorSpend - ptsEnd.datumSpend)),
+            pinnedRetire:       gb.activationAge,
+            ageDelta:           Math.abs(age - gb.currentAge)
+        };
+        var gbPinnedState = {
+            retire:         gb.activationAge,
+            age:            gb.currentAge,
+            port:           gb.portfolioVol,
+            contrib:        gb.annualContrib,
+            datum:          gb.targetSpend,
+            pinnedParadigm: gb.baselineRate === 1.040 ? 'Optimistic' : gb.baselineRate === 1.015 ? 'Stress' : 'Historical',
+            pinnedInflStr:  gb.isNominal ? 'Nominal' : 'Real',
+            pinnedTax:      Math.round((1.0 - (gb.taxMult || 1.0)) * 100),
+            stateObj:       gbStateObj
+        };
+        var _phys = '', _act = '', _leverDelta = '', _d2ChangeHtml = '', _d2DomLever = '';
+        try {
+            var _wbCase = getPinnedCaseObj(gbPinnedState, ptsEnd, s);
+            if (_wbCase && _wbCase.isSingleLever) {
+                _phys = _d2Fill(_wbCase.physics, _d2Vars);
+                _act  = _d2Fill(_wbCase.action,  _d2Vars);
+                var _ld = _wbCase.lever, _sym = _wbCase.direction === 'down' ? '↓' : '↑';
+                if      (_ld === 'datum')     { _leverDelta = 'Datum'     + _sym + ' ' + fmt(gb.targetSpend)       + '/yr → ' + fmt(ptsEnd.datumSpend)   + '/yr'; }
+                else if (_ld === 'retire')    { _leverDelta = 'Retire'    + _sym + ' ' + gb.activationAge          + ' yrs → ' + retire + ' yrs'; }
+                else if (_ld === 'portfolio') { _leverDelta = 'Portfolio' + _sym + ' ' + fmt(gb.portfolioVol*1000) + ' → '     + fmt(ds.port*1000); }
+                else if (_ld === 'contrib')   { _leverDelta = 'Contrib'   + _sym + ' $' + Math.round((gb.annualContrib||0)/1000) + 'k/yr → $' + Math.round((ds.contrib||0)/1000) + 'k/yr'; }
+                else if (_ld === 'age')       { _leverDelta = 'Age'       + _sym + ' ' + gb.currentAge             + ' yrs → ' + age    + ' yrs'; }
+            } else {
+                // ── Multi-lever heuristic (port of Screen 1 heuristic) ─────────────
+                var _d2RetireDelta  = retire - gb.activationAge;
+                var _d2RetireAbs    = Math.abs(_d2RetireDelta);
+                var _d2RetireBand   = _d2RetireAbs > 15 ? 'generational' : _d2RetireAbs >= 10 ? 'dramatic' : _d2RetireAbs >= 5 ? 'large' : _d2RetireAbs >= 2 ? 'moderate' : 'small';
+                var _d2CapDelta     = ds.port - gb.portfolioVol;
+                var _d2CapPct       = Math.abs(_d2CapDelta) / Math.max(Math.abs(gb.portfolioVol), 0.01);
+                var _d2CapBand      = _d2CapPct > 0.5 ? 'dramatic' : _d2CapPct >= 0.25 ? 'large' : _d2CapPct >= 0.10 ? 'moderate' : 'small';
+                var _d2CapPctStr    = Math.round(_d2CapPct * 100) + '%';
+                var _d2ContribDelta = ds.contrib - gb.annualContrib;
+                var _d2ContribAbs   = Math.abs(_d2ContribDelta);
+                var _d2ContribBand  = _d2ContribAbs > 40000 ? 'dramatic' : _d2ContribAbs >= 15000 ? 'large' : _d2ContribAbs >= 5000 ? 'moderate' : 'small';
+                var _d2ContribKStr  = '$' + Math.max(1, Math.round(_d2ContribAbs / 1000)) + 'k';
+                var _d2DatumDelta   = s.targetSpend - gb.targetSpend;
+                var _d2DatumAbs     = Math.abs(_d2DatumDelta);
+                var _d2DatumBand    = _d2DatumAbs > 25 ? 'large' : _d2DatumAbs >= 10 ? 'moderate' : 'small';
+                var _d2DatumPct     = Math.round(_d2DatumAbs / Math.max(Math.abs(gb.targetSpend), 1) * 100);
+                var _d2DCur         = s.targetSpend >= 1000 ? '$' + (s.targetSpend/1000).toFixed(2).replace(/\.00$/, '') + 'M' : '$' + s.targetSpend + 'k';
+                var _d2AgeDelta     = age - gb.currentAge;
+                var _d2AgeAbs       = Math.abs(_d2AgeDelta);
+                var _d2AgeBand      = _d2AgeAbs > 12 ? 'dramatic' : _d2AgeAbs >= 7 ? 'large' : _d2AgeAbs >= 3 ? 'moderate' : 'small';
+                var _d2CurMkt       = paradigm === 'optimistic' ? 'Optimistic' : paradigm === 'stress' ? 'Stress' : 'Historical';
+                var _d2RetireChg    = gb.activationAge !== retire;
+                var _d2AgeChg       = gb.currentAge !== age;
+                var _d2CapChg       = Math.abs(gb.portfolioVol - ds.port) > 0.001;
+                var _d2ContribChg   = Math.abs(gb.annualContrib - ds.contrib) > 100;
+                var _d2DatumChg     = gb.targetSpend !== s.targetSpend;
+                var _d2MktChg       = !!(gbPinnedState.pinnedParadigm && gbPinnedState.pinnedParadigm !== _d2CurMkt);
+                var _d2Pchg = [];
+                if (_d2RetireChg) { var _d2RDir = _d2RetireDelta > 0 ? 'later' : 'earlier'; _d2Pchg.push('Retirement moved ' + _d2RDir + ' by ' + _d2RetireAbs + ' yr to ' + retire + '.'); }
+                if (_d2AgeChg)     _d2Pchg.push('Current age moved to ' + age + '.');
+                if (_d2CapChg)   { var _d2CDir = _d2CapDelta > 0 ? 'up' : 'down'; var _d2CStr = ds.port >= 1 ? '$' + ds.port.toFixed(2) + 'M' : '$' + Math.round(ds.port * 1000) + 'k'; _d2Pchg.push('Capital moved ' + _d2CDir + ' to ' + _d2CStr + ' (' + _d2CapPctStr + ').'); }
+                if (_d2DatumChg) { var _d2DDr = _d2DatumDelta > 0 ? 'up' : 'down'; _d2Pchg.push('Datum moved ' + _d2DDr + ' to ' + _d2DCur + '/yr.'); }
+                if (_d2ContribChg) { var _d2CnDir = _d2ContribDelta > 0 ? 'up' : 'down'; var _d2CnStr = ds.contrib >= 1000 ? '$' + Math.round(ds.contrib/1000) + 'k' : '$' + ds.contrib; _d2Pchg.push('Contributions moved ' + _d2CnDir + ' to ' + _d2CnStr + '/yr.'); }
+                if (_d2MktChg)     _d2Pchg.push('Market changed to ' + _d2CurMkt + '.');
+                var _d2PFloorPin    = gbEnd.floorSpend || 0;
+                var _d2PCeilPin     = gbEnd.ceilSpend  || 0;
+                var _d2PDatumPin    = gbEnd.datumSpend || 0;
+                var _d2PRangePin    = Math.max(_d2PCeilPin - _d2PFloorPin, 1);
+                var _d2PRangeCur    = ptsEnd.ceilSpend - ptsEnd.floorSpend;
+                var _d2PWidthDelta  = _d2PRangeCur - _d2PRangePin;
+                var _d2PMidDelta    = (ptsEnd.floorSpend + ptsEnd.ceilSpend) / 2 - (_d2PFloorPin + _d2PCeilPin) / 2;
+                var _d2PDatPctPin   = _d2PRangePin > 0 ? (_d2PDatumPin - _d2PFloorPin) / _d2PRangePin : 0.5;
+                var _d2PDatPctCur   = _d2PRangeCur > 0 ? (ptsEnd.datumSpend - ptsEnd.floorSpend) / _d2PRangeCur : 0.5;
+                var _d2PNearCeil    = _d2PDatPctCur > 0.78;
+                var _d2PNearFloor   = _d2PDatPctCur < 0.22;
+                var _d2PWidthSig    = Math.abs(_d2PWidthDelta) > Math.max(10, _d2PRangePin * 0.10);
+                var _d2PMidSig      = Math.abs(_d2PMidDelta)   > Math.max(8,  _d2PRangePin * 0.08);
+                var _d2PWidened     = _d2PWidthSig && _d2PWidthDelta > 0;
+                var _d2PCompressed  = _d2PWidthSig && _d2PWidthDelta < 0;
+                var _d2PShiftUp     = !_d2PWidthSig && _d2PMidSig && _d2PMidDelta > 0;
+                var _d2PShiftDn     = !_d2PWidthSig && _d2PMidSig && _d2PMidDelta < 0;
+                var _d2Lw = [];
+                if (_d2RetireChg)  _d2Lw.push({ key: 'retire',  w: _d2RetireAbs * 10 });
+                if (_d2CapChg)     _d2Lw.push({ key: 'capital', w: _d2CapPct * 100 });
+                if (_d2ContribChg) _d2Lw.push({ key: 'contrib', w: _d2ContribAbs / 600 });
+                if (_d2DatumChg)   _d2Lw.push({ key: 'datum',   w: _d2DatumAbs / 3 });
+                if (_d2MktChg)     _d2Lw.push({ key: 'market',  w: 55 });
+                if (_d2AgeChg)     _d2Lw.push({ key: 'age',     w: _d2AgeAbs * 4 });
+                _d2Lw.sort(function(a, b) { return b.w - a.w; });
+                var _d2Dom  = _d2Lw[0];
+                var _d2Sec  = _d2Lw[1];
+                var _d2Twt  = _d2Lw.reduce(function(acc, l) { return acc + l.w; }, 0);
+                var _d2SecDriving = !!(_d2Sec && _d2Twt > 0 && _d2Sec.w / _d2Twt > 0.30);
+                var _d2Mag = { small: 'slightly', moderate: 'moderately', large: 'meaningfully', dramatic: 'dramatically', generational: 'generationally' };
+                var _d2Dp = (function() {
+                    if (!_d2Dom) return '';
+                    switch (_d2Dom.key) {
+                        case 'retire':  return _d2RetireDelta > 0 ? 'A ' + _d2RetireAbs + '-year delay ' + _d2Mag[_d2RetireBand] : 'Retiring ' + _d2RetireAbs + ' years earlier ' + _d2Mag[_d2RetireBand];
+                        case 'capital': return 'A ' + _d2CapPctStr + ' capital ' + (_d2CapDelta > 0 ? 'increase' : 'decrease') + ' ' + _d2Mag[_d2CapBand];
+                        case 'contrib': return 'A ' + _d2ContribKStr + ' contribution ' + (_d2ContribDelta > 0 ? 'increase' : 'reduction') + ' ' + _d2Mag[_d2ContribBand];
+                        case 'datum':   return 'A ' + _d2DatumPct + '% Datum ' + (_d2DatumDelta > 0 ? 'increase' : 'decrease') + ' ' + _d2Mag[_d2DatumBand];
+                        case 'market':  return paradigm === 'optimistic' ? 'Optimistic market assumptions' : paradigm === 'stress' ? 'Stress market assumptions' : 'Changed market assumptions';
+                        case 'age':     return _d2AgeDelta > 0 ? 'Starting ' + _d2AgeAbs + ' years later ' + _d2Mag[_d2AgeBand] : 'Starting ' + _d2AgeAbs + ' years earlier ' + _d2Mag[_d2AgeBand];
+                        default: return '';
+                    }
+                })();
+                var _d2DomNoun = (function() {
+                    if (!_d2Dom) return 'the change';
+                    switch (_d2Dom.key) {
+                        case 'retire':  return 'the ' + _d2RetireAbs + '-year ' + (_d2RetireDelta > 0 ? 'delay' : 'earlier retirement');
+                        case 'capital': return 'the ' + _d2CapPctStr + ' capital ' + (_d2CapDelta > 0 ? 'increase' : 'decrease');
+                        case 'contrib': return 'the ' + _d2ContribKStr + ' contribution ' + (_d2ContribDelta > 0 ? 'lift' : 'reduction');
+                        case 'datum':   return 'the Datum shift';
+                        case 'market':  return 'the market assumption change';
+                        case 'age':     return 'the ' + _d2AgeAbs + '-year timeline change';
+                        default: return 'the change';
+                    }
+                })();
+                var _d2RetireWhy = _d2RetireDelta > 0
+                    ? (_d2RetireBand === 'small' ? 'one extra year of compounding' : _d2RetireBand === 'generational' ? 'that span of compounding fundamentally reshapes both Floor and Ceiling' : _d2RetireBand === 'dramatic' ? 'a full decade more of compounding lifted both Floor and Ceiling materially' : _d2RetireAbs + ' more years of compounding raised both boundaries')
+                    : (_d2RetireBand === 'small' ? 'one fewer year of compounding reduced the range' : 'fewer years for capital to compound reduced both boundaries');
+                var _d2SecClause = (function() {
+                    if (!_d2SecDriving || !_d2Sec) return '';
+                    switch (_d2Sec.key) {
+                        case 'retire':  return 'the ' + _d2RetireAbs + '-year ' + (_d2RetireDelta > 0 ? 'delay' : 'pullback') + ' reinforced it';
+                        case 'capital': return 'the ' + _d2CapPctStr + ' capital ' + (_d2CapDelta > 0 ? 'increase' : 'decrease') + ' reinforced it';
+                        case 'contrib': return 'the ' + _d2ContribKStr + ' contribution ' + (_d2ContribDelta > 0 ? 'lift' : 'reduction') + ' reinforced it';
+                        case 'datum':   return 'the Datum shift contributed';
+                        case 'market':  return 'the market assumption change reinforced it';
+                        default: return '';
+                    }
+                })();
+                var _d2Bridge = (function() {
+                    if (!_d2Dom) return 'Studio can model this change against your actual accounts and income sequencing.';
+                    switch (_d2Dom.key) {
+                        case 'retire':  return 'Studio can test whether SS timing, bridge years, and withdrawal order support this ' + _d2RetireAbs + '-year shift.';
+                        case 'capital': return 'Studio can test whether account types and tax sequencing support this ' + Math.round(_d2CapPct * 100) + '% capital change.';
+                        case 'contrib': return 'Studio can test whether contribution sequencing and account placement support this ' + _d2ContribKStr + '/yr change.';
+                        case 'datum':   return 'Studio can test whether tax architecture and income timing support a Datum ' + _d2DatumPct + '% ' + (_d2DatumDelta > 0 ? 'higher' : 'lower') + '.';
+                        case 'market':  return paradigm === 'stress' ? "Studio can test this Shape across the full engine's probability-weighted paths instead of the Sketch's broad-stroke model." : paradigm === 'optimistic' ? "Studio can model how often this upside case occurs across thousands of simulated market paths." : "Studio can test this Shape across the full engine instead of the Sketch's broad-stroke paths.";
+                        case 'age':     return 'Studio can model this timeline change against your actual account types and spending projections.';
+                        default: return 'Studio can model this change against your actual accounts and income sequencing.';
+                    }
+                })();
+                if (_d2Pchg.length === 0) {
+                    _phys = 'Inputs match the Discover Shape. Move sliders to compare.';
+                    _act  = 'Adjust any input to see how the Shape responds.';
+                } else if (_d2PWidened) {
+                    var _d2Open = 'Compared with your Discover Shape, the Shape widened.';
+                    if (_d2Dp) { switch (_d2Dom.key) { case 'retire': _d2Open = _d2Dp + ' widened the Shape — ' + _d2RetireWhy + '.'; break; case 'capital': _d2Open = _d2Dp + ' widened the Shape — higher capital raised both boundaries.'; break; case 'contrib': _d2Open = _d2Dp + ' widened the Shape — more contributions compounded over the growth period.'; break; case 'market': _d2Open = _d2Dp + ' widened the Shape — higher growth estimates raised both boundaries.'; break; case 'age': _d2Open = _d2Dp + ' widened the Shape — more years remaining for capital to compound.'; break; } }
+                    var _d2CC = _d2Pchg.length, _d2CW = _d2CC === 2 ? 'two' : String(_d2CC);
+                    var _d2St = _d2SecDriving && _d2SecClause ? ' Of the ' + _d2CW + ' changes, ' + _d2DomNoun + ' drove most of the widening; ' + _d2SecClause + '.' : '';
+                    var _d2Dn = (_d2PNearCeil && _d2DatumChg) ? ' Your Datum now sits closer to the Ceiling of this wider range.' : '';
+                    var _d2Sh = _d2PMidSig ? ' It also shifted ' + (_d2PMidDelta > 0 ? 'higher' : 'lower') + ' overall.' : '';
+                    _phys = _d2Open + _d2St + _d2Dn + _d2Sh;
+                    _act  = _d2PNearCeil ? 'Studio can test whether taxes, income timing, and account sequencing can support your Datum at this higher end of the range.' : _d2Bridge;
+                } else if (_d2PCompressed) {
+                    var _d2Open2 = 'Compared with your Discover Shape, the Shape narrowed.';
+                    if (_d2Dp) { switch (_d2Dom.key) { case 'retire': _d2Open2 = _d2Dp + ' narrowed the Shape — ' + _d2RetireWhy + '.'; break; case 'capital': _d2Open2 = _d2Dp + ' narrowed the Shape — lower capital reduced both boundaries.'; break; case 'market': _d2Open2 = _d2Dp + ' narrowed the Shape — stress assumptions lowered both boundaries.'; break; case 'age': _d2Open2 = _d2Dp + ' narrowed the Shape — ' + (_d2AgeBand === 'dramatic' ? 'that span of lost compounding heavily reduced both boundaries' : 'fewer years remaining for capital to compound') + '.'; break; } }
+                    var _d2CC2 = _d2Pchg.length, _d2CW2 = _d2CC2 === 2 ? 'two' : String(_d2CC2);
+                    var _d2St2 = _d2SecDriving && _d2SecClause ? ' Of the ' + _d2CW2 + ' changes, ' + _d2DomNoun + ' drove most of the narrowing; ' + _d2SecClause + '.' : '';
+                    var _d2Dn2 = _d2PNearCeil ? ' Your Datum now sits near the Ceiling — the Shape has moved toward stretched positioning.' : _d2PNearFloor ? ' Your Datum now sits near the Floor — the Shape has moved toward grounded positioning.' : '';
+                    var _d2Sh2 = _d2PMidSig ? ' It also shifted ' + (_d2PMidDelta > 0 ? 'higher' : 'lower') + ' overall.' : '';
+                    _phys = _d2Open2 + _d2St2 + _d2Dn2 + _d2Sh2;
+                    _act  = _d2PNearCeil ? 'Studio can test whether tax strategies, Social Security timing, or contribution changes can relieve pressure at the upper edge of this narrowed Shape.' : _d2PNearFloor ? 'Studio can inspect lower-bound resilience across bad sequences, early downturns, and spending drift.' : _d2Bridge;
+                } else if (_d2PShiftUp) {
+                    var _d2Open3 = 'Compared with your Discover Shape, the Shape shifted higher.';
+                    if (_d2Dp) { switch (_d2Dom.key) { case 'capital': _d2Open3 = _d2Dp + ' shifted the Shape higher — higher capital lifted both boundaries.'; break; case 'contrib': _d2Open3 = _d2Dp + ' shifted the Shape higher — more contributions raised both boundaries.'; break; case 'retire': _d2Open3 = _d2Dp + ' shifted the Shape higher — more compounding time raised both boundaries.'; break; case 'age': _d2Open3 = _d2Dp + ' shifted the Shape higher — more years remaining for capital to compound.'; break; } }
+                    var _d2St3 = _d2SecDriving && _d2SecClause ? ' ' + _d2SecClause.charAt(0).toUpperCase() + _d2SecClause.slice(1) + '.' : '';
+                    _phys = _d2Open3 + _d2St3;
+                    _act  = _d2PNearCeil ? 'Studio can test whether taxes, income timing, and account sequencing can support your Datum at this level.' : _d2Bridge;
+                } else if (_d2PShiftDn) {
+                    var _d2Open4 = 'Compared with your Discover Shape, the Shape shifted lower.';
+                    if (_d2Dp) { switch (_d2Dom.key) { case 'capital': _d2Open4 = _d2Dp + ' shifted the Shape lower — lower capital reduced both boundaries.'; break; case 'contrib': _d2Open4 = _d2Dp + ' shifted the Shape lower — fewer contributions reduced both boundaries.'; break; case 'retire': _d2Open4 = _d2Dp + ' shifted the Shape lower — earlier retirement narrowed both boundaries.'; break; case 'age': _d2Open4 = _d2Dp + ' shifted the Shape lower — starting later shortened the compounding window.'; break; } }
+                    var _d2St4 = _d2SecDriving && _d2SecClause ? ' ' + _d2SecClause.charAt(0).toUpperCase() + _d2SecClause.slice(1) + '.' : '';
+                    _phys = _d2Open4 + _d2St4;
+                    _act  = _d2PNearFloor ? 'Studio can inspect lower-bound resilience and test whether contribution or timing changes can restore the Floor.' : _d2Bridge;
+                } else if (_d2DatumChg && Math.abs(_d2PDatPctCur - _d2PDatPctPin) > 0.08) {
+                    if (ptsEnd.datumSpend > _d2PDatumPin) {
+                        _phys = 'Compared with your Discover Shape, your Datum moved ' + _d2Mag[_d2DatumBand] + ' closer to the Ceiling, leaving less room for market disappointment.';
+                        _act  = 'Studio can test whether tax architecture and income timing support a Datum ' + _d2DatumPct + '% higher across your actual account types.';
+                    } else {
+                        _phys = 'Compared with your Discover Shape, your Datum moved ' + _d2Mag[_d2DatumBand] + ' closer to the Floor, adding buffer between your target and the survival boundary.';
+                        _act  = 'Studio can test whether the additional margin creates room for an earlier date or additional savings goals.';
+                    }
+                } else if (_d2MktChg) {
+                    if (paradigm === 'stress') {
+                        _phys = 'Compared with your Discover Shape, stress assumptions narrowed the Shape and lowered the spending boundaries.';
+                        _act  = "Studio can test this Shape across the full engine's probability-weighted paths instead of the Sketch's broad-stroke model.";
+                    } else if (paradigm === 'optimistic') {
+                        _phys = 'Compared with your Discover Shape, optimistic assumptions widened the Shape and raised the spending boundaries.';
+                        _act  = "Studio can model how often this upside case occurs across thousands of simulated market paths.";
+                    } else {
+                        _phys = 'Compared with your Discover Shape, market conditions changed and shifted the spending boundaries.';
+                        _act  = "Studio can test this Shape across the full engine instead of the Sketch's broad-stroke paths.";
+                    }
+                } else {
+                    _phys = 'Compared with your Discover Shape, the spending boundaries changed slightly.';
+                    _act  = 'Studio can model this change against your actual accounts and income sequencing.';
+                }
+                if (_d2Pchg.length > 0) {
+                    var _d2Sn = { capital:'Capital', datum:'Datum', contrib:'Contributions', retire:'Retirement', market:'Market', age:'Age' };
+                    var _d2FCap = function(v) { return v >= 1 ? '$' + v.toFixed(2) + 'M' : '$' + Math.round(v * 1000) + 'k'; };
+                    var _d2FDat = function(v) { return v >= 1000 ? '$' + (v/1000).toFixed(2).replace(/\.00$/,'') + 'M' : '$' + Math.round(v) + 'k'; };
+                    var _d2FCon = function(v) { return v >= 1000 ? '$' + Math.round(v/1000) + 'k' : '$' + Math.round(v); };
+                    var _d2Ci = [];
+                    if (_d2RetireChg)  _d2Ci.push({ k:'retire',  up:_d2RetireDelta>0,  from:String(gb.activationAge), to:String(retire) });
+                    if (_d2AgeChg)     _d2Ci.push({ k:'age',     up:_d2AgeDelta>0,     from:String(gb.currentAge),    to:String(age) });
+                    if (_d2CapChg)     _d2Ci.push({ k:'capital', up:_d2CapDelta>0,     from:_d2FCap(gb.portfolioVol), to:_d2FCap(ds.port) });
+                    if (_d2DatumChg)   _d2Ci.push({ k:'datum',   up:_d2DatumDelta>0,   from:_d2FDat(gb.targetSpend),  to:_d2FDat(s.targetSpend) });
+                    if (_d2ContribChg) _d2Ci.push({ k:'contrib', up:_d2ContribDelta>0, from:_d2FCon(gb.annualContrib), to:_d2FCon(ds.contrib) });
+                    if (_d2MktChg)     _d2Ci.push({ k:'market',  up:null, from:gbPinnedState.pinnedParadigm, to:_d2CurMkt });
+                    _d2ChangeHtml = _d2Ci.map(function(it) {
+                        var _nl = '<span style="color:rgba(255,255,255,0.5)">' + (_d2Sn[it.k] || it.k) + '</span>';
+                        var _vl = '<span class="pin-change-values">' + it.from + ' → ' + it.to + '</span>';
+                        if (it.up === null) return '<span class="pin-change-item">' + _nl + _vl + '</span>';
+                        var _ar = it.up ? '<span class="pin-change-arrow-up">↑</span>' : '<span class="pin-change-arrow-down">↓</span>';
+                        return '<span class="pin-change-item">' + _nl + _ar + _vl + '</span>';
+                    }).join('');
+                }
+                // Lever attribution: identical format to Screen 1 ("Datum Spend (+$900k, 50.7% of range)")
+                var _d2LNames = { capital:'Portfolio Balance', datum:'Datum Spend', contrib:'Annual Contributions', retire:'Retirement Age', market:'Market Paradigm', age:'Current Age' };
+                if (_d2Dom) {
+                    var _d2DomPct = (_d2Twt > 0 ? (_d2Dom.w / _d2Twt * 100) : 100).toFixed(1);
+                    var _d2LDetail = '';
+                    switch (_d2Dom.key) {
+                        case 'capital': { var _d2Sgn = _d2CapDelta >= 0 ? '+' : '−'; var _d2AbsC = Math.abs(_d2CapDelta); var _d2AbsS = _d2AbsC >= 1 ? '$' + _d2AbsC.toFixed(2) + 'M' : '$' + Math.round(_d2AbsC * 1000) + 'k'; _d2LDetail = _d2Sgn + _d2AbsS + ', ' + _d2DomPct + '% of range'; break; }
+                        case 'datum':   { var _d2Sgn = _d2DatumDelta >= 0 ? '+' : '−'; var _d2AbsD = Math.abs(_d2DatumDelta); var _d2AbsS = _d2AbsD >= 1000 ? '$' + (_d2AbsD/1000).toFixed(2) + 'M' : '$' + Math.round(_d2AbsD) + 'k'; _d2LDetail = _d2Sgn + _d2AbsS + ', ' + _d2DomPct + '% of range'; break; }
+                        case 'contrib': { var _d2Sgn = _d2ContribDelta >= 0 ? '+' : '−'; var _d2AbsS = _d2ContribAbs >= 1000 ? '$' + Math.round(_d2ContribAbs/1000) + 'k' : '$' + Math.round(_d2ContribAbs); _d2LDetail = _d2Sgn + _d2AbsS + ', ' + _d2DomPct + '% of range'; break; }
+                        case 'retire':  { var _d2Sgn = _d2RetireDelta >= 0 ? '+' : '−'; _d2LDetail = _d2Sgn + _d2RetireAbs + ' yr, ' + _d2DomPct + '% of range'; break; }
+                        case 'age':     { var _d2Sgn = _d2AgeDelta >= 0 ? '+' : '−'; _d2LDetail = _d2Sgn + _d2AgeAbs + ' yr, ' + _d2DomPct + '% of range'; break; }
+                        case 'market':  _d2LDetail = '→ ' + _d2CurMkt + ', ' + _d2DomPct + '% of range'; break;
+                        default:        _d2LDetail = _d2DomPct + '% of range';
+                    }
+                    _d2DomLever = (_d2LNames[_d2Dom.key] || _d2Dom.key) + ' (' + _d2LDetail + ')';
+                } else {
+                    _d2DomLever = _d2Pchg.length > 0 ? 'No dominant lever — multiple small adjustments' : 'No movement yet — adjust a slider to see lever attribution';
+                }
+            }
+        } catch(e) {
+            _phys = 'Design values update live.';
+        }
+        var _pcrEl = document.getElementById('d2s-pin-changes-row');
+        if (_pcrEl) {
+            if (_d2ChangeHtml) {
+                _pcrEl.className = 'pin-changes-row';
+                _pcrEl.style.display = '';
+                _pcrEl.innerHTML = _d2ChangeHtml;
+            } else if (_leverDelta) {
+                _pcrEl.style.display = '';
+                _pcrEl.textContent = _leverDelta;
+            } else {
+                _pcrEl.style.display = 'none';
+                _pcrEl.textContent = '';
+            }
+        }
+        var _phEl = document.getElementById('d2s-pin-means');
+        var _acEl = document.getElementById('d2s-pin-inspect');
+        if (_phEl) _phEl.innerHTML = _phys;
+        if (_acEl) _acEl.innerHTML = _act;
+        var _laEl = document.getElementById('d2s-pin-lever-attribution');
+        if (_laEl) {
+            if (_d2DomLever) {
+                _laEl.textContent = _d2DomLever;
+            } else {
+                var _lMap = { datum: 'Target Datum', retire: 'Retirement Age', portfolio: 'Portfolio', contrib: 'Contributions', age: 'Current Age' };
+                _laEl.textContent = (_wbCase && _wbCase.lever) ? (_lMap[_wbCase.lever] || _wbCase.lever) : '—';
+            }
+        }
+        // Brick A: comparison panel
+        var _cmpFmt = function(v) { return v >= 1000 ? '$' + (v/1000).toFixed(1).replace(/\.0$/, '') + 'M' : '$' + Math.round(v) + 'k'; };
+        var _cmpArr = function(des, disc) { return des > disc + 0.5 ? '↑' : des < disc - 0.5 ? '↓' : '→'; };
+        var _cSet = function(id, txt) { var e = document.getElementById(id); if (e) e.textContent = txt; };
+        _cSet('d2s-cmp-ceil-disc',   _cmpFmt(gbEnd.ceilSpend));
+        _cSet('d2s-cmp-ceil-des',    _cmpFmt(ptsEnd.ceilSpend));
+        _cSet('d2s-cmp-ceil-arrow',  _cmpArr(ptsEnd.ceilSpend, gbEnd.ceilSpend));
+        _cSet('d2s-cmp-datum-disc',  _cmpFmt(gb.targetSpend));
+        _cSet('d2s-cmp-datum-des',   _cmpFmt(s.targetSpend));
+        _cSet('d2s-cmp-datum-arrow', _cmpArr(s.targetSpend, gb.targetSpend));
+        _cSet('d2s-cmp-floor-disc',  _cmpFmt(gbEnd.floorSpend));
+        _cSet('d2s-cmp-floor-des',   _cmpFmt(ptsEnd.floorSpend));
+        _cSet('d2s-cmp-floor-arrow', _cmpArr(ptsEnd.floorSpend, gbEnd.floorSpend));
+        _cSet('d2s-cmp-yrs-disc',    String(gbYrs) + ' yr');
+        _cSet('d2s-cmp-yrs-des',     String(yrs) + ' yr');
+        _cSet('d2s-cmp-yrs-arrow',   _cmpArr(yrs, gbYrs));
+    }
 
     // ── Coordinate constants — match Screen 1 viewBox 840×480 ──
     var D_X_START = 120, D_X_END = 650, D_Y_MIN = 30, D_Y_MAX = 450;
@@ -6135,8 +6779,10 @@
       ];
       rows.forEach((row, i) => {
         setTimeout(() => {
-          document.getElementById(row.valId).textContent = row.val;
-          document.getElementById(row.id).classList.add('loaded');
+          var _cfVal = document.getElementById(row.valId);
+          var _cfRow = document.getElementById(row.id);
+          if (_cfVal) _cfVal.textContent = row.val;
+          if (_cfRow) _cfRow.classList.add('loaded');
         }, i * 80);
       });
     }
@@ -6144,6 +6790,7 @@
     // --- Reset Design ---
     document.getElementById('btn-reset-design').addEventListener('click', function() {
       initDesignState();
+      if (ghostBaseline) { try { initDesignSliders(); } catch(e) {} }
       renderScreen2();
       var toast = document.getElementById('confirm-toast');
       if (toast) {
@@ -6375,6 +7022,158 @@
         });
       }
     });
+
+    // Phase 2.1: d2-slider-* input listeners (write to designScenario + update display values)
+    (function() {
+      // Portfolio/datum/contrib: pass straight through
+      ['d2-slider-portfolio','d2-slider-datum','d2-slider-contrib'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('input', updateDesignEngine);
+      });
+      // Age / Retirement: enforce cross-slider constraint before rendering
+      var _d2AgeSlider = document.getElementById('d2-slider-age');
+      var _d2ActSlider = document.getElementById('d2-slider-activation');
+      if (_d2AgeSlider) _d2AgeSlider.addEventListener('input', function() {
+        if (_d2ActSlider && parseInt(_d2AgeSlider.value) >= parseInt(_d2ActSlider.value)) _d2AgeSlider.value = parseInt(_d2ActSlider.value) - 1;
+        updateDesignEngine();
+      });
+      if (_d2ActSlider) _d2ActSlider.addEventListener('input', function() {
+        if (_d2AgeSlider && parseInt(_d2ActSlider.value) <= parseInt(_d2AgeSlider.value)) _d2ActSlider.value = parseInt(_d2AgeSlider.value) + 1;
+        updateDesignEngine();
+      });
+      // d2-market radios — re-render canvas + HUD + wave animation on change
+      document.querySelectorAll('input[name="d2-market"]').forEach(function(el) {
+        el.addEventListener('change', function(e) {
+          triggerSweepRect('d2s-market-sweep', e.target.value);
+          renderDesignCanvas();
+        });
+      });
+    })();
+
+    // ── Screen 2 interactive layer: datum drag + hover scrubber ──
+    (function() {
+      var d2Canvas    = document.getElementById('d2s-canvas');
+      var d2Dragger   = document.getElementById('d2s-datum-dragger');
+      var d2ScrubGrp  = document.getElementById('d2s-scrubber-group');
+      var d2ScrubLine = document.getElementById('d2s-scrubber-line');
+      var d2NodeCeil  = document.getElementById('d2s-node-ceil');
+      var d2NodeFloor = document.getElementById('d2s-node-floor');
+      var d2NodeDatum = document.getElementById('d2s-node-datum');
+      var d2CeilLbl   = document.getElementById('d2s-ceil-lbl');
+      var d2FloorLbl  = document.getElementById('d2s-floor-lbl');
+      var d2DatumLbl  = document.getElementById('d2s-datum-lbl');
+      if (!d2Canvas) return;
+
+      var d2IsDragging = false;
+
+      function d2SvgPt(e) {
+        var pt = d2Canvas.createSVGPoint();
+        pt.x = e.clientX; pt.y = e.clientY;
+        return pt.matrixTransform(d2Canvas.getScreenCTM().inverse());
+      }
+
+      function d2ShowTooltip(id, age, fv, spend, svgX, svgY) {
+        var g = document.getElementById('d2s-tt-g-' + id);
+        if (!g) return;
+        var ageEl = document.getElementById('d2s-tt-age-' + id);
+        var datEl = document.getElementById('d2s-tt-data-' + id);
+        if (ageEl) ageEl.textContent = age;
+        var txt;
+        if (id === 'datum') {
+          var capM   = fv || 0;
+          var spStr  = spend >= 1000 ? '$' + (spend / 1000).toFixed(2) + 'M/yr' : '$' + Math.round(spend) + 'k/yr';
+          var capStr = capM >= 1 ? '$' + capM.toFixed(2) + 'M' : '$' + Math.round(capM * 1000) + 'k';
+          txt = '| ' + capStr + ' | ' + spStr;
+        } else {
+          txt = formatTTHover(fv, spend);
+        }
+        if (datEl) datEl.textContent = txt;
+        g.setAttribute('transform', 'translate(' + svgX + ',' + svgY + ')');
+        var rect  = g.querySelector('rect');
+        var texts = g.querySelectorAll('text');
+        if (svgX > 450) {
+          if (rect) rect.setAttribute('x', -295);
+          texts.forEach(function(t){ t.setAttribute('x', -285); });
+        } else {
+          if (rect) rect.setAttribute('x', 15);
+          texts.forEach(function(t){ t.setAttribute('x', 25); });
+        }
+      }
+
+      function d2HideScrubber() {
+        if (!d2ScrubGrp) return;
+        if (d2CeilLbl)  d2CeilLbl.style.opacity  = '1';
+        if (d2FloorLbl) d2FloorLbl.style.opacity = '1';
+        if (d2DatumLbl) d2DatumLbl.style.opacity = '1';
+        var xEnd = 650;
+        if (d2NodeCeil)  { d2NodeCeil.setAttribute('cx',  xEnd); d2NodeCeil.setAttribute('cy',  _d2LastEndpointCY.ceil); }
+        if (d2NodeFloor) { d2NodeFloor.setAttribute('cx', xEnd); d2NodeFloor.setAttribute('cy', _d2LastEndpointCY.floor); }
+        if (d2NodeDatum) { d2NodeDatum.setAttribute('cx', xEnd); d2NodeDatum.setAttribute('cy', _d2LastEndpointCY.datum); }
+        d2ScrubGrp.style.opacity = '0';
+      }
+
+      function d2UpdateScrubber(svgX) {
+        if (!_d2LastScenario) return;
+        var s   = _d2LastScenario;
+        var yrs = s.yearsToGrow;
+        if (yrs === 0) return;
+        if (d2CeilLbl)  d2CeilLbl.style.opacity  = '0';
+        if (d2FloorLbl) d2FloorLbl.style.opacity = '0';
+        if (d2DatumLbl) d2DatumLbl.style.opacity = '0';
+        var offsetRatio = (svgX - 120) / 530;
+        var offsetYears = offsetRatio * yrs;
+        var hoverAge    = Math.round(s.currentAge + offsetYears);
+        var pts = getMathPoint(offsetYears, yrs, s);
+        var yC = spendToY(pts.ceilSpend);
+        var yF = spendToY(pts.floorSpend);
+        var yD = spendToY(pts.datumSpend);
+        if (d2NodeCeil)  { d2NodeCeil.setAttribute('cx',  svgX); d2NodeCeil.setAttribute('cy',  yC); }
+        if (d2NodeFloor) { d2NodeFloor.setAttribute('cx', svgX); d2NodeFloor.setAttribute('cy', yF); }
+        if (d2NodeDatum) { d2NodeDatum.setAttribute('cx', svgX); d2NodeDatum.setAttribute('cy', yD); }
+        if (d2ScrubLine) { d2ScrubLine.setAttribute('x1', svgX); d2ScrubLine.setAttribute('x2', svgX); }
+        d2ScrubGrp.style.opacity = '1';
+        d2ShowTooltip('ceil',  hoverAge, pts.fvUp,   pts.ceilSpend,  svgX, yC);
+        d2ShowTooltip('floor', hoverAge, pts.fvCon,  pts.floorSpend, svgX, yF);
+        d2ShowTooltip('datum', hoverAge, pts.fvBase, pts.datumSpend, svgX, yD);
+      }
+
+      if (d2Dragger) {
+        d2Dragger.addEventListener('pointerdown', function(e) {
+          d2IsDragging = true;
+          d2HideScrubber();
+          document.body.style.userSelect = 'none';
+          d2Canvas.style.cursor = 'ns-resize';
+          try { d2Dragger.setPointerCapture(e.pointerId); } catch(err) {}
+        });
+      }
+
+      window.addEventListener('pointerup', function() {
+        if (d2IsDragging) {
+          d2IsDragging = false;
+          document.body.style.userSelect = '';
+          d2Canvas.style.cursor = 'default';
+        }
+      });
+
+      d2Canvas.addEventListener('pointermove', function(e) {
+        var svgP = d2SvgPt(e);
+        if (d2IsDragging) {
+          var newSpend = ((450 - svgP.y) / 400) * (globalYMax - globalYMin) + globalYMin;
+          newSpend = clamp(newSpend, 20, 1000);
+          var slDatum = document.getElementById('d2-slider-datum');
+          if (slDatum) slDatum.value = datumValToPos(newSpend);
+          updateDesignEngine();
+          return;
+        }
+        if (svgP.x >= 110 && svgP.x <= 660 && svgP.y >= -20 && svgP.y <= 500) {
+          d2UpdateScrubber(clamp(svgP.x, 120, 650));
+        } else {
+          d2HideScrubber();
+        }
+      });
+
+      d2Canvas.addEventListener('pointerleave', d2HideScrubber);
+    })();
 </script>
 </body>
 </html>
