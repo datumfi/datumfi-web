@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#091221">
 <!-- TODO production: replace unsafe-inline with nonces; move JS/CSS to external files -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://eu.i.posthog.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://api.datumfi.com https://eu.i.posthog.com https://api.stripe.com https://formspree.io; frame-src https://js.stripe.com https://hooks.stripe.com; form-action 'self' https://formspree.io; object-src 'none'; base-uri 'self'; upgrade-insecure-requests;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://eu.i.posthog.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://api.datumfi.com https://eu.i.posthog.com https://api.stripe.com https://formspree.io; frame-src https://js.stripe.com https://hooks.stripe.com; form-action 'self' https://formspree.io; object-src 'none'; base-uri 'self'; upgrade-insecure-requests;">
 <title>Datum FI — The Sketch</title>
 <meta name="description" content="Draw the outline of your retirement shape. See your Floor, Datum, and Ceiling in 30 seconds.">
 <link rel="manifest" href="/manifest.json">
@@ -3066,6 +3066,22 @@
             action:  `Find the planning horizon where the ceiling first meets this spending level - that's the minimum runway at which this target becomes achievable at current savings and retirement age.`,
             studio:  `Studio can model what a longer runway unlocks at the account level - Roth conversion windows, contribution room, and Social Security timing all shift with more time.`,
             paradox: false },
+        // V2 advisor copy verbatim per NCP:534 — Tracker:524 RESOLVED
+        'OE.A.1-age': {
+            physics: `Starting {ageDelta} year(s) earlier gave the plan more runway and lifted the ceiling to {newCeilK}, but it still falls short — you’re {aboveCeil} above what the plan can support. Time is closing the gap; you just haven’t crossed back inside the range yet.`,
+            action:  `Find the planning horizon where the ceiling first meets this spending level - that's the minimum runway at which this target becomes achievable at current savings and retirement age.`,
+            studio:  `Studio can model what a longer runway unlocks at the account level - Roth conversion windows, contribution room, and Social Security timing all shift with more time.`,
+            paradox: false },
+        'OE.A.1b-age': {
+            physics: `Starting {ageDelta} year(s) earlier gave the plan more runway and lifted the ceiling by {deltaCeilK}, bringing your spending just under it — the plan now reaches this level, but with only {gapToCeil} of room above. Time got you over the line, not far beyond it.`,
+            action:  `Find the planning horizon where the ceiling first meets this spending level - that's the minimum runway at which this target becomes achievable at current savings and retirement age.`,
+            studio:  `Studio can model what a longer runway unlocks at the account level - Roth conversion windows, contribution room, and Social Security timing all shift with more time.`,
+            paradox: false },
+        'OE.A.1c-age': {
+            physics: `Starting {ageDelta} year(s) earlier gave the plan more runway and lifted the ceiling by {deltaCeilK}, pulling your spending back inside the range it can support — with {gapToFloor} between you and the floor and {gapToCeil} before you hit the ceiling. Time bought room on both sides of this lifestyle.`,
+            action:  `Find the planning horizon where the ceiling first meets this spending level - that's the minimum runway at which this target becomes achievable at current savings and retirement age.`,
+            studio:  `Studio can model what a longer runway unlocks at the account level - Roth conversion windows, contribution room, and Social Security timing all shift with more time.`,
+            paradox: false },
         'OE.A.2': {
             physics: `Less runway reduced the ceiling to {newCeilK} - the gap is now {aboveCeil}. Shorter timeline, less compounding, less the plan can deliver.`,
             action:  `A shorter horizon widens a gap that was already there. The inputs need more time to work, not less.`,
@@ -3434,7 +3450,7 @@
                 down: { OVEREXTENDED: 'OE.C.3' }
             },
             age:       {
-                down: { OVEREXTENDED: 'OE.A.1', STRETCHED: 'OE.A.1b', EXPANSIVE: 'OE.A.1c' },
+                down: { OVEREXTENDED: 'OE.A.1-age', STRETCHED: 'OE.A.1b-age', EXPANSIVE: 'OE.A.1c-age' },
                 up:   { OVEREXTENDED: 'OE.A.2' }
             }
         },
@@ -4204,7 +4220,8 @@
                 floorK:             formatMoney(ptsEnd.floorSpend),
                 deltaFloorK:        formatMoney(Math.abs(ptsEnd.floorSpend - _pFloorPin)),
                 newFloorAboveSpend: formatMoney(Math.abs(ptsEnd.floorSpend - ptsEnd.datumSpend)),
-                pinnedRetire:       (pinnedState.retire || 65)
+                pinnedRetire:       (pinnedState.retire || 65),
+                ageDelta:           Math.abs(currentAge - (pinnedState.age || 18))
             };
 
             // ── Dominant lever ranking ─────────────────────────────────────
@@ -4580,6 +4597,7 @@
             document.getElementById('ghost-ceil').classList.remove('ghost-active');
             document.getElementById('ghost-floor').classList.remove('ghost-active');
             document.getElementById('ghost-cone').classList.remove('ghost-cone-active');
+            document.getElementById('ghost-cone').style.opacity = '0';
             document.getElementById('ghost-datum').classList.remove('ghost-active');
             const gHatch = document.getElementById('ghost-hatch-area');
             if (gHatch) gHatch.style.opacity = '0';
@@ -4627,6 +4645,7 @@
         document.getElementById('ghost-ceil').classList.add('ghost-active');
         document.getElementById('ghost-floor').classList.add('ghost-active');
         document.getElementById('ghost-cone').classList.add('ghost-cone-active');
+        document.getElementById('ghost-cone').style.opacity = '';
         document.getElementById('ghost-datum').classList.add('ghost-active');
 
         // GEM D: hatch area between ghost and live cone + label at retirement endpoint
