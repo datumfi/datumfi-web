@@ -1239,10 +1239,7 @@
   }
   .s3-state-block {
     display: block;
-    padding: 10px;
-    background: rgba(255,255,255,0.04);
-    border-radius: 3px;
-    border-left: 2px solid var(--teal-mid);
+    margin-top: 12px;
   }
 
   /* Arch card gold variant */
@@ -2159,16 +2156,16 @@
               You set your Ceiling to <strong id="s3-want-ceil" style="color:var(--gold);">—</strong>/yr — <span id="s3-ceil-delta-desc">—</span>.<br><br>
               Datum: <strong id="s3-want-datum" style="color:var(--teal-mid);">—</strong>/yr.
               Floor: <strong id="s3-want-floor" style="color:var(--danger-red);">—</strong>/yr.<br><br>
-              <span id="s3-shape-state-block" class="s3-state-block">
-                Shape: <strong id="s3-shape-state-name2" style="color:var(--teal-mid);">—</strong><br>
-                <span id="s3-shape-state-physics" style="color:rgba(255,255,255,0.75);font-size:10px;line-height:1.6;font-style:italic;display:block;margin-bottom:6px;">—</span>
-                <span id="s3-shape-state-plain" style="color:rgba(255,255,255,0.5);font-size:10px;line-height:1.6;">—</span>
-              </span>
               <div id="s3-overextended-banner" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(220,50,50,0.12);border:1px solid rgba(220,50,50,0.4);border-radius:4px;font-family:var(--font-mono);font-size:10px;color:#ff7070;line-height:1.6;">
                 ⚠️ <strong>This shape cannot be sustained.</strong> Your spending target exceeds what the portfolio can support in most market sequences. See the action below to fix it.
               </div>
               <div id="s3-datum-narrative" style="margin-top:10px;padding:8px 10px;background:rgba(93,202,165,0.06);border-left:2px solid rgba(93,202,165,0.3);border-radius:2px;font-size:10px;line-height:1.7;color:rgba(255,255,255,0.7);display:none;"></div>
               <div id="s3-floor-narrative" style="margin-top:6px;padding:8px 10px;background:rgba(239,83,80,0.06);border-left:2px solid rgba(239,83,80,0.25);border-radius:2px;font-size:10px;line-height:1.7;color:rgba(255,255,255,0.7);display:none;"></div>
+              <span id="s3-shape-state-block" class="s3-state-block">
+                Shape: <strong id="s3-shape-state-name2" style="color:var(--teal-mid);">—</strong><br>
+                <span id="s3-shape-state-physics" style="display:block;margin-bottom:12px;">—</span>
+                <span id="s3-shape-state-plain" style="display:block;">—</span>
+              </span>
             </div>
           </div>
 
@@ -3053,6 +3050,16 @@
         }
     }
 
+
+    // ── ML prepend templates (Step 2b — LEVER MATH sheet, verbatim per DJ:250) ─────────
+    const ML_01 = 'Two inputs moved in the same direction — [Lever A] and [Lever B] both grew the Shape, amplifying the shift.';
+    const ML_02 = 'Two inputs moved in the same direction — [Lever A] and [Lever B] both compressed the Shape, amplifying the downward shift.';
+    const ML_03 = 'Two levers moved in opposing directions — [Lever A] worked to improve the position while [Lever B] worked against it. The net result was a positive shift.';
+    const ML_04 = 'Two levers moved in opposing directions — [Lever A] and [Lever B] partially canceled each other. The net result was a negative shift despite one positive input.';
+    const ML_05 = 'Two levers moved in opposing directions and roughly offset — [Lever A] and [Lever B] produced a marginal net shift. The position changed little despite both levers moving.';
+    const ML_06 = 'The Datum moved [direction] while [Lever B] shifted the Shape in the same structural direction — both effects reinforced each other.';
+    const ML_07 = 'The Datum moved [direction] while [Lever B] shifted the Shape boundaries in the opposing direction — the two effects partially canceled.';
+    const ML_08 = 'Three inputs moved simultaneously — [Lever A], [Lever B], and [Lever C]. Identify the primary driver (≥50% of impact) and note whether the secondary levers amplified or offset it.';
 
     // ── PINNED case data (Step 2a): workbook PINNED sheets — 88 single-lever cases ───
     // _PC[caseId] = { physics, action, studio, paradox }
@@ -4253,7 +4260,7 @@
             const _ageChg       = pinnedState.age !== currentAge;
             const _capitalChg   = Math.abs(pinnedState.port - portfolioVol) > 0.001;
             const _contribChg   = Math.abs(pinnedState.contrib - annualContrib) > 100;
-            const _datumChg     = pinnedState.datum !== targetSpend;
+            const _datumChg     = Math.round(pinnedState.datum) !== targetSpend;
             const _mktChg       = !!(pinnedState.pinnedParadigm && pinnedState.pinnedParadigm !== _pinCurMkt);
             const _taxChg       = !!(pinnedState.pinnedTax !== undefined && pinnedState.pinnedTax !== _pinCurTax);
             const _inflChg      = !!(pinnedState.pinnedInflStr && pinnedState.pinnedInflStr !== _pinCurInfl);
@@ -4552,6 +4559,61 @@
             } else {
                 _pinMeans    = 'Compared with your pinned Shape, the spending boundaries changed slightly.';
                 _pinConsider = 'Studio can model this change against your actual accounts and income sequencing.';
+            }
+            // ── ML prepend (Step 2b) ────────────────────────────────────────
+            if (_lw.length >= 2 && pChanged.length > 0) {
+                var _mlShLevs   = _lw.filter(function(l) { return l.key !== 'datum' && l.key !== 'infl' && l.key !== 'tax'; });
+                var _mlHasDatum = _lw.some(function(l)   { return l.key === 'datum'; });
+                var _mlLevNm = function(key) {
+                    switch (key) {
+                        case 'retire':  return _retireDelta  > 0 ? 'a later retirement date' : 'an earlier retirement date';
+                        case 'capital': return _capDelta     > 0 ? 'higher capital'           : 'lower capital';
+                        case 'contrib': return _contribDelta > 0 ? 'higher contributions'     : 'lower contributions';
+                        case 'datum':   return 'a Datum shift';
+                        case 'market':  return paradigm === 'optimistic' ? 'optimistic market assumptions' : 'stress market assumptions';
+                        case 'age':     return _ageDelta     > 0 ? 'a later start'            : 'an earlier start';
+                        case 'tax':     return _taxDelta     > 0 ? 'a higher tax drag'         : 'a lower tax drag';
+                        case 'infl':    return 'a Nominal/Real view change';
+                        default:        return key;
+                    }
+                };
+                var _mlShPos = function(key) {
+                    switch (key) {
+                        case 'retire':  return _retireDelta  > 0;
+                        case 'capital': return _capDelta     > 0;
+                        case 'contrib': return _contribDelta > 0;
+                        case 'market':  return paradigm === 'optimistic';
+                        case 'age':     return _ageDelta     < 0;
+                        default:        return true;
+                    }
+                };
+                var _mlStKey   = pinnedState.stateObj ? (pinnedState.stateObj.key || '') + '_' + (pinnedState.stateObj.subZone || '') : '';
+                var _mlParadox = (_mlStKey === 'abundant_JUST_BELOW' || _mlStKey === 'abundant_WELL_BELOW' || _mlStKey === 'grounded_TIGHT' || _mlStKey === 'expansive_FLOOR_SIDE');
+                var _mlA = _dom ? _mlLevNm(_dom.key) : 'the first input';
+                var _mlB = _sec ? _mlLevNm(_sec.key) : 'the second input';
+                var _mlPrepend = '';
+                if (_lw.length >= 3) {
+                    var _mlC = _lw[2] ? _mlLevNm(_lw[2].key) : 'a third input';
+                    _mlPrepend = ML_08.replace('[Lever A]', _mlA).replace('[Lever B]', _mlB).replace('[Lever C]', _mlC) + ' ';
+                } else if (_mlHasDatum && _mlShLevs.length === 1) {
+                    var _mlSl      = _mlShLevs[0];
+                    var _mlDatDir  = _datumDelta > 0 ? 'up' : 'down';
+                    var _mlSlNm    = _mlLevNm(_mlSl.key);
+                    var _mlDatImpr = _datumDelta < 0;
+                    var _mlSlImpr  = _mlShPos(_mlSl.key);
+                    _mlPrepend = (_mlDatImpr === _mlSlImpr ? ML_06 : ML_07).replace('[direction]', _mlDatDir).replace('[Lever B]', _mlSlNm) + ' ';
+                } else if (_mlShLevs.length >= 2) {
+                    var _mlPosA    = _mlShPos(_mlShLevs[0].key);
+                    var _mlPosB    = _mlShPos(_mlShLevs[1].key);
+                    var _mlPattern = (_mlPosA !== _mlPosB) ? 'OFFSET' : (_mlParadox && _mlPosA) ? 'PARADOX' : 'AMPLIFIED';
+                    if (_mlPattern !== 'OFFSET') {
+                        _mlPrepend = (_mlPosA ? ML_01 : ML_02).replace('[Lever A]', _mlA).replace('[Lever B]', _mlB) + ' ';
+                    } else {
+                        var _mlOffTmpl = (_pWidened || _pShiftUp) ? ML_03 : (_pCompressed || _pShiftDn) ? ML_04 : ML_05;
+                        _mlPrepend = _mlOffTmpl.replace('[Lever A]', _mlA).replace('[Lever B]', _mlB) + ' ';
+                    }
+                }
+                if (_mlPrepend) _pinMeans = _mlPrepend + _pinMeans;
             }
             }
 
@@ -6040,6 +6102,59 @@
                     _phys = 'Compared with your Discover Shape, the spending boundaries changed slightly.';
                     _act  = 'Studio can model this change against your actual accounts and income sequencing.';
                 }
+                // ── ML prepend (Step 2b) ────────────────────────────────────
+                if (_d2Lw.length >= 2 && _d2Pchg.length > 0) {
+                    var _d2MlShLevs   = _d2Lw.filter(function(l) { return l.key !== 'datum' && l.key !== 'infl'; });
+                    var _d2MlHasDatum = _d2Lw.some(function(l)   { return l.key === 'datum'; });
+                    var _d2MlLevNm = function(key) {
+                        switch (key) {
+                            case 'retire':  return _d2RetireDelta  > 0 ? 'a later retirement date' : 'an earlier retirement date';
+                            case 'capital': return _d2CapDelta     > 0 ? 'higher capital'           : 'lower capital';
+                            case 'contrib': return _d2ContribDelta > 0 ? 'higher contributions'     : 'lower contributions';
+                            case 'datum':   return 'a Datum shift';
+                            case 'market':  return paradigm === 'optimistic' ? 'optimistic market assumptions' : 'stress market assumptions';
+                            case 'age':     return _d2AgeDelta     > 0 ? 'a later start'            : 'an earlier start';
+                            default:        return key;
+                        }
+                    };
+                    var _d2MlShPos = function(key) {
+                        switch (key) {
+                            case 'retire':  return _d2RetireDelta  > 0;
+                            case 'capital': return _d2CapDelta     > 0;
+                            case 'contrib': return _d2ContribDelta > 0;
+                            case 'market':  return paradigm === 'optimistic';
+                            case 'age':     return _d2AgeDelta     < 0;
+                            default:        return true;
+                        }
+                    };
+                    var _d2MlStKey   = gbPinnedState.stateObj ? (gbPinnedState.stateObj.key || '') + '_' + (gbPinnedState.stateObj.subZone || '') : '';
+                    var _d2MlParadox = (_d2MlStKey === 'abundant_JUST_BELOW' || _d2MlStKey === 'abundant_WELL_BELOW' || _d2MlStKey === 'grounded_TIGHT' || _d2MlStKey === 'expansive_FLOOR_SIDE');
+                    var _d2MlA = _d2Dom ? _d2MlLevNm(_d2Dom.key) : 'the first input';
+                    var _d2MlB = _d2Sec ? _d2MlLevNm(_d2Sec.key) : 'the second input';
+                    var _d2MlPrepend = '';
+                    if (_d2Lw.length >= 3) {
+                        var _d2MlC = _d2Lw[2] ? _d2MlLevNm(_d2Lw[2].key) : 'a third input';
+                        _d2MlPrepend = ML_08.replace('[Lever A]', _d2MlA).replace('[Lever B]', _d2MlB).replace('[Lever C]', _d2MlC) + ' ';
+                    } else if (_d2MlHasDatum && _d2MlShLevs.length === 1) {
+                        var _d2MlSl      = _d2MlShLevs[0];
+                        var _d2MlDatDir  = _d2DatumDelta > 0 ? 'up' : 'down';
+                        var _d2MlSlNm    = _d2MlLevNm(_d2MlSl.key);
+                        var _d2MlDatImpr = _d2DatumDelta < 0;
+                        var _d2MlSlImpr  = _d2MlShPos(_d2MlSl.key);
+                        _d2MlPrepend = (_d2MlDatImpr === _d2MlSlImpr ? ML_06 : ML_07).replace('[direction]', _d2MlDatDir).replace('[Lever B]', _d2MlSlNm) + ' ';
+                    } else if (_d2MlShLevs.length >= 2) {
+                        var _d2MlPosA    = _d2MlShPos(_d2MlShLevs[0].key);
+                        var _d2MlPosB    = _d2MlShPos(_d2MlShLevs[1].key);
+                        var _d2MlPattern = (_d2MlPosA !== _d2MlPosB) ? 'OFFSET' : (_d2MlParadox && _d2MlPosA) ? 'PARADOX' : 'AMPLIFIED';
+                        if (_d2MlPattern !== 'OFFSET') {
+                            _d2MlPrepend = (_d2MlPosA ? ML_01 : ML_02).replace('[Lever A]', _d2MlA).replace('[Lever B]', _d2MlB) + ' ';
+                        } else {
+                            var _d2MlOffTmpl = (_d2PWidened || _d2PShiftUp) ? ML_03 : (_d2PCompressed || _d2PShiftDn) ? ML_04 : ML_05;
+                            _d2MlPrepend = _d2MlOffTmpl.replace('[Lever A]', _d2MlA).replace('[Lever B]', _d2MlB) + ' ';
+                        }
+                    }
+                    if (_d2MlPrepend) _phys = _d2MlPrepend + _phys;
+                }
                 if (_d2Pchg.length > 0) {
                     var _d2Sn = { capital:'Capital', datum:'Datum', contrib:'Contributions', retire:'Retirement', market:'Market', age:'Age' };
                     var _d2FCap = function(v) { return v >= 1 ? '$' + v.toFixed(2) + 'M' : '$' + Math.round(v * 1000) + 'k'; };
@@ -6438,28 +6553,7 @@
       (function() {
         var setEl = function(id, val, col) { var e = document.getElementById(id); if (!e) return; e.textContent = val; if (col) e.style.color = col; };
         var fA2 = function(v) { return v ? ("$" + Math.round(v) + "k/yr") : "—"; };
-        var stObj2 = (function(dc2, dd2, df2) {
-          var floorCush = Math.round(dd2 - df2);
-          var ceilRoom  = Math.round(dc2 - dd2);
-          var spread    = dc2 - df2;
-          var spreadPct = dc2 > 0 ? spread / dc2 : 0;
-          var margin    = spread > 0 ? (dd2 - df2) / spread : 0.5;
-          if (dd2 > dc2) return { name: "OVEREXTENDED", color: "var(--danger-red)",
-            physics: "Your spending target of $" + Math.round(dd2) + "k/yr sits $" + Math.round(dd2-dc2) + "k/yr above what this portfolio can structurally support. In most market sequences, you would run out of money. This is not a minor gap — it is the most important number on this page.",
-            action: "Lower your Datum to at or below $" + Math.round(dc2) + "k/yr, or go back to Screen 1 and increase your portfolio, extend your timeline, or raise your contributions. Each of those levers closes this gap — Studio shows which one works fastest for your situation." };
-          if (dd2 < df2) return { name: "ABUNDANT", color: "#4a9eff",
-            action: "Your target of $" + Math.round(dd2) + "k/yr sits $" + Math.round(df2-dd2) + "k/yr below your Floor of $" + Math.round(df2) + "k/yr. You have structural room to spare — even a bad market sequence keeps you above your target. Studio can show how to use that slack for earlier retirement or legacy." };
-          if (margin > 0.85) return { name: "COMPRESSED", color: "#e8923a",
-            action: "Your target of $" + Math.round(dd2) + "k/yr sits just $" + ceilRoom + "k/yr below the Ceiling — close to the edge. A bad market stretch could push you below target quickly. Consider pulling the Ceiling up or the Datum down to widen your buffer." };
-          if (margin < 0.15) return { name: "COMPRESSED", color: "#e8923a",
-            action: "Your target of $" + Math.round(dd2) + "k/yr sits just $" + floorCush + "k/yr above the Floor. A sustained market drop could compress your spending to the floor. Consider raising the Floor or lowering the Datum to give yourself more cushion." };
-          if (spreadPct > 0.55) return { name: "EXPANSIVE", color: "var(--teal-mid)",
-            action: "Wide $" + Math.round(spread) + "k/yr range between your Floor and Ceiling. Your target has $" + floorCush + "k/yr of cushion above the Floor. High upside potential — but a sustained stretch of poor returns hits harder in a wide shape." };
-          if (spreadPct > 0.25) return { name: "DEFINED", color: "var(--teal-mid)",
-            action: "A balanced $" + Math.round(spread) + "k/yr range with your target $" + floorCush + "k/yr above the Floor and $" + ceilRoom + "k/yr below the Ceiling. Moderate spread with a protected Floor — predictable and resilient." };
-          return { name: "COMPRESSED", color: "#e8923a",
-            action: "Tight $" + Math.round(spread) + "k/yr range between Floor and Ceiling. Your target has only $" + floorCush + "k/yr above the Floor. Studio can model whether a tighter shape is safe across 10,000 sequences." };
-        })(dc, dd, df);
+        var stObj2 = getShapeStateObj({ ceilSpend: dc, datumSpend: dd, floorSpend: df });
         var skC2 = lastCalculatedPoints ? (lastCalculatedPoints.ceilSpend || 0) : 0;
         var cDelta2 = Math.round(dc - skC2);
         var comp2   = skC2 || dc || 1;
@@ -6474,8 +6568,10 @@
         setEl("s3-shape-state-name2", stObj2.name, stObj2.color);
         var ssb2 = document.getElementById("s3-shape-state-block");
         if (ssb2) ssb2.style.borderLeftColor = stObj2.color;
-        setEl("s3-shape-state-physics", stObj2.physics || "", "rgba(255,255,255,0.75)");
-        setEl("s3-shape-state-plain", stObj2.action);
+        var _ssph = document.getElementById("s3-shape-state-physics");
+        if (_ssph) { _ssph.innerHTML = stObj2.physics || ""; _ssph.style.color = "rgba(255,255,255,0.75)"; }
+        var _sspl = document.getElementById("s3-shape-state-plain");
+        if (_sspl)   _sspl.innerHTML = stObj2.action || "";
         var _ovBanner = document.getElementById("s3-overextended-banner");
         if (_ovBanner) _ovBanner.style.display = stObj2.name === "OVEREXTENDED" ? "block" : "none";
         // Hide narratives in this legacy path — main fn handles them
@@ -6810,15 +6906,16 @@
         setTimeout(function(){ sw.classList.add('fade'); }, 550);
         setTimeout(function(){ sw.classList.remove('fire','fade'); }, 950);
       }
-      // Carry design values to Screen 3
-      if (lastCalculatedPoints) {
-        var _dc = lastCalculatedPoints.ceilSpend  + designOverrides.ceilDelta;
-        var _dd = lastCalculatedPoints.datumSpend + designOverrides.datumDelta;
-        var _df = lastCalculatedPoints.floorSpend + designOverrides.floorDelta;
-        currentScenario._designedCeil  = _dc;
-        currentScenario._designedDatum = _dd;
-        currentScenario._designedFloor = _df;
-      }
+      // Design endpoints: read from Phase 2.1 designScenario, fall back to Sketch
+      var _dPts = _d2LastScenario
+        ? getMathPoint(_d2LastScenario.yearsToGrow||0, _d2LastScenario.yearsToGrow||0, _d2LastScenario)
+        : (lastCalculatedPoints || {});
+      var _dc = _dPts.ceilSpend  || 0;
+      var _dd = _dPts.datumSpend || 0;
+      var _df = _dPts.floorSpend || 0;
+      currentScenario._designedCeil  = _dc;
+      currentScenario._designedDatum = _dd;
+      currentScenario._designedFloor = _df;
       if (typeof updateScreen3WithDesign === 'function') updateScreen3WithDesign();
 
       // Populate all Screen 3 fields
@@ -6844,51 +6941,25 @@
         var sketchDatum = pts.datumSpend || 0;
         var sketchFloor = pts.floorSpend || 0;
         var sketchPort  = pts.portfolioAtRetirement || pts.totalAtRetirement || 0;
-        var dCeil = sketchCeil  + designOverrides.ceilDelta;
-        var dDat  = sketchDatum + designOverrides.datumDelta;
-        var dFlr  = sketchFloor + designOverrides.floorDelta;
+        var dCeil = _dc;
+        var dDat  = _dd;
+        var dFlr  = _df;
         var computed = sketchCeil || 1;
         var tension  = computed>0 ? Math.max(0,Math.round((dCeil-computed)/computed*100)) : 0;
-        var stateObj = (function(dc2, dd2, df2) {
-          var spread = dc2 - df2; var spreadPct = dc2 > 0 ? spread / dc2 : 0; var margin = spread > 0 ? (dd2 - df2) / spread : 0.5;
-          if (dd2 > dc2) return { name: "OVEREXTENDED", color: "var(--danger-red)",
-            physics: "Your target sits above the Sketch's modeled Ceiling at retirement.",
-            action: "Lower your Datum below the Ceiling, delay retirement, or use Studio to see exactly which levers would need to change to make this shape viable." };
-          if (dd2 < df2) return { name: "ABUNDANT", color: "#4a9eff",
-            physics: "Your target sits well below your Floor. You are planning to spend less than even your worst-case scenario suggests you can — there is meaningful structural room here.",
-            action: "You may be able to retire earlier, raise your spending target, or use Studio to plan for gifts and legacy across 10,000 market paths." };
-          if (margin > 0.85 || margin < 0.15) return { name: "COMPRESSED", color: "#e8923a",
-            physics: "Your target spending sits very close to " + (margin > 0.85 ? "the Ceiling" : "the Survival Floor") + ". There is little room for error — a bad year hits harder when you are this close to the edge.",
-            action: "" + (margin > 0.85 ? "Consider pulling the Datum down or raising the Ceiling" : "Lower your Datum or raise your Floor") + " to widen the buffer. Studio can show which lever moves the needle fastest." };
-          if (spreadPct > 0.55) return { name: "EXPANSIVE", color: "var(--teal-mid)",
-            physics: "Your Floor and Ceiling are far apart. There is a lot of upside, but your results will be more sensitive to markets — a bad early sequence hits harder when the range is wide.",
-            action: "If you want to lean into this range, use Studio to test tax strategies, glide paths, and Social Security timing across 10,000 sequences." };
-          if (spreadPct > 0.25) return { name: "DEFINED", color: "var(--teal-mid)",
-            physics: "Your Floor and Ceiling are close together. The range is predictable and resilient, but there is not much room to change things.",
-            action: "Use Studio to test inflation shocks and Social Security timing — small changes matter more when the margin is tight." };
-          return { name: "COMPRESSED", color: "#e8923a",
-            physics: "Your Floor and Ceiling are very close together. The range is tight and your target has limited room to flex — small changes in markets or spending have an outsized impact.",
-            action: "Lower your spending target, delay retirement, or use Studio to see which levers relieve pressure fastest." };
-        })(dCeil, dDat, dFlr);
+        var stateObj = (dCeil && dFlr)
+          ? getShapeStateObj({ ceilSpend: dCeil, datumSpend: dDat, floorSpend: dFlr })
+          : { name: '—', color: 'rgba(255,255,255,0.3)', physics: '', physicsShort: '', action: '' };
         var fmtAT = function(v) { if(!v) return '—'; var t=Math.round(v*yrsInRetire); return fmtA(v)+' ('+(t>=1000?(t/1000).toFixed(1)+'M':t+'k')+' total)'; };
         // ── Row 1: Confirmed (Sketch) values ──────────────────────
-        var skStateObj = (function(sc, sd, sf) {
-          if (!sc || !sf) return { name: '—', color: 'rgba(255,255,255,0.3)', physics: '' };
-          if (sd > sc) return { name: 'OVEREXTENDED', color: 'var(--danger-red)', physics: 'Datum exceeds Ceiling — structurally unsupported.' };
-          if (sd < sf) return { name: 'ABUNDANT',     color: '#4a9eff',           physics: 'Target below Floor — structural room to spare.' };
-          var sp = sc > 0 ? (sc - sf) / sc : 0;
-          var mg = (sc - sf) > 0 ? (sd - sf) / (sc - sf) : 0.5;
-          if (mg > 0.85 || mg < 0.15) return { name: 'COMPRESSED', color: '#e8923a', physics: 'Target near an edge — low resilience.' };
-          if (sp > 0.55) return { name: 'EXPANSIVE', color: 'var(--teal-mid)', physics: 'Wide range — high upside, higher downside risk.' };
-          if (sp > 0.25) return { name: 'DEFINED',   color: 'var(--teal-mid)', physics: 'Balanced range with a protected Floor.' };
-          return              { name: 'COMPRESSED', color: '#e8923a',           physics: 'Tight range — consider widening.' };
-        })(sketchCeil, sketchDatum, sketchFloor);
+        var skStateObj = (sketchCeil && sketchFloor)
+          ? getShapeStateObj({ ceilSpend: sketchCeil, datumSpend: sketchDatum, floorSpend: sketchFloor })
+          : { name: '—', color: 'rgba(255,255,255,0.3)', physics: '', physicsShort: '', action: '' };
         var fmtS = function(v) { return v ? ('$'+Math.round(v)+'k/yr') : '—'; };
         set('s3-sk-shape-name', skStateObj.name,          skStateObj.color);
         set('s3-sk-ceil',       fmtAT(sketchCeil));
         set('s3-sk-datum',      fmtAT(sketchDatum));
         set('s3-sk-floor',      fmtAT(sketchFloor));
-        set('s3-sk-meaning',    skStateObj.physics);
+        set('s3-sk-meaning', skStateObj.physicsShort || skStateObj.physics || '—');
         // ── Row 2: Designed values with direction arrows ─────────
         var _arrC = dCeil  > sketchCeil  + 1 ? ' <span style="color:var(--teal-mid);font-size:11px;">&#8593;</span>' : dCeil  < sketchCeil  - 1 ? ' <span style="color:var(--danger-red);font-size:11px;">&#8595;</span>' : ' <span style="color:rgba(255,255,255,0.3);font-size:11px;">=</span>';
         var _arrD = dDat   > sketchDatum + 1 ? ' <span style="color:var(--teal-mid);font-size:11px;">&#8593;</span>' : dDat   < sketchDatum - 1 ? ' <span style="color:var(--danger-red);font-size:11px;">&#8595;</span>' : ' <span style="color:rgba(255,255,255,0.3);font-size:11px;">=</span>';
@@ -6900,7 +6971,7 @@
         if (_datEl)   _datEl.innerHTML   = fmtAT(dDat)   + _arrD;
         var _flrEl  = document.getElementById('s3-floor-val');
         if (_flrEl)   _flrEl.innerHTML   = fmtAT(dFlr)   + _arrF;
-        set('s3-shape-meaning', stateObj.physics||'—');
+        set('s3-shape-meaning', stateObj.physicsShort || stateObj.physics || '—');
         set('s2-age',           age);
         set('s2-retire',        retireAge);
         set('s2-years-to-retire', yrsToRetire); // 'years' is already in surrounding HTML
@@ -6935,7 +7006,7 @@
         set('s3-ceil-delta-desc', ceilDesc);
         set('s3-shape-state-name2', stateObj.name||'—', stateObj.color||'var(--teal-mid)');
         if(el('s3-shape-state-block')) el('s3-shape-state-block').style.borderLeftColor = stateObj.color||'var(--teal-mid)';
-        set('s3-shape-state-plain', stateObj.action||'—');
+        var _sspl2 = el('s3-shape-state-plain'); if (_sspl2) _sspl2.innerHTML = stateObj.action || '—';
 
         // ── Datum narrative ──────────────────────────────────────
         var datNarEl = document.getElementById('s3-datum-narrative');
