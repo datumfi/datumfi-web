@@ -322,12 +322,12 @@
   /* State: Under Pressure (Floor Pulse) */
   @keyframes pulseRed { 0%, 100% { stop-opacity: 0.25; } 50% { stop-opacity: 0.6; stop-color: #ff3333; } }
   .shape-under-pressure #stop-floor { animation: pulseRed 2s infinite ease-in-out; }
-  #d2s-canvas.shape-under-pressure #d2s-stop-floor { animation: pulseRed 2s infinite ease-in-out; }
+  #d2-canvas.shape-under-pressure #d2-stop-floor { animation: pulseRed 2s infinite ease-in-out; }
 
   /* State: At Limit (Ceiling Glow) */
   @keyframes pulseGold { 0%, 100% { stop-opacity: 0.25; } 50% { stop-opacity: 0.5; stop-color: #ffe680; } }
   .shape-at-limit #stop-ceil { animation: pulseGold 2s infinite ease-in-out; }
-  #d2s-canvas.shape-at-limit #d2s-stop-ceil { animation: pulseGold 2s infinite ease-in-out; }
+  #d2-canvas.shape-at-limit #d2-stop-ceil { animation: pulseGold 2s infinite ease-in-out; }
 
   /* Visual Market Sweeps */
   .market-sweep { opacity: 0; filter: blur(25px); pointer-events: none; }
@@ -432,10 +432,31 @@
   .ghost-cone-active { opacity: 0.4 !important; }
 
   /* Screen 2 canvas — bypass Screen 1 draw-animation gates */
-  #d2s-canvas .boundary-line { mask: none; }
-  #d2s-canvas .range-label { opacity: 1; animation: none; }
-  #d2s-canvas .boundary-group circle { opacity: 1; animation: none; }
-  #d2s-datum-hitbox { cursor: ns-resize; }
+  #d2-canvas .boundary-line { mask: none; }
+  #d2-canvas .range-label { opacity: 1; animation: none; }
+  #d2-canvas .boundary-group circle { opacity: 1; animation: none; }
+  #d2-datum-hit { cursor: ns-resize; }
+
+  /* Screen 2 drag handles */
+  #d2-canvas .d2-handle { cursor: ns-resize; transition: r 0.15s ease, filter 0.15s ease; }
+  #d2-canvas .d2-handle:hover { filter: drop-shadow(0 0 6px currentColor); }
+  #d2-canvas .d2-handle.d2-handle-probing { filter: drop-shadow(0 0 8px currentColor); }
+  #d2-canvas .d2-handle-hit { cursor: ns-resize; opacity: 0; }
+  #d2-canvas .d2-vline { stroke-width: 1; stroke-dasharray: 3 4; opacity: 0.35; }
+  #d2-canvas .b-datum { stroke: var(--teal-mid); }
+
+  /* Tension bar tracks + fills */
+  .d2-tbar-track { height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; margin-bottom: 4px; }
+  .d2-tbar-fill  { height: 100%; border-radius: 2px; width: 0%; transition: width 0.4s ease; }
+  .d2-tbar-pct   { font-size: 11px; font-family: var(--font-serif); font-style: italic; }
+  .d2-tbar-label { font-size: 8px; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.08em; }
+
+  /* Accept button */
+  .d2-accept-btn { display: block; margin-top: 6px; width: 100%; padding: 4px 0;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 3px; font-family: var(--font-mono); font-size: 9px;
+    color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; }
+  .d2-accept-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
 
   /* GAP 5: Screen 2 blueprint background — teal grid at 5% opacity */
   #screen-2-design .canvas-wrap {
@@ -586,7 +607,7 @@
     width: 100%;
   }
   .design-left {
-    width: 35%;
+    width: 25%;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -611,16 +632,12 @@
   .d2-ghost-tick { position: absolute; top: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 1; display: none; }
   .d2-ghost-tick-line { width: 2px; height: 14px; background: rgba(255,255,255,0.28); border-radius: 1px; box-shadow: 0 0 3px rgba(255,255,255,0.08); }
   .d2-ghost-tick.visible { display: block; }
-  /* Screen 2 Datum Intelligence HUD */
-  .d2-hud-card { background: rgba(9,18,33,0.85); border: 1px solid rgba(255,255,255,0.1); border-left: 2px solid var(--teal-mid); border-radius: 4px; padding: 10px 12px; transition: border-left-color 0.3s ease; }
-  .d2-hud-status { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--teal-mid); margin-bottom: 8px; }
-  .d2-hud-metrics { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
-  .d2-hud-metric { display: flex; justify-content: space-between; align-items: center; font-family: var(--font-mono); font-size: 9px; }
-  .d2-hud-metric-lbl { color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.08em; }
-  .d2-hud-metric-val { font-size: 11px; font-weight: bold; }
-  .d2-hud-divider { border-top: 1px solid rgba(255,255,255,0.06); padding-top: 6px; }
-  .d2-hud-readout { font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.55); line-height: 1.5; display: flex; flex-direction: column; gap: 4px; }
-  .d2-hud-readout strong { color: var(--white); display: inline; margin-right: 3px; }
+  .design-right-wrap {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: row;
+  }
   .design-right {
     flex: 1;
     min-width: 0;
@@ -633,6 +650,16 @@
     background-size: 100% 100%;
     overflow-y: auto;
     overflow-x: hidden;
+  }
+  .design-right-col {
+    width: 25%;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 10px 16px;
+    background: rgba(9,18,33,0.95);
+    border-left: 1px solid rgba(255,255,255,0.05);
+    overflow-y: auto;
   }
 
   /* Carry-forward */
@@ -891,11 +918,20 @@
     transform: translateX(-50%) translateY(0);
   }
 
+  /* 3-col → 2-col collapse at 1100px */
+  @media (max-width: 1100px) {
+    .design-left { width: 35%; }
+    .design-right-wrap { flex-direction: column; }
+    .design-right-col { width: 100%; border-left: none; border-top: 1px solid rgba(255,255,255,0.05); }
+  }
+
   /* Mobile */
   @media (max-width: 800px) {
     .design-split { flex-direction: column; height: auto; min-height: 100vh; }
     .design-left  { width: 100%; padding: 20px; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.05); }
     .design-right { padding: 16px; min-height: 60vw; }
+    .design-right-wrap { flex-direction: column; }
+    .design-right-col { width: 100%; border-left: none; border-top: 1px solid rgba(255,255,255,0.05); }
     .design-canvas-wrap { min-height: 280px; }
   }
 
@@ -1832,6 +1868,7 @@
       </div>
 
       <!-- RIGHT PANEL — full size draggable canvas -->
+      <div class="design-right-wrap">
       <div class="design-right">
         <!-- Zone B: d2s- HUD card above canvas (permanent-pinned intelligence — Screen 2 design state) -->
         <div class="interactive-layer active" id="d2s-hud-dash" style="position:relative; flex-shrink:0; margin-bottom:6px; opacity:0; transition:opacity 0.6s;">
@@ -1902,114 +1939,143 @@
           </div>
         </div>
 
-        <!-- Zone B: d2s- canvas (Screen 1 cone clone, slider-driven, no drag handles) -->
+        <!-- Zone B: d2-canvas (unified — slider-driven + drag-driven, bidirectional) -->
         <div class="canvas-wrap" style="flex:1; position:relative;">
-          <svg class="range-svg" id="d2s-canvas" viewBox="0 0 840 480" preserveAspectRatio="xMidYMid meet" aria-hidden="true" style="cursor:default;">
+          <svg class="range-svg" id="d2-canvas" viewBox="0 0 840 480" preserveAspectRatio="xMidYMid meet" aria-hidden="true" style="cursor:default; overflow:visible;">
             <defs>
-              <linearGradient id="d2s-thermal-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop id="d2s-stop-ceil"  offset="0%"   stop-color="#C9A84C" stop-opacity="0.25" />
-                <stop id="d2s-stop-mid1"  offset="35%"  stop-color="#5DCAA5" stop-opacity="0.15" />
-                <stop id="d2s-stop-mid2"  offset="65%"  stop-color="#5DCAA5" stop-opacity="0.15" />
-                <stop id="d2s-stop-floor" offset="100%" stop-color="#e24b4a" stop-opacity="0.25" />
+              <linearGradient id="d2-thermal-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop id="d2-stop-ceil"  offset="0%"   stop-color="#C9A84C" stop-opacity="0.25" />
+                <stop id="d2-stop-mid1"  offset="35%"  stop-color="#5DCAA5" stop-opacity="0.15" />
+                <stop id="d2-stop-mid2"  offset="65%"  stop-color="#5DCAA5" stop-opacity="0.15" />
+                <stop id="d2-stop-floor" offset="100%" stop-color="#e24b4a" stop-opacity="0.25" />
+                <stop id="d2g-ceil"      offset="0%"   stop-color="#C9A84C" stop-opacity="0.0" />
               </linearGradient>
+              <clipPath id="d2-clip-cone">
+                <path id="d2-clip-cone-path" d="" />
+              </clipPath>
             </defs>
-            <rect id="d2s-market-sweep" class="market-sweep" x="-250" y="-100" width="250" height="700" fill="transparent" />
-            <rect id="d2s-state-tint-rect" x="0" y="0" width="840" height="480" fill="none" pointer-events="none"/>
-            <g id="d2s-grid-axes-group">
+            <rect id="d2-market-sweep" class="market-sweep" x="-250" y="-100" width="250" height="700" fill="transparent" />
+            <rect id="d2-state-tint-rect" x="0" y="0" width="840" height="480" fill="none" pointer-events="none"/>
+            <!-- Grid: dynamic labels injected by renderScreen2() -->
+            <g id="d2-grid">
               <text x="80" y="40" text-anchor="end" class="axis-title" style="fill:rgba(255,255,255,0.8);">ANNUAL SPEND</text>
-              <line x1="80" y1="50"  x2="700" y2="50"  class="grid-tick" />
-              <text id="d2s-grid-lbl-1" x="70" y="54"  text-anchor="end" class="grid-label" style="fill:rgba(255,255,255,0.8);">$400k</text>
-              <line x1="80" y1="150" x2="700" y2="150" class="grid-tick" />
-              <text id="d2s-grid-lbl-2" x="70" y="154" text-anchor="end" class="grid-label" style="fill:rgba(255,255,255,0.8);">$300k</text>
-              <line x1="80" y1="250" x2="700" y2="250" class="grid-tick" />
-              <text id="d2s-grid-lbl-3" x="70" y="254" text-anchor="end" class="grid-label" style="fill:rgba(255,255,255,0.8); font-weight:bold;">$200k</text>
-              <line x1="80" y1="350" x2="700" y2="350" class="grid-tick" />
-              <text id="d2s-grid-lbl-4" x="70" y="354" text-anchor="end" class="grid-label" style="fill:rgba(255,255,255,0.8);">$100k</text>
-              <line x1="80" y1="450" x2="700" y2="450" class="grid-tick" />
-              <text id="d2s-grid-lbl-5" x="70" y="454" text-anchor="end" class="grid-label" style="fill:rgba(255,255,255,0.8);">$0k</text>
+            </g>
+            <!-- Time axis (static structure; labels updated dynamically) -->
+            <g id="d2-xaxis-group">
               <line x1="120" y1="460" x2="650" y2="460" class="time-axis-line" />
               <line x1="120" y1="455" x2="120" y2="465" class="time-axis-line" />
               <line x1="650" y1="455" x2="650" y2="465" class="time-axis-line" />
-              <text id="d2s-time-start" x="120" y="475" text-anchor="middle" class="time-label" style="fill:rgba(255,255,255,0.8);">AGE 40</text>
-              <text id="d2s-time-end"   x="650" y="475" text-anchor="middle" class="time-label" style="fill:var(--teal-mid);">RETIRE: 65</text>
+              <text id="d2-xaxis-start" x="120" y="475" text-anchor="middle" class="time-label" style="fill:rgba(255,255,255,0.8);">AGE 40</text>
+              <text id="d2-xaxis-end"   x="650" y="475" text-anchor="middle" class="time-label" style="fill:var(--teal-mid);">RETIRE: 65</text>
+              <text x="390" y="472" text-anchor="middle" class="axis-title">YEARS UNTIL RETIREMENT</text>
             </g>
-            <g id="d2s-clean-layer">
-              <!-- Ghost cone: ghostBaseline — always visible (Screen 2 = permanently pinned) -->
-              <path id="d2s-ghost-cone"  fill="url(#d2s-thermal-grad)" opacity="0.3" d="" />
-              <path id="d2s-ghost-ceil"  class="ghost-line ghost-ceil  morph ghost-active" d="" />
-              <path id="d2s-ghost-floor" class="ghost-line ghost-floor morph ghost-active" d="" />
-              <path id="d2s-ghost-datum" class="ghost-line ghost-datum morph ghost-active" d="" />
-              <!-- Live cone: designScenario — redrawn by renderDesignCanvas() -->
-              <path id="d2s-cone" fill="url(#d2s-thermal-grad)" opacity="0" d="" />
+            <g id="d2-clean-layer">
+              <!-- Ghost cone: currentScenario snapshot at Screen 2 open -->
+              <path id="d2-ghost-cone"  fill="url(#d2-thermal-grad)" opacity="0.22" d="" />
+              <path id="d2-ghost-ceil"  class="ghost-line ghost-ceil  ghost-active" d="" />
+              <path id="d2-ghost-floor" class="ghost-line ghost-floor ghost-active" d="" />
+              <path id="d2-ghost-datum" class="ghost-line ghost-datum ghost-active" d="" />
+              <!-- Live cone: designScenario + designOverrides -->
+              <path id="d2-cone" fill="url(#d2-thermal-grad)" opacity="0.55" d="" />
+              <!-- Ceiling boundary -->
               <g class="boundary-group">
-                <path id="d2s-ceil-line" class="boundary-line b-ceiling morph" d="" />
-                <circle id="d2s-node-ceil" class="morph-node" cx="650" cy="0" r="4" fill="var(--gold)" />
-                <text id="d2s-ceil-lbl" class="range-label morph-node" x="665" y="0" text-anchor="start" style="fill:var(--gold);">STRUCTURAL CEILING</text>
+                <path id="d2-ceil-hit"  stroke="transparent" stroke-width="18" fill="none" d="" pointer-events="stroke" style="cursor:ns-resize;" />
+                <path id="d2-ceil-line" class="boundary-line b-ceiling" d="" />
+                <circle id="d2-node-ceil" class="morph-node" cx="650" cy="50" r="4" fill="var(--gold)" />
+                <text id="d2-lbl-ceil" class="range-label" x="665" y="50" text-anchor="start" style="fill:var(--gold); opacity:1;">STRUCTURAL CEILING</text>
               </g>
+              <!-- Floor boundary -->
               <g class="boundary-group">
-                <path id="d2s-floor-line" class="boundary-line b-floor morph" d="" />
-                <circle id="d2s-node-floor" class="morph-node" cx="650" cy="0" r="4" fill="var(--danger-red)" />
-                <text id="d2s-floor-lbl" class="range-label morph-node" x="665" y="0" text-anchor="start" style="fill:var(--danger-red);">SURVIVAL FLOOR</text>
+                <path id="d2-floor-hit"  stroke="transparent" stroke-width="18" fill="none" d="" pointer-events="stroke" style="cursor:ns-resize;" />
+                <path id="d2-floor-line" class="boundary-line b-floor" d="" />
+                <circle id="d2-node-floor" class="morph-node" cx="650" cy="430" r="4" fill="var(--danger-red)" />
+                <text id="d2-lbl-floor" class="range-label" x="665" y="430" text-anchor="start" style="fill:var(--danger-red); opacity:1;">SURVIVAL FLOOR</text>
               </g>
-              <g id="d2s-datum-dragger" class="datum-group">
-                <path id="d2s-datum-hitbox" class="boundary-line" stroke="transparent" stroke-width="30" fill="none" d="" pointer-events="stroke" />
-                <path id="d2s-datum-line" class="boundary-line b-datum" d="" />
-                <circle id="d2s-node-datum" class="morph-node" cx="650" cy="0" r="6" fill="var(--teal-mid)" style="opacity:0;" />
-                <text id="d2s-datum-lbl" class="range-label morph-node" x="665" y="0" text-anchor="start" style="fill:var(--teal-mid);">YOUR DATUM</text>
+              <!-- Datum boundary -->
+              <g id="d2-datum-group" class="datum-group">
+                <path id="d2-datum-hit"  stroke="transparent" stroke-width="30" fill="none" d="" pointer-events="stroke" style="cursor:ns-resize;" />
+                <path id="d2-datum-line" class="boundary-line b-datum" d="" />
+                <circle id="d2-node-datum" class="morph-node" cx="650" cy="225" r="6" fill="var(--teal-mid)" />
+                <text id="d2-lbl-datum" class="range-label" x="665" y="225" text-anchor="start" style="fill:var(--teal-mid); opacity:1;">YOUR DATUM</text>
+              </g>
+              <!-- Drag handles (positioned at right endpoint by renderScreen2()) -->
+              <line id="d2-handle-ceil-line"  class="d2-vline" x1="650" y1="30" x2="650" y2="50"  stroke="var(--gold)"       />
+              <line id="d2-handle-datum-line" class="d2-vline" x1="650" y1="225" x2="650" y2="245" stroke="var(--teal-mid)"  />
+              <circle id="d2-handle-ceil"  class="d2-handle" cx="650" cy="50"  r="7"  fill="var(--gold)"       tabindex="0" role="slider" aria-label="Ceiling drag handle"  style="color:var(--gold);" />
+              <circle id="d2-handle-ceil-hit"  class="d2-handle-hit" cx="650" cy="50"  r="18" fill="transparent" style="cursor:ns-resize;" />
+              <circle id="d2-handle-datum" class="d2-handle" cx="650" cy="225" r="8"  fill="var(--teal-mid)"   tabindex="0" role="slider" aria-label="Datum drag handle"    style="color:var(--teal-mid);" />
+              <circle id="d2-handle-datum-hit" class="d2-handle-hit" cx="650" cy="225" r="18" fill="transparent" style="cursor:ns-resize;" />
+              <circle id="d2-handle-floor" class="d2-handle" cx="650" cy="430" r="7"  fill="var(--danger-red)" tabindex="0" role="slider" aria-label="Floor drag handle"    style="color:var(--danger-red);" />
+              <circle id="d2-handle-floor-hit" class="d2-handle-hit" cx="650" cy="430" r="18" fill="transparent" style="cursor:ns-resize;" />
+              <!-- Tension overlay (cone-clipped fill showing drag delta) -->
+              <path id="d2-tension-overlay" fill="rgba(255,255,255,0.06)" d="" pointer-events="none" />
+            </g>
+            <!-- Hover scrubber -->
+            <g id="d2-scrubber-group" style="opacity:0; pointer-events:none; transition:opacity 0.2s;">
+              <line id="d2-scrubber-line" x1="650" y1="30" x2="650" y2="460" stroke="#ffffff" stroke-opacity="0.4" stroke-width="1" stroke-dasharray="4 4" />
+              <g id="d2-tt-g-ceil" transform="translate(650,100)">
+                <rect x="15" y="-14" width="280" height="36" fill="#091221" fill-opacity="0.95" stroke="var(--gold)" rx="4" />
+                <text x="25" y="0" font-family="var(--font-mono)" font-size="10" fill="var(--gold)" font-weight="bold">CEILING @ <tspan id="d2-tt-age-ceil">45</tspan> <tspan fill="var(--white)" font-family="var(--font-serif)" font-style="italic" id="d2-tt-data-ceil">| $2.94M / $97k yr</tspan></text>
+                <text x="25" y="14" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.6">Favorable path — if returns run above the baseline.</text>
+              </g>
+              <g id="d2-tt-g-floor" transform="translate(650,200)">
+                <rect x="15" y="-14" width="280" height="36" fill="#091221" fill-opacity="0.95" stroke="var(--danger-red)" rx="4" />
+                <text x="25" y="0" font-family="var(--font-mono)" font-size="10" fill="var(--danger-red)" font-weight="bold">FLOOR @ <tspan id="d2-tt-age-floor">45</tspan> <tspan fill="var(--white)" font-family="var(--font-serif)" font-style="italic" id="d2-tt-data-floor">| $1.61M / $36k yr</tspan></text>
+                <text x="25" y="14" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.6">Stress path — if returns stay low.</text>
+              </g>
+              <g id="d2-tt-g-datum" transform="translate(650,300)">
+                <rect x="15" y="-14" width="310" height="52" fill="#091221" fill-opacity="0.95" stroke="var(--teal-mid)" rx="4" />
+                <text x="25" y="0" font-family="var(--font-mono)" font-size="10" fill="var(--teal-mid)" font-weight="bold">DATUM @ <tspan id="d2-tt-age-datum">45</tspan> <tspan fill="var(--white)" font-family="var(--font-serif)" font-style="italic" id="d2-tt-data-datum">| $100k/yr</tspan></text>
+                <text x="25" y="14" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.6">Your chosen spending target.</text>
+                <text x="25" y="26" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.4">Capital is a broad-stroke estimate, not a path projection.</text>
               </g>
             </g>
-            <g id="d2s-scrubber-group" style="opacity: 0; pointer-events: none; transition: opacity 0.2s;">
-              <line id="d2s-scrubber-line" x1="650" y1="50" x2="650" y2="460" stroke="#ffffff" stroke-opacity="0.4" stroke-width="1" stroke-dasharray="4 4" />
-              <g id="d2s-tt-g-ceil" transform="translate(650, 100)">
-                 <rect x="15" y="-14" width="280" height="36" fill="#091221" fill-opacity="0.95" stroke="var(--gold)" rx="4" />
-                 <text x="25" y="0" font-family="var(--font-mono)" font-size="10" fill="var(--gold)" font-weight="bold">CEILING @ <tspan id="d2s-tt-age-ceil">45</tspan> <tspan fill="var(--white)" font-family="var(--font-serif)" font-style="italic" id="d2s-tt-data-ceil">| $2.94M / $97k yr</tspan></text>
-                 <text x="25" y="14" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.6">Favorable path — if returns run above the baseline.</text>
-              </g>
-              <g id="d2s-tt-g-floor" transform="translate(650, 200)">
-                 <rect x="15" y="-14" width="280" height="36" fill="#091221" fill-opacity="0.95" stroke="var(--danger-red)" rx="4" />
-                 <text x="25" y="0" font-family="var(--font-mono)" font-size="10" fill="var(--danger-red)" font-weight="bold">FLOOR @ <tspan id="d2s-tt-age-floor">45</tspan> <tspan fill="var(--white)" font-family="var(--font-serif)" font-style="italic" id="d2s-tt-data-floor">| $1.61M / $36k yr</tspan></text>
-                 <text x="25" y="14" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.6">Stress path — if returns stay low.</text>
-              </g>
-              <g id="d2s-tt-g-datum" transform="translate(650, 300)">
-                 <rect x="15" y="-14" width="310" height="52" fill="#091221" fill-opacity="0.95" stroke="var(--teal-mid)" rx="4" />
-                 <text x="25" y="0" font-family="var(--font-mono)" font-size="10" fill="var(--teal-mid)" font-weight="bold">DATUM @ <tspan id="d2s-tt-age-datum">45</tspan> <tspan fill="var(--white)" font-family="var(--font-serif)" font-style="italic" id="d2s-tt-data-datum">| $100k/yr</tspan></text>
-                 <text x="25" y="14" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.6">Your chosen spending target.</text>
-                 <text x="25" y="26" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.4">Capital is a broad-stroke estimate, not a path projection.</text>
-              </g>
-            </g>
-            <text x="390" y="472" text-anchor="middle" class="axis-title">YEARS UNTIL RETIREMENT</text>
           </svg>
-        </div>
 
-        <!-- Canvas HUD: tension overlay — position:absolute stays as-is -->
-        <div id="canvas-hud" style="
-          position:absolute; top:6px; right:12px; z-index:20;
-          background:rgba(9,18,33,0.92);
-          backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
-          border:1px solid rgba(255,255,255,0.1);
-          border-radius:4px; padding:8px 12px;
-          width:210px;
-          font-family:var(--font-mono); font-size:10px;
-          pointer-events:none;
-          box-shadow:0 4px 24px rgba(0,0,0,0.5);
-        ">
-          <div style="color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.15em; font-size:8px; margin-bottom:7px;"><div style="margin-top:0;">
-            <div style="font-size:8px; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.15em; margin-bottom:5px;">Ceiling Tension</div>
-            <div class="tension-bar-track" style="height:3px; background:rgba(255,255,255,0.08); border-radius:2px; margin-bottom:4px;">
-              <div class="tension-bar-fill" id="tension-fill" style="height:100%; background:var(--gold); border-radius:2px; width:0%; transition:width 0.4s ease;"></div>
+
+        </div>
+        <!-- Three tension bars -->
+        <div id="d2-tension-hud" style="margin-top:6px; pointer-events:none; background:rgba(9,18,33,0.82); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.08); border-radius:4px; padding:7px 10px; font-family:var(--font-mono);">
+            <!-- Ceiling tension bar -->
+            <div style="margin-bottom:6px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
+                <span class="d2-tbar-label" id="d2-tension-ceil-lbl" style="color:var(--gold);">CEILING TENSION</span>
+                <span class="d2-tbar-pct" id="d2-tension-ceil-pct" style="color:var(--gold);">0%</span>
+              </div>
+              <div class="d2-tbar-track">
+                <div class="d2-tbar-fill" id="d2-tension-ceil-fill" style="background:var(--gold);"></div>
+              </div>
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-size:8px; color:rgba(255,255,255,0.3); font-family:var(--font-mono); letter-spacing:0.08em;">ABOVE PATH</span>
-              <span class="tension-pct" id="tension-pct" style="font-size:11px; color:var(--gold); font-family:var(--font-serif); font-style:italic;">0%</span>
+            <!-- Floor tension bar -->
+            <div style="margin-bottom:6px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
+                <span class="d2-tbar-label" id="d2-tension-floor-lbl" style="color:var(--danger-red);">FLOOR TENSION</span>
+                <span class="d2-tbar-pct" id="d2-tension-floor-pct" style="color:var(--danger-red);">0%</span>
+              </div>
+              <div class="d2-tbar-track">
+                <div class="d2-tbar-fill" id="d2-tension-floor-fill" style="background:var(--danger-red);"></div>
+              </div>
             </div>
+            <!-- Datum tension bar -->
+            <div style="margin-bottom:4px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
+                <span class="d2-tbar-label" id="d2-tension-datum-lbl" style="color:var(--teal-mid);">DATUM TENSION</span>
+                <span class="d2-tbar-pct" id="d2-tension-datum-pct" style="color:var(--teal-mid);">0%</span>
+              </div>
+              <div class="d2-tbar-track">
+                <div class="d2-tbar-fill" id="d2-tension-datum-fill" style="background:var(--teal-mid);"></div>
+              </div>
+            </div>
+            <div id="tension-explain" style="font-size:9px; color:rgba(255,255,255,0.5); line-height:1.55; font-family:var(--font-sans,sans-serif); margin-top:3px;">Drag the Ceiling, Floor, or Datum handles to shape your cone.</div>
           </div>
-          <div id="tension-explain" style="font-size:9px; color:rgba(255,255,255,0.5); line-height:1.55; font-family:var(--font-sans,sans-serif); margin-top:5px;">Move the Ceiling handle to see what the tension means.</div>
-        </div>
 
-        <!-- Requirements panel — TO REACH THIS DESIGN (Part 5: right side, under Ceiling Tension) -->
-        <div class="requirements-panel" id="requirements-panel" style="flex:1; display:flex; flex-direction:column; margin-top:10px; min-height:0; max-height:220px; overflow-y:auto;">
+
+      </div><!-- end design-right -->
+
+      <div class="design-right-col">
+        <!-- Requirements panel — TO REACH THIS DESIGN -->
+        <div class="requirements-panel" id="requirements-panel" style="flex:1; display:flex; flex-direction:column; min-height:360px; overflow-y:auto;">
           <div class="req-head" id="req-head-label" style="margin-bottom:6px;">TO REACH THIS DESIGN:</div>
-          <div id="req-spotlight" style="display:none;"></div>
           <div class="req-items" id="req-items" style="overflow-y:auto; flex:1; min-height:0;">
             <div class="req-placeholder">Drag the Ceiling, Floor, or Datum handles to design your shape.</div>
           </div>
@@ -2045,9 +2111,10 @@
         </div>
         </div><!-- end pointer wrapper -->
 
-      </div>
+      </div><!-- end design-right-col -->
+      </div><!-- end design-right-wrap -->
 
-      
+
 
     </div>
 
@@ -5489,20 +5556,6 @@
         const btnReset = document.getElementById('btn-reset-sketch');
         if (btnReset) btnReset.addEventListener('click', resetSketch);
 
-        // Delegated listener for dynamically generated req-item suggestions
-        const reqPanel = document.getElementById('req-items');
-        if (reqPanel) {
-          function handleReqItem(e) {
-            const item = e.target.closest('.req-item');
-            if (!item) return;
-            const type  = item.dataset.reqType;
-            const value = parseFloat(item.dataset.reqValue);
-            if (type && !isNaN(value)) applyDesignSuggestion(item, type, value);
-          }
-          reqPanel.addEventListener('click',   handleReqItem);
-          reqPanel.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleReqItem(e); });
-        }
-
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -5655,10 +5708,14 @@
     var designScenario = null;
     var _d2LastEndpointCY = { ceil: 0, floor: 450, datum: 225 };
     var _d2LastScenario   = null;
+    var _d2AcceptAnimating = false;
+    var _d2ActiveDesignPts = null;
 
     // Phase 2.1 STUB: read d2-slider-* into designScenario + update display values
     function updateDesignEngine() {
         if (!ghostBaseline) return;
+        // Implicit reject: slider move discards any pending drag pull (unless slider is animating on Accept)
+        if (!_d2AcceptAnimating) { initDesignState(); _d2SetProbingState(false); }
         var age     = parseInt(document.getElementById('d2-slider-age').value, 10);
         var retire  = parseInt(document.getElementById('d2-slider-activation').value, 10);
         var port    = portPosToVal(parseInt(document.getElementById('d2-slider-portfolio').value));
@@ -5771,7 +5828,10 @@
         globalYMin  = Math.max(0, _d2Mid - _d2PR / 2);
         globalYMax  = _d2Mid + _d2PR / 2;
 
-        // Build live paths
+        // Delegate canvas draw to unified renderScreen2()
+        renderScreen2();
+
+        // Build live paths (d2s-* refs below silently no-op after element rename)
         var dCeil = 'M ' + xStart + ' ' + spendToY(ptsStart.ceilSpend);
         var dFloor= 'M ' + xStart + ' ' + spendToY(ptsStart.floorSpend);
         var dDatum= 'M ' + xStart + ' ' + spendToY(ptsStart.datumSpend);
@@ -5839,9 +5899,7 @@
         _sa('d2s-floor-lbl',  'x', xEnd + 15); _sa('d2s-floor-lbl',  'y', spendToY(ptsEnd.floorSpend) + 4);
         _sa('d2s-node-datum', 'cx', xEnd); _sa('d2s-node-datum', 'cy', spendToY(ptsEnd.datumSpend));
         _sa('d2s-datum-lbl',  'x', xEnd + 15); _sa('d2s-datum-lbl',  'y', spendToY(ptsEnd.datumSpend) + 4);
-        _d2LastEndpointCY.ceil  = spendToY(ptsEnd.ceilSpend);
-        _d2LastEndpointCY.floor = spendToY(ptsEnd.floorSpend);
-        _d2LastEndpointCY.datum = spendToY(ptsEnd.datumSpend);
+        // _d2LastEndpointCY now set by renderScreen2()
 
         // Grid labels (share Screen 1 Y-axis scale)
         _st('d2s-grid-lbl-1', formatYLabel(globalYMax));
@@ -5859,8 +5917,8 @@
         _ss('d2s-datum-lbl',  'fill',   stateObj.color);
         var tintEl = document.getElementById('d2s-state-tint-rect');
         if (tintEl) tintEl.setAttribute('fill', stateObj.name === 'OVEREXTENDED' ? 'rgba(226,75,74,0.06)' : 'none');
-        // Detail 6: datum proximity pulse — mirror Screen 1 shape class on d2s-canvas
-        var _d2CanvasEl = document.getElementById('d2s-canvas');
+        // Detail 6: datum proximity pulse — mirror Screen 1 shape class on d2-canvas
+        var _d2CanvasEl = document.getElementById('d2-canvas');
         if (_d2CanvasEl) {
             _d2CanvasEl.classList.remove('shape-healthy', 'shape-under-pressure', 'shape-at-limit');
             if (stateObj.name === 'GROUNDED')  _d2CanvasEl.classList.add('shape-under-pressure');
@@ -6305,118 +6363,181 @@
       designOverrides.isDirty    = false;
     }
 
-    // ── Main render — uses globalYMin/globalYMax shared with Screen 1 ──
+    // ── Main render — unified bidirectional canvas (slider-driven + drag-driven) ──
     function renderScreen2() {
-      var pts = lastCalculatedPoints;
-      if (!pts) return;
+      var _ghostSc = ghostBaseline;
+      if (!_ghostSc) return;
       var svg = document.getElementById('d2-canvas');
       if (!svg) return;
 
-      var dCeil  = pts.ceilSpend  + designOverrides.ceilDelta;
-      var dFloor = pts.floorSpend + designOverrides.floorDelta;
-      var dDatum = pts.datumSpend + designOverrides.datumDelta;
+      // Build live scenario from Screen 2 sliders (designScenario)
+      var _ls = designScenario;
+      var _mktEl = document.querySelector('input[name="d2-market"]:checked');
+      var _para = _mktEl ? _mktEl.value : 'average';
+      var _cR = 1.015, _bR = 1.035, _uR = 1.055;
+      if (_para === 'optimistic') { _cR = 1.020; _bR = 1.040; _uR = 1.065; }
+      else if (_para === 'stress') { _cR = 1.005; _bR = 1.015; _uR = 1.035; }
+      var _liveSc = (_ls && _ls.port !== undefined) ? {
+        currentAge: _ls.age, activationAge: _ls.retire,
+        yearsToGrow: Math.max(0, _ls.retire - _ls.age),
+        portfolioVol: _ls.port, annualContrib: _ls.contrib,
+        targetSpend: Math.round(_ls.datum || 0),
+        conservativeRate: _cR, baselineRate: _bR, upsideRate: _uR,
+        isNominal: _ghostSc.isNominal || false,
+        taxMult: _ghostSc.taxMult || 0.8, inflRate: 0.03
+      } : _ghostSc;
+      var _lYrs = Math.max(1, _liveSc.yearsToGrow);
+      var _gYrs = Math.max(1, _ghostSc.yearsToGrow || Math.max(0, _ghostSc.activationAge - _ghostSc.currentAge));
 
-      // X axis labels
-      var _s = currentScenario || {};
-      var _xStart = document.getElementById('d2-xaxis-start');
-      var _xEnd   = document.getElementById('d2-xaxis-end');
-      if (_xStart) _xStart.textContent = 'AGE ' + (_s.currentAge || '—');
-      if (_xEnd)   _xEnd.textContent   = 'RETIRE: ' + (_s.activationAge || '—');
+      // Compute design endpoints (live scenario) + apply drag overrides
+      var dptsEnd = getMathPoint(_lYrs, _lYrs, _liveSc);
+      var dCeil   = dptsEnd.ceilSpend  + designOverrides.ceilDelta;
+      var dFloor  = dptsEnd.floorSpend + designOverrides.floorDelta;
+      var dDatum  = dptsEnd.datumSpend + designOverrides.datumDelta;
+      _d2ActiveDesignPts = dptsEnd;
+
+      // F2: Recalculate Y-axis scale to include drag overrides
+      if (designOverrides.isDirty) {
+        var _ghostEnd2 = getMathPoint(_gYrs, _gYrs, _ghostSc);
+        var _d2AV2 = [dCeil, dFloor, dDatum,
+          dptsEnd.ceilSpend, dptsEnd.floorSpend, dptsEnd.datumSpend,
+          _ghostEnd2.ceilSpend, _ghostEnd2.floorSpend, _ghostEnd2.datumSpend];
+        var _d2VMin2 = Math.min.apply(null, _d2AV2);
+        var _d2VMax2 = Math.max.apply(null, _d2AV2);
+        var _d2PR2   = Math.max((_d2VMax2 - _d2VMin2) * 1.25, 60);
+        var _d2Mid2  = (_d2VMin2 + _d2VMax2) / 2;
+        globalYMin   = Math.max(0, _d2Mid2 - _d2PR2 / 2);
+        globalYMax   = _d2Mid2 + _d2PR2 / 2;
+      }
+
+      // X-axis labels (live scenario)
+      var _xSt = document.getElementById('d2-xaxis-start');
+      var _xEn = document.getElementById('d2-xaxis-end');
+      if (_xSt) _xSt.textContent = 'AGE ' + _liveSc.currentAge;
+      if (_xEn) _xEn.textContent = _lYrs > 0 ? 'RETIRE: ' + _liveSc.activationAge : 'TODAY';
 
       var xS = D_X_START, xE = D_X_END;
-      var ptsStart = getMathPoint(0, currentScenario.yearsToGrow, currentScenario);
+      var livePtsStart  = getMathPoint(0, _lYrs, _liveSc);
+      var ghostPtsStart = getMathPoint(0, _gYrs, _ghostSc);
 
-      // ── 50-segment curve build (ghost = Screen 1 baseline, live = blended toward design) ──
-      var _steps = 50;
-      var _lCeilPath  = 'M' + xS + ' ' + d2SpendToY(ptsStart.ceilSpend);
-      var _lFloorPath = 'M' + xS + ' ' + d2SpendToY(ptsStart.floorSpend);
-      var _lConeCeilPts  = [xS + ' ' + d2SpendToY(ptsStart.ceilSpend)];
+      // Build 50-segment paths: ghost (ghostBaseline) + live (designScenario + designOverrides)
+      var _lCeilPath  = 'M' + xS + ' ' + d2SpendToY(livePtsStart.ceilSpend);
+      var _lFloorPath = 'M' + xS + ' ' + d2SpendToY(livePtsStart.floorSpend);
+      var _lConeCeilPts  = [xS + ' ' + d2SpendToY(livePtsStart.ceilSpend)];
       var _lConeFloorPts = [];
-      var _gConeCeilPts  = [xS + ' ' + d2SpendToY(ptsStart.ceilSpend)];
+      var _gConeCeilPts  = [xS + ' ' + d2SpendToY(ghostPtsStart.ceilSpend)];
       var _gConeFloorPts = [];
-      var _gFloorFwdPts  = [xS + ' ' + d2SpendToY(ptsStart.floorSpend)];
-      for (var _i = 1; _i <= _steps; _i++) {
-        var _t  = _i / _steps;
+      var _gCeilFwdPts   = [xS + ' ' + d2SpendToY(ghostPtsStart.ceilSpend)];
+      var _gFloorFwdPts  = [xS + ' ' + d2SpendToY(ghostPtsStart.floorSpend)];
+      var _gDatumFwdPts  = [xS + ' ' + d2SpendToY(ghostPtsStart.datumSpend)];
+      for (var _i = 1; _i <= 50; _i++) {
+        var _t  = _i / 50;
         var _x  = xS + _t * (xE - xS);
-        var _sp = getMathPoint(_t * currentScenario.yearsToGrow, currentScenario.yearsToGrow, currentScenario);
+        var _sp  = getMathPoint(_t * _lYrs, _lYrs, _liveSc);
+        var _spG = getMathPoint(_t * _gYrs, _gYrs, _ghostSc);
         var _yCb = d2SpendToY(_sp.ceilSpend  + _t * designOverrides.ceilDelta);
         var _yFb = d2SpendToY(_sp.floorSpend + _t * designOverrides.floorDelta);
         _lCeilPath  += ' L' + _x + ' ' + _yCb;
         _lFloorPath += ' L' + _x + ' ' + _yFb;
         _lConeCeilPts.push(_x + ' ' + _yCb);
         _lConeFloorPts.unshift(_x + ' ' + _yFb);
-        _gConeCeilPts.push(_x + ' ' + d2SpendToY(_sp.ceilSpend));
-        _gConeFloorPts.unshift(_x + ' ' + d2SpendToY(_sp.floorSpend));
-        _gFloorFwdPts.push(_x + ' ' + d2SpendToY(_sp.floorSpend));
+        _gConeCeilPts.push(_x + ' ' + d2SpendToY(_spG.ceilSpend));
+        _gConeFloorPts.unshift(_x + ' ' + d2SpendToY(_spG.floorSpend));
+        _gCeilFwdPts.push(_x + ' ' + d2SpendToY(_spG.ceilSpend));
+        _gFloorFwdPts.push(_x + ' ' + d2SpendToY(_spG.floorSpend));
+        _gDatumFwdPts.push(_x + ' ' + d2SpendToY(_spG.datumSpend));
       }
-      _lConeFloorPts.push(xS + ' ' + d2SpendToY(ptsStart.floorSpend));
+      _lConeFloorPts.push(xS + ' ' + d2SpendToY(livePtsStart.floorSpend));
       var _lConePath = 'M ' + _lConeCeilPts[0] + ' ' +
         _lConeCeilPts.slice(1).map(function(p){ return 'L ' + p; }).join(' ') + ' ' +
         _lConeFloorPts.map(function(p){ return 'L ' + p; }).join(' ') + ' Z';
-      _gConeFloorPts.push(xS + ' ' + d2SpendToY(ptsStart.floorSpend));
+      _gConeFloorPts.push(xS + ' ' + d2SpendToY(ghostPtsStart.floorSpend));
       var _gConePath = 'M ' + _gConeCeilPts[0] + ' ' +
         _gConeCeilPts.slice(1).map(function(p){ return 'L ' + p; }).join(' ') + ' ' +
         _gConeFloorPts.map(function(p){ return 'L ' + p; }).join(' ') + ' Z';
-      var _ghostCeilD  = 'M ' + _gConeCeilPts[0] + ' ' + _gConeCeilPts.slice(1).map(function(p){ return 'L ' + p; }).join(' ');
+      var _ghostCeilD  = 'M ' + _gCeilFwdPts[0]  + ' ' + _gCeilFwdPts.slice(1).map(function(p){ return 'L ' + p; }).join(' ');
       var _ghostFloorD = 'M ' + _gFloorFwdPts[0] + ' ' + _gFloorFwdPts.slice(1).map(function(p){ return 'L ' + p; }).join(' ');
+      var _ghostDatumD = 'M ' + _gDatumFwdPts[0] + ' ' + _gDatumFwdPts.slice(1).map(function(p){ return 'L ' + p; }).join(' ');
 
-      var yD  = d2SpendToY(dDatum);
-      var yGD = d2SpendToY(pts.datumSpend);
       var yC  = d2SpendToY(dCeil);
       var yF  = d2SpendToY(dFloor);
+      var yD  = d2SpendToY(dDatum);
+      var yGD = d2SpendToY(_ghostSc.targetSpend || dptsEnd.datumSpend);
 
-      document.getElementById('d2-ghost-cone').setAttribute('d',  _gConePath);
-      document.getElementById('d2-ghost-ceil').setAttribute('d',  _ghostCeilD);
-      document.getElementById('d2-ghost-floor').setAttribute('d', _ghostFloorD);
-      document.getElementById('d2-ghost-datum').setAttribute('d', 'M' + xS + ' ' + yGD + ' L' + xE + ' ' + yGD);
-      document.getElementById('d2-ceil-line').setAttribute('d',  _lCeilPath);
-      document.getElementById('d2-floor-line').setAttribute('d', _lFloorPath);
-      document.getElementById('d2-datum-line').setAttribute('d', 'M' + xS + ' ' + yD + ' L' + xE + ' ' + yD);
-      document.getElementById('d2-cone').setAttribute('d', _lConePath);
-      var _dcc = document.getElementById('d2-clip-cone-path');
-      if (_dcc) _dcc.setAttribute('d', _lConePath);
+      // Cache for scrubber
+      _d2LastEndpointCY.ceil  = yC;
+      _d2LastEndpointCY.floor = yF;
+      _d2LastEndpointCY.datum = yD;
+      _d2LastScenario = _liveSc;
+
+      // SVG path updates
+      var _sa = function(id, attr, val) { var el = document.getElementById(id); if (el) el.setAttribute(attr, val); };
+      _sa('d2-ghost-cone',  'd', _gConePath);
+      _sa('d2-ghost-ceil',  'd', _ghostCeilD);
+      _sa('d2-ghost-floor', 'd', _ghostFloorD);
+      _sa('d2-ghost-datum', 'd', _ghostDatumD);
+      _sa('d2-cone',        'd', _lConePath);
+      _sa('d2-ceil-line',   'd', _lCeilPath);
+      _sa('d2-floor-line',  'd', _lFloorPath);
+      var _lDatumD = 'M' + xS + ' ' + d2SpendToY(livePtsStart.datumSpend) + ' L' + xE + ' ' + yD;
+      _sa('d2-datum-line',  'd', _lDatumD);
+      _sa('d2-clip-cone-path', 'd', _lConePath);
 
       // Hit areas
-      var ySC = d2SpendToY(ptsStart.ceilSpend);
-      var ySF = d2SpendToY(ptsStart.floorSpend);
-      var _chit = document.getElementById('d2-ceil-hit');  if (_chit) _chit.setAttribute('d', 'M'+xS+' '+ySC+' L'+xE+' '+yC);
-      var _fhit = document.getElementById('d2-floor-hit'); if (_fhit) _fhit.setAttribute('d', 'M'+xS+' '+ySF+' L'+xE+' '+yF);
-      var _dhit = document.getElementById('d2-datum-hit'); if (_dhit) _dhit.setAttribute('d', 'M'+xS+' '+yD+' L'+xE+' '+yD);
+      _sa('d2-ceil-hit',  'd', _lCeilPath);
+      _sa('d2-floor-hit', 'd', _lFloorPath);
+      _sa('d2-datum-hit', 'd', _lDatumD);
 
-      // Handle nodes and labels
-      [['ceil',yC],['floor',yF],['datum',yD]].forEach(function(pair) {
-        var n = pair[0], yy = pair[1];
+      // F3: Explicit datum stroke driven by shape state
+      var _dStateObj = getShapeStateObj({ datumSpend: dDatum, floorSpend: dFloor, ceilSpend: dCeil });
+      var _datumLineEl = document.getElementById('d2-datum-line');
+      if (_datumLineEl) _datumLineEl.style.stroke = _dStateObj ? _dStateObj.color : 'var(--teal-mid)';
+
+      // Node positions + labels (inside canvas, right endpoint)
+      [['ceil',yC],['floor',yF],['datum',yD]].forEach(function(q) {
+        var n = q[0], yy = q[1];
         var nd = document.getElementById('d2-node-' + n);
         if (nd) { nd.setAttribute('cx', xE); nd.setAttribute('cy', yy); }
         var lb = document.getElementById('d2-lbl-' + n);
         if (lb) { lb.setAttribute('x', xE - 12); lb.setAttribute('y', yy + 4); lb.setAttribute('text-anchor','end'); }
       });
 
-      // Vertical dashed lines on ceiling and datum handles
+      // Drag handle circles
+      [['ceil',yC],['datum',yD],['floor',yF]].forEach(function(q) {
+        var n = q[0], yy = q[1];
+        var h = document.getElementById('d2-handle-' + n);
+        if (h) { h.setAttribute('cx', xE); h.setAttribute('cy', yy); }
+        var hh = document.getElementById('d2-handle-' + n + '-hit');
+        if (hh) { hh.setAttribute('cx', xE); hh.setAttribute('cy', yy); }
+      });
+
+      // Dashed vertical lines on ceil and datum handles
       var _dhcl = document.getElementById('d2-handle-ceil-line');
       if (_dhcl) { _dhcl.setAttribute('x1',xE); _dhcl.setAttribute('y1',yC+7); _dhcl.setAttribute('x2',xE); _dhcl.setAttribute('y2',350); }
       var _dhdl = document.getElementById('d2-handle-datum-line');
       if (_dhdl) { _dhdl.setAttribute('x1',xE); _dhdl.setAttribute('y1',yD+8); _dhdl.setAttribute('x2',xE); _dhdl.setAttribute('y2',350); }
 
-      // Tension: ceilDelta / discovered ceiling, capped at 100%
-      var _tensionRatio = Math.min(1, Math.max(0, designOverrides.ceilDelta / Math.max(1, pts.ceilSpend)));
-      updateTensionVisuals(_tensionRatio);
-      updateRequirementsPanel(dCeil, pts.ceilSpend);
+      // Three tension ratios
+      var _ceilTension  = Math.min(1, Math.max(-1, designOverrides.ceilDelta  / Math.max(1, dptsEnd.ceilSpend)));
+      var _floorTension = Math.min(1, Math.max(-1, designOverrides.floorDelta / Math.max(1, dptsEnd.floorSpend)));
+      var _datumTension = Math.min(1, Math.max(-1, designOverrides.datumDelta / Math.max(1, dptsEnd.datumSpend)));
+      updateTensionVisuals(_ceilTension, _floorTension, _datumTension);
+      updateRequirementsPanel(dCeil, dptsEnd.ceilSpend);
 
       // Grid labels (shared Y-axis — globalYMin/globalYMax)
       var _grid = document.getElementById('d2-grid');
       if (_grid) {
-        var _gHTML = '';
+        var _gHTML = '<text x="80" y="40" text-anchor="end" class="axis-title" style="fill:rgba(255,255,255,0.8);">ANNUAL SPEND</text>';
         for (var _gi = 0; _gi <= 4; _gi++) {
           var _gy = D_Y_MIN + _gi * (D_Y_MAX - D_Y_MIN) / 4;
           var _gv = globalYMax - (_gi / 4) * (globalYMax - globalYMin);
-          _gHTML += '<line x1="' + D_X_START + '" y1="' + _gy + '" x2="' + D_X_END + '" y2="' + _gy + '" class="grid-tick"/>';
+          _gHTML += '<line x1="' + (D_X_START - 2) + '" y1="' + _gy + '" x2="' + D_X_END + '" y2="' + _gy + '" class="grid-tick"/>';
           _gHTML += '<text x="' + (D_X_START - 8) + '" y="' + (_gy + 4) + '" text-anchor="end" class="grid-label">' + formatYLabel(_gv) + '</text>';
         }
         _grid.innerHTML = _gHTML;
       }
 
-      // Live readout spans (hidden, downstream JS reads them for Screen 3)
+      // Live readout spans (for Screen 3)
       var _fmtD = function(v) { return v >= 1000 ? '$' + (v/1000).toFixed(1) + 'M/yr' : '$' + Math.round(v) + 'k/yr'; };
       var _drvC = document.getElementById('drv-ceil');
       var _drvD = document.getElementById('drv-datum');
@@ -6427,8 +6548,8 @@
       (function() {
         var retireAge = parseInt((document.getElementById('slider-retire')||{value:'65'}).value)||65;
         var lifeAge   = parseInt((document.getElementById('slider-life') ||{value:'90'}).value)||90;
-        var yrs = Math.max(1, lifeAge - retireAge);
-        var fmtT = function(v) { if (!v || isNaN(v)) return '—'; var t = Math.round(v * yrs); return t >= 1000 ? '$' + (t/1000).toFixed(1) + 'M total' : '$' + t + 'k total'; };
+        var _rYrs = Math.max(1, lifeAge - retireAge);
+        var fmtT = function(v) { if (!v || isNaN(v)) return '—'; var t = Math.round(v * _rYrs); return t >= 1000 ? '$' + (t/1000).toFixed(1) + 'M total' : '$' + t + 'k total'; };
         var cT = document.getElementById('drv-ceil-total');
         var dT = document.getElementById('drv-datum-total');
         var fT = document.getElementById('drv-floor-total');
@@ -6437,72 +6558,115 @@
         if (fT) fT.textContent = fmtT(dFloor);
       })();
 
-      // ── Datum Intelligence HUD + ghost rail sync ──
+      // Canvas state tint (OVEREXTENDED → red background)
       (function() {
-        var _fmt = function(v) { return '$' + Math.round(v) + 'k/yr'; };
         var _hs = getShapeStateObj({ ceilSpend: dCeil, floorSpend: dFloor, datumSpend: dDatum });
-        var _s = function(id, txt, col) {
-          var el = document.getElementById(id);
-          if (!el) return;
-          el.textContent = txt;
-          if (col) el.style.color = col;
-        };
-        _s('d2-hud-ceil-val',  _fmt(dCeil),  '#C9A84C');
-        _s('d2-hud-datum-val', _fmt(dDatum), '#5DCAA5');
-        _s('d2-hud-floor-val', _fmt(dFloor), '#e24b4a');
-        _s('d2-hud-state', _hs.name, _hs.color);
-        _s('d2-hud-means',  _hs.physicsShort || '');
-        _s('d2-hud-action', _hs.actionShort  || '');
-        var _gYrs = currentScenario && currentScenario.yearsToGrow;
-        _s('d2-hud-growth', _gYrs ? _gYrs + ' yr accumulation' : '—');
-        var _hc = document.querySelector('.d2-hud-card');
-        if (_hc) _hc.style.borderLeftColor = _hs.color;
-        // State tint rect
         var _sr = document.getElementById('d2-state-tint-rect');
         if (_sr) _sr.setAttribute('fill', _hs.name === 'OVEREXTENDED' ? 'rgba(226,75,74,0.06)' : 'none');
-        // Ghost rail — mirror Screen 1 display values
-        var _pairs = [['val-age','d2-ref-age'],['val-activation','d2-ref-retire'],
-                      ['val-portfolio','d2-ref-cap'],['val-datum','d2-ref-datum'],
-                      ['val-contrib','d2-ref-contrib']];
-        _pairs.forEach(function(p) {
-          var src = document.getElementById(p[0]), dst = document.getElementById(p[1]);
-          if (src && dst) dst.textContent = src.textContent;
-        });
       })();
 
       updateScreen2Narrative();
-
     }
 
-    // --- Tension visuals (d2- IDs) ---
-    function updateTensionVisuals(ratio) {
-      var fill    = document.getElementById('tension-fill');
-      var pctEl   = document.getElementById('tension-pct');
-      var overlay = document.getElementById('d2-tension-overlay');
+    // --- Three tension bars + ceiling glow effect ---
+    // Ratios are signed (-1 to 1): positive = tension, negative = relief
+    function updateTensionVisuals(ceilRatio, floorRatio, datumRatio) {
+      floorRatio = floorRatio || 0;
+      datumRatio = datumRatio || 0;
+      var _blue  = 'var(--blue-safe)';
+
+      // ── Ceiling bar ──
+      var _cFill   = document.getElementById('d2-tension-ceil-fill');
+      var _cPct    = document.getElementById('d2-tension-ceil-pct');
+      var _cLbl    = document.getElementById('d2-tension-ceil-lbl');
+      var _cAbs    = Math.abs(ceilRatio);
+      var _cPct2   = Math.round(_cAbs * 100);
+      var _cRelief = ceilRatio < 0;
+      if (_cFill) { _cFill.style.width = _cPct2 + '%'; _cFill.style.background = _cRelief ? _blue : 'var(--gold)'; }
+      if (_cPct)  { _cPct.textContent = _cPct2 + '%'; _cPct.style.color = _cRelief ? _blue : (_cAbs > 0.6 ? '#ffffff' : 'var(--gold)'); }
+      if (_cLbl)  { _cLbl.textContent = _cRelief ? 'CEILING RELIEF' : 'CEILING TENSION'; _cLbl.style.color = _cRelief ? _blue : 'var(--gold)'; }
+
+      // Ceiling line glow — only in tension mode (ceilRatio > 0)
+      var overlay  = document.getElementById('d2-tension-overlay');
       var ceilLine = document.getElementById('d2-ceil-line');
       var gradCeil = document.getElementById('d2g-ceil');
-      var pct = Math.round(ratio * 100);
-      if (fill) { fill.style.width = pct + '%'; }
-      if (pctEl) { pctEl.textContent = pct + '%'; pctEl.style.color = ratio > 0.6 ? '#ffffff' : 'var(--gold)'; }
-      if (fill) { fill.classList.toggle('high', ratio > 0.4); fill.classList.toggle('max', ratio > 0.75); }
-      if (!ceilLine) return;
-      if (ratio === 0) {
-        ceilLine.style.stroke = '#C9A84C';
-        ceilLine.style.filter = 'none';
-        if (gradCeil) gradCeil.setAttribute('stop-opacity', '0.2');
-        if (overlay) { overlay.setAttribute('stroke-width', '0'); overlay.setAttribute('opacity', '0'); }
-      } else if (ratio < 0.4) {
-        ceilLine.style.stroke = '#d4b055';
-        if (gradCeil) gradCeil.setAttribute('stop-opacity', String(0.2 + ratio * 0.3));
-      } else if (ratio < 0.75) {
-        ceilLine.style.stroke = '#f0d060';
-        ceilLine.style.filter = 'drop-shadow(0 0 ' + (8 + ratio * 16) + 'px rgba(240,208,80,0.7))';
-        if (gradCeil) gradCeil.setAttribute('stop-opacity', String(0.35 + ratio * 0.3));
-      } else {
-        ceilLine.style.stroke = '#ffffff';
-        ceilLine.style.filter = 'drop-shadow(0 0 18px rgba(255,255,255,0.9))';
-        if (gradCeil) gradCeil.setAttribute('stop-opacity', '0.7');
-        if (overlay) { overlay.setAttribute('stroke-width', '1'); overlay.setAttribute('opacity', '0.2'); }
+      if (ceilLine) {
+        if (_cRelief || ceilRatio === 0) {
+          ceilLine.style.stroke = '#C9A84C'; ceilLine.style.filter = 'none';
+          if (gradCeil) gradCeil.setAttribute('stop-opacity', '0.2');
+          if (overlay)  { overlay.setAttribute('opacity', '0'); }
+        } else if (_cAbs < 0.4) {
+          ceilLine.style.stroke = '#d4b055'; ceilLine.style.filter = 'none';
+          if (gradCeil) gradCeil.setAttribute('stop-opacity', String(0.2 + _cAbs * 0.3));
+        } else if (_cAbs < 0.75) {
+          ceilLine.style.stroke = '#f0d060';
+          ceilLine.style.filter = 'drop-shadow(0 0 ' + (8 + _cAbs * 16) + 'px rgba(240,208,80,0.7))';
+          if (gradCeil) gradCeil.setAttribute('stop-opacity', String(0.35 + _cAbs * 0.3));
+        } else {
+          ceilLine.style.stroke = '#ffffff';
+          ceilLine.style.filter = 'drop-shadow(0 0 18px rgba(255,255,255,0.9))';
+          if (gradCeil) gradCeil.setAttribute('stop-opacity', '0.7');
+          if (overlay)  { overlay.setAttribute('opacity', '0.2'); }
+        }
+      }
+
+      // ── Floor bar ──
+      var _fFill   = document.getElementById('d2-tension-floor-fill');
+      var _fPct    = document.getElementById('d2-tension-floor-pct');
+      var _fLbl    = document.getElementById('d2-tension-floor-lbl');
+      var _fAbs    = Math.abs(floorRatio);
+      var _fPct2   = Math.round(_fAbs * 100);
+      var _fRelief = floorRatio < 0;
+      if (_fFill) { _fFill.style.width = _fPct2 + '%'; _fFill.style.background = _fRelief ? _blue : 'var(--danger-red)'; }
+      if (_fPct)  { _fPct.textContent = _fPct2 + '%'; _fPct.style.color = _fRelief ? _blue : (_fAbs > 0.6 ? '#ffffff' : 'var(--danger-red)'); }
+      if (_fLbl)  { _fLbl.textContent = _fRelief ? 'FLOOR RELIEF' : 'FLOOR TENSION'; _fLbl.style.color = _fRelief ? _blue : 'var(--danger-red)'; }
+
+      // ── Datum bar ──
+      var _dFill   = document.getElementById('d2-tension-datum-fill');
+      var _dPct    = document.getElementById('d2-tension-datum-pct');
+      var _dLbl    = document.getElementById('d2-tension-datum-lbl');
+      var _dAbs    = Math.abs(datumRatio);
+      var _dPct2   = Math.round(_dAbs * 100);
+      var _dRelief = datumRatio < 0;
+      if (_dFill) { _dFill.style.width = _dPct2 + '%'; _dFill.style.background = _dRelief ? _blue : 'var(--teal-mid)'; }
+      if (_dPct)  { _dPct.textContent = _dPct2 + '%'; _dPct.style.color = _dRelief ? _blue : (_dAbs > 0.6 ? '#ffffff' : 'var(--teal-mid)'); }
+      if (_dLbl)  { _dLbl.textContent = _dRelief ? 'DATUM RELIEF' : 'DATUM TENSION'; _dLbl.style.color = _dRelief ? _blue : 'var(--teal-mid)'; }
+
+      // ── Explainer copy (highest absolute tension/relief wins) ──
+      // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
+      var _exp = document.getElementById('tension-explain');
+      if (_exp) {
+        var _maxAbs = Math.max(_cAbs, _fAbs, _dAbs);
+        if (_maxAbs === 0) {
+          // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
+          _exp.textContent = 'Drag the Ceiling, Floor, or Datum handles to shape your cone.';
+        } else if (_cAbs === _maxAbs) {
+          _exp.textContent = _cRelief
+            // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
+            ? (_cAbs > 0.4 ? 'Ceiling pulled below baseline — structural headroom expanding.' : 'Ceiling below baseline — cone is narrowing inward.')
+            // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
+            : (_cAbs > 0.75 ? 'At structural ceiling — your portfolio must deliver perfectly.'
+            // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
+            : _cAbs > 0.4 ? 'Ceiling under pressure — growth assumptions tightening.'
+            // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
+            : 'Ceiling elevated — capital or time must expand to sustain.');
+        } else if (_fAbs === _maxAbs) {
+          _exp.textContent = _fRelief
+            // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
+            ? 'Floor below baseline — lower minimum spend required.'
+            // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
+            : (_fAbs > 0.75 ? 'Floor near structural minimum — narrow survival band.'
+            // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
+            : 'Floor compressed — risk of undershoot rising.');
+        } else {
+          _exp.textContent = _dRelief
+            // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
+            ? 'Datum pulled below baseline — spending target relaxing.'
+            // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
+            : (_dAbs > 0.75 ? 'Datum near ceiling — very little margin above target.'
+            // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
+            : 'Datum tension — spending elevated relative to baseline.');
+        }
       }
     }
 
@@ -6634,35 +6798,36 @@
       // content handled by updateScreen2Narrative
     }
 
-    // --- Writeback to Screen 1 ---
-    function applyDesignSuggestion(el, type, value) {
-      el.classList.add('flash');
-      setTimeout(() => el.classList.remove('flash'), 300);
 
-      if (type === 'retire')  document.getElementById('slider-activation').value = Math.min(value, 90);
-      if (type === 'contrib') {
-        document.getElementById('slider-contrib').value = contribValToPos(Math.min(value, 200000));
-        const panel = document.getElementById('advanced-panel');
-        if (!panel.classList.contains('open')) document.getElementById('advanced-trigger-btn').click();
-      }
-      if (type === 'capital') document.getElementById('slider-portfolio').value = portValToPos(Math.min(value, 50));
 
-      scheduleUpdate();
-      updateTracker();
-      revealCarryForward();
-
-      const toast = document.getElementById('writeback-toast');
-      toast.textContent = '↑ Applied to your Sketch above';
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 2500);
-
-      // Delay scroll so user sees toast feedback first
-      setTimeout(() => {
-        document.getElementById('sketch-main').scrollIntoView({ behavior: 'smooth' });
-      }, 600);
+    // --- Handle probing state (glows handles while drag is pending Accept) ---
+    function _d2SetProbingState(isProbing) {
+      ['d2-handle-ceil','d2-handle-datum','d2-handle-floor'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        if (isProbing) el.classList.add('d2-handle-probing');
+        else el.classList.remove('d2-handle-probing');
+      });
     }
 
-    // --- Drag handlers (d2- IDs, designOverrides deltas) ---
+    // --- Animate a slider from its current value to targetPos over 300ms ---
+    function _d2AnimateSlider(slEl, targetPos, onDone) {
+      if (!slEl) { if (onDone) onDone(); return; }
+      var startPos = parseFloat(slEl.value);
+      var startT   = performance.now();
+      var dur      = 300;
+      function tick(now) {
+        var t = Math.min(1, (now - startT) / dur);
+        var e = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // ease-in-out quad
+        slEl.value = Math.round(startPos + (targetPos - startPos) * e);
+        slEl.dispatchEvent(new Event('input'));
+        if (t < 1) { requestAnimationFrame(tick); }
+        else { slEl.value = targetPos; slEl.dispatchEvent(new Event('input')); if (onDone) onDone(); }
+      }
+      requestAnimationFrame(tick);
+    }
+
+    // --- Drag handlers (d2- IDs, designOverrides deltas, ±drag caps) ---
     function initD2DragHandlers() {
       var svg = document.getElementById('d2-canvas');
       if (!svg) return;
@@ -6675,6 +6840,7 @@
       }
 
       [['ceil','d2-handle-ceil'],['datum','d2-handle-datum'],['floor','d2-handle-floor'],
+       ['ceil','d2-handle-ceil-hit'],['datum','d2-handle-datum-hit'],['floor','d2-handle-floor-hit'],
        ['ceil','d2-ceil-hit'],   ['datum','d2-datum-hit'],   ['floor','d2-floor-hit']].forEach(function(pair) {
         var name = pair[0], id = pair[1];
         var el = document.getElementById(id);
@@ -6684,26 +6850,31 @@
           activeDrag = name;
           el.setPointerCapture(e.pointerId);
           document.body.style.userSelect = 'none';
+          _d2SetProbingState(true);
         });
       });
 
       svg.addEventListener('pointermove', function(e) {
         if (!activeDrag) return;
-        var pts = lastCalculatedPoints;
-        if (!pts) return;
+        var _pts = _d2ActiveDesignPts || lastCalculatedPoints;
+        if (!_pts) return;
         var rawY  = getSVGY(e);
         var safeY = Math.max(D_Y_MIN + 5, Math.min(rawY, D_Y_MAX - 5));
         var spend = d2YToSpend(safeY);
-        var dFloor = pts.floorSpend + designOverrides.floorDelta;
-        var dCeil  = pts.ceilSpend  + designOverrides.ceilDelta;
         if (activeDrag === 'ceil') {
-          var newCeil = Math.max(dFloor + 5, Math.min(spend, pts.ceilSpend * 2.0));
-          designOverrides.ceilDelta = newCeil - pts.ceilSpend;
+          var ceilBase    = _pts.ceilSpend;
+          var dFloorCurr  = _pts.floorSpend + designOverrides.floorDelta;
+          var spendCapped = Math.max(dFloorCurr + 5, Math.max(ceilBase * 0.50, Math.min(spend, ceilBase * 2.00)));
+          designOverrides.ceilDelta = spendCapped - _pts.ceilSpend;
         } else if (activeDrag === 'datum') {
-          designOverrides.datumDelta = spend - pts.datumSpend;
+          var maxDatum = _pts.datumSpend * 2.00;
+          var minDatum = _pts.datumSpend * 0.50;
+          designOverrides.datumDelta = Math.max(minDatum, Math.min(spend, maxDatum)) - _pts.datumSpend;
         } else if (activeDrag === 'floor') {
-          var newFloor = Math.max(10, Math.min(spend, dCeil - 5));
-          designOverrides.floorDelta = newFloor - pts.floorSpend;
+          var floorBase    = _pts.floorSpend;
+          var dCeilCurr    = _pts.ceilSpend + designOverrides.ceilDelta;
+          var spendFCapped = Math.max(10, Math.max(floorBase * 0.50, Math.min(spend, Math.min(floorBase * 2.00, dCeilCurr - 5))));
+          designOverrides.floorDelta = spendFCapped - _pts.floorSpend;
         }
         designOverrides.isDirty = true;
         renderScreen2();
@@ -6712,29 +6883,38 @@
       svg.addEventListener('pointerup', function() {
         activeDrag = null;
         document.body.style.userSelect = '';
+        // probing state persists until Accept or slider move
         renderScreen2();
       });
-      svg.addEventListener('pointercancel', function() { activeDrag = null; });
+      svg.addEventListener('pointercancel', function() {
+        activeDrag = null;
+        document.body.style.userSelect = '';
+      });
 
       function handleKey(e, which) {
         if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
         e.preventDefault();
-        var pts = lastCalculatedPoints;
-        if (!pts) return;
-        var step = e.shiftKey ? 25 : 5;
+        var _pts = _d2ActiveDesignPts || lastCalculatedPoints;
+        if (!_pts) return;
+        var step  = e.shiftKey ? 25 : 5;
         var delta = e.key === 'ArrowUp' ? step : -step;
         if (which === 'ceil') {
-          var newC = (pts.ceilSpend + designOverrides.ceilDelta) + delta;
-          newC = Math.max((pts.floorSpend + designOverrides.floorDelta) + 5, newC);
-          designOverrides.ceilDelta = newC - pts.ceilSpend;
+          var newC = (_pts.ceilSpend + designOverrides.ceilDelta) + delta;
+          var cBase = _pts.ceilSpend;
+          newC = Math.max((_pts.floorSpend + designOverrides.floorDelta) + 5, Math.max(cBase * 0.50, Math.min(newC, cBase * 2.00)));
+          designOverrides.ceilDelta = newC - _pts.ceilSpend;
         } else if (which === 'datum') {
-          designOverrides.datumDelta += delta;
+          var maxDatumK = _pts.datumSpend * 2.00;
+          var minDatumK = _pts.datumSpend * 0.50;
+          designOverrides.datumDelta = Math.max(minDatumK, Math.min((_pts.datumSpend + designOverrides.datumDelta) + delta, maxDatumK)) - _pts.datumSpend;
         } else if (which === 'floor') {
-          var newF = (pts.floorSpend + designOverrides.floorDelta) + delta;
-          newF = Math.max(10, Math.min(newF, (pts.ceilSpend + designOverrides.ceilDelta) - 5));
-          designOverrides.floorDelta = newF - pts.floorSpend;
+          var newF = (_pts.floorSpend + designOverrides.floorDelta) + delta;
+          var fBase = _pts.floorSpend;
+          newF = Math.max(10, Math.max(fBase * 0.50, Math.min(newF, Math.min(fBase * 2.00, (_pts.ceilSpend + designOverrides.ceilDelta) - 5))));
+          designOverrides.floorDelta = newF - _pts.floorSpend;
         }
         designOverrides.isDirty = true;
+        _d2SetProbingState(true);
         renderScreen2();
       }
       var hCeil  = document.getElementById('d2-handle-ceil');
@@ -6743,12 +6923,511 @@
       if (hCeil)  hCeil.addEventListener('keydown',  function(e) { handleKey(e, 'ceil'); });
       if (hDatum) hDatum.addEventListener('keydown', function(e) { handleKey(e, 'datum'); });
       if (hFloor) hFloor.addEventListener('keydown', function(e) { handleKey(e, 'floor'); });
+
+      // Accept-to-commit delegated handler (bound once per Screen 2 open)
+      var _reqEl = document.getElementById('req-items');
+      if (_reqEl && !_reqEl._d2AcceptBound) {
+        _reqEl._d2AcceptBound = true;
+        _reqEl.addEventListener('click', function(e) {
+          var btn = e.target.closest('.d2-accept-btn');
+          if (!btn) return;
+          var type = btn.getAttribute('data-req-type');
+          var val  = parseFloat(btn.getAttribute('data-req-value'));
+          if (!type || isNaN(val)) return;
+          var slEl = null, targetPos = 0;
+          if (type === 'capital') {
+            slEl = document.getElementById('d2-slider-portfolio');
+            targetPos = portValToPos(Math.min(val, 50));
+          } else if (type === 'contrib') {
+            slEl = document.getElementById('d2-slider-contrib');
+            targetPos = contribValToPos(Math.min(val, 200000));
+          } else if (type === 'retire') {
+            slEl = document.getElementById('d2-slider-activation');
+            targetPos = Math.min(Math.max(Math.round(val), 45), 90);
+          }
+          if (!slEl) return;
+          _d2AcceptAnimating = true;
+          _d2SetProbingState(false);
+          _d2AnimateSlider(slEl, targetPos, function() {
+            _d2AcceptAnimating = false;
+            initDesignState();
+            _d2SetProbingState(false);
+            renderScreen2();
+          });
+        });
+      }
+    }
+
+    // ── DESIGN INVERSE SOLVER — Phase 2.5 ────────────────────────────────
+    // Binary search for ΔY (INVERSE MATH §8): lo=currentAge+1, hi=currentAge+50,
+    // 50 iterations, $500 (= 0.5 k/yr) convergence threshold.
+    function _d2BinarySearchY(target, whichBound, s) {
+      var lo = s.currentAge + 1;
+      var hi = s.currentAge + 50;
+      for (var _i = 0; _i < 50; _i++) {
+        var mid = Math.floor((lo + hi) / 2);
+        var _Ym = mid - s.currentAge;
+        var _pm = getMathPoint(_Ym, _Ym, s);
+        var _cv = whichBound === 'ceil' ? _pm.ceilSpend : _pm.floorSpend;
+        if (Math.abs(_cv - target) < 0.5) { lo = mid; hi = mid; break; }
+        if (_cv < target) lo = mid; else hi = mid;
+      }
+      return Math.floor((lo + hi) / 2); // solved retireAge (integer)
+    }
+
+    // solveInverse(dc, df, dd, pts, s) — pure math, no DOM.
+    // dc/df/dd = designOverrides deltas (k/yr). pts = lastCalculatedPoints. s = currentScenario.
+    // Routing follows FEASIBILITY RULES §6 12-step decision tree.
+    // Sensitivities derived from getMathPoint formula at t=1 (retirement endpoint).
+    function solveInverse(dc, df, dd, pts, s) {
+      var THR    = 0.5; // k/yr noise floor for drag detection
+      var hasCeil  = Math.abs(dc) > THR;
+      var hasFloor = Math.abs(df) > THR;
+      var hasDatum = Math.abs(dd) > THR;
+
+      var Y       = s.yearsToGrow || 0;
+      var P       = s.portfolioVol   || 0;   // millions
+      var K       = s.annualContrib  || 0;   // $/yr
+      // INVERSE MATH §5 sensitivity coefficients (authoritative per Captain Decision)
+      // gfHi = (1.07)^Y, gfLo = (1.035)^Y — INVERSE MATH §5 canonical growth factors
+      var gfHi_spec = Y > 0 ? Math.pow(1.07,  Y) : 1;
+      var gfLo_spec = Y > 0 ? Math.pow(1.035, Y) : 1;
+      // a1 = gfHi × 0.055 (§5 R31): ceiling sensitivity to ΔP, units $M/yr per $M
+      var a1 = gfHi_spec * 0.055;
+      // b1 = 0.055 × (gfHi−1)/0.07 (§5 R32): ceiling sensitivity to ΔK, $M/yr per $M/yr
+      var b1 = 0.055 * (gfHi_spec - 1) / 0.07;
+      // a2 = gfLo × 0.035 (§5 R33): floor sensitivity to ΔP, $M/yr per $M
+      var a2 = gfLo_spec * 0.035;
+      // b2 = 0.5 × (gfLo−1) (§5 R34): floor sensitivity to ΔK, $M/yr per $M/yr
+      var b2 = 0.5 * (gfLo_spec - 1);
+      // Unit bridge: getMathPoint uses k/yr for spending, $M for portfolio, $/yr for contributions.
+      // INVERSE MATH §5 formula assumes spending in $M/yr, P in $M, K in $M/yr.
+      // Conversion: dc/df ÷1000 → $M/yr going in; ΔK ×1e6 → $/yr coming out; effects ×1000 → k/yr for display.
+
+      var ceilTarget  = pts.ceilSpend  + dc;
+      var floorTarget = pts.floorSpend + df;
+      var datumTarget = pts.datumSpend + dd;
+      var base = { dc: dc, df: df, dd: dd, ceilTarget: ceilTarget, floorTarget: floorTarget, datumTarget: datumTarget };
+
+      // ── Step 1: Y=0 → Block D (FEASIBILITY RULES §6 Step 1 / INVERSE MATH §6) ──
+      if (Y === 0) {
+        // Y=0: gfHi_spec=1, gfLo_spec=1, a1=0.055, a2=0.035 (INVERSE MATH §6)
+        // ceilSpend_wb = P_M × 0.055 $M/yr; solve: P_M = ceilTarget_M / 0.055
+        var ceilTarget_M_D = ceilTarget / 1000;          // k/yr → $M/yr
+        var reqP_D = ceilTarget_M_D / 0.055;             // ΔP in $M (INVERSE MATH §6)
+        var implFlr = reqP_D * 0.035 * 1000;             // floor = P × 0.035, back to k/yr
+        var dP_D = reqP_D - P;
+        return Object.assign({}, base, { block: 'D', hardStop: null, reqP_M: reqP_D, dP_M: dP_D, impliedFloor_k: implFlr, P: P });
+      }
+
+      // ── Step 2: Nothing dragged ──
+      if (!hasCeil && !hasFloor && !hasDatum) return Object.assign({}, base, { block: 'none' });
+
+      // ── Block E: datum-only drag (INVERSE MATH §9) ──
+      if (!hasCeil && !hasFloor && hasDatum) {
+        return Object.assign({}, base, { block: 'E', hardStop: null });
+      }
+
+      // ── Block C: both ceiling and floor dragged (INVERSE MATH §5 Cramer's Rule) ──
+      if (hasCeil && hasFloor) {
+        // FEASIBILITY RULES §1: floor target >= ceiling target
+        if (floorTarget >= ceilTarget) {
+          return Object.assign({}, base, { block: 'C', hardStop: { type: 'floor_above_ceil' } });
+        }
+        // FEASIBILITY RULES §1: degenerate 2×2 system (|det| < 0.0001 per Captain Decision 1)
+        var det = a1 * b2 - a2 * b1;
+        if (Math.abs(det) < 0.0001) {
+          return Object.assign({}, base, { block: 'C', hardStop: { type: 'degenerate' } });
+        }
+        // Cramer solve (INVERSE MATH §5): dc/df converted to $M/yr; ΔK result × 1e6 → $/yr
+        var dc_M = dc / 1000, df_M = df / 1000;
+        var dP_C = (dc_M * b2 - df_M * b1) / det;        // ΔP in $M
+        var dK_C = (df_M * a1 - dc_M * a2) / det * 1e6;  // ΔK in $/yr
+        // FEASIBILITY RULES §1: negative portfolio
+        if ((P + dP_C) < 0) {
+          return Object.assign({}, base, { block: 'C', hardStop: { type: 'negative_portfolio' }, dP_M: dP_C, dK_dollars: dK_C });
+        }
+        return Object.assign({}, base, {
+          block: 'C', hardStop: null,
+          dP_M: dP_C, dK_dollars: dK_C,
+          comboWarnK: Math.abs(dK_C) > 50000,
+          comboWarnP: dP_C > 2 * P,
+          a1: a1, a2: a2, b1: b1, b2: b2
+        });
+      }
+
+      // ── Block A: ceiling-only drag (INVERSE MATH §3) ──
+      if (hasCeil && !hasFloor) {
+        var paths_A = [];
+        var dc_M_A = dc / 1000;  // k/yr → $M/yr for INVERSE MATH §3 formulas
+        // Path 1 — Portfolio: ΔP = ΔceilTarget / (gfHi × 0.055) per §3
+        var dP_A1 = a1 > 0 ? dc_M_A / a1 : null;                           // $M
+        var fe_A1 = dP_A1 !== null ? dP_A1 * a2 * 1000 : null;             // floor effect k/yr
+        paths_A.push({
+          lever: 'portfolio',
+          dP_M:        dP_A1,
+          floorEffect: fe_A1,
+          reqPortfolio: dP_A1 !== null ? P + dP_A1 : null,
+          suppressed: dP_A1 !== null && (P + dP_A1) < 0,
+          softWarn:  dP_A1 !== null && dP_A1 > 2 * P ? 'too_large' : null
+        });
+        // Path 2 — Contributions: ΔK = ΔceilTarget / (0.055×(gfHi−1)/0.07) per §3, then ×1e6 → $/yr
+        var dK_A2 = b1 > 0 ? dc_M_A / b1 * 1e6 : null;                     // $/yr
+        var fe_A2 = dK_A2 !== null ? (dK_A2 / 1e6) * b2 * 1000 : null;     // floor effect k/yr
+        paths_A.push({
+          lever: 'contributions',
+          dK_dollars:  dK_A2,
+          floorEffect: fe_A2,
+          suppressed: false,
+          softWarn:  dK_A2 !== null && Math.abs(dK_A2) > 50000 ? 'too_high' : null
+        });
+        // Path 3 — Retire Age (binary search)
+        var reqRA_A3 = _d2BinarySearchY(ceilTarget, 'ceil', s);
+        var dY_A3    = reqRA_A3 - s.activationAge;
+        var ptsSY_A3 = getMathPoint(reqRA_A3 - s.currentAge, reqRA_A3 - s.currentAge, s);
+        paths_A.push({
+          lever: 'retireAge',
+          reqRetireAge: reqRA_A3, dY: dY_A3,
+          floorEffect: ptsSY_A3.floorSpend - pts.floorSpend,
+          suppressed: false,
+          softWarn:  Math.abs(dY_A3) > 15 ? 'extreme' : null
+        });
+        // Combo: split ceiling delta 50/50 portfolio+contributions
+        var combo_A = null;
+        if (a1 > 0 && b1 > 0) {
+          combo_A = { dP_M: (dc_M_A / 2) / a1, dK_dollars: (dc_M_A / 2) / b1 * 1e6 };
+        }
+        return Object.assign({}, base, {
+          block: 'A', hardStop: null,
+          paths: paths_A, combo: combo_A,
+          a1: a1, a2: a2, b1: b1, b2: b2
+        });
+      }
+
+      // ── Block B: floor-only drag (INVERSE MATH §4) ──
+      var paths_B = [];
+      var df_M_B = df / 1000;  // k/yr → $M/yr for INVERSE MATH §4 formulas
+      // Path 1 — Portfolio: ΔP = ΔfloorTarget / (gfLo × 0.035) per §4
+      var dP_B1 = a2 > 0 ? df_M_B / a2 : null;                              // $M
+      var ce_B1 = dP_B1 !== null ? dP_B1 * a1 * 1000 : null;                // ceil effect k/yr
+      paths_B.push({
+        lever: 'portfolio',
+        dP_M:       dP_B1,
+        ceilEffect: ce_B1,
+        reqPortfolio: dP_B1 !== null ? P + dP_B1 : null,
+        suppressed: dP_B1 !== null && (P + dP_B1) < 0,
+        softWarn: dP_B1 !== null && dP_B1 > 2 * P ? 'too_large' : null
+      });
+      // Path 2 — Contributions: ΔK = ΔfloorTarget / (0.5×(gfLo−1)) per §4, ×1e6 → $/yr
+      var dK_B2 = b2 > 0 ? df_M_B / b2 * 1e6 : null;                        // $/yr
+      var ce_B2 = dK_B2 !== null ? (dK_B2 / 1e6) * b1 * 1000 : null;        // ceil effect k/yr
+      paths_B.push({
+        lever: 'contributions',
+        dK_dollars: dK_B2,
+        ceilEffect: ce_B2,
+        suppressed: false,
+        softWarn: dK_B2 !== null && Math.abs(dK_B2) > 50000 ? 'too_high' : null
+      });
+      // Path 3 — Retire Age (binary search)
+      var reqRA_B3 = _d2BinarySearchY(floorTarget, 'floor', s);
+      var dY_B3    = reqRA_B3 - s.activationAge;
+      var ptsSY_B3 = getMathPoint(reqRA_B3 - s.currentAge, reqRA_B3 - s.currentAge, s);
+      paths_B.push({
+        lever: 'retireAge',
+        reqRetireAge: reqRA_B3, dY: dY_B3,
+        ceilEffect: ptsSY_B3.ceilSpend - pts.ceilSpend,
+        suppressed: false,
+        softWarn: Math.abs(dY_B3) > 15 ? 'extreme' : null
+      });
+      var combo_B = null;
+      if (a2 > 0 && b2 > 0) {
+        combo_B = { dP_M: (df_M_B / 2) / a2, dK_dollars: (df_M_B / 2) / b2 * 1e6 };
+      }
+      return Object.assign({}, base, {
+        block: 'B', hardStop: null,
+        paths: paths_B, combo: combo_B,
+        a1: a1, a2: a2, b1: b1, b2: b2
+      });
+    }
+
+    // ── populateZoneC — populates #req-items from solveInverse result ──────
+    // Called at the tail of updateScreen2Narrative, replacing the V1 approximation.
+    function populateZoneC(pts, overrides) {
+      var req = document.getElementById('req-items');
+      if (!req || !pts || !currentScenario) return;
+
+      var s  = designScenario || currentScenario;
+      var dc = overrides.ceilDelta  || 0;
+      var df = overrides.floorDelta || 0;
+      var dd = overrides.datumDelta || 0;
+
+      // Normalize: designScenario uses {age,retire,port,datum,contrib};
+      // solveInverse + _d2BinarySearchY + getMathPoint expect {currentAge,activationAge,yearsToGrow,portfolioVol,annualContrib,targetSpend,...rates}
+      var _sNorm = (function() {
+        var _age    = s.currentAge    !== undefined ? s.currentAge    : (s.age    || 0);
+        var _retire = s.activationAge !== undefined ? s.activationAge : (s.retire || 0);
+        var _mEl    = document.querySelector('input[name="d2-market"]:checked');
+        var _par    = _mEl ? _mEl.value : 'average';
+        var _cR = 1.015, _bR = 1.035, _uR = 1.055;
+        if (_par === 'optimistic') { _cR = 1.020; _bR = 1.040; _uR = 1.065; }
+        else if (_par === 'stress') { _cR = 1.005; _bR = 1.015; _uR = 1.035; }
+        return {
+          currentAge:       _age,
+          activationAge:    _retire,
+          yearsToGrow:      s.yearsToGrow   !== undefined ? s.yearsToGrow   : Math.max(0, _retire - _age),
+          portfolioVol:     s.portfolioVol  !== undefined ? s.portfolioVol  : (s.port    || 0),
+          annualContrib:    s.annualContrib  !== undefined ? s.annualContrib : (s.contrib || 0),
+          targetSpend:      s.targetSpend   !== undefined ? s.targetSpend   : Math.round(s.datum || 0),
+          conservativeRate: _cR, baselineRate: _bR, upsideRate: _uR,
+          isNominal: ghostBaseline ? (ghostBaseline.isNominal || false) : false,
+          taxMult:   ghostBaseline ? (ghostBaseline.taxMult   || 0.8)   : 0.8,
+          inflRate:  0.03
+        };
+      })();
+
+      // ── Format helpers ───────────────────────────────────────────────
+      var fmtKyr = function(v) { return '$' + Math.round(Math.abs(v)) + 'k/yr'; };
+      var fmtPort = function(dP_M) {
+        var d = Math.abs(dP_M) * 1e6;
+        if (d >= 1e6) return '$' + (Math.round(d / 1e4) / 100).toFixed(2).replace(/\.00$/, '') + 'M';
+        return '$' + (Math.round(d / 1000) * 1000).toLocaleString('en-US');
+      };
+      var fmtContrib = function(dK) {
+        return '$' + (Math.round(Math.abs(dK) / 100) * 100).toLocaleString('en-US') + '/year';
+      };
+      var fmtYrs = function(dY) {
+        var n = Math.abs(Math.round(dY));
+        return n + ' year' + (n !== 1 ? 's' : '');
+      };
+      // Per-$1,000 portfolio ceiling/floor effect: a1/a2 in $M/yr per $M → ×1000 → $/yr per $1k
+      var fmtPortPer1k = function(sens) { return '$' + Math.round(Math.abs(sens) * 1000) + '/yr per $1,000'; };
+      // HTML builder helpers
+      var item = function(cls, labelColor, labelTxt, bodyTxt, reqType, reqVal) {
+        var da = (reqType != null && reqVal != null)
+          ? ' data-req-type="' + reqType + '" data-req-value="' + reqVal + '" tabindex="0" style="cursor:pointer;"'
+          : '';
+        var acceptBtn = (reqType != null && reqVal != null)
+          ? '<button class="d2-accept-btn" data-req-type="' + reqType + '" data-req-value="' + reqVal + '">↑ ACCEPT — APPLY TO SKETCH</button>'
+          : '';
+        return '<div class="req-item ' + cls + '"' + da + '>'
+          + '<div class="req-item-label" style="color:' + labelColor + ';">' + labelTxt + '</div>'
+          + '<div class="req-item-body">' + bodyTxt + acceptBtn + '</div></div>';
+      };
+      var warn = function(cls, labelColor, labelTxt, bodyTxt) {
+        return '<div class="req-item ' + cls + '" style="opacity:0.65;">'
+          + '<div class="req-item-label" style="color:' + labelColor + ';">&#9888; ' + labelTxt + '</div>'
+          + '<div class="req-item-body">' + bodyTxt + '</div></div>';
+      };
+      var studioCTA = function(copy) {
+        return '<div class="req-item" style="border-left-color:rgba(255,255,255,0.12);background:rgba(255,255,255,0.02);margin-top:6px;">'
+          + '<div class="req-item-label" style="color:rgba(255,255,255,0.35);letter-spacing:0.1em;">STUDIO</div>'
+          + '<div class="req-item-body" style="color:rgba(255,255,255,0.5);font-size:11px;">' + copy + '</div></div>';
+      };
+      var headCard = function(headline, contextLine) {
+        return '<div class="req-item" style="border-left-color:rgba(255,255,255,0.25);background:rgba(255,255,255,0.04);margin-bottom:8px;">'
+          + '<div class="req-item-body"><strong>' + headline + '</strong><br><span style="color:rgba(255,255,255,0.6);font-size:11px;">' + contextLine + '</span></div></div>';
+      };
+
+      var r = solveInverse(dc, df, dd, pts, _sNorm);
+      var html = '';
+
+      // ── Block: none (no drag) ────────────────────────────────────────
+      if (r.block === 'none') {
+        req.innerHTML = '<div class="req-placeholder">Drag the Ceiling, Floor, or Datum handles to design your shape — and see exactly what each move means.</div>';
+        return;
+      }
+
+      // ── Block E: datum-only — re-classify via getShapeStateObj ──────
+      if (r.block === 'E') {
+        var _eState = getShapeStateObj({ ceilSpend: r.ceilTarget, floorSpend: r.floorTarget, datumSpend: r.datumTarget });
+        html += item('req-item-datum', 'var(--teal-mid)', _eState.name, _eState.physicsShort || _eState.physics, null, null);
+        html += studioCTA('Studio can test whether your accounts and income structure can actually support spending at ' + fmtKyr(r.datumTarget) + ' — and what sequencing makes it most tax-efficient.');
+        req.innerHTML = html;
+        return;
+      }
+
+      // ── Block D: Y=0 retire today ────────────────────────────────────
+      if (r.block === 'D') {
+        html += headCard(
+          'You\'re modeling retirement today. Contributions don\'t factor in — your portfolio is the only lever.',
+          'At retirement, the ceiling is simply your portfolio times the withdrawal rate. To reach ' + fmtKyr(r.ceilTarget) + ', you\'d need a starting balance of ' + fmtPort(r.reqP_M) + '.'
+        );
+        if (r.dP_M <= 0) {
+          html += item('req-item-ceil', 'var(--gold)', 'PORTFOLIO — SURPLUS',
+            'That\'s ' + fmtPort(Math.abs(r.dP_M)) + ' less than your current balance. Your floor would sit at ' + fmtKyr(r.impliedFloor_k) + '.',
+            null, null);
+        } else {
+          html += item('req-item-ceil', 'var(--gold)', 'PORTFOLIO',
+            'That\'s ' + fmtPort(r.dP_M) + ' more than your current balance. Your floor would sit at ' + fmtKyr(r.impliedFloor_k) + '.',
+            'capital', (_sNorm.portfolioVol + r.dP_M));
+        }
+        html += studioCTA('Studio can model whether your actual account structure, Social Security timing, and income sources support spending at this level — without requiring additional portfolio growth.');
+        req.innerHTML = html;
+        return;
+      }
+
+      // ── Block C: dual drag — Cramer solve ────────────────────────────
+      if (r.block === 'C') {
+        if (r.hardStop) {
+          var _cStop = '';
+          if (r.hardStop.type === 'floor_above_ceil') {
+            _cStop = 'The floor can\'t sit above the ceiling — that shape doesn\'t exist. Pull the ceiling higher or the floor lower.';
+          } else if (r.hardStop.type === 'degenerate') {
+            _cStop = 'The shape you\'ve drawn has ceiling and floor targets that move in the same ratio as the levers — there\'s no unique solution. Adjust one endpoint slightly and try again.';
+          } else if (r.hardStop.type === 'negative_portfolio') {
+            _cStop = 'That target implies a negative portfolio — not a reachable state. Pull the target closer to your current shape.';
+          }
+          html += warn('req-item-ceil', 'var(--danger-red)', 'TARGET NOT REACHABLE', _cStop);
+          req.innerHTML = html;
+          return;
+        }
+        if (r.comboWarnK || r.comboWarnP) {
+          html += warn('req-item-ceil', 'var(--gold)', 'OUTSIDE PRACTICAL RANGE',
+            'Reaching both targets simultaneously requires lever moves outside practical range. Consider adjusting one endpoint, or use Studio to model this with your full account picture.');
+          html += studioCTA('Studio can test whether this specific shape is achievable given your actual account types, tax treatment, and income timing — and show the sequencing that gets you closest.');
+          req.innerHTML = html;
+          return;
+        }
+        html += headCard(
+          'You\'ve set a specific shape. Here\'s the lever combination that gets you there.',
+          'Ceiling at ' + fmtKyr(r.ceilTarget) + ' and floor at ' + fmtKyr(r.floorTarget) + ' is a constrained target — it requires moving both portfolio and contributions simultaneously.'
+        );
+        var _cBodyC = '';
+        if (r.dP_M >= 0 && r.dK_dollars >= 0) {
+          _cBodyC = 'To reach this shape: add ' + fmtPort(r.dP_M) + ' to your starting balance and ' + fmtContrib(r.dK_dollars) + ' to contributions. These two levers together solve for your ceiling and floor simultaneously.';
+        } else if (r.dP_M >= 0 && r.dK_dollars < 0) {
+          _cBodyC = 'To reach this shape: add ' + fmtPort(r.dP_M) + ' to your balance and reduce contributions by ' + fmtContrib(r.dK_dollars) + '. The specific shape you\'ve drawn requires less contribution weight and more lump-sum balance.';
+        } else {
+          _cBodyC = 'This shape requires a lower starting balance (' + fmtPort(Math.abs(r.dP_M)) + ' less) and higher contributions (' + fmtContrib(r.dK_dollars) + ' more). You\'re trading lump-sum for ongoing input.';
+        }
+        _cBodyC += ' <em style="color:rgba(255,255,255,0.5);font-size:11px;">Note: retirement age is held constant in this solve. If either lever result seems impractical, extending retirement by even one year materially changes what\'s feasible.</em>';
+        var _cReqType = r.dP_M >= 0 ? 'capital' : null;
+        var _cReqVal  = r.dP_M >= 0 ? (_sNorm.portfolioVol + r.dP_M) : null;
+        html += item('req-item-ceil', 'var(--gold)', 'COMBINATION: PORTFOLIO + CONTRIBUTIONS', _cBodyC, _cReqType, _cReqVal);
+        html += studioCTA('Studio can test whether this specific shape is achievable given your actual account types, tax treatment, and income timing — and show the sequencing that gets you closest.');
+        req.innerHTML = html;
+        return;
+      }
+
+      // ── Block A: ceiling-only drag ────────────────────────────────────
+      if (r.block === 'A') {
+        var _dc_pct  = r.a1 > 0 ? Math.round(Math.abs(dc / pts.ceilSpend) * 100) : 0;
+        var _dc_dir  = dc >= 0 ? 'up' : 'down';
+        html += headCard(
+          'You pulled the ceiling. Here\'s what it takes to hold it.',
+          'Moving the ceiling ' + _dc_dir + ' by ' + _dc_pct + '% requires real lever movement — here are the three paths, ranked by practicality.'
+        );
+        var _allSuppA = r.paths.filter(function(p) { return p.lever !== 'retireAge'; }).every(function(p) { return p.softWarn !== null; });
+        r.paths.forEach(function(pth) {
+          if (pth.lever === 'portfolio') {
+            if (pth.hardStop === 'negative_portfolio' || pth.dP_M === null) return;
+            if (pth.softWarn === 'too_large') {
+              html += warn('req-item-ceil', 'var(--gold)', 'PORTFOLIO',
+                'Reaching that ceiling via portfolio alone requires adding ' + fmtPort(pth.dP_M) + ' — more than twice your current balance.');
+            } else {
+              var _a1Body = 'Add ' + fmtPort(pth.dP_M) + ' to your starting balance. At your horizon, portfolio is the most efficient ceiling lever — every dollar added moves the ceiling ' + fmtPortPer1k(r.a1) + ' and the floor ' + fmtPortPer1k(r.a2) + '.';
+              _a1Body += ' <span style="color:rgba(255,255,255,0.55);font-size:11px;">Your floor would also move ' + fmtKyr(Math.abs(pth.floorEffect)) + ' — it rises with the ceiling.</span>';
+              html += item('req-item-ceil', 'var(--gold)', 'PATH 1 — PORTFOLIO', _a1Body, 'capital', (_sNorm.portfolioVol + pth.dP_M));
+            }
+          }
+          if (pth.lever === 'contributions') {
+            if (pth.dK_dollars === null) return;
+            var _ceilFloorRatio = r.b1 > 0 && r.b2 > 0 ? (r.b1 / r.b2).toFixed(1) : '—';
+            var _floorRatioC = r.b2 > 0 && r.b1 > 0 ? (r.b2 / r.b1).toFixed(2) : '—';
+            if (pth.softWarn === 'too_high') {
+              html += warn('req-item-ceil', 'var(--gold)', 'CONTRIBUTIONS',
+                'Reaching that ceiling would require adding ' + fmtContrib(pth.dK_dollars) + ' — beyond a realistic single-lever move. The combination path is more practical.');
+            } else {
+              var _a2Body = 'Add ' + fmtContrib(pth.dK_dollars) + ' to contributions. Contributions move the ceiling effectively but with a larger ceiling-to-floor ratio (' + _ceilFloorRatio + ':' + _floorRatioC + ') — the floor rises less relative to the ceiling.';
+              _a2Body += ' <span style="color:rgba(255,255,255,0.55);font-size:11px;">Your floor would move ' + fmtKyr(Math.abs(pth.floorEffect)) + '.</span>';
+              html += item('req-item-ceil', 'var(--gold)', 'PATH 2 — CONTRIBUTIONS', _a2Body, 'contrib', (_sNorm.annualContrib + pth.dK_dollars));
+            }
+          }
+          if (pth.lever === 'retireAge') {
+            var _a3Body = 'Delay retirement by ' + fmtYrs(pth.dY) + '. Time amplifies every other input — but it\'s non-linear. Each additional year past ' + _sNorm.activationAge + ' yields a different ceiling gain.';
+            _a3Body += ' <span style="color:rgba(255,255,255,0.55);font-size:11px;">Your floor would also rise — by approximately ' + fmtKyr(Math.abs(pth.floorEffect)) + '.</span>';
+            if (pth.softWarn === 'extreme') {
+              _a3Body = '<em style="color:rgba(255,255,255,0.5);">&#9888; Reaching that ceiling through retirement timing alone would require delaying ' + fmtYrs(pth.dY) + '. A combination may be more practical.</em> ' + _a3Body;
+            }
+            html += item('req-item-ceil', 'var(--gold)', 'PATH 3 — RETIRE AGE', _a3Body, 'retire', pth.reqRetireAge);
+          }
+        });
+        if (_allSuppA && r.combo) {
+          html += item('req-item-ceil', 'var(--gold)', 'COMBINATION PATH',
+            'No single lever reaches this ceiling cleanly. A practical combination: add ' + fmtPort(r.combo.dP_M) + ' to your balance and ' + fmtContrib(r.combo.dK_dollars) + ' to contributions. Together they close the gap without over-relying on either lever.',
+            'capital', (_sNorm.portfolioVol + r.combo.dP_M));
+        }
+        html += studioCTA('Studio can test whether your actual account mix, tax sequencing, and income timing support this ceiling — or whether the path that looks clean here faces friction in practice.');
+        req.innerHTML = html;
+        return;
+      }
+
+      // ── Block B: floor-only drag ──────────────────────────────────────
+      if (r.block === 'B') {
+        var _df_pct = pts.floorSpend > 0 ? Math.round(Math.abs(df / pts.floorSpend) * 100) : 0;
+        var _df_dir = df >= 0 ? 'up' : 'down';
+        html += headCard(
+          'You pulled the floor. Here\'s the lever cost of that move.',
+          'A floor of ' + fmtKyr(r.floorTarget) + ' — ' + _df_pct + '% ' + _df_dir + ' from your current floor — requires one of these lever moves.'
+        );
+        // Mandatory coupling disclosure (CLAUDE §10)
+        var _ceilFloorRatioPort = r.a2 > 0 ? (r.a1 / r.a2).toFixed(2) : '—';
+        html += '<div class="req-item" style="border-left-color:rgba(255,255,255,0.1);background:rgba(255,255,255,0.02);margin-bottom:6px;">'
+          + '<div class="req-item-body" style="color:rgba(255,255,255,0.55);font-size:11px;">No lever raises the floor without also raising the ceiling. At your horizon, each dollar you add to reach this floor moves your ceiling ' + _ceilFloorRatioPort + '× more.</div></div>';
+        r.paths.forEach(function(pth) {
+          if (pth.lever === 'portfolio') {
+            if (pth.hardStop === 'negative_portfolio' || pth.dP_M === null) return;
+            if (pth.softWarn === 'too_large') {
+              html += warn('req-item-floor', 'var(--danger-red)', 'PORTFOLIO',
+                'Securing that floor via portfolio alone requires adding ' + fmtPort(pth.dP_M) + ' — more than twice your current balance.');
+            } else {
+              var _b1Body = 'Add ' + fmtPort(pth.dP_M) + ' to your starting balance. Portfolio raises the floor by ' + fmtPortPer1k(r.a2) + ' per dollar added — and always raises the ceiling too, by ' + fmtPortPer1k(r.a1) + '.';
+              html += item('req-item-floor', 'var(--danger-red)', 'PATH 1 — PORTFOLIO', _b1Body, 'capital', (_sNorm.portfolioVol + pth.dP_M));
+            }
+          }
+          if (pth.lever === 'contributions') {
+            if (pth.dK_dollars === null) return;
+            var _ceilFloorRatioContrib = r.b2 > 0 && r.b1 > 0 ? (r.b1 / r.b2).toFixed(1) : '—';
+            if (pth.softWarn === 'too_high') {
+              html += warn('req-item-floor', 'var(--danger-red)', 'CONTRIBUTIONS',
+                'Securing that floor via contributions alone requires ' + fmtContrib(pth.dK_dollars) + ' — more than one lever can carry. See the combination path.');
+            } else {
+              html += item('req-item-floor', 'var(--danger-red)', 'PATH 2 — CONTRIBUTIONS',
+                'Add ' + fmtContrib(pth.dK_dollars) + ' to contributions. Contributions are less efficient at moving the floor than the ceiling — the ceiling-to-floor ratio at your horizon is approximately ' + _ceilFloorRatioContrib + ':1.',
+                'contrib', (_sNorm.annualContrib + pth.dK_dollars));
+            }
+          }
+          if (pth.lever === 'retireAge') {
+            var _b3Body = 'Delay retirement by ' + fmtYrs(pth.dY) + ' years to grow both boundaries. The floor lifts less than the ceiling with additional time — but consistently.';
+            if (pth.softWarn === 'extreme') {
+              _b3Body = '<em style="color:rgba(255,255,255,0.5);">&#9888; Securing that floor through retirement timing alone would require delaying ' + fmtYrs(pth.dY) + '.</em> ' + _b3Body;
+            }
+            html += item('req-item-floor', 'var(--danger-red)', 'PATH 3 — RETIRE AGE', _b3Body, 'retire', pth.reqRetireAge);
+          }
+        });
+        // Qualitative SS/annuity path — Captain Decision 2: Option 1, no fabricated numbers
+        html += '<div class="req-item req-item-floor" style="opacity:0.75;">'
+          + '<div class="req-item-label" style="color:var(--danger-red);">GUARANTEED INCOME PATH</div>'
+          + '<div class="req-item-body" style="font-size:11px;">Alternatively, guaranteed income sources — Social Security timing or annuity income — can raise your floor without additional portfolio growth. Studio can model the specific amounts given your actual account structure.</div></div>';
+        var _allSuppB = r.paths.slice(0, 2).every(function(p) { return p.softWarn !== null; });
+        if (_allSuppB && r.combo) {
+          html += item('req-item-floor', 'var(--danger-red)', 'COMBINATION PATH',
+            'Reaching this floor with a single lever would require an outsized move. A more practical combination: add ' + fmtPort(r.combo.dP_M) + ' to your balance and ' + fmtContrib(r.combo.dK_dollars) + ' to contributions.',
+            'capital', (_sNorm.portfolioVol + r.combo.dP_M));
+        }
+        html += studioCTA('Studio can test whether tax-efficient sequencing and income timing can structurally support a floor at this level — or whether there are gaps the Sketch can\'t see.');
+        req.innerHTML = html;
+        return;
+      }
+
+      // Fallback
+      req.innerHTML = '<div class="req-placeholder">Drag the Ceiling, Floor, or Datum handles to design your shape — and see exactly what each move means.</div>';
     }
 
     // --- Screen 2 Narrative ---
     function updateScreen2Narrative() {
       if (!lastCalculatedPoints) return;
-      var pts  = lastCalculatedPoints;
+      var pts  = _d2ActiveDesignPts || lastCalculatedPoints;
       var ceil = pts.ceilSpend  + designOverrides.ceilDelta;
       var dat  = pts.datumSpend + designOverrides.datumDelta;
       var flr  = pts.floorSpend + designOverrides.floorDelta;
@@ -6758,99 +7437,7 @@
       var spread = ceil - flr;
       var spreadPct = ceil > 0 ? spread / ceil : 0;
 
-      var tensExplain = document.getElementById('tension-explain');
-      if (tensExplain) {
-        if (tensionPct === 0) {
-          tensExplain.textContent = 'Your Ceiling sits within what the Sketch can confirm. No tension — this shape is structurally supported.';
-        } else if (tensionPct <= 20) {
-          tensExplain.textContent = 'Your Ceiling is ' + tensionPct + '% above what the Sketch confirms. That\'s a small gap — modest above-average market performance could close it.';
-        } else if (tensionPct <= 50) {
-          tensExplain.textContent = 'Your Ceiling is ' + tensionPct + '% above what the Sketch confirms. Reaching it requires markets to outperform their historical average. Studio shows how often that actually happens across 10,000 paths.';
-        } else if (tensionPct <= 80) {
-          tensExplain.textContent = 'Your Ceiling is ' + tensionPct + '% above what the Sketch can confirm. Reaching it requires sustained above-average growth for most of your accumulation years. Studio quantifies the probability.';
-        } else {
-          tensExplain.textContent = 'Your Ceiling is ' + tensionPct + '% above what the Sketch can confirm — a highly aspirational target. Studio shows how many of 10,000 paths actually get there.';
-        }
-      }
-
-      var req = document.getElementById('req-items');
-      if (!req) return;
-      var html = '';
-
-      if (computed > 0 && (dat / computed) > 5) {
-        var _gap = Math.round(dat - computed);
-        html = '<div style="padding:14px 16px;background:rgba(220,50,50,0.08);border-left:3px solid var(--danger-red);border-radius:4px;font-family:var(--font-mono);font-size:10px;line-height:1.7;color:rgba(255,255,255,0.8);">'
-          + '<div style="color:var(--danger-red);font-weight:bold;letter-spacing:0.1em;margin-bottom:8px;">&#9888; YOUR SHAPE NEEDS WORK FIRST</div>'
-          + 'Your spending target (<strong>$' + Math.round(dat) + 'k/yr</strong>) is far above what this portfolio can structurally support right now (<strong>$' + Math.round(computed) + 'k/yr</strong>). That gap is $' + _gap + 'k/yr — and that\'s completely normal early on. This is exactly what the tool is for.<br><br>'
-          + '<strong style="color:var(--gold);">The most powerful moves:</strong><br>'
-          + '&bull; Increase your annual contributions<br>&bull; Extend your timeline (retire later or work longer)<br>&bull; Lower your spending target for now<br><br>'
-          + 'Return to Screen 1 and adjust those sliders. Screen 2 becomes much more useful once your target and portfolio are in the same range. Studio models exactly which combination closes this gap fastest.</div>';
-        req.innerHTML = html;
-        return;
-      }
-
-      if (ceil <= flr) {
-        html += '<div class="req-item" style="border-left-color:var(--danger-red);background:rgba(226,75,74,0.08);">'
-          + '<div class="req-item-label" style="color:var(--danger-red);">&#9888; CEILING BELOW FLOOR</div>'
-          + '<div class="req-item-body">Your best-case spending is below your minimum baseline — this shape has no valid path. <strong style="color:var(--danger-red);">Raise your Ceiling above your Floor</strong> to define a real range, or lower your Floor.</div></div>';
-        req.innerHTML = html;
-        return;
-      }
-
-      if (dat > ceil) {
-        html += '<div class="req-item req-item-datum" style="border-left-color:var(--danger-red);">'
-          + '<div class="req-item-label" style="color:var(--danger-red);">&#9888; DATUM ABOVE CEILING: ' + fmt(dat) + '</div>'
-          + '<div class="req-item-body">Your target spending exceeds your structural Ceiling. This is an <strong style="color:var(--danger-red);">unsupported shape</strong> — the Sketch cannot confirm a path where you spend more than your portfolio can generate. Studio resolves this through account type optimization, Social Security timing, and glide path design.</div></div>';
-      } else if (dat < flr) {
-        html += '<div class="req-item req-item-datum"><div class="req-item-label" style="color:var(--gold);">&#9888; DATUM BELOW FLOOR: ' + fmt(dat) + '</div>'
-          + '<div class="req-item-body">Your target spending is below your protected Floor. Consider raising your Datum or lowering your Floor to create a more meaningful shape.</div></div>';
-      }
-
-      if (ceil > computed * 1.02) {
-        var gap = ceil - computed;
-        var extraYears = Math.round(gap / (computed * 0.04));
-        var _capitalGapM = (gap / 0.04) / 1000;
-        var _r = currentScenario.baselineRate - 1 || 0.035;
-        var _n = currentScenario.yearsToGrow > 0 ? currentScenario.yearsToGrow : 20;
-        var extraContrib = _r > 0
-          ? Math.round((_capitalGapM * _r / (Math.pow(1 + _r, _n) - 1)) * 1000000 / 1000) * 1000
-          : Math.round(_capitalGapM * 1000000 / _n / 1000) * 1000;
-        html += '<div class="req-item req-item-ceil"><div class="req-item-label" style="color:var(--gold);">&#8593; CEILING TARGET: ' + fmt(ceil) + '</div>'
-          + '<div class="req-item-body">Your Ceiling is <strong class="gold-txt">' + Math.round((ceil/computed-1)*100) + '% above</strong> what the Sketch structurally supports (' + fmt(computed) + '). To reach it you\'d need roughly <strong>' + (extraYears > 0 ? extraYears + ' extra years of growth' : 'strong sequence luck') + '</strong> or ~<strong>$' + (extraContrib/1000).toFixed(0) + 'k/yr more</strong> in contributions. Studio resolves this with actual probabilities.</div></div>';
-      } else if (ceil < computed * 0.98) {
-        html += '<div class="req-item req-item-ceil"><div class="req-item-label" style="color:var(--gold);">&#8595; CEILING TARGET: ' + fmt(ceil) + '</div>'
-          + '<div class="req-item-body">You\'ve set a conservative Ceiling below your structural max (' + fmt(computed) + '). This reduces sequence-of-returns risk and means your Floor could rise to as high as <strong>' + fmt(flr * 1.15) + '</strong> with the same capital base.</div></div>';
-      }
-
-      var baseFloor = pts.floorSpend;
-      if (flr > baseFloor * 1.05) {
-        html += '<div class="req-item req-item-floor"><div class="req-item-label" style="color:var(--danger-red);">&#8593; FLOOR TARGET: ' + fmt(flr) + '</div>'
-          + '<div class="req-item-body">Raising your Floor to ' + fmt(flr) + ' means your baseline spending must be guaranteed — this demands <strong style="color:var(--danger-red);">more protected income</strong> (Social Security, annuity income, or a larger bond sleeve). Studio can model whether your current structure supports this Floor across bad sequences.</div></div>';
-      } else if (flr < baseFloor * 0.95) {
-        html += '<div class="req-item req-item-floor"><div class="req-item-label" style="color:var(--danger-red);">&#8595; FLOOR TARGET: ' + fmt(flr) + '</div>'
-          + '<div class="req-item-body">A lower Floor gives you more flexibility. With a reduced baseline of ' + fmt(flr) + ', you need less guaranteed income — freeing capital to extend your Ceiling or retire earlier. Tradeoff: less protection if markets drop early.</div></div>';
-      }
-
-      var baseDatum = pts.datumSpend;
-      if (dat >= flr && dat <= ceil) {
-        if (dat > baseDatum * 1.08) {
-          var yearsLater = Math.round((dat - baseDatum) / (baseDatum * 0.06));
-          html += '<div class="req-item req-item-datum"><div class="req-item-label" style="color:var(--teal-mid);">&#8593; DATUM TARGET: ' + fmt(dat) + '</div>'
-            + '<div class="req-item-body">Raising your target spend to ' + fmt(dat) + ' reduces your runway. You\'d need to retire ~' + yearsLater + ' year' + (yearsLater !== 1 ? 's' : '') + ' later, increase contributions, or accept a lower Floor. Studio maps the exact tradeoff.</div></div>';
-        } else if (dat < baseDatum * 0.92) {
-          var yearsEarlier = Math.round((baseDatum - dat) / (baseDatum * 0.06));
-          var floorBonus = Math.round((baseDatum - dat) * 0.4);
-          html += '<div class="req-item req-item-datum"><div class="req-item-label" style="color:var(--teal-mid);">&#8595; DATUM TARGET: ' + fmt(dat) + '</div>'
-            + '<div class="req-item-body">Spending less (' + fmt(dat) + ') extends your runway — you could potentially retire ~' + yearsEarlier + ' year' + (yearsEarlier !== 1 ? 's' : '') + ' earlier or raise your Floor by ~' + fmt(floorBonus) + ' with the same capital. Lower Datum = more structural room = a more resilient shape.</div></div>';
-        }
-      }
-
-      if (!html) {
-        html = '<div class="req-placeholder">Drag the Ceiling, Floor, or Datum handles to design your shape — and see exactly what each move means.</div>';
-      }
-      req.innerHTML = html;
-      var spotlight = document.getElementById('req-spotlight');
-      if (spotlight) { spotlight.style.display = 'none'; spotlight.innerHTML = ''; }
+      populateZoneC(pts, designOverrides);
     }
 
     // --- Design canvas market toggle ---
@@ -7115,7 +7702,7 @@
       // d2-market radios — re-render canvas + HUD + wave animation on change
       document.querySelectorAll('input[name="d2-market"]').forEach(function(el) {
         el.addEventListener('change', function(e) {
-          triggerSweepRect('d2s-market-sweep', e.target.value);
+          triggerSweepRect('d2-market-sweep', e.target.value);
           renderDesignCanvas();
         });
       });
@@ -7123,19 +7710,16 @@
 
     // ── Screen 2 interactive layer: datum drag + hover scrubber ──
     (function() {
-      var d2Canvas    = document.getElementById('d2s-canvas');
-      var d2Dragger   = document.getElementById('d2s-datum-dragger');
-      var d2ScrubGrp  = document.getElementById('d2s-scrubber-group');
-      var d2ScrubLine = document.getElementById('d2s-scrubber-line');
-      var d2NodeCeil  = document.getElementById('d2s-node-ceil');
-      var d2NodeFloor = document.getElementById('d2s-node-floor');
-      var d2NodeDatum = document.getElementById('d2s-node-datum');
-      var d2CeilLbl   = document.getElementById('d2s-ceil-lbl');
-      var d2FloorLbl  = document.getElementById('d2s-floor-lbl');
-      var d2DatumLbl  = document.getElementById('d2s-datum-lbl');
+      var d2Canvas    = document.getElementById('d2-canvas');
+      var d2ScrubGrp  = document.getElementById('d2-scrubber-group');
+      var d2ScrubLine = document.getElementById('d2-scrubber-line');
+      var d2NodeCeil  = document.getElementById('d2-node-ceil');
+      var d2NodeFloor = document.getElementById('d2-node-floor');
+      var d2NodeDatum = document.getElementById('d2-node-datum');
+      var d2CeilLbl   = document.getElementById('d2-lbl-ceil');
+      var d2FloorLbl  = document.getElementById('d2-lbl-floor');
+      var d2DatumLbl  = document.getElementById('d2-lbl-datum');
       if (!d2Canvas) return;
-
-      var d2IsDragging = false;
 
       function d2SvgPt(e) {
         var pt = d2Canvas.createSVGPoint();
@@ -7144,10 +7728,10 @@
       }
 
       function d2ShowTooltip(id, age, fv, spend, svgX, svgY) {
-        var g = document.getElementById('d2s-tt-g-' + id);
+        var g = document.getElementById('d2-tt-g-' + id);
         if (!g) return;
-        var ageEl = document.getElementById('d2s-tt-age-' + id);
-        var datEl = document.getElementById('d2s-tt-data-' + id);
+        var ageEl = document.getElementById('d2-tt-age-' + id);
+        var datEl = document.getElementById('d2-tt-data-' + id);
         if (ageEl) ageEl.textContent = age;
         var txt;
         if (id === 'datum') {
@@ -7195,9 +7779,9 @@
         var offsetYears = offsetRatio * yrs;
         var hoverAge    = Math.round(s.currentAge + offsetYears);
         var pts = getMathPoint(offsetYears, yrs, s);
-        var yC = spendToY(pts.ceilSpend);
-        var yF = spendToY(pts.floorSpend);
-        var yD = spendToY(pts.datumSpend);
+        var yC = d2SpendToY(pts.ceilSpend);
+        var yF = d2SpendToY(pts.floorSpend);
+        var yD = d2SpendToY(pts.datumSpend);
         if (d2NodeCeil)  { d2NodeCeil.setAttribute('cx',  svgX); d2NodeCeil.setAttribute('cy',  yC); }
         if (d2NodeFloor) { d2NodeFloor.setAttribute('cx', svgX); d2NodeFloor.setAttribute('cy', yF); }
         if (d2NodeDatum) { d2NodeDatum.setAttribute('cx', svgX); d2NodeDatum.setAttribute('cy', yD); }
@@ -7208,34 +7792,8 @@
         d2ShowTooltip('datum', hoverAge, pts.fvBase, pts.datumSpend, svgX, yD);
       }
 
-      if (d2Dragger) {
-        d2Dragger.addEventListener('pointerdown', function(e) {
-          d2IsDragging = true;
-          d2HideScrubber();
-          document.body.style.userSelect = 'none';
-          d2Canvas.style.cursor = 'ns-resize';
-          try { d2Dragger.setPointerCapture(e.pointerId); } catch(err) {}
-        });
-      }
-
-      window.addEventListener('pointerup', function() {
-        if (d2IsDragging) {
-          d2IsDragging = false;
-          document.body.style.userSelect = '';
-          d2Canvas.style.cursor = 'default';
-        }
-      });
-
       d2Canvas.addEventListener('pointermove', function(e) {
         var svgP = d2SvgPt(e);
-        if (d2IsDragging) {
-          var newSpend = ((450 - svgP.y) / 400) * (globalYMax - globalYMin) + globalYMin;
-          newSpend = clamp(newSpend, 20, 1000);
-          var slDatum = document.getElementById('d2-slider-datum');
-          if (slDatum) slDatum.value = datumValToPos(newSpend);
-          updateDesignEngine();
-          return;
-        }
         if (svgP.x >= 110 && svgP.x <= 660 && svgP.y >= -20 && svgP.y <= 500) {
           d2UpdateScrubber(clamp(svgP.x, 120, 650));
         } else {
