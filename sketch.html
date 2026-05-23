@@ -6191,8 +6191,11 @@
                     var _d2MlB = _d2Sec ? _d2MlLevNm(_d2Sec.key) : 'the second input';
                     var _d2MlPrepend = '';
                     if (_d2Lw.length >= 3) {
-                        var _d2MlC = _d2Lw[2] ? _d2MlLevNm(_d2Lw[2].key) : 'a third input';
-                        _d2MlPrepend = ML_08.replace('[Lever A]', _d2MlA).replace('[Lever B]', _d2MlB).replace('[Lever C]', _d2MlC) + ' ';
+                        var _d2MlNW = {1:'One',2:'Two',3:'Three',4:'Four',5:'Five',6:'Six'};
+                        var _d2MlCount = _d2MlNW[_d2Lw.length] || String(_d2Lw.length);
+                        var _d2MlAllNm = _d2Lw.map(function(l) { return _d2MlLevNm(l.key); });
+                        var _d2MlList  = _d2MlAllNm.slice(0, -1).join(', ') + ', and ' + _d2MlAllNm[_d2MlAllNm.length - 1];
+                        _d2MlPrepend = _d2MlCount + ' inputs moved simultaneously — ' + _d2MlList + '. Identify the primary driver (≥50% of impact) and note whether the secondary levers amplified or offset it. ';
                     } else if (_d2MlHasDatum && _d2MlShLevs.length === 1) {
                         var _d2MlSl      = _d2MlShLevs[0];
                         var _d2MlDatDir  = _d2DatumDelta > 0 ? 'up' : 'down';
@@ -6633,39 +6636,30 @@
       if (_dLbl)  { _dLbl.textContent = _dRelief ? 'DATUM RELIEF' : 'DATUM TENSION'; _dLbl.style.color = _dRelief ? _blue : 'var(--teal-mid)'; }
 
       // ── Explainer copy (highest absolute tension/relief wins) ──
-      // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
       var _exp = document.getElementById('tension-explain');
       if (_exp) {
         var _maxAbs = Math.max(_cAbs, _fAbs, _dAbs);
         if (_maxAbs === 0) {
-          // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
-          _exp.textContent = 'Drag the Ceiling, Floor, or Datum handles to shape your cone.';
+          _exp.textContent = 'Drag the Ceiling, Floor, or spending line to see how hard you\'re asking this Shape to work.';
         } else if (_cAbs === _maxAbs) {
           _exp.textContent = _cRelief
             // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
             ? (_cAbs > 0.4 ? 'Ceiling pulled below baseline — structural headroom expanding.' : 'Ceiling below baseline — cone is narrowing inward.')
-            // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
-            : (_cAbs > 0.75 ? 'At structural ceiling — your portfolio must deliver perfectly.'
-            // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
-            : _cAbs > 0.4 ? 'Ceiling under pressure — growth assumptions tightening.'
-            // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
-            : 'Ceiling elevated — capital or time must expand to sustain.');
+            : (_cAbs > 0.75 ? 'Ceiling is near its structural limit — this Shape now leans heavily on strong markets and your contributions holding steady.'
+            : _cAbs > 0.4 ? 'Ceiling under real pressure — more of this plan now depends on growth doing its part.'
+            : 'Ceiling raised but still in a workable band — you\'re asking for more, but the plan still has room above Floor.');
         } else if (_fAbs === _maxAbs) {
           _exp.textContent = _fRelief
             // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
             ? 'Floor below baseline — lower minimum spend required.'
-            // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
-            : (_fAbs > 0.75 ? 'Floor near structural minimum — narrow survival band.'
-            // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
-            : 'Floor compressed — risk of undershoot rising.');
+            : (_fAbs > 0.75 ? 'Floor pressed toward its lower boundary — resilience is thin if returns or income slip.'
+            : 'Floor pulled down — resilience is shrinking and more outcomes cluster near your minimum.');
         } else {
           _exp.textContent = _dRelief
             // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
             ? 'Datum pulled below baseline — spending target relaxing.'
-            // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
-            : (_dAbs > 0.75 ? 'Datum near ceiling — very little margin above target.'
-            // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
-            : 'Datum tension — spending elevated relative to baseline.');
+            : (_dAbs > 0.75 ? 'Spending line sits close to the Ceiling — very little capacity left above your spending target.'
+            : 'Spending line under tension — you\'re noticeably closer to the Ceiling than in the baseline Shape.');
         }
       }
     }
@@ -7156,6 +7150,9 @@
       var req = document.getElementById('req-items');
       if (!req || !pts || !currentScenario) return;
 
+      var _rhEl = document.getElementById('req-head-label');
+      if (_rhEl) _rhEl.textContent = (overrides && overrides.isDirty) ? 'WHAT IT TAKES TO REACH THIS SHAPE' : 'TO REACH THIS DESIGN:';
+
       var s  = designScenario || currentScenario;
       var dc = overrides.ceilDelta  || 0;
       var df = overrides.floorDelta || 0;
@@ -7301,8 +7298,8 @@
           _cBodyC = 'This shape requires a lower starting balance (' + fmtPort(Math.abs(r.dP_M)) + ' less) and higher contributions (' + fmtContrib(r.dK_dollars) + ' more). You\'re trading lump-sum for ongoing input.';
         }
         _cBodyC += ' <em style="color:rgba(255,255,255,0.5);font-size:11px;">Note: retirement age is held constant in this solve. If either lever result seems impractical, extending retirement by even one year materially changes what\'s feasible.</em>';
-        var _cReqType = r.dP_M >= 0 ? 'capital' : null;
-        var _cReqVal  = r.dP_M >= 0 ? (_sNorm.portfolioVol + r.dP_M) : null;
+        var _cReqType = 'capital';
+        var _cReqVal  = _sNorm.portfolioVol + r.dP_M;
         html += item('req-item-ceil', 'var(--gold)', 'COMBINATION: PORTFOLIO + CONTRIBUTIONS', _cBodyC, _cReqType, _cReqVal);
         html += studioCTA('Studio can test whether this specific shape is achievable given your actual account types, tax treatment, and income timing — and show the sequencing that gets you closest.');
         req.innerHTML = html;
@@ -7336,7 +7333,7 @@
             var _floorRatioC = r.b2 > 0 && r.b1 > 0 ? (r.b2 / r.b1).toFixed(2) : '—';
             if (pth.softWarn === 'too_high') {
               html += warn('req-item-ceil', 'var(--gold)', 'CONTRIBUTIONS',
-                'Reaching that ceiling would require adding ' + fmtContrib(pth.dK_dollars) + ' — beyond a realistic single-lever move. The combination path is more practical.');
+                'Reaching that ceiling would require adding ' + fmtContrib(pth.dK_dollars) + ' — beyond a realistic single-lever move. A split across portfolio and contributions is more practical.');
             } else {
               var _a2Body = 'Add ' + fmtContrib(pth.dK_dollars) + ' to contributions. Contributions move the ceiling effectively but with a larger ceiling-to-floor ratio (' + _ceilFloorRatio + ':' + _floorRatioC + ') — the floor rises less relative to the ceiling.';
               _a2Body += ' <span style="color:rgba(255,255,255,0.55);font-size:11px;">Your floor would move ' + fmtKyr(Math.abs(pth.floorEffect)) + '.</span>';
@@ -7390,7 +7387,7 @@
             var _ceilFloorRatioContrib = r.b2 > 0 && r.b1 > 0 ? (r.b1 / r.b2).toFixed(1) : '—';
             if (pth.softWarn === 'too_high') {
               html += warn('req-item-floor', 'var(--danger-red)', 'CONTRIBUTIONS',
-                'Securing that floor via contributions alone requires ' + fmtContrib(pth.dK_dollars) + ' — more than one lever can carry. See the combination path.');
+                'Securing that floor via contributions alone requires ' + fmtContrib(pth.dK_dollars) + ' — more than one lever can carry. Splitting the delta across portfolio and contributions is more practical.');
             } else {
               html += item('req-item-floor', 'var(--danger-red)', 'PATH 2 — CONTRIBUTIONS',
                 'Add ' + fmtContrib(pth.dK_dollars) + ' to contributions. Contributions are less efficient at moving the floor than the ceiling — the ceiling-to-floor ratio at your horizon is approximately ' + _ceilFloorRatioContrib + ':1.',
