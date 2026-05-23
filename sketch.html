@@ -2977,7 +2977,7 @@
             const subZone   = overRatio < 0.15 ? 'ENTRY' : 'STRUCTURAL';
             const _p1 = subZone === 'ENTRY'
                 ? `The plan doesn't quite reach this spending level yet — the gap is small, and one change may close it.`
-                : `No version of this plan currently supports this level of spending. The gap between what you're targeting and what the plan produces is real and will require something to move.`;
+                : `That spending line sits beyond what this plan can currently carry. To make it supportable, you'd need more capital, higher contributions, a later retirement date, or some mix of those.`;
             const _p2  = `That's not a judgment — it's just math. The current mix of savings, time, and target spending doesn't add up yet. Something has to change: the inputs go up, the target comes down, or both. The useful question is which lever moves the ceiling the most in your specific situation.`;
             const _con = `Move one lever at a time — more savings, more contributions, a later retirement, or a lower spending target — and watch which one closes the gap fastest. The most powerful lever in your situation won't always be the obvious one. Or bring the target down to where the plan currently tops out — that number tells you exactly what your current inputs produce. Not what you should want. What you have right now.`;
             const _stu = `Studio can test whether real-world variables — tax-advantaged accounts, withdrawal sequencing, Social Security timing, outside income — close part of this gap before any lever needs to move. Sketch holds those constant. Studio models them. Sometimes they make the difference between a gap that needs a real change and one that doesn't.`;
@@ -6524,7 +6524,7 @@
       var _ceilTension  = Math.min(1, Math.max(-1, designOverrides.ceilDelta  / Math.max(1, dptsEnd.ceilSpend)));
       var _floorTension = Math.min(1, Math.max(-1, designOverrides.floorDelta / Math.max(1, dptsEnd.floorSpend)));
       var _datumTension = Math.min(1, Math.max(-1, designOverrides.datumDelta / Math.max(1, dptsEnd.datumSpend)));
-      updateTensionVisuals(_ceilTension, _floorTension, _datumTension);
+      updateTensionVisuals(_ceilTension, _floorTension, _datumTension, dDatum > dCeil);
       updateRequirementsPanel(dCeil, dptsEnd.ceilSpend);
 
       // Grid labels (shared Y-axis — globalYMin/globalYMax)
@@ -6573,7 +6573,7 @@
 
     // --- Three tension bars + ceiling glow effect ---
     // Ratios are signed (-1 to 1): positive = tension, negative = relief
-    function updateTensionVisuals(ceilRatio, floorRatio, datumRatio) {
+    function updateTensionVisuals(ceilRatio, floorRatio, datumRatio, datumAboveCeil) {
       floorRatio = floorRatio || 0;
       datumRatio = datumRatio || 0;
       var _blue  = 'var(--blue-safe)';
@@ -6643,23 +6643,22 @@
           _exp.textContent = 'Drag the Ceiling, Floor, or spending line to see how hard you\'re asking this Shape to work.';
         } else if (_cAbs === _maxAbs) {
           _exp.textContent = _cRelief
-            // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
-            ? (_cAbs > 0.4 ? 'Ceiling pulled below baseline — structural headroom expanding.' : 'Ceiling below baseline — cone is narrowing inward.')
+            ? 'Ceiling pulled back — your upside spending capacity has narrowed. The plan has less room to deliver above your spending line if markets perform well.'
             : (_cAbs > 0.75 ? 'Ceiling is near its structural limit — this Shape now leans heavily on strong markets and your contributions holding steady.'
             : _cAbs > 0.4 ? 'Ceiling under real pressure — more of this plan now depends on growth doing its part.'
             : 'Ceiling raised but still in a workable band — you\'re asking for more, but the plan still has room above Floor.');
         } else if (_fAbs === _maxAbs) {
           _exp.textContent = _fRelief
-            // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
-            ? 'Floor below baseline — lower minimum spend required.'
+            ? 'Floor set lower — your resilience boundary is thinner now. More of the outcome range sits below this new minimum if markets underperform.'
             : (_fAbs > 0.75 ? 'Floor pressed toward its lower boundary — resilience is thin if returns or income slip.'
             : 'Floor pulled down — resilience is shrinking and more outcomes cluster near your minimum.');
         } else {
-          _exp.textContent = _dRelief
-            // TODO: DJ:250 — pull from DESIGN COPY BLOCKS sheet pending Captain copy authoring (Step 6 / Phase 2.6 scope)
-            ? 'Datum pulled below baseline — spending target relaxing.'
-            : (_dAbs > 0.75 ? 'Spending line sits close to the Ceiling — very little capacity left above your spending target.'
-            : 'Spending line under tension — you\'re noticeably closer to the Ceiling than in the baseline Shape.');
+          _exp.textContent = datumAboveCeil
+            ? 'Spending line is now above the Ceiling — the plan can\'t deliver at this position without a structural change.'
+            : (_dRelief
+              ? 'Spending line lowered — you\'re planning below what this Shape can carry. The gap between your target spend and the Ceiling has widened.'
+              : (_dAbs > 0.75 ? 'Spending line sits close to the Ceiling — very little capacity left above your spending target.'
+              : 'Spending line under tension — you\'re noticeably closer to the Ceiling than in the baseline Shape.'));
         }
       }
     }
@@ -7234,11 +7233,73 @@
         return;
       }
 
-      // ── Block E: datum-only — re-classify via getShapeStateObj ──────
+      // ── Block E v2: datum-only — state observation + lever suggestion ──
       if (r.block === 'E') {
-        var _eState = getShapeStateObj({ ceilSpend: r.ceilTarget, floorSpend: r.floorTarget, datumSpend: r.datumTarget });
-        html += item('req-item-datum', 'var(--teal-mid)', _eState.name, _eState.physicsShort || _eState.physics, null, null);
-        html += studioCTA('Studio can test whether your accounts and income structure can actually support spending at ' + fmtKyr(r.datumTarget) + ' — and what sequencing makes it most tax-efficient.');
+        var _eState  = getShapeStateObj({ ceilSpend: r.ceilTarget, floorSpend: r.floorTarget, datumSpend: r.datumTarget });
+        var _eName   = _eState ? _eState.name : 'EXPANSIVE';
+        var _eCTA    = 'Studio can test whether your accounts and income structure can actually support spending at ' + fmtKyr(r.datumTarget) + ' — and what sequencing makes it most tax-efficient.';
+
+        // Synthetic ceiling solve: target Ceil = newDatum × 1.10 (symmetric buffer, both directions)
+        var _eSynDc  = r.datumTarget * 1.10 - r.ceilTarget;
+        var _eSynR   = (Math.abs(_eSynDc) > 0.5) ? solveInverse(_eSynDc, 0, 0, pts, _sNorm) : null;
+        var _eSynP   = (_eSynR && _eSynR.paths && _eSynR.paths[0]) ? _eSynR.paths[0].dP_M : null;
+
+        if (r.datumTarget > r.ceilTarget) {
+          // E-UP-2: datum crossed above ceiling
+          html += item('req-item-datum', 'var(--teal-mid)', 'OVEREXTENDED — DATUM ABOVE CEILING',
+            'Your spending line has crossed above what this Shape can currently carry. The Datum now sits above the Ceiling — there is no margin left in the plan at this position.',
+            null, null);
+          if (_eSynP !== null && _eSynP > 0) {
+            html += item('req-item-ceil', 'var(--gold)', 'PATH 1 — PORTFOLIO',
+              'To make this spending level supportable, raising the Ceiling by adding ' + fmtPort(_eSynP) + ' to your starting balance is the most direct path — that single move would bring the Ceiling above the Datum and restore a workable margin.',
+              'capital', _sNorm.portfolioVol + _eSynP);
+          }
+        } else if (_eName === 'STRETCHED' || _eName === 'OVEREXTENDED') {
+          // E-UP-1: datum in STRETCHED (near ceiling, still below it)
+          html += item('req-item-datum', 'var(--teal-mid)', 'STRETCHED',
+            'Your Datum has moved into STRETCHED — spending is now sitting close to the Ceiling, with limited capacity above your target line.',
+            null, null);
+          if (_eSynP !== null && _eSynP > 0) {
+            html += item('req-item-ceil', 'var(--gold)', 'PATH 1 — PORTFOLIO',
+              'Adding ' + fmtPort(_eSynP) + ' to your starting balance would raise the Ceiling enough to restore a healthy gap above this Datum and ease the pressure on the plan.',
+              'capital', _sNorm.portfolioVol + _eSynP);
+          }
+        } else if (_eName === 'GROUNDED') {
+          // E-DN-3: datum in GROUNDED (near floor, excess capacity above)
+          html += item('req-item-datum', 'var(--teal-mid)', 'GROUNDED',
+            'Your Datum has moved into GROUNDED — spending is now sitting near the Floor, with most of the plan\'s capacity sitting unused above your target line.',
+            null, null);
+          if (_eSynP !== null && _eSynP < 0) {
+            html += item('req-item-ceil', 'var(--gold)', 'CAPITAL EFFICIENCY',
+              'With this much headroom between the Datum and Ceiling, the Floor could come down by approximately ' + fmtPort(Math.abs(_eSynP)) + ' in starting balance without compressing your resilience band — freeing capital that is otherwise locked into maintaining a higher floor than this spending level needs.',
+              null, null);
+          }
+        } else if (_eName === 'ABUNDANT') {
+          // E-DN-2: datum in ABUNDANT (dual lever: portfolio reduction OR earlier retirement)
+          html += item('req-item-datum', 'var(--teal-mid)', 'ABUNDANT',
+            'Your Datum has moved into ABUNDANT — spending is comfortably below the Ceiling, and your plan is carrying more capacity than this target requires.',
+            null, null);
+          if (_eSynP !== null && _eSynP < 0) {
+            var _eAbRA = _d2BinarySearchY(r.datumTarget * 1.10, 'ceil', _sNorm);
+            var _eAbDY = Math.max(0, _sNorm.activationAge - _eAbRA);
+            html += item('req-item-ceil', 'var(--gold)', 'HEADROOM OPTIONS',
+              'The gap above the Datum means the Ceiling could absorb a reduction of approximately ' + fmtPort(Math.abs(_eSynP)) + ' in starting balance without touching your spending target — or that same headroom could support earlier retirement by roughly ' + fmtYrs(_eAbDY) + '.',
+              null, null);
+          }
+        } else {
+          // E-DN-1: datum in EXPANSIVE (or other — dual lever: portfolio reduction OR earlier retirement)
+          html += item('req-item-datum', 'var(--teal-mid)', _eName || 'EXPANSIVE',
+            'Your Datum has moved into EXPANSIVE — spending is well-positioned within the Shape, with meaningful distance above the Floor and below the Ceiling.',
+            null, null);
+          if (_eSynP !== null && _eSynP < 0) {
+            var _eExRA = _d2BinarySearchY(r.datumTarget * 1.10, 'ceil', _sNorm);
+            var _eExDY = Math.max(0, _sNorm.activationAge - _eExRA);
+            html += item('req-item-ceil', 'var(--gold)', 'HEADROOM OPTIONS',
+              'The headroom restored above the Datum means this plan could sustain a Ceiling reduction of approximately ' + fmtPort(Math.abs(_eSynP)) + ' in starting balance, or it could carry an earlier retirement by roughly ' + fmtYrs(_eExDY) + ' while preserving your spending target.',
+              null, null);
+          }
+        }
+        html += studioCTA(_eCTA);
         req.innerHTML = html;
         return;
       }
@@ -7272,7 +7333,7 @@
           } else if (r.hardStop.type === 'degenerate') {
             _cStop = 'The shape you\'ve drawn has ceiling and floor targets that move in the same ratio as the levers — there\'s no unique solution. Adjust one endpoint slightly and try again.';
           } else if (r.hardStop.type === 'negative_portfolio') {
-            _cStop = 'That target implies a negative portfolio — not a reachable state. Pull the target closer to your current shape.';
+            _cStop = 'This combination would require a negative portfolio — more owed than owned — so no real plan can reach it. Bring the Floor and Ceiling closer to today\'s Shape or explore a less extreme mix in Studio.';
           }
           html += warn('req-item-ceil', 'var(--danger-red)', 'TARGET NOT REACHABLE', _cStop);
           req.innerHTML = html;
@@ -7280,14 +7341,14 @@
         }
         if (r.comboWarnK || r.comboWarnP) {
           html += warn('req-item-ceil', 'var(--gold)', 'OUTSIDE PRACTICAL RANGE',
-            'Reaching both targets simultaneously requires lever moves outside practical range. Consider adjusting one endpoint, or use Studio to model this with your full account picture.');
+            'Hitting both targets at once would need lever moves beyond practical ranges for capital, savings, or timing. Ease one end of the Shape, or use Studio to test a version that fits your real accounts.');
           html += studioCTA('Studio can test whether this specific shape is achievable given your actual account types, tax treatment, and income timing — and show the sequencing that gets you closest.');
           req.innerHTML = html;
           return;
         }
         html += headCard(
           'You\'ve set a specific shape. Here\'s the lever combination that gets you there.',
-          'Ceiling at ' + fmtKyr(r.ceilTarget) + ' and floor at ' + fmtKyr(r.floorTarget) + ' is a constrained target — it requires moving both portfolio and contributions simultaneously.'
+          'With both Floor and Ceiling pulled, this design needs portfolio and contribution changes working together; neither lever on its own can reach this target combo.'
         );
         var _cBodyC = '';
         if (r.dP_M >= 0 && r.dK_dollars >= 0) {
@@ -7312,7 +7373,7 @@
         var _dc_dir  = dc >= 0 ? 'up' : 'down';
         html += headCard(
           'You pulled the ceiling. Here\'s what it takes to hold it.',
-          'Moving the ceiling ' + _dc_dir + ' by ' + _dc_pct + '% requires real lever movement — here are the three paths, ranked by practicality.'
+          'You pulled the Ceiling. Holding it here requires real changes in the plan — these three paths show different ways to carry that higher line.'
         );
         var _allSuppA = r.paths.filter(function(p) { return p.lever !== 'retireAge'; }).every(function(p) { return p.softWarn !== null; });
         r.paths.forEach(function(pth) {
@@ -7335,8 +7396,7 @@
               html += warn('req-item-ceil', 'var(--gold)', 'CONTRIBUTIONS',
                 'Reaching that ceiling would require adding ' + fmtContrib(pth.dK_dollars) + ' — beyond a realistic single-lever move. A split across portfolio and contributions is more practical.');
             } else {
-              var _a2Body = 'Add ' + fmtContrib(pth.dK_dollars) + ' to contributions. Contributions move the ceiling effectively but with a larger ceiling-to-floor ratio (' + _ceilFloorRatio + ':' + _floorRatioC + ') — the floor rises less relative to the ceiling.';
-              _a2Body += ' <span style="color:rgba(255,255,255,0.55);font-size:11px;">Your floor would move ' + fmtKyr(Math.abs(pth.floorEffect)) + '.</span>';
+              var _a2Body = 'Add ' + fmtContrib(pth.dK_dollars) + ' to your annual contributions. That lifts your Ceiling much faster than your Floor — your lower boundary only rises by about ' + fmtKyr(Math.abs(pth.floorEffect)) + '.';
               html += item('req-item-ceil', 'var(--gold)', 'PATH 2 — CONTRIBUTIONS', _a2Body, 'contrib', (_sNorm.annualContrib + pth.dK_dollars));
             }
           }
@@ -7364,13 +7424,13 @@
         var _df_pct = pts.floorSpend > 0 ? Math.round(Math.abs(df / pts.floorSpend) * 100) : 0;
         var _df_dir = df >= 0 ? 'up' : 'down';
         html += headCard(
-          'You pulled the floor. Here\'s the lever cost of that move.',
+          'You pulled the Floor up. These paths show what it would take, in capital, savings, or timing, to keep that higher boundary in place.',
           'A floor of ' + fmtKyr(r.floorTarget) + ' — ' + _df_pct + '% ' + _df_dir + ' from your current floor — requires one of these lever moves.'
         );
         // Mandatory coupling disclosure (CLAUDE §10)
         var _ceilFloorRatioPort = r.a2 > 0 ? (r.a1 / r.a2).toFixed(2) : '—';
         html += '<div class="req-item" style="border-left-color:rgba(255,255,255,0.1);background:rgba(255,255,255,0.02);margin-bottom:6px;">'
-          + '<div class="req-item-body" style="color:rgba(255,255,255,0.55);font-size:11px;">No lever raises the floor without also raising the ceiling. At your horizon, each dollar you add to reach this floor moves your ceiling ' + _ceilFloorRatioPort + '× more.</div></div>';
+          + '<div class="req-item-body" style="color:rgba(255,255,255,0.55);font-size:11px;">In this Sketch there is no floor-only move. Every dollar you use to lift the Floor also lifts the Ceiling, and at this horizon the Ceiling still moves more than the Floor.</div></div>';
         r.paths.forEach(function(pth) {
           if (pth.lever === 'portfolio') {
             if (pth.hardStop === 'negative_portfolio' || pth.dP_M === null) return;
@@ -7378,7 +7438,7 @@
               html += warn('req-item-floor', 'var(--danger-red)', 'PORTFOLIO',
                 'Securing that floor via portfolio alone requires adding ' + fmtPort(pth.dP_M) + ' — more than twice your current balance.');
             } else {
-              var _b1Body = 'Add ' + fmtPort(pth.dP_M) + ' to your starting balance. Portfolio raises the floor by ' + fmtPortPer1k(r.a2) + ' per dollar added — and always raises the ceiling too, by ' + fmtPortPer1k(r.a1) + '.';
+              var _b1Body = 'Add ' + fmtPort(pth.dP_M) + ' to your starting balance. Every extra $1,000 in your portfolio raises the Floor by about ' + fmtPortPer1k(r.a2) + ' and the Ceiling by about ' + fmtPortPer1k(r.a1) + ' — one move lifts both edges of your range.';
               html += item('req-item-floor', 'var(--danger-red)', 'PATH 1 — PORTFOLIO', _b1Body, 'capital', (_sNorm.portfolioVol + pth.dP_M));
             }
           }
@@ -7387,7 +7447,7 @@
             var _ceilFloorRatioContrib = r.b2 > 0 && r.b1 > 0 ? (r.b1 / r.b2).toFixed(1) : '—';
             if (pth.softWarn === 'too_high') {
               html += warn('req-item-floor', 'var(--danger-red)', 'CONTRIBUTIONS',
-                'Securing that floor via contributions alone requires ' + fmtContrib(pth.dK_dollars) + ' — more than one lever can carry. Splitting the delta across portfolio and contributions is more practical.');
+                'Using contributions alone to hold this Floor would require ' + fmtContrib(pth.dK_dollars) + ' — more than that lever can reasonably carry on its own. A split across portfolio and contributions shares the load.');
             } else {
               html += item('req-item-floor', 'var(--danger-red)', 'PATH 2 — CONTRIBUTIONS',
                 'Add ' + fmtContrib(pth.dK_dollars) + ' to contributions. Contributions are less efficient at moving the floor than the ceiling — the ceiling-to-floor ratio at your horizon is approximately ' + _ceilFloorRatioContrib + ':1.',
@@ -7395,9 +7455,9 @@
             }
           }
           if (pth.lever === 'retireAge') {
-            var _b3Body = 'Delay retirement by ' + fmtYrs(pth.dY) + ' years to grow both boundaries. The floor lifts less than the ceiling with additional time — but consistently.';
+            var _b3Body = 'Delay retirement by ' + fmtYrs(pth.dY) + ' to grow both boundaries. The floor lifts less than the ceiling with additional time — but consistently.';
             if (pth.softWarn === 'extreme') {
-              _b3Body = '<em style="color:rgba(255,255,255,0.5);">&#9888; Securing that floor through retirement timing alone would require delaying ' + fmtYrs(pth.dY) + '.</em> ' + _b3Body;
+              _b3Body = 'Relying only on retirement timing to hold this Floor would mean delaying about ' + fmtYrs(pth.dY) + ' more — a heavy ask. A mixed path can often reach similar floors with less delay.';
             }
             html += item('req-item-floor', 'var(--danger-red)', 'PATH 3 — RETIRE AGE', _b3Body, 'retire', pth.reqRetireAge);
           }
@@ -7405,7 +7465,7 @@
         // Qualitative SS/annuity path — Captain Decision 2: Option 1, no fabricated numbers
         html += '<div class="req-item req-item-floor" style="opacity:0.75;">'
           + '<div class="req-item-label" style="color:var(--danger-red);">GUARANTEED INCOME PATH</div>'
-          + '<div class="req-item-body" style="font-size:11px;">Alternatively, guaranteed income sources — Social Security timing or annuity income — can raise your floor without additional portfolio growth. Studio can model the specific amounts given your actual account structure.</div></div>';
+          + '<div class="req-item-body" style="font-size:11px;">Income sources like Social Security and annuities can raise your Floor without needing extra portfolio growth. Studio can model how large those streams would need to be for your plan.</div></div>';
         var _allSuppB = r.paths.slice(0, 2).every(function(p) { return p.softWarn !== null; });
         if (_allSuppB && r.combo) {
           html += item('req-item-floor', 'var(--danger-red)', 'COMBINATION PATH',
