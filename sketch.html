@@ -7297,74 +7297,151 @@
         return;
       }
 
-      // ── Block E v2: datum-only — state observation + lever suggestion ──
+      // ── Block E v3: datum-only — 33-cell Datum Drag Matrix ───────────────────────
       if (r.block === 'E') {
-        var _eState  = getShapeStateObj({ ceilSpend: r.ceilTarget, floorSpend: r.floorTarget, datumSpend: r.datumTarget });
-        var _eName   = _eState ? _eState.name : 'EXPANSIVE';
-        _d2AcceptFromState = _eName;
-        var _eCTA    = 'Studio can test whether your accounts and income structure can actually support spending at ' + fmtKyr(r.datumTarget) + ' — and what sequencing makes it most tax-efficient.';
+        // Landing state (AcceptFromState + L2 routing key)
+        var _eLandSt   = getShapeStateObj({ ceilSpend: r.ceilTarget, floorSpend: r.floorTarget, datumSpend: r.datumTarget });
+        var _eLandName = _eLandSt ? _eLandSt.name    : 'EXPANSIVE';
+        var _eLandSz   = _eLandSt ? _eLandSt.subZone : 'CENTERED';
+        var _eLandClr  = _eLandSt ? _eLandSt.color   : 'var(--teal-mid)';
+        _d2AcceptFromState = _eLandName;
 
-        // Synthetic ceiling solve: target Ceil = newDatum × 1.10 (symmetric buffer, both directions)
-        var _eSynDc  = r.datumTarget * 1.10 - r.ceilTarget;
-        var _eSynR   = (Math.abs(_eSynDc) > 0.5) ? solveInverse(_eSynDc, 0, 0, pts, _sNorm) : null;
-        var _eSynP   = (_eSynR && _eSynR.paths && _eSynR.paths[0]) ? _eSynR.paths[0].dP_M : null;
+        // Entry zone from ghostBaseline (Discover snapshot)
+        var _eGbYrs  = ghostBaseline ? (ghostBaseline.yearsToGrow || Math.max(0, ghostBaseline.activationAge - ghostBaseline.currentAge)) : 0;
+        var _eGbEnd  = ghostBaseline ? getMathPoint(_eGbYrs, _eGbYrs, ghostBaseline) : { ceilSpend: r.ceilTarget, floorSpend: r.floorTarget, datumSpend: r.datumTarget };
+        var _eEntrySt   = getShapeStateObj(_eGbEnd);
+        var _eEntryName = _eEntrySt ? _eEntrySt.name    : 'EXPANSIVE';
+        var _eEntrySz   = _eEntrySt ? _eEntrySt.subZone : 'CENTERED';
 
-        if (r.datumTarget > r.ceilTarget) {
-          // E-UP-2: datum crossed above ceiling
-          html += item('req-item-datum', 'var(--teal-mid)', 'OVEREXTENDED — DATUM ABOVE CEILING',
-            'Your spending line has crossed above what this Shape can currently carry. The Datum now sits above the Ceiling — there is no margin left in the plan at this position.',
-            null, null);
-          if (_eSynP !== null && _eSynP > 0) {
-            html += item('req-item-ceil', 'var(--gold)', 'PATH 1 — PORTFOLIO',
-              'To make this spending level supportable, raising the Ceiling by adding ' + fmtPort(_eSynP) + ' to your starting balance is the most direct path — that single move would bring the Ceiling above the Datum and restore a workable margin.',
-              'capital', _sNorm.portfolioVol + _eSynP);
+        // L1 key: entryName_subZone_DIR  |  L2 key: landingName_subZone
+        var _eDir   = dd > 0 ? 'UP' : 'DN';
+        var _eL1Key = _eEntryName + '_' + _eEntrySz + '_' + _eDir;
+        var _eL2Key = _eLandName  + '_' + _eLandSz;
+
+        // 4 variable bindings
+        var _fmtK = function(v) { return '$' + Math.round(Math.abs(v)) + 'k'; };
+        var _eVars = {
+          newDatum_fmt:   fmtKyr(r.datumTarget),
+          deltaDatum_fmt: '$' + Math.round(Math.abs(dd)) + 'k/yr',
+          ceilGap_fmt:    _fmtK(r.ceilTarget - r.datumTarget),
+          floorGap_fmt:   _fmtK(r.datumTarget - r.floorTarget)
+        };
+        var _eFill = function(t) { return t.replace(/{(\w+)}/g, function(m, k) { return k in _eVars ? _eVars[k] : m; }); };
+
+        // ── L1 table: 22 cells (entry sub-zone × direction) ──────────────────────
+        var _eL1 = {
+          'OVEREXTENDED_STRUCTURAL_UP': {
+            op: "You're already significantly above the Ceiling — and you're testing whether the plan can carry even more. The Datum is now {deltaDatum_fmt} above where you started, sitting {ceilGap_fmt} past a limit the plan's current structure can't reach. This is a stress-test, not a plan state. The question isn't whether this works today — it doesn't — it's what would need to change for it to work.",
+            lv: "The gap between where the Datum sits and what the plan supports is {ceilGap_fmt}. To close that gap, the most direct path is a structural change — more capital, higher contributions, a later start date, or some combination. Studio can show you the cost of closing it and which lever is most efficient given where your accounts actually stand."
+          },
+          'OVEREXTENDED_ENTRY_UP': {
+            op: "You were barely over the Ceiling — and you dragged higher. The Datum is now {deltaDatum_fmt} above your starting point, pushing {ceilGap_fmt} past what the plan currently supports. You were already testing feasibility from the entry point; this move asks a harder version of that same question.",
+            lv: "The plan can't reach {newDatum_fmt} without a structural change. The gap to close is {ceilGap_fmt} — small enough that a targeted portfolio addition or a modest contribution increase might be sufficient. Studio can run the math on what each lever costs at your specific account structure."
+          },
+          'STRETCHED_HIGH_END_UP': {
+            op: "You were nearly touching the Ceiling — and you crossed it. The Datum moved {deltaDatum_fmt} from your start, lifting from the edge of what the plan supports into territory it currently can't reach. That crossing is a clean signal: you're not stress-testing a margin, you're asking whether the plan's capacity can grow.",
+            lv: "The Ceiling marks what the plan's current structure can sustain. The Datum is now {ceilGap_fmt} above it. Closing that gap means adding capital, raising contributions, or extending the runway — whichever your accounts can absorb. Studio can show the most efficient path given where you're starting from."
+          },
+          'STRETCHED_STANDARD_UP': {
+            op: "You were in Stretched — spending near the Ceiling but not yet at it — and you dragged higher. The Datum moved {deltaDatum_fmt} from your start, pushing toward or past the plan's upper limit. You were already in the range where the plan needs to work hard; this move asks whether it can work harder.",
+            lv: "At {newDatum_fmt}, the Datum is {ceilGap_fmt} from the Ceiling. If you've crossed it, the plan can't reach this level without a structural change. If you're still below it, you're testing how thin that margin actually is — Studio can show what happens to that buffer under stress."
+          },
+          'EXPANSIVE_CEILING_SIDE_UP': {
+            op: "You were in the upper range of Expansive — the plan supporting spending comfortably above the middle — and you dragged higher. The Datum moved {deltaDatum_fmt} from your start, lifting into Stretched territory or beyond. You're testing whether ambition is available at this spending level, not just whether the plan survives it.",
+            lv: "The Datum now sits {ceilGap_fmt} from the Ceiling. At this level, the plan is working near its upper boundary — your sequence-of-returns exposure matters more than it did at your starting point. Studio can show what this spending level looks like under a range of market scenarios, not just the base case."
+          },
+          'EXPANSIVE_CENTERED_UP': {
+            op: "You were in the middle of Expansive — spending balanced, plan running with room above and below — and you moved it up. The Datum shifted {deltaDatum_fmt} from your start, exploring how much of the plan's upper capacity you can reach. This is the clearest version of the \"what if I spent more?\" question.",
+            lv: "The Datum is now {ceilGap_fmt} from the Ceiling. You have room to keep testing — but how much room depends on what you're actually carrying in your accounts. Studio can show you the real ceiling given your portfolio, contributions, and income timing."
+          },
+          'EXPANSIVE_FLOOR_SIDE_UP': {
+            op: "You were in the lower range of Expansive — spending modest relative to what the plan supports — and you raised it. The Datum moved {deltaDatum_fmt} from your start, climbing toward the middle of the plan's range. You're not testing the limits yet. You're exploring how much of the capacity the plan already has is available to you.",
+            lv: "The Datum is now {ceilGap_fmt} below the Ceiling and {floorGap_fmt} above the Floor. You still have meaningful runway above your current position. Studio can show what your accounts could sustain at higher spending levels — and whether your current portfolio and contribution trajectory is consistent with reaching them."
+          },
+          'GROUNDED_STABLE_UP': {
+            op: "You were near the Floor — spending close to the plan's minimum supportable level — and you raised it. The Datum moved {deltaDatum_fmt} from your start, lifting into Expansive territory. This is a plan discovering capacity: you weren't spending what the plan could carry, and now you're testing how far into that range you want to go.",
+            lv: "The Datum has moved above the Floor and now sits {ceilGap_fmt} from the Ceiling. You have substantial room between where you are and the plan's upper limit. Studio can show what your real account structure supports at various points across that range — so you're not guessing at what's available."
+          },
+          'GROUNDED_TIGHT_UP': {
+            op: "You were in the paradox zone — spending so close to the Floor that the plan's minimum and your ask were nearly the same thing — and you raised it. The Datum moved {deltaDatum_fmt} from your start, pulling out of the tight band and into supported territory. This move is the answer to what the plan was waiting for: an ask it can actually distinguish from its own floor.",
+            lv: "The Datum is now {floorGap_fmt} above the Floor and {ceilGap_fmt} from the Ceiling. You've moved out of the zone where the margin was essentially zero. The plan has meaningful capacity above where you're sitting — Studio can show you how much and what it would take to use it."
+          },
+          'ABUNDANT_JUST_BELOW_UP': {
+            op: "You were just below the Floor — the plan supporting more than you were asking for — and you raised the Datum. The Datum moved {deltaDatum_fmt} from your start, climbing toward or into the zone the plan was already designed to carry. You're not straining the plan. You're asking it to do what it was built to do.",
+            lv: "The Datum is now {floorGap_fmt} from the Floor and {ceilGap_fmt} from the Ceiling. If you're still below the Floor, the plan's minimum capacity still exceeds your ask — you have room to keep raising. Studio can show what the full supported range looks like given your actual accounts."
+          },
+          'ABUNDANT_WELL_BELOW_UP': {
+            op: "You were well below the Floor — spending significantly less than the plan's minimum supportable level — and you raised the Datum substantially. The Datum moved {deltaDatum_fmt} from your start, testing how far up into the plan's range you can reach. The plan has more capacity than your starting Datum suggested. This drag is the first real stress on that capacity.",
+            lv: "Even at {newDatum_fmt}, the plan may still have room above where the Datum sits. The question is whether you've crossed the Floor yet — and if so, whether you're still within comfortable range or approaching the Ceiling. Studio can show your exact position in the plan's supported range and what it would take to go further."
+          },
+          'OVEREXTENDED_STRUCTURAL_DN': {
+            op: "You were significantly above the Ceiling — the plan unable to reach your spending level — and you pulled back. The Datum moved {deltaDatum_fmt} from your start, dropping toward or into viable territory. This is the right direction. Whether you've crossed back into a range the plan can support depends on how far you came.",
+            lv: "The Datum is now {ceilGap_fmt} from the Ceiling. If you're still above it, a further reduction — or a structural change to the plan — is needed to get to feasibility. If you've crossed below it, you're back in a range the plan can carry. Studio can show exactly where the threshold sits and what it takes to stay below it."
+          },
+          'OVEREXTENDED_ENTRY_DN': {
+            op: "You were just barely over the Ceiling — spending slightly above what the plan currently supports — and you eased back. The Datum moved {deltaDatum_fmt} from your start, dropping toward a range the plan can actually reach. A small reduction from just over the Ceiling is often all it takes to move from broken to workable.",
+            lv: "The Datum is now {ceilGap_fmt} from the Ceiling. If you've crossed below it, you're back inside a range the plan supports. Studio can show you what the plan's actual capacity looks like at this spending level — including how much buffer you now have before you'd approach the limit again."
+          },
+          'STRETCHED_HIGH_END_DN': {
+            op: "You were nearly touching the Ceiling from below — spending at the edge of what the plan supports without crossing it — and you eased back. The Datum moved {deltaDatum_fmt} from your start, creating breathing room between your spending and the plan's upper limit. This is a margin move: you're testing how much distance from the Ceiling changes the plan's resilience.",
+            lv: "The Datum is now {ceilGap_fmt} from the Ceiling. That gap is the plan's buffer — the room it has to absorb a bad sequence of returns before your spending becomes unsustainable. Studio can show what that buffer is worth under real stress scenarios, not just the base-case projection."
+          },
+          'STRETCHED_STANDARD_DN': {
+            op: "You were in Stretched — spending near the Ceiling with limited margin — and you lowered the Datum. The Datum moved {deltaDatum_fmt} from your start, moving from a tight range into more comfortable territory. Lower spending in a Stretched plan doesn't just reduce the ask — it rebuilds the plan's ability to handle volatility.",
+            lv: "The Datum is now {ceilGap_fmt} from the Ceiling and {floorGap_fmt} above the Floor. The middle of Expansive is where the plan runs most freely — you're testing whether this spending level fits there. Studio can show how this Datum holds up under different sequence-of-returns scenarios at your specific account structure."
+          },
+          'EXPANSIVE_CEILING_SIDE_DN': {
+            op: "You were in the upper range of Expansive — spending comfortably but toward the higher end of the plan's supported range — and you lowered it. The Datum moved {deltaDatum_fmt} from your start, shifting toward the middle of what the plan can carry. This is a deliberate move toward the plan's center of gravity.",
+            lv: "The Datum is now {ceilGap_fmt} from the Ceiling and {floorGap_fmt} above the Floor. Moving down from the upper range increases the plan's resilience without reducing the ask dramatically. Studio can quantify how much additional buffer this Datum position creates under stress."
+          },
+          'EXPANSIVE_CENTERED_DN': {
+            op: "You were in the middle of Expansive — spending balanced, plan running freely — and you lowered the Datum. The Datum moved {deltaDatum_fmt} from your start, dropping toward the lower range of what the plan supports. You're testing what a more conservative ask looks like from a comfortable starting point.",
+            lv: "The Datum is now {ceilGap_fmt} from the Ceiling and {floorGap_fmt} above the Floor. At this level, you're asking the plan to carry less than it comfortably can. Studio can show what the gap between this Datum and the plan's full capacity could fund — earlier retirement, a larger legacy, or a stronger stress buffer."
+          },
+          'EXPANSIVE_FLOOR_SIDE_DN': {
+            op: "You were in the lower range of Expansive — spending modestly but within the plan's supported zone — and you lowered further. The Datum moved {deltaDatum_fmt} from your start, dropping toward Grounded territory. You're asking what happens at the conservative end of what the plan can carry.",
+            lv: "The Datum is now {floorGap_fmt} above the Floor. You're testing the approach to the plan's minimum — the level at which the Floor and the Datum converge. Studio can show what the surplus between this Datum and the plan's full capacity could be used for, and whether the conservative ask is the right long-term choice."
+          },
+          'GROUNDED_STABLE_DN': {
+            op: "You were near the Floor — spending close to the plan's minimum supportable level — and you lowered further. The Datum moved {deltaDatum_fmt} from your start, approaching or crossing below the Floor. When the ask drops below what the plan needs to run, the plan doesn't fail — it builds surplus. The question is whether that surplus is intentional.",
+            lv: "The Datum is now {floorGap_fmt} from the Floor. If you've crossed below it, you're in Abundant territory — the plan's minimum capacity now exceeds your ask. Studio can show what that margin represents: how much earlier you could retire, how much larger a legacy the plan supports, or how much stress resilience you're building."
+          },
+          'GROUNDED_TIGHT_DN': {
+            op: "You were in the paradox zone — spending so close to the Floor that the plan's minimum and your ask were nearly identical — and you lowered the Datum below it. The Datum moved {deltaDatum_fmt} from your start, crossing from the tightest possible margin into Abundant territory. This is a strong conservative signal: you're asking for less than the plan's minimum output.",
+            lv: "The Datum is now {floorGap_fmt} below the Floor. The plan was already designed to carry more than you're asking for. Studio can show what that surplus could fund — and help you decide whether this level of conservatism is a deliberate choice or a starting point worth revisiting."
+          },
+          'ABUNDANT_JUST_BELOW_DN': {
+            op: "You were just below the Floor — the plan already supporting more than your ask — and you lowered the Datum further. The Datum moved {deltaDatum_fmt} from your start, pushing deeper into Abundant territory. You're asking less than the plan's minimum. This move makes that gap wider.",
+            lv: "The Datum is now {floorGap_fmt} below the Floor. The plan has meaningful unused capacity above this spending level. Studio can show what the gap between {newDatum_fmt} and the plan's full capacity actually represents — in years, in legacy, or in resilience."
+          },
+          'ABUNDANT_WELL_BELOW_DN': {
+            op: "You were already well below the Floor — spending significantly less than the plan's minimum supportable level — and you lowered further. The Datum moved {deltaDatum_fmt} from your start, approaching the drag floor at half your original pin. This is the most conservative ask the Sketch can model. You're testing what the plan looks like when the spending question is set aside almost entirely.",
+            lv: "The Datum is now {floorGap_fmt} below the Floor. The plan has substantial unused capacity above this level. Studio can show what that full capacity represents — and whether the conservative anchor is a deliberate structural choice or a number worth reconsidering."
           }
-        } else if (_eName === 'STRETCHED' || _eName === 'OVEREXTENDED') {
-          // E-UP-1: datum in STRETCHED (near ceiling, still below it)
-          html += item('req-item-datum', 'var(--teal-mid)', 'STRETCHED',
-            'Your Datum has moved into STRETCHED — spending is now sitting close to the Ceiling, with limited capacity above your target line.',
-            null, null);
-          if (_eSynP !== null && _eSynP > 0) {
-            html += item('req-item-ceil', 'var(--gold)', 'PATH 1 — PORTFOLIO',
-              'Adding ' + fmtPort(_eSynP) + ' to your starting balance would raise the Ceiling enough to restore a healthy gap above this Datum and ease the pressure on the plan.',
-              'capital', _sNorm.portfolioVol + _eSynP);
-          }
-        } else if (_eName === 'GROUNDED') {
-          // E-DN-3: datum in GROUNDED (near floor, excess capacity above)
-          html += item('req-item-datum', 'var(--teal-mid)', 'GROUNDED',
-            'Your Datum has moved into GROUNDED — spending is now sitting near the Floor, with most of the plan\'s capacity sitting unused above your target line.',
-            null, null);
-          if (_eSynP !== null && _eSynP < 0) {
-            html += item('req-item-ceil', 'var(--gold)', 'CAPITAL EFFICIENCY',
-              'With this much headroom between the Datum and Ceiling, the Floor could come down by approximately ' + fmtPort(Math.abs(_eSynP)) + ' in starting balance without compressing your resilience band — freeing capital that is otherwise locked into maintaining a higher floor than this spending level needs.',
-              null, null);
-          }
-        } else if (_eName === 'ABUNDANT') {
-          // E-DN-2: datum in ABUNDANT (dual lever: portfolio reduction OR earlier retirement)
-          html += item('req-item-datum', 'var(--teal-mid)', 'ABUNDANT',
-            'Your Datum has moved into ABUNDANT — spending is comfortably below the Ceiling, and your plan is carrying more capacity than this target requires.',
-            null, null);
-          if (_eSynP !== null && _eSynP < 0) {
-            var _eAbRA = _d2BinarySearchY(r.datumTarget * 1.10, 'ceil', _sNorm);
-            var _eAbDY = Math.max(0, _sNorm.activationAge - _eAbRA);
-            html += item('req-item-ceil', 'var(--gold)', 'HEADROOM OPTIONS',
-              'The gap above the Datum means the Ceiling could absorb a reduction of approximately ' + fmtPort(Math.abs(_eSynP)) + ' in starting balance without touching your spending target — or that same headroom could support earlier retirement by roughly ' + fmtYrs(_eAbDY) + '.',
-              null, null);
-          }
-        } else {
-          // E-DN-1: datum in EXPANSIVE (or other — dual lever: portfolio reduction OR earlier retirement)
-          html += item('req-item-datum', 'var(--teal-mid)', _eName || 'EXPANSIVE',
-            'Your Datum has moved into EXPANSIVE — spending is well-positioned within the Shape, with meaningful distance above the Floor and below the Ceiling.',
-            null, null);
-          if (_eSynP !== null && _eSynP < 0) {
-            var _eExRA = _d2BinarySearchY(r.datumTarget * 1.10, 'ceil', _sNorm);
-            var _eExDY = Math.max(0, _sNorm.activationAge - _eExRA);
-            html += item('req-item-ceil', 'var(--gold)', 'HEADROOM OPTIONS',
-              'The headroom available above the Datum means this plan could sustain a Ceiling reduction of approximately ' + fmtPort(Math.abs(_eSynP)) + ' in starting balance, or it could carry an earlier retirement by roughly ' + fmtYrs(_eExDY) + ' while preserving your spending target.',
-              null, null);
-          }
-        }
-        html += studioCTA(_eCTA);
+        };
+
+        // ── L2 table: 11 cells (landing sub-zone) ────────────────────────────────
+        var _eL2 = {
+          'OVEREXTENDED_STRUCTURAL': { mod: "The Datum has crossed significantly above the Ceiling — {ceilGap_fmt} past the plan's upper limit. At this spending level, the plan's current structure can't deliver. Studio can identify the most efficient structural change — portfolio, contributions, or timing — to close that gap and bring {newDatum_fmt} back into a range the plan can actually reach." },
+          'OVEREXTENDED_ENTRY':      { mod: "The Datum sits just above the Ceiling — {ceilGap_fmt} past the plan's current limit. The gap is small enough that a targeted change could close it. Studio can show the cost of closing it at your account structure — and whether it's a lever move or a plan revision." },
+          'STRETCHED_HIGH_END':      { mod: "The Datum has landed nearly at the Ceiling — {ceilGap_fmt} of margin remaining. The plan can carry {newDatum_fmt}, but with very little room to absorb a bad sequence of returns. Studio can show what that thin margin looks like under stress and whether it's a deliberate trade or a risk worth managing differently." },
+          'STRETCHED_STANDARD':      { mod: "The Datum has landed in the Stretched zone — supported by the plan, but with limited buffer between spending and the Ceiling. There's {ceilGap_fmt} to the upper limit. The plan works here, but sequence-of-returns risk matters more than it does in the middle of the range. Studio can show how this spending level holds up under a range of market scenarios at your specific account structure." },
+          'EXPANSIVE_CEILING_SIDE':  { mod: "The Datum has landed in the upper range of Expansive — {ceilGap_fmt} from the Ceiling, {floorGap_fmt} above the Floor. The plan supports this spending level with room to run. Studio can show how that upper-range position performs across different sequences of returns — and whether there's more capacity available." },
+          'EXPANSIVE_CENTERED':      { mod: "The Datum has landed in the middle of Expansive — {ceilGap_fmt} from the Ceiling, {floorGap_fmt} above the Floor. This is where the plan runs most freely: enough distance from both limits to handle normal volatility without structural pressure. Studio can confirm this is the right range for your accounts and income timing." },
+          'EXPANSIVE_FLOOR_SIDE':    { mod: "The Datum has landed in the lower range of Expansive — {ceilGap_fmt} from the Ceiling, {floorGap_fmt} above the Floor. The plan supports this level comfortably. You're asking less than you could, which means there's room above if circumstances change. Studio can show what the gap between {newDatum_fmt} and the plan's upper capacity represents." },
+          'GROUNDED_STABLE':         { mod: "The Datum has landed near the Floor — {floorGap_fmt} above the plan's minimum. The plan supports this spending level, but the margin to the lower boundary is thin. Studio can show how close this Datum is to the Floor in real terms, and what happens if portfolio returns come in below the base case." },
+          'GROUNDED_TIGHT':          { mod: "The Datum has landed in the paradox zone — {floorGap_fmt} from the Floor, nearly identical to the plan's minimum. The plan supports this level, but barely. There's almost no margin between what you're asking and the absolute lower bound. Studio can show what a small change in either direction does to that margin — and whether staying this close to the Floor is intentional." },
+          'ABUNDANT_JUST_BELOW':     { mod: "The Datum now sits just below the Floor — the plan's minimum capacity exceeds what you're asking for by {floorGap_fmt}. The plan has surplus above this spending level. Studio can show what that margin could fund: an earlier retirement date, a larger legacy target, or a stronger stress buffer against poor market sequences." },
+          'ABUNDANT_WELL_BELOW':     { mod: "The Datum now sits well below the Floor — the plan's minimum capacity exceeds your ask by {floorGap_fmt}. There's substantial unused capacity in the plan above this spending level. Studio can show what that surplus represents in concrete terms — years, legacy, or resilience — and help you decide whether this level of conservatism is a choice or a starting point." }
+        };
+
+        // ── Router + render (2 cards: L1 opening, L2 landing) ───────────────────
+        var _eL1Cell = _eL1[_eL1Key] || _eL1['EXPANSIVE_CENTERED_' + _eDir];
+        var _eL2Cell = _eL2[_eL2Key] || _eL2['EXPANSIVE_CENTERED'];
+        html += item('req-item-datum', 'var(--teal-mid)', 'DATUM — ' + _eEntryName,
+          _eFill(_eL1Cell.op), null, null);
+        html += item('req-item-datum', _eLandClr, _eLandName + ' — LANDING',
+          _eFill(_eL2Cell.mod), null, null);
         req.innerHTML = html;
         return;
       }
