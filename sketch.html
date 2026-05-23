@@ -5709,6 +5709,7 @@
     var _d2LastEndpointCY = { ceil: 0, floor: 450, datum: 225 };
     var _d2LastScenario   = null;
     var _d2AcceptAnimating = false;
+    var _d2AcceptFromState = null;
     var _d2ActiveDesignPts = null;
 
     // Phase 2.1 STUB: read d2-slider-* into designScenario + update display values
@@ -5989,6 +5990,17 @@
                 else if (_ld === 'portfolio') { _leverDelta = 'Portfolio' + _sym + ' ' + fmt(gb.portfolioVol*1000) + ' → '     + fmt(ds.port*1000); }
                 else if (_ld === 'contrib')   { _leverDelta = 'Contrib'   + _sym + ' $' + Math.round((gb.annualContrib||0)/1000) + 'k/yr → $' + Math.round((ds.contrib||0)/1000) + 'k/yr'; }
                 else if (_ld === 'age')       { _leverDelta = 'Age'       + _sym + ' ' + gb.currentAge             + ' yrs → ' + age    + ' yrs'; }
+                // Surface B: _d2DomLever with delta for N=1 single-lever attribution
+                var _slNm = { portfolio:'Portfolio Balance', datum:'Datum Spend', retire:'Retirement Age', contrib:'Annual Contributions', age:'Current Age' };
+                var _slDlt = '', _slDeltaD, _slDeltaS, _slDeltaA;
+                if      (_ld === 'portfolio') { _slDeltaD = ds.port - gb.portfolioVol; _slDeltaS = _slDeltaD >= 0 ? '+' : '−'; _slDeltaA = Math.abs(_slDeltaD); _slDlt = _slDeltaS + (_slDeltaA >= 1 ? '$' + _slDeltaA.toFixed(2) + 'M' : '$' + Math.round(_slDeltaA * 1000) + 'k'); }
+                else if (_ld === 'contrib')   { _slDeltaD = ds.contrib - gb.annualContrib; _slDeltaS = _slDeltaD >= 0 ? '+' : '−'; _slDeltaA = Math.abs(_slDeltaD); _slDlt = _slDeltaS + (_slDeltaA >= 1000 ? '$' + Math.round(_slDeltaA / 1000) + 'k' : '$' + Math.round(_slDeltaA)); }
+                else if (_ld === 'retire')    { _slDeltaD = retire - gb.activationAge; _slDlt = (_slDeltaD >= 0 ? '+' : '−') + Math.abs(_slDeltaD) + ' yr'; }
+                else if (_ld === 'datum')     { _slDeltaD = Math.round(ds.datum) - gb.targetSpend; _slDeltaS = _slDeltaD >= 0 ? '+' : '−'; _slDeltaA = Math.abs(_slDeltaD); _slDlt = _slDeltaS + (_slDeltaA >= 1000 ? '$' + (_slDeltaA / 1000).toFixed(2) + 'M' : '$' + Math.round(_slDeltaA) + 'k'); }
+                else if (_ld === 'age')       { _slDeltaD = age - gb.currentAge; _slDlt = (_slDeltaD >= 0 ? '+' : '−') + Math.abs(_slDeltaD) + ' yr'; }
+                _d2DomLever = (_slNm[_ld] || _ld) + (_slDlt ? ' (' + _slDlt + ', 100% of range)' : '');
+                // Surface C: ACCEPT context inline suffix — gates on animation flag to bind to the causal moment
+                if (_d2AcceptAnimating && _d2AcceptFromState) { _phys += ' (via ACCEPT from ' + _d2AcceptFromState + ' resolution)'; }
             } else {
                 // ── Multi-lever heuristic (port of Screen 1 heuristic) ─────────────
                 var _d2RetireDelta  = retire - gb.activationAge;
@@ -6187,34 +6199,86 @@
                     };
                     var _d2MlStKey   = gbPinnedState.stateObj ? (gbPinnedState.stateObj.key || '') + '_' + (gbPinnedState.stateObj.subZone || '') : '';
                     var _d2MlParadox = (_d2MlStKey === 'abundant_JUST_BELOW' || _d2MlStKey === 'abundant_WELL_BELOW' || _d2MlStKey === 'grounded_TIGHT' || _d2MlStKey === 'expansive_FLOOR_SIDE');
-                    var _d2MlA = _d2Dom ? _d2MlLevNm(_d2Dom.key) : 'the first input';
-                    var _d2MlB = _d2Sec ? _d2MlLevNm(_d2Sec.key) : 'the second input';
-                    var _d2MlPrepend = '';
-                    if (_d2Lw.length >= 3) {
-                        var _d2MlNW = {1:'One',2:'Two',3:'Three',4:'Four',5:'Five',6:'Six'};
-                        var _d2MlCount = _d2MlNW[_d2Lw.length] || String(_d2Lw.length);
-                        var _d2MlAllNm = _d2Lw.map(function(l) { return _d2MlLevNm(l.key); });
-                        var _d2MlList  = _d2MlAllNm.slice(0, -1).join(', ') + ', and ' + _d2MlAllNm[_d2MlAllNm.length - 1];
-                        _d2MlPrepend = _d2MlCount + ' inputs moved simultaneously — ' + _d2MlList + '. Identify the primary driver (≥50% of impact) and note whether the secondary levers amplified or offset it. ';
-                    } else if (_d2MlHasDatum && _d2MlShLevs.length === 1) {
-                        var _d2MlSl      = _d2MlShLevs[0];
-                        var _d2MlDatDir  = _d2DatumDelta > 0 ? 'up' : 'down';
-                        var _d2MlSlNm    = _d2MlLevNm(_d2MlSl.key);
-                        var _d2MlDatImpr = _d2DatumDelta < 0;
-                        var _d2MlSlImpr  = _d2MlShPos(_d2MlSl.key);
-                        _d2MlPrepend = (_d2MlDatImpr === _d2MlSlImpr ? ML_06 : ML_07).replace('[direction]', _d2MlDatDir).replace('[Lever B]', _d2MlSlNm) + ' ';
-                    } else if (_d2MlShLevs.length >= 2) {
-                        var _d2MlPosA    = _d2MlShPos(_d2MlShLevs[0].key);
-                        var _d2MlPosB    = _d2MlShPos(_d2MlShLevs[1].key);
-                        var _d2MlPattern = (_d2MlPosA !== _d2MlPosB) ? 'OFFSET' : (_d2MlParadox && _d2MlPosA) ? 'PARADOX' : 'AMPLIFIED';
-                        if (_d2MlPattern !== 'OFFSET') {
-                            _d2MlPrepend = (_d2MlPosA ? ML_01 : ML_02).replace('[Lever A]', _d2MlA).replace('[Lever B]', _d2MlB) + ' ';
-                        } else {
-                            var _d2MlOffTmpl = (_d2PWidened || _d2PShiftUp) ? ML_03 : (_d2PCompressed || _d2PShiftDn) ? ML_04 : ML_05;
-                            _d2MlPrepend = _d2MlOffTmpl.replace('[Lever A]', _d2MlA).replace('[Lever B]', _d2MlB) + ' ';
+                    // ── Phase 2.6 Surface A: 18-template ML Direction Matrix ────────────
+                    // Direction-first sorted shape lever labels: builders (↑) then reducers (↓), each by |impact|
+                    var _d2UpL = _d2MlShLevs.filter(function(l) { return _d2MlShPos(l.key); });
+                    var _d2DnL = _d2MlShLevs.filter(function(l) { return !_d2MlShPos(l.key); });
+                    var _d2DirLw = _d2UpL.concat(_d2DnL);
+                    var _d2LvLbl = _d2DirLw.map(function(l) { return _d2MlLevNm(l.key); });
+                    var _d2PrimLev = _d2MlShLevs.length > 0 ? _d2MlLevNm(_d2MlShLevs[0].key) : '';
+                    var _d2NUp = _d2UpL.length, _d2Nn = _d2MlShLevs.length;
+                    var _d2FmtKs = function(v) { return '$' + Math.round(Math.abs(v)) + 'k/yr'; };
+                    var _d2CeilGapFmt  = _d2FmtKs(ptsEnd.ceilSpend - ptsEnd.datumSpend);
+                    var _d2FlrDeltaFmt = _d2FmtKs(ptsEnd.floorSpend - (gbEnd ? gbEnd.floorSpend : 0));
+                    var _d2NewDatFmt   = _d2FmtKs(s.targetSpend);
+                    var _d2FillT = function(t) {
+                        return t.replace(/{lever1}/g,_d2LvLbl[0]||'').replace(/{lever2}/g,_d2LvLbl[1]||'')
+                                .replace(/{lever3}/g,_d2LvLbl[2]||'').replace(/{lever4}/g,_d2LvLbl[3]||'')
+                                .replace(/{lever5}/g,_d2LvLbl[4]||'').replace(/{primaryLever}/g,_d2PrimLev)
+                                .replace(/{ceilGap_fmt}/g,_d2CeilGapFmt).replace(/{floorDelta_fmt}/g,_d2FlrDeltaFmt)
+                                .replace(/{newDatum_fmt}/g,_d2NewDatFmt);
+                    };
+                    var _d2DirT = [
+                        {n:2,u:2,o:"Two changes moved in the same direction — {lever1} and {lever2}. The Ceiling is now {ceilGap_fmt} above your spending line and the floor has lifted {floorDelta_fmt} from your pin.",s:"Test whether the target should rise to use what both moves made possible — or confirm the wider gap was the intended outcome.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:2,u:0,o:"Two changes pulled back simultaneously — {lever1} and {lever2}. The Ceiling has dropped {ceilGap_fmt} closer to your spending line and the floor has thinned by {floorDelta_fmt} from your pin.",s:"Name whether this is a deliberate reduction in ask, or whether one of these moves was unintentional — because both are now compressing the plan together.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:2,u:1,o:"{lever1} built plan while {lever2} pulled it back. The net effect is modest — the Ceiling moved {ceilGap_fmt} from your pin and the floor shifted {floorDelta_fmt}.",s:"Test whether the building lever alone gets you where you need — or whether the pullback was intentional and the modest net outcome is the right read.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:3,u:3,o:"Three changes landed in the same direction — {lever1}, {lever2}, and {lever3}. The Ceiling is now {ceilGap_fmt} above your spending line; the floor has moved {floorDelta_fmt} from your pin. {primaryLever} is doing most of the work.",s:"Test whether the target should rise to use what these three moves made possible — or confirm the wider gap was the intended outcome.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:3,u:0,o:"Three changes reduced the plan together — {lever1}, {lever2}, and {lever3}. The Ceiling is now {ceilGap_fmt} closer to your spending line and the floor has thinned {floorDelta_fmt} from your pin. {primaryLever} is responsible for most of that compression.",s:"Confirm whether all three pullbacks were deliberate — if one wasn't, it's compressing capacity alongside the ones that were.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:3,u:2,o:"{lever1} and {lever2} built plan while {lever3} pulled in the other direction. The net result: the Ceiling is {ceilGap_fmt} above your spending line and the floor moved {floorDelta_fmt} from your pin — positive, but partially offset.",s:"Test whether removing the downward move would close the remaining gap cleanly, or whether the offset was an intentional trade.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:3,u:1,o:"{lever1} built plan, but {lever2} and {lever3} pulled it back harder. The Ceiling is now {ceilGap_fmt} closer to your spending line and the floor has thinned {floorDelta_fmt} from your pin.",s:"The two downward moves are outweighing the one building lever. Name whether both reductions were intentional — or bring this to Studio to see what the compression looks like against your real account structure.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:4,u:4,o:"Four levers moved in the same direction — {lever1}, {lever2}, {lever3}, and {lever4}. The Ceiling is now {ceilGap_fmt} above your spending line; the floor lifted {floorDelta_fmt} from your pin. {primaryLever} is carrying the most weight, but all four are contributing.",s:"Consider whether the target should rise to meet what four simultaneous moves created — or take the full picture to Studio to test whether it holds under real sequence-of-returns pressure.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:4,u:3,o:"Three levers built plan — {lever1}, {lever2}, and {lever3} — while {lever4} pulled back. The Ceiling is now {ceilGap_fmt} above your spending line and the floor moved {floorDelta_fmt} from your pin. {primaryLever} is the lead driver; {lever4} partially offset it.",s:"Test whether removing the downward move adds meaningfully to the outcome — or confirm the offset was intentional.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:4,u:2,o:"Four levers moved in two directions — {lever1} and {lever2} built plan, {lever3} and {lever4} pulled it back. The net effect is muted: the Ceiling shifted {ceilGap_fmt} and the floor moved {floorDelta_fmt} from your pin. The building and reducing forces are closely matched.",s:"Isolate which building lever delivers the most lift per move, and which reducing lever costs the most — then decide which pair to keep.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:4,u:1,o:"Three levers pulled the plan back — {lever2}, {lever3}, and {lever4} — while only {lever1} built plan. The Ceiling has moved {ceilGap_fmt} closer to your spending line and the floor thinned {floorDelta_fmt} from your pin.",s:"Name whether three simultaneous reductions were all deliberate. If one wasn't, it's compressing the plan alongside the ones that were — and the single building lever isn't enough to offset all three.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:4,u:0,o:"All four levers reduced the plan simultaneously — {lever1}, {lever2}, {lever3}, and {lever4}. The Ceiling is now {ceilGap_fmt} closer to your spending line and the floor has compressed {floorDelta_fmt} from your pin. {primaryLever} is doing the most compression.",s:"Confirm all four reductions were intentional. If this is a deliberate low-ask scenario, the widening gap between Floor and spending line may be where Studio can surface what the plan is actually able to carry.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:5,u:5,o:"All five levers moved in the same direction — {lever1}, {lever2}, {lever3}, {lever4}, and {lever5}. The Ceiling is now {ceilGap_fmt} above your spending line; the floor lifted {floorDelta_fmt} from your pin. At this level of simultaneous movement, {primaryLever} is the lead driver but individual lever effects become harder to attribute cleanly.",s:"This is the boundary of what the Sketch can attribute cleanly. Name the one or two changes you'd actually make, and bring the rest to Studio for a sequence-aware read.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:5,u:4,o:"Four levers built plan — {lever1}, {lever2}, {lever3}, and {lever4} — while {lever5} pulled against them. The Ceiling is {ceilGap_fmt} above your spending line and the floor moved {floorDelta_fmt} from your pin. The single downward move is a minor offset against strong net-positive movement.",s:"Test whether removing the downward move adds meaningfully — or confirm it was a deliberate trade and the net outcome is the right read.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:5,u:3,o:"Three levers built plan — {lever1}, {lever2}, and {lever3} — while {lever4} and {lever5} partially offset them. The Ceiling is {ceilGap_fmt} above your spending line and the floor moved {floorDelta_fmt} from your pin. The building levers are winning, but not cleanly.",s:"Isolate whether both reducing moves were intentional. If one wasn't, it's costing capacity against three levers that are working in the right direction.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:5,u:2,o:"Two levers built plan — {lever1} and {lever2} — but three pulled harder in the other direction: {lever3}, {lever4}, and {lever5}. The Ceiling is now {ceilGap_fmt} closer to your spending line and the floor thinned {floorDelta_fmt} from your pin.",s:"The reducing levers are outweighing the building ones. Name whether all three pullbacks were intentional — or bring this to Studio to see what the compression looks like against your real accounts and income timing.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:5,u:1,o:"Four levers pulled the plan back — {lever2}, {lever3}, {lever4}, and {lever5} — while only {lever1} added capacity. The Ceiling is now {ceilGap_fmt} closer to your spending line and the floor has compressed {floorDelta_fmt} from your pin. The single building lever is not enough to offset four simultaneous reductions.",s:"Confirm all four reductions were deliberate. If even one wasn't, it's compressing the plan alongside the others — and the Sketch can't cleanly untangle the combined effect from here.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:5,u:0,o:"All five levers reduced the plan at once — {lever1}, {lever2}, {lever3}, {lever4}, and {lever5}. The Ceiling has moved {ceilGap_fmt} closer to your spending line and the floor compressed {floorDelta_fmt} from your pin. This is the boundary of maximum simultaneous reduction in the Sketch.",s:"If this is deliberate — a low-ask scenario, a conservative anchor — the plan has capacity well above where the Datum sits. Studio can show what the full plan could sustain if the ask were allowed to rise.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."}
+                    ];
+                    var _d2DirMatch = null;
+                    if (_d2Nn >= 2 && _d2Nn <= 5) {
+                        for (var _d2Ti = 0; _d2Ti < _d2DirT.length; _d2Ti++) {
+                            if (_d2DirT[_d2Ti].n === _d2Nn && _d2DirT[_d2Ti].u === _d2NUp) { _d2DirMatch = _d2DirT[_d2Ti]; break; }
                         }
                     }
-                    if (_d2MlPrepend) _phys = _d2MlPrepend + _phys;
+                    if (_d2DirMatch) {
+                        _phys = _d2FillT(_d2DirMatch.o);
+                        _phys = _phys.charAt(0).toUpperCase() + _phys.slice(1);
+                        _act  = _d2FillT(_d2DirMatch.s) + ' ' + _d2FillT(_d2DirMatch.c);
+                    } else {
+                        // ── Fallback: Round 6 ML_01-ML_08 prepend system ────────────────
+                        var _d2MlA = _d2Dom ? _d2MlLevNm(_d2Dom.key) : 'the first input';
+                        var _d2MlB = _d2Sec ? _d2MlLevNm(_d2Sec.key) : 'the second input';
+                        var _d2MlPrepend = '';
+                        if (_d2Lw.length >= 3) {
+                            var _d2MlNW = {1:'One',2:'Two',3:'Three',4:'Four',5:'Five',6:'Six'};
+                            var _d2MlCount = _d2MlNW[_d2Lw.length] || String(_d2Lw.length);
+                            var _d2MlAllNm = _d2Lw.map(function(l) { return _d2MlLevNm(l.key); });
+                            var _d2MlList  = _d2MlAllNm.slice(0, -1).join(', ') + ', and ' + _d2MlAllNm[_d2MlAllNm.length - 1];
+                            _d2MlPrepend = _d2MlCount + ' inputs moved simultaneously — ' + _d2MlList + '. Identify the primary driver (≥50% of impact) and note whether the secondary levers amplified or offset it. ';
+                        } else if (_d2MlHasDatum && _d2MlShLevs.length === 1) {
+                            var _d2MlSl      = _d2MlShLevs[0];
+                            var _d2MlDatDir  = _d2DatumDelta > 0 ? 'up' : 'down';
+                            var _d2MlSlNm    = _d2MlLevNm(_d2MlSl.key);
+                            var _d2MlDatImpr = _d2DatumDelta < 0;
+                            var _d2MlSlImpr  = _d2MlShPos(_d2MlSl.key);
+                            _d2MlPrepend = (_d2MlDatImpr === _d2MlSlImpr ? ML_06 : ML_07).replace('[direction]', _d2MlDatDir).replace('[Lever B]', _d2MlSlNm) + ' ';
+                        } else if (_d2MlShLevs.length >= 2) {
+                            var _d2MlPosA    = _d2MlShPos(_d2MlShLevs[0].key);
+                            var _d2MlPosB    = _d2MlShPos(_d2MlShLevs[1].key);
+                            var _d2MlPattern = (_d2MlPosA !== _d2MlPosB) ? 'OFFSET' : (_d2MlParadox && _d2MlPosA) ? 'PARADOX' : 'AMPLIFIED';
+                            if (_d2MlPattern !== 'OFFSET') {
+                                _d2MlPrepend = (_d2MlPosA ? ML_01 : ML_02).replace('[Lever A]', _d2MlA).replace('[Lever B]', _d2MlB) + ' ';
+                            } else {
+                                var _d2MlOffTmpl = (_d2PWidened || _d2PShiftUp) ? ML_03 : (_d2PCompressed || _d2PShiftDn) ? ML_04 : ML_05;
+                                _d2MlPrepend = _d2MlOffTmpl.replace('[Lever A]', _d2MlA).replace('[Lever B]', _d2MlB) + ' ';
+                            }
+                        }
+                        if (_d2MlPrepend) _phys = _d2MlPrepend + _phys;
+                    }
                 }
                 if (_d2Pchg.length > 0) {
                     var _d2Sn = { capital:'Capital', datum:'Datum', contrib:'Contributions', retire:'Retirement', market:'Market', age:'Age' };
@@ -7237,6 +7301,7 @@
       if (r.block === 'E') {
         var _eState  = getShapeStateObj({ ceilSpend: r.ceilTarget, floorSpend: r.floorTarget, datumSpend: r.datumTarget });
         var _eName   = _eState ? _eState.name : 'EXPANSIVE';
+        _d2AcceptFromState = _eName;
         var _eCTA    = 'Studio can test whether your accounts and income structure can actually support spending at ' + fmtKyr(r.datumTarget) + ' — and what sequencing makes it most tax-efficient.';
 
         // Synthetic ceiling solve: target Ceil = newDatum × 1.10 (symmetric buffer, both directions)
@@ -7295,7 +7360,7 @@
             var _eExRA = _d2BinarySearchY(r.datumTarget * 1.10, 'ceil', _sNorm);
             var _eExDY = Math.max(0, _sNorm.activationAge - _eExRA);
             html += item('req-item-ceil', 'var(--gold)', 'HEADROOM OPTIONS',
-              'The headroom restored above the Datum means this plan could sustain a Ceiling reduction of approximately ' + fmtPort(Math.abs(_eSynP)) + ' in starting balance, or it could carry an earlier retirement by roughly ' + fmtYrs(_eExDY) + ' while preserving your spending target.',
+              'The headroom available above the Datum means this plan could sustain a Ceiling reduction of approximately ' + fmtPort(Math.abs(_eSynP)) + ' in starting balance, or it could carry an earlier retirement by roughly ' + fmtYrs(_eExDY) + ' while preserving your spending target.',
               null, null);
           }
         }
@@ -7363,6 +7428,20 @@
         var _cReqVal  = _sNorm.portfolioVol + r.dP_M;
         html += item('req-item-ceil', 'var(--gold)', 'COMBINATION: PORTFOLIO + CONTRIBUTIONS', _cBodyC, _cReqType, _cReqVal);
         html += studioCTA('Studio can test whether this specific shape is achievable given your actual account types, tax treatment, and income timing — and show the sequencing that gets you closest.');
+        // Surface D: cross-route Block E datum analysis when datum also dragged alongside Block C
+        if (Math.abs(dd) > 0.5) {
+          var _cdE = solveInverse(0, 0, dd, pts, _sNorm);
+          if (_cdE.block === 'E') {
+            var _cdEState = getShapeStateObj({ ceilSpend: _cdE.ceilTarget, floorSpend: _cdE.floorTarget, datumSpend: _cdE.datumTarget });
+            var _cdEName  = _cdEState ? _cdEState.name : 'EXPANSIVE';
+            html += '<div class="req-item" style="border-left-color:rgba(255,255,255,0.08);background:none;margin:8px 0 2px;padding:3px 0;">'
+              + '<div class="req-item-body" style="color:rgba(255,255,255,0.3);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;">DATUM SHIFT</div></div>';
+            html += item('req-item-datum', 'var(--teal-mid)', 'DATUM — ' + _cdEName,
+              'Your Datum has also moved to ' + fmtKyr(_cdE.datumTarget) + '. With the Shape set by the Floor and Ceiling above, this Datum position is ' + (_cdEName.charAt(0).toUpperCase() + _cdEName.slice(1).toLowerCase()) + '.',
+              null, null);
+            html += studioCTA('Studio can test whether your accounts and income structure can actually support spending at ' + fmtKyr(_cdE.datumTarget) + ' within this designed Shape — and what sequencing makes it most tax-efficient.');
+          }
+        }
         req.innerHTML = html;
         return;
       }
