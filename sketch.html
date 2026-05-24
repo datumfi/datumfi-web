@@ -7623,7 +7623,7 @@
             html += '<div class="req-item" style="border-left-color:rgba(255,255,255,0.08);background:none;margin:8px 0 2px;padding:3px 0;">'
               + '<div class="req-item-body" style="color:rgba(255,255,255,0.3);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;">DATUM SHIFT</div></div>';
             html += item('req-item-datum', 'var(--teal-mid)', 'DATUM — ' + _cdEName,
-              'Your Datum has also moved to ' + fmtKyr(_cdE.datumTarget) + '. With the Shape set by the Floor and Ceiling above, this Datum position is ' + (_cdEName.charAt(0).toUpperCase() + _cdEName.slice(1).toLowerCase()) + '.',
+              (_cdEState && _cdEState.key === 'overextended' && _cdEState.subZone === 'STRUCTURAL' ? '⚠️ ' : '') + 'Your Datum has also moved to ' + fmtKyr(_cdE.datumTarget) + '. With the Shape set by the Floor and Ceiling above, this Datum position is ' + (_cdEName.charAt(0).toUpperCase() + _cdEName.slice(1).toLowerCase()) + '.',
               null, null);
             html += studioCTA('Studio can test whether your accounts and income structure can actually support spending at ' + fmtKyr(_cdE.datumTarget) + ' within this designed Shape — and what sequencing makes it most tax-efficient.');
           }
@@ -7712,6 +7712,7 @@
         var _cGf_A = fmtKyr(Math.abs(r.ceilTarget - r.datumTarget));
         var _fGf_A = fmtKyr(Math.abs(r.datumTarget - r.floorTarget));
         var _datumAck_A = (Math.abs(dd) > 0.5) ? 'You also ' + (dd > 0 ? 'raised' : 'lowered') + ' the Datum ' + fmtKyr(Math.abs(dd)) + ' — it now sits at ' + fmtKyr(r.datumTarget) + '. ' : '';
+        var _oeGlyph_A = (_wyDatObj_A && _wyDatObj_A.key === 'overextended' && _wyDatObj_A.subZone === 'STRUCTURAL') ? '⚠️ ' : '';
         var _wyCtx_A = '';
         if (_wyDatZone_A === 'overextended') {
           _wyCtx_A = 'One thing to notice: the Ceiling moved, but the Datum ' + _pDfPhrase_A + 'is still above it. The Shape changed; the mismatch didn\'t. Moving the Ceiling doesn\'t resolve a Datum that sits above it — that takes a structural change to the plan itself. Studio can identify the most efficient path to close that gap at your actual account structure.';
@@ -7725,7 +7726,7 @@
           _wyCtx_A = 'With the Ceiling at ' + _nCf_A + ', the Datum ' + _pDfPhrase_A + 'has dropped below the Floor — the plan\'s minimum capacity now exceeds what you\'re asking for. The Ceiling drag expanded the upper range, but the Datum already sits below the lower boundary. Studio can show what that surplus represents and whether it\'s a deliberate conservative anchor or capacity worth reconsidering.';
         }
         if (_wyCtx_A) {
-          html += item('req-item-datum', 'var(--teal-mid)', 'DATUM — ' + (_wyDatObj_A ? _wyDatObj_A.name : 'EXPANSIVE'), _datumAck_A + _wyCtx_A, null, null);
+          html += item('req-item-datum', 'var(--teal-mid)', 'DATUM — ' + (_wyDatObj_A ? _wyDatObj_A.name : 'EXPANSIVE'), _oeGlyph_A + _datumAck_A + _wyCtx_A, null, null);
         }
         req.innerHTML = html;
         return;
@@ -7795,6 +7796,7 @@
         var _fGf_B = fmtKyr(Math.abs(r.datumTarget - r.floorTarget));
         var _fDf_B = _fmtSgn_B(df);
         var _datumAck_B = (Math.abs(dd) > 0.5) ? 'You also ' + (dd > 0 ? 'raised' : 'lowered') + ' the Datum ' + fmtKyr(Math.abs(dd)) + ' — it now sits at ' + fmtKyr(r.datumTarget) + '. ' : '';
+        var _oeGlyph_B = (_wyDatObj_B && _wyDatObj_B.key === 'overextended' && _wyDatObj_B.subZone === 'STRUCTURAL') ? '⚠️ ' : '';
         var _wyCtx_B = '';
         if (_wyDatZone_B === 'overextended') {
           _wyCtx_B = 'The Floor moved, but the structural issue is still there: the Datum ' + _pDfPhrase_B + 'sits above the Ceiling. Adjusting the Floor doesn\'t change the Datum\'s relationship to the Ceiling — the plan still can\'t reach this spending level. Studio can show the most efficient path to bring ' + _pDf_B + ' back into a range the plan supports.';
@@ -7808,7 +7810,7 @@
           _wyCtx_B = 'The Floor moved to ' + _nFf_B + ', and the Datum ' + _pDfPhrase_B + 'is now below it — the plan\'s minimum capacity now exceeds what you\'re asking for. This is a surplus condition: the plan was built to carry more than the Datum represents. Studio can show what that margin could fund — earlier retirement, a larger legacy, or stronger stress resilience.';
         }
         if (_wyCtx_B) {
-          html += item('req-item-datum', 'var(--teal-mid)', 'DATUM — ' + (_wyDatObj_B ? _wyDatObj_B.name : 'EXPANSIVE'), _datumAck_B + _wyCtx_B, null, null);
+          html += item('req-item-datum', 'var(--teal-mid)', 'DATUM — ' + (_wyDatObj_B ? _wyDatObj_B.name : 'EXPANSIVE'), _oeGlyph_B + _datumAck_B + _wyCtx_B, null, null);
         }
         req.innerHTML = html;
         return;
