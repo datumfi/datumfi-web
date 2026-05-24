@@ -1,4 +1,4 @@
-<!-- Sketch V3 candidate — prepared 2026-05-13; not live until promoted -->
+﻿<!-- Sketch V3 candidate — prepared 2026-05-13; not live until promoted -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7504,7 +7504,6 @@
         var _cReqType = 'capital';
         var _cReqVal  = _sNorm.portfolioVol + r.dP_M;
         html += item('req-item-ceil', 'var(--gold)', 'COMBINATION: PORTFOLIO + CONTRIBUTIONS', _cBodyC, _cReqType, _cReqVal);
-        html += studioCTA('Studio can test whether this specific shape is achievable given your actual account types, tax treatment, and income timing — and show the sequencing that gets you closest.');
         // Surface D: cross-route Block E datum analysis when datum also dragged alongside Block C
         if (Math.abs(dd) > 0.5) {
           var _cdE = solveInverse(0, 0, dd, pts, _sNorm);
@@ -7517,6 +7516,30 @@
               'Your Datum has also moved to ' + fmtKyr(_cdE.datumTarget) + '. With the Shape set by the Floor and Ceiling above, this Datum position is ' + (_cdEName.charAt(0).toUpperCase() + _cdEName.slice(1).toLowerCase()) + '.',
               null, null);
             html += studioCTA('Studio can test whether your accounts and income structure can actually support spending at ' + fmtKyr(_cdE.datumTarget) + ' within this designed Shape — and what sequencing makes it most tax-efficient.');
+          }
+        } else {
+          // Workstream Y — Block C × Datum context (Datum static; |dd| ≤ 0.5)
+          var _wyDatObj_C  = getShapeStateObj({ ceilSpend: r.ceilTarget, floorSpend: r.floorTarget, datumSpend: pts.datumSpend });
+          var _wyDatZone_C = _wyDatObj_C ? _wyDatObj_C.key : 'expansive';
+          var _nCf_C = fmtKyr(r.ceilTarget);
+          var _nFf_C = fmtKyr(r.floorTarget);
+          var _pDf_C = fmtKyr(pts.datumSpend);
+          var _cGf_C = fmtKyr(Math.abs(r.ceilTarget - pts.datumSpend));
+          var _fGf_C = fmtKyr(Math.abs(pts.datumSpend - r.floorTarget));
+          var _wyCtx_C = '';
+          if (_wyDatZone_C === 'overextended') {
+            _wyCtx_C = 'Both edges of the Shape moved, but your spending at ' + _pDf_C + ' is now above the new Ceiling at ' + _nCf_C + '. The Shape was repositioned, but the Datum sits outside it — the plan can\'t deliver at this spending level under the new geometry. Studio can identify what structural change closes the gap most efficiently.';
+          } else if (_wyDatZone_C === 'stretched') {
+            _wyCtx_C = 'Both edges moved — Ceiling to ' + _nCf_C + ', Floor to ' + _nFf_C + ' — and your spending at ' + _pDf_C + ' is now ' + _cGf_C + ' from the upper limit. The Datum is inside the new Shape but near its top. The plan carries this spending level, though with limited buffer. Studio can show how that thin margin behaves under real market scenarios at your account structure.';
+          } else if (_wyDatZone_C === 'expansive') {
+            _wyCtx_C = 'Both edges moved — Ceiling to ' + _nCf_C + ', Floor to ' + _nFf_C + ' — and your spending at ' + _pDf_C + ' sits ' + _cGf_C + ' below the Ceiling and ' + _fGf_C + ' above the Floor. The new Shape positions the Datum comfortably in the middle — neither edge is close. Studio can show how this balanced position holds across a range of market scenarios.';
+          } else if (_wyDatZone_C === 'grounded') {
+            _wyCtx_C = 'Both edges moved — Ceiling to ' + _nCf_C + ', Floor to ' + _nFf_C + ' — and your spending at ' + _pDf_C + ' is now ' + _fGf_C + ' above the new Floor. The Datum is sitting near the lower boundary of the new Shape. The plan supports it, but the lower margin is thin. Studio can show what happens to that margin when returns come in below the base case.';
+          } else if (_wyDatZone_C === 'abundant') {
+            _wyCtx_C = 'Both edges moved — Ceiling to ' + _nCf_C + ', Floor to ' + _nFf_C + ' — and your spending at ' + _pDf_C + ' is now ' + _fGf_C + ' below the new Floor. The new Shape\'s lower boundary has risen above the Datum. The plan\'s minimum capacity now exceeds what you\'re asking for. Studio can show what that surplus represents in concrete terms — years, legacy, or resilience.';
+          }
+          if (_wyCtx_C) {
+            html += item('req-item-datum', 'var(--teal-mid)', 'DATUM — ' + (_wyDatObj_C ? _wyDatObj_C.name : 'EXPANSIVE'), _wyCtx_C, null, null);
           }
         }
         req.innerHTML = html;
@@ -7570,7 +7593,28 @@
             'No single lever reaches this ceiling cleanly. A practical combination: add ' + fmtPort(r.combo.dP_M) + ' to your balance and ' + fmtContrib(r.combo.dK_dollars) + ' to contributions. Together they close the gap without over-relying on either lever.',
             'capital', (_sNorm.portfolioVol + r.combo.dP_M));
         }
-        html += studioCTA('Studio can test whether your actual account mix, tax sequencing, and income timing support this ceiling — or whether the path that looks clean here faces friction in practice.');
+        // Workstream Y — Block A × Datum context (Shape+Datum Combos)
+        var _wyDatObj_A  = getShapeStateObj({ ceilSpend: r.ceilTarget, floorSpend: r.floorTarget, datumSpend: pts.datumSpend });
+        var _wyDatZone_A = _wyDatObj_A ? _wyDatObj_A.key : 'expansive';
+        var _nCf_A = fmtKyr(r.ceilTarget);
+        var _pDf_A = fmtKyr(pts.datumSpend);
+        var _cGf_A = fmtKyr(Math.abs(r.ceilTarget - pts.datumSpend));
+        var _fGf_A = fmtKyr(Math.abs(pts.datumSpend - r.floorTarget));
+        var _wyCtx_A = '';
+        if (_wyDatZone_A === 'overextended') {
+          _wyCtx_A = 'One thing to notice: the Ceiling moved, but your spending — the Datum at ' + _pDf_A + ' — is now above it. The Shape changed; the mismatch didn\'t. Moving the Ceiling doesn\'t resolve a Datum that sits above it — that takes a structural change to the plan itself. Studio can identify the most efficient path to close that gap at your actual account structure.';
+        } else if (_wyDatZone_A === 'stretched') {
+          _wyCtx_A = 'With the Ceiling at ' + _nCf_A + ', your spending at ' + _pDf_A + ' sits ' + _cGf_A + ' from the plan\'s upper limit. That\'s a thin margin — the plan carries this Datum, but without much room to absorb a run of poor returns. Studio can show what that buffer looks like under real sequence-of-returns stress, not just the base case.';
+        } else if (_wyDatZone_A === 'expansive') {
+          _wyCtx_A = 'With the Ceiling at ' + _nCf_A + ', your spending at ' + _pDf_A + ' sits ' + _cGf_A + ' below the plan\'s upper limit. The Datum is well inside the supported range — the Ceiling move preserved or opened meaningful headroom above where you\'re spending. Studio can show what that full range of capacity looks like given your accounts.';
+        } else if (_wyDatZone_A === 'grounded') {
+          _wyCtx_A = 'With the Ceiling at ' + _nCf_A + ', your spending at ' + _pDf_A + ' is ' + _cGf_A + ' below the upper limit and ' + _fGf_A + ' above the Floor. The Datum is sitting conservatively low relative to what the plan now supports — the Ceiling raise expanded the range above you significantly. Studio can show what the gap between your Datum and the plan\'s full capacity could actually fund.';
+        } else if (_wyDatZone_A === 'abundant') {
+          _wyCtx_A = 'With the Ceiling at ' + _nCf_A + ', your spending at ' + _pDf_A + ' has dropped below the Floor — the plan\'s minimum capacity now exceeds what you\'re asking for. The Ceiling drag expanded the upper range, but the Datum already sits below the lower boundary. Studio can show what that surplus represents and whether it\'s a deliberate conservative anchor or capacity worth reconsidering.';
+        }
+        if (_wyCtx_A) {
+          html += item('req-item-datum', 'var(--teal-mid)', 'DATUM — ' + (_wyDatObj_A ? _wyDatObj_A.name : 'EXPANSIVE'), _wyCtx_A, null, null);
+        }
         req.innerHTML = html;
         return;
       }
@@ -7628,7 +7672,30 @@
             'Reaching this floor with a single lever would require an outsized move. A more practical combination: add ' + fmtPort(r.combo.dP_M) + ' to your balance and ' + fmtContrib(r.combo.dK_dollars) + ' to contributions.',
             'capital', (_sNorm.portfolioVol + r.combo.dP_M));
         }
-        html += studioCTA('Studio can test whether tax-efficient sequencing and income timing can structurally support a floor at this level — or whether there are gaps the Sketch can\'t see.');
+        // Workstream Y — Block B × Datum context (Shape+Datum Combos)
+        var _wyDatObj_B  = getShapeStateObj({ ceilSpend: r.ceilTarget, floorSpend: r.floorTarget, datumSpend: pts.datumSpend });
+        var _wyDatZone_B = _wyDatObj_B ? _wyDatObj_B.key : 'expansive';
+        var _fmtSgn_B    = function(v) { return (v >= 0 ? '+' : '-') + '$' + Math.round(Math.abs(v)) + 'k/yr'; };
+        var _nFf_B = fmtKyr(r.floorTarget);
+        var _pDf_B = fmtKyr(pts.datumSpend);
+        var _cGf_B = fmtKyr(Math.abs(r.ceilTarget - pts.datumSpend));
+        var _fGf_B = fmtKyr(Math.abs(pts.datumSpend - r.floorTarget));
+        var _fDf_B = _fmtSgn_B(df);
+        var _wyCtx_B = '';
+        if (_wyDatZone_B === 'overextended') {
+          _wyCtx_B = 'The Floor moved, but the structural issue is still there: your spending at ' + _pDf_B + ' sits above the Ceiling. Adjusting the Floor doesn\'t change the Datum\'s relationship to the Ceiling — the plan still can\'t reach this spending level. Studio can show the most efficient path to bring ' + _pDf_B + ' back into a range the plan supports.';
+        } else if (_wyDatZone_B === 'stretched') {
+          _wyCtx_B = 'The Floor moved ' + _fDf_B + ', but your spending at ' + _pDf_B + ' is still ' + _cGf_B + ' from the Ceiling. The Floor change adjusts the plan\'s lower resilience — it doesn\'t change how tight the margin is above the Datum. Studio can show how the current upper-boundary buffer holds under sequence-of-returns pressure.';
+        } else if (_wyDatZone_B === 'expansive') {
+          _wyCtx_B = 'With the Floor at ' + _nFf_B + ', your spending at ' + _pDf_B + ' sits ' + _fGf_B + ' above the lower boundary and ' + _cGf_B + ' below the Ceiling. The Datum is comfortably positioned — the Floor move adjusted the plan\'s resilience baseline without squeezing the Datum\'s range. Studio can confirm how this position holds under stress and whether there\'s more capacity available above.';
+        } else if (_wyDatZone_B === 'grounded') {
+          _wyCtx_B = 'The Floor moved to ' + _nFf_B + ', and your spending at ' + _pDf_B + ' is now only ' + _fGf_B + ' above it. The Floor came up toward the Datum — the margin between your spending and the plan\'s lower boundary has thinned. Studio can show what happens to that margin under below-average return scenarios.';
+        } else if (_wyDatZone_B === 'abundant') {
+          _wyCtx_B = 'The Floor moved to ' + _nFf_B + ', and your spending at ' + _pDf_B + ' is now below it — the plan\'s minimum capacity now exceeds what you\'re asking for. This is a surplus condition: the plan was built to carry more than the Datum represents. Studio can show what that margin could fund — earlier retirement, a larger legacy, or stronger stress resilience.';
+        }
+        if (_wyCtx_B) {
+          html += item('req-item-datum', 'var(--teal-mid)', 'DATUM — ' + (_wyDatObj_B ? _wyDatObj_B.name : 'EXPANSIVE'), _wyCtx_B, null, null);
+        }
         req.innerHTML = html;
         return;
       }
