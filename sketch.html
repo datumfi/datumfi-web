@@ -524,11 +524,13 @@
   .arch-header { text-align: center; margin-bottom: 60px; }
   .insights-h2 { font-family: var(--font-serif); font-size: clamp(32px, 4vw, 48px); font-weight: 300; font-style: italic; color: var(--white); margin-bottom: 12px; }
   
-  .arch-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 1100px; margin: 0 auto; width: 100%; }
+  .s3-row1 { display: grid; grid-template-columns: 280px 1fr; gap: 24px; max-width: 1100px; width: 100%; margin: 0 auto 32px; align-items: center; }
+  .arch-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 32px; max-width: 1100px; margin: 0 auto; width: 100%; }
   .arch-card { background: rgba(9, 18, 33, 0.6); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 32px; transition: border-color 0.3s ease; position: relative; }
   .arch-card:hover { border-color: var(--teal-mid); box-shadow: 0 0 0 1px rgba(93,202,165,0.3); }
   .arch-card-gold:hover { border-color: #f0c84a; box-shadow: 0 0 0 1px rgba(240,200,74,0.4); }
   .horizontal-card { grid-column: 1 / -1; }
+  @media (max-width: 1023px) { .s3-row1 { grid-template-columns: 1fr; } .arch-grid { grid-template-columns: 1fr; } }
   
   .card-title { font-family: var(--font-serif); font-size: 22px; font-style: italic; color: var(--white); margin-bottom: 16px; }
   .card-desc { font-family: var(--font-sans); font-weight:300; font-size: 15px; color: rgba(255,255,255,0.8); line-height: 1.6; }
@@ -1258,20 +1260,28 @@
     align-items: center;
     flex-wrap: wrap;
     font-family: var(--font-mono);
+    min-height: 200px;
+    justify-content: center;
   }
   .s3-stat-val {
-    font-size: 14px;
+    font-size: 18px !important;
     font-family: var(--font-serif);
-    font-style: italic;
+    font-style: normal !important;
+    white-space: nowrap;
   }
   .s3-stat-gold  { color: var(--gold); }
   .s3-stat-teal  { color: var(--teal-mid); }
   .s3-stat-red   { color: var(--danger-red); }
-  .s3-shape-meaning {
-    font-size: 10px;
-    color: rgba(255,255,255,0.45);
-    line-height: 1.7;
-    letter-spacing: 0.04em;
+  .s3-strip-row {
+    padding: 22px 24px !important;
+    gap: 24px !important;
+  }
+  #s3-shape-summary .s3-strip-row > div:first-child {
+    font-size: 12px !important;
+    min-width: 100px !important;
+  }
+  #s3-shape-summary .s3-strip-row > div > div:first-child {
+    font-size: 11px !important;
   }
   .s3-state-block {
     display: block;
@@ -2127,7 +2137,24 @@
           <div class="sub-head" style="text-align:center; margin-bottom:8px;">PHASE III — TENSION</div>
           <h2 class="insights-h2 hero-title">The Sketch drew the Shape. Now see where it strains.</h2>
           <p style="font-family:var(--font-mono); font-size:11px; color:rgba(255,255,255,0.4); text-align:center; max-width:600px; margin:12px auto 0; line-height:1.8; letter-spacing:0.05em;">Your Floor, Datum, and Ceiling are structural boundaries — not forecasts. Below is the gap between what the math confirms and what your life will actually require.</p>
+      </div>
 
+      <div class="s3-row1">
+        <!-- Shape Begins (narrow left) -->
+        <div class="arch-card s3-card-begins">
+          <div class="card-title">The Shape Begins</div>
+          <div class="card-desc">
+            You're <strong id="s2-age">—</strong>, planning to retire at <strong id="s2-retire">—</strong>.
+            That's <strong id="s2-years-to-retire">—</strong> years to build.<br><br>
+            You have <strong id="s2-port" style="color:var(--gold);">—</strong> saved today,
+            adding <strong id="s2-contrib">—</strong>/yr.<br><br>
+            You want to spend <strong id="s2-datum" style="color:var(--teal-mid);">—</strong>/yr in retirement.
+            Tax drag: <strong id="s2-tax">—</strong>.
+            Inflation: <strong id="s2-infl">—</strong>.<br><br>
+            <span>This is what you brought. The Sketch turned it into a shape.</span>
+          </div>
+        </div>
+        <!-- Summary strip (right) -->
       <div id="s3-shape-summary" class="s3-summary-strip" style="flex-direction:column;gap:0;padding:0;">
         <!-- Row 1: Confirmed (Sketch) -->
         <div class="s3-strip-row" style="display:flex;align-items:center;gap:24px;padding:10px 24px 8px;border-bottom:1px solid rgba(255,255,255,0.05);">
@@ -2147,9 +2174,6 @@
           <div style="display:flex;flex-direction:column;gap:2px;">
             <div style="font-size:7px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.15em;">Floor</div>
             <div id="s3-sk-floor" class="s3-stat-val s3-stat-red" style="font-size:13px;">—</div>
-          </div>
-          <div style="flex:1;min-width:120px;">
-            <div id="s3-sk-meaning" style="font-size:10px;color:rgba(255,255,255,0.4);line-height:1.5;">—</div>
           </div>
         </div>
         <!-- Row 2: Designed (Screen 2 pulls) -->
@@ -2171,47 +2195,19 @@
             <div style="font-size:7px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.15em;">Floor</div>
             <div id="s3-floor-val" class="s3-stat-val s3-stat-red" style="font-size:13px;">—</div>
           </div>
-          <div style="flex:1;min-width:120px;">
-            <div id="s3-shape-meaning" class="s3-shape-meaning" style="font-size:10px;">—</div>
-          </div>
           <div id="s3-tension-pct" style="display:none;"></div>
         </div>
-      </div>      </div>
+      </div>
+      </div>
 
       <div class="arch-grid">
 
-          <!-- Col 1: The Shape Begins -->
-          <div class="arch-card">
-            <div class="card-title">The Shape Begins</div>
-            <div class="card-desc">
-              You're <strong id="s2-age">—</strong>, planning to retire at <strong id="s2-retire">—</strong>.
-              That's <strong id="s2-years-to-retire">—</strong> years to build.<br><br>
-              You have <strong id="s2-port" style="color:var(--gold);">—</strong> saved today,
-              adding <strong id="s2-contrib">—</strong>/yr.<br><br>
-              You want to spend <strong id="s2-datum" style="color:var(--teal-mid);">—</strong>/yr in retirement.
-              Tax drag: <strong id="s2-tax">—</strong>.
-              Inflation: <strong id="s2-infl">—</strong>.<br><br>
-              <span>This is what you brought. The Sketch turned it into a shape.</span>
-            </div>
-          </div>
-
-          <!-- Col 2: The Shape You Have -->
+          <!-- Col 1: The Shape You Have -->
           <div class="arch-card">
             <div class="card-title">The Shape You Have</div>
             <div class="card-desc">
-              Under <strong id="s2-market">Historical</strong> conditions (the middle-of-the-road path), your portfolio is projected to reach <strong id="s2-base-tot" style="color:var(--gold); cursor:help; border-bottom:1px dotted rgba(201,168,76,0.5);" title="This is the middle-path estimate using your selected scenario's baseline return. Your Ceiling uses a higher-return path; your Floor uses a lower one. All three paths are shown as the cone on Screen 1.">—</strong> at retirement. Your Ceiling assumes markets do better; your Floor assumes worse.<br><br>
-              At that projected balance, the Sketch supports:<br>
-              <span style="display:block;margin:8px 0 4px;">
-                <span style="color:var(--danger-red);">↓ Floor</span> — <strong id="s2-floor" style="color:var(--danger-red);">—</strong>.
-                The least you can spend without running out, even if markets disappoint.
-              </span>
-              <span style="display:block;margin:4px 0 8px;">
-                <span style="color:var(--gold);">↑ Ceiling</span> — <strong id="s2-ceil" style="color:var(--gold);">—</strong>.
-                The most the math says you can safely reach if things go well.
-              </span>
-              <span style="display:block;margin-top:8px;">
-                Your target of <strong id="s3-datum-position" style="color:var(--teal-mid);">—</strong> sits <span id="s3-datum-where">inside your Shape</span>. This is your confirmed shape — what the Sketch can actually show.
-              </span>
+              <span id="s3-have-state" style="display:inline-block;margin-bottom:10px;padding:2px 10px;border-radius:12px;font-family:var(--font-mono);font-size:10px;letter-spacing:0.1em;color:#fff;background:var(--teal-mid);">—</span>
+              <div id="s3-have-body" style="white-space:pre-wrap;font-family:var(--font-sans);font-size:15px;line-height:1.6;color:rgba(255,255,255,0.8);"></div>
             </div>
           </div>
 
@@ -2219,20 +2215,11 @@
           <div class="arch-card">
             <div class="card-title">The Shape You Want</div>
             <div class="card-desc">
-              In Screen 2 you pulled the shape.<br><br>
-              You set your Ceiling to <strong id="s3-want-ceil" style="color:var(--gold);">—</strong>/yr — <span id="s3-ceil-delta-desc">—</span>.<br><br>
-              Datum: <strong id="s3-want-datum" style="color:var(--teal-mid);">—</strong>/yr.
-              Floor: <strong id="s3-want-floor" style="color:var(--danger-red);">—</strong>/yr.<br><br>
-              <div id="s3-overextended-banner" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(220,50,50,0.12);border:1px solid rgba(220,50,50,0.4);border-radius:4px;font-family:var(--font-mono);font-size:10px;color:#ff7070;line-height:1.6;">
+              <span id="s3-want-state" style="display:inline-block;margin-bottom:10px;padding:2px 10px;border-radius:12px;font-family:var(--font-mono);font-size:10px;letter-spacing:0.1em;color:#fff;background:var(--teal-mid);">—</span>
+              <div id="s3-overextended-banner" style="display:none;margin-bottom:10px;padding:10px 12px;background:rgba(220,50,50,0.12);border:1px solid rgba(220,50,50,0.4);border-radius:4px;font-family:var(--font-mono);font-size:10px;color:#ff7070;line-height:1.6;">
                 ⚠️ <strong>This shape cannot be sustained.</strong> Your spending target exceeds what the portfolio can support in most market sequences. See the action below to fix it.
               </div>
-              <div id="s3-datum-narrative" style="margin-top:10px;font-size:10px;line-height:1.7;color:rgba(255,255,255,0.7);display:none;"></div>
-              <div id="s3-floor-narrative" style="margin-top:6px;font-size:10px;line-height:1.7;color:rgba(255,255,255,0.7);display:none;"></div>
-              <span id="s3-shape-state-block" class="s3-state-block">
-                Shape: <strong id="s3-shape-state-name2" style="color:var(--teal-mid);">—</strong><br>
-                <span id="s3-shape-state-physics" style="display:block;margin-bottom:12px;">—</span>
-                <span id="s3-shape-state-plain" style="display:block;">—</span>
-              </span>
+              <div id="s3-want-body" style="white-space:pre-wrap;font-family:var(--font-sans);font-size:15px;line-height:1.6;color:rgba(255,255,255,0.8);"></div>
             </div>
           </div>
 
@@ -4102,7 +4089,7 @@
         document.getElementById('s2-port').textContent = valPort.innerHTML;
         document.getElementById('s2-contrib').textContent = valContrib.innerHTML;
         document.getElementById('s2-datum').textContent = valDatum.innerHTML.replace(' / yr','');
-        document.getElementById('s2-market').textContent = paradigmName;
+        var _elMkt = document.getElementById('s2-market'); if (_elMkt) _elMkt.textContent = paradigmName;
         document.getElementById('s2-tax').textContent = slTax.value + "%";
         document.getElementById('s2-infl').textContent = isNominal ? "Nominal" : "Real";
 
@@ -4209,9 +4196,9 @@
         const hudGrowthPeriod = document.getElementById('hud-growth-period');
         if (hudGrowthPeriod) hudGrowthPeriod.textContent = yearsToGrow === 1 ? '1 yr until retirement' : `${yearsToGrow} yrs until retirement`;
 
-        document.getElementById('s2-floor').textContent = fSpendStr + '/yr';
-        document.getElementById('s2-ceil').textContent = cSpendStr + '/yr';
-        document.getElementById('s2-base-tot').textContent = fvBaseStr;
+        var _elFlr = document.getElementById('s2-floor');    if (_elFlr) _elFlr.textContent = fSpendStr + '/yr';
+        var _elCl  = document.getElementById('s2-ceil');     if (_elCl)  _elCl.textContent  = cSpendStr + '/yr';
+        var _elBt  = document.getElementById('s2-base-tot'); if (_elBt)  _elBt.textContent  = fvBaseStr;
 
         // --- SHAPE STATE ENGINE ---
         let stateObj = getShapeStateObj(ptsEnd);
@@ -4860,7 +4847,7 @@
         }
 
         pinnedState = { ...getCurrentState(), stateObj: window.currentShapeStateObj,
-            pinnedParadigm:  document.getElementById('s2-market').textContent,
+            pinnedParadigm:  (document.getElementById('s2-market') || {textContent: ''}).textContent,
             pinnedInflStr:   document.getElementById('s2-infl').textContent,
             pinnedTax:       parseInt(slTax.value),
             pinnedFloor:     lastCalculatedPoints ? lastCalculatedPoints.floorSpend : 0,
@@ -5081,7 +5068,7 @@
                 <text x="240" y="165" class="font-serif" font-size="16" fill="#ffffff" text-anchor="end" font-style="italic">${document.getElementById('val-contrib').innerHTML}</text>
 
                 <text x="0" y="205" class="font-mono" font-size="12" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Market Conditions</text>
-                <text x="240" y="205" class="font-serif" font-size="16" fill="#ffffff" text-anchor="end" font-style="italic">${document.getElementById('s2-market').textContent}</text>
+                <text x="240" y="205" class="font-serif" font-size="16" fill="#ffffff" text-anchor="end" font-style="italic">${(document.getElementById('s2-market') || {textContent: ''}).textContent}</text>
 
                 <text x="0" y="245" class="font-mono" font-size="12" fill="#ffffff" fill-opacity="0.5" text-transform="uppercase">Inflation</text>
                 <text x="240" y="245" class="font-serif" font-size="16" fill="#ffffff" text-anchor="end" font-style="italic">${document.getElementById('s2-infl').textContent}</text>
@@ -6797,50 +6784,42 @@
         var cDelta2 = Math.round(dc - skC2);
         var comp2   = skC2 || dc || 1;
         var tens2   = comp2 > 0 ? Math.max(0, Math.round((dc - comp2) / comp2 * 100)) : 0;
-        setEl("s3-want-ceil",  fA2(dc));
-        setEl("s3-want-datum", fA2(dd));
-        setEl("s3-want-floor", fA2(df));
-        var cDesc2 = cDelta2 > 0 ? ("$" + Math.abs(cDelta2) + "k above your confirmed max (" + tens2 + "% tension)")
-          : cDelta2 < 0 ? ("$" + Math.abs(cDelta2) + "k below your confirmed ceiling")
-          : "exactly at your confirmed ceiling";
-        setEl("s3-ceil-delta-desc",   cDesc2);
-        setEl("s3-shape-state-name2", stObj2.name, stObj2.color);
-        var ssb2 = document.getElementById("s3-shape-state-block");
-        if (ssb2) ssb2.style.borderLeftColor = stObj2.color;
-        var _ssph = document.getElementById("s3-shape-state-physics");
-        if (_ssph) { _ssph.innerHTML = stObj2.physics || ""; _ssph.style.color = "rgba(255,255,255,0.75)"; }
-        var _sspl = document.getElementById("s3-shape-state-plain");
-        if (_sspl)   _sspl.innerHTML = stObj2.action || "";
+        var _paradigm = (document.querySelector('input[name="market"]:checked') || {}).value || 'average';
+        var _mktKey   = { average: 'AVG', stressed: 'STR', optimistic: 'OPT' }[_paradigm] || 'AVG';
+        var stObj1    = window.currentShapeStateObj || {};
+        var _fmtM     = function(v) { if (!v || v <= 0) return '—'; return v >= 1 ? '$' + v.toFixed(2) + 'M' : '$' + Math.round(v * 1000) + 'k'; };
+        var _skPts    = lastCalculatedPoints || {};
+        var _gbPts    = _d2LastScenario ? getMathPoint(_d2LastScenario.yearsToGrow||0, _d2LastScenario.yearsToGrow||0, _d2LastScenario) : {};
+        var _usd3HaveVars = {
+          dDatumK: '$' + Math.round(_skPts.datumSpend || 0) + 'k', dCeilK: '$' + Math.round(_skPts.ceilSpend || 0) + 'k', dFloorK: '$' + Math.round(_skPts.floorSpend || 0) + 'k',
+          dDatumM: _fmtM(_skPts.fvBase), dCeilM: _fmtM(_skPts.fvUp), dFloorM: _fmtM(_skPts.fvCon)
+        };
+        var _usd3WantVars = {
+          gbDatumK: '$' + Math.round(dd) + 'k', gbCeilK: '$' + Math.round(dc) + 'k', gbFloorK: '$' + Math.round(df) + 'k',
+          gbDatumM: _fmtM(_gbPts.fvBase), gbCeilM: _fmtM(_gbPts.fvUp), gbFloorM: _fmtM(_gbPts.fvCon)
+        };
+        var _sk1    = 'S3.C2.' + ((stObj1.name || 'EXPANSIVE') + '-' + (stObj1.subZone || 'CENTERED')) + '.HAVE.' + _mktKey;
+        var _sk2    = 'S3.C2.' + (stObj2.name + '-' + (stObj2.subZone || 'CENTERED')) + '.WANT.' + _mktKey;
+        var _s3body = function(s) { var i = (s||'').indexOf('\n\n'); return i >= 0 ? s.slice(i+2) : s; };
         var _ovBanner = document.getElementById("s3-overextended-banner");
         if (_ovBanner) {
           _ovBanner.innerHTML = _s3get('S3.C3.PARADOX-OE');
           _ovBanner.style.display = (stObj2.name === 'OVEREXTENDED' || dd > dc) ? 'block' : 'none';
         }
-        var _dn = document.getElementById('s3-datum-narrative');
-        var _fn = document.getElementById('s3-floor-narrative');
-        if (_dn) {
-          var _datPhysKey = dd > dc ? 'S3.C3.SUBCASE-INVERT' : 'S3.C3.PHYSICS-' + _stateKey;
-          _dn.innerHTML = _s3get(_datPhysKey, _usd3vars);
-          _dn.style.display = 'block';
-        }
-        if (_fn) {
-          var _flrKey = df >= dc ? 'S3.C3.FLOOR-INVALID' : 'S3.C3.FLOOR-CONTEXT';
-          _fn.innerHTML = _s3get(_flrKey, _usd3vars);
-          _fn.style.display = 'block';
-        }
-        var s3dp2 = document.getElementById("s3-datum-position");
-        if (s3dp2) s3dp2.textContent = fA2(dd);
-        var dWhere2 = dd > dc ? "above your confirmed Ceiling" : dd < df ? "below your Floor" : "comfortably inside your Shape";
-        setEl("s3-datum-where", dWhere2);
-        var _dwEl2 = document.getElementById('s3-datum-where'); if (_dwEl2) _dwEl2.style.display = 'none';
+        var _hStateEl = document.getElementById('s3-have-state');
+        if (_hStateEl) { _hStateEl.textContent = stObj1.name || '—'; _hStateEl.style.background = stObj1.color || 'var(--teal-mid)'; }
+        var _wStateEl = document.getElementById('s3-want-state');
+        if (_wStateEl) { _wStateEl.textContent = stObj2.name || '—'; _wStateEl.style.background = stObj2.color || 'var(--teal-mid)'; }
+        var _hCardEl  = _hStateEl ? _hStateEl.closest('.arch-card') : null;
+        if (_hCardEl) _hCardEl.style.borderColor = stObj1.color || 'var(--teal-mid)';
+        var _wCardEl  = _wStateEl ? _wStateEl.closest('.arch-card') : null;
+        if (_wCardEl) _wCardEl.style.borderColor = stObj2.color || 'var(--teal-mid)';
+        var _hBodyEl  = document.getElementById('s3-have-body');
+        if (_hBodyEl) _hBodyEl.textContent = _s3body(_s3get(_sk1, _usd3HaveVars));
+        var _wBodyEl  = document.getElementById('s3-want-body');
+        if (_wBodyEl) _wBodyEl.textContent = _s3body(_s3get(_sk2, _usd3WantVars));
         setEl("s3-shape-name",  stObj2.name, stObj2.color);
         setEl("s3-tension-pct", tens2 + "%");
-        var lifeEl2   = document.getElementById("slider-life");
-        var retireEl2 = document.getElementById("slider-retire");
-        var yrsIR2 = Math.max(1, (parseInt((lifeEl2   || { value: "90" }).value) || 90) - (parseInt((retireEl2 || { value: "65" }).value) || 65));
-        var skDatum2  = lastCalculatedPoints ? (lastCalculatedPoints.datumSpend || 0) : 0;
-        var dDelta2   = Math.round(dd - skDatum2);
-        var bothAbove = cDelta2 > 0 && dDelta2 > 0;
         var _leversKey2 = dd > dc ? 'S3.C4.LEVERS-OE-INVERT' : 'S3.C4.LEVERS-' + _stateKey;
         setEl("s3-gap-plain", _s3get(_leversKey2, _usd3vars));
       })();
@@ -7960,6 +7939,668 @@
       'S3.C4.FOOTER-PARA2-B'  : "It shows you where the gaps are and which levers are most likely to close them.",
       'S3.C4.CTA-BUTTON'      : "See If This Shape Holds →"
     };
+    Object.assign(_S3, {
+      'S3.C2.OVEREXTENDED-STRUCTURAL.HAVE.AVG': `THE SHAPE YOU HAVE: OVEREXTENDED
+
+You're looking at your current Shape under average market conditions - the middle-of-the-road path where returns come in roughly as the long-term record suggests. On that path, supporting your Datum spending of {dDatumK}/yr would require your portfolio to reach about {dDatumM} by retirement.
+
+The plan stretches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The most the plan can structurally carry.
+   Floor - {dFloorK}/yr ({dFloorM} total). The downside line if markets disappoint.
+
+Your spending target sits significantly above the Ceiling - meaningfully above what this portfolio can structurally support. This is a stress-test, not a plan state. The question isn't whether this works today - it doesn't - it's what would need to change for it to work.`,
+      'S3.C2.OVEREXTENDED-STRUCTURAL.HAVE.STR': `THE SHAPE YOU HAVE: OVEREXTENDED
+
+You're looking at your current Shape under stressed market conditions - the tougher path where returns come in worse than the long-term average across your timeline. Under that path, supporting your Datum spending of {dDatumK}/yr would require your portfolio to reach about {dDatumM} by retirement.
+
+Even under stress, the plan reaches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The most the plan can structurally carry in tougher conditions.
+   Floor - {dFloorK}/yr ({dFloorM} total). The protected downside line.
+
+Your spending target sits significantly above the Ceiling - and under stress that gap widens. This Shape doesn't hold; in tougher markets it breaks faster. Something has to change before this can carry.`,
+      'S3.C2.OVEREXTENDED-STRUCTURAL.HAVE.OPT': `THE SHAPE YOU HAVE: OVEREXTENDED
+
+You're looking at your current Shape under optimistic market conditions - the favorable path where returns come in above the long-term average across your timeline. On that path, supporting your Datum spending of {dDatumK}/yr would require your portfolio to reach about {dDatumM} by retirement.
+
+The plan reaches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge even when markets cooperate.
+   Floor - {dFloorK}/yr ({dFloorM} total). The protected downside line.
+
+Even under optimistic conditions, your spending target sits significantly above the Ceiling. Favorable markets aren't enough to close this gap - the structural shortfall is too large. Something fundamental has to change.`,
+      'S3.C2.OVEREXTENDED-STRUCTURAL.WANT.AVG': `THE SHAPE YOU WANT: OVEREXTENDED
+
+The Shape you've designed under average market conditions would require your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr.
+
+At those designed boundaries, this Shape would need:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge you've set.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits significantly above your designed Ceiling - meaningfully above what this portfolio can structurally support. This is a stress-test of intent, not a plan state. The question isn't whether this works - it doesn't - it's what would need to move for it to work.`,
+      'S3.C2.OVEREXTENDED-STRUCTURAL.WANT.STR': `THE SHAPE YOU WANT: OVEREXTENDED
+
+The Shape you've designed under stressed market conditions would require your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr - even when returns come in worse than average.
+
+Under that tougher path, your designed boundaries would be:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge even under stress.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits significantly above your designed Ceiling - and stress widens that gap further. This Shape doesn't hold under tougher markets. Something fundamental has to shift before it can carry.`,
+      'S3.C2.OVEREXTENDED-STRUCTURAL.WANT.OPT': `THE SHAPE YOU WANT: OVEREXTENDED
+
+The Shape you've designed under optimistic market conditions would require your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr - when conditions cooperate.
+
+On that favorable path, your designed boundaries would be:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge when markets deliver.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Even if markets cooperate, your designed spending sits significantly above your designed Ceiling. Favorable conditions aren't enough to close this gap - the structural shortfall is too wide. Something fundamental has to move.`,
+      'S3.C2.OVEREXTENDED-ENTRY.HAVE.AVG': `THE SHAPE YOU HAVE: OVEREXTENDED
+
+You're looking at your current Shape under average market conditions - the middle-of-the-road path where returns come in roughly as the long-term record suggests. On that path, supporting your Datum spending of {dDatumK}/yr would require your portfolio to reach about {dDatumM} by retirement.
+
+The plan stretches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The most the plan can structurally carry.
+   Floor - {dFloorK}/yr ({dFloorM} total). The downside line if markets disappoint.
+
+Your spending target sits just above the Ceiling - you've crossed the line, but only narrowly. This isn't a deep structural break yet; it's the entry zone where the plan starts to depend on things going better than expected. Small adjustments now keep small things small.`,
+      'S3.C2.OVEREXTENDED-ENTRY.HAVE.STR': `THE SHAPE YOU HAVE: OVEREXTENDED
+
+You're looking at your current Shape under stressed market conditions - the tougher path where returns come in worse than the long-term average across your timeline. Under that path, supporting your Datum spending of {dDatumK}/yr would require your portfolio to reach about {dDatumM} by retirement.
+
+Even under stress, the plan reaches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The most the plan can structurally carry under stress.
+   Floor - {dFloorK}/yr ({dFloorM} total). The protected downside line.
+
+Your spending target sits just above the Ceiling - and under stress, that narrow gap matters more. You're in the entry zone, where the plan starts depending on favorable conditions. Worth addressing while the move required is still small.`,
+      'S3.C2.OVEREXTENDED-ENTRY.HAVE.OPT': `THE SHAPE YOU HAVE: OVEREXTENDED
+
+You're looking at your current Shape under optimistic market conditions - the favorable path where returns come in above the long-term average across your timeline. On that path, supporting your Datum spending of {dDatumK}/yr would require your portfolio to reach about {dDatumM} by retirement.
+
+The plan reaches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge when markets cooperate.
+   Floor - {dFloorK}/yr ({dFloorM} total). The protected downside line.
+
+Even under optimistic conditions, your spending target sits just above the Ceiling. You've narrowly crossed the line, but you're relying on favorable markets to make it work. That's a thin reed. Worth knowing this is the entry zone - the threshold where the plan stops carrying you on its own.`,
+      'S3.C2.OVEREXTENDED-ENTRY.WANT.AVG': `THE SHAPE YOU WANT: OVEREXTENDED
+
+The Shape you've designed under average market conditions would require your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr.
+
+At those designed boundaries, this Shape would need:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge you've set.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits just above your designed Ceiling - you've narrowly stepped over the line. This is the entry zone, not a structural break. The plan starts depending on favorable conditions here. Small moves still produce small fixes - worth doing while that's true.`,
+      'S3.C2.OVEREXTENDED-ENTRY.WANT.STR': `THE SHAPE YOU WANT: OVEREXTENDED
+
+The Shape you've designed under stressed market conditions would require your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr - even when returns come in worse than average.
+
+Under that tougher path, your designed boundaries would be:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge under stress.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits just above your designed Ceiling - and under stress, the entry zone matters more. The plan depends on conditions that may not arrive. Worth resolving while the required adjustment is still small.`,
+      'S3.C2.OVEREXTENDED-ENTRY.WANT.OPT': `THE SHAPE YOU WANT: OVEREXTENDED
+
+The Shape you've designed under optimistic market conditions would require your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr - when conditions cooperate.
+
+On that favorable path, your designed boundaries would be:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge when markets deliver.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Even under optimistic conditions, your designed spending sits just above your designed Ceiling. You've crossed the line by a hair - relying on favorable markets to keep things working. That's a thin reed. The entry zone is where small choices still produce small fixes.`,
+      'S3.C2.STRETCHED-HIGH_END.HAVE.AVG': `THE SHAPE YOU HAVE: STRETCHED
+
+You're looking at your current Shape under average market conditions - the middle-of-the-road path where returns come in roughly as the long-term record suggests. On that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+The plan stretches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge of what the plan can deliver.
+   Floor - {dFloorK}/yr ({dFloorM} total). The downside line if markets disappoint.
+
+Your spending sits right up against the Ceiling - the plan reaches this lifestyle, but mostly when markets cooperate. Good years are doing nearly all the heavy lifting. The margin above is thin, and any disappointment lands more directly on you.`,
+      'S3.C2.STRETCHED-HIGH_END.HAVE.STR': `THE SHAPE YOU HAVE: STRETCHED
+
+You're looking at your current Shape under stressed market conditions - the tougher path where returns come in worse than the long-term average across your timeline. Under that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+Even under stress, the plan reaches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge under stress.
+   Floor - {dFloorK}/yr ({dFloorM} total). The protected downside line.
+
+Your spending sits right up against the Ceiling - and under stress, that ceiling drops. The plan is pulling everything it can to carry this lifestyle, with almost nothing held back. This Shape works only when conditions hold together. Worth knowing where the line is when they don't.`,
+      'S3.C2.STRETCHED-HIGH_END.HAVE.OPT': `THE SHAPE YOU HAVE: STRETCHED
+
+You're looking at your current Shape under optimistic market conditions - the favorable path where returns come in above the long-term average across your timeline. On that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+The plan reaches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge when markets cooperate.
+   Floor - {dFloorK}/yr ({dFloorM} total). The protected downside line.
+
+Your spending sits right up against the Ceiling - even under optimistic conditions. Favorable markets are what makes this Shape work, not what makes it comfortable. The good news is the plan reaches this lifestyle. The harder news is you've used most of the room.`,
+      'S3.C2.STRETCHED-HIGH_END.WANT.AVG': `THE SHAPE YOU WANT: STRETCHED
+
+The Shape you've designed under average market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr.
+
+At those designed boundaries, this Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge you've set.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits right up against your designed Ceiling - the plan reaches this lifestyle, but mostly when markets cooperate. Good years would be doing nearly all the heavy lifting. The margin above is thin by design - worth knowing whether that thinness is intended or accidental.`,
+      'S3.C2.STRETCHED-HIGH_END.WANT.STR': `THE SHAPE YOU WANT: STRETCHED
+
+The Shape you've designed under stressed market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr - even when returns come in worse than average.
+
+Under that tougher path, your designed Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge under stress.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits right up against your designed Ceiling - and under stress that gap closes further. This Shape pulls everything it can; almost nothing held back. It works only when conditions hold together. Worth confirming whether that's the trade-off you intended.`,
+      'S3.C2.STRETCHED-HIGH_END.WANT.OPT': `THE SHAPE YOU WANT: STRETCHED
+
+The Shape you've designed under optimistic market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr - when conditions cooperate.
+
+On that favorable path, your designed Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge when markets deliver.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Even under optimistic conditions, your designed spending sits right up against your designed Ceiling. Favorable markets are what makes this Shape reach, not what makes it comfortable. You've used most of the room available - worth knowing that's by design.`,
+      'S3.C2.STRETCHED-STANDARD.HAVE.AVG': `THE SHAPE YOU HAVE: STRETCHED
+
+You're looking at your current Shape under average market conditions - the middle-of-the-road path where returns come in roughly as the long-term record suggests. On that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+The plan stretches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge of what the plan can deliver.
+   Floor - {dFloorK}/yr ({dFloorM} total). The downside line if markets disappoint.
+
+Your spending sits in the upper part of the supported range - the plan carries this lifestyle, but with less margin than a more centered position would give you. Good years are doing more of the heavy lifting now. You haven't crossed into trouble, but the buffer above is leaner.`,
+      'S3.C2.STRETCHED-STANDARD.HAVE.STR': `THE SHAPE YOU HAVE: STRETCHED
+
+You're looking at your current Shape under stressed market conditions - the tougher path where returns come in worse than the long-term average across your timeline. Under that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+Even under stress, the plan reaches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge under stress.
+   Floor - {dFloorK}/yr ({dFloorM} total). The protected downside line.
+
+Your spending sits in the upper part of the supported range - and stress narrows that range. The plan still carries this lifestyle in tougher markets, but with less room to absorb surprises. Worth watching how the margin moves as conditions shift.`,
+      'S3.C2.STRETCHED-STANDARD.HAVE.OPT': `THE SHAPE YOU HAVE: STRETCHED
+
+You're looking at your current Shape under optimistic market conditions - the favorable path where returns come in above the long-term average across your timeline. On that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+The plan reaches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge when markets cooperate.
+   Floor - {dFloorK}/yr ({dFloorM} total). The protected downside line.
+
+Your spending sits in the upper part of the supported range - even under optimistic conditions. The good news: the plan handles this comfortably when markets deliver. The honest read: you're closer to the upper edge than a centered position would put you.`,
+      'S3.C2.STRETCHED-STANDARD.WANT.AVG': `THE SHAPE YOU WANT: STRETCHED
+
+The Shape you've designed under average market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr.
+
+At those designed boundaries, this Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge you've set.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits in the upper part of the supported range - the plan carries it, but with less margin than a more centered position would give. Good years would do more of the heavy lifting. Worth knowing whether that leaner buffer is the trade-off you intended.`,
+      'S3.C2.STRETCHED-STANDARD.WANT.STR': `THE SHAPE YOU WANT: STRETCHED
+
+The Shape you've designed under stressed market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr - even when returns come in worse than average.
+
+Under that tougher path, your designed Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge under stress.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits in the upper part of the supported range - and under stress the range narrows. The plan still holds, but with less room to absorb surprises. Worth confirming that's the margin you want operating under tougher conditions.`,
+      'S3.C2.STRETCHED-STANDARD.WANT.OPT': `THE SHAPE YOU WANT: STRETCHED
+
+The Shape you've designed under optimistic market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr - when conditions cooperate.
+
+On that favorable path, your designed Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge when markets deliver.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits in the upper part of the supported range - even under optimistic conditions. The plan handles this comfortably when markets cooperate, but you're closer to the upper edge than a centered design would put you. Worth knowing that's intentional.`,
+      'S3.C2.EXPANSIVE-CEILING_SIDE.HAVE.AVG': `THE SHAPE YOU HAVE: EXPANSIVE
+
+You're looking at your current Shape under average market conditions - the middle-of-the-road path where returns come in roughly as the long-term record suggests. On that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+The plan stretches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge of what the plan can deliver.
+   Floor - {dFloorK}/yr ({dFloorM} total). The downside line if markets disappoint.
+
+Your spending sits in the upper portion of the supported range. Good years are doing more of the heavy lifting - the plan reaches this lifestyle, but the Ceiling is closer than it was. You haven't left EXPANSIVE territory, but you've traded some of the buffer that makes a more centered position comfortable.`,
+      'S3.C2.EXPANSIVE-CEILING_SIDE.HAVE.STR': `THE SHAPE YOU HAVE: EXPANSIVE
+
+You're looking at your current Shape under stressed market conditions - the tougher path where returns come in worse than the long-term average across your timeline. Under that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+Even under stress, the plan reaches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge under stress.
+   Floor - {dFloorK}/yr ({dFloorM} total). The protected downside line.
+
+Your spending sits in the upper portion of the supported range - and under stress, the Ceiling is even closer. You're still inside EXPANSIVE, but the buffer above is real and worth watching. The number where the plan starts depending on things going well - that's the boundary worth knowing.`,
+      'S3.C2.EXPANSIVE-CEILING_SIDE.HAVE.OPT': `THE SHAPE YOU HAVE: EXPANSIVE
+
+You're looking at your current Shape under optimistic market conditions - the favorable path where returns come in above the long-term average across your timeline. On that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+The plan reaches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge when markets cooperate.
+   Floor - {dFloorK}/yr ({dFloorM} total). The protected downside line.
+
+Your spending sits in the upper portion of the supported range - even when conditions cooperate. You're well inside EXPANSIVE, but closer to the Ceiling than to the Floor. The plan carries this lifestyle comfortably under favorable markets; the position is more about how much room you want than whether the plan holds.`,
+      'S3.C2.EXPANSIVE-CEILING_SIDE.WANT.AVG': `THE SHAPE YOU WANT: EXPANSIVE
+
+The Shape you've designed under average market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr.
+
+At those designed boundaries, this Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge you've set.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits in the upper portion of your designed range. Good years would do more of the heavy lifting. You're still inside EXPANSIVE, but you've placed yourself closer to the Ceiling than the Floor - worth knowing whether that proximity is the trade-off you intended.`,
+      'S3.C2.EXPANSIVE-CEILING_SIDE.WANT.STR': `THE SHAPE YOU WANT: EXPANSIVE
+
+The Shape you've designed under stressed market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr - even when returns come in worse than average.
+
+Under that tougher path, your designed Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge under stress.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits in the upper portion of your designed range - and under stress, the Ceiling is closer still. The Shape holds inside EXPANSIVE, but the buffer above is leaner. Worth confirming that's the position you want when conditions don't cooperate.`,
+      'S3.C2.EXPANSIVE-CEILING_SIDE.WANT.OPT': `THE SHAPE YOU WANT: EXPANSIVE
+
+The Shape you've designed under optimistic market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr - when conditions cooperate.
+
+On that favorable path, your designed Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge when markets deliver.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits in the upper portion of your designed range - even under optimistic conditions. You're inside EXPANSIVE, closer to the Ceiling than the Floor. The plan handles this comfortably when markets cooperate; the question is how much headroom you actually want.`,
+      'S3.C2.EXPANSIVE-CENTERED.HAVE.AVG': `THE SHAPE YOU HAVE: EXPANSIVE
+
+You're looking at your current Shape under average market conditions - the middle-of-the-road path where returns come in roughly as the long-term record suggests. On that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+The plan stretches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge of what the plan can deliver.
+   Floor - {dFloorK}/yr ({dFloorM} total). The downside line if markets disappoint.
+
+Your spending sits squarely in the middle of what the plan can support. Neither edge is close, and the plan works across most futures. The range is wide because real-world variables aren't fully modeled yet. Right now outcomes are roughly balanced around your target - neither pressing toward stress nor accumulating obvious surplus.`,
+      'S3.C2.EXPANSIVE-CENTERED.HAVE.STR': `THE SHAPE YOU HAVE: EXPANSIVE
+
+You're looking at your current Shape under stressed market conditions - the tougher path where returns come in worse than the long-term average across your timeline. Under that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+Even under stress, the plan reaches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge under stress.
+   Floor - {dFloorK}/yr ({dFloorM} total). The protected downside line.
+
+Your spending sits squarely in the middle of the supported range. Even under stress, neither edge is close - the plan works across most tougher futures. This is the position where the plan absorbs surprises most easily; outcomes stay roughly balanced around your target.`,
+      'S3.C2.EXPANSIVE-CENTERED.HAVE.OPT': `THE SHAPE YOU HAVE: EXPANSIVE
+
+You're looking at your current Shape under optimistic market conditions - the favorable path where returns come in above the long-term average across your timeline. On that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+The plan reaches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge when markets cooperate.
+   Floor - {dFloorK}/yr ({dFloorM} total). The protected downside line.
+
+Your spending sits squarely in the middle of the supported range - even under optimistic conditions. Neither edge is close; the plan works across most favorable futures. This is the position with the most flexibility - outcomes stay roughly balanced regardless of which way conditions break.`,
+      'S3.C2.EXPANSIVE-CENTERED.WANT.AVG': `THE SHAPE YOU WANT: EXPANSIVE
+
+The Shape you've designed under average market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr.
+
+At those designed boundaries, this Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge you've set.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits squarely in the middle of your designed range. Neither edge is close, and the plan works across most futures around it. This is where the plan runs most freely - outcomes balanced around your target, with room to absorb surprises in either direction.`,
+      'S3.C2.EXPANSIVE-CENTERED.WANT.STR': `THE SHAPE YOU WANT: EXPANSIVE
+
+The Shape you've designed under stressed market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr - even when returns come in worse than average.
+
+Under that tougher path, your designed Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge under stress.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits squarely in the middle of your designed range - and even under stress, neither edge is close. This is the position where the plan absorbs tougher conditions most easily. Outcomes stay roughly balanced around your target.`,
+      'S3.C2.EXPANSIVE-CENTERED.WANT.OPT': `THE SHAPE YOU WANT: EXPANSIVE
+
+The Shape you've designed under optimistic market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr - when conditions cooperate.
+
+On that favorable path, your designed Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge when markets deliver.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits squarely in the middle of your designed range - even under optimistic conditions. This is the position with the most flexibility - neither edge pressing, plan running freely, outcomes balanced regardless of which way markets break.`,
+      'S3.C2.EXPANSIVE-FLOOR_SIDE.HAVE.AVG': `THE SHAPE YOU HAVE: EXPANSIVE
+
+You're looking at your current Shape under average market conditions - the middle-of-the-road path where returns come in roughly as the long-term record suggests. On that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+The plan stretches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge of what the plan can deliver.
+   Floor - {dFloorK}/yr ({dFloorM} total). The downside line if markets disappoint.
+
+Your spending sits in the lower portion of the supported range - closer to the Floor than the Ceiling, with substantial Ceiling headroom above. You're well inside EXPANSIVE; the plan carries this lifestyle comfortably, and there's a lot of capacity above your target that the plan can support and you're not using.`,
+      'S3.C2.EXPANSIVE-FLOOR_SIDE.HAVE.STR': `THE SHAPE YOU HAVE: EXPANSIVE
+
+You're looking at your current Shape under stressed market conditions - the tougher path where returns come in worse than the long-term average across your timeline. Under that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+Even under stress, the plan reaches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge under stress.
+   Floor - {dFloorK}/yr ({dFloorM} total). The protected downside line.
+
+Your spending sits in the lower portion of the supported range - closer to the Floor than the Ceiling. Even under stress, the plan carries this lifestyle comfortably, with substantial unused Ceiling capacity above. Whether that capacity is buffer or surplus is worth naming.`,
+      'S3.C2.EXPANSIVE-FLOOR_SIDE.HAVE.OPT': `THE SHAPE YOU HAVE: EXPANSIVE
+
+You're looking at your current Shape under optimistic market conditions - the favorable path where returns come in above the long-term average across your timeline. On that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+The plan reaches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge when markets cooperate.
+   Floor - {dFloorK}/yr ({dFloorM} total). The protected downside line.
+
+Your spending sits in the lower portion of the supported range - even under optimistic conditions. There's substantial Ceiling headroom above that the plan can support and you're not using. Worth knowing what that headroom represents: buffer, future flexibility, or capacity you've chosen to leave unclaimed.`,
+      'S3.C2.EXPANSIVE-FLOOR_SIDE.WANT.AVG': `THE SHAPE YOU WANT: EXPANSIVE
+
+The Shape you've designed under average market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr.
+
+At those designed boundaries, this Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge you've set.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits in the lower portion of your designed range - closer to the Floor than the Ceiling. There's meaningful capacity above your target that the plan can support and you're not using. Whether that's by design or by default is worth knowing - buffer against rough sequences, room for an earlier retirement, or something to leave behind.`,
+      'S3.C2.EXPANSIVE-FLOOR_SIDE.WANT.STR': `THE SHAPE YOU WANT: EXPANSIVE
+
+The Shape you've designed under stressed market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr - even when returns come in worse than average.
+
+Under that tougher path, your designed Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge under stress.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits in the lower portion of your designed range. Even under stress, the plan carries this lifestyle comfortably - substantial Ceiling capacity remains above. Worth naming what that capacity is doing for you in tougher conditions.`,
+      'S3.C2.EXPANSIVE-FLOOR_SIDE.WANT.OPT': `THE SHAPE YOU WANT: EXPANSIVE
+
+The Shape you've designed under optimistic market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr - when conditions cooperate.
+
+On that favorable path, your designed Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge when markets deliver.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits in the lower portion of your designed range - even under optimistic conditions. Substantial Ceiling capacity sits above unused. Worth naming what that surplus represents: earlier retirement, larger legacy, or stronger resilience against what the Sketch doesn't model.`,
+      'S3.C2.GROUNDED-STABLE.HAVE.AVG': `THE SHAPE YOU HAVE: GROUNDED
+
+You're looking at your current Shape under average market conditions - the middle-of-the-road path where returns come in roughly as the long-term record suggests. On that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+The plan stretches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge of what the plan can deliver.
+   Floor - {dFloorK}/yr ({dFloorM} total). The downside line if markets disappoint.
+
+Your spending sits squarely between the Floor and the Ceiling - well-supported by what the plan can deliver. The plan carries this lifestyle even under stress, with meaningful room still above before conditions start to matter. Outcomes are roughly balanced around your target.`,
+      'S3.C2.GROUNDED-STABLE.HAVE.STR': `THE SHAPE YOU HAVE: GROUNDED
+
+You're looking at your current Shape under stressed market conditions - the tougher path where returns come in worse than the long-term average across your timeline. Under that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+Even under stress, the plan reaches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge under stress.
+   Floor - {dFloorK}/yr ({dFloorM} total). The protected downside line.
+
+Your spending sits squarely between the Floor and the Ceiling - even under stress, the plan carries this lifestyle. This is what the Shape looks like when conditions don't cooperate: still supported, still anchored, with margin on both sides.`,
+      'S3.C2.GROUNDED-STABLE.HAVE.OPT': `THE SHAPE YOU HAVE: GROUNDED
+
+You're looking at your current Shape under optimistic market conditions - the favorable path where returns come in above the long-term average across your timeline. On that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+The plan reaches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge when markets cooperate.
+   Floor - {dFloorK}/yr ({dFloorM} total). The protected downside line.
+
+Your spending sits squarely between the Floor and the Ceiling - well-supported when conditions cooperate. The plan carries this lifestyle with substantial room to spare. The position is comfortable; the question becomes what the headroom above is for.`,
+      'S3.C2.GROUNDED-STABLE.WANT.AVG': `THE SHAPE YOU WANT: GROUNDED
+
+The Shape you've designed under average market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr.
+
+At those designed boundaries, this Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge you've set.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+The plan covers your designed spending even in a bad scenario - and there's real room above before things get tight. You're in a safe position, but safe has a cost: there's meaningful capacity above your target that the plan can support and you're not using. Whether that's by design or by default is worth knowing.`,
+      'S3.C2.GROUNDED-STABLE.WANT.STR': `THE SHAPE YOU WANT: GROUNDED
+
+The Shape you've designed under stressed market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr - even when returns come in worse than average.
+
+Under that tougher path, your designed Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge under stress.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Even under stress, the plan covers your designed spending - with room above before things get tight. This is a resilient Shape: anchored between margins on both sides, intentional rather than accidental. Worth confirming the headroom above is doing what you want it to do.`,
+      'S3.C2.GROUNDED-STABLE.WANT.OPT': `THE SHAPE YOU WANT: GROUNDED
+
+The Shape you've designed under optimistic market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr - when conditions cooperate.
+
+On that favorable path, your designed Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge when markets deliver.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Under optimistic conditions, this Shape sits comfortably between margins - the plan covers your designed spending with substantial room above. The position is well-protected; the question is whether the headroom is buffer you want or capacity you've chosen not to use.`,
+      'S3.C2.GROUNDED-TIGHT.HAVE.AVG': `THE SHAPE YOU HAVE: GROUNDED
+
+You're looking at your current Shape under average market conditions - the middle-of-the-road path where returns come in roughly as the long-term record suggests. On that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+The plan stretches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge of what the plan can deliver.
+   Floor - {dFloorK}/yr ({dFloorM} total). The downside line if markets disappoint.
+
+Your spending sits between the Floor and the Ceiling - but closer to the Floor than a more centered position would put you. The plan still carries this lifestyle, but the cushion between your spending and the downside line is thinner than it could be. Worth knowing where that line is and how much room separates you from it.`,
+      'S3.C2.GROUNDED-TIGHT.HAVE.STR': `THE SHAPE YOU HAVE: GROUNDED
+
+You're looking at your current Shape under stressed market conditions - the tougher path where returns come in worse than the long-term average across your timeline. Under that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+Even under stress, the plan reaches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge under stress.
+   Floor - {dFloorK}/yr ({dFloorM} total). The protected downside line.
+
+Your spending sits between the edges, but closer to the Floor - and under stress, that gap matters more. The plan still carries this lifestyle, but the buffer below is thin. This is still a supported position; the cushion that protects you is just narrower than it could be.`,
+      'S3.C2.GROUNDED-TIGHT.HAVE.OPT': `THE SHAPE YOU HAVE: GROUNDED
+
+You're looking at your current Shape under optimistic market conditions - the favorable path where returns come in above the long-term average across your timeline. On that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+The plan reaches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge when markets cooperate.
+   Floor - {dFloorK}/yr ({dFloorM} total). The protected downside line.
+
+Your spending sits between the edges, but closer to the Floor - even when conditions cooperate. The plan handles this comfortably under favorable markets; the position is more conservative than centered, with a thinner cushion below than above.`,
+      'S3.C2.GROUNDED-TIGHT.WANT.AVG': `THE SHAPE YOU WANT: GROUNDED
+
+The Shape you've designed under average market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr.
+
+At those designed boundaries, this Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge you've set.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits between the edges, but you've placed it closer to the Floor than a centered position would. The plan still covers this Shape, but the cushion below is leaner by design. Worth knowing whether that tighter buffer is the trade-off you intended - or whether centering would feel better.`,
+      'S3.C2.GROUNDED-TIGHT.WANT.STR': `THE SHAPE YOU WANT: GROUNDED
+
+The Shape you've designed under stressed market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr - even when returns come in worse than average.
+
+Under that tougher path, your designed Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge under stress.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits between the edges, but closer to the Floor - and under stress, that gap is what protects you. The plan still holds, but the cushion is thinner than it could be. Worth confirming you want this proximity to the downside line operating under tougher conditions.`,
+      'S3.C2.GROUNDED-TIGHT.WANT.OPT': `THE SHAPE YOU WANT: GROUNDED
+
+The Shape you've designed under optimistic market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr - when conditions cooperate.
+
+On that favorable path, your designed Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge when markets deliver.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Under optimistic conditions, your designed spending sits between the edges but closer to the Floor than a centered design would put it. The plan handles this comfortably; the position is more conservative than centered, with leaner buffer below than above. Worth knowing that's intentional.`,
+      'S3.C2.ABUNDANT-JUST_BELOW.HAVE.AVG': `THE SHAPE YOU HAVE: ABUNDANT
+
+You're looking at your current Shape under average market conditions - the middle-of-the-road path where returns come in roughly as the long-term record suggests. On that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+The plan stretches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge of what the plan can deliver.
+   Floor - {dFloorK}/yr ({dFloorM} total). The downside line if markets disappoint.
+
+Your spending sits just below the Floor - you're at or near the most conservative line the plan models. The plan supports this lifestyle even in its bad scenario, with substantial capacity above. There's meaningful room you're not using; whether that's deliberate conservatism or accidental headroom is worth knowing.`,
+      'S3.C2.ABUNDANT-JUST_BELOW.HAVE.STR': `THE SHAPE YOU HAVE: ABUNDANT
+
+You're looking at your current Shape under stressed market conditions - the tougher path where returns come in worse than the long-term average across your timeline. Under that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+Even under stress, the plan reaches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge under stress.
+   Floor - {dFloorK}/yr ({dFloorM} total). The protected downside line.
+
+Your spending sits just below the Floor - even under stress, the plan supports this lifestyle. You're operating at the conservative line by choice. Substantial capacity above is intact even in tougher markets. Worth naming what that resilience is doing for you.`,
+      'S3.C2.ABUNDANT-JUST_BELOW.HAVE.OPT': `THE SHAPE YOU HAVE: ABUNDANT
+
+You're looking at your current Shape under optimistic market conditions - the favorable path where returns come in above the long-term average across your timeline. On that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+The plan reaches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge when markets cooperate.
+   Floor - {dFloorK}/yr ({dFloorM} total). The protected downside line.
+
+Your spending sits just below the Floor - and even under optimistic conditions, the gap above represents substantial capacity unused. Whether that's a deliberate conservative anchor or capacity worth reconsidering depends on what the surplus is meant to do.`,
+      'S3.C2.ABUNDANT-JUST_BELOW.WANT.AVG': `THE SHAPE YOU WANT: ABUNDANT
+
+The Shape you've designed under average market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr.
+
+At those designed boundaries, this Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge you've set.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits just below your designed Floor - at or near the conservative line. The plan has meaningful room above this Datum. That surplus is a choice - buffer against rough sequences, room for an earlier retirement, or capital to leave behind. Naming it makes it intentional rather than accidental.`,
+      'S3.C2.ABUNDANT-JUST_BELOW.WANT.STR': `THE SHAPE YOU WANT: ABUNDANT
+
+The Shape you've designed under stressed market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr - even when returns come in worse than average.
+
+Under that tougher path, your designed Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge under stress.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits just below your designed Floor - even under stress, the plan supports this lifestyle. The capacity above stays meaningful in tougher conditions. Worth naming what that resilience is built for: stress protection, future flexibility, or intentional restraint.`,
+      'S3.C2.ABUNDANT-JUST_BELOW.WANT.OPT': `THE SHAPE YOU WANT: ABUNDANT
+
+The Shape you've designed under optimistic market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr - when conditions cooperate.
+
+On that favorable path, your designed Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge when markets deliver.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Under optimistic conditions, your designed spending sits just below your designed Floor - and the unused capacity above grows. Whether that surplus represents a deliberate conservative anchor or capacity worth reconsidering depends on what you want it doing in years of earlier retirement, larger legacy, or stronger stress resilience.`,
+      'S3.C2.ABUNDANT-WELL_BELOW.HAVE.AVG': `THE SHAPE YOU HAVE: ABUNDANT
+
+You're looking at your current Shape under average market conditions - the middle-of-the-road path where returns come in roughly as the long-term record suggests. On that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+The plan stretches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge of what the plan can deliver.
+   Floor - {dFloorK}/yr ({dFloorM} total). The downside line if markets disappoint.
+
+Your spending sits well below the Floor - you're asking for substantially less than the plan is built to deliver. The plan has substantial room above this Datum, and that surplus is a choice. Whether by design or by default, it represents capacity in years of earlier retirement, larger legacy, or stronger stress resilience.`,
+      'S3.C2.ABUNDANT-WELL_BELOW.HAVE.STR': `THE SHAPE YOU HAVE: ABUNDANT
+
+You're looking at your current Shape under stressed market conditions - the tougher path where returns come in worse than the long-term average across your timeline. Under that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+Even under stress, the plan reaches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge under stress.
+   Floor - {dFloorK}/yr ({dFloorM} total). The protected downside line.
+
+Your spending sits well below the Floor - even under stress, the plan supports far more than you're asking for. That substantial unused capacity is robust to tougher conditions. The question becomes what that resilience is doing: insurance, optionality, or accidental restraint.`,
+      'S3.C2.ABUNDANT-WELL_BELOW.HAVE.OPT': `THE SHAPE YOU HAVE: ABUNDANT
+
+You're looking at your current Shape under optimistic market conditions - the favorable path where returns come in above the long-term average across your timeline. On that path, supporting your Datum spending of {dDatumK}/yr requires your portfolio to reach about {dDatumM} by retirement.
+
+The plan reaches to two outer edges:
+
+   Ceiling - {dCeilK}/yr ({dCeilM} total). The upper edge when markets cooperate.
+   Floor - {dFloorK}/yr ({dFloorM} total). The protected downside line.
+
+Your spending sits well below the Floor - and under optimistic conditions, the unused capacity widens further. You're asking for substantially less than the plan can carry. Whether that gap represents deliberate conservatism or unclaimed capacity is worth naming so it's intentional.`,
+      'S3.C2.ABUNDANT-WELL_BELOW.WANT.AVG': `THE SHAPE YOU WANT: ABUNDANT
+
+The Shape you've designed under average market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr.
+
+At those designed boundaries, this Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge you've set.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits well below your designed Floor - you're asking for substantially less than the plan is built to deliver. That surplus is a choice - buffer against rough sequences, room for an earlier retirement, or capital to leave behind. Naming it makes it intentional rather than accidental.`,
+      'S3.C2.ABUNDANT-WELL_BELOW.WANT.STR': `THE SHAPE YOU WANT: ABUNDANT
+
+The Shape you've designed under stressed market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr - even when returns come in worse than average.
+
+Under that tougher path, your designed Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge under stress.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Your designed spending sits well below your designed Floor - even under stress, the plan carries far more than you're asking for. That substantial unused capacity is robust to tougher conditions. Worth naming what that resilience is built for: stress protection, future optionality, or intentional restraint.`,
+      'S3.C2.ABUNDANT-WELL_BELOW.WANT.OPT': `THE SHAPE YOU WANT: ABUNDANT
+
+The Shape you've designed under optimistic market conditions requires your portfolio to reach about {gbDatumM} by retirement to support your designed Datum of {gbDatumK}/yr - when conditions cooperate.
+
+On that favorable path, your designed Shape stretches to:
+
+   Ceiling - {gbCeilK}/yr ({gbCeilM} total). The upper edge when markets deliver.
+   Floor - {gbFloorK}/yr ({gbFloorM} total). The downside line you've drawn.
+
+Under optimistic conditions, your designed spending sits well below your designed Floor - and the unused capacity widens further. Studio can show whether that surplus represents a deliberate conservative anchor or capacity worth reconsidering - in years of earlier retirement, larger legacy, or stronger stress resilience.`
+    });
     var _s3get = function(id, vars) {
       var tmpl = _S3[id];
       if (tmpl === undefined) return '';
@@ -8023,7 +8664,7 @@
         var stateObj = (dCeil && dFlr)
           ? getShapeStateObj({ ceilSpend: dCeil, datumSpend: dDat, floorSpend: dFlr })
           : { name: '—', color: 'rgba(255,255,255,0.3)', physics: '', physicsShort: '', action: '' };
-        var fmtAT = function(v) { if(!v) return '—'; var t=Math.round(v*yrsInRetire); return fmtA(v)+' ('+(t>=1000?(t/1000).toFixed(1)+'M':t+'k')+' total)'; };
+        var fmtAT = function(v) { if(!v) return '—'; var t=Math.round(v*yrsInRetire); var c=t>=1000?'$'+(t/1000).toFixed(1)+'M':'$'+t+'k'; return c+' ($'+Math.round(v)+'k/yr)'; };
         // ── Row 1: Confirmed (Sketch) values ──────────────────────
         var skStateObj = (sketchCeil && sketchFloor)
           ? getShapeStateObj({ ceilSpend: sketchCeil, datumSpend: sketchDatum, floorSpend: sketchFloor })
@@ -8035,9 +8676,9 @@
         set('s3-sk-floor',      fmtAT(sketchFloor));
         set('s3-sk-meaning', skStateObj.physicsShort || skStateObj.physics || '—');
         // ── Row 2: Designed values with direction arrows ─────────
-        var _arrC = dCeil  > sketchCeil  + 1 ? ' <span style="color:var(--teal-mid);font-size:11px;">&#8593;</span>' : dCeil  < sketchCeil  - 1 ? ' <span style="color:var(--danger-red);font-size:11px;">&#8595;</span>' : ' <span style="color:rgba(255,255,255,0.3);font-size:11px;">=</span>';
-        var _arrD = dDat   > sketchDatum + 1 ? ' <span style="color:var(--teal-mid);font-size:11px;">&#8593;</span>' : dDat   < sketchDatum - 1 ? ' <span style="color:var(--danger-red);font-size:11px;">&#8595;</span>' : ' <span style="color:rgba(255,255,255,0.3);font-size:11px;">=</span>';
-        var _arrF = dFlr   > sketchFloor + 1 ? ' <span style="color:var(--teal-mid);font-size:11px;">&#8593;</span>' : dFlr   < sketchFloor - 1 ? ' <span style="color:var(--danger-red);font-size:11px;">&#8595;</span>' : ' <span style="color:rgba(255,255,255,0.3);font-size:11px;">=</span>';
+        var _arrC = dCeil  > sketchCeil  + 1 ? ' <span style="color:var(--teal-mid);font-size:11px;">&#8593;</span>' : dCeil  < sketchCeil  - 1 ? ' <span style="color:var(--danger-red);font-size:11px;">&#8595;</span>' : '';
+        var _arrD = dDat   > sketchDatum + 1 ? ' <span style="color:var(--teal-mid);font-size:11px;">&#8593;</span>' : dDat   < sketchDatum - 1 ? ' <span style="color:var(--danger-red);font-size:11px;">&#8595;</span>' : '';
+        var _arrF = dFlr   > sketchFloor + 1 ? ' <span style="color:var(--teal-mid);font-size:11px;">&#8593;</span>' : dFlr   < sketchFloor - 1 ? ' <span style="color:var(--danger-red);font-size:11px;">&#8595;</span>' : '';
         set('s3-shape-name',    stateObj.name||'—', stateObj.color||'var(--teal-mid)');
         var _ceilEl = document.getElementById('s3-ceil-val');
         if (_ceilEl)  _ceilEl.innerHTML  = fmtAT(dCeil)  + _arrC;
