@@ -2226,8 +2226,8 @@
               <div id="s3-overextended-banner" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(220,50,50,0.12);border:1px solid rgba(220,50,50,0.4);border-radius:4px;font-family:var(--font-mono);font-size:10px;color:#ff7070;line-height:1.6;">
                 ⚠️ <strong>This shape cannot be sustained.</strong> Your spending target exceeds what the portfolio can support in most market sequences. See the action below to fix it.
               </div>
-              <div id="s3-datum-narrative" style="margin-top:10px;padding:8px 10px;background:rgba(93,202,165,0.06);border-left:2px solid rgba(93,202,165,0.3);border-radius:2px;font-size:10px;line-height:1.7;color:rgba(255,255,255,0.7);display:none;"></div>
-              <div id="s3-floor-narrative" style="margin-top:6px;padding:8px 10px;background:rgba(239,83,80,0.06);border-left:2px solid rgba(239,83,80,0.25);border-radius:2px;font-size:10px;line-height:1.7;color:rgba(255,255,255,0.7);display:none;"></div>
+              <div id="s3-datum-narrative" style="margin-top:10px;font-size:10px;line-height:1.7;color:rgba(255,255,255,0.7);display:none;"></div>
+              <div id="s3-floor-narrative" style="margin-top:6px;font-size:10px;line-height:1.7;color:rgba(255,255,255,0.7);display:none;"></div>
               <span id="s3-shape-state-block" class="s3-state-block">
                 Shape: <strong id="s3-shape-state-name2" style="color:var(--teal-mid);">—</strong><br>
                 <span id="s3-shape-state-physics" style="display:block;margin-bottom:12px;">—</span>
@@ -6776,6 +6776,22 @@
         var fA2 = function(v) { return v ? ("$" + Math.round(v) + "k/yr") : "—"; };
         var stObj2 = getShapeStateObj({ ceilSpend: dc, datumSpend: dd, floorSpend: df });
         var skC2 = lastCalculatedPoints ? (lastCalculatedPoints.ceilSpend || 0) : 0;
+        var _skFlr3    = lastCalculatedPoints ? (lastCalculatedPoints.floorSpend || 0) : 0;
+        var _flrDiff3  = Math.round(df - _skFlr3);
+        var _usd3vars  = {
+          dCeilK        : '$' + Math.round(dc) + 'k',
+          dDatumK       : '$' + Math.round(dd) + 'k',
+          dFloorK       : '$' + Math.round(df) + 'k',
+          sketchCeilK   : '$' + Math.round(skC2) + 'k',
+          gapK          : stObj2.name === 'OVEREXTENDED' ? '$' + Math.round(Math.abs(dd - dc)) + 'k' : stObj2.name === 'ABUNDANT' ? '$' + Math.round(Math.abs(df - dd)) + 'k' : '$0k',
+          ceilGapK      : '$' + Math.round(Math.max(0, dc - dd)) + 'k',
+          floorBelowK   : '$' + Math.round(Math.max(0, dd - df)) + 'k',
+          ceilAboveK    : '$' + Math.round(Math.max(0, dc - dd)) + 'k',
+          floorGapK     : '$' + Math.round(Math.max(0, dd - df)) + 'k',
+          floorAlignment: _flrDiff3 > 0 ? '$' + Math.abs(_flrDiff3) + 'k/yr above the Sketch minimum' : _flrDiff3 < 0 ? '$' + Math.abs(_flrDiff3) + 'k/yr below the Sketch minimum' : 'aligned with the Sketch minimum'
+        };
+        var _stateKeyMap = { GROUNDED: 'GRD', EXPANSIVE: 'EXP', STRETCHED: 'STR', OVEREXTENDED: 'OE', ABUNDANT: 'ABU' };
+        var _stateKey    = _stateKeyMap[stObj2.name] || stObj2.name;
         var cDelta2 = Math.round(dc - skC2);
         var comp2   = skC2 || dc || 1;
         var tens2   = comp2 > 0 ? Math.max(0, Math.round((dc - comp2) / comp2 * 100)) : 0;
@@ -6794,16 +6810,27 @@
         var _sspl = document.getElementById("s3-shape-state-plain");
         if (_sspl)   _sspl.innerHTML = stObj2.action || "";
         var _ovBanner = document.getElementById("s3-overextended-banner");
-        if (_ovBanner) _ovBanner.style.display = stObj2.name === "OVEREXTENDED" ? "block" : "none";
-        // Hide narratives in this legacy path — main fn handles them
+        if (_ovBanner) {
+          _ovBanner.innerHTML = _s3get('S3.C3.PARADOX-OE');
+          _ovBanner.style.display = (stObj2.name === 'OVEREXTENDED' || dd > dc) ? 'block' : 'none';
+        }
         var _dn = document.getElementById('s3-datum-narrative');
         var _fn = document.getElementById('s3-floor-narrative');
-        if (_dn) _dn.style.display = 'none';
-        if (_fn) _fn.style.display = 'none';
+        if (_dn) {
+          var _datPhysKey = dd > dc ? 'S3.C3.SUBCASE-INVERT' : 'S3.C3.PHYSICS-' + _stateKey;
+          _dn.innerHTML = _s3get(_datPhysKey, _usd3vars);
+          _dn.style.display = 'block';
+        }
+        if (_fn) {
+          var _flrKey = df >= dc ? 'S3.C3.FLOOR-INVALID' : 'S3.C3.FLOOR-CONTEXT';
+          _fn.innerHTML = _s3get(_flrKey, _usd3vars);
+          _fn.style.display = 'block';
+        }
         var s3dp2 = document.getElementById("s3-datum-position");
         if (s3dp2) s3dp2.textContent = fA2(dd);
         var dWhere2 = dd > dc ? "above your confirmed Ceiling" : dd < df ? "below your Floor" : "comfortably inside your Shape";
         setEl("s3-datum-where", dWhere2);
+        var _dwEl2 = document.getElementById('s3-datum-where'); if (_dwEl2) _dwEl2.style.display = 'none';
         setEl("s3-shape-name",  stObj2.name, stObj2.color);
         setEl("s3-tension-pct", tens2 + "%");
         var lifeEl2   = document.getElementById("slider-life");
@@ -6812,25 +6839,8 @@
         var skDatum2  = lastCalculatedPoints ? (lastCalculatedPoints.datumSpend || 0) : 0;
         var dDelta2   = Math.round(dd - skDatum2);
         var bothAbove = cDelta2 > 0 && dDelta2 > 0;
-        var gapTxt2;
-        var _ceilWord  = cDelta2 > 0 ? "$" + Math.abs(cDelta2) + "k/yr above" : cDelta2 < 0 ? "$" + Math.abs(cDelta2) + "k/yr below" : "exactly at";
-        var _datWord   = dDelta2 > 0 ? "$" + Math.abs(dDelta2) + "k/yr above" : dDelta2 < 0 ? "$" + Math.abs(dDelta2) + "k/yr below" : "exactly at";
-        var _capGap    = Math.round(Math.max(0, dc - (skC2 || dc)) / 0.04 / 1000 * 10) / 10;
-        var _floorBuf  = Math.round(dd - df);
-        if (dd > dc) {
-          gapTxt2 = "Your Datum ($" + Math.round(dd) + "k/yr) sits above your Ceiling ($" + Math.round(dc) + "k/yr) — the shape has no valid range. The Sketch can show the conflict but not resolve it. Studio maps which levers — contributions, retirement age, a lower Datum, or a higher Ceiling — bring this into a structurally supportable position across 10,000 market paths.";
-        } else if (cDelta2 > 0 && dDelta2 > 0) {
-          gapTxt2 = "Your designed Ceiling ($" + Math.round(dc) + "k/yr) is " + _ceilWord + " what the Sketch confirmed, and your Datum ($" + Math.round(dd) + "k/yr) is " + _datWord + " the Sketch baseline. Both gaps require capital the Sketch can't yet see — real account types, Social Security timing, and sequence-of-returns modeling. Studio closes both gaps with actual probabilities, not straight-line estimates.";
-        } else if (cDelta2 > 0) {
-          gapTxt2 = "Your Ceiling ($" + Math.round(dc) + "k/yr) is " + _ceilWord + " what the Sketch can confirm — a gap of roughly $" + (_capGap > 0 ? _capGap.toFixed(1) + "M in additional capital" : Math.abs(cDelta2) + "k/yr in spending room") + ". Your Datum ($" + Math.round(dd) + "k/yr) sits inside the confirmed range with $" + _floorBuf + "k/yr of floor cushion — a solid base. Studio maps whether contributions, a later retirement, or sequence luck closes the ceiling gap.";
-        } else if (dDelta2 > 0) {
-          gapTxt2 = "Your Ceiling sits within the Sketch's confirmed range. Your Datum ($" + Math.round(dd) + "k/yr) is " + _datWord + " the Sketch baseline — meaning you're planning to spend $" + Math.abs(dDelta2) + "k/yr more than the straight-line projection supports. Studio stress-tests whether that Datum holds across 10,000 paths, or whether a bad first decade forces you below it.";
-        } else if (cDelta2 < 0 && dDelta2 < 0) {
-          gapTxt2 = "Your designed Ceiling ($" + Math.round(dc) + "k/yr) is " + _ceilWord + " the Sketch max, and your Datum ($" + Math.round(dd) + "k/yr) is " + _datWord + " the baseline — a deliberately conservative shape with $" + _floorBuf + "k/yr of cushion above your Floor. Studio can show whether pulling either number up is safe across market sequences, or how to redeploy the slack toward legacy or earlier retirement.";
-        } else {
-          gapTxt2 = "Your designed Ceiling ($" + Math.round(dc) + "k/yr) and Datum ($" + Math.round(dd) + "k/yr) align with what the Sketch confirmed — ceiling " + _ceilWord + " the Sketch max, datum " + _datWord + " the baseline. The shape is structurally supported. What the Sketch can't show: which accounts to draw first, when Social Security maximizes your floor, and whether a bad first decade in retirement compresses your $" + _floorBuf + "k/yr buffer. Studio maps those answers across 10,000 sequences.";
-        }
-        setEl("s3-gap-plain", gapTxt2);
+        var _leversKey2 = dd > dc ? 'S3.C4.LEVERS-OE-INVERT' : 'S3.C4.LEVERS-' + _stateKey;
+        setEl("s3-gap-plain", _s3get(_leversKey2, _usd3vars));
       })();
       // S4: stamp real numbers into Studio CTA links
       _updateStudioCTAs();
@@ -7879,6 +7889,84 @@
       }
     });
 
+    // ── _S3: Screen 3 V2 copy table + helper (Phase 2.7 R1) ─────
+    var _S3 = {
+      // Section 1 — Dual-row strip
+      'S3.D1.LABEL-LEFT'      : 'Shape You Have',
+      'S3.D1.STATE-OE'        : 'OVEREXTENDED',
+      'S3.D1.STATE-ABU'       : 'ABUNDANT',
+      'S3.D1.STATE-GRD'       : 'GROUNDED',
+      'S3.D1.STATE-EXP'       : 'EXPANSIVE',
+      'S3.D1.STATE-STR'       : 'STRETCHED',
+      'S3.D1.VALUES'          : 'Ceiling {sketchCeilK}/yr ({sketchCeilTotalM} total) / Datum {sketchDatumK}/yr ({sketchDatumTotalM} total) / Floor {sketchFloorK}/yr ({sketchFloorTotalM} total)',
+      'S3.D1.INTERP-OE'       : "Your spending sits above the ceiling this plan can support — at this level, the math doesn’t work.",
+      'S3.D1.INTERP-ABU'      : "Your spending sits well below the Floor — the plan is set up to support significantly more than you’re asking for.",
+      'S3.D1.INTERP-GRD'      : "Your spending sits between the Floor and the Ceiling — the plan carries this level across a wide range of futures, not just the best ones.",
+      'S3.D1.INTERP-EXP'      : "The Floor and Ceiling are far apart — the plan can support many different outcomes around this spending line, with real room above and below.",
+      'S3.D1.INTERP-STR'      : "Your spending sits close to the Ceiling — the plan can reach it, but there isn’t much room for average or rough markets before it strains.",
+      'S3.D2.LABEL-RIGHT'     : 'Shape You Want',
+      'S3.D2.VALUES'          : 'Ceiling {dCeilK}/yr ({dCeilTotalM} total) / Datum {dDatumK}/yr ({dDatumTotalM} total) / Floor {dFloorK}/yr ({dFloorTotalM} total)',
+      'S3.D2.INTERP-OE'       : "Your spending sits above the Ceiling this plan can support — at that level, something else has to change for the math to work.",
+      'S3.D2.INTERP-ABU'      : "Your spending sits well below the Floor — you’re asking for less than the plan is built to deliver, leaving meaningful capacity unused.",
+      'S3.D2.INTERP-GRD'      : "Your spending sits between the Floor and the Ceiling — the plan is designed to carry this level through a wide range of market paths.",
+      'S3.D2.INTERP-EXP'      : "Your designed Shape has a wide range — many different paths through markets still land you near this spending level.",
+      'S3.D2.INTERP-STR'      : "Your spending sits near your Ceiling — the plan can reach it, but there’s only a thin margin if returns come in average or worse than expected.",
+      // Section 2 — Card 1 'Shape Begins'
+      'S3.C1.LINE1'           : "You’re {currentAge}, planning to retire at {retireAge} — that’s {yearsToRetire} year(s) for this plan to work.",
+      'S3.C1.LINE2'           : "You’ve saved {portfolioK} so far and are adding about {annualContribK} each year.",
+      'S3.C1.LINE3'           : "You’re aiming to spend about {datumK} per year in retirement. We’re building the Shape using {taxDragPct} tax drag and {inflationMode} inflation.",
+      'S3.C1.LINE4'           : "Those inputs are the raw materials. The Sketch turned them into a Shape.",
+      // Section 3 — Card 2 'Shape You Have'
+      'S3.C2.OPENER'          : "On a middle-of-the-road path, this plan is projected to reach about {projectedBalanceM} by retirement. The Ceiling shows what happens if markets do better than that; the Floor shows what happens if they do worse.",
+      'S3.C2.BRIDGE'          : "At that projected balance, this plan supports:",
+      'S3.C2.BULLET-FLOOR'    : "↓ Floor — {sketchFloorK}. The level this plan works to protect in rough markets — the lower bound it is built to sustain.",
+      'S3.C2.BULLET-CEIL'     : "↑ Ceiling — {sketchCeilK}. The level this plan can reach when markets cooperate — not a promise, but the upper edge the math supports.",
+      'S3.C2.PHYSICS-OE'      : "Your target of {datumK} sits above your Ceiling — at this level, the plan doesn’t reach what you’re asking for, even when markets do well.",
+      'S3.C2.PHYSICS-ABU'     : "Your target of {datumK} sits below your Floor — even the conservative case projects more income than this, leaving meaningful capacity you’re not using.",
+      'S3.C2.PHYSICS-GRD'     : "Your target of {datumK} sits between the Floor and the Ceiling — the plan is built to carry this level across a wide range of market paths, not just the best ones.",
+      'S3.C2.PHYSICS-EXP'     : "Your target of {datumK} sits inside a wide range — the Floor is well below you, the Ceiling is well above you, and many different futures still land near this level.",
+      'S3.C2.PHYSICS-STR'     : "Your target of {datumK} sits close to your Ceiling — the plan can reach it, but there isn’t much room if returns come in average or worse than expected.",
+      'S3.C2.CLOSER'          : "This is the Shape you have today — the range this plan can honestly support at your current inputs.",
+      // Section 4 — Card 3 'Shape You Want'
+      'S3.C3.OPENER'          : "In Screen 2 you pulled the Shape directly — setting the Ceiling, spending line, and Floor you’re willing to live with.",
+      'S3.C3.LINE-CEIL'       : "You set your ceiling to {dCeilK}/yr — {ceilContext}.",
+      'S3.C3.LINE-DF'         : "Datum: {dDatumK}/yr. Floor: {dFloorK}/yr.",
+      'S3.C3.LINE-SHAPE'      : "Shape: {designedState}",
+      'S3.C3.PHYSICS-OE'      : "Your spending target of {dDatumK}/yr sits about {gapK}/yr above what this portfolio can structurally support. In most market paths you would run out of money at this level — this gap is the most important number on this page.",
+      'S3.C3.PHYSICS-ABU'     : "Your spending target of {dDatumK}/yr sits about {gapK}/yr below your designed Floor — a substantial buffer. The plan is built to carry more than you’re asking for; that unused capacity is a choice, not an accident.",
+      'S3.C3.PHYSICS-GRD'     : "Your spending target of {dDatumK}/yr sits inside your designed range — the plan is built to carry this level across a wide spread of market sequences, not just the favorable ones.",
+      'S3.C3.PHYSICS-EXP'     : "Your designed range is wide — the Floor sits about {floorBelowK}/yr below your spending line and the Ceiling sits about {ceilAboveK}/yr above it. Many different market paths still land you near this level.",
+      'S3.C3.PHYSICS-STR'     : "Your spending target of {dDatumK}/yr sits only about {ceilGapK}/yr below your designed Ceiling — the plan can reach it, but there is very little room if returns come in average or worse.",
+      'S3.C3.ACTION-OE'       : "To make this Shape viable, something has to give: lower your spending target below the Ceiling, delay retirement, add more capital or savings, or use Studio to see exactly which combination of levers closes this gap fastest.",
+      'S3.C3.ACTION-ABU'      : "With this much buffer, you can raise your spending target, retire earlier, or keep the surplus as deliberate protection against bad sequences — the choice depends on what you actually want this plan to do.",
+      'S3.C3.ACTION-GRD'      : "This Shape holds across most market paths. Confirm that your real accounts, tax picture, and Social Security choices preserve that margin once the averages are replaced with your actual numbers.",
+      'S3.C3.ACTION-EXP'      : "A wide range gives you flexibility — retirement age, savings rate, withdrawal order, and Social Security timing can each narrow this band toward the specific landing point you care about most.",
+      'S3.C3.ACTION-STR'      : "A thin margin means the order of returns matters more than the average. Sequence-of-returns risk, allocation, Social Security timing, and savings rate are the levers that widen the cushion — each trades off against the others.",
+      'S3.C3.PARADOX-OE'      : "⚠️ This Shape cannot be sustained as drawn. Your spending target exceeds what this portfolio can support in most market sequences. Use the actions below — or Studio — to adjust the levers until the math holds.",
+      'S3.C3.SUBCASE-INVERT'  : "Your spending of {dDatumK}/yr sits above your ceiling of {dCeilK}/yr. That’s structurally invalid — you’re planning to spend above the limit this Shape can support. Lower spending below {dCeilK}/yr or raise the ceiling to meet it.",
+      'S3.C3.FLOOR-CONTEXT'   : "Floor: {dFloorK}/yr — {floorAlignment}. That’s about {floorGapK}/yr below your spending line — the buffer this Shape gives you if markets disappoint.",
+      'S3.C3.FLOOR-INVALID'   : "Your designed Floor of {dFloorK}/yr sits at or above your Ceiling of {dCeilK}/yr — that leaves no valid range for the plan to operate inside. Raise the Ceiling above the Floor, or lower the Floor below the Ceiling, before this Shape can be evaluated.",
+      // Section 5 — Card 4 'What It Takes'
+      'S3.C4.LEVERS-OE-INVERT': "The Sketch confirms a ceiling of {sketchCeilK}/yr for this portfolio and a spending target of {dDatumK}/yr, with no valid band between them. Studio shows which levers — contributions, retirement age, spending — must move, and by how much, to turn this into a structurally supportable Shape.",
+      'S3.C4.LEVERS-OE'       : "To support this designed Shape, something has to give: higher contributions, later retirement, lower spending, or a mix of inputs. Studio maps which levers close the gap most efficiently for your situation.",
+      'S3.C4.LEVERS-ABU'      : "This designed Shape is already supported. Studio shows where you have room — to retire earlier, raise your spending target, or keep the buffer as deliberate protection against bad sequences.",
+      'S3.C4.LEVERS-GRD'      : "This designed Shape is structurally supported. Studio checks whether your real account mix, tax situation, and Social Security timing preserve that margin — or quietly pull you closer to the Floor.",
+      'S3.C4.LEVERS-EXP'      : "A wide designed range gives you options. Studio shows which lever moves — Social Security timing, account sequencing, or spending adjustments — narrow that range toward the landing point you actually care about.",
+      'S3.C4.LEVERS-STR'      : "Your designed margin is thin. Studio maps how sequence-of-returns risk hits your real portfolio and which levers — Social Security timing, allocation, or spending — most effectively widen that margin.",
+      'S3.C4.FOOTER-PARA1'    : "The Sketch uses one straight-line path. It doesn’t see account types, Social Security choices, early market drops, or Roth work. Those aren’t details — they often decide whether a Shape holds or breaks.",
+      'S3.C4.FOOTER-PARA2-A'  : "Studio runs your actual numbers across 10,000 market sequences.",
+      'S3.C4.FOOTER-PARA2-B'  : "It shows you where the gaps are and which levers are most likely to close them.",
+      'S3.C4.CTA-BUTTON'      : "See If This Shape Holds →"
+    };
+    var _s3get = function(id, vars) {
+      var tmpl = _S3[id];
+      if (tmpl === undefined) return '';
+      if (!vars) return tmpl;
+      return tmpl.replace(/\{([^}]+)\}/g, function(_, k) {
+        return (vars[k] !== undefined) ? String(vars[k]) : '{' + k + '}';
+      });
+    };
+
     // Know Your Shape → reveals Screen 3
     document.getElementById('btn-know-shape').addEventListener('click', function() {
       // Shockwave
@@ -7893,9 +7981,10 @@
       var _dPts = _d2LastScenario
         ? getMathPoint(_d2LastScenario.yearsToGrow||0, _d2LastScenario.yearsToGrow||0, _d2LastScenario)
         : (lastCalculatedPoints || {});
-      var _dc = _dPts.ceilSpend  || 0;
-      var _dd = _dPts.datumSpend || 0;
-      var _df = _dPts.floorSpend || 0;
+      var _lc = lastCalculatedPoints || {};
+      var _dc = _dPts.ceilSpend  || _lc.ceilSpend  || 0;
+      var _dd = _dPts.datumSpend || _lc.datumSpend || 0;
+      var _df = _dPts.floorSpend || _lc.floorSpend || 0;
       currentScenario._designedCeil  = _dc;
       currentScenario._designedDatum = _dd;
       currentScenario._designedFloor = _df;
@@ -7977,93 +8066,14 @@
         set('s2-floor',         fmtA(sketchFloor));
         set('s2-ceil',          fmtA(sketchCeil));
         set('s3-datum-position', fmtA(sketchDatum));
-        var dWhere = sketchDatum>sketchCeil ? 'above your confirmed Ceiling — already under pressure'
-          : sketchDatum<sketchFloor ? 'below your Floor — structural room to spare'
-          : 'comfortably inside your Shape';
-        set('s3-datum-where', dWhere);
         set('s3-want-ceil',  fmtA(dCeil));
         set('s3-want-datum', fmtA(dDat));
         set('s3-want-floor', fmtA(dFlr));
         var ceilDelta = Math.round(dCeil - sketchCeil);
         var ceilDesc  = ceilDelta>0 ? '$'+Math.abs(ceilDelta)+'k above your confirmed max ('+tension+'% tension)' : ceilDelta<0 ? '$'+Math.abs(ceilDelta)+'k below your confirmed ceiling' : 'exactly at your confirmed ceiling';
-        set('s3-ceil-delta-desc', ceilDesc);
         set('s3-shape-state-name2', stateObj.name||'—', stateObj.color||'var(--teal-mid)');
         if(el('s3-shape-state-block')) el('s3-shape-state-block').style.borderLeftColor = stateObj.color||'var(--teal-mid)';
         var _sspl2 = el('s3-shape-state-plain'); if (_sspl2) _sspl2.innerHTML = stateObj.action || '—';
-
-        // ── Datum narrative ──────────────────────────────────────
-        var datNarEl = document.getElementById('s3-datum-narrative');
-        if (datNarEl) {
-          var skDatumRef = sketchDatum || dDat;
-          var datDiff    = Math.round(dDat - skDatumRef);
-          var datTxt = '';
-          if (dDat > dCeil) {
-            datTxt = '<strong style="color:var(--danger-red);">Your Datum ($' + Math.round(dDat) + 'k/yr) exceeds your Ceiling ($' + Math.round(dCeil) + 'k/yr).</strong> This is structurally invalid — you\'re planning to spend above your own upper limit. Lower your Datum below $' + Math.round(dCeil) + 'k/yr, or raise the Ceiling to match.';
-          } else if (dDat < dFlr) {
-            datTxt = '<strong style="color:#4a9eff;">Your Datum ($' + Math.round(dDat) + 'k/yr) sits below your Floor ($' + Math.round(dFlr) + 'k/yr).</strong> Structural slack built in — even a bad market sequence keeps you above your target. Studio can show how to redirect that margin toward earlier retirement or legacy.';
-          } else if (datDiff > 5) {
-            var _lcp3   = lastCalculatedPoints || {};
-            var _wr3    = (dDat > (_lcp3.ceilSpend  || Infinity)) ? 0.050
-                        : (dDat < (_lcp3.floorSpend || 0))        ? 0.028
-                        : 0.04;
-            var capNeed = ((dDat / _wr3) / 1000).toFixed(1);
-            var capHave = (_lcp3.fvBase || 0).toFixed(1);
-            datTxt = '<strong style="color:var(--teal-mid);">Datum: $' + Math.round(dDat) + 'k/yr</strong> — $' + Math.abs(datDiff) + 'k/yr above the Sketch baseline of $' + Math.round(skDatumRef) + 'k/yr. Sustaining this needs ~$' + capNeed + 'M at retirement vs. the $' + capHave + 'M the Sketch currently projects. Studio maps whether contributions, a later retirement, or sequence luck closes that gap.';
-          } else if (datDiff < -5) {
-            datTxt = '<strong style="color:var(--teal-mid);">Datum: $' + Math.round(dDat) + 'k/yr</strong> — $' + Math.abs(datDiff) + 'k/yr below the Sketch baseline. Conservative target. Your buffer above the Floor is $' + Math.round(dDat - dFlr) + 'k/yr — Studio can show whether pulling the Datum back up holds across 10,000 paths.';
-          } else {
-            datTxt = '<strong style="color:var(--teal-mid);">Datum: $' + Math.round(dDat) + 'k/yr</strong> — aligned with the Sketch baseline. $' + Math.round(dDat - dFlr) + 'k/yr above your Floor, $' + Math.round(dCeil - dDat) + 'k/yr below your Ceiling.';
-          }
-          datNarEl.innerHTML = datTxt;
-          datNarEl.style.display = 'block';
-        }
-
-        // ── Floor narrative ──────────────────────────────────────
-        var flrNarEl = document.getElementById('s3-floor-narrative');
-        if (flrNarEl) {
-          var skFloorRef = sketchFloor || dFlr;
-          var flrDiff    = Math.round(dFlr - skFloorRef);
-          var flrTxt = '';
-          if (dFlr >= dCeil) {
-            flrTxt = '<strong style="color:var(--danger-red);">Your Floor ($' + Math.round(dFlr) + 'k/yr) meets or exceeds the Ceiling.</strong> The shape has no range — no room between your worst case and best case. Lower the Floor or raise the Ceiling to create a viable spread.';
-          } else if (flrDiff > 5) {
-            var flrCapNeed = ((dFlr / 0.04) / 1000).toFixed(1);
-            flrTxt = '<strong style="color:var(--danger-red);">Floor: $' + Math.round(dFlr) + 'k/yr</strong> — $' + Math.abs(flrDiff) + 'k/yr above the Sketch\'s structural minimum of $' + Math.round(skFloorRef) + 'k/yr. A higher Floor is a commitment: sustaining $' + Math.round(dFlr) + 'k/yr even in bad markets needs ~$' + flrCapNeed + 'M. Studio stress-tests whether this Floor holds across 10,000 sequences.';
-          } else if (flrDiff < -5) {
-            flrTxt = '<strong style="color:var(--danger-red);">Floor: $' + Math.round(dFlr) + 'k/yr</strong> — $' + Math.abs(flrDiff) + 'k/yr below the Sketch minimum. More flexibility in down markets, but it means deeper cuts if things go wrong. Your cushion above this Floor is $' + Math.round(dDat - dFlr) + 'k/yr — the gap between survival mode and your target.';
-          } else {
-            flrTxt = '<strong style="color:var(--danger-red);">Floor: $' + Math.round(dFlr) + 'k/yr</strong> — aligned with the Sketch minimum. $' + Math.round(dDat - dFlr) + 'k/yr below your Datum — that\'s your downside buffer if markets disappoint.';
-          }
-          flrNarEl.innerHTML = flrTxt;
-          flrNarEl.style.display = 'block';
-        }
-
-        var _skDat3   = lastCalculatedPoints ? (lastCalculatedPoints.datumSpend  || 0) : 0;
-        var _skFlr3   = lastCalculatedPoints ? (lastCalculatedPoints.floorSpend  || 0) : 0;
-        var _dDelta3  = Math.round(dDat  - _skDat3);
-        var _fDelta3  = Math.round(dFlr  - _skFlr3);
-        var _flrBuf3  = Math.round(dDat  - dFlr);
-        var _cWord3   = ceilDelta > 0 ? "$" + Math.abs(ceilDelta) + "k/yr above" : ceilDelta < 0 ? "$" + Math.abs(ceilDelta) + "k/yr below" : "exactly at";
-        var _dWord3   = _dDelta3  > 0 ? "$" + Math.abs(_dDelta3)  + "k/yr above" : _dDelta3  < 0 ? "$" + Math.abs(_dDelta3)  + "k/yr below" : "exactly at";
-        var _fWord3   = _fDelta3  > 0 ? "$" + Math.abs(_fDelta3)  + "k/yr above" : _fDelta3  < 0 ? "$" + Math.abs(_fDelta3)  + "k/yr below" : "exactly at";
-        var _capGap3  = ceilDelta > 0 ? (Math.round(ceilDelta / 0.04 / 1000 * 10) / 10).toFixed(1) : "0";
-        var gapTxt;
-        if (dDat > dCeil) {
-          gapTxt = "Your Datum ($" + Math.round(dDat) + "k/yr) sits above your Ceiling ($" + Math.round(dCeil) + "k/yr) — the Sketch confirms a ceiling of $" + Math.round(sketchCeil) + "k/yr and a baseline spending of $" + Math.round(_skDat3) + "k/yr, but your designed shape has no valid range between them. Studio maps exactly which levers — contributions, retirement age, Datum, or Ceiling — would bring this into a structurally supportable position.";
-        } else if (ceilDelta > 0 && _dDelta3 > 0) {
-          gapTxt = "The Sketch confirms a ceiling of $" + Math.round(sketchCeil) + "k/yr and a baseline of $" + Math.round(_skDat3) + "k/yr. Your designed Ceiling ($" + Math.round(dCeil) + "k/yr) is " + _cWord3 + " the confirmed max, and your Datum ($" + Math.round(dDat) + "k/yr) is " + _dWord3 + " the baseline — both gaps require capital the Sketch can\'t yet see. Studio closes them with actual probabilities across 10,000 sequences.";
-        } else if (ceilDelta > 0) {
-          gapTxt = "The Sketch confirms $" + Math.round(sketchCeil) + "k/yr as your ceiling. Your designed Ceiling is " + _cWord3 + " that — a gap of roughly $" + _capGap3 + "M in additional capital. Your Datum ($" + Math.round(dDat) + "k/yr) sits inside the confirmed range with $" + _flrBuf3 + "k/yr of floor cushion — a solid base. Studio maps whether contributions, a later retirement, or sequence luck closes the ceiling gap.";
-        } else if (_dDelta3 > 0) {
-          gapTxt = "Your Ceiling ($" + Math.round(dCeil) + "k/yr) is " + _cWord3 + " the Sketch\'s confirmed max. But your Datum ($" + Math.round(dDat) + "k/yr) is " + _dWord3 + " the Sketch baseline of $" + Math.round(_skDat3) + "k/yr — you\'re planning to spend $" + Math.abs(_dDelta3) + "k/yr more than the straight-line projection supports. Studio stress-tests whether that Datum holds across 10,000 paths, or whether a bad first decade forces you below it.";
-        } else if (_fDelta3 > 0) {
-          gapTxt = "Your Ceiling and Datum align with the Sketch. But your Floor ($" + Math.round(dFlr) + "k/yr) is " + _fWord3 + " the Sketch\'s structural minimum of $" + Math.round(_skFlr3) + "k/yr — a commitment that needs ~$" + (Math.round(dFlr / 0.04 / 1000 * 10) / 10).toFixed(1) + "M to sustain even in bad markets. Studio stress-tests whether this Floor holds across 10,000 sequences.";
-        } else if (ceilDelta < 0 && _dDelta3 < 0) {
-          gapTxt = "Your designed shape is deliberately conservative — Ceiling " + _cWord3 + " the Sketch max, Datum " + _dWord3 + " the baseline, $" + _flrBuf3 + "k/yr of cushion above your Floor. Studio can show whether pulling either number up is safe, or how to redeploy that slack toward legacy or earlier retirement.";
-        } else {
-          gapTxt = "Your designed shape aligns with what the Sketch confirmed — Ceiling at $" + Math.round(dCeil) + "k/yr (" + _cWord3 + " the Sketch max), Datum at $" + Math.round(dDat) + "k/yr (" + _dWord3 + " the baseline), $" + _flrBuf3 + "k/yr of floor cushion. What the Sketch can\'t show: which accounts to draw first, when Social Security maximizes your Floor, and whether a bad first decade compresses that buffer. Studio maps those answers across 10,000 sequences.";
-        }
-        set('s3-gap-plain', gapTxt);
       })();
       // Reveal Screen 3
       var s3 = document.getElementById('screen-2');
