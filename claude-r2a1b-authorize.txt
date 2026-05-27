@@ -1,0 +1,50 @@
+R2.A.1b PATCH AUTHORIZATION
+============================
+Status: APPLIED — awaiting Captain DevTools verify
+DJ:242 HOLD active — no commit/push/deploy until Captain releases
+
+AUTHORIZED SCOPE (verbatim from Captain):
+"Apply patch. Run static verification across all 6 zone-impact confirmations.
+Report final diff scope post-application before Captain DevTools verify."
+
+PATCH APPLIED TO: C:\Users\tmnte\datumfi-web\sketch.html
+
+ZONE 1 — HTML (2 edits, applied):
+  HAVE card (was L2205-2221): replaced 6-ID hardcoded prose with
+    - s3-have-state  (badge span)
+    - s3-have-body   (pre-wrap div)
+  WANT card (was L2225-2241): replaced 9-ID body with
+    - s3-want-state          (badge span)
+    - s3-overextended-banner (retained, Decision 1)
+    - s3-want-body           (pre-wrap div)
+
+ZONE 2 — JS IIFE (1 edit, applied):
+  ADDED: _paradigm, _mktKey, stObj1, _fmtM, _skPts, _gbPts,
+         _usd3HaveVars, _usd3WantVars, _sk1, _sk2, _s3body,
+         s3-have-state / s3-have-body wire-ins,
+         s3-want-state / s3-want-body wire-ins
+  REMOVED: 9 orphaned calls —
+    setEl(s3-want-ceil), setEl(s3-want-datum), setEl(s3-want-floor),
+    cDesc2+setEl(s3-ceil-delta-desc), setEl(s3-shape-state-name2),
+    ssb2 borderLeftColor block, _ssph innerHTML block, _sspl innerHTML block,
+    _dn/_fn datum/floor-narrative blocks, s3dp2 block, dWhere2/s3-datum-where,
+    lifeEl2/retireEl2/yrsIR2/skDatum2/dDelta2/bothAbove (unused vars)
+  RETAINED: s3-overextended-banner toggle, s3-shape-name, s3-tension-pct,
+            _leversKey2, s3-gap-plain
+
+ZONE 3 — JS Object.assign (1 edit, applied):
+  Appended Object.assign(_S3, {...}) after closing }; of _S3
+  66 authored strings: 11 sub-zones × 2 cards × 3 market conditions
+  Key format: S3.C2.{SUBZONE_KEY}.{HAVE|WANT}.{AVG|STR|OPT}
+  Title correction applied: DISCOVERED→HAVE, DESIGNED→WANT (first line only)
+  Template vars: {dDatumK}/{dCeilK}/{dFloorK}/{dDatumM}/{dCeilM}/{dFloorM} (HAVE)
+                 {gbDatumK}/{gbCeilK}/{gbFloorK}/{gbDatumM}/{gbCeilM}/{gbFloorM} (WANT)
+
+PENDING:
+  - Captain DevTools verify PASS across 66 visual combinations
+  - DJ:242 HOLD release from Captain
+  - Single commit bundling R2.A.0 + R2.A.1b (no separate commits)
+  - Deploy via clean export .ps1 + wrangler pages deploy (NOT git push alone)
+
+NEXT PHASE:
+  R2.B — Most Impactful Lever Card 4 rewrite (lever-weighting logic refactor)

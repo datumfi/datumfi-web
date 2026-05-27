@@ -37,9 +37,10 @@
     align-items: center;
     justify-content: center;
     padding: 60px 20px;
+    color-scheme: dark; /* Forces native OS scrollbars and dropdowns to render in dark mode */
   }
 
-  /* --- NEW HORIZONTAL ANCHOR LOGO --- */
+  /* --- BRAND HEADER --- */
   .brand-header {
     position: absolute;
     top: 40px;
@@ -76,7 +77,7 @@
     letter-spacing: 0.1em;
     color: var(--teal-mid);
     margin-left: 10px;
-    transform: translateY(1px); /* Optical baseline alignment */
+    transform: translateY(1px);
   }
 
   /* --- AUTH CONTAINER --- */
@@ -98,8 +99,8 @@
     text-align: center;
     border-bottom: 1px solid rgba(255,255,255,0.05);
   }
-  .auth-header h1 { font-size: 32px; font-weight: 300; font-style: italic; color: var(--white); margin-bottom: 8px; }
-  .auth-header p { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gold); }
+  .auth-header h1 { font-size: 32px; font-weight: 300; font-style: italic; color: var(--white); margin-bottom: 8px; transition: all 0.3s ease; }
+  .auth-header p { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gold); transition: all 0.3s ease; }
 
   .auth-body {
     padding: 40px;
@@ -111,8 +112,29 @@
   .input-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--teal-mid); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
   .mock-input { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; padding: 14px 16px; border-radius: 6px; width: 100%; transition: border-color 0.3s; }
   .mock-input:focus-within { border-color: var(--teal-mid); background: rgba(255,255,255,0.05); }
-  .mock-input input, .mock-input select { background: transparent; border: none; color: var(--white); font-family: var(--font-mono); font-size: 15px; outline: none; width: 100%; }
+  .mock-input input, .mock-input select { background: transparent; border: none; color: var(--white); font-family: var(--font-mono); font-size: 15px; outline: none; width: 100%; color-scheme: dark; }
   .mock-input input::placeholder { color: rgba(255,255,255,0.2); }
+
+  /* Tooltip Engine */
+  .tt-wrap { position: relative; display: inline-block; }
+  .info-tooltip {
+    position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%) translateY(5px);
+    background: #060b14; border: 1px solid var(--teal-mid);
+    padding: 16px; border-radius: 4px; opacity: 0; pointer-events: none;
+    transition: 0.3s ease; z-index: 60; width: 280px; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    font-family: var(--font-sans); font-size: 12px; font-weight: 300; color: rgba(255,255,255,0.8); line-height: 1.5;
+  }
+  .info-tooltip::after {
+    content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+    border: 6px solid transparent; border-top-color: var(--teal-mid);
+  }
+  .info-tooltip strong {
+    font-family: var(--font-mono); color: var(--gold); text-transform: uppercase;
+    letter-spacing: 0.1em; font-size: 9px; display: block; margin-bottom: 6px;
+    border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px; font-weight: normal;
+  }
+  .tt-wrap:hover .info-tooltip { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
 
   /* Dates Row */
   .dob-row { display: flex; gap: 12px; }
@@ -148,8 +170,8 @@
   .verify-state p { font-size: 16px; color: rgba(255,255,255,0.8); line-height: 1.6; margin-bottom: 24px; }
 
   /* Subtext links */
-  .auth-footer { text-align: center; margin-top: 24px; font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 0.05em; }
-  .auth-footer a { color: var(--gold); text-decoration: none; transition: color 0.3s; }
+  .auth-footer { text-align: center; margin-top: 24px; font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; }
+  .auth-footer a { color: var(--gold); text-decoration: none; transition: color 0.3s; cursor: pointer; }
   .auth-footer a:hover { color: var(--white); }
 
   /* --- ZERO KNOWLEDGE ARCHITECTURE BADGE --- */
@@ -163,45 +185,82 @@
     border-radius: 8px;
     z-index: 10;
   }
-  .zk-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 16px;
-  }
+  .zk-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
   .zk-icon { color: var(--gold); }
-  .zk-title {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    color: var(--white);
-  }
+  .zk-title { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--white); }
   .zk-list { list-style: none; padding: 0; margin: 0; }
-  .zk-list li {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--muted);
-    line-height: 1.6;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-  }
+  .zk-list li { font-family: var(--font-mono); font-size: 11px; color: var(--muted); line-height: 1.6; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 12px; }
   .zk-list li:last-child { margin-bottom: 0; }
-  .zk-bullet {
-    color: var(--teal-mid);
-    font-size: 14px;
-    line-height: 1;
-    margin-top: 1px;
-  }
+  .zk-bullet { color: var(--teal-mid); font-size: 14px; line-height: 1; margin-top: 1px; }
   .zk-strong { color: rgba(255,255,255,0.85); }
+
+  /* --- SIMULATED GOOGLE OAUTH MODAL --- */
+  .google-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 100000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .google-modal-overlay.active {
+    display: flex;
+    opacity: 1;
+  }
+  .google-modal {
+    background: #ffffff;
+    border-radius: 8px;
+    width: 420px;
+    max-width: 90vw;
+    padding: 40px 24px;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    color: #202124;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+  }
+  .google-modal-overlay.active .google-modal {
+    transform: translateY(0);
+  }
+  .google-close {
+    position: absolute;
+    top: 16px; right: 20px;
+    background: none; border: none;
+    font-size: 24px; font-weight: 300;
+    color: #5f6368; cursor: pointer;
+  }
+  .google-account-row {
+    display: flex; align-items: center;
+    padding: 12px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid #dadce0;
+    transition: background 0.2s;
+  }
+  .google-account-row:hover { background: #f8f9fa; }
+  .google-account-row:last-child { border-bottom: none; }
+  
+  .google-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: #1a73e8; color: #fff;
+    display: flex; justify-content: center; align-items: center;
+    font-weight: bold; font-size: 14px; margin-right: 14px;
+  }
+  .google-avatar.empty {
+    background: #e8eaed;
+  }
 
 </style>
 </head>
 <body>
 
-  <a href="#" class="brand-header">
+  <a href="/" class="brand-header">
     <span class="brand-datum">DATUM</span>
     <span class="brand-fi">FI</span>
   </a>
@@ -216,21 +275,16 @@
       
       <div id="step-1" class="step active">
         
-        <button class="btn-social" onclick="simulateSocialLogin('Google')">
+        <button class="btn-social" onclick="openGoogleLogin()">
           <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
           Continue with Google
-        </button>
-        
-        <button class="btn-social" onclick="simulateSocialLogin('Apple')">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M16.365 1.488c1.144-.892 2.378-1.488 3.51-1.488.168 0 .324.012.48.036-.18 1.344-.924 2.808-1.932 3.828-.948 1.008-2.316 1.656-3.576 1.656-.036 0-.072 0-.108-.012-.132-1.332.612-2.916 1.626-4.02zm-3.036 4.548c-1.896-.06-3.804 1.152-4.788 1.152-.96 0-2.484-1.068-3.96-1.044-2.04.024-3.924 1.188-4.968 3.012-2.124 3.66-.54 9.072 1.512 12.06 1.008 1.452 2.196 3.12 3.756 3.072 1.476-.048 2.052-.948 3.84-.948 1.776 0 2.304.948 3.852.912 1.608-.036 2.628-1.524 3.612-2.976 1.14-1.668 1.608-3.288 1.644-3.372-.036-.012-3.156-1.212-3.192-4.812-.036-3.012 2.46-4.464 2.568-4.536-1.428-2.088-3.624-2.364-4.404-2.436z"/></svg>
-          Continue with Apple
         </button>
 
         <div class="divider"><span>Or use email</span></div>
 
         <div class="input-group">
           <label class="input-label">Email</label>
-          <div class="mock-input"><input type="email" id="auth-email" placeholder="name@domain.com"></div>
+          <div class="mock-input"><input type="email" id="auth-email" placeholder="name@email.com"></div>
         </div>
 
         <div class="input-group">
@@ -238,24 +292,28 @@
           <div class="mock-input"><input type="password" placeholder="••••••••••••"></div>
         </div>
 
-        <button class="btn" onclick="nextStep(2)">Proceed to Profile →</button>
+        <button class="btn" onclick="nextStep(2)">Create Profile</button>
         
         <div class="auth-footer">
-          Already have a blueprint? <a href="#">Access Studio.</a>
+          Already have an account? <a onclick="nextStep(4)">Login</a>
         </div>
       </div>
 
       <div id="step-2" class="step">
         
-        <div class="input-group" style="margin-bottom: 24px;">
-          <div style="font-family: var(--font-serif); font-style: italic; font-size: 20px; margin-bottom: 8px;">Welcome, <span id="display-name" style="color: var(--teal-mid);">Architect</span>.</div>
-          <div style="font-size: 13px; color: var(--muted); line-height: 1.5;">To generate your mathematical range, the engine requires your structural timeline.</div>
+        <div class="input-group tt-wrap" style="margin-bottom: 24px; cursor: help;">
+          <div style="font-family: var(--font-serif); font-style: italic; font-size: 20px; margin-bottom: 8px;">Welcome, <span id="display-name" style="color: var(--teal-mid);">Architect</span>. <span style="font-family: var(--font-sans); font-size: 14px; font-style: normal; opacity: 0.5;">(?)</span></div>
+          <div style="font-family: var(--font-sans); font-size: 13px; color: var(--muted); line-height: 1.5; font-weight: 300;">To generate your mathematical range, the engine requires your structural timeline.</div>
+          <div class="info-tooltip">
+             <strong>Precision in. Precision out.</strong>
+             Accurate birth and retirement dates are required to calculate your exact timeline, tax boundaries, and withdrawal rules. Better inputs create a more accurate Shape of your retirement.
+          </div>
         </div>
 
         <div class="input-group">
           <label class="input-label">Your Name</label>
           <div class="mock-input">
-            <input type="text" id="primary-name" placeholder="First Name" oninput="document.getElementById('display-name').innerText = this.value.trim() || 'Architect'">
+            <input type="text" id="primary-name" placeholder="First Name" oninput="this.value = this.value.replace(/[^a-zA-Z\s\-]/g, ''); document.getElementById('display-name').innerText = this.value.trim() || 'Architect'">
           </div>
         </div>
 
@@ -286,7 +344,7 @@
             <div class="input-group" style="margin-bottom: 16px;">
               <label class="input-label">Co-Architect Name</label>
               <div class="mock-input">
-                <input type="text" placeholder="First Name">
+                <input type="text" placeholder="First Name" oninput="this.value = this.value.replace(/[^a-zA-Z\s\-]/g, '');">
               </div>
             </div>
             
@@ -326,18 +384,45 @@
           </div>
         </div>
 
-        <button class="btn" style="background: var(--teal-mid); color: var(--bg-navy);" onclick="nextStep(3)">Initialize Blueprint</button>
+        <button class="btn" style="background: var(--teal-mid); color: var(--bg-navy);" onclick="nextStep(3)">Initialize Profile</button>
         <button class="btn" style="border: none; margin-top: 8px; color: var(--muted);" onclick="nextStep(1)">← Back</button>
       </div>
 
       <div id="step-3" class="step verify-state">
         <div class="verify-icon">🗝</div>
-        <h2 style="font-family: var(--font-serif); font-size: 28px; font-style: italic; margin-bottom: 12px;">Enter the Vault.</h2>
+        <h2 style="font-family: var(--font-serif); font-size: 28px; font-style: italic; margin-bottom: 12px;">Enter the Studio.</h2>
         <p>A structural verification key has been sent to <br><span id="verify-email-display" style="color: var(--teal-mid); font-family: var(--font-mono); font-size: 13px;">your email</span>.</p>
         <p style="font-size: 13px; color: var(--muted);">Click the link to verify your identity and enter the Studio.</p>
         
-        <div style="margin-top: 40px;">
+        <div style="margin-top: 40px; display: flex; flex-direction: column; gap: 12px;">
           <button class="btn" style="border-color: rgba(255,255,255,0.2); color: var(--white);">Open Mail App</button>
+          <button class="btn" style="border: none; color: var(--muted);" onclick="nextStep(1)">← Back</button>
+        </div>
+      </div>
+
+      <div id="step-4" class="step">
+        
+        <button class="btn-social" onclick="openGoogleLogin()">
+          <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+          Continue with Google
+        </button>
+
+        <div class="divider"><span>Or use email</span></div>
+
+        <div class="input-group">
+          <label class="input-label">Email</label>
+          <div class="mock-input"><input type="email" id="login-email" placeholder="name@email.com"></div>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Password</label>
+          <div class="mock-input"><input type="password" placeholder="••••••••••••"></div>
+        </div>
+
+        <button class="btn" style="background: var(--teal-mid); color: var(--bg-navy);" onclick="window.location.href='/studio.html'">Authenticate →</button>
+        
+        <div class="auth-footer">
+          Need to create an account? <a onclick="nextStep(1)">Establish Origin.</a>
         </div>
       </div>
 
@@ -347,7 +432,7 @@
   <div class="zk-wrapper">
     <div class="zk-header">
       <svg class="zk-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-      <span class="zk-title">Zero-Knowledge Architecture</span>
+      <span class="zk-title">Zero Knowledge Financial Architecture...</span>
     </div>
     <ul class="zk-list">
       <li>
@@ -364,13 +449,48 @@
       </li>
       <li>
         <span class="zk-bullet">✓</span> 
-        <span><span class="zk-strong">Session-Scoped State:</span> Blueprints live only for your active session. Close the Vault, and your numbers are gone—never written to disk, never recoverable.</span>
+        <span><span class="zk-strong">Session-Scoped State:</span> Blueprints live only for your active session. Close the Studio, and your numbers are gone—never written to disk, never recoverable.</span>
       </li>
     </ul>
   </div>
 
+  <div id="google-mock-modal" class="google-modal-overlay">
+    <div class="google-modal">
+      <button class="google-close" onclick="closeGoogleLogin()">×</button>
+      
+      <svg width="48" height="48" viewBox="0 0 48 48" style="margin-bottom: 12px;">
+        <path fill="#4285F4" d="M23.49 12.275c0-.793-.071-1.556-.203-2.288H12v4.331h6.443c-.278 1.396-1.056 2.58-2.247 3.37v2.802h3.633c2.127-1.956 3.351-4.836 3.351-8.215z"/>
+        <path fill="#34A853" d="M12 24c3.24 0 5.955-1.075 7.94-2.91l-3.633-2.802c-1.076.72-2.454 1.145-4.307 1.145-3.315 0-6.13-2.238-7.135-5.25H1.116v2.898C3.102 21.01 7.234 24 12 24z"/>
+        <path fill="#FBBC05" d="M4.865 14.183A7.214 7.214 0 0 1 4.47 12c0-.76.133-1.492.378-2.183V6.92H1.116A11.958 11.958 0 0 0 0 12c0 1.933.456 3.762 1.258 5.4l3.607-2.8z"/>
+        <path fill="#EA4335" d="M12 4.567c1.764 0 3.348.607 4.594 1.796l3.444-3.444C17.947 1.109 15.232 0 12 0 7.234 0 3.102 2.99 1.116 6.92l3.749 2.898c1.005-3.011 3.82-5.251 7.135-5.251z"/>
+      </svg>
+
+      <h2 style="font-size:24px; font-weight:400; margin:0 0 8px;">Sign in</h2>
+      <p style="font-size:16px; margin:0 0 32px; font-family: Roboto, Arial, sans-serif;">to continue to Datum FI</p>
+
+      <div style="border: 1px solid #dadce0; border-radius: 8px; overflow: hidden; text-align: left;">
+        
+        <div class="google-account-row" onclick="completeGoogleAuth('Alex Architect', 'alex@example.com')">
+          <div class="google-avatar">A</div>
+          <div>
+            <div style="font-size:14px; font-weight:500; color:#3c4043;">Alex Architect</div>
+            <div style="font-size:12px; color:#5f6368;">alex@example.com</div>
+          </div>
+        </div>
+
+        <div class="google-account-row" onclick="completeGoogleAuth('', '')">
+          <div class="google-avatar empty">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#5f6368"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+          </div>
+          <div style="font-size:14px; font-weight:500; color:#3c4043;">Use another account</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
   <script>
-    // Handles transitioning between the 3 form states
+    // Handles transitioning between the 4 form states
     function nextStep(stepNum) {
       // Hide all steps
       document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
@@ -400,6 +520,10 @@
         const email = document.getElementById('auth-email').value.trim() || 'your secure email';
         document.getElementById('verify-email-display').innerText = email;
       }
+      else if (stepNum === 4) {
+        title.innerHTML = 'Access Studio.';
+        sub.innerHTML = 'Enter Your Coordinates';
+      }
       else {
         title.innerHTML = 'Establish Origin.';
         sub.innerHTML = 'Phase I / Identity Verification';
@@ -416,14 +540,32 @@
       panel.style.display = isChecked ? 'block' : 'none';
     }
 
+    // --- Google OAuth Simulation Logic ---
+    function openGoogleLogin() {
+      const modal = document.getElementById('google-mock-modal');
+      modal.style.display = 'flex';
+      // Slight delay for CSS transition
+      setTimeout(() => { modal.classList.add('active'); }, 10);
+    }
+
+    function closeGoogleLogin() {
+      const modal = document.getElementById('google-mock-modal');
+      modal.classList.remove('active');
+      setTimeout(() => { modal.style.display = 'none'; }, 300);
+    }
+
     // Simulates a smooth, frictionless Social Login pulling data automatically
-    function simulateSocialLogin(provider) {
-      // Set global variable to be picked up by Step 2
-      window.socialName = "Jonathan"; 
+    function completeGoogleAuth(mockName, mockEmail) {
+      closeGoogleLogin();
       
-      // Auto-fill mock data to simulate pulling from Google/Apple
+      // Set global variable to be picked up by Step 2
+      window.socialName = mockName; 
+      
+      // Auto-fill mock data to simulate pulling from Google
       const emailInput = document.getElementById('auth-email');
-      if (emailInput) emailInput.value = `jonathan@${provider.toLowerCase()}.com`;
+      if (emailInput && mockEmail !== '') {
+         emailInput.value = mockEmail;
+      }
       
       // Instantly push them to Step 2 (Profile)
       nextStep(2);

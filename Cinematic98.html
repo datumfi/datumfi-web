@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#091221">
+<title>Datum FI — Cinematic Transition Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-navy: #091221;
+    --teal-mid: #5DCAA5;
+    --gold: #C9A84C;
+    --danger-red: #e24b4a;
+    --white: #ffffff;
+    --muted: rgba(255,255,255,0.4);
+    --grid-line: rgba(100, 180, 255, 0.05);
+    --font-serif: 'Fraunces', serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background-color: var(--bg-navy);
+    color: var(--white);
+    font-family: var(--font-serif);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* --- DEMO TRIGGER BUTTON --- */
+  .trigger-btn {
+    background: var(--teal-mid);
+    color: #000;
+    border: none;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    padding: 20px 40px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 700;
+    box-shadow: 0 10px 30px rgba(93, 202, 165, 0.3);
+    transition: all 0.3s ease;
+    z-index: 10;
+  }
+  .trigger-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 40px rgba(93, 202, 165, 0.5);
+  }
+
+  /* =========================================
+     CINEMATIC OVERLAY ENGINE
+     ========================================= */
+  #cinematic-overlay { 
+    position: fixed; 
+    top: 0; left: 0; 
+    width: 100vw; height: 100vh; 
+    background-color: var(--bg-navy); 
+    background-image: 
+      linear-gradient(var(--grid-line) 1px, transparent 1px), 
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px); 
+    background-size: 40px 40px; 
+    z-index: 99999; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+  }
+  #cinematic-overlay.active { 
+    opacity: 1; 
+    pointer-events: all; 
+  }
+
+  .c-layout {
+    display: flex;
+    width: 100%;
+    max-width: 1100px;
+    height: 500px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 40px;
+  }
+
+  /* --- LEFT: TELEMETRY TERMINAL --- */
+  .c-terminal {
+    width: 400px; 
+    font-family: var(--font-mono); 
+    font-size: 12px;
+    color: var(--teal-mid); 
+    text-transform: uppercase; 
+    letter-spacing: 0.15em;
+    line-height: 2.8;
+  }
+  
+  .c-log-line { 
+    opacity: 0; 
+    transform: translateX(-15px); 
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out; 
+  }
+  .c-log-line.show { 
+    opacity: 1; 
+    transform: translateX(0); 
+  }
+
+  /* --- RIGHT: GEOMETRIC STAGE --- */
+  .c-stage {
+    width: 550px; 
+    height: 450px; 
+    position: relative;
+  }
+
+  /* The Detailed Architectural SVG Wireframe */
+  .c-estate-svg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 500px;
+    height: 380px;
+    opacity: 0;
+    transition: opacity 1s ease, transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+    overflow: visible;
+  }
+  .c-estate-svg.show { opacity: 1; }
+  
+  /* Dimming after shock */
+  .c-estate-svg.dim { opacity: 0.15; transform: translate(-50%, -50%) scale(0.95); }
+  
+  /* Thermodynamic Shock Flash (Targets ALL SVG elements) */
+  .c-estate-svg.shocked line, 
+  .c-estate-svg.shocked rect, 
+  .c-estate-svg.shocked path, 
+  .c-estate-svg.shocked circle {
+    stroke: var(--danger-red) !important;
+    transition: stroke 0.1s ease;
+  }
+
+  /* Drawing Animation for ALL SVG structural lines */
+  .c-estate-svg line, 
+  .c-estate-svg rect, 
+  .c-estate-svg path, 
+  .c-estate-svg circle {
+    stroke-dasharray: 2000;
+    stroke-dashoffset: 2000;
+    transition: stroke-dashoffset 2.5s cubic-bezier(0.25, 1, 0.5, 1), stroke 0.4s;
+  }
+  .c-estate-svg.show line, 
+  .c-estate-svg.show rect, 
+  .c-estate-svg.show path, 
+  .c-estate-svg.show circle {
+    stroke-dashoffset: 0;
+  }
+
+  /* The Glowing V-Scan Beam */
+  .c-scanner {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 550px;
+    height: 3px;
+    background: var(--teal-mid);
+    box-shadow: 0 0 30px 10px rgba(93, 202, 165, 0.4);
+    opacity: 0;
+    z-index: 10;
+  }
+  .c-scanner.scan {
+    opacity: 1;
+    transition: top 1.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+    top: 420px; /* drops all the way through */
+  }
+
+  /* Thermodynamic Shockwave Circle */
+  .c-shockwave {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    background: transparent;
+    border: 2px solid var(--danger-red);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    z-index: 15;
+    pointer-events: none;
+  }
+  .c-shockwave.fire {
+    animation: shockwaveAnim 0.8s ease-out forwards;
+  }
+  @keyframes shockwaveAnim {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 1; border-width: 20px; }
+    100% { transform: translate(-50%, -50%) scale(30); opacity: 0; border-width: 1px; }
+  }
+
+  /* --- RANGE LINES OVERLAY --- */
+  .c-range-container {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 20;
+  }
+
+  .c-line-wrapper {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 30px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Centered Vertical Positioning for the 3 Lines */
+  .c-line-wrapper.ceil { top: 70px; }
+  .c-line-wrapper.datum { top: 210px; }
+  .c-line-wrapper.floor { top: 350px; }
+
+  .c-line-track {
+    flex: 1;
+    height: 2px;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .c-line-fill {
+    position: absolute;
+    top: 0; left: 0; height: 100%; width: 0%;
+    transition: width 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .c-line-wrapper.ceil .c-line-fill { background: var(--gold); }
+  .c-line-wrapper.datum .c-line-fill { background: var(--teal-mid); }
+  .c-line-wrapper.floor .c-line-fill { background: var(--danger-red); }
+
+  .c-line-wrapper.expand .c-line-fill { width: 100%; }
+
+  .c-node {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--bg-navy);
+    border: 2px solid;
+    margin: 0 15px;
+    opacity: 0;
+    transform: scale(0);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .c-line-wrapper.ceil .c-node { border-color: var(--gold); }
+  .c-line-wrapper.datum .c-node { border-color: var(--teal-mid); background: var(--teal-mid); }
+  .c-line-wrapper.floor .c-node { border-color: var(--danger-red); }
+  
+  .c-line-wrapper.expand .c-node { opacity: 1; transform: scale(1); }
+
+  .c-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 0.15em;
+    opacity: 0;
+    transform: translateX(-15px);
+    transition: all 0.4s ease;
+  }
+  .c-line-wrapper.ceil .c-label { color: var(--gold); }
+  .c-line-wrapper.datum .c-label { color: var(--teal-mid); }
+  .c-line-wrapper.floor .c-label { color: var(--danger-red); }
+  
+  .c-line-wrapper.expand .c-label { opacity: 1; transform: translateX(0); }
+
+  /* Demo Reset Button */
+  .c-demo-reset {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: transparent;
+    border: 1px solid var(--muted);
+    color: var(--white);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .c-demo-reset.show { opacity: 1; pointer-events: all; }
+  .c-demo-reset:hover { border-color: var(--white); }
+
+  @media (max-width: 900px) {
+    .c-layout { flex-direction: column; justify-content: center; height: 100vh; padding: 20px;}
+    .c-terminal { width: 100%; margin-bottom: 40px; text-align: center; }
+    .c-stage { width: 100%; max-width: 400px; height: 350px; }
+    .c-estate-svg { width: 300px; height: 250px; }
+  }
+
+</style>
+</head>
+<body>
+
+  <button class="trigger-btn" onclick="startCinematicReveal()">Reveal Your Range</button>
+
+  <div id="cinematic-overlay">
+    <div class="c-layout">
+      
+      <div class="c-terminal">
+        <div class="c-log-line" id="log-1">> INITIALIZING DATUM V-SCAN ENGINE</div>
+        <div class="c-log-line" id="log-2">> COMPILING ARCHITECTURAL ASSETS</div>
+        <div class="c-log-line" id="log-3">> ISOLATING LIQUIDITY FRICTION</div>
+        <div class="c-log-line" id="log-4">> RUNNING 10,000 FUTURES...</div>
+        <div class="c-log-line" id="log-5" style="color: var(--danger-red);">> APPLYING THERMODYNAMIC SHOCK</div>
+        <div class="c-log-line" id="log-6">> MAPPING STRUCTURAL BOUNDARIES</div>
+        <div class="c-log-line" id="log-7">> DATUM LOCKED. PREPARING DOSSIER.</div>
+      </div>
+
+      <div class="c-stage">
+        
+        <svg class="c-estate-svg" id="c-estate" viewBox="0 0 550 400" preserveAspectRatio="xMidYMid meet">
+            <g id="estate-group" class="estate-wireframe">
+                
+                <line x1="10" y1="300" x2="540" y2="300" stroke="var(--teal-mid)" stroke-width="2" />
+                <line x1="10" y1="305" x2="540" y2="305" stroke="var(--teal-mid)" stroke-width="1" opacity="0.3"/>
+
+                <rect x="65" y="180" width="120" height="120" fill="rgba(93, 202, 165, 0.05)" stroke="var(--teal-mid)" stroke-width="1.5" />
+                <path d="M 55 180 L 85 140 L 185 140 L 185 180 Z" fill="rgba(93, 202, 165, 0.05)" stroke="var(--teal-mid)" stroke-width="1.5" />
+                
+                <rect x="80" y="195" width="20" height="30" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="90" y1="195" x2="90" y2="225" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="80" y1="210" x2="100" y2="210" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+
+                <rect x="115" y="195" width="20" height="30" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="125" y1="195" x2="125" y2="225" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="115" y1="210" x2="135" y2="210" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+
+                <rect x="150" y="195" width="20" height="30" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="160" y1="195" x2="160" y2="225" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="150" y1="210" x2="170" y2="210" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+
+                <rect x="80" y="245" width="20" height="35" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="90" y1="245" x2="90" y2="280" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="80" y1="262" x2="100" y2="262" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+
+                <rect x="115" y="245" width="20" height="35" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="125" y1="245" x2="125" y2="280" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="115" y1="262" x2="135" y2="262" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+
+                <rect x="150" y="245" width="20" height="35" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="160" y1="245" x2="160" y2="280" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="150" y1="262" x2="170" y2="262" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+
+
+                <rect x="365" y="180" width="120" height="120" fill="rgba(93, 202, 165, 0.05)" stroke="var(--teal-mid)" stroke-width="1.5" />
+                <path d="M 365 180 L 365 140 L 465 140 L 495 180 Z" fill="rgba(93, 202, 165, 0.05)" stroke="var(--teal-mid)" stroke-width="1.5" />
+                
+                <rect x="380" y="195" width="20" height="30" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="390" y1="195" x2="390" y2="225" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="380" y1="210" x2="400" y2="210" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+
+                <rect x="415" y="195" width="20" height="30" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="425" y1="195" x2="425" y2="225" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="415" y1="210" x2="435" y2="210" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+
+                <rect x="450" y="195" width="20" height="30" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="460" y1="195" x2="460" y2="225" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="450" y1="210" x2="470" y2="210" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+
+                <rect x="380" y="245" width="20" height="35" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="390" y1="245" x2="390" y2="280" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="380" y1="262" x2="400" y2="262" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+
+                <rect x="415" y="245" width="20" height="35" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="425" y1="245" x2="425" y2="280" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="415" y1="262" x2="435" y2="262" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+
+                <rect x="450" y="245" width="20" height="35" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="460" y1="245" x2="460" y2="280" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="450" y1="262" x2="470" y2="262" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+
+
+                <rect x="185" y="140" width="180" height="160" fill="rgba(93, 202, 165, 0.05)" stroke="var(--teal-mid)" stroke-width="1.5" />
+                <path d="M 170 140 L 275 60 L 380 140 Z" fill="rgba(93, 202, 165, 0.05)" stroke="var(--teal-mid)" stroke-width="1.5" />
+                
+                <rect x="205" y="155" width="20" height="30" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="215" y1="155" x2="215" y2="185" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="205" y1="170" x2="225" y2="170" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+
+                <rect x="235" y="155" width="20" height="30" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="245" y1="155" x2="245" y2="185" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="235" y1="170" x2="255" y2="170" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+
+                <rect x="265" y="150" width="20" height="35" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.8"/>
+                <path d="M 265 150 Q 275 140 285 150" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.8"/>
+                <line x1="275" y1="150" x2="275" y2="185" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="265" y1="167" x2="285" y2="167" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+
+                <rect x="295" y="155" width="20" height="30" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="305" y1="155" x2="305" y2="185" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="295" y1="170" x2="315" y2="170" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+
+                <rect x="325" y="155" width="20" height="30" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="335" y1="155" x2="335" y2="185" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="325" y1="170" x2="345" y2="170" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+
+                <rect x="205" y="215" width="20" height="45" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="215" y1="215" x2="215" y2="260" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="205" y1="237" x2="225" y2="237" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+
+                <rect x="325" y="215" width="20" height="45" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="335" y1="215" x2="335" y2="260" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                <line x1="325" y1="237" x2="345" y2="237" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+
+                <rect x="235" y="215" width="80" height="85" fill="rgba(93, 202, 165, 0.05)" stroke="var(--teal-mid)" stroke-width="1.5" />
+                <path d="M 230 215 L 275 195 L 320 215 Z" fill="rgba(93, 202, 165, 0.1)" stroke="var(--teal-mid)" stroke-width="1.5" />
+                
+                <rect x="240" y="215" width="6" height="85" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.8"/>
+                <rect x="304" y="215" width="6" height="85" fill="none" stroke="var(--teal-mid)" stroke-width="1" opacity="0.8"/>
+                
+                <path d="M 255 300 L 255 240 A 20 20 0 0 1 295 240 L 295 300" fill="none" stroke="var(--teal-mid)" stroke-width="1.5"/>
+                <line x1="275" y1="220" x2="275" y2="300" stroke="var(--teal-mid)" stroke-width="1" opacity="0.6"/>
+                
+                <circle cx="270" cy="265" r="1.5" fill="var(--teal-mid)" stroke="none" opacity="0.8"/>
+                <circle cx="280" cy="265" r="1.5" fill="var(--teal-mid)" stroke="none" opacity="0.8"/>
+
+                <rect x="240" y="300" width="70" height="3" fill="none" stroke="var(--teal-mid)" stroke-width="1" />
+                <rect x="235" y="303" width="80" height="3" fill="none" stroke="var(--teal-mid)" stroke-width="1" />
+
+                <text id="c-estate-text" font-family="var(--font-mono)" font-size="12" letter-spacing="0.2em" x="275" y="360" text-anchor="middle" style="fill:rgba(255,255,255,0.6); opacity: 0; transition: opacity 1s 1.5s;">THE ESTATE</text>
+            </g>
+        </svg>
+
+        <div class="c-scanner" id="c-scanner"></div>
+
+        <div class="c-shockwave" id="c-shockwave"></div>
+
+        <div class="c-range-container">
+            
+            <div class="c-line-wrapper ceil" id="cw-ceil">
+                <div class="c-line-track"><div class="c-line-fill"></div></div>
+                <div class="c-node"></div>
+                <div class="c-label">STRUCTURAL CEILING</div>
+            </div>
+
+            <div class="c-line-wrapper datum" id="cw-datum">
+                <div class="c-line-track"><div class="c-line-fill"></div></div>
+                <div class="c-node"></div>
+                <div class="c-label">YOUR DATUM</div>
+            </div>
+
+            <div class="c-line-wrapper floor" id="cw-floor">
+                <div class="c-line-track"><div class="c-line-fill"></div></div>
+                <div class="c-node"></div>
+                <div class="c-label">SURVIVAL FLOOR</div>
+            </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <button class="c-demo-reset" id="demo-reset" onclick="resetDemo()">Simulate Redirect to Range (Replay Demo)</button>
+  </div>
+
+  <script>
+    function startCinematicReveal() {
+      // 0. Show Overlay
+      const overlay = document.getElementById('cinematic-overlay');
+      overlay.classList.add('active');
+
+      // 1. Precise Timeline Logs
+      setTimeout(() => document.getElementById('log-1').classList.add('show'), 300);
+      setTimeout(() => document.getElementById('log-2').classList.add('show'), 700);
+      setTimeout(() => document.getElementById('log-3').classList.add('show'), 1100);
+      setTimeout(() => document.getElementById('log-4').classList.add('show'), 1500);
+
+      // 2. Fade in and Draw Estate
+      setTimeout(() => {
+          document.getElementById('c-estate').classList.add('show');
+          document.getElementById('c-estate-text').style.opacity = "1";
+      }, 800);
+
+      // 3. Drop the V-Scan Beam
+      setTimeout(() => {
+          document.getElementById('c-scanner').classList.add('scan');
+      }, 1800);
+
+      // 4. Scanner finishes, fades out
+      setTimeout(() => {
+          document.getElementById('c-scanner').style.opacity = '0';
+      }, 3400);
+
+      // 5. THERMODYNAMIC SHOCK
+      setTimeout(() => {
+          document.getElementById('log-5').classList.add('show'); // Apply shock log
+          document.getElementById('c-shockwave').classList.add('fire'); // Radiate red circle
+          document.getElementById('c-estate').classList.add('shocked'); // Flash building red
+          
+          // Instantly recover building to dim state after flash
+          setTimeout(() => {
+              document.getElementById('c-estate').classList.remove('shocked');
+              document.getElementById('c-estate').classList.add('dim');
+              document.getElementById('c-estate-text').style.opacity = "0";
+          }, 400);
+      }, 3500);
+
+      // 6. Mapping Boundaries
+      setTimeout(() => {
+          document.getElementById('log-6').classList.add('show');
+      }, 4200);
+
+      // 7. Lock in Range Lines sequentially
+      setTimeout(() => document.getElementById('cw-ceil').classList.add('expand'), 4300);
+      setTimeout(() => document.getElementById('cw-datum').classList.add('expand'), 4600);
+      setTimeout(() => document.getElementById('cw-floor').classList.add('expand'), 4900);
+
+      // 8. Datum Locked / Show Redirect
+      setTimeout(() => {
+          document.getElementById('log-7').classList.add('show');
+          document.getElementById('demo-reset').classList.add('show');
+      }, 5600);
+    }
+
+    function resetDemo() {
+        // Strip all animation classes to reset state
+        document.getElementById('cinematic-overlay').classList.remove('active');
+        document.getElementById('c-estate').classList.remove('show', 'dim', 'shocked');
+        document.getElementById('c-estate-text').style.opacity = "0";
+        
+        const scanner = document.getElementById('c-scanner');
+        scanner.classList.remove('scan');
+        scanner.style.opacity = '';
+        
+        document.getElementById('c-shockwave').classList.remove('fire');
+
+        [1, 2, 3, 4, 5, 6, 7].forEach(i => document.getElementById('log-' + i).classList.remove('show'));
+        
+        ['ceil', 'datum', 'floor'].forEach(id => {
+            document.getElementById('cw-' + id).classList.remove('expand');
+        });
+
+        document.getElementById('demo-reset').classList.remove('show');
+    }
+  </script>
+</body>
+</html>

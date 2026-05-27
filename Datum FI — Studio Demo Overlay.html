@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#091221">
+<title>Datum FI — Studio Demo Overlay</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-navy: #091221;
+    --teal-mid: #5DCAA5;
+    --gold: #C9A84C;
+    --danger-red: #e24b4a;
+    --white: #ffffff;
+    --muted: rgba(255,255,255,0.4);
+    --grid-line: rgba(100, 180, 255, 0.05);
+    --font-serif: 'Fraunces', serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* Base background for standalone demo */
+  body {
+    background-color: var(--bg-navy);
+    background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    font-family: var(--font-serif);
+    height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* =========================================
+     THE STUDIO DEMO OVERLAY
+     ========================================= */
+  #studio-demo-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: rgba(9, 18, 33, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+    opacity: 1;
+    transition: opacity 0.6s ease, visibility 0.6s;
+    padding: 40px 20px;
+  }
+
+  #studio-demo-overlay.dismissed {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /* --- TOP RIGHT CLOSE BUTTON --- */
+  .demo-close-btn {
+    position: absolute;
+    top: 30px; right: 40px;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 48px;
+    font-weight: 300;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.3s ease, transform 0.3s ease;
+    z-index: 100;
+    padding: 10px;
+  }
+  .demo-close-btn:hover {
+    color: var(--danger-red);
+    transform: scale(1.1);
+  }
+
+  .demo-container {
+    width: 100%;
+    max-width: 1000px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 60px;
+    margin: auto;
+  }
+
+  /* --- RIGHT: ANIMATED STAGE (Now highlighted in Teal) --- */
+  .demo-stage {
+    flex: 1;
+    height: 450px;
+    min-width: 350px;
+    position: relative;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    overflow: hidden;
+    
+    /* Highlighted Box Styles */
+    border: 1px solid var(--teal-mid);
+    box-shadow: inset 0 0 40px rgba(93, 202, 165, 0.1), 0 20px 50px rgba(0,0,0,0.5), 0 0 20px rgba(93, 202, 165, 0.3);
+  }
+
+  .anim-phase {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    padding: 50px 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+  }
+
+  .phase-title {
+    font-family: var(--font-mono); font-size: 9px; color: var(--gold);
+    letter-spacing: 0.2em; margin-bottom: 24px; text-transform: uppercase;
+  }
+
+  /* --- PHASE 1: DRAFTING ACCOUNTS --- */
+  .mock-room {
+    position: relative;
+    padding-left: 15px;
+    border-left: 2px solid var(--teal-mid);
+    margin-bottom: 20px;
+    opacity: 0;
+    transform: translateX(-20px);
+    transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  .mock-room.show {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  
+  .mr-header {
+    display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;
+  }
+  .mr-name {
+    font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--white);
+  }
+  .mr-meta {
+    font-family: var(--font-serif); font-style: italic; font-size: 12px; color: var(--muted);
+  }
+  .mr-val {
+    font-family: var(--font-serif); font-size: 26px; color: var(--white);
+  }
+
+  /* --- PHASE 2: BLUEPRINT GENERATION --- */
+  .blueprint-svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  /* The Room Rectangles */
+  .bp-rect {
+    fill: rgba(29, 158, 117, 0.05);
+    stroke: var(--teal-mid);
+    stroke-width: 1.5;
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    transition: stroke-dashoffset 1.5s cubic-bezier(0.25, 1, 0.5, 1), fill 1s;
+  }
+  .bp-rect.draw {
+    stroke-dashoffset: 0;
+  }
+
+  /* The Golden Measurement Outline */
+  .bp-outline {
+    fill: rgba(201,168,76, 0.02);
+    stroke: var(--gold);
+    stroke-width: 2;
+    stroke-dasharray: 1500;
+    stroke-dashoffset: 1500;
+    transition: stroke-dashoffset 2s cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  .bp-outline.draw {
+    stroke-dashoffset: 0;
+  }
+
+  /* Room Labels */
+  .bp-label {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    fill: var(--teal-mid);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    text-anchor: middle;
+    font-weight: bold;
+    opacity: 0;
+    transform: translateY(5px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+  .bp-label.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .bp-val {
+    font-family: var(--font-serif);
+    font-size: 22px;
+    font-style: italic;
+    fill: var(--white);
+    text-anchor: middle;
+    opacity: 0;
+    transform: translateY(5px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+  .bp-val.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+
+  /* --- LEFT: COPY & CONTROLS --- */
+  .demo-content { flex: 1; max-width: 420px; }
+  .demo-content h1 { font-size: 42px; font-weight: 300; font-style: italic; line-height: 1.1; margin-bottom: 24px; color: var(--white); }
+  .demo-content p { font-family: var(--font-mono); font-size: 13px; line-height: 1.6; color: var(--muted); margin-bottom: 40px; text-transform: uppercase; letter-spacing: 0.1em; }
+  .demo-content p strong { color: var(--teal-mid); font-weight: normal; }
+  
+  .demo-actions { display: flex; flex-direction: column; gap: 16px; }
+  
+  .btn-studio {
+    background: var(--gold); color: var(--bg-navy); border: none; font-family: var(--font-mono); font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.2em; padding: 20px; border-radius: 4px; cursor: pointer; transition: all 0.3s ease; text-align: center; text-decoration: none; box-shadow: 0 10px 30px rgba(201, 168, 76, 0.2);
+  }
+  .btn-studio:hover { transform: translateY(-2px); box-shadow: 0 15px 40px rgba(201, 168, 76, 0.4); background: var(--white); }
+
+  .btn-demo {
+    background: transparent; color: var(--white); border: 1px solid rgba(255,255,255,0.2); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; padding: 16px; border-radius: 4px; cursor: pointer; transition: all 0.3s ease; text-align: center;
+  }
+  .btn-demo:hover { border-color: var(--teal-mid); color: var(--teal-mid); }
+
+  @media (max-width: 900px) {
+    #studio-demo-overlay { align-items: flex-start; }
+    .demo-container { flex-direction: column-reverse; gap: 40px; padding-top: 20px;}
+    .demo-stage { width: 100%; height: 350px; min-height: 350px; }
+    .demo-content { max-width: 100%; text-align: center; padding-bottom: 60px; }
+    .demo-content h1 { font-size: 32px; }
+    .demo-close-btn { top: 10px; right: 20px; }
+  }
+
+</style>
+</head>
+<body>
+
+  <div id="studio-demo-overlay">
+    
+    <button class="demo-close-btn" onclick="dismissStudioDemo()" aria-label="Close Demo">&times;</button>
+
+    <div class="demo-container">
+      
+      <div class="demo-content">
+        <div style="font-family: var(--font-mono); font-size: 10px; color: var(--gold); letter-spacing: 0.2em; margin-bottom: 16px; text-transform: uppercase;">From Sketch to Structure.</div>
+        <h1>This Is Your<br>Blueprint.</h1>
+        <p>You've sketched the outline. Now map every account, every asset, every income stream — and watch your estate take <strong>structural form</strong>.</p>
+        
+        <div class="demo-actions">
+          <a href="/vault.html" class="btn-studio">BUILD YOUR BLUEPRINT &rarr;</a>
+          <button class="btn-demo" onclick="window.location.href='/studio-mock.html'">Demo THE STUDIO</button>
+        </div>
+      </div>
+
+      <div class="demo-stage">
+        
+        <div class="anim-phase" id="phase-1">
+          <div class="phase-title">1. Draft your Estate</div>
+          
+          <div class="mock-room" id="room-1">
+            <div class="mr-header">
+              <span class="mr-name">Pre-Tax 401(k)</span>
+              <span class="mr-meta">The Vault</span>
+            </div>
+            <div class="mr-val">$850,000</div>
+          </div>
+
+          <div class="mock-room" id="room-2">
+            <div class="mr-header">
+              <span class="mr-name">Roth IRA</span>
+              <span class="mr-meta">The Treasury</span>
+            </div>
+            <div class="mr-val">$210,000</div>
+          </div>
+
+          <div class="mock-room" id="room-3">
+            <div class="mr-header">
+              <span class="mr-name">Checking</span>
+              <span class="mr-meta">The Foyer</span>
+            </div>
+            <div class="mr-val">$45,000</div>
+          </div>
+        </div>
+
+        <div class="anim-phase" id="phase-2" style="opacity: 0; transform: translateY(40px);">
+          <div class="phase-title">2. Build your Blueprint</div>
+          
+          <svg class="blueprint-svg" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet">
+            
+            <rect id="bp-r1" class="bp-rect" x="30" y="20" width="180" height="220" />
+            <text id="bp-t1" class="bp-label" x="120" y="120">THE VAULT</text>
+            <text id="bp-v1" class="bp-val" x="120" y="150">$850k</text>
+
+            <rect id="bp-r2" class="bp-rect" x="230" y="20" width="140" height="130" />
+            <text id="bp-t2" class="bp-label" x="300" y="80">TREASURY</text>
+            <text id="bp-v2" class="bp-val" x="300" y="110">$210k</text>
+
+            <rect id="bp-r3" class="bp-rect" x="230" y="170" width="140" height="70" />
+            <text id="bp-t3" class="bp-label" x="300" y="205">FOYER</text>
+            <text id="bp-v3" class="bp-val" x="300" y="230" style="font-size: 16px;">$45k</text>
+
+            <path id="bp-outline" class="bp-outline" d="M 20 10 L 380 10 L 380 250 L 20 250 Z" stroke-dasharray="8 8" />
+          </svg>
+
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    let isStudioDemoActive = true;
+
+    function dismissStudioDemo() {
+      isStudioDemoActive = false;
+      const overlay = document.getElementById('studio-demo-overlay');
+      overlay.classList.add('dismissed');
+      // Optional: hide forever after first view
+      sessionStorage.setItem('datum_studio_demo_seen', 'true');
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // Optional: Check if they've already seen it
+      // if(sessionStorage.getItem('datum_studio_demo_seen') === 'true') {
+      //   document.getElementById('studio-demo-overlay').style.display = 'none';
+      //   isStudioDemoActive = false;
+      // } else {
+        runStudioAnimationSequence();
+      // }
+    });
+
+    // ========================================================
+    // BULLETPROOF JAVASCRIPT ANIMATION SEQUENCER
+    // ========================================================
+    async function runStudioAnimationSequence() {
+        const phase1 = document.getElementById('phase-1');
+        const room1 = document.getElementById('room-1');
+        const room2 = document.getElementById('room-2');
+        const room3 = document.getElementById('room-3');
+
+        const phase2 = document.getElementById('phase-2');
+        const rects = [document.getElementById('bp-r1'), document.getElementById('bp-r2'), document.getElementById('bp-r3')];
+        const texts = [
+            document.getElementById('bp-t1'), document.getElementById('bp-v1'),
+            document.getElementById('bp-t2'), document.getElementById('bp-v2'),
+            document.getElementById('bp-t3'), document.getElementById('bp-v3')
+        ];
+        const outline = document.getElementById('bp-outline');
+
+        while(isStudioDemoActive) {
+            // 0. RESET ALL STATES
+            phase1.style.opacity = '1'; phase1.style.transform = 'translateY(0)';
+            phase2.style.opacity = '0'; phase2.style.transform = 'translateY(40px)';
+            
+            room1.classList.remove('show');
+            room2.classList.remove('show');
+            room3.classList.remove('show');
+
+            rects.forEach(r => r.classList.remove('draw'));
+            texts.forEach(t => t.classList.remove('show'));
+            outline.classList.remove('draw');
+
+            await new Promise(r => setTimeout(r, 600));
+            if(!isStudioDemoActive) break;
+
+            // 1. POPULATE ACCOUNTS (Phase 1)
+            room1.classList.add('show');
+            await new Promise(r => setTimeout(r, 600));
+            room2.classList.add('show');
+            await new Promise(r => setTimeout(r, 600));
+            room3.classList.add('show');
+            
+            await new Promise(r => setTimeout(r, 1200));
+            if(!isStudioDemoActive) break;
+
+            // 2. THE TILT (Transition to Phase 2)
+            phase1.style.opacity = '0'; phase1.style.transform = 'translateY(-40px)';
+            phase2.style.opacity = '1'; phase2.style.transform = 'translateY(0)';
+
+            await new Promise(r => setTimeout(r, 800));
+            if(!isStudioDemoActive) break;
+
+            // 3. DRAW BLUEPRINT RECTANGLES
+            rects.forEach(r => r.classList.add('draw'));
+
+            await new Promise(r => setTimeout(r, 800));
+            if(!isStudioDemoActive) break;
+
+            // 4. SHOW LABELS & VALUES
+            texts.forEach(t => t.classList.add('show'));
+
+            await new Promise(r => setTimeout(r, 600));
+            if(!isStudioDemoActive) break;
+
+            // 5. LOCK IN GOLDEN MEASUREMENT OUTLINE
+            outline.classList.add('draw');
+
+            await new Promise(r => setTimeout(r, 2800));
+            if(!isStudioDemoActive) break;
+
+            // 6. FADE OUT TO LOOP
+            phase2.style.opacity = '0'; phase2.style.transform = 'translateY(-20px)';
+
+            await new Promise(r => setTimeout(r, 600));
+        }
+    }
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<style id="datum-critical-colors">
+  :root{--bg-navy:#091221;--teal:#1D9E75;--teal-mid:#5DCAA5;--gold:#C9A84C;--gold-dark:#B8952F;--white:#fff;--muted:rgba(255,255,255,0.4);--danger-red:#e24b4a}
+  html,body{background-color:#091221!important}
+</style>
+<meta name="theme-color" content="#091221">
+<title>Datum FI — The Method</title>
+<meta name="description" content="Five letters. Five acts. One honest Shape. The technical anatomy of the Datum Method.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Datum FI">
+<meta property="og:title" content="Datum FI — The Method">
+<meta property="og:description" content="The physics engine behind the Shape: D + A + T + U = M.">
+<meta property="og:url" content="https://datumfi.com/methodology.html">
+<meta name="color-scheme" content="dark">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,700&family=DM+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles/typography.css?v=2">
+<link rel="stylesheet" href="/styles/header.css?v=2">
+<style>
+  :root {
+    --bg-navy: #091221;
+    --teal: #1D9E75;
+    --teal-mid: #5DCAA5;
+    --gold: #C9A84C;
+    --danger-red: #e24b4a;
+    --white: #ffffff;
+    --muted: rgba(255,255,255,0.4);
+    --grid-line: rgba(100, 180, 255, 0.05);
+    --font-serif: 'Fraunces', serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  body {
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: var(--bg-navy);
+    color: var(--white);
+    font-family: var(--font-serif);
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
+  }
+
+  /* --- CONTENT CONTAINER --- */
+  .container {
+    position: relative;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 150px 40px 20px;
+    z-index: 10;
+    flex: 1;
+  }
+
+  /* --- HERO --- */
+  .hero-block { margin-bottom: 80px; }
+
+  .page-h1 {
+    margin-bottom: 16px;
+    font-size: 64px;
+    font-weight: 300;
+    font-style: italic;
+    line-height: 1.1;
+    color: var(--white);
+  }
+
+  .page-subhead {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-weight: 500;
+  }
+
+  /* --- RANGE WRAPPER & BOUNDARIES --- */
+  .range-wrapper { position: relative; margin-bottom: 60px; }
+
+  .range-tier {
+    position: absolute; top: 0; bottom: 0; left: 20%; width: 200px;
+    background: rgba(93, 202, 165, 0.06); z-index: -1;
+  }
+
+  .boundary {
+    width: 100vw; position: relative; left: 50%; transform: translateX(-50%);
+    margin: 40px 0; display: flex; flex-direction: column; align-items: flex-end;
+  }
+  .b-ceiling { margin-top: 0; }
+  .b-floor { margin-bottom: 0; }
+
+  .line { height: 2px; width: 100%; opacity: 0.8; }
+  .label-group { padding-right: 10%; margin-bottom: 8px; text-align: right; }
+  .lbl { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase; font-weight: bold; }
+
+  .b-ceiling .line { background: var(--gold); }
+  .b-ceiling .lbl { color: var(--gold); }
+  .b-datum .line { background: var(--teal-mid); }
+  .b-datum .lbl { color: var(--teal-mid); }
+  .b-floor .line { background: var(--danger-red); }
+  .b-floor .lbl { color: var(--danger-red); }
+
+  @keyframes floatDatum { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-6px); } }
+  .b-datum.is-floating { animation: floatDatum 4s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .b-datum.is-floating { animation: none; } }
+
+  /* --- STANZA TYPOGRAPHY --- */
+  .stanza { max-width: 700px; margin: 0 auto 70px; padding-left: 5%; position: relative; z-index: 2; }
+  .stanza .eyebrow { font-family: var(--font-mono); font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.22em; color: var(--gold); margin-bottom: 14px; display: block; }
+  .stanza .eyebrow .ey-act { color: var(--muted); margin-right: 8px; }
+  .stanza h2 { font-family: var(--font-serif); font-size: 36px; font-style: italic; font-weight: 300; line-height: 1.15; color: var(--teal-mid); margin-bottom: 8px; }
+  .stanza .stanza-sub { font-family: var(--font-mono); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.18em; margin-bottom: 26px; display: block; }
+  .stanza p { font-size: 19px; line-height: 1.65; color: rgba(255,255,255,0.85); margin-bottom: 20px; font-weight: 300; }
+  .stanza p.lead { font-size: 21px; color: var(--white); }
+  .stanza strong { color: var(--white); font-weight: 500; }
+  .stanza em { color: var(--teal-mid); font-style: italic; }
+
+  .stanza ul { list-style: none; margin: 0 0 24px 0; padding-left: 20px; }
+  .stanza li { font-size: 18px; color: rgba(255,255,255,0.85); margin-bottom: 10px; font-weight: 300; position: relative; line-height: 1.55; padding-left: 8px; }
+  .stanza li::before { content: "—"; position: absolute; left: -24px; color: var(--teal-mid); }
+
+  /* --- PULL QUOTE --- */
+  .pull-quote { max-width: 720px; margin: 36px auto 36px; padding: 8px 0 8px 28px; border-left: 2px solid var(--gold); }
+  .pull-quote p { font-family: var(--font-serif); font-style: italic; font-size: 22px; line-height: 1.55; color: rgba(255,255,255,0.92); font-weight: 300; margin: 0; }
+  .pull-quote.lived { border-left-color: var(--teal-mid); padding-left: 32px; }
+  .pull-quote.lived p { font-size: 24px; color: var(--white); }
+
+  /* --- CALLOUT (MODELED / HELD CONSTANT) --- */
+  .scope-box { background: rgba(12, 18, 30, 0.55); border: 1px solid rgba(201,168,76,0.18); border-radius: 4px; padding: 24px 28px; margin: 28px 0 32px; }
+  .scope-row { display: flex; gap: 18px; margin-bottom: 10px; align-items: baseline; }
+  .scope-row:last-child { margin-bottom: 0; }
+  .scope-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); font-weight: 500; flex-shrink: 0; width: 130px; padding-top: 2px; }
+  .scope-label.held { color: var(--muted); }
+  .scope-text { font-family: var(--font-mono); font-size: 12px; line-height: 1.7; color: rgba(255,255,255,0.78); font-weight: 300; }
+  .scope-eyebrow { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--teal-mid); font-weight: 500; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px dashed rgba(93,202,165,0.18); }
+  /* --- BRIDGE (italic, muted, centered) --- */
+  .bridge { max-width: 600px; margin: 16px auto 0; text-align: center; font-family: var(--font-serif); font-style: italic; font-size: 16px; color: rgba(255,255,255,0.5); line-height: 1.55; font-weight: 300; }
+
+  /* --- DATUM FORMULA PANEL --- */
+  .formula-panel { background: rgba(12, 18, 30, 0.6); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 40px; width: 100%; max-width: 720px; margin: 60px auto; box-sizing: border-box; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+  .fp-formula { font-family: var(--font-mono); color: var(--gold); font-size: 26px; letter-spacing: 0.2em; font-weight: 500; margin-bottom: 22px; text-align: center; }
+  .fp-subtitle { text-align: center; font-family: var(--font-serif); font-style: italic; font-size: 17px; line-height: 1.55; color: rgba(255,255,255,0.65); font-weight: 300; max-width: 520px; margin: 0 auto 30px; }
+  .fp-divider { height: 1px; width: 100%; border-top: 1px dashed rgba(255,255,255,0.15); margin-bottom: 28px; }
+  .fp-letters { display: grid; grid-template-columns: 32px 140px 1fr; gap: 12px 18px; align-items: baseline; justify-content: center; max-width: 480px; margin: 0 auto; }
+  .fp-letter-row { display: contents; }
+  .fp-letter { font-family: var(--font-mono); color: var(--teal-mid); font-weight: bold; font-size: 16px; letter-spacing: 0.15em; min-width: 24px; }
+  .fp-word { font-family: var(--font-mono); color: var(--white); font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; min-width: 120px; }
+  .fp-action { font-family: var(--font-serif); font-style: italic; font-size: 18px; color: rgba(255,255,255,0.75); font-weight: 300; }
+
+  /* --- TRANSPARENCY TABLE --- */
+  .transparency-block { max-width: 900px; margin: 80px auto; padding: 0 5%; }
+  .transparency-block .eyebrow { font-family: var(--font-mono); font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.22em; color: var(--gold); margin-bottom: 14px; display: block; }
+  .transparency-block h2 { font-family: var(--font-serif); font-size: 32px; font-style: italic; font-weight: 300; line-height: 1.2; color: var(--white); margin-bottom: 26px; }
+  .transparency-block .intro { font-size: 18px; line-height: 1.6; color: rgba(255,255,255,0.8); margin-bottom: 32px; font-weight: 300; }
+  .tp-table { width: 100%; border-collapse: collapse; background: rgba(12,18,30,0.55); border: 1px solid rgba(201,168,76,0.18); border-radius: 4px; overflow: hidden; }
+  .tp-table th, .tp-table td { padding: 18px 20px; text-align: left; vertical-align: top; font-family: var(--font-mono); font-size: 12px; line-height: 1.65; color: rgba(255,255,255,0.78); border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: 300; }
+  .tp-table th { font-weight: 500; color: var(--gold); text-transform: uppercase; letter-spacing: 0.15em; font-size: 10px; background: rgba(201,168,76,0.05); }
+  .tp-table td:first-child { font-family: var(--font-serif); font-style: italic; font-size: 16px; color: var(--teal-mid); font-weight: 400; width: 22%; }
+  .tp-table tr:last-child td { border-bottom: none; }
+
+  /* --- IDENTITY PANEL (sign-off DATUM) --- */
+  .identity-block { max-width: 720px; margin: 80px auto 60px; padding: 0 5%; text-align: center; }
+  .identity-block .eyebrow { font-family: var(--font-mono); font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.22em; color: var(--gold); margin-bottom: 22px; display: block; }
+  .identity-block .line-h { font-family: var(--font-serif); font-style: italic; font-size: 24px; line-height: 1.5; color: rgba(255,255,255,0.92); font-weight: 300; margin-bottom: 6px; }
+  .identity-block .line-h .ltr { color: var(--gold); font-style: normal; font-family: var(--font-mono); font-weight: bold; font-size: 18px; letter-spacing: 0.1em; margin-right: 12px; }
+
+  /* --- POETIC SIGN-OFF --- */
+  .poetic-signoff { text-align: center; margin-top: 80px; margin-bottom: 40px; padding-top: 60px; border-top: 1px dashed rgba(255,255,255,0.1); }
+  .poetic-staccato { font-size: 20px; line-height: 1.8; color: rgba(255,255,255,0.6); margin-bottom: 40px; font-weight: 300; }
+  .poetic-climax { font-size: 44px; font-style: italic; font-weight: 300; line-height: 1.25; color: var(--white); }
+  .poetic-climax .gold { color: var(--gold); }
+  /* --- PHILOSOPHY-STYLE CLOSING ACRONYM PANEL (mirrors philosophy.html stanza 9 exactly) --- */
+  .acronym-panel {
+    background: rgba(12, 18, 30, 0.6);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 8px;
+    padding: 30px 40px;
+    width: 100%;
+    max-width: 720px;
+    margin: 60px auto 30px;
+    box-sizing: border-box;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  }
+  .ap-formula { font-family: var(--font-mono); color: var(--gold); font-size: 22px; letter-spacing: 0.2em; font-weight: 500; margin-bottom: 25px; white-space: nowrap; text-align: center; }
+  .ap-divider { height: 1px; width: 100%; border-top: 1px dashed rgba(255,255,255,0.15); margin-bottom: 25px; }
+  .ap-words { display: flex; justify-content: space-between; align-items: center; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.2em; color: rgba(255,255,255,0.4); }
+  .ap-highlight { color: var(--teal-mid); font-weight: bold; }
+  .mark-text { font-family: var(--font-serif); font-style: italic; font-size: 18px; color: rgba(255,255,255,0.7); display: block; line-height: 1.6; font-weight: 300; text-align: center; max-width: 700px; margin: 24px auto 60px; }
+  .mark-text .highlight { color: var(--teal-mid); font-style: normal; }
+
+
+
+
+  /* --- CTA SECTION --- */
+  .fp-cta-section { max-width: 720px; margin: 60px auto 80px; padding-left: 5%; }
+  .fp-cta-lead { font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold); margin-bottom: 28px; }
+  .fp-cta-grid { display: flex; gap: 16px; flex-wrap: wrap; }
+  .fp-cta-card { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 200px; border: 1px solid rgba(93,202,165,0.35); border-radius: 4px; padding: 18px 24px; text-decoration: none; transition: border-color 0.3s, background 0.3s; background: rgba(93,202,165,0.03); }
+  .fp-cta-card:hover { border-color: var(--teal-mid); background: rgba(93,202,165,0.08); }
+  .fp-cta-card--studio { border-color: rgba(201,168,76,0.35); background: rgba(201,168,76,0.03); }
+  .fp-cta-card--studio:hover { border-color: var(--gold); background: rgba(201,168,76,0.08); }
+  .fp-cta-label { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--teal-mid); font-weight: bold; }
+  .fp-cta-card--studio .fp-cta-label { color: var(--gold); }
+  .fp-cta-sub { font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 0.05em; }
+
+  /* --- FOOTER --- */
+  #disclosure-footer { width: 100%; background: rgba(9, 18, 33, 0.97); border-top: 1px solid rgba(255,255,255,0.05); padding: 20px 40px 24px; text-align: center; margin-top: 20px; }
+  #disclosure-footer p { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,0.25); line-height: 1.6; margin: 0; }
+
+  @media (max-width: 768px) {
+    .container { padding: 120px 24px 20px; }
+    .range-tier { left: 5%; width: 100px; }
+    .page-h1 { font-size: 42px; }
+    .stanza h2 { font-size: 26px; }
+    .stanza p, .stanza li { font-size: 16px; }
+    .pull-quote p { font-size: 18px; }
+    .pull-quote.lived p { font-size: 20px; }
+    .formula-panel { padding: 24px 18px; }
+    .fp-formula { font-size: 18px; letter-spacing: 0.1em; }
+    .fp-letter-row { flex-direction: column; gap: 2px; }
+    .fp-word { min-width: 0; }
+    .tp-table th, .tp-table td { padding: 12px 10px; font-size: 11px; }
+    .tp-table td:first-child { font-size: 14px; }
+    .poetic-climax { font-size: 30px; }
+    .fp-cta-grid { flex-direction: column; }
+    .acronym-panel { padding: 20px 15px; }
+    .ap-formula { font-size: 14px; letter-spacing: 0.1em; margin-bottom: 20px; }
+    .ap-words { flex-direction: column; gap: 10px; font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+  <nav id="app-nav">
+    <a href="/" class="brand-header" aria-label="Datum FI — Home">
+      <img src="/brand/datumfi-mark-d.svg" class="nav-mark" alt="" aria-hidden="true" width="26" height="26">
+      <img src="/brand/datumfi-wordmark-atum-fi.svg" class="nav-wordmark" alt="Datum FI">
+    </a>
+    <div class="nav-links">
+      <a href="/sketch.html" class="nav-link">Sketch</a>
+      <a href="/studio-showcase.html" class="nav-link">Studio</a>
+      <a href="/why-a-range.html" class="nav-link">Shape</a>
+      <a href="/vault.html" class="nav-login-btn">Login</a>
+    </div>
+  </nav>
+
+  <main class="container" id="main-content">
+
+    <!-- HERO -->
+    <div class="hero-block">
+      <h1 class="page-h1">The Method</h1>
+      <div class="page-subhead">Five letters. Five acts. One honest Shape.</div>
+    </div>
+
+    <!-- RANGE WRAPPER OPENS -->
+    <div class="range-wrapper">
+      <div class="range-tier"></div>
+
+      <!-- ============================================ -->
+      <!-- BOUNDARY: STRUCTURAL CEILING -->
+      <!-- ============================================ -->
+      <div class="boundary b-ceiling">
+        <div class="label-group">
+          <span class="lbl">Structural Ceiling</span>
+        </div>
+        <div class="line"></div>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- ZONE 1: ABOVE CEILING -->
+      <!-- The architectural setup. Formula reveal + Acts I & II. -->
+      <!-- ============================================ -->
+
+      <div class="stanza">
+        <p class="lead">Retirement isn't a number.<br>It's a structure with mass, tension, and noise.</p>
+        <p><em>Datum FI is the physics engine that resolves all four into one honest Shape.</em></p>
+        <p>Every tool has a method. Most hide theirs.</p>
+        <p>Ours is the product itself — five acts you move through, five things the math does in response. The acronym is not a mnemonic. It is a sequence. Each letter is a physics primitive. Each act builds on the one before it. Together they form the only honest path from rough envelope to lived answer.</p>
+      </div>
+
+      <!-- DATUM FORMULA PANEL -->
+      <div class="formula-panel">
+        <div class="fp-formula">( D + A ) × ( T + U ) = M</div>
+        <div class="fp-subtitle">When Data meets Architecture under Tension and Uncertainty, Measurement is forged — and intelligence emerges.</div>
+        <div class="fp-divider"></div>
+        <div class="fp-letters">
+          <div class="fp-letter-row"><span class="fp-letter">D</span><span class="fp-word">Data</span><span class="fp-action">Reveal the Shape.</span></div>
+          <div class="fp-letter-row"><span class="fp-letter">A</span><span class="fp-word">Architecture</span><span class="fp-action">Define the Mass.</span></div>
+          <div class="fp-letter-row"><span class="fp-letter">T</span><span class="fp-word">Tension</span><span class="fp-action">Apply the Pressure.</span></div>
+          <div class="fp-letter-row"><span class="fp-letter">U</span><span class="fp-word">Uncertainty</span><span class="fp-action">Structure the Noise.</span></div>
+          <div class="fp-letter-row"><span class="fp-letter">M</span><span class="fp-word">Measurement</span><span class="fp-action">Resolve the Shape.</span></div>
+        </div>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- ACT I — DATA -->
+      <!-- ============================================ -->
+      <div class="stanza">
+        <span class="eyebrow"><span class="ey-act">Act I</span> · Data</span>
+        <h2>Reveal the Shape.</h2>
+        <span class="stanza-sub">The Sketch — pre-retirement instrument. Free. Deterministic.</span>
+        <p>Every calculation begins with inputs. But the choice of <em>which</em> inputs matter — and how they are used — is already a methodology decision.</p>
+        <p>The Sketch takes five: your current age, your retirement age, your investable capital, your annual contributions, and your target annual spending. From these five it draws three simultaneous paths.</p>
+        <p>A <strong>conservative</strong> path — if returns compress and markets disappoint.<br>A <strong>baseline</strong> path — if markets behave near historical averages.<br>An <strong>upside</strong> path — if conditions lean your way.</p>
+        <p>These three paths form the envelope. The lower path becomes the <strong style="color: var(--danger-red);">Survival Floor</strong>. The upper path becomes the <strong style="color: var(--gold);">Structural Ceiling</strong>. The middle path is where your <strong style="color: var(--teal-mid);">Datum</strong> is placed.</p>
+      </div>
+
+      <div class="pull-quote">
+        <p>Why three rates, not one?</p>
+      </div>
+
+      <div class="stanza">
+        <p>A single withdrawal rate cannot answer three structural questions simultaneously. The Sketch uses path-tuned rates:</p>
+        <ul>
+          <li>The <strong>Floor rate</strong> is reduced. It asks what the conservative path can sustain under stress.</li>
+          <li>The <strong>Ceiling rate</strong> is elevated. It asks what the upside path could support under favorable conditions.</li>
+          <li>The <strong>Datum rate</strong> sits on the baseline path. It asks what your inputs honestly project.</li>
+        </ul>
+        <p>The 4% rule applies one rate universally — derived from a 1994 study of US returns from 1926 to 1976, then extended to every retiree regardless of path, time, or context. That is a heuristic. The Sketch uses three rates because the Shape has three structural questions, and collapsing them into one answer destroys the information that makes the Shape useful.</p>
+      </div>
+
+      <div class="stanza">
+        <span class="eyebrow" style="color: var(--teal-mid);">The Five States of a First Shape</span>
+        <p>Once the envelope is drawn and your Datum is placed, the relationship between them produces a structural reading. The Sketch resolves this in five states.</p>
+        <p><strong>Abundant</strong> — Your target sits below the Floor. The conservative path already supports more than you're asking. The Shape has capacity you haven't decided what to do with yet.</p>
+        <p><strong>Grounded</strong> — Your target sits near the lower boundary. The Floor holds it; the space above is your margin. Whether you preserve it or test it is your decision.</p>
+        <p><strong>Expansive</strong> — Your target sits inside a wide Shape with room in both directions. The question isn't whether the Shape holds — it's which edge is worth testing first.</p>
+        <p><strong>Stretched</strong> — Your target is near the Ceiling. The Shape carries it, but the upper paths are doing the work. Less margin means less tolerance for stress or delay.</p>
+        <p><strong>Overextended</strong> — Your target is above the current Ceiling. No modeled path reaches this lifestyle at current inputs. This is the most useful state the Sketch can produce: it tells you precisely where the gap is and which levers could close it.</p>
+        <p><em>These are positions, not judgments. The Shape tells you what is structurally true.</em></p>
+      </div>
+
+      <div class="scope-box"><div class="scope-eyebrow">What the Sketch sees</div>
+        <div class="scope-row"><span class="scope-label">Modeled</span><span class="scope-text">Geometric compounding. Path-tuned withdrawal rates. Real or nominal inflation. Tax drag as a single flat percentage.</span></div>
+        <div class="scope-row"><span class="scope-label held">Held Constant</span><span class="scope-text">Account types. Withdrawal sequencing. Social Security. Income timing. RMDs. Healthcare. One-time events.</span></div>
+      </div>
+
+      <p class="bridge">Data reveals the outline.<br>To understand the structure beneath it, you move to Architecture.</p>
+      <div style="height: 80px;" aria-hidden="true"></div>
+      <!-- ============================================ -->
+      <!-- ACT II — ARCHITECTURE -->
+      <!-- Still above Datum line — Studio is approaching retirement. -->
+      <!-- ============================================ -->
+      <div class="stanza">
+        <span class="eyebrow"><span class="ey-act">Act II</span> · Architecture</span>
+        <h2>Define the Mass.</h2>
+        <span class="stanza-sub">The Studio — drafting environment. Paid. Architectural.</span>
+        <p>The Sketch draws the envelope using broad-stroke assumptions. Architecture replaces them with your actual structure.</p>
+        <p>Studio treats your retirement as a building you're drafting. Accounts become rooms. Plumbing carries cashflow. HVAC sets the climate. Each room has a different tax treatment, a different set of rules for when you can access it, and a different role in the sequence of withdrawals. A taxable brokerage account is not the same room as a traditional 401(k). A Roth IRA is not the same room as an HSA. The architecture of your financial life is the floor plan of these rooms — and the order in which you move through them determines how long the building holds.</p>
+        <p>Studio maps this architecture across four account types: taxable, tax-deferred, Roth, and health savings. For each, it models the tax treatment on contributions, growth, and distributions. It sequences withdrawals to minimize drag and extend the life of the portfolio. It layers in Social Security timing — when to claim, how the benefit interacts with other income — and any pension or structured income source.</p>
+        <p>Liabilities are modeled as <strong>loads</strong> the architecture must carry before the Shape can fully express itself. A mortgage, a structured obligation, a debt-servicing requirement — each changes the effective spending capacity of every year it's present. Architecture does not ignore them. It places them on the floor plan as fixed loads and builds the model around them.</p>
+      </div>
+
+      <div class="scope-box"><div class="scope-eyebrow">What the Studio sees</div>
+        <div class="scope-row"><span class="scope-label">Modeled</span><span class="scope-text">Taxable, tax-deferred, Roth, HSA. Withdrawal sequencing. Social Security timing. Pension and structured income. Tax drag at the bracket level. Roth conversion strategy. Liability demolition.</span></div>
+        <div class="scope-row"><span class="scope-label held">Held Constant</span><span class="scope-text">Market regimes (until Tension). Return assumptions. Volatility patterns. Behavioral change.</span></div>
+      </div>
+
+      <p class="bridge">Once the mass is defined, the next question is:<br>how does the structure behave under pressure?</p>
+
+      <!-- ============================================ -->
+      <!-- BOUNDARY: YOUR DATUM -->
+      <!-- Visual anchor — the floating fixed point. -->
+      <!-- ============================================ -->
+      <div class="boundary b-datum is-floating">
+        <div class="label-group">
+          <span class="lbl">Your Datum</span>
+        </div>
+        <div class="line"></div>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- ZONE 2: BETWEEN DATUM AND FLOOR -->
+      <!-- The pressure / noise zone. Acts III & IV. -->
+      <!-- ============================================ -->
+
+      <!-- ACT III — TENSION -->
+      <div class="stanza">
+        <span class="eyebrow"><span class="ey-act">Act III</span> · Tension</span>
+        <h2>Apply the Pressure.</h2>
+        <span class="stanza-sub">Stress regimes. Historical batteries. Custom matrices.</span>
+        <p class="lead">A structure that has never been stressed is not a structure. It is a drawing.</p>
+        <p>Tension applies real pressure to the architecture — running it through the market conditions that will actually try to break it, and measuring where it holds, where it bends, and where it fails.</p>
+        <p>Studio models tension across four return regimes:</p>
+        <ul>
+          <li><strong>Historical</strong> anchors the model to long-run behavior. The baseline against which everything else is measured.</li>
+          <li><strong>Optimistic</strong> tests the upper capacity under favorable returns.</li>
+          <li><strong>Cautious</strong> compresses the model toward the conservative path. How the structure behaves when markets underdeliver.</li>
+          <li><strong>Custom Matrix</strong> lets you enter your own return triplet. Your view of expected returns, volatility, inflation. The architecture is tested against your assumptions, not someone else's.</li>
+        </ul>
+        <p>Beyond regimes, the engine runs a <strong>stress battery</strong> of named historical events: the 1929 Depression, the 1970s stagflation, the 2000–2008 Lost Decade. These are not scenarios in the colloquial sense. They are structural tests. Each one asks a precise question: under this regime, does the architecture produce a Shape that holds your Datum? If it does, what margin exists? If it doesn't, which room in the floor plan fails first?</p>
+      </div>
+
+      <div class="scope-box">
+        <div class="scope-row"><span class="scope-label">Modeled</span><span class="scope-text">Four return regimes. User-defined custom matrix. Stress battery (1929, 1970s, Lost Decade). Sequence-of-returns risk. Liquidity constraints.</span></div>
+        <div class="scope-row"><span class="scope-label held">Held Constant</span><span class="scope-text">Randomness across paths. Distribution shape (held until Uncertainty).</span></div>
+      </div>
+
+      <p class="bridge">Pressure reveals fragility — but not full uncertainty.<br>To understand uncertainty, the noise itself must be structured.</p>
+      <div style="height: 80px;" aria-hidden="true"></div>
+      <!-- ACT IV — UNCERTAINTY -->
+      <div class="stanza">
+        <span class="eyebrow"><span class="ey-act">Act IV</span> · Uncertainty</span>
+        <h2>Structure the Noise.</h2>
+        <span class="stanza-sub">Ten thousand paths. Four lenses. One distribution.</span>
+        <p class="lead">The most dangerous thing a retirement model can do is pretend that uncertainty is manageable with a single number.</p>
+        <p>It isn't. The future is not a line. It is a distribution — an enormous space of possible outcomes, each with its own sequence of returns, its own inflation path, its own timing of market stress. A deterministic model picks three points in that distribution and calls them the answer. That is useful. It is the right tool for drawing the first outline.</p>
+        <p>But the architecture you've built — the rooms, the sequencing, the tax treatment, the Social Security timing, the liability loads — deserves to be tested against the full distribution, not three points in it.</p>
+        <p>Studio runs <strong>10,000 Monte Carlo paths</strong> through the complete architectural model. Each path is a different sequence of returns drawn from the defined tension regime. Each path runs the architecture from your current age through your full retirement timeline, measuring the Shape at every year along the way. Not one path. Not three. Ten thousand.</p>
+        <p>Four modeling lenses apply simultaneously:</p>
+        <ul>
+          <li><strong>Parametric Log-Normal</strong> — draws from a statistical distribution calibrated to historical parameters.</li>
+          <li><strong>Empirical (1926–Present)</strong> — draws return sequences from actual historical data.</li>
+          <li><strong>CAPE Valuation Adjustment</strong> — modifies expected returns based on current equity valuations.</li>
+          <li><strong>Regime Bootstrap</strong> — conditions return sequences on the economic regime present at each point.</li>
+        </ul>
+        <p>The output is not a line. It is a distribution — a cloud of 10,000 possible Shapes, each one honest about its assumptions. From that cloud, the boundaries emerge. This is not uncertainty eliminated. It is uncertainty <em>structured</em>. The noise becomes a surface you can read.</p>
+      </div>
+
+      <div class="scope-box">
+        <div class="scope-row"><span class="scope-label">Modeled</span><span class="scope-text">Stochastic returns. Volatility. Cross-asset correlation. Path dependency. Sequence-of-returns risk across the full distribution. Four simultaneous lenses.</span></div>
+        <div class="scope-row"><span class="scope-label held">Held Constant</span><span class="scope-text">Behavioral change. Life events outside the plan. Decisions made under conditions the architecture did not anticipate.</span></div>
+      </div>
+
+      <p class="bridge">Once the noise is structured, the final acts begin:<br>Measurement — first as crystallization, then as the Lived Shape.</p>
+      <div style="height: 80px;" aria-hidden="true"></div>
+      <!-- ============================================ -->
+      <!-- ACT V (PART 1) — MEASUREMENT: CRYSTALLIZATION -->
+      <!-- Just above the Floor — the moment of retirement. -->
+      <!-- ============================================ -->
+      <div class="stanza">
+        <span class="eyebrow"><span class="ey-act">Act V</span> · Measurement — Crystallization</span>
+        <h2>Resolve the Shape.</h2>
+        <span class="stanza-sub">The Shape — your boundaries at the moment of retirement.</span>
+        <p>The Shape is not a separate product. It is the act where the engine resolves everything it has been given into the most honest answer it can produce.</p>
+        <p>Where the Sketch drew three deterministic lines, the Shape reveals a distribution-derived envelope:</p>
+        <ul>
+          <li>The <strong style="color: var(--gold);">Structural Ceiling</strong> is the percentile boundary above which the distribution does not reliably reach.</li>
+          <li>The <strong style="color: var(--danger-red);">Survival Floor</strong> is the percentile boundary below which the distribution does not reliably support your Datum.</li>
+          <li>Your <strong style="color: var(--teal-mid);">Datum</strong> sits where your target spending intersects the distribution's behavior.</li>
+        </ul>
+        <p>This is the moment of retirement. The architecture has been drafted. The tension has been applied. The noise has been structured. What remains is a measurement — the most complete one the methodology can produce.</p>
+      </div>
+
+      <div class="pull-quote">
+        <p>The Sketch's Shape is drawn against assumptions.<br>The Studio's Shape is drawn against ten thousand tested paths through your actual architecture under actual tension.<br>The numbers carry a different kind of weight.</p>
+      </div>
+
+      <div class="stanza">
+        <p>They are not estimates of what <em>might</em> happen. They are measurements of what the engine, given everything it needs, believes is structurally true at the moment you stop working.</p>
+      </div>
+
+      <div class="scope-box">
+        <div class="scope-row"><span class="scope-label">Modeled</span><span class="scope-text">Distribution-derived Floor, Datum, and Ceiling. Sensitivity to architectural changes. Year-zero structural limits.</span></div>
+        <div class="scope-row"><span class="scope-label held">Held Constant</span><span class="scope-text">Everything that happens after the measurement is taken. The next act addresses that.</span></div>
+      </div>
+
+      <p class="bridge">A measurement at year zero is not the whole answer.<br>Retirement is not a finish line. It is the beginning of a longer instrument.</p>
+
+      <!-- ============================================ -->
+      <!-- BOUNDARY: SURVIVAL FLOOR -->
+      <!-- ============================================ -->
+      <div class="boundary b-floor">
+        <div class="label-group">
+          <span class="lbl">Survival Floor</span>
+        </div>
+        <div class="line"></div>
+      </div>
+      <div style="height: 60px;" aria-hidden="true"></div>
+      <!-- ============================================ -->
+      <!-- ZONE 3: BELOW FLOOR -->
+      <!-- The Lived Shape — where users actually live for 30 years. -->
+      <!-- This is the page's emphasis section. -->
+      <!-- ============================================ -->
+
+      <!-- ACT V (PART 2) — MEASUREMENT: THE LIVED SHAPE -->
+      <div class="stanza">
+        <span class="eyebrow" style="color: var(--gold);"><span class="ey-act">Act V</span> · Measurement — The Lived Shape</span>
+        <h2 style="color: var(--gold);">Live the Shape.</h2>
+        <span class="stanza-sub" style="color: var(--gold);">Year by year. Re-measured continuously. The instrument you actually inhabit.</span>
+        <p class="lead">Most retirement tools stop at the finish line. They tell you whether you'll <em>reach</em> retirement. They go quiet on what happens <em>during</em> the thirty years that follow.</p>
+        <p><em>Datum FI does not go quiet.</em></p>
+        <p>The Lived Shape is the same Shape, re-measured continuously across the years you actually inhabit. The boundaries do not freeze at the moment of retirement. They breathe.</p>
+        <ul>
+          <li>In years when returns are strong, the <strong style="color: var(--gold);">Living Ceiling</strong> rises. The architecture has more capacity than the year-zero measurement projected. The room above the Datum grows.</li>
+          <li>In years when markets stress, the <strong style="color: var(--danger-red);">Living Floor</strong> compresses. The conservative paths tighten. The room beneath the Datum shrinks.</li>
+          <li>Your <strong style="color: var(--teal-mid);">Datum Range</strong> — the band you are actually living inside — shifts with both. Some years carry more. Some carry less. The range within the Range.</li>
+        </ul>
+      </div>
+
+      <div class="pull-quote lived">
+        <p>I thought I needed one number.<br>Then I realized I needed a framework.<br>Then I realized the framework had to keep working after I retired.</p>
+      </div>
+
+      <div class="stanza">
+        <p>This is the part of the methodology that almost every other retirement tool refuses to model. They give you a probability of success. They give you a target balance. They do not give you a structure that adjusts to the markets you actually experience, the spending you actually do, the conditions you actually face.</p>
+        <p>The Lived Shape does. It treats retirement not as a destination but as a <strong>thirty-year continuously-resolved instrument</strong> — one that responds to the markets in front of you and tells you, year by year, what the structure can carry.</p>
+        <p><strong>Strong year</strong> → the Living Ceiling lifts. The math says: <em>you can take more.</em><br><strong>Stress year</strong> → the Living Floor holds. The math says: <em>compress here, the structure still holds.</em><br><strong>Quiet year</strong> → the Datum Range steadies. The math says: <em>this is the band.</em></p>
+        <p>This is not optimization. It is <strong>honest year-by-year structural truth</strong>, delivered to you in the same Shape language you began with — but now responding to your actual life.</p>
+      </div>
+
+      <div class="scope-box">
+        <div class="scope-row"><span class="scope-label">Modeled</span><span class="scope-text">Year-to-year movement of the Living Ceiling and Living Floor. Datum Range as the lived band. Re-measurement of distribution after each year's actual returns. Sensitivity to spending deviations and market regime shifts.</span></div>
+        <div class="scope-row"><span class="scope-label held">Held Constant</span><span class="scope-text">Behavioral change in real time. Decisions you make outside the framework. Events the architecture cannot anticipate.</span></div>
+      </div>
+
+      <p class="bridge">Measurement returns you to the Shape — the same place you began —<br>but now with full fidelity and full life.</p>
+
+    </div> <!-- /range-wrapper -->
+
+    <!-- ============================================ -->
+    <!-- TRANSPARENCY TABLE — What each layer holds constant -->
+    <!-- ============================================ -->
+    <div class="transparency-block">
+      <span class="eyebrow">Transparency</span>
+      <h2>What every layer models — and what it doesn't.</h2>
+      <p class="intro">Every layer of the methodology models something and holds something constant. Transparency is part of the method. The table below is an honest accounting of both.</p>
+      <table class="tp-table">
+        <thead>
+          <tr>
+            <th>Tier</th>
+            <th>What's Modeled</th>
+            <th>What's Held Constant</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Sketch<br><span style="font-family:var(--font-mono);font-size:10px;font-style:normal;color:var(--muted);letter-spacing:0.15em;text-transform:uppercase;">Data</span></td>
+            <td>Three deterministic paths. Path-tuned rates. Real or nominal inflation. Flat tax drag. Five structural states.</td>
+            <td>Account types. Withdrawal sequencing. Social Security. Income timing. RMDs. Healthcare. One-time events.</td>
+          </tr>
+          <tr>
+            <td>Studio<br><span style="font-family:var(--font-mono);font-size:10px;font-style:normal;color:var(--muted);letter-spacing:0.15em;text-transform:uppercase;">Architecture + Tension</span></td>
+            <td>Four account types. Withdrawal sequencing. Social Security timing. Pension and structured income. Bracket-level tax drag. Roth conversions. Liability demolition. Four return regimes. Custom matrix. Stress battery.</td>
+            <td>Randomness (until Uncertainty). Behavioral change. Active management alpha. Decisions made outside the plan.</td>
+          </tr>
+          <tr>
+            <td>Shape<br><span style="font-family:var(--font-mono);font-size:10px;font-style:normal;color:var(--muted);letter-spacing:0.15em;text-transform:uppercase;">Uncertainty + Measurement</span></td>
+            <td>10,000 Monte Carlo paths. Four simultaneous lenses. Distribution-derived Floor, Datum, Ceiling. Year-to-year Lived Shape. Living Ceiling. Living Floor. Datum Range.</td>
+            <td>Behavioral change in real time. Life events outside the modeled architecture. Decisions made under conditions the model did not anticipate.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="font-family: var(--font-serif); font-style: italic; font-size: 17px; line-height: 1.6; color: rgba(255,255,255,0.7); margin-top: 28px; font-weight: 300;">No layer claims to model everything. Each layer is honest about what it knows and what it doesn't. The methodology earns its precision by being explicit about its limits — not by hiding them.</p>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- IDENTITY BLOCK — DATUM signature reveal -->
+    <!-- Mirrors philosophy.html stanza 9 exactly -->
+    <!-- ============================================ -->
+
+
+
+
+    <div class="stanza" style="text-align: center;">
+      <div class="acronym-panel">
+        <div class="ap-formula">[ D + A ] &times; [ T + U ] = M</div>
+        <div class="ap-divider"></div>
+        <div class="ap-words">
+          <span class="ap-word"><span class="ap-highlight">D</span>ATA</span>
+          <span class="ap-word"><span class="ap-highlight">A</span>RCHITECTURE</span>
+          <span class="ap-word"><span class="ap-highlight">T</span>ENSION</span>
+          <span class="ap-word"><span class="ap-highlight">U</span>NCERTAINTY</span>
+          <span class="ap-word"><span class="ap-highlight">M</span>EASUREMENT</span>
+        </div>
+      </div>
+
+      <span class="mark-text">
+        When <span class="highlight">D</span>ata meets <span class="highlight">A</span>rchitecture under <span class="highlight">T</span>ension and <span class="highlight">U</span>ncertainty, <span class="highlight">M</span>easurement is <span class="highlight">F</span>orged &mdash; and <span class="highlight">I</span>ntelligence emerges.
+      </span>
+    </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div class="stanza" style="text-align: center; max-width: 720px;">
+      <p>Every number reconciles with where your Datum sits in the envelope. No single rate applied universally. No uncertainty collapsed to a point. No hidden assumptions dressed as precision. No finish line dressed as the answer.</p>
+    </div>
+
+
+    <!-- CTA SECTION -->
+    <div class="fp-cta-section">
+      <div class="fp-cta-lead">Where to go next</div>
+      <div class="fp-cta-grid">
+        <a href="/sketch.html" class="fp-cta-card">
+          <span class="fp-cta-label">See the Shape →</span>
+          <span class="fp-cta-sub">Free. No login. First outline in 30 seconds.</span>
+        </a>
+        <a href="/studio-showcase.html" class="fp-cta-card fp-cta-card--studio">
+          <span class="fp-cta-label">Run the Full Engine →</span>
+          <span class="fp-cta-sub">The architecture beneath the envelope.</span>
+        </a>
+        <a href="/philosophy.html" class="fp-cta-card">
+          <span class="fp-cta-label">Read the Philosophy →</span>
+          <span class="fp-cta-sub">How we think, before how we calculate.</span>
+        </a>
+      </div>
+    </div>
+
+  </main>
+
+  <footer id="disclosure-footer">
+    <p>Datum FI is a Decision Confidence Engine. Not investment advice. Not a financial plan. A measurement framework for your own decisions.</p>
+  </footer>
+
+</body>
+</html>

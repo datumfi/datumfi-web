@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#091221">
+<title>Datum FI — Sketch Demo Overlay</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-navy: #091221;
+    --teal-mid: #5DCAA5;
+    --gold: #C9A84C;
+    --danger-red: #e24b4a;
+    --white: #ffffff;
+    --muted: rgba(255,255,255,0.4);
+    --grid-line: rgba(100, 180, 255, 0.05);
+    --font-serif: 'Fraunces', serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* Base background for standalone demo */
+  body {
+    background-color: var(--bg-navy);
+    background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    font-family: var(--font-serif);
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* =========================================
+     THE SKETCH DEMO OVERLAY
+     ========================================= */
+  #sketch-demo-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: rgba(9, 18, 33, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto; /* Allows scrolling on small laptop screens */
+    opacity: 1;
+    transition: opacity 0.5s ease, visibility 0.5s;
+  }
+
+  #sketch-demo-overlay.dismissed {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /* --- TOP RIGHT CLOSE BUTTON --- */
+  .demo-close-btn {
+    position: absolute;
+    top: 20px; right: 30px;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 48px;
+    font-weight: 300;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.3s ease, transform 0.3s ease;
+    z-index: 100;
+    padding: 10px;
+  }
+  .demo-close-btn:hover {
+    color: var(--danger-red);
+    transform: scale(1.1);
+  }
+
+  .demo-container {
+    width: 100%;
+    max-width: 1000px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 60px;
+    padding: 40px;
+    margin: auto;
+  }
+
+  /* --- ANIMATED STAGE --- */
+  .demo-stage {
+    flex: 1;
+    height: 420px;
+    min-width: 300px;
+    position: relative;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    overflow: hidden;
+    
+    border: 1px solid var(--teal-mid);
+    box-shadow: inset 0 0 40px rgba(93, 202, 165, 0.1), 0 20px 50px rgba(0,0,0,0.5), 0 0 20px rgba(93, 202, 165, 0.3);
+  }
+
+  /* Shared Phase Layer */
+  .anim-phase {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    padding: 60px 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  /* =========================================
+     PHASE 1: INPUT SLIDERS
+     ========================================= */
+  #phase-1 {
+    animation: phase1Cycle 8s infinite;
+  }
+  @keyframes phase1Cycle {
+    0%, 40% { opacity: 1; transform: translateY(0); }
+    45%, 95% { opacity: 0; transform: translateY(-40px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  .sim-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px; }
+  .sim-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); }
+  .sim-val { font-family: var(--font-serif); font-size: 28px; font-style: italic; font-weight: bold; color: var(--white); transition: color 0.2s ease; }
+  .sim-val.active { color: var(--teal-mid); }
+  
+  .sim-track { width: 100%; height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; position: relative; margin-bottom: 40px; }
+  .sim-fill {
+    position: absolute; top: 0; left: 0; height: 100%; background: var(--teal-mid); border-radius: 2px;
+    animation: sliderFill 8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  .sim-handle {
+    position: absolute; top: 50%; width: 18px; height: 18px; background: var(--white); border-radius: 50%; transform: translate(-50%, -50%);
+    box-shadow: 0 0 15px var(--teal-mid);
+    animation: sliderHandle 8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  @keyframes sliderFill {
+    0%, 10% { width: 20%; background: var(--muted); }
+    30%, 100% { width: 80%; background: var(--teal-mid); }
+  }
+  @keyframes sliderHandle {
+    0%, 10% { left: 20%; box-shadow: 0 0 10px rgba(255,255,255,0.2); }
+    30%, 100% { left: 80%; box-shadow: 0 0 20px var(--teal-mid); }
+  }
+
+  /* =========================================
+     PHASE 2: RANGE OUTPUT
+     ========================================= */
+  #phase-2 {
+    opacity: 0;
+    animation: phase2Cycle 8s infinite;
+  }
+  @keyframes phase2Cycle {
+    0%, 40% { opacity: 0; transform: translateY(40px); }
+    45%, 90% { opacity: 1; transform: translateY(0); }
+    95%, 100% { opacity: 0; transform: translateY(-40px); }
+  }
+
+  .sim-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+  
+  .sim-toggle { width: 40px; height: 20px; background: rgba(255,255,255,0.1); border-radius: 10px; position: relative; animation: toggleBg 8s infinite; }
+  .sim-toggle-knob { position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; background: var(--white); border-radius: 50%; animation: toggleKnob 8s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+
+  @keyframes toggleBg {
+    0%, 70% { background: rgba(255,255,255,0.1); }
+    72%, 100% { background: var(--danger-red); }
+  }
+  @keyframes toggleKnob {
+    0%, 70% { left: 3px; }
+    72%, 100% { left: 23px; }
+  }
+
+  .sim-range-box { position: relative; width: 100%; height: 200px; }
+  
+  /* The 3 Core Lines */
+  .sim-line {
+    position: absolute; left: 0; width: 100%; height: 3px; border-radius: 2px; opacity: 0; transform: translateY(-50%);
+  }
+  
+  /* Ceiling: Gold, Top */
+  .sim-line.ceil {
+    background: var(--gold);
+    animation: moveCeil 8s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+  }
+  @keyframes moveCeil {
+    0%, 45% { top: 50%; opacity: 0; box-shadow: none; }
+    48% { top: 50%; opacity: 1; }
+    55%, 100% { top: 15%; opacity: 1; box-shadow: 0 0 15px rgba(201, 168, 76, 0.4); }
+  }
+
+  /* Datum: Teal (Middle), flashes Red on shock */
+  .sim-line.datum {
+    animation: moveDatum 8s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+  }
+  @keyframes moveDatum {
+    0%, 45% { top: 50%; opacity: 0; background: var(--teal-mid); box-shadow: none; }
+    48%, 70% { top: 50%; opacity: 1; background: var(--teal-mid); box-shadow: 0 0 15px rgba(93, 202, 165, 0.4); }
+    72%, 100% { top: 50%; opacity: 1; background: var(--danger-red); box-shadow: 0 0 20px rgba(226, 75, 74, 0.8); }
+  }
+
+  /* Floor: Red, Bottom (drops further on shock) */
+  .sim-line.floor {
+    background: var(--danger-red);
+    animation: moveFloor 8s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+  }
+  @keyframes moveFloor {
+    0%, 45% { top: 50%; opacity: 0; box-shadow: none; }
+    48% { top: 50%; opacity: 1; }
+    55%, 70% { top: 80%; opacity: 1; box-shadow: 0 0 10px rgba(226, 75, 74, 0.4); }
+    72%, 100% { top: 95%; opacity: 1; box-shadow: 0 0 25px rgba(226, 75, 74, 0.8); }
+  }
+
+  /* Node Dots for UI realism */
+  .sim-node { position: absolute; right: 20px; top: 50%; width: 10px; height: 10px; background: var(--bg-navy); border: 2px solid; border-radius: 50%; transform: translateY(-50%); }
+  .ceil .sim-node { border-color: var(--gold); }
+  .datum .sim-node { border-color: transparent; } /* Handled by bg color in datum */
+  .floor .sim-node { border-color: var(--danger-red); }
+
+  /* Line Labels */
+  .sim-label-text {
+    position: absolute;
+    right: 20px;
+    bottom: 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .ceil .sim-label-text { color: var(--gold); }
+  .datum .sim-label-text { animation: colorDatum 8s cubic-bezier(0.25, 1, 0.5, 1) infinite; }
+  .floor .sim-label-text { color: var(--danger-red); }
+
+  @keyframes colorDatum {
+    0%, 70% { color: var(--teal-mid); }
+    72%, 100% { color: var(--danger-red); }
+  }
+
+  /* --- LEFT: COPY & CONTROLS --- */
+  .demo-content { flex: 1; max-width: 420px; }
+  .demo-content h1 { font-size: 46px; font-weight: 300; font-style: italic; line-height: 1.1; margin-bottom: 20px; color: var(--white); }
+  .demo-content p { font-family: var(--font-mono); font-size: 13px; line-height: 1.6; color: var(--muted); margin-bottom: 40px; text-transform: uppercase; letter-spacing: 0.1em; }
+  .demo-content p strong { color: var(--teal-mid); font-weight: normal; }
+  
+  .demo-actions { display: flex; flex-direction: column; gap: 16px; }
+  
+  .btn-studio {
+    background: var(--gold); color: var(--bg-navy); border: none; font-family: var(--font-mono); font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.2em; padding: 18px 20px; border-radius: 4px; cursor: pointer; transition: all 0.3s ease; text-align: center; text-decoration: none; box-shadow: 0 10px 30px rgba(201, 168, 76, 0.2);
+  }
+  .btn-studio:hover { transform: translateY(-2px); box-shadow: 0 15px 40px rgba(201, 168, 76, 0.4); background: var(--white); }
+  
+  .btn-studio-sub {
+    display: block; font-size: 9px; color: var(--bg-navy); opacity: 0.8; font-weight: normal; letter-spacing: 0.1em; margin-top: 6px; text-transform: none;
+  }
+
+  .btn-sketch {
+    background: transparent; color: var(--white); border: 1px solid rgba(255,255,255,0.2); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; padding: 16px 20px; border-radius: 4px; cursor: pointer; transition: all 0.3s ease; text-align: center;
+  }
+  .btn-sketch:hover { border-color: var(--teal-mid); color: var(--teal-mid); }
+  
+  .btn-sketch-sub {
+    display: block; font-size: 9px; color: var(--muted); font-weight: normal; letter-spacing: 0.1em; margin-top: 6px; text-transform: none; transition: color 0.3s ease;
+  }
+  .btn-sketch:hover .btn-sketch-sub { color: var(--white); }
+
+  @media (max-width: 900px) {
+    .demo-container { flex-direction: column; gap: 40px; padding: 80px 20px 40px 20px; }
+    .demo-stage { width: 100%; height: 350px; min-height: 350px; }
+    .demo-content { max-width: 100%; text-align: center; }
+    .demo-content h1 { font-size: 36px; }
+  }
+
+</style>
+</head>
+<body>
+
+  <div id="sketch-demo-overlay">
+    
+    <button class="demo-close-btn" onclick="dismissSketchDemo()" aria-label="Close Demo">&times;</button>
+
+    <div class="demo-container">
+      
+      <div class="demo-content">
+        <div style="font-family: var(--font-mono); font-size: 10px; color: var(--gold); letter-spacing: 0.2em; margin-bottom: 16px; text-transform: uppercase;">Data In. Confidence Out.</div>
+        <h1>This Is Your Range.</h1>
+        <p>Every retirement has a Floor, a Ceiling, and a fixed point in between — your <strong>Datum</strong>. In a moment, you'll set your numbers and watch it take shape.</p>
+        
+        <div class="demo-actions">
+          <a href="/studio.html" class="btn-studio">
+            <div>BUILD YOUR BLUEPRINT &rarr;</div>
+            <div class="btn-studio-sub">Full precision. Every asset. Every lever.</div>
+          </a>
+          <button class="btn-sketch" onclick="dismissSketchDemo()">
+            <div>START WITH A QUICK SKETCH</div>
+            <div class="btn-sketch-sub">Free. No signup. Just your numbers.</div>
+          </button>
+        </div>
+      </div>
+
+      <div class="demo-stage">
+        
+        <div class="anim-phase" id="phase-1">
+          <div style="font-family: var(--font-mono); font-size: 9px; color: var(--gold); letter-spacing: 0.2em; margin-bottom: 24px; text-transform: uppercase;">1. System Calibration</div>
+          
+          <div class="sim-row">
+            <span class="sim-label">Current Age</span>
+            <span class="sim-val" id="js-val-age">35</span>
+          </div>
+          <div class="sim-track"><div class="sim-fill"></div><div class="sim-handle"></div></div>
+
+          <div class="sim-row" style="margin-top: 10px;">
+            <span class="sim-label">Annual Contributions</span>
+            <span class="sim-val" id="js-val-contrib">$10,000</span>
+          </div>
+          <div class="sim-track"><div class="sim-fill"></div><div class="sim-handle"></div></div>
+        </div>
+
+        <div class="anim-phase" id="phase-2">
+          <div class="sim-header">
+            <div style="font-family: var(--font-mono); font-size: 9px; color: var(--gold); letter-spacing: 0.2em; text-transform: uppercase;">2. Structural Output</div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span class="sim-label" style="color:var(--danger-red); margin-bottom: 0;">Stress Battery</span>
+              <div class="sim-toggle"><div class="sim-toggle-knob"></div></div>
+            </div>
+          </div>
+
+          <div class="sim-range-box">
+            <div class="sim-line ceil">
+              <div class="sim-label-text">CEILING</div>
+              <div class="sim-node"></div>
+            </div>
+            <div class="sim-line datum">
+              <div class="sim-label-text">YOUR DATUM</div>
+            </div>
+            <div class="sim-line floor">
+              <div class="sim-label-text">FLOOR</div>
+              <div class="sim-node"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Dismissal Logic
+    function dismissSketchDemo() {
+      const overlay = document.getElementById('sketch-demo-overlay');
+      overlay.classList.add('dismissed');
+      sessionStorage.setItem('datum_sketch_demo_seen', 'true');
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      if(sessionStorage.getItem('datum_sketch_demo_seen') === 'true') {
+        document.getElementById('sketch-demo-overlay').style.display = 'none';
+      }
+    });
+
+    // ========================================================
+    // BULLETPROOF NUMERIC SYNC (Runs independent of CSS layout)
+    // ========================================================
+    const valAge = document.getElementById('js-val-age');
+    const valContrib = document.getElementById('js-val-contrib');
+
+    // The CSS animation loop is exactly 8000ms.
+    // We use a high-frequency interval to sync the numbers to the exact millisecond of the loop.
+    setInterval(() => {
+      const t = Date.now() % 8000; // Find current time inside the 8s loop
+
+      if (t < 800) {
+        // 0.0s to 0.8s: Hold at start
+        valAge.innerText = "35";
+        valContrib.innerText = "$10,000";
+        valAge.classList.remove('active');
+        valContrib.classList.remove('active');
+      } 
+      else if (t >= 800 && t <= 2400) {
+        // 0.8s to 2.4s: Sliders are moving. Interpolate numbers.
+        const progress = (t - 800) / 1600;
+        valAge.innerText = 35 + Math.floor(progress * 10); // Goes to 45
+        const cVal = 10000 + Math.floor(progress * 15000); // Goes to 25000
+        valContrib.innerText = "$" + cVal.toLocaleString('en-US');
+        valAge.classList.remove('active');
+        valContrib.classList.remove('active');
+      } 
+      else {
+        // 2.4s to 8.0s: Hold at end (Phase 1 fades out during this time)
+        valAge.innerText = "45";
+        valContrib.innerText = "$25,000";
+        valAge.classList.add('active');
+        valContrib.classList.add('active');
+      }
+    }, 50); // Runs 20 times a second for smooth number ticking
+  </script>
+
+</body>
+</html>

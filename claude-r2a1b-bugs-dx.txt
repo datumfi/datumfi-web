@@ -1,0 +1,213 @@
+R2.A.1b — POST-PATCH REGRESSION DIAGNOSTIC FINDINGS
+=====================================================
+Status: DIAGNOSTIC COMPLETE — awaiting Captain authorization for fix
+DJ:308 active — no patches until Captain reviews
+DJ:242 HOLD active — no commit/push/deploy
+
+========================================================
+Q1: L4090 — WHICH getElementById RETURNS NULL?
+========================================================
+
+L4090 exact content:
+  document.getElementById('s2-market').textContent = paradigmName;
+
+NULL ELEMENT: 's2-market'
+
+CAUSE: id="s2-market" was embedded inside the HAVE card's original prose
+that Zone 1 replaced. Pre-patch content (from git diff):
+
+  Under <strong id="s2-market">Historical</strong> conditions
+  (the middle-of-the-road path), your portfolio is projected to reach
+  <strong id="s2-base-tot" ...>—</strong> at retirement. Your Ceiling
+  assumes markets do better; your Floor assumes worse.<br><br>
+  At that projected balance, the Sketch supports:<br>
+  <span style="display:block;margin:8px 0 4px;">
+    <span style="color:var(--danger-red);">↓ Floor</span> —
+    <strong id="s2-floor" style="color:var(--danger-red);">—</strong>.
+
+Zone 1 replaced this entire prose block with:
+  <span id="s3-have-state" ...>—</span>
+  <div id="s3-have-body" ...></div>
+
+This removed 's2-market' (and 's2-base-tot', 's2-floor', and possibly
+others) from the HTML. 's2-market' is NOT in the 9-removal sweep from
+Zone 2 — it was an accidental HTML removal.
+
+CASCADE:
+  updateEngine() throws TypeError at L4090 on EVERY call
+  → lastCalculatedPoints is never set (set at L4202, after L4090)
+  → updateScreen3WithDesign() hits `if (!lastCalculatedPoints) return;`
+    at L6720 → early return → s3-have-state stays "—", s3-have-body
+    stays empty, s3-want-state stays "—", s3-want-body stays empty
+  → window.currentShapeStateObj stays {name:"INITIALIZING",...}
+    (set at L4203, after the L4090 throw)
+
+SCREEN 2 ANIMATION NOTE: The splash animation code at L2616
+(splash.classList.add('visible')) runs inside requestAnimationFrame
+before any updateEngine() call — not directly blocked by the L4090 throw.
+The exact cascade from BUG 1 to Screen 2 animation missing may require
+a Captain DevTools trace to isolate fully (possible re-entry path
+at L2599 or initDesignSliders() failure).
+
+ALSO CONFIRMED REMOVED (grep returns no HTML match):
+  - id="s2-base-tot" — used at L4199 without null guard, also throws
+  - id="s2-floor"    — used at L4197 without null guard, also throws
+  - id="s2-ceil"     — used at L4198 without null guard, also throws
+
+All 4 were in the HAVE card's original prose (confirmed via git diff):
+  s2-market → inline in "Under <strong id="s2-market">Historical</strong>"
+  s2-base-tot → inline after market text
+  s2-floor → in structured list below
+  s2-ceil → in structured list below
+
+The "Shape Begins" card at L2136-2148 does NOT contain these 4 elements.
+They were exclusively in the HAVE card body — now replaced.
+
+THROW ORDER IN updateEngine() if all 4 are null:
+  L4090: s2-market  → THROWS FIRST, stops execution here
+  L4197: s2-floor   → would also throw (not reached due to L4090 abort)
+  L4198: s2-ceil    → would also throw
+  L4199: s2-base-tot → would also throw
+
+SECONDARY THROW SITES (not null-guarded):
+  L4848: document.getElementById('s2-market').textContent → throws in pinScenario()
+  L5069: ${document.getElementById('s2-market').textContent} → throws in renderDesignCanvas()
+
+FIX SCOPE (requires Captain authorization):
+  Restore all 4 elements to HTML. Options:
+  A) Hidden display-none spans in Screen 3 outside visible card content
+  B) Visible additions to "Shape Begins" card (s2-age/s2-retire area)
+  C) Add null guards to updateEngine() L4090/L4197/L4198/L4199 AND to
+     L4848/L5069 — but elements still need to exist for value-reads
+  Captain to select approach.
+
+OTHER REFERENCES TO s2-market THAT WILL ALSO NULL-THROW:
+  - L4090: updateEngine() — confirmed throw site
+  - L4848: pinnedParadigm: document.getElementById('s2-market').textContent
+  - L5069: ${document.getElementById('s2-market').textContent} (template literal)
+  - L5588: setEl('s2-market', 'Historical'); — setEl guards null, won't throw
+  - L8693: set('s2-market', mktLabel); — set guards null, won't throw
+
+CRITICAL: L4848 and L5069 are also direct .textContent / template literal
+accesses without null guards. These will also throw when reached.
+
+========================================================
+Q2: OBJECT.ASSIGN BLOCK — SYNTAX VALID? KEYS IN _S3?
+========================================================
+
+SYNTAX: The block at L7936-8597 is syntactically valid.
+  - Scanned all 66 template literal strings — no stray backticks
+  - L7935: `    };` closes _S3
+  - L7936: `    Object.assign(_S3, {` opens block
+  - L8596: Last entry closes with backtick
+  - L8597: `    });` closes Object.assign
+  - L8598: `var _s3get = function(...)` follows correctly
+
+DOES IT EXECUTE? YES. Object.assign runs at module scope in the second
+<script> block (L2650-8849). It executes synchronously during HTML parsing,
+BEFORE any requestAnimationFrame callbacks fire. The rAF at L5564 that
+calls updateEngine() fires AFTER the script block completes. So all 66
+keys land in _S3 successfully.
+
+CAPTAIN PROBE RESULT EXPLAINED:
+  Object.keys(_S3).filter(k => k.startsWith('S3.HAVE.') ||
+    k.startsWith('S3.WANT.')).length === 0
+
+This returns 0 NOT because the keys are missing, but because the key
+format does NOT start with 'S3.HAVE.' or 'S3.WANT.'. The actual format
+is:
+
+  'S3.C2.{STATENAME}-{SUBZONE}.{HAVE|WANT}.{MARKET}'
+
+FIRST 3 KEYS (verbatim from L7937-7966):
+  'S3.C2.OVEREXTENDED-STRUCTURAL.HAVE.AVG'
+  'S3.C2.OVEREXTENDED-STRUCTURAL.HAVE.STR'
+  'S3.C2.OVEREXTENDED-STRUCTURAL.HAVE.OPT'
+
+CORRECT PROBE to confirm they landed:
+  Object.keys(_S3).filter(k => k.startsWith('S3.C2.')).length
+  → should return 66 (new) + 10 pre-existing S3.C2.* keys = 76
+
+  OR specifically for new keys:
+  Object.keys(_S3).filter(k =>
+    k.startsWith('S3.C2.') && (k.includes('.HAVE.') || k.includes('.WANT.'))
+  ).length
+  → should return 66
+
+========================================================
+Q3: MARKET SUFFIX — .STR OR .STRESS?
+========================================================
+
+KEYS USE: .STR  (not .STRESS)
+
+First AVG key: 'S3.C2.OVEREXTENDED-STRUCTURAL.HAVE.AVG'
+First STR key: 'S3.C2.OVEREXTENDED-STRUCTURAL.HAVE.STR'
+First OPT key: 'S3.C2.OVEREXTENDED-STRUCTURAL.HAVE.OPT'
+
+WIRE-IN LOOKUP (L6786) also uses .STR:
+  var _mktKey = { average: 'AVG', stressed: 'STR', optimistic: 'OPT' }
+    [_paradigm] || 'AVG';
+
+ASSESSMENT: Keys and lookup both use 'STR' — internally consistent.
+Captain spec'd 'STRESS'; implementation used 'STR'. This is a spec
+deviation but NOT a runtime key-mismatch bug (both sides use 'STR').
+Captain to confirm whether 'STR' is acceptable or whether keys + lookup
+must both be changed to 'STRESS'.
+
+========================================================
+Q4: WIRE-IN KEY CONSTRUCTION (EXACT LINES)
+========================================================
+
+From updateScreen3WithDesign() inner IIFE, L6799-6800:
+
+  var _sk1 = 'S3.C2.' + ((stObj1.name || 'EXPANSIVE') + '-' +
+               (stObj1.subZone || 'CENTERED')) + '.HAVE.' + _mktKey;
+  var _sk2 = 'S3.C2.' + (stObj2.name + '-' +
+               (stObj2.subZone || 'CENTERED')) + '.WANT.' + _mktKey;
+
+Format built: 'S3.C2.{NAME}-{SUBZONE}.{HAVE|WANT}.{AVG|STR|OPT}'
+  → MATCHES Object.assign key format exactly ✓
+
+RUNTIME ISSUE (secondary to BUG 1):
+  stObj1 = window.currentShapeStateObj || {}
+  Since updateEngine() throws at L4090 before reaching L4203
+  (window.currentShapeStateObj = stateObj), stObj1.name remains
+  "INITIALIZING" → _sk1 = 'S3.C2.INITIALIZING-CENTERED.HAVE.AVG'
+  → not in _S3 → _s3get returns '' → body empty
+
+  BUT this path is never reached because L6720 returns early:
+    `if (!lastCalculatedPoints) return;`
+  lastCalculatedPoints is also set after L4090 (at L4202).
+
+========================================================
+SUMMARY OF BUGS
+========================================================
+
+BUG 1 (REAL CODE BUG — HTML orphan):
+  id="s2-market" was accidentally removed from HTML by Zone 1.
+  It was embedded in the HAVE card's original prose (not a standalone
+  element). updateEngine() throws at L4090 with no null guard.
+  FIX SCOPE: Restore id="s2-market" to HTML (exact location TBD per
+  Captain — likely hidden span outside the HAVE/WANT cards, or restored
+  to "Shape Begins" card prose at L2139-2146).
+  ALSO CHECK: id="s2-base-tot" (L4199) and id="s2-floor" as used in
+  updateEngine() — may also be missing.
+
+BUG 2 (PROBE MISMATCH — not a code bug):
+  Captain's filter used 'S3.HAVE.' / 'S3.WANT.' prefix; actual keys
+  use 'S3.C2.' prefix. The 66 keys ARE in _S3 and the wire-in format
+  matches. No Object.assign bug.
+
+  SECONDARY (blocked by BUG 1): Even when BUG 1 is fixed and
+  updateScreen3WithDesign() runs fully, the _sk1/_sk2 construction is
+  correct and keys exist — content WILL populate.
+
+PENDING CAPTAIN DECISIONS:
+  1. Authorize fix for id="s2-market" (and check for co-removed
+     siblings: id="s2-base-tot", id="s2-floor")
+  2. Confirm STR vs STRESS market suffix (spec deviation, not bug)
+  3. Clarify Screen 2 animation cascade path if separate fix is needed
+  4. Confirm correct probe to verify Object.assign landed (see Q2)
+
+NO PATCHES UNTIL CAPTAIN REVIEWS AND AUTHORIZES.
+DJ:308 diagnostic-first. DJ:242 HOLD active.

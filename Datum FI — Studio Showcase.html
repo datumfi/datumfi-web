@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Datum FI — Studio Showcase</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles/typography.css">
+<link rel="stylesheet" href="/styles/header.css">
+<style>
+  :root {
+    --bg-navy: #091221;
+    --bg-darker: #050a14;
+    --teal: #1D9E75;
+    --teal-mid: #5DCAA5;
+    --gold: #C9A84C;
+    --danger-red: #e24b4a;
+    --hot: #ffb864;
+    --cold: #64b4ff;
+    --white: #ffffff;
+    --muted: rgba(255,255,255,0.4);
+    --grid-line: rgba(100, 180, 255, 0.05);
+    --font-serif: 'Fraunces', serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background-color: var(--bg-navy);
+    color: var(--white);
+    font-family: var(--font-serif);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* --- BRAND HEADER --- */
+  #app-nav {
+    position: relative; z-index: 50; display: flex; justify-content: space-between; align-items: center;
+    padding: 30px 5%; max-width: 1800px; margin: 0 auto;
+  }
+  .brand-header { display: inline-flex; align-items: baseline; text-decoration: none; user-select: none; font-size: 24px; }
+  .brand-datum { font-family: var(--font-serif); font-weight: 300; letter-spacing: 0.15em; color: var(--teal-mid); position: relative; padding-bottom: 0.12em; }
+  .brand-datum::after { content: ''; position: absolute; bottom: 0; left: 4%; width: 92%; height: 0.06em; background-color: var(--gold); border-radius: 2px; }
+  .brand-fi { font-family: var(--font-mono); font-size: 0.73em; font-weight: 300; letter-spacing: 0.1em; color: var(--teal-mid); margin-left: 0.35em; transform: translateY(0.05em); }
+  .nav-links { display: flex; gap: 32px; align-items: center; }
+  .nav-link { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); text-decoration: none; transition: color 0.3s; }
+  .nav-link.active, .nav-link:hover { color: var(--teal-mid); border-bottom: 1px solid var(--teal-mid); padding-bottom: 4px; }
+  .nav-feedback-btn { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); border: 1px solid rgba(255,255,255,0.1); background: transparent; padding: 10px 20px; border-radius: 4px; cursor: pointer; transition: all 0.3s; }
+  .nav-feedback-btn:hover { border-color: var(--white); color: var(--white); }
+  .nav-login-btn { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gold); text-decoration: none; transition: color 0.3s; }
+  .nav-login-btn:hover { color: var(--white); }
+
+  /* --- SHOWCASE CONTAINER --- */
+  .studio-showcase {
+    max-width: 1000px;
+    margin: 60px auto 100px;
+    padding: 0 40px;
+    position: relative;
+    z-index: 10;
+  }
+
+  .showcase-header {
+    text-align: center;
+    margin-bottom: 80px;
+  }
+
+  .showcase-header h2 {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--gold);
+    margin-bottom: 16px;
+  }
+
+  .showcase-header h1 {
+    font-size: 56px;
+    font-weight: 300;
+    font-style: italic;
+    line-height: 1.1;
+    margin-bottom: 24px;
+  }
+
+  .showcase-header p {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--muted);
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  /* --- INTERACTIVE CARDS --- */
+  .feature-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 40px;
+    margin-bottom: 40px;
+    display: flex;
+    gap: 40px;
+    align-items: center;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    transition: border-color 0.3s ease;
+  }
+
+  .feature-card:hover {
+    border-color: rgba(93, 202, 165, 0.3);
+  }
+
+  .feature-text { flex: 1; }
+  .feature-visual { flex: 1.2; position: relative; height: 280px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center;}
+
+  .f-num { font-family: var(--font-serif); font-size: 24px; font-style: italic; color: var(--teal-mid); margin-bottom: 16px; display: block; }
+  .f-title { font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--white); margin-bottom: 16px; }
+  .f-desc { font-family: var(--font-mono); font-size: 11px; color: var(--muted); line-height: 1.6; margin-bottom: 24px; }
+
+  /* Interactive Buttons inside features */
+  .interactive-btn {
+    background: transparent; border: 1px solid var(--gold); color: var(--gold);
+    font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em;
+    padding: 10px 20px; border-radius: 4px; cursor: pointer; transition: all 0.3s ease;
+  }
+  .interactive-btn:hover { background: var(--gold); color: var(--bg-navy); }
+  .interactive-btn.active { background: var(--danger-red); border-color: var(--danger-red); color: var(--white); }
+  
+  .mc-hud { position: absolute; top: 20px; right: 20px; text-align: right; }
+  .mc-hud.left { right: auto; left: 20px; text-align: left; }
+  .mc-hud-title { font-family: var(--font-mono); font-size: 9px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+  .mc-hud-val { font-family: var(--font-serif); font-size: 28px; font-style: italic; color: var(--teal-mid); transition: color 0.5s; }
+
+  /* --- VISUAL 1: MONTE CARLO ENGINE --- */
+  .mc-svg { width: 100%; height: 100%; padding: 20px; overflow: visible; }
+  .mc-path { fill: none; stroke-width: 2; opacity: 0.4; transition: all 0.8s cubic-bezier(0.25, 1, 0.5, 1); transform-origin: left center; }
+  .mc-path.p1 { stroke: var(--teal-mid); }
+  .mc-path.p2 { stroke: var(--gold); }
+  .mc-path.p3 { stroke: var(--white); opacity: 0.2; }
+  .mc-path.p4 { stroke: rgba(255,255,255,0.1); }
+  .mc-floor { stroke: var(--danger-red); stroke-dasharray: 4 4; stroke-width: 1.5; transition: y1 0.8s, y2 0.8s; }
+
+  /* --- VISUAL 2: THERMODYNAMIC TAX SEQUENCING --- */
+  .tax-container { display: flex; gap: 20px; width: 100%; padding: 0 40px; align-items: flex-end; height: 160px; }
+  .tax-pillar { flex: 1; border-radius: 4px 4px 0 0; position: relative; transition: all 0.8s ease; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding-bottom: 10px;}
+  .pillar-pretax { background: rgba(255,255,255,0.05); height: 100%; border: 1px solid rgba(255,255,255,0.1); }
+  .pillar-roth { background: rgba(255,255,255,0.05); height: 40%; border: 1px solid rgba(255,255,255,0.1); }
+  .pillar-taxable { background: rgba(255,255,255,0.05); height: 60%; border: 1px solid rgba(255,255,255,0.1); }
+  .pillar-lbl { font-family: var(--font-mono); font-size: 9px; color: var(--white); letter-spacing: 0.1em; text-transform: uppercase; text-align: center; }
+  .tax-container.optimized .pillar-pretax { height: 60%; background: rgba(100, 180, 255, 0.1); border-color: var(--cold); box-shadow: 0 0 20px rgba(100, 180, 255, 0.2); }
+  .tax-container.optimized .pillar-roth { height: 90%; background: rgba(93, 202, 165, 0.1); border-color: var(--teal-mid); box-shadow: 0 0 20px rgba(93, 202, 165, 0.2); }
+  .tax-container.optimized .pillar-taxable { height: 10%; background: rgba(226, 75, 74, 0.1); border-color: var(--danger-red); box-shadow: 0 0 20px rgba(226, 75, 74, 0.2); }
+
+  /* --- VISUAL 3: OUTFLOW ROUTING --- */
+  @keyframes dashFlow { from { stroke-dashoffset: 32; } to { stroke-dashoffset: 0; } }
+
+  /* --- VISUAL 4: FEE DRAG WEDGE --- */
+  .fee-svg { width: 100%; height: 100%; overflow: visible; }
+  .fee-wedge { fill: rgba(226, 75, 74, 0.3); opacity: 0; transition: opacity 0.8s; }
+  .fee-line { stroke: var(--danger-red); stroke-width: 2; fill: none; opacity: 0; transition: opacity 0.8s; }
+  .fee-base { fill: rgba(93, 202, 165, 0.1); stroke: var(--teal-mid); stroke-width: 2; }
+
+  /* --- VISUAL 5: THE DOSSIER GENERATOR --- */
+  .doc-preview { width: 140px; height: 180px; background: var(--bg-navy); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 16px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+  .doc-line { height: 4px; background: rgba(255,255,255,0.1); margin-bottom: 8px; border-radius: 2px; width: 100%; }
+  .doc-line.short { width: 60%; }
+  .doc-line.gold { background: var(--gold); width: 40%; margin-bottom: 16px; }
+  .doc-chart { height: 40px; border: 1px dashed rgba(93, 202, 165, 0.4); margin-bottom: 16px; position: relative; }
+  .doc-chart-line { position: absolute; top: 50%; left: 0; width: 100%; height: 2px; background: var(--teal-mid); }
+  .scanner { position: absolute; top: -10px; left: 0; width: 100%; height: 2px; background: var(--teal-mid); box-shadow: 0 0 10px var(--teal-mid); opacity: 0; }
+  .scanning .scanner { animation: scanDown 1.5s ease-in-out infinite; opacity: 1; }
+  @keyframes scanDown { 0% { top: 0; } 100% { top: 100%; } }
+
+  /* --- CTA SECTION & BUTTONS --- */
+  .cta-section { text-align: center; margin-top: 100px; padding-top: 60px; border-top: 1px solid rgba(255,255,255,0.05); }
+  .cta-section h2 { font-size: 36px; font-weight: 300; font-style: italic; margin-bottom: 24px; }
+  
+  .btn-sketch {
+    display: inline-block; background: var(--teal-mid); color: var(--bg-navy);
+    font-family: var(--font-mono); font-size: 12px; font-weight: bold; text-transform: uppercase;
+    letter-spacing: 0.15em; padding: 16px 32px; border-radius: 4px; text-decoration: none;
+    transition: all 0.3s; margin-right: 16px; border: 1px solid var(--teal-mid);
+  }
+  .btn-sketch:hover { background: transparent; color: var(--teal-mid); }
+
+  .btn-studio {
+    display: inline-block; background: var(--gold); color: var(--bg-navy);
+    font-family: var(--font-mono); font-size: 12px; font-weight: bold; text-transform: uppercase;
+    letter-spacing: 0.15em; padding: 16px 32px; border-radius: 4px; text-decoration: none;
+    transition: all 0.3s; border: 1px solid var(--gold);
+  }
+  .btn-studio:hover { background: transparent; color: var(--gold); }
+
+  .disclaimer-text {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: rgba(255,255,255,0.3);
+      text-align: center;
+      max-width: 700px;
+      margin: 40px auto 0;
+      line-height: 1.6;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+  }
+
+  .legal-footer {
+    max-width: 1000px;
+    margin: 60px auto 0;
+    padding-bottom: 40px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.6;
+    color: rgba(255,255,255,0.25);
+    text-align: center;
+  }
+
+  @media (max-width: 768px) {
+    .feature-card { flex-direction: column; }
+    .feature-card[style*="row-reverse"] { flex-direction: column !important; }
+    .feature-visual { width: 100%; }
+    .showcase-header h1 { font-size: 42px; }
+    .btn-sketch { margin-right: 0; margin-bottom: 16px; display: block; }
+    .btn-studio { display: block; }
+  }
+</style>
+</head>
+<body>
+
+  <nav id="app-nav">
+    <a href="/" class="brand-header"><span class="brand-datum">DATUM</span><span class="brand-fi">FI</span></a>
+    <div class="nav-links">
+      <a href="/sketch.html" class="nav-link active">Sketch</a>
+      <a href="/studio.html" class="nav-link">Studio</a>
+      <a href="/range.html" class="nav-link" id="nav-range-link" style="display:none;">Range</a>
+      <a href="/philosophy.html" class="nav-link">Philosophy</a>
+      <a href="/vault.html" class="nav-login-btn">Login</a>
+      <button class="nav-feedback-btn" onclick="openFeedback()">Share Feedback</button>
+    </div>
+    <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <div class="nav-mobile-menu" id="nav-mobile-menu">
+    <a href="/sketch.html" class="nav-mobile-link active">Sketch</a>
+    <a href="/studio.html" class="nav-mobile-link">Studio</a>
+    <a href="/range.html" class="nav-mobile-link" id="nav-mob-range" style="display:none;">Range</a>
+    <a href="/philosophy.html" class="nav-mobile-link">Philosophy</a>
+    <a href="/vault.html" class="nav-mobile-login">Login</a>
+    <button class="nav-mobile-feedback" onclick="closeMobileNav(); openFeedback()">Share Feedback</button>
+  </div>
+
+<section class="studio-showcase">
+  
+  <div class="showcase-header">
+    <h2>The Studio Upgrade</h2>
+    <h1>Transform guesses into<br>structured reality.</h1>
+    <p>The Sketch gives you an estimate. The Studio gives you an architecture. Unlock institutional-grade modeling, thermodynamic tax sequencing, liability demolition, and the power to print your Blueprint.</p>
+  </div>
+
+  <div class="feature-card">
+    <div class="feature-text">
+      <span class="f-num">01.</span>
+      <h3 class="f-title">Measure Uncertainty. Don't fear it.</h3>
+      <p class="f-desc">The Studio drops your portfolio into 10,000 market futures. Test your architecture against the 1929 Crash, the 1970s Stagflation, or Japan's Lost Decade with a single click.</p>
+      <button class="interactive-btn" id="btn-stress" onclick="toggleStress()">Inject Stress Battery</button>
+    </div>
+    <div class="feature-visual">
+      <div class="mc-hud">
+        <div class="mc-hud-title">Plan Convergence</div>
+        <div class="mc-hud-val" id="hud-surv">99.8%</div>
+      </div>
+      <svg class="mc-svg" viewBox="0 0 400 200" preserveAspectRatio="none">
+        <path id="path1" class="mc-path p1" d="M 0 100 Q 100 80, 200 90 T 400 20" />
+        <path id="path2" class="mc-path p2" d="M 0 100 Q 150 120, 250 80 T 400 50" />
+        <path id="path3" class="mc-path p3" d="M 0 100 Q 100 110, 200 100 T 400 90" />
+        <path id="path4" class="mc-path p4" d="M 0 100 Q 80 90, 150 130 T 400 140" />
+        
+        <line id="floor-line" class="mc-floor" x1="0" y1="160" x2="400" y2="160" />
+        <text x="390" y="150" font-family="DM Mono" font-size="8" fill="#e24b4a" text-anchor="end">SURVIVAL FLOOR</text>
+      </svg>
+    </div>
+  </div>
+
+  <div class="feature-card" style="flex-direction: row-reverse;">
+    <div class="feature-text">
+      <span class="f-num">02.</span>
+      <h3 class="f-title">Master Your Tax Topography</h3>
+      <p class="f-desc">Stop paying taxes you don't owe. The Studio's Thermodynamic Engine automatically routes your drawdowns across Pre-Tax, Roth, and Taxable accounts to preserve maximum capital.</p>
+      <button class="interactive-btn" id="btn-tax" style="border-color: var(--teal-mid); color: var(--teal-mid);" onclick="toggleTax()">Run Thermal Optimization</button>
+    </div>
+    <div class="feature-visual">
+      <div class="mc-hud left">
+        <div class="mc-hud-title">Estimated Tax Drag</div>
+        <div class="mc-hud-val" id="hud-tax" style="color: var(--danger-red); font-size: 20px;">$485,000</div>
+      </div>
+      <div class="tax-container" id="tax-viz">
+        <div class="tax-pillar pillar-pretax"><span class="pillar-lbl">Pre-Tax</span></div>
+        <div class="tax-pillar pillar-roth"><span class="pillar-lbl">Roth</span></div>
+        <div class="tax-pillar pillar-taxable"><span class="pillar-lbl">Taxable</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="feature-card">
+    <div class="feature-text">
+      <span class="f-num">03.</span>
+      <h3 class="f-title">Engineer Your Outflows</h3>
+      <p class="f-desc">Watch your architecture work. The Studio maps the exact sequence of capital extraction and automatically routes your excess free cash flow to demolish high-interest liabilities before they compound.</p>
+      <button class="interactive-btn" id="btn-routing" onclick="toggleRouting()">Accelerate Demolition</button>
+    </div>
+    <div class="feature-visual">
+      <div class="mc-hud">
+        <div class="mc-hud-title">Est. Debt Freedom</div>
+        <div class="mc-hud-val" id="hud-payoff" style="color: var(--danger-red);">14.2 Years</div>
+      </div>
+      <svg class="mc-svg" viewBox="0 0 400 200" preserveAspectRatio="xMidYMid meet" style="padding: 0;">
+          <rect x="40" y="80" width="100" height="80" fill="rgba(29, 158, 117, 0.05)" stroke="var(--teal-mid)" stroke-width="2" rx="4"/>
+          <text x="90" y="125" font-family="var(--font-mono)" font-size="10" fill="var(--teal-mid)" text-anchor="middle" letter-spacing="0.1em">LIQUIDITY</text>
+
+          <rect id="route-debt-box" x="260" y="40" width="100" height="120" fill="rgba(226, 75, 74, 0.05)" stroke="var(--danger-red)" stroke-width="2" rx="4" style="transition: height 0.8s cubic-bezier(0.25, 1, 0.5, 1), y 0.8s cubic-bezier(0.25, 1, 0.5, 1);"/>
+          <text id="route-debt-txt" x="310" y="105" font-family="var(--font-mono)" font-size="10" fill="var(--danger-red)" text-anchor="middle" letter-spacing="0.1em" style="transition: y 0.8s cubic-bezier(0.25, 1, 0.5, 1);">LIABILITY</text>
+
+          <path id="route-line" d="M 140 120 C 200 120, 200 100, 260 100" fill="none" stroke="var(--gold)" stroke-width="3" stroke-dasharray="8 8" style="opacity: 0; transition: opacity 0.3s; animation: dashFlow 1s linear infinite;"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="feature-card" style="flex-direction: row-reverse;">
+    <div class="feature-text">
+      <span class="f-num">04.</span>
+      <h3 class="f-title">Expose the Invisible Leaks</h3>
+      <p class="f-desc">Standard AUM (Assets Under Management) fees silently erode decades of compounding growth. The Studio isolates these structural frictions so you can measure their exact damage.</p>
+      <button class="interactive-btn" id="btn-fees" style="border-color: var(--danger-red); color: var(--danger-red);" onclick="toggleFees()">Reveal 1% AUM Impact</button>
+    </div>
+    <div class="feature-visual">
+      <div class="mc-hud left">
+        <div class="mc-hud-title">Capital Lost to Fees</div>
+        <div class="mc-hud-val" id="hud-fees">$0</div>
+      </div>
+      <svg class="fee-svg" viewBox="0 0 400 200" preserveAspectRatio="none">
+        <path class="fee-base" d="M -10 200 Q 200 160, 420 40 L 420 220 Z" />
+        <path id="fee-wedge" class="fee-wedge" d="M -10 200 Q 200 160, 420 40 L 420 100 Q 200 170, -10 200 Z" />
+        <path id="fee-line" class="fee-line" d="M -10 200 Q 200 170, 420 100" />
+      </svg>
+    </div>
+  </div>
+
+  <div class="feature-card">
+    <div class="feature-text">
+      <span class="f-num">05.</span>
+      <h3 class="f-title">Confidence you can Export</h3>
+      <p class="f-desc">When the math is perfect, export it. Generate a beautifully formatted, institutional-grade Intelligence Dossier to hand to your spouse or financial advisor. They can't argue with architecture.</p>
+      <button class="interactive-btn" onclick="animateDossier()">Generate Dossier</button>
+    </div>
+    <div class="feature-visual">
+      <div class="doc-preview" id="doc-prev">
+        <div class="scanner"></div>
+        <div class="doc-line gold"></div>
+        <div class="doc-line"></div>
+        <div class="doc-line short"></div>
+        <div style="margin-top: 20px;"></div>
+        <div class="doc-chart">
+          <div class="doc-chart-line"></div>
+        </div>
+        <div class="doc-line"></div>
+        <div class="doc-line"></div>
+        <div class="doc-line short"></div>
+      </div>
+      <div id="doc-success" style="font-family: var(--font-mono); font-size: 10px; color: var(--teal-mid); margin-top: 16px; opacity: 0; transition: opacity 0.3s;">DOSSIER SECURED. READY TO PRINT.</div>
+    </div>
+  </div>
+
+  <div class="cta-section">
+    <h2>The power to think like an architect.</h2>
+    <div style="margin-top: 32px;">
+      <a href="/sketch.html" class="btn-sketch">CREATE FREE SKETCH</a>
+      <a href="/studio.html" class="btn-studio">UNLOCK FULL STUDIO</a>
+    </div>
+    
+    <div class="disclaimer-text">
+        * The interactive modules above are for display and educational purposes only to illustrate the capabilities of the Studio concept. They do not constitute actual financial models or personalized advice.
+    </div>
+  </div>
+
+  <div class="legal-footer">
+    DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. Past performance does not guarantee future outcomes.
+  </div>
+
+</section>
+
+<script>
+  // INTERACTIVE MODULE 1: STRESS
+  let isStressed = false;
+  function toggleStress() {
+    const btn = document.getElementById('btn-stress');
+    const p1 = document.getElementById('path1'), p2 = document.getElementById('path2');
+    const p3 = document.getElementById('path3'), p4 = document.getElementById('path4');
+    const floor = document.getElementById('floor-line'), surv = document.getElementById('hud-surv');
+
+    if (!isStressed) {
+      btn.classList.add('active'); btn.innerText = "Disable Stress Battery";
+      p1.setAttribute('d', 'M 0 100 Q 100 160, 200 180 T 400 190');
+      p2.setAttribute('d', 'M 0 100 Q 150 180, 250 195 T 400 180');
+      p3.setAttribute('d', 'M 0 100 Q 100 150, 200 160 T 400 170');
+      p4.setAttribute('d', 'M 0 100 Q 80 190, 150 210 T 400 250');
+      p1.style.stroke = 'var(--danger-red)'; p2.style.stroke = 'var(--danger-red)';
+      floor.setAttribute('y1', '130'); floor.setAttribute('y2', '130');
+      surv.innerText = "72.4%"; surv.style.color = 'var(--danger-red)';
+    } else {
+      btn.classList.remove('active'); btn.innerText = "Inject Stress Battery";
+      p1.setAttribute('d', 'M 0 100 Q 100 80, 200 90 T 400 20');
+      p2.setAttribute('d', 'M 0 100 Q 150 120, 250 80 T 400 50');
+      p3.setAttribute('d', 'M 0 100 Q 100 110, 200 100 T 400 90');
+      p4.setAttribute('d', 'M 0 100 Q 80 90, 150 130 T 400 140');
+      p1.style.stroke = 'var(--teal-mid)'; p2.style.stroke = 'var(--gold)';
+      floor.setAttribute('y1', '160'); floor.setAttribute('y2', '160');
+      surv.innerText = "99.8%"; surv.style.color = 'var(--teal-mid)';
+    }
+    isStressed = !isStressed;
+  }
+
+  // INTERACTIVE MODULE 2: TAX
+  let isOptimized = false;
+  function toggleTax() {
+    const btn = document.getElementById('btn-tax'), container = document.getElementById('tax-viz'), taxVal = document.getElementById('hud-tax');
+    if (!isOptimized) {
+      container.classList.add('optimized');
+      btn.innerText = "Revert to Standard";
+      btn.style.borderColor = 'var(--muted)'; btn.style.color = 'var(--white)';
+      taxVal.innerText = "$142,000"; taxVal.style.color = 'var(--teal-mid)';
+    } else {
+      container.classList.remove('optimized');
+      btn.innerText = "Run Thermal Optimization";
+      btn.style.borderColor = 'var(--teal-mid)'; btn.style.color = 'var(--teal-mid)';
+      taxVal.innerText = "$485,000"; taxVal.style.color = 'var(--danger-red)';
+    }
+    isOptimized = !isOptimized;
+  }
+
+  // INTERACTIVE MODULE 3: ROUTING / DEMOLITION
+  let isRoutingLoc = false;
+  function toggleRouting() {
+    const btn = document.getElementById('btn-routing');
+    const debtBox = document.getElementById('route-debt-box');
+    const debtTxt = document.getElementById('route-debt-txt');
+    const line = document.getElementById('route-line');
+    const hud = document.getElementById('hud-payoff');
+
+    if(!isRoutingLoc) {
+        btn.innerText = "Revert to Minimum Payments";
+        btn.classList.add('active');
+        debtBox.setAttribute('height', '40');
+        debtBox.setAttribute('y', '120');
+        debtTxt.setAttribute('y', '145');
+        line.style.opacity = '1';
+        hud.innerText = "3.2 Years";
+        hud.style.color = "var(--teal-mid)";
+    } else {
+        btn.innerText = "Accelerate Demolition";
+        btn.classList.remove('active');
+        debtBox.setAttribute('height', '120');
+        debtBox.setAttribute('y', '40');
+        debtTxt.setAttribute('y', '105');
+        line.style.opacity = '0';
+        hud.innerText = "14.2 Years";
+        hud.style.color = "var(--danger-red)";
+    }
+    isRoutingLoc = !isRoutingLoc;
+  }
+
+  // INTERACTIVE MODULE 4: FEES
+  let isFees = false;
+  function toggleFees() {
+    const btn = document.getElementById('btn-fees'), val = document.getElementById('hud-fees');
+    const wedge = document.getElementById('fee-wedge'), line = document.getElementById('fee-line');
+    if(!isFees) {
+        btn.innerText = "Remove Fee Drag"; btn.style.background = 'var(--danger-red)'; btn.style.color = 'var(--white)';
+        val.innerText = "$842,000"; val.style.color = "var(--danger-red)";
+        wedge.style.opacity = "1"; line.style.opacity = "1";
+    } else {
+        btn.innerText = "Reveal 1% AUM Impact"; btn.style.background = 'transparent'; btn.style.color = 'var(--danger-red)';
+        val.innerText = "$0"; val.style.color = "var(--teal-mid)";
+        wedge.style.opacity = "0"; line.style.opacity = "0";
+    }
+    isFees = !isFees;
+  }
+
+  // INTERACTIVE MODULE 5: DOSSIER
+  function animateDossier() {
+    const doc = document.getElementById('doc-prev'), msg = document.getElementById('doc-success');
+    doc.classList.add('scanning'); msg.style.opacity = '0';
+    setTimeout(() => { doc.classList.remove('scanning'); msg.style.opacity = '1'; }, 1500);
+  }
+</script>
+</body>
+</html>
