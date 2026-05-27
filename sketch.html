@@ -1275,6 +1275,9 @@
   .s3-token-gold { color: var(--gold); }
   .s3-token-red  { color: var(--danger-red); }
   .s3-token-teal { color: var(--teal-mid); }
+  .c4-money { color: #5DCAA5; font-weight: 500; }
+  .c4-time  { color: #FFFFFF; font-weight: 500; }
+  .c4-force { color: #C9A84C; font-weight: 500; }
   .s3-strip-row {
     padding: 22px 16px !important;
     gap: 24px !important;
@@ -6740,6 +6743,65 @@
         }
       }
 
+      // --- Lever attribution utility ---
+      var _s3MostImpactfulLever = function(have, want) {
+        var hYrs = have.yearsToGrow || Math.max(0, (have.activationAge||65) - (have.currentAge||40));
+        var wYrs = want.yearsToGrow || Math.max(0, (want.activationAge||65) - (want.currentAge||40));
+        var basePts = getMathPoint(hYrs, hYrs, have);
+        var wantPts = getMathPoint(wYrs, wYrs, want);
+        var totalDeltaK = (wantPts.fvBase - basePts.fvBase) * 1000;
+        var _levFmt = function(dK) {
+          var s = dK >= 0 ? '+' : '-';
+          var a = Math.abs(dK);
+          return a >= 1000 ? s + '$' + (a/1000).toFixed(2).replace(/\.00$/,'') + 'M' : s + '$' + Math.round(a) + 'k';
+        };
+        if (Math.abs(totalDeltaK) < 1) {
+          var _dReqDeltaK = (want.targetSpend - have.targetSpend) / 0.04;
+          if (Math.abs(_dReqDeltaK) >= 1) {
+            return { name: 'Target Datum', amountSigned: _levFmt(_dReqDeltaK), pctOfMove: 99 };
+          }
+          return { name: 'the projection itself', amountSigned: '—', pctOfMove: 0 };
+        }
+        var _swapFvB = function(overrides) {
+          var aA = overrides.activationAge !== undefined ? overrides.activationAge : have.activationAge;
+          var cA = overrides.currentAge    !== undefined ? overrides.currentAge    : have.currentAge;
+          var yrs = Math.max(0, aA - cA);
+          var sc = Object.assign({}, have, overrides, { yearsToGrow: yrs });
+          return getMathPoint(yrs, yrs, sc).fvBase;
+        };
+        var tests = [
+          { name: 'Portfolio Balance',   fvB: _swapFvB({ portfolioVol:     want.portfolioVol }) },
+          { name: 'Target Datum',        fvB: _swapFvB({ targetSpend:      want.targetSpend }) },
+          { name: 'Current Age',         fvB: _swapFvB({ currentAge:       want.currentAge }) },
+          { name: 'Retirement Age',      fvB: _swapFvB({ activationAge:    want.activationAge }) },
+          { name: 'Tax Treatment',       fvB: _swapFvB({ taxMult:          want.taxMult }) },
+          { name: 'Annual Contribution', fvB: _swapFvB({ annualContrib:    want.annualContrib }) },
+          { name: 'Market Mode',         fvB: _swapFvB({ conservativeRate: want.conservativeRate, baselineRate: want.baselineRate, upsideRate: want.upsideRate }) },
+          { name: 'Inflation Mode',      fvB: _swapFvB({ isNominal:        want.isNominal }) }
+        ];
+        var totalAbsK = 0;
+        var scored = tests.map(function(t) {
+          var dK = (t.fvB - basePts.fvBase) * 1000;
+          var aK = Math.abs(dK);
+          totalAbsK += aK;
+          return { name: t.name, dK: dK, aK: aK };
+        });
+        if (totalAbsK < 1) {
+          var _dReqDeltaK2 = (want.targetSpend - have.targetSpend) / 0.04;
+          if (Math.abs(_dReqDeltaK2) >= 1) {
+            return { name: 'Target Datum', amountSigned: _levFmt(_dReqDeltaK2), pctOfMove: 99 };
+          }
+          return { name: 'the projection itself', amountSigned: '—', pctOfMove: 0 };
+        }
+        scored.sort(function(a, b) { return b.aK - a.aK; });
+        var top = scored[0];
+        return {
+          name:         top.name,
+          amountSigned: _levFmt(top.dK),
+          pctOfMove:    Math.min(99, Math.round(top.aK / Math.abs(totalDeltaK) * 100))
+        };
+      };
+
       // --- col3 + strip + datum updates ---
       (function() {
         var setEl = function(id, val, col) { var e = document.getElementById(id); if (!e) return; e.textContent = val; if (col) e.style.color = col; };
@@ -6896,19 +6958,31 @@
           'OVEREXTENDED STRUCTURAL|ENTRY':  'You closed some of the structural gap — still over the Ceiling, but closer to where it could become reachable with the right inputs.'
         };
         // Build Card 4 token vars (spreads Have + Want existing vars, adds new tokens)
+        var _c4M = function(v) { return '<span class="c4-money">' + v + '</span>'; };
+        var _c4T = function(v) { return '<span class="c4-time">'  + v + '</span>'; };
+        var _lever      = _s3MostImpactfulLever(_c4Have, _c4Want);
+        var _rawCapGapM  = Math.abs((_gbPts.fvBase || 0) - (_skPts.fvBase || 0));
+        var _reqCapWantM = (dd || 0) / 0.04 / 1000;
+        var _capGapM     = _rawCapGapM > 0.001
+          ? _rawCapGapM
+          : Math.max(0, _reqCapWantM - (_skPts.fvBase || 0));
         var _c4Vars = Object.assign({}, _usd3HaveVars, _usd3WantVars, {
-          capDeltaM:          _fmtM(Math.abs((_gbPts.fvBase || 0) - (_skPts.fvBase || 0))),
-          levName:            'the chosen lever',
-          levAmtSigned:       '—',
-          levPct:             '0',
-          yearsDeltaAbs:      String(Math.abs(_yrsDelta)),
+          capDeltaM:          _c4M(_fmtM(_capGapM)),
+          dCapBaseM:          _c4M(_fmtM(_skPts.fvBase)),
+          gbDatumReqM:        _c4M(_fmtM((dd || 0) / 0.04 / 1000)),
+          dFloorM:            _c4M(_fmtM(_skPts.fvCon)),
+          dCeilM:             _c4M(_fmtM(_skPts.fvUp)),
+          levName:            _lever.name,
+          levAmtSigned:       _c4M(_lever.amountSigned),
+          levPct:             _c4T(String(_lever.pctOfMove)),
+          yearsDeltaAbs:      _c4T(String(Math.abs(_yrsDelta))),
           yearsDeltaDir:      _yrsDelta < 0 ? 'earlier' : 'later',
           bridgeContext:      _yrsDelta < 0 ? 'with taxable accounts and bridge income' : 'while contributions continue and tax-advantaged caps reset',
-          contribDeltaSigned: (_contribDelta    >= 0 ? '+' : '') + '$' + Math.abs(Math.round(_contribDelta)).toLocaleString('en-US'),
-          contribDeltaPct:    (_contribDeltaPct >= 0 ? '+' : '') + Math.round(_contribDeltaPct * 100) + '%',
-          capitalDeltaSigned: (_capitalDelta    >= 0 ? '+' : '') + '$' + Math.round(Math.abs(_capitalDelta) * 1000) + 'k',
-          floorDeltaSigned:   (_floorSpendDelta >= 0 ? '+' : '') + '$' + Math.abs(_floorSpendDelta) + 'k/yr',
-          ceilingDeltaSigned: (_ceilSpendDelta  >= 0 ? '+' : '') + '$' + Math.abs(_ceilSpendDelta)  + 'k/yr',
+          contribDeltaSigned: _c4M((_contribDelta    >= 0 ? '+' : '') + '$' + Math.abs(Math.round(_contribDelta)).toLocaleString('en-US')),
+          contribDeltaPct:    _c4T((_contribDeltaPct >= 0 ? '+' : '') + Math.round(_contribDeltaPct * 100) + '%'),
+          capitalDeltaSigned: _c4M((_capitalDelta    >= 0 ? '+' : '') + '$' + Math.round(Math.abs(_capitalDelta) * 1000) + 'k'),
+          floorDeltaSigned:   _c4M((_floorSpendDelta >= 0 ? '+' : '') + '$' + Math.abs(_floorSpendDelta) + 'k/yr'),
+          ceilingDeltaSigned: _c4M((_ceilSpendDelta  >= 0 ? '+' : '') + '$' + Math.abs(_ceilSpendDelta)  + 'k/yr'),
           stateHaveName:      stObj1.name    || 'EXPANSIVE',
           stateWantName:      stObj2.name    || 'EXPANSIVE',
           stateName:          stObj2.name    || 'EXPANSIVE',
@@ -6920,7 +6994,9 @@
         // Render Card 4
         var _c4El = document.getElementById('s3-card4-body');
         if (_c4El) {
-          var _c4Prose = _s3c4Body(_s3c4Resolve(_c4Key, _c4Vars));
+          var _c4Prose = _s3c4Body(_s3c4Resolve(_c4Key, _c4Vars))
+            .replace(/• (CAPITAL|LEVER|REALITY|BUFFER|TIME|SAVINGS|STARTING POINT|DOWNSIDE|REACH|STRUCTURE|POSITION|CONFIRMATION) —/g,
+                     '• <span class="c4-force">$1</span> —');
           _c4El.innerHTML = '<div style="white-space:pre-wrap;font-family:var(--font-sans);font-size:15px;line-height:1.7;color:rgba(255,255,255,0.85);text-align:left;padding:0 8px;">' + _c4Prose + '</div>';
         }
       })();
@@ -8709,206 +8785,156 @@ Under optimistic conditions, your designed spending sits well below your designe
 
 ⚠️ This isn't tension to resolve — it's structure that doesn't hold.
 
-The Shape you've designed asks the plan to carry more than it structurally can. That's not a market-conditions problem and it's not a discipline problem. It's a math problem.
+The Shape you've designed asks the plan to carry more than it structurally can.
+That's not a market-conditions problem and it's not a discipline problem.
+It's a math problem. Three forces, named honestly:
 
-The three forces, named honestly:
+  • CAPITAL — Your designed Shape requires {gbDatumReqM} of capital. Your current Shape projects {dCapBaseM} on the middle path. That's a {capDeltaM} gap the sketch can't reach — and the structural ratio means it stays unreachable until something foundational changes.
 
-  • CAPITAL — Your designed Shape requires {gbDatumReqM} by retirement. Your current Shape projects {dDatumM}. That's a gap of {capDeltaM} the sketch numbers don't reach — and the structural ratio puts the Datum significantly above what {gbDatumM} can sustainably support.
+  • LEVER — {levName} is doing the most work in your design ({levAmtSigned}, {levPct}% of every dollar of movement between Have and Want). But here's the honest read: moving {levName} alone won't close this. The Shape is past the structural line, not stretched toward it. One lever can't make impossible math possible.
 
-  • LEVER — The single biggest force in that gap is {levName} ({levAmtSigned}, {levPct}% of the move). But moving any one lever alone won't close this — the Shape is over the structural line, not just stretched toward it.
+  • REALITY — You're looking at a stress-test, not a livable plan state. The Sketch can draw the Datum here so you can see it. It can't tell you that you'd survive actually living inside it — because at this ratio, no sequence does.
 
-  • REALITY — This is a stress-test, not a plan state. You can see what the Shape would require, but you can't live inside it as currently designed.
+This is exactly where the Sketch runs out of road. It tells you what isn't reachable. It can't tell you what reaching this Shape would actually require — which combination of capital injection, retirement-age shift, contribution acceleration, or Datum adjustment brings the structural ratio back inside the line. Studio runs that math against your actual accounts. Not a generic "increase savings 10%" pitch — the specific number, by lever, that closes the structural gap. Whether {levName} carrying more weight would do it alone, or whether two levers have to move together. What the timeline costs if you wait. What account-type sequencing changes about the answer. The question is honest. You're holding a Shape the math can't carry.
 
-This is the moment the Sketch runs out of road. It draws the Shape; it can't show you what would need to change for this Shape to become reachable.
-
-Studio shows that — exactly which combination of capital, time, contribution, or Datum would need to move, and by how much, to bring this Shape inside the structural line. Not whether to push for it. What pushing would actually require.
-
-The question is honest:
-Do you accept the Shape you have, or do you want to know what reaching this designed Shape actually costs?
+Do you want to accept what you have — or do you want to know exactly what reaching this Shape would cost?
 
 See If This Shape Holds →`;
     _S3C4['PARADOX-TIGHT'] = `HOW TO RESOLVE THE TENSION
 
-Your designed Datum sits at the Floor. The plan still supports it — but you've designed away the buffer.
+⚠️ This isn't tension between two Shapes — it's tension inside the one you designed.
 
-That matters more than it sounds. The buffer between Datum and Floor is what absorbs the real-world variance the Sketch doesn't fully model: a bad sequence in year two of retirement, a healthcare event that wasn't in the projection, a tax-policy shift that compresses the floor.
+Your Datum sits at the Floor. The plan still supports it on paper — but you've designed away every dollar of buffer. That's not a math problem. It's a margin problem. The buffer between Datum and Floor is what absorbs what the Sketch doesn't model: a bad sequence in year two of retirement, a healthcare event that wasn't projected, a tax-policy shift that compresses the floor. You've collapsed that margin to zero. Three forces, named honestly:
 
-The three forces in tension:
+  • CAPITAL — Your designed Shape requires {gbDatumReqM} of capital. Your current Shape projects {dCapBaseM} on the middle path. That's a {capDeltaM} gap — and your Datum sits exactly where the Floor catches it, with nothing to absorb the real-world variance that always shows up.
 
-  • CAPITAL — Your designed Shape requires {gbDatumReqM} by retirement. Your current Shape projects {dDatumM}. That's a gap of {capDeltaM} between what you have and what this no-buffer Shape needs.
+  • LEVER — {levName} is doing the most work in your design ({levAmtSigned}, {levPct}% of every dollar of movement between Have and Want). It's the load-bearing variable. If {levName} slips, there's no slack anywhere else in the Shape to compensate.
 
-  • LEVER — {levName} accounts for {levPct}% of that gap ({levAmtSigned}). It's the load-bearing variable.
+  • BUFFER — You've collapsed the margin between Datum and Floor. The Sketch says the plan still holds. It does — until conditions arrive that the Sketch didn't model. At that point "still holds" becomes "holds barely, then doesn't."
 
-  • BUFFER — You've collapsed the margin between Datum and Floor. The Sketch says the plan still holds. It does — until conditions arrive that the Sketch didn't model.
+This is exactly where the Sketch runs out of road. It tells you the math works at the Floor. It can't tell you which sequences break it, how often, or what restoring even a small buffer would actually cost. Studio runs your no-buffer Shape across 10,000 market sequences and names exactly which ones break it. Not a generic "leave some cushion" pitch — the specific number, by lever, that restores meaningful margin. Whether tightening {levName} alone does it, or whether buffer has to come from a second lever. What sequence risk means for a plan designed at the Floor. What account-type sequencing changes about the math. The question is honest. You've designed a Shape with no slack.
 
-This is the moment the Sketch runs out of road. It tells you the math works at the Floor. It doesn't tell you what happens when reality lands a few percent below the conservative path.
-
-Studio stress-tests exactly that. It runs your no-buffer Shape across 10,000 sequences and shows you which ones break it — and what restoring even a small buffer would buy you.
-
-The question is honest:
-Do you accept a Shape with no margin, or do you want to know what a small buffer actually costs?
+Do you want to accept what you have — or do you want to know exactly what restoring a buffer would cost?
 
 See If This Shape Holds →`;
     _S3C4['TIME-SHIFT'] = `HOW TO RESOLVE THE TENSION
 
-You've designed a Shape your current numbers don't project — and you're trying to land it on a different timeline.
+You've changed the timeline. That's the most expensive lever in the Shape — because it compounds every other one. A year of retirement isn't a year of cost. It's a year the portfolio doesn't get to compound, a year of spending that has to come from somewhere, and a year added to every withdrawal-rate assumption the Sketch is making. {yearsDeltaAbs} years {yearsDeltaDir} means {yearsDeltaAbs} years of compounding pressure that shows up everywhere, not just at the edges. Three forces, named honestly:
 
-The gap between what you have and what you want is the question. But time changes the conversation.
+  • CAPITAL — Your designed Shape requires {gbDatumReqM} of capital. Your current Shape projects {dCapBaseM} on the middle path. That's a {capDeltaM} gap — and every year of timeline shift moves both numbers, not just one.
 
-The three forces in tension:
+  • LEVER — {levName} is doing the most work in your design ({levAmtSigned}, {levPct}% of every dollar of movement between Have and Want). Time is the multiplier that makes {levName} heavier — a lever that closes the gap at 65 may not close it at 62.
 
-  • CAPITAL — Your designed Shape requires {gbDatumReqM} by retirement. Your current Shape projects {dDatumM}. That's {capDeltaM} of capital your sketch numbers don't reach.
+  • TIME — You're targeting this Shape {yearsDeltaAbs} years {yearsDeltaDir} than your current retirement date. That's {yearsDeltaAbs} bridge years the plan has to fund {bridgeContext} — before traditional retirement assets are even available, before Social Security, before Medicare.
 
-  • LEVER — {levName} accounts for {levPct}% of that gap ({levAmtSigned}). It's the single biggest driver.
+This is exactly where the Sketch runs out of road. It assumes the timeline holds, the contribution holds, the markets cooperate. It can't tell you what the bridge years actually cost — or whether your tax-advantaged accounts can carry that bridge before they unlock. Studio runs that math against your actual accounts. Not a generic "retire earlier costs more" pitch — the specific number, by lever, that makes this timeline reachable. Whether {levName} carrying more weight closes it alone, or whether two levers have to move together. What account-type sequencing changes about the bridge math. What happens to the answer if markets compress for two of those bridge years. The question is honest. You've designed a Shape on a different clock.
 
-  • TIME — You're targeting this Shape {yearsDeltaAbs} years {yearsDeltaDir} than your current retirement date. {yearsDeltaAbs} bridge years that the plan has to fund {bridgeContext} before traditional retirement assets become available.
-
-This is the moment the Sketch runs out of road. It draws the shape; it doesn't know how Roth conversion windows narrow when you retire earlier, what sequence-of-returns risk does to your target if markets disappoint in your bridge years, or how Social Security claiming timing reshapes the floor when you delay or pull forward.
-
-Studio models bridge spending, Roth conversion windows, and Social Security claiming — the WHEN levers your shifted retirement requires. It runs your actual numbers across 10,000 market sequences and shows which lever is most likely to bridge the distance.
-
-The question is honest:
-Do you accept what you have, or push for what you want?
+Do you want to accept the timeline you have — or do you want to know exactly what reaching this one would cost?
 
 See If This Shape Holds →`;
     _S3C4['CONTRIBUTION-SHIFT'] = `HOW TO RESOLVE THE TENSION
 
-You've designed a Shape your current contribution rate doesn't fund — and the difference between the two is a decade or more of savings discipline.
+You've designed a Shape your current contribution rate doesn't fund. The difference between the two isn't a spreadsheet entry — it's a decade or more of savings discipline showing up every paycheck, every bonus, every year your income could flex either direction. That's not a small ask. It's the kind of commitment that has to survive job changes, household events, market drawdowns, and every other reason people quietly stop contributing. Three forces, named honestly:
 
-The three forces in tension:
+  • CAPITAL — Your designed Shape requires {gbDatumReqM} of capital. Your current Shape projects {dCapBaseM} on the middle path. That's a {capDeltaM} gap — and your designed contribution rate is the engine expected to close it.
 
-  • CAPITAL — Your designed Shape requires {gbDatumReqM} by retirement. Your current Shape projects {dDatumM}. That's {capDeltaM} the sketch numbers don't reach.
+  • LEVER — {levName} is doing the most work in your design ({levAmtSigned}, {levPct}% of every dollar of movement between Have and Want). The contribution rate is the load-bearing variable beneath it. If {levName} carries this gap, the contribution has to actually land every year for it to work.
 
-  • LEVER — {levName} accounts for {levPct}% of that gap ({levAmtSigned}).
+  • SAVINGS — You're betting on contributing {contribDeltaSigned}/yr between now and retirement — {contribDeltaPct} more than your current scenario assumes. Savings discipline becomes a load-bearing assumption. Every year that contribution doesn't materialize is a year the gap widens by more than this year's shortfall, because compounding doesn't get the year back.
 
-  • SAVINGS — You're betting on contributing {contribDeltaSigned} per year between now and retirement. {contribDeltaPct} more than your current scenario assumes. Savings discipline becomes a load-bearing assumption for this Shape — every year that contribution doesn't materialize is a year the gap widens.
+This is exactly where the Sketch runs out of road. It assumes the contribution holds. It can't tell you what happens if your income compresses for two years, if 401(k)/IRA contribution limits cap out before your designed rate, or if a household event reshuffles priorities for a stretch. Studio runs that math against your actual accounts. Not a generic "save more" pitch — the specific number, by account type, that your designed Shape actually requires. Whether your tax-advantaged accounts can hold the full contribution or whether taxable space has to carry some of it. What the answer changes if income drops for a year. How Studio routes contributions across account types so the dollar you save buys the most retirement spending power it possibly can. The question is honest. You've designed a Shape built on a contribution promise.
 
-This is the moment the Sketch runs out of road. It assumes the contribution holds; it doesn't know what happens if your income compresses for two years, if account contribution limits cap out, or if a household event reshuffles priorities.
-
-Studio stress-tests whether your designed savings rate actually holds — across career disruptions, account caps, and the tax-advantaged sequencing decisions that determine whether contributing $X actually buys you $X in retirement spending power.
-
-The question is honest:
-Do you accept what you have, or commit to what you want?
+Do you want to accept what you have — or do you want to know exactly what keeping that promise across real life would cost?
 
 See If This Shape Holds →`;
     _S3C4['CAPITAL-SHIFT'] = `HOW TO RESOLVE THE TENSION
 
-You've designed a Shape that starts from a different financial position than the one you have today. That's not wrong — but it's worth naming.
+You've designed a Shape that starts from a different financial position than the one you have today. Not wrong — but worth naming, because the Shape depends on capital that the calendar hasn't reached yet. A future starting position isn't the same as a current one. Where that capital comes from — a windfall, a sale, an inheritance, a planned contribution event — changes how it lands, what it's taxed at, and which accounts it ends up inside. Three forces, named honestly:
 
-The three forces in tension:
+  • CAPITAL — Your designed Shape requires {gbDatumReqM} of capital. Your current Shape projects {dCapBaseM} on the middle path. That's a {capDeltaM} gap — and {capitalDeltaSigned} of that gap depends on capital you're modeling but don't yet hold.
 
-  • CAPITAL — Your designed Shape requires {gbDatumReqM} by retirement. Your current Shape projects {dDatumM}. That's {capDeltaM} the sketch numbers don't reach.
+  • LEVER — {levName} is doing the most work in your design ({levAmtSigned}, {levPct}% of every dollar of movement between Have and Want). The starting-capital assumption is the foundation beneath it. If {levName} is the lever, the capital it's pulling against has to actually arrive.
 
-  • LEVER — {levName} accounts for {levPct}% of that gap ({levAmtSigned}).
+  • STARTING POINT — You're modeling {capitalDeltaSigned} more in already-invested capital than you actually have right now. The Shape depends on a position the Sketch can draw but you haven't reached. Whether that capital lands tax-advantaged, taxable, or as ordinary income matters — because each routes through retirement very differently.
 
-  • STARTING POINT — You're modeling {capitalDeltaSigned} more in already-invested capital than you actually have right now. The Shape depends on a starting position the sketch can draw but the calendar hasn't reached. Whether that capital comes from a windfall, a sale, an inheritance, or a planned contribution event matters — because each source lands differently.
+This is exactly where the Sketch runs out of road. It treats capital as a single number. It can't tell you what type of account it lands in, whether it's taxable, tax-deferred, or already after-tax, how Roth conversions reshape it once it arrives, or what sequence risk does to capital that shows up at the wrong moment in the cycle. Studio models exactly how that capital lands. Not a generic "save the windfall" pitch — the specific routing, by account type, that turns the assumed capital into the spending power your Shape requires. What changes if it arrives in a down market. Whether converting some to Roth in the right window pays for itself. How account-type sequencing decides whether $1 of capital becomes $0.75 or $0.95 of retirement spending. The question is honest. You've designed a Shape pointed at a starting position you haven't reached.
 
-This is the moment the Sketch runs out of road. It treats capital as a number; it doesn't know what type of account it lands in, whether it's tax-advantaged or taxable, how Roth conversions reshape it, or what sequence risk does to capital that arrives at the wrong moment.
-
-Studio models exactly how that capital lands — what's already invested, what depends on future events, how account types reshape effective spending power, and what timing means for the path between here and there.
-
-The question is honest:
-Do you accept what you have, or are you building toward what you want?
+Do you want to accept what you have — or do you want to know exactly what landing that capital well would cost?
 
 See If This Shape Holds →`;
     _S3C4['FLOOR-RISK-SHIFT'] = `HOW TO RESOLVE THE TENSION
 
-You've designed a Shape that accepts more downside than your current Shape carries. The Floor moved. That's a real choice — worth naming.
+You've designed a Shape that accepts more downside than your current Shape carries. The Floor moved. That's a real trade — worth naming, because the Floor isn't an accounting line, it's the level the plan supports even when conditions disappoint. Lowering it doesn't fail anything. It just changes what the plan promises when markets don't cooperate. Three forces, named honestly:
 
-The three forces in tension:
+  • CAPITAL — Your designed Shape requires {gbDatumReqM} of capital. Your current Shape projects {dCapBaseM} on the middle path. That's a {capDeltaM} gap — and accepting a lower Floor is part of how the designed Shape closes it.
 
-  • CAPITAL — Your designed Shape requires {gbDatumM} by retirement. Your current Shape projects {dDatumM}. That's {capDeltaM} the sketch numbers don't reach.
+  • LEVER — {levName} is doing the most work in your design ({levAmtSigned}, {levPct}% of every dollar of movement between Have and Want). The lower Floor is what's making the rest of the design possible. If {levName} slips and the Floor is already low, there's less plan beneath you to catch the slip.
 
-  • LEVER — {levName} accounts for {levPct}% of that gap ({levAmtSigned}).
+  • DOWNSIDE — You accepted {floorDeltaSigned}/yr less protection on the downside. The Floor — the level the plan supports when markets disappoint — sits lower than it did. In exchange, the Shape stretches elsewhere. That's a trade. But it's a trade with consequences in the years it gets tested.
 
-  • DOWNSIDE — You accepted {floorDeltaSigned} less protection on the downside. The Floor — the level the plan supports even when markets disappoint — sits lower than it did. In exchange, the Shape stretches in other directions. That's a trade, not a mistake. But it's a trade with consequences.
+This is exactly where the Sketch runs out of road. It can draw a new Floor on paper. It can't tell you which sequences trigger it, how often it gets touched across realistic market histories, or what it actually feels like to live at it for a stretch of years rather than briefly cross through it. Studio stress-tests that accepted downside across 10,000 market sequences. Not a generic "have an emergency fund" pitch — the specific number, by lever, that says how often the new Floor holds and how often conditions push the plan below it. What lever discipline keeps you from getting stuck there. How {levName} interacts with the lower Floor when both get tested in the same sequence. The question is honest. You've traded protection for reach.
 
-This is the moment the Sketch runs out of road. It draws the new Floor; it doesn't show you what happens when reality lands there. Which sequences trigger it. How often. What it actually feels like in the years leading up to it.
-
-Studio stress-tests that accepted downside across 10,000 market sequences — where the new Floor holds, where it doesn't, and what conditions push the plan into the territory below it. So you know what you're trading away, not just that you traded.
-
-The question is honest:
-Do you accept what you have, or are you trading something for what you want?
+Do you want to accept what you have — or do you want to know exactly what trading away that protection costs?
 
 See If This Shape Holds →`;
     _S3C4['CEILING-REACH-SHIFT'] = `HOW TO RESOLVE THE TENSION
 
-You've designed a Shape that reaches higher than your current Shape projects. The Ceiling moved up. That reach has a price — worth naming.
+You've designed a Shape that reaches higher than your current Shape projects. The Ceiling moved up. That reach has a price — worth naming, because a higher Ceiling isn't free. It's the level the plan supports when markets cooperate. Raising it means good years now have to do more of the work, and the Shape increasingly relies on conditions actually aligning. Three forces, named honestly:
 
-The three forces in tension:
+  • CAPITAL — Your designed Shape requires {gbDatumReqM} of capital. Your current Shape projects {dCapBaseM} on the middle path. That's a {capDeltaM} gap — and reaching the higher Ceiling is what closes part of it on the upside.
 
-  • CAPITAL — Your designed Shape requires {gbDatumM} by retirement. Your current Shape projects {dDatumM}. That's {capDeltaM} the sketch numbers don't reach.
+  • LEVER — {levName} is doing the most work in your design ({levAmtSigned}, {levPct}% of every dollar of movement between Have and Want). The raised Ceiling is the upside it's pulling toward. If {levName} delivers, the reach is on the table. If it doesn't, the Ceiling is decorative.
 
-  • LEVER — {levName} accounts for {levPct}% of that gap ({levAmtSigned}).
+  • REACH — You stretched the upper edge by {ceilingDeltaSigned}/yr. The Ceiling — the level the plan supports when markets cooperate — sits higher than it did. Good years now have to do more work. The Shape reaches this lifestyle, but increasingly only when conditions align in your favor.
 
-  • REACH — You stretched the upper edge by {ceilingDeltaSigned}. The Ceiling — the level the plan supports when markets cooperate — sits higher than it did. Good years now have to do more of the work. The Shape reaches this lifestyle, but increasingly only when conditions align.
+This is exactly where the Sketch runs out of road. It can extend the Ceiling on paper. It can't tell you how often markets actually cooperate enough to fund the reach, how often that upper edge gets touched across real sequences, or what specific combination of returns, contributions, and lever discipline has to compound for it to happen. Studio shows how often that Ceiling actually gets reached. Not a generic "stay invested" pitch — the specific frequency, by sequence, that says how dependable the reach is. Which lever combinations make it likely versus aspirational. What {levName} carrying its share actually requires across years that don't all cooperate. How tax-advantaged account positioning amplifies or limits the upside. The question is honest. You've designed a Shape that reaches further than the math currently projects.
 
-This is the moment the Sketch runs out of road. It can extend the Ceiling on paper; it can't tell you how often markets actually cooperate enough to fund the reach. How often that upper edge gets touched. What conditions have to compound for it to happen.
-
-Studio shows how often that Ceiling actually gets reached across real market sequences — and what specific combinations of conditions, timing, and lever discipline have to align. So you know what you're reaching for, and what you're depending on to get there.
-
-The question is honest:
-Do you accept what you have, or are you reaching for what you want?
+Do you want to accept what you have — or do you want to know exactly what reaching the upper edge would cost?
 
 See If This Shape Holds →`;
     _S3C4['STATE-TRANSITION'] = `HOW TO RESOLVE THE TENSION
 
-You didn't shift position inside a state — you moved between states. From {stateHaveName} to {stateWantName}. That's a different kind of move, and it deserves its own honest read.
+You didn't shift position inside a state — you moved between states. From {stateHaveName} to {stateWantName}. That's a different kind of move than tightening or stretching inside the same category, and it deserves its own honest read. The eleven Shape states aren't decorative labels. Each one is a structurally different relationship to the plan — different lever sensitivities, different buffers, different conditions to maintain it. Crossing between them isn't a tweak. It's a reframe. Three forces, named honestly:
 
-The three forces in tension:
+  • CAPITAL — Your designed Shape requires {gbDatumReqM} of capital. Your current Shape projects {dCapBaseM} on the middle path. That's a {capDeltaM} gap — and the state change is what makes the new Shape qualitatively different from the old one, not just quantitatively.
 
-  • CAPITAL — Your designed Shape requires {gbDatumM} by retirement. Your current Shape projects {dDatumM}. That's {capDeltaM} the sketch numbers don't reach.
-
-  • LEVER — {levName} accounts for {levPct}% of that gap ({levAmtSigned}).
+  • LEVER — {levName} is doing the most work in your design ({levAmtSigned}, {levPct}% of every dollar of movement between Have and Want). It's the lever that moved you across the boundary. The cost of staying in the new state is whatever {levName} costs to keep delivering, year after year.
 
   • STRUCTURE — You crossed a state boundary. {stateHaveName} and {stateWantName} aren't the same kind of relationship to the plan. {stateTransitionContext} That's not a tweak — it's a reframe of what the plan is being asked to do.
 
-This is the moment the Sketch runs out of road. It tells you the new state on paper; it doesn't tell you what living inside that state actually requires — which lever combinations the new structural category demands, how stable the new state is across real conditions, whether the move is sustainable or fragile.
+This is exactly where the Sketch runs out of road. It tells you the new state on paper. It can't tell you what living inside that state actually requires — which lever combinations the new category demands, how stable the new state is across realistic conditions, or whether the move is sustainable or fragile against market disruption and household events. Studio names exactly what crossing that boundary costs. Not a generic "be flexible" pitch — the specific number, by lever, that maintains the new state. Which sequences hold it and which push you back. What {levName} has to keep delivering across years it might not want to. How account-type sequencing and tax positioning either reinforce the new state or quietly erode it. The question is honest. You've designed a structurally different Shape.
 
-Studio names exactly what crossing that boundary costs. It shows whether the new state holds under stress, what specific lever discipline maintains it, and what conditions would push the Shape back to where it started.
-
-The question is honest:
-Do you accept what you have, or are you committing to a different Shape entirely?
+Do you want to accept what you have — or do you want to know exactly what committing to a different Shape would cost?
 
 See If This Shape Holds →`;
     _S3C4['SUB-ZONE-DRIFT'] = `HOW TO RESOLVE THE TENSION
 
-Same state, different posture. You haven't left {stateName} — but the Shape you've designed sits in a different part of it. That's a real shift even when the state name doesn't change.
+Same state, different posture. You haven't left {stateName} — but the Shape you've designed sits in a different part of it. That's a real shift even when the state name doesn't change. Sub-zone drift is the move people most often miss. The category looks the same on the headline, but the buffers inside it got narrower, the assumptions got more load-bearing, and the conditions required to stay in the state got stricter. Three forces, named honestly:
 
-The three forces in tension:
+  • CAPITAL — Your designed Shape requires {gbDatumReqM} of capital. Your current Shape projects {dCapBaseM} on the middle path. That's a {capDeltaM} gap — and the position change inside {stateName} is what gets you closer to one edge of the state than the other.
 
-  • CAPITAL — Your designed Shape requires {gbDatumM} by retirement. Your current Shape projects {dDatumM}. That's {capDeltaM} the sketch numbers don't reach.
-
-  • LEVER — {levName} accounts for {levPct}% of that gap ({levAmtSigned}).
+  • LEVER — {levName} is doing the most work in your design ({levAmtSigned}, {levPct}% of every dollar of movement between Have and Want). It's what's repositioning the Shape inside the state. The cost of holding the new position is whatever {levName} costs to keep doing what it's doing.
 
   • POSITION — You shifted from {subZoneHaveName} to {subZoneWantName}. {subZoneDriftContext} That's not a state change — it's a position change. The category looks the same. The posture inside it doesn't.
 
-This is the moment the Sketch runs out of road. It tells you the state holds; it doesn't tell you whether the new position holds differently than the old one. Which buffers got narrower. Which assumptions got more load-bearing. What conditions would push the Shape further toward the edge of the state you're still inside.
+This is exactly where the Sketch runs out of road. It tells you the state holds. It can't tell you whether the new position holds differently than the old one — which buffers got narrower, which assumptions got more load-bearing, or what conditions would push the Shape further toward the edge of the state you're still inside. Studio shows whether the new posture actually matters. Not a generic "stay disciplined" pitch — the specific number, by sequence, that says how often the new position holds across real conditions. Whether {levName} repositioning the Shape inside {stateName} buys you margin or erodes it. What account-type sequencing changes about the answer. How close to the next state boundary the new posture actually puts you. The question is honest. You shifted your position even though the state held.
 
-Studio shows whether the new posture actually matters across market sequences, account types, and the variables the Sketch doesn't model. Same state, different conditions to stay in it.
-
-The question is honest:
-Do you accept where you are, or are you positioning for something different inside the same state?
+Do you want to accept where you are — or do you want to know exactly what positioning differently inside the same state would cost?
 
 See If This Shape Holds →`;
     _S3C4['STATIC-DESIGN'] = `HOW TO RESOLVE THE TENSION
 
-Your designed Shape is essentially your current Shape. The tension here isn't between two different futures — it's between the Shape the Sketch can draw and the Shape that actually holds when real conditions arrive.
+Your designed Shape is essentially your current Shape. You haven't moved anything material — same Datum, same Floor, same Ceiling, same retirement age, same contribution rate, same posture toward the plan. That doesn't mean there's no tension. It means the tension isn't between two different futures you're considering. It's between the Shape the Sketch can draw and the Shape that actually holds when real conditions arrive — markets that don't behave like averages, sequences that hit at the wrong moment, account types that route differently than the projection assumes. Three forces, still worth naming:
 
-The three forces still worth naming:
+  • CAPITAL — Your portfolio is projected to reach {dCapBaseM} by retirement on the middle path. Real outcomes could land {dFloorM} lower or {dCeilM} higher depending on which markets you actually live through. That spread isn't theoretical — it's the range of futures the same plan delivers depending on conditions it can't control.
 
-  • CAPITAL — Your portfolio is projected to reach {dDatumM} by retirement on the middle path. Real outcomes could land {dFloorM} lower or {dCeilM} higher depending on which markets you actually live through. That spread isn't theoretical — it's what your retirement actually depends on.
+  • LEVER — The plan's biggest sensitivity is {levName}. It's the variable that moves the projection more than any other when conditions diverge from the average. The Sketch holds {levName} steady to draw the Shape. Real life doesn't.
 
-  • LEVER — The plan's biggest sensitivity is {levName}. Every dollar of variance there moves the projection more than any other lever. That's the variable your future depends on most.
+  • CONFIRMATION — You haven't pushed the design. That's worth naming honestly — this Shape is either deliberately what you want, or you haven't yet asked what the plan could carry if you did push. Both are real answers, but they're different answers, and the difference matters.
 
-  • CONFIRMATION — You haven't pushed the design. That's worth naming — this Shape is either deliberately what you want, or you haven't yet asked whether the plan could carry more.
+This is exactly where the Sketch runs out of road. It draws the Shape. It can't tell you whether your account types support this projection, what sequence-of-returns risk does to the years right before and after retirement, or how Roth conversion windows reshape the floor between now and then. Studio tests the variable carrying the weight. Not a generic "stay the course" pitch — the specific number, by sequence, that says how dependable this Shape is when {levName} gets stressed. Which years actually break the projection. How tax-advantaged account positioning either reinforces this Shape or quietly erodes it. What changes about the answer if you pushed even one lever. The question is honest. Stable on paper doesn't mean stable when conditions arrive.
 
-This is the moment the Sketch runs out of road. It draws the envelope; it doesn't know whether your account types support this projection, what sequence-of-returns risk does to the years right before and after retirement, or how Roth conversions reshape the floor between now and then.
-
-Studio tests the variable carrying the weight — {levName} — against the sequences, account types, and timing the Sketch holds constant. Stable on paper doesn't mean stable when conditions arrive.
-
-The question is honest:
-Do you accept what the Sketch shows, or do you want to know what holds when conditions get real?
+Do you want to accept what the Sketch shows — or do you want to know what holds when real conditions actually arrive?
 
 See If This Shape Holds →`;
     var _s3c4Resolve = function(key, vars) {
