@@ -1274,6 +1274,7 @@
   .s3-stat-red   { color: var(--danger-red); }
   .s3-token-gold { color: var(--gold); }
   .s3-token-red  { color: var(--danger-red); }
+  .s3-token-teal { color: var(--teal-mid); }
   .s3-strip-row {
     padding: 22px 16px !important;
     gap: 24px !important;
@@ -1511,7 +1512,7 @@
                 Private by design. The Sketch runs in your browser using a broad-stroke deterministic model. Inputs are not sent to Datum FI servers while using the Sketch. If you continue into Studio, your current inputs may be passed forward; recent inputs may be stored locally on your device for handoff or resume.
                 <button type="button" id="methodology-btn" class="methodology-trigger" aria-expanded="false">VIEW SKETCH METHODOLOGY</button>
                 <div id="methodology-panel" class="methodology-panel">
-                    The Sketch uses geometric compounding. Each scenario runs a band of three growth paths — conservative, baseline, and upside — which form your Floor, middle projection, and Ceiling. <strong>Optimistic</strong>: 2.0–4.0–6.5% real (markets performing well above average). <strong>Historical</strong>: 1.5–3.5–5.5% real (anchored to long-run averages). <strong>Stress</strong>: 0.5–1.5–3.5% real (compressed returns, heavy downside guardrails). Inflation: <strong>Real</strong> strips inflation out — all values in today's dollars. <strong>Nominal</strong> adds 3.0%/yr inflation, showing the raw future dollar amounts.<br><br>Each of the three lines in your Shape uses a withdrawal rate tuned to its purpose. Your Floor uses a reduced rate for resilience — it asks how much spending the conservative path can sustain under stress. Your Ceiling uses an elevated rate for capacity — it asks how much the upside path could support under favorable conditions. Your Datum sits on the baseline path — the middle projection between Floor and Ceiling. Your Datum reads differently depending on where it sits: inside the Shape, it shows the baseline path's projected capital — what you'll have. Outside the Shape, it shows the capital required at that boundary's rate — what you'd need to close the gap. Most retirement tools apply a single 4% rule to everything. The Sketch tunes each path's rate to what it's actually measuring.
+                    The Sketch uses geometric compounding. Each scenario runs a band of three growth paths — conservative, baseline, and upside — which form your Floor, middle projection, and Ceiling. <strong>Optimistic</strong>: 2.0–4.0–6.5% real (markets performing well above average). <strong>Historical</strong>: 1.5–3.5–5.5% real (anchored to long-run averages). <strong>Stress</strong>: 0.5–1.5–3.5% real (compressed returns, heavy downside guardrails). Inflation: <strong>Real</strong> strips inflation out — all values in today's dollars. <strong>Nominal</strong> adds 3.0%/yr inflation, showing the raw future dollar amounts.<br><br>Your Floor and Ceiling each use a withdrawal rate tuned to the question they answer: the Floor uses a reduced rate for resilience under a conservative path, the Ceiling uses an elevated rate for capacity under an upside path. Your Datum is different — it always shows the capital required to sustain your chosen spending at the canonical 4% rule, regardless of where it sits in the Shape. That way the three boundaries answer three honest questions: "what could break" (Floor), "what could stretch" (Ceiling), and "what would my spending cost as capital" (Datum).
                 </div>
             </div>
         </div>
@@ -2137,8 +2138,8 @@
   <div class="full-width-section" id="screen-2" hidden aria-hidden="true">
       <div class="arch-header">
           <div class="sub-head" style="text-align:center; margin-bottom:8px;">PHASE III — TENSION</div>
-          <h2 class="insights-h2 hero-title">The Sketch drew the Shape. Now see where it strains.</h2>
-          <p style="font-family:var(--font-mono); font-size:11px; color:rgba(255,255,255,0.4); text-align:center; max-width:600px; margin:12px auto 0; line-height:1.8; letter-spacing:0.05em;">Your Floor, Datum, and Ceiling are structural boundaries — not forecasts. Below is the gap between what the math confirms and what your life will actually require.</p>
+          <h2 class="insights-h2 hero-title">You Sketched your Shape. Now see the tension.</h2>
+          <p style="font-family:var(--font-mono); font-size:11px; color:rgba(255,255,255,0.4); text-align:center; max-width:600px; margin:12px auto 0; line-height:1.8; letter-spacing:0.05em;">Your Floor, Datum, and Ceiling are structural boundaries — not forecasts. Below is the Shape your plan projects, the Shape you want, and what it will take to resolve the difference.</p>
       </div>
 
       <div class="s3-row1">
@@ -2311,8 +2312,8 @@
         </div>
       
         <div class="pitch-below" style="text-align:center;max-width:600px;margin-top:32px;opacity:0;transform:translateY(18px);transition:opacity 1s ease 1.8s,transform 1s ease 1.8s;">
-          <p style="font-family:var(--font-sans);font-size:18px;color:rgba(255,255,255,0.85);line-height:1.6;margin:0 0 12px;">The Sketch used one straight line.<br>Studio runs 10,000 different market paths against your actual accounts — showing which outcomes are likely, which are outliers, and exactly where the gaps are.</p>
-          <p style="font-family:var(--font-mono);font-size:11px;font-weight:bold;color:var(--gold);letter-spacing:0.12em;text-transform:uppercase;text-shadow:0 0 18px rgba(201,168,76,0.4);margin:0 0 28px;">10,000 paths. Your accounts. Your sequence. Your shape.</p>
+          <p style="font-family:var(--font-sans);font-size:18px;color:rgba(255,255,255,0.85);line-height:1.6;margin:0 0 12px;">The Sketch traced three paths. Studio runs 10,000 — against your actual accounts, your actual sequence, showing which outcomes hold, which break, and exactly where the gaps are.</p>
+          <p style="font-family:var(--font-mono);font-size:11px;font-weight:bold;color:var(--gold);letter-spacing:0.12em;text-transform:uppercase;text-shadow:0 0 18px rgba(201,168,76,0.4);margin:0 0 28px;">10,000 paths. Your accounts. Your sequence. Your Shape.</p>
           <a href="#screen-5-build" id="cta-reveal-s5" class="cta-gold-primary" style="opacity:0;pointer-events:none;transition:opacity 0.8s ease;">Build Your Shape →</a>
         </div>
         <!-- Replay button — appears after bloom completes -->
@@ -2335,12 +2336,12 @@
         <div class="sub-head" style="text-align:center; margin-bottom:20px; letter-spacing:0.3em;">PHASE V — MEASUREMENT</div>
 
         <div style="font-family:var(--font-serif); font-size:clamp(30px,4vw,48px); font-style:italic; font-weight:300; color:var(--white); margin-bottom:24px; line-height:1.2;">
-          You've seen the shape.<br>Now build it for real.
+          You've seen your Shape.<br>Now build it for real.
         </div>
 
         <div style="font-family:var(--font-mono); font-size:13px; color:rgba(255,255,255,0.5); line-height:2.0; margin-bottom:40px; max-width:600px; margin-left:auto; margin-right:auto;">
           The Sketch gave you boundaries. A Floor. A Datum. A Ceiling.<br>
-          It used three inputs and one path to get there.<br>
+          It used three inputs and three paths to get there.<br>
           You already know the questions it couldn't answer.
         </div>
 
@@ -2352,7 +2353,7 @@
             <div style="font-family:var(--font-mono); font-size:10px; color:rgba(93,202,165,0.7); line-height:1.9;">
               Flat tax drag<br>
               No Social Security<br>
-              One market path<br>
+              Three market paths<br>
               Constant spending
             </div>
           </div>
@@ -2382,7 +2383,7 @@
 
         <!-- Social proof puncher -->
         <div style="font-family:var(--font-mono); font-size:11px; color:rgba(255,255,255,0.3); margin-top:20px; letter-spacing:0.15em; text-transform:uppercase;">
-          10,000 paths &nbsp;·&nbsp; Your accounts &nbsp;·&nbsp; Your sequence &nbsp;·&nbsp; Your shape.
+          10,000 paths &nbsp;·&nbsp; Your accounts &nbsp;·&nbsp; Your sequence &nbsp;·&nbsp; Your Shape.
         </div>
 
         <div style="margin-top:28px;">
@@ -8614,7 +8615,9 @@ Under optimistic conditions, your designed spending sits well below your designe
         .replace(/\{ceilLineHave\}/g,  '<span class="s3-token-gold">↑ Ceiling — ' + (v.dCeilK  || '') + '/yr (' + (v.dCeilM  || '') + ' total)</span>')
         .replace(/\{floorLineHave\}/g, '<span class="s3-token-red">↓ Floor — '   + (v.dFloorK || '') + '/yr (' + (v.dFloorM || '') + ' total)</span>')
         .replace(/\{ceilLineWant\}/g,  '<span class="s3-token-gold">↑ Ceiling — ' + (v.gbCeilK  || '') + '/yr (' + (v.gbCeilM  || '') + ' total)</span>')
-        .replace(/\{floorLineWant\}/g, '<span class="s3-token-red">↓ Floor — '   + (v.gbFloorK || '') + '/yr (' + (v.gbFloorM || '') + ' total)</span>');
+        .replace(/\{floorLineWant\}/g, '<span class="s3-token-red">↓ Floor — '   + (v.gbFloorK || '') + '/yr (' + (v.gbFloorM || '') + ' total)</span>')
+        .replace(/\bDatum\b of (\$[0-9,.]+[kM])\/yr would actually require closer to (\$[0-9,.]+[kM])/g,
+          '<span class="s3-token-teal">Datum</span> of <span class="s3-token-teal">$1/yr</span> would actually require closer to <span class="s3-token-teal">$2</span>');
     };
 
     // Know Your Shape → reveals Screen 3
