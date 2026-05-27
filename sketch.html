@@ -1553,13 +1553,7 @@
                                     <span id="lbl-shape-state" style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Shape State:</span>
                                     <strong id="shape-state-name" class="hud-state-label">INITIALIZING</strong>
                                     <span class="shape-info-icon" tabindex="0">?
-                                        <div class="shape-info-tooltip">
-                                            <div class="tt-row"><strong style="color:var(--teal-mid)">EXPANSIVE:</strong> Floor & Ceiling are far apart; high upside, high sensitivity.</div>
-                                            <div class="tt-row"><strong style="color:var(--purple-grounded)">GROUNDED:</strong> Datum sits near the Floor — conservative positioning with room to expand.</div>
-                                            <div class="tt-row"><strong style="color:var(--orange-warning)">STRETCHED:</strong> Datum sits near the Ceiling — favorable conditions carry most of the weight.</div>
-                                            <div class="tt-row"><strong style="color:var(--blue-safe)">ABUNDANT:</strong> Target spending is well below the Survival Floor.</div>
-                                            <div class="tt-row"><strong style="color:var(--danger-red)">OVEREXTENDED:</strong> Target spending sits above the Sketch's modeled Ceiling.</div>
-                                        </div>
+                                        <div id="s1-state-tip" class="shape-info-tooltip"></div>
                                     </span>
                                 </div>
                                 <div class="readout-row"><strong id="lbl-physics">What it Means:</strong> <span id="val-physics" class="data-line">Calculating...</span></div>
@@ -1887,11 +1881,11 @@
                 <div class="hud-diff" style="border-left: none; padding-left: 0;">
                   <div class="tel-readout" id="d2s-pinned-readout">
                     <div class="readout-row" style="margin-bottom: 3px;">
-                      <span style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Discover State:</span>
+                      <span class="lbl-has-tip" tabindex="0" style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Discover State:<div id="s2-disc-tip" class="shape-info-tooltip"></div></span>
                       <strong id="d2s-pin-state-name" class="hud-state-label">—</strong><span id="d2s-pin-state-opener" style="font-family:var(--font-mono); font-size:8px; color:rgba(255,255,255,0.45); margin-left:4px;"></span>
                     </div>
                     <div class="readout-row" style="margin-bottom: 3px;">
-                      <span style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Designed State:</span>
+                      <span class="lbl-has-tip" tabindex="0" style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Designed State:<div id="s2-des-tip" class="shape-info-tooltip"></div></span>
                       <strong id="d2s-pin-designed-state" class="hud-state-label">—</strong><span id="d2s-pin-designed-opener" style="font-family:var(--font-mono); font-size:8px; color:rgba(255,255,255,0.45); margin-left:4px;"></span>
                     </div>
                     <div id="d2s-pin-changes-row" class="pin-changes-row" style="display:none;"></div>
@@ -2118,9 +2112,10 @@
       <div id="s3-shape-summary" class="s3-summary-strip" style="flex-direction:column;gap:0;padding:0;">
         <!-- Row 1: Confirmed (Sketch) -->
         <div class="s3-strip-row" style="display:flex;align-items:center;gap:24px;padding:10px 24px 8px;border-bottom:1px solid rgba(255,255,255,0.05);">
-          <div style="display:flex;flex-direction:column;gap:2px;font-size:8px;font-family:var(--font-mono);color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.18em;min-width:80px;">
+          <div class="lbl-has-tip" tabindex="0" style="display:flex;flex-direction:column;gap:2px;font-size:8px;font-family:var(--font-mono);color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.18em;min-width:80px;">
             <span>Shape You Have</span>
             <div id="s3-sk-shape-name" class="s3-stat-val" style="font-size:13px;color:var(--teal-mid);">—</div>
+            <div id="s3-have-tip" class="shape-info-tooltip"></div>
           </div>
           <div style="display:flex;flex-direction:column;gap:2px;">
             <div style="font-size:7px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.15em;"><span class="lbl-has-tip" tabindex="0">Structural Ceiling<div class="shape-info-tooltip">Structural Ceiling — the portfolio your upside path projects, and the yearly spending it could sustain.</div></span></div>
@@ -2137,9 +2132,10 @@
         </div>
         <!-- Row 2: Designed (Screen 2 pulls) -->
         <div class="s3-strip-row" style="display:flex;align-items:center;gap:24px;padding:8px 24px 10px;">
-          <div style="display:flex;flex-direction:column;gap:2px;font-size:8px;font-family:var(--font-mono);color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.18em;min-width:80px;">
+          <div class="lbl-has-tip" tabindex="0" style="display:flex;flex-direction:column;gap:2px;font-size:8px;font-family:var(--font-mono);color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.18em;min-width:80px;">
             <span>Shape You Want</span>
             <div id="s3-shape-name" class="s3-stat-val" style="font-size:13px;color:var(--teal-mid);">—</div>
+            <div id="s3-want-tip" class="shape-info-tooltip"></div>
           </div>
           <div style="display:flex;flex-direction:column;gap:2px;">
             <div style="font-size:7px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.15em;"><span class="lbl-has-tip" tabindex="0">Structural Ceiling<div class="shape-info-tooltip">Structural Ceiling — the portfolio your upside path projects, and the yearly spending it could sustain.</div></span></div>
@@ -2687,6 +2683,33 @@
     };
 
     window.currentShapeStateObj = { name: "INITIALIZING", color: "var(--white)", cls: "", physics: "", action: "" };
+
+    var _stateHoverMap = {
+      'ABU':              "Your Datum sits below the Floor — the conservative path already supports more than you're asking, leaving real capacity unspoken for.",
+      'ABU-WELL_BELOW':   "Your Datum sits well under the Floor — significant capacity unused, the plan carries you with room to spare in any market.",
+      'ABU-JUST_BELOW':   "Your Datum sits just under the Floor — capacity exists but the gap is narrowing toward where you'd start using the margin you've built.",
+      'GRD':              "Your Datum sits near the Floor — the conservative path holds it, but the room above is your margin to preserve or test.",
+      'GRD-TIGHT':        "Your Datum sits right against the Floor — the conservative path carries it efficiently, with margin reserved rather than spent.",
+      'GRD-STABLE':       "Your Datum sits comfortably above the Floor — the conservative path carries it cleanly, with room to absorb most surprises.",
+      'EXP':              "Your Datum sits inside a wide gap between Floor and Ceiling — the question isn't whether the plan holds, but which edge is worth testing.",
+      'EXP-FLOOR_SIDE':   "Your Datum sits closer to the Floor — the most resilient position the plan offers, trading upper room for durability against bad markets.",
+      'EXP-CENTERED':     "Your Datum sits in the middle — the most balanced position the plan offers, with meaningful room in both directions.",
+      'EXP-CEILING_SIDE': "Your Datum sits closer to the Ceiling — the plan still carries it, but you're spending most of the margin you've earned.",
+      'STR':              "Your Datum sits near the Ceiling — the plan carries it, but the upside paths are doing the work and tolerance for stress is thin.",
+      'STR-STANDARD':     "Your Datum sits inside STRETCHED — the plan carries it, but with little cushion if returns disappoint or retirement starts earlier.",
+      'STR-HIGH_END':     "Your Datum sits near the top of STRETCHED — the upper paths carry it, but any market stress puts the plan visibly under pressure.",
+      'OE':               "Your Datum sits above the Ceiling — no modeled path reaches this lifestyle at current inputs, and the gap is what the Sketch is telling you to close.",
+      'OE-ENTRY':         "Your Datum sits just past the Ceiling — modest gap, modest moves can close it, the structural line is right behind you.",
+      'OE-STRUCTURAL':    "Your Datum sits well past the Ceiling — the gap is structural, not cosmetic, and only meaningful lever changes can bring the plan back to reach."
+    };
+    function _setStateTip(tipId, stObj) {
+      var el = document.getElementById(tipId);
+      if (!el || !stObj || !stObj.name) return;
+      var km = { GROUNDED: 'GRD', EXPANSIVE: 'EXP', STRETCHED: 'STR', OVEREXTENDED: 'OE', ABUNDANT: 'ABU' };
+      var k  = km[stObj.name] || stObj.name;
+      var sk = stObj.subZone ? k + '-' + stObj.subZone : null;
+      el.textContent = (sk && _stateHoverMap[sk]) || _stateHoverMap[k] || '';
+    }
       // Screen 2 uses separate Y-axis range so Screen 1 coordinates are never clobbered
       var designYMax = 200;
       var designYMin = 0;
@@ -3912,6 +3935,7 @@
                 });
             });
         }
+        _setStateTip('s1-state-tip', s);
         // GEM B: background pulse on state change
         const skCanvas = document.getElementById('sketch-canvas');
         if (skCanvas && previousShapeStatus !== s.key) {
@@ -5741,6 +5765,8 @@
         if (_doEl) _doEl.textContent = gbStateObj.physicsShort ? '— ' + gbStateObj.physicsShort : '';
         if (_gnEl) { _gnEl.textContent = stateObj.name; _gnEl.style.color = stateObj.color; }
         if (_goEl) _goEl.textContent = stateObj.physicsShort ? '— ' + stateObj.physicsShort : '';
+        _setStateTip('s2-disc-tip', gbStateObj);
+        _setStateTip('s2-des-tip', stateObj);
 
         // PINNED comparison: getPinnedCaseObj(ghostBaseline-as-pinnedState, ptsEnd, s)
         var _d2Fill = function(tmpl, vars) {
@@ -9248,6 +9274,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
           : { name: '—', color: 'rgba(255,255,255,0.3)', physics: '', physicsShort: '', action: '' };
         var fmtS = function(v) { return v ? ('$'+Math.round(v)+'k/yr') : '—'; };
         set('s3-sk-shape-name', skStateObj.name,          skStateObj.color);
+        _setStateTip('s3-have-tip', skStateObj);
         set('s3-sk-ceil',       fmtAT(sketchCeil));
         set('s3-sk-datum',      fmtAT(sketchDatum / 0.04 / yrsInRetire));
         set('s3-sk-floor',      fmtAT(sketchFloor));
@@ -9257,6 +9284,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
         var _arrD = dDat   > sketchDatum + 1 ? ' <span style="color:var(--teal-mid);font-size:11px;">&#8593;</span>' : dDat   < sketchDatum - 1 ? ' <span style="color:var(--danger-red);font-size:11px;">&#8595;</span>' : '';
         var _arrF = dFlr   > sketchFloor + 1 ? ' <span style="color:var(--teal-mid);font-size:11px;">&#8593;</span>' : dFlr   < sketchFloor - 1 ? ' <span style="color:var(--danger-red);font-size:11px;">&#8595;</span>' : '';
         set('s3-shape-name',    stateObj.name||'—', stateObj.color||'var(--teal-mid)');
+        _setStateTip('s3-want-tip', stateObj);
         var _ceilEl = document.getElementById('s3-ceil-val');
         if (_ceilEl)  _ceilEl.innerHTML  = fmtAT(dCeil)  + _arrC;
         var _datEl  = document.getElementById('s3-datum-val');
