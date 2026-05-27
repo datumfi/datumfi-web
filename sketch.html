@@ -2226,8 +2226,8 @@
 
           <!-- Footer: What It Takes to Get There -->
           <div class="arch-card horizontal-card arch-card-gold">
-            <div class="card-title" style="text-align:center;">What It Takes to Get There</div>
-            <div class="card-desc" style="text-align:center;max-width:760px;margin:0 auto;">
+            <div class="card-title" style="text-align:center;">How to Resolve the Tension</div>
+            <div id="s3-card4-body" class="card-desc" style="text-align:center;max-width:760px;margin:0 auto;">
               <span id="s3-gap-plain" style="font-size:14px;line-height:1.9;color:rgba(255,255,255,0.85);display:block;">The Sketch shows the shape. It can't show you the path.</span>
               <span style="display:block;margin-top:16px;font-size:11px;color:rgba(255,255,255,0.4);font-family:var(--font-mono);letter-spacing:0.08em;line-height:1.8;">
                 The Sketch uses one straight-line projection. It doesn't know your account types, your Social Security options, what happens if markets drop in year two of retirement, or how Roth conversions change your floor. Those aren't details — they're the difference between a shape that holds and one that breaks.
@@ -5213,38 +5213,11 @@
         document.getElementById('slider-age').focus();
     }
 
-    let isDraggingDatum = false;
     const svgCanvas = document.querySelector('.range-svg');
-    const datumDragger = document.getElementById('datum-dragger');
-
-    datumDragger.addEventListener('pointerdown', (e) => { 
-        isDraggingDatum = true; 
-        hideScrubber();
-        document.body.style.userSelect = 'none'; 
-        svgCanvas.style.cursor = 'ns-resize'; 
-        try { datumDragger.setPointerCapture(e.pointerId); } catch(err){ console.warn('Pointer capture failed:', err); }
-    });
-    
-    window.addEventListener('pointerup', () => { 
-        isDraggingDatum = false; 
-        document.body.style.userSelect = ''; 
-        svgCanvas.style.cursor = 'crosshair'; 
-    });
-
     svgCanvas.addEventListener('pointermove', (e) => {
         const pt = svgCanvas.createSVGPoint();
         pt.x = e.clientX; pt.y = e.clientY;
         const svgP = pt.matrixTransform(svgCanvas.getScreenCTM().inverse());
-        
-        if (isDraggingDatum) {
-            triggerInteraction();
-            let newSpend = ((450 - svgP.y) / 400) * (globalYMax - globalYMin) + globalYMin;
-            slDatum.value = datumValToPos(clamp(newSpend, 20, 1000));
-            touched.spending = true; updateTracker();
-            scheduleUpdate();
-            return;
-        }
-        
         if (svgP.x >= 110 && svgP.x <= 660 && svgP.y >= -20 && svgP.y <= 500) {
             let scrubX = clamp(svgP.x, 120, 650);
             updateScrubber(scrubX);
@@ -5367,8 +5340,7 @@
     // GEM C: Datum SVG drag — dragging the datum line live-updates the slider
     (function wireDatumSVGDrag() {
       const datumDragger = document.getElementById('datum-dragger');
-      const sketchSVG    = document.getElementById('sketch-canvas')
-                              ? document.getElementById('sketch-canvas').querySelector('svg') : null;
+      const sketchSVG    = document.getElementById('sketch-canvas');
       if (!datumDragger || !sketchSVG) return;
 
       let isDraggingDatum = false;
@@ -5584,8 +5556,8 @@
 
     (function() {
       var cfg = [
-        { valId: 'val-age', slider: slAge, w: '80px', isCurrency: false, getEditVal: () => String(Math.round(parseFloat(slAge.value))), clean: s => s.replace(/[^0-9]/g, ''), validate: () => true, toSlider: v => v },
-        { valId: 'val-activation', slider: slAct, w: '80px', isCurrency: false, getEditVal: () => String(Math.round(parseFloat(slAct.value))), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= Math.round(parseFloat(slAge.value)) && v <= 90, toSlider: v => v },
+        { valId: 'val-age', slider: slAge, w: '80px', isCurrency: false, maxLength: 2, getEditVal: () => String(Math.round(parseFloat(slAge.value))), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 18 && v <= 85, getClampedValid: v => Math.max(18, Math.min(85, v)), toSlider: v => v },
+        { valId: 'val-activation', slider: slAct, w: '80px', isCurrency: false, maxLength: 2, getEditVal: () => String(Math.round(parseFloat(slAct.value))), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= Math.max(45, Math.round(parseFloat(slAge.value)) + 1) && v <= 90, getClampedValid: v => { var lo = Math.max(45, Math.round(parseFloat(slAge.value)) + 1); return Math.max(lo, Math.min(90, v)); }, toSlider: v => v },
         { valId: 'val-portfolio', slider: slPort, w: '140px', isCurrency: true, getEditVal: () => '$' + Math.round(portPosToVal(parseInt(slPort.value)) * 1000000).toLocaleString('en-US'), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 1000 && v <= 50000000, toSlider: v => portValToPos(v / 1000000) },
         { valId: 'val-datum', slider: slDatum, w: '140px', isCurrency: true, getEditVal: () => '$' + Math.round(datumPosToVal(parseInt(slDatum.value)) * 1000).toLocaleString('en-US'), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 20000 && v <= 1000000, toSlider: v => datumValToPos(v / 1000) },
         { valId: 'val-contrib', slider: slContrib, w: '140px', isCurrency: true, getEditVal: () => '$' + contribPosToVal(parseInt(slContrib.value)).toLocaleString('en-US'), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 0 && v <= 200000, toSlider: v => contribValToPos(v) }
@@ -5595,10 +5567,11 @@
         var valEl = document.getElementById(c.valId);
         var slider = c.slider;
         var inp = document.createElement('input');
-        inp.type = 'text'; 
+        inp.type = 'text';
         inp.inputMode = 'numeric';
-        inp.className = 'ctrl-edit-input'; 
+        inp.className = 'ctrl-edit-input';
         inp.style.cssText = 'display:none;width:' + c.w;
+        if (c.maxLength) inp.maxLength = c.maxLength;
         valEl.parentNode.insertBefore(inp, valEl.nextSibling);
 
         valEl.addEventListener('click', function() {
@@ -5637,8 +5610,17 @@
             inp.style.display = 'none'; valEl.style.display = ''; return;
           }
           if (!c.validate(raw)) {
-            inp.classList.add('shake'); setTimeout(() => inp.classList.remove('shake'), 300);
-            inp.value = c.getEditVal(); return;
+            if (c.getClampedValid) {
+              var snapped = c.getClampedValid(raw);
+              inp.value = String(snapped);
+              slider.value = clamp(c.toSlider(snapped), parseFloat(slider.min), parseFloat(slider.max));
+              triggerInteraction();
+              if (slider === slAge || slider === slAct) touched.timeline = true;
+              updateTracker(); updateEngine();
+            }
+            inp.classList.add('shake');
+            setTimeout(() => { inp.classList.remove('shake'); inp.style.display = 'none'; valEl.style.display = ''; }, 300);
+            return;
           }
           if(activeInputId !== slider.id) { anchorState = getCurrentState(); activeInputId = slider.id; }
           slider.value = clamp(c.toSlider(raw), parseFloat(slider.min), parseFloat(slider.max));
@@ -6821,8 +6803,126 @@
         if (_wBodyEl) _wBodyEl.innerHTML = _s3body(_s3styleTokens(_s3get(_sk2, _usd3WantVars), _usd3WantVars));
         setEl("s3-shape-name",  stObj2.name, stObj2.color);
         setEl("s3-tension-pct", tens2 + "%");
-        var _leversKey2 = dd > dc ? 'S3.C4.LEVERS-OE-INVERT' : 'S3.C4.LEVERS-' + _stateKey;
-        setEl("s3-gap-plain", _s3get(_leversKey2, _usd3vars));
+        // --- Phase G: Card 4 scenario routing ---
+        var _c4Have = ghostBaseline || {};
+        var _c4Want = _d2LastScenario || {};
+        var _yrsDelta        = (_c4Want.activationAge  || 65) - (_c4Have.activationAge  || 65);
+        var _c4HaveContrib   = _c4Have.annualContrib   || 0;
+        var _c4WantContrib   = _c4Want.annualContrib   || 0;
+        var _contribDelta    = _c4WantContrib - _c4HaveContrib;
+        var _contribDeltaPct = _c4HaveContrib > 0 ? _contribDelta / _c4HaveContrib : 0;
+        var _c4HavePV        = _c4Have.portfolioVol    || 0;
+        var _c4WantPV        = _c4Want.portfolioVol    || 0;
+        var _capitalDelta    = _c4WantPV - _c4HavePV;
+        var _capitalDeltaPct = _c4HavePV > 0 ? _capitalDelta / _c4HavePV : 0;
+        var _c4HaveFloorM    = _skPts.fvCon || 0;
+        var _c4WantFloorM    = _gbPts.fvCon || 0;
+        var _floorMDelta     = _c4WantFloorM - _c4HaveFloorM;
+        var _floorMDeltaPct  = _c4HaveFloorM > 0 ? _floorMDelta / _c4HaveFloorM : 0;
+        var _c4HaveCeilM     = _skPts.fvUp  || 0;
+        var _c4WantCeilM     = _gbPts.fvUp  || 0;
+        var _ceilMDelta      = _c4WantCeilM - _c4HaveCeilM;
+        var _ceilMDeltaPct   = _c4HaveCeilM > 0 ? _ceilMDelta / _c4HaveCeilM : 0;
+        var _floorSpendDelta = Math.round((_gbPts.floorSpend || 0) - (_skPts.floorSpend || 0));
+        var _ceilSpendDelta  = Math.round((_gbPts.ceilSpend  || 0) - (_skPts.ceilSpend  || 0));
+        // Score each scenario
+        var _c4pStructural = (stObj2.name === 'OVEREXTENDED' && stObj2.subZone === 'STRUCTURAL') ? 100 : 0;
+        var _c4pTight      = (stObj2.name === 'GROUNDED'     && stObj2.subZone === 'TIGHT')      ?  95 : 0;
+        var _c4tTime  = Math.abs(_yrsDelta)        >= 1    ? Math.min(100, Math.abs(_yrsDelta)        * 20) : 0;
+        var _c4tCon   = Math.abs(_contribDeltaPct) >= 0.10 ? Math.min(100, Math.abs(_contribDeltaPct) * 100) : 0;
+        var _c4tCap   = Math.abs(_capitalDeltaPct) >= 0.05 ? Math.min(100, Math.abs(_capitalDeltaPct) * 80)  : 0;
+        var _c4tFloor = _floorMDelta < -0.05 ? Math.min(100, Math.abs(_floorMDeltaPct) * 90) : 0;
+        var _c4tCeil  = _ceilMDelta  >  0.10 ? Math.min(100, Math.abs(_ceilMDeltaPct)  * 70) : 0;
+        var _c4tSt    = ((stObj1.name || '') !== (stObj2.name || '')) ? 60 : 0;
+        var _c4tSz    = (stObj1.name === stObj2.name && (stObj1.subZone || '') !== (stObj2.subZone || '')) ? 40 : 0;
+        // Priority override → conditional best → fallback
+        var _c4Key;
+        if (_c4pStructural > 0) {
+          _c4Key = 'PARADOX-STRUCTURAL';
+        } else if (_c4pTight > 0) {
+          _c4Key = 'PARADOX-TIGHT';
+        } else {
+          var _c4Cands = [
+            { key: 'TIME-SHIFT',          score: _c4tTime  },
+            { key: 'CONTRIBUTION-SHIFT',  score: _c4tCon   },
+            { key: 'CAPITAL-SHIFT',       score: _c4tCap   },
+            { key: 'FLOOR-RISK-SHIFT',    score: _c4tFloor },
+            { key: 'CEILING-REACH-SHIFT', score: _c4tCeil  },
+            { key: 'STATE-TRANSITION',    score: _c4tSt    },
+            { key: 'SUB-ZONE-DRIFT',      score: _c4tSz    }
+          ];
+          var _c4Best = null;
+          for (var _ci = 0; _ci < _c4Cands.length; _ci++) {
+            if (_c4Cands[_ci].score > 0 && (!_c4Best || _c4Cands[_ci].score > _c4Best.score)) { _c4Best = _c4Cands[_ci]; }
+          }
+          _c4Key = _c4Best ? _c4Best.key : 'STATIC-DESIGN';
+        }
+        // State-transition context lookup (Template 8)
+        var _c4TransCtx = {
+          'ABUNDANT|GROUNDED':      'Moving from "more capacity than you need" to "the plan supports it with margin to spare" — that\'s a tightening of comfort, not a structural weakening.',
+          'ABUNDANT|EXPANSIVE':     'You\'re trading visible surplus for visible variance — wider middle paths, less reserve, more dependence on which sequence you actually live through.',
+          'ABUNDANT|STRETCHED':     'You\'re moving from surplus to upper-edge — from "plan covers more than you need" to "plan covers this only when conditions cooperate."',
+          'ABUNDANT|OVEREXTENDED':  'You\'re crossing from surplus to structural gap — from "plan supports more than you spend" to "plan can\'t structurally carry what you\'re asking it to."',
+          'GROUNDED|ABUNDANT':      'You\'re building structural surplus — from "plan supports it" to "plan supports more than you need."',
+          'GROUNDED|EXPANSIVE':     'You\'re widening the envelope — same support, more variance in either direction, more middle paths your retirement could actually live through.',
+          'GROUNDED|STRETCHED':     'You\'re moving from the lower-stable edge to the upper-reaching edge — same plan, very different posture toward the conditions you depend on.',
+          'GROUNDED|OVEREXTENDED':  'You\'re crossing from supported to structurally short — from "plan carries it" to "plan can\'t carry it under current inputs."',
+          'EXPANSIVE|ABUNDANT':     'You\'re trading width for surplus — narrower envelope, but more capacity than you actually need.',
+          'EXPANSIVE|GROUNDED':     'You\'re tightening — same general support, but less variance in what the plan can absorb.',
+          'EXPANSIVE|STRETCHED':    'You\'re shifting from wide-middle to upper-edge — the same envelope now leans toward conditions cooperating.',
+          'EXPANSIVE|OVEREXTENDED': 'You\'re moving from wide-supported to structurally short — the envelope reached as far as it could, and the Datum is past it.',
+          'STRETCHED|ABUNDANT':     'You\'re pulling back significantly — from reaching at the upper edge to sitting comfortably below the lower one.',
+          'STRETCHED|GROUNDED':     'You\'re settling — trading upper-edge reach for lower-edge stability.',
+          'STRETCHED|EXPANSIVE':    'You\'re moving from the upper-edge to the middle — same plan, less dependency on good conditions.',
+          'STRETCHED|OVEREXTENDED': 'You\'re moving past the upper edge — from "reaches when conditions cooperate" to "reaches even when conditions cooperate isn\'t enough."',
+          'OVEREXTENDED|ABUNDANT':  'Significant restructuring — from "plan can\'t carry this" to "plan carries more than this." A different question entirely.',
+          'OVEREXTENDED|GROUNDED':  'From "plan can\'t carry this" to "plan carries this with no margin" — closing the structural gap but landing on the edge.',
+          'OVEREXTENDED|EXPANSIVE': 'From "structurally short" to "structurally supported with variance" — closing the gap and giving the envelope back.',
+          'OVEREXTENDED|STRETCHED': 'From "plan can\'t carry this" to "plan carries this only when conditions cooperate" — closing the structural gap by accepting upper-edge dependency.'
+        };
+        // Sub-zone drift context lookup (Template 9)
+        var _c4SubCtx = {
+          'ABUNDANT WELL_BELOW|JUST_BELOW': 'You moved closer to the lower edge of ABUNDANT — still surplus, but less of it. The buffer between Datum and Floor narrowed without changing the relationship.',
+          'ABUNDANT JUST_BELOW|WELL_BELOW': 'You moved deeper into surplus — same ABUNDANT relationship to the plan, more capacity unused.',
+          'GROUNDED TIGHT|STABLE':          'You restored buffer between Datum and Floor — still GROUNDED, but with margin to absorb variance the Sketch doesn\'t model.',
+          'GROUNDED STABLE|TIGHT':          'You traded buffer for something else — Datum moved toward the Floor, leaving less margin for the conditions the Sketch holds constant.',
+          'EXPANSIVE FLOOR_SIDE|CENTERED':  'You moved toward the middle of the envelope — same EXPANSIVE category, but more balanced between downside protection and upside reach.',
+          'EXPANSIVE CENTERED|FLOOR_SIDE':  'You drifted toward the lower paths — same envelope, more weight on conservative outcomes than aggressive ones.',
+          'EXPANSIVE CENTERED|CEILING_SIDE':'You drifted toward the upper paths — same envelope, more dependency on conditions cooperating than on conservative ones holding.',
+          'EXPANSIVE CEILING_SIDE|CENTERED':'You pulled back from the upper edge — same envelope, less reach, more balance across paths.',
+          'STRETCHED STANDARD|HIGH_END':    'You stretched further toward the Ceiling — same upper-edge posture, but now even closer to where the plan stops cooperating with normal conditions.',
+          'STRETCHED HIGH_END|STANDARD':    'You pulled back from the upper edge — still STRETCHED, but the reach has more headroom against the Ceiling.',
+          'OVEREXTENDED ENTRY|STRUCTURAL':  'You\'re no longer just past the Ceiling — the structural gap widened. The plan can\'t carry this even with favorable conditions.',
+          'OVEREXTENDED STRUCTURAL|ENTRY':  'You closed some of the structural gap — still over the Ceiling, but closer to where it could become reachable with the right inputs.'
+        };
+        // Build Card 4 token vars (spreads Have + Want existing vars, adds new tokens)
+        var _c4Vars = Object.assign({}, _usd3HaveVars, _usd3WantVars, {
+          capDeltaM:          _fmtM(Math.abs((_gbPts.fvBase || 0) - (_skPts.fvBase || 0))),
+          levName:            'the chosen lever',
+          levAmtSigned:       '—',
+          levPct:             '0',
+          yearsDeltaAbs:      String(Math.abs(_yrsDelta)),
+          yearsDeltaDir:      _yrsDelta < 0 ? 'earlier' : 'later',
+          bridgeContext:      _yrsDelta < 0 ? 'with taxable accounts and bridge income' : 'while contributions continue and tax-advantaged caps reset',
+          contribDeltaSigned: (_contribDelta    >= 0 ? '+' : '') + '$' + Math.abs(Math.round(_contribDelta)).toLocaleString('en-US'),
+          contribDeltaPct:    (_contribDeltaPct >= 0 ? '+' : '') + Math.round(_contribDeltaPct * 100) + '%',
+          capitalDeltaSigned: (_capitalDelta    >= 0 ? '+' : '') + '$' + Math.round(Math.abs(_capitalDelta) * 1000) + 'k',
+          floorDeltaSigned:   (_floorSpendDelta >= 0 ? '+' : '') + '$' + Math.abs(_floorSpendDelta) + 'k/yr',
+          ceilingDeltaSigned: (_ceilSpendDelta  >= 0 ? '+' : '') + '$' + Math.abs(_ceilSpendDelta)  + 'k/yr',
+          stateHaveName:      stObj1.name    || 'EXPANSIVE',
+          stateWantName:      stObj2.name    || 'EXPANSIVE',
+          stateName:          stObj2.name    || 'EXPANSIVE',
+          subZoneHaveName:    stObj1.subZone || 'CENTERED',
+          subZoneWantName:    stObj2.subZone || 'CENTERED',
+          stateTransitionContext: _c4TransCtx[(stObj1.name || '') + '|' + (stObj2.name || '')] || '',
+          subZoneDriftContext:    _c4SubCtx[(stObj2.name || '') + ' ' + (stObj1.subZone || '') + '|' + (stObj2.subZone || '')] || ''
+        });
+        // Render Card 4
+        var _c4El = document.getElementById('s3-card4-body');
+        if (_c4El) {
+          var _c4Prose = _s3c4Body(_s3c4Resolve(_c4Key, _c4Vars));
+          _c4El.innerHTML = '<div style="white-space:pre-wrap;font-family:var(--font-sans);font-size:15px;line-height:1.7;color:rgba(255,255,255,0.85);text-align:left;padding:0 8px;">' + _c4Prose + '</div>';
+        }
       })();
       // S4: stamp real numbers into Studio CTA links
       _updateStudioCTAs();
@@ -8602,6 +8702,228 @@ On that favorable path, your designed Shape stretches to:
 
 Under optimistic conditions, your designed spending sits well below your designed Floor — and the unused capacity widens further. Studio can show whether that surplus represents a deliberate conservative anchor or capacity worth reconsidering — in years of earlier retirement, larger legacy, or stronger stress resilience.`
     });
+
+    // ── _S3C4: Phase G Card 4 tension templates (10 scenarios) ───────────
+    var _S3C4 = {};
+    _S3C4['PARADOX-STRUCTURAL'] = `HOW TO RESOLVE THE TENSION
+
+⚠️ This isn't tension to resolve — it's structure that doesn't hold.
+
+The Shape you've designed asks the plan to carry more than it structurally can. That's not a market-conditions problem and it's not a discipline problem. It's a math problem.
+
+The three forces, named honestly:
+
+  • CAPITAL — Your designed Shape requires {gbDatumReqM} by retirement. Your current Shape projects {dDatumM}. That's a gap of {capDeltaM} the sketch numbers don't reach — and the structural ratio puts the Datum significantly above what {gbDatumM} can sustainably support.
+
+  • LEVER — The single biggest force in that gap is {levName} ({levAmtSigned}, {levPct}% of the move). But moving any one lever alone won't close this — the Shape is over the structural line, not just stretched toward it.
+
+  • REALITY — This is a stress-test, not a plan state. You can see what the Shape would require, but you can't live inside it as currently designed.
+
+This is the moment the Sketch runs out of road. It draws the Shape; it can't show you what would need to change for this Shape to become reachable.
+
+Studio shows that — exactly which combination of capital, time, contribution, or Datum would need to move, and by how much, to bring this Shape inside the structural line. Not whether to push for it. What pushing would actually require.
+
+The question is honest:
+Do you accept the Shape you have, or do you want to know what reaching this designed Shape actually costs?
+
+See If This Shape Holds →`;
+    _S3C4['PARADOX-TIGHT'] = `HOW TO RESOLVE THE TENSION
+
+Your designed Datum sits at the Floor. The plan still supports it — but you've designed away the buffer.
+
+That matters more than it sounds. The buffer between Datum and Floor is what absorbs the real-world variance the Sketch doesn't fully model: a bad sequence in year two of retirement, a healthcare event that wasn't in the projection, a tax-policy shift that compresses the floor.
+
+The three forces in tension:
+
+  • CAPITAL — Your designed Shape requires {gbDatumReqM} by retirement. Your current Shape projects {dDatumM}. That's a gap of {capDeltaM} between what you have and what this no-buffer Shape needs.
+
+  • LEVER — {levName} accounts for {levPct}% of that gap ({levAmtSigned}). It's the load-bearing variable.
+
+  • BUFFER — You've collapsed the margin between Datum and Floor. The Sketch says the plan still holds. It does — until conditions arrive that the Sketch didn't model.
+
+This is the moment the Sketch runs out of road. It tells you the math works at the Floor. It doesn't tell you what happens when reality lands a few percent below the conservative path.
+
+Studio stress-tests exactly that. It runs your no-buffer Shape across 10,000 sequences and shows you which ones break it — and what restoring even a small buffer would buy you.
+
+The question is honest:
+Do you accept a Shape with no margin, or do you want to know what a small buffer actually costs?
+
+See If This Shape Holds →`;
+    _S3C4['TIME-SHIFT'] = `HOW TO RESOLVE THE TENSION
+
+You've designed a Shape your current numbers don't project — and you're trying to land it on a different timeline.
+
+The gap between what you have and what you want is the question. But time changes the conversation.
+
+The three forces in tension:
+
+  • CAPITAL — Your designed Shape requires {gbDatumReqM} by retirement. Your current Shape projects {dDatumM}. That's {capDeltaM} of capital your sketch numbers don't reach.
+
+  • LEVER — {levName} accounts for {levPct}% of that gap ({levAmtSigned}). It's the single biggest driver.
+
+  • TIME — You're targeting this Shape {yearsDeltaAbs} years {yearsDeltaDir} than your current retirement date. {yearsDeltaAbs} bridge years that the plan has to fund {bridgeContext} before traditional retirement assets become available.
+
+This is the moment the Sketch runs out of road. It draws the shape; it doesn't know how Roth conversion windows narrow when you retire earlier, what sequence-of-returns risk does to your target if markets disappoint in your bridge years, or how Social Security claiming timing reshapes the floor when you delay or pull forward.
+
+Studio models bridge spending, Roth conversion windows, and Social Security claiming — the WHEN levers your shifted retirement requires. It runs your actual numbers across 10,000 market sequences and shows which lever is most likely to bridge the distance.
+
+The question is honest:
+Do you accept what you have, or push for what you want?
+
+See If This Shape Holds →`;
+    _S3C4['CONTRIBUTION-SHIFT'] = `HOW TO RESOLVE THE TENSION
+
+You've designed a Shape your current contribution rate doesn't fund — and the difference between the two is a decade or more of savings discipline.
+
+The three forces in tension:
+
+  • CAPITAL — Your designed Shape requires {gbDatumReqM} by retirement. Your current Shape projects {dDatumM}. That's {capDeltaM} the sketch numbers don't reach.
+
+  • LEVER — {levName} accounts for {levPct}% of that gap ({levAmtSigned}).
+
+  • SAVINGS — You're betting on contributing {contribDeltaSigned} per year between now and retirement. {contribDeltaPct} more than your current scenario assumes. Savings discipline becomes a load-bearing assumption for this Shape — every year that contribution doesn't materialize is a year the gap widens.
+
+This is the moment the Sketch runs out of road. It assumes the contribution holds; it doesn't know what happens if your income compresses for two years, if account contribution limits cap out, or if a household event reshuffles priorities.
+
+Studio stress-tests whether your designed savings rate actually holds — across career disruptions, account caps, and the tax-advantaged sequencing decisions that determine whether contributing $X actually buys you $X in retirement spending power.
+
+The question is honest:
+Do you accept what you have, or commit to what you want?
+
+See If This Shape Holds →`;
+    _S3C4['CAPITAL-SHIFT'] = `HOW TO RESOLVE THE TENSION
+
+You've designed a Shape that starts from a different financial position than the one you have today. That's not wrong — but it's worth naming.
+
+The three forces in tension:
+
+  • CAPITAL — Your designed Shape requires {gbDatumReqM} by retirement. Your current Shape projects {dDatumM}. That's {capDeltaM} the sketch numbers don't reach.
+
+  • LEVER — {levName} accounts for {levPct}% of that gap ({levAmtSigned}).
+
+  • STARTING POINT — You're modeling {capitalDeltaSigned} more in already-invested capital than you actually have right now. The Shape depends on a starting position the sketch can draw but the calendar hasn't reached. Whether that capital comes from a windfall, a sale, an inheritance, or a planned contribution event matters — because each source lands differently.
+
+This is the moment the Sketch runs out of road. It treats capital as a number; it doesn't know what type of account it lands in, whether it's tax-advantaged or taxable, how Roth conversions reshape it, or what sequence risk does to capital that arrives at the wrong moment.
+
+Studio models exactly how that capital lands — what's already invested, what depends on future events, how account types reshape effective spending power, and what timing means for the path between here and there.
+
+The question is honest:
+Do you accept what you have, or are you building toward what you want?
+
+See If This Shape Holds →`;
+    _S3C4['FLOOR-RISK-SHIFT'] = `HOW TO RESOLVE THE TENSION
+
+You've designed a Shape that accepts more downside than your current Shape carries. The Floor moved. That's a real choice — worth naming.
+
+The three forces in tension:
+
+  • CAPITAL — Your designed Shape requires {gbDatumM} by retirement. Your current Shape projects {dDatumM}. That's {capDeltaM} the sketch numbers don't reach.
+
+  • LEVER — {levName} accounts for {levPct}% of that gap ({levAmtSigned}).
+
+  • DOWNSIDE — You accepted {floorDeltaSigned} less protection on the downside. The Floor — the level the plan supports even when markets disappoint — sits lower than it did. In exchange, the Shape stretches in other directions. That's a trade, not a mistake. But it's a trade with consequences.
+
+This is the moment the Sketch runs out of road. It draws the new Floor; it doesn't show you what happens when reality lands there. Which sequences trigger it. How often. What it actually feels like in the years leading up to it.
+
+Studio stress-tests that accepted downside across 10,000 market sequences — where the new Floor holds, where it doesn't, and what conditions push the plan into the territory below it. So you know what you're trading away, not just that you traded.
+
+The question is honest:
+Do you accept what you have, or are you trading something for what you want?
+
+See If This Shape Holds →`;
+    _S3C4['CEILING-REACH-SHIFT'] = `HOW TO RESOLVE THE TENSION
+
+You've designed a Shape that reaches higher than your current Shape projects. The Ceiling moved up. That reach has a price — worth naming.
+
+The three forces in tension:
+
+  • CAPITAL — Your designed Shape requires {gbDatumM} by retirement. Your current Shape projects {dDatumM}. That's {capDeltaM} the sketch numbers don't reach.
+
+  • LEVER — {levName} accounts for {levPct}% of that gap ({levAmtSigned}).
+
+  • REACH — You stretched the upper edge by {ceilingDeltaSigned}. The Ceiling — the level the plan supports when markets cooperate — sits higher than it did. Good years now have to do more of the work. The Shape reaches this lifestyle, but increasingly only when conditions align.
+
+This is the moment the Sketch runs out of road. It can extend the Ceiling on paper; it can't tell you how often markets actually cooperate enough to fund the reach. How often that upper edge gets touched. What conditions have to compound for it to happen.
+
+Studio shows how often that Ceiling actually gets reached across real market sequences — and what specific combinations of conditions, timing, and lever discipline have to align. So you know what you're reaching for, and what you're depending on to get there.
+
+The question is honest:
+Do you accept what you have, or are you reaching for what you want?
+
+See If This Shape Holds →`;
+    _S3C4['STATE-TRANSITION'] = `HOW TO RESOLVE THE TENSION
+
+You didn't shift position inside a state — you moved between states. From {stateHaveName} to {stateWantName}. That's a different kind of move, and it deserves its own honest read.
+
+The three forces in tension:
+
+  • CAPITAL — Your designed Shape requires {gbDatumM} by retirement. Your current Shape projects {dDatumM}. That's {capDeltaM} the sketch numbers don't reach.
+
+  • LEVER — {levName} accounts for {levPct}% of that gap ({levAmtSigned}).
+
+  • STRUCTURE — You crossed a state boundary. {stateHaveName} and {stateWantName} aren't the same kind of relationship to the plan. {stateTransitionContext} That's not a tweak — it's a reframe of what the plan is being asked to do.
+
+This is the moment the Sketch runs out of road. It tells you the new state on paper; it doesn't tell you what living inside that state actually requires — which lever combinations the new structural category demands, how stable the new state is across real conditions, whether the move is sustainable or fragile.
+
+Studio names exactly what crossing that boundary costs. It shows whether the new state holds under stress, what specific lever discipline maintains it, and what conditions would push the Shape back to where it started.
+
+The question is honest:
+Do you accept what you have, or are you committing to a different Shape entirely?
+
+See If This Shape Holds →`;
+    _S3C4['SUB-ZONE-DRIFT'] = `HOW TO RESOLVE THE TENSION
+
+Same state, different posture. You haven't left {stateName} — but the Shape you've designed sits in a different part of it. That's a real shift even when the state name doesn't change.
+
+The three forces in tension:
+
+  • CAPITAL — Your designed Shape requires {gbDatumM} by retirement. Your current Shape projects {dDatumM}. That's {capDeltaM} the sketch numbers don't reach.
+
+  • LEVER — {levName} accounts for {levPct}% of that gap ({levAmtSigned}).
+
+  • POSITION — You shifted from {subZoneHaveName} to {subZoneWantName}. {subZoneDriftContext} That's not a state change — it's a position change. The category looks the same. The posture inside it doesn't.
+
+This is the moment the Sketch runs out of road. It tells you the state holds; it doesn't tell you whether the new position holds differently than the old one. Which buffers got narrower. Which assumptions got more load-bearing. What conditions would push the Shape further toward the edge of the state you're still inside.
+
+Studio shows whether the new posture actually matters across market sequences, account types, and the variables the Sketch doesn't model. Same state, different conditions to stay in it.
+
+The question is honest:
+Do you accept where you are, or are you positioning for something different inside the same state?
+
+See If This Shape Holds →`;
+    _S3C4['STATIC-DESIGN'] = `HOW TO RESOLVE THE TENSION
+
+Your designed Shape is essentially your current Shape. The tension here isn't between two different futures — it's between the Shape the Sketch can draw and the Shape that actually holds when real conditions arrive.
+
+The three forces still worth naming:
+
+  • CAPITAL — Your portfolio is projected to reach {dDatumM} by retirement on the middle path. Real outcomes could land {dFloorM} lower or {dCeilM} higher depending on which markets you actually live through. That spread isn't theoretical — it's what your retirement actually depends on.
+
+  • LEVER — The plan's biggest sensitivity is {levName}. Every dollar of variance there moves the projection more than any other lever. That's the variable your future depends on most.
+
+  • CONFIRMATION — You haven't pushed the design. That's worth naming — this Shape is either deliberately what you want, or you haven't yet asked whether the plan could carry more.
+
+This is the moment the Sketch runs out of road. It draws the envelope; it doesn't know whether your account types support this projection, what sequence-of-returns risk does to the years right before and after retirement, or how Roth conversions reshape the floor between now and then.
+
+Studio tests the variable carrying the weight — {levName} — against the sequences, account types, and timing the Sketch holds constant. Stable on paper doesn't mean stable when conditions arrive.
+
+The question is honest:
+Do you accept what the Sketch shows, or do you want to know what holds when conditions get real?
+
+See If This Shape Holds →`;
+    var _s3c4Resolve = function(key, vars) {
+      var tmpl = _S3C4[key];
+      if (!tmpl) return '';
+      return tmpl.replace(/\{([^}]+)\}/g, function(_, k) {
+        return (vars[k] !== undefined) ? String(vars[k]) : '{' + k + '}';
+      });
+    };
+    var _s3c4Body = function(s) {
+      var i = (s||'').indexOf('\n\n');
+      var body = i >= 0 ? s.slice(i+2) : (s||'');
+      return body.replace(/\n\nSee If This Shape Holds →\s*$/, '').replace(/\s+$/, '');
+    };
+
     var _s3get = function(id, vars) {
       var tmpl = _S3[id];
       if (tmpl === undefined) return '';
@@ -8784,7 +9106,21 @@ Under optimistic conditions, your designed spending sits well below your designe
 
     // Phase E.0.1: Screen 2 click-to-type affordance (mirrors S1 IIFE at L5584-5665)
     (function() {
+      var slD2Age = document.getElementById('d2-slider-age');
+      var slD2Act = document.getElementById('d2-slider-activation');
       var d2cfg = [
+        { valId: 'd2-val-age',        slider: slD2Age, w: '80px', isCurrency: false, maxLength: 2,
+          getEditVal: function() { return String(parseInt(slD2Age.value, 10)); },
+          clean: function(s) { return s.replace(/[^0-9]/g, ''); },
+          validate: function(v) { return v >= 18 && v <= 85; },
+          getClampedValid: function(raw) { return Math.max(18, Math.min(85, raw)); },
+          toSlider: function(v) { return v; } },
+        { valId: 'd2-val-activation', slider: slD2Act, w: '80px', isCurrency: false, maxLength: 2,
+          getEditVal: function() { return String(parseInt(slD2Act.value, 10)); },
+          clean: function(s) { return s.replace(/[^0-9]/g, ''); },
+          validate: function(v) { return v >= Math.max(45, parseInt(slD2Age.value, 10) + 1) && v <= 90; },
+          getClampedValid: function(raw) { var lo = Math.max(45, parseInt(slD2Age.value, 10) + 1); return Math.max(lo, Math.min(90, raw)); },
+          toSlider: function(v) { return v; } },
         { valId: 'd2-val-portfolio', slider: slD2Port,    w: '140px', isCurrency: true,
           getEditVal: function() { return '$' + Math.round(portPosToVal(parseInt(slD2Port.value)) * 1000000).toLocaleString('en-US'); },
           clean: function(s) { return s.replace(/[^0-9]/g, ''); },
@@ -8812,13 +9148,18 @@ Under optimistic conditions, your designed spending sits well below your designe
         inp.inputMode = 'numeric';
         inp.className = 'ctrl-edit-input';
         inp.style.cssText = 'display:none;width:' + c.w;
+        if (c.maxLength) inp.maxLength = c.maxLength;
         valEl.parentNode.insertBefore(inp, valEl.nextSibling);
 
         valEl.addEventListener('click', function() {
-          var ex = slider.dataset.exactVal;
-          inp.value = (ex !== undefined && ex !== '')
-            ? '$' + parseFloat(ex).toLocaleString('en-US')
-            : c.getEditVal();
+          if (c.isCurrency) {
+            var ex = slider.dataset.exactVal;
+            inp.value = (ex !== undefined && ex !== '')
+              ? '$' + parseFloat(ex).toLocaleString('en-US')
+              : c.getEditVal();
+          } else {
+            inp.value = c.getEditVal();
+          }
           valEl.style.display = 'none';
           inp.style.display = '';
           inp.focus();
@@ -8827,7 +9168,9 @@ Under optimistic conditions, your designed spending sits well below your designe
 
         inp.addEventListener('input', function(e) {
           var num = e.target.value.replace(/[^0-9]/g, '');
-          e.target.value = num ? '$' + parseInt(num, 10).toLocaleString('en-US') : '';
+          e.target.value = c.isCurrency
+            ? (num ? '$' + parseInt(num, 10).toLocaleString('en-US') : '')
+            : num;
         });
 
         function d2CommitEdit() {
@@ -8835,12 +9178,24 @@ Under optimistic conditions, your designed spending sits well below your designe
           var raw = parseInt(cleaned, 10);
           if (isNaN(raw)) { inp.style.display = 'none'; valEl.style.display = ''; return; }
           if (!c.validate(raw)) {
-            inp.classList.add('shake'); setTimeout(function() { inp.classList.remove('shake'); }, 300);
-            inp.value = c.getEditVal(); return;
+            if (c.getClampedValid) {
+              var snapped = c.getClampedValid(raw);
+              inp.value = String(snapped);
+              slider.value = clamp(c.toSlider(snapped), parseFloat(slider.min), parseFloat(slider.max));
+              updateDesignEngine();
+            }
+            inp.classList.add('shake');
+            setTimeout(function() { inp.classList.remove('shake'); inp.style.display = 'none'; valEl.style.display = ''; }, 300);
+            return;
           }
           slider.dataset.exactVal = String(raw);
           slider.value = clamp(c.toSlider(raw), parseFloat(slider.min), parseFloat(slider.max));
-          updateDesignEngine();
+          if (slider === slD2Age && slD2Act && parseInt(slD2Act.value) <= raw) {
+            slD2Act.value = clamp(raw + 1, 45, 90);
+            slD2Act.dispatchEvent(new Event('input'));
+          } else {
+            updateDesignEngine();
+          }
           inp.style.display = 'none'; valEl.style.display = '';
         }
 
