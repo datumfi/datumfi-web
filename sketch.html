@@ -1278,6 +1278,13 @@
   .c4-money { color: #5DCAA5; font-weight: 500; }
   .c4-time  { color: #FFFFFF; font-weight: 500; }
   .c4-force { color: #C9A84C; font-weight: 500; }
+  .c4-up    { color: #C9A84C; font-weight: 500; }
+  .c4-down  { color: #e24b4a; font-weight: 500; }
+  .c4-state-abu { color: #4da8da; font-weight: 500; }
+  .c4-state-grd { color: #8B6FBF; font-weight: 500; }
+  .c4-state-exp { color: #5DCAA5; font-weight: 500; }
+  .c4-state-str { color: #E58E26; font-weight: 500; }
+  .c4-state-oe  { color: #e24b4a; font-weight: 500; }
   .s3-strip-row {
     padding: 22px 16px !important;
     gap: 24px !important;
@@ -6833,6 +6840,47 @@
         var _fmtM     = function(v) { if (!v || v <= 0) return '—'; return v >= 1 ? '$' + v.toFixed(2) + 'M' : '$' + Math.round(v * 1000) + 'k'; };
         var _skPts    = lastCalculatedPoints || {};
         var _gbPts    = _d2LastScenario ? getMathPoint(_d2LastScenario.yearsToGrow||0, _d2LastScenario.yearsToGrow||0, _d2LastScenario) : {};
+        var _pickIncrement = function(datum, dir, size) {
+          var b = datum < 50   ? { pSm:10, pLg:20,  mSm:5,  mLg:10  } :
+                  datum < 100  ? { pSm:10, pLg:25,  mSm:10, mLg:20  } :
+                  datum < 175  ? { pSm:15, pLg:25,  mSm:15, mLg:25  } :
+                  datum < 250  ? { pSm:25, pLg:50,  mSm:20, mLg:40  } :
+                                 { pSm:50, pLg:100, mSm:35, mLg:75  };
+          if (dir === '+') return size === 'small' ? b.pSm : b.pLg;
+          return size === 'small' ? b.mSm : b.mLg;
+        };
+        var _s3CouldBeTokens = function(datum) {
+          var pSm  = _pickIncrement(datum, '+', 'small'),  pLg  = _pickIncrement(datum, '+', 'large');
+          var mSm  = _pickIncrement(datum, '-', 'small'),  mLg  = _pickIncrement(datum, '-', 'large');
+          var pDSm = datum + pSm,  pDLg = datum + pLg;
+          var mDSm = datum - mSm,  mDLg = datum - mLg;
+          var up = function(v) { return '<span class="c4-up">'   + v + '</span>'; };
+          var dn = function(v) { return '<span class="c4-down">' + v + '</span>'; };
+          return {
+            plusIncSmallK:      up('$' + pSm  + 'k'),
+            plusIncLargeK:      up('$' + pLg  + 'k'),
+            minusIncSmallK:     dn('$' + mSm  + 'k'),
+            minusIncLargeK:     dn('$' + mLg  + 'k'),
+            plusDatumSmallK:    up('$' + pDSm + 'k'),
+            plusDatumLargeK:    up('$' + pDLg + 'k'),
+            minusDatumSmallK:   dn('$' + mDSm + 'k'),
+            minusDatumLargeK:   dn('$' + mDLg + 'k'),
+            plusDatumSmallReqM:  up(_fmtM(pDSm / 0.04 / 1000)),
+            plusDatumLargeReqM:  up(_fmtM(pDLg / 0.04 / 1000)),
+            minusDatumSmallReqM: dn(_fmtM(mDSm / 0.04 / 1000)),
+            minusDatumLargeReqM: dn(_fmtM(mDLg / 0.04 / 1000))
+          };
+        };
+        // G.2.1: zero-change detection — shared by Box 3 (R2.C) and Box 4 (R2.D)
+        var _c4ZeroChange = (
+          Math.round(dd) === Math.round(_skPts.datumSpend || 0) &&
+          Math.round(df) === Math.round(_skPts.floorSpend || 0) &&
+          Math.round(dc) === Math.round(_skPts.ceilSpend  || 0) &&
+          ((_d2LastScenario || {}).activationAge || 65) === ((ghostBaseline || {}).activationAge || 65) &&
+          ((_d2LastScenario || {}).annualContrib || 0) === ((ghostBaseline || {}).annualContrib || 0)
+        );
+        var _cbTokens = (_c4ZeroChange && stObj1.name && stObj1.subZone)
+          ? _s3CouldBeTokens(Math.round(dd)) : {};
         var _usd3HaveVars = {
           dDatumK: '$' + Math.round(_skPts.datumSpend || 0) + 'k', dCeilK: '$' + Math.round(_skPts.ceilSpend || 0) + 'k', dFloorK: '$' + Math.round(_skPts.floorSpend || 0) + 'k',
           dDatumM: _fmtM(_skPts.fvBase), dCeilM: _fmtM(_skPts.fvUp), dFloorM: _fmtM(_skPts.fvCon),
@@ -6859,10 +6907,46 @@
         if (_hCardEl) _hCardEl.style.borderColor = stObj1.color || 'var(--teal-mid)';
         var _wCardEl  = _wStateEl ? _wStateEl.closest('.arch-card') : null;
         if (_wCardEl) _wCardEl.style.borderColor = stObj2.color || 'var(--teal-mid)';
+        // G.2.1 Box 3: swap title on zero-change
+        var _wTitleEl = _wCardEl ? _wCardEl.querySelector('.card-title') : null;
+        if (_wTitleEl) _wTitleEl.textContent = _c4ZeroChange ? 'The Shape You Could Have' : 'The Shape You Want';
         var _hBodyEl  = document.getElementById('s3-have-body');
-        if (_hBodyEl) _hBodyEl.innerHTML = _s3body(_s3styleTokens(_s3get(_sk1, _usd3HaveVars), _usd3HaveVars));
+        if (_hBodyEl) _hBodyEl.innerHTML = _s3body(_s3styleTokens(_s3get(_sk1, _usd3HaveVars), _usd3HaveVars))
+          .replace(/\b(ABUNDANT|GROUNDED|EXPANSIVE|STRETCHED|OVEREXTENDED)\b/g, function(_, s) {
+            var _stCls = { ABUNDANT:'abu', GROUNDED:'grd', EXPANSIVE:'exp', STRETCHED:'str', OVEREXTENDED:'oe' };
+            return '<span class="c4-state-' + _stCls[s] + '">' + s + '</span>';
+          });
         var _wBodyEl  = document.getElementById('s3-want-body');
-        if (_wBodyEl) _wBodyEl.innerHTML = _s3body(_s3styleTokens(_s3get(_sk2, _usd3WantVars), _usd3WantVars));
+        if (_wBodyEl) {
+          if (_c4ZeroChange && stObj1.name && stObj1.subZone) {
+            var _r2cKey  = 'COULD_BE-' + (_stateKeyMap[stObj1.name] || stObj1.name) + '-' + stObj1.subZone;
+            var _r2cTmpl = _S3R2C[_r2cKey];
+            if (_r2cTmpl) {
+              var _r2cResolved = _r2cTmpl.replace(/\{([^}]+)\}/g, function(_, k) {
+                return (_cbTokens[k] !== undefined) ? String(_cbTokens[k]) : '{' + k + '}';
+              });
+              _wBodyEl.innerHTML = _s3body(_r2cResolved)
+                .replace(/\b(ABUNDANT|GROUNDED|EXPANSIVE|STRETCHED|OVEREXTENDED)\b/g, function(_, s) {
+                  var _stCls = { ABUNDANT:'abu', GROUNDED:'grd', EXPANSIVE:'exp', STRETCHED:'str', OVEREXTENDED:'oe' };
+                  return '<span class="c4-state-' + _stCls[s] + '">' + s + '</span>';
+                })
+                .replace(/(↑ [^—\n]+—)/g, '<span class="c4-up">$1</span>')
+                .replace(/(↓ [^—\n]+—)/g, '<span class="c4-down">$1</span>');
+            } else {
+              _wBodyEl.innerHTML = _s3body(_s3styleTokens(_s3get(_sk2, _usd3WantVars), _usd3WantVars))
+                .replace(/\b(ABUNDANT|GROUNDED|EXPANSIVE|STRETCHED|OVEREXTENDED)\b/g, function(_, s) {
+                  var _stCls = { ABUNDANT:'abu', GROUNDED:'grd', EXPANSIVE:'exp', STRETCHED:'str', OVEREXTENDED:'oe' };
+                  return '<span class="c4-state-' + _stCls[s] + '">' + s + '</span>';
+                });
+            }
+          } else {
+            _wBodyEl.innerHTML = _s3body(_s3styleTokens(_s3get(_sk2, _usd3WantVars), _usd3WantVars))
+              .replace(/\b(ABUNDANT|GROUNDED|EXPANSIVE|STRETCHED|OVEREXTENDED)\b/g, function(_, s) {
+                var _stCls = { ABUNDANT:'abu', GROUNDED:'grd', EXPANSIVE:'exp', STRETCHED:'str', OVEREXTENDED:'oe' };
+                return '<span class="c4-state-' + _stCls[s] + '">' + s + '</span>';
+              });
+          }
+        }
         setEl("s3-shape-name",  stObj2.name, stObj2.color);
         setEl("s3-tension-pct", tens2 + "%");
         // --- Phase G: Card 4 scenario routing ---
@@ -6919,6 +7003,11 @@
           }
           _c4Key = _c4Best ? _c4Best.key : 'STATIC-DESIGN';
         }
+        // G.2.1 Box 4 R2.D: zero-change overrides to tension templates
+        if (_c4ZeroChange && stObj1.name && stObj1.subZone) {
+          var _cbtKey = 'COULD_BE_TENSION-' + (_stateKeyMap[stObj1.name] || stObj1.name) + '-' + stObj1.subZone;
+          if (_S3C4[_cbtKey]) { _c4Key = _cbtKey; }
+        }
         // State-transition context lookup (Template 8)
         var _c4TransCtx = {
           'ABUNDANT|GROUNDED':      'Moving from "more capacity than you need" to "the plan supports it with margin to spare" — that\'s a tightening of comfort, not a structural weakening.',
@@ -6966,8 +7055,9 @@
         var _capGapM     = _rawCapGapM > 0.001
           ? _rawCapGapM
           : Math.max(0, _reqCapWantM - (_skPts.fvBase || 0));
-        var _c4Vars = Object.assign({}, _usd3HaveVars, _usd3WantVars, {
+        var _c4Vars = Object.assign({}, _usd3HaveVars, _usd3WantVars, _cbTokens, {
           capDeltaM:          _c4M(_fmtM(_capGapM)),
+          currentDatumK:      _c4M('$' + Math.round(dd) + 'k'),
           dCapBaseM:          _c4M(_fmtM(_skPts.fvBase)),
           gbDatumReqM:        _c4M(_fmtM((dd || 0) / 0.04 / 1000)),
           dFloorM:            _c4M(_fmtM(_skPts.fvCon)),
@@ -6995,8 +7085,14 @@
         var _c4El = document.getElementById('s3-card4-body');
         if (_c4El) {
           var _c4Prose = _s3c4Body(_s3c4Resolve(_c4Key, _c4Vars))
-            .replace(/• (CAPITAL|LEVER|REALITY|BUFFER|TIME|SAVINGS|STARTING POINT|DOWNSIDE|REACH|STRUCTURE|POSITION|CONFIRMATION) —/g,
-                     '• <span class="c4-force">$1</span> —');
+            .replace(/\b(ABUNDANT|GROUNDED|EXPANSIVE|STRETCHED|OVEREXTENDED)\b/g, function(_, s) {
+              var _stCls = { ABUNDANT:'abu', GROUNDED:'grd', EXPANSIVE:'exp', STRETCHED:'str', OVEREXTENDED:'oe' };
+              return '<span class="c4-state-' + _stCls[s] + '">' + s + '</span>';
+            })
+            .replace(/• (CAPITAL|LEVER|REALITY|BUFFER|TIME|SAVINGS|STARTING POINT|DOWNSIDE|REACH|STRUCTURE|POSITION|CONFIRMATION|TRAJECTORY|DURABILITY|MARGIN) —/g,
+                     '• <span class="c4-force">$1</span> —')
+            .replace(/(↑ [^—\n]+—)/g, '<span class="c4-up">$1</span>')
+            .replace(/(↓ [^—\n]+—)/g, '<span class="c4-down">$1</span>');
           _c4El.innerHTML = '<div style="white-space:pre-wrap;font-family:var(--font-sans);font-size:15px;line-height:1.7;color:rgba(255,255,255,0.85);text-align:left;padding:0 8px;">' + _c4Prose + '</div>';
         }
       })();
@@ -8937,6 +9033,307 @@ This is exactly where the Sketch runs out of road. It draws the Shape. It can't 
 Do you want to accept what the Sketch shows — or do you want to know what holds when real conditions actually arrive?
 
 See If This Shape Holds →`;
+    // ── _S3R2C: Phase G.2.1 R2.C "What Your Shape Could Be" templates (Box 3 · 11 sub-zones) ──
+    // .c4-up/.c4-down classes shared with Box 4 R2.D — named for Card 4 origin, functional in both boxes
+    var _S3R2C = {};
+    _S3R2C['COULD_BE-ABU-WELL_BELOW'] = `WHAT YOUR SHAPE COULD BE
+
+You haven't changed anything — and your Shape sits comfortably below what your portfolio can carry. There's real room above your Datum, and the plan isn't asking much of markets to reach it.
+
+Two upward paths worth knowing:
+
+  ↑ Smaller lift — Raising your Datum by {plusIncSmallK} to {plusDatumSmallK}/yr would lift required capital to {plusDatumSmallReqM}. Still well inside ABUNDANT — you'd simply use a bit more of the room you've built.
+
+  ↑ Larger lift — Raising by {plusIncLargeK} to {plusDatumLargeK}/yr would lift required capital to {plusDatumLargeReqM} — moving the Shape toward the upper end of ABUNDANT or into GROUNDED territory. A meaningful step up in lifestyle, still well within what the Shape can sustain.
+
+Both directions are toward using surplus. Studio can show you what each lift means for sequence risk, account-type sequencing, and whether the additional spending is durable across market regimes.`;
+    _S3R2C['COULD_BE-ABU-JUST_BELOW'] = `WHAT YOUR SHAPE COULD BE
+
+You haven't changed anything — and your Shape sits just below the balanced range. The plan carries comfortably above your Datum; there's still meaningful surplus to use if you want.
+
+Two upward paths worth knowing:
+
+  ↑ Smaller lift — Raising your Datum by {plusIncSmallK} to {plusDatumSmallK}/yr would lift required capital to {plusDatumSmallReqM}. The Shape moves toward the stable end of GROUNDED — a balanced posture where Datum and supported lifestyle align.
+
+  ↑ Larger lift — Raising by {plusIncLargeK} to {plusDatumLargeK}/yr would lift required capital to {plusDatumLargeReqM} — moving you into the floor side of EXPANSIVE. A wider envelope with more outcome variability, but the plan still has room above.
+
+Both directions are toward using room you've built. Studio can show you what each shift means for sequence risk, account-type sequencing, and the path to making either choice durable.`;
+    _S3R2C['COULD_BE-GRD-TIGHT'] = `WHAT YOUR SHAPE COULD BE
+
+You haven't changed anything — and your Shape sits at the lower edge of the balanced range. The plan carries your Datum, but with less margin than a more centered position would give.
+
+Two paths worth knowing:
+
+  ↑ Small lift — Raising your Datum by {plusIncSmallK} to {plusDatumSmallK}/yr would lift required capital to {plusDatumSmallReqM} — moving the Shape into the floor side of EXPANSIVE. A wider envelope, but you'd be asking more of the plan in tougher conditions.
+
+  ↓ Margin relief — Dropping your Datum by {minusIncLargeK} to {minusDatumLargeK}/yr would lower required capital to {minusDatumLargeReqM} — moving toward the stable end of GROUNDED. More breathing room, less dependence on favorable markets carrying the plan.
+
+The honest read: from TIGHT, the relief direction usually buys more durability than the lift direction. Studio can show you what each path means for sequence risk and long-run comfort.`;
+    _S3R2C['COULD_BE-GRD-STABLE'] = `WHAT YOUR SHAPE COULD BE
+
+You haven't changed anything — and your Shape sits in balance. What you want and what the plan can sustain are close, with healthy margin in both directions.
+
+Two paths worth knowing:
+
+  ↓ Toward surplus — Dropping your Datum by {minusIncLargeK} to {minusDatumLargeK}/yr would lower required capital to {minusDatumLargeReqM} — moving toward the upper end of ABUNDANT. More cushion, less dependence on markets cooperating.
+
+  ↑ Toward more room — Raising your Datum by {plusIncLargeK} to {plusDatumLargeK}/yr would lift required capital to {plusDatumLargeReqM} — moving into the floor side of EXPANSIVE. A wider lifestyle envelope, with outcomes that vary more freely.
+
+Both directions are honest. From a centered position the question isn't fixing anything — it's deciding which trade-off matches how you actually want to live. Studio can show you what each shift means for sequence risk and account-type sequencing.`;
+    _S3R2C['COULD_BE-EXP-FLOOR_SIDE'] = `WHAT YOUR SHAPE COULD BE
+
+You haven't changed anything — and your Shape sits in the lower portion of a wide outcome envelope. The plan has room above your Datum; you haven't used most of it.
+
+Two paths worth knowing:
+
+  ↑ Toward center — Raising your Datum by {plusIncSmallK} to {plusDatumSmallK}/yr would lift required capital to {plusDatumSmallReqM} — moving you into centered in EXPANSIVE, the most balanced position inside the envelope.
+
+  ↓ Toward grounding — Dropping by {minusIncLargeK} to {minusDatumLargeK}/yr would lower required capital to {minusDatumLargeReqM} — moving toward the stable end of GROUNDED. Tighter range, less outcome variability, more predictability.
+
+Both directions are within what the Shape can carry. Studio can show you what each means for sequence risk, account-type sequencing, and the path to either a wider lifestyle or a tighter, more predictable one.`;
+    _S3R2C['COULD_BE-EXP-CENTERED'] = `WHAT YOUR SHAPE COULD BE
+
+You haven't changed anything — and your Shape sits centered in a wide outcome envelope. This is the most balanced position the plan offers: meaningful room in both directions, with the plan carrying comfortably.
+
+Two paths worth knowing:
+
+  ↑ Toward more lifestyle — Raising your Datum by {plusIncLargeK} to {plusDatumLargeK}/yr would lift required capital to {plusDatumLargeReqM} — moving toward the ceiling side of EXPANSIVE. Still inside the envelope, but using more of the upper room.
+
+  ↓ Toward more cushion — Dropping by {minusIncLargeK} to {minusDatumLargeK}/yr would lower required capital to {minusDatumLargeReqM} — moving toward the floor side of EXPANSIVE. A wider margin above, more predictable outcomes.
+
+From centered, the question isn't whether anything's wrong — it's how you'd prefer to use the room. Studio can show you what each direction means for sequence risk and long-run durability.`;
+    _S3R2C['COULD_BE-EXP-CEILING_SIDE'] = `WHAT YOUR SHAPE COULD BE
+
+You haven't changed anything — and your Shape sits in the upper portion of the supported envelope. The plan still carries this lifestyle, but you're closer to the Ceiling than a centered position would put you.
+
+Two paths worth knowing:
+
+  ↓ Toward center — Dropping your Datum by {minusIncSmallK} to {minusDatumSmallK}/yr would lower required capital to {minusDatumSmallReqM} — moving you into centered in EXPANSIVE, where outcomes have more room in both directions.
+
+  ↑ Toward the edge — Raising by {plusIncLargeK} to {plusDatumLargeK}/yr would lift required capital to {plusDatumLargeReqM} — moving toward STRETCHED. The plan begins to require markets to cooperate; the margin above thins meaningfully.
+
+The honest read: from here, the centering direction usually buys more durability. Studio can show you what each means for sequence risk and whether the upper edge is worth the trade.`;
+    _S3R2C['COULD_BE-STR-STANDARD'] = `WHAT YOUR SHAPE COULD BE
+
+You haven't changed anything — and your Shape sits in the upper part of the supported range. Good years are doing more of the heavy lifting than a centered position would require. The plan reaches this lifestyle, but with less buffer.
+
+Two relief paths worth knowing:
+
+  ↓ Smaller relief — Dropping your Datum by {minusIncSmallK} to {minusDatumSmallK}/yr would lower required capital to {minusDatumSmallReqM} — moving back toward the ceiling side of EXPANSIVE. Slightly more margin, same lifestyle envelope.
+
+  ↓ Larger relief — Dropping by {minusIncLargeK} to {minusDatumLargeK}/yr would lower required capital to {minusDatumLargeReqM} — centering you in EXPANSIVE. A wider envelope, more room for surprises, less dependence on favorable markets.
+
+Both directions are toward more breathing room. Studio can show you what each shift means for sequence risk, account-type sequencing, and the path to Studio-grade comfort.`;
+    _S3R2C['COULD_BE-STR-HIGH_END'] = `WHAT YOUR SHAPE COULD BE
+
+You haven't changed anything — and your Shape sits near the upper edge of what the plan can structurally carry. The plan reaches this lifestyle only when markets cooperate; the buffer above is thin by design.
+
+Two relief paths worth knowing:
+
+  ↓ Smaller relief — Dropping your Datum by {minusIncSmallK} to {minusDatumSmallK}/yr would lower required capital to {minusDatumSmallReqM} — moving back toward the standard end of STRETCHED. Modest margin restored, same general posture.
+
+  ↓ Larger relief — Dropping by {minusIncLargeK} to {minusDatumLargeK}/yr would lower required capital to {minusDatumLargeReqM} — moving into the ceiling side of EXPANSIVE. A real envelope returns; the plan stops depending entirely on favorable markets.
+
+Both directions are toward durability. Studio can show you what each means for sequence risk, account-type sequencing, and what restoring meaningful margin actually costs.`;
+    _S3R2C['COULD_BE-OE-ENTRY'] = `WHAT YOUR SHAPE COULD BE
+
+You haven't changed anything — and your Shape sits just above what the plan can structurally support. You've crossed the line, but only narrowly. This is the entry zone where small adjustments still produce small fixes.
+
+Two relief paths worth knowing:
+
+  ↓ Smaller relief — Dropping your Datum by {minusIncSmallK} to {minusDatumSmallK}/yr would lower required capital to {minusDatumSmallReqM} — moving back into the high end of STRETCHED. Still tight, but inside what the plan can carry.
+
+  ↓ Larger relief — Dropping by {minusIncLargeK} to {minusDatumLargeK}/yr would lower required capital to {minusDatumLargeReqM} — moving toward the standard end of STRETCHED. Meaningful margin restored; the plan starts carrying you again.
+
+Both directions are toward resolution. Studio can show you what each shift means for sequence risk and the cleanest path back to a Shape that holds on its own.`;
+    _S3R2C['COULD_BE-OE-STRUCTURAL'] = `WHAT YOUR SHAPE COULD BE
+
+⚠️ You haven't changed anything — and your Shape sits significantly above what the plan can structurally support. This isn't tension to resolve at the margins; it's a structural gap the math can't close on its own.
+
+Two relief paths worth knowing:
+
+  ↓ Smaller relief — Dropping your Datum by {minusIncSmallK} to {minusDatumSmallK}/yr would lower required capital to {minusDatumSmallReqM} — moving toward the entry end of OVEREXTENDED. The gap narrows, but the Shape still doesn't structurally hold.
+
+  ↓ Larger relief — Dropping by {minusIncLargeK} to {minusDatumLargeK}/yr would lower required capital to {minusDatumLargeReqM} — moving toward the high end of STRETCHED. Real structural improvement, though the plan still depends on favorable conditions.
+
+The honest read: neither relief path alone fully resolves the structural gap. Studio is built for exactly this — it shows you what combination of lever moves (Datum, contribution, time, capital) actually closes the math, not just narrows it.`;
+    // ── _S3C4: Phase G.2.1 R2.D "Have vs Could Have" tension templates (Box 4 · 11 sub-zones) ──
+    _S3C4['COULD_BE_TENSION-ABU-WELL_BELOW'] = `HOW TO RESOLVE THE TENSION
+
+You haven't changed anything — and there's real room above where you're sitting. The Shape supports more than you're asking it to.
+
+Three forces, named honestly:
+
+• CAPITAL — Your current Datum of {currentDatumK}/yr requires {gbDatumReqM}. Your projected capital comes in at {dCapBaseM} on the middle path — meaningfully above what your current Datum needs. A larger lift to {plusDatumLargeK}/yr would require {plusDatumLargeReqM} — still inside what the projection supports.
+
+• LEVER — Target Datum is the only lever moving here. You haven't touched contributions, retirement age, or capital — those are doing their work. The question is whether you're under-asking the Shape. A {plusIncSmallK} lift is conservative. A {plusIncLargeK} lift is what the room actually allows.
+
+• TRAJECTORY — Sitting well below the supported range isn't a problem on paper. But every year you under-ask, you're banking margin that may not get spent. That's a choice — not a mistake — and worth seeing clearly.
+
+ACCEPT staying here means accepting margin you may never use.
+PUSH toward either lift means using room the plan already supports.
+
+See If This Shape Holds →`;
+    _S3C4['COULD_BE_TENSION-ABU-JUST_BELOW'] = `HOW TO RESOLVE THE TENSION
+
+You haven't changed anything — and you're sitting just below the supported range. The room above is real, just not as wide as deeper-ABUNDANT positions.
+
+Three forces, named honestly:
+
+• CAPITAL — Your current Datum of {currentDatumK}/yr requires {gbDatumReqM}. Projected capital lands at {dCapBaseM} — above what your current Datum needs, with a larger lift to {plusDatumLargeK}/yr requiring {plusDatumLargeReqM}. The lift is supported but starts narrowing the cushion.
+
+• LEVER — Target Datum is doing the work in this scenario. A {plusIncSmallK} lift keeps you comfortably positioned. A {plusIncLargeK} lift moves you toward the centered range of EXPANSIVE — where the plan runs most freely.
+
+• TRAJECTORY — Just-below positions are the easiest places to under-ask without noticing. The capital is there. The question is whether the lifestyle ambition matches it.
+
+ACCEPT staying here means staying conservative with room you've earned.
+PUSH toward either lift means matching ambition to capacity.
+
+See If This Shape Holds →`;
+    _S3C4['COULD_BE_TENSION-GRD-TIGHT'] = `HOW TO RESOLVE THE TENSION
+
+You haven't changed anything — and your Shape sits tight against the lower edge of GROUNDED. The plan works, but there isn't much breathing room above the Floor.
+
+Three forces, named honestly:
+
+• CAPITAL — Your current Datum of {currentDatumK}/yr requires {gbDatumReqM}. Projected capital comes in at {dCapBaseM} — close to what's needed, not above it. A small relief to {minusDatumSmallK}/yr would lower required capital to {minusDatumSmallReqM} — opening real margin.
+
+• LEVER — Target Datum is the lever that opens or closes this gap. A small lift to {plusDatumSmallK}/yr would require {plusDatumSmallReqM} and tighten things further. A small drop creates breathing room without changing the structural shape.
+
+• MARGIN — Tight isn't broken — but tight is fragile. Any market disappointment, any unplanned expense, lands harder here than it does in a wider position. The relief options exist because the Sketch can see what the Datum can't tell you yet.
+
+ACCEPT staying here means accepting a narrow margin that depends on things going roughly right.
+PUSH toward relief means building the cushion the plan currently lacks.
+
+See If This Shape Holds →`;
+    _S3C4['COULD_BE_TENSION-GRD-STABLE'] = `HOW TO RESOLVE THE TENSION
+
+You haven't changed anything — and your Shape sits stable inside GROUNDED. Not tight, not abundant. A supported position with quiet margin on either side.
+
+Three forces, named honestly:
+
+• CAPITAL — Your current Datum of {currentDatumK}/yr requires {gbDatumReqM}. Projected capital lands at {dCapBaseM} — supportive, with room. A lift to {plusDatumLargeK}/yr would require {plusDatumLargeReqM} — moving toward EXPANSIVE. A drop to {minusDatumLargeK}/yr would require {minusDatumLargeReqM} — moving deeper into GROUNDED cushion.
+
+• LEVER — Target Datum is the only thing that would meaningfully shift this position. Everything else is doing its job. The question is which direction the room is meant to serve.
+
+• DURABILITY — Stable positions are durable precisely because they're not asking the plan to do anything heroic. Either direction is honest — the only wrong move is pretending the room doesn't exist.
+
+ACCEPT staying here means keeping the position the Shape currently supports.
+PUSH in either direction means using room that's available either way.
+
+See If This Shape Holds →`;
+    _S3C4['COULD_BE_TENSION-EXP-FLOOR_SIDE'] = `HOW TO RESOLVE THE TENSION
+
+You haven't changed anything — and your Shape sits on the floor side of EXPANSIVE. The plan runs comfortably, with margin closer to the downside than the upside.
+
+Three forces, named honestly:
+
+• CAPITAL — Your current Datum of {currentDatumK}/yr requires {gbDatumReqM}. Projected capital lands at {dCapBaseM} — comfortably above the requirement. A lift to {plusDatumLargeK}/yr would require {plusDatumLargeReqM} — using more of the upper room. A drop to {minusDatumLargeK}/yr would require {minusDatumLargeReqM} — moving toward GROUNDED cushion.
+
+• LEVER — Target Datum decides which side of EXPANSIVE you actually use. The other levers have built the envelope. Datum is what fills it.
+
+• DURABILITY — Positions on the floor side are the most resilient corners of EXPANSIVE — they survive sequence risk best. The trade is that you're not using the upper room the plan has earned.
+
+ACCEPT staying here means keeping the resilient corner of EXPANSIVE.
+PUSH toward more lifestyle means using upper room the plan supports.
+
+See If This Shape Holds →`;
+    _S3C4['COULD_BE_TENSION-EXP-CENTERED'] = `HOW TO RESOLVE THE TENSION
+
+You haven't changed anything — and your Shape sits centered in a wide outcome envelope. This is the most balanced position the plan offers — meaningful room in both directions, with the plan carrying comfortably.
+
+Three forces, named honestly:
+
+• CAPITAL — Your current Datum of {currentDatumK}/yr requires {gbDatumReqM}. Projected capital lands at {dCapBaseM} — balanced around the requirement. A lift to {plusDatumLargeK}/yr would require {plusDatumLargeReqM}. A drop to {minusDatumLargeK}/yr would require {minusDatumLargeReqM}. Both directions are inside the envelope.
+
+• LEVER — Target Datum is what determines which corner of the envelope you actually live in. The capital, the timeline, the contributions — those are doing their work. Datum decides the shape of the spending.
+
+• DURABILITY — Centered in EXPANSIVE is the position the plan can hold most easily through almost any market path. The question isn't whether anything's wrong — it's whether you want the room you've earned to lean toward lifestyle or toward cushion.
+
+ACCEPT staying here means keeping the most balanced position the plan offers.
+PUSH in either direction means choosing a preference the room is already supporting.
+
+See If This Shape Holds →`;
+    _S3C4['COULD_BE_TENSION-EXP-CEILING_SIDE'] = `HOW TO RESOLVE THE TENSION
+
+You haven't changed anything — and your Shape sits on the ceiling side of EXPANSIVE. You're using more of the upper envelope, with less cushion below than centered positions hold.
+
+Three forces, named honestly:
+
+• CAPITAL — Your current Datum of {currentDatumK}/yr requires {gbDatumReqM}. Projected capital lands at {dCapBaseM} — supportive, but with the gap narrowing. A drop to {minusDatumLargeK}/yr would require {minusDatumLargeReqM} — recentering. A further lift to {plusDatumLargeK}/yr would require {plusDatumLargeReqM} — moving toward STRETCHED, where good years carry more weight.
+
+• LEVER — Target Datum is the lever that decides whether you stay inside EXPANSIVE or cross into STRETCHED. The other inputs aren't going to change that boundary — Datum is.
+
+• MARGIN — Positions on the ceiling side are honest about what the plan can deliver in good years. They're also more exposed to bad ones. The recentering option exists because the Sketch knows where the boundary actually sits.
+
+ACCEPT staying here means using the upper room — knowing the cushion is thinner.
+PUSH toward recentering means trading some upside for more durable margin.
+
+See If This Shape Holds →`;
+    _S3C4['COULD_BE_TENSION-STR-STANDARD'] = `HOW TO RESOLVE THE TENSION
+
+You haven't changed anything — and your Shape sits in STRETCHED. The plan still works, but good years are carrying more of the weight than centered positions would require.
+
+Three forces, named honestly:
+
+• CAPITAL — Your current Datum of {currentDatumK}/yr requires {gbDatumReqM}. Projected capital lands at {dCapBaseM} — closer to the line than the room allows comfortably. Smaller relief to {minusDatumSmallK}/yr would lower required capital to {minusDatumSmallReqM}. Larger relief to {minusDatumLargeK}/yr would lower it to {minusDatumLargeReqM} — recentering inside EXPANSIVE.
+
+• LEVER — Target Datum is the only lever that meaningfully opens this. Contributions and timeline can help at the margins, but the Datum is what's holding the position tight.
+
+• MARGIN — STRETCHED isn't broken, but STRETCHED is exposed. Average years work. Below-average years don't. The relief paths exist because the Sketch can see how much the upside is doing the heavy lifting.
+
+ACCEPT staying here means accepting that good years have to keep showing up.
+PUSH toward either relief means building margin the plan currently runs without.
+
+See If This Shape Holds →`;
+    _S3C4['COULD_BE_TENSION-STR-HIGH_END'] = `HOW TO RESOLVE THE TENSION
+
+You haven't changed anything — and your Shape sits at the upper end of STRETCHED. The plan can deliver this, but it depends on a narrowing band of futures behaving favorably.
+
+Three forces, named honestly:
+
+• CAPITAL — Your current Datum of {currentDatumK}/yr requires {gbDatumReqM}. Projected capital lands at {dCapBaseM} — supportive only if returns come in roughly as the long-term record suggests. Smaller relief to {minusDatumSmallK}/yr would require {minusDatumSmallReqM}. Larger relief to {minusDatumLargeK}/yr would require {minusDatumLargeReqM} — pulling you back toward the standard range of STRETCHED or into EXPANSIVE.
+
+• LEVER — Target Datum is what holds this position up. Nothing else moves the math meaningfully — the gap is in the spending target, not the inputs feeding it.
+
+• MARGIN — The high end of STRETCHED is where surprises hurt most. The closer you sit to the structural line, the less room there is to absorb a bad sequence. The relief options are the Sketch saying: there's a more durable version of this you haven't drawn yet.
+
+ACCEPT staying here means relying on the upside to keep doing the work.
+PUSH toward either relief means trading some ambition for a wider margin of safety.
+
+See If This Shape Holds →`;
+    _S3C4['COULD_BE_TENSION-OE-ENTRY'] = `HOW TO RESOLVE THE TENSION
+
+You haven't changed anything — and your Shape has crossed into OVEREXTENDED. The plan can draw this position, but it can't tell you it survives actually living inside it across most futures.
+
+Three forces, named honestly:
+
+• CAPITAL — Your current Datum of {currentDatumK}/yr requires {gbDatumReqM}. Projected capital lands at {dCapBaseM} — below what the Datum needs at the canonical safe rate. Smaller relief to {minusDatumSmallK}/yr would require {minusDatumSmallReqM}. Larger relief to {minusDatumLargeK}/yr would require {minusDatumLargeReqM} — pulling back into the structurally supported range.
+
+• LEVER — Target Datum is the only lever that closes this gap meaningfully at this point. The inputs that build capital — contributions, timeline, starting balance — would all need to move more than the relief options ask the Datum to.
+
+• MARGIN — The entry edge of OVEREXTENDED is the threshold where the Sketch shifts from describing margin to flagging risk. The relief paths aren't optional decoration — they're the directions where the math becomes survivable again.
+
+ACCEPT staying here means accepting a position the plan can't structurally support across most paths.
+PUSH toward either relief means drawing a Shape the Sketch can stand behind.
+
+See If This Shape Holds →`;
+    _S3C4['COULD_BE_TENSION-OE-STRUCTURAL'] = `HOW TO RESOLVE THE TENSION
+
+⚠️ You haven't changed anything — and your Shape sits past the structural line. This isn't a position the plan can hold across most futures — it's a stress-test the Sketch is drawing so you can see it.
+
+Three forces, named honestly:
+
+• CAPITAL — Your current Datum of {currentDatumK}/yr requires {gbDatumReqM}. Projected capital lands at {dCapBaseM} — well below what the Datum needs at the canonical safe rate. Smaller relief to {minusDatumSmallK}/yr would require {minusDatumSmallReqM} — still strained. Larger relief to {minusDatumLargeK}/yr would require {minusDatumLargeReqM} — closer to supported but not yet there.
+
+• LEVER — Target Datum is the visible lever, but even the larger relief option may not be enough on its own. At this ratio, the gap isn't bridged by Datum adjustments alone. Contributions, timeline, starting capital — all would need to move with it.
+
+• MARGIN — Past the structural line, the question stops being "how much room do I have" and starts being "what combination of changes makes this honest." The Sketch is showing you the Datum side because that's what fits in this view. The full answer takes more than one tool can draw.
+
+ACCEPT staying here means accepting a Shape the Sketch is honest about not being able to hold.
+PUSH toward larger relief — and then to Studio — is the only path where the math becomes something you could actually live inside.
+
+Studio is built for exactly this. See If This Shape Holds →`;
     var _s3c4Resolve = function(key, vars) {
       var tmpl = _S3C4[key];
       if (!tmpl) return '';
@@ -8947,7 +9344,10 @@ See If This Shape Holds →`;
     var _s3c4Body = function(s) {
       var i = (s||'').indexOf('\n\n');
       var body = i >= 0 ? s.slice(i+2) : (s||'');
-      return body.replace(/\n\nSee If This Shape Holds →\s*$/, '').replace(/\s+$/, '');
+      return body
+        .replace(/\n\nStudio is built for exactly this\. See If This Shape Holds →\s*$/, '')
+        .replace(/\n\nSee If This Shape Holds →\s*$/, '')
+        .replace(/\s+$/, '');
     };
 
     var _s3get = function(id, vars) {
