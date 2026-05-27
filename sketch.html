@@ -185,23 +185,7 @@
   #hud-main { min-height: 270px; }
   .telemetry-card.pinned { background: rgba(93, 202, 165, 0.05); border-color: rgba(93, 202, 165, 0.2); border-left-color: var(--teal-mid); display: none; }
   .telemetry-card { position: relative; }
-  @keyframes hudPinnedBorderPulse {
-    0%, 100% { opacity: 1.0; }
-    50%      { opacity: 0.3; }
-  }
-  .telemetry-card.is-pinned::before {
-    content: "";
-    position: absolute;
-    inset: -1px;
-    border: 2px solid;
-    border-color: inherit;
-    border-radius: 4px;
-    pointer-events: none;
-    animation: hudPinnedBorderPulse 4s ease-in-out infinite;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .telemetry-card.is-pinned::before { animation: none; }
-  }
+
   .pin-lever-row {
     font-family: var(--font-mono);
     font-size: 11px;
@@ -242,7 +226,6 @@
   .pin-change-arrow-up   { color: var(--teal-mid); font-weight: 500; margin: 0 4px; }
   .pin-change-arrow-down { color: var(--muted);    font-weight: 500; margin: 0 4px; }
   .pin-change-values     { color: rgba(255,255,255,0.6); margin-left: 2px; }
-  #pin-changed-row       { display: none; }
 
   /* Dynamic Shape State HUD Colors */
   .hud-state-expansive { border-color: var(--teal-mid) !important; border-left-color: var(--teal-mid) !important; background: rgba(93, 202, 165, 0.05) !important; }
@@ -465,10 +448,6 @@
       repeating-linear-gradient(90deg, rgba(93,202,165,0.05) 0 1px, transparent 1px 40px);
   }
 
-  /* Pinned Comparison Legend */
-  #pinned-legend { display: none; position: absolute; top: 16px; right: 24px; background: rgba(9, 18, 33, 0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 10px 14px; z-index: 20; font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.1em; }
-  .pinned-legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-  .pinned-legend-item:last-child { margin-bottom: 0; }
 
   /* Interactive Draggers */
   .datum-group { cursor: ns-resize; }
@@ -1588,34 +1567,7 @@
                             </div>
                         </div>
                         <div class="canvas-actions">
-                            <button type="button" class="canvas-btn" id="btn-pin-scenario">Pin Scenario</button>
                             <button type="button" class="canvas-btn" id="btn-save-shape">Save Shape</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="telemetry-card pinned" id="hud-pinned">
-                    <div class="hud-split">
-                         <div style="font-family:var(--font-mono); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; width: 90px; padding-right: 16px; border-right: 1px solid rgba(255,255,255,0.05); line-height: 1.2;">Pinned Scenario</div>
-                         <div class="hud-diff" style="border-left: none; padding-left: 0;">
-                            <div class="tel-readout" id="pinned-readout">
-                                <div class="readout-row" style="margin-bottom: 3px;">
-                                    <span style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Pin State:</span>
-                                    <strong id="pin-state-name" class="hud-state-label">UNKNOWN</strong>
-                                </div>
-                                <div class="readout-row" style="margin-bottom: 3px;">
-                                    <span style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Designed State:</span>
-                                    <strong id="pin-designed-state" class="hud-state-label">—</strong>
-                                </div>
-                                <div id="pin-changes-row" class="pin-changes-row" style="display:none;"></div>
-                                <div class="readout-row"><strong id="lbl-pin-means">What it Means:</strong> <span id="pin-means" class="data-line">Modify your timeline...</span></div>
-                                <div class="readout-row"><strong id="lbl-pin-inspect">What to Consider:</strong> <span id="pin-inspect" class="data-line">Ready to analyze differences.</span></div>
-                                <div class="pin-lever-row">
-                                    <span class="lbl-pin-lever">Most Impactful Lever:</span>
-                                    <span id="pin-lever-attribution">No movement yet — adjust a slider to see lever attribution</span>
-                                </div>
-                                <div id="pin-changed-row" class="readout-row"><strong id="lbl-pin-changed">What Changed:</strong> <span id="pin-changed" class="data-line">No inputs changed yet.</span></div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -1625,11 +1577,6 @@
         <div class="canvas-wrap">
           <div id="chart-summary" class="sr-only" aria-live="polite">Initializing retirement projection canvas...</div>
           
-          <div id="pinned-legend">
-              <div class="pinned-legend-item"><svg width="16" height="2" aria-hidden="true"><line x1="0" y1="1" x2="16" y2="1" stroke="var(--white)" stroke-width="2" stroke-opacity="0.8"/></svg> Current Shape</div>
-              <div class="pinned-legend-item"><svg width="16" height="2" aria-hidden="true"><line x1="0" y1="1" x2="16" y2="1" stroke="var(--white)" stroke-width="2" stroke-dasharray="2 2" stroke-opacity="0.6"/></svg> Pinned Shape</div>
-          </div>
-
           <svg class="range-svg shape-healthy" id="sketch-canvas" viewBox="0 0 840 480" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
               <defs>
                   <linearGradient id="thermal-grad" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -1761,8 +1708,8 @@
   <div class="full-width-section" id="screen-2-design" hidden aria-hidden="true">
   <div id="s2-splash">
     <div class="splash-eyebrow">Phase II — Architecture</div>
-    <div class="splash-headline">You've discovered your shape.<br>Now it's time to design it.</div>
-    <div class="splash-sub">Pull a boundary to test the retirement shape you want.<br>The Sketch shows what would need to change to make it happen.</div>
+    <div class="splash-headline">You've drawn the shape you have.<br>Now draw the one you want.</div>
+    <div class="splash-sub">Every boundary here can move. Pull one and the Sketch shows what it would cost to hold the new shape — in years, in dollars, or in trade-offs.</div>
     <div class="splash-bar"></div>
   </div>
 
@@ -1775,7 +1722,7 @@
             <div class="sub-head hero-subtitle">PHASE II — ARCHITECTURE</div>
             <div style="font-family: var(--font-serif); font-size: 22px; font-style: italic; color: var(--gold); margin-bottom: 12px;">Design Your Shape</div>
             <h1 class="page-h1 hero-title">The Sketch</h1>
-            <div class="page-lead">Move the inputs, pull a boundary. Shape the retirement you want.</div>
+            <div class="page-lead">Discover showed your shape today. Design shows what it would take to hold a different one. Move an input or pull a boundary to test.</div>
         </div>
 
         <!-- Phase 2.1: Screen 2 input panel — d2-slider-* IDs, separate from Screen 1 -->
@@ -1904,7 +1851,7 @@
                       <span style="text-align:right;">DISCOVER</span><span></span><span>DESIGNED</span>
                     </div>
                     <div>
-                      <div style="font-size:7px; color:rgba(255,255,255,0.28); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px;">Structural Ceiling</div>
+                      <div style="font-size:7px; color:rgba(255,255,255,0.28); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px;"><span class="lbl-has-tip" tabindex="0">Structural Ceiling<div class="shape-info-tooltip">Structural Ceiling — the portfolio your upside path projects, and the yearly spending it could sustain.</div></span></div>
                       <div style="display:grid; grid-template-columns:1fr 14px 1fr; align-items:center; gap:2px;">
                         <span id="d2s-cmp-ceil-disc"  style="text-align:right; color:var(--gold); font-size:11px;">—</span>
                         <span id="d2s-cmp-ceil-arrow" style="text-align:center; color:rgba(255,255,255,0.4); font-size:10px;">—</span>
@@ -1912,7 +1859,7 @@
                       </div>
                     </div>
                     <div>
-                      <div style="font-size:7px; color:rgba(255,255,255,0.28); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px;">Target Datum</div>
+                      <div style="font-size:7px; color:rgba(255,255,255,0.28); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px;"><span class="lbl-has-tip" tabindex="0">Target Datum<div class="shape-info-tooltip">Capital your portfolio is projected to reach on the baseline path.</div></span></div>
                       <div style="display:grid; grid-template-columns:1fr 14px 1fr; align-items:center; gap:2px;">
                         <span id="d2s-cmp-datum-disc"  style="text-align:right; color:var(--teal-mid); font-size:11px;">—</span>
                         <span id="d2s-cmp-datum-arrow" style="text-align:center; color:rgba(255,255,255,0.4); font-size:10px;">—</span>
@@ -1920,7 +1867,7 @@
                       </div>
                     </div>
                     <div>
-                      <div style="font-size:7px; color:rgba(255,255,255,0.28); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px;">Survival Floor</div>
+                      <div style="font-size:7px; color:rgba(255,255,255,0.28); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px;"><span class="lbl-has-tip" tabindex="0">Survival Floor<div class="shape-info-tooltip">Survival Floor — the portfolio your conservative path projects, and the yearly spending it could sustain.</div></span></div>
                       <div style="display:grid; grid-template-columns:1fr 14px 1fr; align-items:center; gap:2px;">
                         <span id="d2s-cmp-floor-disc"  style="text-align:right; color:var(--danger-red); font-size:11px;">—</span>
                         <span id="d2s-cmp-floor-arrow" style="text-align:center; color:rgba(255,255,255,0.4); font-size:10px;">—</span>
@@ -2176,15 +2123,15 @@
             <div id="s3-sk-shape-name" class="s3-stat-val" style="font-size:13px;color:var(--teal-mid);">—</div>
           </div>
           <div style="display:flex;flex-direction:column;gap:2px;">
-            <div style="font-size:7px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.15em;">Ceiling</div>
+            <div style="font-size:7px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.15em;"><span class="lbl-has-tip" tabindex="0">Structural Ceiling<div class="shape-info-tooltip">Structural Ceiling — the portfolio your upside path projects, and the yearly spending it could sustain.</div></span></div>
             <div id="s3-sk-ceil" class="s3-stat-val s3-stat-gold" style="font-size:13px;">—</div>
           </div>
           <div style="display:flex;flex-direction:column;gap:2px;">
-            <div style="font-size:7px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.15em;">Datum</div>
+            <div style="font-size:7px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.15em;"><span class="lbl-has-tip" tabindex="0">Target Datum<div class="shape-info-tooltip">Capital your portfolio is projected to reach on the baseline path.</div></span></div>
             <div id="s3-sk-datum" class="s3-stat-val s3-stat-teal" style="font-size:13px;">—</div>
           </div>
           <div style="display:flex;flex-direction:column;gap:2px;">
-            <div style="font-size:7px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.15em;">Floor</div>
+            <div style="font-size:7px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.15em;"><span class="lbl-has-tip" tabindex="0">Survival Floor<div class="shape-info-tooltip">Survival Floor — the portfolio your conservative path projects, and the yearly spending it could sustain.</div></span></div>
             <div id="s3-sk-floor" class="s3-stat-val s3-stat-red" style="font-size:13px;">—</div>
           </div>
         </div>
@@ -2195,15 +2142,15 @@
             <div id="s3-shape-name" class="s3-stat-val" style="font-size:13px;color:var(--teal-mid);">—</div>
           </div>
           <div style="display:flex;flex-direction:column;gap:2px;">
-            <div style="font-size:7px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.15em;">Ceiling</div>
+            <div style="font-size:7px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.15em;"><span class="lbl-has-tip" tabindex="0">Structural Ceiling<div class="shape-info-tooltip">Structural Ceiling — the portfolio your upside path projects, and the yearly spending it could sustain.</div></span></div>
             <div id="s3-ceil-val" class="s3-stat-val s3-stat-gold" style="font-size:13px;">—</div>
           </div>
           <div style="display:flex;flex-direction:column;gap:2px;">
-            <div style="font-size:7px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.15em;">Datum</div>
+            <div style="font-size:7px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.15em;"><span class="lbl-has-tip" tabindex="0">Target Datum<div class="shape-info-tooltip">Capital your portfolio is projected to reach on the baseline path.</div></span></div>
             <div id="s3-datum-val" class="s3-stat-val s3-stat-teal" style="font-size:13px;">—</div>
           </div>
           <div style="display:flex;flex-direction:column;gap:2px;">
-            <div style="font-size:7px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.15em;">Floor</div>
+            <div style="font-size:7px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.15em;"><span class="lbl-has-tip" tabindex="0">Survival Floor<div class="shape-info-tooltip">Survival Floor — the portfolio your conservative path projects, and the yearly spending it could sustain.</div></span></div>
             <div id="s3-floor-val" class="s3-stat-val s3-stat-red" style="font-size:13px;">—</div>
           </div>
           <div id="s3-tension-pct" style="display:none;"></div>
@@ -2652,10 +2599,8 @@
     // Wire all action buttons inside DOMContentLoaded — guarantees all functions defined
     document.addEventListener('DOMContentLoaded', function() {
       var _s  = document.getElementById('btn-submit');
-      var _p  = document.getElementById('btn-pin-scenario');
       var _sv = document.getElementById('btn-save-shape');
       if (_s)  _s.addEventListener('click', revealScreen2);
-      if (_p)  _p.addEventListener('click', pinScenario);
       if (_sv) _sv.addEventListener('click', saveSnapshot);
     });
   </script>
@@ -4806,132 +4751,6 @@
             sessionStorage.setItem('datum_taxDrag',        slTax.value);
             sessionStorage.setItem('datum_annualContrib',  annualContrib);
         } catch(e) {}
-    }
-
-    function pinScenario() {
-        const btn = document.getElementById('btn-pin-scenario');
-
-        // Toggle: release if already pinned
-        if (pinnedState) {
-            pinnedState = null;
-            document.getElementById('ghost-ceil').classList.remove('ghost-active');
-            document.getElementById('ghost-floor').classList.remove('ghost-active');
-            document.getElementById('ghost-cone').classList.remove('ghost-cone-active');
-            document.getElementById('ghost-cone').style.opacity = '0';
-            document.getElementById('ghost-datum').classList.remove('ghost-active');
-            const gHatch = document.getElementById('ghost-hatch-area');
-            if (gHatch) gHatch.style.opacity = '0';
-            const gLabel = document.getElementById('ghost-label');
-            if (gLabel) gLabel.style.opacity = '0';
-            document.getElementById('pinned-legend').style.display = 'none';
-            const pinnedBlock = document.getElementById('hud-pinned');
-            if (pinnedBlock) pinnedBlock.style.display = 'none';
-            document.getElementById('hud-main').classList.remove('is-pinned');
-            const _lsRelEl = document.getElementById('lbl-shape-state');
-            if (_lsRelEl) _lsRelEl.textContent = 'Shape State:';
-            // B6-RELEASE: restore full action copy immediately (no slider move required)
-            const _vaRelEl = document.getElementById('val-action');
-            if (_vaRelEl && window.currentShapeStateObj && window.currentShapeStateObj.action) {
-                _vaRelEl.innerHTML = window.currentShapeStateObj.action;
-            }
-            btn.textContent = 'Pin Scenario';
-            return;
-        }
-
-        const ceilD  = document.getElementById('ceil-line').getAttribute('d');
-        const floorD = document.getElementById('floor-line').getAttribute('d');
-        const coneD  = document.getElementById('cone-area').getAttribute('d');
-
-        // Guard: only pin when the canvas has been drawn (paths have real data)
-        if (!ceilD || ceilD.trim() === '' || !lastCalculatedPoints) {
-            btn.textContent = 'Move sliders first';
-            setTimeout(() => { btn.textContent = 'Pin Scenario'; }, 1800);
-            return;
-        }
-
-        pinnedState = { ...getCurrentState(), stateObj: window.currentShapeStateObj,
-            pinnedParadigm:  (document.getElementById('s2-market') || {textContent: ''}).textContent,
-            pinnedInflStr:   document.getElementById('s2-infl').textContent,
-            pinnedTax:       parseInt(slTax.value),
-            pinnedFloor:     lastCalculatedPoints ? lastCalculatedPoints.floorSpend : 0,
-            pinnedCeil:      lastCalculatedPoints ? lastCalculatedPoints.ceilSpend  : 0,
-            pinnedDatumSpend: lastCalculatedPoints ? lastCalculatedPoints.datumSpend : 0 };
-
-        document.getElementById('ghost-ceil').setAttribute('d',  ceilD);
-        document.getElementById('ghost-floor').setAttribute('d', floorD);
-        document.getElementById('ghost-cone').setAttribute('d',  coneD);
-        document.getElementById('ghost-datum').setAttribute('d', document.getElementById('datum-line').getAttribute('d'));
-
-        document.getElementById('ghost-ceil').classList.add('ghost-active');
-        document.getElementById('ghost-floor').classList.add('ghost-active');
-        document.getElementById('ghost-cone').classList.add('ghost-cone-active');
-        document.getElementById('ghost-cone').style.opacity = '';
-        document.getElementById('ghost-datum').classList.add('ghost-active');
-
-        // GEM D: hatch area between ghost and live cone + label at retirement endpoint
-        const gHatch = document.getElementById('ghost-hatch-area');
-        if (gHatch && ceilD && floorD) { gHatch.setAttribute('d', coneD); gHatch.style.opacity='1'; }
-        // Position ghost label at retirement endpoint using known SVG coordinate constants
-        const gLabel = document.getElementById('ghost-label');
-        if (gLabel && lastCalculatedPoints) {
-            // xEnd = 650 matches the viewBox x-coordinate for retirement age (Screen 1 SVG)
-            const xRet = 650;
-            const yMid = (spendToY(lastCalculatedPoints.ceilSpend) + spendToY(lastCalculatedPoints.floorSpend)) / 2;
-            gLabel.setAttribute('x', String(xRet - 6));
-            gLabel.setAttribute('y', String(yMid - 10));
-            gLabel.style.opacity = '0.7';
-        }
-
-        document.getElementById('pinned-legend').style.display = 'block';
-
-        // Do NOT call updateEngine() here — it resets interactive-layer and kills slider pointer-events
-        if (window.currentShapeStateObj) {
-            const pn = document.getElementById('pin-state-name');
-            const pd = document.getElementById('pin-designed-state');
-            const pm = document.getElementById('pin-means');
-            const pi = document.getElementById('pin-inspect');
-            const pc = document.getElementById('pin-changed');
-            if (pn) { pn.textContent = window.currentShapeStateObj.name; pn.style.color = window.currentShapeStateObj.color; }
-            if (pd) { pd.textContent = window.currentShapeStateObj.name; pd.style.color = window.currentShapeStateObj.color; }
-            if (pm) pm.innerHTML = 'Shape pinned. Move sliders to compare against this baseline.';
-            if (pi) pi.innerHTML = 'Adjust any input to see how the Shape responds.';
-            if (pc) pc.innerHTML = 'No inputs changed yet.';
-        }
-
-        // B6 v3: strip Studio-bridge from val-action immediately on pin activation
-        const _vaEl = document.getElementById('val-action');
-        if (_vaEl && window.currentShapeStateObj && window.currentShapeStateObj.action) {
-            const _vaSplit = window.currentShapeStateObj.action.split(/<br\s*\/?>\s*<br\s*\/?>/i);
-            _vaEl.innerHTML = _vaSplit.length > 1 ? _vaSplit[0] : window.currentShapeStateObj.action;
-        }
-
-        const pinnedBlock = document.getElementById('hud-pinned');
-        if (pinnedBlock) {
-            pinnedBlock.style.display = 'flex';
-            // Flash the card to confirm
-            pinnedBlock.style.borderColor = 'var(--teal-mid)';
-            setTimeout(() => { pinnedBlock.style.borderColor = ''; }, 800);
-        }
-
-        // B1: flip main HUD label to Designed Shape State
-        const _lsActEl = document.getElementById('lbl-shape-state');
-        if (_lsActEl) _lsActEl.textContent = 'Designed Shape State:';
-
-        // B2: start border pulse on main HUD
-        document.getElementById('hud-main').classList.add('is-pinned');
-
-        // B3: initialize lever attribution to no-movement state
-        const _plaInitEl = document.getElementById('pin-lever-attribution');
-        if (_plaInitEl) _plaInitEl.textContent = 'No movement yet — adjust a slider to see lever attribution';
-
-        // B7: reset arrow-changes row to hidden on fresh pin
-        const _pcrActEl = document.getElementById('pin-changes-row');
-        if (_pcrActEl) { _pcrActEl.style.display = 'none'; _pcrActEl.innerHTML = ''; }
-
-        // Button feedback — stays as release toggle until user clicks again
-        btn.textContent = 'Release Pin';
-        btn.style.color = 'var(--teal-mid)';
-        setTimeout(() => { btn.style.color = ''; }, 800);
     }
 
     function saveSnapshot() {
