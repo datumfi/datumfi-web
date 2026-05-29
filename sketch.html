@@ -270,6 +270,13 @@
   .lbl-has-tip:hover .shape-info-tooltip { display: block; animation: fade-in 0.2s ease; }
   .lbl-has-tip:focus .shape-info-tooltip,
   .lbl-has-tip:focus-within .shape-info-tooltip { display: block; }
+  #d2-ceil-bar-tip,
+  #d2-floor-bar-tip,
+  #d2-datum-bar-tip {
+    background: var(--bg-navy) !important;
+    border: 1px solid rgba(255,255,255,0.18);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.40);
+  }
   .tt-row { margin-bottom: 8px; line-height: 1.4; }
   .tt-row:last-child { margin-bottom: 0; }
 
@@ -1539,7 +1546,7 @@
                                     <span id="ri-ceiling-val">$0 / $0 yr</span>
                                 </div>
                                 <div class="tel-metric m-datum">
-                                    <span class="lbl-has-tip" tabindex="0">TARGET DATUM<div id="ri-datum-tip" class="shape-info-tooltip">Capital your portfolio is projected to reach on the baseline path.</div></span>
+                                    <span class="lbl-has-tip" tabindex="0">TARGET DATUM<div id="ri-datum-tip" class="shape-info-tooltip">Target Datum — the yearly spending you want in retirement, and the total capital needed to make that spending possible.</div></span>
                                     <span id="ri-datum-val">$0 / $0 yr</span>
                                 </div>
                                 <div class="tel-metric m-floor">
@@ -1724,7 +1731,7 @@
             <div class="sub-head hero-subtitle">PHASE II — ARCHITECTURE</div>
             <div style="font-family: var(--font-serif); font-size: 22px; font-style: italic; color: var(--gold); margin-bottom: 12px;">Design Your Shape</div>
             <h1 class="page-h1 hero-title">The Sketch</h1>
-            <div class="page-lead">Discover showed your shape today. Design shows what it would take to hold a different one. Move an input or pull a boundary to test.</div>
+            <div class="page-lead">Design lets you test a new Shape. The dashed lines show where you started; the solid shape updates as you move inputs or pull boundaries.</div>
         </div>
 
         <!-- Phase 2.1: Screen 2 input panel — d2-slider-* IDs, separate from Screen 1 -->
@@ -1850,7 +1857,7 @@
                 <div style="min-width:190px; padding-right:16px; border-right:1px solid rgba(255,255,255,0.05); flex-shrink:0; font-family:var(--font-mono);">
                   <div style="display:flex; flex-direction:column; gap:6px;">
                     <div style="display:grid; grid-template-columns:1fr auto 1fr; gap:3px; align-items:center; font-size:8px; color:rgba(255,255,255,0.3); text-transform:uppercase; letter-spacing:0.1em; padding-bottom:4px; border-bottom:1px solid rgba(255,255,255,0.05);">
-                      <span style="text-align:right;">DISCOVER</span><span></span><span>DESIGNED</span>
+                      <span style="text-align:right;">CURRENT SHAPE</span><span></span><span>TEST SHAPE</span>
                     </div>
                     <div>
                       <div style="font-size:7px; color:rgba(255,255,255,0.28); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px;"><span class="lbl-has-tip" tabindex="0">Structural Ceiling<div class="shape-info-tooltip">Structural Ceiling — the portfolio your upside path projects, and the yearly spending it could sustain.</div></span></div>
@@ -1861,7 +1868,7 @@
                       </div>
                     </div>
                     <div>
-                      <div style="font-size:7px; color:rgba(255,255,255,0.28); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px;"><span class="lbl-has-tip" tabindex="0">Target Datum<div class="shape-info-tooltip">Capital your portfolio is projected to reach on the baseline path.</div></span></div>
+                      <div style="font-size:7px; color:rgba(255,255,255,0.28); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px;"><span class="lbl-has-tip" tabindex="0">Target Datum<div id="d2s-datum-tip" class="shape-info-tooltip">Target Datum — the yearly spending you want in retirement, and the total capital needed to make that spending possible.</div></span></div>
                       <div style="display:grid; grid-template-columns:1fr 14px 1fr; align-items:center; gap:2px;">
                         <span id="d2s-cmp-datum-disc"  style="text-align:right; color:var(--teal-mid); font-size:11px;">—</span>
                         <span id="d2s-cmp-datum-arrow" style="text-align:center; color:rgba(255,255,255,0.4); font-size:10px;">—</span>
@@ -1889,11 +1896,11 @@
                 <div class="hud-diff" style="border-left: none; padding-left: 0;">
                   <div class="tel-readout" id="d2s-pinned-readout">
                     <div class="readout-row" style="margin-bottom: 3px;">
-                      <span class="lbl-has-tip" tabindex="0" style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Discover State:<div id="s2-disc-tip" class="shape-info-tooltip"></div></span>
+                      <span class="lbl-has-tip" tabindex="0" style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Current Shape:<div id="s2-disc-tip" class="shape-info-tooltip"></div></span>
                       <strong id="d2s-pin-state-name" class="hud-state-label">—</strong><span id="d2s-pin-state-opener" style="font-family:var(--font-mono); font-size:8px; color:rgba(255,255,255,0.45); margin-left:4px;"></span>
                     </div>
                     <div class="readout-row" style="margin-bottom: 3px;">
-                      <span class="lbl-has-tip" tabindex="0" style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Designed State:<div id="s2-des-tip" class="shape-info-tooltip"></div></span>
+                      <span class="lbl-has-tip" tabindex="0" style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Test Shape:<div id="s2-des-tip" class="shape-info-tooltip"></div></span>
                       <strong id="d2s-pin-designed-state" class="hud-state-label">—</strong><span id="d2s-pin-designed-opener" style="font-family:var(--font-mono); font-size:8px; color:rgba(255,255,255,0.45); margin-left:4px;"></span>
                     </div>
                     <div id="d2s-pin-changes-row" class="pin-changes-row" style="display:none;"></div>
@@ -2007,11 +2014,11 @@
 
         </div>
         <!-- Three tension bars -->
-        <div id="d2-tension-hud" style="margin-top:6px; pointer-events:none; background:rgba(9,18,33,0.82); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.08); border-radius:4px; padding:7px 10px; font-family:var(--font-mono);">
+        <div id="d2-tension-hud" style="margin-top:6px; pointer-events:none; background:rgba(9,18,33,0.95); border:1px solid rgba(255,255,255,0.08); border-radius:4px; padding:7px 10px; font-family:var(--font-mono);">
             <!-- Ceiling tension bar -->
             <div style="margin-bottom:6px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
-                <span class="d2-tbar-label" id="d2-tension-ceil-lbl" style="color:var(--gold);">CEILING TENSION</span>
+                <span class="d2-tbar-label lbl-has-tip" id="d2-tension-ceil-lbl" tabindex="0" style="color:var(--gold); pointer-events:auto; display:inline-block;"><span class="d2-tbar-label-txt">CEILING TENSION</span><div class="shape-info-tooltip" id="d2-ceil-bar-tip" style="pointer-events:none; top:auto; bottom:calc(100% + 10px);">You're pulling your Ceiling higher than the Sketch projects. At 30% the gap is modest — small input changes can close it. At 60% the gap is structural — only meaningful moves (more time, more capital, lower spending) will reach it.</div></span>
                 <span class="d2-tbar-pct" id="d2-tension-ceil-pct" style="color:var(--gold);">0%</span>
               </div>
               <div class="d2-tbar-track">
@@ -2021,7 +2028,7 @@
             <!-- Floor tension bar -->
             <div style="margin-bottom:6px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
-                <span class="d2-tbar-label" id="d2-tension-floor-lbl" style="color:var(--danger-red);">FLOOR TENSION</span>
+                <span class="d2-tbar-label lbl-has-tip" id="d2-tension-floor-lbl" tabindex="0" style="color:var(--danger-red); pointer-events:auto; display:inline-block;"><span class="d2-tbar-label-txt">FLOOR TENSION</span><div class="shape-info-tooltip" id="d2-floor-bar-tip" style="pointer-events:none; top:auto; bottom:calc(100% + 10px);">You're asking your Floor to hold a higher line than the conservative path supports. At 30% the gap is bridgeable with stronger inputs. At 60% you're asking the conservative path to do work it can't do without more time or capital.</div></span>
                 <span class="d2-tbar-pct" id="d2-tension-floor-pct" style="color:var(--danger-red);">0%</span>
               </div>
               <div class="d2-tbar-track">
@@ -2031,7 +2038,7 @@
             <!-- Datum tension bar -->
             <div style="margin-bottom:4px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
-                <span class="d2-tbar-label" id="d2-tension-datum-lbl" style="color:var(--teal-mid);">DATUM TENSION</span>
+                <span class="d2-tbar-label lbl-has-tip" id="d2-tension-datum-lbl" tabindex="0" style="color:var(--teal-mid); pointer-events:auto; display:inline-block;"><span class="d2-tbar-label-txt">DATUM TENSION</span><div class="shape-info-tooltip" id="d2-datum-bar-tip" style="pointer-events:none; top:auto; bottom:calc(100% + 10px);">You're pulling your Datum higher than your discovered position. At 30% the upper paths still carry it. At 60% you're approaching or past the Ceiling — the plan needs stronger inputs to support this lifestyle across modeled outcomes.</div></span>
                 <span class="d2-tbar-pct" id="d2-tension-datum-pct" style="color:var(--teal-mid);">0%</span>
               </div>
               <div class="d2-tbar-track">
@@ -2130,7 +2137,7 @@
             <div id="s3-sk-ceil" class="s3-stat-val s3-stat-gold" style="font-size:13px;">—</div>
           </div>
           <div style="display:flex;flex-direction:column;gap:2px;">
-            <div style="font-size:7px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.15em;"><span class="lbl-has-tip" tabindex="0">Target Datum<div class="shape-info-tooltip">Capital your portfolio is projected to reach on the baseline path.</div></span></div>
+            <div style="font-size:7px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.15em;"><span class="lbl-has-tip" tabindex="0">Target Datum<div id="s3-sk-datum-tip" class="shape-info-tooltip">Target Datum — the yearly spending you want in retirement, and the total capital needed to make that spending possible.</div></span></div>
             <div id="s3-sk-datum" class="s3-stat-val s3-stat-teal" style="font-size:13px;">—</div>
           </div>
           <div style="display:flex;flex-direction:column;gap:2px;">
@@ -2150,7 +2157,7 @@
             <div id="s3-ceil-val" class="s3-stat-val s3-stat-gold" style="font-size:13px;">—</div>
           </div>
           <div style="display:flex;flex-direction:column;gap:2px;">
-            <div style="font-size:7px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.15em;"><span class="lbl-has-tip" tabindex="0">Target Datum<div class="shape-info-tooltip">Capital your portfolio is projected to reach on the baseline path.</div></span></div>
+            <div style="font-size:7px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.15em;"><span class="lbl-has-tip" tabindex="0">Target Datum<div id="s3-des-datum-tip" class="shape-info-tooltip">Target Datum — the yearly spending you want in retirement, and the total capital needed to make that spending possible.</div></span></div>
             <div id="s3-datum-val" class="s3-stat-val s3-stat-teal" style="font-size:13px;">—</div>
           </div>
           <div style="display:flex;flex-direction:column;gap:2px;">
@@ -3999,6 +4006,10 @@
         if (datumTip) {
             datumTip.textContent = 'Target Datum — the yearly spending you want in retirement, and the total capital needed to make that spending possible.';
         }
+        ['d2s-datum-tip','s3-sk-datum-tip','s3-des-datum-tip'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.textContent = 'Target Datum — the yearly spending you want in retirement, and the total capital needed to make that spending possible.';
+        });
 
         document.getElementById('lbl-physics').style.display = 'inline';
         document.getElementById('lbl-action').style.display = 'inline';
@@ -6533,7 +6544,7 @@
       var _cRelief = ceilRatio < 0;
       if (_cFill) { _cFill.style.width = _cPct2 + '%'; _cFill.style.background = _cRelief ? _blue : 'var(--gold)'; }
       if (_cPct)  { _cPct.textContent = _cPct2 + '%'; _cPct.style.color = _cRelief ? _blue : (_cAbs > 0.6 ? '#ffffff' : 'var(--gold)'); }
-      if (_cLbl)  { _cLbl.textContent = _cRelief ? 'CEILING RELIEF' : 'CEILING TENSION'; _cLbl.style.color = _cRelief ? _blue : 'var(--gold)'; }
+      if (_cLbl)  { var _cT = _cLbl.querySelector('.d2-tbar-label-txt'); if (_cT) _cT.textContent = _cRelief ? 'CEILING RELIEF' : 'CEILING TENSION'; _cLbl.style.color = _cRelief ? _blue : 'var(--gold)'; var _cTip = document.getElementById('d2-ceil-bar-tip'); if (_cTip) _cTip.textContent = _cRelief ? "You're accepting a lower Ceiling than the Sketch projects. At 30% you're trading some upside for simpler planning. At 60% you're locking in a much more modest cap — useful when you'd rather not depend on favorable markets." : "You're pulling your Ceiling higher than the Sketch projects. At 30% the gap is modest — small input changes can close it. At 60% the gap is structural — only meaningful moves (more time, more capital, lower spending) will reach it."; }
 
       // Ceiling line glow — only in tension mode (ceilRatio > 0)
       var overlay  = document.getElementById('d2-tension-overlay');
@@ -6568,7 +6579,7 @@
       var _fRelief = floorRatio < 0;
       if (_fFill) { _fFill.style.width = _fPct2 + '%'; _fFill.style.background = _fRelief ? _blue : 'var(--danger-red)'; }
       if (_fPct)  { _fPct.textContent = _fPct2 + '%'; _fPct.style.color = _fRelief ? _blue : (_fAbs > 0.6 ? '#ffffff' : 'var(--danger-red)'); }
-      if (_fLbl)  { _fLbl.textContent = _fRelief ? 'FLOOR RELIEF' : 'FLOOR TENSION'; _fLbl.style.color = _fRelief ? _blue : 'var(--danger-red)'; }
+      if (_fLbl)  { var _fT = _fLbl.querySelector('.d2-tbar-label-txt'); if (_fT) _fT.textContent = _fRelief ? 'FLOOR RELIEF' : 'FLOOR TENSION'; _fLbl.style.color = _fRelief ? _blue : 'var(--danger-red)'; var _fTip = document.getElementById('d2-floor-bar-tip'); if (_fTip) _fTip.textContent = _fRelief ? "You're accepting a lower Floor than the Sketch projects. At 30% you're carrying extra resilience headroom. At 60% you're building in serious cushion — useful if you want the conservative path to stay quiet through almost any market." : "You're asking your Floor to hold a higher line than the conservative path supports. At 30% the gap is bridgeable with stronger inputs. At 60% you're asking the conservative path to do work it can't do without more time or capital."; }
 
       // ── Datum bar ──
       var _dFill   = document.getElementById('d2-tension-datum-fill');
@@ -6579,7 +6590,7 @@
       var _dRelief = datumRatio < 0;
       if (_dFill) { _dFill.style.width = _dPct2 + '%'; _dFill.style.background = _dRelief ? _blue : 'var(--teal-mid)'; }
       if (_dPct)  { _dPct.textContent = _dPct2 + '%'; _dPct.style.color = _dRelief ? _blue : (_dAbs > 0.6 ? '#ffffff' : 'var(--teal-mid)'); }
-      if (_dLbl)  { _dLbl.textContent = _dRelief ? 'DATUM RELIEF' : 'DATUM TENSION'; _dLbl.style.color = _dRelief ? _blue : 'var(--teal-mid)'; }
+      if (_dLbl)  { var _dT = _dLbl.querySelector('.d2-tbar-label-txt'); if (_dT) _dT.textContent = _dRelief ? 'DATUM RELIEF' : 'DATUM TENSION'; _dLbl.style.color = _dRelief ? _blue : 'var(--teal-mid)'; var _dTip = document.getElementById('d2-datum-bar-tip'); if (_dTip) _dTip.textContent = _dRelief ? "You're pulling your Datum lower than your discovered position. At 30% you're trading some lifestyle for more margin. At 60% you're at or below the Floor — building real surplus the plan doesn't need to defend." : "You're pulling your Datum higher than your discovered position. At 30% the upper paths still carry it. At 60% you're approaching or past the Ceiling — the plan needs stronger inputs to support this lifestyle across modeled outcomes."; }
 
       // ── Explainer copy (highest absolute tension/relief wins) ──
       var _exp = document.getElementById('tension-explain');
@@ -7167,6 +7178,9 @@
           } else if (type === 'retire') {
             slEl = document.getElementById('d2-slider-activation');
             targetPos = Math.min(Math.max(Math.round(val), 45), 90);
+          } else if (type === 'datum') {
+            slEl = document.getElementById('d2-slider-datum');
+            targetPos = datumValToPos(Math.min(val, 1000));
           }
           if (!slEl) return;
           _d2AcceptAnimating = true;
@@ -7715,7 +7729,7 @@
         // Round 13: L2 render disabled — L1 absorbed distinct angles. Re-enable for Phase 2.7 resurrection.
         // var _eL2Cell = _eL2[_eL2Key] || _eL2['EXPANSIVE_CENTERED'];
         html += item('req-item-datum', 'var(--teal-mid)', 'DATUM — ' + _eEntryName,
-          _eFill(_eL1Cell.op), null, null);
+          _eFill(_eL1Cell.op), 'datum', r.datumTarget);
         // html += item('req-item-datum', _eLandClr, _eLandName + ' — LANDING',
         //   _eFill(_eL2Cell.mod), null, null);
         req.innerHTML = html;
