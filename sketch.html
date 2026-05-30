@@ -2699,6 +2699,8 @@
 
     var globalYMin = 0;
     var globalYMax = 400;
+    var d2YMin = 0;
+    var d2YMax = 400;
     var pinnedState = null;
     var anchorState = null;
     let activeInputId = null;
@@ -4146,6 +4148,8 @@
         
         globalYMin = Math.max(0, midpoint - paddedRange / 2);
         globalYMax = midpoint + paddedRange / 2;
+        d2YMin = globalYMin;
+        d2YMax = globalYMax;
 
         document.getElementById('grid-lbl-1').textContent = formatYLabel(globalYMax);
         document.getElementById('grid-lbl-2').textContent = formatYLabel(globalYMax - (globalYMax - globalYMin) * 0.25);
@@ -5656,10 +5660,10 @@
         _sv('d2-slider-portfolio',  portValToPos(ghostBaseline.portfolioVol));
         _sv('d2-slider-datum',      datumValToPos(ghostBaseline.targetSpend));
         _sv('d2-slider-contrib',    contribValToPos(ghostBaseline.annualContrib));
-        // Propagate S1 exactVal → S2 to preserve typed precision across screen transition
-        if (slD2Port    && slPort.dataset.exactVal)    { slD2Port.dataset.exactVal    = slPort.dataset.exactVal;    }
-        if (slD2Datum   && slDatum.dataset.exactVal)   { slD2Datum.dataset.exactVal   = slDatum.dataset.exactVal;   }
-        if (slD2Contrib && slContrib.dataset.exactVal) { slD2Contrib.dataset.exactVal = slContrib.dataset.exactVal; }
+        // Always sync S2 exactVal from ghostBaseline — covers Reset after Accept overwrites exactVal
+        if (slD2Port)    slD2Port.dataset.exactVal    = String(Math.round(ghostBaseline.portfolioVol * 1000000));
+        if (slD2Datum)   slD2Datum.dataset.exactVal   = String(Math.round(ghostBaseline.targetSpend * 1000));
+        if (slD2Contrib) slD2Contrib.dataset.exactVal = String(Math.round(ghostBaseline.annualContrib || 0));
         // Sync Screen 2 market radio to ghostBaseline so _dMkt starts false
         var _gbParadigm = ghostBaseline.baselineRate === 1.040 ? 'optimistic'
                         : ghostBaseline.baselineRate === 1.015 ? 'stress' : 'average';
@@ -5715,8 +5719,8 @@
         var _d2VMax = Math.max.apply(null, _d2AV);
         var _d2PR   = Math.max((_d2VMax - _d2VMin) * 1.25, 60);
         var _d2Mid  = (_d2VMin + _d2VMax) / 2;
-        globalYMin  = Math.max(0, _d2Mid - _d2PR / 2);
-        globalYMax  = _d2Mid + _d2PR / 2;
+        d2YMin  = Math.max(0, _d2Mid - _d2PR / 2);
+        d2YMax  = _d2Mid + _d2PR / 2;
 
         // Delegate canvas draw to unified renderScreen2()
         renderScreen2();
@@ -5791,12 +5795,12 @@
         _sa('d2s-datum-lbl',  'x', xEnd + 15); _sa('d2s-datum-lbl',  'y', spendToY(ptsEnd.datumSpend) + 4);
         // _d2LastEndpointCY now set by renderScreen2()
 
-        // Grid labels (share Screen 1 Y-axis scale)
-        _st('d2s-grid-lbl-1', formatYLabel(globalYMax));
-        _st('d2s-grid-lbl-2', formatYLabel(globalYMax - (globalYMax - globalYMin) * 0.25));
-        _st('d2s-grid-lbl-3', formatYLabel((globalYMax + globalYMin) / 2));
-        _st('d2s-grid-lbl-4', formatYLabel(globalYMin + (globalYMax - globalYMin) * 0.25));
-        _st('d2s-grid-lbl-5', formatYLabel(globalYMin));
+        // Grid labels (Screen 2 Y-axis scale — d2YMin/d2YMax)
+        _st('d2s-grid-lbl-1', formatYLabel(d2YMax));
+        _st('d2s-grid-lbl-2', formatYLabel(d2YMax - (d2YMax - d2YMin) * 0.25));
+        _st('d2s-grid-lbl-3', formatYLabel((d2YMax + d2YMin) / 2));
+        _st('d2s-grid-lbl-4', formatYLabel(d2YMin + (d2YMax - d2YMin) * 0.25));
+        _st('d2s-grid-lbl-5', formatYLabel(d2YMin));
         _st('d2s-time-start', 'AGE ' + age);
         _st('d2s-time-end',   yrs > 0 ? 'RETIRE: ' + retire : 'TODAY');
 
@@ -6265,14 +6269,14 @@
 
     // ── Shared Y-axis — globalYMin/globalYMax set by Screen 1's updateEngine() ──
     function d2SpendToY(spend) {
-      var range = globalYMax - globalYMin;
+      var range = d2YMax - d2YMin;
       if (range === 0) return D_Y_MAX;
-      var ratio = (spend - globalYMin) / range;
+      var ratio = (spend - d2YMin) / range;
       return Math.max(D_Y_MIN, Math.min(D_Y_MAX, D_Y_MAX - ratio * (D_Y_MAX - D_Y_MIN)));
     }
     function d2YToSpend(y) {
-      var range = globalYMax - globalYMin;
-      return globalYMin + ((D_Y_MAX - y) / (D_Y_MAX - D_Y_MIN)) * range;
+      var range = d2YMax - d2YMin;
+      return d2YMin + ((D_Y_MAX - y) / (D_Y_MAX - D_Y_MIN)) * range;
     }
 
     // ── Placeholder for old buildDesignCanvas — SVG is now static in HTML ──
@@ -6366,8 +6370,8 @@
         var _d2VMax2 = Math.max.apply(null, _d2AV2);
         var _d2PR2   = Math.max((_d2VMax2 - _d2VMin2) * 1.25, 60);
         var _d2Mid2  = (_d2VMin2 + _d2VMax2) / 2;
-        globalYMin   = Math.max(0, _d2Mid2 - _d2PR2 / 2);
-        globalYMax   = _d2Mid2 + _d2PR2 / 2;
+        d2YMin   = Math.max(0, _d2Mid2 - _d2PR2 / 2);
+        d2YMax   = _d2Mid2 + _d2PR2 / 2;
       }
 
       // X-axis labels (live scenario)
@@ -6429,6 +6433,9 @@
       _d2LastEndpointCY.floor = yF;
       _d2LastEndpointCY.datum = yD;
       _d2LastScenario = _liveSc;
+      _d2LastScenario.targetSpend = Math.round(dDatum);
+      var _d2ValDatEl = document.getElementById('d2-val-datum');
+      if (_d2ValDatEl) { var _dDRnd = Math.round(dDatum); _d2ValDatEl.textContent = (_dDRnd >= 1000 ? '$' + (_dDRnd/1000).toFixed(2).replace(/\.00$/,'') + 'M' : '$' + _dDRnd + 'k') + ' / yr'; }
 
       // SVG path updates
       var _sa = function(id, attr, val) { var el = document.getElementById(id); if (el) el.setAttribute(attr, val); };
@@ -6490,7 +6497,7 @@
         var _gHTML = '<text x="80" y="40" text-anchor="end" class="axis-title" style="fill:rgba(255,255,255,0.8);">ANNUAL SPEND</text>';
         for (var _gi = 0; _gi <= 4; _gi++) {
           var _gy = D_Y_MIN + _gi * (D_Y_MAX - D_Y_MIN) / 4;
-          var _gv = globalYMax - (_gi / 4) * (globalYMax - globalYMin);
+          var _gv = d2YMax - (_gi / 4) * (d2YMax - d2YMin);
           _gHTML += '<line x1="' + (D_X_START - 2) + '" y1="' + _gy + '" x2="' + D_X_END + '" y2="' + _gy + '" class="grid-tick"/>';
           _gHTML += '<text x="' + (D_X_START - 8) + '" y="' + (_gy + 4) + '" text-anchor="end" class="grid-label">' + formatYLabel(_gv) + '</text>';
         }
