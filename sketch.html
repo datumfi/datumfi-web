@@ -7182,6 +7182,13 @@
             slEl = document.getElementById('d2-slider-datum');
             targetPos = datumValToPos(Math.min(val, 1000));
           }
+          // Framing D: commit Datum handle synchronously before lever animation so initDesignState reads committed value.
+          var _dtSec = btn.getAttribute('data-req-datum-value');
+          if (_dtSec != null) {
+            var _dtSlEl = document.getElementById('d2-slider-datum');
+            var _dtPos  = datumValToPos(Math.min(parseFloat(_dtSec), 1000));
+            if (_dtSlEl) _dtSlEl.value = _dtPos;
+          }
           if (!slEl) return;
           _d2AcceptAnimating = true;
           _d2SetProbingState(false);
@@ -7211,6 +7218,31 @@
       }
       return Math.floor((lo + hi) / 2); // solved retireAge (integer)
     }
+
+    // _d2BinarySearchYDatum — finds retire-age where baseline-spec FV × DATUM_SUPPORT_RATE clears datumTarget_M.
+    // Condition (spec §7 R92): gfDatum(Y) × P_M × DR + DR × K_M × ((gfDatum(Y)−1) / DATUM_GROWTH_RATE_SPEC) >= datumTarget_M
+    // Returns retirement AGE (integer) — same return type as _d2BinarySearchY.
+    function _d2BinarySearchYDatum(datumTarget_M, s) {
+      var lo = s.currentAge + 1;
+      var hi = s.currentAge + 50;
+      for (var _i = 0; _i < 50; _i++) {
+        var mid = Math.floor((lo + hi) / 2);
+        var _Y  = mid - s.currentAge;
+        var _gf = _Y > 0 ? Math.pow(1 + DATUM_GROWTH_RATE_SPEC, _Y) : 1;
+        var _PM = s.portfolioVol  || 0;
+        var _KM = (s.annualContrib || 0) / 1e6;
+        var _sup = _gf * _PM * DATUM_SUPPORT_RATE
+                 + (_gf > 1 ? DATUM_SUPPORT_RATE * _KM * ((_gf - 1) / DATUM_GROWTH_RATE_SPEC) : 0);
+        if (Math.abs(_sup - datumTarget_M) < 0.0005) { lo = mid; hi = mid; break; }
+        if (_sup < datumTarget_M) lo = mid; else hi = mid;
+      }
+      return Math.floor((lo + hi) / 2); // retireAge (integer)
+    }
+
+    // Framing D named constants — mirror existing 1.07/1.035 hardcoded-spec pattern; NOT scenario-aware.
+    var DATUM_GROWTH_RATE_SPEC = 0.045;
+    var DATUM_SUPPORT_RATE     = 0.040;
+    var DRIVER_TIE_EPSILON     = 0.005; // 0.5% tolerance for tied-driver detection (spec §8 R106)
 
     // solveInverse(dc, df, dd, pts, s) — pure math, no DOM.
     // dc/df/dd = designOverrides deltas (k/yr). pts = lastCalculatedPoints. s = currentScenario.
@@ -7466,6 +7498,20 @@
       var headCard = function(headline, contextLine) {
         return '<div class="req-item" style="border-left-color:rgba(255,255,255,0.25);background:rgba(255,255,255,0.04);margin-bottom:8px;">'
           + '<div class="req-item-body"><strong>' + headline + '</strong><br><span style="color:rgba(255,255,255,0.6);font-size:11px;">' + contextLine + '</span></div></div>';
+      };
+
+      // itemD — like item() but carries a datum secondary value for Accept wiring (Framing D only).
+      var itemD = function(cls, labelColor, labelTxt, bodyTxt, reqType, reqVal, datumVal) {
+        var _dv = datumVal != null ? ' data-req-datum-value="' + datumVal + '"' : '';
+        var da = (reqType != null && reqVal != null)
+          ? ' data-req-type="' + reqType + '" data-req-value="' + reqVal + '"' + _dv + ' tabindex="0" style="cursor:pointer;"'
+          : '';
+        var acceptBtn = (reqType != null && reqVal != null)
+          ? '<button class="d2-accept-btn" data-req-type="' + reqType + '" data-req-value="' + reqVal + '"' + _dv + '>&#x2191; ACCEPT &mdash; APPLY TO SKETCH</button>'
+          : '';
+        return '<div class="req-item ' + cls + '"' + da + '>'
+          + '<div class="req-item-label" style="color:' + labelColor + ';">' + labelTxt + '</div>'
+          + '<div class="req-item-body">' + bodyTxt + acceptBtn + '</div></div>';
       };
 
       var r = solveInverse(dc, df, dd, pts, _sNorm);
@@ -7738,6 +7784,28 @@
 
       // ── Block D: Y=0 retire today ────────────────────────────────────
       if (r.block === 'D') {
+        // Framing D: Y=0 → gfDatum_spec=1, C2=0; portfolio top-up only (spec §7 R97)
+        if (Math.abs(dd) > 0.5) {
+          var _C1D0 = DATUM_SUPPORT_RATE; // gfDatum=(1.045)^0=1
+          var _ddM0 = dd / 1000;
+          var _reqDatP0 = _C1D0 > 0 ? Math.max(_ddM0 / _C1D0, 0) : 0;
+          var _reqCeilP0 = r.reqP_M || 0;
+          var _dispP0 = Math.max(_reqCeilP0, _reqDatP0);
+          var _eps0 = DRIVER_TIE_EPSILON * Math.max(_reqDatP0, _reqCeilP0, 0.001);
+          var _datDrv0 = _reqDatP0 - _reqCeilP0 > _eps0;
+          var _tied0   = Math.abs(_reqDatP0 - _reqCeilP0) <= _eps0;
+          var _cp0 = _tied0
+            ? 'Add ' + fmtPort(_dispP0) + ' to your starting balance. Your Ceiling and Datum are pulling together — both need the same portfolio at this rate.'
+            : _datDrv0
+              ? 'Add ' + fmtPort(_dispP0) + ' to your starting balance. Your Datum spending is the line driving this number — the Ceiling sits within the same portfolio.'
+              : 'Add ' + fmtPort(_dispP0) + ' to your starting balance. Your Ceiling is setting this amount — your Datum sits comfortably within reach.';
+          html += headCard('Retirement today. Portfolio is the only lever.',
+            'Your Datum also moved. This number is the larger of what the Ceiling needs and what your Datum needs.');
+          html += itemD('req-item-ceil', 'var(--gold)', 'PATH 1 &mdash; PORTFOLIO', _cp0, 'capital', (_sNorm.portfolioVol + _dispP0), r.datumTarget);
+          html += studioCTA('Studio can model whether your accounts can support spending at ' + fmtKyr(r.datumTarget) + ' within this shape.');
+          req.innerHTML = html;
+          return;
+        }
         html += headCard(
           'You\'re modeling retirement today. Contributions don\'t factor in — your portfolio is the only lever.',
           'At retirement, the ceiling is simply your portfolio times the withdrawal rate. To reach ' + fmtKyr(r.ceilTarget) + ', you\'d need a starting balance of ' + fmtPort(r.reqP_M) + '.'
@@ -7770,6 +7838,53 @@
           html += warn('req-item-ceil', 'var(--danger-red)', 'TARGET NOT REACHABLE', _cStop);
           req.innerHTML = html;
           return;
+        }
+        // Framing D: hasDatum branch — Cramer-preserve + portfolio top-up (spec §12 R227)
+        if (Math.abs(dd) > 0.5) {
+          // Guard 1: Datum above Ceiling (suppress Path Options)
+          if (r.datumTarget > r.ceilTarget + 0.5) {
+            html += warn('req-item-datum', 'var(--gold)', 'DATUM ABOVE CEILING',
+              'Your Datum sits above your Ceiling. Your spending target is higher than the upper boundary you drew. Raise the Ceiling or lower the Datum before comparing Path Options.');
+            req.innerHTML = html; return;
+          }
+          var _YC = _sNorm.yearsToGrow || 0;
+          var _gfC = _YC > 0 ? Math.pow(1 + DATUM_GROWTH_RATE_SPEC, _YC) : 1;
+          var _C1C = _gfC * DATUM_SUPPORT_RATE;
+          var _C2C = _YC > 0 ? DATUM_SUPPORT_RATE * ((_gfC - 1) / DATUM_GROWTH_RATE_SPEC) : 0;
+          var _ddMC = dd / 1000;
+          // Guard 2: Datum at/below Floor → req_datum = 0
+          var _datBlwFlrC = r.datumTarget <= r.floorTarget + 0.5;
+          // Cramer-preserve: compute how much Datum support the existing Cramer pair already provides
+          var _datSupC = (_C1C * r.dP_M) + (_C2C * (r.dK_dollars / 1e6));
+          var _shortC  = _datBlwFlrC ? 0 : Math.max(_ddMC - _datSupC, 0);
+          var _dPdispC = r.dP_M + (_C1C > 0 ? _shortC / _C1C : 0); // top-up portfolio; dK unchanged
+          // comboWarnP extension: check post-top-up portfolio
+          if (r.comboWarnK || r.comboWarnP || _dPdispC > 2 * (_sNorm.portfolioVol || 0)) {
+            html += warn('req-item-ceil', 'var(--gold)', 'OUTSIDE PRACTICAL RANGE',
+              'Hitting all three targets at once would need lever moves beyond practical ranges. Ease one end of the Shape, or use Studio to test a version that fits your real accounts.');
+            html += studioCTA('Studio can test whether this specific shape is achievable given your actual account types, tax treatment, and income timing — and show the sequencing that gets you closest.');
+            req.innerHTML = html; return;
+          }
+          // Driving line: did Datum require the top-up, or was the Cramer pair sufficient?
+          var _datDrvC = _shortC > 0.001;
+          var _dKdispC = r.dK_dollars;
+          var _cDirC   = _dKdispC >= 0 ? 'increase' : 'reduce';
+          var _cBodyC_FD = 'To reach this shape: add ' + fmtPort(_dPdispC) + ' to your balance and '
+            + _cDirC + ' contributions by ' + fmtContrib(_dKdispC) + '/year. ';
+          if (_datDrvC) {
+            _cBodyC_FD += 'You moved the Ceiling to ' + fmtKyr(r.ceilTarget) + ', the Floor to ' + fmtKyr(r.floorTarget) + ', and your Datum to ' + fmtKyr(r.datumTarget) + '. Your Datum spending is the line driving the portfolio number — the Ceiling and Floor are carried by the contribution lever.';
+          } else if (Math.abs(dc) >= Math.abs(df)) {
+            _cBodyC_FD += 'Your Ceiling move is what is setting this combination — your Datum has moved to ' + fmtKyr(r.datumTarget) + ' and is carried within the Cramer solution without additional levers.';
+          } else {
+            _cBodyC_FD += 'Your Floor move is the most demanding line — your Datum has moved to ' + fmtKyr(r.datumTarget) + ' and is carried within the Cramer solution without additional levers.';
+          }
+          if (_datBlwFlrC) {
+            _cBodyC_FD += ' Your Datum sits at or below your Floor — the plan supports your spending target without additional levers.';
+          }
+          html += headCard('You\'ve set a specific shape with all three lines moved. Here\'s the lever combination.',
+            'The Cramer system solves Ceiling and Floor together. Any Datum shortfall adds a portfolio-only top-up — contributions are unchanged.');
+          html += itemD('req-item-ceil', 'var(--gold)', 'COMBINATION: PORTFOLIO + CONTRIBUTIONS', _cBodyC_FD, 'capital', (_sNorm.portfolioVol + _dPdispC), r.datumTarget);
+          req.innerHTML = html; return;
         }
         if (r.comboWarnK || r.comboWarnP) {
           html += warn('req-item-ceil', 'var(--gold)', 'OUTSIDE PRACTICAL RANGE',
@@ -7838,6 +7953,82 @@
 
       // ── Block A: ceiling-only drag ────────────────────────────────────
       if (r.block === 'A') {
+        // Framing D: Datum + Ceiling — Scenario 2 (spec §10 R148-R158)
+        if (Math.abs(dd) > 0.5) {
+          // Guard 1: Datum above Ceiling
+          if (r.datumTarget > r.ceilTarget + 0.5) {
+            html += warn('req-item-datum', 'var(--gold)', 'DATUM ABOVE CEILING',
+              'Your Datum sits above your Ceiling. Your spending target is higher than the upper boundary you drew. Raise the Ceiling or lower the Datum before comparing Path Options.');
+            req.innerHTML = html; return;
+          }
+          var _YA = _sNorm.yearsToGrow || 0;
+          var _gfA = _YA > 0 ? Math.pow(1 + DATUM_GROWTH_RATE_SPEC, _YA) : 1;
+          var _C1A = _gfA * DATUM_SUPPORT_RATE;
+          var _C2A = _YA > 0 ? DATUM_SUPPORT_RATE * ((_gfA - 1) / DATUM_GROWTH_RATE_SPEC) : 0;
+          var _ddMA = dd / 1000;
+          // Guard 2: Datum at/below Floor → req_datum = 0
+          var _datBlwA = r.datumTarget <= r.floorTarget + 0.5;
+          var _reqDatPA = _datBlwA ? 0 : Math.max(_ddMA / _C1A, 0);
+          var _reqDatKA = (_datBlwA || _C2A === 0) ? 0 : Math.max(_ddMA / _C2A * 1e6, 0);
+          // MAX-over-clearance per path
+          var _pthPA = r.paths && r.paths[0];
+          var _pthKA = r.paths && r.paths[1];
+          var _pthRA = r.paths && r.paths[2];
+          var _bndPA = (_pthPA && _pthPA.dP_M != null) ? _pthPA.dP_M : 0;
+          var _bndKA = (_pthKA && _pthKA.dK_dollars != null) ? _pthKA.dK_dollars : 0;
+          var _dispPA = Math.max(_bndPA, _reqDatPA);
+          var _dispKA = Math.max(_bndKA, _reqDatKA);
+          // PATH 3: MAX(boundary age, datum age)
+          var _raDA = _d2BinarySearchYDatum(r.datumTarget / 1000, _sNorm);
+          var _raBndA = (_pthRA && _pthRA.reqRetireAge) ? _pthRA.reqRetireAge : _sNorm.activationAge;
+          var _raDispA = Math.max(_raBndA, _raDA);
+          var _dYA = _raDispA - _sNorm.activationAge;
+          // Driving line (portfolio path as primary indicator)
+          var _epsA = DRIVER_TIE_EPSILON * Math.max(_reqDatPA, _bndPA, 0.001);
+          var _datDrvA = _reqDatPA - _bndPA > _epsA;
+          var _tiedA   = Math.abs(_reqDatPA - _bndPA) <= _epsA;
+          // Guard 3: all zero
+          if (_dispPA <= 0 && _dispKA <= 0 && _dYA <= 0) {
+            html += headCard('NO ADDITIONAL LEVERS NEEDED',
+              'You moved your Shape in a direction your current plan already supports. No portfolio addition, contribution increase, or retirement delay is needed.');
+            req.innerHTML = html; return;
+          }
+          html += headCard('You pulled the Ceiling and moved your Datum. Here\'s what it takes to hold both.',
+            'Each path shows the larger of what the Ceiling needs and what your Datum needs.');
+          // PATH 1 — PORTFOLIO
+          var _p1A = _tiedA
+            ? 'Add ' + fmtPort(_dispPA) + ' to your starting balance. Your Ceiling and Datum are pulling together — both need the same portfolio addition.'
+            : _datDrvA
+              ? 'Add ' + fmtPort(_dispPA) + ' to your starting balance. Your Datum target is the line driving this number — the Ceiling move is already within reach of the same portfolio.'
+              : 'Add ' + fmtPort(_dispPA) + ' to your starting balance. Your Ceiling move is what is setting this number — your Datum move is included but sits within reach.';
+          if (_datBlwA) _p1A += ' Your Datum sits at or below your Floor — the plan supports your spending target without extra portfolio.';
+          if (_dispPA > 2 * (_sNorm.portfolioVol || 0)) {
+            html += warn('req-item-ceil', 'var(--gold)', 'PATH 1 &mdash; PORTFOLIO',
+              'Reaching these targets via portfolio alone requires more than twice your current balance. A split across levers is more practical.');
+          } else {
+            html += itemD('req-item-ceil', 'var(--gold)', 'PATH 1 &mdash; PORTFOLIO', _p1A, 'capital', (_sNorm.portfolioVol + _dispPA), r.datumTarget);
+          }
+          // PATH 2 — CONTRIBUTIONS
+          var _epsKA = DRIVER_TIE_EPSILON * Math.max(_reqDatKA, _bndKA, 0.001);
+          var _datDrvKA = _reqDatKA - _bndKA > _epsKA;
+          var _p2A = _datDrvKA
+            ? 'Add ' + fmtContrib(_dispKA) + ' to your annual contributions. The contribution lever has to support both the Ceiling pull and your Datum target — your Datum is the line setting how much.'
+            : 'Add ' + fmtContrib(_dispKA) + ' to your annual contributions. This lifts your Ceiling — your Datum target is included and sits within reach of the same amount.';
+          if (Math.abs(_dispKA) > 50000) {
+            html += warn('req-item-ceil', 'var(--gold)', 'PATH 2 &mdash; CONTRIBUTIONS',
+              'Reaching these targets via contributions alone would require ' + fmtContrib(_dispKA) + ' — beyond a practical single-lever move.');
+          } else {
+            html += itemD('req-item-ceil', 'var(--gold)', 'PATH 2 &mdash; CONTRIBUTIONS', _p2A, 'contrib', (_sNorm.annualContrib + _dispKA), r.datumTarget);
+          }
+          // PATH 3 — RETIRE AGE
+          var _datDrvRA = _raDA > _raBndA;
+          var _p3A = _datDrvRA
+            ? 'Delay retirement by ' + fmtYrs(_dYA) + '. Time amplifies every input — each additional year raises both your Ceiling and your Datum support. Your Datum spending is what is setting the delay needed.'
+            : 'Delay retirement by ' + fmtYrs(_dYA) + '. Time amplifies every other input — but it\'s non-linear. Each additional year past ' + _sNorm.activationAge + ' yields a different ceiling gain. Your Datum move is included.';
+          html += itemD('req-item-ceil', 'var(--gold)', 'PATH 3 &mdash; RETIRE AGE', _p3A, 'retire', _raDispA, r.datumTarget);
+          html += studioCTA('Studio can model the most efficient mix of these levers given your actual account structure, income timing, and tax treatment.');
+          req.innerHTML = html; return;
+        }
         var _dc_pct  = r.a1 > 0 ? Math.round(Math.abs(dc / pts.ceilSpend) * 100) : 0;
         var _dc_dir  = dc >= 0 ? 'up' : 'down';
         html += headCard(
@@ -7914,6 +8105,83 @@
 
       // ── Block B: floor-only drag ──────────────────────────────────────
       if (r.block === 'B') {
+        // Framing D: Datum + Floor — Scenario 1 (spec §10 R126-R144)
+        if (Math.abs(dd) > 0.5) {
+          // Guard 1: Datum above Ceiling (ceiling static here → dc=0, ceilTarget = pts.ceilSpend)
+          if (r.datumTarget > r.ceilTarget + 0.5) {
+            html += warn('req-item-datum', 'var(--gold)', 'DATUM ABOVE CEILING',
+              'Your Datum sits above your Ceiling. Your spending target is higher than the upper boundary you drew. Raise the Ceiling or lower the Datum before comparing Path Options.');
+            req.innerHTML = html; return;
+          }
+          var _YB = _sNorm.yearsToGrow || 0;
+          var _gfB = _YB > 0 ? Math.pow(1 + DATUM_GROWTH_RATE_SPEC, _YB) : 1;
+          var _C1B = _gfB * DATUM_SUPPORT_RATE;
+          var _C2B = _YB > 0 ? DATUM_SUPPORT_RATE * ((_gfB - 1) / DATUM_GROWTH_RATE_SPEC) : 0;
+          var _ddMB = dd / 1000;
+          // Guard 2: Datum at/below Floor → req_datum = 0
+          var _datBlwB = r.datumTarget <= r.floorTarget + 0.5;
+          var _reqDatPB = _datBlwB ? 0 : Math.max(_ddMB / _C1B, 0);
+          var _reqDatKB = (_datBlwB || _C2B === 0) ? 0 : Math.max(_ddMB / _C2B * 1e6, 0);
+          // MAX-over-clearance per path
+          var _pthPB = r.paths && r.paths[0];
+          var _pthKB = r.paths && r.paths[1];
+          var _pthRB = r.paths && r.paths[2];
+          var _bndPB = (_pthPB && _pthPB.dP_M != null) ? _pthPB.dP_M : 0;
+          var _bndKB = (_pthKB && _pthKB.dK_dollars != null) ? _pthKB.dK_dollars : 0;
+          var _dispPB = Math.max(_bndPB, _reqDatPB);
+          var _dispKB = Math.max(_bndKB, _reqDatKB);
+          // PATH 3: MAX(boundary age, datum age)
+          var _raDB = _d2BinarySearchYDatum(r.datumTarget / 1000, _sNorm);
+          var _raBndB = (_pthRB && _pthRB.reqRetireAge) ? _pthRB.reqRetireAge : _sNorm.activationAge;
+          var _raDispB = Math.max(_raBndB, _raDB);
+          var _dYB = _raDispB - _sNorm.activationAge;
+          // Driving line (portfolio path primary)
+          var _epsPB = DRIVER_TIE_EPSILON * Math.max(_reqDatPB, _bndPB, 0.001);
+          var _datDrvPB = _reqDatPB - _bndPB > _epsPB;
+          var _flrDrvPB = _bndPB - _reqDatPB > _epsPB;
+          var _tiedPB   = !_datDrvPB && !_flrDrvPB;
+          // Guard 3: all zero
+          if (_dispPB <= 0 && _dispKB <= 0 && _dYB <= 0) {
+            html += headCard('NO ADDITIONAL LEVERS NEEDED',
+              'You moved your Shape in a direction your current plan already supports. No portfolio addition, contribution increase, or retirement delay is needed.');
+            req.innerHTML = html; return;
+          }
+          html += headCard('You pulled the Floor and moved your Datum. Here\'s what it takes to support both.',
+            'Each path shows the larger of what the Floor needs and what your Datum needs.');
+          // PATH 1 — PORTFOLIO
+          var _p1B = _tiedPB
+            ? 'Add ' + fmtPort(_dispPB) + ' to your starting balance. Supporting both takes more portfolio than supporting the Floor alone.'
+            : _datDrvPB
+              ? 'Add ' + fmtPort(_dispPB) + ' to your starting balance. You moved your Floor to ' + fmtKyr(r.floorTarget) + ' and your Datum to ' + fmtKyr(r.datumTarget) + ' — your Datum spending is the line driving this number.'
+              : 'Add ' + fmtPort(_dispPB) + ' to your starting balance. Your Floor move is what is setting this number — your Datum move is included but sits comfortably within reach. Without the Floor move, less would be needed.';
+          if (_datBlwB) _p1B += ' Your Datum sits at or below your Floor — the plan supports your spending target without extra portfolio.';
+          if (_dispPB > 2 * (_sNorm.portfolioVol || 0)) {
+            html += warn('req-item-floor', 'var(--danger-red)', 'PATH 1 &mdash; PORTFOLIO',
+              'Reaching these targets via portfolio alone requires more than twice your current balance. A split across levers is more practical.');
+          } else {
+            html += itemD('req-item-floor', 'var(--danger-red)', 'PATH 1 &mdash; PORTFOLIO', _p1B, 'capital', (_sNorm.portfolioVol + _dispPB), r.datumTarget);
+          }
+          // PATH 2 — CONTRIBUTIONS
+          var _epsKB = DRIVER_TIE_EPSILON * Math.max(_reqDatKB, _bndKB, 0.001);
+          var _datDrvKB = _reqDatKB - _bndKB > _epsKB;
+          var _p2B = _datDrvKB
+            ? 'Add ' + fmtContrib(_dispKB) + ' to your annual contributions. This lifts both your Floor and your Datum support — the contribution increase has to carry both lines at once. Your Datum spending is driving the total.'
+            : 'Add ' + fmtContrib(_dispKB) + ' to your annual contributions. This holds your Floor — your Datum target is included and supported within the same amount.';
+          if (Math.abs(_dispKB) > 50000) {
+            html += warn('req-item-floor', 'var(--danger-red)', 'PATH 2 &mdash; CONTRIBUTIONS',
+              'Reaching these targets via contributions alone would require ' + fmtContrib(_dispKB) + ' — beyond a practical single-lever move.');
+          } else {
+            html += itemD('req-item-floor', 'var(--danger-red)', 'PATH 2 &mdash; CONTRIBUTIONS', _p2B, 'contrib', (_sNorm.annualContrib + _dispKB), r.datumTarget);
+          }
+          // PATH 3 — RETIRE AGE
+          var _datDrvRB = _raDB > _raBndB;
+          var _p3B = _datDrvRB
+            ? 'Delay retirement by ' + fmtYrs(_dYB) + '. Time amplifies every input — each additional year of compound growth raises both your Floor and your Datum support. Your Datum spending is what is setting the delay needed.'
+            : 'Delay retirement by ' + fmtYrs(_dYB) + '. Time grows both your Floor and your Datum support — each additional year past ' + _sNorm.activationAge + ' locks in more capacity. Your Datum move is included.';
+          html += itemD('req-item-floor', 'var(--danger-red)', 'PATH 3 &mdash; RETIRE AGE', _p3B, 'retire', _raDispB, r.datumTarget);
+          html += studioCTA('Studio can model the most efficient mix of these levers given your actual account structure, income timing, and tax treatment.');
+          req.innerHTML = html; return;
+        }
         var _df_pct = pts.floorSpend > 0 ? Math.round(Math.abs(df / pts.floorSpend) * 100) : 0;
         var _df_dir = df >= 0 ? 'up' : 'down';
         html += headCard(
