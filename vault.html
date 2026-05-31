@@ -338,40 +338,35 @@
           var signedOut = document.getElementById('state-signed-out');
           var signedIn  = document.getElementById('state-signed-in');
 
-          if (loading) loading.style.display = 'none';
-
-          if (Clerk.user) {
-            // datum_auth_hint must be set BEFORE redirect so nav.js
-            // auth-hint cascade works on the destination page.
-            sessionStorage.setItem('datum_auth_hint', '1');
-            window.location.replace('/my-account.html');
-          } else {
-            if (signedOut) signedOut.style.display = 'flex';
-            Clerk.mountSignIn(document.getElementById('clerk-sign-in'), {
-              fallbackRedirectUrl: '/vault.html',
-              appearance: {
-                variables: {
-                  colorPrimary:          '#5DCAA5',
-                  colorBackground:       'rgba(9,18,33,0)',
-                  colorText:             '#ffffff',
-                  colorTextSecondary:    'rgba(255,255,255,0.5)',
-                  colorInputBackground:  'rgba(255,255,255,0.04)',
-                  colorInputText:        '#ffffff',
-                  colorInputPlaceholder: 'rgba(255,255,255,0.25)',
-                  fontFamily:            '"DM Mono", monospace',
-                  borderRadius:          '6px',
-                  fontSize:              '13px'
-                },
-                elements: {
-                  card:           { boxShadow: 'none', border: 'none', background: 'transparent' },
-                  cardBox:        { boxShadow: 'none', border: 'none', background: 'transparent' },
-                  headerTitle:    { display: 'none' },
-                  headerSubtitle: { display: 'none' },
-                  footer:         { background: 'transparent', borderTop: 'none' }
-                }
-              }
-            });
+          if (Clerk.isSignedIn) {
+            return; // window.load handler handles authenticated redirect
           }
+          if (loading) loading.style.display = 'none';
+          if (signedOut) signedOut.style.display = 'flex';
+          Clerk.mountSignIn(document.getElementById('clerk-sign-in'), {
+            fallbackRedirectUrl: '/vault.html',
+            appearance: {
+              variables: {
+                colorPrimary:          '#5DCAA5',
+                colorBackground:       'rgba(9,18,33,0)',
+                colorText:             '#ffffff',
+                colorTextSecondary:    'rgba(255,255,255,0.5)',
+                colorInputBackground:  'rgba(255,255,255,0.04)',
+                colorInputText:        '#ffffff',
+                colorInputPlaceholder: 'rgba(255,255,255,0.25)',
+                fontFamily:            '"DM Mono", monospace',
+                borderRadius:          '6px',
+                fontSize:              '13px'
+              },
+              elements: {
+                card:           { boxShadow: 'none', border: 'none', background: 'transparent' },
+                cardBox:        { boxShadow: 'none', border: 'none', background: 'transparent' },
+                headerTitle:    { display: 'none' },
+                headerSubtitle: { display: 'none' },
+                footer:         { background: 'transparent', borderTop: 'none' }
+              }
+            }
+          });
         }).catch(showError);
       }
 
@@ -388,6 +383,26 @@
         }
       }
     })();
+
+    window.addEventListener('load', function () {
+      Clerk.load().then(function () {
+        if (Clerk.isSignedIn) {
+          var lastRedirect = sessionStorage.getItem('datumfi_vault_redirect_attempt');
+          var now = Date.now();
+          if (lastRedirect && (now - parseInt(lastRedirect, 10)) < 3000) {
+            console.warn('[Datum] loop prevention: redirect too recent, showing sign-in form');
+            sessionStorage.removeItem('datumfi_vault_redirect_attempt');
+            return;
+          }
+          sessionStorage.setItem('datumfi_vault_redirect_attempt', String(now));
+          sessionStorage.setItem('datum_auth_hint', '1');
+          window.location.replace('/my-account.html');
+        }
+        // else: sign-in form already mounted by initClerk
+      }).catch(function () {
+        // On error, do nothing — let sign-in form render
+      });
+    });
 
     function handleManageAccount() {
       if (typeof Clerk !== 'undefined' && typeof Clerk.openUserProfile === 'function') {
