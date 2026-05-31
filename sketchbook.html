@@ -3349,6 +3349,9 @@
          var _snap = null;
          try { _snap = JSON.parse(sessionStorage.getItem('datumfi_sketch_current_snapshot') || 'null'); } catch(ex) {}
          if (_snap) {
+           var _lsPin = {};
+           try { _lsPin = JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch(ex) {}
+           try { _lsPin['slot_' + activeSlotId] = _snap; localStorage.setItem(LS_KEY, JSON.stringify(_lsPin)); } catch(ex) {}
            executeSavePayloadToSlot(activeSlotId, _contractToSlot(_snap));
          } else {
            showSketchToast('Return to Sketch to save a new shape →');
@@ -3388,6 +3391,9 @@
       document.getElementById('discover-capacity-modal').classList.add('open');
       return;
     }
+    var _lsSCS = {};
+    try { _lsSCS = JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch(ex) {}
+    try { _lsSCS.slot_1 = _snap; localStorage.setItem(LS_KEY, JSON.stringify(_lsSCS)); } catch(ex) {}
     executeSavePayloadToSlot(1, _contractToSlot(_snap));
   });
 
@@ -3416,15 +3422,8 @@
       showSketchToast('Select a saved Sketch first');
       return;
     }
-    var lsData = null;
-    try {
-      var raw = localStorage.getItem('datumfi_sketchbook_v1');
-      if (raw) {
-        var parsed = JSON.parse(raw);
-        lsData = parsed['slot_' + slotIdx];
-      }
-    } catch(ex) {}
-    if (!lsData) {
+    var slotData = SketchbookDatabase['slot' + slotIdx];
+    if (!slotData) {
       showSketchToast('Selected slot is empty');
       return;
     }
