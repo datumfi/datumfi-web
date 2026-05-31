@@ -32,8 +32,9 @@
 
 <!-- Auth gate + hash router -->
 <!-- Fires on window.load so Clerk has time to complete afterSignInUrl
-     handshake exchange before session is checked. Uses Clerk.isSignedIn
-     (boolean) not Clerk.user (can be undefined during loading). -->
+     handshake exchange before session is checked. Uses Clerk.user
+     (v4 API · truthy after handshake) not Clerk.isSignedIn (v5-only ·
+     undefined in Clerk v4.73.14). -->
 <script>
 (function () {
   'use strict';
@@ -113,7 +114,7 @@
   // token with its API before we check session state.
   window.addEventListener('load', function () {
     Clerk.load().then(function () {
-      if (Clerk.isSignedIn) {
+      if (Clerk.user) {
         onSessionConfirmed();
       } else {
         redirectToVault();

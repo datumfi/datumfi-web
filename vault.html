@@ -338,7 +338,7 @@
           var signedOut = document.getElementById('state-signed-out');
           var signedIn  = document.getElementById('state-signed-in');
 
-          if (Clerk.isSignedIn) {
+          if (Clerk.user) {
             return; // window.load handler handles authenticated redirect
           }
           if (loading) loading.style.display = 'none';
@@ -386,7 +386,7 @@
 
     window.addEventListener('load', function () {
       Clerk.load().then(function () {
-        if (Clerk.isSignedIn) {
+        if (Clerk.user) {
           var lastRedirect = sessionStorage.getItem('datumfi_vault_redirect_attempt');
           var now = Date.now();
           if (lastRedirect && (now - parseInt(lastRedirect, 10)) < 3000) {
