@@ -1,0 +1,3499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Datum FI — Desktop Sketchbook Portfolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600&family=DM+Mono:wght@300;400;500;700&family=DM+Sans:wght@300;400;500;700&family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..500,0..100,0..1&display=swap" rel="stylesheet">
+
+<style>
+  /* ── SYSTEM BRAND TOKENS (Preserved from Your Core Architecture) ── */
+  :root {
+    --bg-navy:        #091221;
+    --navy-card:      #0d1a2e;
+    --teal-mid:       #5DCAA5; 
+    --teal-brand:     #1D9E75; 
+    --purple-grounded:#6B7BC4; 
+    --gold:           #C9A84C; 
+    --danger-red:     #e24b4a; 
+    --orange-warning: #E58E26; 
+    --blue-safe:      #4da8da; 
+    --white:          #ffffff;
+    --muted:          rgba(255,255,255,0.4);
+    
+    /* ── TRANSPLANTED MATERIAL ASSET 2: REALISTIC TAN SKETCHBOOK PAPER ── */
+    --paper-tan:      #efe7d6;
+    --paper-light:    #fbf5e8;
+    --paper-dark:     #d8ccaf;
+    --ink-dark:       #20242b;
+    --ink-soft:       rgba(32,36,43,.58);
+    --margin-rule:    rgba(226, 75, 74, 0.22);
+    
+    --font-serif:     'Fraunces', Georgia, serif;
+    --font-mono:      'DM Mono', monospace;
+    --font-sans:      'DM Sans', system-ui, sans-serif;
+  }
+
+  /* ── STRUCTURE & LAYOUT (Your Fluid, Responsive Shell Framework) ── */
+  body, html {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background-color: var(--bg-navy); color: var(--white);
+    font-family: var(--font-sans); -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  .sketchbook-section {
+    width: 100vw; min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 80px 40px; position: relative;
+    background-image: radial-gradient(circle at center, rgba(29, 158, 117, 0.02) 0%, var(--bg-navy) 100%);
+  }
+
+  /* --- HEADER NAVIGATION LINK --- */
+  .back-to-workspace {
+    position: absolute; top: 40px; left: 60px;
+    background: transparent; border: none; outline: none;
+    font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.15em; color: var(--teal-mid); cursor: pointer;
+    display: flex; align-items: center; gap: 8px; transition: color 0.2s;
+    z-index: 100;
+  }
+  .back-to-workspace:hover { color: var(--white); }
+
+  /* ── SKETCHBOOK CONTENT FRAMING WRAPPER (Your Proportions Only) ── */
+  .sketchbook-wrapper {
+    width: 100%; max-width: 1080px; position: relative; margin-top: 20px;
+    will-change: transform, opacity;
+  }
+
+  /* ── TRANSPLANTED MATERIAL ASSET 3: OUTSIDE SKETCHBOOK COVER EDGE & SHADOW ── */
+  .book-shadow {
+    position: absolute; left: 26px; right: -24px; top: 28px; bottom: -14px;
+    border-radius: 20px; background: rgba(0,0,0,.50); filter: blur(19px); z-index: 0;
+  }
+  .book-cover {
+    position: absolute; inset: -10px -16px -12px -10px; border-radius: 22px;
+    background: linear-gradient(90deg, rgba(255,255,255,.07), transparent 14%, transparent 88%, rgba(0,0,0,.22)), linear-gradient(180deg, #142033, #050b14);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.055), inset 0 -42px 56px rgba(0,0,0,.28);
+    z-index: 1;
+  }
+  .book-cover::after { content: ""; position: absolute; inset: 10px; border-radius: 17px; border: 1px solid rgba(255,255,255,.035); }
+
+  /* ── TRANSPLANTED MATERIAL ASSET 1: THE REALISTIC GOLD SPIRAL SPINE BINDING ── */
+  .spiral {
+    position: absolute; left: -34px; top: 28px; bottom: 28px; width: 75px;
+    z-index: 10; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none;
+  }
+  .ring { width: 86px; height: 14px; position: relative; }
+  .ring::before, .ring::after {
+    content: ""; position: absolute; height: 7px; border-radius: 999px;
+    background: linear-gradient(90deg, #2a1b08 0%, #664511 17%, #c69937 34%, #f1d88b 47%, #8a6421 71%, #251708 100%);
+    box-shadow: 0 3px 6px rgba(0,0,0,.46), inset 0 1px 1px rgba(255,255,255,.28);
+  }
+  .ring::before { left: 0; top: 3px; width: 73px; }
+  .ring::after { left: 12px; top: 6px; width: 70px; opacity: .62; }
+
+  /* Main Fine-Paper Sheet Layer (Fusing the Texture Directly Onto Your Layout) */
+  .sketchbook-sheet {
+    position: relative; z-index: 3; border-radius: 14px 18px 18px 14px;
+    padding: 60px 60px 70px 72px; color: var(--ink-dark); min-height: 580px;
+    display: flex; flex-direction: column; overflow: hidden; margin-left: 28px;
+    background:
+      radial-gradient(circle at 35% 22%, rgba(255,255,255,.74), transparent 34%),
+      radial-gradient(circle at 80% 74%, rgba(84,54,20,.08), transparent 28%),
+      repeating-linear-gradient(0deg, transparent 0, transparent 30px, rgba(30,35,42,.045) 31px),
+      repeating-linear-gradient(90deg, transparent 0, transparent 30px, rgba(30,35,42,.045) 31px),
+      linear-gradient(110deg, #f8f1df 0%, #eee4cc 53%, #e4d8bc 100%);
+    box-shadow: inset 0 0 0 1px rgba(45,36,20,.18), inset 16px 0 24px rgba(0,0,0,.09), inset -18px 0 28px rgba(77,54,22,.08), 0 18px 42px rgba(0,0,0,.40);
+  }
+  .sketchbook-sheet::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 8% 18%, rgba(0,0,0,.06), transparent 20%), radial-gradient(circle at 86% 12%, rgba(0,0,0,.05), transparent 24%), radial-gradient(circle at 72% 86%, rgba(0,0,0,.045), transparent 30%), linear-gradient(90deg, rgba(255,255,255,.28), transparent 24%, transparent 78%, rgba(0,0,0,.08)); mix-blend-mode: multiply; z-index: 1; }
+  
+  /* Vertical Architectural Left Margin Red Guide Line Axis */
+  .sketchbook-sheet::after { content: ""; position: absolute; top: 0; bottom: 0; left: 44px; width: 1px; background: var(--margin-rule); pointer-events: none; z-index: 5; }
+
+  /* Organic Graphite Textural Dust Smudges Layer */
+  .paper-smudge-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 2; opacity: 0.55; mix-blend-mode: multiply; }
+  .smudge-1 { position: absolute; top: 120px; left: -40px; width: 250px; height: 180px; background: radial-gradient(circle, rgba(28,35,45,0.04) 0%, rgba(28,35,45,0.01) 50%, transparent 100%); filter: blur(15px); transform: rotate(15deg); }
+  .smudge-2 { position: absolute; bottom: 80px; right: 40px; width: 320px; height: 140px; background: radial-gradient(circle, rgba(0,0,0,0.035) 0%, rgba(0,0,0,0.005) 60%, transparent 100%); filter: blur(20px); transform: rotate(-10deg); }
+
+  /* Folio Document Header Block */
+  .sheet-header-block { position: relative; z-index: 10; margin-bottom: 32px; text-align: left; }
+  
+  /* Editable Handwritten Title Field Style */
+  .sheet-title-input {
+    font-family: var(--font-serif); font-size: 32px; font-weight: 300; font-style: italic;
+    color: var(--ink-dark); background: transparent; border: none; outline: none;
+    width: 100%; max-width: 420px; padding: 0; margin: 0; text-align: left;
+    border-bottom: 1px dashed transparent; transition: border-color 0.2s;
+    transform: none; position: relative; z-index: 12;
+  }
+  .sheet-title-input:focus { border-bottom-color: rgba(26, 35, 45, 0.2); }
+  .paper-title-line { width: 385px; height: 1px; background: rgba(32,36,43,.30); margin: -2px 0 0 0; transform: none; position: relative; z-index: 11; }
+  
+  .sheet-subtitle {
+    font-family: var(--font-mono); font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.15em; color: var(--ink-soft); margin: 15px 0 0 0; text-align: left;
+  }
+  .sheet-divider-rule { width: 100%; height: 1px; background-color: rgba(32, 36, 43, 0.14); margin-top: 24px; position: relative; z-index: 10; }
+
+  /* ── YOUR EXACT 4 PORTFOLIO SLOTS GRID ── */
+  .portfolio-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;
+    flex: 1; position: relative; z-index: 10; margin-top: 16px;
+  }
+
+  /* Empty/Unallocated Design Matrix Tile */
+  .page-slot-tile {
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(32,36,43,.18); border-radius: 8px;
+    padding: 24px 20px; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; cursor: pointer; text-align: center;
+    transition: background 0.2s cubic-bezier(0.2,0.8,0.2,1), border-color 0.2s, transform 0.2s, opacity 0.3s;
+    user-select: none; position: relative; overflow: hidden;
+  }
+  .page-slot-tile:hover {
+    background: rgba(255,255,255,.22); border-color: rgba(32,36,43,.32); transform: translateY(-2px);
+  }
+  .slot-empty-glyph {
+    font-family: var(--font-serif); font-size: 32px; font-weight: 300; line-height: 1;
+    color: rgba(142,104,31,.70); margin-bottom: 12px;
+  }
+  .slot-empty-label {
+    font-family: var(--font-mono); font-size: 10px; font-weight: 400; text-transform: uppercase;
+    color: rgba(32,36,43,.65); margin: 0; letter-spacing: 0.17em; line-height: 1.4;
+  }
+
+  /* Lock Badge for unauthenticated spaces */
+  .slot-lock-indicator {
+    font-family: var(--font-mono); font-size: 9px; text-transform: uppercase;
+    letter-spacing: 0.08em; color: rgba(32,36,43,.42); margin-top: 6px; display: block;
+  }
+
+  /* --- POPULATED ARCHITECTURAL PROFILE STATE --- */
+  .page-slot-tile.has-profile {
+    border-style: solid; border-width: 1px; justify-content: flex-start;
+    align-items: flex-start; text-align: left; background: rgba(255, 255, 255, 0.55);
+  }
+  .page-slot-tile.has-profile:hover {
+    background: #ffffff; box-shadow: 0 12px 30px rgba(9,18,33,0.04);
+  }
+
+  .slot-meta-eyebrow-container {
+    display: flex; justify-content: space-between; width: 100%; align-items: baseline; margin-bottom: 12px;
+  }
+  .slot-meta-eyebrow {
+    font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.1em; color: rgba(32,36,43,.86); text-transform: uppercase;
+  }
+
+  .slot-state-title {
+    font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  
+  /* Parameters Metrics Readout Area */
+  .slot-metrics-table { width: 100%; display: flex; flex-direction: column; gap: 4px; margin-bottom: auto; }
+  .sm-row { display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(32,36,43,.06); padding-bottom: 2px; }
+  .sm-key { font-family: var(--font-mono); font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(32,36,43,.66); }
+  .sm-val { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--ink-dark); }
+
+  .mini-shape {
+    width: 100%; height: 52px; border-radius: 4px; overflow: hidden; border: 1px solid rgba(7,18,33,.22); margin-bottom: 8px; margin-top: 6px;
+    background: linear-gradient(rgba(93,202,165,.055) 1px, transparent 1px), linear-gradient(90deg, rgba(93,202,165,.055) 1px, transparent 1px), #071221;
+    background-size: 14px 14px;
+  }
+
+  /* Clear Action Option Button Link */
+  .slot-erase-action {
+    background: transparent; border: none; outline: none;
+    font-family: var(--font-mono); font-size: 7px; text-transform: uppercase;
+    letter-spacing: 0.12em; color: rgba(32,36,43,.45); cursor: pointer; padding: 0;
+    transition: color 0.2s; flex-shrink: 0; position: relative; z-index: 15;
+  }
+  .slot-erase-action:hover { color: var(--danger-red); }
+  
+  .saved-bottom { 
+    display: flex; justify-content: space-between; align-items: center; width: 100%; 
+    margin-top: auto; flex-wrap: wrap; gap: 6px 4px; 
+  }
+  .saved-time { font-family: var(--font-mono); font-size: 7px; letter-spacing: .08em; color: rgba(32,36,43,.4); text-transform: uppercase; white-space: nowrap; }
+
+  /* ── HIGH VISUALLY DYNAMIC ERASER WIPING ENGINE ── */
+  .eraser-wipe-tool {
+    position: absolute; width: 45px; height: 22px;
+    background: linear-gradient(135deg, #f7afbc, #ffc8aa);
+    border-radius: 4px; box-shadow: 0 8px 18px rgba(0,0,0,.24);
+    border-bottom: 3px solid #df93a3;
+    z-index: 20; opacity: 0; pointer-events: none;
+    top: 54%; left: -68px; transform: translateY(-50%) rotate(-15deg);
+  }
+  .tile-content-view { height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; }
+  .has-profile .tile-content-view { justify-content: flex-start; align-items: flex-start; }
+  .slot-erasing .tile-content-view { animation: eraseScrub .75s ease-in-out forwards; }
+  
+  /* Wiping Keyframes Animation */
+  @keyframes eraseWipeMotion {
+    0% { left: -68px; opacity: 0; transform: translateY(-50%) rotate(-15deg); }
+    14% { opacity: 1; left: 18px; }
+    36% { left: 144px; transform: translateY(-42%) rotate(-5deg); }
+    56% { left: 52px; transform: translateY(-60%) rotate(-20deg); }
+    78% { left: 162px; opacity: 1; }
+    100% { left: 230px; opacity: 0; transform: translateY(-50%) rotate(-10deg); }
+  }
+  .slot-erasing .eraser-wipe-tool { animation: eraserMove .75s ease-in-out forwards; }
+  @keyframes eraserMove {
+    0% { left: -68px; opacity: 0; transform: translateY(-50%) rotate(-15deg); }
+    14% { opacity: 1; left: 18px; }
+    36% { left: 144px; transform: translateY(-42%) rotate(-5deg); }
+    56% { left: 52px; transform: translateY(-60%) rotate(-20deg); }
+    78% { left: 162px; opacity: 1; }
+    100% { left: 230px; opacity: 0; transform: translateY(-50%) rotate(-10deg); }
+  }
+
+  /* ── CHARCOAL DRAFTING PENCIL IN BOTTOM RIGHT ── */
+  .charcoal-pencil-instrument {
+    position: absolute; bottom: -12px; right: 45px;
+    width: 250px; height: 7px; z-index: 45; pointer-events: none;
+    transform: rotate(-11deg); transform-origin: right bottom;
+    background: linear-gradient(to bottom, #2c3238 0%, #17191c 50%, #0a0b0d 100%);
+    box-shadow: 0 10px 20px rgba(9,18,33,0.5); border-radius: 1px;
+  }
+  .charcoal-pencil-instrument::before { content: ''; position: absolute; left: -20px; top: 0; width: 0; height: 0; border-style: solid; border-width: 3.5px 20px 3.5px 0; border-color: transparent #cfb18a transparent transparent; }
+  .charcoal-pencil-instrument::after { content: ''; position: absolute; left: -24px; top: 1.5px; width: 0; height: 0; border-style: solid; border-width: 2px 5px 2px 0; border-color: transparent #111111 transparent transparent; }
+
+  /* Disclaimer Bottom Footnote Block */
+  .sheet-footnote-disclaimer {
+    margin-top: 32px; font-family: var(--font-mono); font-size: 9px;
+    text-transform: uppercase; letter-spacing: 0.1em; color: rgba(32, 36, 43, 0.35);
+    text-align: center; border-top: 1px dashed rgba(32, 36, 43, 0.06); padding-top: 16px;
+    position: relative; z-index: 10;
+  }
+
+  /* ── MODALS MASK OVERLAYS ── */
+  .premium-soft-wall-mask {
+    position: absolute; inset: 0; background-color: rgba(9, 18, 33, 0.95);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    z-index: 200; display: none; flex-direction: column; align-items: center;
+    justify-content: center; padding: 40px; text-align: center; border-radius: 4px;
+  }
+  .premium-soft-wall-mask.open { display: grid; }
+  .modal-frame { max-width: 440px; animation: modal-slide 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  @keyframes modal-slide { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  
+  .modal-h2 { font-family: var(--font-serif); font-size: 32px; font-weight: 300; font-style: italic; color: var(--white); margin: 0 0 12px 0; }
+  .modal-desc { font-family: var(--font-sans); font-size: 15px; font-weight: 300; line-height: 1.6; color: var(--muted); margin: 0 0 32px 0; }
+  .modal-desc strong { color: var(--white); font-weight: 400; }
+  
+  .modal-actions-layout { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+  .modal-upgrade-cta { width: 100%; height: 50px; border-radius: 6px; background-color: var(--teal-mid); color: var(--bg-navy); border: none; font-family: var(--font-mono); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; cursor: pointer; transition: background-color 0.2s, box-shadow 0.2s; }
+  .modal-upgrade-cta:hover { background-color: var(--white); box-shadow: 0 0 20px rgba(255,255,255,0.25); }
+  .modal-upgrade-cta.danger { background-color: var(--danger-red); color: var(--white); }
+  .modal-dismiss-link { background: transparent; border: none; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); cursor: pointer; padding: 8px 0; margin-top: 8px; transition: color 0.2s; }
+  .modal-dismiss-link:hover { color: var(--white); }
+
+
+  /* ──────────────────────────────────────────────────────────────
+     V3 REALISTIC SPIRAL NOTEBOOK VISUAL PASS
+     Functionality unchanged. This only deepens the physical notebook
+     rendering to better match the generated mockup: darker cover, side
+     binding, tan paper, page-stack depth, metallic rings, and centered
+     handwritten page title.
+  ────────────────────────────────────────────────────────────── */
+
+  .sketchbook-section {
+    justify-content: center;
+    padding: 78px 42px 68px;
+    background:
+      radial-gradient(circle at 50% 42%, rgba(93,202,165,0.085) 0%, rgba(93,202,165,0.025) 28%, transparent 56%),
+      radial-gradient(circle at 18% 54%, rgba(201,168,76,0.035), transparent 24%),
+      radial-gradient(circle at 84% 65%, rgba(0,0,0,0.30), transparent 30%),
+      linear-gradient(180deg, #0a1424 0%, #07101d 46%, #050b14 100%);
+  }
+
+  .sketchbook-section::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(rgba(93,202,165,.024) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(93,202,165,.024) 1px, transparent 1px);
+    background-size: 45px 45px;
+    mask-image: radial-gradient(circle at 50% 48%, rgba(0,0,0,.62), transparent 72%);
+  }
+
+  .back-to-workspace {
+    top: 46px;
+    left: 54px;
+    text-shadow: 0 0 12px rgba(93,202,165,.25);
+  }
+
+  .sketchbook-wrapper {
+    max-width: 1128px;
+    margin-top: 28px;
+    perspective: 1600px;
+    filter: drop-shadow(0 42px 70px rgba(0,0,0,.54));
+  }
+
+  .book-shadow {
+    left: 32px;
+    right: -42px;
+    top: 42px;
+    bottom: -30px;
+    border-radius: 28px;
+    background: rgba(0,0,0,.62);
+    filter: blur(22px);
+    opacity: .92;
+    transform: skewX(-2deg);
+  }
+
+  .book-cover {
+    inset: -18px -31px -20px -24px;
+    border-radius: 28px 32px 32px 25px;
+    background:
+      radial-gradient(circle at 13% 17%, rgba(255,255,255,.08), transparent 20%),
+      radial-gradient(circle at 92% 82%, rgba(0,0,0,.34), transparent 32%),
+      linear-gradient(90deg, rgba(255,255,255,.07), transparent 13%, transparent 86%, rgba(0,0,0,.30)),
+      linear-gradient(180deg, #17243a 0%, #0b1627 52%, #040913 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.055),
+      inset 24px 0 34px rgba(255,255,255,.025),
+      inset -22px 0 44px rgba(0,0,0,.30),
+      inset 0 -46px 65px rgba(0,0,0,.36),
+      0 24px 50px rgba(0,0,0,.34);
+  }
+
+  .book-cover::before {
+    content: "";
+    position: absolute;
+    left: 26px;
+    top: 18px;
+    bottom: 18px;
+    width: 56px;
+    border-radius: 18px 8px 8px 18px;
+    background:
+      linear-gradient(90deg, rgba(0,0,0,.42), rgba(255,255,255,.025) 48%, rgba(0,0,0,.18));
+    opacity: .72;
+    filter: blur(.2px);
+  }
+
+  .book-cover::after {
+    inset: 10px;
+    border-radius: 23px 27px 27px 22px;
+    border: 1px solid rgba(255,255,255,.042);
+    box-shadow: inset 0 0 28px rgba(255,255,255,.015);
+  }
+
+  .spiral {
+    left: -40px;
+    top: 41px;
+    bottom: 41px;
+    width: 102px;
+    z-index: 24;
+    justify-content: space-between;
+    filter: drop-shadow(7px 7px 8px rgba(0,0,0,.50));
+  }
+
+  .spiral::before {
+    content: "";
+    position: absolute;
+    left: 48px;
+    top: -20px;
+    bottom: -20px;
+    width: 19px;
+    border-radius: 999px;
+    background:
+      linear-gradient(90deg, rgba(0,0,0,.45), rgba(255,255,255,.10) 50%, rgba(0,0,0,.25));
+    opacity: .62;
+    filter: blur(6px);
+    transform: translateX(-50%);
+  }
+
+  .ring {
+    width: 112px;
+    height: 17px;
+    position: relative;
+    transform: translateZ(0);
+  }
+
+  .ring::before,
+  .ring::after {
+    content: "";
+    position: absolute;
+    height: 8px;
+    border-radius: 999px;
+    background:
+      linear-gradient(90deg,
+        #1b1004 0%,
+        #4a2f0a 10%,
+        #9d711f 25%,
+        #ecd083 43%,
+        #fff0ab 50%,
+        #b48225 65%,
+        #51340a 84%,
+        #1d1103 100%);
+    box-shadow:
+      0 3px 7px rgba(0,0,0,.56),
+      0 0 0 1px rgba(0,0,0,.18),
+      inset 0 1px 1px rgba(255,255,255,.38),
+      inset 0 -1px 1px rgba(0,0,0,.34);
+  }
+
+  .ring::before {
+    left: 0;
+    top: 2px;
+    width: 88px;
+    transform: perspective(140px) rotateY(-12deg) rotateZ(-.5deg);
+  }
+
+  .ring::after {
+    left: 18px;
+    top: 7px;
+    width: 86px;
+    opacity: .72;
+    transform: perspective(140px) rotateY(10deg) rotateZ(.4deg);
+  }
+
+  .ring:nth-child(2n)::before { transform: perspective(140px) rotateY(-12deg) rotateZ(.9deg); }
+  .ring:nth-child(3n)::after { transform: perspective(140px) rotateY(10deg) rotateZ(-.7deg); }
+
+  .sketchbook-sheet {
+    margin-left: 37px;
+    min-height: 548px;
+    border-radius: 16px 28px 28px 16px;
+    padding: 56px 72px 62px 84px;
+    background:
+      radial-gradient(circle at 31% 18%, rgba(255,255,255,.80), transparent 32%),
+      radial-gradient(circle at 78% 78%, rgba(116,79,31,.095), transparent 31%),
+      radial-gradient(circle at 10% 28%, rgba(0,0,0,.055), transparent 23%),
+      repeating-linear-gradient(0deg, transparent 0, transparent 30px, rgba(30,35,42,.043) 31px),
+      linear-gradient(110deg, #f7eedc 0%, #eee4cc 48%, #e1d4b8 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(45,36,20,.20),
+      inset 24px 0 34px rgba(0,0,0,.105),
+      inset -20px 0 34px rgba(77,54,22,.10),
+      inset 0 28px 42px rgba(255,255,255,.32),
+      0 19px 44px rgba(0,0,0,.42);
+  }
+
+  .sketchbook-sheet::before {
+    background:
+      radial-gradient(circle at 9% 19%, rgba(0,0,0,.075), transparent 20%),
+      radial-gradient(circle at 84% 15%, rgba(0,0,0,.052), transparent 24%),
+      radial-gradient(circle at 76% 88%, rgba(0,0,0,.054), transparent 30%),
+      linear-gradient(90deg, rgba(255,255,255,.30), transparent 22%, transparent 80%, rgba(0,0,0,.09));
+    opacity: .94;
+  }
+
+  .sketchbook-sheet::after {
+    left: auto;
+    right: 12px;
+    top: 18px;
+    bottom: 18px;
+    width: 1px;
+    background: rgba(35,27,16,.12);
+    box-shadow:
+      5px 0 rgba(35,27,16,.07),
+      10px 0 rgba(35,27,16,.04);
+  }
+
+  .paper-smudge-overlay {
+    opacity: .70;
+  }
+
+  .paper-smudge-overlay::before {
+    content: "";
+    position: absolute;
+    left: 2%;
+    top: 4%;
+    width: 38%;
+    height: 20%;
+    background: radial-gradient(circle, rgba(35,31,24,.072), rgba(35,31,24,.018) 54%, transparent 74%);
+    filter: blur(14px);
+    transform: rotate(-7deg);
+  }
+
+  .paper-smudge-overlay::after {
+    content: "";
+    position: absolute;
+    right: 3%;
+    bottom: 8%;
+    width: 36%;
+    height: 23%;
+    background: radial-gradient(circle, rgba(35,31,24,.060), rgba(35,31,24,.015) 55%, transparent 76%);
+    filter: blur(17px);
+    transform: rotate(9deg);
+  }
+
+  .smudge-alpha {
+    position: absolute;
+    top: 92px;
+    left: -34px;
+    width: 260px;
+    height: 170px;
+    background: radial-gradient(circle, rgba(28,35,45,0.05) 0%, rgba(28,35,45,0.014) 52%, transparent 100%);
+    filter: blur(16px);
+    transform: rotate(13deg);
+  }
+
+  .smudge-beta {
+    position: absolute;
+    bottom: 60px;
+    right: 34px;
+    width: 335px;
+    height: 130px;
+    background: radial-gradient(circle, rgba(0,0,0,0.045) 0%, rgba(0,0,0,0.012) 60%, transparent 100%);
+    filter: blur(18px);
+    transform: rotate(-10deg);
+  }
+
+  .sheet-header-block {
+    text-align: center;
+    margin-bottom: 34px;
+  }
+
+  .sheet-title-input {
+    max-width: 430px;
+    text-align: center;
+    font-size: 34px;
+    letter-spacing: .02em;
+    transform: rotate(-3.2deg);
+  }
+
+  .paper-title-line {
+    margin: -1px auto 0;
+    width: 394px;
+    transform: rotate(-3.2deg);
+    background: rgba(32,36,43,.34);
+  }
+
+  .sheet-subtitle {
+    margin-top: 17px;
+    text-align: center;
+    font-size: 10px;
+    letter-spacing: .20em;
+    color: rgba(32,36,43,.42);
+  }
+
+  .sheet-divider-rule {
+    margin-top: 22px;
+  }
+
+  .portfolio-grid {
+    gap: 23px;
+    margin-top: 18px;
+  }
+
+  .page-slot-tile {
+    min-height: 186px;
+    border-radius: 9px;
+    background: rgba(255,255,255,.10);
+    border-color: rgba(32,36,43,.17);
+    box-shadow: inset 0 1px rgba(255,255,255,.20);
+  }
+
+  .page-slot-tile.has-profile {
+    background: rgba(255,255,255,.45);
+  }
+
+  .mini-shape {
+    height: 58px;
+    border-radius: 5px;
+  }
+
+
+
+  /* ── SURGICAL V4 FIX: restore left-aligned title block, no diagonal tilt ── */
+  .sheet-header-block {
+    text-align: left;
+    margin-bottom: 34px;
+  }
+
+  .sheet-title-input {
+    max-width: 430px;
+    text-align: left;
+    font-family: 'Caveat', 'Segoe Print', 'Bradley Hand', 'Comic Sans MS', cursive;
+    font-size: 43px;
+    font-weight: 500;
+    letter-spacing: .015em;
+    line-height: .92;
+    transform: none;
+  }
+
+  .paper-title-line {
+    margin: 2px 0 0 0;
+    width: 394px;
+    transform: none;
+    background: rgba(32,36,43,.34);
+  }
+
+  .sheet-subtitle {
+    margin-top: 15px;
+    text-align: left;
+    font-size: 10px;
+    letter-spacing: .20em;
+    color: rgba(32,36,43,.42);
+  }
+
+
+  /* ── V5 ALTERNATIVE VISUAL SKIN — ARCHITECTURAL FIELD FOLIO / VELLUM DRAFT ──
+     Functionality, DOM, slot behavior, modals, eraser, and save/load logic unchanged.
+     This only changes the physical notebook/paper material language. */
+
+  :root {
+    --folio-cover-top: #101b2c;
+    --folio-cover-bottom: #030812;
+    --vellum-warm: #f7f1e3;
+    --vellum-mid: #eee4cf;
+    --vellum-edge: #cabf9f;
+    --draft-blue: rgba(107,123,196,.16);
+    --draft-teal: rgba(29,158,117,.14);
+    --draft-red: rgba(226,75,74,.17);
+    --graphite-soft: rgba(26, 35, 45, .105);
+  }
+
+  .sketchbook-section {
+    background:
+      radial-gradient(circle at 50% 42%, rgba(93,202,165,0.075) 0%, rgba(93,202,165,0.020) 30%, transparent 57%),
+      radial-gradient(circle at 24% 56%, rgba(107,123,196,0.050), transparent 26%),
+      radial-gradient(circle at 83% 68%, rgba(201,168,76,0.030), transparent 30%),
+      linear-gradient(180deg, #0b1627 0%, #07101d 46%, #030812 100%);
+  }
+
+  .sketchbook-section::before {
+    background:
+      linear-gradient(rgba(93,202,165,.020) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(93,202,165,.020) 1px, transparent 1px),
+      linear-gradient(rgba(201,168,76,.012) 1px, transparent 1px);
+    background-size: 48px 48px, 48px 48px, 192px 192px;
+    mask-image: radial-gradient(circle at 50% 48%, rgba(0,0,0,.70), transparent 74%);
+  }
+
+  .sketchbook-wrapper {
+    max-width: 1142px;
+    margin-top: 26px;
+    filter:
+      drop-shadow(0 44px 74px rgba(0,0,0,.58))
+      drop-shadow(0 0 34px rgba(93,202,165,.035));
+  }
+
+  /* deeper field-folio cover, less “school notebook”, more architectural object */
+  .book-cover {
+    inset: -22px -34px -25px -28px;
+    border-radius: 30px 34px 34px 26px;
+    background:
+      radial-gradient(circle at 18% 12%, rgba(255,255,255,.085), transparent 22%),
+      radial-gradient(circle at 86% 84%, rgba(0,0,0,.42), transparent 32%),
+      linear-gradient(90deg, rgba(255,255,255,.075), transparent 11%, transparent 84%, rgba(0,0,0,.33)),
+      linear-gradient(180deg, var(--folio-cover-top) 0%, #0a1423 48%, var(--folio-cover-bottom) 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.06),
+      inset 30px 0 42px rgba(255,255,255,.025),
+      inset -28px 0 52px rgba(0,0,0,.36),
+      inset 0 -54px 76px rgba(0,0,0,.42),
+      0 28px 54px rgba(0,0,0,.42);
+  }
+
+  .book-cover::before {
+    left: 28px;
+    top: 16px;
+    bottom: 16px;
+    width: 62px;
+    border-radius: 20px 9px 9px 20px;
+    background:
+      linear-gradient(90deg,
+        rgba(0,0,0,.58),
+        rgba(255,255,255,.020) 34%,
+        rgba(93,202,165,.040) 52%,
+        rgba(0,0,0,.22));
+    opacity: .76;
+    filter: blur(.1px);
+    box-shadow:
+      inset -1px 0 rgba(255,255,255,.06),
+      8px 0 20px rgba(0,0,0,.26);
+  }
+
+  .book-cover::after {
+    inset: 11px;
+    border-radius: 24px 28px 28px 22px;
+    border: 1px solid rgba(255,255,255,.045);
+    box-shadow:
+      inset 0 0 34px rgba(255,255,255,.012),
+      inset 0 0 0 1px rgba(0,0,0,.16);
+  }
+
+  .book-shadow {
+    left: 38px;
+    right: -48px;
+    top: 48px;
+    bottom: -36px;
+    border-radius: 32px;
+    background: rgba(0,0,0,.66);
+    filter: blur(24px);
+    opacity: .94;
+    transform: skewX(-2deg) translateY(3px);
+  }
+
+  /* binding becomes brushed gunmetal + brass highlights */
+  .spiral {
+    left: -43px;
+    top: 39px;
+    bottom: 39px;
+    width: 110px;
+    filter:
+      drop-shadow(8px 8px 9px rgba(0,0,0,.54))
+      drop-shadow(0 0 10px rgba(201,168,76,.10));
+  }
+
+  .spiral::before {
+    left: 51px;
+    width: 23px;
+    top: -21px;
+    bottom: -21px;
+    background:
+      linear-gradient(90deg,
+        rgba(0,0,0,.55),
+        rgba(255,255,255,.08) 38%,
+        rgba(201,168,76,.08) 52%,
+        rgba(0,0,0,.26));
+    opacity: .68;
+    filter: blur(6px);
+  }
+
+  .ring {
+    width: 118px;
+    height: 18px;
+  }
+
+  .ring::before,
+  .ring::after {
+    height: 8px;
+    border-radius: 999px;
+    background:
+      linear-gradient(90deg,
+        #0b0d10 0%,
+        #31363b 12%,
+        #8c6a23 27%,
+        #f0d486 43%,
+        #fff3b6 50%,
+        #a47a24 64%,
+        #3f4449 81%,
+        #090b0f 100%);
+    box-shadow:
+      0 4px 8px rgba(0,0,0,.58),
+      0 0 0 1px rgba(0,0,0,.22),
+      inset 0 1px 1px rgba(255,255,255,.42),
+      inset 0 -1px 1px rgba(0,0,0,.40);
+  }
+
+  .ring::before {
+    width: 92px;
+  }
+
+  .ring::after {
+    width: 90px;
+    left: 19px;
+    opacity: .75;
+  }
+
+  /* paper becomes vellum/drafting sheet: flatter, cleaner, more architectural */
+  .sketchbook-sheet {
+    margin-left: 39px;
+    min-height: 548px;
+    border-radius: 16px 30px 30px 16px;
+    padding: 56px 74px 62px 86px;
+    background:
+      radial-gradient(circle at 31% 16%, rgba(255,255,255,.88), transparent 34%),
+      radial-gradient(circle at 78% 78%, rgba(88,61,24,.070), transparent 32%),
+      radial-gradient(circle at 9% 28%, rgba(0,0,0,.040), transparent 23%),
+      linear-gradient(90deg, rgba(226,75,74,.10) 0 1px, transparent 1px),
+      repeating-linear-gradient(0deg, transparent 0, transparent 29px, rgba(30,35,42,.036) 30px),
+      repeating-linear-gradient(90deg, transparent 0, transparent 31px, rgba(107,123,196,.030) 32px),
+      linear-gradient(110deg, var(--vellum-warm) 0%, var(--vellum-mid) 49%, #e2d6ba 100%);
+    background-position:
+      0 0,
+      0 0,
+      0 0,
+      51px 0,
+      0 0,
+      0 0,
+      0 0;
+    background-size:
+      auto,
+      auto,
+      auto,
+      1px 100%,
+      auto,
+      auto,
+      auto;
+    box-shadow:
+      inset 0 0 0 1px rgba(45,36,20,.22),
+      inset 26px 0 36px rgba(0,0,0,.108),
+      inset -23px 0 36px rgba(77,54,22,.11),
+      inset 0 30px 44px rgba(255,255,255,.38),
+      inset 0 -20px 28px rgba(63,43,18,.055),
+      0 20px 48px rgba(0,0,0,.44);
+  }
+
+  .sketchbook-sheet::before {
+    background:
+      radial-gradient(circle at 9% 19%, rgba(0,0,0,.052), transparent 20%),
+      radial-gradient(circle at 84% 15%, rgba(0,0,0,.036), transparent 24%),
+      radial-gradient(circle at 76% 88%, rgba(0,0,0,.046), transparent 30%),
+      linear-gradient(90deg, rgba(255,255,255,.35), transparent 22%, transparent 80%, rgba(0,0,0,.082));
+    opacity: .88;
+  }
+
+  /* right edge now reads like a stacked folio page edge */
+  .sketchbook-sheet::after {
+    right: 11px;
+    top: 17px;
+    bottom: 17px;
+    width: 1px;
+    background: rgba(35,27,16,.13);
+    box-shadow:
+      4px 0 rgba(35,27,16,.085),
+      8px 0 rgba(35,27,16,.055),
+      12px 0 rgba(35,27,16,.032),
+      -1px 0 rgba(255,255,255,.26);
+  }
+
+  .paper-smudge-overlay {
+    opacity: .52;
+    mix-blend-mode: multiply;
+  }
+
+  .paper-smudge-overlay::before {
+    left: 3%;
+    top: 5%;
+    width: 39%;
+    height: 18%;
+    background: radial-gradient(circle, rgba(35,31,24,.050), rgba(35,31,24,.012) 56%, transparent 75%);
+    filter: blur(16px);
+    transform: rotate(-5deg);
+  }
+
+  .paper-smudge-overlay::after {
+    right: 3%;
+    bottom: 8%;
+    width: 37%;
+    height: 22%;
+    background: radial-gradient(circle, rgba(35,31,24,.050), rgba(35,31,24,.012) 55%, transparent 76%);
+    filter: blur(18px);
+    transform: rotate(7deg);
+  }
+
+  .smudge-alpha {
+    opacity: .62;
+    top: 82px;
+    left: -26px;
+    background: radial-gradient(circle, rgba(28,35,45,0.042) 0%, rgba(28,35,45,0.010) 54%, transparent 100%);
+  }
+
+  .smudge-beta {
+    opacity: .56;
+    bottom: 52px;
+    right: 28px;
+    background: radial-gradient(circle, rgba(0,0,0,0.038) 0%, rgba(0,0,0,0.010) 60%, transparent 100%);
+  }
+
+  /* left title remains left-aligned from v4, but feels more like a field note */
+  .sheet-header-block {
+    margin-bottom: 34px;
+  }
+
+  .sheet-title-input {
+    font-family: 'Caveat', 'Segoe Print', 'Bradley Hand', cursive;
+    font-size: 44px;
+    font-weight: 500;
+    color: rgba(23,27,34,.86);
+    text-shadow: 0 1px rgba(255,255,255,.28);
+  }
+
+  .paper-title-line {
+    width: 408px;
+    height: 1px;
+    background:
+      linear-gradient(90deg,
+        rgba(23,27,34,.42),
+        rgba(23,27,34,.25) 72%,
+        transparent);
+  }
+
+  .sheet-subtitle {
+    color: rgba(32,36,43,.45);
+  }
+
+  .sheet-divider-rule {
+    background:
+      linear-gradient(90deg,
+        rgba(32,36,43,.16),
+        rgba(107,123,196,.11) 50%,
+        rgba(32,36,43,.09));
+  }
+
+  /* tiles become drafting panels on vellum, not generic boxes */
+  .page-slot-tile {
+    border-radius: 10px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,.08)),
+      linear-gradient(90deg, rgba(93,202,165,.030), transparent 50%, rgba(201,168,76,.020));
+    border-color: rgba(32,36,43,.165);
+    box-shadow:
+      inset 0 1px rgba(255,255,255,.28),
+      inset 0 0 0 1px rgba(255,255,255,.045);
+  }
+
+  .page-slot-tile:hover {
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.32), rgba(255,255,255,.13)),
+      linear-gradient(90deg, rgba(93,202,165,.040), transparent 50%, rgba(201,168,76,.030));
+    border-color: rgba(29,158,117,.30);
+    box-shadow:
+      0 14px 30px rgba(9,18,33,.055),
+      inset 0 1px rgba(255,255,255,.34);
+  }
+
+  .page-slot-tile.has-profile {
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.50), rgba(255,255,255,.30)),
+      linear-gradient(90deg, rgba(93,202,165,.055), transparent 62%);
+    box-shadow:
+      0 12px 28px rgba(9,18,33,.045),
+      inset 0 1px rgba(255,255,255,.42),
+      inset 0 0 0 1px rgba(93,202,165,.030);
+  }
+
+  .slot-empty-glyph {
+    color: rgba(143,104,30,.68);
+    text-shadow: 0 1px rgba(255,255,255,.35);
+  }
+
+  .slot-empty-label {
+    color: rgba(25,31,39,.62);
+  }
+
+  .slot-lock-indicator {
+    color: rgba(25,31,39,.40);
+  }
+
+  .slot-meta-eyebrow {
+    color: rgba(23,27,34,.78);
+  }
+
+  .slot-metrics-table .sm-row {
+    border-bottom-color: rgba(23,27,34,.08);
+  }
+
+  .mini-shape {
+    border-color: rgba(9,18,33,.25);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.035),
+      0 5px 12px rgba(9,18,33,.11);
+  }
+
+  .slot-erase-action {
+    color: rgba(25,31,39,.40);
+  }
+
+  .sheet-footnote-disclaimer {
+    color: rgba(32,36,43,.34);
+    border-top-color: rgba(32,36,43,.085);
+  }
+
+
+  /* ── V6 ERASE INTERACTION FIX
+     Keeps the v5 visual skin intact. Restores reliable clickability for the
+     saved-slot Erase action and its confirmation warning modal. */
+  .saved-bottom {
+    position: relative;
+    z-index: 60;
+    pointer-events: auto;
+  }
+
+  .slot-erase-action {
+    position: relative;
+    z-index: 80;
+    pointer-events: auto;
+    cursor: pointer;
+  }
+
+  .tile-content-view,
+  .has-profile .tile-content-view {
+    pointer-events: auto;
+  }
+
+  .premium-soft-wall-mask.open {
+    display: flex;
+  }
+
+
+  /* ── V7 REALISTIC MATERIAL PASS
+     Visual-only refinement. No DOM, JS, save/erase/modal, or slot logic changes.
+     Goal: make the folio/sketchbook object feel more physical, premium, and architectural. */
+
+  :root {
+    --v7-cover-black: #03070d;
+    --v7-cover-navy: #0b1627;
+    --v7-cover-ridge: rgba(255,255,255,.065);
+    --v7-paper-core: #f2ead8;
+    --v7-paper-high: #fff9eb;
+    --v7-paper-low: #d8ccb0;
+    --v7-paper-ink: rgba(26,31,39,.86);
+    --v7-shadow: rgba(0,0,0,.64);
+  }
+
+  .sketchbook-wrapper {
+    transform: perspective(1600px) rotateX(1.2deg);
+    transform-origin: 50% 60%;
+    filter:
+      drop-shadow(0 50px 78px rgba(0,0,0,.62))
+      drop-shadow(0 0 24px rgba(93,202,165,.035));
+  }
+
+  .book-shadow {
+    left: 42px;
+    right: -58px;
+    top: 54px;
+    bottom: -42px;
+    border-radius: 36px;
+    background:
+      radial-gradient(ellipse at 46% 42%, rgba(0,0,0,.78), rgba(0,0,0,.36) 58%, transparent 78%);
+    filter: blur(26px);
+    opacity: .95;
+    transform: skewX(-4deg) translateY(8px);
+  }
+
+  .book-cover {
+    inset: -26px -42px -31px -34px;
+    border-radius: 32px 38px 38px 30px;
+    background:
+      linear-gradient(90deg,
+        rgba(255,255,255,.085) 0%,
+        rgba(255,255,255,.020) 4.5%,
+        transparent 18%,
+        transparent 82%,
+        rgba(0,0,0,.34) 96%),
+      radial-gradient(circle at 18% 8%, rgba(255,255,255,.090), transparent 21%),
+      radial-gradient(circle at 86% 84%, rgba(0,0,0,.52), transparent 34%),
+      repeating-linear-gradient(
+        45deg,
+        rgba(255,255,255,.018) 0 1px,
+        transparent 1px 5px
+      ),
+      linear-gradient(180deg, #142033 0%, #091322 48%, #02060b 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.065),
+      inset 34px 0 52px rgba(255,255,255,.028),
+      inset -34px 0 58px rgba(0,0,0,.43),
+      inset 0 -62px 86px rgba(0,0,0,.50),
+      0 32px 64px rgba(0,0,0,.46);
+  }
+
+  .book-cover::before {
+    left: 31px;
+    top: 14px;
+    bottom: 14px;
+    width: 74px;
+    border-radius: 24px 12px 12px 24px;
+    background:
+      linear-gradient(90deg,
+        rgba(0,0,0,.68),
+        rgba(255,255,255,.035) 24%,
+        rgba(201,168,76,.045) 45%,
+        rgba(93,202,165,.035) 62%,
+        rgba(0,0,0,.28));
+    opacity: .86;
+    box-shadow:
+      inset -1px 0 rgba(255,255,255,.070),
+      inset 9px 0 18px rgba(0,0,0,.40),
+      12px 0 26px rgba(0,0,0,.30);
+    filter: blur(.15px);
+  }
+
+  .book-cover::after {
+    inset: 11px;
+    border-radius: 25px 31px 31px 24px;
+    border: 1px solid rgba(255,255,255,.055);
+    box-shadow:
+      inset 0 0 0 1px rgba(0,0,0,.22),
+      inset 0 0 44px rgba(255,255,255,.010);
+  }
+
+  /* More realistic binding: deeper holes, layered wire, and contact shadow */
+  .spiral {
+    left: -48px;
+    top: 42px;
+    bottom: 42px;
+    width: 126px;
+    filter:
+      drop-shadow(10px 10px 10px rgba(0,0,0,.58))
+      drop-shadow(0 0 10px rgba(201,168,76,.10));
+  }
+
+  .spiral::before {
+    left: 58px;
+    width: 29px;
+    top: -24px;
+    bottom: -24px;
+    border-radius: 999px;
+    background:
+      linear-gradient(90deg,
+        rgba(0,0,0,.62),
+        rgba(255,255,255,.090) 39%,
+        rgba(201,168,76,.100) 52%,
+        rgba(0,0,0,.30));
+    opacity: .76;
+    filter: blur(7px);
+  }
+
+  .spiral-loop-pair,
+  .ring {
+    position: relative;
+  }
+
+  .spiral-loop-pair::before,
+  .ring::before {
+    box-shadow:
+      0 5px 9px rgba(0,0,0,.60),
+      0 0 0 1px rgba(0,0,0,.30),
+      inset 0 1px 1px rgba(255,255,255,.46),
+      inset 0 -1px 1px rgba(0,0,0,.52);
+  }
+
+  .ring::before,
+  .ring::after {
+    background:
+      linear-gradient(90deg,
+        #050609 0%,
+        #242930 11%,
+        #6e5018 25%,
+        #c69a39 36%,
+        #f5df91 47%,
+        #fff8bc 53%,
+        #9b7222 68%,
+        #373d43 84%,
+        #050609 100%);
+  }
+
+  .ring::after {
+    opacity: .82;
+    filter: brightness(.92);
+  }
+
+  .sketchbook-sheet {
+    background:
+      /* lifted center highlight */
+      radial-gradient(ellipse at 50% 12%, rgba(255,255,255,.66), transparent 43%),
+      radial-gradient(ellipse at 25% 28%, rgba(255,255,255,.30), transparent 31%),
+      radial-gradient(ellipse at 84% 80%, rgba(86,60,24,.105), transparent 30%),
+      /* paper fiber scratches */
+      repeating-linear-gradient(
+        12deg,
+        rgba(37,29,18,.018) 0 1px,
+        transparent 1px 7px
+      ),
+      repeating-linear-gradient(
+        -18deg,
+        rgba(255,255,255,.060) 0 1px,
+        transparent 1px 8px
+      ),
+      /* architectural grid */
+      linear-gradient(90deg, rgba(226,75,74,.105) 0 1px, transparent 1px),
+      repeating-linear-gradient(0deg, transparent 0, transparent 29px, rgba(30,35,42,.039) 30px),
+      repeating-linear-gradient(90deg, transparent 0, transparent 31px, rgba(107,123,196,.033) 32px),
+      linear-gradient(112deg, var(--v7-paper-high) 0%, var(--v7-paper-core) 52%, var(--v7-paper-low) 100%);
+    background-position:
+      0 0,
+      0 0,
+      0 0,
+      0 0,
+      0 0,
+      51px 0,
+      0 0,
+      0 0,
+      0 0;
+    background-size:
+      auto,
+      auto,
+      auto,
+      auto,
+      auto,
+      1px 100%,
+      auto,
+      auto,
+      auto;
+    box-shadow:
+      inset 0 0 0 1px rgba(45,36,20,.25),
+      inset 31px 0 43px rgba(0,0,0,.126),
+      inset -28px 0 42px rgba(77,54,22,.125),
+      inset 0 34px 48px rgba(255,255,255,.42),
+      inset 0 -24px 34px rgba(63,43,18,.075),
+      0 22px 52px rgba(0,0,0,.48);
+  }
+
+  .sketchbook-sheet::before {
+    background:
+      radial-gradient(circle at 8% 21%, rgba(0,0,0,.066), transparent 20%),
+      radial-gradient(circle at 81% 14%, rgba(0,0,0,.045), transparent 24%),
+      radial-gradient(circle at 76% 88%, rgba(0,0,0,.055), transparent 30%),
+      linear-gradient(90deg, rgba(255,255,255,.42), transparent 22%, transparent 80%, rgba(0,0,0,.096));
+    opacity: .96;
+  }
+
+  .sketchbook-sheet::after {
+    right: 10px;
+    top: 16px;
+    bottom: 16px;
+    width: 1px;
+    background: rgba(35,27,16,.14);
+    box-shadow:
+      4px 0 rgba(35,27,16,.090),
+      8px 0 rgba(35,27,16,.060),
+      12px 0 rgba(35,27,16,.040),
+      16px 0 rgba(35,27,16,.024),
+      -1px 0 rgba(255,255,255,.30);
+  }
+
+  .paper-smudge-overlay {
+    opacity: .60;
+  }
+
+  .paper-smudge-overlay::before {
+    left: 4%;
+    top: 4%;
+    width: 42%;
+    height: 20%;
+    background:
+      radial-gradient(circle, rgba(35,31,24,.060), rgba(35,31,24,.014) 56%, transparent 75%);
+    filter: blur(17px);
+    transform: rotate(-7deg);
+  }
+
+  .paper-smudge-overlay::after {
+    right: 4%;
+    bottom: 7%;
+    width: 41%;
+    height: 24%;
+    background:
+      radial-gradient(circle, rgba(35,31,24,.058), rgba(35,31,24,.012) 58%, transparent 77%);
+    filter: blur(20px);
+    transform: rotate(8deg);
+  }
+
+  .smudge-alpha {
+    opacity: .68;
+    filter: blur(17px);
+  }
+
+  .smudge-beta {
+    opacity: .62;
+    filter: blur(21px);
+  }
+
+  /* More “real ink on paper” title and rules, while preserving v4 left alignment */
+  .sheet-title-input {
+    color: rgba(20,24,31,.84);
+    text-shadow:
+      0 .7px rgba(255,255,255,.32),
+      .15px .15px rgba(20,24,31,.28);
+    filter: contrast(1.03);
+  }
+
+  .paper-title-line {
+    background:
+      linear-gradient(90deg,
+        rgba(23,27,34,.46),
+        rgba(23,27,34,.27) 72%,
+        transparent);
+    box-shadow: 0 1px rgba(255,255,255,.28);
+  }
+
+  .sheet-divider-rule {
+    background:
+      linear-gradient(90deg,
+        rgba(32,36,43,.18),
+        rgba(107,123,196,.13) 48%,
+        rgba(32,36,43,.10));
+    box-shadow: 0 1px rgba(255,255,255,.22);
+  }
+
+  /* Tiles become more embedded in the paper surface */
+  .page-slot-tile {
+    background:
+      radial-gradient(circle at 24% 12%, rgba(255,255,255,.36), transparent 34%),
+      linear-gradient(180deg, rgba(255,255,255,.24), rgba(255,255,255,.075)),
+      linear-gradient(90deg, rgba(93,202,165,.034), transparent 52%, rgba(201,168,76,.026));
+    border-color: rgba(32,36,43,.18);
+    box-shadow:
+      inset 0 1px rgba(255,255,255,.36),
+      inset 0 0 0 1px rgba(255,255,255,.050),
+      0 1px 0 rgba(255,255,255,.20);
+  }
+
+  .page-slot-tile:hover {
+    background:
+      radial-gradient(circle at 24% 12%, rgba(255,255,255,.44), transparent 34%),
+      linear-gradient(180deg, rgba(255,255,255,.34), rgba(255,255,255,.13)),
+      linear-gradient(90deg, rgba(93,202,165,.050), transparent 52%, rgba(201,168,76,.032));
+    border-color: rgba(29,158,117,.34);
+    box-shadow:
+      0 16px 32px rgba(9,18,33,.060),
+      inset 0 1px rgba(255,255,255,.42),
+      inset 0 0 0 1px rgba(255,255,255,.06);
+  }
+
+  .page-slot-tile.has-profile {
+    background:
+      radial-gradient(circle at 24% 12%, rgba(255,255,255,.46), transparent 34%),
+      linear-gradient(180deg, rgba(255,255,255,.54), rgba(255,255,255,.31)),
+      linear-gradient(90deg, rgba(93,202,165,.064), transparent 62%);
+    box-shadow:
+      0 14px 30px rgba(9,18,33,.055),
+      inset 0 1px rgba(255,255,255,.48),
+      inset 0 0 0 1px rgba(93,202,165,.040);
+  }
+
+  .slot-meta-eyebrow,
+  .sm-val,
+  .slot-state-title {
+    text-shadow: 0 1px rgba(255,255,255,.24);
+  }
+
+  .mini-shape {
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.04),
+      inset 0 0 18px rgba(0,0,0,.18),
+      0 6px 14px rgba(9,18,33,.12);
+  }
+
+  /* Make the footer sit on the paper rather than float over it */
+  .sheet-footnote-disclaimer {
+    border-top-color: rgba(32,36,43,.10);
+    text-shadow: 0 1px rgba(255,255,255,.22);
+  }
+
+
+  /* ── V8 TEXT CLARITY RESTORE
+     Surgical visual-only pass.
+     Keeps the v7 material realism, but removes the rasterizing/softening
+     effects that made the paper text look blurry. No JS or functionality touched. */
+
+  /* The subtle 3D transform from v7 was the main blur source because it rasterized
+     the entire sheet and all children. Preserve the shadow/material language without
+     tilting the text layer. */
+  .sketchbook-wrapper {
+    transform: none !important;
+    filter:
+      drop-shadow(0 50px 78px rgba(0,0,0,.62))
+      drop-shadow(0 0 24px rgba(93,202,165,.035));
+  }
+
+  /* Keep paper texture visible, but make sure content sits cleanly above the
+     smudge/fiber layers. */
+  .sheet-header-block,
+  .portfolio-grid,
+  .sheet-footnote-disclaimer,
+  .tile-content-view,
+  .slot-meta-eyebrow-container,
+  .slot-state-title,
+  .slot-metrics-table,
+  .slot-empty-glyph,
+  .slot-empty-label,
+  .slot-lock-indicator,
+  .slot-erase-action {
+    position: relative;
+    z-index: 12;
+    filter: none !important;
+    text-shadow: none !important;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+  }
+
+  /* Restore crisp ink. The prior pass added shadows/contrast that looked like
+     graphite texture but softened the title. */
+  .sheet-title-input {
+    filter: none !important;
+    text-shadow: none !important;
+    color: rgba(20,24,31,.90) !important;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+  }
+
+  .sheet-subtitle,
+  .slot-meta-eyebrow,
+  .slot-meta-date,
+  .sm-key,
+  .sm-val,
+  .slot-state-title,
+  .slot-empty-label,
+  .slot-lock-indicator,
+  .slot-erase-action,
+  .sheet-footnote-disclaimer {
+    filter: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Keep the paper line tactile but avoid fuzzy shadowing directly underneath text. */
+  .paper-title-line,
+  .sheet-divider-rule,
+  .sheet-footnote-disclaimer {
+    box-shadow: none !important;
+  }
+
+  /* Reduce smudge overlay strength just enough that it does not muddy letterforms. */
+  .paper-smudge-overlay {
+    opacity: .42 !important;
+  }
+
+  .paper-smudge-overlay::before,
+  .paper-smudge-overlay::after,
+  .smudge-alpha,
+  .smudge-beta {
+    filter: blur(14px) !important;
+  }
+
+  /* Crisper tile panels and mini previews; no text-affecting softness. */
+  .page-slot-tile,
+  .page-slot-tile.has-profile,
+  .page-slot-tile:hover {
+    text-shadow: none !important;
+  }
+
+  .mini-shape {
+    filter: none !important;
+  }
+
+  /* Keep interaction text sharp even during normal state; erase animation still
+     intentionally blurs only while erasing. */
+  .tile-content-view:not(.tile-erasing) {
+    opacity: 1;
+    transform: none;
+    filter: none !important;
+  }
+
+
+  /* ── V9 REALISM DETAIL PASS
+     Surgical visual-only refinement.
+     Goal: preserve v8 text clarity while pushing the notebook object to feel more tactile,
+     slightly worn, and materially convincing. No DOM or JS changes. */
+
+  :root {
+    --v9-cover-bright: rgba(255,255,255,.075);
+    --v9-cover-scuff: rgba(255,255,255,.028);
+    --v9-cover-wear: rgba(0,0,0,.18);
+    --v9-paper-shadow: rgba(59, 43, 21, .065);
+    --v9-paper-grain: rgba(44,34,20,.020);
+    --v9-paper-highlight: rgba(255,252,244,.55);
+  }
+
+  .sketchbook-wrapper {
+    filter:
+      drop-shadow(0 58px 88px rgba(0,0,0,.66))
+      drop-shadow(0 8px 18px rgba(0,0,0,.22))
+      drop-shadow(0 0 24px rgba(93,202,165,.035));
+  }
+
+  .book-shadow {
+    left: 46px;
+    right: -62px;
+    top: 58px;
+    bottom: -46px;
+    border-radius: 38px;
+    background:
+      radial-gradient(ellipse at 48% 42%, rgba(0,0,0,.82), rgba(0,0,0,.42) 56%, transparent 80%);
+    filter: blur(30px);
+    opacity: .98;
+    transform: skewX(-4deg) translateY(10px);
+  }
+
+  /* Cover: subtle scuffs, edge wear, and a more premium lacquered sheen */
+  .book-cover {
+    background:
+      linear-gradient(90deg,
+        rgba(255,255,255,.11) 0%,
+        rgba(255,255,255,.030) 5%,
+        transparent 17%,
+        transparent 82%,
+        rgba(0,0,0,.36) 96%),
+      radial-gradient(circle at 16% 8%, rgba(255,255,255,.10), transparent 22%),
+      radial-gradient(circle at 84% 84%, rgba(0,0,0,.56), transparent 34%),
+      radial-gradient(ellipse at 50% 0%, rgba(255,255,255,.055), transparent 34%),
+      /* fine scuffing */
+      repeating-linear-gradient(
+        32deg,
+        rgba(255,255,255,.018) 0 1px,
+        transparent 1px 8px
+      ),
+      repeating-linear-gradient(
+        -28deg,
+        rgba(0,0,0,.026) 0 1px,
+        transparent 1px 11px
+      ),
+      linear-gradient(180deg, #152235 0%, #091322 48%, #02060b 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.070),
+      inset 0 1px 0 rgba(255,255,255,.035),
+      inset 34px 0 52px rgba(255,255,255,.030),
+      inset -34px 0 58px rgba(0,0,0,.45),
+      inset 0 -62px 86px rgba(0,0,0,.52),
+      inset 0 18px 18px rgba(255,255,255,.012),
+      0 34px 68px rgba(0,0,0,.48);
+  }
+
+  .book-cover::before {
+    box-shadow:
+      inset -1px 0 rgba(255,255,255,.08),
+      inset 9px 0 18px rgba(0,0,0,.42),
+      12px 0 26px rgba(0,0,0,.32),
+      1px 0 0 rgba(255,255,255,.02);
+  }
+
+  .book-cover::after {
+    border: 1px solid rgba(255,255,255,.06);
+    box-shadow:
+      inset 0 0 0 1px rgba(0,0,0,.22),
+      inset 0 0 44px rgba(255,255,255,.012),
+      inset 0 -12px 18px rgba(0,0,0,.08);
+  }
+
+  /* Spine / ring realism */
+  .spiral {
+    left: -50px;
+    top: 40px;
+    bottom: 40px;
+    width: 132px;
+    filter:
+      drop-shadow(11px 11px 12px rgba(0,0,0,.60))
+      drop-shadow(0 0 10px rgba(201,168,76,.10));
+  }
+
+  .spiral::before {
+    left: 60px;
+    width: 30px;
+    top: -26px;
+    bottom: -26px;
+    background:
+      linear-gradient(90deg,
+        rgba(0,0,0,.68),
+        rgba(255,255,255,.10) 38%,
+        rgba(201,168,76,.12) 52%,
+        rgba(0,0,0,.30));
+    opacity: .80;
+    filter: blur(7px);
+  }
+
+  .ring::before,
+  .ring::after {
+    box-shadow:
+      0 5px 9px rgba(0,0,0,.62),
+      0 0 0 1px rgba(0,0,0,.30),
+      inset 0 1px 1px rgba(255,255,255,.48),
+      inset 0 -1px 1px rgba(0,0,0,.54);
+  }
+
+  /* Paper: stronger material richness but keep the content layer crisp */
+  .sketchbook-sheet {
+    background:
+      radial-gradient(ellipse at 50% 11%, rgba(255,255,255,.68), transparent 44%),
+      radial-gradient(ellipse at 24% 28%, rgba(255,255,255,.34), transparent 30%),
+      radial-gradient(ellipse at 84% 80%, rgba(86,60,24,.11), transparent 31%),
+      /* subtle thumb wear near lower right */
+      radial-gradient(circle at 94% 92%, rgba(54,40,20,.035), transparent 11%),
+      /* fine paper fibers */
+      repeating-linear-gradient(
+        11deg,
+        rgba(46,34,20,.018) 0 1px,
+        transparent 1px 7px
+      ),
+      repeating-linear-gradient(
+        -19deg,
+        rgba(255,255,255,.062) 0 1px,
+        transparent 1px 8px
+      ),
+      /* light vellum mottling */
+      radial-gradient(circle at 18% 22%, rgba(146,119,77,.030), transparent 17%),
+      radial-gradient(circle at 71% 36%, rgba(146,119,77,.022), transparent 15%),
+      radial-gradient(circle at 44% 74%, rgba(146,119,77,.024), transparent 16%),
+      linear-gradient(90deg, rgba(226,75,74,.11) 0 1px, transparent 1px),
+      repeating-linear-gradient(0deg, transparent 0, transparent 29px, rgba(30,35,42,.039) 30px),
+      repeating-linear-gradient(90deg, transparent 0, transparent 31px, rgba(107,123,196,.033) 32px),
+      linear-gradient(112deg, #fffaf0 0%, #f3ead8 52%, #d7cab0 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(45,36,20,.25),
+      inset 31px 0 43px rgba(0,0,0,.125),
+      inset -28px 0 42px rgba(77,54,22,.125),
+      inset 0 34px 48px rgba(255,255,255,.42),
+      inset 0 -24px 34px rgba(63,43,18,.078),
+      inset 0 0 30px rgba(255,255,255,.025),
+      0 24px 56px rgba(0,0,0,.49);
+  }
+
+  /* Sharper page-edge stack with a little irregularity */
+  .sketchbook-sheet::after {
+    right: 9px;
+    top: 15px;
+    bottom: 15px;
+    width: 1px;
+    background: rgba(35,27,16,.14);
+    box-shadow:
+      4px 0 rgba(35,27,16,.090),
+      8px 0 rgba(35,27,16,.060),
+      12px 0 rgba(35,27,16,.040),
+      16px 0 rgba(35,27,16,.025),
+      20px 0 rgba(35,27,16,.014),
+      -1px 0 rgba(255,255,255,.32);
+  }
+
+  /* Keep smudges subtle and away from legibility */
+  .paper-smudge-overlay {
+    opacity: .40;
+  }
+
+  .paper-smudge-overlay::before {
+    left: 5%;
+    top: 5%;
+    width: 40%;
+    height: 18%;
+    background:
+      radial-gradient(circle, rgba(35,31,24,.045), rgba(35,31,24,.010) 58%, transparent 75%);
+    filter: blur(15px);
+    transform: rotate(-8deg);
+  }
+
+  .paper-smudge-overlay::after {
+    right: 5%;
+    bottom: 8%;
+    width: 39%;
+    height: 22%;
+    background:
+      radial-gradient(circle, rgba(35,31,24,.046), rgba(35,31,24,.010) 59%, transparent 77%);
+    filter: blur(16px);
+    transform: rotate(8deg);
+  }
+
+  .smudge-alpha {
+    opacity: .50;
+    filter: blur(15px);
+  }
+
+  .smudge-beta {
+    opacity: .46;
+    filter: blur(18px);
+  }
+
+  /* Slightly richer tiles—like pinned drafting cards resting on paper */
+  .page-slot-tile {
+    background:
+      radial-gradient(circle at 24% 12%, rgba(255,255,255,.37), transparent 34%),
+      linear-gradient(180deg, rgba(255,255,255,.25), rgba(255,255,255,.08)),
+      linear-gradient(90deg, rgba(93,202,165,.035), transparent 52%, rgba(201,168,76,.026));
+    border-color: rgba(32,36,43,.18);
+    box-shadow:
+      inset 0 1px rgba(255,255,255,.36),
+      inset 0 0 0 1px rgba(255,255,255,.050),
+      0 1px 0 rgba(255,255,255,.20),
+      0 3px 8px rgba(9,18,33,.03);
+  }
+
+  .page-slot-tile:hover {
+    box-shadow:
+      0 16px 32px rgba(9,18,33,.065),
+      inset 0 1px rgba(255,255,255,.42),
+      inset 0 0 0 1px rgba(255,255,255,.06);
+  }
+
+  .page-slot-tile.has-profile {
+    box-shadow:
+      0 15px 32px rgba(9,18,33,.058),
+      inset 0 1px rgba(255,255,255,.48),
+      inset 0 0 0 1px rgba(93,202,165,.040);
+  }
+
+  /* A tiny bit more visual craftsmanship in the mini preview */
+  .mini-shape {
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.04),
+      inset 0 0 18px rgba(0,0,0,.18),
+      0 7px 15px rgba(9,18,33,.13);
+  }
+
+  /* Keep text layer crisp, but let the page feel worn around it */
+  .sheet-title-input,
+  .sheet-subtitle,
+  .slot-meta-eyebrow,
+  .slot-meta-date,
+  .sm-key,
+  .sm-val,
+  .slot-state-title,
+  .slot-empty-label,
+  .slot-lock-indicator,
+  .slot-erase-action,
+  .sheet-footnote-disclaimer {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+  }
+
+
+  /* ── V10 REALISTIC WORKBOOK DETAIL PASS
+     Surgical visual-only refinement.
+     Keeps v9's lighter paper direction and v8's crisp text discipline.
+     No DOM, JavaScript, save/erase/modal, or slot behavior changes. */
+
+  :root {
+    --v10-paper-lift: #fffbf1;
+    --v10-paper-body: #f5edda;
+    --v10-paper-age: #dccfb3;
+    --v10-crease: rgba(81, 61, 31, .050);
+    --v10-fiber-dark: rgba(48, 36, 20, .020);
+    --v10-fiber-light: rgba(255,255,255,.070);
+    --v10-edge-dirt: rgba(60, 43, 22, .070);
+  }
+
+  /* Keep the global object heavy and tactile without blurring the paper text. */
+  .sketchbook-wrapper {
+    filter:
+      drop-shadow(0 62px 92px rgba(0,0,0,.68))
+      drop-shadow(0 10px 20px rgba(0,0,0,.24))
+      drop-shadow(0 0 25px rgba(93,202,165,.033));
+  }
+
+  .book-shadow {
+    left: 48px;
+    right: -66px;
+    top: 61px;
+    bottom: -49px;
+    filter: blur(32px);
+    opacity: .99;
+  }
+
+  /* Cover: more worn field-book character, but still Datum FI premium. */
+  .book-cover {
+    background:
+      linear-gradient(90deg,
+        rgba(255,255,255,.120) 0%,
+        rgba(255,255,255,.032) 5%,
+        transparent 17%,
+        transparent 82%,
+        rgba(0,0,0,.38) 96%),
+      radial-gradient(circle at 15% 8%, rgba(255,255,255,.105), transparent 22%),
+      radial-gradient(circle at 82% 86%, rgba(0,0,0,.58), transparent 35%),
+      radial-gradient(ellipse at 53% -4%, rgba(255,255,255,.060), transparent 35%),
+      /* long worn scuffs */
+      linear-gradient(103deg, transparent 14%, rgba(255,255,255,.022) 15%, transparent 17%),
+      linear-gradient(78deg, transparent 58%, rgba(255,255,255,.020) 59%, transparent 61%),
+      repeating-linear-gradient(32deg, rgba(255,255,255,.017) 0 1px, transparent 1px 8px),
+      repeating-linear-gradient(-28deg, rgba(0,0,0,.027) 0 1px, transparent 1px 11px),
+      linear-gradient(180deg, #152235 0%, #091322 48%, #02060b 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.073),
+      inset 0 1px 0 rgba(255,255,255,.040),
+      inset 38px 0 58px rgba(255,255,255,.032),
+      inset -38px 0 66px rgba(0,0,0,.48),
+      inset 0 -68px 92px rgba(0,0,0,.54),
+      inset 0 18px 22px rgba(255,255,255,.013),
+      0 36px 72px rgba(0,0,0,.50);
+  }
+
+  .book-cover::before {
+    background:
+      linear-gradient(90deg,
+        rgba(0,0,0,.72),
+        rgba(255,255,255,.040) 23%,
+        rgba(201,168,76,.052) 44%,
+        rgba(93,202,165,.040) 62%,
+        rgba(0,0,0,.31)),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 12px);
+    box-shadow:
+      inset -1px 0 rgba(255,255,255,.085),
+      inset 10px 0 20px rgba(0,0,0,.44),
+      14px 0 28px rgba(0,0,0,.34),
+      1px 0 0 rgba(255,255,255,.025);
+  }
+
+  .book-cover::after {
+    border-color: rgba(255,255,255,.064);
+    box-shadow:
+      inset 0 0 0 1px rgba(0,0,0,.23),
+      inset 0 0 48px rgba(255,255,255,.012),
+      inset 0 -14px 20px rgba(0,0,0,.09);
+  }
+
+  /* Binding details: visible punch holes behind the wire and more specular wire. */
+  .spiral {
+    filter:
+      drop-shadow(12px 12px 13px rgba(0,0,0,.62))
+      drop-shadow(0 0 11px rgba(201,168,76,.11));
+  }
+
+  .ring {
+    background:
+      radial-gradient(ellipse at 70px 9px, rgba(0,0,0,.55) 0 5px, rgba(255,255,255,.10) 5.5px 6.5px, transparent 7px),
+      radial-gradient(ellipse at 82px 12px, rgba(255,255,255,.070), transparent 11px);
+    border-radius: 999px;
+  }
+
+  .ring::before,
+  .ring::after {
+    background:
+      linear-gradient(90deg,
+        #030406 0%,
+        #20252b 10%,
+        #654916 23%,
+        #b98e34 35%,
+        #f8df8d 46%,
+        #fff9c0 52%,
+        #aa7c25 66%,
+        #343a40 84%,
+        #040507 100%);
+  }
+
+  .ring::before {
+    box-shadow:
+      0 5px 10px rgba(0,0,0,.64),
+      0 0 0 1px rgba(0,0,0,.32),
+      inset 0 1px 1px rgba(255,255,255,.50),
+      inset 0 -1px 1px rgba(0,0,0,.56),
+      inset 18px 0 10px rgba(255,255,255,.045);
+  }
+
+  .ring::after {
+    box-shadow:
+      0 4px 8px rgba(0,0,0,.56),
+      0 0 0 1px rgba(0,0,0,.26),
+      inset 0 1px 1px rgba(255,255,255,.40),
+      inset 0 -1px 1px rgba(0,0,0,.48);
+  }
+
+  /* Paper: keep the lighter direction; add fibers, crease, edge wear, tiny imperfections. */
+  .sketchbook-sheet {
+    background:
+      /* broad light lift */
+      radial-gradient(ellipse at 48% 10%, rgba(255,255,255,.72), transparent 44%),
+      radial-gradient(ellipse at 24% 28%, rgba(255,255,255,.36), transparent 30%),
+      radial-gradient(ellipse at 84% 80%, rgba(86,60,24,.105), transparent 31%),
+      /* slightly worn lower-right handling */
+      radial-gradient(circle at 94% 92%, rgba(54,40,20,.042), transparent 12%),
+      radial-gradient(circle at 88% 19%, rgba(60,43,22,.028), transparent 10%),
+      radial-gradient(circle at 12% 82%, rgba(60,43,22,.024), transparent 13%),
+      /* mild diagonal crease / real paper plane */
+      linear-gradient(122deg, transparent 0 38%, rgba(81,61,31,.040) 39%, rgba(255,255,255,.040) 40%, transparent 42%),
+      linear-gradient(74deg, transparent 0 67%, rgba(81,61,31,.025) 68%, transparent 70%),
+      /* fine paper fiber scratches */
+      repeating-linear-gradient(11deg, rgba(46,34,20,.018) 0 1px, transparent 1px 7px),
+      repeating-linear-gradient(-19deg, rgba(255,255,255,.064) 0 1px, transparent 1px 8px),
+      repeating-linear-gradient(3deg, rgba(46,34,20,.010) 0 1px, transparent 1px 16px),
+      /* light vellum mottling */
+      radial-gradient(circle at 18% 22%, rgba(146,119,77,.030), transparent 17%),
+      radial-gradient(circle at 71% 36%, rgba(146,119,77,.022), transparent 15%),
+      radial-gradient(circle at 44% 74%, rgba(146,119,77,.024), transparent 16%),
+      /* architectural guides */
+      linear-gradient(90deg, rgba(226,75,74,.11) 0 1px, transparent 1px),
+      repeating-linear-gradient(0deg, transparent 0, transparent 29px, rgba(30,35,42,.038) 30px),
+      repeating-linear-gradient(90deg, transparent 0, transparent 31px, rgba(107,123,196,.032) 32px),
+      linear-gradient(112deg, var(--v10-paper-lift) 0%, var(--v10-paper-body) 52%, var(--v10-paper-age) 100%);
+    background-position:
+      0 0, 0 0, 0 0, 0 0, 0 0, 0 0,
+      0 0, 0 0, 0 0, 0 0, 0 0,
+      0 0, 0 0, 0 0,
+      51px 0, 0 0, 0 0, 0 0;
+    background-size:
+      auto, auto, auto, auto, auto, auto,
+      auto, auto, auto, auto, auto,
+      auto, auto, auto,
+      1px 100%, auto, auto, auto;
+    box-shadow:
+      inset 0 0 0 1px rgba(45,36,20,.26),
+      inset 33px 0 45px rgba(0,0,0,.126),
+      inset -30px 0 45px rgba(77,54,22,.128),
+      inset 0 36px 50px rgba(255,255,255,.44),
+      inset 0 -26px 36px rgba(63,43,18,.082),
+      inset 0 0 34px rgba(255,255,255,.030),
+      0 25px 58px rgba(0,0,0,.50);
+  }
+
+  /* Edge stack: richer but unobtrusive. */
+  .sketchbook-sheet::after {
+    right: 8px;
+    top: 14px;
+    bottom: 14px;
+    background: rgba(35,27,16,.145);
+    box-shadow:
+      4px 0 rgba(35,27,16,.096),
+      8px 0 rgba(35,27,16,.064),
+      12px 0 rgba(35,27,16,.042),
+      16px 0 rgba(35,27,16,.026),
+      20px 0 rgba(35,27,16,.015),
+      24px 0 rgba(35,27,16,.008),
+      -1px 0 rgba(255,255,255,.34);
+  }
+
+  .paper-smudge-overlay {
+    opacity: .39;
+  }
+
+  .paper-smudge-overlay::before {
+    left: 5%;
+    top: 5%;
+    width: 39%;
+    height: 18%;
+    background:
+      radial-gradient(circle, rgba(35,31,24,.042), rgba(35,31,24,.010) 58%, transparent 76%);
+    filter: blur(15px);
+  }
+
+  .paper-smudge-overlay::after {
+    right: 5%;
+    bottom: 8%;
+    width: 38%;
+    height: 22%;
+    background:
+      radial-gradient(circle, rgba(35,31,24,.044), rgba(35,31,24,.010) 60%, transparent 78%);
+    filter: blur(16px);
+  }
+
+  .smudge-alpha {
+    opacity: .46;
+    filter: blur(15px);
+  }
+
+  .smudge-beta {
+    opacity: .43;
+    filter: blur(17px);
+  }
+
+  /* Slight polish on title rule and separators without reintroducing text blur. */
+  .paper-title-line {
+    background:
+      linear-gradient(90deg,
+        rgba(23,27,34,.48),
+        rgba(23,27,34,.27) 70%,
+        rgba(23,27,34,.08) 88%,
+        transparent);
+  }
+
+  .sheet-divider-rule {
+    background:
+      linear-gradient(90deg,
+        rgba(32,36,43,.19),
+        rgba(107,123,196,.135) 48%,
+        rgba(32,36,43,.10));
+  }
+
+  /* Tiles: slightly more physical, like light cardstock laid onto the page. */
+  .page-slot-tile {
+    background:
+      radial-gradient(circle at 24% 12%, rgba(255,255,255,.40), transparent 34%),
+      linear-gradient(180deg, rgba(255,255,255,.27), rgba(255,255,255,.083)),
+      linear-gradient(90deg, rgba(93,202,165,.036), transparent 52%, rgba(201,168,76,.028));
+    border-color: rgba(32,36,43,.185);
+    box-shadow:
+      inset 0 1px rgba(255,255,255,.38),
+      inset 0 0 0 1px rgba(255,255,255,.052),
+      0 1px 0 rgba(255,255,255,.20),
+      0 3px 8px rgba(9,18,33,.035);
+  }
+
+  .page-slot-tile:hover {
+    border-color: rgba(29,158,117,.35);
+  }
+
+  .page-slot-tile.has-profile {
+    background:
+      radial-gradient(circle at 24% 12%, rgba(255,255,255,.49), transparent 34%),
+      linear-gradient(180deg, rgba(255,255,255,.56), rgba(255,255,255,.32)),
+      linear-gradient(90deg, rgba(93,202,165,.066), transparent 62%);
+  }
+
+  .mini-shape {
+    border-color: rgba(9,18,33,.28);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.04),
+      inset 0 0 20px rgba(0,0,0,.18),
+      0 7px 16px rgba(9,18,33,.135);
+  }
+
+  /* Explicitly preserve crisp text from v8. */
+  .sketchbook-wrapper,
+  .sketchbook-sheet,
+  .sheet-header-block,
+  .portfolio-grid,
+  .tile-content-view,
+  .sheet-footnote-disclaimer {
+    transform: none !important;
+  }
+
+  .sheet-title-input,
+  .sheet-subtitle,
+  .slot-meta-eyebrow,
+  .slot-meta-date,
+  .sm-key,
+  .sm-val,
+  .slot-state-title,
+  .slot-empty-label,
+  .slot-lock-indicator,
+  .slot-erase-action,
+  .sheet-footnote-disclaimer {
+    filter: none !important;
+    text-shadow: none !important;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+  }
+
+
+  /* ── V11 LIGHT PAPER REALISM PASS
+     Surgical visual-only refinement.
+     Keeps v10's workbook/binding detail, but returns the paper to a lighter,
+     clearer drafting-sheet value. No DOM, JS, save/erase/modal, or slot logic changes. */
+
+  :root {
+    --v11-paper-white: #fffdf6;
+    --v11-paper-main: #f8f2e6;
+    --v11-paper-edge: #e7ddc7;
+  }
+
+  .book-shadow {
+    opacity: .97;
+    filter: blur(31px);
+  }
+
+  .book-cover {
+    background:
+      linear-gradient(90deg,
+        rgba(255,255,255,.125) 0%,
+        rgba(255,255,255,.033) 5%,
+        transparent 17%,
+        transparent 82%,
+        rgba(0,0,0,.39) 96%),
+      radial-gradient(circle at 15% 8%, rgba(255,255,255,.112), transparent 22%),
+      radial-gradient(circle at 82% 86%, rgba(0,0,0,.58), transparent 35%),
+      radial-gradient(ellipse at 53% -4%, rgba(255,255,255,.066), transparent 35%),
+      linear-gradient(103deg, transparent 14%, rgba(255,255,255,.026) 15%, transparent 17%),
+      linear-gradient(78deg, transparent 58%, rgba(255,255,255,.022) 59%, transparent 61%),
+      repeating-linear-gradient(32deg, rgba(255,255,255,.016) 0 1px, transparent 1px 8px),
+      repeating-linear-gradient(-28deg, rgba(0,0,0,.025) 0 1px, transparent 1px 11px),
+      linear-gradient(180deg, #162337 0%, #091322 48%, #02060b 100%);
+  }
+
+  .spiral {
+    filter:
+      drop-shadow(12px 12px 13px rgba(0,0,0,.62))
+      drop-shadow(0 0 12px rgba(201,168,76,.12));
+  }
+
+  .ring {
+    background:
+      radial-gradient(ellipse at 69px 9px, rgba(0,0,0,.58) 0 5.2px, rgba(255,255,255,.12) 5.5px 6.7px, transparent 7.2px),
+      radial-gradient(ellipse at 83px 12px, rgba(255,255,255,.075), transparent 11px);
+  }
+
+  .ring::before,
+  .ring::after {
+    background:
+      linear-gradient(90deg,
+        #030406 0%,
+        #1f242a 10%,
+        #604514 23%,
+        #b98e34 35%,
+        #ffe69a 46%,
+        #fffbd0 52%,
+        #a87a22 66%,
+        #343a40 84%,
+        #040507 100%);
+  }
+
+  .sketchbook-sheet {
+    background:
+      radial-gradient(ellipse at 48% 9%, rgba(255,255,255,.88), transparent 43%),
+      radial-gradient(ellipse at 24% 27%, rgba(255,255,255,.44), transparent 30%),
+      radial-gradient(ellipse at 84% 80%, rgba(86,60,24,.050), transparent 31%),
+      radial-gradient(circle at 94% 92%, rgba(54,40,20,.026), transparent 12%),
+      radial-gradient(circle at 88% 19%, rgba(60,43,22,.018), transparent 10%),
+      radial-gradient(circle at 12% 82%, rgba(60,43,22,.016), transparent 13%),
+      linear-gradient(122deg, transparent 0 38%, rgba(81,61,31,.020) 39%, rgba(255,255,255,.052) 40%, transparent 42%),
+      linear-gradient(74deg, transparent 0 67%, rgba(81,61,31,.014) 68%, transparent 70%),
+      repeating-linear-gradient(11deg, rgba(46,34,20,.011) 0 1px, transparent 1px 7px),
+      repeating-linear-gradient(-19deg, rgba(255,255,255,.082) 0 1px, transparent 1px 8px),
+      repeating-linear-gradient(3deg, rgba(46,34,20,.007) 0 1px, transparent 1px 16px),
+      radial-gradient(circle at 18% 22%, rgba(146,119,77,.014), transparent 17%),
+      radial-gradient(circle at 71% 36%, rgba(146,119,77,.011), transparent 15%),
+      radial-gradient(circle at 44% 74%, rgba(146,119,77,.012), transparent 16%),
+      linear-gradient(90deg, rgba(226,75,74,.085) 0 1px, transparent 1px),
+      repeating-linear-gradient(0deg, transparent 0, transparent 29px, rgba(30,35,42,.030) 30px),
+      repeating-linear-gradient(90deg, transparent 0, transparent 31px, rgba(107,123,196,.026) 32px),
+      linear-gradient(112deg, var(--v11-paper-white) 0%, var(--v11-paper-main) 53%, var(--v11-paper-edge) 100%);
+    background-position:
+      0 0, 0 0, 0 0, 0 0, 0 0, 0 0,
+      0 0, 0 0, 0 0, 0 0, 0 0,
+      0 0, 0 0, 0 0,
+      51px 0, 0 0, 0 0, 0 0;
+    background-size:
+      auto, auto, auto, auto, auto, auto,
+      auto, auto, auto, auto, auto,
+      auto, auto, auto,
+      1px 100%, auto, auto, auto;
+    box-shadow:
+      inset 0 0 0 1px rgba(45,36,20,.22),
+      inset 32px 0 42px rgba(0,0,0,.102),
+      inset -28px 0 42px rgba(77,54,22,.090),
+      inset 0 36px 50px rgba(255,255,255,.50),
+      inset 0 -23px 32px rgba(63,43,18,.050),
+      inset 0 0 36px rgba(255,255,255,.040),
+      0 25px 58px rgba(0,0,0,.50);
+  }
+
+  .sketchbook-sheet::before {
+    background:
+      radial-gradient(circle at 8% 21%, rgba(0,0,0,.044), transparent 20%),
+      radial-gradient(circle at 81% 14%, rgba(0,0,0,.026), transparent 24%),
+      radial-gradient(circle at 76% 88%, rgba(0,0,0,.034), transparent 30%),
+      linear-gradient(90deg, rgba(255,255,255,.48), transparent 22%, transparent 80%, rgba(0,0,0,.064));
+    opacity: .86;
+  }
+
+  .sketchbook-sheet::after {
+    background: rgba(35,27,16,.105);
+    box-shadow:
+      4px 0 rgba(35,27,16,.070),
+      8px 0 rgba(35,27,16,.046),
+      12px 0 rgba(35,27,16,.030),
+      16px 0 rgba(35,27,16,.018),
+      20px 0 rgba(35,27,16,.010),
+      24px 0 rgba(35,27,16,.006),
+      -1px 0 rgba(255,255,255,.40);
+  }
+
+  .paper-smudge-overlay {
+    opacity: .32;
+  }
+
+  .paper-smudge-overlay::before {
+    background:
+      radial-gradient(circle, rgba(35,31,24,.030), rgba(35,31,24,.007) 58%, transparent 76%);
+    filter: blur(14px);
+  }
+
+  .paper-smudge-overlay::after {
+    background:
+      radial-gradient(circle, rgba(35,31,24,.032), rgba(35,31,24,.007) 60%, transparent 78%);
+    filter: blur(15px);
+  }
+
+  .smudge-alpha {
+    opacity: .36;
+    filter: blur(14px);
+  }
+
+  .smudge-beta {
+    opacity: .34;
+    filter: blur(16px);
+  }
+
+  .page-slot-tile {
+    background:
+      radial-gradient(circle at 24% 12%, rgba(255,255,255,.48), transparent 34%),
+      linear-gradient(180deg, rgba(255,255,255,.34), rgba(255,255,255,.115)),
+      linear-gradient(90deg, rgba(93,202,165,.032), transparent 52%, rgba(201,168,76,.020));
+    border-color: rgba(32,36,43,.160);
+    box-shadow:
+      inset 0 1px rgba(255,255,255,.46),
+      inset 0 0 0 1px rgba(255,255,255,.060),
+      0 1px 0 rgba(255,255,255,.25),
+      0 3px 8px rgba(9,18,33,.030);
+  }
+
+  .page-slot-tile:hover {
+    background:
+      radial-gradient(circle at 24% 12%, rgba(255,255,255,.56), transparent 34%),
+      linear-gradient(180deg, rgba(255,255,255,.40), rgba(255,255,255,.145)),
+      linear-gradient(90deg, rgba(93,202,165,.040), transparent 52%, rgba(201,168,76,.023));
+    border-color: rgba(29,158,117,.30);
+  }
+
+  .page-slot-tile.has-profile {
+    background:
+      radial-gradient(circle at 24% 12%, rgba(255,255,255,.58), transparent 34%),
+      linear-gradient(180deg, rgba(255,255,255,.64), rgba(255,255,255,.39)),
+      linear-gradient(90deg, rgba(93,202,165,.056), transparent 62%);
+  }
+
+  .sketchbook-wrapper,
+  .sketchbook-sheet,
+  .sheet-header-block,
+  .portfolio-grid,
+  .tile-content-view,
+  .sheet-footnote-disclaimer {
+    transform: none !important;
+  }
+
+  .sheet-title-input,
+  .sheet-subtitle,
+  .slot-meta-eyebrow,
+  .slot-meta-date,
+  .sm-key,
+  .sm-val,
+  .slot-state-title,
+  .slot-empty-label,
+  .slot-lock-indicator,
+  .slot-erase-action,
+  .sheet-footnote-disclaimer {
+    filter: none !important;
+    text-shadow: none !important;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+  }
+
+
+  /* ── V12 ERASE REPAIR + LIGHT REALISM DETAIL PASS
+     Surgical repair plus notebook/paper visual refinement only.
+     Functionality is preserved and the erase target is hardened. */
+
+  /* Hard repair: make the erase control sit above every decorative paper layer. */
+  .page-slot-tile.has-profile {
+    isolation: isolate;
+  }
+
+  .tile-content-view {
+    position: relative;
+    z-index: 40;
+    pointer-events: auto;
+  }
+
+  .saved-bottom {
+    position: relative !important;
+    z-index: 400 !important;
+    pointer-events: auto !important;
+  }
+
+  .slot-erase-action {
+    position: relative !important;
+    z-index: 500 !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    touch-action: manipulation;
+  }
+
+  .premium-soft-wall-mask.open {
+    display: flex !important;
+  }
+
+  /* Keep the lighter paper direction, but add more believable paper grain and page depth. */
+  .sketchbook-sheet {
+    background:
+      radial-gradient(ellipse at 48% 9%, rgba(255,255,255,.90), transparent 43%),
+      radial-gradient(ellipse at 24% 27%, rgba(255,255,255,.46), transparent 30%),
+      radial-gradient(ellipse at 84% 80%, rgba(86,60,24,.042), transparent 31%),
+
+      /* small real-world handling marks, intentionally low contrast */
+      radial-gradient(circle at 94% 92%, rgba(54,40,20,.022), transparent 12%),
+      radial-gradient(circle at 88% 19%, rgba(60,43,22,.014), transparent 10%),
+      radial-gradient(circle at 12% 82%, rgba(60,43,22,.013), transparent 13%),
+      radial-gradient(circle at 39% 93%, rgba(60,43,22,.010), transparent 9%),
+
+      /* light construction-sheet crease details */
+      linear-gradient(122deg, transparent 0 38%, rgba(81,61,31,.016) 39%, rgba(255,255,255,.058) 40%, transparent 42%),
+      linear-gradient(74deg, transparent 0 67%, rgba(81,61,31,.010) 68%, transparent 70%),
+      linear-gradient(168deg, transparent 0 18%, rgba(255,255,255,.035) 19%, transparent 21%),
+
+      /* fine fibers without returning to tan */
+      repeating-linear-gradient(11deg, rgba(46,34,20,.009) 0 1px, transparent 1px 7px),
+      repeating-linear-gradient(-19deg, rgba(255,255,255,.088) 0 1px, transparent 1px 8px),
+      repeating-linear-gradient(3deg, rgba(46,34,20,.006) 0 1px, transparent 1px 16px),
+
+      /* pale vellum mottling */
+      radial-gradient(circle at 18% 22%, rgba(146,119,77,.010), transparent 17%),
+      radial-gradient(circle at 71% 36%, rgba(146,119,77,.008), transparent 15%),
+      radial-gradient(circle at 44% 74%, rgba(146,119,77,.009), transparent 16%),
+
+      /* architectural guides */
+      linear-gradient(90deg, rgba(226,75,74,.078) 0 1px, transparent 1px),
+      repeating-linear-gradient(0deg, transparent 0, transparent 29px, rgba(30,35,42,.028) 30px),
+      repeating-linear-gradient(90deg, transparent 0, transparent 31px, rgba(107,123,196,.024) 32px),
+      linear-gradient(112deg, #fffef8 0%, #faf4e9 53%, #eadfca 100%);
+    background-position:
+      0 0, 0 0, 0 0,
+      0 0, 0 0, 0 0, 0 0,
+      0 0, 0 0, 0 0,
+      0 0, 0 0, 0 0,
+      0 0, 0 0, 0 0,
+      51px 0, 0 0, 0 0, 0 0;
+    background-size:
+      auto, auto, auto,
+      auto, auto, auto, auto,
+      auto, auto, auto,
+      auto, auto, auto,
+      auto, auto, auto,
+      1px 100%, auto, auto, auto;
+    box-shadow:
+      inset 0 0 0 1px rgba(45,36,20,.215),
+      inset 32px 0 42px rgba(0,0,0,.098),
+      inset -28px 0 42px rgba(77,54,22,.082),
+      inset 0 36px 50px rgba(255,255,255,.52),
+      inset 0 -23px 32px rgba(63,43,18,.044),
+      inset 0 0 38px rgba(255,255,255,.046),
+      0 26px 60px rgba(0,0,0,.50);
+  }
+
+  .sketchbook-sheet::before {
+    background:
+      radial-gradient(circle at 8% 21%, rgba(0,0,0,.038), transparent 20%),
+      radial-gradient(circle at 81% 14%, rgba(0,0,0,.022), transparent 24%),
+      radial-gradient(circle at 76% 88%, rgba(0,0,0,.030), transparent 30%),
+      linear-gradient(90deg, rgba(255,255,255,.50), transparent 22%, transparent 80%, rgba(0,0,0,.058));
+    opacity: .84;
+  }
+
+  .sketchbook-sheet::after {
+    background: rgba(35,27,16,.095);
+    box-shadow:
+      4px 0 rgba(35,27,16,.064),
+      8px 0 rgba(35,27,16,.041),
+      12px 0 rgba(35,27,16,.027),
+      16px 0 rgba(35,27,16,.016),
+      20px 0 rgba(35,27,16,.009),
+      24px 0 rgba(35,27,16,.005),
+      -1px 0 rgba(255,255,255,.42);
+  }
+
+  /* More realistic binding and punch shadow without changing layout. */
+  .spiral {
+    filter:
+      drop-shadow(12px 12px 13px rgba(0,0,0,.64))
+      drop-shadow(0 0 13px rgba(201,168,76,.125));
+  }
+
+  .spiral::before {
+    opacity: .83;
+    filter: blur(7px);
+  }
+
+  .ring {
+    background:
+      radial-gradient(ellipse at 69px 9px, rgba(0,0,0,.60) 0 5.2px, rgba(255,255,255,.13) 5.5px 6.8px, transparent 7.3px),
+      radial-gradient(ellipse at 83px 12px, rgba(255,255,255,.080), transparent 11px),
+      radial-gradient(ellipse at 55px 8px, rgba(0,0,0,.16), transparent 16px);
+  }
+
+  .ring::before,
+  .ring::after {
+    background:
+      linear-gradient(90deg,
+        #020304 0%,
+        #1f242a 10%,
+        #5c4213 23%,
+        #b98e34 35%,
+        #ffe9a3 46%,
+        #fffdda 52%,
+        #a87a22 66%,
+        #343a40 84%,
+        #030405 100%);
+  }
+
+  .ring::before {
+    box-shadow:
+      0 5px 11px rgba(0,0,0,.66),
+      0 0 0 1px rgba(0,0,0,.33),
+      inset 0 1px 1px rgba(255,255,255,.54),
+      inset 0 -1px 1px rgba(0,0,0,.58),
+      inset 18px 0 10px rgba(255,255,255,.050);
+  }
+
+  .ring::after {
+    box-shadow:
+      0 4px 9px rgba(0,0,0,.58),
+      0 0 0 1px rgba(0,0,0,.27),
+      inset 0 1px 1px rgba(255,255,255,.44),
+      inset 0 -1px 1px rgba(0,0,0,.50);
+  }
+
+  /* Cover polish: slightly more worn sheen, still premium/dark. */
+  .book-cover {
+    background:
+      linear-gradient(90deg,
+        rgba(255,255,255,.128) 0%,
+        rgba(255,255,255,.034) 5%,
+        transparent 17%,
+        transparent 82%,
+        rgba(0,0,0,.40) 96%),
+      radial-gradient(circle at 15% 8%, rgba(255,255,255,.116), transparent 22%),
+      radial-gradient(circle at 82% 86%, rgba(0,0,0,.60), transparent 35%),
+      radial-gradient(ellipse at 53% -4%, rgba(255,255,255,.068), transparent 35%),
+      linear-gradient(103deg, transparent 14%, rgba(255,255,255,.028) 15%, transparent 17%),
+      linear-gradient(78deg, transparent 58%, rgba(255,255,255,.023) 59%, transparent 61%),
+      repeating-linear-gradient(32deg, rgba(255,255,255,.016) 0 1px, transparent 1px 8px),
+      repeating-linear-gradient(-28deg, rgba(0,0,0,.026) 0 1px, transparent 1px 11px),
+      linear-gradient(180deg, #162337 0%, #091322 48%, #02060b 100%);
+  }
+
+  .book-cover::before {
+    box-shadow:
+      inset -1px 0 rgba(255,255,255,.090),
+      inset 10px 0 20px rgba(0,0,0,.46),
+      14px 0 28px rgba(0,0,0,.36),
+      1px 0 0 rgba(255,255,255,.026);
+  }
+
+  /* Lighter but more tactile slot cards. */
+  .page-slot-tile {
+    background:
+      radial-gradient(circle at 24% 12%, rgba(255,255,255,.52), transparent 34%),
+      linear-gradient(180deg, rgba(255,255,255,.37), rgba(255,255,255,.125)),
+      linear-gradient(90deg, rgba(93,202,165,.032), transparent 52%, rgba(201,168,76,.018));
+    border-color: rgba(32,36,43,.155);
+    box-shadow:
+      inset 0 1px rgba(255,255,255,.48),
+      inset 0 0 0 1px rgba(255,255,255,.062),
+      0 1px 0 rgba(255,255,255,.25),
+      0 3px 9px rgba(9,18,33,.032);
+  }
+
+  .page-slot-tile.has-profile {
+    background:
+      radial-gradient(circle at 24% 12%, rgba(255,255,255,.62), transparent 34%),
+      linear-gradient(180deg, rgba(255,255,255,.67), rgba(255,255,255,.405)),
+      linear-gradient(90deg, rgba(93,202,165,.055), transparent 62%);
+  }
+
+  .page-slot-tile:hover {
+    border-color: rgba(29,158,117,.31);
+  }
+
+  .paper-smudge-overlay {
+    opacity: .30;
+  }
+
+  .paper-smudge-overlay::before {
+    filter: blur(13px);
+  }
+
+  .paper-smudge-overlay::after {
+    filter: blur(14px);
+  }
+
+  .smudge-alpha {
+    opacity: .32;
+    filter: blur(13px);
+  }
+
+  .smudge-beta {
+    opacity: .31;
+    filter: blur(15px);
+  }
+
+  /* Reassert crisp text. */
+  .sketchbook-wrapper,
+  .sketchbook-sheet,
+  .sheet-header-block,
+  .portfolio-grid,
+  .tile-content-view,
+  .sheet-footnote-disclaimer {
+    transform: none !important;
+  }
+
+  .sheet-title-input,
+  .sheet-subtitle,
+  .slot-meta-eyebrow,
+  .slot-meta-date,
+  .sm-key,
+  .sm-val,
+  .slot-state-title,
+  .slot-empty-label,
+  .slot-lock-indicator,
+  .slot-erase-action,
+  .sheet-footnote-disclaimer {
+    filter: none !important;
+    text-shadow: none !important;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+  }
+
+
+  /* ── V13 ACCOUNT HEADER + SKETCHBOOK CONTROLS
+     Surgical additive pass: account hero, Sketchbook Index, CTA row, compare modal, toast.
+     Existing notebook visuals, save/erase modal, eraser animation, and slot structure preserved. */
+
+  .sketchbook-section {
+    justify-content: flex-start !important;
+    padding-top: 96px !important;
+    padding-bottom: 58px !important;
+  }
+
+  .sketchbook-account-hero {
+    width: min(1120px, calc(100vw - 76px));
+    text-align: center;
+    position: relative;
+    z-index: 18;
+    margin: 0 auto 30px;
+  }
+
+  .sketchbook-hero-eyebrow {
+    margin: 0 0 12px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: rgba(201,168,76,.72);
+  }
+
+  .sketchbook-account-hero h1 {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: clamp(40px, 6vw, 66px);
+    font-weight: 300;
+    line-height: .95;
+    color: rgba(255,255,255,.94);
+  }
+
+  .sketchbook-account-hero p {
+    margin: 16px auto 0;
+    max-width: 790px;
+    font-family: var(--font-sans);
+    font-size: 15px;
+    font-weight: 300;
+    line-height: 1.65;
+    color: rgba(255,255,255,.52);
+  }
+
+  .sketchbook-account-hero p strong {
+    color: rgba(255,255,255,.88);
+    font-weight: 400;
+  }
+
+  .sketchbook-wrapper {
+    margin-top: 0 !important;
+  }
+
+  .sketchbook-header-index {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    gap: 36px;
+    align-items: start;
+    text-align: left !important;
+  }
+
+  .sketchbook-title-area {
+    min-width: 0;
+  }
+
+  .sketchbook-header-index .sheet-divider-rule {
+    grid-column: 1 / -1;
+    width: 100%;
+    margin-top: 0;
+  }
+
+  .sketchbook-summary {
+    border: 1px solid rgba(32,36,43,.13);
+    border-radius: 10px;
+    padding: 15px 16px 14px;
+    background:
+      radial-gradient(circle at 20% 8%, rgba(255,255,255,.54), transparent 40%),
+      linear-gradient(180deg, rgba(255,255,255,.30), rgba(255,255,255,.12));
+    box-shadow:
+      inset 0 1px rgba(255,255,255,.46),
+      0 6px 16px rgba(9,18,33,.036);
+    position: relative;
+    z-index: 24;
+  }
+
+  .sketchbook-summary-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: .16em;
+    color: rgba(32,36,43,.48);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .sketchbook-summary-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 5px 0;
+    border-bottom: 1px dashed rgba(32,36,43,.08);
+    color: rgba(32,36,43,.58);
+  }
+
+  .sketchbook-summary-row:last-child {
+    border-bottom: 0;
+  }
+
+  .sketchbook-summary-row strong {
+    color: rgba(32,36,43,.88);
+    font-weight: 700;
+  }
+
+  .page-slot-tile.active-sketch {
+    border-color: rgba(201,168,76,.78) !important;
+    box-shadow:
+      0 18px 36px rgba(9,18,33,.070),
+      0 0 0 1px rgba(201,168,76,.08),
+      inset 0 1px rgba(255,255,255,.56);
+  }
+
+  .page-slot-tile.selected {
+    border-color: rgba(29,158,117,.78) !important;
+    box-shadow:
+      0 18px 36px rgba(9,18,33,.070),
+      0 0 0 1px rgba(29,158,117,.12),
+      inset 0 1px rgba(255,255,255,.56);
+  }
+
+  .sketch-secondary-action.action-active {
+    border-color: rgba(29,158,117,.54);
+    color: rgba(32,36,43,.92);
+    background: rgba(29,158,117,.08);
+  }
+
+  .sketchbook-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    margin-top: 27px;
+    padding-top: 22px;
+    border-top: 1px solid rgba(32,36,43,.11);
+    position: relative;
+    z-index: 28;
+  }
+
+  .sketch-primary-action {
+    height: 52px;
+    min-width: 292px;
+    border: 0;
+    border-radius: 3px;
+    background: linear-gradient(180deg, #d8b13e, #c9a12f);
+    color: #15120a;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: .20em;
+    text-transform: uppercase;
+    box-shadow:
+      0 16px 30px rgba(201,168,76,.20),
+      inset 0 1px rgba(255,255,255,.28);
+  }
+
+  .sketch-primary-action:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 18px 34px rgba(201,168,76,.24),
+      inset 0 1px rgba(255,255,255,.32);
+  }
+
+  .sketch-secondary-action {
+    height: 43px;
+    min-width: 166px;
+    border: 1px solid rgba(32,36,43,.20);
+    border-radius: 3px;
+    background: rgba(255,255,255,.12);
+    color: rgba(32,36,43,.72);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+  }
+
+  .sketch-secondary-action:hover {
+    border-color: rgba(29,158,117,.32);
+    background: rgba(255,255,255,.18);
+    color: rgba(32,36,43,.86);
+  }
+
+  .compare-sketch-frame {
+    width: min(720px, calc(100vw - 56px));
+    max-width: 720px;
+  }
+
+  .sketch-compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    margin: 12px 0 20px;
+  }
+
+  .sketch-compare-table th {
+    text-align: left;
+    padding: 8px 9px;
+    color: rgba(201,168,76,.82);
+    text-transform: uppercase;
+    letter-spacing: .10em;
+    border-bottom: 1px solid rgba(255,255,255,.09);
+  }
+
+  .sketch-compare-table td {
+    padding: 10px 9px;
+    color: rgba(255,255,255,.78);
+    border-bottom: 1px solid rgba(255,255,255,.055);
+  }
+
+  .sketch-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 26px;
+    transform: translateX(-50%) translateY(18px);
+    z-index: 1200;
+    opacity: 0;
+    padding: 11px 16px;
+    min-width: 300px;
+    border-radius: 999px;
+    border: 1px solid rgba(93,202,165,.30);
+    background: rgba(5,11,20,.88);
+    color: var(--teal-mid);
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    transition: opacity .22s ease, transform .22s ease;
+    pointer-events: none;
+  }
+
+  .sketch-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  @media (max-width: 980px) {
+    .sketchbook-section {
+      padding-left: 18px !important;
+      padding-right: 18px !important;
+    }
+
+    .sketchbook-account-hero {
+      width: calc(100vw - 36px);
+      margin-bottom: 24px;
+    }
+
+    .sketchbook-header-index {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+
+    .sketchbook-summary {
+      max-width: 280px;
+    }
+
+    .sketchbook-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .sketch-primary-action,
+    .sketch-secondary-action {
+      min-width: 0;
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .sketchbook-account-hero h1 {
+      font-size: 42px;
+    }
+
+    .sketchbook-account-hero p {
+      font-size: 13px;
+    }
+  }
+
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <section class="sketchbook-section" id="sketchbook-view-container">
+    
+    <button class="back-to-workspace" id="action-return-canvas" aria-label="Return back to primary view workspace panels" title="Return to where you left off in Sketch">
+      &larr; Return
+    </button>
+
+    <section class="sketchbook-account-hero" aria-labelledby="sketchbook-page-title">
+      <p class="sketchbook-hero-eyebrow">My Account · Sketch Output</p>
+      <h1 id="sketchbook-page-title">Sketchbook</h1>
+      <p>
+        <strong>The Sketchbook</strong> is where rough retirement Shapes,
+        early Range ideas, and quick scenario sketches are saved, reopened, compared, or sent back into Sketch.
+      </p>
+    </section>
+
+    <div class="sketchbook-wrapper">
+      
+      <div class="book-cover" aria-hidden="true"></div>
+      <div class="book-shadow" aria-hidden="true"></div>
+
+      <div class="spiral" aria-hidden="true">
+        <div class="ring"></div><div class="ring"></div><div class="ring"></div><div class="ring"></div>
+        <div class="ring"></div><div class="ring"></div><div class="ring"></div><div class="ring"></div>
+        <div class="ring"></div><div class="ring"></div><div class="ring"></div><div class="ring"></div>
+        <div class="ring"></div><div class="ring"></div><div class="ring"></div>
+      </div>
+
+      <div class="sketchbook-sheet">
+        
+        <div class="paper-smudge-overlay" aria-hidden="true">
+           <div class="smudge-alpha"></div>
+           <div class="smudge-beta"></div>
+        </div>
+        
+        <header class="sheet-header-block sketchbook-header-index">
+          <div class="sketchbook-title-area">
+            <input type="text" value="My Sketchbook" class="sheet-title-input" id="editable-notebook-title" aria-label="Sketchbook Title" autocomplete="off">
+            <div class="paper-title-line"></div>
+            <p class="sheet-subtitle">Sketched Scenarios &mdash; Multi-Scenario Deck</p>
+          </div>
+
+          <aside class="sketchbook-summary" aria-label="Sketchbook index">
+            <div class="sketchbook-summary-label">Sketchbook Index</div>
+            <div class="sketchbook-summary-row"><span>Saved</span><strong id="summary-sketch-saved">1 / 4</strong></div>
+            <div class="sketchbook-summary-row"><span>Active</span><strong id="summary-sketch-active">Page 01</strong></div>
+            <div class="sketchbook-summary-row"><span>Access</span><strong id="summary-sketch-access">Discover</strong></div>
+          </aside>
+
+          <div class="sheet-divider-rule"></div>
+        </header>
+
+        <div class="premium-soft-wall-mask" id="premium-gate-modal">
+          <div class="modal-frame">
+            <h2 class="modal-h2">Unlock Full Sketchbook Access</h2>
+            <p class="modal-desc">Upgrade to <strong>Design Mode</strong> to unlock concurrent comparison paths, pin up to 4 parallel shapes, and serialize your parameters into the Studio Monte Carlo engine.</p>
+            <div class="modal-actions-layout">
+               <button class="modal-upgrade-cta" id="action-upgrade">Unlock Design Mode &rarr;</button>
+               <button class="modal-dismiss-link" id="action-dismiss-modal">Keep Current Sketch</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="premium-soft-wall-mask" id="delete-confirm-modal">
+          <div class="modal-frame">
+            <h2 class="modal-h2" style="color: var(--danger-red);">Erase Scenario?</h2>
+            <p class="modal-desc">This structural baseline scenario will be permanently cleared from your sketchbook. This action cannot be undone.</p>
+            <div class="modal-actions-layout">
+               <button class="modal-upgrade-cta danger" id="action-confirm-erase">Erase Configuration</button>
+               <button class="modal-dismiss-link" id="action-cancel-erase">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+
+        <div class="premium-soft-wall-mask" id="discover-capacity-modal">
+          <div class="modal-frame">
+            <h2 class="modal-h2">Your Sketchbook Is Full</h2>
+            <p class="modal-desc">Discover Mode includes one saved Sketch. You can erase your current Sketch to save a new one, or upgrade to Design Mode for unlimited Sketches plus Studio access, Monte Carlo testing, and the full Datum FI experience.</p>
+            <div class="modal-actions-layout">
+              <button class="modal-upgrade-cta" id="action-upgrade-capacity" type="button">Upgrade to Design Mode &rarr;</button>
+              <button class="modal-upgrade-cta danger" id="action-erase-save-new" type="button">Erase &amp; Save New</button>
+              <button class="modal-dismiss-link" id="action-later-capacity" type="button">Maybe later</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="premium-soft-wall-mask compare-sketch-mask" id="compare-sketch-modal">
+          <div class="modal-frame compare-sketch-frame">
+            <h2 class="modal-h2">Compare Saved Sketches</h2>
+            <p class="modal-desc">Review your saved Shapes before reopening one in Sketch or promoting the idea into Studio.</p>
+            <div id="compare-sketch-table-wrap"></div>
+            <div class="modal-actions-layout">
+               <button class="modal-upgrade-cta" id="action-close-compare-sketch">Close Comparison</button>
+            </div>
+          </div>
+        </div>
+
+        <main class="portfolio-grid">
+          
+          <div class="page-slot-tile" id="tile-slot-1" data-slot-id="1">
+             <div class="eraser-wipe-tool" id="eraser-tool-1"></div>
+             <div class="tile-content-view" id="tile-content-1"></div>
+          </div>
+
+          <div class="page-slot-tile" id="tile-slot-2" data-slot-id="2">
+             <div class="eraser-wipe-tool" id="eraser-tool-2"></div>
+             <div class="tile-content-view" id="tile-content-2"></div>
+          </div>
+
+          <div class="page-slot-tile" id="tile-slot-3" data-slot-id="3">
+             <div class="eraser-wipe-tool" id="eraser-tool-3"></div>
+             <div class="tile-content-view" id="tile-content-3"></div>
+          </div>
+
+          <div class="page-slot-tile" id="tile-slot-4" data-slot-id="4">
+             <div class="eraser-wipe-tool" id="eraser-tool-4"></div>
+             <div class="tile-content-view" id="tile-content-4"></div>
+          </div>
+
+        </main>
+
+        <div class="sketchbook-actions">
+          <button class="sketch-primary-action" id="action-save-current-sketch" type="button" title="Save your current Sketch shape to this slot">Save Current Sketch &rarr;</button>
+          <button class="sketch-secondary-action" id="action-compare-sketches" type="button">Compare</button>
+          <button class="sketch-secondary-action" id="action-open-sketch" type="button" title="Reopen selected Sketch and continue designing">Open Sketch</button>
+        </div>
+
+        <div class="charcoal-pencil-instrument" aria-hidden="true"></div>
+
+        <footer class="sheet-footnote-disclaimer">
+          Datum FI &middot; Sketchbook &middot; Three-path envelope &middot; Studio runs the engine
+        </footer>
+
+      </div>
+    </div>
+
+  </section>
+
+  <div class="sketch-toast" id="sketch-toast" role="status" aria-live="polite"></div>
+
+</div>
+
+<script>
+  // ── ARCHITECTURAL APP STATE SIMULATION ──
+  const AppSessionState = {
+    userHasPremiumToken: false,
+    activeTargetPurgeId: null,
+    activeSketchSlot: 1, 
+    mockCanvasParameters: {
+      age: 40, retireAge: 53,
+      portfolioMass: 1400000, contributions: 48000, datumSpend: 108000,
+      resolvedState: "EXPANSIVE" // Core Options Matrix: ABUNDANT | GROUNDED | EXPANSIVE | STRETCHED | OVEREXTENDED
+    }
+  };
+
+  // Variable Color-Parity Rule Book Multi-State Lookups
+  const STATE_BRAND_MAP = {
+    ABUNDANT:     { color: 'var(--blue-safe)' },
+    GROUNDED:     { color: 'var(--purple-grounded)' },
+    EXPANSIVE:    { color: 'var(--teal-brand)' },
+    STRETCHED:    { color: 'var(--orange-warning)' },
+    OVEREXTENDED: { color: 'var(--danger-red)' }
+  };
+
+  const SketchbookDatabase = {
+    slot1: null, slot2: null, slot3: null, slot4: null
+  };
+
+  // ── PHASE A: localStorage persistence ────────────────────────────────────
+  const LS_KEY = 'datumfi_sketchbook_v1';
+
+  function _contractToSlot(c) {
+    if (!c) return null;
+    var mapped = STATE_BRAND_MAP[c.resolved_state] || STATE_BRAND_MAP.EXPANSIVE;
+    return {
+      age:         c.age,
+      retire:      c.retire_age,
+      port:        c.portfolio_mass,
+      contrib:     c.contributions,
+      datum:       c.datum_spend,
+      ceil:        c.designed_ceil  || 0,
+      floor:       c.designed_floor || 0,
+      stateName:   c.resolved_state || 'EXPANSIVE',
+      stateColor:  mapped.color,
+      dateStamped: c.date_stamped,
+      timeStamped: c.time_stamped
+    };
+  }
+
+  function _updateLsTitle(title) {
+    try {
+      var d = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+      d.sketchbook_title = title;
+      localStorage.setItem(LS_KEY, JSON.stringify(d));
+    } catch(e) {}
+  }
+
+  function _clearLsSlot(idx) {
+    if (idx !== 1) return;
+    try {
+      var d = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+      d.slot_1 = null;
+      localStorage.setItem(LS_KEY, JSON.stringify(d));
+    } catch(e) {}
+  }
+  // ── END PHASE A HELPERS ──────────────────────────────────────────────────
+
+  function addCommas(num) {
+    return isNaN(num) || num === null ? '0' : Math.round(num).toLocaleString('en-US');
+  }
+
+  function compactMoney(num) {
+    if (!num && num !== 0) return '$0';
+    if (num >= 1000000) {
+      const value = num / 1000000;
+      return `$${value.toFixed(value >= 10 ? 0 : 1)}M`;
+    }
+    if (num >= 1000) return `$${Math.round(num / 1000)}k`;
+    return `$${addCommas(num)}`;
+  }
+
+
+  function showSketchToast(message) {
+    const toast = document.getElementById('sketch-toast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.classList.add('show');
+    clearTimeout(showSketchToast._timer);
+    showSketchToast._timer = setTimeout(() => toast.classList.remove('show'), 2300);
+  }
+
+  function countSavedSketches() {
+    let saved = 0;
+    for (let idx = 1; idx <= 4; idx++) {
+      if (SketchbookDatabase['slot' + idx]) saved++;
+    }
+    return saved;
+  }
+
+  function firstSavedSketchSlot() {
+    return [1, 2, 3, 4].find(idx => SketchbookDatabase['slot' + idx]) || null;
+  }
+
+  function updateSketchbookIndex() {
+    const savedCount = countSavedSketches();
+    const activeData = SketchbookDatabase['slot' + AppSessionState.activeSketchSlot];
+
+    const savedEl = document.getElementById('summary-sketch-saved');
+    const activeEl = document.getElementById('summary-sketch-active');
+    const accessEl = document.getElementById('summary-sketch-access');
+
+    if (savedEl) savedEl.textContent = `${savedCount} / 4`;
+    if (activeEl) activeEl.textContent = activeData ? `Page 0${AppSessionState.activeSketchSlot}` : 'None';
+    if (accessEl) accessEl.textContent = AppSessionState.userHasPremiumToken ? 'Design' : 'Discover';
+  }
+
+  function saveCurrentSketchToFirstAvailableSlot() {
+    for (let idx = 1; idx <= 4; idx++) {
+      const isLocked = idx > 1 && !AppSessionState.userHasPremiumToken;
+      const isEmpty = !SketchbookDatabase['slot' + idx];
+
+      if (isEmpty && isLocked) {
+        document.getElementById('premium-gate-modal').classList.add('open');
+        return;
+      }
+
+      if (isEmpty) {
+        executeSavePayloadToSlot(idx);
+        return;
+      }
+    }
+
+    showSketchToast('All available sketch pages are already filled.');
+  }
+
+  function openSketchCompareModal() {
+    const rows = [1, 2, 3, 4]
+      .map(idx => ({ idx, data: SketchbookDatabase['slot' + idx] }))
+      .filter(entry => entry.data);
+
+    const wrap = document.getElementById('compare-sketch-table-wrap');
+    if (!wrap) return;
+
+    if (!rows.length) {
+      wrap.innerHTML = '<p class="modal-desc">No saved sketches to compare yet.</p>';
+    } else {
+      wrap.innerHTML = `
+        <table class="sketch-compare-table">
+          <thead>
+            <tr>
+              <th>Page</th>
+              <th>State</th>
+              <th>Portfolio</th>
+              <th>Target Spend</th>
+              <th>Timeline</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(({idx, data}) => `
+              <tr>
+                <td>Page 0${idx}</td>
+                <td>${data.stateName}</td>
+                <td>${compactMoney(data.port)}</td>
+                <td>$${addCommas(data.datum)}/yr</td>
+                <td>${data.age} → ${data.retire}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    document.getElementById('compare-sketch-modal').classList.add('open');
+  }
+
+  function getFormattedCurrentDate() {
+    const today = new Date();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const yyyy = today.getFullYear();
+    return `${mm}/${dd}/${yyyy}`;
+  }
+
+  function getFormattedTime() {
+    return new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function miniShapeSVG(data) {
+    var vC = data.ceil  || 0;
+    var vF = data.floor || 0;
+    var vD = data.datum || 0;
+    if (!vC || !vF) { vC = Math.round(vD * 1.35); vF = Math.round(vD * 0.75); }
+    var vMax = Math.max(vC, vD) * 1.08;
+    var vMin = Math.max(0, Math.min(vF, vD) * 0.88);
+    var vRng = Math.max(vMax - vMin, 1);
+    var vy = function(v) { return Math.round(10 + (1 - (v - vMin) / vRng) * 90); };
+    var yCR = vy(vC), yDR = vy(vD), yFR = vy(vF);
+    // Cone geometry: 12% of spread at left edge → narrow start, wide right end
+    var yLC = vy(vD + (vC - vD) * 0.12);
+    var yLD = vy(vD);
+    var yLF = vy(vD - (vD - vF) * 0.12);
+    return `
+      <svg width="100%" height="100%" viewBox="0 0 300 110" role="img" aria-label="Mini Shape preview">
+        <defs>
+          <linearGradient id="miniCone-${data.stateName}" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0%" stop-color="#5DCAA5" stop-opacity="0.10"/>
+            <stop offset="100%" stop-color="#C9A84C" stop-opacity="0.18"/>
+          </linearGradient>
+        </defs>
+        <polygon points="18,${yLC} 282,${yCR} 282,${yFR} 18,${yLF}" fill="url(#miniCone-${data.stateName})"/>
+        <line x1="18" y1="${yLC}" x2="282" y2="${yCR}" stroke="#C9A84C" stroke-width="2.5"/>
+        <line x1="18" y1="${yLF}" x2="282" y2="${yFR}" stroke="#e24b4a" stroke-width="2" opacity="0.72"/>
+        <line x1="18" y1="${yLD}" x2="282" y2="${yDR}" stroke="#5DCAA5" stroke-width="2.5"/>
+        <circle cx="282" cy="${yCR}" r="3.5" fill="#C9A84C"/>
+        <circle cx="282" cy="${yFR}" r="3.5" fill="#e24b4a"/>
+        <circle cx="282" cy="${yDR}" r="4" fill="#5DCAA5"/>
+      </svg>
+    `;
+  }
+
+  function renderEmptySlot(idx) {
+    const locked = idx > 1 && !AppSessionState.userHasPremiumToken;
+    return `
+      <div class="slot-empty-glyph" title="Click to save your current Sketch here">＋</div>
+      <p class="slot-empty-label">Pin Current Scenario<br><span style="font-size:11px; opacity:0.6;">(Page 0${idx} Scenario)</span></p>
+      ${locked ? '<span class="slot-lock-indicator">[ Locked ]</span>' : ''}
+    `;
+  }
+
+  function renderSavedSlot(idx, data) {
+    return `
+      <div class="slot-meta-eyebrow-container">
+        <div class="slot-meta-eyebrow">Page 0${idx}</div>
+      </div>
+      <div class="slot-state-title" style="color: ${data.stateColor};">${data.stateName}</div>
+      <div class="slot-metrics-table">
+        <div class="sm-row"><span class="sm-key">Timeline</span><span class="sm-val">${data.age} &rarr; ${data.retire}</span></div>
+        <div class="sm-row"><span class="sm-key">Portfolio</span><span class="sm-val">${compactMoney(data.port)}</span></div>
+        <div class="sm-row"><span class="sm-key">Contrib</span><span class="sm-val">$${addCommas(data.contrib)}/yr</span></div>
+        <div class="sm-row"><span class="sm-key">Target Spend</span><span class="sm-val">$${addCommas(data.datum)}/yr</span></div>
+      </div>
+      <div class="mini-shape">${miniShapeSVG(data)}</div>
+      <div class="saved-bottom">
+        <span class="saved-time">Sketched Saved · ${data.dateStamped}</span>
+        <button type="button" class="slot-erase-action" data-purge-target="${idx}" aria-label="Erase scenario data from page slot 0${idx}" title="Erase this saved Sketch">Erase Slot</button>
+      </div>
+    `;
+  }
+
+  // Master UI Synchronization Renderer Block
+  function syncDesktopSketchbookUI() {
+    for (let idx = 1; idx <= 4; idx++) {
+      const data = SketchbookDatabase['slot' + idx];
+      const targetTile = document.getElementById('tile-slot-' + idx);
+      const targetContent = document.getElementById('tile-content-' + idx);
+      if (!targetTile) continue;
+
+      targetTile.className = 'page-slot-tile';
+      targetTile.classList.toggle('locked', idx > 1 && !AppSessionState.userHasPremiumToken);
+      targetTile.classList.toggle('has-profile', !!data);
+      targetTile.classList.toggle('active-sketch', !!data && AppSessionState.activeSketchSlot === idx);
+      targetTile.title = data ? 'Click to select · then Open Sketch to reload' : '';
+
+      if (data) {
+        targetTile.style.borderColor = data.stateColor;
+        targetContent.innerHTML = renderSavedSlot(idx, data);
+      } else {
+        targetTile.style.borderColor = '';
+        targetContent.innerHTML = renderEmptySlot(idx);
+      }
+    }
+    
+    bindEraseActionListeners();
+    updateSketchbookIndex();
+  }
+
+  function makeSavePayload() {
+    const source = AppSessionState.mockCanvasParameters;
+    const mapped = STATE_BRAND_MAP[source.resolvedState] || STATE_BRAND_MAP.EXPANSIVE;
+
+    return {
+      age: source.age,
+      retire: source.retireAge,
+      port: source.portfolioMass,
+      contrib: source.contributions,
+      datum: source.datumSpend,
+      stateName: source.resolvedState,
+      stateColor: mapped.color,
+      dateStamped: getFormattedCurrentDate(),
+      timeStamped: getFormattedTime()
+    };
+  }
+
+  function executeSavePayloadToSlot(slotId, payload) {
+    SketchbookDatabase['slot' + slotId] = payload || makeSavePayload();
+    AppSessionState.activeSketchSlot = Number(slotId);
+    syncDesktopSketchbookUI();
+    showSketchToast(`Sketch saved to Page 0${slotId}.`);
+  }
+
+  // Intercept Erase Event Triggers to call confirmation layer modals system dialogue box
+  function bindEraseActionListeners() {
+    document.querySelectorAll('.slot-erase-action').forEach(btn => {
+      btn.onclick = function(e) {
+         e.stopPropagation(); 
+         AppSessionState.activeTargetPurgeId = this.dataset.purgeTarget;
+         document.getElementById('delete-confirm-modal').classList.add('open');
+      };
+    });
+  }
+
+  // Tactile Pink Art-Gum Eraser Scrubbing Visual Wiping Execution Flow 
+  function proceedWithEraseSequence() {
+     const targetId = AppSessionState.activeTargetPurgeId;
+     if (!targetId) return;
+
+     const tile = document.getElementById('tile-slot-' + targetId);
+     if (tile) {
+        tile.classList.add('slot-erasing');
+        
+        setTimeout(() => {
+           SketchbookDatabase['slot' + targetId] = null;
+           _clearLsSlot(Number(targetId));
+           if (AppSessionState.activeSketchSlot === Number(targetId)) {
+             AppSessionState.activeSketchSlot = firstSavedSketchSlot() || 1;
+           }
+           tile.classList.remove('slot-erasing');
+           AppSessionState.activeTargetPurgeId = null;
+           syncDesktopSketchbookUI();
+           showSketchToast(`Page 0${targetId} erased.`);
+           // Auto-complete pending capacity save after erase
+           if (AppSessionState._pendingCapacitySave) {
+             AppSessionState._pendingCapacitySave = false;
+             var _pSnap = null;
+             try { _pSnap = JSON.parse(sessionStorage.getItem('datumfi_sketch_current_snapshot') || 'null'); } catch(ex) {}
+             if (_pSnap) {
+               var _lsD = null;
+               try { _lsD = JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch(ex) { _lsD = {}; }
+               _lsD.slot_1 = _pSnap;
+               try { localStorage.setItem(LS_KEY, JSON.stringify(_lsD)); } catch(ex) {}
+               executeSavePayloadToSlot(1, _contractToSlot(_pSnap));
+             }
+           }
+        }, 750);
+     } else {
+        SketchbookDatabase['slot' + targetId] = null;
+        _clearLsSlot(Number(targetId));
+        if (AppSessionState.activeSketchSlot === Number(targetId)) {
+          AppSessionState.activeSketchSlot = firstSavedSketchSlot() || 1;
+        }
+        AppSessionState.activeTargetPurgeId = null;
+        syncDesktopSketchbookUI();
+        showSketchToast(`Page 0${targetId} erased.`);
+        // Auto-complete pending capacity save after erase
+        if (AppSessionState._pendingCapacitySave) {
+          AppSessionState._pendingCapacitySave = false;
+          var _pSnap = null;
+          try { _pSnap = JSON.parse(sessionStorage.getItem('datumfi_sketch_current_snapshot') || 'null'); } catch(ex) {}
+          if (_pSnap) {
+            var _lsD = null;
+            try { _lsD = JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch(ex) { _lsD = {}; }
+            _lsD.slot_1 = _pSnap;
+            try { localStorage.setItem(LS_KEY, JSON.stringify(_lsD)); } catch(ex) {}
+            executeSavePayloadToSlot(1, _contractToSlot(_pSnap));
+          }
+        }
+     }
+  }
+
+  // Initialize Tile Action Interceptors
+  document.querySelectorAll('.page-slot-tile').forEach(tile => {
+    tile.addEventListener('click', function() {
+      const activeSlotId = parseInt(this.dataset.slotId, 10);
+      const isLocked = activeSlotId > 1 && !AppSessionState.userHasPremiumToken;
+      
+      if (isLocked) {
+         document.getElementById('premium-gate-modal').classList.add('open');
+         return;
+      }
+
+      if (this.classList.contains('has-profile')) {
+         const wasSelected = this.classList.contains('selected');
+         AppSessionState.activeSketchSlot = activeSlotId;
+         syncDesktopSketchbookUI();
+         if (!wasSelected) {
+           this.classList.add('selected');
+           document.getElementById('action-open-sketch').classList.add('action-active');
+           showSketchToast(`Page 0${activeSlotId} selected. Ready to reopen in Sketch.`);
+         }
+      } else {
+         var _snap = null;
+         try { _snap = JSON.parse(sessionStorage.getItem('datumfi_sketch_current_snapshot') || 'null'); } catch(ex) {}
+         if (_snap) {
+           executeSavePayloadToSlot(activeSlotId, _contractToSlot(_snap));
+         } else {
+           showSketchToast('Return to Sketch to save a new shape →');
+         }
+      }
+    });
+  });
+
+  // Action Triggers Navigation Core Interceptors Linkages
+  document.getElementById('action-dismiss-modal').addEventListener('click', () => {
+     document.getElementById('premium-gate-modal').classList.remove('open');
+  });
+
+  document.getElementById('action-upgrade').addEventListener('click', () => {
+     AppSessionState.userHasPremiumToken = true;
+     document.getElementById('premium-gate-modal').classList.remove('open');
+     syncDesktopSketchbookUI();
+     showSketchToast('Design capacity unlocked for this demo.');
+  });
+
+  document.getElementById('action-return-canvas').addEventListener('click', () => {
+     var _retScreen = sessionStorage.getItem('datumfi_sketch_return_screen') || '';
+     sessionStorage.removeItem('datumfi_sketch_return_screen');
+     window.location.href = '/sketch.html' + _retScreen;
+  });
+
+
+  document.getElementById('action-save-current-sketch').addEventListener('click', () => {
+    var _snap = null;
+    try { _snap = JSON.parse(sessionStorage.getItem('datumfi_sketch_current_snapshot') || 'null'); } catch(ex) {}
+    if (!_snap) {
+      showSketchToast('Return to Sketch to save a new shape →');
+      return;
+    }
+    if (SketchbookDatabase.slot1 && !AppSessionState.userHasPremiumToken) {
+      AppSessionState._pendingCapacitySave = true;
+      document.getElementById('discover-capacity-modal').classList.add('open');
+      return;
+    }
+    executeSavePayloadToSlot(1, _contractToSlot(_snap));
+  });
+
+  document.getElementById('action-later-capacity').addEventListener('click', () => {
+    document.getElementById('discover-capacity-modal').classList.remove('open');
+    AppSessionState._pendingCapacitySave = false;
+  });
+
+  document.getElementById('action-upgrade-capacity').addEventListener('click', () => {
+    document.getElementById('discover-capacity-modal').classList.remove('open');
+    window.location.href = '/design-mode.html';
+  });
+
+  document.getElementById('action-erase-save-new').addEventListener('click', () => {
+    document.getElementById('discover-capacity-modal').classList.remove('open');
+    AppSessionState.activeTargetPurgeId = '1';
+    AppSessionState._pendingCapacitySave = true;
+    document.getElementById('delete-confirm-modal').classList.add('open');
+  });
+
+  document.getElementById('action-compare-sketches').addEventListener('click', openSketchCompareModal);
+
+  document.getElementById('action-open-sketch').addEventListener('click', () => {
+     sessionStorage.setItem('datumfi_hydrate_from_slot', String(AppSessionState.activeSketchSlot || 1));
+     window.location.href = '/sketch.html';
+  });
+
+  document.getElementById('action-close-compare-sketch').addEventListener('click', () => {
+     document.getElementById('compare-sketch-modal').classList.remove('open');
+  });
+
+  document.getElementById('action-cancel-erase').addEventListener('click', () => {
+     document.getElementById('delete-confirm-modal').classList.remove('open');
+     AppSessionState.activeTargetPurgeId = null;
+  });
+
+  document.getElementById('action-confirm-erase').addEventListener('click', () => {
+     document.getElementById('delete-confirm-modal').classList.remove('open');
+     proceedWithEraseSequence();
+  });
+
+  document.getElementById('compare-sketch-modal').addEventListener('click', event => {
+     if (event.target.id === 'compare-sketch-modal') {
+       document.getElementById('compare-sketch-modal').classList.remove('open');
+     }
+  });
+
+  // Handle Input text backup configuration title states automatically on click bounds focus
+  const inputTitleEl = document.getElementById('editable-notebook-title');
+  inputTitleEl.addEventListener('click', function() {
+    if (this.value === 'My Sketchbook') {
+      this.value = '';
+    }
+  });
+  inputTitleEl.addEventListener('blur', function() {
+    if (this.value.trim() === '') this.value = 'My Sketchbook';
+    _updateLsTitle(this.value);
+  });
+
+  // Hydrate from localStorage (written by sketch.html "Save to Sketchbook →")
+  (function() {
+    var lsData = null;
+    try { lsData = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch(e) {}
+    if (lsData && lsData.slot_1) {
+      SketchbookDatabase.slot1 = _contractToSlot(lsData.slot_1);
+      var titleEl = document.getElementById('editable-notebook-title');
+      if (titleEl && lsData.sketchbook_title) titleEl.value = lsData.sketchbook_title;
+    }
+    AppSessionState.activeSketchSlot = 1;
+    if (sessionStorage.getItem('datumfi_just_saved')) {
+      sessionStorage.removeItem('datumfi_just_saved');
+      setTimeout(function() { showSketchToast('Saved to this device · Log in for permanent storage'); }, 5000);
+    }
+  })();
+
+
+  /* ── V6 ERASE INTERACTION FIX
+     Delegated capture listener catches Erase even if the slot has been
+     re-rendered or another tile listener would otherwise handle the click. */
+  document.addEventListener('click', function(e) {
+    const eraseButton = e.target.closest && e.target.closest('.slot-erase-action');
+    if (!eraseButton) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    AppSessionState.activeTargetPurgeId = eraseButton.dataset.purgeTarget;
+    const modal = document.getElementById('delete-confirm-modal');
+    if (modal) modal.classList.add('open');
+  }, true);
+  /* ── END V6 ERASE INTERACTION FIX ── */
+
+
+  /* ── V12 HARDEN ERASE CONFIRMATION
+     Guarantees that clicking Erase Slot opens the warning modal even after
+     visual-layer changes. Uses capture + closest() so decorative layers and
+     tile click handlers cannot intercept it first. */
+  document.addEventListener('click', function(event) {
+    const eraseButton = event.target.closest && event.target.closest('.slot-erase-action');
+    if (!eraseButton) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
+    AppSessionState.activeTargetPurgeId = eraseButton.dataset.purgeTarget;
+    const deleteModal = document.getElementById('delete-confirm-modal');
+    if (deleteModal) deleteModal.classList.add('open');
+  }, true);
+  /* ── END V12 HARDEN ERASE CONFIRMATION ── */
+
+  // Run initialization boot tracking sequence scripts
+  syncDesktopSketchbookUI();
+</script>
+</body>
+</html>

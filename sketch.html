@@ -1066,6 +1066,19 @@
 
   #p4-anim-wrap.state-bloom .pitch-below { opacity:1 !important; transform:translateY(0) !important; }
 
+  /* ── Overwrite-confirm modal (Phase A) ── */
+  .premium-soft-wall-mask { display:none; position:fixed; inset:0; background:rgba(9,18,33,0.92); backdrop-filter:blur(4px); z-index:var(--z-modal); align-items:center; justify-content:center; }
+  .premium-soft-wall-mask.open { display:flex; }
+  .modal-frame { max-width:420px; width:90%; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:36px 32px; animation:modal-slide 0.28s cubic-bezier(0.2,0.8,0.2,1); }
+  @keyframes modal-slide { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+  .modal-h2 { font-family:var(--font-mono); font-size:14px; letter-spacing:0.1em; text-transform:uppercase; color:var(--white); margin:0 0 12px 0; }
+  .modal-desc { font-family:var(--font-sans,sans-serif); font-size:13px; font-weight:300; line-height:1.6; color:rgba(255,255,255,0.6); margin:0 0 28px 0; }
+  .modal-actions-layout { display:flex; flex-direction:column; gap:10px; }
+  .modal-upgrade-cta { width:100%; height:48px; border-radius:4px; background:var(--gold); color:var(--bg-navy); border:none; font-family:var(--font-mono); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.12em; cursor:pointer; transition:opacity 0.18s; }
+  .modal-upgrade-cta:hover { opacity:0.85; }
+  .modal-dismiss-link { background:transparent; border:none; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:rgba(255,255,255,0.35); cursor:pointer; padding:8px 0; transition:color 0.18s; }
+  .modal-dismiss-link:hover { color:rgba(255,255,255,0.7); }
+
 </style>
 <style>
   [hidden] { display: none !important; }
@@ -1207,6 +1220,8 @@
     box-shadow: 0 0 40px rgba(201,168,76,0.25);
   }
   .cta-gold-primary:hover { box-shadow: 0 0 60px rgba(201,168,76,0.5); }
+  .cta-primary-text { display: block; }
+  .cta-secondary-text { display: block; font-size: 9px; font-weight: 500; letter-spacing: 0.08em; text-transform: none; opacity: 0.55; margin-top: 3px; }
 
   .cta-gold-secondary {
     display: inline-block;
@@ -2345,8 +2360,9 @@
         </div>
 
         <!-- CTA -->
-        <a id="studio-cta-main" href="/studio-showcase.html" class="cta-gold-primary">
-          See If This Shape Holds →
+        <a id="studio-cta-main" href="#" class="cta-gold-primary" style="text-align:center;">
+          <span class="cta-primary-text">Save to Sketchbook →</span>
+          <span class="cta-secondary-text">See If This Shape Holds</span>
         </a>
 
         <!-- Social proof puncher -->
@@ -2383,6 +2399,18 @@
         <a href="mailto:accessibility@datumfi.com">Accessibility</a> &nbsp;|&nbsp;
         Build 2026.05.09 &bull; v3.2.4
       </p>
+    </div>
+  </div>
+
+  <!-- Sketchbook overwrite confirm modal -->
+  <div class="premium-soft-wall-mask" id="sketch-overwrite-modal">
+    <div class="modal-frame">
+      <h2 class="modal-h2">Overwrite Sketch?</h2>
+      <p class="modal-desc">You already have a saved sketch. This will replace it with your current design.</p>
+      <div class="modal-actions-layout">
+        <button class="modal-upgrade-cta" id="sketch-overwrite-confirm" type="button">Overwrite →</button>
+        <button class="modal-dismiss-link" id="sketch-overwrite-cancel" type="button">Keep Existing</button>
+      </div>
     </div>
   </div>
 
@@ -6436,6 +6464,10 @@
       _d2LastScenario.targetSpend = Math.round(dDatum);
       var _d2ValDatEl = document.getElementById('d2-val-datum');
       if (_d2ValDatEl) { var _dDRnd = Math.round(dDatum); _d2ValDatEl.textContent = (_dDRnd >= 1000 ? '$' + (_dDRnd/1000).toFixed(2).replace(/\.00$/,'') + 'M' : '$' + _dDRnd + 'k') + ' / yr'; }
+      var _d2LblCeilEl = document.getElementById('d2-lbl-ceil');
+      if (_d2LblCeilEl) { var _dCRnd = Math.round(dCeil); _d2LblCeilEl.textContent = 'CEILING — ' + (_dCRnd >= 1000 ? '$'+(_dCRnd/1000).toFixed(1)+'M' : '$'+_dCRnd+'k') + '/yr'; }
+      var _d2LblFloorEl = document.getElementById('d2-lbl-floor');
+      if (_d2LblFloorEl) { var _dFRnd = Math.round(dFloor); _d2LblFloorEl.textContent = 'FLOOR — ' + (_dFRnd >= 1000 ? '$'+(_dFRnd/1000).toFixed(1)+'M' : '$'+_dFRnd+'k') + '/yr'; }
 
       // SVG path updates
       var _sa = function(id, attr, val) { var el = document.getElementById(id); if (el) el.setAttribute(attr, val); };
@@ -7029,7 +7061,7 @@
       const retire = parseInt(document.getElementById('slider-activation').value, 10);
       const port   = Math.round(readPort() / 1000);
       const params = `?ceil=${dc}&datum=${dd}&floor=${df}&age=${age}&retire=${retire}&port=${port}k`;
-      ['studio-cta-link','studio-cta-main'].forEach(id => {
+      ['studio-cta-link'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.href = '/studio-showcase.html' + params;
       });
@@ -9929,6 +9961,153 @@ Studio is built for exactly this. See If This Shape Holds →`;
 
       d2Canvas.addEventListener('pointerleave', d2HideScrubber);
     })();
+
+    // ── PHASE A: SKETCHBOOK SAVE ──────────────────────────────────────────
+    function generateUUID() {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+      }
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+      });
+    }
+
+    function serializeSketchState() {
+      var dc = currentScenario._designedCeil  || (lastCalculatedPoints || {}).ceilSpend  || 0;
+      var dd = currentScenario._designedDatum || currentScenario.targetSpend             || 0;
+      var df = currentScenario._designedFloor || (lastCalculatedPoints || {}).floorSpend || 0;
+      var stObj = getShapeStateObj({ ceilSpend: dc, datumSpend: dd, floorSpend: df });
+      var now  = new Date();
+      var mm   = String(now.getMonth() + 1).padStart(2, '0');
+      var ddS  = String(now.getDate()).padStart(2, '0');
+      return {
+        sketch_id:      generateUUID(),
+        version:        '1.0.0',
+        saved_at:       now.toISOString(),
+        age:            currentScenario.currentAge,
+        retire_age:     currentScenario.activationAge,
+        portfolio_mass: Math.round((currentScenario.portfolioVol || 0) * 1000000),
+        contributions:  Math.round(currentScenario.annualContrib  || 0),
+        datum_spend:    Math.round(dd * 1000),
+        designed_ceil:  Math.round(dc * 1000),
+        designed_datum: Math.round(dd * 1000),
+        designed_floor: Math.round(df * 1000),
+        resolved_state: stObj.name  || 'EXPANSIVE',
+        state_color:    stObj.color || 'var(--teal-brand)',
+        date_stamped:   mm + '/' + ddS + '/' + now.getFullYear(),
+        time_stamped:   now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      };
+    }
+
+    (function() {
+      var _ctaMain = document.getElementById('studio-cta-main');
+      if (!_ctaMain) return;
+      var LS_KEY = 'datumfi_sketchbook_v1';
+
+      function _doSave() {
+        var prev = null;
+        try { prev = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch(ex) {}
+        var payload = serializeSketchState();
+        var now = new Date();
+        var mm  = String(now.getMonth() + 1).padStart(2, '0');
+        var ddS = String(now.getDate()).padStart(2, '0');
+        var data = {
+          sketchbook_title: (prev && prev.sketchbook_title) || ('Sketch from ' + mm + '/' + ddS + '/' + now.getFullYear()),
+          slot_1: payload
+        };
+        try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch(ex) {}
+        sessionStorage.setItem('datumfi_just_saved', '1');
+        sessionStorage.setItem('datumfi_sketch_return_screen', window.location.hash || '#screen-5-build');
+        sessionStorage.setItem('datumfi_sketch_current_snapshot', JSON.stringify(payload));
+        window.location.href = '/sketchbook.html';
+      }
+
+      _ctaMain.addEventListener('click', function(e) {
+        e.preventDefault();
+        var existing = null;
+        try { existing = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch(ex) {}
+        if (existing && existing.slot_1) {
+          var modal = document.getElementById('sketch-overwrite-modal');
+          if (modal) { modal.classList.add('open'); return; }
+        }
+        _doSave();
+      });
+
+      var _confirmBtn = document.getElementById('sketch-overwrite-confirm');
+      if (_confirmBtn) _confirmBtn.addEventListener('click', function() {
+        var modal = document.getElementById('sketch-overwrite-modal');
+        if (modal) modal.classList.remove('open');
+        _doSave();
+      });
+
+      var _cancelBtn = document.getElementById('sketch-overwrite-cancel');
+      if (_cancelBtn) _cancelBtn.addEventListener('click', function() {
+        var modal = document.getElementById('sketch-overwrite-modal');
+        if (modal) modal.classList.remove('open');
+      });
+    })();
+    // ── END PHASE A: SKETCHBOOK SAVE ─────────────────────────────────────
+
+    // ── PHASE A: OPEN SKETCH HYDRATION ───────────────────────────────────
+    (function() {
+      var _hydrateSlot = sessionStorage.getItem('datumfi_hydrate_from_slot');
+      if (!_hydrateSlot) return;
+      sessionStorage.removeItem('datumfi_hydrate_from_slot');
+      var _lsData = null;
+      try { _lsData = JSON.parse(localStorage.getItem('datumfi_sketchbook_v1') || 'null'); } catch(ex) {}
+      var _contract = _lsData && _lsData.slot_1;
+      if (!_contract) return;
+
+      var _slAge     = document.getElementById('slider-age');
+      var _slAct     = document.getElementById('slider-activation');
+      var _slPort    = document.getElementById('slider-portfolio');
+      var _slContrib = document.getElementById('slider-contrib');
+      var _slDatum   = document.getElementById('slider-datum');
+      if (!_slAge || !_slAct || !_slPort || !_slContrib || !_slDatum) return;
+
+      if (_contract.age) {
+        _slAge.value = _contract.age;
+        var _vAge = document.getElementById('val-age');
+        if (_vAge) _vAge.textContent = _contract.age;
+      }
+      if (_contract.retire_age) {
+        _slAct.value = _contract.retire_age;
+        var _vAct = document.getElementById('val-activation');
+        if (_vAct) _vAct.textContent = _contract.retire_age;
+      }
+      if (_contract.portfolio_mass) {
+        var _portM = _contract.portfolio_mass / 1000000;
+        _slPort.value = portValToPos(_portM);
+        _slPort.dataset.exactVal = _contract.portfolio_mass;
+        var _vPort = document.getElementById('val-portfolio');
+        if (_vPort) _vPort.textContent = _portM >= 1 ? '$' + _portM.toFixed(2).replace(/\.?0+$/, '') + 'M' : '$' + Math.round(_portM * 1000) + 'k';
+      }
+      if (_contract.contributions !== undefined) {
+        _slContrib.value = contribValToPos(_contract.contributions);
+        _slContrib.dataset.exactVal = _contract.contributions;
+        var _vContrib = document.getElementById('val-contrib');
+        if (_vContrib) _vContrib.textContent = '$' + Math.round(_contract.contributions / 1000) + 'k/yr';
+      }
+      if (_contract.datum_spend) {
+        var _datumK = _contract.datum_spend / 1000;
+        _slDatum.value = datumValToPos(_datumK);
+        _slDatum.dataset.exactVal = _contract.datum_spend;
+        var _vDatum = document.getElementById('val-datum');
+        if (_vDatum) _vDatum.textContent = '$' + Math.round(_datumK) + 'k/yr';
+      }
+
+      try { updateEngine(); } catch(ex) {}
+      // Deferred re-stamp: updateEngine() may schedule async handlers that recompute exactVals
+      ;(function(_pM, _cV, _dS, _slP, _slC, _slD) {
+        setTimeout(function() {
+          if (_pM) _slP.dataset.exactVal = _pM;
+          if (_cV !== undefined) _slC.dataset.exactVal = _cV;
+          if (_dS) _slD.dataset.exactVal = _dS;
+        }, 100);
+      })(_contract.portfolio_mass, _contract.contributions, _contract.datum_spend, _slPort, _slContrib, _slDatum);
+    })();
+    // ── END PHASE A: OPEN SKETCH HYDRATION ───────────────────────────────
 </script>
 </body>
 </html>
