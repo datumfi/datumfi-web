@@ -108,7 +108,10 @@
     // handled server-side. Hint is cleared on sign-out.
     if (sessionStorage.getItem('datum_auth_hint')) {
       var loginLinks = document.querySelectorAll('.nav-login-btn, .nav-mobile-login');
-      loginLinks.forEach(function(el) { el.textContent = 'Account'; });
+      loginLinks.forEach(function(el) {
+        el.textContent = 'My Account';
+        el.setAttribute('href', '/my-account.html');
+      });
     }
   });
 })();

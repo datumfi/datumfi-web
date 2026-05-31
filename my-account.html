@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#091221">
+<meta name="robots" content="noindex, nofollow">
+<!-- Flash prevention: body stays hidden until Clerk confirms session -->
+<style>body { visibility: hidden; }</style>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://alive-reindeer-79.clerk.accounts.dev https://eu.i.posthog.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://img.clerk.com; connect-src 'self' https://api.datumfi.com https://alive-reindeer-79.clerk.accounts.dev https://api.clerk.com https://eu.i.posthog.com; frame-src https://alive-reindeer-79.clerk.accounts.dev https://accounts.google.com https://appleid.apple.com; worker-src 'self' blob:;">
+<title>Datum FI — My Account</title>
+<meta name="description" content="Your Datum FI workspace. Access your saved Sketches and Blueprints.">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<!-- Clerk JS — must load before auth gate script runs -->
+<script
+  async
+  crossorigin="anonymous"
+  data-clerk-publishable-key="pk_test_YWxpdmUtcmVpbmRlZXItNzkuY2xlcmsuYWNjb3VudHMuZGV2JA"
+  src="https://alive-reindeer-79.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+  type="text/javascript"
+></script>
+
+<!-- Account topbar — loads deferred so it mounts after DOM parse -->
+<script defer src="/scripts/account-topbar.js"></script>
+
+<!-- Auth gate + hash router -->
+<!-- Fires on window.load so Clerk has time to complete afterSignInUrl
+     handshake exchange before session is checked. Uses Clerk.isSignedIn
+     (boolean) not Clerk.user (can be undefined during loading). -->
+<script>
+(function () {
+  'use strict';
+
+  function redirectToVault() {
+    window.location.replace('/vault.html');
+  }
+
+  function revealBody() {
+    document.body.style.visibility = '';
+  }
+
+  function populateGreeting() {
+    try {
+      var firstName = Clerk.user.firstName;
+      var email = Clerk.user.primaryEmailAddress
+        && Clerk.user.primaryEmailAddress.emailAddress;
+      var name = firstName || (email ? email.split('@')[0] : '');
+      var el = document.getElementById('acct-greeting-name');
+      if (el && name) el.textContent = 'Hello, ' + name;
+    } catch (e) { /* non-fatal — greeting stays as default */ }
+  }
+
+  function showSection(which) {
+    var profileEl    = document.getElementById('acct-profile-section');
+    var blueprintsEl = document.getElementById('acct-blueprints-section');
+    if (profileEl)    profileEl.style.display    = which === 'profile'    ? '' : 'none';
+    if (blueprintsEl) blueprintsEl.style.display = which === 'blueprints' ? '' : 'none';
+  }
+
+  function initHashRouter() {
+    function handleHash() {
+      var hash = window.location.hash.replace('#', '') || 'profile';
+      switch (hash) {
+        case 'sketches':
+          window.location.href = '/sketchbook.html?context=account';
+          return;
+        case 'blueprints':
+          showSection('blueprints');
+          break;
+        case 'sketch':
+          window.location.href = '/sketch.html';
+          return;
+        case 'studio':
+          window.location.href = '/studio-showcase.html';
+          return;
+        case 'shape':
+          window.location.href = '/why-a-range.html';
+          return;
+        case 'profile':
+        default:
+          showSection('profile');
+          break;
+      }
+    }
+    window.addEventListener('hashchange', handleHash);
+    handleHash();
+  }
+
+  function onSessionConfirmed() {
+    sessionStorage.setItem('datum_auth_hint', '1');
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function () {
+        populateGreeting();
+        revealBody();
+        initHashRouter();
+      });
+    } else {
+      populateGreeting();
+      revealBody();
+      initHashRouter();
+    }
+  }
+
+  // window.load guarantees all resources (including async Clerk SDK) are
+  // settled and Clerk has finished exchanging the afterSignInUrl handshake
+  // token with its API before we check session state.
+  window.addEventListener('load', function () {
+    Clerk.load().then(function () {
+      if (Clerk.isSignedIn) {
+        onSessionConfirmed();
+      } else {
+        redirectToVault();
+      }
+    }).catch(redirectToVault);
+  });
+})();
+</script>
+
+<style>
+  :root {
+    --bg-navy:   #091221;
+    --teal:      #1D9E75;
+    --teal-mid:  #5DCAA5;
+    --gold:      #C9A84C;
+    --white:     #ffffff;
+    --font-serif: 'Fraunces', Georgia, serif;
+    --font-mono:  'DM Mono', monospace;
+    --font-sans:  'DM Sans', system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg-navy);
+    color: var(--white);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  /* ── Page shell — sits below fixed 64px topbar ── */
+  .acct-shell {
+    min-height: 100vh;
+    padding: 96px 40px 80px;
+    background:
+      radial-gradient(circle at 50% 28%, rgba(93,202,165,.045), transparent 42%),
+      radial-gradient(circle at 82% 78%, rgba(201,168,76,.025), transparent 30%),
+      var(--bg-navy);
+  }
+
+  .acct-section {
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  /* ── Welcome panel ── */
+  .acct-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.32);
+    margin: 0 0 18px;
+  }
+
+  #acct-greeting-name {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: clamp(36px, 5vw, 56px);
+    font-weight: 300;
+    color: rgba(255,255,255,.92);
+    margin: 0 0 18px;
+    letter-spacing: -.01em;
+  }
+
+  .acct-subtext {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    color: rgba(255,255,255,.42);
+    line-height: 1.65;
+    margin: 0 0 52px;
+    max-width: 500px;
+  }
+
+  /* ── Action cards ── */
+  .acct-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
+  .acct-action-card {
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 8px;
+    padding: 28px 22px 24px;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: border-color .2s, background .2s;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    font-family: inherit;
+  }
+
+  .acct-action-card:hover {
+    border-color: rgba(93,202,165,.28);
+    background: rgba(93,202,165,.04);
+  }
+
+  .acct-action-card.coming-soon {
+    opacity: .48;
+    cursor: default;
+  }
+
+  .acct-action-card.coming-soon:hover {
+    border-color: rgba(255,255,255,.08);
+    background: rgba(255,255,255,.03);
+  }
+
+  .acct-card-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: .18em;
+    color: rgba(255,255,255,.26);
+    margin: 0 0 10px;
+  }
+
+  .acct-card-title {
+    font-family: var(--font-serif);
+    font-size: 20px;
+    font-weight: 400;
+    color: rgba(255,255,255,.86);
+    margin: 0 0 10px;
+  }
+
+  .acct-card-desc {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: rgba(255,255,255,.36);
+    line-height: 1.55;
+    margin: 0 0 22px;
+  }
+
+  .acct-card-cta {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    color: var(--teal-mid);
+    display: block;
+  }
+
+  .acct-action-card.coming-soon .acct-card-cta {
+    color: rgba(255,255,255,.22);
+  }
+
+  /* ── Blueprints coming-soon panel ── */
+  .acct-coming-panel {
+    padding-top: 24px;
+  }
+
+  .acct-coming-title {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: clamp(28px, 4vw, 42px);
+    font-weight: 300;
+    color: rgba(255,255,255,.75);
+    margin: 0 0 16px;
+  }
+
+  .acct-coming-desc {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: rgba(255,255,255,.38);
+    line-height: 1.65;
+    margin: 0 0 36px;
+    max-width: 440px;
+  }
+
+  .acct-back-btn {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    color: var(--teal-mid);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: opacity .18s;
+  }
+
+  .acct-back-btn:hover { opacity: .7; }
+
+  /* ── Responsive ── */
+  @media (max-width: 820px) {
+    .acct-cards { grid-template-columns: 1fr 1fr; }
+    .acct-action-card.coming-soon { grid-column: 1 / -1; }
+  }
+
+  @media (max-width: 520px) {
+    .acct-shell { padding: 88px 20px 60px; }
+    .acct-cards { grid-template-columns: 1fr; }
+    .acct-action-card.coming-soon { grid-column: auto; }
+  }
+</style>
+</head>
+
+<body>
+
+<main class="acct-shell">
+
+  <!-- Profile / Welcome section (default landing view) -->
+  <section id="acct-profile-section" class="acct-section" aria-label="Welcome">
+    <p class="acct-eyebrow">Welcome Back</p>
+    <h1 id="acct-greeting-name">Hello</h1>
+    <p class="acct-subtext">Your workspace. Saved Sketches and Blueprints live here&nbsp;&middot; or jump straight into a live experience.</p>
+
+    <div class="acct-cards" role="list">
+
+      <a href="/sketchbook.html?context=account" class="acct-action-card" role="listitem">
+        <p class="acct-card-eyebrow">Saved Work</p>
+        <p class="acct-card-title">The Sketchbook</p>
+        <p class="acct-card-desc">Your saved Sketch shapes. Open, compare, and continue from where you left off.</p>
+        <span class="acct-card-cta">Open Sketchbook &rarr;</span>
+      </a>
+
+      <button type="button" class="acct-action-card coming-soon" role="listitem" id="acct-card-blueprints" onclick="window.location.hash='#blueprints'">
+        <p class="acct-card-eyebrow">Studio Output</p>
+        <p class="acct-card-title">Blueprint Archive</p>
+        <p class="acct-card-desc">Saved Studio runs. Named, filed, and ready to compare or promote.</p>
+        <span class="acct-card-cta">Coming next dispatch</span>
+      </button>
+
+      <a href="/studio-showcase.html" class="acct-action-card" role="listitem">
+        <p class="acct-card-eyebrow">Live Experience</p>
+        <p class="acct-card-title">The Studio</p>
+        <p class="acct-card-desc">Run the Monte Carlo engine. Model your retirement spending range.</p>
+        <span class="acct-card-cta">Visit Studio &rarr;</span>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- Blueprints placeholder section (shown when #blueprints hash active) -->
+  <section id="acct-blueprints-section" class="acct-section" style="display:none" aria-label="Blueprint Archive">
+    <div class="acct-coming-panel">
+      <p class="acct-eyebrow">Blueprint Archive &middot; R3.5.5c</p>
+      <h2 class="acct-coming-title">Coming next dispatch.</h2>
+      <p class="acct-coming-desc">Blueprint Archive ships with R3.5.5c. Run the Studio and save a Blueprint first&nbsp;&mdash; it will appear here.</p>
+      <button type="button" class="acct-back-btn" onclick="window.location.hash='#profile'">
+        &larr; Back to Account
+      </button>
+    </div>
+  </section>
+
+</main>
+
+<script src="/nav.js"></script>
+</body>
+</html>

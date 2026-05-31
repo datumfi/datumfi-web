@@ -64,23 +64,14 @@
   /* --- BRAND HEADER --- */
   .brand-header {
     position: absolute; top: 40px; left: 40px;
-    display: inline-flex; align-items: baseline;
+    display: inline-flex; align-items: center; gap: 10px;
     text-decoration: none; user-select: none;
   }
-  .brand-datum {
-    font-family: var(--font-serif); font-size: 22px; font-weight: 300;
-    letter-spacing: 0.15em; color: var(--teal-mid);
-    position: relative; padding-bottom: 4px;
+  .brand-mark {
+    width: 28px; height: 28px; display: block; flex-shrink: 0;
   }
-  .brand-datum::after {
-    content: ''; position: absolute; bottom: 0; left: 4%; width: 92%; height: 2px;
-    background-color: var(--gold); border-radius: 2px;
-    box-shadow: 0 1px 4px rgba(201,168,76,0.4);
-  }
-  .brand-fi {
-    font-family: var(--font-mono); font-size: 16px; font-weight: 300;
-    letter-spacing: 0.1em; color: var(--teal-mid);
-    margin-left: 10px; transform: translateY(1px);
+  .brand-wordmark {
+    height: 20px; width: auto; display: block;
   }
 
   /* --- STATE PANELS --- */
@@ -235,8 +226,8 @@
 <body>
 
   <a href="/" class="brand-header">
-    <span class="brand-datum">DATUM</span>
-    <span class="brand-fi">FI</span>
+    <img src="/brand/datumfi-mark-d.svg" class="brand-mark" alt="" aria-hidden="true" width="28" height="28">
+    <img src="/brand/datumfi-wordmark-atum-fi.svg" class="brand-wordmark" alt="Datum FI">
   </a>
 
   <!-- LOADING — shown while Clerk initializes -->
@@ -323,6 +314,8 @@
         initiated = true;
 
         Clerk.load({
+          afterSignInUrl: '/my-account.html',
+          afterSignUpUrl: '/my-account.html',
           signInFallbackRedirectUrl: '/vault.html',
           signUpFallbackRedirectUrl: '/vault.html',
           appearance: {
@@ -348,11 +341,10 @@
           if (loading) loading.style.display = 'none';
 
           if (Clerk.user) {
+            // datum_auth_hint must be set BEFORE redirect so nav.js
+            // auth-hint cascade works on the destination page.
             sessionStorage.setItem('datum_auth_hint', '1');
-            var addr = Clerk.user.primaryEmailAddress;
-            var emailEl = document.getElementById('signed-in-email');
-            if (emailEl && addr) emailEl.textContent = addr.emailAddress;
-            if (signedIn) signedIn.style.display = 'flex';
+            window.location.replace('/my-account.html');
           } else {
             if (signedOut) signedOut.style.display = 'flex';
             Clerk.mountSignIn(document.getElementById('clerk-sign-in'), {
