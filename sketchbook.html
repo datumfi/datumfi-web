@@ -2956,7 +2956,7 @@
   const AppSessionState = {
     userHasPremiumToken: false,
     activeTargetPurgeId: null,
-    activeSketchSlot: 1, 
+    activeSketchSlot: null,
     mockCanvasParameters: {
       age: 40, retireAge: 53,
       portfolioMass: 1400000, contributions: 48000, datumSpend: 108000,
@@ -3273,7 +3273,10 @@
            SketchbookDatabase['slot' + targetId] = null;
            _clearLsSlot(Number(targetId));
            if (AppSessionState.activeSketchSlot === Number(targetId)) {
-             AppSessionState.activeSketchSlot = firstSavedSketchSlot() || 1;
+             AppSessionState.activeSketchSlot = firstSavedSketchSlot() || null;
+             tile.classList.remove('selected');
+             var _ob = document.getElementById('action-open-sketch');
+             if (_ob) _ob.classList.remove('action-active');
            }
            tile.classList.remove('slot-erasing');
            AppSessionState.activeTargetPurgeId = null;
@@ -3297,7 +3300,11 @@
         SketchbookDatabase['slot' + targetId] = null;
         _clearLsSlot(Number(targetId));
         if (AppSessionState.activeSketchSlot === Number(targetId)) {
-          AppSessionState.activeSketchSlot = firstSavedSketchSlot() || 1;
+          AppSessionState.activeSketchSlot = firstSavedSketchSlot() || null;
+          var _erasedTile = document.getElementById('tile-slot-' + targetId);
+          if (_erasedTile) _erasedTile.classList.remove('selected');
+          var _ob2 = document.getElementById('action-open-sketch');
+          if (_ob2) _ob2.classList.remove('action-active');
         }
         AppSessionState.activeTargetPurgeId = null;
         syncDesktopSketchbookUI();
@@ -3403,9 +3410,26 @@
 
   document.getElementById('action-compare-sketches').addEventListener('click', openSketchCompareModal);
 
-  document.getElementById('action-open-sketch').addEventListener('click', () => {
-     sessionStorage.setItem('datumfi_hydrate_from_slot', String(AppSessionState.activeSketchSlot || 1));
-     window.location.href = '/sketch.html';
+  document.getElementById('action-open-sketch').addEventListener('click', function() {
+    var slotIdx = AppSessionState.activeSketchSlot;
+    if (!slotIdx || slotIdx < 1 || slotIdx > 4) {
+      showSketchToast('Select a saved Sketch first');
+      return;
+    }
+    var lsData = null;
+    try {
+      var raw = localStorage.getItem('datumfi_sketchbook_v1');
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        lsData = parsed['slot_' + slotIdx];
+      }
+    } catch(ex) {}
+    if (!lsData) {
+      showSketchToast('Selected slot is empty');
+      return;
+    }
+    sessionStorage.setItem('datumfi_hydrate_from_slot', String(slotIdx));
+    window.location.href = '/sketch.html';
   });
 
   document.getElementById('action-close-compare-sketch').addEventListener('click', () => {
@@ -3449,7 +3473,7 @@
       var titleEl = document.getElementById('editable-notebook-title');
       if (titleEl && lsData.sketchbook_title) titleEl.value = lsData.sketchbook_title;
     }
-    AppSessionState.activeSketchSlot = 1;
+    AppSessionState.activeSketchSlot = null;
     if (sessionStorage.getItem('datumfi_just_saved')) {
       sessionStorage.removeItem('datumfi_just_saved');
       setTimeout(function() { showSketchToast('Saved to this device · Log in for permanent storage'); }, 5000);
