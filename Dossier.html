@@ -1496,13 +1496,14 @@ const STORAGE_KEY="datumfi.accountDossier.v14";const $=id=>document.getElementBy
     if (document.getElementById('acct-signin-modal')) return;
     var m = document.createElement('div');
     m.id = 'acct-signin-modal';
-    m.style.cssText = 'position:fixed;inset:0;z-index:1100;display:none;place-items:center;'
-      + 'padding:30px;background:rgba(5,11,20,.84);backdrop-filter:blur(10px);';
+    m.style.cssText = 'position:fixed;inset:0;z-index:1100;display:none;place-items:start center;'
+      + 'overflow-y:auto;padding:30px;background:rgba(5,11,20,.84);backdrop-filter:blur(10px);';
     m.innerHTML = '<div style="width:min(760px,calc(100vw - 44px));border:1px solid rgba(255,255,255,.10);'
       + 'border-radius:18px;background:radial-gradient(circle at 20% 0,rgba(93,202,165,.10),transparent 34%),'
       + 'linear-gradient(180deg,rgba(13,26,46,.98),rgba(5,11,20,.98));'
-      + 'box-shadow:0 34px 90px rgba(0,0,0,.54);padding:24px;">'
-      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">'
+      + 'box-shadow:0 34px 90px rgba(0,0,0,.54);padding:24px;'
+      + 'max-height:calc(100vh - 60px);display:flex;flex-direction:column;">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-shrink:0;">'
       + '<span style="font-family:\'DM Mono\',monospace;font-size:11px;text-transform:uppercase;'
       + 'letter-spacing:.18em;color:rgba(255,255,255,.55);">Manage Sign In</span>'
       + '<button id="acct-signin-close" type="button" style="background:none;'
@@ -1510,7 +1511,7 @@ const STORAGE_KEY="datumfi.accountDossier.v14";const $=id=>document.getElementBy
       + 'font-family:\'DM Mono\',monospace;font-size:9px;letter-spacing:.12em;'
       + 'text-transform:uppercase;padding:4px 10px;cursor:pointer;">Close</button>'
       + '</div>'
-      + '<div id="acct-signin-mount" style="min-height:200px;"></div>'
+      + '<div id="acct-signin-mount" style="min-height:200px;flex:1;overflow-y:auto;"></div>'
       + '</div>';
     document.body.appendChild(m);
     document.getElementById('acct-signin-close').addEventListener('click', closeModal);
