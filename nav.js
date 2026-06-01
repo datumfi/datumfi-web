@@ -102,16 +102,20 @@
       if (mob) mob.style.display = '';
     }
 
-    // Cosmetic auth hint: show "Account" instead of "Login" when signed in.
-    // datum_auth_hint is a UI-only sessionStorage flag set by vault.html after
-    // Clerk confirms a valid session. Not a security gate — Studio gating is
-    // handled server-side. Hint is cleared on sign-out.
+    // Session-bound nav (F21 · Doctrine #11): when authenticated, inject 7-tab account
+    // topbar and suppress the anonymous nav. datum_auth_hint is a UI-only sessionStorage
+    // flag set by vault.html / account-shell pages after Clerk confirms a valid session.
+    // Not a security gate. Cleared on sign-out by account-topbar.js F4 handler.
     if (sessionStorage.getItem('datum_auth_hint')) {
-      var loginLinks = document.querySelectorAll('.nav-login-btn, .nav-mobile-login');
-      loginLinks.forEach(function(el) {
-        el.textContent = 'My Account';
-        el.setAttribute('href', '/my-account.html');
-      });
+      // Account-shell pages already declare account-topbar.js via <script defer> in source.
+      // Detect the tag to skip re-injection and avoid double-load.
+      if (!document.querySelector('script[src*="account-topbar.js"]')) {
+        var appNav = document.getElementById('app-nav');
+        if (appNav) appNav.style.display = 'none';
+        var _atScript = document.createElement('script');
+        _atScript.src = '/scripts/account-topbar.js';
+        document.head.appendChild(_atScript);
+      }
     }
   });
 })();

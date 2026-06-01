@@ -1482,6 +1482,100 @@ const STORAGE_KEY="datumfi.accountDossier.v14";const $=id=>document.getElementBy
   });
 })();
 </script>
+<script>
+// F18 — Manage Sign In · Dossier-specific credential management surface
+// Pill injects into .acct-topbar-right after account-topbar.js defer-mount + Clerk session confirm.
+// Timing dependency: .acct-topbar-right is created by account-topbar.js mount() which runs at
+// DOMContentLoaded via <script defer>. window.load fires after defer scripts, so
+// .acct-topbar-right is guaranteed present. If account-topbar.js loading pattern changes,
+// revisit this timing assumption.
+(function () {
+  'use strict';
+
+  function buildModal() {
+    if (document.getElementById('acct-signin-modal')) return;
+    var m = document.createElement('div');
+    m.id = 'acct-signin-modal';
+    m.style.cssText = 'position:fixed;inset:0;z-index:1100;display:none;place-items:center;'
+      + 'padding:30px;background:rgba(5,11,20,.84);backdrop-filter:blur(10px);';
+    m.innerHTML = '<div style="width:min(760px,calc(100vw - 44px));border:1px solid rgba(255,255,255,.10);'
+      + 'border-radius:18px;background:radial-gradient(circle at 20% 0,rgba(93,202,165,.10),transparent 34%),'
+      + 'linear-gradient(180deg,rgba(13,26,46,.98),rgba(5,11,20,.98));'
+      + 'box-shadow:0 34px 90px rgba(0,0,0,.54);padding:24px;">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">'
+      + '<span style="font-family:\'DM Mono\',monospace;font-size:11px;text-transform:uppercase;'
+      + 'letter-spacing:.18em;color:rgba(255,255,255,.55);">Manage Sign In</span>'
+      + '<button id="acct-signin-close" type="button" style="background:none;'
+      + 'border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.38);border-radius:3px;'
+      + 'font-family:\'DM Mono\',monospace;font-size:9px;letter-spacing:.12em;'
+      + 'text-transform:uppercase;padding:4px 10px;cursor:pointer;">Close</button>'
+      + '</div>'
+      + '<div id="acct-signin-mount" style="min-height:200px;"></div>'
+      + '</div>';
+    document.body.appendChild(m);
+    document.getElementById('acct-signin-close').addEventListener('click', closeModal);
+    m.addEventListener('click', function (e) { if (e.target === m) closeModal(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+  }
+
+  function openModal() {
+    var m = document.getElementById('acct-signin-modal');
+    if (!m) return;
+    m.style.display = 'grid';
+    var mt = document.getElementById('acct-signin-mount');
+    if (mt && window.Clerk && typeof Clerk.mountUserProfile === 'function') {
+      Clerk.mountUserProfile(mt, {
+        appearance: {
+          variables: {
+            colorBackground: '#0d1a2e',
+            colorText: 'rgba(255,255,255,.82)',
+            colorPrimary: '#1D9E75',
+            colorDanger: '#e24b4a',
+            fontFamily: '"DM Mono","DM Sans",system-ui,sans-serif'
+          }
+        }
+      });
+    }
+  }
+
+  function closeModal() {
+    var m = document.getElementById('acct-signin-modal');
+    if (!m) return;
+    m.style.display = 'none';
+    var mt = document.getElementById('acct-signin-mount');
+    if (mt && window.Clerk && typeof Clerk.unmountUserProfile === 'function') {
+      Clerk.unmountUserProfile(mt);
+    }
+  }
+
+  window.addEventListener('load', function () {
+    if (!window.Clerk) return;
+    Clerk.load().then(function () {
+      if (!Clerk.user) return;
+      var rightEl = document.querySelector('.acct-topbar-right');
+      if (!rightEl) return;
+      buildModal();
+      var pill = document.createElement('button');
+      pill.type = 'button';
+      pill.textContent = 'Manage Sign In';
+      pill.style.cssText = 'font-family:"DM Mono",monospace;font-size:9px;text-transform:uppercase;'
+        + 'letter-spacing:.13em;color:rgba(255,255,255,.38);background:none;'
+        + 'border:1px solid rgba(255,255,255,.12);cursor:pointer;padding:5px 10px;'
+        + 'border-radius:3px;transition:color .18s,border-color .18s;white-space:nowrap;';
+      pill.addEventListener('mouseenter', function () {
+        this.style.color = 'rgba(255,255,255,.72)';
+        this.style.borderColor = 'rgba(255,255,255,.28)';
+      });
+      pill.addEventListener('mouseleave', function () {
+        this.style.color = 'rgba(255,255,255,.38)';
+        this.style.borderColor = 'rgba(255,255,255,.12)';
+      });
+      pill.addEventListener('click', openModal);
+      rightEl.insertBefore(pill, rightEl.firstChild);
+    }).catch(function () {});
+  });
+})();
+</script>
 
 <script>
 (function(){

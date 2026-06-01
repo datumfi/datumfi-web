@@ -71,12 +71,24 @@
       + '  margin:0 8px;flex-shrink:0;'
       + '}'
       + '.acct-topbar-right{'
-      + '  flex-shrink:0;min-width:80px;display:flex;'
-      + '  align-items:center;justify-content:flex-end;'
+      + '  flex-shrink:0;display:flex;'
+      + '  align-items:center;justify-content:flex-end;gap:8px;'
       + '}'
+      + '.acct-action-btn{'
+      + '  font-family:"DM Mono",monospace;font-size:9px;'
+      + '  text-transform:uppercase;letter-spacing:.13em;'
+      + '  background:none;border:1px solid rgba(255,255,255,.12);'
+      + '  color:rgba(255,255,255,.38);cursor:pointer;'
+      + '  padding:5px 10px;border-radius:3px;'
+      + '  transition:color .18s,border-color .18s;white-space:nowrap;'
+      + '}'
+      + '.acct-action-btn:hover{color:rgba(255,255,255,.72);border-color:rgba(255,255,255,.28);}'
+      + '.acct-action-btn.acct-signout{color:rgba(226,75,74,.52);border-color:rgba(226,75,74,.20);}'
+      + '.acct-action-btn.acct-signout:hover{color:rgba(226,75,74,.85);border-color:rgba(226,75,74,.50);}'
       + '@media(max-width:720px){'
       + '  .acct-topbar-nav{display:none;}'
       + '  .acct-wordmark-img{height:15px;}'
+      + '  .acct-action-btn{font-size:8px;padding:4px 8px;}'
       + '}';
     document.head.appendChild(style);
   }
@@ -110,7 +122,10 @@
       +     makeTab('shape',   'Shape',   active)
       +   '</div>'
       + '</nav>'
-      + '<div class="acct-topbar-right"></div>'
+      + '<div class="acct-topbar-right">'
+      +   '<button type="button" class="acct-action-btn acct-signout"'
+      +   ' data-acct-action="signout" aria-label="Sign out of Datum FI">Sign Out</button>'
+      + '</div>'
       + '</header>';
   }
 
@@ -134,6 +149,7 @@
   }
 
   function mount() {
+    if (document.getElementById('acct-topbar')) return;
     injectCSS();
     var wrapper = document.createElement('div');
     wrapper.innerHTML = buildHTML(getActiveTab());
@@ -144,6 +160,17 @@
       btn.addEventListener('click', function () {
         handleTabClick(btn.getAttribute('data-acct-tab'));
       });
+    });
+
+    // F4 — Sign Out · graceful: Clerk not loaded on public pages (post-F21 Pattern B)
+    var _signOutBtn = topbarEl.querySelector('[data-acct-action="signout"]');
+    if (_signOutBtn) _signOutBtn.addEventListener('click', function () {
+      sessionStorage.removeItem('datum_auth_hint');
+      if (window.Clerk && typeof Clerk.signOut === 'function') {
+        Clerk.signOut().then(function () { window.location.href = '/index.html'; });
+      } else {
+        window.location.href = '/index.html';
+      }
     });
 
     if (onAccountPage) {
