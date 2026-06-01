@@ -1471,9 +1471,14 @@ const STORAGE_KEY="datumfi.accountDossier.v14";const $=id=>document.getElementBy
     } catch(e) { name = 'Architect'; }
   }
   titleEl.value = name + "'s Dossier";
-  titleEl.addEventListener('blur', function () {
+})();
+(function () {
+  var el = document.getElementById('dossierTitle');
+  if (!el) return;
+  el.addEventListener('blur', function () {
     var v = this.value.trim();
-    if (v && v !== 'My Account Dossier') localStorage.setItem('datum_dossier_title', v);
+    if (v === '') { this.value = 'My Account Dossier'; return; }
+    if (v !== 'My Account Dossier') localStorage.setItem('datum_dossier_title', v);
   });
 })();
 </script>
