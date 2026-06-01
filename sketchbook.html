@@ -3381,7 +3381,8 @@
      showSketchToast('Design capacity unlocked for this demo.');
   });
 
-  document.getElementById('action-return-canvas').addEventListener('click', () => {
+  var _retCanvasBtn = document.getElementById('action-return-canvas');
+  if (_retCanvasBtn) _retCanvasBtn.addEventListener('click', () => {
      var _retScreen = sessionStorage.getItem('datumfi_sketch_return_screen') || '';
      sessionStorage.removeItem('datumfi_sketch_return_screen');
      window.location.href = '/sketch.html' + _retScreen;
