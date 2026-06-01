@@ -1454,6 +1454,31 @@ const STORAGE_KEY="datumfi.accountDossier.v14";const $=id=>document.getElementBy
 </script>
 
 <script>
+// Personalized title default — F32
+(function () {
+  var titleEl = document.getElementById('dossierTitle');
+  if (!titleEl) return;
+  var override = localStorage.getItem('datum_dossier_title');
+  if (override) { titleEl.value = override; return; }
+  if (titleEl.value !== 'My Account Dossier') return;
+  var name = localStorage.getItem('datum_workspace_name');
+  if (!name) {
+    try {
+      var u = window.Clerk && window.Clerk.user;
+      var fn = u && u.firstName;
+      var em = u && u.primaryEmailAddress && u.primaryEmailAddress.emailAddress;
+      name = fn || (em ? em.split('@')[0] : '') || 'Architect';
+    } catch(e) { name = 'Architect'; }
+  }
+  titleEl.value = name + "'s Dossier";
+  titleEl.addEventListener('blur', function () {
+    var v = this.value.trim();
+    if (v && v !== 'My Account Dossier') localStorage.setItem('datum_dossier_title', v);
+  });
+})();
+</script>
+
+<script>
 (function(){
   const SKETCH_DEFAULTS = { salary:'$0', spouseIncome:'$0', retireAge:'65', planThrough:'105', datumDefault:'$100,000' };
   function byId(id){ return document.getElementById(id); }

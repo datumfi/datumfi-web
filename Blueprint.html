@@ -1606,13 +1606,15 @@ if (_retAccBtn) _retAccBtn.addEventListener('click', () => {
   showToast('Returning to My Account.');
 });
 
-document.getElementById('login-button').addEventListener('click', () => {
+var _loginBtn = document.getElementById('login-button');
+if (_loginBtn) _loginBtn.addEventListener('click', () => {
   AppSessionState.userHasPremiumToken = !AppSessionState.userHasPremiumToken;
   syncArchiveUI();
   showToast(AppSessionState.userHasPremiumToken ? 'Demo login: Blueprint capacity unlocked.' : 'Demo login: Starter capacity restored.');
 });
 
-document.getElementById('upgrade-from-nav').addEventListener('click', () => {
+var _upgradeNavBtn = document.getElementById('upgrade-from-nav');
+if (_upgradeNavBtn) _upgradeNavBtn.addEventListener('click', () => {
   document.getElementById('premium-gate-modal').classList.add('open');
 });
 
