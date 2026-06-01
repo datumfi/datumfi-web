@@ -3577,7 +3577,14 @@
     e.stopPropagation();
     e.stopImmediatePropagation();
     var slotId = openBtn.dataset.openSlot;
-    if (slotId) window.location.href = '/sketch.html?id=' + slotId;
+    if (!slotId) return;
+    var _studioPickup = sessionStorage.getItem('datum_sketch_pickup_for_studio');
+    if (_studioPickup) {
+      sessionStorage.removeItem('datum_sketch_pickup_for_studio');
+      window.location.href = '/studio.html?id=' + slotId + '&hydrate=sketch';
+    } else {
+      window.location.href = '/sketch.html?id=' + slotId;
+    }
   }, true);
   /* ── END R3.6 OPEN SKETCH HYDRATION HANDSHAKE ── */
 

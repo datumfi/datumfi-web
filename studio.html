@@ -5434,6 +5434,7 @@
 
     if (_startSketch && !_startSketch.classList.contains('disabled-cta')) {
       _startSketch.addEventListener('click', function() {
+        sessionStorage.setItem('datum_sketch_pickup_for_studio', '1');
         if (isSignedIn) {
           window.location.href = '/sketchbook.html';
         } else {
@@ -5486,6 +5487,45 @@
     }, 600);
   })();
   /* ── END R3.6 BLUEPRINT HYDRATION HANDSHAKE ─────────────── */
+
+  /* ── R3.6 SKETCH HYDRATION HANDSHAKE ───────────────────── */
+  (function() {
+    var params = new URLSearchParams(window.location.search);
+    var _id = params.get('id');
+    if (!_id || params.get('hydrate') !== 'sketch') return;
+
+    var _sketch = null;
+    try { _sketch = JSON.parse(localStorage.getItem('datum_sketch_state_' + _id) || 'null'); } catch(ex) {}
+    if (!_sketch) {
+      var _sBlob = null;
+      try { _sBlob = JSON.parse(localStorage.getItem('datumfi_sketchbook_v1') || 'null'); } catch(ex) {}
+      _sketch = (_sBlob && (_sBlob['slot_' + _id] || _sBlob.slot_1)) || null;
+    }
+    if (!_sketch) return;
+
+    setTimeout(function() {
+      var _now = new Date().getFullYear();
+      if (_sketch.age) {
+        var _dobEl = document.getElementById('pri-dob');
+        if (_dobEl) _dobEl.value = '01 / ' + (_now - _sketch.age);
+      }
+      if (_sketch.age && _sketch.retire_age) {
+        var _retEl = document.getElementById('target-ret');
+        if (_retEl) _retEl.value = '01 / ' + (_now + (_sketch.retire_age - _sketch.age));
+      }
+      if (_sketch.datum_spend) {
+        var _spendEl = document.getElementById('spend-input');
+        if (_spendEl) _spendEl.value = '$' + Math.round(_sketch.datum_spend).toLocaleString('en-US');
+      }
+      if (typeof updateSVGs === 'function') updateSVGs();
+      var _b = document.createElement('div');
+      _b.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(29,158,117,0.12);border:1px solid rgba(29,158,117,0.4);color:var(--teal-mid,#5DCAA5);font-family:var(--font-mono,"DM Mono",monospace);font-size:11px;letter-spacing:0.06em;padding:8px 16px;border-radius:4px;white-space:nowrap;pointer-events:none;';
+      _b.textContent = 'Sketch outline loaded — refine and build your Blueprint.';
+      document.body.appendChild(_b);
+      setTimeout(function() { _b.style.transition = 'opacity 0.5s'; _b.style.opacity = '0'; setTimeout(function() { if (_b.parentNode) _b.remove(); }, 500); }, 3500);
+    }, 600);
+  })();
+  /* ── END R3.6 SKETCH HYDRATION HANDSHAKE ───────────────── */
   </script>
 
   <script>
