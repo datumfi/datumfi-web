@@ -1,22 +1,20 @@
 // Datum FI — Shared Account Topbar Component (Pattern C · JS injection)
 // Loaded by: /my-account.html (always)
-//            /sketchbook.html?context=account (R3.5.5b)
-//            /blueprints.html?context=account (R3.5.5c)
+//            /sketchbook.html (R3.5.5b)
 // Does NOT contain a Clerk gate — loading decision is per-page.
 (function () {
   'use strict';
 
-  var path    = window.location.pathname;
-  var params  = new URLSearchParams(window.location.search);
+  var path       = window.location.pathname;
   var onAccountPage = /\/my-account(\.html)?($|\?)/.test(path);
 
   function getActiveTab() {
-    if (/\/sketchbook(\.html)?($|\?)/.test(path)) return 'sketches';
-    if (/\/blueprints(\.html)?($|\?)/.test(path)) return 'blueprints';
-    // On /my-account.html — derive from hash
-    var hash = window.location.hash.replace('#', '');
-    if (hash === 'blueprints') return 'blueprints';
-    return 'profile';
+    if (/\/my-account(\.html)?($|\?)/.test(path))  return 'welcome';
+    if (/\/Dossier(\.html)?($|\?)/.test(path))      return 'profile';
+    if (/\/sketchbook(\.html)?($|\?)/.test(path))   return 'sketchbook';
+    if (/\/Blueprint(\.html)?($|\?)/.test(path))    return 'blueprints';
+    if (/\/studio(\.html)?($|\?)/.test(path))       return 'studio';
+    return '';
   }
 
   function injectCSS() {
@@ -40,10 +38,9 @@
       + '  filter:drop-shadow(0 0 10px rgba(29,158,117,.28));'
       + '  flex-shrink:0;'
       + '}'
-      + '.acct-wordmark{'
-      + '  font-family:"Fraunces",Georgia,serif;font-size:24px;'
-      + '  letter-spacing:.18em;line-height:1;'
-      + '  color:rgba(255,255,255,.92);font-weight:400;'
+      + '.acct-wordmark-img{'
+      + '  height:18px;width:auto;flex-shrink:0;'
+      + '  filter:drop-shadow(0 0 8px rgba(255,255,255,.06));'
       + '}'
       + '.acct-topbar-nav{'
       + '  flex:1;display:flex;align-items:center;'
@@ -65,8 +62,6 @@
       + '  height:2px;background:#C9A84C;'
       + '  box-shadow:0 0 10px rgba(201,168,76,.4);border-radius:1px;'
       + '}'
-      + '.acct-tab.away{color:rgba(255,255,255,.26);}'
-      + '.acct-tab.away:hover{color:rgba(255,255,255,.58);}'
       + '.acct-divider{'
       + '  width:1px;height:24px;background:rgba(255,255,255,.12);'
       + '  margin:0 8px;flex-shrink:0;'
@@ -77,18 +72,10 @@
       + '}'
       + '@media(max-width:720px){'
       + '  .acct-topbar-nav{display:none;}'
-      + '  .acct-wordmark{font-size:20px;}'
+      + '  .acct-wordmark-img{height:15px;}'
       + '}';
     document.head.appendChild(style);
   }
-
-  var LOGO_SVG = '<svg class="acct-logo" viewBox="0 0 64 64" aria-hidden="true">'
-    + '<path d="M12 10h20.5C44.6 10 54 19.2 54 31.8S44.6 54 32.5 54H12V10Z"'
-    + ' fill="none" stroke="#1D9E75" stroke-width="6" stroke-linejoin="round"/>'
-    + '<path d="M13 20h28M13 32h31M13 44h24"'
-    + ' stroke="#5DCAA5" stroke-width="3" stroke-linecap="round"/>'
-    + '<path d="M12 10 25 10 12 23Z" fill="#091221"/>'
-    + '</svg>';
 
   function makeTab(target, label, active) {
     var cls = 'acct-tab' + (active === target ? ' active' : '');
@@ -96,30 +83,22 @@
       + label + '</button>';
   }
 
-  function makeAwayLink(href, label) {
-    return '<a href="' + href + '" class="acct-tab away">' + label + '</a>';
-  }
-
   function buildHTML(active) {
     return '<header id="acct-topbar" role="banner">'
-      + '<a href="/my-account.html" class="acct-brand" aria-label="Datum FI — My Account">'
-      + LOGO_SVG
-      + '<span class="acct-wordmark">DATUM FI</span>'
+      + '<a href="/index.html" class="acct-brand" aria-label="Datum FI — Home">'
+      + '<img class="acct-logo" src="/brand/datumfi-mark-d.svg" alt="" aria-hidden="true">'
+      + '<img class="acct-wordmark-img" src="/brand/datumfi-wordmark-atum-fi.svg" alt="DATUM FI">'
       + '</a>'
       + '<nav class="acct-topbar-nav" aria-label="Account navigation">'
       +   '<div class="acct-cluster">'
-      +     makeTab('sketches',  'Sketches',  active)
-      +     makeTab('blueprints','Blueprints', active)
+      +     makeTab('welcome',    'Welcome',          active)
+      +     makeTab('profile',    'My Profile',       active)
       +   '</div>'
       +   '<div class="acct-divider" aria-hidden="true"></div>'
       +   '<div class="acct-cluster">'
-      +     makeAwayLink('/sketch.html',          'Sketch')
-      +     makeAwayLink('/studio-showcase.html',  'Studio')
-      +     makeAwayLink('/why-a-range.html',      'Shape')
-      +   '</div>'
-      +   '<div class="acct-divider" aria-hidden="true"></div>'
-      +   '<div class="acct-cluster">'
-      +     makeTab('profile', 'My Profile', active)
+      +     makeTab('sketchbook', 'Sketchbook',       active)
+      +     makeTab('blueprints', 'Blueprint Archive', active)
+      +     makeTab('studio',     'Studio',           active)
       +   '</div>'
       + '</nav>'
       + '<div class="acct-topbar-right"></div>'
@@ -128,23 +107,11 @@
 
   function handleTabClick(tabId) {
     switch (tabId) {
-      case 'sketches':
-        window.location.href = '/sketchbook.html?context=account';
-        break;
-      case 'blueprints':
-        if (onAccountPage) {
-          window.location.hash = '#blueprints';
-        } else {
-          window.location.href = '/blueprints.html?context=account';
-        }
-        break;
-      case 'profile':
-        if (onAccountPage) {
-          window.location.hash = '#profile';
-        } else {
-          window.location.href = '/my-account.html#profile';
-        }
-        break;
+      case 'welcome':    window.location.href = '/my-account.html'; break;
+      case 'profile':    window.location.href = '/Dossier.html';    break;
+      case 'sketchbook': window.location.href = '/sketchbook.html'; break;
+      case 'blueprints': window.location.href = '/Blueprint.html';  break;
+      case 'studio':     window.location.href = '/studio.html';     break;
     }
   }
 

@@ -2804,6 +2804,19 @@
   }
 
 </style>
+<meta name="robots" content="noindex, nofollow">
+<!-- Flash prevention: body stays hidden until Clerk confirms session -->
+<style>body { visibility: hidden; }</style>
+<!-- Clerk JS — must load before auth gate script runs -->
+<script
+  async
+  crossorigin="anonymous"
+  data-clerk-publishable-key="pk_test_YWxpdmUtcmVpbmRlZXItNzkuY2xlcmsuYWNjb3VudHMuZGV2JA"
+  src="https://alive-reindeer-79.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+  type="text/javascript"
+></script>
+<!-- Account topbar — loads deferred so it mounts after DOM parse -->
+<script defer src="/scripts/account-topbar.js"></script>
 </head>
 <body>
 
@@ -2811,10 +2824,6 @@
 
   <section class="sketchbook-section" id="sketchbook-view-container">
     
-    <button class="back-to-workspace" id="action-return-canvas" aria-label="Return back to primary view workspace panels" title="Return to where you left off in Sketch">
-      &larr; Return
-    </button>
-
     <section class="sketchbook-account-hero" aria-labelledby="sketchbook-page-title">
       <p class="sketchbook-hero-eyebrow">My Account · Sketch Output</p>
       <h1 id="sketchbook-page-title">Sketchbook</h1>
@@ -3518,5 +3527,28 @@
   // Run initialization boot tracking sequence scripts
   syncDesktopSketchbookUI();
 </script>
+<!-- Auth gate (R3.5.5b): redirect unauthenticated visitors to vault -->
+<script>
+(function () {
+  'use strict';
+  function redirectToVault() {
+    window.location.replace('/vault.html');
+  }
+  function revealBody() {
+    document.body.style.visibility = 'visible';
+  }
+  function onSessionConfirmed() {
+    try { sessionStorage.setItem('datum_auth_hint', '1'); } catch (e) {}
+    revealBody();
+  }
+  window.addEventListener('load', function () {
+    Clerk.load().then(function () {
+      if (Clerk.user) { onSessionConfirmed(); }
+      else { redirectToVault(); }
+    }).catch(redirectToVault);
+  });
+})();
+</script>
+<script src="/nav.js"></script>
 </body>
 </html>
