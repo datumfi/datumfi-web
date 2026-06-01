@@ -3540,6 +3540,9 @@
   function onSessionConfirmed() {
     try { sessionStorage.setItem('datum_auth_hint', '1'); } catch (e) {}
     revealBody();
+    if (typeof syncDesktopSketchbookUI === 'function') {
+      requestAnimationFrame(syncDesktopSketchbookUI);
+    }
   }
   window.addEventListener('load', function () {
     Clerk.load().then(function () {

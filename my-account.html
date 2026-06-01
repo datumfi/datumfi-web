@@ -69,8 +69,10 @@
   function populateProfileTile() {
     try {
       var sessionEl = document.getElementById('acct-meta-session');
-      if (sessionEl && Clerk.user && Clerk.user.id) {
-        sessionEl.textContent = Clerk.user.id.slice(0, 14) + '…';
+      if (sessionEl) {
+        sessionEl.textContent = 'Session · ' + new Date().toLocaleDateString('en-US', {
+          month: 'long', day: 'numeric', year: 'numeric'
+        });
       }
     } catch (e) { /* non-fatal */ }
   }
@@ -456,7 +458,7 @@ h1{text-shadow:0 0 34px rgba(93,202,165,.052),0 16px 34px rgba(0,0,0,.18)}
         <aside class="profile-tile" aria-label="Workspace profile summary">
           <div class="profile-top">
             <div class="mini-logo" aria-hidden="true">
-              <svg viewBox="0 0 100 100"><path fill="currentColor" d="M13 14h38c23 0 37 15 37 36S74 86 51 86H13V14Zm18 18v36h20c11 0 19-7 19-18s-8-18-19-18H31Z"/><path fill="#091221" d="M13 14h16L13 30V14Zm0 56 16 16H13V70Zm0-40 13 11v18L13 70V30Z"/><rect x="38" y="37" width="30" height="4" fill="#1D9E75"/><rect x="38" y="48" width="30" height="4" fill="#C9A84C"/><rect x="38" y="59" width="30" height="4" fill="#1D9E75"/></svg>
+              <img src="/brand/datumfi-mark-d.svg" alt="">
             </div>
             <div>
               <div class="profile-name" id="acct-profile-name">Workspace</div>

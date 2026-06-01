@@ -1,0 +1,1683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Datum FI — Blueprint Archive</title>
+<meta name="theme-color" content="#091221">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500;700&family=DM+Sans:wght@300;400;500;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg-navy: #091221;
+  --bg-deep: #050b14;
+  --navy-card: #0d1a2e;
+  --teal-mid: #5DCAA5;
+  --teal-brand: #1D9E75;
+  --gold: #C9A84C;
+  --gold-dark: #B8952F;
+  --danger-red: #e24b4a;
+  --blueprint-blue: #64b4ff;
+  --white: #ffffff;
+  --muted: rgba(255,255,255,.42);
+
+  --paper-white: #fffdf7;
+  --paper-main: #f8f2e6;
+  --paper-edge: #e7ddc7;
+  --ink: #20242b;
+  --ink-soft: rgba(32,36,43,.58);
+
+  --font-serif: 'Fraunces', Georgia, serif;
+  --font-mono: 'DM Mono', monospace;
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg-navy);
+  color: var(--white);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+button,
+input {
+  font-family: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   DATUM ACCOUNT SHELL
+   ───────────────────────────────────────────────────────────── */
+
+.account-shell {
+  min-height: 100vh;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 92px 40px 58px;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(93,202,165,.070), transparent 34%),
+    radial-gradient(circle at 20% 68%, rgba(100,180,255,.052), transparent 27%),
+    radial-gradient(circle at 83% 72%, rgba(201,168,76,.035), transparent 32%),
+    linear-gradient(180deg, #0a1424 0%, #07101d 48%, #030812 100%);
+}
+
+.account-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(93,202,165,.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(93,202,165,.022) 1px, transparent 1px),
+    linear-gradient(rgba(201,168,76,.010) 1px, transparent 1px);
+  background-size: 48px 48px, 48px 48px, 192px 192px;
+  mask-image: radial-gradient(circle at 50% 46%, rgba(0,0,0,.72), transparent 75%);
+}
+
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  z-index: 100;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+  background: rgba(5,11,20,.74);
+  backdrop-filter: blur(14px);
+}
+
+.brand {
+  position: absolute;
+  left: 31px;
+  top: 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.logo {
+  width: 27px;
+  height: 27px;
+  filter: drop-shadow(0 0 10px rgba(29,158,117,.28));
+}
+
+.wordmark {
+  font-family: var(--font-serif);
+  font-size: 29px;
+  letter-spacing: .18em;
+  line-height: 1;
+  color: rgba(255,255,255,.92);
+  font-weight: 400;
+}
+
+.nav {
+  position: absolute;
+  top: 0;
+  left: 395px;
+  right: 250px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 46px;
+}
+
+.nav a {
+  position: relative;
+  text-decoration: none;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: .16em;
+  font-size: 10px;
+  color: rgba(255,255,255,.40);
+}
+
+.nav a.active {
+  color: var(--gold);
+}
+
+.nav a.active::after {
+  content: "";
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  bottom: -12px;
+  height: 2px;
+  background: var(--gold);
+  box-shadow: 0 0 14px rgba(201,168,76,.46);
+}
+
+.login-area {
+  position: absolute;
+  right: 32px;
+  top: 17px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.login-button {
+  height: 31px;
+  padding: 0 17px;
+  border: 1px solid rgba(93,202,165,.56);
+  background: rgba(93,202,165,.035);
+  color: var(--teal-mid);
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+
+.upgrade-link {
+  height: 31px;
+  padding: 0 16px;
+  border: 1px solid rgba(201,168,76,.62);
+  background: rgba(201,168,76,.045);
+  color: var(--gold);
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+
+.return {
+  position: absolute;
+  left: 60px;
+  top: 102px;
+  z-index: 20;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  color: var(--teal-mid);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+
+.hero {
+  width: 100%;
+  max-width: 1120px;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+  margin-bottom: 28px;
+}
+
+.hero-eyebrow {
+  margin: 0 0 12px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: rgba(201,168,76,.72);
+}
+
+.hero h1 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: clamp(40px, 6vw, 66px);
+  font-weight: 300;
+  line-height: .95;
+  color: rgba(255,255,255,.94);
+}
+
+.hero p {
+  margin: 16px auto 0;
+  max-width: 760px;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 300;
+  line-height: 1.65;
+  color: rgba(255,255,255,.52);
+}
+
+.hero p strong {
+  color: rgba(255,255,255,.88);
+  font-weight: 400;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   BLUEPRINT ARCHIVE OBJECT
+   Slightly different from Sketchbook:
+   no school-like spiral notebook; this is an archival field folio.
+   ───────────────────────────────────────────────────────────── */
+
+.archive-wrapper {
+  width: min(1128px, calc(100vw - 76px));
+  position: relative;
+  margin: 10px auto 0;
+  z-index: 5;
+  filter:
+    drop-shadow(0 64px 96px rgba(0,0,0,.66))
+    drop-shadow(0 10px 20px rgba(0,0,0,.25))
+    drop-shadow(0 0 26px rgba(93,202,165,.034));
+}
+
+.archive-shadow {
+  position: absolute;
+  left: 48px;
+  right: -68px;
+  top: 62px;
+  bottom: -48px;
+  border-radius: 40px;
+  background: radial-gradient(ellipse at 48% 42%, rgba(0,0,0,.82), rgba(0,0,0,.42) 56%, transparent 80%);
+  filter: blur(32px);
+  opacity: .97;
+  transform: skewX(-3deg) translateY(10px);
+  z-index: 0;
+}
+
+.archive-cover {
+  position: absolute;
+  inset: -26px -42px -31px -34px;
+  z-index: 1;
+  border-radius: 34px 40px 40px 34px;
+  background:
+    linear-gradient(90deg,
+      rgba(255,255,255,.130) 0%,
+      rgba(255,255,255,.036) 5%,
+      transparent 17%,
+      transparent 82%,
+      rgba(0,0,0,.42) 96%),
+    radial-gradient(circle at 15% 8%, rgba(255,255,255,.118), transparent 22%),
+    radial-gradient(circle at 82% 86%, rgba(0,0,0,.62), transparent 36%),
+    radial-gradient(ellipse at 53% -4%, rgba(255,255,255,.070), transparent 35%),
+    linear-gradient(103deg, transparent 14%, rgba(255,255,255,.030) 15%, transparent 17%),
+    linear-gradient(78deg, transparent 58%, rgba(255,255,255,.024) 59%, transparent 61%),
+    repeating-linear-gradient(32deg, rgba(255,255,255,.016) 0 1px, transparent 1px 8px),
+    repeating-linear-gradient(-28deg, rgba(0,0,0,.027) 0 1px, transparent 1px 11px),
+    linear-gradient(180deg, #162337 0%, #091322 48%, #02060b 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.074),
+    inset 0 1px 0 rgba(255,255,255,.042),
+    inset 38px 0 58px rgba(255,255,255,.034),
+    inset -38px 0 66px rgba(0,0,0,.50),
+    inset 0 -68px 92px rgba(0,0,0,.55),
+    0 38px 74px rgba(0,0,0,.50);
+}
+
+.archive-cover::before {
+  content: "";
+  position: absolute;
+  left: 28px;
+  top: 16px;
+  bottom: 16px;
+  width: 74px;
+  border-radius: 24px 12px 12px 24px;
+  background:
+    linear-gradient(90deg,
+      rgba(0,0,0,.72),
+      rgba(255,255,255,.040) 23%,
+      rgba(201,168,76,.052) 44%,
+      rgba(93,202,165,.040) 62%,
+      rgba(0,0,0,.31)),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 12px);
+  box-shadow:
+    inset -1px 0 rgba(255,255,255,.090),
+    inset 10px 0 20px rgba(0,0,0,.46),
+    14px 0 28px rgba(0,0,0,.36),
+    1px 0 0 rgba(255,255,255,.026);
+}
+
+.archive-cover::after {
+  content: "";
+  position: absolute;
+  inset: 11px;
+  border-radius: 26px 32px 32px 26px;
+  border: 1px solid rgba(255,255,255,.064);
+  box-shadow:
+    inset 0 0 0 1px rgba(0,0,0,.23),
+    inset 0 0 48px rgba(255,255,255,.012),
+    inset 0 -14px 20px rgba(0,0,0,.09);
+}
+
+/* brass rail replaces sketchbook spiral, so Blueprint feels related but more official */
+.archive-rail {
+  position: absolute;
+  left: -17px;
+  top: 42px;
+  bottom: 42px;
+  width: 44px;
+  z-index: 8;
+  pointer-events: none;
+  filter:
+    drop-shadow(12px 12px 13px rgba(0,0,0,.64))
+    drop-shadow(0 0 13px rgba(201,168,76,.125));
+}
+
+.archive-rail::before {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: -10px;
+  bottom: -10px;
+  width: 14px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg,
+      #020304 0%,
+      #1f242a 11%,
+      #5c4213 24%,
+      #b98e34 36%,
+      #ffe9a3 47%,
+      #fffdda 53%,
+      #a87a22 67%,
+      #343a40 84%,
+      #030405 100%);
+  box-shadow:
+    0 9px 18px rgba(0,0,0,.52),
+    inset 0 1px 1px rgba(255,255,255,.54),
+    inset 0 -1px 1px rgba(0,0,0,.58);
+}
+
+.archive-rail::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: 18px;
+  bottom: 18px;
+  background:
+    radial-gradient(circle at 50% 0, rgba(0,0,0,.58) 0 5px, transparent 6px),
+    radial-gradient(circle at 50% 14%, rgba(0,0,0,.58) 0 5px, transparent 6px),
+    radial-gradient(circle at 50% 28%, rgba(0,0,0,.58) 0 5px, transparent 6px),
+    radial-gradient(circle at 50% 42%, rgba(0,0,0,.58) 0 5px, transparent 6px),
+    radial-gradient(circle at 50% 56%, rgba(0,0,0,.58) 0 5px, transparent 6px),
+    radial-gradient(circle at 50% 70%, rgba(0,0,0,.58) 0 5px, transparent 6px),
+    radial-gradient(circle at 50% 84%, rgba(0,0,0,.58) 0 5px, transparent 6px),
+    radial-gradient(circle at 50% 100%, rgba(0,0,0,.58) 0 5px, transparent 6px);
+  opacity: .72;
+}
+
+.archive-sheet {
+  position: relative;
+  z-index: 3;
+  min-height: 602px;
+  margin-left: 38px;
+  border-radius: 18px 32px 32px 18px;
+  padding: 58px 76px 66px 88px;
+  overflow: hidden;
+  color: var(--ink);
+  background:
+    radial-gradient(ellipse at 48% 9%, rgba(255,255,255,.90), transparent 43%),
+    radial-gradient(ellipse at 24% 27%, rgba(255,255,255,.46), transparent 30%),
+    radial-gradient(ellipse at 84% 80%, rgba(86,60,24,.042), transparent 31%),
+    radial-gradient(circle at 94% 92%, rgba(54,40,20,.022), transparent 12%),
+    radial-gradient(circle at 88% 19%, rgba(60,43,22,.014), transparent 10%),
+    radial-gradient(circle at 12% 82%, rgba(60,43,22,.013), transparent 13%),
+    linear-gradient(122deg, transparent 0 38%, rgba(81,61,31,.016) 39%, rgba(255,255,255,.058) 40%, transparent 42%),
+    linear-gradient(74deg, transparent 0 67%, rgba(81,61,31,.010) 68%, transparent 70%),
+    repeating-linear-gradient(11deg, rgba(46,34,20,.009) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(-19deg, rgba(255,255,255,.088) 0 1px, transparent 1px 8px),
+    repeating-linear-gradient(3deg, rgba(46,34,20,.006) 0 1px, transparent 1px 16px),
+    radial-gradient(circle at 18% 22%, rgba(146,119,77,.010), transparent 17%),
+    radial-gradient(circle at 71% 36%, rgba(146,119,77,.008), transparent 15%),
+    radial-gradient(circle at 44% 74%, rgba(146,119,77,.009), transparent 16%),
+    linear-gradient(90deg, rgba(226,75,74,.078) 0 1px, transparent 1px),
+    repeating-linear-gradient(0deg, transparent 0, transparent 29px, rgba(30,35,42,.028) 30px),
+    repeating-linear-gradient(90deg, transparent 0, transparent 31px, rgba(107,123,196,.024) 32px),
+    linear-gradient(112deg, #fffef8 0%, #faf4e9 53%, #eadfca 100%);
+  background-position:
+    0 0, 0 0, 0 0,
+    0 0, 0 0, 0 0,
+    0 0, 0 0,
+    0 0, 0 0, 0 0,
+    0 0, 0 0, 0 0,
+    54px 0, 0 0, 0 0, 0 0;
+  background-size:
+    auto, auto, auto,
+    auto, auto, auto,
+    auto, auto,
+    auto, auto, auto,
+    auto, auto, auto,
+    1px 100%, auto, auto, auto;
+  box-shadow:
+    inset 0 0 0 1px rgba(45,36,20,.215),
+    inset 32px 0 42px rgba(0,0,0,.098),
+    inset -28px 0 42px rgba(77,54,22,.082),
+    inset 0 36px 50px rgba(255,255,255,.52),
+    inset 0 -23px 32px rgba(63,43,18,.044),
+    inset 0 0 38px rgba(255,255,255,.046),
+    0 26px 60px rgba(0,0,0,.50);
+}
+
+.archive-sheet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 8% 21%, rgba(0,0,0,.038), transparent 20%),
+    radial-gradient(circle at 81% 14%, rgba(0,0,0,.022), transparent 24%),
+    radial-gradient(circle at 76% 88%, rgba(0,0,0,.030), transparent 30%),
+    linear-gradient(90deg, rgba(255,255,255,.50), transparent 22%, transparent 80%, rgba(0,0,0,.058));
+  opacity: .84;
+}
+
+.archive-sheet::after {
+  content: "";
+  position: absolute;
+  right: 8px;
+  top: 14px;
+  bottom: 14px;
+  width: 1px;
+  z-index: 2;
+  background: rgba(35,27,16,.095);
+  box-shadow:
+    4px 0 rgba(35,27,16,.064),
+    8px 0 rgba(35,27,16,.041),
+    12px 0 rgba(35,27,16,.027),
+    16px 0 rgba(35,27,16,.016),
+    20px 0 rgba(35,27,16,.009),
+    24px 0 rgba(35,27,16,.005),
+    -1px 0 rgba(255,255,255,.42);
+}
+
+.archival-stamp {
+  position: absolute;
+  right: 72px;
+  top: 45px;
+  z-index: 9;
+  width: 104px;
+  height: 104px;
+  border: 1px solid rgba(201,168,76,.34);
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  transform: rotate(8deg);
+  opacity: .72;
+}
+
+.archival-stamp span {
+  display: block;
+  width: 78px;
+  height: 78px;
+  border: 1px solid rgba(201,168,76,.22);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: .17em;
+  text-transform: uppercase;
+  color: rgba(201,168,76,.58);
+  text-align: center;
+  padding-top: 19px;
+  line-height: 1.55;
+}
+
+.sheet-content {
+  position: relative;
+  z-index: 10;
+}
+
+.sheet-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 36px;
+  align-items: start;
+  margin-bottom: 26px;
+}
+
+.title-area input {
+  width: min(100%, 510px);
+  background: transparent;
+  border: 0;
+  outline: 0;
+  color: rgba(20,24,31,.90);
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 42px;
+  font-weight: 300;
+  padding: 0;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+.title-rule {
+  width: min(100%, 438px);
+  height: 1px;
+  margin-top: 8px;
+  background:
+    linear-gradient(90deg,
+      rgba(23,27,34,.48),
+      rgba(23,27,34,.27) 70%,
+      rgba(23,27,34,.08) 88%,
+      transparent);
+}
+
+.sheet-subtitle {
+  margin: 14px 0 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.65;
+  letter-spacing: .14em;
+  color: rgba(32,36,43,.48);
+  text-transform: uppercase;
+}
+
+.archive-summary {
+  border: 1px solid rgba(32,36,43,.13);
+  border-radius: 10px;
+  padding: 15px 16px 14px;
+  background:
+    radial-gradient(circle at 20% 8%, rgba(255,255,255,.54), transparent 40%),
+    linear-gradient(180deg, rgba(255,255,255,.30), rgba(255,255,255,.12));
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.46),
+    0 6px 16px rgba(9,18,33,.036);
+}
+
+.summary-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: .16em;
+  color: rgba(32,36,43,.48);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 5px 0;
+  border-bottom: 1px dashed rgba(32,36,43,.08);
+  color: rgba(32,36,43,.58);
+}
+
+.summary-row:last-child {
+  border-bottom: 0;
+}
+
+.summary-row strong {
+  color: rgba(32,36,43,.88);
+  font-weight: 700;
+}
+
+.sheet-divider {
+  width: 100%;
+  height: 1px;
+  margin: 0 0 18px;
+  background:
+    linear-gradient(90deg,
+      rgba(32,36,43,.19),
+      rgba(107,123,196,.135) 48%,
+      rgba(32,36,43,.10));
+}
+
+.blueprint-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+  min-height: 246px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   BLUEPRINT CARDS
+   ───────────────────────────────────────────────────────────── */
+
+.blueprint-slot {
+  position: relative;
+  min-height: 246px;
+  border-radius: 11px;
+  border: 1px solid rgba(32,36,43,.155);
+  background:
+    radial-gradient(circle at 24% 12%, rgba(255,255,255,.52), transparent 34%),
+    linear-gradient(180deg, rgba(255,255,255,.37), rgba(255,255,255,.125)),
+    linear-gradient(90deg, rgba(93,202,165,.032), transparent 52%, rgba(201,168,76,.018));
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.48),
+    inset 0 0 0 1px rgba(255,255,255,.062),
+    0 1px 0 rgba(255,255,255,.25),
+    0 3px 9px rgba(9,18,33,.032);
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform .22s ease, border-color .22s ease, background .22s ease, box-shadow .22s ease;
+  isolation: isolate;
+}
+
+.blueprint-slot:hover {
+  transform: translateY(-2px);
+  border-color: rgba(29,158,117,.31);
+  box-shadow:
+    0 16px 32px rgba(9,18,33,.060),
+    inset 0 1px rgba(255,255,255,.50),
+    inset 0 0 0 1px rgba(255,255,255,.066);
+}
+
+.blueprint-slot.has-blueprint {
+  background:
+    radial-gradient(circle at 24% 12%, rgba(255,255,255,.62), transparent 34%),
+    linear-gradient(180deg, rgba(255,255,255,.67), rgba(255,255,255,.405)),
+    linear-gradient(90deg, rgba(93,202,165,.055), transparent 62%);
+}
+
+.blueprint-slot.active-blueprint {
+  border-color: rgba(201,168,76,.78);
+  box-shadow:
+    0 18px 36px rgba(9,18,33,.070),
+    0 0 0 1px rgba(201,168,76,.08),
+    inset 0 1px rgba(255,255,255,.56);
+}
+
+.slot-content {
+  position: relative;
+  z-index: 40;
+  height: 100%;
+  min-height: 244px;
+  padding: 19px 17px 16px;
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+}
+
+.slot-erasing .slot-content {
+  animation: blueprintScrub .72s ease-in-out forwards;
+}
+
+@keyframes blueprintScrub {
+  0% { opacity: 1; transform: scale(1); filter: blur(0); }
+  50% { opacity: .52; filter: blur(1px); }
+  100% { opacity: 0; transform: scale(.96); filter: blur(4px); }
+}
+
+.redline-eraser {
+  position: absolute;
+  width: 52px;
+  height: 24px;
+  border-radius: 4px;
+  background:
+    linear-gradient(135deg, #f7afbc, #ffc8aa);
+  box-shadow: 0 8px 18px rgba(0,0,0,.24);
+  border-bottom: 3px solid #df93a3;
+  z-index: 70;
+  opacity: 0;
+  pointer-events: none;
+  top: 54%;
+  left: -72px;
+  transform: translateY(-50%) rotate(-15deg);
+}
+
+.slot-erasing .redline-eraser {
+  animation: eraserMove .72s ease-in-out forwards;
+}
+
+@keyframes eraserMove {
+  0% { left: -72px; opacity: 0; transform: translateY(-50%) rotate(-15deg); }
+  14% { opacity: 1; left: 18px; }
+  36% { left: 146px; transform: translateY(-42%) rotate(-5deg); }
+  56% { left: 52px; transform: translateY(-60%) rotate(-20deg); }
+  78% { left: 172px; opacity: 1; }
+  100% { left: 248px; opacity: 0; transform: translateY(-50%) rotate(-10deg); }
+}
+
+.empty-state {
+  height: 100%;
+  min-height: 206px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.empty-glyph {
+  font-family: var(--font-serif);
+  font-size: 39px;
+  line-height: 1;
+  color: rgba(142,104,31,.64);
+  margin-bottom: 13px;
+}
+
+.empty-label {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.55;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: rgba(25,31,39,.66);
+}
+
+.empty-label span {
+  display: block;
+  margin-top: 8px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: rgba(25,31,39,.44);
+}
+
+.lock-indicator {
+  display: inline-block;
+  margin-top: 9px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+  color: rgba(32,36,43,.44);
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.sheet-id {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: rgba(23,27,34,.78);
+}
+
+.status-pill {
+  border: 1px solid rgba(29,158,117,.33);
+  color: var(--teal-brand);
+  background: rgba(29,158,117,.06);
+  border-radius: 999px;
+  padding: 3px 7px;
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+}
+
+.blueprint-name {
+  margin: 0 0 10px;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 20px;
+  line-height: 1.05;
+  font-weight: 300;
+  color: rgba(20,24,31,.90);
+}
+
+.blueprint-mini {
+  height: 70px;
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid rgba(9,18,33,.28);
+  background:
+    linear-gradient(rgba(100,180,255,.070) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(100,180,255,.070) 1px, transparent 1px),
+    #071221;
+  background-size: 14px 14px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.04),
+    inset 0 0 20px rgba(0,0,0,.18),
+    0 7px 16px rgba(9,18,33,.135);
+  margin-bottom: 11px;
+}
+
+.blueprint-metrics {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px dashed rgba(23,27,34,.080);
+  padding-bottom: 2px;
+  gap: 10px;
+}
+
+.metric-row span {
+  font-family: var(--font-mono);
+  font-size: 8.4px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: rgba(32,36,43,.58);
+}
+
+.metric-row strong {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: rgba(32,36,43,.86);
+}
+
+.card-bottom {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  z-index: 400;
+  pointer-events: auto;
+}
+
+.saved-time {
+  font-family: var(--font-mono);
+  font-size: 7.3px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: rgba(32,36,43,.42);
+}
+
+.erase-action {
+  position: relative;
+  z-index: 500;
+  pointer-events: auto;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: rgba(32,36,43,.44);
+  font-family: var(--font-mono);
+  font-size: 7.4px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.erase-action:hover {
+  color: var(--danger-red);
+}
+
+.archive-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 27px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(32,36,43,.11);
+}
+
+.primary-action {
+  height: 52px;
+  min-width: 292px;
+  border: 0;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #d8b13e, #c9a12f);
+  color: #15120a;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: .20em;
+  text-transform: uppercase;
+  box-shadow:
+    0 16px 30px rgba(201,168,76,.20),
+    inset 0 1px rgba(255,255,255,.28);
+}
+
+.secondary-action {
+  height: 43px;
+  min-width: 166px;
+  border: 1px solid rgba(32,36,43,.20);
+  border-radius: 3px;
+  background: rgba(255,255,255,.12);
+  color: rgba(32,36,43,.72);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.footer-note {
+  position: relative;
+  z-index: 8;
+  margin: 34px auto 0;
+  max-width: 920px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.8;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.31);
+}
+
+.footer-note span {
+  color: rgba(201,168,76,.55);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   MODALS + TOAST
+   ───────────────────────────────────────────────────────────── */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(3,8,15,.76);
+  backdrop-filter: blur(12px);
+  padding: 24px;
+}
+
+.modal.open {
+  display: flex;
+}
+
+.modal-card {
+  width: min(460px, 100%);
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: linear-gradient(180deg, rgba(15,27,46,.97), rgba(7,14,25,.98));
+  box-shadow: 0 34px 80px rgba(0,0,0,.48);
+  padding: 34px 32px 28px;
+  text-align: center;
+}
+
+.modal-card.wide {
+  width: min(720px, 100%);
+  text-align: left;
+}
+
+.modal-card h2 {
+  margin: 0 0 14px;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 33px;
+  font-weight: 300;
+}
+
+.modal-card p {
+  margin: 0 0 26px;
+  color: rgba(255,255,255,.56);
+  line-height: 1.58;
+  font-size: 14px;
+}
+
+.modal-card strong {
+  color: rgba(255,255,255,.9);
+  font-weight: 500;
+}
+
+.modal-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.modal-primary {
+  height: 48px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--teal-mid);
+  color: var(--bg-navy);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.modal-primary.gold {
+  background: var(--gold);
+}
+
+.modal-primary.danger {
+  background: var(--danger-red);
+  color: white;
+}
+
+.modal-secondary {
+  border: 0;
+  background: transparent;
+  color: rgba(255,255,255,.45);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  padding: 10px;
+}
+
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  margin: 12px 0 20px;
+}
+
+.compare-table th {
+  text-align: left;
+  padding: 8px 9px;
+  color: rgba(201,168,76,.82);
+  text-transform: uppercase;
+  letter-spacing: .10em;
+  border-bottom: 1px solid rgba(255,255,255,.09);
+}
+
+.compare-table td {
+  padding: 10px 9px;
+  color: rgba(255,255,255,.78);
+  border-bottom: 1px solid rgba(255,255,255,.055);
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%) translateY(18px);
+  z-index: 1200;
+  opacity: 0;
+  padding: 11px 16px;
+  min-width: 300px;
+  border-radius: 999px;
+  border: 1px solid rgba(93,202,165,.30);
+  background: rgba(5,11,20,.88);
+  color: var(--teal-mid);
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  transition: opacity .22s ease, transform .22s ease;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+@media (max-width: 980px) {
+  .account-shell { padding: 90px 18px 42px; }
+  .nav { display: none; }
+  .wordmark { font-size: 23px; }
+  .login-area { right: 18px; }
+  .upgrade-link { display: none; }
+  .return { left: 22px; top: 84px; }
+  .archive-wrapper { width: calc(100vw - 24px); }
+  .archive-sheet { padding: 42px 24px 48px 44px; margin-left: 22px; }
+  .archive-cover { inset: -18px -18px -22px -20px; }
+  .archive-rail { left: -18px; }
+  .sheet-header { grid-template-columns: 1fr; }
+  .archival-stamp { display: none; }
+  .blueprint-grid { grid-template-columns: 1fr; }
+  .archive-actions { flex-direction: column; align-items: stretch; }
+  .primary-action, .secondary-action { width: 100%; min-width: 0; }
+}
+
+@media (max-width: 560px) {
+  .brand { left: 18px; }
+  .logo { width: 23px; height: 23px; }
+  .wordmark { display: none; }
+  .login-button { padding: 0 12px; }
+  .hero h1 { font-size: 42px; }
+  .hero p { font-size: 13px; }
+  .archive-sheet { padding: 34px 18px 38px 34px; }
+  .title-area input { font-size: 34px; }
+}
+</style>
+<meta name="robots" content="noindex, nofollow">
+<style>body { visibility: hidden; }</style>
+<script
+  async
+  crossorigin="anonymous"
+  data-clerk-publishable-key="pk_test_YWxpdmUtcmVpbmRlZXItNzkuY2xlcmsuYWNjb3VudHMuZGV2JA"
+  src="https://alive-reindeer-79.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+  type="text/javascript"
+></script>
+<script defer src="/scripts/account-topbar.js"></script>
+</head>
+
+<body>
+<div id="app">
+  <section class="account-shell">
+    <section class="hero" aria-labelledby="page-title">
+      <p class="hero-eyebrow">My Account · Studio Output</p>
+      <h1 id="page-title">Blueprint Archive</h1>
+      <p>
+        Sketchbook is for rough possibilities. <strong>Blueprint Archive</strong> is for Studio plans you have modeled,
+        named, saved, and may want to reopen, compare, or promote into your working retirement plan.
+      </p>
+    </section>
+
+    <section class="archive-wrapper" aria-label="Saved Studio Blueprint Archive">
+      <div class="archive-shadow" aria-hidden="true"></div>
+      <div class="archive-cover" aria-hidden="true"></div>
+      <div class="archive-rail" aria-hidden="true"></div>
+
+      <div class="archive-sheet">
+        <div class="archival-stamp" aria-hidden="true"><span>Studio<br>Blueprint<br>Filed</span></div>
+
+        <div class="sheet-content">
+          <header class="sheet-header">
+            <div class="title-area">
+              <input id="archive-title" value="My Blueprint Archive" aria-label="Blueprint archive title" autocomplete="off" />
+              <div class="title-rule"></div>
+              <p class="sheet-subtitle">Saved Studio Blueprints — Modeled Estate Plans — Range Candidates</p>
+            </div>
+
+            <aside class="archive-summary" aria-label="Archive summary">
+              <div class="summary-label">Archive Index</div>
+              <div class="summary-row"><span>Saved</span><strong id="summary-saved">1 / 4</strong></div>
+              <div class="summary-row"><span>Active</span><strong id="summary-active">A-01</strong></div>
+              <div class="summary-row"><span>Access</span><strong id="summary-access">Discover</strong></div>
+            </aside>
+          </header>
+
+          <div class="sheet-divider"></div>
+
+          <main class="blueprint-grid" id="blueprint-grid">
+            <article class="blueprint-slot" id="blueprint-slot-1" data-slot-id="1">
+              <div class="redline-eraser" aria-hidden="true"></div>
+              <div class="slot-content" id="blueprint-content-1"></div>
+            </article>
+
+            <article class="blueprint-slot" id="blueprint-slot-2" data-slot-id="2">
+              <div class="redline-eraser" aria-hidden="true"></div>
+              <div class="slot-content" id="blueprint-content-2"></div>
+            </article>
+
+            <article class="blueprint-slot" id="blueprint-slot-3" data-slot-id="3">
+              <div class="redline-eraser" aria-hidden="true"></div>
+              <div class="slot-content" id="blueprint-content-3"></div>
+            </article>
+
+            <article class="blueprint-slot" id="blueprint-slot-4" data-slot-id="4">
+              <div class="redline-eraser" aria-hidden="true"></div>
+              <div class="slot-content" id="blueprint-content-4"></div>
+            </article>
+          </main>
+
+          <div class="archive-actions">
+            <button class="primary-action" id="action-save-blueprint" type="button">Save Current Blueprint →</button>
+            <button class="secondary-action" id="action-compare-blueprints" type="button">Compare</button>
+            <button class="secondary-action" id="action-open-studio" type="button">Open Studio</button>
+          </div>
+        </div>
+      </div>
+    </section>
+</section>
+
+  <div class="modal" id="premium-gate-modal" role="dialog" aria-modal="true" aria-labelledby="premium-title">
+    <div class="modal-card">
+      <h2 id="premium-title">Unlock Blueprint Capacity</h2>
+      <p>Discover saves one working Blueprint. Upgrade to keep multiple Studio plans, compare modeled outcomes, and maintain parallel retirement designs.</p>
+      <div class="modal-actions">
+        <button class="modal-primary gold" id="action-upgrade" type="button">Unlock Blueprint Archive →</button>
+        <button class="modal-secondary" id="action-dismiss-modal" type="button">Keep One Blueprint</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="delete-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+    <div class="modal-card">
+      <h2 id="delete-title" style="color: var(--danger-red);">Erase Blueprint?</h2>
+      <p>This saved Studio Blueprint will be removed from your archive. This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="modal-primary danger" id="action-confirm-erase" type="button">Erase Blueprint</button>
+        <button class="modal-secondary" id="action-cancel-erase" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="compare-modal" role="dialog" aria-modal="true" aria-labelledby="compare-title">
+    <div class="modal-card wide">
+      <h2 id="compare-title">Compare Saved Blueprints</h2>
+      <p>Use this as the Account-area comparison layer before reopening a plan in Studio.</p>
+      <div id="compare-table-wrap"></div>
+      <div class="modal-actions">
+        <button class="modal-primary" id="action-close-compare" type="button">Close Comparison</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+
+<script>
+const BLUEPRINT_STORAGE_KEY = 'datumfi_blueprint_archive_v1';
+
+const AppSessionState = {
+  userHasPremiumToken: false,
+  activeTargetPurgeId: null,
+  activeBlueprintSlot: 1,
+  mockStudioBlueprint: {
+    name: 'Core Retirement Blueprint',
+    netEstate: 2785000,
+    annualDatum: 108000,
+    floor: 82000,
+    ceiling: 168000,
+    rooms: 7,
+    climate: 'Valuations Matter',
+    taxSequence: 'Roth / Brokerage / Pre-Tax',
+    modelPaths: 10000,
+    status: 'Modeled'
+  }
+};
+
+const BlueprintArchive = {
+  slot1: null,
+  slot2: null,
+  slot3: null,
+  slot4: null
+};
+
+function safeLoadArchive() {
+  try {
+    const raw = localStorage.getItem(BLUEPRINT_STORAGE_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    for (let idx = 1; idx <= 4; idx++) {
+      BlueprintArchive['slot' + idx] = parsed['slot' + idx] || null;
+    }
+    AppSessionState.activeBlueprintSlot = parsed.activeBlueprintSlot || 1;
+    AppSessionState.userHasPremiumToken = !!parsed.userHasPremiumToken;
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+function safePersistArchive() {
+  try {
+    localStorage.setItem(BLUEPRINT_STORAGE_KEY, JSON.stringify({
+      slot1: BlueprintArchive.slot1,
+      slot2: BlueprintArchive.slot2,
+      slot3: BlueprintArchive.slot3,
+      slot4: BlueprintArchive.slot4,
+      activeBlueprintSlot: AppSessionState.activeBlueprintSlot,
+      userHasPremiumToken: AppSessionState.userHasPremiumToken
+    }));
+  } catch (err) {
+    /* localStorage may be unavailable in some preview contexts. Prototype continues in memory. */
+  }
+}
+
+function addCommas(num) {
+  return isNaN(num) || num === null ? '0' : Math.round(num).toLocaleString('en-US');
+}
+
+function compactMoney(num) {
+  if (!num && num !== 0) return '$0';
+  if (num >= 1000000) {
+    const value = num / 1000000;
+    return `$${value.toFixed(value >= 10 ? 0 : 1)}M`;
+  }
+  if (num >= 1000) return `$${Math.round(num / 1000)}k`;
+  return `$${addCommas(num)}`;
+}
+
+function todayStamp() {
+  return new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+}
+
+function timeStamp() {
+  return new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(() => toast.classList.remove('show'), 2300);
+}
+
+function blueprintSvg(data, slotId) {
+  const gid = `bpGradient-${slotId}-${String(data.id || 'demo').replace(/[^a-zA-Z0-9]/g, '')}`;
+  return `
+    <svg width="100%" height="100%" viewBox="0 0 320 112" role="img" aria-label="Mini Studio blueprint preview">
+      <defs>
+        <linearGradient id="${gid}" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0%" stop-color="#5DCAA5" stop-opacity="0.20"/>
+          <stop offset="100%" stop-color="#C9A84C" stop-opacity="0.09"/>
+        </linearGradient>
+      </defs>
+      <rect x="18" y="16" width="284" height="80" rx="4" fill="rgba(93,202,165,.035)" stroke="rgba(100,180,255,.22)" stroke-width="1"/>
+      <rect x="30" y="28" width="72" height="48" fill="url(#${gid})" stroke="#5DCAA5" stroke-width="1.4"/>
+      <rect x="110" y="28" width="92" height="48" fill="rgba(201,168,76,.08)" stroke="#C9A84C" stroke-width="1.4"/>
+      <rect x="210" y="28" width="68" height="48" fill="rgba(100,180,255,.08)" stroke="#64b4ff" stroke-width="1.4"/>
+      <path d="M30 88 C86 72 135 63 168 56 C206 48 239 57 292 37" fill="none" stroke="#5DCAA5" stroke-width="2.4"/>
+      <path d="M30 93 C101 93 167 86 292 84" fill="none" stroke="#e24b4a" stroke-width="1.8" opacity=".72"/>
+      <line x1="168" y1="18" x2="168" y2="98" stroke="#C9A84C" stroke-dasharray="4 5" opacity=".50"/>
+      <circle cx="168" cy="56" r="4" fill="#C9A84C"/>
+      <text x="42" y="54" fill="rgba(255,255,255,.78)" font-size="9" font-family="DM Mono">ROOMS</text>
+      <text x="123" y="54" fill="rgba(255,255,255,.78)" font-size="9" font-family="DM Mono">DATUM</text>
+      <text x="221" y="54" fill="rgba(255,255,255,.78)" font-size="9" font-family="DM Mono">TAX</text>
+    </svg>
+  `;
+}
+
+function makeBlueprintPayload() {
+  const source = AppSessionState.mockStudioBlueprint;
+  const variant = Math.floor(Math.random() * 4);
+  const names = [
+    'Core Retirement Blueprint',
+    'Rule of 55 Blueprint',
+    'Lower Spend Stress Blueprint',
+    'Delayed SS Blueprint'
+  ];
+
+  return {
+    id: 'bp-' + Date.now(),
+    name: names[variant],
+    netEstate: source.netEstate + (variant * 85000),
+    annualDatum: source.annualDatum + (variant === 2 ? -12000 : variant * 4500),
+    floor: source.floor + (variant * 2500),
+    ceiling: source.ceiling + (variant * 9000),
+    rooms: source.rooms + (variant > 1 ? 1 : 0),
+    climate: variant === 0 ? source.climate : ['History Repeats', 'Cautious', 'Custom Matrix'][variant - 1],
+    taxSequence: source.taxSequence,
+    modelPaths: source.modelPaths,
+    status: source.status,
+    dateStamped: todayStamp(),
+    timeStamped: timeStamp()
+  };
+}
+
+function renderEmptySlot(idx) {
+  const locked = idx > 1 && !AppSessionState.userHasPremiumToken;
+  return `
+    <div class="empty-state">
+      <div>
+        <div class="empty-glyph">＋</div>
+        <p class="empty-label">
+          Save Studio Blueprint
+          <span>Sheet A-0${idx} · ${locked ? 'Unlock additional archive capacity' : 'Pin current Studio plan'}</span>
+        </p>
+        ${locked ? '<span class="lock-indicator">[ Locked ]</span>' : ''}
+      </div>
+    </div>
+  `;
+}
+
+function renderBlueprintSlot(idx, data) {
+  return `
+    <div class="card-top">
+      <div class="sheet-id">Sheet A-0${idx}</div>
+      <div class="status-pill">${data.status}</div>
+    </div>
+
+    <h3 class="blueprint-name">${data.name}</h3>
+
+    <div class="blueprint-mini">${blueprintSvg(data, idx)}</div>
+
+    <div class="blueprint-metrics">
+      <div class="metric-row"><span>Net Estate</span><strong>${compactMoney(data.netEstate)}</strong></div>
+      <div class="metric-row"><span>Datum</span><strong>$${addCommas(data.annualDatum)}/yr</strong></div>
+      <div class="metric-row"><span>Rooms</span><strong>${data.rooms}</strong></div>
+      <div class="metric-row"><span>Climate</span><strong>${data.climate}</strong></div>
+    </div>
+
+    <div class="card-bottom">
+      <span class="saved-time">Modeled · ${data.dateStamped}</span>
+      <button type="button" class="erase-action" data-purge-target="${idx}" aria-label="Erase blueprint from sheet A-0${idx}">Erase</button>
+    </div>
+  `;
+}
+
+function syncArchiveUI() {
+  let savedCount = 0;
+
+  for (let idx = 1; idx <= 4; idx++) {
+    const data = BlueprintArchive['slot' + idx];
+    const tile = document.getElementById('blueprint-slot-' + idx);
+    const content = document.getElementById('blueprint-content-' + idx);
+
+    if (!tile || !content) continue;
+
+    tile.className = 'blueprint-slot';
+    tile.classList.toggle('has-blueprint', !!data);
+    tile.classList.toggle('active-blueprint', !!data && AppSessionState.activeBlueprintSlot === idx);
+    tile.classList.toggle('locked', idx > 1 && !AppSessionState.userHasPremiumToken);
+
+    if (data) {
+      savedCount++;
+      content.innerHTML = renderBlueprintSlot(idx, data);
+    } else {
+      content.innerHTML = renderEmptySlot(idx);
+    }
+  }
+
+  document.getElementById('summary-saved').textContent = `${savedCount} / 4`;
+  document.getElementById('summary-active').textContent = BlueprintArchive['slot' + AppSessionState.activeBlueprintSlot]
+    ? `A-0${AppSessionState.activeBlueprintSlot}`
+    : 'None';
+  document.getElementById('summary-access').textContent = AppSessionState.userHasPremiumToken ? 'Studio' : 'Discover';
+
+  safePersistArchive();
+}
+
+function saveToSlot(slotId) {
+  BlueprintArchive['slot' + slotId] = makeBlueprintPayload();
+  AppSessionState.activeBlueprintSlot = slotId;
+  syncArchiveUI();
+  showToast(`Blueprint saved to Sheet A-0${slotId}.`);
+}
+
+function saveToFirstAvailableSlot() {
+  for (let idx = 1; idx <= 4; idx++) {
+    const isPremiumSlot = idx > 1;
+    const isEmpty = !BlueprintArchive['slot' + idx];
+
+    if (isEmpty && (!isPremiumSlot || AppSessionState.userHasPremiumToken)) {
+      saveToSlot(idx);
+      return;
+    }
+
+    if (isEmpty && isPremiumSlot && !AppSessionState.userHasPremiumToken) {
+      document.getElementById('premium-gate-modal').classList.add('open');
+      return;
+    }
+  }
+
+  showToast('All available Blueprint sheets are already filled.');
+}
+
+function proceedWithEraseSequence() {
+  const targetId = AppSessionState.activeTargetPurgeId;
+  if (!targetId) return;
+
+  const tile = document.getElementById('blueprint-slot-' + targetId);
+  if (!tile) return;
+
+  tile.classList.add('slot-erasing');
+
+  setTimeout(() => {
+    BlueprintArchive['slot' + targetId] = null;
+
+    if (AppSessionState.activeBlueprintSlot === Number(targetId)) {
+      const next = [1,2,3,4].find(idx => BlueprintArchive['slot' + idx]);
+      AppSessionState.activeBlueprintSlot = next || 1;
+    }
+
+    tile.classList.remove('slot-erasing');
+    AppSessionState.activeTargetPurgeId = null;
+    syncArchiveUI();
+    showToast(`Sheet A-0${targetId} erased.`);
+  }, 730);
+}
+
+function openCompareModal() {
+  const rows = [1,2,3,4]
+    .map(idx => ({ idx, data: BlueprintArchive['slot' + idx] }))
+    .filter(entry => entry.data);
+
+  const wrap = document.getElementById('compare-table-wrap');
+
+  if (!rows.length) {
+    wrap.innerHTML = '<p>No saved Blueprints to compare yet.</p>';
+  } else {
+    wrap.innerHTML = `
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Sheet</th>
+            <th>Blueprint</th>
+            <th>Net Estate</th>
+            <th>Datum</th>
+            <th>Climate</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(({idx, data}) => `
+            <tr>
+              <td>A-0${idx}</td>
+              <td>${data.name}</td>
+              <td>${compactMoney(data.netEstate)}</td>
+              <td>$${addCommas(data.annualDatum)}/yr</td>
+              <td>${data.climate}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  document.getElementById('compare-modal').classList.add('open');
+}
+
+/* Slot click behavior */
+document.querySelectorAll('.blueprint-slot').forEach(tile => {
+  tile.addEventListener('click', function() {
+    const slotId = Number(this.dataset.slotId);
+    const isLocked = slotId > 1 && !AppSessionState.userHasPremiumToken;
+
+    if (isLocked) {
+      document.getElementById('premium-gate-modal').classList.add('open');
+      return;
+    }
+
+    if (BlueprintArchive['slot' + slotId]) {
+      AppSessionState.activeBlueprintSlot = slotId;
+      syncArchiveUI();
+      showToast(`Sheet A-0${slotId} selected. Ready to reopen in Studio.`);
+    } else {
+      saveToSlot(slotId);
+    }
+  });
+});
+
+/* Harden erase so card/tile click handlers cannot intercept it */
+document.addEventListener('click', function(event) {
+  const eraseButton = event.target.closest && event.target.closest('.erase-action');
+  if (!eraseButton) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation();
+
+  AppSessionState.activeTargetPurgeId = eraseButton.dataset.purgeTarget;
+  document.getElementById('delete-confirm-modal').classList.add('open');
+}, true);
+
+document.getElementById('action-save-blueprint').addEventListener('click', saveToFirstAvailableSlot);
+
+document.getElementById('action-compare-blueprints').addEventListener('click', openCompareModal);
+
+document.getElementById('action-open-studio').addEventListener('click', () => {
+  const active = BlueprintArchive['slot' + AppSessionState.activeBlueprintSlot];
+  showToast(active ? `Opening ${active.name} in Studio.` : 'Open Studio to build a Blueprint first.');
+});
+
+document.getElementById('action-return-account').addEventListener('click', () => {
+  showToast('Returning to My Account.');
+});
+
+document.getElementById('login-button').addEventListener('click', () => {
+  AppSessionState.userHasPremiumToken = !AppSessionState.userHasPremiumToken;
+  syncArchiveUI();
+  showToast(AppSessionState.userHasPremiumToken ? 'Demo login: Blueprint capacity unlocked.' : 'Demo login: Starter capacity restored.');
+});
+
+document.getElementById('upgrade-from-nav').addEventListener('click', () => {
+  document.getElementById('premium-gate-modal').classList.add('open');
+});
+
+document.getElementById('action-upgrade').addEventListener('click', () => {
+  AppSessionState.userHasPremiumToken = true;
+  document.getElementById('premium-gate-modal').classList.remove('open');
+  syncArchiveUI();
+  showToast('Blueprint Archive capacity unlocked for this demo.');
+});
+
+document.getElementById('action-dismiss-modal').addEventListener('click', () => {
+  document.getElementById('premium-gate-modal').classList.remove('open');
+});
+
+document.getElementById('action-cancel-erase').addEventListener('click', () => {
+  document.getElementById('delete-confirm-modal').classList.remove('open');
+  AppSessionState.activeTargetPurgeId = null;
+});
+
+document.getElementById('action-confirm-erase').addEventListener('click', () => {
+  document.getElementById('delete-confirm-modal').classList.remove('open');
+  proceedWithEraseSequence();
+});
+
+document.getElementById('action-close-compare').addEventListener('click', () => {
+  document.getElementById('compare-modal').classList.remove('open');
+});
+
+document.querySelectorAll('.modal').forEach(modal => {
+  modal.addEventListener('click', event => {
+    if (event.target === modal) modal.classList.remove('open');
+  });
+});
+
+const archiveTitle = document.getElementById('archive-title');
+archiveTitle.addEventListener('click', function() {
+  if (this.value === 'My Blueprint Archive') this.select();
+});
+archiveTitle.addEventListener('blur', function() {
+  if (this.value.trim() === '') this.value = 'My Blueprint Archive';
+});
+
+const loaded = safeLoadArchive();
+if (!loaded) {
+  BlueprintArchive.slot1 = makeBlueprintPayload();
+}
+
+syncArchiveUI();
+</script>
+<script>
+(function () {
+  'use strict';
+  function redirectToVault() { window.location.replace('/vault.html'); }
+  function revealBody() { document.body.style.visibility = 'visible'; }
+  function onSessionConfirmed() {
+    try { sessionStorage.setItem('datum_auth_hint', '1'); } catch (e) {}
+    revealBody();
+  }
+  window.addEventListener('load', function () {
+    Clerk.load().then(function () {
+      if (Clerk.user) { onSessionConfirmed(); }
+      else { redirectToVault(); }
+    }).catch(redirectToVault);
+  });
+})();
+</script>
+<script src="/nav.js"></script>
+</body>
+</html>

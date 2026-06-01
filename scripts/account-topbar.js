@@ -1,6 +1,8 @@
 // Datum FI — Shared Account Topbar Component (Pattern C · JS injection)
 // Loaded by: /my-account.html (always)
 //            /sketchbook.html (R3.5.5b)
+//            /Blueprint.html (R3.5.5b v2)
+//            /Dossier.html (R3.5.5b v2)
 // Does NOT contain a Clerk gate — loading decision is per-page.
 (function () {
   'use strict';
@@ -9,11 +11,13 @@
   var onAccountPage = /\/my-account(\.html)?($|\?)/.test(path);
 
   function getActiveTab() {
-    if (/\/my-account(\.html)?($|\?)/.test(path))  return 'welcome';
-    if (/\/Dossier(\.html)?($|\?)/.test(path))      return 'profile';
-    if (/\/sketchbook(\.html)?($|\?)/.test(path))   return 'sketchbook';
-    if (/\/Blueprint(\.html)?($|\?)/.test(path))    return 'blueprints';
-    if (/\/studio(\.html)?($|\?)/.test(path))       return 'studio';
+    if (/\/my-account(\.html)?($|\?)/.test(path))   return 'welcome';
+    if (/\/Dossier(\.html)?($|\?)/.test(path))       return 'profile';
+    if (/\/sketchbook(\.html)?($|\?)/.test(path))    return 'sketches';
+    if (/\/Blueprint(\.html)?($|\?)/.test(path))     return 'myblueprints';
+    if (/\/sketch(\.html)?($|\?)/.test(path))        return 'sketch';
+    if (/\/studio(\.html)?($|\?)/.test(path))        return 'studio';
+    if (/\/why-a-range(\.html)?($|\?)/.test(path))   return 'shape';
     return '';
   }
 
@@ -91,14 +95,19 @@
       + '</a>'
       + '<nav class="acct-topbar-nav" aria-label="Account navigation">'
       +   '<div class="acct-cluster">'
-      +     makeTab('welcome',    'Welcome',          active)
-      +     makeTab('profile',    'My Profile',       active)
+      +     makeTab('welcome',      'Welcome',      active)
+      +     makeTab('profile',      'My Profile',   active)
       +   '</div>'
       +   '<div class="acct-divider" aria-hidden="true"></div>'
       +   '<div class="acct-cluster">'
-      +     makeTab('sketchbook', 'Sketchbook',       active)
-      +     makeTab('blueprints', 'Blueprint Archive', active)
-      +     makeTab('studio',     'Studio',           active)
+      +     makeTab('sketches',     'My Sketches',  active)
+      +     makeTab('myblueprints', 'My Blueprints', active)
+      +   '</div>'
+      +   '<div class="acct-divider" aria-hidden="true"></div>'
+      +   '<div class="acct-cluster">'
+      +     makeTab('sketch',  'Sketch',  active)
+      +     makeTab('studio',  'Studio',  active)
+      +     makeTab('shape',   'Shape',   active)
       +   '</div>'
       + '</nav>'
       + '<div class="acct-topbar-right"></div>'
@@ -107,11 +116,13 @@
 
   function handleTabClick(tabId) {
     switch (tabId) {
-      case 'welcome':    window.location.href = '/my-account.html'; break;
-      case 'profile':    window.location.href = '/Dossier.html';    break;
-      case 'sketchbook': window.location.href = '/sketchbook.html'; break;
-      case 'blueprints': window.location.href = '/Blueprint.html';  break;
-      case 'studio':     window.location.href = '/studio.html';     break;
+      case 'welcome':      window.location.href = '/my-account.html';  break;
+      case 'profile':      window.location.href = '/Dossier.html';     break;
+      case 'sketches':     window.location.href = '/sketchbook.html';  break;
+      case 'myblueprints': window.location.href = '/Blueprint.html';   break;
+      case 'sketch':       window.location.href = '/sketch.html';      break;
+      case 'studio':       window.location.href = '/studio.html';      break;
+      case 'shape':        window.location.href = '/why-a-range.html'; break;
     }
   }
 
