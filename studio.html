@@ -5244,6 +5244,275 @@
   </script>
 
   <script src="/feedback.js"></script>
+
+  <style>
+  /* ── R3.6 STUDIO OVERLAY ─────────────────────────────────── */
+  .so-overlay-wrap{position:fixed;inset:0;z-index:9000;display:grid;place-items:center;padding:84px 24px 40px;background:radial-gradient(circle at 50% 42%,rgba(201,168,76,.085),transparent 38%),radial-gradient(circle at 45% 58%,rgba(93,202,165,.052),transparent 42%),linear-gradient(180deg,rgba(3,8,18,.36),rgba(3,8,18,.72));backdrop-filter:blur(9px)}
+  .so-overlay{width:min(1080px,calc(100vw - 42px));position:relative;border-radius:36px;border:1px solid rgba(255,255,255,.138);background:radial-gradient(circle at 17% 0%,rgba(201,168,76,.170),transparent 30%),radial-gradient(circle at 88% 13%,rgba(93,202,165,.135),transparent 35%),radial-gradient(circle at 54% 110%,rgba(77,168,218,.064),transparent 42%),linear-gradient(115deg,rgba(255,255,255,.040),transparent 18%,transparent 78%,rgba(255,255,255,.026)),repeating-linear-gradient(31deg,rgba(255,255,255,.014) 0 1px,transparent 1px 9px),linear-gradient(180deg,rgba(14,27,48,.94),rgba(5,11,20,.91));box-shadow:0 66px 166px rgba(0,0,0,.74),0 0 78px rgba(201,168,76,.055),inset 0 1px rgba(255,255,255,.135),inset 0 0 0 1px rgba(255,255,255,.050),inset 0 -1px rgba(0,0,0,.34);overflow:hidden}
+  .so-overlay:before{content:"";position:absolute;inset:-46% -20% auto -20%;height:330px;background:linear-gradient(112deg,transparent,rgba(255,255,255,.135),transparent);transform:translateX(-38%);opacity:.88;filter:blur(.15px)}
+  .so-overlay:after{content:"DF";position:absolute;right:30px;top:28px;width:102px;height:102px;border-radius:50%;display:grid;place-items:center;border:1px solid rgba(201,168,76,.30);color:rgba(201,168,76,.49);font-family:'Fraunces',Georgia,serif;font-size:32px;font-style:italic;letter-spacing:-.065em;background:radial-gradient(circle at 50% 50%,transparent 0 32px,rgba(201,168,76,.120) 33px 34px,transparent 35px),radial-gradient(circle at 50% 50%,transparent 0 44px,rgba(201,168,76,.190) 45px 46px,transparent 47px),radial-gradient(circle at 50% 50%,rgba(255,255,255,.030),transparent 62%);transform:rotate(7deg);pointer-events:none;filter:drop-shadow(0 14px 28px rgba(0,0,0,.18))}
+  .so-rim{position:absolute;inset:14px;border-radius:27px;border:1px solid rgba(255,255,255,.055);pointer-events:none;z-index:1;box-shadow:inset 0 1px rgba(255,255,255,.035),inset 0 0 0 1px rgba(0,0,0,.18)}
+  .so-close{position:absolute;top:22px;right:22px;z-index:5;width:40px;height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:radial-gradient(circle at 30% 10%,rgba(255,255,255,.16),transparent 40%),rgba(255,255,255,.044);color:rgba(255,255,255,.68);font-size:24px;line-height:1;display:grid;place-items:center;cursor:pointer;box-shadow:inset 0 1px rgba(255,255,255,.085),0 14px 30px rgba(0,0,0,.24);transition:transform .18s ease,border-color .18s ease,color .18s ease}
+  .so-close:hover{transform:translateY(-1px) scale(1.025);color:rgba(255,255,255,.92);border-color:rgba(201,168,76,.34)}
+  .so-inner{position:relative;z-index:2;padding:38px 38px 36px}
+  .so-head{display:grid;grid-template-columns:1fr 240px;gap:30px;align-items:start;margin-bottom:24px}
+  .so-eyebrow{margin:0 0 12px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:rgba(201,168,76,.84)}
+  .so-overlay h1{max-width:750px;margin:0;font-family:'Fraunces',Georgia,serif;font-size:clamp(42px,5.8vw,70px);font-style:italic;font-weight:300;line-height:.92;letter-spacing:-.035em;text-shadow:0 0 38px rgba(201,168,76,.070),0 18px 38px rgba(0,0,0,.24)}
+  .so-copy{max-width:730px;margin:16px 0 0;color:rgba(255,255,255,.64);font-size:15.5px;line-height:1.72}
+  .so-copy strong{color:rgba(201,168,76,.93);font-weight:400;text-shadow:0 0 18px rgba(201,168,76,.08)}
+  .so-status{border-radius:24px;border:1px solid rgba(255,255,255,.118);background:radial-gradient(circle at 22% 0%,rgba(255,255,255,.135),transparent 36%),radial-gradient(circle at 88% 94%,rgba(201,168,76,.092),transparent 40%),linear-gradient(180deg,rgba(255,255,255,.062),rgba(255,255,255,.024));padding:18px;box-shadow:inset 0 1px rgba(255,255,255,.095),0 23px 52px rgba(0,0,0,.29)}
+  .so-status-title{font-family:'DM Mono',monospace;font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:rgba(201,168,76,.78)}
+  .so-status-value{margin-top:10px;font-family:'Fraunces',Georgia,serif;font-size:28px;font-style:italic;text-shadow:0 0 18px rgba(201,168,76,.055)}
+  .so-status-note{margin-top:8px;color:rgba(255,255,255,.48);font-size:12.5px;line-height:1.5}
+  .so-roadmap{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:22px 0 18px}
+  .so-step{position:relative;min-height:208px;border-radius:24px;overflow:hidden;padding:20px;border:1px solid rgba(93,202,165,.28);background:radial-gradient(circle at 18% 8%,rgba(93,202,165,.20),transparent 36%),radial-gradient(circle at 92% 94%,rgba(93,202,165,.24),transparent 38%),linear-gradient(180deg,rgba(255,255,255,.068),rgba(255,255,255,.025));box-shadow:inset 0 1px rgba(255,255,255,.130),0 31px 66px rgba(0,0,0,.36)}
+  .so-step:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,rgba(93,202,165,.96),rgba(93,202,165,.42) 58%,rgba(201,168,76,.58));box-shadow:0 0 28px rgba(93,202,165,.31)}
+  .so-step.so-gold{border-color:rgba(201,168,76,.28)}.so-step.so-gold:before{background:linear-gradient(180deg,rgba(201,168,76,.96),rgba(201,168,76,.42) 58%,rgba(93,202,165,.58));box-shadow:0 0 28px rgba(201,168,76,.31)}
+  .so-step.so-orange{border-color:rgba(229,142,38,.28)}.so-step.so-orange:before{background:linear-gradient(180deg,rgba(229,142,38,.96),rgba(229,142,38,.42) 58%,rgba(201,168,76,.58));box-shadow:0 0 28px rgba(229,142,38,.31)}
+  .so-step-num{font-family:'DM Mono',monospace;font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:12px}
+  .so-step h2{margin:0 0 8px;font-family:'Fraunces',Georgia,serif;font-size:29px;font-style:italic;font-weight:300;line-height:1.02}
+  .so-step p{margin:0;color:rgba(255,255,255,.60);font-size:13px;line-height:1.58}
+  .so-cta-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:20px}
+  .so-choice{position:relative;overflow:hidden;text-align:left;min-height:142px;border-radius:25px;padding:20px;border:1px solid rgba(255,255,255,.124);background:radial-gradient(circle at 18% 0%,rgba(255,255,255,.118),transparent 36%),radial-gradient(circle at 88% 92%,rgba(201,168,76,.080),transparent 40%),linear-gradient(180deg,rgba(255,255,255,.058),rgba(255,255,255,.022));color:#fff;box-shadow:inset 0 1px rgba(255,255,255,.106),0 28px 62px rgba(0,0,0,.34);transition:.20s ease;cursor:pointer}
+  .so-choice:hover{transform:translateY(-4px);border-color:rgba(201,168,76,.42);box-shadow:inset 0 1px rgba(255,255,255,.130),0 38px 78px rgba(0,0,0,.42),0 0 40px rgba(201,168,76,.082)}
+  .so-choice:before{content:"";position:absolute;inset:0;background:linear-gradient(112deg,transparent 0%,rgba(255,255,255,.20) 44%,transparent 58%);transform:translateX(-120%);transition:transform .70s ease}
+  .so-choice:hover:before{transform:translateX(120%)}
+  .so-choice.so-primary{border-color:rgba(201,168,76,.36);background:radial-gradient(circle at 18% 0%,rgba(201,168,76,.175),transparent 36%),radial-gradient(circle at 88% 92%,rgba(93,202,165,.086),transparent 40%),linear-gradient(180deg,rgba(255,255,255,.072),rgba(255,255,255,.026));box-shadow:inset 0 1px rgba(255,255,255,.122),0 30px 66px rgba(0,0,0,.36),0 0 32px rgba(201,168,76,.060)}
+  .so-choice.so-primary:hover{border-color:rgba(201,168,76,.52);box-shadow:inset 0 1px rgba(255,255,255,.140),0 38px 78px rgba(0,0,0,.42),0 0 40px rgba(201,168,76,.090)}
+  .so-choice.so-blue{border-color:rgba(77,168,218,.25);background:radial-gradient(circle at 18% 0%,rgba(77,168,218,.135),transparent 36%),linear-gradient(180deg,rgba(255,255,255,.060),rgba(255,255,255,.022))}
+  .so-choice.so-teal{border-color:rgba(93,202,165,.25);background:radial-gradient(circle at 18% 0%,rgba(93,202,165,.135),transparent 36%),linear-gradient(180deg,rgba(255,255,255,.060),rgba(255,255,255,.022))}
+  .so-choice-kicker{position:relative;z-index:2;margin-bottom:8px;font-family:'DM Mono',monospace;font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:rgba(201,168,76,.84)}
+  .so-choice.so-blue .so-choice-kicker{color:rgba(77,168,218,.82)}
+  .so-choice.so-teal .so-choice-kicker{color:rgba(93,202,165,.82)}
+  .so-choice-title{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;font-family:'Fraunces',Georgia,serif;font-size:28px;font-style:italic;line-height:1;text-shadow:0 0 22px rgba(255,255,255,.040)}
+  .so-choice-sub{position:relative;z-index:2;margin-top:10px;color:rgba(255,255,255,.56);font-size:13px;line-height:1.55}
+  .so-choice-arrow{flex:0 0 auto;width:35px;height:35px;border-radius:50%;display:grid;place-items:center;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.045);font-family:'DM Mono',monospace;font-size:15px;box-shadow:inset 0 1px rgba(255,255,255,.08),0 8px 18px rgba(0,0,0,.18)}
+  .so-choice.so-primary .so-choice-arrow{border-color:rgba(201,168,76,.26);background:rgba(201,168,76,.075)}
+  .so-choice.disabled-cta{opacity:.45;cursor:not-allowed;pointer-events:none}
+  .so-overlay-wrap.dismissed{opacity:0;pointer-events:none;transition:opacity .28s ease}
+  .so-toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:9500;border:1px solid rgba(201,168,76,.36);border-radius:999px;padding:12px 16px;background:radial-gradient(circle at 18% 0%,rgba(201,168,76,.110),transparent 42%),rgba(5,11,20,.94);color:rgba(255,255,255,.80);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.13em;text-transform:uppercase;box-shadow:0 26px 66px rgba(0,0,0,.46);transition:.22s ease}
+  .so-toast.show{opacity:1;transform:translate(-50%,0)}
+  @media(max-width:1080px){.so-head{grid-template-columns:1fr}.so-roadmap{grid-template-columns:1fr}.so-cta-grid{grid-template-columns:1fr}}
+  @media(max-width:640px){.so-overlay-wrap{padding:74px 16px 26px;align-items:start;overflow:auto}.so-overlay{width:100%;border-radius:28px}.so-inner{padding:58px 20px 22px}.so-overlay:after{width:78px;height:78px;font-size:25px;right:18px;top:18px;opacity:.54}}
+  </style>
+  <section class="so-overlay-wrap" id="studioOverlayWrap" aria-labelledby="studioOverlayTitle">
+    <div class="so-overlay" role="dialog" aria-modal="true" aria-describedby="studioOverlayDesc">
+      <div class="so-rim" aria-hidden="true"></div>
+      <button class="so-close" id="studioCloseIntro" type="button" aria-label="Close intro and start a new Blueprint">&times;</button>
+      <div class="so-inner">
+        <div class="so-head">
+          <div>
+            <p class="so-eyebrow">Before you enter the Studio</p>
+            <h1 id="studioOverlayTitle">You are about to draft the Blueprint that carries your retirement.</h1>
+            <p class="so-copy" id="studioOverlayDesc">The Studio is where the outline becomes architecture. You will add the account rooms, define the Datum, then test the tension between the life you want and the estate that has to carry it.</p>
+          </div>
+          <aside class="so-status" aria-label="Auth status">
+            <div class="so-status-title">Current status</div>
+            <div class="so-status-value" id="studioStatusValue">Signed out</div>
+            <div class="so-status-note" id="studioStatusNote">You can start a new Blueprint now. Saved Sketches and filed Blueprints require sign in so they can open from the right archive.</div>
+          </aside>
+        </div>
+        <div class="so-roadmap" aria-label="Studio roadmap">
+          <article class="so-step so-gold">
+            <div class="so-step-num">01 / Account rooms</div>
+            <h2>Build the estate.</h2>
+            <p>Add household details, tax base, accounts, assets, expenses, Social Security, pensions, and the capital that will carry retirement.</p>
+          </article>
+          <article class="so-step">
+            <div class="so-step-num">02 / Datum</div>
+            <h2>Derive the target.</h2>
+            <p>Define the annual spend the plan must support. Studio turns that target into a line the estate has to clear, not just a number on a form.</p>
+          </article>
+          <article class="so-step so-orange">
+            <div class="so-step-num">03 / Tension</div>
+            <h2>Resolve the pressure.</h2>
+            <p>Run the plan against market climate, tax drag, withdrawal order, income timing, and shocks. Then see what holds, what stretches, and what needs redesign.</p>
+          </article>
+        </div>
+        <div class="so-cta-grid">
+          <button class="so-choice so-primary" id="studioStartScratch" type="button">
+            <div class="so-choice-kicker">Begin new</div>
+            <div class="so-choice-title">Start from Scratch <span class="so-choice-arrow">&rarr;</span></div>
+            <div class="so-choice-sub">Start a new Blueprint with clean Studio inputs.</div>
+          </button>
+          <button class="so-choice so-blue" id="studioStartSketch" type="button">
+            <div class="so-choice-kicker">Import outline</div>
+            <div class="so-choice-title">Start from Sketch <span class="so-choice-arrow">&rarr;</span></div>
+            <div class="so-choice-sub" id="studioSketchSub">Sign in, open your Sketchbook, choose a saved Sketch, and prefill your Blueprint defaults.</div>
+          </button>
+          <button class="so-choice so-teal" id="studioStartBlueprint" type="button">
+            <div class="so-choice-kicker">Continue filed work</div>
+            <div class="so-choice-title">Start from Blueprint <span class="so-choice-arrow">&rarr;</span></div>
+            <div class="so-choice-sub" id="studioBlueprintSub">Continue from saved Blueprint.</div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+  <div class="so-toast" id="studioOverlayToast" role="status" aria-live="polite"></div>
+  <script>
+  (function() {
+    'use strict';
+    var _wrap = document.getElementById('studioOverlayWrap');
+    if (!_wrap) return;
+
+    var isSignedIn = !!sessionStorage.getItem('datum_auth_hint');
+
+    if (isSignedIn && localStorage.getItem('datum_studio_overlay_seen')) {
+      _wrap.style.display = 'none';
+      return;
+    }
+
+    var _toast           = document.getElementById('studioOverlayToast');
+    var _statusValue     = document.getElementById('studioStatusValue');
+    var _statusNote      = document.getElementById('studioStatusNote');
+    var _startSketch     = document.getElementById('studioStartSketch');
+    var _startBlueprint  = document.getElementById('studioStartBlueprint');
+    var _sketchSub       = document.getElementById('studioSketchSub');
+    var _blueprintSub    = document.getElementById('studioBlueprintSub');
+
+    if (isSignedIn) {
+      if (_statusValue) _statusValue.textContent = 'Signed in';
+      if (_statusNote)  _statusNote.textContent  = 'Your Sketchbook and Blueprint Archive are available.';
+    }
+
+    var _hasSavedSketch = false;
+    try {
+      if (localStorage.getItem('datum_sketch_state_1')) {
+        _hasSavedSketch = true;
+      } else {
+        var _sBlob = JSON.parse(localStorage.getItem('datumfi_sketchbook_v1') || 'null');
+        _hasSavedSketch = !!(_sBlob && (_sBlob.slot_1 || _sBlob['slot_1']));
+      }
+    } catch(ex) {}
+
+    var _hasSavedBlueprint = false;
+    try {
+      var _hasNew = false;
+      for (var _i = 1; _i <= 4; _i++) {
+        if (localStorage.getItem('datum_blueprint_state_' + _i)) { _hasNew = true; break; }
+      }
+      if (_hasNew) {
+        _hasSavedBlueprint = true;
+      } else {
+        var _bBlob = JSON.parse(localStorage.getItem('datumfi_blueprint_archive_v1') || 'null');
+        _hasSavedBlueprint = !!((_bBlob && (_bBlob.slot1 || _bBlob.slot2 || _bBlob.slot3 || _bBlob.slot4)));
+      }
+    } catch(ex) {}
+
+    if (!_hasSavedSketch) {
+      if (_startSketch) _startSketch.classList.add('disabled-cta');
+      if (_sketchSub)   _sketchSub.textContent = 'No saved Sketches yet. Sketch first to build your outline.';
+    }
+    if (!_hasSavedBlueprint) {
+      if (_startBlueprint) _startBlueprint.classList.add('disabled-cta');
+      if (_blueprintSub)   _blueprintSub.textContent = 'No saved Blueprints yet. Start from Scratch to file your first.';
+    }
+
+    function _showToast(msg) {
+      if (!_toast) return;
+      _toast.textContent = msg;
+      _toast.classList.add('show');
+      clearTimeout(_showToast._t);
+      _showToast._t = setTimeout(function() { _toast.classList.remove('show'); }, 2800);
+    }
+
+    function dismissOverlay(msg) {
+      if (isSignedIn) {
+        try { localStorage.setItem('datum_studio_overlay_seen', '1'); } catch(ex) {}
+      }
+      _wrap.classList.add('dismissed');
+      _showToast(msg || 'Starting a new Blueprint.');
+      setTimeout(function() { _wrap.style.display = 'none'; }, 320);
+    }
+
+    var _closeBtn     = document.getElementById('studioCloseIntro');
+    var _startScratch = document.getElementById('studioStartScratch');
+
+    if (_closeBtn)     _closeBtn.addEventListener('click',     function() { dismissOverlay('Starting a new Blueprint.'); });
+    if (_startScratch) _startScratch.addEventListener('click', function() { dismissOverlay('Starting a new Blueprint.'); });
+
+    if (_startSketch && !_startSketch.classList.contains('disabled-cta')) {
+      _startSketch.addEventListener('click', function() {
+        if (isSignedIn) {
+          window.location.href = '/sketchbook.html';
+        } else {
+          window.location.href = '/vault.html?returnTo=' + encodeURIComponent('/sketchbook.html');
+        }
+      });
+    }
+
+    if (_startBlueprint && !_startBlueprint.classList.contains('disabled-cta')) {
+      _startBlueprint.addEventListener('click', function() {
+        if (isSignedIn) {
+          window.location.href = '/Blueprint.html';
+        } else {
+          window.location.href = '/vault.html?returnTo=' + encodeURIComponent('/Blueprint.html');
+        }
+      });
+    }
+
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape' && _wrap && _wrap.style.display !== 'none') {
+        dismissOverlay('Starting a new Blueprint.');
+      }
+    });
+  })();
+  </script>
+
+  <script>
+  /* ── R3.6 BLUEPRINT HYDRATION HANDSHAKE ─────────────────── */
+  (function() {
+    var params = new URLSearchParams(window.location.search);
+    var _id = params.get('id');
+    var _hydrate = params.get('hydrate');
+    if (!_id || _hydrate !== 'blueprint') return;
+
+    var _data = null;
+    try { _data = JSON.parse(localStorage.getItem('datum_blueprint_state_' + _id) || 'null'); } catch(ex) {}
+    if (!_data) {
+      var _blob = null;
+      try { _blob = JSON.parse(localStorage.getItem('datumfi_blueprint_archive_v1') || 'null'); } catch(ex) {}
+      _data = (_blob && _blob['slot' + _id]) || null;
+    }
+    if (!_data) return;
+
+    setTimeout(function() {
+      var _b = document.createElement('div');
+      _b.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(29,158,117,0.12);border:1px solid rgba(29,158,117,0.4);color:var(--teal-mid,#5DCAA5);font-family:var(--font-mono,"DM Mono",monospace);font-size:11px;letter-spacing:0.06em;padding:8px 16px;border-radius:4px;white-space:nowrap;pointer-events:none;';
+      _b.textContent = 'Blueprint loaded from Archive.';
+      document.body.appendChild(_b);
+      setTimeout(function() { _b.style.transition = 'opacity 0.5s'; _b.style.opacity = '0'; setTimeout(function() { if (_b.parentNode) _b.remove(); }, 500); }, 3500);
+    }, 600);
+  })();
+  /* ── END R3.6 BLUEPRINT HYDRATION HANDSHAKE ─────────────── */
+  </script>
+
+  <script>
+  /* ── R3.6 CAPTURE STUDIO STATE (foundation for R3.7 makeBlueprintPayload upgrade) ── */
+  (function() {
+    var _btn = document.getElementById('measure-btn');
+    if (!_btn) return;
+    _btn.addEventListener('click', function() {
+      try {
+        var _nameEl = document.getElementById('primary-name');
+        var _dobEl  = document.getElementById('pri-dob');
+        var _retEl  = document.getElementById('target-ret');
+        var _planEl = document.getElementById('plan-end-age');
+        var _state = {
+          ts:          Date.now(),
+          primaryName: _nameEl ? _nameEl.value : '',
+          priDob:      _dobEl  ? _dobEl.value  : '',
+          targetRet:   _retEl  ? _retEl.value  : '',
+          planEndAge:  _planEl ? _planEl.value  : ''
+        };
+        localStorage.setItem('datum_blueprint_state_pending', JSON.stringify(_state));
+      } catch(ex) {}
+    });
+  })();
+  /* ── END R3.6 CAPTURE STUDIO STATE ─────────────────────── */
+  </script>
+
   <script src="/nav.js"></script>
   <script>document.addEventListener('DOMContentLoaded', function() { if (window.dfTrack) dfTrack('studio_started'); });</script>
 </body>

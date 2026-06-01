@@ -214,6 +214,14 @@
     transition: color 0.2s; flex-shrink: 0; position: relative; z-index: 15;
   }
   .slot-erase-action:hover { color: var(--danger-red); }
+  .slot-open-action {
+    background: transparent; border: none; outline: none;
+    font-family: var(--font-mono); font-size: 7px; text-transform: uppercase;
+    letter-spacing: 0.12em; color: rgba(29,158,117,.72); cursor: pointer; padding: 0;
+    transition: color 0.2s; flex-shrink: 0; position: relative; z-index: 80;
+    pointer-events: auto;
+  }
+  .slot-open-action:hover { color: rgba(93,202,165,.95); }
   
   .saved-bottom { 
     display: flex; justify-content: space-between; align-items: center; width: 100%; 
@@ -3202,7 +3210,10 @@
       <div class="mini-shape">${miniShapeSVG(data)}</div>
       <div class="saved-bottom">
         <span class="saved-time">Sketched Saved · ${data.dateStamped}</span>
-        <button type="button" class="slot-erase-action" data-purge-target="${idx}" aria-label="Erase scenario data from page slot 0${idx}" title="Erase this saved Sketch">Erase Slot</button>
+        <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+          <button type="button" class="slot-open-action" data-open-slot="${idx}" aria-label="Open this Sketch" title="Open in Sketch">Open Sketch</button>
+          <button type="button" class="slot-erase-action" data-purge-target="${idx}" aria-label="Erase scenario data from page slot 0${idx}" title="Erase this saved Sketch">Erase Slot</button>
+        </div>
       </div>
     `;
   }
@@ -3553,6 +3564,23 @@
     if (deleteModal) deleteModal.classList.add('open');
   }, true);
   /* ── END V12 HARDEN ERASE CONFIRMATION ── */
+
+
+  /* ── R3.6 OPEN SKETCH HYDRATION HANDSHAKE
+     Capture-phase delegated listener routes slot tile to sketch.html with ?id param.
+     New datum_sketch_state_{N} key is written by sketch.html _doSave(); this side
+     only reads via the migration shim on that page. */
+  document.addEventListener('click', function(e) {
+    const openBtn = e.target.closest && e.target.closest('.slot-open-action');
+    if (!openBtn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    var slotId = openBtn.dataset.openSlot;
+    if (slotId) window.location.href = '/sketch.html?id=' + slotId;
+  }, true);
+  /* ── END R3.6 OPEN SKETCH HYDRATION HANDSHAKE ── */
+
 
   // Run initialization boot tracking sequence scripts
   syncDesktopSketchbookUI();

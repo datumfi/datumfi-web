@@ -907,6 +907,24 @@ button {
   color: var(--danger-red);
 }
 
+.open-blueprint-action {
+  position: relative;
+  z-index: 500;
+  pointer-events: auto;
+  background: transparent;
+  border: 0;
+  font-family: var(--font-mono);
+  font-size: 7.4px;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+  color: rgba(29,158,117,.72);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.open-blueprint-action:hover {
+  color: rgba(93,202,165,.95);
+}
+
 .archive-actions {
   display: flex;
   align-items: center;
@@ -1432,7 +1450,10 @@ function renderBlueprintSlot(idx, data) {
 
     <div class="card-bottom">
       <span class="saved-time">Modeled · ${data.dateStamped}</span>
-      <button type="button" class="erase-action" data-purge-target="${idx}" aria-label="Erase blueprint from sheet A-0${idx}">Erase</button>
+      <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+        <button type="button" class="open-blueprint-action" data-open-slot="${idx}" aria-label="Open Blueprint in Studio">Open</button>
+        <button type="button" class="erase-action" data-purge-target="${idx}" aria-label="Erase blueprint from sheet A-0${idx}">Erase</button>
+      </div>
     </div>
   `;
 }
@@ -1472,6 +1493,7 @@ function syncArchiveUI() {
 function saveToSlot(slotId) {
   BlueprintArchive['slot' + slotId] = makeBlueprintPayload();
   AppSessionState.activeBlueprintSlot = slotId;
+  try { localStorage.setItem('datum_blueprint_state_' + slotId, JSON.stringify(BlueprintArchive['slot' + slotId])); } catch(ex) {}
   syncArchiveUI();
   showToast(`Blueprint saved to Sheet A-0${slotId}.`);
 }
@@ -1591,6 +1613,23 @@ document.addEventListener('click', function(event) {
   AppSessionState.activeTargetPurgeId = eraseButton.dataset.purgeTarget;
   document.getElementById('delete-confirm-modal').classList.add('open');
 }, true);
+
+/* ── R3.6 OPEN BLUEPRINT HYDRATION HANDSHAKE
+   Capture-phase delegated listener routes Blueprint tile to studio.html with
+   ?id + &hydrate=blueprint params. datum_blueprint_state_{N} was written by
+   saveToSlot() above; studio.html reads it via migration shim. */
+document.addEventListener('click', function(event) {
+  const openBtn = event.target.closest && event.target.closest('.open-blueprint-action');
+  if (!openBtn) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation();
+
+  var slotId = openBtn.dataset.openSlot;
+  if (slotId) window.location.href = '/studio.html?id=' + slotId + '&hydrate=blueprint';
+}, true);
+/* ── END R3.6 OPEN BLUEPRINT HYDRATION HANDSHAKE ── */
 
 document.getElementById('action-save-blueprint').addEventListener('click', saveToFirstAvailableSlot);
 

@@ -10017,6 +10017,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
           slot_1: payload
         };
         try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch(ex) {}
+        try { localStorage.setItem('datum_sketch_state_1', JSON.stringify(payload)); } catch(ex) {}
         sessionStorage.setItem('datumfi_just_saved', '1');
         sessionStorage.setItem('datumfi_sketch_return_screen', window.location.hash || '#screen-5-build');
         sessionStorage.setItem('datumfi_sketch_current_snapshot', JSON.stringify(payload));
@@ -10108,6 +10109,245 @@ Studio is built for exactly this. See If This Shape Holds →`;
       })(_contract.portfolio_mass, _contract.contributions, _contract.datum_spend, _slPort, _slContrib, _slDatum);
     })();
     // ── END PHASE A: OPEN SKETCH HYDRATION ───────────────────────────────
+
+    // ── PHASE B: URL PARAM SKETCH HYDRATION ──────────────────────────────
+    (function() {
+      var _id = new URLSearchParams(window.location.search).get('id');
+      if (!_id) return;
+      var _contract = null;
+      try { _contract = JSON.parse(localStorage.getItem('datum_sketch_state_' + _id) || 'null'); } catch(ex) {}
+      if (!_contract) {
+        var _blob = null;
+        try { _blob = JSON.parse(localStorage.getItem('datumfi_sketchbook_v1') || 'null'); } catch(ex) {}
+        _contract = (_blob && (_blob['slot_' + _id] || _blob.slot_1)) || null;
+      }
+      if (!_contract) return;
+
+      var _slAge     = document.getElementById('slider-age');
+      var _slAct     = document.getElementById('slider-activation');
+      var _slPort    = document.getElementById('slider-portfolio');
+      var _slContrib = document.getElementById('slider-contrib');
+      var _slDatum   = document.getElementById('slider-datum');
+      if (!_slAge || !_slAct || !_slPort || !_slContrib || !_slDatum) return;
+
+      if (_contract.age) {
+        _slAge.value = _contract.age;
+        var _vAge = document.getElementById('val-age');
+        if (_vAge) _vAge.textContent = _contract.age;
+      }
+      if (_contract.retire_age) {
+        _slAct.value = _contract.retire_age;
+        var _vAct = document.getElementById('val-activation');
+        if (_vAct) _vAct.textContent = _contract.retire_age;
+      }
+      if (_contract.portfolio_mass) {
+        var _portM = _contract.portfolio_mass / 1000000;
+        _slPort.value = portValToPos(_portM);
+        _slPort.dataset.exactVal = _contract.portfolio_mass;
+        var _vPort = document.getElementById('val-portfolio');
+        if (_vPort) _vPort.textContent = _portM >= 1 ? '$' + _portM.toFixed(2).replace(/\.?0+$/, '') + 'M' : '$' + Math.round(_portM * 1000) + 'k';
+      }
+      if (_contract.contributions !== undefined) {
+        _slContrib.value = contribValToPos(_contract.contributions);
+        _slContrib.dataset.exactVal = _contract.contributions;
+        var _vContrib = document.getElementById('val-contrib');
+        if (_vContrib) _vContrib.textContent = '$' + Math.round(_contract.contributions / 1000) + 'k/yr';
+      }
+      if (_contract.datum_spend) {
+        var _datumK = _contract.datum_spend / 1000;
+        _slDatum.value = datumValToPos(_datumK);
+        _slDatum.dataset.exactVal = _contract.datum_spend;
+        var _vDatum = document.getElementById('val-datum');
+        if (_vDatum) _vDatum.textContent = '$' + Math.round(_datumK) + 'k/yr';
+      }
+
+      try { updateEngine(); } catch(ex) {}
+      ;(function(_pM, _cV, _dS, _slP, _slC, _slD) {
+        setTimeout(function() {
+          if (_pM) _slP.dataset.exactVal = _pM;
+          if (_cV !== undefined) _slC.dataset.exactVal = _cV;
+          if (_dS) _slD.dataset.exactVal = _dS;
+        }, 100);
+      })(_contract.portfolio_mass, _contract.contributions, _contract.datum_spend, _slPort, _slContrib, _slDatum);
+    })();
+    // ── END PHASE B: URL PARAM SKETCH HYDRATION ──────────────────────────
+</script>
+<style>
+/* ── R3.6 SKETCH OVERLAY ─────────────────────────────────── */
+.sketch-overlay-wrap{position:fixed;inset:0;z-index:9000;display:grid;place-items:center;padding:84px 24px 40px;background:radial-gradient(circle at 50% 42%,rgba(93,202,165,.090),transparent 38%),linear-gradient(180deg,rgba(3,8,18,.36),rgba(3,8,18,.72));backdrop-filter:blur(9px)}
+.sketch-overlay{width:min(1040px,calc(100vw - 42px));position:relative;border-radius:36px;border:1px solid rgba(255,255,255,.138);background:radial-gradient(circle at 17% 0%,rgba(93,202,165,.195),transparent 30%),radial-gradient(circle at 88% 13%,rgba(201,168,76,.145),transparent 35%),radial-gradient(circle at 54% 110%,rgba(77,168,218,.070),transparent 42%),linear-gradient(115deg,rgba(255,255,255,.040),transparent 18%,transparent 78%,rgba(255,255,255,.026)),repeating-linear-gradient(31deg,rgba(255,255,255,.014) 0 1px,transparent 1px 9px),linear-gradient(180deg,rgba(14,27,48,.94),rgba(5,11,20,.91));box-shadow:0 66px 166px rgba(0,0,0,.74),0 0 78px rgba(93,202,165,.064),inset 0 1px rgba(255,255,255,.135),inset 0 0 0 1px rgba(255,255,255,.050),inset 0 -1px rgba(0,0,0,.34);overflow:hidden}
+.sketch-overlay:before{content:"";position:absolute;inset:-46% -20% auto -20%;height:330px;background:linear-gradient(112deg,transparent,rgba(255,255,255,.135),transparent);transform:translateX(-38%);opacity:.88;filter:blur(.15px)}
+.sketch-overlay:after{content:"DF";position:absolute;right:30px;top:28px;width:102px;height:102px;border-radius:50%;display:grid;place-items:center;border:1px solid rgba(201,168,76,.30);color:rgba(201,168,76,.49);font-family:'Fraunces',Georgia,serif;font-size:32px;font-style:italic;letter-spacing:-.065em;background:radial-gradient(circle at 50% 50%,transparent 0 32px,rgba(201,168,76,.120) 33px 34px,transparent 35px),radial-gradient(circle at 50% 50%,transparent 0 44px,rgba(201,168,76,.190) 45px 46px,transparent 47px),radial-gradient(circle at 50% 50%,rgba(255,255,255,.030),transparent 62%);transform:rotate(7deg);pointer-events:none;filter:drop-shadow(0 14px 28px rgba(0,0,0,.18))}
+.sketch-overlay-rim{position:absolute;inset:14px;border-radius:27px;border:1px solid rgba(255,255,255,.055);pointer-events:none;z-index:1;box-shadow:inset 0 1px rgba(255,255,255,.035),inset 0 0 0 1px rgba(0,0,0,.18)}
+.sketch-overlay-inner{position:relative;z-index:2;padding:38px}
+.sketch-overlay-head{display:grid;grid-template-columns:1fr 230px;gap:30px;align-items:start;margin-bottom:24px}
+.sketch-overlay-eyebrow{margin:0 0 12px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:rgba(201,168,76,.82)}
+.sketch-overlay h1{margin:0;font-family:'Fraunces',Georgia,serif;font-size:clamp(42px,6vw,72px);font-style:italic;font-weight:300;line-height:.92;letter-spacing:-.035em;text-shadow:0 0 38px rgba(93,202,165,.075),0 18px 38px rgba(0,0,0,.24);max-width:720px}
+.sketch-overlay-copy{max-width:720px;margin:16px 0 0;color:rgba(255,255,255,.64);font-size:15.5px;line-height:1.72}
+.sketch-overlay-copy strong{color:rgba(201,168,76,.93);font-weight:400;text-shadow:0 0 18px rgba(201,168,76,.08)}
+.sketch-status-card{border-radius:24px;border:1px solid rgba(255,255,255,.118);background:radial-gradient(circle at 22% 0%,rgba(255,255,255,.135),transparent 36%),radial-gradient(circle at 88% 94%,rgba(93,202,165,.092),transparent 40%),radial-gradient(circle at 0% 100%,rgba(201,168,76,.046),transparent 38%),linear-gradient(180deg,rgba(255,255,255,.062),rgba(255,255,255,.024));padding:18px;box-shadow:inset 0 1px rgba(255,255,255,.095),0 23px 52px rgba(0,0,0,.29)}
+.sketch-status-title{font-family:'DM Mono',monospace;font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:rgba(93,202,165,.76)}
+.sketch-status-value{margin-top:10px;font-family:'Fraunces',Georgia,serif;font-size:28px;font-style:italic;text-shadow:0 0 18px rgba(93,202,165,.055)}
+.sketch-status-note{margin-top:8px;color:rgba(255,255,255,.48);font-size:12.5px;line-height:1.5}
+.sketch-overlay-roadmap{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:22px 0 18px}
+.sketch-overlay-step{position:relative;min-height:198px;border-radius:24px;overflow:hidden;padding:20px;border:1px solid rgba(93,202,165,.28);background:radial-gradient(circle at 18% 8%,rgba(93,202,165,.20),transparent 36%),radial-gradient(circle at 92% 94%,rgba(93,202,165,.24),transparent 38%),radial-gradient(circle at 52% -8%,rgba(255,255,255,.055),transparent 34%),linear-gradient(180deg,rgba(255,255,255,.068),rgba(255,255,255,.025));box-shadow:inset 0 1px rgba(255,255,255,.130),0 31px 66px rgba(0,0,0,.36)}
+.sketch-overlay-step:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,rgba(93,202,165,.96),rgba(93,202,165,.42) 58%,rgba(201,168,76,.58));box-shadow:0 0 28px rgba(93,202,165,.31)}
+.sketch-overlay-step.so-discover{border-color:rgba(77,168,218,.28)}
+.sketch-overlay-step.so-discover:before{background:linear-gradient(180deg,rgba(77,168,218,.96),rgba(77,168,218,.42) 58%,rgba(201,168,76,.58));box-shadow:0 0 28px rgba(77,168,218,.31)}
+.sketch-overlay-step.so-design{border-color:rgba(201,168,76,.28)}
+.sketch-overlay-step.so-design:before{background:linear-gradient(180deg,rgba(201,168,76,.96),rgba(201,168,76,.42) 58%,rgba(93,202,165,.58));box-shadow:0 0 28px rgba(201,168,76,.31)}
+.sketch-overlay-step-num{font-family:'DM Mono',monospace;font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:12px}
+.sketch-overlay-step h2{margin:0 0 8px;font-family:'Fraunces',Georgia,serif;font-size:29px;font-style:italic;font-weight:300;line-height:1.02}
+.sketch-overlay-step p{margin:0;color:rgba(255,255,255,.60);font-size:13px;line-height:1.58}
+.sketch-cta-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px}
+.sketch-choice{position:relative;overflow:hidden;text-align:left;min-height:128px;border-radius:25px;padding:20px;border:1px solid rgba(255,255,255,.124);background:radial-gradient(circle at 18% 0%,rgba(255,255,255,.118),transparent 36%),radial-gradient(circle at 88% 92%,rgba(93,202,165,.086),transparent 40%),linear-gradient(180deg,rgba(255,255,255,.058),rgba(255,255,255,.022));color:#fff;box-shadow:inset 0 1px rgba(255,255,255,.106),0 28px 62px rgba(0,0,0,.34);transition:.20s ease;cursor:pointer}
+.sketch-choice:hover{transform:translateY(-4px);border-color:rgba(93,202,165,.30);box-shadow:inset 0 1px rgba(255,255,255,.120),0 34px 72px rgba(0,0,0,.38),0 0 34px rgba(93,202,165,.085)}
+.sketch-choice:before{content:"";position:absolute;inset:0;background:linear-gradient(112deg,transparent 0%,rgba(255,255,255,.20) 44%,transparent 58%);transform:translateX(-120%);transition:transform .70s ease}
+.sketch-choice:hover:before{transform:translateX(120%)}
+.sketch-choice.so-primary{border-color:rgba(201,168,76,.36);background:radial-gradient(circle at 18% 0%,rgba(201,168,76,.175),transparent 36%),radial-gradient(circle at 88% 92%,rgba(93,202,165,.086),transparent 40%),linear-gradient(180deg,rgba(255,255,255,.072),rgba(255,255,255,.026));box-shadow:inset 0 1px rgba(255,255,255,.122),0 30px 66px rgba(0,0,0,.36),0 0 32px rgba(201,168,76,.060)}
+.sketch-choice.so-primary:hover{border-color:rgba(201,168,76,.52);box-shadow:inset 0 1px rgba(255,255,255,.140),0 38px 78px rgba(0,0,0,.42),0 0 40px rgba(201,168,76,.090)}
+.sketch-choice-kicker{position:relative;z-index:2;margin-bottom:8px;font-family:'DM Mono',monospace;font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:rgba(201,168,76,.82)}
+.sketch-choice-title{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;font-family:'Fraunces',Georgia,serif;font-size:30px;font-style:italic;line-height:1;text-shadow:0 0 22px rgba(255,255,255,.040)}
+.sketch-choice-sub{position:relative;z-index:2;margin-top:10px;color:rgba(255,255,255,.56);font-size:13px;line-height:1.55}
+.sketch-choice-arrow{flex:0 0 auto;width:35px;height:35px;border-radius:50%;display:grid;place-items:center;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.045);font-family:'DM Mono',monospace;font-size:15px;box-shadow:inset 0 1px rgba(255,255,255,.08),0 8px 18px rgba(0,0,0,.18)}
+.sketch-choice.so-primary .sketch-choice-arrow{border-color:rgba(201,168,76,.26);background:rgba(201,168,76,.075)}
+.sketch-choice.disabled-cta{opacity:.45;cursor:not-allowed;pointer-events:none}
+.sketch-close-btn{position:absolute;top:18px;right:18px;width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.055);color:rgba(255,255,255,.72);font-family:monospace;font-size:20px;display:grid;place-items:center;cursor:pointer;z-index:10;transition:.18s ease}
+.sketch-close-btn:hover{background:rgba(255,255,255,.10);color:#fff;border-color:rgba(255,255,255,.22);transform:scale(1.06)}
+.sketch-overlay-wrap.dismissed{opacity:0;pointer-events:none;transition:opacity .28s ease}
+.sketch-overlay-toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:9500;border:1px solid rgba(93,202,165,.36);border-radius:999px;padding:12px 16px;background:radial-gradient(circle at 18% 0%,rgba(93,202,165,.110),transparent 42%),rgba(5,11,20,.94);color:rgba(255,255,255,.80);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.13em;text-transform:uppercase;box-shadow:0 26px 66px rgba(0,0,0,.46);transition:.22s ease}
+.sketch-overlay-toast.show{opacity:1;transform:translate(-50%,0)}
+@media(max-width:960px){.sketch-overlay-head{grid-template-columns:1fr}.sketch-overlay-roadmap{grid-template-columns:1fr}.sketch-cta-grid{grid-template-columns:1fr}}
+@media(max-width:640px){.sketch-overlay-wrap{padding:74px 16px 26px;align-items:start;overflow:auto}.sketch-overlay{width:100%;border-radius:28px}.sketch-overlay-inner{padding:28px 20px 22px}.sketch-overlay:after{width:78px;height:78px;font-size:25px;right:18px;top:18px;opacity:.54}}
+</style>
+<section class="sketch-overlay-wrap" id="sketchOverlayWrap" aria-labelledby="sketchOverlayTitle">
+  <div class="sketch-overlay" role="dialog" aria-modal="true" aria-describedby="sketchOverlayDesc">
+    <div class="sketch-overlay-rim" aria-hidden="true"></div>
+    <button class="sketch-close-btn" id="sketchCloseIntro" type="button" aria-label="Close intro and start a new Sketch">&times;</button>
+    <div class="sketch-overlay-inner">
+      <div class="sketch-overlay-head">
+        <div>
+          <p class="sketch-overlay-eyebrow">Before you sketch</p>
+          <h1 id="sketchOverlayTitle">You are about to draw the Shape of your Retirement.</h1>
+          <p class="sketch-overlay-copy" id="sketchOverlayDesc">The Sketch is a fast, private starting point. You will begin in <strong>Discover</strong>, move into <strong>Design</strong>, then see the tension between the Shape you have and the Shape you want.</p>
+        </div>
+        <aside class="sketch-status-card" id="sketchStatusCard" aria-label="Auth status">
+          <div class="sketch-status-title">Current status</div>
+          <div class="sketch-status-value" id="sketchStatusValue">Signed out</div>
+          <div class="sketch-status-note" id="sketchStatusNote">You can start fresh now. Saved Sketches require sign in so they can open from your Sketchbook.</div>
+        </aside>
+      </div>
+      <div class="sketch-overlay-roadmap" aria-label="Sketch roadmap">
+        <article class="sketch-overlay-step so-discover">
+          <div class="sketch-overlay-step-num">01 / Discover</div>
+          <h2>Find the Shape you have.</h2>
+          <p>Enter the basics: timeline, portfolio, Datum, contributions, and market view. The Sketch gives you a first Floor, Datum, and Ceiling.</p>
+        </article>
+        <article class="sketch-overlay-step so-design">
+          <div class="sketch-overlay-step-num">02 / Design</div>
+          <h2>Test the Shape you want.</h2>
+          <p>Move the inputs or pull the boundaries. The dashed line shows where you started; the live line shows what changed.</p>
+        </article>
+        <article class="sketch-overlay-step">
+          <div class="sketch-overlay-step-num">03 / Tension</div>
+          <h2>Resolve what changed.</h2>
+          <p>The Sketch shows the gap in plain English: more time, more capital, lower spending, or a deeper Studio test.</p>
+        </article>
+      </div>
+      <div class="sketch-cta-grid">
+        <button class="sketch-choice so-primary" id="sketchStartScratch" type="button">
+          <div class="sketch-choice-kicker">Begin new</div>
+          <div class="sketch-choice-title">Start from Scratch <span class="sketch-choice-arrow">&rarr;</span></div>
+          <div class="sketch-choice-sub">Start a new Sketch with clean inputs. No account required.</div>
+        </button>
+        <button class="sketch-choice" id="sketchStartSaved" type="button">
+          <div class="sketch-choice-kicker">Continue saved</div>
+          <div class="sketch-choice-title">Start from Sketch <span class="sketch-choice-arrow">&rarr;</span></div>
+          <div class="sketch-choice-sub" id="sketchSavedSub">Sign in, open your Sketchbook, and choose a saved Sketch to populate this page.</div>
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+<div class="sketch-overlay-toast" id="sketchOverlayToast" role="status" aria-live="polite"></div>
+<script>
+(function() {
+  'use strict';
+  var _overlayWrap = document.getElementById('sketchOverlayWrap');
+  if (!_overlayWrap) return;
+
+  var isSignedIn = !!sessionStorage.getItem('datum_auth_hint');
+
+  if (isSignedIn && localStorage.getItem('datum_sketch_overlay_seen')) {
+    _overlayWrap.style.display = 'none';
+    return;
+  }
+
+  var _toast      = document.getElementById('sketchOverlayToast');
+  var _statusValue = document.getElementById('sketchStatusValue');
+  var _statusNote  = document.getElementById('sketchStatusNote');
+  var _startSaved  = document.getElementById('sketchStartSaved');
+  var _savedSub    = document.getElementById('sketchSavedSub');
+
+  if (isSignedIn) {
+    if (_statusValue) _statusValue.textContent = 'Signed in';
+    if (_statusNote)  _statusNote.textContent  = 'Your saved Sketches are available in your Sketchbook.';
+  }
+
+  var _hasSavedSketch = false;
+  try {
+    if (localStorage.getItem('datum_sketch_state_1')) {
+      _hasSavedSketch = true;
+    } else {
+      var _blob = JSON.parse(localStorage.getItem('datumfi_sketchbook_v1') || 'null');
+      _hasSavedSketch = !!(_blob && (_blob.slot_1 || _blob['slot_1']));
+    }
+  } catch(ex) {}
+
+  if (!_hasSavedSketch) {
+    if (_startSaved) _startSaved.classList.add('disabled-cta');
+    if (_savedSub)   _savedSub.textContent = 'No saved Sketches yet. Start from Scratch to create your first.';
+  }
+
+  function _showOverlayToast(msg) {
+    if (!_toast) return;
+    _toast.textContent = msg;
+    _toast.classList.add('show');
+    clearTimeout(_showOverlayToast._t);
+    _showOverlayToast._t = setTimeout(function() { _toast.classList.remove('show'); }, 2600);
+  }
+
+  function dismissOverlay(msg) {
+    if (isSignedIn) {
+      try { localStorage.setItem('datum_sketch_overlay_seen', '1'); } catch(ex) {}
+    }
+    _overlayWrap.classList.add('dismissed');
+    _showOverlayToast(msg || 'Starting a new Sketch.');
+    setTimeout(function() { _overlayWrap.style.display = 'none'; }, 320);
+  }
+
+  var _closeBtn    = document.getElementById('sketchCloseIntro');
+  var _startScratch = document.getElementById('sketchStartScratch');
+
+  if (_closeBtn)    _closeBtn.addEventListener('click',    function() { dismissOverlay('Starting from scratch.'); });
+  if (_startScratch) _startScratch.addEventListener('click', function() { dismissOverlay('Starting from scratch.'); });
+
+  if (_startSaved && !_startSaved.classList.contains('disabled-cta')) {
+    _startSaved.addEventListener('click', function() {
+      if (isSignedIn) {
+        window.location.href = '/sketchbook.html';
+      } else {
+        window.location.href = '/vault.html?returnTo=' + encodeURIComponent('/sketchbook.html');
+      }
+    });
+  }
+
+  document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape' && _overlayWrap && _overlayWrap.style.display !== 'none') {
+      dismissOverlay('Starting from scratch.');
+    }
+  });
+})();
 </script>
 <script src="/nav.js"></script>
 </body>
