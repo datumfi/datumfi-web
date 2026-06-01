@@ -95,7 +95,7 @@
       + '</a>'
       + '<nav class="acct-topbar-nav" aria-label="Account navigation">'
       +   '<div class="acct-cluster">'
-      +     makeTab('welcome',      'Welcome',      active)
+      +     makeTab('welcome',      'Home',         active)
       +     makeTab('profile',      'My Profile',   active)
       +   '</div>'
       +   '<div class="acct-divider" aria-hidden="true"></div>'

@@ -49,20 +49,26 @@
 
   function populateGreeting() {
     try {
+      var KEY = 'datum_workspace_name';
+      var OLD_KEY = 'datumfi.workspaceName';
+      var lsName = localStorage.getItem(KEY);
+      if (!lsName) {
+        var oldVal = localStorage.getItem(OLD_KEY);
+        if (oldVal) { localStorage.setItem(KEY, oldVal); lsName = oldVal; }
+      }
       var firstName = Clerk.user.firstName;
       var email = Clerk.user.primaryEmailAddress
         && Clerk.user.primaryEmailAddress.emailAddress;
-      var name = firstName || (email ? email.split('@')[0] : '');
-      if (!name) return;
-      // Set workspace name only if user has not saved a custom name
-      var lsKey = 'datumfi.workspaceName';
-      if (!localStorage.getItem(lsKey)) {
-        var nameEl = document.getElementById('workspaceName');
-        if (nameEl) { nameEl.textContent = name; localStorage.setItem(lsKey, name); }
+      var derived = email ? email.split('@')[0] : '';
+      var clerkName = firstName || derived;
+      var displayName = lsName || clerkName || 'Architect';
+      var nameEl = document.getElementById('workspaceName');
+      if (nameEl) {
+        nameEl.textContent = displayName;
+        if (!lsName && clerkName) localStorage.setItem(KEY, clerkName);
       }
-      // Always reflect Clerk identity in the profile tile
       var profileNameEl = document.getElementById('acct-profile-name');
-      if (profileNameEl) profileNameEl.textContent = name;
+      if (profileNameEl) profileNameEl.textContent = clerkName || 'Architect';
     } catch (e) { /* non-fatal — greeting stays as default */ }
   }
 
@@ -70,7 +76,7 @@
     try {
       var sessionEl = document.getElementById('acct-meta-session');
       if (sessionEl) {
-        sessionEl.textContent = 'Session · ' + new Date().toLocaleDateString('en-US', {
+        sessionEl.textContent = new Date().toLocaleDateString('en-US', {
           month: 'long', day: 'numeric', year: 'numeric'
         });
       }
@@ -440,6 +446,7 @@ h1{text-shadow:0 0 34px rgba(93,202,165,.052),0 16px 34px rgba(0,0,0,.18)}
 .reference-card{min-height:310px}
 .footnote{color:rgba(255,255,255,.38);padding-top:2px}
 .toast{background:radial-gradient(circle at 18% 0%,rgba(93,202,165,.110),transparent 42%),rgba(5,11,20,.94)}
+.mini-logo{background:none;border:none;border-radius:0;box-shadow:none}
 </style>
 
 </head>
@@ -466,7 +473,7 @@ h1{text-shadow:0 0 34px rgba(93,202,165,.052),0 16px 34px rgba(0,0,0,.18)}
             </div>
           </div>
           <div class="profile-meta">
-            <div class="meta-row"><span>Plan</span><strong>Datum FI Free</strong></div>
+            <div class="meta-row"><span>Plan</span><strong>Discover</strong></div>
             <div class="meta-row"><span>Region</span><strong>United States</strong></div>
             <div class="meta-row"><span>Session</span><strong id="acct-meta-session">&mdash;</strong></div>
           </div>
@@ -624,22 +631,37 @@ h1{text-shadow:0 0 34px rgba(93,202,165,.052),0 16px 34px rgba(0,0,0,.18)}
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
-/* Workspace name persistence — V2 pattern */
+/* Workspace name persistence — V3 · oninput debounce + key migration */
 (function () {
   var nameEl = document.getElementById('workspaceName');
-  var key = 'datumfi.workspaceName';
+  var KEY = 'datum_workspace_name';
+  var OLD_KEY = 'datumfi.workspaceName';
   if (!nameEl) return;
-  var saved = localStorage.getItem(key);
+  var saved = localStorage.getItem(KEY);
+  if (!saved) {
+    var oldVal = localStorage.getItem(OLD_KEY);
+    if (oldVal) { localStorage.setItem(KEY, oldVal); saved = oldVal; }
+  }
   if (saved) nameEl.textContent = saved;
   function cleanName() {
-    var cleaned = (nameEl.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 32);
-    nameEl.textContent = cleaned || (localStorage.getItem(key) || '');
-    if (nameEl.textContent) localStorage.setItem(key, nameEl.textContent);
+    return (nameEl.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 32);
   }
+  var _debounce;
+  nameEl.addEventListener('input', function () {
+    clearTimeout(_debounce);
+    _debounce = setTimeout(function () {
+      var n = cleanName();
+      if (n) localStorage.setItem(KEY, n);
+    }, 300);
+  });
   nameEl.addEventListener('keydown', function (e) {
     if (e.key === 'Enter') { e.preventDefault(); nameEl.blur(); }
   });
-  nameEl.addEventListener('blur', cleanName);
+  nameEl.addEventListener('blur', function () {
+    var n = cleanName();
+    nameEl.textContent = n || (localStorage.getItem(KEY) || '');
+    if (nameEl.textContent) localStorage.setItem(KEY, nameEl.textContent);
+  });
 })();
 </script>
 
