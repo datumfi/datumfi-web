@@ -74,9 +74,18 @@
       + '  flex-shrink:0;min-width:80px;display:flex;'
       + '  align-items:center;justify-content:flex-end;'
       + '}'
+      + '.acct-profile-chip{'
+      + '  font-family:"DM Mono",monospace;font-size:10px;'
+      + '  text-transform:uppercase;letter-spacing:.12em;'
+      + '  color:rgba(255,255,255,.42);padding:5px 12px;'
+      + '  border:1px solid rgba(255,255,255,.10);border-radius:20px;'
+      + '  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
+      + '  max-width:120px;display:inline-block;'
+      + '}'
       + '@media(max-width:720px){'
       + '  .acct-topbar-nav{display:none;}'
       + '  .acct-wordmark-img{height:15px;}'
+      + '  .acct-profile-chip{display:none;}'
       + '}';
     document.head.appendChild(style);
   }
@@ -110,7 +119,9 @@
       +     makeTab('shape',   'Shape',   active)
       +   '</div>'
       + '</nav>'
-      + '<div class="acct-topbar-right"></div>'
+      + '<div class="acct-topbar-right">'
+      + '<span id="acct-profile-chip" class="acct-profile-chip">Architect</span>'
+      + '</div>'
       + '</header>';
   }
 
@@ -133,6 +144,21 @@
     });
   }
 
+  function populateProfileName() {
+    var el = document.getElementById('acct-profile-chip');
+    if (!el) return;
+    var name = localStorage.getItem('datum_workspace_name');
+    if (!name) {
+      try {
+        var u = window.Clerk && window.Clerk.user;
+        var fn = u && u.firstName;
+        var em = u && u.primaryEmailAddress && u.primaryEmailAddress.emailAddress;
+        name = fn || (em ? em.split('@')[0] : '') || 'Architect';
+      } catch(e) { name = 'Architect'; }
+    }
+    el.textContent = name;
+  }
+
   function mount() {
     injectCSS();
     var wrapper = document.createElement('div');
@@ -145,6 +171,9 @@
         handleTabClick(btn.getAttribute('data-acct-tab'));
       });
     });
+
+    populateProfileName();
+    window.addEventListener('load', populateProfileName);
 
     if (onAccountPage) {
       window.addEventListener('hashchange', function () { syncActive(topbarEl); });

@@ -1660,6 +1660,30 @@ if (!loaded) {
 }
 
 syncArchiveUI();
+
+// Personalized title default — F30
+(function () {
+  var titleEl = document.getElementById('archive-title');
+  if (!titleEl) return;
+  var override = localStorage.getItem('datum_blueprint_archive_title');
+  if (override) { titleEl.value = override; return; }
+  var name = localStorage.getItem('datum_workspace_name');
+  if (!name) {
+    try {
+      var u = window.Clerk && window.Clerk.user;
+      var fn = u && u.firstName;
+      var em = u && u.primaryEmailAddress && u.primaryEmailAddress.emailAddress;
+      name = fn || (em ? em.split('@')[0] : '') || 'Architect';
+    } catch(e) { name = 'Architect'; }
+  }
+  titleEl.value = name + "'s Blueprint Archive";
+  titleEl.addEventListener('blur', function () {
+    var v = this.value.trim();
+    if (v && v !== 'My Blueprint Archive') {
+      localStorage.setItem('datum_blueprint_archive_title', v);
+    }
+  });
+})();
 </script>
 <script>
 (function () {

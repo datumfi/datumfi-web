@@ -3488,6 +3488,35 @@
     }
   })();
 
+  // Personalized title default — F29
+  (function () {
+    var titleEl = document.getElementById('editable-notebook-title');
+    if (!titleEl) return;
+    var override = localStorage.getItem('datum_sketchbook_title');
+    if (override) { titleEl.value = override; return; }
+    var lsTitle = null;
+    try {
+      var d = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+      if (d && d.sketchbook_title) lsTitle = d.sketchbook_title;
+    } catch(e) {}
+    if (!lsTitle) {
+      var name = localStorage.getItem('datum_workspace_name');
+      if (!name) {
+        try {
+          var u = window.Clerk && window.Clerk.user;
+          var fn = u && u.firstName;
+          var em = u && u.primaryEmailAddress && u.primaryEmailAddress.emailAddress;
+          name = fn || (em ? em.split('@')[0] : '') || 'Architect';
+        } catch(e) { name = 'Architect'; }
+      }
+      titleEl.value = name + "'s Sketchbook";
+    }
+    titleEl.addEventListener('blur', function () {
+      var v = this.value.trim();
+      if (v && v !== 'My Sketchbook') localStorage.setItem('datum_sketchbook_title', v);
+    });
+  })();
+
 
   /* ── V6 ERASE INTERACTION FIX
      Delegated capture listener catches Erase even if the slot has been
