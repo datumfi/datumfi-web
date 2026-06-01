@@ -1669,6 +1669,9 @@ syncArchiveUI();
   function onSessionConfirmed() {
     try { sessionStorage.setItem('datum_auth_hint', '1'); } catch (e) {}
     revealBody();
+    if (typeof syncArchiveUI === 'function') {
+      requestAnimationFrame(syncArchiveUI);
+    }
   }
   window.addEventListener('load', function () {
     Clerk.load().then(function () {
