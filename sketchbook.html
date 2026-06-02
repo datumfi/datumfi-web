@@ -3449,7 +3449,15 @@
       return;
     }
     sessionStorage.setItem('datumfi_hydrate_from_slot', String(slotIdx));
-    window.location.href = '/sketch.html';
+    var _spRaw2 = null;
+    try { _spRaw2 = JSON.parse(localStorage.getItem('datum_sketch_pickup_for_studio') || 'null'); } catch(ex) {}
+    var _studioPickup2 = _spRaw2 && (Date.now() - _spRaw2.ts) < 300000;
+    if (_studioPickup2) {
+      try { localStorage.removeItem('datum_sketch_pickup_for_studio'); } catch(ex) {}
+      window.location.href = '/studio.html?id=' + slotIdx + '&hydrate=sketch';
+    } else {
+      window.location.href = '/sketch.html';
+    }
   });
 
   document.getElementById('action-close-compare-sketch').addEventListener('click', () => {
