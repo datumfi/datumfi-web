@@ -5434,7 +5434,7 @@
 
     if (_startSketch && !_startSketch.classList.contains('disabled-cta')) {
       _startSketch.addEventListener('click', function() {
-        sessionStorage.setItem('datum_sketch_pickup_for_studio', '1');
+        try { localStorage.setItem('datum_sketch_pickup_for_studio', JSON.stringify({ts: Date.now()})); } catch(ex) {}
         if (isSignedIn) {
           window.location.href = '/sketchbook.html';
         } else {

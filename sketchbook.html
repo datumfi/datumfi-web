@@ -3578,9 +3578,11 @@
     e.stopImmediatePropagation();
     var slotId = openBtn.dataset.openSlot;
     if (!slotId) return;
-    var _studioPickup = sessionStorage.getItem('datum_sketch_pickup_for_studio');
+    var _spRaw = null;
+    try { _spRaw = JSON.parse(localStorage.getItem('datum_sketch_pickup_for_studio') || 'null'); } catch(ex) {}
+    var _studioPickup = _spRaw && (Date.now() - _spRaw.ts) < 300000;
     if (_studioPickup) {
-      sessionStorage.removeItem('datum_sketch_pickup_for_studio');
+      try { localStorage.removeItem('datum_sketch_pickup_for_studio'); } catch(ex) {}
       window.location.href = '/studio.html?id=' + slotId + '&hydrate=sketch';
     } else {
       window.location.href = '/sketch.html?id=' + slotId;
