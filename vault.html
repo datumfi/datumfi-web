@@ -127,6 +127,22 @@
     border-top: none !important;
   }
 
+  #clerk-sign-up { min-height: 180px; }
+  #clerk-sign-up .cl-card,
+  #clerk-sign-up .cl-cardBox {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  #clerk-sign-up .cl-header { display: none !important; }
+  #clerk-sign-up .cl-footer {
+    background: transparent !important;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: center !important;
+    border-top: none !important;
+  }
+
   /* --- LOADING STATE --- */
   #state-loading {
     width: 100%; max-width: 520px;
@@ -244,6 +260,7 @@
       </div>
       <div class="auth-body">
         <div id="clerk-sign-in"></div>
+        <div id="clerk-sign-up" style="display:none;"></div>
       </div>
     </div>
   </div>
@@ -317,9 +334,25 @@
           afterSignInUrl: '/my-account.html',
           afterSignUpUrl: '/my-account.html',
           signInUrl: '/vault.html',
-          signUpUrl: '/vault.html',
-          signInFallbackRedirectUrl: '/vault.html',
-          signUpFallbackRedirectUrl: '/vault.html',
+          signUpUrl: '/vault.html?mode=sign-up',
+          navigate: function(to) {
+            try {
+              var url = new URL(to, window.location.origin);
+              if (url.pathname === '/vault.html') {
+                var siEl = document.getElementById('clerk-sign-in');
+                var suEl = document.getElementById('clerk-sign-up');
+                if (url.searchParams.get('mode') === 'sign-up') {
+                  siEl.style.display = 'none';
+                  suEl.style.display = 'block';
+                } else {
+                  suEl.style.display = 'none';
+                  siEl.style.display = 'block';
+                }
+                return;
+              }
+            } catch(e) {}
+            window.location.assign(to);
+          },
           appearance: {
             variables: {
               colorPrimary:          '#5DCAA5',
@@ -345,11 +378,40 @@
           }
           if (loading) loading.style.display = 'none';
           if (signedOut) signedOut.style.display = 'flex';
+          if (new URLSearchParams(window.location.search).get('mode') === 'sign-up') {
+            document.getElementById('clerk-sign-in').style.display = 'none';
+            document.getElementById('clerk-sign-up').style.display = 'block';
+          }
           Clerk.mountSignIn(document.getElementById('clerk-sign-in'), {
             afterSignInUrl: '/my-account.html',
             afterSignUpUrl: '/my-account.html',
-            signUpUrl: '/vault.html',
-            fallbackRedirectUrl: '/vault.html',
+            signUpUrl: '/vault.html?mode=sign-up',
+            appearance: {
+              variables: {
+                colorPrimary:          '#5DCAA5',
+                colorBackground:       'rgba(9,18,33,0)',
+                colorText:             '#ffffff',
+                colorTextSecondary:    'rgba(255,255,255,0.5)',
+                colorInputBackground:  'rgba(255,255,255,0.04)',
+                colorInputText:        '#ffffff',
+                colorInputPlaceholder: 'rgba(255,255,255,0.25)',
+                fontFamily:            '"DM Mono", monospace',
+                borderRadius:          '6px',
+                fontSize:              '13px'
+              },
+              elements: {
+                card:           { boxShadow: 'none', border: 'none', background: 'transparent' },
+                cardBox:        { boxShadow: 'none', border: 'none', background: 'transparent' },
+                headerTitle:    { display: 'none' },
+                headerSubtitle: { display: 'none' },
+                footer:         { background: 'transparent', borderTop: 'none' }
+              }
+            }
+          });
+          Clerk.mountSignUp(document.getElementById('clerk-sign-up'), {
+            afterSignInUrl: '/my-account.html',
+            afterSignUpUrl: '/my-account.html',
+            signInUrl: '/vault.html',
             appearance: {
               variables: {
                 colorPrimary:          '#5DCAA5',
