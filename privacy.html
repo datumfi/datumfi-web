@@ -40,7 +40,10 @@
 <body>
 
   <nav id="app-nav">
-    <a href="/" class="brand-header"><span class="brand-datum">DATUM</span><span class="brand-fi">FI</span></a>
+    <a href="/" class="brand-header" aria-label="Datum FI — Home">
+      <img src="/brand/datumfi-mark-d.svg" class="nav-mark" alt="" aria-hidden="true" width="26" height="26">
+      <img src="/brand/datumfi-wordmark-atum-fi.svg" class="nav-wordmark" alt="Datum FI">
+    </a>
     <div class="nav-links">
       <a href="/sketch.html" class="nav-link">Sketch</a>
       <a href="/studio.html" class="nav-link">Studio</a>
@@ -60,7 +63,7 @@
 
   <div class="container">
     <h1>Privacy Policy</h1>
-    <p class="meta">Effective Date: April 19, 2026</p>
+    <p class="meta">Effective Date: June 2, 2026</p>
 
     <h2>1. Who We Are</h2>
     <p>Datum FI ("we," "us," "our") operates datumfi.com, an educational retirement planning tool. This policy explains what data we collect, what we do with it, and your rights.</p>
@@ -71,30 +74,45 @@
     <ul>
       <li>Your name and email address (for identity verification)</li>
       <li>Your date of birth and co-architect's date of birth (for retirement timeline modeling)</li>
-      <li>Financial inputs you enter (assets, liabilities, income, spending targets) — transmitted to our computation servers to generate your Range</li>
+      <li>Financial inputs you enter (assets, liabilities, income, spending targets) — used for retirement timeline modeling in your browser</li>
     </ul>
     <p>We see your financial inputs only long enough to compute your plan. We store nothing beyond your profile. We sell nothing.</p>
 
     <h2>3. Third-Party Services</h2>
     <ul>
-      <li><strong>Google Fonts CDN:</strong> Loads typography assets. Google's servers see your IP address when fonts are requested. See <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's Privacy Policy</a>.</li>
-      <li><strong>api.datumfi.com:</strong> Our own computation server. Receives your Studio financial inputs to calculate your Range. Inputs are not persisted after the computation completes.</li>
+      <li><strong>Clerk.com:</strong> Authentication provider. Handles sign-in, sign-up, and session management. Receives your email address and OAuth provider data (if applicable). <a href="https://clerk.com/privacy" target="_blank" rel="noopener">Clerk Privacy Policy</a>.</li>
+      <li><strong>Cloudflare:</strong> Hosts datumfi.com and serves all pages. May log IP addresses and request metadata for security and performance purposes. <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Cloudflare Privacy Policy</a>.</li>
+      <li><strong>Cloudflare Turnstile:</strong> Bot protection on sign-up. Runs a passive security check in your browser. No personally identifiable information is collected by Turnstile beyond what Cloudflare logs as the host. <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Cloudflare Privacy Policy</a>.</li>
+      <li><strong>Cloudflare Fonts:</strong> Serves Fraunces and DM Mono typefaces directly from Cloudflare's network. Google's servers do not see your IP address. This is a privacy upgrade from the previous Google Fonts CDN delivery. <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Cloudflare Privacy Policy</a>.</li>
       <li>We use no ad networks, no analytics trackers, no retargeting pixels, and no data brokers.</li>
     </ul>
 
     <h2>4. Cookies and Storage</h2>
-    <p>The Sketch uses <code>sessionStorage</code> to preserve your inputs during your browser session. This data is deleted when you close the tab. No tracking cookies are set.</p>
-    <p>We set a single <code>localStorage</code> flag to remember that you have dismissed the privacy notice. No personal information is stored in this flag.</p>
+    <ul>
+      <li><strong>sessionStorage:</strong> Sketch inputs are preserved during your browser session and cleared when you close the tab. No tracking cookies are set.</li>
+      <li><strong>localStorage keys stored by Datum FI:</strong>
+        <ul>
+          <li><code>datum_workspace_name</code> — your workspace display name.</li>
+          <li><code>datum_auth_hint</code> — session presence flag used to conditionally load the authenticated navigation bar. UI-only; not a security gate.</li>
+          <li><code>datum_sketch_overlay_seen</code> / <code>datum_studio_overlay_seen</code> — one-time overlay display flags. Set once, never updated.</li>
+          <li><code>datum_sketch_pickup_for_studio</code> — a 5-minute TTL handoff flag used to pre-populate Studio from a saved Sketch. Expires automatically.</li>
+          <li><code>datumfi.privacyConsent</code> — records that you have dismissed the privacy notice.</li>
+          <li><code>datumfi_session_id</code> / <code>ds_anon_id</code> — anonymous session UUIDs for aggregate, non-identifying analytics.</li>
+        </ul>
+      </li>
+      <li><strong>Clerk authentication cookies:</strong> Secure session cookies scoped to datumfi.com, managed by Clerk. See <a href="https://clerk.com/privacy" target="_blank" rel="noopener">Clerk Privacy Policy</a>.</li>
+      <li>We set <strong>no tracking cookies</strong>, no advertising cookies, and no third-party analytics cookies.</li>
+    </ul>
 
     <h2>5. Data Retention</h2>
     <ul>
       <li><strong>Sketch inputs:</strong> Session-only (<code>sessionStorage</code>). Cleared when you close the browser tab. Maximum retention: duration of browser session.</li>
       <li><strong>Session token:</strong> Stored in <code>localStorage</code> until you clear your browser data or use our Delete My Data tool. No personal information is encoded in this token.</li>
       <li><strong>Privacy consent flag:</strong> Stored in <code>localStorage</code> indefinitely until cleared. Contains no personal information.</li>
-      <li><strong>Studio computation inputs:</strong> Transmitted to api.datumfi.com for computation. Not written to persistent storage. Retention on our servers: zero (in-memory only, discarded after computation).</li>
+      <li><strong>Studio computation inputs:</strong> Processed in your browser only. No financial inputs are transmitted to external servers or written to persistent storage.</li>
       <li><strong>Studio account profile:</strong> Retained until you submit a deletion request. Deletion requests are honored within 30 days.</li>
     </ul>
-    <p>To delete all locally stored browser data immediately, use the <a href="/privacy-choices.html">Delete My Data</a> tool. For server-side deletion, submit a <a href="/dsar.html">Data Subject Request</a>.</p>
+    <p>To delete all locally stored browser data immediately, use the <a href="/privacy-choices">Delete My Data</a> tool. For account deletion, submit a <a href="/dsar">Data Subject Request</a>.</p>
 
     <h2>6. Your Rights (GDPR / CCPA)</h2>
     <p>Under the GDPR (EU/UK) and CCPA (California), you have the following rights:</p>
@@ -105,7 +123,7 @@
       <li><strong>Art. 20 — Portability:</strong> Request your data in a machine-readable format.</li>
       <li><strong>CCPA — Opt Out:</strong> Opt out of sale or sharing of personal information. We do not sell personal information.</li>
     </ul>
-    <p>To exercise any of these rights, submit a <a href="/dsar.html">Data Subject Request</a> or email <a href="mailto:privacy@datumfi.com">privacy@datumfi.com</a>. We will respond within 30 days as required by GDPR Art. 12 (extensible to 90 days for complex requests, with notice).</p>
+    <p>To exercise any of these rights, submit a <a href="/dsar">Data Subject Request</a> or email <a href="mailto:privacy@datumfi.com">privacy@datumfi.com</a>. We will respond within 30 days as required by GDPR Art. 12 (extensible to 90 days for complex requests, with notice).</p>
 
     <h2>7. Data Security</h2>
     <p>All data in transit is encrypted via TLS. Studio computation inputs are processed in memory only and never written to persistent storage.</p>
@@ -120,7 +138,7 @@
     <p>Our designated Data Protection Officer can be reached at:</p>
     <p><strong>Email:</strong> <a href="mailto:privacy@datumfi.com">privacy@datumfi.com</a><br>
     <strong>Mailing Address:</strong> Datum FI, Attn: Privacy, [Address on File]<br>
-    <strong>DSAR Form:</strong> <a href="/dsar.html">datumfi.com/dsar</a></p>
+    <strong>DSAR Form:</strong> <a href="/dsar">datumfi.com/dsar</a></p>
 
     <h2>11. Contact</h2>
     <p>For any privacy questions or DSAR requests: <a href="mailto:privacy@datumfi.com">privacy@datumfi.com</a></p>
@@ -128,7 +146,7 @@
   </div>
 
   <div id="disclosure-footer">
-    <p>DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. &nbsp;|&nbsp; <a href="/terms.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Terms of Service</a> &nbsp;|&nbsp; <a href="/dsar.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Data Subject Requests</a> &nbsp;|&nbsp; <a href="/privacy-choices.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Do Not Sell My Information</a> &nbsp;|&nbsp; Build&nbsp;2026.04.19&nbsp;&bull;&nbsp;v1.0.0</p>
+    <p>Datum FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. &nbsp;|&nbsp; <a href="/terms" style="color:rgba(255,255,255,0.3);text-decoration:none;">Terms of Service</a> &nbsp;|&nbsp; <a href="/methodology.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Methodology</a> &nbsp;|&nbsp; <a href="/philosophy.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Philosophy</a> &nbsp;|&nbsp; <a href="/dsar" style="color:rgba(255,255,255,0.3);text-decoration:none;">Data Subject Requests</a> &nbsp;|&nbsp; <a href="/privacy-choices" style="color:rgba(255,255,255,0.3);text-decoration:none;">Privacy Choices</a> &nbsp;|&nbsp; © 2026 Datum FI</p>
   </div>
 
   <script src="/nav.js"></script>
