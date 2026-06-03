@@ -320,6 +320,7 @@
   <script>
     (function () {
       var initiated = false;
+      var signUpActive = false;
 
       function showError() {
         var el = document.getElementById('state-loading');
@@ -338,13 +339,22 @@
           navigate: function(to) {
             try {
               var url = new URL(to, window.location.origin);
-              if (url.pathname === '/vault.html') {
+              if (url.pathname === '/vault.html' || url.pathname.startsWith('/vault.html/')) {
                 var siEl = document.getElementById('clerk-sign-in');
                 var suEl = document.getElementById('clerk-sign-up');
-                if (url.searchParams.get('mode') === 'sign-up') {
+                var mode = url.searchParams.get('mode');
+                if (mode === 'sign-up') {
+                  signUpActive = true;
                   siEl.style.display = 'none';
                   suEl.style.display = 'block';
+                } else if (mode === 'sign-in') {
+                  signUpActive = false;
+                  suEl.style.display = 'none';
+                  siEl.style.display = 'block';
+                } else if (signUpActive) {
+                  // Internal step transition (verify-email etc.) — preserve sign-up view
                 } else {
+                  signUpActive = false;
                   suEl.style.display = 'none';
                   siEl.style.display = 'block';
                 }
@@ -379,6 +389,7 @@
           if (loading) loading.style.display = 'none';
           if (signedOut) signedOut.style.display = 'flex';
           if (new URLSearchParams(window.location.search).get('mode') === 'sign-up') {
+            signUpActive = true;
             document.getElementById('clerk-sign-in').style.display = 'none';
             document.getElementById('clerk-sign-up').style.display = 'block';
           }
@@ -411,7 +422,7 @@
           Clerk.mountSignUp(document.getElementById('clerk-sign-up'), {
             afterSignInUrl: '/my-account.html',
             afterSignUpUrl: '/my-account.html',
-            signInUrl: '/vault.html',
+            signInUrl: '/vault.html?mode=sign-in',
             appearance: {
               variables: {
                 colorPrimary:          '#5DCAA5',
