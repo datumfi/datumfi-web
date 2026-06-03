@@ -339,7 +339,8 @@
           navigate: function(to) {
             try {
               var url = new URL(to, window.location.origin);
-              if (url.pathname === '/vault.html' || url.pathname.startsWith('/vault.html/')) {
+              if (url.pathname === '/vault.html' || url.pathname === '/vault' ||
+                  url.pathname.startsWith('/vault.html/') || url.pathname.startsWith('/vault/')) {
                 var siEl = document.getElementById('clerk-sign-in');
                 var suEl = document.getElementById('clerk-sign-up');
                 var mode = url.searchParams.get('mode');
@@ -397,6 +398,7 @@
             afterSignInUrl: '/my-account.html',
             afterSignUpUrl: '/my-account.html',
             signUpUrl: '/vault.html?mode=sign-up',
+            routing: 'virtual',
             appearance: {
               variables: {
                 colorPrimary:          '#5DCAA5',
@@ -423,6 +425,7 @@
             afterSignInUrl: '/my-account.html',
             afterSignUpUrl: '/my-account.html',
             signInUrl: '/vault.html?mode=sign-in',
+            routing: 'virtual',
             appearance: {
               variables: {
                 colorPrimary:          '#5DCAA5',
