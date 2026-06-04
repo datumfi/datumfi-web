@@ -23,7 +23,7 @@ Body paragraph one with detail.
 
 Body paragraph two with more detail.
 "@
-$msg | Out-File -FilePath commit-msg.txt -Encoding utf8
+$msg | Out-File -FilePath commit-msg.txt -Encoding ASCII
 git commit -F commit-msg.txt
 Remove-Item commit-msg.txt
 ```
