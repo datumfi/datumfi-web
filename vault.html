@@ -323,6 +323,16 @@
           afterSignUpUrl: '/my-account.html',
           signInUrl: 'https://accounts.datumfi.com/sign-in?redirect_url=https%3A%2F%2Fdatumfi.com%2Fmy-account.html',
           signUpUrl: 'https://accounts.datumfi.com/sign-up?redirect_url=https%3A%2F%2Fdatumfi.com%2Fmy-account.html',
+          navigate: function(to) {
+            try {
+              var url = new URL(to, window.location.origin);
+              if ((url.pathname === '/vault.html' || url.pathname === '/vault') && url.hash) {
+                window.location.replace('https://accounts.datumfi.com/sign-in?redirect_url=' + encodeURIComponent('https://datumfi.com/my-account.html'));
+                return;
+              }
+            } catch(e) {}
+            window.location.assign(to);
+          },
           appearance: {
             variables: {
               colorPrimary:          '#5DCAA5',
