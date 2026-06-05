@@ -691,6 +691,53 @@ h1{text-shadow:0 0 34px rgba(93,202,165,.052),0 16px 34px rgba(0,0,0,.18)}
   }
 })();
 </script>
+<script>
+/* F80 workspace name Clerk.user.unsafeMetadata sync */
+(function () {
+  'use strict';
+
+  var NAME_KEY = 'datum_workspace_name';
+
+  window.addEventListener('load', function () {
+    if (!window.Clerk) return;
+    Clerk.load().then(function () {
+      if (!Clerk.user) return;
+      var meta = Clerk.user.unsafeMetadata || {};
+      var clerkName = meta.workspaceName || '';
+
+      if (clerkName) {
+        var localName = localStorage.getItem(NAME_KEY) || '';
+        if (clerkName !== localName) {
+          localStorage.setItem(NAME_KEY, clerkName);
+          var nameEl = document.getElementById('workspaceName');
+          if (nameEl) nameEl.textContent = clerkName;
+          var profileEl = document.getElementById('acct-profile-name');
+          if (profileEl) profileEl.textContent = clerkName;
+        }
+      } else {
+        var localName = localStorage.getItem(NAME_KEY) || '';
+        if (localName) {
+          var migMeta = Object.assign({}, meta, { workspaceName: localName });
+          Clerk.user.update({ unsafeMetadata: migMeta }).catch(function () {});
+        }
+      }
+
+      var nameEl = document.getElementById('workspaceName');
+      if (nameEl) {
+        nameEl.addEventListener('blur', function () {
+          var n = (nameEl.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 32);
+          if (!n) return;
+          try {
+            var updMeta = Object.assign({}, Clerk.user.unsafeMetadata || {}, { workspaceName: n });
+            Clerk.user.update({ unsafeMetadata: updMeta }).catch(function () {});
+          } catch (e) {}
+        });
+      }
+    }).catch(function () {});
+  });
+
+}());
+</script>
 
 <script src="/nav.js"></script>
 </body>

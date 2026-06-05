@@ -3544,6 +3544,147 @@ const STORAGE_KEY="datumfi.accountDossier.v14";const $=id=>document.getElementBy
 })();
 </script>
 <script>
+/* -----------------------------------------------------------------
+   F80 CONSOLIDATION - Bug A (V5 birthday string-compare clamp)
+   Bug B (V11 setGhost overwrites loaded retireAge+planThrough)
+   Bug C (Clerk.user.unsafeMetadata cross-device sync).
+   Pure append - V5-V14 patches unmodified.
+   KEY_V15 written alongside KEY_V14 so existing load() stays in sync.
+   ----------------------------------------------------------------- */
+(function () {
+  'use strict';
+
+  var KEY_V15 = 'datumfi.accountDossier.v15';
+  var KEY_V14 = 'datumfi.accountDossier.v14';
+
+  function byId(id) { return document.getElementById(id); }
+
+  function readLocal() {
+    var raw = localStorage.getItem(KEY_V15) || localStorage.getItem(KEY_V14);
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch (e) { return null; }
+  }
+
+  function writeLocal(p) {
+    var s = JSON.stringify(p);
+    localStorage.setItem(KEY_V15, s);
+    localStorage.setItem(KEY_V14, s);
+  }
+
+  function toMMYYYY(raw) {
+    var s = String(raw || '');
+    var iso = s.match(/^(\d{4})-(\d{2})$/);
+    if (iso) return String(+iso[2]).padStart(2, '0') + '/' + iso[1];
+    var pretty = s.match(/^(\d{1,2})\/(\d{4})$/);
+    if (pretty) return String(+pretty[1]).padStart(2, '0') + '/' + pretty[2];
+    return '';
+  }
+
+  function pin(id, value) {
+    var el = byId(id);
+    if (!el || value == null) return;
+    var s = String(value);
+    if (!s) return;
+    el.value = s;
+    el.classList.remove('ghost-default', 'input-invalid');
+    el.dataset.userEdited = 'true';
+    if (s.trim()) el.classList.add('input-valid');
+  }
+
+  function pinFromPayload(p) {
+    if (!p) return;
+    var dob = p.primary && p.primary.dateOfBirth;
+    if (dob) pin('dob', toMMYYYY(dob));
+    var coDob = p.household && p.household.coArchitect && p.household.coArchitect.dateOfBirth;
+    if (coDob) pin('spouseDob', toMMYYYY(coDob));
+    var retire = (p.primary && p.primary.targetRetirementAge) ||
+                 (p.defaults && p.defaults.targetRetirementAge);
+    if (retire) pin('retireAge', String(retire));
+    var plan = p.defaults && p.defaults.planThroughAge;
+    if (plan) pin('planThrough', String(plan));
+    if (typeof update === 'function') update();
+  }
+
+  function reloadFromPayload(p) {
+    if (!p) return;
+    writeLocal(p);
+    if (typeof load === 'function') load();
+    pinFromPayload(p);
+  }
+
+  function hybridSave() {
+    if (typeof payload !== 'function') return false;
+    var p = payload();
+    p.schema = 'DatumFIAccountDossierV15';
+    writeLocal(p);
+    try {
+      if (window.Clerk && window.Clerk.user) {
+        var wn = localStorage.getItem('datum_workspace_name') || '';
+        var meta = Object.assign({}, window.Clerk.user.unsafeMetadata || {}, {
+          dossier: p,
+          workspaceName: wn || undefined
+        });
+        window.Clerk.user.update({ unsafeMetadata: meta }).catch(function () {});
+      }
+    } catch (e) {}
+    if (typeof els !== 'undefined' && els && els.summaryStatus) {
+      els.summaryStatus.textContent = 'Saved';
+    }
+    if (typeof showToast === 'function') showToast('Account Dossier saved.');
+    if (typeof update === 'function') update();
+    return true;
+  }
+
+  (function () {
+    [['saveProfile', false], ['useStudio', true]].forEach(function (pair) {
+      var old = byId(pair[0]);
+      if (!old) return;
+      var fresh = old.cloneNode(true);
+      old.parentNode.replaceChild(fresh, old);
+      var isStudio = pair[1];
+      fresh.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (hybridSave() && isStudio) {
+          if (typeof showToast === 'function') showToast('Studio defaults prepared.');
+        }
+      });
+    });
+  }());
+
+  pinFromPayload(readLocal());
+
+  window.addEventListener('load', function () {
+    if (!window.Clerk) return;
+    Clerk.load().then(function () {
+      if (!Clerk.user) return;
+      var meta = Clerk.user.unsafeMetadata || {};
+      var clerkDossier = meta.dossier;
+      var localData = readLocal();
+      if (clerkDossier) {
+        var clerkTime = new Date(clerkDossier.savedAt || 0).getTime();
+        var localTime = new Date((localData && localData.savedAt) || 0).getTime();
+        if (localTime > clerkTime) {
+          var pushMeta = Object.assign({}, meta, { dossier: localData });
+          Clerk.user.update({ unsafeMetadata: pushMeta }).catch(function () {});
+          pinFromPayload(localData);
+        } else {
+          reloadFromPayload(clerkDossier);
+        }
+      } else {
+        if (localData) {
+          var migMeta = Object.assign({}, meta, {
+            dossier: localData,
+            workspaceName: localStorage.getItem('datum_workspace_name') || undefined
+          });
+          Clerk.user.update({ unsafeMetadata: migMeta }).catch(function () {});
+        }
+      }
+    }).catch(function () {});
+  });
+
+}());
+</script>
+<script>
 (function () {
   'use strict';
   function redirectToVault() { window.location.replace('/vault.html'); }
