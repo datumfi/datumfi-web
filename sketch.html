@@ -416,6 +416,61 @@
 
   #datum-dragger circle { opacity: 0; animation: fadeInClean 0.8s ease 1.8s forwards; }
 
+  /* ── F88 DISCOVERY SEQUENCE ──────────────────────────────────────────── */
+  #await-text { font-family: var(--font-serif); font-size: 52px; font-style: italic; font-weight: 300; fill: rgba(255,255,255,0.055); text-anchor: middle; pointer-events: none; transition: opacity 0.7s ease, filter 0.7s ease; }
+  #sketch-canvas.f88-started #await-text { opacity: 0; filter: blur(8px); }
+
+  .f88-draw-ceil  #m-ceil  { animation: drawLine 0.9s cubic-bezier(0.2,0.8,0.2,1) 0s forwards; }
+  .f88-draw-floor #m-floor { animation: drawLine 0.9s cubic-bezier(0.2,0.8,0.2,1) 0s forwards; }
+  .f88-draw-datum #m-datum { animation: drawLine 1.0s cubic-bezier(0.2,0.8,0.2,1) 0s forwards; }
+  .f88-draw-datum .cone-fill { animation: fadeInClean 0.7s ease 0.4s forwards; }
+
+  .f88-dashed-line { fill: none; stroke-linecap: round; stroke-width: 2; opacity: 0; stroke-dasharray: 10 7; transition: opacity 0.35s ease; }
+  #ceil-line-dashed  { stroke: var(--gold); }
+  #floor-line-dashed { stroke: var(--danger-red); }
+  .f88-draw-ceil  #ceil-line-dashed,
+  .f88-draw-floor #ceil-line-dashed  { opacity: 0.82; }
+  .f88-draw-floor #floor-line-dashed { opacity: 0.82; }
+  .f88-solid-ceil  #ceil-line-dashed  { opacity: 0; transition: opacity 0.55s ease; }
+  .f88-solid-floor #floor-line-dashed { opacity: 0; transition: opacity 0.55s ease; }
+  .f88-draw-datum  #ceil-line-dashed,
+  .f88-draw-datum  #floor-line-dashed { opacity: 0; }
+
+  .f88-mass { opacity: 0; pointer-events: none; transition: opacity 0.55s ease, d 0.36s cubic-bezier(0.2,0.8,0.2,1); }
+  .f88-mass.active { opacity: 1; }
+  .f88-mass-top    { fill: url(#gold-mass-grad); }
+  .f88-mass-bottom { fill: url(#red-mass-grad); }
+  #top-reveal-rect { transition: width 1.3s cubic-bezier(0.13,0.84,0.16,1); }
+  #sketch-canvas.f88-complete .f88-mass { opacity: 0 !important; transition: opacity 0.4s ease !important; }
+
+  .f88-locked { opacity: 0.38; }
+  .f88-locked input[type=range] { pointer-events: none; }
+  .f88-invite { background: rgba(93,202,165,0.045); box-shadow: 0 0 0 1px rgba(93,202,165,0.10), 0 0 28px rgba(93,202,165,0.055); transition: background 0.3s ease, box-shadow 0.3s ease; }
+  .f88-invite input[type=range]::-webkit-slider-thumb { animation: f88Beckon 1.05s ease-in-out infinite; }
+  .f88-invite input[type=range]::-moz-range-thumb      { animation: f88Beckon 1.05s ease-in-out infinite; }
+  .f88-datum-invite { background: rgba(93,202,165,0.075); box-shadow: 0 0 0 1px rgba(93,202,165,0.18), 0 0 42px rgba(93,202,165,0.11); }
+  .f88-datum-invite input[type=range]::-webkit-slider-thumb { animation: f88DatumBeckon 0.74s ease-in-out infinite; }
+  .f88-datum-invite input[type=range]::-moz-range-thumb      { animation: f88DatumBeckon 0.74s ease-in-out infinite; }
+  @keyframes f88Beckon {
+    0%,100% { transform: scale(1);    box-shadow: 0 0 10px rgba(93,202,165,0.45); }
+    50%     { transform: scale(1.42); box-shadow: 0 0 22px rgba(93,202,165,0.95); }
+  }
+  @keyframes f88DatumBeckon {
+    0%,100% { transform: translateX(0)   scale(1);    box-shadow: 0 0 14px rgba(93,202,165,0.70); }
+    30%     { transform: translateX(-2px) scale(1.42); box-shadow: 0 0 30px rgba(93,202,165,1);    }
+    60%     { transform: translateX(2px)  scale(1.28); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #await-text { display: none; }
+    .f88-mass { transition: none !important; }
+    #top-reveal-rect { transition: none !important; }
+    .f88-invite input[type=range]::-webkit-slider-thumb,
+    .f88-datum-invite input[type=range]::-webkit-slider-thumb { animation: none !important; }
+    .f88-invite input[type=range]::-moz-range-thumb,
+    .f88-datum-invite input[type=range]::-moz-range-thumb     { animation: none !important; }
+  }
+  /* ── END F88 ─────────────────────────────────────────────────────────── */
+
   /* Ghost Lines classes */
   .ghost-line { stroke-width: 1; stroke-linecap: round; fill: none; stroke-dasharray: 2 4; opacity: 0; transition: opacity 0.3s; }
   .ghost-ceil { stroke: var(--gold); }
@@ -1366,7 +1421,7 @@
 
         <div class="dialogue-block anim-fade-up anim-delay-1">
             <div class="dialogue-prompt mono-label">01 / YOUR TIMELINE</div>
-            <div class="control-group">
+            <div class="control-group" id="grp-age">
                 <div class="control-header">
                     <label class="control-label" for="slider-age">Current Age</label>
                     <span class="control-value" id="val-age">40 yrs</span>
@@ -1374,7 +1429,7 @@
                 <input type="range" id="slider-age" min="18" max="85" value="40" step="1" tabindex="1">
             </div>
 
-            <div class="control-group" style="margin-bottom:0;">
+            <div class="control-group" id="grp-retire" style="margin-bottom:0;">
                 <div class="control-header">
                     <label class="control-label" id="lbl-retire" for="slider-activation">Retirement Age</label>
                     <span class="control-value" id="val-activation">65 yrs</span>
@@ -1388,7 +1443,7 @@
 
         <div class="dialogue-block anim-fade-up anim-delay-2">
             <div class="dialogue-prompt mono-label">02 / YOUR CAPITAL</div>
-            <div class="control-group" style="margin-bottom:0;">
+            <div class="control-group" id="grp-portfolio" style="margin-bottom:0;">
                 <div class="control-header">
                     <label class="control-label" for="slider-portfolio">Current Portfolio Balance</label>
                     <span class="control-value" id="val-portfolio">$750k</span>
@@ -1397,27 +1452,27 @@
             </div>
         </div>
 
+        <div class="dialogue-block">
+            <div class="dialogue-prompt mono-label">03 / YOUR CONTRIBUTIONS</div>
+            <div class="control-group" id="grp-contrib" style="margin-bottom:0;">
+                <div class="control-header">
+                  <label class="control-label" for="slider-contrib">Annual Contributions</label>
+                  <span class="control-value" id="val-contrib">$25,000</span>
+                </div>
+                <input type="range" id="slider-contrib" min="0" max="100000" value="82964" step="1" tabindex="4">
+            </div>
+        </div>
+
         <div class="dialogue-block" style="border-bottom:none; margin-bottom: 0;">
-            <div class="dialogue-prompt mono-label" style="color: var(--gold);">03 / YOUR DATUM</div>
-            <div class="control-group" style="margin-bottom:0;">
+            <div class="dialogue-prompt mono-label" style="color: var(--teal-mid);">04 / YOUR DATUM</div>
+            <div class="control-group" id="grp-datum" style="margin-bottom:0;">
                 <div class="control-header" style="flex-direction: column; align-items: flex-start;">
                     <div style="display:flex; justify-content:flex-end; width:100%; align-items:flex-end;">
                         <span class="control-value" id="val-datum" style="color: var(--teal-mid);">$100k / yr</span>
                     </div>
                     <div style="font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.4); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.1em;">Your target annual retirement spending — the point you choose to test inside your Shape.</div>
                 </div>
-                <input type="range" id="slider-datum" min="0" max="100000" value="41141" step="1" tabindex="4">
-            </div>
-
-            <div class="dialogue-block" style="padding-top:14px; border-top:1px solid rgba(255,255,255,0.06);">
-              <div class="dialogue-prompt mono-label">04 / YOUR CONTRIBUTIONS</div>
-              <div class="control-group" style="margin-bottom:0;">
-                <div class="control-header">
-                  <label class="control-label" for="slider-contrib">Annual Contributions</label>
-                  <span class="control-value" id="val-contrib">$25,000</span>
-                </div>
-                <input type="range" id="slider-contrib" min="0" max="100000" value="82964" step="1" tabindex="5">
-              </div>
+                <input type="range" id="slider-datum" min="0" max="100000" value="41141" step="1" tabindex="5">
             </div>
 
             <div class="dialogue-block" style="border-bottom:none; padding-bottom:0;">
@@ -1617,6 +1672,21 @@
                   <clipPath id="cone-clip">
                       <path id="clip-cone-path" d="" />
                   </clipPath>
+                  <!-- F88 construction fill gradients -->
+                  <linearGradient id="gold-mass-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%"   stop-color="#ffeaa3" stop-opacity="0.65"/>
+                    <stop offset="50%"  stop-color="#C9A84C" stop-opacity="0.38"/>
+                    <stop offset="100%" stop-color="#5DCAA5" stop-opacity="0.06"/>
+                  </linearGradient>
+                  <linearGradient id="red-mass-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%"   stop-color="#5DCAA5" stop-opacity="0.06"/>
+                    <stop offset="50%"  stop-color="#e24b4a" stop-opacity="0.32"/>
+                    <stop offset="100%" stop-color="#ff6b68" stop-opacity="0.55"/>
+                  </linearGradient>
+                  <!-- F88 left-to-right wipe clip for construction fills -->
+                  <clipPath id="top-reveal">
+                    <rect id="top-reveal-rect" x="0" y="0" height="480" width="0"/>
+                  </clipPath>
               </defs>
               <rect id="state-tint-rect" x="0" y="0" width="840" height="480" fill="none" pointer-events="none"/>
 
@@ -1645,6 +1715,9 @@
                   <text id="time-end" x="650" y="475" text-anchor="middle" class="time-label" style="fill: var(--teal-mid);">RETIRE: 65</text>
               </g>
 
+              <!-- F88: decorative await text, fades on first stage -->
+              <text id="await-text" x="390" y="230" aria-hidden="true">Your Shape Awaits</text>
+
               <g id="clean-layer">
                   <path id="ghost-cone" class="ghost-cone-fill morph ghost-cone-init" d="" />
                   <path id="ghost-ceil" class="ghost-line ghost-ceil morph" d="" />
@@ -1663,20 +1736,26 @@
                         letter-spacing="1" text-anchor="end"
                         style="transition:opacity 0.4s ease;">YOUR STARTING SHAPE</text>
                   
+                  <!-- F88 staged construction fills: gold(stage3) + red(stage4), retire at stage5 -->
+                  <path id="mass-top"    class="f88-mass f88-mass-top"    d="" clip-path="url(#top-reveal)"/>
+                  <path id="mass-bottom" class="f88-mass f88-mass-bottom" d="" clip-path="url(#top-reveal)"/>
+
                   <path id="cone-area" class="cone-fill morph" d="" />
-                  
+
                   <g clip-path="url(#cone-clip)">
                       <rect id="market-sweep" class="market-sweep" x="-250" y="-100" width="250" height="700" fill="var(--danger-red)" />
                   </g>
 
                   <g class="boundary-group">
                       <path id="ceil-line" class="boundary-line b-ceiling morph" d="" />
+                      <path id="ceil-line-dashed" class="f88-dashed-line" d="" mask="url(#mask-ceil)"/>
                       <circle id="node-ceil" class="morph-node" cx="650" cy="0" r="4" fill="var(--gold)" />
                       <text id="ceil-lbl" class="range-label morph-node" x="665" y="0" text-anchor="start" style="fill: var(--gold);">STRUCTURAL CEILING</text>
                   </g>
 
                   <g class="boundary-group">
                       <path id="floor-line" class="boundary-line b-floor morph" d="" />
+                      <path id="floor-line-dashed" class="f88-dashed-line" d="" mask="url(#mask-floor)"/>
                       <circle id="node-floor" class="morph-node" cx="650" cy="0" r="4" fill="var(--danger-red)" />
                       <text id="floor-lbl" class="range-label morph-node" x="665" y="0" text-anchor="start" style="fill: var(--danger-red);">SURVIVAL FLOOR</text>
                   </g>
@@ -2825,8 +2904,8 @@
             const dc = document.getElementById('datum-circle');
             if (nd) nd.style.opacity = '1';
             if (dc) dc.style.opacity = '1';
-            // S2: ghost scrubber — auto-scrub datum once to show shape is live
-            _runTutorialSweep();
+            // S2: auto-scrub datum — only for returning users (discovery teaches via beckon)
+            if (!window._f88DiscoveryActive) _runTutorialSweep();
         }
     }
 
@@ -4227,6 +4306,14 @@
         document.getElementById('art-floor').setAttribute('d', dFloor);
         document.getElementById('art-datum').setAttribute('d', dDatum);
 
+        // F88: keep dashed guide paths in sync with solid siblings
+        var _f88CeilD = document.getElementById('ceil-line-dashed');
+        var _f88FlrD  = document.getElementById('floor-line-dashed');
+        if (_f88CeilD) _f88CeilD.setAttribute('d', dCeil);
+        if (_f88FlrD)  _f88FlrD.setAttribute('d', dFloor);
+        // F88: update construction fill paths (natural midpoint split, no datum needed)
+        if (window._f88UpdateMass) window._f88UpdateMass(dConeCeil, dConeFloor, xStart);
+
         nodeCeil.setAttribute('cx', xEnd); nodeCeil.setAttribute('cy', spendToY(ptsEnd.ceilSpend)); 
         ceilLbl.setAttribute('x', xEnd + 15); ceilLbl.setAttribute('y', spendToY(ptsEnd.ceilSpend) + 4);
         
@@ -5146,6 +5233,197 @@
         updateEngine();
         document.getElementById('slider-age').focus();
     }
+
+    // ── F88 DISCOVERY SEQUENCE CONTROLLER ────────────────────────────────
+    (function f88Discovery() {
+      var DISCOVER_KEY = 'datum-discover-v1';
+      var stage = 0;
+      var canvas = document.getElementById('sketch-canvas');
+      var grps = {
+        age:     document.getElementById('grp-age'),
+        retire:  document.getElementById('grp-retire'),
+        port:    document.getElementById('grp-portfolio'),
+        contrib: document.getElementById('grp-contrib'),
+        datum:   document.getElementById('grp-datum')
+      };
+      var sliders = {
+        age:     document.getElementById('slider-age'),
+        retire:  document.getElementById('slider-activation'),
+        port:    document.getElementById('slider-portfolio'),
+        contrib: document.getElementById('slider-contrib'),
+        datum:   document.getElementById('slider-datum')
+      };
+      var stageOrder = ['age','retire','port','contrib','datum'];
+      var touched = {age:false,retire:false,port:false,contrib:false,datum:false};
+
+      function isStoreDone() {
+        try { return localStorage.getItem(DISCOVER_KEY) === 'done'; } catch(e) { return false; }
+      }
+      function markDone() {
+        try { localStorage.setItem(DISCOVER_KEY, 'done'); } catch(e) {}
+      }
+
+      function setLock(name, locked) {
+        var grp = grps[name]; var sl = sliders[name];
+        if (!grp || !sl) return;
+        if (locked) {
+          grp.classList.add('f88-locked');
+          sl.setAttribute('tabindex', '-1');
+          sl.setAttribute('aria-disabled', 'true');
+          sl.setAttribute('disabled', '');
+        } else {
+          grp.classList.remove('f88-locked');
+          var idx = stageOrder.indexOf(name) + 1;
+          sl.setAttribute('tabindex', String(idx));
+          sl.removeAttribute('aria-disabled');
+          sl.removeAttribute('disabled');
+        }
+      }
+
+      function setInvite(name) {
+        stageOrder.forEach(function(k) {
+          var grp = grps[k];
+          if (!grp) return;
+          grp.classList.remove('f88-invite','f88-datum-invite');
+          if (k === name) {
+            grp.classList.add('f88-invite');
+            if (k === 'datum') grp.classList.add('f88-datum-invite');
+          }
+        });
+      }
+
+      function jumpToFull() {
+        // Returning users or hydration: skip sequence, full shape immediately
+        stage = 5;
+        window._f88DiscoveryActive = false;
+        stageOrder.forEach(function(k) { setLock(k, false); });
+        setInvite(null);
+        if (canvas) {
+          canvas.classList.add('draw-triggered','f88-complete','f88-started',
+            'f88-draw-ceil','f88-draw-floor','f88-draw-datum',
+            'f88-solid-ceil','f88-solid-floor');
+        }
+        var rr = document.getElementById('top-reveal-rect');
+        if (rr) rr.style.width = '840px';
+        var mt = document.getElementById('mass-top');
+        var mb = document.getElementById('mass-bottom');
+        if (mt) mt.classList.add('active');
+        if (mb) mb.classList.add('active');
+      }
+
+      window._f88JumpToFull = jumpToFull;
+
+      // Construction fill path builder — called from updateEngine via _f88UpdateMass
+      window._f88UpdateMass = function(ceilPts, floorPts, xStart) {
+        if (stage < 3) return;
+        var mt = document.getElementById('mass-top');
+        var mb = document.getElementById('mass-bottom');
+        if (!mt || !mb) return;
+        // Natural midpoint split — no datum needed pre-stage5
+        var n = ceilPts.length;
+        var midPts = [];
+        for (var i = 0; i < n; i++) {
+          var cp = ceilPts[i].split(' ');
+          var fp = floorPts[n - 1 - i].split(' ');
+          var x = parseFloat(cp[0]);
+          var yc = parseFloat(cp[1]);
+          var yf = parseFloat(fp[1]);
+          midPts.push(x + ' ' + ((yc + yf) / 2).toFixed(1));
+        }
+        var dTop = 'M ' + ceilPts[0] + ' ' + ceilPts.map(function(p){return 'L '+p;}).join(' ')
+                 + ' ' + midPts.slice().reverse().map(function(p){return 'L '+p;}).join(' ') + ' Z';
+        var dBot = 'M ' + midPts[0] + ' ' + midPts.map(function(p){return 'L '+p;}).join(' ')
+                 + ' ' + floorPts.map(function(p){return 'L '+p;}).join(' ') + ' Z';
+        mt.setAttribute('d', dTop);
+        mb.setAttribute('d', dBot);
+      };
+
+      function advance(name) {
+        var idx = stageOrder.indexOf(name);
+        if (touched[name] || idx !== stage) return;
+        touched[name] = true;
+        stage++;
+        if (canvas) canvas.classList.add('f88-started');
+
+        if (name === 'age') {
+          if (canvas) canvas.classList.add('f88-draw-ceil');
+          var nextName = 'retire';
+          setLock(nextName, false);
+          setInvite(nextName);
+        }
+        if (name === 'retire') {
+          if (canvas) canvas.classList.add('f88-draw-floor');
+          var nextName = 'port';
+          setLock(nextName, false);
+          setInvite(nextName);
+        }
+        if (name === 'port') {
+          // Ceiling solidifies: dashed fades, solid revealed, gold fill expands
+          if (canvas) canvas.classList.add('f88-solid-ceil');
+          var mt = document.getElementById('mass-top');
+          if (mt) mt.classList.add('active');
+          var rr = document.getElementById('top-reveal-rect');
+          if (rr) rr.style.width = '840px';
+          var nextName = 'contrib';
+          setLock(nextName, false);
+          setInvite(nextName);
+        }
+        if (name === 'contrib') {
+          // Floor solidifies: dashed fades, solid revealed, red fill fades in
+          if (canvas) canvas.classList.add('f88-solid-floor');
+          var mb = document.getElementById('mass-bottom');
+          if (mb) mb.classList.add('active');
+          var nextName = 'datum';
+          setLock(nextName, false);
+          setInvite(nextName);
+        }
+        if (name === 'datum') {
+          // Datum climax: construction fills out, datum mask draws, cone fill fades in
+          if (canvas) canvas.classList.add('f88-draw-datum','f88-complete');
+          setInvite(null);
+          markDone();
+          window._f88DiscoveryActive = false;
+          // Construction fills retire 0.4s before unified cone appears (inside .f88-draw-datum .cone-fill delay)
+          setTimeout(function() {
+            var mt = document.getElementById('mass-top');
+            var mb = document.getElementById('mass-bottom');
+            if (mt) mt.classList.remove('active');
+            if (mb) mb.classList.remove('active');
+          }, 200);
+        }
+      }
+
+      function bindSlider(name) {
+        var sl = sliders[name];
+        if (!sl) return;
+        function onFirst() { if (!touched[name] && stageOrder.indexOf(name) === stage) advance(name); }
+        sl.addEventListener('pointerdown', onFirst);
+        sl.addEventListener('touchstart', onFirst, {passive: true});
+        sl.addEventListener('keydown', function(e) {
+          var nav = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown'];
+          if (nav.indexOf(e.key) !== -1) onFirst();
+        });
+      }
+
+      // Check for reduced-motion first — skip sequence entirely
+      var prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      // Check for returning user or active hydration
+      var isHydrating = !!sessionStorage.getItem('datumfi_hydrate_from_slot');
+      var isReturning = isStoreDone();
+
+      if (prefersReduced || isReturning || isHydrating) {
+        jumpToFull();
+        return;
+      }
+
+      // New-user discovery path
+      window._f88DiscoveryActive = true;
+      // Lock retire, port, contrib, datum at start; age stays open
+      ['retire','port','contrib','datum'].forEach(function(k) { setLock(k, true); });
+      setInvite('age');
+      stageOrder.forEach(function(k) { bindSlider(k); });
+    })();
+    // ── END F88 DISCOVERY SEQUENCE CONTROLLER ────────────────────────────
 
     const svgCanvas = document.querySelector('.range-svg');
     svgCanvas.addEventListener('pointermove', (e) => {
@@ -10136,6 +10414,9 @@ Studio is built for exactly this. See If This Shape Holds →`;
       }
 
       try { updateEngine(); } catch(ex) {}
+      // F88: hydrated sketches skip discovery sequence
+      try { localStorage.setItem('datum-discover-v1', 'done'); } catch(ex) {}
+      if (window._f88JumpToFull) window._f88JumpToFull();
       // Deferred re-stamp: updateEngine() may schedule async handlers that recompute exactVals
       ;(function(_pM, _cV, _dS, _slP, _slC, _slD) {
         setTimeout(function() {
