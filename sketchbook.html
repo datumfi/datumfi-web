@@ -222,6 +222,14 @@
     pointer-events: auto;
   }
   .slot-open-action:hover { color: rgba(93,202,165,.95); }
+  .slot-studio-action {
+    background: transparent; border: none; outline: none;
+    font-family: var(--font-mono); font-size: 7px; text-transform: uppercase;
+    letter-spacing: 0.12em; color: rgba(201,168,76,.72); cursor: pointer; padding: 0;
+    transition: color 0.2s; flex-shrink: 0; position: relative; z-index: 80;
+    pointer-events: auto;
+  }
+  .slot-studio-action:hover { color: rgba(201,168,76,.95); }
   
   .saved-bottom { 
     display: flex; justify-content: space-between; align-items: center; width: 100%; 
@@ -3212,6 +3220,7 @@
         <span class="saved-time">Sketched Saved · ${data.dateStamped}</span>
         <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
           <button type="button" class="slot-open-action" data-open-slot="${idx}" aria-label="Open this Sketch" title="Open in Sketch">Open Sketch</button>
+          <button type="button" class="slot-studio-action" data-studio-slot="${idx}" aria-label="Open this Sketch in Studio" title="Open in Studio">Open Studio</button>
           <button type="button" class="slot-erase-action" data-purge-target="${idx}" aria-label="Erase scenario data from page slot 0${idx}" title="Erase this saved Sketch">Erase Slot</button>
         </div>
       </div>
@@ -3597,6 +3606,19 @@
     }
   }, true);
   /* ── END R3.6 OPEN SKETCH HYDRATION HANDSHAKE ── */
+
+  /* ── F77 OPEN IN STUDIO HANDSHAKE ── */
+  document.addEventListener('click', function(e) {
+    const studioBtn = e.target.closest && e.target.closest('.slot-studio-action');
+    if (!studioBtn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    var slotId = studioBtn.dataset.studioSlot;
+    if (!slotId) return;
+    window.location.href = '/studio.html?id=' + slotId + '&hydrate=sketch';
+  }, true);
+  /* ── END F77 OPEN IN STUDIO HANDSHAKE ── */
 
 
   // Run initialization boot tracking sequence scripts
