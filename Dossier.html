@@ -3543,6 +3543,10 @@ const STORAGE_KEY="datumfi.accountDossier.v14";const $=id=>document.getElementBy
   requestAnimationFrame(scrubLabels);
 })();
 </script>
+<style>
+/* F81 - toast safe-area position fix */
+.toast { bottom: calc(56px + env(safe-area-inset-bottom, 0px)); }
+</style>
 <script>
 /* -----------------------------------------------------------------
    F80 CONSOLIDATION - Bug A (V5 birthday string-compare clamp)
@@ -3602,6 +3606,12 @@ const STORAGE_KEY="datumfi.accountDossier.v14";const $=id=>document.getElementBy
     if (retire) pin('retireAge', String(retire));
     var plan = p.defaults && p.defaults.planThroughAge;
     if (plan) pin('planThrough', String(plan));
+    var salary = p.primary && p.primary.grossIncome;
+    if (salary > 0 && typeof moneyFull === 'function') pin('salary', moneyFull(salary));
+    var datum = p.defaults && p.defaults.defaultDatum;
+    if (datum > 0 && typeof moneyFull === 'function') pin('datumDefault', moneyFull(datum));
+    var coIncome = p.household && p.household.coArchitect && p.household.coArchitect.grossIncome;
+    if (coIncome > 0 && typeof moneyFull === 'function') pin('spouseIncome', moneyFull(coIncome));
     if (typeof update === 'function') update();
   }
 
