@@ -5294,6 +5294,7 @@
   .so-toast.show{opacity:1;transform:translate(-50%,0)}
   @media(max-width:1080px){.so-head{grid-template-columns:1fr}.so-roadmap{grid-template-columns:1fr}.so-cta-grid{grid-template-columns:1fr}}
   @media(max-width:640px){.so-overlay-wrap{padding:74px 16px 26px;align-items:start;overflow:auto}.so-overlay{width:100%;border-radius:28px}.so-inner{padding:58px 20px 22px}.so-overlay:after{width:78px;height:78px;font-size:25px;right:18px;top:18px;opacity:.54}}
+  .so-overlay{transform:scale(.85);transform-origin:top center}
   </style>
   <section class="so-overlay-wrap" id="studioOverlayWrap" aria-labelledby="studioOverlayTitle">
     <div class="so-overlay" role="dialog" aria-modal="true" aria-describedby="studioOverlayDesc">
@@ -5355,7 +5356,7 @@
     'use strict';
     var _wrap = document.getElementById('studioOverlayWrap');
     if (!_wrap) return;
-    if (new URLSearchParams(window.location.search).get('hydrate') || new URLSearchParams(window.location.search).get('id')) return;
+    if (new URLSearchParams(window.location.search).get('hydrate') || new URLSearchParams(window.location.search).get('id')) { _wrap.style.display='none'; return; }
 
     var isSignedIn = !!sessionStorage.getItem('datum_auth_hint');
 
