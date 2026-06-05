@@ -2984,8 +2984,8 @@
         const inflMult = s.isNominal ? Math.pow(1 + s.inflRate, offset) : 1;
         
         const t = yearsToGrow > 0 ? offset / yearsToGrow : 0;
-        const wrCon = 0.04 - (0.04 - 0.028) * t;
-        const wrUp = 0.04 + (0.050 - 0.04) * t;
+        const wrCon = 0.04 - (0.04 - WR_FLOOR) * t;
+        const wrUp  = 0.04 + (WR_CEIL  - 0.04) * t;
         
         const floorSpend = fvCon * 1000 * wrCon * inflMult * s.taxMult;
         const ceilSpend = fvUp * 1000 * wrUp * inflMult * s.taxMult;
@@ -7278,10 +7278,27 @@
       return Math.floor((lo + hi) / 2); // retireAge (integer)
     }
 
-    // Framing D named constants — mirror existing 1.07/1.035 hardcoded-spec pattern; NOT scenario-aware.
+    // Shared withdrawal-rate endpoints — ONE definition read by both forward and inverse (F86 rider).
+    var WR_CEIL  = 0.050; // forward wrUp endpoint: 0.04 + (WR_CEIL  - 0.04) × t at t=1
+    var WR_FLOOR = 0.028; // forward wrCon endpoint: 0.04 - (0.04 - WR_FLOOR) × t at t=1
+    // Framing D named constants — NOT scenario-aware.
     var DATUM_GROWTH_RATE_SPEC = 0.045;
     var DATUM_SUPPORT_RATE     = 0.040;
     var DRIVER_TIE_EPSILON     = 0.005; // 0.5% tolerance for tied-driver detection (spec §8 R106)
+
+    // N4 Round-trip assertion — dev-only; fires per P/K path on every solveInverse call.
+    // Perturbs (P+dP, K+dK) and asserts the redrawn bound lands within 1 k/yr of the drag target.
+    function _rtCheck(dP, dK, label, target, which, s, Y) {
+      if (dP === null || dK === null) return;
+      var _tS = Object.assign({}, s, {
+        portfolioVol:  (s.portfolioVol  || 0) + dP,
+        annualContrib: (s.annualContrib || 0) + dK
+      });
+      var _pm  = getMathPoint(Y, Y, _tS);
+      var _got = which === 'ceil' ? _pm.ceilSpend : _pm.floorSpend;
+      console.assert(Math.abs(_got - target) < 1.0,
+        'F86 RT [' + label + '] target=' + target.toFixed(1) + ' got=' + _got.toFixed(1));
+    }
 
     // solveInverse(dc, df, dd, pts, s) — pure math, no DOM.
     // dc/df/dd = designOverrides deltas (k/yr). pts = lastCalculatedPoints. s = currentScenario.
@@ -7296,35 +7313,43 @@
       var Y       = s.yearsToGrow || 0;
       var P       = s.portfolioVol   || 0;   // millions
       var K       = s.annualContrib  || 0;   // $/yr
-      // INVERSE MATH §5 sensitivity coefficients (authoritative per Captain Decision)
-      // gfHi = (1.07)^Y, gfLo = (1.035)^Y — INVERSE MATH §5 canonical growth factors
-      var gfHi_spec = Y > 0 ? Math.pow(1.07,  Y) : 1;
-      var gfLo_spec = Y > 0 ? Math.pow(1.035, Y) : 1;
-      // a1 = gfHi × 0.055 (§5 R31): ceiling sensitivity to ΔP, units $M/yr per $M
-      var a1 = gfHi_spec * 0.055;
-      // b1 = 0.055 × (gfHi−1)/0.07 (§5 R32): ceiling sensitivity to ΔK, $M/yr per $M/yr
-      var b1 = 0.055 * (gfHi_spec - 1) / 0.07;
-      // a2 = gfLo × 0.035 (§5 R33): floor sensitivity to ΔP, $M/yr per $M
-      var a2 = gfLo_spec * 0.035;
-      // b2 = 0.5 × (gfLo−1) (§5 R34): floor sensitivity to ΔK, $M/yr per $M/yr
-      var b2 = 0.5 * (gfLo_spec - 1);
-      // Unit bridge: getMathPoint uses k/yr for spending, $M for portfolio, $/yr for contributions.
-      // INVERSE MATH §5 formula assumes spending in $M/yr, P in $M, K in $M/yr.
-      // Conversion: dc/df ÷1000 → $M/yr going in; ΔK ×1e6 → $/yr coming out; effects ×1000 → k/yr for display.
+      // ── §1 MODEL: scenario-aware constants, single source (F86) ─────────────────
+      var g_up = s.upsideRate,       r_up = g_up - 1;
+      var g_lo = s.conservativeRate, r_lo = g_lo - 1;
+      var gfUp = Y > 0 ? Math.pow(g_up, Y) : 1;
+      var gfLo = Y > 0 ? Math.pow(g_lo, Y) : 1;
+      var inflM = (s.isNominal && Y > 0) ? Math.pow(1 + s.inflRate, Y) : 1;
+      var M    = inflM * (s.taxMult || 0.8);   // mirrors forward inflMult × taxMult at t=1
+      // §2 annuity coefficients (forward formula structure at t=1, M and W factored out):
+      var A_up = gfUp;
+      var B_up = r_up > 0 ? (gfUp - 1) / r_up : Y;  // K/1e6 multiplier for fvUp
+      var A_lo = gfLo;
+      var B_lo = r_lo > 0 ? (gfLo - 1) / r_lo : Y;  // K/1e6 multiplier for fvCon (Answer A: full K)
+      // Effective display sensitivities returned in result for fmtPortPer1k in populateZoneC:
+      var a1 = A_up * WR_CEIL  * M;
+      var a2 = A_lo * WR_FLOOR * M;
+      var b1 = B_up * WR_CEIL  * M;
+      var b2 = B_lo * WR_FLOOR * M;
 
       var ceilTarget  = pts.ceilSpend  + dc;
       var floorTarget = pts.floorSpend + df;
       var datumTarget = pts.datumSpend + dd;
       var base = { dc: dc, df: df, dd: dd, ceilTarget: ceilTarget, floorTarget: floorTarget, datumTarget: datumTarget };
 
-      // ── Step 1: Y=0 → Block D (FEASIBILITY RULES §6 Step 1 / INVERSE MATH §6) ──
+      // §3 Required FV in $M — exact algebraic inverse of forward (reads WR_CEIL/WR_FLOOR, M):
+      var R_c = ceilTarget  / 1000 / (WR_CEIL  * M);  // required fvUp
+      var R_f = floorTarget / 1000 / (WR_FLOOR * M);  // required fvCon
+      // Delta from current FV (forward self-consistent by construction):
+      var dR_c = R_c - (P * A_up + (K / 1e6) * B_up);
+      var dR_f = R_f - (P * A_lo + (K / 1e6) * B_lo);
+
+      // ── Step 1: Y=0 → Block D (FEASIBILITY RULES §6 Step 1) ───────────────────
       if (Y === 0) {
-        // Y=0: gfHi_spec=1, gfLo_spec=1, a1=0.055, a2=0.035 (INVERSE MATH §6)
-        // ceilSpend_wb = P_M × 0.055 $M/yr; solve: P_M = ceilTarget_M / 0.055
-        var ceilTarget_M_D = ceilTarget / 1000;          // k/yr → $M/yr
-        var reqP_D = ceilTarget_M_D / 0.055;             // ΔP in $M (INVERSE MATH §6)
-        var implFlr = reqP_D * 0.035 * 1000;             // floor = P × 0.035, back to k/yr
-        var dP_D = reqP_D - P;
+        // Y=0: inflM=1, M=taxMult; gfUp=gfLo=1, B terms=0 (contributions can't help)
+        // ceilSpend = P × WR_CEIL × M × 1000 → P = ceilTarget/1000/(WR_CEIL×M) = R_c
+        var reqP_D  = R_c;
+        var implFlr = reqP_D * WR_FLOOR * M * 1000;
+        var dP_D    = reqP_D - P;
         return Object.assign({}, base, { block: 'D', hardStop: null, reqP_M: reqP_D, dP_M: dP_D, impliedFloor_k: implFlr, P: P });
       }
 
@@ -7342,15 +7367,14 @@
         if (floorTarget >= ceilTarget) {
           return Object.assign({}, base, { block: 'C', hardStop: { type: 'floor_above_ceil' } });
         }
-        // FEASIBILITY RULES §1: degenerate 2×2 system (|det| < 0.0001 per Captain Decision 1)
-        var det = a1 * b2 - a2 * b1;
+        // FEASIBILITY RULES §1: degenerate 2×2 system (|det| < 0.0001)
+        var det = A_up * B_lo - A_lo * B_up;
         if (Math.abs(det) < 0.0001) {
           return Object.assign({}, base, { block: 'C', hardStop: { type: 'degenerate' } });
         }
-        // Cramer solve (INVERSE MATH §5): dc/df converted to $M/yr; ΔK result × 1e6 → $/yr
-        var dc_M = dc / 1000, df_M = df / 1000;
-        var dP_C = (dc_M * b2 - df_M * b1) / det;        // ΔP in $M
-        var dK_C = (df_M * a1 - dc_M * a2) / det * 1e6;  // ΔK in $/yr
+        // §3 Cramer in FV-delta domain: [A_up B_up; A_lo B_lo][ΔP; ΔK/1e6] = [dR_c; dR_f]
+        var dP_C  = (dR_c * B_lo - dR_f * B_up) / det;
+        var dK_C  = (A_up * dR_f - A_lo * dR_c) / det * 1e6;
         // FEASIBILITY RULES §1: negative portfolio
         if ((P + dP_C) < 0) {
           return Object.assign({}, base, { block: 'C', hardStop: { type: 'negative_portfolio' }, dP_M: dP_C, dK_dollars: dK_C });
@@ -7364,13 +7388,13 @@
         });
       }
 
-      // ── Block A: ceiling-only drag (INVERSE MATH §3) ──
+      // ── Block A: ceiling-only drag (§3 inverse) ──────────────────────────────
       if (hasCeil && !hasFloor) {
         var paths_A = [];
-        var dc_M_A = dc / 1000;  // k/yr → $M/yr for INVERSE MATH §3 formulas
-        // Path 1 — Portfolio: ΔP = ΔceilTarget / (gfHi × 0.055) per §3
-        var dP_A1 = a1 > 0 ? dc_M_A / a1 : null;                           // $M
-        var fe_A1 = dP_A1 !== null ? dP_A1 * a2 * 1000 : null;             // floor effect k/yr
+        // Path 1 — Portfolio: keep K fixed; ΔP = dR_c / A_up
+        var dP_A1 = A_up > 0 ? dR_c / A_up : null;
+        var fe_A1 = dP_A1 !== null ? dP_A1 * A_lo * WR_FLOOR * M * 1000 : null;
+        _rtCheck(dP_A1, 0, 'A-portfolio', ceilTarget, 'ceil', s, Y);
         paths_A.push({
           lever: 'portfolio',
           dP_M:        dP_A1,
@@ -7379,9 +7403,10 @@
           suppressed: dP_A1 !== null && (P + dP_A1) < 0,
           softWarn:  dP_A1 !== null && dP_A1 > 2 * P ? 'too_large' : null
         });
-        // Path 2 — Contributions: ΔK = ΔceilTarget / (0.055×(gfHi−1)/0.07) per §3, then ×1e6 → $/yr
-        var dK_A2 = b1 > 0 ? dc_M_A / b1 * 1e6 : null;                     // $/yr
-        var fe_A2 = dK_A2 !== null ? (dK_A2 / 1e6) * b2 * 1000 : null;     // floor effect k/yr
+        // Path 2 — Contributions: keep P fixed; ΔK = dR_c / B_up × 1e6
+        var dK_A2 = B_up > 0 ? dR_c / B_up * 1e6 : null;
+        var fe_A2 = dK_A2 !== null ? (dK_A2 / 1e6) * B_lo * WR_FLOOR * M * 1000 : null;
+        _rtCheck(0, dK_A2, 'A-contrib', ceilTarget, 'ceil', s, Y);
         paths_A.push({
           lever: 'contributions',
           dK_dollars:  dK_A2,
@@ -7389,7 +7414,7 @@
           suppressed: false,
           softWarn:  dK_A2 !== null && Math.abs(dK_A2) > 50000 ? 'too_high' : null
         });
-        // Path 3 — Retire Age (binary search)
+        // Path 3 — Retire Age (binary search via getMathPoint — already scenario-aware)
         var reqRA_A3 = _d2BinarySearchY(ceilTarget, 'ceil', s);
         var dY_A3    = reqRA_A3 - s.activationAge;
         var ptsSY_A3 = getMathPoint(reqRA_A3 - s.currentAge, reqRA_A3 - s.currentAge, s);
@@ -7400,10 +7425,10 @@
           suppressed: false,
           softWarn:  Math.abs(dY_A3) > 15 ? 'extreme' : null
         });
-        // Combo: split ceiling delta 50/50 portfolio+contributions
+        // Combo: split dR_c 50/50 portfolio+contributions
         var combo_A = null;
-        if (a1 > 0 && b1 > 0) {
-          combo_A = { dP_M: (dc_M_A / 2) / a1, dK_dollars: (dc_M_A / 2) / b1 * 1e6 };
+        if (A_up > 0 && B_up > 0) {
+          combo_A = { dP_M: dR_c / 2 / A_up, dK_dollars: dR_c / 2 / B_up * 1e6 };
         }
         return Object.assign({}, base, {
           block: 'A', hardStop: null,
@@ -7412,12 +7437,12 @@
         });
       }
 
-      // ── Block B: floor-only drag (INVERSE MATH §4) ──
+      // ── Block B: floor-only drag (§3 inverse, floor equations) ─────────────
       var paths_B = [];
-      var df_M_B = df / 1000;  // k/yr → $M/yr for INVERSE MATH §4 formulas
-      // Path 1 — Portfolio: ΔP = ΔfloorTarget / (gfLo × 0.035) per §4
-      var dP_B1 = a2 > 0 ? df_M_B / a2 : null;                              // $M
-      var ce_B1 = dP_B1 !== null ? dP_B1 * a1 * 1000 : null;                // ceil effect k/yr
+      // Path 1 — Portfolio: keep K fixed; ΔP = dR_f / A_lo
+      var dP_B1 = A_lo > 0 ? dR_f / A_lo : null;
+      var ce_B1 = dP_B1 !== null ? dP_B1 * A_up * WR_CEIL * M * 1000 : null;
+      _rtCheck(dP_B1, 0, 'B-portfolio', floorTarget, 'floor', s, Y);
       paths_B.push({
         lever: 'portfolio',
         dP_M:       dP_B1,
@@ -7426,9 +7451,10 @@
         suppressed: dP_B1 !== null && (P + dP_B1) < 0,
         softWarn: dP_B1 !== null && dP_B1 > 2 * P ? 'too_large' : null
       });
-      // Path 2 — Contributions: ΔK = ΔfloorTarget / (0.5×(gfLo−1)) per §4, ×1e6 → $/yr
-      var dK_B2 = b2 > 0 ? df_M_B / b2 * 1e6 : null;                        // $/yr
-      var ce_B2 = dK_B2 !== null ? (dK_B2 / 1e6) * b1 * 1000 : null;        // ceil effect k/yr
+      // Path 2 — Contributions: keep P fixed; ΔK = dR_f / B_lo × 1e6
+      var dK_B2 = B_lo > 0 ? dR_f / B_lo * 1e6 : null;
+      var ce_B2 = dK_B2 !== null ? (dK_B2 / 1e6) * B_up * WR_CEIL * M * 1000 : null;
+      _rtCheck(0, dK_B2, 'B-contrib', floorTarget, 'floor', s, Y);
       paths_B.push({
         lever: 'contributions',
         dK_dollars: dK_B2,
@@ -7436,7 +7462,7 @@
         suppressed: false,
         softWarn: dK_B2 !== null && Math.abs(dK_B2) > 50000 ? 'too_high' : null
       });
-      // Path 3 — Retire Age (binary search)
+      // Path 3 — Retire Age (binary search via getMathPoint — already scenario-aware)
       var reqRA_B3 = _d2BinarySearchY(floorTarget, 'floor', s);
       var dY_B3    = reqRA_B3 - s.activationAge;
       var ptsSY_B3 = getMathPoint(reqRA_B3 - s.currentAge, reqRA_B3 - s.currentAge, s);
@@ -7448,8 +7474,8 @@
         softWarn: Math.abs(dY_B3) > 15 ? 'extreme' : null
       });
       var combo_B = null;
-      if (a2 > 0 && b2 > 0) {
-        combo_B = { dP_M: (df_M_B / 2) / a2, dK_dollars: (df_M_B / 2) / b2 * 1e6 };
+      if (A_lo > 0 && B_lo > 0) {
+        combo_B = { dP_M: dR_f / 2 / A_lo, dK_dollars: dR_f / 2 / B_lo * 1e6 };
       }
       return Object.assign({}, base, {
         block: 'B', hardStop: null,
