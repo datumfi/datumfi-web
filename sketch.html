@@ -2896,16 +2896,16 @@
             hasInteracted = true;
             document.getElementById('interactive-layer').classList.add('active');
             document.getElementById('tracker-bar').classList.add('active');
-            // GEM A: trigger draw animation on first touch — the "reveal" moment
-            const skCanvas = document.getElementById('sketch-canvas');
-            if (skCanvas) skCanvas.classList.add('draw-triggered');
-            // Reveal datum circles now that animation has started
-            const nd = document.getElementById('node-datum');
-            const dc = document.getElementById('datum-circle');
-            if (nd) nd.style.opacity = '1';
-            if (dc) dc.style.opacity = '1';
-            // S2: auto-scrub datum — only for returning users (discovery teaches via beckon)
-            if (!window._f88DiscoveryActive) _runTutorialSweep();
+            // Returning/hydrated only — discovery users use per-stage f88-draw-* reveals
+            if (!window._f88DiscoveryActive) {
+                const skCanvas = document.getElementById('sketch-canvas');
+                if (skCanvas) skCanvas.classList.add('draw-triggered');
+                const nd = document.getElementById('node-datum');
+                const dc = document.getElementById('datum-circle');
+                if (nd) nd.style.opacity = '1';
+                if (dc) dc.style.opacity = '1';
+                _runTutorialSweep();
+            }
         }
     }
 
