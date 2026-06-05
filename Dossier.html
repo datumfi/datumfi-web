@@ -3612,6 +3612,8 @@ const STORAGE_KEY="datumfi.accountDossier.v14";const $=id=>document.getElementBy
     if (datum > 0 && typeof moneyFull === 'function') pin('datumDefault', moneyFull(datum));
     var coIncome = p.household && p.household.coArchitect && p.household.coArchitect.grossIncome;
     if (coIncome > 0 && typeof moneyFull === 'function') pin('spouseIncome', moneyFull(coIncome));
+    var coRetire = p.household && p.household.coArchitect && p.household.coArchitect.targetRetirementAge;
+    if (coRetire) pin('spouseRetireDate', String(coRetire));
     if (typeof update === 'function') update();
   }
 
