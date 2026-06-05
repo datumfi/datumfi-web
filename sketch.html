@@ -5697,6 +5697,17 @@
                         : ghostBaseline.baselineRate === 1.015 ? 'stress' : 'average';
         var _gbMktEl = document.querySelector('input[name="d2-market"][value="' + _gbParadigm + '"]');
         if (_gbMktEl) _gbMktEl.checked = true;
+        // Refresh toggle pill — programmatic .checked doesn't fire change, so CSS classes need manual sync
+        document.querySelectorAll('input[name="d2-market"]').forEach(function(r) {
+          var _w = r.closest('.toggle-option');
+          if (!_w) return;
+          _w.classList.remove('is-active-opt', 'is-active-hist', 'is-active-stress');
+          if (r.checked) {
+            if (r.value === 'optimistic') _w.classList.add('is-active-opt');
+            else if (r.value === 'average') _w.classList.add('is-active-hist');
+            else if (r.value === 'stress')  _w.classList.add('is-active-stress');
+          }
+        });
         updateDesignEngine();
         positionDesignGhostTicks();
         renderDesignCanvas();
