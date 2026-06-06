@@ -4071,8 +4071,8 @@
 
     // ── F89 VERTEX WAVE ───────────────────────────────────────────────────
     // Tuning — adjust live in DevTools: WAVE_LAMBDA, WAVE_PHASE_SPEED, WAVE_DECAY, WAVE_IMP_*
-    var WAVE_LAMBDA      = 280;   // wavelength SVG units
-    var WAVE_PHASE_SPEED = 0.25;  // radians/frame → propagation speed (live-tunable; ~5 cycles/2s settle)
+    var WAVE_LAMBDA      = 1200;  // wavelength SVG units (live-tunable; large λ = single visible crest)
+    var WAVE_PHASE_SPEED = 0.10;  // radians/frame → propagation speed (live-tunable; crest crosses ~0.5s)
     var WAVE_DECAY       = 0.96;  // amplitude multiplier/frame (~2s settle)
     var WAVE_IMP_DATUM   = 8;     // datum-drag impulse per $1k/frame velocity
     var WAVE_IMP_PORT    = 12;    // portfolio event ceiling impulse
@@ -4098,6 +4098,7 @@
     var _edgeBow = 0, _edgeBowTarget = 0, _edgeBowDir = 1; // 2D-1: bow (lerped), target (bumped by events), dir
     var _waveRafId = null, _waveEnabled = true;
     var _prevDatumVal = NaN, _rawDatumForWave = NaN; // bow velocity; vel computed once per rAF in waveLoop
+    var _datVelEMA = 0;  // signed EMA of datum velocity (α=0.8; smooths inter-frame noise)
     var _prevDatumSliderVal = NaN; // Fix4: datum direction tracking (once-per-event)
     var _prevAgeVal = NaN, _prevPortVal = NaN, _prevContribVal = NaN, _prevRetVal = NaN; // Fix3: dir tracking
     function applyWave(pts, amp, phase, xStart) {
@@ -4127,15 +4128,17 @@
         if (_edgeBowTarget < 0.1) _edgeBowTarget = 0;
         _edgeBow += (_edgeBowTarget - _edgeBow) * WAVE_BOW_LERP;
         if (_edgeBow < 0.1) _edgeBow = 0;
-        // Datum: abs-velocity sampled once/frame (same invariant as bow — always-non-negative target)
+        // Datum: EMA-smoothed velocity once/frame → stable target, no inter-frame quiver
         if (!isNaN(_rawDatumForWave) && !isNaN(_prevDatumVal)) {
             var _wlVel = _rawDatumForWave - _prevDatumVal;
-            var _wlVAbs = Math.abs(_wlVel);
-            if (_wlVAbs > 100) {
-                var _wlBase = _wlVAbs * WAVE_IMP_DATUM / 1000 * 2;
-                if (_wlVel > 0) { _ceilTarget = Math.min(_ceilTarget + _wlBase, 18); _ceilPhaseDir = +1; }
-                else             { _floorTarget = Math.min(_floorTarget + _wlBase, 18); _floorPhaseDir = -1; }
-                _edgeBowTarget = Math.min(_edgeBowTarget + _wlVAbs * WAVE_IMP_EDGE / 1000, WAVE_EDGE_MAX);
+            _datVelEMA = _datVelEMA * 0.8 + _wlVel * 0.2;   // signed EMA; decays to 0 when still
+            if (Math.abs(_datVelEMA) > 30) {
+                var _wlBase = Math.abs(_datVelEMA) * WAVE_IMP_DATUM / 1000 * 2;
+                if (_datVelEMA > 0) { _ceilTarget = Math.min(_ceilTarget + _wlBase, 18); _ceilPhaseDir = +1; }
+                else                 { _floorTarget = Math.min(_floorTarget + _wlBase, 18); _floorPhaseDir = -1; }
+            }
+            if (Math.abs(_wlVel) > 100) {   // bow: raw abs velocity, separate path, unchanged
+                _edgeBowTarget = Math.min(_edgeBowTarget + Math.abs(_wlVel) * WAVE_IMP_EDGE / 1000, WAVE_EDGE_MAX);
                 _edgeBowDir = _wlVel > 0 ? 1 : -1;
             }
             _prevDatumVal = _rawDatumForWave;
@@ -5597,7 +5600,7 @@
             _btn.textContent = _waveEnabled ? 'Motion: ON' : 'Motion: OFF';
             try { localStorage.setItem(_key, _waveEnabled ? 'on' : 'off'); } catch(e) {}
             if (!_waveEnabled) {
-                ceilAmp = 0; floorAmp = 0; _ceilTarget = 0; _floorTarget = 0; _ceilPhase = 0; _floorPhase = 0; _edgeBow = 0; _edgeBowTarget = 0;
+                ceilAmp = 0; floorAmp = 0; _ceilTarget = 0; _floorTarget = 0; _ceilPhase = 0; _floorPhase = 0; _datVelEMA = 0; _edgeBow = 0; _edgeBowTarget = 0;
                 if (_waveRafId) { cancelAnimationFrame(_waveRafId); _waveRafId = null; }
                 // Stop gradient stop pulses + GEM B
                 var _skc2 = document.getElementById('sketch-canvas');
