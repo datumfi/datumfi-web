@@ -490,24 +490,6 @@
   }
   /* ── END F88 ─────────────────────────────────────────────────────────── */
 
-  /* ── F89a LIQUID-METAL CONE ──────────────────────────────────────────── */
-  #cone-specular { opacity: 0; pointer-events: none; }
-  #d2-specular   { opacity: 0; pointer-events: none; }
-  #sketch-canvas.f88-complete:not(.lm-disabled) #cone-area     { filter: url(#liquid-metal); }
-  #sketch-canvas.f88-complete:not(.lm-disabled) #cone-specular { opacity: 0.15; }
-  #d2-canvas:not(.lm-disabled) #d2-cone     { filter: url(#d2-liquid-metal); }
-  #d2-canvas:not(.lm-disabled) #d2-specular { opacity: 0.15; }
-  #sketch-canvas.lm-disabled #cone-area,
-  #d2-canvas.lm-disabled #d2-cone     { filter: none !important; }
-  #sketch-canvas.lm-disabled #cone-specular,
-  #d2-canvas.lm-disabled #d2-specular { opacity: 0 !important; }
-  /* ── END F89a ─────────────────────────────────────────────────────────── */
-  /* ── F89b AT-REST: detach filter when slosh fully decayed ─────────────── */
-  #sketch-canvas.lm-at-rest:not(.lm-disabled) #cone-area { filter: none !important; }
-  #d2-canvas.lm-at-rest:not(.lm-disabled)     #d2-cone   { filter: none !important; }
-  /* ── END F89b AT-REST ─────────────────────────────────────────────────── */
-  /* F89b: to kill specular at rest add: #sketch-canvas.lm-at-rest #cone-specular,#d2-canvas.lm-at-rest #d2-specular{opacity:0!important} */
-
   /* Ghost Lines classes */
   .ghost-line { stroke-width: 1; stroke-linecap: round; fill: none; stroke-dasharray: 2 4; opacity: 0; transition: opacity 0.3s; }
   .ghost-ceil { stroke: var(--gold); }
@@ -1684,7 +1666,6 @@
                         </div>
                         <div class="canvas-actions">
                             <button type="button" class="canvas-btn" id="btn-save-shape">Save Shape</button>
-                            <button type="button" class="canvas-btn" id="btn-motion">Motion: ON</button>
                         </div>
                     </div>
                 </div>
@@ -1725,23 +1706,6 @@
                   <clipPath id="top-reveal">
                     <rect id="top-reveal-rect" x="0" y="0" height="480" width="0"/>
                   </clipPath>
-                  <!-- F89a liquid-metal filter + specular gradient -->
-                  <filter id="liquid-metal" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
-                    <feTurbulence id="lm-turb" type="fractalNoise" baseFrequency="0.006 0.004" numOctaves="3" seed="17" result="noise"/>
-                    <feDisplacementMap id="lm-disp" in="SourceGraphic" in2="noise" scale="10" xChannelSelector="R" yChannelSelector="G" result="displaced"/>
-                    <feGaussianBlur in="displaced" stdDeviation="1.5" result="softened"/>
-                    <feMerge>
-                      <feMergeNode in="softened"/>
-                      <feMergeNode in="displaced"/>
-                    </feMerge>
-                  </filter>
-                  <radialGradient id="cone-specular-grad" cx="25%" cy="28%" r="55%" gradientUnits="objectBoundingBox">
-                    <animate attributeName="cx" values="25%;68%;25%" dur="7s" repeatCount="indefinite"/>
-                    <animate attributeName="cy" values="28%;40%;28%" dur="7s" repeatCount="indefinite"/>
-                    <stop offset="0%"   stop-color="white" stop-opacity="0.22"/>
-                    <stop offset="55%"  stop-color="white" stop-opacity="0.05"/>
-                    <stop offset="100%" stop-color="white" stop-opacity="0"/>
-                  </radialGradient>
               </defs>
               <rect id="state-tint-rect" x="0" y="0" width="840" height="480" fill="none" pointer-events="none"/>
 
@@ -1796,7 +1760,6 @@
                   <path id="mass-bottom" class="f88-mass f88-mass-bottom" d="" clip-path="url(#top-reveal)"/>
 
                   <path id="cone-area" class="cone-fill morph" d="" />
-                  <path id="cone-specular" class="morph" d="" fill="url(#cone-specular-grad)" opacity="0" pointer-events="none"/>
 
                   <g clip-path="url(#cone-clip)">
                       <rect id="market-sweep" class="market-sweep" x="-250" y="-100" width="250" height="700" fill="var(--danger-red)" />
@@ -2082,23 +2045,6 @@
               <clipPath id="d2-clip-cone">
                 <path id="d2-clip-cone-path" d="" />
               </clipPath>
-              <!-- F89a liquid-metal filter + specular gradient (Screen 2) -->
-              <filter id="d2-liquid-metal" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
-                <feTurbulence id="d2-lm-turb" type="fractalNoise" baseFrequency="0.006 0.004" numOctaves="3" seed="23" result="noise"/>
-                <feDisplacementMap id="d2-lm-disp" in="SourceGraphic" in2="noise" scale="10" xChannelSelector="R" yChannelSelector="G" result="displaced"/>
-                <feGaussianBlur in="displaced" stdDeviation="1.5" result="softened"/>
-                <feMerge>
-                  <feMergeNode in="softened"/>
-                  <feMergeNode in="displaced"/>
-                </feMerge>
-              </filter>
-              <radialGradient id="d2-specular-grad" cx="25%" cy="28%" r="55%" gradientUnits="objectBoundingBox">
-                <animate attributeName="cx" values="25%;68%;25%" dur="7s" begin="3.5s" repeatCount="indefinite"/>
-                <animate attributeName="cy" values="28%;40%;28%" dur="7s" begin="3.5s" repeatCount="indefinite"/>
-                <stop offset="0%"   stop-color="white" stop-opacity="0.22"/>
-                <stop offset="55%"  stop-color="white" stop-opacity="0.05"/>
-                <stop offset="100%" stop-color="white" stop-opacity="0"/>
-              </radialGradient>
             </defs>
             <rect id="d2-market-sweep" class="market-sweep" x="-250" y="-100" width="250" height="700" fill="transparent" />
             <rect id="d2-state-tint-rect" x="0" y="0" width="840" height="480" fill="none" pointer-events="none"/>
@@ -2123,7 +2069,6 @@
               <path id="d2-ghost-datum" class="ghost-line ghost-datum ghost-active" d="" />
               <!-- Live cone: designScenario + designOverrides -->
               <path id="d2-cone" fill="url(#d2-thermal-grad)" opacity="0.55" d="" />
-              <path id="d2-specular" class="morph" d="" fill="url(#d2-specular-grad)" opacity="0" pointer-events="none"/>
               <!-- Ceiling boundary -->
               <g class="boundary-group">
                 <path id="d2-ceil-hit"  stroke="transparent" stroke-width="18" fill="none" d="" pointer-events="stroke" style="cursor:ns-resize;" />
@@ -2853,17 +2798,7 @@
     const timeEnd = document.getElementById('time-end');
     const lblRetire = document.getElementById('lbl-retire');
     const coneArea = document.getElementById('cone-area');
-    const coneSpecular = document.getElementById('cone-specular');
-    const d2SpecularEl = document.getElementById('d2-specular');
     const mConePath = document.getElementById('clip-cone-path');
-    // F89b slosh state
-    const lmDisp    = document.getElementById('lm-disp');
-    const d2LmDisp  = document.getElementById('d2-lm-disp');
-    const skCanvas  = document.getElementById('sketch-canvas');
-    const d2Canvas  = document.getElementById('d2-canvas');
-    let sloshScale   = 0;
-    let prevDatumVal = NaN;
-    let _sloshRafId  = null;
     const marketSweep = document.getElementById('market-sweep');
 
     const ceilLine = document.getElementById('ceil-line');
@@ -4137,46 +4072,6 @@
         rafTextPending = true;
         requestAnimationFrame(() => { rafTextPending = false; updateEngineText(); });
     }
-    // ── F89b SLOSH DECAY ──────────────────────────────────────────────────
-    // Tuning consts — adjust live in DevTools to dial visible vs violent
-    var LM_COEFF    = 0.001;  // datum $/frame → impulse multiplier
-    var LM_THRESH   = 50;     // min $/frame velocity to trigger slosh
-    var LM_MAX      = 25;     // global sloshScale cap
-    var LM_IMP_PORT = 8;      // portfolio event impulse
-    var LM_IMP_CONT = 5;      // contrib event impulse
-    var LM_IMP_MKT  = 12;     // market toggle impulse
-    function decaySlosh() {
-        sloshScale *= 0.92;
-        var _s = sloshScale < 0.01 ? 0 : sloshScale;
-        if (lmDisp)   lmDisp.setAttribute('scale',   _s.toFixed(2));
-        if (d2LmDisp) d2LmDisp.setAttribute('scale', _s.toFixed(2));
-        // specular fades with slosh — ambient 0.15 at rest, full 1.0 at max
-        var _op = (0.15 + Math.min(_s / LM_MAX, 1) * 0.85).toFixed(2);
-        var _f88ok = skCanvas && skCanvas.classList.contains('f88-complete');
-        if (coneSpecular && _f88ok) coneSpecular.style.opacity = _op;
-        if (d2SpecularEl) d2SpecularEl.style.opacity = _op;
-        if (_s === 0) {
-            sloshScale = 0;
-            _sloshRafId = null;
-            // Detach filter 500ms after eye sees stillness — no visual pop at scale=0
-            setTimeout(function() {
-                if (sloshScale === 0) {
-                    if (skCanvas) skCanvas.classList.add('lm-at-rest');
-                    if (d2Canvas) d2Canvas.classList.add('lm-at-rest');
-                }
-            }, 500);
-            return;
-        }
-        _sloshRafId = requestAnimationFrame(decaySlosh);
-    }
-    function addSloshImpulse(mag) {
-        if (skCanvas && skCanvas.classList.contains('lm-disabled')) return;
-        if (skCanvas) skCanvas.classList.remove('lm-at-rest');
-        if (d2Canvas) d2Canvas.classList.remove('lm-at-rest');
-        sloshScale = Math.min(sloshScale + mag, LM_MAX);
-        if (!_sloshRafId) _sloshRafId = requestAnimationFrame(decaySlosh);
-    }
-    // ── END F89b SLOSH DECAY ──────────────────────────────────────────────
 
     function updateEngineText() {
         if (!hasInteracted || !lastCalculatedPoints) return;
@@ -4286,15 +4181,6 @@
     }
 
     function updateEngine() {
-        // F89b: datum velocity → slosh impulse (read-only; never feeds F86 math)
-        (function() {
-            var _dv = readDatum();
-            if (!isNaN(prevDatumVal)) {
-                var _vel = Math.abs(_dv - prevDatumVal);
-                if (_vel > LM_THRESH) addSloshImpulse(_vel * LM_COEFF);
-            }
-            prevDatumVal = _dv;
-        })();
         // Read both sliders — enforce logical gap in calculation only, never write back
         let currentAgeRaw    = parseInt(slAge.value);
         let activationAgeRaw = parseInt(slAct.value);
@@ -4429,7 +4315,6 @@
         datumLine.setAttribute('d', dDatum); 
         datumHitboxLine.setAttribute('d', dDatum); 
         coneArea.setAttribute('d', dCone);
-        if (coneSpecular) coneSpecular.setAttribute('d', dCone);
         mConePath.setAttribute('d', dCone);
 
         document.getElementById('m-ceil').setAttribute('d', dCeil);
@@ -5573,38 +5458,6 @@
     })();
     // ── END F88 DISCOVERY SEQUENCE CONTROLLER ────────────────────────────
 
-    // ── F89a/F89b LIQUID-METAL INIT ───────────────────────────────────────
-    (function() {
-      var ALLOW_MOBILE_LM = false;
-      var _rm   = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      var _mob  = window.matchMedia('(max-width: 768px)').matches;
-      var _btn  = document.getElementById('btn-motion');
-      var _key  = 'datum-motion-v1';
-      var _forced = _rm || (_mob && !ALLOW_MOBILE_LM);
-      var _off  = _forced || (localStorage.getItem(_key) === 'off');
-      function _setMotion(off) {
-        if (off) {
-          if (skCanvas) skCanvas.classList.add('lm-disabled');
-          if (d2Canvas) d2Canvas.classList.add('lm-disabled');
-          if (_btn) _btn.textContent = 'Motion: OFF';
-        } else {
-          if (skCanvas) skCanvas.classList.remove('lm-disabled');
-          if (d2Canvas) d2Canvas.classList.remove('lm-disabled');
-          if (_btn) _btn.textContent = 'Motion: ON';
-        }
-      }
-      _setMotion(_off);
-      if (skCanvas) skCanvas.classList.add('lm-at-rest');
-      if (d2Canvas) d2Canvas.classList.add('lm-at-rest');
-      if (_btn) _btn.addEventListener('click', function() {
-        if (_forced) return;
-        var _isOff = skCanvas ? skCanvas.classList.contains('lm-disabled') : true;
-        _setMotion(!_isOff);
-        try { localStorage.setItem(_key, !_isOff ? 'on' : 'off'); } catch(e) {}
-      });
-    })();
-    // ── END F89a/F89b ──────────────────────────────────────────────────────
-
     const svgCanvas = document.querySelector('.range-svg');
     svgCanvas.addEventListener('pointermove', (e) => {
         const pt = svgCanvas.createSVGPoint();
@@ -5725,8 +5578,8 @@
       if (parseInt(slAct.value) <= parseInt(slAge.value)) slAct.value = minRet;
       triggerInteraction(); touched.timeline = true; updateTracker(); scheduleUpdate();
     });
-    slPort.addEventListener('input',   () => { slPort.dataset.exactVal   = String(Math.round(portPosToVal(parseInt(slPort.value))     * 1000000)); addSloshImpulse(LM_IMP_PORT); triggerInteraction(); touched.capital  = true; updateTracker(); scheduleUpdate(); });
-    slContrib.addEventListener('input', () => { slContrib.dataset.exactVal = String(Math.round(contribPosToVal(parseInt(slContrib.value))));           addSloshImpulse(LM_IMP_CONT); triggerInteraction(); touched.refined  = true; updateTracker(); scheduleUpdate(); });
+    slPort.addEventListener('input',   () => { slPort.dataset.exactVal   = String(Math.round(portPosToVal(parseInt(slPort.value))     * 1000000)); triggerInteraction(); touched.capital  = true; updateTracker(); scheduleUpdate(); });
+    slContrib.addEventListener('input', () => { slContrib.dataset.exactVal = String(Math.round(contribPosToVal(parseInt(slContrib.value))));           triggerInteraction(); touched.refined  = true; updateTracker(); scheduleUpdate(); });
     slDatum.addEventListener('input',  () => { slDatum.dataset.exactVal  = String(Math.round(datumPosToVal(parseInt(slDatum.value))   * 1000));    triggerInteraction(); touched.spending = true; updateTracker(); scheduleUpdate(); });
 
     // GEM C: Datum SVG drag — dragging the datum line live-updates the slider
@@ -5801,7 +5654,7 @@
     document.getElementById('tax-30').addEventListener('change', (e) => { if(e.target.checked) { triggerInteraction(); slTax.value = 30; touched.refined = true; updateTracker(); updateEngine(); }});
 
     marketRadios.forEach(r => r.addEventListener('change', (e) => {
-      addSloshImpulse(LM_IMP_MKT); triggerInteraction(); touched.refined = true; updateTracker(); updateEngine();
+      triggerInteraction(); touched.refined = true; updateTracker(); updateEngine();
       triggerMarketSweep(e.target.value);
       triggerDesignSweep(e.target.value);
     }));
@@ -6947,7 +6800,6 @@
       _sa('d2-ghost-floor', 'd', _ghostFloorD);
       _sa('d2-ghost-datum', 'd', _ghostDatumD);
       _sa('d2-cone',        'd', _lConePath);
-      _sa('d2-specular',    'd', _lConePath);
       _sa('d2-ceil-line',   'd', _lCeilPath);
       _sa('d2-floor-line',  'd', _lFloorPath);
       var _lDatumD = 'M' + xS + ' ' + d2SpendToY(livePtsStart.datumSpend) + ' L' + xE + ' ' + yD;
