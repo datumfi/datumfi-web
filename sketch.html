@@ -369,17 +369,9 @@
 
   @keyframes drawLine { to { stroke-dashoffset: 0; } }
 
-  /* GEM B — Shape state pulse animations (5 states, semantic colors) */
-  @keyframes statePulseRed    { 0% { background: transparent; } 25% { background: rgba(226,75,74,0.07); }   100% { background: transparent; } }
-  @keyframes statePulseOrange { 0% { background: transparent; } 25% { background: rgba(229,138,38,0.07); }  100% { background: transparent; } }
-  @keyframes statePulseTeal   { 0% { background: transparent; } 25% { background: rgba(93,202,165,0.06); }  100% { background: transparent; } }
-  @keyframes statePulsePurple { 0% { background: transparent; } 25% { background: rgba(139,111,191,0.07); } 100% { background: transparent; } }
-  @keyframes statePulseBlue   { 0% { background: transparent; } 25% { background: rgba(77,168,218,0.07); }  100% { background: transparent; } }
-  .state-pulse-red    { animation: statePulseRed    1.0s ease forwards; }
-  .state-pulse-orange { animation: statePulseOrange 1.0s ease forwards; }
-  .state-pulse-teal   { animation: statePulseTeal   1.0s ease forwards; }
-  .state-pulse-purple { animation: statePulsePurple 1.0s ease forwards; }
-  .state-pulse-blue   { animation: statePulseBlue   1.0s ease forwards; }
+  /* GEM B — OVEREXTENDED-only full-canvas flash (all other states color in-shape via gradient stops) */
+  @keyframes statePulseRed { 0% { background: transparent; } 25% { background: rgba(226,75,74,0.07); } 100% { background: transparent; } }
+  .state-pulse-red { animation: statePulseRed 1.0s ease forwards; }
 
   /* Fix 3 — ambient state tint via SVG rect (SVG fill animates reliably; background-color on SVG is unreliable) */
   #state-tint-rect { transition: fill 0.4s ease; }
@@ -4096,7 +4088,7 @@
     var ceilAmp = 0, floorAmp = 0, wavePhase = 0;
     var _edgeBow = 0, _edgeBowTarget = 0, _edgeBowDir = 1; // 2D-1: bow (lerped), target (bumped by events), dir
     var _waveRafId = null, _waveEnabled = true;
-    var _prevDatumVal = NaN;
+    var _prevDatumVal = NaN, _rawDatumForWave = NaN; // Issue 1: raw store; vel computed once per rAF in waveLoop
     function applyWave(pts, amp, xStart) {
         if (amp < 0.01) return pts;
         return pts.map(function(p) {
@@ -4114,6 +4106,26 @@
         if (_edgeBowTarget < 0.1) _edgeBowTarget = 0;
         _edgeBow += (_edgeBowTarget - _edgeBow) * WAVE_BOW_LERP;
         if (_edgeBow < 0.1) _edgeBow = 0;
+        // Issue 1: datum velocity — ONE sample per rAF frame (eliminates 300-600Hz multi-write race)
+        if (!isNaN(_rawDatumForWave) && !isNaN(_prevDatumVal)) {
+            var _wlVel = _rawDatumForWave - _prevDatumVal;
+            var _wlVAbs = Math.abs(_wlVel);
+            if (_wlVAbs > 100 && lastCalculatedPoints) {
+                var _wlLcp = lastCalculatedPoints;
+                var _wlSpan = _wlLcp.ceilSpend - _wlLcp.floorSpend;
+                var _wlPC = _wlSpan > 0 ? (_wlLcp.ceilSpend  - _wlLcp.datumSpend) / _wlSpan : 0.5;
+                var _wlPF = _wlSpan > 0 ? (_wlLcp.datumSpend - _wlLcp.floorSpend) / _wlSpan : 0.5;
+                var _wlDC = _wlVel > 0 ? 1 : 0; var _wlDF = _wlVel > 0 ? 0 : 1;
+                var _wlCF = WAVE_DIR_BIAS * _wlDC + (1 - WAVE_DIR_BIAS) * _wlPC;
+                var _wlFF = WAVE_DIR_BIAS * _wlDF + (1 - WAVE_DIR_BIAS) * _wlPF;
+                var _wlBase = _wlVAbs * WAVE_IMP_DATUM / 1000;
+                ceilAmp  = Math.min(ceilAmp  + _wlBase * _wlCF * 2, 18);
+                floorAmp = Math.min(floorAmp + _wlBase * _wlFF * 2, 18);
+                _edgeBowTarget = Math.min(_edgeBowTarget + _wlVAbs * WAVE_IMP_EDGE / 1000, WAVE_EDGE_MAX);
+                _edgeBowDir = _wlVel > 0 ? 1 : -1;
+            }
+            _prevDatumVal = _rawDatumForWave;
+        }
         var _ca = ceilAmp  < 0.01 ? 0 : ceilAmp;
         var _fa = floorAmp < 0.01 ? 0 : floorAmp;
         var _eb = _edgeBow; var _ebd = _edgeBowDir;
@@ -4190,13 +4202,11 @@
             });
         }
         _setStateTip('s1-state-tip', s);
-        // GEM B: background pulse on state change (gated by _waveEnabled)
+        // GEM B: full-canvas flash ONLY for OVEREXTENDED — only state that colors outside the shape
         const skCanvas = document.getElementById('sketch-canvas');
-        if (_waveEnabled && skCanvas && previousShapeStatus !== s.key) {
-            skCanvas.classList.remove('state-pulse-red','state-pulse-orange','state-pulse-teal','state-pulse-purple','state-pulse-blue');
-            void skCanvas.offsetWidth;
-            var _gemBMap = {overextended:'state-pulse-red',stretched:'state-pulse-orange',expansive:'state-pulse-teal',grounded:'state-pulse-purple',abundant:'state-pulse-blue'};
-            if (_gemBMap[s.key]) skCanvas.classList.add(_gemBMap[s.key]);
+        if (_waveEnabled && skCanvas) {
+            skCanvas.classList.remove('state-pulse-red');
+            if (s.key === 'overextended') { void skCanvas.offsetWidth; skCanvas.classList.add('state-pulse-red'); }
         }
 
         // Fix 3: ambient state tint via SVG rect — fill animates reliably in SVG
@@ -4274,31 +4284,14 @@
     }
 
     function updateEngine() {
-        // F89 2C-2/2C-3: datum velocity → directional wave + right-edge bulge (READ-ONLY — never feeds F86 math)
+        // F89 Issue 1: store raw datum for waveLoop per-frame velocity sample (READ-ONLY — never feeds F86 math)
         (function() {
             var _dv = readDatum();
-            if (!isNaN(_prevDatumVal) && lastCalculatedPoints) {
-                var _vel = _dv - _prevDatumVal;        // signed: positive = datum went up
-                var _vAbs = Math.abs(_vel);
-                if (_vAbs > 100) {
-                    var _lcp = lastCalculatedPoints;
-                    var _span = _lcp.ceilSpend - _lcp.floorSpend;
-                    var _pC = _span > 0 ? (_lcp.ceilSpend  - _lcp.datumSpend) / _span : 0.5;
-                    var _pF = _span > 0 ? (_lcp.datumSpend - _lcp.floorSpend) / _span : 0.5;
-                    var _dC = _vel > 0 ? 1 : 0;       // datum up → ceiling reacts more
-                    var _dF = _vel > 0 ? 0 : 1;
-                    var _cF = WAVE_DIR_BIAS * _dC + (1 - WAVE_DIR_BIAS) * _pC;
-                    var _fF = WAVE_DIR_BIAS * _dF + (1 - WAVE_DIR_BIAS) * _pF;
-                    var _base = _vAbs * WAVE_IMP_DATUM / 1000;
-                    addWaveImpulse(_base * _cF * 2, _base * _fF * 2);
-                    if (_waveEnabled) {
-                        _edgeBowTarget = Math.min(_edgeBowTarget + _vAbs * WAVE_IMP_EDGE / 1000, WAVE_EDGE_MAX);
-                        _edgeBowDir = _vel > 0 ? 1 : -1;
-                        if (!_waveRafId) _waveRafId = requestAnimationFrame(waveLoop);
-                    }
-                }
+            _rawDatumForWave = _dv;
+            if (isNaN(_prevDatumVal)) { _prevDatumVal = _dv; } // init baseline on first call
+            else if (_waveEnabled && !_waveRafId && Math.abs(_dv - _prevDatumVal) > 100) {
+                _waveRafId = requestAnimationFrame(waveLoop); // kick loop when datum moves
             }
-            _prevDatumVal = _dv;
         })();
         // Read both sliders — enforce logical gap in calculation only, never write back
         let currentAgeRaw    = parseInt(slAge.value);
@@ -5592,15 +5585,28 @@
             if (!_waveEnabled) {
                 ceilAmp = 0; floorAmp = 0; _edgeBow = 0; _edgeBowTarget = 0;
                 if (_waveRafId) { cancelAnimationFrame(_waveRafId); _waveRafId = null; }
-                // Stop gradient stop pulses
+                // Stop gradient stop pulses + GEM B
                 var _skc2 = document.getElementById('sketch-canvas');
-                if (_skc2) { _skc2.classList.remove('shape-state-overextended','shape-state-stretched','shape-state-expansive','shape-state-grounded','shape-state-abundant'); }
+                if (_skc2) { _skc2.classList.remove('shape-state-overextended','shape-state-stretched','shape-state-expansive','shape-state-grounded','shape-state-abundant','state-pulse-red'); }
                 // Tint-rect: drop animated classes; only OVEREXTENDED keeps canvas tint
                 var _trt2 = document.getElementById('state-tint-rect');
                 if (_trt2) {
                     _trt2.classList.remove('state-ambient-abundant','state-ambient-grounded','state-ambient-stretched','state-ambient-overextended','state-ambient-overextended-entry');
                     var _sn2 = (window.currentShapeStateObj || {}).name;
                     _trt2.setAttribute('fill', _sn2 === 'OVEREXTENDED' ? 'rgba(226,75,74,0.10)' : 'none');
+                }
+            } else {
+                // Motion ON: immediately re-apply current state's gradient pulse (no GEM B flash — that's a state-change signal)
+                var _sobj3 = window.currentShapeStateObj || {};
+                var _sm3 = {OVEREXTENDED:'shape-state-overextended',STRETCHED:'shape-state-stretched',EXPANSIVE:'shape-state-expansive',GROUNDED:'shape-state-grounded',ABUNDANT:'shape-state-abundant'};
+                var _skc3 = document.getElementById('sketch-canvas');
+                if (_skc3 && _sm3[_sobj3.name]) _skc3.classList.add(_sm3[_sobj3.name]);
+                var _d2c3 = document.getElementById('d2-canvas');
+                if (_d2c3 && _sm3[_sobj3.name]) _d2c3.classList.add(_sm3[_sobj3.name]);
+                var _trt3 = document.getElementById('state-tint-rect');
+                if (_trt3) {
+                    _trt3.setAttribute('fill', 'none');
+                    if (_sobj3.name === 'OVEREXTENDED') _trt3.classList.add('state-ambient-overextended');
                 }
             }
         });
