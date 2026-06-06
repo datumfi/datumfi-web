@@ -310,18 +310,29 @@
   #stop-mid1, #stop-mid2 { stop-color: var(--teal-mid); stop-opacity: 0.15; transition: all 0.8s ease; }
   #stop-floor { stop-color: var(--danger-red); stop-opacity: 0.25; transition: all 0.8s ease; }
 
-  /* State: Healthy (Calm teal center) */
-  .shape-healthy #stop-mid1, .shape-healthy #stop-mid2 { stop-color: var(--teal-mid); stop-opacity: 0.15; }
-  
-  /* State: Under Pressure (Floor Pulse) */
-  @keyframes pulseRed { 0%, 100% { stop-opacity: 0.25; } 50% { stop-opacity: 0.6; stop-color: #ff3333; } }
-  .shape-under-pressure #stop-floor { animation: pulseRed 2s infinite ease-in-out; }
-  #d2-canvas.shape-under-pressure #d2-stop-floor { animation: pulseRed 2s infinite ease-in-out; }
-
-  /* State: At Limit (Ceiling Glow) */
-  @keyframes pulseGold { 0%, 100% { stop-opacity: 0.25; } 50% { stop-opacity: 0.5; stop-color: #ffe680; } }
-  .shape-at-limit #stop-ceil { animation: pulseGold 2s infinite ease-in-out; }
-  #d2-canvas.shape-at-limit #d2-stop-ceil { animation: pulseGold 2s infinite ease-in-out; }
+  /* State gradient stop pulses — 5 states, colors matched to financial meaning */
+  @keyframes pulseRed    { 0%,100%{ stop-opacity:0.25; } 50%{ stop-opacity:0.60; stop-color:#ff3333; } }
+  @keyframes pulseOrange { 0%,100%{ stop-opacity:0.25; } 50%{ stop-opacity:0.50; stop-color:#E58E26; } }
+  @keyframes pulseTealMid{ 0%,100%{ stop-opacity:0.15; } 50%{ stop-opacity:0.38; stop-color:#5DCAA5; } }
+  @keyframes pulsePurple { 0%,100%{ stop-opacity:0.25; } 50%{ stop-opacity:0.50; stop-color:#8B6FBF; } }
+  @keyframes pulseBlue   { 0%,100%{ stop-opacity:0.25; } 50%{ stop-opacity:0.50; stop-color:#4da8da; } }
+  /* OVEREXTENDED — ceiling breached (danger red) */
+  .shape-state-overextended #stop-ceil { animation: pulseRed    2s infinite ease-in-out; }
+  #d2-canvas.shape-state-overextended  #d2-stop-ceil  { animation: pulseRed    2s infinite ease-in-out; }
+  /* STRETCHED — near ceiling (caution orange) */
+  .shape-state-stretched   #stop-ceil  { animation: pulseOrange 2s infinite ease-in-out; }
+  #d2-canvas.shape-state-stretched     #d2-stop-ceil  { animation: pulseOrange 2s infinite ease-in-out; }
+  /* EXPANSIVE — comfortable center (calm teal) */
+  .shape-state-expansive   #stop-mid1,
+  .shape-state-expansive   #stop-mid2  { animation: pulseTealMid 2s infinite ease-in-out; }
+  #d2-canvas.shape-state-expansive #d2-stop-mid1,
+  #d2-canvas.shape-state-expansive #d2-stop-mid2 { animation: pulseTealMid 2s infinite ease-in-out; }
+  /* GROUNDED — near floor, deliberate + safe (purple, NOT red) */
+  .shape-state-grounded    #stop-floor { animation: pulsePurple 2s infinite ease-in-out; }
+  #d2-canvas.shape-state-grounded      #d2-stop-floor { animation: pulsePurple 2s infinite ease-in-out; }
+  /* ABUNDANT — below floor, strong surplus (blue) */
+  .shape-state-abundant    #stop-floor { animation: pulseBlue   2s infinite ease-in-out; }
+  #d2-canvas.shape-state-abundant      #d2-stop-floor { animation: pulseBlue   2s infinite ease-in-out; }
 
   /* Visual Market Sweeps */
   .market-sweep { opacity: 0; filter: blur(25px); pointer-events: none; }
@@ -358,25 +369,17 @@
 
   @keyframes drawLine { to { stroke-dashoffset: 0; } }
 
-  /* GEM B — Shape state pulse animations */
-  @keyframes statePulseRed {
-    0%   { background: transparent; }
-    25%  { background: rgba(226,75,74,0.07); }
-    100% { background: transparent; }
-  }
-  @keyframes statePulseGold {
-    0%   { background: transparent; }
-    25%  { background: rgba(201,168,76,0.07); }
-    100% { background: transparent; }
-  }
-  @keyframes statePulseTeal {
-    0%   { background: transparent; }
-    25%  { background: rgba(93,202,165,0.06); }
-    100% { background: transparent; }
-  }
-  .state-pulse-red  { animation: statePulseRed  1.0s ease forwards; }
-  .state-pulse-gold { animation: statePulseGold 1.0s ease forwards; }
-  .state-pulse-teal { animation: statePulseTeal 1.0s ease forwards; }
+  /* GEM B — Shape state pulse animations (5 states, semantic colors) */
+  @keyframes statePulseRed    { 0% { background: transparent; } 25% { background: rgba(226,75,74,0.07); }   100% { background: transparent; } }
+  @keyframes statePulseOrange { 0% { background: transparent; } 25% { background: rgba(229,138,38,0.07); }  100% { background: transparent; } }
+  @keyframes statePulseTeal   { 0% { background: transparent; } 25% { background: rgba(93,202,165,0.06); }  100% { background: transparent; } }
+  @keyframes statePulsePurple { 0% { background: transparent; } 25% { background: rgba(139,111,191,0.07); } 100% { background: transparent; } }
+  @keyframes statePulseBlue   { 0% { background: transparent; } 25% { background: rgba(77,168,218,0.07); }  100% { background: transparent; } }
+  .state-pulse-red    { animation: statePulseRed    1.0s ease forwards; }
+  .state-pulse-orange { animation: statePulseOrange 1.0s ease forwards; }
+  .state-pulse-teal   { animation: statePulseTeal   1.0s ease forwards; }
+  .state-pulse-purple { animation: statePulsePurple 1.0s ease forwards; }
+  .state-pulse-blue   { animation: statePulseBlue   1.0s ease forwards; }
 
   /* Fix 3 — ambient state tint via SVG rect (SVG fill animates reliably; background-color on SVG is unreliable) */
   #state-tint-rect { transition: fill 0.4s ease; }
@@ -1676,7 +1679,7 @@
         <div class="canvas-wrap">
           <div id="chart-summary" class="sr-only" aria-live="polite">Initializing retirement projection canvas...</div>
           
-          <svg class="range-svg shape-healthy" id="sketch-canvas" viewBox="0 0 840 480" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <svg class="range-svg" id="sketch-canvas" viewBox="0 0 840 480" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
               <defs>
                   <linearGradient id="thermal-grad" x1="0%" y1="0%" x2="0%" y2="100%">
                       <stop id="stop-ceil" offset="0%" stop-color="#C9A84C" stop-opacity="0.25" />
@@ -4087,12 +4090,13 @@
     var WAVE_IMP_CONT    = 8;     // contrib event floor impulse
     var WAVE_IMP_MKT     = 14;    // market toggle full-cone impulse
     var WAVE_DIR_BIAS   = 0.6;   // 2C-2: direction vs proximity blend (0=pure prox, 1=pure dir)
-    var WAVE_IMP_EDGE   = 5;     // 2C-3: right-edge bulge per $1k/frame velocity
-    var WAVE_EDGE_DECAY = 0.93;  // 2C-3: right-edge bulge decay/frame (faster than wave's 0.96)
+    var WAVE_IMP_EDGE   = 5;     // 2D-1: right-edge bow impulse per $1k/frame velocity
+    var WAVE_EDGE_DECAY = 0.93;  // 2D-1: right-edge bow decay/frame (faster than wave's 0.96)
+    var WAVE_EDGE_MAX   = 20;    // 2D-1: max outward X bow (peak at x=670, clear of labels)
     var WAVE_IMP_AGE    = 10;    // 2C-1: age slider impulse → ceiling channel
     var WAVE_IMP_RET    = 10;    // 2C-1: retire slider impulse → floor channel
     var ceilAmp = 0, floorAmp = 0, wavePhase = 0;
-    var _edgeBulge = 0;          // signed: positive = up (subtract from Y at right edge)
+    var _edgeBow = 0, _edgeBowDir = 1; // 2D-1: outward X bow (>=0) + drag direction sign
     var _waveRafId = null, _waveEnabled = true;
     var _prevDatumVal = NaN;
     function applyWave(pts, amp, xStart) {
@@ -4108,47 +4112,57 @@
         ceilAmp  *= WAVE_DECAY;
         floorAmp *= WAVE_DECAY;
         wavePhase += WAVE_PHASE_SPEED;
-        _edgeBulge *= WAVE_EDGE_DECAY;
-        if (Math.abs(_edgeBulge) < 0.1) _edgeBulge = 0;
+        _edgeBow *= WAVE_EDGE_DECAY;
+        if (_edgeBow < 0.1) _edgeBow = 0;
         var _ca = ceilAmp  < 0.01 ? 0 : ceilAmp;
         var _fa = floorAmp < 0.01 ? 0 : floorAmp;
-        var _eb = _edgeBulge;
+        var _eb = _edgeBow; var _ebd = _edgeBowDir;
         // F89 ISOLATION: reads only cached base points, writes only fill paths (#cone-area, #d2-cone)
         if (lastCeilPts.length && lastFloorPts.length) {
             var wCeil  = applyWave(lastCeilPts,  _ca, lastXStart);
             var wFloor = applyWave(lastFloorPts, _fa, lastXStart);
-            // 2C-3: smooth right-edge bulge — 3-vertex taper so no kink at corner
-            if (Math.abs(_eb) >= 0.1) {
-                if (wCeil === lastCeilPts)   wCeil  = lastCeilPts.slice();
-                if (wFloor === lastFloorPts) wFloor = lastFloorPts.slice();
-                var _cn = wCeil.length;
-                var _cw = [[_cn-3,0.25],[_cn-2,0.6],[_cn-1,1.0]];
-                for (var _ci=0; _ci<3; _ci++) { var _cp=wCeil[_cw[_ci][0]].split(' '); wCeil[_cw[_ci][0]]=_cp[0]+' '+(parseFloat(_cp[1])-_eb*_cw[_ci][1]).toFixed(2); }
-                var _fw = [[0,1.0],[1,0.6],[2,0.25]];
-                for (var _fi=0; _fi<3; _fi++) { var _fp=wFloor[_fw[_fi][0]].split(' '); wFloor[_fw[_fi][0]]=_fp[0]+' '+(parseFloat(_fp[1])-_eb*_fw[_fi][1]).toFixed(2); }
-            }
-            var wDCone = 'M ' + wCeil[0] + ' ' + wCeil.map(function(p){return 'L '+p;}).join(' ')
+            var wDCone;
+            if (_eb >= 0.1) {
+                // 2D-1: inject 3 synthetic vertices outward (+X) between wCeil[last] and wFloor[0]
+                var _yC = parseFloat(wCeil[wCeil.length-1].split(' ')[1]);
+                var _yF = parseFloat(wFloor[0].split(' ')[1]);
+                var _sp = _yF - _yC;
+                var _pf = 0.5 - _ebd * 0.08; // direction bias: up-drag peaks near ceiling
+                var _bx1 = (650 + _eb * 0.5).toFixed(1); var _bx2 = (650 + _eb).toFixed(1);
+                var _bowStr = ' L ' + _bx1 + ' ' + (_yC + _sp * 0.33).toFixed(2)
+                            + ' L ' + _bx2 + ' ' + (_yC + _sp * _pf).toFixed(2)
+                            + ' L ' + _bx1 + ' ' + (_yC + _sp * 0.67).toFixed(2);
+                wDCone = 'M ' + wCeil[0] + ' ' + wCeil.map(function(p){return 'L '+p;}).join(' ')
+                       + _bowStr + ' ' + wFloor.map(function(p){return 'L '+p;}).join(' ') + ' Z';
+            } else {
+                wDCone = 'M ' + wCeil[0] + ' ' + wCeil.map(function(p){return 'L '+p;}).join(' ')
                        + ' ' + wFloor.map(function(p){return 'L '+p;}).join(' ') + ' Z';
+            }
             coneArea.setAttribute('d', wDCone);
         }
         if (lastD2CeilPts.length && lastD2FloorPts.length) {
             var wD2Ceil  = applyWave(lastD2CeilPts,  _ca, lastD2XStart);
             var wD2Floor = applyWave(lastD2FloorPts, _fa, lastD2XStart);
-            // 2C-3: Screen-2 right-edge taper
-            if (Math.abs(_eb) >= 0.1) {
-                if (wD2Ceil === lastD2CeilPts)   wD2Ceil  = lastD2CeilPts.slice();
-                if (wD2Floor === lastD2FloorPts) wD2Floor = lastD2FloorPts.slice();
-                var _d2cn = wD2Ceil.length;
-                var _d2cw = [[_d2cn-3,0.25],[_d2cn-2,0.6],[_d2cn-1,1.0]];
-                for (var _d2ci=0; _d2ci<3; _d2ci++) { var _d2cp=wD2Ceil[_d2cw[_d2ci][0]].split(' '); wD2Ceil[_d2cw[_d2ci][0]]=_d2cp[0]+' '+(parseFloat(_d2cp[1])-_eb*_d2cw[_d2ci][1]).toFixed(2); }
-                var _d2fw = [[0,1.0],[1,0.6],[2,0.25]];
-                for (var _d2fi=0; _d2fi<3; _d2fi++) { var _d2fp=wD2Floor[_d2fw[_d2fi][0]].split(' '); wD2Floor[_d2fw[_d2fi][0]]=_d2fp[0]+' '+(parseFloat(_d2fp[1])-_eb*_d2fw[_d2fi][1]).toFixed(2); }
+            var wD2Cone;
+            if (_eb >= 0.1) {
+                // 2D-1: Screen-2 right-edge bow — same geometry
+                var _d2yC = parseFloat(wD2Ceil[wD2Ceil.length-1].split(' ')[1]);
+                var _d2yF = parseFloat(wD2Floor[0].split(' ')[1]);
+                var _d2sp = _d2yF - _d2yC;
+                var _d2pf = 0.5 - _ebd * 0.08;
+                var _d2bx1 = (650 + _eb * 0.5).toFixed(1); var _d2bx2 = (650 + _eb).toFixed(1);
+                var _d2bowStr = ' L ' + _d2bx1 + ' ' + (_d2yC + _d2sp * 0.33).toFixed(2)
+                              + ' L ' + _d2bx2 + ' ' + (_d2yC + _d2sp * _d2pf).toFixed(2)
+                              + ' L ' + _d2bx1 + ' ' + (_d2yC + _d2sp * 0.67).toFixed(2);
+                wD2Cone = 'M ' + wD2Ceil[0] + ' ' + wD2Ceil.slice(1).map(function(p){return 'L '+p;}).join(' ')
+                        + _d2bowStr + ' ' + wD2Floor.map(function(p){return 'L '+p;}).join(' ') + ' Z';
+            } else {
+                wD2Cone = 'M ' + wD2Ceil[0] + ' ' + wD2Ceil.slice(1).map(function(p){return 'L '+p;}).join(' ')
+                        + ' ' + wD2Floor.map(function(p){return 'L '+p;}).join(' ') + ' Z';
             }
-            var wD2Cone  = 'M ' + wD2Ceil[0] + ' ' + wD2Ceil.slice(1).map(function(p){return 'L '+p;}).join(' ')
-                         + ' ' + wD2Floor.map(function(p){return 'L '+p;}).join(' ') + ' Z';
             var _d2cone = document.getElementById('d2-cone'); if (_d2cone) _d2cone.setAttribute('d', wD2Cone);
         }
-        if (_ca === 0 && _fa === 0 && _edgeBulge === 0) { ceilAmp = 0; floorAmp = 0; _waveRafId = null; return; }
+        if (_ca === 0 && _fa === 0 && _edgeBow === 0) { ceilAmp = 0; floorAmp = 0; _waveRafId = null; return; }
         _waveRafId = requestAnimationFrame(waveLoop);
     }
     function addWaveImpulse(ceilMag, floorMag) {
@@ -4184,18 +4198,13 @@
             });
         }
         _setStateTip('s1-state-tip', s);
-        // GEM B: background pulse on state change
+        // GEM B: background pulse on state change (gated by _waveEnabled)
         const skCanvas = document.getElementById('sketch-canvas');
-        if (skCanvas && previousShapeStatus !== s.key) {
-            skCanvas.classList.remove('state-pulse-red','state-pulse-gold','state-pulse-teal');
+        if (_waveEnabled && skCanvas && previousShapeStatus !== s.key) {
+            skCanvas.classList.remove('state-pulse-red','state-pulse-orange','state-pulse-teal','state-pulse-purple','state-pulse-blue');
             void skCanvas.offsetWidth;
-            if (s.key === 'overextended' || s.key === 'stretched') {
-                skCanvas.classList.add('state-pulse-red');
-            } else if (s.key === 'expansive' || s.key === 'abundant') {
-                skCanvas.classList.add('state-pulse-gold');
-            } else {
-                skCanvas.classList.add('state-pulse-teal');
-            }
+            var _gemBMap = {overextended:'state-pulse-red',stretched:'state-pulse-orange',expansive:'state-pulse-teal',grounded:'state-pulse-purple',abundant:'state-pulse-blue'};
+            if (_gemBMap[s.key]) skCanvas.classList.add(_gemBMap[s.key]);
         }
 
         // Fix 3: ambient state tint via SVG rect — fill animates reliably in SVG
@@ -4206,13 +4215,26 @@
                 'state-ambient-stretched', 'state-ambient-overextended',
                 'state-ambient-overextended-entry'
             );
-            if (s.name === 'OVEREXTENDED') {
-                if (previousStateName !== 'OVEREXTENDED') { void tintRect.getBoundingClientRect(); }
-                tintRect.classList.add(previousStateName === 'OVEREXTENDED'
-                    ? 'state-ambient-overextended'
-                    : 'state-ambient-overextended-entry');
+            if (!_waveEnabled) {
+                // Motion OFF: static fill via attribute (no animation, preserve state meaning)
+                var _stm = {OVEREXTENDED:'rgba(226,75,74,0.10)',STRETCHED:'rgba(229,138,38,0.07)',GROUNDED:'rgba(139,111,191,0.06)',ABUNDANT:'rgba(77,168,218,0.06)'};
+                tintRect.setAttribute('fill', _stm[s.name] || 'rgba(0,0,0,0)');
+            } else {
+                tintRect.removeAttribute('fill'); // let CSS classes control fill
+                if (s.name === 'OVEREXTENDED') {
+                    if (previousStateName !== 'OVEREXTENDED') { void tintRect.getBoundingClientRect(); }
+                    tintRect.classList.add(previousStateName === 'OVEREXTENDED'
+                        ? 'state-ambient-overextended'
+                        : 'state-ambient-overextended-entry');
+                } else if (s.name === 'STRETCHED') {
+                    tintRect.classList.add('state-ambient-stretched');
+                } else if (s.name === 'GROUNDED') {
+                    tintRect.classList.add('state-ambient-grounded');
+                } else if (s.name === 'ABUNDANT') {
+                    tintRect.classList.add('state-ambient-abundant');
+                }
+                // EXPANSIVE: no canvas tint (gradient mid pulses handle the signal)
             }
-            // All non-OVEREXTENDED states: no canvas tint (boundary pulses handle load-bearing signals)
         }
         previousStateName = s.name;
 
@@ -4285,7 +4307,8 @@
                     var _base = _vAbs * WAVE_IMP_DATUM / 1000;
                     addWaveImpulse(_base * _cF * 2, _base * _fF * 2);
                     if (_waveEnabled) {
-                        _edgeBulge = clamp(_edgeBulge + _vel * WAVE_IMP_EDGE / 1000, -18, 18);
+                        _edgeBow = Math.min(_edgeBow + _vAbs * WAVE_IMP_EDGE / 1000, WAVE_EDGE_MAX);
+                        _edgeBowDir = _vel > 0 ? 1 : -1;
                         if (!_waveRafId) _waveRafId = requestAnimationFrame(waveLoop);
                     }
                 }
@@ -4507,13 +4530,11 @@
             previousShapeStatus = 'inside';
         }
 
-        sketchCanvas.classList.remove('shape-healthy', 'shape-under-pressure', 'shape-at-limit');
-        if (stateObj.name === 'GROUNDED') {
-            sketchCanvas.classList.add('shape-under-pressure'); // Floor stop pulses: Datum near Floor ✅
-        } else if (stateObj.name === 'STRETCHED') {
-            sketchCanvas.classList.add('shape-at-limit');       // Ceiling stop pulses: Datum near Ceiling ✅
-        } else {
-            sketchCanvas.classList.add('shape-healthy');
+        var _S5 = ['shape-state-overextended','shape-state-stretched','shape-state-expansive','shape-state-grounded','shape-state-abundant'];
+        sketchCanvas.classList.remove.apply(sketchCanvas.classList, _S5);
+        if (_waveEnabled) {
+            var _sm = {OVEREXTENDED:'shape-state-overextended',STRETCHED:'shape-state-stretched',EXPANSIVE:'shape-state-expansive',GROUNDED:'shape-state-grounded',ABUNDANT:'shape-state-abundant'};
+            if (_sm[stateObj.name]) sketchCanvas.classList.add(_sm[stateObj.name]);
         }
 
         // HUD updating logic - ONLY runs if the Emergence Narrative is finished
@@ -5583,7 +5604,21 @@
             _waveEnabled = !_waveEnabled;
             _btn.textContent = _waveEnabled ? 'Motion: ON' : 'Motion: OFF';
             try { localStorage.setItem(_key, _waveEnabled ? 'on' : 'off'); } catch(e) {}
-            if (!_waveEnabled) { ceilAmp = 0; floorAmp = 0; if (_waveRafId) { cancelAnimationFrame(_waveRafId); _waveRafId = null; } }
+            if (!_waveEnabled) {
+                ceilAmp = 0; floorAmp = 0; _edgeBow = 0;
+                if (_waveRafId) { cancelAnimationFrame(_waveRafId); _waveRafId = null; }
+                // Stop gradient stop pulses
+                var _skc2 = document.getElementById('sketch-canvas');
+                if (_skc2) { _skc2.classList.remove('shape-state-overextended','shape-state-stretched','shape-state-expansive','shape-state-grounded','shape-state-abundant'); }
+                // Tint-rect: drop animated classes, apply static fill for current state
+                var _trt2 = document.getElementById('state-tint-rect');
+                if (_trt2) {
+                    _trt2.classList.remove('state-ambient-abundant','state-ambient-grounded','state-ambient-stretched','state-ambient-overextended','state-ambient-overextended-entry');
+                    var _sn2 = (window.currentShapeStateObj || {}).name;
+                    var _stm2 = {OVEREXTENDED:'rgba(226,75,74,0.10)',STRETCHED:'rgba(229,138,38,0.07)',GROUNDED:'rgba(139,111,191,0.06)',ABUNDANT:'rgba(77,168,218,0.06)'};
+                    _trt2.setAttribute('fill', _stm2[_sn2] || 'rgba(0,0,0,0)');
+                }
+            }
         });
     })();
 
@@ -6298,10 +6333,12 @@
         // Detail 6: datum proximity pulse — mirror Screen 1 shape class on d2-canvas
         var _d2CanvasEl = document.getElementById('d2-canvas');
         if (_d2CanvasEl) {
-            _d2CanvasEl.classList.remove('shape-healthy', 'shape-under-pressure', 'shape-at-limit');
-            if (stateObj.name === 'GROUNDED')  _d2CanvasEl.classList.add('shape-under-pressure');
-            else if (stateObj.name === 'STRETCHED') _d2CanvasEl.classList.add('shape-at-limit');
-            else _d2CanvasEl.classList.add('shape-healthy');
+            var _d2S5 = ['shape-state-overextended','shape-state-stretched','shape-state-expansive','shape-state-grounded','shape-state-abundant'];
+            _d2CanvasEl.classList.remove.apply(_d2CanvasEl.classList, _d2S5);
+            if (_waveEnabled) {
+                var _d2sm = {OVEREXTENDED:'shape-state-overextended',STRETCHED:'shape-state-stretched',EXPANSIVE:'shape-state-expansive',GROUNDED:'shape-state-grounded',ABUNDANT:'shape-state-abundant'};
+                if (_d2sm[stateObj.name]) _d2CanvasEl.classList.add(_d2sm[stateObj.name]);
+            }
         }
 
         var fmt = function(v) { return v >= 1000 ? '$' + (v/1000).toFixed(2).replace(/\.00$/,'') + 'M' : '$' + Math.round(v) + 'k'; };
