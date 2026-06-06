@@ -426,6 +426,10 @@
   .f88-draw-floor #m-floor { animation: drawLine 0.9s cubic-bezier(0.2,0.8,0.2,1) 0s forwards; }
   .f88-draw-datum #m-datum { animation: drawLine 1.0s cubic-bezier(0.2,0.8,0.2,1) 0s forwards; }
   .f88-draw-datum .cone-fill { animation: fadeInClean 0.7s ease 0.4s forwards; }
+  :root { --f88-draw-dur: 2.0s; }
+  #sketch-canvas.f88-draw-ceil:not(.draw-triggered)  #m-ceil  { animation: drawLine var(--f88-draw-dur) cubic-bezier(0.1,0.9,0.2,1) 0s forwards; }
+  #sketch-canvas.f88-draw-floor:not(.draw-triggered) #m-floor { animation: drawLine var(--f88-draw-dur) cubic-bezier(0.1,0.9,0.2,1) 0s forwards; }
+  #sketch-canvas.f88-draw-datum:not(.draw-triggered) #m-datum { animation: drawLine calc(var(--f88-draw-dur) * 1.1) cubic-bezier(0.1,0.9,0.2,1) 0s forwards; }
 
   .f88-dashed-line { fill: none; stroke-linecap: round; stroke-width: 2; opacity: 0; stroke-dasharray: 10 7; transition: opacity 0.35s ease; }
   #ceil-line-dashed  { stroke: var(--gold); }
@@ -437,6 +441,10 @@
   .f88-solid-floor #floor-line-dashed { opacity: 0; transition: opacity 0.55s ease; }
   #sketch-canvas.f88-draw-ceil:not(.f88-solid-ceil)   #ceil-line  { opacity: 0 !important; }
   #sketch-canvas.f88-draw-floor:not(.f88-solid-floor) #floor-line { opacity: 0 !important; }
+  #sketch-canvas.f88-solid-ceil  .boundary-group #node-ceil,
+  #sketch-canvas.f88-solid-ceil  .boundary-group #ceil-lbl  { animation: fadeInClean 0.6s ease 0.2s forwards; }
+  #sketch-canvas.f88-solid-floor .boundary-group #node-floor,
+  #sketch-canvas.f88-solid-floor .boundary-group #floor-lbl { animation: fadeInClean 0.6s ease 0.2s forwards; }
   .f88-draw-datum  #ceil-line-dashed,
   .f88-draw-datum  #floor-line-dashed { opacity: 0; }
 
@@ -449,6 +457,7 @@
 
   .f88-locked { opacity: 0.38; }
   .f88-locked input[type=range] { pointer-events: none; }
+  #hud-dash.f88-hud-hidden { opacity: 0; pointer-events: none; transition: opacity 0.5s ease; }
   .f88-invite { background: rgba(93,202,165,0.045); box-shadow: 0 0 0 1px rgba(93,202,165,0.10), 0 0 28px rgba(93,202,165,0.055); transition: background 0.3s ease, box-shadow 0.3s ease; }
   .f88-invite input[type=range]::-webkit-slider-thumb { animation: f88Beckon 1.05s ease-in-out infinite; }
   .f88-invite input[type=range]::-moz-range-thumb      { animation: f88Beckon 1.05s ease-in-out infinite; }
@@ -5313,6 +5322,8 @@
         var mb = document.getElementById('mass-bottom');
         if (mt) mt.classList.add('active');
         if (mb) mb.classList.add('active');
+        var hd = document.getElementById('hud-dash');
+        if (hd) hd.classList.remove('f88-hud-hidden');
       }
 
       window._f88JumpToFull = jumpToFull;
@@ -5396,6 +5407,9 @@
             if (mt) mt.classList.remove('active');
             if (mb) mb.classList.remove('active');
           }, 200);
+          // HUD reveals after datum draw completes — reads --f88-draw-dur so it auto-adjusts if tuned
+          var _dur = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--f88-draw-dur')) || 2.0;
+          setTimeout(function() { var hd = document.getElementById('hud-dash'); if (hd) hd.classList.remove('f88-hud-hidden'); }, Math.round(_dur * 1.1 * 1000) + 100);
         }
       }
 
@@ -5424,6 +5438,8 @@
 
       // New-user discovery path
       window._f88DiscoveryActive = true;
+      var _hd = document.getElementById('hud-dash');
+      if (_hd) _hd.classList.add('f88-hud-hidden');
       // Lock retire, port, contrib, datum at start; age stays open
       ['retire','port','contrib','datum'].forEach(function(k) { setLock(k, true); });
       setInvite('age');
