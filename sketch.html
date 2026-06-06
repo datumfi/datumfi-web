@@ -4085,12 +4085,20 @@
     var WAVE_BOW_LERP   = 0.18;  // 2D-1: lerp factor — _edgeBow chases _edgeBowTarget per frame
     var WAVE_IMP_AGE    = 10;    // 2C-1: age slider impulse → ceiling channel
     var WAVE_IMP_RET    = 10;    // 2C-1: retire slider impulse → floor channel
+    var WAVE_AMP_LERP   = 0.18;  // Fix3: wave channel lerp (live-tunable; 0.1=slower, 0.3=snappier)
+    // DIRECTIONAL SIGNS — flip in DevTools if a direction reads backwards:
+    var WAVE_DIR_PORT_UP  = -1;  // portfolio up = ceiling breathes out (expand)
+    var WAVE_DIR_AGE_UP   = +1;  // age older = ceiling tightens (compress)
+    var WAVE_DIR_RET_UP   = +1;  // retire later = floor expands outward
+    var WAVE_DIR_CONT_UP  = +1;  // contrib up = floor breathes out
     var ceilAmp = 0, floorAmp = 0, wavePhase = 0;
+    var _ceilTarget = 0, _floorTarget = 0;  // signed [-18,+18]: negative=outward, positive=inward
     var _edgeBow = 0, _edgeBowTarget = 0, _edgeBowDir = 1; // 2D-1: bow (lerped), target (bumped by events), dir
     var _waveRafId = null, _waveEnabled = true;
-    var _prevDatumVal = NaN, _rawDatumForWave = NaN; // Issue 1: raw store; vel computed once per rAF in waveLoop
+    var _prevDatumVal = NaN, _rawDatumForWave = NaN; // raw store; vel computed once per rAF in waveLoop
+    var _prevAgeVal = NaN, _prevPortVal = NaN, _prevContribVal = NaN, _prevRetVal = NaN; // Fix3: dir tracking
     function applyWave(pts, amp, xStart) {
-        if (amp < 0.01) return pts;
+        if (Math.abs(amp) < 0.01) return pts;
         return pts.map(function(p) {
             var parts = p.split(' ');
             var x = parseFloat(parts[0]);
@@ -4099,35 +4107,47 @@
         });
     }
     function waveLoop() {
-        ceilAmp  *= WAVE_DECAY;
-        floorAmp *= WAVE_DECAY;
         wavePhase += WAVE_PHASE_SPEED;
+        // Channel target decay (sign preserved → direction stable during settle)
+        _ceilTarget  *= WAVE_DECAY;
+        _floorTarget *= WAVE_DECAY;
+        if (Math.abs(_ceilTarget)  < 0.01) _ceilTarget  = 0;
+        if (Math.abs(_floorTarget) < 0.01) _floorTarget = 0;
+        // Lerp amplitudes toward targets (same cadence as _edgeBow lerp)
+        ceilAmp  += (_ceilTarget  - ceilAmp)  * WAVE_AMP_LERP;
+        floorAmp += (_floorTarget - floorAmp) * WAVE_AMP_LERP;
+        if (Math.abs(ceilAmp)  < 0.01) ceilAmp  = 0;
+        if (Math.abs(floorAmp) < 0.01) floorAmp = 0;
         _edgeBowTarget *= WAVE_EDGE_DECAY;
         if (_edgeBowTarget < 0.1) _edgeBowTarget = 0;
         _edgeBow += (_edgeBowTarget - _edgeBow) * WAVE_BOW_LERP;
         if (_edgeBow < 0.1) _edgeBow = 0;
-        // Issue 1: datum velocity — ONE sample per rAF frame (eliminates 300-600Hz multi-write race)
+        // Datum velocity: STRICTLY single-channel (eliminates sign-flip dual-channel churn)
         if (!isNaN(_rawDatumForWave) && !isNaN(_prevDatumVal)) {
             var _wlVel = _rawDatumForWave - _prevDatumVal;
             var _wlVAbs = Math.abs(_wlVel);
             if (_wlVAbs > 100 && lastCalculatedPoints) {
                 var _wlLcp = lastCalculatedPoints;
                 var _wlSpan = _wlLcp.ceilSpend - _wlLcp.floorSpend;
-                var _wlPC = _wlSpan > 0 ? (_wlLcp.ceilSpend  - _wlLcp.datumSpend) / _wlSpan : 0.5;
-                var _wlPF = _wlSpan > 0 ? (_wlLcp.datumSpend - _wlLcp.floorSpend) / _wlSpan : 0.5;
-                var _wlDC = _wlVel > 0 ? 1 : 0; var _wlDF = _wlVel > 0 ? 0 : 1;
-                var _wlCF = WAVE_DIR_BIAS * _wlDC + (1 - WAVE_DIR_BIAS) * _wlPC;
-                var _wlFF = WAVE_DIR_BIAS * _wlDF + (1 - WAVE_DIR_BIAS) * _wlPF;
                 var _wlBase = _wlVAbs * WAVE_IMP_DATUM / 1000;
-                ceilAmp  = Math.min(ceilAmp  + _wlBase * _wlCF * 2, 18);
-                floorAmp = Math.min(floorAmp + _wlBase * _wlFF * 2, 18);
+                if (_wlVel > 0) {
+                    // Datum UP → ceiling only (positive=inward: datum approaching ceiling)
+                    var _wlPC = _wlSpan > 0 ? (_wlLcp.ceilSpend - _wlLcp.datumSpend) / _wlSpan : 0.5;
+                    var _wlCF = WAVE_DIR_BIAS + (1 - WAVE_DIR_BIAS) * _wlPC;
+                    _ceilTarget = Math.min(_ceilTarget + _wlBase * _wlCF * 2, 18);
+                } else {
+                    // Datum DOWN → floor only (negative=inward: datum approaching floor)
+                    var _wlPF = _wlSpan > 0 ? (_wlLcp.datumSpend - _wlLcp.floorSpend) / _wlSpan : 0.5;
+                    var _wlFF = WAVE_DIR_BIAS + (1 - WAVE_DIR_BIAS) * _wlPF;
+                    _floorTarget = Math.max(_floorTarget - _wlBase * _wlFF * 2, -18);
+                }
                 _edgeBowTarget = Math.min(_edgeBowTarget + _wlVAbs * WAVE_IMP_EDGE / 1000, WAVE_EDGE_MAX);
                 _edgeBowDir = _wlVel > 0 ? 1 : -1;
             }
             _prevDatumVal = _rawDatumForWave;
         }
-        var _ca = ceilAmp  < 0.01 ? 0 : ceilAmp;
-        var _fa = floorAmp < 0.01 ? 0 : floorAmp;
+        var _ca = Math.abs(ceilAmp)  < 0.01 ? 0 : ceilAmp;
+        var _fa = Math.abs(floorAmp) < 0.01 ? 0 : floorAmp;
         var _eb = _edgeBow; var _ebd = _edgeBowDir;
         // F89 ISOLATION: reads only cached base points, writes only fill paths (#cone-area, #d2-cone)
         if (lastCeilPts.length && lastFloorPts.length) {
@@ -4166,13 +4186,13 @@
             }
             var _d2cone = document.getElementById('d2-cone'); if (_d2cone) _d2cone.setAttribute('d', wD2Cone);
         }
-        if (_ca === 0 && _fa === 0 && _edgeBowTarget === 0 && _edgeBow === 0) { ceilAmp = 0; floorAmp = 0; _waveRafId = null; return; }
+        if (_ceilTarget === 0 && _floorTarget === 0 && _ca === 0 && _fa === 0 && _edgeBowTarget === 0 && _edgeBow === 0) { ceilAmp = 0; floorAmp = 0; _waveRafId = null; return; }
         _waveRafId = requestAnimationFrame(waveLoop);
     }
-    function addWaveImpulse(ceilMag, floorMag) {
+    function addWaveImpulse(ceilSigned, floorSigned) {
         if (!_waveEnabled) return;
-        ceilAmp  = Math.min(ceilAmp  + ceilMag,  18);
-        floorAmp = Math.min(floorAmp + floorMag, 18);
+        _ceilTarget  = Math.min(Math.max(_ceilTarget  + ceilSigned,  -18), 18);
+        _floorTarget = Math.min(Math.max(_floorTarget + floorSigned, -18), 18);
         if (!_waveRafId) _waveRafId = requestAnimationFrame(waveLoop);
     }
     // ── END F89 VERTEX WAVE ───────────────────────────────────────────────
@@ -5583,7 +5603,7 @@
             _btn.textContent = _waveEnabled ? 'Motion: ON' : 'Motion: OFF';
             try { localStorage.setItem(_key, _waveEnabled ? 'on' : 'off'); } catch(e) {}
             if (!_waveEnabled) {
-                ceilAmp = 0; floorAmp = 0; _edgeBow = 0; _edgeBowTarget = 0;
+                ceilAmp = 0; floorAmp = 0; _ceilTarget = 0; _floorTarget = 0; _edgeBow = 0; _edgeBowTarget = 0;
                 if (_waveRafId) { cancelAnimationFrame(_waveRafId); _waveRafId = null; }
                 // Stop gradient stop pulses + GEM B
                 var _skc2 = document.getElementById('sketch-canvas');
@@ -5724,18 +5744,38 @@
       // Current age can never meet or exceed retirement age
       const maxAge = parseInt(slAct.value) - 1;
       if (parseInt(slAge.value) >= parseInt(slAct.value)) slAge.value = maxAge;
-      if (!window._f88DiscoveryActive) addWaveImpulse(WAVE_IMP_AGE, 0); // 2C-1: ceiling channel
+      if (!window._f88DiscoveryActive) {
+        var _nAge = parseInt(slAge.value);
+        if (!isNaN(_prevAgeVal)) { addWaveImpulse(WAVE_DIR_AGE_UP * (_nAge > _prevAgeVal ? 1 : -1) * WAVE_IMP_AGE, 0); }
+        _prevAgeVal = _nAge;
+      }
       triggerInteraction(); touched.timeline = true; updateTracker(); scheduleUpdate();
     });
     slAct.addEventListener('input', () => {
       // Retirement age can never meet or fall below current age
       const minRet = parseInt(slAge.value) + 1;
       if (parseInt(slAct.value) <= parseInt(slAge.value)) slAct.value = minRet;
-      if (!window._f88DiscoveryActive) addWaveImpulse(0, WAVE_IMP_RET); // 2C-1: floor channel
+      if (!window._f88DiscoveryActive) {
+        var _nRet = parseInt(slAct.value);
+        if (!isNaN(_prevRetVal)) { addWaveImpulse(0, WAVE_DIR_RET_UP * (_nRet > _prevRetVal ? 1 : -1) * WAVE_IMP_RET); }
+        _prevRetVal = _nRet;
+      }
       triggerInteraction(); touched.timeline = true; updateTracker(); scheduleUpdate();
     });
-    slPort.addEventListener('input',   () => { slPort.dataset.exactVal   = String(Math.round(portPosToVal(parseInt(slPort.value))     * 1000000)); addWaveImpulse(WAVE_IMP_PORT, 0);  triggerInteraction(); touched.capital  = true; updateTracker(); scheduleUpdate(); });
-    slContrib.addEventListener('input', () => { slContrib.dataset.exactVal = String(Math.round(contribPosToVal(parseInt(slContrib.value))));           addWaveImpulse(0, WAVE_IMP_CONT); triggerInteraction(); touched.refined  = true; updateTracker(); scheduleUpdate(); });
+    slPort.addEventListener('input', () => {
+      slPort.dataset.exactVal = String(Math.round(portPosToVal(parseInt(slPort.value)) * 1000000));
+      var _nPort = parseInt(slPort.value);
+      if (!isNaN(_prevPortVal)) { addWaveImpulse(WAVE_DIR_PORT_UP * (_nPort > _prevPortVal ? 1 : -1) * WAVE_IMP_PORT, 0); }
+      _prevPortVal = _nPort;
+      triggerInteraction(); touched.capital = true; updateTracker(); scheduleUpdate();
+    });
+    slContrib.addEventListener('input', () => {
+      slContrib.dataset.exactVal = String(Math.round(contribPosToVal(parseInt(slContrib.value))));
+      var _nCont = parseInt(slContrib.value);
+      if (!isNaN(_prevContribVal)) { addWaveImpulse(0, WAVE_DIR_CONT_UP * (_nCont > _prevContribVal ? 1 : -1) * WAVE_IMP_CONT); }
+      _prevContribVal = _nCont;
+      triggerInteraction(); touched.refined = true; updateTracker(); scheduleUpdate();
+    });
     slDatum.addEventListener('input',  () => { slDatum.dataset.exactVal  = String(Math.round(datumPosToVal(parseInt(slDatum.value))   * 1000));    triggerInteraction(); touched.spending = true; updateTracker(); scheduleUpdate(); });
 
     // GEM C: Datum SVG drag — dragging the datum line live-updates the slider
@@ -5810,7 +5850,10 @@
     document.getElementById('tax-30').addEventListener('change', (e) => { if(e.target.checked) { triggerInteraction(); slTax.value = 30; touched.refined = true; updateTracker(); updateEngine(); }});
 
     marketRadios.forEach(r => r.addEventListener('change', (e) => {
-      addWaveImpulse(WAVE_IMP_MKT, WAVE_IMP_MKT);
+      var _mkt = e.target.value;
+      if (_mkt === 'stress') { addWaveImpulse(WAVE_IMP_MKT * 0.3, -WAVE_IMP_MKT); }
+      else if (_mkt === 'optimistic') { addWaveImpulse(-WAVE_IMP_MKT, WAVE_IMP_MKT * 0.3); }
+      else { addWaveImpulse(-WAVE_IMP_MKT * 0.5, WAVE_IMP_MKT * 0.5); }
       triggerInteraction(); touched.refined = true; updateTracker(); updateEngine();
       triggerMarketSweep(e.target.value);
       triggerDesignSweep(e.target.value);
