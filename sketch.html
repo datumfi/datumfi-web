@@ -170,7 +170,7 @@
   /* --- INTERACTIVE HUD LAYER --- */
   .interactive-layer { 
       max-height: 0; opacity: 0; overflow: visible; width: 100%; max-width: 900px;
-      transition: max-height 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.6s ease;
+      transition: max-height 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 1.2s ease;
       display: flex; flex-direction: column; align-items: stretch;
       margin-bottom: 0px; z-index: 50;
   }
@@ -350,7 +350,7 @@
   .b-datum { stroke-width: 3; mask: url(#mask-datum); filter: drop-shadow(0 0 6px rgba(93, 202, 165, 0.6)); }
   
   /* Draw animation — fires on first slider touch via .draw-triggered class */
-  #m-floor, #m-ceil, #m-datum { stroke-dashoffset: 4000; }
+  #m-floor, #m-ceil, #m-datum { stroke-dashoffset: 1; }
   .draw-triggered #m-floor { animation: drawLine 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.0s forwards; }
   .draw-triggered #m-ceil  { animation: drawLine 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.18s forwards; }
   .draw-triggered #m-datum { animation: drawLine 1.0s cubic-bezier(0.2, 0.8, 0.2, 1) 0.36s forwards; }
@@ -457,7 +457,7 @@
 
   .f88-locked { opacity: 0.38; }
   .f88-locked input[type=range] { pointer-events: none; }
-  #hud-dash.f88-hud-hidden { opacity: 0; pointer-events: none; transition: opacity 0.5s ease; }
+  #hud-dash.f88-hud-hidden { opacity: 0; pointer-events: none; }
   .f88-invite { background: rgba(93,202,165,0.045); box-shadow: 0 0 0 1px rgba(93,202,165,0.10), 0 0 28px rgba(93,202,165,0.055); transition: background 0.3s ease, box-shadow 0.3s ease; }
   .f88-invite input[type=range]::-webkit-slider-thumb { animation: f88Beckon 1.05s ease-in-out infinite; }
   .f88-invite input[type=range]::-moz-range-thumb      { animation: f88Beckon 1.05s ease-in-out infinite; }
@@ -1678,9 +1678,9 @@
                       <stop id="stop-floor" offset="100%" stop-color="#e24b4a" stop-opacity="0.25" />
                   </linearGradient>
                   
-                  <mask id="mask-ceil" maskUnits="userSpaceOnUse" x="0" y="0" width="840" height="480"><path id="m-ceil" fill="none" stroke="white" stroke-width="15" stroke-linecap="round" stroke-dasharray="4000" stroke-dashoffset="4000" class="morph" /></mask>
-                  <mask id="mask-floor" maskUnits="userSpaceOnUse" x="0" y="0" width="840" height="480"><path id="m-floor" fill="none" stroke="white" stroke-width="15" stroke-linecap="round" stroke-dasharray="4000" stroke-dashoffset="4000" class="morph" /></mask>
-                  <mask id="mask-datum" maskUnits="userSpaceOnUse" x="0" y="0" width="840" height="480"><path id="m-datum" fill="none" stroke="white" stroke-width="15" stroke-linecap="round" stroke-dasharray="4000" stroke-dashoffset="4000" /></mask>
+                  <mask id="mask-ceil" maskUnits="userSpaceOnUse" x="0" y="0" width="840" height="480"><path id="m-ceil" fill="none" stroke="white" stroke-width="15" stroke-linecap="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1" class="morph" /></mask>
+                  <mask id="mask-floor" maskUnits="userSpaceOnUse" x="0" y="0" width="840" height="480"><path id="m-floor" fill="none" stroke="white" stroke-width="15" stroke-linecap="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1" class="morph" /></mask>
+                  <mask id="mask-datum" maskUnits="userSpaceOnUse" x="0" y="0" width="840" height="480"><path id="m-datum" fill="none" stroke="white" stroke-width="15" stroke-linecap="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1" /></mask>
                   
                   <clipPath id="cone-clip">
                       <path id="clip-cone-path" d="" />
@@ -2907,10 +2907,10 @@
     function triggerInteraction() {
         if(!hasInteracted) {
             hasInteracted = true;
-            document.getElementById('interactive-layer').classList.add('active');
             document.getElementById('tracker-bar').classList.add('active');
             // Returning/hydrated only — discovery users use per-stage f88-draw-* reveals
             if (!window._f88DiscoveryActive) {
+                document.getElementById('interactive-layer').classList.add('active');
                 const skCanvas = document.getElementById('sketch-canvas');
                 if (skCanvas) skCanvas.classList.add('draw-triggered');
                 const nd = document.getElementById('node-datum');
@@ -5409,7 +5409,7 @@
           }, 200);
           // HUD reveals after datum draw completes — reads --f88-draw-dur so it auto-adjusts if tuned
           var _dur = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--f88-draw-dur')) || 2.0;
-          setTimeout(function() { var hd = document.getElementById('hud-dash'); if (hd) hd.classList.remove('f88-hud-hidden'); }, Math.round(_dur * 1.1 * 1000) + 100);
+          setTimeout(function() { var hd = document.getElementById('hud-dash'); if (hd) hd.classList.remove('f88-hud-hidden'); var il = document.getElementById('interactive-layer'); if (il) il.classList.add('active'); }, Math.round(_dur * 1.1 * 1000) + 100);
         }
       }
 
