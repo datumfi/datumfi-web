@@ -4072,7 +4072,7 @@
     // ── F89 VERTEX WAVE ───────────────────────────────────────────────────
     // Tuning — adjust live in DevTools: WAVE_LAMBDA, WAVE_PHASE_SPEED, WAVE_DECAY, WAVE_IMP_*
     var WAVE_LAMBDA      = 280;   // wavelength SVG units
-    var WAVE_PHASE_SPEED = 0.06;  // radians/frame → propagation speed
+    var WAVE_PHASE_SPEED = 0.25;  // radians/frame → propagation speed (live-tunable; ~5 cycles/2s settle)
     var WAVE_DECAY       = 0.96;  // amplitude multiplier/frame (~2s settle)
     var WAVE_IMP_DATUM   = 8;     // datum-drag impulse per $1k/frame velocity
     var WAVE_IMP_PORT    = 12;    // portfolio event ceiling impulse
@@ -4101,7 +4101,7 @@
     var _prevDatumSliderVal = NaN; // Fix4: datum direction tracking (once-per-event)
     var _prevAgeVal = NaN, _prevPortVal = NaN, _prevContribVal = NaN, _prevRetVal = NaN; // Fix3: dir tracking
     function applyWave(pts, amp, phase, xStart) {
-        if (Math.abs(amp) < 0.01) return pts;
+        if (amp < 0.01) return pts;
         return pts.map(function(p) {
             var parts = p.split(' ');
             var x = parseFloat(parts[0]);
@@ -4110,35 +4110,38 @@
         });
     }
     function waveLoop() {
-        // Per-channel phase: only advances while that channel has active amplitude (no drift at rest)
-        if (_ceilTarget !== 0 || Math.abs(ceilAmp) > 0.01) _ceilPhase += _ceilPhaseDir * WAVE_PHASE_SPEED;
-        if (_floorTarget !== 0 || Math.abs(floorAmp) > 0.01) _floorPhase += _floorPhaseDir * WAVE_PHASE_SPEED;
-        // Channel target decay (sign preserved → direction stable during settle)
+        // Per-channel phase: only advances while that channel is active (persistent — no reset on settle)
+        if (_ceilTarget > 0 || ceilAmp > 0.01) _ceilPhase += _ceilPhaseDir * WAVE_PHASE_SPEED;
+        if (_floorTarget > 0 || floorAmp > 0.01) _floorPhase += _floorPhaseDir * WAVE_PHASE_SPEED;
+        // Target decay (always-non-negative invariant: targets never go negative)
         _ceilTarget  *= WAVE_DECAY;
         _floorTarget *= WAVE_DECAY;
-        if (Math.abs(_ceilTarget)  < 0.01) _ceilTarget  = 0;
-        if (Math.abs(_floorTarget) < 0.01) _floorTarget = 0;
-        // Lerp amplitudes toward targets (same cadence as _edgeBow lerp)
+        if (_ceilTarget  < 0.01) _ceilTarget  = 0;
+        if (_floorTarget < 0.01) _floorTarget = 0;
+        // Lerp amplitudes toward targets (always non-negative; same cadence as _edgeBow)
         ceilAmp  += (_ceilTarget  - ceilAmp)  * WAVE_AMP_LERP;
         floorAmp += (_floorTarget - floorAmp) * WAVE_AMP_LERP;
-        if (Math.abs(ceilAmp)  < 0.01) ceilAmp  = 0;
-        if (Math.abs(floorAmp) < 0.01) floorAmp = 0;
+        if (ceilAmp  < 0.01) ceilAmp  = 0;
+        if (floorAmp < 0.01) floorAmp = 0;
         _edgeBowTarget *= WAVE_EDGE_DECAY;
         if (_edgeBowTarget < 0.1) _edgeBowTarget = 0;
         _edgeBow += (_edgeBowTarget - _edgeBow) * WAVE_BOW_LERP;
         if (_edgeBow < 0.1) _edgeBow = 0;
-        // Datum velocity: bow only — ceiling/floor impulse fires once-per-event via slDatum handler
+        // Datum: abs-velocity sampled once/frame (same invariant as bow — always-non-negative target)
         if (!isNaN(_rawDatumForWave) && !isNaN(_prevDatumVal)) {
             var _wlVel = _rawDatumForWave - _prevDatumVal;
             var _wlVAbs = Math.abs(_wlVel);
             if (_wlVAbs > 100) {
+                var _wlBase = _wlVAbs * WAVE_IMP_DATUM / 1000 * 2;
+                if (_wlVel > 0) { _ceilTarget = Math.min(_ceilTarget + _wlBase, 18); _ceilPhaseDir = +1; }
+                else             { _floorTarget = Math.min(_floorTarget + _wlBase, 18); _floorPhaseDir = -1; }
                 _edgeBowTarget = Math.min(_edgeBowTarget + _wlVAbs * WAVE_IMP_EDGE / 1000, WAVE_EDGE_MAX);
                 _edgeBowDir = _wlVel > 0 ? 1 : -1;
             }
             _prevDatumVal = _rawDatumForWave;
         }
-        var _ca = Math.abs(ceilAmp)  < 0.01 ? 0 : ceilAmp;
-        var _fa = Math.abs(floorAmp) < 0.01 ? 0 : floorAmp;
+        var _ca = ceilAmp  < 0.01 ? 0 : ceilAmp;
+        var _fa = floorAmp < 0.01 ? 0 : floorAmp;
         var _eb = _edgeBow; var _ebd = _edgeBowDir;
         // F89 ISOLATION: reads only cached base points, writes only fill paths (#cone-area, #d2-cone)
         if (lastCeilPts.length && lastFloorPts.length) {
@@ -4177,13 +4180,13 @@
             }
             var _d2cone = document.getElementById('d2-cone'); if (_d2cone) _d2cone.setAttribute('d', wD2Cone);
         }
-        if (_ceilTarget === 0 && _floorTarget === 0 && _ca === 0 && _fa === 0 && _edgeBowTarget === 0 && _edgeBow === 0) { ceilAmp = 0; floorAmp = 0; _ceilPhase = 0; _floorPhase = 0; _waveRafId = null; return; }
+        if (_ceilTarget === 0 && _floorTarget === 0 && _ca === 0 && _fa === 0 && _edgeBowTarget === 0 && _edgeBow === 0) { ceilAmp = 0; floorAmp = 0; _waveRafId = null; return; }
         _waveRafId = requestAnimationFrame(waveLoop);
     }
-    function addWaveImpulse(ceilSigned, floorSigned) {
+    function addWaveImpulse(ceilMag, floorMag) {
         if (!_waveEnabled) return;
-        _ceilTarget  = Math.min(Math.max(_ceilTarget  + ceilSigned,  -18), 18);
-        _floorTarget = Math.min(Math.max(_floorTarget + floorSigned, -18), 18);
+        _ceilTarget  = Math.min(_ceilTarget  + ceilMag,  18);
+        _floorTarget = Math.min(_floorTarget + floorMag, 18);
         if (!_waveRafId) _waveRafId = requestAnimationFrame(waveLoop);
     }
     // ── END F89 VERTEX WAVE ───────────────────────────────────────────────
@@ -5737,7 +5740,7 @@
       if (parseInt(slAge.value) >= parseInt(slAct.value)) slAge.value = maxAge;
       if (!window._f88DiscoveryActive) {
         var _nAge = parseInt(slAge.value);
-        if (!isNaN(_prevAgeVal)) { var _ad = WAVE_DIR_AGE_UP * (_nAge > _prevAgeVal ? 1 : -1); _ceilPhaseDir = _ad > 0 ? +1 : -1; addWaveImpulse(_ad * WAVE_IMP_AGE, 0); }
+        if (!isNaN(_prevAgeVal)) { var _ad = WAVE_DIR_AGE_UP * (_nAge > _prevAgeVal ? 1 : -1); _ceilPhaseDir = _ad > 0 ? +1 : -1; addWaveImpulse(WAVE_IMP_AGE, 0); }
         _prevAgeVal = _nAge;
       }
       triggerInteraction(); touched.timeline = true; updateTracker(); scheduleUpdate();
@@ -5748,7 +5751,7 @@
       if (parseInt(slAct.value) <= parseInt(slAge.value)) slAct.value = minRet;
       if (!window._f88DiscoveryActive) {
         var _nRet = parseInt(slAct.value);
-        if (!isNaN(_prevRetVal)) { var _rd = WAVE_DIR_RET_UP * (_nRet > _prevRetVal ? 1 : -1); _floorPhaseDir = _rd > 0 ? +1 : -1; addWaveImpulse(0, _rd * WAVE_IMP_RET); }
+        if (!isNaN(_prevRetVal)) { var _rd = WAVE_DIR_RET_UP * (_nRet > _prevRetVal ? 1 : -1); _floorPhaseDir = _rd > 0 ? +1 : -1; addWaveImpulse(0, WAVE_IMP_RET); }
         _prevRetVal = _nRet;
       }
       triggerInteraction(); touched.timeline = true; updateTracker(); scheduleUpdate();
@@ -5756,33 +5759,20 @@
     slPort.addEventListener('input', () => {
       slPort.dataset.exactVal = String(Math.round(portPosToVal(parseInt(slPort.value)) * 1000000));
       var _nPort = parseInt(slPort.value);
-      if (!isNaN(_prevPortVal)) { var _pd = WAVE_DIR_PORT_UP * (_nPort > _prevPortVal ? 1 : -1); _ceilPhaseDir = _pd > 0 ? +1 : -1; addWaveImpulse(_pd * WAVE_IMP_PORT, 0); }
+      if (!isNaN(_prevPortVal)) { var _pd = WAVE_DIR_PORT_UP * (_nPort > _prevPortVal ? 1 : -1); _ceilPhaseDir = _pd > 0 ? +1 : -1; addWaveImpulse(WAVE_IMP_PORT, 0); }
       _prevPortVal = _nPort;
       triggerInteraction(); touched.capital = true; updateTracker(); scheduleUpdate();
     });
     slContrib.addEventListener('input', () => {
       slContrib.dataset.exactVal = String(Math.round(contribPosToVal(parseInt(slContrib.value))));
       var _nCont = parseInt(slContrib.value);
-      if (!isNaN(_prevContribVal)) { var _cd = WAVE_DIR_CONT_UP * (_nCont > _prevContribVal ? 1 : -1); _floorPhaseDir = _cd > 0 ? +1 : -1; addWaveImpulse(0, _cd * WAVE_IMP_CONT); }
+      if (!isNaN(_prevContribVal)) { var _cd = WAVE_DIR_CONT_UP * (_nCont > _prevContribVal ? 1 : -1); _floorPhaseDir = _cd > 0 ? +1 : -1; addWaveImpulse(0, WAVE_IMP_CONT); }
       _prevContribVal = _nCont;
       triggerInteraction(); touched.refined = true; updateTracker(); scheduleUpdate();
     });
     slDatum.addEventListener('input', () => {
       slDatum.dataset.exactVal = String(Math.round(datumPosToVal(parseInt(slDatum.value)) * 1000));
-      if (!window._f88DiscoveryActive) {
-        var _nDat = parseInt(slDatum.value);
-        if (!isNaN(_prevDatumSliderVal)) {
-          var _dDir = _nDat > _prevDatumSliderVal ? 1 : -1;
-          var _prox = 0.5;
-          if (lastCalculatedPoints) {
-            var _s = lastCalculatedPoints.ceilSpend - lastCalculatedPoints.floorSpend;
-            _prox = _s > 0 ? (lastCalculatedPoints.ceilSpend - lastCalculatedPoints.datumSpend) / _s : 0.5;
-          }
-          if (_dDir > 0) { _ceilPhaseDir = +1; addWaveImpulse(WAVE_IMP_DATUM * _prox * 2, 0); }
-          else { _floorPhaseDir = -1; addWaveImpulse(0, -(WAVE_IMP_DATUM * (1 - _prox) * 2)); }
-        }
-        _prevDatumSliderVal = _nDat;
-      }
+      if (_waveEnabled && !_waveRafId) _waveRafId = requestAnimationFrame(waveLoop);
       triggerInteraction(); touched.spending = true; updateTracker(); scheduleUpdate();
     });
 
@@ -5859,9 +5849,9 @@
 
     marketRadios.forEach(r => r.addEventListener('change', (e) => {
       var _mkt = e.target.value;
-      if (_mkt === 'stress') { _ceilPhaseDir = +1; _floorPhaseDir = -1; addWaveImpulse(WAVE_IMP_MKT * 0.3, -WAVE_IMP_MKT); }
-      else if (_mkt === 'optimistic') { _ceilPhaseDir = -1; _floorPhaseDir = +1; addWaveImpulse(-WAVE_IMP_MKT, WAVE_IMP_MKT * 0.3); }
-      else { addWaveImpulse(-WAVE_IMP_MKT * 0.5, WAVE_IMP_MKT * 0.5); }
+      if (_mkt === 'stress') { _ceilPhaseDir = +1; _floorPhaseDir = -1; addWaveImpulse(WAVE_IMP_MKT * 0.3, WAVE_IMP_MKT); }
+      else if (_mkt === 'optimistic') { _ceilPhaseDir = -1; _floorPhaseDir = +1; addWaveImpulse(WAVE_IMP_MKT, WAVE_IMP_MKT * 0.3); }
+      else { addWaveImpulse(WAVE_IMP_MKT * 0.5, WAVE_IMP_MKT * 0.5); }
       triggerInteraction(); touched.refined = true; updateTracker(); updateEngine();
       triggerMarketSweep(e.target.value);
       triggerDesignSweep(e.target.value);
