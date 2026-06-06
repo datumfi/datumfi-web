@@ -490,6 +490,19 @@
   }
   /* ── END F88 ─────────────────────────────────────────────────────────── */
 
+  /* ── F89a LIQUID-METAL CONE ──────────────────────────────────────────── */
+  #cone-specular { opacity: 0; pointer-events: none; }
+  #d2-specular   { opacity: 0; pointer-events: none; }
+  #sketch-canvas.f88-complete:not(.lm-disabled) #cone-area     { filter: url(#liquid-metal); }
+  #sketch-canvas.f88-complete:not(.lm-disabled) #cone-specular { opacity: 1; }
+  #d2-canvas:not(.lm-disabled) #d2-cone     { filter: url(#d2-liquid-metal); }
+  #d2-canvas:not(.lm-disabled) #d2-specular { opacity: 0.7; }
+  #sketch-canvas.lm-disabled #cone-area,
+  #d2-canvas.lm-disabled #d2-cone     { filter: none !important; }
+  #sketch-canvas.lm-disabled #cone-specular,
+  #d2-canvas.lm-disabled #d2-specular { opacity: 0 !important; }
+  /* ── END F89a ─────────────────────────────────────────────────────────── */
+
   /* Ghost Lines classes */
   .ghost-line { stroke-width: 1; stroke-linecap: round; fill: none; stroke-dasharray: 2 4; opacity: 0; transition: opacity 0.3s; }
   .ghost-ceil { stroke: var(--gold); }
@@ -1706,6 +1719,25 @@
                   <clipPath id="top-reveal">
                     <rect id="top-reveal-rect" x="0" y="0" height="480" width="0"/>
                   </clipPath>
+                  <!-- F89a liquid-metal filter + specular gradient -->
+                  <filter id="liquid-metal" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
+                    <feTurbulence id="lm-turb" type="fractalNoise" baseFrequency="0.006 0.004" numOctaves="3" seed="17" result="noise">
+                      <animate id="lm-turb-anim" attributeName="baseFrequency" values="0.006 0.004;0.010 0.007;0.006 0.004" dur="10s" repeatCount="indefinite"/>
+                    </feTurbulence>
+                    <feDisplacementMap id="lm-disp" in="SourceGraphic" in2="noise" scale="10" xChannelSelector="R" yChannelSelector="G" result="displaced"/>
+                    <feGaussianBlur in="displaced" stdDeviation="1.5" result="softened"/>
+                    <feMerge>
+                      <feMergeNode in="softened"/>
+                      <feMergeNode in="displaced"/>
+                    </feMerge>
+                  </filter>
+                  <radialGradient id="cone-specular-grad" cx="25%" cy="28%" r="55%" gradientUnits="objectBoundingBox">
+                    <animate attributeName="cx" values="25%;68%;25%" dur="7s" repeatCount="indefinite"/>
+                    <animate attributeName="cy" values="28%;40%;28%" dur="7s" repeatCount="indefinite"/>
+                    <stop offset="0%"   stop-color="white" stop-opacity="0.22"/>
+                    <stop offset="55%"  stop-color="white" stop-opacity="0.05"/>
+                    <stop offset="100%" stop-color="white" stop-opacity="0"/>
+                  </radialGradient>
               </defs>
               <rect id="state-tint-rect" x="0" y="0" width="840" height="480" fill="none" pointer-events="none"/>
 
@@ -1760,6 +1792,7 @@
                   <path id="mass-bottom" class="f88-mass f88-mass-bottom" d="" clip-path="url(#top-reveal)"/>
 
                   <path id="cone-area" class="cone-fill morph" d="" />
+                  <path id="cone-specular" class="morph" d="" fill="url(#cone-specular-grad)" opacity="0" pointer-events="none"/>
 
                   <g clip-path="url(#cone-clip)">
                       <rect id="market-sweep" class="market-sweep" x="-250" y="-100" width="250" height="700" fill="var(--danger-red)" />
@@ -2045,6 +2078,25 @@
               <clipPath id="d2-clip-cone">
                 <path id="d2-clip-cone-path" d="" />
               </clipPath>
+              <!-- F89a liquid-metal filter + specular gradient (Screen 2) -->
+              <filter id="d2-liquid-metal" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
+                <feTurbulence id="d2-lm-turb" type="fractalNoise" baseFrequency="0.006 0.004" numOctaves="3" seed="23" result="noise">
+                  <animate id="d2-lm-turb-anim" attributeName="baseFrequency" values="0.006 0.004;0.010 0.007;0.006 0.004" dur="10s" begin="4.5s" repeatCount="indefinite"/>
+                </feTurbulence>
+                <feDisplacementMap id="d2-lm-disp" in="SourceGraphic" in2="noise" scale="10" xChannelSelector="R" yChannelSelector="G" result="displaced"/>
+                <feGaussianBlur in="displaced" stdDeviation="1.5" result="softened"/>
+                <feMerge>
+                  <feMergeNode in="softened"/>
+                  <feMergeNode in="displaced"/>
+                </feMerge>
+              </filter>
+              <radialGradient id="d2-specular-grad" cx="25%" cy="28%" r="55%" gradientUnits="objectBoundingBox">
+                <animate attributeName="cx" values="25%;68%;25%" dur="7s" begin="3.5s" repeatCount="indefinite"/>
+                <animate attributeName="cy" values="28%;40%;28%" dur="7s" begin="3.5s" repeatCount="indefinite"/>
+                <stop offset="0%"   stop-color="white" stop-opacity="0.22"/>
+                <stop offset="55%"  stop-color="white" stop-opacity="0.05"/>
+                <stop offset="100%" stop-color="white" stop-opacity="0"/>
+              </radialGradient>
             </defs>
             <rect id="d2-market-sweep" class="market-sweep" x="-250" y="-100" width="250" height="700" fill="transparent" />
             <rect id="d2-state-tint-rect" x="0" y="0" width="840" height="480" fill="none" pointer-events="none"/>
@@ -2069,6 +2121,7 @@
               <path id="d2-ghost-datum" class="ghost-line ghost-datum ghost-active" d="" />
               <!-- Live cone: designScenario + designOverrides -->
               <path id="d2-cone" fill="url(#d2-thermal-grad)" opacity="0.55" d="" />
+              <path id="d2-specular" class="morph" d="" fill="url(#d2-specular-grad)" opacity="0" pointer-events="none"/>
               <!-- Ceiling boundary -->
               <g class="boundary-group">
                 <path id="d2-ceil-hit"  stroke="transparent" stroke-width="18" fill="none" d="" pointer-events="stroke" style="cursor:ns-resize;" />
@@ -2798,6 +2851,7 @@
     const timeEnd = document.getElementById('time-end');
     const lblRetire = document.getElementById('lbl-retire');
     const coneArea = document.getElementById('cone-area');
+    const coneSpecular = document.getElementById('cone-specular');
     const mConePath = document.getElementById('clip-cone-path');
     const marketSweep = document.getElementById('market-sweep');
 
@@ -4315,7 +4369,8 @@
         datumLine.setAttribute('d', dDatum); 
         datumHitboxLine.setAttribute('d', dDatum); 
         coneArea.setAttribute('d', dCone);
-        mConePath.setAttribute('d', dCone); 
+        if (coneSpecular) coneSpecular.setAttribute('d', dCone);
+        mConePath.setAttribute('d', dCone);
 
         document.getElementById('m-ceil').setAttribute('d', dCeil);
         document.getElementById('m-floor').setAttribute('d', dFloor);
@@ -5452,6 +5507,23 @@
       stageOrder.forEach(function(k) { bindSlider(k); });
     })();
     // ── END F88 DISCOVERY SEQUENCE CONTROLLER ────────────────────────────
+
+    // ── F89a LIQUID-METAL CONE INIT ───────────────────────────────────────
+    (function() {
+      var ALLOW_MOBILE_LM = false; // false = desktop-premium only; set true to test on mobile
+      var _rm  = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var _mob = window.matchMedia('(max-width: 768px)').matches;
+      if (_rm || (_mob && !ALLOW_MOBILE_LM)) {
+        ['lm-turb-anim','d2-lm-turb-anim'].forEach(function(id) {
+          var el = document.getElementById(id); if (el) el.remove();
+        });
+        var _sk = document.getElementById('sketch-canvas');
+        if (_sk) _sk.classList.add('lm-disabled');
+        var _d2 = document.getElementById('d2-canvas');
+        if (_d2) _d2.classList.add('lm-disabled');
+      }
+    })();
+    // ── END F89a ──────────────────────────────────────────────────────────
 
     const svgCanvas = document.querySelector('.range-svg');
     svgCanvas.addEventListener('pointermove', (e) => {
@@ -6793,6 +6865,7 @@
       _sa('d2-ghost-floor', 'd', _ghostFloorD);
       _sa('d2-ghost-datum', 'd', _ghostDatumD);
       _sa('d2-cone',        'd', _lConePath);
+      _sa('d2-specular',    'd', _lConePath);
       _sa('d2-ceil-line',   'd', _lCeilPath);
       _sa('d2-floor-line',  'd', _lFloorPath);
       var _lDatumD = 'M' + xS + ' ' + d2SpendToY(livePtsStart.datumSpend) + ' L' + xE + ' ' + yD;
