@@ -4086,7 +4086,13 @@
     var WAVE_IMP_PORT    = 12;    // portfolio event ceiling impulse
     var WAVE_IMP_CONT    = 8;     // contrib event floor impulse
     var WAVE_IMP_MKT     = 14;    // market toggle full-cone impulse
+    var WAVE_DIR_BIAS   = 0.6;   // 2C-2: direction vs proximity blend (0=pure prox, 1=pure dir)
+    var WAVE_IMP_EDGE   = 5;     // 2C-3: right-edge bulge per $1k/frame velocity
+    var WAVE_EDGE_DECAY = 0.93;  // 2C-3: right-edge bulge decay/frame (faster than wave's 0.96)
+    var WAVE_IMP_AGE    = 10;    // 2C-1: age slider impulse → ceiling channel
+    var WAVE_IMP_RET    = 10;    // 2C-1: retire slider impulse → floor channel
     var ceilAmp = 0, floorAmp = 0, wavePhase = 0;
+    var _edgeBulge = 0;          // signed: positive = up (subtract from Y at right edge)
     var _waveRafId = null, _waveEnabled = true;
     var _prevDatumVal = NaN;
     function applyWave(pts, amp, xStart) {
@@ -4102,12 +4108,25 @@
         ceilAmp  *= WAVE_DECAY;
         floorAmp *= WAVE_DECAY;
         wavePhase += WAVE_PHASE_SPEED;
+        _edgeBulge *= WAVE_EDGE_DECAY;
+        if (Math.abs(_edgeBulge) < 0.1) _edgeBulge = 0;
         var _ca = ceilAmp  < 0.01 ? 0 : ceilAmp;
         var _fa = floorAmp < 0.01 ? 0 : floorAmp;
+        var _eb = _edgeBulge;
         // F89 ISOLATION: reads only cached base points, writes only fill paths (#cone-area, #d2-cone)
         if (lastCeilPts.length && lastFloorPts.length) {
             var wCeil  = applyWave(lastCeilPts,  _ca, lastXStart);
             var wFloor = applyWave(lastFloorPts, _fa, lastXStart);
+            // 2C-3: smooth right-edge bulge — 3-vertex taper so no kink at corner
+            if (Math.abs(_eb) >= 0.1) {
+                if (wCeil === lastCeilPts)   wCeil  = lastCeilPts.slice();
+                if (wFloor === lastFloorPts) wFloor = lastFloorPts.slice();
+                var _cn = wCeil.length;
+                var _cw = [[_cn-3,0.25],[_cn-2,0.6],[_cn-1,1.0]];
+                for (var _ci=0; _ci<3; _ci++) { var _cp=wCeil[_cw[_ci][0]].split(' '); wCeil[_cw[_ci][0]]=_cp[0]+' '+(parseFloat(_cp[1])-_eb*_cw[_ci][1]).toFixed(2); }
+                var _fw = [[0,1.0],[1,0.6],[2,0.25]];
+                for (var _fi=0; _fi<3; _fi++) { var _fp=wFloor[_fw[_fi][0]].split(' '); wFloor[_fw[_fi][0]]=_fp[0]+' '+(parseFloat(_fp[1])-_eb*_fw[_fi][1]).toFixed(2); }
+            }
             var wDCone = 'M ' + wCeil[0] + ' ' + wCeil.map(function(p){return 'L '+p;}).join(' ')
                        + ' ' + wFloor.map(function(p){return 'L '+p;}).join(' ') + ' Z';
             coneArea.setAttribute('d', wDCone);
@@ -4115,11 +4134,21 @@
         if (lastD2CeilPts.length && lastD2FloorPts.length) {
             var wD2Ceil  = applyWave(lastD2CeilPts,  _ca, lastD2XStart);
             var wD2Floor = applyWave(lastD2FloorPts, _fa, lastD2XStart);
+            // 2C-3: Screen-2 right-edge taper
+            if (Math.abs(_eb) >= 0.1) {
+                if (wD2Ceil === lastD2CeilPts)   wD2Ceil  = lastD2CeilPts.slice();
+                if (wD2Floor === lastD2FloorPts) wD2Floor = lastD2FloorPts.slice();
+                var _d2cn = wD2Ceil.length;
+                var _d2cw = [[_d2cn-3,0.25],[_d2cn-2,0.6],[_d2cn-1,1.0]];
+                for (var _d2ci=0; _d2ci<3; _d2ci++) { var _d2cp=wD2Ceil[_d2cw[_d2ci][0]].split(' '); wD2Ceil[_d2cw[_d2ci][0]]=_d2cp[0]+' '+(parseFloat(_d2cp[1])-_eb*_d2cw[_d2ci][1]).toFixed(2); }
+                var _d2fw = [[0,1.0],[1,0.6],[2,0.25]];
+                for (var _d2fi=0; _d2fi<3; _d2fi++) { var _d2fp=wD2Floor[_d2fw[_d2fi][0]].split(' '); wD2Floor[_d2fw[_d2fi][0]]=_d2fp[0]+' '+(parseFloat(_d2fp[1])-_eb*_d2fw[_d2fi][1]).toFixed(2); }
+            }
             var wD2Cone  = 'M ' + wD2Ceil[0] + ' ' + wD2Ceil.slice(1).map(function(p){return 'L '+p;}).join(' ')
                          + ' ' + wD2Floor.map(function(p){return 'L '+p;}).join(' ') + ' Z';
             var _d2cone = document.getElementById('d2-cone'); if (_d2cone) _d2cone.setAttribute('d', wD2Cone);
         }
-        if (_ca === 0 && _fa === 0) { ceilAmp = 0; floorAmp = 0; _waveRafId = null; return; }
+        if (_ca === 0 && _fa === 0 && _edgeBulge === 0) { ceilAmp = 0; floorAmp = 0; _waveRafId = null; return; }
         _waveRafId = requestAnimationFrame(waveLoop);
     }
     function addWaveImpulse(ceilMag, floorMag) {
@@ -4238,12 +4267,28 @@
     }
 
     function updateEngine() {
-        // F89: datum velocity → wave impulse (READ-ONLY — never feeds F86 math)
+        // F89 2C-2/2C-3: datum velocity → directional wave + right-edge bulge (READ-ONLY — never feeds F86 math)
         (function() {
             var _dv = readDatum();
-            if (!isNaN(_prevDatumVal)) {
-                var _vel = Math.abs(_dv - _prevDatumVal);
-                if (_vel > 100) addWaveImpulse(_vel * WAVE_IMP_DATUM / 1000, _vel * WAVE_IMP_DATUM / 1000);
+            if (!isNaN(_prevDatumVal) && lastCalculatedPoints) {
+                var _vel = _dv - _prevDatumVal;        // signed: positive = datum went up
+                var _vAbs = Math.abs(_vel);
+                if (_vAbs > 100) {
+                    var _lcp = lastCalculatedPoints;
+                    var _span = _lcp.ceilSpend - _lcp.floorSpend;
+                    var _pC = _span > 0 ? (_lcp.ceilSpend  - _lcp.datumSpend) / _span : 0.5;
+                    var _pF = _span > 0 ? (_lcp.datumSpend - _lcp.floorSpend) / _span : 0.5;
+                    var _dC = _vel > 0 ? 1 : 0;       // datum up → ceiling reacts more
+                    var _dF = _vel > 0 ? 0 : 1;
+                    var _cF = WAVE_DIR_BIAS * _dC + (1 - WAVE_DIR_BIAS) * _pC;
+                    var _fF = WAVE_DIR_BIAS * _dF + (1 - WAVE_DIR_BIAS) * _pF;
+                    var _base = _vAbs * WAVE_IMP_DATUM / 1000;
+                    addWaveImpulse(_base * _cF * 2, _base * _fF * 2);
+                    if (_waveEnabled) {
+                        _edgeBulge = clamp(_edgeBulge + _vel * WAVE_IMP_EDGE / 1000, -18, 18);
+                        if (!_waveRafId) _waveRafId = requestAnimationFrame(waveLoop);
+                    }
+                }
             }
             _prevDatumVal = _dv;
         })();
@@ -5654,12 +5699,14 @@
       // Current age can never meet or exceed retirement age
       const maxAge = parseInt(slAct.value) - 1;
       if (parseInt(slAge.value) >= parseInt(slAct.value)) slAge.value = maxAge;
+      if (!window._f88DiscoveryActive) addWaveImpulse(WAVE_IMP_AGE, 0); // 2C-1: ceiling channel
       triggerInteraction(); touched.timeline = true; updateTracker(); scheduleUpdate();
     });
     slAct.addEventListener('input', () => {
       // Retirement age can never meet or fall below current age
       const minRet = parseInt(slAge.value) + 1;
       if (parseInt(slAct.value) <= parseInt(slAge.value)) slAct.value = minRet;
+      if (!window._f88DiscoveryActive) addWaveImpulse(0, WAVE_IMP_RET); // 2C-1: floor channel
       triggerInteraction(); touched.timeline = true; updateTracker(); scheduleUpdate();
     });
     slPort.addEventListener('input',   () => { slPort.dataset.exactVal   = String(Math.round(portPosToVal(parseInt(slPort.value))     * 1000000)); addWaveImpulse(WAVE_IMP_PORT, 0);  triggerInteraction(); touched.capital  = true; updateTracker(); scheduleUpdate(); });
