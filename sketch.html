@@ -453,6 +453,12 @@
   .f88-mass-top    { fill: url(#gold-mass-grad); }
   .f88-mass-bottom { fill: url(#red-mass-grad); }
   #top-reveal-rect { transition: width 1.3s cubic-bezier(0.13,0.84,0.16,1); }
+  /* Stage 3-4 discovery timing — bind to --f88-draw-dur, :not(.draw-triggered) guard */
+  #sketch-canvas.f88-solid-ceil:not(.draw-triggered)  #ceil-line-dashed  { transition: opacity var(--f88-draw-dur) ease; }
+  #sketch-canvas.f88-solid-floor:not(.draw-triggered) #floor-line-dashed { transition: opacity var(--f88-draw-dur) ease; }
+  #sketch-canvas.f88-solid-ceil:not(.draw-triggered)  #top-reveal-rect   { transition: width var(--f88-draw-dur) cubic-bezier(0.13,0.84,0.16,1); }
+  #sketch-canvas.f88-solid-ceil:not(.draw-triggered)  .f88-mass,
+  #sketch-canvas.f88-solid-floor:not(.draw-triggered) .f88-mass          { transition: opacity var(--f88-draw-dur) ease, d 0.36s cubic-bezier(0.2,0.8,0.2,1); }
   #sketch-canvas.f88-complete .f88-mass { opacity: 0 !important; transition: opacity 0.4s ease !important; }
 
   .f88-locked { opacity: 0.38; }
