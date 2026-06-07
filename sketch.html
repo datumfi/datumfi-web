@@ -4055,15 +4055,43 @@
         const _resName  = _resObj ? _resObj.name     : 'UNKNOWN';
         const _resSZ    = _resObj ? (_resObj.subZone || '') : '';
 
-        // Plan-through: no workbook case yet (Phase 3 adds it); return partial for lever detection
+        const _pinnedName = pinnedState.stateObj ? pinnedState.stateObj.name : 'UNKNOWN';
+
+        // Plan-through: Phase 3a — route to 15 PT cases by pinned state + direction + result
         if (_lever === 'plan') {
-            return { caseId: null, lever: 'plan', direction: _dir,
+            const _PTA_PC = {
+'OE.PT.1':{ physics:"A shorter retirement raised the ceiling to {newCeilK} — the same portfolio covering {newPlanYears} years instead. You’re now {aboveCeil} from the plan supporting this. No dollar was added; the money just has to stretch less far.", action:"This is an assumption lever, not an effort one — it only helps if the shorter retirement is real. Confirm the horizon matches your own outlook before leaning on the higher ceiling." },
+'OE.PT.2':{ physics:"Planning through {newPlanThrough} pushed the ceiling past your target — the plan reaches this, but only when conditions are good. You’re {gapToCeil} inside the range, on the same pile covering fewer years.", action:"A shorter horizon got you in range, but it costs nothing and proves nothing. Pair it with a real lever, or confirm the horizon is genuine, before relying on it." },
+'OE.PT.3':{ physics:"A longer retirement lowered the ceiling to {newCeilK} — the same portfolio now covering {newPlanYears} years. The gap widened to {aboveCeil}. Your savings didn’t change; you asked the money to last longer.", action:"This is the honest direction — most people underestimate how long they’ll live. If {newPlanThrough} is realistic, treat the wider gap as the true picture and close it with capital, time, or a lower target." },
+'ABU-PT-1':{ physics:"A shorter retirement raised the floor by {deltaFloorK} — moving it further above your spending, not closer. The same portfolio covering {newPlanYears} years projects more at the floor, so the surplus widened to {floorAboveSpend}.", action:"This is the paradox of this position: shortening the horizon lifts the floor away from your target, just like adding capital does. The only way it helps is if you raise spending to {floorK} to meet where the floor now sits — and only if the shorter retirement is genuine." },
+'ABU-PT-2':{ physics:"A longer retirement lowered the floor by {deltaFloorK} — bringing it down toward your target, but it still sits {floorAboveSpend} above your spending. The same portfolio spread across {newPlanYears} years projects less at the floor.", action:"Lengthening the horizon is the one move that closes this gap from the floor’s side — the opposite of adding capital. The floor is at {floorK}; keep checking it against a realistic {newPlanThrough} rather than leaning on a shorter assumption to force alignment." },
+'ABU-PT-3':{ physics:"A much longer retirement lowered the floor by {deltaFloorK} until it met your spending level — the plan’s conservative scenario now carries this lifestyle over {newPlanYears} years. There’s {gapToCeil} of ceiling room above.", action:"The horizon did the work that a spending increase or a capital reduction would have — it brought the floor down to your target honestly. If {newPlanThrough} is realistic, this is a true alignment, not a paper one." },
+'GRD-PT-1':{ physics:"A shorter retirement raised the floor by {deltaFloorK} — to {floorK} — because the same portfolio now covers {newPlanYears} years. If your target sat right at the edge, the floor may have moved above it rather than away from it. The ceiling is {gapToCeil} above.", action:"This is the TIGHT-zone risk in a new form: shortening the horizon lifts the floor toward your target. If the floor crossed above it, raise your spending to {floorK} to meet where the plan’s worst case now sits — and only if the shorter retirement is real." },
+'GRD-PT-2':{ physics:"A meaningfully shorter retirement lifted both boundaries enough to move your target into the interior — {gapToFloor} above the floor and {gapToCeil} below the ceiling. The same pile covering {newPlanYears} years can safely deliver more each year.", action:"The range opened because the horizon shrank, not because the plan grew. Confirm {newPlanThrough} matches your actual outlook before relying on the wider interior — it’s an assumption doing the work here, not a dollar." },
+'GRD-PT-3':{ physics:"A longer retirement lowered the floor by {deltaFloorK} to {floorK} — below your target. The same portfolio now spread across {newPlanYears} years projects {floorAboveSpend} less at the floor, dropping it beneath your spending.", action:"A longer horizon is often the honest one. If {newPlanThrough} is realistic, the surplus below is real — the floor at {floorK} is what the plan’s worst case now produces over that span. Test whether your target should hold or come down." },
+'EXP-PT-1':{ physics:"A shorter retirement raised the ceiling to {newCeilK} — the same portfolio covering {newPlanYears} years instead. The ceiling is now {gapToCeil} above your target, with more room than at your pin. No dollar was added; the money just has to stretch less far.", action:"This is an assumption lever, not an effort one — it only widens the range if the shorter retirement is real. If it is, name what the extra ceiling room is for; if it isn’t, the headroom is on paper only." },
+'EXP-PT-2':{ physics:"A longer retirement lowered the ceiling to {newCeilK} — the same portfolio now covering {newPlanYears} years. The target ended up {gapToCeil} from the ceiling without ever moving. The plan now leans on good conditions to hold this.", action:"The horizon moved, not your spending. If {newPlanThrough} is realistic, treat the tighter position as the true one — and lower the target or add a real lever to get back off the edge." },
+'EXP-PT-3':{ physics:"A much longer retirement dropped the ceiling below your target — the same portfolio now spread across {newPlanYears} years. There’s a {aboveCeil} gap between what you’re asking for and what the plan can deliver over that horizon.", action:"This is the honest direction — most people underestimate how long they’ll live. If {newPlanThrough} is realistic, close the {aboveCeil} gap with capital, time, or a lower target rather than a shorter assumption." },
+'STR-PT-1':{ physics:"A shorter retirement raised the ceiling to {newCeilK} — the same portfolio covering {newPlanYears} years instead. That lifted the upper boundary away from your target enough to move into the interior: {gapToFloor} above the floor, {gapToCeil} below the ceiling. The favorable-conditions dependency eased.", action:"The relief came from the horizon, not from more capital — it only holds if the shorter retirement is real. If it is, you’ve bought genuine room off the edge; if it isn’t, you’re still near the ceiling in truth." },
+'STR-PT-2':{ physics:"A modestly shorter retirement nudged the ceiling up to {newCeilK} — the same portfolio over {newPlanYears} years — but you’re still near the top, with {gapToCeil} of cushion. The position improved without leaving STRETCHED.", action:"The horizon moved the ceiling the right way, but not far enough to change the picture — the plan still leans on good conditions. Find the retirement length where average scenarios carry this, or pair it with a real lever." },
+'STR-PT-3':{ physics:"A longer retirement lowered the ceiling to {newCeilK} — the same portfolio now spread across {newPlanYears} years — dropping it below your target. There’s a {aboveCeil} gap between what you’re asking for and what the plan can deliver over that horizon.", action:"This is the honest direction — most people underestimate how long they’ll live. If {newPlanThrough} is realistic, close the {aboveCeil} gap with capital, time, or a lower target rather than relying on a shorter assumption to hold the ceiling up." }
+            };
+            const _ptaId = (function(pn, d, rn) {
+                if (pn === 'OVEREXTENDED') return d === 'up' ? (rn === 'STRETCHED' ? 'OE.PT.2' : 'OE.PT.1') : 'OE.PT.3';
+                if (pn === 'ABUNDANT')     return d === 'up' ? 'ABU-PT-1' : (rn === 'GROUNDED' ? 'ABU-PT-3' : 'ABU-PT-2');
+                if (pn === 'GROUNDED')     return d === 'up' ? (rn === 'EXPANSIVE' ? 'GRD-PT-2' : 'GRD-PT-1') : 'GRD-PT-3';
+                if (pn === 'EXPANSIVE')    return d === 'up' ? 'EXP-PT-1' : (rn === 'OVEREXTENDED' ? 'EXP-PT-3' : 'EXP-PT-2');
+                if (pn === 'STRETCHED')    return d === 'up' ? (rn === 'EXPANSIVE' ? 'STR-PT-1' : 'STR-PT-2') : 'STR-PT-3';
+                return null;
+            })(_pinnedName, _dir, _resName);
+            const _ptaCd = _ptaId ? _PTA_PC[_ptaId] : null;
+            return { caseId: _ptaId, lever: 'plan', direction: _dir,
                      resultState: _resName, resultSubZone: _resSZ,
-                     physics: '', action: '', studio: '', paradox: false,
+                     physics: _ptaCd ? _ptaCd.physics : '',
+                     action:  _ptaCd ? _ptaCd.action  : '',
+                     studio: '', paradox: false,
                      isSingleLever: true, primaryPct: _primaryPct };
         }
-
-        const _pinnedName = pinnedState.stateObj ? pinnedState.stateObj.name : 'UNKNOWN';
         const _caseId = _routeLookup(_pinnedName, _lever, _dir, _resName);
         if (!_caseId) return null;
 
@@ -6479,7 +6507,9 @@
             deltaFloorK:        fmt(Math.abs(ptsEnd.floorSpend - gbEnd.floorSpend)),
             newFloorAboveSpend: fmt(Math.abs(ptsEnd.floorSpend - ptsEnd.datumSpend)),
             pinnedRetire:       gb.activationAge,
-            ageDelta:           Math.abs(age - gb.currentAge)
+            ageDelta:           Math.abs(age - gb.currentAge),
+            newPlanThrough:     ds.planThroughAge || 93,
+            newPlanYears:       (ds.planThroughAge || 93) - retire
         };
         var gbPinnedState = {
             retire:         gb.activationAge,
@@ -6545,6 +6575,14 @@
                     if (Math.abs(_xRD) > 0 && _ld !== 'retire')    _slCI.push({ k:'retire',  up:_xRD>0,   from:String(gb.activationAge||65), to:String(retire) });
                     if (_slCI.length >= 2) _d2ChangeHtml = _slCI.map(_slFmt).join('');
                 })();
+                // PTA secondary modifier — when plan co-moved alongside the dominant effort lever, name the horizon move
+                var _ptaSecDelta = (ds.planThroughAge || 93) - (gbPinnedState.planThroughAge || 93);
+                if (Math.abs(_ptaSecDelta) >= 1 && _ld !== 'plan') {
+                    _phys += ' ' + _d2Fill(_ptaSecDelta < 0
+                        ? 'A shorter retirement length reinforced this — the same pile covering {newPlanYears} years raised both boundaries. This is an assumption lever; it holds only if the shorter retirement is genuine.'
+                        : 'A longer retirement lowered both boundaries in parallel — the same pile spread across {newPlanYears} years. This is the honest direction; most plans underestimate how long the money has to stretch.',
+                        _d2Vars);
+                }
             } else {
                 // ── Multi-lever heuristic (port of Screen 1 heuristic) ─────────────
                 var _d2RetireDelta  = retire - gb.activationAge;
