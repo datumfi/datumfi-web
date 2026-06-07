@@ -3117,7 +3117,8 @@
         const ceilSpend = fvUp * 1000 * wrUp * inflMult * s.taxMult;
         const datumSpend = s.targetSpend * inflMult;
         
-        return { fvCon, fvBase, fvUp, floorSpend, ceilSpend, datumSpend };
+        const datumCapM = datumSpend / (0.04 * _hScale) / 1000;
+        return { fvCon, fvBase, fvUp, floorSpend, ceilSpend, datumSpend, datumCapM };
     }
 
     function getShapeStateObj(pts) {
@@ -4541,9 +4542,7 @@
         let stateObj = getShapeStateObj(ptsEnd);
         window.currentShapeStateObj = stateObj;
 
-        const _hD      = Math.max(15, currentScenario.planThroughAge - activationAge);
-        const _wrBaseD = 0.04 * 0.6079 / (1 - Math.pow(1.034, -_hD));
-        const _datumCapM = ptsEnd.datumSpend / _wrBaseD / 1000;
+        const _datumCapM = ptsEnd.datumCapM;
         const datumCapStr = _datumCapM >= 1 ? `$${_datumCapM.toFixed(2)}M` : `$${Math.round(_datumCapM * 1000)}k`;
         if (hudDatumVal) { hudDatumVal.textContent = `${datumCapStr} / ${targetEndStr} yr`; }
 
@@ -5756,7 +5755,7 @@
         
         showSvgTooltip('ceil', hoverAge, pts.fvUp, pts.ceilSpend, svgX, yC);
         showSvgTooltip('floor', hoverAge, pts.fvCon, pts.floorSpend, svgX, yF);
-        showSvgTooltip('datum', hoverAge, pts.datumSpend / 0.04 / 1000, pts.datumSpend, svgX, yD);
+        showSvgTooltip('datum', hoverAge, pts.datumCapM, pts.datumSpend, svgX, yD);
     }
 
     function hideScrubber() {
@@ -6805,7 +6804,8 @@
                     var _d2FillT = function(t) {
                         return t.replace(/{lever1}/g,_d2LvLbl[0]||'').replace(/{lever2}/g,_d2LvLbl[1]||'')
                                 .replace(/{lever3}/g,_d2LvLbl[2]||'').replace(/{lever4}/g,_d2LvLbl[3]||'')
-                                .replace(/{lever5}/g,_d2LvLbl[4]||'').replace(/{primaryLever}/g,_d2PrimLev)
+                                .replace(/{lever5}/g,_d2LvLbl[4]||'').replace(/{lever6}/g,_d2LvLbl[5]||'')
+                                .replace(/{primaryLever}/g,_d2PrimLev)
                                 .replace(/{ceilGap_fmt}/g,_d2CeilGapFmt).replace(/{floorDelta_fmt}/g,_d2FlrDeltaFmt)
                                 .replace(/{newDatum_fmt}/g,_d2NewDatFmt);
                     };
@@ -6827,10 +6827,17 @@
                         {n:5,u:3,o:"Three levers built plan — {lever1}, {lever2}, and {lever3} — while {lever4} and {lever5} partially offset them. The Ceiling is {ceilGap_fmt} above your spending line and the floor moved {floorDelta_fmt} from your pin. The building levers are winning, but not cleanly.",s:"Isolate whether both reducing moves were intentional. If one wasn't, it's costing capacity against three levers that are working in the right direction.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
                         {n:5,u:2,o:"Two levers built plan — {lever1} and {lever2} — but three pulled harder in the other direction: {lever3}, {lever4}, and {lever5}. The Ceiling is now {ceilGap_fmt} closer to your spending line and the floor thinned {floorDelta_fmt} from your pin.",s:"The reducing levers are outweighing the building ones. Name whether all three pullbacks were intentional — or bring this to Studio to see what the compression looks like against your real accounts and income timing.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
                         {n:5,u:1,o:"Four levers pulled the plan back — {lever2}, {lever3}, {lever4}, and {lever5} — while only {lever1} added capacity. The Ceiling is now {ceilGap_fmt} closer to your spending line and the floor has compressed {floorDelta_fmt} from your pin. The single building lever is not enough to offset four simultaneous reductions.",s:"Confirm all four reductions were deliberate. If even one wasn't, it's compressing the plan alongside the others — and the Sketch can't cleanly untangle the combined effect from here.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
-                        {n:5,u:0,o:"All five levers reduced the plan at once — {lever1}, {lever2}, {lever3}, {lever4}, and {lever5}. The Ceiling has moved {ceilGap_fmt} closer to your spending line and the floor compressed {floorDelta_fmt} from your pin. This is the boundary of maximum simultaneous reduction in the Sketch.",s:"If this is deliberate — a low-ask scenario, a conservative anchor — the plan has capacity well above where the Datum sits. Studio can show what the full plan could sustain if the ask were allowed to rise.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."}
+                        {n:5,u:0,o:"All five levers reduced the plan at once — {lever1}, {lever2}, {lever3}, {lever4}, and {lever5}. The Ceiling has moved {ceilGap_fmt} closer to your spending line and the floor compressed {floorDelta_fmt} from your pin. This is the boundary of maximum simultaneous reduction in the Sketch.",s:"If this is deliberate — a low-ask scenario, a conservative anchor — the plan has capacity well above where the Datum sits. Studio can show what the full plan could sustain if the ask were allowed to rise.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:6,u:6,o:"All six levers moved in the same direction — {lever1}, {lever2}, {lever3}, {lever4}, {lever5}, and {lever6}. The Ceiling is now {ceilGap_fmt} above your spending line; the floor lifted {floorDelta_fmt} from your pin. {primaryLever} is carrying the most weight, but at this level of simultaneous movement the plan has materially more capacity than any single lever could create.",s:"This is the boundary of what the Sketch can attribute cleanly. Name the one or two changes that matter most, and bring the full picture to Studio for a sequence-aware read.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:6,u:5,o:"Five levers built plan — {lever1}, {lever2}, {lever3}, {lever4}, and {lever5} — while {lever6} pulled against them. The Ceiling is {ceilGap_fmt} above your spending line and the floor moved {floorDelta_fmt} from your pin. The single downward move is a minor offset against strong net-positive movement.",s:"Test whether removing the downward move adds meaningfully — or confirm it was a deliberate trade and the net outcome is the right read.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:6,u:4,o:"Four levers built plan — {lever1}, {lever2}, {lever3}, and {lever4} — while {lever5} and {lever6} partially offset them. The Ceiling is {ceilGap_fmt} above your spending line and the floor moved {floorDelta_fmt} from your pin. The building levers are ahead, but not without friction.",s:"Confirm whether both reducing moves were intentional. If one wasn't, it's costing capacity against four levers working in the right direction.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:6,u:3,o:"Three levers built plan — {lever1}, {lever2}, and {lever3} — while {lever4}, {lever5}, and {lever6} pulled equally hard in the other direction. The Ceiling moved {ceilGap_fmt} and the floor shifted {floorDelta_fmt} from your pin. Building and reducing forces are closely matched.",s:"Isolate the single building lever with the most lift and the single reducing lever with the most cost — then decide which trade to keep.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:6,u:2,o:"Two levers built plan — {lever1} and {lever2} — but four pulled harder in the other direction: {lever3}, {lever4}, {lever5}, and {lever6}. The Ceiling is now {ceilGap_fmt} closer to your spending line and the floor thinned {floorDelta_fmt} from your pin.",s:"Four simultaneous reductions are outweighing two building levers. Name whether all four pullbacks were intentional — or bring this to Studio to see what the compression looks like against your real accounts.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:6,u:1,o:"Five levers pulled the plan back — {lever2}, {lever3}, {lever4}, {lever5}, and {lever6} — while only {lever1} added capacity. The Ceiling is now {ceilGap_fmt} closer to your spending line and the floor has compressed {floorDelta_fmt} from your pin. The single building lever cannot offset five simultaneous reductions.",s:"Confirm all five reductions were deliberate. If even one wasn't, it's compressing the plan alongside the others — and the Sketch cannot cleanly untangle the combined effect from here.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:6,u:0,o:"All six levers reduced the plan at once — {lever1}, {lever2}, {lever3}, {lever4}, {lever5}, and {lever6}. The Ceiling has moved {ceilGap_fmt} closer to your spending line and the floor compressed {floorDelta_fmt} from your pin. This is the outer boundary of simultaneous reduction in the Sketch.",s:"If this is deliberate — a low-ask scenario, a conservative anchor — the plan has capacity well above where the Datum sits. Studio can show what the full plan could sustain if the ask were allowed to rise.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."}
                     ];
                     var _d2DirMatch = null;
-                    if (_d2Nn >= 2 && _d2Nn <= 5) {
+                    if (_d2Nn >= 2 && _d2Nn <= 6) {
                         for (var _d2Ti = 0; _d2Ti < _d2DirT.length; _d2Ti++) {
                             if (_d2DirT[_d2Ti].n === _d2Nn && _d2DirT[_d2Ti].u === _d2NUp) { _d2DirMatch = _d2DirT[_d2Ti]; break; }
                         }
@@ -6951,8 +6958,8 @@
         _cSet('d2s-cmp-ceil-disc',   _cmpDual(gbEnd.fvUp,    gbEnd.ceilSpend));
         _cSet('d2s-cmp-ceil-des',    _cmpDual(ptsEnd.fvUp,   ptsEnd.ceilSpend));
         _cSet('d2s-cmp-ceil-arrow',  _cmpArr(ptsEnd.ceilSpend, gbEnd.ceilSpend));
-        _cSet('d2s-cmp-datum-disc',  _cmpDual(gbEnd.datumSpend / 0.04 / 1000,  gb.targetSpend));
-        _cSet('d2s-cmp-datum-des',   _cmpDual(ptsEnd.datumSpend / 0.04 / 1000, s.targetSpend));
+        _cSet('d2s-cmp-datum-disc',  _cmpDual(gbEnd.datumCapM,  gb.targetSpend));
+        _cSet('d2s-cmp-datum-des',   _cmpDual(ptsEnd.datumCapM, s.targetSpend));
         _cSet('d2s-cmp-datum-arrow', _cmpArr(s.targetSpend, gb.targetSpend));
         _cSet('d2s-cmp-floor-disc',  _cmpDual(gbEnd.fvCon,   gbEnd.floorSpend));
         _cSet('d2s-cmp-floor-des',   _cmpDual(ptsEnd.fvCon,  ptsEnd.floorSpend));
@@ -7525,7 +7532,7 @@
         var _usd3HaveVars = {
           dDatumK: '$' + Math.round(_skPts.datumSpend || 0) + 'k', dCeilK: '$' + Math.round(_skPts.ceilSpend || 0) + 'k', dFloorK: '$' + Math.round(_skPts.floorSpend || 0) + 'k',
           dDatumM: _fmtM(_skPts.fvBase), dCeilM: _fmtM(_skPts.fvUp), dFloorM: _fmtM(_skPts.fvCon),
-          dDatumReqM: _fmtM((_skPts.datumSpend || 0) / 0.04 / 1000)
+          dDatumReqM: _fmtM((_skPts.datumCapM || 0))
         };
         var _usd3WantVars = {
           gbDatumK: '$' + Math.round(dd) + 'k', gbCeilK: '$' + Math.round(dc) + 'k', gbFloorK: '$' + Math.round(df) + 'k',
@@ -7959,8 +7966,11 @@
         var _gf = _Y > 0 ? Math.pow(1 + DATUM_GROWTH_RATE_SPEC, _Y) : 1;
         var _PM = s.portfolioVol  || 0;
         var _KM = (s.annualContrib || 0) / 1e6;
-        var _sup = _gf * _PM * DATUM_SUPPORT_RATE
-                 + (_gf > 1 ? DATUM_SUPPORT_RATE * _KM * ((_gf - 1) / DATUM_GROWTH_RATE_SPEC) : 0);
+        var _hDatBs  = Math.max(15, (s.planThroughAge || 93) - mid);
+        var _hScDatBs = 0.6079 / (1 - Math.pow(1.034, -_hDatBs));
+        var _DRatBs  = DATUM_SUPPORT_RATE * _hScDatBs;
+        var _sup = _gf * _PM * _DRatBs
+                 + (_gf > 1 ? _DRatBs * _KM * ((_gf - 1) / DATUM_GROWTH_RATE_SPEC) : 0);
         if (Math.abs(_sup - datumTarget_M) < 0.0005) { lo = mid; hi = mid; break; }
         if (_sup < datumTarget_M) lo = mid; else hi = mid;
       }
