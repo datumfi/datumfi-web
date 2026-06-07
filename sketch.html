@@ -5768,7 +5768,7 @@
     slContrib.addEventListener('input', () => {
       slContrib.dataset.exactVal = String(Math.round(contribPosToVal(parseInt(slContrib.value))));
       var _nCont = parseInt(slContrib.value);
-      if (!isNaN(_prevContribVal)) { var _cd = WAVE_DIR_CONT_UP * (_nCont > _prevContribVal ? 1 : -1); _floorPhaseDir = _cd > 0 ? +1 : -1; _floorLean = _cd * WAVE_LEAN_MAG; addWaveImpulse(0, WAVE_IMP_CONT); }
+      if (!isNaN(_prevContribVal)) { if (_nCont > _prevContribVal) { _floorPhaseDir = +1; _floorLean = WAVE_LEAN_MAG; addWaveImpulse(0, WAVE_IMP_CONT); } else { _ceilPhaseDir = -1; _ceilLean = -WAVE_LEAN_MAG; addWaveImpulse(WAVE_IMP_CONT, 0); } }
       _prevContribVal = _nCont;
       triggerInteraction(); touched.refined = true; updateTracker(); scheduleUpdate();
     });
