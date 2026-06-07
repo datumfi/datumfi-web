@@ -3913,6 +3913,7 @@
             portfolioVol:     pinnedState.port    || 0.75,
             annualContrib:    pinnedState.contrib  || 25000,
             targetSpend:      pinnedState.datum    || 100,
+            planThroughAge:   pinnedState.planThroughAge || 93,
             conservativeRate: _pR.c, baselineRate: _pR.b, upsideRate: _pR.u,
             isNominal: (pinnedState.pinnedInflStr === 'Nominal'),
             taxMult:   1.0 - ((pinnedState.pinnedTax || 0) / 100),
@@ -3926,6 +3927,7 @@
         const _cPort   = currentScenario.portfolioVol;
         const _cContrib = currentScenario.annualContrib;
         const _cDatum  = currentScenario.targetSpend;
+        const _cPlan   = currentScenario.planThroughAge || 93;
         const _cYTG    = Math.max(0, _cRetire - _cAge);
 
         // Detect changed levers
@@ -3934,6 +3936,7 @@
         const _dPort    = Math.abs((pinnedState.port   || 0)  - _cPort)   > 0.001;
         const _dContrib = Math.abs((pinnedState.contrib || 0) - _cContrib) > 500;
         const _dDatum   = Math.abs((pinnedState.datum || 0) - _cDatum) > 0.5;
+        const _dPlan    = Math.abs((pinnedState.planThroughAge || 93) - _cPlan) >= 1;
 
         // Derive current paradigm label from rates (for tax/market detection)
         const _curParadigmLabel = currentScenario.baselineRate === 1.040 ? 'Optimistic'
@@ -3950,6 +3953,7 @@
         if (_dAge)     _shapeMovers.push('age');
         if (_dPort)    _shapeMovers.push('portfolio');
         if (_dContrib) _shapeMovers.push('contrib');
+        if (_dPlan)    _shapeMovers.push('plan');
         if (_dTax)     _shapeMovers.push('tax');
         if (_dMkt)     _shapeMovers.push('market');
 
@@ -3981,6 +3985,7 @@
             else if (_lever === 'age')  _dir = _cAge     > pinnedState.age      ? 'up' : 'down';
             else if (_lever === 'portfolio') _dir = _cPort    > pinnedState.port    ? 'up' : 'down';
             else if (_lever === 'contrib')   _dir = _cContrib > pinnedState.contrib ? 'up' : 'down';
+            else if (_lever === 'plan')      _dir = _cPlan    < (pinnedState.planThroughAge || 93) ? 'up' : 'down';
             else _dir = 'up'; // tax/market: no workbook case, will return null below
 
         } else if (_shapeMovers.length >= 2 && !_dDatum) {
@@ -4000,6 +4005,9 @@
                     _cfPts = getMathPoint(_pYTG, _pYTG, _cfSc);
                 } else if (_lev === 'contrib') {
                     const _cfSc = Object.assign({}, _pSc, { annualContrib: _cContrib });
+                    _cfPts = getMathPoint(_pYTG, _pYTG, _cfSc);
+                } else if (_lev === 'plan') {
+                    const _cfSc = Object.assign({}, _pSc, { planThroughAge: _cPlan });
                     _cfPts = getMathPoint(_pYTG, _pYTG, _cfSc);
                 } else if (_lev === 'tax') {
                     const _cfSc = Object.assign({}, _pSc, { taxMult: currentScenario.taxMult });
@@ -4031,6 +4039,7 @@
             else if (_lever === 'age')  _dir = _cAge     > pinnedState.age      ? 'up' : 'down';
             else if (_lever === 'portfolio') _dir = _cPort    > pinnedState.port    ? 'up' : 'down';
             else if (_lever === 'contrib')   _dir = _cContrib > pinnedState.contrib ? 'up' : 'down';
+            else if (_lever === 'plan')      _dir = _cPlan    < (pinnedState.planThroughAge || 93) ? 'up' : 'down';
             else _dir = 'up';
 
         } else {
@@ -4045,6 +4054,14 @@
         const _resObj   = getShapeStateObj(pts);
         const _resName  = _resObj ? _resObj.name     : 'UNKNOWN';
         const _resSZ    = _resObj ? (_resObj.subZone || '') : '';
+
+        // Plan-through: no workbook case yet (Phase 3 adds it); return partial for lever detection
+        if (_lever === 'plan') {
+            return { caseId: null, lever: 'plan', direction: _dir,
+                     resultState: _resName, resultSubZone: _resSZ,
+                     physics: '', action: '', studio: '', paradox: false,
+                     isSingleLever: true, primaryPct: _primaryPct };
+        }
 
         const _pinnedName = pinnedState.stateObj ? pinnedState.stateObj.name : 'UNKNOWN';
         const _caseId = _routeLookup(_pinnedName, _lever, _dir, _resName);
@@ -6470,6 +6487,7 @@
             port:           gb.portfolioVol,
             contrib:        gb.annualContrib,
             datum:          gb.targetSpend,
+            planThroughAge: gb.planThroughAge || 93,
             pinnedParadigm: gb.baselineRate === 1.040 ? 'Optimistic' : gb.baselineRate === 1.015 ? 'Stress' : 'Historical',
             pinnedInflStr:  gb.isNominal ? 'Nominal' : 'Real',
             pinnedTax:      Math.round((1.0 - (gb.taxMult || 1.0)) * 100),
@@ -6486,18 +6504,47 @@
                 else if (_ld === 'retire')    { _leverDelta = 'Retire'    + _sym + ' ' + gb.activationAge          + ' yrs → ' + retire + ' yrs'; }
                 else if (_ld === 'portfolio') { _leverDelta = 'Portfolio' + _sym + ' ' + fmt(gb.portfolioVol*1000) + ' → '     + fmt(ds.port*1000); }
                 else if (_ld === 'contrib')   { _leverDelta = 'Contrib'   + _sym + ' $' + Math.round((gb.annualContrib||0)/1000) + 'k/yr → $' + Math.round((ds.contrib||0)/1000) + 'k/yr'; }
-                else if (_ld === 'age')       { _leverDelta = 'Age'       + _sym + ' ' + gb.currentAge             + ' yrs → ' + age    + ' yrs'; }
+                else if (_ld === 'age')       { _leverDelta = 'Age'          + _sym + ' ' + gb.currentAge             + ' yrs → ' + age    + ' yrs'; }
+                else if (_ld === 'plan')      { _leverDelta = 'Plan-Through' + _sym + ' ' + (gbPinnedState.planThroughAge || 93) + ' yrs → ' + (ds.planThroughAge || 93) + ' yrs'; }
                 // Surface B: _d2DomLever with delta for N=1 single-lever attribution
-                var _slNm = { portfolio:'Portfolio Balance', datum:'Datum Spend', retire:'Retirement Age', contrib:'Annual Contributions', age:'Current Age' };
+                var _slNm = { portfolio:'Portfolio Balance', datum:'Datum Spend', retire:'Retirement Age', contrib:'Annual Contributions', age:'Current Age', plan:'Plan-Through' };
                 var _slDlt = '', _slDeltaD, _slDeltaS, _slDeltaA;
                 if      (_ld === 'portfolio') { _slDeltaD = ds.port - gb.portfolioVol; _slDeltaS = _slDeltaD >= 0 ? '+' : '−'; _slDeltaA = Math.abs(_slDeltaD); _slDlt = _slDeltaS + (_slDeltaA >= 1 ? '$' + _slDeltaA.toFixed(2) + 'M' : '$' + Math.round(_slDeltaA * 1000) + 'k'); }
                 else if (_ld === 'contrib')   { _slDeltaD = ds.contrib - gb.annualContrib; _slDeltaS = _slDeltaD >= 0 ? '+' : '−'; _slDeltaA = Math.abs(_slDeltaD); _slDlt = _slDeltaS + (_slDeltaA >= 1000 ? '$' + Math.round(_slDeltaA / 1000) + 'k' : '$' + Math.round(_slDeltaA)); }
                 else if (_ld === 'retire')    { _slDeltaD = retire - gb.activationAge; _slDlt = (_slDeltaD >= 0 ? '+' : '−') + Math.abs(_slDeltaD) + ' yr'; }
                 else if (_ld === 'datum')     { _slDeltaD = Math.round(ds.datum) - gb.targetSpend; _slDeltaS = _slDeltaD >= 0 ? '+' : '−'; _slDeltaA = Math.abs(_slDeltaD); _slDlt = _slDeltaS + (_slDeltaA >= 1000 ? '$' + (_slDeltaA / 1000).toFixed(2) + 'M' : '$' + Math.round(_slDeltaA) + 'k'); }
                 else if (_ld === 'age')       { _slDeltaD = age - gb.currentAge; _slDlt = (_slDeltaD >= 0 ? '+' : '−') + Math.abs(_slDeltaD) + ' yr'; }
+                else if (_ld === 'plan')      { _slDeltaD = (ds.planThroughAge || 93) - (gbPinnedState.planThroughAge || 93); _slDlt = (_slDeltaD >= 0 ? '+' : '−') + Math.abs(_slDeltaD) + ' yr'; }
                 _d2DomLever = (_slNm[_ld] || _ld) + (_slDlt ? ' (' + _slDlt + ', 100% of range)' : '');
                 // Surface C: ACCEPT context inline suffix — gates on animation flag to bind to the causal moment
                 if (_d2AcceptAnimating && _d2AcceptFromState) { _phys += ' (via ACCEPT from ' + _d2AcceptFromState + ' resolution)'; }
+                // Surface D: if additional levers also physically moved alongside the dominant lever,
+                // build a multi-item _d2ChangeHtml so pin-changes-row shows all changed levers.
+                (function() {
+                    var _slCI = [];
+                    var _slSn = { plan:'Plan-Through', contrib:'Contributions', retire:'Retirement', age:'Age', capital:'Capital', datum:'Datum', market:'Market' };
+                    var _slFmt = function(it) {
+                        var _nl = '<span style="color:rgba(255,255,255,0.5)">' + (_slSn[it.k]||it.k) + '</span>';
+                        var _vl = '<span class="pin-change-values">' + it.from + ' → ' + it.to + '</span>';
+                        var _ar = it.up ? '<span class="pin-change-arrow-up">↑</span>' : '<span class="pin-change-arrow-down">↓</span>';
+                        return '<span class="pin-change-item">' + _nl + _ar + _vl + '</span>';
+                    };
+                    // Dominant lever first
+                    var _slFCon = function(v) { return (v >= 1000 ? '$' + Math.round(v/1000) + 'k' : '$' + Math.round(v)); };
+                    if (_ld === 'contrib') { var _cD = (ds.contrib||0)-(gb.annualContrib||0); _slCI.push({ k:'contrib', up:_cD>0, from:_slFCon(gb.annualContrib||0)+'/yr', to:_slFCon(ds.contrib||0)+'/yr' }); }
+                    else if (_ld === 'retire') { _slCI.push({ k:'retire', up:retire>(gb.activationAge||65), from:String(gb.activationAge||65), to:String(retire) }); }
+                    else if (_ld === 'portfolio') { var _pFmt = function(v) { return v>=1?'$'+v.toFixed(2)+'M':'$'+Math.round(v*1000)+'k'; }; var _pD=(ds.port||0)-(gb.portfolioVol||0); _slCI.push({ k:'capital', up:_pD>0, from:_pFmt(gb.portfolioVol||0), to:_pFmt(ds.port||0) }); }
+                    else if (_ld === 'age') { var _aD=age-(gb.currentAge||40); _slCI.push({ k:'age', up:_aD>0, from:String(gb.currentAge||40), to:String(age) }); }
+                    else if (_ld === 'plan') { var _pnD=(ds.planThroughAge||93)-(gbPinnedState.planThroughAge||93); _slCI.push({ k:'plan', up:_pnD<0, from:String(gbPinnedState.planThroughAge||93)+' yrs', to:String(ds.planThroughAge||93)+' yrs' }); }
+                    // Additional moved levers
+                    var _xPD = (ds.planThroughAge||93)-(gbPinnedState.planThroughAge||93);
+                    if (Math.abs(_xPD) >= 1 && _ld !== 'plan')    _slCI.push({ k:'plan',    up:_xPD<0,   from:String(gbPinnedState.planThroughAge||93)+' yrs', to:String(ds.planThroughAge||93)+' yrs' });
+                    var _xCD = (ds.contrib||0)-(gb.annualContrib||0);
+                    if (Math.abs(_xCD) > 100 && _ld !== 'contrib') _slCI.push({ k:'contrib', up:_xCD>0,   from:_slFCon(gb.annualContrib||0)+'/yr', to:_slFCon(ds.contrib||0)+'/yr' });
+                    var _xRD = retire - (gb.activationAge||65);
+                    if (Math.abs(_xRD) > 0 && _ld !== 'retire')    _slCI.push({ k:'retire',  up:_xRD>0,   from:String(gb.activationAge||65), to:String(retire) });
+                    if (_slCI.length >= 2) _d2ChangeHtml = _slCI.map(_slFmt).join('');
+                })();
             } else {
                 // ── Multi-lever heuristic (port of Screen 1 heuristic) ─────────────
                 var _d2RetireDelta  = retire - gb.activationAge;
@@ -6526,12 +6573,17 @@
                 var _d2ContribChg   = Math.abs(gb.annualContrib - ds.contrib) > 100;
                 var _d2DatumChg     = gb.targetSpend !== s.targetSpend;
                 var _d2MktChg       = !!(gbPinnedState.pinnedParadigm && gbPinnedState.pinnedParadigm !== _d2CurMkt);
+                var _d2PlanDelta    = (ds.planThroughAge || 93) - (gb.planThroughAge || 93);
+                var _d2PlanAbs      = Math.abs(_d2PlanDelta);
+                var _d2PlanBand     = _d2PlanAbs > 10 ? 'large' : _d2PlanAbs >= 5 ? 'moderate' : 'small';
+                var _d2PlanChg      = _d2PlanAbs >= 1;
                 var _d2Pchg = [];
                 if (_d2RetireChg) { var _d2RDir = _d2RetireDelta > 0 ? 'later' : 'earlier'; _d2Pchg.push('Retirement moved ' + _d2RDir + ' by ' + _d2RetireAbs + ' yr to ' + retire + '.'); }
                 if (_d2AgeChg)     _d2Pchg.push('Current age moved to ' + age + '.');
                 if (_d2CapChg)   { var _d2CDir = _d2CapDelta > 0 ? 'up' : 'down'; var _d2CStr = ds.port >= 1 ? '$' + ds.port.toFixed(2) + 'M' : '$' + Math.round(ds.port * 1000) + 'k'; _d2Pchg.push('Capital moved ' + _d2CDir + ' to ' + _d2CStr + ' (' + _d2CapPctStr + ').'); }
                 if (_d2DatumChg) { var _d2DDr = _d2DatumDelta > 0 ? 'up' : 'down'; _d2Pchg.push('Datum moved ' + _d2DDr + ' to ' + _d2DCur + '/yr.'); }
                 if (_d2ContribChg) { var _d2CnDir = _d2ContribDelta > 0 ? 'up' : 'down'; var _d2CnStr = ds.contrib >= 1000 ? '$' + Math.round(ds.contrib/1000) + 'k' : '$' + ds.contrib; _d2Pchg.push('Contributions moved ' + _d2CnDir + ' to ' + _d2CnStr + '/yr.'); }
+                if (_d2PlanChg)  { var _d2PDir = _d2PlanDelta < 0 ? 'shorter' : 'longer'; _d2Pchg.push('Retirement length moved ' + _d2PDir + ' to ' + (ds.planThroughAge || 93) + ' yrs.'); }
                 if (_d2MktChg)     _d2Pchg.push('Market changed to ' + _d2CurMkt + '.');
                 var _d2PFloorPin    = gbEnd.floorSpend || 0;
                 var _d2PCeilPin     = gbEnd.ceilSpend  || 0;
@@ -6557,6 +6609,7 @@
                 if (_d2DatumChg)   _d2Lw.push({ key: 'datum',   w: _d2DatumAbs / 3 });
                 if (_d2MktChg)     _d2Lw.push({ key: 'market',  w: 55 });
                 if (_d2AgeChg)     _d2Lw.push({ key: 'age',     w: _d2AgeAbs * 4 });
+                if (_d2PlanChg)    _d2Lw.push({ key: 'plan',    w: _d2PlanAbs * 5 });
                 _d2Lw.sort(function(a, b) { return b.w - a.w; });
                 var _d2Dom  = _d2Lw[0];
                 var _d2Sec  = _d2Lw[1];
@@ -6572,6 +6625,7 @@
                         case 'datum':   return 'A ' + _d2DatumPct + '% Datum ' + (_d2DatumDelta > 0 ? 'increase' : 'decrease') + ' ' + _d2Mag[_d2DatumBand];
                         case 'market':  return paradigm === 'optimistic' ? 'Optimistic market assumptions' : paradigm === 'stress' ? 'Stress market assumptions' : 'Changed market assumptions';
                         case 'age':     return _d2AgeDelta > 0 ? 'Starting ' + _d2AgeAbs + ' years later ' + _d2Mag[_d2AgeBand] : 'Starting ' + _d2AgeAbs + ' years earlier ' + _d2Mag[_d2AgeBand];
+                        case 'plan':    return _d2PlanDelta < 0 ? 'A shorter retirement length ' + _d2Mag[_d2PlanBand] : 'A longer retirement length ' + _d2Mag[_d2PlanBand];
                         default: return '';
                     }
                 })();
@@ -6681,6 +6735,7 @@
                             case 'datum':   return 'a Datum shift';
                             case 'market':  return paradigm === 'optimistic' ? 'optimistic market assumptions' : 'stress market assumptions';
                             case 'age':     return _d2AgeDelta     > 0 ? 'a later start'            : 'an earlier start';
+                            case 'plan':    return _d2PlanDelta    < 0 ? 'a shorter retirement length' : 'a longer retirement length';
                             default:        return key;
                         }
                     };
@@ -6691,6 +6746,7 @@
                             case 'contrib': return _d2ContribDelta > 0;
                             case 'market':  return paradigm === 'optimistic';
                             case 'age':     return _d2AgeDelta     < 0;
+                            case 'plan':    return _d2PlanDelta    < 0;
                             default:        return true;
                         }
                     };
@@ -6778,7 +6834,7 @@
                     }
                 }
                 if (_d2Pchg.length > 0) {
-                    var _d2Sn = { capital:'Capital', datum:'Datum', contrib:'Contributions', retire:'Retirement', market:'Market', age:'Age' };
+                    var _d2Sn = { capital:'Capital', datum:'Datum', contrib:'Contributions', retire:'Retirement', market:'Market', age:'Age', plan:'Plan-Through' };
                     var _d2FCap = function(v) { return v >= 1 ? '$' + v.toFixed(2) + 'M' : '$' + Math.round(v * 1000) + 'k'; };
                     var _d2FDat = function(v) { return v >= 1000 ? '$' + (v/1000).toFixed(2).replace(/\.00$/,'') + 'M' : '$' + Math.round(v) + 'k'; };
                     var _d2FCon = function(v) { return v >= 1000 ? '$' + Math.round(v/1000) + 'k' : '$' + Math.round(v); };
@@ -6788,6 +6844,7 @@
                     if (_d2CapChg)     _d2Ci.push({ k:'capital', up:_d2CapDelta>0,     from:_d2FCap(gb.portfolioVol), to:_d2FCap(ds.port) });
                     if (_d2DatumChg)   _d2Ci.push({ k:'datum',   up:_d2DatumDelta>0,   from:_d2FDat(gb.targetSpend),  to:_d2FDat(s.targetSpend) });
                     if (_d2ContribChg) _d2Ci.push({ k:'contrib', up:_d2ContribDelta>0, from:_d2FCon(gb.annualContrib), to:_d2FCon(ds.contrib) });
+                    if (_d2PlanChg)    _d2Ci.push({ k:'plan',    up:_d2PlanDelta<0, from:String(gb.planThroughAge||93)+' yrs', to:String(ds.planThroughAge||93)+' yrs' });
                     if (_d2MktChg)     _d2Ci.push({ k:'market',  up:null, from:gbPinnedState.pinnedParadigm, to:_d2CurMkt });
                     _d2ChangeHtml = _d2Ci.map(function(it) {
                         var _nl = '<span style="color:rgba(255,255,255,0.5)">' + (_d2Sn[it.k] || it.k) + '</span>';
@@ -6798,7 +6855,7 @@
                     }).join('');
                 }
                 // Lever attribution: identical format to Screen 1 ("Datum Spend (+$900k, 50.7% of range)")
-                var _d2LNames = { capital:'Portfolio Balance', datum:'Datum Spend', contrib:'Annual Contributions', retire:'Retirement Age', market:'Market Paradigm', age:'Current Age' };
+                var _d2LNames = { capital:'Portfolio Balance', datum:'Datum Spend', contrib:'Annual Contributions', retire:'Retirement Age', market:'Market Paradigm', age:'Current Age', plan:'Plan-Through' };
                 if (_d2Dom) {
                     var _d2DomPct = (_d2Twt > 0 ? (_d2Dom.w / _d2Twt * 100) : 100).toFixed(1);
                     var _d2LDetail = '';
@@ -6808,6 +6865,7 @@
                         case 'contrib': { var _d2Sgn = _d2ContribDelta >= 0 ? '+' : '−'; var _d2AbsS = _d2ContribAbs >= 1000 ? '$' + Math.round(_d2ContribAbs/1000) + 'k' : '$' + Math.round(_d2ContribAbs); _d2LDetail = _d2Sgn + _d2AbsS + ', ' + _d2DomPct + '% of range'; break; }
                         case 'retire':  { var _d2Sgn = _d2RetireDelta >= 0 ? '+' : '−'; _d2LDetail = _d2Sgn + _d2RetireAbs + ' yr, ' + _d2DomPct + '% of range'; break; }
                         case 'age':     { var _d2Sgn = _d2AgeDelta >= 0 ? '+' : '−'; _d2LDetail = _d2Sgn + _d2AgeAbs + ' yr, ' + _d2DomPct + '% of range'; break; }
+                        case 'plan':    { var _d2Sgn = _d2PlanDelta >= 0 ? '+' : '−'; _d2LDetail = _d2Sgn + _d2PlanAbs + ' yr, ' + _d2DomPct + '% of range'; break; }
                         case 'market':  _d2LDetail = '→ ' + _d2CurMkt + ', ' + _d2DomPct + '% of range'; break;
                         default:        _d2LDetail = _d2DomPct + '% of range';
                     }
@@ -6842,7 +6900,7 @@
             if (_d2DomLever) {
                 _laEl.textContent = _d2DomLever;
             } else {
-                var _lMap = { datum: 'Target Datum', retire: 'Retirement Age', portfolio: 'Portfolio', contrib: 'Contributions', age: 'Current Age' };
+                var _lMap = { datum: 'Target Datum', retire: 'Retirement Age', portfolio: 'Portfolio', contrib: 'Contributions', age: 'Current Age', plan: 'Plan-Through' };
                 _laEl.textContent = (_wbCase && _wbCase.lever) ? (_lMap[_wbCase.lever] || _wbCase.lever) : '—';
             }
         }
@@ -7290,7 +7348,20 @@
           var a = Math.abs(dK);
           return a >= 1000 ? s + '$' + (a/1000).toFixed(2).replace(/\.00$/,'') + 'M' : s + '$' + Math.round(a) + 'k';
         };
+        // PTA impact via WR channel — structurally zero on fvBase, scored separately
+        var _hHave = Math.max(15, (have.planThroughAge||93) - (have.activationAge||65));
+        var _hWant = Math.max(15, (want.planThroughAge||93) - (want.activationAge||65));
+        var _ptaImpact = 0;
+        if (Math.abs(_hHave - _hWant) >= 1) {
+          var _scHave = 0.6079 / (1 - Math.pow(1.034, -_hHave));
+          var _scWant = 0.6079 / (1 - Math.pow(1.034, -_hWant));
+          _ptaImpact = basePts.fvBase * 1000 * (_scWant - _scHave) * WR_CEIL;
+        }
+        var _ptaYrsDelta = (want.planThroughAge||93) - (have.planThroughAge||93);
         if (Math.abs(totalDeltaK) < 1) {
+          if (Math.abs(_ptaImpact) >= 1) {
+            return { name: 'Plan-Through', amountSigned: (_ptaYrsDelta >= 0 ? '+' : '') + _ptaYrsDelta + ' yr', pctOfMove: 99 };
+          }
           var _dReqDeltaK = (want.targetSpend - have.targetSpend) / 0.04;
           if (Math.abs(_dReqDeltaK) >= 1) {
             return { name: 'Target Datum', amountSigned: _levFmt(_dReqDeltaK), pctOfMove: 99 };
@@ -7330,6 +7401,9 @@
         }
         scored.sort(function(a, b) { return b.aK - a.aK; });
         var top = scored[0];
+        if (Math.abs(_ptaImpact) > top.aK) {
+          return { name: 'Plan-Through', amountSigned: (_ptaYrsDelta >= 0 ? '+' : '') + _ptaYrsDelta + ' yr', pctOfMove: 99 };
+        }
         return {
           name:         top.name,
           amountSigned: _levFmt(top.dK),
