@@ -1440,7 +1440,7 @@
                 <input type="range" id="slider-age" min="18" max="85" value="40" step="1" tabindex="1">
             </div>
 
-            <div class="control-group" id="grp-retire" style="margin-bottom:0;">
+            <div class="control-group" id="grp-retire" style="margin-bottom:8px;">
                 <div class="control-header">
                     <label class="control-label" id="lbl-retire" for="slider-activation">Retirement Age</label>
                     <span class="control-value" id="val-activation">65 yrs</span>
@@ -1449,6 +1449,14 @@
                 <div id="already-retired-msg" style="display:none; margin-top:8px; padding:8px 12px; background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.3); border-radius:4px; font-family:var(--font-mono); font-size:10px; color:var(--gold); letter-spacing:0.05em;">
                   🎉 Congrats — you're already retired! Move the slider right to model a future milestone, or keep going to see what your current shape looks like.
                 </div>
+            </div>
+
+            <div class="control-group" id="grp-plan-through" style="display:none; margin-bottom:0;">
+                <div class="control-header">
+                    <label class="control-label" for="sl-plan-through">Plan Through Age</label>
+                    <span class="control-value" id="val-plan-through">93 yrs</span>
+                </div>
+                <input type="range" id="sl-plan-through" min="85" max="105" value="93" step="1">
             </div>
         </div>
 
@@ -2770,6 +2778,14 @@
 
     const slAge = document.getElementById('slider-age');
     const slAct = document.getElementById('slider-activation');
+    const slPlan = document.getElementById('sl-plan-through');
+    // F92 hook: Dossier writes datum_planThroughAge to sessionStorage; Sketch reads it at boot
+    (function() {
+        var _pta = parseInt(sessionStorage.getItem('datum_planThroughAge') || '93', 10);
+        var _pta_s = isNaN(_pta) ? 93 : Math.max(75, Math.min(105, _pta));
+        if (slPlan) slPlan.value = _pta_s;
+        currentScenario.planThroughAge = _pta_s;
+    })();
     const slPort = document.getElementById('slider-portfolio');
     const slContrib = document.getElementById('slider-contrib');
     const slDatum = document.getElementById('slider-datum');
@@ -2834,7 +2850,7 @@
     var touched = { timeline: false, capital: false, spending: false, refined: false };
 
     var currentScenario = {
-        currentAge: 40, activationAge: 65, yearsToGrow: 25,
+        currentAge: 40, activationAge: 65, yearsToGrow: 25, planThroughAge: 93,
         portfolioVol: 0.75, annualContrib: 25000, targetSpend: 100,
         conservativeRate: 1.015, baselineRate: 1.035, upsideRate: 1.055,
         isNominal: false, taxMult: 0.8, inflRate: 0.03
@@ -3031,6 +3047,8 @@
 
         if(touched.capital) document.getElementById('prog-capital').classList.add('active');
         else document.getElementById('prog-capital').classList.remove('active');
+        var _grpPlan = document.getElementById('grp-plan-through');
+        if (_grpPlan) _grpPlan.style.display = touched.capital ? '' : 'none';
 
         if(touched.spending) document.getElementById('prog-spending').classList.add('active');
         else document.getElementById('prog-spending').classList.remove('active');
@@ -3078,8 +3096,15 @@
         const inflMult = s.isNominal ? Math.pow(1 + s.inflRate, offset) : 1;
         
         const t = yearsToGrow > 0 ? offset / yearsToGrow : 0;
-        const wrCon = 0.04 - (0.04 - WR_FLOOR) * t;
-        const wrUp  = 0.04 + (WR_CEIL  - 0.04) * t;
+        // Horizon-aware WR: scale calibrated against engine PMT formula at r=3.4%, n_ref=28
+        // scale(n) = 0.6079 / (1 - 1.034^-n); n_ref=28 → scale=1.000 (zero change at default)
+        const _h      = Math.max(15, (s.planThroughAge || 93) - (s.activationAge || 65));
+        const _hScale = 0.6079 / (1 - Math.pow(1.034, -_h));
+        const _wrBase  = 0.04     * _hScale;
+        const _wrFloor = WR_FLOOR * _hScale;
+        const _wrCeil  = WR_CEIL  * _hScale;
+        const wrCon = _wrBase - (_wrBase - _wrFloor) * t;
+        const wrUp  = _wrBase + (_wrCeil  - _wrBase)  * t;
         
         const floorSpend = fvCon * 1000 * wrCon * inflMult * s.taxMult;
         const ceilSpend = fvUp * 1000 * wrUp * inflMult * s.taxMult;
@@ -4081,6 +4106,8 @@
     var WAVE_DIR_BIAS   = 0.6;   // 2C-2: direction vs proximity blend (0=pure prox, 1=pure dir)
     var WAVE_IMP_AGE    = 10;    // 2C-1: age slider impulse → ceiling channel
     var WAVE_IMP_RET    = 10;    // 2C-1: retire slider impulse → floor channel
+    var WAVE_IMP_PLAN   = 10;    // F93: plan-through slider impulse (later→floor, earlier→ceiling)
+    var WAVE_DIR_PLAN_UP = +1;   // later plan-through = floor wave; flip in DevTools if reversed
     var WAVE_AMP_LERP   = 0.18;  // Fix3: wave channel lerp (live-tunable; 0.1=slower, 0.3=snappier)
     var WAVE_LEAN_MAG   = 12;    // signed vertical bias per direction event (SVG units; live-tunable)
     // DIRECTIONAL SIGNS — flip in DevTools if a direction reads backwards:
@@ -4096,7 +4123,7 @@
     var _waveRafId = null, _waveEnabled = true;
     var _prevDatumVal = NaN, _rawDatumForWave = NaN; // bow velocity; vel computed once per rAF in waveLoop
     var _prevDatumSliderVal = NaN; // datum direction tracking (once-per-event)
-    var _prevAgeVal = NaN, _prevPortVal = NaN, _prevContribVal = NaN, _prevRetVal = NaN; // Fix3: dir tracking
+    var _prevAgeVal = NaN, _prevPortVal = NaN, _prevContribVal = NaN, _prevRetVal = NaN, _prevPlanVal = NaN; // Fix3 + F93: dir tracking
     function applyWave(pts, amp, phase, lean, xStart) {
         if (amp < 0.01 && Math.abs(lean) < 0.1) return pts;
         return pts.map(function(p) {
@@ -4273,7 +4300,10 @@
         let activationAgeRaw = parseInt(slAct.value);
         let currentAge    = clamp(currentAgeRaw, 18, 85);
         let activationAge = clamp(activationAgeRaw, currentAge + 1, 90);
-        
+        const _planMin = Math.max(75, activationAge + 20);
+        if (slPlan) { slPlan.min = String(_planMin); if (parseInt(slPlan.value) < _planMin) slPlan.value = _planMin; }
+        let planThroughAge = slPlan ? Math.max(_planMin, Math.min(105, parseInt(slPlan.value) || 93)) : 93;
+
         let portfolioVol  = clamp(readPort()    / 1000000, 0.001, 50.0);
         let annualContrib = clamp(readContrib(), 0, 200000);
         let targetSpend   = Math.round(clamp(readDatum() / 1000, 20, 1000));
@@ -4317,6 +4347,8 @@
 
         valAge.innerHTML = `${currentAge} yrs`;
         timeStart.textContent = `AGE ${currentAge}`;
+        const _valPlan = document.getElementById('val-plan-through');
+        if (_valPlan) _valPlan.innerHTML = `${planThroughAge} yrs`;
         valPort.innerHTML = portfolioVol < 1
             ? `$${Math.round(portfolioVol * 1000).toLocaleString('en-US')}k`
             : `$${portfolioVol.toFixed(2)}M`;
@@ -4340,7 +4372,7 @@
         else { conservativeRate = 1.005; baselineRate = 1.015; upsideRate = 1.035; }
 
         currentScenario = {
-            currentAge, activationAge, yearsToGrow,
+            currentAge, activationAge, yearsToGrow, planThroughAge,
             portfolioVol, annualContrib, targetSpend,
             conservativeRate, baselineRate, upsideRate,
             isNominal, taxMult, inflRate: 0.03
@@ -4457,7 +4489,9 @@
         let stateObj = getShapeStateObj(ptsEnd);
         window.currentShapeStateObj = stateObj;
 
-        const _datumCapM = ptsEnd.datumSpend / 0.04 / 1000;
+        const _hD      = Math.max(15, currentScenario.planThroughAge - activationAge);
+        const _wrBaseD = 0.04 * 0.6079 / (1 - Math.pow(1.034, -_hD));
+        const _datumCapM = ptsEnd.datumSpend / _wrBaseD / 1000;
         const datumCapStr = _datumCapM >= 1 ? `$${_datumCapM.toFixed(2)}M` : `$${Math.round(_datumCapM * 1000)}k`;
         if (hudDatumVal) { hudDatumVal.textContent = `${datumCapStr} / ${targetEndStr} yr`; }
 
@@ -5048,6 +5082,7 @@
             sessionStorage.setItem('datum_inflationMode',  isNominal ? 'nominal' : 'real');
             sessionStorage.setItem('datum_taxDrag',        slTax.value);
             sessionStorage.setItem('datum_annualContrib',  annualContrib);
+            sessionStorage.setItem('datum_planThroughAge', currentScenario.planThroughAge || 93);
         } catch(e) {}
     }
 
@@ -5304,6 +5339,8 @@
     function resetSketch() {
         slAge.value = 40;
         slAct.value = 65;
+        if (slPlan) { slPlan.value = 93; slPlan.min = '85'; }
+        _prevPlanVal = NaN;
         slPort.value   = portValToPos(0.75);   slPort.dataset.exactVal   = '';
         slDatum.value  = datumValToPos(100);   slDatum.dataset.exactVal  = '';
         slContrib.value = contribValToPos(25000); slContrib.dataset.exactVal = '';
@@ -5716,6 +5753,17 @@
         _prevRetVal = _nRet;
       }
       triggerInteraction(); touched.timeline = true; updateTracker(); scheduleUpdate();
+    });
+    if (slPlan) slPlan.addEventListener('input', () => {
+      const _minP = Math.max(75, parseInt(slAct.value) + 20);
+      if (parseInt(slPlan.value) < _minP) slPlan.value = _minP;
+      var _nPlan = parseInt(slPlan.value);
+      if (!isNaN(_prevPlanVal)) {
+        if (_nPlan > _prevPlanVal) { _floorPhaseDir = +1; _floorLean = WAVE_LEAN_MAG; addWaveImpulse(0, WAVE_IMP_PLAN); }
+        else { _ceilPhaseDir = -1; _ceilLean = -WAVE_LEAN_MAG; addWaveImpulse(WAVE_IMP_PLAN, 0); }
+      }
+      _prevPlanVal = _nPlan;
+      scheduleUpdate();
     });
     slPort.addEventListener('input', () => {
       slPort.dataset.exactVal = String(Math.round(portPosToVal(parseInt(slPort.value)) * 1000000));
@@ -7820,25 +7868,30 @@
       var gfLo = Y > 0 ? Math.pow(g_lo, Y) : 1;
       var inflM = (s.isNominal && Y > 0) ? Math.pow(1 + s.inflRate, Y) : 1;
       var M    = inflM * (s.taxMult || 0.8);   // mirrors forward inflMult × taxMult at t=1
+      // F93: horizon-aware WR — mirrors getMathPoint derivation; WR_CEIL/WR_FLOOR globals untouched
+      var _h_i     = Math.max(15, (s.planThroughAge || 93) - (s.activationAge || 65));
+      var _hScale_i = 0.6079 / (1 - Math.pow(1.034, -_h_i));
+      var wrCeilH  = WR_CEIL  * _hScale_i;
+      var wrFloorH = WR_FLOOR * _hScale_i;
       // §2 annuity coefficients (forward formula structure at t=1, M and W factored out):
       var A_up = gfUp;
       var B_up = r_up > 0 ? (gfUp - 1) / r_up : Y;  // K/1e6 multiplier for fvUp
       var A_lo = gfLo;
       var B_lo = r_lo > 0 ? (gfLo - 1) / r_lo : Y;  // K/1e6 multiplier for fvCon (Answer A: full K)
       // Effective display sensitivities returned in result for fmtPortPer1k in populateZoneC:
-      var a1 = A_up * WR_CEIL  * M;
-      var a2 = A_lo * WR_FLOOR * M;
-      var b1 = B_up * WR_CEIL  * M;
-      var b2 = B_lo * WR_FLOOR * M;
+      var a1 = A_up * wrCeilH  * M;
+      var a2 = A_lo * wrFloorH * M;
+      var b1 = B_up * wrCeilH  * M;
+      var b2 = B_lo * wrFloorH * M;
 
       var ceilTarget  = pts.ceilSpend  + dc;
       var floorTarget = pts.floorSpend + df;
       var datumTarget = pts.datumSpend + dd;
       var base = { dc: dc, df: df, dd: dd, ceilTarget: ceilTarget, floorTarget: floorTarget, datumTarget: datumTarget };
 
-      // §3 Required FV in $M — exact algebraic inverse of forward (reads WR_CEIL/WR_FLOOR, M):
-      var R_c = ceilTarget  / 1000 / (WR_CEIL  * M);  // required fvUp
-      var R_f = floorTarget / 1000 / (WR_FLOOR * M);  // required fvCon
+      // §3 Required FV in $M — exact algebraic inverse of forward (wrCeilH/wrFloorH mirror getMathPoint):
+      var R_c = ceilTarget  / 1000 / (wrCeilH  * M);  // required fvUp
+      var R_f = floorTarget / 1000 / (wrFloorH * M);  // required fvCon
       // Delta from current FV (forward self-consistent by construction):
       var dR_c = R_c - (P * A_up + (K / 1e6) * B_up);
       var dR_f = R_f - (P * A_lo + (K / 1e6) * B_lo);
@@ -7846,9 +7899,9 @@
       // ── Step 1: Y=0 → Block D (FEASIBILITY RULES §6 Step 1) ───────────────────
       if (Y === 0) {
         // Y=0: inflM=1, M=taxMult; gfUp=gfLo=1, B terms=0 (contributions can't help)
-        // ceilSpend = P × WR_CEIL × M × 1000 → P = ceilTarget/1000/(WR_CEIL×M) = R_c
+        // ceilSpend = P × wrCeilH × M × 1000 → P = ceilTarget/1000/(wrCeilH×M) = R_c
         var reqP_D  = R_c;
-        var implFlr = reqP_D * WR_FLOOR * M * 1000;
+        var implFlr = reqP_D * wrFloorH * M * 1000;
         var dP_D    = reqP_D - P;
         return Object.assign({}, base, { block: 'D', hardStop: null, reqP_M: reqP_D, dP_M: dP_D, impliedFloor_k: implFlr, P: P });
       }
@@ -7893,7 +7946,7 @@
         var paths_A = [];
         // Path 1 — Portfolio: keep K fixed; ΔP = dR_c / A_up
         var dP_A1 = A_up > 0 ? dR_c / A_up : null;
-        var fe_A1 = dP_A1 !== null ? dP_A1 * A_lo * WR_FLOOR * M * 1000 : null;
+        var fe_A1 = dP_A1 !== null ? dP_A1 * A_lo * wrFloorH * M * 1000 : null;
         _rtCheck(dP_A1, 0, 'A-portfolio', ceilTarget, 'ceil', s, Y);
         paths_A.push({
           lever: 'portfolio',
@@ -7905,7 +7958,7 @@
         });
         // Path 2 — Contributions: keep P fixed; ΔK = dR_c / B_up × 1e6
         var dK_A2 = B_up > 0 ? dR_c / B_up * 1e6 : null;
-        var fe_A2 = dK_A2 !== null ? (dK_A2 / 1e6) * B_lo * WR_FLOOR * M * 1000 : null;
+        var fe_A2 = dK_A2 !== null ? (dK_A2 / 1e6) * B_lo * wrFloorH * M * 1000 : null;
         _rtCheck(0, dK_A2, 'A-contrib', ceilTarget, 'ceil', s, Y);
         paths_A.push({
           lever: 'contributions',
@@ -7941,7 +7994,7 @@
       var paths_B = [];
       // Path 1 — Portfolio: keep K fixed; ΔP = dR_f / A_lo
       var dP_B1 = A_lo > 0 ? dR_f / A_lo : null;
-      var ce_B1 = dP_B1 !== null ? dP_B1 * A_up * WR_CEIL * M * 1000 : null;
+      var ce_B1 = dP_B1 !== null ? dP_B1 * A_up * wrCeilH * M * 1000 : null;
       _rtCheck(dP_B1, 0, 'B-portfolio', floorTarget, 'floor', s, Y);
       paths_B.push({
         lever: 'portfolio',
@@ -7953,7 +8006,7 @@
       });
       // Path 2 — Contributions: keep P fixed; ΔK = dR_f / B_lo × 1e6
       var dK_B2 = B_lo > 0 ? dR_f / B_lo * 1e6 : null;
-      var ce_B2 = dK_B2 !== null ? (dK_B2 / 1e6) * B_up * WR_CEIL * M * 1000 : null;
+      var ce_B2 = dK_B2 !== null ? (dK_B2 / 1e6) * B_up * wrCeilH * M * 1000 : null;
       _rtCheck(0, dK_B2, 'B-contrib', floorTarget, 'floor', s, Y);
       paths_B.push({
         lever: 'contributions',
