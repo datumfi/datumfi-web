@@ -5761,7 +5761,7 @@
     slPort.addEventListener('input', () => {
       slPort.dataset.exactVal = String(Math.round(portPosToVal(parseInt(slPort.value)) * 1000000));
       var _nPort = parseInt(slPort.value);
-      if (!isNaN(_prevPortVal)) { var _pd = WAVE_DIR_PORT_UP * (_nPort > _prevPortVal ? 1 : -1); _ceilPhaseDir = _pd > 0 ? +1 : -1; _ceilLean = _pd * WAVE_LEAN_MAG; addWaveImpulse(WAVE_IMP_PORT, 0); }
+      if (!isNaN(_prevPortVal)) { if (_nPort > _prevPortVal) { _ceilPhaseDir = +1; _ceilLean = WAVE_LEAN_MAG; addWaveImpulse(WAVE_IMP_PORT, 0); } else { _floorPhaseDir = -1; _floorLean = -WAVE_LEAN_MAG; addWaveImpulse(0, WAVE_IMP_PORT); } }
       _prevPortVal = _nPort;
       triggerInteraction(); touched.capital = true; updateTracker(); scheduleUpdate();
     });
