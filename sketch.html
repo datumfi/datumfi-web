@@ -4079,10 +4079,6 @@
     var WAVE_IMP_CONT    = 8;     // contrib event floor impulse
     var WAVE_IMP_MKT     = 14;    // market toggle full-cone impulse
     var WAVE_DIR_BIAS   = 0.6;   // 2C-2: direction vs proximity blend (0=pure prox, 1=pure dir)
-    var WAVE_IMP_EDGE   = 5;     // 2D-1: right-edge bow impulse per $1k/frame velocity
-    var WAVE_EDGE_DECAY = 0.93;  // 2D-1: right-edge bow target decay/frame
-    var WAVE_EDGE_MAX   = 20;    // 2D-1: max outward X bow (Bezier ctrl+_eb; rendered peak ~x660)
-    var WAVE_BOW_LERP   = 0.18;  // 2D-1: lerp factor — _edgeBow chases _edgeBowTarget per frame
     var WAVE_IMP_AGE    = 10;    // 2C-1: age slider impulse → ceiling channel
     var WAVE_IMP_RET    = 10;    // 2C-1: retire slider impulse → floor channel
     var WAVE_AMP_LERP   = 0.18;  // Fix3: wave channel lerp (live-tunable; 0.1=slower, 0.3=snappier)
@@ -4097,7 +4093,6 @@
     var _ceilLean = 0, _floorLean = 0;      // signed vertical bias (negative=up/outward; positive=down/outward)
     var _ceilPhase = 0, _floorPhase = 0;    // independent per-channel phase (advances ±WAVE_PHASE_SPEED)
     var _ceilPhaseDir = 1, _floorPhaseDir = 1; // +1=L→R, -1=R→L (live-tunable in DevTools)
-    var _edgeBow = 0, _edgeBowTarget = 0, _edgeBowDir = 1; // 2D-1: bow (lerped), target (bumped by events), dir
     var _waveRafId = null, _waveEnabled = true;
     var _prevDatumVal = NaN, _rawDatumForWave = NaN; // bow velocity; vel computed once per rAF in waveLoop
     var _prevDatumSliderVal = NaN; // datum direction tracking (once-per-event)
@@ -4124,65 +4119,29 @@
         _floorLean *= WAVE_DECAY;
         if (Math.abs(_ceilLean)  < 0.1) _ceilLean  = 0;
         if (Math.abs(_floorLean) < 0.1) _floorLean = 0;
-        // Lerp amplitudes toward targets (always non-negative; same cadence as _edgeBow)
+        // Lerp amplitudes toward targets (always non-negative)
         ceilAmp  += (_ceilTarget  - ceilAmp)  * WAVE_AMP_LERP;
         floorAmp += (_floorTarget - floorAmp) * WAVE_AMP_LERP;
         if (ceilAmp  < 0.01) ceilAmp  = 0;
         if (floorAmp < 0.01) floorAmp = 0;
-        _edgeBowTarget *= WAVE_EDGE_DECAY;
-        if (_edgeBowTarget < 0.1) _edgeBowTarget = 0;
-        _edgeBow += (_edgeBowTarget - _edgeBow) * WAVE_BOW_LERP;
-        if (_edgeBow < 0.1) _edgeBow = 0;
-        // Bow: raw abs velocity, once/frame, always-positive target
-        if (!isNaN(_rawDatumForWave) && !isNaN(_prevDatumVal)) {
-            var _wlVel = _rawDatumForWave - _prevDatumVal;
-            if (Math.abs(_wlVel) > 100) {
-                _edgeBowTarget = Math.min(_edgeBowTarget + Math.abs(_wlVel) * WAVE_IMP_EDGE / 1000, WAVE_EDGE_MAX);
-                _edgeBowDir = _wlVel > 0 ? 1 : -1;
-            }
-            _prevDatumVal = _rawDatumForWave;
-        }
         var _ca = ceilAmp  < 0.01 ? 0 : ceilAmp;
         var _fa = floorAmp < 0.01 ? 0 : floorAmp;
-        var _eb = _edgeBow; var _ebd = _edgeBowDir;
         // F89 ISOLATION: reads only cached base points, writes only fill paths (#cone-area, #d2-cone)
         if (lastCeilPts.length && lastFloorPts.length) {
             var wCeil  = applyWave(lastCeilPts,  _ca, _ceilPhase,  _ceilLean,  lastXStart);
             var wFloor = applyWave(lastFloorPts, _fa, _floorPhase, _floorLean, lastXStart);
-            var wDCone;
-            if (_eb >= 0.1) {
-                // 2D-1: quadratic Bezier bow — control point pushed +X, smooth curve, no triangle kinks
-                var _yC = parseFloat(wCeil[wCeil.length-1].split(' ')[1]);
-                var _yF = parseFloat(wFloor[0].split(' ')[1]);
-                var _pf = 0.5 - _ebd * 0.08; // direction bias: up-drag peaks near ceiling
-                var _bowStr = ' Q ' + (650 + _eb).toFixed(1) + ' ' + (_yC + (_yF-_yC)*_pf).toFixed(2) + ' 650 ' + _yF.toFixed(2);
-                wDCone = 'M ' + wCeil[0] + ' ' + wCeil.map(function(p){return 'L '+p;}).join(' ')
-                       + _bowStr + ' ' + wFloor.map(function(p){return 'L '+p;}).join(' ') + ' Z';
-            } else {
-                wDCone = 'M ' + wCeil[0] + ' ' + wCeil.map(function(p){return 'L '+p;}).join(' ')
+            var wDCone = 'M ' + wCeil[0] + ' ' + wCeil.map(function(p){return 'L '+p;}).join(' ')
                        + ' ' + wFloor.map(function(p){return 'L '+p;}).join(' ') + ' Z';
-            }
             coneArea.setAttribute('d', wDCone);
         }
         if (lastD2CeilPts.length && lastD2FloorPts.length) {
             var wD2Ceil  = applyWave(lastD2CeilPts,  _ca, _ceilPhase,  _ceilLean,  lastD2XStart);
             var wD2Floor = applyWave(lastD2FloorPts, _fa, _floorPhase, _floorLean, lastD2XStart);
-            var wD2Cone;
-            if (_eb >= 0.1) {
-                // 2D-1: Screen-2 Bezier bow — same geometry
-                var _d2yC = parseFloat(wD2Ceil[wD2Ceil.length-1].split(' ')[1]);
-                var _d2yF = parseFloat(wD2Floor[0].split(' ')[1]);
-                var _d2pf = 0.5 - _ebd * 0.08;
-                var _d2bowStr = ' Q ' + (650 + _eb).toFixed(1) + ' ' + (_d2yC + (_d2yF-_d2yC)*_d2pf).toFixed(2) + ' 650 ' + _d2yF.toFixed(2);
-                wD2Cone = 'M ' + wD2Ceil[0] + ' ' + wD2Ceil.slice(1).map(function(p){return 'L '+p;}).join(' ')
-                        + _d2bowStr + ' ' + wD2Floor.map(function(p){return 'L '+p;}).join(' ') + ' Z';
-            } else {
-                wD2Cone = 'M ' + wD2Ceil[0] + ' ' + wD2Ceil.slice(1).map(function(p){return 'L '+p;}).join(' ')
+            var wD2Cone = 'M ' + wD2Ceil[0] + ' ' + wD2Ceil.slice(1).map(function(p){return 'L '+p;}).join(' ')
                         + ' ' + wD2Floor.map(function(p){return 'L '+p;}).join(' ') + ' Z';
-            }
             var _d2cone = document.getElementById('d2-cone'); if (_d2cone) _d2cone.setAttribute('d', wD2Cone);
         }
-        if (_ceilTarget === 0 && _floorTarget === 0 && _ca === 0 && _fa === 0 && Math.abs(_ceilLean) < 0.1 && Math.abs(_floorLean) < 0.1 && _edgeBowTarget === 0 && _edgeBow === 0) { ceilAmp = 0; floorAmp = 0; _waveRafId = null; return; }
+        if (_ceilTarget === 0 && _floorTarget === 0 && _ca === 0 && _fa === 0 && Math.abs(_ceilLean) < 0.1 && Math.abs(_floorLean) < 0.1) { ceilAmp = 0; floorAmp = 0; _waveRafId = null; return; }
         _waveRafId = requestAnimationFrame(waveLoop);
     }
     function addWaveImpulse(ceilMag, floorMag) {
@@ -5599,7 +5558,7 @@
             _btn.textContent = _waveEnabled ? 'Motion: ON' : 'Motion: OFF';
             try { localStorage.setItem(_key, _waveEnabled ? 'on' : 'off'); } catch(e) {}
             if (!_waveEnabled) {
-                ceilAmp = 0; floorAmp = 0; _ceilTarget = 0; _floorTarget = 0; _ceilLean = 0; _floorLean = 0; _ceilPhase = 0; _floorPhase = 0; _edgeBow = 0; _edgeBowTarget = 0;
+                ceilAmp = 0; floorAmp = 0; _ceilTarget = 0; _floorTarget = 0; _ceilLean = 0; _floorLean = 0; _ceilPhase = 0; _floorPhase = 0;
                 if (_waveRafId) { cancelAnimationFrame(_waveRafId); _waveRafId = null; }
                 // Stop gradient stop pulses + GEM B
                 var _skc2 = document.getElementById('sketch-canvas');
