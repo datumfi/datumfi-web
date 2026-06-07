@@ -1456,7 +1456,7 @@
                     <label class="control-label" for="sl-plan-through">Plan Through Age</label>
                     <span class="control-value" id="val-plan-through">93 yrs</span>
                 </div>
-                <input type="range" id="sl-plan-through" min="85" max="105" value="93" step="1">
+                <input type="range" id="sl-plan-through" min="75" max="105" value="93" step="1">
             </div>
         </div>
 
@@ -1874,6 +1874,16 @@
               </div>
               <div id="d2-already-retired-msg" style="display:none; margin-top:8px; padding:8px 12px; background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.3); border-radius:4px; font-family:var(--font-mono); font-size:10px; color:var(--gold); letter-spacing:0.05em;">
                 🎉 Congrats — you're already retired! Move the slider right to model a future milestone.
+              </div>
+            </div>
+            <div class="control-group" style="margin-bottom:0;">
+              <div class="control-header">
+                <label class="control-label" for="d2-slider-plan-through">Plan Through Age</label>
+                <span class="control-value" id="d2-val-plan-through">93 yrs</span>
+              </div>
+              <div class="d2-slider-wrap">
+                <input type="range" id="d2-slider-plan-through" min="75" max="105" value="93" step="1">
+                <div class="d2-ghost-tick" id="d2-tick-plan-through"><div class="d2-ghost-tick-line"></div></div>
               </div>
             </div>
           </div>
@@ -5382,6 +5392,7 @@
       var grps = {
         age:     document.getElementById('grp-age'),
         retire:  document.getElementById('grp-retire'),
+        plan:    document.getElementById('grp-plan-through'),
         port:    document.getElementById('grp-portfolio'),
         contrib: document.getElementById('grp-contrib'),
         datum:   document.getElementById('grp-datum')
@@ -5389,12 +5400,13 @@
       var sliders = {
         age:     document.getElementById('slider-age'),
         retire:  document.getElementById('slider-activation'),
+        plan:    document.getElementById('sl-plan-through'),
         port:    document.getElementById('slider-portfolio'),
         contrib: document.getElementById('slider-contrib'),
         datum:   document.getElementById('slider-datum')
       };
-      var stageOrder = ['age','retire','port','contrib','datum'];
-      var touched = {age:false,retire:false,port:false,contrib:false,datum:false};
+      var stageOrder = ['age','retire','plan','port','contrib','datum'];
+      var touched = {age:false,retire:false,plan:false,port:false,contrib:false,datum:false};
 
       function isStoreDone() {
         try { return localStorage.getItem(DISCOVER_KEY) === 'done'; } catch(e) { return false; }
@@ -5500,15 +5512,19 @@
         }
         if (name === 'retire') {
           if (canvas) canvas.classList.add('f88-draw-floor');
+          var nextName = 'plan';
+          setLock(nextName, false);
+          setInvite(nextName);
+        }
+        if (name === 'plan') {
+          if (canvas) canvas.classList.add('f88-solid-ceil');
+          var mt = document.getElementById('mass-top');
+          if (mt) mt.classList.add('active');
           var nextName = 'port';
           setLock(nextName, false);
           setInvite(nextName);
         }
         if (name === 'port') {
-          // Ceiling solidifies: dashed fades, solid revealed, gold fill expands
-          if (canvas) canvas.classList.add('f88-solid-ceil');
-          var mt = document.getElementById('mass-top');
-          if (mt) mt.classList.add('active');
           var rr = document.getElementById('top-reveal-rect');
           if (rr) rr.style.width = '840px';
           updateEngine();
@@ -5573,7 +5589,7 @@
       var _hd = document.getElementById('hud-dash');
       if (_hd) _hd.classList.add('f88-hud-hidden');
       // Lock retire, port, contrib, datum at start; age stays open
-      ['retire','port','contrib','datum'].forEach(function(k) { setLock(k, true); });
+      ['retire','plan','port','contrib','datum'].forEach(function(k) { setLock(k, true); });
       setInvite('age');
       stageOrder.forEach(function(k) { bindSlider(k); });
     })();
@@ -6039,9 +6055,10 @@
       var cfg = [
         { valId: 'val-age', slider: slAge, w: '80px', isCurrency: false, maxLength: 2, getEditVal: () => String(Math.round(parseFloat(slAge.value))), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 18 && v <= 85, getClampedValid: v => Math.max(18, Math.min(85, v)), toSlider: v => v },
         { valId: 'val-activation', slider: slAct, w: '80px', isCurrency: false, maxLength: 2, getEditVal: () => String(Math.round(parseFloat(slAct.value))), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= Math.max(45, Math.round(parseFloat(slAge.value)) + 1) && v <= 90, getClampedValid: v => { var lo = Math.max(45, Math.round(parseFloat(slAge.value)) + 1); return Math.max(lo, Math.min(90, v)); }, toSlider: v => v },
+        { valId: 'val-plan-through', slider: slPlan, w: '80px', isCurrency: false, maxLength: 3, getEditVal: () => String(Math.round(parseFloat(slPlan.value))), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= Math.max(75, Math.round(parseFloat(slAct.value)) + 20) && v <= 105, getClampedValid: v => { var lo = Math.max(75, Math.round(parseFloat(slAct.value)) + 20); return Math.max(lo, Math.min(105, v)); }, toSlider: v => v },
         { valId: 'val-portfolio', slider: slPort, w: '140px', isCurrency: true, getEditVal: () => '$' + Math.round(portPosToVal(parseInt(slPort.value)) * 1000000).toLocaleString('en-US'), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 1000 && v <= 50000000, toSlider: v => portValToPos(v / 1000000) },
-        { valId: 'val-datum', slider: slDatum, w: '140px', isCurrency: true, getEditVal: () => '$' + Math.round(datumPosToVal(parseInt(slDatum.value)) * 1000).toLocaleString('en-US'), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 20000 && v <= 1000000, toSlider: v => datumValToPos(v / 1000) },
-        { valId: 'val-contrib', slider: slContrib, w: '140px', isCurrency: true, getEditVal: () => '$' + contribPosToVal(parseInt(slContrib.value)).toLocaleString('en-US'), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 0 && v <= 200000, toSlider: v => contribValToPos(v) }
+        { valId: 'val-contrib', slider: slContrib, w: '140px', isCurrency: true, getEditVal: () => '$' + contribPosToVal(parseInt(slContrib.value)).toLocaleString('en-US'), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 0 && v <= 200000, toSlider: v => contribValToPos(v) },
+        { valId: 'val-datum', slider: slDatum, w: '140px', isCurrency: true, getEditVal: () => '$' + Math.round(datumPosToVal(parseInt(slDatum.value)) * 1000).toLocaleString('en-US'), clean: s => s.replace(/[^0-9]/g, ''), validate: v => v >= 20000 && v <= 1000000, toSlider: v => datumValToPos(v / 1000) }
       ];
 
       cfg.forEach(function(c) {
@@ -6113,6 +6130,14 @@
           if(slider === slPort) touched.capital = true;
           if(slider === slDatum) touched.spending = true;
           if(slider === slContrib) touched.refined = true;
+          if (slider === slPlan) {
+            var _np = parseInt(slider.value);
+            if (!isNaN(_prevPlanVal) && _np !== _prevPlanVal) {
+              if (_np > _prevPlanVal) { _floorPhaseDir = +1; _floorLean = WAVE_LEAN_MAG; addWaveImpulse(0, WAVE_IMP_PLAN); }
+              else                   { _ceilPhaseDir  = -1; _ceilLean  = -WAVE_LEAN_MAG; addWaveImpulse(WAVE_IMP_PLAN, 0); }
+            }
+            _prevPlanVal = _np;
+          }
           updateTracker();
 
           inp.style.display = 'none'; valEl.style.display = '';
@@ -6166,13 +6191,15 @@
         if (!_d2AcceptAnimating) { initDesignState(); _d2SetProbingState(false); }
         var age     = parseInt(document.getElementById('d2-slider-age').value, 10);
         var retire  = parseInt(document.getElementById('d2-slider-activation').value, 10);
+        var plan    = parseInt((document.getElementById('d2-slider-plan-through') || {value:'93'}).value, 10) || 93;
         var port    = readD2Port()    / 1000000;  // M
         var datum   = readD2Datum()   / 1000;     // k/yr
         var contrib = readD2Contrib();            // raw $
-        designScenario = { age: age, retire: retire, port: port, datum: datum, contrib: contrib };
+        designScenario = { age: age, retire: retire, planThroughAge: plan, port: port, datum: datum, contrib: contrib };
         var _dv = function(id, txt) { var el = document.getElementById(id); if (el) el.textContent = txt; };
-        _dv('d2-val-age', age + ' yrs');
-        _dv('d2-val-activation', retire + ' yrs');
+        _dv('d2-val-age',          age + ' yrs');
+        _dv('d2-val-activation',   retire + ' yrs');
+        _dv('d2-val-plan-through', plan + ' yrs');
         _dv('d2-val-portfolio', port < 1
             ? '$' + Math.round(port * 1000).toLocaleString('en-US') + 'k'
             : '$' + port.toFixed(2) + 'M');
@@ -6188,9 +6215,11 @@
         var defs = [
             { id: 'd2-tick-age',        pct: (ghostBaseline.currentAge - 18) / (85 - 18),
               label: ghostBaseline.currentAge + ' yrs' },
-            { id: 'd2-tick-activation', pct: (ghostBaseline.activationAge - 45) / (90 - 45),
+            { id: 'd2-tick-activation',   pct: (ghostBaseline.activationAge - 45) / (90 - 45),
               label: ghostBaseline.activationAge + ' yrs' },
-            { id: 'd2-tick-portfolio',  pct: portValToPos(ghostBaseline.portfolioVol) / 100000,
+            { id: 'd2-tick-plan-through', pct: ((ghostBaseline.planThroughAge || 93) - 75) / (105 - 75),
+              label: (ghostBaseline.planThroughAge || 93) + ' yrs' },
+            { id: 'd2-tick-portfolio',    pct: portValToPos(ghostBaseline.portfolioVol) / 100000,
               label: ghostBaseline.portfolioVol < 1
                   ? '$' + Math.round(ghostBaseline.portfolioVol * 1000) + 'k'
                   : '$' + ghostBaseline.portfolioVol.toFixed(2) + 'M' },
@@ -6213,9 +6242,10 @@
     function initDesignSliders() {
         if (!ghostBaseline) return;
         var _sv = function(id, val) { var el = document.getElementById(id); if (el) el.value = val; };
-        _sv('d2-slider-age',        ghostBaseline.currentAge);
-        _sv('d2-slider-activation', ghostBaseline.activationAge);
-        _sv('d2-slider-portfolio',  portValToPos(ghostBaseline.portfolioVol));
+        _sv('d2-slider-age',          ghostBaseline.currentAge);
+        _sv('d2-slider-activation',   ghostBaseline.activationAge);
+        _sv('d2-slider-plan-through', ghostBaseline.planThroughAge || 93);
+        _sv('d2-slider-portfolio',    portValToPos(ghostBaseline.portfolioVol));
         _sv('d2-slider-datum',      datumValToPos(ghostBaseline.targetSpend));
         _sv('d2-slider-contrib',    contribValToPos(ghostBaseline.annualContrib));
         // Always sync S2 exactVal from ghostBaseline — covers Reset after Accept overwrites exactVal
@@ -8061,6 +8091,7 @@
         return {
           currentAge:       _age,
           activationAge:    _retire,
+          planThroughAge:   s.planThroughAge !== undefined ? s.planThroughAge : 93,
           yearsToGrow:      s.yearsToGrow   !== undefined ? s.yearsToGrow   : Math.max(0, _retire - _age),
           portfolioVol:     s.portfolioVol  !== undefined ? s.portfolioVol  : (s.port    || 0),
           annualContrib:    s.annualContrib  !== undefined ? s.annualContrib : (s.contrib || 0),
@@ -10293,6 +10324,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
     var slD2Port    = document.getElementById('d2-slider-portfolio');
     var slD2Datum   = document.getElementById('d2-slider-datum');
     var slD2Contrib = document.getElementById('d2-slider-contrib');
+    var slD2Plan    = document.getElementById('d2-slider-plan-through');
     function readD2Port()    { var x = slD2Port    && slD2Port.dataset.exactVal;    return (x !== undefined && x !== '') ? parseFloat(x) : portPosToVal(parseInt(slD2Port.value))    * 1000000; }
     function readD2Datum()   { var x = slD2Datum   && slD2Datum.dataset.exactVal;   return (x !== undefined && x !== '') ? parseFloat(x) : datumPosToVal(parseInt(slD2Datum.value))   * 1000;    }
     function readD2Contrib() { var x = slD2Contrib && slD2Contrib.dataset.exactVal; return (x !== undefined && x !== '') ? parseFloat(x) : contribPosToVal(parseInt(slD2Contrib.value));           }
@@ -10320,6 +10352,14 @@ Studio is built for exactly this. See If This Shape Holds →`;
       });
       if (_d2ActSlider) _d2ActSlider.addEventListener('input', function() {
         if (_d2AgeSlider && parseInt(_d2ActSlider.value) <= parseInt(_d2AgeSlider.value)) _d2ActSlider.value = parseInt(_d2AgeSlider.value) + 1;
+        var _d2PlanEl = document.getElementById('d2-slider-plan-through');
+        if (_d2PlanEl) { var _mP = Math.max(75, parseInt(_d2ActSlider.value) + 20); if (parseInt(_d2PlanEl.value) < _mP) _d2PlanEl.value = _mP; }
+        updateDesignEngine();
+      });
+      var _d2PlanSlider = document.getElementById('d2-slider-plan-through');
+      if (_d2PlanSlider) _d2PlanSlider.addEventListener('input', function() {
+        var _minP = Math.max(75, parseInt(_d2ActSlider.value) + 20);
+        if (parseInt(_d2PlanSlider.value) < _minP) _d2PlanSlider.value = _minP;
         updateDesignEngine();
       });
       // d2-market radios — re-render canvas + HUD + wave animation on change
@@ -10348,21 +10388,27 @@ Studio is built for exactly this. See If This Shape Holds →`;
           validate: function(v) { return v >= Math.max(45, parseInt(slD2Age.value, 10) + 1) && v <= 90; },
           getClampedValid: function(raw) { var lo = Math.max(45, parseInt(slD2Age.value, 10) + 1); return Math.max(lo, Math.min(90, raw)); },
           toSlider: function(v) { return v; } },
+        { valId: 'd2-val-plan-through', slider: slD2Plan, w: '80px', isCurrency: false, maxLength: 3,
+          getEditVal: function() { return String(parseInt(slD2Plan.value, 10)); },
+          clean: function(s) { return s.replace(/[^0-9]/g, ''); },
+          validate: function(v) { var lo = Math.max(75, parseInt(slD2Act.value, 10) + 20); return v >= lo && v <= 105; },
+          getClampedValid: function(raw) { var lo = Math.max(75, parseInt(slD2Act.value, 10) + 20); return Math.max(lo, Math.min(105, raw)); },
+          toSlider: function(v) { return v; } },
         { valId: 'd2-val-portfolio', slider: slD2Port,    w: '140px', isCurrency: true,
           getEditVal: function() { return '$' + Math.round(portPosToVal(parseInt(slD2Port.value)) * 1000000).toLocaleString('en-US'); },
           clean: function(s) { return s.replace(/[^0-9]/g, ''); },
           validate: function(v) { return v >= 1000 && v <= 50000000; },
           toSlider: function(v) { return portValToPos(v / 1000000); } },
-        { valId: 'd2-val-datum',     slider: slD2Datum,   w: '140px', isCurrency: true,
-          getEditVal: function() { return '$' + Math.round(datumPosToVal(parseInt(slD2Datum.value)) * 1000).toLocaleString('en-US'); },
-          clean: function(s) { return s.replace(/[^0-9]/g, ''); },
-          validate: function(v) { return v >= 20000 && v <= 1000000; },
-          toSlider: function(v) { return datumValToPos(v / 1000); } },
         { valId: 'd2-val-contrib',   slider: slD2Contrib, w: '140px', isCurrency: true,
           getEditVal: function() { return '$' + Math.round(contribPosToVal(parseInt(slD2Contrib.value))).toLocaleString('en-US'); },
           clean: function(s) { return s.replace(/[^0-9]/g, ''); },
           validate: function(v) { return v >= 0 && v <= 200000; },
-          toSlider: function(v) { return contribValToPos(v); } }
+          toSlider: function(v) { return contribValToPos(v); } },
+        { valId: 'd2-val-datum',     slider: slD2Datum,   w: '140px', isCurrency: true,
+          getEditVal: function() { return '$' + Math.round(datumPosToVal(parseInt(slD2Datum.value)) * 1000).toLocaleString('en-US'); },
+          clean: function(s) { return s.replace(/[^0-9]/g, ''); },
+          validate: function(v) { return v >= 20000 && v <= 1000000; },
+          toSlider: function(v) { return datumValToPos(v / 1000); } }
       ];
 
       d2cfg.forEach(function(c) {
