@@ -5753,7 +5753,7 @@
       if (parseInt(slAct.value) <= parseInt(slAge.value)) slAct.value = minRet;
       if (!window._f88DiscoveryActive) {
         var _nRet = parseInt(slAct.value);
-        if (!isNaN(_prevRetVal)) { var _rd = WAVE_DIR_RET_UP * (_nRet > _prevRetVal ? 1 : -1); _floorPhaseDir = _rd > 0 ? +1 : -1; _floorLean = _rd * WAVE_LEAN_MAG; addWaveImpulse(0, WAVE_IMP_RET); }
+        if (!isNaN(_prevRetVal)) { if (_nRet > _prevRetVal) { _floorPhaseDir = +1; _floorLean = WAVE_LEAN_MAG; addWaveImpulse(0, WAVE_IMP_RET); } else { _ceilPhaseDir = -1; _ceilLean = -WAVE_LEAN_MAG; addWaveImpulse(WAVE_IMP_RET, 0); } }
         _prevRetVal = _nRet;
       }
       triggerInteraction(); touched.timeline = true; updateTracker(); scheduleUpdate();
