@@ -4083,6 +4083,7 @@
     var WAVE_IMP_RET    = 10;    // 2C-1: retire slider impulse → floor channel
     var WAVE_AMP_LERP   = 0.18;  // Fix3: wave channel lerp (live-tunable; 0.1=slower, 0.3=snappier)
     var WAVE_LEAN_MAG   = 12;    // signed vertical bias per direction event (SVG units; live-tunable)
+    var WAVE_IMP_EDGE   = 10;   // right-edge impulse per event (live-tunable; SVG units max bow)
     // DIRECTIONAL SIGNS — flip in DevTools if a direction reads backwards:
     var WAVE_DIR_PORT_UP  = -1;  // portfolio up = ceiling breathes out (expand)
     var WAVE_DIR_AGE_UP   = +1;  // age older = ceiling tightens (compress)
@@ -4097,6 +4098,7 @@
     var _prevDatumVal = NaN, _rawDatumForWave = NaN; // bow velocity; vel computed once per rAF in waveLoop
     var _prevDatumSliderVal = NaN; // datum direction tracking (once-per-event)
     var _prevAgeVal = NaN, _prevPortVal = NaN, _prevContribVal = NaN, _prevRetVal = NaN; // Fix3: dir tracking
+    var _edgeAmp = 0, _edgeTarget = 0, _edgePhase = 0, _edgePosDir = 1; // edge: +1=top, -1=bottom
     function applyWave(pts, amp, phase, lean, xStart) {
         if (amp < 0.01 && Math.abs(lean) < 0.1) return pts;
         return pts.map(function(p) {
@@ -4105,6 +4107,17 @@
             var y = parseFloat(parts[1]);
             return x.toFixed(1) + ' ' + (y + amp * Math.sin(2 * Math.PI * (x - xStart) / WAVE_LAMBDA - phase) + lean).toFixed(2);
         });
+    }
+    function applyEdgeWave(yTop, yBot, amp, phase, posDir, N) {
+        var pts = [];
+        for (var i = 1; i < N; i++) {
+            var t = i / N;
+            var y = yTop + (yBot - yTop) * t;
+            var env = posDir > 0 ? (1 - t) : t;
+            var x = 650 + amp * env * Math.sin(2 * Math.PI * t - phase);
+            pts.push(x.toFixed(1) + ' ' + y.toFixed(2));
+        }
+        return pts;
     }
     function waveLoop() {
         // Per-channel phase: only advances while that channel is active (persistent — no reset on settle)
@@ -4119,6 +4132,11 @@
         _floorLean *= WAVE_DECAY;
         if (Math.abs(_ceilLean)  < 0.1) _ceilLean  = 0;
         if (Math.abs(_floorLean) < 0.1) _floorLean = 0;
+        if (_edgeTarget > 0 || _edgeAmp > 0.01) _edgePhase += WAVE_PHASE_SPEED;
+        _edgeTarget *= WAVE_DECAY;
+        if (_edgeTarget < 0.01) _edgeTarget = 0;
+        _edgeAmp += (_edgeTarget - _edgeAmp) * WAVE_AMP_LERP;
+        if (_edgeAmp < 0.01) _edgeAmp = 0;
         // Lerp amplitudes toward targets (always non-negative)
         ceilAmp  += (_ceilTarget  - ceilAmp)  * WAVE_AMP_LERP;
         floorAmp += (_floorTarget - floorAmp) * WAVE_AMP_LERP;
@@ -4130,24 +4148,37 @@
         if (lastCeilPts.length && lastFloorPts.length) {
             var wCeil  = applyWave(lastCeilPts,  _ca, _ceilPhase,  _ceilLean,  lastXStart);
             var wFloor = applyWave(lastFloorPts, _fa, _floorPhase, _floorLean, lastXStart);
+            var _eyC = parseFloat(wCeil[wCeil.length-1].split(' ')[1]);
+            var _eyF = parseFloat(wFloor[0].split(' ')[1]);
+            var _ePts = _edgeAmp > 0.01 ? applyEdgeWave(_eyC, _eyF, _edgeAmp, _edgePhase, _edgePosDir, 12) : [];
+            var _eStr = _ePts.length ? ' ' + _ePts.map(function(p){return 'L '+p;}).join(' ') : '';
             var wDCone = 'M ' + wCeil[0] + ' ' + wCeil.map(function(p){return 'L '+p;}).join(' ')
-                       + ' ' + wFloor.map(function(p){return 'L '+p;}).join(' ') + ' Z';
+                       + _eStr + ' ' + wFloor.map(function(p){return 'L '+p;}).join(' ') + ' Z';
             coneArea.setAttribute('d', wDCone);
         }
         if (lastD2CeilPts.length && lastD2FloorPts.length) {
             var wD2Ceil  = applyWave(lastD2CeilPts,  _ca, _ceilPhase,  _ceilLean,  lastD2XStart);
             var wD2Floor = applyWave(lastD2FloorPts, _fa, _floorPhase, _floorLean, lastD2XStart);
+            var _d2eyC = parseFloat(wD2Ceil[wD2Ceil.length-1].split(' ')[1]);
+            var _d2eyF = parseFloat(wD2Floor[0].split(' ')[1]);
+            var _d2ePts = _edgeAmp > 0.01 ? applyEdgeWave(_d2eyC, _d2eyF, _edgeAmp, _edgePhase, _edgePosDir, 12) : [];
+            var _d2eStr = _d2ePts.length ? ' ' + _d2ePts.map(function(p){return 'L '+p;}).join(' ') : '';
             var wD2Cone = 'M ' + wD2Ceil[0] + ' ' + wD2Ceil.slice(1).map(function(p){return 'L '+p;}).join(' ')
-                        + ' ' + wD2Floor.map(function(p){return 'L '+p;}).join(' ') + ' Z';
+                        + _d2eStr + ' ' + wD2Floor.map(function(p){return 'L '+p;}).join(' ') + ' Z';
             var _d2cone = document.getElementById('d2-cone'); if (_d2cone) _d2cone.setAttribute('d', wD2Cone);
         }
-        if (_ceilTarget === 0 && _floorTarget === 0 && _ca === 0 && _fa === 0 && Math.abs(_ceilLean) < 0.1 && Math.abs(_floorLean) < 0.1) { ceilAmp = 0; floorAmp = 0; _waveRafId = null; return; }
+        if (_ceilTarget === 0 && _floorTarget === 0 && _ca === 0 && _fa === 0 && Math.abs(_ceilLean) < 0.1 && Math.abs(_floorLean) < 0.1 && _edgeTarget === 0 && _edgeAmp < 0.01) { ceilAmp = 0; floorAmp = 0; _waveRafId = null; return; }
         _waveRafId = requestAnimationFrame(waveLoop);
     }
     function addWaveImpulse(ceilMag, floorMag) {
         if (!_waveEnabled) return;
         _ceilTarget  = Math.min(_ceilTarget  + ceilMag,  18);
         _floorTarget = Math.min(_floorTarget + floorMag, 18);
+        if (!_waveRafId) _waveRafId = requestAnimationFrame(waveLoop);
+    }
+    function addEdgeImpulse(mag) {
+        if (!_waveEnabled) return;
+        _edgeTarget = Math.min(_edgeTarget + mag, 18);
         if (!_waveRafId) _waveRafId = requestAnimationFrame(waveLoop);
     }
     // ── END F89 VERTEX WAVE ───────────────────────────────────────────────
@@ -5558,7 +5589,7 @@
             _btn.textContent = _waveEnabled ? 'Motion: ON' : 'Motion: OFF';
             try { localStorage.setItem(_key, _waveEnabled ? 'on' : 'off'); } catch(e) {}
             if (!_waveEnabled) {
-                ceilAmp = 0; floorAmp = 0; _ceilTarget = 0; _floorTarget = 0; _ceilLean = 0; _floorLean = 0; _ceilPhase = 0; _floorPhase = 0;
+                ceilAmp = 0; floorAmp = 0; _ceilTarget = 0; _floorTarget = 0; _ceilLean = 0; _floorLean = 0; _ceilPhase = 0; _floorPhase = 0; _edgeAmp = 0; _edgeTarget = 0;
                 if (_waveRafId) { cancelAnimationFrame(_waveRafId); _waveRafId = null; }
                 // Stop gradient stop pulses + GEM B
                 var _skc2 = document.getElementById('sketch-canvas');
@@ -5701,7 +5732,7 @@
       if (parseInt(slAge.value) >= parseInt(slAct.value)) slAge.value = maxAge;
       if (!window._f88DiscoveryActive) {
         var _nAge = parseInt(slAge.value);
-        if (!isNaN(_prevAgeVal)) { if (_nAge > _prevAgeVal) { _ceilPhaseDir = +1; _ceilLean = WAVE_LEAN_MAG; addWaveImpulse(WAVE_IMP_AGE, 0); } else { _floorPhaseDir = -1; _floorLean = -WAVE_LEAN_MAG; addWaveImpulse(0, WAVE_IMP_AGE); } }
+        if (!isNaN(_prevAgeVal)) { if (_nAge > _prevAgeVal) { _ceilPhaseDir = +1; _ceilLean = WAVE_LEAN_MAG; addWaveImpulse(WAVE_IMP_AGE, 0); _edgePosDir = +1; addEdgeImpulse(WAVE_IMP_EDGE); } else { _floorPhaseDir = -1; _floorLean = -WAVE_LEAN_MAG; addWaveImpulse(0, WAVE_IMP_AGE); _edgePosDir = -1; addEdgeImpulse(WAVE_IMP_EDGE); } }
         _prevAgeVal = _nAge;
       }
       triggerInteraction(); touched.timeline = true; updateTracker(); scheduleUpdate();
@@ -5712,7 +5743,7 @@
       if (parseInt(slAct.value) <= parseInt(slAge.value)) slAct.value = minRet;
       if (!window._f88DiscoveryActive) {
         var _nRet = parseInt(slAct.value);
-        if (!isNaN(_prevRetVal)) { if (_nRet > _prevRetVal) { _floorPhaseDir = +1; _floorLean = WAVE_LEAN_MAG; addWaveImpulse(0, WAVE_IMP_RET); } else { _ceilPhaseDir = -1; _ceilLean = -WAVE_LEAN_MAG; addWaveImpulse(WAVE_IMP_RET, 0); } }
+        if (!isNaN(_prevRetVal)) { if (_nRet > _prevRetVal) { _floorPhaseDir = +1; _floorLean = WAVE_LEAN_MAG; addWaveImpulse(0, WAVE_IMP_RET); _edgePosDir = -1; addEdgeImpulse(WAVE_IMP_EDGE); } else { _ceilPhaseDir = -1; _ceilLean = -WAVE_LEAN_MAG; addWaveImpulse(WAVE_IMP_RET, 0); _edgePosDir = +1; addEdgeImpulse(WAVE_IMP_EDGE); } }
         _prevRetVal = _nRet;
       }
       triggerInteraction(); touched.timeline = true; updateTracker(); scheduleUpdate();
@@ -5720,14 +5751,14 @@
     slPort.addEventListener('input', () => {
       slPort.dataset.exactVal = String(Math.round(portPosToVal(parseInt(slPort.value)) * 1000000));
       var _nPort = parseInt(slPort.value);
-      if (!isNaN(_prevPortVal)) { if (_nPort > _prevPortVal) { _ceilPhaseDir = +1; _ceilLean = WAVE_LEAN_MAG; addWaveImpulse(WAVE_IMP_PORT, 0); } else { _floorPhaseDir = -1; _floorLean = -WAVE_LEAN_MAG; addWaveImpulse(0, WAVE_IMP_PORT); } }
+      if (!isNaN(_prevPortVal)) { if (_nPort > _prevPortVal) { _ceilPhaseDir = +1; _ceilLean = WAVE_LEAN_MAG; addWaveImpulse(WAVE_IMP_PORT, 0); _edgePosDir = +1; addEdgeImpulse(WAVE_IMP_EDGE); } else { _floorPhaseDir = -1; _floorLean = -WAVE_LEAN_MAG; addWaveImpulse(0, WAVE_IMP_PORT); _edgePosDir = -1; addEdgeImpulse(WAVE_IMP_EDGE); } }
       _prevPortVal = _nPort;
       triggerInteraction(); touched.capital = true; updateTracker(); scheduleUpdate();
     });
     slContrib.addEventListener('input', () => {
       slContrib.dataset.exactVal = String(Math.round(contribPosToVal(parseInt(slContrib.value))));
       var _nCont = parseInt(slContrib.value);
-      if (!isNaN(_prevContribVal)) { if (_nCont > _prevContribVal) { _floorPhaseDir = +1; _floorLean = WAVE_LEAN_MAG; addWaveImpulse(0, WAVE_IMP_CONT); } else { _ceilPhaseDir = -1; _ceilLean = -WAVE_LEAN_MAG; addWaveImpulse(WAVE_IMP_CONT, 0); } }
+      if (!isNaN(_prevContribVal)) { if (_nCont > _prevContribVal) { _floorPhaseDir = +1; _floorLean = WAVE_LEAN_MAG; addWaveImpulse(0, WAVE_IMP_CONT); _edgePosDir = -1; addEdgeImpulse(WAVE_IMP_EDGE); } else { _ceilPhaseDir = -1; _ceilLean = -WAVE_LEAN_MAG; addWaveImpulse(WAVE_IMP_CONT, 0); _edgePosDir = +1; addEdgeImpulse(WAVE_IMP_EDGE); } }
       _prevContribVal = _nCont;
       triggerInteraction(); touched.refined = true; updateTracker(); scheduleUpdate();
     });
@@ -5742,8 +5773,8 @@
             var _sp = lastCalculatedPoints.ceilSpend - lastCalculatedPoints.floorSpend;
             _prox = _sp > 0 ? (lastCalculatedPoints.ceilSpend - lastCalculatedPoints.datumSpend) / _sp : 0.5;
           }
-          if (_dDir > 0) { _ceilPhaseDir = +1; _ceilLean = WAVE_LEAN_MAG; addWaveImpulse(WAVE_IMP_DATUM * _prox, 0); }
-          else           { _floorPhaseDir = -1; _floorLean = -WAVE_LEAN_MAG; addWaveImpulse(0, WAVE_IMP_DATUM * (1 - _prox)); }
+          if (_dDir > 0) { _ceilPhaseDir = +1; _ceilLean = WAVE_LEAN_MAG; addWaveImpulse(WAVE_IMP_DATUM * _prox, 0); _edgePosDir = +1; addEdgeImpulse(WAVE_IMP_EDGE); }
+          else           { _floorPhaseDir = -1; _floorLean = -WAVE_LEAN_MAG; addWaveImpulse(0, WAVE_IMP_DATUM * (1 - _prox)); _edgePosDir = -1; addEdgeImpulse(WAVE_IMP_EDGE); }
         }
         _prevDatumSliderVal = _nDat;
       }
