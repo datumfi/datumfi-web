@@ -7518,11 +7518,14 @@
           _ptaImpact = basePts.fvBase * 1000 * (_scWant - _scHave) * WR_CEIL;
         }
         var _ptaYrsDelta = (want.planThroughAge||93) - (have.planThroughAge||93);
+        // Horizon-aware WR for Datum capital delta — same formula as _hScaleS3 but derived from
+        // _hWant (already computed above) so it stays in lexical scope of this function.
+        var _hScW = 0.6079 / (1 - Math.pow(1.034, -_hWant));
         if (Math.abs(totalDeltaK) < 1) {
           if (Math.abs(_ptaImpact) >= 1) {
             return { name: 'Plan-Through', amountSigned: (_ptaYrsDelta >= 0 ? '+' : '') + _ptaYrsDelta + ' yr', pctOfMove: 99 };
           }
-          var _dReqDeltaK = (want.targetSpend - have.targetSpend) / 0.04;
+          var _dReqDeltaK = (want.targetSpend - have.targetSpend) / (0.04 * _hScW);
           if (Math.abs(_dReqDeltaK) >= 1) {
             return { name: 'Target Datum', amountSigned: _levFmt(_dReqDeltaK), pctOfMove: 99 };
           }
@@ -7553,7 +7556,7 @@
           return { name: t.name, dK: dK, aK: aK };
         });
         if (totalAbsK < 1) {
-          var _dReqDeltaK2 = (want.targetSpend - have.targetSpend) / 0.04;
+          var _dReqDeltaK2 = (want.targetSpend - have.targetSpend) / (0.04 * _hScW);
           if (Math.abs(_dReqDeltaK2) >= 1) {
             return { name: 'Target Datum', amountSigned: _levFmt(_dReqDeltaK2), pctOfMove: 99 };
           }
