@@ -152,6 +152,10 @@
   .toggle-option:first-child .mkt-tooltip::after { left: 30px; transform: none; }
   .toggle-option:last-child .mkt-tooltip { left: auto; right: 0; transform: none; }
   .toggle-option:last-child .mkt-tooltip::after { left: auto; right: 30px; transform: none; }
+  /* --- LEVER TOOLTIPS --- */
+  .lev-tooltip { display: none; position: absolute; top: calc(100% + 8px); left: 0; width: 260px; z-index: var(--z-tooltip); background: rgba(6,11,20,0.97); border: 1px solid rgba(93,202,165,0.3); border-radius: 6px; padding: 12px 14px; pointer-events: none; box-shadow: 0 8px 32px rgba(0,0,0,0.6); font-family: var(--font-sans); font-size: 13px; font-weight: 300; color: rgba(255,255,255,0.8); line-height: 1.5; }
+  .lev-tooltip::before { content: ''; position: absolute; bottom: 100%; left: 16px; border: 6px solid transparent; border-bottom-color: rgba(93,202,165,0.3); }
+  .control-group:hover .lev-tooltip { display: block; animation: fade-in 0.2s ease; }
 
   /* --- ADVANCED DRAWER & METHODOLOGY --- */
   .advanced-trigger { background: transparent; border: none; outline: none; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--teal-mid); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 4px 0; margin-top: 4px; transition: color 0.2s; border-top: 1px dashed rgba(255,255,255,0.1); width: 100%; }
@@ -1438,6 +1442,7 @@
                     <span class="control-value" id="val-age">40 yrs</span>
                 </div>
                 <input type="range" id="slider-age" min="18" max="85" value="40" step="1" tabindex="1">
+                <div class="lev-tooltip">Where you are today — the starting point, and how many years of building still lie ahead before retirement.</div>
             </div>
 
             <div class="control-group" id="grp-retire" style="margin-bottom:8px;">
@@ -1446,6 +1451,7 @@
                     <span class="control-value" id="val-activation">65 yrs</span>
                 </div>
                 <input type="range" id="slider-activation" min="45" max="90" value="65" step="1" tabindex="2">
+                <div class="lev-tooltip">The year you stop earning and start drawing — it sets how long your money has to grow and when the spending begins.</div>
                 <div id="already-retired-msg" style="display:none; margin-top:8px; padding:8px 12px; background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.3); border-radius:4px; font-family:var(--font-mono); font-size:10px; color:var(--gold); letter-spacing:0.05em;">
                   🎉 Congrats — you're already retired! Move the slider right to model a future milestone, or keep going to see what your current shape looks like.
                 </div>
@@ -1457,6 +1463,7 @@
                     <span class="control-value" id="val-plan-through">93 yrs</span>
                 </div>
                 <input type="range" id="sl-plan-through" min="75" max="105" value="93" step="1">
+                <div class="lev-tooltip">How long you're planning for your money to last — a shorter retirement raises your boundaries, a longer one lowers them, so set it to the age you genuinely want to be covered through.</div>
             </div>
         </div>
 
@@ -1492,6 +1499,7 @@
                     <div style="font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.4); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.1em;">Your target annual retirement spending — the point you choose to test inside your Shape.</div>
                 </div>
                 <input type="range" id="slider-datum" min="0" max="100000" value="41141" step="1" tabindex="5">
+                <div class="lev-tooltip">Your target spending line — the lifestyle you're aiming to fund each year, measured against what your plan can safely support.</div>
             </div>
 
             <div class="dialogue-block" style="border-bottom:none; padding-bottom:0;">
@@ -1862,6 +1870,7 @@
                 <input type="range" id="d2-slider-age" min="18" max="85" value="40" step="1">
                 <div class="d2-ghost-tick" id="d2-tick-age"><div class="d2-ghost-tick-line"></div></div>
               </div>
+              <div class="lev-tooltip">Where you are today — the starting point, and how many years of building still lie ahead before retirement.</div>
             </div>
             <div class="control-group" style="margin-bottom:0;">
               <div class="control-header">
@@ -1872,6 +1881,7 @@
                 <input type="range" id="d2-slider-activation" min="45" max="90" value="65" step="1">
                 <div class="d2-ghost-tick" id="d2-tick-activation"><div class="d2-ghost-tick-line"></div></div>
               </div>
+              <div class="lev-tooltip">The year you stop earning and start drawing — it sets how long your money has to grow and when the spending begins.</div>
               <div id="d2-already-retired-msg" style="display:none; margin-top:8px; padding:8px 12px; background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.3); border-radius:4px; font-family:var(--font-mono); font-size:10px; color:var(--gold); letter-spacing:0.05em;">
                 🎉 Congrats — you're already retired! Move the slider right to model a future milestone.
               </div>
@@ -1885,6 +1895,7 @@
                 <input type="range" id="d2-slider-plan-through" min="75" max="105" value="93" step="1">
                 <div class="d2-ghost-tick" id="d2-tick-plan-through"><div class="d2-ghost-tick-line"></div></div>
               </div>
+              <div class="lev-tooltip">How long you're planning for your money to last — a shorter retirement raises your boundaries, a longer one lowers them, so set it to the age you genuinely want to be covered through.</div>
             </div>
           </div>
 
@@ -1915,6 +1926,7 @@
                 <input type="range" id="d2-slider-datum" min="0" max="100000" value="41141" step="1">
                 <div class="d2-ghost-tick" id="d2-tick-datum"><div class="d2-ghost-tick-line"></div></div>
               </div>
+              <div class="lev-tooltip">Your target spending line — the lifestyle you're aiming to fund each year, measured against what your plan can safely support.</div>
             </div>
 
             <div class="dialogue-block" style="padding-top:14px; border-top:1px solid rgba(255,255,255,0.06);">
@@ -1938,14 +1950,26 @@
                   <div class="toggle-option">
                     <input type="radio" id="d2-market-opt" name="d2-market" value="optimistic">
                     <label for="d2-market-opt">Optimistic</label>
+                    <div class="mkt-tooltip" style="border-color:rgba(201,168,76,0.4);">
+                      <div class="mkt-tooltip-head" style="color:var(--gold);">Market Scenario</div>
+                      <div class="mkt-tooltip-body">Assumes markets grow faster than inflation, with upside real returns around 4%–6.5%.<br><br><strong>Plain English:</strong> This shows how your Shape can widen if markets help.</div>
+                    </div>
                   </div>
                   <div class="toggle-option">
                     <input type="radio" id="d2-market-avg" name="d2-market" value="average" checked>
                     <label for="d2-market-avg">Historical</label>
+                    <div class="mkt-tooltip">
+                      <div class="mkt-tooltip-head" style="color:var(--teal-mid);">Market Scenario</div>
+                      <div class="mkt-tooltip-body">Uses a middle-of-the-road real return baseline around 3.5% after inflation.<br><br><strong>Plain English:</strong> When people hear 7%–8% market returns, that is usually before inflation. This view shows purchasing-power growth.</div>
+                    </div>
                   </div>
                   <div class="toggle-option">
                     <input type="radio" id="d2-market-stress" name="d2-market" value="stress">
                     <label for="d2-market-stress">Stress</label>
+                    <div class="mkt-tooltip" style="border-color:rgba(226,75,74,0.4);">
+                      <div class="mkt-tooltip-head" style="color:var(--danger-red);">Market Scenario</div>
+                      <div class="mkt-tooltip-body">Assumes real returns stay low, roughly 0.5%–3.5% after inflation.<br><br><strong>Plain English:</strong> This compresses the Shape and shows what may still hold if markets disappoint.</div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2238,7 +2262,8 @@
           <div class="card-title">The Shape Begins</div>
           <div class="card-desc">
             You're <strong id="s2-age">—</strong>, planning to retire at <strong id="s2-retire">—</strong>.
-            That's <strong id="s2-years-to-retire">—</strong> years to build.<br><br>
+            That's <strong id="s2-years-to-retire">—</strong> years to build.
+            And you're planning through <strong id="s2-plan-through-val">—</strong> — about <strong id="s2-plan-years-val">—</strong> years of retirement to fund, which is what sets how far this money has to stretch.<br><br>
             You have <strong id="s2-port" style="color:var(--gold);">—</strong> saved today,
             adding <strong id="s2-contrib">—</strong>/yr.<br><br>
             You want to spend <strong id="s2-datum" style="color:var(--teal-mid);">—</strong>/yr in retirement.
@@ -7503,11 +7528,18 @@
           if (dir === '+') return size === 'small' ? b.pSm : b.pLg;
           return size === 'small' ? b.mSm : b.mLg;
         };
+        var _hScaleS3 = (function() {
+          var _ptaS3 = (_d2LastScenario || {}).planThroughAge || 93;
+          var _actS3 = (_d2LastScenario || {}).activationAge  || 65;
+          var _hS3   = Math.max(15, _ptaS3 - _actS3);
+          return 0.6079 / (1 - Math.pow(1.034, -_hS3));
+        })();
         var _s3CouldBeTokens = function(datum) {
           var pSm  = _pickIncrement(datum, '+', 'small'),  pLg  = _pickIncrement(datum, '+', 'large');
           var mSm  = _pickIncrement(datum, '-', 'small'),  mLg  = _pickIncrement(datum, '-', 'large');
           var pDSm = datum + pSm,  pDLg = datum + pLg;
           var mDSm = datum - mSm,  mDLg = datum - mLg;
+          var _wr  = 0.04 * _hScaleS3;
           var up = function(v) { return '<span class="c4-up">'   + v + '</span>'; };
           var dn = function(v) { return '<span class="c4-down">' + v + '</span>'; };
           return {
@@ -7519,10 +7551,10 @@
             plusDatumLargeK:    up('$' + pDLg + 'k'),
             minusDatumSmallK:   dn('$' + mDSm + 'k'),
             minusDatumLargeK:   dn('$' + mDLg + 'k'),
-            plusDatumSmallReqM:  up(_fmtM(pDSm / 0.04 / 1000)),
-            plusDatumLargeReqM:  up(_fmtM(pDLg / 0.04 / 1000)),
-            minusDatumSmallReqM: dn(_fmtM(mDSm / 0.04 / 1000)),
-            minusDatumLargeReqM: dn(_fmtM(mDLg / 0.04 / 1000))
+            plusDatumSmallReqM:  up(_fmtM(pDSm / _wr / 1000)),
+            plusDatumLargeReqM:  up(_fmtM(pDLg / _wr / 1000)),
+            minusDatumSmallReqM: dn(_fmtM(mDSm / _wr / 1000)),
+            minusDatumLargeReqM: dn(_fmtM(mDLg / _wr / 1000))
           };
         };
         // G.2.1: zero-change detection — shared by Box 3 (R2.C) and Box 4 (R2.D)
@@ -7543,7 +7575,7 @@
         var _usd3WantVars = {
           gbDatumK: '$' + Math.round(dd) + 'k', gbCeilK: '$' + Math.round(dc) + 'k', gbFloorK: '$' + Math.round(df) + 'k',
           gbDatumM: _fmtM(_gbPts.fvBase), gbCeilM: _fmtM(_gbPts.fvUp), gbFloorM: _fmtM(_gbPts.fvCon),
-          gbDatumReqM: _fmtM((dd || 0) / 0.04 / 1000)
+          gbDatumReqM: _fmtM(_gbPts.datumCapM || ((dd || 0) / 0.04 / 1000))
         };
         var _sk1    = 'S3.C2.' + ((stObj1.name || 'EXPANSIVE') + '-' + (stObj1.subZone || 'CENTERED')) + '.HAVE.' + _mktKey;
         var _sk2    = 'S3.C2.' + (stObj2.name + '-' + (stObj2.subZone || 'CENTERED')) + '.WANT.' + _mktKey;
@@ -7635,6 +7667,8 @@
         var _c4tCeil  = _ceilMDelta  >  0.10 ? Math.min(100, Math.abs(_ceilMDeltaPct)  * 70) : 0;
         var _c4tSt    = ((stObj1.name || '') !== (stObj2.name || '')) ? 60 : 0;
         var _c4tSz    = (stObj1.name === stObj2.name && (stObj1.subZone || '') !== (stObj2.subZone || '')) ? 40 : 0;
+        var _planYearsDelta = (_c4Want.planThroughAge || 93) - (_c4Have.planThroughAge || 93);
+        var _c4tHorizon = Math.abs(_planYearsDelta) >= 1 ? Math.min(100, Math.abs(_planYearsDelta) * 12) : 0;
         // Priority override → conditional best → fallback
         var _c4Key;
         if (_c4pStructural > 0) {
@@ -7643,13 +7677,14 @@
           _c4Key = 'PARADOX-TIGHT';
         } else {
           var _c4Cands = [
-            { key: 'TIME-SHIFT',          score: _c4tTime  },
-            { key: 'CONTRIBUTION-SHIFT',  score: _c4tCon   },
-            { key: 'CAPITAL-SHIFT',       score: _c4tCap   },
-            { key: 'FLOOR-RISK-SHIFT',    score: _c4tFloor },
-            { key: 'CEILING-REACH-SHIFT', score: _c4tCeil  },
-            { key: 'STATE-TRANSITION',    score: _c4tSt    },
-            { key: 'SUB-ZONE-DRIFT',      score: _c4tSz    }
+            { key: 'TIME-SHIFT',          score: _c4tTime    },
+            { key: 'CONTRIBUTION-SHIFT',  score: _c4tCon     },
+            { key: 'CAPITAL-SHIFT',       score: _c4tCap     },
+            { key: 'FLOOR-RISK-SHIFT',    score: _c4tFloor   },
+            { key: 'CEILING-REACH-SHIFT', score: _c4tCeil    },
+            { key: 'STATE-TRANSITION',    score: _c4tSt      },
+            { key: 'SUB-ZONE-DRIFT',      score: _c4tSz      },
+            { key: 'HORIZON-SHIFT',       score: _c4tHorizon }
           ];
           var _c4Best = null;
           for (var _ci = 0; _ci < _c4Cands.length; _ci++) {
@@ -7713,7 +7748,7 @@
           capDeltaM:          _c4M(_fmtM(_capGapM)),
           currentDatumK:      _c4M('$' + Math.round(dd) + 'k'),
           dCapBaseM:          _c4M(_fmtM(_skPts.fvBase)),
-          gbDatumReqM:        _c4M(_fmtM((dd || 0) / 0.04 / 1000)),
+          gbDatumReqM:        _c4M(_fmtM(_gbPts.datumCapM || (dd / 0.04 / 1000))),
           dFloorM:            _c4M(_fmtM(_skPts.fvCon)),
           dCeilM:             _c4M(_fmtM(_skPts.fvUp)),
           levName:            _lever.name,
@@ -7722,6 +7757,10 @@
           yearsDeltaAbs:      _c4T(String(Math.abs(_yrsDelta))),
           yearsDeltaDir:      _yrsDelta < 0 ? 'earlier' : 'later',
           bridgeContext:      _yrsDelta < 0 ? 'with taxable accounts and bridge income' : 'while contributions continue and tax-advantaged caps reset',
+          planYearsDeltaAbs:  _c4T(String(Math.abs(_planYearsDelta))),
+          planYearsDeltaDir:  _planYearsDelta < 0 ? 'shorter' : 'longer',
+          newPlanThrough:     _c4T(String(_c4Want.planThroughAge || 93)),
+          newPlanYears:       _c4T(String(Math.max(0, (_c4Want.planThroughAge || 93) - (_c4Want.activationAge || 65)))),
           contribDeltaSigned: _c4M((_contribDelta    >= 0 ? '+' : '') + '$' + Math.abs(Math.round(_contribDelta)).toLocaleString('en-US')),
           contribDeltaPct:    _c4T((_contribDeltaPct >= 0 ? '+' : '') + Math.round(_contribDeltaPct * 100) + '%'),
           capitalDeltaSigned: _c4M((_capitalDelta    >= 0 ? '+' : '') + '$' + Math.round(Math.abs(_capitalDelta) * 1000) + 'k'),
@@ -7743,7 +7782,7 @@
               var _stCls = { ABUNDANT:'abu', GROUNDED:'grd', EXPANSIVE:'exp', STRETCHED:'str', OVEREXTENDED:'oe' };
               return '<span class="c4-state-' + _stCls[s] + '">' + s + '</span>';
             })
-            .replace(/• (CAPITAL|LEVER|REALITY|BUFFER|TIME|SAVINGS|STARTING POINT|DOWNSIDE|REACH|STRUCTURE|POSITION|CONFIRMATION|TRAJECTORY|DURABILITY|MARGIN) —/g,
+            .replace(/• (CAPITAL|LEVER|REALITY|BUFFER|TIME|SAVINGS|STARTING POINT|DOWNSIDE|REACH|STRUCTURE|POSITION|CONFIRMATION|TRAJECTORY|DURABILITY|MARGIN|ASSUMPTION) —/g,
                      '• <span class="c4-force">$1</span> —')
             .replace(/(↑ [^—\n]+—)/g, '<span class="c4-up">$1</span>')
             .replace(/(↓ [^—\n]+—)/g, '<span class="c4-down">$1</span>');
@@ -9233,7 +9272,7 @@
       'S3.D2.INTERP-EXP'      : "Your designed Shape has a wide range — many different paths through markets still land you near this spending level.",
       'S3.D2.INTERP-STR'      : "Your spending sits near your Ceiling — the plan can reach it, but there’s only a thin margin if returns come in average or worse than expected.",
       // Section 2 — Card 1 'Shape Begins'
-      'S3.C1.LINE1'           : "You’re {currentAge}, planning to retire at {retireAge} — that’s {yearsToRetire} year(s) for this plan to work.",
+      ‘S3.C1.LINE1’           : "You’re {currentAge}, planning to retire at {retireAge} — that’s {yearsToRetire} year(s) for this plan to work. And you’re planning through {newPlanThrough} — about {newPlanYears} years of retirement to fund, which is what sets how far this money has to stretch.",
       'S3.C1.LINE2'           : "You’ve saved {portfolioK} so far and are adding about {annualContribK} each year.",
       'S3.C1.LINE3'           : "You’re aiming to spend about {datumK} per year in retirement. We’re building the Shape using {taxDragPct} tax drag and {inflationMode} inflation.",
       'S3.C1.LINE4'           : "Those inputs are the raw materials. The Sketch turned them into a Shape.",
@@ -9258,18 +9297,18 @@
       'S3.C3.PHYSICS-GRD'     : "Your spending target of {dDatumK}/yr sits inside your designed range — the plan is built to carry this level across a wide spread of market sequences, not just the favorable ones.",
       'S3.C3.PHYSICS-EXP'     : "Your designed range is wide — the Floor sits about {floorBelowK}/yr below your spending line and the Ceiling sits about {ceilAboveK}/yr above it. Many different market paths still land you near this level.",
       'S3.C3.PHYSICS-STR'     : "Your spending target of {dDatumK}/yr sits only about {ceilGapK}/yr below your designed Ceiling — the plan can reach it, but there is very little room if returns come in average or worse.",
-      'S3.C3.ACTION-OE'       : "To make this Shape viable, something has to give: lower your spending target below the Ceiling, delay retirement, add more capital or savings, or use Studio to see exactly which combination of levers closes this gap fastest.",
+      'S3.C3.ACTION-OE'       : "To make this Shape viable, something has to give: lower your spending target below the Ceiling, delay retirement, add more capital or savings, or use Studio to see exactly which combination of levers closes this gap fastest. One lever that adds no capital is the retirement length itself: planning through fewer years raises the Ceiling toward your target on the same pile — real only if the shorter horizon is genuine.",
       'S3.C3.ACTION-ABU'      : "With this much buffer, you can raise your spending target, retire earlier, or keep the surplus as deliberate protection against bad sequences — the choice depends on what you actually want this plan to do.",
       'S3.C3.ACTION-GRD'      : "This Shape holds across most market paths. Confirm that your real accounts, tax picture, and Social Security choices preserve that margin once the averages are replaced with your actual numbers.",
       'S3.C3.ACTION-EXP'      : "A wide range gives you flexibility — retirement age, savings rate, withdrawal order, and Social Security timing can each narrow this band toward the specific landing point you care about most.",
-      'S3.C3.ACTION-STR'      : "A thin margin means the order of returns matters more than the average. Sequence-of-returns risk, allocation, Social Security timing, and savings rate are the levers that widen the cushion — each trades off against the others.",
+      'S3.C3.ACTION-STR'      : "A thin margin means the order of returns matters more than the average. Sequence‑of‑returns risk, allocation, Social Security timing, and savings rate are the levers that widen the cushion — each trades off against the others. A shorter retirement length also widens the cushion — it lifts the Ceiling without new capital — but lean on it only if that horizon is truly shorter.",
       'S3.C3.PARADOX-OE'      : "⚠️ This Shape cannot be sustained as drawn. Your spending target exceeds what this portfolio can support in most market sequences. Use the actions below — or Studio — to adjust the levers until the math holds.",
       'S3.C3.SUBCASE-INVERT'  : "Your spending of {dDatumK}/yr sits above your ceiling of {dCeilK}/yr. That’s structurally invalid — you’re planning to spend above the limit this Shape can support. Lower spending below {dCeilK}/yr or raise the ceiling to meet it.",
       'S3.C3.FLOOR-CONTEXT'   : "Floor: {dFloorK}/yr — {floorAlignment}. That’s about {floorGapK}/yr below your spending line — the buffer this Shape gives you if markets disappoint.",
       'S3.C3.FLOOR-INVALID'   : "Your designed Floor of {dFloorK}/yr sits at or above your Ceiling of {dCeilK}/yr — that leaves no valid range for the plan to operate inside. Raise the Ceiling above the Floor, or lower the Floor below the Ceiling, before this Shape can be evaluated.",
       // Section 5 — Card 4 'What It Takes'
-      'S3.C4.LEVERS-OE-INVERT': "The Sketch confirms a ceiling of {sketchCeilK}/yr for this portfolio and a spending target of {dDatumK}/yr, with no valid band between them. Studio shows which levers — contributions, retirement age, spending — must move, and by how much, to turn this into a structurally supportable Shape.",
-      'S3.C4.LEVERS-OE'       : "To support this designed Shape, something has to give: higher contributions, later retirement, lower spending, or a mix of inputs. Studio maps which levers close the gap most efficiently for your situation.",
+      'S3.C4.LEVERS-OE-INVERT': "The Sketch confirms a ceiling of {sketchCeilK}/yr for this portfolio and a spending target of {dDatumK}/yr, with no valid band between them. Studio shows which levers — contributions, retirement age, spending — must move, and by how much, to turn this into a structurally supportable Shape. A fourth, no-capital lever is the retirement length: a shorter plan raises the Ceiling toward the target, honest only if the horizon is genuine.",
+      'S3.C4.LEVERS-OE'       : "To support this designed Shape, something has to give: higher contributions, later retirement, lower spending, a shorter retirement length, or a mix of inputs. Studio maps which levers close the gap most efficiently for your situation. (The retirement-length lever adds no capital — it raises the Ceiling on the same pile, honest only if the shorter horizon is real.)",
       'S3.C4.LEVERS-ABU'      : "This designed Shape is already supported. Studio shows where you have room — to retire earlier, raise your spending target, or keep the buffer as deliberate protection against bad sequences.",
       'S3.C4.LEVERS-GRD'      : "This designed Shape is structurally supported. Studio checks whether your real account mix, tax situation, and Social Security timing preserve that margin — or quietly pull you closer to the Floor.",
       'S3.C4.LEVERS-EXP'      : "A wide designed range gives you options. Studio shows which lever moves — Social Security timing, account sequencing, or spending adjustments — narrow that range toward the landing point you actually care about.",
@@ -10085,6 +10124,29 @@ This is exactly where the Sketch runs out of road. It tells you the state holds.
 Do you want to accept where you are — or do you want to know exactly what positioning differently inside the same state would cost?
 
 See If This Shape Holds →`;
+    _S3C4['HORIZON-SHIFT'] = `HOW TO RESOLVE THE TENSION
+
+You changed how long the plan has to last. That's a different kind of lever than the others — it doesn't add a dollar or move your retirement date. It changes how long the same pile has to stretch, and every boundary moves with it.
+
+This is the one lever that costs no capital and no working years. A shorter retirement raises the safe withdrawal rate, so the Ceiling and Floor both lift on the exact same balance. A longer one lowers them. Nothing about your savings changed — you changed the question the money has to answer.
+
+Three forces, named honestly:
+
+  • CAPITAL — Your designed Shape requires {gbDatumReqM} of capital. Your current Shape projects {dCapBaseM} on the middle path. That's a {capDeltaM} gap — and a shorter retirement closes part of it for free by raising what the same pile can safely deliver, while a longer one widens it.
+
+  • LEVER — {levName} is doing the most work in your design ({levAmtSigned}, {levPct}% of every dollar of movement between Have and Want). But the retirement length is doing something none of the effort levers do: it moves BOTH boundaries at once by {planYearsDeltaAbs} years {planYearsDeltaDir}, without touching the balance.
+
+  • ASSUMPTION — You're now planning through {newPlanThrough} — about {newPlanYears} years of retirement. That raises every number, but ONLY if the shorter retirement is real. This is the one lever you can move on paper without it being true. A shorter plan that you outlive doesn't make the higher Ceiling real — it just hides the gap until it arrives.
+
+This is exactly where the Sketch runs out of road. It can flex the boundaries to a shorter horizon. It can't tell you whether you'll actually live a shorter retirement, what happens to the plan if you outlast it, or how guaranteed income reshapes the math as the horizon moves.
+
+Studio tests longevity directly. Not a generic "plan conservatively" pitch — the specific math of what your plan looks like if you outlive a shortened horizon, where Social Security and any guaranteed income carry more weight the longer the plan runs, and whether the higher boundaries a shorter retirement implies hold across a full-length life rather than just a convenient one.
+
+The question is honest. You changed how long the money has to last.
+
+Do you want to plan for the retirement length you assumed — or do you want to know what holds if you live longer than it?
+
+See If This Shape Holds →`;
     _S3C4['STATIC-DESIGN'] = `HOW TO RESOLVE THE TENSION
 
 Your designed Shape is essentially your current Shape. You haven't moved anything material — same Datum, same Floor, same Ceiling, same retirement age, same contribution rate, same posture toward the plan. That doesn't mean there's no tension. It means the tension isn't between two different futures you're considering. It's between the Shape the Sketch can draw and the Shape that actually holds when real conditions arrive — markets that don't behave like averages, sequences that hit at the wrong moment, account types that route differently than the projection assumes. Three forces, still worth naming:
@@ -10517,6 +10579,9 @@ Studio is built for exactly this. See If This Shape Holds →`;
         set('s2-age',           age);
         set('s2-retire',        retireAge);
         set('s2-years-to-retire', yrsToRetire); // 'years' is already in surrounding HTML
+        var _ptaS3Card = parseInt((el('sl-plan-through') || {value:'93'}).value, 10) || 93;
+        set('s2-plan-through-val', _ptaS3Card);
+        set('s2-plan-years-val', Math.max(0, _ptaS3Card - retireAge));
         // port is in millions; contrib is raw dollars
         set('s2-port',    port >= 1 ? '$'+port.toFixed(2).replace(/\.?0+$/,'')+'M' : '$'+Math.round(port*1000)+'k');
         set('s2-contrib', '$'+Math.round(contrib/1000)+'k/yr');
