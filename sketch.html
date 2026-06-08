@@ -6508,7 +6508,13 @@
             pinnedRetire:       gb.activationAge,
             ageDelta:           Math.abs(age - gb.currentAge),
             newPlanThrough:     ds.planThroughAge || 93,
-            newPlanYears:       (ds.planThroughAge || 93) - retire
+            newPlanYears:       (ds.planThroughAge || 93) - retire,
+            leverDeltaPlan_fmt: (function() {
+                var _pd = (ds.planThroughAge || 93) - (gb.planThroughAge || 93);
+                if (Math.abs(_pd) < 1) return 'unchanged';
+                var _pn = Math.abs(Math.round(_pd));
+                return (_pn === 1 ? '1 year' : _pn + ' years') + (_pd < 0 ? ' shorter' : ' longer');
+            })()
         };
         var gbPinnedState = {
             retire:         gb.activationAge,
@@ -6828,13 +6834,13 @@
                         {n:5,u:2,o:"Two levers built plan — {lever1} and {lever2} — but three pulled harder in the other direction: {lever3}, {lever4}, and {lever5}. The Ceiling is now {ceilGap_fmt} closer to your spending line and the floor thinned {floorDelta_fmt} from your pin.",s:"The reducing levers are outweighing the building ones. Name whether all three pullbacks were intentional — or bring this to Studio to see what the compression looks like against your real accounts and income timing.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
                         {n:5,u:1,o:"Four levers pulled the plan back — {lever2}, {lever3}, {lever4}, and {lever5} — while only {lever1} added capacity. The Ceiling is now {ceilGap_fmt} closer to your spending line and the floor has compressed {floorDelta_fmt} from your pin. The single building lever is not enough to offset four simultaneous reductions.",s:"Confirm all four reductions were deliberate. If even one wasn't, it's compressing the plan alongside the others — and the Sketch can't cleanly untangle the combined effect from here.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
                         {n:5,u:0,o:"All five levers reduced the plan at once — {lever1}, {lever2}, {lever3}, {lever4}, and {lever5}. The Ceiling has moved {ceilGap_fmt} closer to your spending line and the floor compressed {floorDelta_fmt} from your pin. This is the boundary of maximum simultaneous reduction in the Sketch.",s:"If this is deliberate — a low-ask scenario, a conservative anchor — the plan has capacity well above where the Datum sits. Studio can show what the full plan could sustain if the ask were allowed to rise.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
-                        {n:6,u:6,o:"All six levers moved in the same direction — {lever1}, {lever2}, {lever3}, {lever4}, {lever5}, and {lever6}. The Ceiling is now {ceilGap_fmt} above your spending line; the floor lifted {floorDelta_fmt} from your pin. {primaryLever} is carrying the most weight, but at this level of simultaneous movement the plan has materially more capacity than any single lever could create.",s:"This is the boundary of what the Sketch can attribute cleanly. Name the one or two changes that matter most, and bring the full picture to Studio for a sequence-aware read.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
-                        {n:6,u:5,o:"Five levers built plan — {lever1}, {lever2}, {lever3}, {lever4}, and {lever5} — while {lever6} pulled against them. The Ceiling is {ceilGap_fmt} above your spending line and the floor moved {floorDelta_fmt} from your pin. The single downward move is a minor offset against strong net-positive movement.",s:"Test whether removing the downward move adds meaningfully — or confirm it was a deliberate trade and the net outcome is the right read.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
-                        {n:6,u:4,o:"Four levers built plan — {lever1}, {lever2}, {lever3}, and {lever4} — while {lever5} and {lever6} partially offset them. The Ceiling is {ceilGap_fmt} above your spending line and the floor moved {floorDelta_fmt} from your pin. The building levers are ahead, but not without friction.",s:"Confirm whether both reducing moves were intentional. If one wasn't, it's costing capacity against four levers working in the right direction.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
-                        {n:6,u:3,o:"Three levers built plan — {lever1}, {lever2}, and {lever3} — while {lever4}, {lever5}, and {lever6} pulled equally hard in the other direction. The Ceiling moved {ceilGap_fmt} and the floor shifted {floorDelta_fmt} from your pin. Building and reducing forces are closely matched.",s:"Isolate the single building lever with the most lift and the single reducing lever with the most cost — then decide which trade to keep.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
-                        {n:6,u:2,o:"Two levers built plan — {lever1} and {lever2} — but four pulled harder in the other direction: {lever3}, {lever4}, {lever5}, and {lever6}. The Ceiling is now {ceilGap_fmt} closer to your spending line and the floor thinned {floorDelta_fmt} from your pin.",s:"Four simultaneous reductions are outweighing two building levers. Name whether all four pullbacks were intentional — or bring this to Studio to see what the compression looks like against your real accounts.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
-                        {n:6,u:1,o:"Five levers pulled the plan back — {lever2}, {lever3}, {lever4}, {lever5}, and {lever6} — while only {lever1} added capacity. The Ceiling is now {ceilGap_fmt} closer to your spending line and the floor has compressed {floorDelta_fmt} from your pin. The single building lever cannot offset five simultaneous reductions.",s:"Confirm all five reductions were deliberate. If even one wasn't, it's compressing the plan alongside the others — and the Sketch cannot cleanly untangle the combined effect from here.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
-                        {n:6,u:0,o:"All six levers reduced the plan at once — {lever1}, {lever2}, {lever3}, {lever4}, {lever5}, and {lever6}. The Ceiling has moved {ceilGap_fmt} closer to your spending line and the floor compressed {floorDelta_fmt} from your pin. This is the outer boundary of simultaneous reduction in the Sketch.",s:"If this is deliberate — a low-ask scenario, a conservative anchor — the plan has capacity well above where the Datum sits. Studio can show what the full plan could sustain if the ask were allowed to rise.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."}
+                        {n:6,u:6,o:"All six levers moved in the same direction — {lever1}, {lever2}, {lever3}, {lever4}, {lever5}, and {lever6}. The Ceiling is now {ceilGap_fmt} above your spending line and the floor lifted {floorDelta_fmt} from your pin. This is the most movement the Sketch can hold at once — every input is pushing the same way, with {primaryLever} doing the most work.",s:"This is the outer edge of what the Sketch can attribute cleanly. Pick the one or two changes you would truly make, and bring the rest to Studio for a sequence-aware read.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:6,u:5,o:"Five levers built plan — {lever1}, {lever2}, {lever3}, {lever4}, and {lever5} — while {lever6} pulled the other way. The Ceiling is {ceilGap_fmt} above your spending line and the floor moved {floorDelta_fmt} from your pin. The lone downward move is a minor offset against five working together.",s:"Test whether removing the single pullback adds anything meaningful — or confirm it was a deliberate trade and the strongly positive net is the right read.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:6,u:4,o:"Four levers built plan — {lever1}, {lever2}, {lever3}, and {lever4} — while {lever5} and {lever6} partially offset them. The Ceiling is {ceilGap_fmt} above your spending line and the floor moved {floorDelta_fmt} from your pin. The building levers are still winning, but two pullbacks are trimming the gain.",s:"Isolate whether both reducing moves were intentional. If either was not, it is costing capacity against four levers pulling the right way.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:6,u:3,o:"Three levers built plan — {lever1}, {lever2}, and {lever3} — while three pulled it back: {lever4}, {lever5}, and {lever6}. The forces are evenly matched, so the net is muted — the Ceiling shifted {ceilGap_fmt} and the floor moved {floorDelta_fmt} from your pin. {primaryLever} carries the most weight on whichever side wins.",s:"Six levers split evenly cancel most of their own effect. Name which one or two you would actually keep — the Sketch cannot untangle a six-way tie cleanly from here, and Studio can read the trade sequence-aware.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:6,u:2,o:"Two levers built plan — {lever1} and {lever2} — but four pulled harder in the other direction: {lever3}, {lever4}, {lever5}, and {lever6}. The Ceiling is now {ceilGap_fmt} closer to your spending line and the floor thinned {floorDelta_fmt} from your pin.",s:"The reducing levers are outweighing the building ones. Confirm all four pullbacks were deliberate — or bring this to Studio to see what the compression looks like against your real accounts.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:6,u:1,o:"Five levers pulled the plan back — {lever2}, {lever3}, {lever4}, {lever5}, and {lever6} — while only {lever1} added capacity. The Ceiling is now {ceilGap_fmt} closer to your spending line and the floor has compressed {floorDelta_fmt} from your pin. The single building lever cannot offset five moving the other way.",s:"Confirm all five reductions were deliberate. If even one was not, it is compressing the plan alongside the others — and the Sketch cannot cleanly separate the combined effect from here.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."},
+                        {n:6,u:0,o:"All six levers reduced the plan at once — {lever1}, {lever2}, {lever3}, {lever4}, {lever5}, and {lever6}. The Ceiling has moved {ceilGap_fmt} closer to your spending line and the floor compressed {floorDelta_fmt} from your pin. This is maximum simultaneous reduction — every input pulling down together.",s:"If this is deliberate — a low-ask scenario or a conservative anchor — the plan still has capacity well above where the Datum sits. Studio can show what the full plan could sustain if the ask were allowed to rise.",c:"Studio can test whether your accounts and income structure can actually support spending at {newDatum_fmt} — and what sequencing makes it most tax-efficient."}
                     ];
                     var _d2DirMatch = null;
                     if (_d2Nn >= 2 && _d2Nn <= 6) {
@@ -7916,6 +7922,9 @@
           } else if (type === 'datum') {
             slEl = document.getElementById('d2-slider-datum');
             targetPos = datumValToPos(Math.min(val, 1000));
+          } else if (type === 'plan') {
+            slEl = document.getElementById('d2-slider-plan-through');
+            targetPos = Math.min(105, Math.max(75, Math.round(val)));
           }
           // Framing D: commit Datum handle synchronously before lever animation so initDesignState reads committed value.
           var _dtSec = btn.getAttribute('data-req-datum-value');
@@ -8329,19 +8338,19 @@
         var _eL1Fallback = {
           'OVEREXTENDED_STRUCTURAL_UP': {
             op: "You're already significantly above the Ceiling — and you're testing whether the plan can carry even more. The Datum is now {deltaDatum_fmt} above where you started, sitting {ceilGap_fmt} past a limit the plan's current structure can't reach. This is a stress-test, not a plan state. The question isn't whether this works today — it doesn't — it's what would need to change for it to work.",
-            lv: "The gap between where the Datum sits and what the plan supports is {ceilGap_fmt}. To close that gap, the most direct path is a structural change — more capital, higher contributions, a later start date, or some combination. Studio can show you the cost of closing it and which lever is most efficient given where your accounts actually stand."
+            lv: "The gap between where the Datum sits and what the plan supports is {ceilGap_fmt}. To close that gap, the most direct path is a structural change — more capital, higher contributions, a later start date, or some combination. Studio can show you the cost of closing it and which lever is most efficient given where your accounts actually stand. One lever that adds no capital is the retirement length itself: planning through fewer years raises the Ceiling toward {newDatum_fmt} on the same pile — but it only counts if the shorter horizon is genuine."
           },
           'OVEREXTENDED_ENTRY_UP': {
             op: "You were barely over the Ceiling — and you dragged higher. The Datum is now {deltaDatum_fmt} above your starting point, pushing {ceilGap_fmt} past what the plan currently supports. You were already testing feasibility from the entry point; this move asks a harder version of that same question.",
-            lv: "The plan can't reach {newDatum_fmt} without a structural change. The gap to close is {ceilGap_fmt} — small enough that a targeted portfolio addition or a modest contribution increase might be sufficient. Studio can run the math on what each lever costs at your specific account structure."
+            lv: "The plan can't reach {newDatum_fmt} without a structural change. The gap to close is {ceilGap_fmt} — small enough that a targeted portfolio addition or a modest contribution increase might be sufficient. Studio can run the math on what each lever costs at your specific account structure. And because this gap is small, a shorter retirement length alone may close it — planning through fewer years lifts the Ceiling without new capital, honest only if the horizon truly is shorter."
           },
           'STRETCHED_HIGH_END_UP': {
             op: "You were nearly touching the Ceiling — and you crossed it. The Datum moved {deltaDatum_fmt} from your start, lifting from the edge of what the plan supports into territory it currently can't reach. That crossing is a clean signal: you're not stress-testing a margin, you're asking whether the plan's capacity can grow.",
-            lv: "The Ceiling marks what the plan's current structure can sustain. The Datum is now {ceilGap_fmt} above it. Closing that gap means adding capital, raising contributions, or extending the runway — whichever your accounts can absorb. Studio can show the most efficient path given where you're starting from."
+            lv: "The Ceiling marks what the plan's current structure can sustain. The Datum is now {ceilGap_fmt} above it. Closing that gap means adding capital, raising contributions, or extending the runway — whichever your accounts can absorb. Studio can show the most efficient path given where you're starting from. A shorter retirement length is a fourth path — it raises the Ceiling toward {newDatum_fmt} on the same pile, if that horizon is genuine."
           },
           'STRETCHED_STANDARD_UP': {
             op: "You were in Stretched — spending near the Ceiling but not yet at it — and you dragged higher. The Datum moved {deltaDatum_fmt} from your start, pushing toward or past the plan's upper limit. You were already in the range where the plan needs to work hard; this move asks whether it can work harder.",
-            lv: "At {newDatum_fmt}, the Datum is {ceilGap_fmt} from the Ceiling. If you've crossed it, the plan can't reach this level without a structural change. If you're still below it, you're testing how thin that margin actually is — Studio can show what happens to that buffer under stress."
+            lv: "At {newDatum_fmt}, the Datum is {ceilGap_fmt} from the Ceiling. If you've crossed it, the plan can't reach this level without a structural change. If you're still below it, you're testing how thin that margin actually is — Studio can show what happens to that buffer under stress. If you've crossed it, one lever costs nothing: a shorter retirement length raises the Ceiling toward {newDatum_fmt} — real only if the shorter horizon is true."
           },
           'EXPANSIVE_CEILING_SIDE_UP': {
             op: "You were in the upper range of Expansive — the plan supporting spending comfortably above the middle — and you dragged higher. The Datum moved {deltaDatum_fmt} from your start, lifting into Stretched territory or beyond. You're testing whether ambition is available at this spending level, not just whether the plan survives it.",
@@ -8546,6 +8555,17 @@
         // var _eL2Cell = _eL2[_eL2Key] || _eL2['EXPANSIVE_CENTERED'];
         html += item('req-item-datum', 'var(--teal-mid)', 'DATUM — ' + _eEntryName,
           _eFill(_eL1Cell.op), 'datum', r.datumTarget);
+        // G56/G57 horizon studio bridge for OE landing states
+        if (_eLandName === 'OVEREXTENDED') {
+          var _eBridge = _eLandSz === 'STRUCTURAL'
+            ? '⚠️ The Datum has crossed significantly above the Ceiling — {ceilGap_fmt} past the plan\'s upper limit. At this spending level, the plan\'s current structure can\'t deliver. Studio can identify the most efficient structural change — portfolio, contributions, or timing — to close that gap and bring {newDatum_fmt} back into a range the plan can actually reach. One lever needs no new capital — a shorter retirement length lifts the Ceiling toward {newDatum_fmt} on the same pile, honest only if that horizon is genuine.'
+            : 'The Datum sits just above the Ceiling — {ceilGap_fmt} past the plan\'s current limit. The gap is small enough that a targeted change could close it. Studio can show the cost of closing it at your account structure — and whether it\'s a lever move or a plan revision. A shorter retirement length is one such lever — it raises the Ceiling toward {newDatum_fmt} without new capital, if the horizon truly is shorter.';
+          html += studioCTA(_eFill(_eBridge));
+        }
+        // Lever suggestion (H29-H32) for fallback entries
+        if (_eL1Cell.lv) {
+          html += studioCTA(_eFill(_eL1Cell.lv));
+        }
         // html += item('req-item-datum', _eLandClr, _eLandName + ' — LANDING',
         //   _eFill(_eL2Cell.mod), null, null);
         req.innerHTML = html;
@@ -8703,7 +8723,7 @@
           var _fGf_C = fmtKyr(Math.abs(pts.datumSpend - r.floorTarget));
           var _wyCtx_C = '';
           if (_wyDatZone_C === 'overextended') {
-            _wyCtx_C = 'Both edges of the Shape moved, but your spending at ' + _pDf_C + ' is now above the new Ceiling at ' + _nCf_C + '. The Shape was repositioned, but the Datum sits outside it — the plan can\'t deliver at this spending level under the new geometry. Studio can identify what structural change closes the gap most efficiently.';
+            _wyCtx_C = '⚠️ Both edges moved — Ceiling to ' + _nCf_C + ', Floor to ' + _nFf_C + ' — and your spending at ' + _pDf_C + ' is now above the new Ceiling. The Shape was repositioned, but the Datum sits outside it. The plan can\'t deliver at this spending level under the new geometry. Studio can identify what structural change closes the gap most efficiently. Shortening the retirement length raises the Ceiling toward ' + _pDf_C + ' on the same pile — a real option if that horizon is genuine, not just a way to make the number work.';
           } else if (_wyDatZone_C === 'stretched') {
             _wyCtx_C = 'Both edges moved — Ceiling to ' + _nCf_C + ', Floor to ' + _nFf_C + ' — and your spending at ' + _pDf_C + ' is now ' + _cGf_C + ' from the upper limit. The Datum is inside the new Shape but near its top. The plan carries this spending level, though with limited buffer. Studio can show how that thin margin behaves under real market scenarios at your account structure.';
           } else if (_wyDatZone_C === 'expansive') {
@@ -8844,6 +8864,28 @@
             'No single lever reaches this ceiling cleanly. A practical combination: add ' + fmtPort(r.combo.dP_M) + ' to your balance and ' + fmtContrib(r.combo.dK_dollars) + ' to contributions. Together they close the gap without over-relying on either lever.',
             'capital', (_sNorm.portfolioVol + r.combo.dP_M));
         }
+        // PATH 4 — PLANNING HORIZON (Block A: ceiling drag)
+        (function() {
+          var _h4Curr = Math.max(15, (_sNorm.planThroughAge || 93) - _sNorm.activationAge);
+          var _h4ScCurr = 0.6079 / (1 - Math.pow(1.034, -_h4Curr));
+          var _h4ScReq  = r.ceilTarget * _h4ScCurr / pts.ceilSpend;
+          if (_h4ScReq <= 0.6079) return;
+          var _h4Inner = 1 - 0.6079 / _h4ScReq;
+          if (_h4Inner <= 0 || _h4Inner >= 1) return;
+          var _h4    = -Math.log(_h4Inner) / Math.log(1.034);
+          var _h4PTA = _sNorm.activationAge + Math.max(15, _h4);
+          var _h4C   = Math.round(Math.min(105, Math.max(Math.max(75, _sNorm.activationAge + 20), _h4PTA)));
+          var _h4Delta = _h4C - (_sNorm.planThroughAge || 93);
+          if (Math.abs(_h4Delta) < 1) return;
+          var _h4Dir = _h4Delta < 0 ? 'shorter' : 'longer';
+          var _h4Abs = Math.abs(_h4Delta);
+          var _h4DFmt = (_h4Abs === 1 ? '1 year' : _h4Abs + ' years') + ' ' + _h4Dir;
+          var _h4Body = 'Plan through age ' + _h4C + ' — ' + _h4DFmt + ' than your current assumption. A ' + _h4Dir + ' retirement length ' + (_h4Delta < 0 ? 'raises' : 'lowers') + ' the Ceiling on the same pile by adjusting how long the withdrawals need to last. This is an assumption lever; it holds only if planning through ' + _h4C + ' is genuine.';
+          if (_h4Abs > 15) {
+            _h4Body = '<em style="color:rgba(255,255,255,0.5);">&#9888; Reaching that ceiling through retirement length alone would require planning through ' + _h4C + ' — a significant shift. A combination may be more practical.</em> ' + _h4Body;
+          }
+          html += item('req-item-ceil', 'var(--gold)', 'PATH 4 — PLANNING HORIZON', _h4Body, 'plan', _h4C);
+        })();
         // Workstream Y — Block A × Datum context (Shape+Datum Combos)
         var _wyDatObj_A  = getShapeStateObj({ ceilSpend: r.ceilTarget, floorSpend: r.floorTarget, datumSpend: r.datumTarget });
         var _wyDatZone_A = _wyDatObj_A ? _wyDatObj_A.key : 'expansive';
@@ -8853,10 +8895,10 @@
         var _cGf_A = fmtKyr(Math.abs(r.ceilTarget - r.datumTarget));
         var _fGf_A = fmtKyr(Math.abs(r.datumTarget - r.floorTarget));
         var _datumAck_A = (Math.abs(dd) > 0.5) ? 'You also ' + (dd > 0 ? 'raised' : 'lowered') + ' the Datum ' + fmtKyr(Math.abs(dd)) + ' — it now sits at ' + fmtKyr(r.datumTarget) + '. ' : '';
-        var _oeGlyph_A = (_wyDatObj_A && _wyDatObj_A.key === 'overextended' && _wyDatObj_A.subZone === 'STRUCTURAL') ? '⚠️ ' : '';
+        var _oeGlyph_A = (_wyDatObj_A && _wyDatObj_A.key === 'overextended') ? '⚠️ ' : '';
         var _wyCtx_A = '';
         if (_wyDatZone_A === 'overextended') {
-          _wyCtx_A = 'One thing to notice: the Ceiling moved, but the Datum ' + _pDfPhrase_A + 'is still above it. The Shape changed; the mismatch didn\'t. Moving the Ceiling doesn\'t resolve a Datum that sits above it — that takes a structural change to the plan itself. Studio can identify the most efficient path to close that gap at your actual account structure.';
+          _wyCtx_A = 'The Ceiling moved to ' + _nCf_A + ', but your spending at ' + _pDf_A + ' is now above it — the Shape changed, the mismatch didn\'t. Moving the Ceiling doesn\'t resolve a Datum that exceeds it. That takes a structural change to the plan. Studio can show the most direct path to close that ' + _cGf_A + ' gap. One lever you control directly is the retirement length: planning through fewer years raises the Ceiling toward ' + _pDf_A + ' on the same pile — but lean on it only if the shorter horizon is genuine.';
         } else if (_wyDatZone_A === 'stretched') {
           _wyCtx_A = 'With the Ceiling at ' + _nCf_A + ', the Datum ' + _pDfPhrase_A + 'sits ' + _cGf_A + ' from the plan\'s upper limit. That\'s a thin margin — the plan carries this Datum, but without much room to absorb a run of poor returns. Studio can show what that buffer looks like under real sequence-of-returns stress, not just the base case.';
         } else if (_wyDatZone_A === 'expansive') {
@@ -8997,6 +9039,28 @@
         html += '<div class="req-item req-item-floor" style="opacity:0.75;">'
           + '<div class="req-item-label" style="color:var(--danger-red);">GUARANTEED INCOME PATH</div>'
           + '<div class="req-item-body" style="font-size:11px;">Income sources like Social Security and annuities can raise your Floor without needing extra portfolio growth. Studio can model how large those streams would need to be for your plan.</div></div>';
+        // PATH 4 — PLANNING HORIZON (Block B: floor drag)
+        (function() {
+          var _h4Curr = Math.max(15, (_sNorm.planThroughAge || 93) - _sNorm.activationAge);
+          var _h4ScCurr = 0.6079 / (1 - Math.pow(1.034, -_h4Curr));
+          var _h4ScReq  = r.floorTarget * _h4ScCurr / pts.floorSpend;
+          if (_h4ScReq <= 0.6079) return;
+          var _h4Inner = 1 - 0.6079 / _h4ScReq;
+          if (_h4Inner <= 0 || _h4Inner >= 1) return;
+          var _h4    = -Math.log(_h4Inner) / Math.log(1.034);
+          var _h4PTA = _sNorm.activationAge + Math.max(15, _h4);
+          var _h4C   = Math.round(Math.min(105, Math.max(Math.max(75, _sNorm.activationAge + 20), _h4PTA)));
+          var _h4Delta = _h4C - (_sNorm.planThroughAge || 93);
+          if (Math.abs(_h4Delta) < 1) return;
+          var _h4Dir = _h4Delta < 0 ? 'shorter' : 'longer';
+          var _h4Abs = Math.abs(_h4Delta);
+          var _h4DFmt = (_h4Abs === 1 ? '1 year' : _h4Abs + ' years') + ' ' + _h4Dir;
+          var _h4Body = 'Plan through age ' + _h4C + ' — ' + _h4DFmt + ' than your current assumption. A ' + _h4Dir + ' retirement length ' + (_h4Delta < 0 ? 'raises' : 'lowers') + ' the Floor on the same pile by adjusting how long the withdrawals need to last. This is an assumption lever; it holds only if planning through ' + _h4C + ' is genuine.';
+          if (_h4Abs > 15) {
+            _h4Body = '<em style="color:rgba(255,255,255,0.5);">&#9888; Reaching that floor through retirement length alone would require planning through ' + _h4C + ' — a significant shift. A combination may be more practical.</em> ' + _h4Body;
+          }
+          html += item('req-item-floor', 'var(--danger-red)', 'PATH 4 — PLANNING HORIZON', _h4Body, 'plan', _h4C);
+        })();
         var _allSuppB = r.paths.slice(0, 2).every(function(p) { return p.softWarn !== null; });
         if (_allSuppB && r.combo) {
           html += item('req-item-floor', 'var(--danger-red)', 'COMBINATION PATH',
@@ -9014,10 +9078,10 @@
         var _fGf_B = fmtKyr(Math.abs(r.datumTarget - r.floorTarget));
         var _fDf_B = _fmtSgn_B(df);
         var _datumAck_B = (Math.abs(dd) > 0.5) ? 'You also ' + (dd > 0 ? 'raised' : 'lowered') + ' the Datum ' + fmtKyr(Math.abs(dd)) + ' — it now sits at ' + fmtKyr(r.datumTarget) + '. ' : '';
-        var _oeGlyph_B = (_wyDatObj_B && _wyDatObj_B.key === 'overextended' && _wyDatObj_B.subZone === 'STRUCTURAL') ? '⚠️ ' : '';
+        var _oeGlyph_B = (_wyDatObj_B && _wyDatObj_B.key === 'overextended') ? '⚠️ ' : '';
         var _wyCtx_B = '';
         if (_wyDatZone_B === 'overextended') {
-          _wyCtx_B = 'The Floor moved, but the structural issue is still there: the Datum ' + _pDfPhrase_B + 'sits above the Ceiling. Adjusting the Floor doesn\'t change the Datum\'s relationship to the Ceiling — the plan still can\'t reach this spending level. Studio can show the most efficient path to bring ' + _pDf_B + ' back into a range the plan supports.';
+          _wyCtx_B = 'The Floor moved to ' + _nFf_B + ', but the structural issue is still there: your spending at ' + _pDf_B + ' sits above the Ceiling. Adjusting the Floor doesn\'t change the Datum\'s relationship to the Ceiling — the plan still can\'t reach this spending level. Studio can show the most efficient path to bring ' + _pDf_B + ' back into a supported range. A shorter retirement length is the one move that lifts the Ceiling toward ' + _pDf_B + ' without new capital — honest only if the horizon truly is shorter.';
         } else if (_wyDatZone_B === 'stretched') {
           _wyCtx_B = 'The Floor moved ' + _fDf_B + ', but the Datum ' + _pDfPhrase_B + 'is still ' + _cGf_B + ' from the Ceiling. The Floor change adjusts the plan\'s lower resilience — it doesn\'t change how tight the margin is above the Datum. Studio can show how the current upper-boundary buffer holds under sequence-of-returns pressure.';
         } else if (_wyDatZone_B === 'expansive') {
