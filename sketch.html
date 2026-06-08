@@ -2150,9 +2150,10 @@
               <circle id="d2-sp-handle-hit" cx="120" cy="240" r="18" fill="transparent" style="cursor:ns-resize;" />
               <circle id="d2-sp-ghost" cx="120" cy="240" r="5" fill="none" stroke="rgba(93,202,165,0.3)" stroke-width="1.5" stroke-dasharray="3 2" style="display:none;" />
               <g id="d2-tt-g-sp" transform="translate(120,240)" style="opacity:0; pointer-events:none;">
-                <rect x="15" y="-22" width="230" height="50" fill="#091221" fill-opacity="1" stroke="rgba(93,202,165,0.5)" stroke-width="1" rx="4" />
-                <text id="d2-tt-sp-bal" x="25" y="-8" font-family="var(--font-mono)" font-size="10" fill="var(--teal-mid)" font-weight="bold">$0 starting</text>
-                <text id="d2-tt-sp-delta" x="25" y="8" font-family="var(--font-mono)" font-size="9" fill="rgba(255,255,255,0.7)">+$0 designed in</text>
+                <rect x="15" y="-34" width="260" height="64" fill="#091221" fill-opacity="1" stroke="rgba(93,202,165,0.5)" stroke-width="1" rx="4" />
+                <text id="d2-tt-sp-bounds" x="25" y="-20" font-family="var(--font-mono)" font-size="9" fill="rgba(255,255,255,0.55)">C $— · D $— · F $—</text>
+                <text id="d2-tt-sp-bal" x="25" y="-5" font-family="var(--font-mono)" font-size="10" fill="var(--teal-mid)" font-weight="bold">$0 starting</text>
+                <text id="d2-tt-sp-delta" x="25" y="11" font-family="var(--font-mono)" font-size="9" fill="rgba(255,255,255,0.7)">+$0 designed in</text>
               </g>
               <!-- Tension overlay (cone-clipped fill showing drag delta) -->
               <path id="d2-tension-overlay" fill="rgba(255,255,255,0.06)" d="" pointer-events="none" />
@@ -6279,6 +6280,7 @@
     var _d2SPGhostActive   = false;
     var _d2SPDragBase      = null;
     var _d2SPHandleY       = 240;
+    var _d2SPHovering      = false;
 
     // Phase 2.1 STUB: read d2-slider-* into designScenario + update display values
     function updateDesignEngine() {
@@ -7276,9 +7278,12 @@
                : d >= 1000 ? '$' + Math.round(d / 1000) + 'k'
                : '$' + d;
         };
-        var _spBalEl = document.getElementById('d2-tt-sp-bal');
-        var _spDltEl = document.getElementById('d2-tt-sp-delta');
-        var _spTipEl = document.getElementById('d2-tt-g-sp');
+        var _fmtKsp = function(v) { return v >= 1000 ? '$' + (v/1000).toFixed(1) + 'M' : '$' + Math.round(v) + 'k'; };
+        var _spBalEl  = document.getElementById('d2-tt-sp-bal');
+        var _spDltEl  = document.getElementById('d2-tt-sp-delta');
+        var _spBndsEl = document.getElementById('d2-tt-sp-bounds');
+        var _spTipEl  = document.getElementById('d2-tt-g-sp');
+        if (_spBndsEl) _spBndsEl.textContent = 'C ' + _fmtKsp(livePtsStart.ceilSpend) + ' · D ' + _fmtKsp(livePtsStart.datumSpend) + ' · F ' + _fmtKsp(livePtsStart.floorSpend);
         if (_spBalEl) _spBalEl.textContent = _fmtD(_spPortDollar) + ' starting';
         if (_spDltEl) _spDltEl.textContent = _spDelta > 0 ? '+' + _fmtD(_spDelta) + ' designed in' : '±$0 designed in';
         if (_spTipEl) _spTipEl.setAttribute('transform', 'translate(' + xS + ',' + Math.round(ySpMid) + ')');
@@ -7304,10 +7309,11 @@
       var _dhdl = document.getElementById('d2-handle-datum-line');
       if (_dhdl) { _dhdl.setAttribute('x1',xE); _dhdl.setAttribute('y1',yD+8); _dhdl.setAttribute('x2',xE); _dhdl.setAttribute('y2',350); }
 
-      // Three tension ratios
-      var _ceilTension  = Math.min(1, Math.max(-1, designOverrides.ceilDelta  / Math.max(1, dptsEnd.ceilSpend)));
-      var _floorTension = Math.min(1, Math.max(-1, designOverrides.floorDelta / Math.max(1, dptsEnd.floorSpend)));
-      var _datumTension = Math.min(1, Math.max(-1, designOverrides.datumDelta / Math.max(1, dptsEnd.datumSpend)));
+      // Three tension ratios — use ghost endpoint as reference so SP-driven band lift registers correctly
+      var _ghostRefEnd  = getMathPoint(_gYrs, _gYrs, _ghostSc);
+      var _ceilTension  = Math.min(1, Math.max(-1, (dCeil  - _ghostRefEnd.ceilSpend)  / Math.max(1, _ghostRefEnd.ceilSpend)));
+      var _floorTension = Math.min(1, Math.max(-1, (dFloor - _ghostRefEnd.floorSpend) / Math.max(1, _ghostRefEnd.floorSpend)));
+      var _datumTension = Math.min(1, Math.max(-1, (dDatum - _ghostRefEnd.datumSpend) / Math.max(1, _ghostRefEnd.datumSpend)));
       updateTensionVisuals(_ceilTension, _floorTension, _datumTension, dDatum > dCeil);
       updateRequirementsPanel(dCeil, dptsEnd.ceilSpend);
 
@@ -7952,10 +7958,13 @@
         if (!el) return;
         el.addEventListener('pointerdown', function(e) {
           e.stopPropagation();
+          _d2SPHovering = true;
           activeDrag = 'sp';
           svg.classList.add('dragging');
           el.setPointerCapture(e.pointerId);
           document.body.style.userSelect = 'none';
+          var _sg = document.getElementById('d2-scrubber-group');
+          if (_sg) _sg.style.opacity = '0';
           var _slPort = (designScenario && designScenario.port !== undefined)
             ? designScenario.port
             : (ghostBaseline ? ghostBaseline.portfolioVol : 0);
@@ -7965,12 +7974,16 @@
           if (_spTip) _spTip.style.opacity = '1';
         });
         el.addEventListener('pointerenter', function() {
+          _d2SPHovering = true;
+          var _sg = document.getElementById('d2-scrubber-group');
+          if (_sg) _sg.style.opacity = '0';
           if (activeDrag) return;
           var _spTip = document.getElementById('d2-tt-g-sp');
           if (_spTip) _spTip.style.opacity = '1';
         });
         el.addEventListener('pointerleave', function() {
           if (activeDrag === 'sp') return;
+          _d2SPHovering = false;
           var _spTip = document.getElementById('d2-tt-g-sp');
           if (_spTip) _spTip.style.opacity = '0';
         });
@@ -7986,7 +7999,7 @@
         if (activeDrag === 'sp') {
           if (_d2SPDragBase && _d2SPDragBase.refSpend > 0.001) {
             var spRatio = spend / _d2SPDragBase.refSpend;
-            var newPortVol = _d2SPDragBase.curPortVol * Math.max(0.05, spRatio);
+            var newPortVol = _d2SPDragBase.curPortVol * Math.max(0.05, Math.min(spRatio, 2.00));
             designOverrides.portDelta = Math.max(0, newPortVol - _d2SPDragBase.sliderPort);
           }
           renderScreen2();
@@ -8017,6 +8030,7 @@
         svg.classList.remove('dragging');
         document.body.style.userSelect = '';
         if (_wasSP) {
+          _d2SPHovering = false;
           var _spTip = document.getElementById('d2-tt-g-sp');
           if (_spTip) _spTip.style.opacity = '0';
           _d2SPDragBase = null;
@@ -8479,6 +8493,16 @@
 
       // ── Block: none (no drag) ────────────────────────────────────────
       if (r.block === 'none') {
+        if (_spOffOrigin) {
+          var _spAloneNewP = _sNorm.portfolioVol + _portDeltaM;
+          var _spAloneBody = 'You\'ve raised the starting balance from '
+            + fmtPort(_sNorm.portfolioVol) + ' to ' + fmtPort(_spAloneNewP)
+            + ' — designing in ' + fmtPort(_portDeltaM)
+            + ' before any endpoint moves. The whole band lifts from this new origin. Accept to commit this balance to your Sketch.';
+          html += item('req-item', 'var(--teal-mid)', 'STARTING POINT — DESIGNED IN', _spAloneBody, 'capital', _spAloneNewP);
+          req.innerHTML = html;
+          return;
+        }
         req.innerHTML = '<div class="req-placeholder">Drag the Ceiling, Floor, or Datum handles to design your shape — and see exactly what each move means.</div>';
         return;
       }
@@ -9288,10 +9312,12 @@
           'A floor of ' + fmtKyr(r.floorTarget) + ' — ' + _df_pct + '% ' + _df_dir + ' from your current floor — requires one of these lever moves.'
         );
         if (_spOffOrigin) { html += _spClauseCard('Starting from the higher balance you\'ve designed, each path reflects what\'s still needed on top — the designed-in balance covers part of the distance.'); }
-        // Mandatory coupling disclosure (CLAUDE §10)
+        // Mandatory coupling disclosure (CLAUDE §10) — suppressed when SP has also moved (self-contradictory with live paths)
         var _ceilFloorRatioPort = r.a2 > 0 ? (r.a1 / r.a2).toFixed(2) : '—';
-        html += '<div class="req-item" style="border-left-color:rgba(255,255,255,0.1);background:rgba(255,255,255,0.02);margin-bottom:6px;">'
-          + '<div class="req-item-body" style="color:rgba(255,255,255,0.55);font-size:11px;">In this Sketch there is no floor-only move. Every dollar you use to lift the Floor also lifts the Ceiling, and at this horizon the Ceiling still moves more than the Floor.</div></div>';
+        if (!_spOffOrigin) {
+          html += '<div class="req-item" style="border-left-color:rgba(255,255,255,0.1);background:rgba(255,255,255,0.02);margin-bottom:6px;">'
+            + '<div class="req-item-body" style="color:rgba(255,255,255,0.55);font-size:11px;">In this Sketch there is no floor-only move. Every dollar you use to lift the Floor also lifts the Ceiling, and at this horizon the Ceiling still moves more than the Floor.</div></div>';
+        }
         r.paths.forEach(function(pth) {
           if (pth.lever === 'portfolio') {
             if (pth.hardStop === 'negative_portfolio' || pth.dP_M === null) return;
@@ -11051,6 +11077,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
 
       function d2UpdateScrubber(svgX) {
         if (!_d2LastScenario) return;
+        if (_d2SPHovering) return;
         var s   = _d2LastScenario;
         var yrs = s.yearsToGrow;
         if (yrs === 0) return;
