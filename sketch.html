@@ -300,6 +300,7 @@
   /* Native morphing for structural paths */
   .morph { transition: d 0.7s cubic-bezier(0.2, 0.8, 0.2, 1), stroke 0.3s ease; }
   .morph-node { transition: cx 0.7s cubic-bezier(0.2, 0.8, 0.2, 1), cy 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #d2-canvas.dragging .morph-node { transition: none !important; }
 
   .grid-tick { stroke: rgba(255,255,255,0.05); stroke-width: 1; stroke-dasharray: 2 4; }
   .grid-label { font-family: var(--font-mono); font-size: 10px; fill: rgba(255,255,255,0.8); }
@@ -522,6 +523,13 @@
     border-radius: 3px; font-family: var(--font-mono); font-size: 9px;
     color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; }
   .d2-accept-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+  /* S2 opening draw animation — fires once on first arrival */
+  #d2-canvas.d2-draw-init #d2-ceil-line  { stroke-dasharray: 1; stroke-dashoffset: 1; animation: drawLine 0.9s cubic-bezier(0.2,0.8,0.2,1) 0.0s forwards; }
+  #d2-canvas.d2-draw-init #d2-floor-line { stroke-dasharray: 1; stroke-dashoffset: 1; animation: drawLine 0.9s cubic-bezier(0.2,0.8,0.2,1) 0.2s forwards; }
+  #d2-canvas.d2-draw-init #d2-datum-line { stroke-dasharray: 1; stroke-dashoffset: 1; animation: drawLine 1.0s cubic-bezier(0.2,0.8,0.2,1) 0.4s forwards; }
+  @keyframes d2FadeInCone { to { opacity: 0.55; } }
+  #d2-canvas.d2-draw-init #d2-cone       { opacity: 0; animation: d2FadeInCone 0.7s ease 0.5s forwards; }
 
   /* GAP 5: Screen 2 blueprint background — teal grid at 5% opacity */
   #screen-2-design .canvas-wrap {
@@ -2106,21 +2114,21 @@
               <!-- Ceiling boundary -->
               <g class="boundary-group">
                 <path id="d2-ceil-hit"  stroke="transparent" stroke-width="18" fill="none" d="" pointer-events="stroke" style="cursor:ns-resize;" />
-                <path id="d2-ceil-line" class="boundary-line b-ceiling" d="" />
+                <path id="d2-ceil-line" class="boundary-line b-ceiling" pathLength="1" d="" />
                 <circle id="d2-node-ceil" class="morph-node" cx="650" cy="50" r="4" fill="var(--gold)" />
                 <text id="d2-lbl-ceil" class="range-label" x="665" y="50" text-anchor="start" style="fill:var(--gold); opacity:1;">STRUCTURAL CEILING</text>
               </g>
               <!-- Floor boundary -->
               <g class="boundary-group">
                 <path id="d2-floor-hit"  stroke="transparent" stroke-width="18" fill="none" d="" pointer-events="stroke" style="cursor:ns-resize;" />
-                <path id="d2-floor-line" class="boundary-line b-floor" d="" />
+                <path id="d2-floor-line" class="boundary-line b-floor" pathLength="1" d="" />
                 <circle id="d2-node-floor" class="morph-node" cx="650" cy="430" r="4" fill="var(--danger-red)" />
                 <text id="d2-lbl-floor" class="range-label" x="665" y="430" text-anchor="start" style="fill:var(--danger-red); opacity:1;">SURVIVAL FLOOR</text>
               </g>
               <!-- Datum boundary -->
               <g id="d2-datum-group" class="datum-group">
                 <path id="d2-datum-hit"  stroke="transparent" stroke-width="30" fill="none" d="" pointer-events="stroke" style="cursor:ns-resize;" />
-                <path id="d2-datum-line" class="boundary-line b-datum" d="" />
+                <path id="d2-datum-line" class="boundary-line b-datum" pathLength="1" d="" />
                 <circle id="d2-node-datum" class="morph-node" cx="650" cy="225" r="6" fill="var(--teal-mid)" />
                 <text id="d2-lbl-datum" class="range-label" x="665" y="225" text-anchor="start" style="fill:var(--teal-mid); opacity:1;">YOUR DATUM</text>
               </g>
@@ -2781,7 +2789,11 @@
         initD2DragHandlers();
         renderScreen2();
         updateScreen2Narrative();
-        requestAnimationFrame(function(){ s2d.classList.add('revealed'); });
+        requestAnimationFrame(function(){
+          s2d.classList.add('revealed');
+          var _d2Can = document.getElementById('d2-canvas');
+          if (_d2Can) _d2Can.classList.add('d2-draw-init');
+        });
         setTimeout(function(){ if (splash) splash.style.display = 'none'; }, 600);
       }, 3800);
     }
@@ -7170,6 +7182,8 @@
       _d2LastEndpointCY.datum = yD;
       _d2LastScenario = _liveSc;
       _d2LastScenario.targetSpend = Math.round(dDatum);
+      _d2LastScenario._epCeil  = Math.round(dCeil);
+      _d2LastScenario._epFloor = Math.round(dFloor);
       var _d2ValDatEl = document.getElementById('d2-val-datum');
       if (_d2ValDatEl) { var _dDRnd = Math.round(dDatum); _d2ValDatEl.textContent = (_dDRnd >= 1000 ? '$' + (_dDRnd/1000).toFixed(2).replace(/\.00$/,'') + 'M' : '$' + _dDRnd + 'k') + ' / yr'; }
       var _d2LblCeilEl = document.getElementById('d2-lbl-ceil');
@@ -7861,6 +7875,7 @@
         el.addEventListener('pointerdown', function(e) {
           e.stopPropagation();
           activeDrag = name;
+          svg.classList.add('dragging');
           el.setPointerCapture(e.pointerId);
           document.body.style.userSelect = 'none';
           _d2SetProbingState(true);
@@ -7895,12 +7910,14 @@
 
       svg.addEventListener('pointerup', function() {
         activeDrag = null;
+        svg.classList.remove('dragging');
         document.body.style.userSelect = '';
         // probing state persists until Accept or slider move
         renderScreen2();
       });
       svg.addEventListener('pointercancel', function() {
         activeDrag = null;
+        svg.classList.remove('dragging');
         document.body.style.userSelect = '';
       });
 
@@ -10863,6 +10880,9 @@ Studio is built for exactly this. See If This Shape Holds →`;
         var offsetYears = offsetRatio * yrs;
         var hoverAge    = Math.round(s.currentAge + offsetYears);
         var pts = getMathPoint(offsetYears, yrs, s);
+        if (offsetYears >= yrs - 0.1 && s._epCeil != null) {
+          pts = { fvUp: pts.fvUp, fvCon: pts.fvCon, ceilSpend: s._epCeil, floorSpend: s._epFloor, datumSpend: s.targetSpend };
+        }
         var yC = d2SpendToY(pts.ceilSpend);
         var yF = d2SpendToY(pts.floorSpend);
         var yD = d2SpendToY(pts.datumSpend);
