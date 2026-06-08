@@ -508,6 +508,10 @@
   #d2-canvas .d2-handle:hover { filter: drop-shadow(0 0 6px currentColor); }
   #d2-canvas .d2-handle.d2-handle-probing { filter: drop-shadow(0 0 8px currentColor); }
   #d2-canvas .d2-handle-hit { cursor: ns-resize; opacity: 0; }
+  #d2-canvas .d2-sp-handle { cursor: ns-resize; transition: r 0.15s ease, filter 0.15s ease; }
+  #d2-canvas .d2-sp-handle:hover { filter: drop-shadow(0 0 6px rgba(93,202,165,0.7)); }
+  #d2-canvas.dragging .d2-sp-handle { transition: none !important; }
+  #d2-canvas .d2-sp-handle.d2-handle-probing { filter: drop-shadow(0 0 8px rgba(93,202,165,0.9)); }
   #d2-canvas .d2-vline { stroke-width: 1; stroke-dasharray: 3 4; opacity: 0.35; }
   #d2-canvas .b-datum { stroke: var(--teal-mid); }
 
@@ -2141,6 +2145,15 @@
               <circle id="d2-handle-datum-hit" class="d2-handle-hit" cx="650" cy="225" r="18" fill="transparent" style="cursor:ns-resize;" />
               <circle id="d2-handle-floor" class="d2-handle" cx="650" cy="430" r="7"  fill="var(--danger-red)" tabindex="0" role="slider" aria-label="Floor drag handle"    style="color:var(--danger-red);" />
               <circle id="d2-handle-floor-hit" class="d2-handle-hit" cx="650" cy="430" r="18" fill="transparent" style="cursor:ns-resize;" />
+              <!-- SP anchor handle (left edge x=120, draggable up/down) -->
+              <circle id="d2-sp-handle" cx="120" cy="240" r="7" class="d2-sp-handle" tabindex="0" role="slider" aria-label="Starting point anchor" fill="rgba(93,202,165,0.45)" style="color:var(--teal-mid);" />
+              <circle id="d2-sp-handle-hit" cx="120" cy="240" r="18" fill="transparent" style="cursor:ns-resize;" />
+              <circle id="d2-sp-ghost" cx="120" cy="240" r="5" fill="none" stroke="rgba(93,202,165,0.3)" stroke-width="1.5" stroke-dasharray="3 2" style="display:none;" />
+              <g id="d2-tt-g-sp" transform="translate(120,240)" style="opacity:0; pointer-events:none;">
+                <rect x="15" y="-22" width="230" height="50" fill="#091221" fill-opacity="1" stroke="rgba(93,202,165,0.5)" stroke-width="1" rx="4" />
+                <text id="d2-tt-sp-bal" x="25" y="-8" font-family="var(--font-mono)" font-size="10" fill="var(--teal-mid)" font-weight="bold">$0 starting</text>
+                <text id="d2-tt-sp-delta" x="25" y="8" font-family="var(--font-mono)" font-size="9" fill="rgba(255,255,255,0.7)">+$0 designed in</text>
+              </g>
               <!-- Tension overlay (cone-clipped fill showing drag delta) -->
               <path id="d2-tension-overlay" fill="rgba(255,255,255,0.06)" d="" pointer-events="none" />
             </g>
@@ -6251,7 +6264,7 @@
     // ============================================================
 
     // Entry state: all zero — handles sit exactly on the ghost lines.
-    var designOverrides = { ceilDelta: 0, floorDelta: 0, datumDelta: 0, isDirty: false };
+    var designOverrides = { ceilDelta: 0, floorDelta: 0, datumDelta: 0, portDelta: 0, isDirty: false };
 
     // Phase 2.1: three-state architecture
     // ghostBaseline  — frozen snapshot of currentScenario at Screen 1→2 entry ("Shape You Have")
@@ -6263,6 +6276,9 @@
     var _d2AcceptAnimating = false;
     var _d2AcceptFromState = null;
     var _d2ActiveDesignPts = null;
+    var _d2SPGhostActive   = false;
+    var _d2SPDragBase      = null;
+    var _d2SPHandleY       = 240;
 
     // Phase 2.1 STUB: read d2-slider-* into designScenario + update display values
     function updateDesignEngine() {
@@ -7071,7 +7087,9 @@
       designOverrides.ceilDelta  = 0;
       designOverrides.floorDelta = 0;
       designOverrides.datumDelta = 0;
+      designOverrides.portDelta  = 0;
       designOverrides.isDirty    = false;
+      _d2SPGhostActive = false;
     }
 
     // ── Main render — unified bidirectional canvas (slider-driven + drag-driven) ──
@@ -7098,6 +7116,10 @@
         isNominal: _ghostSc.isNominal || false,
         taxMult: _ghostSc.taxMult || 0.8, inflRate: 0.03
       } : _ghostSc;
+      // Apply SP portDelta — must happen before ANY getMathPoint call
+      if (_ls && _ls.port !== undefined && designOverrides.portDelta) {
+        _liveSc.portfolioVol = _ls.port + designOverrides.portDelta;
+      }
       var _lYrs = Math.max(1, _liveSc.yearsToGrow);
       var _gYrs = Math.max(1, _ghostSc.yearsToGrow || Math.max(0, _ghostSc.activationAge - _ghostSc.currentAge));
 
@@ -7108,12 +7130,14 @@
       var dDatum  = dptsEnd.datumSpend + designOverrides.datumDelta;
       _d2ActiveDesignPts = dptsEnd;
 
-      // F2: Recalculate Y-axis scale to include drag overrides
-      if (designOverrides.isDirty) {
+      // F2: Recalculate Y-axis scale to include drag overrides (endpoint drag OR portDelta)
+      if (designOverrides.isDirty || designOverrides.portDelta) {
         var _ghostEnd2 = getMathPoint(_gYrs, _gYrs, _ghostSc);
+        var _lPtsS2 = getMathPoint(0, _lYrs, _liveSc);
         var _d2AV2 = [dCeil, dFloor, dDatum,
           dptsEnd.ceilSpend, dptsEnd.floorSpend, dptsEnd.datumSpend,
-          _ghostEnd2.ceilSpend, _ghostEnd2.floorSpend, _ghostEnd2.datumSpend];
+          _ghostEnd2.ceilSpend, _ghostEnd2.floorSpend, _ghostEnd2.datumSpend,
+          _lPtsS2.ceilSpend, _lPtsS2.floorSpend];
         var _d2VMin2 = Math.min.apply(null, _d2AV2);
         var _d2VMax2 = Math.max.apply(null, _d2AV2);
         var _d2PR2   = Math.max((_d2VMax2 - _d2VMin2) * 1.25, 60);
@@ -7225,7 +7249,7 @@
         if (lb) { lb.setAttribute('x', xE - 12); lb.setAttribute('y', yy + 4); lb.setAttribute('text-anchor','end'); }
       });
 
-      // Drag handle circles
+      // Drag handle circles (right endpoint)
       [['ceil',yC],['datum',yD],['floor',yF]].forEach(function(q) {
         var n = q[0], yy = q[1];
         var h = document.getElementById('d2-handle-' + n);
@@ -7233,6 +7257,46 @@
         var hh = document.getElementById('d2-handle-' + n + '-hit');
         if (hh) { hh.setAttribute('cx', xE); hh.setAttribute('cy', yy); }
       });
+
+      // SP anchor handle (left edge)
+      var ySpMid = (d2SpendToY(livePtsStart.ceilSpend) + d2SpendToY(livePtsStart.floorSpend)) / 2;
+      _d2SPHandleY = ySpMid;
+      var _spHEl  = document.getElementById('d2-sp-handle');
+      var _spHHEl = document.getElementById('d2-sp-handle-hit');
+      if (_spHEl)  { _spHEl.setAttribute('cx', xS);  _spHEl.setAttribute('cy', Math.round(ySpMid)); }
+      if (_spHHEl) { _spHHEl.setAttribute('cx', xS); _spHHEl.setAttribute('cy', Math.round(ySpMid)); }
+
+      // SP tooltip content + position
+      (function() {
+        var _spPortDollar  = Math.round(_liveSc.portfolioVol * 1e6);
+        var _spGhostDollar = _ghostSc ? Math.round(_ghostSc.portfolioVol * 1e6) : _spPortDollar;
+        var _spDelta = _spPortDollar - _spGhostDollar;
+        var _fmtD = function(d) {
+          return d >= 1000000 ? '$' + (d / 1000000).toFixed(2).replace(/\.00$/, '') + 'M'
+               : d >= 1000 ? '$' + Math.round(d / 1000) + 'k'
+               : '$' + d;
+        };
+        var _spBalEl = document.getElementById('d2-tt-sp-bal');
+        var _spDltEl = document.getElementById('d2-tt-sp-delta');
+        var _spTipEl = document.getElementById('d2-tt-g-sp');
+        if (_spBalEl) _spBalEl.textContent = _fmtD(_spPortDollar) + ' starting';
+        if (_spDltEl) _spDltEl.textContent = _spDelta > 0 ? '+' + _fmtD(_spDelta) + ' designed in' : '±$0 designed in';
+        if (_spTipEl) _spTipEl.setAttribute('transform', 'translate(' + xS + ',' + Math.round(ySpMid) + ')');
+      })();
+
+      // Ghost P marker (shown after Accept PATH 1 raised the slider above ghost baseline)
+      (function() {
+        var _spGEl = document.getElementById('d2-sp-ghost');
+        if (!_spGEl) return;
+        if (_d2SPGhostActive && _ghostSc && _liveSc.portfolioVol > _ghostSc.portfolioVol + 0.001) {
+          var _yGhostMid = (d2SpendToY(ghostPtsStart.ceilSpend) + d2SpendToY(ghostPtsStart.floorSpend)) / 2;
+          _spGEl.setAttribute('cx', xS);
+          _spGEl.setAttribute('cy', Math.round(_yGhostMid));
+          _spGEl.style.display = '';
+        } else {
+          _spGEl.style.display = 'none';
+        }
+      })();
 
       // Dashed vertical lines on ceil and datum handles
       var _dhcl = document.getElementById('d2-handle-ceil-line');
@@ -7829,7 +7893,7 @@
 
     // --- Handle probing state (glows handles while drag is pending Accept) ---
     function _d2SetProbingState(isProbing) {
-      ['d2-handle-ceil','d2-handle-datum','d2-handle-floor'].forEach(function(id) {
+      ['d2-handle-ceil','d2-handle-datum','d2-handle-floor','d2-sp-handle'].forEach(function(id) {
         var el = document.getElementById(id);
         if (!el) return;
         if (isProbing) el.classList.add('d2-handle-probing');
@@ -7882,6 +7946,36 @@
         });
       });
 
+      // SP anchor pointerdown
+      ['d2-sp-handle','d2-sp-handle-hit'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('pointerdown', function(e) {
+          e.stopPropagation();
+          activeDrag = 'sp';
+          svg.classList.add('dragging');
+          el.setPointerCapture(e.pointerId);
+          document.body.style.userSelect = 'none';
+          var _slPort = (designScenario && designScenario.port !== undefined)
+            ? designScenario.port
+            : (ghostBaseline ? ghostBaseline.portfolioVol : 0);
+          var _curPortVol = _slPort + (designOverrides.portDelta || 0);
+          _d2SPDragBase = { sliderPort: _slPort, curPortVol: _curPortVol, refSpend: d2YToSpend(_d2SPHandleY) };
+          var _spTip = document.getElementById('d2-tt-g-sp');
+          if (_spTip) _spTip.style.opacity = '1';
+        });
+        el.addEventListener('pointerenter', function() {
+          if (activeDrag) return;
+          var _spTip = document.getElementById('d2-tt-g-sp');
+          if (_spTip) _spTip.style.opacity = '1';
+        });
+        el.addEventListener('pointerleave', function() {
+          if (activeDrag === 'sp') return;
+          var _spTip = document.getElementById('d2-tt-g-sp');
+          if (_spTip) _spTip.style.opacity = '0';
+        });
+      });
+
       svg.addEventListener('pointermove', function(e) {
         if (!activeDrag) return;
         var _pts = _d2ActiveDesignPts || lastCalculatedPoints;
@@ -7889,6 +7983,15 @@
         var rawY  = getSVGY(e);
         var safeY = Math.max(D_Y_MIN + 5, Math.min(rawY, D_Y_MAX - 5));
         var spend = d2YToSpend(safeY);
+        if (activeDrag === 'sp') {
+          if (_d2SPDragBase && _d2SPDragBase.refSpend > 0.001) {
+            var spRatio = spend / _d2SPDragBase.refSpend;
+            var newPortVol = _d2SPDragBase.curPortVol * Math.max(0.05, spRatio);
+            designOverrides.portDelta = Math.max(0, newPortVol - _d2SPDragBase.sliderPort);
+          }
+          renderScreen2();
+          return;
+        }
         if (activeDrag === 'ceil') {
           var ceilBase    = _pts.ceilSpend;
           var dFloorCurr  = _pts.floorSpend + designOverrides.floorDelta;
@@ -7909,9 +8012,15 @@
       });
 
       svg.addEventListener('pointerup', function() {
+        var _wasSP = activeDrag === 'sp';
         activeDrag = null;
         svg.classList.remove('dragging');
         document.body.style.userSelect = '';
+        if (_wasSP) {
+          var _spTip = document.getElementById('d2-tt-g-sp');
+          if (_spTip) _spTip.style.opacity = '0';
+          _d2SPDragBase = null;
+        }
         // probing state persists until Accept or slider move
         renderScreen2();
       });
@@ -7919,6 +8028,9 @@
         activeDrag = null;
         svg.classList.remove('dragging');
         document.body.style.userSelect = '';
+        var _spTip = document.getElementById('d2-tt-g-sp');
+        if (_spTip) _spTip.style.opacity = '0';
+        _d2SPDragBase = null;
       });
 
       function handleKey(e, which) {
@@ -7992,11 +8104,14 @@
             }
           }
           if (!slEl) return;
+          var _isCapitalAccept = (type === 'capital');
           _d2AcceptAnimating = true;
           _d2SetProbingState(false);
           _d2AnimateSlider(slEl, targetPos, function() {
             _d2AcceptAnimating = false;
+            if (_isCapitalAccept) { _d2SPGhostActive = true; }
             initDesignState();
+            if (_isCapitalAccept) { _d2SPGhostActive = true; }
             _d2SetProbingState(false);
             renderScreen2();
           });
@@ -8267,6 +8382,15 @@
       var dc = overrides.ceilDelta  || 0;
       var df = overrides.floorDelta || 0;
       var dd = overrides.datumDelta || 0;
+
+      // SP conditional clause helpers
+      var _portDeltaM   = overrides.portDelta || 0;
+      var _spOffOrigin  = _portDeltaM > 0.001;
+      var _spClauseCard = function(body) {
+        return '<div class="req-item" style="border-left:2px solid rgba(93,202,165,0.45);background:rgba(93,202,165,0.04);margin-bottom:6px;">'
+          + '<div class="req-item-label" style="color:rgba(93,202,165,0.7);font-size:9px;letter-spacing:0.1em;">DESIGNED-IN STARTING BALANCE</div>'
+          + '<div class="req-item-body" style="font-size:11px;color:rgba(255,255,255,0.65);">' + body + '</div></div>';
+      };
 
       // Normalize: designScenario uses {age,retire,port,datum,contrib};
       // solveInverse + _d2BinarySearchY + getMathPoint expect {currentAge,activationAge,yearsToGrow,portfolioVol,annualContrib,targetSpend,...rates}
@@ -8612,6 +8736,7 @@
         // var _eL2Cell = _eL2[_eL2Key] || _eL2['EXPANSIVE_CENTERED'];
         html += item('req-item-datum', 'var(--teal-mid)', 'DATUM — ' + _eEntryName,
           _eFill(_eL1Cell.op), 'datum', r.datumTarget);
+        if (_spOffOrigin) { html += _spClauseCard('Starting from the higher balance you\'ve designed, the required capital for this Datum adjusts — the designed-in balance carries part of the load.'); }
         // G56/G57 horizon studio bridge for OE landing states
         if (_eLandName === 'OVEREXTENDED') {
           var _eBridge = _eLandSz === 'STRUCTURAL'
@@ -8730,6 +8855,7 @@
           }
           html += headCard('You\'ve set a specific shape with all three lines moved. Here\'s the lever combination.',
             'The Cramer system solves Ceiling and Floor together. Any Datum shortfall adds a portfolio-only top-up — contributions are unchanged.');
+          if (_spOffOrigin) { html += _spClauseCard('Starting from the higher balance you\'ve designed, the combination below reflects what\'s still needed — both levers shrink because part of the gap is already designed in.'); }
           html += itemD('req-item-ceil', 'var(--gold)', 'COMBINATION: PORTFOLIO + CONTRIBUTIONS', _cBodyC_FD, 'capital', (_sNorm.portfolioVol + _dPdispC), r.datumTarget);
           (function() {
             var _h4Curr   = Math.max(15, (_sNorm.planThroughAge || 93) - _sNorm.activationAge);
@@ -8771,6 +8897,7 @@
           'You\'ve set a specific shape. Here\'s the lever combination that gets you there.',
           'With both Floor and Ceiling pulled, this design needs portfolio and contribution changes working together; neither lever on its own can reach this target combo.'
         );
+        if (_spOffOrigin) { html += _spClauseCard('Starting from the higher balance you\'ve designed, the combination below reflects what\'s still needed — both levers shrink because part of the gap is already designed in.'); }
         var _cBodyC = '';
         if (r.dP_M >= 0 && r.dK_dollars >= 0) {
           _cBodyC = 'To reach this shape: add ' + fmtPort(r.dP_M) + ' to your starting balance and ' + fmtContrib(r.dK_dollars) + ' to contributions. These two levers together solve for your ceiling and floor simultaneously.';
@@ -8892,6 +9019,7 @@
           }
           html += headCard('You pulled the Ceiling and moved your Datum. Here\'s what it takes to hold both.',
             'Each path shows the larger of what the Ceiling needs and what your Datum needs.');
+          if (_spOffOrigin) { html += _spClauseCard('Starting from the higher balance you\'ve designed, each path reflects what\'s still needed on top — the designed-in balance covers part of the distance.'); }
           // PATH 1 — PORTFOLIO
           var _p1A = _tiedA
             ? 'Add ' + fmtPort(_dispPA) + ' to your starting balance. Your Ceiling and Datum are pulling together — both need the same portfolio addition.'
@@ -8959,6 +9087,7 @@
           'You pulled the ceiling. Here\'s what it takes to hold it.',
           'You pulled the Ceiling. Holding it here requires real changes in the plan — these three paths show different ways to carry that higher line.'
         );
+        if (_spOffOrigin) { html += _spClauseCard('Starting from the higher balance you\'ve designed, each path reflects what\'s still needed on top — the designed-in balance covers part of the distance.'); }
         var _allSuppA = r.paths.filter(function(p) { return p.lever !== 'retireAge'; }).every(function(p) { return p.softWarn !== null; });
         r.paths.forEach(function(pth) {
           if (pth.lever === 'portfolio') {
@@ -9094,6 +9223,7 @@
           }
           html += headCard('You pulled the Floor and moved your Datum. Here\'s what it takes to support both.',
             'Each path shows the larger of what the Floor needs and what your Datum needs.');
+          if (_spOffOrigin) { html += _spClauseCard('Starting from the higher balance you\'ve designed, each path reflects what\'s still needed on top — the designed-in balance covers part of the distance.'); }
           // PATH 1 — PORTFOLIO
           var _p1B = _tiedPB
             ? 'Add ' + fmtPort(_dispPB) + ' to your starting balance. Supporting both takes more portfolio than supporting the Floor alone.'
@@ -9157,6 +9287,7 @@
           'You pulled the Floor up. These paths show what it would take, in capital, savings, or timing, to keep that higher boundary in place.',
           'A floor of ' + fmtKyr(r.floorTarget) + ' — ' + _df_pct + '% ' + _df_dir + ' from your current floor — requires one of these lever moves.'
         );
+        if (_spOffOrigin) { html += _spClauseCard('Starting from the higher balance you\'ve designed, each path reflects what\'s still needed on top — the designed-in balance covers part of the distance.'); }
         // Mandatory coupling disclosure (CLAUDE §10)
         var _ceilFloorRatioPort = r.a2 > 0 ? (r.a1 / r.a2).toFixed(2) : '—';
         html += '<div class="req-item" style="border-left-color:rgba(255,255,255,0.1);background:rgba(255,255,255,0.02);margin-bottom:6px;">'
