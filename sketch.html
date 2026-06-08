@@ -8731,6 +8731,33 @@
           html += headCard('You\'ve set a specific shape with all three lines moved. Here\'s the lever combination.',
             'The Cramer system solves Ceiling and Floor together. Any Datum shortfall adds a portfolio-only top-up — contributions are unchanged.');
           html += itemD('req-item-ceil', 'var(--gold)', 'COMBINATION: PORTFOLIO + CONTRIBUTIONS', _cBodyC_FD, 'capital', (_sNorm.portfolioVol + _dPdispC), r.datumTarget);
+          (function() {
+            var _h4Curr   = Math.max(15, (_sNorm.planThroughAge || 93) - _sNorm.activationAge);
+            var _h4ScCurr = 0.6079 / (1 - Math.pow(1.034, -_h4Curr));
+            if (pts.ceilSpend <= 0 || pts.floorSpend <= 0) return;
+            var _h4ScReqCeil = r.ceilTarget  * _h4ScCurr / pts.ceilSpend;
+            var _h4ScReqFlr  = r.floorTarget * _h4ScCurr / pts.floorSpend;
+            var _h4ScReq = Math.max(_h4ScReqCeil, _h4ScReqFlr);
+            if (pts.datumSpend > 0) {
+              var _h4ScReqDat = r.datumTarget * _h4ScCurr / pts.datumSpend;
+              _h4ScReq = Math.max(_h4ScReq, _h4ScReqDat);
+            }
+            if (_h4ScReq <= 0.6079) return;
+            var _h4Inner = 1 - 0.6079 / _h4ScReq;
+            if (_h4Inner <= 0 || _h4Inner >= 1) return;
+            var _h4 = -Math.log(_h4Inner) / Math.log(1.034);
+            var _h4PTA = _sNorm.activationAge + Math.max(15, _h4);
+            var _h4C = Math.round(Math.min(105, Math.max(Math.max(75, _sNorm.activationAge + 20), _h4PTA)));
+            var _h4Delta = _h4C - (_sNorm.planThroughAge || 93);
+            if (Math.abs(_h4Delta) < 1) return;
+            var _h4PlanOld = _sNorm.planThroughAge || 93;
+            var _h4Body = 'Plan through ' + _h4C + ' instead of ' + _h4PlanOld + '. A single shorter retirement holds both the Ceiling and the Floor you\'ve pulled, on the same balance — no new capital, no extra working years. Your Datum move is included. This is an assumption, not an effort — lean on it only if the shorter retirement is genuine.';
+            if (Math.abs(_h4Delta) > 15) {
+              _h4Body = '<em style="color:rgba(255,255,255,0.5);">&#9888; Reaching these targets through retirement length alone would require planning through ' + _h4C + ' — a significant shift. A combination may be more practical.</em> ' + _h4Body;
+            }
+            html += itemD('req-item-ceil', 'var(--gold)', 'PATH 4 — PLANNING HORIZON', _h4Body, 'plan', _h4C, r.datumTarget);
+          })();
+          html += studioCTA('Studio can model the most efficient mix of these levers given your actual account structure, income timing, and tax treatment.');
           req.innerHTML = html; return;
         }
         if (r.comboWarnK || r.comboWarnP) {
@@ -8794,6 +8821,29 @@
             html += item('req-item-datum', 'var(--teal-mid)', 'DATUM — ' + (_wyDatObj_C ? _wyDatObj_C.name : 'EXPANSIVE'), _wyCtx_C, null, null);
           }
         }
+        (function() {
+          var _h4Curr   = Math.max(15, (_sNorm.planThroughAge || 93) - _sNorm.activationAge);
+          var _h4ScCurr = 0.6079 / (1 - Math.pow(1.034, -_h4Curr));
+          if (pts.ceilSpend <= 0 || pts.floorSpend <= 0) return;
+          var _h4ScReqCeil = r.ceilTarget  * _h4ScCurr / pts.ceilSpend;
+          var _h4ScReqFlr  = r.floorTarget * _h4ScCurr / pts.floorSpend;
+          var _h4ScReq = Math.max(_h4ScReqCeil, _h4ScReqFlr);
+          if (_h4ScReq <= 0.6079) return;
+          var _h4Inner = 1 - 0.6079 / _h4ScReq;
+          if (_h4Inner <= 0 || _h4Inner >= 1) return;
+          var _h4 = -Math.log(_h4Inner) / Math.log(1.034);
+          var _h4PTA = _sNorm.activationAge + Math.max(15, _h4);
+          var _h4C = Math.round(Math.min(105, Math.max(Math.max(75, _sNorm.activationAge + 20), _h4PTA)));
+          var _h4Delta = _h4C - (_sNorm.planThroughAge || 93);
+          if (Math.abs(_h4Delta) < 1) return;
+          var _h4PlanOld = _sNorm.planThroughAge || 93;
+          var _h4Body = 'Plan through ' + _h4C + ' instead of ' + _h4PlanOld + '. A single shorter retirement holds both the Ceiling and the Floor you\'ve pulled, on the same balance — no new capital, no extra working years. This is an assumption, not an effort — lean on it only if the shorter retirement is genuine.';
+          if (Math.abs(_h4Delta) > 15) {
+            _h4Body = '<em style="color:rgba(255,255,255,0.5);">&#9888; Reaching these targets through retirement length alone would require planning through ' + _h4C + ' — a significant shift. A combination may be more practical.</em> ' + _h4Body;
+          }
+          html += itemD('req-item-ceil', 'var(--gold)', 'PATH 4 — PLANNING HORIZON', _h4Body, 'plan', _h4C, r.datumTarget);
+        })();
+        html += studioCTA('Studio can model the most efficient mix of these levers given your actual account structure, income timing, and tax treatment.');
         req.innerHTML = html;
         return;
       }
