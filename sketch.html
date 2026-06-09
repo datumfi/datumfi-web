@@ -397,6 +397,10 @@
   #sketch-canvas:not(.shape-armed) #tt-g-ceil,
   #sketch-canvas:not(.shape-armed) #tt-g-datum,
   #sketch-canvas:not(.shape-armed) #tt-g-floor { opacity: 0 !important; pointer-events: none !important; }
+  html:not(:has(#sketch-canvas.shape-armed)) #d2-scrubber-group,
+  html:not(:has(#sketch-canvas.shape-armed)) #d2-tt-g-ceil,
+  html:not(:has(#sketch-canvas.shape-armed)) #d2-tt-g-datum,
+  html:not(:has(#sketch-canvas.shape-armed)) #d2-tt-g-floor { opacity: 0 !important; pointer-events: none !important; }
 
   /* Grid Fade */
   .fade-in-early { opacity: 0; animation: fadeInClean 0.5s ease forwards; }
@@ -4665,7 +4669,7 @@
         if (_waveEnabled) {
             var _sm = {OVEREXTENDED:'shape-state-overextended',STRETCHED:'shape-state-stretched',EXPANSIVE:'shape-state-expansive',GROUNDED:'shape-state-grounded',ABUNDANT:'shape-state-abundant'};
             var _smk = _sm[stateObj.name];
-            if (_smk && (stateObj.name !== 'OVEREXTENDED' || _shapeArmed)) sketchCanvas.classList.add(_smk);
+            if (_smk && (stateObj.name !== 'OVEREXTENDED' || sketchCanvas.classList.contains('shape-armed'))) sketchCanvas.classList.add(_smk);
         }
 
         // HUD updating logic - ONLY runs if the Emergence Narrative is finished
@@ -6571,7 +6575,7 @@
         _ss('d2s-node-datum', 'fill',   stateObj.color);
         _ss('d2s-datum-lbl',  'fill',   stateObj.color);
         var tintEl = document.getElementById('d2s-state-tint-rect');
-        if (tintEl) tintEl.setAttribute('fill', stateObj.name === 'OVEREXTENDED' && _shapeArmed ? 'rgba(226,75,74,0.06)' : 'none');
+        if (tintEl) tintEl.setAttribute('fill', stateObj.name === 'OVEREXTENDED' && sketchCanvas.classList.contains('shape-armed') ? 'rgba(226,75,74,0.06)' : 'none');
         // Detail 6: datum proximity pulse — mirror Screen 1 shape class on d2-canvas
         var _d2CanvasEl = document.getElementById('d2-canvas');
         if (_d2CanvasEl) {
@@ -6580,7 +6584,7 @@
             if (_waveEnabled) {
                 var _d2sm = {OVEREXTENDED:'shape-state-overextended',STRETCHED:'shape-state-stretched',EXPANSIVE:'shape-state-expansive',GROUNDED:'shape-state-grounded',ABUNDANT:'shape-state-abundant'};
                 var _d2k = _d2sm[stateObj.name];
-                if (_d2k && (stateObj.name !== 'OVEREXTENDED' || _shapeArmed)) _d2CanvasEl.classList.add(_d2k);
+                if (_d2k && (stateObj.name !== 'OVEREXTENDED' || sketchCanvas.classList.contains('shape-armed'))) _d2CanvasEl.classList.add(_d2k);
             }
         }
 
@@ -7419,7 +7423,7 @@
       (function() {
         var _hs = getShapeStateObj({ ceilSpend: dCeil, floorSpend: dFloor, datumSpend: dDatum });
         var _sr = document.getElementById('d2-state-tint-rect');
-        if (_sr) _sr.setAttribute('fill', _hs.name === 'OVEREXTENDED' ? 'rgba(226,75,74,0.06)' : 'none');
+        if (_sr) _sr.setAttribute('fill', _hs.name === 'OVEREXTENDED' && sketchCanvas.classList.contains('shape-armed') ? 'rgba(226,75,74,0.06)' : 'none');
       })();
 
       updateScreen2Narrative();
