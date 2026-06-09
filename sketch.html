@@ -392,6 +392,12 @@
     #sketch-canvas.shape-armed #state-tint-rect.state-ambient-overextended-entry { animation: none !important; fill: rgba(226, 75, 74, 0.10); }
   }
 
+  /* F97.3 belt — hard-hide scrubber/tooltip groups until shape-armed */
+  #sketch-canvas:not(.shape-armed) #scrubber-group,
+  #sketch-canvas:not(.shape-armed) #tt-g-ceil,
+  #sketch-canvas:not(.shape-armed) #tt-g-datum,
+  #sketch-canvas:not(.shape-armed) #tt-g-floor { opacity: 0 !important; pointer-events: none !important; }
+
   /* Grid Fade */
   .fade-in-early { opacity: 0; animation: fadeInClean 0.5s ease forwards; }
 
@@ -5771,6 +5777,7 @@
 
     const svgCanvas = document.querySelector('.range-svg');
     svgCanvas.addEventListener('pointermove', (e) => {
+        if (!document.getElementById('sketch-canvas').classList.contains('shape-armed')) return;
         const pt = svgCanvas.createSVGPoint();
         pt.x = e.clientX; pt.y = e.clientY;
         const svgP = pt.matrixTransform(svgCanvas.getScreenCTM().inverse());
@@ -5817,7 +5824,7 @@
     }
 
     function updateScrubber(svgX) {
-        if (!_shapeArmed) {
+        if (!document.getElementById('sketch-canvas').classList.contains('shape-armed')) {
             var _sg = document.getElementById('scrubber-group');
             if (_sg) _sg.style.opacity = '0';
             ['tt-g-ceil','tt-g-floor','tt-g-datum'].forEach(function(id) { var el = document.getElementById(id); if (el) el.style.opacity = '0'; });
@@ -5948,6 +5955,7 @@
         _prevDatumSliderVal = _nDat;
       }
       _shapeArmed = true;
+      if (window.currentShapeStateObj && window.currentShapeStateObj.name) previousStateName = window.currentShapeStateObj.name;
       var _dd0 = document.getElementById('datum-dragger'); if (_dd0) _dd0.style.pointerEvents = '';
       var _sc0 = document.getElementById('sketch-canvas'); if (_sc0) _sc0.classList.add('shape-armed');
       triggerInteraction(); touched.spending = true; updateTracker(); scheduleUpdate();
@@ -11130,7 +11138,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
       }
 
       function d2UpdateScrubber(svgX) {
-        if (!_shapeArmed) {
+        if (!document.getElementById('sketch-canvas').classList.contains('shape-armed')) {
             if (d2ScrubGrp) d2ScrubGrp.style.opacity = '0';
             ['d2-tt-g-ceil','d2-tt-g-floor','d2-tt-g-datum'].forEach(function(id) { var el = document.getElementById(id); if (el) el.style.opacity = '0'; });
             if (d2CeilLbl)  d2CeilLbl.style.opacity  = '1';
@@ -11167,6 +11175,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
       }
 
       d2Canvas.addEventListener('pointermove', function(e) {
+        if (!document.getElementById('sketch-canvas').classList.contains('shape-armed')) return;
         var svgP = d2SvgPt(e);
         if (svgP.x >= 110 && svgP.x <= 660 && svgP.y >= -20 && svgP.y <= 500) {
           d2UpdateScrubber(clamp(svgP.x, 120, 650));
