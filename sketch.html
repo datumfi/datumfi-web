@@ -381,15 +381,15 @@
 
   /* Fix 3 — ambient state tint via SVG rect (SVG fill animates reliably; background-color on SVG is unreliable) */
   #state-tint-rect { transition: fill 0.4s ease; }
-  #state-tint-rect.state-ambient-overextended { fill: rgba(226, 75, 74, 0.10); }
+  #sketch-canvas.shape-armed #state-tint-rect.state-ambient-overextended { fill: rgba(226, 75, 74, 0.10); }
   @keyframes overextendedEntryFlash {
     0%   { fill: rgba(226, 75, 74, 0.30); }
     100% { fill: rgba(226, 75, 74, 0.10); }
   }
-  #state-tint-rect.state-ambient-overextended-entry { animation: overextendedEntryFlash 0.6s ease forwards; }
+  #sketch-canvas.shape-armed #state-tint-rect.state-ambient-overextended-entry { animation: overextendedEntryFlash 0.6s ease forwards; }
   @media (prefers-reduced-motion: reduce) {
     #state-tint-rect { transition: none !important; }
-    #state-tint-rect.state-ambient-overextended-entry { animation: none !important; fill: rgba(226, 75, 74, 0.10); }
+    #sketch-canvas.shape-armed #state-tint-rect.state-ambient-overextended-entry { animation: none !important; fill: rgba(226, 75, 74, 0.10); }
   }
 
   /* Grid Fade */
@@ -399,16 +399,16 @@
   .cone-fill { fill: url(#thermal-grad); opacity: 0; } /* triggered by .draw-triggered */
   .ghost-cone-fill { fill: url(#thermal-grad); } /* ghost-cone only — no animation association */
   .range-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0; }
-  .draw-triggered .range-label { animation: fadeInClean 0.6s ease 0.45s forwards; }
+  .shape-armed.draw-triggered .range-label { animation: fadeInClean 0.6s ease 0.45s forwards; }
   .boundary-group circle { opacity: 0; }
-  .draw-triggered .boundary-group circle { animation: fadeInClean 0.6s ease 0.45s forwards; }
+  .shape-armed.draw-triggered .boundary-group circle { animation: fadeInClean 0.6s ease 0.45s forwards; }
   #sketch-canvas #node-datum,
   #sketch-canvas #datum-circle {
     opacity: 0;
     transition: opacity 0.3s ease;
   }
-  #sketch-canvas.draw-triggered #node-datum,
-  #sketch-canvas.draw-triggered #datum-circle {
+  #sketch-canvas.shape-armed.draw-triggered #node-datum,
+  #sketch-canvas.shape-armed.draw-triggered #datum-circle {
     opacity: 1;
   }
 
@@ -439,10 +439,10 @@
   .f88-solid-floor #floor-line-dashed { opacity: 0; transition: opacity 0.55s ease; }
   #sketch-canvas.f88-draw-ceil:not(.f88-solid-ceil)   #ceil-line  { opacity: 0 !important; }
   #sketch-canvas.f88-draw-floor:not(.f88-solid-floor) #floor-line { opacity: 0 !important; }
-  #sketch-canvas.f88-solid-ceil  .boundary-group #node-ceil,
-  #sketch-canvas.f88-solid-ceil  .boundary-group #ceil-lbl  { animation: fadeInClean 0.6s ease 0.2s forwards; }
-  #sketch-canvas.f88-solid-floor .boundary-group #node-floor,
-  #sketch-canvas.f88-solid-floor .boundary-group #floor-lbl { animation: fadeInClean 0.6s ease 0.2s forwards; }
+  #sketch-canvas.shape-armed.f88-solid-ceil  .boundary-group #node-ceil,
+  #sketch-canvas.shape-armed.f88-solid-ceil  .boundary-group #ceil-lbl  { animation: fadeInClean 0.6s ease 0.2s forwards; }
+  #sketch-canvas.shape-armed.f88-solid-floor .boundary-group #node-floor,
+  #sketch-canvas.shape-armed.f88-solid-floor .boundary-group #floor-lbl { animation: fadeInClean 0.6s ease 0.2s forwards; }
   .f88-draw-datum  #ceil-line-dashed,
   .f88-draw-datum  #floor-line-dashed { opacity: 0; }
 
@@ -5489,6 +5489,7 @@
         touched = { timeline: false, capital: false, spending: false, refined: false };
         hasInteracted = false;
         _shapeArmed = false;
+        var _sc = document.getElementById('sketch-canvas'); if (_sc) _sc.classList.remove('shape-armed');
         document.getElementById('interactive-layer').classList.remove('active');
         document.getElementById('tracker-bar').classList.remove('active');
         updateTracker();
@@ -5948,6 +5949,7 @@
       }
       _shapeArmed = true;
       var _dd0 = document.getElementById('datum-dragger'); if (_dd0) _dd0.style.pointerEvents = '';
+      var _sc0 = document.getElementById('sketch-canvas'); if (_sc0) _sc0.classList.add('shape-armed');
       triggerInteraction(); touched.spending = true; updateTracker(); scheduleUpdate();
     });
 
