@@ -3622,6 +3622,10 @@ input:focus,select:focus{
     if (coIncome > 0 && typeof moneyFull === 'function') pin('spouseIncome', moneyFull(coIncome));
     var coRetire = p.household && p.household.coArchitect && p.household.coArchitect.targetRetirementAge;
     if (coRetire) pin('spouseRetireDate', String(coRetire));
+    var _pBal = p.accounts && p.accounts.currentPortfolioBalance;
+    if (_pBal > 0 && typeof moneyFull === 'function') pin('portfolioBalance', moneyFull(_pBal));
+    var _aCon = p.accounts && p.accounts.annualContributions;
+    if (_aCon > 0 && typeof moneyFull === 'function') pin('annualContributions', moneyFull(_aCon));
     if (typeof update === 'function') update();
   }
 
