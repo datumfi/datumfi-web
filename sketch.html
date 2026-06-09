@@ -2849,12 +2849,8 @@
     const slAge = document.getElementById('slider-age');
     const slAct = document.getElementById('slider-activation');
     const slPlan = document.getElementById('sl-plan-through');
-    (function() {
-        var _raw = null;
-        try { _raw = localStorage.getItem('datumfi.accountDossier.v15'); } catch(e) {}
-        if (!_raw) return;
-        var _p = null;
-        try { _p = JSON.parse(_raw); } catch(e) {}
+    window._v15WasAbsent = false;
+    window._applyDossierSliders = function(_p) {
         if (!_p) return;
         var _dob = _p.primary && _p.primary.dateOfBirth;
         if (_dob) {
@@ -2888,10 +2884,39 @@
             var _sC = document.getElementById('slider-contrib');
             if (_sC) { _sC.value = contribValToPos(Math.round(_contrib)); _sC.dataset.exactVal = String(Math.round(_contrib)); }
         }
+    };
+    (function() {
+        var _raw = null;
+        try { _raw = localStorage.getItem('datumfi.accountDossier.v15'); } catch(e) {}
+        if (!_raw) { window._v15WasAbsent = true; return; }
+        var _p = null;
+        try { _p = JSON.parse(_raw); } catch(e) {}
+        if (!_p) { window._v15WasAbsent = true; return; }
+        window._applyDossierSliders(_p);
     })();
     const slPort = document.getElementById('slider-portfolio');
     const slContrib = document.getElementById('slider-contrib');
     const slDatum = document.getElementById('slider-datum');
+
+    window.addEventListener('load', function() {
+        if (!window._v15WasAbsent) return;
+        if (sessionStorage.getItem('datumfi_hydrate_from_slot') || new URLSearchParams(window.location.search).get('id')) return;
+        try {
+            if (!window.Clerk) return;
+            window.Clerk.load().then(function() {
+                try {
+                    if (!window.Clerk.user) return;
+                    var _meta = window.Clerk.user.unsafeMetadata || {};
+                    var _cd = _meta.dossier;
+                    if (!_cd || typeof _cd !== 'object') return;
+                    try { localStorage.setItem('datumfi.accountDossier.v15', JSON.stringify(_cd)); } catch(e2) {}
+                    if (hasInteracted) return;
+                    window._applyDossierSliders(_cd);
+                    try { scheduleUpdate(); } catch(e3) {}
+                } catch(e) {}
+            }).catch(function() {});
+        } catch(e) {}
+    });
 
     function readPort()    { var x = slPort.dataset.exactVal;    return (x !== undefined && x !== '') ? parseFloat(x) : portPosToVal(parseInt(slPort.value))     * 1000000; }
     function readDatum()   { var x = slDatum.dataset.exactVal;   return (x !== undefined && x !== '') ? parseFloat(x) : datumPosToVal(parseInt(slDatum.value))    * 1000;    }
