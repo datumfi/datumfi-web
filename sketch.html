@@ -2839,11 +2839,45 @@
     const slAge = document.getElementById('slider-age');
     const slAct = document.getElementById('slider-activation');
     const slPlan = document.getElementById('sl-plan-through');
-    // F92 hook: Dossier writes datum_planThroughAge to sessionStorage; Sketch reads it at boot
     (function() {
-        var _pta = parseInt(sessionStorage.getItem('datum_planThroughAge') || '93', 10);
-        var _pta_s = isNaN(_pta) ? 93 : Math.max(75, Math.min(105, _pta));
-        if (slPlan) slPlan.value = _pta_s;
+        var _raw = null;
+        try { _raw = localStorage.getItem('datumfi.accountDossier.v15'); } catch(e) {}
+        if (!_raw) return;
+        var _p = null;
+        try { _p = JSON.parse(_raw); } catch(e) {}
+        if (!_p) return;
+        var _dob = _p.primary && _p.primary.dateOfBirth;
+        if (_dob) {
+            var _s = String(_dob), _y, _m;
+            var _iso = _s.match(/^(\d{4})-(\d{2})$/);
+            var _pretty = _s.match(/^(\d{1,2})\/(\d{4})$/);
+            if (_iso) { _y = parseInt(_iso[1], 10); _m = parseInt(_iso[2], 10); }
+            else if (_pretty) { _y = parseInt(_pretty[2], 10); _m = parseInt(_pretty[1], 10); }
+            if (_y && _m) {
+                var _now = new Date(), _a = _now.getFullYear() - _y;
+                if (_now.getMonth() + 1 < _m) _a--;
+                if (_a >= 18 && _a <= 85) slAge.value = _a;
+            }
+        }
+        var _ra = parseInt((_p.primary && _p.primary.targetRetirementAge) || (_p.defaults && _p.defaults.targetRetirementAge), 10);
+        if (_ra >= 45 && _ra <= 90) slAct.value = _ra;
+        var _pta = parseInt(_p.defaults && _p.defaults.planThroughAge, 10);
+        if (!isNaN(_pta) && _pta >= 75 && _pta <= 105 && slPlan) slPlan.value = _pta;
+        var _datum = parseFloat(_p.defaults && _p.defaults.defaultDatum);
+        if (_datum > 0) {
+            var _sD = document.getElementById('slider-datum');
+            if (_sD) { _sD.value = datumValToPos(_datum / 1000); _sD.dataset.exactVal = String(Math.round(_datum)); }
+        }
+        var _port = parseFloat(_p.accounts && _p.accounts.currentPortfolioBalance);
+        if (_port > 0) {
+            var _sP = document.getElementById('slider-portfolio');
+            if (_sP) { _sP.value = portValToPos(_port / 1000000); _sP.dataset.exactVal = String(Math.round(_port)); }
+        }
+        var _contrib = parseFloat(_p.accounts && _p.accounts.annualContributions);
+        if (_contrib > 0) {
+            var _sC = document.getElementById('slider-contrib');
+            if (_sC) { _sC.value = contribValToPos(Math.round(_contrib)); _sC.dataset.exactVal = String(Math.round(_contrib)); }
+        }
     })();
     const slPort = document.getElementById('slider-portfolio');
     const slContrib = document.getElementById('slider-contrib');
