@@ -2936,6 +2936,7 @@
     var anchorState = null;
     let activeInputId = null;
     var hasInteracted = false;
+    var _shapeArmed = false;
     let previousShapeStatus = 'inside';
     let previousStateName   = null; // Fix 3: tracks prior state name for OVEREXTENDED entry detection
     let hudSequenceActive = false; // STRUCT 2: gate removed — HUD shows real values immediately
@@ -4656,7 +4657,8 @@
         sketchCanvas.classList.remove.apply(sketchCanvas.classList, _S5);
         if (_waveEnabled) {
             var _sm = {OVEREXTENDED:'shape-state-overextended',STRETCHED:'shape-state-stretched',EXPANSIVE:'shape-state-expansive',GROUNDED:'shape-state-grounded',ABUNDANT:'shape-state-abundant'};
-            if (_sm[stateObj.name]) sketchCanvas.classList.add(_sm[stateObj.name]);
+            var _smk = _sm[stateObj.name];
+            if (_smk && (stateObj.name !== 'OVEREXTENDED' || _shapeArmed)) sketchCanvas.classList.add(_smk);
         }
 
         // HUD updating logic - ONLY runs if the Emergence Narrative is finished
@@ -5486,6 +5488,7 @@
 
         touched = { timeline: false, capital: false, spending: false, refined: false };
         hasInteracted = false;
+        _shapeArmed = false;
         document.getElementById('interactive-layer').classList.remove('active');
         document.getElementById('tracker-bar').classList.remove('active');
         updateTracker();
@@ -5813,6 +5816,7 @@
     }
 
     function updateScrubber(svgX) {
+        if (!_shapeArmed) return;
         if (currentScenario.yearsToGrow === 0) return;
         
         ceilLbl.style.opacity = 0;
@@ -5936,7 +5940,7 @@
         }
         _prevDatumSliderVal = _nDat;
       }
-      triggerInteraction(); touched.spending = true; updateTracker(); scheduleUpdate();
+      _shapeArmed = true; triggerInteraction(); touched.spending = true; updateTracker(); scheduleUpdate();
     });
 
     // GEM C: Datum SVG drag — dragging the datum line live-updates the slider
@@ -6542,7 +6546,7 @@
         _ss('d2s-node-datum', 'fill',   stateObj.color);
         _ss('d2s-datum-lbl',  'fill',   stateObj.color);
         var tintEl = document.getElementById('d2s-state-tint-rect');
-        if (tintEl) tintEl.setAttribute('fill', stateObj.name === 'OVEREXTENDED' ? 'rgba(226,75,74,0.06)' : 'none');
+        if (tintEl) tintEl.setAttribute('fill', stateObj.name === 'OVEREXTENDED' && _shapeArmed ? 'rgba(226,75,74,0.06)' : 'none');
         // Detail 6: datum proximity pulse — mirror Screen 1 shape class on d2-canvas
         var _d2CanvasEl = document.getElementById('d2-canvas');
         if (_d2CanvasEl) {
@@ -6550,7 +6554,8 @@
             _d2CanvasEl.classList.remove.apply(_d2CanvasEl.classList, _d2S5);
             if (_waveEnabled) {
                 var _d2sm = {OVEREXTENDED:'shape-state-overextended',STRETCHED:'shape-state-stretched',EXPANSIVE:'shape-state-expansive',GROUNDED:'shape-state-grounded',ABUNDANT:'shape-state-abundant'};
-                if (_d2sm[stateObj.name]) _d2CanvasEl.classList.add(_d2sm[stateObj.name]);
+                var _d2k = _d2sm[stateObj.name];
+                if (_d2k && (stateObj.name !== 'OVEREXTENDED' || _shapeArmed)) _d2CanvasEl.classList.add(_d2k);
             }
         }
 
@@ -11113,6 +11118,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
       }
 
       function d2UpdateScrubber(svgX) {
+        if (!_shapeArmed) return;
         if (!_d2LastScenario) return;
         if (_d2SPHovering) return;
         var s   = _d2LastScenario;
@@ -11289,6 +11295,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
         if (_vDatum) _vDatum.textContent = '$' + Math.round(_datumK) + 'k/yr';
       }
 
+      _shapeArmed = true;
       try { updateEngine(); } catch(ex) {}
       // F88: hydrated sketches skip discovery sequence
       try { localStorage.setItem('datum-discover-v1', 'done'); } catch(ex) {}
@@ -11355,6 +11362,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
         if (_vDatum) _vDatum.textContent = '$' + Math.round(_datumK) + 'k/yr';
       }
 
+      _shapeArmed = true;
       try { updateEngine(); } catch(ex) {}
       ;(function(_pM, _cV, _dS, _slP, _slC, _slD) {
         setTimeout(function() {
