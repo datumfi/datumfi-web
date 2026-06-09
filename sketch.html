@@ -4363,12 +4363,13 @@
                 'state-ambient-stretched', 'state-ambient-overextended',
                 'state-ambient-overextended-entry'
             );
+            var _armed = sketchCanvas.classList.contains('shape-armed');
             if (!_waveEnabled) {
                 // Motion OFF: static fill via attribute (OVEREXTENDED only gets canvas tint)
-                tintRect.setAttribute('fill', s.name === 'OVEREXTENDED' ? 'rgba(226,75,74,0.10)' : 'none');
+                tintRect.setAttribute('fill', (_armed && s.name === 'OVEREXTENDED') ? 'rgba(226,75,74,0.10)' : 'none');
             } else {
                 tintRect.setAttribute('fill', 'none'); // always transparent unless CSS class overrides
-                if (s.name === 'OVEREXTENDED') {
+                if (_armed && s.name === 'OVEREXTENDED') {
                     if (previousStateName !== 'OVEREXTENDED') { void tintRect.getBoundingClientRect(); }
                     tintRect.classList.add(previousStateName === 'OVEREXTENDED'
                         ? 'state-ambient-overextended'
@@ -5756,7 +5757,8 @@
                 if (_trt2) {
                     _trt2.classList.remove('state-ambient-abundant','state-ambient-grounded','state-ambient-stretched','state-ambient-overextended','state-ambient-overextended-entry');
                     var _sn2 = (window.currentShapeStateObj || {}).name;
-                    _trt2.setAttribute('fill', _sn2 === 'OVEREXTENDED' ? 'rgba(226,75,74,0.10)' : 'none');
+                    var _armed2 = sketchCanvas.classList.contains('shape-armed');
+                    _trt2.setAttribute('fill', (_armed2 && _sn2 === 'OVEREXTENDED') ? 'rgba(226,75,74,0.10)' : 'none');
                 }
             } else {
                 // Motion ON: immediately re-apply current state's gradient pulse (no GEM B flash — that's a state-change signal)
@@ -5769,7 +5771,8 @@
                 var _trt3 = document.getElementById('state-tint-rect');
                 if (_trt3) {
                     _trt3.setAttribute('fill', 'none');
-                    if (_sobj3.name === 'OVEREXTENDED') _trt3.classList.add('state-ambient-overextended');
+                    var _armed3 = sketchCanvas.classList.contains('shape-armed');
+                    if (_armed3 && _sobj3.name === 'OVEREXTENDED') _trt3.classList.add('state-ambient-overextended');
                 }
             }
         });
@@ -5938,7 +5941,7 @@
       _prevContribVal = _nCont;
       triggerInteraction(); touched.refined = true; updateTracker(); scheduleUpdate();
     });
-    slDatum.addEventListener('input', () => {
+    slDatum.addEventListener('input', (e) => {
       slDatum.dataset.exactVal = String(Math.round(datumPosToVal(parseInt(slDatum.value)) * 1000));
       if (!window._f88DiscoveryActive) {
         var _nDat = parseInt(slDatum.value);
@@ -5954,10 +5957,12 @@
         }
         _prevDatumSliderVal = _nDat;
       }
-      _shapeArmed = true;
-      if (window.currentShapeStateObj && window.currentShapeStateObj.name) previousStateName = window.currentShapeStateObj.name;
-      var _dd0 = document.getElementById('datum-dragger'); if (_dd0) _dd0.style.pointerEvents = '';
-      var _sc0 = document.getElementById('sketch-canvas'); if (_sc0) _sc0.classList.add('shape-armed');
+      if (e && e.isTrusted && !window._f88DiscoveryActive) {
+        _shapeArmed = true;
+        if (window.currentShapeStateObj && window.currentShapeStateObj.name) previousStateName = window.currentShapeStateObj.name;
+        var _dd0 = document.getElementById('datum-dragger'); if (_dd0) _dd0.style.pointerEvents = '';
+        var _sc0 = document.getElementById('sketch-canvas'); if (_sc0) _sc0.classList.add('shape-armed');
+      }
       triggerInteraction(); touched.spending = true; updateTracker(); scheduleUpdate();
     });
 
@@ -11325,6 +11330,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
 
       _shapeArmed = true;
       var _dd1 = document.getElementById('datum-dragger'); if (_dd1) _dd1.style.pointerEvents = '';
+      var _sc1 = document.getElementById('sketch-canvas'); if (_sc1) _sc1.classList.add('shape-armed');
       try { updateEngine(); } catch(ex) {}
       // F88: hydrated sketches skip discovery sequence
       try { localStorage.setItem('datum-discover-v1', 'done'); } catch(ex) {}
@@ -11393,6 +11399,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
 
       _shapeArmed = true;
       var _dd2 = document.getElementById('datum-dragger'); if (_dd2) _dd2.style.pointerEvents = '';
+      var _sc2 = document.getElementById('sketch-canvas'); if (_sc2) _sc2.classList.add('shape-armed');
       try { updateEngine(); } catch(ex) {}
       ;(function(_pM, _cV, _dS, _slP, _slC, _slD) {
         setTimeout(function() {
