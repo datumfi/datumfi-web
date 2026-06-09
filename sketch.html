@@ -5816,7 +5816,13 @@
     }
 
     function updateScrubber(svgX) {
-        if (!_shapeArmed) return;
+        if (!_shapeArmed) {
+            var _sg = document.getElementById('scrubber-group');
+            if (_sg) _sg.style.opacity = '0';
+            ['tt-g-ceil','tt-g-floor','tt-g-datum'].forEach(function(id) { var el = document.getElementById(id); if (el) el.style.opacity = '0'; });
+            ceilLbl.style.opacity = 1; floorLbl.style.opacity = 1; datumLbl.style.opacity = 1;
+            return;
+        }
         if (currentScenario.yearsToGrow === 0) return;
         
         ceilLbl.style.opacity = 0;
@@ -5940,7 +5946,9 @@
         }
         _prevDatumSliderVal = _nDat;
       }
-      _shapeArmed = true; triggerInteraction(); touched.spending = true; updateTracker(); scheduleUpdate();
+      _shapeArmed = true;
+      var _dd0 = document.getElementById('datum-dragger'); if (_dd0) _dd0.style.pointerEvents = '';
+      triggerInteraction(); touched.spending = true; updateTracker(); scheduleUpdate();
     });
 
     // GEM C: Datum SVG drag — dragging the datum line live-updates the slider
@@ -5948,6 +5956,7 @@
       const datumDragger = document.getElementById('datum-dragger');
       const sketchSVG    = document.getElementById('sketch-canvas');
       if (!datumDragger || !sketchSVG) return;
+      datumDragger.style.pointerEvents = 'none';
 
       let isDraggingDatum = false;
       let svgRect = null;
@@ -5964,6 +5973,7 @@
       }
 
       datumDragger.addEventListener('pointerdown', (e) => {
+        if (!_shapeArmed) return;
         if (e.button !== 0) return;
         isDraggingDatum = true;
         svgRect = sketchSVG.getBoundingClientRect();
@@ -11118,7 +11128,14 @@ Studio is built for exactly this. See If This Shape Holds →`;
       }
 
       function d2UpdateScrubber(svgX) {
-        if (!_shapeArmed) return;
+        if (!_shapeArmed) {
+            if (d2ScrubGrp) d2ScrubGrp.style.opacity = '0';
+            ['d2-tt-g-ceil','d2-tt-g-floor','d2-tt-g-datum'].forEach(function(id) { var el = document.getElementById(id); if (el) el.style.opacity = '0'; });
+            if (d2CeilLbl)  d2CeilLbl.style.opacity  = '1';
+            if (d2FloorLbl) d2FloorLbl.style.opacity = '1';
+            if (d2DatumLbl) d2DatumLbl.style.opacity = '1';
+            return;
+        }
         if (!_d2LastScenario) return;
         if (_d2SPHovering) return;
         var s   = _d2LastScenario;
@@ -11296,6 +11313,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
       }
 
       _shapeArmed = true;
+      var _dd1 = document.getElementById('datum-dragger'); if (_dd1) _dd1.style.pointerEvents = '';
       try { updateEngine(); } catch(ex) {}
       // F88: hydrated sketches skip discovery sequence
       try { localStorage.setItem('datum-discover-v1', 'done'); } catch(ex) {}
@@ -11363,6 +11381,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
       }
 
       _shapeArmed = true;
+      var _dd2 = document.getElementById('datum-dragger'); if (_dd2) _dd2.style.pointerEvents = '';
       try { updateEngine(); } catch(ex) {}
       ;(function(_pM, _cV, _dS, _slP, _slC, _slD) {
         setTimeout(function() {
