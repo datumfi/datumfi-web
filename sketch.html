@@ -5835,7 +5835,7 @@
             var _sg = document.getElementById('scrubber-group');
             if (_sg) _sg.style.opacity = '0';
             ['tt-g-ceil','tt-g-floor','tt-g-datum'].forEach(function(id) { var el = document.getElementById(id); if (el) el.style.opacity = '0'; });
-            ceilLbl.style.opacity = 1; floorLbl.style.opacity = 1; datumLbl.style.opacity = 1;
+            ceilLbl.style.opacity = 0; floorLbl.style.opacity = 0; datumLbl.style.opacity = 0;
             return;
         }
         if (currentScenario.yearsToGrow === 0) return;
@@ -5868,9 +5868,10 @@
     }
 
     function hideScrubber() {
-        ceilLbl.style.opacity = 1;
-        floorLbl.style.opacity = 1;
-        datumLbl.style.opacity = 1;
+        var _armedS1 = document.getElementById('sketch-canvas').classList.contains('shape-armed');
+        ceilLbl.style.opacity = _armedS1 ? 1 : 0;
+        floorLbl.style.opacity = _armedS1 ? 1 : 0;
+        datumLbl.style.opacity = _armedS1 ? 1 : 0;
         
         const endPts = getMathPoint(currentScenario.yearsToGrow, currentScenario.yearsToGrow, currentScenario);
         nodeCeil.setAttribute('cx', 650); nodeCeil.setAttribute('cy', spendToY(endPts.ceilSpend));
@@ -11136,9 +11137,10 @@ Studio is built for exactly this. See If This Shape Holds →`;
 
       function d2HideScrubber() {
         if (!d2ScrubGrp) return;
-        if (d2CeilLbl)  d2CeilLbl.style.opacity  = '1';
-        if (d2FloorLbl) d2FloorLbl.style.opacity = '1';
-        if (d2DatumLbl) d2DatumLbl.style.opacity = '1';
+        var _armedS2 = document.getElementById('sketch-canvas').classList.contains('shape-armed');
+        if (d2CeilLbl)  d2CeilLbl.style.opacity  = _armedS2 ? '1' : '0';
+        if (d2FloorLbl) d2FloorLbl.style.opacity = _armedS2 ? '1' : '0';
+        if (d2DatumLbl) d2DatumLbl.style.opacity = _armedS2 ? '1' : '0';
         var xEnd = 650;
         if (d2NodeCeil)  { d2NodeCeil.setAttribute('cx',  xEnd); d2NodeCeil.setAttribute('cy',  _d2LastEndpointCY.ceil); }
         if (d2NodeFloor) { d2NodeFloor.setAttribute('cx', xEnd); d2NodeFloor.setAttribute('cy', _d2LastEndpointCY.floor); }
@@ -11150,9 +11152,9 @@ Studio is built for exactly this. See If This Shape Holds →`;
         if (!document.getElementById('sketch-canvas').classList.contains('shape-armed')) {
             if (d2ScrubGrp) d2ScrubGrp.style.opacity = '0';
             ['d2-tt-g-ceil','d2-tt-g-floor','d2-tt-g-datum'].forEach(function(id) { var el = document.getElementById(id); if (el) el.style.opacity = '0'; });
-            if (d2CeilLbl)  d2CeilLbl.style.opacity  = '1';
-            if (d2FloorLbl) d2FloorLbl.style.opacity = '1';
-            if (d2DatumLbl) d2DatumLbl.style.opacity = '1';
+            if (d2CeilLbl)  d2CeilLbl.style.opacity  = '0';
+            if (d2FloorLbl) d2FloorLbl.style.opacity = '0';
+            if (d2DatumLbl) d2DatumLbl.style.opacity = '0';
             return;
         }
         if (!_d2LastScenario) return;
