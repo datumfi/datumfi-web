@@ -3247,6 +3247,12 @@
     var yLC = vy(vD + (vC - vD) * 0.12);
     var yLD = vy(vD);
     var yLF = vy(vD - (vD - vF) * 0.12);
+    // Cubic bezier CPs at 30%/70% x, anchored to left/right Y — compound-growth curve shape
+    var xL = 18, xR = 282, xC1 = 97, xC2 = 203;
+    var coneFill  = 'M ' + xL + ',' + yLC + ' C ' + xC1 + ',' + yLC + ' ' + xC2 + ',' + yCR + ' ' + xR + ',' + yCR + ' L ' + xR + ',' + yFR + ' C ' + xC2 + ',' + yFR + ' ' + xC1 + ',' + yLF + ' ' + xL + ',' + yLF + ' Z';
+    var ceilLine  = 'M ' + xL + ',' + yLC + ' C ' + xC1 + ',' + yLC + ' ' + xC2 + ',' + yCR + ' ' + xR + ',' + yCR;
+    var floorLine = 'M ' + xL + ',' + yLF + ' C ' + xC1 + ',' + yLF + ' ' + xC2 + ',' + yFR + ' ' + xR + ',' + yFR;
+    var datumLine = 'M ' + xL + ',' + yLD + ' C ' + xC1 + ',' + yLD + ' ' + xC2 + ',' + yDR + ' ' + xR + ',' + yDR;
     return `
       <svg width="100%" height="100%" viewBox="0 0 300 110" role="img" aria-label="Mini Shape preview">
         <defs>
@@ -3255,13 +3261,13 @@
             <stop offset="100%" stop-color="#C9A84C" stop-opacity="0.18"/>
           </linearGradient>
         </defs>
-        <polygon points="18,${yLC} 282,${yCR} 282,${yFR} 18,${yLF}" fill="url(#miniCone-${data.stateName})"/>
-        <line x1="18" y1="${yLC}" x2="282" y2="${yCR}" stroke="#C9A84C" stroke-width="2.5"/>
-        <line x1="18" y1="${yLF}" x2="282" y2="${yFR}" stroke="#e24b4a" stroke-width="2" opacity="0.72"/>
-        <line x1="18" y1="${yLD}" x2="282" y2="${yDR}" stroke="#5DCAA5" stroke-width="2.5"/>
-        <circle cx="282" cy="${yCR}" r="3.5" fill="#C9A84C"/>
-        <circle cx="282" cy="${yFR}" r="3.5" fill="#e24b4a"/>
-        <circle cx="282" cy="${yDR}" r="4" fill="#5DCAA5"/>
+        <path d="${coneFill}" fill="url(#miniCone-${data.stateName})"/>
+        <path d="${ceilLine}" stroke="#C9A84C" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="${floorLine}" stroke="#e24b4a" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.72"/>
+        <path d="${datumLine}" stroke="#5DCAA5" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <circle cx="${xR}" cy="${yCR}" r="3.5" fill="#C9A84C"/>
+        <circle cx="${xR}" cy="${yFR}" r="3.5" fill="#e24b4a"/>
+        <circle cx="${xR}" cy="${yDR}" r="4" fill="#5DCAA5"/>
       </svg>
     `;
   }
