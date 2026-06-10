@@ -11426,10 +11426,11 @@ Studio is built for exactly this. See If This Shape Holds →`;
         var _vContrib = document.getElementById('val-contrib');
         if (_vContrib) _vContrib.textContent = '$' + Math.round(_contract.contributions / 1000) + 'k/yr';
       }
-      if (_contract.datum_spend) {
-        var _datumK = _contract.datum_spend / 1000;
+      var _hydDatum = _contract.s1_datum || _contract.datum_spend;
+      if (_hydDatum) {
+        var _datumK = _hydDatum / 1000;
         _slDatum.value = datumValToPos(_datumK);
-        _slDatum.dataset.exactVal = _contract.datum_spend;
+        _slDatum.dataset.exactVal = _hydDatum;
         var _vDatum = document.getElementById('val-datum');
         if (_vDatum) _vDatum.textContent = '$' + Math.round(_datumK) + 'k/yr';
       }
@@ -11448,7 +11449,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
           if (_cV !== undefined) _slC.dataset.exactVal = _cV;
           if (_dS) _slD.dataset.exactVal = _dS;
         }, 100);
-      })(_contract.portfolio_mass, _contract.contributions, _contract.datum_spend, _slPort, _slContrib, _slDatum);
+      })(_contract.portfolio_mass, _contract.contributions, (_contract.s1_datum || _contract.datum_spend), _slPort, _slContrib, _slDatum);
       if (_contract.s2_design) window._f98S2Design = _contract.s2_design;
     })();
     // ── END PHASE A: OPEN SKETCH HYDRATION ───────────────────────────────
@@ -11496,10 +11497,11 @@ Studio is built for exactly this. See If This Shape Holds →`;
         var _vContrib = document.getElementById('val-contrib');
         if (_vContrib) _vContrib.textContent = '$' + Math.round(_contract.contributions / 1000) + 'k/yr';
       }
-      if (_contract.datum_spend) {
-        var _datumK = _contract.datum_spend / 1000;
+      var _hydDatum = _contract.s1_datum || _contract.datum_spend;
+      if (_hydDatum) {
+        var _datumK = _hydDatum / 1000;
         _slDatum.value = datumValToPos(_datumK);
-        _slDatum.dataset.exactVal = _contract.datum_spend;
+        _slDatum.dataset.exactVal = _hydDatum;
         var _vDatum = document.getElementById('val-datum');
         if (_vDatum) _vDatum.textContent = '$' + Math.round(_datumK) + 'k/yr';
       }
@@ -11514,7 +11516,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
           if (_cV !== undefined) _slC.dataset.exactVal = _cV;
           if (_dS) _slD.dataset.exactVal = _dS;
         }, 100);
-      })(_contract.portfolio_mass, _contract.contributions, _contract.datum_spend, _slPort, _slContrib, _slDatum);
+      })(_contract.portfolio_mass, _contract.contributions, (_contract.s1_datum || _contract.datum_spend), _slPort, _slContrib, _slDatum);
       if (_contract.s2_design) window._f98S2Design = _contract.s2_design;
     })();
     // ── END PHASE B: URL PARAM SKETCH HYDRATION ──────────────────────────
