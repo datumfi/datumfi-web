@@ -3528,24 +3528,27 @@
 
   document.getElementById('action-open-sketch').addEventListener('click', function() {
     var slotIdx = AppSessionState.activeSketchSlot;
-    if (!slotIdx || slotIdx < 1 || slotIdx > 4) {
-      showSketchToast('Select a saved Sketch first');
-      return;
-    }
-    var slotData = SketchbookDatabase['slot' + slotIdx];
-    if (!slotData) {
-      showSketchToast('Selected slot is empty');
-      return;
-    }
-    sessionStorage.setItem('datumfi_hydrate_from_slot', String(slotIdx));
+    var slotData = slotIdx && SketchbookDatabase['slot' + slotIdx];
     var _spRaw2 = null;
     try { _spRaw2 = JSON.parse(localStorage.getItem('datum_sketch_pickup_for_studio') || 'null'); } catch(ex) {}
     var _studioPickup2 = _spRaw2 && (Date.now() - _spRaw2.ts) < 300000;
-    if (_studioPickup2) {
-      try { localStorage.removeItem('datum_sketch_pickup_for_studio'); } catch(ex) {}
-      window.location.href = '/studio.html?id=' + slotIdx + '&hydrate=sketch';
+    if (slotData) {
+      // Saved tile selected: reopen that slot
+      sessionStorage.setItem('datumfi_hydrate_from_slot', String(slotIdx));
+      if (_studioPickup2) {
+        try { localStorage.removeItem('datum_sketch_pickup_for_studio'); } catch(ex) {}
+        window.location.href = '/studio.html?id=' + slotIdx + '&hydrate=sketch';
+      } else {
+        window.location.href = '/sketch.html';
+      }
     } else {
-      window.location.href = '/sketch.html';
+      // No saved tile selected: launch fresh (Dossier bridge prefills on load)
+      if (_studioPickup2) {
+        try { localStorage.removeItem('datum_sketch_pickup_for_studio'); } catch(ex) {}
+        window.location.href = '/studio.html';
+      } else {
+        window.location.href = '/sketch.html';
+      }
     }
   });
 
