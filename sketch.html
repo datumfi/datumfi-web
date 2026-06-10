@@ -6399,6 +6399,12 @@
             if (_s2d.port  != null)          _sv('d2-slider-portfolio',    portValToPos(_s2d.port));
             if (_s2d.datum != null)          _sv('d2-slider-datum',        datumValToPos(_s2d.datum));
             if (_s2d.contrib != null)        _sv('d2-slider-contrib',      contribValToPos(_s2d.contrib));
+            // Sync exactVal so readD2* returns S2 values on the next updateDesignEngine call
+            // (initDesignSliders set these to ghostBaseline/S1; without this, any slider move
+            //  causes readD2* to return stale S1 values for untouched sliders)
+            if (_s2d.port   != null && slD2Port)    slD2Port.dataset.exactVal    = String(Math.round(_s2d.port   * 1000000));
+            if (_s2d.datum  != null && slD2Datum)   slD2Datum.dataset.exactVal   = String(Math.round(_s2d.datum  * 1000));
+            if (_s2d.contrib!= null && slD2Contrib) slD2Contrib.dataset.exactVal = String(Math.round(_s2d.contrib));
             designScenario = {
                 age: _s2d.age, retire: _s2d.retire,
                 planThroughAge: _s2d.planThroughAge || 93,
@@ -6409,6 +6415,16 @@
             designOverrides.datumDelta = _s2d.datumDelta || 0;
             designOverrides.portDelta  = _s2d.portDelta  || 0;
             designOverrides.isDirty = !!(designOverrides.ceilDelta || designOverrides.floorDelta || designOverrides.datumDelta || designOverrides.portDelta);
+            // Sync display labels — initDesignSliders->updateDesignEngine wrote S1 values here
+            var _dv2 = function(id, txt) { var el = document.getElementById(id); if (el) el.textContent = txt; };
+            if (_s2d.age     != null) _dv2('d2-val-age',          _s2d.age + ' yrs');
+            if (_s2d.retire  != null) _dv2('d2-val-activation',   _s2d.retire + ' yrs');
+            if (_s2d.planThroughAge != null) _dv2('d2-val-plan-through', (_s2d.planThroughAge || 93) + ' yrs');
+            if (_s2d.port  != null) _dv2('d2-val-portfolio', _s2d.port < 1
+                ? '$' + Math.round(_s2d.port * 1000).toLocaleString('en-US') + 'k'
+                : '$' + _s2d.port.toFixed(2) + 'M');
+            if (_s2d.datum != null) { var _tgt = Math.round(_s2d.datum); _dv2('d2-val-datum', (_tgt >= 1000 ? '$' + (_tgt / 1000).toFixed(2).replace(/\.00$/, '') + 'M' : '$' + _tgt + 'k') + ' / yr'); }
+            if (_s2d.contrib != null) _dv2('d2-val-contrib', '$' + Math.round(_s2d.contrib).toLocaleString('en-US'));
         } catch(e) {}
     };
 
