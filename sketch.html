@@ -6425,6 +6425,12 @@
                 : '$' + _s2d.port.toFixed(2) + 'M');
             if (_s2d.datum != null) { var _tgt = Math.round(_s2d.datum); _dv2('d2-val-datum', (_tgt >= 1000 ? '$' + (_tgt / 1000).toFixed(2).replace(/\.00$/, '') + 'M' : '$' + _tgt + 'k') + ' / yr'); }
             if (_s2d.contrib != null) _dv2('d2-val-contrib', '$' + Math.round(_s2d.contrib).toLocaleString('en-US'));
+            // Re-render HUD from restored S2 designScenario vs S1 ghostBaseline.
+            // initDesignSliders->updateDesignEngine->renderDesignCanvas ran first with S1 values;
+            // calling renderDesignCanvas() here overwrites the HUD state badges, endpoint nodes,
+            // grid labels, and pinned-comparison text with the correct S2-vs-S1 values.
+            // Do NOT call updateDesignEngine() here — it calls initDesignState() which zeros designOverrides.
+            if (typeof renderDesignCanvas === 'function') try { renderDesignCanvas(); } catch(_e) {}
         } catch(e) {}
     };
 
