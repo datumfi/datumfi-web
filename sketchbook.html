@@ -3243,16 +3243,12 @@
     var vRng = Math.max(vMax - vMin, 1);
     var vy = function(v) { return Math.round(10 + (1 - (v - vMin) / vRng) * 90); };
     var yCR = vy(vC), yDR = vy(vD), yFR = vy(vF);
-    // Cone geometry: 12% of spread at left edge → narrow start, wide right end
-    var yLC = vy(vD + (vC - vD) * 0.12);
-    var yLD = vy(vD);
-    var yLF = vy(vD - (vD - vF) * 0.12);
-    // Cubic bezier CPs at 30%/70% x, anchored to left/right Y — compound-growth curve shape
-    var xL = 18, xR = 282, xC1 = 97, xC2 = 203;
-    var coneFill  = 'M ' + xL + ',' + yLC + ' C ' + xC1 + ',' + yLC + ' ' + xC2 + ',' + yCR + ' ' + xR + ',' + yCR + ' L ' + xR + ',' + yFR + ' C ' + xC2 + ',' + yFR + ' ' + xC1 + ',' + yLF + ' ' + xL + ',' + yLF + ' Z';
-    var ceilLine  = 'M ' + xL + ',' + yLC + ' C ' + xC1 + ',' + yLC + ' ' + xC2 + ',' + yCR + ' ' + xR + ',' + yCR;
-    var floorLine = 'M ' + xL + ',' + yLF + ' C ' + xC1 + ',' + yLF + ' ' + xC2 + ',' + yFR + ' ' + xR + ',' + yFR;
-    var datumLine = 'M ' + xL + ',' + yLD + ' C ' + xC1 + ',' + yLD + ' ' + xC2 + ',' + yDR + ' ' + xR + ',' + yDR;
+    // yO = vy(vMin) = 100: single low-left origin all growth lines start from (matches canvas t=0 cluster)
+    var xL = 18, xR = 282, xC1 = 97, xC2 = 203, yO = 100;
+    var coneFill  = 'M ' + xL + ',' + yO + ' C ' + xC1 + ',' + yO + ' ' + xC2 + ',' + yCR + ' ' + xR + ',' + yCR + ' L ' + xR + ',' + yFR + ' C ' + xC2 + ',' + yFR + ' ' + xC1 + ',' + yO + ' ' + xL + ',' + yO + ' Z';
+    var ceilLine  = 'M ' + xL + ',' + yO + ' C ' + xC1 + ',' + yO + ' ' + xC2 + ',' + yCR + ' ' + xR + ',' + yCR;
+    var floorLine = 'M ' + xL + ',' + yO + ' C ' + xC1 + ',' + yO + ' ' + xC2 + ',' + yFR + ' ' + xR + ',' + yFR;
+    var datumLine = 'M ' + xL + ',' + yO + ' C ' + xC1 + ',' + yO + ' ' + xC2 + ',' + yDR + ' ' + xR + ',' + yDR;
     return `
       <svg width="100%" height="100%" viewBox="0 0 300 110" role="img" aria-label="Mini Shape preview">
         <defs>
