@@ -9630,9 +9630,15 @@
 
     // --- Reset Design ---
     document.getElementById('btn-reset-design').addEventListener('click', function() {
-      initDesignState();
-      if (ghostBaseline) { try { initDesignSliders(); } catch(e) {} }
-      renderScreen2();
+      if (window._f98S2Design && typeof window._f98RestoreS2Design === 'function') {
+        // Reopened sketch: reset back to the saved S2 design
+        try { window._f98RestoreS2Design(); } catch(e) {}
+      } else {
+        // Fresh sketch: revert to S1 / Discover
+        initDesignState();
+        if (ghostBaseline) { try { initDesignSliders(); } catch(e) {} }
+        renderScreen2();
+      }
       var toast = document.getElementById('confirm-toast');
       if (toast) {
         toast.style.transition = 'opacity 0.3s ease';
