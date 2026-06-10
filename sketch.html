@@ -11579,6 +11579,9 @@ Studio is built for exactly this. See If This Shape Holds →`;
       var _dd2 = document.getElementById('datum-dragger'); if (_dd2) _dd2.style.pointerEvents = '';
       var _sc2 = document.getElementById('sketch-canvas'); if (_sc2) _sc2.classList.add('shape-armed');
       try { updateEngine(); } catch(ex) {}
+      // F88: hydrated sketches skip discovery sequence
+      try { localStorage.setItem('datum-discover-v1', 'done'); } catch(ex) {}
+      if (window._f88JumpToFull) window._f88JumpToFull();
       ;(function(_pM, _cV, _dS, _slP, _slC, _slD) {
         setTimeout(function() {
           if (_pM) _slP.dataset.exactVal = _pM;
