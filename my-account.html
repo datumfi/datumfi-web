@@ -148,6 +148,9 @@
       }
     }).catch(redirectToVault);
   });
+  window.addEventListener('pageshow', function (e) {
+    if (e.persisted) { Clerk.load().then(function () { if (!Clerk.user) { redirectToVault(); } }).catch(redirectToVault); }
+  });
 })();
 </script>
 

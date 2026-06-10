@@ -3723,6 +3723,9 @@ input:focus,select:focus{
       else { redirectToVault(); }
     }).catch(redirectToVault);
   });
+  window.addEventListener('pageshow', function (e) {
+    if (e.persisted) { Clerk.load().then(function () { if (!Clerk.user) { redirectToVault(); } }).catch(redirectToVault); }
+  });
 })();
 </script>
 <script src="/nav.js"></script>

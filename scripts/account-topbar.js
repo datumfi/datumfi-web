@@ -169,9 +169,9 @@
       localStorage.removeItem('datum_sketch_overlay_seen');
       localStorage.removeItem('datum_studio_overlay_seen');
       if (window.Clerk && typeof Clerk.signOut === 'function') {
-        Clerk.signOut().then(function () { window.location.href = '/index.html'; });
+        Clerk.signOut().then(function () { window.location.replace('/index.html'); });
       } else {
-        window.location.href = '/index.html';
+        window.location.replace('/index.html');
       }
     });
 
