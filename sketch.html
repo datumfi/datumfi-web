@@ -11341,6 +11341,29 @@ Studio is built for exactly this. See If This Shape Holds →`;
       if (!_ctaMain) return;
       var LS_KEY = 'datumfi_sketchbook_v1';
 
+      function _slimSlot(blob) {
+        var s = blob && blob.slot_1;
+        if (!s) return blob;
+        return {
+          sketchbook_title: blob.sketchbook_title || '',
+          slot_1: {
+            age:               s.age,
+            retire_age:        s.retire_age,
+            portfolio_mass:    s.portfolio_mass,
+            contributions:     s.contributions,
+            datum_spend:       s.datum_spend,
+            designed_ceil:     s.designed_ceil,
+            designed_floor:    s.designed_floor,
+            resolved_state:    s.resolved_state,
+            date_stamped:      s.date_stamped,
+            time_stamped:      s.time_stamped,
+            s1_datum:          s.s1_datum,
+            s1_resolved_state: s.s1_resolved_state,
+            s2_design:         s.s2_design
+          }
+        };
+      }
+
       function _doSave() {
         var prev = null;
         try { prev = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch(ex) {}
@@ -11361,10 +11384,12 @@ Studio is built for exactly this. See If This Shape Holds →`;
         function _nav() { window.location.href = '/sketchbook.html'; }
         try {
           if (window.Clerk) {
+            var _slim = _slimSlot(data);
+            console.log('[sketchbook mirror] slim bytes:', JSON.stringify(_slim).length);
             window.Clerk.load().then(function() {
               if (!window.Clerk.user) { _nav(); return; }
-              var _ckM = Object.assign({}, window.Clerk.user.unsafeMetadata || {}, { sketchbook: data });
-              window.Clerk.user.update({ unsafeMetadata: _ckM }).then(_nav).catch(_nav);
+              var _ckM = Object.assign({}, window.Clerk.user.unsafeMetadata || {}, { sketchbook: _slim });
+              window.Clerk.user.update({ unsafeMetadata: _ckM }).then(_nav).catch(function(e) { console.warn('[mirror] sketchbook failed', e); _nav(); });
             }).catch(_nav);
             return;
           }

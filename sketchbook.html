@@ -3049,14 +3049,37 @@
     } catch(e) {}
   }
 
+  function _slimSlot(blob) {
+    var s = blob && blob.slot_1;
+    if (!s) return blob;
+    return {
+      sketchbook_title: blob.sketchbook_title || '',
+      slot_1: {
+        age:               s.age,
+        retire_age:        s.retire_age,
+        portfolio_mass:    s.portfolio_mass,
+        contributions:     s.contributions,
+        datum_spend:       s.datum_spend,
+        designed_ceil:     s.designed_ceil,
+        designed_floor:    s.designed_floor,
+        resolved_state:    s.resolved_state,
+        date_stamped:      s.date_stamped,
+        time_stamped:      s.time_stamped,
+        s1_datum:          s.s1_datum,
+        s1_resolved_state: s.s1_resolved_state,
+        s2_design:         s.s2_design
+      }
+    };
+  }
+
   function _mirrorSketchbookToClerk(blob) {
     try {
       if (!window.Clerk) return;
-      var _b = blob;
+      var _slim = _slimSlot(blob);
       window.Clerk.load().then(function() {
         if (!window.Clerk.user) return;
-        var _m = Object.assign({}, window.Clerk.user.unsafeMetadata || {}, { sketchbook: _b });
-        window.Clerk.user.update({ unsafeMetadata: _m }).catch(function(){});
+        var _m = Object.assign({}, window.Clerk.user.unsafeMetadata || {}, { sketchbook: _slim });
+        window.Clerk.user.update({ unsafeMetadata: _m }).catch(function(e) { console.warn('[mirror] sketchbook failed', e); });
       }).catch(function(){});
     } catch(_e) {}
   }
@@ -3064,18 +3087,24 @@
   function _sketchbookRestoreFromClerk() {
     try {
       if (!window.Clerk || !window.Clerk.user) return;
-      var _lsBlob = null;
-      try { _lsBlob = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch(_pe) {}
-      if (_lsBlob && _lsBlob.slot_1) return;
       var _meta = window.Clerk.user.unsafeMetadata || {};
       var _ckBook = _meta.sketchbook;
       if (!_ckBook || !_ckBook.slot_1) return;
-      var _r = { sketchbook_title: _ckBook.sketchbook_title || '', slot_1: _ckBook.slot_1 };
-      localStorage.setItem(LS_KEY, JSON.stringify(_r));
-      SketchbookDatabase.slot1 = _contractToSlot(_ckBook.slot_1);
-      var _tEl = document.getElementById('editable-notebook-title');
-      if (_tEl && _r.sketchbook_title) _tEl.value = _r.sketchbook_title;
-      if (typeof syncDesktopSketchbookUI === 'function') syncDesktopSketchbookUI();
+      var _lsBlob = null;
+      try { _lsBlob = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch(_pe) {}
+      var _needsLs = !(_lsBlob && _lsBlob.slot_1);
+      var _needsUi = !SketchbookDatabase.slot1;
+      if (!_needsLs && !_needsUi) return;
+      if (_needsLs) {
+        var _r = { sketchbook_title: _ckBook.sketchbook_title || '', slot_1: _ckBook.slot_1 };
+        localStorage.setItem(LS_KEY, JSON.stringify(_r));
+      }
+      if (_needsUi) {
+        SketchbookDatabase.slot1 = _contractToSlot(_ckBook.slot_1);
+        var _tEl = document.getElementById('editable-notebook-title');
+        if (_tEl && _ckBook.sketchbook_title) _tEl.value = _ckBook.sketchbook_title;
+        if (typeof syncDesktopSketchbookUI === 'function') syncDesktopSketchbookUI();
+      }
     } catch(_e) {}
   }
   // ── END PHASE A HELPERS ──────────────────────────────────────────────────

@@ -169,3 +169,24 @@
 
   document.addEventListener('DOMContentLoaded', function() { window.dfTrack('page_view'); });
 })();
+
+// Centralized sketchbook restore: writes LS from Clerk metadata on every page if local slot is absent
+(function() {
+  var _BOOK_KEY = 'datumfi_sketchbook_v1';
+  window.addEventListener('load', function() {
+    try {
+      if (!window.Clerk) return;
+      var _lb = null;
+      try { _lb = JSON.parse(localStorage.getItem(_BOOK_KEY) || 'null'); } catch(_pe) {}
+      if (_lb && _lb.slot_1) return;
+      window.Clerk.load().then(function() {
+        if (!window.Clerk.user) return;
+        var _ck = (window.Clerk.user.unsafeMetadata || {}).sketchbook;
+        if (!_ck || !_ck.slot_1) return;
+        var _r = { sketchbook_title: _ck.sketchbook_title || '', slot_1: _ck.slot_1 };
+        try { localStorage.setItem(_BOOK_KEY, JSON.stringify(_r)); } catch(_we) {}
+        if (typeof _sketchbookRestoreFromClerk === 'function') _sketchbookRestoreFromClerk();
+      }).catch(function(){});
+    } catch(_e) {}
+  });
+})();
