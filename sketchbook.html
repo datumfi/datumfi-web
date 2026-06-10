@@ -3539,14 +3539,17 @@
         try { localStorage.removeItem('datum_sketch_pickup_for_studio'); } catch(ex) {}
         window.location.href = '/studio.html?id=' + slotIdx + '&hydrate=sketch';
       } else {
+        sessionStorage.setItem('datumfi_skip_entry_overlay', '1');
         window.location.href = '/sketch.html';
       }
     } else {
       // No saved tile selected: launch fresh (Dossier bridge prefills on load)
       if (_studioPickup2) {
         try { localStorage.removeItem('datum_sketch_pickup_for_studio'); } catch(ex) {}
+        sessionStorage.setItem('datumfi_skip_entry_overlay', '1');
         window.location.href = '/studio.html';
       } else {
+        sessionStorage.setItem('datumfi_skip_entry_overlay', '1');
         window.location.href = '/sketch.html';
       }
     }

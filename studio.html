@@ -5358,6 +5358,9 @@
     if (!_wrap) return;
     if (new URLSearchParams(window.location.search).get('hydrate') || new URLSearchParams(window.location.search).get('id')) { _wrap.style.display='none'; return; }
 
+    var _skipO = sessionStorage.getItem('datumfi_skip_entry_overlay');
+    if (_skipO) { try { sessionStorage.removeItem('datumfi_skip_entry_overlay'); } catch(e) {} _wrap.style.display='none'; return; }
+
     var isSignedIn = !!sessionStorage.getItem('datum_auth_hint');
 
     if (isSignedIn && localStorage.getItem('datum_studio_overlay_seen')) {

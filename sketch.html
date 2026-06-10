@@ -11699,6 +11699,9 @@ Studio is built for exactly this. See If This Shape Holds →`;
   if (!_overlayWrap) return;
   if (new URLSearchParams(window.location.search).get('id')) { _overlayWrap.style.display='none'; return; }
 
+  var _skipO = sessionStorage.getItem('datumfi_skip_entry_overlay');
+  if (_skipO) { try { sessionStorage.removeItem('datumfi_skip_entry_overlay'); } catch(e) {} _overlayWrap.style.display='none'; return; }
+
   var isSignedIn = !!sessionStorage.getItem('datum_auth_hint');
 
   if (isSignedIn && localStorage.getItem('datum_sketch_overlay_seen')) {

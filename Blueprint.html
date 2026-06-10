@@ -1636,8 +1636,14 @@ document.getElementById('action-save-blueprint').addEventListener('click', saveT
 document.getElementById('action-compare-blueprints').addEventListener('click', openCompareModal);
 
 document.getElementById('action-open-studio').addEventListener('click', () => {
-  const active = BlueprintArchive['slot' + AppSessionState.activeBlueprintSlot];
-  showToast(active ? `Opening ${active.name} in Studio.` : 'Open Studio to build a Blueprint first.');
+  const slotId = AppSessionState.activeBlueprintSlot;
+  const active = BlueprintArchive['slot' + slotId];
+  if (active) {
+    window.location.href = '/studio.html?id=' + slotId + '&hydrate=blueprint';
+  } else {
+    try { sessionStorage.setItem('datumfi_skip_entry_overlay', '1'); } catch(e) {}
+    window.location.href = '/studio.html';
+  }
 });
 
 var _retAccBtn = document.getElementById('action-return-account');
