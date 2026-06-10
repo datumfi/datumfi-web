@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#091221">
 <!-- TODO production: replace unsafe-inline with nonces; move JS/CSS to external files -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://eu.i.posthog.com https://static.cloudflareinsights.com https://clerk.datumfi.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://api.datumfi.com https://eu.i.posthog.com https://api.stripe.com https://formspree.io https://clerk.datumfi.com; frame-src https://js.stripe.com https://hooks.stripe.com; form-action 'self' https://formspree.io; object-src 'none'; base-uri 'self'; upgrade-insecure-requests;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://eu.i.posthog.com https://static.cloudflareinsights.com https://clerk.datumfi.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://api.datumfi.com https://eu.i.posthog.com https://api.stripe.com https://formspree.io https://clerk.datumfi.com; worker-src 'self' blob: https://clerk.datumfi.com; frame-src https://js.stripe.com https://hooks.stripe.com; form-action 'self' https://formspree.io; object-src 'none'; base-uri 'self'; upgrade-insecure-requests;">
 <title>Datum FI — The Sketch</title>
 <meta name="description" content="Draw the outline of your retirement shape. See your Floor, Datum, and Ceiling in 30 seconds.">
 <link rel="manifest" href="/manifest.json">
@@ -2912,7 +2912,7 @@
                     var _cd = _meta.dossier;
                     if (!_cd || typeof _cd !== 'object') return;
                     try { localStorage.setItem('datumfi.accountDossier.v15', JSON.stringify(_cd)); } catch(e2) {}
-                    if (hasInteracted) return;
+                    if (window._userTouchedSlider) return;
                     window._applyDossierSliders(_cd);
                     try { scheduleUpdate(); } catch(e3) {}
                 } catch(e) {}
@@ -5940,7 +5940,8 @@
       setTimeout(function() { el.style.animation = 'none'; el.style.opacity = '1'; el.style.pointerEvents = 'auto'; el.style.transform = 'none'; }, 1600);
     });
 
-    slAge.addEventListener('input', () => {
+    slAge.addEventListener('input', (e) => {
+      if (e && e.isTrusted) window._userTouchedSlider = true;
       // Current age can never meet or exceed retirement age
       const maxAge = parseInt(slAct.value) - 1;
       if (parseInt(slAge.value) >= parseInt(slAct.value)) slAge.value = maxAge;
@@ -5951,7 +5952,8 @@
       }
       triggerInteraction(); touched.timeline = true; updateTracker(); scheduleUpdate();
     });
-    slAct.addEventListener('input', () => {
+    slAct.addEventListener('input', (e) => {
+      if (e && e.isTrusted) window._userTouchedSlider = true;
       // Retirement age can never meet or fall below current age
       const minRet = parseInt(slAge.value) + 1;
       if (parseInt(slAct.value) <= parseInt(slAge.value)) slAct.value = minRet;
@@ -5962,7 +5964,8 @@
       }
       triggerInteraction(); touched.timeline = true; updateTracker(); scheduleUpdate();
     });
-    if (slPlan) slPlan.addEventListener('input', () => {
+    if (slPlan) slPlan.addEventListener('input', (e) => {
+      if (e && e.isTrusted) window._userTouchedSlider = true;
       const _minP = Math.max(75, parseInt(slAct.value) + 20);
       if (parseInt(slPlan.value) < _minP) slPlan.value = _minP;
       var _nPlan = parseInt(slPlan.value);
@@ -5973,14 +5976,16 @@
       _prevPlanVal = _nPlan;
       scheduleUpdate();
     });
-    slPort.addEventListener('input', () => {
+    slPort.addEventListener('input', (e) => {
+      if (e && e.isTrusted) window._userTouchedSlider = true;
       slPort.dataset.exactVal = String(Math.round(portPosToVal(parseInt(slPort.value)) * 1000000));
       var _nPort = parseInt(slPort.value);
       if (!isNaN(_prevPortVal)) { if (_nPort > _prevPortVal) { _ceilPhaseDir = +1; _ceilLean = WAVE_LEAN_MAG; addWaveImpulse(WAVE_IMP_PORT, 0); } else { _floorPhaseDir = -1; _floorLean = -WAVE_LEAN_MAG; addWaveImpulse(0, WAVE_IMP_PORT); } }
       _prevPortVal = _nPort;
       triggerInteraction(); touched.capital = true; updateTracker(); scheduleUpdate();
     });
-    slContrib.addEventListener('input', () => {
+    slContrib.addEventListener('input', (e) => {
+      if (e && e.isTrusted) window._userTouchedSlider = true;
       slContrib.dataset.exactVal = String(Math.round(contribPosToVal(parseInt(slContrib.value))));
       var _nCont = parseInt(slContrib.value);
       if (!isNaN(_prevContribVal)) { if (_nCont > _prevContribVal) { _floorPhaseDir = +1; _floorLean = WAVE_LEAN_MAG; addWaveImpulse(0, WAVE_IMP_CONT); } else { _ceilPhaseDir = -1; _ceilLean = -WAVE_LEAN_MAG; addWaveImpulse(WAVE_IMP_CONT, 0); } }
@@ -6004,6 +6009,7 @@
         _prevDatumSliderVal = _nDat;
       }
       if (e && e.isTrusted && !window._f88DiscoveryActive) {
+        window._userTouchedSlider = true;
         _shapeArmed = true;
         if (window.currentShapeStateObj && window.currentShapeStateObj.name) previousStateName = window.currentShapeStateObj.name;
         var _dd0 = document.getElementById('datum-dragger'); if (_dd0) _dd0.style.pointerEvents = '';
