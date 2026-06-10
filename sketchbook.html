@@ -3022,6 +3022,8 @@
       dateStamped: c.date_stamped,
       timeStamped: c.time_stamped,
       s1Datum:      c.s1_datum     || 0,
+      s1Ceil:       c.s1_ceil      || 0,
+      s1Floor:      c.s1_floor     || 0,
       s1StateName:  c.s1_resolved_state || c.resolved_state || 'EXPANSIVE',
       s1StateColor: s1Mapped.color,
       s1ConePath:   c.s1_cone_path  || '',
@@ -3066,6 +3068,8 @@
         date_stamped:      s.date_stamped,
         time_stamped:      s.time_stamped,
         s1_datum:          s.s1_datum,
+        s1_ceil:           s.s1_ceil,
+        s1_floor:          s.s1_floor,
         s1_resolved_state: s.s1_resolved_state,
         s2_design:         s.s2_design
       }
@@ -3285,7 +3289,7 @@
       </div>
       <div class="mini-shape">${data.s1ConePath
         ? '<svg width="100%" height="100%" viewBox="' + (data.s1ViewBox) + '" preserveAspectRatio="xMidYMid meet"><path d="' + data.s1ConePath + '" fill="rgba(93,202,165,0.15)"/><path d="' + data.s1CeilPath + '" stroke="#C9A84C" stroke-width="3" fill="none" stroke-linecap="round"/><path d="' + data.s1FloorPath + '" stroke="#e24b4a" stroke-width="2" fill="none" stroke-linecap="round"/><path d="' + data.s1DatumPath + '" stroke="#5DCAA5" stroke-width="3" fill="none" stroke-linecap="round"/></svg>'
-        : miniShapeSVG(data)}</div>
+        : miniShapeSVG({ ceil: data.s1Ceil || data.ceil, datum: data.s1Datum || data.datum, floor: data.s1Floor || data.floor, stateName: data.s1StateName || data.stateName })}</div>
       <div class="saved-bottom">
         <span class="saved-time">Sketched Saved · ${data.dateStamped}</span>
         <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">

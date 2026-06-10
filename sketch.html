@@ -11326,6 +11326,8 @@ Studio is built for exactly this. See If This Shape Holds →`;
         date_stamped:   mm + '/' + ddS + '/' + now.getFullYear(),
         time_stamped:   now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
         s1_datum:          Math.round(_s1DatumRaw * 1000),
+        s1_ceil:           Math.round((_lcp.ceilSpend  || dc) * 1000),
+        s1_floor:          Math.round((_lcp.floorSpend || df) * 1000),
         s1_resolved_state: (_s1StObj && _s1StObj.name) || 'EXPANSIVE',
         s1_cone_path:  (_s1paths && _s1paths.cone)  || '',
         s1_ceil_path:  (_s1paths && _s1paths.ceil)  || '',
@@ -11358,6 +11360,8 @@ Studio is built for exactly this. See If This Shape Holds →`;
             date_stamped:      s.date_stamped,
             time_stamped:      s.time_stamped,
             s1_datum:          s.s1_datum,
+            s1_ceil:           s.s1_ceil,
+            s1_floor:          s.s1_floor,
             s1_resolved_state: s.s1_resolved_state,
             s2_design:         s.s2_design
           }
