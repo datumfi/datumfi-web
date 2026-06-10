@@ -3104,7 +3104,12 @@
         localStorage.setItem(LS_KEY, JSON.stringify(_r));
       }
       if (_needsUi) {
-        SketchbookDatabase.slot1 = _contractToSlot(_ckBook.slot_1);
+        var _raw1 = _ckBook.slot_1;
+        var _clean1 = Object.assign({}, _raw1);
+        delete _clean1.s1_cone_path; delete _clean1.s1_ceil_path;
+        delete _clean1.s1_floor_path; delete _clean1.s1_datum_path;
+        delete _clean1.s1_canvas_viewbox;
+        SketchbookDatabase.slot1 = _contractToSlot(_clean1);
         var _tEl = document.getElementById('editable-notebook-title');
         if (_tEl && _ckBook.sketchbook_title) _tEl.value = _ckBook.sketchbook_title;
         if (typeof syncDesktopSketchbookUI === 'function') syncDesktopSketchbookUI();
@@ -3599,7 +3604,9 @@
     AppSessionState.activeSketchSlot = null;
     if (sessionStorage.getItem('datumfi_just_saved')) {
       sessionStorage.removeItem('datumfi_just_saved');
-      setTimeout(function() { showSketchToast('Saved to this device · Log in for permanent storage'); }, 5000);
+      if (!sessionStorage.getItem('datum_auth_hint')) {
+        setTimeout(function() { showSketchToast('Saved to this device · Log in for permanent storage'); }, 5000);
+      }
     }
   })();
 

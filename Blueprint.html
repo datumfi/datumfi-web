@@ -1627,7 +1627,10 @@ document.addEventListener('click', function(event) {
   event.stopImmediatePropagation();
 
   var slotId = openBtn.dataset.openSlot;
-  if (slotId) window.location.href = '/studio.html?id=' + slotId + '&hydrate=blueprint';
+  if (slotId) {
+    try { sessionStorage.setItem('datumfi_blueprint_explicit_load', '1'); } catch(e) {}
+    window.location.href = '/studio.html?id=' + slotId + '&hydrate=blueprint';
+  }
 }, true);
 /* ── END R3.6 OPEN BLUEPRINT HYDRATION HANDSHAKE ── */
 
@@ -1639,6 +1642,7 @@ document.getElementById('action-open-studio').addEventListener('click', () => {
   const slotId = AppSessionState.activeBlueprintSlot;
   const active = BlueprintArchive['slot' + slotId];
   if (active) {
+    try { sessionStorage.setItem('datumfi_blueprint_explicit_load', '1'); } catch(e) {}
     window.location.href = '/studio.html?id=' + slotId + '&hydrate=blueprint';
   } else {
     try { sessionStorage.setItem('datumfi_skip_entry_overlay', '1'); } catch(e) {}

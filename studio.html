@@ -5483,6 +5483,10 @@
     }
     if (!_data) return;
 
+    var _explicit = sessionStorage.getItem('datumfi_blueprint_explicit_load');
+    if (!_explicit) return;
+    try { sessionStorage.removeItem('datumfi_blueprint_explicit_load'); } catch(ex) {}
+
     setTimeout(function() {
       var _b = document.createElement('div');
       _b.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(29,158,117,0.12);border:1px solid rgba(29,158,117,0.4);color:var(--teal-mid,#5DCAA5);font-family:var(--font-mono,"DM Mono",monospace);font-size:11px;letter-spacing:0.06em;padding:8px 16px;border-radius:4px;white-space:nowrap;pointer-events:none;';
