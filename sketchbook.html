@@ -3051,9 +3051,13 @@
 
   function _mirrorSketchbookToClerk(blob) {
     try {
-      if (!window.Clerk || !window.Clerk.user) return;
-      var _m = Object.assign({}, window.Clerk.user.unsafeMetadata || {}, { sketchbook: blob });
-      window.Clerk.user.update({ unsafeMetadata: _m }).catch(function(){});
+      if (!window.Clerk) return;
+      var _b = blob;
+      window.Clerk.load().then(function() {
+        if (!window.Clerk.user) return;
+        var _m = Object.assign({}, window.Clerk.user.unsafeMetadata || {}, { sketchbook: _b });
+        window.Clerk.user.update({ unsafeMetadata: _m }).catch(function(){});
+      }).catch(function(){});
     } catch(_e) {}
   }
 

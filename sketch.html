@@ -11354,16 +11354,22 @@ Studio is built for exactly this. See If This Shape Holds →`;
         };
         try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch(ex) {}
         try { localStorage.setItem('datum_sketch_state_1', JSON.stringify(payload)); } catch(ex) {}
-        try {
-          if (window.Clerk && window.Clerk.user) {
-            var _ckM = Object.assign({}, window.Clerk.user.unsafeMetadata || {}, { sketchbook: data });
-            window.Clerk.user.update({ unsafeMetadata: _ckM }).catch(function(){});
-          }
-        } catch(_e) {}
         sessionStorage.setItem('datumfi_just_saved', '1');
         sessionStorage.setItem('datumfi_sketch_return_screen', window.location.hash || '#screen-5-build');
         sessionStorage.setItem('datumfi_sketch_current_snapshot', JSON.stringify(payload));
-        window.location.href = '/sketchbook.html';
+        // Navigate only after Clerk write commits; fall-through on error or logged-out
+        function _nav() { window.location.href = '/sketchbook.html'; }
+        try {
+          if (window.Clerk) {
+            window.Clerk.load().then(function() {
+              if (!window.Clerk.user) { _nav(); return; }
+              var _ckM = Object.assign({}, window.Clerk.user.unsafeMetadata || {}, { sketchbook: data });
+              window.Clerk.user.update({ unsafeMetadata: _ckM }).then(_nav).catch(_nav);
+            }).catch(_nav);
+            return;
+          }
+        } catch(_e) {}
+        _nav();
       }
 
       _ctaMain.addEventListener('click', function(e) {
