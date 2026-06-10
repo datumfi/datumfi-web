@@ -47,6 +47,7 @@
   };
 
   window.deleteDataOnly = function() {
+    if (!confirm('Delete all locally stored data from this browser?\n\nThis will remove your saved Sketches and cannot be undone.')) return;
     localStorage.clear(); sessionStorage.clear();
     var m = document.getElementById('delete-data-modal');
     if (m) m.innerHTML = '<div style="background:#0d1a2e;border:1px solid rgba(93,202,165,0.2);border-radius:8px;padding:40px;max-width:480px;width:90%;font-family:\'DM Mono\',monospace;text-align:center;">'

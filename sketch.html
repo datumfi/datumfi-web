@@ -11354,6 +11354,12 @@ Studio is built for exactly this. See If This Shape Holds →`;
         };
         try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch(ex) {}
         try { localStorage.setItem('datum_sketch_state_1', JSON.stringify(payload)); } catch(ex) {}
+        try {
+          if (window.Clerk && window.Clerk.user) {
+            var _ckM = Object.assign({}, window.Clerk.user.unsafeMetadata || {}, { sketchbook: data });
+            window.Clerk.user.update({ unsafeMetadata: _ckM }).catch(function(){});
+          }
+        } catch(_e) {}
         sessionStorage.setItem('datumfi_just_saved', '1');
         sessionStorage.setItem('datumfi_sketch_return_screen', window.location.hash || '#screen-5-build');
         sessionStorage.setItem('datumfi_sketch_current_snapshot', JSON.stringify(payload));
@@ -11647,11 +11653,11 @@ Studio is built for exactly this. See If This Shape Holds →`;
 
   var _hasSavedSketch = false;
   try {
-    if (localStorage.getItem('datum_sketch_state_1')) {
+    var _blob = JSON.parse(localStorage.getItem('datumfi_sketchbook_v1') || 'null');
+    if (_blob && _blob.slot_1) {
       _hasSavedSketch = true;
-    } else {
-      var _blob = JSON.parse(localStorage.getItem('datumfi_sketchbook_v1') || 'null');
-      _hasSavedSketch = !!(_blob && (_blob.slot_1 || _blob['slot_1']));
+    } else if (localStorage.getItem('datum_sketch_state_1')) {
+      _hasSavedSketch = true;
     }
   } catch(ex) {}
 

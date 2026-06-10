@@ -3048,6 +3048,32 @@
       localStorage.setItem(LS_KEY, JSON.stringify(d));
     } catch(e) {}
   }
+
+  function _mirrorSketchbookToClerk(blob) {
+    try {
+      if (!window.Clerk || !window.Clerk.user) return;
+      var _m = Object.assign({}, window.Clerk.user.unsafeMetadata || {}, { sketchbook: blob });
+      window.Clerk.user.update({ unsafeMetadata: _m }).catch(function(){});
+    } catch(_e) {}
+  }
+
+  function _sketchbookRestoreFromClerk() {
+    try {
+      if (!window.Clerk || !window.Clerk.user) return;
+      var _lsBlob = null;
+      try { _lsBlob = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch(_pe) {}
+      if (_lsBlob && _lsBlob.slot_1) return;
+      var _meta = window.Clerk.user.unsafeMetadata || {};
+      var _ckBook = _meta.sketchbook;
+      if (!_ckBook || !_ckBook.slot_1) return;
+      var _r = { sketchbook_title: _ckBook.sketchbook_title || '', slot_1: _ckBook.slot_1 };
+      localStorage.setItem(LS_KEY, JSON.stringify(_r));
+      SketchbookDatabase.slot1 = _contractToSlot(_ckBook.slot_1);
+      var _tEl = document.getElementById('editable-notebook-title');
+      if (_tEl && _r.sketchbook_title) _tEl.value = _r.sketchbook_title;
+      if (typeof syncDesktopSketchbookUI === 'function') syncDesktopSketchbookUI();
+    } catch(_e) {}
+  }
   // ── END PHASE A HELPERS ──────────────────────────────────────────────────
 
   function addCommas(num) {
@@ -3332,6 +3358,7 @@
                try { _lsD = JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch(ex) { _lsD = {}; }
                _lsD.slot_1 = _pSnap;
                try { localStorage.setItem(LS_KEY, JSON.stringify(_lsD)); } catch(ex) {}
+               _mirrorSketchbookToClerk(_lsD);
                executeSavePayloadToSlot(1, _contractToSlot(_pSnap));
              }
            }
@@ -3359,6 +3386,7 @@
             try { _lsD = JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch(ex) { _lsD = {}; }
             _lsD.slot_1 = _pSnap;
             try { localStorage.setItem(LS_KEY, JSON.stringify(_lsD)); } catch(ex) {}
+            _mirrorSketchbookToClerk(_lsD);
             executeSavePayloadToSlot(1, _contractToSlot(_pSnap));
           }
         }
@@ -3392,6 +3420,7 @@
            var _lsPin = {};
            try { _lsPin = JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch(ex) {}
            try { _lsPin['slot_' + activeSlotId] = _snap; localStorage.setItem(LS_KEY, JSON.stringify(_lsPin)); } catch(ex) {}
+           _mirrorSketchbookToClerk(_lsPin);
            executeSavePayloadToSlot(activeSlotId, _contractToSlot(_snap));
          } else {
            showSketchToast('Return to Sketch to save a new shape →');
@@ -3435,6 +3464,7 @@
     var _lsSCS = {};
     try { _lsSCS = JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch(ex) {}
     try { _lsSCS.slot_1 = _snap; localStorage.setItem(LS_KEY, JSON.stringify(_lsSCS)); } catch(ex) {}
+    _mirrorSketchbookToClerk(_lsSCS);
     executeSavePayloadToSlot(1, _contractToSlot(_snap));
   });
 
@@ -3648,6 +3678,7 @@
   function onSessionConfirmed() {
     try { sessionStorage.setItem('datum_auth_hint', '1'); } catch (e) {}
     revealBody();
+    if (typeof _sketchbookRestoreFromClerk === 'function') _sketchbookRestoreFromClerk();
     if (typeof syncDesktopSketchbookUI === 'function') {
       requestAnimationFrame(syncDesktopSketchbookUI);
     }
