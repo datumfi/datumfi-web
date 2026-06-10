@@ -2784,6 +2784,7 @@
         ghostBaseline = Object.assign({}, currentScenario);
         initDesignState();
         try { initDesignSliders(); } catch(e) {}
+        if (typeof window._f98RestoreS2Design === 'function') try { window._f98RestoreS2Design(); } catch(e) {}
         renderScreen2();
         updateScreen2Narrative();
         revealCarryForward();
@@ -2809,6 +2810,7 @@
         ghostBaseline = Object.assign({}, currentScenario);
         initDesignState();
         try { initDesignSliders(); } catch(e) {}
+        if (typeof window._f98RestoreS2Design === 'function') try { window._f98RestoreS2Design(); } catch(e) {}
         revealCarryForward();
         initD2DragHandlers();
         renderScreen2();
@@ -5259,6 +5261,19 @@
         } catch(e) {}
     }
 
+    function _captureS1Paths() {
+        var _cn = document.getElementById('cone-area');
+        var _cl = document.getElementById('ceil-line');
+        var _fl = document.getElementById('floor-line');
+        var _dl = document.getElementById('datum-line');
+        return {
+            cone:  (_cn && _cn.getAttribute('d')) || '',
+            ceil:  (_cl && _cl.getAttribute('d')) || '',
+            floor: (_fl && _fl.getAttribute('d')) || '',
+            datum: (_dl && _dl.getAttribute('d')) || ''
+        };
+    }
+
     function saveSnapshot() {
         if (!lastCalculatedPoints) return; // guard: no data yet
         const viewBox = "0 0 1100 720";
@@ -5273,10 +5288,11 @@
           'var(--white)':            '#ffffff'
         };
         const _stateHex = _csvc[window.currentShapeStateObj.color] ?? window.currentShapeStateObj.color;
-        const dCone = document.getElementById('cone-area').getAttribute('d');
-        const dCeil = document.getElementById('ceil-line').getAttribute('d');
-        const dFloor = document.getElementById('floor-line').getAttribute('d');
-        const dDatum = document.getElementById('datum-line').getAttribute('d');
+        var _s1pSnap = _captureS1Paths();
+        const dCone = _s1pSnap.cone;
+        const dCeil = _s1pSnap.ceil;
+        const dFloor = _s1pSnap.floor;
+        const dDatum = _s1pSnap.datum;
 
         const ptsEnd = getMathPoint(currentScenario.yearsToGrow, currentScenario.yearsToGrow, currentScenario);
         const yC = spendToY(ptsEnd.ceilSpend);
@@ -6365,6 +6381,31 @@
     // designScenario — Screen 2 working state, written by d2-slider-* inputs
     var ghostBaseline  = null;
     var designScenario = null;
+
+    window._f98RestoreS2Design = function() {
+        var _s2d = window._f98S2Design;
+        if (!_s2d) return;
+        try {
+            var _sv = function(id, val) { var el = document.getElementById(id); if (el) el.value = val; };
+            if (_s2d.age != null)            _sv('d2-slider-age',          _s2d.age);
+            if (_s2d.retire != null)         _sv('d2-slider-activation',   _s2d.retire);
+            if (_s2d.planThroughAge != null) _sv('d2-slider-plan-through', _s2d.planThroughAge);
+            if (_s2d.port  != null)          _sv('d2-slider-portfolio',    portValToPos(_s2d.port));
+            if (_s2d.datum != null)          _sv('d2-slider-datum',        datumValToPos(_s2d.datum));
+            if (_s2d.contrib != null)        _sv('d2-slider-contrib',      contribValToPos(_s2d.contrib));
+            designScenario = {
+                age: _s2d.age, retire: _s2d.retire,
+                planThroughAge: _s2d.planThroughAge || 93,
+                port: _s2d.port, datum: _s2d.datum, contrib: _s2d.contrib
+            };
+            designOverrides.ceilDelta  = _s2d.ceilDelta  || 0;
+            designOverrides.floorDelta = _s2d.floorDelta || 0;
+            designOverrides.datumDelta = _s2d.datumDelta || 0;
+            designOverrides.portDelta  = _s2d.portDelta  || 0;
+            designOverrides.isDirty = !!(designOverrides.ceilDelta || designOverrides.floorDelta || designOverrides.datumDelta || designOverrides.portDelta);
+        } catch(e) {}
+    };
+
     var _d2LastEndpointCY = { ceil: 0, floor: 450, datum: 225 };
     var _d2LastScenario   = null;
     var _d2AcceptAnimating = false;
@@ -11242,6 +11283,26 @@ Studio is built for exactly this. See If This Shape Holds →`;
       var now  = new Date();
       var mm   = String(now.getMonth() + 1).padStart(2, '0');
       var ddS  = String(now.getDate()).padStart(2, '0');
+      // F98: S1 values for card display
+      var _lcp = lastCalculatedPoints || {};
+      var _s1DatumRaw = currentScenario.targetSpend || 0;
+      var _s1StObj = null;
+      try { _s1StObj = getShapeStateObj({ ceilSpend: _lcp.ceilSpend || dc, datumSpend: _lcp.datumSpend || _s1DatumRaw, floorSpend: _lcp.floorSpend || df }); } catch(e2) {}
+      var _s1paths = null;
+      try { if (typeof _captureS1Paths === 'function') _s1paths = _captureS1Paths(); } catch(e3) {}
+      // F98: S2 design block — only if user opened S2
+      var _s2block = null;
+      if (designScenario) {
+        _s2block = {
+          age: designScenario.age, retire: designScenario.retire,
+          planThroughAge: designScenario.planThroughAge || 93,
+          port: designScenario.port, datum: designScenario.datum, contrib: designScenario.contrib,
+          ceilDelta:  designOverrides.ceilDelta  || 0,
+          floorDelta: designOverrides.floorDelta || 0,
+          datumDelta: designOverrides.datumDelta || 0,
+          portDelta:  designOverrides.portDelta  || 0
+        };
+      }
       return {
         sketch_id:      generateUUID(),
         version:        '1.0.0',
@@ -11257,7 +11318,15 @@ Studio is built for exactly this. See If This Shape Holds →`;
         resolved_state: stObj.name  || 'EXPANSIVE',
         state_color:    stObj.color || 'var(--teal-brand)',
         date_stamped:   mm + '/' + ddS + '/' + now.getFullYear(),
-        time_stamped:   now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+        time_stamped:   now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+        s1_datum:          Math.round(_s1DatumRaw * 1000),
+        s1_resolved_state: (_s1StObj && _s1StObj.name) || 'EXPANSIVE',
+        s1_cone_path:  (_s1paths && _s1paths.cone)  || '',
+        s1_ceil_path:  (_s1paths && _s1paths.ceil)  || '',
+        s1_floor_path: (_s1paths && _s1paths.floor) || '',
+        s1_datum_path: (_s1paths && _s1paths.datum) || '',
+        s1_canvas_viewbox: '80 50 570 415',
+        s2_design: _s2block
       };
     }
 
@@ -11374,6 +11443,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
           if (_dS) _slD.dataset.exactVal = _dS;
         }, 100);
       })(_contract.portfolio_mass, _contract.contributions, _contract.datum_spend, _slPort, _slContrib, _slDatum);
+      if (_contract.s2_design) window._f98S2Design = _contract.s2_design;
     })();
     // ── END PHASE A: OPEN SKETCH HYDRATION ───────────────────────────────
 
@@ -11439,6 +11509,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
           if (_dS) _slD.dataset.exactVal = _dS;
         }, 100);
       })(_contract.portfolio_mass, _contract.contributions, _contract.datum_spend, _slPort, _slContrib, _slDatum);
+      if (_contract.s2_design) window._f98S2Design = _contract.s2_design;
     })();
     // ── END PHASE B: URL PARAM SKETCH HYDRATION ──────────────────────────
 </script>

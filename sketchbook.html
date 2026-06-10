@@ -3007,7 +3007,8 @@
 
   function _contractToSlot(c) {
     if (!c) return null;
-    var mapped = STATE_BRAND_MAP[c.resolved_state] || STATE_BRAND_MAP.EXPANSIVE;
+    var mapped   = STATE_BRAND_MAP[c.resolved_state]    || STATE_BRAND_MAP.EXPANSIVE;
+    var s1Mapped = STATE_BRAND_MAP[c.s1_resolved_state] || mapped;
     return {
       age:         c.age,
       retire:      c.retire_age,
@@ -3019,7 +3020,15 @@
       stateName:   c.resolved_state || 'EXPANSIVE',
       stateColor:  mapped.color,
       dateStamped: c.date_stamped,
-      timeStamped: c.time_stamped
+      timeStamped: c.time_stamped,
+      s1Datum:      c.s1_datum     || 0,
+      s1StateName:  c.s1_resolved_state || c.resolved_state || 'EXPANSIVE',
+      s1StateColor: s1Mapped.color,
+      s1ConePath:   c.s1_cone_path  || '',
+      s1CeilPath:   c.s1_ceil_path  || '',
+      s1FloorPath:  c.s1_floor_path || '',
+      s1DatumPath:  c.s1_datum_path || '',
+      s1ViewBox:    c.s1_canvas_viewbox || '0 0 840 480'
     };
   }
 
@@ -3208,14 +3217,16 @@
       <div class="slot-meta-eyebrow-container">
         <div class="slot-meta-eyebrow">Page 0${idx}</div>
       </div>
-      <div class="slot-state-title" style="color: ${data.stateColor};">${data.stateName}</div>
+      <div class="slot-state-title" style="color: ${data.s1StateColor || data.stateColor};">${data.s1StateName || data.stateName}</div>
       <div class="slot-metrics-table">
         <div class="sm-row"><span class="sm-key">Timeline</span><span class="sm-val">${data.age} &rarr; ${data.retire}</span></div>
         <div class="sm-row"><span class="sm-key">Portfolio</span><span class="sm-val">${compactMoney(data.port)}</span></div>
         <div class="sm-row"><span class="sm-key">Contrib</span><span class="sm-val">$${addCommas(data.contrib)}/yr</span></div>
-        <div class="sm-row"><span class="sm-key">Target Spend</span><span class="sm-val">$${addCommas(data.datum)}/yr</span></div>
+        <div class="sm-row"><span class="sm-key">Target Spend</span><span class="sm-val">$${addCommas(data.s1Datum || data.datum)}/yr</span></div>
       </div>
-      <div class="mini-shape">${miniShapeSVG(data)}</div>
+      <div class="mini-shape">${data.s1ConePath
+        ? '<svg width="100%" height="100%" viewBox="' + (data.s1ViewBox) + '" preserveAspectRatio="xMidYMid meet"><path d="' + data.s1ConePath + '" fill="rgba(93,202,165,0.15)"/><path d="' + data.s1CeilPath + '" stroke="#C9A84C" stroke-width="3" fill="none" stroke-linecap="round"/><path d="' + data.s1FloorPath + '" stroke="#e24b4a" stroke-width="2" fill="none" stroke-linecap="round"/><path d="' + data.s1DatumPath + '" stroke="#5DCAA5" stroke-width="3" fill="none" stroke-linecap="round"/></svg>'
+        : miniShapeSVG(data)}</div>
       <div class="saved-bottom">
         <span class="saved-time">Sketched Saved · ${data.dateStamped}</span>
         <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
