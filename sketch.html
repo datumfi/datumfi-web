@@ -2868,6 +2868,7 @@
     });
   </script>
 
+  <script src="/scripts/datum-shape.js"></script>
   <script>
     const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
 
@@ -3240,41 +3241,15 @@
     }
 
     function getMathPoint(offset, yearsToGrow, s) {
-        const rCon = s.conservativeRate - 1;
-        const rBase = s.baselineRate - 1;
-        const rUp = s.upsideRate - 1;
-        
-        const pFvCon = s.portfolioVol * Math.pow(s.conservativeRate, offset);
-        const pFvBase = s.portfolioVol * Math.pow(s.baselineRate, offset);
-        const pFvUp = s.portfolioVol * Math.pow(s.upsideRate, offset);
-        
-        const cFvCon = rCon > 0 ? (s.annualContrib / 1000000) * ((Math.pow(s.conservativeRate, offset) - 1) / rCon) : (s.annualContrib / 1000000) * offset;
-        const cFvBase = rBase > 0 ? (s.annualContrib / 1000000) * ((Math.pow(s.baselineRate, offset) - 1) / rBase) : (s.annualContrib / 1000000) * offset;
-        const cFvUp = rUp > 0 ? (s.annualContrib / 1000000) * ((Math.pow(s.upsideRate, offset) - 1) / rUp) : (s.annualContrib / 1000000) * offset;
-        
-        const fvCon = pFvCon + cFvCon;
-        const fvBase = pFvBase + cFvBase;
-        const fvUp = pFvUp + cFvUp;
-        
-        const inflMult = s.isNominal ? Math.pow(1 + s.inflRate, offset) : 1;
-        
-        const t = yearsToGrow > 0 ? offset / yearsToGrow : 0;
-        // Horizon-aware WR: scale calibrated against engine PMT formula at r=3.4%, n_ref=28
-        // scale(n) = 0.6079 / (1 - 1.034^-n); n_ref=28 → scale=1.000 (zero change at default)
-        const _h      = Math.max(15, (s.planThroughAge || 93) - (s.activationAge || 65));
-        const _hScale = 0.6079 / (1 - Math.pow(1.034, -_h));
-        const _wrBase  = 0.04     * _hScale;
-        const _wrFloor = WR_FLOOR * _hScale;
-        const _wrCeil  = WR_CEIL  * _hScale;
-        const wrCon = _wrBase - (_wrBase - _wrFloor) * t;
-        const wrUp  = _wrBase + (_wrCeil  - _wrBase)  * t;
-        
-        const floorSpend = fvCon * 1000 * wrCon * inflMult * s.taxMult;
-        const ceilSpend = fvUp * 1000 * wrUp * inflMult * s.taxMult;
-        const datumSpend = s.targetSpend * inflMult;
-        
-        const datumCapM = datumSpend / (0.04 * _hScale) / 1000;
-        return { fvCon, fvBase, fvUp, floorSpend, ceilSpend, datumSpend, datumCapM };
+        // Delegates to DatumShape.computeAt (shared S1 engine in /scripts/datum-shape.js).
+        // Sketch's contract: yearsToGrow arg may differ from s.yearsToGrow during
+        // counterfactual sims (Multi-Lever Pattern lever isolation: a "what if I had
+        // pinned at age X, retire Y" computation runs against the PINNED scenario with
+        // an OVERRIDDEN horizon). When they differ, rebuild a scenario carrying the
+        // override so DatumShape.computeAt's t = offset / scenario.yearsToGrow is
+        // numerically identical to the prior inline implementation.
+        var sc = (s.yearsToGrow === yearsToGrow) ? s : Object.assign({}, s, { yearsToGrow: yearsToGrow });
+        return DatumShape.computeAt(sc, offset);
     }
 
     function getShapeStateObj(pts) {
