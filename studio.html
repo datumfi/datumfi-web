@@ -5565,19 +5565,25 @@
   </script>
 
   <script>
-  // Post-load Clerk re-render: handle returnTo cold sign-in on overlay + header
+  // Post-load Clerk re-render: handle returnTo cold sign-in and stale-hint after sign-out
   window.addEventListener('load', function() {
-    if (sessionStorage.getItem('datum_auth_hint')) return;
     if (!window.Clerk) return;
     window.Clerk.load().then(function() {
-      if (!window.Clerk.user) return;
-      try { sessionStorage.setItem('datum_auth_hint', '1'); } catch(e) {}
       var _sv = document.getElementById('studioStatusValue');
       var _sn = document.getElementById('studioStatusNote');
-      if (_sv) _sv.textContent = 'Signed in';
-      if (_sn) _sn.textContent = 'Your Sketchbook and Blueprint Archive are available.';
-      var _ln = document.querySelector('nav a.nav-login-btn[href*="vault"]');
-      if (_ln) _ln.style.display = 'none';
+      if (window.Clerk.user) {
+        if (!sessionStorage.getItem('datum_auth_hint')) {
+          try { sessionStorage.setItem('datum_auth_hint', '1'); } catch(e) {}
+          if (_sv) _sv.textContent = 'Signed in';
+          if (_sn) _sn.textContent = 'Your Sketchbook and Blueprint Archive are available.';
+          var _ln = document.querySelector('nav a.nav-login-btn[href*="vault"]');
+          if (_ln) _ln.style.display = 'none';
+        }
+      } else if (sessionStorage.getItem('datum_auth_hint')) {
+        try { sessionStorage.removeItem('datum_auth_hint'); } catch(e) {}
+        if (_sv) _sv.innerHTML = '<a href="/vault.html?returnTo=%2Fstudio.html" class="nav-login-btn" style="margin-left:0">Sign In</a>';
+        if (_sn) _sn.textContent = 'You can start a new Blueprint now. Saved Sketches and filed Blueprints require sign in so they can open from the right archive.';
+      }
     }).catch(function() {});
   });
   </script>

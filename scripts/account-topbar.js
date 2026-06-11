@@ -166,6 +166,7 @@
     var _signOutBtn = topbarEl.querySelector('[data-acct-action="signout"]');
     if (_signOutBtn) _signOutBtn.addEventListener('click', function () {
       sessionStorage.removeItem('datum_auth_hint');
+      localStorage.removeItem('datum_auth_hint');
       localStorage.removeItem('datum_sketch_overlay_seen');
       localStorage.removeItem('datum_studio_overlay_seen');
       if (window.Clerk && typeof Clerk.signOut === 'function') {
