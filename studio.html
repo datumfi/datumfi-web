@@ -4772,7 +4772,7 @@
       }
       // Datum: net_datum_v1 in dollars -> $k -> log slider position via datumValToPos($k)
       var sDat = $('slider-datum');
-      if (sDat && bp.datum && bp.datum.net_datum_v1 > 0) {
+      if (sDat && bp.datum && bp.datum.net_datum_v1 > 0 && bp._loadSource !== 'fresh+dossier') {
         var dK = bp.datum.net_datum_v1 / 1000;
         sDat.value = clampN(SC.datumValToPos(dK), 0, 100000);
         sDat.dataset.exactVal = String(Math.round(bp.datum.net_datum_v1));
