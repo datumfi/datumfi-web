@@ -75,6 +75,82 @@
   .inline-details { display: none; margin-top: 14px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 14px; }
   .studio-layout.mode-draft .inline-details { display: block; }
 
+  /* ── mode-shape: 4th canvas mode, co-exists with panel layout modes ──
+     Toggle independently of Draft/Split/Blueprint; setViewMode unchanged. */
+  .blueprint-container {
+    transition: transform 0.65s cubic-bezier(0.25,1,0.5,1), opacity 0.4s ease;
+  }
+  .studio-layout.mode-shape .blueprint-container {
+    transform: perspective(900px) rotateY(5deg) scale(0.96);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .studio-layout.mode-shape .hud-overview,
+  .studio-layout.mode-shape .hud-analysis,
+  .studio-layout.mode-shape .lens-controls {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: opacity 0.3s ease;
+  }
+  .canvas-wrapper { transition: background-size 0.7s ease; }
+  .studio-layout.mode-shape .canvas-wrapper { background-size: 80px 80px; cursor: default; }
+
+  /* shape mode toggle button */
+  #shape-mode-toggle {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 50;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--teal-mid);
+    background: rgba(9,18,33,0.85);
+    border: 1px solid rgba(29,158,117,0.4);
+    border-radius: 3px;
+    padding: 6px 12px;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+  }
+  #shape-mode-toggle:hover { border-color: var(--teal-mid); background: rgba(29,158,117,0.1); }
+  .studio-layout.mode-shape #shape-mode-toggle { color: var(--gold); border-color: rgba(201,168,76,0.5); }
+  .studio-layout.mode-shape #shape-mode-toggle:hover { border-color: var(--gold); background: rgba(201,168,76,0.08); }
+
+  /* shape panel: sibling to blueprint-container inside canvas-wrapper */
+  #shape-panel {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transform: perspective(900px) rotateY(-5deg) scale(0.98);
+    transition: transform 0.65s cubic-bezier(0.25,1,0.5,1), opacity 0.4s ease;
+  }
+  .studio-layout.mode-shape #shape-panel { opacity: 1; pointer-events: auto; transform: none; }
+  #shape-panel-svg { width: 88%; max-width: 680px; height: auto; overflow: visible; }
+  #shape-hud {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    background: rgba(9,18,33,0.85);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 8px;
+    padding: 14px 18px;
+    backdrop-filter: blur(8px);
+    pointer-events: none;
+  }
+  .sh-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 7px; }
+  .sh-row:last-child { margin-bottom: 0; }
+  .sh-lbl { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; width: 50px; }
+  .sh-val { font-family: var(--font-serif); font-style: italic; font-size: 20px; }
+  .sh-lbl-ceil, .sh-val-ceil   { color: var(--gold); }
+  .sh-lbl-datum, .sh-val-datum { color: var(--teal-mid); }
+  .sh-lbl-floor, .sh-val-floor { color: var(--danger-red); }
+
   /* --- STUDIO LAYOUT --- */
   .studio-layout { display: flex; flex: 1; width: 100%; margin: 0 auto; }
 
@@ -1180,6 +1256,68 @@
       
       <div id="trust-firewall-tooltip">
          <strong>LEGAL FIREWALL</strong>Capital housed within this wing is legally decoupled from the primary Estate. It is immune to core structural collapse, shielded from standard liability modeling, and designated exclusively for generational transfer.
+      </div>
+
+      <!-- Estate<->Shape flip toggle -->
+      <button id="shape-mode-toggle" onclick="toggleShapeMode()" title="Switch between Estate rooms and deterministic Shape view">Shape Mode</button>
+
+      <!-- Shape panel: visible in mode-shape; deterministic Floor/Datum/Ceiling view (no Monte Carlo) -->
+      <div id="shape-panel">
+        <div id="shape-hud">
+          <div class="sh-row">
+            <span class="sh-lbl sh-lbl-ceil">Ceiling</span>
+            <span class="sh-val sh-val-ceil" id="sh-ceil-val">&#8212;</span>
+          </div>
+          <div class="sh-row">
+            <span class="sh-lbl sh-lbl-datum">Datum</span>
+            <span class="sh-val sh-val-datum" id="sh-datum-val">&#8212;</span>
+          </div>
+          <div class="sh-row">
+            <span class="sh-lbl sh-lbl-floor">Floor</span>
+            <span class="sh-val sh-val-floor" id="sh-floor-val">&#8212;</span>
+          </div>
+        </div>
+
+        <svg id="shape-panel-svg" viewBox="0 0 700 420" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <defs>
+            <linearGradient id="sp-thermal-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stop-color="#5DCAA5" stop-opacity="0.55"/>
+              <stop offset="100%" stop-color="#5DCAA5" stop-opacity="0.05"/>
+            </linearGradient>
+          </defs>
+          <!-- Blueprint grid -->
+          <g opacity="0.5">
+            <line x1="80" y1="60"  x2="80"  y2="360" stroke="rgba(100,180,255,0.25)" stroke-width="1"/>
+            <line x1="560" y1="60" x2="560" y2="360" stroke="rgba(100,180,255,0.25)" stroke-width="1"/>
+            <line x1="80" y1="60"  x2="560" y2="60"  stroke="rgba(100,180,255,0.12)" stroke-width="1" stroke-dasharray="4,6"/>
+            <line x1="80" y1="160" x2="560" y2="160" stroke="rgba(100,180,255,0.12)" stroke-width="1" stroke-dasharray="4,6"/>
+            <line x1="80" y1="260" x2="560" y2="260" stroke="rgba(100,180,255,0.12)" stroke-width="1" stroke-dasharray="4,6"/>
+            <line x1="80" y1="360" x2="560" y2="360" stroke="rgba(100,180,255,0.12)" stroke-width="1" stroke-dasharray="4,6"/>
+          </g>
+          <!-- Dynamic Y-axis labels -->
+          <text id="sp-lbl-1" x="72" y="64"  text-anchor="end" font-family="DM Mono,monospace" font-size="9" fill="rgba(255,255,255,0.3)"></text>
+          <text id="sp-lbl-2" x="72" y="164" text-anchor="end" font-family="DM Mono,monospace" font-size="9" fill="rgba(255,255,255,0.3)"></text>
+          <text id="sp-lbl-3" x="72" y="264" text-anchor="end" font-family="DM Mono,monospace" font-size="9" fill="rgba(255,255,255,0.3)"></text>
+          <text id="sp-lbl-4" x="72" y="364" text-anchor="end" font-family="DM Mono,monospace" font-size="9" fill="rgba(255,255,255,0.3)"></text>
+          <!-- Cone fill -->
+          <path id="sp-cone"  fill="url(#sp-thermal-grad)" d=""/>
+          <!-- Boundary lines -->
+          <path id="sp-ceil"  fill="none" stroke="#C9A84C" stroke-width="1.5" d=""/>
+          <path id="sp-floor" fill="none" stroke="#e24b4a" stroke-width="1.5" d=""/>
+          <path id="sp-datum" fill="none" stroke="#5DCAA5" stroke-width="2.5" filter="drop-shadow(0 0 5px rgba(93,202,165,0.5))" d=""/>
+          <!-- Retirement nodes -->
+          <circle id="sp-node-ceil"  cx="560" cy="100" r="3.5" fill="#C9A84C" opacity="0"/>
+          <circle id="sp-node-datum" cx="560" cy="200" r="4"   fill="#5DCAA5" opacity="0"/>
+          <circle id="sp-node-floor" cx="560" cy="300" r="3.5" fill="#e24b4a" opacity="0"/>
+          <!-- End labels -->
+          <text id="sp-lbl-ceil-end"  x="568" y="0" font-family="DM Mono,monospace" font-size="9" fill="#C9A84C" letter-spacing="0.08em" opacity="0">CEILING</text>
+          <text id="sp-lbl-datum-end" x="568" y="0" font-family="DM Mono,monospace" font-size="9" fill="#5DCAA5" letter-spacing="0.08em" opacity="0">DATUM</text>
+          <text id="sp-lbl-floor-end" x="568" y="0" font-family="DM Mono,monospace" font-size="9" fill="#e24b4a" letter-spacing="0.08em" opacity="0">FLOOR</text>
+          <!-- Age axis -->
+          <text id="sp-age-start" x="80"  y="390" text-anchor="middle" font-family="DM Mono,monospace" font-size="10" fill="rgba(255,255,255,0.4)"></text>
+          <text id="sp-age-end"   x="560" y="390" text-anchor="middle" font-family="DM Mono,monospace" font-size="10" fill="#5DCAA5" font-weight="bold"></text>
+          <text x="320" y="412" text-anchor="middle" font-family="DM Mono,monospace" font-size="9" fill="rgba(255,255,255,0.18)" letter-spacing="0.06em">DETERMINISTIC ESTIMATE -- NOT MONTE CARLO</text>
+        </svg>
       </div>
 
       <div class="blueprint-container" id="blueprint-container">
@@ -2851,6 +2989,7 @@
       }
 
       state.accounts.forEach(a => a.isNew = false);
+      if (typeof updateShapePanel === 'function') updateShapePanel();
     }
     _updateSVGsCore = _updateSVGsCoreImpl; // wire the debounce wrapper
 
@@ -3850,6 +3989,202 @@
         });
       }
     })();
+
+    // ── SHAPE VIEW: Estate<->Shape flip (deterministic FV only, no Monte Carlo) ──
+
+    // _shapeGetPoint MIRRORS sketch.html getMathPoint at commit 5747ecc
+    // (WR_CEIL=0.050, WR_FLOOR=0.028, _hScale formula, average-paradigm rates 1.015/1.035/1.055,
+    //  isNominal=false so inflMult=1). Must stay in sync if the Sketch's getMathPoint changes.
+    var _SP_WR_CEIL  = 0.050;
+    var _SP_WR_FLOOR = 0.028;
+    function _shapeGetPoint(offset, yearsToGrow, s) {
+      var rCon  = s.conservativeRate - 1;
+      var rBase = s.baselineRate    - 1;
+      var rUp   = s.upsideRate      - 1;
+      var pFvCon  = s.portfolioVol * Math.pow(s.conservativeRate, offset);
+      var pFvBase = s.portfolioVol * Math.pow(s.baselineRate,     offset);
+      var pFvUp   = s.portfolioVol * Math.pow(s.upsideRate,       offset);
+      var cFvCon  = rCon  > 0 ? (s.annualContrib/1e6)*((Math.pow(s.conservativeRate,offset)-1)/rCon)  : (s.annualContrib/1e6)*offset;
+      var cFvBase = rBase > 0 ? (s.annualContrib/1e6)*((Math.pow(s.baselineRate,    offset)-1)/rBase) : (s.annualContrib/1e6)*offset;
+      var cFvUp   = rUp   > 0 ? (s.annualContrib/1e6)*((Math.pow(s.upsideRate,      offset)-1)/rUp)   : (s.annualContrib/1e6)*offset;
+      var fvCon  = pFvCon  + cFvCon;
+      var fvBase = pFvBase + cFvBase;
+      var fvUp   = pFvUp   + cFvUp;
+      var h      = Math.max(15, (s.planThroughAge || 93) - (s.activationAge || 65));
+      var hScale = 0.6079 / (1 - Math.pow(1.034, -h));
+      var wrBase = 0.04 * hScale;
+      var t      = yearsToGrow > 0 ? offset / yearsToGrow : 0;
+      var wrCon  = wrBase - (wrBase - _SP_WR_FLOOR * hScale) * t;
+      var wrUp   = wrBase + (_SP_WR_CEIL  * hScale - wrBase) * t;
+      return {
+        fvCon: fvCon, fvBase: fvBase, fvUp: fvUp,
+        floorSpend: fvCon * 1000 * wrCon * s.taxMult,
+        ceilSpend:  fvUp  * 1000 * wrUp  * s.taxMult,
+        datumSpend: s.targetSpend  // real terms, inflMult=1 (isNominal=false)
+      };
+    }
+
+    // Parse Blueprint DOM inputs into a normalized scenario object.
+    // Ages mirror Sketch slider semantics exactly (integer floor, clamp 18-85 / retAge+1-90).
+    // Tax rate: #eff-tax-rate holds a percent integer (22 = 22%); Dossier-sourced values
+    // arrive via DatumBlueprint as 0.22; both are normalized to decimal before taxMult = 1-rate.
+    function _parseBlueprintInputs() {
+      var out = {
+        currentAge: 40, activationAge: 65, yearsToGrow: 25, planThroughAge: 93,
+        portfolioVol: 0.75, annualContrib: 25000, targetSpend: 120, taxMult: 0.78
+      };
+
+      var portEl = document.getElementById('bp-portfolio-total');
+      if (portEl && portEl.value) {
+        var portRaw = parseInt(portEl.value.replace(/[^0-9]/g,''), 10) || 0;
+        if (portRaw > 0) out.portfolioVol = portRaw / 1e6;
+      }
+
+      var contEl = document.getElementById('bp-contributions-total');
+      if (contEl && contEl.value) {
+        out.annualContrib = parseInt(contEl.value.replace(/[^0-9]/g,''), 10) || 0;
+      }
+
+      // Datum spend: dollars -> $k (mirrors Sketch: readDatum()/1000)
+      var spendEl = document.getElementById('spend-input');
+      if (spendEl && spendEl.value) {
+        var spRaw = parseInt(spendEl.value.replace(/[^0-9]/g,''), 10) || 0;
+        if (spRaw > 0) out.targetSpend = spRaw / 1000;
+      }
+
+      // Ages: parse "MM / YYYY" strings, mirror Sketch integer-floor rounding + clamping
+      var dobStr = ((document.getElementById('pri-dob')    || {}).value || '');
+      var retStr = ((document.getElementById('target-ret') || {}).value || '');
+      var dobM   = dobStr.match(/(\d{1,2})\s*\/\s*(\d{4})/);
+      var retM   = retStr.match(/(\d{1,2})\s*\/\s*(\d{4})/);
+      if (dobM) {
+        var birthMo = parseInt(dobM[1], 10), birthYr = parseInt(dobM[2], 10);
+        var now     = new Date();
+        var curAge  = now.getFullYear() - birthYr;
+        if (now.getMonth() + 1 < birthMo) curAge--;
+        out.currentAge = Math.max(18, Math.min(85, curAge));
+        if (retM) {
+          var retMo  = parseInt(retM[1], 10), retYr = parseInt(retM[2], 10);
+          var retAge = retYr - birthYr;
+          if (retMo < birthMo) retAge--;
+          out.activationAge = Math.max(out.currentAge + 1, Math.min(90, retAge));
+        } else {
+          out.activationAge = Math.min(90, out.currentAge + 25);
+        }
+      }
+      out.yearsToGrow = out.activationAge - out.currentAge;
+
+      var planEl = document.getElementById('plan-end-age');
+      if (planEl) {
+        var p = parseInt(planEl.value, 10);
+        if (!isNaN(p)) out.planThroughAge = Math.max(75, Math.min(120, p));
+      }
+
+      // Tax: #eff-tax-rate is a percent integer (22); normalize to decimal (handles "22", "22%", 0.22)
+      var taxEl  = document.getElementById('eff-tax-rate');
+      var taxRaw = parseFloat(String((taxEl && taxEl.value) || '22').replace('%','')) || 22;
+      if (taxRaw > 1) taxRaw = taxRaw / 100;
+      out.taxMult = Math.max(0, Math.min(1, 1.0 - taxRaw));
+
+      return out;
+    }
+
+    function updateShapePanel() {
+      var spSvg = document.getElementById('shape-panel-svg');
+      if (!spSvg) return;
+
+      var sc = _parseBlueprintInputs();
+      if (sc.yearsToGrow < 1) sc.yearsToGrow = 1;
+
+      var scenario = {
+        portfolioVol: sc.portfolioVol, annualContrib: sc.annualContrib,
+        targetSpend:  sc.targetSpend,  taxMult:       sc.taxMult,
+        currentAge:   sc.currentAge,   activationAge: sc.activationAge,
+        yearsToGrow:  sc.yearsToGrow,  planThroughAge: sc.planThroughAge,
+        conservativeRate: 1.015, baselineRate: 1.035, upsideRate: 1.055
+      };
+
+      var xStart = 80, xEnd = 560, steps = 50;
+      var ptsS = _shapeGetPoint(0, sc.yearsToGrow, scenario);
+      var ptsE = _shapeGetPoint(sc.yearsToGrow, sc.yearsToGrow, scenario);
+
+      // Y scale: exact mirror of Sketch's auto-scale logic
+      var allV = [ptsS.floorSpend, ptsE.ceilSpend, ptsE.floorSpend, ptsS.datumSpend, ptsE.datumSpend];
+      var vMin = Math.min.apply(null, allV);
+      var vMax = Math.max.apply(null, allV);
+      var paddedRange = Math.max((vMax - vMin) * 1.10, 60);
+      var mid  = (vMin + vMax) / 2;
+      var yLo  = Math.max(0, mid - paddedRange / 2);
+      var yHi  = mid + paddedRange / 2;
+      var yTop = 60, yBot = 360, yPx = yBot - yTop;
+
+      function spY(v) {
+        if (yHi <= yLo) return (yTop + yBot) / 2;
+        return yTop + yPx - ((Math.max(yLo, Math.min(yHi, v)) - yLo) / (yHi - yLo)) * yPx;
+      }
+
+      var dCeil = 'M'+xStart+' '+spY(ptsS.ceilSpend);
+      var dFloor= 'M'+xStart+' '+spY(ptsS.floorSpend);
+      var dDatum= 'M'+xStart+' '+spY(ptsS.datumSpend);
+      var cCeil = [], cFloor = [];
+
+      for (var i = 0; i <= steps; i++) {
+        var off = (i / steps) * sc.yearsToGrow;
+        var x   = xStart + (i / steps) * (xEnd - xStart);
+        var pt  = _shapeGetPoint(off, sc.yearsToGrow, scenario);
+        var yC  = spY(pt.ceilSpend), yF = spY(pt.floorSpend), yD = spY(pt.datumSpend);
+        if (i > 0) { dCeil += ' L'+x+' '+yC; dFloor += ' L'+x+' '+yF; dDatum += ' L'+x+' '+yD; }
+        cCeil.push(x+' '+yC);
+        cFloor.unshift(x+' '+yF);
+      }
+      var dCone = 'M'+cCeil[0]+' '+cCeil.map(function(p){return 'L '+p;}).join(' ')+' '+cFloor.map(function(p){return 'L '+p;}).join(' ')+' Z';
+
+      function _sa(id, a, v) { var el = document.getElementById(id); if (el) el.setAttribute(a, v); }
+      function _st(id, v)    { var el = document.getElementById(id); if (el) el.textContent = v;    }
+
+      _sa('sp-cone','d',dCone); _sa('sp-ceil','d',dCeil); _sa('sp-floor','d',dFloor); _sa('sp-datum','d',dDatum);
+
+      var yCE = spY(ptsE.ceilSpend), yDE = spY(ptsE.datumSpend), yFE = spY(ptsE.floorSpend);
+      _sa('sp-node-ceil',  'cy', yCE);  _sa('sp-node-ceil',  'opacity', '1');
+      _sa('sp-node-datum', 'cy', yDE);  _sa('sp-node-datum', 'opacity', '1');
+      _sa('sp-node-floor', 'cy', yFE);  _sa('sp-node-floor', 'opacity', '1');
+      _sa('sp-lbl-ceil-end',  'y', yCE+4);  _sa('sp-lbl-ceil-end',  'opacity', '1');
+      _sa('sp-lbl-datum-end', 'y', yDE+4);  _sa('sp-lbl-datum-end', 'opacity', '1');
+      _sa('sp-lbl-floor-end', 'y', yFE+4);  _sa('sp-lbl-floor-end', 'opacity', '1');
+
+      function fmtK(v) {
+        return v >= 1000 ? '$'+(v/1000).toFixed(1).replace(/\.0$/,'')+'M' : '$'+Math.round(v)+'k';
+      }
+      _st('sp-lbl-1', fmtK(yHi));
+      _st('sp-lbl-2', fmtK(yHi - (yHi-yLo)/3));
+      _st('sp-lbl-3', fmtK(yHi - (yHi-yLo)*2/3));
+      _st('sp-lbl-4', fmtK(yLo));
+      _st('sp-age-start', 'AGE '+sc.currentAge);
+      _st('sp-age-end',   'RETIRE: '+sc.activationAge);
+
+      function fmtSpend(v) {
+        return v >= 1000
+          ? '$'+(v/1000).toFixed(2).replace(/\.00$/,'')+'M'
+          : '$'+Math.round(v).toLocaleString('en-US')+'k';
+      }
+      _st('sh-ceil-val',  fmtSpend(ptsE.ceilSpend) +' / yr');
+      _st('sh-datum-val', fmtSpend(ptsE.datumSpend)+' / yr');
+      _st('sh-floor-val', fmtSpend(ptsE.floorSpend)+' / yr');
+    }
+
+    window.toggleShapeMode = function() {
+      var layout = document.getElementById('studio-layout');
+      var btn    = document.getElementById('shape-mode-toggle');
+      if (!layout) return;
+      if (layout.classList.contains('mode-shape')) {
+        layout.classList.remove('mode-shape');
+        if (btn) btn.textContent = 'Shape Mode';
+      } else {
+        layout.classList.add('mode-shape');
+        if (btn) btn.textContent = 'Estate Mode';
+        updateShapePanel();
+      }
+    };
 
   </script>
 
@@ -5624,6 +5959,7 @@
       if (contEl && bp.contributions_total > 0 && !contEl.value) contEl.value = fmt(bp.contributions_total);
       window.DatumBlueprint.bind({ blueprint: bp });
       window._studioBlueprint = bp;
+      if (typeof updateShapePanel === 'function') updateShapePanel();
     } catch (e) { console.warn('[blueprint] init failed', e); }
   });
   </script>
