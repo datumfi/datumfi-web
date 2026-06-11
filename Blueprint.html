@@ -1280,6 +1280,7 @@ const AppSessionState = {
   userHasPremiumToken: false,
   activeTargetPurgeId: null,
   activeBlueprintSlot: 1,
+  userExplicitlySelectedBlueprint: false,
   mockStudioBlueprint: {
     name: 'Core Retirement Blueprint',
     netEstate: 2785000,
@@ -1593,6 +1594,7 @@ document.querySelectorAll('.blueprint-slot').forEach(tile => {
 
     if (BlueprintArchive['slot' + slotId]) {
       AppSessionState.activeBlueprintSlot = slotId;
+      AppSessionState.userExplicitlySelectedBlueprint = true;
       syncArchiveUI();
       showToast(`Sheet A-0${slotId} selected. Ready to reopen in Studio.`);
     } else {
@@ -1641,7 +1643,7 @@ document.getElementById('action-compare-blueprints').addEventListener('click', o
 document.getElementById('action-open-studio').addEventListener('click', () => {
   const slotId = AppSessionState.activeBlueprintSlot;
   const active = BlueprintArchive['slot' + slotId];
-  if (active) {
+  if (active && AppSessionState.userExplicitlySelectedBlueprint) {
     try { sessionStorage.setItem('datumfi_blueprint_explicit_load', '1'); } catch(e) {}
     window.location.href = '/studio.html?id=' + slotId + '&hydrate=blueprint';
   } else {
