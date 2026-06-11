@@ -240,7 +240,7 @@
   .tel-readout { font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.65); line-height: 1.4; display: flex; flex-direction: column; gap: 4px; }
   .tel-readout strong { color: var(--white); display: inline; margin-right: 4px; }
   .tel-readout span.data-line { display: inline; margin-bottom: 0; transition: color 0.3s; }
-  .hud-state-label { font-family: var(--font-serif); font-style: italic; font-size: 16px; font-weight: bold; color: var(--teal-mid); margin-left: 4px; }
+  .hud-state-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.15em; margin-left: 4px; }
   .hud-state-expansive    { border-color: var(--teal-mid) !important; border-left-color: var(--teal-mid) !important; background: rgba(93, 202, 165, 0.05) !important; }
   .hud-state-grounded     { border-color: var(--purple-grounded) !important; border-left-color: var(--purple-grounded) !important; background: rgba(139, 111, 191, 0.05) !important; }
   .hud-state-stretched    { border-color: var(--orange-warning) !important; border-left-color: var(--orange-warning) !important; background: rgba(229, 142, 38, 0.05) !important; }
@@ -4656,7 +4656,7 @@
     function fireUpdate() { if (typeof window.updateShapePanel === 'function') window.updateShapePanel(); }
     function handle() { return window._datumShapeHandle || null; }
     function wave()   { var h = handle(); return h ? h.wave : null; }
-    var SC = (window.DatumShape && DatumShape.scales) || null;
+    var SC = null;
     var clampN = function (v, lo, hi) { return Math.min(Math.max(v, lo), hi); };
 
     /* F89 wave constants -- mirror sketch L4286-4297. */
@@ -4799,6 +4799,33 @@
         sTax.value = clampN(Math.round(pct), 0, 40);
       }
       return true;
+    }
+
+    function applyDossierSliders(p) {
+      if (!p || !SC) return;
+      var _dob = p.primary && p.primary.dateOfBirth;
+      if (_dob) {
+        var _s = String(_dob), _y, _m;
+        var _iso = _s.match(/^(\d{4})-(\d{2})$/);
+        var _pretty = _s.match(/^(\d{1,2})\/(\d{4})$/);
+        if (_iso) { _y = parseInt(_iso[1],10); _m = parseInt(_iso[2],10); }
+        else if (_pretty) { _y = parseInt(_pretty[2],10); _m = parseInt(_pretty[1],10); }
+        if (_y && _m) {
+          var _now = new Date(), _a = _now.getFullYear() - _y;
+          if (_now.getMonth() + 1 < _m) _a--;
+          var _sA = $('slider-age'); if (_sA && _a >= 18 && _a <= 85) _sA.value = _a;
+        }
+      }
+      var _ra = parseInt((p.primary && p.primary.targetRetirementAge) || (p.defaults && p.defaults.targetRetirementAge), 10);
+      var _sR = $('slider-activation'); if (_sR && _ra >= 45 && _ra <= 90) _sR.value = _ra;
+      var _pta = parseInt(p.defaults && p.defaults.planThroughAge, 10);
+      var _sP = $('sl-plan-through'); if (_sP && !isNaN(_pta) && _pta >= 75 && _pta <= 105) _sP.value = _pta;
+      var _datum = parseFloat(p.defaults && p.defaults.defaultDatum);
+      if (_datum > 0) { var _sD = $('slider-datum'); if (_sD) { _sD.value = SC.datumValToPos(_datum / 1000); _sD.dataset.exactVal = String(Math.round(_datum)); } }
+      var _port = parseFloat(p.accounts && p.accounts.currentPortfolioBalance);
+      if (_port > 0) { var _sPo = $('slider-portfolio'); if (_sPo) { _sPo.value = SC.portValToPos(_port / 1e6); _sPo.dataset.exactVal = String(Math.round(_port)); } }
+      var _contrib = parseFloat(p.accounts && p.accounts.annualContributions);
+      if (_contrib > 0) { var _sCo = $('slider-contrib'); if (_sCo) { _sCo.value = SC.contribValToPos(Math.round(_contrib)); _sCo.dataset.exactVal = String(Math.round(_contrib)); } }
     }
 
     /* ── Click-to-type currency edit via DatumShape.wireCurrencyEdit ─────── */
@@ -5012,6 +5039,7 @@
     }
 
     function init() {
+      SC = (window.DatumShape && DatumShape.scales) || null;
       // Pre-seed slider _prev caches with current values (so the first input event
       // doesn't fire a no-op-magnitude impulse from NaN baseline).
       _prev.age  = parseInt(($('slider-age')        || {value: 40}).value, 10);
@@ -5022,7 +5050,35 @@
       _prev.dat  = parseInt(($('slider-datum')      || {value: 41141}).value, 10);
       _prev.tax  = parseInt(($('slider-tax')        || {value: 20}).value, 10);
 
-      seedFromBlueprint();
+      var _bpApplied = seedFromBlueprint();
+      if (!_bpApplied) {
+        var _v15Raw = null;
+        try { _v15Raw = localStorage.getItem('datumfi.accountDossier.v15'); } catch(e) {}
+        var _v15Applied = false;
+        if (_v15Raw) {
+          var _v15 = null;
+          try { _v15 = JSON.parse(_v15Raw); } catch(e) {}
+          if (_v15) { applyDossierSliders(_v15); _v15Applied = true; }
+        }
+        if (!_v15Applied) {
+          window.addEventListener('load', function () {
+            try {
+              if (!window.Clerk) return;
+              window.Clerk.load().then(function () {
+                try {
+                  if (!window.Clerk.user) return;
+                  var _meta = window.Clerk.user.unsafeMetadata || {};
+                  var _cd = _meta.dossier;
+                  if (!_cd || typeof _cd !== 'object') return;
+                  try { localStorage.setItem('datumfi.accountDossier.v15', JSON.stringify(_cd)); } catch(e2) {}
+                  applyDossierSliders(_cd);
+                  refreshAllLabels(); fireUpdate();
+                } catch(e) {}
+              }).catch(function () {});
+            } catch(e) {}
+          });
+        }
+      }
       syncFromProfileDates();
       refreshAllLabels();
       wireClickToType();
