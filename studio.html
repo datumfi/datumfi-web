@@ -314,6 +314,12 @@
   #shape-panel-svg .datum-group:active { cursor: grabbing; }
   #shape-panel-svg .datum-group:hover .b-datum { stroke-width: 5; filter: drop-shadow(0 0 8px rgba(93,202,165,0.8)); }
 
+  /* Reveal masked boundary paths when Shape Mode is active */
+  @keyframes studioDrawLine { to { stroke-dashoffset: 0; } }
+  .studio-layout.mode-shape #m-floor { animation: studioDrawLine 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.0s  forwards; }
+  .studio-layout.mode-shape #m-ceil  { animation: studioDrawLine 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.18s forwards; }
+  .studio-layout.mode-shape #m-datum { animation: studioDrawLine 1.0s cubic-bezier(0.2, 0.8, 0.2, 1) 0.36s forwards; }
+
   /* --- STUDIO LAYOUT --- */
   .studio-layout { display: flex; flex: 1; width: 100%; margin: 0 auto; }
 
@@ -1188,7 +1194,7 @@
             <div class="field-row">
               <div>
                 <div class="input-label">Date of Birth</div>
-                <input type="text" class="small-field" id="pri-dob" data-field="current_age" value="08 / 1982" onfocus="this.select()" oninput="_fmtRetDate(this); _updatePlanEndAge()" onblur="_validatePriDob(this)">
+                <input type="text" class="small-field" id="pri-dob" data-field="current_age" value="" onfocus="this.select()" oninput="_fmtRetDate(this); _updatePlanEndAge()" onblur="_validatePriDob(this)">
                 <div id="pri-dob-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
               </div>
               <div>
@@ -1206,7 +1212,7 @@
               <div>
                 <div class="input-label">Effective Tax Rate</div>
                 <div style="display: flex; align-items: center; background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; padding: 2px 6px;">
-                   <input type="number" id="eff-tax-rate" class="small-field" value="22" style="border:none; padding: 2px; width:100%;" oninput="updateAnalysisText()">
+                   <input type="number" id="eff-tax-rate" class="small-field" value="" style="border:none; padding: 2px; width:100%;" oninput="updateAnalysisText()">
                    <span style="color:var(--muted); font-family:var(--font-mono); font-size:9px;">%</span>
                 </div>
               </div>
@@ -1226,7 +1232,7 @@
             <div class="field-row" style="margin-top: 15px;">
               <div>
                 <div class="input-label">Target Retirement Date</div>
-                <input type="text" class="small-field" id="target-ret" data-field="retirement_age" value="03 / 2035" onfocus="this.select()" oninput="_fmtRetDate(this); updateSVGs(); _updatePlanEndAge()" onblur="_validateRetDate(this)">
+                <input type="text" class="small-field" id="target-ret" data-field="retirement_age" value="" onfocus="this.select()" oninput="_fmtRetDate(this); updateSVGs(); _updatePlanEndAge()" onblur="_validateRetDate(this)">
                 <div id="ret-date-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;">Retirement age exceeds 100 — plan capped at age 120.</div>
               </div>
               <div>
@@ -4640,6 +4646,7 @@
         layout.classList.add('mode-shape');
         if (btn) btn.textContent = 'Estate Mode';
         window.updateShapePanel();
+        requestAnimationFrame(function () { window.updateShapePanel(); });
       }
     };
 
