@@ -2584,6 +2584,8 @@
       const section = document.getElementById('screen-4-rewind');
       if (!section) return;
       let p4Fired = false;
+      // Capture reopen signal NOW (synchronous) — Phase A removes the flag later at ~L11462
+      var _isReopenSketch = !!sessionStorage.getItem('datumfi_hydrate_from_slot') || !!new URLSearchParams(window.location.search).get('id');
 
       function runPhase4() {
         const wrap = document.getElementById('p4-anim-wrap');
@@ -2690,6 +2692,38 @@
         }, 9000);
       }
 
+      // ── Reopen skip: jump Phase 4 to end state with no scroll-lock ────────
+      function jumpPhase4ToEnd() {
+        const wrap = document.getElementById('p4-anim-wrap');
+        if (!wrap) return;
+        wrap.dataset.played = '1';
+        ['state-init','state-draw','state-fill','state-center','state-bloom'].forEach(c => wrap.classList.add(c));
+        const dot = wrap.querySelector('.origin-dot');
+        if (dot) {
+          dot.setAttribute('cx', '400'); dot.setAttribute('cy', '190'); dot.setAttribute('r', '7');
+          dot.style.filter = 'drop-shadow(0 0 14px rgba(201,168,76,1))';
+        }
+        const bloomGroup = document.getElementById('monte-carlo-bloom');
+        if (bloomGroup && !bloomGroup.children.length) {
+          const frag = document.createDocumentFragment();
+          for (let i = 0; i < 60; i++) {
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            const isGold = Math.random() > 0.4;
+            const cpX = 400 + Math.random() * 300, cpY = 190 + (Math.random() * 500 - 250);
+            const endX = 800 + Math.random() * 100, endY = 190 + (Math.random() * 1200 - 600);
+            path.setAttribute('d', `M 400 190 Q ${cpX} ${cpY} ${endX} ${endY}`);
+            path.setAttribute('class', `bloom-path ${isGold ? 'bloom-gold' : 'bloom-teal'}`);
+            path.style.transitionDelay = `${(Math.random() * 1.5).toFixed(2)}s`;
+            frag.appendChild(path);
+          }
+          bloomGroup.appendChild(frag);
+        }
+        const replayBtn = document.getElementById('p4-replay-btn');
+        if (replayBtn) { replayBtn.style.opacity = '1'; replayBtn.style.pointerEvents = 'auto'; }
+        const earlyCta = document.getElementById('cta-reveal-s5');
+        if (earlyCta) { earlyCta.style.opacity = '1'; earlyCta.style.pointerEvents = 'auto'; }
+      }
+
       // ── Replay handler ────────────────────────────────────────────
       document.getElementById('p4-replay-btn')?.addEventListener('click', () => {
         const wrap = document.getElementById('p4-anim-wrap');
@@ -2721,7 +2755,7 @@
         entries.forEach(e => {
           if (e.isIntersecting && !p4Fired) {
             p4Fired = true;
-            runPhase4();
+            if (_isReopenSketch) { jumpPhase4ToEnd(); } else { runPhase4(); }
             obs.unobserve(section);
           }
         });
@@ -11718,6 +11752,8 @@ Studio is built for exactly this. See If This Shape Holds →`;
   if (isSignedIn) {
     if (_statusValue) _statusValue.textContent = 'Signed in';
     if (_statusNote)  _statusNote.textContent  = 'Your saved Sketches are available in your Sketchbook.';
+  } else {
+    if (_statusValue) _statusValue.innerHTML = '<a href="/vault.html?returnTo=%2Fsketch.html" class="nav-login-btn" style="margin-left:0">Sign In</a>';
   }
 
   var _hasSavedSketch = false;

@@ -21,11 +21,16 @@
 <meta name="twitter:image" content="/og-image.png">
 <script>
   (function() {
-    var mode = new URLSearchParams(window.location.search).get('mode');
+    var params = new URLSearchParams(window.location.search);
+    var mode = params.get('mode');
+    var returnTo = params.get('returnTo');
     var dest = mode === 'sign-up'
       ? 'https://accounts.datumfi.com/sign-up'
       : 'https://accounts.datumfi.com/sign-in';
-    window.location.replace(dest + '?redirect_url=' + encodeURIComponent('https://datumfi.com/my-account.html'));
+    var redirectBase = returnTo
+      ? ('https://datumfi.com' + returnTo)
+      : 'https://datumfi.com/my-account.html';
+    window.location.replace(dest + '?redirect_url=' + encodeURIComponent(redirectBase));
   })();
 </script>
 <style>
