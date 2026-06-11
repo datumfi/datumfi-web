@@ -1,0 +1,575 @@
+/* studio-blueprint.js — Datum FI Studio Blueprint contract v1.0
+ *
+ * Responsibilities:
+ *   1. Define the serializable Blueprint object (single source of truth across
+ *      the 5 Studio pages: Draft, Remodel, Tension, Uncertainty, Measurement).
+ *   2. Three-tier persistence: sessionStorage draft + localStorage archive +
+ *      Clerk unsafeMetadata slim mirror (Object.assign-merged with dossier/sketchbook).
+ *   3. Prefill ladder: URL hydrate params -> session draft -> sketch contract ->
+ *      Dossier defaults -> hard defaults.
+ *   4. Client-side weighted-average Gross Funding ESTIMATE (engine remains
+ *      authoritative on the MC path).
+ *   5. toEnginePayload(): extends window._buildStudioRequest() without rewriting it.
+ *
+ * Invariants (do not violate):
+ *   - Slim Clerk payload < 5KB; total unsafeMetadata < 8192B (shared cap with
+ *     dossier + sketchbook). Always Object.assign-merge — never clobber siblings.
+ *   - Numbers only; no SVG path strings or other regenerable artifacts.
+ *   - Engine adapter only extends buildStudioRequest's output; never rewrites it.
+ */
+(function (global) {
+  'use strict';
+
+  var SCHEMA  = 'DatumFIBlueprintV1';
+  var VERSION = '1.0.0';
+
+  var SESSION_DRAFT_KEY = 'datumfi_blueprint_draft_v1';
+  var ARCHIVE_KEY       = 'datumfi_blueprint_archive_v1';
+  var PER_SLOT_PREFIX   = 'datum_blueprint_state_';
+  var DOSSIER_KEY       = 'datumfi.accountDossier.v15';
+  var SKETCHBOOK_KEY    = 'datumfi_sketchbook_v1';
+
+  /* Tax multipliers for the V1 Gross Funding ESTIMATE. UI must label the
+   * output ESTIMATE — the MC engine (api.datumfi.com) is authoritative on
+   * the real tax-ordered draw. */
+  var TAX_MULTIPLIERS = {
+    roth:        1.00,
+    taxable:     1.075,
+    traditional: 1.18,
+    pension:     1.10,
+    ss:          1.06
+  };
+
+  /* Studio room baseId -> Gross Funding tax bucket. Mirrors the engine's
+   * ACCOUNT_TYPE_MAP in studio.html so any baseId routes consistently. */
+  var BASE_TO_BUCKET = {
+    pretax401k: 'traditional', pretax401k_co: 'traditional',
+    pretax457b: 'traditional', pretax457b_co: 'traditional',
+    tradira:    'traditional', tradira_co:    'traditional',
+    roth401k:   'roth',        roth401k_co:   'roth',
+    roth457b:   'roth',        roth457b_co:   'roth',
+    rothira:    'roth',        rothira_co:    'roth',
+    taxable:    'taxable',
+    savings:    'taxable',     savings_primary: 'taxable', savings_co: 'taxable',
+    crypto:     'taxable',     crypto_primary:  'taxable', crypto_co:  'taxable'
+  };
+
+  /* SS annual benefit dollars per engine spec v1.8 §1 — used only for the
+   * client-side Gross Funding ESTIMATE supply pool. Real SS is computed
+   * server-side. */
+  var SS_BY_STRATEGY = { early_62: 18084, full_67: 26100, optimal_70: 32592 };
+
+  function newBlueprint() {
+    return {
+      schema:        SCHEMA,
+      blueprint_id:  null,
+      saved_at:      null,
+      version:       VERSION,
+      profile: {
+        primary_name:                 '',
+        co_architect_name:            '',
+        primary_dob:                  '',
+        co_architect_dob:             '',
+        target_retirement_date:       '',
+        co_architect_retirement_date: '',
+        plan_end_age:                 93,
+        co_architect_enabled:         false
+      },
+      accounts: [],
+      contributions_total: 0,
+      portfolio_total:     0,
+      ss: {
+        strategy_primary:       'full_67',
+        strategy_secondary:     'optimal_70',
+        pri_overrides_monthly:  { v62: 0, v67: 0, v70: 0 },
+        sec_overrides_monthly:  { v62: 0, v67: 0, v70: 0 }
+      },
+      income: {
+        pension_primary_annual:   0,
+        pension_secondary_annual: 0
+      },
+      climate: { outlook: 'valuations_matter', custom_weights: null },
+      tax:     { filing: 'Married Filing Jointly', location: 'FL',
+                 working_year_effective_rate: 0.22 },
+      upkeep:  { items: [], charity: [], upkeep_total: 0, charity_total: 0 },
+      datum: {
+        net_datum_v1:            120000,
+        gross_funding_need:      0,
+        gross_funding_breakdown: { roth: 0, taxable: 0, traditional: 0, pension: 0, ss: 0 },
+        derived_from:            'quick'
+      },
+      lenses:   { shock: false, thermal: false, routing: false, datum: false },
+      mc_meta:  { shock_param: false, scenario_label: 'Draft', last_result_hash: '' },
+      readout:  null
+    };
+  }
+
+  /* Slim Clerk payload — drops anything regenerable (chart artifacts, readout,
+   * upkeep line items per §2 decision, holdings, names derivable from baseId,
+   * UI-only flags). Target: < 5KB even with 20 accounts. */
+  function slimSlotForClerk(bp) {
+    if (!bp) return null;
+    return {
+      schema:        bp.schema,
+      blueprint_id:  bp.blueprint_id,
+      saved_at:      bp.saved_at,
+      version:       bp.version,
+      profile:       bp.profile,
+      accounts: (bp.accounts || []).map(function (a) {
+        var out = {
+          id:      a.id,
+          baseId:  a.baseId,
+          value:   a.value || 0,
+          inflow:  a.inflow || 0,
+          freq:    a.freq || 12
+        };
+        if (a.intRate)       out.intRate       = a.intRate;
+        if (a.cola)          out.cola          = a.cola;
+        if (a.linkedAssetId) out.linkedAssetId = a.linkedAssetId;
+        if (a.exclude)       out.exclude       = true;
+        if (a.useRule55)     out.useRule55     = true;
+        if (a.isFriction)    out.isFriction    = true;
+        if (a.isPriority)    out.isPriority    = true;
+        if (a.trustType    && a.trustType    !== 'Irrevocable')   out.trustType    = a.trustType;
+        if (a.disbursement && a.disbursement !== 'Discretionary') out.disbursement = a.disbursement;
+        return out;
+      }),
+      contributions_total: bp.contributions_total || 0,
+      portfolio_total:     bp.portfolio_total || 0,
+      ss:      bp.ss,
+      income:  bp.income,
+      climate: bp.climate,
+      tax:     bp.tax,
+      upkeep:  { upkeep_total: bp.upkeep && bp.upkeep.upkeep_total || 0,
+                 charity_total: bp.upkeep && bp.upkeep.charity_total || 0 },
+      datum: {
+        net_datum_v1:       bp.datum && bp.datum.net_datum_v1 || 0,
+        gross_funding_need: bp.datum && bp.datum.gross_funding_need || 0,
+        derived_from:       bp.datum && bp.datum.derived_from || 'quick'
+      }
+    };
+  }
+
+  /* V1 Gross Funding ESTIMATE — weighted-average over the supply pools.
+   * Pools = Roth balances, Taxable balances, Traditional balances,
+   * Pension income stream, SS income stream. Each pool's share of the
+   * total supply weights its tax multiplier; the resulting weighted
+   * multiplier scales Net Datum -> Gross Funding need. */
+  function computeGrossFunding(bp) {
+    var net = Number(bp.datum && bp.datum.net_datum_v1) || 0;
+    var empty = { gross: 0, breakdown: { roth: 0, taxable: 0, traditional: 0, pension: 0, ss: 0 } };
+    if (net <= 0) return empty;
+
+    var pools = { roth: 0, taxable: 0, traditional: 0, pension: 0, ss: 0 };
+    (bp.accounts || []).forEach(function (a) {
+      var bucket = BASE_TO_BUCKET[a.baseId];
+      if (bucket && (a.value || 0) > 0 && !a.exclude) {
+        pools[bucket] += Number(a.value) || 0;
+      }
+    });
+    pools.pension += Number(bp.income && bp.income.pension_primary_annual) || 0;
+    pools.pension += Number(bp.income && bp.income.pension_secondary_annual) || 0;
+
+    var ss = SS_BY_STRATEGY[bp.ss && bp.ss.strategy_primary] || 0;
+    if (bp.profile && bp.profile.co_architect_enabled) {
+      ss += SS_BY_STRATEGY[bp.ss && bp.ss.strategy_secondary] || 0;
+    }
+    pools.ss = ss;
+
+    var totalSupply = pools.roth + pools.taxable + pools.traditional + pools.pension + pools.ss;
+    if (totalSupply <= 0) return { gross: net, breakdown: empty.breakdown };
+
+    var weightedMult = 0;
+    var breakdown = { roth: 0, taxable: 0, traditional: 0, pension: 0, ss: 0 };
+    Object.keys(pools).forEach(function (k) {
+      var w = pools[k] / totalSupply;
+      breakdown[k]  = Math.round(w * 1000) / 1000;
+      weightedMult += w * (TAX_MULTIPLIERS[k] || 1);
+    });
+    return { gross: Math.round(net * weightedMult), breakdown: breakdown };
+  }
+
+  /* ---- Persistence ---- */
+
+  function readArchive() {
+    try { var raw = localStorage.getItem(ARCHIVE_KEY); return raw ? JSON.parse(raw) : null; }
+    catch (_e) { return null; }
+  }
+  function writeArchive(arch) {
+    try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(arch)); } catch (_e) {}
+  }
+  function readSlot(slotId) {
+    try {
+      var raw = localStorage.getItem(PER_SLOT_PREFIX + slotId);
+      if (raw) return JSON.parse(raw);
+    } catch (_e) {}
+    var arch = readArchive();
+    return (arch && arch['slot' + slotId]) || null;
+  }
+  function writeSlot(slotId, bp) {
+    try { localStorage.setItem(PER_SLOT_PREFIX + slotId, JSON.stringify(bp)); } catch (_e) {}
+    var arch = readArchive() || {
+      slot1: null, slot2: null, slot3: null, slot4: null,
+      activeBlueprintSlot: 1, userHasPremiumToken: false
+    };
+    arch['slot' + slotId] = bp;
+    arch.activeBlueprintSlot = slotId;
+    writeArchive(arch);
+  }
+  function readSessionDraft() {
+    try { var raw = sessionStorage.getItem(SESSION_DRAFT_KEY); return raw ? JSON.parse(raw) : null; }
+    catch (_e) { return null; }
+  }
+  function writeSessionDraft(bp) {
+    try { sessionStorage.setItem(SESSION_DRAFT_KEY, JSON.stringify(bp)); } catch (_e) {}
+  }
+
+  /* Clerk mirror — Object.assign merge protects dossier + sketchbook.
+   * Logs slim byte size and merged total; warns at >7800 bytes (>5KB blueprint
+   * alone is a hard error per Captain invariant). */
+  function mirrorToClerk(bp, done) {
+    if (typeof done !== 'function') done = function () {};
+    try {
+      if (!global.Clerk) { done(); return; }
+      global.Clerk.load().then(function () {
+        if (!global.Clerk.user) { done(); return; }
+        var slim  = slimSlotForClerk(bp);
+        var bytes = JSON.stringify(slim).length;
+        console.log('[blueprint mirror] slim bytes:', bytes);
+        if (bytes >= 5120) {
+          console.warn('[blueprint mirror] slim Blueprint exceeded 5KB target:', bytes);
+        }
+        var existing = global.Clerk.user.unsafeMetadata || {};
+        var merged   = Object.assign({}, existing, { blueprint: slim });
+        var total    = JSON.stringify(merged).length;
+        console.log('[blueprint mirror] merged unsafeMetadata bytes:', total);
+        if (total >= 7800) {
+          console.warn('[blueprint mirror] unsafeMetadata approaching 8KB cap:', total);
+        }
+        global.Clerk.user.update({ unsafeMetadata: merged })
+          .then(done)
+          .catch(function (e) { console.warn('[blueprint mirror] update failed', e); done(); });
+      }).catch(done);
+    } catch (_e) { done(); }
+  }
+
+  /* ---- Prefill ladder ---- */
+
+  function readDossier() {
+    try { var raw = localStorage.getItem(DOSSIER_KEY); return raw ? JSON.parse(raw) : null; }
+    catch (_e) { return null; }
+  }
+  function readSketchSlot(id) {
+    if (!id) id = 1;
+    try {
+      var raw = localStorage.getItem('datum_sketch_state_' + id);
+      if (raw) return JSON.parse(raw);
+    } catch (_e) {}
+    try {
+      var blob = JSON.parse(localStorage.getItem(SKETCHBOOK_KEY) || 'null');
+      if (blob) return blob['slot_' + id] || blob.slot_1 || null;
+    } catch (_e) {}
+    return null;
+  }
+
+  function mmYYYY(raw) {
+    var s = String(raw || '');
+    var iso     = s.match(/^(\d{4})-(\d{2})$/);
+    if (iso)    return String(+iso[2]).padStart(2, '0') + ' / ' + iso[1];
+    var pretty  = s.match(/^(\d{1,2})\s*\/\s*(\d{4})$/);
+    if (pretty) return String(+pretty[1]).padStart(2, '0') + ' / ' + pretty[2];
+    return '';
+  }
+  function retDateFromAge(dobStr, retAge) {
+    if (!dobStr || !retAge) return '';
+    var m = String(dobStr).match(/(\d{1,2})\s*\/\s*(\d{4})/);
+    if (!m) return '';
+    var birthMo = +m[1], birthYr = +m[2];
+    var now     = new Date();
+    var curAge  = now.getFullYear() - birthYr;
+    if (now.getMonth() + 1 < birthMo) curAge--;
+    var retYr   = now.getFullYear() + (Number(retAge) - curAge);
+    return String(birthMo).padStart(2, '0') + ' / ' + retYr;
+  }
+
+  function applyDossier(bp, d) {
+    if (!d) return;
+    var pri = d.primary || {};
+    var ho  = d.household || {};
+    var co  = ho.coArchitect || {};
+    var def = d.defaults || {};
+    var acc = d.accounts || {};
+
+    if (pri.dateOfBirth)        bp.profile.primary_dob      = mmYYYY(pri.dateOfBirth);
+    if (co.dateOfBirth)         bp.profile.co_architect_dob = mmYYYY(co.dateOfBirth);
+    if (pri.fullName)           bp.profile.primary_name           = pri.fullName;
+    if (co.fullName)            bp.profile.co_architect_name      = co.fullName;
+
+    var rAge = pri.targetRetirementAge || def.targetRetirementAge;
+    if (rAge)  bp.profile.target_retirement_date = retDateFromAge(bp.profile.primary_dob, rAge);
+    var coRAge = co.targetRetirementAge;
+    if (coRAge) bp.profile.co_architect_retirement_date = retDateFromAge(bp.profile.co_architect_dob, coRAge);
+
+    if (def.planThroughAge) {
+      var p = parseInt(def.planThroughAge, 10);
+      if (!isNaN(p)) bp.profile.plan_end_age = Math.min(120, Math.max(70, p));
+    }
+    if (def.defaultDatum > 0)         bp.datum.net_datum_v1     = Math.round(def.defaultDatum);
+    if (acc.currentPortfolioBalance > 0) bp.portfolio_total      = Math.round(acc.currentPortfolioBalance);
+    if (acc.annualContributions > 0)     bp.contributions_total  = Math.round(acc.annualContributions);
+
+    if (ho.filing)   bp.tax.filing   = ho.filing;
+    if (ho.location) bp.tax.location = ho.location;
+    if (def.taxRate) {
+      var n = parseFloat(String(def.taxRate).replace('%', ''));
+      if (n > 0 && n < 100) bp.tax.working_year_effective_rate = n / 100;
+    }
+    if (co.dateOfBirth || co.fullName || co.targetRetirementAge || co.grossIncome) {
+      bp.profile.co_architect_enabled = true;
+    }
+  }
+
+  function applySketchContract(bp, s) {
+    if (!s) return;
+    var now = new Date().getFullYear();
+    if (s.age && !bp.profile.primary_dob) {
+      bp.profile.primary_dob = '01 / ' + (now - s.age);
+    }
+    if (s.age && s.retire_age && !bp.profile.target_retirement_date) {
+      bp.profile.target_retirement_date = '01 / ' + (now + (s.retire_age - s.age));
+    }
+    if (s.datum_spend)    bp.datum.net_datum_v1    = Math.round(s.datum_spend);
+    if (s.portfolio_mass) bp.portfolio_total       = Math.round(s.portfolio_mass);
+    if (s.contributions)  bp.contributions_total   = Math.round(s.contributions);
+  }
+
+  /* ---- Public API ---- */
+
+  function finishLoad(bp, source) {
+    bp._loadSource = source;
+    var gf = computeGrossFunding(bp);
+    bp.datum.gross_funding_need      = gf.gross;
+    bp.datum.gross_funding_breakdown = gf.breakdown;
+    writeSessionDraft(bp);
+    return bp;
+  }
+
+  function load(opts) {
+    opts = opts || {};
+    var bp = newBlueprint();
+
+    try {
+      var params = new URLSearchParams(global.location.search);
+      var id     = parseInt(params.get('id'), 10);
+      var mode   = params.get('hydrate');
+      if (id && mode === 'blueprint') {
+        var slot = readSlot(id);
+        if (slot) { Object.assign(bp, slot); return finishLoad(bp, 'blueprint-slot:' + id); }
+      }
+      if (id && mode === 'sketch') {
+        applySketchContract(bp, readSketchSlot(id));
+        applyDossier(bp, readDossier());
+        return finishLoad(bp, 'sketch-contract:' + id);
+      }
+    } catch (_e) {}
+
+    var draft = readSessionDraft();
+    if (draft && !opts.ignoreDraft) {
+      Object.assign(bp, draft);
+      return finishLoad(bp, 'session-draft');
+    }
+
+    if (opts.from === 'sketch') {
+      applySketchContract(bp, readSketchSlot(opts.sketchSlot || 1));
+    }
+    applyDossier(bp, readDossier());
+    return finishLoad(bp, 'fresh+dossier');
+  }
+
+  function save(bp, opts) {
+    opts = opts || {};
+    var slotId = opts.slot || 1;
+    bp.saved_at = new Date().toISOString();
+    if (!bp.blueprint_id) bp.blueprint_id = generateUUID();
+    var gf = computeGrossFunding(bp);
+    bp.datum.gross_funding_need      = gf.gross;
+    bp.datum.gross_funding_breakdown = gf.breakdown;
+    writeSlot(slotId, bp);
+    writeSessionDraft(bp);
+    mirrorToClerk(bp, opts.done);
+    return bp;
+  }
+
+  function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      var r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+  }
+
+  /* toEnginePayload — extends window._buildStudioRequest, never rewrites.
+   * On Draft host: studio.html provides _buildStudioRequest, so we wrap it.
+   * On stub hosts: returns null with a console hint. */
+  function toEnginePayload(bp) {
+    if (typeof global._buildStudioRequest !== 'function') {
+      console.warn('[blueprint] _buildStudioRequest unavailable on this host; payload requires studio.html (Draft).');
+      return null;
+    }
+    var base = global._buildStudioRequest();
+    if (!base) return null;
+    if (bp && bp.profile && bp.profile.co_architect_enabled && bp.profile.co_architect_dob) {
+      var m = String(bp.profile.co_architect_dob).match(/(\d{1,2})\s*\/\s*(\d{4})/);
+      if (m) {
+        var coYr = +m[2], coMo = +m[1];
+        var now  = new Date();
+        var coAge = now.getFullYear() - coYr;
+        if (now.getMonth() + 1 < coMo) coAge--;
+        if (coAge >= 18 && coAge <= 100) base.co_architect_age = coAge;
+      }
+    }
+    return base;
+  }
+
+  /* bind — wires Studio Draft DOM inputs to debounced auto-commit into
+   * sessionStorage. Each lookup guarded — same code path on stub hosts
+   * harmlessly finds no elements and does nothing. */
+  function bind(opts) {
+    opts = opts || {};
+    var bp = opts.blueprint || load();
+    var debounceMs = opts.debounceMs || 350;
+
+    var commit = (function () {
+      var t = null;
+      return function () {
+        if (t) clearTimeout(t);
+        t = setTimeout(function () {
+          captureDOM(bp);
+          var gf = computeGrossFunding(bp);
+          bp.datum.gross_funding_need      = gf.gross;
+          bp.datum.gross_funding_breakdown = gf.breakdown;
+          writeSessionDraft(bp);
+        }, debounceMs);
+      };
+    }());
+
+    var inputIds  = ['primary-name', 'co-name', 'pri-dob', 'target-ret',
+                     'plan-end-age', 'spend-input',
+                     'bp-portfolio-total', 'bp-contributions-total',
+                     'ss-pri-62', 'ss-pri-67', 'ss-pri-70',
+                     'ss-sec-62', 'ss-sec-67', 'ss-sec-70'];
+    var changeIds = ['co-arch-toggle'];
+
+    inputIds.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('input', commit);
+    });
+    changeIds.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('change', commit);
+    });
+
+    document.querySelectorAll('.climate-option').forEach(function (el) {
+      el.addEventListener('click', commit);
+    });
+    document.querySelectorAll('.ss-btn, .ss-sec-btn').forEach(function (el) {
+      el.addEventListener('click', commit);
+    });
+
+    captureDOM(bp);
+    return bp;
+  }
+
+  var OUTLOOK_LABEL_TO_ENUM = {
+    'History Repeats':   'history_repeats',
+    'Valuations Matter': 'valuations_matter',
+    'Cautious':          'cautious',
+    'Optimistic':        'optimistic',
+    'Custom Matrix':     'custom'
+  };
+  var SS_LABEL_TO_ENUM = { '62': 'early_62', '67': 'full_67', '70': 'optimal_70' };
+
+  function moneyToInt(v) {
+    return parseInt(String(v || '').replace(/[^\d]/g, ''), 10) || 0;
+  }
+
+  function captureDOM(bp) {
+    var d = document;
+    var v = function (id) { var el = d.getElementById(id); return el ? el.value : ''; };
+
+    var name    = v('primary-name'); if (name) bp.profile.primary_name = name;
+    var coName  = v('co-name');      if (coName) bp.profile.co_architect_name = coName;
+    var dob     = v('pri-dob');      if (dob)  bp.profile.primary_dob = dob;
+    var ret     = v('target-ret');   if (ret)  bp.profile.target_retirement_date = ret;
+    var plan    = parseInt(v('plan-end-age'), 10);
+    if (!isNaN(plan)) bp.profile.plan_end_age = plan;
+
+    var spend = moneyToInt(v('spend-input'));
+    if (spend) bp.datum.net_datum_v1 = spend;
+
+    var coT = d.getElementById('co-arch-toggle');
+    if (coT) bp.profile.co_architect_enabled = !!coT.checked;
+
+    var portE = d.getElementById('bp-portfolio-total');
+    if (portE) bp.portfolio_total = moneyToInt(portE.value);
+    var contE = d.getElementById('bp-contributions-total');
+    if (contE) bp.contributions_total = moneyToInt(contE.value);
+
+    if (global.state && Array.isArray(global.state.accounts)) {
+      bp.accounts = global.state.accounts.slice();
+    }
+
+    var act = d.querySelector('.climate-option.active');
+    if (act && act.dataset && act.dataset.outlook) {
+      bp.climate.outlook = OUTLOOK_LABEL_TO_ENUM[act.dataset.outlook] || bp.climate.outlook;
+      if (bp.climate.outlook === 'custom') {
+        var weights = Array.prototype.map.call(d.querySelectorAll('.c-weight'),
+          function (el) { return parseFloat(el.value) || 0; });
+        if (weights.length === 4) {
+          bp.climate.custom_weights = {
+            bootstrap: weights[0] / 100, parametric: weights[1] / 100,
+            regime:    weights[2] / 100, cape:        weights[3] / 100
+          };
+        }
+      } else {
+        bp.climate.custom_weights = null;
+      }
+    }
+
+    var ssAct = d.querySelector('.ss-btn.active strong');
+    if (ssAct) bp.ss.strategy_primary = SS_LABEL_TO_ENUM[ssAct.textContent.trim()] || bp.ss.strategy_primary;
+    var ssSecAct = d.querySelector('.ss-sec-btn.active strong');
+    if (ssSecAct) bp.ss.strategy_secondary = SS_LABEL_TO_ENUM[ssSecAct.textContent.trim()] || bp.ss.strategy_secondary;
+
+    bp.ss.pri_overrides_monthly = {
+      v62: moneyToInt(v('ss-pri-62')),
+      v67: moneyToInt(v('ss-pri-67')),
+      v70: moneyToInt(v('ss-pri-70'))
+    };
+    bp.ss.sec_overrides_monthly = {
+      v62: moneyToInt(v('ss-sec-62')),
+      v67: moneyToInt(v('ss-sec-67')),
+      v70: moneyToInt(v('ss-sec-70'))
+    };
+  }
+
+  global.DatumBlueprint = {
+    SCHEMA:           SCHEMA,
+    VERSION:          VERSION,
+    'new':            newBlueprint,
+    load:             load,
+    bind:             bind,
+    save:             save,
+    toEnginePayload:  toEnginePayload,
+    slimSlotForClerk: slimSlotForClerk,
+    computeGrossFunding: computeGrossFunding,
+    captureDOM:       captureDOM,
+    _internal: {
+      readDossier:    readDossier,
+      readSketchSlot: readSketchSlot,
+      readSlot:       readSlot,
+      writeSlot:      writeSlot,
+      writeSessionDraft: writeSessionDraft,
+      readSessionDraft:  readSessionDraft
+    }
+  };
+}(typeof window !== 'undefined' ? window : this));

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Datum FI - Studio Remodel</title>
+  <meta name="robots" content="noindex">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://eu.i.posthog.com https://clerk.datumfi.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.datumfi.com https://eu.i.posthog.com https://api.stripe.com https://clerk.datumfi.com; worker-src 'self' blob: https://clerk.datumfi.com;">
+  <link rel="icon" type="image/svg+xml" href="/datumfi-mark-d-favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-navy: #091221; --bg-deep: #060b14; --teal: #1D9E75; --teal-mid: #5DCAA5;
+      --gold: #C9A84C; --white: #ECECEC; --muted: rgba(236,236,236,0.55);
+      --font-serif: "Fraunces", Georgia, serif; --font-mono: "DM Mono", monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg-navy); color: var(--white); font-family: var(--font-serif); min-height: 100vh; }
+    .stub-wrap { max-width: 960px; margin: 0 auto; padding: 80px 32px 64px; }
+    .stub-kicker { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--teal-mid); margin-bottom: 14px; }
+    .stub-title { font-family: var(--font-serif); font-style: italic; font-weight: 400; font-size: 42px; line-height: 1.1; margin-bottom: 18px; }
+    .stub-lead { font-size: 17px; color: var(--muted); line-height: 1.6; max-width: 680px; }
+    .stub-card { margin-top: 36px; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; background: rgba(255,255,255,0.02); padding: 24px; }
+    .stub-card h2 { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); margin-bottom: 14px; }
+    .bp-readout { font-family: var(--font-mono); font-size: 11px; color: var(--muted); white-space: pre-wrap; line-height: 1.65; max-height: 360px; overflow: auto; }
+    .stub-actions { margin-top: 28px; display: flex; gap: 14px; flex-wrap: wrap; }
+    .stub-btn { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; padding: 10px 18px; border: 1px solid rgba(255,255,255,0.18); background: transparent; color: var(--white); cursor: pointer; border-radius: 3px; text-decoration: none; transition: 0.2s; }
+    .stub-btn:hover { border-color: var(--teal); color: var(--teal-mid); }
+    .stub-btn.primary { border-color: var(--teal); color: var(--teal-mid); }
+    .stub-note { margin-top: 14px; font-size: 12px; color: var(--muted); font-style: italic; }
+  </style>
+</head>
+<body>
+  <div class="stub-wrap">
+    <div class="stub-kicker">D - A - T - U - M . 2 . Architecture</div>
+    <h1 class="stub-title">Remodel - the moves that hold your shape.</h1>
+    <p class="stub-lead">Scenario cards: Raise Datum, Retire Earlier, Strengthen Floor, Delay SS, Build Taxable Bridge. Each shows the structural levers and tax consequences that support your target. Screen UI is being built next.</p>
+    <div class="stub-card">
+      <h2>Live Blueprint contract</h2>
+      <div class="bp-readout" id="bp-readout">Loading...</div>
+    </div>
+    <div class="stub-actions">
+      <a class="stub-btn primary" href="/studio.html">&larr; Back to Draft</a>
+      <a class="stub-btn" href="/studio-tension.html">Tension &rarr;</a>
+    </div>
+    <p class="stub-note">Scaffold page. The Blueprint contract round-trips here; screen UI ships next.</p>
+  </div>
+  <script src="/nav.js"></script>
+  <script src="/scripts/studio-blueprint.js" defer></script>
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (!window.DatumBlueprint) return;
+    var bp = window.DatumBlueprint.load();
+    window.DatumBlueprint.bind({ blueprint: bp });
+    window._studioBlueprint = bp;
+    var el = document.getElementById('bp-readout');
+    if (el) el.textContent = JSON.stringify(bp, null, 2);
+  });
+  </script>
+</body>
+</html>

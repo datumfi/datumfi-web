@@ -845,7 +845,21 @@
             <button class="pin-btn" onclick="togglePin('sec-drafting', this)" title="Pin section open">📌</button>
         </div>
         <div id="sec-drafting" class="section-content" style="display: block;">
-          
+
+          <!-- Blueprint v1 header fields — prefilled from Dossier / Sketch, editable.
+               Sit BEFORE the rooms array; auto-commit to the Blueprint contract via
+               scripts/studio-blueprint.js (DatumBlueprint.bind). -->
+          <div class="field-row" style="margin-bottom: 18px;">
+            <div>
+              <div class="input-label">Total Portfolio Balance</div>
+              <input type="text" class="small-field curr-format" id="bp-portfolio-total" placeholder="$0" onfocus="this.select()" aria-label="Total Portfolio Balance">
+            </div>
+            <div>
+              <div class="input-label">Annual Contributions</div>
+              <input type="text" class="small-field curr-format" id="bp-contributions-total" placeholder="$0" onfocus="this.select()" aria-label="Annual Contributions">
+            </div>
+          </div>
+
           <div id="rooms-container">
             </div>
 
@@ -5594,6 +5608,25 @@
     type="text/javascript"
   ></script>
   <script src="/nav.js"></script>
+  <script src="/scripts/studio-blueprint.js" defer></script>
+  <script>
+  // Blueprint v1 wiring — prefill the two new header fields from the loaded
+  // contract, then bind for auto-commit. defer attribute on studio-blueprint.js
+  // guarantees DatumBlueprint exists by DOMContentLoaded.
+  document.addEventListener('DOMContentLoaded', function () {
+    if (!window.DatumBlueprint) return;
+    try {
+      var bp = window.DatumBlueprint.load();
+      var portEl = document.getElementById('bp-portfolio-total');
+      var contEl = document.getElementById('bp-contributions-total');
+      function fmt(n) { return n > 0 ? '$' + Math.round(n).toLocaleString('en-US') : ''; }
+      if (portEl && bp.portfolio_total > 0 && !portEl.value)     portEl.value = fmt(bp.portfolio_total);
+      if (contEl && bp.contributions_total > 0 && !contEl.value) contEl.value = fmt(bp.contributions_total);
+      window.DatumBlueprint.bind({ blueprint: bp });
+      window._studioBlueprint = bp;
+    } catch (e) { console.warn('[blueprint] init failed', e); }
+  });
+  </script>
   <script>document.addEventListener('DOMContentLoaded', function() { if (window.dfTrack) dfTrack('studio_started'); });</script>
 </body>
 </html>
