@@ -4800,7 +4800,7 @@
       if (sPlan && prof.plan_end_age) sPlan.value = clampN(parseInt(prof.plan_end_age,10) || 93, 75, 105);
 
       var sTax = $('slider-tax');
-      if (sTax && bp.tax && typeof bp.tax.working_year_effective_rate === 'number') {
+      if (sTax && bp.tax && typeof bp.tax.working_year_effective_rate === 'number' && bp._loadSource !== 'fresh+dossier') {
         var pct = bp.tax.working_year_effective_rate;
         if (pct <= 1) pct = pct * 100;
         sTax.value = clampN(Math.round(pct), 0, 40);
