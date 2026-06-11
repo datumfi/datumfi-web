@@ -107,7 +107,7 @@
     // topbar and suppress the anonymous nav. datum_auth_hint is a UI-only sessionStorage
     // flag set by vault.html / account-shell pages after Clerk confirms a valid session.
     // Not a security gate. Cleared on sign-out by account-topbar.js F4 handler.
-    if (sessionStorage.getItem('datum_auth_hint')) {
+    function _injectAccountTopbar() {
       // Account-shell pages already declare account-topbar.js via <script defer> in source.
       // Detect the tag to skip re-injection and avoid double-load.
       if (!document.querySelector('script[src*="account-topbar.js"]')) {
@@ -117,6 +117,11 @@
         _atScript.src = '/scripts/account-topbar.js';
         document.head.appendChild(_atScript);
       }
+    }
+    window._datumNavReinject = _injectAccountTopbar;
+
+    if (sessionStorage.getItem('datum_auth_hint')) {
+      _injectAccountTopbar();
     }
   });
 })();

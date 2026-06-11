@@ -5576,8 +5576,7 @@
           try { sessionStorage.setItem('datum_auth_hint', '1'); } catch(e) {}
           if (_sv) _sv.textContent = 'Signed in';
           if (_sn) _sn.textContent = 'Your Sketchbook and Blueprint Archive are available.';
-          var _ln = document.querySelector('nav a.nav-login-btn[href*="vault"]');
-          if (_ln) _ln.style.display = 'none';
+          if (typeof window._datumNavReinject === 'function') window._datumNavReinject();
         }
       } else if (sessionStorage.getItem('datum_auth_hint')) {
         try { sessionStorage.removeItem('datum_auth_hint'); } catch(e) {}
