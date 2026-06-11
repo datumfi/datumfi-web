@@ -2697,7 +2697,7 @@
         const wrap = document.getElementById('p4-anim-wrap');
         if (!wrap) return;
         wrap.dataset.played = '1';
-        ['state-init','state-draw','state-fill','state-center','state-bloom'].forEach(c => wrap.classList.add(c));
+        ['state-center','state-bloom'].forEach(c => wrap.classList.add(c));
         const dot = wrap.querySelector('.origin-dot');
         if (dot) {
           dot.setAttribute('cx', '400'); dot.setAttribute('cy', '190'); dot.setAttribute('r', '7');
@@ -11810,6 +11810,23 @@ Studio is built for exactly this. See If This Shape Holds →`;
     }
   });
 })();
+</script>
+<script>
+// Post-load Clerk re-render: handle returnTo cold sign-in on overlay + header
+window.addEventListener('load', function() {
+  if (sessionStorage.getItem('datum_auth_hint')) return;
+  if (!window.Clerk) return;
+  window.Clerk.load().then(function() {
+    if (!window.Clerk.user) return;
+    try { sessionStorage.setItem('datum_auth_hint', '1'); } catch(e) {}
+    var _sv = document.getElementById('sketchStatusValue');
+    var _sn = document.getElementById('sketchStatusNote');
+    if (_sv) _sv.textContent = 'Signed in';
+    if (_sn) _sn.textContent = 'Your saved Sketches are available in your Sketchbook.';
+    var _ln = document.querySelector('#app-nav a.nav-login-btn[href*="vault"]');
+    if (_ln) _ln.style.display = 'none';
+  }).catch(function() {});
+});
 </script>
 <script
   async
