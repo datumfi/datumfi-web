@@ -151,64 +151,168 @@
   .sh-lbl-datum, .sh-val-datum { color: var(--teal-mid); }
   .sh-lbl-floor, .sh-val-floor { color: var(--danger-red); }
 
-  /* === DatumShape (S1 port) — boundary lines, cone fill, axes, drag, state pulses === */
+  /* === S1 transplant: verbatim sketch.html CSS for shape canvas + inputs + HUD === */
   :root {
-    --purple-grounded: #9b7fb8;
-    --blue-safe:       #4a9eff;
-    --orange-warning:  #f0a04b;
+    --purple-grounded: #8B6FBF;
+    --blue-safe:       #4da8da;
+    --orange-warning:  #E58E26;
+    --font-sans:       'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    --z-tooltip:       1000;
   }
-  #shape-panel-svg .ds-axis-title    { fill: rgba(255,255,255,0.8); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
-  #shape-panel-svg .ds-grid-tick     { stroke: rgba(255,255,255,0.06); stroke-width: 1; }
-  #shape-panel-svg .ds-grid-label    { fill: rgba(255,255,255,0.4); font-family: var(--font-mono); font-size: 10px; }
-  #shape-panel-svg .ds-time-axis-line{ stroke: rgba(255,255,255,0.3); stroke-width: 1; }
-  #shape-panel-svg .ds-time-label    { fill: rgba(255,255,255,0.6); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; }
-  #shape-panel-svg .ds-cone-fill     { fill: url(#thermal-grad); opacity: 1; transition: opacity 0.3s ease; }
-  #shape-panel-svg .ds-boundary-line { fill: none; stroke-width: 2; stroke-linecap: round; }
-  #shape-panel-svg .ds-b-ceiling     { stroke: var(--gold); }
-  #shape-panel-svg .ds-b-floor       { stroke: var(--danger-red); }
-  #shape-panel-svg .ds-b-datum       { stroke: var(--teal-mid); stroke-width: 3; filter: drop-shadow(0 0 4px rgba(93,202,165,0.4)); }
-  #shape-panel-svg .ds-morph-node    { transition: cx 0.3s ease, cy 0.3s ease; }
-  #shape-panel-svg .ds-range-label   { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; }
-  #shape-panel-svg .ds-art-path      { fill: none; opacity: 0; pointer-events: none; }
-  #shape-panel-svg .ds-datum-group   { cursor: ns-resize; }
-  #shape-panel-svg .ds-datum-group:hover .ds-b-datum         { stroke-width: 5; filter: drop-shadow(0 0 8px  rgba(93,202,165,0.8)); }
-  #shape-panel-svg .ds-datum-group.datum-dragging .ds-b-datum{ stroke-width: 5; filter: drop-shadow(0 0 10px rgba(93,202,165,1.0)); }
-  /* Cone-stop pulses (state-driven). Sketch uses these same five color cues. */
-  @keyframes dsPulseRed    { 0%,100% { stop-opacity: 0.25; } 50% { stop-opacity: 0.55; } }
-  @keyframes dsPulseOrange { 0%,100% { stop-opacity: 0.25; } 50% { stop-opacity: 0.45; } }
-  @keyframes dsPulseTealM  { 0%,100% { stop-opacity: 0.15; } 50% { stop-opacity: 0.35; } }
-  @keyframes dsPulsePurple { 0%,100% { stop-opacity: 0.25; } 50% { stop-opacity: 0.50; } }
-  @keyframes dsPulseBlue   { 0%,100% { stop-opacity: 0.25; } 50% { stop-opacity: 0.50; } }
-  #shape-panel-svg.shape-state-overextended #stop-ceil { animation: dsPulseRed    2s infinite ease-in-out; stop-color: #e24b4a; }
-  #shape-panel-svg.shape-state-stretched    #stop-ceil { animation: dsPulseOrange 2s infinite ease-in-out; stop-color: var(--orange-warning); }
+  /* Sketch input typography */
+  .dialogue-block { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .dialogue-block:last-child { border-bottom: none; }
+  .mono-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold); margin-bottom: 8px; font-style: normal; }
+  .control-group { margin-bottom: 10px; position: relative; }
+  .control-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 6px; }
+  .control-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); cursor: pointer; }
+  .control-value { font-family: var(--font-serif); font-size: 20px; font-weight: 300; font-style: italic; color: var(--white); cursor: text; transition: color 0.2s;}
+  .control-value:hover { color: var(--teal-mid); }
+  /* Click-to-edit currency input */
+  .ctrl-edit-input { font-family: var(--font-serif); font-size: 20px; font-weight: 300; font-style: italic; color: var(--teal-mid); background: transparent; border: none; border-bottom: 1px solid var(--teal-mid); outline: none; width: 140px; text-align: right; padding: 0; }
+  .ctrl-edit-input::-webkit-inner-spin-button, .ctrl-edit-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  @keyframes ctrl-shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+  .ctrl-edit-input.shake { animation: ctrl-shake 0.25s ease; }
+  /* Sketch sliders -- scoped to #sec-sketch so studio's other range inputs are untouched */
+  #sec-sketch input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; margin: 4px 0; }
+  #sec-sketch input[type=range]:focus { outline: none; }
+  #sec-sketch input[type=range]:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--gold); outline-offset: 2px; }
+  #sec-sketch input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 1px; cursor: pointer; background: rgba(255,255,255,0.2); border-radius: 1px; }
+  #sec-sketch input[type=range]::-webkit-slider-thumb { height: 14px; width: 14px; border-radius: 50%; background: var(--teal-mid) !important; border: none !important; cursor: pointer; -webkit-appearance: none; margin-top: -6px; box-shadow: 0 0 10px rgba(93, 202, 165, 0.4); transition: transform 0.1s, box-shadow 0.2s; }
+  #sec-sketch input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); box-shadow: 0 0 15px rgba(93, 202, 165, 0.8); }
+  #sec-sketch #slider-datum::-webkit-slider-runnable-track { height: 2px; background: rgba(93, 202, 165, 0.3); }
+  #sec-sketch #slider-datum::-webkit-slider-thumb { height: 18px; width: 18px; margin-top: -8px; box-shadow: 0 0 15px rgba(93, 202, 165, 0.6); }
+  /* Segmented toggles */
+  .toggle-wrapper { position: relative; overflow: visible; }
+  .toggle-container { display: flex; background: rgba(255,255,255,0.03); border-radius: 4px; overflow: visible; border: 1px solid rgba(255,255,255,0.08); margin-top: 5px; }
+  .toggle-container input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); }
+  .toggle-option { flex: 1; position: relative; border-right: 1px solid rgba(255,255,255,0.05); }
+  .toggle-option:last-child { border-right: none; }
+  .toggle-container label { display: block; text-align: center; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; padding: 8px 0; color: rgba(255,255,255,0.5); cursor: pointer; transition: all 0.3s ease; }
+  .toggle-container input:focus-visible + label { outline: 2px solid var(--teal-mid); outline-offset: -2px; border-radius: 4px; }
+  #market-opt:checked + label { background: rgba(201, 168, 76, 0.15); color: var(--gold); border-radius: 4px 0 0 4px; }
+  #market-avg:checked + label { background: rgba(93, 202, 165, 0.15); color: var(--teal-mid); }
+  #market-stress:checked + label { background: rgba(226, 75, 74, 0.15); color: var(--danger-red); border-radius: 0 4px 4px 0; }
+  #infl-real:checked + label { background: rgba(93, 202, 165, 0.15); color: var(--teal-mid); border-radius: 4px 0 0 4px; }
+  #infl-nom:checked + label { background: rgba(201, 168, 76, 0.15); color: var(--gold); border-radius: 0 4px 4px 0; }
+  input[name="tax-preset"]:checked + label { background: rgba(93, 202, 165, 0.15); color: var(--teal-mid); }
+  /* Toggle tooltips */
+  .mkt-tooltip { display: none; position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); width: 260px; z-index: var(--z-tooltip); background: rgba(6, 11, 20, 0.97); border: 1px solid rgba(93,202,165,0.3); border-radius: 6px; padding: 14px 16px; pointer-events: none; box-shadow: 0 8px 32px rgba(0,0,0,0.6); }
+  .mkt-tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 6px solid transparent; border-top-color: inherit; }
+  .mkt-tooltip-head { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--teal-mid); margin-bottom: 8px; }
+  .mkt-tooltip-body { font-family: var(--font-sans); font-size: 13px; font-weight: 300; color: rgba(255,255,255,0.8); line-height: 1.5; text-transform: none; letter-spacing: normal; text-align: left; }
+  .toggle-option:hover .mkt-tooltip, .toggle-option label:focus-visible + .mkt-tooltip { display: block; animation: fade-in 0.2s ease; }
+  .toggle-option:first-child .mkt-tooltip { left: 0; transform: none; }
+  .toggle-option:first-child .mkt-tooltip::after { left: 30px; transform: none; }
+  .toggle-option:last-child .mkt-tooltip { left: auto; right: 0; transform: none; }
+  .toggle-option:last-child .mkt-tooltip::after { left: auto; right: 30px; transform: none; }
+  /* Lever tooltips */
+  .lev-tooltip { display: none; position: absolute; top: calc(100% + 8px); left: 0; width: 260px; z-index: var(--z-tooltip); background: rgba(6,11,20,1); isolation: isolate; border: 1px solid rgba(93,202,165,0.3); border-radius: 6px; padding: 12px 14px; pointer-events: none; box-shadow: 0 8px 32px rgba(0,0,0,0.6); font-family: var(--font-sans); font-size: 13px; font-weight: 300; color: rgba(255,255,255,0.8); line-height: 1.5; }
+  .lev-tooltip::before { content: ''; position: absolute; bottom: 100%; left: 16px; border: 6px solid transparent; border-bottom-color: rgba(93,202,165,0.3); }
+  .control-group:hover .lev-tooltip { display: block; animation: fade-in 0.2s ease; }
+  /* Advanced drawer + methodology */
+  .advanced-trigger { background: transparent; border: none; outline: none; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--teal-mid); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 4px 0; margin-top: 4px; transition: color 0.2s; border-top: 1px dashed rgba(255,255,255,0.1); width: 100%; }
+  .advanced-trigger:hover, .advanced-trigger:focus-visible { color: var(--white); }
+  .advanced-panel { display: none; padding-top: 16px; }
+  .advanced-panel.open { display: block; animation: fade-in 0.3s ease; }
+  @keyframes fade-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+  .methodology-trigger { background: transparent; border: none; font-family: var(--font-mono); font-size: 10px; font-weight: bold; color: var(--teal-mid); text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; padding: 0; margin-top: 10px; display: inline-block; transition: opacity 0.2s; }
+  .methodology-trigger:hover { opacity: 0.7; }
+  .methodology-panel { display: none; background: rgba(93, 202, 165, 0.05); border: 1px solid rgba(93, 202, 165, 0.2); border-radius: 4px; padding: 16px; margin-top: 12px; font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,0.7); line-height: 1.6; }
+  .methodology-panel strong { color: var(--white); }
+  .methodology-panel.open { display: block; animation: fade-in 0.3s ease; }
+  .sketch-trust-copy { font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.3); line-height: 1.6; margin-top: 12px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05); }
+  /* DATUM INTELLIGENCE HUD */
+  #shape-hud .telemetry-card { background: rgba(9, 18, 33, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1); border-left: 2px solid var(--teal-mid); border-radius: 4px; padding: 8px 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); transition: background-color 0.3s ease, border-color 0.3s ease, border-left-color 0.3s ease, box-shadow 0.3s ease; display: flex; flex-direction: row; align-items: center; position: relative; }
+  #shape-hud #hud-main { min-height: 200px; }
+  .hud-split { display: flex; gap: 16px; width: 100%; align-items: center; }
+  .hud-metrics { display: flex; flex-direction: column; gap: 6px; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 16px; justify-content: center; min-width: 190px; }
+  .hud-diff { flex: 1; padding-left: 0; display: flex; align-items: center; }
+  .tel-status { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; line-height: 1.3; color: var(--teal-mid); }
+  .tel-metric-group { display: flex; flex-direction: column; gap: 6px; }
+  .tel-metric { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-family: var(--font-mono); overflow: visible; }
+  .tel-metric span:first-child { font-size: 9px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; display: flex; gap: 6px; width: auto; flex: 1; }
+  .tel-metric span:last-child { font-size: 13px; font-weight: bold; text-align: right; width: auto; white-space: nowrap; }
+  .tel-metric.m-ceil span:last-child  { color: var(--gold); }
+  .tel-metric.m-datum span:last-child { color: var(--white); font-size: 14px; }
+  .tel-metric.m-floor span:last-child { color: var(--danger-red); }
+  .hud-disclaimer { font-family: var(--font-mono); font-size: 8px; color: rgba(255,255,255,0.3); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.1em; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 6px; }
+  .tel-readout { font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.65); line-height: 1.4; display: flex; flex-direction: column; gap: 4px; }
+  .tel-readout strong { color: var(--white); display: inline; margin-right: 4px; }
+  .tel-readout span.data-line { display: inline; margin-bottom: 0; transition: color 0.3s; }
+  .hud-state-label { font-family: var(--font-serif); font-style: italic; font-size: 16px; font-weight: bold; color: var(--teal-mid); margin-left: 4px; }
+  .hud-state-expansive    { border-color: var(--teal-mid) !important; border-left-color: var(--teal-mid) !important; background: rgba(93, 202, 165, 0.05) !important; }
+  .hud-state-grounded     { border-color: var(--purple-grounded) !important; border-left-color: var(--purple-grounded) !important; background: rgba(139, 111, 191, 0.05) !important; }
+  .hud-state-stretched    { border-color: var(--orange-warning) !important; border-left-color: var(--orange-warning) !important; background: rgba(229, 142, 38, 0.05) !important; }
+  .hud-state-overextended { border-color: var(--danger-red) !important; border-left-color: var(--danger-red) !important; background: rgba(226, 75, 74, 0.05) !important; }
+  .hud-state-abundant     { border-color: var(--blue-safe) !important; border-left-color: var(--blue-safe) !important; background: rgba(77, 168, 218, 0.05) !important; }
+  /* Shape-state ? tooltip */
+  .shape-info-icon { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.3); font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.6); cursor: help; margin-left: 6px; position: relative; vertical-align: middle; top: -1px; transition: all 0.2s; }
+  .shape-info-icon:hover { border-color: var(--teal-mid); color: var(--teal-mid); background: rgba(93,202,165,0.1); }
+  .shape-info-tooltip { display: none; position: absolute; top: calc(100% + 10px); bottom: auto; left: 50%; transform: translateX(-50%); width: 280px; max-width: min(280px, 90vw); background: rgba(9, 18, 33, 0.98); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 14px; z-index: var(--z-tooltip); box-shadow: 0 10px 30px rgba(0,0,0,0.6); font-family: var(--font-sans); font-size: 11px; font-weight: 300; color: rgba(255,255,255,0.8); text-transform: none; letter-spacing: normal; text-align: left; pointer-events: none; }
+  .shape-info-icon:hover .shape-info-tooltip { display: block; animation: fade-in 0.2s ease; }
+  .shape-info-icon:focus .shape-info-tooltip,
+  .shape-info-icon:focus-within .shape-info-tooltip { display: block; }
+  .lbl-has-tip { position: relative; cursor: help; }
+  .lbl-has-tip .shape-info-tooltip { left: 0; transform: none; }
+  .lbl-has-tip:hover .shape-info-tooltip { display: block; animation: fade-in 0.2s ease; }
+  .lbl-has-tip:focus .shape-info-tooltip,
+  .lbl-has-tip:focus-within .shape-info-tooltip { display: block; }
+  /* Motion toggle button */
+  .motion-toggle-btn { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; letter-spacing: 0.1em; padding: 6px 12px; border-radius: 4px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+  .motion-toggle-btn:hover { border-color: var(--teal-mid); color: var(--teal-mid); background: rgba(93, 202, 165, 0.05); }
+  /* SVG shape architecture -- verbatim sketch */
+  #shape-panel-svg { width: 88%; max-width: 680px; height: auto; overflow: visible; cursor: crosshair; }
+  #shape-panel-svg .morph { transition: d 0.7s cubic-bezier(0.2, 0.8, 0.2, 1), stroke 0.3s ease; }
+  #shape-panel-svg .morph-node { transition: cx 0.7s cubic-bezier(0.2, 0.8, 0.2, 1), cy 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #shape-panel-svg .grid-tick   { stroke: rgba(255,255,255,0.05); stroke-width: 1; stroke-dasharray: 2 4; }
+  #shape-panel-svg .grid-label  { font-family: var(--font-mono); font-size: 10px; fill: rgba(255,255,255,0.8); }
+  #shape-panel-svg .axis-title  { font-family: var(--font-mono); font-size: 10px; fill: rgba(255,255,255,0.8); letter-spacing: 0.2em; text-transform: uppercase; }
+  #shape-panel-svg .time-axis-line { stroke: rgba(255,255,255,0.2); stroke-width: 1; }
+  #shape-panel-svg .time-label  { font-family: var(--font-mono); font-size: 10px; fill: rgba(255,255,255,0.8); letter-spacing: 0.15em; text-transform: uppercase; }
+  /* Gradient stops + state pulses (verbatim sketch L315-341 scoped to studio panel) */
+  #shape-panel-svg #stop-ceil  { stop-color: var(--gold); stop-opacity: 0.25; transition: all 0.8s ease; }
+  #shape-panel-svg #stop-mid1, #shape-panel-svg #stop-mid2 { stop-color: var(--teal-mid); stop-opacity: 0.15; transition: all 0.8s ease; }
+  #shape-panel-svg #stop-floor { stop-color: var(--danger-red); stop-opacity: 0.25; transition: all 0.8s ease; }
+  @keyframes pulseRed    { 0%,100%{ stop-opacity:0.25; } 50%{ stop-opacity:0.60; stop-color:#ff3333; } }
+  @keyframes pulseOrange { 0%,100%{ stop-opacity:0.25; } 50%{ stop-opacity:0.50; stop-color:#E58E26; } }
+  @keyframes pulseTealMid{ 0%,100%{ stop-opacity:0.15; } 50%{ stop-opacity:0.38; stop-color:#5DCAA5; } }
+  @keyframes pulsePurple { 0%,100%{ stop-opacity:0.25; } 50%{ stop-opacity:0.50; stop-color:#8B6FBF; } }
+  @keyframes pulseBlue   { 0%,100%{ stop-opacity:0.25; } 50%{ stop-opacity:0.50; stop-color:#4da8da; } }
+  #shape-panel-svg.shape-state-overextended #stop-ceil  { animation: pulseRed    2s infinite ease-in-out; }
+  #shape-panel-svg.shape-state-stretched    #stop-ceil  { animation: pulseOrange 2s infinite ease-in-out; }
   #shape-panel-svg.shape-state-expansive    #stop-mid1,
-  #shape-panel-svg.shape-state-expansive    #stop-mid2 { animation: dsPulseTealM  2s infinite ease-in-out; }
-  #shape-panel-svg.shape-state-grounded     #stop-floor { animation: dsPulsePurple 2s infinite ease-in-out; stop-color: var(--purple-grounded); }
-  #shape-panel-svg.shape-state-abundant     #stop-floor { animation: dsPulseBlue   2s infinite ease-in-out; stop-color: var(--blue-safe); }
-  /* HUD shape-state name + endpoint readout */
-  .shape-hud-state-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); }
-  .shape-hud-state-lbl { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.5); width: 50px; }
-  .shape-hud-state-name{ font-family: var(--font-serif); font-style: italic; font-size: 16px; font-weight: bold; color: var(--teal-mid); }
-
-  /* 00 / Sketch Inputs section (Sketch-style sliders + radios, drives Shape Mode) */
-  .s0-grid     { display: grid; grid-template-columns: 1fr; gap: 14px; }
-  .s0-field    { display: flex; flex-direction: column; gap: 4px; }
-  .s0-row      { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-  .s0-lbl      { font-family: var(--font-mono); font-size: 10px; color: var(--white); text-transform: uppercase; letter-spacing: 0.08em; }
-  .s0-val      { font-family: var(--font-serif); font-style: italic; font-size: 16px; color: var(--teal-mid); }
-  .s0-slider   { -webkit-appearance: none; appearance: none; width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; outline: none; }
-  .s0-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--teal-mid); cursor: pointer; transition: transform 0.15s ease; }
-  .s0-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
-  .s0-slider::-moz-range-thumb     { width: 14px; height: 14px; border-radius: 50%; background: var(--teal-mid); cursor: pointer; border: none; }
-  .s0-radio-row { display: flex; gap: 6px; margin-top: 4px; }
-  .s0-radio-row label { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,0.7); display: flex; align-items: center; gap: 4px; padding: 5px 8px; border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; cursor: pointer; flex: 1; justify-content: center; transition: all 0.15s ease; }
-  .s0-radio-row label:hover { border-color: rgba(93,202,165,0.4); }
-  .s0-radio-row input:checked + span { color: var(--teal-mid); font-weight: bold; }
-  .s0-radio-row label:has(input:checked) { border-color: var(--teal-mid); background: rgba(93,202,165,0.05); }
-  .s0-radio-row input { display: none; }
-  .s0-int-row  { display: flex; align-items: center; gap: 6px; }
-  .s0-int-input{ background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; padding: 4px 6px; color: white; font-family: var(--font-mono); font-size: 12px; width: 50px; text-align: center; }
-  .s0-hint     { font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.06em; }
+  #shape-panel-svg.shape-state-expansive    #stop-mid2  { animation: pulseTealMid 2s infinite ease-in-out; }
+  #shape-panel-svg.shape-state-grounded     #stop-floor { animation: pulsePurple 2s infinite ease-in-out; }
+  #shape-panel-svg.shape-state-abundant     #stop-floor { animation: pulseBlue   2s infinite ease-in-out; }
+  /* Market sweep + state-tint (Q2 KEEP) */
+  #shape-panel-svg .market-sweep { opacity: 0; filter: blur(25px); pointer-events: none; }
+  @keyframes sweepRightStress { 0% { transform: translateX(-100px) skewX(-20deg); opacity: 0; } 20% { opacity: 0.8; } 80% { opacity: 0.8; } 100% { transform: translateX(1000px) skewX(-20deg); opacity: 0; } }
+  @keyframes sweepRightOpt    { 0% { transform: translateX(-100px) skewX(-20deg); opacity: 0; } 20% { opacity: 0.8; } 80% { opacity: 0.8; } 100% { transform: translateX(1000px) skewX(-20deg); opacity: 0; } }
+  #shape-panel-svg .sweep-active-stress { animation: sweepRightStress 2.0s cubic-bezier(0.15, 0.8, 0.15, 1) forwards; fill: var(--danger-red); }
+  #shape-panel-svg .sweep-active-opt    { animation: sweepRightOpt    2.0s cubic-bezier(0.15, 0.8, 0.15, 1) forwards; fill: var(--gold); }
+  #shape-panel-svg #state-tint-rect { transition: fill 0.4s ease; }
+  #shape-panel-svg.shape-state-overextended #state-tint-rect { fill: rgba(226, 75, 74, 0.10); }
+  /* Clean render (boundary lines, cone fill, nodes, labels) */
+  #shape-panel-svg #clean-layer { opacity: 1; }
+  #shape-panel-svg .boundary-line { stroke-width: 2; stroke-linecap: round; fill: none; }
+  #shape-panel-svg .b-ceiling { stroke: var(--gold); mask: url(#mask-ceil); }
+  #shape-panel-svg .b-floor   { stroke: var(--danger-red); mask: url(#mask-floor); }
+  #shape-panel-svg .b-datum   { stroke-width: 3; mask: url(#mask-datum); filter: drop-shadow(0 0 6px rgba(93, 202, 165, 0.6)); stroke: var(--teal-mid); }
+  #shape-panel-svg .cone-fill { fill: url(#thermal-grad); opacity: 1; }
+  #shape-panel-svg .range-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; opacity: 1; }
+  /* F88 liquid-fill */
+  #shape-panel-svg .f88-mass { opacity: 0; pointer-events: none; transition: opacity 0.55s ease, d 0.36s cubic-bezier(0.2,0.8,0.2,1); }
+  #shape-panel-svg .f88-mass.active { opacity: 1; }
+  #shape-panel-svg .f88-mass-top    { fill: url(#gold-mass-grad); }
+  #shape-panel-svg .f88-mass-bottom { fill: url(#red-mass-grad); }
+  @media (prefers-reduced-motion: reduce) {
+    #shape-panel-svg .f88-mass { transition: none !important; }
+  }
+  /* Datum drag */
+  #shape-panel-svg .datum-group { cursor: ns-resize; }
+  #shape-panel-svg .datum-group:active { cursor: grabbing; }
+  #shape-panel-svg .datum-group:hover .b-datum { stroke-width: 5; filter: drop-shadow(0 0 8px rgba(93,202,165,0.8)); }
 
   /* --- STUDIO LAYOUT --- */
   .studio-layout { display: flex; flex: 1; width: 100%; margin: 0 auto; }
@@ -882,64 +986,183 @@
             <button class="pin-btn" onclick="togglePin('sec-sketch', this)" title="Pin section open">📌</button>
         </div>
         <div id="sec-sketch" class="section-content" style="display: block;">
-          <div class="precision-motto">Coarse in. Shape out.</div>
-          <div class="s0-grid">
+          <!-- VERBATIM S1 inputs transplanted from sketch.html L1460-1639.
+               IDs (slider-portfolio, slider-activation, sl-plan-through, slider-contrib,
+               slider-datum, slider-tax, market-*, infl-*, tax-* + val-* ) are sketch-verbatim.
+               tabindex 1-5 preserved. lev-tooltip + mkt-tooltip strings verbatim. -->
 
-            <!-- coordinator: tracks last-touched source ('sketch' | 'profile') for age/retire/plan reconciliation -->
-            <div id="s0-age-coord" data-source="profile" style="display:none;"></div>
-
-            <div class="s0-field">
-              <div class="s0-row"><span class="s0-lbl">Portfolio Balance</span><span class="s0-val" id="s0-val-portfolio">$750k</span></div>
-              <input type="range" id="s0-slider-portfolio" class="s0-slider" min="0" max="10000000" step="1000" value="750000" data-exact-val="750000">
+          <div class="dialogue-block">
+            <div class="dialogue-prompt mono-label">01 / YOUR TIMELINE</div>
+            <div class="control-group" id="grp-age">
+              <div class="control-header">
+                <label class="control-label" for="slider-age">Current Age</label>
+                <span class="control-value" id="val-age">40 yrs</span>
+              </div>
+              <input type="range" id="slider-age" min="18" max="85" value="40" step="1" tabindex="1">
+              <div class="lev-tooltip">Where you are today — the starting point, and how many years of building still lie ahead before retirement.</div>
             </div>
 
-            <div class="s0-field">
-              <div class="s0-row"><span class="s0-lbl">Annual Contributions</span><span class="s0-val" id="s0-val-contrib">$25k/yr</span></div>
-              <input type="range" id="s0-slider-contrib" class="s0-slider" min="0" max="200000" step="500" value="25000" data-exact-val="25000">
-            </div>
-
-            <div class="s0-field">
-              <div class="s0-row"><span class="s0-lbl">Datum (Target Spending)</span><span class="s0-val" id="s0-val-datum">$120k/yr</span></div>
-              <input type="range" id="s0-slider-datum" class="s0-slider" min="20" max="400" step="1" value="120" data-exact-val="120000">
-            </div>
-
-            <div class="s0-field">
-              <div class="s0-row"><span class="s0-lbl">Current Age</span><span class="s0-val" id="s0-val-age">42</span></div>
-              <input type="range" id="s0-slider-age" class="s0-slider" min="18" max="85" step="1" value="42">
-              <div class="s0-hint">Profile DOB refines this to MM/YYYY precision.</div>
-            </div>
-
-            <div class="s0-field">
-              <div class="s0-row"><span class="s0-lbl">Retirement Age</span><span class="s0-val" id="s0-val-retire">65</span></div>
-              <input type="range" id="s0-slider-retire" class="s0-slider" min="40" max="90" step="1" value="65">
-              <div class="s0-hint">Profile Retirement Date refines this.</div>
-            </div>
-
-            <div class="s0-field">
-              <div class="s0-row"><span class="s0-lbl">Plan-Through Age</span><span class="s0-val" id="s0-val-plan">93</span></div>
-              <input type="range" id="s0-slider-plan" class="s0-slider" min="75" max="105" step="1" value="93">
-              <div class="s0-hint">Integer here; Profile can set MM/YYYY precision.</div>
-            </div>
-
-            <div class="s0-field">
-              <div class="s0-row"><span class="s0-lbl">Effective Tax (working-year)</span><span class="s0-val" id="s0-val-tax">22%</span></div>
-              <input type="range" id="s0-slider-tax" class="s0-slider" min="0" max="40" step="1" value="22">
-            </div>
-
-            <div class="s0-field">
-              <span class="s0-lbl">Market Paradigm</span>
-              <div class="s0-radio-row" id="s0-market-row">
-                <label><input type="radio" name="s0-market" value="optimistic"><span>Optimistic</span></label>
-                <label><input type="radio" name="s0-market" value="average" checked><span>Average</span></label>
-                <label><input type="radio" name="s0-market" value="stress"><span>Stress</span></label>
+            <div class="control-group" id="grp-retire" style="margin-bottom:8px;">
+              <div class="control-header">
+                <label class="control-label" id="lbl-retire" for="slider-activation">Retirement Age</label>
+                <span class="control-value" id="val-activation">65 yrs</span>
+              </div>
+              <input type="range" id="slider-activation" min="45" max="90" value="65" step="1" tabindex="2">
+              <div class="lev-tooltip">The year you stop earning and start drawing — it sets how long your money has to grow and when the spending begins.</div>
+              <div id="already-retired-msg" style="display:none; margin-top:8px; padding:8px 12px; background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.3); border-radius:4px; font-family:var(--font-mono); font-size:10px; color:var(--gold); letter-spacing:0.05em;">
+                🎉 Congrats — you're already retired! Move the slider right to model a future milestone, or keep going to see what your current shape looks like.
               </div>
             </div>
 
-            <div class="s0-field">
-              <span class="s0-lbl">Inflation Frame</span>
-              <div class="s0-radio-row" id="s0-infl-row">
-                <label><input type="radio" name="s0-infl" value="real" checked><span>Real (today's $)</span></label>
-                <label><input type="radio" name="s0-infl" value="nominal"><span>Nominal</span></label>
+            <div class="control-group" id="grp-plan-through" style="margin-bottom:0;">
+              <div class="control-header">
+                <label class="control-label" for="sl-plan-through">Plan Through Age</label>
+                <span class="control-value" id="val-plan-through">93 yrs</span>
+              </div>
+              <input type="range" id="sl-plan-through" min="75" max="105" value="93" step="1">
+              <div class="lev-tooltip">How long you're planning for your money to last — a shorter retirement raises your boundaries, a longer one lowers them, so set it to the age you genuinely want to be covered through.</div>
+            </div>
+          </div>
+
+          <div class="dialogue-block">
+            <div class="dialogue-prompt mono-label">02 / YOUR CAPITAL</div>
+            <div class="control-group" id="grp-portfolio" style="margin-bottom:0;">
+              <div class="control-header">
+                <label class="control-label" for="slider-portfolio">Current Portfolio Balance</label>
+                <span class="control-value" id="val-portfolio">$750k</span>
+              </div>
+              <input type="range" id="slider-portfolio" min="0" max="100000" value="61185" step="1" tabindex="3">
+            </div>
+          </div>
+
+          <div class="dialogue-block">
+            <div class="dialogue-prompt mono-label">03 / YOUR CONTRIBUTIONS</div>
+            <div class="control-group" id="grp-contrib" style="margin-bottom:0;">
+              <div class="control-header">
+                <label class="control-label" for="slider-contrib">Annual Contributions</label>
+                <span class="control-value" id="val-contrib">$25,000</span>
+              </div>
+              <input type="range" id="slider-contrib" min="0" max="100000" value="82964" step="1" tabindex="4">
+            </div>
+          </div>
+
+          <div class="dialogue-block" style="border-bottom:none; margin-bottom: 0;">
+            <div class="dialogue-prompt mono-label" style="color: var(--teal-mid);">04 / YOUR DATUM</div>
+            <div class="control-group" id="grp-datum" style="margin-bottom:0;">
+              <div class="control-header" style="flex-direction: column; align-items: flex-start;">
+                <div style="display:flex; justify-content:flex-end; width:100%; align-items:flex-end;">
+                  <span class="control-value" id="val-datum" style="color: var(--teal-mid);">$100k / yr</span>
+                </div>
+                <div style="font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.4); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.1em;">Your target annual retirement spending — the point you choose to test inside your Shape.</div>
+              </div>
+              <input type="range" id="slider-datum" min="0" max="100000" value="41141" step="1" tabindex="5">
+            </div>
+
+            <div class="dialogue-block" style="border-bottom:none; padding-bottom:0;">
+              <div class="dialogue-prompt mono-label">05 / MARKET CONDITIONS</div>
+              <div class="toggle-wrapper">
+                <div class="toggle-container">
+                  <div class="toggle-option">
+                    <input type="radio" id="market-opt" name="market" value="optimistic" tabindex="0">
+                    <label for="market-opt">Optimistic</label>
+                    <div class="mkt-tooltip" style="border-color:rgba(201,168,76,0.4);">
+                      <div class="mkt-tooltip-head" style="color:var(--gold);">Market Scenario</div>
+                      <div class="mkt-tooltip-body">Assumes markets grow faster than inflation, with upside real returns around 4%–6.5%.<br><br><strong>Plain English:</strong> This shows how your Shape can widen if markets help.</div>
+                    </div>
+                  </div>
+                  <div class="toggle-option">
+                    <input type="radio" id="market-avg" name="market" value="average" checked tabindex="0">
+                    <label for="market-avg">Historical</label>
+                    <div class="mkt-tooltip">
+                      <div class="mkt-tooltip-head" style="color:var(--teal-mid);">Market Scenario</div>
+                      <div class="mkt-tooltip-body">Uses a middle-of-the-road real return baseline around 3.5% after inflation.<br><br><strong>Plain English:</strong> When people hear 7%–8% market returns, that is usually before inflation. This view shows purchasing-power growth.</div>
+                    </div>
+                  </div>
+                  <div class="toggle-option">
+                    <input type="radio" id="market-stress" name="market" value="stress" tabindex="0">
+                    <label for="market-stress">Stress</label>
+                    <div class="mkt-tooltip" style="border-color:rgba(226,75,74,0.4);">
+                      <div class="mkt-tooltip-head" style="color:var(--danger-red);">Market Scenario</div>
+                      <div class="mkt-tooltip-body">Assumes real returns stay low, roughly 0.5%–3.5% after inflation.<br><br><strong>Plain English:</strong> This compresses the Shape and shows what may still hold if markets disappoint.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button type="button" id="advanced-trigger-btn" class="advanced-trigger" aria-expanded="false">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+              Refine the Sketch
+            </button>
+
+            <div id="advanced-panel" class="advanced-panel">
+              <div class="control-group" style="margin-top: 16px;">
+                <div class="control-header">
+                  <span class="control-label">Inflation Engine</span>
+                </div>
+                <div class="toggle-wrapper">
+                  <div class="toggle-container">
+                    <div class="toggle-option">
+                      <input type="radio" id="infl-real" name="inflation" value="real" checked tabindex="0">
+                      <label for="infl-real">Real (Today's $)</label>
+                      <div class="mkt-tooltip">
+                        <div class="mkt-tooltip-head" style="color: var(--teal-mid);">Datum Intelligence</div>
+                        <div class="mkt-tooltip-body">Keeps the Shape in today's purchasing power by stripping out inflation.<br><br><strong>Plain English:</strong> $100k means what $100k buys today, even if the future dollar amount would be higher.</div>
+                      </div>
+                    </div>
+                    <div class="toggle-option">
+                      <input type="radio" id="infl-nom" name="inflation" value="nominal" tabindex="0">
+                      <label for="infl-nom">Nominal (Future $)</label>
+                      <div class="mkt-tooltip" style="border-color: rgba(201,168,76,0.4);">
+                        <div class="mkt-tooltip-head" style="color: var(--gold);">Datum Intelligence</div>
+                        <div class="mkt-tooltip-body">Shows the future dollar amounts after inflation is added.<br><br><strong>Plain English:</strong> The same lifestyle may require a bigger number later, even if the buying power is the same.</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="control-group" style="margin-top: 16px;">
+                <div class="control-header">
+                  <label class="control-label" for="slider-tax">Effective Tax Drag</label>
+                  <span class="control-value" id="val-tax" style="font-size: 16px;">20%</span>
+                </div>
+                <div class="toggle-wrapper" style="margin-bottom: 10px;">
+                  <div class="toggle-container">
+                    <div class="toggle-option">
+                      <input type="radio" id="tax-10" name="tax-preset" value="10" tabindex="0">
+                      <label for="tax-10">Low (10%)</label>
+                      <div class="mkt-tooltip">
+                        <div class="mkt-tooltip-head" style="color: var(--teal-mid);">Datum Intelligence</div>
+                        <div class="mkt-tooltip-body">Light tax drag. More of each withdrawal is available for spending.<br><br><strong>Plain English:</strong> Your Shape expands because taxes take a smaller bite.</div>
+                      </div>
+                    </div>
+                    <div class="toggle-option">
+                      <input type="radio" id="tax-20" name="tax-preset" value="20" checked tabindex="0">
+                      <label for="tax-20">Avg (20%)</label>
+                      <div class="mkt-tooltip">
+                        <div class="mkt-tooltip-head" style="color: var(--teal-mid);">Datum Intelligence</div>
+                        <div class="mkt-tooltip-body">Middle tax drag assumption. A simple planning haircut, not a tax projection.<br><br><strong>Plain English:</strong> A balanced estimate before Studio models your actual accounts.</div>
+                      </div>
+                    </div>
+                    <div class="toggle-option">
+                      <input type="radio" id="tax-30" name="tax-preset" value="30" tabindex="0">
+                      <label for="tax-30">High (30%)</label>
+                      <div class="mkt-tooltip" style="border-color: rgba(226,75,74,0.4);">
+                        <div class="mkt-tooltip-head" style="color: var(--danger-red);">Datum Intelligence</div>
+                        <div class="mkt-tooltip-body">Heavy tax drag. More portfolio withdrawal is needed to support the same spending.<br><br><strong>Plain English:</strong> Your Shape compresses because taxes take a bigger bite.</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <input type="range" id="slider-tax" min="0" max="40" value="20" step="1">
+              </div>
+            </div>
+
+            <div class="sketch-trust-copy">
+              <button type="button" id="methodology-btn" class="methodology-trigger" aria-expanded="false">VIEW SKETCH METHODOLOGY</button>
+              <div id="methodology-panel" class="methodology-panel">
+                The Sketch uses geometric compounding. Each scenario runs a band of three growth paths — conservative, baseline, and upside — which form your Floor, middle projection, and Ceiling. <strong>Optimistic</strong>: 2.0–4.0–6.5% real (markets performing well above average). <strong>Historical</strong>: 1.5–3.5–5.5% real (anchored to long-run averages). <strong>Stress</strong>: 0.5–1.5–3.5% real (compressed returns, heavy downside guardrails). Inflation: <strong>Real</strong> strips inflation out — all values in today's dollars. <strong>Nominal</strong> adds 3.0%/yr inflation, showing the raw future dollar amounts.<br><br>Plan-Through Age sets how long the money has to last. It's the one input that isn't about how hard your plan works, but how long — and it reshapes everything downstream. A shorter retirement means each dollar covers fewer years, so the same capital safely supports more spending: your Floor, Ceiling, and Datum all rise. A longer retirement spreads the same capital thinner, and all three settle lower. Set it to the age you genuinely want to be covered through — it's an honest assumption, not a dial to make the numbers look better.<br><br>Your Floor and Ceiling each use a withdrawal rate tuned to the question they answer: the Floor uses a reduced rate for resilience under a conservative path, the Ceiling uses an elevated rate for capacity under an upside path — and both flex with your retirement length, rising as it shortens and easing as it lengthens. Your Datum is different in kind: it always shows the capital required to sustain your chosen spending — at the canonical 4% rule for a baseline retirement, adjusting with your Plan-Through Age just as the boundaries do. That way the three boundaries answer three honest questions: "what could break" (Floor), "what could stretch" (Ceiling), and "what would my spending cost as capital" (Datum) — each measured against the length of retirement you're planning for.
               </div>
             </div>
 
@@ -1399,28 +1622,55 @@
 
       <!-- Shape panel: visible in mode-shape; deterministic Floor/Datum/Ceiling view (no Monte Carlo) -->
       <div id="shape-panel">
+        <!-- DATUM INTELLIGENCE HUD -- verbatim sketch L1657-1696, minus hud-studio-toggle (Q1). -->
         <div id="shape-hud">
-          <div class="shape-hud-state-row">
-            <span class="shape-hud-state-lbl">State</span>
-            <strong id="shape-state-name" class="shape-hud-state-name">INITIALIZING</strong>
-          </div>
-          <div class="sh-row">
-            <span class="sh-lbl sh-lbl-ceil">Ceiling</span>
-            <span class="sh-val sh-val-ceil" id="sh-ceil-val">&#8212;</span>
-          </div>
-          <div class="sh-row">
-            <span class="sh-lbl sh-lbl-datum">Datum</span>
-            <span class="sh-val sh-val-datum" id="sh-datum-val">&#8212;</span>
-          </div>
-          <div class="sh-row">
-            <span class="sh-lbl sh-lbl-floor">Floor</span>
-            <span class="sh-val sh-val-floor" id="sh-floor-val">&#8212;</span>
+          <div class="telemetry-card" id="hud-main">
+            <div class="hud-split">
+              <div class="hud-metrics">
+                <div class="tel-status" id="hud-status" style="color:var(--teal-mid);">DATUM INTELLIGENCE</div>
+                <div class="tel-metric-group">
+                  <div class="tel-metric m-ceil">
+                    <span class="lbl-has-tip" tabindex="0">STRUCTURAL CEILING<div class="shape-info-tooltip">Structural Ceiling — the portfolio your upside path projects, and the yearly spending it could sustain.</div></span>
+                    <span id="ri-ceiling-val">$0 / $0 yr</span>
+                  </div>
+                  <div class="tel-metric m-datum">
+                    <span class="lbl-has-tip" tabindex="0">TARGET DATUM<div id="ri-datum-tip" class="shape-info-tooltip">Target Datum — the yearly spending you want in retirement, and the total capital needed to make that spending possible.</div></span>
+                    <span id="ri-datum-val">$0 / $0 yr</span>
+                  </div>
+                  <div class="tel-metric m-floor">
+                    <span class="lbl-has-tip" tabindex="0">SURVIVAL FLOOR<div class="shape-info-tooltip">Survival Floor — the portfolio your conservative path projects, and the yearly spending it could sustain.</div></span>
+                    <span id="ri-floor-val">$0 / $0 yr</span>
+                  </div>
+                </div>
+                <div class="tel-metric" style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06);">
+                  <span>Growth Period</span>
+                  <span id="hud-growth-period" style="font-size:10px; font-weight:normal; color:rgba(255,255,255,0.4);">—</span>
+                </div>
+                <div class="hud-disclaimer">Projections are illustrative only. Not financial advice.</div>
+              </div>
+              <div class="hud-diff">
+                <div class="tel-readout" id="main-readout">
+                  <div class="readout-row readout-header" style="margin-bottom: 6px;">
+                    <span id="lbl-shape-state" style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Shape State:</span>
+                    <strong id="shape-state-name" class="hud-state-label">INITIALIZING</strong>
+                    <span class="shape-info-icon" tabindex="0">?
+                      <div id="s1-state-tip" class="shape-info-tooltip"></div>
+                    </span>
+                  </div>
+                  <div class="readout-row"><strong id="lbl-physics">What it Means:</strong> <span id="val-physics" class="data-line">Calculating...</span></div>
+                  <div class="readout-row"><strong id="lbl-action">What to Consider:</strong> <span id="val-action" class="data-line">Calculating...</span></div>
+                </div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:6px; border-left:1px dashed rgba(255,255,255,0.1); padding-left:16px; justify-content:center;">
+                <button type="button" class="motion-toggle-btn" id="motion-toggle-btn" aria-pressed="true">Motion: ON</button>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Full S1 SVG ported from sketch.html (viewBox 0 0 840 480; plot x=120..650).
-             IDs match sketch S1; DatumShape.mount() scopes all queries to this root. -->
-        <svg id="shape-panel-svg" viewBox="0 0 840 480" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <!-- Full S1 SVG -- verbatim sketch L1709-1851 with: F88 mass + state-tint-rect + market-sweep KEPT;
+             ghost layer + await-text DROPPED per Q2; CSS classes match sketch verbatim (no ds- prefix). -->
+        <svg class="range-svg" id="shape-panel-svg" viewBox="0 0 840 480" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
           <defs>
             <linearGradient id="thermal-grad" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop id="stop-ceil"  offset="0%"   stop-color="#C9A84C" stop-opacity="0.25" />
@@ -1428,79 +1678,109 @@
               <stop id="stop-mid2" offset="65%"  stop-color="#5DCAA5" stop-opacity="0.15" />
               <stop id="stop-floor" offset="100%" stop-color="#e24b4a" stop-opacity="0.25" />
             </linearGradient>
-            <mask id="mask-ceil"  maskUnits="userSpaceOnUse" x="0" y="0" width="840" height="480"><path id="m-ceil"  fill="none" stroke="white" stroke-width="15" stroke-linecap="round" pathLength="1" d="" /></mask>
-            <mask id="mask-floor" maskUnits="userSpaceOnUse" x="0" y="0" width="840" height="480"><path id="m-floor" fill="none" stroke="white" stroke-width="15" stroke-linecap="round" pathLength="1" d="" /></mask>
-            <mask id="mask-datum" maskUnits="userSpaceOnUse" x="0" y="0" width="840" height="480"><path id="m-datum" fill="none" stroke="white" stroke-width="15" stroke-linecap="round" pathLength="1" d="" /></mask>
+
+            <mask id="mask-ceil"  maskUnits="userSpaceOnUse" x="0" y="0" width="840" height="480"><path id="m-ceil"  fill="none" stroke="white" stroke-width="15" stroke-linecap="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1" class="morph" /></mask>
+            <mask id="mask-floor" maskUnits="userSpaceOnUse" x="0" y="0" width="840" height="480"><path id="m-floor" fill="none" stroke="white" stroke-width="15" stroke-linecap="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1" class="morph" /></mask>
+            <mask id="mask-datum" maskUnits="userSpaceOnUse" x="0" y="0" width="840" height="480"><path id="m-datum" fill="none" stroke="white" stroke-width="15" stroke-linecap="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1" /></mask>
+
             <clipPath id="cone-clip"><path id="clip-cone-path" d="" /></clipPath>
+
+            <!-- F88 construction fill gradients (liquid-fill) -->
+            <linearGradient id="gold-mass-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%"   stop-color="#ffeaa3" stop-opacity="0.65"/>
+              <stop offset="50%"  stop-color="#C9A84C" stop-opacity="0.38"/>
+              <stop offset="100%" stop-color="#5DCAA5" stop-opacity="0.06"/>
+            </linearGradient>
+            <linearGradient id="red-mass-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%"   stop-color="#5DCAA5" stop-opacity="0.06"/>
+              <stop offset="50%"  stop-color="#e24b4a" stop-opacity="0.32"/>
+              <stop offset="100%" stop-color="#ff6b68" stop-opacity="0.55"/>
+            </linearGradient>
+            <clipPath id="top-reveal">
+              <rect id="top-reveal-rect" x="0" y="0" height="480" width="840"/>
+            </clipPath>
           </defs>
 
-          <g id="grid-axes-group">
-            <text x="80" y="40" text-anchor="end" class="ds-axis-title">ANNUAL SPEND</text>
-            <line x1="80" y1="50"  x2="700" y2="50"  class="ds-grid-tick" />
-            <text id="grid-lbl-1" x="70" y="54"  text-anchor="end" class="ds-grid-label">$400k</text>
-            <line x1="80" y1="150" x2="700" y2="150" class="ds-grid-tick" />
-            <text id="grid-lbl-2" x="70" y="154" text-anchor="end" class="ds-grid-label">$300k</text>
-            <line x1="80" y1="250" x2="700" y2="250" class="ds-grid-tick" />
-            <text id="grid-lbl-3" x="70" y="254" text-anchor="end" class="ds-grid-label" style="font-weight:bold;">$200k</text>
-            <line x1="80" y1="350" x2="700" y2="350" class="ds-grid-tick" />
-            <text id="grid-lbl-4" x="70" y="354" text-anchor="end" class="ds-grid-label">$100k</text>
-            <line x1="80" y1="450" x2="700" y2="450" class="ds-grid-tick" />
-            <text id="grid-lbl-5" x="70" y="454" text-anchor="end" class="ds-grid-label">$0k</text>
-            <line x1="120" y1="460" x2="650" y2="460" class="ds-time-axis-line" />
-            <line x1="120" y1="455" x2="120" y2="465" class="ds-time-axis-line" />
-            <line x1="650" y1="455" x2="650" y2="465" class="ds-time-axis-line" />
-            <text id="time-start" x="120" y="475" text-anchor="middle" class="ds-time-label">AGE 40</text>
-            <text id="time-end"   x="650" y="475" text-anchor="middle" class="ds-time-label" style="fill: var(--teal-mid);">RETIRE: 65</text>
+          <rect id="state-tint-rect" x="0" y="0" width="840" height="480" fill="none" pointer-events="none"/>
+
+          <g id="grid-axes-group" class="fade-in-early">
+            <text x="80" y="40" text-anchor="end" class="axis-title" style="fill: rgba(255,255,255,0.8);">ANNUAL SPEND</text>
+            <line x1="80" y1="50"  x2="700" y2="50"  class="grid-tick" />
+            <text id="grid-lbl-1" x="70" y="54"  text-anchor="end" class="grid-label" style="fill: rgba(255,255,255,0.8);">$400k</text>
+            <line x1="80" y1="150" x2="700" y2="150" class="grid-tick" />
+            <text id="grid-lbl-2" x="70" y="154" text-anchor="end" class="grid-label" style="fill: rgba(255,255,255,0.8);">$300k</text>
+            <line x1="80" y1="250" x2="700" y2="250" class="grid-tick" />
+            <text id="grid-lbl-3" x="70" y="254" text-anchor="end" class="grid-label" style="fill: rgba(255,255,255,0.8); font-weight:bold;">$200k</text>
+            <line x1="80" y1="350" x2="700" y2="350" class="grid-tick" />
+            <text id="grid-lbl-4" x="70" y="354" text-anchor="end" class="grid-label" style="fill: rgba(255,255,255,0.8);">$100k</text>
+            <line x1="80" y1="450" x2="700" y2="450" class="grid-tick" />
+            <text id="grid-lbl-5" x="70" y="454" text-anchor="end" class="grid-label" style="fill: rgba(255,255,255,0.8);">$0k</text>
+            <line x1="120" y1="460" x2="650" y2="460" class="time-axis-line" />
+            <line x1="120" y1="455" x2="120" y2="465" class="time-axis-line" />
+            <line x1="650" y1="455" x2="650" y2="465" class="time-axis-line" />
+            <text id="time-start" x="120" y="475" text-anchor="middle" class="time-label" style="fill: rgba(255,255,255,0.8);">AGE 40</text>
+            <text id="time-end"   x="650" y="475" text-anchor="middle" class="time-label" style="fill: var(--teal-mid);">RETIRE: 65</text>
           </g>
 
           <g id="clean-layer">
-            <path id="cone-area" class="ds-cone-fill" d="" />
-            <g class="ds-boundary-group">
-              <path id="ceil-line" class="ds-boundary-line ds-b-ceiling" d="" />
-              <circle id="node-ceil" class="ds-morph-node" cx="650" cy="0" r="4" fill="#C9A84C" />
-              <text id="ceil-lbl" class="ds-range-label ds-morph-node" x="665" y="0" text-anchor="start" style="fill: #C9A84C;">STRUCTURAL CEILING</text>
+            <!-- F88 staged construction fills (liquid-fill -- handle.f88.update from module) -->
+            <path id="mass-top"    class="f88-mass f88-mass-top    active" d="" clip-path="url(#top-reveal)"/>
+            <path id="mass-bottom" class="f88-mass f88-mass-bottom active" d="" clip-path="url(#top-reveal)"/>
+
+            <path id="cone-area" class="cone-fill morph" d="" />
+
+            <g clip-path="url(#cone-clip)">
+              <rect id="market-sweep" class="market-sweep" x="-250" y="-100" width="250" height="700" fill="var(--danger-red)" />
             </g>
-            <g class="ds-boundary-group">
-              <path id="floor-line" class="ds-boundary-line ds-b-floor" d="" />
-              <circle id="node-floor" class="ds-morph-node" cx="650" cy="0" r="4" fill="#e24b4a" />
-              <text id="floor-lbl" class="ds-range-label ds-morph-node" x="665" y="0" text-anchor="start" style="fill: #e24b4a;">SURVIVAL FLOOR</text>
+
+            <g class="boundary-group">
+              <path id="ceil-line" class="boundary-line b-ceiling morph" d="" />
+              <circle id="node-ceil" class="morph-node" cx="650" cy="0" r="4" fill="var(--gold)" />
+              <text id="ceil-lbl" class="range-label morph-node" x="665" y="0" text-anchor="start" style="fill: var(--gold);">STRUCTURAL CEILING</text>
             </g>
-            <g id="datum-dragger" class="ds-datum-group">
-              <path id="datum-hitbox-line" class="ds-boundary-line" stroke="transparent" stroke-width="30" fill="none" d="" pointer-events="stroke" />
-              <path id="datum-line" class="ds-boundary-line ds-b-datum" d="" />
-              <circle id="node-datum"   cx="650" cy="0" r="6" fill="#5DCAA5" />
-              <circle id="datum-circle" cx="120" cy="0" r="6" fill="#5DCAA5" stroke="none" />
-              <text id="datum-lbl" class="ds-range-label" x="665" y="0" text-anchor="start" style="fill: #5DCAA5;">YOUR DATUM</text>
+
+            <g class="boundary-group">
+              <path id="floor-line" class="boundary-line b-floor morph" d="" />
+              <circle id="node-floor" class="morph-node" cx="650" cy="0" r="4" fill="var(--danger-red)" />
+              <text id="floor-lbl" class="range-label morph-node" x="665" y="0" text-anchor="start" style="fill: var(--danger-red);">SURVIVAL FLOOR</text>
             </g>
+
+            <g id="datum-dragger" class="datum-group">
+              <path id="datum-hitbox-line" class="boundary-line" stroke="transparent" stroke-width="30" fill="none" d="" pointer-events="stroke" />
+              <path id="datum-line" class="boundary-line b-datum" d="" />
+              <circle id="node-datum"   cx="650" cy="0" r="6" fill="var(--teal-mid)" />
+              <circle id="datum-circle" cx="120" cy="0" r="6" fill="var(--teal-mid)" stroke="none" />
+              <text id="datum-lbl" class="range-label" x="665" y="0" text-anchor="start" style="fill: var(--teal-mid);">YOUR DATUM</text>
+            </g>
+
             <g id="art-layer" style="pointer-events: none;">
-              <path id="art-ceil"  class="ds-art-path" d="" />
-              <path id="art-floor" class="ds-art-path" d="" />
-              <path id="art-datum" class="ds-art-path" d="" />
+              <path id="art-ceil"  class="art-path morph" d="" />
+              <path id="art-floor" class="art-path morph" d="" />
+              <path id="art-datum" class="art-path" d="" />
             </g>
           </g>
 
-          <g id="scrubber-group" style="opacity:0; pointer-events:none; transition: opacity 0.2s;">
+          <g id="scrubber-group" style="opacity: 0; pointer-events: none; transition: opacity 0.2s;">
             <line id="scrubber-line" x1="650" y1="50" x2="650" y2="460" stroke="#ffffff" stroke-opacity="0.4" stroke-width="1" stroke-dasharray="4 4" />
             <g id="tt-g-ceil" transform="translate(650, 100)">
-              <rect x="15" y="-14" width="280" height="36" fill="#091221" fill-opacity="0.95" stroke="#C9A84C" rx="4" />
-              <text x="25" y="0"  font-family="DM Mono, monospace" font-size="10" fill="#C9A84C" font-weight="bold">CEILING @ <tspan id="tt-age-ceil">45</tspan> <tspan fill="#ffffff" font-family="Fraunces, serif" font-style="italic" id="tt-data-ceil">| $2.94M / $97k yr</tspan></text>
-              <text x="25" y="14" font-family="DM Mono, monospace" font-size="8"  fill="#ffffff" fill-opacity="0.6">Favorable path - if returns run above the baseline.</text>
+              <rect x="15" y="-14" width="280" height="36" fill="#091221" fill-opacity="0.95" stroke="var(--gold)" rx="4" />
+              <text x="25" y="0" font-family="var(--font-mono)" font-size="10" fill="var(--gold)" font-weight="bold">CEILING @ <tspan id="tt-age-ceil">45</tspan> <tspan fill="var(--white)" font-family="var(--font-serif)" font-style="italic" id="tt-data-ceil">| $2.94M / $97k yr</tspan></text>
+              <text x="25" y="14" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.6">Favorable path — if returns run above the baseline.</text>
             </g>
             <g id="tt-g-floor" transform="translate(650, 200)">
-              <rect x="15" y="-14" width="280" height="36" fill="#091221" fill-opacity="0.95" stroke="#e24b4a" rx="4" />
-              <text x="25" y="0"  font-family="DM Mono, monospace" font-size="10" fill="#e24b4a" font-weight="bold">FLOOR @ <tspan id="tt-age-floor">45</tspan> <tspan fill="#ffffff" font-family="Fraunces, serif" font-style="italic" id="tt-data-floor">| $1.61M / $36k yr</tspan></text>
-              <text x="25" y="14" font-family="DM Mono, monospace" font-size="8"  fill="#ffffff" fill-opacity="0.6">Stress path - if returns stay low.</text>
+              <rect x="15" y="-14" width="280" height="36" fill="#091221" fill-opacity="0.95" stroke="var(--danger-red)" rx="4" />
+              <text x="25" y="0" font-family="var(--font-mono)" font-size="10" fill="var(--danger-red)" font-weight="bold">FLOOR @ <tspan id="tt-age-floor">45</tspan> <tspan fill="var(--white)" font-family="var(--font-serif)" font-style="italic" id="tt-data-floor">| $1.61M / $36k yr</tspan></text>
+              <text x="25" y="14" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.6">Stress path — if returns stay low.</text>
             </g>
             <g id="tt-g-datum" transform="translate(650, 300)">
-              <rect x="15" y="-14" width="310" height="52" fill="#091221" fill-opacity="0.95" stroke="#5DCAA5" rx="4" />
-              <text x="25" y="0"  font-family="DM Mono, monospace" font-size="10" fill="#5DCAA5" font-weight="bold">DATUM @ <tspan id="tt-age-datum">45</tspan> <tspan fill="#ffffff" font-family="Fraunces, serif" font-style="italic" id="tt-data-datum">| $100k/yr</tspan></text>
-              <text x="25" y="14" font-family="DM Mono, monospace" font-size="8"  fill="#ffffff" fill-opacity="0.6">Your chosen spending target.</text>
-              <text x="25" y="26" font-family="DM Mono, monospace" font-size="8"  fill="#ffffff" fill-opacity="0.4">Capital is a broad-stroke estimate, not a path projection.</text>
+              <rect x="15" y="-14" width="310" height="52" fill="#091221" fill-opacity="0.95" stroke="var(--teal-mid)" rx="4" />
+              <text x="25" y="0" font-family="var(--font-mono)" font-size="10" fill="var(--teal-mid)" font-weight="bold">DATUM @ <tspan id="tt-age-datum">45</tspan> <tspan fill="var(--white)" font-family="var(--font-serif)" font-style="italic" id="tt-data-datum">| $100k/yr</tspan></text>
+              <text x="25" y="14" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.6">Your chosen spending target.</text>
+              <text x="25" y="26" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.4">Capital is a broad-stroke estimate, not a path projection.</text>
             </g>
           </g>
 
-          <text x="390" y="472" text-anchor="middle" class="ds-axis-title">YEARS UNTIL RETIREMENT</text>
-          <text x="390" y="492" text-anchor="middle" font-family="DM Mono,monospace" font-size="9" fill="rgba(255,255,255,0.18)" letter-spacing="0.06em">DETERMINISTIC ESTIMATE -- NOT MONTE CARLO</text>
+          <text x="390" y="472" text-anchor="middle" class="axis-title">YEARS UNTIL RETIREMENT</text>
         </svg>
       </div>
 
@@ -4181,117 +4461,71 @@
     // #shape-panel-svg root + #shape-hud HUD root. Math and renderer both come
     // from the module -- there is no _shapeGetPoint duplicate here anymore.
     //
-    // Parse Blueprint DOM inputs into a normalized scenario object.
-    // Ages mirror Sketch slider semantics exactly (integer floor, clamp 18-85 / retAge+1-90).
-    // Tax rate: #eff-tax-rate holds a percent integer (22 = 22%); Dossier-sourced values
-    // arrive via DatumBlueprint as 0.22; both are normalized to decimal before taxMult = 1-rate.
-    // Sketch inputs (#s0-*) override Blueprint inputs when present (00 / Sketch Inputs section).
+    // Parse 00/Sketch Inputs into a normalized scenario object.
+    // 00 inputs use SKETCH log-scale sliders (slider-portfolio / slider-contrib /
+    // slider-datum, positions 0-100000 inverted via DatumShape.scales) PLUS integer
+    // sliders for age / activation / plan-through / tax. Profile dates (pri-dob /
+    // target-ret / plan-end-age / eff-tax-rate) are bidirectionally bound -- the
+    // 00 sliders carry the authoritative value at any moment; the wiring script
+    // mirrors any Profile change into the 00 sliders synchronously.
     function _scenarioFromInputs() {
       var out = {
         currentAge: 40, activationAge: 65, yearsToGrow: 25, planThroughAge: 93,
-        portfolioVol: 0.75, annualContrib: 25000, targetSpend: 120, taxMult: 0.78,
+        portfolioVol: 0.75, annualContrib: 25000, targetSpend: 100, taxMult: 0.8,
         conservativeRate: 1.015, baselineRate: 1.035, upsideRate: 1.055,
         isNominal: false, inflRate: 0.03
       };
 
-      function rd(id) { var el = document.getElementById(id); return el ? el.value : ''; }
+      var SC = (window.DatumShape && DatumShape.scales) || null;
+      function $(id) { return document.getElementById(id); }
+      function ival(id, def) { var el = $(id); return el ? (parseInt(el.value, 10) || def) : def; }
 
-      // Portfolio: prefer 00/Sketch slider exactVal; fall back to bp-portfolio-total currency input
-      var s0Port = document.getElementById('s0-slider-portfolio');
-      if (s0Port && s0Port.dataset && s0Port.dataset.exactVal) {
-        var v = parseFloat(s0Port.dataset.exactVal);
-        if (v > 0) out.portfolioVol = v / 1e6;
-      } else {
-        var portRaw = parseInt(String(rd('bp-portfolio-total')).replace(/[^0-9]/g,''), 10) || 0;
-        if (portRaw > 0) out.portfolioVol = portRaw / 1e6;
-      }
-
-      // Contributions
-      var s0Cont = document.getElementById('s0-slider-contrib');
-      if (s0Cont && s0Cont.dataset && s0Cont.dataset.exactVal) {
-        out.annualContrib = parseFloat(s0Cont.dataset.exactVal) || 0;
-      } else {
-        out.annualContrib = parseInt(String(rd('bp-contributions-total')).replace(/[^0-9]/g,''), 10) || out.annualContrib;
-      }
-
-      // Datum (spend) -- dollars -> $k (Sketch convention)
-      var s0Dat = document.getElementById('s0-slider-datum');
-      if (s0Dat && s0Dat.dataset && s0Dat.dataset.exactVal) {
-        var dv = parseFloat(s0Dat.dataset.exactVal);
-        if (dv > 0) out.targetSpend = dv / 1000;
-      } else {
-        var spRaw = parseInt(String(rd('spend-input')).replace(/[^0-9]/g,''), 10) || 0;
-        if (spRaw > 0) out.targetSpend = spRaw / 1000;
-      }
-
-      // Ages: 00/Sketch slider integers override Profile MM/YYYY when present and last-touched.
-      // Last-touched-wins is recorded as dataset.lastTouched on a coordinating root element.
-      var ageRoot = document.getElementById('s0-age-coord');
-      var ageSource = ageRoot ? ageRoot.dataset.source : 'profile';
-
-      var s0Age  = document.getElementById('s0-slider-age');
-      var s0Ret  = document.getElementById('s0-slider-retire');
-      var s0Plan = document.getElementById('s0-slider-plan');
-
-      var dobStr = rd('pri-dob');
-      var retStr = rd('target-ret');
-      var dobM = dobStr ? dobStr.match(/(\d{1,2})\s*\/\s*(\d{4})/) : null;
-      var retM = retStr ? retStr.match(/(\d{1,2})\s*\/\s*(\d{4})/) : null;
-
-      var derivedAge = null, derivedRet = null;
-      if (dobM) {
-        var birthMo = parseInt(dobM[1], 10), birthYr = parseInt(dobM[2], 10);
-        var now = new Date();
-        var ca = now.getFullYear() - birthYr;
-        if (now.getMonth() + 1 < birthMo) ca--;
-        derivedAge = Math.max(18, Math.min(85, ca));
-        if (retM) {
-          var retMo = parseInt(retM[1], 10), retYr = parseInt(retM[2], 10);
-          var ra = retYr - birthYr;
-          if (retMo < birthMo) ra--;
-          derivedRet = Math.max(derivedAge + 1, Math.min(90, ra));
+      // Portfolio (log slider; exactVal override from click-to-type)
+      var sPort = $('slider-portfolio');
+      if (sPort) {
+        var exP = sPort.dataset.exactVal;
+        if (exP !== undefined && exP !== '') {
+          out.portfolioVol = (parseFloat(exP) || 0) / 1e6;
+        } else if (SC) {
+          out.portfolioVol = SC.portPosToVal(parseInt(sPort.value, 10));
         }
       }
 
-      if (ageSource === 'sketch' && s0Age && s0Age.value) {
-        out.currentAge = parseInt(s0Age.value, 10) || out.currentAge;
-        out.activationAge = (s0Ret && s0Ret.value) ? parseInt(s0Ret.value, 10) : Math.min(90, out.currentAge + 25);
-      } else if (derivedAge !== null) {
-        out.currentAge = derivedAge;
-        out.activationAge = derivedRet !== null ? derivedRet : Math.min(90, derivedAge + 25);
-      } else if (s0Age && s0Age.value) {
-        out.currentAge = parseInt(s0Age.value, 10) || out.currentAge;
-        out.activationAge = (s0Ret && s0Ret.value) ? parseInt(s0Ret.value, 10) : Math.min(90, out.currentAge + 25);
+      // Contributions (log slider; exactVal override)
+      var sCon = $('slider-contrib');
+      if (sCon) {
+        var exC = sCon.dataset.exactVal;
+        if (exC !== undefined && exC !== '') {
+          out.annualContrib = parseFloat(exC) || 0;
+        } else if (SC) {
+          out.annualContrib = SC.contribPosToVal(parseInt(sCon.value, 10));
+        }
       }
+
+      // Datum (log slider returns $k; exactVal in dollars when typed)
+      var sDat = $('slider-datum');
+      if (sDat) {
+        var exD = sDat.dataset.exactVal;
+        if (exD !== undefined && exD !== '') {
+          out.targetSpend = (parseFloat(exD) || 0) / 1000;
+        } else if (SC) {
+          out.targetSpend = SC.datumPosToVal(parseInt(sDat.value, 10));
+        }
+      }
+
+      // Ages (integer sliders)
+      out.currentAge    = ival('slider-age',        out.currentAge);
+      out.activationAge = ival('slider-activation', out.activationAge);
+      out.planThroughAge = ival('sl-plan-through',  out.planThroughAge);
       out.activationAge = Math.max(out.currentAge + 1, out.activationAge);
       out.yearsToGrow   = Math.max(1, out.activationAge - out.currentAge);
 
-      // Plan-through-age: integer in 00 (s0-slider-plan); Profile (plan-end-age) is the
-      // existing studio field. Last-touched wins; default Profile.
-      if (s0Plan && s0Plan.value && s0Plan.dataset.touched === '1') {
-        out.planThroughAge = Math.max(75, Math.min(120, parseInt(s0Plan.value, 10) || out.planThroughAge));
-      } else {
-        var planEl = document.getElementById('plan-end-age');
-        var p = planEl ? parseInt(planEl.value, 10) : NaN;
-        if (!isNaN(p)) out.planThroughAge = Math.max(75, Math.min(120, p));
-        else if (s0Plan && s0Plan.value) out.planThroughAge = Math.max(75, Math.min(120, parseInt(s0Plan.value, 10) || out.planThroughAge));
-      }
+      // Tax (integer 0-40 percent)
+      var taxPct = ival('slider-tax', 20);
+      out.taxMult = Math.max(0, Math.min(1, 1.0 - taxPct / 100));
 
-      // Tax: 00 slider stores percent; Profile #eff-tax-rate may be "22"/"22%"/0.22
-      var s0Tax = document.getElementById('s0-slider-tax');
-      var taxRaw;
-      if (s0Tax && s0Tax.dataset && s0Tax.dataset.touched === '1') {
-        taxRaw = parseFloat(s0Tax.value);
-      } else {
-        var taxStr = String(rd('eff-tax-rate') || '22').replace('%','');
-        taxRaw = parseFloat(taxStr);
-        if (isNaN(taxRaw)) taxRaw = 22;
-      }
-      if (taxRaw > 1) taxRaw = taxRaw / 100;
-      out.taxMult = Math.max(0, Math.min(1, 1.0 - taxRaw));
-
-      // Market paradigm
-      var mktSel = document.querySelector('input[name="s0-market"]:checked');
+      // Market paradigm (sketch values: optimistic / average / stress)
+      var mktSel = document.querySelector('input[name="market"]:checked');
       var paradigm = mktSel ? mktSel.value : 'average';
       var rates = (window.DatumShape && DatumShape.CONSTANTS && DatumShape.CONSTANTS.DEFAULT_RATES) || null;
       if (rates && rates[paradigm]) {
@@ -4299,8 +4533,9 @@
         out.baselineRate     = rates[paradigm].baselineRate;
         out.upsideRate       = rates[paradigm].upsideRate;
       }
+
       // Inflation (nominal vs real)
-      var inflSel = document.querySelector('input[name="s0-infl"]:checked');
+      var inflSel = document.querySelector('input[name="inflation"]:checked');
       out.isNominal = inflSel ? (inflSel.value === 'nominal') : false;
 
       return out;
@@ -4308,6 +4543,7 @@
 
     // Mounted DatumShape handle (created on first toggleShapeMode -> shape).
     var _datumShapeHandle = null;
+    window._datumShapeHandle = null; // exposed for wiring script
 
     function _mountDatumShape() {
       if (_datumShapeHandle || !window.DatumShape) return _datumShapeHandle;
@@ -4316,7 +4552,6 @@
       if (!svg) return null;
       _datumShapeHandle = DatumShape.mount(svg, hud, {
         initialScenario: _scenarioFromInputs(),
-        // Standard S1 geometry (viewBox 840x480, plot 120..650, y 50..450)
         xStart: 120, xEnd: 650, steps: 50,
         yPxTop: 50, yPxBot: 450,
         stateHost: svg,
@@ -4327,26 +4562,68 @@
         enableAgeAxis: true,
         enableEndNodes: true,
         enableHudReadout: true,
+        enableNarrativeHud: true,
+        enableF88: true,
+        enableF89Wave: true,
         canDrag: function () { return true; },
+        onShapeStateChange: function (stateObj) {
+          // Apply hud-state-* class to the telemetry-card (controls the colored left-border).
+          var card = document.getElementById('hud-main');
+          if (!card) return;
+          ['hud-state-overextended','hud-state-stretched','hud-state-expansive','hud-state-grounded','hud-state-abundant'].forEach(function (c) { card.classList.remove(c); });
+          if (stateObj && stateObj.cls) card.classList.add(stateObj.cls);
+          // s1-state-tip hover copy from sketch's _stateHoverMap (verbatim subset)
+          var tip = document.getElementById('s1-state-tip');
+          if (tip && stateObj) {
+            var km = { GROUNDED: 'GRD', EXPANSIVE: 'EXP', STRETCHED: 'STR', OVEREXTENDED: 'OE', ABUNDANT: 'ABU' };
+            var k  = km[stateObj.name] || stateObj.name;
+            var sk = stateObj.subZone ? k + '-' + stateObj.subZone : null;
+            var hover = (sk && _S1_STATE_HOVER[sk]) || _S1_STATE_HOVER[k] || '';
+            tip.textContent = hover;
+          }
+        },
         onDatumChange: function (spendVal) {
-          // Mirror to 00/Sketch datum slider + Blueprint spend-input
-          var s0d = document.getElementById('s0-slider-datum');
+          // Mirror drag into the sketch datum slider (sets log-scale position + exactVal in $).
+          var sDat = document.getElementById('slider-datum');
           var spendDollars = Math.round(spendVal * 1000);
-          if (s0d) {
-            s0d.value = spendVal;
-            s0d.dataset.exactVal = String(spendDollars);
-            s0d.dataset.touched = '1';
+          if (sDat && window.DatumShape && DatumShape.scales) {
+            sDat.value = DatumShape.scales.datumValToPos(Math.round(spendVal));
+            sDat.dataset.exactVal = String(spendDollars);
+            // Update label
+            var valEl = document.getElementById('val-datum');
+            if (valEl) valEl.textContent = '$' + spendDollars.toLocaleString('en-US') + ' / yr';
           }
           var spendEl = document.getElementById('spend-input');
           if (spendEl) spendEl.value = String(spendDollars);
           if (_datumShapeHandle) _datumShapeHandle.update(_scenarioFromInputs());
         }
       });
+      window._datumShapeHandle = _datumShapeHandle;
       return _datumShapeHandle;
     }
 
-    // Public: rebuild shape from current input state. Called by 00/Sketch slider
-    // handlers and by Profile date-change handlers via the bidirectional bind.
+    // Sketch's _stateHoverMap subset (sketch L3026-3043 verbatim, for the ? icon tooltip).
+    var _S1_STATE_HOVER = {
+      'ABU':              "Your Datum sits below the Floor — the conservative path already supports more than you're asking, leaving real capacity unspoken for.",
+      'ABU-WELL_BELOW':   "Your Datum sits well under the Floor — significant capacity unused, the plan carries you with room to spare in any market.",
+      'ABU-JUST_BELOW':   "Your Datum sits just under the Floor — capacity exists but the gap is narrowing toward where you'd start using the margin you've built.",
+      'GRD':              "Your Datum sits near the Floor — the conservative path holds it, but the room above is your margin to preserve or test.",
+      'GRD-TIGHT':        "Your Datum sits right against the Floor — the conservative path carries it efficiently, with margin reserved rather than spent.",
+      'GRD-STABLE':       "Your Datum sits comfortably above the Floor — the conservative path carries it cleanly, with room to absorb most surprises.",
+      'EXP':              "Your Datum sits inside a wide gap between Floor and Ceiling — the question isn't whether the plan holds, but which edge is worth testing.",
+      'EXP-FLOOR_SIDE':   "Your Datum sits closer to the Floor — the most resilient position the plan offers, trading upper room for durability against bad markets.",
+      'EXP-CENTERED':     "Your Datum sits in the middle — the most balanced position the plan offers, with meaningful room in both directions.",
+      'EXP-CEILING_SIDE': "Your Datum sits closer to the Ceiling — the plan still carries it, but you're spending most of the margin you've earned.",
+      'STR':              "Your Datum sits near the Ceiling — the plan carries it, but the upside paths are doing the work and tolerance for stress is thin.",
+      'STR-STANDARD':     "Your Datum sits inside STRETCHED — the plan carries it, but with little cushion if returns disappoint or retirement starts earlier.",
+      'STR-HIGH_END':     "Your Datum sits near the top of STRETCHED — the upper paths carry it, but any market stress puts the plan visibly under pressure.",
+      'OE':               "Your Datum sits above the Ceiling — no modeled path reaches this lifestyle at current inputs, and the gap is what the Sketch is telling you to close.",
+      'OE-ENTRY':         "Your Datum sits just past the Ceiling — modest gap, modest moves can close it, the structural line is right behind you.",
+      'OE-STRUCTURAL':    "Your Datum sits well past the Ceiling — the gap is structural, not cosmetic, and only meaningful lever changes can bring the plan back to reach."
+    };
+    window._scenarioFromInputs = _scenarioFromInputs;
+
+    // Public: rebuild shape from current input state.
     window.updateShapePanel = function () {
       _mountDatumShape();
       if (_datumShapeHandle) _datumShapeHandle.update(_scenarioFromInputs());
@@ -4368,106 +4645,88 @@
 
   </script>
 
-  <!-- 00 / Sketch Inputs wiring: prefill ladder, slider handlers, Profile<->Sketch reconciliation -->
+  <!-- 00 / Sketch Inputs wiring -- sketch IDs verbatim, log scales + click-to-type via
+       DatumShape, F89 vertex wave impulses per slider, motion toggle, Profile<->Sketch
+       reconciliation, advanced + methodology drawers, prefill ladder. -->
   <script>
   (function () {
     'use strict';
 
     function $(id) { return document.getElementById(id); }
-    function fmtK(v) { return v >= 1000 ? '$' + (v/1000).toFixed(1).replace(/\.0$/,'') + 'M' : '$' + Math.round(v).toLocaleString('en-US') + 'k'; }
-    function fmtKyr(v) { return fmtK(v) + '/yr'; }
+    function fireUpdate() { if (typeof window.updateShapePanel === 'function') window.updateShapePanel(); }
+    function handle() { return window._datumShapeHandle || null; }
+    function wave()   { var h = handle(); return h ? h.wave : null; }
+    var SC = (window.DatumShape && DatumShape.scales) || null;
+    var clampN = function (v, lo, hi) { return Math.min(Math.max(v, lo), hi); };
 
-    function setSliderVal(el, val) {
-      if (!el) return;
-      el.value = val;
-      el.dispatchEvent(new Event('input', { bubbles: false }));
-    }
+    /* F89 wave constants -- mirror sketch L4286-4297. */
+    var WAVE_IMP_DATUM = 8, WAVE_IMP_PORT = 12, WAVE_IMP_CONT = 8, WAVE_IMP_MKT = 14;
+    var WAVE_IMP_AGE   = 10, WAVE_IMP_RET = 10, WAVE_IMP_PLAN = 10;
+    var WAVE_LEAN_MAG  = 12;
 
-    function setExact(el, exactVal) {
-      if (!el) return;
-      el.dataset.exactVal = String(exactVal);
-    }
-
-    /* ── value-label updaters (mirror slider value to the .s0-val span) ── */
+    /* ── label updaters (writes to the .control-value spans; sketch-faithful) ── */
+    function fmtCap(v) { return v >= 1000 ? '$' + (v/1000).toFixed(2).replace(/\.00$/,'') + 'M' : '$' + v + 'k'; }
     function updatePortLabel() {
-      var s = $('s0-slider-portfolio'); if (!s) return;
-      var v = parseFloat(s.value) || 0;
-      setExact(s, v);
-      var l = $('s0-val-portfolio'); if (l) l.textContent = fmtK(v / 1000);
+      var sl = $('slider-portfolio'); var lbl = $('val-portfolio'); if (!sl || !lbl || !SC) return;
+      var ex = sl.dataset.exactVal;
+      var dollars = (ex !== undefined && ex !== '') ? (parseFloat(ex) || 0) : SC.portPosToVal(parseInt(sl.value,10)) * 1e6;
+      if (ex === undefined || ex === '') sl.dataset.exactVal = String(Math.round(dollars));
+      lbl.textContent = fmtCap(Math.round(dollars / 1000));
     }
     function updateContribLabel() {
-      var s = $('s0-slider-contrib'); if (!s) return;
-      var v = parseFloat(s.value) || 0;
-      setExact(s, v);
-      var l = $('s0-val-contrib'); if (l) l.textContent = fmtKyr(v / 1000);
+      var sl = $('slider-contrib'); var lbl = $('val-contrib'); if (!sl || !lbl || !SC) return;
+      var ex = sl.dataset.exactVal;
+      var dollars = (ex !== undefined && ex !== '') ? (parseFloat(ex) || 0) : SC.contribPosToVal(parseInt(sl.value,10));
+      if (ex === undefined || ex === '') sl.dataset.exactVal = String(Math.round(dollars));
+      lbl.textContent = '$' + Math.round(dollars).toLocaleString('en-US');
     }
     function updateDatumLabel() {
-      var s = $('s0-slider-datum'); if (!s) return;
-      var k = parseFloat(s.value) || 0;
-      setExact(s, k * 1000);
-      var l = $('s0-val-datum'); if (l) l.textContent = '$' + k + 'k/yr';
+      var sl = $('slider-datum'); var lbl = $('val-datum'); if (!sl || !lbl || !SC) return;
+      var ex = sl.dataset.exactVal;
+      var dollars = (ex !== undefined && ex !== '') ? (parseFloat(ex) || 0) : SC.datumPosToVal(parseInt(sl.value,10)) * 1000;
+      if (ex === undefined || ex === '') sl.dataset.exactVal = String(Math.round(dollars));
+      var k = Math.round(dollars / 1000);
+      lbl.textContent = (k >= 1000 ? '$' + (k/1000).toFixed(2).replace(/\.00$/,'') + 'M' : '$' + k + 'k') + ' / yr';
     }
-    function updateAgeLabel()    { var s = $('s0-slider-age');    var l = $('s0-val-age');    if (s && l) l.textContent = s.value; }
-    function updateRetireLabel() { var s = $('s0-slider-retire'); var l = $('s0-val-retire'); if (s && l) l.textContent = s.value; }
-    function updatePlanLabel()   { var s = $('s0-slider-plan');   var l = $('s0-val-plan');   if (s && l) l.textContent = s.value; }
-    function updateTaxLabel()    { var s = $('s0-slider-tax');    var l = $('s0-val-tax');    if (s && l) l.textContent = s.value + '%'; }
+    function updateAgeLabel()        { var s = $('slider-age');        var l = $('val-age');        if (s && l) l.textContent = s.value + ' yrs'; }
+    function updateActivationLabel() { var s = $('slider-activation'); var l = $('val-activation'); if (s && l) l.textContent = s.value + ' yrs'; }
+    function updatePlanThroughLabel(){ var s = $('sl-plan-through');   var l = $('val-plan-through');if (s && l) l.textContent = s.value + ' yrs'; }
+    function updateTaxLabel()        { var s = $('slider-tax');        var l = $('val-tax');        if (s && l) l.textContent = s.value + '%'; }
 
     function refreshAllLabels() {
       updatePortLabel(); updateContribLabel(); updateDatumLabel();
-      updateAgeLabel(); updateRetireLabel(); updatePlanLabel(); updateTaxLabel();
+      updateAgeLabel(); updateActivationLabel(); updatePlanThroughLabel(); updateTaxLabel();
     }
 
-    function fireShapeUpdate() {
-      if (typeof window.updateShapePanel === 'function') window.updateShapePanel();
-    }
-
-    /* ── Profile <-> Sketch reconciliation (last-touched-wins) ──
-       Source = 'sketch' when user moved age/retire sliders.
-       Source = 'profile' when user typed in pri-dob / target-ret.
-       Plan-through is tracked by per-slider .dataset.touched. */
-    function markSource(source) {
-      var coord = $('s0-age-coord'); if (coord) coord.dataset.source = source;
-    }
-
+    /* ── Profile <-> Sketch reconciliation (last-touched-wins, bidirectional) ── */
     function syncFromProfileDates() {
       var dobEl = $('pri-dob'), retEl = $('target-ret'), planEl = $('plan-end-age');
       var dobM = dobEl && dobEl.value ? dobEl.value.match(/(\d{1,2})\s*\/\s*(\d{4})/) : null;
       var retM = retEl && retEl.value ? retEl.value.match(/(\d{1,2})\s*\/\s*(\d{4})/) : null;
       var now = new Date();
       if (dobM) {
-        var birthMo = parseInt(dobM[1],10), birthYr = parseInt(dobM[2],10);
-        var ca = now.getFullYear() - birthYr;
-        if (now.getMonth() + 1 < birthMo) ca--;
-        ca = Math.max(18, Math.min(85, ca));
-        var sA = $('s0-slider-age');
-        if (sA) { sA.value = ca; updateAgeLabel(); }
+        var bm = parseInt(dobM[1],10), by = parseInt(dobM[2],10);
+        var ca = now.getFullYear() - by; if (now.getMonth() + 1 < bm) ca--;
+        ca = clampN(ca, 18, 85);
+        var sA = $('slider-age'); if (sA) { sA.value = ca; updateAgeLabel(); }
         if (retM) {
-          var retMo = parseInt(retM[1],10), retYr = parseInt(retM[2],10);
-          var ra = retYr - birthYr;
-          if (retMo < birthMo) ra--;
-          ra = Math.max(ca + 1, Math.min(90, ra));
-          var sR = $('s0-slider-retire');
-          if (sR) { sR.value = ra; updateRetireLabel(); }
+          var rm = parseInt(retM[1],10), ry = parseInt(retM[2],10);
+          var ra = ry - by; if (rm < bm) ra--;
+          ra = clampN(ra, ca + 1, 90);
+          var sR = $('slider-activation'); if (sR) { sR.value = ra; updateActivationLabel(); }
         }
       }
       if (planEl && planEl.value) {
         var p = parseInt(planEl.value, 10);
-        if (!isNaN(p)) {
-          var sP = $('s0-slider-plan');
-          if (sP) { sP.value = Math.max(75, Math.min(105, p)); updatePlanLabel(); }
-        }
+        if (!isNaN(p)) { var sP = $('sl-plan-through'); if (sP) { sP.value = clampN(p, 75, 105); updatePlanThroughLabel(); } }
       }
-      markSource('profile');
     }
-
     function syncFromSketchAges() {
-      var sA = $('s0-slider-age'), sR = $('s0-slider-retire');
+      var sA = $('slider-age'), sR = $('slider-activation');
       var dobEl = $('pri-dob'), retEl = $('target-ret');
-      var now = new Date();
-      var thisYear = now.getFullYear();
+      var thisYear = new Date().getFullYear();
       if (sA && dobEl) {
         var ca = parseInt(sA.value, 10) || 40;
-        // Virtual DOB: June of (this year - currentAge), matches Sketch's "happens mid-year" assumption
         dobEl.value = '06 / ' + (thisYear - ca);
       }
       if (sR && retEl) {
@@ -4475,39 +4734,45 @@
         var ca2 = parseInt(sA ? sA.value : 40, 10) || 40;
         retEl.value = '06 / ' + (thisYear - ca2 + ra);
       }
-      markSource('sketch');
     }
-
     function syncPlanFromSketch() {
-      var sP = $('s0-slider-plan'), pEl = $('plan-end-age');
-      if (sP && pEl) {
-        pEl.value = sP.value;
-        sP.dataset.touched = '1';
-      }
+      var sP = $('sl-plan-through'), pEl = $('plan-end-age');
+      if (sP && pEl) pEl.value = sP.value;
+    }
+    function syncTaxFromSketch() {
+      var sT = $('slider-tax'), pEl = $('eff-tax-rate');
+      if (sT && pEl) pEl.value = sT.value;
     }
 
-    /* ── Prefill ladder: DatumBlueprint.load() -> Dossier -> defaults ──
-       Mirrors the locked Blueprint v1 ladder (URL hydrate -> session draft ->
-       sketch contract -> Dossier -> hard defaults). Result is a bp object whose
-       portfolio_total / contributions_total / datum.net_datum_v1 / profile.*
-       fields seed the 00 sliders. */
+    /* ── Prefill ladder: DatumBlueprint.load() -> Dossier -> defaults ─────── */
     function seedFromBlueprint() {
-      if (!window.DatumBlueprint) return false;
+      if (!window.DatumBlueprint || !SC) return false;
       var bp = null;
       try { bp = DatumBlueprint.load({ from: 'sketch' }); } catch (e) { bp = null; }
       if (!bp) return false;
 
-      var sPort = $('s0-slider-portfolio');
-      if (sPort && bp.portfolio_total > 0) { sPort.value = bp.portfolio_total; }
-
-      var sCont = $('s0-slider-contrib');
-      if (sCont && bp.contributions_total > 0) { sCont.value = bp.contributions_total; }
-
-      var sDat  = $('s0-slider-datum');
-      if (sDat && bp.datum && bp.datum.net_datum_v1 > 0) { sDat.value = Math.round(bp.datum.net_datum_v1 / 1000); }
+      // Portfolio: dollars -> log slider position via portValToPos(MILLIONS)
+      var sPort = $('slider-portfolio');
+      if (sPort && bp.portfolio_total > 0) {
+        sPort.value = clampN(SC.portValToPos(bp.portfolio_total / 1e6), 0, 100000);
+        sPort.dataset.exactVal = String(Math.round(bp.portfolio_total));
+      }
+      // Contributions: dollars -> log slider position via contribValToPos(dollars)
+      var sCon = $('slider-contrib');
+      if (sCon && bp.contributions_total > 0) {
+        sCon.value = clampN(SC.contribValToPos(bp.contributions_total), 0, 100000);
+        sCon.dataset.exactVal = String(Math.round(bp.contributions_total));
+      }
+      // Datum: net_datum_v1 in dollars -> $k -> log slider position via datumValToPos($k)
+      var sDat = $('slider-datum');
+      if (sDat && bp.datum && bp.datum.net_datum_v1 > 0) {
+        var dK = bp.datum.net_datum_v1 / 1000;
+        sDat.value = clampN(SC.datumValToPos(dK), 0, 100000);
+        sDat.dataset.exactVal = String(Math.round(bp.datum.net_datum_v1));
+      }
 
       var prof = bp.profile || {};
-      var sAge = $('s0-slider-age'), sRet = $('s0-slider-retire'), sPlan = $('s0-slider-plan');
+      var sAge = $('slider-age'), sRet = $('slider-activation'), sPlan = $('sl-plan-through');
       var dobM = prof.primary_dob ? String(prof.primary_dob).match(/(\d{1,2})\s*\/\s*(\d{4})/) : null;
       var retM = prof.target_retirement_date ? String(prof.target_retirement_date).match(/(\d{1,2})\s*\/\s*(\d{4})/) : null;
       var now = new Date();
@@ -4515,107 +4780,261 @@
         var by = parseInt(dobM[2],10);
         var ca = now.getFullYear() - by;
         if (now.getMonth() + 1 < parseInt(dobM[1],10)) ca--;
-        sAge.value = Math.max(18, Math.min(85, ca));
+        sAge.value = clampN(ca, 18, 85);
       }
       if (retM && sRet && sAge) {
-        var ry = parseInt(retM[2],10), bm = dobM ? parseInt(dobM[1],10) : 1, by2 = dobM ? parseInt(dobM[2],10) : (parseInt(sAge.value,10) ? (now.getFullYear() - parseInt(sAge.value,10)) : 1985);
+        var ry = parseInt(retM[2],10);
+        var bm = dobM ? parseInt(dobM[1],10) : 1;
+        var by2 = dobM ? parseInt(dobM[2],10) : (now.getFullYear() - (parseInt(sAge.value,10) || 40));
         var ra = ry - by2;
         if (parseInt(retM[1],10) < bm) ra--;
-        sRet.value = Math.max(parseInt(sAge.value,10) + 1, Math.min(90, ra));
+        sRet.value = clampN(ra, (parseInt(sAge.value,10) || 40) + 1, 90);
       }
-      if (sPlan && prof.plan_end_age) { sPlan.value = Math.max(75, Math.min(105, parseInt(prof.plan_end_age,10) || 93)); }
+      if (sPlan && prof.plan_end_age) sPlan.value = clampN(parseInt(prof.plan_end_age,10) || 93, 75, 105);
 
-      var sTax = $('s0-slider-tax');
+      var sTax = $('slider-tax');
       if (sTax && bp.tax && typeof bp.tax.working_year_effective_rate === 'number') {
         var pct = bp.tax.working_year_effective_rate;
         if (pct <= 1) pct = pct * 100;
-        sTax.value = Math.max(0, Math.min(40, Math.round(pct)));
+        sTax.value = clampN(Math.round(pct), 0, 40);
       }
       return true;
     }
 
-    /* ── Wire-up ──────────────────────────────────────────────────────── */
-    function wire() {
-      var sliders = [
-        { id: 's0-slider-portfolio', upd: updatePortLabel,   src: null },
-        { id: 's0-slider-contrib',   upd: updateContribLabel, src: null },
-        { id: 's0-slider-datum',     upd: updateDatumLabel,   src: null },
-        { id: 's0-slider-age',       upd: updateAgeLabel,     src: 'sketch' },
-        { id: 's0-slider-retire',    upd: updateRetireLabel,  src: 'sketch' },
-        { id: 's0-slider-plan',      upd: updatePlanLabel,    src: null,    plan: true },
-        { id: 's0-slider-tax',       upd: updateTaxLabel,     src: null,    taxTouch: true }
+    /* ── Click-to-type currency edit via DatumShape.wireCurrencyEdit ─────── */
+    function wireClickToType() {
+      if (!window.DatumShape || !DatumShape.wireCurrencyEdit || !SC) return;
+      var slAge = $('slider-age'), slAct = $('slider-activation'), slPlan = $('sl-plan-through');
+      var slPort = $('slider-portfolio'), slCont = $('slider-contrib'), slDat = $('slider-datum');
+      var cfg = [
+        { valId: 'val-age',         slider: slAge,  w: '80px',  isCurrency: false, maxLength: 2,
+          getEditVal: function () { return String(Math.round(parseFloat(slAge.value))); },
+          clean: function (s) { return s.replace(/[^0-9]/g, ''); },
+          validate: function (v) { return v >= 18 && v <= 85; },
+          getClampedValid: function (v) { return clampN(v, 18, 85); },
+          toSlider: function (v) { return v; } },
+        { valId: 'val-activation',  slider: slAct,  w: '80px',  isCurrency: false, maxLength: 2,
+          getEditVal: function () { return String(Math.round(parseFloat(slAct.value))); },
+          clean: function (s) { return s.replace(/[^0-9]/g, ''); },
+          validate: function (v) { return v >= Math.max(45, Math.round(parseFloat(slAge.value)) + 1) && v <= 90; },
+          getClampedValid: function (v) { var lo = Math.max(45, Math.round(parseFloat(slAge.value)) + 1); return clampN(v, lo, 90); },
+          toSlider: function (v) { return v; } },
+        { valId: 'val-plan-through', slider: slPlan, w: '80px', isCurrency: false, maxLength: 3,
+          getEditVal: function () { return String(Math.round(parseFloat(slPlan.value))); },
+          clean: function (s) { return s.replace(/[^0-9]/g, ''); },
+          validate: function (v) { return v >= 75 && v <= 105; },
+          getClampedValid: function (v) { return clampN(v, 75, 105); },
+          toSlider: function (v) { return v; } },
+        { valId: 'val-portfolio',   slider: slPort, w: '140px', isCurrency: true,
+          getEditVal: function () { return '$' + Math.round(SC.portPosToVal(parseInt(slPort.value,10)) * 1e6).toLocaleString('en-US'); },
+          clean: function (s) { return s.replace(/[^0-9]/g, ''); },
+          validate: function (v) { return v >= 1000 && v <= 50000000; },
+          toSlider: function (v) { return SC.portValToPos(v / 1e6); } },
+        { valId: 'val-contrib',     slider: slCont, w: '140px', isCurrency: true,
+          getEditVal: function () { return '$' + SC.contribPosToVal(parseInt(slCont.value,10)).toLocaleString('en-US'); },
+          clean: function (s) { return s.replace(/[^0-9]/g, ''); },
+          validate: function (v) { return v >= 0 && v <= 200000; },
+          toSlider: function (v) { return SC.contribValToPos(v); } },
+        { valId: 'val-datum',       slider: slDat,  w: '140px', isCurrency: true,
+          getEditVal: function () { return '$' + Math.round(SC.datumPosToVal(parseInt(slDat.value,10)) * 1000).toLocaleString('en-US'); },
+          clean: function (s) { return s.replace(/[^0-9]/g, ''); },
+          validate: function (v) { return v >= 20000 && v <= 1000000; },
+          toSlider: function (v) { return SC.datumValToPos(v / 1000); } }
       ];
-      sliders.forEach(function (s) {
-        var el = $(s.id); if (!el) return;
-        el.addEventListener('input', function (e) {
-          s.upd();
-          if (s.src) {
-            syncFromSketchAges();
-          }
-          if (s.plan) {
-            syncPlanFromSketch();
-          }
-          if (s.taxTouch) {
-            el.dataset.touched = '1';
-            var pEl = $('eff-tax-rate'); if (pEl) pEl.value = el.value;
-          }
-          if (s.id === 's0-slider-datum') {
-            var spendEl = $('spend-input');
-            if (spendEl) spendEl.value = String(parseFloat(el.dataset.exactVal) || 0);
-          }
-          if (s.id === 's0-slider-portfolio') {
-            var pTotEl = $('bp-portfolio-total'); if (pTotEl) pTotEl.value = String(parseFloat(el.dataset.exactVal) || 0);
-          }
-          if (s.id === 's0-slider-contrib') {
-            var cTotEl = $('bp-contributions-total'); if (cTotEl) cTotEl.value = String(parseFloat(el.dataset.exactVal) || 0);
-          }
-          fireShapeUpdate();
+      DatumShape.wireCurrencyEdit(cfg, {
+        clamp: clampN,
+        onCommit: function (slider) {
+          refreshAllLabels();
+          if (slider.id === 'slider-age' || slider.id === 'slider-activation') syncFromSketchAges();
+          if (slider.id === 'sl-plan-through') syncPlanFromSketch();
+        },
+        updateEngine: fireUpdate
+      });
+    }
+
+    /* ── Slider input handlers (with F89 impulses + direction lean) ─────── */
+    var _prev = { age: NaN, ret: NaN, plan: NaN, port: NaN, cont: NaN, dat: NaN, tax: NaN };
+    function impulse(cMag, fMag, cDir, fDir, cLean, fLean) {
+      var w = wave(); if (!w) return;
+      if (cDir != null || fDir != null) w.setPhaseDir(cDir, fDir);
+      if (cLean != null || fLean != null) w.setLean(cLean, fLean);
+      if (cMag || fMag) w.addImpulse(cMag || 0, fMag || 0);
+    }
+
+    function wireSliders() {
+      // Integer sliders
+      var sAge = $('slider-age');
+      if (sAge) sAge.addEventListener('input', function () {
+        var n = parseInt(sAge.value, 10);
+        if (!isNaN(_prev.age)) {
+          if (n > _prev.age) impulse(WAVE_IMP_AGE, 0, +1, null, WAVE_LEAN_MAG, null);
+          else if (n < _prev.age) impulse(0, WAVE_IMP_AGE, null, -1, null, -WAVE_LEAN_MAG);
+        }
+        _prev.age = n;
+        updateAgeLabel(); syncFromSketchAges(); fireUpdate();
+      });
+      var sRet = $('slider-activation');
+      if (sRet) sRet.addEventListener('input', function () {
+        var n = parseInt(sRet.value, 10);
+        if (!isNaN(_prev.ret)) {
+          if (n > _prev.ret) impulse(0, WAVE_IMP_RET, null, +1, null, WAVE_LEAN_MAG);
+          else if (n < _prev.ret) impulse(WAVE_IMP_RET, 0, -1, null, -WAVE_LEAN_MAG, null);
+        }
+        _prev.ret = n;
+        updateActivationLabel(); syncFromSketchAges(); fireUpdate();
+      });
+      var sPlan = $('sl-plan-through');
+      if (sPlan) sPlan.addEventListener('input', function () {
+        var n = parseInt(sPlan.value, 10);
+        if (!isNaN(_prev.plan)) {
+          if (n > _prev.plan) impulse(0, WAVE_IMP_PLAN, null, +1, null, WAVE_LEAN_MAG);
+          else if (n < _prev.plan) impulse(WAVE_IMP_PLAN, 0, -1, null, -WAVE_LEAN_MAG, null);
+        }
+        _prev.plan = n;
+        updatePlanThroughLabel(); syncPlanFromSketch(); fireUpdate();
+      });
+      // Log sliders (set exactVal from current position before reading)
+      var sPort = $('slider-portfolio');
+      if (sPort) sPort.addEventListener('input', function () {
+        var n = parseInt(sPort.value, 10);
+        sPort.dataset.exactVal = String(Math.round(SC.portPosToVal(n) * 1e6));
+        if (!isNaN(_prev.port)) {
+          if (n > _prev.port) impulse(WAVE_IMP_PORT, 0, +1, null, WAVE_LEAN_MAG, null);
+          else if (n < _prev.port) impulse(0, WAVE_IMP_PORT, null, -1, null, -WAVE_LEAN_MAG);
+        }
+        _prev.port = n;
+        updatePortLabel(); fireUpdate();
+      });
+      var sCon = $('slider-contrib');
+      if (sCon) sCon.addEventListener('input', function () {
+        var n = parseInt(sCon.value, 10);
+        sCon.dataset.exactVal = String(SC.contribPosToVal(n));
+        if (!isNaN(_prev.cont)) {
+          if (n > _prev.cont) impulse(0, WAVE_IMP_CONT, null, +1, null, WAVE_LEAN_MAG);
+          else if (n < _prev.cont) impulse(WAVE_IMP_CONT, 0, -1, null, -WAVE_LEAN_MAG, null);
+        }
+        _prev.cont = n;
+        updateContribLabel(); fireUpdate();
+      });
+      var sDat = $('slider-datum');
+      if (sDat) sDat.addEventListener('input', function () {
+        var n = parseInt(sDat.value, 10);
+        sDat.dataset.exactVal = String(Math.round(SC.datumPosToVal(n) * 1000));
+        if (!isNaN(_prev.dat)) {
+          if (n > _prev.dat) impulse(WAVE_IMP_DATUM, 0, +1, null, WAVE_LEAN_MAG, null);
+          else if (n < _prev.dat) impulse(0, WAVE_IMP_DATUM, null, -1, null, -WAVE_LEAN_MAG);
+        }
+        _prev.dat = n;
+        updateDatumLabel(); fireUpdate();
+        var spendEl = $('spend-input'); if (spendEl) spendEl.value = sDat.dataset.exactVal;
+      });
+      var sTax = $('slider-tax');
+      if (sTax) sTax.addEventListener('input', function () {
+        var n = parseInt(sTax.value, 10);
+        // Untick tax-preset radios when the slider drags away from a preset
+        ['tax-10','tax-20','tax-30'].forEach(function (id) { var r = $(id); if (r) r.checked = false; });
+        _prev.tax = n;
+        updateTaxLabel(); syncTaxFromSketch(); fireUpdate();
+      });
+    }
+
+    function wireRadios() {
+      // Market paradigm -- F89 sweep direction matches sketch L6105-6107
+      document.querySelectorAll('input[name="market"]').forEach(function (r) {
+        r.addEventListener('change', function () {
+          var v = r.value;
+          if (v === 'stress') impulse(WAVE_IMP_MKT * 0.3, WAVE_IMP_MKT, +1, -1, WAVE_LEAN_MAG * 0.3, WAVE_LEAN_MAG);
+          else if (v === 'optimistic') impulse(WAVE_IMP_MKT, WAVE_IMP_MKT * 0.3, -1, +1, -WAVE_LEAN_MAG, WAVE_LEAN_MAG * 0.3);
+          else impulse(WAVE_IMP_MKT * 0.5, WAVE_IMP_MKT * 0.5, null, null, null, null);
+          fireUpdate();
         });
       });
-
-      // Market + inflation radios
-      document.querySelectorAll('input[name="s0-market"], input[name="s0-infl"]').forEach(function (r) {
-        r.addEventListener('change', fireShapeUpdate);
+      // Inflation toggle
+      document.querySelectorAll('input[name="inflation"]').forEach(function (r) {
+        r.addEventListener('change', fireUpdate);
       });
+      // Tax presets -- snap slider, mark preset checked, fire wave
+      [['tax-10', 10], ['tax-20', 20], ['tax-30', 30]].forEach(function (pair) {
+        var el = $(pair[0]); var pct = pair[1];
+        if (!el) return;
+        el.addEventListener('change', function () {
+          if (!el.checked) return;
+          var sT = $('slider-tax'); if (!sT) return;
+          sT.value = pct;
+          updateTaxLabel(); syncTaxFromSketch(); fireUpdate();
+        });
+      });
+    }
 
-      // Profile <- date inputs cross-bind. Use 'change' so we only re-sync once typing settles.
+    function wireProfileBindings() {
       ['pri-dob', 'target-ret', 'plan-end-age'].forEach(function (id) {
         var el = $(id); if (!el) return;
-        el.addEventListener('change', function () {
-          syncFromProfileDates();
-          fireShapeUpdate();
-        });
+        el.addEventListener('change', function () { syncFromProfileDates(); refreshAllLabels(); fireUpdate(); });
       });
-
-      // Effective tax rate cross-bind
       var taxProfEl = $('eff-tax-rate');
-      if (taxProfEl) {
-        taxProfEl.addEventListener('change', function () {
-          var v = parseFloat(String(taxProfEl.value).replace('%','')) || 22;
-          if (v > 1) {} else v = v * 100;
-          var sT = $('s0-slider-tax');
-          if (sT) {
-            sT.value = Math.max(0, Math.min(40, Math.round(v)));
-            sT.dataset.touched = ''; // profile re-took ownership
-            updateTaxLabel();
-          }
-          fireShapeUpdate();
+      if (taxProfEl) taxProfEl.addEventListener('change', function () {
+        var v = parseFloat(String(taxProfEl.value).replace('%','')) || 22;
+        if (v <= 1) v = v * 100;
+        var sT = $('slider-tax'); if (sT) { sT.value = clampN(Math.round(v), 0, 40); updateTaxLabel(); }
+        fireUpdate();
+      });
+    }
+
+    function wireDrawers() {
+      var advBtn = $('advanced-trigger-btn'), advPanel = $('advanced-panel');
+      if (advBtn && advPanel) {
+        advBtn.addEventListener('click', function () {
+          var open = advPanel.classList.toggle('open');
+          advBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+      }
+      var methBtn = $('methodology-btn'), methPanel = $('methodology-panel');
+      if (methBtn && methPanel) {
+        methBtn.addEventListener('click', function () {
+          var open = methPanel.classList.toggle('open');
+          methBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
         });
       }
     }
 
-    function init() {
-      seedFromBlueprint();         // ladder fills slider values where available
-      syncFromProfileDates();      // initial sync from Profile (default source = profile)
-      refreshAllLabels();
-      wire();
+    function wireMotionToggle() {
+      var btn = $('motion-toggle-btn');
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        var w = wave(); if (!w) return;
+        var enabled = !w.isEnabled();
+        w.setEnabled(enabled);
+        btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+        btn.textContent = 'Motion: ' + (enabled ? 'ON' : 'OFF');
+        // On disable, force a fresh repaint to clear any residual cone wave.
+        if (!enabled) fireUpdate();
+      });
     }
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', init);
-    } else {
-      init();
+    function init() {
+      // Pre-seed slider _prev caches with current values (so the first input event
+      // doesn't fire a no-op-magnitude impulse from NaN baseline).
+      _prev.age  = parseInt(($('slider-age')        || {value: 40}).value, 10);
+      _prev.ret  = parseInt(($('slider-activation') || {value: 65}).value, 10);
+      _prev.plan = parseInt(($('sl-plan-through')   || {value: 93}).value, 10);
+      _prev.port = parseInt(($('slider-portfolio')  || {value: 61185}).value, 10);
+      _prev.cont = parseInt(($('slider-contrib')    || {value: 82964}).value, 10);
+      _prev.dat  = parseInt(($('slider-datum')      || {value: 41141}).value, 10);
+      _prev.tax  = parseInt(($('slider-tax')        || {value: 20}).value, 10);
+
+      seedFromBlueprint();
+      syncFromProfileDates();
+      refreshAllLabels();
+      wireClickToType();
+      wireSliders();
+      wireRadios();
+      wireProfileBindings();
+      wireDrawers();
+      wireMotionToggle();
     }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
   })();
   </script>
 
