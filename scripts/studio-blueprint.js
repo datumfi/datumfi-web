@@ -21,7 +21,7 @@
   'use strict';
 
   var SCHEMA  = 'DatumFIBlueprintV1';
-  var VERSION = '1.0.0';
+  var VERSION = '1.0.1';
 
   var SESSION_DRAFT_KEY = 'datumfi_blueprint_draft_v1';
   var ARCHIVE_KEY       = 'datumfi_blueprint_archive_v1';
@@ -90,10 +90,10 @@
       },
       climate: { outlook: 'valuations_matter', custom_weights: null },
       tax:     { filing: 'Married Filing Jointly', location: 'FL',
-                 working_year_effective_rate: 0.22 },
+                 working_year_effective_rate: 0.20 },
       upkeep:  { items: [], charity: [], upkeep_total: 0, charity_total: 0 },
       datum: {
-        net_datum_v1:            120000,
+        net_datum_v1:            100000,
         gross_funding_need:      0,
         gross_funding_breakdown: { roth: 0, taxable: 0, traditional: 0, pension: 0, ss: 0 },
         derived_from:            'quick'
@@ -376,6 +376,14 @@
     var draft = readSessionDraft();
     if (draft && !opts.ignoreDraft) {
       Object.assign(bp, draft);
+      // v1.0.1 migration: pre-1.0.1 drafts round-tripped the old hard defaults
+      // (datum 120000 / tax 0.22) through captureDOM and re-poisoned the
+      // sliders on every load. Reset only those exact signatures once.
+      if (draft.version !== VERSION) {
+        if (bp.datum && bp.datum.net_datum_v1 === 120000) bp.datum.net_datum_v1 = 100000;
+        if (bp.tax && bp.tax.working_year_effective_rate === 0.22) bp.tax.working_year_effective_rate = 0.20;
+        bp.version = VERSION;
+      }
       return finishLoad(bp, 'session-draft');
     }
 
@@ -563,6 +571,8 @@
     slimSlotForClerk: slimSlotForClerk,
     computeGrossFunding: computeGrossFunding,
     captureDOM:       captureDOM,
+    mmYYYY:           mmYYYY,
+    retDateFromAge:   retDateFromAge,
     _internal: {
       readDossier:    readDossier,
       readSketchSlot: readSketchSlot,

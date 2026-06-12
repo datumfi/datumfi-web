@@ -124,19 +124,29 @@
     position: absolute;
     inset: 0;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
+    overflow-y: auto;
     opacity: 0;
     pointer-events: none;
     transform: perspective(900px) rotateY(-5deg) scale(0.98);
     transition: transform 0.65s cubic-bezier(0.25,1,0.5,1), opacity 0.4s ease;
   }
   .studio-layout.mode-shape #shape-panel { opacity: 1; pointer-events: auto; transform: none; }
-  #shape-panel-svg { width: 88%; max-width: 680px; height: auto; overflow: visible; }
+  /* margin-bottom:auto pairs with the HUD's margin-top:auto -- centers the
+     HUD+canvas stack when there is room, but degrades to scroll (not clip)
+     when a long OVEREXTENDED narrative grows the HUD. */
+  #shape-panel-svg { width: 88%; max-width: 680px; height: auto; overflow: visible; margin-bottom: auto; }
+  /* In-flow HUD above the canvas -- mirrors sketch .hud-dashboard (relative +
+     margin-bottom) so the Y-axis top and datum top-clamp are never covered. */
   #shape-hud {
-    position: absolute;
-    top: 14px;
-    left: 14px;
+    position: relative;
+    width: 88%;
+    max-width: 680px;
+    flex-shrink: 0;
+    margin-top: auto;
+    margin-bottom: 12px;
+    z-index: 50;
     background: rgba(9,18,33,0.85);
     border: 1px solid rgba(255,255,255,0.05);
     border-radius: 8px;
@@ -1232,27 +1242,35 @@
             <div class="field-row">
               <div>
                 <div class="input-label">Date of Birth</div>
-                <input type="text" class="small-field" id="pri-dob" data-field="current_age" value="" onfocus="this.select()" oninput="_fmtRetDate(this); _updatePlanEndAge()" onblur="_validatePriDob(this)">
+                <input type="text" class="small-field" id="pri-dob" data-field="current_age" value="" placeholder="MM/YYYY" onfocus="this.select()" oninput="_fmtRetDate(this); _updatePlanEndAge()" onblur="_validatePriDob(this)">
                 <div id="pri-dob-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
               </div>
               <div>
                 <div class="input-label">Location (Tax Base)</div>
-                <input type="text" class="small-field" value="Wesley Chapel, FL">
+                <!-- Dossier-exact US-states dropdown (Dossier.html #location, verbatim option list) -->
+                <select id="pri-location" class="small-field" style="background: var(--bg-navy); color: white; border: 1px solid rgba(255,255,255,0.1);">
+                   <option value="" selected>Select state</option><option>Alabama</option><option>Alaska</option><option>Arizona</option><option>Arkansas</option><option>California</option><option>Colorado</option><option>Connecticut</option><option>Delaware</option><option>District of Columbia</option><option>Florida</option><option>Georgia</option><option>Hawaii</option><option>Idaho</option><option>Illinois</option><option>Indiana</option><option>Iowa</option><option>Kansas</option><option>Kentucky</option><option>Louisiana</option><option>Maine</option><option>Maryland</option><option>Massachusetts</option><option>Michigan</option><option>Minnesota</option><option>Mississippi</option><option>Missouri</option><option>Montana</option><option>Nebraska</option><option>Nevada</option><option>New Hampshire</option><option>New Jersey</option><option>New Mexico</option><option>New York</option><option>North Carolina</option><option>North Dakota</option><option>Ohio</option><option>Oklahoma</option><option>Oregon</option><option>Pennsylvania</option><option>Rhode Island</option><option>South Carolina</option><option>South Dakota</option><option>Tennessee</option><option>Texas</option><option>Utah</option><option>Vermont</option><option>Virginia</option><option>Washington</option><option>West Virginia</option><option>Wisconsin</option><option>Wyoming</option>
+                </select>
               </div>
             </div>
             
             <div class="field-row">
               <div class="salary-container" style="position: relative;">
                 <div class="input-label">Gross Annual Salary</div>
-                <input type="text" class="small-field curr-format" id="pri-salary" value="$100,000" oninput="updateSalaryTT('pri'); calculateUpkeepLoad(); updateAnalysisText();">
+                <input type="text" class="small-field curr-format" id="pri-salary" value="" placeholder="$0" oninput="updateSalaryTT('pri'); calculateUpkeepLoad(); updateAnalysisText();">
                 <div class="salary-tooltip" id="pri-salary-tt"></div>
               </div>
               <div>
                 <div class="input-label">Effective Tax Rate</div>
-                <div style="display: flex; align-items: center; background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; padding: 2px 6px;">
-                   <input type="number" id="eff-tax-rate" class="small-field" value="" style="border:none; padding: 2px; width:100%;" oninput="updateAnalysisText()">
-                   <span style="color:var(--muted); font-family:var(--font-mono); font-size:9px;">%</span>
-                </div>
+                <!-- Dossier-exact dropdown (Dossier.html #taxRate, verbatim options) -->
+                <select id="eff-tax-rate" class="small-field" style="background: var(--bg-navy); color: white; border: 1px solid rgba(255,255,255,0.1);" onchange="updateAnalysisText()">
+                   <option value="12%">12% bracket</option>
+                   <option value="22%" selected>22% blended estimate</option>
+                   <option value="24%">24% bracket</option>
+                   <option value="32%">32% bracket</option>
+                   <option value="35%">35% bracket</option>
+                   <option value="37%">37% bracket</option>
+                </select>
               </div>
             </div>
             <div class="field-row" style="grid-template-columns: 1fr;">
@@ -1270,7 +1288,7 @@
             <div class="field-row" style="margin-top: 15px;">
               <div>
                 <div class="input-label">Target Retirement Date</div>
-                <input type="text" class="small-field" id="target-ret" data-field="retirement_age" value="" onfocus="this.select()" oninput="_fmtRetDate(this); updateSVGs(); _updatePlanEndAge()" onblur="_validateRetDate(this)">
+                <input type="text" class="small-field" id="target-ret" data-field="retirement_age" value="" placeholder="MM/YYYY" onfocus="this.select()" oninput="_fmtRetDate(this); updateSVGs(); _updatePlanEndAge()" onblur="_validateRetDate(this)">
                 <div id="ret-date-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;">Retirement age exceeds 100 — plan capped at age 120.</div>
               </div>
               <div>
@@ -1396,7 +1414,7 @@
         <div id="sec-datum" class="section-content" style="display: block;">
           <div class="datum-group">
             <div class="input-label">Target Annual Spend</div>
-            <input type="text" class="datum-input curr-format" id="spend-input" data-field="datum_spend" value="$120,000" onfocus="this.select()" oninput="updateSVGs()">
+            <input type="text" class="datum-input curr-format" id="spend-input" data-field="datum_spend" value="$100,000" onfocus="this.select()" oninput="updateSVGs()">
             <div class="metaphor-hint">The benchmark elevation for your financial future.</div>
           </div>
         </div>
@@ -4050,7 +4068,17 @@
         if (_dobError) { window._buildRequestError = _dobError; window._buildRequestErrorField = 'Date of Birth'; return null; }
         if (_retError) { window._buildRequestError = _retError; window._buildRequestErrorField = 'Target Retirement Date'; return null; }
 
-        const datumSpend  = parseInt(spendVal.replace(/[^\d]/g, ''), 10) || 120000;
+        // Read the SAME slider-datum/exactVal source as _scenarioFromInputs so the
+        // engine request, HUD, and canvas always agree (spend-input is a mirror only).
+        const datumSpend = (() => {
+          const sDat = document.getElementById('slider-datum');
+          if (sDat) {
+            const ex = sDat.dataset.exactVal;
+            if (ex !== undefined && ex !== '') return Math.round(parseFloat(ex)) || 100000;
+            if (window.DatumShape && DatumShape.scales) return Math.round(DatumShape.scales.datumPosToVal(parseInt(sDat.value, 10)) * 1000);
+          }
+          return parseInt(spendVal.replace(/[^\d]/g, ''), 10) || 100000;
+        })();
         const planEndAge  = Math.min(120, Math.max(_planEndAgeMin, parseInt((document.getElementById('plan-end-age')?.value) || '', 10) || 93));
 
         const activeClimate = document.querySelector('.climate-option.active');
@@ -4807,8 +4835,14 @@
       if (sP && pEl) pEl.value = sP.value;
     }
     function syncTaxFromSketch() {
+      // eff-tax-rate is the Dossier-exact preset select; only mirror the slider
+      // when it lands exactly on a preset, otherwise leave the select untouched
+      // (assigning a non-option value would blank a <select>).
       var sT = $('slider-tax'), pEl = $('eff-tax-rate');
-      if (sT && pEl) pEl.value = sT.value;
+      if (!sT || !pEl) return;
+      var v = sT.value + '%';
+      var hasOpt = Array.prototype.some.call(pEl.options || [], function (o) { return o.value === v; });
+      if (hasOpt) pEl.value = v;
     }
 
     /* ── Prefill ladder: DatumBlueprint.load() -> Dossier -> defaults ─────── */
@@ -4893,6 +4927,52 @@
       if (_port > 0) { var _sPo = $('slider-portfolio'); if (_sPo) { _sPo.value = SC.portValToPos(_port / 1e6); _sPo.dataset.exactVal = String(Math.round(_port)); } }
       var _contrib = parseFloat(p.accounts && p.accounts.annualContributions);
       if (_contrib > 0) { var _sCo = $('slider-contrib'); if (_sCo) { _sCo.value = SC.contribValToPos(Math.round(_contrib)); _sCo.dataset.exactVal = String(Math.round(_contrib)); } }
+    }
+
+    /* ── 04/ Datum mirror: keep spend-input in agreement with slider-datum ── */
+    function syncSpendFromDatumSlider() {
+      var spendEl = $('spend-input'), sDat = $('slider-datum');
+      if (!spendEl || !sDat) return;
+      var ex = sDat.dataset.exactVal, n = 0;
+      if (ex !== undefined && ex !== '') n = Math.round(parseFloat(ex));
+      // pos->val carries log-scale noise ($100,001); snap to $1k -- typed exactVal stays exact
+      else if (SC) n = Math.round(SC.datumPosToVal(parseInt(sDat.value, 10))) * 1000;
+      if (n > 0) spendEl.value = '$' + n.toLocaleString('en-US');
+    }
+
+    /* ── Dossier -> 01/ Architect Profile prefill ───────────────────────────
+       Fills the Profile fields from the saved Account Dossier payload when
+       present; otherwise the greyed placeholders (MM/YYYY, $0) stay visible.
+       Date conversion reuses DatumBlueprint.mmYYYY / retDateFromAge. */
+    function applyDossierProfile(p) {
+      if (!p) return;
+      var pri = p.primary || {}, def = p.defaults || {}, ho = p.household || {};
+      var BP = window.DatumBlueprint || {};
+      var dobEl = $('pri-dob');
+      var dobStr = (typeof BP.mmYYYY === 'function') ? BP.mmYYYY(pri.dateOfBirth) : '';
+      if (dobEl && dobStr && !dobEl.value) dobEl.value = dobStr;
+      var retEl = $('target-ret');
+      var rAge = pri.targetRetirementAge || def.targetRetirementAge;
+      if (retEl && !retEl.value && dobStr && rAge && typeof BP.retDateFromAge === 'function') {
+        var retStr = BP.retDateFromAge(dobStr, rAge);
+        if (retStr) retEl.value = retStr;
+      }
+      var salEl = $('pri-salary');
+      var gross = parseFloat(pri.grossIncome);
+      if (salEl && !salEl.value && gross > 0) salEl.value = '$' + Math.round(gross).toLocaleString('en-US');
+      var taxEl = $('eff-tax-rate');
+      var rate = parseFloat(def.effectiveTaxRate);
+      if (taxEl && rate > 0 && rate < 1) {
+        var rv = Math.round(rate * 100) + '%';
+        var hasOpt = Array.prototype.some.call(taxEl.options || [], function (o) { return o.value === rv; });
+        if (hasOpt) taxEl.value = rv;
+      }
+      var locEl = $('pri-location');
+      var loc = String(ho.location || '').trim();
+      if (locEl && loc) {
+        var hasState = Array.prototype.some.call(locEl.options || [], function (o) { return o.value === loc; });
+        if (hasState) locEl.value = loc;
+      }
     }
 
     /* ── Click-to-type currency edit via DatumShape.wireCurrencyEdit ─────── */
@@ -5032,6 +5112,22 @@
       });
     }
 
+    // Shared sweep rect animator -- sketch L3193-3205 verbatim. One-shot on
+    // radio click (not the idle pulse), so .motion-off must NOT suppress it.
+    function triggerSweepRect(rectId, type) {
+      var el = document.getElementById(rectId);
+      if (!el) return;
+      el.classList.remove('sweep-active-stress', 'sweep-active-opt');
+      void el.offsetWidth;
+      if (type === 'stress') {
+        el.setAttribute('fill', '#e24b4a');
+        el.classList.add('sweep-active-stress');
+      } else if (type === 'optimistic') {
+        el.setAttribute('fill', '#C9A84C');
+        el.classList.add('sweep-active-opt');
+      }
+    }
+
     function wireRadios() {
       // Market paradigm -- F89 sweep direction matches sketch L6105-6107
       document.querySelectorAll('input[name="market"]').forEach(function (r) {
@@ -5041,6 +5137,9 @@
           else if (v === 'optimistic') impulse(WAVE_IMP_MKT, WAVE_IMP_MKT * 0.3, -1, +1, -WAVE_LEAN_MAG, WAVE_LEAN_MAG * 0.3);
           else impulse(WAVE_IMP_MKT * 0.5, WAVE_IMP_MKT * 0.5, null, null, null, null);
           fireUpdate();
+          // Market sweep -- gold on optimistic, red on stress, none on average
+          // (Historical never had a sweep in the sketch; do not invent one).
+          triggerSweepRect('market-sweep', v);
         });
       });
       // Inflation toggle
@@ -5143,6 +5242,9 @@
                   if (!_cd || typeof _cd !== 'object') return;
                   try { localStorage.setItem('datumfi.accountDossier.v15', JSON.stringify(_cd)); } catch(e2) {}
                   applyDossierSliders(_cd);
+                  applyDossierProfile(_cd);
+                  syncSpendFromDatumSlider();
+                  syncFromProfileDates();
                   refreshAllLabels(); fireUpdate();
                 } catch(e) {}
               }).catch(function () {});
@@ -5150,6 +5252,14 @@
           });
         }
       }
+      // Dossier -> Architect Profile prefill runs regardless of which rung of
+      // the slider ladder applied (Blueprint draft vs v15 vs Clerk-deferred).
+      try {
+        var _profRaw = localStorage.getItem('datumfi.accountDossier.v15');
+        if (_profRaw) applyDossierProfile(JSON.parse(_profRaw));
+      } catch(e) {}
+      // 04/ Datum mirror field agrees with slider-datum from the first paint.
+      syncSpendFromDatumSlider();
       syncFromProfileDates();
       refreshAllLabels();
       wireClickToType();
@@ -6935,6 +7045,23 @@
       function fmt(n) { return n > 0 ? '$' + Math.round(n).toLocaleString('en-US') : ''; }
       if (portEl && bp.portfolio_total > 0 && !portEl.value)     portEl.value = fmt(bp.portfolio_total);
       if (contEl && bp.contributions_total > 0 && !contEl.value) contEl.value = fmt(bp.contributions_total);
+      // When neither Dossier nor Blueprint filled them, mirror the 00/ Sketch
+      // sliders so the Drafting header always agrees with the Shape inputs.
+      var SCb = window.DatumShape && DatumShape.scales;
+      var sP = document.getElementById('slider-portfolio');
+      if (portEl && !portEl.value && sP) {
+        // At load exactVal can only be the position-derived cache, which carries
+        // log-scale noise ($750,006) -- snap the mirrored value to $1k.
+        var pv = (sP.dataset.exactVal !== undefined && sP.dataset.exactVal !== '') ? parseFloat(sP.dataset.exactVal)
+               : (SCb ? SCb.portPosToVal(parseInt(sP.value, 10)) * 1e6 : 0);
+        if (pv > 0) portEl.value = fmt(Math.round(pv / 1000) * 1000);
+      }
+      var sCn = document.getElementById('slider-contrib');
+      if (contEl && !contEl.value && sCn) {
+        var cv = (sCn.dataset.exactVal !== undefined && sCn.dataset.exactVal !== '') ? parseFloat(sCn.dataset.exactVal)
+               : (SCb ? SCb.contribPosToVal(parseInt(sCn.value, 10)) : 0);
+        if (cv > 0) contEl.value = fmt(cv);
+      }
       window.DatumBlueprint.bind({ blueprint: bp });
       window._studioBlueprint = bp;
       if (typeof updateShapePanel === 'function') updateShapePanel();
