@@ -318,6 +318,23 @@
   #shape-panel-svg .datum-group { cursor: ns-resize; }
   #shape-panel-svg .datum-group:active { cursor: grabbing; }
   #shape-panel-svg .datum-group:hover .b-datum { stroke-width: 5; filter: drop-shadow(0 0 8px rgba(93,202,165,0.8)); }
+  #shape-panel-svg .datum-group.datum-dragging .b-datum { stroke-width: 5; filter: drop-shadow(0 0 10px rgba(93,202,165,1)); }
+
+  /* Drafting echo (art) layer -- verbatim sketch L352-355 + draftingFade keyframes.
+     fill:none is CRITICAL: these are OPEN curves, and without it SVG auto-closes
+     them with a straight chord and fills the lens solid BLACK (the wedge bug).
+     Keyed on mode-shape so the gold/red/teal flare replays on every entry. */
+  #shape-panel-svg .art-path { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-width: 4px; opacity: 0.28; filter: none; }
+  .studio-layout.mode-shape #art-floor { stroke: var(--danger-red); mask: url(#mask-floor); animation: draftingFade 0.8s ease 0.3s forwards; }
+  .studio-layout.mode-shape #art-ceil  { stroke: var(--gold);       mask: url(#mask-ceil);  animation: draftingFade 0.8s ease 0.8s forwards; }
+  .studio-layout.mode-shape #art-datum { stroke: var(--teal-mid);   mask: url(#mask-datum); animation: draftingFade 0.8s ease 1.3s forwards; }
+  @keyframes draftingFade { 0% { stroke-width: 5px; opacity: 0.30; } 65% { stroke-width: 3px; opacity: 0.18; } 100% { stroke-width: 2px; opacity: 0; } }
+
+  /* Motion OFF = the shape goes FULLY still: the JS handler disables the F89
+     wave, and this class freezes the infinite gradient state-pulse + drafting
+     echo, which are what users actually see as persistent motion. */
+  #shape-panel-svg.motion-off stop { animation: none !important; }
+  #shape-panel-svg.motion-off .art-path { animation: none !important; opacity: 0; }
 
   /* Boundary line reveal (draw-triggered on SVG or mode-shape on layout — belt+suspenders) */
   @keyframes studioDrawLine { to { stroke-dashoffset: 0; } }
@@ -5083,6 +5100,10 @@
         w.setEnabled(enabled);
         btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
         btn.textContent = 'Motion: ' + (enabled ? 'ON' : 'OFF');
+        // Freeze/unfreeze the gradient state-pulse + drafting echo too --
+        // Motion OFF must still the WHOLE shape, not just the F89 wave.
+        var svgEl = document.getElementById('shape-panel-svg');
+        if (svgEl) svgEl.classList.toggle('motion-off', !enabled);
         // On disable, force a fresh repaint to clear any residual cone wave.
         if (!enabled) fireUpdate();
       });
