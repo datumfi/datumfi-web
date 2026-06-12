@@ -85,6 +85,7 @@
     opacity: 0;
     pointer-events: none;
   }
+  .studio-layout.mode-shape #bp-svg { pointer-events: none; }
   .studio-layout.mode-shape .hud-overview,
   .studio-layout.mode-shape .hud-analysis,
   .studio-layout.mode-shape .lens-controls {
@@ -299,8 +300,8 @@
   #shape-panel-svg .b-ceiling { stroke: var(--gold); mask: url(#mask-ceil); }
   #shape-panel-svg .b-floor   { stroke: var(--danger-red); mask: url(#mask-floor); }
   #shape-panel-svg .b-datum   { stroke-width: 3; mask: url(#mask-datum); filter: drop-shadow(0 0 6px rgba(93, 202, 165, 0.6)); stroke: var(--teal-mid); }
-  #shape-panel-svg .cone-fill { fill: url(#thermal-grad); opacity: 0; }
-  #shape-panel-svg .range-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0; }
+  #shape-panel-svg .cone-fill { fill: url(#thermal-grad); opacity: 0; transition: opacity 0.7s ease 0.5s; }
+  #shape-panel-svg .range-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0; transition: opacity 0.6s ease 0.45s; }
   /* F88 liquid-fill */
   #shape-panel-svg .f88-mass { opacity: 0; pointer-events: none; transition: opacity 0.55s ease, d 0.36s cubic-bezier(0.2,0.8,0.2,1); }
   #shape-panel-svg .f88-mass.active { opacity: 1; }
@@ -326,11 +327,11 @@
   /* jumpToFull end-state CSS (ports sketch L470 + L411-427 scoped to #shape-panel-svg) */
   @keyframes studioFadeIn { to { opacity: 1; } }
   #shape-panel-svg.f88-complete .f88-mass { opacity: 0 !important; transition: opacity 0.4s ease !important; }
-  #shape-panel-svg.draw-triggered .cone-fill { animation: studioFadeIn 0.7s ease 0.5s forwards; }
-  #shape-panel-svg.shape-armed.draw-triggered .range-label { animation: studioFadeIn 0.6s ease 0.45s forwards; }
-  #shape-panel-svg.shape-armed.draw-triggered .boundary-group circle { animation: studioFadeIn 0.6s ease 0.45s forwards; }
-  #shape-panel-svg #datum-dragger circle { opacity: 0; }
-  #shape-panel-svg.draw-triggered #datum-dragger circle { animation: studioFadeIn 0.5s ease 0.3s forwards; }
+  #shape-panel-svg.draw-triggered .cone-fill { opacity: 1; }
+  #shape-panel-svg.shape-armed.draw-triggered .range-label { opacity: 1; }
+  #shape-panel-svg.shape-armed.draw-triggered .boundary-group circle { opacity: 1; }
+  #shape-panel-svg #datum-dragger circle { opacity: 0; transition: opacity 0.5s ease 0.3s; }
+  #shape-panel-svg.draw-triggered #datum-dragger circle { opacity: 1; }
   #shape-panel-svg.shape-armed.draw-triggered #node-datum,
   #shape-panel-svg.shape-armed.draw-triggered #datum-circle { opacity: 1; }
   /* Scrubber: pointer-events always none (JS sets opacity via inline style on hover) */
@@ -4656,16 +4657,11 @@
       'f88-solid-ceil','f88-solid-floor','shape-armed'];
 
     function _applyJumpToFull(svg) {
-      // Port of sketch jumpToFull() — returning-user end-state, element reference changed only
       svg.classList.add.apply(svg.classList, _JTF_CLASSES);
-      var rr = document.getElementById('top-reveal-rect');
-      if (rr) rr.style.width = '840px';
       var mt = document.getElementById('mass-top');
       var mb = document.getElementById('mass-bottom');
       if (mt) mt.classList.add('active');
       if (mb) mb.classList.add('active');
-      var hd = document.getElementById('hud-dash');
-      if (hd) hd.classList.remove('f88-hud-hidden');
     }
 
     function _removeJumpToFull(svg) {
