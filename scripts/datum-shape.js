@@ -1,5 +1,5 @@
 /* datum-shape.js -- Datum FI S1 shape: shared engine + renderer + scales + state copy
- * v1.1.0
+ * v1.2.0
  *
  * ONE source of truth for the S1 cone math, interactive renderer, log-scale
  * sliders, click-to-type currency edits, F88 liquid-fill, F89 vertex wave, and
@@ -37,11 +37,21 @@
  * vertex-wave loop reads them, and the renderer's wave loop uses them too).
  *
  * Renderer operates ONLY on the passed svgRoot via root-scoped querySelector.
+ *
+ * v1.2.0: opts.autoReveal (default false). When true, the FIRST update() also
+ * applies the reopen end-state reveal -- the same classes sketch.html's
+ * _f88JumpToFull adds (draw-triggered, f88-complete, f88-started, the
+ * f88-draw and f88-solid set) plus shape-armed, mass .active, and a full-width
+ * top-reveal-rect -- so paint and reveal are ONE synchronous unit owned by the
+ * module. Applied once per reveal cycle; handle.resetReveal() re-arms it (host
+ * calls this on mode-exit so re-entry replays the staggered line drop), and
+ * handle.reveal() force-applies it. sketch.html never passes autoReveal, so its
+ * staged discovery sequencer keeps sole ownership of these classes there.
  */
 (function (global) {
   'use strict';
 
-  var VERSION = '1.1.0';
+  var VERSION = '1.2.0';
 
   var WR_CEIL  = 0.050;
   var WR_FLOOR = 0.028;
@@ -679,6 +689,7 @@
     var enableNarrativeHud     = opts.enableNarrativeHud     === true;
     var enableF88              = opts.enableF88              === true;
     var enableF89Wave          = opts.enableF89Wave          === true;
+    var autoReveal             = opts.autoReveal             === true;
 
     var stateHost = opts.stateHost || svgRoot;
     var canDrag = typeof opts.canDrag === 'function' ? opts.canDrag : function () { return true; };
@@ -709,6 +720,24 @@
       listeners.push({ target: target, ev: ev, fn: fn });
     }
 
+    /* Reopen end-state reveal -- mirrors sketch.html jumpToFull() (L5495). Class
+     * list is sketch-verbatim plus shape-armed (Studio label gate). f88-complete
+     * keeps the .active masses hidden -- same end-state as a reopened sketch. */
+    var revealed = false;
+    function applyReveal() {
+      if (!svgRoot || !svgRoot.classList) return;
+      svgRoot.classList.add('draw-triggered','f88-complete','f88-started',
+        'f88-draw-ceil','f88-draw-floor','f88-draw-datum',
+        'f88-solid-ceil','f88-solid-floor','shape-armed');
+      var rr = svgRoot.querySelector('#top-reveal-rect');
+      if (rr) rr.style.width = '840px';
+      var mt = svgRoot.querySelector('#mass-top');
+      var mb = svgRoot.querySelector('#mass-bottom');
+      if (mt) mt.classList.add('active');
+      if (mb) mb.classList.add('active');
+      revealed = true;
+    }
+
     function update(scenario) {
       if (scenario) currentScenario = scenario;
       if (!currentScenario) return null;
@@ -732,6 +761,11 @@
 
       if (f88)  f88.update(b.ceilPts, b.floorPts, b.xStart);
       if (wave) wave.setCache(b.ceilPts, b.floorPts, b.xStart);
+
+      // Paint + reveal as one synchronous unit (once per reveal cycle; guarded
+      // so per-frame updates don't re-add mass .active and retrigger its
+      // opacity transition mid-interaction).
+      if (autoReveal && !revealed) applyReveal();
 
       var spY    = b.spY;
       var ptsEnd = b.ptsEnd;
@@ -925,11 +959,14 @@
       buildPath: buildPath,
       wave: wave,
       f88:  f88,
+      reveal: applyReveal,
+      resetReveal: function () { revealed = false; },
       teardown: function () {
         for (var i = 0; i < listeners.length; i++) {
           listeners[i].target.removeEventListener(listeners[i].ev, listeners[i].fn);
         }
         listeners = [];
+        revealed = false;
       }
     };
   }
