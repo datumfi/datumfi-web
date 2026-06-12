@@ -299,8 +299,8 @@
   #shape-panel-svg .b-ceiling { stroke: var(--gold); mask: url(#mask-ceil); }
   #shape-panel-svg .b-floor   { stroke: var(--danger-red); mask: url(#mask-floor); }
   #shape-panel-svg .b-datum   { stroke-width: 3; mask: url(#mask-datum); filter: drop-shadow(0 0 6px rgba(93, 202, 165, 0.6)); stroke: var(--teal-mid); }
-  #shape-panel-svg .cone-fill { fill: url(#thermal-grad); opacity: 1; }
-  #shape-panel-svg .range-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; opacity: 1; }
+  #shape-panel-svg .cone-fill { fill: url(#thermal-grad); opacity: 0; }
+  #shape-panel-svg .range-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0; }
   /* F88 liquid-fill */
   #shape-panel-svg .f88-mass { opacity: 0; pointer-events: none; transition: opacity 0.55s ease, d 0.36s cubic-bezier(0.2,0.8,0.2,1); }
   #shape-panel-svg .f88-mass.active { opacity: 1; }
@@ -314,11 +314,27 @@
   #shape-panel-svg .datum-group:active { cursor: grabbing; }
   #shape-panel-svg .datum-group:hover .b-datum { stroke-width: 5; filter: drop-shadow(0 0 8px rgba(93,202,165,0.8)); }
 
-  /* Reveal masked boundary paths when Shape Mode is active */
+  /* Boundary line reveal (draw-triggered on SVG or mode-shape on layout — belt+suspenders) */
   @keyframes studioDrawLine { to { stroke-dashoffset: 0; } }
   .studio-layout.mode-shape #m-floor { animation: studioDrawLine 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.0s  forwards; }
   .studio-layout.mode-shape #m-ceil  { animation: studioDrawLine 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.18s forwards; }
   .studio-layout.mode-shape #m-datum { animation: studioDrawLine 1.0s cubic-bezier(0.2, 0.8, 0.2, 1) 0.36s forwards; }
+  #shape-panel-svg.draw-triggered #m-floor { animation: studioDrawLine 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.0s  forwards; }
+  #shape-panel-svg.draw-triggered #m-ceil  { animation: studioDrawLine 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.18s forwards; }
+  #shape-panel-svg.draw-triggered #m-datum { animation: studioDrawLine 1.0s cubic-bezier(0.2, 0.8, 0.2, 1) 0.36s forwards; }
+
+  /* jumpToFull end-state CSS (ports sketch L470 + L411-427 scoped to #shape-panel-svg) */
+  @keyframes studioFadeIn { to { opacity: 1; } }
+  #shape-panel-svg.f88-complete .f88-mass { opacity: 0 !important; transition: opacity 0.4s ease !important; }
+  #shape-panel-svg.draw-triggered .cone-fill { animation: studioFadeIn 0.7s ease 0.5s forwards; }
+  #shape-panel-svg.shape-armed.draw-triggered .range-label { animation: studioFadeIn 0.6s ease 0.45s forwards; }
+  #shape-panel-svg.shape-armed.draw-triggered .boundary-group circle { animation: studioFadeIn 0.6s ease 0.45s forwards; }
+  #shape-panel-svg #datum-dragger circle { opacity: 0; }
+  #shape-panel-svg.draw-triggered #datum-dragger circle { animation: studioFadeIn 0.5s ease 0.3s forwards; }
+  #shape-panel-svg.shape-armed.draw-triggered #node-datum,
+  #shape-panel-svg.shape-armed.draw-triggered #datum-circle { opacity: 1; }
+  /* Scrubber: pointer-events always none (JS sets opacity via inline style on hover) */
+  #shape-panel-svg #scrubber-group { pointer-events: none; opacity: 0; transition: opacity 0.2s; }
 
   /* --- STUDIO LAYOUT --- */
   .studio-layout { display: flex; flex: 1; width: 100%; margin: 0 auto; }
@@ -1730,8 +1746,8 @@
 
           <g id="clean-layer">
             <!-- F88 staged construction fills (liquid-fill -- handle.f88.update from module) -->
-            <path id="mass-top"    class="f88-mass f88-mass-top    active" d="" clip-path="url(#top-reveal)"/>
-            <path id="mass-bottom" class="f88-mass f88-mass-bottom active" d="" clip-path="url(#top-reveal)"/>
+            <path id="mass-top"    class="f88-mass f88-mass-top"    d="" clip-path="url(#top-reveal)"/>
+            <path id="mass-bottom" class="f88-mass f88-mass-bottom" d="" clip-path="url(#top-reveal)"/>
 
             <path id="cone-area" class="cone-fill morph" d="" />
 
@@ -1766,7 +1782,7 @@
             </g>
           </g>
 
-          <g id="scrubber-group" style="opacity: 0; pointer-events: none; transition: opacity 0.2s;">
+          <g id="scrubber-group">
             <line id="scrubber-line" x1="650" y1="50" x2="650" y2="460" stroke="#ffffff" stroke-opacity="0.4" stroke-width="1" stroke-dasharray="4 4" />
             <g id="tt-g-ceil" transform="translate(650, 100)">
               <rect x="15" y="-14" width="280" height="36" fill="#091221" fill-opacity="0.95" stroke="var(--gold)" rx="4" />
@@ -4635,6 +4651,31 @@
       if (_datumShapeHandle) _datumShapeHandle.update(_scenarioFromInputs());
     };
 
+    var _JTF_CLASSES = ['draw-triggered','f88-complete','f88-started',
+      'f88-draw-ceil','f88-draw-floor','f88-draw-datum',
+      'f88-solid-ceil','f88-solid-floor','shape-armed'];
+
+    function _applyJumpToFull(svg) {
+      // Port of sketch jumpToFull() — returning-user end-state, element reference changed only
+      svg.classList.add.apply(svg.classList, _JTF_CLASSES);
+      var rr = document.getElementById('top-reveal-rect');
+      if (rr) rr.style.width = '840px';
+      var mt = document.getElementById('mass-top');
+      var mb = document.getElementById('mass-bottom');
+      if (mt) mt.classList.add('active');
+      if (mb) mb.classList.add('active');
+      var hd = document.getElementById('hud-dash');
+      if (hd) hd.classList.remove('f88-hud-hidden');
+    }
+
+    function _removeJumpToFull(svg) {
+      _JTF_CLASSES.forEach(function (c) { svg.classList.remove(c); });
+      var mt = document.getElementById('mass-top');
+      var mb = document.getElementById('mass-bottom');
+      if (mt) mt.classList.remove('active');
+      if (mb) mb.classList.remove('active');
+    }
+
     window.toggleShapeMode = function () {
       var layout = document.getElementById('studio-layout');
       var btn    = document.getElementById('shape-mode-toggle');
@@ -4642,11 +4683,17 @@
       if (layout.classList.contains('mode-shape')) {
         layout.classList.remove('mode-shape');
         if (btn) btn.textContent = 'Shape Mode';
+        var svg = document.getElementById('shape-panel-svg');
+        if (svg) _removeJumpToFull(svg);
       } else {
         layout.classList.add('mode-shape');
         if (btn) btn.textContent = 'Estate Mode';
         window.updateShapePanel();
-        requestAnimationFrame(function () { window.updateShapePanel(); });
+        requestAnimationFrame(function () {
+          window.updateShapePanel();
+          var svg = document.getElementById('shape-panel-svg');
+          if (svg) _applyJumpToFull(svg);
+        });
       }
     };
 
