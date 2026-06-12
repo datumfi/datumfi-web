@@ -94,7 +94,7 @@
     transition: opacity 0.3s ease;
   }
   .canvas-wrapper { transition: background-size 0.7s ease; }
-  .studio-layout.mode-shape .canvas-wrapper { background-size: 80px 80px; cursor: default; }
+  .studio-layout.mode-shape .canvas-wrapper { background-size: 80px 80px; cursor: grab; }
 
   /* shape mode toggle button */
   #shape-mode-toggle {
@@ -126,25 +126,34 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    overflow-y: auto;
+    padding-top: 14px;
+    overflow: hidden;
     opacity: 0;
     pointer-events: none;
     transform: perspective(900px) rotateY(-5deg) scale(0.98);
     transition: transform 0.65s cubic-bezier(0.25,1,0.5,1), opacity 0.4s ease;
   }
   .studio-layout.mode-shape #shape-panel { opacity: 1; pointer-events: auto; transform: none; }
-  /* margin-bottom:auto pairs with the HUD's margin-top:auto -- centers the
-     HUD+canvas stack when there is room, but degrades to scroll (not clip)
-     when a long OVEREXTENDED narrative grows the HUD. */
-  #shape-panel-svg { width: 88%; max-width: 680px; height: auto; overflow: visible; margin-bottom: auto; }
-  /* In-flow HUD above the canvas -- mirrors sketch .hud-dashboard (relative +
-     margin-bottom) so the Y-axis top and datum top-clamp are never covered. */
+  /* Pan/zoom target: HUD + SVG move and scale as one unit. Top-anchored so a
+     growing HUD pushes the shape down within the wrap, never off-screen
+     (fitShapeToScreen rescales on entry / resize / HUD growth). */
+  #shape-zoom-wrap {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform-origin: top center;
+    will-change: transform;
+  }
+  #shape-panel-svg { width: 88%; max-width: 900px; height: auto; overflow: visible; }
+  /* In-flow HUD above the canvas at FULL panel width -- mirrors sketch
+     .hud-dashboard (width:100%, sketch L187) so the telemetry card lays out
+     as the compact ~210px horizontal bar instead of wrapping into a tall
+     680px block that pushes the shape off the bottom. */
   #shape-hud {
     position: relative;
-    width: 88%;
-    max-width: 680px;
+    width: calc(100% - 28px);
     flex-shrink: 0;
-    margin-top: auto;
     margin-bottom: 12px;
     z-index: 50;
     background: rgba(9,18,33,0.85);
@@ -1242,13 +1251,13 @@
             <div class="field-row">
               <div>
                 <div class="input-label">Date of Birth</div>
-                <input type="text" class="small-field" id="pri-dob" data-field="current_age" value="" placeholder="MM/YYYY" onfocus="this.select()" oninput="_fmtRetDate(this); _updatePlanEndAge()" onblur="_validatePriDob(this)">
+                <input type="text" class="small-field" id="pri-dob" data-field="current_age" value="" placeholder="MM/YYYY" tabindex="11" onfocus="this.select()" oninput="_fmtRetDate(this); _updatePlanEndAge()" onblur="_validatePriDob(this)">
                 <div id="pri-dob-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
               </div>
               <div>
                 <div class="input-label">Location (Tax Base)</div>
                 <!-- Dossier-exact US-states dropdown (Dossier.html #location, verbatim option list) -->
-                <select id="pri-location" class="small-field" style="background: var(--bg-navy); color: white; border: 1px solid rgba(255,255,255,0.1);">
+                <select id="pri-location" class="small-field" tabindex="12" style="background: var(--bg-navy); color: white; border: 1px solid rgba(255,255,255,0.1);">
                    <option value="" selected>Select state</option><option>Alabama</option><option>Alaska</option><option>Arizona</option><option>Arkansas</option><option>California</option><option>Colorado</option><option>Connecticut</option><option>Delaware</option><option>District of Columbia</option><option>Florida</option><option>Georgia</option><option>Hawaii</option><option>Idaho</option><option>Illinois</option><option>Indiana</option><option>Iowa</option><option>Kansas</option><option>Kentucky</option><option>Louisiana</option><option>Maine</option><option>Maryland</option><option>Massachusetts</option><option>Michigan</option><option>Minnesota</option><option>Mississippi</option><option>Missouri</option><option>Montana</option><option>Nebraska</option><option>Nevada</option><option>New Hampshire</option><option>New Jersey</option><option>New Mexico</option><option>New York</option><option>North Carolina</option><option>North Dakota</option><option>Ohio</option><option>Oklahoma</option><option>Oregon</option><option>Pennsylvania</option><option>Rhode Island</option><option>South Carolina</option><option>South Dakota</option><option>Tennessee</option><option>Texas</option><option>Utah</option><option>Vermont</option><option>Virginia</option><option>Washington</option><option>West Virginia</option><option>Wisconsin</option><option>Wyoming</option>
                 </select>
               </div>
@@ -1257,13 +1266,13 @@
             <div class="field-row">
               <div class="salary-container" style="position: relative;">
                 <div class="input-label">Gross Annual Salary</div>
-                <input type="text" class="small-field curr-format" id="pri-salary" value="" placeholder="$0" oninput="updateSalaryTT('pri'); calculateUpkeepLoad(); updateAnalysisText();">
+                <input type="text" class="small-field curr-format" id="pri-salary" value="" placeholder="$0" tabindex="13" oninput="updateSalaryTT('pri'); calculateUpkeepLoad(); updateAnalysisText();">
                 <div class="salary-tooltip" id="pri-salary-tt"></div>
               </div>
               <div>
                 <div class="input-label">Effective Tax Rate</div>
                 <!-- Dossier-exact dropdown (Dossier.html #taxRate, verbatim options) -->
-                <select id="eff-tax-rate" class="small-field" style="background: var(--bg-navy); color: white; border: 1px solid rgba(255,255,255,0.1);" onchange="updateAnalysisText()">
+                <select id="eff-tax-rate" class="small-field" tabindex="14" style="background: var(--bg-navy); color: white; border: 1px solid rgba(255,255,255,0.1);" onchange="updateAnalysisText()">
                    <option value="12%">12% bracket</option>
                    <option value="22%" selected>22% blended estimate</option>
                    <option value="24%">24% bracket</option>
@@ -1276,7 +1285,7 @@
             <div class="field-row" style="grid-template-columns: 1fr;">
               <div>
                 <div class="input-label">Filing Status</div>
-                <select class="small-field" style="background: var(--bg-navy); color: white; border: 1px solid rgba(255,255,255,0.1);">
+                <select id="filing-status" class="small-field" tabindex="15" style="background: var(--bg-navy); color: white; border: 1px solid rgba(255,255,255,0.1);">
                    <option>Single / Individual</option>
                    <option selected>Married Filing Jointly</option>
                    <option>Married Filing Separately</option>
@@ -1288,12 +1297,12 @@
             <div class="field-row" style="margin-top: 15px;">
               <div>
                 <div class="input-label">Target Retirement Date</div>
-                <input type="text" class="small-field" id="target-ret" data-field="retirement_age" value="" placeholder="MM/YYYY" onfocus="this.select()" oninput="_fmtRetDate(this); updateSVGs(); _updatePlanEndAge()" onblur="_validateRetDate(this)">
+                <input type="text" class="small-field" id="target-ret" data-field="retirement_age" value="" placeholder="MM/YYYY" tabindex="16" onfocus="this.select()" oninput="_fmtRetDate(this); updateSVGs(); _updatePlanEndAge()" onblur="_validateRetDate(this)">
                 <div id="ret-date-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;">Retirement age exceeds 100 — plan capped at age 120.</div>
               </div>
               <div>
                 <div class="input-label">Plan Through Age</div>
-                <input type="number" class="small-field" id="plan-end-age" value="93" min="75" max="120" title="The age through which your retirement plan is modeled. Updates automatically when you change your retirement date." oninput="_clampPlanEndAge(this,false)" onblur="_clampPlanEndAge(this,true)">
+                <input type="number" class="small-field" id="plan-end-age" value="93" min="75" max="120" tabindex="17" title="The age through which your retirement plan is modeled. Updates automatically when you change your retirement date." oninput="_clampPlanEndAge(this,false)" onblur="_clampPlanEndAge(this,true)">
               </div>
             </div>
 
@@ -1311,7 +1320,7 @@
               <div class="field-row">
                 <div>
                   <div class="input-label">Co-Architect DOB</div>
-                  <input type="text" class="small-field" id="co-dob" value="05 / 1980" onfocus="this.select()" oninput="_fmtRetDate(this)" onblur="_validateCoDob(this)">
+                  <input type="text" class="small-field" id="co-dob" value="" placeholder="MM/YYYY" onfocus="this.select()" oninput="_fmtRetDate(this)" onblur="_validateCoDob(this)">
                   <div id="co-dob-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
                 </div>
               </div>
@@ -1319,12 +1328,12 @@
               <div class="field-row">
                 <div class="salary-container" style="position: relative;">
                   <div class="input-label">Co-Arch Salary</div>
-                  <input type="text" class="small-field curr-format" id="co-salary" value="$80,000" oninput="updateSalaryTT('co'); calculateUpkeepLoad(); updateAnalysisText();">
+                  <input type="text" class="small-field curr-format" id="co-salary" value="" placeholder="$0" oninput="updateSalaryTT('co'); calculateUpkeepLoad(); updateAnalysisText();">
                   <div class="salary-tooltip" id="co-salary-tt"></div>
                 </div>
                 <div>
                   <div class="input-label">Target Retirement Date</div>
-                  <input type="text" class="small-field" id="co-ret" value="05 / 2040" onfocus="this.select()" oninput="_fmtRetDate(this)" onblur="_validateCoRet(this)">
+                  <input type="text" class="small-field" id="co-ret" value="" placeholder="MM/YYYY" onfocus="this.select()" oninput="_fmtRetDate(this)" onblur="_validateCoRet(this)">
                   <div id="co-ret-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
                 </div>
               </div>
@@ -1684,6 +1693,9 @@
 
       <!-- Shape panel: visible in mode-shape; deterministic Floor/Datum/Ceiling view (no Monte Carlo) -->
       <div id="shape-panel">
+        <!-- Pan/zoom transform target: HUD + SVG move/scale together (Studio's
+             own Estate canvas controller pattern, branched for shape mode). -->
+        <div id="shape-zoom-wrap">
         <!-- DATUM INTELLIGENCE HUD -- verbatim sketch L1657-1696, minus hud-studio-toggle (Q1). -->
         <div id="shape-hud">
           <div class="telemetry-card" id="hud-main">
@@ -1844,6 +1856,7 @@
 
           <text x="390" y="472" text-anchor="middle" class="axis-title">YEARS UNTIL RETIREMENT</text>
         </svg>
+        </div>
       </div>
 
       <div class="blueprint-container" id="blueprint-container">
@@ -3744,16 +3757,71 @@
     }
 
     window.addEventListener('resize', fitToScreen);
-    
+
+    // ── Shape Mode pan/zoom: same controller, separate state, acting on
+    // #shape-zoom-wrap. Without the branch the Estate handlers leak into
+    // Shape Mode -- preventDefault()ing scroll while panning the HIDDEN
+    // #blueprint-container.
+    const shapeZoomWrap = document.getElementById('shape-zoom-wrap');
+    let shapeScale = 1, shapeX = 0, shapeY = 0;
+    let shapeUserAdjusted = false;
+    let dragTarget = 'estate';
+    function inShapeMode() {
+      const l = document.getElementById('studio-layout');
+      return !!(l && l.classList.contains('mode-shape'));
+    }
+    function updateShapeTransform() {
+      if (shapeZoomWrap) shapeZoomWrap.style.transform = `translate(${shapeX}px, ${shapeY}px) scale(${shapeScale})`;
+    }
+    // offsetWidth/Height are transform-independent -- safe to measure during
+    // the mode-shape entry transition (gBCR would read mid-animation scale).
+    function fitShapeToScreen() {
+      if (!shapeZoomWrap) return;
+      const availW = canvasWrapper.clientWidth;
+      const availH = canvasWrapper.clientHeight - 24;
+      const contentW = shapeZoomWrap.offsetWidth;
+      const contentH = shapeZoomWrap.offsetHeight;
+      if (contentW < 1 || contentH < 1 || availH < 1) return;
+      shapeScale = Math.min(availW / contentW, availH / contentH, 1);
+      shapeX = 0; shapeY = 0;
+      updateShapeTransform();
+    }
+    window._fitShapeToScreen = function () { shapeUserAdjusted = false; fitShapeToScreen(); };
+    window.addEventListener('resize', () => { if (inShapeMode() && !shapeUserAdjusted) fitShapeToScreen(); });
+    if (window.ResizeObserver && shapeZoomWrap) {
+      const _hudEl = document.getElementById('shape-hud');
+      if (_hudEl) new ResizeObserver(() => {
+        if (inShapeMode() && !shapeUserAdjusted) fitShapeToScreen();
+      }).observe(_hudEl);
+    }
+
     canvasWrapper.addEventListener('wheel', (e) => {
        e.preventDefault();
+       if (inShapeMode()) {
+         shapeUserAdjusted = true;
+         shapeScale += e.deltaY * -0.001;
+         shapeScale = Math.min(Math.max(0.3, shapeScale), 2.0);
+         updateShapeTransform();
+         return;
+       }
        scale += e.deltaY * -0.001;
-       scale = Math.min(Math.max(0.3, scale), 2.0); 
+       scale = Math.min(Math.max(0.3, scale), 2.0);
        updateTransform();
     }, { passive: false });
 
     canvasWrapper.addEventListener('mousedown', (e) => {
       if(e.target.closest('.hud-panel') || e.target.closest('.map-delete') || e.target.closest('.room-grp') || e.target.closest('.lens-controls')) return;
+      if (inShapeMode()) {
+        // HUD stays clickable (Motion toggle, tooltips); datum drag stays the module's.
+        if (e.target.closest('#shape-hud') || e.target.closest('#datum-dragger') || e.target.closest('.datum-group')) return;
+        dragTarget = 'shape';
+        isDragging = true;
+        startX = e.clientX - shapeX;
+        startY = e.clientY - shapeY;
+        canvasWrapper.style.cursor = 'grabbing';
+        return;
+      }
+      dragTarget = 'estate';
       isDragging = true;
       startX = e.clientX - currentX;
       startY = e.clientY - currentY;
@@ -3764,6 +3832,13 @@
     canvasWrapper.addEventListener('mousemove', (e) => {
       if (!isDragging) return;
       e.preventDefault();
+      if (dragTarget === 'shape') {
+        shapeUserAdjusted = true;
+        shapeX = e.clientX - startX;
+        shapeY = e.clientY - startY;
+        updateShapeTransform();
+        return;
+      }
       currentX = e.clientX - startX;
       currentY = e.clientY - startY;
       updateTransform();
@@ -3771,14 +3846,23 @@
 
     canvasWrapper.addEventListener('touchstart', (e) => {
       if(e.touches.length === 1) {
+        if (inShapeMode() && (e.target.closest('#shape-hud') || e.target.closest('#datum-dragger') || e.target.closest('.datum-group'))) return;
+        dragTarget = inShapeMode() ? 'shape' : 'estate';
         isDragging = true;
-        startX = e.touches[0].clientX - currentX;
-        startY = e.touches[0].clientY - currentY;
+        startX = e.touches[0].clientX - (dragTarget === 'shape' ? shapeX : currentX);
+        startY = e.touches[0].clientY - (dragTarget === 'shape' ? shapeY : currentY);
       }
     }, { passive: true });
     canvasWrapper.addEventListener('touchend', () => { isDragging = false; });
     canvasWrapper.addEventListener('touchmove', (e) => {
       if (!isDragging || e.touches.length !== 1) return;
+      if (dragTarget === 'shape') {
+        shapeUserAdjusted = true;
+        shapeX = e.touches[0].clientX - startX;
+        shapeY = e.touches[0].clientY - startY;
+        updateShapeTransform();
+        return;
+      }
       currentX = e.touches[0].clientX - startX;
       currentY = e.touches[0].clientY - startY;
       updateTransform();
@@ -4734,6 +4818,8 @@
         window.updateShapePanel();
         requestAnimationFrame(function () {
           window.updateShapePanel();
+          // Zoom-to-fit on entry; re-arms auto-fit after any manual pan/zoom.
+          if (window._fitShapeToScreen) window._fitShapeToScreen();
         });
       }
     };
@@ -4967,11 +5053,43 @@
         var hasOpt = Array.prototype.some.call(taxEl.options || [], function (o) { return o.value === rv; });
         if (hasOpt) taxEl.value = rv;
       }
+      // Dossier tax also seeds slider-tax (regardless of select-preset match)
+      // so the Profile tax and the Shape HUD agree without a manual touch.
+      if (rate > 0 && rate < 1) {
+        var sTx = $('slider-tax');
+        if (sTx) { sTx.value = clampN(Math.round(rate * 100), 0, 40); updateTaxLabel(); fireUpdate(); }
+      }
       var locEl = $('pri-location');
       var loc = String(ho.location || '').trim();
       if (locEl && loc) {
         var hasState = Array.prototype.some.call(locEl.options || [], function (o) { return o.value === loc; });
         if (hasState) locEl.value = loc;
+      }
+      // Co-Architect: reveal the section and fill from household.coArchitect.
+      // Retirement ships as AGE ("65") in current payloads, "YYYY-MM" in
+      // legacy saves -- mmYYYY handles date forms, retDateFromAge the age form.
+      var co = (ho && ho.coArchitect) || null;
+      if (co) {
+        var tog = $('co-arch-toggle');
+        if (tog && !tog.checked) { tog.checked = true; tog.dispatchEvent(new Event('change')); }
+        var coDobEl = $('co-dob');
+        var coDobStr = (typeof BP.mmYYYY === 'function') ? BP.mmYYYY(co.dateOfBirth) : '';
+        if (coDobEl && coDobStr && !coDobEl.value) coDobEl.value = coDobStr;
+        var coSalEl = $('co-salary');
+        var coGross = parseFloat(co.grossIncome);
+        if (coSalEl && !coSalEl.value && coGross > 0) coSalEl.value = '$' + Math.round(coGross).toLocaleString('en-US');
+        var coRetEl = $('co-ret');
+        if (coRetEl && !coRetEl.value) {
+          var rawRet = co.targetRetirementDate != null ? String(co.targetRetirementDate).trim() : '';
+          var coRetStr = (typeof BP.mmYYYY === 'function') ? BP.mmYYYY(rawRet) : '';
+          if (!coRetStr) {
+            var coAge = parseInt(rawRet || co.targetRetirementAge, 10);
+            if (coAge >= 45 && coAge <= 90 && coDobStr && typeof BP.retDateFromAge === 'function') {
+              coRetStr = BP.retDateFromAge(coDobStr, coAge);
+            }
+          }
+          if (coRetStr) coRetEl.value = coRetStr;
+        }
       }
     }
 
@@ -5173,6 +5291,32 @@
       });
     }
 
+    /* ── 02/ Estate Drafting -> 00/ Sketch writeback ────────────────────────
+       bp-portfolio-total / bp-contributions-total were inbound-only (written
+       at load, read by captureDOM). Editing them now moves the 00/ sliders
+       and the shape -- same direction pattern as the Profile date binding.
+       Bounds mirror wireClickToType (portfolio 1,000-50,000,000; contrib
+       0-200,000). No loop: sliders never write these fields after load. */
+    function wireEstateDraftingWriteback() {
+      var portEl = $('bp-portfolio-total'), contEl = $('bp-contributions-total');
+      if (portEl) portEl.addEventListener('input', function () {
+        if (!SC) return;
+        var v = parseInt(String(portEl.value).replace(/[^\d]/g, ''), 10);
+        if (isNaN(v) || v < 1000 || v > 50000000) return;
+        var sP = $('slider-portfolio');
+        if (sP) { sP.value = clampN(SC.portValToPos(v / 1e6), 0, 100000); sP.dataset.exactVal = String(v); }
+        refreshAllLabels(); fireUpdate();
+      });
+      if (contEl) contEl.addEventListener('input', function () {
+        if (!SC) return;
+        var v = parseInt(String(contEl.value).replace(/[^\d]/g, ''), 10);
+        if (isNaN(v) || v < 0 || v > 200000) return;
+        var sC = $('slider-contrib');
+        if (sC) { sC.value = clampN(SC.contribValToPos(v), 0, 100000); sC.dataset.exactVal = String(v); }
+        refreshAllLabels(); fireUpdate();
+      });
+    }
+
     function wireDrawers() {
       var advBtn = $('advanced-trigger-btn'), advPanel = $('advanced-panel');
       if (advBtn && advPanel) {
@@ -5266,6 +5410,7 @@
       wireSliders();
       wireRadios();
       wireProfileBindings();
+      wireEstateDraftingWriteback();
       wireDrawers();
       wireMotionToggle();
     }
