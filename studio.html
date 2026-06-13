@@ -994,6 +994,49 @@
   .ss-map-grid-placeholder { min-height: 56px; border: 1px dashed rgba(255,255,255,0.06); border-radius: 4px; margin-bottom: 14px; }
 
 </style>
+  <style id="shape-want-face-styles">
+  /* ── Have/Want flip scaffold (Step-3) ─────────────────────────────── */
+  #shape-subtoggle { display:none; margin:0 0 10px; z-index:60; }
+  .studio-layout.mode-shape #shape-subtoggle { display:inline-flex; }
+  .shape-subtoggle-btn { font-family:var(--font-mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; padding:6px 14px; background:transparent; border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.5); cursor:pointer; transition:all .2s; }
+  .shape-subtoggle-btn:first-child { border-radius:4px 0 0 4px; }
+  .shape-subtoggle-btn:last-child { border-radius:0 4px 4px 0; border-left:none; }
+  .shape-subtoggle-btn.active { color:var(--gold); border-color:rgba(201,168,76,0.5); background:rgba(201,168,76,0.08); }
+  #shape-flip { position:relative; width:100%; flex:1; min-height:0; perspective:1800px; }
+  #shape-flip-inner { position:relative; width:100%; height:100%; min-height:520px; transform-style:preserve-3d; transition:transform .8s cubic-bezier(.2,.8,.2,1); }
+  #shape-flip-inner.flipped { transform:rotateY(180deg); }
+  #shape-face-front, #shape-face-back { position:absolute; inset:0; width:100%; -webkit-backface-visibility:hidden; backface-visibility:hidden; }
+  #shape-face-back { transform:rotateY(180deg); overflow:auto; }
+  #shape-flip-inner.flipped #shape-face-front { pointer-events:none; }
+  @media (prefers-reduced-motion: reduce) { #shape-flip-inner { transition:none; } }
+  /* back-face content — verbatim d2-canvas + tension, scoped to avoid collisions */
+  #shape-want-face { display:flex; flex-direction:column; align-items:center; width:100%; padding:8px 16px; }
+  #swf-canvas-col { width:100%; max-width:900px; }
+  #shape-want-face .range-svg { width:100%; max-height:480px; overflow:visible; }
+  #shape-want-face .morph { transition:d .7s cubic-bezier(.2,.8,.2,1), stroke .3s ease; }
+  #shape-want-face .morph-node { transition:cx .7s, cy .7s; }
+  #shape-want-face .axis-title { font-family:var(--font-mono); font-size:10px; fill:rgba(255,255,255,0.8); letter-spacing:0.2em; text-transform:uppercase; }
+  #shape-want-face .time-axis-line { stroke:rgba(255,255,255,0.2); stroke-width:1; }
+  #shape-want-face .time-label { font-family:var(--font-mono); font-size:10px; fill:rgba(255,255,255,0.8); letter-spacing:0.15em; text-transform:uppercase; }
+  #shape-want-face .market-sweep { opacity:0; pointer-events:none; }
+  #shape-want-face .boundary-line { stroke-width:2; stroke-linecap:round; fill:none; }
+  #shape-want-face .b-ceiling { stroke:var(--gold); }
+  #shape-want-face .b-floor { stroke:var(--danger-red); }
+  #shape-want-face .b-datum { stroke-width:3; filter:drop-shadow(0 0 6px rgba(93,202,165,0.6)); stroke:var(--teal-mid); }
+  #shape-want-face .range-label { font-family:var(--font-mono); font-size:10px; letter-spacing:0.15em; text-transform:uppercase; }
+  #shape-want-face .ghost-line { stroke-width:1; stroke-linecap:round; fill:none; stroke-dasharray:2 4; opacity:0; }
+  #shape-want-face .ghost-ceil { stroke:var(--gold); }
+  #shape-want-face .ghost-floor { stroke:var(--danger-red); }
+  #shape-want-face .ghost-datum { stroke:var(--teal-mid); }
+  #shape-want-face .ghost-active { opacity:0.6 !important; }
+  #shape-want-face .datum-group { cursor:ns-resize; }
+  #shape-want-face .d2-tbar-track { height:3px; background:rgba(255,255,255,0.08); border-radius:2px; margin-bottom:4px; }
+  #shape-want-face .d2-tbar-fill { height:100%; border-radius:2px; width:0%; transition:width .4s ease; }
+  #shape-want-face .d2-tbar-pct { font-size:11px; font-family:var(--font-serif); font-style:italic; }
+  #shape-want-face .d2-tbar-label { font-size:8px; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.08em; }
+  #d2-tension-hud { width:100%; max-width:900px; }
+  #swf-pending { margin-top:12px; font-family:var(--font-mono); font-size:10px; letter-spacing:0.08em; color:rgba(255,255,255,0.35); text-align:center; }
+  </style>
 </head>
 <body>
   <a href="#studio-layout" class="skip-link">Skip to main content</a>
@@ -1740,6 +1783,16 @@
 
       <!-- Shape panel: visible in mode-shape; deterministic Floor/Datum/Ceiling view (no Monte Carlo) -->
       <div id="shape-panel">
+        <!-- Have/Want flip (Step-3 scaffold): sub-toggle + 3D flip. Front face = the
+             existing Have shape (mount(), untouched). Back face = #shape-want-face. The
+             flip lives OUTSIDE #shape-zoom-wrap so the pan/zoom matrix never nests under
+             rotateY. Renderer wiring of the back-face surrounds is the next step. -->
+        <div id="shape-subtoggle" role="tablist" aria-label="Shape you have or want">
+          <button id="shape-have-tab" class="shape-subtoggle-btn active" role="tab" aria-selected="true" onclick="window.flipToHave&&window.flipToHave()">Shape You Have</button>
+          <button id="shape-want-tab" class="shape-subtoggle-btn" role="tab" aria-selected="false" onclick="window.flipToWant&&window.flipToWant()">Shape You Want</button>
+        </div>
+        <div id="shape-flip"><div id="shape-flip-inner">
+        <div id="shape-face-front">
         <!-- Pan/zoom transform target: HUD + SVG move/scale together (Studio's
              own Estate canvas controller pattern, branched for shape mode). -->
         <div id="shape-zoom-wrap">
@@ -1903,7 +1956,149 @@
 
           <text x="390" y="472" text-anchor="middle" class="axis-title">YEARS UNTIL RETIREMENT</text>
         </svg>
-        </div>
+        </div><!-- /#shape-zoom-wrap -->
+        </div><!-- /#shape-face-front -->
+        <div id="shape-face-back" aria-hidden="true">
+          <div id="shape-want-face">
+            <div id="swf-canvas-col">
+          <svg class="range-svg" id="d2-canvas" viewBox="0 0 840 480" preserveAspectRatio="xMidYMid meet" aria-hidden="true" style="cursor:default; overflow:visible;">
+            <defs>
+              <linearGradient id="d2-thermal-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop id="d2-stop-ceil"  offset="0%"   stop-color="#C9A84C" stop-opacity="0.25" />
+                <stop id="d2-stop-mid1"  offset="35%"  stop-color="#5DCAA5" stop-opacity="0.15" />
+                <stop id="d2-stop-mid2"  offset="65%"  stop-color="#5DCAA5" stop-opacity="0.15" />
+                <stop id="d2-stop-floor" offset="100%" stop-color="#e24b4a" stop-opacity="0.25" />
+                <stop id="d2g-ceil"      offset="0%"   stop-color="#C9A84C" stop-opacity="0.0" />
+              </linearGradient>
+              <clipPath id="d2-clip-cone">
+                <path id="d2-clip-cone-path" d="" />
+              </clipPath>
+            </defs>
+            <rect id="d2-market-sweep" class="market-sweep" x="-250" y="-100" width="250" height="700" fill="transparent" />
+            <rect id="d2-state-tint-rect" x="0" y="0" width="840" height="480" fill="none" pointer-events="none"/>
+            <!-- Grid: dynamic labels injected by renderScreen2() -->
+            <g id="d2-grid">
+              <text x="80" y="40" text-anchor="end" class="axis-title" style="fill:rgba(255,255,255,0.8);">ANNUAL SPEND</text>
+            </g>
+            <!-- Time axis (static structure; labels updated dynamically) -->
+            <g id="d2-xaxis-group">
+              <line x1="120" y1="460" x2="650" y2="460" class="time-axis-line" />
+              <line x1="120" y1="455" x2="120" y2="465" class="time-axis-line" />
+              <line x1="650" y1="455" x2="650" y2="465" class="time-axis-line" />
+              <text id="d2-xaxis-start" x="120" y="475" text-anchor="middle" class="time-label" style="fill:rgba(255,255,255,0.8);">AGE 40</text>
+              <text id="d2-xaxis-end"   x="650" y="475" text-anchor="middle" class="time-label" style="fill:var(--teal-mid);">RETIRE: 65</text>
+              <text x="390" y="472" text-anchor="middle" class="axis-title">YEARS UNTIL RETIREMENT</text>
+            </g>
+            <g id="d2-clean-layer">
+              <!-- Ghost cone: currentScenario snapshot at Screen 2 open -->
+              <path id="d2-ghost-cone"  fill="url(#d2-thermal-grad)" opacity="0.22" d="" />
+              <path id="d2-ghost-ceil"  class="ghost-line ghost-ceil  ghost-active" d="" />
+              <path id="d2-ghost-floor" class="ghost-line ghost-floor ghost-active" d="" />
+              <path id="d2-ghost-datum" class="ghost-line ghost-datum ghost-active" d="" />
+              <!-- Live cone: designScenario + designOverrides -->
+              <path id="d2-cone" fill="url(#d2-thermal-grad)" opacity="0.55" d="" />
+              <!-- Ceiling boundary -->
+              <g class="boundary-group">
+                <path id="d2-ceil-hit"  stroke="transparent" stroke-width="18" fill="none" d="" pointer-events="stroke" style="cursor:ns-resize;" />
+                <path id="d2-ceil-line" class="boundary-line b-ceiling" pathLength="1" d="" />
+                <circle id="d2-node-ceil" class="morph-node" cx="650" cy="50" r="4" fill="var(--gold)" />
+                <text id="d2-lbl-ceil" class="range-label" x="665" y="50" text-anchor="start" style="fill:var(--gold); opacity:1;">STRUCTURAL CEILING</text>
+              </g>
+              <!-- Floor boundary -->
+              <g class="boundary-group">
+                <path id="d2-floor-hit"  stroke="transparent" stroke-width="18" fill="none" d="" pointer-events="stroke" style="cursor:ns-resize;" />
+                <path id="d2-floor-line" class="boundary-line b-floor" pathLength="1" d="" />
+                <circle id="d2-node-floor" class="morph-node" cx="650" cy="430" r="4" fill="var(--danger-red)" />
+                <text id="d2-lbl-floor" class="range-label" x="665" y="430" text-anchor="start" style="fill:var(--danger-red); opacity:1;">SURVIVAL FLOOR</text>
+              </g>
+              <!-- Datum boundary -->
+              <g id="d2-datum-group" class="datum-group">
+                <path id="d2-datum-hit"  stroke="transparent" stroke-width="30" fill="none" d="" pointer-events="stroke" style="cursor:ns-resize;" />
+                <path id="d2-datum-line" class="boundary-line b-datum" pathLength="1" d="" />
+                <circle id="d2-node-datum" class="morph-node" cx="650" cy="225" r="6" fill="var(--teal-mid)" />
+                <text id="d2-lbl-datum" class="range-label" x="665" y="225" text-anchor="start" style="fill:var(--teal-mid); opacity:1;">YOUR DATUM</text>
+              </g>
+              <!-- Drag handles (positioned at right endpoint by renderScreen2()) -->
+              <line id="d2-handle-ceil-line"  class="d2-vline" x1="650" y1="30" x2="650" y2="50"  stroke="var(--gold)"       />
+              <line id="d2-handle-datum-line" class="d2-vline" x1="650" y1="225" x2="650" y2="245" stroke="var(--teal-mid)"  />
+              <circle id="d2-handle-ceil"  class="d2-handle" cx="650" cy="50"  r="7"  fill="var(--gold)"       tabindex="0" role="slider" aria-label="Ceiling drag handle"  style="color:var(--gold);" />
+              <circle id="d2-handle-ceil-hit"  class="d2-handle-hit" cx="650" cy="50"  r="18" fill="transparent" style="cursor:ns-resize;" />
+              <circle id="d2-handle-datum" class="d2-handle" cx="650" cy="225" r="8"  fill="var(--teal-mid)"   tabindex="0" role="slider" aria-label="Datum drag handle"    style="color:var(--teal-mid);" />
+              <circle id="d2-handle-datum-hit" class="d2-handle-hit" cx="650" cy="225" r="18" fill="transparent" style="cursor:ns-resize;" />
+              <circle id="d2-handle-floor" class="d2-handle" cx="650" cy="430" r="7"  fill="var(--danger-red)" tabindex="0" role="slider" aria-label="Floor drag handle"    style="color:var(--danger-red);" />
+              <circle id="d2-handle-floor-hit" class="d2-handle-hit" cx="650" cy="430" r="18" fill="transparent" style="cursor:ns-resize;" />
+              <!-- SP anchor handle (left edge x=120, draggable up/down) -->
+              <circle id="d2-sp-handle" cx="120" cy="240" r="7" class="d2-sp-handle" tabindex="0" role="slider" aria-label="Starting point anchor" fill="rgba(93,202,165,0.45)" style="color:var(--teal-mid);" />
+              <circle id="d2-sp-handle-hit" cx="120" cy="240" r="18" fill="transparent" style="cursor:ns-resize;" />
+              <circle id="d2-sp-ghost" cx="120" cy="240" r="5" fill="none" stroke="rgba(93,202,165,0.3)" stroke-width="1.5" stroke-dasharray="3 2" style="display:none;" />
+              <g id="d2-tt-g-sp" transform="translate(120,240)" style="opacity:0; pointer-events:none;">
+                <rect x="15" y="-34" width="260" height="64" fill="#091221" fill-opacity="1" stroke="rgba(93,202,165,0.5)" stroke-width="1" rx="4" />
+                <text id="d2-tt-sp-bounds" x="25" y="-20" font-family="var(--font-mono)" font-size="9" fill="rgba(255,255,255,0.55)">C $— · D $— · F $—</text>
+                <text id="d2-tt-sp-bal" x="25" y="-5" font-family="var(--font-mono)" font-size="10" fill="var(--teal-mid)" font-weight="bold">$0 starting</text>
+                <text id="d2-tt-sp-delta" x="25" y="11" font-family="var(--font-mono)" font-size="9" fill="rgba(255,255,255,0.7)">+$0 designed in</text>
+              </g>
+              <!-- Tension overlay (cone-clipped fill showing drag delta) -->
+              <path id="d2-tension-overlay" fill="rgba(255,255,255,0.06)" d="" pointer-events="none" />
+            </g>
+            <!-- Hover scrubber -->
+            <g id="d2-scrubber-group" style="opacity:0; pointer-events:none; transition:opacity 0.2s;">
+              <line id="d2-scrubber-line" x1="650" y1="30" x2="650" y2="460" stroke="#ffffff" stroke-opacity="0.4" stroke-width="1" stroke-dasharray="4 4" />
+              <g id="d2-tt-g-ceil" transform="translate(650,100)">
+                <rect x="15" y="-14" width="280" height="36" fill="#091221" fill-opacity="0.95" stroke="var(--gold)" rx="4" />
+                <text x="25" y="0" font-family="var(--font-mono)" font-size="10" fill="var(--gold)" font-weight="bold">CEILING @ <tspan id="d2-tt-age-ceil">45</tspan> <tspan fill="var(--white)" font-family="var(--font-serif)" font-style="italic" id="d2-tt-data-ceil">| $2.94M / $97k yr</tspan></text>
+                <text x="25" y="14" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.6">Favorable path — if returns run above the baseline.</text>
+              </g>
+              <g id="d2-tt-g-floor" transform="translate(650,200)">
+                <rect x="15" y="-14" width="280" height="36" fill="#091221" fill-opacity="0.95" stroke="var(--danger-red)" rx="4" />
+                <text x="25" y="0" font-family="var(--font-mono)" font-size="10" fill="var(--danger-red)" font-weight="bold">FLOOR @ <tspan id="d2-tt-age-floor">45</tspan> <tspan fill="var(--white)" font-family="var(--font-serif)" font-style="italic" id="d2-tt-data-floor">| $1.61M / $36k yr</tspan></text>
+                <text x="25" y="14" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.6">Stress path — if returns stay low.</text>
+              </g>
+              <g id="d2-tt-g-datum" transform="translate(650,300)">
+                <rect x="15" y="-14" width="310" height="52" fill="#091221" fill-opacity="0.95" stroke="var(--teal-mid)" rx="4" />
+                <text x="25" y="0" font-family="var(--font-mono)" font-size="10" fill="var(--teal-mid)" font-weight="bold">DATUM @ <tspan id="d2-tt-age-datum">45</tspan> <tspan fill="var(--white)" font-family="var(--font-serif)" font-style="italic" id="d2-tt-data-datum">| $100k/yr</tspan></text>
+                <text x="25" y="14" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.6">Your chosen spending target.</text>
+                <text x="25" y="26" font-family="var(--font-mono)" font-size="8" fill="#ffffff" fill-opacity="0.4">Capital is a broad-stroke estimate, not a path projection.</text>
+              </g>
+            </g>
+          </svg>
+        <div id="d2-tension-hud" style="margin-top:6px; pointer-events:none; background:rgba(9,18,33,0.95); border:1px solid rgba(255,255,255,0.08); border-radius:4px; padding:7px 10px; font-family:var(--font-mono);">
+            <!-- Ceiling tension bar -->
+            <div style="margin-bottom:6px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
+                <span class="d2-tbar-label lbl-has-tip" id="d2-tension-ceil-lbl" tabindex="0" style="color:var(--gold); pointer-events:auto; display:inline-block;"><span class="d2-tbar-label-txt">CEILING TENSION</span><div class="shape-info-tooltip" id="d2-ceil-bar-tip" style="pointer-events:none; top:auto; bottom:calc(100% + 10px);">You're pulling your Ceiling higher than the Sketch projects. At 30% the gap is modest — small input changes can close it. At 60% the gap is structural — only meaningful moves (more time, more capital, lower spending) will reach it.</div></span>
+                <span class="d2-tbar-pct" id="d2-tension-ceil-pct" style="color:var(--gold);">0%</span>
+              </div>
+              <div class="d2-tbar-track">
+                <div class="d2-tbar-fill" id="d2-tension-ceil-fill" style="background:var(--gold);"></div>
+              </div>
+            </div>
+            <!-- Floor tension bar -->
+            <div style="margin-bottom:6px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
+                <span class="d2-tbar-label lbl-has-tip" id="d2-tension-floor-lbl" tabindex="0" style="color:var(--danger-red); pointer-events:auto; display:inline-block;"><span class="d2-tbar-label-txt">FLOOR TENSION</span><div class="shape-info-tooltip" id="d2-floor-bar-tip" style="pointer-events:none; top:auto; bottom:calc(100% + 10px);">You're asking your Floor to hold a higher line than the conservative path supports. At 30% the gap is bridgeable with stronger inputs. At 60% you're asking the conservative path to do work it can't do without more time or capital.</div></span>
+                <span class="d2-tbar-pct" id="d2-tension-floor-pct" style="color:var(--danger-red);">0%</span>
+              </div>
+              <div class="d2-tbar-track">
+                <div class="d2-tbar-fill" id="d2-tension-floor-fill" style="background:var(--danger-red);"></div>
+              </div>
+            </div>
+            <!-- Datum tension bar -->
+            <div style="margin-bottom:4px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
+                <span class="d2-tbar-label lbl-has-tip" id="d2-tension-datum-lbl" tabindex="0" style="color:var(--teal-mid); pointer-events:auto; display:inline-block;"><span class="d2-tbar-label-txt">DATUM TENSION</span><div class="shape-info-tooltip" id="d2-datum-bar-tip" style="pointer-events:none; top:auto; bottom:calc(100% + 10px);">You're pulling your Datum higher than your discovered position. At 30% the upper paths still carry it. At 60% you're approaching or past the Ceiling — the plan needs stronger inputs to support this lifestyle across modeled outcomes.</div></span>
+                <span class="d2-tbar-pct" id="d2-tension-datum-pct" style="color:var(--teal-mid);">0%</span>
+              </div>
+              <div class="d2-tbar-track">
+                <div class="d2-tbar-fill" id="d2-tension-datum-fill" style="background:var(--teal-mid);"></div>
+              </div>
+            </div>
+            <div id="tension-explain" style="font-size:9px; color:rgba(255,255,255,0.5); line-height:1.55; font-family:var(--font-sans,sans-serif); margin-top:3px;">Drag the Ceiling, Floor, or Datum handles to shape your cone.</div>
+          </div>
+            </div><!-- /#swf-canvas-col -->
+            <div id="swf-pending">SLIDERS &middot; CURRENT&rarr;TEST HUD &middot; WHAT-IT-TAKES + ACCEPT &mdash; wired next step</div>
+          </div><!-- /#shape-want-face -->
+        </div><!-- /#shape-face-back -->
+        </div></div><!-- /#shape-flip-inner /#shape-flip -->
       </div>
 
       <div class="blueprint-container" id="blueprint-container">
@@ -7331,5 +7526,38 @@
   });
   </script>
   <script>document.addEventListener('DOMContentLoaded', function() { if (window.dfTrack) dfTrack('studio_started'); });</script>
+  <script>
+  /* Have/Want flip controller (Step-3 scaffold). renderWantFace() is a STUB; the
+     four-surround wiring (buildDiff + DatumShape.solveInverse) is the next step. */
+  (function () {
+    function inner() { return document.getElementById('shape-flip-inner'); }
+    function setTabs(want) {
+      var h = document.getElementById('shape-have-tab'), w = document.getElementById('shape-want-tab');
+      if (h) { h.classList.toggle('active', !want); h.setAttribute('aria-selected', String(!want)); }
+      if (w) { w.classList.toggle('active', want); w.setAttribute('aria-selected', String(want)); }
+      var back = document.getElementById('shape-face-back'); if (back) back.setAttribute('aria-hidden', String(!want));
+      var front = document.getElementById('shape-face-front'); if (front) front.setAttribute('aria-hidden', String(want));
+    }
+    var _haveScn = null, _wantScn = null;
+    function enterWantFace() {
+      var sfi = (typeof window._scenarioFromInputs === 'function') ? window._scenarioFromInputs() : null;
+      _haveScn = sfi ? Object.assign({}, sfi) : null;          // freeze Have at flip-entry
+      _wantScn = _haveScn ? Object.assign({}, _haveScn) : null; // cold-start: want = have (zero diff)
+      var ref = document.getElementById('sketch-design-ref'); if (ref) ref.style.display = 'none'; // retires on Want
+      renderWantFace();
+    }
+    function exitWantFace() { /* Have face untouched — mount() keeps running */ }
+    function renderWantFace() {
+      // STUB (Step-3 scaffold). NEXT: var d = DatumShape.buildDiff(_haveScn, _wantScn, FRONT_OPTS);
+      // then bind d.have.positions (ghost marks) / d.have+d.want+d.copy (CURRENT->TEST HUD) /
+      // d.tension[] (signed bars) / DatumShape.solveInverse(d.gap.*.delta, d.want.ptsEnd, _wantScn) (what-it-takes).
+      // 90deg cross-fade morph (Have->Want over d.sharedY) hooks in here too.
+      window._wantFaceState = { have: _haveScn, want: _wantScn };
+    }
+    window.flipToWant = function () { var i = inner(); if (!i) return; setTabs(true); enterWantFace(); i.classList.add('flipped'); };
+    window.flipToHave = function () { var i = inner(); if (!i) return; setTabs(false); exitWantFace(); i.classList.remove('flipped'); };
+    window.renderWantFace = renderWantFace;
+  })();
+  </script>
 </body>
 </html>
