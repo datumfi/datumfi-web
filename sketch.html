@@ -7913,23 +7913,6 @@
           _c4El.innerHTML = '<div style="white-space:pre-wrap;font-family:var(--font-sans);font-size:15px;line-height:1.7;color:rgba(255,255,255,0.85);text-align:left;padding:0 8px;">' + _c4Prose + '</div>';
         }
       })();
-      // S4: stamp real numbers into Studio CTA links
-      _updateStudioCTAs();
-    }
-
-    function _updateStudioCTAs() {
-      if (!lastCalculatedPoints) return;
-      const dc  = Math.round(currentScenario._designedCeil  || lastCalculatedPoints.ceilSpend);
-      const dd  = Math.round(currentScenario._designedDatum || lastCalculatedPoints.datumSpend);
-      const df  = Math.round(currentScenario._designedFloor || lastCalculatedPoints.floorSpend);
-      const age    = parseInt(document.getElementById('slider-age').value, 10);
-      const retire = parseInt(document.getElementById('slider-activation').value, 10);
-      const port   = Math.round(readPort() / 1000);
-      const params = `?ceil=${dc}&datum=${dd}&floor=${df}&age=${age}&retire=${retire}&port=${port}k`;
-      ['studio-cta-link'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.href = '/studio.html' + params;
-      });
     }
 
     function updateRequirementsPanel(ceilTarget, computedMax) {
@@ -11287,10 +11270,17 @@ Studio is built for exactly this. See If This Shape Holds →`;
         sessionStorage.setItem('datumfi_just_saved', '1');
         sessionStorage.setItem('datumfi_sketch_return_screen', window.location.hash || '#screen-5-build');
         sessionStorage.setItem('datumfi_sketch_current_snapshot', JSON.stringify(payload));
-        // Navigate only after Clerk write commits; fall-through on error or logged-out
-        function _nav() { window.location.href = '/sketchbook.html'; }
+        // Navigate only after Clerk write commits; fall-through on error or logged-out.
+        // Origin-relative so the post-save hop stays on the current host (e.g. a
+        // local dev server) instead of bouncing to the production domain.
+        function _nav() { window.location.href = new URL('sketchbook.html', window.location.href).href; }
+        // Skip the Clerk cross-device mirror on localhost: the production Clerk
+        // instance (clerk.datumfi.com) redirects to the primary domain when
+        // loaded from 127.0.0.1, which would yank the save flow off localhost.
+        var _ho = window.location.hostname;
+        var _isLocalHost = (_ho === 'localhost' || _ho === '127.0.0.1' || _ho === '');
         try {
-          if (window.Clerk) {
+          if (window.Clerk && !_isLocalHost) {
             var _slim = _slimSlot(data);
             console.log('[sketchbook mirror] slim bytes:', JSON.stringify(_slim).length);
             window.Clerk.load().then(function() {

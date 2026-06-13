@@ -1070,6 +1070,32 @@
             <button class="pin-btn" onclick="togglePin('sec-sketch', this)" title="Pin section open">📌</button>
         </div>
         <div id="sec-sketch" class="section-content" style="display: block;">
+          <!-- Phase 1 — read-only reference: the S2 tested (WANT) shape carried from
+               Sketch. Data-only carry (designed ceil/datum/floor + accepted lever
+               deltas); NO drag UI per North Star §13-T2. Hidden until a designed
+               shape is present. Populated by _renderSketchDesignRef(). -->
+          <div id="sketch-design-ref" style="display:none; margin:0 0 14px; padding:10px 12px; border:1px solid rgba(101,205,169,0.35); border-radius:6px; background:rgba(101,205,169,0.06);">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;">
+              <span style="font-family:var(--font-mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--teal-mid);">From your Sketch design</span>
+              <strong id="sdr-state" style="font-family:var(--font-mono); font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:var(--teal-mid);">—</strong>
+            </div>
+            <div style="display:flex; gap:14px; flex-wrap:wrap;">
+              <div style="flex:1; min-width:80px;">
+                <div style="font-family:var(--font-mono); font-size:9px; letter-spacing:0.08em; color:rgba(255,255,255,0.45); text-transform:uppercase;">Ceiling</div>
+                <div id="sdr-ceil" style="font-family:var(--font-sans); font-size:14px; color:rgba(255,255,255,0.9);">$0</div>
+              </div>
+              <div style="flex:1; min-width:80px;">
+                <div style="font-family:var(--font-mono); font-size:9px; letter-spacing:0.08em; color:rgba(255,255,255,0.45); text-transform:uppercase;">Datum</div>
+                <div id="sdr-datum" style="font-family:var(--font-sans); font-size:14px; color:rgba(255,255,255,0.9);">$0</div>
+              </div>
+              <div style="flex:1; min-width:80px;">
+                <div style="font-family:var(--font-mono); font-size:9px; letter-spacing:0.08em; color:rgba(255,255,255,0.45); text-transform:uppercase;">Floor</div>
+                <div id="sdr-floor" style="font-family:var(--font-sans); font-size:14px; color:rgba(255,255,255,0.9);">$0</div>
+              </div>
+            </div>
+            <div id="sdr-levers" style="display:none; margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.08); font-family:var(--font-mono); font-size:9px; letter-spacing:0.05em; color:rgba(255,255,255,0.55);"></div>
+            <div style="margin-top:8px; font-family:var(--font-mono); font-size:9px; color:rgba(255,255,255,0.35); letter-spacing:0.04em;">The shape you designed in Sketch — read-only reference. Remodel scenarios will start here.</div>
+          </div>
           <!-- VERBATIM S1 inputs transplanted from sketch.html L1460-1639.
                IDs (slider-portfolio, slider-activation, sl-plan-through, slider-contrib,
                slider-datum, slider-tax, market-*, infl-*, tax-* + val-* ) are sketch-verbatim.
@@ -4955,11 +4981,48 @@
       if (hasOpt) pEl.value = v;
     }
 
+    /* ── Phase 1 — Sketch S2 carry-through (read-only WANT-shape reference) ──
+       Source of truth = the SAVED localStorage blob only, normalized into
+       bp.designed by DatumBlueprint.applySketchContract, reached via the explicit
+       ?hydrate=sketch entry. No sessionStorage / unsaved carry (doctrine Q1).
+       Data-only; no drag UI (North Star §13-T2). */
+    function _sdrFmt(n) { return '$' + Math.round(Number(n) || 0).toLocaleString('en-US'); }
+    function _readCarriedDesigned(bp) {
+      if (bp && bp.designed && bp.designed.present) return bp.designed;
+      return null;
+    }
+    function _renderSketchDesignRef(d) {
+      var el = document.getElementById('sketch-design-ref');
+      if (!el) return;
+      if (!d || !d.present) { el.style.display = 'none'; return; }
+      var setTxt = function (id, v) { var n = document.getElementById(id); if (n) n.textContent = v; };
+      setTxt('sdr-ceil',  _sdrFmt(d.ceil));
+      setTxt('sdr-datum', _sdrFmt(d.datum));
+      setTxt('sdr-floor', _sdrFmt(d.floor));
+      var st = document.getElementById('sdr-state');
+      if (st) { st.textContent = d.state || '—'; if (d.color) st.style.color = d.color; }
+      var lv = d.levers || {}, parts = [];
+      if (lv.ceilDelta)  parts.push('Ceiling '  + (lv.ceilDelta  > 0 ? '+' : '') + lv.ceilDelta);
+      if (lv.floorDelta) parts.push('Floor '    + (lv.floorDelta > 0 ? '+' : '') + lv.floorDelta);
+      if (lv.datumDelta) parts.push('Datum '    + (lv.datumDelta > 0 ? '+' : '') + lv.datumDelta);
+      if (lv.portDelta)  parts.push('Capital '  + (lv.portDelta  > 0 ? '+' : '') + lv.portDelta);
+      var lvEl = document.getElementById('sdr-levers');
+      if (lvEl) {
+        if (parts.length) { lvEl.textContent = 'Accepted moves:  ' + parts.join('   ·   '); lvEl.style.display = 'block'; }
+        else { lvEl.style.display = 'none'; }
+      }
+      el.style.display = 'block';
+    }
+
     /* ── Prefill ladder: DatumBlueprint.load() -> Dossier -> defaults ─────── */
     function seedFromBlueprint() {
       if (!window.DatumBlueprint || !SC) return false;
       var bp = null;
-      try { bp = DatumBlueprint.load({ from: 'sketch' }); } catch (e) { bp = null; }
+      // Saved-sketch carry happens ONLY via the explicit ?hydrate=sketch entry
+      // (Sketchbook -> Open in Studio), which DatumBlueprint.load() handles from
+      // the URL. No implicit { from:'sketch' } auto-load: a direct / Start-from-
+      // Scratch entry must NOT silently carry the last saved sketch (doctrine Q1).
+      try { bp = DatumBlueprint.load(); } catch (e) { bp = null; }
       if (!bp) return false;
 
       // Portfolio: dollars -> log slider position via portValToPos(MILLIONS)
@@ -5009,6 +5072,9 @@
         if (pct <= 1) pct = pct * 100;
         sTax.value = clampN(Math.round(pct), 0, 40);
       }
+
+      // Phase 1 — surface the carried S2 (WANT) shape as a read-only reference.
+      try { _renderSketchDesignRef(_readCarriedDesigned(bp)); } catch (e) {}
       return true;
     }
 
@@ -7057,8 +7123,19 @@
     var _closeBtn     = document.getElementById('studioCloseIntro');
     var _startScratch = document.getElementById('studioStartScratch');
 
-    if (_closeBtn)     _closeBtn.addEventListener('click',     function() { dismissOverlay('Starting a new Blueprint.'); });
-    if (_startScratch) _startScratch.addEventListener('click', function() { dismissOverlay('Starting a new Blueprint.'); });
+    // Start from Scratch = blank. Defensively drop any carried Sketch-design
+    // state so the read-only WANT card cannot linger from a prior session.
+    function _clearCarriedDesign() {
+      try {
+        ['datum_designed_ceil','datum_designed_datum','datum_designed_floor',
+         'datum_designed_state','datum_s2_design'].forEach(function(k) { sessionStorage.removeItem(k); });
+      } catch(e) {}
+      var _card = document.getElementById('sketch-design-ref');
+      if (_card) _card.style.display = 'none';
+    }
+
+    if (_closeBtn)     _closeBtn.addEventListener('click',     function() { _clearCarriedDesign(); dismissOverlay('Starting a new Blueprint.'); });
+    if (_startScratch) _startScratch.addEventListener('click', function() { _clearCarriedDesign(); dismissOverlay('Starting a new Blueprint.'); });
 
     if (_startSketch && !_startSketch.classList.contains('disabled-cta')) {
       _startSketch.addEventListener('click', function() {

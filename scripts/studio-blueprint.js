@@ -98,6 +98,16 @@
         gross_funding_breakdown: { roth: 0, taxable: 0, traditional: 0, pension: 0, ss: 0 },
         derived_from:            'quick'
       },
+      // Phase 1 — Sketch S2 carry-through. designed = the WANT shape the user
+      // tested in Sketch S2 (read-only data, no drag UI per North Star §13-T2);
+      // current = the HAVE shape from Sketch S1. Dollars. Both kept as parallel
+      // numeric endpoints so a future render primitive (§16.2-iii) can diff them.
+      designed: {
+        ceil: 0, datum: 0, floor: 0, state: '', color: '',
+        levers: { ceilDelta: 0, floorDelta: 0, datumDelta: 0, portDelta: 0 },
+        present: false
+      },
+      current: { ceil: 0, datum: 0, floor: 0, state: '' },
       lenses:   { shock: false, thermal: false, routing: false, datum: false },
       mc_meta:  { shock_param: false, scenario_label: 'Draft', last_result_hash: '' },
       readout:  null
@@ -341,6 +351,36 @@
     if (s.datum_spend)    bp.datum.net_datum_v1    = Math.round(s.datum_spend);
     if (s.portfolio_mass) bp.portfolio_total       = Math.round(s.portfolio_mass);
     if (s.contributions)  bp.contributions_total   = Math.round(s.contributions);
+
+    // Phase 1 — carry the S2 tested (WANT) shape + S1 (HAVE) shape. Field names
+    // match the live save blob (serializeSketchState); designed_* are dollars.
+    if (bp.designed) {
+      var dCeil  = Number(s.designed_ceil)  || 0;
+      var dDatum = Number(s.designed_datum) || Number(s.datum_spend) || 0;
+      var dFloor = Number(s.designed_floor) || 0;
+      if (dCeil || dDatum || dFloor) {
+        bp.designed.ceil    = Math.round(dCeil);
+        bp.designed.datum   = Math.round(dDatum);
+        bp.designed.floor   = Math.round(dFloor);
+        bp.designed.state   = s.resolved_state || '';
+        bp.designed.color   = s.state_color   || '';
+        bp.designed.present = true;
+      }
+      var sd = s.s2_design;
+      if (sd && bp.designed.levers) {
+        bp.designed.levers.ceilDelta  = Number(sd.ceilDelta)  || 0;
+        bp.designed.levers.floorDelta = Number(sd.floorDelta) || 0;
+        bp.designed.levers.datumDelta = Number(sd.datumDelta) || 0;
+        bp.designed.levers.portDelta  = Number(sd.portDelta)  || 0;
+        bp.designed.present = true;
+      }
+    }
+    if (bp.current) {
+      bp.current.ceil  = Math.round(Number(s.s1_ceil)  || 0);
+      bp.current.datum = Math.round(Number(s.s1_datum) || 0);
+      bp.current.floor = Math.round(Number(s.s1_floor) || 0);
+      bp.current.state = s.s1_resolved_state || '';
+    }
   }
 
   /* ---- Public API ---- */
