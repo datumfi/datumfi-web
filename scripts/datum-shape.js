@@ -131,13 +131,21 @@
     var ptsStart = computeAt(scenario, 0);
     var ptsEnd   = computeAt(scenario, yearsToGrow);
 
-    var allV = [ptsStart.floorSpend, ptsEnd.ceilSpend, ptsEnd.floorSpend, ptsStart.datumSpend, ptsEnd.datumSpend];
-    var vMin = Math.min.apply(null, allV);
-    var vMax = Math.max.apply(null, allV);
-    var paddedRange = Math.max((vMax - vMin) * (1 + padPct), yMinFloor);
-    var mid = (vMin + vMax) / 2;
-    var yLo = Math.max(0, mid - paddedRange / 2);
-    var yHi = mid + paddedRange / 2;
+    // Y-domain: self-computed per scenario, OR an explicit shared domain when the
+    // caller supplies both opts.yLo and opts.yHi (buildDiff passes a union domain so
+    // have/want paths are directly comparable). Inert/byte-identical when absent.
+    var yLo, yHi;
+    if (opts.yLo != null && opts.yHi != null) {
+      yLo = opts.yLo; yHi = opts.yHi;
+    } else {
+      var allV = [ptsStart.floorSpend, ptsEnd.ceilSpend, ptsEnd.floorSpend, ptsStart.datumSpend, ptsEnd.datumSpend];
+      var vMin = Math.min.apply(null, allV);
+      var vMax = Math.max.apply(null, allV);
+      var paddedRange = Math.max((vMax - vMin) * (1 + padPct), yMinFloor);
+      var mid = (vMin + vMax) / 2;
+      yLo = Math.max(0, mid - paddedRange / 2);
+      yHi = mid + paddedRange / 2;
+    }
     var yPx = yPxBot - yPxTop;
 
     function spY(v) {
@@ -178,6 +186,155 @@
       xStart: xStart, xEnd: xEnd,
       yLo: yLo, yHi: yHi, yTop: yPxTop, yBot: yPxBot,
       spY: spY
+    };
+  }
+
+  /* ── DIFF PRODUCER (Studio WANT-face spine; pure, no DOM) ─────────────────────
+   * buildDiff(haveScenario, wantScenario, opts) -> paired geometry on ONE shared
+   * Y-domain, signed gap/tension, ghost-mark positions, and the 109-case copy.
+   * This is the Step-2 render-spine: ONE producer feeding all four Sketch-S2
+   * surrounds Step-3 ports into Studio's WANT face (ghost marks, CURRENT->TEST HUD
+   * + copy, "what it takes" inverse solver, tension/relief bars). It builds NO DOM.
+   *
+   * Additive by design: the live front face stays on mount()/buildPath() this step.
+   * buildDiff(have, have) is the zero-diff degenerate case and is byte-identical to
+   * buildPath(have) (front-face convergence is a later, separately-smoked step).
+   *
+   * opts: xStart,xEnd,steps,padPct,yPxTop,yPxBot,yMinFloor (same meaning as buildPath;
+   *       same defaults, so default opts match the Studio front-face mount), plus
+   *       opts.boundaryOverrides = { ceilDelta, floorDelta, datumDelta } -- INERT when
+   *       absent (Step-2/3); applied to the want endpoints before gap/tension/copy
+   *       when Step-4's boundary handles pass it. */
+  function _diffPositions(scn) {
+    var c01 = function (v) { return Math.max(0, Math.min(1, v)); };
+    return {
+      age:         c01((scn.currentAge - 18) / (85 - 18)),
+      retire:      c01((scn.activationAge - 45) / (90 - 45)),
+      planThrough: c01(((scn.planThroughAge || 93) - 75) / (105 - 75)),
+      portfolio:   c01(portValToPos(scn.portfolioVol) / 100000),
+      datum:       c01(datumValToPos(scn.targetSpend) / 100000),
+      contrib:     c01(contribValToPos(scn.annualContrib || 0) / 100000)
+    };
+  }
+
+  /* HAVE side, shaped for S2Copy.getPinnedCaseObj -- mirrors sketch.html's
+   * gbPinnedState (sketch L5796-5807) so the 109-case selector behaves identically. */
+  function _havePinned(scn, stateObj) {
+    return {
+      retire:         scn.activationAge,
+      age:            scn.currentAge,
+      port:           scn.portfolioVol,
+      contrib:        scn.annualContrib,
+      datum:          scn.targetSpend,
+      planThroughAge: scn.planThroughAge || 93,
+      pinnedParadigm: scn.baselineRate === 1.040 ? 'Optimistic'
+                     : scn.baselineRate === 1.015 ? 'Stress' : 'Historical',
+      pinnedInflStr:  scn.isNominal ? 'Nominal' : 'Real',
+      pinnedTax:      Math.round((1.0 - (scn.taxMult != null ? scn.taxMult : 1.0)) * 100),
+      stateObj:       stateObj
+    };
+  }
+
+  function _scnYrs(scn) {
+    return Math.max(1, scn.yearsToGrow != null
+      ? scn.yearsToGrow
+      : Math.max(0, scn.activationAge - scn.currentAge));
+  }
+
+  function buildDiff(haveScenario, wantScenario, opts) {
+    opts = opts || {};
+    if (!wantScenario) wantScenario = haveScenario; // cold-start: want defaults to have (zero diff)
+
+    var padPct    = opts.padPct    != null ? opts.padPct    : 0.10;
+    var yMinFloor = opts.yMinFloor != null ? opts.yMinFloor : 60;
+    var ov        = opts.boundaryOverrides || null;
+
+    var haveStart  = computeAt(haveScenario, 0);
+    var haveEnd    = computeAt(haveScenario, _scnYrs(haveScenario));
+    var wantStart  = computeAt(wantScenario, 0);
+    var wantEndRaw = computeAt(wantScenario, _scnYrs(wantScenario));
+
+    // Boundary-drag overrides (Step-4): applied to the WANT endpoints only. Lever
+    // dominance still reads the want SCENARIO (overrides are boundary pulls, not lever
+    // moves) -- exactly how Sketch separates designOverrides from designScenario.
+    var wantEnd = wantEndRaw;
+    if (ov) {
+      wantEnd = {};
+      for (var _k in wantEndRaw) { if (Object.prototype.hasOwnProperty.call(wantEndRaw, _k)) wantEnd[_k] = wantEndRaw[_k]; }
+      wantEnd.ceilSpend  = wantEndRaw.ceilSpend  + (ov.ceilDelta  || 0);
+      wantEnd.floorSpend = wantEndRaw.floorSpend + (ov.floorDelta || 0);
+      wantEnd.datumSpend = wantEndRaw.datumSpend + (ov.datumDelta || 0);
+    }
+
+    // Shared Y-domain: buildPath's EXACT formula over the UNION of both 5-point sets.
+    // When have===want (no overrides) the union collapses to have's set, so sharedY ==
+    // buildPath(have)'s self-computed domain -> buildDiff(have,have) is byte-identical.
+    var allV = [
+      haveStart.floorSpend, haveEnd.ceilSpend, haveEnd.floorSpend, haveStart.datumSpend, haveEnd.datumSpend,
+      wantStart.floorSpend, wantEnd.ceilSpend, wantEnd.floorSpend, wantStart.datumSpend, wantEnd.datumSpend
+    ];
+    var vMin = Math.min.apply(null, allV);
+    var vMax = Math.max.apply(null, allV);
+    var paddedRange = Math.max((vMax - vMin) * (1 + padPct), yMinFloor);
+    var mid = (vMin + vMax) / 2;
+    var sharedY = { yLo: Math.max(0, mid - paddedRange / 2), yHi: mid + paddedRange / 2 };
+
+    var pathOpts = {
+      xStart: opts.xStart, xEnd: opts.xEnd, steps: opts.steps,
+      yPxTop: opts.yPxTop, yPxBot: opts.yPxBot,
+      padPct: padPct, yMinFloor: yMinFloor,
+      yLo: sharedY.yLo, yHi: sharedY.yHi
+    };
+    var haveB = buildPath(haveScenario, pathOpts);
+    var wantB = buildPath(wantScenario, pathOpts);
+
+    var haveState = buildShapeState(haveEnd);
+    var wantState = buildShapeState(wantEnd);
+
+    // gap: BOTH forms of the want-have gap, derived once.
+    //   delta = raw $k/yr  -> feeds the inverse solver (it owns its own noise floor)
+    //   ratio = clamped signed [-1,1] -> feeds the tension/relief bars (sign = read)
+    var _ch = function (wv, hv) {
+      var delta = wv - hv;
+      return { delta: delta, ratio: Math.min(1, Math.max(-1, delta / Math.max(1, hv))) };
+    };
+    var gap = {
+      ceil:  _ch(wantEnd.ceilSpend,  haveEnd.ceilSpend),
+      floor: _ch(wantEnd.floorSpend, haveEnd.floorSpend),
+      datum: _ch(wantEnd.datumSpend, haveEnd.datumSpend),
+      datumAboveCeil: wantEnd.datumSpend > wantEnd.ceilSpend
+    };
+    // Signed tension array, handed out unmodified (positive=tension, negative=relief).
+    var tension = [
+      { channel: 'ceil',  ratio: gap.ceil.ratio },
+      { channel: 'floor', ratio: gap.floor.ratio },
+      { channel: 'datum', ratio: gap.datum.ratio }
+    ];
+
+    // 109-case copy via the shared engine. S2Copy is attached by datum-shape-copy.js,
+    // which loads AFTER this file -> resolve lazily at call time, null-safe (mirrors
+    // sketch.html's getPinnedCaseObj fallback). null copy => Step-3 multi-lever heuristic.
+    var copy = null;
+    var S2 = global.DatumShape && global.DatumShape.S2Copy;
+    if (S2 && typeof S2.getPinnedCaseObj === 'function') {
+      copy = S2.getPinnedCaseObj(_havePinned(haveScenario, haveState), wantEnd, wantScenario);
+    }
+
+    return {
+      sharedY: sharedY,
+      have: {
+        dCeil: haveB.dCeil, dFloor: haveB.dFloor, dDatum: haveB.dDatum, dCone: haveB.dCone,
+        ceilPts: haveB.ceilPts, floorPts: haveB.floorPts,
+        ptsEnd: haveEnd, stateObj: haveState, positions: _diffPositions(haveScenario)
+      },
+      want: {
+        dCeil: wantB.dCeil, dFloor: wantB.dFloor, dDatum: wantB.dDatum, dCone: wantB.dCone,
+        ceilPts: wantB.ceilPts, floorPts: wantB.floorPts,
+        ptsEnd: wantEnd, stateObj: wantState, positions: _diffPositions(wantScenario)
+      },
+      gap: gap,
+      tension: tension,
+      copy: copy
     };
   }
 
@@ -976,6 +1133,7 @@
     compute:            compute,
     computeAt:          computeAt,
     buildPath:          buildPath,
+    buildDiff:          buildDiff,
     classifyShapeState: classifyShapeState,
     buildShapeState:    buildShapeState,
     SHAPE_STATE_COPY:   SHAPE_STATE_COPY,
