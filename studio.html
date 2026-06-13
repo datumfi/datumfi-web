@@ -1278,7 +1278,7 @@
               <div>
                 <div class="input-label">Location (Tax Base)</div>
                 <!-- Dossier-exact US-states dropdown (Dossier.html #location, verbatim option list) -->
-                <select id="pri-location" class="small-field" tabindex="12" style="background: var(--bg-navy); color: white; border: 1px solid rgba(255,255,255,0.1);">
+                <select id="pri-location" class="small-field" tabindex="12" style="background: var(--bg-navy); color: white;">
                    <option value="" selected>Select state</option><option>Alabama</option><option>Alaska</option><option>Arizona</option><option>Arkansas</option><option>California</option><option>Colorado</option><option>Connecticut</option><option>Delaware</option><option>District of Columbia</option><option>Florida</option><option>Georgia</option><option>Hawaii</option><option>Idaho</option><option>Illinois</option><option>Indiana</option><option>Iowa</option><option>Kansas</option><option>Kentucky</option><option>Louisiana</option><option>Maine</option><option>Maryland</option><option>Massachusetts</option><option>Michigan</option><option>Minnesota</option><option>Mississippi</option><option>Missouri</option><option>Montana</option><option>Nebraska</option><option>Nevada</option><option>New Hampshire</option><option>New Jersey</option><option>New Mexico</option><option>New York</option><option>North Carolina</option><option>North Dakota</option><option>Ohio</option><option>Oklahoma</option><option>Oregon</option><option>Pennsylvania</option><option>Rhode Island</option><option>South Carolina</option><option>South Dakota</option><option>Tennessee</option><option>Texas</option><option>Utah</option><option>Vermont</option><option>Virginia</option><option>Washington</option><option>West Virginia</option><option>Wisconsin</option><option>Wyoming</option>
                 </select>
               </div>
@@ -1293,7 +1293,7 @@
               <div>
                 <div class="input-label">Effective Tax Rate</div>
                 <!-- Dossier-exact dropdown (Dossier.html #taxRate, verbatim options) -->
-                <select id="eff-tax-rate" class="small-field" tabindex="14" style="background: var(--bg-navy); color: white; border: 1px solid rgba(255,255,255,0.1);" onchange="updateAnalysisText()">
+                <select id="eff-tax-rate" class="small-field" tabindex="14" style="background: var(--bg-navy); color: white;" onchange="updateAnalysisText()">
                    <option value="12%">12% bracket</option>
                    <option value="22%" selected>22% blended estimate</option>
                    <option value="24%">24% bracket</option>
@@ -1306,7 +1306,7 @@
             <div class="field-row" style="grid-template-columns: 1fr;">
               <div>
                 <div class="input-label">Filing Status</div>
-                <select id="filing-status" class="small-field" tabindex="15" style="background: var(--bg-navy); color: white; border: 1px solid rgba(255,255,255,0.1);">
+                <select id="filing-status" class="small-field" tabindex="15" style="background: var(--bg-navy); color: white;">
                    <option>Single / Individual</option>
                    <option selected>Married Filing Jointly</option>
                    <option>Married Filing Separately</option>
@@ -4773,6 +4773,9 @@
           }
           var spendEl = document.getElementById('spend-input');
           if (spendEl) spendEl.value = String(spendDollars);
+          // Fire the F89 datum wave (up -> ceiling, down -> floor) the same way
+          // the datum slider does; the slider position was set just above.
+          if (window._studioDatumBarWave) window._studioDatumBarWave();
           if (_datumShapeHandle) _datumShapeHandle.update(_scenarioFromInputs());
         }
       });
@@ -5173,6 +5176,22 @@
       if (cLean != null || fLean != null) w.setLean(cLean, fLean);
       if (cMag || fMag) w.addImpulse(cMag || 0, fMag || 0);
     }
+
+    // Datum-bar drag wave: the SVG bar drag flows through the module's
+    // onDatumChange (not the slider 'input' event the Sketch dispatches), so
+    // mirror the datum slider's directional impulse here -- drag up pushes the
+    // shape toward the Ceiling, drag down toward the Floor, exactly like the
+    // slider and the Sketch. Reads the slider position onDatumChange just set
+    // and keeps _prev.dat in sync so a later slider nudge stays correct.
+    window._studioDatumBarWave = function () {
+      var sDat = $('slider-datum'); if (!sDat) return;
+      var n = parseInt(sDat.value, 10);
+      if (!isNaN(_prev.dat)) {
+        if (n > _prev.dat) impulse(WAVE_IMP_DATUM, 0, +1, null, WAVE_LEAN_MAG, null);
+        else if (n < _prev.dat) impulse(0, WAVE_IMP_DATUM, null, -1, null, -WAVE_LEAN_MAG);
+      }
+      _prev.dat = n;
+    };
 
     function wireSliders() {
       // Integer sliders
