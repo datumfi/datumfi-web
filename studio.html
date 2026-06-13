@@ -338,6 +338,27 @@
   #shape-panel-svg .datum-group:active { cursor: grabbing; }
   #shape-panel-svg .datum-group:hover .b-datum { stroke-width: 5; filter: drop-shadow(0 0 8px rgba(93,202,165,0.8)); }
   #shape-panel-svg .datum-group.datum-dragging .b-datum { stroke-width: 5; filter: drop-shadow(0 0 10px rgba(93,202,165,1)); }
+  /* Datum architecture takes the shape-state color -- CSS port of sketch
+     L4537-4540 (the sketch writes stateObj.color inline from JS; the module
+     swaps shape-state-* on this SVG so CSS can key off it). Expansive keeps
+     the teal default above; datum-lbl carries an inline teal fill so the
+     state overrides need !important. */
+  #shape-panel-svg.shape-state-abundant #datum-line { stroke: var(--blue-safe); }
+  #shape-panel-svg.shape-state-abundant #node-datum,
+  #shape-panel-svg.shape-state-abundant #datum-circle { fill: var(--blue-safe); }
+  #shape-panel-svg.shape-state-abundant #datum-lbl { fill: var(--blue-safe) !important; }
+  #shape-panel-svg.shape-state-grounded #datum-line { stroke: var(--purple-grounded); }
+  #shape-panel-svg.shape-state-grounded #node-datum,
+  #shape-panel-svg.shape-state-grounded #datum-circle { fill: var(--purple-grounded); }
+  #shape-panel-svg.shape-state-grounded #datum-lbl { fill: var(--purple-grounded) !important; }
+  #shape-panel-svg.shape-state-stretched #datum-line { stroke: var(--orange-warning); }
+  #shape-panel-svg.shape-state-stretched #node-datum,
+  #shape-panel-svg.shape-state-stretched #datum-circle { fill: var(--orange-warning); }
+  #shape-panel-svg.shape-state-stretched #datum-lbl { fill: var(--orange-warning) !important; }
+  #shape-panel-svg.shape-state-overextended #datum-line { stroke: var(--danger-red); }
+  #shape-panel-svg.shape-state-overextended #node-datum,
+  #shape-panel-svg.shape-state-overextended #datum-circle { fill: var(--danger-red); }
+  #shape-panel-svg.shape-state-overextended #datum-lbl { fill: var(--danger-red) !important; }
 
   /* Drafting echo (art) layer -- verbatim sketch L352-355 + draftingFade keyframes.
      fill:none is CRITICAL: these are OPEN curves, and without it SVG auto-closes

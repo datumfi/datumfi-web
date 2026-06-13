@@ -5605,7 +5605,18 @@
           }, 200);
           // HUD reveals after datum draw completes — reads --f88-draw-dur so it auto-adjusts if tuned
           var _dur = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--f88-draw-dur')) || 2.0;
-          setTimeout(function() { var hd = document.getElementById('hud-dash'); if (hd) hd.classList.remove('f88-hud-hidden'); var il = document.getElementById('interactive-layer'); if (il) il.classList.add('active'); }, Math.round(_dur * 1.1 * 1000) + 100);
+          setTimeout(function() {
+            var hd = document.getElementById('hud-dash'); if (hd) hd.classList.remove('f88-hud-hidden');
+            var il = document.getElementById('interactive-layer'); if (il) il.classList.add('active');
+            // Discovery completion arms the shape (drag + hover + scrubber) the same
+            // way a trusted datum input does (see the slDatum input handler). Without
+            // this the user had to nudge the datum a second time before it went live.
+            // Reopen jumpToFull (its callers add shape-armed) and Studio are unaffected.
+            _shapeArmed = true;
+            if (window.currentShapeStateObj && window.currentShapeStateObj.name) previousStateName = window.currentShapeStateObj.name;
+            var _ddF = document.getElementById('datum-dragger'); if (_ddF) _ddF.style.pointerEvents = '';
+            var _scF = document.getElementById('sketch-canvas'); if (_scF) _scF.classList.add('shape-armed');
+          }, Math.round(_dur * 1.1 * 1000) + 100);
         }
       }
 
