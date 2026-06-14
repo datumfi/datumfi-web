@@ -1096,6 +1096,28 @@
   #shape-want-face .d2-accept-btn:hover { background:rgba(255,255,255,0.12); color:#fff; }
   #shape-want-face #d2-canvas .d2-handle, #shape-want-face #d2-canvas .d2-handle-hit { cursor:ns-resize; }
   </style>
+  <style id="shape-want-face-cleanup-styles">
+  /* ── P1: stop the Estate grab-cursor bleeding onto Want controls (the pan-hijack
+        itself is fixed in the canvas-wrapper controller); the shape pan-surface
+        re-asserts grab below. ── */
+  #shape-want-face { cursor:auto; }
+  /* ── P2: the Want shape gets its OWN zoom/pan context — parity with the Have
+        #shape-zoom-wrap — wrapping HUD + canvas + tension so they scale together. ── */
+  #swf-main { overflow:hidden; }
+  #shape-want-zoom-wrap { transform-origin:top center; will-change:transform; cursor:grab; }
+  #shape-want-zoom-wrap:active { cursor:grabbing; }
+  #shape-want-zoom-wrap input, #shape-want-zoom-wrap .lbl-has-tip,
+  #shape-want-zoom-wrap button, #shape-want-zoom-wrap a { cursor:auto; }
+  #shape-want-zoom-wrap .datum-group, #shape-want-zoom-wrap .d2-handle,
+  #shape-want-zoom-wrap .d2-handle-hit { cursor:ns-resize; }
+  /* ── P4: in Want mode collapse the redundant primary input column ("Draft Your
+        Estate") so the Shape breathes; it returns on flip-to-Have. ── */
+  .studio-layout.want-mode .drafting-panel { display:none !important; }
+  /* ── P4: compact muted inline "was <have> →" prior value beside each live Want value ── */
+  .swf-val-wrap { display:inline-flex; align-items:baseline; }
+  .swf-was { font-family:var(--font-mono); font-size:9px; color:rgba(255,255,255,0.34); letter-spacing:0.04em; margin-right:6px; white-space:nowrap; }
+  .swf-was:empty { display:none; }
+  </style>
 </head>
 <body>
   <a href="#studio-layout" class="skip-link">Skip to main content</a>
@@ -2029,7 +2051,7 @@
             <div class="control-group">
               <div class="control-header">
                 <label class="control-label" for="d2-slider-age">Current Age</label>
-                <span class="control-value" id="d2-val-age">40 yrs</span>
+                <span class="swf-val-wrap"><span class="swf-was" id="swf-was-age"></span><span class="control-value" id="d2-val-age">40 yrs</span></span>
               </div>
               <div class="d2-slider-wrap">
                 <input type="range" id="d2-slider-age" min="18" max="85" value="40" step="1">
@@ -2040,7 +2062,7 @@
             <div class="control-group" style="margin-bottom:0;">
               <div class="control-header">
                 <label class="control-label" id="d2-lbl-retire" for="d2-slider-activation">Retirement Age</label>
-                <span class="control-value" id="d2-val-activation">65 yrs</span>
+                <span class="swf-val-wrap"><span class="swf-was" id="swf-was-activation"></span><span class="control-value" id="d2-val-activation">65 yrs</span></span>
               </div>
               <div class="d2-slider-wrap">
                 <input type="range" id="d2-slider-activation" min="45" max="90" value="65" step="1">
@@ -2054,7 +2076,7 @@
             <div class="control-group" style="margin-bottom:0;">
               <div class="control-header">
                 <label class="control-label" for="d2-slider-plan-through">Plan Through Age</label>
-                <span class="control-value" id="d2-val-plan-through">93 yrs</span>
+                <span class="swf-val-wrap"><span class="swf-was" id="swf-was-plan-through"></span><span class="control-value" id="d2-val-plan-through">93 yrs</span></span>
               </div>
               <div class="d2-slider-wrap">
                 <input type="range" id="d2-slider-plan-through" min="75" max="105" value="93" step="1">
@@ -2069,7 +2091,7 @@
             <div class="control-group" style="margin-bottom:0;">
               <div class="control-header">
                 <label class="control-label" for="d2-slider-portfolio">Current Portfolio Balance</label>
-                <span class="control-value" id="d2-val-portfolio">$750k</span>
+                <span class="swf-val-wrap"><span class="swf-was" id="swf-was-portfolio"></span><span class="control-value" id="d2-val-portfolio">$750k</span></span>
               </div>
               <div class="d2-slider-wrap">
                 <input type="range" id="d2-slider-portfolio" min="0" max="100000" value="61185" step="1">
@@ -2083,7 +2105,7 @@
             <div class="control-group" style="margin-bottom:0;">
               <div class="control-header">
                 <label class="control-label" for="d2-slider-contrib">Annual Contributions</label>
-                <span class="control-value" id="d2-val-contrib">$25,000</span>
+                <span class="swf-val-wrap"><span class="swf-was" id="swf-was-contrib"></span><span class="control-value" id="d2-val-contrib">$25,000</span></span>
               </div>
               <div class="d2-slider-wrap">
                 <input type="range" id="d2-slider-contrib" min="0" max="100000" value="82964" step="1">
@@ -2096,8 +2118,8 @@
             <div class="dialogue-prompt mono-label" style="color: var(--teal-mid);">04 / YOUR DATUM</div>
             <div class="control-group" style="margin-bottom:0;">
               <div class="control-header" style="flex-direction: column; align-items: flex-start;">
-                <div style="display:flex; justify-content:flex-end; width:100%; align-items:flex-end;">
-                  <span class="control-value" id="d2-val-datum" style="color: var(--teal-mid);">$100k / yr</span>
+                <div style="display:flex; justify-content:flex-end; width:100%; align-items:baseline;">
+                  <span class="swf-was" id="swf-was-datum"></span><span class="control-value" id="d2-val-datum" style="color: var(--teal-mid);">$100k / yr</span>
                 </div>
                 <div style="font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.4); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.1em;">Your target annual retirement spending — the point you choose to test inside your Shape.</div>
               </div>
@@ -2143,6 +2165,7 @@
         </div>
             </div><!-- /#swf-controls -->
             <div id="swf-main">
+              <div id="shape-want-zoom-wrap">
               <div id="swf-hud">
         <div class="interactive-layer active" id="d2s-hud-dash" style="position:relative; flex-shrink:0; margin-bottom:6px; opacity:0; transition:opacity 0.6s;">
           <div class="hud-dashboard" style="display:block;">
@@ -2345,6 +2368,7 @@
             </div>
             <div id="tension-explain" style="font-size:9px; color:rgba(255,255,255,0.5); line-height:1.55; font-family:var(--font-sans,sans-serif); margin-top:3px;">Drag the Ceiling, Floor, or Datum handles to shape your cone.</div>
           </div>
+              </div><!-- /#shape-want-zoom-wrap -->
             </div><!-- /#swf-main -->
             <div id="swf-takes">
               <div class="requirements-panel" id="requirements-panel">
@@ -4293,8 +4317,53 @@
       }).observe(_hudEl);
     }
 
+    // ── P2: Want-face (back of the 3D flip) zoom/pan — own state + target, parity
+    // with the Have #shape-zoom-wrap. The back face carries rotateY(180deg), so
+    // screen-space X is MIRRORED: negate the X delta on pan (Y + scale unaffected,
+    // same reason datum-drag works vertically on the flipped face).
+    const shapeWantZoomWrap = document.getElementById('shape-want-zoom-wrap');
+    let wantScale = 1, wantX = 0, wantY = 0, wantUserAdjusted = false;
+    function wantActive() {
+      const fi = document.getElementById('shape-flip-inner');
+      return inShapeMode() && !!(fi && fi.classList.contains('flipped'));
+    }
+    function updateWantTransform() {
+      if (shapeWantZoomWrap) shapeWantZoomWrap.style.transform = `translate(${wantX}px, ${wantY}px) scale(${wantScale})`;
+    }
+    function fitWantToScreen() {
+      if (!shapeWantZoomWrap) return;
+      const main = document.getElementById('swf-main');
+      if (!main) return;
+      const availW = main.clientWidth;
+      const availH = main.clientHeight;
+      const contentW = shapeWantZoomWrap.offsetWidth;
+      const contentH = shapeWantZoomWrap.offsetHeight;
+      if (contentW < 1 || contentH < 1 || availW < 1 || availH < 1) return;
+      wantScale = Math.min(availW / contentW, availH / contentH, 1);
+      wantX = 0; wantY = 0;
+      updateWantTransform();
+    }
+    window._fitWantToScreen = function () { wantUserAdjusted = false; fitWantToScreen(); };
+    window.addEventListener('resize', () => { if (wantActive() && !wantUserAdjusted) fitWantToScreen(); });
+    // Re-fit when the Want shape's content grows (HUD/narrative after ACCEPT or a state
+    // change) so it never pushes the shape off-screen — mirrors the Have HUD observer.
+    if (window.ResizeObserver && shapeWantZoomWrap) {
+      new ResizeObserver(() => { if (wantActive() && !wantUserAdjusted) fitWantToScreen(); }).observe(shapeWantZoomWrap);
+    }
+    // Want pan is suppressed over interactive controls + chrome (only the empty shape pans).
+    function _wantPanBlocked(t) {
+      return !!(t.closest('#swf-hud') || t.closest('.datum-group') || t.closest('.d2-handle') || t.closest('.d2-handle-hit') || t.closest('input') || t.closest('button') || t.closest('a') || t.closest('.lbl-has-tip'));
+    }
+
     canvasWrapper.addEventListener('wheel', (e) => {
        e.preventDefault();
+       if (wantActive()) {
+         wantUserAdjusted = true;
+         wantScale += e.deltaY * -0.001;
+         wantScale = Math.min(Math.max(0.3, wantScale), 2.0);
+         updateWantTransform();
+         return;
+       }
        if (inShapeMode()) {
          shapeUserAdjusted = true;
          shapeScale += e.deltaY * -0.001;
@@ -4310,6 +4379,16 @@
     canvasWrapper.addEventListener('mousedown', (e) => {
       if(e.target.closest('.hud-panel') || e.target.closest('.map-delete') || e.target.closest('.room-grp') || e.target.closest('.lens-controls')) return;
       if (inShapeMode()) {
+        if (wantActive()) {
+          // P1: Want controls are free — pan ONLY when grabbing the empty shape surface.
+          if (!e.target.closest('#shape-want-zoom-wrap') || _wantPanBlocked(e.target)) return;
+          dragTarget = 'want';
+          isDragging = true;
+          startX = e.clientX + wantX;   // mirrored X (rotateY180): wantX = startX - clientX
+          startY = e.clientY - wantY;
+          canvasWrapper.style.cursor = 'grabbing';
+          return;
+        }
         // HUD stays clickable (Motion toggle, tooltips); datum drag stays the module's.
         if (e.target.closest('#shape-hud') || e.target.closest('#datum-dragger') || e.target.closest('.datum-group')) return;
         dragTarget = 'shape';
@@ -4330,6 +4409,13 @@
     canvasWrapper.addEventListener('mousemove', (e) => {
       if (!isDragging) return;
       e.preventDefault();
+      if (dragTarget === 'want') {
+        wantUserAdjusted = true;
+        wantX = startX - e.clientX;   // mirrored X (rotateY180 back face)
+        wantY = e.clientY - startY;
+        updateWantTransform();
+        return;
+      }
       if (dragTarget === 'shape') {
         shapeUserAdjusted = true;
         shapeX = e.clientX - startX;
@@ -4344,6 +4430,13 @@
 
     canvasWrapper.addEventListener('touchstart', (e) => {
       if(e.touches.length === 1) {
+        if (wantActive()) {
+          if (!e.target.closest('#shape-want-zoom-wrap') || _wantPanBlocked(e.target)) return;
+          dragTarget = 'want'; isDragging = true;
+          startX = e.touches[0].clientX + wantX;   // mirrored X
+          startY = e.touches[0].clientY - wantY;
+          return;
+        }
         if (inShapeMode() && (e.target.closest('#shape-hud') || e.target.closest('#datum-dragger') || e.target.closest('.datum-group'))) return;
         dragTarget = inShapeMode() ? 'shape' : 'estate';
         isDragging = true;
@@ -4354,6 +4447,13 @@
     canvasWrapper.addEventListener('touchend', () => { isDragging = false; });
     canvasWrapper.addEventListener('touchmove', (e) => {
       if (!isDragging || e.touches.length !== 1) return;
+      if (dragTarget === 'want') {
+        wantUserAdjusted = true;
+        wantX = startX - e.touches[0].clientX;   // mirrored X
+        wantY = e.touches[0].clientY - startY;
+        updateWantTransform();
+        return;
+      }
       if (dragTarget === 'shape') {
         shapeUserAdjusted = true;
         shapeX = e.touches[0].clientX - startX;

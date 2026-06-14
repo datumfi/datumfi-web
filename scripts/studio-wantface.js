@@ -113,6 +113,23 @@
     }
   }
 
+  /* P4: compact muted "was <have> →" prior-value beside each live Want value. The Have
+   * baseline is frozen for the session (set on Want entry), so this is static while the
+   * user reshapes — it replaces the separate Have mirror column. */
+  function _updateWasReadouts() {
+    var t = function (id, v) { var el = $(id); if (el) el.textContent = v; };
+    var keys = ['age', 'activation', 'plan-through', 'portfolio', 'contrib', 'datum'];
+    if (!_haveScn) { keys.forEach(function (k) { t('swf-was-' + k, ''); }); return; }
+    var arrow = ' →';
+    t('swf-was-age', 'was ' + Math.round(_haveScn.currentAge) + arrow);
+    t('swf-was-activation', 'was ' + Math.round(_haveScn.activationAge) + arrow);
+    t('swf-was-plan-through', 'was ' + Math.round(_haveScn.planThroughAge || 93) + arrow);
+    t('swf-was-portfolio', 'was ' + fmtCapK(Math.round((_haveScn.portfolioVol || 0) * 1000)) + arrow);
+    t('swf-was-contrib', 'was $' + Math.round(_haveScn.annualContrib || 0).toLocaleString('en-US') + arrow);
+    var ts = Math.round(_haveScn.targetSpend || 0);
+    t('swf-was-datum', 'was ' + (ts >= 1000 ? '$' + (ts / 1000).toFixed(2).replace(/\.00$/, '') + 'M' : '$' + ts + 'k') + arrow);
+  }
+
   /* ── geometry helpers ── */
   function _spY(sy) {
     var lo = sy.yLo, hi = sy.yHi, top = FRONT.yPxTop, bot = FRONT.yPxBot;
@@ -145,15 +162,16 @@
     sa('d2-ghost-floor', 'd', d.have.dFloor); sa('d2-ghost-datum', 'd', d.have.dDatum);
     var gc = $('d2-ghost-cone'); if (gc) gc.setAttribute('opacity', '0.22');
     // live (Want) — exact at rest, interpolated during morph
+    // datum line is drawn below at the SAME dy as the node/handle (see _dy) so they
+    // always coincide — the engine's dDatum path can lag the endpoint on a boundary pull.
     if (t >= 1) {
       sa('d2-cone', 'd', d.want.dCone); sa('d2-ceil-line', 'd', d.want.dCeil);
-      sa('d2-floor-line', 'd', d.want.dFloor); sa('d2-datum-line', 'd', d.want.dDatum);
+      sa('d2-floor-line', 'd', d.want.dFloor);
     } else {
       var hc = _parse(d.have.dCeil), wc = _parse(d.want.dCeil), c = _lerpPts(hc, wc, t);
       var hf = _parse(d.have.dFloor), wf = _parse(d.want.dFloor), f = _lerpPts(hf, wf, t);
-      var hd = _parse(d.have.dDatum), wd = _parse(d.want.dDatum), dd = _lerpPts(hd, wd, t);
       sa('d2-ceil-line', 'd', _lineFrom(c)); sa('d2-floor-line', 'd', _lineFrom(f));
-      sa('d2-datum-line', 'd', _lineFrom(dd)); sa('d2-cone', 'd', _coneFrom(c, f));
+      sa('d2-cone', 'd', _coneFrom(c, f));
     }
     var lc = $('d2-cone'); if (lc) lc.setAttribute('opacity', '0.55');
     // endpoint nodes / labels / handles at the right edge, lerped
@@ -161,6 +179,8 @@
     var cy = spY(_lerp(he.ceilSpend, we.ceilSpend, t));
     var fy = spY(_lerp(he.floorSpend, we.floorSpend, t));
     var dy = spY(_lerp(he.datumSpend, we.datumSpend, t));
+    // draw the datum line flat at dy (== node/handle y) so line+node+handle are coincident
+    sa('d2-datum-line', 'd', 'M ' + FRONT.xStart + ' ' + dy + ' L ' + FRONT.xEnd + ' ' + dy);
     var place = function (node, lbl, y) { sa(node, 'cx', xE); sa(node, 'cy', y); sa(lbl, 'x', xE + 15); sa(lbl, 'y', y + 4); };
     place('d2-node-ceil', 'd2-lbl-ceil', cy); place('d2-node-floor', 'd2-lbl-floor', fy); place('d2-node-datum', 'd2-lbl-datum', dy);
     [['d2-handle-ceil', 'd2-handle-ceil-hit', 'd2-handle-ceil-line', cy], ['d2-handle-datum', 'd2-handle-datum-hit', 'd2-handle-datum-line', dy], ['d2-handle-floor', 'd2-handle-floor-hit', null, fy]].forEach(function (h) {
@@ -379,13 +399,14 @@
     if (!_haveScn) return;
     if (!_wantInit) { _seedSliders(_haveScn); _wantInit = true; }
     _computeHavePos();
+    _updateWasReadouts();
     _resetOverrides();
     var ref = $('sketch-design-ref'); if (ref) ref.style.display = 'none';
     renderWantFace(1);          // compute _lastDiff at rest first
     _paintCanvas(_lastDiff, 0); // then start the morph from Have
   }
 
-  window.flipToWant = function () { var i = inner(); if (!i) return; var lay = $('studio-layout'); if (lay) lay.classList.add('want-mode'); setTabs(true); enterWantFace(); i.classList.add('flipped'); _morph(800); };
+  window.flipToWant = function () { var i = inner(); if (!i) return; var lay = $('studio-layout'); if (lay) lay.classList.add('want-mode'); setTabs(true); enterWantFace(); i.classList.add('flipped'); _morph(800); if (window._fitWantToScreen) { requestAnimationFrame(function () { requestAnimationFrame(function () { window._fitWantToScreen(); }); }); } };
   window.flipToHave = function () { var i = inner(); if (!i) return; var lay = $('studio-layout'); if (lay) lay.classList.remove('want-mode'); setTabs(false); i.classList.remove('flipped'); if (_morphRAF) { cancelAnimationFrame(_morphRAF); _morphRAF = 0; } };
   window.renderWantFace = function () { renderWantFace(1); };
 
