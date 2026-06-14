@@ -1037,6 +1037,48 @@
   #d2-tension-hud { width:100%; max-width:900px; }
   #swf-pending { margin-top:12px; font-family:var(--font-mono); font-size:10px; letter-spacing:0.08em; color:rgba(255,255,255,0.35); text-align:center; }
   </style>
+  <style id="shape-want-face-wiring-styles">
+  /* ── Want-face layout + S2 controls (Step-3 wiring) ───────────────── */
+  #shape-want-face { display:flex; flex-direction:row; gap:16px; align-items:flex-start; width:100%; padding:6px 14px; box-sizing:border-box; }
+  #swf-controls { width:290px; flex-shrink:0; max-height:600px; overflow-y:auto; overflow-x:hidden; padding-right:8px; margin-top:62px; }
+  #swf-main { flex:1; min-width:0; display:flex; flex-direction:column; }
+  #swf-hud { margin-bottom:8px; }
+  #shape-want-face #d2s-hud-dash { opacity:1 !important; }
+  #shape-want-face .d2-input-panel { width:100%; }
+  #shape-want-face .d2-input-panel .dialogue-block { margin-bottom:14px; }
+  #shape-want-face .d2-slider-wrap { position:relative; width:100%; }
+  #shape-want-face .d2-input-panel input[type=range] { width:100%; }
+  #shape-want-face .d2-ghost-tick { position:absolute; top:50%; transform:translate(-50%,-50%); pointer-events:none; z-index:1; display:none; }
+  #shape-want-face .d2-ghost-tick.visible { display:block; }
+  #shape-want-face .d2-ghost-tick-line { width:2px; height:14px; background:rgba(255,255,255,0.28); border-radius:1px; box-shadow:0 0 3px rgba(255,255,255,0.08); }
+  #shape-want-face .lev-tooltip { font-family:var(--font-mono); font-size:9px; color:rgba(255,255,255,0.32); margin-top:5px; line-height:1.45; }
+  #shape-want-face .dialogue-prompt { font-size:9px; letter-spacing:0.12em; color:rgba(255,255,255,0.4); margin-bottom:8px; }
+  #shape-want-face .sketch-trust-copy { display:none; }
+  #shape-want-face .btn-know-shape { display:none; }
+  #shape-want-face .pin-changes-row { font-family:var(--font-mono); font-size:9px; color:rgba(255,255,255,0.6); margin-bottom:4px; }
+  #shape-want-face .pin-lever-row { display:flex; gap:6px; align-items:baseline; margin-top:5px; font-family:var(--font-mono); font-size:9px; }
+  #shape-want-face .lbl-pin-lever { color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:0.08em; }
+  #shape-want-face #d2s-pin-lever-attribution { color:var(--gold); }
+  #shape-want-face .data-line { color:rgba(255,255,255,0.82); }
+  #shape-want-face .range-svg { cursor:default; }
+  </style>
+  <style id="shape-want-face-polish-styles">
+  /* ── Want-face UX polish (Step-1: labels, gold/red plan-strength fill, state HUD) ── */
+  .swf-col-head { font-family:var(--font-mono); font-size:10px; letter-spacing:0.18em; text-transform:uppercase; padding:6px 0 10px; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.08); }
+  .swf-col-head.want { color:var(--gold); }
+  .swf-col-head.have { display:none; color:var(--teal-mid); }
+  .studio-layout.want-mode .swf-col-head.have { display:block; }
+  /* Want sliders: visible track so the JS-set gold/red plan-strength gradient reads as a fill bar */
+  #shape-want-face .d2-input-panel input[type=range] { -webkit-appearance:none; appearance:none; width:100%; height:4px; border-radius:2px; background:rgba(255,255,255,0.14); margin:7px 0; cursor:pointer; }
+  #shape-want-face .d2-input-panel input[type=range]::-webkit-slider-runnable-track { background:transparent; height:4px; border:none; }
+  #shape-want-face .d2-input-panel input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; height:14px; width:14px; border-radius:50%; background:#fff; margin-top:-5px; box-shadow:0 0 6px rgba(0,0,0,0.5); cursor:pointer; border:none; }
+  #shape-want-face .d2-input-panel input[type=range]:focus-visible::-webkit-slider-thumb { outline:2px solid var(--gold); outline-offset:2px; }
+  #shape-want-face .d2-input-panel input[type=range]::-moz-range-track { background:transparent; height:4px; border:none; }
+  #shape-want-face .d2-input-panel input[type=range]::-moz-range-thumb { height:14px; width:14px; border:none; border-radius:50%; background:#fff; }
+  /* HUD: opaque navy wrapper so the state tint reads over it (not the blueprint grid) */
+  #shape-want-face #d2s-hud-dash { background:rgba(9,18,33,0.92); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px 14px; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); box-shadow:0 8px 24px rgba(0,0,0,0.35); }
+  #shape-want-face #d2s-hud-main { background:transparent; border:1px solid rgba(255,255,255,0.08); border-left:2px solid var(--teal-mid); border-radius:6px; padding:8px 12px; transition:border-color 0.3s ease, border-left-color 0.3s ease, background-color 0.3s ease; }
+  </style>
 </head>
 <body>
   <a href="#studio-layout" class="skip-link">Skip to main content</a>
@@ -1105,6 +1147,7 @@
            Seeded from Blueprint draft -> saved Sketch -> Dossier -> defaults.
            Bidirectionally bound to Profile (pri-dob / target-ret / plan-end-age / eff-tax-rate)
            on a last-touched-wins basis. -->
+      <div class="swf-col-head have" aria-hidden="true">Shape You Have</div>
       <div class="studio-section">
         <div class="section-header-wrapper">
             <button class="section-tag" onclick="toggleSection('sec-sketch', this)" style="border:none; margin:0; padding:0; flex:1;">
@@ -1960,7 +2003,202 @@
         </div><!-- /#shape-face-front -->
         <div id="shape-face-back" aria-hidden="true">
           <div id="shape-want-face">
-            <div id="swf-canvas-col">
+            <div id="swf-controls">
+              <div class="swf-col-head want">Shape You Want</div>
+        <div class="d2-input-panel">
+
+          <div class="dialogue-block">
+            <div class="dialogue-prompt mono-label">01 / YOUR TIMELINE</div>
+            <div class="control-group">
+              <div class="control-header">
+                <label class="control-label" for="d2-slider-age">Current Age</label>
+                <span class="control-value" id="d2-val-age">40 yrs</span>
+              </div>
+              <div class="d2-slider-wrap">
+                <input type="range" id="d2-slider-age" min="18" max="85" value="40" step="1">
+                <div class="d2-ghost-tick" id="d2-tick-age"><div class="d2-ghost-tick-line"></div></div>
+              </div>
+              <div class="lev-tooltip">Where you are today — the starting point, and how many years of building still lie ahead before retirement.</div>
+            </div>
+            <div class="control-group" style="margin-bottom:0;">
+              <div class="control-header">
+                <label class="control-label" id="d2-lbl-retire" for="d2-slider-activation">Retirement Age</label>
+                <span class="control-value" id="d2-val-activation">65 yrs</span>
+              </div>
+              <div class="d2-slider-wrap">
+                <input type="range" id="d2-slider-activation" min="45" max="90" value="65" step="1">
+                <div class="d2-ghost-tick" id="d2-tick-activation"><div class="d2-ghost-tick-line"></div></div>
+              </div>
+              <div class="lev-tooltip">The year you stop earning and start drawing — it sets how long your money has to grow and when the spending begins.</div>
+              <div id="d2-already-retired-msg" style="display:none; margin-top:8px; padding:8px 12px; background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.3); border-radius:4px; font-family:var(--font-mono); font-size:10px; color:var(--gold); letter-spacing:0.05em;">
+                🎉 Congrats — you're already retired! Move the slider right to model a future milestone.
+              </div>
+            </div>
+            <div class="control-group" style="margin-bottom:0;">
+              <div class="control-header">
+                <label class="control-label" for="d2-slider-plan-through">Plan Through Age</label>
+                <span class="control-value" id="d2-val-plan-through">93 yrs</span>
+              </div>
+              <div class="d2-slider-wrap">
+                <input type="range" id="d2-slider-plan-through" min="75" max="105" value="93" step="1">
+                <div class="d2-ghost-tick" id="d2-tick-plan-through"><div class="d2-ghost-tick-line"></div></div>
+              </div>
+              <div class="lev-tooltip">How long you're planning for your money to last — a shorter retirement raises your boundaries, a longer one lowers them, so set it to the age you genuinely want to be covered through.</div>
+            </div>
+          </div>
+
+          <div class="dialogue-block">
+            <div class="dialogue-prompt mono-label">02 / YOUR CAPITAL</div>
+            <div class="control-group" style="margin-bottom:0;">
+              <div class="control-header">
+                <label class="control-label" for="d2-slider-portfolio">Current Portfolio Balance</label>
+                <span class="control-value" id="d2-val-portfolio">$750k</span>
+              </div>
+              <div class="d2-slider-wrap">
+                <input type="range" id="d2-slider-portfolio" min="0" max="100000" value="61185" step="1">
+                <div class="d2-ghost-tick" id="d2-tick-portfolio"><div class="d2-ghost-tick-line"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="dialogue-block" style="border-bottom:none; margin-bottom:0;">
+            <div class="dialogue-prompt mono-label" style="color:var(--gold);">03 / YOUR DATUM</div>
+            <div class="control-group" style="margin-bottom:0;">
+              <div class="control-header" style="flex-direction:column; align-items:flex-start;">
+                <div style="display:flex; justify-content:flex-end; width:100%; align-items:flex-end;">
+                  <span class="control-value" id="d2-val-datum" style="color:var(--teal-mid);">$100k / yr</span>
+                </div>
+                <div style="font-family:var(--font-mono); font-size:9px; color:rgba(255,255,255,0.4); margin-top:4px; text-transform:uppercase; letter-spacing:0.1em;">Your target annual retirement spending.</div>
+              </div>
+              <div class="d2-slider-wrap">
+                <input type="range" id="d2-slider-datum" min="0" max="100000" value="41141" step="1">
+                <div class="d2-ghost-tick" id="d2-tick-datum"><div class="d2-ghost-tick-line"></div></div>
+              </div>
+            </div>
+
+            <div class="dialogue-block" style="padding-top:14px; border-top:1px solid rgba(255,255,255,0.06);">
+              <div class="dialogue-prompt mono-label">04 / YOUR CONTRIBUTIONS</div>
+              <div class="control-group" style="margin-bottom:0;">
+                <div class="control-header">
+                  <label class="control-label" for="d2-slider-contrib">Annual Contributions</label>
+                  <span class="control-value" id="d2-val-contrib">$25,000</span>
+                </div>
+                <div class="d2-slider-wrap">
+                  <input type="range" id="d2-slider-contrib" min="0" max="100000" value="82964" step="1">
+                  <div class="d2-ghost-tick" id="d2-tick-contrib"><div class="d2-ghost-tick-line"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="dialogue-block" style="border-bottom:none; padding-bottom:0;">
+              <div class="dialogue-prompt mono-label">05 / MARKET CONDITIONS</div>
+              <div class="toggle-wrapper">
+                <div class="toggle-container">
+                  <div class="toggle-option">
+                    <input type="radio" id="d2-market-opt" name="d2-market" value="optimistic">
+                    <label for="d2-market-opt">Optimistic</label>
+                    <div class="mkt-tooltip" style="border-color:rgba(201,168,76,0.4);">
+                      <div class="mkt-tooltip-head" style="color:var(--gold);">Market Scenario</div>
+                      <div class="mkt-tooltip-body">Assumes markets grow faster than inflation, with upside real returns around 4%–6.5%.<br><br><strong>Plain English:</strong> This shows how your Shape can widen if markets help.</div>
+                    </div>
+                  </div>
+                  <div class="toggle-option">
+                    <input type="radio" id="d2-market-avg" name="d2-market" value="average" checked>
+                    <label for="d2-market-avg">Historical</label>
+                    <div class="mkt-tooltip">
+                      <div class="mkt-tooltip-head" style="color:var(--teal-mid);">Market Scenario</div>
+                      <div class="mkt-tooltip-body">Uses a middle-of-the-road real return baseline around 3.5% after inflation.<br><br><strong>Plain English:</strong> When people hear 7%–8% market returns, that is usually before inflation. This view shows purchasing-power growth.</div>
+                    </div>
+                  </div>
+                  <div class="toggle-option">
+                    <input type="radio" id="d2-market-stress" name="d2-market" value="stress">
+                    <label for="d2-market-stress">Stress</label>
+                    <div class="mkt-tooltip" style="border-color:rgba(226,75,74,0.4);">
+                      <div class="mkt-tooltip-head" style="color:var(--danger-red);">Market Scenario</div>
+                      <div class="mkt-tooltip-body">Assumes real returns stay low, roughly 0.5%–3.5% after inflation.<br><br><strong>Plain English:</strong> This compresses the Shape and shows what may still hold if markets disappoint.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="sketch-trust-copy" style="margin-top:8px;">
+              Private by design. Inputs are not sent to servers while using the Sketch.
+            </div>
+          </div>
+
+        </div>
+            </div><!-- /#swf-controls -->
+            <div id="swf-main">
+              <div id="swf-hud">
+        <div class="interactive-layer active" id="d2s-hud-dash" style="position:relative; flex-shrink:0; margin-bottom:6px; opacity:0; transition:opacity 0.6s;">
+          <div class="hud-dashboard" style="display:block;">
+            <div class="telemetry-card pinned" id="d2s-hud-main" style="display:flex;">
+              <div class="hud-split">
+                <div style="min-width:190px; padding-right:16px; border-right:1px solid rgba(255,255,255,0.05); flex-shrink:0; font-family:var(--font-mono);">
+                  <div style="display:flex; flex-direction:column; gap:6px;">
+                    <div style="display:grid; grid-template-columns:1fr auto 1fr; gap:3px; align-items:center; font-size:8px; color:rgba(255,255,255,0.3); text-transform:uppercase; letter-spacing:0.1em; padding-bottom:4px; border-bottom:1px solid rgba(255,255,255,0.05);">
+                      <span style="text-align:right;">CURRENT SHAPE</span><span></span><span>TEST SHAPE</span>
+                    </div>
+                    <div>
+                      <div style="font-size:7px; color:rgba(255,255,255,0.28); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px;"><span class="lbl-has-tip" tabindex="0">Structural Ceiling<div class="shape-info-tooltip">Structural Ceiling — the portfolio your upside path projects, and the yearly spending it could sustain.</div></span></div>
+                      <div style="display:grid; grid-template-columns:1fr 14px 1fr; align-items:center; gap:2px;">
+                        <span id="d2s-cmp-ceil-disc"  style="text-align:right; color:var(--gold); font-size:11px;">—</span>
+                        <span id="d2s-cmp-ceil-arrow" style="text-align:center; color:rgba(255,255,255,0.4); font-size:10px;">—</span>
+                        <span id="d2s-cmp-ceil-des"   style="color:var(--gold); font-size:11px;">—</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div style="font-size:7px; color:rgba(255,255,255,0.28); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px;"><span class="lbl-has-tip" tabindex="0">Target Datum<div id="d2s-datum-tip" class="shape-info-tooltip">Target Datum — the yearly spending you want in retirement, and the total capital needed to make that spending possible.</div></span></div>
+                      <div style="display:grid; grid-template-columns:1fr 14px 1fr; align-items:center; gap:2px;">
+                        <span id="d2s-cmp-datum-disc"  style="text-align:right; color:var(--teal-mid); font-size:11px;">—</span>
+                        <span id="d2s-cmp-datum-arrow" style="text-align:center; color:rgba(255,255,255,0.4); font-size:10px;">—</span>
+                        <span id="d2s-cmp-datum-des"   style="color:var(--teal-mid); font-size:11px;">—</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div style="font-size:7px; color:rgba(255,255,255,0.28); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px;"><span class="lbl-has-tip" tabindex="0">Survival Floor<div class="shape-info-tooltip">Survival Floor — the portfolio your conservative path projects, and the yearly spending it could sustain.</div></span></div>
+                      <div style="display:grid; grid-template-columns:1fr 14px 1fr; align-items:center; gap:2px;">
+                        <span id="d2s-cmp-floor-disc"  style="text-align:right; color:var(--danger-red); font-size:11px;">—</span>
+                        <span id="d2s-cmp-floor-arrow" style="text-align:center; color:rgba(255,255,255,0.4); font-size:10px;">—</span>
+                        <span id="d2s-cmp-floor-des"   style="color:var(--danger-red); font-size:11px;">—</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div style="font-size:7px; color:rgba(255,255,255,0.28); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px;">Growth Period</div>
+                      <div style="display:grid; grid-template-columns:1fr 14px 1fr; align-items:center; gap:2px;">
+                        <span id="d2s-cmp-yrs-disc"  style="text-align:right; color:rgba(255,255,255,0.65); font-size:11px;">—</span>
+                        <span id="d2s-cmp-yrs-arrow" style="text-align:center; color:rgba(255,255,255,0.4); font-size:10px;">—</span>
+                        <span id="d2s-cmp-yrs-des"   style="color:rgba(255,255,255,0.65); font-size:11px;">—</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="hud-diff" style="border-left: none; padding-left: 0;">
+                  <div class="tel-readout" id="d2s-pinned-readout">
+                    <div class="readout-row" style="margin-bottom: 3px;">
+                      <span class="lbl-has-tip" tabindex="0" style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Current Shape:<div id="s2-disc-tip" class="shape-info-tooltip"></div></span>
+                      <strong id="d2s-pin-state-name" class="hud-state-label">—</strong><span id="d2s-pin-state-opener" style="font-family:var(--font-mono); font-size:8px; color:rgba(255,255,255,0.45); margin-left:4px;"></span>
+                    </div>
+                    <div class="readout-row" style="margin-bottom: 3px;">
+                      <span class="lbl-has-tip" tabindex="0" style="font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Test Shape:<div id="s2-des-tip" class="shape-info-tooltip"></div></span>
+                      <strong id="d2s-pin-designed-state" class="hud-state-label">—</strong><span id="d2s-pin-designed-opener" style="font-family:var(--font-mono); font-size:8px; color:rgba(255,255,255,0.45); margin-left:4px;"></span>
+                    </div>
+                    <div id="d2s-pin-changes-row" class="pin-changes-row" style="display:none;"></div>
+                    <div class="readout-row"><strong>What it Means:</strong> <span id="d2s-pin-means" class="data-line">Move a slider to begin.</span></div>
+                    <div class="readout-row"><strong>What to Consider:</strong> <span id="d2s-pin-inspect" class="data-line">Design values update live.</span></div>
+                    <div class="pin-lever-row">
+                      <span class="lbl-pin-lever">Most Impactful Lever:</span>
+                      <span id="d2s-pin-lever-attribution">—</span>
+                    </div>
+                    <div id="d2s-pin-changed-row" class="readout-row" style="display:none;"><strong>What Changed:</strong> <span id="d2s-pin-changed" class="data-line">No changes yet.</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+              </div><!-- /#swf-hud -->
           <svg class="range-svg" id="d2-canvas" viewBox="0 0 840 480" preserveAspectRatio="xMidYMid meet" aria-hidden="true" style="cursor:default; overflow:visible;">
             <defs>
               <linearGradient id="d2-thermal-grad" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -2094,8 +2332,7 @@
             </div>
             <div id="tension-explain" style="font-size:9px; color:rgba(255,255,255,0.5); line-height:1.55; font-family:var(--font-sans,sans-serif); margin-top:3px;">Drag the Ceiling, Floor, or Datum handles to shape your cone.</div>
           </div>
-            </div><!-- /#swf-canvas-col -->
-            <div id="swf-pending">SLIDERS &middot; CURRENT&rarr;TEST HUD &middot; WHAT-IT-TAKES + ACCEPT &mdash; wired next step</div>
+            </div><!-- /#swf-main -->
           </div><!-- /#shape-want-face -->
         </div><!-- /#shape-face-back -->
         </div></div><!-- /#shape-flip-inner /#shape-flip -->
@@ -7488,6 +7725,8 @@
   ></script>
   <script src="/nav.js"></script>
   <script src="/scripts/datum-shape.js" defer></script>
+  <script src="/scripts/datum-shape-copy.js" defer></script>
+  <script src="/scripts/studio-wantface.js" defer></script>
   <script src="/scripts/studio-blueprint.js" defer></script>
   <script>
   // Blueprint v1 wiring — prefill the two new header fields from the loaded
@@ -7526,38 +7765,5 @@
   });
   </script>
   <script>document.addEventListener('DOMContentLoaded', function() { if (window.dfTrack) dfTrack('studio_started'); });</script>
-  <script>
-  /* Have/Want flip controller (Step-3 scaffold). renderWantFace() is a STUB; the
-     four-surround wiring (buildDiff + DatumShape.solveInverse) is the next step. */
-  (function () {
-    function inner() { return document.getElementById('shape-flip-inner'); }
-    function setTabs(want) {
-      var h = document.getElementById('shape-have-tab'), w = document.getElementById('shape-want-tab');
-      if (h) { h.classList.toggle('active', !want); h.setAttribute('aria-selected', String(!want)); }
-      if (w) { w.classList.toggle('active', want); w.setAttribute('aria-selected', String(want)); }
-      var back = document.getElementById('shape-face-back'); if (back) back.setAttribute('aria-hidden', String(!want));
-      var front = document.getElementById('shape-face-front'); if (front) front.setAttribute('aria-hidden', String(want));
-    }
-    var _haveScn = null, _wantScn = null;
-    function enterWantFace() {
-      var sfi = (typeof window._scenarioFromInputs === 'function') ? window._scenarioFromInputs() : null;
-      _haveScn = sfi ? Object.assign({}, sfi) : null;          // freeze Have at flip-entry
-      _wantScn = _haveScn ? Object.assign({}, _haveScn) : null; // cold-start: want = have (zero diff)
-      var ref = document.getElementById('sketch-design-ref'); if (ref) ref.style.display = 'none'; // retires on Want
-      renderWantFace();
-    }
-    function exitWantFace() { /* Have face untouched — mount() keeps running */ }
-    function renderWantFace() {
-      // STUB (Step-3 scaffold). NEXT: var d = DatumShape.buildDiff(_haveScn, _wantScn, FRONT_OPTS);
-      // then bind d.have.positions (ghost marks) / d.have+d.want+d.copy (CURRENT->TEST HUD) /
-      // d.tension[] (signed bars) / DatumShape.solveInverse(d.gap.*.delta, d.want.ptsEnd, _wantScn) (what-it-takes).
-      // 90deg cross-fade morph (Have->Want over d.sharedY) hooks in here too.
-      window._wantFaceState = { have: _haveScn, want: _wantScn };
-    }
-    window.flipToWant = function () { var i = inner(); if (!i) return; setTabs(true); enterWantFace(); i.classList.add('flipped'); };
-    window.flipToHave = function () { var i = inner(); if (!i) return; setTabs(false); exitWantFace(); i.classList.remove('flipped'); };
-    window.renderWantFace = renderWantFace;
-  })();
-  </script>
 </body>
 </html>
