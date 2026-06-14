@@ -1040,12 +1040,12 @@
   <style id="shape-want-face-wiring-styles">
   /* ── Want-face layout + S2 controls (Step-3 wiring) ───────────────── */
   #shape-want-face { display:flex; flex-direction:row; gap:16px; align-items:flex-start; width:100%; padding:6px 14px; box-sizing:border-box; }
-  #swf-controls { width:290px; flex-shrink:0; max-height:600px; overflow-y:auto; overflow-x:hidden; padding-right:8px; margin-top:62px; }
+  #swf-controls { width:290px; flex-shrink:0; overflow:visible; padding-right:8px; margin-top:164px; }
   #swf-main { flex:1; min-width:0; display:flex; flex-direction:column; }
   #swf-hud { margin-bottom:8px; }
   #shape-want-face #d2s-hud-dash { opacity:1 !important; }
   #shape-want-face .d2-input-panel { width:100%; }
-  #shape-want-face .d2-input-panel .dialogue-block { margin-bottom:14px; }
+  #shape-want-face .d2-input-panel .dialogue-block { margin-bottom:8px; }
   #shape-want-face .d2-slider-wrap { position:relative; width:100%; }
   #shape-want-face .d2-input-panel input[type=range] { width:100%; }
   #shape-want-face .d2-ghost-tick { position:absolute; top:50%; transform:translate(-50%,-50%); pointer-events:none; z-index:1; display:none; }
@@ -2061,32 +2061,32 @@
             </div>
           </div>
 
-          <div class="dialogue-block" style="border-bottom:none; margin-bottom:0;">
-            <div class="dialogue-prompt mono-label" style="color:var(--gold);">03 / YOUR DATUM</div>
+          <div class="dialogue-block">
+            <div class="dialogue-prompt mono-label">03 / YOUR CONTRIBUTIONS</div>
             <div class="control-group" style="margin-bottom:0;">
-              <div class="control-header" style="flex-direction:column; align-items:flex-start;">
+              <div class="control-header">
+                <label class="control-label" for="d2-slider-contrib">Annual Contributions</label>
+                <span class="control-value" id="d2-val-contrib">$25,000</span>
+              </div>
+              <div class="d2-slider-wrap">
+                <input type="range" id="d2-slider-contrib" min="0" max="100000" value="82964" step="1">
+                <div class="d2-ghost-tick" id="d2-tick-contrib"><div class="d2-ghost-tick-line"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="dialogue-block" style="border-bottom:none; margin-bottom: 0;">
+            <div class="dialogue-prompt mono-label" style="color: var(--teal-mid);">04 / YOUR DATUM</div>
+            <div class="control-group" style="margin-bottom:0;">
+              <div class="control-header" style="flex-direction: column; align-items: flex-start;">
                 <div style="display:flex; justify-content:flex-end; width:100%; align-items:flex-end;">
-                  <span class="control-value" id="d2-val-datum" style="color:var(--teal-mid);">$100k / yr</span>
+                  <span class="control-value" id="d2-val-datum" style="color: var(--teal-mid);">$100k / yr</span>
                 </div>
-                <div style="font-family:var(--font-mono); font-size:9px; color:rgba(255,255,255,0.4); margin-top:4px; text-transform:uppercase; letter-spacing:0.1em;">Your target annual retirement spending.</div>
+                <div style="font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.4); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.1em;">Your target annual retirement spending — the point you choose to test inside your Shape.</div>
               </div>
               <div class="d2-slider-wrap">
                 <input type="range" id="d2-slider-datum" min="0" max="100000" value="41141" step="1">
                 <div class="d2-ghost-tick" id="d2-tick-datum"><div class="d2-ghost-tick-line"></div></div>
-              </div>
-            </div>
-
-            <div class="dialogue-block" style="padding-top:14px; border-top:1px solid rgba(255,255,255,0.06);">
-              <div class="dialogue-prompt mono-label">04 / YOUR CONTRIBUTIONS</div>
-              <div class="control-group" style="margin-bottom:0;">
-                <div class="control-header">
-                  <label class="control-label" for="d2-slider-contrib">Annual Contributions</label>
-                  <span class="control-value" id="d2-val-contrib">$25,000</span>
-                </div>
-                <div class="d2-slider-wrap">
-                  <input type="range" id="d2-slider-contrib" min="0" max="100000" value="82964" step="1">
-                  <div class="d2-ghost-tick" id="d2-tick-contrib"><div class="d2-ghost-tick-line"></div></div>
-                </div>
               </div>
             </div>
 
@@ -2120,10 +2120,6 @@
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div class="sketch-trust-copy" style="margin-top:8px;">
-              Private by design. Inputs are not sent to servers while using the Sketch.
             </div>
           </div>
 
