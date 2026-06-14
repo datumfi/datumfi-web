@@ -1039,9 +1039,9 @@
   </style>
   <style id="shape-want-face-wiring-styles">
   /* ── Want-face layout + S2 controls (Step-3 wiring) ───────────────── */
-  #shape-want-face { display:flex; flex-direction:row; gap:16px; align-items:flex-start; width:100%; padding:6px 14px; box-sizing:border-box; }
-  #swf-controls { width:290px; flex-shrink:0; overflow:visible; padding-right:8px; margin-top:164px; }
-  #swf-main { flex:1; min-width:0; display:flex; flex-direction:column; }
+  #shape-want-face { display:flex; flex-direction:row; gap:16px; align-items:stretch; width:100%; height:100%; min-height:0; padding:6px 14px; box-sizing:border-box; }
+  #swf-controls { width:290px; flex-shrink:0; padding-right:8px; align-self:stretch; min-height:0; max-height:100%; overflow-y:auto; overflow-x:hidden; }
+  #swf-main { flex:1; min-width:0; display:flex; flex-direction:column; align-self:stretch; min-height:0; overflow:hidden; }
   #swf-hud { margin-bottom:8px; }
   #shape-want-face #d2s-hud-dash { opacity:1 !important; }
   #shape-want-face .d2-input-panel { width:100%; }
@@ -1081,8 +1081,8 @@
   </style>
   <style id="shape-want-face-takes-styles">
   /* ── Want-face "What It Takes" panel (surround 4) — cards/copy come from the shared module ── */
-  #swf-takes { width:300px; flex-shrink:0; align-self:stretch; display:flex; }
-  #shape-want-face .requirements-panel { background:rgba(9,18,33,0.96); border:1px solid rgba(255,255,255,0.12); border-radius:4px; padding:16px; flex:1; min-height:0; max-height:600px; display:flex; flex-direction:column; overflow:hidden; }
+  #swf-takes { width:300px; flex-shrink:0; align-self:stretch; display:flex; flex-direction:column; min-height:0; }
+  #shape-want-face .requirements-panel { background:rgba(9,18,33,0.96); border:1px solid rgba(255,255,255,0.12); border-radius:4px; padding:16px; flex:1; min-height:0; max-height:100%; display:flex; flex-direction:column; overflow:hidden; }
   #shape-want-face .req-items { flex:1; min-height:0; overflow-y:auto; font-size:12px; line-height:1.7; }
   #shape-want-face .req-head { font-family:var(--font-mono); font-size:9px; text-transform:uppercase; letter-spacing:0.2em; color:var(--gold); margin-bottom:12px; }
   #shape-want-face .req-placeholder { font-family:var(--font-mono); font-size:11px; color:rgba(255,255,255,0.4); line-height:1.8; letter-spacing:0.04em; }
@@ -1106,6 +1106,9 @@
   #swf-main { overflow:hidden; }
   #shape-want-zoom-wrap { transform-origin:top center; will-change:transform; cursor:grab; }
   #shape-want-zoom-wrap:active { cursor:grabbing; }
+  /* #4b-(ii): Want canvas state-tint — mirror #shape-panel-svg's OVEREXTENDED red wash */
+  #d2-canvas #d2-state-tint-rect { transition: fill 0.4s ease; }
+  #d2-canvas.shape-state-overextended #d2-state-tint-rect { fill: rgba(226, 75, 74, 0.10); }
   #shape-want-zoom-wrap input, #shape-want-zoom-wrap .lbl-has-tip,
   #shape-want-zoom-wrap button, #shape-want-zoom-wrap a { cursor:auto; }
   #shape-want-zoom-wrap .datum-group, #shape-want-zoom-wrap .d2-handle,
@@ -1201,7 +1204,7 @@
                shape is present. Populated by _renderSketchDesignRef(). -->
           <div id="sketch-design-ref" style="display:none; margin:0 0 14px; padding:10px 12px; border:1px solid rgba(101,205,169,0.35); border-radius:6px; background:rgba(101,205,169,0.06);">
             <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;">
-              <span style="font-family:var(--font-mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--teal-mid);">From your Sketch design</span>
+              <span id="sdr-title" style="font-family:var(--font-mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--teal-mid);">From your Sketch design</span>
               <strong id="sdr-state" style="font-family:var(--font-mono); font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:var(--teal-mid);">—</strong>
             </div>
             <div style="display:flex; gap:14px; flex-wrap:wrap;">
@@ -5552,6 +5555,14 @@
       setTxt('sdr-floor', _sdrFmt(d.floor));
       var st = document.getElementById('sdr-state');
       if (st) { st.textContent = d.state || '—'; if (d.color) st.style.color = d.color; }
+      // #4a: the whole ref box takes the designed shape-state color (e.g. RED for
+      // OVEREXTENDED), not a hardcoded teal. Border + title + state recolor; bg neutralized
+      // off the hardcoded teal so it never contradicts a red/orange state.
+      if (d.color) {
+        el.style.borderColor = d.color;
+        el.style.background = 'rgba(255,255,255,0.03)';
+        var _ti = document.getElementById('sdr-title'); if (_ti) _ti.style.color = d.color;
+      }
       var lv = d.levers || {}, parts = [];
       if (lv.ceilDelta)  parts.push('Ceiling '  + (lv.ceilDelta  > 0 ? '+' : '') + lv.ceilDelta);
       if (lv.floorDelta) parts.push('Floor '    + (lv.floorDelta > 0 ? '+' : '') + lv.floorDelta);

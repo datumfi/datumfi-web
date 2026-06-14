@@ -20,7 +20,7 @@
   function fmt(v) { return v >= 1000 ? '$' + (v / 1000).toFixed(2).replace(/\.00$/, '') + 'M' : '$' + Math.round(v) + 'k'; }
   function fmtCapK(k) { return k >= 1000 ? '$' + (k / 1000).toFixed(2).replace(/\.00$/, '') + 'M' : '$' + Math.round(k) + 'k'; }
 
-  var _haveScn = null, _wantScn = null, _wantInit = false, _lastDiff = null, _morphRAF = 0, _wired = false, _haveSliderPos = null;
+  var _haveScn = null, _wantScn = null, _wantInit = false, _lastDiff = null, _morphRAF = 0, _wired = false, _haveSliderPos = null, _refWasShown = false;
   // surround 4: boundary-pull overrides on the Want canvas (Step-3 = datum-line drag; ceil/floor = Step-4)
   var _wantOverrides = { ceilDelta: 0, floorDelta: 0, datumDelta: 0, portDelta: 0, isDirty: false };
   var _wantAcceptFromState = null, _dragActive = null;
@@ -187,7 +187,12 @@
       sa(h[0], 'cy', h[3]); if (h[1]) sa(h[1], 'cy', h[3]); if (h[2]) { sa(h[2], 'y1', h[3] - 10); sa(h[2], 'y2', h[3] + 10); }
     });
     // datum colour reflects the (live) Test state
-    var col = (t >= 1 ? d.want.stateObj : (t < 0.5 ? d.have.stateObj : d.want.stateObj)).color;
+    var liveState = (t >= 1 ? d.want.stateObj : (t < 0.5 ? d.have.stateObj : d.want.stateObj));
+    var col = liveState.color;
+    // #4b-(ii): canvas state-tint — mirror the Have #shape-panel-svg pattern onto #d2-canvas
+    // so the OVEREXTENDED red wash appears on Want too (CSS keys #d2-state-tint-rect off this).
+    var dcv = $('d2-canvas');
+    if (dcv) { ['overextended', 'stretched', 'expansive', 'grounded', 'abundant'].forEach(function (k) { dcv.classList.remove('shape-state-' + k); }); if (liveState.key) dcv.classList.add('shape-state-' + liveState.key); }
     var dl = $('d2-datum-line'); if (dl) dl.style.stroke = col;
     var dn = $('d2-node-datum'); if (dn) dn.setAttribute('fill', col);
     var dlb = $('d2-lbl-datum'); if (dlb) dlb.style.fill = col;
@@ -235,15 +240,27 @@
   /* ── CURRENT->TEST HUD + 109-case copy ── */
   function _paintHUD(d) {
     var t = function (id, v) { var el = $(id); if (el) el.textContent = v; };
-    var cmp = function (chan, hv, wv, unit) {
-      var disc = $('d2s-cmp-' + chan + '-disc'), des = $('d2s-cmp-' + chan + '-des'), arr = $('d2s-cmp-' + chan + '-arrow');
-      if (disc) disc.textContent = unit === 'yr' ? hv + ' yr' : fmt(hv);
-      if (des) des.textContent = unit === 'yr' ? wv + ' yr' : fmt(wv);
-      if (arr) arr.textContent = wv > hv ? '↑' : wv < hv ? '↓' : '—';
-    };
-    var he = d.have.ptsEnd, we = d.want.ptsEnd;
-    cmp('ceil', he.ceilSpend, we.ceilSpend); cmp('datum', he.datumSpend, we.datumSpend);
-    cmp('floor', he.floorSpend, we.floorSpend); cmp('yrs', _haveScn.yearsToGrow, _wantScn.yearsToGrow, 'yr');
+    // Brick A: comparison panel — dual "capital / spend" + → connector, VERBATIM from
+    // Sketch-S2 (sketch.html _cmpFmt/_cmpMFmt/_cmpDual/_cmpArr) so both apps read identically.
+    var _cmpFmt = function (v) { return v >= 1000 ? '$' + (v / 1000).toFixed(1).replace(/\.0$/, '') + 'M' : '$' + Math.round(v) + 'k'; };
+    var _cmpMFmt = function (m) { return m >= 1 ? '$' + m.toFixed(2) + 'M' : '$' + Math.round(m * 1000) + 'k'; };
+    var _cmpDual = function (m, k) { return _cmpMFmt(m) + ' / ' + _cmpFmt(k); };
+    var _cmpArr = function (des, disc) { return des > disc + 0.5 ? '↑' : des < disc - 0.5 ? '↓' : '→'; };
+    var _cSet = function (id, txt) { var e = $(id); if (e) e.textContent = txt; };
+    var gbEnd = d.have.ptsEnd, ptsEnd = d.want.ptsEnd, gb = _haveScn, s = _wantScn;
+    var gbYrs = _haveScn.yearsToGrow, yrs = _wantScn.yearsToGrow;
+    _cSet('d2s-cmp-ceil-disc',  _cmpDual(gbEnd.fvUp,  gbEnd.ceilSpend));
+    _cSet('d2s-cmp-ceil-des',   _cmpDual(ptsEnd.fvUp, ptsEnd.ceilSpend));
+    _cSet('d2s-cmp-ceil-arrow', _cmpArr(ptsEnd.ceilSpend, gbEnd.ceilSpend));
+    _cSet('d2s-cmp-datum-disc',  _cmpDual(gbEnd.datumCapM,  gb.targetSpend));
+    _cSet('d2s-cmp-datum-des',   _cmpDual(ptsEnd.datumCapM, s.targetSpend));
+    _cSet('d2s-cmp-datum-arrow', _cmpArr(s.targetSpend, gb.targetSpend));
+    _cSet('d2s-cmp-floor-disc',  _cmpDual(gbEnd.fvCon,  gbEnd.floorSpend));
+    _cSet('d2s-cmp-floor-des',   _cmpDual(ptsEnd.fvCon, ptsEnd.floorSpend));
+    _cSet('d2s-cmp-floor-arrow', _cmpArr(ptsEnd.floorSpend, gbEnd.floorSpend));
+    _cSet('d2s-cmp-yrs-disc',    String(gbYrs) + ' yr');
+    _cSet('d2s-cmp-yrs-des',     String(yrs) + ' yr');
+    _cSet('d2s-cmp-yrs-arrow',   _cmpArr(yrs, gbYrs));
     var sn = $('d2s-pin-state-name'); if (sn) { sn.textContent = d.have.stateObj.name; sn.style.color = d.have.stateObj.color; }
     var dn = $('d2s-pin-designed-state'); if (dn) { dn.textContent = d.want.stateObj.name; dn.style.color = d.want.stateObj.color; }
     var oD = $('d2s-pin-state-opener'); if (oD) oD.textContent = d.have.stateObj.physicsShort ? '— ' + d.have.stateObj.physicsShort : '';
@@ -401,13 +418,13 @@
     _computeHavePos();
     _updateWasReadouts();
     _resetOverrides();
-    var ref = $('sketch-design-ref'); if (ref) ref.style.display = 'none';
+    var ref = $('sketch-design-ref'); if (ref) { _refWasShown = ref.style.display !== 'none'; ref.style.display = 'none'; }
     renderWantFace(1);          // compute _lastDiff at rest first
     _paintCanvas(_lastDiff, 0); // then start the morph from Have
   }
 
   window.flipToWant = function () { var i = inner(); if (!i) return; var lay = $('studio-layout'); if (lay) lay.classList.add('want-mode'); setTabs(true); enterWantFace(); i.classList.add('flipped'); _morph(800); if (window._fitWantToScreen) { requestAnimationFrame(function () { requestAnimationFrame(function () { window._fitWantToScreen(); }); }); } };
-  window.flipToHave = function () { var i = inner(); if (!i) return; var lay = $('studio-layout'); if (lay) lay.classList.remove('want-mode'); setTabs(false); i.classList.remove('flipped'); if (_morphRAF) { cancelAnimationFrame(_morphRAF); _morphRAF = 0; } };
+  window.flipToHave = function () { var i = inner(); if (!i) return; var lay = $('studio-layout'); if (lay) lay.classList.remove('want-mode'); setTabs(false); i.classList.remove('flipped'); if (_morphRAF) { cancelAnimationFrame(_morphRAF); _morphRAF = 0; } var ref = $('sketch-design-ref'); if (ref && _refWasShown) ref.style.display = 'block'; };
   window.renderWantFace = function () { renderWantFace(1); };
 
   if (document.readyState !== 'loading') _wire();
