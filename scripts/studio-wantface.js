@@ -164,15 +164,20 @@
     // live (Want) — exact at rest, interpolated during morph
     // datum line is drawn below at the SAME dy as the node/handle (see _dy) so they
     // always coincide — the engine's dDatum path can lag the endpoint on a boundary pull.
+    var conePath;
     if (t >= 1) {
-      sa('d2-cone', 'd', d.want.dCone); sa('d2-ceil-line', 'd', d.want.dCeil);
+      conePath = d.want.dCone;
+      sa('d2-cone', 'd', conePath); sa('d2-ceil-line', 'd', d.want.dCeil);
       sa('d2-floor-line', 'd', d.want.dFloor);
     } else {
       var hc = _parse(d.have.dCeil), wc = _parse(d.want.dCeil), c = _lerpPts(hc, wc, t);
       var hf = _parse(d.have.dFloor), wf = _parse(d.want.dFloor), f = _lerpPts(hf, wf, t);
+      conePath = _coneFrom(c, f);
       sa('d2-ceil-line', 'd', _lineFrom(c)); sa('d2-floor-line', 'd', _lineFrom(f));
-      sa('d2-cone', 'd', _coneFrom(c, f));
+      sa('d2-cone', 'd', conePath);
     }
+    // #A: keep the market-sweep clip bounded to the live cone (mirror sketch L6456)
+    sa('d2-clip-cone-path', 'd', conePath);
     var lc = $('d2-cone'); if (lc) lc.setAttribute('opacity', '0.55');
     // endpoint nodes / labels / handles at the right edge, lerped
     var xE = FRONT.xEnd, he = d.have.ptsEnd, we = d.want.ptsEnd;

@@ -1025,6 +1025,11 @@
      sweep rect never animated until these parallel rules were added. */
   #shape-want-face .sweep-active-stress { animation: sweepRightStress 2.0s cubic-bezier(0.15, 0.8, 0.15, 1) forwards; fill: var(--danger-red); }
   #shape-want-face .sweep-active-opt    { animation: sweepRightOpt    2.0s cubic-bezier(0.15, 0.8, 0.15, 1) forwards; fill: var(--gold); }
+  /* #B: Reset Design skin — verbatim from Sketch .btn-confirm-shape (sketch.html L1260-1264):
+     transition + base/hover/active shadow + press-scale. (Button keeps its muted bg/color inline.) */
+  #d2s-btn-reset-design { transition: all 0.15s ease; box-shadow: 0 0 20px rgba(201,168,76,0.3); }
+  #d2s-btn-reset-design:hover  { box-shadow: 0 0 30px rgba(201,168,76,0.5); }
+  #d2s-btn-reset-design:active { transform: scale(0.97); box-shadow: 0 0 40px rgba(201,168,76,0.7); }
   #shape-want-face .boundary-line { stroke-width:2; stroke-linecap:round; fill:none; }
   #shape-want-face .b-ceiling { stroke:var(--gold); }
   #shape-want-face .b-floor { stroke:var(--danger-red); }
@@ -2257,7 +2262,11 @@
                 <path id="d2-clip-cone-path" d="" />
               </clipPath>
             </defs>
-            <rect id="d2-market-sweep" class="market-sweep" x="-250" y="-100" width="250" height="700" fill="transparent" />
+            <!-- #A: market sweep clipped to the live cone (mirrors Sketch <g clip-path="url(#cone-clip)">
+                 at sketch.html L1795); d2-clip-cone-path d is wired in studio-wantface _paintCanvas. -->
+            <g clip-path="url(#d2-clip-cone)">
+              <rect id="d2-market-sweep" class="market-sweep" x="-250" y="-100" width="250" height="700" fill="transparent" />
+            </g>
             <rect id="d2-state-tint-rect" x="0" y="0" width="840" height="480" fill="none" pointer-events="none"/>
             <!-- Grid: dynamic labels injected by renderScreen2() -->
             <g id="d2-grid">
