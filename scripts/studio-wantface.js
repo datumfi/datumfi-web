@@ -21,6 +21,10 @@
   function fmtCapK(k) { return k >= 1000 ? '$' + (k / 1000).toFixed(2).replace(/\.00$/, '') + 'M' : '$' + Math.round(k) + 'k'; }
 
   var _haveScn = null, _wantScn = null, _wantInit = false, _lastDiff = null, _morphRAF = 0, _wired = false, _haveSliderPos = null;
+  // surround 4: boundary-pull overrides on the Want canvas (Step-3 = datum-line drag; ceil/floor = Step-4)
+  var _wantOverrides = { ceilDelta: 0, floorDelta: 0, datumDelta: 0, portDelta: 0, isDirty: false };
+  var _wantAcceptFromState = null, _dragActive = null;
+  function _resetOverrides() { _wantOverrides.ceilDelta = 0; _wantOverrides.floorDelta = 0; _wantOverrides.datumDelta = 0; _wantOverrides.portDelta = 0; _wantOverrides.isDirty = false; }
 
   /* baseline d2-slider positions for the frozen Have — recomputed each Want entry so the
    * gold/red plan-strength fill reads zero-diff at seed (no float round-trip noise). */
@@ -113,6 +117,11 @@
   function _spY(sy) {
     var lo = sy.yLo, hi = sy.yHi, top = FRONT.yPxTop, bot = FRONT.yPxBot;
     return function (v) { if (hi <= lo) return (top + bot) / 2; var c = Math.max(lo, Math.min(hi, v)); return bot - ((c - lo) / (hi - lo)) * (bot - top); };
+  }
+  function _yToSpend(sy, y) { // inverse of _spY on a shared Y-domain
+    var lo = sy.yLo, hi = sy.yHi, top = FRONT.yPxTop, bot = FRONT.yPxBot;
+    if (bot <= top) return lo;
+    return lo + ((bot - y) / (bot - top)) * (hi - lo);
   }
   function _parse(d) { // "M x y L x y L x y" -> [[x,y],...]
     var out = [], re = /(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/g, m;
@@ -248,10 +257,26 @@
   }
 
   /* ── orchestrator: one buildDiff -> all surrounds ── */
+  /* surround 4: thin renderer — calls the shared buildRequirements and paints #req-items.
+   * pts = RAW want endpoints (no override); overrides = the Want-canvas boundary pull. NO copy here. */
+  function _renderRequirements() {
+    var d = DS(); if (!d || !d.S2Copy || !d.S2Copy.buildRequirements || !_haveScn || !_wantScn) return;
+    var ri = $('req-items'); if (!ri) return;
+    var rawEnd = d.computeAt(_wantScn, Math.max(1, _wantScn.yearsToGrow));
+    var mkt = document.querySelector('input[name="d2-market"]:checked');
+    var ctx = { designScenario: _wantScn, currentScenario: _wantScn, ghostBaseline: _haveScn, marketParadigm: mkt ? mkt.value : 'average' };
+    var out = d.S2Copy.buildRequirements(rawEnd, _wantOverrides, ctx);
+    if (!out) return;
+    var rh = $('req-head-label'); if (rh && out.headLabel != null) rh.textContent = out.headLabel;
+    if (out.html != null) ri.innerHTML = out.html;
+    _wantAcceptFromState = out.acceptFromState;
+  }
+
   function renderWantFace(t) {
     var d = DS(); if (!d || !d.buildDiff || !_haveScn) return;
     _wantScn = _wantFromSliders();
-    var diff = d.buildDiff(_haveScn, _wantScn, FRONT);
+    var opts = _wantOverrides.isDirty ? Object.assign({}, FRONT, { boundaryOverrides: _wantOverrides }) : FRONT;
+    var diff = d.buildDiff(_haveScn, _wantScn, opts);
     _lastDiff = diff;
     _paintCanvas(diff, t == null ? 1 : t);
     _positionGhostTicks(diff.have.positions);
@@ -259,7 +284,8 @@
     _paintHUD(diff);
     var g = diff.gap;
     try { updateTensionVisuals(diff.tension[0].ratio, diff.tension[1].ratio, diff.tension[2].ratio, g.datumAboveCeil); } catch (e) {}
-    window._wantFaceState = { have: _haveScn, want: _wantScn, diff: diff };
+    _renderRequirements();
+    window._wantFaceState = { have: _haveScn, want: _wantScn, diff: diff, overrides: _wantOverrides };
   }
 
   /* ── 90deg cross-fade morph: lerp Have->Want geometry over the flip ── */
@@ -280,15 +306,62 @@
   }
 
   /* ── slider / market wiring (once) ── */
+  /* datum-line drag on the Want canvas = the Step-3 boundary pull -> _wantOverrides.datumDelta
+   * -> What-It-Takes (block E). Vertical (Y) mapping is unaffected by the back-face rotateY(180)
+   * mirror (that flips X only); getScreenCTM maps client->viewBox incl. preserveAspectRatio. */
+  function _wireDatumDrag() {
+    var svg = $('d2-canvas'); if (!svg || svg._wantDragBound) return; svg._wantDragBound = true;
+    function svgY(e) { try { var p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()).y; } catch (_e) { var r = svg.getBoundingClientRect(); return ((e.clientY - r.top) / r.height) * 480; } }
+    ['d2-handle-datum', 'd2-handle-datum-hit', 'd2-datum-hit'].forEach(function (id) {
+      var el = $(id); if (!el) return;
+      el.addEventListener('pointerdown', function (e) { e.stopPropagation(); _dragActive = 'datum'; try { el.setPointerCapture(e.pointerId); } catch (_e) {} document.body.style.userSelect = 'none'; });
+    });
+    svg.addEventListener('pointermove', function (e) {
+      if (_dragActive !== 'datum' || !_lastDiff || !_wantScn) return;
+      var d = DS(); var rawDatum = d.computeAt(_wantScn, Math.max(1, _wantScn.yearsToGrow)).datumSpend;
+      var y = Math.max(FRONT.yPxTop + 5, Math.min(svgY(e), FRONT.yPxBot - 5));
+      var spend = _yToSpend(_lastDiff.sharedY, y);
+      _wantOverrides.datumDelta = Math.max(rawDatum * 0.5, Math.min(spend, rawDatum * 2.0)) - rawDatum;
+      _wantOverrides.isDirty = true;
+      renderWantFace(1);
+    });
+    var end = function () { if (_dragActive) { _dragActive = null; document.body.style.userSelect = ''; renderWantFace(1); } };
+    svg.addEventListener('pointerup', end);
+    svg.addEventListener('pointercancel', end);
+  }
+
+  /* ACCEPT off the rendered d2-accept-btn -> apply the solved lever to the Want scenario, clear the
+   * pull, re-render. (Step-3: instant apply; the accept fly-to animation is Step-4.) */
+  function _wireAccept() {
+    var ri = $('req-items'); if (!ri || ri._wantAcceptBound) return; ri._wantAcceptBound = true;
+    ri.addEventListener('click', function (e) {
+      var btn = e.target && e.target.closest && e.target.closest('.d2-accept-btn'); if (!btn) return;
+      var type = btn.getAttribute('data-req-type'); var val = parseFloat(btn.getAttribute('data-req-value'));
+      if (!type || isNaN(val)) return;
+      var sc = SC(); if (!sc) return;
+      var setSl = function (id, pos, exact) { var el = $(id); if (!el) return; el.value = String(pos); if (exact != null) el.dataset.exactVal = String(exact); else delete el.dataset.exactVal; };
+      var dsec = btn.getAttribute('data-req-datum-value');
+      if (dsec != null) { var dv = Math.min(parseFloat(dsec), 1000); setSl('d2-slider-datum', sc.datumValToPos(dv), Math.round(dv * 1000)); }
+      if (type === 'capital') setSl('d2-slider-portfolio', sc.portValToPos(Math.min(val, 50)), Math.round(Math.min(val, 50) * 1e6));
+      else if (type === 'contrib') setSl('d2-slider-contrib', sc.contribValToPos(Math.min(val, 200000)), Math.round(Math.min(val, 200000)));
+      else if (type === 'retire') setSl('d2-slider-activation', Math.min(90, Math.max(45, Math.round(val))));
+      else if (type === 'datum') setSl('d2-slider-datum', sc.datumValToPos(Math.min(val, 1000)), Math.round(Math.min(val, 1000) * 1000));
+      else if (type === 'plan') setSl('d2-slider-plan-through', Math.min(105, Math.max(75, Math.round(val))));
+      _resetOverrides(); _updateLabels(); renderWantFace(1);
+    });
+  }
+
   function _wire() {
     if (_wired) return; _wired = true;
     ['d2-slider-age', 'd2-slider-activation', 'd2-slider-plan-through', 'd2-slider-portfolio', 'd2-slider-datum', 'd2-slider-contrib'].forEach(function (id) {
       var el = $(id); if (!el) return;
-      el.addEventListener('input', function () { delete el.dataset.exactVal; _updateLabels(); renderWantFace(1); });
+      el.addEventListener('input', function () { delete el.dataset.exactVal; _resetOverrides(); _updateLabels(); renderWantFace(1); });
     });
     Array.prototype.forEach.call(document.querySelectorAll('input[name="d2-market"]'), function (r) {
-      r.addEventListener('change', function () { renderWantFace(1); });
+      r.addEventListener('change', function () { _resetOverrides(); renderWantFace(1); });
     });
+    _wireDatumDrag();
+    _wireAccept();
   }
 
   /* ── flip lifecycle ── */
@@ -306,6 +379,7 @@
     if (!_haveScn) return;
     if (!_wantInit) { _seedSliders(_haveScn); _wantInit = true; }
     _computeHavePos();
+    _resetOverrides();
     var ref = $('sketch-design-ref'); if (ref) ref.style.display = 'none';
     renderWantFace(1);          // compute _lastDiff at rest first
     _paintCanvas(_lastDiff, 0); // then start the morph from Have
