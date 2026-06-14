@@ -388,6 +388,30 @@
     });
   }
 
+  /* #A: gold/red market sweep across the Want shape. Ports the Have-face
+   * triggerSweepRect mechanism (studio.html L5903 / sketch L8924) onto the
+   * d2-canvas sweep rect; the .sweep-active-* CSS is scoped to #shape-want-face. */
+  function _triggerWantSweep(type) {
+    var el = $('d2-market-sweep'); if (!el) return;
+    el.classList.remove('sweep-active-stress', 'sweep-active-opt');
+    void el.getBoundingClientRect(); // force reflow so the animation restarts on rapid clicks
+    if (type === 'stress') { el.setAttribute('fill', 'var(--danger-red)'); el.classList.add('sweep-active-stress'); }
+    else if (type === 'optimistic') { el.setAttribute('fill', 'var(--gold)'); el.classList.add('sweep-active-opt'); }
+  }
+
+  /* #B: Reset Design — revert the Want design to the carried/discovered (Have) shape.
+   * Mirrors Sketch's btn-reset-design fresh-sketch path (initDesignState -> reseed ->
+   * re-render): clear boundary overrides, reseed the d2-sliders from the frozen Have
+   * scenario, re-render, and flash the confirm toast. */
+  function _wireReset() {
+    var rb = $('d2s-btn-reset-design'); if (!rb || rb._wantResetBound) return; rb._wantResetBound = true;
+    rb.addEventListener('click', function () {
+      if (_haveScn) { _resetOverrides(); _seedSliders(_haveScn); _updateLabels(); renderWantFace(1); }
+      var toast = $('d2s-confirm-toast');
+      if (toast) { toast.style.opacity = '1'; setTimeout(function () { toast.style.opacity = '0'; }, 2500); }
+    });
+  }
+
   function _wire() {
     if (_wired) return; _wired = true;
     ['d2-slider-age', 'd2-slider-activation', 'd2-slider-plan-through', 'd2-slider-portfolio', 'd2-slider-datum', 'd2-slider-contrib'].forEach(function (id) {
@@ -395,10 +419,11 @@
       el.addEventListener('input', function () { delete el.dataset.exactVal; _resetOverrides(); _updateLabels(); renderWantFace(1); });
     });
     Array.prototype.forEach.call(document.querySelectorAll('input[name="d2-market"]'), function (r) {
-      r.addEventListener('change', function () { _resetOverrides(); renderWantFace(1); });
+      r.addEventListener('change', function () { _resetOverrides(); renderWantFace(1); _triggerWantSweep(r.value); });
     });
     _wireDatumDrag();
     _wireAccept();
+    _wireReset();
   }
 
   /* ── flip lifecycle ── */

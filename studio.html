@@ -1018,7 +1018,13 @@
   #shape-want-face .axis-title { font-family:var(--font-mono); font-size:10px; fill:rgba(255,255,255,0.8); letter-spacing:0.2em; text-transform:uppercase; }
   #shape-want-face .time-axis-line { stroke:rgba(255,255,255,0.2); stroke-width:1; }
   #shape-want-face .time-label { font-family:var(--font-mono); font-size:10px; fill:rgba(255,255,255,0.8); letter-spacing:0.15em; text-transform:uppercase; }
-  #shape-want-face .market-sweep { opacity:0; pointer-events:none; }
+  #shape-want-face .market-sweep { opacity:0; filter:blur(25px); pointer-events:none; }
+  /* #A: port the Have-face gold/red market sweep onto the Want canvas. Keyframes
+     sweepRightStress/sweepRightOpt are global (defined above) — the Have rules at
+     #shape-panel-svg .sweep-active-* are scoped to the front face only, so the Want
+     sweep rect never animated until these parallel rules were added. */
+  #shape-want-face .sweep-active-stress { animation: sweepRightStress 2.0s cubic-bezier(0.15, 0.8, 0.15, 1) forwards; fill: var(--danger-red); }
+  #shape-want-face .sweep-active-opt    { animation: sweepRightOpt    2.0s cubic-bezier(0.15, 0.8, 0.15, 1) forwards; fill: var(--gold); }
   #shape-want-face .boundary-line { stroke-width:2; stroke-linecap:round; fill:none; }
   #shape-want-face .b-ceiling { stroke:var(--gold); }
   #shape-want-face .b-floor { stroke:var(--danger-red); }
@@ -2377,6 +2383,14 @@
               <div class="requirements-panel" id="requirements-panel">
                 <div class="req-head" id="req-head-label">To Reach This Design:</div>
                 <div class="req-items" id="req-items"><div class="req-placeholder">Drag the Datum line on your Want shape to test a target — the plan shows exactly what it would take to hold it.</div></div>
+              </div>
+              <!-- #B: Reset Design — ported from Sketch (btn-reset-design, .design-right-col
+                   directly after the requirements panel). Reverts the Want design back to the
+                   carried/discovered (Have) shape. d2s- namespaced; self-contained inline style
+                   (studio.html has no .btn-confirm-shape class). Handler wired in studio-wantface.js. -->
+              <div id="d2s-reset-wrap" style="flex-shrink:0; margin-top:10px; position:relative;">
+                <button type="button" id="d2s-btn-reset-design" style="width:100%; padding:11px 16px; background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.7); font-family:var(--font-mono); font-size:11px; text-transform:uppercase; letter-spacing:0.15em; font-weight:bold; border:none; border-radius:4px; cursor:pointer;">↺ Reset Design</button>
+                <div id="d2s-confirm-toast" style="font-family:var(--font-mono); font-size:9px; color:var(--teal-mid); text-transform:uppercase; letter-spacing:0.1em; margin-top:8px; opacity:0; transition:opacity 0.4s ease; text-align:center;">↺ Design reset to discovered shape</div>
               </div>
             </div><!-- /#swf-takes -->
           </div><!-- /#shape-want-face -->
@@ -4359,6 +4373,13 @@
     }
 
     canvasWrapper.addEventListener('wheel', (e) => {
+       // #D: on the Want face the controls column (#swf-controls) and the
+       // To-Reach panel (#swf-takes) live INSIDE canvas-wrapper, so this handler
+       // used to eat their wheel/two-finger events for zoom. Let those scroll
+       // regions scroll natively (no preventDefault) — only the empty shape zooms.
+       if (wantActive() && (e.target.closest('#swf-controls') || e.target.closest('#swf-takes'))) {
+         return;
+       }
        e.preventDefault();
        if (wantActive()) {
          wantUserAdjusted = true;
@@ -5545,6 +5566,14 @@
       if (bp && bp.designed && bp.designed.present) return bp.designed;
       return null;
     }
+    // #C: state -> color fallback. The carried blob's state_color is often empty
+    // (older saves), so deriving the color from the resolved state name guarantees
+    // the box turns RED for OVEREXTENDED etc. instead of staying the hardcoded teal.
+    // Map matches datum-shape.js classifyShapeState exactly.
+    function _sdrStateColor(state) {
+      var m = { OVEREXTENDED: 'var(--danger-red)', STRETCHED: 'var(--orange-warning)', EXPANSIVE: 'var(--teal-mid)', GROUNDED: 'var(--purple-grounded)', ABUNDANT: 'var(--blue-safe)' };
+      return m[String(state || '').toUpperCase().trim()] || 'var(--teal-mid)';
+    }
     function _renderSketchDesignRef(d) {
       var el = document.getElementById('sketch-design-ref');
       if (!el) return;
@@ -5553,15 +5582,17 @@
       setTxt('sdr-ceil',  _sdrFmt(d.ceil));
       setTxt('sdr-datum', _sdrFmt(d.datum));
       setTxt('sdr-floor', _sdrFmt(d.floor));
+      // #C: use the carried state_color when present, else derive from the state name.
+      var col = d.color || _sdrStateColor(d.state);
       var st = document.getElementById('sdr-state');
-      if (st) { st.textContent = d.state || '—'; if (d.color) st.style.color = d.color; }
-      // #4a: the whole ref box takes the designed shape-state color (e.g. RED for
+      if (st) { st.textContent = d.state || '—'; st.style.color = col; }
+      // #4a / #C: the whole ref box takes the designed shape-state color (e.g. RED for
       // OVEREXTENDED), not a hardcoded teal. Border + title + state recolor; bg neutralized
       // off the hardcoded teal so it never contradicts a red/orange state.
-      if (d.color) {
-        el.style.borderColor = d.color;
+      if (col) {
+        el.style.borderColor = col;
         el.style.background = 'rgba(255,255,255,0.03)';
-        var _ti = document.getElementById('sdr-title'); if (_ti) _ti.style.color = d.color;
+        var _ti = document.getElementById('sdr-title'); if (_ti) _ti.style.color = col;
       }
       var lv = d.levers || {}, parts = [];
       if (lv.ceilDelta)  parts.push('Ceiling '  + (lv.ceilDelta  > 0 ? '+' : '') + lv.ceilDelta);
