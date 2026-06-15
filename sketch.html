@@ -9251,7 +9251,15 @@ Studio is built for exactly this. See If This Shape Holds →`;
         s1_floor_path: (_s1paths && _s1paths.floor) || '',
         s1_datum_path: (_s1paths && _s1paths.datum) || '',
         s1_canvas_viewbox: '80 50 570 415',
-        s2_design: _s2block
+        s2_design: _s2block,
+        // Carry the global assumption controls so Studio recomputes the Have/Want
+        // boundaries under the SAME market/tax/inflation/plan-through Sketch used —
+        // without these, Studio's defaults (avg/20%/real/93) silently move the ceiling
+        // and can flip a STRETCHED Shape to a false OVEREXTENDED. Current (S1) values.
+        market_outlook: (document.querySelector('input[name="market"]:checked')    || {}).value || 'average',
+        tax_rate:       parseInt((document.getElementById('slider-tax')    || {}).value, 10) || 20,
+        inflation_mode: (((document.querySelector('input[name="inflation"]:checked') || {}).value) === 'nominal') ? 'nominal' : 'real',
+        plan_end_age:   parseInt((document.getElementById('sl-plan-through') || {}).value, 10) || 93
       };
     }
 
@@ -9280,7 +9288,11 @@ Studio is built for exactly this. See If This Shape Holds →`;
             s1_ceil:           s.s1_ceil,
             s1_floor:          s.s1_floor,
             s1_resolved_state: s.s1_resolved_state,
-            s2_design:         s.s2_design
+            s2_design:         s.s2_design,
+            market_outlook:    s.market_outlook,
+            tax_rate:          s.tax_rate,
+            inflation_mode:    s.inflation_mode,
+            plan_end_age:      s.plan_end_age
           }
         };
       }

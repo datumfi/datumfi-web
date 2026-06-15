@@ -89,6 +89,11 @@
         pension_secondary_annual: 0
       },
       climate: { outlook: 'valuations_matter', custom_weights: null },
+      // Sketch global assumptions carried so Studio recomputes boundaries identically.
+      // Distinct from climate.outlook (the Studio climate lens) — these mirror the Sketch
+      // market/inflation radios. Defaults match Sketch's defaults (average / real).
+      market_paradigm: 'average',
+      inflation_mode:  'real',
       tax:     { filing: 'Married Filing Jointly', location: 'FL',
                  working_year_effective_rate: 0.20 },
       upkeep:  { items: [], charity: [], upkeep_total: 0, charity_total: 0 },
@@ -352,6 +357,13 @@
     if (s.portfolio_mass) bp.portfolio_total       = Math.round(s.portfolio_mass);
     if (s.contributions)  bp.contributions_total   = Math.round(s.contributions);
 
+    // Carry the global assumptions so Studio recomputes Have/Want under Sketch's settings
+    // (guarded — older saves without these keep the defaults). tax_rate is 0-40 percent.
+    if (s.market_outlook != null) bp.market_paradigm = s.market_outlook;
+    if (s.inflation_mode != null) bp.inflation_mode  = s.inflation_mode;
+    if (s.tax_rate != null)       bp.tax.working_year_effective_rate = (Number(s.tax_rate) || 0) / 100;
+    if (s.plan_end_age)           bp.profile.plan_end_age = Math.round(Number(s.plan_end_age));
+
     // Phase 1 — carry the S2 tested (WANT) shape + S1 (HAVE) shape. Field names
     // match the live save blob (serializeSketchState); designed_* are dollars.
     if (bp.designed) {
@@ -392,6 +404,11 @@
       bp.current.datum = Math.round(Number(s.s1_datum) || 0);
       bp.current.floor = Math.round(Number(s.s1_floor) || 0);
       bp.current.state = s.s1_resolved_state || '';
+      // Exact carried ages — Studio seeds slider-age/activation from these directly,
+      // bypassing the lossy age->date->age round-trip (the profile date fields convert
+      // back a year short, dropping a year of compounding from the recomputed ceiling).
+      bp.current.age    = Math.round(Number(s.age)        || 0);
+      bp.current.retire = Math.round(Number(s.retire_age) || 0);
     }
   }
 

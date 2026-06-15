@@ -5536,6 +5536,15 @@
         if (!isNaN(p)) { var sP = $('sl-plan-through'); if (sP) { sP.value = clampN(p, 75, 105); updatePlanThroughLabel(); } }
       }
     }
+    // #4b carry: re-assert the EXACT carried ages onto the sliders after the date-based
+    // syncs run (init + the +600ms hydration handshake), so the recomputed ceiling uses
+    // Sketch's compounding window and not a year-short date round-trip. No-op without a carry.
+    function _reassertCarriedAges() {
+      var a = window._studioCarriedAges; if (!a) return;
+      var sA = $('slider-age'), sR = $('slider-activation');
+      if (sA && a.age > 0)    { sA.value = clampN(a.age, 18, 85); updateAgeLabel(); }
+      if (sR && a.retire > 0) { sR.value = clampN(a.retire, (parseInt(sA && sA.value, 10) || 40) + 1, 90); updateActivationLabel(); }
+    }
     function syncFromSketchAges() {
       var sA = $('slider-age'), sR = $('slider-activation');
       var dobEl = $('pri-dob'), retEl = $('target-ret');
@@ -5674,11 +5683,38 @@
       }
       if (sPlan && prof.plan_end_age) sPlan.value = clampN(parseInt(prof.plan_end_age,10) || 93, 75, 105);
 
+      // #4b carry: override the date-derived ages with the EXACT carried integers so the
+      // recomputed ceiling uses the same compounding window Sketch did (the age->date->age
+      // round-trip lands a year short, dropping ~1yr of compounding from the ceiling). Stash
+      // for a re-assert after syncFromProfileDates()/the hydration handshake (see init).
+      if (bp.current && bp.current.age > 0 && sAge)   sAge.value = clampN(bp.current.age, 18, 85);
+      if (bp.current && bp.current.retire > 0 && sRet) sRet.value = clampN(bp.current.retire, (parseInt(sAge.value,10) || 40) + 1, 90);
+      window._studioCarriedAges = (bp.current && bp.current.age > 0)
+        ? { age: bp.current.age, retire: bp.current.retire } : null;
+
       var sTax = $('slider-tax');
       if (sTax && bp.tax && typeof bp.tax.working_year_effective_rate === 'number' && bp._loadSource !== 'fresh+dossier') {
         var pct = bp.tax.working_year_effective_rate;
         if (pct <= 1) pct = pct * 100;
         sTax.value = clampN(Math.round(pct), 0, 40);
+      }
+
+      // Carry the global market + inflation assumptions onto the Have controls so
+      // _scenarioFromInputs recomputes the boundaries under Sketch's settings (mirrors the
+      // radio wiring at L5985/5998). These run before the first shape paint, so no extra
+      // re-render is needed. Tax slider stays authoritative; the preset chip is synced only
+      // on an exact 10/20/30 match (else the slider value drives the math).
+      if (bp.market_paradigm && bp._loadSource !== 'fresh+dossier') {
+        var _mr = document.querySelector('input[name="market"][value="' + bp.market_paradigm + '"]');
+        if (_mr) _mr.checked = true;
+      }
+      if (bp.inflation_mode && bp._loadSource !== 'fresh+dossier') {
+        var _ir = document.querySelector('input[name="inflation"][value="' + bp.inflation_mode + '"]');
+        if (_ir) _ir.checked = true;
+      }
+      if (sTax) {
+        var _tp = document.querySelector('input[name="tax-preset"][value="' + sTax.value + '"]');
+        if (_tp) _tp.checked = true;
       }
 
       // Phase 1 — surface the carried S2 (WANT) shape as a read-only reference.
@@ -6139,6 +6175,8 @@
       // 04/ Datum mirror field agrees with slider-datum from the first paint.
       syncSpendFromDatumSlider();
       syncFromProfileDates();
+      _reassertCarriedAges();
+      setTimeout(_reassertCarriedAges, 900); // after the +600ms ?hydrate=sketch handshake re-sync
       refreshAllLabels();
       wireClickToType();
       wireSliders();
