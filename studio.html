@@ -4077,6 +4077,23 @@
       }
 
       state.accounts.forEach(a => a.isNew = false);
+      // G5 — Estate→Shape reconcile. When real rooms exist with a positive investable total,
+      // the itemized estate is AUTHORITATIVE for the deterministic Shape's portfolio: write
+      // slider-portfolio so _scenarioFromInputs (read by updateShapePanel below) uses the rooms
+      // total, not the carried/slider ESTIMATE. With no investable rooms the slider keeps its
+      // Sketch/Dossier seed, so a carried estimate is never clobbered before rooms exist (the
+      // two conditions are time-disjoint). Investable = accounts minus physical/debt (same
+      // definition as the Reveal gate, studio.html ~5028).
+      try {
+        var _invTotal = (state.accounts || [])
+          .filter(function (a) { var b = getBaseType(a.baseId); var tc = b ? b.taxCode : ''; return tc !== 'physical' && tc !== 'debt'; })
+          .reduce(function (s, a) { return s + (a.value || 0); }, 0);
+        var _scl = (window.DatumShape && DatumShape.scales) || null;
+        if (_invTotal > 0 && _scl) {
+          var _spo = document.getElementById('slider-portfolio');
+          if (_spo) { _spo.value = _scl.portValToPos(_invTotal / 1e6); _spo.dataset.exactVal = String(Math.round(_invTotal)); }
+        }
+      } catch (_e) {}
       if (typeof updateShapePanel === 'function') updateShapePanel();
     }
     _updateSVGsCore = _updateSVGsCoreImpl; // wire the debounce wrapper
@@ -4596,10 +4613,18 @@
     function restoreDraft() {
       var raw = sessionStorage.getItem('datum_studio_draft');
       if (!raw) return;
-      // Sketch-wins-tie: Sketch keys present → clear draft, let prefillFromSketch run
+      // G5 — Sketch-wins-tie applies to SLIDERS only. A carried Sketch seeds ages/datum/
+      // market (prefillFromSketch below), but it must NOT purge drafted Estate rooms.
+      // Restore the rooms from the draft and let the carry own the profile/sliders; keep
+      // the draft intact (previously this cleared the draft → rooms were lost on carry).
       if (sessionStorage.getItem('datum_currentAge') || sessionStorage.getItem('datum_targetSpend')) {
-        sessionStorage.removeItem('datum_studio_draft');
-        sessionStorage.removeItem('datum_studio_draft_ts');
+        try {
+          var _carryDraft = JSON.parse(raw);
+          if (_carryDraft && _carryDraft.accounts && _carryDraft.accounts.length) {
+            state.accounts = _carryDraft.accounts;
+            renderInputs(); updateSVGs();
+          }
+        } catch (_e) {}
         return;
       }
       try {
