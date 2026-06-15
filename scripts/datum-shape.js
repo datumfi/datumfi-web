@@ -241,6 +241,25 @@
       : Math.max(0, scn.activationAge - scn.currentAge));
   }
 
+  // Plan-health tension/relief, Have->Want, for the three Studio/Sketch bars (founder model).
+  // STRUCTURAL bars (ceil/floor) read the Datum-INDEPENDENT sustainable-spending capacity
+  // (ceilSpend/floorSpend = structural capital AFTER the withdrawal-rate ramp, so retirement
+  // timing AND plan-through-age both register). DATUM bar reads target-spend movement only.
+  //   ceil/floor: capacity DOWN (weaker structure) = TENSION(+);  capacity UP = RELIEF(-).
+  //   datum:      spend UP (heavier target)        = TENSION(+);  spend DOWN = RELIEF(-).
+  // Zero on every bar at rest (want==have). Magnitude = fractional movement, clamped [-1,1].
+  // Each bar is a fraction of its OWN boundary's value, so unequal ceil-vs-floor sensitivity
+  // (e.g. retirement age moves ceiling ~1.5x the floor; PTA moves both equally) is preserved.
+  function buildTension(haveEnd, wantEnd) {
+    var down = function (hv, wv) { return Math.min(1, Math.max(-1, (hv - wv) / Math.max(1, hv))); }; // weaker = +tension
+    var up   = function (hv, wv) { return Math.min(1, Math.max(-1, (wv - hv) / Math.max(1, hv))); }; // heavier = +tension
+    return {
+      ceil:  down(haveEnd.ceilSpend,  wantEnd.ceilSpend),   // structural, Datum-independent
+      floor: down(haveEnd.floorSpend, wantEnd.floorSpend),  // structural, Datum-independent
+      datum: up(haveEnd.datumSpend,   wantEnd.datumSpend)   // target-spend only
+    };
+  }
+
   function buildDiff(haveScenario, wantScenario, opts) {
     opts = opts || {};
     if (!wantScenario) wantScenario = haveScenario; // cold-start: want defaults to have (zero diff)
@@ -304,11 +323,15 @@
       datum: _ch(wantEnd.datumSpend, haveEnd.datumSpend),
       datumAboveCeil: wantEnd.datumSpend > wantEnd.ceilSpend
     };
-    // Signed tension array, handed out unmodified (positive=tension, negative=relief).
+    // Plan-health tension array (positive=tension, negative=relief). Structural bars
+    // (ceil/floor) read Datum-independent capacity movement, sign-fixed to plan health;
+    // datum bar reads target-spend movement only. gap (above) stays movement-signed for
+    // the inverse solver / What-It-Takes -- only the BARS re-point to plan-health pressure.
+    var t = buildTension(haveEnd, wantEnd);
     var tension = [
-      { channel: 'ceil',  ratio: gap.ceil.ratio },
-      { channel: 'floor', ratio: gap.floor.ratio },
-      { channel: 'datum', ratio: gap.datum.ratio }
+      { channel: 'ceil',  ratio: t.ceil },
+      { channel: 'floor', ratio: t.floor },
+      { channel: 'datum', ratio: t.datum }
     ];
 
     // 109-case copy via the shared engine. S2Copy is attached by datum-shape-copy.js,
@@ -1352,6 +1375,7 @@
     computeAt:          computeAt,
     buildPath:          buildPath,
     buildDiff:          buildDiff,
+    buildTension:       buildTension,
     solveInverse:       solveInverse,
     classifyShapeState: classifyShapeState,
     buildShapeState:    buildShapeState,

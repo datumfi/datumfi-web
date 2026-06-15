@@ -2197,7 +2197,7 @@
             <!-- Ceiling tension bar -->
             <div style="margin-bottom:6px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
-                <span class="d2-tbar-label lbl-has-tip" id="d2-tension-ceil-lbl" tabindex="0" style="color:var(--gold); pointer-events:auto; display:inline-block;"><span class="d2-tbar-label-txt">CEILING TENSION</span><div class="shape-info-tooltip" id="d2-ceil-bar-tip" style="pointer-events:none; top:auto; bottom:calc(100% + 10px);">You're pulling your Ceiling higher than the Sketch projects. At 30% the gap is modest — small input changes can close it. At 60% the gap is structural — only meaningful moves (more time, more capital, lower spending) will reach it.</div></span>
+                <span class="d2-tbar-label lbl-has-tip" id="d2-tension-ceil-lbl" tabindex="0" style="color:var(--gold); pointer-events:auto; display:inline-block;"><span class="d2-tbar-label-txt">CEILING TENSION</span><div class="shape-info-tooltip" id="d2-ceil-bar-tip" style="pointer-events:none; top:auto; bottom:calc(100% + 10px);">This move lowers your structural Ceiling — the best your plan can support if markets cooperate. At 30% you're trading away some upside. At 60% the strong-market path now tops out much lower.</div></span>
                 <span class="d2-tbar-pct" id="d2-tension-ceil-pct" style="color:var(--gold);">0%</span>
               </div>
               <div class="d2-tbar-track">
@@ -2207,7 +2207,7 @@
             <!-- Floor tension bar -->
             <div style="margin-bottom:6px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
-                <span class="d2-tbar-label lbl-has-tip" id="d2-tension-floor-lbl" tabindex="0" style="color:var(--danger-red); pointer-events:auto; display:inline-block;"><span class="d2-tbar-label-txt">FLOOR TENSION</span><div class="shape-info-tooltip" id="d2-floor-bar-tip" style="pointer-events:none; top:auto; bottom:calc(100% + 10px);">You're asking your Floor to hold a higher line than the conservative path supports. At 30% the gap is bridgeable with stronger inputs. At 60% you're asking the conservative path to do work it can't do without more time or capital.</div></span>
+                <span class="d2-tbar-label lbl-has-tip" id="d2-tension-floor-lbl" tabindex="0" style="color:var(--danger-red); pointer-events:auto; display:inline-block;"><span class="d2-tbar-label-txt">FLOOR TENSION</span><div class="shape-info-tooltip" id="d2-floor-bar-tip" style="pointer-events:none; top:auto; bottom:calc(100% + 10px);">This move lowers your survival Floor — what the conservative path supports even if markets disappoint. At 30% you're thinning your safety margin. At 60% your worst-case resilience has dropped sharply.</div></span>
                 <span class="d2-tbar-pct" id="d2-tension-floor-pct" style="color:var(--danger-red);">0%</span>
               </div>
               <div class="d2-tbar-track">
@@ -2224,7 +2224,7 @@
                 <div class="d2-tbar-fill" id="d2-tension-datum-fill" style="background:var(--teal-mid);"></div>
               </div>
             </div>
-            <div id="tension-explain" style="font-size:9px; color:rgba(255,255,255,0.5); line-height:1.55; font-family:var(--font-sans,sans-serif); margin-top:3px;">Drag the Ceiling, Floor, or Datum handles to shape your cone.</div>
+            <div id="tension-explain" style="font-size:9px; color:rgba(255,255,255,0.5); line-height:1.55; font-family:var(--font-sans,sans-serif); margin-top:3px;">As you design your Want, these bars show how much pressure each change puts on your Ceiling, Floor, and spending target.</div>
           </div>
 
 
@@ -6532,12 +6532,15 @@
       var _dhdl = document.getElementById('d2-handle-datum-line');
       if (_dhdl) { _dhdl.setAttribute('x1',xE); _dhdl.setAttribute('y1',yD+8); _dhdl.setAttribute('x2',xE); _dhdl.setAttribute('y2',350); }
 
-      // Three tension ratios — use ghost endpoint as reference so SP-driven band lift registers correctly
+      // Plan-health tension — route through the SHARED DatumShape.buildTension so Sketch and
+      // Studio compute identically (locked by _tension_pressure_parity). Ghost endpoint = the
+      // Have/current reference (so SP-driven band lift registers); designed spends = the Want.
+      // Structural bars (ceil/floor) read Datum-independent capacity movement, sign-fixed to
+      // plan health; datum bar reads target-spend movement only. Zero on every bar at rest.
       var _ghostRefEnd  = getMathPoint(_gYrs, _gYrs, _ghostSc);
-      var _ceilTension  = Math.min(1, Math.max(-1, (dCeil  - _ghostRefEnd.ceilSpend)  / Math.max(1, _ghostRefEnd.ceilSpend)));
-      var _floorTension = Math.min(1, Math.max(-1, (dFloor - _ghostRefEnd.floorSpend) / Math.max(1, _ghostRefEnd.floorSpend)));
-      var _datumTension = Math.min(1, Math.max(-1, (dDatum - _ghostRefEnd.datumSpend) / Math.max(1, _ghostRefEnd.datumSpend)));
-      updateTensionVisuals(_ceilTension, _floorTension, _datumTension, dDatum > dCeil);
+      var _t            = DatumShape.buildTension(_ghostRefEnd, { ceilSpend: dCeil, floorSpend: dFloor, datumSpend: dDatum });
+      updateTensionVisuals(_t.ceil, _t.floor, _t.datum, dDatum > dCeil);
+      _colorD2Sliders(_ghostSc, _liveSc, _ghostRefEnd);   // boundary-aware strain color on the design sliders (lockstep w/ Studio)
       updateRequirementsPanel(dCeil, dptsEnd.ceilSpend);
 
       // Grid labels (shared Y-axis — globalYMin/globalYMax)
@@ -6600,7 +6603,7 @@
       var _cRelief = ceilRatio < 0;
       if (_cFill) { _cFill.style.width = _cPct2 + '%'; _cFill.style.background = _cRelief ? _blue : 'var(--gold)'; }
       if (_cPct)  { _cPct.textContent = _cPct2 + '%'; _cPct.style.color = _cRelief ? _blue : (_cAbs > 0.6 ? '#ffffff' : 'var(--gold)'); }
-      if (_cLbl)  { var _cT = _cLbl.querySelector('.d2-tbar-label-txt'); if (_cT) _cT.textContent = _cRelief ? 'CEILING RELIEF' : 'CEILING TENSION'; _cLbl.style.color = _cRelief ? _blue : 'var(--gold)'; var _cTip = document.getElementById('d2-ceil-bar-tip'); if (_cTip) _cTip.textContent = _cRelief ? "You're accepting a lower Ceiling than the Sketch projects. At 30% you're trading some upside for simpler planning. At 60% you're locking in a much more modest cap — useful when you'd rather not depend on favorable markets." : "You're pulling your Ceiling higher than the Sketch projects. At 30% the gap is modest — small input changes can close it. At 60% the gap is structural — only meaningful moves (more time, more capital, lower spending) will reach it."; }
+      if (_cLbl)  { var _cT = _cLbl.querySelector('.d2-tbar-label-txt'); if (_cT) _cT.textContent = _cRelief ? 'CEILING RELIEF' : 'CEILING TENSION'; _cLbl.style.color = _cRelief ? _blue : 'var(--gold)'; var _cTip = document.getElementById('d2-ceil-bar-tip'); if (_cTip) _cTip.textContent = _cRelief ? "This move lifts your structural Ceiling — the best your plan can support if markets cooperate. At 30% you've added real upside capacity. At 60% you've strengthened it substantially." : "This move lowers your structural Ceiling — the best your plan can support if markets cooperate. At 30% you're trading away some upside. At 60% the strong-market path now tops out much lower."; }
 
       // Ceiling line glow — only in tension mode (ceilRatio > 0)
       var overlay  = document.getElementById('d2-tension-overlay');
@@ -6635,7 +6638,7 @@
       var _fRelief = floorRatio < 0;
       if (_fFill) { _fFill.style.width = _fPct2 + '%'; _fFill.style.background = _fRelief ? _blue : 'var(--danger-red)'; }
       if (_fPct)  { _fPct.textContent = _fPct2 + '%'; _fPct.style.color = _fRelief ? _blue : (_fAbs > 0.6 ? '#ffffff' : 'var(--danger-red)'); }
-      if (_fLbl)  { var _fT = _fLbl.querySelector('.d2-tbar-label-txt'); if (_fT) _fT.textContent = _fRelief ? 'FLOOR RELIEF' : 'FLOOR TENSION'; _fLbl.style.color = _fRelief ? _blue : 'var(--danger-red)'; var _fTip = document.getElementById('d2-floor-bar-tip'); if (_fTip) _fTip.textContent = _fRelief ? "You're accepting a lower Floor than the Sketch projects. At 30% you're carrying extra resilience headroom. At 60% you're building in serious cushion — useful if you want the conservative path to stay quiet through almost any market." : "You're asking your Floor to hold a higher line than the conservative path supports. At 30% the gap is bridgeable with stronger inputs. At 60% you're asking the conservative path to do work it can't do without more time or capital."; }
+      if (_fLbl)  { var _fT = _fLbl.querySelector('.d2-tbar-label-txt'); if (_fT) _fT.textContent = _fRelief ? 'FLOOR RELIEF' : 'FLOOR TENSION'; _fLbl.style.color = _fRelief ? _blue : 'var(--danger-red)'; var _fTip = document.getElementById('d2-floor-bar-tip'); if (_fTip) _fTip.textContent = _fRelief ? "This move raises your survival Floor — what the conservative path supports even if markets disappoint. At 30% you've added resilience headroom. At 60% you've strengthened your worst case substantially." : "This move lowers your survival Floor — what the conservative path supports even if markets disappoint. At 30% you're thinning your safety margin. At 60% your worst-case resilience has dropped sharply."; }
 
       // ── Datum bar ──
       var _dFill   = document.getElementById('d2-tension-datum-fill');
@@ -6653,18 +6656,18 @@
       if (_exp) {
         var _maxAbs = Math.max(_cAbs, _fAbs, _dAbs);
         if (_maxAbs === 0) {
-          _exp.textContent = 'Drag the Ceiling, Floor, or spending line to see how hard you\'re asking this Shape to work.';
+          _exp.textContent = 'As you design your Want, these bars show how much pressure each change puts on your Ceiling, Floor, and spending target.';
         } else if (_cAbs === _maxAbs) {
           _exp.textContent = _cRelief
-            ? 'Ceiling pulled back — your upside spending capacity has narrowed. The plan has less room to deliver above your spending line if markets perform well.'
-            : (_cAbs > 0.75 ? 'Ceiling is near its structural limit — this Shape now leans heavily on strong markets and your contributions holding steady.'
-            : _cAbs > 0.4 ? 'Ceiling under real pressure — more of this plan now depends on growth doing its part.'
-            : 'Ceiling raised but still in a workable band — you\'re asking for more, but the plan still has room above Floor.');
+            ? 'Your Ceiling rose — this move strengthens your upside capacity. The strong-market path now reaches higher above your spending line.'
+            : (_cAbs > 0.75 ? 'Your Ceiling dropped sharply — this move gives up a large share of your upside capacity.'
+            : _cAbs > 0.4 ? 'Your Ceiling came down meaningfully — the strong-market path now tops out noticeably lower.'
+            : 'Your Ceiling eased down a little — a modest trade of upside capacity.');
         } else if (_fAbs === _maxAbs) {
           _exp.textContent = _fRelief
-            ? 'Floor set lower — your resilience boundary is thinner now. More of the outcome range sits below this new minimum if markets underperform.'
-            : (_fAbs > 0.75 ? 'Floor pressed toward its lower boundary — resilience is thin if returns or income slip.'
-            : 'Floor pulled down — resilience is shrinking and more outcomes cluster near your minimum.');
+            ? 'Your Floor rose — this move strengthens your worst-case resilience. More outcomes stay above your minimum even if markets disappoint.'
+            : (_fAbs > 0.75 ? 'Your Floor dropped sharply — worst-case resilience is much thinner now.'
+            : 'Your Floor came down — your safety margin shrinks if markets disappoint.');
         } else {
           _exp.textContent = datumAboveCeil
             ? 'Spending line is now above the Ceiling — the plan can\'t deliver at this position without a structural change.'
@@ -6674,6 +6677,36 @@
               : 'Spending line under tension — you\'re noticeably closer to the Ceiling than in the baseline Shape.'));
         }
       }
+    }
+
+    /* Boundary-aware strain fill on the d2 design sliders — Sketch twin of Studio's
+     * _colorWantSliders (Tension Redesign step 5). Reads each lever's ISOLATED ghost->live
+     * effect through the SAME DatumShape.buildTension the bars use, so toggle color and bars
+     * never disagree. Structural lever weakening BOTH ceiling+floor -> gold->red gradient;
+     * strengthening -> blue relief; datum -> teal (heavier) / blue (lighter); baseline -> neutral. */
+    var _D2SLF = { 'd2-slider-age': 'currentAge', 'd2-slider-activation': 'activationAge', 'd2-slider-plan-through': 'planThroughAge', 'd2-slider-portfolio': 'portfolioVol', 'd2-slider-contrib': 'annualContrib', 'd2-slider-datum': 'targetSpend' };
+    function _colorD2Sliders(ghostSc, liveSc, haveEnd) {
+      if (!ghostSc || !liveSc || !window.DatumShape || typeof DatumShape.buildTension !== 'function') return;
+      var GOLD = 'var(--gold)', RED = 'var(--danger-red)', TEAL = 'var(--teal-mid)', BLUE = 'var(--blue-safe)', NEU = 'rgba(93,202,165,0.40)', TRK = 'rgba(255,255,255,0.14)', EPS = 1e-6;
+      var endOf = function (s) { var y = Math.max(1, s.activationAge - s.currentAge); return getMathPoint(y, y, s); };
+      var hEnd = haveEnd || endOf(ghostSc);
+      var fill = function (a, b, pct) { return 'linear-gradient(90deg,' + a + ' 0%,' + b + ' ' + pct + '%,' + TRK + ' ' + pct + '%,' + TRK + ' 100%)'; };
+      Object.keys(_D2SLF).forEach(function (id) {
+        var el = document.getElementById(id); if (!el) return;
+        var mn = parseFloat(el.min), mx = parseFloat(el.max), v = parseFloat(el.value);
+        var pct = mx > mn ? Math.max(0, Math.min(100, (v - mn) / (mx - mn) * 100)) : 0;
+        var solo = {}; for (var k in ghostSc) { if (Object.prototype.hasOwnProperty.call(ghostSc, k)) solo[k] = ghostSc[k]; }
+        solo[_D2SLF[id]] = liveSc[_D2SLF[id]];
+        solo.activationAge = Math.max(solo.currentAge + 1, solo.activationAge);
+        solo.yearsToGrow = Math.max(1, solo.activationAge - solo.currentAge);
+        var t = DatumShape.buildTension(hEnd, endOf(solo));
+        var bg;
+        if (id === 'd2-slider-datum') { var col = t.datum > EPS ? TEAL : t.datum < -EPS ? BLUE : NEU; bg = fill(col, col, pct); }
+        else if (t.ceil > EPS && t.floor > EPS) { bg = fill(GOLD, RED, pct); }
+        else if (t.ceil < -EPS && t.floor < -EPS) { bg = fill(BLUE, BLUE, pct); }
+        else { bg = fill(NEU, NEU, pct); }
+        el.style.background = bg;
+      });
     }
 
     // --- Requirements panel ---

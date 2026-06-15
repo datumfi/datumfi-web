@@ -40,21 +40,47 @@
     };
   }
 
-  /* Gold/Red plan-strength fill per Want slider (change #2). Color = the lever's effect on
-   * the FUNDED position (not raw slider direction): GOLD strengthens, RED strains, neutral at
-   * baseline. Strengthening direction is the lever's monotonic physics, so the plan-through
-   * inversion is respected (longer horizon = strain = RED even though the value rose). */
+  /* Boundary-aware strain fill per Want slider (Tension Redesign, step 5). Each lever's
+   * ISOLATED Have->Want effect is read through the SAME DatumShape.buildTension the bars use,
+   * so the toggle color and the bars never disagree:
+   *   structural lever (age/retire/plan/portfolio/contrib) weakens BOTH ceiling+floor ->
+   *     gold->red gradient (multi-boundary strain); strengthens both -> blue relief.
+   *   datum lever -> teal (heavier spend = tension) / blue (lighter = relief).
+   *   no move from the Have baseline -> neutral.
+   * Plain-spoken language: gold/red = you're straining your plan, blue = you're easing it,
+   * teal = you're moving your spending target. */
+  var _SLF = { 'd2-slider-age': 'currentAge', 'd2-slider-activation': 'activationAge', 'd2-slider-plan-through': 'planThroughAge', 'd2-slider-portfolio': 'portfolioVol', 'd2-slider-contrib': 'annualContrib', 'd2-slider-datum': 'targetSpend' };
   function _colorWantSliders() {
-    if (!_haveSliderPos) return;
-    var GOLD = 'var(--gold)', RED = 'var(--danger-red)', NEU = 'rgba(93,202,165,0.40)', TRK = 'rgba(255,255,255,0.14)';
-    var STR = { 'd2-slider-age': -1, 'd2-slider-activation': 1, 'd2-slider-plan-through': -1, 'd2-slider-portfolio': 1, 'd2-slider-datum': -1, 'd2-slider-contrib': 1 };
-    Object.keys(STR).forEach(function (id) {
+    if (!_haveSliderPos || !_haveScn) return;
+    var d = DS(); if (!d || typeof d.buildTension !== 'function') return;
+    var GOLD = 'var(--gold)', RED = 'var(--danger-red)', TEAL = 'var(--teal-mid)', BLUE = 'var(--blue-safe)', NEU = 'rgba(93,202,165,0.40)', TRK = 'rgba(255,255,255,0.14)';
+    var EPS = 1e-6;
+    var endOf = function (s) { return d.computeAt(s, Math.max(1, s.activationAge - s.currentAge)); };
+    var haveEnd = endOf(_haveScn);
+    var want = _wantFromSliders();
+    var fill = function (a, b, pct) { return 'linear-gradient(90deg,' + a + ' 0%,' + b + ' ' + pct + '%,' + TRK + ' ' + pct + '%,' + TRK + ' 100%)'; };
+    Object.keys(_SLF).forEach(function (id) {
       var el = $(id); if (!el || _haveSliderPos[id] == null) return;
       var mn = parseFloat(el.min), mx = parseFloat(el.max), v = parseFloat(el.value);
       var pct = mx > mn ? Math.max(0, Math.min(100, (v - mn) / (mx - mn) * 100)) : 0;
-      var dv = v - _haveSliderPos[id], sign = dv > 0.5 ? 1 : dv < -0.5 ? -1 : 0;
-      var col = sign === 0 ? NEU : (sign === STR[id] ? GOLD : RED);
-      el.style.background = 'linear-gradient(90deg,' + col + ' 0%,' + col + ' ' + pct + '%,' + TRK + ' ' + pct + '%,' + TRK + ' 100%)';
+      // isolate THIS lever: the Have scenario with only this one field moved to its Want value
+      var solo = {}; for (var k in _haveScn) { if (Object.prototype.hasOwnProperty.call(_haveScn, k)) solo[k] = _haveScn[k]; }
+      solo[_SLF[id]] = want[_SLF[id]];
+      solo.activationAge = Math.max(solo.currentAge + 1, solo.activationAge);
+      solo.yearsToGrow = Math.max(1, solo.activationAge - solo.currentAge);
+      var t = d.buildTension(haveEnd, endOf(solo));
+      var bg;
+      if (id === 'd2-slider-datum') {
+        var col = t.datum > EPS ? TEAL : t.datum < -EPS ? BLUE : NEU;
+        bg = fill(col, col, pct);
+      } else if (t.ceil > EPS && t.floor > EPS) {
+        bg = fill(GOLD, RED, pct);          // structural strain on BOTH boundaries
+      } else if (t.ceil < -EPS && t.floor < -EPS) {
+        bg = fill(BLUE, BLUE, pct);         // structural relief
+      } else {
+        bg = fill(NEU, NEU, pct);           // at baseline / negligible
+      }
+      el.style.background = bg;
     });
   }
 
@@ -475,7 +501,7 @@
       var _cRelief = ceilRatio < 0;
       if (_cFill) { _cFill.style.width = _cPct2 + '%'; _cFill.style.background = _cRelief ? _blue : 'var(--gold)'; }
       if (_cPct)  { _cPct.textContent = _cPct2 + '%'; _cPct.style.color = _cRelief ? _blue : (_cAbs > 0.6 ? '#ffffff' : 'var(--gold)'); }
-      if (_cLbl)  { var _cT = _cLbl.querySelector('.d2-tbar-label-txt'); if (_cT) _cT.textContent = _cRelief ? 'CEILING RELIEF' : 'CEILING TENSION'; _cLbl.style.color = _cRelief ? _blue : 'var(--gold)'; var _cTip = document.getElementById('d2-ceil-bar-tip'); if (_cTip) _cTip.textContent = _cRelief ? "You're accepting a lower Ceiling than the Sketch projects. At 30% you're trading some upside for simpler planning. At 60% you're locking in a much more modest cap — useful when you'd rather not depend on favorable markets." : "You're pulling your Ceiling higher than the Sketch projects. At 30% the gap is modest — small input changes can close it. At 60% the gap is structural — only meaningful moves (more time, more capital, lower spending) will reach it."; }
+      if (_cLbl)  { var _cT = _cLbl.querySelector('.d2-tbar-label-txt'); if (_cT) _cT.textContent = _cRelief ? 'CEILING RELIEF' : 'CEILING TENSION'; _cLbl.style.color = _cRelief ? _blue : 'var(--gold)'; var _cTip = document.getElementById('d2-ceil-bar-tip'); if (_cTip) _cTip.textContent = _cRelief ? "This move lifts your structural Ceiling — the best your plan can support if markets cooperate. At 30% you've added real upside capacity. At 60% you've strengthened it substantially." : "This move lowers your structural Ceiling — the best your plan can support if markets cooperate. At 30% you're trading away some upside. At 60% the strong-market path now tops out much lower."; }
 
       // Ceiling line glow — only in tension mode (ceilRatio > 0)
       var overlay  = document.getElementById('d2-tension-overlay');
@@ -510,7 +536,7 @@
       var _fRelief = floorRatio < 0;
       if (_fFill) { _fFill.style.width = _fPct2 + '%'; _fFill.style.background = _fRelief ? _blue : 'var(--danger-red)'; }
       if (_fPct)  { _fPct.textContent = _fPct2 + '%'; _fPct.style.color = _fRelief ? _blue : (_fAbs > 0.6 ? '#ffffff' : 'var(--danger-red)'); }
-      if (_fLbl)  { var _fT = _fLbl.querySelector('.d2-tbar-label-txt'); if (_fT) _fT.textContent = _fRelief ? 'FLOOR RELIEF' : 'FLOOR TENSION'; _fLbl.style.color = _fRelief ? _blue : 'var(--danger-red)'; var _fTip = document.getElementById('d2-floor-bar-tip'); if (_fTip) _fTip.textContent = _fRelief ? "You're accepting a lower Floor than the Sketch projects. At 30% you're carrying extra resilience headroom. At 60% you're building in serious cushion — useful if you want the conservative path to stay quiet through almost any market." : "You're asking your Floor to hold a higher line than the conservative path supports. At 30% the gap is bridgeable with stronger inputs. At 60% you're asking the conservative path to do work it can't do without more time or capital."; }
+      if (_fLbl)  { var _fT = _fLbl.querySelector('.d2-tbar-label-txt'); if (_fT) _fT.textContent = _fRelief ? 'FLOOR RELIEF' : 'FLOOR TENSION'; _fLbl.style.color = _fRelief ? _blue : 'var(--danger-red)'; var _fTip = document.getElementById('d2-floor-bar-tip'); if (_fTip) _fTip.textContent = _fRelief ? "This move raises your survival Floor — what the conservative path supports even if markets disappoint. At 30% you've added resilience headroom. At 60% you've strengthened your worst case substantially." : "This move lowers your survival Floor — what the conservative path supports even if markets disappoint. At 30% you're thinning your safety margin. At 60% your worst-case resilience has dropped sharply."; }
 
       // ── Datum bar ──
       var _dFill   = document.getElementById('d2-tension-datum-fill');
@@ -528,18 +554,18 @@
       if (_exp) {
         var _maxAbs = Math.max(_cAbs, _fAbs, _dAbs);
         if (_maxAbs === 0) {
-          _exp.textContent = 'Drag the Ceiling, Floor, or spending line to see how hard you\'re asking this Shape to work.';
+          _exp.textContent = 'As you design your Want, these bars show how much pressure each change puts on your Ceiling, Floor, and spending target.';
         } else if (_cAbs === _maxAbs) {
           _exp.textContent = _cRelief
-            ? 'Ceiling pulled back — your upside spending capacity has narrowed. The plan has less room to deliver above your spending line if markets perform well.'
-            : (_cAbs > 0.75 ? 'Ceiling is near its structural limit — this Shape now leans heavily on strong markets and your contributions holding steady.'
-            : _cAbs > 0.4 ? 'Ceiling under real pressure — more of this plan now depends on growth doing its part.'
-            : 'Ceiling raised but still in a workable band — you\'re asking for more, but the plan still has room above Floor.');
+            ? 'Your Ceiling rose — this move strengthens your upside capacity. The strong-market path now reaches higher above your spending line.'
+            : (_cAbs > 0.75 ? 'Your Ceiling dropped sharply — this move gives up a large share of your upside capacity.'
+            : _cAbs > 0.4 ? 'Your Ceiling came down meaningfully — the strong-market path now tops out noticeably lower.'
+            : 'Your Ceiling eased down a little — a modest trade of upside capacity.');
         } else if (_fAbs === _maxAbs) {
           _exp.textContent = _fRelief
-            ? 'Floor set lower — your resilience boundary is thinner now. More of the outcome range sits below this new minimum if markets underperform.'
-            : (_fAbs > 0.75 ? 'Floor pressed toward its lower boundary — resilience is thin if returns or income slip.'
-            : 'Floor pulled down — resilience is shrinking and more outcomes cluster near your minimum.');
+            ? 'Your Floor rose — this move strengthens your worst-case resilience. More outcomes stay above your minimum even if markets disappoint.'
+            : (_fAbs > 0.75 ? 'Your Floor dropped sharply — worst-case resilience is much thinner now.'
+            : 'Your Floor came down — your safety margin shrinks if markets disappoint.');
         } else {
           _exp.textContent = datumAboveCeil
             ? 'Spending line is now above the Ceiling — the plan can\'t deliver at this position without a structural change.'

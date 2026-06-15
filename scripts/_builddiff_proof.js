@@ -73,13 +73,23 @@ function show(label, wantO) {
 }
 const bUp   = show('datum UP (raise spend 100->160k)', { age: 40, retire: 65, plan: 93, port: 0.75, contrib: 25000, datum: 160, par: 'average', tax: 20 });
 const bDown = show('datum DOWN (lower spend 100->60k)', { age: 40, retire: 65, plan: 93, port: 0.75, contrib: 25000, datum: 60, par: 'average', tax: 20 });
-show('retire EARLIER (65->58)',  { age: 40, retire: 58, plan: 93, port: 0.75, contrib: 25000, datum: 100, par: 'average', tax: 20 });
+const bEarly = show('retire EARLIER (65->58)',  { age: 40, retire: 58, plan: 93, port: 0.75, contrib: 25000, datum: 100, par: 'average', tax: 20 });
+const bLate  = show('retire LATER (65->72)',    { age: 40, retire: 72, plan: 93, port: 0.75, contrib: 25000, datum: 100, par: 'average', tax: 20 });
 show('multi: retire 65->59 + plan 93->101', { age: 40, retire: 59, plan: 101, port: 0.75, contrib: 25000, datum: 100, par: 'average', tax: 20 });
 
-// directed assertions on sign + raw-vs-ratio duality
+// directed assertions: plan-health pressure bars + the founder INDEPENDENCE invariant
 console.log('\n  --- assertions ---');
-if (bUp.gap.datum.delta > 0 && bUp.gap.datum.ratio > 0) ok('datum-up => +tension (delta & ratio both positive)'); else fail('datum-up sign wrong');
-if (bDown.gap.datum.delta < 0 && bDown.gap.datum.ratio < 0) ok('datum-down => -relief (delta & ratio both negative)'); else fail('datum-down sign wrong');
+const tch = (d, ch) => d.tension.find((t) => t.channel === ch).ratio;
+// structural bars (ceil/floor) = Datum-independent capacity movement, sign-fixed to plan health
+if (tch(bEarly, 'ceil') > 0 && tch(bEarly, 'floor') > 0) ok('retire EARLIER => ceiling+floor TENSION (weaker structure)'); else fail('earlier-retire structural sign wrong');
+if (tch(bLate, 'ceil') < 0 && tch(bLate, 'floor') < 0) ok('retire LATER => ceiling+floor RELIEF (stronger structure)'); else fail('later-retire structural sign wrong');
+// datum bar = target-spend movement only
+if (tch(bUp, 'datum') > 0) ok('datum-up => datum TENSION'); else fail('datum-up bar sign wrong');
+if (tch(bDown, 'datum') < 0) ok('datum-down => datum RELIEF'); else fail('datum-down bar sign wrong');
+// INDEPENDENCE: structural lever leaves datum bar at 0, datum lever leaves ceil/floor at 0
+if (Math.abs(tch(bEarly, 'datum')) < 1e-9) ok('structural lever leaves DATUM bar = 0 (independence)'); else fail('datum bar moved on structural-only lever');
+if (Math.abs(tch(bUp, 'ceil')) < 1e-9 && Math.abs(tch(bUp, 'floor')) < 1e-9) ok('datum lever leaves CEIL/FLOOR bars = 0 (independence)'); else fail('structural bars moved on datum-only lever');
+// gap (solver feed) still exposes raw $k delta + clamped ratio, and 109-copy still reached
 if (Math.abs(bUp.gap.datum.delta) > 1 && Math.abs(bUp.gap.datum.ratio) <= 1) ok('gap exposes raw $k delta (>1) AND clamped ratio (<=1) — both forms present'); else fail('raw/ratio duality missing');
 if (bUp.copy && bUp.copy.isSingleLever && bUp.copy.lever === 'datum') ok('copy = single-lever datum case (109-engine reached)'); else fail('copy datum-lever not selected: ' + JSON.stringify(bUp.copy && bUp.copy.lever));
 
