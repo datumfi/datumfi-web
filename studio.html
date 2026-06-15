@@ -4378,7 +4378,7 @@
     }
     // Want pan is suppressed over interactive controls + chrome (only the empty shape pans).
     function _wantPanBlocked(t) {
-      return !!(t.closest('#swf-hud') || t.closest('.datum-group') || t.closest('.d2-handle') || t.closest('.d2-handle-hit') || t.closest('input') || t.closest('button') || t.closest('a') || t.closest('.lbl-has-tip'));
+      return !!(t.closest('#swf-hud') || t.closest('.datum-group') || t.closest('.d2-handle') || t.closest('.d2-handle-hit') || t.closest('.d2-sp-handle') || (t.id && /^d2-(ceil|floor|datum)-hit$|^d2-sp-handle-hit$/.test(t.id)) || t.closest('input') || t.closest('button') || t.closest('a') || t.closest('.lbl-has-tip'));
     }
 
     canvasWrapper.addEventListener('wheel', (e) => {

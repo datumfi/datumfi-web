@@ -20,10 +20,12 @@
   function fmt(v) { return v >= 1000 ? '$' + (v / 1000).toFixed(2).replace(/\.00$/, '') + 'M' : '$' + Math.round(v) + 'k'; }
   function fmtCapK(k) { return k >= 1000 ? '$' + (k / 1000).toFixed(2).replace(/\.00$/, '') + 'M' : '$' + Math.round(k) + 'k'; }
 
-  var _haveScn = null, _wantScn = null, _wantInit = false, _lastDiff = null, _morphRAF = 0, _wired = false, _haveSliderPos = null, _refWasShown = false;
-  // surround 4: boundary-pull overrides on the Want canvas (Step-3 = datum-line drag; ceil/floor = Step-4)
+  var _haveScn = null, _wantScn = null, _wantGeo = null, _wantInit = false, _lastDiff = null, _morphRAF = 0, _wired = false, _haveSliderPos = null, _refWasShown = false;
+  // surround 4: boundary-pull overrides on the Want canvas (Step-4 = ceil/floor/datum endpoint
+  // drags + SP starting-point ratio-scale). ceil/floor/datumDelta feed buildDiff's want endpoints;
+  // portDelta folds into the GEO scenario for the geometry (see renderWantFace), never into _wantScn.
   var _wantOverrides = { ceilDelta: 0, floorDelta: 0, datumDelta: 0, portDelta: 0, isDirty: false };
-  var _wantAcceptFromState = null, _dragActive = null;
+  var _wantAcceptFromState = null, _dragActive = null, _spHandleY = 240, _spDragBase = null;
   function _resetOverrides() { _wantOverrides.ceilDelta = 0; _wantOverrides.floorDelta = 0; _wantOverrides.datumDelta = 0; _wantOverrides.portDelta = 0; _wantOverrides.isDirty = false; }
 
   /* baseline d2-slider positions for the frozen Have — recomputed each Want entry so the
@@ -190,18 +192,35 @@
     // live (Want) — exact at rest, interpolated during morph
     // datum line is drawn below at the SAME dy as the node/handle (see _dy) so they
     // always coincide — the engine's dDatum path can lag the endpoint on a boundary pull.
-    var conePath;
+    var conePath, _ceilDrawn, _floorDrawn;
+    // ramp a ceil/floor endpoint override across the timeline so the LIVE line pivots from the
+    // start anchor up to the dragged endpoint (mirror sketch L6399 d2SpendToY(sp + _t*delta)).
+    var _rampLine = function (rawD, delta) {
+      var pts = _parse(rawD), xs = FRONT.xStart, span = (FRONT.xEnd - FRONT.xStart) || 1, out = [];
+      for (var i = 0; i < pts.length; i++) {
+        var tt = (pts[i][0] - xs) / span;
+        out.push([pts[i][0], spY(_yToSpend(d.sharedY, pts[i][1]) + tt * delta)]);
+      }
+      return out;
+    };
     if (t >= 1) {
-      conePath = d.want.dCone;
-      sa('d2-cone', 'd', conePath); sa('d2-ceil-line', 'd', d.want.dCeil);
-      sa('d2-floor-line', 'd', d.want.dFloor);
+      if (_wantOverrides.ceilDelta || _wantOverrides.floorDelta) {
+        var rc = _rampLine(d.want.dCeil, _wantOverrides.ceilDelta);
+        var rf = _rampLine(d.want.dFloor, _wantOverrides.floorDelta);
+        _ceilDrawn = _lineFrom(rc); _floorDrawn = _lineFrom(rf); conePath = _coneFrom(rc, rf);
+      } else {
+        _ceilDrawn = d.want.dCeil; _floorDrawn = d.want.dFloor; conePath = d.want.dCone;
+      }
+      sa('d2-cone', 'd', conePath); sa('d2-ceil-line', 'd', _ceilDrawn); sa('d2-floor-line', 'd', _floorDrawn);
     } else {
       var hc = _parse(d.have.dCeil), wc = _parse(d.want.dCeil), c = _lerpPts(hc, wc, t);
       var hf = _parse(d.have.dFloor), wf = _parse(d.want.dFloor), f = _lerpPts(hf, wf, t);
-      conePath = _coneFrom(c, f);
-      sa('d2-ceil-line', 'd', _lineFrom(c)); sa('d2-floor-line', 'd', _lineFrom(f));
+      _ceilDrawn = _lineFrom(c); _floorDrawn = _lineFrom(f); conePath = _coneFrom(c, f);
+      sa('d2-ceil-line', 'd', _ceilDrawn); sa('d2-floor-line', 'd', _floorDrawn);
       sa('d2-cone', 'd', conePath);
     }
+    // whole ceil/floor line draggable: mirror the drawn line onto the invisible stroke hit paths
+    sa('d2-ceil-hit', 'd', _ceilDrawn); sa('d2-floor-hit', 'd', _floorDrawn);
     // #A: keep the market-sweep clip bounded to the live cone (mirror sketch L6456)
     sa('d2-clip-cone-path', 'd', conePath);
     var lc = $('d2-cone'); if (lc) lc.setAttribute('opacity', '0.55');
@@ -217,6 +236,14 @@
     [['d2-handle-ceil', 'd2-handle-ceil-hit', 'd2-handle-ceil-line', cy], ['d2-handle-datum', 'd2-handle-datum-hit', 'd2-handle-datum-line', dy], ['d2-handle-floor', 'd2-handle-floor-hit', null, fy]].forEach(function (h) {
       sa(h[0], 'cy', h[3]); if (h[1]) sa(h[1], 'cy', h[3]); if (h[2]) { sa(h[2], 'y1', h[3] - 10); sa(h[2], 'y2', h[3] + 10); }
     });
+    // SP anchor (left edge) at the midpoint of the STARTING ceil/floor — lifts as portDelta
+    // raises the whole band; its Y is the drag's spend reference (mirror sketch L6487).
+    var _cd = _parse(_ceilDrawn), _fd = _parse(_floorDrawn);
+    if (_cd.length && _fd.length) {
+      _spHandleY = (_cd[0][1] + _fd[0][1]) / 2;
+      sa('d2-sp-handle', 'cx', FRONT.xStart); sa('d2-sp-handle', 'cy', _spHandleY);
+      sa('d2-sp-handle-hit', 'cx', FRONT.xStart); sa('d2-sp-handle-hit', 'cy', _spHandleY);
+    }
     // datum colour reflects the (live) Test state
     var liveState = (t >= 1 ? d.want.stateObj : (t < 0.5 ? d.have.stateObj : d.want.stateObj));
     var col = liveState.color;
@@ -330,8 +357,10 @@
   function _renderRequirements() {
     var d = DS(); if (!d || !d.S2Copy || !d.S2Copy.buildRequirements || !_haveScn || !_wantScn) return;
     var ri = $('req-items'); if (!ri) return;
-    var rawEnd = d.computeAt(_wantScn, Math.max(1, _wantScn.yearsToGrow));
+    var geo = _wantGeo || _wantScn;
+    var rawEnd = d.computeAt(geo, Math.max(1, geo.yearsToGrow)); // GEO endpoints (incl SP portDelta) == sketch _d2ActiveDesignPts
     var mkt = document.querySelector('input[name="d2-market"]:checked');
+    // designScenario stays CLEAN (no portDelta) so the SP card's `port + portDelta` can't double-count.
     var ctx = { designScenario: _wantScn, currentScenario: _wantScn, ghostBaseline: _haveScn, marketParadigm: mkt ? mkt.value : 'average' };
     var out = d.S2Copy.buildRequirements(rawEnd, _wantOverrides, ctx);
     if (!out) return;
@@ -342,9 +371,14 @@
 
   function renderWantFace(t) {
     var d = DS(); if (!d || !d.buildDiff || !_haveScn) return;
-    _wantScn = _wantFromSliders();
+    _wantScn = _wantFromSliders();                          // CLEAN want (no portDelta) = designScenario for the cards
+    // SP overlay: fold portDelta into a GEO scenario for the geometry/tension only, so the cone
+    // lifts from the new origin while _wantScn stays clean (the SP card can't double-count).
+    _wantGeo = _wantOverrides.portDelta
+      ? Object.assign({}, _wantScn, { portfolioVol: _wantScn.portfolioVol + _wantOverrides.portDelta })
+      : _wantScn;
     var opts = _wantOverrides.isDirty ? Object.assign({}, FRONT, { boundaryOverrides: _wantOverrides }) : FRONT;
-    var diff = d.buildDiff(_haveScn, _wantScn, opts);
+    var diff = d.buildDiff(_haveScn, _wantGeo, opts);
     _lastDiff = diff;
     _paintCanvas(diff, t == null ? 1 : t);
     _positionGhostTicks(diff.have.positions);
@@ -374,26 +408,64 @@
   }
 
   /* ── slider / market wiring (once) ── */
-  /* datum-line drag on the Want canvas = the Step-3 boundary pull -> _wantOverrides.datumDelta
-   * -> What-It-Takes (block E). Vertical (Y) mapping is unaffected by the back-face rotateY(180)
-   * mirror (that flips X only); getScreenCTM maps client->viewBox incl. preserveAspectRatio. */
-  function _wireDatumDrag() {
+  /* On-canvas handle drags on the Want face (Step-4) — faithful to Sketch initD2DragHandlers:
+   *   ceil/floor/datum  -> endpoint overrides (_wantOverrides.*Delta), Sketch caps + cross-guards
+   *                        verbatim; buildDiff applies them to the want endpoints so the tension
+   *                        bars, toggle colors, HUD and What-It-Takes all respond live.
+   *   sp (starting point)-> ratio-scales the portfolio into _wantOverrides.portDelta (NOT a solver);
+   *                        renderWantFace folds it into the GEO scenario so the whole band lifts.
+   * Drag base = computeAt(GEO) (== Sketch _d2ActiveDesignPts: includes portDelta, excludes endpoint
+   * deltas). Vertical (Y) mapping is unaffected by the back-face rotateY(180) X-mirror; getScreenCTM
+   * maps client->viewBox incl. preserveAspectRatio. */
+  function _wireHandleDrags() {
     var svg = $('d2-canvas'); if (!svg || svg._wantDragBound) return; svg._wantDragBound = true;
     function svgY(e) { try { var p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()).y; } catch (_e) { var r = svg.getBoundingClientRect(); return ((e.clientY - r.top) / r.height) * 480; } }
-    ['d2-handle-datum', 'd2-handle-datum-hit', 'd2-datum-hit'].forEach(function (id) {
-      var el = $(id); if (!el) return;
-      el.addEventListener('pointerdown', function (e) { e.stopPropagation(); _dragActive = 'datum'; try { el.setPointerCapture(e.pointerId); } catch (_e) {} document.body.style.userSelect = 'none'; });
+    [['ceil', 'd2-handle-ceil'], ['ceil', 'd2-handle-ceil-hit'], ['ceil', 'd2-ceil-hit'],
+     ['datum', 'd2-handle-datum'], ['datum', 'd2-handle-datum-hit'], ['datum', 'd2-datum-hit'],
+     ['floor', 'd2-handle-floor'], ['floor', 'd2-handle-floor-hit'], ['floor', 'd2-floor-hit'],
+     ['sp', 'd2-sp-handle'], ['sp', 'd2-sp-handle-hit']].forEach(function (pair) {
+      var name = pair[0], el = $(pair[1]); if (!el) return;
+      el.addEventListener('pointerdown', function (e) {
+        e.stopPropagation(); _dragActive = name;
+        try { el.setPointerCapture(e.pointerId); } catch (_e) {}
+        document.body.style.userSelect = 'none';
+        if (name === 'sp') {
+          var basePort = _wantScn ? _wantScn.portfolioVol : 0;
+          _spDragBase = { sliderPort: basePort, curPortVol: basePort + (_wantOverrides.portDelta || 0), refSpend: (_lastDiff ? _yToSpend(_lastDiff.sharedY, _spHandleY) : 0) };
+        }
+      });
     });
     svg.addEventListener('pointermove', function (e) {
-      if (_dragActive !== 'datum' || !_lastDiff || !_wantScn) return;
-      var d = DS(); var rawDatum = d.computeAt(_wantScn, Math.max(1, _wantScn.yearsToGrow)).datumSpend;
+      if (!_dragActive || !_lastDiff || !_wantScn) return;
+      var d = DS();
+      var geo = _wantGeo || _wantScn;
+      var pts = d.computeAt(geo, Math.max(1, geo.yearsToGrow));
       var y = Math.max(FRONT.yPxTop + 5, Math.min(svgY(e), FRONT.yPxBot - 5));
       var spend = _yToSpend(_lastDiff.sharedY, y);
-      _wantOverrides.datumDelta = Math.max(rawDatum * 0.5, Math.min(spend, rawDatum * 2.0)) - rawDatum;
+      if (_dragActive === 'sp') {
+        if (_spDragBase && _spDragBase.refSpend > 0.001) {
+          var spRatio = spend / _spDragBase.refSpend;
+          var newPortVol = _spDragBase.curPortVol * Math.max(0.05, Math.min(spRatio, 2.00));
+          _wantOverrides.portDelta = Math.max(0, newPortVol - _spDragBase.sliderPort);
+        }
+      } else if (_dragActive === 'ceil') {
+        var ceilBase = pts.ceilSpend;
+        var dFloorCurr = pts.floorSpend + _wantOverrides.floorDelta;
+        var spendCapped = Math.max(dFloorCurr + 5, Math.max(ceilBase * 0.50, Math.min(spend, ceilBase * 2.00)));
+        _wantOverrides.ceilDelta = spendCapped - pts.ceilSpend;
+      } else if (_dragActive === 'datum') {
+        var maxDatum = pts.datumSpend * 2.00, minDatum = pts.datumSpend * 0.50;
+        _wantOverrides.datumDelta = Math.max(minDatum, Math.min(spend, maxDatum)) - pts.datumSpend;
+      } else if (_dragActive === 'floor') {
+        var floorBase = pts.floorSpend;
+        var dCeilCurr = pts.ceilSpend + _wantOverrides.ceilDelta;
+        var spendFCapped = Math.max(10, Math.max(floorBase * 0.50, Math.min(spend, Math.min(floorBase * 2.00, dCeilCurr - 5))));
+        _wantOverrides.floorDelta = spendFCapped - pts.floorSpend;
+      }
       _wantOverrides.isDirty = true;
       renderWantFace(1);
     });
-    var end = function () { if (_dragActive) { _dragActive = null; document.body.style.userSelect = ''; renderWantFace(1); } };
+    var end = function () { if (_dragActive) { _dragActive = null; _spDragBase = null; document.body.style.userSelect = ''; renderWantFace(1); } };
     svg.addEventListener('pointerup', end);
     svg.addEventListener('pointercancel', end);
   }
@@ -452,7 +524,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('input[name="d2-market"]'), function (r) {
       r.addEventListener('change', function () { _resetOverrides(); renderWantFace(1); _triggerWantSweep(r.value); });
     });
-    _wireDatumDrag();
+    _wireHandleDrags();
     _wireAccept();
     _wireReset();
   }
