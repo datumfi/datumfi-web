@@ -416,6 +416,13 @@
 
   function finishLoad(bp, source) {
     bp._loadSource = source;
+    // G1 — the Estate rooms are the user's durable model and must survive a load that brings
+    // none (e.g. a Sketch contract carry seeds sliders, not rooms). Preserve an existing
+    // drafted Estate so finishLoad's writeSessionDraft below does not purge it. A blueprint
+    // slot load (which HAS accounts) and a cleared draft are unaffected.
+    if (!bp.accounts || !bp.accounts.length) {
+      try { var _prev = readSessionDraft(); if (_prev && _prev.accounts && _prev.accounts.length) bp.accounts = _prev.accounts; } catch (_e) {}
+    }
     var gf = computeGrossFunding(bp);
     bp.datum.gross_funding_need      = gf.gross;
     bp.datum.gross_funding_breakdown = gf.breakdown;

@@ -2877,6 +2877,11 @@
     let state = {
       accounts: [] // Start Blank!
     };
+    // G1 — expose the live Estate model so the hub's DatumBlueprint.captureDOM (which reads
+    // global.state.accounts, studio-blueprint.js:595) can serialize the rooms. Without this
+    // the hub could never capture the Estate — the reason it sat dormant. `state` is never
+    // reassigned (only state.accounts is mutated), so this binding stays live.
+    window.state = state;
 
     let isMeasured = false; 
     let activeModalId = null;
@@ -4555,18 +4560,14 @@
       clearTimeout(_draftSaveTimer);
       _draftSaveTimer = setTimeout(function() {
         try {
-          var draft = {
-            ts: Date.now(),
-            priDob:       (document.getElementById('pri-dob')    || {}).value || '',
-            targetRet:    (document.getElementById('target-ret') || {}).value || '',
-            spendInput:   (document.getElementById('spend-input') || {}).value || '',
-            activeClimate:((document.querySelector('.climate-option.active') || {}).dataset || {}).outlook || '',
-            activeSS:     ((document.querySelector('.ss-btn.active strong') || {}).textContent || '').trim(),
-            coArchEnabled:!!(document.getElementById('co-arch-toggle') || {}).checked,
-            accounts:     JSON.parse(JSON.stringify(state.accounts))
-          };
-          sessionStorage.setItem('datum_studio_draft', JSON.stringify(draft));
-          sessionStorage.setItem('datum_studio_draft_ts', String(draft.ts));
+          // G1 — single source of truth: capture the full live model into the hub bp and
+          // persist via the hub's session draft (datumfi_blueprint_draft_v1). Retires the
+          // old flat datum_studio_draft (dual-source drift). captureDOM is null-safe and
+          // reads the Estate rooms via window.state (exposed above).
+          if (!window.DatumBlueprint || !DatumBlueprint._internal) return;
+          var bp = window._studioBp || (window._studioBp = DatumBlueprint['new']());
+          DatumBlueprint.captureDOM(bp);
+          DatumBlueprint._internal.writeSessionDraft(bp);
         } catch(e) {}
       }, 400);
     }
@@ -4580,8 +4581,7 @@
       setTimeout(function() { b.style.transition = 'opacity 0.5s'; b.style.opacity = '0'; setTimeout(function() { if (b.parentNode) b.remove(); }, 500); }, 9000);
     }
     window.clearDraftAndRefresh = function() {
-      sessionStorage.removeItem('datum_studio_draft');
-      sessionStorage.removeItem('datum_studio_draft_ts');
+      sessionStorage.removeItem('datumfi_blueprint_draft_v1'); window._studioBp = null; // G1 hub draft
       // SS Matrix cache + state keys
       sessionStorage.removeItem('ss_matrix_result');
       sessionStorage.removeItem('ss_matrix_job_id');
@@ -4611,47 +4611,40 @@
       var ban = document.getElementById('draft-restored-banner'); if (ban) ban.remove();
     };
     function restoreDraft() {
-      var raw = sessionStorage.getItem('datum_studio_draft');
-      if (!raw) return;
-      // G5 — Sketch-wins-tie applies to SLIDERS only. A carried Sketch seeds ages/datum/
-      // market (prefillFromSketch below), but it must NOT purge drafted Estate rooms.
-      // Restore the rooms from the draft and let the carry own the profile/sliders; keep
-      // the draft intact (previously this cleared the draft → rooms were lost on carry).
-      if (sessionStorage.getItem('datum_currentAge') || sessionStorage.getItem('datum_targetSpend')) {
-        try {
-          var _carryDraft = JSON.parse(raw);
-          if (_carryDraft && _carryDraft.accounts && _carryDraft.accounts.length) {
-            state.accounts = _carryDraft.accounts;
-            renderInputs(); updateSVGs();
-          }
-        } catch (_e) {}
-        return;
-      }
+      // G1 — single source of truth: restore from the hub session draft (the bp), not the
+      // retired flat datum_studio_draft. Map bp -> DOM symmetrically to captureDOM.
+      if (!window.DatumBlueprint || !DatumBlueprint._internal) return;
+      var bp = null;
+      try { bp = DatumBlueprint._internal.readSessionDraft(); } catch (_e) { bp = null; }
+      if (!bp) return;
+      window._studioBp = bp; // keep the live bp in agreement with what was restored
+      // G2 inverse — always restore the Estate rooms (a carried Sketch must NOT purge them).
       try {
-        var draft = JSON.parse(raw);
-        if (!draft || !draft.accounts) return;
-        state.accounts = draft.accounts;
-        renderInputs(); updateSVGs();
-        if (draft.priDob)    { var d = document.getElementById('pri-dob');    if (d) d.value = draft.priDob; }
-        if (draft.targetRet) { var r = document.getElementById('target-ret'); if (r) r.value = draft.targetRet; }
-        if (draft.spendInput){ var s = document.getElementById('spend-input'); if (s) s.value = draft.spendInput; }
-        if (draft.activeClimate) {
-          document.querySelectorAll('.climate-option').forEach(function(el) {
-            el.classList.toggle('active', el.dataset.outlook === draft.activeClimate);
-          });
+        if (bp.accounts && bp.accounts.length) { state.accounts = bp.accounts.slice(); renderInputs(); updateSVGs(); }
+      } catch (_e) {}
+      // G5 — on a Sketch carry, prefillFromSketch owns the sliders/profile; rooms above kept.
+      if (sessionStorage.getItem('datum_currentAge') || sessionStorage.getItem('datum_targetSpend')) return;
+      try {
+        var prof = bp.profile || {};
+        if (prof.primary_dob)            { var d = document.getElementById('pri-dob');     if (d) d.value = prof.primary_dob; }
+        if (prof.target_retirement_date) { var r = document.getElementById('target-ret');  if (r) r.value = prof.target_retirement_date; }
+        if (prof.primary_name)           { var pn = document.getElementById('primary-name'); if (pn) pn.value = prof.primary_name; }
+        if (prof.co_architect_name)      { var cn = document.getElementById('co-name');    if (cn) cn.value = prof.co_architect_name; }
+        var _spend = bp.datum && bp.datum.net_datum_v1;
+        if (_spend) { var s = document.getElementById('spend-input'); if (s) s.value = '$' + Math.round(_spend).toLocaleString('en-US'); }
+        var _clEnum = bp.climate && bp.climate.outlook;
+        if (_clEnum) {
+          var _clLabel = { history_repeats: 'History Repeats', valuations_matter: 'Valuations Matter', cautious: 'Cautious', optimistic: 'Optimistic', custom: 'Custom Matrix' }[_clEnum];
+          if (_clLabel) document.querySelectorAll('.climate-option').forEach(function (el) { el.classList.toggle('active', el.dataset.outlook === _clLabel); });
         }
-        if (draft.activeSS) {
-          document.querySelectorAll('.ss-btn').forEach(function(btn) {
-            var t = ((btn.querySelector('strong') || {}).textContent || '').trim();
-            btn.classList.toggle('active', t === draft.activeSS);
-          });
+        var _ssEnum = bp.ss && bp.ss.strategy_primary;
+        if (_ssEnum) {
+          var _ssLabel = { early_62: '62', full_67: '67', optimal_70: '70' }[_ssEnum];
+          if (_ssLabel) document.querySelectorAll('.ss-btn').forEach(function (btn) { var t = ((btn.querySelector('strong') || {}).textContent || '').trim(); btn.classList.toggle('active', t === _ssLabel); });
         }
-        if (draft.coArchEnabled) {
-          var tog = document.getElementById('co-arch-toggle');
-          if (tog && !tog.checked) { tog.checked = true; tog.dispatchEvent(new Event('change')); }
-        }
+        if (prof.co_architect_enabled) { var tog = document.getElementById('co-arch-toggle'); if (tog && !tog.checked) { tog.checked = true; tog.dispatchEvent(new Event('change')); } }
         showRestoredBanner();
-      } catch(e) { sessionStorage.removeItem('datum_studio_draft'); }
+      } catch (e) {}
     }
     restoreDraft();
     document.addEventListener('input', saveDraft);
@@ -5148,7 +5141,7 @@
             announce('Datum locked. Your Range is ready.');
             if (window.dfTrack) dfTrack('studio_reveal_completed', { api_success: !!apiResult, reduced_motion: true });
             await new Promise(function(r) { setTimeout(r, 500); });
-            sessionStorage.removeItem('datum_studio_draft'); sessionStorage.removeItem('datum_studio_draft_ts');
+            sessionStorage.removeItem('datumfi_blueprint_draft_v1'); window._studioBp = null; // G1 hub draft
             window.location.href = '/range.html';
             return;
           }
@@ -5261,7 +5254,7 @@
           if (window.dfTrack) dfTrack('studio_reveal_completed', { api_success: !!apiResult });
 
           await new Promise(function(r) { setTimeout(r, 2000); });
-          sessionStorage.removeItem('datum_studio_draft'); sessionStorage.removeItem('datum_studio_draft_ts');
+          sessionStorage.removeItem('datumfi_blueprint_draft_v1'); window._studioBp = null; // G1 hub draft
           window.location.href = '/range.html';
         });
       }

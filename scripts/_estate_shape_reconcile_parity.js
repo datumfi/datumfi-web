@@ -64,7 +64,9 @@ const readSlider = (page) => page.evaluate(() => {
   page = await ctx.newPage();
   page.on('pageerror', (e) => out.pageErrors.push(e.message));
   await page.addInitScript((room) => {
-    sessionStorage.setItem('datum_studio_draft', JSON.stringify({ ts: Date.now(), accounts: [room], priDob: '08 / 1982', targetRet: '03 / 2035', spendInput: '$120,000' }));
+    // G1 single-source: rooms are injected via the hub session draft (bp shape), not the
+    // retired datum_studio_draft. restoreDraft restores bp.accounts -> state.accounts.
+    sessionStorage.setItem('datumfi_blueprint_draft_v1', JSON.stringify({ accounts: [room], profile: {}, datum: { net_datum_v1: 100000 }, climate: { outlook: 'history_repeats' } }));
   }, ROOM);
   await page.goto('http://127.0.0.1:' + PORT + '/studio.html', { waitUntil: 'load' });
   await page.waitForTimeout(3000);
@@ -78,7 +80,7 @@ const readSlider = (page) => page.evaluate(() => {
   await page.addInitScript((args) => {
     localStorage.setItem('datum_sketch_state_1', JSON.stringify(args.blob));
     localStorage.setItem('datumfi_sketchbook_v1', JSON.stringify({ slot_1: args.blob }));
-    sessionStorage.setItem('datum_studio_draft', JSON.stringify({ ts: Date.now(), accounts: [args.room], priDob: '08 / 1982', targetRet: '03 / 2035', spendInput: '$120,000' }));
+    sessionStorage.setItem('datumfi_blueprint_draft_v1', JSON.stringify({ accounts: [args.room], profile: {}, datum: { net_datum_v1: 100000 }, climate: { outlook: 'history_repeats' } }));
     sessionStorage.setItem('datum_currentAge', '40');
     sessionStorage.setItem('datum_retireAge', '65');
     sessionStorage.setItem('datum_targetSpend', '100');
