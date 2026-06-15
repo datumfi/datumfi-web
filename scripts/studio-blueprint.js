@@ -373,6 +373,18 @@
         bp.designed.levers.datumDelta = Number(sd.datumDelta) || 0;
         bp.designed.levers.portDelta  = Number(sd.portDelta)  || 0;
         bp.designed.present = true;
+        // #4b Part B — carry the designed scenario SCALARS (not just the boundary
+        // deltas) so the Studio Want face can rebuild the S2 tested shape on flip.
+        // Units match the live save blob (serializeSketchState / updateDesignEngine):
+        // port = millions, datum = $k/yr, contrib = raw $, age/retire = years.
+        bp.designed.scenario = {
+          age:            Number(sd.age)            || 0,
+          retire:         Number(sd.retire)         || 0,
+          planThroughAge: Number(sd.planThroughAge) || 93,
+          port:           Number(sd.port)           || 0,
+          datum:          Number(sd.datum)          || 0,
+          contrib:        Number(sd.contrib)        || 0
+        };
       }
     }
     if (bp.current) {

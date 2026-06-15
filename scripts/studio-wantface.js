@@ -537,15 +537,47 @@
     var b = $('shape-face-back'); if (b) b.setAttribute('aria-hidden', String(!want));
     var f = $('shape-face-front'); if (f) f.setAttribute('aria-hidden', String(want));
   }
+  /* #4b Part B — seed the Want sliders + boundary overrides from the carried Sketch-S2
+   * DESIGNED shape (window._studioCarriedDesign, set by studio.html seedFromBlueprint).
+   * Scalars map onto a Have-derived base so market/tax/inflation inherit from Have; the
+   * four boundary deltas restore the accepted on-canvas pulls. Mirrors Sketch's own S2
+   * restore (sketch.html updateDesignEngine + designOverrides from _s2d). */
+  function _seedDesigned(cd) {
+    var s = cd.scenario;
+    var seed = Object.assign({}, _haveScn || {}, {
+      currentAge:     s.age,
+      activationAge:  Math.max((s.age || 0) + 1, s.retire),
+      planThroughAge: s.planThroughAge || 93,
+      portfolioVol:   s.port,
+      targetSpend:    s.datum,
+      annualContrib:  s.contrib
+    });
+    seed.yearsToGrow = Math.max(1, seed.activationAge - seed.currentAge);
+    _seedSliders(seed);
+    var o = cd.overrides || {};
+    _wantOverrides.ceilDelta  = o.ceilDelta  || 0;
+    _wantOverrides.floorDelta = o.floorDelta || 0;
+    _wantOverrides.datumDelta = o.datumDelta || 0;
+    _wantOverrides.portDelta  = o.portDelta  || 0;
+    _wantOverrides.isDirty = !!(_wantOverrides.ceilDelta || _wantOverrides.floorDelta || _wantOverrides.datumDelta || _wantOverrides.portDelta);
+  }
+
   function enterWantFace() {
     _wire();
     var sfi = (typeof window._scenarioFromInputs === 'function') ? window._scenarioFromInputs() : null;
     _haveScn = sfi ? Object.assign({}, sfi) : null;
     if (!_haveScn) return;
-    if (!_wantInit) { _seedSliders(_haveScn); _wantInit = true; }
+    var _seededDesign = false;
+    if (!_wantInit) {
+      var cd = window._studioCarriedDesign;
+      if (cd && cd.present && cd.scenario && cd.scenario.age > 0) { _seedDesigned(cd); _seededDesign = true; }
+      else { _seedSliders(_haveScn); }
+      _wantInit = true;
+    }
     _computeHavePos();
     _updateWasReadouts();
-    _resetOverrides();
+    // Keep the carried pulls on the first designed render; otherwise reset transient pulls.
+    if (!_seededDesign) _resetOverrides();
     var ref = $('sketch-design-ref'); if (ref) { _refWasShown = ref.style.display !== 'none'; ref.style.display = 'none'; }
     renderWantFace(1);          // compute _lastDiff at rest first
     _paintCanvas(_lastDiff, 0); // then start the morph from Have
