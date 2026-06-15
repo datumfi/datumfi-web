@@ -9415,6 +9415,15 @@ Studio is built for exactly this. See If This Shape Holds →`;
       _shapeArmed = true;
       var _dd1 = document.getElementById('datum-dragger'); if (_dd1) _dd1.style.pointerEvents = '';
       var _sc1 = document.getElementById('sketch-canvas'); if (_sc1) _sc1.classList.add('shape-armed');
+      // Restore the saved global assumptions (market/inflation/tax/plan-through) BEFORE the
+      // recompute, so updateEngine() rebuilds the S1 shape under the SAME settings Sketch used
+      // at save. Without this the controls keep their defaults (avg/real/20%/93), the ceiling
+      // shifts, and an EXPANSIVE S1 can re-classify STRETCHED on re-open (the save-under-
+      // optimistic bug). Mirrors serializeSketchState (L9259-9262) + Studio seedFromBlueprint.
+      if (_contract.market_outlook) { var _mR = document.querySelector('input[name="market"][value="' + _contract.market_outlook + '"]'); if (_mR) _mR.checked = true; }
+      if (_contract.inflation_mode) { var _iR = document.querySelector('input[name="inflation"][value="' + _contract.inflation_mode + '"]'); if (_iR) _iR.checked = true; }
+      if (_contract.tax_rate != null) { var _tR = document.getElementById('slider-tax'); if (_tR) _tR.value = _contract.tax_rate; }
+      if (_contract.plan_end_age) { var _pR = document.getElementById('sl-plan-through'); if (_pR) _pR.value = _contract.plan_end_age; }
       try { updateEngine(); } catch(ex) {}
       // F88: hydrated sketches skip discovery sequence
       try { localStorage.setItem('datum-discover-v1', 'done'); } catch(ex) {}
@@ -9486,6 +9495,13 @@ Studio is built for exactly this. See If This Shape Holds →`;
       _shapeArmed = true;
       var _dd2 = document.getElementById('datum-dragger'); if (_dd2) _dd2.style.pointerEvents = '';
       var _sc2 = document.getElementById('sketch-canvas'); if (_sc2) _sc2.classList.add('shape-armed');
+      // Restore the saved global assumptions BEFORE the recompute (see Phase A note) so the S1
+      // shape is rebuilt under Sketch's saved market/inflation/tax/plan-through, not the
+      // control defaults — prevents an EXPANSIVE S1 re-classifying STRETCHED on re-open.
+      if (_contract.market_outlook) { var _mR = document.querySelector('input[name="market"][value="' + _contract.market_outlook + '"]'); if (_mR) _mR.checked = true; }
+      if (_contract.inflation_mode) { var _iR = document.querySelector('input[name="inflation"][value="' + _contract.inflation_mode + '"]'); if (_iR) _iR.checked = true; }
+      if (_contract.tax_rate != null) { var _tR = document.getElementById('slider-tax'); if (_tR) _tR.value = _contract.tax_rate; }
+      if (_contract.plan_end_age) { var _pR = document.getElementById('sl-plan-through'); if (_pR) _pR.value = _contract.plan_end_age; }
       try { updateEngine(); } catch(ex) {}
       // F88: hydrated sketches skip discovery sequence
       try { localStorage.setItem('datum-discover-v1', 'done'); } catch(ex) {}
