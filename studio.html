@@ -5764,6 +5764,17 @@
           };
         }
       } catch (e) {}
+      // G2 — rehydrate the Estate rooms from a saved Blueprint slot (bp.accounts). The Have
+      // sliders are seeded above; the itemized rooms must also be restored so renderInputs
+      // draws them and the G5 reconcile makes the rooms authoritative for the Shape. Only a
+      // blueprint-slot load carries accounts (a fresh Sketch contract has none) — no-op then.
+      try {
+        if (bp.accounts && bp.accounts.length && typeof state !== 'undefined' && state) {
+          state.accounts = bp.accounts.slice();
+          if (typeof renderInputs === 'function') renderInputs();
+          if (typeof updateSVGs === 'function') updateSVGs();
+        }
+      } catch (e) {}
       return true;
     }
 
