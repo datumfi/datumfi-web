@@ -36,10 +36,16 @@ const readSlider = (page) => page.evaluate(() => {
   const rooms = document.querySelectorAll('#rooms-container .room-input-container').length;
   const sfi = window._scenarioFromInputs ? window._scenarioFromInputs() : null;
   return { exactVal: sp && sp.dataset ? sp.dataset.exactVal : null,
+           sliderValue: sp ? +sp.value : null,
+           valLabel: (document.getElementById('val-portfolio') || {}).textContent || null,
            portfolioVol: sfi ? +sfi.portfolioVol.toFixed(4) : null,
            datumK: sfi ? sfi.targetSpend : null, rooms: rooms,
            shapeState: (function(){const m=/shape-state-(\w+)/.exec(svg?svg.getAttribute('class'):'');return m?m[1].toUpperCase():null;})() };
 });
+// Expected native thumb position for a given dollar portfolio (matches DatumShape.scales).
+const expectThumb = (page, dollars) => page.evaluate((d) => {
+  const SC = window.DatumShape && DatumShape.scales; return SC ? SC.portValToPos(d / 1e6) : null;
+}, dollars);
 
 (async () => {
   await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
@@ -59,18 +65,27 @@ const readSlider = (page) => page.evaluate(() => {
   out.arm1 = await readSlider(page);
   await ctx.close();
 
-  // ── ARM 2: draft with an investable room, NO carry ──
+  // ── ARM 2: REAL add-room + value-entry events (Captain's repro), NO carry ──
   ctx = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
   page = await ctx.newPage();
   page.on('pageerror', (e) => out.pageErrors.push(e.message));
-  await page.addInitScript((room) => {
-    // G1 single-source: rooms are injected via the hub session draft (bp shape), not the
-    // retired datum_studio_draft. restoreDraft restores bp.accounts -> state.accounts.
-    sessionStorage.setItem('datumfi_blueprint_draft_v1', JSON.stringify({ accounts: [room], profile: {}, datum: { net_datum_v1: 100000 }, climate: { outlook: 'history_repeats' } }));
-  }, ROOM);
   await page.goto('http://127.0.0.1:' + PORT + '/studio.html', { waitUntil: 'load' });
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(2500);
+  // Crypto $120k + Pre-Tax 401k $250k = $300k investable, via the real addInstance + the room
+  // value input's oninput=updateValueWithoutRender (NO manual updateSVGs).
+  await page.evaluate(() => {
+    function addAndValue(baseId, amount) {
+      window.addInstance(baseId);
+      var acc = window.state.accounts[window.state.accounts.length - 1];
+      var inp = document.getElementById('room-val-inp-' + acc.id);
+      if (inp) { inp.value = '$' + amount.toLocaleString('en-US'); inp.dispatchEvent(new Event('input', { bubbles: true })); }
+    }
+    addAndValue('crypto_co', 120000);
+    addAndValue('pretax401k', 180000);
+  });
+  await page.waitForTimeout(1500);
   out.arm2 = await readSlider(page);
+  out.arm2thumb = await expectThumb(page, 300000);
   await ctx.close();
 
   // ── ARM 3: carried sketch + drafted rooms (tie-fix) ──
@@ -88,20 +103,25 @@ const readSlider = (page) => page.evaluate(() => {
   await page.goto('http://127.0.0.1:' + PORT + '/studio.html?id=1&hydrate=sketch', { waitUntil: 'load' });
   await page.waitForTimeout(3000);
   out.arm3 = await readSlider(page);
+  out.arm3thumb = await expectThumb(page, 300000);
   await page.screenshot({ path: path.join(OUT, 'g5_reconcile_arm3.png') });
   await ctx.close();
 
   const f = out.findings;
   const near = (a, b, tol) => a != null && b != null && Math.abs(a - b) <= (tol || 0);
-  // ARM 1: estimate held (~750k), no rooms
+  // ARM 1: estimate held (~750k), no rooms — label also shows the estimate.
   if (!near(+out.arm1.exactVal, 750000, 5000)) f.push('ARM1: estimate clobbered — slider ' + out.arm1.exactVal + ' expected ~750000');
   if (out.arm1.rooms !== 0) f.push('ARM1: unexpected rooms ' + out.arm1.rooms);
-  // ARM 2: rooms authoritative (slider == 300k), room rendered
-  if (!near(+out.arm2.exactVal, 300000, 2000)) f.push('ARM2: slider not rooms-total — ' + out.arm2.exactVal + ' expected 300000');
-  if (out.arm2.rooms < 1) f.push('ARM2: room not restored from draft (rooms=' + out.arm2.rooms + ')');
-  // ARM 3: rooms survive carry AND win portfolio; carry seeds datum
-  if (out.arm3.rooms < 1) f.push('ARM3: ROOMS PURGED on carry (rooms=' + out.arm3.rooms + ') — tie-fix failed');
-  if (!near(+out.arm3.exactVal, 300000, 2000)) f.push('ARM3: rooms did not win portfolio — slider ' + out.arm3.exactVal + ' expected 300000 (seed clobbered the reconcile?)');
+  // ARM 2 (REAL add-room events): rooms authoritative across exactVal + scenario + LABEL + THUMB.
+  if (!near(+out.arm2.exactVal, 300000, 2000)) f.push('ARM2: exactVal not rooms-total — ' + out.arm2.exactVal);
+  if (out.arm2.rooms < 1) f.push('ARM2: rooms not rendered (' + out.arm2.rooms + ')');
+  if (out.arm2.valLabel !== '$300k') f.push('ARM2: VISIBLE LABEL stale — #val-portfolio="' + out.arm2.valLabel + '" expected $300k (Bug A)');
+  if (!near(out.arm2.sliderValue, out.arm2thumb, 50)) f.push('ARM2: THUMB stale — value ' + out.arm2.sliderValue + ' expected ~' + Math.round(out.arm2thumb));
+  // ARM 3 (REAL carry path): rooms survive AND win across exactVal + LABEL + THUMB.
+  if (out.arm3.rooms < 1) f.push('ARM3: ROOMS PURGED on carry (rooms=' + out.arm3.rooms + ')');
+  if (!near(+out.arm3.exactVal, 300000, 2000)) f.push('ARM3: rooms did not win exactVal — ' + out.arm3.exactVal);
+  if (out.arm3.valLabel !== '$300k') f.push('ARM3: VISIBLE LABEL stale after carry — #val-portfolio="' + out.arm3.valLabel + '" expected $300k (Bug B)');
+  if (!near(out.arm3.sliderValue, out.arm3thumb, 50)) f.push('ARM3: THUMB stale after carry — value ' + out.arm3.sliderValue + ' expected ~' + Math.round(out.arm3thumb));
 
   out.verdict = (f.length === 0 && out.pageErrors.length === 0) ? 'PASS' : 'FAIL';
   console.log(JSON.stringify(out, null, 2));

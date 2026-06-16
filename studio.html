@@ -4096,7 +4096,16 @@
         var _scl = (window.DatumShape && DatumShape.scales) || null;
         if (_invTotal > 0 && _scl) {
           var _spo = document.getElementById('slider-portfolio');
-          if (_spo) { _spo.value = _scl.portValToPos(_invTotal / 1e6); _spo.dataset.exactVal = String(Math.round(_invTotal)); }
+          if (_spo) {
+            _spo.value = _scl.portValToPos(_invTotal / 1e6);   // reposition the native thumb
+            _spo.dataset.exactVal = String(Math.round(_invTotal));
+            // Display-sync: the scenario + Shape already used the rooms total, but the visible
+            // #val-portfolio NUMBER (and thumb) stayed at the stale estimate. Sync the label
+            // directly (inline fmtCap, mirror studio.html:5501) — do NOT dispatch the slider
+            // 'input' event (would re-enter updateSVGs -> reconcile).
+            var _vlbl = document.getElementById('val-portfolio');
+            if (_vlbl) { var _pk = Math.round(_invTotal / 1000); _vlbl.textContent = _pk >= 1000 ? '$' + (_pk / 1000).toFixed(2).replace(/\.00$/, '') + 'M' : '$' + _pk + 'k'; }
+          }
         }
       } catch (_e) {}
       if (typeof updateShapePanel === 'function') updateShapePanel();
