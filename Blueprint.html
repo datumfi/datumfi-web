@@ -1273,6 +1273,10 @@ button {
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 
+<!-- G3: the shared hub. Loaded synchronously (no defer) so DatumBlueprint exists
+     when the inline script's syncArchiveUI() -> bpToCard() runs at parse. Defines
+     the global only; load()/bind() are never auto-invoked, so no side effects. -->
+<script src="/scripts/studio-blueprint.js"></script>
 <script>
 const BLUEPRINT_STORAGE_KEY = 'datumfi_blueprint_archive_v1';
 
@@ -1280,19 +1284,10 @@ const AppSessionState = {
   userHasPremiumToken: false,
   activeTargetPurgeId: null,
   activeBlueprintSlot: 1,
-  userExplicitlySelectedBlueprint: false,
-  mockStudioBlueprint: {
-    name: 'Core Retirement Blueprint',
-    netEstate: 2785000,
-    annualDatum: 108000,
-    floor: 82000,
-    ceiling: 168000,
-    rooms: 7,
-    climate: 'Valuations Matter',
-    taxSequence: 'Roth / Brokerage / Pre-Tax',
-    modelPaths: 10000,
-    status: 'Modeled'
-  }
+  userExplicitlySelectedBlueprint: false
+  // G3: mockStudioBlueprint retired. The front-door is list/open/delete only;
+  // Studio originates every save via DatumBlueprint.save(bp,{slot}). Cards render
+  // real saved slots through bpToCard().
 };
 
 const BlueprintArchive = {
@@ -1388,30 +1383,52 @@ function blueprintSvg(data, slotId) {
   `;
 }
 
-function makeBlueprintPayload() {
-  const source = AppSessionState.mockStudioBlueprint;
-  const variant = Math.floor(Math.random() * 4);
-  const names = [
-    'Core Retirement Blueprint',
-    'Rule of 55 Blueprint',
-    'Lower Spend Stress Blueprint',
-    'Delayed SS Blueprint'
-  ];
+/* G3 — bpToCard: adapt a saved hub Blueprint (nested DatumFIBlueprintV1 schema,
+ * written by Studio via DatumBlueprint.save) into the FLAT shape renderBlueprintSlot
+ * / the compare table already consume. Net Estate = INVESTABLE total (mirrors the
+ * Shape, excludes physical/debt) via DatumBlueprint.investableTotal — NOT the gross
+ * Estate Square Footage figure. Status is honest about completeness: 'Modeled' once a
+ * Reveal/MC has run, else 'Drafted'. Legacy flat slots (no schema) pass through. */
+const OUTLOOK_ENUM_TO_LABEL = {
+  history_repeats: 'History Repeats',
+  valuations_matter: 'Valuations Matter',
+  cautious: 'Cautious',
+  optimistic: 'Optimistic',
+  custom: 'Custom Matrix'
+};
+function bpToCard(bp) {
+  if (!bp) return bp;
+  // Legacy / already-flat slot (pre-G3): leave untouched.
+  if (bp.schema !== 'DatumFIBlueprintV1') return bp;
+
+  const prof = bp.profile || {};
+  const datum = bp.datum || {};
+  const climate = bp.climate || {};
+  const mc = bp.mc_meta || {};
+  const accounts = Array.isArray(bp.accounts) ? bp.accounts : [];
+
+  const netEstate = (window.DatumBlueprint && typeof DatumBlueprint.investableTotal === 'function')
+    ? DatumBlueprint.investableTotal(bp)
+    : accounts.reduce((s, a) => s + (Number(a && a.value) || 0), 0);
+
+  const modeled = !!(bp.readout || (mc && mc.last_result_hash) ||
+                     (bp.current && bp.current.state));
+
+  let stamp = '—';
+  if (bp.saved_at) {
+    const d = new Date(bp.saved_at);
+    if (!isNaN(d)) stamp = d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+  }
 
   return {
-    id: 'bp-' + Date.now(),
-    name: names[variant],
-    netEstate: source.netEstate + (variant * 85000),
-    annualDatum: source.annualDatum + (variant === 2 ? -12000 : variant * 4500),
-    floor: source.floor + (variant * 2500),
-    ceiling: source.ceiling + (variant * 9000),
-    rooms: source.rooms + (variant > 1 ? 1 : 0),
-    climate: variant === 0 ? source.climate : ['History Repeats', 'Cautious', 'Custom Matrix'][variant - 1],
-    taxSequence: source.taxSequence,
-    modelPaths: source.modelPaths,
-    status: source.status,
-    dateStamped: todayStamp(),
-    timeStamped: timeStamp()
+    id: bp.blueprint_id || ('bp-' + (bp.saved_at || Date.now())),
+    name: prof.primary_name ? (prof.primary_name + "'s Blueprint") : 'Studio Blueprint',
+    netEstate: netEstate,
+    annualDatum: Number(datum.net_datum_v1) || 0,
+    rooms: accounts.length,
+    climate: OUTLOOK_ENUM_TO_LABEL[climate.outlook] || 'Valuations Matter',
+    status: modeled ? 'Modeled' : 'Drafted',
+    dateStamped: stamp
   };
 }
 
@@ -1450,7 +1467,7 @@ function renderBlueprintSlot(idx, data) {
     </div>
 
     <div class="card-bottom">
-      <span class="saved-time">Modeled · ${data.dateStamped}</span>
+      <span class="saved-time">${data.status} · ${data.dateStamped}</span>
       <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
         <button type="button" class="open-blueprint-action" data-open-slot="${idx}" aria-label="Open Blueprint in Studio">Open</button>
         <button type="button" class="erase-action" data-purge-target="${idx}" aria-label="Erase blueprint from sheet A-0${idx}">Erase</button>
@@ -1476,7 +1493,7 @@ function syncArchiveUI() {
 
     if (data) {
       savedCount++;
-      content.innerHTML = renderBlueprintSlot(idx, data);
+      content.innerHTML = renderBlueprintSlot(idx, bpToCard(data));
     } else {
       content.innerHTML = renderEmptySlot(idx);
     }
@@ -1491,31 +1508,24 @@ function syncArchiveUI() {
   safePersistArchive();
 }
 
+/* G3 — the front-door no longer fabricates or captures Blueprints. Saving an
+ * actual plan requires the live Studio DOM, so a "save" here simply hands the
+ * user to Studio, where the persistent header "Save to Blueprint" control calls
+ * captureDOM + DatumBlueprint.save({slot}). Premium-locked slots still gate. */
+function goToStudioToSave() {
+  try { sessionStorage.setItem('datumfi_skip_entry_overlay', '1'); } catch (e) {}
+  showToast('Open Studio to build and save your Blueprint.');
+  window.location.href = '/studio.html';
+}
+
 function saveToSlot(slotId) {
-  BlueprintArchive['slot' + slotId] = makeBlueprintPayload();
-  AppSessionState.activeBlueprintSlot = slotId;
-  try { localStorage.setItem('datum_blueprint_state_' + slotId, JSON.stringify(BlueprintArchive['slot' + slotId])); } catch(ex) {}
-  syncArchiveUI();
-  showToast(`Blueprint saved to Sheet A-0${slotId}.`);
+  const isLocked = slotId > 1 && !AppSessionState.userHasPremiumToken;
+  if (isLocked) { document.getElementById('premium-gate-modal').classList.add('open'); return; }
+  goToStudioToSave();
 }
 
 function saveToFirstAvailableSlot() {
-  for (let idx = 1; idx <= 4; idx++) {
-    const isPremiumSlot = idx > 1;
-    const isEmpty = !BlueprintArchive['slot' + idx];
-
-    if (isEmpty && (!isPremiumSlot || AppSessionState.userHasPremiumToken)) {
-      saveToSlot(idx);
-      return;
-    }
-
-    if (isEmpty && isPremiumSlot && !AppSessionState.userHasPremiumToken) {
-      document.getElementById('premium-gate-modal').classList.add('open');
-      return;
-    }
-  }
-
-  showToast('All available Blueprint sheets are already filled.');
+  goToStudioToSave();
 }
 
 function proceedWithEraseSequence() {
@@ -1529,6 +1539,10 @@ function proceedWithEraseSequence() {
 
   setTimeout(() => {
     BlueprintArchive['slot' + targetId] = null;
+    // G3 — a true delete must also drop the hub's per-slot key. DatumBlueprint.readSlot
+    // reads datum_blueprint_state_N FIRST (archive is only its fallback), so nulling the
+    // archive alone would leave a ghost that re-hydrates on the next Open-in-Studio.
+    try { localStorage.removeItem('datum_blueprint_state_' + targetId); } catch (ex) {}
 
     if (AppSessionState.activeBlueprintSlot === Number(targetId)) {
       const next = [1,2,3,4].find(idx => BlueprintArchive['slot' + idx]);
@@ -1545,7 +1559,8 @@ function proceedWithEraseSequence() {
 function openCompareModal() {
   const rows = [1,2,3,4]
     .map(idx => ({ idx, data: BlueprintArchive['slot' + idx] }))
-    .filter(entry => entry.data);
+    .filter(entry => entry.data)
+    .map(entry => ({ idx: entry.idx, data: bpToCard(entry.data) }));
 
   const wrap = document.getElementById('compare-table-wrap');
 
@@ -1708,10 +1723,9 @@ archiveTitle.addEventListener('blur', function() {
   if (this.value.trim() === '') this.value = 'My Blueprint Archive';
 });
 
-const loaded = safeLoadArchive();
-if (!loaded) {
-  BlueprintArchive.slot1 = makeBlueprintPayload();
-}
+// G3 — no mock seed on cold start. An empty archive renders empty slots; the
+// user fills them by saving from Studio.
+safeLoadArchive();
 
 syncArchiveUI();
 

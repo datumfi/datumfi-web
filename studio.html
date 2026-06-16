@@ -1153,6 +1153,7 @@
         <button class="view-btn active" id="btn-split" onclick="setViewMode('split')" title="Split View">◼◻ Split</button>
         <button class="view-btn" id="btn-blueprint" onclick="setViewMode('blueprint')" title="Blueprint Focus">◼ Blueprint</button>
       </div>
+      <button class="nav-login-btn" id="studio-save-bp-btn" type="button" style="border-color:var(--teal);color:var(--teal);margin-right:0;" title="File this plan to a Blueprint sheet">⤓ Save to Blueprint</button>
       <a href="/pricing.html" class="nav-login-btn" style="border-color:var(--gold);color:var(--gold);margin-right:0;">Upgrade</a>
       <a href="/vault.html" class="nav-login-btn">Sign In</a>
       <button class="nav-feedback-btn" onclick="openFeedback()">SHARE FEEDBACK</button>
@@ -5572,6 +5573,28 @@
       if (sA && a.age > 0)    { sA.value = clampN(a.age, 18, 85); updateAgeLabel(); }
       if (sR && a.retire > 0) { sR.value = clampN(a.retire, (parseInt(sA && sA.value, 10) || 40) + 1, 90); updateActivationLabel(); }
     }
+    // G3 — the persisted profile fields win the reload. restoreDraft() writes pri-dob /
+    // target-ret / climate / SS from the draft, but later init syncs (the date<->slider
+    // round-trips, syncFromSketchAges) and the seed path re-clobber the date fields + the
+    // climate selection. Re-assert them from the live bp AFTER those syncs settle, symmetric
+    // to captureDOM's read. No-op on a Sketch carry (the ?hydrate=sketch handshake owns dates).
+    function _reassertRestoredProfile() {
+      if (sessionStorage.getItem('datum_currentAge') || sessionStorage.getItem('datum_targetSpend')) return;
+      var bp = window._studioBp; if (!bp) return;
+      var prof = bp.profile || {};
+      if (prof.primary_dob)            { var d = $('pri-dob');    if (d) d.value = prof.primary_dob; }
+      if (prof.target_retirement_date) { var r = $('target-ret'); if (r) r.value = prof.target_retirement_date; }
+      var clEnum = bp.climate && bp.climate.outlook;
+      if (clEnum) {
+        var clLabel = { history_repeats: 'History Repeats', valuations_matter: 'Valuations Matter', cautious: 'Cautious', optimistic: 'Optimistic', custom: 'Custom Matrix' }[clEnum];
+        if (clLabel) document.querySelectorAll('.climate-option').forEach(function (el) { el.classList.toggle('active', el.dataset.outlook === clLabel); });
+      }
+      var ssEnum = bp.ss && bp.ss.strategy_primary;
+      if (ssEnum) {
+        var ssLabel = { early_62: '62', full_67: '67', optimal_70: '70' }[ssEnum];
+        if (ssLabel) document.querySelectorAll('.ss-btn').forEach(function (btn) { var t = ((btn.querySelector('strong') || {}).textContent || '').trim(); btn.classList.toggle('active', t === ssLabel); });
+      }
+    }
     function syncFromSketchAges() {
       var sA = $('slider-age'), sR = $('slider-activation');
       var dobEl = $('pri-dob'), retEl = $('target-ret');
@@ -5662,6 +5685,10 @@
       // Scratch entry must NOT silently carry the last saved sketch (doctrine Q1).
       try { bp = DatumBlueprint.load(); } catch (e) { bp = null; }
       if (!bp) return false;
+      // G3 — unify the live bp to the load() result so the post-init profile re-assert
+      // (and the autosave) act on the authoritative source: a blueprint-slot on the
+      // ?hydrate=blueprint open path, the session draft on a plain reload.
+      window._studioBp = bp;
 
       // Portfolio: dollars -> log slider position via portValToPos(MILLIONS)
       var sPort = $('slider-portfolio');
@@ -6214,7 +6241,8 @@
       syncSpendFromDatumSlider();
       syncFromProfileDates();
       _reassertCarriedAges();
-      setTimeout(_reassertCarriedAges, 900); // after the +600ms ?hydrate=sketch handshake re-sync
+      _reassertRestoredProfile(); // G3 — restored dob/retire/climate/SS win over the init syncs
+      setTimeout(function () { _reassertCarriedAges(); _reassertRestoredProfile(); }, 900); // after the +600ms ?hydrate=sketch handshake re-sync
       refreshAllLabels();
       wireClickToType();
       wireSliders();
@@ -8041,5 +8069,75 @@
   });
   </script>
   <script>document.addEventListener('DOMContentLoaded', function() { if (window.dfTrack) dfTrack('studio_started'); });</script>
+  <script>
+  /* G3 — persistent "Save to Blueprint" header control. Available across every phase
+   * (not coupled to Reveal) so an in-progress Estate draft can be filed at any time —
+   * the Sketchbook "save anytime" pattern. Single writer: captureDOM(window._studioBp)
+   * -> DatumBlueprint.save(bp,{slot:N}) (writes per-slot + archive + session draft +
+   * Clerk mirror). Runs at DOMContentLoaded so the deferred hub is loaded. */
+  document.addEventListener('DOMContentLoaded', function () {
+    var btn = document.getElementById('studio-save-bp-btn');
+    if (!btn) return;
+    if (!window.DatumBlueprint) { btn.style.display = 'none'; return; }
+    var pop = null;
+    function toast(msg) {
+      if (typeof _showToast === 'function') { try { _showToast(msg); return; } catch (e) {} }
+      var t = document.createElement('div');
+      t.textContent = msg;
+      t.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:10002;background:rgba(29,158,117,0.14);border:1px solid rgba(29,158,117,0.5);color:var(--teal,#1d9e75);font-family:var(--font-mono);font-size:11px;letter-spacing:0.05em;padding:8px 16px;border-radius:4px;';
+      document.body.appendChild(t);
+      setTimeout(function () { if (t.parentNode) t.remove(); }, 2300);
+    }
+    function liveBp() {
+      var bp = window._studioBp || window._studioBlueprint;
+      if (!bp) bp = window._studioBp = DatumBlueprint['new']();
+      return bp;
+    }
+    function slotLabel(n) {
+      var slot = null; try { slot = DatumBlueprint._internal.readSlot(n); } catch (e) {}
+      if (!slot) return 'A-0' + n + '  ·  Empty';
+      var rooms = (slot.accounts || []).length;
+      var when = slot.saved_at ? new Date(slot.saved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+      return 'A-0' + n + '  ·  ' + rooms + ' rooms' + (when ? '  ·  ' + when : '');
+    }
+    function saveTo(n) {
+      try {
+        var bp = liveBp();
+        DatumBlueprint.captureDOM(bp);
+        DatumBlueprint.save(bp, { slot: n });
+        window._studioBp = bp;
+        toast('Saved to Blueprint A-0' + n + '.');
+      } catch (e) { toast('Save failed.'); }
+      close();
+    }
+    function close() { if (pop) { if (pop.parentNode) pop.remove(); pop = null; document.removeEventListener('click', onDoc, true); } }
+    function onDoc(e) { if (pop && !pop.contains(e.target) && e.target !== btn) close(); }
+    function open() {
+      pop = document.createElement('div');
+      pop.id = 'studio-save-bp-pop';
+      pop.style.cssText = 'position:fixed;z-index:10001;background:#0a1018;border:1px solid rgba(93,202,165,0.4);border-radius:6px;padding:8px;display:flex;flex-direction:column;gap:6px;box-shadow:0 10px 30px rgba(0,0,0,0.7);min-width:230px;';
+      var r = btn.getBoundingClientRect();
+      pop.style.top = (r.bottom + 6) + 'px';
+      pop.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
+      var head = document.createElement('div');
+      head.textContent = 'Save to which sheet?';
+      head.style.cssText = 'font-family:var(--font-mono);font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);padding:2px 4px 4px;';
+      pop.appendChild(head);
+      [1, 2, 3, 4].forEach(function (n) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = slotLabel(n);
+        b.style.cssText = 'text-align:left;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.12);color:var(--white,#fff);font-family:var(--font-mono);font-size:11px;padding:8px 10px;border-radius:4px;cursor:pointer;';
+        b.addEventListener('mouseenter', function () { b.style.borderColor = 'var(--teal,#1d9e75)'; });
+        b.addEventListener('mouseleave', function () { b.style.borderColor = 'rgba(255,255,255,0.12)'; });
+        b.addEventListener('click', function (e) { e.stopPropagation(); saveTo(n); });
+        pop.appendChild(b);
+      });
+      document.body.appendChild(pop);
+      setTimeout(function () { document.addEventListener('click', onDoc, true); }, 0);
+    }
+    btn.addEventListener('click', function (e) { e.stopPropagation(); if (pop) close(); else open(); });
+  });
+  </script>
 </body>
 </html>

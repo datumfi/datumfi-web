@@ -204,6 +204,21 @@
     return { gross: Math.round(net * weightedMult), breakdown: breakdown };
   }
 
+  /* Investable estate total — Σ of account balances that fund the Shape
+   * (roth / taxable / traditional buckets). Excludes physical assets and
+   * debts (neither is in BASE_TO_BUCKET), income streams (pension / ss),
+   * and excluded rooms. Mirrors studio.html's investable filter so a
+   * Blueprint card's Net Estate matches the Shape-driving total — distinct
+   * from the Estate Square Footage gross-net figure. */
+  function investableTotal(bp) {
+    var INVEST = { roth: true, taxable: true, traditional: true };
+    return (((bp && bp.accounts) || [])).reduce(function (sum, a) {
+      var bucket = BASE_TO_BUCKET[a && a.baseId];
+      if (bucket && INVEST[bucket] && !(a && a.exclude)) sum += Number(a.value) || 0;
+      return sum;
+    }, 0);
+  }
+
   /* ---- Persistence ---- */
 
   function readArchive() {
@@ -646,6 +661,7 @@
     toEnginePayload:  toEnginePayload,
     slimSlotForClerk: slimSlotForClerk,
     computeGrossFunding: computeGrossFunding,
+    investableTotal:  investableTotal,
     captureDOM:       captureDOM,
     mmYYYY:           mmYYYY,
     retDateFromAge:   retDateFromAge,
