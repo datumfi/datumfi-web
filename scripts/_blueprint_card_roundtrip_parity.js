@@ -54,8 +54,12 @@ const out = { findings: [], pageErrors: [] };
   await page.goto(base + '/studio.html', { waitUntil: 'load' });
   await page.waitForTimeout(2500);
   await page.evaluate(() => {
-    var d = document.getElementById('pri-dob'); if (d) d.value = '08 / 1982';
-    var r = document.getElementById('target-ret'); if (r) r.value = '03 / 2035';
+    // Drive the SLIDERS like a real user (they are the source of truth for the Shape) —
+    // their input handlers sync the pri-dob / target-ret / plan-end-age text fields.
+    function setSlider(id, v) { var el = document.getElementById(id); if (el) { el.value = String(v); el.dispatchEvent(new Event('input', { bubbles: true })); } }
+    setSlider('slider-age', 52);
+    setSlider('slider-activation', 68);
+    setSlider('sl-plan-through', 88);
     var s = document.getElementById('spend-input'); if (s) s.value = '$88,000';
     document.querySelectorAll('.climate-option').forEach(function (el) { el.classList.toggle('active', el.dataset.outlook === 'Optimistic'); });
     if (window.state) {
@@ -116,15 +120,40 @@ const out = { findings: [], pageErrors: [] };
   await page.waitForTimeout(3500); // through the 900ms re-assert
   out.reopen = await page.evaluate(() => {
     var sp = document.getElementById('slider-portfolio');
+    var val = function (id) { return (document.getElementById(id) || {}).value || ''; };
     return {
-      priDob: (document.getElementById('pri-dob') || {}).value || '',
-      targetRet: (document.getElementById('target-ret') || {}).value || '',
+      priDob: val('pri-dob'),
+      targetRet: val('target-ret'),
       climate: ((document.querySelector('.climate-option.active') || {}).dataset || {}).outlook || '',
       rooms: document.querySelectorAll('#rooms-container .room-input-container').length,
-      sliderExact: sp && sp.dataset ? sp.dataset.exactVal : null
+      sliderExact: sp && sp.dataset ? sp.dataset.exactVal : null,
+      // the RENDERED slider scalars that actually drive the Shape
+      sliderAge: val('slider-age'),
+      sliderAct: val('slider-activation'),
+      sliderPlan: val('sl-plan-through'),
+      planEndText: val('plan-end-age')
     };
   });
   await page.screenshot({ path: path.join(OUT, 'g3_3_reopen.png') });
+
+  // ── (3b) THE REAL LIVE PATH: a lingering Sketch carry in sessionStorage (Sketch->Studio
+  // earlier in the tab) must NOT override an explicit blueprint open. Seed the stale keys,
+  // reopen, assert the slot still wins AND the keys were cleared (Mechanism A).
+  await page.evaluate(() => {
+    sessionStorage.setItem('datum_currentAge', '40');
+    sessionStorage.setItem('datum_retireAge', '64');
+    sessionStorage.setItem('datum_targetSpend', '120000');
+  });
+  await page.goto(base + '/studio.html?id=2&hydrate=blueprint', { waitUntil: 'load' });
+  await page.waitForTimeout(3500);
+  out.reopenWithSketch = await page.evaluate(() => {
+    var val = function (id) { return (document.getElementById(id) || {}).value || ''; };
+    return {
+      sliderAge: val('slider-age'), sliderAct: val('slider-activation'), sliderPlan: val('sl-plan-through'),
+      stillHasSketchKeys: !!(sessionStorage.getItem('datum_currentAge') || sessionStorage.getItem('datum_targetSpend'))
+    };
+  });
+  await page.screenshot({ path: path.join(OUT, 'g3_3b_reopen_sketchkeys.png') });
 
   // ── (4) Erase removes the slot (archive + per-slot key).
   await ctx.route('**/*', abortExternal);
@@ -148,7 +177,7 @@ const out = { findings: [], pageErrors: [] };
   if (!a.perSlot) f.push('per-slot datum_blueprint_state_2 not written by header save');
   if (a.schema !== 'DatumFIBlueprintV1') f.push('saved slot is not a hub bp (schema=' + a.schema + ')');
   if (a.accounts !== 3) f.push('saved slot did not capture all rooms (accounts=' + a.accounts + ')');
-  if (a.dob !== '08 / 1982') f.push('saved dob wrong (' + a.dob + ')');
+  if (a.dob !== '06 / 1974') f.push('saved dob wrong (' + a.dob + ')');
   if (a.climate !== 'optimistic') f.push('saved climate wrong (' + a.climate + ')');
   if (a.investable !== 500000) f.push('investable total wrong (' + a.investable + ' expected 500000 — physical room must be excluded)');
   if (!a.archSlot2) f.push('archive slot2 not written');
@@ -158,11 +187,21 @@ const out = { findings: [], pageErrors: [] };
   if (cd.status && cd.status.trim() !== 'Drafted') f.push('card status not Drafted (' + cd.status + ')');
   if (!/\$500k/.test((cd.metrics || []).join(' '))) f.push('card Net Estate not the investable $500k (' + JSON.stringify(cd.metrics) + ')');
   if (!/Rooms\s*3\b/.test((cd.metrics || []).join(' '))) f.push('card Rooms not 3 (' + JSON.stringify(cd.metrics) + ')');
-  // (3) HARD acceptance — survive reload
-  if (ro.priDob !== '08 / 1982') f.push('HARD: pri-dob did NOT survive Open (' + ro.priDob + ')');
-  if (ro.targetRet !== '03 / 2035') f.push('HARD: target-ret did NOT survive Open (' + ro.targetRet + ')');
+  // (3) HARD acceptance — the RENDERED slider scalars that drive the Shape must survive Open.
+  if (ro.sliderAge !== '52') f.push('HARD: slider-age did NOT survive Open (' + ro.sliderAge + ' expected 52)');
+  if (ro.sliderAct !== '68') f.push('HARD: slider-activation did NOT survive Open (' + ro.sliderAct + ' expected 68)');
+  if (ro.sliderPlan !== '88') f.push('HARD: sl-plan-through did NOT survive Open (' + ro.sliderPlan + ' expected 88 — reverts to default)');
+  if (ro.planEndText !== '88') f.push('HARD: plan-end-age text did NOT survive Open (' + ro.planEndText + ' expected 88)');
+  if (ro.priDob !== '06 / 1974') f.push('HARD: pri-dob did NOT survive Open (' + ro.priDob + ')');
+  if (ro.targetRet !== '06 / 2042') f.push('HARD: target-ret did NOT survive Open (' + ro.targetRet + ')');
   if (ro.climate !== 'Optimistic') f.push('HARD: climate selection did NOT survive Open (' + ro.climate + ')');
   if (ro.rooms !== 3) f.push('rooms not restored on Open (rooms=' + ro.rooms + ')');
+  // (3b) blueprint open wins over a lingering Sketch carry (Mechanism A)
+  const rs = out.reopenWithSketch || {};
+  if (rs.sliderAge !== '52') f.push('HARD(sketch-keys): slider-age overridden by Sketch carry (' + rs.sliderAge + ' expected 52)');
+  if (rs.sliderAct !== '68') f.push('HARD(sketch-keys): slider-activation overridden by Sketch carry (' + rs.sliderAct + ' expected 68)');
+  if (rs.sliderPlan !== '88') f.push('HARD(sketch-keys): sl-plan-through overridden by Sketch carry (' + rs.sliderPlan + ' expected 88)');
+  if (rs.stillHasSketchKeys) f.push('blueprint open did not clear the stale Sketch keys');
   // (4) erase
   if (!ae.perSlotGone) f.push('erase left the hub per-slot key (ghost slot)');
   if (!ae.archSlot2Gone) f.push('erase left the archive slot');

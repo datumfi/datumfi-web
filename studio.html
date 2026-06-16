@@ -4656,6 +4656,22 @@
         showRestoredBanner();
       } catch (e) {}
     }
+    // G3 fix (Mechanism A) — an explicit blueprint-slot open is AUTHORITATIVE over any
+    // lingering Sketch carry. Clear the stale Sketch sessionStorage keys NOW (before
+    // restoreDraft / prefillFromSketch / the profile re-asserts read them), so the slot's
+    // profile wins and nothing downstream re-derives ages from the old Sketch values. A
+    // genuine Sketch->Studio carry uses ?hydrate=sketch (a different param) and re-writes
+    // these keys fresh on its own navigation, so it is unaffected.
+    (function () {
+      try {
+        var _q = new URLSearchParams(location.search);
+        if (_q.get('id') && _q.get('hydrate') === 'blueprint') {
+          sessionStorage.removeItem('datum_currentAge');
+          sessionStorage.removeItem('datum_retireAge');
+          sessionStorage.removeItem('datum_targetSpend');
+        }
+      } catch (_e) {}
+    })();
     restoreDraft();
     document.addEventListener('input', saveDraft);
     document.addEventListener('change', saveDraft);
@@ -5594,6 +5610,18 @@
         var ssLabel = { early_62: '62', full_67: '67', optimal_70: '70' }[ssEnum];
         if (ssLabel) document.querySelectorAll('.ss-btn').forEach(function (btn) { var t = ((btn.querySelector('strong') || {}).textContent || '').trim(); btn.classList.toggle('active', t === ssLabel); });
       }
+      // G3 fix (Mechanism B) — the SLIDERS drive the Shape, so re-assert age / activation /
+      // plan-through from the slot profile LAST, after syncFromProfileDates and the date<->
+      // slider back-syncs have run, so nothing re-derives them from a stale text field.
+      var now = new Date();
+      var dobM = prof.primary_dob ? String(prof.primary_dob).match(/(\d{1,2})\s*\/\s*(\d{4})/) : null;
+      var retM = prof.target_retirement_date ? String(prof.target_retirement_date).match(/(\d{1,2})\s*\/\s*(\d{4})/) : null;
+      var sA = $('slider-age'), sR = $('slider-activation'), sP = $('sl-plan-through');
+      if (dobM && sA) { var by = parseInt(dobM[2],10); var ca = now.getFullYear() - by; if (now.getMonth() + 1 < parseInt(dobM[1],10)) ca--; sA.value = clampN(ca, 18, 85); }
+      if (retM && sR && dobM) { var ry = parseInt(retM[2],10), by2 = parseInt(dobM[2],10), bm = parseInt(dobM[1],10); var ra = ry - by2; if (parseInt(retM[1],10) < bm) ra--; sR.value = clampN(ra, (parseInt(sA && sA.value, 10) || 40) + 1, 90); }
+      if (sP && prof.plan_end_age) { sP.value = clampN(parseInt(prof.plan_end_age,10) || 93, 75, 105); var pe = $('plan-end-age'); if (pe) pe.value = sP.value; }
+      if (typeof refreshAllLabels === 'function') refreshAllLabels();
+      if (typeof fireUpdate === 'function') fireUpdate();
     }
     function syncFromSketchAges() {
       var sA = $('slider-age'), sR = $('slider-activation');
@@ -5735,7 +5763,12 @@
         if (parseInt(retM[1],10) < bm) ra--;
         sRet.value = clampN(ra, (parseInt(sAge.value,10) || 40) + 1, 90);
       }
-      if (sPlan && prof.plan_end_age) sPlan.value = clampN(parseInt(prof.plan_end_age,10) || 93, 75, 105);
+      if (sPlan && prof.plan_end_age) {
+        sPlan.value = clampN(parseInt(prof.plan_end_age,10) || 93, 75, 105);
+        // G3 fix (Mechanism B) — also seed the plan-end-age TEXT, else syncFromProfileDates
+        // reads the stale default (93) afterward and clobbers the slider back to it.
+        var _peTxt = $('plan-end-age'); if (_peTxt) _peTxt.value = sPlan.value;
+      }
 
       // #4b carry: override the date-derived ages with the EXACT carried integers so the
       // recomputed ceiling uses the same compounding window Sketch did (the age->date->age
