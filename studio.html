@@ -5620,6 +5620,9 @@
       if (dobM && sA) { var by = parseInt(dobM[2],10); var ca = now.getFullYear() - by; if (now.getMonth() + 1 < parseInt(dobM[1],10)) ca--; sA.value = clampN(ca, 18, 85); }
       if (retM && sR && dobM) { var ry = parseInt(retM[2],10), by2 = parseInt(dobM[2],10), bm = parseInt(dobM[1],10); var ra = ry - by2; if (parseInt(retM[1],10) < bm) ra--; sR.value = clampN(ra, (parseInt(sA && sA.value, 10) || 40) + 1, 90); }
       if (sP && prof.plan_end_age) { sP.value = clampN(parseInt(prof.plan_end_age,10) || 93, 75, 105); var pe = $('plan-end-age'); if (pe) pe.value = sP.value; }
+      // 05/ Market Conditions paradigm + inflation mode — re-assert from the slot too.
+      if (bp.market_paradigm) { var _mr = document.querySelector('input[name="market"][value="' + bp.market_paradigm + '"]'); if (_mr) _mr.checked = true; }
+      if (bp.inflation_mode)  { var _ir = document.querySelector('input[name="inflation"][value="' + bp.inflation_mode + '"]'); if (_ir) _ir.checked = true; }
       if (typeof refreshAllLabels === 'function') refreshAllLabels();
       if (typeof fireUpdate === 'function') fireUpdate();
     }

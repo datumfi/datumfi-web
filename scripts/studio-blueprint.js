@@ -649,6 +649,14 @@
       v67: moneyToInt(v('ss-sec-67')),
       v70: moneyToInt(v('ss-sec-70'))
     };
+
+    // 05/ Market Conditions toggle (the user-facing "climate" paradigm) + inflation mode.
+    // seedFromBlueprint already restores these radios from bp, but capture was the gap:
+    // without reading them here they stayed at the schema defaults on every Studio save.
+    var mkt = d.querySelector('input[name="market"]:checked');
+    if (mkt && mkt.value) bp.market_paradigm = mkt.value;
+    var infl = d.querySelector('input[name="inflation"]:checked');
+    if (infl && infl.value) bp.inflation_mode = infl.value;
   }
 
   global.DatumBlueprint = {

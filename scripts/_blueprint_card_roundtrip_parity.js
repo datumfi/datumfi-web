@@ -62,6 +62,10 @@ const out = { findings: [], pageErrors: [] };
     setSlider('sl-plan-through', 88);
     var s = document.getElementById('spend-input'); if (s) s.value = '$88,000';
     document.querySelectorAll('.climate-option').forEach(function (el) { el.classList.toggle('active', el.dataset.outlook === 'Optimistic'); });
+    // 05/ Market Conditions paradigm (the card's "Climate") + inflation — non-defaults.
+    function checkRadio(name, value) { var r = document.querySelector('input[name="' + name + '"][value="' + value + '"]'); if (r) { r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); } }
+    checkRadio('market', 'stress');
+    checkRadio('inflation', 'nominal');
     if (window.state) {
       window.state.accounts = [
         { id: 'g3a', baseId: 'pretax401k', value: 425000, inflow: 0, freq: 12, name: 'Pre-Tax 401(k)', holdings: [] },
@@ -92,6 +96,8 @@ const out = { findings: [], pageErrors: [] };
       ret: slot && slot.profile ? slot.profile.target_retirement_date : null,
       datum: slot && slot.datum ? slot.datum.net_datum_v1 : null,
       climate: slot && slot.climate ? slot.climate.outlook : null,
+      market: slot ? slot.market_paradigm : null,
+      inflation: slot ? slot.inflation_mode : null,
       investable: (window.DatumBlueprint && slot) ? DatumBlueprint.investableTotal(slot) : null,
       archSlot2: !!(arch && arch.slot2)
     };
@@ -131,7 +137,9 @@ const out = { findings: [], pageErrors: [] };
       sliderAge: val('slider-age'),
       sliderAct: val('slider-activation'),
       sliderPlan: val('sl-plan-through'),
-      planEndText: val('plan-end-age')
+      planEndText: val('plan-end-age'),
+      market: ((document.querySelector('input[name="market"]:checked')) || {}).value || '',
+      inflation: ((document.querySelector('input[name="inflation"]:checked')) || {}).value || ''
     };
   });
   await page.screenshot({ path: path.join(OUT, 'g3_3_reopen.png') });
@@ -150,6 +158,7 @@ const out = { findings: [], pageErrors: [] };
     var val = function (id) { return (document.getElementById(id) || {}).value || ''; };
     return {
       sliderAge: val('slider-age'), sliderAct: val('slider-activation'), sliderPlan: val('sl-plan-through'),
+      market: ((document.querySelector('input[name="market"]:checked')) || {}).value || '',
       stillHasSketchKeys: !!(sessionStorage.getItem('datum_currentAge') || sessionStorage.getItem('datum_targetSpend'))
     };
   });
@@ -180,6 +189,8 @@ const out = { findings: [], pageErrors: [] };
   if (a.dob !== '06 / 1974') f.push('saved dob wrong (' + a.dob + ')');
   if (a.climate !== 'optimistic') f.push('saved climate wrong (' + a.climate + ')');
   if (a.investable !== 500000) f.push('investable total wrong (' + a.investable + ' expected 500000 — physical room must be excluded)');
+  if (a.market !== 'stress') f.push('saved market_paradigm wrong (' + a.market + ' expected stress)');
+  if (a.inflation !== 'nominal') f.push('saved inflation_mode wrong (' + a.inflation + ' expected nominal)');
   if (!a.archSlot2) f.push('archive slot2 not written');
   // (2) card
   if (!cd.present || cd.isEmpty) f.push('Blueprint slot-2 card did not render real data');
@@ -187,6 +198,7 @@ const out = { findings: [], pageErrors: [] };
   if (cd.status && cd.status.trim() !== 'Drafted') f.push('card status not Drafted (' + cd.status + ')');
   if (!/\$500k/.test((cd.metrics || []).join(' '))) f.push('card Net Estate not the investable $500k (' + JSON.stringify(cd.metrics) + ')');
   if (!/Rooms\s*3\b/.test((cd.metrics || []).join(' '))) f.push('card Rooms not 3 (' + JSON.stringify(cd.metrics) + ')');
+  if (!/Climate\s*Stress\b/.test((cd.metrics || []).join(' '))) f.push('card Climate not the Stress paradigm (' + JSON.stringify(cd.metrics) + ')');
   // (3) HARD acceptance — the RENDERED slider scalars that drive the Shape must survive Open.
   if (ro.sliderAge !== '52') f.push('HARD: slider-age did NOT survive Open (' + ro.sliderAge + ' expected 52)');
   if (ro.sliderAct !== '68') f.push('HARD: slider-activation did NOT survive Open (' + ro.sliderAct + ' expected 68)');
@@ -194,13 +206,16 @@ const out = { findings: [], pageErrors: [] };
   if (ro.planEndText !== '88') f.push('HARD: plan-end-age text did NOT survive Open (' + ro.planEndText + ' expected 88)');
   if (ro.priDob !== '06 / 1974') f.push('HARD: pri-dob did NOT survive Open (' + ro.priDob + ')');
   if (ro.targetRet !== '06 / 2042') f.push('HARD: target-ret did NOT survive Open (' + ro.targetRet + ')');
-  if (ro.climate !== 'Optimistic') f.push('HARD: climate selection did NOT survive Open (' + ro.climate + ')');
+  if (ro.climate !== 'Optimistic') f.push('HARD: HVAC climate selection did NOT survive Open (' + ro.climate + ')');
+  if (ro.market !== 'stress') f.push('HARD: market paradigm did NOT survive Open (' + ro.market + ' expected stress)');
+  if (ro.inflation !== 'nominal') f.push('HARD: inflation mode did NOT survive Open (' + ro.inflation + ' expected nominal)');
   if (ro.rooms !== 3) f.push('rooms not restored on Open (rooms=' + ro.rooms + ')');
   // (3b) blueprint open wins over a lingering Sketch carry (Mechanism A)
   const rs = out.reopenWithSketch || {};
   if (rs.sliderAge !== '52') f.push('HARD(sketch-keys): slider-age overridden by Sketch carry (' + rs.sliderAge + ' expected 52)');
   if (rs.sliderAct !== '68') f.push('HARD(sketch-keys): slider-activation overridden by Sketch carry (' + rs.sliderAct + ' expected 68)');
   if (rs.sliderPlan !== '88') f.push('HARD(sketch-keys): sl-plan-through overridden by Sketch carry (' + rs.sliderPlan + ' expected 88)');
+  if (rs.market !== 'stress') f.push('HARD(sketch-keys): market paradigm overridden by Sketch carry (' + rs.market + ' expected stress)');
   if (rs.stillHasSketchKeys) f.push('blueprint open did not clear the stale Sketch keys');
   // (4) erase
   if (!ae.perSlotGone) f.push('erase left the hub per-slot key (ghost slot)');

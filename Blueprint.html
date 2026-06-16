@@ -1389,12 +1389,13 @@ function blueprintSvg(data, slotId) {
  * Shape, excludes physical/debt) via DatumBlueprint.investableTotal — NOT the gross
  * Estate Square Footage figure. Status is honest about completeness: 'Modeled' once a
  * Reveal/MC has run, else 'Drafted'. Legacy flat slots (no schema) pass through. */
-const OUTLOOK_ENUM_TO_LABEL = {
-  history_repeats: 'History Repeats',
-  valuations_matter: 'Valuations Matter',
-  cautious: 'Cautious',
+// The card's user-facing "Climate" = the 05/Market Conditions paradigm the user sets
+// (Optimistic / Historical / Stress). The HVAC climate.outlook is reserved for the future
+// Monte-Carlo phase, so it is NOT what the card surfaces.
+const MARKET_ENUM_TO_LABEL = {
   optimistic: 'Optimistic',
-  custom: 'Custom Matrix'
+  average:    'Historical',
+  stress:     'Stress'
 };
 function bpToCard(bp) {
   if (!bp) return bp;
@@ -1403,7 +1404,6 @@ function bpToCard(bp) {
 
   const prof = bp.profile || {};
   const datum = bp.datum || {};
-  const climate = bp.climate || {};
   const mc = bp.mc_meta || {};
   const accounts = Array.isArray(bp.accounts) ? bp.accounts : [];
 
@@ -1426,7 +1426,7 @@ function bpToCard(bp) {
     netEstate: netEstate,
     annualDatum: Number(datum.net_datum_v1) || 0,
     rooms: accounts.length,
-    climate: OUTLOOK_ENUM_TO_LABEL[climate.outlook] || 'Valuations Matter',
+    climate: MARKET_ENUM_TO_LABEL[bp.market_paradigm] || 'Historical',
     status: modeled ? 'Modeled' : 'Drafted',
     dateStamped: stamp
   };
