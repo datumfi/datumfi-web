@@ -8211,6 +8211,16 @@
     // NO anonymous-local save path: the picker (open) is reached only when signed in.
     window.studioSaveCurrent = function (anchor) {
       if (!sessionStorage.getItem('datum_auth_hint')) {
+        // P5 Step-1: the live Studio DOM exists only here. Capture the full bp and
+        // stash it (sessionStorage survives the same-tab accounts.datumfi.com hop)
+        // so the Blueprint archive can reconstruct + DatumBlueprint.save() on landing
+        // — Option B: we set a pending-intent flag but DO NOT auto-fire; the user
+        // clicks "Save Current Blueprint →" on the archive to consume it.
+        try {
+          var _bp = liveBp(); DatumBlueprint.captureDOM(_bp);
+          sessionStorage.setItem('datumfi_blueprint_current_snapshot', JSON.stringify(_bp));
+          sessionStorage.setItem('datumfi_pending_save', 'blueprint');
+        } catch (e) {}
         window.location.href = '/vault.html?returnTo=' + encodeURIComponent('/Blueprint.html');
         return;
       }

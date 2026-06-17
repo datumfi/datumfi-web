@@ -1525,7 +1525,36 @@ function saveToSlot(slotId) {
 }
 
 function saveToFirstAvailableSlot() {
-  goToStudioToSave();
+  // P5 Step-1: if Studio stashed a snapshot before the signed-out vault hop, save it
+  // HERE — DatumBlueprint.save() is DOM-free (only captureDOM reads the DOM, and that
+  // already ran in Studio), and writeSlot targets the same ARCHIVE_KEY this page
+  // renders from. No carried plan -> preserve the legacy bounce-to-Studio behavior.
+  var snapRaw = null;
+  try { snapRaw = sessionStorage.getItem('datumfi_blueprint_current_snapshot'); } catch (e) {}
+  if (!snapRaw) { goToStudioToSave(); return; }
+  var bp = null;
+  try { bp = JSON.parse(snapRaw); } catch (e) {}
+  if (!bp) { goToStudioToSave(); return; }
+
+  // First EMPTY slot among the ones this user may write (free = slot 1 only). All
+  // writable slots full -> ask the user to delete one; no silent overwrite on landing.
+  var maxSlot = AppSessionState.userHasPremiumToken ? 4 : 1;
+  var slot = null;
+  for (var n = 1; n <= maxSlot; n++) { if (!BlueprintArchive['slot' + n]) { slot = n; break; } }
+  if (!slot) { showToast('All slots taken, please delete one first.'); return; }
+
+  try { DatumBlueprint.save(bp, { slot: slot }); }
+  catch (e) { showToast('Save failed.'); return; }
+
+  // Consume the intent + snapshot so a second click cannot fill a second slot.
+  try { sessionStorage.removeItem('datumfi_pending_save'); } catch (e) {}
+  try { sessionStorage.removeItem('datumfi_blueprint_current_snapshot'); } catch (e) {}
+
+  if (typeof safeLoadArchive === 'function') safeLoadArchive();
+  AppSessionState.activeBlueprintSlot = slot;
+  AppSessionState.userExplicitlySelectedBlueprint = true;
+  syncArchiveUI();
+  showToast('Saved to Blueprint A-0' + slot + '.');
 }
 
 function proceedWithEraseSequence() {
@@ -1768,8 +1797,20 @@ archiveTitle.addEventListener('blur', function () {
       if (typeof safeLoadArchive === 'function') safeLoadArchive();
       if (typeof syncArchiveUI === 'function') syncArchiveUI();
     }
-    if (typeof window._datumRestoreFromClerk === 'function') window._datumRestoreFromClerk(function () { requestAnimationFrame(_sync); });
-    else if (typeof syncArchiveUI === 'function') requestAnimationFrame(syncArchiveUI);
+    // P5 Step-1 (Option B): if Studio carried a snapshot through the signed-out hop,
+    // land first and guide the user to the explicit Save click — do NOT auto-fire.
+    function _maybeHint() {
+      try {
+        if (sessionStorage.getItem('datumfi_pending_save') === 'blueprint' &&
+            sessionStorage.getItem('datumfi_blueprint_current_snapshot') &&
+            typeof showToast === 'function') {
+          showToast('Your plan is ready — click "Save Current Blueprint →" to keep it.');
+        }
+      } catch (e) {}
+    }
+    function _afterRestore() { _sync(); _maybeHint(); }
+    if (typeof window._datumRestoreFromClerk === 'function') window._datumRestoreFromClerk(function () { requestAnimationFrame(_afterRestore); });
+    else requestAnimationFrame(_afterRestore);
   }
   window.addEventListener('load', function () {
     Clerk.load().then(function () {

@@ -9359,6 +9359,14 @@ Studio is built for exactly this. See If This Shape Holds →`;
       // rule + the 4-slot picker; sketchbook_z is already written 4-slot-capable.)
       function _gatedSave() {
         if (!sessionStorage.getItem('datum_auth_hint')) {
+          // P5 Step-1: capture wherever the user is (mid-stream S1..S5) and stash it
+          // BEFORE the vault hop so the Sketchbook can save it on landing. Option B:
+          // pending-intent flag is preserved but does NOT auto-fire — the user clicks
+          // "Save Current Sketch →" on the Sketchbook to consume it.
+          try {
+            sessionStorage.setItem('datumfi_sketch_current_snapshot', JSON.stringify(serializeSketchState()));
+            sessionStorage.setItem('datumfi_pending_save', 'sketch');
+          } catch (e) {}
           window.location.href = '/vault.html?returnTo=' + encodeURIComponent('/sketchbook.html');
           return;
         }

@@ -3510,6 +3510,8 @@
     try { _lsSCS.slot_1 = _snap; localStorage.setItem(LS_KEY, JSON.stringify(_lsSCS)); } catch(ex) {}
     _mirrorSketchbookToClerk(_lsSCS);
     executeSavePayloadToSlot(1, _contractToSlot(_snap));
+    // P5 Step-1: the explicit click consumes the pending-save intent (Option B).
+    try { sessionStorage.removeItem('datumfi_pending_save'); } catch(ex) {}
   });
 
   document.getElementById('action-later-capacity').addEventListener('click', () => {
@@ -3722,7 +3724,11 @@
 (function () {
   'use strict';
   function redirectToVault() {
-    window.location.replace('/vault.html');
+    // P5 Step-1 root-cause fix: preserve returnTo so a transient null-user on the
+    // cross-subdomain return (or a genuine sign-in) round-trips BACK to the
+    // Sketchbook instead of falling through to vault's my-account default. Mirrors
+    // Blueprint.html's redirectToVault, which already carries returnTo and self-heals.
+    window.location.replace('/vault.html?returnTo=' + encodeURIComponent('/sketchbook.html'));
   }
   function revealBody() {
     document.body.style.visibility = 'visible';
@@ -3734,6 +3740,14 @@
     if (typeof syncDesktopSketchbookUI === 'function') {
       requestAnimationFrame(syncDesktopSketchbookUI);
     }
+    // P5 Step-1 (Option B): guide a carried-snapshot user to the explicit Save click.
+    try {
+      if (sessionStorage.getItem('datumfi_pending_save') === 'sketch' &&
+          sessionStorage.getItem('datumfi_sketch_current_snapshot') &&
+          typeof showSketchToast === 'function') {
+        setTimeout(function () { showSketchToast('Your sketch is ready — click "Save Current Sketch →" to keep it.'); }, 400);
+      }
+    } catch (e) {}
   }
   window.addEventListener('load', function () {
     Clerk.load().then(function () {
