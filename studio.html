@@ -7886,7 +7886,8 @@
         try { localStorage.setItem('datum_studio_overlay_seen', '1'); } catch(ex) {}
       }
       _wrap.classList.add('dismissed');
-      _showToast(msg || 'Starting a new Blueprint.');
+      // Entry toast suppressed (Captain): no pop on overlay dismiss. _showToast stays
+      // defined for user-action confirmations (e.g. Save). msg arg now unused.
       setTimeout(function() { _wrap.style.display = 'none'; }, 320);
     }
 
@@ -7953,17 +7954,9 @@
     }
     if (!_data) return;
 
-    var _explicit = sessionStorage.getItem('datumfi_blueprint_explicit_load');
-    if (!_explicit) return;
+    // Consume the one-shot explicit-load flag (Blueprint.html sets it before nav) so it
+    // does not linger. Entry toast suppressed (Captain): no "Blueprint loaded" pop.
     try { sessionStorage.removeItem('datumfi_blueprint_explicit_load'); } catch(ex) {}
-
-    setTimeout(function() {
-      var _b = document.createElement('div');
-      _b.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(29,158,117,0.12);border:1px solid rgba(29,158,117,0.4);color:var(--teal-mid,#5DCAA5);font-family:var(--font-mono,"DM Mono",monospace);font-size:11px;letter-spacing:0.06em;padding:8px 16px;border-radius:4px;white-space:nowrap;pointer-events:none;';
-      _b.textContent = 'Blueprint loaded from Archive.';
-      document.body.appendChild(_b);
-      setTimeout(function() { _b.style.transition = 'opacity 0.5s'; _b.style.opacity = '0'; setTimeout(function() { if (_b.parentNode) _b.remove(); }, 500); }, 3500);
-    }, 600);
   })();
   /* ── END R3.6 BLUEPRINT HYDRATION HANDSHAKE ─────────────── */
 
@@ -8001,11 +7994,8 @@
         if (_spendEl) _spendEl.value = '$' + Math.round(_haveSpend).toLocaleString('en-US');
       }
       if (typeof updateSVGs === 'function') updateSVGs();
-      var _b = document.createElement('div');
-      _b.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(29,158,117,0.12);border:1px solid rgba(29,158,117,0.4);color:var(--teal-mid,#5DCAA5);font-family:var(--font-mono,"DM Mono",monospace);font-size:11px;letter-spacing:0.06em;padding:8px 16px;border-radius:4px;white-space:nowrap;pointer-events:none;';
-      _b.textContent = 'Sketch outline loaded — refine and build your Blueprint.';
-      document.body.appendChild(_b);
-      setTimeout(function() { _b.style.transition = 'opacity 0.5s'; _b.style.opacity = '0'; setTimeout(function() { if (_b.parentNode) _b.remove(); }, 500); }, 3500);
+      // Entry toast suppressed (Captain): the prefill above is silent — no
+      // "Sketch outline loaded" pop on hydration.
     }, 600);
   })();
   /* ── END R3.6 SKETCH HYDRATION HANDSHAKE ───────────────── */
