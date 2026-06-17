@@ -254,29 +254,39 @@
     try { sessionStorage.setItem(SESSION_DRAFT_KEY, JSON.stringify(bp)); } catch (_e) {}
   }
 
-  /* Clerk mirror — Object.assign merge protects dossier + sketchbook.
-   * Logs slim byte size and merged total; warns at >7800 bytes (>5KB blueprint
-   * alone is a hard error per Captain invariant). */
+  /* Clerk mirror — P3 SOURCE OF TRUTH: compact+compress the WHOLE 4-slot archive
+   * (slim per slot) into a single `blueprint_z` blob, then atomically drop the
+   * legacy single-slot `blueprint` key to reclaim ~1KB of the shared 8192B cap.
+   * Decision A sequencing: the write proceeds ONLY when safeMerge returns ok:true,
+   * and that same write both stores blueprint_z AND removes the legacy key — so the
+   * legacy key is never gone without blueprint_z present. Over cap (ok:false) ->
+   * keep localStorage as truth, leave the legacy key untouched, never truncate. */
   function mirrorToClerk(bp, done) {
     if (typeof done !== 'function') done = function () {};
     try {
       if (!global.Clerk) { done(); return; }
+      var Codec = global.DatumArchiveCodec;
+      if (!Codec) { console.warn('[blueprint mirror] codec unavailable; skipped Clerk mirror'); done(); return; }
       global.Clerk.load().then(function () {
         if (!global.Clerk.user) { done(); return; }
-        var slim  = slimSlotForClerk(bp);
-        var bytes = JSON.stringify(slim).length;
-        console.log('[blueprint mirror] slim bytes:', bytes);
-        if (bytes >= 5120) {
-          console.warn('[blueprint mirror] slim Blueprint exceeded 5KB target:', bytes);
-        }
+        var arch = readArchive() || {};
+        var slimArch = {
+          slot1: slimSlotForClerk(arch.slot1), slot2: slimSlotForClerk(arch.slot2),
+          slot3: slimSlotForClerk(arch.slot3), slot4: slimSlotForClerk(arch.slot4)
+        };
+        var bpZ = Codec.encodeBlueprintArchive(slimArch);
         var existing = global.Clerk.user.unsafeMetadata || {};
-        var merged   = Object.assign({}, existing, { blueprint: slim });
-        var total    = JSON.stringify(merged).length;
-        console.log('[blueprint mirror] merged unsafeMetadata bytes:', total);
-        if (total >= 7800) {
-          console.warn('[blueprint mirror] unsafeMetadata approaching 8KB cap:', total);
+        var base = {};
+        for (var k in existing) {
+          if (Object.prototype.hasOwnProperty.call(existing, k) && k !== 'blueprint') base[k] = existing[k];
         }
-        global.Clerk.user.update({ unsafeMetadata: merged })
+        var res = Codec.safeMerge(base, { blueprint_z: bpZ });
+        console.log('[blueprint mirror] blueprint_z bytes:', Codec.byteLen(bpZ), '| merged total:', res.bytes, '/ 8192 | ok:', res.ok);
+        if (!res.ok) {
+          console.warn('[blueprint mirror] over 8192B cap; kept LS truth + legacy key, did NOT write:', res.bytes);
+          done(); return;
+        }
+        global.Clerk.user.update({ unsafeMetadata: res.merged })
           .then(done)
           .catch(function (e) { console.warn('[blueprint mirror] update failed', e); done(); });
       }).catch(done);

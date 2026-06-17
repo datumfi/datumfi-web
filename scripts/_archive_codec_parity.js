@@ -144,5 +144,27 @@ check('wouldFit refuses over-cap write', fit.ok === false, fit.bytes);
 var ok = Codec.wouldFit({ dossier: dossier }, 'blueprint_z', bpBlob);
 check('wouldFit accepts in-budget write', ok.ok === true, ok.bytes);
 
+/* ---- 5. P3 migration: legacy-key reclaim + over-cap safety (Decision A) ----
+ * Mirrors the live mirror logic: drop the legacy single-slot key, add the _z blob,
+ * and proceed ONLY when safeMerge returns ok:true. Over cap -> refuse + keep legacy. */
+var legacyMeta = { dossier: dossier, workspaceName: 'Alexandra Winterbottom-Smithfield',
+  blueprint: slimBlueprint(1, 12), sketchbook: { sketchbook_title: 'X', slot_1: slimSketch(1) } };
+var mBase = Object.assign({}, legacyMeta); delete mBase.blueprint;
+var mBp = Codec.safeMerge(mBase, { blueprint_z: bpBlob });
+var mBase2 = Object.assign({}, mBp.merged); delete mBase2.sketchbook;
+var mSk = Codec.safeMerge(mBase2, { sketchbook_z: skBlob });
+check('migration: blueprint_z write fits (ok)', mBp.ok === true, mBp.bytes);
+check('migration: sketchbook_z write fits (ok)', mSk.ok === true, mSk.bytes);
+check('migration: legacy keys removed', !('blueprint' in mSk.merged) && !('sketchbook' in mSk.merged));
+check('migration: _z keys present', ('blueprint_z' in mSk.merged) && ('sketchbook_z' in mSk.merged));
+var bothLegacyAndZ = Codec.byteLen(JSON.stringify(Object.assign({}, legacyMeta, { blueprint_z: bpBlob, sketchbook_z: skBlob })));
+check('migration: reclaim shrinks payload', mSk.bytes < bothLegacyAndZ, mSk.bytes + ' < ' + bothLegacyAndZ);
+check('migration: final <= 8192', mSk.bytes <= 8192, mSk.bytes);
+var nearFull = { filler: 'x'.repeat(7000), blueprint: slimBlueprint(1, 12) };
+var ofBase = Object.assign({}, nearFull); delete ofBase.blueprint;
+var ofRes = Codec.safeMerge(ofBase, { blueprint_z: bpBlob });
+check('migration: over-cap write refused (ok:false)', ofRes.ok === false, ofRes.bytes);
+check('migration: over-cap leaves legacy key intact (no write)', 'blueprint' in nearFull);
+
 console.log(fails.length ? ('\nRED — ' + fails.length + ' failure(s): ' + fails.join(', ')) : '\nGREEN — all codec parity + budget checks pass');
 process.exit(fails.length ? 1 : 0);

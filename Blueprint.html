@@ -1756,14 +1756,20 @@ archiveTitle.addEventListener('blur', function () {
 <script>
 (function () {
   'use strict';
-  function redirectToVault() { window.location.replace('/vault.html'); }
+  function redirectToVault() { window.location.replace('/vault.html?returnTo=' + encodeURIComponent('/Blueprint.html')); }
   function revealBody() { document.body.style.visibility = 'visible'; }
   function onSessionConfirmed() {
     try { sessionStorage.setItem('datum_auth_hint', '1'); } catch (e) {}
     revealBody();
-    if (typeof syncArchiveUI === 'function') {
-      requestAnimationFrame(syncArchiveUI);
+    // P3: pull the 4-slot Blueprint archive from Clerk (cross-device truth) into LS,
+    // THEN re-read + render. nav.js owns the decode (single source of restore logic);
+    // we just re-sync afterward. Falls back to a plain sync if the helper is absent.
+    function _sync() {
+      if (typeof safeLoadArchive === 'function') safeLoadArchive();
+      if (typeof syncArchiveUI === 'function') syncArchiveUI();
     }
+    if (typeof window._datumRestoreFromClerk === 'function') window._datumRestoreFromClerk(function () { requestAnimationFrame(_sync); });
+    else if (typeof syncArchiveUI === 'function') requestAnimationFrame(syncArchiveUI);
   }
   window.addEventListener('load', function () {
     Clerk.load().then(function () {

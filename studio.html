@@ -8059,6 +8059,8 @@
   <script src="/scripts/datum-shape.js" defer></script>
   <script src="/scripts/datum-shape-copy.js" defer></script>
   <script src="/scripts/studio-wantface.js" defer></script>
+  <script src="/scripts/lz-string.min.js" defer></script>
+  <script src="/scripts/datum-archive-codec.js" defer></script>
   <script src="/scripts/studio-blueprint.js" defer></script>
   <script>
   // Blueprint v1 wiring — prefill the two new header fields from the loaded
@@ -8128,6 +8130,10 @@
       var when = slot.saved_at ? new Date(slot.saved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
       return 'A-0' + n + '  ·  ' + rooms + ' rooms' + (when ? '  ·  ' + when : '');
     }
+    var HEAD_CSS = 'font-family:var(--font-mono);font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);padding:2px 4px 4px;';
+    function isFilled(n) {
+      try { return !!DatumBlueprint._internal.readSlot(n); } catch (e) { return false; }
+    }
     function saveTo(n) {
       try {
         var bp = liveBp();
@@ -8140,17 +8146,38 @@
     }
     function close() { if (pop) { if (pop.parentNode) pop.remove(); pop = null; document.removeEventListener('click', onDoc, true); } }
     function onDoc(e) { if (pop && !pop.contains(e.target) && e.target !== btn) close(); }
-    function open(anchor) {
-      anchor = anchor || btn;
-      pop = document.createElement('div');
-      pop.id = 'studio-save-bp-pop';
-      pop.style.cssText = 'position:fixed;z-index:10001;background:#0a1018;border:1px solid rgba(93,202,165,0.4);border-radius:6px;padding:8px;display:flex;flex-direction:column;gap:6px;box-shadow:0 10px 30px rgba(0,0,0,0.7);min-width:230px;';
-      var r = anchor.getBoundingClientRect();
-      pop.style.top = (r.bottom + 6) + 'px';
-      pop.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
+    /* Gated picker: an EMPTY slot saves immediately; a FILLED slot must confirm the
+       overwrite first — no silent clobber, no first-available auto-fire. */
+    function confirmOverwrite(n) {
+      if (!pop) return;
+      pop.innerHTML = '';
+      var head = document.createElement('div');
+      head.textContent = 'Overwrite A-0' + n + '?';
+      head.style.cssText = HEAD_CSS;
+      pop.appendChild(head);
+      var sub = document.createElement('div');
+      sub.textContent = 'This sheet — ' + slotLabel(n) + ' — will be replaced.';
+      sub.style.cssText = 'font-family:var(--font-mono);font-size:10px;color:rgba(255,255,255,0.6);padding:0 4px 4px;line-height:1.4;';
+      pop.appendChild(sub);
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:6px;';
+      var ov = document.createElement('button');
+      ov.type = 'button'; ov.textContent = 'Overwrite';
+      ov.style.cssText = 'flex:1;background:rgba(201,168,76,0.15);border:1px solid var(--gold,#c9a84c);color:var(--gold,#c9a84c);font-family:var(--font-mono);font-size:11px;padding:8px 10px;border-radius:4px;cursor:pointer;';
+      ov.addEventListener('click', function (e) { e.stopPropagation(); saveTo(n); });
+      var ca = document.createElement('button');
+      ca.type = 'button'; ca.textContent = 'Cancel';
+      ca.style.cssText = 'flex:1;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.12);color:var(--white,#fff);font-family:var(--font-mono);font-size:11px;padding:8px 10px;border-radius:4px;cursor:pointer;';
+      ca.addEventListener('click', function (e) { e.stopPropagation(); renderSlots(); });
+      row.appendChild(ov); row.appendChild(ca);
+      pop.appendChild(row);
+    }
+    function renderSlots() {
+      if (!pop) return;
+      pop.innerHTML = '';
       var head = document.createElement('div');
       head.textContent = 'Save to which sheet?';
-      head.style.cssText = 'font-family:var(--font-mono);font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);padding:2px 4px 4px;';
+      head.style.cssText = HEAD_CSS;
       pop.appendChild(head);
       [1, 2, 3, 4].forEach(function (n) {
         var b = document.createElement('button');
@@ -8159,19 +8186,36 @@
         b.style.cssText = 'text-align:left;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.12);color:var(--white,#fff);font-family:var(--font-mono);font-size:11px;padding:8px 10px;border-radius:4px;cursor:pointer;';
         b.addEventListener('mouseenter', function () { b.style.borderColor = 'var(--teal,#1d9e75)'; });
         b.addEventListener('mouseleave', function () { b.style.borderColor = 'rgba(255,255,255,0.12)'; });
-        b.addEventListener('click', function (e) { e.stopPropagation(); saveTo(n); });
+        b.addEventListener('click', function (e) { e.stopPropagation(); if (isFilled(n)) confirmOverwrite(n); else saveTo(n); });
         pop.appendChild(b);
       });
+    }
+    function open(anchor) {
+      anchor = anchor || btn;
+      pop = document.createElement('div');
+      pop.id = 'studio-save-bp-pop';
+      pop.style.cssText = 'position:fixed;z-index:10001;background:#0a1018;border:1px solid rgba(93,202,165,0.4);border-radius:6px;padding:8px;display:flex;flex-direction:column;gap:6px;box-shadow:0 10px 30px rgba(0,0,0,0.7);min-width:230px;';
+      var r = anchor.getBoundingClientRect();
+      pop.style.top = (r.bottom + 6) + 'px';
+      pop.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
+      renderSlots();
       document.body.appendChild(pop);
       setTimeout(function () { document.addEventListener('click', onDoc, true); }, 0);
     }
-    btn.addEventListener('click', function (e) { e.stopPropagation(); if (pop) close(); else open(btn); });
+    btn.addEventListener('click', function (e) { e.stopPropagation(); window.studioSaveCurrent(btn); });
     var mob = document.getElementById('studio-save-bp-mob');
-    if (mob) mob.addEventListener('click', function (e) { e.stopPropagation(); if (typeof closeMobileNav === 'function') closeMobileNav(); if (pop) close(); else open(mob); });
-    // P1/P2 hook (Decision 2): the signed-IN account-topbar Save button calls this.
-    // Behavior is today's slot popup; P3 swaps the internals for the forced-sign-in
-    // + gated picker flow. anchor lets the popup align to whichever button fired it.
-    window.studioSaveCurrent = function (anchor) { if (pop) close(); else open(anchor || btn); };
+    if (mob) mob.addEventListener('click', function (e) { e.stopPropagation(); if (typeof closeMobileNav === 'function') closeMobileNav(); window.studioSaveCurrent(mob); });
+    // P3 hook: the SINGLE Save entry for both the page header (btn/mob) and the
+    // signed-IN account-topbar Save button. We gate the ACTION, not the page —
+    // a signed-OUT Save forces sign-in and lands on the Blueprint archive. There is
+    // NO anonymous-local save path: the picker (open) is reached only when signed in.
+    window.studioSaveCurrent = function (anchor) {
+      if (!sessionStorage.getItem('datum_auth_hint')) {
+        window.location.href = '/vault.html?returnTo=' + encodeURIComponent('/Blueprint.html');
+        return;
+      }
+      if (pop) close(); else open(anchor || btn);
+    };
   });
   </script>
 </body>

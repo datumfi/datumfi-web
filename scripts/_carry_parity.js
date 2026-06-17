@@ -46,6 +46,10 @@ const stateClass = (cls) => { const m = /shape-state-(\w+)/.exec(cls || ''); ret
   await page.waitForTimeout(600);
   report.sketch.s1State = await page.evaluate(() => { const e = document.getElementById('d2s-pin-state-name'); return e ? (e.textContent || '').trim() : null; });
 
+  // P3: Save is now a GATED action — signed-out users are redirected to vault.html.
+  // Set the signed-in condition at action time (after sketch.html's one-time Clerk
+  // stale-hint cleanup has settled) so the carry save actually fires.
+  await page.evaluate(() => { try { sessionStorage.setItem('datum_auth_hint', '1'); } catch (e) {} });
   await Promise.all([
     page.waitForNavigation({ timeout: 8000 }).catch(() => {}),
     page.evaluate(() => { const a = document.getElementById('studio-cta-main'); if (a) a.click(); }).catch(() => {})

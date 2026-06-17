@@ -2872,6 +2872,8 @@
 
   <script src="/scripts/datum-shape.js"></script>
   <script src="/scripts/datum-shape-copy.js"></script>
+  <script src="/scripts/lz-string.min.js"></script>
+  <script src="/scripts/datum-archive-codec.js"></script>
   <script>
     const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
 
@@ -9325,13 +9327,24 @@ Studio is built for exactly this. See If This Shape Holds →`;
         var _ho = window.location.hostname;
         var _isLocalHost = (_ho === 'localhost' || _ho === '127.0.0.1' || _ho === '');
         try {
-          if (window.Clerk && !_isLocalHost) {
+          var _Codec = window.DatumArchiveCodec;
+          if (window.Clerk && !_isLocalHost && _Codec) {
+            // P3 SOURCE OF TRUTH: write a 4-slot-capable sketchbook_z (slot_1 + 3 nulls
+            // until P4 unlocks the UI tiles) and atomically drop the legacy `sketchbook`
+            // key once safeMerge confirms ok:true. Over cap -> keep LS truth + legacy.
             var _slim = _slimSlot(data);
-            console.log('[sketchbook mirror] slim bytes:', JSON.stringify(_slim).length);
+            var _book = { sketchbook_title: _slim.sketchbook_title, slot_1: _slim.slot_1, slot_2: null, slot_3: null, slot_4: null };
+            var _skZ  = _Codec.encodeSketchbook(_book);
+            console.log('[sketchbook mirror] sketchbook_z bytes:', _Codec.byteLen(_skZ));
             window.Clerk.load().then(function() {
               if (!window.Clerk.user) { _nav(); return; }
-              var _ckM = Object.assign({}, window.Clerk.user.unsafeMetadata || {}, { sketchbook: _slim });
-              window.Clerk.user.update({ unsafeMetadata: _ckM }).then(_nav).catch(function(e) { console.warn('[mirror] sketchbook failed', e); _nav(); });
+              var _ex = window.Clerk.user.unsafeMetadata || {};
+              var _base = {};
+              for (var _k in _ex) { if (Object.prototype.hasOwnProperty.call(_ex, _k) && _k !== 'sketchbook') _base[_k] = _ex[_k]; }
+              var _res = _Codec.safeMerge(_base, { sketchbook_z: _skZ });
+              console.log('[sketchbook mirror] merged total:', _res.bytes, '/ 8192 | ok:', _res.ok);
+              if (!_res.ok) { console.warn('[sketchbook mirror] over 8192B cap; kept LS truth + legacy key, did NOT write:', _res.bytes); _nav(); return; }
+              window.Clerk.user.update({ unsafeMetadata: _res.merged }).then(_nav).catch(function(e) { console.warn('[mirror] sketchbook failed', e); _nav(); });
             }).catch(_nav);
             return;
           }
@@ -9339,8 +9352,16 @@ Studio is built for exactly this. See If This Shape Holds →`;
         _nav();
       }
 
-      _ctaMain.addEventListener('click', function(e) {
-        e.preventDefault();
+      // P3: SINGLE gated Save entry for the Phase-V CTA, the top-nav button, and the
+      // signed-IN account-topbar Save button. We gate the ACTION, not the page — a
+      // signed-OUT Save forces sign-in and lands on the Sketchbook archive. No
+      // anonymous-local save path ever runs. (P4 adds the Drafted-vs-Modeled status
+      // rule + the 4-slot picker; sketchbook_z is already written 4-slot-capable.)
+      function _gatedSave() {
+        if (!sessionStorage.getItem('datum_auth_hint')) {
+          window.location.href = '/vault.html?returnTo=' + encodeURIComponent('/sketchbook.html');
+          return;
+        }
         var existing = null;
         try { existing = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch(ex) {}
         if (existing && existing.slot_1) {
@@ -9348,25 +9369,13 @@ Studio is built for exactly this. See If This Shape Holds →`;
           if (modal) { modal.classList.add('open'); return; }
         }
         _doSave();
-      });
-
-      // P1/P2 hook (Decision 2): top-nav "Save Current Sketch" + the signed-IN
-      // account-topbar Save button both call this. Behavior mirrors the Phase-V CTA
-      // (existing save) for now; P3 swaps internals for forced-sign-in + gated picker
-      // and P4 adds the Drafted-vs-Modeled status rule.
-      window.sketchSaveCurrent = function() {
-        var existing = null;
-        try { existing = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch(ex) {}
-        if (existing && existing.slot_1) {
-          var modal = document.getElementById('sketch-overwrite-modal');
-          if (modal) { modal.classList.add('open'); return; }
-        }
-        _doSave();
-      };
+      }
+      _ctaMain.addEventListener('click', function(e) { e.preventDefault(); _gatedSave(); });
+      window.sketchSaveCurrent = _gatedSave;
       var _navSaveBtn = document.getElementById('sketch-save-btn');
       if (_navSaveBtn) _navSaveBtn.addEventListener('click', function(e) {
         e.preventDefault();
-        if (typeof window.sketchSaveCurrent === 'function') window.sketchSaveCurrent();
+        _gatedSave();
       });
 
       var _confirmBtn = document.getElementById('sketch-overwrite-confirm');

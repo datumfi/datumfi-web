@@ -175,23 +175,64 @@
   document.addEventListener('DOMContentLoaded', function() { window.dfTrack('page_view'); });
 })();
 
-// Centralized sketchbook restore: writes LS from Clerk metadata on every page if local slot is absent
+// Centralized cross-device restore (P3): the signed-in account is the source of truth.
+// On every page, when a local store is ABSENT, rebuild it from Clerk unsafeMetadata —
+// preferring the compressed codec blobs (sketchbook_z / blueprint_z), falling back to
+// the legacy uncompressed keys (sketchbook / single-slot blueprint) for pre-P3 accounts.
+// The codec is pulled in on demand here so EVERY page can decode (universal load).
+// Exposed as window._datumRestoreFromClerk(done) so account pages can re-sync after.
 (function() {
   var _BOOK_KEY = 'datumfi_sketchbook_v1';
-  window.addEventListener('load', function() {
+  var _BP_ARCH_KEY = 'datumfi_blueprint_archive_v1';
+  var _BP_SLOT_PREFIX = 'datum_blueprint_state_';
+
+  function _ensureCodec(cb) {
+    if (window.DatumArchiveCodec) { cb(); return; }
+    function add(src, next) { var s = document.createElement('script'); s.src = src; s.onload = next; s.onerror = next; document.head.appendChild(s); }
+    if (window.LZString) add('/scripts/datum-archive-codec.js', cb);
+    else add('/scripts/lz-string.min.js', function() { add('/scripts/datum-archive-codec.js', cb); });
+  }
+  function _hasBook() { try { var b = JSON.parse(localStorage.getItem(_BOOK_KEY) || 'null'); return !!(b && b.slot_1); } catch(e) { return false; } }
+  function _hasArch() { try { var a = JSON.parse(localStorage.getItem(_BP_ARCH_KEY) || 'null'); return !!(a && (a.slot1 || a.slot2 || a.slot3 || a.slot4)); } catch(e) { return false; } }
+
+  function _restoreSketchbook(meta, Codec) {
+    if (_hasBook()) return;                                            // local cache wins
+    var book = null;
+    if (meta.sketchbook_z && Codec) book = Codec.decodeSketchbook(meta.sketchbook_z);   // _z preferred
+    if ((!book || !book.slot_1) && meta.sketchbook && meta.sketchbook.slot_1) {          // legacy fallback
+      book = { sketchbook_title: meta.sketchbook.sketchbook_title || '', slot_1: meta.sketchbook.slot_1, slot_2: null, slot_3: null, slot_4: null };
+    }
+    if (!book || !book.slot_1) return;
+    try { localStorage.setItem(_BOOK_KEY, JSON.stringify(book)); } catch(_e) {}
+    if (typeof _sketchbookRestoreFromClerk === 'function') _sketchbookRestoreFromClerk();
+  }
+  function _restoreBlueprint(meta, Codec) {
+    if (_hasArch()) return;                                            // local cache wins
+    var arch = null;
+    if (meta.blueprint_z && Codec) arch = Codec.decodeBlueprintArchive(meta.blueprint_z);   // _z preferred
+    if (!arch && meta.blueprint) arch = { slot1: meta.blueprint, slot2: null, slot3: null, slot4: null };  // legacy single-slot
+    if (!arch) return;
+    if (!arch.slot1 && !arch.slot2 && !arch.slot3 && !arch.slot4) return;
+    var active = [1,2,3,4].filter(function(n) { return arch['slot' + n]; })[0] || 1;
+    var _la = null; try { _la = JSON.parse(localStorage.getItem(_BP_ARCH_KEY) || 'null'); } catch(_e) {}
+    var out = { slot1: arch.slot1 || null, slot2: arch.slot2 || null, slot3: arch.slot3 || null, slot4: arch.slot4 || null,
+                activeBlueprintSlot: active, userHasPremiumToken: !!(_la && _la.userHasPremiumToken) };
+    try { localStorage.setItem(_BP_ARCH_KEY, JSON.stringify(out)); } catch(_e) {}
+    [1,2,3,4].forEach(function(n) { if (arch['slot' + n]) { try { localStorage.setItem(_BP_SLOT_PREFIX + n, JSON.stringify(arch['slot' + n])); } catch(_e) {} } });
+  }
+
+  window._datumRestoreFromClerk = function(done) {
+    if (typeof done !== 'function') done = function() {};
     try {
-      if (!window.Clerk) return;
-      var _lb = null;
-      try { _lb = JSON.parse(localStorage.getItem(_BOOK_KEY) || 'null'); } catch(_pe) {}
-      if (_lb && _lb.slot_1) return;
+      if (!window.Clerk) { done(); return; }
       window.Clerk.load().then(function() {
-        if (!window.Clerk.user) return;
-        var _ck = (window.Clerk.user.unsafeMetadata || {}).sketchbook;
-        if (!_ck || !_ck.slot_1) return;
-        var _r = { sketchbook_title: _ck.sketchbook_title || '', slot_1: _ck.slot_1 };
-        try { localStorage.setItem(_BOOK_KEY, JSON.stringify(_r)); } catch(_we) {}
-        if (typeof _sketchbookRestoreFromClerk === 'function') _sketchbookRestoreFromClerk();
-      }).catch(function(){});
-    } catch(_e) {}
-  });
+        if (!window.Clerk.user) { done(); return; }
+        var meta = window.Clerk.user.unsafeMetadata || {};
+        var wantCodec = (!_hasBook() && meta.sketchbook_z) || (!_hasArch() && meta.blueprint_z);
+        function go() { var C = window.DatumArchiveCodec || null; _restoreSketchbook(meta, C); _restoreBlueprint(meta, C); done(); }
+        if (wantCodec) _ensureCodec(go); else go();
+      }).catch(function() { done(); });
+    } catch(_e) { done(); }
+  };
+  window.addEventListener('load', function() { window._datumRestoreFromClerk(); });
 })();

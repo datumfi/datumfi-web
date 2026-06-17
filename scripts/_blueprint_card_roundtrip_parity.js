@@ -44,6 +44,10 @@ const out = { findings: [], pageErrors: [] };
   // Both run per-load, so re-establish them before every navigation via addInitScript.
   await page.addInitScript(() => {
     try { sessionStorage.setItem('datumfi_skip_entry_overlay', '1'); } catch (e) {}
+    // P3: Save is now a GATED action — signed-out users redirect to vault.html. This
+    // harness already mocks a signed-in Clerk user, so set the matching UI hint that
+    // window.studioSaveCurrent checks, otherwise the save click would bounce to vault.
+    try { sessionStorage.setItem('datum_auth_hint', '1'); } catch (e) {}
     window.Clerk = {
       load: function () { return Promise.resolve(); },
       user: { unsafeMetadata: {}, update: function () { return Promise.resolve(); }, firstName: 'Tester', primaryEmailAddress: { emailAddress: 't@t.co' } }
@@ -77,11 +81,23 @@ const out = { findings: [], pageErrors: [] };
     if (typeof updateSVGs === 'function') updateSVGs();
   });
   await page.waitForTimeout(300);
-  // open the header popover and click slot A-02
-  await page.click('#studio-save-bp-btn');
+  // open the save popover and click slot A-02. Signed-in (P3), the account-topbar
+  // hides the page-header button and exposes its own Save Current Blueprint button —
+  // both call window.studioSaveCurrent, so invoke the gated hook directly. The hint is
+  // set at action time because studio.html's load-time Clerk check (no real user on
+  // this host) clears it — a real signed-in user keeps it.
+  await page.evaluate(() => { try { sessionStorage.setItem('datum_auth_hint', '1'); } catch (e) {} });
+  await page.evaluate(() => window.studioSaveCurrent());
   await page.waitForTimeout(150);
   out.popoverPresent = await page.evaluate(() => !!document.getElementById('studio-save-bp-pop'));
-  await page.click('#studio-save-bp-pop button:has-text("A-02")');
+  // Click slot A-02 in-page (empty -> immediate save). Direct .click() avoids popover
+  // positioning quirks when invoked headlessly without a visible anchor button.
+  await page.evaluate(() => {
+    var pop = document.getElementById('studio-save-bp-pop');
+    if (!pop) return;
+    var b = Array.prototype.slice.call(pop.querySelectorAll('button')).find(function (x) { return /A-02/.test(x.textContent); });
+    if (b) b.click();
+  });
   await page.waitForTimeout(400);
 
   out.afterSave = await page.evaluate(() => {
