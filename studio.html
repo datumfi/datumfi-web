@@ -52,7 +52,7 @@
   ::-webkit-scrollbar-thumb:hover { background: var(--teal-mid); }
 
   /* Mode: split (default — no changes, drafting panel + canvas side by side) */
-  .studio-layout.mode-split .drafting-panel { display: block; width: 480px; }
+  .studio-layout.mode-split .drafting-panel { display: block; width: var(--studio-panel-w, 480px); }
   .studio-layout.mode-split .canvas-wrapper { display: block; flex: 1; }
 
   /* Mode: blueprint — hide drafting panel, canvas fills */
@@ -1136,27 +1136,29 @@
 <body>
   <a href="#studio-layout" class="skip-link">Skip to main content</a>
 
+  <!-- Signed-OUT Studio header — canonical site pattern (mirrors sketch.html): brand,
+       page links (Sketch · Studio · Shape), then Sign In · Upgrade. Studio-specific
+       view-toggles are seam-pinned to the drafting<->blueprint divide (Option A).
+       When signed IN, nav.js hides #app-nav and account-topbar.js takes over (it
+       re-renders the toggles + Save + Upgrade — see account-topbar.js). -->
   <nav id="app-nav">
     <a href="/" class="brand-header" aria-label="Datum FI — Home">
       <img src="/brand/datumfi-mark-d.svg" class="nav-mark" alt="" aria-hidden="true" width="26" height="26">
       <img src="/brand/datumfi-wordmark-atum-fi.svg" class="nav-wordmark" alt="Datum FI">
     </a>
+    <div class="view-toggle studio-seam">
+      <button class="view-btn" id="btn-draft" onclick="setViewMode('draft')" title="Drafting Focus">◼ Drafting</button>
+      <button class="view-btn active" id="btn-split" onclick="setViewMode('split')" title="Split View">◼◻ Split</button>
+      <button class="view-btn" id="btn-blueprint" onclick="setViewMode('blueprint')" title="Blueprint Focus">◼ Blueprint</button>
+    </div>
     <div class="nav-links">
       <a href="/sketch.html" class="nav-link">Sketch</a>
       <a href="/studio.html" class="nav-link active">Studio</a>
-      <a href="/range.html" class="nav-link" id="nav-range-link" style="display:none;">Range</a>
-      <a href="/philosophy.html" class="nav-link">Philosophy</a>
-    </div>
-    <div style="display:flex; align-items:center; gap:8px;">
-      <div class="view-toggle">
-        <button class="view-btn" id="btn-draft" onclick="setViewMode('draft')" title="Drafting Focus">◼ Drafting</button>
-        <button class="view-btn active" id="btn-split" onclick="setViewMode('split')" title="Split View">◼◻ Split</button>
-        <button class="view-btn" id="btn-blueprint" onclick="setViewMode('blueprint')" title="Blueprint Focus">◼ Blueprint</button>
-      </div>
-      <button class="nav-login-btn" id="studio-save-bp-btn" type="button" style="border-color:var(--teal);color:var(--teal);margin-right:0;" title="File this plan to a Blueprint sheet">⤓ Save to Blueprint</button>
-      <a href="/pricing.html" class="nav-login-btn" style="border-color:var(--gold);color:var(--gold);margin-right:0;">Upgrade</a>
+      <button class="nav-login-btn" id="studio-save-bp-btn" type="button" style="border-color:var(--teal);color:var(--teal);" title="Save this plan to a Blueprint sheet">⤓ Save Current Blueprint</button>
+      <a href="/why-a-range.html" class="nav-link">Shape</a>
+      <span style="width:1px; height:16px; background:rgba(255,255,255,0.1); margin:0 8px;"></span>
       <a href="/vault.html" class="nav-login-btn">Sign In</a>
-      <button class="nav-feedback-btn" onclick="openFeedback()">SHARE FEEDBACK</button>
+      <a href="/pricing.html" class="nav-login-btn nav-upgrade-btn">Upgrade</a>
     </div>
     <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
       <span></span><span></span><span></span>
@@ -1165,10 +1167,10 @@
   <div class="nav-mobile-menu" id="nav-mobile-menu">
     <a href="/sketch.html" class="nav-mobile-link">Sketch</a>
     <a href="/studio.html" class="nav-mobile-link active">Studio</a>
-    <a href="/range.html" class="nav-mobile-link" id="nav-mob-range" style="display:none;">Range</a>
-    <a href="/philosophy.html" class="nav-mobile-link">Philosophy</a>
+    <a href="/why-a-range.html" class="nav-mobile-link">Shape</a>
+    <button class="nav-mobile-login" id="studio-save-bp-mob" type="button" style="border-color:var(--teal);color:var(--teal);">⤓ Save Current Blueprint</button>
     <a href="/vault.html" class="nav-mobile-login">Sign In</a>
-    <button class="nav-mobile-feedback" onclick="closeMobileNav(); openFeedback()">Share Feedback</button>
+    <a href="/pricing.html" class="nav-mobile-login nav-upgrade-btn">Upgrade</a>
   </div>
 
   <!-- Diagnostics Modal -->
@@ -8148,11 +8150,12 @@
     }
     function close() { if (pop) { if (pop.parentNode) pop.remove(); pop = null; document.removeEventListener('click', onDoc, true); } }
     function onDoc(e) { if (pop && !pop.contains(e.target) && e.target !== btn) close(); }
-    function open() {
+    function open(anchor) {
+      anchor = anchor || btn;
       pop = document.createElement('div');
       pop.id = 'studio-save-bp-pop';
       pop.style.cssText = 'position:fixed;z-index:10001;background:#0a1018;border:1px solid rgba(93,202,165,0.4);border-radius:6px;padding:8px;display:flex;flex-direction:column;gap:6px;box-shadow:0 10px 30px rgba(0,0,0,0.7);min-width:230px;';
-      var r = btn.getBoundingClientRect();
+      var r = anchor.getBoundingClientRect();
       pop.style.top = (r.bottom + 6) + 'px';
       pop.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
       var head = document.createElement('div');
@@ -8172,7 +8175,13 @@
       document.body.appendChild(pop);
       setTimeout(function () { document.addEventListener('click', onDoc, true); }, 0);
     }
-    btn.addEventListener('click', function (e) { e.stopPropagation(); if (pop) close(); else open(); });
+    btn.addEventListener('click', function (e) { e.stopPropagation(); if (pop) close(); else open(btn); });
+    var mob = document.getElementById('studio-save-bp-mob');
+    if (mob) mob.addEventListener('click', function (e) { e.stopPropagation(); if (typeof closeMobileNav === 'function') closeMobileNav(); if (pop) close(); else open(mob); });
+    // P1/P2 hook (Decision 2): the signed-IN account-topbar Save button calls this.
+    // Behavior is today's slot popup; P3 swaps the internals for the forced-sign-in
+    // + gated picker flow. anchor lets the popup align to whichever button fired it.
+    window.studioSaveCurrent = function (anchor) { if (pop) close(); else open(anchor || btn); };
   });
   </script>
 </body>

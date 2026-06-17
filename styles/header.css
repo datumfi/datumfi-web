@@ -1,5 +1,11 @@
 /* ── Shared Navigation Header ── */
 
+/* Studio drafting-panel width — single source so the signed-out Studio view-toggle
+   can seam-pin to the drafting<->blueprint divide. MUST stay in sync with
+   .studio-layout.mode-split .drafting-panel width in studio.html (which references
+   this same var), so the two can never drift. */
+:root { --studio-panel-w: 480px; }
+
 /* SVG brand mark + wordmark images */
 .nav-mark {
   width: 32px;
@@ -117,6 +123,16 @@
 }
 .view-btn:hover { border-color: rgba(93,202,165,0.4); color: rgba(255,255,255,0.7); }
 .view-btn.active { background: rgba(29,158,117,0.12); border-color: var(--teal-mid); color: var(--teal-mid); }
+
+/* Option A — seam-pinned Studio toggles (signed-out #app-nav): left edge sits on the
+   drafting<->blueprint divide. Absolute so it floats independent of brand / nav-links. */
+#app-nav .view-toggle.studio-seam {
+  position: absolute; left: var(--studio-panel-w); top: 50%; transform: translateY(-50%); margin-left: 0;
+}
+
+/* Permanent Upgrade pill (gold) — canonical across signed-in/out navs. */
+.nav-login-btn.nav-upgrade-btn { color: var(--gold); border-color: var(--gold); }
+.nav-login-btn.nav-upgrade-btn:hover { background: rgba(201,168,76,0.1); }
 
 @media (max-width: 650px) {
   .nav-links { display: none; }

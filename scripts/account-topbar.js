@@ -85,6 +85,15 @@
       + '.acct-action-btn:hover{color:rgba(255,255,255,.72);border-color:rgba(255,255,255,.28);}'
       + '.acct-action-btn.acct-signout{color:rgba(226,75,74,.52);border-color:rgba(226,75,74,.20);}'
       + '.acct-action-btn.acct-signout:hover{color:rgba(226,75,74,.85);border-color:rgba(226,75,74,.50);}'
+      + '.acct-action-btn.acct-save{color:var(--teal,#1d9e75);border-color:var(--teal,#1d9e75);text-decoration:none;}'
+      + '.acct-action-btn.acct-save:hover{background:rgba(29,158,117,.12);border-color:var(--teal,#1d9e75);}'
+      + '.acct-action-btn.acct-upgrade{color:#C9A84C;border-color:#C9A84C;text-decoration:none;}'
+      + '.acct-action-btn.acct-upgrade:hover{background:rgba(201,168,76,.1);border-color:#C9A84C;}'
+      /* Studio-only toggles (left of nav). .view-btn base comes from header.css, which
+         the Studio page always loads; acct-view-active supplies the active style without
+         depending on header.css's .view-btn.active. */
+      + '.acct-studio-toggle{display:flex;gap:3px;align-items:center;margin-left:18px;flex-shrink:0;}'
+      + '.acct-view-active{background:rgba(29,158,117,.12)!important;border-color:#3ec3a0!important;color:#3ec3a0!important;}'
       + '@media(max-width:720px){'
       + '  .acct-topbar-nav{display:none;}'
       + '  .acct-wordmark-img{height:15px;}'
@@ -99,12 +108,35 @@
       + label + '</button>';
   }
 
+  /* ── Studio-only view-toggles (ISOLATED — page-specific coupling kept here and
+     obvious). Rendered ONLY when getActiveTab()==='studio', so it never leaks onto
+     any other account page. Buttons drive window.setViewMode (a studio.html global);
+     they stand in for the signed-out #app-nav toggles, which nav.js hides once
+     authenticated — without this they would silently vanish on signed-in Studio. ── */
+  function studioToggles(active) {
+    if (active !== 'studio') return '';
+    return '<div class="acct-studio-toggle" role="group" aria-label="Studio view">'
+      + '<button type="button" class="view-btn" data-acct-view="draft" title="Drafting Focus">◼ Drafting</button>'
+      + '<button type="button" class="view-btn acct-view-active" data-acct-view="split" title="Split View">◼◻ Split</button>'
+      + '<button type="button" class="view-btn" data-acct-view="blueprint" title="Blueprint Focus">◼ Blueprint</button>'
+      + '</div>';
+  }
+
+  /* Origin-aware Save — appears ONLY on its own editor page (studio -> Blueprint,
+     sketch -> Sketch) and sits beside its archive tab (My Blueprints / My Sketches). */
+  function saveAction(active) {
+    if (active === 'studio') return '<button type="button" class="acct-action-btn acct-save" data-acct-action="save-current" title="Save your current Blueprint">⤓ Save Current Blueprint</button>';
+    if (active === 'sketch') return '<button type="button" class="acct-action-btn acct-save" data-acct-action="save-current" title="Save your current Sketch">⤓ Save Current Sketch</button>';
+    return '';
+  }
+
   function buildHTML(active) {
     return '<header id="acct-topbar" role="banner">'
       + '<a href="/index.html" class="acct-brand" aria-label="Datum FI — Home">'
       + '<img class="acct-logo" src="/brand/datumfi-mark-d.svg" alt="" aria-hidden="true">'
       + '<img class="acct-wordmark-img" src="/brand/datumfi-wordmark-atum-fi.svg" alt="DATUM FI">'
       + '</a>'
+      + studioToggles(active)
       + '<nav class="acct-topbar-nav" aria-label="Account navigation">'
       +   '<div class="acct-cluster">'
       +     makeTab('welcome',      'Home',         active)
@@ -113,7 +145,9 @@
       +   '<div class="acct-divider" aria-hidden="true"></div>'
       +   '<div class="acct-cluster">'
       +     makeTab('sketches',     'My Sketches',  active)
+      +     (active === 'sketch' ? saveAction(active) : '')
       +     makeTab('myblueprints', 'My Blueprints', active)
+      +     (active === 'studio' ? saveAction(active) : '')
       +   '</div>'
       +   '<div class="acct-divider" aria-hidden="true"></div>'
       +   '<div class="acct-cluster">'
@@ -125,6 +159,7 @@
       + '<div class="acct-topbar-right">'
       +   '<button type="button" class="acct-action-btn acct-signout"'
       +   ' data-acct-action="signout" aria-label="Sign out of Datum FI">Sign Out</button>'
+      +   '<a href="/pricing.html" class="acct-action-btn acct-upgrade">Upgrade</a>'
       + '</div>'
       + '</header>';
   }
@@ -174,6 +209,26 @@
       } else {
         window.location.replace('/index.html');
       }
+    });
+
+    // Origin-aware Save -> the page's own hook (window.studioSaveCurrent /
+    // sketchSaveCurrent). P1/P2: today's save behavior; P3 swaps the hook internals.
+    var _saveBtn = topbarEl.querySelector('[data-acct-action="save-current"]');
+    if (_saveBtn) _saveBtn.addEventListener('click', function () {
+      var a = getActiveTab();
+      if (a === 'studio' && typeof window.studioSaveCurrent === 'function') window.studioSaveCurrent(_saveBtn);
+      else if (a === 'sketch' && typeof window.sketchSaveCurrent === 'function') window.sketchSaveCurrent();
+    });
+
+    // Studio view-toggles -> window.setViewMode + local active state. Self-contained
+    // (own active class) so it never collides with the hidden #app-nav toggle ids.
+    topbarEl.querySelectorAll('[data-acct-view]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (typeof window.setViewMode === 'function') window.setViewMode(b.getAttribute('data-acct-view'));
+        topbarEl.querySelectorAll('[data-acct-view]').forEach(function (x) {
+          x.classList.toggle('acct-view-active', x === b);
+        });
+      });
     });
 
     if (onAccountPage) {

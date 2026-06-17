@@ -1438,10 +1438,12 @@
       </a>
       <div class="nav-links">
           <a class="nav-link active"      id="nav-link-sketch"      href="/sketch.html">Sketch</a>
+          <button type="button" class="nav-login-btn" id="sketch-save-btn" style="border-color:var(--teal);color:var(--teal);" title="Save your current Sketch">⤓ Save Current Sketch</button>
           <a class="nav-link"             id="nav-link-studio"      href="/studio.html">Studio</a>
           <a class="nav-link"             id="nav-link-shape"       href="/why-a-range.html">Shape</a>
           <span style="width:1px; height:16px; background:rgba(255,255,255,0.1); margin:0 8px;"></span>
           <a href="/vault.html" class="nav-login-btn">Sign In</a>
+          <a href="/pricing.html" class="nav-login-btn nav-upgrade-btn">Upgrade</a>
       </div>
       <button type="button" class="nav-hamburger" id="nav-hamburger" aria-label="Menu" aria-expanded="false">
           <span></span><span></span><span></span>
@@ -9346,6 +9348,25 @@ Studio is built for exactly this. See If This Shape Holds →`;
           if (modal) { modal.classList.add('open'); return; }
         }
         _doSave();
+      });
+
+      // P1/P2 hook (Decision 2): top-nav "Save Current Sketch" + the signed-IN
+      // account-topbar Save button both call this. Behavior mirrors the Phase-V CTA
+      // (existing save) for now; P3 swaps internals for forced-sign-in + gated picker
+      // and P4 adds the Drafted-vs-Modeled status rule.
+      window.sketchSaveCurrent = function() {
+        var existing = null;
+        try { existing = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch(ex) {}
+        if (existing && existing.slot_1) {
+          var modal = document.getElementById('sketch-overwrite-modal');
+          if (modal) { modal.classList.add('open'); return; }
+        }
+        _doSave();
+      };
+      var _navSaveBtn = document.getElementById('sketch-save-btn');
+      if (_navSaveBtn) _navSaveBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (typeof window.sketchSaveCurrent === 'function') window.sketchSaveCurrent();
       });
 
       var _confirmBtn = document.getElementById('sketch-overwrite-confirm');
