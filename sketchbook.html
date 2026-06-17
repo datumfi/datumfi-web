@@ -3612,33 +3612,44 @@
     }
   })();
 
-  // Personalized title default — F29
-  (function () {
+  // Personalized title — F29 / P5 Step-2. Symmetric with the Blueprint Archive: computed
+  // from the signed-in account EACH render and re-run after Clerk resolves so a fresh
+  // sign-in shows the real name with ZERO lag (the pre-trace's "self-correct" never fired
+  // on its own — it only ever recovered after a my-account visit seeded the name). A saved
+  // book still shows its own title; the 'Architect' fallback is never frozen as an override.
+  var SB_TITLE_KEY = 'datum_sketchbook_title';
+  var SB_TITLE_SUFFIX = "'s Sketchbook";
+  function _sbComputedName() {
+    var name = localStorage.getItem('datum_workspace_name');
+    if (!name) {
+      try {
+        var u = window.Clerk && window.Clerk.user;
+        var fn = u && u.firstName;
+        var em = u && u.primaryEmailAddress && u.primaryEmailAddress.emailAddress;
+        name = fn || (em ? em.split('@')[0] : '') || 'Architect';
+      } catch (e) { name = 'Architect'; }
+    }
+    return name;
+  }
+  function _sbDefaultTitle() { return _sbComputedName() + SB_TITLE_SUFFIX; }
+  window.renderNotebookTitle = function () {
     var titleEl = document.getElementById('editable-notebook-title');
     if (!titleEl) return;
-    var override = localStorage.getItem('datum_sketchbook_title');
+    var override = localStorage.getItem(SB_TITLE_KEY);
+    // Architect-only heal (mirrors Blueprint).
+    if (override === 'Architect' + SB_TITLE_SUFFIX) { try { localStorage.removeItem(SB_TITLE_KEY); } catch (e) {} override = null; }
     if (override) { titleEl.value = override; return; }
+    // A saved book carries its own title (e.g. "Sketch from 6/17") — honor it.
     var lsTitle = null;
-    try {
-      var d = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
-      if (d && d.sketchbook_title) lsTitle = d.sketchbook_title;
-    } catch(e) {}
-    if (!lsTitle) {
-      var name = localStorage.getItem('datum_workspace_name');
-      if (!name) {
-        try {
-          var u = window.Clerk && window.Clerk.user;
-          var fn = u && u.firstName;
-          var em = u && u.primaryEmailAddress && u.primaryEmailAddress.emailAddress;
-          name = fn || (em ? em.split('@')[0] : '') || 'Architect';
-        } catch(e) { name = 'Architect'; }
-      }
-      titleEl.value = name + "'s Sketchbook";
-    }
-  })();
+    try { var d = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); if (d && d.sketchbook_title) lsTitle = d.sketchbook_title; } catch (e) {}
+    if (lsTitle) { titleEl.value = lsTitle; return; }
+    titleEl.value = _sbDefaultTitle();
+  };
+  renderNotebookTitle();
   inputTitleEl.addEventListener('blur', function () {
     var v = this.value.trim();
-    if (v && v !== 'My Sketchbook') localStorage.setItem('datum_sketchbook_title', v);
+    if (v && v !== 'My Sketchbook' && v !== _sbDefaultTitle()) localStorage.setItem(SB_TITLE_KEY, v);
+    else if (v === _sbDefaultTitle()) { try { localStorage.removeItem(SB_TITLE_KEY); } catch (e) {} }
   });
 
 
@@ -3740,6 +3751,8 @@
     if (typeof syncDesktopSketchbookUI === 'function') {
       requestAnimationFrame(syncDesktopSketchbookUI);
     }
+    // P5 Step-2: re-render the title now Clerk has resolved (zero-lag real name).
+    if (typeof window.renderNotebookTitle === 'function') window.renderNotebookTitle();
     // P5 Step-1 (Option B): guide a carried-snapshot user to the explicit Save click.
     try {
       if (sessionStorage.getItem('datumfi_pending_save') === 'sketch' &&

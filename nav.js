@@ -227,6 +227,17 @@
       if (!window.Clerk) { done(); return; }
       window.Clerk.load().then(function() {
         if (!window.Clerk.user) { done(); return; }
+        // P5 Step-2: seed the app-wide display name from the signed-in account when absent
+        // so every page's synchronous parse-time title read resolves to the REAL name (not
+        // the 'Architect' fallback) even before a my-account visit. One place, both stores.
+        try {
+          if (!localStorage.getItem('datum_workspace_name')) {
+            var _u = window.Clerk.user;
+            var _em = _u.primaryEmailAddress && _u.primaryEmailAddress.emailAddress;
+            var _nm = _u.firstName || (_em ? _em.split('@')[0] : '');
+            if (_nm) localStorage.setItem('datum_workspace_name', _nm);
+          }
+        } catch (_se) {}
         var meta = window.Clerk.user.unsafeMetadata || {};
         var wantCodec = (!_hasBook() && meta.sketchbook_z) || (!_hasArch() && meta.blueprint_z);
         function go() { var C = window.DatumArchiveCodec || null; _restoreSketchbook(meta, C); _restoreBlueprint(meta, C); done(); }

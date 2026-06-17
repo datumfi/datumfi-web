@@ -1758,12 +1758,13 @@ safeLoadArchive();
 
 syncArchiveUI();
 
-// Personalized title default — F30
-(function () {
-  var titleEl = document.getElementById('archive-title');
-  if (!titleEl) return;
-  var override = localStorage.getItem('datum_blueprint_archive_title');
-  if (override) { titleEl.value = override; return; }
+// Personalized title — F30 / P5 Step-2. Computed from the signed-in account EACH render
+// and re-run after Clerk resolves (onSessionConfirmed) so a fresh-incognito sign-in shows
+// the real name with ZERO lag — no dependency on a prior my-account visit. The override
+// key is honored ONLY for a deliberate rename; the 'Architect' fallback is never frozen.
+var BP_TITLE_KEY = 'datum_blueprint_archive_title';
+var BP_TITLE_SUFFIX = "'s Blueprint Archive";
+function _bpComputedName() {
   var name = localStorage.getItem('datum_workspace_name');
   if (!name) {
     try {
@@ -1771,14 +1772,30 @@ syncArchiveUI();
       var fn = u && u.firstName;
       var em = u && u.primaryEmailAddress && u.primaryEmailAddress.emailAddress;
       name = fn || (em ? em.split('@')[0] : '') || 'Architect';
-    } catch(e) { name = 'Architect'; }
+    } catch (e) { name = 'Architect'; }
   }
-  titleEl.value = name + "'s Blueprint Archive";
-})();
+  return name;
+}
+function _bpDefaultTitle() { return _bpComputedName() + BP_TITLE_SUFFIX; }
+window.renderArchiveTitle = function () {
+  var titleEl = document.getElementById('archive-title');
+  if (!titleEl) return;
+  var override = localStorage.getItem(BP_TITLE_KEY);
+  // Architect-only heal: drop a literal fallback frozen by an earlier pre-Clerk blur so
+  // the computed name can win (never clobbers a name the user deliberately typed).
+  if (override === 'Architect' + BP_TITLE_SUFFIX) { try { localStorage.removeItem(BP_TITLE_KEY); } catch (e) {} override = null; }
+  if (override) { titleEl.value = override; return; }
+  titleEl.value = _bpDefaultTitle();
+};
+renderArchiveTitle();
 archiveTitle.addEventListener('blur', function () {
   var v = this.value.trim();
-  if (v && v !== 'My Blueprint Archive') {
-    localStorage.setItem('datum_blueprint_archive_title', v);
+  // Persist ONLY a deliberate rename — not the auto default (it recomputes) nor the
+  // placeholder — so a pre-Clerk fallback can never freeze itself.
+  if (v && v !== 'My Blueprint Archive' && v !== _bpDefaultTitle()) {
+    localStorage.setItem(BP_TITLE_KEY, v);
+  } else if (v === _bpDefaultTitle()) {
+    try { localStorage.removeItem(BP_TITLE_KEY); } catch (e) {}
   }
 });
 </script>
@@ -1808,7 +1825,7 @@ archiveTitle.addEventListener('blur', function () {
         }
       } catch (e) {}
     }
-    function _afterRestore() { _sync(); _maybeHint(); }
+    function _afterRestore() { _sync(); if (typeof window.renderArchiveTitle === 'function') window.renderArchiveTitle(); _maybeHint(); }
     if (typeof window._datumRestoreFromClerk === 'function') window._datumRestoreFromClerk(function () { requestAnimationFrame(_afterRestore); });
     else requestAnimationFrame(_afterRestore);
   }
