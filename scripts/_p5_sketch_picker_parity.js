@@ -105,14 +105,23 @@ const armS1 = async (page, age) => page.evaluate((a) => {
   out.afterNavSave = await page.evaluate(() => {
     var b = null; try { b = JSON.parse(localStorage.getItem('datumfi_sketchbook_v1')); } catch (e) {}
     var saved = 0; for (var n = 1; n <= 4; n++) { var t = document.getElementById('tile-slot-' + n); if (t && t.classList.contains('has-profile')) saved++; }
-    var pill2 = (document.querySelector('#tile-slot-2 .slot-status-pill') || {}).textContent || '';
+    var pillEl = document.querySelector('#tile-slot-2 .slot-status-pill');
+    var pill2 = (pillEl || {}).textContent || '';
+    // Guard the white-on-white regression: the DRAFTED pill must be DARK/visible on the
+    // light Sketchbook card (Studio's dark-popup palette is invisible here).
+    var pillColor = '', pillRgbSum = 999;
+    if (pillEl) {
+      pillColor = getComputedStyle(pillEl).color;
+      var mm = pillColor.match(/\d+/g);
+      if (mm) pillRgbSum = (+mm[0]) + (+mm[1]) + (+mm[2]);
+    }
     return {
       url: location.pathname,
       slot1: !!(b && b.slot_1), slot2: !!(b && b.slot_2), slot3: !!(b && b.slot_3), slot4: !!(b && b.slot_4),
       slot2status: b && b.slot_2 && b.slot_2.status, slot2age: b && b.slot_2 && b.slot_2.age,
       slot2hasS2: !!(b && b.slot_2 && b.slot_2.s2_design),
       tilesSaved: saved, tile2Profile: !!(document.getElementById('tile-slot-2') || {}).classList && document.getElementById('tile-slot-2').classList.contains('has-profile'),
-      pill2: pill2,
+      pill2: pill2, pillColor: pillColor, pillRgbSum: pillRgbSum,
       pendingCleared: !sessionStorage.getItem('datumfi_pending_save')
     };
   });
@@ -213,6 +222,7 @@ const armS1 = async (page, age) => page.evaluate((a) => {
   // (e)
   F(nv.slot2status === 'Drafted', 'e: nav picker save status != Drafted (' + nv.slot2status + ')');
   F(/Drafted/i.test(nv.pill2), 'e: tile A-02 pill not Drafted (' + nv.pill2 + ')');
+  F(nv.pillRgbSum < 300, 'e: DRAFTED pill is too light to read on the light card — white-on-white regression (' + nv.pillColor + ')');
   F(pv.slot1status === 'Modeled', 'e: Phase-V CTA save status != Modeled (' + pv.slot1status + ')');
   F(/Modeled/i.test(pv.pill1), 'e: tile A-01 pill not Modeled (' + pv.pill1 + ')');
   F(pv.slot2status === 'Drafted', 'e: prior Drafted slot mutated by Phase-V save (' + pv.slot2status + ')');
