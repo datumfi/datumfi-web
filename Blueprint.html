@@ -952,18 +952,24 @@ button {
     inset 0 1px rgba(255,255,255,.28);
 }
 
+/* P6.1 — the obsolete "Save Current Blueprint" primary button is gone; its gold
+   identity transfers to the two remaining actions (Compare + Open Studio), centered
+   by .archive-actions (justify-content:center). */
 .secondary-action {
-  height: 43px;
-  min-width: 166px;
-  border: 1px solid rgba(32,36,43,.20);
+  height: 48px;
+  min-width: 200px;
+  border: 0;
   border-radius: 3px;
-  background: rgba(255,255,255,.12);
-  color: rgba(32,36,43,.72);
+  background: linear-gradient(180deg, #d8b13e, #c9a12f);
+  color: #15120a;
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: .16em;
   text-transform: uppercase;
+  box-shadow:
+    0 16px 30px rgba(201,168,76,.20),
+    inset 0 1px rgba(255,255,255,.28);
 }
 
 .footer-note {
@@ -1228,7 +1234,6 @@ button {
           </main>
 
           <div class="archive-actions">
-            <button class="primary-action" id="action-save-blueprint" type="button">Save Current Blueprint →</button>
             <button class="secondary-action" id="action-compare-blueprints" type="button">Compare</button>
             <button class="secondary-action" id="action-open-studio" type="button">Open Studio</button>
           </div>
@@ -1515,7 +1520,6 @@ function syncArchiveUI() {
  * captureDOM + DatumBlueprint.save({slot}). Premium-locked slots still gate. */
 function goToStudioToSave() {
   try { sessionStorage.setItem('datumfi_skip_entry_overlay', '1'); } catch (e) {}
-  showToast('Open Studio to build and save your Blueprint.');
   window.location.href = '/studio.html';
 }
 
@@ -1526,16 +1530,17 @@ function saveToSlot(slotId) {
 }
 
 function saveToFirstAvailableSlot() {
-  // P5 Step-1: if Studio stashed a snapshot before the signed-out vault hop, save it
-  // HERE — DatumBlueprint.save() is DOM-free (only captureDOM reads the DOM, and that
-  // already ran in Studio), and writeSlot targets the same ARCHIVE_KEY this page
-  // renders from. No carried plan -> preserve the legacy bounce-to-Studio behavior.
+  // P6.1: AUTO-CONSUME on landing. The "Save Current Blueprint" button is gone;
+  // when a signed-out Studio save carried a snapshot through the vault hop, this
+  // fires once from onSessionConfirmed and saves it inline. DatumBlueprint.save()
+  // is DOM-free (captureDOM already ran in Studio) and targets the same ARCHIVE_KEY
+  // this page renders from. No carried plan -> nothing to do (no bounce).
   var snapRaw = null;
   try { snapRaw = sessionStorage.getItem('datumfi_blueprint_current_snapshot'); } catch (e) {}
-  if (!snapRaw) { goToStudioToSave(); return; }
+  if (!snapRaw) { return; }
   var bp = null;
   try { bp = JSON.parse(snapRaw); } catch (e) {}
-  if (!bp) { goToStudioToSave(); return; }
+  if (!bp) { return; }
 
   // First EMPTY slot among the ones this user may write (free = slot 1 only). All
   // writable slots full -> ask the user to delete one; no silent overwrite on landing.
@@ -1649,8 +1654,7 @@ document.querySelectorAll('.blueprint-slot').forEach(tile => {
     if (BlueprintArchive['slot' + slotId]) {
       AppSessionState.activeBlueprintSlot = slotId;
       AppSessionState.userExplicitlySelectedBlueprint = true;
-      syncArchiveUI();
-      showToast(`Sheet A-0${slotId} selected. Ready to reopen in Studio.`);
+      syncArchiveUI();   // P6.1 — selection is shown by the tile's active state; no toast
     } else {
       saveToSlot(slotId);
     }
@@ -1690,8 +1694,6 @@ document.addEventListener('click', function(event) {
 }, true);
 /* ── END R3.6 OPEN BLUEPRINT HYDRATION HANDSHAKE ── */
 
-document.getElementById('action-save-blueprint').addEventListener('click', saveToFirstAvailableSlot);
-
 document.getElementById('action-compare-blueprints').addEventListener('click', openCompareModal);
 
 document.getElementById('action-open-studio').addEventListener('click', () => {
@@ -1706,23 +1708,11 @@ document.getElementById('action-open-studio').addEventListener('click', () => {
   }
 });
 
-var _retAccBtn = document.getElementById('action-return-account');
-if (_retAccBtn) _retAccBtn.addEventListener('click', () => {
-  showToast('Returning to My Account.');
-});
-
-var _loginBtn = document.getElementById('login-button');
-if (_loginBtn) _loginBtn.addEventListener('click', () => {
-  AppSessionState.userHasPremiumToken = !AppSessionState.userHasPremiumToken;
-  syncArchiveUI();
-  showToast(AppSessionState.userHasPremiumToken ? 'Demo login: Blueprint capacity unlocked.' : 'Demo login: Starter capacity restored.');
-});
-
-var _upgradeNavBtn = document.getElementById('upgrade-from-nav');
-if (_upgradeNavBtn) _upgradeNavBtn.addEventListener('click', () => {
-  document.getElementById('premium-gate-modal').classList.add('open');
-});
-
+// P6.1 — stripped dead demo artifacts (no markup elements existed; handlers never
+// bound): action-return-account ("Returning to My Account."), login-button (demo
+// token toggle), upgrade-from-nav. Real Clerk sign-in + the P6 token-unlock make
+// them redundant. The premium-gate-modal + its action-upgrade CTA below are KEPT
+// (P6 deactivated-but-intact infrastructure, ready to re-enable as 1-free+premium).
 document.getElementById('action-upgrade').addEventListener('click', () => {
   AppSessionState.userHasPremiumToken = true;
   document.getElementById('premium-gate-modal').classList.remove('open');
@@ -1836,18 +1826,17 @@ archiveTitle.addEventListener('blur', function () {
       AppSessionState.userHasPremiumToken = true;
       if (typeof syncArchiveUI === 'function') syncArchiveUI();
     }
-    // P5 Step-1 (Option B): if Studio carried a snapshot through the signed-out hop,
-    // land first and guide the user to the explicit Save click — do NOT auto-fire.
-    function _maybeHint() {
+    // P6.1 (reverses P5 Option-B): a Studio snapshot carried through the signed-out
+    // vault hop now AUTO-SAVES inline on landing — no explicit "Save Current" button.
+    // saveToFirstAvailableSlot() consumes the pending flag + snapshot, so this fires
+    // exactly ONCE (a second landing finds no flag). All slots full -> its own "All
+    // slots taken" guard. Gated on the pending flag so an ordinary visit does nothing.
+    function _autoConsume() {
       try {
-        if (sessionStorage.getItem('datumfi_pending_save') === 'blueprint' &&
-            sessionStorage.getItem('datumfi_blueprint_current_snapshot') &&
-            typeof showToast === 'function') {
-          showToast('Your plan is ready — click "Save Current Blueprint →" to keep it.');
-        }
+        if (sessionStorage.getItem('datumfi_pending_save') === 'blueprint') saveToFirstAvailableSlot();
       } catch (e) {}
     }
-    function _afterRestore() { _sync(); if (typeof window.renderArchiveTitle === 'function') window.renderArchiveTitle(); _maybeHint(); }
+    function _afterRestore() { _sync(); if (typeof window.renderArchiveTitle === 'function') window.renderArchiveTitle(); _autoConsume(); }
     if (typeof window._datumRestoreFromClerk === 'function') window._datumRestoreFromClerk(function () { requestAnimationFrame(_afterRestore); });
     else requestAnimationFrame(_afterRestore);
   }

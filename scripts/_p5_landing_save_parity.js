@@ -65,12 +65,10 @@ const F = (cond, msg) => { if (!cond) out.findings.push(msg); };
     return { url: location.pathname + location.search, pending: sessionStorage.getItem('datumfi_pending_save'), schema: s && s.schema, accounts: s && s.accounts ? s.accounts.length : null };
   });
 
-  // ── B/C — Blueprint lands (hint), explicit Save writes the first EMPTY slot, consumes once ──
+  // ── B/C — Blueprint lands; P6.1 AUTO-CONSUME (reverses P5 Option-B) saves the carried
+  //    snapshot to the first EMPTY slot on landing — no explicit button — and consumes once.
   await page.goto(base + '/Blueprint.html', { waitUntil: 'load' });
-  await page.waitForTimeout(1500);
-  out.bpHint = await page.evaluate(() => (document.getElementById('toast') || {}).textContent || '');
-  await page.click('#action-save-blueprint');
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(1800);
   out.bpAfterSave = await page.evaluate(() => {
     var slot = null, arch = null;
     try { slot = JSON.parse(localStorage.getItem('datum_blueprint_state_1')); } catch (e) {}
@@ -84,16 +82,18 @@ const F = (cond, msg) => { if (!cond) out.findings.push(msg); };
     };
   });
 
-  // ── D — all writable slots full -> message, no write, snapshot NOT consumed ──
+  // ── D — all writable slots full -> auto-consume on the next landing shows the all-full
+  //    guard, writes nothing, and PRESERVES the snapshot (no silent drop). Seed a full LS
+  //    archive + a fresh pending snapshot, then reload to re-fire onSessionConfirmed.
   await page.evaluate(() => {
-    try { AppSessionState.userHasPremiumToken = true; } catch (e) {}
-    [1, 2, 3, 4].forEach(function (n) { BlueprintArchive['slot' + n] = BlueprintArchive['slot' + n] || { schema: 'DatumFIBlueprintV1', accounts: [], datum: { net_datum_v1: 1 }, profile: {} }; });
-    sessionStorage.setItem('datumfi_blueprint_current_snapshot', JSON.stringify({ schema: 'DatumFIBlueprintV1', accounts: [], datum: { net_datum_v1: 1 }, profile: {} }));
+    var full = { schema: 'DatumFIBlueprintV1', accounts: [], datum: { net_datum_v1: 1 }, profile: {}, blueprint_id: 'full' };
+    var arch = { slot1: full, slot2: full, slot3: full, slot4: full, activeBlueprintSlot: 1, userHasPremiumToken: true };
+    try { localStorage.setItem('datumfi_blueprint_archive_v1', JSON.stringify(arch)); } catch (e) {}
+    sessionStorage.setItem('datumfi_blueprint_current_snapshot', JSON.stringify({ schema: 'DatumFIBlueprintV1', accounts: [], datum: { net_datum_v1: 1 }, profile: {}, blueprint_id: 'carry' }));
     sessionStorage.setItem('datumfi_pending_save', 'blueprint');
-    var t = document.getElementById('toast'); if (t) t.textContent = '';
   });
-  await page.click('#action-save-blueprint');
-  await page.waitForTimeout(300);
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForTimeout(1800);
   out.bpAllFull = await page.evaluate(() => ({ toast: (document.getElementById('toast') || {}).textContent || '', snapStillThere: !!sessionStorage.getItem('datumfi_blueprint_current_snapshot') }));
 
   // ── A2 — Sketch stashes a snapshot before the signed-out hop ──────────────────────

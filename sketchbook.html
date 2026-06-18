@@ -2702,24 +2702,31 @@
       inset 0 1px rgba(255,255,255,.32);
   }
 
+  /* P6.1 — the obsolete "Save Current Sketch" primary button is gone; its gold
+     identity transfers to the two remaining actions (Compare + Open Sketch),
+     centered by .sketchbook-actions (justify-content:center). */
   .sketch-secondary-action {
-    height: 43px;
-    min-width: 166px;
-    border: 1px solid rgba(32,36,43,.20);
+    height: 48px;
+    min-width: 200px;
+    border: 0;
     border-radius: 3px;
-    background: rgba(255,255,255,.12);
-    color: rgba(32,36,43,.72);
+    background: linear-gradient(180deg, #d8b13e, #c9a12f);
+    color: #15120a;
     font-family: var(--font-mono);
     font-size: 10px;
     font-weight: 700;
     letter-spacing: .16em;
     text-transform: uppercase;
+    box-shadow:
+      0 16px 30px rgba(201,168,76,.20),
+      inset 0 1px rgba(255,255,255,.28);
   }
 
   .sketch-secondary-action:hover {
-    border-color: rgba(29,158,117,.32);
-    background: rgba(255,255,255,.18);
-    color: rgba(32,36,43,.86);
+    transform: translateY(-1px);
+    box-shadow:
+      0 18px 34px rgba(201,168,76,.24),
+      inset 0 1px rgba(255,255,255,.32);
   }
 
   .compare-sketch-frame {
@@ -2956,7 +2963,6 @@
         </main>
 
         <div class="sketchbook-actions">
-          <button class="sketch-primary-action" id="action-save-current-sketch" type="button" title="Save your current Sketch shape to this slot">Save Current Sketch &rarr;</button>
           <button class="sketch-secondary-action" id="action-compare-sketches" type="button">Compare</button>
           <button class="sketch-secondary-action" id="action-open-sketch" type="button" title="Reopen selected Sketch and continue designing">Open Sketch</button>
         </div>
@@ -3416,6 +3422,30 @@
     showSketchToast(`Sketch saved to Page 0${slotId}.`);
   }
 
+  // P6.1 (reverses P5 Option-B): a Sketch carried through the signed-out vault hop
+  // AUTO-SAVES inline on landing — the "Save Current Sketch" button is gone. Fires
+  // exactly ONCE: it consumes the pending flag + snapshot (a second landing finds
+  // none). All four pages full -> the existing "all pages filled" guard. The caller
+  // (onSessionConfirmed) gates on the pending flag so an ordinary visit does nothing.
+  function _autoConsumeSketch() {
+    var _snap = null;
+    try { _snap = JSON.parse(sessionStorage.getItem('datumfi_sketch_current_snapshot') || 'null'); } catch(ex) {}
+    if (!_snap) return;
+    var book = {};
+    try { book = JSON.parse(localStorage.getItem(LS_KEY) || '{}') || {}; } catch(ex) { book = {}; }
+    var slot = null;
+    for (var n = 1; n <= 4; n++) { if (!book['slot_' + n]) { slot = n; break; } }
+    if (!slot) { showSketchToast('All available sketch pages are already filled.'); return; }
+    book['slot_' + slot] = _snap;
+    try { localStorage.setItem(LS_KEY, JSON.stringify(book)); } catch(ex) {}
+    try { localStorage.setItem('datum_sketch_state_' + slot, JSON.stringify(_snap)); } catch(ex) {}
+    _mirrorSketchbookToClerk(book);
+    executeSavePayloadToSlot(slot, _contractToSlot(_snap));   // updates UI + save-confirm toast
+    try { sessionStorage.removeItem('datumfi_pending_save'); } catch(ex) {}
+    try { sessionStorage.removeItem('datumfi_sketch_current_snapshot'); } catch(ex) {}
+  }
+
+
   // Intercept Erase Event Triggers to call confirmation layer modals system dialogue box
   function bindEraseActionListeners() {
     document.querySelectorAll('.slot-erase-action').forEach(btn => {
@@ -3486,20 +3516,14 @@
          if (!wasSelected) {
            this.classList.add('selected');
            document.getElementById('action-open-sketch').classList.add('action-active');
-           showSketchToast(`Page 0${activeSlotId} selected. Ready to reopen in Sketch.`);
+           // P6.1 — selection is shown by the tile's active state; no toast
          }
       } else {
-         var _snap = null;
-         try { _snap = JSON.parse(sessionStorage.getItem('datumfi_sketch_current_snapshot') || 'null'); } catch(ex) {}
-         if (_snap) {
-           var _lsPin = {};
-           try { _lsPin = JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch(ex) {}
-           try { _lsPin['slot_' + activeSlotId] = _snap; localStorage.setItem(LS_KEY, JSON.stringify(_lsPin)); } catch(ex) {}
-           _mirrorSketchbookToClerk(_lsPin);
-           executeSavePayloadToSlot(activeSlotId, _contractToSlot(_snap));
-         } else {
-           showSketchToast('Return to Sketch to save a new shape →');
-         }
+         // P6.1 — an EMPTY pin opens a FRESH Sketch (Dossier/Profile defaults seed on
+         // load), mirroring Blueprint's empty-pin -> fresh Studio. No snapshot pinning:
+         // a carried snapshot is now auto-consumed on landing, not pinned by hand.
+         try { sessionStorage.setItem('datumfi_skip_entry_overlay', '1'); } catch(ex) {}
+         window.location.href = '/sketch.html';
       }
     });
   });
@@ -3524,26 +3548,6 @@
   });
 
 
-  document.getElementById('action-save-current-sketch').addEventListener('click', () => {
-    var _snap = null;
-    try { _snap = JSON.parse(sessionStorage.getItem('datumfi_sketch_current_snapshot') || 'null'); } catch(ex) {}
-    if (!_snap) {
-      showSketchToast('Return to Sketch to save a new shape →');
-      return;
-    }
-    if (SketchbookDatabase.slot1 && !AppSessionState.userHasPremiumToken) {
-      AppSessionState._pendingCapacitySave = true;
-      document.getElementById('discover-capacity-modal').classList.add('open');
-      return;
-    }
-    var _lsSCS = {};
-    try { _lsSCS = JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch(ex) {}
-    try { _lsSCS.slot_1 = _snap; localStorage.setItem(LS_KEY, JSON.stringify(_lsSCS)); } catch(ex) {}
-    _mirrorSketchbookToClerk(_lsSCS);
-    executeSavePayloadToSlot(1, _contractToSlot(_snap));
-    // P5 Step-1: the explicit click consumes the pending-save intent (Option B).
-    try { sessionStorage.removeItem('datumfi_pending_save'); } catch(ex) {}
-  });
 
   document.getElementById('action-later-capacity').addEventListener('click', () => {
     document.getElementById('discover-capacity-modal').classList.remove('open');
@@ -3806,12 +3810,12 @@
     } else if (typeof window.renderNotebookTitle === 'function') {
       window.renderNotebookTitle();
     }
-    // P5 Step-1 (Option B): guide a carried-snapshot user to the explicit Save click.
+    // P6.1 (reverses P5 Option-B): auto-consume the carried snapshot on landing —
+    // save it inline to the first free page, no explicit "Save Current Sketch" click.
     try {
       if (sessionStorage.getItem('datumfi_pending_save') === 'sketch' &&
-          sessionStorage.getItem('datumfi_sketch_current_snapshot') &&
-          typeof showSketchToast === 'function') {
-        setTimeout(function () { showSketchToast('Your sketch is ready — click "Save Current Sketch →" to keep it.'); }, 400);
+          typeof _autoConsumeSketch === 'function') {
+        _autoConsumeSketch();
       }
     } catch (e) {}
   }

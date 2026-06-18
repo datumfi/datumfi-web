@@ -96,32 +96,23 @@ const armS1 = async (page, age) => page.evaluate((a) => {
   await page.evaluate(() => { if (!document.getElementById('sketch-save-sb-pop')) window.sketchSaveCurrent(); });
   await page.waitForTimeout(120);
 
-  // ── (b)+(e nav=DRAFTED)+(f slot N) — save to SLOT 2 via the picker, then navigate ────
-  await Promise.all([
-    page.waitForURL('**/sketchbook.html', { timeout: 9000 }).catch(() => {}),
-    page.evaluate(() => { document.querySelectorAll('#sketch-save-sb-pop button')[1].click(); }) // index 1 = A-02
-  ]);
+  // ── (b)+(e nav=DRAFTED)+(f slot N) — save to SLOT 2 via the picker. P6.1 Item-3: the
+  //    nav-picker save now STAYS on the Sketch (Studio parity = save + keep working), so
+  //    assert the write landed in localStorage + did NOT navigate. The DRAFTED-pill
+  //    visibility (white-on-white guard) moves to the Phase-V Sketchbook render below,
+  //    where slot_2 is still Drafted and the tile is actually painted.
+  await page.evaluate(() => { document.querySelectorAll('#sketch-save-sb-pop button')[1].click(); }); // index 1 = A-02
   await page.waitForTimeout(1500);
   out.afterNavSave = await page.evaluate(() => {
     var b = null; try { b = JSON.parse(localStorage.getItem('datumfi_sketchbook_v1')); } catch (e) {}
-    var saved = 0; for (var n = 1; n <= 4; n++) { var t = document.getElementById('tile-slot-' + n); if (t && t.classList.contains('has-profile')) saved++; }
-    var pillEl = document.querySelector('#tile-slot-2 .slot-status-pill');
-    var pill2 = (pillEl || {}).textContent || '';
-    // Guard the white-on-white regression: the DRAFTED pill must be DARK/visible on the
-    // light Sketchbook card (Studio's dark-popup palette is invisible here).
-    var pillColor = '', pillRgbSum = 999;
-    if (pillEl) {
-      pillColor = getComputedStyle(pillEl).color;
-      var mm = pillColor.match(/\d+/g);
-      if (mm) pillRgbSum = (+mm[0]) + (+mm[1]) + (+mm[2]);
-    }
+    var filled = 0; for (var n = 1; n <= 4; n++) { if (b && b['slot_' + n]) filled++; }
     return {
       url: location.pathname,
+      stayedOnSketch: location.pathname.indexOf('sketch.html') >= 0,
       slot1: !!(b && b.slot_1), slot2: !!(b && b.slot_2), slot3: !!(b && b.slot_3), slot4: !!(b && b.slot_4),
       slot2status: b && b.slot_2 && b.slot_2.status, slot2age: b && b.slot_2 && b.slot_2.age,
       slot2hasS2: !!(b && b.slot_2 && b.slot_2.s2_design),
-      tilesSaved: saved, tile2Profile: !!(document.getElementById('tile-slot-2') || {}).classList && document.getElementById('tile-slot-2').classList.contains('has-profile'),
-      pill2: pill2, pillColor: pillColor, pillRgbSum: pillRgbSum,
+      filledSlots: filled,
       pendingCleared: !sessionStorage.getItem('datumfi_pending_save')
     };
   });
@@ -168,10 +159,17 @@ const armS1 = async (page, age) => page.evaluate((a) => {
   out.phaseV = await page.evaluate(() => {
     var b = null; try { b = JSON.parse(localStorage.getItem('datumfi_sketchbook_v1')); } catch (e) {}
     var saved = 0; for (var n = 1; n <= 4; n++) { var t = document.getElementById('tile-slot-' + n); if (t && t.classList.contains('has-profile')) saved++; }
+    // White-on-white guard (relocated from the nav save): the DRAFTED slot_2 pill must be
+    // DARK/visible on the light Sketchbook card. Read it here where the tile is painted.
+    var pEl = document.querySelector('#tile-slot-2 .slot-status-pill');
+    var p2 = (pEl || {}).textContent || '';
+    var p2Color = '', p2RgbSum = 999;
+    if (pEl) { p2Color = getComputedStyle(pEl).color; var mm = p2Color.match(/\d+/g); if (mm) p2RgbSum = (+mm[0]) + (+mm[1]) + (+mm[2]); }
     return {
       slot1status: b && b.slot_1 && b.slot_1.status, slot2status: b && b.slot_2 && b.slot_2.status,
       tilesSaved: saved,
-      pill1: (document.querySelector('#tile-slot-1 .slot-status-pill') || {}).textContent || ''
+      pill1: (document.querySelector('#tile-slot-1 .slot-status-pill') || {}).textContent || '',
+      pill2: p2, pill2Color: p2Color, pill2RgbSum: p2RgbSum
     };
   });
 
@@ -204,10 +202,9 @@ const armS1 = async (page, age) => page.evaluate((a) => {
   F(ha && ha.exists, 'a: picker did not open when anchored to a hidden nav button (signed-in topbar case)');
   F(ha && ha.exists && ha.width > 0 && ha.left >= -1 && ha.right <= ha.vw + 1 && ha.top >= -1, 'a: hidden-anchor picker rendered OFF-SCREEN — the signed-in "does nothing" bug (' + JSON.stringify(ha) + ')');
   // (b) + (f slot N)
-  F(nv.url.indexOf('sketchbook.html') >= 0, 'b: nav save did not navigate to sketchbook (' + nv.url + ')');
+  F(nv.stayedOnSketch, 'b: P6.1 Item-3 — nav-picker save must STAY on the Sketch, instead navigated to (' + nv.url + ')');
   F(nv.slot2 && !nv.slot1 && !nv.slot3 && !nv.slot4, 'f/b: write did not land in slot 2 ONLY (s1=' + nv.slot1 + ' s2=' + nv.slot2 + ' s3=' + nv.slot3 + ' s4=' + nv.slot4 + ')');
-  F(nv.tilesSaved === 1, 'b: shared-source double-count — expected 1 saved tile, got ' + nv.tilesSaved);
-  F(nv.tile2Profile, 'b: Sketchbook tile A-02 not rendered as saved');
+  F(nv.filledSlots === 1, 'b: shared-source double-count — expected 1 filled slot, got ' + nv.filledSlots);
   F(nv.pendingCleared, 'b: pending_save not cleared after picker save (re-consume risk)');
   // (c)
   F(out.reopenErrs === 0, 'c: page errors during partial-S1 reopen (' + out.reopenErrs + ')');
@@ -221,8 +218,8 @@ const armS1 = async (page, age) => page.evaluate((a) => {
   F(ov.backToList, 'd: Cancel did not return to the slot list');
   // (e)
   F(nv.slot2status === 'Drafted', 'e: nav picker save status != Drafted (' + nv.slot2status + ')');
-  F(/Drafted/i.test(nv.pill2), 'e: tile A-02 pill not Drafted (' + nv.pill2 + ')');
-  F(nv.pillRgbSum < 300, 'e: DRAFTED pill is too light to read on the light card — white-on-white regression (' + nv.pillColor + ')');
+  F(/Drafted/i.test(pv.pill2), 'e: tile A-02 pill not Drafted (' + pv.pill2 + ')');
+  F(pv.pill2RgbSum < 300, 'e: DRAFTED pill is too light to read on the light card — white-on-white regression (' + pv.pill2Color + ')');
   F(pv.slot1status === 'Modeled', 'e: Phase-V CTA save status != Modeled (' + pv.slot1status + ')');
   F(/Modeled/i.test(pv.pill1), 'e: tile A-01 pill not Modeled (' + pv.pill1 + ')');
   F(pv.slot2status === 'Drafted', 'e: prior Drafted slot mutated by Phase-V save (' + pv.slot2status + ')');

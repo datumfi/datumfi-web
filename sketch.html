@@ -9333,10 +9333,14 @@ Studio is built for exactly this. See If This Shape Holds →`;
         // stale pending-save flag so the Sketchbook never re-consumes this snapshot into a
         // second slot (no phantom double-count).
         try { sessionStorage.removeItem('datumfi_pending_save'); } catch(ex) {}
-        // Navigate only after Clerk write commits; fall-through on error or logged-out.
-        // Origin-relative so the post-save hop stays on the current host (e.g. a
-        // local dev server) instead of bouncing to the production domain.
-        function _nav() { window.location.href = new URL('sketchbook.html', window.location.href).href; }
+        // P6.1 Item-3: the NAV picker save STAYS on the Sketch (Studio parity — save
+        // + keep working, no forced reopen). Only the Phase-V completion CTA hands off
+        // to the Sketchbook. Origin-relative so the hop stays on the current host.
+        function _finish() {
+          if (source === 'phaseV') { window.location.href = new URL('sketchbook.html', window.location.href).href; return; }
+          var _t = document.getElementById('sketchOverlayToast');
+          if (_t) { _t.textContent = 'Saved to A-0' + _slot; _t.classList.add('show'); clearTimeout(_finish._t); _finish._t = setTimeout(function() { _t.classList.remove('show'); }, 2400); }
+        }
         // Skip the Clerk cross-device mirror on localhost: the production Clerk
         // instance (clerk.datumfi.com) redirects to the primary domain when
         // loaded from 127.0.0.1, which would yank the save flow off localhost.
@@ -9352,19 +9356,19 @@ Studio is built for exactly this. See If This Shape Holds →`;
             var _skZ  = _Codec.encodeSketchbook(_book);
             console.log('[sketchbook mirror] sketchbook_z bytes:', _Codec.byteLen(_skZ));
             window.Clerk.load().then(function() {
-              if (!window.Clerk.user) { _nav(); return; }
+              if (!window.Clerk.user) { _finish(); return; }
               var _ex = window.Clerk.user.unsafeMetadata || {};
               var _base = {};
               for (var _k in _ex) { if (Object.prototype.hasOwnProperty.call(_ex, _k) && _k !== 'sketchbook') _base[_k] = _ex[_k]; }
               var _res = _Codec.safeMerge(_base, { sketchbook_z: _skZ });
               console.log('[sketchbook mirror] merged total:', _res.bytes, '/ 8192 | ok:', _res.ok);
-              if (!_res.ok) { console.warn('[sketchbook mirror] over 8192B cap; kept LS truth + legacy key, did NOT write:', _res.bytes); _nav(); return; }
-              window.Clerk.user.update({ unsafeMetadata: _res.merged }).then(_nav).catch(function(e) { console.warn('[mirror] sketchbook failed', e); _nav(); });
-            }).catch(_nav);
+              if (!_res.ok) { console.warn('[sketchbook mirror] over 8192B cap; kept LS truth + legacy key, did NOT write:', _res.bytes); _finish(); return; }
+              window.Clerk.user.update({ unsafeMetadata: _res.merged }).then(_finish).catch(function(e) { console.warn('[mirror] sketchbook failed', e); _finish(); });
+            }).catch(_finish);
             return;
           }
         } catch(_e) {}
-        _nav();
+        _finish();
       }
 
       // P5 Step-3: signed-OUT Save forces sign-in and lands on the Sketchbook. We capture

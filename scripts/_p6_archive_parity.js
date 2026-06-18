@@ -97,13 +97,15 @@ async function eraseSketch(page, slot) {
     return {
       token: !!(acc && acc.textContent.trim() === 'Studio'),   // UI proxy for userHasPremiumToken
       lockedSlots: locked, openable: openable,
-      modalPresent: !!document.getElementById('premium-gate-modal')
+      modalPresent: !!document.getElementById('premium-gate-modal'),
+      saveBtn: !!document.getElementById('action-save-blueprint')   // P6.1: must be GONE
     };
   });
   check('BP: signed-in seeds premium token', bpUnlock.token);
   check('BP: no slot locked (all 4 unlocked)', bpUnlock.lockedSlots.length === 0, bpUnlock.lockedSlots.join(','));
   check('BP: all 4 slots openable', bpUnlock.openable === 4, bpUnlock.openable);
   check('BP: premium-gate-modal still in DOM (deactivated)', bpUnlock.modalPresent);
+  check('BP P6.1: "Save Current Blueprint" button removed', !bpUnlock.saveBtn);
 
   // (b) PURGE: snapshot + draft belong to slot 2 → erase slot 2 clears every copy.
   await page.evaluate(() => {
@@ -145,6 +147,41 @@ async function eraseSketch(page, slot) {
   check('BP guard: unrelated snapshot PRESERVED', bpGuard.snapshot);
   check('BP erase: datum_blueprint_state_3 cleared', !bpGuard.perSlot3);
 
+  // (P6.1) AUTO-CONSUME on landing: a signed-out Studio save carried a snapshot +
+  // pending flag through the vault hop → must auto-save inline on the next signed-in
+  // landing (no "Save Current" button), fire ONCE, and clear the flag. Slots 2,3 are
+  // empty after the purge tests, so auto-consume fills the first free slot (2).
+  await page.evaluate(() => {
+    var bp = window.DatumBlueprint['new']();
+    bp.blueprint_id = 'bp-auto';
+    bp.datum.net_datum_v1 = 77000;
+    bp.accounts = [{ id: 'ra', baseId: 'taxable', value: 123000, holdings: [] }];
+    sessionStorage.setItem('datumfi_blueprint_current_snapshot', JSON.stringify(bp));
+    sessionStorage.setItem('datumfi_pending_save', 'blueprint');
+  });
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForTimeout(2600);
+  const bpAuto = await page.evaluate(() => {
+    var arch = null; try { arch = JSON.parse(localStorage.getItem('datumfi_blueprint_archive_v1') || 'null'); } catch (e) {}
+    var slot = 0; for (var n = 1; n <= 4; n++) { var s = arch && arch['slot' + n]; if (s && s.blueprint_id === 'bp-auto') { slot = n; break; } }
+    return {
+      savedSlot: slot,
+      pending: sessionStorage.getItem('datumfi_pending_save') != null,
+      snapshot: sessionStorage.getItem('datumfi_blueprint_current_snapshot') != null
+    };
+  });
+  check('BP P6.1: auto-consume saved carried snapshot', bpAuto.savedSlot > 0, bpAuto.savedSlot);
+  check('BP P6.1: auto-consume cleared pending flag', !bpAuto.pending);
+  check('BP P6.1: auto-consume cleared snapshot', !bpAuto.snapshot);
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForTimeout(2200);
+  const bpAutoOnce = await page.evaluate(() => {
+    var arch = null; try { arch = JSON.parse(localStorage.getItem('datumfi_blueprint_archive_v1') || 'null'); } catch (e) {}
+    var c = 0; for (var n = 1; n <= 4; n++) { var s = arch && arch['slot' + n]; if (s && s.blueprint_id === 'bp-auto') c++; }
+    return c;
+  });
+  check('BP P6.1: auto-consume fires ONCE (no double-save)', bpAutoOnce === 1, bpAutoOnce);
+
   // ════════ SKETCHBOOK STORE ════════
   await page.goto(BASE + '/sketchbook.html', { waitUntil: 'load' });
   await page.waitForTimeout(2600);
@@ -177,7 +214,8 @@ async function eraseSketch(page, slot) {
       token: !!(acc && acc.textContent.trim() === 'Design'),   // UI proxy for userHasPremiumToken
       lockedSlots: locked, openable: openable,
       modalPresent: !!document.getElementById('premium-gate-modal'),
-      capacityPresent: !!document.getElementById('discover-capacity-modal')
+      capacityPresent: !!document.getElementById('discover-capacity-modal'),
+      saveBtn: !!document.getElementById('action-save-current-sketch')   // P6.1: must be GONE
     };
   });
   check('SK: signed-in seeds premium token', skUnlock.token);
@@ -185,6 +223,7 @@ async function eraseSketch(page, slot) {
   check('SK: all 4 slots openable', skUnlock.openable === 4, skUnlock.openable);
   check('SK: premium-gate-modal still in DOM (deactivated)', skUnlock.modalPresent);
   check('SK: discover-capacity-modal still in DOM (deactivated)', skUnlock.capacityPresent);
+  check('SK P6.1: "Save Current Sketch" button removed', !skUnlock.saveBtn);
 
   // (b) PURGE: snapshot belongs to slot 2 → erase slot 2 clears every copy.
   await page.evaluate(() => {
@@ -227,9 +266,82 @@ async function eraseSketch(page, slot) {
   check('bare-open: BP draft empty (fresh Studio)', !bpPurge.draft);
   check('bare-open: SK snapshot empty after matched erase (fresh Sketch)', !skPurge.snapshot);
 
+  // (P6.1) SK AUTO-CONSUME on landing: fill first free page (2,3 empty after purge),
+  // clear the pending flag, fire ONCE.
+  await page.evaluate(() => {
+    var c = { sketch_id: 'sk-auto', age: 47, retire_age: 67, portfolio_mass: 1700007, datum_spend: 95007, resolved_state: 'EXPANSIVE', status: 'Drafted', date_stamped: '06/18/2026', time_stamped: '2:07 PM' };
+    sessionStorage.setItem('datumfi_sketch_current_snapshot', JSON.stringify(c));
+    sessionStorage.setItem('datumfi_pending_save', 'sketch');
+  });
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForTimeout(2600);
+  const skAuto = await page.evaluate(() => {
+    var book = null; try { book = JSON.parse(localStorage.getItem('datumfi_sketchbook_v1') || 'null'); } catch (e) {}
+    var slot = 0; for (var n = 1; n <= 4; n++) { var s = book && book['slot_' + n]; if (s && s.sketch_id === 'sk-auto') { slot = n; break; } }
+    return {
+      savedSlot: slot,
+      pending: sessionStorage.getItem('datumfi_pending_save') != null,
+      snapshot: sessionStorage.getItem('datumfi_sketch_current_snapshot') != null
+    };
+  });
+  check('SK P6.1: auto-consume saved carried snapshot', skAuto.savedSlot > 0, skAuto.savedSlot);
+  check('SK P6.1: auto-consume cleared pending flag', !skAuto.pending);
+  check('SK P6.1: auto-consume cleared snapshot', !skAuto.snapshot);
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForTimeout(2200);
+  const skAutoOnce = await page.evaluate(() => {
+    var book = null; try { book = JSON.parse(localStorage.getItem('datumfi_sketchbook_v1') || 'null'); } catch (e) {}
+    var c = 0; for (var n = 1; n <= 4; n++) { var s = book && book['slot_' + n]; if (s && s.sketch_id === 'sk-auto') c++; }
+    return c;
+  });
+  check('SK P6.1: auto-consume fires ONCE (no double-save)', skAutoOnce === 1, skAutoOnce);
+
+  // (P6.1) SK EMPTY-PIN opens a FRESH Sketch (mirrors Blueprint empty→Studio). Find an
+  // empty tile and click it → must navigate to /sketch.html, not pin anything.
+  const emptyTile = await page.evaluate(() => {
+    var book = null; try { book = JSON.parse(localStorage.getItem('datumfi_sketchbook_v1') || 'null'); } catch (e) {}
+    for (var n = 1; n <= 4; n++) { if (!(book && book['slot_' + n])) return n; }
+    return 0;
+  });
+  if (emptyTile) {
+    await Promise.all([
+      page.waitForNavigation({ timeout: 8000 }).catch(() => {}),
+      page.evaluate((n) => { var t = document.getElementById('tile-slot-' + n); if (t) t.click(); }, emptyTile)
+    ]);
+    await page.waitForTimeout(800);
+    const pinUrl = page.url();
+    check('SK P6.1: empty-pin opens fresh Sketch', /\/sketch\.html(?:[?#]|$)/.test(pinUrl), pinUrl);
+  } else {
+    check('SK P6.1: empty-pin opens fresh Sketch', false, 'no empty tile to test');
+  }
+
+  // (P6.1 Item-3) NAV-PICKER save STAYS on the Sketch (Studio parity). Drive sketch.html
+  // into scratch (engine armed), clear the book, open the picker, save an empty slot →
+  // must NOT navigate to the Sketchbook, and the save must actually land (proves _doSave
+  // ran past serializeSketchState, so "no nav" isn't a silent throw).
+  await page.goto(BASE + '/sketch.html', { waitUntil: 'load' });
+  await page.waitForTimeout(3000);
+  await page.evaluate(() => { const b = document.getElementById('sketchStartScratch'); if (b) b.click(); }).catch(() => {});
+  await page.waitForTimeout(1800);
+  await page.evaluate(() => { try { localStorage.removeItem('datumfi_sketchbook_v1'); } catch (e) {} });
+  const beforeUrl = page.url();
+  await page.evaluate(() => { if (typeof window.sketchSaveCurrent === 'function') window.sketchSaveCurrent(); });
+  await page.waitForTimeout(400);
+  await page.evaluate(() => { var pop = document.getElementById('sketch-save-sb-pop'); if (pop) { var b = pop.querySelector('button'); if (b) b.click(); } });
+  await page.waitForTimeout(1500);
+  const navStay = await page.evaluate(() => {
+    var book = null; try { book = JSON.parse(localStorage.getItem('datumfi_sketchbook_v1') || 'null'); } catch (e) {}
+    var saved = false; for (var n = 1; n <= 4; n++) { if (book && book['slot_' + n]) { saved = true; break; } }
+    var t = document.getElementById('sketchOverlayToast');
+    return { url: window.location.href, saved: saved, toastShown: !!(t && t.classList.contains('show')) };
+  });
+  check('SK P6.1 Item-3: nav-picker save did NOT navigate away', /\/sketch\.html(?:[?#]|$)/.test(navStay.url) && navStay.url === beforeUrl, navStay.url);
+  check('SK P6.1 Item-3: nav-picker save actually landed', navStay.saved);
+  check('SK P6.1 Item-3: nav-picker shows stay-put confirm toast', navStay.toastShown);
+
   check('no page errors', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
 
   await browser.close(); server.close();
-  console.log(JSON.stringify({ verdict: fails.length ? 'FAIL' : 'PASS', bpUnlock, bpPurge, bpGuard, skUnlock, skPurge, skGuard, pageErrors: pageErrors.slice(0, 3) }, null, 2));
+  console.log(JSON.stringify({ verdict: fails.length ? 'FAIL' : 'PASS', bpUnlock, bpPurge, bpGuard, bpAuto, bpAutoOnce, skUnlock, skPurge, skGuard, skAuto, skAutoOnce, navStay, pageErrors: pageErrors.slice(0, 3) }, null, 2));
   process.exit(fails.length ? 1 : 0);
 })();
