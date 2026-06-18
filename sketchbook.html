@@ -2976,6 +2976,7 @@
 
 </div>
 
+<script src="/scripts/datum-archive-purge.js"></script>
 <script>
   // ── ARCHITECTURAL APP STATE SIMULATION ──
   const AppSessionState = {
@@ -3051,6 +3052,19 @@
       localStorage.setItem(LS_KEY, JSON.stringify(d));
       _mirrorSketchbookToClerk(d);
     } catch(e) {}
+  }
+
+  // P6 — single-source erase. DatumPurge owns the COMPLETE slot-copy list (LS book
+  // slot, datum_sketch_state_N per-slot key, carried snapshot [guarded by sketch_id
+  // / save-stamp], Clerk sketchbook_z); we pass the page's one mirror encoder so it
+  // stays single-sourced. Falls back to _clearLsSlot only if the helper failed to load.
+  function _purgeSketchSlot(idx) {
+    if (idx < 1 || idx > 4) return;
+    if (window.DatumPurge) {
+      DatumPurge.sketch({ slotId: idx, remirror: _mirrorSketchbookToClerk });
+    } else {
+      _clearLsSlot(idx);
+    }
   }
 
   function _slimOne(s) {
@@ -3424,7 +3438,7 @@
         
         setTimeout(() => {
            SketchbookDatabase['slot' + targetId] = null;
-           _clearLsSlot(Number(targetId));
+           _purgeSketchSlot(Number(targetId));
            if (AppSessionState.activeSketchSlot === Number(targetId)) {
              AppSessionState.activeSketchSlot = firstSavedSketchSlot() || null;
              tile.classList.remove('selected');
@@ -3433,26 +3447,13 @@
            }
            tile.classList.remove('slot-erasing');
            AppSessionState.activeTargetPurgeId = null;
+           AppSessionState._pendingCapacitySave = false;
            syncDesktopSketchbookUI();
            showSketchToast(`Page 0${targetId} erased.`);
-           // Auto-complete pending capacity save after erase
-           if (AppSessionState._pendingCapacitySave) {
-             AppSessionState._pendingCapacitySave = false;
-             var _pSnap = null;
-             try { _pSnap = JSON.parse(sessionStorage.getItem('datumfi_sketch_current_snapshot') || 'null'); } catch(ex) {}
-             if (_pSnap) {
-               var _lsD = null;
-               try { _lsD = JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch(ex) { _lsD = {}; }
-               _lsD.slot_1 = _pSnap;
-               try { localStorage.setItem(LS_KEY, JSON.stringify(_lsD)); } catch(ex) {}
-               _mirrorSketchbookToClerk(_lsD);
-               executeSavePayloadToSlot(1, _contractToSlot(_pSnap));
-             }
-           }
         }, 750);
      } else {
         SketchbookDatabase['slot' + targetId] = null;
-        _clearLsSlot(Number(targetId));
+        _purgeSketchSlot(Number(targetId));
         if (AppSessionState.activeSketchSlot === Number(targetId)) {
           AppSessionState.activeSketchSlot = firstSavedSketchSlot() || null;
           var _erasedTile = document.getElementById('tile-slot-' + targetId);
@@ -3461,22 +3462,9 @@
           if (_ob2) _ob2.classList.remove('action-active');
         }
         AppSessionState.activeTargetPurgeId = null;
+        AppSessionState._pendingCapacitySave = false;
         syncDesktopSketchbookUI();
         showSketchToast(`Page 0${targetId} erased.`);
-        // Auto-complete pending capacity save after erase
-        if (AppSessionState._pendingCapacitySave) {
-          AppSessionState._pendingCapacitySave = false;
-          var _pSnap = null;
-          try { _pSnap = JSON.parse(sessionStorage.getItem('datumfi_sketch_current_snapshot') || 'null'); } catch(ex) {}
-          if (_pSnap) {
-            var _lsD = null;
-            try { _lsD = JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch(ex) { _lsD = {}; }
-            _lsD.slot_1 = _pSnap;
-            try { localStorage.setItem(LS_KEY, JSON.stringify(_lsD)); } catch(ex) {}
-            _mirrorSketchbookToClerk(_lsD);
-            executeSavePayloadToSlot(1, _contractToSlot(_pSnap));
-          }
-        }
      }
   }
 
@@ -3802,6 +3790,10 @@
   function onSessionConfirmed() {
     try { sessionStorage.setItem('datum_auth_hint', '1'); } catch (e) {}
     revealBody();
+    // P6 Issue 1 — every visitor here is Clerk-authenticated (redirectToVault gates
+    // the page), so signed-in == all 4 sketch pages. The premium overlay/modals stay
+    // in the DOM, deactivated — ready to re-enable as "1 free + premium" later.
+    AppSessionState.userHasPremiumToken = true;
     if (typeof _sketchbookRestoreFromClerk === 'function') _sketchbookRestoreFromClerk();
     if (typeof syncDesktopSketchbookUI === 'function') {
       requestAnimationFrame(syncDesktopSketchbookUI);

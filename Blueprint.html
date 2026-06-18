@@ -1277,6 +1277,7 @@ button {
      when the inline script's syncArchiveUI() -> bpToCard() runs at parse. Defines
      the global only; load()/bind() are never auto-invoked, so no side effects. -->
 <script src="/scripts/studio-blueprint.js"></script>
+<script src="/scripts/datum-archive-purge.js"></script>
 <script>
 const BLUEPRINT_STORAGE_KEY = 'datumfi_blueprint_archive_v1';
 
@@ -1567,11 +1568,10 @@ function proceedWithEraseSequence() {
   tile.classList.add('slot-erasing');
 
   setTimeout(() => {
+    // P6 — capture the erased Blueprint BEFORE nulling so DatumPurge can match its
+    // blueprint_id against the carried snapshot + session draft (guarded purge).
+    const erasedBp = BlueprintArchive['slot' + targetId];
     BlueprintArchive['slot' + targetId] = null;
-    // G3 — a true delete must also drop the hub's per-slot key. DatumBlueprint.readSlot
-    // reads datum_blueprint_state_N FIRST (archive is only its fallback), so nulling the
-    // archive alone would leave a ghost that re-hydrates on the next Open-in-Studio.
-    try { localStorage.removeItem('datum_blueprint_state_' + targetId); } catch (ex) {}
 
     if (AppSessionState.activeBlueprintSlot === Number(targetId)) {
       const next = [1,2,3,4].find(idx => BlueprintArchive['slot' + idx]);
@@ -1580,7 +1580,17 @@ function proceedWithEraseSequence() {
 
     tile.classList.remove('slot-erasing');
     AppSessionState.activeTargetPurgeId = null;
+    // syncArchiveUI() persists ARCHIVE_KEY with the slot now null — must run BEFORE
+    // DatumPurge.blueprint(), whose remirrorArchive() re-reads that pruned archive.
     syncArchiveUI();
+
+    // P6 single-source purge of every OTHER copy: per-slot key, carried snapshot +
+    // session draft (guarded by blueprint_id), and the Clerk blueprint_z mirror.
+    if (window.DatumPurge) {
+      DatumPurge.blueprint({ slotId: Number(targetId), erasedBp: erasedBp });
+    } else {
+      try { localStorage.removeItem('datum_blueprint_state_' + targetId); } catch (ex) {}
+    }
     showToast(`Sheet A-0${targetId} erased.`);
   }, 730);
 }
@@ -1818,6 +1828,12 @@ archiveTitle.addEventListener('blur', function () {
     // we just re-sync afterward. Falls back to a plain sync if the helper is absent.
     function _sync() {
       if (typeof safeLoadArchive === 'function') safeLoadArchive();
+      // P6 Issue 1 — every visitor here is Clerk-authenticated (redirectToVault
+      // gates the page), so signed-in == all 4 archive slots. Seeded AFTER
+      // safeLoadArchive (which reloads the token from the blob) and BEFORE
+      // syncArchiveUI (which persists it). The premium overlay/modal stays in the
+      // DOM, deactivated — ready to re-enable as "1 free + premium" later.
+      AppSessionState.userHasPremiumToken = true;
       if (typeof syncArchiveUI === 'function') syncArchiveUI();
     }
     // P5 Step-1 (Option B): if Studio carried a snapshot through the signed-out hop,

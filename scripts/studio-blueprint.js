@@ -293,6 +293,12 @@
     } catch (_e) { done(); }
   }
 
+  /* P6 — public re-mirror: re-encode the WHOLE archive (read fresh from LS, so a
+   * just-erased slot is already null) into blueprint_z via the same safeMerge
+   * path. Lets the shared DatumPurge helper drop a slot from the Clerk mirror on
+   * erase without inlining a second encoder. */
+  function remirrorArchive(done) { mirrorToClerk(null, done); }
+
   /* ---- Prefill ladder ---- */
 
   function readDossier() {
@@ -678,6 +684,7 @@
     save:             save,
     toEnginePayload:  toEnginePayload,
     slimSlotForClerk: slimSlotForClerk,
+    remirrorArchive:  remirrorArchive,
     computeGrossFunding: computeGrossFunding,
     investableTotal:  investableTotal,
     captureDOM:       captureDOM,

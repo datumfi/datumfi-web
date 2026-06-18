@@ -187,11 +187,18 @@
   var _BP_SLOT_PREFIX = 'datum_blueprint_state_';
 
   function _ensureCodec(cb) {
+    if (typeof cb !== 'function') cb = function() {};
     if (window.DatumArchiveCodec) { cb(); return; }
     function add(src, next) { var s = document.createElement('script'); s.src = src; s.onload = next; s.onerror = next; document.head.appendChild(s); }
     if (window.LZString) add('/scripts/datum-archive-codec.js', cb);
     else add('/scripts/lz-string.min.js', function() { add('/scripts/datum-archive-codec.js', cb); });
   }
+  // P6 — universal lazy codec loader. Restore loads the codec only when a local
+  // store is ABSENT, so on a returning device DatumArchiveCodec is missing and any
+  // ERASE re-mirror (DatumPurge -> remirrorArchive / _mirrorSketchbookToClerk) would
+  // silently skip the Clerk *_z update, leaving the erased slot to resurrect
+  // cross-device. Expose the loader so the purge can guarantee the codec first.
+  window._datumEnsureCodec = _ensureCodec;
   function _hasBook() { try { var b = JSON.parse(localStorage.getItem(_BOOK_KEY) || 'null'); return !!(b && b.slot_1); } catch(e) { return false; } }
   function _hasArch() { try { var a = JSON.parse(localStorage.getItem(_BP_ARCH_KEY) || 'null'); return !!(a && (a.slot1 || a.slot2 || a.slot3 || a.slot4)); } catch(e) { return false; } }
 
