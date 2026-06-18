@@ -239,11 +239,47 @@
           }
         } catch (_se) {}
         var meta = window.Clerk.user.unsafeMetadata || {};
+        // P5 Step-2b: carry the per-store CUSTOM archive title (full verbatim string, incl.
+        // the user's noun) cross-device. The override is localStorage-only; without this a
+        // fresh device recovers only firstName and the noun reverts to the structural default.
+        try {
+          if (meta.bp_title && !localStorage.getItem('datum_blueprint_archive_title')) localStorage.setItem('datum_blueprint_archive_title', meta.bp_title);
+          if (meta.sb_title && !localStorage.getItem('datum_sketchbook_title')) localStorage.setItem('datum_sketchbook_title', meta.sb_title);
+        } catch (_te) {}
         var wantCodec = (!_hasBook() && meta.sketchbook_z) || (!_hasArch() && meta.blueprint_z);
         function go() { var C = window.DatumArchiveCodec || null; _restoreSketchbook(meta, C); _restoreBlueprint(meta, C); done(); }
         if (wantCodec) _ensureCodec(go); else go();
       }).catch(function() { done(); });
     } catch(_e) { done(); }
+  };
+  // P5 Step-2b: mirror a custom archive title to Clerk so it crosses devices. metaKey is
+  // 'bp_title' | 'sb_title'; value=null removes it (reset to default). Budget-guarded through
+  // the codec's safeMerge — on over-cap we KEEP the local override and skip the mirror, never
+  // truncate. Removal only shrinks the blob, so it always fits.
+  window._datumMirrorTitle = function(metaKey, value) {
+    try {
+      if (!window.Clerk) return;
+      window.Clerk.load().then(function() {
+        if (!window.Clerk.user) return;
+        function doMerge() {
+          var ex = window.Clerk.user.unsafeMetadata || {};
+          if (value == null) {
+            var m = {}; for (var k in ex) if (Object.prototype.hasOwnProperty.call(ex, k) && k !== metaKey) m[k] = ex[k];
+            window.Clerk.user.update({ unsafeMetadata: m }).catch(function() {});
+            return;
+          }
+          var Codec = window.DatumArchiveCodec;
+          var patch = {}; patch[metaKey] = value;
+          var res = Codec ? Codec.safeMerge(ex, patch) : null;
+          if (!res) { console.warn('[title mirror] codec unavailable; kept LS override, skipped mirror'); return; }
+          var vBytes = Codec.byteLen(metaKey) + Codec.byteLen(value);
+          if (!res.ok) { console.warn('[title mirror] ' + metaKey + ' (' + vBytes + 'B) would exceed ' + Codec.CAP + 'B cap (total ' + res.bytes + '); kept LS override, skipped mirror'); return; }
+          console.log('[title mirror] ' + metaKey + ' key+value bytes: ' + vBytes + ' | merged total: ' + res.bytes + ' / ' + Codec.CAP + ' | ok');
+          window.Clerk.user.update({ unsafeMetadata: res.merged }).catch(function() {});
+        }
+        if (window.DatumArchiveCodec) doMerge(); else _ensureCodec(doMerge);
+      }).catch(function() {});
+    } catch (_me) {}
   };
   window.addEventListener('load', function() { window._datumRestoreFromClerk(); });
 })();

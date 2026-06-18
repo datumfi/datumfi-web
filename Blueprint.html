@@ -1790,12 +1790,15 @@ window.renderArchiveTitle = function () {
 renderArchiveTitle();
 archiveTitle.addEventListener('blur', function () {
   var v = this.value.trim();
-  // Persist ONLY a deliberate rename — not the auto default (it recomputes) nor the
-  // placeholder — so a pre-Clerk fallback can never freeze itself.
-  if (v && v !== 'My Blueprint Archive' && v !== _bpDefaultTitle()) {
-    localStorage.setItem(BP_TITLE_KEY, v);
-  } else if (v === _bpDefaultTitle()) {
+  // Empty / placeholder / personalized default -> reset: drop the override AND its Clerk
+  // mirror. Anything else is a deliberate rename: store the FULL verbatim string AND mirror
+  // it cross-device (the noun is lost on a fresh device without this).
+  if (!v || v === 'My Blueprint Archive' || v === _bpDefaultTitle()) {
     try { localStorage.removeItem(BP_TITLE_KEY); } catch (e) {}
+    if (typeof window._datumMirrorTitle === 'function') window._datumMirrorTitle('bp_title', null);
+  } else {
+    localStorage.setItem(BP_TITLE_KEY, v);
+    if (typeof window._datumMirrorTitle === 'function') window._datumMirrorTitle('bp_title', v);
   }
 });
 </script>

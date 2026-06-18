@@ -3648,8 +3648,15 @@
   renderNotebookTitle();
   inputTitleEl.addEventListener('blur', function () {
     var v = this.value.trim();
-    if (v && v !== 'My Sketchbook' && v !== _sbDefaultTitle()) localStorage.setItem(SB_TITLE_KEY, v);
-    else if (v === _sbDefaultTitle()) { try { localStorage.removeItem(SB_TITLE_KEY); } catch (e) {} }
+    // Empty / placeholder / personalized default -> reset: drop override + Clerk mirror.
+    // Anything else -> deliberate rename: store verbatim AND mirror cross-device.
+    if (!v || v === 'My Sketchbook' || v === _sbDefaultTitle()) {
+      try { localStorage.removeItem(SB_TITLE_KEY); } catch (e) {}
+      if (typeof window._datumMirrorTitle === 'function') window._datumMirrorTitle('sb_title', null);
+    } else {
+      localStorage.setItem(SB_TITLE_KEY, v);
+      if (typeof window._datumMirrorTitle === 'function') window._datumMirrorTitle('sb_title', v);
+    }
   });
 
 
@@ -3751,8 +3758,14 @@
     if (typeof syncDesktopSketchbookUI === 'function') {
       requestAnimationFrame(syncDesktopSketchbookUI);
     }
-    // P5 Step-2: re-render the title now Clerk has resolved (zero-lag real name).
-    if (typeof window.renderNotebookTitle === 'function') window.renderNotebookTitle();
+    // P5 Step-2: re-render the title once Clerk has resolved (zero-lag real name). Route
+    // through the cross-device restore so a synced custom title (override) is written to LS
+    // BEFORE the final render — otherwise a fresh device paints the default and the noun reverts.
+    if (typeof window._datumRestoreFromClerk === 'function') {
+      window._datumRestoreFromClerk(function () { if (typeof window.renderNotebookTitle === 'function') window.renderNotebookTitle(); });
+    } else if (typeof window.renderNotebookTitle === 'function') {
+      window.renderNotebookTitle();
+    }
     // P5 Step-1 (Option B): guide a carried-snapshot user to the explicit Save click.
     try {
       if (sessionStorage.getItem('datumfi_pending_save') === 'sketch' &&
