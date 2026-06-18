@@ -9272,51 +9272,67 @@ Studio is built for exactly this. See If This Shape Holds →`;
       if (!_ctaMain) return;
       var LS_KEY = 'datumfi_sketchbook_v1';
 
+      function _slimOne(s) {
+        if (!s) return null;
+        return {
+          age:               s.age,
+          retire_age:        s.retire_age,
+          portfolio_mass:    s.portfolio_mass,
+          contributions:     s.contributions,
+          datum_spend:       s.datum_spend,
+          designed_ceil:     s.designed_ceil,
+          designed_floor:    s.designed_floor,
+          resolved_state:    s.resolved_state,
+          status:            s.status,
+          date_stamped:      s.date_stamped,
+          time_stamped:      s.time_stamped,
+          s1_datum:          s.s1_datum,
+          s1_ceil:           s.s1_ceil,
+          s1_floor:          s.s1_floor,
+          s1_resolved_state: s.s1_resolved_state,
+          s2_design:         s.s2_design,
+          market_outlook:    s.market_outlook,
+          tax_rate:          s.tax_rate,
+          inflation_mode:    s.inflation_mode,
+          plan_end_age:      s.plan_end_age
+        };
+      }
+      // P5 Step-3: slim ALL FOUR slots (the picker writes any of slot_1..4); the codec
+      // sketchbook_z is 4-slot-capable, so the cross-device mirror carries the whole book.
       function _slimSlot(blob) {
-        var s = blob && blob.slot_1;
-        if (!s) return blob;
+        if (!blob) return blob;
         return {
           sketchbook_title: blob.sketchbook_title || '',
-          slot_1: {
-            age:               s.age,
-            retire_age:        s.retire_age,
-            portfolio_mass:    s.portfolio_mass,
-            contributions:     s.contributions,
-            datum_spend:       s.datum_spend,
-            designed_ceil:     s.designed_ceil,
-            designed_floor:    s.designed_floor,
-            resolved_state:    s.resolved_state,
-            date_stamped:      s.date_stamped,
-            time_stamped:      s.time_stamped,
-            s1_datum:          s.s1_datum,
-            s1_ceil:           s.s1_ceil,
-            s1_floor:          s.s1_floor,
-            s1_resolved_state: s.s1_resolved_state,
-            s2_design:         s.s2_design,
-            market_outlook:    s.market_outlook,
-            tax_rate:          s.tax_rate,
-            inflation_mode:    s.inflation_mode,
-            plan_end_age:      s.plan_end_age
-          }
+          slot_1: _slimOne(blob.slot_1),
+          slot_2: _slimOne(blob.slot_2),
+          slot_3: _slimOne(blob.slot_3),
+          slot_4: _slimOne(blob.slot_4)
         };
       }
 
-      function _doSave() {
+      // P5 Step-3: write the CHOSEN slot (1..4), preserving the other slots. source:'nav'
+      // (picker, any phase) -> DRAFTED; source:'phaseV' (full-experience CTA) -> MODELED.
+      function _doSave(slotN, source) {
+        var _slot = (slotN >= 1 && slotN <= 4) ? slotN : 1;
         var prev = null;
         try { prev = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch(ex) {}
         var payload = serializeSketchState();
+        payload.status = (source === 'phaseV') ? 'Modeled' : 'Drafted';
         var now = new Date();
         var mm  = String(now.getMonth() + 1).padStart(2, '0');
         var ddS = String(now.getDate()).padStart(2, '0');
-        var data = {
-          sketchbook_title: (prev && prev.sketchbook_title) || ('Sketch from ' + mm + '/' + ddS + '/' + now.getFullYear()),
-          slot_1: payload
-        };
+        var data = (prev && typeof prev === 'object') ? prev : {};
+        if (!data.sketchbook_title) data.sketchbook_title = 'Sketch from ' + mm + '/' + ddS + '/' + now.getFullYear();
+        data['slot_' + _slot] = payload;
         try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch(ex) {}
-        try { localStorage.setItem('datum_sketch_state_1', JSON.stringify(payload)); } catch(ex) {}
+        try { localStorage.setItem('datum_sketch_state_' + _slot, JSON.stringify(payload)); } catch(ex) {}
         sessionStorage.setItem('datumfi_just_saved', '1');
         sessionStorage.setItem('datumfi_sketch_return_screen', window.location.hash || '#screen-5-build');
         sessionStorage.setItem('datumfi_sketch_current_snapshot', JSON.stringify(payload));
+        // 2a guard: a picker/CTA write is a COMPLETED save, not a pending intent — clear any
+        // stale pending-save flag so the Sketchbook never re-consumes this snapshot into a
+        // second slot (no phantom double-count).
+        try { sessionStorage.removeItem('datumfi_pending_save'); } catch(ex) {}
         // Navigate only after Clerk write commits; fall-through on error or logged-out.
         // Origin-relative so the post-save hop stays on the current host (e.g. a
         // local dev server) instead of bouncing to the production domain.
@@ -9329,11 +9345,10 @@ Studio is built for exactly this. See If This Shape Holds →`;
         try {
           var _Codec = window.DatumArchiveCodec;
           if (window.Clerk && !_isLocalHost && _Codec) {
-            // P3 SOURCE OF TRUTH: write a 4-slot-capable sketchbook_z (slot_1 + 3 nulls
-            // until P4 unlocks the UI tiles) and atomically drop the legacy `sketchbook`
-            // key once safeMerge confirms ok:true. Over cap -> keep LS truth + legacy.
-            var _slim = _slimSlot(data);
-            var _book = { sketchbook_title: _slim.sketchbook_title, slot_1: _slim.slot_1, slot_2: null, slot_3: null, slot_4: null };
+            // P5 Step-3 SOURCE OF TRUTH: write the full 4-slot sketchbook_z and atomically
+            // drop the legacy `sketchbook` key once safeMerge confirms ok:true. Over cap ->
+            // keep LS truth, skip the mirror, never truncate.
+            var _book = _slimSlot(data);
             var _skZ  = _Codec.encodeSketchbook(_book);
             console.log('[sketchbook mirror] sketchbook_z bytes:', _Codec.byteLen(_skZ));
             window.Clerk.load().then(function() {
@@ -9352,45 +9367,102 @@ Studio is built for exactly this. See If This Shape Holds →`;
         _nav();
       }
 
-      // P3: SINGLE gated Save entry for the Phase-V CTA, the top-nav button, and the
-      // signed-IN account-topbar Save button. We gate the ACTION, not the page — a
-      // signed-OUT Save forces sign-in and lands on the Sketchbook archive. No
-      // anonymous-local save path ever runs. (P4 adds the Drafted-vs-Modeled status
-      // rule + the 4-slot picker; sketchbook_z is already written 4-slot-capable.)
-      function _gatedSave() {
-        if (!sessionStorage.getItem('datum_auth_hint')) {
-          // P5 Step-1: capture wherever the user is (mid-stream S1..S5) and stash it
-          // BEFORE the vault hop so the Sketchbook can save it on landing. Option B:
-          // pending-intent flag is preserved but does NOT auto-fire — the user clicks
-          // "Save Current Sketch →" on the Sketchbook to consume it.
-          try {
-            sessionStorage.setItem('datumfi_sketch_current_snapshot', JSON.stringify(serializeSketchState()));
-            sessionStorage.setItem('datumfi_pending_save', 'sketch');
-          } catch (e) {}
-          window.location.href = '/vault.html?returnTo=' + encodeURIComponent('/sketchbook.html');
-          return;
-        }
-        var existing = null;
-        try { existing = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch(ex) {}
-        if (existing && existing.slot_1) {
-          var modal = document.getElementById('sketch-overwrite-modal');
-          if (modal) { modal.classList.add('open'); return; }
-        }
-        _doSave();
-      }
-      _ctaMain.addEventListener('click', function(e) { e.preventDefault(); _gatedSave(); });
-      window.sketchSaveCurrent = _gatedSave;
+      // P5 Step-3: signed-OUT Save forces sign-in and lands on the Sketchbook. We capture
+      // wherever the user is (mid-stream S1..S5) and stash it BEFORE the vault hop. Option
+      // B: the pending-intent flag is preserved but does NOT auto-fire — the user clicks
+      // "Save Current Sketch →" on the Sketchbook to consume it (single legacy slot_1 path).
       var _navSaveBtn = document.getElementById('sketch-save-btn');
-      if (_navSaveBtn) _navSaveBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        _gatedSave();
-      });
+      var _ovSlot = 1, _ovSource = 'phaseV', _pop = null;
+      function _hopToVaultSave() {
+        try {
+          sessionStorage.setItem('datumfi_sketch_current_snapshot', JSON.stringify(serializeSketchState()));
+          sessionStorage.setItem('datumfi_pending_save', 'sketch');
+        } catch (e) {}
+        window.location.href = '/vault.html?returnTo=' + encodeURIComponent('/sketchbook.html');
+      }
+      function _readBook() { try { return JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch(ex) { return null; } }
+      function _skIsFilled(n) { var b = _readBook(); return !!(b && b['slot_' + n]); }
+      function _skSlotLabel(n) {
+        var b = _readBook(); var s = b && b['slot_' + n];
+        if (!s) return 'A-0' + n + '  ·  Empty';
+        var st = s.s1_resolved_state || s.resolved_state || '';
+        var when = s.date_stamped || '';
+        return 'A-0' + n + (st ? '  ·  ' + st : '') + (when ? '  ·  ' + when : '');
+      }
+      // ── 4-slot picker — ported from the proven Studio Blueprint picker
+      //    (studio.html studioSaveCurrent): an EMPTY slot saves immediately; a FILLED slot
+      //    must confirm the overwrite first — no silent clobber, no first-available auto-fire.
+      var _PHEAD = 'font-family:var(--font-mono);font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold,#c9a84c);padding:2px 4px 4px;';
+      function _skClose() { if (_pop) { if (_pop.parentNode) _pop.remove(); _pop = null; document.removeEventListener('click', _skOnDoc, true); } }
+      function _skOnDoc(e) { if (_pop && !_pop.contains(e.target) && e.target !== _navSaveBtn) _skClose(); }
+      function _skSaveTo(n) { _skClose(); _doSave(n, 'nav'); }
+      function _skConfirmOverwrite(n) {
+        if (!_pop) return;
+        _pop.innerHTML = '';
+        var head = document.createElement('div'); head.textContent = 'Overwrite A-0' + n + '?'; head.style.cssText = _PHEAD; _pop.appendChild(head);
+        var sub = document.createElement('div'); sub.textContent = 'This sheet — ' + _skSlotLabel(n) + ' — will be replaced.';
+        sub.style.cssText = 'font-family:var(--font-mono);font-size:10px;color:rgba(255,255,255,0.6);padding:0 4px 4px;line-height:1.4;'; _pop.appendChild(sub);
+        var row = document.createElement('div'); row.style.cssText = 'display:flex;gap:6px;';
+        var ov = document.createElement('button'); ov.type = 'button'; ov.textContent = 'Overwrite';
+        ov.style.cssText = 'flex:1;background:rgba(201,168,76,0.15);border:1px solid var(--gold,#c9a84c);color:var(--gold,#c9a84c);font-family:var(--font-mono);font-size:11px;padding:8px 10px;border-radius:4px;cursor:pointer;';
+        ov.addEventListener('click', function (e) { e.stopPropagation(); _skSaveTo(n); });
+        var ca = document.createElement('button'); ca.type = 'button'; ca.textContent = 'Cancel';
+        ca.style.cssText = 'flex:1;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.12);color:var(--white,#fff);font-family:var(--font-mono);font-size:11px;padding:8px 10px;border-radius:4px;cursor:pointer;';
+        ca.addEventListener('click', function (e) { e.stopPropagation(); _skRenderSlots(); });
+        row.appendChild(ov); row.appendChild(ca); _pop.appendChild(row);
+      }
+      function _skRenderSlots() {
+        if (!_pop) return;
+        _pop.innerHTML = '';
+        var head = document.createElement('div'); head.textContent = 'Save to which sheet?'; head.style.cssText = _PHEAD; _pop.appendChild(head);
+        [1, 2, 3, 4].forEach(function (n) {
+          var b = document.createElement('button'); b.type = 'button'; b.textContent = _skSlotLabel(n);
+          b.style.cssText = 'text-align:left;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.12);color:var(--white,#fff);font-family:var(--font-mono);font-size:11px;padding:8px 10px;border-radius:4px;cursor:pointer;';
+          b.addEventListener('mouseenter', function () { b.style.borderColor = 'var(--teal,#1d9e75)'; });
+          b.addEventListener('mouseleave', function () { b.style.borderColor = 'rgba(255,255,255,0.12)'; });
+          b.addEventListener('click', function (e) { e.stopPropagation(); if (_skIsFilled(n)) _skConfirmOverwrite(n); else _skSaveTo(n); });
+          _pop.appendChild(b);
+        });
+      }
+      function _skOpen(anchor) {
+        anchor = anchor || _navSaveBtn || document.body;
+        _pop = document.createElement('div'); _pop.id = 'sketch-save-sb-pop';
+        _pop.style.cssText = 'position:fixed;z-index:10001;background:#0a1018;border:1px solid rgba(93,202,165,0.4);border-radius:6px;padding:8px;display:flex;flex-direction:column;gap:6px;box-shadow:0 10px 30px rgba(0,0,0,0.7);min-width:230px;';
+        var r = anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : { bottom: 56, right: window.innerWidth - 8 };
+        _pop.style.top = (r.bottom + 6) + 'px';
+        _pop.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
+        _skRenderSlots();
+        document.body.appendChild(_pop);
+        setTimeout(function () { document.addEventListener('click', _skOnDoc, true); }, 0);
+      }
+      // NAV "Save Current Sketch" → 4-slot picker (source:'nav' → DRAFTED). Signed-out
+      // forces sign-in first; the picker is reached only when signed in (Studio parity).
+      function _gatedNavSave(anchor) {
+        if (!sessionStorage.getItem('datum_auth_hint')) { _hopToVaultSave(); return; }
+        if (_pop) _skClose(); else _skOpen(anchor || _navSaveBtn);
+      }
+      // Phase-V CTA "Save to Sketchbook" → DIRECT save to first-empty slot (source:'phaseV'
+      // → MODELED). All four filled → overwrite-confirm fallback (overwrites A-01), never a
+      // silent clobber (2c). Captain decision 2026-06-18.
+      function _firstEmptySlot() { for (var n = 1; n <= 4; n++) { if (!_skIsFilled(n)) return n; } return null; }
+      function _gatedPhaseVSave() {
+        if (!sessionStorage.getItem('datum_auth_hint')) { _hopToVaultSave(); return; }
+        var n = _firstEmptySlot();
+        if (n) { _doSave(n, 'phaseV'); return; }
+        _ovSlot = 1; _ovSource = 'phaseV';
+        var modal = document.getElementById('sketch-overwrite-modal');
+        if (modal) { modal.classList.add('open'); return; }
+        _doSave(1, 'phaseV');
+      }
+      _ctaMain.addEventListener('click', function(e) { e.preventDefault(); _gatedPhaseVSave(); });
+      window.sketchSaveCurrent = function (anchor) { _gatedNavSave(anchor); };
+      if (_navSaveBtn) _navSaveBtn.addEventListener('click', function(e) { e.preventDefault(); e.stopPropagation(); _gatedNavSave(_navSaveBtn); });
 
       var _confirmBtn = document.getElementById('sketch-overwrite-confirm');
       if (_confirmBtn) _confirmBtn.addEventListener('click', function() {
         var modal = document.getElementById('sketch-overwrite-modal');
         if (modal) modal.classList.remove('open');
-        _doSave();
+        _doSave(_ovSlot, _ovSource);
       });
 
       var _cancelBtn = document.getElementById('sketch-overwrite-cancel');

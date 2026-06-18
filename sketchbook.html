@@ -3019,6 +3019,7 @@
       floor:       c.designed_floor || 0,
       stateName:   c.resolved_state || 'EXPANSIVE',
       stateColor:  mapped.color,
+      status:      c.status || 'Drafted',
       dateStamped: c.date_stamped,
       timeStamped: c.time_stamped,
       s1Datum:      c.s1_datum     || 0,
@@ -3043,46 +3044,75 @@
   }
 
   function _clearLsSlot(idx) {
-    if (idx !== 1) return;
+    if (idx < 1 || idx > 4) return;
     try {
       var d = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
-      d.slot_1 = null;
+      d['slot_' + idx] = null;
       localStorage.setItem(LS_KEY, JSON.stringify(d));
+      _mirrorSketchbookToClerk(d);
     } catch(e) {}
   }
 
+  function _slimOne(s) {
+    if (!s) return null;
+    return {
+      age:               s.age,
+      retire_age:        s.retire_age,
+      portfolio_mass:    s.portfolio_mass,
+      contributions:     s.contributions,
+      datum_spend:       s.datum_spend,
+      designed_ceil:     s.designed_ceil,
+      designed_floor:    s.designed_floor,
+      resolved_state:    s.resolved_state,
+      status:            s.status,
+      date_stamped:      s.date_stamped,
+      time_stamped:      s.time_stamped,
+      s1_datum:          s.s1_datum,
+      s1_ceil:           s.s1_ceil,
+      s1_floor:          s.s1_floor,
+      s1_resolved_state: s.s1_resolved_state,
+      s2_design:         s.s2_design,
+      market_outlook:    s.market_outlook,
+      tax_rate:          s.tax_rate,
+      inflation_mode:    s.inflation_mode,
+      plan_end_age:      s.plan_end_age
+    };
+  }
+  // P5 Step-3: slim ALL FOUR slots so an in-page erase/edit of any slot mirrors the whole
+  // 4-slot book cross-device (parity with the sketch.html picker write).
   function _slimSlot(blob) {
-    var s = blob && blob.slot_1;
-    if (!s) return blob;
+    if (!blob) return blob;
     return {
       sketchbook_title: blob.sketchbook_title || '',
-      slot_1: {
-        age:               s.age,
-        retire_age:        s.retire_age,
-        portfolio_mass:    s.portfolio_mass,
-        contributions:     s.contributions,
-        datum_spend:       s.datum_spend,
-        designed_ceil:     s.designed_ceil,
-        designed_floor:    s.designed_floor,
-        resolved_state:    s.resolved_state,
-        date_stamped:      s.date_stamped,
-        time_stamped:      s.time_stamped,
-        s1_datum:          s.s1_datum,
-        s1_ceil:           s.s1_ceil,
-        s1_floor:          s.s1_floor,
-        s1_resolved_state: s.s1_resolved_state,
-        s2_design:         s.s2_design
-      }
+      slot_1: _slimOne(blob.slot_1),
+      slot_2: _slimOne(blob.slot_2),
+      slot_3: _slimOne(blob.slot_3),
+      slot_4: _slimOne(blob.slot_4)
     };
   }
 
+  // P5 Step-3: write the 4-slot sketchbook_z codec blob (preferred, what nav.js + the
+  // picker read) through safeMerge — over-cap keeps the LS truth, never truncates. Falls
+  // back to the legacy `sketchbook` object only if the codec is not yet loaded.
   function _mirrorSketchbookToClerk(blob) {
     try {
       if (!window.Clerk) return;
       var _slim = _slimSlot(blob);
+      var _Codec = window.DatumArchiveCodec;
       window.Clerk.load().then(function() {
         if (!window.Clerk.user) return;
-        var _m = Object.assign({}, window.Clerk.user.unsafeMetadata || {}, { sketchbook: _slim });
+        var _ex = window.Clerk.user.unsafeMetadata || {};
+        if (_Codec) {
+          var _skZ = _Codec.encodeSketchbook(_slim);
+          var _base = {};
+          for (var _k in _ex) { if (Object.prototype.hasOwnProperty.call(_ex, _k) && _k !== 'sketchbook') _base[_k] = _ex[_k]; }
+          var _res = _Codec.safeMerge(_base, { sketchbook_z: _skZ });
+          console.log('[sketchbook mirror] sketchbook_z bytes:', _Codec.byteLen(_skZ), '| merged total:', _res.bytes, '/ 8192 | ok:', _res.ok);
+          if (!_res.ok) { console.warn('[sketchbook mirror] over 8192B cap; kept LS truth, did NOT write:', _res.bytes); return; }
+          window.Clerk.user.update({ unsafeMetadata: _res.merged }).catch(function(e) { console.warn('[mirror] sketchbook failed', e); });
+          return;
+        }
+        var _m = Object.assign({}, _ex, { sketchbook: _slim });
         window.Clerk.user.update({ unsafeMetadata: _m }).catch(function(e) { console.warn('[mirror] sketchbook failed', e); });
       }).catch(function(){});
     } catch(_e) {}
@@ -3092,24 +3122,36 @@
     try {
       if (!window.Clerk || !window.Clerk.user) return;
       var _meta = window.Clerk.user.unsafeMetadata || {};
-      var _ckBook = _meta.sketchbook;
-      if (!_ckBook || !_ckBook.slot_1) return;
+      // P5 Step-3: prefer the 4-slot sketchbook_z codec blob; fall back to the legacy
+      // single-slot `sketchbook` object for back-compat.
+      var _Codec = window.DatumArchiveCodec;
+      var _ckBook = null;
+      if (_meta.sketchbook_z && _Codec) _ckBook = _Codec.decodeSketchbook(_meta.sketchbook_z);
+      if ((!_ckBook || !_ckBook.slot_1) && _meta.sketchbook && _meta.sketchbook.slot_1) _ckBook = _meta.sketchbook;
+      if (!_ckBook) return;
+      var _anySlot = _ckBook.slot_1 || _ckBook.slot_2 || _ckBook.slot_3 || _ckBook.slot_4;
+      if (!_anySlot) return;
       var _lsBlob = null;
       try { _lsBlob = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch(_pe) {}
-      var _needsLs = !(_lsBlob && _lsBlob.slot_1);
-      var _needsUi = !SketchbookDatabase.slot1;
+      var _needsLs = !(_lsBlob && (_lsBlob.slot_1 || _lsBlob.slot_2 || _lsBlob.slot_3 || _lsBlob.slot_4));
+      var _needsUi = !(SketchbookDatabase.slot1 || SketchbookDatabase.slot2 || SketchbookDatabase.slot3 || SketchbookDatabase.slot4);
       if (!_needsLs && !_needsUi) return;
       if (_needsLs) {
-        var _r = { sketchbook_title: _ckBook.sketchbook_title || '', slot_1: _ckBook.slot_1 };
+        var _r = { sketchbook_title: _ckBook.sketchbook_title || '',
+          slot_1: _ckBook.slot_1 || null, slot_2: _ckBook.slot_2 || null,
+          slot_3: _ckBook.slot_3 || null, slot_4: _ckBook.slot_4 || null };
         localStorage.setItem(LS_KEY, JSON.stringify(_r));
       }
       if (_needsUi) {
-        var _raw1 = _ckBook.slot_1;
-        var _clean1 = Object.assign({}, _raw1);
-        delete _clean1.s1_cone_path; delete _clean1.s1_ceil_path;
-        delete _clean1.s1_floor_path; delete _clean1.s1_datum_path;
-        delete _clean1.s1_canvas_viewbox;
-        SketchbookDatabase.slot1 = _contractToSlot(_clean1);
+        for (var _rn = 1; _rn <= 4; _rn++) {
+          var _raw = _ckBook['slot_' + _rn];
+          if (!_raw) continue;
+          var _clean = Object.assign({}, _raw);
+          delete _clean.s1_cone_path; delete _clean.s1_ceil_path;
+          delete _clean.s1_floor_path; delete _clean.s1_datum_path;
+          delete _clean.s1_canvas_viewbox;
+          SketchbookDatabase['slot' + _rn] = _contractToSlot(_clean);
+        }
         var _tEl = document.getElementById('editable-notebook-title');
         if (_tEl && _ckBook.sketchbook_title) _tEl.value = _ckBook.sketchbook_title;
         if (typeof syncDesktopSketchbookUI === 'function') syncDesktopSketchbookUI();
@@ -3284,8 +3326,9 @@
 
   function renderSavedSlot(idx, data) {
     return `
-      <div class="slot-meta-eyebrow-container">
+      <div class="slot-meta-eyebrow-container" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
         <div class="slot-meta-eyebrow">Page 0${idx}</div>
+        <div class="slot-status-pill" style="font-family:var(--font-mono,monospace);font-size:9px;letter-spacing:0.1em;text-transform:uppercase;padding:2px 7px;border-radius:3px;${(data.status === 'Modeled') ? 'color:#C9A84C;border:1px solid rgba(201,168,76,0.5);background:rgba(201,168,76,0.10);' : 'color:rgba(255,255,255,0.55);border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.04);'}">${data.status || 'Drafted'}</div>
       </div>
       <div class="slot-state-title" style="color: ${data.s1StateColor || data.stateColor};">${data.s1StateName || data.stateName}</div>
       <div class="slot-metrics-table">
@@ -3598,8 +3641,10 @@
   (function() {
     var lsData = null;
     try { lsData = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch(e) {}
-    if (lsData && lsData.slot_1) {
-      SketchbookDatabase.slot1 = _contractToSlot(lsData.slot_1);
+    if (lsData) {
+      for (var _hn = 1; _hn <= 4; _hn++) {
+        if (lsData['slot_' + _hn]) SketchbookDatabase['slot' + _hn] = _contractToSlot(lsData['slot_' + _hn]);
+      }
       var titleEl = document.getElementById('editable-notebook-title');
       if (titleEl && lsData.sketchbook_title) titleEl.value = lsData.sketchbook_title;
     }

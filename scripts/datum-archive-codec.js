@@ -130,10 +130,10 @@
   }
 
   /* ---- Sketch slot <-> compact ---- */
-  // positional order (v1): [age, retire_age, portfolio_mass, contributions, datum_spend,
-  //   designed_ceil, designed_floor, resolved_state, date_stamped, time_stamped,
+  // positional order (v1 — append-only): [age, retire_age, portfolio_mass, contributions,
+  //   datum_spend, designed_ceil, designed_floor, resolved_state, date_stamped, time_stamped,
   //   s1_datum, s1_ceil, s1_floor, s1_resolved_state, s2_design[10]|0,
-  //   market_outlook, tax_rate, inflation_mode, plan_end_age]
+  //   market_outlook, tax_rate, inflation_mode, plan_end_age, status(19)]
   function cSketch(s) {
     if (!s) return 0;
     var d = s.s2_design;
@@ -142,7 +142,7 @@
             s.s1_datum || 0, s.s1_ceil || 0, s.s1_floor || 0, s.s1_resolved_state || '',
             d ? [d.ceilDelta || 0, d.floorDelta || 0, d.datumDelta || 0, d.portDelta || 0, d.age || 0,
                  d.retire || 0, d.planThroughAge || 0, d.port || 0, d.datum || 0, d.contrib || 0] : 0,
-            s.market_outlook || 0, s.tax_rate || 0, s.inflation_mode || 0, s.plan_end_age || 0];
+            s.market_outlook || 0, s.tax_rate || 0, s.inflation_mode || 0, s.plan_end_age || 0, s.status || 0];
   }
   function dSketch(r) {
     if (!r) return null;
@@ -152,9 +152,13 @@
     // s1_resolved_state and market_outlook, not appended at the end.
     var o = {
       age: r[0], retire_age: r[1], portfolio_mass: r[2], contributions: r[3], datum_spend: r[4],
-      designed_ceil: r[5], designed_floor: r[6], resolved_state: r[7], date_stamped: r[8], time_stamped: r[9],
-      s1_datum: r[10], s1_ceil: r[11], s1_floor: r[12], s1_resolved_state: r[13]
+      designed_ceil: r[5], designed_floor: r[6], resolved_state: r[7]
     };
+    // status sits between resolved_state and date_stamped (mirrors _slimOne). Only emit it
+    // when present so legacy slots (no status) stay byte-identical on re-stringify.
+    if (r[19]) o.status = r[19];
+    o.date_stamped = r[8]; o.time_stamped = r[9];
+    o.s1_datum = r[10]; o.s1_ceil = r[11]; o.s1_floor = r[12]; o.s1_resolved_state = r[13];
     if (d) o.s2_design = {
       ceilDelta: d[0], floorDelta: d[1], datumDelta: d[2], portDelta: d[3], age: d[4],
       retire: d[5], planThroughAge: d[6], port: d[7], datum: d[8], contrib: d[9]

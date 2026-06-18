@@ -91,6 +91,7 @@ function slimSketch(seed) {
   return { age: 42 + seed, retire_age: 60 + seed % 8, portfolio_mass: Math.round(Math.abs(rnd(seed)) * 900) / 100,
     contributions: 60000 + seed * 1234, datum_spend: 150000 + seed * 2345, designed_ceil: 280000 + seed * 3456,
     designed_floor: 100000 + seed * 1234, resolved_state: ['EXPANSIVE','STRETCHED','OVEREXTENDED','SECURE'][seed % 4],
+    status: ['Drafted','Modeled'][seed % 2],
     date_stamped: '0' + ((seed % 9) + 1) + '/1' + (seed % 9) + '/2026', time_stamped: (1 + seed % 12) + ':3' + (seed % 6) + ' PM',
     s1_datum: 140000 + seed * 1111, s1_ceil: 230000 + seed * 2222, s1_floor: 95000 + seed * 900, s1_resolved_state: ['STRETCHED','SECURE'][seed % 2],
     s2_design: { ceilDelta: 20000 + seed * 100, floorDelta: 7000 + seed * 50, datumDelta: 12000 + seed * 80, portDelta: Math.round(rnd(seed) * 100) / 100,
