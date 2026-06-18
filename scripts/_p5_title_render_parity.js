@@ -59,6 +59,7 @@ async function readClean(ctx, urlPath, sel, seedKey, seedVal) {
 }
 
 async function typeBlur(pg, sel, val) { await pg.evaluate(([s, t]) => { var el = document.querySelector(s); el.focus(); el.value = t; el.dispatchEvent(new Event('input', { bubbles: true })); el.blur(); el.dispatchEvent(new Event('blur', { bubbles: true })); }, [sel, val]); await pg.waitForTimeout(300); }
+async function clearField(pg, sel) { await pg.evaluate((s) => { var el = document.querySelector(s); el.focus(); el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); el.blur(); el.dispatchEvent(new Event('blur', { bubbles: true })); }, sel); await pg.waitForTimeout(250); }
 
 (async () => {
   await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
@@ -121,6 +122,18 @@ async function typeBlur(pg, sel, val) { await pg.evaluate(([s, t]) => { var el =
   pg = await newPage(dev4, STATEFUL); await pg.goto(base + '/sketchbook.html', { waitUntil: 'load' }); await pg.waitForTimeout(600); out.sbFreshAfterReset = await titleOf(pg, '#editable-notebook-title'); await pg.close();
   await dev4.close();
   F(out.sbFreshAfterReset === "Sweety's Sketchbook", '(4) custom title resurrected after reset on fresh device: "' + out.sbFreshAfterReset + '"');
+
+  // (5) EMPTY-FIELD DEFAULT === post-Clerk default: clearing to empty (signed in) must yield
+  // the personalized "Sweety's <store>", NOT the generic "My …" that later morphs.
+  await fetch(base + '/__resetmeta').catch(() => {});
+  const dev5 = await browser.newContext();
+  pg = await newPage(dev5, DELAYED); await pg.goto(base + '/sketchbook.html', { waitUntil: 'load' }); await pg.waitForTimeout(500);
+  await clearField(pg, '#editable-notebook-title'); out.sbCleared = await titleOf(pg, '#editable-notebook-title'); await pg.close();
+  pg = await newPage(dev5, DELAYED); await pg.goto(base + '/Blueprint.html', { waitUntil: 'load' }); await pg.waitForTimeout(500);
+  await clearField(pg, '#archive-title'); out.bpCleared = await titleOf(pg, '#archive-title'); await pg.close();
+  await dev5.close();
+  F(out.sbCleared === "Sweety's Sketchbook", '(5) SKETCHBOOK clear-to-empty gave "' + out.sbCleared + '" (expected the personalized default, NOT a generic My-prefixed one)');
+  F(out.bpCleared === "Sweety's Blueprint Archive", '(5) BLUEPRINT clear-to-empty gave "' + out.bpCleared + '" (expected the personalized default, NOT a generic My-prefixed one)');
 
   out.mirrorLogLines = Object.keys(out.mirrorBytes);
   out.verdict = (out.findings.length === 0 && out.pageErrors.length === 0) ? 'PASS' : 'FAIL';

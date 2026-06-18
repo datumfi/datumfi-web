@@ -3590,7 +3590,7 @@
     }
   });
   inputTitleEl.addEventListener('blur', function() {
-    if (this.value.trim() === '') this.value = 'My Sketchbook';
+    if (this.value.trim() === '') this.value = (typeof _sbDefaultTitle === 'function') ? _sbDefaultTitle() : 'My Sketchbook';
     _updateLsTitle(this.value);
   });
 
@@ -3626,12 +3626,15 @@
         var u = window.Clerk && window.Clerk.user;
         var fn = u && u.firstName;
         var em = u && u.primaryEmailAddress && u.primaryEmailAddress.emailAddress;
-        name = fn || (em ? em.split('@')[0] : '') || 'Architect';
-      } catch (e) { name = 'Architect'; }
+        name = fn || (em ? em.split('@')[0] : '') || '';
+      } catch (e) { name = ''; }
     }
     return name;
   }
-  function _sbDefaultTitle() { return _sbComputedName() + SB_TITLE_SUFFIX; }
+  // ONE source of truth (mirrors Blueprint): personalized when a name exists, generic
+  // "My Sketchbook" ONLY as a last resort. Used by BOTH the post-Clerk render AND the
+  // empty-field blur, so clearing === the re-login default (no "My …" -> "Sweety's …" morph).
+  function _sbDefaultTitle() { var n = _sbComputedName(); return n ? (n + SB_TITLE_SUFFIX) : 'My Sketchbook'; }
   window.renderNotebookTitle = function () {
     var titleEl = document.getElementById('editable-notebook-title');
     if (!titleEl) return;

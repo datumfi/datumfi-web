@@ -1749,7 +1749,7 @@ archiveTitle.addEventListener('click', function() {
   if (this.value === 'My Blueprint Archive') this.select();
 });
 archiveTitle.addEventListener('blur', function() {
-  if (this.value.trim() === '') this.value = 'My Blueprint Archive';
+  if (this.value.trim() === '') this.value = (typeof _bpDefaultTitle === 'function') ? _bpDefaultTitle() : 'My Blueprint Archive';
 });
 
 // G3 — no mock seed on cold start. An empty archive renders empty slots; the
@@ -1771,12 +1771,15 @@ function _bpComputedName() {
       var u = window.Clerk && window.Clerk.user;
       var fn = u && u.firstName;
       var em = u && u.primaryEmailAddress && u.primaryEmailAddress.emailAddress;
-      name = fn || (em ? em.split('@')[0] : '') || 'Architect';
-    } catch (e) { name = 'Architect'; }
+      name = fn || (em ? em.split('@')[0] : '') || '';
+    } catch (e) { name = ''; }
   }
   return name;
 }
-function _bpDefaultTitle() { return _bpComputedName() + BP_TITLE_SUFFIX; }
+// ONE source of truth for the default: personalized when a name exists, generic "My …"
+// ONLY as a last resort (signed-out / name truly absent). Used by BOTH the post-Clerk
+// render AND the empty-field blur, so clearing the title === the re-login default (no morph).
+function _bpDefaultTitle() { var n = _bpComputedName(); return n ? (n + BP_TITLE_SUFFIX) : 'My Blueprint Archive'; }
 window.renderArchiveTitle = function () {
   var titleEl = document.getElementById('archive-title');
   if (!titleEl) return;
