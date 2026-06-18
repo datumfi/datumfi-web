@@ -217,7 +217,7 @@
     if (_saveBtn) _saveBtn.addEventListener('click', function () {
       var a = getActiveTab();
       if (a === 'studio' && typeof window.studioSaveCurrent === 'function') window.studioSaveCurrent(_saveBtn);
-      else if (a === 'sketch' && typeof window.sketchSaveCurrent === 'function') window.sketchSaveCurrent();
+      else if (a === 'sketch' && typeof window.sketchSaveCurrent === 'function') window.sketchSaveCurrent(_saveBtn);
     });
 
     // Studio view-toggles -> window.setViewMode + local active state. Self-contained

@@ -61,13 +61,40 @@ const armS1 = async (page, age) => page.evaluate((a) => {
   await page.waitForTimeout(400);
   await page.evaluate(() => window.sketchSaveCurrent());
   await page.waitForTimeout(150);
+  const inView = () => {
+    var pop = document.getElementById('sketch-save-sb-pop');
+    if (!pop) return null;
+    var r = pop.getBoundingClientRect();
+    return { left: Math.round(r.left), right: Math.round(r.right), top: Math.round(r.top), width: Math.round(r.width), vw: window.innerWidth, vh: window.innerHeight };
+  };
   out.pickerOpen = await page.evaluate(() => {
     var pop = document.getElementById('sketch-save-sb-pop');
     if (!pop) return { exists: false };
     var head = (pop.querySelector('div') || {}).textContent || '';
     var labels = Array.prototype.map.call(pop.querySelectorAll('button'), function (b) { return b.textContent; });
-    return { exists: true, head: head, labels: labels };
+    var r = pop.getBoundingClientRect();
+    return { exists: true, head: head, labels: labels, rect: { left: Math.round(r.left), right: Math.round(r.right), top: Math.round(r.top), width: Math.round(r.width), vw: window.innerWidth } };
   });
+
+  // ── (a-regression) signed-in topbar anchor is the hidden #sketch-save-btn case: opening
+  //    via a ZERO-rect anchor must NOT push the popup off-screen ("picker does nothing"). ──
+  out.hiddenAnchor = await page.evaluate(() => {
+    // close the picker opened above via the REAL toggle so the closure's _pop resets to null
+    // (calling pop.remove() would leave _pop dangling and the next open would toggle-close).
+    if (document.getElementById('sketch-save-sb-pop')) window.sketchSaveCurrent();
+    var nav = document.getElementById('sketch-save-btn'); if (nav) nav.style.display = 'none';
+    window.sketchSaveCurrent();   // no anchor -> falls back to the now-hidden nav button
+    var pop = document.getElementById('sketch-save-sb-pop');
+    var res = pop
+      ? (function () { var r = pop.getBoundingClientRect(); return { exists: true, left: Math.round(r.left), right: Math.round(r.right), top: Math.round(r.top), width: Math.round(r.width), vw: window.innerWidth }; })()
+      : { exists: false };
+    if (document.getElementById('sketch-save-sb-pop')) window.sketchSaveCurrent(); // close via toggle
+    if (nav) nav.style.display = '';
+    return res;
+  });
+  // reopen the normal picker for the save flow below (only if not already open)
+  await page.evaluate(() => { if (!document.getElementById('sketch-save-sb-pop')) window.sketchSaveCurrent(); });
+  await page.waitForTimeout(120);
 
   // ── (b)+(e nav=DRAFTED)+(f slot N) — save to SLOT 2 via the picker, then navigate ────
   await Promise.all([
@@ -162,6 +189,11 @@ const armS1 = async (page, age) => page.evaluate((a) => {
   F(a.exists && /Save to which sheet/.test(a.head), 'a: picker head wrong (' + (a && a.head) + ')');
   F(a.exists && a.labels && a.labels.length === 4, 'a: picker did not render 4 slot buttons (' + (a.labels && a.labels.length) + ')');
   F(a.exists && a.labels && a.labels.every((l) => /Empty/.test(l)), 'a: fresh book slots not all Empty (' + JSON.stringify(a.labels) + ')');
+  F(a.exists && a.rect && a.rect.width > 0 && a.rect.left >= -1 && a.rect.right <= a.rect.vw + 1, 'a: picker rendered off-screen (' + JSON.stringify(a.rect) + ')');
+  // (a-regression) hidden-anchor open must stay on-screen
+  const ha = out.hiddenAnchor;
+  F(ha && ha.exists, 'a: picker did not open when anchored to a hidden nav button (signed-in topbar case)');
+  F(ha && ha.exists && ha.width > 0 && ha.left >= -1 && ha.right <= ha.vw + 1 && ha.top >= -1, 'a: hidden-anchor picker rendered OFF-SCREEN — the signed-in "does nothing" bug (' + JSON.stringify(ha) + ')');
   // (b) + (f slot N)
   F(nv.url.indexOf('sketchbook.html') >= 0, 'b: nav save did not navigate to sketchbook (' + nv.url + ')');
   F(nv.slot2 && !nv.slot1 && !nv.slot3 && !nv.slot4, 'f/b: write did not land in slot 2 ONLY (s1=' + nv.slot1 + ' s2=' + nv.slot2 + ' s3=' + nv.slot3 + ' s4=' + nv.slot4 + ')');

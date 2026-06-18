@@ -9372,7 +9372,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
       // B: the pending-intent flag is preserved but does NOT auto-fire — the user clicks
       // "Save Current Sketch →" on the Sketchbook to consume it (single legacy slot_1 path).
       var _navSaveBtn = document.getElementById('sketch-save-btn');
-      var _ovSlot = 1, _ovSource = 'phaseV', _pop = null;
+      var _ovSlot = 1, _ovSource = 'phaseV', _pop = null, _skAnchor = null;
       function _hopToVaultSave() {
         try {
           sessionStorage.setItem('datumfi_sketch_current_snapshot', JSON.stringify(serializeSketchState()));
@@ -9394,7 +9394,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
       //    must confirm the overwrite first — no silent clobber, no first-available auto-fire.
       var _PHEAD = 'font-family:var(--font-mono);font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold,#c9a84c);padding:2px 4px 4px;';
       function _skClose() { if (_pop) { if (_pop.parentNode) _pop.remove(); _pop = null; document.removeEventListener('click', _skOnDoc, true); } }
-      function _skOnDoc(e) { if (_pop && !_pop.contains(e.target) && e.target !== _navSaveBtn) _skClose(); }
+      function _skOnDoc(e) { if (_pop && !_pop.contains(e.target) && e.target !== _navSaveBtn && e.target !== _skAnchor) _skClose(); }
       function _skSaveTo(n) { _skClose(); _doSave(n, 'nav'); }
       function _skConfirmOverwrite(n) {
         if (!_pop) return;
@@ -9426,9 +9426,15 @@ Studio is built for exactly this. See If This Shape Holds →`;
       }
       function _skOpen(anchor) {
         anchor = anchor || _navSaveBtn || document.body;
+        _skAnchor = anchor;
         _pop = document.createElement('div'); _pop.id = 'sketch-save-sb-pop';
         _pop.style.cssText = 'position:fixed;z-index:10001;background:#0a1018;border:1px solid rgba(93,202,165,0.4);border-radius:6px;padding:8px;display:flex;flex-direction:column;gap:6px;box-shadow:0 10px 30px rgba(0,0,0,0.7);min-width:230px;';
-        var r = anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : { bottom: 56, right: window.innerWidth - 8 };
+        var r = (anchor && anchor.getBoundingClientRect) ? anchor.getBoundingClientRect() : null;
+        // A hidden/removed anchor (e.g. the signed-OUT nav #sketch-save-btn that nav.js
+        // hides once authenticated) returns a ZERO rect; right:innerWidth would then shove
+        // the popup off-screen ("picker does nothing" after sign-in). Fall back to a fixed
+        // top-right anchor whenever the rect is degenerate.
+        if (!r || (!r.bottom && !r.right && !r.width)) { r = { bottom: 56, right: window.innerWidth - 8 }; }
         _pop.style.top = (r.bottom + 6) + 'px';
         _pop.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
         _skRenderSlots();
