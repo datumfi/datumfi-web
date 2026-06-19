@@ -1880,16 +1880,22 @@
       <!-- Estate<->Shape flip toggle -->
       <button id="shape-mode-toggle" onclick="toggleShapeMode()" title="Switch between Estate rooms and deterministic Shape view">Shape Mode</button>
 
+      <!-- Item 2 (P8.1) — the Have/Want subtoggle is a DIRECT child of .canvas-wrapper, NOT
+           inside #shape-panel: #shape-panel carries the reveal transform, and a position:fixed
+           element inside a transformed ancestor is positioned relative to THAT ancestor, which
+           made the fixed toggle "swoop" from its old spot while the transform settled on
+           Estate->Shape entry. Anchored here (canvas-wrapper is untransformed) it holds from
+           first paint -- no flash-of-unanchored-content. -->
+      <div id="shape-subtoggle" role="tablist" aria-label="Shape you have or want">
+        <button id="shape-have-tab" class="shape-subtoggle-btn active" role="tab" aria-selected="true" onclick="window.flipToHave&&window.flipToHave()">Shape You Have</button>
+        <button id="shape-want-tab" class="shape-subtoggle-btn" role="tab" aria-selected="false" onclick="window.flipToWant&&window.flipToWant()">Shape You Want</button>
+      </div>
+
       <!-- Shape panel: visible in mode-shape; deterministic Floor/Datum/Ceiling view (no Monte Carlo) -->
       <div id="shape-panel">
-        <!-- Have/Want flip (Step-3 scaffold): sub-toggle + 3D flip. Front face = the
-             existing Have shape (mount(), untouched). Back face = #shape-want-face. The
-             flip lives OUTSIDE #shape-zoom-wrap so the pan/zoom matrix never nests under
-             rotateY. Renderer wiring of the back-face surrounds is the next step. -->
-        <div id="shape-subtoggle" role="tablist" aria-label="Shape you have or want">
-          <button id="shape-have-tab" class="shape-subtoggle-btn active" role="tab" aria-selected="true" onclick="window.flipToHave&&window.flipToHave()">Shape You Have</button>
-          <button id="shape-want-tab" class="shape-subtoggle-btn" role="tab" aria-selected="false" onclick="window.flipToWant&&window.flipToWant()">Shape You Want</button>
-        </div>
+        <!-- Have/Want flip (Step-3 scaffold): front face = the existing Have shape (mount(),
+             untouched); back face = #shape-want-face. The flip lives OUTSIDE #shape-zoom-wrap
+             so the pan/zoom matrix never nests under rotateY. -->
         <div id="shape-flip"><div id="shape-flip-inner">
         <div id="shape-face-front">
         <!-- Pan/zoom transform target: HUD + SVG move/scale together (Studio's

@@ -63,9 +63,15 @@ const readAges = (page) => page.evaluate(() => ({ age: parseInt(document.getElem
   check('Item1: PTA clamps to >= max(75, RA+20)', ptaLow >= 90, 'PTA=' + ptaLow);
 
   // Enter shape mode for Items 2 + 3.
+  const rectOf = () => page.evaluate(() => { const r = document.getElementById('shape-subtoggle').getBoundingClientRect(); return r.width ? Math.round(r.x + r.width / 2) : null; });
   await page.click('#shape-mode-toggle');
-  await page.waitForTimeout(2600);
-  const rectOf = () => page.evaluate(() => { const r = document.getElementById('shape-subtoggle').getBoundingClientRect(); return Math.round(r.x + r.width / 2); });
+  // Item 2 anti-flash: sample the subtoggle center-x DURING the Estate->Shape transition
+  // (not just at rest) — it must be anchored from first paint, no swoop.
+  const flashSamples = [];
+  for (const t of [40, 80, 150, 300, 600]) { await page.waitForTimeout(t === 40 ? 40 : t - flashSamples[flashSamples.length - 1].t); flashSamples.push({ t, cx: await rectOf() }); }
+  const seen = flashSamples.map((s) => s.cx).filter((v) => v !== null);
+  check('Item2: no unanchored-flash on Estate->Shape (stable during transition)', seen.length >= 4 && (Math.max(...seen) - Math.min(...seen)) <= 2, JSON.stringify(flashSamples));
+  await page.waitForTimeout(2000);
 
   // Item 3 — box gone + state badge/outline present at default.
   const i3 = await page.evaluate(() => {
