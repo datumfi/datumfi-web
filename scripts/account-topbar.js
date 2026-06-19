@@ -204,10 +204,35 @@
       localStorage.removeItem('datum_auth_hint');
       localStorage.removeItem('datum_sketch_overlay_seen');
       localStorage.removeItem('datum_studio_overlay_seen');
-      if (window.Clerk && typeof Clerk.signOut === 'function') {
-        Clerk.signOut().then(function () { window.location.replace('/index.html'); });
+
+      function _finishSignOut() {
+        if (window.Clerk && typeof Clerk.signOut === 'function') {
+          Clerk.signOut().then(function () { window.location.replace('/index.html'); });
+        } else {
+          window.location.replace('/index.html');
+        }
+      }
+
+      // P7 — LOCAL-ONLY carried-plan wipe so the next user on this browser cannot
+      // see the prior user's plan. DatumPurge owns the single-source key list and
+      // does NOT touch the Clerk cloud blob (their plans return on next sign-in).
+      // The module isn't loaded on every page (only erase pages declare it), so
+      // ensure it first, then wipe, then sign out — guarded so we never hang.
+      function _wipeThenSignOut() {
+        try { if (window.DatumPurge && typeof window.DatumPurge.signOutWipe === 'function') window.DatumPurge.signOutWipe(); } catch (_e) {}
+        _finishSignOut();
+      }
+      if (window.DatumPurge && typeof window.DatumPurge.signOutWipe === 'function') {
+        _wipeThenSignOut();
       } else {
-        window.location.replace('/index.html');
+        var _ps = document.createElement('script');
+        _ps.src = '/scripts/datum-archive-purge.js';
+        var _done = false;
+        function _once() { if (_done) return; _done = true; _wipeThenSignOut(); }
+        _ps.onload = _once;
+        _ps.onerror = _once;
+        setTimeout(_once, 1500);   // fallback: never block sign-out on a load miss
+        document.head.appendChild(_ps);
       }
     });
 

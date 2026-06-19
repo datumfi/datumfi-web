@@ -27,9 +27,14 @@
   var BP_SNAPSHOT = 'datumfi_blueprint_current_snapshot';
   var BP_DRAFT    = 'datumfi_blueprint_draft_v1';
   var BP_PER_SLOT = 'datum_blueprint_state_';
+  var BP_PENDING  = 'datum_blueprint_state_pending';   // R3.6 captured Studio state
+  var BP_ARCHIVE  = 'datumfi_blueprint_archive_v1';     // local archive view (Clerk = truth)
   var SK_SNAPSHOT = 'datumfi_sketch_current_snapshot';
   var SK_PER_SLOT = 'datum_sketch_state_';
   var SK_BOOK     = 'datumfi_sketchbook_v1';
+  // Carried Sketch-design state that prefills the Studio WANT card / S2 face.
+  var CARRIED_DESIGN = ['datum_designed_ceil', 'datum_designed_datum',
+    'datum_designed_floor', 'datum_designed_state', 'datum_s2_design'];
 
   function _readSS(key) { try { return JSON.parse(sessionStorage.getItem(key) || 'null'); } catch (_e) { return null; } }
   function _readLS(key) { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (_e) { return null; } }
@@ -120,9 +125,37 @@
     return report;
   }
 
+  /* The COMPLETE set of concrete local keys that carry a user's plan across the
+   * page. Derived from the SAME constants the per-slot erase paths use, so a new
+   * carried key added above can never silently leak past sign-out — it must be
+   * listed here once and both signOutWipe and the _p7 gate sweep it. */
+  function _localCarriedKeys() {
+    var keys = [BP_SNAPSHOT, BP_DRAFT, BP_PENDING, BP_ARCHIVE, SK_SNAPSHOT, SK_BOOK]
+      .concat(CARRIED_DESIGN);
+    for (var i = 1; i <= 4; i++) { keys.push(BP_PER_SLOT + i); keys.push(SK_PER_SLOT + i); }
+    return keys;
+  }
+
+  /* P7 sign-out wipe — LOCAL ONLY. Clears every carried plan copy from BOTH
+   * localStorage and sessionStorage so the next user on this browser cannot see
+   * the prior user's plan. It DELIBERATELY does NOT touch the Clerk *_z mirrors:
+   * the cloud blob is the user's truth and must survive sign-out so their saved
+   * plans return on next sign-in. (This is the opposite of blueprint()/sketch(),
+   * which ERASE a slot everywhere including the cloud.) */
+  function signOutWipe() {
+    var keys = _localCarriedKeys();
+    keys.forEach(function (k) {
+      try { localStorage.removeItem(k); } catch (_e) {}
+      try { sessionStorage.removeItem(k); } catch (_e) {}
+    });
+    return { swept: keys.length, keys: keys };
+  }
+
   global.DatumPurge = {
     blueprint: blueprint,
     sketch: sketch,
+    signOutWipe: signOutWipe,
+    _localCarriedKeys: _localCarriedKeys,
     _bpBelongs: _bpBelongs,
     _skBelongs: _skBelongs
   };
