@@ -7911,6 +7911,10 @@
       return had;
     }
     function _startScratchFlow() {
+      // P8 Item 5 — no-op when the overlay isn't shown. Setup now always runs (so
+      // _studioOverlayOpen exists even when the overlay auto-hides on load), which wires the
+      // scratch/close handlers while hidden; a stray click must NOT reset+reload the Blueprint.
+      if (_wrap.style.display === 'none' || _wrap.classList.contains('dismissed')) return;
       if (_scratchReset()) {
         try { sessionStorage.setItem('datumfi_skip_entry_overlay', '1'); } catch(e) {}
         window.location.href = '/studio.html';

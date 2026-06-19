@@ -9807,6 +9807,12 @@ Studio is built for exactly this. See If This Shape Holds →`;
   }
 
   function dismissOverlay(msg) {
+    // P8 Item 5 — no-op when the overlay isn't actually shown. Setup now always runs (so
+    // _sketchOverlayOpen exists even when the overlay auto-hides on load), which means the
+    // scratch/close handlers are wired even while hidden. Dismissing an already-hidden
+    // overlay must NOT pop the shared toast — its remove-timer would race with the
+    // nav-picker save toast (_finish) that shares #sketchOverlayToast.
+    if (_overlayWrap.style.display === 'none' || _overlayWrap.classList.contains('dismissed')) return;
     if (isSignedIn) {
       try { localStorage.setItem('datum_sketch_overlay_seen', '1'); } catch(ex) {}
     }
