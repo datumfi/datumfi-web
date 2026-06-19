@@ -5971,8 +5971,8 @@
         { valId: 'val-plan-through', slider: slPlan, w: '80px', isCurrency: false, maxLength: 3,
           getEditVal: function () { return String(Math.round(parseFloat(slPlan.value))); },
           clean: function (s) { return s.replace(/[^0-9]/g, ''); },
-          validate: function (v) { return v >= 75 && v <= 105; },
-          getClampedValid: function (v) { return clampN(v, 75, 105); },
+          validate: function (v) { var lo = Math.max(75, Math.round(parseFloat(slAct.value)) + 20); return v >= lo && v <= 105; },
+          getClampedValid: function (v) { var lo = Math.max(75, Math.round(parseFloat(slAct.value)) + 20); return clampN(v, lo, 105); },
           toSlider: function (v) { return v; } },
         { valId: 'val-portfolio',   slider: slPort, w: '140px', isCurrency: true,
           getEditVal: function () { return '$' + Math.round(SC.portPosToVal(parseInt(slPort.value,10)) * 1e6).toLocaleString('en-US'); },
@@ -6030,6 +6030,9 @@
       // Integer sliders
       var sAge = $('slider-age');
       if (sAge) sAge.addEventListener('input', function () {
+        // Item 1 — Sketch parity (sketch.html:5007): current age can never meet/exceed retirement.
+        var _sR = $('slider-activation');
+        if (_sR && parseInt(sAge.value, 10) >= parseInt(_sR.value, 10)) sAge.value = parseInt(_sR.value, 10) - 1;
         var n = parseInt(sAge.value, 10);
         if (!isNaN(_prev.age)) {
           if (n > _prev.age) impulse(WAVE_IMP_AGE, 0, +1, null, WAVE_LEAN_MAG, null);
@@ -6040,6 +6043,11 @@
       });
       var sRet = $('slider-activation');
       if (sRet) sRet.addEventListener('input', function () {
+        // Item 1 — Sketch parity (sketch.html:5019): retirement can never meet/fall below current age.
+        var _sA = $('slider-age'), _sP = $('sl-plan-through');
+        if (_sA && parseInt(sRet.value, 10) <= parseInt(_sA.value, 10)) sRet.value = parseInt(_sA.value, 10) + 1;
+        // Plan-Through floor follows RA: PTA >= max(75, RA+20) (Sketch compute-path rule, sketch.html:3532).
+        if (_sP) { var _minP = Math.max(75, parseInt(sRet.value, 10) + 20); if (parseInt(_sP.value, 10) < _minP) { _sP.value = _minP; updatePlanThroughLabel(); syncPlanFromSketch(); } }
         var n = parseInt(sRet.value, 10);
         if (!isNaN(_prev.ret)) {
           if (n > _prev.ret) impulse(0, WAVE_IMP_RET, null, +1, null, WAVE_LEAN_MAG);
@@ -6050,6 +6058,10 @@
       });
       var sPlan = $('sl-plan-through');
       if (sPlan) sPlan.addEventListener('input', function () {
+        // Item 1 — Sketch parity (sketch.html:5031): plan-through floor = max(75, RA+20).
+        var _sR = $('slider-activation');
+        var _minP = Math.max(75, _sR ? parseInt(_sR.value, 10) + 20 : 75);
+        if (parseInt(sPlan.value, 10) < _minP) sPlan.value = _minP;
         var n = parseInt(sPlan.value, 10);
         if (!isNaN(_prev.plan)) {
           if (n > _prev.plan) impulse(0, WAVE_IMP_PLAN, null, +1, null, WAVE_LEAN_MAG);
