@@ -869,6 +869,10 @@
           var num = e.target.value.replace(/[^0-9]/g, '');
           if (num) { e.target.value = '$' + parseInt(num, 10).toLocaleString('en-US'); }
           else     { e.target.value = ''; }
+        } else if (c.inputFilter) {
+          // Opt-in: caller controls the live input filter (e.g. allow "/" + spaces for
+          // MM/YYYY date entry). Absent -> digits-only, byte-identical to prior behavior.
+          e.target.value = c.inputFilter(e.target.value);
         } else {
           var num2 = e.target.value.replace(/[^0-9]/g, '');
           e.target.value = num2;
@@ -876,8 +880,10 @@
       });
 
       function commitEdit() {
-        var cleaned = c.clean(inp.value.trim());
-        var raw = parseInt(cleaned, 10);
+        // Opt-in: c.parse(rawStr) -> committed integer (e.g. MM/YYYY -> age). Absent ->
+        // clean + parseInt, byte-identical to prior behavior. The result still flows through
+        // c.validate / c.getClampedValid / c.toSlider, so range + ordering clamps are reused.
+        var raw = c.parse ? c.parse(inp.value.trim()) : parseInt(c.clean(inp.value.trim()), 10);
         if (isNaN(raw)) {
           inp.style.display = 'none'; valEl.style.display = ''; return;
         }

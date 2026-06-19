@@ -5640,18 +5640,77 @@
       if (typeof refreshAllLabels === 'function') refreshAllLabels();
       if (typeof fireUpdate === 'function') fireUpdate();
     }
+    /* ── Item 4 — MM/YYYY date entry for the three inline age fields ───────────
+       Each age field accepts EITHER a 2-digit age OR an MM/YYYY date. _parseAgeOrDate
+       converts a date to an integer age that flows through the existing
+       validate/getClampedValid (so the Item-1 ordering clamp RA>=CA+1 / CA<=RA-1 /
+       PTA>=max(75,RA+20) is reused for free). A typed date is stashed in
+       _agePendingDate and written to the Profile field (month-preserving) by onCommit
+       ONLY when the committed age matches the typed date (i.e. it wasn't range-clamped).
+       Plain-age + slider-drag paths keep today's behavior. */
+    var _ageDateRe = /^(\d{1,2})\s*\/\s*(\d{4})$/;
+    var _agePendingDate = null;
+    function _ageInputFilter(s) { return String(s).replace(/[^0-9\/ ]/g, ''); }
+    function _pad2(n) { n = String(n); return n.length < 2 ? '0' + n : n; }
+    function _readDobMoYr() {
+      var el = $('pri-dob');
+      var m = el && el.value ? String(el.value).match(/(\d{1,2})\s*\/\s*(\d{4})/) : null;
+      if (m) return { mo: parseInt(m[1], 10), yr: parseInt(m[2], 10) };
+      // DOB-absent fallback: birthYear = today - current-age slider, birthMonth = 1.
+      var sA = $('slider-age'); var ca = sA ? (parseInt(sA.value, 10) || 40) : 40;
+      return { mo: 1, yr: new Date().getFullYear() - ca };
+    }
+    // kind: 'dob' (Current Age = DOB) | 'retire' | 'pta' (target date, DOB-anchored).
+    function _parseAgeOrDate(str, kind) {
+      var s = String(str || '').trim();
+      // A "/" signals a date attempt: it must be a full MM/YYYY, else revert (don't silently
+      // fall back to digit-stripping, which would read "03 / 85" as 385 -> clamp).
+      if (s.indexOf('/') !== -1) {
+        var dm = s.match(_ageDateRe);
+        if (!dm) { _agePendingDate = null; return NaN; }                // malformed date -> revert
+        var mo = parseInt(dm[1], 10), yr = parseInt(dm[2], 10);
+        if (mo < 1 || mo > 12) { _agePendingDate = null; return NaN; }  // bad month -> revert
+        var now = new Date(), age;
+        if (kind === 'dob') {
+          age = now.getFullYear() - yr;
+          if (now.getMonth() + 1 < mo) age--;
+        } else {
+          var dob = _readDobMoYr();
+          age = yr - dob.yr;
+          if (mo < dob.mo) age--;
+        }
+        _agePendingDate = { kind: kind, mo: mo, yr: yr, age: age };
+        return age;
+      }
+      _agePendingDate = null;
+      var n = parseInt(s.replace(/[^0-9]/g, ''), 10);
+      return isNaN(n) ? NaN : n;
+    }
+    // Writes the exact typed date to the Profile field, month+year preserved, ONLY when the
+    // committed age equals the typed date's age (unclamped). Returns true if it owned the
+    // Profile write so onCommit skips the lossy syncFromSketchAges derive.
+    function _commitAgeDate(committedAge) {
+      var pd = _agePendingDate; _agePendingDate = null;
+      if (!pd || committedAge !== pd.age) return false;
+      if (pd.kind === 'dob')    { var d = $('pri-dob');    if (d) d.value = _pad2(pd.mo) + ' / ' + pd.yr; return true; }
+      if (pd.kind === 'retire') { var r = $('target-ret'); if (r) r.value = _pad2(pd.mo) + ' / ' + pd.yr; return true; }
+      return false; // 'pta' has no date Profile field
+    }
     function syncFromSketchAges() {
       var sA = $('slider-age'), sR = $('slider-activation');
       var dobEl = $('pri-dob'), retEl = $('target-ret');
       var thisYear = new Date().getFullYear();
       if (sA && dobEl) {
         var ca = parseInt(sA.value, 10) || 40;
-        dobEl.value = '06 / ' + (thisYear - ca);
+        // Item 4 — preserve an existing typed month; only default to 06 when none is set.
+        var dm = String(dobEl.value || '').match(_ageDateRe);
+        dobEl.value = (dm ? _pad2(dm[1]) : '06') + ' / ' + (thisYear - ca);
       }
       if (sR && retEl) {
         var ra = parseInt(sR.value, 10) || 65;
         var ca2 = parseInt(sA ? sA.value : 40, 10) || 40;
-        retEl.value = '06 / ' + (thisYear - ca2 + ra);
+        var rm = String(retEl.value || '').match(_ageDateRe);
+        retEl.value = (rm ? _pad2(rm[1]) : '06') + ' / ' + (thisYear - ca2 + ra);
       }
     }
     function syncPlanFromSketch() {
@@ -5927,21 +5986,24 @@
       var slAge = $('slider-age'), slAct = $('slider-activation'), slPlan = $('sl-plan-through');
       var slPort = $('slider-portfolio'), slCont = $('slider-contrib'), slDat = $('slider-datum');
       var cfg = [
-        { valId: 'val-age',         slider: slAge,  w: '80px',  isCurrency: false, maxLength: 2,
+        { valId: 'val-age',         slider: slAge,  w: '120px', isCurrency: false, maxLength: 9,
           getEditVal: function () { return String(Math.round(parseFloat(slAge.value))); },
           clean: function (s) { return s.replace(/[^0-9]/g, ''); },
+          inputFilter: _ageInputFilter, parse: function (s) { return _parseAgeOrDate(s, 'dob'); },
           validate: function (v) { return v >= 18 && v <= 85; },
           getClampedValid: function (v) { return clampN(v, 18, 85); },
           toSlider: function (v) { return v; } },
-        { valId: 'val-activation',  slider: slAct,  w: '80px',  isCurrency: false, maxLength: 2,
+        { valId: 'val-activation',  slider: slAct,  w: '120px', isCurrency: false, maxLength: 9,
           getEditVal: function () { return String(Math.round(parseFloat(slAct.value))); },
           clean: function (s) { return s.replace(/[^0-9]/g, ''); },
+          inputFilter: _ageInputFilter, parse: function (s) { return _parseAgeOrDate(s, 'retire'); },
           validate: function (v) { return v >= Math.max(45, Math.round(parseFloat(slAge.value)) + 1) && v <= 90; },
           getClampedValid: function (v) { var lo = Math.max(45, Math.round(parseFloat(slAge.value)) + 1); return clampN(v, lo, 90); },
           toSlider: function (v) { return v; } },
-        { valId: 'val-plan-through', slider: slPlan, w: '80px', isCurrency: false, maxLength: 3,
+        { valId: 'val-plan-through', slider: slPlan, w: '120px', isCurrency: false, maxLength: 9,
           getEditVal: function () { return String(Math.round(parseFloat(slPlan.value))); },
           clean: function (s) { return s.replace(/[^0-9]/g, ''); },
+          inputFilter: _ageInputFilter, parse: function (s) { return _parseAgeOrDate(s, 'pta'); },
           validate: function (v) { var lo = Math.max(75, Math.round(parseFloat(slAct.value)) + 20); return v >= lo && v <= 105; },
           getClampedValid: function (v) { var lo = Math.max(75, Math.round(parseFloat(slAct.value)) + 20); return clampN(v, lo, 105); },
           toSlider: function (v) { return v; } },
@@ -5963,10 +6025,18 @@
       ];
       DatumShape.wireCurrencyEdit(cfg, {
         clamp: clampN,
-        onCommit: function (slider) {
+        onCommit: function (slider, value) {
           refreshAllLabels();
-          if (slider.id === 'slider-age' || slider.id === 'slider-activation') syncFromSketchAges();
-          if (slider.id === 'sl-plan-through') syncPlanFromSketch();
+          if (slider.id === 'slider-age' || slider.id === 'slider-activation') {
+            // Item 4 — a matching date commit writes the exact MM/YYYY to the Profile
+            // (month-preserving); otherwise derive the date from the committed age.
+            if (!_commitAgeDate(value)) syncFromSketchAges();
+          } else if (slider.id === 'sl-plan-through') {
+            _agePendingDate = null;   // pta date already converted to age; no date Profile field
+            syncPlanFromSketch();
+          } else {
+            _agePendingDate = null;
+          }
         },
         updateEngine: fireUpdate
       });

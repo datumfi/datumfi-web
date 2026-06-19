@@ -31,6 +31,10 @@ function check(label, cond, detail) { const ok = !!cond; if (!ok) fails++; resul
 const visible = (page, id) => page.evaluate((i) => { const el = document.getElementById(i); if (!el) return false; const cs = getComputedStyle(el); return cs.display !== 'none' && !el.classList.contains('dismissed'); }, id);
 const setSlider = (page, id, val) => page.evaluate(([i, v]) => { const el = document.getElementById(i); if (!el) return null; el.value = String(v); el.dispatchEvent(new Event('input', { bubbles: true })); return parseInt(el.value, 10); }, [id, val]);
 const blockClerk = (ctx) => ctx.route('**/*', (route) => { const u = route.request().url(); if (!/127\.0\.0\.1/.test(u) && /clerk|cloudflareinsights|posthog/i.test(u)) return route.abort(); return route.continue(); });
+// Item 4 — drive the inline edit: click the value span, set its sibling edit-input, run the
+// live filter, then blur to commit.
+const editField = (page, valId, text) => page.evaluate(([id, t]) => { const val = document.getElementById(id); val.click(); const inp = val.nextSibling; inp.value = t; inp.dispatchEvent(new Event('input', { bubbles: true })); inp.blur(); }, [valId, text]);
+const readAges = (page) => page.evaluate(() => ({ age: parseInt(document.getElementById('slider-age').value, 10), ret: parseInt(document.getElementById('slider-activation').value, 10), plan: parseInt(document.getElementById('sl-plan-through').value, 10), dob: (document.getElementById('pri-dob') || {}).value, tret: (document.getElementById('target-ret') || {}).value }));
 
 (async () => {
   await new Promise((r) => server.listen(8141, '127.0.0.1', r));
@@ -111,6 +115,44 @@ const blockClerk = (ctx) => ctx.route('**/*', (route) => { const u = route.reque
   check('Item5: reopen shows live Signed in', /Signed in/.test(await page.evaluate(() => (document.getElementById('studioStatusValue') || {}).textContent || '')));
   await ctx.close();
 
+  // ── Item 4 — MM/YYYY age inputs ──
+  ctx = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+  await blockClerk(ctx);
+  page = await ctx.newPage();
+  const now = new Date(); const Y = now.getFullYear(); const Mo = now.getMonth() + 1;
+  await page.goto(BASE + '/studio.html', { waitUntil: 'load' });
+  await page.waitForTimeout(1500);
+  await page.evaluate(() => { const b = document.getElementById('studioStartScratch'); if (b) b.click(); }).catch(() => {});
+  await page.waitForTimeout(700);
+  // date -> age + month round-trip (typed 03/1985 survives, not clobbered to 06/...)
+  await editField(page, 'val-age', '03 / 1985'); await page.waitForTimeout(200);
+  let a = await readAges(page);
+  check('Item4: date->age (Current Age DOB)', a.age === Y - 1985 - (Mo < 3 ? 1 : 0), 'age=' + a.age);
+  check('Item4: month round-trip preserves typed month', /^03\s*\/\s*1985$/.test(a.dob || ''), a.dob);
+  // age -> date keeps the existing month (not forced to 06)
+  await editField(page, 'val-age', '50'); await page.waitForTimeout(200);
+  a = await readAges(page);
+  check('Item4: age->date keeps month on plain-age derive', a.age === 50 && /^03\s*\/\s*/.test(a.dob || ''), a.dob);
+  // ordering clamp on a date (retirement date below CA+1 clamps up)
+  await editField(page, 'val-age', '01 / 1976'); await page.waitForTimeout(150);
+  await editField(page, 'val-activation', '06 / 2021'); await page.waitForTimeout(200);
+  a = await readAges(page);
+  check('Item4: date entry re-runs Item-1 ordering clamp (RA>=CA+1)', a.ret === a.age + 1 && a.ret === 51, 'CA=' + a.age + ' RA=' + a.ret);
+  // DOB-absent fallback (birthYear = today - current-age slider)
+  await page.evaluate(() => { const d = document.getElementById('pri-dob'); if (d) d.value = ''; });
+  await editField(page, 'val-age', '40'); await page.waitForTimeout(120);
+  await page.evaluate(() => { const d = document.getElementById('pri-dob'); if (d) d.value = ''; });
+  await editField(page, 'val-activation', '06 / ' + (Y - 40 + 64)); await page.waitForTimeout(200);
+  check('Item4: DOB-absent fallback resolves retirement date', (await readAges(page)).ret === 64, 'RA=' + (await readAges(page)).ret);
+  // invalid-format revert (bad month, non-4-digit year leave slider unchanged)
+  await editField(page, 'val-age', '45'); await page.waitForTimeout(120);
+  const beforeAge = (await readAges(page)).age;
+  await editField(page, 'val-age', '13 / 1985'); await page.waitForTimeout(150);
+  check('Item4: invalid month -> revert', (await readAges(page)).age === beforeAge);
+  await editField(page, 'val-age', '03 / 85'); await page.waitForTimeout(150);
+  check('Item4: non-4-digit year -> revert', (await readAges(page)).age === beforeAge);
+  await ctx.close();
+
   // ── Sketch parity ──
   ctx = await browser.newContext({ viewport: { width: 1366, height: 900 } });
   await blockClerk(ctx);
@@ -122,6 +164,15 @@ const blockClerk = (ctx) => ctx.route('**/*', (route) => { const u = route.reque
   check('Item5: Sketch overlay dismissed', !(await visible(page, 'sketchOverlayWrap')));
   await page.click('.return-home'); await page.waitForTimeout(400);
   check('Item5: Return-to-Overview re-opens Sketch overlay', await visible(page, 'sketchOverlayWrap'));
+  // Item 4 guardrail (a) — Sketch passes NO hooks: the default digit-only filter is intact
+  // (a "/" is stripped as you type), proving the absent-hooks path is byte-identical.
+  const skFilter = await page.evaluate(() => {
+    const val = document.getElementById('val-age'); if (!val) return null;
+    val.click(); const inp = val.nextSibling; inp.value = '03 / 1985';
+    inp.dispatchEvent(new Event('input', { bubbles: true })); const v = inp.value; inp.blur();
+    return v;
+  });
+  check('Item4: Sketch absent-hooks path byte-identical (digits-only filter)', skFilter !== null && skFilter.indexOf('/') === -1, skFilter);
   await ctx.close();
 
   await browser.close(); server.close();
