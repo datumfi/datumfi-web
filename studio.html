@@ -997,7 +997,17 @@
   <style id="shape-want-face-styles">
   /* ── Have/Want flip scaffold (Step-3) ─────────────────────────────── */
   #shape-subtoggle { display:none; margin:0 0 10px; z-index:60; }
-  .studio-layout.mode-shape #shape-subtoggle { display:inline-flex; }
+  /* Item 2 — anchor the Have/Want toggle to a FIXED screen position so it does not
+     ride the canvas reflow when want-mode collapses the 480px drafting panel
+     (flipToWant adds .want-mode -> .drafting-panel{display:none}, widening the
+     canvas-wrapper offsetParent and sliding its centered children left). Fixed +
+     centered over the HAVE-canvas region keeps it put across Have<->Want; #shape-flip
+     reserves the vacated flow space so the shape/HUD do not rise into it. */
+  .studio-layout.mode-shape #shape-subtoggle {
+    display:inline-flex; position:fixed; top:70px;
+    left:calc((100vw + var(--studio-panel-w, 480px)) / 2); transform:translateX(-50%);
+  }
+  .studio-layout.mode-shape #shape-flip { margin-top:44px; }
   .shape-subtoggle-btn { font-family:var(--font-mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; padding:6px 14px; background:transparent; border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.5); cursor:pointer; transition:all .2s; }
   .shape-subtoggle-btn:first-child { border-radius:4px 0 0 4px; }
   .shape-subtoggle-btn:last-child { border-radius:0 4px 4px 0; border-left:none; }
