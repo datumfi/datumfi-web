@@ -73,30 +73,50 @@ const readAges = (page) => page.evaluate(() => ({ age: parseInt(document.getElem
   check('Item2: no unanchored-flash on Estate->Shape (stable during transition)', seen.length >= 4 && (Math.max(...seen) - Math.min(...seen)) <= 2, JSON.stringify(flashSamples));
   await page.waitForTimeout(2000);
 
-  // Item 3 — box gone + state badge/outline present at default.
+  // Item 3 (P8.1) — box gone; frame scoped to 01->05 (excludes methodology); Profile intact
+  // outside; Have frame border on all 4 sides, un-clipped, colored by state.
+  const _b4 = (s) => { const p = String(s).split(','); const v = parseFloat(p[0]); return p.length === 4 && v > 0 && p.every((x) => parseFloat(x) === v); };
   const i3 = await page.evaluate(() => {
+    const f = document.getElementById('shape-input-frame-have');
     const b = document.getElementById('timeline-state-badge');
-    const panel = document.querySelector('.drafting-panel');
-    return { boxGone: !document.getElementById('sketch-design-ref'), badge: b ? b.textContent.trim() : '', panelVar: panel ? panel.style.getPropertyValue('--panel-state-color').trim() : '' };
+    const cs = f ? getComputedStyle(f) : null; const r = f ? f.getBoundingClientRect() : null;
+    const pr = document.querySelector('.drafting-panel').getBoundingClientRect();
+    return {
+      boxGone: !document.getElementById('sketch-design-ref'), badge: b ? b.textContent.trim() : '',
+      wraps: !!(f && f.querySelector('#slider-age') && f.querySelector('#slider-tax')),
+      excludesMethod: !!(f && !f.querySelector('#methodology-btn')),
+      profileOutside: !!(document.getElementById('sec-profile') && f && !f.contains(document.getElementById('sec-profile'))),
+      sides: cs ? [cs.borderTopWidth, cs.borderRightWidth, cs.borderBottomWidth, cs.borderLeftWidth].join(',') : '',
+      rightInside: !!(r && r.right <= pr.right + 0.5 && r.right > pr.left),
+      color: cs ? cs.borderTopColor : ''
+    };
   });
   check('Item3: import box removed', i3.boxGone);
   check('Item3: 01/Timeline badge reflects state', !!i3.badge, i3.badge);
-  check('Item3: .drafting-panel outline set from state', !!i3.panelVar, i3.panelVar);
+  check('Item3: frame wraps 01->05, excludes methodology', i3.wraps && i3.excludesMethod);
+  check('Item3: Profile section intact + outside frame', i3.profileOutside);
+  check('Item3: Have frame border on all 4 sides', _b4(i3.sides), i3.sides);
+  check('Item3: Have frame right edge un-clipped (inside panel)', i3.rightInside);
+  check('Item3: Have frame colored by state', i3.color !== 'rgba(0, 0, 0, 0)', i3.color);
 
   // Item 2 — toggle position fixed across Have -> Want -> Have.
   const haveCx = await rectOf();
   await page.click('#shape-want-tab'); await page.waitForTimeout(1300);
   const wantCx = await rectOf();
+  // Item 3 — Want frame carries its OWN state color, all 4 sides.
+  const i3w = await page.evaluate(() => { const f = document.getElementById('shape-input-frame-want'); if (!f) return null; const cs = getComputedStyle(f); return { sides: [cs.borderTopWidth, cs.borderRightWidth, cs.borderBottomWidth, cs.borderLeftWidth].join(','), color: cs.borderTopColor }; });
+  check('Item3: Want frame border on all 4 sides', i3w && _b4(i3w.sides), i3w && i3w.sides);
+  check('Item3: Want frame colored by its own state', i3w && i3w.color !== 'rgba(0, 0, 0, 0)', i3w && i3w.color);
   await page.click('#shape-have-tab'); await page.waitForTimeout(1100);
   const backCx = await rectOf();
   check('Item2: subtoggle x fixed across flip', Math.abs(haveCx - wantCx) <= 2 && Math.abs(haveCx - backCx) <= 2, haveCx + '/' + wantCx + '/' + backCx);
 
-  // Item 3 — recolor on state change (max datum -> OVEREXTENDED).
+  // Item 3 — Have frame recolors on state change (max datum -> OVEREXTENDED).
   await page.evaluate(() => { const el = document.getElementById('slider-datum'); if (el) { el.value = String(el.max); delete el.dataset.exactVal; el.dispatchEvent(new Event('input', { bubbles: true })); } });
   await page.waitForTimeout(900);
-  const i3b = await page.evaluate(() => { const b = document.getElementById('timeline-state-badge'); const panel = document.querySelector('.drafting-panel'); return { badge: b ? b.textContent.trim() : '', panelVar: panel ? panel.style.getPropertyValue('--panel-state-color').trim() : '' }; });
+  const i3b = await page.evaluate(() => { const b = document.getElementById('timeline-state-badge'); const f = document.getElementById('shape-input-frame-have'); return { badge: b ? b.textContent.trim() : '', color: f ? getComputedStyle(f).borderTopColor : '' }; });
   check('Item3: badge recolors on state change', i3b.badge && i3b.badge !== i3.badge, i3.badge + ' -> ' + i3b.badge);
-  check('Item3: panel outline recolors on state change', i3b.panelVar && i3b.panelVar !== i3.panelVar, i3.panelVar + ' -> ' + i3b.panelVar);
+  check('Item3: Have frame recolors on state change', i3b.color && i3b.color !== i3.color, i3.color + ' -> ' + i3b.color);
 
   // Item 5 — Studio reopen + soft-dismiss preserves draft.
   await page.evaluate(() => localStorage.setItem('datumfi_blueprint_draft_v1', JSON.stringify({ marker: 'KEEPME' })));

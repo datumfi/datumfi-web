@@ -247,6 +247,10 @@
     // datum colour reflects the (live) Test state
     var liveState = (t >= 1 ? d.want.stateObj : (t < 0.5 ? d.have.stateObj : d.want.stateObj));
     var col = liveState.color;
+    // Item 3 (P8.1) — the Want 01->05 input frame carries the WANT (test) shape-state color,
+    // its own state (not the Have state). Mirrors the Have frame driven by onShapeStateChange.
+    var _wf = $('shape-input-frame-want');
+    if (_wf && d.want && d.want.stateObj) _wf.style.setProperty('--shape-frame-color', d.want.stateObj.color);
     // #4b-(ii): canvas state-tint — mirror the Have #shape-panel-svg pattern onto #d2-canvas
     // so the OVEREXTENDED red wash appears on Want too (CSS keys #d2-state-tint-rect off this).
     var dcv = $('d2-canvas');

@@ -405,12 +405,13 @@
   .drafting-panel {
     width: 480px; padding: 30px 40px 40px 40px; border-right: 1px solid rgba(255,255,255,0.05);
     height: calc(100vh - 56px); overflow-y: auto; background-color: var(--bg-navy); z-index: 50;
-    /* Item 3.3 — shape-state colored outline (border only, no interior, no layout shift),
-       re-homed from the deleted sketch-design-ref box. Driven by --panel-state-color set
-       from onShapeStateChange (stateObj.color). inset box-shadow avoids edge clipping. */
-    box-shadow: inset 0 0 0 1.5px var(--panel-state-color, transparent);
-    transition: box-shadow 0.4s ease;
   }
+  /* Item 3 (P8.1) — shape-state outline scoped to the 01->05 input group on BOTH the Have
+     (#shape-input-frame-have) and Want (#shape-input-frame-want) panels. Border (all 4 sides,
+     no interior) on this inner element so it sits inside the scroll viewport, never clipped at
+     the right edge. Color set per-panel from each panel's own live state (onShapeStateChange
+     for Have, the want-face render for Want). Padding keeps the inputs off the border. */
+  .shape-input-frame { border: 2px solid var(--shape-frame-color, transparent); border-radius: 7px; padding: 14px 14px 6px; margin-bottom: 8px; transition: border-color 0.4s ease; }
   /* Item 3.4 — shape-state badge beside the 01/Timeline header (re-homed state render). */
   .timeline-state-badge { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); border: 1px solid currentColor; border-radius: 3px; padding: 2px 7px; line-height: 1; white-space: nowrap; }
   .timeline-state-badge:empty { display: none; }
@@ -1240,6 +1241,11 @@
                slider-datum, slider-tax, market-*, infl-*, tax-* + val-* ) are sketch-verbatim.
                tabindex 1-5 preserved. lev-tooltip + mkt-tooltip strings verbatim. -->
 
+          <!-- Item 3 (P8.1) — shape-state outline frame: wraps ONLY the 01->05 input group
+               (the methodology copy is lifted out, below) so the border matches the Want panel
+               exactly. It lives on this INNER element (inside .drafting-panel's scroll viewport)
+               so all 4 sides render un-clipped. Color = live HAVE state via onShapeStateChange. -->
+          <div class="shape-input-frame" id="shape-input-frame-have">
           <div class="dialogue-block">
             <div class="dialogue-prompt mono-label" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
               <span>01 / YOUR TIMELINE</span>
@@ -1410,6 +1416,8 @@
                 <input type="range" id="slider-tax" min="0" max="40" value="20" step="1">
               </div>
             </div>
+          </div><!-- /04 dialogue-block -->
+          </div><!-- /shape-input-frame-have — methodology copy lifted out below, outside the frame -->
 
             <div class="sketch-trust-copy">
               <button type="button" id="methodology-btn" class="methodology-trigger" aria-expanded="false">VIEW SKETCH METHODOLOGY</button>
@@ -1417,8 +1425,6 @@
                 The Sketch uses geometric compounding. Each scenario runs a band of three growth paths — conservative, baseline, and upside — which form your Floor, middle projection, and Ceiling. <strong>Optimistic</strong>: 2.0–4.0–6.5% real (markets performing well above average). <strong>Historical</strong>: 1.5–3.5–5.5% real (anchored to long-run averages). <strong>Stress</strong>: 0.5–1.5–3.5% real (compressed returns, heavy downside guardrails). Inflation: <strong>Real</strong> strips inflation out — all values in today's dollars. <strong>Nominal</strong> adds 3.0%/yr inflation, showing the raw future dollar amounts.<br><br>Plan-Through Age sets how long the money has to last. It's the one input that isn't about how hard your plan works, but how long — and it reshapes everything downstream. A shorter retirement means each dollar covers fewer years, so the same capital safely supports more spending: your Floor, Ceiling, and Datum all rise. A longer retirement spreads the same capital thinner, and all three settle lower. Set it to the age you genuinely want to be covered through — it's an honest assumption, not a dial to make the numbers look better.<br><br>Your Floor and Ceiling each use a withdrawal rate tuned to the question they answer: the Floor uses a reduced rate for resilience under a conservative path, the Ceiling uses an elevated rate for capacity under an upside path — and both flex with your retirement length, rising as it shortens and easing as it lengthens. Your Datum is different in kind: it always shows the capital required to sustain your chosen spending — at the canonical 4% rule for a baseline retirement, adjusting with your Plan-Through Age just as the boundaries do. That way the three boundaries answer three honest questions: "what could break" (Floor), "what could stretch" (Ceiling), and "what would my spending cost as capital" (Datum) — each measured against the length of retirement you're planning for.
               </div>
             </div>
-
-          </div>
         </div>
       </div>
 
@@ -2067,7 +2073,7 @@
           <div id="shape-want-face">
             <div id="swf-controls">
               <div class="swf-col-head want">Shape You Want</div>
-        <div class="d2-input-panel">
+        <div class="d2-input-panel shape-input-frame" id="shape-input-frame-want">
 
           <div class="dialogue-block">
             <div class="dialogue-prompt mono-label">01 / YOUR TIMELINE</div>
@@ -5414,8 +5420,9 @@
           // card early-return so the panel/badge update even if hud-main is absent.
           if (stateObj && stateObj.name) {
             var _stCol = stateObj.color || 'var(--teal-mid)';
-            var _panel = document.querySelector('.drafting-panel');
-            if (_panel) _panel.style.setProperty('--panel-state-color', _stCol);
+            // Item 3 (P8.1) — outline now scoped to the HAVE 01->05 input frame, not the panel.
+            var _frame = document.getElementById('shape-input-frame-have');
+            if (_frame) _frame.style.setProperty('--shape-frame-color', _stCol);
             var _badge = document.getElementById('timeline-state-badge');
             if (_badge) { _badge.textContent = stateObj.name; _badge.style.color = _stCol; }
           }
