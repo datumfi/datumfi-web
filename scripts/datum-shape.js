@@ -885,7 +885,16 @@
         // c.validate / c.getClampedValid / c.toSlider, so range + ordering clamps are reused.
         var raw = c.parse ? c.parse(inp.value.trim()) : parseInt(c.clean(inp.value.trim()), 10);
         if (isNaN(raw)) {
-          inp.style.display = 'none'; valEl.style.display = ''; return;
+          // Opt-in: surface the rejection (e.g. toast + shake on an incomplete/out-of-range
+          // typed date). Absent -> silent revert, byte-identical to prior behavior.
+          if (hooks.onValidationFail) {
+            hooks.onValidationFail(c, inp.value);
+            inp.classList.add('shake');
+            setTimeout(function () { inp.classList.remove('shake'); inp.style.display = 'none'; valEl.style.display = ''; }, 300);
+          } else {
+            inp.style.display = 'none'; valEl.style.display = '';
+          }
+          return;
         }
         if (!c.validate(raw)) {
           if (c.getClampedValid) {

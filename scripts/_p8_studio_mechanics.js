@@ -33,8 +33,8 @@ const setSlider = (page, id, val) => page.evaluate(([i, v]) => { const el = docu
 const blockClerk = (ctx) => ctx.route('**/*', (route) => { const u = route.request().url(); if (!/127\.0\.0\.1/.test(u) && /clerk|cloudflareinsights|posthog/i.test(u)) return route.abort(); return route.continue(); });
 // Item 4 — drive the inline edit: click the value span, set its sibling edit-input, run the
 // live filter, then blur to commit.
-const editField = (page, valId, text) => page.evaluate(([id, t]) => { const val = document.getElementById(id); val.click(); const inp = val.nextSibling; inp.value = t; inp.dispatchEvent(new Event('input', { bubbles: true })); inp.blur(); }, [valId, text]);
-const readAges = (page) => page.evaluate(() => ({ age: parseInt(document.getElementById('slider-age').value, 10), ret: parseInt(document.getElementById('slider-activation').value, 10), plan: parseInt(document.getElementById('sl-plan-through').value, 10), dob: (document.getElementById('pri-dob') || {}).value, tret: (document.getElementById('target-ret') || {}).value }));
+const editField = (page, valId, text) => page.evaluate(([id, t]) => { const val = document.getElementById(id); val.click(); const inp = val.nextSibling; inp.value = t; inp.dispatchEvent(new Event('input', { bubbles: true })); const shown = inp.value; inp.blur(); return shown; }, [valId, text]);
+const readAges = (page) => page.evaluate(() => { const tt = document.getElementById('studioOverlayToast'); return { age: parseInt(document.getElementById('slider-age').value, 10), ret: parseInt(document.getElementById('slider-activation').value, 10), plan: parseInt(document.getElementById('sl-plan-through').value, 10), dob: (document.getElementById('pri-dob') || {}).value, tret: (document.getElementById('target-ret') || {}).value, valAge: (document.getElementById('val-age') || {}).textContent, toast: tt ? tt.textContent : '', toastShown: !!(tt && tt.classList.contains('show')) }; });
 
 (async () => {
   await new Promise((r) => server.listen(8141, '127.0.0.1', r));
@@ -150,33 +150,43 @@ const readAges = (page) => page.evaluate(() => ({ age: parseInt(document.getElem
   await page.waitForTimeout(1500);
   await page.evaluate(() => { const b = document.getElementById('studioStartScratch'); if (b) b.click(); }).catch(() => {});
   await page.waitForTimeout(700);
-  // date -> age + month round-trip (typed 03/1985 survives, not clobbered to 06/...)
-  await editField(page, 'val-age', '03 / 1985'); await page.waitForTimeout(200);
+  // 4b strict — auto-slash, valid date collapses to age, month round-trips (not 06/...).
+  const shown = await editField(page, 'val-age', '081982'); await page.waitForTimeout(200);
+  check('Item4: auto-slash formats to MM / YYYY', /^08\s*\/\s*1982$/.test(shown), shown);
   let a = await readAges(page);
-  check('Item4: date->age (Current Age DOB)', a.age === Y - 1985 - (Mo < 3 ? 1 : 0), 'age=' + a.age);
-  check('Item4: month round-trip preserves typed month', /^03\s*\/\s*1985$/.test(a.dob || ''), a.dob);
-  // age -> date keeps the existing month (not forced to 06)
-  await editField(page, 'val-age', '50'); await page.waitForTimeout(200);
+  check('Item4: valid date collapses to age', a.age === Y - 1982 - (Mo < 8 ? 1 : 0) && /yrs/.test(a.valAge || ''), a.valAge);
+  check('Item4: month round-trips to Profile (not 06)', /^08\s*\/\s*1982$/.test(a.dob || ''), a.dob);
+  // 4a — 031985555 capped to 03/1985 (not age 85); out-of-18-85 and 2-digits rejected w/ toast.
+  const capped = await editField(page, 'val-age', '031985555'); await page.waitForTimeout(150);
+  check('Item4: 031985555 capped to 03 / 1985', /^03\s*\/\s*1985$/.test(capped), capped);
+  let bAge = (await readAges(page)).age;
+  await editField(page, 'val-age', '08'); await page.waitForTimeout(150);
   a = await readAges(page);
-  check('Item4: age->date keeps month on plain-age derive', a.age === 50 && /^03\s*\/\s*/.test(a.dob || ''), a.dob);
-  // ordering clamp on a date (retirement date below CA+1 clamps up)
+  check('Item4: 2-digits-alone rejected with toast', a.age === bAge && a.toastShown && /MM \/ YYYY/.test(a.toast), a.toast);
+  bAge = (await readAges(page)).age;
+  await editField(page, 'val-age', '01 / ' + (Y - 10)); await page.waitForTimeout(150);
+  a = await readAges(page);
+  check('Item4: age<18 rejected with 18-85 toast', a.age === bAge && /between 18 and 85/.test(a.toast), a.toast);
+  // month 13 auto-clamps to 12 (shared formatter; no invalid month reaches the Shape).
+  const m13 = await editField(page, 'val-age', '13 / 1985'); await page.waitForTimeout(150);
+  check('Item4: month 13 auto-clamps to 12', /^12\s*\/\s*1985$/.test(m13), m13);
+  // ordering clamp on a date (retirement date below CA+1 clamps up).
   await editField(page, 'val-age', '01 / 1976'); await page.waitForTimeout(150);
   await editField(page, 'val-activation', '06 / 2021'); await page.waitForTimeout(200);
   a = await readAges(page);
   check('Item4: date entry re-runs Item-1 ordering clamp (RA>=CA+1)', a.ret === a.age + 1 && a.ret === 51, 'CA=' + a.age + ' RA=' + a.ret);
-  // DOB-absent fallback (birthYear = today - current-age slider)
+  // DOB-absent fallback (birthYear = today - current-age slider).
   await page.evaluate(() => { const d = document.getElementById('pri-dob'); if (d) d.value = ''; });
-  await editField(page, 'val-age', '40'); await page.waitForTimeout(120);
+  await editField(page, 'val-age', '01 / ' + (Y - 40)); await page.waitForTimeout(150);
   await page.evaluate(() => { const d = document.getElementById('pri-dob'); if (d) d.value = ''; });
   await editField(page, 'val-activation', '06 / ' + (Y - 40 + 64)); await page.waitForTimeout(200);
   check('Item4: DOB-absent fallback resolves retirement date', (await readAges(page)).ret === 64, 'RA=' + (await readAges(page)).ret);
-  // invalid-format revert (bad month, non-4-digit year leave slider unchanged)
-  await editField(page, 'val-age', '45'); await page.waitForTimeout(120);
-  const beforeAge = (await readAges(page)).age;
-  await editField(page, 'val-age', '13 / 1985'); await page.waitForTimeout(150);
-  check('Item4: invalid month -> revert', (await readAges(page)).age === beforeAge);
-  await editField(page, 'val-age', '03 / 85'); await page.waitForTimeout(150);
-  check('Item4: non-4-digit year -> revert', (await readAges(page)).age === beforeAge);
+  // slider drag still yields a plain age (display) + preserves the Profile month.
+  await editField(page, 'val-age', '06 / 1979'); await page.waitForTimeout(150);
+  await page.evaluate(() => { const el = document.getElementById('slider-age'); el.value = '55'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.waitForTimeout(150);
+  a = await readAges(page);
+  check('Item4: slider drag yields plain age + keeps month', a.age === 55 && /55\s*yrs/.test(a.valAge || '') && /^06\s*\/\s*/.test(a.dob || ''), a.valAge + ' / ' + a.dob);
   await ctx.close();
 
   // ── Sketch parity ──
