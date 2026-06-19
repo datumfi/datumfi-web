@@ -20,7 +20,7 @@
   function fmt(v) { return v >= 1000 ? '$' + (v / 1000).toFixed(2).replace(/\.00$/, '') + 'M' : '$' + Math.round(v) + 'k'; }
   function fmtCapK(k) { return k >= 1000 ? '$' + (k / 1000).toFixed(2).replace(/\.00$/, '') + 'M' : '$' + Math.round(k) + 'k'; }
 
-  var _haveScn = null, _wantScn = null, _wantGeo = null, _wantInit = false, _lastDiff = null, _morphRAF = 0, _wired = false, _haveSliderPos = null, _refWasShown = false;
+  var _haveScn = null, _wantScn = null, _wantGeo = null, _wantInit = false, _lastDiff = null, _morphRAF = 0, _wired = false, _haveSliderPos = null;
   // surround 4: boundary-pull overrides on the Want canvas (Step-4 = ceil/floor/datum endpoint
   // drags + SP starting-point ratio-scale). ceil/floor/datumDelta feed buildDiff's want endpoints;
   // portDelta folds into the GEO scenario for the geometry (see renderWantFace), never into _wantScn.
@@ -578,13 +578,13 @@
     _updateWasReadouts();
     // Keep the carried pulls on the first designed render; otherwise reset transient pulls.
     if (!_seededDesign) _resetOverrides();
-    var ref = $('sketch-design-ref'); if (ref) { _refWasShown = ref.style.display !== 'none'; ref.style.display = 'none'; }
+    // (Item 3.1 — the sketch-design-ref box was removed; no flip hide/restore needed.)
     renderWantFace(1);          // compute _lastDiff at rest first
     _paintCanvas(_lastDiff, 0); // then start the morph from Have
   }
 
   window.flipToWant = function () { var i = inner(); if (!i) return; var lay = $('studio-layout'); if (lay) lay.classList.add('want-mode'); setTabs(true); enterWantFace(); i.classList.add('flipped'); _morph(800); if (window._fitWantToScreen) { requestAnimationFrame(function () { requestAnimationFrame(function () { window._fitWantToScreen(); }); }); } };
-  window.flipToHave = function () { var i = inner(); if (!i) return; var lay = $('studio-layout'); if (lay) lay.classList.remove('want-mode'); setTabs(false); i.classList.remove('flipped'); if (_morphRAF) { cancelAnimationFrame(_morphRAF); _morphRAF = 0; } var ref = $('sketch-design-ref'); if (ref && _refWasShown) ref.style.display = 'block'; };
+  window.flipToHave = function () { var i = inner(); if (!i) return; var lay = $('studio-layout'); if (lay) lay.classList.remove('want-mode'); setTabs(false); i.classList.remove('flipped'); if (_morphRAF) { cancelAnimationFrame(_morphRAF); _morphRAF = 0; } };
   window.renderWantFace = function () { renderWantFace(1); };
 
   if (document.readyState !== 'loading') _wire();

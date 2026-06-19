@@ -405,7 +405,15 @@
   .drafting-panel {
     width: 480px; padding: 30px 40px 40px 40px; border-right: 1px solid rgba(255,255,255,0.05);
     height: calc(100vh - 56px); overflow-y: auto; background-color: var(--bg-navy); z-index: 50;
+    /* Item 3.3 — shape-state colored outline (border only, no interior, no layout shift),
+       re-homed from the deleted sketch-design-ref box. Driven by --panel-state-color set
+       from onShapeStateChange (stateObj.color). inset box-shadow avoids edge clipping. */
+    box-shadow: inset 0 0 0 1.5px var(--panel-state-color, transparent);
+    transition: box-shadow 0.4s ease;
   }
+  /* Item 3.4 — shape-state badge beside the 01/Timeline header (re-homed state render). */
+  .timeline-state-badge { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); border: 1px solid currentColor; border-radius: 3px; padding: 2px 7px; line-height: 1; white-space: nowrap; }
+  .timeline-state-badge:empty { display: none; }
 
   .return-home { display: inline-block; font-family: var(--font-mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; text-decoration: none; margin-bottom: 30px; transition: 0.2s; }
   .return-home:hover { color: var(--teal-mid); }
@@ -1222,39 +1230,21 @@
             <button class="pin-btn" onclick="togglePin('sec-sketch', this)" title="Pin section open">📌</button>
         </div>
         <div id="sec-sketch" class="section-content" style="display: block;">
-          <!-- Phase 1 — read-only reference: the S2 tested (WANT) shape carried from
-               Sketch. Data-only carry (designed ceil/datum/floor + accepted lever
-               deltas); NO drag UI per North Star §13-T2. Hidden until a designed
-               shape is present. Populated by _renderSketchDesignRef(). -->
-          <div id="sketch-design-ref" style="display:none; margin:0 0 14px; padding:10px 12px; border:1px solid rgba(101,205,169,0.35); border-radius:6px; background:rgba(101,205,169,0.06);">
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;">
-              <span id="sdr-title" style="font-family:var(--font-mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--teal-mid);">From your Sketch design</span>
-              <strong id="sdr-state" style="font-family:var(--font-mono); font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:var(--teal-mid);">—</strong>
-            </div>
-            <div style="display:flex; gap:14px; flex-wrap:wrap;">
-              <div style="flex:1; min-width:80px;">
-                <div style="font-family:var(--font-mono); font-size:9px; letter-spacing:0.08em; color:rgba(255,255,255,0.45); text-transform:uppercase;">Ceiling</div>
-                <div id="sdr-ceil" style="font-family:var(--font-sans); font-size:14px; color:rgba(255,255,255,0.9);">$0</div>
-              </div>
-              <div style="flex:1; min-width:80px;">
-                <div style="font-family:var(--font-mono); font-size:9px; letter-spacing:0.08em; color:rgba(255,255,255,0.45); text-transform:uppercase;">Datum</div>
-                <div id="sdr-datum" style="font-family:var(--font-sans); font-size:14px; color:rgba(255,255,255,0.9);">$0</div>
-              </div>
-              <div style="flex:1; min-width:80px;">
-                <div style="font-family:var(--font-mono); font-size:9px; letter-spacing:0.08em; color:rgba(255,255,255,0.45); text-transform:uppercase;">Floor</div>
-                <div id="sdr-floor" style="font-family:var(--font-sans); font-size:14px; color:rgba(255,255,255,0.9);">$0</div>
-              </div>
-            </div>
-            <div id="sdr-levers" style="display:none; margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.08); font-family:var(--font-mono); font-size:9px; letter-spacing:0.05em; color:rgba(255,255,255,0.55);"></div>
-            <div style="margin-top:8px; font-family:var(--font-mono); font-size:9px; color:rgba(255,255,255,0.35); letter-spacing:0.04em;">The shape you designed in Sketch — read-only reference. Remodel scenarios will start here.</div>
-          </div>
+          <!-- Item 3.1 — the read-only "From your Sketch design" WANT-metrics box was
+               removed here. Its shape-state styling was re-homed: the colored outline
+               now drives the whole .drafting-panel and the state badge sits beside the
+               01/Timeline header (both fed from onShapeStateChange stateObj.color).
+               The Want-face seed still reads bp.designed directly (see _readCarriedDesigned). -->
           <!-- VERBATIM S1 inputs transplanted from sketch.html L1460-1639.
                IDs (slider-portfolio, slider-activation, sl-plan-through, slider-contrib,
                slider-datum, slider-tax, market-*, infl-*, tax-* + val-* ) are sketch-verbatim.
                tabindex 1-5 preserved. lev-tooltip + mkt-tooltip strings verbatim. -->
 
           <div class="dialogue-block">
-            <div class="dialogue-prompt mono-label">01 / YOUR TIMELINE</div>
+            <div class="dialogue-prompt mono-label" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+              <span>01 / YOUR TIMELINE</span>
+              <span id="timeline-state-badge" class="timeline-state-badge"></span>
+            </div>
             <div class="control-group" id="grp-age">
               <div class="control-header">
                 <label class="control-label" for="slider-age">Current Age</label>
@@ -5411,6 +5401,18 @@
         autoReveal: true,
         canDrag: function () { return true; },
         onShapeStateChange: function (stateObj) {
+          // Item 3.3 / 3.4 — drive the left-panel state outline + the 01/Timeline badge from
+          // the live HAVE shape state (re-homed from the removed sketch-design-ref box). Uses
+          // stateObj.color — the module's authoritative state color (datum-shape.js classifier,
+          // identical var(--*) palette the old _sdrStateColor map mirrored). Placed before the
+          // card early-return so the panel/badge update even if hud-main is absent.
+          if (stateObj && stateObj.name) {
+            var _stCol = stateObj.color || 'var(--teal-mid)';
+            var _panel = document.querySelector('.drafting-panel');
+            if (_panel) _panel.style.setProperty('--panel-state-color', _stCol);
+            var _badge = document.getElementById('timeline-state-badge');
+            if (_badge) { _badge.textContent = stateObj.name; _badge.style.color = _stCol; }
+          }
           // Apply hud-state-* class to the telemetry-card (controls the colored left-border).
           var card = document.getElementById('hud-main');
           if (!card) return;
@@ -5672,50 +5674,9 @@
        bp.designed by DatumBlueprint.applySketchContract, reached via the explicit
        ?hydrate=sketch entry. No sessionStorage / unsaved carry (doctrine Q1).
        Data-only; no drag UI (North Star §13-T2). */
-    function _sdrFmt(n) { return '$' + Math.round(Number(n) || 0).toLocaleString('en-US'); }
     function _readCarriedDesigned(bp) {
       if (bp && bp.designed && bp.designed.present) return bp.designed;
       return null;
-    }
-    // #C: state -> color fallback. The carried blob's state_color is often empty
-    // (older saves), so deriving the color from the resolved state name guarantees
-    // the box turns RED for OVEREXTENDED etc. instead of staying the hardcoded teal.
-    // Map matches datum-shape.js classifyShapeState exactly.
-    function _sdrStateColor(state) {
-      var m = { OVEREXTENDED: 'var(--danger-red)', STRETCHED: 'var(--orange-warning)', EXPANSIVE: 'var(--teal-mid)', GROUNDED: 'var(--purple-grounded)', ABUNDANT: 'var(--blue-safe)' };
-      return m[String(state || '').toUpperCase().trim()] || 'var(--teal-mid)';
-    }
-    function _renderSketchDesignRef(d) {
-      var el = document.getElementById('sketch-design-ref');
-      if (!el) return;
-      if (!d || !d.present) { el.style.display = 'none'; return; }
-      var setTxt = function (id, v) { var n = document.getElementById(id); if (n) n.textContent = v; };
-      setTxt('sdr-ceil',  _sdrFmt(d.ceil));
-      setTxt('sdr-datum', _sdrFmt(d.datum));
-      setTxt('sdr-floor', _sdrFmt(d.floor));
-      // #C: use the carried state_color when present, else derive from the state name.
-      var col = d.color || _sdrStateColor(d.state);
-      var st = document.getElementById('sdr-state');
-      if (st) { st.textContent = d.state || '—'; st.style.color = col; }
-      // #4a / #C: the whole ref box takes the designed shape-state color (e.g. RED for
-      // OVEREXTENDED), not a hardcoded teal. Border + title + state recolor; bg neutralized
-      // off the hardcoded teal so it never contradicts a red/orange state.
-      if (col) {
-        el.style.borderColor = col;
-        el.style.background = 'rgba(255,255,255,0.03)';
-        var _ti = document.getElementById('sdr-title'); if (_ti) _ti.style.color = col;
-      }
-      var lv = d.levers || {}, parts = [];
-      if (lv.ceilDelta)  parts.push('Ceiling '  + (lv.ceilDelta  > 0 ? '+' : '') + lv.ceilDelta);
-      if (lv.floorDelta) parts.push('Floor '    + (lv.floorDelta > 0 ? '+' : '') + lv.floorDelta);
-      if (lv.datumDelta) parts.push('Datum '    + (lv.datumDelta > 0 ? '+' : '') + lv.datumDelta);
-      if (lv.portDelta)  parts.push('Capital '  + (lv.portDelta  > 0 ? '+' : '') + lv.portDelta);
-      var lvEl = document.getElementById('sdr-levers');
-      if (lvEl) {
-        if (parts.length) { lvEl.textContent = 'Accepted moves:  ' + parts.join('   ·   '); lvEl.style.display = 'block'; }
-        else { lvEl.style.display = 'none'; }
-      }
-      el.style.display = 'block';
     }
 
     /* ── Prefill ladder: DatumBlueprint.load() -> Dossier -> defaults ─────── */
@@ -5819,10 +5780,10 @@
         if (_tp) _tp.checked = true;
       }
 
-      // Phase 1 — surface the carried S2 (WANT) shape as a read-only reference.
+      // Phase 1 — read the carried S2 (WANT) shape. The read-only reference box was
+      // removed (Item 3.1); this still feeds the Want-face seed below.
       try {
         var _cd = _readCarriedDesigned(bp);
-        _renderSketchDesignRef(_cd);
         // #4b Part B — hand the Want face the designed scenario so its FIRST flip
         // auto-restores the S2 tested shape (§14.2 broken-promise fix) instead of
         // cold-starting want = have. scalars from bp.designed.scenario (s2_design,
@@ -7918,8 +7879,7 @@
           sessionStorage.removeItem(k);
         });
       } catch(e) {}
-      var _card = document.getElementById('sketch-design-ref');
-      if (_card) _card.style.display = 'none';
+      // (Item 3.1 — the sketch-design-ref reference box was removed; nothing to hide here.)
       return had;
     }
     function _scratchReset() {
