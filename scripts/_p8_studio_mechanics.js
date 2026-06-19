@@ -33,7 +33,7 @@ const setSlider = (page, id, val) => page.evaluate(([i, v]) => { const el = docu
 const blockClerk = (ctx) => ctx.route('**/*', (route) => { const u = route.request().url(); if (!/127\.0\.0\.1/.test(u) && /clerk|cloudflareinsights|posthog/i.test(u)) return route.abort(); return route.continue(); });
 // Item 4 — drive the inline edit: click the value span, set its sibling edit-input, run the
 // live filter, then blur to commit.
-const editField = (page, valId, text) => page.evaluate(([id, t]) => { const val = document.getElementById(id); val.click(); const inp = val.nextSibling; inp.value = t; inp.dispatchEvent(new Event('input', { bubbles: true })); const shown = inp.value; inp.blur(); return shown; }, [valId, text]);
+const editField = (page, valId, text) => page.evaluate(([id, t]) => { const val = document.getElementById(id); val.click(); const inp = val.parentNode.querySelector('.ctrl-edit-input'); inp.value = t; inp.dispatchEvent(new Event('input', { bubbles: true })); const shown = inp.value; inp.blur(); return shown; }, [valId, text]);
 const readAges = (page) => page.evaluate(() => { const tt = document.getElementById('studioOverlayToast'); return { age: parseInt(document.getElementById('slider-age').value, 10), ret: parseInt(document.getElementById('slider-activation').value, 10), plan: parseInt(document.getElementById('sl-plan-through').value, 10), dob: (document.getElementById('pri-dob') || {}).value, tret: (document.getElementById('target-ret') || {}).value, valAge: (document.getElementById('val-age') || {}).textContent, toast: tt ? tt.textContent : '', toastShown: !!(tt && tt.classList.contains('show')) }; });
 
 (async () => {
@@ -167,14 +167,29 @@ const readAges = (page) => page.evaluate(() => { const tt = document.getElementB
   await editField(page, 'val-age', '01 / ' + (Y - 10)); await page.waitForTimeout(150);
   a = await readAges(page);
   check('Item4: age<18 rejected with 18-85 toast', a.age === bAge && /between 18 and 85/.test(a.toast), a.toast);
-  // month 13 auto-clamps to 12 (shared formatter; no invalid month reaches the Shape).
-  const m13 = await editField(page, 'val-age', '13 / 1985'); await page.waitForTimeout(150);
-  check('Item4: month 13 auto-clamps to 12', /^12\s*\/\s*1985$/.test(m13), m13);
-  // ordering clamp on a date (retirement date below CA+1 clamps up).
-  await editField(page, 'val-age', '01 / 1976'); await page.waitForTimeout(150);
-  await editField(page, 'val-activation', '06 / 2021'); await page.waitForTimeout(200);
+  // P8.1 Q1 — month 13 now REJECTS with a toast (no silent auto-clamp to 12).
+  bAge = (await readAges(page)).age;
+  await editField(page, 'val-age', '13 / 1985'); await page.waitForTimeout(150);
   a = await readAges(page);
-  check('Item4: date entry re-runs Item-1 ordering clamp (RA>=CA+1)', a.ret === a.age + 1 && a.ret === 51, 'CA=' + a.age + ' RA=' + a.ret);
+  check('Item4: month 13 rejected with toast', a.age === bAge && a.toastShown && /Month must be/.test(a.toast), a.toast);
+  // P8.1 — RA out-of-order / nonsensical target dates REJECT with a toast (no silent clamp).
+  await editField(page, 'val-age', '01 / 1976'); await page.waitForTimeout(150);
+  let bRet = (await readAges(page)).ret;
+  await editField(page, 'val-activation', '06 / 2021'); await page.waitForTimeout(150); // age ~45 < CA+1
+  a = await readAges(page);
+  check('Item4: RA below CA+1 rejected (not clamped)', a.ret === bRet && a.toastShown && /Retirement age must be/.test(a.toast), 'RA=' + a.ret + ' ' + a.toast);
+  bRet = (await readAges(page)).ret;
+  await editField(page, 'val-activation', '01 / 3052'); await page.waitForTimeout(150);
+  a = await readAges(page);
+  check('Item4: nonsensical RA year (3052) rejected (not clamped to max)', a.ret === bRet && /Retirement age must be/.test(a.toast), 'RA=' + a.ret);
+  // a VALID in-window RA date still commits.
+  await editField(page, 'val-activation', '06 / ' + (Y - (Y - 1976) + 62)); await page.waitForTimeout(150);
+  check('Item4: valid RA date commits', (await readAges(page)).ret === 62, 'RA=' + (await readAges(page)).ret);
+  // nonsensical PTA year rejects too.
+  let bPlan = (await readAges(page)).plan;
+  await editField(page, 'val-plan-through', '01 / 9855'); await page.waitForTimeout(150);
+  a = await readAges(page);
+  check('Item4: nonsensical PTA year (9855) rejected', a.plan === bPlan && /Plan-through age must be/.test(a.toast), 'PTA=' + a.plan);
   // DOB-absent fallback (birthYear = today - current-age slider).
   await page.evaluate(() => { const d = document.getElementById('pri-dob'); if (d) d.value = ''; });
   await editField(page, 'val-age', '01 / ' + (Y - 40)); await page.waitForTimeout(150);

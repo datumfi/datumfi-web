@@ -5010,6 +5010,16 @@
       window._fmtDateStr = _fmtDateStr;
       function _fmtRetDate(el) { el.value = _fmtDateStr(el.value); }
       window._fmtRetDate = _fmtRetDate;
+      // P8.1 Q1 — inline S1 variant: same auto-slash + single-digit-month snap, but does NOT
+      // clamp MM (so a typed "13" stays "13" and the strict parse REJECTS it with a toast,
+      // rather than silently auto-correcting to 12 and hiding the typo). Consistency: invalid
+      // -> reject everywhere.
+      function _fmtDateSlash(s) {
+        var digits = String(s).replace(/\D/g, '').slice(0, 6);
+        if (digits.length >= 1 && parseInt(digits[0], 10) > 1) digits = '0' + digits.slice(0, 5);
+        return digits.length <= 2 ? digits : digits.slice(0, 2) + ' / ' + digits.slice(2);
+      }
+      window._fmtDateSlash = _fmtDateSlash;   // cfg (other scope) resolves the bare ref via this
 
       function _validateRetDate(el) {
         var w = document.getElementById('ret-date-warn');
@@ -5716,6 +5726,17 @@
         var dob = _readDobMoYr();
         age = yr - dob.yr;
         if (mo < dob.mo) age--;
+        // P8.1 — RA/PTA are target dates: REJECT a nonsensical year (e.g. 3052) with a toast
+        // instead of silently clamping. Sane window = ordering floor .. slider ceiling.
+        var ca = parseInt(($('slider-age') || {}).value, 10) || 40;
+        if (kind === 'retire') {
+          var rlo = Math.max(45, ca + 1);
+          if (age < rlo || age > 90) { _ageFailMsg = 'Retirement age must be between ' + rlo + ' and 90.'; return NaN; }
+        } else {
+          var ra = parseInt(($('slider-activation') || {}).value, 10) || 65;
+          var plo = Math.max(75, ra + 20);
+          if (age < plo || age > 105) { _ageFailMsg = 'Plan-through age must be between ' + plo + ' and 105.'; return NaN; }
+        }
       }
       _agePendingDate = { kind: kind, mo: mo, yr: yr, age: age };
       return age;
@@ -6023,21 +6044,21 @@
         { valId: 'val-age',         slider: slAge,  w: '120px', isCurrency: false, maxLength: 9,
           getEditVal: function () { return _dateForField('dob'); },
           clean: function (s) { return s.replace(/[^0-9]/g, ''); },
-          inputFilter: _fmtDateStr, parse: function (s) { return _parseAgeOrDate(s, 'dob'); },
+          inputFilter: _fmtDateSlash, parse: function (s) { return _parseAgeOrDate(s, 'dob'); },
           validate: function (v) { return v >= 18 && v <= 85; },
           getClampedValid: function (v) { return clampN(v, 18, 85); },
           toSlider: function (v) { return v; } },
         { valId: 'val-activation',  slider: slAct,  w: '120px', isCurrency: false, maxLength: 9,
           getEditVal: function () { return _dateForField('retire'); },
           clean: function (s) { return s.replace(/[^0-9]/g, ''); },
-          inputFilter: _fmtDateStr, parse: function (s) { return _parseAgeOrDate(s, 'retire'); },
+          inputFilter: _fmtDateSlash, parse: function (s) { return _parseAgeOrDate(s, 'retire'); },
           validate: function (v) { return v >= Math.max(45, Math.round(parseFloat(slAge.value)) + 1) && v <= 90; },
           getClampedValid: function (v) { var lo = Math.max(45, Math.round(parseFloat(slAge.value)) + 1); return clampN(v, lo, 90); },
           toSlider: function (v) { return v; } },
         { valId: 'val-plan-through', slider: slPlan, w: '120px', isCurrency: false, maxLength: 9,
           getEditVal: function () { return _dateForField('pta'); },
           clean: function (s) { return s.replace(/[^0-9]/g, ''); },
-          inputFilter: _fmtDateStr, parse: function (s) { return _parseAgeOrDate(s, 'pta'); },
+          inputFilter: _fmtDateSlash, parse: function (s) { return _parseAgeOrDate(s, 'pta'); },
           validate: function (v) { var lo = Math.max(75, Math.round(parseFloat(slAct.value)) + 20); return v >= lo && v <= 105; },
           getClampedValid: function (v) { var lo = Math.max(75, Math.round(parseFloat(slAct.value)) + 20); return clampN(v, lo, 105); },
           toSlider: function (v) { return v; } },
@@ -7839,7 +7860,10 @@
   .so-choice.so-primary .so-choice-arrow{border-color:rgba(201,168,76,.26);background:rgba(201,168,76,.075)}
   .so-choice.disabled-cta{opacity:.45;cursor:not-allowed;pointer-events:none}
   .so-overlay-wrap.dismissed{opacity:0;pointer-events:none;transition:opacity .28s ease}
-  .so-toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:9500;border:1px solid rgba(201,168,76,.36);border-radius:999px;padding:12px 16px;background:radial-gradient(circle at 18% 0%,rgba(201,168,76,.110),transparent 42%),rgba(5,11,20,.94);color:rgba(255,255,255,.80);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.13em;text-transform:uppercase;box-shadow:0 26px 66px rgba(0,0,0,.46);transition:.22s ease}
+  /* P8.1 Q2 — toast anchored TOP-center (below the 56px topbar), not bottom, so validation
+     feedback is never hidden behind the bottom-anchored privacy/cookie banner. z-index raised
+     above it too (belt + suspenders). The hiding was a position overlap, not z-index. */
+  .so-toast{position:fixed;left:50%;top:76px;transform:translate(-50%,-20px);opacity:0;pointer-events:none;z-index:10001;border:1px solid rgba(201,168,76,.36);border-radius:999px;padding:12px 16px;background:radial-gradient(circle at 18% 0%,rgba(201,168,76,.110),transparent 42%),rgba(5,11,20,.94);color:rgba(255,255,255,.80);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.13em;text-transform:uppercase;box-shadow:0 26px 66px rgba(0,0,0,.46);transition:.22s ease}
   .so-toast.show{opacity:1;transform:translate(-50%,0)}
   @media(max-width:1080px){.so-head{grid-template-columns:1fr}.so-roadmap{grid-template-columns:1fr}.so-cta-grid{grid-template-columns:1fr}}
   @media(max-width:640px){.so-overlay-wrap{padding:74px 16px 26px;align-items:start;overflow:auto}.so-overlay{width:100%;border-radius:28px}.so-inner{padding:58px 20px 22px}.so-overlay:after{width:78px;height:78px;font-size:25px;right:18px;top:18px;opacity:.54}}
