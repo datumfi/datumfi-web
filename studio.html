@@ -7796,10 +7796,16 @@
     'use strict';
     var _wrap = document.getElementById('studioOverlayWrap');
     if (!_wrap) return;
-    if (new URLSearchParams(window.location.search).get('hydrate') || new URLSearchParams(window.location.search).get('id')) { _wrap.style.display='none'; return; }
+    // P8 Item 5 — the overlay setup (refs, applyAuthState, handlers, the exposed
+    // window._studioOverlayOpen) must ALWAYS run so "Return to Overview" can re-open it
+    // even when the overlay auto-hides on load. The auto-hide conditions now set
+    // _hideOnLoad instead of early-returning before the setup.
+    var _hideOnLoad = false;
+    var _qp = new URLSearchParams(window.location.search);
+    if (_qp.get('hydrate') || _qp.get('id')) _hideOnLoad = true;
 
     var _skipO = sessionStorage.getItem('datumfi_skip_entry_overlay');
-    if (_skipO) { try { sessionStorage.removeItem('datumfi_skip_entry_overlay'); } catch(e) {} _wrap.style.display='none'; return; }
+    if (_skipO) { try { sessionStorage.removeItem('datumfi_skip_entry_overlay'); } catch(e) {} _hideOnLoad = true; }
 
     // P7: auth is read LIVE (Clerk.user) via applyAuthState — not frozen from the
     // cached hint. The hint only drives the fast first paint + the seen-skip; the
@@ -7807,10 +7813,7 @@
     // a stale hint after sign-out) re-renders the options IN PLACE, no reopen.
     var _hintSignedIn = !!sessionStorage.getItem('datum_auth_hint');
 
-    if (_hintSignedIn && localStorage.getItem('datum_studio_overlay_seen')) {
-      _wrap.style.display = 'none';
-      return;
-    }
+    if (_hintSignedIn && localStorage.getItem('datum_studio_overlay_seen')) _hideOnLoad = true;
 
     var _toast           = document.getElementById('studioOverlayToast');
     var _statusValue     = document.getElementById('studioStatusValue');
@@ -7846,6 +7849,19 @@
       }
     }
     window._studioOverlayApplyAuth = applyAuthState;
+
+    // P8 Item 5 — re-open hook for the "Return to Overview" button. Always exposed (even
+    // when the overlay auto-hid on load). Re-shows the panel and re-applies LIVE auth, and
+    // marks the session reopened so the close X soft-dismisses (hide only, no scratch-reset)
+    // — "X out and keep working" must preserve the in-progress Blueprint.
+    var _reopened = false;
+    window._studioOverlayOpen = function() {
+      _reopened = true;
+      _wrap.classList.remove('dismissed');
+      _wrap.style.display = '';
+      var _live = !!sessionStorage.getItem('datum_auth_hint') || !!(window.Clerk && window.Clerk.user);
+      applyAuthState(_live);
+    };
 
     function _showToast(msg) {
       if (!_toast) return;
@@ -7903,7 +7919,9 @@
       }
     }
 
-    if (_closeBtn)     _closeBtn.addEventListener('click',     _startScratchFlow);
+    // First-entry X = start-from-scratch (founder defaults). Re-opened X = soft dismiss
+    // (hide only, no reset) so returning to the overview mid-work preserves the Blueprint.
+    if (_closeBtn)     _closeBtn.addEventListener('click',     function() { if (_reopened) dismissOverlay(); else _startScratchFlow(); });
     if (_startScratch) _startScratch.addEventListener('click', _startScratchFlow);
 
     // Handlers bound ONCE and read the LIVE _signedIn at click time, so a Clerk
@@ -7928,7 +7946,16 @@
       }
     });
 
-    applyAuthState(_hintSignedIn);   // first paint; Clerk.load() reconciles on load
+    if (_hideOnLoad) {
+      _wrap.style.display = 'none';
+    } else {
+      applyAuthState(_hintSignedIn);   // first paint; Clerk.load() reconciles on load
+    }
+
+    // P8 Item 5 — wire "← Return to Overview" (in the always-present drafting panel) to
+    // re-open this overlay; respects live auth via applyAuthState inside _studioOverlayOpen.
+    var _returnHome = document.querySelector('.return-home');
+    if (_returnHome) _returnHome.addEventListener('click', function(e) { e.preventDefault(); window._studioOverlayOpen(); });
   })();
   </script>
 
