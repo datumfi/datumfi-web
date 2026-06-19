@@ -7818,9 +7818,13 @@
     var _skipO = sessionStorage.getItem('datumfi_skip_entry_overlay');
     if (_skipO) { try { sessionStorage.removeItem('datumfi_skip_entry_overlay'); } catch(e) {} _wrap.style.display='none'; return; }
 
-    var isSignedIn = !!sessionStorage.getItem('datum_auth_hint');
+    // P7: auth is read LIVE (Clerk.user) via applyAuthState — not frozen from the
+    // cached hint. The hint only drives the fast first paint + the seen-skip; the
+    // post-load Clerk block re-invokes applyAuthState so an in-overlay sign-in (or
+    // a stale hint after sign-out) re-renders the options IN PLACE, no reopen.
+    var _hintSignedIn = !!sessionStorage.getItem('datum_auth_hint');
 
-    if (isSignedIn && localStorage.getItem('datum_studio_overlay_seen')) {
+    if (_hintSignedIn && localStorage.getItem('datum_studio_overlay_seen')) {
       _wrap.style.display = 'none';
       return;
     }
@@ -7832,46 +7836,33 @@
     var _startBlueprint  = document.getElementById('studioStartBlueprint');
     var _sketchSub       = document.getElementById('studioSketchSub');
     var _blueprintSub    = document.getElementById('studioBlueprintSub');
+    var _closeBtn        = document.getElementById('studioCloseIntro');
+    var _startScratch    = document.getElementById('studioStartScratch');
 
-    if (isSignedIn) {
-      if (_statusValue) _statusValue.textContent = 'Signed in';
-      if (_statusNote)  _statusNote.textContent  = 'Your Sketchbook and Blueprint Archive are available.';
-    } else {
-      if (_statusValue) _statusValue.innerHTML = '<a href="/vault.html?returnTo=%2Fstudio.html" class="nav-login-btn" style="margin-left:0">Sign In</a>';
-    }
+    var _signedIn = _hintSignedIn;   // live mirror, reconciled by applyAuthState
 
-    var _hasSavedSketch = false;
-    try {
-      if (localStorage.getItem('datum_sketch_state_1')) {
-        _hasSavedSketch = true;
+    // SINGLE source of option availability + status, re-callable so a live Clerk
+    // result re-renders in place. Founder decision: when signed-in BOTH options are
+    // enabled and route straight to the archive (even if empty); when signed-out
+    // BOTH stay actionable but route through Clerk sign-in FIRST (Issue 1a) — never
+    // act as if a session exists, and never leak whether prior local data exists.
+    function applyAuthState(signedIn) {
+      _signedIn = !!signedIn;
+      if (_startSketch)    _startSketch.classList.remove('disabled-cta');
+      if (_startBlueprint) _startBlueprint.classList.remove('disabled-cta');
+      if (_signedIn) {
+        if (_statusValue) _statusValue.textContent = 'Signed in';
+        if (_statusNote)  _statusNote.textContent  = 'Your Sketchbook and Blueprint Archive are available.';
+        if (_sketchSub)    _sketchSub.textContent    = 'Open your Sketchbook and choose a saved Sketch to prefill your Blueprint defaults.';
+        if (_blueprintSub) _blueprintSub.textContent = 'Open your Blueprint Archive and continue a filed Blueprint.';
       } else {
-        var _sBlob = JSON.parse(localStorage.getItem('datumfi_sketchbook_v1') || 'null');
-        _hasSavedSketch = !!(_sBlob && (_sBlob.slot_1 || _sBlob['slot_1']));
+        if (_statusValue) _statusValue.innerHTML = '<a href="/vault.html?returnTo=%2Fstudio.html" class="nav-login-btn" style="margin-left:0">Sign In</a>';
+        if (_statusNote)  _statusNote.textContent  = 'You can start a new Blueprint now. Saved Sketches and filed Blueprints require sign in so they can open from the right archive.';
+        if (_sketchSub)    _sketchSub.textContent    = 'Sign in, open your Sketchbook, and choose a saved Sketch to prefill your Blueprint defaults.';
+        if (_blueprintSub) _blueprintSub.textContent = 'Sign in, open your Blueprint Archive, and continue a filed Blueprint.';
       }
-    } catch(ex) {}
-
-    var _hasSavedBlueprint = false;
-    try {
-      var _hasNew = false;
-      for (var _i = 1; _i <= 4; _i++) {
-        if (localStorage.getItem('datum_blueprint_state_' + _i)) { _hasNew = true; break; }
-      }
-      if (_hasNew) {
-        _hasSavedBlueprint = true;
-      } else {
-        var _bBlob = JSON.parse(localStorage.getItem('datumfi_blueprint_archive_v1') || 'null');
-        _hasSavedBlueprint = !!((_bBlob && (_bBlob.slot1 || _bBlob.slot2 || _bBlob.slot3 || _bBlob.slot4)));
-      }
-    } catch(ex) {}
-
-    if (!_hasSavedSketch) {
-      if (_startSketch) _startSketch.classList.add('disabled-cta');
-      if (_sketchSub)   _sketchSub.textContent = 'No saved Sketches yet. Sketch first to build your outline.';
     }
-    if (!_hasSavedBlueprint) {
-      if (_startBlueprint) _startBlueprint.classList.add('disabled-cta');
-      if (_blueprintSub)   _blueprintSub.textContent = 'No saved Blueprints yet. Start from Scratch to file your first.';
-    }
+    window._studioOverlayApplyAuth = applyAuthState;
 
     function _showToast(msg) {
       if (!_toast) return;
@@ -7881,59 +7872,81 @@
       _showToast._t = setTimeout(function() { _toast.classList.remove('show'); }, 2800);
     }
 
-    function dismissOverlay(msg) {
-      if (isSignedIn) {
+    function dismissOverlay() {
+      if (_signedIn) {
         try { localStorage.setItem('datum_studio_overlay_seen', '1'); } catch(ex) {}
       }
       _wrap.classList.add('dismissed');
-      // Entry toast suppressed (Captain): no pop on overlay dismiss. _showToast stays
-      // defined for user-action confirmations (e.g. Save). msg arg now unused.
+      // Entry toast suppressed (Captain): no pop on overlay dismiss.
       setTimeout(function() { _wrap.style.display = 'none'; }, 320);
     }
 
-    var _closeBtn     = document.getElementById('studioCloseIntro');
-    var _startScratch = document.getElementById('studioStartScratch');
-
-    // Start from Scratch = blank. Defensively drop any carried Sketch-design
-    // state so the read-only WANT card cannot linger from a prior session.
+    // Start from Scratch = founder defaults. Clear the prefill sources (session
+    // draft / snapshot / pending) and the carried Sketch-design WANT card so the new
+    // Blueprint cannot inherit the prior session's numbers. Saved slots, the archive,
+    // and the Clerk cloud are untouched. If lingering data existed, reload to a clean
+    // /studio.html (skip-overlay flag set) so the engine recomputes founder defaults
+    // (Age40 / Retire65 / $750k / $25k / $100k / $166k); otherwise just dismiss.
     function _clearCarriedDesign() {
+      var had = false;
       try {
         ['datum_designed_ceil','datum_designed_datum','datum_designed_floor',
-         'datum_designed_state','datum_s2_design'].forEach(function(k) { sessionStorage.removeItem(k); });
+         'datum_designed_state','datum_s2_design'].forEach(function(k) {
+          if (sessionStorage.getItem(k) != null) had = true;
+          sessionStorage.removeItem(k);
+        });
       } catch(e) {}
       var _card = document.getElementById('sketch-design-ref');
       if (_card) _card.style.display = 'none';
+      return had;
+    }
+    function _scratchReset() {
+      var had = _clearCarriedDesign();
+      try {
+        ['datumfi_blueprint_draft_v1','datumfi_blueprint_current_snapshot',
+         'datum_blueprint_state_pending'].forEach(function(k) {
+          if (localStorage.getItem(k) != null || sessionStorage.getItem(k) != null) had = true;
+          try { localStorage.removeItem(k); } catch(e) {}
+          try { sessionStorage.removeItem(k); } catch(e) {}
+        });
+      } catch(e) {}
+      return had;
+    }
+    function _startScratchFlow() {
+      if (_scratchReset()) {
+        try { sessionStorage.setItem('datumfi_skip_entry_overlay', '1'); } catch(e) {}
+        window.location.href = '/studio.html';
+      } else {
+        dismissOverlay();
+      }
     }
 
-    if (_closeBtn)     _closeBtn.addEventListener('click',     function() { _clearCarriedDesign(); dismissOverlay('Starting a new Blueprint.'); });
-    if (_startScratch) _startScratch.addEventListener('click', function() { _clearCarriedDesign(); dismissOverlay('Starting a new Blueprint.'); });
+    if (_closeBtn)     _closeBtn.addEventListener('click',     _startScratchFlow);
+    if (_startScratch) _startScratch.addEventListener('click', _startScratchFlow);
 
-    if (_startSketch && !_startSketch.classList.contains('disabled-cta')) {
+    // Handlers bound ONCE and read the LIVE _signedIn at click time, so a Clerk
+    // reconciliation between paint and click takes effect without rebinding.
+    if (_startSketch) {
       _startSketch.addEventListener('click', function() {
         try { localStorage.setItem('datum_sketch_pickup_for_studio', JSON.stringify({ts: Date.now()})); } catch(ex) {}
-        if (isSignedIn) {
-          window.location.href = '/sketchbook.html';
-        } else {
-          window.location.href = '/vault.html?returnTo=' + encodeURIComponent('/sketchbook.html');
-        }
+        window.location.href = _signedIn ? '/sketchbook.html'
+          : ('/vault.html?returnTo=' + encodeURIComponent('/sketchbook.html'));
       });
     }
-
-    if (_startBlueprint && !_startBlueprint.classList.contains('disabled-cta')) {
+    if (_startBlueprint) {
       _startBlueprint.addEventListener('click', function() {
-        if (isSignedIn) {
-          window.location.href = '/Blueprint.html';
-        } else {
-          window.location.href = '/vault.html?returnTo=' + encodeURIComponent('/Blueprint.html');
-        }
+        window.location.href = _signedIn ? '/Blueprint.html'
+          : ('/vault.html?returnTo=' + encodeURIComponent('/Blueprint.html'));
       });
     }
 
     document.addEventListener('keydown', function(event) {
       if (event.key === 'Escape' && _wrap && _wrap.style.display !== 'none') {
-        dismissOverlay('Starting a new Blueprint.');
+        dismissOverlay();
       }
     });
+
+    applyAuthState(_hintSignedIn);   // first paint; Clerk.load() reconciles on load
   })();
   </script>
 
@@ -8031,20 +8044,20 @@
   window.addEventListener('load', function() {
     if (!window.Clerk) return;
     window.Clerk.load().then(function() {
-      var _sv = document.getElementById('studioStatusValue');
-      var _sn = document.getElementById('studioStatusNote');
-      if (window.Clerk.user) {
+      var _live = !!window.Clerk.user;
+      if (_live) {
         if (!sessionStorage.getItem('datum_auth_hint')) {
           try { sessionStorage.setItem('datum_auth_hint', '1'); } catch(e) {}
-          if (_sv) _sv.textContent = 'Signed in';
-          if (_sn) _sn.textContent = 'Your Sketchbook and Blueprint Archive are available.';
           if (typeof window._datumNavReinject === 'function') window._datumNavReinject();
         }
       } else if (sessionStorage.getItem('datum_auth_hint')) {
         try { sessionStorage.removeItem('datum_auth_hint'); } catch(e) {}
-        if (_sv) _sv.innerHTML = '<a href="/vault.html?returnTo=%2Fstudio.html" class="nav-login-btn" style="margin-left:0">Sign In</a>';
-        if (_sn) _sn.textContent = 'You can start a new Blueprint now. Saved Sketches and filed Blueprints require sign in so they can open from the right archive.';
       }
+      // P7 — re-render the overlay options from the LIVE session, in place: an
+      // in-overlay sign-in unlocks BOTH options without a reopen, and a stale hint
+      // after sign-out collapses them back to signed-out (sign-in-first) routing.
+      // applyAuthState owns the status text now (single source).
+      if (typeof window._studioOverlayApplyAuth === 'function') window._studioOverlayApplyAuth(_live);
     }).catch(function() {});
   });
   </script>
