@@ -5676,9 +5676,8 @@
        are DOB-anchored target dates whose age then flows through validate/getClampedValid,
        so the Item-1 ordering clamps (RA>=CA+1, PTA>=max(75,RA+20)) still apply on top. The
        field DISPLAY collapses back to the 2-digit age on commit (onCommit->refreshAllLabels);
-       slider drag still yields a plain age. */
-    // Studio Current-Age window — mirrors Dossier.html AGE_MIN_V6 / AGE_MAX_V6 (single source).
-    var STUDIO_AGE_MIN = 18, STUDIO_AGE_MAX = 85;
+       slider drag still yields a plain age. The age/date bounds live in the shared
+       DatumDateBounds module (date-bounds.js) — single source with the Dossier. */
     var _ageDateRe = /^(\d{1,2})\s*\/\s*(\d{4})$/;
     var _agePendingDate = null;
     var _ageFailMsg = '';
@@ -5710,36 +5709,24 @@
       return _pad2(dob.mo) + ' / ' + (dob.yr + pta);
     }
     // kind: 'dob' (Current Age = DOB) | 'retire' | 'pta' (target date, DOB-anchored).
+    // 4d — delegates to the shared DatumDateBounds (single source; Dossier uses the same).
     function _parseAgeOrDate(str, kind) {
       _agePendingDate = null; _ageFailMsg = '';
-      var dm = String(str || '').trim().match(_ageDateRe);   // require a FULL MM/YYYY
-      if (!dm) { _ageFailMsg = 'Enter a full date as MM / YYYY.'; return NaN; }
-      var mo = parseInt(dm[1], 10), yr = parseInt(dm[2], 10);
-      if (mo < 1 || mo > 12) { _ageFailMsg = 'Month must be between 01 and 12.'; return NaN; }
-      var now = new Date(), age;
+      var DB = window.DatumDateBounds;
+      if (!DB) { _ageFailMsg = 'Enter a full date as MM / YYYY.'; return NaN; }
+      var res;
       if (kind === 'dob') {
-        age = now.getFullYear() - yr;
-        if (now.getMonth() + 1 < mo) age--;
-        // 4a — reuse the Dossier current-age window (18-85) as the single source.
-        if (age < STUDIO_AGE_MIN || age > STUDIO_AGE_MAX) { _ageFailMsg = 'Age must be between ' + STUDIO_AGE_MIN + ' and ' + STUDIO_AGE_MAX + '.'; return NaN; }
+        res = DB.validateDob(str);
       } else {
         var dob = _readDobMoYr();
-        age = yr - dob.yr;
-        if (mo < dob.mo) age--;
-        // P8.1 — RA/PTA are target dates: REJECT a nonsensical year (e.g. 3052) with a toast
-        // instead of silently clamping. Sane window = ordering floor .. slider ceiling.
         var ca = parseInt(($('slider-age') || {}).value, 10) || 40;
-        if (kind === 'retire') {
-          var rlo = Math.max(45, ca + 1);
-          if (age < rlo || age > 90) { _ageFailMsg = 'Retirement age must be between ' + rlo + ' and 90.'; return NaN; }
-        } else {
-          var ra = parseInt(($('slider-activation') || {}).value, 10) || 65;
-          var plo = Math.max(75, ra + 20);
-          if (age < plo || age > 105) { _ageFailMsg = 'Plan-through age must be between ' + plo + ' and 105.'; return NaN; }
-        }
+        var ra = parseInt(($('slider-activation') || {}).value, 10) || 65;
+        res = DB.validateTarget(str, kind === 'retire' ? 'retire' : 'plan', dob, ca, ra);
       }
-      _agePendingDate = { kind: kind, mo: mo, yr: yr, age: age };
-      return age;
+      if (!res.ok) { _ageFailMsg = res.err; return NaN; }
+      var p = DB.parseMoYr(str);
+      _agePendingDate = { kind: kind, mo: p.mo, yr: p.yr, age: res.age };
+      return res.age;
     }
     // Writes the exact typed date to the Profile field, month+year preserved, ONLY when the
     // committed age equals the typed date's age (unclamped). Returns true if it owned the
@@ -8217,6 +8204,7 @@
     type="text/javascript"
   ></script>
   <script src="/nav.js"></script>
+  <script src="/scripts/date-bounds.js" defer></script>
   <script src="/scripts/datum-shape.js" defer></script>
   <script src="/scripts/datum-shape-copy.js" defer></script>
   <script src="/scripts/studio-wantface.js" defer></script>
