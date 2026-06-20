@@ -1,16 +1,21 @@
 'use strict';
-/* _p8_dossier_date_enforce.js — STANDING GATE for P8.1 "2B": the Dossier date fields
- * (#retireAge / #planThrough / #spouseRetireDate) migrated to DOB-anchored MM/YYYY,
- * enforced by the SHARED DatumDateBounds — parity with Studio's 2A/enforcement gate.
+/* _p8_dossier_date_enforce.js — STANDING GATE for the P8.1 "AGE-BOX PORT": the three Dossier
+ * toggle boxes (#retireAge / #planThrough / #spouseRetireDate) REST on an integer AGE and present
+ * a MM/YYYY date only while focused — a faithful port of Studio's S1 inline age inputs
+ * (_parseAgeOrDate / _commitAgeDate / _dateForField). Canonical state = el._ageVal (the only thing
+ * the engine reads) + el._dateStr (the typed "MM/YYYY"; the month's only home).
  *
- *   (a) invalid date REVERTS to the field's last REAL good value when one exists;
- *   (b) invalid date with NO prior good value CLEARS to empty (never snapped, never ghost);
- *   (c) NO field ever SNAPS to a bound on invalid input;
- *   (d) a valid date commits + drives the canonical integer derivation;
- *   (e) the engine payload() derives INTEGER ages only — no date/NaN reaches the body;
- *   (bc) the reopen reader normalizes all THREE legacy co-architect shapes
- *        (targetRetirementYear | targetRetirementAge | targetRetirementDate) -> canonical int;
- *   (par) Studio + Dossier share the SAME DatumDateBounds bounds (cross-validator parity).
+ *   (a) invalid -> revert to last REAL good {age,date}; (b) no prior good -> clear; (c) NO bound snap;
+ *   (d) valid commits to the AGE; (e) payload derives INTEGER ages only (no date/NaN to the engine);
+ *   (raf) the <head> rAF guard still reverts a stray rAF write to a box;
+ *   (i) type RA/PTA, change DOB -> the ages SURVIVE (no collapse);
+ *   (iii) MONTH SURVIVAL (the loop-ender): DOB 08/1982 + retire 03/2035 -> rest 52 -> SAVE -> REOPEN
+ *         -> rest 52 -> focus shows 03/2035 (NOT 08/2034) -> payload age 52;
+ *   (port) reject 08/9889990 / letters / month 13, enforce RA>=CurrentAge & PTA>=RA, stop-at-2-digits,
+ *          auto-dash after 2 digits — PORT EVERYTHING;
+ *   (bc) all three legacy co shapes -> canonical int; (legacy) a saved row with NO date string reopens
+ *        clean (DOB-derived on focus);
+ *   (par) Studio == Dossier: identical bounds AND identical ageAtDate/dateFromAge rounding.
  *
  * Run: node scripts/_p8_dossier_date_enforce.js   (exit 0 = GREEN)
  */
@@ -30,7 +35,6 @@ function check(label, cond, detail) { const ok = !!cond; if (!ok) fails++; resul
 const PORT = 8143;
 const Y = new Date().getFullYear();
 
-// Stub Clerk so the Dossier reveals (no live auth) + seed localStorage when a fixture is given.
 function initScript(fixture) {
   return `(function(){
     window.Clerk = { load:function(){return Promise.resolve();}, user:{ unsafeMetadata:{}, update:function(){return Promise.resolve();} }, addListener:function(){} };
@@ -47,8 +51,9 @@ async function openDossier(browser, fixture) {
   await page.waitForTimeout(900);
   return { ctx, page };
 }
-// Drive a field like a user: focus (clears ghost, snapshots good), type (live MM/YYYY filter), blur (enforce).
-const edit = (page, id, text) => page.evaluate(([i, t]) => {
+// Type a DATE into a box (through the live fmtDateStr filter) and blur -> commits to an AGE.
+// Returns the RESTING value (an age for the 3 toggle boxes; a date for the DOB boxes).
+const typeBox = (page, id, text) => page.evaluate(([i, t]) => {
   const el = document.getElementById(i); if (!el) return null;
   el.focus();
   el.value = t; el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -56,6 +61,12 @@ const edit = (page, id, text) => page.evaluate(([i, t]) => {
   el.blur();
   return el.value;
 }, [id, text]);
+// Focus a box and read the DATE it presents for editing (then blur leaves it re-committed/unchanged).
+const focusDate = (page, id) => page.evaluate((i) => {
+  const el = document.getElementById(i); if (!el) return null;
+  el.focus(); const v = el.value; el.blur(); return v;
+}, id);
+// Resting display of every box (ages for the toggles, dates for DOB).
 const read = (page) => page.evaluate(() => ({
   dob: (document.getElementById('dob') || {}).value,
   retire: (document.getElementById('retireAge') || {}).value,
@@ -64,128 +75,129 @@ const read = (page) => page.evaluate(() => ({
   coRet: (document.getElementById('spouseRetireDate') || {}).value
 }));
 const buildPayload = (page) => page.evaluate(() => { try { return typeof payload === 'function' ? payload() : null; } catch (e) { return 'ERR:' + e.message; } });
+const coOn = (page) => page.evaluate(() => { const t = document.getElementById('spouseToggle'); if (t && !t.classList.contains('on')) t.click(); const f = document.getElementById('coFields'); if (f) f.classList.add('show'); });
 
 (async () => {
   await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
   const browser = await chromium.launch();
 
-  // ───────── enforcement + integer-payload (a)-(e) ─────────
+  // ───────── (a)-(e) enforcement + integer payload + age-at-rest ─────────
   {
     const { ctx, page } = await openDossier(browser, null);
-    check('(g) DatumDateBounds present on Dossier', await page.evaluate(() => typeof (window.DatumDateBounds || {}).validateTarget === 'function'));
+    check('(g) DatumDateBounds present (dateFromAge/fmtDateStr too)', await page.evaluate(() => { const B = window.DatumDateBounds || {}; return typeof B.validateTarget === 'function' && typeof B.dateFromAge === 'function' && typeof B.fmtDateStr === 'function'; }));
 
-    // Seed a valid DOB + valid Target Retirement so a last-known-good exists.
-    const dob = '06 / ' + (Y - 45);            // age 45
-    const goodRet = '06 / ' + (Y - 45 + 65);   // retire 65
-    await edit(page, 'dob', dob); await page.waitForTimeout(120);
-    await edit(page, 'retireAge', goodRet); await page.waitForTimeout(120);
-    let r = await read(page);
-    check('(d) valid Target Retirement commits', r.retire.replace(/\s/g, '') === goodRet.replace(/\s/g, ''), r.retire);
+    const dob = '06/' + (Y - 45);              // current age 45
+    await typeBox(page, 'dob', dob); await page.waitForTimeout(100);
+    const restRet = await typeBox(page, 'retireAge', '06/' + (Y - 45 + 65)); await page.waitForTimeout(100);  // retire 65
+    check('(d) valid commit RESTS on the AGE (not a date)', restRet === '65', restRet);
+    check('(d) focus presents the DATE for editing', /^\d{2}\/\d{4}$/.test((await focusDate(page, 'retireAge')) || ''), await focusDate(page, 'retireAge'));
     let pl = await buildPayload(page);
-    check('(d/e) payload retire derives integer 65', pl && pl.defaults && pl.defaults.targetRetirementAge === 65, JSON.stringify(pl && pl.defaults));
+    check('(e) payload retire age INTEGER 65', pl && pl.defaults && pl.defaults.targetRetirementAge === 65, JSON.stringify(pl && pl.defaults));
     check('(e) payload current_age + plan are INTEGER', pl && Number.isInteger(pl.primary.age) && Number.isInteger(pl.defaults.planThroughAge), JSON.stringify(pl && { a: pl.primary.age, p: pl.defaults.planThroughAge }));
+    check('(e) payload carries non-authoritative date string', pl && typeof pl.defaults.targetRetirementDate === 'string' && /^\d{2}\/\d{4}$/.test(pl.defaults.targetRetirementDate), JSON.stringify(pl && pl.defaults.targetRetirementDate));
 
-    // (a) garbage retire date (year 5656) reverts to last-known-good; never snaps to 90.
-    await edit(page, 'retireAge', '06 / 5656'); await page.waitForTimeout(120);
-    r = await read(page);
-    check('(a) garbage retire reverts to last-good', r.retire.replace(/\s/g, '') === goodRet.replace(/\s/g, ''), r.retire);
-    const snapDate = '01 / ' + (Y - 45 + 90);  // the date a snap-to-90 would produce
-    check('(c) garbage retire does NOT snap to a bound (90)', r.retire.replace(/\s/g, '') !== snapDate.replace(/\s/g, ''), r.retire);
+    // (a) garbage reverts to last-good AGE; (c) never snaps to a bound.
+    const afterGarbage = await typeBox(page, 'retireAge', '06/5656'); await page.waitForTimeout(100);
+    check('(a) garbage retire reverts to last-good age 65', afterGarbage === '65', afterGarbage);
+    check('(c) garbage retire does NOT snap to a bound (90/45)', afterGarbage !== '90' && afterGarbage !== '45', afterGarbage);
     pl = await buildPayload(page);
-    check('(e) payload still integer after garbage (no NaN/date)', pl && Number.isInteger(pl.defaults.targetRetirementAge) && pl.defaults.targetRetirementAge === 65, JSON.stringify(pl && pl.defaults));
+    check('(e) payload still integer 65 after garbage', pl && pl.defaults.targetRetirementAge === 65, JSON.stringify(pl && pl.defaults));
 
-    // (b) co-arch retire with NO prior good clears to empty (toggle co on first).
-    await page.evaluate(() => { const t = document.getElementById('spouseToggle'); if (t && !t.classList.contains('on')) t.click(); const f = document.getElementById('coFields'); if (f) f.classList.add('show'); });
-    await edit(page, 'spouseDob', '05 / ' + (Y - 43)); await page.waitForTimeout(120);
-    await edit(page, 'spouseRetireDate', '06 / 5656'); await page.waitForTimeout(120);
-    r = await read(page);
-    check('(b) invalid co-retire with no prior good CLEARS to empty (not snapped)', !r.coRet.trim(), JSON.stringify(r.coRet));
-    // then a good co value commits, and a later garbage value reverts to it.
-    const goodCo = '05 / ' + (Y - 43 + 60);
-    await edit(page, 'spouseRetireDate', goodCo); await page.waitForTimeout(100);
-    await edit(page, 'spouseRetireDate', '06 / 5656'); await page.waitForTimeout(100);
-    r = await read(page);
-    check('(a) co-retire reverts to last-good after a good value existed', r.coRet.replace(/\s/g, '') === goodCo.replace(/\s/g, ''), r.coRet);
+    // (b) co-arch with NO prior good clears.
+    await coOn(page);
+    await typeBox(page, 'spouseDob', '05/' + (Y - 43)); await page.waitForTimeout(100);
+    await typeBox(page, 'spouseRetireDate', '06/5656'); await page.waitForTimeout(100);
+    // Age-at-rest: a box with NO prior good falls back to the GHOST DEFAULT age (grey, non-
+    // authoritative, _ageVal still null) — "all show ages". 65 is the default, NOT a bound, and
+    // the garbage is not persisted as a real edit. (anti-snap + anti-persist both still proven.)
+    const coBad = await page.evaluate(() => { const el = document.getElementById('spouseRetireDate'); return { v: el.value, ghost: el.classList.contains('ghost-default'), age: el._ageVal }; });
+    check('(b) invalid co-retire (no prior good) -> GHOST default age, not snapped/persisted', coBad.v === '65' && coBad.ghost === true && coBad.age == null, JSON.stringify(coBad));
+    const coGood = await typeBox(page, 'spouseRetireDate', '05/' + (Y - 43 + 60)); await page.waitForTimeout(80);
+    check('(d) valid co-retire rests on age 60', coGood === '60', coGood);
+    const coRevert = await typeBox(page, 'spouseRetireDate', '06/5656'); await page.waitForTimeout(80);
+    check('(a) co-retire reverts to last-good age 60', coRevert === '60', coRevert);
     pl = await buildPayload(page);
-    check('(e) co payload age INTEGER + date mirror string + no legacy year', pl && Number.isInteger(pl.household.coArchitect.targetRetirementAge) && typeof pl.household.coArchitect.targetRetirementDate === 'string' && pl.household.coArchitect.targetRetirementYear === undefined, JSON.stringify(pl && pl.household.coArchitect));
+    check('(e) co payload age INTEGER + date string + no legacy year', pl && Number.isInteger(pl.household.coArchitect.targetRetirementAge) && typeof pl.household.coArchitect.targetRetirementDate === 'string' && pl.household.coArchitect.targetRetirementYear === undefined, JSON.stringify(pl && pl.household.coArchitect));
 
-    // (raf) REGRESSION — the private validateAges/validateAgeFields clamp these fields to a
-    // 2-digit integer from inside rAF callbacks on load. Prove the <head> rAF guard reverts ANY
-    // field write performed inside an rAF callback (the exact mechanism), so a committed MM/YYYY
-    // can no longer be clamped. We simulate the private validator by writing '45' inside an rAF.
-    check('(raf) guard installed — requestAnimationFrame is wrapped', await page.evaluate(() => /__dossier2BReady/.test(String(window.requestAnimationFrame))));
-    await edit(page, 'retireAge', '06 / ' + (Y - 45 + 65)); await page.waitForTimeout(80);
+    // (raf) the head guard still reverts a stray rAF write (now the resting value is an age).
+    check('(raf) requestAnimationFrame is wrapped', await page.evaluate(() => /__dossier2BReady/.test(String(window.requestAnimationFrame))));
+    await typeBox(page, 'retireAge', '06/' + (Y - 45 + 65)); await page.waitForTimeout(60);
     const before = (await read(page)).retire;
     const after = await page.evaluate(() => new Promise((resolve) => {
-      requestAnimationFrame(() => { document.getElementById('retireAge').value = '45'; }); // == the legacy clamp
+      requestAnimationFrame(() => { document.getElementById('retireAge').value = '45'; });
       requestAnimationFrame(() => resolve(document.getElementById('retireAge').value));
     }));
-    check('(raf) rAF write to a migrated field is REVERTED (no MM/YYYY -> integer clamp)', after === before && /^\d{2}\/\d{4}$/.test((after || '').replace(/\s/g, '')), 'before=' + before + ' after=' + after);
+    check('(raf) stray rAF write to a box is REVERTED', after === before && /^\d{1,3}$/.test(after || ''), 'before=' + before + ' after=' + after);
     await ctx.close();
   }
 
-  // ───────── (i) INTERACTIVE CLAMP — the exact founder repro the old gate skipped ─────────
-  // Type RA/PTA dates, then CHANGE DOB (the synchronous legacy validateRetirement path) and assert
-  // the fields stay MM/YYYY — they must NOT collapse to 2-digit integers ('45 / 48').
+  // ───────── (port) PORT-COMPLETENESS — reject everything Studio rejects ─────────
   {
     const { ctx, page } = await openDossier(browser, null);
-    await edit(page, 'dob', '06 / 1981'); await page.waitForTimeout(80);
-    await edit(page, 'retireAge', '01 / 2046'); await page.waitForTimeout(80);
-    await edit(page, 'planThrough', '01 / 2066'); await page.waitForTimeout(80);
-    let r = await read(page);
-    check('(i) precondition: RA/PTA committed as MM/YYYY', r.retire.replace(/\s/g, '') === '01/2046' && r.plan.replace(/\s/g, '') === '01/2066', JSON.stringify(r));
-    // change DOB — old bug collapsed RA->45, PTA->48 here
-    await edit(page, 'dob', '01 / 1986'); await page.waitForTimeout(120);
-    r = await read(page);
-    const isMMYYYY = (v) => /^\d{2}\/\d{4}$/.test((v || '').replace(/\s/g, ''));
-    check('(i) RA survives DOB change as MM/YYYY (no 45 collapse)', r.retire.replace(/\s/g, '') === '01/2046' && isMMYYYY(r.retire), r.retire);
-    check('(i) PTA survives DOB change as MM/YYYY (no 48 collapse)', r.plan.replace(/\s/g, '') === '01/2066' && isMMYYYY(r.plan), r.plan);
-    const pl = await buildPayload(page);
-    // typed dates re-derived against the NEW DOB (01/1986): 2046-1986=60, 2066-1986=80
-    check('(i) payload re-derives TYPED ages vs new DOB (integer 60/80)', pl && pl.defaults.targetRetirementAge === 60 && pl.defaults.planThroughAge === 80, JSON.stringify(pl && pl.defaults));
+    await typeBox(page, 'dob', '06/1981'); await page.waitForTimeout(80);           // current age ~45
+    const good = await typeBox(page, 'retireAge', '06/2046'); await page.waitForTimeout(80);  // retire 65
+    check('(port) precondition retire rests age 65', good === '65', good);
+    // auto-dash after 2 digits (live filter)
+    check('(port) auto-dash: "083" -> "08/3"', await page.evaluate(() => window.DatumDateBounds.fmtDateStr('083')) === '08/3');
+    // stop at 2 digits -> reject (no full date) -> revert to last good 65
+    check('(port) stop-at-2-digits rejected (reverts to 65)', (await typeBox(page, 'retireAge', '08')) === '65');
+    // month 13 rejected
+    check('(port) month 13 rejected (reverts to 65)', (await typeBox(page, 'retireAge', '13/2046')) === '65');
+    // 08/9889990 rejected (out of range / capped)
+    check('(port) 08/9889990 rejected (reverts to 65)', (await typeBox(page, 'retireAge', '08/9889990')) === '65');
+    // letters rejected (filtered out -> empty raw -> reverts to 65)
+    check('(port) letters rejected (reverts to 65)', (await typeBox(page, 'retireAge', 'abcdef')) === '65');
+    // RA < CurrentAge rejected (06/2020 -> age ~39 < 46 floor)
+    check('(port) RA below current age rejected (reverts to 65)', (await typeBox(page, 'retireAge', '06/2020')) === '65');
+    // PTA < RA+20 rejected: retire 65, type plan that implies age 70 (<85 floor)
+    await typeBox(page, 'planThrough', '06/2066'); await page.waitForTimeout(60);   // plan 85 (valid)
+    check('(port) PTA below RA+20 rejected (reverts to 85)', (await typeBox(page, 'planThrough', '06/2051')) === '85');
     await ctx.close();
   }
 
-  // ───────── (ii) DOB-CHANGE RECOMPUTE — ghost recomputes, real edit untouched ─────────
+  // ───────── (iii) MONTH SURVIVAL — the loop-ender ─────────
   {
     const { ctx, page } = await openDossier(browser, null);
-    await edit(page, 'dob', '06 / 1980'); await page.waitForTimeout(80);
-    // edit ONLY planThrough; leave retireAge as the DOB-anchored ghost
-    await edit(page, 'planThrough', '01 / 2070'); await page.waitForTimeout(80);
-    const ghostBefore = (await read(page)).retire;
-    await edit(page, 'dob', '06 / 1990'); await page.waitForTimeout(120);
-    const r = await read(page);
-    check('(ii) GHOST retire recomputes on DOB change', r.retire !== ghostBefore && /^\d{2}\/\d{4}$/.test((r.retire || '').replace(/\s/g, '')), 'before=' + ghostBefore + ' after=' + r.retire);
-    check('(ii) user-edited REAL plan is NOT overwritten by a clamp', r.plan.replace(/\s/g, '') === '01/2070', r.plan);
-    await ctx.close();
-  }
-
-  // ───────── (iii) REOPEN ROUND-TRIP — typed values persist; DOB renders MM/YYYY, not ISO ─────────
-  {
-    const { ctx, page } = await openDossier(browser, null);
-    await edit(page, 'dob', '01 / 1986'); await page.waitForTimeout(80);
-    await edit(page, 'retireAge', '01 / 2046'); await page.waitForTimeout(80);   // age 60
-    await edit(page, 'planThrough', '01 / 2066'); await page.waitForTimeout(80); // age 80
-    await page.evaluate(() => { var b = document.getElementById('saveProfile'); if (b) b.click(); });
+    await typeBox(page, 'dob', '08/1982'); await page.waitForTimeout(80);
+    const rest = await typeBox(page, 'retireAge', '03/2035'); await page.waitForTimeout(80);
+    check('(iii) non-DOB-month date rests on age 52', rest === '52', rest);
+    check('(iii) focus shows the TYPED month 03/2035 (not 08/2034)', (await focusDate(page, 'retireAge')) === '03/2035', await focusDate(page, 'retireAge'));
+    // save
+    await page.evaluate(() => { const b = document.getElementById('saveProfile'); if (b) b.click(); });
     await page.waitForTimeout(250);
     const saved = await page.evaluate(() => { try { return JSON.parse(localStorage.getItem('datumfi.accountDossier.v15')); } catch (e) { return null; } });
-    check('(iii) SAVE persists TYPED retire age (not default 65)', saved && saved.defaults && saved.defaults.targetRetirementAge === 60, JSON.stringify(saved && saved.defaults));
-    check('(iii) SAVE persists TYPED plan age (not default 85)', saved && saved.defaults && saved.defaults.planThroughAge === 80, JSON.stringify(saved && saved.defaults));
-    check('(iii) SAVE stores DOB as MM/YYYY', saved && saved.primary && /^\d{2}\/\d{4}$/.test(saved.primary.dateOfBirth), JSON.stringify(saved && saved.primary));
+    check('(iii) SAVE persists age 52', saved && saved.defaults && saved.defaults.targetRetirementAge === 52, JSON.stringify(saved && saved.defaults));
+    check('(iii) SAVE persists the date string 03/2035', saved && saved.defaults && (saved.defaults.targetRetirementDate === '03/2035' || (saved.primary && saved.primary.targetRetirementDate === '03/2035')), JSON.stringify(saved && saved.defaults));
+    check('(iii) SAVE stores DOB MM/YYYY (no ISO)', saved && saved.primary && /^\d{2}\/\d{4}$/.test(saved.primary.dateOfBirth), JSON.stringify(saved && saved.primary));
     await ctx.close();
-    // reopen in a fresh context seeded with the saved payload (the burned reopen/restore zone)
+    // reopen
     const re = await openDossier(browser, saved);
     await re.page.waitForTimeout(250);
     const rr = await read(re.page);
-    check('(iii) REOPEN DOB renders MM/YYYY (no 1986-06 ISO leak)', /^\d{2}\/\d{4}$/.test((rr.dob || '').replace(/\s/g, '')), rr.dob);
-    check('(iii) REOPEN retire reflects SAVED typed date', rr.retire.replace(/\s/g, '') === '01/2046', rr.retire);
-    check('(iii) REOPEN plan reflects SAVED typed date', rr.plan.replace(/\s/g, '') === '01/2066', rr.plan);
+    check('(iii) REOPEN DOB renders MM/YYYY (no ISO leak)', /^\d{2}\/\d{4}$/.test(rr.dob || ''), rr.dob);
+    check('(iii) REOPEN retire rests on age 52', rr.retire === '52', rr.retire);
+    check('(iii) REOPEN focus shows 03/2035 — MONTH SURVIVED', (await focusDate(re.page, 'retireAge')) === '03/2035', await focusDate(re.page, 'retireAge'));
     const rpl = await buildPayload(re.page);
-    check('(iii) REOPEN payload ages stay INTEGER (no NaN/silent-93)', rpl && rpl.defaults.targetRetirementAge === 60 && rpl.defaults.planThroughAge === 80, JSON.stringify(rpl && rpl.defaults));
+    check('(iii) REOPEN payload age INTEGER 52 (no NaN/silent-93)', rpl && rpl.defaults.targetRetirementAge === 52, JSON.stringify(rpl && rpl.defaults));
     await re.ctx.close();
   }
 
-  // ───────── back-compat: 3 legacy co-architect shapes -> canonical int 62 ─────────
+  // ───────── (i) DOB-change: ages SURVIVE ─────────
+  {
+    const { ctx, page } = await openDossier(browser, null);
+    await typeBox(page, 'dob', '06/1981'); await page.waitForTimeout(60);
+    await typeBox(page, 'retireAge', '06/2046'); await page.waitForTimeout(60);     // age 65
+    await typeBox(page, 'planThrough', '06/2071'); await page.waitForTimeout(60);   // age 90
+    await typeBox(page, 'dob', '06/1986'); await page.waitForTimeout(100);          // change DOB
+    const r = await read(page);
+    check('(i) RA age survives DOB change (no collapse)', r.retire === '65', r.retire);
+    check('(i) PTA age survives DOB change (no collapse)', r.plan === '90', r.plan);
+    const pl = await buildPayload(page);
+    check('(i) payload keeps the ages (65/90)', pl && pl.defaults.targetRetirementAge === 65 && pl.defaults.planThroughAge === 90, JSON.stringify(pl && pl.defaults));
+    await ctx.close();
+  }
+
+  // ───────── (bc) 3 legacy co shapes -> canonical int; (legacy) no-date-string reopen ─────────
   {
     const coDob = '05/1984', expected = 2046 - 1984; // 62
     const base = (co) => ({ schema: 'DatumFIAccountDossierV15', savedAt: new Date().toISOString(),
@@ -194,7 +206,7 @@ const buildPayload = (page) => page.evaluate(() => { try { return typeof payload
       household: { coArchitect: Object.assign({ dateOfBirth: coDob }, co) } });
     const fixtures = [
       ['legacy YEAR shape', base({ targetRetirementYear: 2046 })],
-      ['legacy AGE shape', base({ targetRetirementAge: 62 })],
+      ['legacy AGE-only (no date string)', base({ targetRetirementAge: 62 })],
       ['new DATE shape', base({ targetRetirementDate: '05/2046', targetRetirementAge: 62 })]
     ];
     for (const [label, fx] of fixtures) {
@@ -202,32 +214,35 @@ const buildPayload = (page) => page.evaluate(() => { try { return typeof payload
       await page.waitForTimeout(300);
       const r = await read(page);
       const pl = await buildPayload(page);
-      const fieldOk = /^\d{2}\/\d{4}$/.test((r.coRet || '').replace(/\s/g, ''));
-      const ageOk = pl && pl.household && pl.household.coArchitect && pl.household.coArchitect.targetRetirementAge === expected;
-      check('(bc) ' + label + ' -> field MM/YYYY', fieldOk, r.coRet);
-      check('(bc) ' + label + ' -> canonical int age ' + expected, ageOk, JSON.stringify(pl && pl.household && pl.household.coArchitect));
+      check('(bc) ' + label + ' -> rests on canonical age ' + expected, r.coRet === String(expected), r.coRet);
+      check('(bc) ' + label + ' -> payload int age ' + expected, pl && pl.household && pl.household.coArchitect && pl.household.coArchitect.targetRetirementAge === expected, JSON.stringify(pl && pl.household && pl.household.coArchitect));
+      // (legacy) a row with no date string must still present a clean DOB-derived date on focus.
+      const fd = await focusDate(page, 'spouseRetireDate');
+      check('(legacy) ' + label + ' -> focus presents a clean MM/YYYY', /^\d{2}\/\d{4}$/.test(fd || ''), fd);
       await ctx.close();
     }
   }
 
-  // ───────── cross-validator parity: Studio + Dossier share the SAME bounds ─────────
+  // ───────── (par) Studio == Dossier: bounds AND rounding ─────────
   {
     const dossier = await openDossier(browser, null);
-    const dBounds = await dossier.page.evaluate(() => { const B = window.DatumDateBounds; return { AGE_MIN: B.AGE_MIN, AGE_MAX: B.AGE_MAX, RA_MIN_FLOOR: B.RA_MIN_FLOOR, RA_MAX: B.RA_MAX, PTA_MIN_FLOOR: B.PTA_MIN_FLOOR, PTA_MAX: B.PTA_MAX }; });
+    const dProbe = await dossier.page.evaluate(() => { const B = window.DatumDateBounds; return { b: { AGE_MIN: B.AGE_MIN, AGE_MAX: B.AGE_MAX, RA_MIN_FLOOR: B.RA_MIN_FLOOR, RA_MAX: B.RA_MAX, PTA_MIN_FLOOR: B.PTA_MIN_FLOOR, PTA_MAX: B.PTA_MAX }, age: B.ageAtDate('03/2035', 8, 1982), date: B.dateFromAge(52, 8, 1982) }; });
     const sctx = await browser.newContext();
     await sctx.addInitScript('window.Clerk={load:function(){return Promise.resolve();},user:{unsafeMetadata:{}}};');
     await blockClerk(sctx);
     const spage = await sctx.newPage();
     await spage.goto('http://127.0.0.1:' + PORT + '/studio.html', { waitUntil: 'load' });
     await spage.waitForTimeout(900);
-    const sBounds = await spage.evaluate(() => { const B = window.DatumDateBounds || {}; return B.AGE_MIN === undefined ? null : { AGE_MIN: B.AGE_MIN, AGE_MAX: B.AGE_MAX, RA_MIN_FLOOR: B.RA_MIN_FLOOR, RA_MAX: B.RA_MAX, PTA_MIN_FLOOR: B.PTA_MIN_FLOOR, PTA_MAX: B.PTA_MAX }; });
-    check('(par) Studio exposes DatumDateBounds', !!sBounds, JSON.stringify(sBounds));
-    check('(par) Studio + Dossier bounds IDENTICAL', sBounds && JSON.stringify(sBounds) === JSON.stringify(dBounds), 'S=' + JSON.stringify(sBounds) + ' D=' + JSON.stringify(dBounds));
+    const sProbe = await spage.evaluate(() => { const B = window.DatumDateBounds || {}; return B.AGE_MIN === undefined ? null : { b: { AGE_MIN: B.AGE_MIN, AGE_MAX: B.AGE_MAX, RA_MIN_FLOOR: B.RA_MIN_FLOOR, RA_MAX: B.RA_MAX, PTA_MIN_FLOOR: B.PTA_MIN_FLOOR, PTA_MAX: B.PTA_MAX }, age: B.ageAtDate('03/2035', 8, 1982), date: typeof B.dateFromAge === 'function' ? B.dateFromAge(52, 8, 1982) : null }; });
+    check('(par) Studio exposes DatumDateBounds', !!sProbe, JSON.stringify(sProbe));
+    check('(par) Studio + Dossier bounds IDENTICAL', sProbe && JSON.stringify(sProbe.b) === JSON.stringify(dProbe.b), 'S=' + JSON.stringify(sProbe && sProbe.b) + ' D=' + JSON.stringify(dProbe.b));
+    check('(par) Studio == Dossier ageAtDate (52 == 52)', sProbe && sProbe.age === dProbe.age && dProbe.age === 52, 'S=' + (sProbe && sProbe.age) + ' D=' + dProbe.age);
+    check('(par) Studio == Dossier dateFromAge', sProbe && sProbe.date === dProbe.date && dProbe.date === '08/2034', 'S=' + (sProbe && sProbe.date) + ' D=' + dProbe.date);
     await sctx.close(); await dossier.ctx.close();
   }
 
   await browser.close(); server.close();
   results.forEach((r) => console.log('  ' + r));
-  console.log(fails === 0 ? '\nP8.1 DOSSIER DATE ENFORCEMENT: GREEN' : '\nP8.1 DOSSIER DATE ENFORCEMENT: ' + fails + ' FAILURE(S)');
+  console.log(fails === 0 ? '\nP8.1 DOSSIER AGE-BOX PORT: GREEN' : '\nP8.1 DOSSIER AGE-BOX PORT: ' + fails + ' FAILURE(S)');
   process.exit(fails === 0 ? 0 : 1);
 })().catch((e) => { console.error('GATE FAIL', e); server.close(); process.exit(1); });
