@@ -2030,6 +2030,9 @@ input:focus,select:focus{
 
   function setAgeValue(el, value){
     if(!el) return;
+    // P8.1 2B: once the date migration owns these three fields, the legacy integer writers must
+    // never touch them (the '06/2046' -> '45' collapse). 2B is the single source post-arm.
+    if(window.__dossier2BReady && /^(retireAge|planThrough|spouseRetireDate)$/.test(el.id)) return;
     el.value = String(value).slice(0,2);
   }
 
@@ -2038,6 +2041,7 @@ input:focus,select:focus{
   }
 
   function validateRetirement(showMessage){
+    if(window.__dossier2BReady) return true;   // P8.1 2B owns retireAge/planThrough — no legacy clamp
     const retire = byId('retireAge');
     const plan = byId('planThrough');
     if(!retire || !plan) return true;
@@ -2343,6 +2347,7 @@ input:focus,select:focus{
   }
 
   function validateAges(showMessage){
+    if(window.__dossier2BReady) return true;   // P8.1 2B owns the date fields — no legacy clamp
     const primaryOk = validatePrimaryRetire(showMessage);
     const coOk = validateCoRetire(showMessage);
     if(typeof update === 'function') update();
@@ -2560,6 +2565,7 @@ input:focus,select:focus{
   }
 
   function validateAges(showMessage){
+    if(window.__dossier2BReady) return true;   // P8.1 2B owns the date fields — no legacy clamp
     const ok = validatePlan(showMessage) && validateCo(showMessage);
     if(typeof update === 'function') update();
     return ok;
@@ -2836,6 +2842,7 @@ input:focus,select:focus{
   }
 
   function validateAgeFields(showMessage){
+    if(window.__dossier2BReady) return true;   // P8.1 2B owns the date fields — no legacy clamp
     const retire = byId('retireAge');
     const plan = byId('planThrough');
     const coRetire = byId('spouseRetireDate');
@@ -3160,6 +3167,7 @@ input:focus,select:focus{
   }
 
   function validateAges(showMessage){
+    if(window.__dossier2BReady) return true;   // P8.1 2B owns the date fields — no legacy clamp
     const retire = byId('retireAge');
     const plan = byId('planThrough');
     const coRetire = byId('spouseRetireDate');
@@ -3609,7 +3617,7 @@ input:focus,select:focus{
 
   function toMMYYYY(raw) {
     var s = String(raw || '');
-    var iso = s.match(/^(\d{4})-(\d{2})$/);
+    var iso = s.match(/^(\d{4})-(\d{1,2})$/);   // tolerate single-digit ISO month (no ISO leak)
     if (iso) return String(+iso[2]).padStart(2, '0') + '/' + iso[1];
     var pretty = s.match(/^(\d{1,2})\/(\d{4})$/);
     if (pretty) return String(+pretty[1]).padStart(2, '0') + '/' + pretty[2];
@@ -3902,15 +3910,39 @@ input:focus,select:focus{
     el.addEventListener('blur', function () { enforce(el); });
   });
 
-  // ── DOB fields: augment with Option-C via validateDob (no clone) ─
+  // ── DOB fields: OWN them (re-clone, don't just augment). The legacy dob blur fired
+  //    validateRetirement SYNCHRONOUSLY (outside the rAF guard) and clamped RA/PTA to 2-digit
+  //    integers on every DOB change. Re-cloning REMOVES that handler (and the prettyBirth/
+  //    normalizeBirth ones); 2B is the single source. Also normalizes ISO 'YYYY-MM' -> 'MM/YYYY'
+  //    so DOB never surfaces in ISO on reopen.
+  function dobToMMYYYY(raw) {
+    var p = DB.parseMoYr(raw);            // parseMoYr accepts ISO 'YYYY-MM' and 'MM/YYYY'
+    return p ? (String(p.mo).padStart(2, '0') + '/' + p.yr) : '';
+  }
   ['dob', 'spouseDob'].forEach(function (id) {
-    var el = byId(id); if (!el) return;
+    var old = byId(id); if (!old) return;
+    var liveVal = old.value;               // cloneNode copies the value ATTRIBUTE, not the live value
+    var el = old.cloneNode(true);
+    old.parentNode.replaceChild(el, old);
+    el.value = dobToMMYYYY(liveVal) || (DB.parseMoYr(liveVal) ? liveVal : '');
+    el.setAttribute('type', 'text');
+    el.setAttribute('inputmode', 'numeric');
+    el.setAttribute('maxlength', '7');
+    el.setAttribute('placeholder', 'MM/YYYY');
+    if (typeof els === 'object' && els) els[id] = el;
+    if (DB.validateDob(el.value).ok) el._lastGood = el.value;
     el.addEventListener('focus', function () { if (DB.validateDob(el.value).ok) el._lastGood = el.value; });
-    el.addEventListener('input', function () { refreshGhosts(id); });
-    el.addEventListener('blur', function () {     // runs after the existing normalizeBirth blur
+    el.addEventListener('input', function () {
+      fmtInput(el);                        // live MM/YYYY format (same as the age fields)
+      if (typeof els === 'object' && els.summaryStatus) els.summaryStatus.textContent = 'Unsaved';
+      refreshGhosts(id);                   // recompute GHOST dates only; user-edited reals untouched
+      refreshUpdate();
+    });
+    el.addEventListener('blur', function () {
       var res = DB.validateDob(el.value);
-      if (res.ok) { el._lastGood = el.value; }
+      if (res.ok) { el._lastGood = el.value; el.classList.remove('input-invalid'); }
       else if (String(el.value || '').trim()) {
+        showMsg(res.err);                  // Option-C: revert to last real good, else clear — never snap
         el.value = (el._lastGood != null && String(el._lastGood).trim()) ? el._lastGood : '';
         el.classList.remove('input-valid');
       }
@@ -3948,6 +3980,19 @@ input:focus,select:focus{
     };
   }
   window._dossierDeriveAge = deriveAge;            // gate hook (parity / integer assertions)
+
+  // ── reset is the last post-arm byId writer: it sets integer '65'/'90' into the date fields.
+  //    Wrap it so reset/delete restore MM/YYYY ghosts, not 2-digit integers. ─
+  if (typeof resetVals === 'function') {
+    var prevReset = resetVals;
+    resetVals = function () {
+      prevReset();
+      var d = byId('dob'); if (d) d.value = dobToMMYYYY(d.value);
+      var sd = byId('spouseDob'); if (sd) sd.value = dobToMMYYYY(sd.value);
+      Object.keys(META).forEach(function (id) { var el = byId(id); if (el) { delete el._lastGood; el.dataset.userEdited = 'false'; applyGhost(id); } });
+      refreshUpdate();
+    };
+  }
 
   // ── init: anchor any ghosts to the loaded DOB + refresh metrics ─
   refreshGhosts('dob'); refreshGhosts('spouseDob');
