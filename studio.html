@@ -1254,7 +1254,7 @@
           <div class="shape-input-frame" id="shape-input-frame-have">
           <div class="dialogue-block">
             <div class="dialogue-prompt mono-label" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-              <span>01 / YOUR TIMELINE</span>
+              <span id="timeline-header-have">01 / YOUR TIMELINE</span>
               <span id="timeline-state-badge" class="timeline-state-badge"></span>
             </div>
             <div class="control-group" id="grp-age">
@@ -1539,6 +1539,12 @@
                   <div id="co-ret-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
                 </div>
               </div>
+
+              <!-- P8.2 — Co-Architect note (DISPLAY-ONLY, static copy). Pairs with the
+                   "01 / PRIMARY TIMELINE" header relabel in the Shape area to make clear
+                   the Shape treats the household as one (primary-only) for now. No derived
+                   values, no date/age conversion, no payload. -->
+              <div id="co-arch-note" style="font-family:var(--font-serif);font-size:11px;color:var(--muted);line-height:1.6;margin-top:10px;">We see your Co-Architect. For now your Shape treats you as one household; per-person precision arrives as you draft your Estate.</div>
             </div>
 
           </div>
@@ -2083,7 +2089,7 @@
         <div class="d2-input-panel shape-input-frame" id="shape-input-frame-want">
 
           <div class="dialogue-block">
-            <div class="dialogue-prompt mono-label">01 / YOUR TIMELINE</div>
+            <div class="dialogue-prompt mono-label" id="timeline-header-want">01 / YOUR TIMELINE</div>
             <div class="control-group">
               <div class="control-header">
                 <label class="control-label" for="d2-slider-age">Current Age</label>
@@ -2709,6 +2715,14 @@
       updateArchitectNames();
       updateSVGs();
       calculateUpkeepLoad();
+      // P8.2 — relabel the Shape timeline header to make clear the Shape is primary-only
+      // when a Co-Architect is present. TEXT SWAP ONLY (both Have/Want faces); no derived
+      // values, no date/age conversion, no payload. Also fires on the seed path (which
+      // dispatches this 'change'), so a seeded Co-Architect lands on the right label.
+      var _tlTxt = coToggle.checked ? '01 / PRIMARY TIMELINE' : '01 / YOUR TIMELINE';
+      ['timeline-header-have', 'timeline-header-want'].forEach(function (id) {
+        var h = document.getElementById(id); if (h) h.textContent = _tlTxt;
+      });
     });
 
     // --- PLUMBING / UPKEEP LOGIC & CHARITY LOGIC ---
