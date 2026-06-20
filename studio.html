@@ -1496,8 +1496,9 @@
                 <div id="ret-date-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;">Retirement age exceeds 100 — plan capped at age 120.</div>
               </div>
               <div>
-                <div class="input-label">Plan Through Age</div>
-                <input type="number" class="small-field" id="plan-end-age" value="93" min="75" max="120" tabindex="17" title="The age through which your retirement plan is modeled. Updates automatically when you change your retirement date." oninput="_clampPlanEndAge(this,false)" onblur="_clampPlanEndAge(this,true)">
+                <div class="input-label">Plan Through Date</div>
+                <input type="text" class="small-field" id="plan-end-age" value="" placeholder="MM/YYYY" tabindex="17" title="The date through which your retirement plan is modeled (the slider is the source of truth)." onfocus="this.select()" oninput="_fmtRetDate(this)" onblur="window._commitPlanEndDate && window._commitPlanEndDate(this)">
+                <div id="plan-end-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
               </div>
             </div>
 
@@ -4852,7 +4853,8 @@
           }
           return parseInt(spendVal.replace(/[^\d]/g, ''), 10) || 100000;
         })();
-        const planEndAge  = Math.min(120, Math.max(_planEndAgeMin, parseInt((document.getElementById('plan-end-age')?.value) || '', 10) || 93));
+        // 2A — read the slider (single PTA-age source), not the plan-end-age field (now a date mirror).
+        const planEndAge  = Math.min(120, Math.max(_planEndAgeMin, parseInt((document.getElementById('sl-plan-through')?.value) || '', 10) || 93));
 
         const activeClimate = document.querySelector('.climate-option.active');
         const climateLabel  = activeClimate?.dataset?.outlook || '';
@@ -4964,22 +4966,22 @@
           return;
         }
         if (retWarnEl) retWarnEl.style.display = 'none';
-        var minPlanEnd    = Math.min(120, Math.max(75, Math.ceil(retireAge + 20)));
-        var defaultPlanEnd = Math.min(120, Math.max(93, minPlanEnd));
+        var minPlanEnd    = Math.min(105, Math.max(75, Math.ceil(retireAge + 20)));
+        var defaultPlanEnd = Math.min(105, Math.max(93, minPlanEnd));
         _planEndAgeMin = minPlanEnd;
-        var el = document.getElementById('plan-end-age');
-        if (!el) return;
-        el.min = String(minPlanEnd);
-        el.max = '120';
-        var cur = parseInt(el.value, 10);
-        if (isNaN(cur) || cur === _planEndAgeDefault) {
-          el.value = defaultPlanEnd;
-        } else if (cur < minPlanEnd) {
-          el.value = minPlanEnd;
-        } else if (cur > 120) {
-          el.value = 120;
+        // 2A — operate on the sl-plan-through slider (the single PTA-age source) and refresh the
+        // plan-end-age date mirror; the field is no longer the source. Capped at the slider max (105).
+        var sPlan = document.getElementById('sl-plan-through');
+        if (sPlan) {
+          var cur = parseInt(sPlan.value, 10);
+          if (isNaN(cur) || cur === _planEndAgeDefault) cur = defaultPlanEnd;
+          else if (cur < minPlanEnd) cur = minPlanEnd;
+          else if (cur > 105) cur = 105;
+          sPlan.value = cur;
+          if (typeof updatePlanThroughLabel === 'function') updatePlanThroughLabel();
         }
         _planEndAgeDefault = defaultPlanEnd;
+        if (window._mirrorPlanEnd) window._mirrorPlanEnd();
       }
       window._updatePlanEndAge = _updatePlanEndAge;
       _updatePlanEndAge();
@@ -5617,10 +5619,9 @@
           var sR = $('slider-activation'); if (sR) { sR.value = ra; updateActivationLabel(); }
         }
       }
-      if (planEl && planEl.value) {
-        var p = parseInt(planEl.value, 10);
-        if (!isNaN(p)) { var sP = $('sl-plan-through'); if (sP) { sP.value = clampN(p, 75, 105); updatePlanThroughLabel(); } }
-      }
+      // 2A — the plan-end-age field is a DOB-anchored date mirror of the slider (the single
+      // PTA-age source); refresh the display from the slider rather than reading it as an age.
+      if (planEl && typeof _mirrorPlanEnd === 'function') _mirrorPlanEnd();
     }
     // #4b carry: re-assert the EXACT carried ages onto the sliders after the date-based
     // syncs run (init + the +600ms hydration handshake), so the recomputed ceiling uses
@@ -5661,7 +5662,7 @@
       var sA = $('slider-age'), sR = $('slider-activation'), sP = $('sl-plan-through');
       if (dobM && sA) { var by = parseInt(dobM[2],10); var ca = now.getFullYear() - by; if (now.getMonth() + 1 < parseInt(dobM[1],10)) ca--; sA.value = clampN(ca, 18, 85); }
       if (retM && sR && dobM) { var ry = parseInt(retM[2],10), by2 = parseInt(dobM[2],10), bm = parseInt(dobM[1],10); var ra = ry - by2; if (parseInt(retM[1],10) < bm) ra--; sR.value = clampN(ra, (parseInt(sA && sA.value, 10) || 40) + 1, 90); }
-      if (sP && prof.plan_end_age) { sP.value = clampN(parseInt(prof.plan_end_age,10) || 93, 75, 105); var pe = $('plan-end-age'); if (pe) pe.value = sP.value; }
+      if (sP && prof.plan_end_age) { sP.value = clampN(parseInt(prof.plan_end_age,10) || 93, 75, 105); if (typeof _mirrorPlanEnd === 'function') _mirrorPlanEnd(); }
       // 05/ Market Conditions paradigm + inflation mode — re-assert from the slot too.
       if (bp.market_paradigm) { var _mr = document.querySelector('input[name="market"][value="' + bp.market_paradigm + '"]'); if (_mr) _mr.checked = true; }
       if (bp.inflation_mode)  { var _ir = document.querySelector('input[name="inflation"][value="' + bp.inflation_mode + '"]'); if (_ir) _ir.checked = true; }
@@ -5755,10 +5756,31 @@
         retEl.value = (rm ? _pad2(rm[1]) : '06') + ' / ' + (thisYear - ca2 + ra);
       }
     }
-    function syncPlanFromSketch() {
-      var sP = $('sl-plan-through'), pEl = $('plan-end-age');
-      if (sP && pEl) pEl.value = sP.value;
+    // 2A — the sl-plan-through slider is the single PTA-age source; the Profile "Plan Through"
+    // field is a DOB-anchored MM/YYYY mirror of it (display) + a typed-date entry (writes back).
+    function _mirrorPlanEnd() {
+      var pEl = $('plan-end-age');
+      if (pEl) pEl.value = _dateForField('pta');
     }
+    window._mirrorPlanEnd = _mirrorPlanEnd;
+    function _commitPlanEndDate(el) {
+      if (!el) return;
+      var DB = window.DatumDateBounds, warn = $('plan-end-warn');
+      var dob = _readDobMoYr();
+      var ca = parseInt(($('slider-age') || {}).value, 10) || 40;
+      var ra = parseInt(($('slider-activation') || {}).value, 10) || 65;
+      var res = DB ? DB.validateTarget(el.value, 'plan', dob, ca, ra) : { ok: false, err: 'Enter a full date as MM / YYYY.' };
+      if (res.ok) {
+        var sP = $('sl-plan-through'); if (sP) { sP.value = res.age; if (typeof updatePlanThroughLabel === 'function') updatePlanThroughLabel(); }
+        if (warn) { warn.textContent = ''; warn.style.display = 'none'; }
+        _mirrorPlanEnd(); fireUpdate();
+      } else {
+        if (warn) { warn.textContent = res.err; warn.style.display = 'block'; }
+        _mirrorPlanEnd();   // revert to the slider's date
+      }
+    }
+    window._commitPlanEndDate = _commitPlanEndDate;
+    function syncPlanFromSketch() { _mirrorPlanEnd(); }
     function syncTaxFromSketch() {
       // eff-tax-rate is the Dossier-exact preset select; only mirror the slider
       // when it lands exactly on a preset, otherwise leave the select untouched
@@ -5842,9 +5864,8 @@
       }
       if (sPlan && prof.plan_end_age) {
         sPlan.value = clampN(parseInt(prof.plan_end_age,10) || 93, 75, 105);
-        // G3 fix (Mechanism B) — also seed the plan-end-age TEXT, else syncFromProfileDates
-        // reads the stale default (93) afterward and clobbers the slider back to it.
-        var _peTxt = $('plan-end-age'); if (_peTxt) _peTxt.value = sPlan.value;
+        // 2A — mirror the plan-end-age date field from the (now-seeded) slider, the PTA source.
+        if (typeof _mirrorPlanEnd === 'function') _mirrorPlanEnd();
       }
 
       // #4b carry: override the date-derived ages with the EXACT carried integers so the
@@ -8159,7 +8180,7 @@
         var _nameEl = document.getElementById('primary-name');
         var _dobEl  = document.getElementById('pri-dob');
         var _retEl  = document.getElementById('target-ret');
-        var _planEl = document.getElementById('plan-end-age');
+        var _planEl = document.getElementById('sl-plan-through');   // 2A — slider is the PTA-age source
         var _state = {
           ts:          Date.now(),
           primaryName: _nameEl ? _nameEl.value : '',

@@ -202,6 +202,27 @@ const readAges = (page) => page.evaluate(() => { const tt = document.getElementB
   await page.waitForTimeout(150);
   a = await readAges(page);
   check('Item4: slider drag yields plain age + keeps month', a.age === 55 && /55\s*yrs/.test(a.valAge || '') && /^06\s*\/\s*/.test(a.dob || ''), a.valAge + ' / ' + a.dob);
+
+  // ── 2A — Profile "Plan Through" field is a MM/YYYY mirror of the sl-plan-through slider
+  // (single PTA-age source); typed date writes the slider; payload plan_end_age stays integer.
+  let pe = await page.evaluate(() => ({ type: document.getElementById('plan-end-age').type, val: document.getElementById('plan-end-age').value }));
+  check('2A: plan-end-age is a text MM/YYYY mirror', pe.type === 'text' && /^\d{2}\s*\/\s*\d{4}$/.test(pe.val), pe.val);
+  await page.evaluate(() => { const el = document.getElementById('sl-plan-through'); el.value = '100'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.waitForTimeout(150);
+  pe = await page.evaluate(() => document.getElementById('plan-end-age').value);
+  check('2A: slider drag re-mirrors the date field', /^\d{2}\s*\/\s*\d{4}$/.test(pe), pe);
+  const caNow = await page.evaluate(() => parseInt(document.getElementById('slider-age').value, 10));
+  await page.evaluate(() => { const d = document.getElementById('pri-dob'); if (d) d.value = ''; });
+  await page.evaluate((v) => { const el = document.getElementById('plan-end-age'); el.focus(); el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); if (window._commitPlanEndDate) window._commitPlanEndDate(el); }, '01 / ' + (Y - caNow + 95));
+  await page.waitForTimeout(200);
+  check('2A: typed valid date sets slider age', (await page.evaluate(() => parseInt(document.getElementById('sl-plan-through').value, 10))) === 95);
+  const peBefore = await page.evaluate(() => parseInt(document.getElementById('sl-plan-through').value, 10));
+  await page.evaluate(() => { const el = document.getElementById('plan-end-age'); el.value = '01 / 3052'; el.dispatchEvent(new Event('input', { bubbles: true })); if (window._commitPlanEndDate) window._commitPlanEndDate(el); });
+  await page.waitForTimeout(200);
+  const peAfter = await page.evaluate(() => ({ plan: parseInt(document.getElementById('sl-plan-through').value, 10), warn: document.getElementById('plan-end-warn').style.display }));
+  check('2A: invalid date reverts slider + warns', peAfter.plan === peBefore && peAfter.warn === 'block', JSON.stringify(peAfter));
+  const planPayload = await page.evaluate(() => { try { const bp = window.DatumBlueprint['new'](); window.DatumBlueprint.captureDOM(bp); return bp.profile.plan_end_age; } catch (e) { return 'ERR:' + e.message; } });
+  check('2A: payload plan_end_age stays an INTEGER age (shape unchanged)', typeof planPayload === 'number' && Number.isInteger(planPayload) && planPayload >= 75 && planPayload <= 105, JSON.stringify(planPayload));
   await ctx.close();
 
   // ── Sketch parity ──

@@ -615,7 +615,10 @@
     var coName  = v('co-name');      if (coName) bp.profile.co_architect_name = coName;
     var dob     = v('pri-dob');      if (dob)  bp.profile.primary_dob = dob;
     var ret     = v('target-ret');   if (ret)  bp.profile.target_retirement_date = ret;
-    var plan    = parseInt(v('plan-end-age'), 10);
+    // 2A — plan_end_age stays an INTEGER age; read the sl-plan-through slider (the single
+    // PTA-age source) since the plan-end-age field is now a DOB-anchored MM/YYYY date mirror.
+    var planEl = d.getElementById('sl-plan-through');
+    var plan = planEl ? parseInt(planEl.value, 10) : parseInt(v('plan-end-age'), 10);
     if (!isNaN(plan)) bp.profile.plan_end_age = plan;
 
     var spend = moneyToInt(v('spend-input'));
