@@ -4697,27 +4697,29 @@
     document.addEventListener('input', saveDraft);
     document.addEventListener('change', saveDraft);
 
-    // Prefill from Sketch if user came through that flow
+    // Prefill from Sketch if user came through that flow.
+    // P8.1 Sketch->Studio fix: NEVER fabricate the DOB / Retirement DATE fields from a
+    // stale Sketch age carry. The old hardcoded "06 / yyyy" and "01 / yyyy" stamps
+    // clobbered the user's typed/restored dates (the 06/1983, 01/2035 corruption) on
+    // every plain Studio load. The Dossier/draft profile is the single authoritative
+    // source for those two date fields now — so the two destructive date writes are
+    // removed here. Only the dateless, harmless spend mirror is still seeded. The three
+    // Sketch carry keys are then cleared so they stop re-firing on subsequent plain loads
+    // AND so _reassertRestoredProfile (which bails while datum_currentAge/datum_targetSpend
+    // exist) can self-heal an already-corrupted draft on the next load. The genuine
+    // "Open in Studio from Sketch" carry uses ?hydrate=sketch and reads localStorage
+    // (R3.6 handshake), not these keys, so it is unaffected.
     (function prefillFromSketch() {
-      const sketchAge      = sessionStorage.getItem('datum_currentAge');
-      const sketchRetireAge = sessionStorage.getItem('datum_retireAge');
-      const sketchSpend    = sessionStorage.getItem('datum_targetSpend');
-      const currentYear    = new Date().getFullYear();
-
-      if (sketchAge) {
-        const birthYear = currentYear - parseInt(sketchAge, 10);
-        const dobField = document.querySelector('[data-field="current_age"]');
-        if (dobField) dobField.value = `06 / ${birthYear}`;
-      }
-      if (sketchRetireAge && sketchAge) {
-        const retireYear = currentYear + (parseInt(sketchRetireAge, 10) - parseInt(sketchAge, 10));
-        const retField = document.querySelector('[data-field="retirement_age"]');
-        if (retField) retField.value = `01 / ${retireYear}`;
-      }
+      const sketchSpend = sessionStorage.getItem('datum_targetSpend');
       if (sketchSpend) {
         const spendField = document.querySelector('[data-field="datum_spend"]');
         if (spendField) spendField.value = `$${(parseInt(sketchSpend, 10) * 1000).toLocaleString('en-US')}`;
       }
+      try {
+        sessionStorage.removeItem('datum_currentAge');
+        sessionStorage.removeItem('datum_retireAge');
+        sessionStorage.removeItem('datum_targetSpend');
+      } catch (_e) {}
     })();
 
     // Init
