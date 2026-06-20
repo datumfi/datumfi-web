@@ -1414,6 +1414,30 @@ input:focus,select:focus{
   type="text/javascript"
 ></script>
 <script defer src="/scripts/account-topbar.js"></script>
+<!-- P8.1 2B: shared MM/YYYY bounds — blocking (parse-time inline consumers below depend on it) -->
+<script src="/scripts/date-bounds.js"></script>
+<script>
+/* P8.1 2B — rAF guard. The legacy date validators (validateAges / validateAgeFields) are
+   IIFE-private and re-clamp #retireAge / #planThrough / #spouseRetireDate to 2-digit integers
+   from rAF callbacks on load — unreachable from the migration IIFE below. Wrap rAF here (before
+   any page script) so each callback snapshot/restores those three fields once the migration has
+   armed (__dossier2BReady). No-op for every other rAF (they don't write these fields). */
+(function () {
+  'use strict';
+  if (!window.requestAnimationFrame) return;
+  var raf = window.requestAnimationFrame.bind(window);
+  var IDS = ['retireAge', 'planThrough', 'spouseRetireDate'];
+  window.requestAnimationFrame = function (cb) {
+    return raf(function (t) {
+      if (!window.__dossier2BReady) return cb(t);
+      var snap = IDS.map(function (id) { var e = document.getElementById(id); return e ? { e: e, v: e.value, c: e.className, u: e.getAttribute('data-user-edited') } : null; });
+      var r = cb(t);
+      snap.forEach(function (o) { if (!o) return; o.e.value = o.v; o.e.className = o.c; if (o.u != null) o.e.setAttribute('data-user-edited', o.u); });
+      return r;
+    });
+  };
+}());
+</script>
 
 </head>
 <body>
@@ -1421,7 +1445,7 @@ input:focus,select:focus{
 
 <section class="hero"><p class="eyebrow">My Account · Profile Inputs</p><h1>Account Dossier</h1><p>The Sketchbook saves rough Shapes. Blueprint Archive saves modeled plans. <strong>Account Dossier</strong> stores the household assumptions.</p></section>
 <main class="wrap"><div class="shadow"></div><div class="cover"></div><div class="tabs"><button class="tab" type="button" data-target="section-id" style="--offset:0px">ID</button><button class="tab" type="button" data-target="section-accounts" style="--offset:5px">ACCOUNTS</button><button class="tab" type="button" data-target="section-tax" style="--offset:8px">TAX</button><button class="tab" type="button" data-target="section-contact" style="--offset:3px">CONTACT</button><button class="tab" type="button" data-target="section-plan" style="--offset:10px">PLAN</button></div><section class="sheet"><div class="content"><header class="sheet-header"><div class="title"><input id="dossierTitle" value="My Account Dossier" aria-label="Dossier title"><div class="rule"></div><p class="sub">Household identity · tax base · Studio defaults · handoff-ready</p></div><aside class="summary"><div class="summary-label">Account Index</div><div class="summary-row"><span>Status</span><strong id="summaryStatus">Unsaved</strong></div><div class="summary-row"><span>Profile</span><strong id="summaryProfile">Single</strong></div><div class="summary-row"><span>Tier</span><strong id="summaryTier">Discover</strong></div></aside></header><div class="divider"></div>
-<div class="layout"><section class="card" id="section-id"><p class="kicker">01 / Identity</p><h2>Register the household.</h2><div class="grid"><div class="field"><label for="primaryName">Primary name <span class="note">optional</span><span class="help" tabindex="0" data-tip="The person this dossier starts with. Studio can use this label in profile cards, handoff summaries, and saved Blueprint records.">?</span></label><input id="primaryName" value="" placeholder=""></div><div class="field"><label for="dob">Date of birth <span class="help" tabindex="0" data-tip="Used to calculate current age, years to retirement, Social Security timing windows, and planning horizon defaults.">?</span></label><input id="dob" type="text" inputmode="numeric" maxlength="7" data-birth-input data-age-source="primary" value="" placeholder="MM/YYYY" autocomplete="bday"></div><div class="field"><label for="salary">Gross income <span class="help" tabindex="0" data-tip="Primary architect's current gross income before taxes, savings, retirement contributions, and payroll deductions. This is not the same as retirement Datum.">?</span></label><input id="salary" data-money data-max="1000000" inputmode="numeric" data-default-value="$0" value="$0"></div><div class="field"><label for="retireAge">Target retire age <span class="help" tabindex="0" data-tip="The age the primary architect wants the estate to stop depending on work income. Studio uses this to set the bridge period and retirement horizon.">?</span></label><input id="retireAge" data-int data-age-range="retire" inputmode="numeric" maxlength="2" data-default-value="65" value="65"></div><div class="field"><label for="planThrough">Plan through age <span class="help" tabindex="0" data-tip="How long the retirement Shape should be asked to hold. A longer horizon generally asks more of the estate.">?</span></label><input id="planThrough" data-int data-age-range="plan" inputmode="numeric" maxlength="3" data-default-value="85" value="85"></div><div class="field"><label for="datumDefault">Default Datum <span class="help" tabindex="0" data-tip="The target spending you want retirement to support. Studio can later help build this from actual lifestyle costs, expenses ending, taxes, and retirement additions.">?</span></label><input id="datumDefault" data-money data-max="1000000" inputmode="numeric" data-default-value="$100,000" value="$100,000"></div></div><div class="family"><div class="toggle-line"><span>Co-architect / spouse</span><button class="switch" id="spouseToggle" type="button" aria-pressed="false" aria-label="Toggle spouse fields"></button></div><p class="co-arch-note">Co-Architect planning available in Design Mode. Discover supports a single architect per blueprint.</p><div class="grid co" id="coFields"><div class="field"><label for="spouseName">Co-architect name <span class="help" tabindex="0" data-tip="Optional label for the spouse or second planner in the household.">?</span></label><input id="spouseName" value="" placeholder=""></div><div class="field"><label for="spouseDob">Co-architect DOB <span class="help" tabindex="0" data-tip="Used to calculate the co-architect's age, possible retirement timing, Social Security windows, and joint planning horizon context.">?</span></label><input id="spouseDob" type="text" inputmode="numeric" maxlength="7" data-birth-input data-age-source="co" value="" placeholder="MM/YYYY" autocomplete="off"></div><div class="field"><label for="spouseIncome">Co-arch gross income <span class="help" tabindex="0" data-tip="The co-architect's current gross income before taxes and deductions. When active, Studio combines this with primary gross income for household context.">?</span></label><input id="spouseIncome" data-money data-max="1000000" inputmode="numeric" data-default-value="$0" value="$0"></div><div class="field"><label for="spouseRetireDate">Target retire age <span class="help" tabindex="0" data-tip="The age the co-architect wants to stop depending on work income. Must be 45–90 and cannot be younger than their current age.">?</span></label><input id="spouseRetireDate" type="text" data-co-retire-age inputmode="numeric" maxlength="2" data-default-value="65" value="65"></div><div class="field full"><label>Gross household income <span class="help" tabindex="0" data-tip="Primary gross income plus co-architect gross income. This is a profile reference, not the spending target your retirement must support.">?</span></label><div class="readout"><span>Combined current gross</span><strong id="householdIncomeReadout">$180,000</strong></div></div></div></div></section>
+<div class="layout"><section class="card" id="section-id"><p class="kicker">01 / Identity</p><h2>Register the household.</h2><div class="grid"><div class="field"><label for="primaryName">Primary name <span class="note">optional</span><span class="help" tabindex="0" data-tip="The person this dossier starts with. Studio can use this label in profile cards, handoff summaries, and saved Blueprint records.">?</span></label><input id="primaryName" value="" placeholder=""></div><div class="field"><label for="dob">Date of birth <span class="help" tabindex="0" data-tip="Used to calculate current age, years to retirement, Social Security timing windows, and planning horizon defaults.">?</span></label><input id="dob" type="text" inputmode="numeric" maxlength="7" data-birth-input data-age-source="primary" value="" placeholder="MM/YYYY" autocomplete="bday"></div><div class="field"><label for="salary">Gross income <span class="help" tabindex="0" data-tip="Primary architect's current gross income before taxes, savings, retirement contributions, and payroll deductions. This is not the same as retirement Datum.">?</span></label><input id="salary" data-money data-max="1000000" inputmode="numeric" data-default-value="$0" value="$0"></div><div class="field"><label for="retireAge">Target retire age <span class="help" tabindex="0" data-tip="The age the primary architect wants the estate to stop depending on work income. Studio uses this to set the bridge period and retirement horizon.">?</span></label><input id="retireAge" type="text" inputmode="numeric" maxlength="7" value="" placeholder="MM/YYYY"></div><div class="field"><label for="planThrough">Plan through age <span class="help" tabindex="0" data-tip="How long the retirement Shape should be asked to hold. A longer horizon generally asks more of the estate.">?</span></label><input id="planThrough" type="text" inputmode="numeric" maxlength="7" value="" placeholder="MM/YYYY"></div><div class="field"><label for="datumDefault">Default Datum <span class="help" tabindex="0" data-tip="The target spending you want retirement to support. Studio can later help build this from actual lifestyle costs, expenses ending, taxes, and retirement additions.">?</span></label><input id="datumDefault" data-money data-max="1000000" inputmode="numeric" data-default-value="$100,000" value="$100,000"></div></div><div class="family"><div class="toggle-line"><span>Co-architect / spouse</span><button class="switch" id="spouseToggle" type="button" aria-pressed="false" aria-label="Toggle spouse fields"></button></div><p class="co-arch-note">Co-Architect planning available in Design Mode. Discover supports a single architect per blueprint.</p><div class="grid co" id="coFields"><div class="field"><label for="spouseName">Co-architect name <span class="help" tabindex="0" data-tip="Optional label for the spouse or second planner in the household.">?</span></label><input id="spouseName" value="" placeholder=""></div><div class="field"><label for="spouseDob">Co-architect DOB <span class="help" tabindex="0" data-tip="Used to calculate the co-architect's age, possible retirement timing, Social Security windows, and joint planning horizon context.">?</span></label><input id="spouseDob" type="text" inputmode="numeric" maxlength="7" data-birth-input data-age-source="co" value="" placeholder="MM/YYYY" autocomplete="off"></div><div class="field"><label for="spouseIncome">Co-arch gross income <span class="help" tabindex="0" data-tip="The co-architect's current gross income before taxes and deductions. When active, Studio combines this with primary gross income for household context.">?</span></label><input id="spouseIncome" data-money data-max="1000000" inputmode="numeric" data-default-value="$0" value="$0"></div><div class="field"><label for="spouseRetireDate">Target retire age <span class="help" tabindex="0" data-tip="The age the co-architect wants to stop depending on work income. Must be 45–90 and cannot be younger than their current age.">?</span></label><input id="spouseRetireDate" type="text" inputmode="numeric" maxlength="7" value="" placeholder="MM/YYYY"></div><div class="field full"><label>Gross household income <span class="help" tabindex="0" data-tip="Primary gross income plus co-architect gross income. This is a profile reference, not the spending target your retirement must support.">?</span></label><div class="readout"><span>Combined current gross</span><strong id="householdIncomeReadout">$180,000</strong></div></div></div></div></section>
 <aside class="card"><p class="kicker">Studio Handoff</p><h2>What this profile carries.</h2><div class="identity"><div class="seal" aria-hidden="true"><img src="/brand/datumfi-mark-d.svg" alt="" width="52" height="52"></div><div><div id="planBadge" class="badge discover">Discover Plan</div><h3 id="profileHeadline">Married household · Florida tax base</h3><p id="profileNarrative">This dossier gives Studio the profile layer.</p><div class="meta"><span class="meta-pill">Member since May 2026</span><span class="meta-pill" id="lastLogin">Last login today</span></div></div></div><div class="metrics"><div class="metric"><div class="metric-label">Current age</div><div class="metric-value" id="metricAge">39</div><div class="metric-sub" id="metricAgeSub">Primary architect</div></div><div class="metric"><div class="metric-label">Years to retire</div><div class="metric-value" id="metricYears">21</div><div class="metric-sub" id="metricYearsSub">timeline default</div></div><div class="metric"><div class="metric-label">After-tax income</div><div class="metric-value" id="metricAfterTax">$140k</div><div class="metric-sub" id="metricAfterTaxSub">rough current base</div></div><div class="metric"><div class="metric-label">Datum anchor</div><div class="metric-value" id="metricDatum">$90k</div><div class="metric-sub">Studio starting target</div></div></div><div class="transfer"><h4>Feeds Studio Defaults</h4><p>This profile can prefill Studio's Architect Profile, tax base, planning horizon, and first Datum anchor before the estate rooms are drafted.</p><div class="chips"><span class="chip" tabindex="0" data-tip="Age sets the timing grid: years to retirement, bridge years, Social Security windows, and how long the Shape must hold.">Age</span><span class="chip" tabindex="0" data-tip="Tax base tells Studio where the household lives for state and local assumptions. It is the first hint that after-tax spending is not the same as gross income.">Tax Base</span><span class="chip" tabindex="0" data-tip="Filing status affects how taxable income may flow through the plan. It helps Studio move from broad tax drag to household-specific tax posture.">Filing</span><span class="chip" tabindex="0" data-tip="Datum is the lifestyle target the estate is asked to carry. Studio should eventually help build it from real expenses, taxes, and costs that end or begin.">Datum</span><span class="chip" tabindex="0" data-tip="Horizon tells Studio how long the plan must last. A 30-year Shape and a 40-year Shape can require very different structure.">Horizon</span></div></div></aside>
 <section class="card span" id="section-accounts"><p class="kicker">02 / Accounts</p><h2>Record your portfolio position.</h2><div class="grid"><div class="field"><label for="portfolioBalance">Current Portfolio Balance <span class="help" tabindex="0" data-tip="The total you've saved for retirement today — across every account, combined. This is your starting line; the Sketch grows it forward from here.">?</span></label><input id="portfolioBalance" data-money data-max="50000000" inputmode="numeric" data-default-value="$0" value="$0"></div><div class="field"><label for="annualContributions">Annual Portfolio Contributions <span class="help" tabindex="0" data-tip="What you add to retirement savings each year, across all accounts. Steady contributions are one of the strongest levers on your final shape.">?</span></label><input id="annualContributions" data-money data-max="200000" inputmode="numeric" data-default-value="$0" value="$0"></div></div></section>
 <section class="card span" id="section-tax"><p class="kicker">03 / Tax Base</p><h2>Set the tax posture.</h2><div class="grid"><div class="field"><label for="location">Location <span class="note">tax base</span><span class="help" tabindex="0" data-tip="Where the household is taxed today. Later, Studio can use this to compare state-tax exposure, move assumptions, and after-tax spending needs.">?</span></label><select id="location"><option value="" selected>Select state</option><option>Alabama</option><option>Alaska</option><option>Arizona</option><option>Arkansas</option><option>California</option><option>Colorado</option><option>Connecticut</option><option>Delaware</option><option>District of Columbia</option><option>Florida</option><option>Georgia</option><option>Hawaii</option><option>Idaho</option><option>Illinois</option><option>Indiana</option><option>Iowa</option><option>Kansas</option><option>Kentucky</option><option>Louisiana</option><option>Maine</option><option>Maryland</option><option>Massachusetts</option><option>Michigan</option><option>Minnesota</option><option>Mississippi</option><option>Missouri</option><option>Montana</option><option>Nebraska</option><option>Nevada</option><option>New Hampshire</option><option>New Jersey</option><option>New Mexico</option><option>New York</option><option>North Carolina</option><option>North Dakota</option><option>Ohio</option><option>Oklahoma</option><option>Oregon</option><option>Pennsylvania</option><option>Rhode Island</option><option>South Carolina</option><option>South Dakota</option><option>Tennessee</option><option>Texas</option><option>Utah</option><option>Vermont</option><option>Virginia</option><option>Washington</option><option>West Virginia</option><option>Wisconsin</option><option>Wyoming</option></select></div><div class="field"><label for="filing">Filing status <span class="help" tabindex="0" data-tip="How the household files taxes today. This is a profile default for Studio's tax logic, not a final tax projection.">?</span></label><select id="filing"><option>Single</option><option selected>Married Filing Jointly</option><option>Married Filing Separately</option><option>Head of Household</option></select></div><div class="field"><label for="taxRate">Effective tax rate <span class="help" tabindex="0" data-tip="A rough current blended tax rate. Studio can use this as a starting point before account-level taxes and retirement withdrawal routing are modeled.">?</span></label><select id="taxRate" data-percent><option value="12%">12% bracket</option><option value="22%" selected>22% blended estimate</option><option value="24%">24% bracket</option><option value="32%">32% bracket</option><option value="35%">35% bracket</option><option value="37%">37% bracket</option></select><div class="field-helper">22% is a typical blended estimate · You can refine later in Studio.</div></div><select id="accessMode" class="visually-hidden-access-mode" aria-hidden="true" tabindex="-1"><option selected>Discover</option><option>Design</option></select></div></section>
@@ -3592,6 +3616,31 @@ input:focus,select:focus{
     return '';
   }
 
+  // P8.1 2B — DOB-anchored retirement age -> MM/YYYY display (engine still reads the integer age).
+  function retDateFromAge(age, dobMM) {
+    var DB = window.DatumDateBounds;
+    if (!DB || age == null) return '';
+    var p = DB.parseMoYr(dobMM);
+    if (!p) return '';
+    return String(p.mo).padStart(2, '0') + '/' + (p.yr + Number(age));
+  }
+  // Tolerate all three legacy co-architect shapes -> canonical INTEGER age.
+  //   new: targetRetirementAge(int) | mid: targetRetirementDate(MM/YYYY) | old: targetRetirementYear(number)
+  function coRetireAge(co, coDobMM) {
+    if (!co) return null;
+    if (co.targetRetirementAge != null) return Number(co.targetRetirementAge);
+    var DB = window.DatumDateBounds;
+    if (co.targetRetirementDate && DB) {
+      var pd = DB.parseMoYr(co.targetRetirementDate), pb = DB.parseMoYr(coDobMM);
+      if (pd && pb) return pd.yr - pb.yr - (pd.mo < pb.mo ? 1 : 0);
+    }
+    if (co.targetRetirementYear && DB) {
+      var pb2 = DB.parseMoYr(coDobMM);
+      if (pb2) return Number(co.targetRetirementYear) - pb2.yr;
+    }
+    return null;
+  }
+
   function pin(id, value) {
     var el = byId(id);
     if (!el || value == null) return;
@@ -3606,22 +3655,24 @@ input:focus,select:focus{
   function pinFromPayload(p) {
     if (!p) return;
     var dob = p.primary && p.primary.dateOfBirth;
-    if (dob) pin('dob', toMMYYYY(dob));
+    var dobMM = dob ? toMMYYYY(dob) : ((byId('dob') || {}).value || '');
+    if (dob) pin('dob', dobMM);
     var coDob = p.household && p.household.coArchitect && p.household.coArchitect.dateOfBirth;
-    if (coDob) pin('spouseDob', toMMYYYY(coDob));
+    var coDobMM = coDob ? toMMYYYY(coDob) : ((byId('spouseDob') || {}).value || '');
+    if (coDob) pin('spouseDob', coDobMM);
     var retire = (p.primary && p.primary.targetRetirementAge) ||
                  (p.defaults && p.defaults.targetRetirementAge);
-    if (retire) pin('retireAge', String(retire));
+    if (retire) { var rd = retDateFromAge(retire, dobMM); if (rd) pin('retireAge', rd); }
     var plan = p.defaults && p.defaults.planThroughAge;
-    if (plan) pin('planThrough', String(plan));
+    if (plan) { var pd = retDateFromAge(plan, dobMM); if (pd) pin('planThrough', pd); }
     var salary = p.primary && p.primary.grossIncome;
     if (salary > 0 && typeof moneyFull === 'function') pin('salary', moneyFull(salary));
     var datum = p.defaults && p.defaults.defaultDatum;
     if (datum > 0 && typeof moneyFull === 'function') pin('datumDefault', moneyFull(datum));
     var coIncome = p.household && p.household.coArchitect && p.household.coArchitect.grossIncome;
     if (coIncome > 0 && typeof moneyFull === 'function') pin('spouseIncome', moneyFull(coIncome));
-    var coRetire = p.household && p.household.coArchitect && p.household.coArchitect.targetRetirementAge;
-    if (coRetire) pin('spouseRetireDate', String(coRetire));
+    var coAge = coRetireAge(p.household && p.household.coArchitect, coDobMM);
+    if (coAge != null) { var crd = retDateFromAge(coAge, coDobMM); if (crd) pin('spouseRetireDate', crd); }
     var _pBal = p.accounts && p.accounts.currentPortfolioBalance;
     if (_pBal > 0 && typeof moneyFull === 'function') pin('portfolioBalance', moneyFull(_pBal));
     var _aCon = p.accounts && p.accounts.annualContributions;
@@ -3706,6 +3757,206 @@ input:focus,select:focus{
     }).catch(function () {});
   });
 
+}());
+</script>
+<script>
+/* ─────────────────────────────────────────────────────────────
+   P8.1 "2B" — DOSSIER MM/YYYY MIGRATION + STUDIO PARITY
+   Migrates #retireAge / #planThrough / #spouseRetireDate from integer-age
+   inputs to DOB-anchored MM/YYYY, enforced by the SHARED DatumDateBounds
+   (date-bounds.js) — same single source, same Option-C revert-or-clear, and
+   same INTEGER-only engine payload as Studio (studio.html 2A).
+   • Invalid commit -> revert to last REAL good value, else CLEAR to empty.
+   • NEVER snaps to a bound; NEVER reverts to the (non-authoritative) ghost.
+   • Ghost default  = DOB-anchored MM/YYYY of the default age (65/85/65),
+     grey, recomputed when DOB changes, NEVER captured as last-good. No DOB
+     anchor -> empty + MM/YYYY placeholder.
+   • payload()      = outermost wrapper; re-derives INTEGER ages from the
+     MM/YYYY fields so no date / NaN can reach the engine body (the 2A risk).
+   Append-only; pinFromPayload's reopen-normalizer is the one in-place edit.
+   ───────────────────────────────────────────────────────────── */
+(function () {
+  'use strict';
+  var DB = window.DatumDateBounds;
+  if (!DB) { console.warn('[2B] DatumDateBounds missing — Dossier date migration skipped.'); return; }
+  function byId(id) { return document.getElementById(id); }
+  function digits(v) { return String(v || '').replace(/\D/g, ''); }
+
+  var DEFAULT_AGE = { retireAge: 65, planThrough: 85, spouseRetireDate: 65 };
+  // field -> { kind for validateTarget, the DOB field it anchors to }
+  var META = {
+    retireAge:        { kind: 'retire', dob: 'dob' },
+    planThrough:      { kind: 'plan',   dob: 'dob' },
+    spouseRetireDate: { kind: 'retire', dob: 'spouseDob' }
+  };
+
+  function dobAnchor(dobId) {
+    var raw = (byId(dobId) || {}).value;
+    var p = DB.parseMoYr(raw);
+    return p ? { mo: p.mo, yr: p.yr, age: DB.ageFromDob(raw) } : null;
+  }
+  // MM/YYYY field -> integer age anchored to its DOB; default when empty/invalid/no-anchor.
+  function deriveAge(fieldId) {
+    var meta = META[fieldId], el = byId(fieldId), a = dobAnchor(meta.dob);
+    if (!a) {                                    // no DOB anchor: diff vs a default-age DOB
+      var pp = DB.parseMoYr((el || {}).value);
+      return pp ? (pp.yr - (new Date().getFullYear() - DEFAULT_AGE[fieldId])) : DEFAULT_AGE[fieldId];
+    }
+    var age = DB.ageAtDate((el || {}).value, a.mo, a.yr);
+    return (age == null || !isFinite(age)) ? DEFAULT_AGE[fieldId] : age;
+  }
+  function ageToMMYYYY(age, dobVal) {
+    var p = DB.parseMoYr(dobVal);
+    if (!p || age == null || !isFinite(age)) return '';
+    return String(p.mo).padStart(2, '0') + '/' + (p.yr + Number(age));
+  }
+  function mmyyyyOf(fieldId) {
+    var p = DB.parseMoYr((byId(fieldId) || {}).value);
+    return p ? (String(p.mo).padStart(2, '0') + '/' + p.yr) : '';
+  }
+  function validateField(fieldId) {
+    var meta = META[fieldId], el = byId(fieldId), a = dobAnchor(meta.dob);
+    var anchor = a ? { mo: a.mo, yr: a.yr } : { mo: 1, yr: new Date().getFullYear() - 40 };
+    var ca = a ? a.age : 0;
+    if (meta.kind === 'retire') return DB.validateTarget((el || {}).value, 'retire', anchor, ca, 0);
+    return DB.validateTarget((el || {}).value, 'plan', anchor, ca, deriveAge('retireAge'));
+  }
+
+  function showMsg(m) { if (typeof showToast === 'function') showToast(m); }
+  function refreshUpdate() { if (typeof update === 'function') update(); }
+
+  // ── ghost: non-authoritative DOB-anchored default ────────────
+  function isGhost(el) { return el.classList.contains('ghost-default'); }
+  function applyGhost(fieldId) {
+    var el = byId(fieldId); if (!el) return;
+    el.value = ageToMMYYYY(DEFAULT_AGE[fieldId], (byId(META[fieldId].dob) || {}).value); // '' if no anchor
+    el.placeholder = 'MM/YYYY';
+    el.classList.add('ghost-default');
+    el.classList.remove('input-valid', 'input-invalid');
+    el.dataset.userEdited = 'false';
+  }
+  function refreshGhosts(dobId) {
+    Object.keys(META).forEach(function (id) {
+      var el = byId(id);
+      if (el && META[id].dob === dobId && isGhost(el)) applyGhost(id);
+    });
+  }
+
+  // ── enforcement: Option-C revert-to-real-good else clear ─────
+  function captureGood(el) {
+    if (el && !isGhost(el) && validateField(el.id).ok) el._lastGood = el.value;
+  }
+  function fmtInput(el) {
+    var d = digits(el.value).slice(0, 6);
+    el.value = d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2) : d;
+  }
+  function enforce(el) {
+    var res = validateField(el.id);
+    if (res.ok) {
+      el._lastGood = el.value;
+      el.classList.remove('ghost-default', 'input-invalid');
+      el.classList.add('input-valid');
+      el.dataset.userEdited = 'true';
+    } else {
+      showMsg(res.err);
+      if (el._lastGood != null && String(el._lastGood).trim()) {
+        el.value = el._lastGood;                  // revert to last REAL good
+        el.classList.remove('ghost-default', 'input-invalid');
+        el.classList.add('input-valid');
+      } else {
+        el.value = '';                            // clear to empty — never the ghost, never a bound
+        el.classList.remove('ghost-default', 'input-valid');
+        el.dataset.userEdited = 'true';
+      }
+    }
+    refreshUpdate();
+  }
+
+  // ── final re-clone of the three age fields (last layer wins) ─
+  Object.keys(META).forEach(function (id) {
+    var old = byId(id); if (!old) return;
+    var liveVal = old.value;                     // cloneNode copies the value ATTRIBUTE, not the
+    var el = old.cloneNode(true);                // live .value a prior pinFromPayload set — carry it over
+    old.parentNode.replaceChild(el, old);
+    el.value = liveVal;
+    if (typeof els === 'object' && els) els[id] = el;
+    el.setAttribute('type', 'text');
+    el.setAttribute('inputmode', 'numeric');
+    el.setAttribute('maxlength', '7');
+    el.setAttribute('placeholder', 'MM/YYYY');
+    el.removeAttribute('data-int');
+    var hasReal = el.dataset.userEdited === 'true' && DB.parseMoYr(el.value) && validateField(id).ok;
+    if (hasReal) { el.classList.remove('ghost-default'); el.classList.add('input-valid'); el._lastGood = el.value; }
+    else applyGhost(id);
+    el.addEventListener('focus', function () {
+      if (isGhost(el)) { el.value = ''; el.classList.remove('ghost-default'); el.dataset.userEdited = 'true'; }
+      captureGood(el);
+    });
+    el.addEventListener('input', function () {
+      fmtInput(el);
+      el.classList.remove('ghost-default');
+      el.dataset.userEdited = 'true';
+      if (typeof els === 'object' && els.summaryStatus) els.summaryStatus.textContent = 'Unsaved';
+      refreshUpdate();
+    });
+    el.addEventListener('blur', function () { enforce(el); });
+  });
+
+  // ── DOB fields: augment with Option-C via validateDob (no clone) ─
+  ['dob', 'spouseDob'].forEach(function (id) {
+    var el = byId(id); if (!el) return;
+    el.addEventListener('focus', function () { if (DB.validateDob(el.value).ok) el._lastGood = el.value; });
+    el.addEventListener('input', function () { refreshGhosts(id); });
+    el.addEventListener('blur', function () {     // runs after the existing normalizeBirth blur
+      var res = DB.validateDob(el.value);
+      if (res.ok) { el._lastGood = el.value; }
+      else if (String(el.value || '').trim()) {
+        el.value = (el._lastGood != null && String(el._lastGood).trim()) ? el._lastGood : '';
+        el.classList.remove('input-valid');
+      }
+      refreshGhosts(id);
+      refreshUpdate();
+    });
+  });
+
+  // ── payload wrapper — INTEGER-only engine body (outermost) ───
+  if (typeof payload === 'function') {
+    var prevPayload = payload;
+    payload = function () {
+      var p = prevPayload();
+      var ca = DB.ageFromDob((byId('dob') || {}).value);
+      if (ca == null) ca = (p.primary && p.primary.age) || 0;
+      var ret = deriveAge('retireAge'), plan = deriveAge('planThrough');
+      if (p.primary) { p.primary.age = ca; p.primary.targetRetirementAge = ret; }
+      if (p.defaults) {
+        p.defaults.targetRetirementAge = ret;
+        p.defaults.yearsToRetirement = Math.max(ret - ca, 0);
+        p.defaults.planThroughAge = plan;
+      }
+      var co = p.household && p.household.coArchitect;
+      if (co) {
+        var coa = DB.ageFromDob((byId('spouseDob') || {}).value);
+        if (coa == null) coa = co.age || 0;
+        var coRet = deriveAge('spouseRetireDate');
+        co.age = coa;
+        co.targetRetirementAge = coRet;                        // canonical INTEGER (engine reads this)
+        co.targetRetirementDate = mmyyyyOf('spouseRetireDate'); // non-authoritative display mirror
+        co.yearsToRetirement = Math.max(coRet - coa, 0);
+        delete co.targetRetirementYear;                        // drop legacy shape
+      }
+      return p;
+    };
+  }
+  window._dossierDeriveAge = deriveAge;            // gate hook (parity / integer assertions)
+
+  // ── init: anchor any ghosts to the loaded DOB + refresh metrics ─
+  refreshGhosts('dob'); refreshGhosts('spouseDob');
+  refreshUpdate();
+  // The legacy integer validators (validateAges / validateAgeFields) are IIFE-private and fire via
+  // requestAnimationFrame on load; they would clamp a MM/YYYY value back to a 2-digit integer
+  // ('06/2046' -> fieldInt '06' -> clamp 45). The rAF guard installed in <head> restores our three
+  // fields around every rAF callback; arm it now that enforcement owns them.
+  window.__dossier2BReady = true;
 }());
 </script>
 <script>
