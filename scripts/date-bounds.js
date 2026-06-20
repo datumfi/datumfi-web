@@ -80,10 +80,30 @@
     return { ok: true, age: a };
   }
 
+  function pad2(n) { n = String(n); return n.length < 2 ? '0' + n : n; }
+
+  // Inverse of ageAtDate: the DOB-anchored MM/YYYY for a given age (month follows DOB).
+  // Single rounding source shared by Studio + Dossier so identical inputs agree.
+  function dateFromAge(age, dobMo, dobYr) {
+    if (age == null || !isFinite(age) || !dobYr) return '';
+    return pad2(dobMo) + '/' + (dobYr + Number(age));
+  }
+
+  // Strict MM/YYYY auto-slash formatter (string in -> string out). Port of Studio's
+  // _fmtDateSlash (studio.html:5019): caps 6 digits, snaps a leading >1 month digit to 0X,
+  // inserts the slash after 2 digits, and does NOT clamp the month — so a typed "13" stays
+  // "13" and the strict parse REJECTS it (no silent auto-correct that hides a typo).
+  function fmtDateStr(s) {
+    var d = String(s == null ? '' : s).replace(/\D/g, '').slice(0, 6);
+    if (d.length >= 1 && parseInt(d[0], 10) > 1) d = '0' + d.slice(0, 5);
+    return d.length <= 2 ? d : d.slice(0, 2) + '/' + d.slice(2);
+  }
+
   global.DatumDateBounds = {
     AGE_MIN: AGE_MIN, AGE_MAX: AGE_MAX, RA_MIN_FLOOR: RA_MIN_FLOOR, RA_MAX: RA_MAX,
     PTA_MIN_FLOOR: PTA_MIN_FLOOR, PTA_MAX: PTA_MAX,
     parseMoYr: parseMoYr, ageFromDob: ageFromDob, ageAtDate: ageAtDate,
-    validateDob: validateDob, validateTarget: validateTarget
+    validateDob: validateDob, validateTarget: validateTarget,
+    pad2: pad2, dateFromAge: dateFromAge, fmtDateStr: fmtDateStr
   };
 })(typeof window !== 'undefined' ? window : this);

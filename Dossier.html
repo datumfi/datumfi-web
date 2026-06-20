@@ -3625,12 +3625,20 @@ input:focus,select:focus{
   }
 
   // P8.1 2B — DOB-anchored retirement age -> MM/YYYY display (engine still reads the integer age).
-  function retDateFromAge(age, dobMM) {
-    var DB = window.DatumDateBounds;
-    if (!DB || age == null) return '';
-    var p = DB.parseMoYr(dobMM);
-    if (!p) return '';
-    return String(p.mo).padStart(2, '0') + '/' + (p.yr + Number(age));
+  // P8.1 AGE-BOX PORT — the three toggle boxes rest on an AGE, edit as a date. On reopen we
+  // restore the canonical integer age AND the typed date string (the month's only home), then
+  // DISPLAY the age. The old retDateFromAge fabricator (DOB-month rebuild) is DELETED — it was
+  // the lossy round-trip root cause (03/2035 -> 52 -> 08/2034). dateStr null -> focus derives.
+  function pinAge(id, age, dateStr) {
+    var el = byId(id);
+    if (!el || age == null || !isFinite(Number(age))) return;
+    el._ageVal = Number(age);
+    el._dateStr = (dateStr && /^\d{1,2}\/\d{4}$/.test(String(dateStr).replace(/\s/g, ''))) ? String(dateStr).replace(/\s/g, '') : null;
+    el._lastGood = { age: el._ageVal, date: el._dateStr };
+    el.value = String(el._ageVal);
+    el.classList.remove('ghost-default', 'input-invalid');
+    el.classList.add('input-valid');
+    el.dataset.userEdited = 'true';
   }
   // Tolerate all three legacy co-architect shapes -> canonical INTEGER age.
   //   new: targetRetirementAge(int) | mid: targetRetirementDate(MM/YYYY) | old: targetRetirementYear(number)
@@ -3670,17 +3678,20 @@ input:focus,select:focus{
     if (coDob) pin('spouseDob', coDobMM);
     var retire = (p.primary && p.primary.targetRetirementAge) ||
                  (p.defaults && p.defaults.targetRetirementAge);
-    if (retire) { var rd = retDateFromAge(retire, dobMM); if (rd) pin('retireAge', rd); }
+    var retireDate = (p.primary && p.primary.targetRetirementDate) ||
+                     (p.defaults && p.defaults.targetRetirementDate);
+    if (retire) pinAge('retireAge', retire, retireDate);   // rest = age; _dateStr restored (or null)
     var plan = p.defaults && p.defaults.planThroughAge;
-    if (plan) { var pd = retDateFromAge(plan, dobMM); if (pd) pin('planThrough', pd); }
+    if (plan) pinAge('planThrough', plan, p.defaults && p.defaults.planThroughDate);
     var salary = p.primary && p.primary.grossIncome;
     if (salary > 0 && typeof moneyFull === 'function') pin('salary', moneyFull(salary));
     var datum = p.defaults && p.defaults.defaultDatum;
     if (datum > 0 && typeof moneyFull === 'function') pin('datumDefault', moneyFull(datum));
     var coIncome = p.household && p.household.coArchitect && p.household.coArchitect.grossIncome;
     if (coIncome > 0 && typeof moneyFull === 'function') pin('spouseIncome', moneyFull(coIncome));
-    var coAge = coRetireAge(p.household && p.household.coArchitect, coDobMM);
-    if (coAge != null) { var crd = retDateFromAge(coAge, coDobMM); if (crd) pin('spouseRetireDate', crd); }
+    var co = p.household && p.household.coArchitect;
+    var coAge = coRetireAge(co, coDobMM);
+    if (coAge != null) pinAge('spouseRetireDate', coAge, co && co.targetRetirementDate);
     var _pBal = p.accounts && p.accounts.currentPortfolioBalance;
     if (_pBal > 0 && typeof moneyFull === 'function') pin('portfolioBalance', moneyFull(_pBal));
     var _aCon = p.accounts && p.accounts.annualContributions;
@@ -3790,138 +3801,133 @@ input:focus,select:focus{
   function byId(id) { return document.getElementById(id); }
   function digits(v) { return String(v || '').replace(/\D/g, ''); }
 
+  // ── canonical state per toggle box: el._ageVal (INTEGER — the only thing the engine reads)
+  //    + el._dateStr (typed "MM/YYYY"; null => derive on focus). Ported from Studio's S1 inline
+  //    age inputs (_parseAgeOrDate / _commitAgeDate / _dateForField). The box RESTS on the age
+  //    and presents a date only while focused — the typed month survives via _dateStr. ─
   var DEFAULT_AGE = { retireAge: 65, planThrough: 85, spouseRetireDate: 65 };
-  // field -> { kind for validateTarget, the DOB field it anchors to }
   var META = {
     retireAge:        { kind: 'retire', dob: 'dob' },
     planThrough:      { kind: 'plan',   dob: 'dob' },
     spouseRetireDate: { kind: 'retire', dob: 'spouseDob' }
   };
-
-  function dobAnchor(dobId) {
-    var raw = (byId(dobId) || {}).value;
-    var p = DB.parseMoYr(raw);
-    return p ? { mo: p.mo, yr: p.yr, age: DB.ageFromDob(raw) } : null;
-  }
-  // MM/YYYY field -> integer age anchored to its DOB; default when empty/invalid/no-anchor.
-  function deriveAge(fieldId) {
-    var meta = META[fieldId], el = byId(fieldId), a = dobAnchor(meta.dob);
-    if (!a) {                                    // no DOB anchor: diff vs a default-age DOB
-      var pp = DB.parseMoYr((el || {}).value);
-      return pp ? (pp.yr - (new Date().getFullYear() - DEFAULT_AGE[fieldId])) : DEFAULT_AGE[fieldId];
-    }
-    var age = DB.ageAtDate((el || {}).value, a.mo, a.yr);
-    return (age == null || !isFinite(age)) ? DEFAULT_AGE[fieldId] : age;
-  }
-  function ageToMMYYYY(age, dobVal) {
-    var p = DB.parseMoYr(dobVal);
-    if (!p || age == null || !isFinite(age)) return '';
-    return String(p.mo).padStart(2, '0') + '/' + (p.yr + Number(age));
-  }
-  function mmyyyyOf(fieldId) {
-    var p = DB.parseMoYr((byId(fieldId) || {}).value);
-    return p ? (String(p.mo).padStart(2, '0') + '/' + p.yr) : '';
-  }
-  function validateField(fieldId) {
-    var meta = META[fieldId], el = byId(fieldId), a = dobAnchor(meta.dob);
-    var anchor = a ? { mo: a.mo, yr: a.yr } : { mo: 1, yr: new Date().getFullYear() - 40 };
-    var ca = a ? a.age : 0;
-    if (meta.kind === 'retire') return DB.validateTarget((el || {}).value, 'retire', anchor, ca, 0);
-    return DB.validateTarget((el || {}).value, 'plan', anchor, ca, deriveAge('retireAge'));
-  }
-
   function showMsg(m) { if (typeof showToast === 'function') showToast(m); }
   function refreshUpdate() { if (typeof update === 'function') update(); }
 
-  // ── ghost: non-authoritative DOB-anchored default ────────────
-  function isGhost(el) { return el.classList.contains('ghost-default'); }
-  function applyGhost(fieldId) {
-    var el = byId(fieldId); if (!el) return;
-    el.value = ageToMMYYYY(DEFAULT_AGE[fieldId], (byId(META[fieldId].dob) || {}).value); // '' if no anchor
-    el.placeholder = 'MM/YYYY';
-    el.classList.add('ghost-default');
-    el.classList.remove('input-valid', 'input-invalid');
-    el.dataset.userEdited = 'false';
+  // DOB anchor for a box: {mo,yr,age} from the live DOB field, else a 40yo fallback (the Dossier
+  // has no slider, so mirror Studio's DOB-absent path with current-age 40).
+  function anchorFor(dobId) {
+    var raw = (byId(dobId) || {}).value, p = DB.parseMoYr(raw);
+    if (p) return { mo: p.mo, yr: p.yr, age: DB.ageFromDob(raw) };
+    return { mo: 1, yr: new Date().getFullYear() - 40, age: 40 };
   }
-  function refreshGhosts(dobId) {
-    Object.keys(META).forEach(function (id) {
-      var el = byId(id);
-      if (el && META[id].dob === dobId && isGhost(el)) applyGhost(id);
-    });
+  function ageValOf(id) { var el = byId(id); return (el && el._ageVal != null && isFinite(el._ageVal)) ? Number(el._ageVal) : DEFAULT_AGE[id]; }
+  function dateStrOf(id) { var el = byId(id); return (el && el._dateStr) ? el._dateStr : ''; }
+  function deriveAge(id) { return ageValOf(id); }   // gate/parity hook — the canonical integer age
+
+  // Strict parse of the typed date -> {ok, age, err}. PORTS Studio's _parseAgeOrDate: routes
+  // through the SHARED DatumDateBounds, which enforces month<=12, a full MM/YYYY, AND the cross-
+  // field ordering guards (retire >= max(45, currentAge+1); plan >= max(75, retireAge+20)).
+  function parseBox(id, str) {
+    var meta = META[id], a = anchorFor(meta.dob);
+    if (meta.kind === 'retire') return DB.validateTarget(str, 'retire', { mo: a.mo, yr: a.yr }, a.age, 0);
+    return DB.validateTarget(str, 'plan', { mo: a.mo, yr: a.yr }, a.age, ageValOf('retireAge'));
   }
 
-  // ── enforcement: Option-C revert-to-real-good else clear ─────
-  function captureGood(el) {
-    if (el && !isGhost(el) && validateField(el.id).ok) el._lastGood = el.value;
+  // ── display: REST shows the age; FOCUS shows the date (typed month if present, else derived) ─
+  function restDisplay(el) {
+    var id = el.id;
+    if (el._ageVal == null) {                 // never set -> ghost-grey default age
+      el.value = String(DEFAULT_AGE[id]);
+      el.classList.add('ghost-default');
+      el.classList.remove('input-valid', 'input-invalid');
+    } else {
+      el.value = String(el._ageVal);
+      el.classList.remove('ghost-default');
+    }
   }
-  function fmtInput(el) {
-    var d = digits(el.value).slice(0, 6);
-    el.value = d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2) : d;
+  function showDate(el) {                      // port of _dateForField
+    var id = el.id, a = anchorFor(META[id].dob);
+    var age = (el._ageVal != null) ? el._ageVal : DEFAULT_AGE[id];
+    el.value = el._dateStr ? el._dateStr : DB.dateFromAge(age, a.mo, a.yr);
+    el.classList.remove('ghost-default');
+    try { el.select(); } catch (e) {}
   }
-  function enforce(el) {
-    var res = validateField(el.id);
+  function commitBox(el) {                     // port of _commitAgeDate + Option-C revert-or-clear
+    var id = el.id, raw = String(el.value || '').trim();
+    if (!raw) {                               // emptied: revert to last real good, else stay empty/default
+      if (el._lastGood) { el._ageVal = el._lastGood.age; el._dateStr = el._lastGood.date; }
+      else { el._ageVal = null; el._dateStr = null; }
+      restDisplay(el); refreshUpdate(); return;
+    }
+    var res = parseBox(id, raw);              // stop-at-2-digits / month 13 / 08-9889990 / letters / RA<CA / PTA<RA all rejected here
     if (res.ok) {
-      el._lastGood = el.value;
-      el.classList.remove('ghost-default', 'input-invalid');
+      var pp = DB.parseMoYr(raw);
+      el._ageVal = res.age;
+      el._dateStr = DB.pad2(pp.mo) + '/' + pp.yr;   // preserve the EXACT typed month+year (month-survival)
+      el._lastGood = { age: el._ageVal, date: el._dateStr };
+      el.classList.remove('input-invalid');
       el.classList.add('input-valid');
-      el.dataset.userEdited = 'true';
     } else {
       showMsg(res.err);
-      if (el._lastGood != null && String(el._lastGood).trim()) {
-        el.value = el._lastGood;                  // revert to last REAL good
-        el.classList.remove('ghost-default', 'input-invalid');
-        el.classList.add('input-valid');
-      } else {
-        el.value = '';                            // clear to empty — never the ghost, never a bound
-        el.classList.remove('ghost-default', 'input-valid');
-        el.dataset.userEdited = 'true';
-      }
+      if (el._lastGood) { el._ageVal = el._lastGood.age; el._dateStr = el._lastGood.date; }
+      else { el._ageVal = null; el._dateStr = null; }   // no prior good -> clear (never snap, never ghost-revert)
+      el.classList.remove('input-valid');
     }
+    el.dataset.userEdited = 'true';
+    restDisplay(el);
     refreshUpdate();
   }
 
-  // ── final re-clone of the three age fields (last layer wins) ─
+  // ── final re-clone of the three toggle boxes (last layer wins); carry canonical state over ─
   Object.keys(META).forEach(function (id) {
     var old = byId(id); if (!old) return;
-    var liveVal = old.value;                     // cloneNode copies the value ATTRIBUTE, not the
-    var el = old.cloneNode(true);                // live .value a prior pinFromPayload set — carry it over
+    var prevAge = old._ageVal, prevDate = old._dateStr, prevGood = old._lastGood, liveVal = old.value;
+    // A legacy ghost-default ('65'/'85' set grey by the older layers) is an UNSET default, not a
+    // real committed value — treat it as null so the grey affordance + "no prior good" hold.
+    var wasGhost = old.classList.contains('ghost-default');
+    var el = old.cloneNode(true);             // cloneNode drops live .value + JS props -> carry them
     old.parentNode.replaceChild(el, old);
-    el.value = liveVal;
     if (typeof els === 'object' && els) els[id] = el;
     el.setAttribute('type', 'text');
     el.setAttribute('inputmode', 'numeric');
     el.setAttribute('maxlength', '7');
     el.setAttribute('placeholder', 'MM/YYYY');
     el.removeAttribute('data-int');
-    var hasReal = el.dataset.userEdited === 'true' && DB.parseMoYr(el.value) && validateField(id).ok;
-    if (hasReal) { el.classList.remove('ghost-default'); el.classList.add('input-valid'); el._lastGood = el.value; }
-    else applyGhost(id);
-    el.addEventListener('focus', function () {
-      if (isGhost(el)) { el.value = ''; el.classList.remove('ghost-default'); el.dataset.userEdited = 'true'; }
-      captureGood(el);
-    });
+    el._ageVal = (prevAge != null) ? prevAge
+               : (wasGhost ? null : (/^\d{1,3}$/.test(String(liveVal).trim()) ? parseInt(liveVal, 10) : null));
+    el._dateStr = prevDate || null;
+    el._lastGood = prevGood || (el._ageVal != null ? { age: el._ageVal, date: el._dateStr } : null);
+    restDisplay(el);
+    el.addEventListener('focus', function () { showDate(el); });
     el.addEventListener('input', function () {
-      fmtInput(el);
+      el.value = DB.fmtDateStr(el.value);     // strict auto-dash after 2 digits, NO month clamp
       el.classList.remove('ghost-default');
       el.dataset.userEdited = 'true';
       if (typeof els === 'object' && els.summaryStatus) els.summaryStatus.textContent = 'Unsaved';
-      refreshUpdate();
     });
-    el.addEventListener('blur', function () { enforce(el); });
+    el.addEventListener('blur', function () { commitBox(el); });
   });
 
-  // ── DOB fields: OWN them (re-clone, don't just augment). The legacy dob blur fired
-  //    validateRetirement SYNCHRONOUSLY (outside the rAF guard) and clamped RA/PTA to 2-digit
-  //    integers on every DOB change. Re-cloning REMOVES that handler (and the prettyBirth/
-  //    normalizeBirth ones); 2B is the single source. Also normalizes ISO 'YYYY-MM' -> 'MM/YYYY'
-  //    so DOB never surfaces in ISO on reopen.
+  // ── DOB fields stay MM/YYYY at rest (RULING: option b). OWN them (re-clone) so the legacy
+  //    synchronous dob-blur clamp is REMOVED, normalize ISO 'YYYY-MM' -> 'MM/YYYY', and on a
+  //    valid DOB change resync each age box's _dateStr YEAR (keep its month) so a no-op focus/
+  //    blur re-derives the SAME age (no silent drift). The age itself is untouched. ─
   function dobToMMYYYY(raw) {
-    var p = DB.parseMoYr(raw);            // parseMoYr accepts ISO 'YYYY-MM' and 'MM/YYYY'
-    return p ? (String(p.mo).padStart(2, '0') + '/' + p.yr) : '';
+    var p = DB.parseMoYr(raw);
+    return p ? (DB.pad2(p.mo) + '/' + p.yr) : '';
+  }
+  function resyncDatesToDob(dobId) {
+    var p = DB.parseMoYr((byId(dobId) || {}).value); if (!p) return;
+    Object.keys(META).forEach(function (id) {
+      if (META[id].dob !== dobId) return;
+      var el = byId(id); if (!el || el._ageVal == null || !el._dateStr) return;
+      el._dateStr = el._dateStr.split('/')[0] + '/' + (p.yr + Number(el._ageVal));  // keep month, fix year
+    });
   }
   ['dob', 'spouseDob'].forEach(function (id) {
     var old = byId(id); if (!old) return;
-    var liveVal = old.value;               // cloneNode copies the value ATTRIBUTE, not the live value
+    var liveVal = old.value;
     var el = old.cloneNode(true);
     old.parentNode.replaceChild(el, old);
     el.value = dobToMMYYYY(liveVal) || (DB.parseMoYr(liveVal) ? liveVal : '');
@@ -3931,11 +3937,10 @@ input:focus,select:focus{
     el.setAttribute('placeholder', 'MM/YYYY');
     if (typeof els === 'object' && els) els[id] = el;
     if (DB.validateDob(el.value).ok) el._lastGood = el.value;
-    el.addEventListener('focus', function () { if (DB.validateDob(el.value).ok) el._lastGood = el.value; });
+    el.addEventListener('focus', function () { if (DB.validateDob(el.value).ok) el._lastGood = el.value; try { el.select(); } catch (e) {} });
     el.addEventListener('input', function () {
-      fmtInput(el);                        // live MM/YYYY format (same as the age fields)
+      el.value = DB.fmtDateStr(el.value);
       if (typeof els === 'object' && els.summaryStatus) els.summaryStatus.textContent = 'Unsaved';
-      refreshGhosts(id);                   // recompute GHOST dates only; user-edited reals untouched
       refreshUpdate();
     });
     el.addEventListener('blur', function () {
@@ -3946,56 +3951,63 @@ input:focus,select:focus{
         el.value = (el._lastGood != null && String(el._lastGood).trim()) ? el._lastGood : '';
         el.classList.remove('input-valid');
       }
-      refreshGhosts(id);
+      resyncDatesToDob(id);
       refreshUpdate();
     });
   });
 
-  // ── payload wrapper — INTEGER-only engine body (outermost) ───
+  // ── payload wrapper — INTEGER-only engine body (outermost). Engine reads ONLY the integer
+  //    ages (_ageVal); the date strings ride along NON-AUTHORITATIVELY (the month's only home). ─
   if (typeof payload === 'function') {
     var prevPayload = payload;
     payload = function () {
       var p = prevPayload();
       var ca = DB.ageFromDob((byId('dob') || {}).value);
       if (ca == null) ca = (p.primary && p.primary.age) || 0;
-      var ret = deriveAge('retireAge'), plan = deriveAge('planThrough');
-      if (p.primary) { p.primary.age = ca; p.primary.targetRetirementAge = ret; }
+      var ret = ageValOf('retireAge'), plan = ageValOf('planThrough');
+      if (p.primary) {
+        p.primary.age = ca;
+        p.primary.targetRetirementAge = ret;
+        p.primary.targetRetirementDate = dateStrOf('retireAge');   // non-authoritative month home
+      }
       if (p.defaults) {
         p.defaults.targetRetirementAge = ret;
+        p.defaults.targetRetirementDate = dateStrOf('retireAge');
         p.defaults.yearsToRetirement = Math.max(ret - ca, 0);
         p.defaults.planThroughAge = plan;
+        p.defaults.planThroughDate = dateStrOf('planThrough');     // non-authoritative month home
       }
       var co = p.household && p.household.coArchitect;
       if (co) {
         var coa = DB.ageFromDob((byId('spouseDob') || {}).value);
         if (coa == null) coa = co.age || 0;
-        var coRet = deriveAge('spouseRetireDate');
+        var coRet = ageValOf('spouseRetireDate');
         co.age = coa;
-        co.targetRetirementAge = coRet;                        // canonical INTEGER (engine reads this)
-        co.targetRetirementDate = mmyyyyOf('spouseRetireDate'); // non-authoritative display mirror
+        co.targetRetirementAge = coRet;                            // canonical INTEGER (engine reads this)
+        co.targetRetirementDate = dateStrOf('spouseRetireDate');   // non-authoritative month home
         co.yearsToRetirement = Math.max(coRet - coa, 0);
-        delete co.targetRetirementYear;                        // drop legacy shape
+        delete co.targetRetirementYear;                            // drop legacy shape
       }
       return p;
     };
   }
   window._dossierDeriveAge = deriveAge;            // gate hook (parity / integer assertions)
+  window._dossierBoxState = function (id) { var el = byId(id); return el ? { age: el._ageVal, date: el._dateStr, shown: el.value } : null; };
 
-  // ── reset is the last post-arm byId writer: it sets integer '65'/'90' into the date fields.
-  //    Wrap it so reset/delete restore MM/YYYY ghosts, not 2-digit integers. ─
+  // ── reset is the last post-arm byId writer: it sets integer '65'/'90' into the boxes. Wrap it
+  //    so Reset/Delete restore the ghost-grey DEFAULT AGE (age-at-rest), not raw integers. ─
   if (typeof resetVals === 'function') {
     var prevReset = resetVals;
     resetVals = function () {
       prevReset();
       var d = byId('dob'); if (d) d.value = dobToMMYYYY(d.value);
       var sd = byId('spouseDob'); if (sd) sd.value = dobToMMYYYY(sd.value);
-      Object.keys(META).forEach(function (id) { var el = byId(id); if (el) { delete el._lastGood; el.dataset.userEdited = 'false'; applyGhost(id); } });
+      Object.keys(META).forEach(function (id) { var el = byId(id); if (el) { el._ageVal = null; el._dateStr = null; el._lastGood = null; el.dataset.userEdited = 'false'; restDisplay(el); } });
       refreshUpdate();
     };
   }
 
-  // ── init: anchor any ghosts to the loaded DOB + refresh metrics ─
-  refreshGhosts('dob'); refreshGhosts('spouseDob');
+  // ── init: refresh metrics from the canonical ages ─
   refreshUpdate();
   // The legacy integer validators (validateAges / validateAgeFields) are IIFE-private and fire via
   // requestAnimationFrame on load; they would clamp a MM/YYYY value back to a 2-digit integer
