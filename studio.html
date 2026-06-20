@@ -400,6 +400,12 @@
 
   /* --- STUDIO LAYOUT --- */
   .studio-layout { display: flex; flex: 1; width: 100%; margin: 0 auto; }
+  /* Seed render-gate — hold the drafting numbers until the async Clerk dossier seed
+     lands, so a direct load never flashes the schema defaults (40/65/93) before the
+     authoritative dossier hydrates. visibility:hidden keeps layout (no reflow on reveal).
+     Toggled by _seedGateOn/_seedGateOff in init(); a setTimeout safety net guarantees it
+     can never stay hidden. */
+  .studio-layout.seed-gated { visibility: hidden; }
 
   /* LEFT: Drafting Column */
   .drafting-panel {
@@ -6000,7 +6006,18 @@
           if (typeof updateSVGs === 'function') updateSVGs();
         }
       } catch (e) {}
-      return true;
+      // Honest applied-signal. The visible seed symptom (sliders stuck at 40/65/93) is a
+      // MISSING profile, not a present-but-wrong one. Explicit hydration (?id=blueprint /
+      // ?hydrate=sketch) OWNS its seed and always counts as applied — never re-fetch dossier.
+      // On the plain path (session-draft / fresh+dossier) report applied ONLY when a real
+      // DOB actually landed: an empty fresh+dossier (LS not yet hydrated from Clerk) or an
+      // empty round-tripped session draft returns FALSE so init()'s Clerk dossier fallback
+      // runs instead of leaving the schema defaults on screen. Returning true unconditionally
+      // here was the dead-fallback root cause of the direct-load seed race.
+      var _src = String(bp._loadSource || '');
+      var _explicit = _src.indexOf('blueprint-slot') === 0 || _src.indexOf('sketch-contract') === 0;
+      var _realDob = !!(prof.primary_dob && /\d{4}/.test(String(prof.primary_dob)));
+      return _explicit || _realDob;
     }
 
     function applyDossierSliders(p) {
@@ -6417,6 +6434,13 @@
       });
     }
 
+    /* Seed render-gate helpers — hide the drafting numbers while we await the async Clerk
+       dossier, so a direct load never shows the schema defaults (40/65/93) first. Bounded:
+       _seedGateOff runs on EVERY fallback exit plus a setTimeout safety net (init below), so
+       the stage can never stay hidden even if Clerk is slow or absent. */
+    function _seedGateOn()  { var _l = document.getElementById('studio-layout'); if (_l) _l.classList.add('seed-gated'); }
+    function _seedGateOff() { var _l = document.getElementById('studio-layout'); if (_l) _l.classList.remove('seed-gated'); }
+
     function init() {
       SC = (window.DatumShape && DatumShape.scales) || null;
       // Pre-seed slider _prev caches with current values (so the first input event
@@ -6440,25 +6464,39 @@
           if (_v15) { applyDossierSliders(_v15); _v15Applied = true; }
         }
         if (!_v15Applied) {
+          // No synchronous dossier in LS — the authoritative one is in Clerk (async). Gate the
+          // drafting numbers so the schema defaults never flash before the seed lands, then
+          // reveal on resolve OR a timeout safety net so the stage can never stay hidden.
+          _seedGateOn();
           window.addEventListener('load', function () {
             try {
-              if (!window.Clerk) return;
+              if (!window.Clerk) { _seedGateOff(); return; }
               window.Clerk.load().then(function () {
                 try {
-                  if (!window.Clerk.user) return;
+                  if (!window.Clerk.user) { _seedGateOff(); return; }
                   var _meta = window.Clerk.user.unsafeMetadata || {};
                   var _cd = _meta.dossier;
-                  if (!_cd || typeof _cd !== 'object') return;
+                  if (!_cd || typeof _cd !== 'object') { _seedGateOff(); return; }
                   try { localStorage.setItem('datumfi.accountDossier.v15', JSON.stringify(_cd)); } catch(e2) {}
-                  applyDossierSliders(_cd);
+                  // Re-seed through the SAME blueprint path the synchronous load uses, so the
+                  // Clerk-hydrated dossier gets identical month-survival (plan-through date, carried
+                  // ages, target-ret) — not a partial re-apply that drops the plan-through month.
+                  // Clear the empty fresh+dossier draft first (writeSessionDraft(null)) so load()
+                  // reads the now-populated LS dossier, not the stale draft, then run the same seed.
+                  try { if (window.DatumBlueprint && DatumBlueprint._internal) DatumBlueprint._internal.writeSessionDraft(null); } catch(e3) {}
+                  seedFromBlueprint();
                   applyDossierProfile(_cd);
                   syncSpendFromDatumSlider();
                   syncFromProfileDates();
+                  _reassertCarriedAges();
                   refreshAllLabels(); fireUpdate();
                 } catch(e) {}
-              }).catch(function () {});
-            } catch(e) {}
+                _seedGateOff();
+              }).catch(function () { _seedGateOff(); });
+            } catch(e) { _seedGateOff(); }
           });
+          // Safety net: never leave the stage gated if Clerk is slow/absent or 'load' already fired.
+          setTimeout(_seedGateOff, 1500);
         }
       }
       // Dossier -> Architect Profile prefill runs regardless of which rung of
