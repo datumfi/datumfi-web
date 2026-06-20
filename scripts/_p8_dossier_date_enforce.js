@@ -124,6 +124,67 @@ const buildPayload = (page) => page.evaluate(() => { try { return typeof payload
     await ctx.close();
   }
 
+  // ───────── (i) INTERACTIVE CLAMP — the exact founder repro the old gate skipped ─────────
+  // Type RA/PTA dates, then CHANGE DOB (the synchronous legacy validateRetirement path) and assert
+  // the fields stay MM/YYYY — they must NOT collapse to 2-digit integers ('45 / 48').
+  {
+    const { ctx, page } = await openDossier(browser, null);
+    await edit(page, 'dob', '06 / 1981'); await page.waitForTimeout(80);
+    await edit(page, 'retireAge', '01 / 2046'); await page.waitForTimeout(80);
+    await edit(page, 'planThrough', '01 / 2066'); await page.waitForTimeout(80);
+    let r = await read(page);
+    check('(i) precondition: RA/PTA committed as MM/YYYY', r.retire.replace(/\s/g, '') === '01/2046' && r.plan.replace(/\s/g, '') === '01/2066', JSON.stringify(r));
+    // change DOB — old bug collapsed RA->45, PTA->48 here
+    await edit(page, 'dob', '01 / 1986'); await page.waitForTimeout(120);
+    r = await read(page);
+    const isMMYYYY = (v) => /^\d{2}\/\d{4}$/.test((v || '').replace(/\s/g, ''));
+    check('(i) RA survives DOB change as MM/YYYY (no 45 collapse)', r.retire.replace(/\s/g, '') === '01/2046' && isMMYYYY(r.retire), r.retire);
+    check('(i) PTA survives DOB change as MM/YYYY (no 48 collapse)', r.plan.replace(/\s/g, '') === '01/2066' && isMMYYYY(r.plan), r.plan);
+    const pl = await buildPayload(page);
+    // typed dates re-derived against the NEW DOB (01/1986): 2046-1986=60, 2066-1986=80
+    check('(i) payload re-derives TYPED ages vs new DOB (integer 60/80)', pl && pl.defaults.targetRetirementAge === 60 && pl.defaults.planThroughAge === 80, JSON.stringify(pl && pl.defaults));
+    await ctx.close();
+  }
+
+  // ───────── (ii) DOB-CHANGE RECOMPUTE — ghost recomputes, real edit untouched ─────────
+  {
+    const { ctx, page } = await openDossier(browser, null);
+    await edit(page, 'dob', '06 / 1980'); await page.waitForTimeout(80);
+    // edit ONLY planThrough; leave retireAge as the DOB-anchored ghost
+    await edit(page, 'planThrough', '01 / 2070'); await page.waitForTimeout(80);
+    const ghostBefore = (await read(page)).retire;
+    await edit(page, 'dob', '06 / 1990'); await page.waitForTimeout(120);
+    const r = await read(page);
+    check('(ii) GHOST retire recomputes on DOB change', r.retire !== ghostBefore && /^\d{2}\/\d{4}$/.test((r.retire || '').replace(/\s/g, '')), 'before=' + ghostBefore + ' after=' + r.retire);
+    check('(ii) user-edited REAL plan is NOT overwritten by a clamp', r.plan.replace(/\s/g, '') === '01/2070', r.plan);
+    await ctx.close();
+  }
+
+  // ───────── (iii) REOPEN ROUND-TRIP — typed values persist; DOB renders MM/YYYY, not ISO ─────────
+  {
+    const { ctx, page } = await openDossier(browser, null);
+    await edit(page, 'dob', '01 / 1986'); await page.waitForTimeout(80);
+    await edit(page, 'retireAge', '01 / 2046'); await page.waitForTimeout(80);   // age 60
+    await edit(page, 'planThrough', '01 / 2066'); await page.waitForTimeout(80); // age 80
+    await page.evaluate(() => { var b = document.getElementById('saveProfile'); if (b) b.click(); });
+    await page.waitForTimeout(250);
+    const saved = await page.evaluate(() => { try { return JSON.parse(localStorage.getItem('datumfi.accountDossier.v15')); } catch (e) { return null; } });
+    check('(iii) SAVE persists TYPED retire age (not default 65)', saved && saved.defaults && saved.defaults.targetRetirementAge === 60, JSON.stringify(saved && saved.defaults));
+    check('(iii) SAVE persists TYPED plan age (not default 85)', saved && saved.defaults && saved.defaults.planThroughAge === 80, JSON.stringify(saved && saved.defaults));
+    check('(iii) SAVE stores DOB as MM/YYYY', saved && saved.primary && /^\d{2}\/\d{4}$/.test(saved.primary.dateOfBirth), JSON.stringify(saved && saved.primary));
+    await ctx.close();
+    // reopen in a fresh context seeded with the saved payload (the burned reopen/restore zone)
+    const re = await openDossier(browser, saved);
+    await re.page.waitForTimeout(250);
+    const rr = await read(re.page);
+    check('(iii) REOPEN DOB renders MM/YYYY (no 1986-06 ISO leak)', /^\d{2}\/\d{4}$/.test((rr.dob || '').replace(/\s/g, '')), rr.dob);
+    check('(iii) REOPEN retire reflects SAVED typed date', rr.retire.replace(/\s/g, '') === '01/2046', rr.retire);
+    check('(iii) REOPEN plan reflects SAVED typed date', rr.plan.replace(/\s/g, '') === '01/2066', rr.plan);
+    const rpl = await buildPayload(re.page);
+    check('(iii) REOPEN payload ages stay INTEGER (no NaN/silent-93)', rpl && rpl.defaults.targetRetirementAge === 60 && rpl.defaults.planThroughAge === 80, JSON.stringify(rpl && rpl.defaults));
+    await re.ctx.close();
+  }
+
   // ───────── back-compat: 3 legacy co-architect shapes -> canonical int 62 ─────────
   {
     const coDob = '05/1984', expected = 2046 - 1984; // 62
