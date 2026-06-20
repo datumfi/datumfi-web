@@ -1446,7 +1446,7 @@
             <div class="field-row">
               <div>
                 <div class="input-label">Date of Birth</div>
-                <input type="text" class="small-field" id="pri-dob" data-field="current_age" value="" placeholder="MM/YYYY" tabindex="11" onfocus="this.select()" oninput="_fmtRetDate(this); _updatePlanEndAge()" onblur="_validatePriDob(this)">
+                <input type="text" class="small-field" id="pri-dob" data-field="current_age" value="" placeholder="MM/YYYY" tabindex="11" onfocus="this.select(); window._captureProfileGood && window._captureProfileGood(this)" oninput="_fmtRetDate(this); _updatePlanEndAge()" onblur="_validatePriDob(this)">
                 <div id="pri-dob-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
               </div>
               <div>
@@ -1492,7 +1492,7 @@
             <div class="field-row" style="margin-top: 15px;">
               <div>
                 <div class="input-label">Target Retirement Date</div>
-                <input type="text" class="small-field" id="target-ret" data-field="retirement_age" value="" placeholder="MM/YYYY" tabindex="16" onfocus="this.select()" oninput="_fmtRetDate(this); updateSVGs(); _updatePlanEndAge()" onblur="_validateRetDate(this)">
+                <input type="text" class="small-field" id="target-ret" data-field="retirement_age" value="" placeholder="MM/YYYY" tabindex="16" onfocus="this.select(); window._captureProfileGood && window._captureProfileGood(this)" oninput="_fmtRetDate(this); updateSVGs(); _updatePlanEndAge()" onblur="_validateRetDate(this)">
                 <div id="ret-date-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;">Retirement age exceeds 100 — plan capped at age 120.</div>
               </div>
               <div>
@@ -1516,7 +1516,7 @@
               <div class="field-row">
                 <div>
                   <div class="input-label">Co-Architect DOB</div>
-                  <input type="text" class="small-field" id="co-dob" value="" placeholder="MM/YYYY" onfocus="this.select()" oninput="_fmtRetDate(this)" onblur="_validateCoDob(this)">
+                  <input type="text" class="small-field" id="co-dob" value="" placeholder="MM/YYYY" onfocus="this.select(); window._captureProfileGood && window._captureProfileGood(this)" oninput="_fmtRetDate(this)" onblur="_validateCoDob(this)">
                   <div id="co-dob-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
                 </div>
               </div>
@@ -1529,7 +1529,7 @@
                 </div>
                 <div>
                   <div class="input-label">Target Retirement Date</div>
-                  <input type="text" class="small-field" id="co-ret" value="" placeholder="MM/YYYY" onfocus="this.select()" oninput="_fmtRetDate(this)" onblur="_validateCoRet(this)">
+                  <input type="text" class="small-field" id="co-ret" value="" placeholder="MM/YYYY" onfocus="this.select(); window._captureProfileGood && window._captureProfileGood(this)" oninput="_fmtRetDate(this)" onblur="_validateCoRet(this)">
                   <div id="co-ret-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
                 </div>
               </div>
@@ -5023,39 +5023,82 @@
       }
       window._fmtDateSlash = _fmtDateSlash;   // cfg (other scope) resolves the bare ref via this
 
+      // ── P8.1 — Architect Profile date boxes: revert-or-clear enforcement ─────
+      // Every Profile date box (Primary DOB, Target Retirement, Co-Architect DOB +
+      // Target Retirement) validates through the SHARED DatumDateBounds (date-bounds.js,
+      // single source w/ the Dossier). On an invalid commit the bad text must NEVER
+      // persist and NEVER silently snap to a min/max bound (the silent-fallback class 2A
+      // killed in the engine path): instead REVERT to this field's last-known-good MM/YYYY
+      // if one exists, ELSE CLEAR to empty (required-field signalling stays). The inline
+      // warn keeps explaining why. Plan-Through is the shipped template (_commitPlanEndDate).
+      var _PROFILE_DATE_META = {
+        'pri-dob':    { kind: 'dob',    warn: 'pri-dob-warn' },
+        'target-ret': { kind: 'retire', warn: 'ret-date-warn', anchor: 'pri-dob' },
+        'co-dob':     { kind: 'dob',    warn: 'co-dob-warn' },
+        'co-ret':     { kind: 'retire', warn: 'co-ret-warn',  anchor: 'co-dob' }
+      };
+      // DOB anchor for a target-date field: {mo,yr,age} from the anchor DOB when valid,
+      // else derived from the current-age slider (mirrors _readDobMoYr's DOB-absent path).
+      function _profileDobAnchor(anchorEl) {
+        var DB = window.DatumDateBounds;
+        if (DB && anchorEl) {
+          var p = DB.parseMoYr(anchorEl.value);
+          if (p) return { mo: p.mo, yr: p.yr, age: DB.ageFromDob(anchorEl.value) };
+        }
+        var sA = document.getElementById('slider-age');
+        var ca = sA ? (parseInt(sA.value, 10) || 40) : 40;
+        return { mo: 1, yr: new Date().getFullYear() - ca, age: ca };
+      }
+      function _validateProfileDate(el) {
+        var DB = window.DatumDateBounds, meta = el && _PROFILE_DATE_META[el.id];
+        if (!meta || !DB) return { ok: false, err: 'Enter a full date as MM / YYYY.' };
+        if (meta.kind === 'dob') return DB.validateDob(el.value);
+        var anchor = _profileDobAnchor(document.getElementById(meta.anchor));
+        return DB.validateTarget(el.value, 'retire', { mo: anchor.mo, yr: anchor.yr }, anchor.age, 0);
+      }
+      window._validateProfileDate = _validateProfileDate;
+      // Snapshot the current value as last-known-good when it validates (called on focus,
+      // so a later invalid edit reverts to it rather than clearing a perfectly good value).
+      function _captureProfileGood(el) {
+        if (el && _validateProfileDate(el).ok) el._lastGoodDate = el.value;
+      }
+      window._captureProfileGood = _captureProfileGood;
+      // Enforce on commit. Returns true when the committed value is valid.
+      function _enforceProfileDate(el) {
+        var meta = el && _PROFILE_DATE_META[el.id]; if (!meta) return false;
+        var w = document.getElementById(meta.warn);
+        var res = _validateProfileDate(el);
+        if (res.ok) {
+          if (w) { w.textContent = ''; w.style.display = 'none'; }
+          el._lastGoodDate = el.value;
+          return true;
+        }
+        if (w) { w.textContent = res.err; w.style.display = 'block'; }
+        // Revert-or-clear hybrid — never keep the bad text, never snap to a bound.
+        el.value = (el._lastGoodDate != null) ? el._lastGoodDate : '';
+        return false;
+      }
+      window._enforceProfileDate = _enforceProfileDate;
+
       function _validateRetDate(el) {
-        var w = document.getElementById('ret-date-warn');
-        if (!w) return;
-        var dobVal = (document.getElementById('pri-dob') || {}).value || '';
-        var err = _validateDateField(el.value, 'ret', parseAgeFromDob(dobVal));
-        w.textContent = err || ''; w.style.display = err ? 'block' : 'none';
+        // Enforce first (revert-or-clear); only refresh the plan-end mirror on a VALID
+        // commit, since _updatePlanEndAge also owns ret-date-warn (don't erase our reason).
+        if (_enforceProfileDate(el)) _updatePlanEndAge();
       }
       window._validateRetDate = _validateRetDate;
 
       function _validatePriDob(el) {
-        var w = document.getElementById('pri-dob-warn');
-        if (!w) return;
-        var err = _validateDateField(el.value, 'dob', null);
-        w.textContent = err || ''; w.style.display = err ? 'block' : 'none';
+        // DOB never owns ret-date-warn, so always refresh the plan-end mirror from the
+        // committed (or reverted) DOB to keep the plan slider consistent.
+        _enforceProfileDate(el);
+        _updatePlanEndAge();
       }
       window._validatePriDob = _validatePriDob;
 
-      function _validateCoDob(el) {
-        var w = document.getElementById('co-dob-warn');
-        if (!w) return;
-        var err = _validateDateField(el.value, 'dob', null, 'Co-Architect DOB');
-        w.textContent = err || ''; w.style.display = err ? 'block' : 'none';
-      }
+      function _validateCoDob(el) { _enforceProfileDate(el); }
       window._validateCoDob = _validateCoDob;
 
-      function _validateCoRet(el) {
-        var w = document.getElementById('co-ret-warn');
-        if (!w) return;
-        var coDobVal = (document.getElementById('co-dob') || {}).value || '';
-        var coDobAge = parseAgeFromDob(coDobVal);
-        var err = _validateDateField(el.value, 'ret', coDobAge, 'Co-Architect Target Retirement Date');
-        w.textContent = err || ''; w.style.display = err ? 'block' : 'none';
-      }
+      function _validateCoRet(el) { _enforceProfileDate(el); }
       window._validateCoRet = _validateCoRet;
 
       // Range Readiness \u2014 informational only, not a gate
@@ -5604,20 +5647,17 @@
     /* ── Profile <-> Sketch reconciliation (last-touched-wins, bidirectional) ── */
     function syncFromProfileDates() {
       var dobEl = $('pri-dob'), retEl = $('target-ret'), planEl = $('plan-end-age');
-      var dobM = dobEl && dobEl.value ? dobEl.value.match(/(\d{1,2})\s*\/\s*(\d{4})/) : null;
-      var retM = retEl && retEl.value ? retEl.value.match(/(\d{1,2})\s*\/\s*(\d{4})/) : null;
-      var now = new Date();
-      if (dobM) {
-        var bm = parseInt(dobM[1],10), by = parseInt(dobM[2],10);
-        var ca = now.getFullYear() - by; if (now.getMonth() + 1 < bm) ca--;
-        ca = clampN(ca, 18, 85);
-        var sA = $('slider-age'); if (sA) { sA.value = ca; updateAgeLabel(); }
-        if (retM) {
-          var rm = parseInt(retM[1],10), ry = parseInt(retM[2],10);
-          var ra = ry - by; if (rm < bm) ra--;
-          ra = clampN(ra, ca + 1, 90);
-          var sR = $('slider-activation'); if (sR) { sR.value = ra; updateActivationLabel(); }
-        }
+      var DB = window.DatumDateBounds;
+      // P8.1 — single-source bounds + NO silent snap. Only push a Profile date onto its
+      // slider when it VALIDATES through DatumDateBounds; an out-of-window/garbage date no
+      // longer clampN()s the slider to a bound (the resurfaced silent-fallback bug). The
+      // field's own blur enforcement (_enforceProfileDate) reverts-or-clears the bad text.
+      var dobRes = DB && dobEl ? DB.validateDob(dobEl.value) : { ok: false };
+      if (dobRes.ok) {
+        var sA = $('slider-age'); if (sA) { sA.value = dobRes.age; updateAgeLabel(); }
+        var dob = DB.parseMoYr(dobEl.value);
+        var retRes = retEl ? DB.validateTarget(retEl.value, 'retire', dob, dobRes.age, 0) : { ok: false };
+        if (retRes.ok) { var sR = $('slider-activation'); if (sR) { sR.value = retRes.age; updateActivationLabel(); } }
       }
       // 2A — the plan-end-age field is a DOB-anchored date mirror of the slider (the single
       // PTA-age source); refresh the display from the slider rather than reading it as an age.
