@@ -5702,7 +5702,7 @@
       var sA = $('slider-age'), sR = $('slider-activation'), sP = $('sl-plan-through');
       if (dobM && sA) { var by = parseInt(dobM[2],10); var ca = now.getFullYear() - by; if (now.getMonth() + 1 < parseInt(dobM[1],10)) ca--; sA.value = clampN(ca, 18, 85); }
       if (retM && sR && dobM) { var ry = parseInt(retM[2],10), by2 = parseInt(dobM[2],10), bm = parseInt(dobM[1],10); var ra = ry - by2; if (parseInt(retM[1],10) < bm) ra--; sR.value = clampN(ra, (parseInt(sA && sA.value, 10) || 40) + 1, 90); }
-      if (sP && prof.plan_end_age) { sP.value = clampN(parseInt(prof.plan_end_age,10) || 93, 75, 105); if (typeof _mirrorPlanEnd === 'function') _mirrorPlanEnd(); }
+      if (sP && prof.plan_end_age) { sP.value = clampN(parseInt(prof.plan_end_age,10) || 93, 75, 105); var _peR = $('plan-end-age'); if (_peR && prof.plan_end_date && _ageDateRe.test(String(prof.plan_end_date).trim())) _peR.value = _fmtDateStr(prof.plan_end_date); if (typeof _mirrorPlanEnd === 'function') _mirrorPlanEnd(); }
       // 05/ Market Conditions paradigm + inflation mode — re-assert from the slot too.
       if (bp.market_paradigm) { var _mr = document.querySelector('input[name="market"][value="' + bp.market_paradigm + '"]'); if (_mr) _mr.checked = true; }
       if (bp.inflation_mode)  { var _ir = document.querySelector('input[name="inflation"][value="' + bp.inflation_mode + '"]'); if (_ir) _ir.checked = true; }
@@ -5735,19 +5735,24 @@
     // (a no-op blur re-commits the same date). Prefers the live Profile date, else derives it.
     function _dateForField(kind) {
       var now = new Date();
+      var DB = window.DatumDateBounds;
       if (kind === 'dob') {
         var d = $('pri-dob'); if (d && _ageDateRe.test(String(d.value || '').trim())) return _fmtDateStr(d.value);
         var ca = parseInt(($('slider-age') || {}).value, 10) || 40;
         return '01 / ' + (now.getFullYear() - ca);
       }
       var dob = _readDobMoYr();
+      // Shared single rounding source for the derive fallback; _fmtDateStr keeps Studio's
+      // " / " display spacing (dateFromAge returns MM/YYYY).
+      var fromAge = function (age) { return DB ? _fmtDateStr(DB.dateFromAge(age, dob.mo, dob.yr)) : (_pad2(dob.mo) + ' / ' + (dob.yr + age)); };
       if (kind === 'retire') {
         var r = $('target-ret'); if (r && _ageDateRe.test(String(r.value || '').trim())) return _fmtDateStr(r.value);
-        var ra = parseInt(($('slider-activation') || {}).value, 10) || 65;
-        return _pad2(dob.mo) + ' / ' + (dob.yr + ra);
+        return fromAge(parseInt(($('slider-activation') || {}).value, 10) || 65);
       }
-      var pta = parseInt(($('sl-plan-through') || {}).value, 10) || 93;
-      return _pad2(dob.mo) + ' / ' + (dob.yr + pta);
+      // PTA: prefer the live Plan-Through date field (carries the typed month, like 'retire'
+      // reads target-ret); else derive DOB-anchored via the shared single rounding source.
+      var pe = $('plan-end-age'); if (pe && _ageDateRe.test(String(pe.value || '').trim())) return _fmtDateStr(pe.value);
+      return fromAge(parseInt(($('sl-plan-through') || {}).value, 10) || 93);
     }
     // kind: 'dob' (Current Age = DOB) | 'retire' | 'pta' (target date, DOB-anchored).
     // 4d — delegates to the shared DatumDateBounds (single source; Dossier uses the same).
@@ -5782,27 +5787,43 @@
     function syncFromSketchAges() {
       var sA = $('slider-age'), sR = $('slider-activation');
       var dobEl = $('pri-dob'), retEl = $('target-ret');
+      var DB = window.DatumDateBounds;
       var thisYear = new Date().getFullYear();
       if (sA && dobEl) {
         var ca = parseInt(sA.value, 10) || 40;
         // Item 4 — preserve an existing typed month; only default to 06 when none is set.
         var dm = String(dobEl.value || '').match(_ageDateRe);
-        dobEl.value = (dm ? _pad2(dm[1]) : '06') + ' / ' + (thisYear - ca);
+        var dMo = dm ? parseInt(dm[1], 10) : 6;
+        dobEl.value = DB ? _fmtDateStr(DB.dateFromAge(0, dMo, thisYear - ca)) : (_pad2(dMo) + ' / ' + (thisYear - ca));
       }
       if (sR && retEl) {
         var ra = parseInt(sR.value, 10) || 65;
         var ca2 = parseInt(sA ? sA.value : 40, 10) || 40;
         var rm = String(retEl.value || '').match(_ageDateRe);
-        retEl.value = (rm ? _pad2(rm[1]) : '06') + ' / ' + (thisYear - ca2 + ra);
+        var rMo = rm ? parseInt(rm[1], 10) : 6;
+        retEl.value = DB ? _fmtDateStr(DB.dateFromAge(0, rMo, thisYear - ca2 + ra)) : (_pad2(rMo) + ' / ' + (thisYear - ca2 + ra));
       }
     }
     // 2A — the sl-plan-through slider is the single PTA-age source; the Profile "Plan Through"
     // field is a DOB-anchored MM/YYYY mirror of it (display) + a typed-date entry (writes back).
     function _mirrorPlanEnd() {
       var pEl = $('plan-end-age');
-      if (pEl) pEl.value = _dateForField('pta');
+      if (!pEl) return;
+      // Month-survival: if the field already holds a date that IMPLIES the slider's current PTA
+      // age, keep it VERBATIM (the typed/seeded 03/2068 must not be rebuilt to a DOB-month date).
+      // Only recompute — preserving the typed month, year from the shared rounding source — when
+      // the slider age has actually moved. We derive directly here (NOT via _dateForField('pta'),
+      // which now reads this field). (_commitPlanEndDate, the interactive commit, is untouched.)
+      var DB = window.DatumDateBounds;
+      var pta = parseInt(($('sl-plan-through') || {}).value, 10) || 93;
+      var dob = _readDobMoYr();
+      var pm = String(pEl.value || '').match(_ageDateRe);
+      if (DB && pm && DB.ageAtDate(pEl.value, dob.mo, dob.yr) === pta) return;   // consistent — keep verbatim
+      var mo = pm ? parseInt(pm[1], 10) : dob.mo;
+      pEl.value = DB ? _fmtDateStr(DB.dateFromAge(pta, mo, dob.yr)) : (_pad2(mo) + ' / ' + (dob.yr + pta));
     }
     window._mirrorPlanEnd = _mirrorPlanEnd;
+    window._studioDateForField = _dateForField;   // gate hook: the MM/YYYY a toggle box shows on focus
     function _commitPlanEndDate(el) {
       if (!el) return;
       var DB = window.DatumDateBounds, warn = $('plan-end-warn');
@@ -5904,7 +5925,11 @@
       }
       if (sPlan && prof.plan_end_age) {
         sPlan.value = clampN(parseInt(prof.plan_end_age,10) || 93, 75, 105);
-        // 2A — mirror the plan-end-age date field from the (now-seeded) slider, the PTA source.
+        // Month-survival: seed the Plan-Through date field from the carried typed string FIRST,
+        // so _mirrorPlanEnd keeps it verbatim (it implies the slider's PTA age) instead of
+        // rebuilding a DOB-month date.
+        var _peEl = $('plan-end-age');
+        if (_peEl && prof.plan_end_date && _ageDateRe.test(String(prof.plan_end_date).trim())) _peEl.value = _fmtDateStr(prof.plan_end_date);
         if (typeof _mirrorPlanEnd === 'function') _mirrorPlanEnd();
       }
 
@@ -6029,8 +6054,14 @@
       if (dobEl && dobStr && !dobEl.value) dobEl.value = dobStr;
       var retEl = $('target-ret');
       var rAge = pri.targetRetirementAge || def.targetRetirementAge;
-      if (retEl && !retEl.value && dobStr && rAge && typeof BP.retDateFromAge === 'function') {
-        var retStr = BP.retDateFromAge(dobStr, rAge);
+      if (retEl && !retEl.value) {
+        // Month-survival: prefer the EXACT typed date string the Dossier persists
+        // (primary.targetRetirementDate / defaults.targetRetirementDate) — same pattern the
+        // co-architect seed below uses. Fall back to the age derivation only for legacy payloads.
+        var rawRet = (pri.targetRetirementDate != null ? String(pri.targetRetirementDate)
+                     : (def.targetRetirementDate != null ? String(def.targetRetirementDate) : '')).trim();
+        var retStr = (typeof BP.mmYYYY === 'function') ? BP.mmYYYY(rawRet) : '';
+        if (!retStr && dobStr && rAge && typeof BP.retDateFromAge === 'function') retStr = BP.retDateFromAge(dobStr, rAge);
         if (retStr) retEl.value = retStr;
       }
       var salEl = $('pri-salary');

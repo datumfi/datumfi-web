@@ -73,6 +73,7 @@
         target_retirement_date:       '',
         co_architect_retirement_date: '',
         plan_end_age:                 93,
+        plan_end_date:                '',
         co_architect_enabled:         false
       },
       accounts: [],
@@ -351,15 +352,28 @@
     if (pri.fullName)           bp.profile.primary_name           = pri.fullName;
     if (co.fullName)            bp.profile.co_architect_name      = co.fullName;
 
+    // Month-survival: prefer the EXACT typed date string the Dossier persists
+    // (targetRetirementDate / planThroughDate). The integer age alone loses the typed month and
+    // the DOB-month rebuild via retDateFromAge drifts a year at the month boundary (03/2035 -> 52
+    // re-derived as 53 / 08/2035). Fall back to the age derivation only for legacy payloads.
+    var rDate = pri.targetRetirementDate || def.targetRetirementDate;
     var rAge = pri.targetRetirementAge || def.targetRetirementAge;
-    if (rAge)  bp.profile.target_retirement_date = retDateFromAge(bp.profile.primary_dob, rAge);
-    var coRAge = co.targetRetirementAge;
-    if (coRAge) bp.profile.co_architect_retirement_date = retDateFromAge(bp.profile.co_architect_dob, coRAge);
+    var rStr = rDate ? mmYYYY(rDate) : '';
+    if (rStr)      bp.profile.target_retirement_date = rStr;
+    else if (rAge) bp.profile.target_retirement_date = retDateFromAge(bp.profile.primary_dob, rAge);
+    var coDate = co.targetRetirementDate, coRAge = co.targetRetirementAge;
+    var coStr = coDate ? mmYYYY(coDate) : '';
+    if (coStr)       bp.profile.co_architect_retirement_date = coStr;
+    else if (coRAge) bp.profile.co_architect_retirement_date = retDateFromAge(bp.profile.co_architect_dob, coRAge);
 
     if (def.planThroughAge) {
       var p = parseInt(def.planThroughAge, 10);
       if (!isNaN(p)) bp.profile.plan_end_age = Math.min(120, Math.max(70, p));
     }
+    // plan_end_date carries the typed Plan-Through month (the integer plan_end_age can't); Studio
+    // seeds the Plan-Through field from this so a focus shows 03/2068, not a DOB-month rebuild.
+    var pDate = def.planThroughDate ? mmYYYY(def.planThroughDate) : '';
+    if (pDate) bp.profile.plan_end_date = pDate;
     if (def.defaultDatum > 0)         bp.datum.net_datum_v1     = Math.round(def.defaultDatum);
     if (acc.currentPortfolioBalance > 0) bp.portfolio_total      = Math.round(acc.currentPortfolioBalance);
     if (acc.annualContributions > 0)     bp.contributions_total  = Math.round(acc.annualContributions);
