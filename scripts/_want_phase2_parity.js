@@ -125,6 +125,33 @@ async function enterWant(page) {
   await page.mouse.move(10, 10); await page.waitForTimeout(120);
   const gone = await page.evaluate(() => parseFloat(getComputedStyle(document.getElementById('d2-scrubber-group')).opacity));
   check('#2: scrubber hides on pointerleave', gone < 0.5, 'opacity=' + gone);
+
+  // #1/#5 — multi-lever copy renders via the shared builder (was a placeholder).
+  await setSlider(page, 'd2-slider-age', 50);
+  await setSlider(page, 'd2-slider-activation', 72);
+  await setSlider(page, 'd2-slider-contrib', 60000);   // 3 levers -> multi-lever (no >=70% dominant)
+  await page.waitForTimeout(150);
+  const mlv = await page.evaluate(() => {
+    const g = (id) => document.getElementById(id) || {};
+    const means = (g('d2s-pin-means').innerHTML || ''), inspect = (g('d2s-pin-inspect').innerHTML || ''), lever = (g('d2s-pin-lever-attribution').textContent || '');
+    const st = window._wantFaceState, D = window.DatumShape;
+    if (!st || !D || !D.S2Copy || !D.S2Copy.buildMultiLever) return { err: 'no state/builder' };
+    const hav = st.have, wnt = st.want, mkt = document.querySelector('input[name="d2-market"]:checked');
+    const yrs = Math.max(0, wnt.activationAge - wnt.currentAge);
+    const sS = Object.assign({}, wnt, { targetSpend: Math.round(wnt.targetSpend), yearsToGrow: yrs });
+    const gbYrs = hav.yearsToGrow || Math.max(0, hav.activationAge - hav.currentAge), gbEnd = D.computeAt(hav, gbYrs);
+    const exp = D.S2Copy.buildMultiLever({
+      retire: wnt.activationAge, age: wnt.currentAge, yrs: yrs, paradigm: mkt ? mkt.value : 'average', gb: hav,
+      ds: { age: wnt.currentAge, retire: wnt.activationAge, planThroughAge: wnt.planThroughAge, port: wnt.portfolioVol, datum: wnt.targetSpend, contrib: wnt.annualContrib },
+      s: sS, gbEnd: gbEnd, ptsEnd: D.computeAt(sS, yrs),
+      gbPinnedState: { retire: hav.activationAge, age: hav.currentAge, port: hav.portfolioVol, contrib: hav.annualContrib, datum: hav.targetSpend, planThroughAge: hav.planThroughAge || 93, pinnedParadigm: hav.baselineRate === 1.040 ? 'Optimistic' : hav.baselineRate === 1.015 ? 'Stress' : 'Historical', pinnedInflStr: hav.isNominal ? 'Nominal' : 'Real', pinnedTax: Math.round((1 - (hav.taxMult || 1)) * 100), stateObj: D.buildShapeState(gbEnd) }
+    });
+    return { means, inspect, lever, exp, placeholder: /combined several moves|levers moved/.test(means + ' ' + lever) };
+  });
+  check('#1/#5: multi-lever is no longer the placeholder', mlv && !mlv.err && !mlv.placeholder, mlv && (mlv.err || (mlv.means || '').slice(0, 50)));
+  check('#1/#5: rendered means == shared builder phys', mlv && mlv.exp && mlv.means === mlv.exp.phys, mlv && mlv.exp && ('lens ' + (mlv.means || '').length + '/' + mlv.exp.phys.length));
+  check('#1/#5: rendered inspect == shared builder act', mlv && mlv.exp && mlv.inspect === mlv.exp.act);
+  check('#1/#5: rendered lever-attr == shared builder domLever', mlv && mlv.exp && mlv.lever === (mlv.exp.domLever || '—'), mlv && mlv.exp && (mlv.lever + ' | ' + mlv.exp.domLever));
   await ctx.close();
 
   // ── Context B: carried saved design injected — #6-saved ──

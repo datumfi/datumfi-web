@@ -361,11 +361,40 @@
       if (lever) lever.textContent = (lmap[d.copy.lever] || d.copy.lever) + (d.copy.primaryPct != null && d.copy.primaryPct < 1 ? ' (' + Math.round(d.copy.primaryPct * 100) + '% of range)' : ' (100% of range)');
       if (chRow) { chRow.style.display = 'none'; chRow.textContent = ''; }
     } else {
-      // multi-lever (copy === null): branded placeholder until the populateZoneC shared extraction (Step 2)
-      if (means) means.innerHTML = 'You combined several moves — the boundaries shifted together. Deeper multi-lever analysis unlocks as you keep building.';
-      if (inspect) inspect.innerHTML = 'Each lever you change reshapes the cone; the full multi-lever read arrives with the next layer of Studio.';
-      if (lever) lever.textContent = nch + ' levers moved';
-      if (chRow) { chRow.style.display = 'none'; chRow.textContent = ''; }
+      // #1/#5: multi-lever (copy === null) — the SHARED S2 builder (Option-1 extraction),
+      // byte-identical to Sketch via DatumShape.S2Copy.buildMultiLever. ds = clean want;
+      // s.targetSpend rounded (Sketch parity); gbEnd/ptsEnd = rendered Have/Want endpoints;
+      // gbPinnedState mirrors sketch renderDesignCanvas L5804-5815.
+      // Endpoints recomputed EXACTLY as Sketch renderDesignCanvas does (getMathPoint on the
+      // CLEAN design with s.targetSpend = Math.round(ds.datum)) so the copy is byte-identical —
+      // not d.want.ptsEnd (unrounded datum + any SP portDelta override).
+      var _d = DS(), _mkt = document.querySelector('input[name="d2-market"]:checked');
+      var _mlYrs = Math.max(0, _wantScn.activationAge - _wantScn.currentAge);
+      var _mlS = Object.assign({}, _wantScn, { targetSpend: Math.round(_wantScn.targetSpend), yearsToGrow: _mlYrs });
+      var _mlGbYrs = _haveScn.yearsToGrow || Math.max(0, _haveScn.activationAge - _haveScn.currentAge);
+      var _mlGbEnd = (_d && _d.computeAt) ? _d.computeAt(_haveScn, _mlGbYrs) : d.have.ptsEnd;
+      var _ml = (_d && _d.S2Copy && _d.S2Copy.buildMultiLever && _d.computeAt) ? _d.S2Copy.buildMultiLever({
+        retire: _wantScn.activationAge, age: _wantScn.currentAge, yrs: _mlYrs,
+        paradigm: _mkt ? _mkt.value : 'average',
+        gb: _haveScn,
+        ds: { age: _wantScn.currentAge, retire: _wantScn.activationAge, planThroughAge: _wantScn.planThroughAge, port: _wantScn.portfolioVol, datum: _wantScn.targetSpend, contrib: _wantScn.annualContrib },
+        s: _mlS,
+        gbEnd: _mlGbEnd, ptsEnd: _d.computeAt(_mlS, _mlYrs),
+        gbPinnedState: {
+          retire: _haveScn.activationAge, age: _haveScn.currentAge, port: _haveScn.portfolioVol,
+          contrib: _haveScn.annualContrib, datum: _haveScn.targetSpend, planThroughAge: _haveScn.planThroughAge || 93,
+          pinnedParadigm: _haveScn.baselineRate === 1.040 ? 'Optimistic' : _haveScn.baselineRate === 1.015 ? 'Stress' : 'Historical',
+          pinnedInflStr: _haveScn.isNominal ? 'Nominal' : 'Real',
+          pinnedTax: Math.round((1.0 - (_haveScn.taxMult || 1.0)) * 100),
+          stateObj: (_d && _d.buildShapeState) ? _d.buildShapeState(_mlGbEnd) : d.have.stateObj
+        }
+      }) : null;
+      if (_ml) {
+        if (means) means.innerHTML = _ml.phys;
+        if (inspect) inspect.innerHTML = _ml.act;
+        if (lever) lever.textContent = _ml.domLever || '—';
+        if (chRow) { if (_ml.changeHtml) { chRow.className = 'pin-changes-row'; chRow.style.display = ''; chRow.innerHTML = _ml.changeHtml; } else { chRow.style.display = 'none'; chRow.textContent = ''; } }
+      }
     }
   }
 
