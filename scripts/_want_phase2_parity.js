@@ -19,6 +19,7 @@
  */
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const { chromium } = require('playwright');
+const SLF = require('./_singlelever_baseline.fixture.js').buildSingleLeverExtrasORIG;  // frozen Sketch single-lever extras
 const ROOT = path.resolve(__dirname, '..');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.woff2': 'font/woff2' };
 const server = http.createServer((req, res) => {
@@ -152,6 +153,39 @@ async function enterWant(page) {
   check('#1/#5: rendered means == shared builder phys', mlv && mlv.exp && mlv.means === mlv.exp.phys, mlv && mlv.exp && ('lens ' + (mlv.means || '').length + '/' + mlv.exp.phys.length));
   check('#1/#5: rendered inspect == shared builder act', mlv && mlv.exp && mlv.inspect === mlv.exp.act);
   check('#1/#5: rendered lever-attr == shared builder domLever', mlv && mlv.exp && mlv.lever === (mlv.exp.domLever || '—'), mlv && mlv.exp && (mlv.lever + ' | ' + mlv.exp.domLever));
+
+  // ── S2 COPY POLISH fast-follow ──
+  // Item 1 — empty state: reset to Have -> attribution must read Sketch's exact string (not "—").
+  await page.click('#d2s-btn-reset-design'); await page.waitForTimeout(300);
+  const emptyLever = await page.evaluate(() => ((document.getElementById('d2s-pin-lever-attribution') || {}).textContent || '').trim());
+  check('polish#1: empty-state attribution = Sketch string', emptyLever === 'No movement yet — adjust a slider to see lever attribution', emptyLever);
+
+  // Item 2 — single-lever: move ONE lever (age) -> attribution carries the delta + changes-row shows
+  // the arrow transition, byte-identical to the frozen Sketch single-lever extras.
+  await setSlider(page, 'd2-slider-age', 45); await page.waitForTimeout(150);
+  const sl = await page.evaluate(() => {
+    const lever = ((document.getElementById('d2s-pin-lever-attribution') || {}).textContent || '');
+    const chEl = document.getElementById('d2s-pin-changes-row');
+    const cs = chEl ? getComputedStyle(chEl) : {};
+    const st = window._wantFaceState;
+    return { lever, chText: chEl ? chEl.textContent : '', chHtml: chEl ? chEl.innerHTML : '', chDisplay: cs.display, chWrap: cs.flexWrap,
+             have: st && st.have, want: st && st.want, copy: st && st.diff && st.diff.copy };
+  });
+  let exp = null;
+  if (sl.copy && sl.want && sl.have) {
+    const w = sl.want, h = sl.have;
+    exp = SLF({ wbCase: sl.copy, gb: h,
+      ds: { age: w.currentAge, retire: w.activationAge, planThroughAge: w.planThroughAge, port: w.portfolioVol, datum: w.targetSpend, contrib: w.annualContrib },
+      retire: w.activationAge, age: w.currentAge, ptsEnd: { datumSpend: Math.round(w.targetSpend) },
+      gbPinnedState: { planThroughAge: h.planThroughAge || 93 } });
+  }
+  check('polish#2: single-lever is the age case', !!(sl.copy && sl.copy.isSingleLever && sl.copy.lever === 'age'), sl.copy && sl.copy.lever);
+  check('polish#2: attribution carries the delta (+N yr)', /\(\+?\d+\s*yr,\s*100% of range\)/.test(sl.lever), sl.lever);
+  check('polish#2: attribution == frozen Sketch domLever', !!(exp && sl.lever === exp.domLever), exp && (sl.lever + ' | ' + exp.domLever));
+  check('polish#2: changes-row shows the arrow transition', /→/.test(sl.chText) && sl.chText.length > 0, sl.chText);
+  check('polish#2: changes-row == frozen Sketch (leverDelta/changeHtml)', !!(exp && (exp.changeHtml ? sl.chHtml === exp.changeHtml : sl.chText === exp.leverDelta)), exp && (sl.chText + ' | ' + (exp.changeHtml || exp.leverDelta)));
+  // Item 3 — changes-row CSS: flex + wrap (was a crushed block).
+  check('polish#3: changes-row is flex+wrap (breathes)', sl.chDisplay === 'flex' && sl.chWrap === 'wrap', sl.chDisplay + '/' + sl.chWrap);
   await ctx.close();
 
   // ── Context B: carried saved design injected — #6-saved ──
