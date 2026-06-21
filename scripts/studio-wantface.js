@@ -258,6 +258,20 @@
     var dl = $('d2-datum-line'); if (dl) dl.style.stroke = col;
     var dn = $('d2-node-datum'); if (dn) dn.setAttribute('fill', col);
     var dlb = $('d2-lbl-datum'); if (dlb) dlb.style.fill = col;
+    // #7: Y-axis gridlines + labels + "ANNUAL SPEND" title — ported from sketch.html L6555-6565.
+    // Tick VALUES come from the SHARED DatumShape.gridLabels (hub-first single-source, Lesson 48);
+    // pixels map onto Studio's FRONT band (yPxTop..yPxBot over xStart..xEnd).
+    var _grid = $('d2-grid'), _dse = DS();
+    if (_grid && _dse && typeof _dse.gridLabels === 'function') {
+      var _gl = _dse.gridLabels(d.sharedY.yLo, d.sharedY.yHi);
+      var _gHTML = '<text x="80" y="40" text-anchor="end" class="axis-title" style="fill:rgba(255,255,255,0.8);">ANNUAL SPEND</text>';
+      for (var _gi = 0; _gi <= 4; _gi++) {
+        var _gy = FRONT.yPxTop + _gi * (FRONT.yPxBot - FRONT.yPxTop) / 4;
+        _gHTML += '<line x1="' + (FRONT.xStart - 2) + '" y1="' + _gy + '" x2="' + FRONT.xEnd + '" y2="' + _gy + '" class="grid-tick"/>';
+        _gHTML += '<text x="' + (FRONT.xStart - 8) + '" y="' + (_gy + 4) + '" text-anchor="end" class="grid-label">' + _dse.fmtYLabel(_gl[_gi]) + '</text>';
+      }
+      _grid.innerHTML = _gHTML;
+    }
     // axis labels (Want timeline)
     sa('d2-xaxis-start', 'textContent', 'AGE ' + _wantScn.currentAge);
     var xe = $('d2-xaxis-end'); if (xe) xe.textContent = _wantScn.yearsToGrow > 0 ? 'RETIRE: ' + _wantScn.activationAge : 'TODAY';
@@ -474,6 +488,92 @@
     svg.addEventListener('pointercancel', end);
   }
 
+  /* #2: canvas endpoint scrubber / hover tooltips — ported from sketch.html L9088-9196
+   * (d2ShowTooltip / d2HideScrubber / d2UpdateScrubber + pointermove/leave). TWO Studio
+   * adaptations vs Sketch: (1) Sketch restores nodes from _d2LastEndpointCY; Studio has no
+   * such global, so restore from _lastDiff.want.ptsEnd via _spY. (2) Sketch gates on
+   * .shape-armed; Studio gates on the Want face being active (shape-flip-inner.flipped).
+   * Plus: suppress while a handle/SP drag is in flight (_dragActive — the Studio analog of
+   * Sketch's _d2SPHovering). formatTTHover ported verbatim (sketch L4910-4914). */
+  function _wireScrubber() {
+    var svg = $('d2-canvas'); if (!svg || svg._wantScrubBound) return; svg._wantScrubBound = true;
+    var grp = $('d2-scrubber-group'), line = $('d2-scrubber-line');
+    var nC = $('d2-node-ceil'), nF = $('d2-node-floor'), nD = $('d2-node-datum');
+    var lC = $('d2-lbl-ceil'), lF = $('d2-lbl-floor'), lD = $('d2-lbl-datum');
+    function svgPt(e) { try { var p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; var m = p.matrixTransform(svg.getScreenCTM().inverse()); return { x: m.x, y: m.y }; } catch (_e) { var r = svg.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * 840, y: ((e.clientY - r.top) / r.height) * 480 }; } }
+    function wantActive() { var i = inner(); return !!(i && i.classList.contains('flipped')); }
+    function fmtTTHover(fv, spend) {
+      var fvStr = fv >= 1 ? fv.toFixed(2) + 'M' : Math.round(fv * 1000) + 'k';
+      var spStr = spend >= 1000 ? (spend / 1000).toFixed(2).replace(/\.00$/, '') + 'M' : Math.round(spend).toLocaleString('en-US') + 'k';
+      return '| $' + fvStr + ' / $' + spStr + ' yr';
+    }
+    function showTip(id, age, fv, spend, svgX, svgY) {
+      var g = $('d2-tt-g-' + id); if (!g) return;
+      var ageEl = $('d2-tt-age-' + id); if (ageEl) ageEl.textContent = age;
+      var datEl = $('d2-tt-data-' + id), txt;
+      if (id === 'datum') {
+        var capM = fv || 0;
+        var spS = spend >= 1000 ? '$' + (spend / 1000).toFixed(2) + 'M/yr' : '$' + Math.round(spend) + 'k/yr';
+        var capS = capM >= 1 ? '$' + capM.toFixed(2) + 'M' : '$' + Math.round(capM * 1000) + 'k';
+        txt = '| ' + capS + ' | ' + spS;
+      } else { txt = fmtTTHover(fv, spend); }
+      if (datEl) datEl.textContent = txt;
+      g.setAttribute('transform', 'translate(' + svgX + ',' + svgY + ')');
+      var rect = g.querySelector('rect'), texts = g.querySelectorAll('text');
+      if (svgX > 450) { if (rect) rect.setAttribute('x', -295); texts.forEach(function (t) { t.setAttribute('x', -285); }); }
+      else { if (rect) rect.setAttribute('x', 15); texts.forEach(function (t) { t.setAttribute('x', 25); }); }
+    }
+    function hideScrubber() {
+      if (!grp) return;
+      var armed = wantActive();
+      if (lC) lC.style.opacity = armed ? '1' : '0';
+      if (lF) lF.style.opacity = armed ? '1' : '0';
+      if (lD) lD.style.opacity = armed ? '1' : '0';
+      if (_lastDiff) {                                  // adaptation 1: restore from _lastDiff
+        var spY = _spY(_lastDiff.sharedY), we = _lastDiff.want.ptsEnd, xE = FRONT.xEnd;
+        if (nC) { nC.setAttribute('cx', xE); nC.setAttribute('cy', spY(we.ceilSpend)); }
+        if (nF) { nF.setAttribute('cx', xE); nF.setAttribute('cy', spY(we.floorSpend)); }
+        if (nD) { nD.setAttribute('cx', xE); nD.setAttribute('cy', spY(we.datumSpend)); }
+      }
+      grp.style.opacity = '0';
+    }
+    function updateScrubber(svgX) {
+      if (!wantActive()) {                              // adaptation 2: gate on want face active
+        if (grp) grp.style.opacity = '0';
+        ['d2-tt-g-ceil', 'd2-tt-g-floor', 'd2-tt-g-datum'].forEach(function (id) { var el = $(id); if (el) el.style.opacity = '0'; });
+        if (lC) lC.style.opacity = '0'; if (lF) lF.style.opacity = '0'; if (lD) lD.style.opacity = '0';
+        return;
+      }
+      if (!_lastDiff || !_wantScn) return;
+      if (_dragActive) return;                          // suppress mid-drag (Studio analog of _d2SPHovering)
+      var geo = _wantGeo || _wantScn, yrs = geo.yearsToGrow;
+      if (!yrs || yrs === 0) return;
+      if (lC) lC.style.opacity = '0'; if (lF) lF.style.opacity = '0'; if (lD) lD.style.opacity = '0';
+      var spY = _spY(_lastDiff.sharedY);
+      var offsetRatio = (svgX - FRONT.xStart) / (FRONT.xEnd - FRONT.xStart);
+      var offsetYears = offsetRatio * yrs;
+      var hoverAge = Math.round(geo.currentAge + offsetYears);
+      var d = DS(), pts = d.computeAt(geo, Math.max(0, offsetYears));
+      if (offsetYears >= yrs - 0.1) { var we = _lastDiff.want.ptsEnd; pts = { fvUp: we.fvUp, fvCon: we.fvCon, ceilSpend: we.ceilSpend, floorSpend: we.floorSpend, datumSpend: we.datumSpend }; }
+      var yC = spY(pts.ceilSpend), yF = spY(pts.floorSpend), yD = spY(pts.datumSpend);
+      if (nC) { nC.setAttribute('cx', svgX); nC.setAttribute('cy', yC); }
+      if (nF) { nF.setAttribute('cx', svgX); nF.setAttribute('cy', yF); }
+      if (nD) { nD.setAttribute('cx', svgX); nD.setAttribute('cy', yD); }
+      if (line) { line.setAttribute('x1', svgX); line.setAttribute('x2', svgX); }
+      grp.style.opacity = '1';
+      showTip('ceil', hoverAge, pts.fvUp, pts.ceilSpend, svgX, yC);
+      showTip('floor', hoverAge, pts.fvCon, pts.floorSpend, svgX, yF);
+      showTip('datum', hoverAge, pts.datumSpend / 0.04 / 1000, pts.datumSpend, svgX, yD);
+    }
+    svg.addEventListener('pointermove', function (e) {
+      if (!wantActive() || _dragActive) return;
+      var p = svgPt(e);
+      if (p.x >= 110 && p.x <= 660 && p.y >= -20 && p.y <= 500) updateScrubber(Math.max(FRONT.xStart, Math.min(p.x, FRONT.xEnd)));
+      else hideScrubber();
+    });
+    svg.addEventListener('pointerleave', hideScrubber);
+  }
+
   /* ACCEPT off the rendered d2-accept-btn -> apply the solved lever to the Want scenario, clear the
    * pull, re-render. (Step-3: instant apply; the accept fly-to animation is Step-4.) */
   function _wireAccept() {
@@ -550,6 +650,7 @@
       r.addEventListener('change', function () { _resetOverrides(); renderWantFace(1); _triggerWantSweep(r.value); });
     });
     _wireHandleDrags();
+    _wireScrubber();
     _wireAccept();
     _wireReset();
   }

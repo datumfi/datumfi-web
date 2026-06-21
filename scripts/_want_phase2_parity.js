@@ -70,6 +70,19 @@ async function enterWant(page) {
   check('#10: old "CURRENT SHAPE" label gone', !hdr.oldCur);
   check('#10: old "TEST SHAPE" label gone', !hdr.oldTest);
 
+  // #7 — Y-axis grid: 5 ticks + 5 $-labels + "ANNUAL SPEND" title injected into #d2-grid.
+  const grid = await page.evaluate(() => {
+    const g = document.getElementById('d2-grid'); if (!g) return null;
+    const ticks = g.querySelectorAll('line.grid-tick').length;
+    const labels = Array.prototype.map.call(g.querySelectorAll('text.grid-label'), (t) => (t.textContent || '').trim());
+    const title = Array.prototype.some.call(g.querySelectorAll('text'), (t) => /ANNUAL SPEND/.test(t.textContent || ''));
+    return { ticks, labelCount: labels.length, money: labels.filter((s) => /^\$/.test(s)).length, title };
+  });
+  check('#7: 5 Y-axis gridlines drawn', grid && grid.ticks === 5, grid && grid.ticks);
+  check('#7: 5 Y-axis labels drawn', grid && grid.labelCount === 5, grid && grid.labelCount);
+  check('#7: Y-axis labels are $-formatted spend', grid && grid.money === 5, grid && JSON.stringify(grid));
+  check('#7: "ANNUAL SPEND" axis title present', grid && grid.title);
+
   // #4 — value-snap cross-constraints on the Want sliders.
   await setSlider(page, 'd2-slider-age', 40);
   await setSlider(page, 'd2-slider-activation', 70);
@@ -88,6 +101,30 @@ async function enterWant(page) {
   await page.click('#d2s-btn-reset-design');
   await page.waitForTimeout(400);
   check('#6: fresh reset reverts to Have (CA=40)', (await ageOf(page, 'd2-slider-age')) === 40, 'CA=' + (await ageOf(page, 'd2-slider-age')));
+
+  // #2 — canvas endpoint scrubber activates on hover (was dead: drag-only handler).
+  // Drive by mapping a target svg-x through the canvas getScreenCTM, so we hover exact chart
+  // positions regardless of fit-scale/overflow (mirror probe confirmed CTM is accurate + unflipped).
+  const hoverSvgX = async (sx) => {
+    const cl = await page.evaluate((x) => { const svg = document.getElementById('d2-canvas'); const m = svg.getScreenCTM(); const pt = svg.createSVGPoint(); pt.x = x; pt.y = 240; const sp = pt.matrixTransform(m); return { x: sp.x, y: sp.y }; }, sx);
+    await page.mouse.move(cl.x, cl.y); await page.waitForTimeout(60);
+    await page.mouse.move(cl.x + 0.5, cl.y); await page.waitForTimeout(90);  // nudge to guarantee a pointermove
+    return page.evaluate(() => ({ op: parseFloat(getComputedStyle(document.getElementById('d2-scrubber-group')).opacity),
+      age: parseInt(((document.getElementById('d2-tt-age-ceil') || {}).textContent || '0'), 10),
+      data: ((document.getElementById('d2-tt-data-ceil') || {}).textContent || '').trim(),
+      datum: ((document.getElementById('d2-tt-data-datum') || {}).textContent || '').trim() }));
+  };
+  const mid = await hoverSvgX(385);
+  check('#2: scrubber reveals on canvas hover', mid.op > 0.5, 'opacity=' + mid.op);
+  check('#2: ceil tooltip age populated', Number.isFinite(mid.age) && mid.age > 0, mid.age);
+  check('#2: ceil tooltip data is $-formatted', /\$/.test(mid.data), mid.data);
+  check('#2: datum tooltip data populated', /\$/.test(mid.datum), mid.datum);
+  const left = await hoverSvgX(170); const right = await hoverSvgX(600);
+  check('#2: hover age increases left->right (X not mirrored on back face)', left.age < right.age, 'ageL=' + left.age + ' ageR=' + right.age);
+  // pointerleave hides the scrubber.
+  await page.mouse.move(10, 10); await page.waitForTimeout(120);
+  const gone = await page.evaluate(() => parseFloat(getComputedStyle(document.getElementById('d2-scrubber-group')).opacity));
+  check('#2: scrubber hides on pointerleave', gone < 0.5, 'opacity=' + gone);
   await ctx.close();
 
   // ── Context B: carried saved design injected — #6-saved ──
