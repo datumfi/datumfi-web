@@ -513,7 +513,15 @@
   function _wireReset() {
     var rb = $('d2s-btn-reset-design'); if (!rb || rb._wantResetBound) return; rb._wantResetBound = true;
     rb.addEventListener('click', function () {
-      if (_haveScn) { _resetOverrides(); _seedSliders(_haveScn); _updateLabels(); renderWantFace(1); }
+      // #6: honor a SAVED carried sketch — mirror Sketch's saved-vs-fresh branch
+      // (sketch.html L7530-7537). Saved -> restore the carried S2 design (scenario + accepted
+      // boundary pulls); fresh/unsaved -> revert to the discovered Have baseline.
+      var cd = window._studioCarriedDesign;
+      if (cd && cd.present && cd.scenario && cd.scenario.age > 0) {
+        _seedDesigned(cd); renderWantFace(1);
+      } else if (_haveScn) {
+        _resetOverrides(); _seedSliders(_haveScn); _updateLabels(); renderWantFace(1);
+      }
       var toast = $('d2s-confirm-toast');
       if (toast) { toast.style.opacity = '1'; setTimeout(function () { toast.style.opacity = '0'; }, 2500); }
     });
@@ -523,7 +531,20 @@
     if (_wired) return; _wired = true;
     ['d2-slider-age', 'd2-slider-activation', 'd2-slider-plan-through', 'd2-slider-portfolio', 'd2-slider-datum', 'd2-slider-contrib'].forEach(function (id) {
       var el = $(id); if (!el) return;
-      el.addEventListener('input', function () { delete el.dataset.exactVal; _resetOverrides(); _updateLabels(); renderWantFace(1); });
+      el.addEventListener('input', function () {
+        // #4: value-snap cross-constraints — ported VERBATIM from sketch.html L8946-8961 so
+        // the Want thumbs cannot overrun retirement (CA<RA) or the plan floor (PTA>=RA+20).
+        var _a = $('d2-slider-age'), _ac = $('d2-slider-activation'), _pl = $('d2-slider-plan-through');
+        if (id === 'd2-slider-age') {
+          if (_ac && parseInt(_a.value, 10) >= parseInt(_ac.value, 10)) _a.value = parseInt(_ac.value, 10) - 1;
+        } else if (id === 'd2-slider-activation') {
+          if (_a && parseInt(_ac.value, 10) <= parseInt(_a.value, 10)) _ac.value = parseInt(_a.value, 10) + 1;
+          if (_pl) { var _mP = Math.max(75, parseInt(_ac.value, 10) + 20); if (parseInt(_pl.value, 10) < _mP) _pl.value = _mP; }
+        } else if (id === 'd2-slider-plan-through') {
+          if (_ac) { var _minP = Math.max(75, parseInt(_ac.value, 10) + 20); if (parseInt(_pl.value, 10) < _minP) _pl.value = _minP; }
+        }
+        delete el.dataset.exactVal; _resetOverrides(); _updateLabels(); renderWantFace(1);
+      });
     });
     Array.prototype.forEach.call(document.querySelectorAll('input[name="d2-market"]'), function (r) {
       r.addEventListener('change', function () { _resetOverrides(); renderWantFace(1); _triggerWantSweep(r.value); });
