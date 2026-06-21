@@ -816,6 +816,7 @@
       floorRatio = floorRatio || 0;
       datumRatio = datumRatio || 0;
       var _blue  = 'var(--blue-safe)';
+      var _neu   = 'rgba(255,255,255,0.45)';
 
       // ── Ceiling bar ──
       var _cFill   = document.getElementById('d2-tension-ceil-fill');
@@ -824,9 +825,10 @@
       var _cAbs    = Math.abs(ceilRatio);
       var _cPct2   = Math.round(_cAbs * 100);
       var _cRelief = ceilRatio < 0;
+      var _cBal    = _cPct2 === 0;
       if (_cFill) { _cFill.style.width = _cPct2 + '%'; _cFill.style.background = _cRelief ? _blue : 'var(--gold)'; }
-      if (_cPct)  { _cPct.textContent = _cPct2 + '%'; _cPct.style.color = _cRelief ? _blue : (_cAbs > 0.6 ? '#ffffff' : 'var(--gold)'); }
-      if (_cLbl)  { var _cT = _cLbl.querySelector('.d2-tbar-label-txt'); if (_cT) _cT.textContent = _cRelief ? 'CEILING RELIEF' : 'CEILING TENSION'; _cLbl.style.color = _cRelief ? _blue : 'var(--gold)'; var _cTip = document.getElementById('d2-ceil-bar-tip'); if (_cTip) _cTip.textContent = _cRelief ? "This move lifts your structural Ceiling — the best your plan can support if markets cooperate. At 30% you've added real upside capacity. At 60% you've strengthened it substantially." : "This move lowers your structural Ceiling — the best your plan can support if markets cooperate. At 30% you're trading away some upside. At 60% the strong-market path now tops out much lower."; }
+      if (_cPct)  { _cPct.textContent = _cBal ? '—' : _cPct2 + '%'; _cPct.style.color = _cBal ? _neu : (_cRelief ? _blue : (_cAbs > 0.6 ? '#ffffff' : 'var(--gold)')); }
+      if (_cLbl)  { var _cT = _cLbl.querySelector('.d2-tbar-label-txt'); if (_cT) _cT.textContent = _cBal ? 'BALANCED' : (_cRelief ? 'CEILING RELIEF' : 'CEILING TENSION'); _cLbl.style.color = _cBal ? _neu : (_cRelief ? _blue : 'var(--gold)'); var _cTip = document.getElementById('d2-ceil-bar-tip'); if (_cTip) _cTip.textContent = _cRelief ? "This move lifts your structural Ceiling — the best your plan can support if markets cooperate. At 30% you've added real upside capacity. At 60% you've strengthened it substantially." : "This move lowers your structural Ceiling — the best your plan can support if markets cooperate. At 30% you're trading away some upside. At 60% the strong-market path now tops out much lower."; }
 
       // Ceiling line glow — only in tension mode (ceilRatio > 0)
       var overlay  = document.getElementById('d2-tension-overlay');
@@ -859,9 +861,10 @@
       var _fAbs    = Math.abs(floorRatio);
       var _fPct2   = Math.round(_fAbs * 100);
       var _fRelief = floorRatio < 0;
+      var _fBal    = _fPct2 === 0;
       if (_fFill) { _fFill.style.width = _fPct2 + '%'; _fFill.style.background = _fRelief ? _blue : 'var(--danger-red)'; }
-      if (_fPct)  { _fPct.textContent = _fPct2 + '%'; _fPct.style.color = _fRelief ? _blue : (_fAbs > 0.6 ? '#ffffff' : 'var(--danger-red)'); }
-      if (_fLbl)  { var _fT = _fLbl.querySelector('.d2-tbar-label-txt'); if (_fT) _fT.textContent = _fRelief ? 'FLOOR RELIEF' : 'FLOOR TENSION'; _fLbl.style.color = _fRelief ? _blue : 'var(--danger-red)'; var _fTip = document.getElementById('d2-floor-bar-tip'); if (_fTip) _fTip.textContent = _fRelief ? "This move raises your survival Floor — what the conservative path supports even if markets disappoint. At 30% you've added resilience headroom. At 60% you've strengthened your worst case substantially." : "This move lowers your survival Floor — what the conservative path supports even if markets disappoint. At 30% you're thinning your safety margin. At 60% your worst-case resilience has dropped sharply."; }
+      if (_fPct)  { _fPct.textContent = _fBal ? '—' : _fPct2 + '%'; _fPct.style.color = _fBal ? _neu : (_fRelief ? _blue : (_fAbs > 0.6 ? '#ffffff' : 'var(--danger-red)')); }
+      if (_fLbl)  { var _fT = _fLbl.querySelector('.d2-tbar-label-txt'); if (_fT) _fT.textContent = _fBal ? 'BALANCED' : (_fRelief ? 'FLOOR RELIEF' : 'FLOOR TENSION'); _fLbl.style.color = _fBal ? _neu : (_fRelief ? _blue : 'var(--danger-red)'); var _fTip = document.getElementById('d2-floor-bar-tip'); if (_fTip) _fTip.textContent = _fRelief ? "This move raises your survival Floor — what the conservative path supports even if markets disappoint. At 30% you've added resilience headroom. At 60% you've strengthened your worst case substantially." : "This move lowers your survival Floor — what the conservative path supports even if markets disappoint. At 30% you're thinning your safety margin. At 60% your worst-case resilience has dropped sharply."; }
 
       // ── Datum bar ──
       var _dFill   = document.getElementById('d2-tension-datum-fill');
@@ -870,9 +873,10 @@
       var _dAbs    = Math.abs(datumRatio);
       var _dPct2   = Math.round(_dAbs * 100);
       var _dRelief = datumRatio < 0;
+      var _dBal    = _dPct2 === 0;
       if (_dFill) { _dFill.style.width = _dPct2 + '%'; _dFill.style.background = _dRelief ? _blue : 'var(--teal-mid)'; }
-      if (_dPct)  { _dPct.textContent = _dPct2 + '%'; _dPct.style.color = _dRelief ? _blue : (_dAbs > 0.6 ? '#ffffff' : 'var(--teal-mid)'); }
-      if (_dLbl)  { var _dT = _dLbl.querySelector('.d2-tbar-label-txt'); if (_dT) _dT.textContent = _dRelief ? 'DATUM RELIEF' : 'DATUM TENSION'; _dLbl.style.color = _dRelief ? _blue : 'var(--teal-mid)'; var _dTip = document.getElementById('d2-datum-bar-tip'); if (_dTip) _dTip.textContent = _dRelief ? "You're pulling your Datum lower than your discovered position. At 30% you're trading some lifestyle for more margin. At 60% you're at or below the Floor — building real surplus the plan doesn't need to defend." : "You're pulling your Datum higher than your discovered position. At 30% the upper paths still carry it. At 60% you're approaching or past the Ceiling — the plan needs stronger inputs to support this lifestyle across modeled outcomes."; }
+      if (_dPct)  { _dPct.textContent = _dBal ? '—' : _dPct2 + '%'; _dPct.style.color = _dBal ? _neu : (_dRelief ? _blue : (_dAbs > 0.6 ? '#ffffff' : 'var(--teal-mid)')); }
+      if (_dLbl)  { var _dT = _dLbl.querySelector('.d2-tbar-label-txt'); if (_dT) _dT.textContent = _dBal ? 'BALANCED' : (_dRelief ? 'DATUM RELIEF' : 'DATUM TENSION'); _dLbl.style.color = _dBal ? _neu : (_dRelief ? _blue : 'var(--teal-mid)'); var _dTip = document.getElementById('d2-datum-bar-tip'); if (_dTip) _dTip.textContent = _dRelief ? "You're pulling your Datum lower than your discovered position. At 30% you're trading some lifestyle for more margin. At 60% you're at or below the Floor — building real surplus the plan doesn't need to defend." : "You're pulling your Datum higher than your discovered position. At 30% the upper paths still carry it. At 60% you're approaching or past the Ceiling — the plan needs stronger inputs to support this lifestyle across modeled outcomes."; }
 
       // ── Explainer copy (highest absolute tension/relief wins) ──
       var _exp = document.getElementById('tension-explain');

@@ -87,5 +87,75 @@ const sk = fs.readFileSync('sketch.html', 'utf8');
 if (/DatumShape\.buildTension\s*\(/.test(sk)) ok('sketch.html calls DatumShape.buildTension'); else fail('sketch.html does NOT route through DatumShape.buildTension');
 if (!/_ceilTension\s*=\s*Math\.min/.test(sk) && !/_floorTension\s*=\s*Math\.min/.test(sk)) ok('sketch.html no longer hand-rolls _ceil/_floorTension'); else fail('sketch.html still hand-rolls tension formula (drift risk)');
 
+console.log('\n===== (e) BALANCED tolerance band — tied to display rounding (_xPct2===0), identical on all 3 bars =====');
+// Extract each updateTensionVisuals body and EXECUTE it against a DOM stub across a battery of
+// ratio triples. A bar is BALANCED iff it would otherwise round to "0%" (|ratio| < 0.005); the
+// instant it rounds to >=1% it must go live TENSION/RELIEF. Same threshold on ceil/floor/datum.
+function fnBody(src) {
+  const j = src.indexOf('function updateTensionVisuals');
+  let k = src.indexOf('{', j), depth = 0, end = -1, inStr = null;
+  for (let p = k; p < src.length; p++) {
+    const c = src[p], prev = src[p - 1];
+    if (inStr) { if (c === inStr && prev !== '\\') inStr = null; continue; }
+    if (c === '"' || c === "'") { inStr = c; continue; }
+    if (c === '{') depth++; else if (c === '}') { if (--depth === 0) { end = p; break; } }
+  }
+  return src.slice(j, end + 1);
+}
+function fakeDoc() {
+  const reg = {};
+  const mk = () => ({ style: {}, textContent: '', _kids: {}, setAttribute() {}, getAttribute() { return null; },
+    querySelector(sel) { return this._kids[sel] || (this._kids[sel] = mk()); } });
+  return { getElementById(id) { return reg[id] || (reg[id] = mk()); } };
+}
+function renderAt(src, c, f, d) {
+  const doc = fakeDoc();
+  const fn = new Function('document', fnBody(src) + '\nreturn updateTensionVisuals;')(doc);
+  fn(c, f, d, d > c);
+  const read = (pctId, lblId) => ({ pct: doc.getElementById(pctId).textContent,
+    lbl: doc.getElementById(lblId).querySelector('.d2-tbar-label-txt').textContent });
+  return { ceil: read('d2-tension-ceil-pct', 'd2-tension-ceil-lbl'),
+    floor: read('d2-tension-floor-pct', 'd2-tension-floor-lbl'),
+    datum: read('d2-tension-datum-pct', 'd2-tension-datum-lbl') };
+}
+function expectBar(label, who, bar, mode) {
+  let g = true;
+  if (mode === 'BAL') {
+    if (bar.lbl !== 'BALANCED') { g = false; fail('[' + label + '] ' + who + ' lbl="' + bar.lbl + '" (want BALANCED)'); }
+    if (bar.pct !== '—')        { g = false; fail('[' + label + '] ' + who + ' pct="' + bar.pct + '" (want —)'); }
+  } else {
+    if (!/TENSION|RELIEF/.test(bar.lbl)) { g = false; fail('[' + label + '] ' + who + ' lbl="' + bar.lbl + '" (want live TENSION/RELIEF)'); }
+    if (!/^\d+%$/.test(bar.pct))         { g = false; fail('[' + label + '] ' + who + ' pct="' + bar.pct + '" (want N%)'); }
+    if (bar.lbl === 'BALANCED' || bar.pct === '—') { g = false; fail('[' + label + '] ' + who + ' stuck BALANCED but should be live'); }
+  }
+  return g;
+}
+// label, [ceil,floor,datum ratios], [ceilMode, floorMode, datumMode]
+const CASES = [
+  ['rest 0/0/0',                                  [0, 0, 0],          ['BAL', 'BAL', 'BAL']],
+  ['sub-0.5% all (0.003) -> rounds to 0%',        [0.003, 0.003, 0.003], ['BAL', 'BAL', 'BAL']],
+  ['RAGGED: ceil/floor 0.003, datum EXACT 0 (the regression -> all BALANCED together)', [0.003, 0.003, 0], ['BAL', 'BAL', 'BAL']],
+  ['live 2% all (rounds to 2%)',                  [0.02, 0.02, 0.02], ['LIVE', 'LIVE', 'LIVE']],
+  ['ceil tension / floor RELIEF / datum +50%',    [0.02, -0.02, 0.5], ['LIVE', 'LIVE', 'LIVE']],
+  ['datum leaves band only (0/0/0.5) — stretch alive', [0, 0, 0.5],   ['BAL', 'BAL', 'LIVE']]
+];
+const SK = fs.readFileSync('sketch.html', 'utf8');
+const ST = fs.readFileSync('scripts/studio-wantface.js', 'utf8');
+[['sketch.html', SK], ['studio-wantface.js', ST]].forEach(([file, src]) => {
+  let allGood = true;
+  CASES.forEach(([label, [c, f, d], modes]) => {
+    const r = renderAt(src, c, f, d);
+    allGood = expectBar(file + ' :: ' + label, 'ceil',  r.ceil,  modes[0]) && allGood;
+    allGood = expectBar(file + ' :: ' + label, 'floor', r.floor, modes[1]) && allGood;
+    allGood = expectBar(file + ' :: ' + label, 'datum', r.datum, modes[2]) && allGood;
+  });
+  if (allGood) ok(file + ': all ' + CASES.length + ' band cases correct (rest · sub-band · ragged · live · mixed-sign · datum-only)');
+});
+
+console.log('\n===== (f) BYTE-EQUALITY LOCK: updateTensionVisuals identical across both surfaces =====');
+const skB = fnBody(SK).replace(/\r/g, ''), stB = fnBody(ST).replace(/\r/g, '');
+if (skB === stB) ok('byte-identical across sketch.html & studio-wantface.js (' + skB.length + ' bytes)');
+else fail('DRIFTED: sketch ' + skB.length + ' vs studio ' + stB.length + ' bytes');
+
 console.log('\n===== VERDICT: ' + (pass ? 'PASS' : 'FAIL') + ' =====');
 process.exit(pass ? 0 : 1);
