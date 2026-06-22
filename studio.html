@@ -86,6 +86,11 @@
   .studio-layout.view-s2 .drafting-panel > .studio-section.s2-spotlight { display: block; }
   .studio-layout.view-s2 .drafting-panel > .swf-col-head { display: none; }
 
+  /* §20 account-gate (Step 2) — hide the Estate-mode toggle while in S2 with zero rooms
+     (refreshEstateGate adds .s2-estate-locked) so the user can't toggle to an empty-rooms
+     dead-end. Cleared the moment the first room is drafted, restoring free toggling per §22. */
+  .studio-layout.view-s2.s2-estate-locked #shape-mode-toggle { display: none; }
+
   /* Entry/exit affordance — exit shows only inside the task-view */
   .s2-exit-btn { display: none; }
   .studio-layout.view-s2 .s2-enter-btn { display: none; }
@@ -4315,11 +4320,20 @@
     window.addInstance = function(baseId) {
       const base = getBaseType(baseId);
       const newId = 'inst_' + Math.random().toString(36).substr(2, 9);
+      var wasEmpty = !(state.accounts && state.accounts.length);   // §22 one-shot 0->1 detect (before push)
       state.accounts.push({ id: newId, baseId: baseId, name: base.title, value: 0, inflow: 0, freq: 12, intRate: 0, term: null, exclude: false, notes: '', cola: 0, linkedAssetId: null, useRule55: false, isNew: true, isFriction: false, isPriority: false, holdings: [], trustType: 'Irrevocable', disbursement: 'Discretionary' });
       renderInputs();
       updateSVGs();
       updateAnalysisText();
       spaceDropdown.classList.remove('open');
+      if (window.refreshEstateGate) refreshEstateGate();   // §20: rooms now exist -> unlock the Estate toggle
+      // §22: first room drafted in S2 -> AUTO-SPIN the canvas from the carried Shape to Estate
+      // rooms (outer box). One-shot on the 0->1 transition; only when in S2 and currently showing
+      // the Shape (entry forced it / user hasn't already spun to Estate). Reuses toggleShapeMode.
+      var _l = document.getElementById('studio-layout');
+      if (wasEmpty && _l && _l.classList.contains('view-s2') && _l.classList.contains('mode-shape') && window.toggleShapeMode) {
+        window.toggleShapeMode();
+      }
     };
 
     window.removeInstance = function(id) {
@@ -4328,15 +4342,17 @@
       renderInputs();
       updateSVGs();
       updateAnalysisText();
+      if (window.refreshEstateGate) refreshEstateGate();   // §20: re-lock if rooms fell back to zero
     };
     
     window.removeInstanceSum = function(baseId) {
         let idsToRemove = state.accounts.filter(a => a.baseId === baseId).map(a => a.id);
         state.accounts = state.accounts.filter(a => a.baseId !== baseId);
         state.accounts.forEach(a => { if(idsToRemove.includes(a.linkedAssetId)) a.linkedAssetId = null; });
-        renderInputs(); 
-        updateSVGs(); 
-        updateAnalysisText(); 
+        renderInputs();
+        updateSVGs();
+        updateAnalysisText();
+        if (window.refreshEstateGate) refreshEstateGate();   // §20: re-lock if rooms fell back to zero
     }
 
     window.updateName = function(id, newName) {
@@ -5655,11 +5671,33 @@
       }
     };
 
-    /* view-s2 task-view toggle — Step 1. Pure class flip on #studio-layout; the
-       CSS filter does the spotlighting. Fully reversible, no state mutation.
-       Null-guarded per D14. */
-    window.enterS2View = function () { var l = document.getElementById('studio-layout'); if (l) l.classList.add('view-s2'); };
-    window.exitS2View  = function () { var l = document.getElementById('studio-layout'); if (l) l.classList.remove('view-s2'); };
+    /* view-s2 task-view toggle — Step 1/2. Pure class flip on #studio-layout; the CSS
+       filter spotlights 02+03. Null-guarded per D14. */
+    function _hasEstate() { return !!(window.state && window.state.accounts && window.state.accounts.length); }
+
+    /* §20 account-gate: in S2 with zero rooms, hide the Estate-mode toggle (via the
+       .s2-estate-locked class) so the user can't toggle to an empty-rooms dead-end. The
+       moment a room exists the lock clears and free toggling resumes (§22). */
+    function refreshEstateGate() {
+      var l = document.getElementById('studio-layout'); if (!l) return;
+      l.classList.toggle('s2-estate-locked', l.classList.contains('view-s2') && !_hasEstate());
+    }
+    window.refreshEstateGate = refreshEstateGate;
+
+    window.enterS2View = function () {
+      var l = document.getElementById('studio-layout'); if (!l) return;
+      l.classList.add('view-s2');
+      refreshEstateGate();
+      // §22: at zero accounts the carried Sketch shape IS the landing view — force Shape mode
+      // (Estate rooms would be the §20 empty dead-end). With rooms already drafted, leave the
+      // canvas untouched so a returning user keeps their view. Reuses toggleShapeMode (DRY).
+      if (!_hasEstate() && !l.classList.contains('mode-shape') && window.toggleShapeMode) window.toggleShapeMode();
+    };
+    window.exitS2View = function () {
+      var l = document.getElementById('studio-layout'); if (!l) return;
+      l.classList.remove('view-s2');
+      refreshEstateGate();   // clears the lock outside S2; S1 canvas default untouched
+    };
 
   </script>
 
