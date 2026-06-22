@@ -306,6 +306,12 @@
   .shape-info-icon:hover .shape-info-tooltip { display: block; animation: fade-in 0.2s ease; }
   .shape-info-icon:focus .shape-info-tooltip,
   .shape-info-icon:focus-within .shape-info-tooltip { display: block; }
+  /* Step 4 — room exclusion ⓘ: anchor the tooltip to the CARD (icon -> position:static, so the
+     280px box positions against .room-input-container, not the icon) and open it DOWN + to the
+     LEFT (right-aligned to the card edge). Length-independent: a long desc like the 529's can no
+     longer push the box off the panel into the canvas. Reuses .shape-info-icon hover/focus. */
+  .shape-info-icon.tip-room { position: static; }
+  .shape-info-icon.tip-room .shape-info-tooltip { left: auto; right: 0; transform: none; }
   .lbl-has-tip { position: relative; cursor: help; }
   .lbl-has-tip .shape-info-tooltip { left: 0; transform: none; }
   .lbl-has-tip:hover .shape-info-tooltip { display: block; animation: fade-in 0.2s ease; }
@@ -2955,6 +2961,25 @@
 
     const getBaseType = (id) => rDataList.find(r => r.id === id);
 
+    /* Step 4 — Shape-exclusion micro-copy (display-only). Keyed on baseId, NOT taxCode, so
+       Checking (The Foyer) is told apart from a Taxable/Savings brokerage despite all three
+       being taxCode 'liquid'. Mirrors the Step-3 canonical investable set: any room NOT in
+       DatumBlueprint's investable buckets is excluded from the Shape. No logic / no total. */
+    const SHAPE_EXCLUSION_NOTE = {
+      checking: "Operating cash for daily life — not retirement capital. It lives in your net worth, but it doesn't lift your Shape.",
+      pension:  "A guaranteed income stream, not investable principal. It reinforces your floor later in the Datum Builder — not your portfolio ceiling here.",
+      trust:    "Earmarked for generational transfer. Real wealth, but not spendable retirement capital — so it stays out of your Shape.",
+      edu:      "Earmarked for education. Real wealth, but not spendable retirement capital — so it stays out of your Shape."
+    };
+    function shapeExclusionNote(baseId) {
+      var id = String(baseId || '');
+      if (id.indexOf('checking') === 0) return SHAPE_EXCLUSION_NOTE.checking; // checking / _primary / _co
+      if (id.indexOf('pension')  === 0) return SHAPE_EXCLUSION_NOTE.pension;  // pension / pension_co
+      if (id === 'trust')               return SHAPE_EXCLUSION_NOTE.trust;
+      if (id === '529plan')             return SHAPE_EXCLUSION_NOTE.edu;
+      return '';
+    }
+
     let state = {
       accounts: [] // Start Blank!
     };
@@ -3060,6 +3085,8 @@
 
         let opacStyle = acc.exclude ? 'opacity: 0.4;' : '';
         let isReadOnly = (acc.holdings && acc.holdings.length > 0) ? 'readonly' : '';
+        const _exNote = shapeExclusionNote(acc.baseId);   // Step 4 — Shape-exclusion ⓘ (display only)
+        const _exIcon = _exNote ? `<span class="shape-info-icon tip-room" tabindex="0" role="note" aria-label="Why this isn't in your Shape">i<div class="shape-info-tooltip">${_exNote}</div></span>` : '';
 
         roomsContainer.innerHTML += `
           <div class="room-input-container active" id="inp-wrapper-${acc.id}" style="${opacStyle}">
@@ -3074,7 +3101,7 @@
             <input type="text" id="room-val-inp-${acc.id}" class="room-input curr-format" placeholder="$0" value="${valStr}" onfocus="this.select()" oninput="updateValueWithoutRender('${acc.id}', this.value)" style="color: ${base.taxCode==='debt' ? 'var(--danger)' : 'var(--white)'};" ${isReadOnly}>
             ${extraRows}
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
-               <div class="room-desc" style="margin-top:0;">${base.desc}</div>
+               <div class="room-desc" style="margin-top:0;">${base.desc}${_exIcon}</div>
                <button class="details-btn" type="button" onclick="openAccountModal('${acc.id}')">⚙️ DETAILS</button>
             </div>
             <div class="inline-details" id="inline-${acc.id}"></div>
