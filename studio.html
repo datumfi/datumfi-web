@@ -91,6 +91,32 @@
      dead-end. Cleared the moment the first room is drafted, restoring free toggling per §22. */
   .studio-layout.view-s2.s2-estate-locked #shape-mode-toggle { display: none; }
 
+  /* ── Step 5 — verdict-soften (guardrail A: SUPPRESS the red, don't dim) ──────────────────
+     While drafting a partial estate (.estate-drafting on #studio-layout), kill the module-applied
+     red canvas wash + state pulses. Badge / frame / hud are neutralized in JS (onShapeStateChange
+     intercept). Released the instant the CTA resolves the estate. */
+  .studio-layout.estate-drafting #shape-panel-svg #state-tint-rect { fill: rgba(255,255,255,0.04) !important; }
+  .studio-layout.estate-drafting #shape-panel-svg #stop-ceil,
+  .studio-layout.estate-drafting #shape-panel-svg #stop-floor,
+  .studio-layout.estate-drafting #shape-panel-svg #stop-mid1,
+  .studio-layout.estate-drafting #shape-panel-svg #stop-mid2 { animation: none !important; }
+  /* The verdict the user ACTUALLY sees in S2 is the canvas HUD "Shape State" (#shape-state-name,
+     repainted by the datum-shape module every frame). Mask it to DRAFTING via CSS so the module
+     can't paint over it (the timeline badge is hidden by the S2 spotlight). */
+  .studio-layout.estate-drafting #shape-state-name { color: transparent !important; position: relative; }
+  .studio-layout.estate-drafting #shape-state-name::after {
+    content: "DRAFTING"; position: absolute; left: 0; top: 0; white-space: nowrap;
+    color: rgba(255,255,255,0.6) !important; font: inherit; letter-spacing: inherit;
+  }
+
+  /* Step 5 — estimate ghost (#1) + "See the Tension" CTA (#3b) + one-time deepening note (#3a) */
+  .estate-progress-ghost { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: 0.04em; margin: 12px 0 2px; }
+  .estate-progress-ghost strong { color: var(--teal-mid); font-weight: 600; }
+  .see-tension-cta { display: block; width: 100%; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; color: var(--gold); background: rgba(201,168,76,0.08); border: 1px solid rgba(201,168,76,0.5); border-radius: 4px; padding: 11px 18px; margin-top: 12px; cursor: pointer; transition: 0.2s; }
+  .see-tension-cta:hover { background: rgba(201,168,76,0.16); border-color: var(--gold); }
+  .s2-deepening-note { position: relative; font-family: var(--font-serif); font-size: 12px; line-height: 1.6; color: var(--muted); background: rgba(29,158,117,0.06); border: 1px solid rgba(29,158,117,0.25); border-radius: 4px; padding: 12px 32px 12px 14px; margin-bottom: 14px; }
+  .s2-deepening-x { position: absolute; top: 5px; right: 8px; background: none; border: none; color: var(--muted); font-size: 15px; line-height: 1; cursor: pointer; }
+
   /* Entry/exit affordance — exit shows only inside the task-view */
   .s2-exit-btn { display: none; }
   .studio-layout.view-s2 .s2-enter-btn { display: none; }
@@ -1628,11 +1654,16 @@
           <div id="rooms-container">
             </div>
 
+          <!-- Step 5 — estimate-ghost (#1): "$X drafted of ~$Y estimate", shown while drafting. -->
+          <div id="estate-progress-ghost" class="estate-progress-ghost" style="display:none;"></div>
+
           <div class="add-space-wrapper">
             <button class="add-space-btn" id="add-space-btn" type="button">+ Draft Additional Space — Add Account</button>
             <div class="space-dropdown" id="space-dropdown">
               </div>
             <button class="measure-btn" id="measure-btn" type="button">⤓ DIAGNOSE MY FINANCES</button>
+            <!-- Step 5 — CTA (#3b): resolve the estate -> release the held verdict + morph. -->
+            <button id="see-tension-cta" class="see-tension-cta" type="button" style="display:none;" onclick="resolveEstate()">See the Tension →</button>
           </div>
         </div>
       </div>
@@ -4221,6 +4252,7 @@
           }
         }
       } catch (_e) {}
+      if (window.refreshDraftingState) refreshDraftingState();   // Step 5: keep .estate-drafting + ghost synced
       if (typeof updateShapePanel === 'function') updateShapePanel();
     }
     _updateSVGsCore = _updateSVGsCoreImpl; // wire the debounce wrapper
@@ -4359,6 +4391,12 @@
       updateAnalysisText();
       spaceDropdown.classList.remove('open');
       if (window.refreshEstateGate) refreshEstateGate();   // §20: rooms now exist -> unlock the Estate toggle
+      window._estateResolved = false;                       // Step 5: estate changed -> verdict preliminary again
+      if (window.refreshDraftingState) refreshDraftingState();
+      if (wasEmpty) {                                        // #3a one-time deepening note on first room (in S2)
+        var _dl = document.getElementById('studio-layout');
+        if (_dl && _dl.classList.contains('view-s2') && window.showDeepeningNote) showDeepeningNote();
+      }
       // §22: first room drafted in S2 -> AUTO-SPIN the canvas from the carried Shape to Estate
       // rooms (outer box). One-shot on the 0->1 transition; only when in S2 and currently showing
       // the Shape (entry forced it / user hasn't already spun to Estate). Reuses toggleShapeMode.
@@ -4375,6 +4413,8 @@
       updateSVGs();
       updateAnalysisText();
       if (window.refreshEstateGate) refreshEstateGate();   // §20: re-lock if rooms fell back to zero
+      window._estateResolved = false;                       // Step 5: estate changed -> verdict preliminary again
+      if (window.refreshDraftingState) refreshDraftingState();
     };
     
     window.removeInstanceSum = function(baseId) {
@@ -4385,6 +4425,8 @@
         updateSVGs();
         updateAnalysisText();
         if (window.refreshEstateGate) refreshEstateGate();   // §20: re-lock if rooms fell back to zero
+        window._estateResolved = false;                       // Step 5: estate changed -> verdict preliminary again
+        if (window.refreshDraftingState) refreshDraftingState();
     }
 
     window.updateName = function(id, newName) {
@@ -5583,6 +5625,14 @@
         autoReveal: true,
         canDrag: function () { return true; },
         onShapeStateChange: function (stateObj) {
+          // Step 5 — verdict-soften: a PARTIAL estate must not render a final verdict. While
+          // drafting, show neutral DRAFTING (badge + frame + hud neutralized here; the red canvas
+          // wash is killed by the .estate-drafting CSS). Released by the CTA (resolveEstate). Pure
+          // display guard — no classifier/math touch.
+          if (window._estateDrafting && window._estateDrafting()) {
+            if (window._applyDraftingNeutral) window._applyDraftingNeutral();  // second guard
+            return;
+          }
           // Item 3.3 / 3.4 — drive the left-panel state outline + the 01/Timeline badge from
           // the live HAVE shape state (re-homed from the removed sketch-design-ref box). Uses
           // stateObj.color — the module's authoritative state color (datum-shape.js classifier,
@@ -5716,10 +5766,106 @@
     }
     window.refreshEstateGate = refreshEstateGate;
 
+    /* ── Step 5 — estimate→itemized transition state (window-scoped so the cross-block account
+       funnels + onShapeStateChange can reach it) ────────────────────────────────────────────
+       _carriedEstimate: the pre-itemization sketch estimate ($), stashed ONCE at S2 entry so the
+       ghost can show "drafted of ~estimate" while the G5 reconcile drives the live Shape from the
+       itemized total (capital-authority untouched). _estateResolved: false while drafting a partial
+       estate; the CTA sets it true; any room add/remove resets it (estate changed -> preliminary
+       again). _estateDrafting() = in S2 + itemized capital exists + unresolved -> the window where
+       the verdict is softened to DRAFTING and the red wash is suppressed. */
+    window._carriedEstimate = window._carriedEstimate || 0;
+    window._estateResolved  = false;
+    function _investableNow() {
+      return (window.DatumBlueprint && window.state) ? DatumBlueprint.investableTotal({ accounts: state.accounts }) : 0;
+    }
+    function _estateDrafting() {
+      var l = document.getElementById('studio-layout');
+      return !!(l && l.classList.contains('view-s2') && _investableNow() > 0 && !window._estateResolved);
+    }
+    window._estateDrafting = _estateDrafting;   // read by onShapeStateChange (verdict intercept)
+
+    function _fmtMoney(n) {
+      n = Math.round(Number(n) || 0);
+      if (n >= 1e6) return '$' + (n / 1e6).toFixed(2).replace(/\.?0+$/, '') + 'M';
+      if (n >= 1e3) return '$' + Math.round(n / 1e3) + 'k';
+      return '$' + n.toLocaleString('en-US');
+    }
+    function updateEstateGhost() {
+      var g = document.getElementById('estate-progress-ghost'); if (!g) return;
+      if (!_estateDrafting()) { g.style.display = 'none'; return; }
+      g.style.display = '';
+      g.innerHTML = '<strong>' + _fmtMoney(_investableNow()) + ' drafted</strong>'
+        + (window._carriedEstimate > 0 ? ' · of your ~' + _fmtMoney(window._carriedEstimate) + ' estimate' : '');
+    }
+    /* Apply the neutral DRAFTING treatment DIRECTLY (badge text/color + frame + hud) so the soften
+       does NOT depend on the datum-shape module re-firing onShapeStateChange — which it SKIPS when
+       the state name is unchanged (carried OVEREXTENDED -> partial OVEREXTENDED), leaving the badge
+       stale (the founder-smoke miss). The onShapeStateChange intercept stays as a second guard. */
+    function _applyDraftingNeutral() {
+      var b = document.getElementById('timeline-state-badge');
+      if (b) { b.textContent = 'DRAFTING'; b.style.color = 'rgba(255,255,255,0.5)'; }
+      var fr = document.getElementById('shape-input-frame-have');
+      if (fr) fr.style.setProperty('--shape-frame-color', 'rgba(255,255,255,0.25)');
+      var c = document.getElementById('hud-main');
+      if (c) ['hud-state-overextended','hud-state-stretched','hud-state-expansive','hud-state-grounded','hud-state-abundant'].forEach(function (x) { c.classList.remove(x); });
+    }
+    window._applyDraftingNeutral = _applyDraftingNeutral;
+
+    /* Drives the .estate-drafting class (verdict-soften CSS), the CTA visibility, the ghost, AND
+       the direct DRAFTING badge/frame/hud application (authority — independent of the module). */
+    function refreshDraftingState() {
+      var l = document.getElementById('studio-layout'); if (!l) return;
+      var wasDrafting = l.classList.contains('estate-drafting');
+      var drafting = _estateDrafting();
+      l.classList.toggle('estate-drafting', drafting);
+      var cta = document.getElementById('see-tension-cta');
+      if (cta) cta.style.display = drafting ? '' : 'none';
+      updateEstateGhost();
+      if (drafting) {
+        _applyDraftingNeutral();                       // apply now — independent of onShapeStateChange
+      } else if (wasDrafting && window.updateShapePanel) {
+        updateShapePanel();                            // just left drafting -> repaint the real verdict
+      }
+    }
+    window.refreshDraftingState = refreshDraftingState;
+
+    /* #3a — one-time "deepening" note when drafting begins (first room). §20 row 0428. */
+    function showDeepeningNote() {
+      try { if (sessionStorage.getItem('s2_deepening_seen')) return; } catch (e) {}
+      if (document.getElementById('s2-deepening-note')) return;
+      var host = document.getElementById('sec-drafting'); if (!host) return;
+      var n = document.createElement('div');
+      n.id = 's2-deepening-note'; n.className = 's2-deepening-note';
+      n.innerHTML = '<button class="s2-deepening-x" type="button" aria-label="Dismiss" onclick="this.parentNode.remove()">×</button>'
+        + "Your sketch gave us an estimate. Now you draft the real thing — account by account. It'll look incomplete until every account is in. That's expected: you're trading a guess for the truth.";
+      host.insertBefore(n, host.firstChild);
+      try { sessionStorage.setItem('s2_deepening_seen', '1'); } catch (e) {}
+    }
+    window.showDeepeningNote = showDeepeningNote;
+
+    /* #3b — CTA: mark the estate complete -> release the held verdict + morph to the resolved
+       Shape and STAY there (ruling C: no S3 nav, no fake destination). */
+    window.resolveEstate = function () {
+      window._estateResolved = true;
+      refreshDraftingState();          // drops .estate-drafting, hides CTA + ghost
+      var l = document.getElementById('studio-layout');
+      if (l && !l.classList.contains('mode-shape') && window.toggleShapeMode) window.toggleShapeMode(); // morph reveal
+      if (window.updateShapePanel) updateShapePanel();   // re-fire onShapeStateChange -> real verdict returns
+    };
+
     window.enterS2View = function () {
       var l = document.getElementById('studio-layout'); if (!l) return;
       l.classList.add('view-s2');
+      // #1 — stash the carried estimate ONCE, before any room overwrites the slider via G5.
+      if (!window._carriedEstimate) {
+        var _sp = document.getElementById('slider-portfolio');
+        var _fromSlider = _sp && _sp.dataset.exactVal ? parseFloat(_sp.dataset.exactVal) : 0;
+        var _fromBp = (window._studioBlueprint && window._studioBlueprint.portfolio_total) || 0;
+        window._carriedEstimate = Math.round(_fromSlider || _fromBp || 0);
+      }
       refreshEstateGate();
+      refreshDraftingState();
       // §22: at zero accounts the carried Sketch shape IS the landing view — force Shape mode
       // (Estate rooms would be the §20 empty dead-end). With rooms already drafted, leave the
       // canvas untouched so a returning user keeps their view. Reuses toggleShapeMode (DRY).
@@ -5728,7 +5874,8 @@
     window.exitS2View = function () {
       var l = document.getElementById('studio-layout'); if (!l) return;
       l.classList.remove('view-s2');
-      refreshEstateGate();   // clears the lock outside S2; S1 canvas default untouched
+      refreshEstateGate();
+      refreshDraftingState();   // clears .estate-drafting outside S2; S1 canvas default untouched
     };
 
   </script>
