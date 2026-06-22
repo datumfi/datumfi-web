@@ -130,6 +130,26 @@
   }
   .s2-enter-btn:hover, .s2-exit-btn:hover { border-color: var(--teal-mid); background: rgba(29,158,117,0.14); }
 
+  /* ── view-s3: Phase-III "Tension" task-view (SEAM ONLY · additive · reversible) ──
+     Sibling to view-s2. Spotlights the Tension section (.s3-spotlight); the section is
+     base-HIDDEN everywhere else (incl. plain S1) so the empty seam never leaks into the S1
+     scroll. SS-timing 11-scenario matrix / Pension / Remodel cards are NOT built (gated on
+     S2 maturity) — this is the bare destination for the "See the Tension →" handoff.
+     Dropping .view-s3 restores S1; entering from S2 swaps view-s2 -> view-s3. Explicit
+     class, not :has() (durability, matches view-s2). */
+  .studio-layout .drafting-panel > .studio-section.s3-spotlight { display: none; }
+  .studio-layout.view-s3 .drafting-panel > .studio-section { display: none; }
+  .studio-layout.view-s3 .drafting-panel > .studio-section.s3-spotlight { display: block; }
+  .studio-layout.view-s3 .drafting-panel > .swf-col-head { display: none; }
+  .studio-layout.view-s3 .s2-entry-row { display: none; }
+  .s3-back-btn {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em;
+    color: var(--teal); background: rgba(29,158,117,0.08);
+    border: 1px solid rgba(29,158,117,0.4); border-radius: 4px;
+    padding: 7px 14px; cursor: pointer;
+  }
+  .s3-back-btn:hover { border-color: var(--teal-mid); background: rgba(29,158,117,0.14); }
+
   /* ── mode-shape: 4th canvas mode, co-exists with panel layout modes ──
      Toggle independently of Draft/Split/Blueprint; setViewMode unchanged. */
   .blueprint-container {
@@ -1700,6 +1720,24 @@
               <span id="upkeep-load-pct" class="load-pct">0%</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Phase-III "Tension" task-view panel (S3 SEAM · additive · reversible). Real, permanent
+           section node; CONTENT (SS-timing matrix · Pension · Remodel cards) deliberately NOT
+           built — gated on S2 itemization/Upkeep maturing. Spotlighted in .view-s3 via
+           .s3-spotlight; base-hidden elsewhere. No throwaway copy/art — only the real section
+           label + functional back-nav. Label uses the DATUM letter "T" (not a number) to avoid
+           colliding with the existing "04 / DEFINE YOUR DATUM" section. -->
+      <div class="studio-section s3-spotlight">
+        <div class="section-header-wrapper">
+            <button class="section-tag" onclick="toggleSection('sec-tension', this)" style="border:none; margin:0; padding:0; flex:1;">
+                <span>T / Tension</span> <span class="toggle-icon">−</span>
+            </button>
+            <button class="pin-btn" onclick="togglePin('sec-tension', this)" title="Pin section open">📌</button>
+        </div>
+        <div id="sec-tension" class="section-content" style="display: block;">
+          <button type="button" class="s3-back-btn" onclick="exitS3View()">← Back to Estate Drafting</button>
         </div>
       </div>
 
@@ -5852,6 +5890,7 @@
       var l = document.getElementById('studio-layout');
       if (l && !l.classList.contains('mode-shape') && window.toggleShapeMode) window.toggleShapeMode(); // morph reveal
       if (window.updateShapePanel) updateShapePanel();   // re-fire onShapeStateChange -> real verdict returns
+      if (window.enterS3View) window.enterS3View();       // S3 seam: hand off into the Tension task-view
     };
 
     window.enterS2View = function () {
@@ -5876,6 +5915,25 @@
       l.classList.remove('view-s2');
       refreshEstateGate();
       refreshDraftingState();   // clears .estate-drafting outside S2; S1 canvas default untouched
+    };
+
+    /* ── Phase-III "Tension" task-view (S3 SEAM) — sibling to view-s2. enterS3View swaps
+       view-s2 -> view-s3 (the "See the Tension →" destination); exitS3View returns to Estate
+       Drafting. CONTENT gated on S2 maturity; this is the bare reversible seam. Null-guarded
+       per D14; reuses refreshEstateGate/refreshDraftingState (DRY, no new state). */
+    window.enterS3View = function () {
+      var l = document.getElementById('studio-layout'); if (!l) return;
+      l.classList.remove('view-s2');
+      l.classList.add('view-s3');
+      refreshEstateGate();
+      refreshDraftingState();
+    };
+    window.exitS3View = function () {
+      var l = document.getElementById('studio-layout'); if (!l) return;
+      l.classList.remove('view-s3');
+      l.classList.add('view-s2');   // back to the prior task-view (Estate Drafting)
+      refreshEstateGate();
+      refreshDraftingState();
     };
 
   </script>
