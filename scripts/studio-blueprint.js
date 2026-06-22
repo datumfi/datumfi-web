@@ -205,11 +205,12 @@
     return { gross: Math.round(net * weightedMult), breakdown: breakdown };
   }
 
-  /* Investable estate total — Σ of account balances that fund the Shape
-   * (roth / taxable / traditional buckets). Excludes physical assets and
-   * debts (neither is in BASE_TO_BUCKET), income streams (pension / ss),
-   * and excluded rooms. Mirrors studio.html's investable filter so a
-   * Blueprint card's Net Estate matches the Shape-driving total — distinct
+  /* Investable estate total — THE canonical investable set that drives the deterministic
+   * Shape's capital axis (Captain ruling 2026-06-21 / §22 row 0458): Σ of account balances
+   * in the roth / taxable / traditional buckets = liquid + pretax + roth. EXCLUDES physical
+   * assets, debts, income streams (pension / SS), and trust / 529 (none are in BASE_TO_BUCKET),
+   * plus checking (unmapped) and any room flagged a.exclude (the Phase-III per-account override
+   * hook). studio.html's G5 Estate→Shape reconcile calls THIS as its single source — distinct
    * from the Estate Square Footage gross-net figure. */
   function investableTotal(bp) {
     var INVEST = { roth: true, taxable: true, traditional: true };

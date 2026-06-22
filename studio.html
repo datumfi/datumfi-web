@@ -4168,12 +4168,17 @@
       // slider-portfolio so _scenarioFromInputs (read by updateShapePanel below) uses the rooms
       // total, not the carried/slider ESTIMATE. With no investable rooms the slider keeps its
       // Sketch/Dossier seed, so a carried estimate is never clobbered before rooms exist (the
-      // two conditions are time-disjoint). Investable = accounts minus physical/debt (same
-      // definition as the Reveal gate, studio.html ~5028).
+      // two conditions are time-disjoint). SINGLE SOURCE of the investable set = the canonical
+      // DatumBlueprint.investableTotal (Captain ruling 2026-06-21 / §22 row 0458): liquid +
+      // pretax + roth; EXCLUDES physical, debt, income/pension, trust/529, checking; honors
+      // per-account a.exclude (Phase-III override hook). The old inline taxCode!=physical/debt
+      // filter over-included checking/pension/trust/529 ($220k on the gate fixture) — retired
+      // here to kill the dual definition. If the helper is ever absent (defer guarantees it on
+      // this host), skip the reconcile and keep the estimate rather than fork the definition.
       try {
-        var _invTotal = (state.accounts || [])
-          .filter(function (a) { var b = getBaseType(a.baseId); var tc = b ? b.taxCode : ''; return tc !== 'physical' && tc !== 'debt'; })
-          .reduce(function (s, a) { return s + (a.value || 0); }, 0);
+        var _invTotal = (window.DatumBlueprint && DatumBlueprint.investableTotal)
+          ? DatumBlueprint.investableTotal({ accounts: state.accounts })
+          : 0;
         var _scl = (window.DatumShape && DatumShape.scales) || null;
         if (_invTotal > 0 && _scl) {
           var _spo = document.getElementById('slider-portfolio');
