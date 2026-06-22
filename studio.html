@@ -75,6 +75,30 @@
   .inline-details { display: none; margin-top: 14px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 14px; }
   .studio-layout.mode-draft .inline-details { display: block; }
 
+  /* ── view-s2: Phase-II "Estate Drafting" task-view (Step 1 · additive · reversible) ──
+     Spotlights 02 Estate Drafting (#sec-drafting) + 03 Operating Upkeep (#sec-upkeep)
+     via the explicit .s2-spotlight class on their wrapper nodes, and hides the other
+     drafting sections. Pure CSS over the live mode-split layout — no DOM moves, no
+     duplication. Canvas stays visible (carried Sketch shape on entry; no auto-reveal —
+     that's Step 2). Dropping .view-s2 restores full S1 untouched. Keyed off an explicit
+     class (not > :has()) so it survives any future section reorg/nesting. */
+  .studio-layout.view-s2 .drafting-panel > .studio-section { display: none; }
+  .studio-layout.view-s2 .drafting-panel > .studio-section.s2-spotlight { display: block; }
+  .studio-layout.view-s2 .drafting-panel > .swf-col-head { display: none; }
+
+  /* Entry/exit affordance — exit shows only inside the task-view */
+  .s2-exit-btn { display: none; }
+  .studio-layout.view-s2 .s2-enter-btn { display: none; }
+  .studio-layout.view-s2 .s2-exit-btn  { display: inline-block; }
+  .s2-entry-row { margin: 4px 0 18px; display: flex; gap: 10px; }
+  .s2-enter-btn, .s2-exit-btn {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em;
+    color: var(--teal); background: rgba(29,158,117,0.08);
+    border: 1px solid rgba(29,158,117,0.4); border-radius: 4px;
+    padding: 7px 14px; cursor: pointer;
+  }
+  .s2-enter-btn:hover, .s2-exit-btn:hover { border-color: var(--teal-mid); background: rgba(29,158,117,0.14); }
+
   /* ── mode-shape: 4th canvas mode, co-exists with panel layout modes ──
      Toggle independently of Draft/Split/Blueprint; setViewMode unchanged. */
   .blueprint-container {
@@ -1233,6 +1257,13 @@
       <h1>Draft Your Estate</h1>
       <div class="panel-sub" style="color: var(--gold);">Map the dimensions of your wealth</div>
 
+      <!-- Phase-II Estate Drafting task-view entry (Step 1 · additive · reversible).
+           Enters #studio-layout.view-s2 over the live hub; carried Sketch shape stays on canvas. -->
+      <div class="s2-entry-row">
+        <button type="button" class="s2-enter-btn" onclick="enterS2View()">Estate Drafting →</button>
+        <button type="button" class="s2-exit-btn"  onclick="exitS2View()">← Full Studio</button>
+      </div>
+
       <!-- 00 / Sketch Inputs: Sketch-style sliders/radios that drive Shape Mode.
            Seeded from Blueprint draft -> saved Sketch -> Dossier -> defaults.
            Bidirectionally bound to Profile (pri-dob / target-ret / plan-end-age / eff-tax-rate)
@@ -1560,7 +1591,7 @@
         </div>
       </div>
 
-      <div class="studio-section">
+      <div class="studio-section s2-spotlight">
         <div class="section-header-wrapper">
             <button class="section-tag" onclick="toggleSection('sec-drafting', this)" style="border:none; margin:0; padding:0; flex:1;">
                 <span>02 / Estate Drafting — Accounts & Assets</span> <span class="toggle-icon">−</span>
@@ -1595,7 +1626,7 @@
         </div>
       </div>
 
-      <div class="studio-section">
+      <div class="studio-section s2-spotlight">
         <div class="section-header-wrapper">
             <button class="section-tag" onclick="toggleSection('sec-upkeep', this)" style="border:none; margin:0; padding:0; flex:1;">
                 <span>03 / Operating Upkeep — Living Expenses</span> <span class="toggle-icon">−</span>
@@ -5623,6 +5654,12 @@
         });
       }
     };
+
+    /* view-s2 task-view toggle — Step 1. Pure class flip on #studio-layout; the
+       CSS filter does the spotlighting. Fully reversible, no state mutation.
+       Null-guarded per D14. */
+    window.enterS2View = function () { var l = document.getElementById('studio-layout'); if (l) l.classList.add('view-s2'); };
+    window.exitS2View  = function () { var l = document.getElementById('studio-layout'); if (l) l.classList.remove('view-s2'); };
 
   </script>
 
