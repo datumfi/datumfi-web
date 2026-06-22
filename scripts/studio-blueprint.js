@@ -691,6 +691,26 @@
     if (mkt && mkt.value) bp.market_paradigm = mkt.value;
     var infl = d.querySelector('input[name="inflation"]:checked');
     if (infl && infl.value) bp.inflation_mode = infl.value;
+
+    // Operating Upkeep (Lifestyle Engine · Layer-1 "O" term) — capture the live ledger rows
+    // into the canonical hub slot so O is single-source and S4/Datum-Builder READ it, never
+    // recompute (§16.1 four-screen chain). U1 = PARITY bind only: mirrors the current monthly
+    // model verbatim; freq/category/tag/end-date land in U2. Pure DOM-read (matches this fn's
+    // idiom); driven by the existing global input/change -> saveDraft listener.
+    function _captureLedger(listId) {
+      var rows = d.querySelectorAll('#' + listId + ' .plumbing-row'), items = [], total = 0;
+      Array.prototype.forEach.call(rows, function (row) {
+        var nm = row.querySelector('.plumbing-name'), ct = row.querySelector('.plumbing-cost');
+        var cost = moneyToInt(ct ? ct.value : '');
+        items.push({ name: nm ? nm.value : '', cost: cost }); total += cost;
+      });
+      return { items: items, total: total };
+    }
+    if (d.getElementById('plumbing-list')) {
+      var _up = _captureLedger('plumbing-list'), _ch = _captureLedger('charity-list');
+      bp.upkeep.items = _up.items;   bp.upkeep.upkeep_total  = _up.total;
+      bp.upkeep.charity = _ch.items; bp.upkeep.charity_total = _ch.total;
+    }
   }
 
   global.DatumBlueprint = {

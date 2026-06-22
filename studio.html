@@ -2894,6 +2894,27 @@
         calculateUpkeepLoad(total, cTotal);
     }
 
+    /* U1 hub-bind — re-hydrate the Operating Upkeep ledger from the canonical hub slot, then
+       repaint. Called from the DOMContentLoaded hub-ready block: the deferred DatumBlueprint
+       is only guaranteed loaded there, so the parse-time restoreDraft (which runs before the
+       hub exists) can't do this. renderUpkeep() here repaints over the parse-time default render. */
+    window._applyUpkeepFromBp = function(bp) {
+      if (!bp || !bp.upkeep) return;
+      try {
+        if (Array.isArray(bp.upkeep.items) && bp.upkeep.items.length) {
+          upkeepItems = bp.upkeep.items.map(function (it) {
+            return { id: 'upk_' + Math.random().toString(36).substr(2, 9), name: it.name || '', cost: it.cost || 0 };
+          });
+        }
+        if (Array.isArray(bp.upkeep.charity) && bp.upkeep.charity.length) {
+          charityItems = bp.upkeep.charity.map(function (it) {
+            return { id: 'char_' + Math.random().toString(36).substr(2, 9), name: it.name || '', cost: it.cost || 0 };
+          });
+        }
+        renderUpkeep();
+      } catch (_e) {}
+    };
+
     window.addUpkeepItem = function() {
         upkeepItems.push({ id: 'upk_' + Math.random().toString(36).substr(2, 9), name: '', cost: 0 });
         renderUpkeep();
@@ -8690,6 +8711,7 @@
     if (!window.DatumBlueprint) return;
     try {
       var bp = window.DatumBlueprint.load();
+      if (window._applyUpkeepFromBp) window._applyUpkeepFromBp(bp);   // U1 — restore Operating Upkeep ledger (hub ready here)
       var portEl = document.getElementById('bp-portfolio-total');
       var contEl = document.getElementById('bp-contributions-total');
       function fmt(n) { return n > 0 ? '$' + Math.round(n).toLocaleString('en-US') : ''; }
