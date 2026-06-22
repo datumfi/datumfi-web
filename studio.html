@@ -562,6 +562,8 @@
   .plumbing-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
   .plumbing-name { flex: 2; }
   .plumbing-cost { flex: 1; }
+  .plumbing-freq { flex: 0 0 64px; padding: 0 4px; background: var(--bg-navy); color: var(--white); }
+  .plumbing-freq option { background: var(--bg-navy); color: var(--white); }
   .plumbing-delete { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; transition: 0.2s;}
   .plumbing-delete:hover { color: var(--danger); }
   .plumbing-summary { background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 4px; margin-top: 15px; }
@@ -1712,7 +1714,7 @@
 
           <div class="plumbing-summary">
             <div class="plumbing-summary-row">
-              <span>Total Operating Overhead:</span>
+              <span>Monthly Operating Overhead:</span>
               <span id="total-upkeep-val" style="color:var(--danger); font-size:14px; font-weight:bold;">$0</span>
             </div>
             <div class="plumbing-summary-row" style="margin-bottom:0; align-items:center; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px; margin-top:8px;">
@@ -2847,10 +2849,16 @@
 
     // --- PLUMBING / UPKEEP LOGIC & CHARITY LOGIC ---
     let upkeepItems = [
-      { id: 'upk_1', name: 'Housing Utilities', cost: 350 },
-      { id: 'upk_2', name: 'Groceries / Provisions', cost: 800 }
+      { id: 'upk_1', name: 'Housing Utilities',    amount: 350, freq: 'monthly', category: 'essential', endDate: '', endsAtRet: false, tag: 'autopay', note: '' },
+      { id: 'upk_2', name: 'Groceries / Provisions', amount: 800, freq: 'monthly', category: 'essential', endDate: '', endsAtRet: false, tag: 'autopay', note: '' }
     ];
     let charityItems = [];
+    // U2 — single-source accessors. _upkMo: null-safe per-item monthly via the hub producer
+    // (returns 0 pre-hub at parse-time; DOMContentLoaded re-render sets the real total — the
+    // deferred-hub pattern from U1). NO second definition of the monthly math. _getUpkeepModel:
+    // live model refs for the hub's captureDOM (ids reassign on edit, so a getter not a const).
+    function _upkMo(i){ return window.DatumBlueprint ? DatumBlueprint.upkeepMonthly(i) : 0; }
+    window._getUpkeepModel = function(){ return { items: upkeepItems, charity: charityItems }; };
 
     window.renderUpkeep = function() {
         const list = document.getElementById('plumbing-list');
@@ -2861,29 +2869,39 @@
         let cTotal = 0;
 
         upkeepItems.forEach((item, index) => {
-            total += item.cost;
+            total += _upkMo(item);
             list.innerHTML += `
               <div class="plumbing-row">
                  <input type="text" class="small-field plumbing-name" value="${item.name}" placeholder="Expense Name" oninput="updateUpkeepItem('${item.id}', 'name', this.value, false)">
-                 <input type="text" class="small-field plumbing-cost curr-format" value="$${item.cost.toLocaleString('en-US')}" placeholder="$0" oninput="updateUpkeepItem('${item.id}', 'cost', this.value, false)">
+                 <input type="text" class="small-field plumbing-cost curr-format" value="$${(item.amount||0).toLocaleString('en-US')}" placeholder="$0" oninput="updateUpkeepItem('${item.id}', 'amount', this.value, false)">
+                 <select class="small-field plumbing-freq" onchange="updateUpkeepItem('${item.id}', 'freq', this.value, false)">
+                   <option value="monthly"${item.freq==='monthly'?' selected':''}>/mo</option>
+                   <option value="quarterly"${item.freq==='quarterly'?' selected':''}>/qtr</option>
+                   <option value="annual"${item.freq==='annual'?' selected':''}>/yr</option>
+                 </select>
                  <button class="plumbing-delete" onclick="removeUpkeepItem('${item.id}', false)">×</button>
               </div>
             `;
         });
 
         charityItems.forEach((item, index) => {
-            cTotal += item.cost;
+            cTotal += _upkMo(item);
             cList.innerHTML += `
               <div class="plumbing-row">
                  <input type="text" class="small-field plumbing-name" value="${item.name}" placeholder="Philanthropic Org" oninput="updateUpkeepItem('${item.id}', 'name', this.value, true)">
-                 <input type="text" class="small-field plumbing-cost curr-format" value="$${item.cost.toLocaleString('en-US')}" placeholder="$0" oninput="updateUpkeepItem('${item.id}', 'cost', this.value, true)">
+                 <input type="text" class="small-field plumbing-cost curr-format" value="$${(item.amount||0).toLocaleString('en-US')}" placeholder="$0" oninput="updateUpkeepItem('${item.id}', 'amount', this.value, true)">
+                 <select class="small-field plumbing-freq" onchange="updateUpkeepItem('${item.id}', 'freq', this.value, true)">
+                   <option value="monthly"${item.freq==='monthly'?' selected':''}>/mo</option>
+                   <option value="quarterly"${item.freq==='quarterly'?' selected':''}>/qtr</option>
+                   <option value="annual"${item.freq==='annual'?' selected':''}>/yr</option>
+                 </select>
                  <button class="plumbing-delete" onclick="removeUpkeepItem('${item.id}', true)">×</button>
               </div>
             `;
         });
 
-        document.getElementById('total-upkeep-val').innerText = `$${total.toLocaleString('en-US')}`;
-        
+        document.getElementById('total-upkeep-val').innerText = `$${Math.round(total).toLocaleString('en-US')}`;
+
         let cRow = document.getElementById('charity-hud-row');
         if(cTotal > 0) {
              cRow.style.display = 'flex';
@@ -2903,12 +2921,18 @@
       try {
         if (Array.isArray(bp.upkeep.items) && bp.upkeep.items.length) {
           upkeepItems = bp.upkeep.items.map(function (it) {
-            return { id: 'upk_' + Math.random().toString(36).substr(2, 9), name: it.name || '', cost: it.cost || 0 };
+            return { id: 'upk_' + Math.random().toString(36).substr(2, 9), name: it.name || '',
+              amount: (it.amount != null ? it.amount : it.cost) || 0, freq: it.freq || 'monthly',
+              category: it.category || 'essential', endDate: it.endDate || '', endsAtRet: !!it.endsAtRet,
+              tag: it.tag || 'autopay', note: it.note || '' };
           });
         }
         if (Array.isArray(bp.upkeep.charity) && bp.upkeep.charity.length) {
           charityItems = bp.upkeep.charity.map(function (it) {
-            return { id: 'char_' + Math.random().toString(36).substr(2, 9), name: it.name || '', cost: it.cost || 0 };
+            return { id: 'char_' + Math.random().toString(36).substr(2, 9), name: it.name || '',
+              amount: (it.amount != null ? it.amount : it.cost) || 0, freq: it.freq || 'monthly',
+              category: it.category || 'essential', endDate: it.endDate || '', endsAtRet: !!it.endsAtRet,
+              tag: it.tag || 'autopay', note: it.note || '' };
           });
         }
         renderUpkeep();
@@ -2916,12 +2940,12 @@
     };
 
     window.addUpkeepItem = function() {
-        upkeepItems.push({ id: 'upk_' + Math.random().toString(36).substr(2, 9), name: '', cost: 0 });
+        upkeepItems.push({ id: 'upk_' + Math.random().toString(36).substr(2, 9), name: '', amount: 0, freq: 'monthly', category: 'essential', endDate: '', endsAtRet: false, tag: 'autopay', note: '' });
         renderUpkeep();
     }
     
     window.addCharityItem = function() {
-        charityItems.push({ id: 'char_' + Math.random().toString(36).substr(2, 9), name: '', cost: 0 });
+        charityItems.push({ id: 'char_' + Math.random().toString(36).substr(2, 9), name: '', amount: 0, freq: 'monthly', category: 'essential', endDate: '', endsAtRet: false, tag: 'autopay', note: '' });
         renderUpkeep();
     }
 
@@ -2934,28 +2958,27 @@
     window.updateUpkeepItem = function(id, field, val, isCharity) {
         let arr = isCharity ? charityItems : upkeepItems;
         const item = arr.find(i => i.id === id);
-        if(item) {
-            if(field === 'cost') item.cost = parseInt(val.replace(/[^0-9]/g, ''), 10) || 0;
-            else item.name = val;
-            
-            if(field === 'cost') {
-               let total = upkeepItems.reduce((sum, i) => sum + i.cost, 0);
-               let cTotal = charityItems.reduce((sum, i) => sum + i.cost, 0);
-               document.getElementById('total-upkeep-val').innerText = `$${total.toLocaleString('en-US')}`;
-               
-               let cRow = document.getElementById('charity-hud-row');
-               if(cTotal > 0) cRow.style.display = 'flex'; else cRow.style.display = 'none';
+        if(!item) return;
+        if(field === 'amount')         item.amount = parseInt(String(val).replace(/[^0-9]/g, ''), 10) || 0;
+        else if(field === 'endsAtRet') item.endsAtRet = !!val;
+        else                           item[field] = val;   // name/freq/category/endDate/tag/note (controlled callers)
 
-               calculateUpkeepLoad(total, cTotal);
-               updateAnalysisText(); 
-               updateSVGs();
-            }
+        // amount + freq both move the MONTHLY-normalized Floor -> recompute live totals
+        if(field === 'amount' || field === 'freq') {
+           let total  = upkeepItems.reduce((sum, i) => sum + _upkMo(i), 0);
+           let cTotal = charityItems.reduce((sum, i) => sum + _upkMo(i), 0);
+           document.getElementById('total-upkeep-val').innerText = `$${Math.round(total).toLocaleString('en-US')}`;
+           let cRow = document.getElementById('charity-hud-row');
+           if(cRow) cRow.style.display = cTotal > 0 ? 'flex' : 'none';
+           calculateUpkeepLoad(total, cTotal);
+           updateAnalysisText();
+           updateSVGs();
         }
     }
 
     window.calculateUpkeepLoad = function(manualTotal = null, cTotal = null) {
-        let totalUpkeep = manualTotal !== null ? manualTotal : upkeepItems.reduce((sum, i) => sum + i.cost, 0);
-        let totalCharity = cTotal !== null ? cTotal : charityItems.reduce((sum, i) => sum + i.cost, 0);
+        let totalUpkeep = manualTotal !== null ? manualTotal : upkeepItems.reduce((sum, i) => sum + _upkMo(i), 0);
+        let totalCharity = cTotal !== null ? cTotal : charityItems.reduce((sum, i) => sum + _upkMo(i), 0);
         
         let priSal = parseInt(document.getElementById('pri-salary').value.replace(/[^0-9]/g, ''), 10) || 0;
         let coSal = 0;
@@ -3991,7 +4014,7 @@
       document.getElementById('ie-mo').innerText = `+$${Math.round(displayEarned).toLocaleString('en-US')} ${tfLabel}`;
       document.getElementById('ip-mo').innerText = `-$${Math.round(displayPaid).toLocaleString('en-US')} ${tfLabel}`;
 
-      let totalCharityAnnual = charityItems.reduce((sum, i) => sum + i.cost, 0) * 12; 
+      let totalCharityAnnual = charityItems.reduce((sum, i) => sum + _upkMo(i), 0) * 12;
       let displayCharity = totalCharityAnnual / tf;
 
       let priSal = parseInt(document.getElementById('pri-salary').value.replace(/[^0-9]/g, ''), 10) || 0;
@@ -4389,8 +4412,8 @@
         let grossAnnual = priSal + coSal;
         let netAnnual = grossAnnual * (1 - (effTax / 100));
         let monthlyNetIncome = Math.round(netAnnual / 12);
-        let totalUpkeep = upkeepItems.reduce((sum, i) => sum + i.cost, 0);
-        let totalCharity = charityItems.reduce((sum, i) => sum + i.cost, 0);
+        let totalUpkeep = upkeepItems.reduce((sum, i) => sum + _upkMo(i), 0);
+        let totalCharity = charityItems.reduce((sum, i) => sum + _upkMo(i), 0);
         let freeCashFlow = monthlyNetIncome - totalUpkeep - totalCharity;
 
         if (grossAnnual > 0) {

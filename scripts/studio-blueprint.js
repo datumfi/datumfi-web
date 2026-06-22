@@ -622,6 +622,22 @@
     return parseInt(String(v || '').replace(/[^\d]/g, ''), 10) || 0;
   }
 
+  // U2 — canonical MONTHLY OVERHEAD producers (single source of the Layer-1 "O" term; S4 reads
+  // these). NOTE: this is the budgeting overhead total, NOT the Shape floor — the Shape's
+  // Floor/Ceiling/Datum are F93 withdrawal-rate-derived and do NOT react to bills (that wiring is U4).
+  var UPKEEP_FREQ_DIV = { monthly: 1, quarterly: 3, annual: 12 };
+  function upkeepMonthly(item) {
+    if (!item) return 0;
+    var amt = Number(item.amount != null ? item.amount : item.cost) || 0; // ?? legacy U1 cost
+    return amt / (UPKEEP_FREQ_DIV[item.freq] || 1);
+  }
+  function upkeepMonthlyTotal(bp, opts) {
+    opts = opts || {};                       // opts.asOf reserved for U4/S4 time-dependent schedule
+    var items = (bp && bp.upkeep && bp.upkeep.items) || [];
+    var t = 0; items.forEach(function (it) { t += upkeepMonthly(it); });
+    return t;
+  }
+
   function captureDOM(bp) {
     var d = document;
     var v = function (id) { var el = d.getElementById(id); return el ? el.value : ''; };
@@ -692,24 +708,21 @@
     var infl = d.querySelector('input[name="inflation"]:checked');
     if (infl && infl.value) bp.inflation_mode = infl.value;
 
-    // Operating Upkeep (Lifestyle Engine · Layer-1 "O" term) — capture the live ledger rows
-    // into the canonical hub slot so O is single-source and S4/Datum-Builder READ it, never
-    // recompute (§16.1 four-screen chain). U1 = PARITY bind only: mirrors the current monthly
-    // model verbatim; freq/category/tag/end-date land in U2. Pure DOM-read (matches this fn's
-    // idiom); driven by the existing global input/change -> saveDraft listener.
-    function _captureLedger(listId) {
-      var rows = d.querySelectorAll('#' + listId + ' .plumbing-row'), items = [], total = 0;
-      Array.prototype.forEach.call(rows, function (row) {
-        var nm = row.querySelector('.plumbing-name'), ct = row.querySelector('.plumbing-cost');
-        var cost = moneyToInt(ct ? ct.value : '');
-        items.push({ name: nm ? nm.value : '', cost: cost }); total += cost;
-      });
-      return { items: items, total: total };
+    // Operating Upkeep (Lifestyle Engine · Layer-1 "O" term) — U2 captures the canonical
+    // IN-MEMORY model (NOT a DOM-scrape: rich fields aren't all visible inputs). Single-source
+    // so S4/Datum-Builder READ bp.upkeep, never recompute (§16.1). Totals MONTHLY-normalized via
+    // upkeepMonthlyTotal (canonical period = monthly; U3 display toggle is pure presentation).
+    function _serUpk(it) {
+      return { name: it.name || '', amount: (it.amount != null ? it.amount : it.cost) || 0,
+        freq: it.freq || 'monthly', category: it.category || 'essential', endDate: it.endDate || '',
+        endsAtRet: !!it.endsAtRet, tag: it.tag || 'autopay', note: it.note || '' };
     }
-    if (d.getElementById('plumbing-list')) {
-      var _up = _captureLedger('plumbing-list'), _ch = _captureLedger('charity-list');
-      bp.upkeep.items = _up.items;   bp.upkeep.upkeep_total  = _up.total;
-      bp.upkeep.charity = _ch.items; bp.upkeep.charity_total = _ch.total;
+    if (global._getUpkeepModel) {
+      var _um = global._getUpkeepModel();
+      bp.upkeep.items   = (_um.items   || []).map(_serUpk);
+      bp.upkeep.charity = (_um.charity || []).map(_serUpk);
+      bp.upkeep.upkeep_total  = upkeepMonthlyTotal(bp);
+      bp.upkeep.charity_total = (bp.upkeep.charity || []).reduce(function (s, it) { return s + upkeepMonthly(it); }, 0);
     }
   }
 
@@ -725,6 +738,8 @@
     remirrorArchive:  remirrorArchive,
     computeGrossFunding: computeGrossFunding,
     investableTotal:  investableTotal,
+    upkeepMonthly:      upkeepMonthly,
+    upkeepMonthlyTotal: upkeepMonthlyTotal,
     captureDOM:       captureDOM,
     mmYYYY:           mmYYYY,
     retDateFromAge:   retDateFromAge,
