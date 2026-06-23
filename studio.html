@@ -247,6 +247,15 @@
   .studio-layout.view-s2 .drafting-panel > .studio-section { display: none; }
   .studio-layout.view-s2 .drafting-panel > .studio-section.s2-spotlight { display: block; }
   .studio-layout.view-s2 .drafting-panel > .swf-col-head { display: none; }
+  /* S2.0 — header swap: PHASE I header on S1, PHASE II header in view-s2. */
+  .s2-header { display: none; }
+  .studio-layout.view-s2 .s1-header { display: none; }
+  .studio-layout.view-s2 .s2-header { display: block; }
+  /* S2.1 — Total Portfolio / Annual Contributions boxes become a stale mirror once rooms
+     drive the Shape (G5 capital-authority overwrites slider-portfolio every render). Hide
+     in view-s2 ONLY; KEEP in S1 (critical estimate entry). display:none preserves the
+     load-fill + writeback listeners for S1; reversible (drop the class or .view-s2). */
+  .studio-layout.view-s2 .s2-hide-boxes { display: none; }
 
   /* §20 account-gate (Step 2) — hide the Estate-mode toggle while in S2 with zero rooms
      (refreshEstateGate adds .s2-estate-locked) so the user can't toggle to an empty-rooms
@@ -1478,10 +1487,21 @@
       <!-- S1 left-header — parity with Sketch title-block (sketch.html:1460-1463), Sketch visual order.
            "Reveal the Shape" = gold serif-italic descriptor (parallels Sketch "Discover Your Shape");
            HEADER STRING ONLY — NOT wired to the MC "REVEAL YOUR RANGE" button. -->
-      <div class="panel-sub" style="margin-bottom:12px;color:var(--gold);">PHASE I — DATA</div>
-      <div style="font-family:var(--font-serif); font-size:22px; font-style:italic; color:var(--gold); margin-bottom:12px;">Reveal the Shape</div>
-      <h1>The Studio</h1>
-      <div class="panel-sub" style="color:rgba(255,255,255,0.6);">Move the inputs. Watch your retirement take shape.</div>
+      <div class="s1-header">
+        <div class="panel-sub" style="margin-bottom:12px;color:var(--gold);">PHASE I — DATA</div>
+        <div style="font-family:var(--font-serif); font-size:22px; font-style:italic; color:var(--gold); margin-bottom:12px;">Reveal the Shape</div>
+        <h1>The Studio</h1>
+        <div class="panel-sub" style="color:rgba(255,255,255,0.6);">Move the inputs. Watch your retirement take shape.</div>
+      </div>
+      <!-- S2.0: PHASE II — ARCHITECTURE header. Hidden by default; shown only in view-s2.
+           Same Sketch-parity structure as S1 (gold phase-label / gold serif descriptor /
+           white "The Studio" title / 60%-white subtitle). h1 constant across phases. -->
+      <div class="s2-header">
+        <div class="panel-sub" style="margin-bottom:12px;color:var(--gold);">PHASE II — ARCHITECTURE</div>
+        <div style="font-family:var(--font-serif); font-size:22px; font-style:italic; color:var(--gold); margin-bottom:12px;">Define the Mass</div>
+        <h1>The Studio</h1>
+        <div class="panel-sub" style="color:rgba(255,255,255,0.6);">Draft your Estate. Map the dimensions of your wealth.</div>
+      </div>
 
       <!-- Phase-II Estate Drafting task-view entry (Step 1 · additive · reversible).
            Enters #studio-layout.view-s2 over the live hub; carried Sketch shape stays on canvas. -->
@@ -1829,8 +1849,10 @@
 
           <!-- Blueprint v1 header fields — prefilled from Dossier / Sketch, editable.
                Sit BEFORE the rooms array; auto-commit to the Blueprint contract via
-               scripts/studio-blueprint.js (DatumBlueprint.bind). -->
-          <div class="field-row" style="margin-bottom: 18px;">
+               scripts/studio-blueprint.js (DatumBlueprint.bind).
+               S2.1: .s2-hide-boxes — KEEP live in S1 (critical estimate entry); hidden in
+               view-s2 where G5 rooms-authority makes them a stale mirror. -->
+          <div class="field-row s2-hide-boxes" style="margin-bottom: 18px;">
             <div>
               <div class="input-label">Total Portfolio Balance</div>
               <input type="text" class="small-field curr-format" id="bp-portfolio-total" placeholder="$0" onfocus="this.select()" aria-label="Total Portfolio Balance">
