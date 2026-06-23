@@ -75,6 +75,168 @@
   .inline-details { display: none; margin-top: 14px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 14px; }
   .studio-layout.mode-draft .inline-details { display: block; }
 
+  /* ══ U3 — LIVING-LEDGER "SHEET" (mode-draft) ══════════════════════════════════════════════
+     PAPER = verbatim Blueprint-Archive .archive-sheet treatment (Blueprint.html L425-499),
+     COPIED here (TWO COPIES must stay in sync — no shared extraction in U3). Framing differs:
+     Archive centers a small card in navy; SHEET zooms near-full-bleed with a thin navy sliver.
+     Dark-ink color-flip is scoped to mode-draft ONLY — Split (navy) is untouched. STRUCTURE
+     (mode-blueprint) paper is DEFERRED (Shape-on-cream recolor is its own follow-up). */
+  :root{ --paper-white:#fffdf7; --paper-main:#f8f2e6; --paper-edge:#e7ddc7; --ink:#20242b; --ink-soft:rgba(32,36,43,.58); }
+
+  .studio-nb-sheet{
+    position: relative; z-index: 3; min-height: 560px; border-radius: 18px 32px 32px 18px; padding: 48px 64px 56px 84px; overflow: hidden; color: var(--ink);
+    background:
+      radial-gradient(ellipse at 48% 9%, rgba(255,255,255,.90), transparent 43%),
+      radial-gradient(ellipse at 24% 27%, rgba(255,255,255,.46), transparent 30%),
+      radial-gradient(ellipse at 84% 80%, rgba(86,60,24,.042), transparent 31%),
+      radial-gradient(circle at 94% 92%, rgba(54,40,20,.022), transparent 12%),
+      radial-gradient(circle at 88% 19%, rgba(60,43,22,.014), transparent 10%),
+      radial-gradient(circle at 12% 82%, rgba(60,43,22,.013), transparent 13%),
+      linear-gradient(122deg, transparent 0 38%, rgba(81,61,31,.016) 39%, rgba(255,255,255,.058) 40%, transparent 42%),
+      linear-gradient(74deg, transparent 0 67%, rgba(81,61,31,.010) 68%, transparent 70%),
+      repeating-linear-gradient(11deg, rgba(46,34,20,.009) 0 1px, transparent 1px 7px),
+      repeating-linear-gradient(-19deg, rgba(255,255,255,.088) 0 1px, transparent 1px 8px),
+      repeating-linear-gradient(3deg, rgba(46,34,20,.006) 0 1px, transparent 1px 16px),
+      radial-gradient(circle at 18% 22%, rgba(146,119,77,.010), transparent 17%),
+      radial-gradient(circle at 71% 36%, rgba(146,119,77,.008), transparent 15%),
+      radial-gradient(circle at 44% 74%, rgba(146,119,77,.009), transparent 16%),
+      linear-gradient(90deg, rgba(226,75,74,.078) 0 1px, transparent 1px),
+      repeating-linear-gradient(0deg, transparent 0, transparent 29px, rgba(30,35,42,.028) 30px),
+      repeating-linear-gradient(90deg, transparent 0, transparent 31px, rgba(107,123,196,.024) 32px),
+      linear-gradient(112deg, #fffef8 0%, #faf4e9 53%, #eadfca 100%);
+    background-position: 0 0,0 0,0 0, 0 0,0 0,0 0, 0 0,0 0, 0 0,0 0,0 0, 0 0,0 0,0 0, 54px 0, 0 0, 0 0, 0 0;
+    background-size: auto,auto,auto, auto,auto,auto, auto,auto, auto,auto,auto, auto,auto,auto, 1px 100%, auto, auto, auto;
+    box-shadow:
+      inset 0 0 0 1px rgba(45,36,20,.215),
+      inset 32px 0 42px rgba(0,0,0,.098),
+      inset -28px 0 42px rgba(77,54,22,.082),
+      inset 0 36px 50px rgba(255,255,255,.52),
+      inset 0 -23px 32px rgba(63,43,18,.044),
+      0 26px 60px rgba(0,0,0,.50);
+  }
+  .studio-nb-sheet::before{
+    content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
+    background:
+      radial-gradient(circle at 8% 21%, rgba(0,0,0,.038), transparent 20%),
+      radial-gradient(circle at 81% 14%, rgba(0,0,0,.022), transparent 24%),
+      radial-gradient(circle at 76% 88%, rgba(0,0,0,.030), transparent 30%),
+      linear-gradient(90deg, rgba(255,255,255,.50), transparent 22%, transparent 80%, rgba(0,0,0,.058));
+    opacity:.84;
+  }
+  /* dark-ink flip — scoped to the cream PAGE only (the desk + Split stay as-is) */
+  .studio-nb-sheet,
+  .studio-nb-sheet .section-tag,
+  .studio-nb-sheet .panel-sub { color: var(--ink); }
+
+  /* SHEET = the DESK: navy field that holds the notebook (paper now lives on .studio-nb-sheet) */
+  .studio-layout.mode-draft .drafting-panel{ background: var(--bg-navy); box-shadow: none; margin: 0; padding: 36px 28px 56px; overflow: auto; }
+  /* DE-CLUTTER — Sheet shows ONLY the upkeep ledger. Others are HIDDEN (not removed); the full
+     numbers (accounts/datum/options/charts) return to Sheet as projections after Split is complete. */
+  .studio-layout.mode-draft .drafting-panel > .studio-section { display: none; }
+  .studio-layout.mode-draft .drafting-panel > .studio-section.sheet-host { display: block; }
+  .studio-layout.mode-draft .drafting-panel > h1,
+  .studio-layout.mode-draft .drafting-panel > .panel-sub,
+  .studio-layout.mode-draft .drafting-panel > .swf-col-head,
+  .studio-layout.mode-draft .s2-entry-row,
+  .studio-layout.mode-draft #sec-upkeep > .section-header-wrapper { display: none; }
+
+  /* ── THE NOTEBOOK — verbatim Blueprint-Archive structure (wrapper/shadow/cover/rail), re-scoped
+     and sized "a bit more out" so the whole notepad reads on the navy desk. ── */
+  .studio-notebook { display: none; }
+  .studio-layout.mode-draft .studio-notebook{
+    display:block; position:relative; z-index:5; width:min(1080px, calc(100% - 96px)); margin:16px auto 44px;
+    filter: drop-shadow(0 64px 96px rgba(0,0,0,.66)) drop-shadow(0 10px 20px rgba(0,0,0,.25)) drop-shadow(0 0 26px rgba(93,202,165,.034));
+  }
+  .studio-nb-shadow{
+    position:absolute; left:48px; right:-68px; top:62px; bottom:-48px; border-radius:40px;
+    background: radial-gradient(ellipse at 48% 42%, rgba(0,0,0,.82), rgba(0,0,0,.42) 56%, transparent 80%);
+    filter: blur(32px); opacity:.97; transform: skewX(-3deg) translateY(10px); z-index:0;
+  }
+  .studio-nb-cover{
+    position:absolute; inset:-26px -42px -31px -34px; z-index:1; border-radius:34px 40px 40px 34px;
+    background:
+      linear-gradient(90deg, rgba(255,255,255,.130) 0%, rgba(255,255,255,.036) 5%, transparent 17%, transparent 82%, rgba(0,0,0,.42) 96%),
+      radial-gradient(circle at 15% 8%, rgba(255,255,255,.118), transparent 22%),
+      radial-gradient(circle at 82% 86%, rgba(0,0,0,.62), transparent 36%),
+      radial-gradient(ellipse at 53% -4%, rgba(255,255,255,.070), transparent 35%),
+      linear-gradient(103deg, transparent 14%, rgba(255,255,255,.030) 15%, transparent 17%),
+      linear-gradient(78deg, transparent 58%, rgba(255,255,255,.024) 59%, transparent 61%),
+      repeating-linear-gradient(32deg, rgba(255,255,255,.016) 0 1px, transparent 1px 8px),
+      repeating-linear-gradient(-28deg, rgba(0,0,0,.027) 0 1px, transparent 1px 11px),
+      linear-gradient(180deg, #162337 0%, #091322 48%, #02060b 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.074), inset 0 1px 0 rgba(255,255,255,.042),
+      inset 38px 0 58px rgba(255,255,255,.034), inset -38px 0 66px rgba(0,0,0,.50),
+      inset 0 -68px 92px rgba(0,0,0,.55), 0 38px 74px rgba(0,0,0,.50);
+  }
+  .studio-nb-cover::before{
+    content:""; position:absolute; left:28px; top:16px; bottom:16px; width:74px; border-radius:24px 12px 12px 24px;
+    background:
+      linear-gradient(90deg, rgba(0,0,0,.72), rgba(255,255,255,.040) 23%, rgba(201,168,76,.052) 44%, rgba(93,202,165,.040) 62%, rgba(0,0,0,.31)),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 12px);
+    box-shadow: inset -1px 0 rgba(255,255,255,.090), inset 10px 0 20px rgba(0,0,0,.46), 14px 0 28px rgba(0,0,0,.36), 1px 0 0 rgba(255,255,255,.026);
+  }
+  .studio-nb-cover::after{
+    content:""; position:absolute; inset:11px; border-radius:26px 32px 32px 26px; border:1px solid rgba(255,255,255,.064);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.23), inset 0 0 48px rgba(255,255,255,.012), inset 0 -14px 20px rgba(0,0,0,.09);
+  }
+  .studio-nb-rail{
+    position:absolute; left:-17px; top:42px; bottom:42px; width:44px; z-index:8; pointer-events:none;
+    filter: drop-shadow(12px 12px 13px rgba(0,0,0,.64)) drop-shadow(0 0 13px rgba(201,168,76,.125));
+  }
+  .studio-nb-rail::before{
+    content:""; position:absolute; left:15px; top:-10px; bottom:-10px; width:14px; border-radius:999px;
+    background: linear-gradient(90deg, #020304 0%, #1f242a 11%, #5c4213 24%, #b98e34 36%, #ffe9a3 47%, #fffdda 53%, #a87a22 67%, #343a40 84%, #030405 100%);
+    box-shadow: 0 9px 18px rgba(0,0,0,.52), inset 0 1px 1px rgba(255,255,255,.54), inset 0 -1px 1px rgba(0,0,0,.58);
+  }
+  .studio-nb-rail::after{
+    content:""; position:absolute; left:2px; right:2px; top:18px; bottom:18px; opacity:.72;
+    background:
+      radial-gradient(circle at 50% 0, rgba(0,0,0,.58) 0 5px, transparent 6px),
+      radial-gradient(circle at 50% 14%, rgba(0,0,0,.58) 0 5px, transparent 6px),
+      radial-gradient(circle at 50% 28%, rgba(0,0,0,.58) 0 5px, transparent 6px),
+      radial-gradient(circle at 50% 42%, rgba(0,0,0,.58) 0 5px, transparent 6px),
+      radial-gradient(circle at 50% 56%, rgba(0,0,0,.58) 0 5px, transparent 6px),
+      radial-gradient(circle at 50% 70%, rgba(0,0,0,.58) 0 5px, transparent 6px),
+      radial-gradient(circle at 50% 84%, rgba(0,0,0,.58) 0 5px, transparent 6px),
+      radial-gradient(circle at 50% 100%, rgba(0,0,0,.58) 0 5px, transparent 6px);
+  }
+
+  /* ledger visibility: ledger only in Sheet; compact split UI hidden in Sheet */
+  .upkeep-ledger { display: none; }
+  .studio-layout.mode-draft #upkeep-ledger { display: block; position: relative; z-index: 2; }
+  .studio-layout.mode-draft #plumbing-list,
+  .studio-layout.mode-draft #charity-list,
+  .studio-layout.mode-draft .plumbing-summary,
+  .studio-layout.mode-draft #sec-upkeep > .panel-sub,
+  .studio-layout.mode-draft #sec-upkeep > .add-space-btn { display: none; }
+
+  .ledger-head { display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid rgba(45,36,20,.20); }
+  .ledger-title { font-family:var(--font-mono); font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink); font-weight:700; }
+  .ledger-overhead { margin-left:auto; font-family:var(--font-mono); font-size:12px; color:var(--ink-soft); }
+  .ledger-overhead strong { color:var(--ink); font-size:15px; margin-left:6px; }
+  .ledger-period-toggle { display:inline-flex; border:1px solid rgba(45,36,20,.28); border-radius:6px; overflow:hidden; }
+  .ledger-period-toggle button { font-family:var(--font-mono); font-size:11px; letter-spacing:.04em; padding:5px 10px; border:none; background:transparent; color:var(--ink-soft); cursor:pointer; border-left:1px solid rgba(45,36,20,.16); }
+  .ledger-period-toggle button:first-child { border-left:none; }
+  .ledger-period-toggle button.active { background:rgba(45,36,20,.10); color:var(--ink); font-weight:700; }
+  .ledger-table { width:100%; border-collapse:collapse; font-family:var(--font-mono); font-size:12px; color:var(--ink); }
+  .ledger-table th { text-align:left; font-size:10px; letter-spacing:.10em; text-transform:uppercase; color:var(--ink-soft); padding:6px 10px; border-bottom:1px solid rgba(45,36,20,.22); }
+  .ledger-table th:nth-child(2), .ledger-table th:nth-child(3) { text-align:right; }
+  .lg-row td { padding:6px 10px; border-bottom:1px solid rgba(45,36,20,.08); }
+  .lg-group td { padding:13px 10px 5px; font-size:10px; letter-spacing:.10em; text-transform:uppercase; color:var(--ink); font-weight:700; border-bottom:1px solid rgba(45,36,20,.16); }
+  .lg-disp { text-align:right; white-space:nowrap; }
+  .lg-sub { color:var(--ink); font-weight:700; }
+  .lg-entered { color:var(--ink-soft); white-space:nowrap; text-align:right; }
+  .lg-flag { display:inline-block; font-size:10px; padding:1px 6px; border-radius:3px; background:rgba(45,36,20,.07); color:var(--ink-soft); margin-right:3px; }
+  .lg-flag-warn { background:rgba(226,75,74,.12); color:#9a2f2e; }
+  .lg-note { color:var(--ink-soft); font-style:italic; }
+  .lg-muted { color:var(--ink-soft); }
+  .lg-grand td { padding:12px 10px; font-size:13px; font-weight:700; color:var(--ink); border-top:2px solid rgba(45,36,20,.30); }
+  .lg-ratio td { padding:8px 10px; font-size:11px; color:var(--ink-soft); }
+  .ledger-empty { padding:40px 10px; text-align:center; color:var(--ink-soft); font-family:var(--font-serif); font-size:13px; }
+  .ledger-foot { display:flex; align-items:center; gap:16px; margin-top:16px; }
+  .ledger-fork-hook { margin-left:auto; font-family:var(--font-mono); font-size:10px; color:var(--ink-soft); opacity:.6; border:1px dashed rgba(45,36,20,.3); border-radius:4px; padding:4px 10px; }
+
   /* ── view-s2: Phase-II "Estate Drafting" task-view (Step 1 · additive · reversible) ──
      Spotlights 02 Estate Drafting (#sec-drafting) + 03 Operating Upkeep (#sec-upkeep)
      via the explicit .s2-spotlight class on their wrapper nodes, and hides the other
@@ -1264,9 +1426,9 @@
       <img src="/brand/datumfi-wordmark-atum-fi.svg" class="nav-wordmark" alt="Datum FI">
     </a>
     <div class="view-toggle studio-seam">
-      <button class="view-btn" id="btn-draft" onclick="setViewMode('draft')" title="Drafting Focus">◼ Drafting</button>
+      <button class="view-btn" id="btn-draft" onclick="setViewMode('draft')" title="Sheet — full-screen ledger">◼ Sheet</button>
       <button class="view-btn active" id="btn-split" onclick="setViewMode('split')" title="Split View">◼◻ Split</button>
-      <button class="view-btn" id="btn-blueprint" onclick="setViewMode('blueprint')" title="Blueprint Focus">◼ Blueprint</button>
+      <button class="view-btn" id="btn-blueprint" onclick="setViewMode('blueprint')" title="Structure — estate blocks">◼ Structure</button>
     </div>
     <div class="nav-links">
       <a href="/sketch.html" class="nav-link">Sketch</a>
@@ -1690,7 +1852,7 @@
         </div>
       </div>
 
-      <div class="studio-section s2-spotlight">
+      <div class="studio-section s2-spotlight sheet-host">
         <div class="section-header-wrapper">
             <button class="section-tag" onclick="toggleSection('sec-upkeep', this)" style="border:none; margin:0; padding:0; flex:1;">
                 <span>03 / Operating Upkeep — Living Expenses</span> <span class="toggle-icon">−</span>
@@ -1720,6 +1882,16 @@
             <div class="plumbing-summary-row" style="margin-bottom:0; align-items:center; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px; margin-top:8px;">
               <span>Expense-to-Income Ratio (Overhead vs. Income):</span>
               <span id="upkeep-load-pct" class="load-pct">0%</span>
+            </div>
+          </div>
+
+          <!-- U3 — Living-Ledger on the Blueprint-Archive notebook (shown only in mode-draft / "Sheet"). -->
+          <div class="studio-notebook">
+            <div class="studio-nb-shadow" aria-hidden="true"></div>
+            <div class="studio-nb-cover" aria-hidden="true"></div>
+            <div class="studio-nb-rail" aria-hidden="true"></div>
+            <div class="studio-nb-sheet">
+              <div id="upkeep-ledger" class="upkeep-ledger" aria-label="Operating Upkeep — full ledger"></div>
             </div>
           </div>
         </div>
@@ -2860,6 +3032,110 @@
     function _upkMo(i){ return window.DatumBlueprint ? DatumBlueprint.upkeepMonthly(i) : 0; }
     window._getUpkeepModel = function(){ return { items: upkeepItems, charity: charityItems }; };
 
+    /* ── U3 — GLOBAL display-period (ephemeral, VIEW-ONLY). §16.8 "store one way (monthly),
+       compute one way, display many ways." Resets to monthly each load; NEVER stored, NEVER
+       per-line, NEVER in bp. dispVal re-expresses the canonical MONTHLY figure and NEVER mutates
+       amount/freq/model/Shape. */
+    window._displayPeriod = 'monthly';
+    var PERIOD_MULT   = { weekly: 12/52, biweekly: 12/26, monthly: 1, annual: 12, daily: 12/365 };
+    var PERIOD_SUFFIX = { weekly: '/wk', biweekly: '/biwk', monthly: '/mo', annual: '/yr', daily: '/day' };
+    function dispVal(monthly){ return (Number(monthly) || 0) * (PERIOD_MULT[window._displayPeriod] || 1); }
+    function _fmtPeriod(monthly){
+      return '$' + (Math.round(dispVal(monthly) * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        + ' ' + (PERIOD_SUFFIX[window._displayPeriod] || '/mo');
+    }
+    // Single display-authority for the split "Monthly Operating Overhead" readout (global toggle).
+    function _setOverheadText(){
+      var el = document.getElementById('total-upkeep-val'); if (!el) return;
+      var monthly = upkeepItems.reduce(function (s, i) { return s + _upkMo(i); }, 0);
+      el.textContent = _fmtPeriod(monthly);
+    }
+    window._setOverheadText = _setOverheadText;
+    window.setDisplayPeriod = function (p) {
+      if (!PERIOD_MULT[p]) return;
+      window._displayPeriod = p;
+      _setOverheadText();                          // GLOBAL: split readout obeys
+      if (window.renderLedger) renderLedger();     // Sheet re-expresses
+    };
+
+    /* ── U3 — Living-Ledger dense-table render for the full-screen SHEET (mode-draft). ADDITIVE:
+       renderUpkeep (split list) untouched; reads the SAME model + SAME hub producers (canonical
+       math stays in the hub). Pure presentation read-out (editing stays in Split, single-source ->
+       Sheet reflects live). Inline ledger editing + the $200 Fork are deliberate later work. */
+    var LEDGER_GROUPS = [
+      { key: 'essential',     label: 'Essential · Needs',     target: 'target 50%' },
+      { key: 'discretionary', label: 'Discretionary · Wants', target: 'target 30%' },
+      { key: 'aspirational',  label: 'Aspirational',          target: '' }
+    ];
+    function _enteredFreqLabel(f){ return ({ monthly:'/mo', quarterly:'/qtr', annual:'/yr' })[f] || '/mo'; }
+    function _esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function _ledgerFlags(it){
+      var f = [];
+      if (it.tag === 'autopay') f.push('<span class="lg-flag">⟳ auto</span>');
+      else if (it.tag === 'manual') f.push('<span class="lg-flag lg-flag-warn">✋ manual</span>');
+      if (it.endDate) f.push('<span class="lg-flag">⏳ ends ' + _esc(it.endDate) + '</span>');
+      if (it.endsAtRet) f.push('<span class="lg-flag">🏁 at retirement</span>');
+      return f.join(' ');
+    }
+    function _ledgerRow(it){
+      return '<tr class="lg-row">'
+        + '<td class="lg-name">' + (it.name ? _esc(it.name) : '<span class="lg-muted">(unnamed)</span>') + '</td>'
+        + '<td class="lg-entered">$' + (Number(it.amount)||0).toLocaleString('en-US') + ' ' + _enteredFreqLabel(it.freq) + '</td>'
+        + '<td class="lg-disp">' + _fmtPeriod(_upkMo(it)) + '</td>'
+        + '<td class="lg-flags">' + _ledgerFlags(it) + '</td>'
+        + '<td class="lg-note">' + _esc(it.note) + '</td>'
+        + '</tr>';
+    }
+    function _ledgerGroup(label, target, items){
+      var sub = items.reduce(function (s, it) { return s + _upkMo(it); }, 0);
+      var head = '<tr class="lg-group"><td class="lg-gname" colspan="2">' + _esc(label)
+        + (target ? ' <span class="lg-muted">(' + target + ')</span>' : '') + '</td>'
+        + '<td class="lg-disp lg-sub">' + _fmtPeriod(sub) + '</td><td colspan="2"></td></tr>';
+      var rows = items.length
+        ? items.map(_ledgerRow).join('')
+        : '<tr class="lg-row lg-empty"><td colspan="5" class="lg-muted">— none —</td></tr>';
+      return head + rows;
+    }
+    window.renderLedger = function () {
+      var host = document.getElementById('upkeep-ledger'); if (!host) return;
+      var byCat = { essential: [], discretionary: [], aspirational: [] };
+      upkeepItems.forEach(function (it) { (byCat[it.category] || byCat.essential).push(it); });
+      var monthlyTotal = upkeepItems.reduce(function (s, i) { return s + _upkMo(i); }, 0);
+      var essMo = byCat.essential.reduce(function (s, it) { return s + _upkMo(it); }, 0);
+      var disMo = byCat.discretionary.reduce(function (s, it) { return s + _upkMo(it); }, 0);
+      var priSal = parseInt(((document.getElementById('pri-salary') || {}).value || '').replace(/[^0-9]/g, ''), 10) || 0;
+      var coSal = 0; var coT = document.getElementById('co-arch-toggle');
+      if (coT && coT.checked) coSal = parseInt(((document.getElementById('co-salary') || {}).value || '').replace(/[^0-9]/g, ''), 10) || 0;
+      var moInc = (priSal + coSal) / 12;
+      var needsPct = moInc > 0 ? Math.round(essMo / moInc * 100) : 0;
+      var wantsPct = moInc > 0 ? Math.round(disMo / moInc * 100) : 0;
+      var period = PERIOD_SUFFIX[window._displayPeriod] || '/mo';
+      var pds = ['weekly','biweekly','monthly','annual','daily'];
+      var toggle = '<div class="ledger-period-toggle" role="group" aria-label="Display period">'
+        + pds.map(function (p) { return '<button type="button" data-period="' + p + '"'
+            + (window._displayPeriod === p ? ' class="active"' : '')
+            + ' onclick="setDisplayPeriod(\'' + p + '\')">' + PERIOD_SUFFIX[p] + '</button>'; }).join('')
+        + '</div>';
+      var head = '<div class="ledger-head"><div class="ledger-title">Operating Upkeep · The Living Ledger</div>'
+        + toggle + '<div class="ledger-overhead">Monthly Operating Overhead <strong>' + _fmtPeriod(monthlyTotal) + '</strong></div></div>';
+      if (upkeepItems.length === 0 && charityItems.length === 0) {
+        host.innerHTML = head + '<div class="ledger-empty">No expenses yet. Add lines in Split — they appear here instantly.</div>';
+        return;
+      }
+      var body = '<table class="ledger-table"><thead><tr><th>Expense</th><th>Entered</th><th>' + period + '</th><th>Flags</th><th>Note</th></tr></thead><tbody>';
+      LEDGER_GROUPS.forEach(function (g) { body += _ledgerGroup(g.label, g.target, byCat[g.key] || []); });
+      body += _ledgerGroup('Giving', '', charityItems);   // ruling (iv): own group, distinct from Wants
+      body += '</tbody><tfoot>'
+        + '<tr class="lg-grand"><td colspan="2">Grand Total (canonical monthly)</td><td class="lg-disp">' + _fmtPeriod(monthlyTotal) + '</td><td colspan="2"></td></tr>'
+        + '<tr class="lg-ratio"><td colspan="5"><span class="lg-muted">Needs (target 50%)</span> ' + needsPct + '%'
+        + ' &nbsp;·&nbsp; <span class="lg-muted">Wants (target 30%)</span> ' + wantsPct + '%'
+        + ' &nbsp;·&nbsp; <span class="lg-muted">Savings (target 20%)</span> <em class="lg-muted">— pending accounts wiring (U4+) —</em></td></tr>'
+        + '</tfoot></table>';
+      var foot = '<div class="ledger-foot"><span class="lg-muted" style="font-family:var(--font-mono);font-size:10px;">Add or edit expenses in Split — they appear here instantly (inline editing comes with the Sheet overhaul).</span>'
+        + '<span class="ledger-fork-hook" title="Opportunity-cost / $200 Fork — future U4">⌁ $200 Fork · opp-cost (U4)</span></div>';
+      host.innerHTML = head + body + foot;
+    };
+
     window.renderUpkeep = function() {
         const list = document.getElementById('plumbing-list');
         const cList = document.getElementById('charity-list');
@@ -2900,7 +3176,7 @@
             `;
         });
 
-        document.getElementById('total-upkeep-val').innerText = `$${Math.round(total).toLocaleString('en-US')}`;
+        _setOverheadText();   // U3 — global display-period authority (split readout obeys toggle)
 
         let cRow = document.getElementById('charity-hud-row');
         if(cTotal > 0) {
@@ -2910,6 +3186,7 @@
         }
 
         calculateUpkeepLoad(total, cTotal);
+        if (window.renderLedger) renderLedger();   // U3 — keep the Sheet ledger in sync
     }
 
     /* U1 hub-bind — re-hydrate the Operating Upkeep ledger from the canonical hub slot, then
@@ -2967,12 +3244,13 @@
         if(field === 'amount' || field === 'freq') {
            let total  = upkeepItems.reduce((sum, i) => sum + _upkMo(i), 0);
            let cTotal = charityItems.reduce((sum, i) => sum + _upkMo(i), 0);
-           document.getElementById('total-upkeep-val').innerText = `$${Math.round(total).toLocaleString('en-US')}`;
+           _setOverheadText();   // U3 — global display-period authority
            let cRow = document.getElementById('charity-hud-row');
            if(cRow) cRow.style.display = cTotal > 0 ? 'flex' : 'none';
            calculateUpkeepLoad(total, cTotal);
            updateAnalysisText();
            updateSVGs();
+           if (window.renderLedger) renderLedger();   // U3 — keep the Sheet ledger in sync
         }
     }
 
