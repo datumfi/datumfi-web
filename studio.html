@@ -1475,8 +1475,13 @@
       
       <a href="#" class="return-home">← Return to Overview</a>
 
-      <h1>Draft Your Estate</h1>
-      <div class="panel-sub" style="color: var(--gold);">Map the dimensions of your wealth</div>
+      <!-- S1 left-header — parity with Sketch title-block (sketch.html:1460-1463), Sketch visual order.
+           "Reveal the Shape" = gold serif-italic descriptor (parallels Sketch "Discover Your Shape");
+           HEADER STRING ONLY — NOT wired to the MC "REVEAL YOUR RANGE" button. -->
+      <div class="panel-sub" style="margin-bottom:12px;">PHASE I — DATA</div>
+      <div style="font-family:var(--font-serif); font-size:22px; font-style:italic; color:var(--gold); margin-bottom:12px;">Reveal the Shape</div>
+      <h1>The Studio</h1>
+      <div class="panel-sub" style="color:var(--muted);">Move the inputs. Watch your retirement take shape.</div>
 
       <!-- Phase-II Estate Drafting task-view entry (Step 1 · additive · reversible).
            Enters #studio-layout.view-s2 over the live hub; carried Sketch shape stays on canvas. -->
@@ -1485,19 +1490,137 @@
         <button type="button" class="s2-exit-btn"  onclick="exitS2View()">← Full Studio</button>
       </div>
 
+      <div class="swf-col-head have" aria-hidden="true">Shape You Have</div>
+
+      <div class="studio-section">
+        <div class="section-header-wrapper">
+            <button class="section-tag" onclick="toggleSection('sec-profile', this)" style="border:none; margin:0; padding:0; flex:1;">
+                <span>00 / Architect Profile</span> <span class="toggle-icon">−</span>
+            </button>
+            <button class="pin-btn" onclick="togglePin('sec-profile', this)" title="Pin section open">📌</button>
+        </div>
+        <div id="sec-profile" class="section-content" style="display: block;">
+          
+          <div class="precision-motto">Precision in. Precision out.</div>
+
+          <div class="architect-box">
+            
+            <input type="text" id="primary-name" class="name-input" value="Primary Architect" maxlength="20">
+            
+            <div class="field-row">
+              <div>
+                <div class="input-label">Date of Birth</div>
+                <input type="text" class="small-field" id="pri-dob" data-field="current_age" value="" placeholder="MM/YYYY" tabindex="11" onfocus="this.select(); window._captureProfileGood && window._captureProfileGood(this)" oninput="_fmtRetDate(this); _updatePlanEndAge()" onblur="_validatePriDob(this)">
+                <div id="pri-dob-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
+              </div>
+              <div>
+                <div class="input-label">Location (Tax Base)</div>
+                <!-- Dossier-exact US-states dropdown (Dossier.html #location, verbatim option list) -->
+                <select id="pri-location" class="small-field" tabindex="12" style="background: var(--bg-navy); color: white;">
+                   <option value="" selected>Select state</option><option>Alabama</option><option>Alaska</option><option>Arizona</option><option>Arkansas</option><option>California</option><option>Colorado</option><option>Connecticut</option><option>Delaware</option><option>District of Columbia</option><option>Florida</option><option>Georgia</option><option>Hawaii</option><option>Idaho</option><option>Illinois</option><option>Indiana</option><option>Iowa</option><option>Kansas</option><option>Kentucky</option><option>Louisiana</option><option>Maine</option><option>Maryland</option><option>Massachusetts</option><option>Michigan</option><option>Minnesota</option><option>Mississippi</option><option>Missouri</option><option>Montana</option><option>Nebraska</option><option>Nevada</option><option>New Hampshire</option><option>New Jersey</option><option>New Mexico</option><option>New York</option><option>North Carolina</option><option>North Dakota</option><option>Ohio</option><option>Oklahoma</option><option>Oregon</option><option>Pennsylvania</option><option>Rhode Island</option><option>South Carolina</option><option>South Dakota</option><option>Tennessee</option><option>Texas</option><option>Utah</option><option>Vermont</option><option>Virginia</option><option>Washington</option><option>West Virginia</option><option>Wisconsin</option><option>Wyoming</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="field-row">
+              <div class="salary-container" style="position: relative;">
+                <div class="input-label">Gross Annual Salary</div>
+                <input type="text" class="small-field curr-format" id="pri-salary" value="" placeholder="$0" tabindex="13" oninput="updateSalaryTT('pri'); calculateUpkeepLoad(); updateAnalysisText();">
+                <div class="salary-tooltip" id="pri-salary-tt"></div>
+              </div>
+              <div>
+                <div class="input-label">Effective Tax Rate</div>
+                <!-- Dossier-exact dropdown (Dossier.html #taxRate, verbatim options) -->
+                <select id="eff-tax-rate" class="small-field" tabindex="14" style="background: var(--bg-navy); color: white;" onchange="updateAnalysisText()">
+                   <option value="12%">12% bracket</option>
+                   <option value="22%" selected>22% blended estimate</option>
+                   <option value="24%">24% bracket</option>
+                   <option value="32%">32% bracket</option>
+                   <option value="35%">35% bracket</option>
+                   <option value="37%">37% bracket</option>
+                </select>
+              </div>
+            </div>
+            <div class="field-row" style="grid-template-columns: 1fr;">
+              <div>
+                <div class="input-label">Filing Status</div>
+                <select id="filing-status" class="small-field" tabindex="15" style="background: var(--bg-navy); color: white;">
+                   <option>Single / Individual</option>
+                   <option selected>Married Filing Jointly</option>
+                   <option>Married Filing Separately</option>
+                   <option>Head of Household</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field-row" style="margin-top: 15px;">
+              <div>
+                <div class="input-label">Target Retirement Date</div>
+                <input type="text" class="small-field" id="target-ret" data-field="retirement_age" value="" placeholder="MM/YYYY" tabindex="16" onfocus="this.select(); window._captureProfileGood && window._captureProfileGood(this)" oninput="_fmtRetDate(this); updateSVGs(); _updatePlanEndAge()" onblur="_validateRetDate(this)">
+                <div id="ret-date-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;">Retirement age exceeds 100 — plan capped at age 120.</div>
+              </div>
+              <div>
+                <div class="input-label">Plan Through Date</div>
+                <input type="text" class="small-field" id="plan-end-age" value="" placeholder="MM/YYYY" tabindex="17" title="The date through which your retirement plan is modeled (the slider is the source of truth)." onfocus="this.select()" oninput="_fmtRetDate(this)" onblur="window._commitPlanEndDate && window._commitPlanEndDate(this)">
+                <div id="plan-end-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
+              </div>
+            </div>
+
+
+            <div class="toggle-row" style="margin-top: 25px; margin-bottom: 15px; padding-bottom: 0; border: none;">
+              <span class="toggle-label">Co-Architect / Spouse</span>
+              <label class="switch">
+                <input type="checkbox" id="co-arch-toggle">
+                <span class="slider"></span>
+              </label>
+            </div>
+            
+            <div id="co-arch-fields" style="display: none; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
+              <input type="text" id="co-name" class="name-input" value="Co-Architect" maxlength="20">
+              <div class="field-row">
+                <div>
+                  <div class="input-label">Co-Architect DOB</div>
+                  <input type="text" class="small-field" id="co-dob" value="" placeholder="MM/YYYY" onfocus="this.select(); window._captureProfileGood && window._captureProfileGood(this)" oninput="_fmtRetDate(this)" onblur="_validateCoDob(this)">
+                  <div id="co-dob-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
+                </div>
+              </div>
+
+              <div class="field-row">
+                <div class="salary-container" style="position: relative;">
+                  <div class="input-label">Co-Arch Salary</div>
+                  <input type="text" class="small-field curr-format" id="co-salary" value="" placeholder="$0" oninput="updateSalaryTT('co'); calculateUpkeepLoad(); updateAnalysisText();">
+                  <div class="salary-tooltip" id="co-salary-tt"></div>
+                </div>
+                <div>
+                  <div class="input-label">Target Retirement Date</div>
+                  <input type="text" class="small-field" id="co-ret" value="" placeholder="MM/YYYY" onfocus="this.select(); window._captureProfileGood && window._captureProfileGood(this)" oninput="_fmtRetDate(this)" onblur="_validateCoRet(this)">
+                  <div id="co-ret-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
+                </div>
+              </div>
+
+              <!-- P8.2 — Co-Architect note (DISPLAY-ONLY, static copy). Pairs with the
+                   "01 / PRIMARY TIMELINE" header relabel in the Shape area to make clear
+                   the Shape treats the household as one (primary-only) for now. No derived
+                   values, no date/age conversion, no payload. -->
+              <div id="co-arch-note" style="font-family:var(--font-serif);font-size:11px;color:var(--muted);line-height:1.6;margin-top:10px;">We see your Co-Architect. For now your Shape treats you as one household; per-person precision arrives as you draft your Estate.</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
       <!-- 00 / Sketch Inputs: Sketch-style sliders/radios that drive Shape Mode.
            Seeded from Blueprint draft -> saved Sketch -> Dossier -> defaults.
            Bidirectionally bound to Profile (pri-dob / target-ret / plan-end-age / eff-tax-rate)
            on a last-touched-wins basis. -->
-      <div class="swf-col-head have" aria-hidden="true">Shape You Have</div>
       <div class="studio-section">
         <div class="section-header-wrapper">
             <button class="section-tag" onclick="toggleSection('sec-sketch', this)" style="border:none; margin:0; padding:0; flex:1;">
-                <span>00 / Sketch Inputs</span> <span class="toggle-icon">−</span>
+                <span>01 / Sketch Inputs</span> <span class="toggle-icon">+</span>
             </button>
             <button class="pin-btn" onclick="togglePin('sec-sketch', this)" title="Pin section open">📌</button>
         </div>
-        <div id="sec-sketch" class="section-content" style="display: block;">
+        <div id="sec-sketch" class="section-content" style="display: none;">
           <!-- Item 3.1 — the read-only "From your Sketch design" WANT-metrics box was
                removed here. Its shape-state styling was re-homed: the colored outline
                now drives the whole .drafting-panel and the state badge sits beside the
@@ -1692,123 +1815,6 @@
                 The Sketch uses geometric compounding. Each scenario runs a band of three growth paths — conservative, baseline, and upside — which form your Floor, middle projection, and Ceiling. <strong>Optimistic</strong>: 2.0–4.0–6.5% real (markets performing well above average). <strong>Historical</strong>: 1.5–3.5–5.5% real (anchored to long-run averages). <strong>Stress</strong>: 0.5–1.5–3.5% real (compressed returns, heavy downside guardrails). Inflation: <strong>Real</strong> strips inflation out — all values in today's dollars. <strong>Nominal</strong> adds 3.0%/yr inflation, showing the raw future dollar amounts.<br><br>Plan-Through Age sets how long the money has to last. It's the one input that isn't about how hard your plan works, but how long — and it reshapes everything downstream. A shorter retirement means each dollar covers fewer years, so the same capital safely supports more spending: your Floor, Ceiling, and Datum all rise. A longer retirement spreads the same capital thinner, and all three settle lower. Set it to the age you genuinely want to be covered through — it's an honest assumption, not a dial to make the numbers look better.<br><br>Your Floor and Ceiling each use a withdrawal rate tuned to the question they answer: the Floor uses a reduced rate for resilience under a conservative path, the Ceiling uses an elevated rate for capacity under an upside path — and both flex with your retirement length, rising as it shortens and easing as it lengthens. Your Datum is different in kind: it always shows the capital required to sustain your chosen spending — at the canonical 4% rule for a baseline retirement, adjusting with your Plan-Through Age just as the boundaries do. That way the three boundaries answer three honest questions: "what could break" (Floor), "what could stretch" (Ceiling), and "what would my spending cost as capital" (Datum) — each measured against the length of retirement you're planning for.
               </div>
             </div>
-        </div>
-      </div>
-
-      <div class="studio-section">
-        <div class="section-header-wrapper">
-            <button class="section-tag" onclick="toggleSection('sec-profile', this)" style="border:none; margin:0; padding:0; flex:1;">
-                <span>01 / Architect Profile</span> <span class="toggle-icon">−</span>
-            </button>
-            <button class="pin-btn" onclick="togglePin('sec-profile', this)" title="Pin section open">📌</button>
-        </div>
-        <div id="sec-profile" class="section-content" style="display: block;">
-          
-          <div class="precision-motto">Precision in. Precision out.</div>
-
-          <div class="architect-box">
-            
-            <input type="text" id="primary-name" class="name-input" value="Primary Architect" maxlength="20">
-            
-            <div class="field-row">
-              <div>
-                <div class="input-label">Date of Birth</div>
-                <input type="text" class="small-field" id="pri-dob" data-field="current_age" value="" placeholder="MM/YYYY" tabindex="11" onfocus="this.select(); window._captureProfileGood && window._captureProfileGood(this)" oninput="_fmtRetDate(this); _updatePlanEndAge()" onblur="_validatePriDob(this)">
-                <div id="pri-dob-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
-              </div>
-              <div>
-                <div class="input-label">Location (Tax Base)</div>
-                <!-- Dossier-exact US-states dropdown (Dossier.html #location, verbatim option list) -->
-                <select id="pri-location" class="small-field" tabindex="12" style="background: var(--bg-navy); color: white;">
-                   <option value="" selected>Select state</option><option>Alabama</option><option>Alaska</option><option>Arizona</option><option>Arkansas</option><option>California</option><option>Colorado</option><option>Connecticut</option><option>Delaware</option><option>District of Columbia</option><option>Florida</option><option>Georgia</option><option>Hawaii</option><option>Idaho</option><option>Illinois</option><option>Indiana</option><option>Iowa</option><option>Kansas</option><option>Kentucky</option><option>Louisiana</option><option>Maine</option><option>Maryland</option><option>Massachusetts</option><option>Michigan</option><option>Minnesota</option><option>Mississippi</option><option>Missouri</option><option>Montana</option><option>Nebraska</option><option>Nevada</option><option>New Hampshire</option><option>New Jersey</option><option>New Mexico</option><option>New York</option><option>North Carolina</option><option>North Dakota</option><option>Ohio</option><option>Oklahoma</option><option>Oregon</option><option>Pennsylvania</option><option>Rhode Island</option><option>South Carolina</option><option>South Dakota</option><option>Tennessee</option><option>Texas</option><option>Utah</option><option>Vermont</option><option>Virginia</option><option>Washington</option><option>West Virginia</option><option>Wisconsin</option><option>Wyoming</option>
-                </select>
-              </div>
-            </div>
-            
-            <div class="field-row">
-              <div class="salary-container" style="position: relative;">
-                <div class="input-label">Gross Annual Salary</div>
-                <input type="text" class="small-field curr-format" id="pri-salary" value="" placeholder="$0" tabindex="13" oninput="updateSalaryTT('pri'); calculateUpkeepLoad(); updateAnalysisText();">
-                <div class="salary-tooltip" id="pri-salary-tt"></div>
-              </div>
-              <div>
-                <div class="input-label">Effective Tax Rate</div>
-                <!-- Dossier-exact dropdown (Dossier.html #taxRate, verbatim options) -->
-                <select id="eff-tax-rate" class="small-field" tabindex="14" style="background: var(--bg-navy); color: white;" onchange="updateAnalysisText()">
-                   <option value="12%">12% bracket</option>
-                   <option value="22%" selected>22% blended estimate</option>
-                   <option value="24%">24% bracket</option>
-                   <option value="32%">32% bracket</option>
-                   <option value="35%">35% bracket</option>
-                   <option value="37%">37% bracket</option>
-                </select>
-              </div>
-            </div>
-            <div class="field-row" style="grid-template-columns: 1fr;">
-              <div>
-                <div class="input-label">Filing Status</div>
-                <select id="filing-status" class="small-field" tabindex="15" style="background: var(--bg-navy); color: white;">
-                   <option>Single / Individual</option>
-                   <option selected>Married Filing Jointly</option>
-                   <option>Married Filing Separately</option>
-                   <option>Head of Household</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="field-row" style="margin-top: 15px;">
-              <div>
-                <div class="input-label">Target Retirement Date</div>
-                <input type="text" class="small-field" id="target-ret" data-field="retirement_age" value="" placeholder="MM/YYYY" tabindex="16" onfocus="this.select(); window._captureProfileGood && window._captureProfileGood(this)" oninput="_fmtRetDate(this); updateSVGs(); _updatePlanEndAge()" onblur="_validateRetDate(this)">
-                <div id="ret-date-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;">Retirement age exceeds 100 — plan capped at age 120.</div>
-              </div>
-              <div>
-                <div class="input-label">Plan Through Date</div>
-                <input type="text" class="small-field" id="plan-end-age" value="" placeholder="MM/YYYY" tabindex="17" title="The date through which your retirement plan is modeled (the slider is the source of truth)." onfocus="this.select()" oninput="_fmtRetDate(this)" onblur="window._commitPlanEndDate && window._commitPlanEndDate(this)">
-                <div id="plan-end-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
-              </div>
-            </div>
-
-
-            <div class="toggle-row" style="margin-top: 25px; margin-bottom: 15px; padding-bottom: 0; border: none;">
-              <span class="toggle-label">Co-Architect / Spouse</span>
-              <label class="switch">
-                <input type="checkbox" id="co-arch-toggle">
-                <span class="slider"></span>
-              </label>
-            </div>
-            
-            <div id="co-arch-fields" style="display: none; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
-              <input type="text" id="co-name" class="name-input" value="Co-Architect" maxlength="20">
-              <div class="field-row">
-                <div>
-                  <div class="input-label">Co-Architect DOB</div>
-                  <input type="text" class="small-field" id="co-dob" value="" placeholder="MM/YYYY" onfocus="this.select(); window._captureProfileGood && window._captureProfileGood(this)" oninput="_fmtRetDate(this)" onblur="_validateCoDob(this)">
-                  <div id="co-dob-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
-                </div>
-              </div>
-
-              <div class="field-row">
-                <div class="salary-container" style="position: relative;">
-                  <div class="input-label">Co-Arch Salary</div>
-                  <input type="text" class="small-field curr-format" id="co-salary" value="" placeholder="$0" oninput="updateSalaryTT('co'); calculateUpkeepLoad(); updateAnalysisText();">
-                  <div class="salary-tooltip" id="co-salary-tt"></div>
-                </div>
-                <div>
-                  <div class="input-label">Target Retirement Date</div>
-                  <input type="text" class="small-field" id="co-ret" value="" placeholder="MM/YYYY" onfocus="this.select(); window._captureProfileGood && window._captureProfileGood(this)" oninput="_fmtRetDate(this)" onblur="_validateCoRet(this)">
-                  <div id="co-ret-warn" style="display:none;font-family:var(--font-mono);font-size:9px;color:#f59e0b;margin-top:3px;line-height:1.4;"></div>
-                </div>
-              </div>
-
-              <!-- P8.2 — Co-Architect note (DISPLAY-ONLY, static copy). Pairs with the
-                   "01 / PRIMARY TIMELINE" header relabel in the Shape area to make clear
-                   the Shape treats the household as one (primary-only) for now. No derived
-                   values, no date/age conversion, no payload. -->
-              <div id="co-arch-note" style="font-family:var(--font-serif);font-size:11px;color:var(--muted);line-height:1.6;margin-top:10px;">We see your Co-Architect. For now your Shape treats you as one household; per-person precision arrives as you draft your Estate.</div>
-            </div>
-
-          </div>
         </div>
       </div>
 
@@ -9038,6 +9044,9 @@
       window.DatumBlueprint.bind({ blueprint: bp });
       window._studioBlueprint = bp;
       if (typeof updateShapePanel === 'function') updateShapePanel();
+      // S1 LANDING — default to Shape mode (no estate exists yet at S1). ONE-LINE FLIP: false = Estate default.
+      var S1_DEFAULT_SHAPE = true;
+      if (S1_DEFAULT_SHAPE && !document.getElementById('studio-layout').classList.contains('mode-shape') && window.toggleShapeMode) window.toggleShapeMode();
     } catch (e) { console.warn('[blueprint] init failed', e); }
   });
   </script>
