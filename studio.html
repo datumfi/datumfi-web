@@ -3464,30 +3464,21 @@
         document.getElementById('hud-diag').classList.toggle('open');
     }
 
-    function renderInputs() {
-      const scrollTop = roomsContainer.scrollTop;
-      roomsContainer.innerHTML = '';
-      
-      const isCo = coToggle.checked;
-      const priName = document.getElementById('primary-name').value.toUpperCase() || 'PRIMARY';
-      const coName = document.getElementById('co-name').value.toUpperCase() || 'CO-ARCH';
+    // S2.2 — inner card HTML for one room, extracted verbatim from the old renderInputs loop so
+    // the keyed reconcile can repaint a REUSED .room-input-container instead of rebuilding it.
+    function _roomCardInner(acc, base, isCo, priName, coName) {
+      let ownerTag = '';
+      if (base.type === 'coarch') ownerTag = `(${coName})`;
+      else if (base.type === 'primary') ownerTag = `(${priName})`;
+      else if (base.type === 'joint' && isCo) ownerTag = `(JOINT)`;
 
-      state.accounts.forEach(acc => {
-        const base = getBaseType(acc.baseId);
-        if(!base) return;
-        
-        let ownerTag = '';
-        if (base.type === 'coarch') ownerTag = `(${coName})`;
-        else if (base.type === 'primary') ownerTag = `(${priName})`;
-        else if (base.type === 'joint' && isCo) ownerTag = `(JOINT)`;
-        
-        let valStr = acc.value ? formatCurrency(acc.value.toString()) : '';
-        let inflowStr = acc.inflow ? formatCurrency(acc.inflow.toString()) : '';
+      let valStr = acc.value ? formatCurrency(acc.value.toString()) : '';
+      let inflowStr = acc.inflow ? formatCurrency(acc.inflow.toString()) : '';
 
-        let extraRows = '';
-        
-        if (base.hasInflow && base.taxCode !== 'debt') {
-            extraRows += `
+      let extraRows = '';
+
+      if (base.hasInflow && base.taxCode !== 'debt') {
+          extraRows += `
             <div class="contribution-row">
               <span class="inflow-label">Contributions</span>
               <div class="inflow-input-group">
@@ -3500,15 +3491,13 @@
                  </select>
               </div>
             </div>`;
-        }
+      }
 
-        let opacStyle = acc.exclude ? 'opacity: 0.4;' : '';
-        let isReadOnly = (acc.holdings && acc.holdings.length > 0) ? 'readonly' : '';
-        const _exNote = shapeExclusionNote(acc.baseId);   // Step 4 — Shape-exclusion ⓘ (display only)
-        const _exIcon = _exNote ? `<span class="shape-info-icon tip-room" tabindex="0" role="note" aria-label="Why this isn't in your Shape">i<div class="shape-info-tooltip">${_exNote}</div></span>` : '';
+      let isReadOnly = (acc.holdings && acc.holdings.length > 0) ? 'readonly' : '';
+      const _exNote = shapeExclusionNote(acc.baseId);   // Step 4 — Shape-exclusion ⓘ (display only)
+      const _exIcon = _exNote ? `<span class="shape-info-icon tip-room" tabindex="0" role="note" aria-label="Why this isn't in your Shape">i<div class="shape-info-tooltip">${_exNote}</div></span>` : '';
 
-        roomsContainer.innerHTML += `
-          <div class="room-input-container active" id="inp-wrapper-${acc.id}" style="${opacStyle}">
+      return `
             <button class="delete-room" type="button" onclick="removeInstance('${acc.id}')">×</button>
             <div class="room-header">
               <div>
@@ -3523,10 +3512,38 @@
                <div class="room-desc" style="margin-top:0;">${base.desc}${_exIcon}</div>
                <button class="details-btn" type="button" onclick="openAccountModal('${acc.id}')">⚙️ DETAILS</button>
             </div>
-            <div class="inline-details" id="inline-${acc.id}"></div>
-          </div>
-        `;
+            <div class="inline-details" id="inline-${acc.id}"></div>`;
+    }
+
+    function renderInputs() {
+      const scrollTop = roomsContainer.scrollTop;
+      const isCo = coToggle.checked;
+      const priName = document.getElementById('primary-name').value.toUpperCase() || 'PRIMARY';
+      const coName = document.getElementById('co-name').value.toUpperCase() || 'CO-ARCH';
+
+      // S2.2 — KEYED RECONCILE: reuse a persistent wrapper per acc.id (keyed off its existing
+      // #inp-wrapper-<id>; no new attribute), repaint inner + reorder, drop orphans. Replaces the
+      // full innerHTML wipe so wrappers survive add/remove (prereq for jostle/cross-highlight/lift-out).
+      const existing = new Map();
+      Array.from(roomsContainer.children).forEach(n => {
+        if (n.id && n.id.indexOf('inp-wrapper-') === 0) existing.set(n.id.slice(12), n);
       });
+      const seen = new Set();
+      const ordered = [];
+      state.accounts.forEach(acc => {
+        const base = getBaseType(acc.baseId);
+        if(!base) return;
+        seen.add(acc.id);
+        let wrap = existing.get(acc.id);
+        if (!wrap) wrap = document.createElement('div');
+        wrap.className = 'room-input-container active';   // class/id/style order matches old template
+        wrap.id = 'inp-wrapper-' + acc.id;
+        wrap.setAttribute('style', acc.exclude ? 'opacity: 0.4;' : '');
+        wrap.innerHTML = _roomCardInner(acc, base, isCo, priName, coName);
+        ordered.push(wrap);
+      });
+      existing.forEach((n, id) => { if (!seen.has(id)) n.remove(); });
+      ordered.forEach(n => roomsContainer.appendChild(n));   // appendChild moves existing nodes -> state order
       roomsContainer.scrollTop = scrollTop;
 
       // Populate inline details in Drafting Focus mode
