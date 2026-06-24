@@ -255,7 +255,35 @@
      drive the Shape (G5 capital-authority overwrites slider-portfolio every render). Hide
      in view-s2 ONLY; KEEP in S1 (critical estimate entry). display:none preserves the
      load-fill + writeback listeners for S1; reversible (drop the class or .view-s2). */
+  /* Dispatch-A Task 2 — the editable Portfolio/Contributions pair (+ the read-only CCA/RA/PTA
+     age context) RETURN on the SHAPE side of S2 (.mode-shape), where the slider<->shape writeback
+     is live; they stay hidden on the Estate side, where the rooms are capital-authority. The
+     .s2-hide-boxes rows are display:grid (.field-row), so restore grid, not block. */
   .studio-layout.view-s2 .s2-hide-boxes { display: none; }
+  .studio-layout.view-s2.mode-shape .s2-hide-boxes { display: grid; }
+  /* Read-only age context — a static field face (no input affordance). The .small-field.s2-ro-age
+     compound beats the later `.small-field { color:white }` so all 5 read-only boxes read grey. */
+  .small-field.s2-ro-age { display: flex; align-items: center; color: var(--muted); cursor: default; }
+  /* A.1 Task 1 — on the S2 Shape side the relocated Portfolio/Contributions boxes are READ-ONLY
+     baseline (the figure carried from Sketch). Match the CCA/RA/PTA static face: muted, no caret.
+     readOnly (set by _applyS2RoBoxes) severs user typing -> no 'input' -> writeback dormant HERE
+     only; on S1 the predicate is false so the box stays fully editable. */
+  .studio-layout.view-s2.mode-shape input.s2-ro-box {
+    color: var(--muted); cursor: default; caret-color: transparent;
+  }
+
+  /* Dispatch-A Task 1 — the S1 capital controls (Snapshot bank, range-readiness status bar, and
+     Reveal-Range button) plus the privacy note belong to the S1 landing only; they are NOT
+     .studio-section, so the S2 spotlight doesn't catch them and they leak in. Hide across ALL of
+     S2 (both sides); untouched on S1. Reversible (drop .view-s2). */
+  .studio-layout.view-s2 .scenario-bank,
+  .studio-layout.view-s2 .reveal-container,
+  .studio-layout.view-s2 .privacy-note { display: none; }
+
+  /* Dispatch-A Task 2 (Option B) — the one-time "deepening" note is cosmetic context for the
+     Shape side; keep it hidden while the canvas is on the Estate side. (The "See the Tension"
+     CTA is deliberately NOT gated here — it stays reachable on both sides, per Captain ruling.) */
+  .studio-layout.view-s2:not(.mode-shape) .s2-deepening-note { display: none; }
 
   /* §20 account-gate (Step 2) — hide the Estate-mode toggle while in S2 with zero rooms
      (refreshEstateGate adds .s2-estate-locked) so the user can't toggle to an empty-rooms
@@ -285,7 +313,7 @@
   .estate-progress-ghost strong { color: var(--teal-mid); font-weight: 600; }
   .see-tension-cta { display: block; width: 100%; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; color: var(--gold); background: rgba(201,168,76,0.08); border: 1px solid rgba(201,168,76,0.5); border-radius: 4px; padding: 11px 18px; margin-top: 12px; cursor: pointer; transition: 0.2s; }
   .see-tension-cta:hover { background: rgba(201,168,76,0.16); border-color: var(--gold); }
-  .s2-deepening-note { position: relative; font-family: var(--font-serif); font-size: 12px; line-height: 1.6; color: var(--muted); background: rgba(29,158,117,0.06); border: 1px solid rgba(29,158,117,0.25); border-radius: 4px; padding: 12px 32px 12px 14px; margin-bottom: 14px; }
+  .s2-deepening-note { position: relative; font-family: var(--font-serif); font-size: 12px; line-height: 1.6; color: var(--white); background: rgba(29,158,117,0.06); border: 1px solid rgba(29,158,117,0.25); border-radius: 4px; padding: 12px 32px 12px 14px; margin-bottom: 14px; }
   .s2-deepening-x { position: absolute; top: 5px; right: 8px; background: none; border: none; color: var(--muted); font-size: 15px; line-height: 1; cursor: pointer; }
 
   /* Entry/exit affordance — exit shows only inside the task-view */
@@ -1867,6 +1895,25 @@
             <div>
               <div class="input-label">Annual Contributions</div>
               <input type="text" class="small-field curr-format" id="bp-contributions-total" placeholder="$0" onfocus="this.select()" aria-label="Annual Contributions">
+            </div>
+          </div>
+
+          <!-- Dispatch-A Task 2 — READ-ONLY age context (CCA / RA / PTA), Shape side only. Mirrors
+               the 01/Timeline sliders (hidden under the S2 spotlight) so the user still sees the
+               three ages that frame the Shape. Display-only — populated by syncS2AgeContext(); no
+               writeback. Same .s2-hide-boxes gate as the editable pair above. -->
+          <div class="field-row s2-hide-boxes s2-age-context" style="grid-template-columns:1fr 1fr 1fr; margin-bottom:18px;">
+            <div>
+              <div class="input-label">Current Age</div>
+              <div class="small-field s2-ro-age" id="s2-cca" aria-label="Current Age">—</div>
+            </div>
+            <div>
+              <div class="input-label">Retirement Age</div>
+              <div class="small-field s2-ro-age" id="s2-ra" aria-label="Retirement Age">—</div>
+            </div>
+            <div>
+              <div class="input-label">Plan-Through Age</div>
+              <div class="small-field s2-ro-age" id="s2-pta" aria-label="Plan-Through Age">—</div>
             </div>
           </div>
 
@@ -5920,6 +5967,9 @@
           if (window._fitShapeToScreen) window._fitShapeToScreen();
         });
       }
+      // Dispatch-A Task 2 — the ghost + read-only age context are mode-dependent now; re-evaluate
+      // them for the side we just flipped to (idempotent on the mode-agnostic drafting flag).
+      if (window.refreshDraftingState) window.refreshDraftingState();
     };
 
     /* view-s2 task-view toggle — Step 1/2. Pure class flip on #studio-layout; the CSS
@@ -5960,9 +6010,42 @@
       if (n >= 1e3) return '$' + Math.round(n / 1e3) + 'k';
       return '$' + n.toLocaleString('en-US');
     }
+    /* Dispatch-A Task 2 — read-only age context (CCA/RA/PTA) on the Shape side. Mirrors the live
+       01/Timeline value spans into the static fields; display-only (no writeback). The timeline
+       sliders are hidden under the S2 spotlight, so the ages are static once in S2 — populate on
+       every show transition (S2 entry, mode flip, state refresh). Null-guarded per D14. */
+    function syncS2AgeContext() {
+      var m = { 's2-cca': 'val-age', 's2-ra': 'val-activation', 's2-pta': 'val-plan-through' };
+      Object.keys(m).forEach(function (k) {
+        var dst = document.getElementById(k), src = document.getElementById(m[k]);
+        if (dst && src) dst.textContent = src.textContent;
+      });
+    }
+    window.syncS2AgeContext = syncS2AgeContext;
+
+    /* A.1 Task 1 — make the relocated Portfolio/Contributions boxes READ-ONLY on the S2 Shape side
+       (the carried-from-Sketch baseline). Toggling native readOnly is inherently scoped: it is set
+       true ONLY while view-s2 && mode-shape, so a readOnly input fires no 'input' event and
+       wireEstateDraftingWriteback stays dormant HERE — with zero code removed. On S1 (and S2 Estate
+       side) the predicate is false -> readOnly=false -> the box is fully editable and the writeback
+       fires normally. The unbinding cannot leak to S1. Null-guarded per D14. */
+    function _applyS2RoBoxes() {
+      var l = document.getElementById('studio-layout');
+      var ro = !!(l && l.classList.contains('view-s2') && l.classList.contains('mode-shape'));
+      ['bp-portfolio-total', 'bp-contributions-total'].forEach(function (id) {
+        var el = document.getElementById(id); if (!el) return;
+        el.readOnly = ro;
+        el.classList.toggle('s2-ro-box', ro);
+      });
+    }
+    window._applyS2RoBoxes = _applyS2RoBoxes;
+
     function updateEstateGhost() {
       var g = document.getElementById('estate-progress-ghost'); if (!g) return;
-      if (!_estateDrafting()) { g.style.display = 'none'; return; }
+      var l = document.getElementById('studio-layout');
+      // Option B (Dispatch A) — the ghost footer is cosmetic Shape-side context; the CTA + verdict
+      // intercept stay mode-agnostic via _estateDrafting(). Show only while drafting AND Shape-side.
+      if (!_estateDrafting() || !(l && l.classList.contains('mode-shape'))) { g.style.display = 'none'; return; }
       g.style.display = '';
       g.innerHTML = '<strong>' + _fmtMoney(_investableNow()) + ' drafted</strong>'
         + (window._carriedEstimate > 0 ? ' · of your ~' + _fmtMoney(window._carriedEstimate) + ' estimate' : '');
@@ -5991,6 +6074,8 @@
       var cta = document.getElementById('see-tension-cta');
       if (cta) cta.style.display = drafting ? '' : 'none';
       updateEstateGhost();
+      syncS2AgeContext();
+      _applyS2RoBoxes();
       if (drafting) {
         _applyDraftingNeutral();                       // apply now — independent of onShapeStateChange
       } else if (wasDrafting && window.updateShapePanel) {
@@ -6007,7 +6092,7 @@
       var n = document.createElement('div');
       n.id = 's2-deepening-note'; n.className = 's2-deepening-note';
       n.innerHTML = '<button class="s2-deepening-x" type="button" aria-label="Dismiss" onclick="this.parentNode.remove()">×</button>'
-        + "Your sketch gave us an estimate. Now you draft the real thing — account by account. It'll look incomplete until every account is in. That's expected: you're trading a guess for the truth.";
+        + "This is the estimate your Sketch gave us — your starting line. From here you draft the real thing, account by account. It will look incomplete until every account is in; that is expected — you are trading a guess for the truth. To change the estimate itself, head back to your Sketch.";
       host.insertBefore(n, host.firstChild);
       try { sessionStorage.setItem('s2_deepening_seen', '1'); } catch (e) {}
     }
@@ -6989,6 +7074,7 @@
       wireRadios();
       wireProfileBindings();
       wireEstateDraftingWriteback();
+      _applyS2RoBoxes();   // A.1 Task 1 — set baseline read-only state once (no-op outside S2-Shape)
       wireDrawers();
       wireMotionToggle();
     }

@@ -9,17 +9,11 @@
 (function () {
   'use strict';
 
-  // S2.4 — aggressive concave fill: low end already reads "has capital", tops at 100% at $1M.
-  // ABSOLUTE per-room basis on RAW value. FLOOR/CAP LOCKED; k is the live-tune knob. (rulings #4/5a/T1)
-  // FLOOR/CAP locked; k is the live-tune knob. Exposed on DatumEstate.FILL so the dev-dial can
-  // tune k by eye on localhost; the locked value bakes back into this default at commit.
-  var FILL = { floor: 12, cap: 1000000, k: 0.35 };   // k=0.35 = Captain-locked feel (aggressive low end)
-  function fillPct(v) {
-    if (!(v > 0)) return 0;                                  // $0 = empty room, no fill
-    var r = Math.pow(Math.min(v, FILL.cap) / FILL.cap, FILL.k);
-    var pct = FILL.floor + (100 - FILL.floor) * r;
-    return Math.max(FILL.floor, Math.min(100, pct));         // visibility floor + clamp
-  }
+  // S2.5 (Dispatch A Task 3) — fill is BINARY: a typed value fills the room completely; $0 stays an
+  // empty room. The concave FILL_K/floor/cap scaling is retired (a room either holds capital or it
+  // doesn't). The descriptor still carries fillPct; the --weight wall driver and the §16.2-iii
+  // descriptor surface are unchanged.
+  function fillPct(v) { return v > 0 ? 100 : 0; }
 
   function renderEstate(ctx) {
     var svgContainer = ctx.svgContainer;
@@ -334,5 +328,5 @@
       ctx.accounts.forEach(a => a.isNew = false);
       return descriptors;   // S2.4 — §16.2-iii single hook surface; consumers tween off this
   }
-  window.DatumEstate = { renderEstate: renderEstate, FILL: FILL };
+  window.DatumEstate = { renderEstate: renderEstate };
 })();
