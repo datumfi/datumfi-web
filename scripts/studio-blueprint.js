@@ -212,13 +212,30 @@
    * plus checking (unmapped) and any room flagged a.exclude (the Phase-III per-account override
    * hook). studio.html's G5 Estate→Shape reconcile calls THIS as its single source — distinct
    * from the Estate Square Footage gross-net figure. */
+  // S2.4 — hoisted to module scope so investableTotal() AND accountWeights() share ONE
+  // definition of the canonical investable bucket set (single source of truth).
+  var INVEST = { roth: true, taxable: true, traditional: true };
   function investableTotal(bp) {
-    var INVEST = { roth: true, taxable: true, traditional: true };
     return (((bp && bp.accounts) || [])).reduce(function (sum, a) {
       var bucket = BASE_TO_BUCKET[a && a.baseId];
       if (bucket && INVEST[bucket] && !(a && a.exclude)) sum += Number(a.value) || 0;
       return sum;
     }, 0);
+  }
+
+  /* Per-account weight = % of investableTotal (Captain ruling #3, S2.4). SAME BASE_TO_BUCKET +
+   * INVEST as investableTotal() — one source. Non-investable rooms (debt / physical / income /
+   * trust / 529 / checking / excluded) -> 0. The estate renderer READS this (LOCK-3, never
+   * recomputes); load-bearing wall thickness + edge glow scale off it. */
+  function accountWeights(bp) {
+    var total = investableTotal(bp), out = {};
+    (((bp && bp.accounts) || [])).forEach(function (a) {
+      if (!a) return;
+      var bucket = BASE_TO_BUCKET[a.baseId];
+      var invest = bucket && INVEST[bucket] && !a.exclude;
+      out[a.id] = (invest && total > 0) ? ((Number(a.value) || 0) / total) * 100 : 0;
+    });
+    return out;
   }
 
   /* ---- Persistence ---- */
@@ -738,6 +755,7 @@
     remirrorArchive:  remirrorArchive,
     computeGrossFunding: computeGrossFunding,
     investableTotal:  investableTotal,
+    accountWeights:   accountWeights,
     upkeepMonthly:      upkeepMonthly,
     upkeepMonthlyTotal: upkeepMonthlyTotal,
     captureDOM:       captureDOM,

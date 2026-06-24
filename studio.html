@@ -939,6 +939,13 @@
   .blueprint-svg.thermal-mode .room-grp.debt-room .room-rect { fill: rgba(226, 75, 74, 0.2); stroke: var(--danger); }
   .blueprint-svg.thermal-mode .room-grp.trust-room .room-rect { fill: rgba(138, 100, 255, 0.2); stroke: var(--shield); stroke-width: 2px; }
 
+  /* S2.4 — FILL / WEIGHT / ENERGIZE lighting. Fill is ADDITIVE (wall geometry byte-unchanged).
+     --weight (0..100, set on the room <g> from the hub) scales the lit load-bearing edge. */
+  .room-fill { transition: y .5s cubic-bezier(0.25,1,0.5,1), height .5s cubic-bezier(0.25,1,0.5,1); pointer-events: none; }
+  /* load-bearing edge: weight-0 stays ~1px (no jarring change), up to ~4px + teal glow at 100%. */
+  .room-rect.active { stroke-width: calc(1px + var(--weight,0) * 0.03px); filter: drop-shadow(0 0 calc(2px + var(--weight,0) * 0.04px) rgba(29,158,117, calc(0.12 + var(--weight,0) * 0.0038))); }
+  @media (prefers-reduced-motion: reduce) { .room-rect.active { filter: none; } }
+
   /* Routing Lines */
   .outflow-route { fill: none; stroke: var(--teal-mid); stroke-width: 2px; stroke-dasharray: 8 8; animation: dashFlow 2s linear infinite; pointer-events: none; opacity: 0.8;}
   .demolition-route { fill: none; stroke: var(--gold); stroke-width: 3px; stroke-dasharray: 8 8; animation: dashFlow 1s linear infinite; pointer-events: none; opacity: 0.9;}
@@ -2812,6 +2819,22 @@
               <rect width="10" height="10" fill="rgba(29, 158, 117, 0.05)"/>
               <line x1="0" y1="0" x2="0" y2="10" stroke="rgba(255,255,255,0.15)" stroke-width="2" />
             </pattern>
+            <!-- S2.4 — volumetric capital-fill gradients (brighter near the surface) + optional
+                 feGaussianBlur interior-glow (available as a live-tune dial). Persistent here in
+                 the crosshair-layer defs; #bp-svg is wiped each render so its url(#..) resolves
+                 document-wide without being cleared. -->
+            <linearGradient id="fillGradAsset" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0%"   stop-color="#1D9E75" stop-opacity="0.10"/>
+              <stop offset="100%" stop-color="#5DCAA5" stop-opacity="0.60"/>
+            </linearGradient>
+            <linearGradient id="fillGradDebt" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0%"   stop-color="#e24b4a" stop-opacity="0.10"/>
+              <stop offset="100%" stop-color="#e24b4a" stop-opacity="0.60"/>
+            </linearGradient>
+            <filter id="roomGlow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="3" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
           </defs>
           <g id="ch-machine">
             <line x1="700" y1="-5000" x2="700" y2="5000" class="crosshair" />
@@ -4349,7 +4372,11 @@
 
       // S2.3 — estate SVG drawing extracted to scripts/datum-estate.js (WATCH-A). Pure render;
       // capital-authority (G5 below) + HUD writes (above) stay here. Closure severed via ctx.
-      DatumEstate.renderEstate({
+      // S2.4 — per-account weight computed ONCE from the hub (LOCK-3), passed via ctx; renderer
+      // READS only. Captured descriptor array fans to the energize timeline (§16.2-iii).
+      var accountWeights = (window.DatumBlueprint && DatumBlueprint.accountWeights)
+        ? DatumBlueprint.accountWeights({ accounts: state.accounts }) : {};
+      var _estateRooms = DatumEstate.renderEstate({
         svgContainer: svgContainer,
         accounts: state.accounts,
         getBaseType: getBaseType,
@@ -4359,8 +4386,10 @@
         machineEl: document.getElementById('ch-machine'),
         spendInputEl: document.getElementById('spend-input'),
         cols: cols, propertyAccount: propertyAccount,
-        trustAccounts: trustAccounts, grandTotal: grandTotal
+        trustAccounts: trustAccounts, grandTotal: grandTotal,
+        accountWeights: accountWeights
       });
+      if (window.DatumEnergize) DatumEnergize.run(_estateRooms);
       // G5 — Estate→Shape reconcile. When real rooms exist with a positive investable total,
       // the itemized estate is AUTHORITATIVE for the deterministic Shape's portfolio: write
       // slider-portfolio so _scenarioFromInputs (read by updateShapePanel below) uses the rooms
@@ -8780,6 +8809,7 @@
   <script src="/scripts/date-bounds.js" defer></script>
   <script src="/scripts/datum-shape.js" defer></script>
   <script src="/scripts/datum-estate.js" defer></script>
+  <script src="/scripts/datum-energize.js" defer></script>
   <script src="/scripts/datum-shape-copy.js" defer></script>
   <script src="/scripts/studio-wantface.js" defer></script>
   <script src="/scripts/lz-string.min.js" defer></script>

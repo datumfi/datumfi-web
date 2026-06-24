@@ -8,6 +8,19 @@
    Loaded as a SEPARATE deferred module (WATCH-A) — never inlined into studio.html. */
 (function () {
   'use strict';
+
+  // S2.4 — aggressive concave fill: low end already reads "has capital", tops at 100% at $1M.
+  // ABSOLUTE per-room basis on RAW value. FLOOR/CAP LOCKED; k is the live-tune knob. (rulings #4/5a/T1)
+  // FLOOR/CAP locked; k is the live-tune knob. Exposed on DatumEstate.FILL so the dev-dial can
+  // tune k by eye on localhost; the locked value bakes back into this default at commit.
+  var FILL = { floor: 12, cap: 1000000, k: 0.35 };   // k=0.35 = Captain-locked feel (aggressive low end)
+  function fillPct(v) {
+    if (!(v > 0)) return 0;                                  // $0 = empty room, no fill
+    var r = Math.pow(Math.min(v, FILL.cap) / FILL.cap, FILL.k);
+    var pct = FILL.floor + (100 - FILL.floor) * r;
+    return Math.max(FILL.floor, Math.min(100, pct));         // visibility floor + clamp
+  }
+
   function renderEstate(ctx) {
     var svgContainer = ctx.svgContainer;
     var getBaseType = ctx.getBaseType;
@@ -16,7 +29,9 @@
     var cols = ctx.cols, propertyAccount = ctx.propertyAccount,
         trustAccounts = ctx.trustAccounts, grandTotal = ctx.grandTotal;
     var grossEstateVal = ctx.grossEstateVal;
+    var accountWeights = ctx.accountWeights || {};   // S2.4 — read from hub (LOCK-3, never recompute)
     var newRoomToTrace = null;
+    var descriptors = [];                            // S2.4 — the ONE canonical hook surface (§16.2-iii)
 
     svgContainer.innerHTML = '';
       // DRAWING PHYSICS: PROPORTIONAL SQUARIFY RENDERING
@@ -83,15 +98,25 @@
               
               let taxClass = isThermal ? `tax-${base.taxCode}` : '';
               let animClass = acc.isNew ? 'animate-draw' : '';
-              
+
+              // S2.4 — trusts HOLD capital (fill) but are non-investable (weight 0, not load-bearing).
+              let weight = accountWeights[acc.id] || 0;
+              let fp = fillPct(acc.value || 0);
+              let fillH = d.h * fp / 100, fillY = d.y + d.h - fillH;
+              g.style.setProperty('--weight', weight);
+              let fillHTML = fp > 0 ? `
+                  <rect x="${d.x}" y="${fillY}" width="${d.w}" height="${fillH}" class="room-fill" fill="url(#fillGradAsset)" />` : '';
+
               g.innerHTML = `
                   <title>${base.desc}</title>
                   <rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" class="room-rect active ${taxClass} ${animClass}" />
+                  ${fillHTML}
                   <text x="${d.cx}" y="${d.cy - 10}" class="bp-title" style="fill:var(--shield)">${base.meta.toUpperCase()}</text>
                   <text x="${d.cx}" y="${d.cy + 30}" class="bp-val" style="fill:var(--white)">${valStr}</text>
               `;
-              svgContainer.appendChild(g); 
-              cY += h + 12; 
+              svgContainer.appendChild(g);
+              descriptors.push({ id: acc.id, el: g, rect: g.querySelector('.room-rect'), d: d, value: acc.value || 0, fillPct: fp, weight: weight, isNew: !!acc.isNew, taxCode: base.taxCode, isDebt: false });
+              cY += h + 12;
           });
       }
 
@@ -215,14 +240,24 @@
                   let taxClass = '';
                   if(isThermal) taxClass = `tax-${base.taxCode}`;
 
+                  // S2.4 — load-bearing weight (read from hub) + concave fill on RAW value.
+                  let weight = accountWeights[acc.id] || 0;
+                  let fp = fillPct(acc.value || 0);
+                  let fillH = d.h * fp / 100, fillY = d.y + d.h - fillH;
+                  g.style.setProperty('--weight', weight);
+                  let fillHTML = fp > 0 ? `
+                    <rect x="${d.x}" y="${fillY}" width="${d.w}" height="${fillH}" class="room-fill${isDebt ? ' fill-debt' : ''}" fill="url(#${isDebt ? 'fillGradDebt' : 'fillGradAsset'})" />` : '';
+
                   g.innerHTML = `
                     ${tooltipHTML}
                     <rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" class="room-rect active ${animClass} ${frictionClass} ${priorityClass} ${taxClass}" />
+                    ${fillHTML}
                     <text x="${d.cx}" y="${d.cy - 10}" class="bp-title">${base.meta.toUpperCase()}</text>
                     <text x="${d.cx}" y="${d.cy + 30}" class="bp-val" style="fill:${shockColor}; transition: 0.6s ease;">${valStr}</text>
                     ${doorHTML}
                   `;
                   svgContainer.appendChild(g);
+                  descriptors.push({ id: acc.id, el: g, rect: g.querySelector('.room-rect'), d: d, value: acc.value || 0, fillPct: fp, weight: weight, isNew: !!acc.isNew, taxCode: base.taxCode, isDebt: isDebt });
 
                   currentY += h + gap;
               });
@@ -297,6 +332,7 @@
       }
 
       ctx.accounts.forEach(a => a.isNew = false);
+      return descriptors;   // S2.4 — §16.2-iii single hook surface; consumers tween off this
   }
-  window.DatumEstate = { renderEstate: renderEstate };
+  window.DatumEstate = { renderEstate: renderEstate, FILL: FILL };
 })();
