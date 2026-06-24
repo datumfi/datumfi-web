@@ -1,8 +1,8 @@
-/* S2.1 box-hide gate — RED pre-wire, GREEN post-wire. The Total Portfolio / Annual
-   Contributions header boxes must be HIDDEN in view-s2 (stale mirror once rooms drive the
-   Shape) but FULLY LIVE in S1 (critical estimate entry). Proves the S1 carry-in is NOT
-   broken by the S2 hide. RED today because the boxes show in view-s2. Asserts via the app's
-   own render path (Lesson 47). Usage: node scripts/_probe_s2_boxes.js [LABEL] */
+/* S2.1 box gate — UPDATED for Dispatch A Task 2 (relocate). The Total Portfolio / Annual
+   Contributions header boxes must be FULLY LIVE in S1 (critical estimate entry), HIDDEN on the
+   Estate side of S2 (rooms are capital-authority), and VISIBLE again on the SHAPE side of S2
+   (where the slider<->shape writeback is live). Proves the S1 carry-in survives. Asserts via the
+   app's own render path (Lesson 47). Usage: node scripts/_probe_s2_boxes.js [LABEL] */
 const { chromium } = require('playwright');
 const LABEL = process.argv[2] || 'RUN';
 const URL = 'http://127.0.0.1:8001/studio.html';
@@ -35,13 +35,21 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     }
     s1.writeback = writeback;
 
-    // ---- enter S2 ----
+    // ---- enter S2 (seed an estate so BOTH sides are legitimate, not the §20 empty dead-end) ----
+    window.state.accounts = [{ id: 'b1', baseId: 'taxable', value: 50000, inflow: 0, freq: 12,
+      exclude: false, isNew: false, isFriction: false, isPriority: false, holdings: [],
+      trustType: 'Irrevocable', disbursement: 'Discretionary', intRate: 0, notes: '', cola: 0,
+      linkedAssetId: null, useRule55: false }];
+    if (window.updateSVGs) window.updateSVGs();
     if (window.enterS2View) window.enterS2View();
-    const inS2 = document.getElementById('studio-layout').classList.contains('view-s2');
-    const s2 = {
-      inS2,
-      boxHidden: portEl ? !isVisible(portEl) : false,
-    };
+    const l = document.getElementById('studio-layout');
+    // Estate side (force mode-shape OFF)
+    if (l.classList.contains('mode-shape') && window.toggleShapeMode) window.toggleShapeMode();
+    const boxHiddenEstate = portEl ? !isVisible(portEl) : false;
+    // Shape side (mode-shape ON)
+    if (window.toggleShapeMode) window.toggleShapeMode();
+    const boxVisibleShape = portEl ? isVisible(portEl) : false;
+    const s2 = { inS2: l.classList.contains('view-s2'), boxHiddenEstate, boxVisibleShape };
     return { s1, s2 };
   });
   await b.close();
@@ -53,9 +61,10 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   const a2 = ok('S1: carry-in seeded box value',      R.s1.carryFilled === true);
   const a3 = ok('S1: box writeback -> slider live',   R.s1.writeback === true);
   const a4 = ok('S2: view-s2 active',                 R.s2.inS2 === true);
-  const a5 = ok('S2: boxes hidden',                   R.s2.boxHidden === true);
+  const a5 = ok('S2: boxes hidden on Estate side',    R.s2.boxHiddenEstate === true);
+  const a6 = ok('S2: boxes visible on Shape side',    R.s2.boxVisibleShape === true);
   console.log('detail:', JSON.stringify(R));
-  const all = a1 && a2 && a3 && a4 && a5;
+  const all = a1 && a2 && a3 && a4 && a5 && a6;
   console.log('OVERALL: ' + (all ? 'GREEN' : 'RED'));
   process.exit(all ? 0 : 1);
 })().catch(e => { console.error('GATE ERROR:', e.message); process.exit(2); });

@@ -1,15 +1,15 @@
-/* S2.4 fill/weight gate — asserts via the app render path (Lesson 47), NOT model output:
-   fill-height/wall-height ~= fillPct(value) on the concave absolute curve; visibility floor;
-   $0 -> no fill; room --weight === DatumBlueprint.accountWeights[id] (renderer READS hub, no
-   recompute; debt/checking -> 0); descriptor flow (renderEstate -> energize attaches .sweeping).
+/* S2.4 fill/weight gate — asserts via the app render path (Lesson 47), NOT model output.
+   S2.5 (Dispatch A Task 3): fill is BINARY — a typed value fills the room completely (100%),
+   $0 -> no fill. Concave FILL_K/floor/cap curve retired. Weight/descriptor contract unchanged:
+   room --weight === DatumBlueprint.accountWeights[id] (renderer READS hub, no recompute;
+   debt/checking -> 0); descriptor flow (renderEstate -> energize attaches data-energized).
    Usage: node scripts/_probe_s2_4_fill.js [LABEL] */
 const { chromium } = require('playwright');
 const LABEL = process.argv[2] || 'RUN';
 const URL = 'http://127.0.0.1:8001/studio.html';
 
-// mirror of datum-estate.js fillPct (start-point params) — for EXPECTED values
-const FLOOR = 12, CAP = 1000000, K = 0.35;   // Captain-locked k (mirrors datum-estate.js FILL.k)
-function expFill(v){ if(!(v>0)) return 0; var r=Math.pow(Math.min(v,CAP)/CAP,K); return Math.max(FLOOR, Math.min(100, FLOOR+(100-FLOOR)*r)); }
+// mirror of datum-estate.js fillPct — S2.5 binary contract: typed value fills completely, $0 = empty
+function expFill(v){ return v > 0 ? 100 : 0; }
 
 (async () => {
   const b = await chromium.launch();
@@ -74,7 +74,7 @@ function expFill(v){ if(!(v>0)) return 0; var r=Math.pow(Math.min(v,CAP)/CAP,K);
     checks.push(ok('fill% ' + id + ' ~= ' + expFill(v).toFixed(1) + '% (got ' + ratio.toFixed(1) + ')', within(ratio, expFill(v), 1.5)));
   });
   checks.push(ok('$0 room (f0) has NO fill', D.rooms.f0 && D.rooms.f0.hasFill === false));
-  checks.push(ok('visibility floor: f25 fill% >= 12', D.rooms.f25 && (D.rooms.f25.fillH / D.rooms.f25.wallH) * 100 >= 12 - 0.01));
+  checks.push(ok('binary: f25 fully filled (>= 99%)', D.rooms.f25 && (D.rooms.f25.fillH / D.rooms.f25.wallH) * 100 >= 99));
   // weight == hub, renderer recomputes nothing
   ['f25','f50','f250','f750','f1m'].forEach(function(id){
     const r = D.rooms[id];
