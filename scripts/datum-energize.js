@@ -16,11 +16,13 @@
   var _funded = Object.create(null);     // room id -> was funded at the previous render (transition tracker)
   var _pourStart = Object.create(null);  // room id -> performance.now() when its pour began (continuity)
   var _breatheStart = null;              // S2.5a — global anchor: breathing phase continuity across re-renders
+  var CONNECT_WAIT = 700, CONNECT_DRAW = 900;   // S2.5b — fund -> WAIT -> hallway DRAW (ms)
+  var _connStart = Object.create(null);  // S2.5b — corridorId -> fund time (draw-sequence anchor, survives re-renders)
   var _now = function () { return (window.performance && performance.now) ? performance.now() : Date.now(); };
 
   function run(rooms) {
     if (!rooms || !rooms.length) { _funded = Object.create(null); _pourStart = Object.create(null); return; }
-    var seen = Object.create(null), arrived = null;   // arrived: a new room this render -> reflow trigger
+    var seen = Object.create(null), arrived = null, transitioned = Object.create(null);   // arrived: new room (reflow); transitioned: 0->funded this render (connect)
     var now = _now();
     if (_breatheStart == null) _breatheStart = now;
     var breathePhase = now - _breatheStart;   // grows by real elapsed -> breathing resumes, never restarts
@@ -37,6 +39,7 @@
         // an EMPTY room the user just typed into (a tracked 0->funded transition). Rooms that hydrate
         // already funded were never seen empty -> no transition -> no pour (no mass-pour on load).
         var transitionFunded = (id in _funded) && !_funded[id];
+        if (transitionFunded) transitioned[id] = true;   // S2.5b — which corridor to draw
         if (r.isNew || transitionFunded) {
           _pourStart[id] = now;
           pour(r, 0);                              // fresh pour from the floor
@@ -58,6 +61,9 @@
     Object.keys(_funded).forEach(function (k) { if (!seen[k]) { delete _funded[k]; delete _pourStart[k]; } });
     // S2.5b — estate-organism settle: existing rooms nudge to make room for a new arrival.
     if (!STILL && arrived) reflow(rooms, arrived);
+    // S2.5b — corridors: reveal the hallway on the fund -> wait -> draw sequence. Called ALWAYS;
+    // under STILL it falls back to drawing connected corridors statically (no anim), not hiding them.
+    connect(rooms, now, transitioned);
   }
 
   function pulse(r) {
@@ -113,7 +119,44 @@
 
   // S2.5 — descriptor-ready stubs (the fund-then-connect ordering + estate-organism reflow are
   // EXPRESSIBLE from the descriptor now; they need the keyed canvas to animate across renders).
-  function connect(/* rooms */) { /* S2.5: energy-trace -> trench -> corridor -> retract */ }
+  // S2.5b — CONNECT: reveal a corridor (a renderer-drawn path, R2 split) between two funded rooms.
+  // A freshly-funded room's hallway stays hidden through CONNECT_WAIT, then draws over CONNECT_DRAW —
+  // one WAAPI per corridor with the wait baked into the keyframes, seeked across re-renders so it
+  // RESUMES (never restarts). Rooms that HYDRATE already funded were never seen empty -> no transition
+  // -> drawn STATIC (no mass-draw on load), same spirit as the pour/breath.
+  function connect(rooms, now, transitioned) {
+    if (!rooms.corridors) return;
+    rooms.corridors.forEach(function (c) {
+      if (!c || !c.el) return;
+      var bothFunded = _funded[c.fromId] && _funded[c.toId];
+      if (!bothFunded) { _hideCorr(c); return; }                        // an endpoint empty -> hidden
+      if (STILL) { _drawnCorr(c); return; }                             // reduced-motion / weak HW -> connected, NO draw anim
+      var fresh = transitioned[c.fromId] || transitioned[c.toId];
+      if (_connStart[c.id] == null && !fresh) { _drawnCorr(c); return; } // hydrated -> already connected (static)
+      if (_connStart[c.id] == null) _connStart[c.id] = now;             // fresh fund -> start the sequence
+      _drawCorr(c, now - _connStart[c.id]);                             // wait+draw WAAPI, SEEKED (resume)
+    });
+    // forget corridors that vanished or whose endpoint emptied (a re-fund re-animates)
+    Object.keys(_connStart).forEach(function (k) {
+      var live = rooms.corridors.some(function (c) { return c.id === k && _funded[c.fromId] && _funded[c.toId]; });
+      if (!live) delete _connStart[k];
+    });
+  }
+  function _hideCorr(c)  { c.el.style.strokeDasharray = c.len; c.el.style.strokeDashoffset = c.len; }
+  function _drawnCorr(c) { c.el.style.strokeDasharray = c.len; c.el.style.strokeDashoffset = 0; }
+  function _drawCorr(c, elapsed) {
+    if (!c.el.animate) { _drawnCorr(c); return; }
+    var total = CONNECT_WAIT + CONNECT_DRAW, hold = CONNECT_WAIT / total;
+    c.el.style.strokeDasharray = c.len;
+    // Effect timing is LINEAR so the WAIT holds for exactly CONNECT_WAIT ms; the draw ease lives on
+    // the second keyframe (per-segment), so it eases only the len->0 reveal — NOT the whole timeline.
+    var a = c.el.animate(
+      [{ strokeDashoffset: c.len, offset: 0, easing: 'linear' },
+       { strokeDashoffset: c.len, offset: hold, easing: 'cubic-bezier(0.4,0,0.2,1)' },   // hold flat, then draw eases
+       { strokeDashoffset: 0,     offset: 1 }],
+      { duration: total, fill: 'forwards' });
+    try { a.currentTime = Math.min(elapsed, total); } catch (e) {}   // seek; past end clamps to "drawn"
+  }
   function reflow(rooms, arrivedId) {
     rooms.forEach(function (r) {
       if (!r || !r.el || r.id === arrivedId || !r.el.animate) return;
