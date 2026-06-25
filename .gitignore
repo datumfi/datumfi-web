@@ -2,3 +2,20 @@ node_modules/
 .DS_Store
 .env
 *.log
+
+# ── Security hardening 2026-06-24 ───────────────────────────────────────────────
+# A runaway PostToolUse hook in .claude/settings.local.json had been auto-running
+# `wrangler pages deploy .` — publishing the ENTIRE working folder (uncommitted +
+# untracked files) to datumfi.com. It is REMOVED. Deploys are now MANUAL clean-export
+# only (tracked web files; never `deploy .`). These patterns keep internal/dev/personal
+# material out of git and out of any deploy export.
+.wrangler/
+_eyeson/
+_tmp_*/
+*.xlsx
+~$*.xlsx
+*.py
+*.ps1
+hover_raw.txt
+meth_raw.txt
+claude-*.txt
