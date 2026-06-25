@@ -8,15 +8,22 @@
 (function () {
   'use strict';
   var REDUCE = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  // S2.5a — NEW guard (A.1/S2.4 shipped none): a weak CPU also falls back to a static estate.
+  var WEAK = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency)
+               ? navigator.hardwareConcurrency < 4 : false;
+  var STILL = REDUCE || WEAK;            // either guard -> NO breathe/connect/reflow (static estate)
   var POUR_MS = 850;
   var _funded = Object.create(null);     // room id -> was funded at the previous render (transition tracker)
   var _pourStart = Object.create(null);  // room id -> performance.now() when its pour began (continuity)
+  var _breatheStart = null;              // S2.5a — global anchor: breathing phase continuity across re-renders
   var _now = function () { return (window.performance && performance.now) ? performance.now() : Date.now(); };
 
   function run(rooms) {
     if (!rooms || !rooms.length) { _funded = Object.create(null); _pourStart = Object.create(null); return; }
     var seen = Object.create(null);
     var now = _now();
+    if (_breatheStart == null) _breatheStart = now;
+    var breathePhase = now - _breatheStart;   // grows by real elapsed -> breathing resumes, never restarts
     rooms.forEach(function (r) {
       if (!r || !r.el) return;
       r.el.setAttribute('data-energized', '1');   // timeline consumed this descriptor (render-path proof)
@@ -42,6 +49,9 @@
         // else: pour finished (or room long-funded) -> leave the fill static at full
       }
       if (id) _funded[id] = fundedNow;
+      // S2.5a — continuous weight-modulated breath on every funded room (idle = uninterrupted;
+      // edit-burst = re-seek to phase). Guarded by STILL (reduced-motion OR weak CPU).
+      if (!STILL && fundedNow) breathe(r, breathePhase);
     });
     // forget rooms that no longer exist so a re-added id can pour again
     Object.keys(_funded).forEach(function (k) { if (!seen[k]) { delete _funded[k]; delete _pourStart[k]; } });
@@ -73,6 +83,29 @@
       // so the height is continuous with the destroyed element — no restart, no snap.
       if (elapsed > 0 && anim) { try { anim.currentTime = elapsed; } catch (e) {} }
     }
+  }
+
+  // S2.5a — BREATHE: a continuous, weight-modulated opacity breath on a funded room's fill. Heavier
+  // rooms (more % of investable, READ from the hub descriptor — LOCK-3, never recomputed) breathe
+  // SLOWER and DEEPER; lighter rooms quicker and shallower. The fill OPACITY channel is independent
+  // of pour (fill transform) / pulse (wall filter) / reflow (group transform) — no WAAPI contention.
+  // Continuity: idle estate never re-renders so the infinite anim just runs; an edit-burst re-render
+  // re-attaches it SEEKED to the global breathePhase, so motion resumes rather than restarting. A
+  // per-id phase offset desyncs the rooms so the estate breathes organically, not in lockstep.
+  function _hashPhase(id) {
+    var h = 0; for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+    return h % 4000;
+  }
+  function breathe(r, phaseMs) {
+    var f = r.el.querySelector('.room-fill');
+    if (!f || !f.animate) return;                          // empty room has no fill -> nothing to breathe
+    var w = Math.max(0, Math.min(100, r.weight || 0));     // READ hub weight (LOCK-3)
+    var period = 3200 + w * 38;                            // heavier -> slower (3.2s .. 7.0s)
+    var amp    = 0.14 + w * 0.0030;                        // heavier -> deeper (opacity dip 0.14 .. 0.44)
+    var a = f.animate(
+      [{ opacity: 1 - amp }, { opacity: 1 }, { opacity: 1 - amp }],
+      { duration: period, iterations: Infinity, easing: 'ease-in-out' });
+    a.currentTime = (phaseMs + _hashPhase(r.id || '')) % period;
   }
 
   // S2.5 — descriptor-ready stubs (the fund-then-connect ordering + estate-organism reflow are
