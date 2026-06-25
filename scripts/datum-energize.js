@@ -20,7 +20,7 @@
 
   function run(rooms) {
     if (!rooms || !rooms.length) { _funded = Object.create(null); _pourStart = Object.create(null); return; }
-    var seen = Object.create(null);
+    var seen = Object.create(null), arrived = null;   // arrived: a new room this render -> reflow trigger
     var now = _now();
     if (_breatheStart == null) _breatheStart = now;
     var breathePhase = now - _breatheStart;   // grows by real elapsed -> breathing resumes, never restarts
@@ -49,12 +49,15 @@
         // else: pour finished (or room long-funded) -> leave the fill static at full
       }
       if (id) _funded[id] = fundedNow;
+      if (r.isNew && id) arrived = id;                // S2.5b — a new room arrived this render
       // S2.5a — continuous weight-modulated breath on every funded room (idle = uninterrupted;
       // edit-burst = re-seek to phase). Guarded by STILL (reduced-motion OR weak CPU).
       if (!STILL && fundedNow) breathe(r, breathePhase);
     });
     // forget rooms that no longer exist so a re-added id can pour again
     Object.keys(_funded).forEach(function (k) { if (!seen[k]) { delete _funded[k]; delete _pourStart[k]; } });
+    // S2.5b — estate-organism settle: existing rooms nudge to make room for a new arrival.
+    if (!STILL && arrived) reflow(rooms, arrived);
   }
 
   function pulse(r) {
@@ -111,7 +114,15 @@
   // S2.5 — descriptor-ready stubs (the fund-then-connect ordering + estate-organism reflow are
   // EXPRESSIBLE from the descriptor now; they need the keyed canvas to animate across renders).
   function connect(/* rooms */) { /* S2.5: energy-trace -> trench -> corridor -> retract */ }
-  function reflow(/* rooms */)  { /* S2.5: existing rooms ~4px nudge then settle on a new arrival */ }
+  function reflow(rooms, arrivedId) {
+    rooms.forEach(function (r) {
+      if (!r || !r.el || r.id === arrivedId || !r.el.animate) return;
+      // nudge then gentle overshoot-settle. Group-transform channel — conflict-free with
+      // breathe (fill opacity) / pour (fill transform) / pulse (wall filter).
+      r.el.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-14px)' }, { transform: 'translateY(0)' }],
+        { duration: 700, easing: 'cubic-bezier(0.34,1.3,0.7,1)' });
+    });
+  }
 
   window.DatumEnergize = { run: run, connect: connect, reflow: reflow };
 })();
