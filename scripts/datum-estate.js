@@ -200,13 +200,20 @@
     });
     return out;
   }
-  function _exteriorDoor(roomRects, colInfo, lastCi, tune, jut) {            // ONE entrance for the whole home
+  // A.3 — the estate's entry room = the ONE top-row room spanning the estate center-x (the front-door
+  // position). Whatever account sits there is the entrance; the jut + cutout + door all attach to it.
+  function _entryRoom(roomRects, colInfo, lastCi) {
+    if (!colInfo.length) return null;
+    var cxEnv = (colInfo[0].x + colInfo[lastCi].x + colInfo[lastCi].w) / 2;
+    var tops = roomRects.filter(function (r) { return r.ri === 0; });          // top room of each column
+    var hit = tops.filter(function (r) { return cxEnv >= r.x && cxEnv <= r.x + r.w; });
+    return hit[0] || tops[0] || null;                                          // deterministic; fallback top-left
+  }
+  function _exteriorDoor(entry, colInfo, lastCi, tune, jut) {                  // ONE entrance, on the top-center room
     if (!tune.door || !colInfo.length) return '';
-    var top = colInfo[0].top, foyer = null;
-    for (var k = 0; k < roomRects.length; k++) { if (/foyer/i.test(roomRects[k].meta || '') && roomRects[k].ri === 0) { foyer = roomRects[k]; break; } }
-    var cx, wy = top;
-    if (foyer) { cx = foyer.x + foyer.w / 2; if (jut) wy = top - tune.jutDepth; }   // on the (jutted) Foyer wall
-    else { cx = (colInfo[0].x + colInfo[lastCi].x + colInfo[lastCi].w) / 2; }       // else top-center
+    var top = colInfo[0].top, cx, wy = top;
+    if (entry) { cx = entry.x + entry.w / 2; if (jut) wy = top - tune.jutDepth; }   // on the (jutted) entry wall
+    else { cx = (colInfo[0].x + colInfo[lastCi].x + colInfo[lastCi].w) / 2; }       // no rooms -> center fallback
     var w = tune.doorW, ax = cx - w/2, bx = cx + w/2, hw = w/2, up = -1;            // double door, swings OUTWARD
     var st = 'style="stroke:var(--teal-mid);stroke-width:1;fill:none;opacity:0.6"';
     return '<g class="estate-entry-door">' +
@@ -488,11 +495,21 @@
           // per-room box strokes (now stroke:none) and the per-room doors.
           var _lastCi = colInfo.length - 1;
           // A.1 — Foyer jut: if a Foyer lands on the perimeter top, its outer wall steps OUT.
-          var _foyerTop = null;
-          for (var _fi = 0; _fi < roomRects.length; _fi++) { if (/foyer/i.test(roomRects[_fi].meta || '') && roomRects[_fi].ri === 0) { _foyerTop = roomRects[_fi]; break; } }
-          var _jut = (A1_TUNE.foyerJut && _foyerTop && A1_TUNE.jutDepth > 0)
-            ? { x0: _foyerTop.x + 10, x1: _foyerTop.x + _foyerTop.w - 10, depth: A1_TUNE.jutDepth } : null;
-          var _shell = '<path class="estate-envelope" d="' + _envelopePath(colInfo, _jut) +
+          // A.3 — the entry (jut + cutout + door) attaches to the ONE top-center room, whatever account
+          // it is (foyerJut/jutDepth keys reused = entry jut; Foyer-float stays parked).
+          var _entry = _entryRoom(roomRects, colInfo, _lastCi);
+          var _jut = (A1_TUNE.foyerJut && _entry && A1_TUNE.jutDepth > 0)
+            ? { x0: _entry.x + 10, x1: _entry.x + _entry.w - 10, depth: A1_TUNE.jutDepth } : null;
+          // A.3 — fill the jut with the entry room's gradient (only when funded) so the notch reads as
+          // part of the room, not a hollow gap. Drawn UNDER the envelope stroke. Binary-fill untouched:
+          // this extends the fill REGION to match the silhouette; no scaling, no new fill model.
+          var _jutFill = '';
+          if (_jut && _entry && _entry.val > 0) {
+            var _eg = _entry.isDebt ? 'fillGradDebt' : 'fillGradAsset';
+            _jutFill = '<rect class="estate-jut-fill" x="' + _jut.x0 + '" y="' + (colInfo[0].top - _jut.depth) +
+              '" width="' + (_jut.x1 - _jut.x0) + '" height="' + _jut.depth + '" fill="url(#' + _eg + ')"/>';
+          }
+          var _shell = _jutFill + '<path class="estate-envelope" d="' + _envelopePath(colInfo, _jut) +
                        '" style="fill:none;stroke:var(--teal-mid);stroke-width:' + SHELL_TUNE.envWeight + 'px;opacity:0.92"/>';
           _sharedEdges(roomRects, colInfo).forEach(function (e) { _shell += _openThreshold(e, SHELL_TUNE.openness); });
           var _byCol = _roomsByCol(roomRects);
@@ -503,7 +520,7 @@
           roomRects.forEach(function (r) { _extEdges = _extEdges.concat(_roomExteriorEdges(r, _lastCi)); });
           _shell += _loadWall(roomRects, _lastCi, A1_TUNE);
           if (A1_TUNE.windows) _shell += _windows(_extEdges, A1_TUNE);
-          _shell += _exteriorDoor(roomRects, colInfo, _lastCi, A1_TUNE, _jut);
+          _shell += _exteriorDoor(_entry, colInfo, _lastCi, A1_TUNE, _jut);
           _shell += _stairs(roomRects, A1_TUNE);
           _shell += _chrome(colInfo, _lastCi, A1_TUNE);
           var _shellG = document.createElementNS("http://www.w3.org/2000/svg", "g");
