@@ -73,10 +73,15 @@
   // studio.html edit (E5). Tuned by eye via SHELL_TUNE. Hallways = Phase B (not here).
   var SHELL_TUNE = { openness: 1, envWeight: 8, partWeight: 0.5 };   // Captain-locked 2026-06-25 (eyes-on)
 
-  function _envelopePath(colInfo) {
+  function _envelopePath(colInfo, jut) {
     if (!colInfo.length) return '';
     var top = colInfo[0].top, n = colInfo.length, last = colInfo[n - 1];
     var d = 'M ' + colInfo[0].x + ' ' + top;
+    if (jut && jut.x1 > jut.x0) {                                            // A.1 Foyer jut: top wall steps OUT
+      var jt = top - jut.depth;
+      d += ' L ' + jut.x0 + ' ' + top + ' L ' + jut.x0 + ' ' + jt +
+           ' L ' + jut.x1 + ' ' + jt + ' L ' + jut.x1 + ' ' + top;
+    }
     d += ' L ' + (last.x + last.w) + ' ' + top;                              // flat top across all columns
     d += ' L ' + (last.x + last.w) + ' ' + last.bottom;                      // right edge down
     for (var i = n - 1; i >= 0; i--) {
@@ -124,6 +129,92 @@
   function _privDoor(r) {
     var wy = r.last ? r.y : (r.y + r.h);                                     // last room: top wall; else bottom
     return _doorH(wy, r.x, r.x + r.w, r.id + 'pd', r.val >= 250000);
+  }
+
+  // ── Phase A.1 · Exterior articulation (additive; ESTATE-LEVEL silhouette, NEVER per-room character) ──
+  // Windows + ONE entry door + load-bearing OUTER wall (heaviest room, hub weight READ-only) + ONE stair
+  // + Foyer jut + optional CAD chrome. All inline overlays on the estate shell — zero studio.html edit.
+  var A1_TUNE = { windows: true, windowGap: 110, windowW: 60, door: true, doorW: 120,
+                  weightGain: 0.1, stairs: true, foyerJut: true, jutDepth: 48, chrome: true };   // Captain-locked 2026-06-26 (eyes-on)
+
+  function _roomExteriorEdges(r, lastCi) {                                   // which of a room's edges are on the envelope
+    var e = [];
+    if (r.ri === 0)      e.push({ side:'top',    x0:r.x,     y0:r.y,     x1:r.x+r.w, y1:r.y,     ux:1, uy:0, r:r });
+    if (r.last)          e.push({ side:'bottom', x0:r.x,     y0:r.y+r.h, x1:r.x+r.w, y1:r.y+r.h, ux:1, uy:0, r:r });
+    if (r.ci === 0)      e.push({ side:'left',   x0:r.x,     y0:r.y,     x1:r.x,     y1:r.y+r.h, ux:0, uy:1, r:r });
+    if (r.ci === lastCi) e.push({ side:'right',  x0:r.x+r.w, y0:r.y,     x1:r.x+r.w, y1:r.y+r.h, ux:0, uy:1, r:r });
+    return e;
+  }
+  function _windowGlyph(cx, cy, ux, uy, w) {                                 // a plan window: cut + 2 glazing lines + jambs
+    var nx = -uy, ny = ux, hx = ux*w/2, hy = uy*w/2, o = 2.4;
+    var ax = cx-hx, ay = cy-hy, bx = cx+hx, by = cy+hy;
+    var ln = function (x1,y1,x2,y2) { return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'"/>'; };
+    var cut = '<line x1="'+ax+'" y1="'+ay+'" x2="'+bx+'" y2="'+by+'" style="stroke:var(--bg-navy);stroke-width:'+(SHELL_TUNE.envWeight+2)+'px"/>';
+    var glaze = ln(ax+nx*o, ay+ny*o, bx+nx*o, by+ny*o) + ln(ax-nx*o, ay-ny*o, bx-nx*o, by-ny*o);
+    var jamb  = ln(ax+nx*o, ay+ny*o, ax-nx*o, ay-ny*o) + ln(bx+nx*o, by+ny*o, bx-nx*o, by-ny*o);
+    return '<g class="estate-window" style="stroke:var(--teal-mid);stroke-width:1;fill:none;opacity:0.6">'+cut+glaze+jamb+'</g>';
+  }
+  function _windows(edges, tune) {
+    var out = '';
+    edges.forEach(function (e) {
+      if (e.r.priv) return;                                                  // no windows on sealed rooms
+      if (/foyer/i.test(e.r.meta || '') && e.side === 'top') return;         // entry door lives there
+      var L = Math.hypot(e.x1 - e.x0, e.y1 - e.y0);
+      var count = Math.floor((L - 40) / tune.windowGap);
+      if (count < 1) return;
+      var span = count * tune.windowGap, start = (L - span) / 2 + tune.windowGap / 2;
+      for (var i = 0; i < count; i++) {
+        var c = start + i * tune.windowGap;
+        out += _windowGlyph(e.x0 + e.ux * c, e.y0 + e.uy * c, e.ux, e.uy, tune.windowW);
+      }
+    });
+    return out;
+  }
+  function _exteriorDoor(roomRects, colInfo, lastCi, tune, jut) {            // ONE entrance for the whole home
+    if (!tune.door || !colInfo.length) return '';
+    var top = colInfo[0].top, foyer = null;
+    for (var k = 0; k < roomRects.length; k++) { if (/foyer/i.test(roomRects[k].meta || '') && roomRects[k].ri === 0) { foyer = roomRects[k]; break; } }
+    var cx, wy = top;
+    if (foyer) { cx = foyer.x + foyer.w / 2; if (jut) wy = top - tune.jutDepth; }   // on the (jutted) Foyer wall
+    else { cx = (colInfo[0].x + colInfo[lastCi].x + colInfo[lastCi].w) / 2; }       // else top-center
+    var w = tune.doorW, ax = cx - w/2, bx = cx + w/2, hw = w/2, up = -1;            // double door, swings OUTWARD
+    var st = 'style="stroke:var(--teal-mid);stroke-width:1;fill:none;opacity:0.6"';
+    return '<g class="estate-entry-door">' +
+      '<line x1="'+ax+'" y1="'+wy+'" x2="'+bx+'" y2="'+wy+'" class="wall-cutout"/>' +
+      '<path d="M '+ax+' '+wy+' L '+ax+' '+(wy+up*hw)+' A '+hw+' '+hw+' 0 0 1 '+cx+' '+wy+'" '+st+'/>' +
+      '<path d="M '+bx+' '+wy+' L '+bx+' '+(wy+up*hw)+' A '+hw+' '+hw+' 0 0 0 '+cx+' '+wy+'" '+st+'/></g>';
+  }
+  function _loadWall(roomRects, lastCi, tune) {                             // heaviest room thickens ITS outer wall
+    var heavy = null;
+    roomRects.forEach(function (r) { if (!heavy || r.weight > heavy.weight) heavy = r; });
+    if (!heavy || heavy.weight <= 0) return '';
+    var sw = SHELL_TUNE.envWeight + heavy.weight * tune.weightGain;
+    var glow = Math.min(0.5, 0.15 + heavy.weight * 0.004), blur = 4 + heavy.weight * 0.08, out = '';
+    _roomExteriorEdges(heavy, lastCi).forEach(function (e) {
+      out += '<line class="estate-loadwall" x1="'+e.x0+'" y1="'+e.y0+'" x2="'+e.x1+'" y2="'+e.y1+
+             '" style="stroke:var(--teal-mid);stroke-width:'+sw+'px;opacity:0.95;filter:drop-shadow(0 0 '+blur+'px rgba(29,158,117,'+glow+'))"/>';
+    });
+    return out;
+  }
+  function _stairs(roomRects, tune) {                                        // ONE stair for the home (by the Vault)
+    if (!tune.stairs) return '';
+    var room = null;
+    for (var k = 0; k < roomRects.length; k++) { if (/vault/i.test(roomRects[k].meta || '')) { room = roomRects[k]; break; } }
+    if (!room) roomRects.forEach(function (r) { if (!room || r.w*r.h > room.w*room.h) room = r; });
+    if (!room) return '';
+    var n = 5, gw = Math.min(40, room.w*0.3), gh = Math.min(44, room.h*0.3);
+    var x = room.x + room.w - gw - 12, y = room.y + 12, out = '';
+    out += '<rect x="'+x+'" y="'+y+'" width="'+gw+'" height="'+gh+'" style="fill:none;stroke:var(--teal-mid);stroke-width:1;opacity:0.5"/>';
+    for (var i = 1; i < n; i++) { var ty = y + i*(gh/n); out += '<line x1="'+x+'" y1="'+ty+'" x2="'+(x+gw)+'" y2="'+ty+'" style="stroke:var(--teal-mid);stroke-width:1;opacity:0.5"/>'; }
+    return '<g class="estate-stairs">'+out+'</g>';
+  }
+  function _chrome(colInfo, lastCi, tune) {                                  // CAD chrome — OFF by default, cuttable
+    if (!tune.chrome || !colInfo.length) return '';
+    var nx = colInfo[lastCi].x + colInfo[lastCi].w + 42, ny = colInfo[0].top + 12;
+    return '<g class="estate-chrome" style="stroke:var(--teal-mid);stroke-width:1;fill:none;opacity:0.45">' +
+      '<line x1="'+nx+'" y1="'+(ny+30)+'" x2="'+nx+'" y2="'+ny+'"/>' +
+      '<path d="M '+(nx-5)+' '+(ny+8)+' L '+nx+' '+ny+' L '+(nx+5)+' '+(ny+8)+'"/>' +
+      '<text x="'+nx+'" y="'+(ny-5)+'" style="fill:var(--teal-mid);stroke:none;font:10px monospace;text-anchor:middle">N</text></g>';
   }
 
   function renderEstate(ctx) {
@@ -325,7 +416,8 @@
                   var _priv = isDebt || /vault/i.test(base.meta);            // Vault + debt = sealed
                   roomRects.push({ x: d.x, y: d.y, w: d.w, h: d.h, id: acc.id, isDebt: isDebt, priv: _priv,
                                    val: Math.abs(acc.value || 0), col: colName, ci: index, ri: i,
-                                   last: (i === accounts.length - 1) });
+                                   last: (i === accounts.length - 1),
+                                   weight: accountWeights[acc.id] || 0, meta: base.meta });   // A.1: load-bearing + role
 
                   let animClass = acc.isNew ? 'animate-draw' : '';
                   let frictionClass = acc.isFriction ? 'liquidity-friction' : '';
@@ -364,10 +456,25 @@
           // Phase A — draw the estate SHELL once (over the room fills): one envelope + dissolved
           // interior walls (open thresholds) + sealed private rooms (Vault + debt). Replaces the
           // per-room box strokes (now stroke:none) and the per-room doors.
-          var _shell = '<path class="estate-envelope" d="' + _envelopePath(colInfo) +
+          var _lastCi = colInfo.length - 1;
+          // A.1 — Foyer jut: if a Foyer lands on the perimeter top, its outer wall steps OUT.
+          var _foyerTop = null;
+          for (var _fi = 0; _fi < roomRects.length; _fi++) { if (/foyer/i.test(roomRects[_fi].meta || '') && roomRects[_fi].ri === 0) { _foyerTop = roomRects[_fi]; break; } }
+          var _jut = (A1_TUNE.foyerJut && _foyerTop && A1_TUNE.jutDepth > 0)
+            ? { x0: _foyerTop.x + 10, x1: _foyerTop.x + _foyerTop.w - 10, depth: A1_TUNE.jutDepth } : null;
+          var _shell = '<path class="estate-envelope" d="' + _envelopePath(colInfo, _jut) +
                        '" style="fill:none;stroke:var(--teal-mid);stroke-width:' + SHELL_TUNE.envWeight + 'px;opacity:0.92"/>';
           _sharedEdges(roomRects, colInfo).forEach(function (e) { _shell += _openThreshold(e, SHELL_TUNE.openness); });
           roomRects.forEach(function (r) { if (r.priv) _shell += _privEnclosure(r) + _privDoor(r); });
+          // A.1 — exterior articulation (additive, estate-level): load-bearing outer wall, windows,
+          // ONE entry door, ONE stair, optional chrome. Drawn over the envelope.
+          var _extEdges = [];
+          roomRects.forEach(function (r) { _extEdges = _extEdges.concat(_roomExteriorEdges(r, _lastCi)); });
+          _shell += _loadWall(roomRects, _lastCi, A1_TUNE);
+          if (A1_TUNE.windows) _shell += _windows(_extEdges, A1_TUNE);
+          _shell += _exteriorDoor(roomRects, colInfo, _lastCi, A1_TUNE, _jut);
+          _shell += _stairs(roomRects, A1_TUNE);
+          _shell += _chrome(colInfo, _lastCi, A1_TUNE);
           var _shellG = document.createElementNS("http://www.w3.org/2000/svg", "g");
           _shellG.setAttribute('class', 'estate-shell');
           _shellG.innerHTML = _shell;
@@ -469,6 +576,7 @@
       ctx.accounts.forEach(a => a.isNew = false);
       return descriptors;   // S2.4 — §16.2-iii single hook surface; consumers tween off this
   }
-  window.DatumEstate = { renderEstate: renderEstate, SHELL_TUNE: SHELL_TUNE };
-  window.DatumEstateTune = SHELL_TUNE;   // Phase A eyes-on dial — openness 0..1, envWeight, partWeight; then updateSVGs()
+  window.DatumEstate = { renderEstate: renderEstate, SHELL_TUNE: SHELL_TUNE, A1_TUNE: A1_TUNE };
+  window.DatumEstateTune = SHELL_TUNE;     // Phase A geometry — openness/envWeight/partWeight (LOCKED)
+  window.DatumEstateA1Tune = A1_TUNE;      // Phase A.1 eyes-on dial; edit then updateSVGs()
 })();

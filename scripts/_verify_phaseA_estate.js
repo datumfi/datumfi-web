@@ -62,8 +62,10 @@ const MK = `(id,baseId,value)=>({id,baseId,value,inflow:0,freq:12,exclude:false,
     // (3) private enclosures + their doors
     const privWalls = svg.querySelectorAll('.estate-wall-private');
     const shellDoors = svg.querySelectorAll('.estate-shell .wall-cutout');
-    // (4) dissolution: doors ONLY on private rooms (no per-room/open-room door anywhere in #bp-svg)
-    const totalCutouts = svg.querySelectorAll('.wall-cutout').length;
+    // (4) dissolution: INTERIOR doors ONLY on private rooms. The A.1 exterior entry door is also a
+    // .wall-cutout but is a single ESTATE entrance, not an interior per-room door -> exclude it.
+    const totalCutouts = svg.querySelectorAll('.wall-cutout').length
+      - svg.querySelectorAll('.estate-entry-door .wall-cutout').length;
     return {
       envCount: envelopes.length,
       foyerStroke,
