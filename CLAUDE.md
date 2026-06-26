@@ -59,6 +59,27 @@ Get-Content md5-baselines.txt | ForEach-Object {
 Remove-Item md5-baselines.txt
 ```
 
+## Lockfile / `npm ci` Discipline (Doctrine #34 — deploy-blocker law)
+
+Cloudflare Pages installs with strict `npm ci`, which **ABORTS** if
+`package.json` and `package-lock.json` are out of sync. Local `npm install` is
+lenient and silently fixes the lockfile, so a stale committed lock is invisible
+locally but fails the cloud build before it ever reaches `npm run build` — no
+`dist/` is published and the deploy silently does nothing (datumfi.com keeps
+serving old bytes). This blocked the Phase-A deploy (2026-06-26): playwright was
+in `package.json` but the COMMITTED lockfile never included it (the synced lock
+sat uncommitted in the worktree).
+
+STANDING RULE — any time you add / remove / bump an npm dependency:
+ 1. `npm install` — regenerate `package-lock.json`.
+ 2. `rm -rf node_modules && npm ci` — mirror Cloudflare's strict install LOCALLY.
+    A green `npm ci` (exit 0, no EUSAGE / "out of sync") is the GATE before push.
+ 3. Commit `package.json` AND `package-lock.json` together, never one without the
+    other.
+
+Quick pre-push check: `npm run check:deps` (`npm ci --dry-run`). NO git hook —
+the breach was a rogue hook; deploy gating stays MANUAL and explicit.
+
 ## Phase Cadence (non-negotiable)
 
  · Phase 1 · Diagnostic only · HOLD for Captain authorization
