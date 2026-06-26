@@ -2,8 +2,8 @@
    DatumEstate.renderEstate(ctx) returns (§16.2-iii single hook surface) and owns the things
    that MOVE / breathe — separate from the near-pure renderer (LOCK-3 / WATCH-A, never inlined).
    S2.4: one-shot "FUNDED" pulse on isNew + marks each consumed room data-energized. A.1: the fill
-   POURS up (scaleY 0->1) on funding instead of snapping. connect()/reflow() are descriptor-ready
-   stubs the S2.5 keyed-canvas refactor animates.
+   POURS up (scaleY 0->1) on funding instead of snapping. connect() (S2.5b) and reflow() (S2.5b) are
+   LIVE — fund->wait->draw corridors + estate-organism settle (not stubs).
    Guard: prefers-reduced-motion disables the pulse + pour (instant full fill). */
 (function () {
   'use strict';
@@ -117,8 +117,8 @@
     a.currentTime = (phaseMs + _hashPhase(r.id || '')) % period;
   }
 
-  // S2.5 — descriptor-ready stubs (the fund-then-connect ordering + estate-organism reflow are
-  // EXPRESSIBLE from the descriptor now; they need the keyed canvas to animate across renders).
+  // S2.5b — connect()/reflow() are LIVE (not stubs): the fund-then-connect ordering + estate-organism
+  // reflow run off the descriptor (+ the .corridors sidecar), seeked across re-renders.
   // S2.5b — CONNECT: reveal a corridor (a renderer-drawn path, R2 split) between two funded rooms.
   // A freshly-funded room's hallway stays hidden through CONNECT_WAIT, then draws over CONNECT_DRAW —
   // one WAAPI per corridor with the wait baked into the keyframes, seeked across re-renders so it

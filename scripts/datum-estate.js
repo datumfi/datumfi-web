@@ -65,6 +65,67 @@
     return out;
   }
 
+  // ── Phase A · Estate-dissolve — "rooms stop being alone" ─────────────────────────────────────
+  // The per-room box stroke + per-room doors are gone (see the cols loop). Walls are drawn ONCE as an
+  // estate SHELL: (a) one heavy ENVELOPE around the column union (flat shared top, stepped bottom);
+  // (b) interior shared edges become OPEN THRESHOLDS (single light stubs + a varied gap, never doubled);
+  // (c) PRIVATE rooms (Vault + debt) stay SEALED (full enclosure + one door). All inline-styled — zero
+  // studio.html edit (E5). Tuned by eye via SHELL_TUNE. Hallways = Phase B (not here).
+  var SHELL_TUNE = { openness: 1, envWeight: 8, partWeight: 0.5 };   // Captain-locked 2026-06-25 (eyes-on)
+
+  function _envelopePath(colInfo) {
+    if (!colInfo.length) return '';
+    var top = colInfo[0].top, n = colInfo.length, last = colInfo[n - 1];
+    var d = 'M ' + colInfo[0].x + ' ' + top;
+    d += ' L ' + (last.x + last.w) + ' ' + top;                              // flat top across all columns
+    d += ' L ' + (last.x + last.w) + ' ' + last.bottom;                      // right edge down
+    for (var i = n - 1; i >= 0; i--) {
+      d += ' L ' + colInfo[i].x + ' ' + colInfo[i].bottom;                   // across col i bottom (R->L)
+      if (i > 0) d += ' L ' + colInfo[i].x + ' ' + colInfo[i - 1].bottom;    // step to the left col's bottom
+    }
+    return d + ' Z';                                                         // up the left edge
+  }
+  function _sharedEdges(roomRects, colInfo) {
+    var edges = [];
+    for (var k = 0; k < roomRects.length; k++) {                             // horizontal: stacked rooms
+      var r = roomRects[k]; if (r.last) continue;
+      var below = roomRects[k + 1]; if (!below || below.col !== r.col) continue;
+      if (r.priv || below.priv) continue;                                    // private enclosure walls it
+      edges.push({ id: r.id + '_h', x0: r.x, y0: r.y + r.h, x1: r.x + r.w, y1: r.y + r.h });
+    }
+    for (var c = 0; c < colInfo.length - 1; c++) {                           // vertical: between columns
+      var A = colInfo[c], B = colInfo[c + 1];
+      var x = A.x + A.w, yT = A.top, yB = Math.min(A.bottom, B.bottom);
+      if (yB - yT < 30) continue;
+      edges.push({ id: 'col' + c + '_v', x0: x, y0: yT, x1: x, y1: yB });
+    }
+    return edges;
+  }
+  function _openThreshold(edge, o) {
+    var dx = edge.x1 - edge.x0, dy = edge.y1 - edge.y0, L = Math.hypot(dx, dy);
+    if (L < 1) return '';
+    var ux = dx / L, uy = dy / L;
+    var keep = L * Math.max(0, Math.min(1, 1 - o));                          // wall kept; gap = L - keep
+    if (keep < 1) return '';                                                 // fully open -> no stub at all
+    var style = 'stroke="var(--teal-mid)" stroke-width="' + SHELL_TUNE.partWeight + '" opacity="0.4" stroke-linecap="round"';
+    function seg(a, b) {
+      return '<line class="estate-partition" data-edge="' + edge.id + '" x1="' + (edge.x0 + ux * a) + '" y1="' + (edge.y0 + uy * a) +
+             '" x2="' + (edge.x0 + ux * b) + '" y2="' + (edge.y0 + uy * b) + '" ' + style + '/>';
+    }
+    if (_hashFrac(edge.id) < 0.5) { var s = keep / 2; return seg(0, s) + seg(L - s, L); }   // centered gap
+    var off = (L - keep) * (0.2 + 0.5 * _hashFrac(edge.id, 'off'));                          // short jog
+    return seg(off, off + keep);
+  }
+  function _privEnclosure(r) {
+    var col = r.isDebt ? 'var(--danger)' : 'var(--teal-mid)';
+    return '<rect class="estate-wall-private" x="' + r.x + '" y="' + r.y + '" width="' + r.w + '" height="' + r.h +
+           '" style="fill:none;stroke:' + col + ';stroke-width:1.6px;opacity:0.85"/>';
+  }
+  function _privDoor(r) {
+    var wy = r.last ? r.y : (r.y + r.h);                                     // last room: top wall; else bottom
+    return _doorH(wy, r.x, r.x + r.w, r.id + 'pd', r.val >= 250000);
+  }
+
   function renderEstate(ctx) {
     var svgContainer = ctx.svgContainer;
     var getBaseType = ctx.getBaseType;
@@ -76,6 +137,7 @@
     var accountWeights = ctx.accountWeights || {};   // S2.4 — read from hub (LOCK-3, never recompute)
     var newRoomToTrace = null;
     var descriptors = [];                            // S2.4 — the ONE canonical hook surface (§16.2-iii)
+    var roomRects = [], colInfo = [];                // Phase A — fed to the estate shell (walls drawn once)
 
     svgContainer.innerHTML = '';
       // DRAWING PHYSICS: PROPORTIONAL SQUARIFY RENDERING
@@ -258,18 +320,12 @@
                   g.setAttribute('onclick', `openAccountModal('${acc.id}')`);
                   g.style.cursor = 'pointer';
                   
-                  let doorHTML = '';
-                  
-                  if (i < accounts.length - 1) {                       // shared wall with the room below
-                      var _nextV = (accounts[i + 1] && accounts[i + 1].value) || 0;
-                      var _bigH = Math.max(Math.abs(acc.value || 0), Math.abs(_nextV)) >= 250000;
-                      doorHTML += _doorH(d.y + d.h, d.x, d.x + d.w, acc.id, _bigH);
-                  }
-
-                  if (index < activeCols.length - 1 && i === 0) {      // shared wall with the next column
-                      var _bigV = Math.abs(acc.value || 0) >= 250000;
-                      doorHTML += _doorV(d.x + d.w, d.y, d.y + d.h, acc.id + 'v', _bigV);
-                  }
+                  // Phase A — collect this room's rect for the estate shell; walls/doors drawn ONCE
+                  // post-loop (envelope + open thresholds + sealed private rooms), not per room.
+                  var _priv = isDebt || /vault/i.test(base.meta);            // Vault + debt = sealed
+                  roomRects.push({ x: d.x, y: d.y, w: d.w, h: d.h, id: acc.id, isDebt: isDebt, priv: _priv,
+                                   val: Math.abs(acc.value || 0), col: colName, ci: index, ri: i,
+                                   last: (i === accounts.length - 1) });
 
                   let animClass = acc.isNew ? 'animate-draw' : '';
                   let frictionClass = acc.isFriction ? 'liquidity-friction' : '';
@@ -290,11 +346,10 @@
 
                   g.innerHTML = `
                     ${tooltipHTML}
-                    <rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" class="room-rect active ${animClass} ${frictionClass} ${priorityClass} ${taxClass}" />
+                    <rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" class="room-rect active ${animClass} ${frictionClass} ${priorityClass} ${taxClass}" style="stroke:none" />
                     ${fillHTML}
                     <text x="${d.cx}" y="${d.cy - 10}" class="bp-title">${base.meta.toUpperCase()}</text>
                     <text x="${d.cx}" y="${d.cy + 30}" class="bp-val" style="fill:${shockColor}; transition: 0.6s ease;">${valStr}</text>
-                    ${doorHTML}
                   `;
                   svgContainer.appendChild(g);
                   descriptors.push({ id: acc.id, el: g, rect: g.querySelector('.room-rect'), d: d, value: acc.value || 0, fillPct: fp, weight: weight, isNew: !!acc.isNew, taxCode: base.taxCode, isDebt: isDebt });
@@ -302,8 +357,21 @@
                   currentY += h + gap;
               });
 
+              colInfo.push({ x: currentX, w: colW, top: gY + 20, bottom: currentY });   // Phase A — for the envelope
               currentX += colW + colGap;
           });
+
+          // Phase A — draw the estate SHELL once (over the room fills): one envelope + dissolved
+          // interior walls (open thresholds) + sealed private rooms (Vault + debt). Replaces the
+          // per-room box strokes (now stroke:none) and the per-room doors.
+          var _shell = '<path class="estate-envelope" d="' + _envelopePath(colInfo) +
+                       '" style="fill:none;stroke:var(--teal-mid);stroke-width:' + SHELL_TUNE.envWeight + 'px;opacity:0.92"/>';
+          _sharedEdges(roomRects, colInfo).forEach(function (e) { _shell += _openThreshold(e, SHELL_TUNE.openness); });
+          roomRects.forEach(function (r) { if (r.priv) _shell += _privEnclosure(r) + _privDoor(r); });
+          var _shellG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+          _shellG.setAttribute('class', 'estate-shell');
+          _shellG.innerHTML = _shell;
+          svgContainer.appendChild(_shellG);
 
           if (isMeasured && bounds.maxX > 0) {
               let outline = document.createElementNS("http://www.w3.org/2000/svg", "rect");
@@ -401,5 +469,6 @@
       ctx.accounts.forEach(a => a.isNew = false);
       return descriptors;   // S2.4 — §16.2-iii single hook surface; consumers tween off this
   }
-  window.DatumEstate = { renderEstate: renderEstate };
+  window.DatumEstate = { renderEstate: renderEstate, SHELL_TUNE: SHELL_TUNE };
+  window.DatumEstateTune = SHELL_TUNE;   // Phase A eyes-on dial — openness 0..1, envWeight, partWeight; then updateSVGs()
 })();
