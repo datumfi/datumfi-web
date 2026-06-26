@@ -126,9 +126,39 @@
     return '<rect class="estate-wall-private" x="' + r.x + '" y="' + r.y + '" width="' + r.w + '" height="' + r.h +
            '" style="fill:none;stroke:' + col + ';stroke-width:1.6px;opacity:0.85"/>';
   }
-  function _privDoor(r) {
-    var wy = r.last ? r.y : (r.y + r.h);                                     // last room: top wall; else bottom
-    return _doorH(wy, r.x, r.x + r.w, r.id + 'pd', r.val >= 250000);
+  // A.2 — a sealed room gets ONE door, on a wall facing OPEN space or the EXTERIOR; NEVER on a wall
+  // shared with another sealed room (those stay solid party walls). Position along the chosen wall is
+  // DETERMINISTIC (reuses _doorH/_doorV's id-hash) so doors vary room-to-room without jitter. This is
+  // the estate-level door RULE (which wall), not per-room character.
+  function _roomsByCol(roomRects) {
+    var m = {};
+    roomRects.forEach(function (r) { (m[r.ci] = m[r.ci] || []).push(r); });
+    Object.keys(m).forEach(function (k) { m[k].sort(function (a, b) { return a.ri - b.ri; }); });
+    return m;
+  }
+  function _sealedDoor(r, byCol, lastCi) {
+    function vert(ci, y0, y1) {                                              // class the column across a vertical wall
+      var list = byCol[ci] || [], open = false, sealed = false, saw = false;
+      list.forEach(function (o) { if (o.y < y1 && o.y + o.h > y0) { saw = true; if (o.priv) sealed = true; else open = true; } });
+      return !saw ? 'exterior' : (open ? 'open' : 'sealed');
+    }
+    var col = byCol[r.ci] || [], up = col[r.ri - 1], dn = col[r.ri + 1];
+    var walls = [
+      { kind: r.ri === 0     ? 'exterior' : (up && up.priv ? 'sealed' : up ? 'open' : 'exterior'), axis:'h', f:r.y,       a:r.x, b:r.x + r.w },  // top
+      { kind: r.last         ? 'exterior' : (dn && dn.priv ? 'sealed' : dn ? 'open' : 'exterior'), axis:'h', f:r.y + r.h, a:r.x, b:r.x + r.w },  // bottom
+      { kind: r.ci === 0     ? 'exterior' : vert(r.ci - 1, r.y, r.y + r.h),  axis:'v', f:r.x,       a:r.y, b:r.y + r.h },                         // left
+      { kind: r.ci === lastCi ? 'exterior' : vert(r.ci + 1, r.y, r.y + r.h), axis:'v', f:r.x + r.w, a:r.y, b:r.y + r.h }                          // right
+    ];
+    var rank = { open: 0, exterior: 1 };
+    var cand = walls.filter(function (w) { return w.kind in rank; })
+                    .sort(function (x, y) { return rank[x.kind] - rank[y.kind]; });   // prefer OPEN, then exterior
+    var w = cand[0];
+    if (!w) w = walls[1];   // LANDLOCKED-SEALED FALLBACK: no open/exterior wall exists -> ONE door on the
+                            // bottom wall, necessarily on a sealed wall. This is the LONE sanctioned exception
+                            // to the never-cut-a-sealed-wall rule (never doorless). NOT cluster door-sharing
+                            // (that is the parked cluster refinement).
+    var big = r.val >= 250000;
+    return (w.axis === 'h') ? _doorH(w.f, w.a, w.b, r.id, big) : _doorV(w.f, w.a, w.b, r.id, big);
   }
 
   // ── Phase A.1 · Exterior articulation (additive; ESTATE-LEVEL silhouette, NEVER per-room character) ──
@@ -465,7 +495,8 @@
           var _shell = '<path class="estate-envelope" d="' + _envelopePath(colInfo, _jut) +
                        '" style="fill:none;stroke:var(--teal-mid);stroke-width:' + SHELL_TUNE.envWeight + 'px;opacity:0.92"/>';
           _sharedEdges(roomRects, colInfo).forEach(function (e) { _shell += _openThreshold(e, SHELL_TUNE.openness); });
-          roomRects.forEach(function (r) { if (r.priv) _shell += _privEnclosure(r) + _privDoor(r); });
+          var _byCol = _roomsByCol(roomRects);
+          roomRects.forEach(function (r) { if (r.priv) _shell += _privEnclosure(r) + _sealedDoor(r, _byCol, _lastCi); });
           // A.1 — exterior articulation (additive, estate-level): load-bearing outer wall, windows,
           // ONE entry door, ONE stair, optional chrome. Drawn over the envelope.
           var _extEdges = [];
