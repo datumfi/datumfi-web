@@ -64,6 +64,9 @@
     // S2.5b — corridors: reveal the hallway on the fund -> wait -> draw sequence. Called ALWAYS;
     // under STILL it falls back to drawing connected corridors statically (no anim), not hiding them.
     connect(rooms, now, transitioned);
+    // S2.II — lens WOW: read the lens button .active state off the DOM (no host edit) and drive the
+    // shock wave off the same descriptor array (§16.2-iii: one hook surface, no fork).
+    shockwave(rooms);
   }
 
   function pulse(r) {
@@ -165,6 +168,93 @@
       r.el.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-14px)' }, { transform: 'translateY(0)' }],
         { duration: 700, easing: 'cubic-bezier(0.34,1.3,0.7,1)' });
     });
+  }
+
+  // ── S2.II — LENS WOW. Lens state is READ from the DOM button .active class (LOCK-3, no host edit);
+  // module-local transition trackers; ALL motion via WAAPI; STILL (reduced-motion OR weak CPU) -> NO
+  // animation, the renderer's static lens end-state stands. No total touched (visual only). ──────────
+  var _lastShock = false;
+  var _shockHi = [];                       // #inp-wrapper-<id> els currently red-highlighted (for cleanup)
+  function _lensOn(id) { var b = document.getElementById(id); return !!(b && b.classList.contains('active')); }
+  function _bpsvg() { return document.getElementById('bp-svg'); }
+
+  // A4 — THERMODYNAMIC SHOCK WAVE: a crimson ring sweeps #bp-svg, volatile rooms CONTRACT on the
+  // wavefront, the canvas JOLTS, and the LEFT ledger rows for market-risk (isInvestment) buckets flash
+  // soft-red. Fires once per OFF->ON; the highlight re-applies each render while ON (survives input
+  // re-renders) and clears on OFF. Borrows the .c-shockwave LOOK, rebuilt via WAAPI — NOT the c-prefix
+  // cover node, and NO keyframe CSS added to studio.html.
+  function shockwave(rooms) {
+    var on = _lensOn('btn-shock');
+    if (STILL) { if (!on) _clearShockHi(); _lastShock = on; return; }   // static shocked estate; no anim
+    if (on) {
+      _applyShockHi(rooms);                                             // idempotent; survives re-renders
+      if (!_lastShock) _fireWave(rooms);                               // OFF->ON only: ring + contract + jolt
+    } else if (_lastShock || _shockHi.length) {
+      _clearShockHi();
+    }
+    _lastShock = on;
+  }
+  function _focal(rooms) {
+    var hv = null;
+    rooms.forEach(function (r) { if (r && r.d && (!hv || (r.weight || 0) > (hv.weight || 0))) hv = r; });
+    return (hv && hv.d) ? { x: hv.d.cx, y: hv.d.cy } : { x: 700, y: 550 };   // heaviest room, else canvas center
+  }
+  function _fireWave(rooms) {
+    var svg = _bpsvg(); if (!svg) return;
+    var f = _focal(rooms), maxD = 600, WAVE = 620;
+    rooms.forEach(function (r) { if (r && r.d) maxD = Math.max(maxD, Math.hypot(r.d.cx - f.x, r.d.cy - f.y) + 200); });
+    // RING — net-new crimson ring; WAAPI expand+fade; self-removes on finish (no orphan node).
+    var ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    ring.setAttribute('class', 'estate-shockwave');
+    ring.setAttribute('cx', f.x); ring.setAttribute('cy', f.y); ring.setAttribute('r', 1);
+    ring.setAttribute('fill', 'none'); ring.setAttribute('stroke', 'var(--danger)');
+    ring.setAttribute('stroke-width', '6'); ring.setAttribute('pointer-events', 'none');
+    svg.appendChild(ring);
+    if (ring.animate) {
+      var ra = ring.animate([{ r: 1, strokeWidth: 16, opacity: 0.9 }, { r: maxD, strokeWidth: 1, opacity: 0 }],
+        { duration: WAVE, easing: 'cubic-bezier(0.2,0.6,0.2,1)', fill: 'forwards' });
+      ra.onfinish = function () { if (ring.parentNode) ring.parentNode.removeChild(ring); };
+    } else if (ring.parentNode) { ring.parentNode.removeChild(ring); }
+    // CONTRACT — volatile rooms ease from the pre-shock scale (1/0.70) down to the rendered shocked
+    // size, staggered by distance so they collapse as the wavefront reaches them. Group-transform
+    // channel (transient; conflict-free with reflow). End-state = none -> settles to the rendered size.
+    rooms.forEach(function (r) {
+      if (!r || !r.el || !r.el.animate || !r.d) return;
+      if (!(r.isInvestment || r.taxCode === 'liquid')) return;
+      var delay = Math.min(WAVE * 0.6, (Math.hypot(r.d.cx - f.x, r.d.cy - f.y) / maxD) * WAVE * 0.6);
+      r.el.style.transformBox = 'fill-box';
+      r.el.style.transformOrigin = 'center';
+      r.el.setAttribute('data-shock-contract', '1');   // durable proof (gate hook, race-free)
+      r.el.animate([{ transform: 'scale(1.43)' }, { transform: 'scale(1)' }],
+        { duration: 420, delay: delay, easing: 'cubic-bezier(0.3,0,0.2,1)' });
+    });
+    _jolt(svg);
+    svg.setAttribute('data-shockwave', String(Date.now()));   // durable fire-proof (gate hook)
+  }
+  function _jolt(svg) {
+    svg.setAttribute('data-shock-jolt', '1');   // durable proof (gate hook, race-free; set even with anim delay)
+    if (!svg.animate) return;
+    svg.animate(
+      [{ transform: 'translate(0,0)' }, { transform: 'translate(-6px,4px)', offset: 0.2 },
+       { transform: 'translate(5px,-3px)', offset: 0.5 }, { transform: 'translate(-3px,2px)', offset: 0.75 },
+       { transform: 'translate(0,0)' }],
+      { duration: 280, delay: 120, easing: 'ease-in-out' });
+  }
+  function _applyShockHi(rooms) {
+    _clearShockHi();
+    rooms.forEach(function (r) {
+      if (!r || !r.isInvestment || !r.id) return;
+      var w = document.getElementById('inp-wrapper-' + r.id);
+      if (!w) return;
+      w.style.transition = 'box-shadow 0.3s ease, background-color 0.3s ease';
+      w.style.boxShadow = 'inset 0 0 0 1px var(--danger), 0 0 12px rgba(226,75,74,0.35)';
+      w.style.backgroundColor = 'rgba(226,75,74,0.08)';
+      _shockHi.push(w);
+    });
+  }
+  function _clearShockHi() {
+    _shockHi.forEach(function (w) { w.style.boxShadow = ''; w.style.backgroundColor = ''; });
+    _shockHi = [];
   }
 
   window.DatumEnergize = { run: run, connect: connect, reflow: reflow };
