@@ -319,19 +319,72 @@
     var descriptors = [];                            // S2.4 — the ONE canonical hook surface (§16.2-iii)
     var roomRects = [], colInfo = [];                // Phase A — fed to the estate shell (walls drawn once)
 
+    // IDEA-1 — LINKED DEBT -> ASSET merge (renderer-only, LOCK-3 read-only). A debt that links to a
+    // PRESENT, non-excluded PHYSICAL asset merges VISUALLY onto that asset: its own box is suppressed,
+    // the asset reads RED-MARKED with a dual label + NET EQUITY (asset - debt) on the face. We only
+    // READ linkedAssetId here; suppression + net-equity are DISPLAY-ONLY — grandTotal/Shape/all totals
+    // were computed by the host (link-agnostic) BEFORE this renderer ran, so nothing here moves a total.
+    var _accts = ctx.accounts || [];
+    var _mergeDebtByAsset = {};   // assetId -> the debt acc merging onto it (first link wins)
+    var _suppressedDebt = {};     // debt id -> true (don't draw its box)
+    _accts.forEach(function (a) {
+      if (a.exclude || !a.linkedAssetId) return;
+      var ab = getBaseType(a.baseId);
+      if (!ab || ab.taxCode !== 'debt') return;
+      var asset = null;
+      for (var i = 0; i < _accts.length; i++) { if (_accts[i].id === a.linkedAssetId && !_accts[i].exclude) { asset = _accts[i]; break; } }
+      if (!asset) return;                                   // linked-to-absent/excluded -> plain box (fallback)
+      var sb = getBaseType(asset.baseId);
+      if (!sb || sb.taxCode !== 'physical') return;         // only physical merge targets (matches link <select>)
+      if (!_mergeDebtByAsset[asset.id]) _mergeDebtByAsset[asset.id] = a;
+      _suppressedDebt[a.id] = true;
+    });
+    function _visibleCol(list) { return list.filter(function (a) { return !_suppressedDebt[a.id]; }); }
+    function _eqStr(v) {   // NET EQUITY display string (asset - debt); mirrors the room value format
+      var n = Math.abs(v);
+      var s = n >= 1000000 ? '$' + (n / 1000000).toFixed(2) + 'M' : (n >= 1000 ? '$' + (n / 1000).toFixed(0) + 'k' : '$' + Math.round(n));
+      return v < 0 ? '-' + s : s;
+    }
+
     svgContainer.innerHTML = '';
       // DRAWING PHYSICS: PROPORTIONAL SQUARIFY RENDERING
       let gX = 200, gY = 160, gW = 1000, gH = 850; 
       let pVal = propertyAccount ? propertyAccount.value || 0 : 0;
       let pValStr = pVal >= 1000000 ? '$'+(pVal/1000000).toFixed(2)+'M' : (pVal >= 1000 ? '$'+(pVal/1000).toFixed(0)+'k' : (pVal > 0 ? '$'+pVal : ''));
 
+      // IDEA-1 — if a mortgage links to THIS property, the Grounds become "THE MOAT": equity-colored,
+      // dual label, NET EQUITY on the face, clickable -> property modal (which already lists the debt).
+      // The Grounds finally carry COLOR regardless of link: a teal gradient fill like every other block,
+      // flipping to red only when a linked mortgage is UNDERWATER. The dashed boundary (drawn after the
+      // rooms, so it can step around the north entry jut) matches that same color. All display-only.
+      let _moatDebt = propertyAccount ? _mergeDebtByAsset[propertyAccount.id] : null;
+      let _moatEq = _moatDebt ? ((propertyAccount.value || 0) - (_moatDebt.value || 0)) : null;
+      let _grUnderwater = (_moatEq !== null && _moatEq < 0);
+      let _grGrad = _grUnderwater ? 'fillGradDebt' : 'fillGradAsset';      // teal default, red underwater
+      let _grLine = _grUnderwater ? 'var(--danger)' : 'var(--teal-mid)';   // dashed boundary + label accent
+      let _grValColor = _grUnderwater ? 'var(--danger)' : 'var(--gold)';   // R3: gold positive, red underwater
+      // The grounds FILL + dashed boundary are drawn AFTER the rooms (deferred below) so the fill can
+      // frame the estate (footprint punched out — no bleed-through) and follow the entry jut outside.
+      // This early group carries only the label/title + an invisible .grounds-rect anchor.
       let gSVG = document.createElementNS("http://www.w3.org/2000/svg", "g");
-      gSVG.innerHTML = `
+      if (_moatDebt) {
+          let _moatBase = getBaseType(_moatDebt.baseId);
+          let _grLabel = ((getBaseType(propertyAccount.baseId).meta) + ' / ' + _moatBase.meta).toUpperCase();
+          gSVG.innerHTML = `
+          <title>Physical asset + secured liability (The Moat). Click for detail.</title>
+          <rect x="${gX}" y="${gY}" width="${gW}" height="${gH}" class="grounds-rect" style="stroke:none; fill:none; pointer-events:none;" />
+          <text x="${gX + gW/2}" y="${gY + gH - 38}" class="grounds-title" style="fill: ${_grLine};">${_grLabel}</text>
+          <text x="${gX + gW/2}" y="${gY + gH - 20}" class="grounds-title" style="fill: ${_grLine}; opacity:0.7; font-size:11px; letter-spacing:0.12em;">NET EQUITY</text>
+          <text x="${gX + gW/2}" y="${gY + gH - 4}" class="grounds-title" style="fill: ${_grValColor}; font-size:16px;">${_eqStr(_moatEq)}</text>
+      `;
+      } else {
+          gSVG.innerHTML = `
           <title>Physical asset footprint.</title>
-          <rect x="${gX}" y="${gY}" width="${gW}" height="${gH}" class="grounds-rect" />
+          <rect x="${gX}" y="${gY}" width="${gW}" height="${gH}" class="grounds-rect" style="stroke:none; fill:none; pointer-events:none;" />
           <text x="${gX + gW/2}" y="${gY + gH - 30}" class="grounds-title">THE GROUNDS</text>
           <text x="${gX + gW/2}" y="${gY + gH - 10}" class="grounds-title" style="fill: var(--gold); font-size:16px;">${pValStr}</text>
       `;
+      }
       svgContainer.appendChild(gSVG);
 
       // SURGICAL: Datum Line Rendering
@@ -406,10 +459,13 @@
           });
       }
 
+      // IDEA-1 — render each column WITHOUT its suppressed (linked-debt) boxes, so no phantom column
+      // gap opens and a column that held only a linked debt drops out entirely.
+      let _viz = { primary: _visibleCol(cols.primary), joint: _visibleCol(cols.joint), coarch: _visibleCol(cols.coarch) };
       let activeCols = [];
-      if(cols.primary.length > 0) activeCols.push('primary');
-      if(cols.joint.length > 0) activeCols.push('joint');
-      if(cols.coarch.length > 0) activeCols.push('coarch');
+      if(_viz.primary.length > 0) activeCols.push('primary');
+      if(_viz.joint.length > 0) activeCols.push('joint');
+      if(_viz.coarch.length > 0) activeCols.push('coarch');
       
       let numCols = activeCols.length;
       let drawnRooms = [];
@@ -426,12 +482,12 @@
           let colTotals = { primary: 0, joint: 0, coarch: 0 };
 
           activeCols.forEach(c => {
-             cols[c].forEach(acc => {
+             _viz[c].forEach(acc => {
                  let base = getBaseType(acc.baseId);
                  let isVolatile = base.isInvestment || base.taxCode === 'liquid';
                  let shockMult = (isShocked && isVolatile && base.taxCode !== 'debt') ? 0.70 : 1;
-                 
-                 let val = Math.max(Math.abs((acc.value || 0) * shockMult), 1000); 
+
+                 let val = Math.max(Math.abs((acc.value || 0) * shockMult), 1000);
                  acc._renderVal = val;
                  colTotals[c] += val;
                  totalGlobalRender += val;
@@ -445,8 +501,8 @@
           let bounds = { minX: 9999, minY: 9999, maxX: 0, maxY: 0 }; 
 
           activeCols.forEach((colName, index) => {
-              let accounts = cols[colName];
-              
+              let accounts = _viz[colName];   // IDEA-1 — suppressed linked debts already removed
+
               let colW = minW;
               if (totalGlobalRender > 0) {
                   colW += availW * (colTotals[colName] / totalGlobalRender);
@@ -517,20 +573,36 @@
                   let taxClass = '';
                   if(isThermal) taxClass = `tax-${base.taxCode}`;
 
+                  // IDEA-1 — does a linked debt merge onto THIS asset (e.g. auto-loan -> vehicle)?
+                  // The room stays OPEN (no border, no seal); EQUITY drives the FILL color exactly like
+                  // every other block — teal when positive, the debt red gradient when underwater — so
+                  // pos/neg reads at a glance. Dual label + NET EQUITY (asset - debt) are DISPLAY-only.
+                  let _mergeDebt = (!isDebt) ? _mergeDebtByAsset[acc.id] : null;
+                  let _mergeEq = _mergeDebt ? ((acc.value || 0) - (_mergeDebt.value || 0)) : null;
+                  let _mergeNeg = (_mergeEq !== null && _mergeEq < 0);
+                  let _roomTitle = _mergeDebt ? (base.meta + ' / ' + getBaseType(_mergeDebt.baseId).meta).toUpperCase() : base.meta.toUpperCase();
+                  let _titleY = _mergeDebt ? (d.cy - 20) : (d.cy - 10);
+                  let _valBlock = _mergeDebt
+                    ? `
+                    <text x="${d.cx}" y="${d.cy - 2}" class="bp-title" style="fill:${_mergeNeg ? 'var(--danger)' : 'var(--teal-mid)'}; opacity:0.75; font-size:11px; letter-spacing:0.12em;">NET EQUITY</text>
+                    <text x="${d.cx}" y="${d.cy + 24}" class="bp-val" style="fill:${_mergeNeg ? 'var(--danger)' : 'var(--gold)'}; font-size:18px;">${_eqStr(_mergeEq)}</text>`
+                    : `<text x="${d.cx}" y="${d.cy + 30}" class="bp-val" style="fill:${shockColor}; transition: 0.6s ease;">${valStr}</text>`;
+
                   // S2.4 — load-bearing weight (read from hub) + concave fill on RAW value.
                   let weight = accountWeights[acc.id] || 0;
                   let fp = fillPct(acc.value || 0);
                   let fillH = d.h * fp / 100, fillY = d.y + d.h - fillH;
                   g.style.setProperty('--weight', weight);
+                  let _roomDebtFill = isDebt || _mergeNeg;   // underwater merge fills red like a debt
                   let fillHTML = fp > 0 ? `
-                    <rect x="${d.x}" y="${fillY}" width="${d.w}" height="${fillH}" class="room-fill${isDebt ? ' fill-debt' : ''}" fill="url(#${isDebt ? 'fillGradDebt' : 'fillGradAsset'})" />` : '';
+                    <rect x="${d.x}" y="${fillY}" width="${d.w}" height="${fillH}" class="room-fill${_roomDebtFill ? ' fill-debt' : ''}" fill="url(#${_roomDebtFill ? 'fillGradDebt' : 'fillGradAsset'})" />` : '';
 
                   g.innerHTML = `
                     ${tooltipHTML}
                     <rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" class="room-rect active ${animClass} ${frictionClass} ${priorityClass} ${taxClass}" style="stroke:none" />
                     ${fillHTML}
-                    <text x="${d.cx}" y="${d.cy - 10}" class="bp-title">${base.meta.toUpperCase()}</text>
-                    <text x="${d.cx}" y="${d.cy + 30}" class="bp-val" style="fill:${shockColor}; transition: 0.6s ease;">${valStr}</text>
+                    <text x="${d.cx}" y="${_titleY}" class="bp-title">${_roomTitle}</text>
+                    ${_valBlock}
                   `;
                   svgContainer.appendChild(g);
                   descriptors.push({ id: acc.id, el: g, rect: g.querySelector('.room-rect'), d: d, value: acc.value || 0, fillPct: fp, weight: weight, isNew: !!acc.isNew, taxCode: base.taxCode, isDebt: isDebt });
@@ -591,6 +663,54 @@
               svgContainer.appendChild(outline);
           }
       }
+
+      // IDEA-1 R2/R3 — GROUNDS fill + dashed boundary, drawn AFTER the rooms so they frame the estate
+      // from OUTSIDE: the outline steps OUT around the north entry jut (never cuts the front door), and
+      // once rooms exist the FILL becomes a FRAME (estate footprint punched out, even-odd) so the
+      // red/teal never bleeds THROUGH the translucent room boxes. Full plot only when property stands
+      // alone. Color = grounds equity/link state (teal default, red when a linked mortgage is underwater).
+      (function () {
+        var bx = gX, by = gY, bx2 = gX + gW, by2 = gY + gH, outer;
+        if (_jut && colInfo.length) {
+          var M = 14;                                                       // clearance around the jut
+          var jx0 = Math.max(bx, _jut.x0 - M), jx1 = Math.min(bx2, _jut.x1 + M);
+          var jTop = Math.min(by, (colInfo[0].top - _jut.depth) - M);       // notch top, above the jut
+          outer = 'M ' + bx + ' ' + by + ' H ' + jx0 + ' V ' + jTop + ' H ' + jx1 + ' V ' + by +
+                  ' H ' + bx2 + ' V ' + by2 + ' H ' + bx + ' Z';
+        } else {
+          outer = 'M ' + bx + ' ' + by + ' H ' + bx2 + ' V ' + by2 + ' H ' + bx + ' Z';
+        }
+        // FILL — full plot when property stands alone; a frame (estate footprint punched out) once rooms
+        // exist, so nothing tints the rooms.
+        var fillD = outer;
+        if (colInfo.length) {
+          var eMinX = colInfo[0].x, eMaxX = colInfo[colInfo.length - 1].x + colInfo[colInfo.length - 1].w;
+          var eTop = colInfo[0].top, eBot = colInfo[0].bottom;
+          colInfo.forEach(function (c) { eBot = Math.max(eBot, c.bottom); });
+          // The hole follows the estate SILHOUETTE — including the entry jut — so nothing fills behind
+          // the cutout (no red/teal bleeding UNDER the translucent jut). Jut span/top match estate-jut-fill.
+          if (_jut) {
+            var hjTop = colInfo[0].top - _jut.depth;
+            fillD += ' M ' + eMinX + ' ' + eTop + ' H ' + _jut.x0 + ' V ' + hjTop + ' H ' + _jut.x1 + ' V ' + eTop +
+                     ' H ' + eMaxX + ' V ' + eBot + ' H ' + eMinX + ' Z';
+          } else {
+            fillD += ' M ' + eMinX + ' ' + eTop + ' V ' + eBot + ' H ' + eMaxX + ' V ' + eTop + ' Z';
+          }
+        }
+        var gf = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        gf.setAttribute('class', 'grounds-fill');
+        gf.setAttribute('d', fillD);
+        gf.setAttribute('fill-rule', 'evenodd');
+        gf.setAttribute('style', 'fill:url(#' + _grGrad + '); stroke:none; ' + (_moatDebt ? 'cursor:pointer; pointer-events:auto;' : 'pointer-events:none;'));
+        if (_moatDebt) gf.setAttribute('onclick', "openAccountModal('" + propertyAccount.id + "')");
+        svgContainer.insertBefore(gf, svgContainer.firstChild);            // behind the rooms (frame backdrop)
+
+        var gb = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        gb.setAttribute('class', 'grounds-boundary');
+        gb.setAttribute('d', outer);
+        gb.setAttribute('style', 'fill:none; stroke:' + _grLine + '; stroke-dasharray:12 12; stroke-width:1.5; pointer-events:none;');
+        svgContainer.appendChild(gb);
+      })();
 
       // SURGICAL: Outflow Routing Lines
       if (isRouting && drawnRooms.length > 0) {
