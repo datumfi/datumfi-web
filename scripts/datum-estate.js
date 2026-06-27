@@ -161,6 +161,58 @@
     return (w.axis === 'h') ? _doorH(w.f, w.a, w.b, r.id, big) : _doorV(w.f, w.a, w.b, r.id, big);
   }
 
+  // A.4 — a contiguous vertical RUN of sealed rooms in a column = a "debt wing". Returns the runs.
+  function _sealedWings(roomRects, byCol) {
+    var wings = [];
+    Object.keys(byCol).forEach(function (ci) {
+      var run = null;
+      byCol[ci].forEach(function (r) {                            // byCol[ci] sorted by ri
+        if (r.priv) { if (!run) { run = []; wings.push(run); } run.push(r); }
+        else run = null;                                          // an open room breaks the run
+      });
+    });
+    return wings;                                                 // each = array of consecutive sealed rooms
+  }
+  // A.4 — ONE shared door for a wing (run>=2), on its open-facing/exterior wall nearest the wing center.
+  // A run of length 1 = an isolated sealed room -> A.2 rule UNCHANGED (so the supersession can never be
+  // mistaken for an A.2 regression). This SUPERSEDES the A.2 single-room landlocked fallback for runs>=2.
+  function _wingDoor(wing, byCol, lastCi) {
+    if (wing.length === 1) return _sealedDoor(wing[0], byCol, lastCi);   // isolated sealed room -> A.2
+    var ci = wing[0].ci, topR = wing[0], botR = wing[wing.length - 1];
+    function vert(c, y0, y1) {
+      var list = byCol[c] || [], open = false, sealed = false, saw = false;
+      list.forEach(function (o) { if (o.y < y1 && o.y + o.h > y0) { saw = true; if (o.priv) sealed = true; else open = true; } });
+      return !saw ? 'exterior' : (open ? 'open' : 'sealed');
+    }
+    var cands = [];
+    wing.forEach(function (r) {                                   // each room's side walls
+      var lk = r.ci === 0      ? 'exterior' : vert(r.ci - 1, r.y, r.y + r.h);
+      var rk = r.ci === lastCi ? 'exterior' : vert(r.ci + 1, r.y, r.y + r.h);
+      if (lk !== 'sealed') cands.push({ kind: lk, axis: 'v', f: r.x,       a: r.y, b: r.y + r.h, c: r.y + r.h / 2, seed: r.id });
+      if (rk !== 'sealed') cands.push({ kind: rk, axis: 'v', f: r.x + r.w, a: r.y, b: r.y + r.h, c: r.y + r.h / 2, seed: r.id });
+    });
+    var tUp = byCol[ci][topR.ri - 1], bDn = byCol[ci][botR.ri + 1];   // a maximal run is always bounded
+    var tk = topR.ri === 0 ? 'exterior' : (tUp && tUp.priv ? 'sealed' : tUp ? 'open' : 'exterior');   // above/below by an
+    var bk = botR.last      ? 'exterior' : (bDn && bDn.priv ? 'sealed' : bDn ? 'open' : 'exterior');   // open room or the edge
+    if (tk !== 'sealed') cands.push({ kind: tk, axis: 'h', f: topR.y,        a: topR.x, b: topR.x + topR.w, c: topR.x + topR.w / 2, seed: topR.id });
+    if (bk !== 'sealed') cands.push({ kind: bk, axis: 'h', f: botR.y + botR.h, a: botR.x, b: botR.x + botR.w, c: botR.x + botR.w / 2, seed: botR.id });
+
+    var midY = (topR.y + botR.y + botR.h) / 2, rank = { open: 0, exterior: 1 };
+    cands.sort(function (x, y) {                                  // prefer OPEN, then exterior; tiebreak = nearest wing center (deterministic)
+      if (rank[x.kind] !== rank[y.kind]) return rank[x.kind] - rank[y.kind];
+      return Math.abs(x.c - midY) - Math.abs(y.c - midY);
+    });
+    var w = cands[0];
+    if (!w) {   // LANDLOCKED-WING FALLBACK (A.4) — DEFENSIVE/UNREACHABLE: a maximal run is always bounded
+                // above/below by an open room or the envelope edge, so `cands` is never empty. Kept as a
+                // safety net (e.g. a future 2D-wing change). Supersedes the A.2 single-room landlocked
+                // fallback for runs>=2; never doorless. NOT cluster-sharing-across-columns (that is parked).
+      w = { axis: 'h', f: botR.y + botR.h, a: botR.x, b: botR.x + botR.w, seed: botR.id };
+    }
+    var big = wing.some(function (r) { return r.val >= 250000; });
+    return (w.axis === 'h') ? _doorH(w.f, w.a, w.b, 'wing-' + w.seed, big) : _doorV(w.f, w.a, w.b, 'wing-' + w.seed, big);
+  }
+
   // ── Phase A.1 · Exterior articulation (additive; ESTATE-LEVEL silhouette, NEVER per-room character) ──
   // Windows + ONE entry door + load-bearing OUTER wall (heaviest room, hub weight READ-only) + ONE stair
   // + Foyer jut + optional CAD chrome. All inline overlays on the estate shell — zero studio.html edit.
@@ -513,7 +565,8 @@
                        '" style="fill:none;stroke:var(--teal-mid);stroke-width:' + SHELL_TUNE.envWeight + 'px;opacity:0.92"/>';
           _sharedEdges(roomRects, colInfo).forEach(function (e) { _shell += _openThreshold(e, SHELL_TUNE.openness); });
           var _byCol = _roomsByCol(roomRects);
-          roomRects.forEach(function (r) { if (r.priv) _shell += _privEnclosure(r) + _sealedDoor(r, _byCol, _lastCi); });
+          roomRects.forEach(function (r) { if (r.priv) _shell += _privEnclosure(r); });             // sealed boxes (all rooms)
+          _sealedWings(roomRects, _byCol).forEach(function (wg) { _shell += _wingDoor(wg, _byCol, _lastCi); });   // A.4 — ONE door per wing
           // A.1 — exterior articulation (additive, estate-level): load-bearing outer wall, windows,
           // ONE entry door, ONE stair, optional chrome. Drawn over the envelope.
           var _extEdges = [];

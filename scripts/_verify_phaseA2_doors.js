@@ -89,19 +89,20 @@ async function render(p, accts, coArch) {
   const ok = (n, c) => { console.log(`${n.padEnd(58)} -> ${c ? 'GREEN' : 'RED'}`); return c; };
   console.log('===== PHASE-A.2 DOOR GATE [' + LABEL + '] =====');
   const checks = [];
-  // Fixture A
+  // NOTE: A.4 SUPERSEDES A.2's per-room door COUNT for contiguous runs (a debt wing now shares ONE
+  // door — see _verify_phaseA4_wings.js). This gate retains A.2's ENDURING invariant: NO door ever
+  // sits on a sealed<->sealed wall (when an open/exterior escape exists). The per-room-count assertions
+  // were RETIRED here, not regressed — the supersession is intentional and named.
+  // Fixture A (3 stacked debts = one wing)
   checks.push(ok('A: sealed rooms found (3 debts)', A1.sealedCount === 3));
-  checks.push(ok('A: EVERY sealed room has exactly 1 door', A1.perRoom.length > 0 && A1.perRoom.every(n => n === 1)));
-  checks.push(ok('A: NO door on a sealed<->sealed wall', A1.sealedSealed === 0));
-  checks.push(ok('A: one private door per sealed room (count==sealed)', A1.cutCount === A1.sealedCount));
+  checks.push(ok('A: stacked debts share ONE wing door (A.4 supersedes A.2 per-room)', A1.cutCount === 1));
+  checks.push(ok('A: NO door on a sealed<->sealed wall (A.2 enduring invariant)', A1.sealedSealed === 0));
   // determinism
   checks.push(ok('determinism: two renders -> identical positions', JSON.stringify(A1.mids) === JSON.stringify(A2.mids)));
-  // Fixture B (landlocked fallback). A landlocked room MUST door onto a sealed wall (no open/exterior
-  // exists), so its neighbor legitimately shows 2 doors -- the lone sanctioned exception. Assert:
-  // never doorless, the fallback fired, and the 3-door CROWD bug never returns (max <= 2).
-  checks.push(ok('B: every sealed room has >=1 door (never doorless)', B.perRoom.length === 9 && B.perRoom.every(n => n >= 1)));
-  checks.push(ok('B: landlocked fallback present (sealed<->sealed door EXPECTED here)', B.sealedSealed >= 1));
-  checks.push(ok('B: no 3-door crowd returns (max doors/room <= 2)', Math.max.apply(null, B.perRoom) <= 2));
+  // Fixture B (co-arch 3 all-debt columns = 3 column-wings). A.4 wing-level door makes the A.2 per-room
+  // landlocked case unreachable -> zero sealed<->sealed doors (was >=1 under A.2's per-room fallback).
+  checks.push(ok('B: 3 column-wings -> 3 doors (A.4, not 9 per-room)', B.cutCount === 3));
+  checks.push(ok('B: A.4 eliminates the per-room landlocked case (no sealed<->sealed)', B.sealedSealed === 0));
   console.log('detail A:', JSON.stringify({ sealedCount:A1.sealedCount, perRoom:A1.perRoom, sealedSealed:A1.sealedSealed, cutCount:A1.cutCount }));
   console.log('detail B:', JSON.stringify({ sealedCount:B.sealedCount, perRoom:B.perRoom, sealedSealed:B.sealedSealed }));
   const all = checks.every(Boolean);
