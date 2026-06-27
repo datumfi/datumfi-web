@@ -68,6 +68,7 @@
     // shock wave + sequence-risk staging off the same descriptor array (§16.2-iii: one hook surface).
     shockwave(rooms);
     sequence(rooms);
+    thermal(rooms);
   }
 
   function pulse(r) {
@@ -331,6 +332,77 @@
     t.setAttribute('font-weight', 'bold'); t.setAttribute('fill', '#fff'); t.textContent = String(rank);
     g.appendChild(tint); g.appendChild(c); g.appendChild(t);
     r.el.appendChild(g);     // inside the room group -> lifts with the room, wiped+redrawn each render
+  }
+
+  // THERMAL — NIGHT-VISION HEAT-SCAN (reuses isThermal / #btn-thermal). The renderer already tags
+  // rooms tax-{taxCode} (host CSS L964-968 recolors them); this LAYERS night-vision ON TOP via runtime
+  // inline styles (no host edit): a one-pass orange scan sweeps #bp-svg revealing the heat, ONLY the
+  // PRE-TAX rooms (trapped-tax liability) glow + sustained heat-breathe, everything else dims to a COOL
+  // EMBER (non-zero opacity, never black), and the pre-tax ledger rows highlight ORANGE. STILL -> the
+  // static host-CSS recolor stands (no scan/breathe/dim). Read-only on taxCode (LOCK-3); no total.
+  var _lastTherm = false;
+  var _thermHi = [];                        // #inp-wrapper teal... ORANGE-highlighted hot rows (cleanup)
+  var _thermBStart = null;                  // heat-breathe phase anchor (resume across re-renders)
+  function _thermClass(r) {
+    if (r.taxCode === 'pretax') return 'hot';
+    if (r.isDebt || r.taxCode === 'debt' || r.taxCode === 'trust') return 'identity';   // keep red/purple, faint
+    return 'cool';                                                                        // roth/liquid/physical/income
+  }
+  function thermal(rooms) {
+    var on = _lensOn('btn-thermal');
+    var svg = _bpsvg();
+    if (!on) { if (_thermHi.length) { _ledgerClear(_thermHi); _thermHi = []; } if (svg) svg.removeAttribute('data-thermal-animated'); _lastTherm = false; return; }
+    if (STILL) { _lastTherm = on; return; }     // host-CSS recolor IS the static end-state; no flourish
+    if (!svg) return;
+    var fresh = !_lastTherm, scanMs = 1200;
+    if (_thermBStart == null) _thermBStart = _now();
+    var bphase = _now() - _thermBStart, hotIds = [];
+    rooms.forEach(function (r) {
+      if (!r || !r.el) return;
+      var cls = _thermClass(r);
+      // reveal as the scan crosses the room's cy (one-time on fresh OFF->ON; instant on re-renders)
+      var revealMs = fresh ? Math.max(0, Math.min(scanMs, (((r.d ? r.d.cy : 600) - 160) / 850) * scanMs)) : 0;
+      r.el.style.transition = 'opacity 0.45s ease ' + revealMs + 'ms, filter 0.45s ease ' + revealMs + 'ms';
+      if (cls === 'hot') {
+        r.el.style.opacity = '1';
+        r.el.style.filter = 'drop-shadow(0 0 12px rgba(255,184,100,0.85))';
+        if (r.id) hotIds.push(r.id);
+        _thermBreathe(r, bphase, revealMs);     // SUSTAINED heat-breathe (glow/opacity, NOT transform), pre-tax only
+      } else {
+        r.el.style.opacity = (cls === 'identity') ? '0.32' : '0.30';   // COOL EMBER — non-zero floor, never black
+        r.el.style.filter = 'none';
+      }
+    });
+    if (fresh) _thermScan(svg, scanMs);
+    _ledgerClear(_thermHi);
+    _thermHi = _ledgerHi(hotIds, 'var(--hot)', '255,184,100');          // ORANGE _ledgerHi on hot (pre-tax) rows ONLY
+    svg.setAttribute('data-thermal-animated', '1');
+    _lastTherm = on;
+  }
+  function _thermBreathe(r, phase, delayMs) {
+    if (!r.el.animate) return;
+    var a = r.el.animate(
+      [{ filter: 'drop-shadow(0 0 6px rgba(255,184,100,0.5))' },
+       { filter: 'drop-shadow(0 0 18px rgba(255,184,100,0.95))' },
+       { filter: 'drop-shadow(0 0 6px rgba(255,184,100,0.5))' }],
+      { duration: 2600, iterations: Infinity, easing: 'ease-in-out', delay: delayMs || 0 });
+    try { if (!delayMs) a.currentTime = phase % 2600; } catch (e) {}   // resume across re-renders
+  }
+  function _thermScan(svg, ms) {
+    var s = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    s.setAttribute('class', 'thermal-scan');
+    s.setAttribute('x', '180'); s.setAttribute('y', '150'); s.setAttribute('width', '1040'); s.setAttribute('height', '14');
+    s.setAttribute('fill', 'rgba(255,184,100,0.5)'); s.setAttribute('pointer-events', 'none');
+    s.style.filter = 'blur(4px)';
+    svg.appendChild(s);
+    if (s.animate) {
+      var a = s.animate(
+        [{ transform: 'translateY(0)', opacity: 0.1 }, { transform: 'translateY(40px)', opacity: 0.7, offset: 0.1 },
+         { transform: 'translateY(860px)', opacity: 0.7, offset: 0.95 }, { transform: 'translateY(900px)', opacity: 0 }],
+        { duration: ms, easing: 'linear' });
+      a.onfinish = function () { if (s.parentNode) s.parentNode.removeChild(s); };
+    } else if (s.parentNode) { s.parentNode.removeChild(s); }
+    svg.setAttribute('data-thermal-scan', String(Date.now()));   // durable fire-proof (gate hook)
   }
 
   window.DatumEnergize = { run: run, connect: connect, reflow: reflow };
