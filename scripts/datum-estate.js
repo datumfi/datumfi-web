@@ -387,8 +387,11 @@
       }
       svgContainer.appendChild(gSVG);
 
-      // SURGICAL: Datum Line Rendering
-      if (isDatum) {
+      // SURGICAL: Datum Line Rendering — RETIRED. isDatum is repurposed to the SEQUENCE RISK lens,
+      // which is energizer-owned (datum-energize.js sequence(): lift + (1)(2)(3) badges + RISK LADDER).
+      // The flat spend-line is suppressed; the button still reads "Datum Elevation" until the step-3
+      // host relabel. Kept disabled (not deleted) so step-3 can rule on the line's fate.
+      if (false && isDatum) {
           let spendStr = ctx.spendInputEl.value;
           let spendVal = parseInt(spendStr.replace(/[^0-9]/g, ''), 10) || 0;
           let datumY = (gY + gH) - Math.min((spendVal / 250), gH); 

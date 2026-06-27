@@ -65,8 +65,9 @@
     // under STILL it falls back to drawing connected corridors statically (no anim), not hiding them.
     connect(rooms, now, transitioned);
     // S2.II — lens WOW: read the lens button .active state off the DOM (no host edit) and drive the
-    // shock wave off the same descriptor array (§16.2-iii: one hook surface, no fork).
+    // shock wave + sequence-risk staging off the same descriptor array (§16.2-iii: one hook surface).
     shockwave(rooms);
+    sequence(rooms);
   }
 
   function pulse(r) {
@@ -240,21 +241,96 @@
        { transform: 'translate(0,0)' }],
       { duration: 280, delay: 120, easing: 'ease-in-out' });
   }
-  function _applyShockHi(rooms) {
-    _clearShockHi();
-    rooms.forEach(function (r) {
-      if (!r || !r.isInvestment || !r.id) return;
-      var w = document.getElementById('inp-wrapper-' + r.id);
-      if (!w) return;
+  // SHARED signature-color left-ledger highlighter (Ruling 2): runtime inline-style on the host DOM
+  // #inp-wrapper-<id> rows — G1: NO markup hook, module-only (same path Shock has shipped). Each lens
+  // calls with its color: Shock RED, Sequence TEAL, Thermal ORANGE, Routing BLUE (later). Returns the
+  // touched els for cleanup. cssVar keeps the brand var (so gates see the color name); rgb drives the
+  // alpha glow/wash. LOCK-3: pure display, never touches a total.
+  function _ledgerHi(ids, cssVar, rgb) {
+    var out = [];
+    ids.forEach(function (id) {
+      var w = document.getElementById('inp-wrapper-' + id); if (!w) return;
       w.style.transition = 'box-shadow 0.3s ease, background-color 0.3s ease';
-      w.style.boxShadow = 'inset 0 0 0 1px var(--danger), 0 0 12px rgba(226,75,74,0.35)';
-      w.style.backgroundColor = 'rgba(226,75,74,0.08)';
-      _shockHi.push(w);
+      w.style.boxShadow = 'inset 0 0 0 1px ' + cssVar + ', 0 0 12px rgba(' + rgb + ',0.35)';
+      w.style.backgroundColor = 'rgba(' + rgb + ',0.08)';
+      out.push(w);
     });
+    return out;
   }
-  function _clearShockHi() {
-    _shockHi.forEach(function (w) { w.style.boxShadow = ''; w.style.backgroundColor = ''; });
-    _shockHi = [];
+  function _ledgerClear(list) { (list || []).forEach(function (w) { w.style.boxShadow = ''; w.style.backgroundColor = ''; }); }
+  function _applyShockHi(rooms) {
+    _ledgerClear(_shockHi);
+    _shockHi = _ledgerHi(rooms.filter(function (r) { return r && r.isInvestment && r.id; }).map(function (r) { return r.id; }),
+      'var(--danger)', '226,75,74');                         // Shock = RED (unchanged behavior)
+  }
+  function _clearShockHi() { _ledgerClear(_shockHi); _shockHi = []; }
+
+  // SEQUENCE RISK lens (reuses isDatum / #btn-datum — NO new flag). Ranks the rooms most exposed to
+  // sequence-of-returns risk (selling volatile investments EARLY in a downturn) and STAGES them: lift
+  // + (1)(2)(3) badges + a top RISK LADDER, highest-first. The floor plan is NOT re-laid-out (rooms
+  // stay put). Score reads taxCode/isInvestment/weight from the descriptor (LOCK-3, no total). Drawn
+  // EVERY run while ON (survives input re-renders + IS the STILL end-state); the entrance MOTION fires
+  // only on a fresh OFF->ON when !STILL. Draws ONLY into #bp-svg (own rooms) -> G1 not in play.
+  var _lastSeq = false;
+  var _seqHi = [];                          // #inp-wrapper-<id> teal-highlighted rows (cleanup)
+  var SEQ_STAGE = { liquid: 0, pretax: 1, roth: 2 };   // withdrawal order: liquid drawn FIRST = most sequence-exposed
+  function sequence(rooms) {
+    var on = _lensOn('btn-datum');
+    if (!on) { if (_seqHi.length) { _ledgerClear(_seqHi); _seqHi = []; } _lastSeq = false; return; }   // clear teal on OFF
+    var svg = _bpsvg(); if (!svg) return;
+    // RULED (A) ORDER-DOMINANT: sort ASCENDING by withdrawal stage (liquid<pretax<roth), then DESCENDING
+    // by balance WITHIN a stage (tie-break). Magnitude NEVER crosses a stage boundary -> the lens reads
+    // "which buckets you drain FIRST into a downturn," not "biggest account." isInvestment gate excludes
+    // cash/physical/debt/trust. All read-only from ctx (taxCode + value) -> no total touched (LOCK-3).
+    var ranked = [];
+    rooms.forEach(function (r) {
+      if (!r || !r.el || !r.isInvestment || !(r.taxCode in SEQ_STAGE)) return;
+      ranked.push({ r: r, stage: SEQ_STAGE[r.taxCode], mag: r.value || 0 });
+    });
+    ranked.sort(function (a, b) { return a.stage - b.stage || b.mag - a.mag; });
+    var fresh = !_lastSeq;
+    var LIFT = -34;                                                     // UNIFORM flat height for ALL ranks
+    ranked.forEach(function (e, i) {
+      var r = e.r, rank = i + 1;
+      r.el.setAttribute('data-seq-rank', String(rank));
+      r.el.style.transformBox = 'fill-box';
+      r.el.style.transformOrigin = 'center';
+      r.el.style.transform = 'translateY(' + LIFT + 'px)';             // same flat height (NO staircase, NO per-rank delta)
+      r.el.style.filter = 'drop-shadow(0 14px 12px rgba(0,0,0,0.5))';
+      _seqBadge(r, rank);
+      // SIMULTANEOUS one-time rise — ALL ranked rooms rise TOGETHER (no per-rank stagger; a staggered
+      // rise reads as jitter on a vertical column), then HOLD. NO cascade, NO bob. STILL -> no rise.
+      if (!STILL && fresh && r.el.animate) {
+        r.el.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(' + LIFT + 'px)' }],
+          { duration: 480, easing: 'cubic-bezier(0.34,1.2,0.64,1)' });
+      }
+    });
+    svg.setAttribute('data-seq-active', '1');
+    if (!STILL) {                                                       // teal highlight + animated marker = flourish (!STILL ONLY)
+      _ledgerClear(_seqHi);
+      _seqHi = _ledgerHi(ranked.map(function (e) { return e.r.id; }), 'var(--teal-mid)', '93,202,165');   // Sequence = TEAL
+      svg.setAttribute('data-seq-animated', '1');
+    }
+    _lastSeq = on;
+  }
+  function _seqBadge(r, rank) {
+    if (!r.d) return;
+    var ns = 'http://www.w3.org/2000/svg';
+    var g = document.createElementNS(ns, 'g'); g.setAttribute('class', 'seq-badge');
+    var tint = document.createElementNS(ns, 'rect');
+    tint.setAttribute('x', r.d.x); tint.setAttribute('y', r.d.y);
+    tint.setAttribute('width', r.d.w); tint.setAttribute('height', r.d.h);
+    tint.setAttribute('fill', 'rgba(226,75,74,0.12)'); tint.setAttribute('pointer-events', 'none');
+    var cx = r.d.x + r.d.w - 18, cy = r.d.y + 18;   // top-RIGHT corner: clears the top-left SQUARE FOOTAGE box
+    var c = document.createElementNS(ns, 'circle');
+    c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', 12);
+    c.setAttribute('fill', 'var(--danger)'); c.setAttribute('stroke', '#fff'); c.setAttribute('stroke-width', '1.5');
+    var t = document.createElementNS(ns, 'text');
+    t.setAttribute('x', cx); t.setAttribute('y', cy + 4); t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('font-family', 'var(--font-mono)'); t.setAttribute('font-size', '13');
+    t.setAttribute('font-weight', 'bold'); t.setAttribute('fill', '#fff'); t.textContent = String(rank);
+    g.appendChild(tint); g.appendChild(c); g.appendChild(t);
+    r.el.appendChild(g);     // inside the room group -> lifts with the room, wiped+redrawn each render
   }
 
   window.DatumEnergize = { run: run, connect: connect, reflow: reflow };
