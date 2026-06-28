@@ -55,9 +55,9 @@ const MK = `(id,baseId,value,holdings)=>({id,baseId,value,inflow:0,freq:12,exclu
     const rollup = Array.from(document.querySelectorAll('#modal-dynamic-content .holdings-rollup .hr-lbl')).map(t => t.textContent.trim());
     const ugCell = document.querySelector('#modal-dynamic-content .holdings-rollup .hr-cell .hr-val');
     const html = document.getElementById('modal-dynamic-content').innerHTML;
-    // per-row Unrealized Gain: holding B has blank cost basis -> a "—" cell must exist
-    const rowDash = /—/.test(html);
-    return { ths, rollup, ugVal: ugCell ? ugCell.textContent.trim() : '', html };
+    // Instrument column input value for holding 0 (the instrumentType field surfaced)
+    const instCell = document.querySelector('#modal-dynamic-content .holdings-table tr:nth-child(2) td:last-child input, #modal-dynamic-content input[oninput*="instrumentType"]');
+    return { ths, rollup, ugVal: ugCell ? ugCell.textContent.trim() : '', instVal: instCell ? instCell.value : '', html };
   });
 
   // fetchMockData expansion: type AAPL -> stable fields populate
@@ -135,6 +135,7 @@ const MK = `(id,baseId,value,holdings)=>({id,baseId,value,inflow:0,freq:12,exclu
   const checks = [];
   const T = taxable.ths.join(' | ');
   checks.push(ok('columns: Beta + Yield + Geography render', /Beta/.test(T) && /Yield/.test(T) && /Geography/.test(T)));
+  checks.push(ok('Ask3: Instrument column surfaced, shows instrumentType ("Stock")', /Instrument/.test(T) && taxable.instVal === 'Stock'));
   checks.push(ok('Inv. Corr. column GONE', !/Inv\. Corr\./.test(T) && !/Inverse Correlation/.test(taxable.html)));
   checks.push(ok('taxable: Cost Basis + Unrealized Gain columns present', /Cost Basis/.test(T) && /Unrealized Gain/.test(T)));
   checks.push(ok('rollup strip: Unrealized Gain/Weighted Beta/Blended Yield/Avg Expense', JSON.stringify(taxable.rollup) === JSON.stringify(['Unrealized Gain', 'Weighted Beta', 'Blended Yield', 'Avg Expense'])));

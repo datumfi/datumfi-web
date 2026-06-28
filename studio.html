@@ -4137,7 +4137,7 @@
             </button>`;
             
             if(acc.showHoldings) {
-                document.getElementById('modal-card').style.width = "1120px";
+                document.getElementById('modal-card').style.width = "1200px";
                 var isTaxable = (base.taxCode === 'liquid' && base.isInvestment);
                 var _agg = (window.DatumMath ? DatumMath.portfolioStats([acc]) : null);   // display-only (LOCK-3)
                 var _esc = function (s) { return (s === undefined || s === null) ? '' : String(s); };
@@ -4169,6 +4169,7 @@
                   { lbl: 'Sector', w: 110, td: function (h, i) { return _ti(h, i, 'sector', ''); } },
                   { lbl: 'Exp Ratio', w: 72, td: function (h, i) { return _ti(h, i, 'expRatio', '0', true); } },
                   { lbl: 'Asset Class', w: 110, td: function (h, i) { return _ti(h, i, 'assetClass', ''); } },
+                  { lbl: 'Instrument', w: 95, td: function (h, i) { return _ti(h, i, 'instrumentType', '—'); } },
                   { lbl: '', w: null, td: function (h, i) { return '<td><button onclick="removeHolding(\'' + id + '\', ' + i + ')" style="background:none; border:none; color:var(--muted); cursor:pointer;">×</button></td>'; } }
                 ];
                 var cols = COLS.filter(function (c) { return !c.taxableOnly || isTaxable; });
