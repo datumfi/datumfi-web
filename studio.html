@@ -362,6 +362,7 @@
   .studio-layout.mode-shape #bp-svg { pointer-events: none; }
   .studio-layout.mode-shape .hud-overview,
   .studio-layout.mode-shape .hud-analysis,
+  .studio-layout.mode-shape #want-readout,
   .studio-layout.mode-shape .lens-controls {
     opacity: 0 !important;
     pointer-events: none !important;
@@ -904,7 +905,7 @@
   .hud-title { font-family: var(--font-mono); font-size: 10px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; }
   
   /* TOP LEFT: OVERVIEW DASHBOARD */
-  .hud-overview { top: 40px; left: 40px; width: 350px; cursor: pointer; transition: border-color 0.3s;}
+  .hud-overview { top: 16px; left: 16px; width: 300px; cursor: pointer; transition: border-color 0.3s;}
   .hud-overview:hover { border-color: var(--teal-mid); }
   .estate-total-val { font-family: var(--font-serif); font-size: 54px; font-style: italic; color: var(--white); text-shadow: 0 4px 10px rgba(0,0,0,0.8); line-height: 1; margin-bottom: 5px; margin-top: 10px;}
   
@@ -927,6 +928,18 @@
   .hud-analysis.visible { opacity: 1; pointer-events: auto; }
   .analysis-text { font-size: 14px; color: var(--white); line-height: 1.6; font-family: var(--font-serif); }
   .analysis-text span { font-family: var(--font-mono); font-size: 12px;}
+
+  /* B2 — OUTFLOW WANT readout (left, transient; shown only while Routing is on). id-rules only,
+     reusing .hud-panel; mirrors the .hud-analysis visible-toggle. Captain live-dials final px. */
+  #want-readout { top: 220px; left: 16px; width: 300px; padding: 18px 22px; opacity: 0; pointer-events: none; border-color: rgba(93,202,165,0.35); }
+  #want-readout.visible { opacity: 1; pointer-events: auto; }
+  #want-readout .wr-need { font-family: var(--font-serif); font-size: 15px; color: var(--white); line-height: 1.5; margin-bottom: 10px; }
+  #want-readout .wr-need b { color: var(--teal-mid); font-style: italic; }
+  #want-readout .wr-hop { display: flex; justify-content: space-between; gap: 10px; font-family: var(--font-mono); font-size: 11px; color: var(--white); padding: 5px 0; border-top: 1px solid rgba(255,255,255,0.06); }
+  #want-readout .wr-hop .wr-amt { color: var(--teal-mid); font-weight: bold; white-space: nowrap; }
+  #want-readout .wr-hop .wr-tax { color: var(--muted); font-size: 9px; }
+  #want-readout .wr-foot { margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); font-family: var(--font-mono); font-size: 9px; color: var(--muted); line-height: 1.45; }
+  #want-readout .wr-short { color: var(--danger); }
 
   /* SURGICAL: Restored Lens Array with proper spacing and exact tooltips */
   .lens-controls { bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; padding: 15px 25px; border-radius: 40px; top: auto; width: max-content; }
@@ -2841,6 +2854,13 @@
             </div>
         </div>
 
+        <!-- B2 — Outflow WANT readout. DISPLAY-ONLY (LOCK-3): narrates DatumMath.waterfall() in words;
+             shows only while the Routing lens is active. Reuses .hud-panel; #want-readout id-rules position it. -->
+        <div class="hud-panel" id="want-readout">
+          <div class="hud-title" style="color: var(--teal-mid);">OUTFLOW — FUNDING YOUR SPEND</div>
+          <div id="want-readout-body"></div>
+        </div>
+
         <div class="hud-panel lens-controls">
            <div class="lens-tt-wrap">
                <button class="lens-btn" id="btn-shock" onclick="toggleShock()">⚡ THERMODYNAMIC SHOCK</button>
@@ -3511,12 +3531,73 @@
         isRouting = !isRouting;
         document.getElementById('btn-routing').classList.toggle('active');
         updateSVGs();
+        if (window.renderWantBox) renderWantBox();   // B2 — immediate show/hide (updateSVGs is debounced)
     }
     window.toggleDatum = function() {
         isDatum = !isDatum;
         document.getElementById('btn-datum').classList.toggle('active');
         updateSVGs();
     }
+
+    // B2 — OUTFLOW WANT readout. DISPLAY-ONLY (LOCK-3): reads state, calls the PURE DatumMath.waterfall,
+    // and writes NOTHING back to state or any total. Narrates the withdrawal waterfall in words; shown
+    // only while the Routing lens is active. Closes over isRouting / state / getBaseType.
+    function _wantMoney(n) { return '$' + Math.round(n || 0).toLocaleString('en-US'); }
+
+    // input mapper — per-HOLDING embedded-gain blend: REAL Σ(value−costBasis) where a basis is typed,
+    // labeled 50% only on the blanks, correctly blended when an account mixes both. No holdings -> leave
+    // gainFrac unset so B1 falls back to its labeled default (additive / reserve-the-field).
+    function _wantInputAccts() {
+        return state.accounts.map(function (a) {
+            var base = getBaseType(a.baseId); if (!base) return null;
+            var m = { id: a.id, taxCode: base.taxCode, value: Math.abs(a.value || 0), isInvestment: !!base.isInvestment, meta: base.meta };
+            if (base.isInvestment && base.taxCode === 'liquid') {          // taxable brokerage / crypto
+                var known = 0, knownVal = 0, blankVal = 0;
+                (a.holdings || []).forEach(function (h) {
+                    var v = (+h.price || 0) * (+h.shares || 0);
+                    if (h.costBasis !== '' && h.costBasis != null) { known += Math.max(0, v - (+h.costBasis || 0)); knownVal += v; }
+                    else blankVal += v;
+                });
+                var covered = knownVal + blankVal;
+                if (covered > 0) {                                          // holdings present -> blend, NOT all-or-nothing
+                    m.gainFrac  = Math.max(0, Math.min(1, (known + 0.5 * blankVal) / covered));
+                    m.gainBasis = [knownVal > 0 ? 'real cost-basis' : '', blankVal > 0 ? 'est. 50%' : ''].filter(Boolean).join(' + ');
+                }
+            }
+            return m;
+        }).filter(Boolean);
+    }
+
+    window.renderWantBox = function () {
+        var box = document.getElementById('want-readout'); if (!box) return;
+        var body = document.getElementById('want-readout-body');
+        if (!isRouting || !window.DatumMath) { box.classList.remove('visible'); return; }   // Routing-only
+
+        var income = state.accounts.reduce(function (s, a) {
+            var b = getBaseType(a.baseId); return s + ((b && b.taxCode === 'income') ? Math.abs(a.value || 0) : 0);
+        }, 0);
+        var spendEl = document.getElementById('spend-input');
+        var spend = spendEl ? (parseInt(String(spendEl.value).replace(/[^0-9]/g, ''), 10) || 0) : 0;
+
+        var r = DatumMath.waterfall({ accounts: _wantInputAccts(), spendAnnual: spend, incomeAnnual: income });   // PURE / read-only
+
+        var html = '<div class="wr-need">Need <b>' + _wantMoney(r.need) + '/yr</b> — your ' + _wantMoney(spend) +
+                   ' spend minus ' + _wantMoney(income) + ' non-wage income.</div>';
+        if (!r.hops.length) {
+            html += '<div class="wr-hop"><span>Income covers your spend — no withdrawal needed.</span></div>';
+        } else {
+            r.hops.forEach(function (h, i) {
+                html += '<div class="wr-hop"><span>' + (i + 1) + '. ' + (h.meta || h.id) +
+                        '<div class="wr-tax">' + h.taxBasis + (h.taxEstimate > 0 ? ' · ~' + _wantMoney(h.taxEstimate) + ' tax' : '') + '</div></span>' +
+                        '<span class="wr-amt">' + _wantMoney(h.amount) + '</span></div>';
+            });
+        }
+        var foot = 'Drawn ' + _wantMoney(r.drawn) + ' · est. tax ' + _wantMoney(r.totalTaxEstimate);
+        if (r.shortfall > 0.5) foot += ' · <span class="wr-short">shortfall ' + _wantMoney(r.shortfall) + '</span>';
+        html += '<div class="wr-foot">' + foot + '<br>' + r.taxNote + '</div>';
+        body.innerHTML = html;
+        box.classList.add('visible');
+    };
 
     // Trust Firewall Hover
     window.showTrustTooltip = function(e) {
@@ -4491,6 +4572,7 @@
         accountWeights: accountWeights
       });
       if (window.DatumEnergize) DatumEnergize.run(_estateRooms);
+      if (window.renderWantBox) renderWantBox();   // B2 — outflow readout (display-only; Routing-gated inside)
       // G5 — Estate→Shape reconcile. When real rooms exist with a positive investable total,
       // the itemized estate is AUTHORITATIVE for the deterministic Shape's portfolio: write
       // slider-portfolio so _scenarioFromInputs (read by updateShapePanel below) uses the rooms
@@ -8950,6 +9032,7 @@
   <script src="/scripts/datum-shape.js" defer></script>
   <script src="/scripts/datum-estate.js" defer></script>
   <script src="/scripts/datum-energize.js" defer></script>
+  <script src="/scripts/datum-math.js" defer></script>
   <script src="/scripts/datum-shape-copy.js" defer></script>
   <script src="/scripts/studio-wantface.js" defer></script>
   <script src="/scripts/lz-string.min.js" defer></script>

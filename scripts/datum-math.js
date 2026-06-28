@@ -42,8 +42,16 @@
     if (acct.taxCode === 'roth') return { tax: 0, basis: 'tax-free (Roth)' };
     if (acct.taxCode === 'pretax') return { tax: amount * rates.ordinary, basis: 'ordinary income' };
     if (acct.isInvestment) {                                   // taxable brokerage / crypto
-      var gain = amount * rates.assumedGainFrac;               // ESTIMATE — replace with real gain once cost-basis lands
-      return { tax: gain * rates.capGains, basis: 'est. cap-gains (assumed ' + Math.round(rates.assumedGainFrac * 100) + '% gain, pending cost-basis)' };
+      // ADDITIVE (reserve-the-field, Lesson 48): an optional per-account gainFrac — the REAL embedded
+      // gain fraction blended from typed cost-basis (host phase-i) — overrides the assumed estimate
+      // when present. UNSET -> falls back to rates.assumedGainFrac -> byte-identical to the prior
+      // default (no signature/return-contract change; the committed B1 gate stays green).
+      var frac = (acct.gainFrac != null ? acct.gainFrac : rates.assumedGainFrac);
+      var gain = amount * frac;
+      var basis = acct.gainBasis
+        ? 'est. cap-gains (' + acct.gainBasis + ')'
+        : 'est. cap-gains (assumed ' + Math.round(frac * 100) + '% gain, pending cost-basis)';
+      return { tax: gain * rates.capGains, basis: basis };
     }
     return { tax: 0, basis: 'cash (no tax)' };                 // checking / savings
   }
