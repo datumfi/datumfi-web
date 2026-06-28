@@ -3563,7 +3563,8 @@
             </div>`;
       }
 
-      let isReadOnly = (acc.holdings && acc.holdings.length > 0) ? 'readonly' : '';
+      // Single source of truth: the front value is derived-from-holdings when present (Σ price×shares).
+      // The old silent `readonly` lock is replaced by onFrontValueEdit's warn-on-overwrite (Lesson 48).
       const _exNote = shapeExclusionNote(acc.baseId);   // Step 4 — Shape-exclusion ⓘ (display only)
       const _exIcon = _exNote ? `<span class="shape-info-icon tip-room" tabindex="0" role="note" aria-label="Why this isn't in your Shape">i<div class="shape-info-tooltip">${_exNote}</div></span>` : '';
 
@@ -3576,7 +3577,7 @@
               </div>
               <span class="room-meta">${base.meta}</span>
             </div>
-            <input type="text" id="room-val-inp-${acc.id}" class="room-input curr-format" placeholder="$0" value="${valStr}" onfocus="this.select()" oninput="updateValueWithoutRender('${acc.id}', this.value)" style="color: ${base.taxCode==='debt' ? 'var(--danger)' : 'var(--white)'};" ${isReadOnly}>
+            <input type="text" id="room-val-inp-${acc.id}" class="room-input curr-format" placeholder="$0" value="${valStr}" onfocus="this.select()" oninput="onFrontValueEdit('${acc.id}', this)" style="color: ${base.taxCode==='debt' ? 'var(--danger)' : 'var(--white)'};">
             ${extraRows}
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
                <div class="room-desc" style="margin-top:0;">${base.desc}${_exIcon}</div>
@@ -4019,7 +4020,7 @@
         } else if(base.isInvestment) {
             html += `
             <button class="add-space-btn" type="button" style="margin-top: 15px; width: 100%;" onclick="toggleHoldings('${id}')">
-                ❖ BEGIN INTERIOR DECORATING (PORTFOLIO HOLDINGS)
+                ${acc.showHoldings ? '← Back to Account' : '❖ BEGIN INTERIOR DECORATING (PORTFOLIO HOLDINGS)'}
             </button>`;
             
             if(acc.showHoldings) {
@@ -4033,6 +4034,11 @@
                             <th style="width: 80px;">Price</th>
                             <th style="width: 80px;">Shares</th>
                             <th style="width: 100px;">Value</th>
+                            <th style="width: 90px;">
+                                <div class="modal-tt-wrap" style="justify-content:flex-start;">Cost Basis
+                                    <div class="modal-tt" style="left:0; right:auto; top:100%; bottom:auto;"><strong>Cost Basis</strong>What you paid for this holding. Lets the math use your real embedded gain (capital-gains tax) when this account funds your retirement spend, instead of an estimate.</div>
+                                </div>
+                            </th>
                             <th style="width: 80px;" class="modal-tt-wrap" style="justify-content:flex-start;">
                                 Inv. Corr.
                                 <div class="modal-tt" style="left:0; right:auto;"><strong>Inverse Correlation</strong>Configures the simulation to dynamically increase this asset's yield during market drawdowns, mathematically hedging your Estate against systemic shocks.</div>
@@ -4052,6 +4058,7 @@
                             <td><input type="number" class="holding-input" value="${h.price||''}" placeholder="0" oninput="updateHolding('${id}', ${i}, 'price', this.value)"></td>
                             <td><input type="number" class="holding-input" value="${h.shares||''}" placeholder="0" oninput="updateHolding('${id}', ${i}, 'shares', this.value)"></td>
                             <td style="color:var(--teal-mid); font-weight:bold;" id="holding-val-${i}">$${((parseFloat(h.price)||0)*(parseFloat(h.shares)||0)).toLocaleString('en-US')}</td>
+                            <td><input type="number" class="holding-input" value="${h.costBasis||''}" placeholder="0" oninput="updateHolding('${id}', ${i}, 'costBasis', this.value)"></td>
                             <td style="text-align:center;"><input type="checkbox" ${h.invCorr ? 'checked' : ''} onchange="updateHolding('${id}', ${i}, 'invCorr', this.checked)"></td>
                             <td><input type="text" class="holding-input" value="${h.sector||''}" oninput="updateHolding('${id}', ${i}, 'sector', this.value)"></td>
                             <td><input type="number" class="holding-input" value="${h.expRatio||''}" placeholder="0" oninput="updateHolding('${id}', ${i}, 'expRatio', this.value)"></td>
@@ -4129,6 +4136,53 @@
         }
     };
 
+    // Brand-styled confirm modal (replaces the raw OS confirm()). Built once, reused. Fully inline-styled
+    // so it needs no new sacred CSS class. ASYNC via onConfirm/onCancel callbacks.
+    window.showBrandConfirm = function(opts) {
+        opts = opts || {};
+        let ov = document.getElementById('brand-confirm-overlay');
+        if (!ov) {
+            ov = document.createElement('div');
+            ov.id = 'brand-confirm-overlay';
+            ov.style.cssText = 'position:fixed; inset:0; background:rgba(2,6,14,0.72); display:none; align-items:center; justify-content:center; z-index:99999; backdrop-filter:blur(3px);';
+            ov.innerHTML = '<div style="background:var(--bg-navy); border:1px solid var(--teal-mid); border-radius:8px; padding:24px 28px; max-width:440px; box-shadow:0 24px 64px rgba(0,0,0,0.85);">'
+                + '<div id="bc-title" style="font-family:var(--font-mono); color:var(--gold); font-size:11px; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;"></div>'
+                + '<div id="bc-msg" style="font-family:var(--font-serif); color:rgba(255,255,255,0.85); font-size:14px; line-height:1.55; margin-bottom:22px;"></div>'
+                + '<div style="display:flex; justify-content:flex-end; gap:10px;">'
+                + '<button id="bc-cancel" type="button" style="background:transparent; border:1px solid rgba(255,255,255,0.25); color:var(--white); font-family:var(--font-mono); font-size:11px; text-transform:uppercase; letter-spacing:0.08em; padding:9px 16px; border-radius:4px; cursor:pointer;"></button>'
+                + '<button id="bc-ok" type="button" style="background:rgba(226,75,74,0.15); border:1px solid var(--danger); color:var(--danger); font-family:var(--font-mono); font-size:11px; text-transform:uppercase; letter-spacing:0.08em; padding:9px 16px; border-radius:4px; cursor:pointer;"></button>'
+                + '</div></div>';
+            document.body.appendChild(ov);
+        }
+        ov.querySelector('#bc-title').textContent = opts.title || 'Confirm';
+        ov.querySelector('#bc-msg').textContent = opts.message || '';
+        const okBtn = ov.querySelector('#bc-ok'), cancelBtn = ov.querySelector('#bc-cancel');
+        okBtn.textContent = opts.confirmText || 'Continue';
+        cancelBtn.textContent = opts.cancelText || 'Cancel';
+        const close = () => { ov.style.display = 'none'; okBtn.onclick = null; cancelBtn.onclick = null; };
+        okBtn.onclick = () => { close(); if (opts.onConfirm) opts.onConfirm(); };
+        cancelBtn.onclick = () => { close(); if (opts.onCancel) opts.onCancel(); };
+        ov.style.display = 'flex';
+    };
+    // SSOT warn-on-overwrite: typing over a front value that has account-specific holdings behind it
+    // would silently lose them. Warn via the brand modal — Continue clears acc.holdings[] and accepts the
+    // typed value; Cancel reverts the field to the EXACT holdings-sum. No holdings -> plain front edit.
+    window.onFrontValueEdit = function(id, el) {
+        const acc = state.accounts.find(a => a.id === id);
+        if (acc && acc.holdings && acc.holdings.length > 0) {
+            const typed = el.value;
+            const sum = acc.holdings.reduce((s, h) => s + ((parseFloat(h.price) || 0) * (parseFloat(h.shares) || 0)), 0);
+            showBrandConfirm({
+                title: 'Replace your holdings?',
+                message: "You've entered specific holdings for this account in Details. Typing a total here will replace them with this single number.",
+                confirmText: 'Replace', cancelText: 'Keep holdings',
+                onConfirm: () => { acc.holdings = []; updateValueWithoutRender(id, typed); },
+                onCancel: () => { el.value = '$' + Math.round(sum).toLocaleString('en-US'); }   // revert to the EXACT sum
+            });
+            return;
+        }
+        updateValueWithoutRender(id, el.value);
+    };
     window.updateValueWithoutRender = function(id, valStr) {
         const acc = state.accounts.find(a => a.id === id);
         if(acc) {
@@ -4217,7 +4271,7 @@
         let base = getBaseType(acc.baseId);
         if (acc.showHoldings && (!acc.holdings || acc.holdings.length===0)) {
              if(base.id.includes('collectibles')) acc.holdings = [{name:'', price:0, date:''}];
-             else acc.holdings = [{ticker:'', name:'', price:0, shares:0, sector:'', expRatio:'', assetClass:'', invCorr: false}];
+             else acc.holdings = [{ticker:'', name:'', price:0, shares:0, sector:'', expRatio:'', assetClass:'', invCorr: false, costBasis:0, beta:'', expectedReturn:'', priceSource:'manual'}];
         }
         openAccountModal(id); 
     }
@@ -4226,7 +4280,7 @@
         let acc = state.accounts.find(a=>a.id===id);
         let base = getBaseType(acc.baseId);
         if(base.id.includes('collectibles')) acc.holdings.push({name:'', price:0, date:''});
-        else acc.holdings.push({ticker:'', name:'', price:0, shares:0, sector:'', expRatio:'', assetClass:'', invCorr: false});
+        else acc.holdings.push({ticker:'', name:'', price:0, shares:0, sector:'', expRatio:'', assetClass:'', invCorr: false, costBasis:0, beta:'', expectedReturn:'', priceSource:'manual'});
         openAccountModal(id);
     }
     
