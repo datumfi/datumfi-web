@@ -62,6 +62,9 @@ const MK = `(id,baseId,value,holdings)=>({id,baseId,value,inflow:0,freq:12,exclu
 
   // fetchMockData expansion: type AAPL -> stable fields populate
   const pull = await p.evaluate(() => {
+    // start beta/yield BLANK so the auto-fill cannot fabricate them (honesty-strip proof)
+    window.state.accounts[0].holdings[0].beta = '';
+    window.state.accounts[0].holdings[0].dividendYield = '';
     window.fetchMockData('tx', 0, 'AAPL');
     const h = window.state.accounts[0].holdings[0];
     return { name: h.name, sector: h.sector, beta: h.beta, dividendYield: h.dividendYield, geography: h.geography, instrumentType: h.instrumentType };
@@ -143,7 +146,8 @@ const MK = `(id,baseId,value,holdings)=>({id,baseId,value,inflow:0,freq:12,exclu
   checks.push(ok('live-bar: GAIN copy = "Your unrealized gain — current value minus what you paid"', /Your unrealized gain — current value minus what you paid \(cost basis\)\./.test(taxable.html)));
   checks.push(ok('live-bar: TAX line distinct, ≈15% of gain ($400 -> roughly $60)', /Tax if you sold it all today ≈ 15% of that gain — roughly \$60\./.test(taxable.html)));
   checks.push(ok('empty field shows "—" (B 0/blank cost basis -> per-row dash, no fake gain)', /—/.test(taxable.html)));
-  checks.push(ok('fetchMockData (bundle) pulls name/sector/beta/yield/geography/instrumentType', pull.name === 'Apple Inc.' && pull.sector === 'Technology' && pull.beta === 1.24 && pull.dividendYield === 0.55 && pull.geography === 'US' && pull.instrumentType === 'Stock'));
+  checks.push(ok('fetchMockData (bundle) pulls categorical: name/sector/geography/instrumentType', pull.name === 'Apple Inc.' && pull.sector === 'Technology' && pull.geography === 'US' && pull.instrumentType === 'Stock'));
+  checks.push(ok('★honesty-strip: bundle auto-fill leaves beta + yield BLANK (no unsourced number)', (pull.beta === '' || pull.beta == null) && (pull.dividendYield === '' || pull.dividendYield == null)));
   checks.push(ok('★REFRESH BUG: typing costBasis updates rollup ($400→$700) + row gain ($300) in place', /\+\$400/.test(refresh.before) && /\+\$700/.test(refresh.afterGain) && /\+\$300/.test(refresh.rowGain)));
   checks.push(ok('Roth: Cost Basis + Unrealized Gain columns ABSENT (taxable-only)', !/Cost Basis/.test(roth.ths.join(' | ')) && !/Unrealized Gain/.test(roth.ths.join(' | '))));
   checks.push(ok('Roth rollup omits Unrealized Gain (keeps Beta/Yield/Expense)', roth.rollup.indexOf('Unrealized Gain') < 0 && roth.rollup.indexOf('Weighted Beta') >= 0));
