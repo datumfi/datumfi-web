@@ -905,7 +905,7 @@
   .hud-title { font-family: var(--font-mono); font-size: 10px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; }
   
   /* TOP LEFT: OVERVIEW DASHBOARD */
-  .hud-overview { top: 16px; left: 16px; width: 300px; cursor: pointer; transition: border-color 0.3s;}
+  .hud-overview { top: 14px; left: 14px; width: 300px; cursor: pointer; transition: border-color 0.3s;}
   .hud-overview:hover { border-color: var(--teal-mid); }
   .estate-total-val { font-family: var(--font-serif); font-size: 54px; font-style: italic; color: var(--white); text-shadow: 0 4px 10px rgba(0,0,0,0.8); line-height: 1; margin-bottom: 5px; margin-top: 10px;}
   
@@ -931,15 +931,19 @@
 
   /* B2 — OUTFLOW WANT readout (left, transient; shown only while Routing is on). id-rules only,
      reusing .hud-panel; mirrors the .hud-analysis visible-toggle. Captain live-dials final px. */
-  #want-readout { top: 220px; left: 16px; width: 300px; padding: 18px 22px; opacity: 0; pointer-events: none; border-color: rgba(93,202,165,0.35); }
+  #want-readout { top: 200px; left: 14px; width: 360px; max-height: 600px; overflow-y: auto; padding: 16px 20px; opacity: 0; pointer-events: none; border-color: rgba(93,202,165,0.35); }
   #want-readout.visible { opacity: 1; pointer-events: auto; }
-  #want-readout .wr-need { font-family: var(--font-serif); font-size: 15px; color: var(--white); line-height: 1.5; margin-bottom: 10px; }
-  #want-readout .wr-need b { color: var(--teal-mid); font-style: italic; }
-  #want-readout .wr-hop { display: flex; justify-content: space-between; gap: 10px; font-family: var(--font-mono); font-size: 11px; color: var(--white); padding: 5px 0; border-top: 1px solid rgba(255,255,255,0.06); }
-  #want-readout .wr-hop .wr-amt { color: var(--teal-mid); font-weight: bold; white-space: nowrap; }
-  #want-readout .wr-hop .wr-tax { color: var(--muted); font-size: 9px; }
-  #want-readout .wr-foot { margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); font-family: var(--font-mono); font-size: 9px; color: var(--muted); line-height: 1.45; }
-  #want-readout .wr-short { color: var(--danger); }
+  #want-readout .wr-lead { font-family: var(--font-serif); font-size: 13px; color: var(--white); line-height: 1.5; margin-bottom: 8px; }
+  #want-readout .wr-need { font-family: var(--font-serif); font-size: 13px; color: var(--white); line-height: 1.5; margin-bottom: 10px; }
+  #want-readout .wr-need b, #want-readout .wr-foot b { color: var(--teal-mid); }
+  #want-readout .wr-order { font-family: var(--font-mono); font-size: 10px; color: var(--gold); letter-spacing: 0.03em; margin-bottom: 6px; }
+  #want-readout .wr-hop { font-family: var(--font-mono); font-size: 11px; color: var(--white); line-height: 1.5; padding: 3px 0; }
+  #want-readout .wr-hop b { color: var(--teal-mid); }
+  #want-readout .wr-cross { font-family: var(--font-serif); font-size: 11px; color: var(--muted); line-height: 1.45; margin: 9px 0; }
+  #want-readout .wr-cross b { color: var(--white); }
+  #want-readout .wr-foot { font-family: var(--font-mono); font-size: 11px; color: var(--white); margin-top: 9px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); }
+  #want-readout .wr-short { color: var(--danger); display: block; margin-top: 5px; }
+  #want-readout .wr-note { font-family: var(--font-mono); font-size: 9px; color: var(--muted); line-height: 1.55; margin-top: 9px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); }
 
   /* SURGICAL: Restored Lens Array with proper spacing and exact tooltips */
   .lens-controls { bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; padding: 15px 25px; border-radius: 40px; top: auto; width: max-content; }
@@ -2857,7 +2861,7 @@
         <!-- B2 — Outflow WANT readout. DISPLAY-ONLY (LOCK-3): narrates DatumMath.waterfall() in words;
              shows only while the Routing lens is active. Reuses .hud-panel; #want-readout id-rules position it. -->
         <div class="hud-panel" id="want-readout">
-          <div class="hud-title" style="color: var(--teal-mid);">OUTFLOW — FUNDING YOUR SPEND</div>
+          <div class="hud-title" style="color: var(--teal-mid);">HOW YOUR SPENDING GETS PAID</div>
           <div id="want-readout-body"></div>
         </div>
 
@@ -3543,6 +3547,7 @@
     // and writes NOTHING back to state or any total. Narrates the withdrawal waterfall in words; shown
     // only while the Routing lens is active. Closes over isRouting / state / getBaseType.
     function _wantMoney(n) { return '$' + Math.round(n || 0).toLocaleString('en-US'); }
+    function _wantCircle(n) { var c = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳']; return (n >= 1 && n <= 20) ? c[n - 1] : '(' + n + ')'; }
 
     // input mapper — per-HOLDING embedded-gain blend: REAL Σ(value−costBasis) where a basis is typed,
     // labeled 50% only on the blanks, correctly blended when an account mixes both. No holdings -> leave
@@ -3581,20 +3586,36 @@
 
         var r = DatumMath.waterfall({ accounts: _wantInputAccts(), spendAnnual: spend, incomeAnnual: income });   // PURE / read-only
 
-        var html = '<div class="wr-need">Need <b>' + _wantMoney(r.need) + '/yr</b> — your ' + _wantMoney(spend) +
-                   ' spend minus ' + _wantMoney(income) + ' non-wage income.</div>';
+        // LEAD (always)
+        var html = '<div class="wr-lead">Your Datum is what you’ll spend each year. Here’s where it comes from — and the order we pull it.</div>';
+        // DATUM line — income>0 names the PENSION only (never SS as a current figure); income=0 -> savings cover all.
+        html += '<div class="wr-need"><b>Datum: ' + _wantMoney(spend) + '/yr</b>';
+        if (r.need <= 0) { /* zero-hops line below carries it; no "$0 rest" clause */ }
+        else if (income > 0) html += ' Your pension covers <b>' + _wantMoney(income) + '.</b> Savings cover the rest: <b>' + _wantMoney(r.need) + '.</b>';
+        else html += ' Savings cover all of it: <b>' + _wantMoney(spend) + '.</b>';
+        html += '</div>';
+
         if (!r.hops.length) {
-            html += '<div class="wr-hop"><span>Income covers your spend — no withdrawal needed.</span></div>';
+            // ZERO-HOPS (income >= spend)
+            html += '<div class="wr-hop">Your pension covers your full Datum — no savings withdrawal needed this year.</div>';
         } else {
+            html += '<div class="wr-order"><b>Pulled tax-smart — taxable first, pre-tax next, Roth last:</b></div>';
+            var TYPE = { liquid: 'Taxable', pretax: 'Pre-tax', roth: 'Roth' };
             r.hops.forEach(function (h, i) {
-                html += '<div class="wr-hop"><span>' + (i + 1) + '. ' + (h.meta || h.id) +
-                        '<div class="wr-tax">' + h.taxBasis + (h.taxEstimate > 0 ? ' · ~' + _wantMoney(h.taxEstimate) + ' tax' : '') + '</div></span>' +
-                        '<span class="wr-amt">' + _wantMoney(h.amount) + '</span></div>';
+                var lbl = TYPE[h.taxCode] || 'Account';
+                var tax = (h.taxCode === 'roth') ? '(no tax)' : '(~' + _wantMoney(h.taxEstimate) + ' tax)';
+                html += '<div class="wr-hop"><b>' + _wantCircle(i + 1) + '</b> ' + lbl + ' → ' + (h.meta || h.id) +
+                        ' — <b>' + _wantMoney(h.amount) + '</b> ' + tax + '</div>';
             });
+            html += '<div class="wr-cross"><b>Lines crossing?</b> Biggest, most tax-friendly accounts go first. That’s the plan — not a mistake.</div>';
+            var foot = '<b>From savings: ' + _wantMoney(r.drawn) + '</b> · est. tax ~' + _wantMoney(r.totalTaxEstimate);
+            if (r.shortfall > 0.5) foot += '<span class="wr-short">⚠️ Accounts fall <b>~' + _wantMoney(r.shortfall) + ' short</b> — spend less, save more, or retire later.</span>';
+            html += '<div class="wr-foot">' + foot + '</div>';
         }
-        var foot = 'Drawn ' + _wantMoney(r.drawn) + ' · est. tax ' + _wantMoney(r.totalTaxEstimate);
-        if (r.shortfall > 0.5) foot += ' · <span class="wr-short">shortfall ' + _wantMoney(r.shortfall) + '</span>';
-        html += '<div class="wr-foot">' + foot + '<br>' + r.taxNote + '</div>';
+        // NOTES (always) — taxes-are-estimates + the SS/pension honesty caveat (Lesson 47).
+        html += '<div class="wr-note">Amounts exact; taxes estimated (~22% pre-tax, 15% gains).<br>' +
+                'Savings only — Social Security and other Datum Builder income come later, lowering what these accounts must cover.</div>';
+
         body.innerHTML = html;
         box.classList.add('visible');
     };
@@ -6994,6 +7015,7 @@
         _prev.dat = n;
         updateDatumLabel(); fireUpdate();
         var spendEl = $('spend-input'); if (spendEl) spendEl.value = sDat.dataset.exactVal;
+        if (window.renderWantBox) renderWantBox();   // B2 v2 — keep the outflow box live with the Datum
       });
       var sTax = $('slider-tax');
       if (sTax) sTax.addEventListener('input', function () {
