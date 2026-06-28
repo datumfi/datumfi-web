@@ -91,7 +91,34 @@
     };
   }
 
-  var DatumMath = { waterfall: waterfall, _draw: _draw, _order: _order, DEFAULT_RATES: DEFAULT_RATES };
+  // PORTFOLIO STATS (spine) — pure, value-weighted aggregates over the HOLDINGS of the given accounts.
+  // Blends only over holdings that actually carry each field (no fabrication). Holdings value = price*shares.
+  // unrealizedGain = Σ(value − costBasis) over holdings with a numeric cost basis. hasData = any holding
+  // carries beta OR expectedReturn (gates the Shape wire; absent -> caller falls back to paradigm rates).
+  // beta is unitless; expectedReturn / expRatio / dividendYield are PERCENT numbers (e.g. 7 = 7%).
+  function _pnum(x) { var n = parseFloat(x); return isFinite(n) ? n : null; }
+  function portfolioStats(accounts) {
+    var hs = [];
+    (accounts || []).forEach(function (a) { if (a && a.holdings) a.holdings.forEach(function (h) { if (h) hs.push(h); }); });
+    function hval(h) { return (_pnum(h.price) || 0) * (_pnum(h.shares) || 0); }
+    function wavg(field) {
+      var wsum = 0, vsum = 0;
+      hs.forEach(function (h) { var v = hval(h), x = _pnum(h[field]); if (v > 0 && x !== null) { wsum += v * x; vsum += v; } });
+      return vsum > 0 ? wsum / vsum : null;
+    }
+    var withBasis = hs.filter(function (h) { var cb = _pnum(h.costBasis); return cb !== null && cb > 0; });   // 0/blank = not entered
+    var unrealizedGain = withBasis.length
+      ? withBasis.reduce(function (s, h) { return s + (hval(h) - (_pnum(h.costBasis) || 0)); }, 0)
+      : null;
+    var beta = wavg('beta'), expReturn = wavg('expectedReturn');
+    return {
+      weightedBeta: beta, blendedExpReturn: expReturn,
+      blendedExpense: wavg('expRatio'), blendedYield: wavg('dividendYield'),
+      unrealizedGain: unrealizedGain, hasData: (beta !== null || expReturn !== null)
+    };
+  }
+
+  var DatumMath = { waterfall: waterfall, _draw: _draw, _order: _order, DEFAULT_RATES: DEFAULT_RATES, portfolioStats: portfolioStats };
   if (typeof module !== 'undefined' && module.exports) module.exports = DatumMath;
   if (typeof root !== 'undefined' && root) root.DatumMath = DatumMath;
 })(typeof self !== 'undefined' ? self : (typeof window !== 'undefined' ? window : this));

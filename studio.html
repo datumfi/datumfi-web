@@ -1054,8 +1054,18 @@
   .holdings-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 10px; margin-top: 15px; }
   .holdings-table th { color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em; padding: 6px; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left; }
   .holdings-table td { padding: 6px; }
-  .holding-input { width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: var(--white); font-family: var(--font-mono); font-size: 11px; padding: 4px; border-radius: 2px; }
+  /* Taxable-card rollup strip (above the holdings table) — display-only portfolio metrics. */
+  .holdings-rollup { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+  .holdings-rollup .hr-cell { flex: 1 1 0; min-width: 120px; background: rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.06); border-radius: 4px; padding: 10px 12px; }
+  .holdings-rollup .hr-lbl { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); margin-bottom: 4px; }
+  .holdings-rollup .hr-val { font-family: var(--font-serif); font-size: 18px; font-style: italic; color: var(--white); line-height: 1.1; }
+  .holdings-rollup .hr-sub { font-family: var(--font-sans, sans-serif); font-size: 9px; color: var(--muted); line-height: 1.4; margin-top: 5px; }
+  .holding-input { width: 100%; min-width: 0; box-sizing: border-box; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: var(--white); font-family: var(--font-mono); font-size: 11px; padding: 4px; border-radius: 2px; }
   .holding-input:focus { border-color: var(--teal-mid); outline: none; }
+  /* kill number spinners so 2-decimal values never clip in narrow columns */
+  .holding-input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+  .holding-input[type=number]::-webkit-outer-spin-button,
+  .holding-input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
   /* SURGICAL: Modal Tooltip Engine */
   .modal-tt-wrap { position: relative; width: 100%; display: flex; justify-content: space-between; align-items: center; }
@@ -3555,6 +3565,7 @@
     function _wantInputAccts() {
         return state.accounts.map(function (a) {
             var base = getBaseType(a.baseId); if (!base) return null;
+            if (a.isFriction) return null;   // "Keep it, but don't spend from it" — out of the DRAW POOL (stays in Estate value)
             var m = { id: a.id, taxCode: base.taxCode, value: Math.abs(a.value || 0), isInvestment: !!base.isInvestment, meta: base.meta };
             if (base.isInvestment && base.taxCode === 'liquid') {          // taxable brokerage / crypto
                 var known = 0, knownVal = 0, blankVal = 0;
@@ -3769,22 +3780,22 @@
         // SURGICAL: Physics Toggles with explicit mathematical tooltips
         html += `
         <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
-            <span class="toggle-label" style="color:var(--gold);">Include in Simulation</span>
+            <span class="toggle-label" style="color:var(--gold);">Count this account in my plan</span>
             <label class="switch">
               <input type="checkbox" ${!acc.exclude ? 'checked' : ''} onchange="updateAccToggle('${id}', 'exclude', !this.checked)">
               <span class="slider"></span>
             </label>
-            <div class="modal-tt"><strong>Physics Disconnect</strong>Isolates this room from all Estate Square Footage and Cash Flow calculations.</div>
+            <div class="modal-tt" style="top:100%; bottom:auto;"><strong>Leave it out</strong>Off = this account sits outside your plan entirely — not in your net worth, not funding your spending. Use it for money that isn't part of this picture.</div>
         </div>`;
 
         html += `
         <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
-            <span class="toggle-label" style="color:var(--teal-mid);">Liquidity Friction (Asset Accessibility)</span>
+            <span class="toggle-label" style="color:var(--teal-mid);">Keep it, but don't spend from it</span>
             <label class="switch">
               <input type="checkbox" ${acc.isFriction ? 'checked' : ''} onchange="updateAccToggle('${id}', 'isFriction', this.checked)">
               <span class="slider"></span>
             </label>
-            <div class="modal-tt"><strong>Apply Liquidity Drag</strong>Discounts the availability of these funds in the simulation, preventing the engine from tapping this capital to cover structural bleed during market stress.</div>
+            <div class="modal-tt" style="top:100%; bottom:auto;"><strong>Set aside, untouched</strong>On = this account still counts in your net worth and keeps growing — but your plan won't pull from it to cover spending. For money you've earmarked for something else.</div>
         </div>`;
 
         if (base.taxCode === 'debt') {
@@ -4126,58 +4137,56 @@
             </button>`;
             
             if(acc.showHoldings) {
-                document.getElementById('modal-card').style.width = "900px";
-                html += `
-                <div style="margin-top: 15px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 4px; overflow-x: auto;">
-                    <table class="holdings-table">
-                        <tr>
-                            <th style="width: 80px;">Ticker</th>
-                            <th style="width: 150px;">Name</th>
-                            <th style="width: 80px;">Price</th>
-                            <th style="width: 80px;">Shares</th>
-                            <th style="width: 100px;">Value</th>
-                            <th style="width: 90px;">
-                                <div class="modal-tt-wrap" style="justify-content:flex-start;">Cost Basis
-                                    <div class="modal-tt" style="left:0; right:auto; top:100%; bottom:auto;"><strong>Cost Basis</strong>What you paid for this holding. Lets the math use your real embedded gain (capital-gains tax) when this account funds your retirement spend, instead of an estimate.</div>
-                                </div>
-                            </th>
-                            <th style="width: 80px;" class="modal-tt-wrap" style="justify-content:flex-start;">
-                                Inv. Corr.
-                                <div class="modal-tt" style="left:0; right:auto;"><strong>Inverse Correlation</strong>Configures the simulation to dynamically increase this asset's yield during market drawdowns, mathematically hedging your Estate against systemic shocks.</div>
-                            </th>
-                            <th style="width: 100px;">Sector</th>
-                            <th style="width: 60px;">Exp Ratio</th>
-                            <th style="width: 100px;">Asset Class</th>
-                            <th></th>
-                        </tr>
-                `;
-                
-                (acc.holdings || []).forEach((h, i) => {
-                    html += `
-                        <tr>
-                            <td><input type="text" class="holding-input" value="${h.ticker||''}" placeholder="AAPL" onchange="fetchMockData('${id}', ${i}, this.value)"></td>
-                            <td><input type="text" class="holding-input" value="${h.name||''}" placeholder="Apple Inc." oninput="updateHolding('${id}', ${i}, 'name', this.value)"></td>
-                            <td><input type="number" class="holding-input" value="${h.price||''}" placeholder="0" oninput="updateHolding('${id}', ${i}, 'price', this.value)"></td>
-                            <td><input type="number" class="holding-input" value="${h.shares||''}" placeholder="0" oninput="updateHolding('${id}', ${i}, 'shares', this.value)"></td>
-                            <td style="color:var(--teal-mid); font-weight:bold;" id="holding-val-${i}">$${((parseFloat(h.price)||0)*(parseFloat(h.shares)||0)).toLocaleString('en-US')}</td>
-                            <td><input type="number" class="holding-input" value="${h.costBasis||''}" placeholder="0" oninput="updateHolding('${id}', ${i}, 'costBasis', this.value)"></td>
-                            <td style="text-align:center;"><input type="checkbox" ${h.invCorr ? 'checked' : ''} onchange="updateHolding('${id}', ${i}, 'invCorr', this.checked)"></td>
-                            <td><input type="text" class="holding-input" value="${h.sector||''}" oninput="updateHolding('${id}', ${i}, 'sector', this.value)"></td>
-                            <td><input type="number" class="holding-input" value="${h.expRatio||''}" placeholder="0" oninput="updateHolding('${id}', ${i}, 'expRatio', this.value)"></td>
-                            <td><input type="text" class="holding-input" value="${h.assetClass||''}" oninput="updateHolding('${id}', ${i}, 'assetClass', this.value)"></td>
-                            <td><button onclick="removeHolding('${id}', ${i})" style="background:none; border:none; color:var(--muted); cursor:pointer;">×</button></td>
-                        </tr>
-                    `;
+                document.getElementById('modal-card').style.width = "1120px";
+                var isTaxable = (base.taxCode === 'liquid' && base.isInvestment);
+                var _agg = (window.DatumMath ? DatumMath.portfolioStats([acc]) : null);   // display-only (LOCK-3)
+                var _esc = function (s) { return (s === undefined || s === null) ? '' : String(s); };
+                var _pct = function (x) { return (x === null || x === undefined) ? '—' : x.toFixed(2) + '%'; };
+                var _bet = function (x) { return (x === null || x === undefined) ? '—' : x.toFixed(2); };
+                var _gn  = function (x) { return (x === null || x === undefined) ? '—' : (x >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(x)).toLocaleString('en-US'); };
+
+                // ROLLUP STRIP (above the table) — empty fields show "—", never fake $0/0.
+                html += '<div class="holdings-rollup">';
+                if (isTaxable) html += '<div class="hr-cell"><div class="hr-lbl">Unrealized Gain</div><div class="hr-val" id="hr-gain">' + _gn(_agg && _agg.unrealizedGain) + '</div><div class="hr-sub">What you’d owe gains tax on if sold — value minus cost basis.</div></div>';
+                html += '<div class="hr-cell"><div class="hr-lbl">Weighted Beta</div><div class="hr-val" id="hr-beta">' + _bet(_agg && _agg.weightedBeta) + '</div></div>';
+                html += '<div class="hr-cell"><div class="hr-lbl">Blended Yield</div><div class="hr-val" id="hr-yield">' + _pct(_agg && _agg.blendedYield) + '</div></div>';
+                html += '<div class="hr-cell"><div class="hr-lbl">Avg Expense</div><div class="hr-val" id="hr-expense">' + _pct(_agg && _agg.blendedExpense) + '</div></div>';
+                html += '</div>';
+
+                // PER-taxCode COLUMN MANIFEST -> one render loop. cost-basis + unrealized-gain render TAXABLE-ONLY.
+                var _ti = function (h, i, f, ph, num) { return '<td><input type="' + (num ? 'number' : 'text') + '" class="holding-input" title="' + _esc(h[f]) + '" value="' + _esc(h[f]) + '" placeholder="' + (ph || '') + '" oninput="updateHolding(\'' + id + '\', ' + i + ', \'' + f + '\', this.value)"></td>'; };
+                var COLS = [
+                  { lbl: 'Ticker', w: 80, td: function (h, i) { return '<td><input type="text" class="holding-input" value="' + _esc(h.ticker) + '" placeholder="AAPL" onchange="fetchMockData(\'' + id + '\', ' + i + ', this.value)"></td>'; } },
+                  { lbl: 'Name', w: 155, td: function (h, i) { return _ti(h, i, 'name', 'Apple Inc.'); } },
+                  { lbl: 'Price', w: 80, td: function (h, i) { return _ti(h, i, 'price', '0', true); } },
+                  { lbl: 'Shares', w: 75, td: function (h, i) { return _ti(h, i, 'shares', '0', true); } },
+                  { lbl: 'Value', w: 90, td: function (h, i) { var v = (parseFloat(h.price) || 0) * (parseFloat(h.shares) || 0); return '<td style="color:var(--teal-mid); font-weight:bold;" id="holding-val-' + i + '">$' + v.toLocaleString('en-US') + '</td>'; } },
+                  { lbl: 'Cost Basis', w: 90, taxableOnly: true, tip: { t: 'Cost Basis', b: 'What you paid for this holding. Lets the math use your real embedded gain (capital-gains tax) when this account funds your retirement spend, instead of an estimate.' }, td: function (h, i) { return _ti(h, i, 'costBasis', '0', true); } },
+                  { lbl: 'Unrealized Gain', w: 100, taxableOnly: true, td: function (h, i) { var cb = parseFloat(h.costBasis); if (!isFinite(cb) || cb <= 0) return '<td id="holding-gain-' + i + '" style="color:var(--muted);">—</td>'; var g = (parseFloat(h.price) || 0) * (parseFloat(h.shares) || 0) - cb; return '<td id="holding-gain-' + i + '" style="color:' + (g >= 0 ? 'var(--teal-mid)' : 'var(--danger)') + ';">' + (g >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(g)).toLocaleString('en-US') + '</td>'; } },
+                  { lbl: 'Beta', w: 72, td: function (h, i) { return _ti(h, i, 'beta', '—', true); } },
+                  { lbl: 'Yield', w: 72, td: function (h, i) { return _ti(h, i, 'dividendYield', '—', true); } },
+                  { lbl: 'Geography', w: 110, td: function (h, i) { return _ti(h, i, 'geography', '—'); } },
+                  { lbl: 'Sector', w: 110, td: function (h, i) { return _ti(h, i, 'sector', ''); } },
+                  { lbl: 'Exp Ratio', w: 72, td: function (h, i) { return _ti(h, i, 'expRatio', '0', true); } },
+                  { lbl: 'Asset Class', w: 110, td: function (h, i) { return _ti(h, i, 'assetClass', ''); } },
+                  { lbl: '', w: null, td: function (h, i) { return '<td><button onclick="removeHolding(\'' + id + '\', ' + i + ')" style="background:none; border:none; color:var(--muted); cursor:pointer;">×</button></td>'; } }
+                ];
+                var cols = COLS.filter(function (c) { return !c.taxableOnly || isTaxable; });
+
+                html += '<div style="margin-top: 15px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 4px; overflow-x: auto;"><table class="holdings-table"><tr>';
+                cols.forEach(function (c) {
+                  if (c.tip) html += '<th style="width:' + c.w + 'px;"><div class="modal-tt-wrap" style="justify-content:flex-start;">' + c.lbl + '<div class="modal-tt" style="left:0; right:auto; top:100%; bottom:auto;"><strong>' + c.tip.t + '</strong>' + c.tip.b + '</div></div></th>';
+                  else html += '<th' + (c.w ? ' style="width:' + c.w + 'px;"' : '') + '>' + c.lbl + '</th>';
                 });
-                
-                html += `
-                    </table>
-                    <button class="add-space-btn" type="button" style="margin-top: 10px; width: max-content; padding: 6px 12px; border-style: solid; color:var(--white);" onclick="addHolding('${id}')">+ Add Holding</button>
-                    <div style="text-align:right; margin-top: 10px; color: var(--muted); font-family: var(--font-mono); font-size: 11px;">
-                        TOTAL PORTFOLIO VALUE: <span id="modal-total-val" style="color:var(--white); font-size: 16px; font-weight:bold;">$${(acc.value||0).toLocaleString('en-US')}</span>
-                    </div>
-                </div>
-                `;
+                html += '</tr>';
+                (acc.holdings || []).forEach(function (h, i) {
+                  html += '<tr>';
+                  cols.forEach(function (c) { html += c.td(h, i); });
+                  html += '</tr>';
+                });
+                html += '</table>';
+                html += '<button class="add-space-btn" type="button" style="margin-top: 10px; width: max-content; padding: 6px 12px; border-style: solid; color:var(--white);" onclick="addHolding(\'' + id + '\')">+ Add Holding</button>';
+                html += '<div style="text-align:right; margin-top: 10px; color: var(--muted); font-family: var(--font-mono); font-size: 11px;">TOTAL PORTFOLIO VALUE: <span id="modal-total-val" style="color:var(--white); font-size: 16px; font-weight:bold;">$' + (acc.value || 0).toLocaleString('en-US') + '</span></div></div>';
             } else {
                 document.getElementById('modal-card').style.width = "550px";
             }
@@ -4373,7 +4382,7 @@
         let base = getBaseType(acc.baseId);
         if (acc.showHoldings && (!acc.holdings || acc.holdings.length===0)) {
              if(base.id.includes('collectibles')) acc.holdings = [{name:'', price:0, date:''}];
-             else acc.holdings = [{ticker:'', name:'', price:0, shares:0, sector:'', expRatio:'', assetClass:'', invCorr: false, costBasis:0, beta:'', expectedReturn:'', priceSource:'manual'}];
+             else acc.holdings = [{ticker:'', name:'', price:'', shares:'', sector:'', expRatio:'', assetClass:'', costBasis:'', beta:'', expectedReturn:'', dividendYield:'', geography:'', instrumentType:'', priceSource:'manual'}];
         }
         openAccountModal(id); 
     }
@@ -4382,7 +4391,7 @@
         let acc = state.accounts.find(a=>a.id===id);
         let base = getBaseType(acc.baseId);
         if(base.id.includes('collectibles')) acc.holdings.push({name:'', price:0, date:''});
-        else acc.holdings.push({ticker:'', name:'', price:0, shares:0, sector:'', expRatio:'', assetClass:'', invCorr: false, costBasis:0, beta:'', expectedReturn:'', priceSource:'manual'});
+        else acc.holdings.push({ticker:'', name:'', price:'', shares:'', sector:'', expRatio:'', assetClass:'', costBasis:'', beta:'', expectedReturn:'', dividendYield:'', geography:'', instrumentType:'', priceSource:'manual'});
         openAccountModal(id);
     }
     
@@ -4396,20 +4405,38 @@
     window.updateHolding = function(id, index, field, val) {
         let acc = state.accounts.find(a=>a.id===id);
         let h = acc.holdings[index];
-        let base = getBaseType(acc.baseId);
-        if(field === 'price' || field === 'shares' || field === 'expRatio') h[field] = parseFloat(val) || 0;
+        // numeric/stat fields: store as number ('' stays empty so the placeholder shows); costBasis kept as
+        // typed string ('' or numeric). text fields stored verbatim.
+        if (field === 'price' || field === 'shares' || field === 'expRatio' || field === 'beta' || field === 'dividendYield') h[field] = (val === '' ? '' : (parseFloat(val) || 0));
         else h[field] = val;
-        
-        if(field === 'price' || field === 'shares') {
-            recalcPortfolio(acc);
-            let valEl = document.getElementById(`holding-val-${index}`);
-            if(valEl) {
-                 let calcVal = base.id.includes('collectibles') ? (h.price||0) : ((h.price||0) * (h.shares||0));
-                 valEl.innerText = '$' + calcVal.toLocaleString('en-US');
-            }
-            let totalEl = document.getElementById('modal-total-val');
-            if(totalEl) totalEl.innerText = '$' + acc.value.toLocaleString('en-US');
+        // any field that feeds value or the rollup -> live refresh (rollup strip + row value/gain + Shape),
+        // focus-safe (patches DOM in place, never re-renders the modal inputs). Fixes the "one edit behind" bug.
+        if (field === 'price' || field === 'shares' || field === 'costBasis' || field === 'beta' || field === 'dividendYield' || field === 'expRatio') {
+            recalcPortfolio(acc);          // acc.value + acc._agg + updateSVGs (Shape) + left-panel
+            refreshModalHoldings(acc);     // patch the modal rollup strip + per-row value/gain + total
         }
+    }
+
+    // Focus-safe modal patch — recompute rollup + per-row value/gain in place (no input re-render).
+    function refreshModalHoldings(acc) {
+        if (!acc) return;
+        var base = getBaseType(acc.baseId); if (!base) return;
+        var _pct = function (x) { return (x === null || x === undefined) ? '—' : x.toFixed(2) + '%'; };
+        var _bet = function (x) { return (x === null || x === undefined) ? '—' : x.toFixed(2); };
+        var _gn  = function (x) { return (x === null || x === undefined) ? '—' : (x >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(x)).toLocaleString('en-US'); };
+        (acc.holdings || []).forEach(function (h, i) {
+            var ve = document.getElementById('holding-val-' + i);
+            if (ve) { var v = base.id.includes('collectibles') ? (parseFloat(h.price) || 0) : (parseFloat(h.price) || 0) * (parseFloat(h.shares) || 0); ve.innerText = '$' + v.toLocaleString('en-US'); }
+            var ge = document.getElementById('holding-gain-' + i);
+            if (ge) { var cb = parseFloat(h.costBasis); if (!isFinite(cb) || cb <= 0) { ge.innerHTML = '—'; ge.style.color = 'var(--muted)'; } else { var g = (parseFloat(h.price) || 0) * (parseFloat(h.shares) || 0) - cb; ge.style.color = g >= 0 ? 'var(--teal-mid)' : 'var(--danger)'; ge.innerHTML = (g >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(g)).toLocaleString('en-US'); } }
+        });
+        var agg = (window.DatumMath ? DatumMath.portfolioStats([acc]) : null); acc._agg = agg;
+        var setT = function (elid, txt) { var e = document.getElementById(elid); if (e) e.innerText = txt; };
+        setT('hr-gain', _gn(agg && agg.unrealizedGain));
+        setT('hr-beta', _bet(agg && agg.weightedBeta));
+        setT('hr-yield', _pct(agg && agg.blendedYield));
+        setT('hr-expense', _pct(agg && agg.blendedExpense));
+        var te = document.getElementById('modal-total-val'); if (te) te.innerText = '$' + (acc.value || 0).toLocaleString('en-US');
     }
     
     // SURGICAL: Expanded Database
@@ -4419,27 +4446,14 @@
         let h = acc.holdings[index];
         h.ticker = ticker;
         
-        const mockData = {
-            'VEA': {name: 'Vanguard Developed Markets ETF', price: 50.25, sector: 'Equity', expRatio: 0.05, assetClass: 'International'},
-            'VTI': {name: 'Vanguard Total Stock Market ETF', price: 250.10, sector: 'Equity', expRatio: 0.03, assetClass: 'US Equity'},
-            'AAPL': {name: 'Apple Inc.', price: 175.50, sector: 'Technology', expRatio: 0.00, assetClass: 'US Equity'},
-            'MSFT': {name: 'Microsoft Corp.', price: 420.30, sector: 'Technology', expRatio: 0.00, assetClass: 'US Equity'},
-            'TSLA': {name: 'Tesla, Inc.', price: 185.20, sector: 'Consumer Cyclical', expRatio: 0.00, assetClass: 'US Equity'},
-            'BHF': {name: 'Brighthouse Financial', price: 48.75, sector: 'Financial Services', expRatio: 0.00, assetClass: 'US Equity'},
-            'SPY': {name: 'SPDR S&P 500 ETF', price: 510.40, sector: 'Equity', expRatio: 0.09, assetClass: 'US Equity'},
-            'QQQ': {name: 'Invesco QQQ Trust', price: 440.10, sector: 'Equity', expRatio: 0.20, assetClass: 'US Equity'},
-            'NVDA': {name: 'NVIDIA Corp.', price: 890.50, sector: 'Technology', expRatio: 0.00, assetClass: 'US Equity'},
-            'AMZN': {name: 'Amazon.com, Inc.', price: 178.30, sector: 'Consumer Cyclical', expRatio: 0.00, assetClass: 'US Equity'},
-            'GOOG': {name: 'Alphabet Inc.', price: 145.20, sector: 'Communication Services', expRatio: 0.00, assetClass: 'US Equity'},
-            'BTC': {name: 'Bitcoin', price: 68500.00, sector: 'Digital Asset', expRatio: 0.00, assetClass: 'Cryptocurrency'},
-            'VOO': {name: 'Vanguard S&P 500 ETF', price: 470.10, sector: 'Equity', expRatio: 0.03, assetClass: 'US Equity'},
-            'ARKK': {name: 'ARK Innovation ETF', price: 50.10, sector: 'Equity', expRatio: 0.75, assetClass: 'US Equity'}
-        };
-        
-        if(mockData[ticker]) {
-            Object.assign(h, mockData[ticker]);
+        // Auto-fill the STABLE, non-price fields from the self-owned curated universe
+        // (scripts/ticker-bundle.js — grows over time, NOT CF-dependent). Live PRICE stays a
+        // user-editable reference (priceSource:'manual'; CF-Worker live proxy is parked).
+        const bundle = (window.TICKER_BUNDLE || {});
+        if (bundle[ticker]) {
+            Object.assign(h, bundle[ticker]);
             recalcPortfolio(acc);
-            openAccountModal(id); 
+            openAccountModal(id);
         }
     }
     
@@ -4450,9 +4464,10 @@
         } else {
              acc.value = acc.holdings.reduce((sum, h) => sum + ((parseFloat(h.price)||0) * (parseFloat(h.shares)||0)), 0);
         }
+        acc._agg = (window.DatumMath ? DatumMath.portfolioStats([acc]) : null);   // spine: stash per-account stats (display + Shape)
         updateSVGs();
         updateAnalysisText();
-        renderInputs(); 
+        renderInputs();
     }
 
     function calculateTotalPmt(acc) {
@@ -5962,6 +5977,29 @@
         out.conservativeRate = rates[paradigm].conservativeRate;
         out.baselineRate     = rates[paradigm].baselineRate;
         out.upsideRate       = rates[paradigm].upsideRate;
+      }
+
+      // SPINE — when the portfolio's holdings carry real expected-return data, RECENTER the band on the
+      // blended expected return; the optimistic/average/stress radio still MODULATES (shifts the band).
+      // Band = center ± (weightedBeta × volUnit), where volUnit = the AVERAGE paradigm's half-band, so
+      // beta = 1.0 ≈ today's paradigm spread (a market-average portfolio looks unchanged). HOLDINGS-EMPTY
+      // -> this block is skipped entirely -> paradigm rates as before (Sketch / empty-card parity).
+      var _agg = (window.DatumMath && window.state && typeof getBaseType === 'function')
+        ? DatumMath.portfolioStats((state.accounts || []).filter(function (a) {
+            var b = getBaseType(a.baseId);
+            return b && (b.taxCode === 'liquid' || b.taxCode === 'pretax' || b.taxCode === 'roth') && !a.exclude;
+          }))
+        : null;
+      if (rates && _agg && _agg.blendedExpReturn !== null) {
+        var avgR = rates.average || { conservativeRate: 1.015, baselineRate: 1.035, upsideRate: 1.055 };
+        var volUnit = (avgR.upsideRate - avgR.conservativeRate) / 2;            // beta=1 => paradigm spread
+        var beta = (_agg.weightedBeta !== null ? _agg.weightedBeta : 1);
+        var spread = volUnit * beta;
+        var center = 1 + (_agg.blendedExpReturn / 100);                          // blended exp-return -> rate
+        var shift = (rates[paradigm] ? rates[paradigm].baselineRate : avgR.baselineRate) - avgR.baselineRate;
+        out.baselineRate     = center + shift;
+        out.conservativeRate = center - spread + shift;
+        out.upsideRate       = center + spread + shift;
       }
 
       // Inflation (nominal vs real)
@@ -9055,6 +9093,7 @@
   <script src="/scripts/datum-estate.js" defer></script>
   <script src="/scripts/datum-energize.js" defer></script>
   <script src="/scripts/datum-math.js" defer></script>
+  <script src="/scripts/ticker-bundle.js" defer></script>
   <script src="/scripts/datum-shape-copy.js" defer></script>
   <script src="/scripts/studio-wantface.js" defer></script>
   <script src="/scripts/lz-string.min.js" defer></script>
