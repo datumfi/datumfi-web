@@ -4147,7 +4147,8 @@
 
                 // ROLLUP STRIP (above the table) — empty fields show "—", never fake $0/0.
                 html += '<div class="holdings-rollup">';
-                if (isTaxable) html += '<div class="hr-cell"><div class="hr-lbl">Unrealized Gain</div><div class="hr-val" id="hr-gain">' + _gn(_agg && _agg.unrealizedGain) + '</div><div class="hr-sub">What you’d owe gains tax on if sold — value minus cost basis.</div></div>';
+                if (isTaxable) { var _ug = _agg && _agg.unrealizedGain; var _gtaxLine = (typeof _ug === 'number' && _ug > 0) ? ('Tax if you sold it all today ≈ 15% of that gain — roughly $' + Math.round(_ug * 0.15).toLocaleString('en-US') + '.') : '';
+                  html += '<div class="hr-cell"><div class="hr-lbl">Unrealized Gain</div><div class="hr-val" id="hr-gain">' + _gn(_ug) + '</div><div class="hr-sub" id="hr-gain-sub">Your unrealized gain — current value minus what you paid (cost basis).</div><div class="hr-sub" id="hr-gaintax" style="margin-top:5px;">' + _gtaxLine + '</div></div>'; }
                 html += '<div class="hr-cell"><div class="hr-lbl">Weighted Beta</div><div class="hr-val" id="hr-beta">' + _bet(_agg && _agg.weightedBeta) + '</div></div>';
                 html += '<div class="hr-cell"><div class="hr-lbl">Blended Yield</div><div class="hr-val" id="hr-yield">' + _pct(_agg && _agg.blendedYield) + '</div></div>';
                 html += '<div class="hr-cell"><div class="hr-lbl">Avg Expense</div><div class="hr-val" id="hr-expense">' + _pct(_agg && _agg.blendedExpense) + '</div></div>';
@@ -4434,6 +4435,8 @@
         var agg = (window.DatumMath ? DatumMath.portfolioStats([acc]) : null); acc._agg = agg;
         var setT = function (elid, txt) { var e = document.getElementById(elid); if (e) e.innerText = txt; };
         setT('hr-gain', _gn(agg && agg.unrealizedGain));
+        var _ug = agg && agg.unrealizedGain; var _gt = document.getElementById('hr-gaintax');
+        if (_gt) _gt.innerHTML = (typeof _ug === 'number' && _ug > 0) ? ('Tax if you sold it all today ≈ 15% of that gain — roughly $' + Math.round(_ug * 0.15).toLocaleString('en-US') + '.') : '';
         setT('hr-beta', _bet(agg && agg.weightedBeta));
         setT('hr-yield', _pct(agg && agg.blendedYield));
         setT('hr-expense', _pct(agg && agg.blendedExpense));

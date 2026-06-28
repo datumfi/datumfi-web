@@ -140,6 +140,8 @@ const MK = `(id,baseId,value,holdings)=>({id,baseId,value,inflow:0,freq:12,exclu
   checks.push(ok('taxable: Cost Basis + Unrealized Gain columns present', /Cost Basis/.test(T) && /Unrealized Gain/.test(T)));
   checks.push(ok('rollup strip: Unrealized Gain/Weighted Beta/Blended Yield/Avg Expense', JSON.stringify(taxable.rollup) === JSON.stringify(['Unrealized Gain', 'Weighted Beta', 'Blended Yield', 'Avg Expense'])));
   checks.push(ok('rollup Unrealized Gain = +$400 (Σ value−costBasis, only A has basis: 1000−600)', /\+\$400\b/.test(taxable.ugVal)));
+  checks.push(ok('live-bar: GAIN copy = "Your unrealized gain — current value minus what you paid"', /Your unrealized gain — current value minus what you paid \(cost basis\)\./.test(taxable.html)));
+  checks.push(ok('live-bar: TAX line distinct, ≈15% of gain ($400 -> roughly $60)', /Tax if you sold it all today ≈ 15% of that gain — roughly \$60\./.test(taxable.html)));
   checks.push(ok('empty field shows "—" (B 0/blank cost basis -> per-row dash, no fake gain)', /—/.test(taxable.html)));
   checks.push(ok('fetchMockData (bundle) pulls name/sector/beta/yield/geography/instrumentType', pull.name === 'Apple Inc.' && pull.sector === 'Technology' && pull.beta === 1.24 && pull.dividendYield === 0.55 && pull.geography === 'US' && pull.instrumentType === 'Stock'));
   checks.push(ok('★REFRESH BUG: typing costBasis updates rollup ($400→$700) + row gain ($300) in place', /\+\$400/.test(refresh.before) && /\+\$700/.test(refresh.afterGain) && /\+\$300/.test(refresh.rowGain)));
