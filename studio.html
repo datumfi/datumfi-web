@@ -2861,7 +2861,7 @@
         <!-- B2 — Outflow WANT readout. DISPLAY-ONLY (LOCK-3): narrates DatumMath.waterfall() in words;
              shows only while the Routing lens is active. Reuses .hud-panel; #want-readout id-rules position it. -->
         <div class="hud-panel" id="want-readout">
-          <div class="hud-title" style="color: var(--teal-mid);">HOW YOUR SPENDING GETS PAID</div>
+          <div class="hud-title" style="color: var(--teal-mid);">FUNDING YOUR RETIREMENT SPENDING</div>
           <div id="want-readout-body"></div>
         </div>
 
@@ -3590,14 +3590,14 @@
         var html = '<div class="wr-lead">Your Datum is what you’ll spend each year. Here’s where it comes from — and the order we pull it.</div>';
         // DATUM line — income>0 names the PENSION only (never SS as a current figure); income=0 -> savings cover all.
         html += '<div class="wr-need"><b>Datum: ' + _wantMoney(spend) + '/yr</b>';
-        if (r.need <= 0) { /* zero-hops line below carries it; no "$0 rest" clause */ }
-        else if (income > 0) html += ' Your pension covers <b>' + _wantMoney(income) + '.</b> Savings cover the rest: <b>' + _wantMoney(r.need) + '.</b>';
-        else html += ' Savings cover all of it: <b>' + _wantMoney(spend) + '.</b>';
+        if (r.need <= 0) { /* zero-hops line below carries it; no "rest" clause */ }
+        else if (income > 0) html += ' — pension covers <b>' + _wantMoney(income) + '</b>; your accounts cover the other <b>' + _wantMoney(r.need) + '</b>.';
+        else html += ' — your accounts cover all of it.';
         html += '</div>';
 
         if (!r.hops.length) {
             // ZERO-HOPS (income >= spend)
-            html += '<div class="wr-hop">Your pension covers your full Datum — no savings withdrawal needed this year.</div>';
+            html += '<div class="wr-hop">Your pension covers your full Datum — no account withdrawal needed this year.</div>';
         } else {
             html += '<div class="wr-order"><b>Pulled tax-smart — taxable first, pre-tax next, Roth last:</b></div>';
             var TYPE = { liquid: 'Taxable', pretax: 'Pre-tax', roth: 'Roth' };
@@ -3608,13 +3608,13 @@
                         ' — <b>' + _wantMoney(h.amount) + '</b> ' + tax + '</div>';
             });
             html += '<div class="wr-cross"><b>Lines crossing?</b> Biggest, most tax-friendly accounts go first. That’s the plan — not a mistake.</div>';
-            var foot = '<b>From savings: ' + _wantMoney(r.drawn) + '</b> · est. tax ~' + _wantMoney(r.totalTaxEstimate);
+            var foot = '<b>Total pulled: ' + _wantMoney(r.drawn) + '/yr</b> · estimated tax ~' + _wantMoney(r.totalTaxEstimate) + '/yr';
             if (r.shortfall > 0.5) foot += '<span class="wr-short">⚠️ Accounts fall <b>~' + _wantMoney(r.shortfall) + ' short</b> — spend less, save more, or retire later.</span>';
             html += '<div class="wr-foot">' + foot + '</div>';
         }
         // NOTES (always) — taxes-are-estimates + the SS/pension honesty caveat (Lesson 47).
         html += '<div class="wr-note">Amounts exact; taxes estimated (~22% pre-tax, 15% gains).<br>' +
-                'Savings only — Social Security and other Datum Builder income come later, lowering what these accounts must cover.</div>';
+                'These accounts only — Social Security and other Datum Builder income come later, lowering what these accounts must cover.</div>';
 
         body.innerHTML = html;
         box.classList.add('visible');

@@ -115,29 +115,29 @@ const SEED = (withPension) => `(mk)=>{const f=eval(mk);
 
   const ok = (n, c) => { console.log(`${n.padEnd(70)} -> ${c ? 'GREEN' : 'RED'}`); return c; };
   const ssCount = (body.match(/Social Security/g) || []).length;
-  console.log('===== B2 v2 WANT-BOX GATE [' + LABEL + '] =====');
+  console.log('===== B2 v3 WANT-BOX GATE [' + LABEL + '] =====');
   const checks = [];
   checks.push(ok('engine + box present', hasEngine && hasBox));
   checks.push(ok('(1) hidden before Routing; hides on toggle-off', hiddenPre && hiddenPost));
   checks.push(ok('(1) shows on Routing toggle', shown));
-  checks.push(ok('copy: TITLE "HOW YOUR SPENDING GETS PAID"', /HOW YOUR SPENDING GETS PAID/.test(title)));
+  checks.push(ok('copy: TITLE "FUNDING YOUR RETIREMENT SPENDING"', /FUNDING YOUR RETIREMENT SPENDING/.test(title)));
   checks.push(ok('copy: lead "Your Datum is what you’ll spend each year"', /Your Datum is what you’ll spend each year/.test(body)));
-  checks.push(ok('copy: Datum line $250,000/yr', /Datum: \$250,000\/yr/.test(body)));
-  checks.push(ok('copy: pension covers $30,000 + savings rest $220,000', /Your pension covers \$30,000\./.test(body) && /Savings cover the rest: \$220,000\./.test(body)));
+  checks.push(ok('copy: Datum line — pension covers $30,000; your accounts cover the other $220,000', /Datum: \$250,000\/yr — pension covers \$30,000; your accounts cover the other \$220,000\./.test(body)));
   checks.push(ok('copy: tax-smart order header', /Pulled tax-smart — taxable first, pre-tax next, Roth last:/.test(body)));
   checks.push(ok('copy: hops Taxable→Living Room/$100,000, Pre-tax→Vault/$80,000, Roth→Conservatory/$40,000',
     /Taxable → The Living Room — \$100,000/.test(body) && /Pre-tax → The Vault — \$80,000/.test(body) && /Roth → The Conservatory — \$40,000 \(no tax\)/.test(body)));
   checks.push(ok('(3) blend: tx ~$6,750 (0.45) present, pure-50% $7,500 absent', /\$6,750/.test(body) && !/\$7,500/.test(body)));
   checks.push(ok('copy: pretax ~$17,600 tax', /\$17,600/.test(body)));
   checks.push(ok('copy: crossing-lines explainer', /Lines crossing\?/.test(body)));
-  checks.push(ok('copy: footer "From savings: $220,000" + est. tax ~$24,350', /From savings: \$220,000/.test(body) && /est\. tax ~\$24,350/.test(body)));
+  checks.push(ok('copy: footer "Total pulled: $220,000/yr · estimated tax ~$24,350/yr"', /Total pulled: \$220,000\/yr/.test(body) && /estimated tax ~\$24,350\/yr/.test(body)));
+  checks.push(ok('HARD RULE: word "savings" never appears in box body', !/savings/i.test(body) && !/savings/i.test(noteTxt)));
   checks.push(ok('copy: notes taxes-estimated line', /Amounts exact; taxes estimated \(~22% pre-tax, 15% gains\)/.test(body)));
   checks.push(ok('(4) HONESTY: SS only in caveat (1x in body, in .wr-note, NOT in Datum line)', ssCount === 1 && /Social Security/.test(noteTxt) && !/Social Security/.test(needTxt)));
   checks.push(ok('(4) income line names "pension"', /pension/i.test(needTxt)));
   checks.push(ok('(2) engine truth tx100k/6750, pre80k/17600, roth40k/0', truth && JSON.stringify(truth.hops) === JSON.stringify([['tx', 100000, 6750], ['pre', 80000, 17600], ['roth', 40000, 0]])));
   checks.push(ok('(6) live-refresh: datum-slider input updates box, no lens toggle', live && !live.skip && live.changed && live.tracksSpend));
   checks.push(ok('(7) shortfall shown (spend 900k)', /short/i.test(shortTxt)));
-  checks.push(ok('(5) hide-zero-income: "Savings cover all of it", no "$0"/"pension"/"non-wage"', /Savings cover all of it:/.test(noIncTxt) && !/\$0\b/.test(noIncTxt) && !/pension/i.test(noIncTxt) && !/non-wage/i.test(noIncTxt)));
+  checks.push(ok('(5) hide-zero-income: "your accounts cover all of it", no "$0"/"pension"/"savings"', /your accounts cover all of it/.test(noIncTxt) && !/\$0\b/.test(noIncTxt) && !/pension/i.test(noIncTxt) && !/savings/i.test(noIncTxt)));
   checks.push(ok('(8) LOCK-3: state byte-identical after render', stateBefore === stateAfter));
   checks.push(ok('ERR: zero page errors, zero native dialogs', errs.length === 0 && nativeDialog === false));
 
