@@ -540,7 +540,7 @@
                   d.cx = d.x + d.w / 2;
                   d.cy = d.y + d.h / 2;
                   
-                  drawnRooms.push({ id: acc.id, taxCode: base.taxCode, isDebt: isDebt, isPriority: acc.isPriority, cx: d.cx, cy: d.cy, col: colName });
+                  drawnRooms.push({ id: acc.id, taxCode: base.taxCode, isDebt: isDebt, isPriority: acc.isPriority, cx: d.cx, cy: d.cy, col: colName, value: Math.abs(acc.value || 0) });
 
                   if(acc.isNew) newRoomToTrace = d; 
 
@@ -717,12 +717,21 @@
 
       // SURGICAL: Outflow Routing Lines
       if (isRouting && drawnRooms.length > 0) {
-          let liq = drawnRooms.filter(r => r.taxCode === 'liquid');
-          let pre = drawnRooms.filter(r => r.taxCode === 'pretax');
-          let roth = drawnRooms.filter(r => r.taxCode === 'roth');
-          let debts = drawnRooms.filter(r => r.isDebt && r.isPriority);
+          // Track A — STABLE in-bucket order (value DESC; id tiebreak) = interim determinism, superseded
+          // by B1's real financial rule. Keep the tax-efficiency bucket order (liquid->pretax->roth); sort
+          // WITHIN each bucket by balance so the SAME inputs always produce the SAME path (placement-agnostic).
+          let _byVal = (a, b) => (b.value || 0) - (a.value || 0) || (a.id < b.id ? -1 : 1);
+          let liq = drawnRooms.filter(r => r.taxCode === 'liquid').sort(_byVal);
+          let pre = drawnRooms.filter(r => r.taxCode === 'pretax').sort(_byVal);
+          let roth = drawnRooms.filter(r => r.taxCode === 'roth').sort(_byVal);
+          let debts = drawnRooms.filter(r => r.isDebt && r.isPriority).sort(_byVal);
 
           let sequence = [...liq, ...pre, ...roth];
+
+          // Stamp the deterministic order onto the room groups; the energizer reads it for the badges.
+          let _elById = {}; descriptors.forEach(d => { if (d && d.id) _elById[d.id] = d.el; });
+          sequence.forEach((r, i) => { let el = _elById[r.id]; if (el) el.setAttribute('data-route-order', i + 1); });
+          debts.forEach((r, j) => { let el = _elById[r.id]; if (el) el.setAttribute('data-route-debt', j + 1); });
 
           if(sequence.length > 1) {
               let p = `M ${sequence[0].cx} ${sequence[0].cy}`;
@@ -736,6 +745,10 @@
           }
 
           if (debts.length > 0 && liq.length > 0) {
+              // FIX 2 — stamp the debt SOURCE (liq[0] = largest liquid, where the money actually leaves)
+              // so the energizer can amber-badge the SOURCE in addition to the destination. SINGLE source
+              // for now (honest — current math can't fund a multi-source cascade; that's B3).
+              let _srcEl = _elById[liq[0].id]; if (_srcEl) _srcEl.setAttribute('data-route-debt-src', '1');
               debts.forEach(d => {
                   let p = `M ${liq[0].cx} ${liq[0].cy} L ${d.cx} ${d.cy}`;
                   let demoPath = document.createElementNS("http://www.w3.org/2000/svg", "path");

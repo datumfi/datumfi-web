@@ -27,7 +27,9 @@ const server = http.createServer((req, res) => {
 const MK = `(id,baseId,value,prio)=>({id,baseId,value,inflow:0,freq:12,exclude:false,isNew:false,
   isFriction:false,isPriority:!!prio,holdings:[],trustType:'Irrevocable',disbursement:'Discretionary',
   intRate:0,notes:'',cola:0,linkedAssetId:null,useRule55:false})`;
-const FIX = [['tax','taxable',150000],['pre','pretax401k',120000],['roth','rothira',90000],['mort','mortgage_joint',80000,true],['rev','rev_debt_joint',30000,false],['veh','auto',40000]];
+// TWO liquids (crypto 200k > taxable 150k) prove in-bucket value-DESC: crypto=order1, taxable=order2,
+// then pretax=3, roth=4 (bucket order preserved). priority mortgage = debt-order 1.
+const FIX = [['cry','crypto',200000],['tax','taxable',150000],['pre','pretax401k',120000],['roth','rothira',90000],['mort','mortgage_joint',80000,true],['rev','rev_debt_joint',30000,false],['veh','auto',40000]];
 
 const SEED = `({mk,a}) => { const f = eval(mk); window.state.accounts = a.map(x=>f(x[0],x[1],x[2],x[3]));
   if (window.renderInputs) renderInputs(); if (window.updateSVGs) updateSVGs(); }`;
@@ -40,9 +42,18 @@ const READ = `() => {
   const fuses = Array.from(svg.querySelectorAll('.routing-fuse'));
   const anim = (el) => el && el.getAnimations ? el.getAnimations().length : 0;
   const hi = (id) => { const w = document.getElementById('inp-wrapper-'+id); return w ? (w.getAttribute('style')||'') : ''; };
+  const grp = (id) => Array.from(svg.querySelectorAll('.room-grp')).find(g => (g.getAttribute('onclick')||'').indexOf("'"+id+"'") !== -1) || null;
+  const ord = (id) => { const g = grp(id); return g ? g.getAttribute('data-route-order') : null; };
+  const dord = (id) => { const g = grp(id); return g ? g.getAttribute('data-route-debt') : null; };
   return {
     outStroke: out ? (out.style.stroke || '') : null, outAnimNone: out ? (out.style.animation || '') : null, outBaseAnim: anim(out),
-    demoCount: demos.length, demoStroke: demos[0] ? (demos[0].style.stroke || '') : null,
+    outD: out ? (out.getAttribute('d') || '') : '', outMarkerEnd: out ? (out.getAttribute('marker-end') || '') : '',
+    demoCount: demos.length, demoStroke: demos[0] ? (demos[0].style.stroke || '') : null, demoMarkerEnd: demos[0] ? (demos[0].getAttribute('marker-end') || '') : '',
+    routeBadges: svg.querySelectorAll('.route-badge').length,
+    markerP: !!svg.querySelector('#route-arrow-purple'), markerA: !!svg.querySelector('#route-arrow-amber'),
+    ordTax: ord('tax'), ordPre: ord('pre'), ordRoth: ord('roth'), ordCry: ord('cry'), dordMort: dord('mort'),
+    dsrcCry: (grp('cry') ? grp('cry').getAttribute('data-route-debt-src') : null),
+    cryBadges: (grp('cry') ? grp('cry').querySelectorAll('.route-badge').length : 0),
     comet: !!comet, cometAnim: anim(comet), fuseCount: fuses.length, fuseAnim: fuses[0] ? anim(fuses[0]) : 0,
     animated: svg.getAttribute('data-routing-animated'),
     hiTax: hi('tax'), hiPre: hi('pre'), hiRoth: hi('roth'), hiMort: hi('mort'), hiRev: hi('rev'), hiVeh: hi('veh'),
@@ -76,11 +87,22 @@ const clickRouting = (p) => p.evaluate(() => { const x = document.getElementById
   const N = await boot(8, 'no-preference');
   const pre = await N.p.evaluate(eval(READ));
   await clickRouting(N.p); await N.p.waitForTimeout(300);
-  const on = await N.p.evaluate(eval(READ));            // draw-on in flight
-  await N.p.waitForTimeout(1300);
+  const on = await N.p.evaluate(eval(READ));            // draw-on in flight; badges/marker/order stamps
+  await N.p.evaluate(eval(SEED), { mk: MK, a: [...FIX].reverse() });   // DETERMINISM: same accounts, reversed placement
+  await N.p.waitForTimeout(400);
+  const det = await N.p.evaluate(eval(READ));           // path d must be identical (placement-agnostic)
+  await N.p.waitForTimeout(900);
   const settled = await N.p.evaluate(eval(READ));       // sustained comet/fuse
   await clickRouting(N.p); await N.p.waitForTimeout(300);
   const off = await N.p.evaluate(eval(READ));
+  // FIX 3 — tied-value determinism: two EQUAL-value liquids (aaa<bbb by id) resolve by stable id tiebreak,
+  // identical across entry order (value-DESC alone leaves ties render-dependent).
+  const TIEDORD = `() => { const svg=document.getElementById('bp-svg'); const g=id=>Array.from(svg.querySelectorAll('.room-grp')).find(e=>(e.getAttribute('onclick')||'').indexOf("'"+id+"'")!==-1); const o=id=>{const e=g(id);return e?e.getAttribute('data-route-order'):null;}; return {aaa:o('aaa'),bbb:o('bbb')}; }`;
+  await clickRouting(N.p);   // routing on
+  await N.p.evaluate(eval(SEED), { mk: MK, a: [['aaa','taxable',50000],['bbb','crypto',50000],['p1','pretax401k',30000]] });
+  await N.p.waitForTimeout(350); const tied1 = await N.p.evaluate(eval(TIEDORD));
+  await N.p.evaluate(eval(SEED), { mk: MK, a: [['bbb','crypto',50000],['aaa','taxable',50000],['p1','pretax401k',30000]] });   // reversed
+  await N.p.waitForTimeout(350); const tied2 = await N.p.evaluate(eval(TIEDORD));
   await N.b.close();
 
   const W = await boot(2, 'no-preference');             // STILL via WEAK
@@ -95,6 +117,23 @@ const clickRouting = (p) => p.evaluate(() => { const x = document.getElementById
   const ok = (n, c) => { console.log(`${n.padEnd(66)} -> ${c ? 'GREEN' : 'RED'}`); return c; };
   console.log('===== ROUTING GATE [' + LABEL + '] =====');
   const checks = [];
+  // TRACK A — determinism (value-DESC, placement-agnostic) + order stamps + badges + arrowheads
+  checks.push(ok('TA: in-bucket order = value-DESC (crypto1>taxable2, pretax3, roth4)', on.ordCry === '1' && on.ordTax === '2' && on.ordPre === '3' && on.ordRoth === '4'));
+  checks.push(ok('TA: priority debt stamped debt-order 1', on.dordMort === '1'));
+  // DETERMINISM = the ORDER is value-based, not entry-order (the literal path d also tracks room
+  // POSITIONS, which layout shifts with entry order — not a determinism concern). Reversed placement
+  // -> SAME value-DESC order assignment (crypto1/taxable2/pretax3/roth4): inserting/reordering accounts
+  // never re-slots the sequence by drag order.
+  checks.push(ok('TA: DETERMINISM — reversed placement => SAME value-order (crypto1/taxable2/pretax3/roth4)', det.ordCry === '1' && det.ordTax === '2' && det.ordPre === '3' && det.ordRoth === '4'));
+  checks.push(ok('TA: order badges drawn (>=6: 4 outflow + 1 dest + 1 source)', on.routeBadges >= 6));
+  // FIX 1 — BOTH routes terminate in an arrowhead (explicit per-color markers; purple no longer missing)
+  checks.push(ok('FIX1: PURPLE arrowhead on outflow (marker-end + marker exists)', on.markerP && /route-arrow-purple/.test(on.outMarkerEnd)));
+  checks.push(ok('FIX1: AMBER arrowhead on demolition', on.markerA && /route-arrow-amber/.test(on.demoMarkerEnd)));
+  // FIX 2 — debt SOURCE (liq[0]=crypto) carries an amber badge IN ADDITION to its purple outflow badge
+  checks.push(ok('FIX2: debt SOURCE stamped at liq[0] (crypto data-route-debt-src=1)', on.dsrcCry === '1'));
+  checks.push(ok('FIX2: source room has BOTH badges (purple outflow + amber source)', on.cryBadges === 2));
+  // FIX 3 — tied value -> stable id tiebreak, placement-agnostic (aaa always 1, bbb always 2)
+  checks.push(ok('FIX3: tied-value -> id tiebreak (aaa=1,bbb=2) both entry orders', tied1.aaa === '1' && tied1.bbb === '2' && tied2.aaa === '1' && tied2.bbb === '2'));
   // (a) inline recolor: outflow PURPLE, demolition AMBER (not CSS teal/gold)
   checks.push(ok('a: OUTFLOW path inline-recolored PURPLE', purple(on.outStroke)));
   checks.push(ok('a: DEMOLITION path inline-recolored AMBER (fuse)', on.demoCount === 1 && amber(on.demoStroke)));

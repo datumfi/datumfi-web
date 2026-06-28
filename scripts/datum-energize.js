@@ -315,25 +315,31 @@
     }
     _lastSeq = on;
   }
-  function _seqBadge(r, rank) {
+  // shared numbered rank badge (top-right of a room). Sequence = red circle + soft-red room tint;
+  // Routing reuses it (purple/gold circle, NO room tint). cls scopes cleanup per lens.
+  function _rankBadge(r, rank, color, tintRgb, cls, withTint, xOff) {
     if (!r.d) return;
     var ns = 'http://www.w3.org/2000/svg';
-    var g = document.createElementNS(ns, 'g'); g.setAttribute('class', 'seq-badge');
-    var tint = document.createElementNS(ns, 'rect');
-    tint.setAttribute('x', r.d.x); tint.setAttribute('y', r.d.y);
-    tint.setAttribute('width', r.d.w); tint.setAttribute('height', r.d.h);
-    tint.setAttribute('fill', 'rgba(226,75,74,0.12)'); tint.setAttribute('pointer-events', 'none');
-    var cx = r.d.x + r.d.w - 18, cy = r.d.y + 18;   // top-RIGHT corner: clears the top-left SQUARE FOOTAGE box
+    var g = document.createElementNS(ns, 'g'); g.setAttribute('class', cls || 'seq-badge');
+    if (withTint) {
+      var tint = document.createElementNS(ns, 'rect');
+      tint.setAttribute('x', r.d.x); tint.setAttribute('y', r.d.y);
+      tint.setAttribute('width', r.d.w); tint.setAttribute('height', r.d.h);
+      tint.setAttribute('fill', 'rgba(' + (tintRgb || '226,75,74') + ',0.12)'); tint.setAttribute('pointer-events', 'none');
+      g.appendChild(tint);
+    }
+    var cx = r.d.x + r.d.w - 18 - (xOff || 0), cy = r.d.y + 18;   // top-RIGHT; xOff stacks a 2nd badge beside it
     var c = document.createElementNS(ns, 'circle');
     c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', 12);
-    c.setAttribute('fill', 'var(--danger)'); c.setAttribute('stroke', '#fff'); c.setAttribute('stroke-width', '1.5');
+    c.setAttribute('fill', color || 'var(--danger)'); c.setAttribute('stroke', '#fff'); c.setAttribute('stroke-width', '1.5');
     var t = document.createElementNS(ns, 'text');
     t.setAttribute('x', cx); t.setAttribute('y', cy + 4); t.setAttribute('text-anchor', 'middle');
     t.setAttribute('font-family', 'var(--font-mono)'); t.setAttribute('font-size', '13');
     t.setAttribute('font-weight', 'bold'); t.setAttribute('fill', '#fff'); t.textContent = String(rank);
-    g.appendChild(tint); g.appendChild(c); g.appendChild(t);
-    r.el.appendChild(g);     // inside the room group -> lifts with the room, wiped+redrawn each render
+    g.appendChild(c); g.appendChild(t);
+    r.el.appendChild(g);     // inside the room group -> wiped+redrawn each render
   }
+  function _seqBadge(r, rank) { _rankBadge(r, rank, 'var(--danger)', '226,75,74', 'seq-badge', true, 0); }
 
   // THERMAL — NIGHT-VISION HEAT-SCAN (reuses isThermal / #btn-thermal). The renderer already tags
   // rooms tax-{taxCode} (host CSS L964-968 recolors them); this LAYERS night-vision ON TOP via runtime
@@ -430,18 +436,30 @@
     var phase = _now() - _routeStart;
     // base recolor + (fresh, !STILL) slow draw-on; else solid. animation:none kills the CSS dashFlow
     // (so STILL is honored). GEOMETRY-READ: getTotalLength/d come from the rendered path only.
-    function paint(path, color, glow) {
+    _ensureRouteMarker(svg);                                                // explicit purple + amber arrowheads
+    function paint(path, color, glow, markerId) {
       if (!path) return;
       var len = path.getTotalLength ? path.getTotalLength() : 600;
       path.style.stroke = color; path.style.animation = 'none';
       path.style.strokeDasharray = len; path.style.filter = 'drop-shadow(0 0 4px ' + glow + ')';
+      path.setAttribute('marker-end', 'url(#' + markerId + ')');            // direction: arrow into the destination box
       if (!STILL && fresh && path.animate) {
         path.style.strokeDashoffset = len;
         path.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], { duration: drawMs, easing: 'cubic-bezier(0.4,0,0.2,1)', fill: 'forwards' });
       } else { path.style.strokeDashoffset = 0; }
     }
-    paint(outflow, '#c84fe3', 'rgba(200,79,227,0.7)');                       // OUTFLOW base = purple
-    demos.forEach(function (d) { paint(d, '#f5a623', 'rgba(245,166,35,0.7)'); });   // DEMOLITION base = amber
+    paint(outflow, '#c84fe3', 'rgba(200,79,227,0.7)', 'route-arrow-purple');         // OUTFLOW base = purple
+    demos.forEach(function (d) { paint(d, '#f5a623', 'rgba(245,166,35,0.7)', 'route-arrow-amber'); });   // DEMOLITION = amber
+    // ORDER BADGES (static -> shown even under STILL). Purple = outflow rank (data-route-order). Amber =
+    // debt DESTINATION (data-route-debt) AND debt SOURCE at liq[0] (data-route-debt-src, offset beside the
+    // source's purple badge). Pass-through rooms get NO number — numbering them would imply they pay the debt.
+    rooms.forEach(function (r) {
+      if (!r || !r.el) return;
+      var ord = r.el.getAttribute('data-route-order'), dord = r.el.getAttribute('data-route-debt'), dsrc = r.el.getAttribute('data-route-debt-src');
+      if (ord) _rankBadge(r, +ord, '#c84fe3', null, 'route-badge', false, 0);        // purple outflow rank
+      else if (dord) _rankBadge(r, +dord, '#f5a623', null, 'route-badge', false, 0); // amber debt destination
+      if (dsrc) _rankBadge(r, +dsrc, '#f5a623', null, 'route-badge', false, 28);     // amber debt SOURCE (beside purple)
+    });
     if (!STILL) {
       var cd = fresh ? drawMs : 0;                                          // current starts AFTER the draw-on
       if (outflow) _flowDash(svg, outflow.getAttribute('d'), 'routing-comet', '#e9a6ff', 'rgba(200,79,227,0.95)', 26, 2200, cd, phase, false);
@@ -453,6 +471,24 @@
       svg.setAttribute('data-routing-animated', '1');
     }
     _lastRouting = on;
+  }
+  // arrowhead marker re-injected each render (the route paths live in #bp-svg, which is wiped per render).
+  // fill:context-stroke -> the arrow inherits each route's stroke color (purple comet / amber fuse). No
+  // host/CSS edit; geometry-read guard intact (the marker sits on the rendered path end, never recomputed).
+  function _ensureRouteMarker(svg) {
+    if (svg.querySelector('#route-arrow-purple')) return;
+    var ns = 'http://www.w3.org/2000/svg';
+    // FIX 1 — explicit per-color markers (purple comet + amber fuse) instead of context-stroke, which
+    // was unreliable on the multi-segment outflow path -> its arrowhead never rendered. Both now show.
+    [['route-arrow-purple', '#c84fe3'], ['route-arrow-amber', '#f5a623']].forEach(function (m) {
+      var mk = document.createElementNS(ns, 'marker');
+      mk.setAttribute('id', m[0]); mk.setAttribute('viewBox', '0 0 10 10');
+      mk.setAttribute('refX', '8'); mk.setAttribute('refY', '5');
+      mk.setAttribute('markerWidth', '7'); mk.setAttribute('markerHeight', '7'); mk.setAttribute('orient', 'auto');
+      var pa = document.createElementNS(ns, 'path');
+      pa.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z'); pa.setAttribute('fill', m[1]);
+      mk.appendChild(pa); svg.appendChild(mk);
+    });
   }
   // a bright short dash that rides the route as a traveling "current" (comet / fuse-spark). d is READ
   // from the rendered route path (geometry-read guard). flicker -> the fuse spark pulses (lit-fuse feel).
