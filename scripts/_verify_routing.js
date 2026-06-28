@@ -49,7 +49,7 @@ const READ = `() => {
     outStroke: out ? (out.style.stroke || '') : null, outAnimNone: out ? (out.style.animation || '') : null, outBaseAnim: anim(out),
     outD: out ? (out.getAttribute('d') || '') : '', outMarkerEnd: out ? (out.getAttribute('marker-end') || '') : '',
     demoCount: demos.length, demoStroke: demos[0] ? (demos[0].style.stroke || '') : null, demoMarkerEnd: demos[0] ? (demos[0].getAttribute('marker-end') || '') : '',
-    routeBadges: svg.querySelectorAll('.route-badge').length,
+    routeBadges: svg.querySelectorAll('.route-badge').length, ticks: svg.querySelectorAll('.route-tick').length,
     markerP: !!svg.querySelector('#route-arrow-purple'), markerA: !!svg.querySelector('#route-arrow-amber'),
     ordTax: ord('tax'), ordPre: ord('pre'), ordRoth: ord('roth'), ordCry: ord('cry'), dordMort: dord('mort'),
     dsrcCry: (grp('cry') ? grp('cry').getAttribute('data-route-debt-src') : null),
@@ -126,6 +126,8 @@ const clickRouting = (p) => p.evaluate(() => { const x = document.getElementById
   // never re-slots the sequence by drag order.
   checks.push(ok('TA: DETERMINISM — reversed placement => SAME value-order (crypto1/taxable2/pretax3/roth4)', det.ordCry === '1' && det.ordTax === '2' && det.ordPre === '3' && det.ordRoth === '4'));
   checks.push(ok('TA: order badges drawn (>=6: 4 outflow + 1 dest + 1 source)', on.routeBadges >= 6));
+  // v3 — START "T" tick on each route (where the flow begins); static, present under STILL too
+  checks.push(ok('v3: START tick on both routes (>=2) + present under STILL', on.ticks >= 2 && still.ticks >= 2));
   // FIX 1 — BOTH routes terminate in an arrowhead (explicit per-color markers; purple no longer missing)
   checks.push(ok('FIX1: PURPLE arrowhead on outflow (marker-end + marker exists)', on.markerP && /route-arrow-purple/.test(on.outMarkerEnd)));
   checks.push(ok('FIX1: AMBER arrowhead on demolition', on.markerA && /route-arrow-amber/.test(on.demoMarkerEnd)));

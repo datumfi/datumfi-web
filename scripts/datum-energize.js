@@ -450,6 +450,8 @@
     }
     paint(outflow, '#c84fe3', 'rgba(200,79,227,0.7)', 'route-arrow-purple');         // OUTFLOW base = purple
     demos.forEach(function (d) { paint(d, '#f5a623', 'rgba(245,166,35,0.7)', 'route-arrow-amber'); });   // DEMOLITION = amber
+    if (outflow) _routeTick(svg, outflow, '#c84fe3');                                // v3 — START tick (where the flow begins)
+    demos.forEach(function (d) { _routeTick(svg, d, '#f5a623'); });
     // ORDER BADGES (static -> shown even under STILL). Purple = outflow rank (data-route-order). Amber =
     // debt DESTINATION (data-route-debt) AND debt SOURCE at liq[0] (data-route-debt-src, offset beside the
     // source's purple badge). Pass-through rooms get NO number — numbering them would imply they pay the debt.
@@ -489,6 +491,23 @@
       pa.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z'); pa.setAttribute('fill', m[1]);
       mk.appendChild(pa); svg.appendChild(mk);
     });
+  }
+  // Track A v3 — START "T" tick: a short perpendicular mark at the route's FIRST point (mirror of the
+  // end arrowhead) so the eye finds where the flow BEGINS. GEOMETRY-READ: first point + initial tangent
+  // from the rendered path (getPointAtLength), never recomputed. Static (no anim) -> shown under STILL too.
+  function _routeTick(svg, path, color) {
+    if (!path || !path.getPointAtLength) return;
+    var total = path.getTotalLength ? path.getTotalLength() : 4;
+    var p0 = path.getPointAtLength(0), p1 = path.getPointAtLength(Math.min(4, total));
+    var dx = p1.x - p0.x, dy = p1.y - p0.y, len = Math.hypot(dx, dy) || 1;
+    var nx = -dy / len, ny = dx / len, h = 9;                  // unit normal, half-length
+    var t = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    t.setAttribute('class', 'route-tick');
+    t.setAttribute('x1', p0.x - nx * h); t.setAttribute('y1', p0.y - ny * h);
+    t.setAttribute('x2', p0.x + nx * h); t.setAttribute('y2', p0.y + ny * h);
+    t.setAttribute('stroke', color); t.setAttribute('stroke-width', '3'); t.setAttribute('stroke-linecap', 'round');
+    t.setAttribute('pointer-events', 'none'); t.style.filter = 'drop-shadow(0 0 3px ' + color + ')';
+    svg.appendChild(t);
   }
   // a bright short dash that rides the route as a traveling "current" (comet / fuse-spark). d is READ
   // from the rendered route path (geometry-read guard). flicker -> the fuse spark pulses (lit-fuse feel).
