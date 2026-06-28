@@ -457,7 +457,7 @@
                   <text x="${d.cx}" y="${d.cy + 30}" class="bp-val" style="fill:var(--white)">${valStr}</text>
               `;
               svgContainer.appendChild(g);
-              descriptors.push({ id: acc.id, el: g, rect: g.querySelector('.room-rect'), d: d, value: acc.value || 0, fillPct: fp, weight: weight, isNew: !!acc.isNew, taxCode: base.taxCode, isDebt: false, isInvestment: !!base.isInvestment });
+              descriptors.push({ id: acc.id, el: g, rect: g.querySelector('.room-rect'), d: d, value: acc.value || 0, fillPct: fp, weight: weight, isNew: !!acc.isNew, taxCode: base.taxCode, isDebt: false, isInvestment: !!base.isInvestment, isPriority: !!acc.isPriority });
               cY += h + 12;
           });
       }
@@ -608,7 +608,7 @@
                     ${_valBlock}
                   `;
                   svgContainer.appendChild(g);
-                  descriptors.push({ id: acc.id, el: g, rect: g.querySelector('.room-rect'), d: d, value: acc.value || 0, fillPct: fp, weight: weight, isNew: !!acc.isNew, taxCode: base.taxCode, isDebt: isDebt, isInvestment: !!base.isInvestment });
+                  descriptors.push({ id: acc.id, el: g, rect: g.querySelector('.room-rect'), d: d, value: acc.value || 0, fillPct: fp, weight: weight, isNew: !!acc.isNew, taxCode: base.taxCode, isDebt: isDebt, isInvestment: !!base.isInvestment, isPriority: !!acc.isPriority });
 
                   currentY += h + gap;
               });

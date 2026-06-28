@@ -69,6 +69,7 @@
     shockwave(rooms);
     sequence(rooms);
     thermal(rooms);
+    routing(rooms);
   }
 
   function pulse(r) {
@@ -403,6 +404,73 @@
       a.onfinish = function () { if (s.parentNode) s.parentNode.removeChild(s); };
     } else if (s.parentNode) { s.parentNode.removeChild(s); }
     svg.setAttribute('data-thermal-scan', String(Date.now()));   // durable fire-proof (gate hook)
+  }
+
+  // ROUTING — DIRECTED FLOWING CURRENT (reuses isRouting / #btn-routing). The renderer draws the
+  // .outflow-route (liquid->pretax->roth withdrawal sequence) + .demolition-route (liquid->each priority
+  // debt); host CSS L978-980 colors them teal/gold + a basic dashFlow. This LAYERS the wow ON TOP via
+  // INLINE styles (no host edit): two distinct flows. (1) OUTFLOW = PURPLE — a slow draw-on then a
+  // bright traveling comet (capital moving through the plumbing). (2) DEBT-DESTRUCTION = AMBER->WHITE —
+  // a draw-on then a white-hot sparking fuse traveling toward each priority debt. Two-color left ledger
+  // (purple sequence rows + amber priority-debt rows). STILL -> static recolored paths, no flow (also
+  // fixes the CSS dashFlow ignoring reduced-motion). GEOMETRY-READ GUARD: the comet/fuse read d from the
+  // ALREADY-RENDERED route paths — never recompute geometry. LOCK-3 read-only; no total touched.
+  var _lastRouting = false;
+  var _routingHi = [];                      // #inp-wrapper rows highlighted (purple + amber) for cleanup
+  var _routeStart = null;                   // flow phase anchor (resume across re-renders)
+  function routing(rooms) {
+    var on = _lensOn('btn-routing');
+    var svg = _bpsvg();
+    if (!on) { if (_routingHi.length) { _ledgerClear(_routingHi); _routingHi = []; } if (svg) svg.removeAttribute('data-routing-animated'); _lastRouting = false; return; }
+    if (!svg) return;
+    var outflow = svg.querySelector('.outflow-route');
+    var demos = Array.prototype.slice.call(svg.querySelectorAll('.demolition-route'));
+    var fresh = !_lastRouting, drawMs = 900;
+    if (_routeStart == null) _routeStart = _now();
+    var phase = _now() - _routeStart;
+    // base recolor + (fresh, !STILL) slow draw-on; else solid. animation:none kills the CSS dashFlow
+    // (so STILL is honored). GEOMETRY-READ: getTotalLength/d come from the rendered path only.
+    function paint(path, color, glow) {
+      if (!path) return;
+      var len = path.getTotalLength ? path.getTotalLength() : 600;
+      path.style.stroke = color; path.style.animation = 'none';
+      path.style.strokeDasharray = len; path.style.filter = 'drop-shadow(0 0 4px ' + glow + ')';
+      if (!STILL && fresh && path.animate) {
+        path.style.strokeDashoffset = len;
+        path.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], { duration: drawMs, easing: 'cubic-bezier(0.4,0,0.2,1)', fill: 'forwards' });
+      } else { path.style.strokeDashoffset = 0; }
+    }
+    paint(outflow, '#c84fe3', 'rgba(200,79,227,0.7)');                       // OUTFLOW base = purple
+    demos.forEach(function (d) { paint(d, '#f5a623', 'rgba(245,166,35,0.7)'); });   // DEMOLITION base = amber
+    if (!STILL) {
+      var cd = fresh ? drawMs : 0;                                          // current starts AFTER the draw-on
+      if (outflow) _flowDash(svg, outflow.getAttribute('d'), 'routing-comet', '#e9a6ff', 'rgba(200,79,227,0.95)', 26, 2200, cd, phase, false);
+      demos.forEach(function (d) { _flowDash(svg, d.getAttribute('d'), 'routing-fuse', '#fff7d0', 'rgba(255,247,208,0.98)', 14, 1500, cd, phase, true); });
+      var seqIds = rooms.filter(function (r) { return r && r.id && ['liquid', 'pretax', 'roth'].indexOf(r.taxCode) >= 0; }).map(function (r) { return r.id; });
+      var fuseIds = rooms.filter(function (r) { return r && r.id && r.isDebt && r.isPriority; }).map(function (r) { return r.id; });
+      _ledgerClear(_routingHi);
+      _routingHi = _ledgerHi(seqIds, '#c84fe3', '200,79,227').concat(_ledgerHi(fuseIds, '#f5a623', '245,166,35'));   // PURPLE seq + AMBER priority-debt
+      svg.setAttribute('data-routing-animated', '1');
+    }
+    _lastRouting = on;
+  }
+  // a bright short dash that rides the route as a traveling "current" (comet / fuse-spark). d is READ
+  // from the rendered route path (geometry-read guard). flicker -> the fuse spark pulses (lit-fuse feel).
+  function _flowDash(svg, d, cls, color, glow, dashLen, dur, delayMs, phase, flicker) {
+    if (!d) return;
+    var p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('class', cls); p.setAttribute('d', d); p.setAttribute('fill', 'none');
+    p.setAttribute('stroke', color); p.setAttribute('stroke-width', flicker ? '4' : '3'); p.setAttribute('stroke-linecap', 'round');
+    p.setAttribute('pointer-events', 'none'); p.style.filter = 'drop-shadow(0 0 ' + (flicker ? 8 : 6) + 'px ' + glow + ')';
+    svg.appendChild(p);
+    var len = p.getTotalLength ? p.getTotalLength() : 600;
+    p.style.strokeDasharray = dashLen + ' ' + Math.max(1, len);
+    if (p.animate) {
+      var a = p.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], { duration: dur, iterations: Infinity, easing: 'linear', delay: delayMs || 0 });
+      try { if (!delayMs) a.currentTime = phase % dur; } catch (e) {}
+      if (flicker) p.animate([{ opacity: 1 }, { opacity: 0.55 }, { opacity: 1 }], { duration: 260, iterations: Infinity, easing: 'ease-in-out' });
+    }
+    return p;
   }
 
   window.DatumEnergize = { run: run, connect: connect, reflow: reflow };
