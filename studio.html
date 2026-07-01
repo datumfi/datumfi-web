@@ -1062,6 +1062,10 @@
   .holdings-rollup .hr-lbl { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); margin-bottom: 4px; }
   .holdings-rollup .hr-val { font-family: var(--font-serif); font-size: 18px; font-style: italic; color: var(--white); line-height: 1.1; }
   .holdings-rollup .hr-sub { font-family: var(--font-sans, sans-serif); font-size: 9px; color: var(--muted); line-height: 1.4; margin-top: 5px; }
+  /* DATUM INTELLIGENCE — holdings-modal narrative (Sketch telemetry-card parity) */
+  .di-narrative { margin-top: 15px; background: rgba(9, 18, 33, 0.85); border: 1px solid rgba(255,255,255,0.1); border-left: 2px solid var(--teal-mid); border-radius: 4px; padding: 14px 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+  .di-narr-head { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--teal-mid); margin-bottom: 8px; }
+  .di-narr-body { font-family: var(--font-serif); font-size: 13px; font-style: italic; color: rgba(255,255,255,0.85); line-height: 1.65; }
   .holding-input { width: 100%; min-width: 0; box-sizing: border-box; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: var(--white); font-family: var(--font-mono); font-size: 11px; padding: 4px; border-radius: 2px; }
   .holding-input:focus { border-color: var(--teal-mid); outline: none; }
   /* kill number spinners so 2-decimal values never clip in narrow columns */
@@ -3779,6 +3783,273 @@
       spaceDropdown.innerHTML = dropdownHTML;
     }
 
+    /* ── DATUM INTELLIGENCE COPY ENGINE (HSA + 403(b) first; other banks follow) ─────────────
+       Display-only (LOCK-3): reads holdings + DatumMath.portfolioStats, writes NO state/total.
+       Copy = Architect-owned VERBATIM from the Studio Estate Accounts workbook (HSA / 403(b)
+       Copy Banks §1 / §2 / §9 / §13). Sourced-or-blank (L47): a token without data renders "—"
+       or keeps its box/layer/clause SILENT — never a fabricated %, name, or beta. The §9 [IF]
+       concentration / asset-location clauses stay DORMANT until the shared singleNamePct /
+       singleNameStock_fmt token contract is wired (the IRA/401k/457 §7 ask — L48, don't rebuild).
+       NOTE: distinct from the Want-canvas "Datum Intelligence" slider tooltips (~L1844) — name
+       collision only; do not merge. */
+    function _diIsBankRoom(baseId) { return /^(hsa|trad403|roth403)(_co)?$/.test(String(baseId || '')); }
+    var _diMoney = function (v) { return '$' + Math.round(v || 0).toLocaleString('en-US'); };
+    var _diP  = function (x) { return (x === null || x === undefined) ? '—' : Math.round(x) + '%'; };
+    var _diE  = function (x) { return (x === null || x === undefined) ? null : (Math.round(x * 100) / 100) + '%'; };
+    var _diNW = ['one','two','three','four','five','six','seven','eight','nine','ten'];
+
+    // Value-weighted signal set. CASH-BASIS GUARD (banks C23/R22): rows with Instrument=CASH or
+    // AssetClass=Cash are the spend sweep — they feed cashPct/investedPct ONLY and never dilute
+    // the invested-sleeve mix. Denominators are data-coverage-aware: no classed rows -> null (L47).
+    function _diSignals(acc) {
+      var val = function (h) { return (parseFloat(h.price) || 0) * (parseFloat(h.shares) || 0); };
+      var isCash = function (h) { return String(h.instrumentType || '').trim().toUpperCase() === 'CASH' || String(h.assetClass || '').trim().toLowerCase() === 'cash'; };
+      var s = { total: 0, cash: 0, inv: 0, eq: 0, bd: 0, classed: 0, foreign: 0, geoed: 0, invCount: 0, maxRow: 0, inst: {}, instKinds: 0, annuity: false };
+      (acc.holdings || []).forEach(function (h) {
+        var v = val(h); if (v <= 0) return;
+        s.total += v;
+        if (isCash(h)) { s.cash += v; return; }
+        s.inv += v; s.invCount++;
+        if (v > s.maxRow) s.maxRow = v;
+        var it = String(h.instrumentType || '').trim().toLowerCase();
+        if (it) { if (!s.inst[it]) { s.inst[it] = 0; s.instKinds++; } s.inst[it]++; if (/annuit/.test(it)) s.annuity = true; }
+        var ac = String(h.assetClass || '').toLowerCase();
+        if (ac) { s.classed += v; if (/stock|equit/.test(ac)) s.eq += v; else if (/bond|fixed/.test(ac)) s.bd += v; }
+        var g = String(h.geography || '').toLowerCase();
+        if (g) { s.geoed += v; if (/foreign|international|global|emerging/.test(g)) s.foreign += v; }
+      });
+      s.investedPct = s.total > 0 ? (s.inv / s.total) * 100 : null;
+      s.cashPct     = s.total > 0 ? (s.cash / s.total) * 100 : null;
+      s.equityPct   = s.classed > 0 ? (s.eq / s.classed) * 100 : null;
+      s.bondPct     = s.classed > 0 ? (s.bd / s.classed) * 100 : null;
+      s.foreignPct  = s.geoed > 0 ? (s.foreign / s.geoed) * 100 : null;
+      s.maxShare    = s.inv > 0 ? s.maxRow / s.inv : 0;
+      return s;
+    }
+    function _diSpine(s) {
+      if (s.invCount === 1) return 'a single-holding account';
+      if (s.maxShare >= 0.5) return 'heavily concentrated';
+      if (s.invCount >= 5 && s.maxShare < 0.35) return 'broadly diversified';
+      return 'compactly built';
+    }
+    function _diInstMix(s) {
+      var n = s.invCount; if (!n) return null;
+      var num = n <= 10 ? _diNW[n - 1] : String(n);
+      var kinds = Object.keys(s.inst);
+      var word = function (k) {
+        if (/etf/.test(k)) return n === 1 ? 'a single ETF' : num + ' ETFs';
+        if (/mutual/.test(k)) return n === 1 ? 'a single mutual fund' : num + ' mutual funds';
+        if (/stock|share/.test(k)) return n === 1 ? 'a single stock' : num + ' individual stocks';
+        return n === 1 ? 'a single holding' : num + ' holdings';
+      };
+      if (kinds.length === 1) return 'from ' + word(kinds[0]);
+      if (kinds.length > 1) return 'from a mix of funds and single names';
+      return 'from ' + (n === 1 ? 'a single holding' : num + ' holdings');
+    }
+    function _diExpenseWord(e) {
+      var t = _diE(e); if (t === null) return null;
+      if (e <= 0.15) return 'exceptionally lean (a value-weighted ≈' + t + ' expense ratio)';
+      if (e <= 0.40) return 'lean (a value-weighted ≈' + t + ' expense ratio)';
+      if (e <= 0.75) return 'moderately priced (≈' + t + '/yr value-weighted)';
+      return 'on the expensive side (≈' + t + '/yr value-weighted — a hard look at cheaper share classes is the biggest lever you control)';
+    }
+    // §13b sector/theme map (broad-market & size buckets are NOT a tilt — SILENT by omission)
+    var _DI_THEMES = [
+      [/semicond|software|it services|electronic|robot/i, 'technology and the chips/software behind it'],
+      [/clean energy|energy/i, 'the energy complex'],
+      [/aerospace|defense|industrial/i, 'industrials and aerospace/defense'],
+      [/biotech/i, 'biotech — high-risk, high-reward science'],
+      [/gold/i, 'gold as a store-of-value hedge'],
+      [/bitcoin|ether/i, 'the largest digital assets'],
+      [/dividend/i, 'companies that raise their payouts'],
+      [/utilit/i, 'steady, regulated utilities'],
+      [/real estate|reit/i, 'real estate via REITs']
+    ];
+    function _diTiltSentence(acc, s, isRoth) {
+      // §13a geo lead: vanilla US core -> SILENT (validated against the live 457(b)); pronounced
+      // international (≥20% of geo-tagged value) fires. §13b: ONE theme ≥20% of equity appends.
+      var geo = (s.foreignPct !== null && s.foreignPct >= 20) ? 'meaningfully international' : null;
+      if (!geo) return null;
+      var themes = {};
+      (acc.holdings || []).forEach(function (h) {
+        var v = (parseFloat(h.price) || 0) * (parseFloat(h.shares) || 0); if (v <= 0) return;
+        var ac = String(h.assetClass || '').toLowerCase(); if (!/stock|equit/.test(ac)) return;
+        for (var i = 0; i < _DI_THEMES.length; i++) { if (_DI_THEMES[i][0].test(String(h.sector || ''))) { var k = _DI_THEMES[i][1]; themes[k] = (themes[k] || 0) + v; break; } }
+      });
+      var top = null; Object.keys(themes).forEach(function (k) { if (!top || themes[k] > themes[top]) top = k; });
+      var sect = (top && s.eq > 0 && themes[top] >= 0.2 * s.eq) ? ', with a tilt toward ' + top : '';
+      return isRoth
+        ? 'It leans ' + geo + sect + ', a shape drawn from the funds your plan offers — and in a Roth that tilt’s upside compounds entirely tax-free.'
+        : 'It leans ' + geo + sect + ', a shape drawn from the funds your plan offers — though in a Traditional account that growth is only tax-deferred, not tax-free.';
+    }
+
+    // §9 assembler — HSA (Layers A/A2 · B · C · C2 · D · E; [IF] clauses dormant)
+    function _diNarrHSA(acc, s, agg) {
+      if (!s.total || !(acc.holdings || []).length) return '';
+      var out = [];
+      if (s.inv > 0) out.push('Your HSA holds ' + _diMoney(s.total) + ' — ' + _diP(s.investedPct) + ' invested and ' + _diP(s.cashPct) + ' in cash.');
+      else out.push('Your HSA holds ' + _diMoney(s.total) + ', all in the cash sweep — earning interest but not yet invested for growth.');
+      if (s.inv > 0 && s.equityPct !== null) {
+        var b = 'The invested sleeve is ' + _diP(s.equityPct) + ' stocks';
+        if (s.bondPct !== null && s.bondPct >= 1) b += ' / ' + _diP(s.bondPct) + ' bonds';
+        if (s.foreignPct !== null && s.foreignPct >= 1) b += ', ' + _diP(s.foreignPct) + ' international';
+        var e = _diE(agg && agg.blendedExpense); if (e !== null) b += ', at a blended ' + e + ' expense';
+        out.push(b + '.');
+      }
+      out.push('Every dollar here went in pre-tax, grows tax-free, and comes out tax-free for medical — the only account taxed nowhere.');
+      var beta = agg && agg.weightedBeta;
+      if (s.inv > 0 && beta !== null && beta !== undefined && (beta >= 1.15 || beta <= 0.85)) {
+        out.push('It rides ' + (beta >= 1.15 ? 'hotter than' : 'calmer than') + ' the market — and because an HSA grows and pays out tax-free for medical, it’s a fitting home for your higher-growth, higher-volatility bets.');
+      }
+      out.push(acc.isFriction
+        ? 'You’ve earmarked this as a medical reserve, so it grows untouched outside your spending plan.'
+        : 'This HSA is counted in your retirement spending plan.');
+      out.push('<span class="modal-tt-wrap" style="display:inline; cursor:help; border-bottom:1px dotted rgba(255,255,255,0.25);">Pay smaller medical bills out-of-pocket and save the receipts — each one is a future tax-free withdrawal you can take any year.<div class="modal-tt" style="bottom:100%;"><strong>Receipt-Bank Potential</strong>Every qualified medical receipt you pay out-of-pocket today is a future TAX-FREE withdrawal you can take any year.</div></span>');
+      return out.join(' ');
+    }
+
+    // §9 assembler — 403(b), [R]/[T] per room (roth403 = [R] "The Roth Shelter"; trad403 = [T]
+    // "The Tax-Shelter"; the planHasRoth gate is inherent — the [R] room only exists if added)
+    function _diNarr403(acc, s, agg, isRoth) {
+      if (!s.total || !(acc.holdings || []).length) return '';
+      var out = [];
+      var mix = _diInstMix(s) || 'from your plan’s menu';
+      out.push(isRoth
+        ? 'This Roth 403(b) is ' + _diSpine(s) + ', built ' + mix + ' — designated Roth dollars inside your tax-sheltered employer plan, where everything grows tax-free.'
+        : 'This Traditional 403(b) is ' + _diSpine(s) + ', built ' + mix + ' — pre-tax salary deferrals inside your tax-sheltered employer plan, growing tax-deferred until you draw on it.');
+      var tilt = _diTiltSentence(acc, s, isRoth); if (tilt) out.push(tilt);
+      var beta = agg && agg.weightedBeta;
+      if (beta !== null && beta !== undefined && (beta >= 1.15 || beta <= 0.85)) {
+        var bw = beta >= 1.15 ? 'harder than' : 'gentler than';
+        out.push(isRoth
+          ? 'It rides ' + bw + ' the market — and because the Roth Shelter pays out tax-free, it’s a fitting home for your higher-growth, higher-volatility bets.'
+          : 'It rides ' + bw + ' the market; in the Tax-Shelter both the gains and the swings are yours until withdrawal, when they’re taxed as ordinary income.');
+      }
+      var ew = _diExpenseWord(agg && agg.blendedExpense);
+      if (ew !== null || s.annuity) {
+        var run = ew !== null ? ew : 'through your plan’s menu';
+        out.push(isRoth
+          ? 'Your funds run ' + run + ' — and since a 403(b) menu often mixes mutual funds with annuity products, the lever is choosing the lowest-cost share class and steering clear of high-fee annuity sub-accounts with surrender charges.'
+          : 'Your funds run ' + run + '; 403(b) menus historically lean on annuities, so fee control means favoring low-cost index or institutional options over insurance products that carry M&E fees and surrender penalties.');
+      }
+      out.push(isRoth
+        ? 'Every dollar here — growth included — comes out tax-free once the 5-year clock is met AND you’re 59½, with no RMDs for you ever. Reach in earlier and the 10% penalty bites the taxable part — there’s no 457-style any-age escape, though Rule-of-55 can help if you leave at 55+.'
+        : 'This is pre-tax money: every dollar — deferrals and growth — is ordinary income when you withdraw, and RMDs begin at 73. Before 59½ a 10% early-withdrawal penalty generally applies (Rule-of-55 and hardship are the main exits) — unlike a 457(b), leaving the job alone doesn’t unlock penalty-free access.');
+      if (acc.catchUp50 || acc.superCatchUp || acc.fifteenYear) {
+        out.push(isRoth
+          ? 'You’ve switched on the catch-up — extra tax-free room (age-50, 60-63 super, or the 15-year-service tier) layered on an already-high ceiling. If your plan matches, capture that free money first.'
+          : 'You’ve switched on the catch-up — extra deductible room (age-50, 60-63 super, or the 15-year-service tier). And if your employer matches, that’s the highest-return dollar you can defer — grab the full match before anything else.');
+      }
+      var contrib = (acc.inflow || 0) * (acc.freq || 0);
+      if (contrib > 0) {
+        out.push(isRoth
+          ? 'At ' + _diMoney(contrib) + '/yr you’re filling a high-limit, tax-free bucket — just remember this shares its ceiling with any 401(k) you also fund.'
+          : 'At ' + _diMoney(contrib) + '/yr you’re deferring meaningful pre-tax capital — lowering today’s tax bill, with the limit shared across this and any 401(k).');
+      }
+      return out.join(' ');
+    }
+
+    // Strip cell with the §1 hover pair (one tooltip, both labeled parts)
+    function _diCell(lbl, valHtml, tipTitle, tip1a, tip1b, valId) {
+      var tt = '<div class="modal-tt" style="bottom:100%; left:0;"><strong>' + tipTitle + '</strong>' + tip1a +
+               (tip1b ? '<br><br><strong>Why it matters for your retirement</strong>' + tip1b : '') + '</div>';
+      return '<div class="hr-cell modal-tt-wrap" style="display:block; cursor:help;"><div class="hr-lbl">' + lbl + '</div><div class="hr-val"' + (valId ? ' id="' + valId + '"' : '') + '>' + valHtml + '</div>' + tt + '</div>';
+    }
+
+    // Bank-room rollup strip (replaces the generic strip for hsa / 403(b) rooms). Contains no
+    // inputs, so full re-render on refresh is focus-safe. Blank beta -> the box is OMITTED (L47).
+    function _diBankStrip(acc, base, s, agg) {
+      var id = acc.id, hsa = base.taxCode === 'hsa', isRoth = /roth403/.test(base.id);
+      var beta = agg && agg.weightedBeta;
+      var h = '<div class="holdings-rollup" id="bank-strip-' + id + '">';
+      if (hsa) {
+        h += _diCell('Invested / Cash', _diP(s.investedPct) + ' / ' + _diP(s.cashPct), 'Invested vs Cash split',
+          _diP(s.investedPct) + ' invested / ' + _diP(s.cashPct) + ' cash. The invested slice is the part working as a stealth retirement account.',
+          'The "invest-above-a-cash-buffer" decision is the core HSA lever — distinguish CASH (spend) from INVESTED (grow).');
+        h += _diCell('Equity %', _diP(s.equityPct), 'Equity share (invested sleeve)',
+          _diP(s.equityPct) + ' of this HSA is in stocks — the long-horizon growth engine of your medical war-chest.',
+          'Only meaningful once the HSA is invested. Many HSAs sit 100% in cash — that idle sweep is usually the headline opportunity.');
+        h += _diCell('Bond %', _diP(s.bondPct), 'Bond share (invested sleeve)',
+          _diP(s.bondPct) + ' sits in bonds — ballast for money you may need for near-term medical costs.',
+          'Same bond signal as any account, framed against medical-spend timing rather than retirement-spend.');
+        h += _diCell('Cash %', _diP(s.cashPct), 'Cash sweep',
+          _diP(s.cashPct) + ' is in the HSA cash sweep — the part that covers this year’s out-of-pocket bills.',
+          'HSAs almost always carry a cash floor (the spend layer). That cash-vs-invested split is the HSA’s defining tension.');
+        h += _diCell('Foreign Tilt', _diP(s.foreignPct), 'International share',
+          _diP(s.foreignPct) + ' of the invested sleeve is international.',
+          'Diversifies the sleeve beyond one economy — identical signal to your other investment accounts.');
+        if (beta !== null && beta !== undefined) {
+          h += _diCell('Weighted Beta', beta.toFixed(2), 'Invested-sleeve beta',
+            'Invested-sleeve beta ' + beta.toFixed(2) + ' vs market.',
+            'Computed on the invested portion only — the cash sweep is beta 0. Left blank rather than faked when holdings don’t publish one.', 'hr-beta');
+        }
+        h += '<div class="hr-cell"><div class="hr-lbl">Blended Yield</div><div class="hr-val" id="hr-yield">' + ((agg && agg.blendedYield !== null && agg.blendedYield !== undefined) ? agg.blendedYield.toFixed(2) + '%' : '—') + '</div></div>';
+        h += _diCell('Avg Expense', (_diE(agg && agg.blendedExpense) || '—'), 'Blended expense',
+          'Weighted expense ratio ' + (_diE(agg && agg.blendedExpense) || '—') + '/yr across the invested sleeve.',
+          'HSA platforms sometimes add an account/admin fee on top — check your provider’s fee schedule alongside the fund expenses.');
+      } else {
+        var bTail = ' Same balance, very different after-tax worth. Unlike a 457(b), reaching this before 59½ generally triggers a 10% penalty — plan to leave it until then.';
+        h += _diCell('Balance', _diMoney(acc.value), 'Current balance in the account',
+          'Current balance in the account.',
+          (isRoth ? 'The Roth Shelter: already-taxed dollars that grow and come out 100% tax-free once qualified.' :
+                    'The Tax-Shelter: pre-tax dollars that grow untaxed until you withdraw — then every dollar is ordinary income.') + bTail);
+        var contrib = (acc.inflow || 0) * (acc.freq || 0);
+        h += _diCell('Annual Contribution', contrib > 0 ? _diMoney(contrib) + ' / yr' : '—', 'What you’re deferring per year',
+          'What you’re deferring per year.',
+          'Capped HIGH — the 403(b) deferral limit matches a 401(k)/457(b). It SHARES the 402(g) elective-deferral limit with any 401(k) you have (unlike the 457, which is separate), but is its own bucket from a 457(b). ' +
+          (isRoth ? 'Roth deferrals lock in tax-free growth.' : 'Pre-tax deferrals lower this year’s taxable income now.'));
+        var mixVal = s.equityPct === null ? '—' : (_diP(s.equityPct) + ' stocks · ' + _diP(s.bondPct) + ' bonds' + ((s.cashPct || 0) >= 1 ? ' · ' + _diP(s.cashPct) + ' cash' : ''));
+        h += _diCell('Asset Mix', mixVal, 'Value-weighted asset mix',
+          'Value-weighted asset mix.',
+          'How your 403(b) is actually invested — chosen from the plan’s menu (often mutual funds AND annuity products). Watch for annuity sub-accounts: they can carry higher fees and surrender charges than plain funds.');
+        if (beta !== null && beta !== undefined) {
+          h += _diCell('Weighted Beta', beta.toFixed(2), 'Value-weighted market sensitivity',
+            'Value-weighted market sensitivity (holdings with a beta).',
+            'How hard your 403(b) swings with the market. Left blank when holdings don’t publish a beta — we leave it empty rather than fake it.', 'hr-beta');
+        }
+        h += _diCell('Blended Yield', ((agg && agg.blendedYield !== null && agg.blendedYield !== undefined) ? agg.blendedYield.toFixed(2) + '%' : '—'), 'Value-weighted dividend yield',
+          'Value-weighted dividend yield.',
+          'Income thrown off inside the account. In a 403(b) these dividends reinvest untaxed — no yearly tax drag, so yield is pure compounding here.', 'hr-yield');
+        h += _diCell('Avg Expense', (_diE(agg && agg.blendedExpense) || '—'), 'Value-weighted expense ratio',
+          'Value-weighted expense ratio.',
+          'Your annual drag. 403(b) menus historically run EXPENSIVE — especially annuity/insurance products with M&E charges. The cheapest available share class (or a low-cost index option if your plan offers one) is the single biggest lever you control.', 'hr-expense');
+      }
+      return h + '</div>';
+    }
+
+    function _diNarrBlock(acc, base, s, agg) {
+      var body = base.taxCode === 'hsa' ? _diNarrHSA(acc, s, agg) : _diNarr403(acc, s, agg, /roth403/.test(base.id));
+      if (!body) return '<div id="di-narr-' + acc.id + '"></div>';   // empty anchor — no fabricated narrative (L47)
+      return '<div class="di-narrative" id="di-narr-' + acc.id + '"><div class="di-narr-head">Datum Intelligence</div><div class="di-narr-body">' + body + '</div></div>';
+    }
+
+    // §2 title hovers — the modal title itself explains the account (verbatim what/why/catch)
+    function _diSetTitle(acc, base) {
+      var el = document.getElementById('modal-acc-title'); if (!el) return;
+      var name = (acc.name || base.title) + ' Details';
+      if (!_diIsBankRoom(base.id)) { el.innerText = name; return; }
+      var tt;
+      if (base.taxCode === 'hsa') {
+        tt = '<strong>The Infirmary — your triple-tax-advantaged health account</strong>' +
+             'The only account taxed nowhere — in, growing, or out (for medical).<br><br>' +
+             'Contributions go in tax-deductible, growth is never taxed, and withdrawals for qualified medical care are tax-free at any age. Not a use-it-or-lose-it FSA: unspent money rolls over, can be invested, and compounds for decades. After 65, non-medical withdrawals simply pay ordinary income tax — a Traditional IRA at worst, tax-free at best.';
+      } else if (/roth403/.test(base.id)) {
+        tt = '<strong>The Roth Shelter — a Roth 403(b)</strong>' +
+             'Tax-free retirement dollars inside a public-school / nonprofit plan.<br><br>' +
+             '<strong>What it is</strong>A designated Roth inside a 403(b), the tax-sheltered-annuity plan offered by §501(c)(3) employers — public schools, colleges, hospitals, churches, and charitable nonprofits. Funded with already-taxed dollars from your paycheck, with the same high deferral limit as a 401(k).<br><br>' +
+             '<strong>Why it matters</strong>Qualified withdrawals (5-year clock met AND age 59½) come out 100% tax-free, growth included. Post-SECURE-2.0 there are no lifetime RMDs on a designated Roth for the original owner. Unlike a Roth IRA, there is NO income limit to contribute.<br><br>' +
+             '<strong>The catch</strong>Your plan must actually offer the Roth option. And unlike a 457(b), there is no penalty-free early escape — reach into it before 59½ (outside Rule-of-55 / hardship) and the 10% penalty applies to the taxable portion.';
+      } else {
+        tt = '<strong>The Tax-Shelter — a Traditional 403(b)</strong>' +
+             'Pre-tax retirement savings for public-school &amp; nonprofit employees.<br><br>' +
+             '<strong>What it is</strong>A Tax-Sheltered Annuity (TSA) plan offered by §501(c)(3) employers — public schools, universities, hospitals, churches, and nonprofits. Funded with pre-tax salary deferrals. The nonprofit/education world’s answer to the corporate 401(k).<br><br>' +
+             '<strong>Why it matters</strong>Deferrals lower this year’s taxable income; growth is tax-deferred. Many plans add an EMPLOYER MATCH — free money you should capture first. Long-tenured staff get a unique 15-year-of-service catch-up on top of the usual limits.<br><br>' +
+             '<strong>The catch</strong>Withdrawals are ordinary income, and before 59½ a 10% early-withdrawal penalty generally applies (Rule-of-55 and hardship are the main exceptions). RMDs begin at 73. Historically these plans lean on annuity products — watch for higher fees and surrender charges.';
+      }
+      el.innerHTML = '<span class="modal-tt-wrap" style="display:inline-flex; width:auto; cursor:help; border-bottom:1px dotted rgba(255,255,255,0.3);">' + name +
+                     '<div class="modal-tt" style="top:100%; bottom:auto; left:0; width:360px; max-height:320px; overflow-y:auto;">' + tt + '</div></span>';
+    }
+
     // --- MODAL ENGINE (BACK OF CARD) ---
     window.openAccountModal = function(id) {
         activeModalId = id;
@@ -3786,8 +4057,8 @@
         if(!acc) return;
         const base = getBaseType(acc.baseId);
         
-        document.getElementById('modal-acc-title').innerText = (acc.name || base.title) + " Details";
-        
+        _diSetTitle(acc, base);   // §2 title hover for bank rooms; plain title otherwise
+
         let html = '';
         
         // SURGICAL: Physics Toggles with explicit mathematical tooltips
@@ -4286,6 +4557,12 @@
                 var _gn  = function (x) { return (x === null || x === undefined) ? '—' : (x >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(x)).toLocaleString('en-US'); };
 
                 // ROLLUP STRIP (above the table) — empty fields show "—", never fake $0/0.
+                // Bank rooms (HSA / 403(b)) carry the Copy Bank §1 signal boxes + hover pairs instead.
+                var _diBank = _diIsBankRoom(base.id);
+                var _diSig = _diBank ? _diSignals(acc) : null;
+                if (_diBank) {
+                  html += _diBankStrip(acc, base, _diSig, _agg);
+                } else {
                 html += '<div class="holdings-rollup">';
                 if (isTaxable) { var _ug = _agg && _agg.unrealizedGain; var _gtaxLine = (typeof _ug === 'number' && _ug > 0) ? ('Tax if you sold it all today ≈ 15% of that gain — roughly $' + Math.round(_ug * 0.15).toLocaleString('en-US') + '.') : '';
                   html += '<div class="hr-cell"><div class="hr-lbl">Unrealized Gain</div><div class="hr-val" id="hr-gain">' + _gn(_ug) + '</div><div class="hr-sub" id="hr-gain-sub">Your unrealized gain — current value minus what you paid (cost basis).</div><div class="hr-sub" id="hr-gaintax" style="margin-top:5px;">' + _gtaxLine + '</div></div>'; }
@@ -4293,6 +4570,7 @@
                 html += '<div class="hr-cell"><div class="hr-lbl">Blended Yield</div><div class="hr-val" id="hr-yield">' + _pct(_agg && _agg.blendedYield) + '</div></div>';
                 html += '<div class="hr-cell"><div class="hr-lbl">Avg Expense</div><div class="hr-val" id="hr-expense">' + _pct(_agg && _agg.blendedExpense) + '</div></div>';
                 html += '</div>';
+                }
 
                 // PER-taxCode COLUMN MANIFEST -> one render loop. cost-basis + unrealized-gain render TAXABLE-ONLY.
                 var _ti = function (h, i, f, ph, num) { return '<td><input type="' + (num ? 'number' : 'text') + '" class="holding-input" title="' + _esc(h[f]) + '" value="' + _esc(h[f]) + '" placeholder="' + (ph || '') + '" oninput="updateHolding(\'' + id + '\', ' + i + ', \'' + f + '\', this.value)"></td>'; };
@@ -4343,6 +4621,7 @@
                 html += '</table>';
                 html += '<button class="add-space-btn" type="button" style="margin-top: 10px; width: max-content; padding: 6px 12px; border-style: solid; color:var(--white);" onclick="addHolding(\'' + id + '\')">+ Add Holding</button>';
                 html += '<div style="text-align:right; margin-top: 10px; color: var(--muted); font-family: var(--font-mono); font-size: 11px;">TOTAL PORTFOLIO VALUE: <span id="modal-total-val" style="color:var(--white); font-size: 16px; font-weight:bold;">$' + (acc.value || 0).toLocaleString('en-US') + '</span></div></div>';
+                if (_diBank) html += _diNarrBlock(acc, base, _diSig, _agg);   // §9 narrative below the table
             } else {
                 document.getElementById('modal-card').style.width = "550px";
             }
@@ -4588,6 +4867,8 @@
         if (field === 'price' || field === 'shares' || field === 'costBasis' || field === 'beta' || field === 'dividendYield' || field === 'expRatio') {
             recalcPortfolio(acc);          // acc.value + acc._agg + updateSVGs (Shape) + left-panel
             refreshModalHoldings(acc);     // patch the modal rollup strip + per-row value/gain + total
+        } else if (field === 'assetClass' || field === 'geography' || field === 'sector' || field === 'instrumentType') {
+            refreshModalHoldings(acc);     // categorical fields feed the DI mix/tilt signals — keep the narrative live
         }
     }
 
@@ -4605,6 +4886,15 @@
             if (ge) { var cb = parseFloat(h.costBasis); if (!isFinite(cb) || cb <= 0) { ge.innerHTML = '—'; ge.style.color = 'var(--muted)'; } else { var g = (parseFloat(h.price) || 0) * (parseFloat(h.shares) || 0) - cb; ge.style.color = g >= 0 ? 'var(--teal-mid)' : 'var(--danger)'; ge.innerHTML = (g >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(g)).toLocaleString('en-US'); } }
         });
         var agg = (window.DatumMath ? DatumMath.portfolioStats([acc]) : null); acc._agg = agg;
+        // Bank rooms: rebuild the §1 strip + §9 narrative in place. Neither contains an input,
+        // so a full swap is focus-safe (the beta box can honestly appear/disappear — L47).
+        if (_diIsBankRoom(base.id)) {
+            var _s = _diSignals(acc);
+            var _se = document.getElementById('bank-strip-' + acc.id);
+            if (_se) _se.outerHTML = _diBankStrip(acc, base, _s, agg);
+            var _ne = document.getElementById('di-narr-' + acc.id);
+            if (_ne) _ne.outerHTML = _diNarrBlock(acc, base, _s, agg);
+        }
         var setT = function (elid, txt) { var e = document.getElementById(elid); if (e) e.innerText = txt; };
         setT('hr-gain', _gn(agg && agg.unrealizedGain));
         var _ug = agg && agg.unrealizedGain; var _gt = document.getElementById('hr-gaintax');
@@ -5025,7 +5315,7 @@
       const acc = state.accounts.find(a => a.id === id);
       if(acc) {
           acc.name = newName;
-          if(activeModalId === id) document.getElementById('modal-acc-title').innerText = newName + " Details";
+          if(activeModalId === id) _diSetTitle(acc, getBaseType(acc.baseId));   // keeps the §2 title hover on bank rooms
       }
     };
 
