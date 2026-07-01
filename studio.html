@@ -36,6 +36,7 @@
     --cold: #64b4ff;
     --hot: #ffb864;
     --shield: #8a64ff;
+    --hsa: #86e07a;   /* Infirmary wall — pure yellow-green, deliberately off the site teal (#5DCAA5) family */
   }
 
   body {
@@ -981,6 +982,7 @@
   .blueprint-svg.thermal-mode .room-rect.tax-roth { fill: rgba(100, 180, 255, 0.2); stroke: var(--cold); stroke-width: 2px;}
   .blueprint-svg.thermal-mode .room-rect.tax-pretax { fill: rgba(255, 184, 100, 0.2); stroke: var(--hot); stroke-width: 2px;}
   .blueprint-svg.thermal-mode .room-rect.tax-liquid { fill: rgba(29, 158, 117, 0.05); stroke: var(--teal-mid); }
+  .blueprint-svg.thermal-mode .room-rect.tax-hsa { fill: rgba(134, 224, 122, 0.2); stroke: var(--hsa); stroke-width: 2px;}
   .blueprint-svg.thermal-mode .room-grp.debt-room .room-rect { fill: rgba(226, 75, 74, 0.2); stroke: var(--danger); }
   .blueprint-svg.thermal-mode .room-grp.trust-room .room-rect { fill: rgba(138, 100, 255, 0.2); stroke: var(--shield); stroke-width: 2px; }
 
@@ -3456,6 +3458,9 @@
       { id: 'rothira', type: 'primary', taxCode: 'roth', hasInflow: true, isInvestment: true, title: 'Roth IRA', meta: 'The Conservatory', desc: 'The tax-free growth environment.' },
       { id: 'pretax457b', type: 'primary', taxCode: 'pretax', hasInflow: true, isInvestment: true, title: 'Pre-Tax 457(b)', meta: 'The Workshop', desc: 'Accessible penalty-free before 59.5.' },
       { id: 'roth457b', type: 'primary', taxCode: 'roth', hasInflow: true, isInvestment: true, title: 'Roth 457(b)', meta: 'The Annex', desc: 'Tax-free growth, accessible early.' },
+      { id: 'trad403', type: 'primary', taxCode: 'pretax', hasInflow: true, isInvestment: true, title: 'Pre-Tax 403(b)', meta: 'The Tenure', desc: 'School & nonprofit plan. Taxed as ordinary income.' },
+      { id: 'roth403', type: 'primary', taxCode: 'roth', hasInflow: true, isInvestment: true, title: 'Roth 403(b)', meta: 'The Chancel', desc: 'Tax-free growth in a school/nonprofit plan.' },
+      { id: 'hsa', type: 'primary', taxCode: 'hsa', hasInflow: true, isInvestment: true, title: 'HSA', meta: 'The Infirmary', desc: 'The only account taxed nowhere — in, growing, or out (for medical).' },
       { id: 'pension', type: 'primary', taxCode: 'income', hasCOLA: true, title: 'Pension (Annual)', meta: 'The Foundation', desc: 'Secure, fixed income floor.' },
       
       { id: 'mortgage_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'Mortgage', meta: 'The Moat', desc: 'Liability. Subtracts from Estate Sq Footage.' },
@@ -3476,6 +3481,9 @@
       { id: 'rothira_co', type: 'coarch', taxCode: 'roth', hasInflow: true, isInvestment: true, title: 'Roth IRA', meta: 'Co-Conservatory', desc: 'Tax-free environment.' },
       { id: 'pretax457b_co', type: 'coarch', taxCode: 'pretax', hasInflow: true, isInvestment: true, title: 'Pre-Tax 457(b)', meta: 'Co-Workshop', desc: 'Accessible before 59.5.' },
       { id: 'roth457b_co', type: 'coarch', taxCode: 'roth', hasInflow: true, isInvestment: true, title: 'Roth 457(b)', meta: 'Co-Annex', desc: 'Tax-free growth.' },
+      { id: 'trad403_co', type: 'coarch', taxCode: 'pretax', hasInflow: true, isInvestment: true, title: 'Pre-Tax 403(b)', meta: 'Co-Tenure', desc: 'School & nonprofit plan. Ordinary income.' },
+      { id: 'roth403_co', type: 'coarch', taxCode: 'roth', hasInflow: true, isInvestment: true, title: 'Roth 403(b)', meta: 'Co-Chancel', desc: 'Tax-free school/nonprofit growth.' },
+      { id: 'hsa_co', type: 'coarch', taxCode: 'hsa', hasInflow: true, isInvestment: true, title: 'HSA', meta: 'Co-Infirmary', desc: 'Triple-tax health account.' },
       { id: 'pension_co', type: 'coarch', taxCode: 'income', hasCOLA: true, title: 'Pension (Annual)', meta: 'Co-Foundation', desc: 'Secure income floor.' },
       
       { id: 'mortgage_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'Mortgage', meta: 'Co-Moat', desc: 'Liability. Subtracts from Estate Sq Footage.' },
@@ -3495,7 +3503,8 @@
       checking: "Operating cash for daily life — not retirement capital. It lives in your net worth, but it doesn't lift your Shape.",
       pension:  "A guaranteed income stream, not investable principal. It reinforces your floor later in the Datum Builder — not your portfolio ceiling here.",
       trust:    "Earmarked for generational transfer. Real wealth, but not spendable retirement capital — so it stays out of your Shape.",
-      edu:      "Earmarked for education. Real wealth, but not spendable retirement capital — so it stays out of your Shape."
+      edu:      "Earmarked for education. Real wealth, but not spendable retirement capital — so it stays out of your Shape.",
+      hsa:      "Earmarked for medical. Real wealth that grows untouched in your estate and net worth — but the Shape won't spend from it."
     };
     function shapeExclusionNote(baseId) {
       var id = String(baseId || '');
@@ -3503,6 +3512,7 @@
       if (id.indexOf('pension')  === 0) return SHAPE_EXCLUSION_NOTE.pension;  // pension / pension_co
       if (id === 'trust')               return SHAPE_EXCLUSION_NOTE.trust;
       if (id === '529plan')             return SHAPE_EXCLUSION_NOTE.edu;
+      if (id.indexOf('hsa') === 0)      return SHAPE_EXCLUSION_NOTE.hsa;      // hsa / hsa_co
       return '';
     }
 
@@ -3614,7 +3624,7 @@
             html += '<div class="wr-hop">Your pension covers your full Datum — no account withdrawal needed this year.</div>';
         } else {
             html += '<div class="wr-order"><b>Pulled tax-smart — taxable first, pre-tax next, Roth last:</b></div>';
-            var TYPE = { liquid: 'Taxable', pretax: 'Pre-tax', roth: 'Roth' };
+            var TYPE = { liquid: 'Taxable', pretax: 'Pre-tax', roth: 'Roth', hsa: 'HSA' };
             r.hops.forEach(function (h, i) {
                 var lbl = TYPE[h.taxCode] || 'Account';
                 var tax = (h.taxCode === 'roth') ? '(no tax)' : '(~' + _wantMoney(h.taxEstimate) + ' tax)';
@@ -3791,7 +3801,19 @@
             <div class="modal-tt" style="top:100%; bottom:auto;"><strong>Leave it out</strong>Off = this account sits outside your plan entirely — not in your net worth, not funding your spending. Use it for money that isn't part of this picture.</div>
         </div>`;
 
-        html += `
+        if (base.taxCode === 'hsa') {
+            // HSA-unique set-aside framing (default-ON at creation) — Copy Bank §5 verbatim
+            html += `
+        <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
+            <span class="toggle-label" style="color:var(--teal-mid);">Earmarked for medical (set-aside)</span>
+            <label class="switch">
+              <input type="checkbox" ${acc.isFriction ? 'checked' : ''} onchange="updateAccToggle('${id}', 'isFriction', this.checked)">
+              <span class="slider"></span>
+            </label>
+            <div class="modal-tt" style="top:100%; bottom:auto;"><strong>Medical Reserve</strong>Treat my HSA as a dedicated medical reserve — count it in net worth and the estate, but DON'T fund general retirement spending from it. Many planners hold the HSA as a sacred medical/LTC bucket.</div>
+        </div>`;
+        } else {
+            html += `
         <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
             <span class="toggle-label" style="color:var(--teal-mid);">Keep it, but don't spend from it</span>
             <label class="switch">
@@ -3800,6 +3822,7 @@
             </label>
             <div class="modal-tt" style="top:100%; bottom:auto;"><strong>Set aside, untouched</strong>On = this account still counts in your net worth and keeps growing — but your plan won't pull from it to cover spending. For money you've earmarked for something else.</div>
         </div>`;
+        }
 
         if (base.taxCode === 'debt') {
              html += `
@@ -3858,7 +3881,10 @@
         </div>`;
 
         if(base.taxCode === 'pretax' || base.taxCode === 'roth') {
-            let is401k = base.id.includes('401k');
+            // §402(g)-class plans (401k / 403b / 457b) share the high elective-deferral figures; IRA is its own bucket.
+            let is401k = /401k|403|457b/.test(base.id);
+            let is403 = base.id.includes('403');
+            let hasRule55 = /401k|403/.test(base.id);   // Rule-of-55 axis: 401(k)/403(b) only — the 457(b) never carries the penalty
             let ownerPrefix = base.type === 'coarch' ? 'co' : 'pri';
             let dobVal = document.getElementById(ownerPrefix + '-dob').value;
             
@@ -3892,7 +3918,7 @@
                 </div>
             `;
             
-            if (is401k) {
+            if (hasRule55) {
                 html += `
                 <div class="toggle-row modal-tt-wrap" style="border-bottom:none; padding-bottom: 0; margin-bottom: 8px; margin-top: 15px;">
                     <span class="toggle-label" style="color:var(--teal-mid);">Enable Rule of 55 Access</span>
@@ -3902,7 +3928,7 @@
                     </label>
                     <div class="modal-tt"><strong>Accelerate Horizon</strong>Calibrates the engine to assume penalty-free capital extraction at age 55 due to separation of service.</div>
                 </div>
-                <div style="font-size: 10px; color: var(--muted); font-family: var(--font-serif); font-style: italic; margin-bottom: 12px; line-height: 1.4;">Separation from service in or after the year turning 55 allows penalty-free access to this specific 401(k) architecture.</div>
+                <div style="font-size: 10px; color: var(--muted); font-family: var(--font-serif); font-style: italic; margin-bottom: 12px; line-height: 1.4;">Separation from service in or after the year turning 55 allows penalty-free access to this specific ${is403 ? '403(b)' : '401(k)'} architecture.</div>
                 `;
             }
             
@@ -3913,20 +3939,22 @@
                 </div>
             </div>`;
 
-            // SURGICAL: Structural Injection Limits (Editable constraints)
-            let limitName = is401k ? "401(k) / 457(b) Limits" : "IRA Limits";
-            let baseLim = acc.baseLimit !== undefined ? acc.baseLimit : (is401k ? 23500 : 7000);
-            let c50 = acc.catchUpLimit !== undefined ? acc.catchUpLimit : (is401k ? 8000 : 1000);
-            let sc60 = acc.superCatchUpLimit !== undefined ? acc.superCatchUpLimit : (is401k ? 11250 : 0); 
+            // SURGICAL: Structural Injection Limits (Editable constraints) — 2026 IRS defaults
+            let limitName = is403 ? "403(b) Limits" : (is401k ? "401(k) / 457(b) Limits" : "IRA Limits");
+            let baseLim = acc.baseLimit !== undefined ? acc.baseLimit : (is401k ? 24500 : 7500);
+            let c50 = acc.catchUpLimit !== undefined ? acc.catchUpLimit : (is401k ? 8000 : 1100);
+            let sc60 = acc.superCatchUpLimit !== undefined ? acc.superCatchUpLimit : (is401k ? 11250 : 0);
+            let f15 = acc.fifteenYearLimit !== undefined ? acc.fifteenYearLimit : 3000;   // 403(b)-only: 15-yr-of-service tier ($3k/yr, $15k lifetime)
 
             let currentLimit = parseInt(baseLim);
             if(acc.superCatchUp) currentLimit += parseInt(sc60);
             else if(acc.catchUp50) currentLimit += parseInt(c50);
+            if(is403 && acc.fifteenYear) currentLimit += parseInt(f15);
 
             html += `
             <div style="margin-top:20px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px;">
                 <div class="input-label" style="color:var(--gold); margin-bottom:6px;">CONTRIBUTION LIMITS (${limitName})</div>
-                <div style="font-family:var(--font-mono);font-size:9px;color:rgba(255,255,255,0.3);margin-bottom:10px;letter-spacing:0.05em;">2025 IRS limits — <a href="https://www.irs.gov/retirement-plans" target="_blank" rel="noopener" style="color:rgba(93,202,165,0.4);text-decoration:none;">irs.gov/retirement-plans</a></div>
+                <div style="font-family:var(--font-mono);font-size:9px;color:rgba(255,255,255,0.3);margin-bottom:10px;letter-spacing:0.05em;">2026 IRS limits — <a href="https://www.irs.gov/retirement-plans" target="_blank" rel="noopener" style="color:rgba(93,202,165,0.4);text-decoration:none;">irs.gov/retirement-plans</a></div>
                 
                 <div class="field-row" style="margin-bottom:10px;">
                     <div><div class="input-label">Base Limit</div><input type="number" class="small-field" value="${baseLim}" oninput="updateAccField('${id}', 'baseLimit', this.value)"></div>
@@ -3935,6 +3963,7 @@
                 ${is401k ? `
                 <div class="field-row" style="margin-bottom:15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
                     <div><div class="input-label">Super Catch-Up (60-63)</div><input type="number" class="small-field" value="${sc60}" oninput="updateAccField('${id}', 'superCatchUpLimit', this.value)"></div>
+                    ${is403 ? `<div><div class="input-label">15-Yr Service Catch-Up</div><input type="number" class="small-field" value="${f15}" oninput="updateAccField('${id}', 'fifteenYearLimit', this.value)"></div>` : ``}
                 </div>` : `<div style="border-bottom:1px solid rgba(255,255,255,0.05); margin-bottom:15px;"></div>`}
 
                 <div class="toggle-row" style="border-bottom:none; padding-bottom: 0; margin-bottom: 8px;">
@@ -3947,7 +3976,7 @@
             `;
             if(is401k) {
                 html += `
-                <div class="toggle-row" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 12px; margin-bottom: 8px; margin-top: 8px;">
+                <div class="toggle-row" style="border-bottom:${is403 ? 'none' : '1px solid rgba(255,255,255,0.05)'}; padding-bottom: 12px; margin-bottom: 8px; margin-top: 8px;">
                     <span class="toggle-label" style="color:var(--gold);">Enable Super Catch-Up (Age 60-63)</span>
                     <label class="switch">
                       <input type="checkbox" ${acc.superCatchUp ? 'checked' : ''} onchange="updateAccToggle('${id}', 'superCatchUp', this.checked)">
@@ -3955,6 +3984,18 @@
                     </label>
                 </div>
                 `;
+                if(is403) {
+                    html += `
+                <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 12px; margin-bottom: 8px; margin-top: 8px;">
+                    <span class="toggle-label" style="color:var(--gold);">Enable 15-Year Service Catch-Up</span>
+                    <label class="switch">
+                      <input type="checkbox" ${acc.fifteenYear ? 'checked' : ''} onchange="updateAccToggle('${id}', 'fifteenYear', this.checked)">
+                      <span class="slider"></span>
+                    </label>
+                    <div class="modal-tt"><strong>Tenure Tier</strong>15+ years at the SAME §501(c)(3) employer, if the plan permits: up to $3,000/yr extra, capped at $15,000 lifetime, any age. Stacks with the age-50 catch-up — deferrals fill this tier first.</div>
+                </div>
+                    `;
+                }
             } else {
                  html += `<div style="border-bottom:1px solid rgba(255,255,255,0.05); margin-bottom:8px; padding-bottom:12px;"></div>`;
             }
@@ -3963,6 +4004,101 @@
                 <div style="display:flex; justify-content: space-between; padding-top: 5px;">
                     <span class="input-label" style="color:var(--teal-mid);">Active Maximum Injection</span>
                     <span style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold; font-size:13px;" id="limit-calc-${id}">$${currentLimit.toLocaleString()} / YR</span>
+                </div>
+            </div>`;
+        }
+
+        if (base.taxCode === 'hsa') {
+            // THE INFIRMARY — triple-tax HSA. Copy = Architect-owned verbatim (HSA Copy Bank §3a/§3b/§4/§8).
+            // Dated IRS constants (Rev. Proc. 2025-19 / Pub 969) — LOOKUP by tax year, never guess (Lesson 47).
+            const HSA_LIMITS = { 2025: { self: 4300, family: 8550, catch: 1000 }, 2026: { self: 4400, family: 8750, catch: 1000 } };
+            let hsaYear = new Date().getFullYear();
+            let hsaLim = HSA_LIMITS[hsaYear];
+            let hsaTier = acc.coverageTier || '';                 // '' = unknown -> show both tiers, never guess
+            let hsaEmp = parseFloat(acc.employerContrib) || 0;    // employer dollars CONSUME the same limit
+            let hsaInjection;
+            if (!hsaLim) hsaInjection = 'Limits pending IRS release';
+            else if (!hsaTier) hsaInjection = `$${hsaLim.self.toLocaleString()} self · $${hsaLim.family.toLocaleString()} family`;
+            else hsaInjection = `$${Math.max(0, (hsaTier === 'family' ? hsaLim.family : hsaLim.self) + (acc.catchUp55 ? hsaLim.catch : 0) - hsaEmp).toLocaleString()} / YR`;
+
+            html += `
+            <div style="margin-top:20px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px;">
+                <div class="input-label" style="color:var(--gold); margin-bottom:10px;">HSA ELIGIBILITY — WHO CAN CONTRIBUTE</div>
+                <div class="modal-tt-wrap" style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">HDHP enrollment</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px; text-align:right; max-width:60%;">HSA-qualified High-Deductible Health Plan — and ONLY that plan</span>
+                    <div class="modal-tt"><strong>The Gate</strong>For 2026 an HDHP needs a deductible of at least $1,700 self-only / $3,400 family, with out-of-pocket capped at $8,500 / $17,000. You can only contribute for the months you were HDHP-covered on the 1st.</div>
+                </div>
+                <div class="modal-tt-wrap" style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">No disqualifying coverage</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px; text-align:right; max-width:60%;">No other coverage that pays before the deductible</span>
+                    <div class="modal-tt"><strong>The Silent Disqualifier</strong>A spouse's general-purpose FSA can disqualify you even if you're not on their plan. Limited-purpose (dental/vision) FSAs are OK.</div>
+                </div>
+                <div class="modal-tt-wrap" style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">Not enrolled in Medicare</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px; text-align:right; max-width:60%;">Any part of Medicare ends new contributions — spending is still fine</span>
+                    <div class="modal-tt"><strong>The Medicare Cliff</strong>Social Security at/after 65 auto-enrolls you in Part A, often retroactively up to 6 months — stop contributions ahead of Medicare to avoid an excess-contribution penalty.</div>
+                </div>
+                <div style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">Not a dependent</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px;">Can't be claimed on someone else's return</span>
+                </div>
+                <div style="font-size: 10px; color: var(--muted); font-family: var(--font-serif); font-style: italic; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.1); line-height: 1.4;">Eligibility is tested on the FIRST day of each month; the annual limit prorates by eligible months (last-month rule excepted).</div>
+            </div>
+
+            <div style="padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px;">
+                <div class="input-label" style="color:var(--gold); margin-bottom:10px;">WITHDRAWAL RULES & ACCESSIBILITY</div>
+                <div style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">Qualified medical — ANY age</span>
+                    <span style="font-family: var(--font-mono); color: var(--teal-mid); font-size:10px; font-weight:bold;">Tax-free, penalty-free, forever</span>
+                </div>
+                <div style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">Non-medical BEFORE 65</span>
+                    <span style="font-family: var(--font-mono); color: var(--danger); font-size:10px;">Income tax + a 20% penalty</span>
+                </div>
+                <div class="modal-tt-wrap" style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">Non-medical AT/AFTER 65</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px;">Income tax only — no penalty. "Becomes a Traditional IRA."</span>
+                    <div class="modal-tt"><strong>The Retirement Unlock</strong>The worst case for an HSA is "as good as a Traditional IRA" — and the best case (medical) is tax-free.</div>
+                </div>
+                <div style="display:flex; justify-content: space-between; margin-bottom: 8px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px;">
+                    <span class="input-label" style="color:var(--teal-mid);">No RMDs</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px;">Never any Required Minimum Distributions</span>
+                </div>
+                <div class="modal-tt-wrap" style="display:flex; justify-content: space-between;">
+                    <span class="input-label" style="color:var(--teal-mid);">Portable</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px;">It follows the person, not the job</span>
+                    <div class="modal-tt"><strong>Inheritance Caveat</strong>A spouse beneficiary inherits it AS an HSA. A non-spouse beneficiary must take it as fully-taxable income in the year of death — name a spouse where possible.</div>
+                </div>
+            </div>
+
+            <div style="padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px;">
+                <div class="input-label" style="color:var(--gold); margin-bottom:6px;">CONTRIBUTION LIMITS (HSA Limits)</div>
+                <div style="font-family:var(--font-mono);font-size:9px;color:rgba(255,255,255,0.3);margin-bottom:10px;letter-spacing:0.05em;">${hsaLim ? hsaYear + ' IRS limits — Rev. Proc. 2025-19 / Pub 969' : 'Limits pending IRS release'} — set by your HDHP COVERAGE TIER, not your salary</div>
+                <div class="field-row" style="margin-bottom:10px;">
+                    <div class="modal-tt-wrap" style="flex-direction:column; align-items:flex-start;">
+                        <div class="input-label" style="width:100%;">HDHP Coverage Tier</div>
+                        <select class="small-field" style="background: var(--bg-navy);" onchange="updateAccToggle('${id}', 'coverageTier', this.value)">
+                            <option value="" ${!hsaTier ? 'selected' : ''}>Unknown (show both)</option>
+                            <option value="self" ${hsaTier === 'self' ? 'selected' : ''}>Self-only${hsaLim ? ' ($' + hsaLim.self.toLocaleString() + ')' : ''}</option>
+                            <option value="family" ${hsaTier === 'family' ? 'selected' : ''}>Family${hsaLim ? ' ($' + hsaLim.family.toLocaleString() + ')' : ''}</option>
+                        </select>
+                        <div class="modal-tt" style="left:0; right:auto; bottom:100%; transform:translateY(-10px);"><strong>Coverage, Not Filing Status</strong>"Family" = your HDHP covers more than just you. The limit depends on self-only vs family HDHP coverage, NOT on income.</div>
+                    </div>
+                    <div><div class="input-label">Employer Contributions</div><input type="number" class="small-field" value="${acc.employerContrib || ''}" placeholder="0" oninput="updateAccField('${id}', 'employerContrib', this.value)"></div>
+                </div>
+                <div style="font-size: 10px; color: var(--muted); font-family: var(--font-serif); font-style: italic; margin-bottom: 12px; line-height: 1.4;">Anything your employer puts in (including "seed" money) counts toward the SAME limit — it does not stack on top.</div>
+                <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 12px; margin-bottom: 8px;">
+                    <span class="toggle-label" style="color:var(--teal-mid);">Enable Catch-Up (Age 55+)</span>
+                    <label class="switch">
+                      <input type="checkbox" ${acc.catchUp55 ? 'checked' : ''} onchange="updateAccToggle('${id}', 'catchUp55', this.checked)">
+                      <span class="slider"></span>
+                    </label>
+                    <div class="modal-tt"><strong>55, Not 50</strong>At 55+ add a $1,000 catch-up (flat — not indexed). If BOTH spouses are 55+, each $1,000 must go into THAT spouse's OWN HSA.</div>
+                </div>
+                <div style="display:flex; justify-content: space-between; padding-top: 5px;">
+                    <span class="input-label" style="color:var(--teal-mid);">Active Maximum Injection</span>
+                    <span style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold; font-size:13px;" id="limit-calc-${id}">${hsaInjection}</span>
                 </div>
             </div>`;
         }
@@ -4236,14 +4372,29 @@
 
             if(field === 'linkedAssetId') openAccountModal(id); 
 
-            // Live DOM update for limits calculation
-            if(field === 'baseLimit' || field === 'catchUpLimit' || field === 'superCatchUpLimit') {
+            // Live DOM update for limits calculation — same §402(g)-class test as the modal (401k/403b/457b)
+            if(field === 'baseLimit' || field === 'catchUpLimit' || field === 'superCatchUpLimit' || field === 'fifteenYearLimit') {
                  let el = document.getElementById(`limit-calc-${id}`);
                  if(el) {
-                     let cLim = parseInt(acc.baseLimit !== undefined ? acc.baseLimit : (acc.baseId.includes('401k') ? 24500 : 7000));
-                     if(acc.superCatchUp) cLim += parseInt(acc.superCatchUpLimit !== undefined ? acc.superCatchUpLimit : (acc.baseId.includes('401k') ? 11250 : 0));
-                     else if (acc.catchUp50) cLim += parseInt(acc.catchUpLimit !== undefined ? acc.catchUpLimit : (acc.baseId.includes('401k') ? 8000 : 1000));
+                     let hiClass = /401k|403|457b/.test(acc.baseId);
+                     let cLim = parseInt(acc.baseLimit !== undefined ? acc.baseLimit : (hiClass ? 24500 : 7500));
+                     if(acc.superCatchUp) cLim += parseInt(acc.superCatchUpLimit !== undefined ? acc.superCatchUpLimit : (hiClass ? 11250 : 0));
+                     else if (acc.catchUp50) cLim += parseInt(acc.catchUpLimit !== undefined ? acc.catchUpLimit : (hiClass ? 8000 : 1100));
+                     if(acc.baseId.includes('403') && acc.fifteenYear) cLim += parseInt(acc.fifteenYearLimit !== undefined ? acc.fifteenYearLimit : 3000);
                      el.innerText = `$${cLim.toLocaleString()} / YR`;
+                 }
+            }
+            // HSA: employer contributions consume the SAME limit — live-recalc the injection line
+            if(field === 'employerContrib') {
+                 let el = document.getElementById(`limit-calc-${id}`);
+                 let b = getBaseType(acc.baseId);
+                 if(el && b && b.taxCode === 'hsa') {
+                     const HSA_LIMITS = { 2025: { self: 4300, family: 8550, catch: 1000 }, 2026: { self: 4400, family: 8750, catch: 1000 } };
+                     let lim = HSA_LIMITS[new Date().getFullYear()];
+                     let tier = acc.coverageTier || '';
+                     if (!lim) el.innerText = 'Limits pending IRS release';
+                     else if (!tier) el.innerText = `$${lim.self.toLocaleString()} self · $${lim.family.toLocaleString()} family`;
+                     else el.innerText = `$${Math.max(0, (tier === 'family' ? lim.family : lim.self) + (acc.catchUp55 ? lim.catch : 0) - (parseFloat(acc.employerContrib) || 0)).toLocaleString()} / YR`;
                  }
             }
 
@@ -4825,7 +4976,8 @@
       const base = getBaseType(baseId);
       const newId = 'inst_' + Math.random().toString(36).substr(2, 9);
       var wasEmpty = !(state.accounts && state.accounts.length);   // §22 one-shot 0->1 detect (before push)
-      state.accounts.push({ id: newId, baseId: baseId, name: base.title, value: 0, inflow: 0, freq: 12, intRate: 0, term: null, exclude: false, notes: '', cola: 0, linkedAssetId: null, useRule55: false, isNew: true, isFriction: false, isPriority: false, holdings: [], trustType: 'Irrevocable', disbursement: 'Discretionary' });
+      var frictionDefault = base.taxCode === 'hsa';                // HSA: "earmarked for medical" set-aside defaults ON (Copy Bank §5)
+      state.accounts.push({ id: newId, baseId: baseId, name: base.title, value: 0, inflow: 0, freq: 12, intRate: 0, term: null, exclude: false, notes: '', cola: 0, linkedAssetId: null, useRule55: false, isNew: true, isFriction: frictionDefault, isPriority: false, holdings: [], trustType: 'Irrevocable', disbursement: 'Discretionary' });
       renderInputs();
       updateSVGs();
       updateAnalysisText();
@@ -5331,6 +5483,15 @@
         roth457b:      'roth_457b',    roth457b_co:      'roth_457b',
         tradira:       'pretax_ira',   tradira_co:       'pretax_ira',
         rothira:       'roth_ira',     rothira_co:       'roth_ira',
+        // 403(b) — WIRE-CLASS ENCODING, not a type alias (Captain ruling 2026-07-01). The 403(b) is native
+        // first-class everywhere in this codebase (own registry rows, "403(b) Limits", 15-yr tier, rooms);
+        // this map is the ONE place the engine enum exists. The live engine's schema is a strict literal
+        // (pretax_457b/401k/ira, roth_457b/401k/ira, taxable, hysa, pension — verified 2026-07-01: an unknown
+        // type 422s the WHOLE request, killing the Shape). So a held 403(b) ships as its drawdown class —
+        // identical §402(g) pretax/roth treatment — until the engine grows native 403b enums. PROMOTE-ME:
+        // when pretax_403b/roth_403b land server-side, flip these four values and delete this paragraph.
+        trad403:       'pretax_401k',  trad403_co:       'pretax_401k',
+        roth403:       'roth_401k',    roth403_co:       'roth_401k',
         taxable:       'taxable',
         savings:       'hysa',         savings_primary:  'hysa',      savings_co: 'hysa',
         crypto:        'taxable',      crypto_primary:   'taxable',   crypto_co:  'taxable',
@@ -5343,6 +5504,7 @@
         'property', 'auto', 'auto_primary', 'auto_co',
         'collectibles', 'collectibles_primary', 'collectibles_co',
         'trust', '529plan',
+        'hsa', 'hsa_co',   // medical set-aside — never engine spend-mass (Copy Bank §0.6; toggle-OFF inclusion parked)
         'mortgage_joint',   'auto_debt_joint',   'rev_debt_joint',   'personal_loan_joint',
         'mortgage_primary', 'auto_debt_primary', 'student_loan_primary', 'rev_debt_primary', 'personal_loan_primary',
         'mortgage_co',      'auto_debt_co',      'student_loan_co',  'rev_debt_co', 'personal_loan_co'

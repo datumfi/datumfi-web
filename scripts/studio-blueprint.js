@@ -45,10 +45,14 @@
   var BASE_TO_BUCKET = {
     pretax401k: 'traditional', pretax401k_co: 'traditional',
     pretax457b: 'traditional', pretax457b_co: 'traditional',
+    trad403:    'traditional', trad403_co:    'traditional',
     tradira:    'traditional', tradira_co:    'traditional',
     roth401k:   'roth',        roth401k_co:   'roth',
     roth457b:   'roth',        roth457b_co:   'roth',
+    roth403:    'roth',        roth403_co:    'roth',
     rothira:    'roth',        rothira_co:    'roth',
+    // hsa deliberately ABSENT — the medical set-aside keeps The Infirmary in estate/net-worth
+    // but OUT of the Shape's investable spend-mass (same mechanism as trust/529, Copy Bank §0.6).
     taxable:    'taxable',
     savings:    'taxable',     savings_primary: 'taxable', savings_co: 'taxable',
     crypto:     'taxable',     crypto_primary:  'taxable', crypto_co:  'taxable'
