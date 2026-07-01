@@ -31,6 +31,9 @@ function audit(T) {
     if (e.betaSrc === 'Yahoo Finance' && e.betaMethod !== '5Y monthly vs S&P 500') v.push(`${k}: wrong beta method`);
     // (7) NO PRICE: price is live-feed-only; a static bundle price is an unsourced guess (Lesson 47).
     if (e.price != null || e.priceSource != null) v.push(`${k}: carries a PRICE key (bundle must never emit price)`);
+    // (8) expRatio SOURCED-OR-BLANK: any expRatio must be issuer-sourced (carry expRatioSrc); a bare
+    //     hand-typed expRatio is an unsourced guess (Lesson 47, same wall as price).
+    if (e.expRatio != null && !e.expRatioSrc) v.push(`${k}: expRatio without expRatioSrc (unsourced hand-typed value)`);
   }
   return v;
 }
@@ -55,10 +58,11 @@ const poison = JSON.parse(JSON.stringify({
   FAKE2: { name: 'x', instrumentType: 'ETF', dividendYield: 0.03, dividendYieldSrc: 'Yahoo Finance', dividendYieldAsOf: 'd' }, // fund yield from Yahoo
   FAKE3: { name: 'x', instrumentType: 'Stock', expRatio: 0.1, expRatioSrc: 'Yahoo Finance' }, // expense from Yahoo
   FAKE4: { name: 'x', instrumentType: 'Stock', sector: null },                                  // fabricated null
-  FAKE5: { name: 'x', instrumentType: 'Stock', price: 420.3, priceSource: 'manual' }            // static PRICE (Bug 1)
+  FAKE5: { name: 'x', instrumentType: 'Stock', price: 420.3, priceSource: 'manual' },           // static PRICE (Bug 1)
+  FAKE6: { name: 'x', instrumentType: 'ETF', expRatio: 0.09 }                                    // unsourced hand-typed expRatio
 }));
 const red = audit(poison);
-const redExpected = red.length >= 5; // must flag all five symptoms (incl. the PRICE key)
+const redExpected = red.length >= 6; // must flag all six symptoms (incl. unsourced expRatio)
 
 // ---- TICKER-SWAP regression (Bug 2): clear-and-re-resolve leaves NO stale field, preserves user overrides ----
 // mirrors studio.html fetchMockData: clear bundle-derived (non-user) fields, then re-resolve from the new ticker.

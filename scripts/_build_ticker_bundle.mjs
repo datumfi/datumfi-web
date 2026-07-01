@@ -168,9 +168,10 @@ const run = async () => {
     if (c.geography) e.geography = c.geography;
     else if (sf.geography) { e.geography = sf.geography; e.geographySrc = 'SEC domicile'; }
 
-    // expense: curated -> SPDR (issuer) -> blank   [NEVER Yahoo]
-    if (c.expRatio != null) e.expRatio = c.expRatio;
-    else if (sp.expRatio != null) { e.expRatio = sp.expRatio; e.expRatioSrc = 'SSGA/SPDR'; bySrc.spdrExp++; }
+    // expense: issuer (SSGA/SPDR) ONLY -> blank. Curated hand-typed expRatio is walled out (Lesson 47,
+    // same as price): expRatio must be issuer-sourced or BLANK — never a hand-typed guess. Every emitted
+    // expRatio therefore carries expRatioSrc (gate asserts this).
+    if (sp.expRatio != null) { e.expRatio = sp.expRatio; e.expRatioSrc = 'SSGA/SPDR'; bySrc.spdrExp++; }
 
     // asset-class: curated -> SPDR (issuer) -> blank   [NEVER Yahoo]
     if (c.assetClass) e.assetClass = c.assetClass;
