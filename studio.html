@@ -3792,7 +3792,10 @@
        singleNameStock_fmt token contract is wired (the IRA/401k/457 §7 ask — L48, don't rebuild).
        NOTE: distinct from the Want-canvas "Datum Intelligence" slider tooltips (~L1844) — name
        collision only; do not merge. */
-    function _diIsBankRoom(baseId) { return /^(hsa|trad403|roth403)(_co)?$/.test(String(baseId || '')); }
+    function _diIsBankRoom(baseId) { return /^(hsa|trad403|roth403)(_co)?$/.test(String(baseId || '')) || baseId === '529plan'; }
+    // 529 §8 dated constants (gift exclusion / superfund / K-12 / 529→Roth) — LOOKUP by tax year (L47)
+    var _DI_529 = { 2025: { excl: 18000, superS: 90000, superC: 180000, k12: 10000, roth: 35000 },
+                    2026: { excl: 19000, superS: 95000, superC: 190000, k12: 20000, roth: 35000 } };
     var _diMoney = function (v) { return '$' + Math.round(v || 0).toLocaleString('en-US'); };
     var _diP  = function (x) { return (x === null || x === undefined) ? '—' : Math.round(x) + '%'; };
     var _diE  = function (x) { return (x === null || x === undefined) ? null : (Math.round(x * 100) / 100) + '%'; };
@@ -3908,6 +3911,32 @@
       return out.join(' ');
     }
 
+    // §9 assembler — 529 (Layers A/A2 · B · C · C2 · D · E). {beneficiary}/{yearsToCollege}
+    // unsourced -> their clauses stay dormant / fall back to the neutral phrasing (L47; §7 asks parked).
+    function _diNarr529(acc, s, agg) {
+      if (!s.total || !(acc.holdings || []).length) return '';
+      var out = [];
+      if (s.inv > 0) out.push('Your 529 holds ' + _diMoney(s.total) + ' — ' + _diP(s.investedPct) + ' invested and ' + _diP(s.cashPct) + ' in the cash/stable-value option.');
+      else out.push('Your 529 holds ' + _diMoney(s.total) + ', all in the cash / stable-value option — safe, but not yet invested for the long growth a young beneficiary can capture.');
+      if (s.inv > 0 && s.equityPct !== null) {
+        var bLn = 'The invested sleeve is ' + _diP(s.equityPct) + ' stocks';
+        if (s.bondPct !== null && s.bondPct >= 1) bLn += ' / ' + _diP(s.bondPct) + ' bonds';
+        if (s.foreignPct !== null && s.foreignPct >= 1) bLn += ', ' + _diP(s.foreignPct) + ' international';
+        var e5 = _diE(agg && agg.blendedExpense); if (e5 !== null) bLn += ', at a blended ' + e5 + ' expense';
+        out.push(bLn + '.');
+      }
+      out.push('Money here grows tax-free and comes out tax-free for education — and OBBBA now stretches that to K-12, credentials, and trade programs, not just a four-year degree.');
+      var beta5 = agg && agg.weightedBeta;
+      if (s.inv > 0 && beta5 !== null && beta5 !== undefined && (beta5 >= 1.15 || beta5 <= 0.85)) {
+        out.push('The invested sleeve rides ' + (beta5 >= 1.15 ? 'hotter than' : 'calmer than') + ' the market.');
+      }
+      out.push(acc.isFriction
+        ? 'You’ve earmarked this for education, so it grows untouched outside your spending plan.'
+        : 'This 529 is counted in your retirement spending plan.');
+      out.push('If your student doesn’t need it all, you can redirect it to another family member, pay down their student loans, or roll up to $35,000 into their Roth IRA — this money is never trapped.');
+      return out.join(' ');
+    }
+
     // §9 assembler — 403(b), [R]/[T] per room (roth403 = [R] "The Roth Shelter"; trad403 = [T]
     // "The Tax-Shelter"; the planHasRoth gate is inherent — the [R] room only exists if added)
     function _diNarr403(acc, s, agg, isRoth) {
@@ -3962,6 +3991,36 @@
       var id = acc.id, hsa = base.taxCode === 'hsa', isRoth = /roth403/.test(base.id);
       var beta = agg && agg.weightedBeta;
       var h = '<div class="holdings-rollup" id="bank-strip-' + id + '">';
+      if (base.id === '529plan') {
+        var g = _DI_529[new Date().getFullYear()];
+        h += _diCell('Enrollment Tilt', s.equityPct === null ? '—' : (_diP(s.equityPct) + ' / ' + _diP(s.bondPct)), 'Time-to-enrollment tilt',
+          _diP(s.equityPct) + ' stocks / ' + _diP(s.bondPct) + ' bonds — appropriate for a beneficiary roughly — years from enrollment (add the beneficiary’s age to sharpen this).',
+          'The glidepath decision is the core 529 lever: too much equity right before tuition is the classic 529 risk.');
+        h += _diCell('Equity %', _diP(s.equityPct), 'Equity share (invested sleeve)',
+          _diP(s.equityPct) + ' of this 529 is in stocks — the long-horizon growth engine for a tuition bill that may be years away.',
+          'Most 529s use an age-based glidepath that is equity-heavy when the child is young and de-risks toward college.');
+        h += _diCell('Bond %', _diP(s.bondPct), 'Bond share (invested sleeve)',
+          _diP(s.bondPct) + ' sits in bonds — ballast for tuition you may need to spend soon.',
+          'As the beneficiary nears enrollment, the bond/cash share should rise.');
+        h += _diCell('Cash %', _diP(s.cashPct), 'Cash / stable value',
+          _diP(s.cashPct) + ' is in the 529 cash / stable-value option — the part ready for next semester’s bill.',
+          'Distinguish CASH (near-term tuition) from INVESTED (long-horizon growth).');
+        h += _diCell('Foreign Tilt', _diP(s.foreignPct), 'International share',
+          _diP(s.foreignPct) + ' of the invested sleeve is international.',
+          'Identical signal to your other investment accounts — no 529-specific nuance.');
+        if (beta !== null && beta !== undefined) {
+          h += _diCell('Weighted Beta', beta.toFixed(2), 'Invested-sleeve beta',
+            'Invested-sleeve beta ' + beta.toFixed(2) + ' vs market.',
+            'Computed on the invested portion only — cash/stable-value is beta 0. Left blank rather than faked when holdings don’t publish one.', 'hr-beta');
+        }
+        h += _diCell('Avg Expense', (_diE(agg && agg.blendedExpense) || '—'), 'Blended expense',
+          'Weighted expense ratio ' + (_diE(agg && agg.blendedExpense) || '—') + '/yr across the invested sleeve.',
+          '529 platforms sometimes add a program/admin fee on top — advisor-sold plans can carry meaningfully higher fees than direct-sold.', 'hr-expense');
+        h += _diCell('Superfund Room', g ? '$' + g.superC.toLocaleString('en-US') + ' (couple)' : '—', 'Superfund / gift potential',
+          'You can front-load up to 5 years of gifts at once — ' + (g ? '$' + g.superC.toLocaleString('en-US') : '—') + ' as a couple — without touching your lifetime gift exemption.',
+          'The 5-year election front-loads decades of tax-free compounding. See the gift panel below for the dated math.');
+        return h + '</div>';
+      }
       if (hsa) {
         h += _diCell('Invested / Cash', _diP(s.investedPct) + ' / ' + _diP(s.cashPct), 'Invested vs Cash split',
           _diP(s.investedPct) + ' invested / ' + _diP(s.cashPct) + ' cash. The invested slice is the part working as a stealth retirement account.',
@@ -4018,18 +4077,39 @@
     }
 
     function _diNarrBlock(acc, base, s, agg) {
-      var body = base.taxCode === 'hsa' ? _diNarrHSA(acc, s, agg) : _diNarr403(acc, s, agg, /roth403/.test(base.id));
+      var body = base.taxCode === 'hsa' ? _diNarrHSA(acc, s, agg)
+               : base.id === '529plan' ? _diNarr529(acc, s, agg)
+               : _diNarr403(acc, s, agg, /roth403/.test(base.id));
       if (!body) return '<div id="di-narr-' + acc.id + '"></div>';   // empty anchor — no fabricated narrative (L47)
       return '<div class="di-narrative" id="di-narr-' + acc.id + '"><div class="di-narr-head">Datum Intelligence</div><div class="di-narr-body">' + body + '</div></div>';
     }
 
-    // §2 title hovers — the modal title itself explains the account (verbatim what/why/catch)
+    // §2 title hovers + REVERSE NAME-SYNC: the header is an editable input for EVERY account —
+    // renaming here writes acc.name and mirrors to the left estate card (renderInputs), the
+    // exact inverse of the card→modal direction that already existed. Blank reverts to base.title.
+    window.renameFromModal = function (id, v) {
+      var acc = state.accounts.find(function (a) { return a.id === id; }); if (!acc) return;
+      var base = getBaseType(acc.baseId); if (!base) return;
+      acc.name = String(v || '').trim() || base.title;   // never leave a room nameless
+      renderInputs();                                     // left estate card mirrors the new name
+      _diSetTitle(acc, base);                             // normalize the header (keeps the §2 hover)
+    };
+    function _diTitleInput(acc, base) {
+      return '<input type="text" maxlength="20" value="' + String(acc.name || (base && base.title) || '').replace(/"/g, '&quot;') + '"' +
+        ' style="background:transparent; border:none; border-bottom:1px dashed rgba(255,255,255,0.25); color:var(--white); font:inherit; letter-spacing:inherit; width:240px; outline:none; padding:0;"' +
+        ' onchange="renameFromModal(\'' + acc.id + '\', this.value)"> Details';
+    }
     function _diSetTitle(acc, base) {
       var el = document.getElementById('modal-acc-title'); if (!el) return;
-      var name = (acc.name || base.title) + ' Details';
-      if (!_diIsBankRoom(base.id)) { el.innerText = name; return; }
+      if (!_diIsBankRoom(base.id)) { el.innerHTML = _diTitleInput(acc, base); return; }
       var tt;
-      if (base.taxCode === 'hsa') {
+      if (base.id === '529plan') {
+        tt = '<strong>The Academy — your tax-advantaged education account</strong>' +
+             'Tax-free money for school — and a stealth Roth head-start if the child doesn’t need it all.<br><br>' +
+             '<strong>What it is</strong>A 529 is a tax-advantaged account built for education. You put in after-tax money, it grows tax-free, and it comes out tax-free when spent on qualified education — now including K-12, trade and credential programs, and college.<br><br>' +
+             '<strong>Why use one</strong>Tax-free growth on money earmarked for school, and — thanks to recent rules — almost no risk the money gets "stranded." If the child doesn’t use it, you can change who it’s for, pay off student loans, or roll $35,000 into their Roth IRA.<br><br>' +
+             '<strong>The catch</strong>Pull money out for NON-education and the earnings (not your contributions) get hit with income tax + a 10% penalty. Keep it for school — or use one of the escape valves — and there’s no catch.';
+      } else if (base.taxCode === 'hsa') {
         tt = '<strong>The Infirmary — your triple-tax-advantaged health account</strong>' +
              'The only account taxed nowhere — in, growing, or out (for medical).<br><br>' +
              'Contributions go in tax-deductible, growth is never taxed, and withdrawals for qualified medical care are tax-free at any age. Not a use-it-or-lose-it FSA: unspent money rolls over, can be invested, and compounds for decades. After 65, non-medical withdrawals simply pay ordinary income tax — a Traditional IRA at worst, tax-free at best.';
@@ -4046,7 +4126,8 @@
              '<strong>Why it matters</strong>Deferrals lower this year’s taxable income; growth is tax-deferred. Many plans add an EMPLOYER MATCH — free money you should capture first. Long-tenured staff get a unique 15-year-of-service catch-up on top of the usual limits.<br><br>' +
              '<strong>The catch</strong>Withdrawals are ordinary income, and before 59½ a 10% early-withdrawal penalty generally applies (Rule-of-55 and hardship are the main exceptions). RMDs begin at 73. Historically these plans lean on annuity products — watch for higher fees and surrender charges.';
       }
-      el.innerHTML = '<span class="modal-tt-wrap" style="display:inline-flex; width:auto; cursor:help; border-bottom:1px dotted rgba(255,255,255,0.3);">' + name +
+      el.innerHTML = '<span class="modal-tt-wrap" style="display:inline-flex; width:auto; cursor:help;">' + _diTitleInput(acc, base) +
+                     '<span style="margin-left:8px; opacity:0.5; border-bottom:1px dotted rgba(255,255,255,0.5); font-size:11px;">ⓘ</span>' +
                      '<div class="modal-tt" style="top:100%; bottom:auto; left:0; width:360px; max-height:320px; overflow-y:auto;">' + tt + '</div></span>';
     }
 
@@ -4083,6 +4164,17 @@
             </label>
             <div class="modal-tt" style="top:100%; bottom:auto;"><strong>Medical Reserve</strong>Treat my HSA as a dedicated medical reserve — count it in net worth and the estate, but DON'T fund general retirement spending from it. Many planners hold the HSA as a sacred medical/LTC bucket.</div>
         </div>`;
+        } else if (base.id === '529plan') {
+            // 529-unique set-aside framing (default-ON at creation) — 529 Copy Bank §5 verbatim
+            html += `
+        <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
+            <span class="toggle-label" style="color:var(--teal-mid);">Earmarked for education (set-aside)</span>
+            <label class="switch">
+              <input type="checkbox" ${acc.isFriction ? 'checked' : ''} onchange="updateAccToggle('${id}', 'isFriction', this.checked)">
+              <span class="slider"></span>
+            </label>
+            <div class="modal-tt" style="top:100%; bottom:auto;"><strong>Education Reserve</strong>Treat my 529 as a dedicated education reserve — count it in net worth and the estate, but DON'T fund general retirement spending from it in the Shape.</div>
+        </div>`;
         } else {
             html += `
         <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
@@ -4107,8 +4199,10 @@
              </div>`;
         }
 
-        // SURGICAL: Trust Settings with tooltips
-        if (base.taxCode === 'trust') {
+        // SURGICAL: Trust Settings with tooltips — trust ONLY. The 529 shares taxCode 'trust'
+        // until the edu-split ticket lands, but trust-structure/disbursement scaffolding on an
+        // education account is a leak (529 Copy Bank §6) — The Academy gets its own §3/§4 panels.
+        if (base.taxCode === 'trust' && base.id !== '529plan') {
             html += `
             <div style="margin-top:20px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px;">
                 <div class="input-label" style="color:var(--shield); margin-bottom:10px;">TRUST ARCHITECTURE & DISBURSEMENT</div>
@@ -4370,6 +4464,140 @@
                 <div style="display:flex; justify-content: space-between; padding-top: 5px;">
                     <span class="input-label" style="color:var(--teal-mid);">Active Maximum Injection</span>
                     <span style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold; font-size:13px;" id="limit-calc-${id}">${hsaInjection}</span>
+                </div>
+            </div>`;
+        }
+
+        if (base.id === '529plan') {
+            // THE ACADEMY — 529 Copy Bank §3a/§3b/§3c/§4 (Architect-owned verbatim). Owner↔beneficiary
+            // axis renders FIRST — the 529's defining structure (its analog of the HSA eligibility gate).
+            // {beneficiary}/{ownerState} are §7 asks, unsourced -> "not yet on file" (L47, never fabricate).
+            const g529 = _DI_529[new Date().getFullYear()];
+            const gx = (n) => g529 ? '$' + n.toLocaleString('en-US') : '—';
+            html += `
+            <div style="margin-top:20px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px;">
+                <div class="input-label" style="color:var(--gold); margin-bottom:10px;">OWNER &amp; BENEFICIARY — WHO CONTROLS, WHO BENEFITS</div>
+                <div class="modal-tt-wrap" style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">Account owner</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px; text-align:right; max-width:60%;">You control the investments, the withdrawals, and who the money is for</span>
+                    <div class="modal-tt"><strong>The Structural Axis</strong>The OWNER (not the beneficiary) keeps full control: picks investments, takes distributions, and can change the beneficiary — unlike an UTMA/UGMA, where the money becomes the child's at majority.</div>
+                </div>
+                <div class="modal-tt-wrap" style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">Beneficiary</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px;">— not yet on file</span>
+                    <div class="modal-tt"><strong>Who It's For</strong>This 529 is FOR the student whose qualified education it pays. The beneficiary receives the tax-free benefit; they do NOT control the account.</div>
+                </div>
+                <div class="modal-tt-wrap" style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--teal-mid);">Change the beneficiary</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px; text-align:right; max-width:60%;">Any qualifying family member, any time — a sibling, yourself, a grandchild</span>
+                    <div class="modal-tt"><strong>The "What If They Don't Go?" Answer</strong>If one child doesn't use it, redirect to another qualifying family member with no tax hit — the IRS family definition is broad (siblings, parents, cousins, in-laws, spouse).</div>
+                </div>
+                <div style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">Investment changes</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px;">Twice per calendar year (or on a beneficiary change)</span>
+                </div>
+                <div class="modal-tt-wrap" style="display:flex; justify-content: space-between;">
+                    <span class="input-label" style="color:var(--white);">Financial-aid treatment</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px; text-align:right; max-width:60%;">Parent-owned = parental asset on the FAFSA, assessed at most ~5.64%</span>
+                    <div class="modal-tt"><strong>Light FAFSA Touch</strong>Far gentler than student-owned assets. Post-FAFSA-simplification, a grandparent-owned 529 no longer counts as untaxed student income — the old "grandparent penalty" is gone.</div>
+                </div>
+            </div>
+
+            <div style="padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px;">
+                <div class="input-label" style="color:var(--gold); margin-bottom:10px;">WITHDRAWAL RULES &amp; QUALIFIED EXPENSES</div>
+                <div class="modal-tt-wrap" style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">Qualified education — any age</span>
+                    <span style="font-family: var(--font-mono); color: var(--teal-mid); font-size:10px; font-weight:bold;">Tax-free, penalty-free, forever</span>
+                    <div class="modal-tt"><strong>The Core Promise</strong>College tuition/fees, room &amp; board (if enrolled ≥half-time), books, computers/internet, special-needs equipment, and registered apprenticeships. Withdrawals must match the year the expense is paid.</div>
+                </div>
+                <div class="modal-tt-wrap" style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">K-12 tuition (expanded 2026)</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px;">Up to ${g529 ? '$' + g529.k12.toLocaleString('en-US') : '—'}/yr per student — doubled under OBBBA</span>
+                    <div class="modal-tt"><strong>OBBBA Expansion</strong>Effective Jan 2026 the K-12 cap doubled from $10,000 → $20,000/yr per student, and qualified K-12 expenses now include curriculum materials, tutoring, standardized/AP/admissions test fees, dual-enrollment fees, and educational therapies.</div>
+                </div>
+                <div class="modal-tt-wrap" style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">Credentials &amp; trades (new)</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px; text-align:right; max-width:55%;">Welding, aviation, CDL, HVAC, cosmetology — plus CPA/bar exam prep</span>
+                    <div class="modal-tt"><strong>Beyond the 4-Year Degree</strong>As of July 5, 2025 (OBBBA): postsecondary credentialing programs recognized under WIOA or listed in the VA WEAMS database qualify, plus professional licensing and continuing-ed costs.</div>
+                </div>
+                <div class="modal-tt-wrap" style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">Student-loan repayment</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px;">Up to $10,000 lifetime per beneficiary (+ $10k per sibling)</span>
+                    <div class="modal-tt"><strong>Escape Valve</strong>SECURE Act: a lifetime $10,000 per beneficiary can repay qualified student-loan principal/interest — plus a separate $10,000 for each of the beneficiary's siblings.</div>
+                </div>
+                <div class="modal-tt-wrap" style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">Non-qualified — the penalty</span>
+                    <span style="font-family: var(--font-mono); color: var(--danger); font-size:10px; text-align:right; max-width:55%;">Income tax + 10% penalty — ONLY on the EARNINGS, never your contributions</span>
+                    <div class="modal-tt"><strong>Correctly Scoped</strong>The penalty and income tax hit the GROWTH portion only; your after-tax principal always comes out tax- and penalty-free. Waived for scholarships (up to the scholarship amount), disability, or a U.S. service academy.</div>
+                </div>
+                <div style="display:flex; justify-content: space-between; margin-bottom: 8px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px;">
+                    <span class="input-label" style="color:var(--teal-mid);">No RMDs</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px;">Never any Required Minimum Distributions — no age deadline to use the funds</span>
+                </div>
+                <div class="modal-tt-wrap" style="display:flex; justify-content: space-between;">
+                    <span class="input-label" style="color:var(--teal-mid);">Successor owner</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px; text-align:right; max-width:55%;">Name one so the account passes smoothly — a 529 is generally outside your taxable estate already</span>
+                    <div class="modal-tt"><strong>Estate Nuance</strong>Contributions are completed gifts, so the balance is generally OUTSIDE the owner's taxable estate — a rare "control it but it's out of your estate" feature. Naming a successor owner avoids probate.</div>
+                </div>
+            </div>
+
+            <div style="padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px;">
+                <div class="input-label" style="color:var(--gold); margin-bottom:10px;">529 → ROTH IRA ROLLOVER — THE "WHAT IF UNUSED" UNLOCK</div>
+                <div class="modal-tt-wrap" style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--teal-mid);">The headline</span>
+                    <span style="font-family: var(--font-mono); color: var(--teal-mid); font-size:10px; font-weight:bold;">Leftover money can roll to the beneficiary's Roth IRA — up to $35,000 lifetime</span>
+                    <div class="modal-tt"><strong>SECURE 2.0 Unlock</strong>Turns an over-funded 529 into a retirement head-start for the child. The Roth IRA must be in the BENEFICIARY's name.</div>
+                </div>
+                <div style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">15-year account age</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px;">The 529 must be open at least 15 years first — start the clock early</span>
+                </div>
+                <div style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">5-year seasoning</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px;">The last 5 years of contributions (and their earnings) can't roll</span>
+                </div>
+                <div class="modal-tt-wrap" style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">Annual Roth limit applies</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px;">Each year's rollover counts toward the beneficiary's annual Roth limit</span>
+                    <div class="modal-tt"><strong>Drained Gradually</strong>The $35,000 lifetime cap moves at most the annual Roth contribution limit per year ($7,000 in 2026; $8,000 if 50+), so it takes ~5+ years to use fully. The beneficiary needs earned income ≥ the amount rolled that year.</div>
+                </div>
+                <div style="display:flex; justify-content: space-between; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px;">
+                    <span class="input-label" style="color:var(--teal-mid);">Why it matters</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px; text-align:right; max-width:60%;">Unused money is never trapped — worst case is a tax-free retirement head-start for your child</span>
+                </div>
+            </div>
+
+            <div style="padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px;">
+                <div class="input-label" style="color:var(--gold); margin-bottom:6px;">CONTRIBUTIONS &amp; GIFT-TAX ROOM (NO federal cap)</div>
+                <div style="font-family:var(--font-mono);font-size:9px;color:rgba(255,255,255,0.3);margin-bottom:10px;letter-spacing:0.05em;">${g529 ? new Date().getFullYear() + ' IRS gift figures' : 'Figures pending IRS release'} — a GIFT-tax framing, not a salary-keyed limit</div>
+                <div class="modal-tt-wrap" style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">Annual gift exclusion</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px;">${gx(g529 ? g529.excl : 0)} per giver, per beneficiary, per year — fully gift-tax-free</span>
+                    <div class="modal-tt"><strong>No Form Required</strong>A married couple can give ${gx(g529 ? g529.excl * 2 : 0)}/yr to one beneficiary and stay entirely under the gift-tax radar — no Form 709 at or below the exclusion.</div>
+                </div>
+                <div class="modal-tt-wrap" style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">Superfund (5-year election)</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px;">Front-load 5 years at once — up to ${gx(g529 ? g529.superS : 0)} single / ${gx(g529 ? g529.superC : 0)} per couple</span>
+                    <div class="modal-tt"><strong>Accelerated Gifting</strong>The 5-year election (Form 709) treats one big gift as if spread over 5 years — front-loading decades of tax-free compounding. If you die within the 5 years, a prorated portion comes back into your estate.</div>
+                </div>
+                <div class="modal-tt-wrap" style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">Above the exclusion?</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px; text-align:right; max-width:55%;">Just uses a slice of the $15,000,000 lifetime exemption (2026) — a form, rarely a tax</span>
+                    <div class="modal-tt"><strong>Reassurance</strong>"Above the exclusion" ≠ "owe gift tax." Larger gifts simply file against the $15M-per-individual (2026) lifetime gift/estate exemption.</div>
+                </div>
+                <div class="modal-tt-wrap" style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">State tax benefit</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px;">Many states give a deduction or credit — usually only in your home-state plan</span>
+                    <div class="modal-tt"><strong>State-Gated</strong>Check your home state: many give a deduction/credit ONLY for the home-state plan; a few are tax-parity (any plan qualifies). Some recapture the deduction on non-qualified withdrawals.</div>
+                </div>
+                <div class="modal-tt-wrap" style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="input-label" style="color:var(--white);">State aggregate cap</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px;">Most states cap lifetime totals per beneficiary around $300k–$550k</span>
+                    <div class="modal-tt"><strong>The Only Hard Ceiling</strong>A per-beneficiary lifetime aggregate across all 529s for that beneficiary in the state — once hit, no new contributions (growth still allowed). Distinct from the federal gift framing.</div>
+                </div>
+                <div style="display:flex; justify-content: space-between; padding-top: 5px; border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 4px;">
+                    <span class="input-label" style="color:var(--teal-mid);">Gift-Tax-Free Room</span>
+                    <span style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold; font-size:13px;">${g529 ? gx(g529.excl) + ' single · ' + gx(g529.excl * 2) + ' couple / YR' : 'Figures pending IRS release'}</span>
                 </div>
             </div>`;
         }
@@ -5266,7 +5494,7 @@
       const base = getBaseType(baseId);
       const newId = 'inst_' + Math.random().toString(36).substr(2, 9);
       var wasEmpty = !(state.accounts && state.accounts.length);   // §22 one-shot 0->1 detect (before push)
-      var frictionDefault = base.taxCode === 'hsa';                // HSA: "earmarked for medical" set-aside defaults ON (Copy Bank §5)
+      var frictionDefault = base.taxCode === 'hsa' || base.id === '529plan';   // HSA/529: "earmarked" set-aside defaults ON (Copy Banks §5)
       state.accounts.push({ id: newId, baseId: baseId, name: base.title, value: 0, inflow: 0, freq: 12, intRate: 0, term: null, exclude: false, notes: '', cola: 0, linkedAssetId: null, useRule55: false, isNew: true, isFriction: frictionDefault, isPriority: false, holdings: [], trustType: 'Irrevocable', disbursement: 'Discretionary' });
       renderInputs();
       updateSVGs();
