@@ -4429,6 +4429,9 @@
         // typed string ('' or numeric). text fields stored verbatim.
         if (field === 'price' || field === 'shares' || field === 'expRatio' || field === 'beta' || field === 'dividendYield') h[field] = (val === '' ? '' : (parseFloat(val) || 0));
         else h[field] = val;
+        // Mark bundle-derived fields the user hand-edits as USER-OWNED (survives a later ticker swap) and
+        // drop their reference provenance — a user-entered value is not a Yahoo/SEC reference (no asterisk).
+        if (typeof _BUNDLE_FIELDS !== 'undefined' && _BUNDLE_FIELDS.hasOwnProperty(field)) { h._userSet = h._userSet || {}; h._userSet[field] = true; _BUNDLE_FIELDS[field].forEach(function (k) { delete h[k]; }); }
         // any field that feeds value or the rollup -> live refresh (rollup strip + row value/gain + Shape),
         // focus-safe (patches DOM in place, never re-renders the modal inputs). Fixes the "one edit behind" bug.
         if (field === 'price' || field === 'shares' || field === 'costBasis' || field === 'beta' || field === 'dividendYield' || field === 'expRatio') {
@@ -4479,21 +4482,30 @@
         return _tickerBundleP;
     };
 
+    // Bundle-derived fields + their provenance companions. On a ticker change we CLEAR every one of these
+    // (unless the user hand-entered it) then re-resolve from the new ticker — so no prior ticker's value
+    // can survive as stale. PRICE is NOT here: price is user/live-feed only, never bundle-derived.
+    var _BUNDLE_FIELDS = { name: [], instrumentType: [], sector: ['sectorSrc'], geography: ['geographySrc'], expRatio: ['expRatioSrc'], assetClass: ['assetClassSrc'], beta: ['betaSrc', 'betaAsOf', 'betaMethod'], dividendYield: ['dividendYieldSrc', 'dividendYieldAsOf'] };
+    var _SRC_TO_BASE = {}; for (var _bf in _BUNDLE_FIELDS) { _BUNDLE_FIELDS[_bf].forEach(function (k) { _SRC_TO_BASE[k] = _bf; }); }
+
     window.fetchMockData = function(id, index, ticker) {
         ticker = ticker.toUpperCase();
-        // Auto-fill STABLE non-price fields from the lazy-loaded curated+sourced universe. Live PRICE
-        // stays a user-editable reference (priceSource:'manual'; CF-Worker live proxy is parked).
+        // Auto-fill STABLE non-price fields from the lazy-loaded curated+sourced universe. PRICE never
+        // comes from the bundle (live-feed only; CF-Worker parked) — it stays a user-entered field.
         window.ensureTickerBundle().then(function (bundle) {
             let acc = state.accounts.find(a=>a.id===id);
             if (!acc) return;
             let h = acc.holdings[index];
             if (!h) return;
             h.ticker = ticker;
-            if (bundle[ticker]) {
-                Object.assign(h, bundle[ticker]);
-                recalcPortfolio(acc);
-                openAccountModal(id);
-            }
+            var owned = h._userSet || {};
+            // CLEAR every bundle-derived field (+ its provenance companions) the user did NOT hand-enter.
+            for (var f in _BUNDLE_FIELDS) { if (!owned[f]) { delete h[f]; _BUNDLE_FIELDS[f].forEach(function (k) { delete h[k]; }); } }
+            // RE-RESOLVE from the new ticker through the normal ladder; never clobber a user-owned field.
+            var e = bundle[ticker];
+            if (e) { Object.keys(e).forEach(function (k) { var base = _SRC_TO_BASE[k] || k; if (_BUNDLE_FIELDS.hasOwnProperty(base) && owned[base]) return; h[k] = e[k]; }); }
+            recalcPortfolio(acc);
+            openAccountModal(id);   // full re-render: shows re-resolved values (or blanks), never stale
         });
     }
     

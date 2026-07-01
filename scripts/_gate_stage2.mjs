@@ -29,6 +29,8 @@ function audit(T) {
     if (isFund && e.betaSrc === 'Yahoo Finance') v.push(`${k}: FUND beta from Yahoo`);
     // (6) beta method stamp exact
     if (e.betaSrc === 'Yahoo Finance' && e.betaMethod !== '5Y monthly vs S&P 500') v.push(`${k}: wrong beta method`);
+    // (7) NO PRICE: price is live-feed-only; a static bundle price is an unsourced guess (Lesson 47).
+    if (e.price != null || e.priceSource != null) v.push(`${k}: carries a PRICE key (bundle must never emit price)`);
   }
   return v;
 }
@@ -52,10 +54,38 @@ const poison = JSON.parse(JSON.stringify({
   FAKE1: { name: 'x', instrumentType: 'Stock', beta: 1.2 },                                   // beta w/o stamp
   FAKE2: { name: 'x', instrumentType: 'ETF', dividendYield: 0.03, dividendYieldSrc: 'Yahoo Finance', dividendYieldAsOf: 'd' }, // fund yield from Yahoo
   FAKE3: { name: 'x', instrumentType: 'Stock', expRatio: 0.1, expRatioSrc: 'Yahoo Finance' }, // expense from Yahoo
-  FAKE4: { name: 'x', instrumentType: 'Stock', sector: null }                                  // fabricated null
+  FAKE4: { name: 'x', instrumentType: 'Stock', sector: null },                                  // fabricated null
+  FAKE5: { name: 'x', instrumentType: 'Stock', price: 420.3, priceSource: 'manual' }            // static PRICE (Bug 1)
 }));
 const red = audit(poison);
-const redExpected = red.length >= 4; // must flag all four symptoms
+const redExpected = red.length >= 5; // must flag all five symptoms (incl. the PRICE key)
+
+// ---- TICKER-SWAP regression (Bug 2): clear-and-re-resolve leaves NO stale field, preserves user overrides ----
+// mirrors studio.html fetchMockData: clear bundle-derived (non-user) fields, then re-resolve from the new ticker.
+const BF = { name: [], instrumentType: [], sector: ['sectorSrc'], geography: ['geographySrc'], expRatio: ['expRatioSrc'], assetClass: ['assetClassSrc'], beta: ['betaSrc', 'betaAsOf', 'betaMethod'], dividendYield: ['dividendYieldSrc', 'dividendYieldAsOf'] };
+const S2B = {}; for (const b in BF) for (const s of BF[b]) S2B[s] = b;
+function swap(h, ticker, bundle) {
+  h.ticker = ticker; const owned = h._userSet || {};
+  for (const f in BF) if (!owned[f]) { delete h[f]; BF[f].forEach((k) => delete h[k]); }
+  const e = bundle[ticker];
+  if (e) for (const k of Object.keys(e)) { const base = S2B[k] || k; if (BF.hasOwnProperty(base) && owned[base]) continue; h[k] = e[k]; }
+  return h;
+}
+const swapFail = [];
+// IBM -> TSLA: IBM's beta/sector must NOT persist; TSLA's must resolve.
+let row = swap({ ticker: 'IBM' }, 'IBM', T);
+const ibmBeta = row.beta, ibmSector = row.sector;
+row = swap(row, 'TSLA', T);
+if (row.beta === ibmBeta && ibmBeta != null) swapFail.push('TSLA kept IBM beta (stale)');
+if (row.sector === ibmSector && row.sector != null && T.TSLA && T.TSLA.sector !== ibmSector) swapFail.push('TSLA kept IBM sector (stale)');
+if (T.TSLA && T.TSLA.beta != null && row.beta !== T.TSLA.beta) swapFail.push('TSLA beta did not re-resolve');
+// swap to an unknown ticker -> derived fields BLANK, not stale
+row = swap(row, 'ZZZZNOTREAL', T);
+if (row.beta != null || row.sector != null) swapFail.push('unknown ticker left stale derived fields');
+// user override preserved across swap
+let ur = swap({ ticker: 'AAPL' }, 'AAPL', T); ur._userSet = { beta: true }; ur.beta = 9.99;
+ur = swap(ur, 'KO', T);
+if (ur.beta !== 9.99) swapFail.push('user-overridden beta was clobbered on swap');
 
 // ---- ROLLUP-MATH: user-entered == curated == Yahoo-sourced (source-agnostic), + units/field-name regression ----
 // datum-math.portfolioStats reads dividendYield/expRatio as PERCENT numbers (1.5 = 1.5%); beta unitless.
@@ -81,7 +111,8 @@ console.log('=== STAGE-2/3 GATE ===');
 console.log('GREEN (real bundle) violations:', real.length, real.slice(0, 6));
 console.log('PRECEDENCE checks:', precedenceFail.length, precedenceFail);
 console.log('ROLLUP-MATH (user==curated, units, drop-test):', rollupFail.length, rollupFail);
-console.log('RED (poisoned) flagged:', red.length, '(expect >=4):', red);
-const pass = real.length === 0 && precedenceFail.length === 0 && rollupFail.length === 0 && redExpected;
+console.log('TICKER-SWAP (no-stale, blank-on-unknown, override-safe):', swapFail.length, swapFail);
+console.log('RED (poisoned) flagged:', red.length, '(expect >=5):', red);
+const pass = real.length === 0 && precedenceFail.length === 0 && rollupFail.length === 0 && swapFail.length === 0 && redExpected;
 console.log(pass ? 'RESULT: PASS (green real · red bites)' : 'RESULT: FAIL');
 process.exit(pass ? 0 : 1);

@@ -157,7 +157,8 @@ const run = async () => {
     const e = {};
     e.name = c.name || b.name || '';
     e.instrumentType = c.instrumentType || b.instrumentType || '';
-    if (c.price != null) { e.price = c.price; e.priceSource = c.priceSource || 'manual'; }
+    // NO PRICE: price is live-feed-only (future CF Worker). The static bundle must NEVER carry/emit a
+    // price — a hardcoded price is an unsourced guess (Lesson 47). Blank cell until the live feed lands.
 
     // sector: curated -> SEC SIC (stocks) -> blank
     if (c.sector) { e.sector = c.sector; bySrc.curatedSector++; }
