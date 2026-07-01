@@ -1066,6 +1066,9 @@
   .holding-input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   .holding-input[type=number]::-webkit-outer-spin-button,
   .holding-input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  /* Stage-3 honesty marker: * on Tier-2 (Yahoo) reference values only; Tier-1/curated stay unmarked. */
+  .holdings-table td.ref-cell { position: relative; }
+  .holdings-table .ref-star { position: absolute; top: 1px; right: 3px; color: var(--gold); font-weight: 700; font-size: 12px; line-height: 1; cursor: help; pointer-events: auto; }
 
   /* SURGICAL: Modal Tooltip Engine */
   .modal-tt-wrap { position: relative; width: 100%; display: flex; justify-content: space-between; align-items: center; }
@@ -4137,6 +4140,7 @@
             </button>`;
             
             if(acc.showHoldings) {
+                if (window.ensureTickerBundle) window.ensureTickerBundle();   // Stage-3: lazy-load bundle on first holdings-modal open
                 document.getElementById('modal-card').style.width = "1200px";
                 var isTaxable = (base.taxCode === 'liquid' && base.isInvestment);
                 var _agg = (window.DatumMath ? DatumMath.portfolioStats([acc]) : null);   // display-only (LOCK-3)
@@ -4156,6 +4160,20 @@
 
                 // PER-taxCode COLUMN MANIFEST -> one render loop. cost-basis + unrealized-gain render TAXABLE-ONLY.
                 var _ti = function (h, i, f, ph, num) { return '<td><input type="' + (num ? 'number' : 'text') + '" class="holding-input" title="' + _esc(h[f]) + '" value="' + _esc(h[f]) + '" placeholder="' + (ph || '') + '" oninput="updateHolding(\'' + id + '\', ' + i + ', \'' + f + '\', this.value)"></td>'; };
+                // Stage-3 provenance render. Grammar: curated -> reference-figure tooltip; Tier-1 (SEC/SPDR) -> plain, hover source;
+                // Tier-2 (Yahoo beta/stock-yield) -> small * + VERBATIM reference tooltip. Every field stays user-editable (1-tap override).
+                var _inp = function (h, i, f, ph, num, ttl) { return '<input type="' + (num ? 'number' : 'text') + '" class="holding-input" title="' + _esc(ttl != null ? ttl : h[f]) + '" value="' + _esc(h[f]) + '" placeholder="' + (ph || '') + '" oninput="updateHolding(\'' + id + '\', ' + i + ', \'' + f + '\', this.value)">'; };
+                var _T2BETA = function (h) { return 'Reference estimate — beta is a computed figure (it varies by method and window), sourced ' + _esc(h.betaSrc) + ' as of ' + _esc(h.betaAsOf) + '. It widens or narrows an illustrative range, not a dollar you owe. Tap to replace with your own. Method: ' + _esc(h.betaMethod) + '.'; };
+                var _T2YLD = function (h) { return 'Reference figure — trailing yield as of ' + _esc(h.dividendYieldAsOf) + ', ' + _esc(h.dividendYieldSrc) + '. It moves with price. Tap to replace with your own.'; };
+                var _CURREF = 'Reference figure — a representative value to get you started. Replace it with your own from your statement for an exact read.';
+                var _prov = function (h, i, f, ph, num, srcKey, t2fn, t1lbl) {
+                  var src = srcKey ? h[srcKey] : null;
+                  var hasVal = !(h[f] === undefined || h[f] === null || h[f] === '');
+                  if (src === 'Yahoo Finance') { var tip = t2fn(h); return '<td class="ref-cell">' + _inp(h, i, f, ph, num, tip) + '<span class="ref-star" title="' + _esc(tip) + '">*</span></td>'; }
+                  if (src) return '<td>' + _inp(h, i, f, ph, num, (t1lbl || f) + ' — source: ' + src) + '</td>';
+                  if (hasVal) return '<td>' + _inp(h, i, f, ph, num, _CURREF) + '</td>';
+                  return '<td>' + _inp(h, i, f, ph, num) + '</td>';
+                };
                 var COLS = [
                   { lbl: 'Ticker', w: 80, td: function (h, i) { return '<td><input type="text" class="holding-input" value="' + _esc(h.ticker) + '" placeholder="AAPL" onchange="fetchMockData(\'' + id + '\', ' + i + ', this.value)"></td>'; } },
                   { lbl: 'Name', w: 155, td: function (h, i) { return _ti(h, i, 'name', 'Apple Inc.'); } },
@@ -4164,12 +4182,12 @@
                   { lbl: 'Value', w: 90, td: function (h, i) { var v = (parseFloat(h.price) || 0) * (parseFloat(h.shares) || 0); return '<td style="color:var(--teal-mid); font-weight:bold;" id="holding-val-' + i + '">$' + v.toLocaleString('en-US') + '</td>'; } },
                   { lbl: 'Cost Basis', w: 90, taxableOnly: true, tip: { t: 'Cost Basis', b: 'What you paid for this holding. Lets the math use your real embedded gain (capital-gains tax) when this account funds your retirement spend, instead of an estimate.' }, td: function (h, i) { return _ti(h, i, 'costBasis', '0', true); } },
                   { lbl: 'Unrealized Gain', w: 100, taxableOnly: true, td: function (h, i) { var cb = parseFloat(h.costBasis); if (!isFinite(cb) || cb <= 0) return '<td id="holding-gain-' + i + '" style="color:var(--muted);">—</td>'; var g = (parseFloat(h.price) || 0) * (parseFloat(h.shares) || 0) - cb; return '<td id="holding-gain-' + i + '" style="color:' + (g >= 0 ? 'var(--teal-mid)' : 'var(--danger)') + ';">' + (g >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(g)).toLocaleString('en-US') + '</td>'; } },
-                  { lbl: 'Beta', w: 72, td: function (h, i) { return _ti(h, i, 'beta', '—', true); } },
-                  { lbl: 'Yield', w: 72, td: function (h, i) { return _ti(h, i, 'dividendYield', '—', true); } },
-                  { lbl: 'Geography', w: 110, td: function (h, i) { return _ti(h, i, 'geography', '—'); } },
-                  { lbl: 'Sector', w: 110, td: function (h, i) { return _ti(h, i, 'sector', ''); } },
-                  { lbl: 'Exp Ratio', w: 72, td: function (h, i) { return _ti(h, i, 'expRatio', '0', true); } },
-                  { lbl: 'Asset Class', w: 110, td: function (h, i) { return _ti(h, i, 'assetClass', ''); } },
+                  { lbl: 'Beta', w: 72, td: function (h, i) { return _prov(h, i, 'beta', '—', true, 'betaSrc', _T2BETA, 'Beta'); } },
+                  { lbl: 'Yield', w: 72, td: function (h, i) { return _prov(h, i, 'dividendYield', '—', true, 'dividendYieldSrc', _T2YLD, 'Yield'); } },
+                  { lbl: 'Geography', w: 110, td: function (h, i) { return _prov(h, i, 'geography', '—', false, 'geographySrc', null, 'Geography'); } },
+                  { lbl: 'Sector', w: 110, td: function (h, i) { return _prov(h, i, 'sector', '', false, 'sectorSrc', null, 'Sector'); } },
+                  { lbl: 'Exp Ratio', w: 72, td: function (h, i) { return _prov(h, i, 'expRatio', '0', true, 'expRatioSrc', null, 'Exp Ratio'); } },
+                  { lbl: 'Asset Class', w: 110, td: function (h, i) { return _prov(h, i, 'assetClass', '', false, 'assetClassSrc', null, 'Asset Class'); } },
                   { lbl: 'Instrument', w: 95, td: function (h, i) { return _ti(h, i, 'instrumentType', '—'); } },
                   { lbl: '', w: null, td: function (h, i) { return '<td><button onclick="removeHolding(\'' + id + '\', ' + i + ')" style="background:none; border:none; color:var(--muted); cursor:pointer;">×</button></td>'; } }
                 ];
@@ -4444,21 +4462,39 @@
     }
     
     // SURGICAL: Expanded Database
+    // Stage-3 LAZY-LOAD: the ~1.7MB ticker-bundle.js is NOT loaded at page-load. It is injected once,
+    // on first holdings-modal open (ensureTickerBundle), so a user who never opens holdings never pays for it.
+    // fetch/lookup fails soft to manual entry if the file can't load (never blocks the modal).
+    var _tickerBundleP = null;
+    window.ensureTickerBundle = function () {
+        if (window.TICKER_BUNDLE) return Promise.resolve(window.TICKER_BUNDLE);
+        if (_tickerBundleP) return _tickerBundleP;
+        _tickerBundleP = new Promise(function (resolve) {
+            var s = document.createElement('script');
+            s.src = '/scripts/ticker-bundle.js';
+            s.onload = function () { resolve(window.TICKER_BUNDLE || {}); };
+            s.onerror = function () { resolve({}); };   // fail-soft: manual entry still works
+            document.head.appendChild(s);
+        });
+        return _tickerBundleP;
+    };
+
     window.fetchMockData = function(id, index, ticker) {
         ticker = ticker.toUpperCase();
-        let acc = state.accounts.find(a=>a.id===id);
-        let h = acc.holdings[index];
-        h.ticker = ticker;
-        
-        // Auto-fill the STABLE, non-price fields from the self-owned curated universe
-        // (scripts/ticker-bundle.js — grows over time, NOT CF-dependent). Live PRICE stays a
-        // user-editable reference (priceSource:'manual'; CF-Worker live proxy is parked).
-        const bundle = (window.TICKER_BUNDLE || {});
-        if (bundle[ticker]) {
-            Object.assign(h, bundle[ticker]);
-            recalcPortfolio(acc);
-            openAccountModal(id);
-        }
+        // Auto-fill STABLE non-price fields from the lazy-loaded curated+sourced universe. Live PRICE
+        // stays a user-editable reference (priceSource:'manual'; CF-Worker live proxy is parked).
+        window.ensureTickerBundle().then(function (bundle) {
+            let acc = state.accounts.find(a=>a.id===id);
+            if (!acc) return;
+            let h = acc.holdings[index];
+            if (!h) return;
+            h.ticker = ticker;
+            if (bundle[ticker]) {
+                Object.assign(h, bundle[ticker]);
+                recalcPortfolio(acc);
+                openAccountModal(id);
+            }
+        });
     }
     
     function recalcPortfolio(acc) {
@@ -9097,7 +9133,7 @@
   <script src="/scripts/datum-estate.js" defer></script>
   <script src="/scripts/datum-energize.js" defer></script>
   <script src="/scripts/datum-math.js" defer></script>
-  <script src="/scripts/ticker-bundle.js" defer></script>
+  <!-- ticker-bundle.js is LAZY-LOADED on first holdings-modal open (see ensureTickerBundle) — NOT at page-load -->
   <script src="/scripts/datum-shape-copy.js" defer></script>
   <script src="/scripts/studio-wantface.js" defer></script>
   <script src="/scripts/lz-string.min.js" defer></script>

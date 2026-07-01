@@ -18,11 +18,11 @@ function audit(T) {
     const isFund = e.instrumentType !== 'Stock';
     // (1) TRACEABLE: any beta present must carry src+asOf+method (Tier-2 guard #1)
     if (e.beta != null && (!e.betaSrc || !e.betaAsOf || !e.betaMethod)) v.push(`${k}: beta without full stamp`);
-    if (e.divYield != null && e.divYieldSrc === 'Yahoo Finance' && !e.divYieldAsOf) v.push(`${k}: yahoo yield without asOf`);
+    if (e.dividendYield != null && e.dividendYieldSrc === 'Yahoo Finance' && !e.dividendYieldAsOf) v.push(`${k}: yahoo yield without asOf`);
     // (2) NO FABRICATION: no null/placeholder numerics (blank = key absent, never null/0-as-empty)
-    for (const f of ['beta', 'divYield', 'expRatio', 'sector', 'assetClass']) if (e[f] === null) v.push(`${k}: ${f} is null (should be absent)`);
+    for (const f of ['beta', 'dividendYield', 'expRatio', 'sector', 'assetClass']) if (e[f] === null) v.push(`${k}: ${f} is null (should be absent)`);
     // (3) FUND-YIELD WALL: a fund's yield must never come from Yahoo (issuer/curated only)
-    if (isFund && e.divYieldSrc === 'Yahoo Finance') v.push(`${k}: FUND yield sourced from Yahoo`);
+    if (isFund && e.dividendYieldSrc === 'Yahoo Finance') v.push(`${k}: FUND yield sourced from Yahoo`);
     // (4) EXPENSE/ASSET-CLASS WALL: never from Yahoo
     if (e.expRatioSrc === 'Yahoo Finance' || e.assetClassSrc === 'Yahoo Finance') v.push(`${k}: expense/assetClass from Yahoo`);
     // (5) beta only on stocks (Yahoo returns none for funds; curated may still carry one)
@@ -50,17 +50,38 @@ if (T.KO && typeof T.KO.beta !== 'number') precedenceFail.push('KO beta not a li
 // ---- RED negative control: poison a copy, confirm audit catches each symptom ----
 const poison = JSON.parse(JSON.stringify({
   FAKE1: { name: 'x', instrumentType: 'Stock', beta: 1.2 },                                   // beta w/o stamp
-  FAKE2: { name: 'x', instrumentType: 'ETF', divYield: 0.03, divYieldSrc: 'Yahoo Finance', divYieldAsOf: 'd' }, // fund yield from Yahoo
+  FAKE2: { name: 'x', instrumentType: 'ETF', dividendYield: 0.03, dividendYieldSrc: 'Yahoo Finance', dividendYieldAsOf: 'd' }, // fund yield from Yahoo
   FAKE3: { name: 'x', instrumentType: 'Stock', expRatio: 0.1, expRatioSrc: 'Yahoo Finance' }, // expense from Yahoo
   FAKE4: { name: 'x', instrumentType: 'Stock', sector: null }                                  // fabricated null
 }));
 const red = audit(poison);
 const redExpected = red.length >= 4; // must flag all four symptoms
 
-console.log('=== STAGE-2 GATE ===');
+// ---- ROLLUP-MATH: user-entered == curated == Yahoo-sourced (source-agnostic), + units/field-name regression ----
+// datum-math.portfolioStats reads dividendYield/expRatio as PERCENT numbers (1.5 = 1.5%); beta unitless.
+const DatumMath = require('./datum-math.js');
+const rollupFail = [];
+const acct = (holdings) => [{ id: 'x', holdings }];
+// one holding "from the bundle" (has Src stamps) vs an identical one "typed by the user" (no stamps) -> IDENTICAL stats.
+const fromBundle = { ticker: 'A', price: 100, shares: 10, beta: 1.2, dividendYield: 2.49, expRatio: 0.03, costBasis: 600, betaSrc: 'Yahoo Finance', dividendYieldSrc: 'Yahoo Finance' };
+const userTyped = { ticker: 'A', price: 100, shares: 10, beta: 1.2, dividendYield: 2.49, expRatio: 0.03, costBasis: 600 };
+const sB = DatumMath.portfolioStats(acct([fromBundle]));
+const sU = DatumMath.portfolioStats(acct([userTyped]));
+for (const f of ['weightedBeta', 'blendedYield', 'blendedExpense', 'unrealizedGain']) if (sB[f] !== sU[f]) rollupFail.push(`${f}: bundle ${sB[f]} != user ${sU[f]}`);
+// UNITS regression: a 2.49% yield must roll up as 2.49, not 0.0249 (the bug this stage caught).
+if (Math.abs(sU.blendedYield - 2.49) > 1e-9) rollupFail.push(`yield units wrong: blendedYield=${sU.blendedYield} (expect 2.49)`);
+// weighted correctness across two holdings: Σ(v*beta)/Σv.
+const two = DatumMath.portfolioStats(acct([{ price: 100, shares: 10, beta: 1.2 }, { price: 50, shares: 20, beta: 0.8 }]));
+if (Math.abs(two.weightedBeta - 1.0) > 1e-9) rollupFail.push(`weightedBeta=${two.weightedBeta} (expect 1.0)`);
+// RED drop-test: remove the beta -> weighted beta MOVES (proves the field is really read).
+const dropped = DatumMath.portfolioStats(acct([{ price: 100, shares: 10 }, { price: 50, shares: 20, beta: 0.8 }]));
+if (!(dropped.weightedBeta === 0.8)) rollupFail.push(`drop-test: expected 0.8 after dropping A's beta, got ${dropped.weightedBeta}`);
+
+console.log('=== STAGE-2/3 GATE ===');
 console.log('GREEN (real bundle) violations:', real.length, real.slice(0, 6));
 console.log('PRECEDENCE checks:', precedenceFail.length, precedenceFail);
+console.log('ROLLUP-MATH (user==curated, units, drop-test):', rollupFail.length, rollupFail);
 console.log('RED (poisoned) flagged:', red.length, '(expect >=4):', red);
-const pass = real.length === 0 && precedenceFail.length === 0 && redExpected;
+const pass = real.length === 0 && precedenceFail.length === 0 && rollupFail.length === 0 && redExpected;
 console.log(pass ? 'RESULT: PASS (green real · red bites)' : 'RESULT: FAIL');
 process.exit(pass ? 0 : 1);

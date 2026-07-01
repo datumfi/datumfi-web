@@ -143,7 +143,7 @@ const run = async () => {
   // union of symbols
   const syms = new Set([...Object.keys(bulk), ...Object.keys(curated)]);
   const final = {};
-  const cov = { name: 0, sector: 0, geography: 0, expRatio: 0, assetClass: 0, beta: 0, divYield: 0 };
+  const cov = { name: 0, sector: 0, geography: 0, expRatio: 0, assetClass: 0, beta: 0, dividendYield: 0 };
   const bySrc = { secSector: 0, spdrExp: 0, yahooBeta: 0, yahooYield: 0, curatedSector: 0 };
 
   for (const sym of syms) {
@@ -179,13 +179,14 @@ const run = async () => {
     if (c.beta != null) e.beta = c.beta;
     else if (!isFund && y.beta != null) { e.beta = y.beta; e.betaSrc = y.betaSrc; e.betaAsOf = y.betaAsOf; e.betaMethod = y.betaMethod; bySrc.yahooBeta++; }
 
-    // dividend yield: curated -> (STOCKS: Yahoo) -> blank.  Fund yield = curated ONLY (never Yahoo).
-    if (c.divYield != null) e.divYield = c.divYield;
-    else if (!isFund && y.divYield != null) { e.divYield = y.divYield; e.divYieldSrc = y.divYieldSrc; e.divYieldAsOf = y.divYieldAsOf; bySrc.yahooYield++; }
+    // dividend yield: curated -> (STOCKS: Yahoo, ratio->PERCENT ×100) -> blank.  Fund yield = curated ONLY (never Yahoo).
+    // App canon (datum-math.js): dividendYield/expRatio are PERCENT numbers (1.5 = 1.5%). Yahoo returns a ratio.
+    if (c.dividendYield != null) e.dividendYield = c.dividendYield;
+    else if (!isFund && y.divYield != null) { e.dividendYield = Math.round(y.divYield * 10000) / 100; e.dividendYieldSrc = y.divYieldSrc; e.dividendYieldAsOf = y.divYieldAsOf; bySrc.yahooYield++; }
 
     final[sym] = e;
     if (e.name) cov.name++;
-    for (const f of ['sector', 'geography', 'expRatio', 'assetClass', 'beta', 'divYield']) if (e[f] != null && e[f] !== '') cov[f]++;
+    for (const f of ['sector', 'geography', 'expRatio', 'assetClass', 'beta', 'dividendYield']) if (e[f] != null && e[f] !== '') cov[f]++;
   }
 
   // LEAN emit: named-only, sorted
