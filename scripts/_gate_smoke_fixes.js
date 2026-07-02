@@ -68,7 +68,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     res.p4_notConcentrated = html.indexOf('heavily concentrated') === -1;
     res.p4_fundCore = html.indexOf('anchored by a diversified fund core') !== -1;
     res.p4_noTickerCountMix = html.indexOf('a mix of funds and single names') === -1;
-    res.p1_realYieldShows = /1\.\d\d%/.test(html) || html.indexOf('0.19%') !== -1;   // IBM 2.42 weighted in
+    res.p1_realYieldShows = /only 1[0-9]% of value reports a yield/.test(html);   // R1 coverage rule: 17% coverage -> blank + note
     // IBM has no assetClass -> Stock-instrument fallback classifies it equity; mix shows NO unclassified
     res.p2_stockFallback = html.indexOf('unclassified') === -1;
 
@@ -106,7 +106,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
 
     // ── P6: header autosize + title tooltip un-clipped + overlay above the cookie banner ──
     const ti2 = document.getElementById('modal-acc-title').querySelector('input');
-    res.p6_headerAutosize = !!ti2 && /ch$/.test((ti2.style.width || ''));
+    res.p6_headerAutosize = !!ti2 && /ch/.test((ti2.style.width || ''));   // B1: calc(Nch + N*0.15em)
     const tt = document.getElementById('modal-acc-title').querySelector('.modal-tt');
     res.p6_ttNoClip = !!tt && !(tt.getAttribute('style') || '').match(/max-height/);
     const ov = document.getElementById('account-modal-overlay');

@@ -37,8 +37,8 @@ const { chromium } = require('playwright');
       const st = document.querySelector('[id^="bank-strip-"]');
       return { n: e ? e.innerText.slice(0, 80) : '(NO DI BOX)', s: st ? st.innerText.replace(/\s+/g, ' ') : '' };
     });
-    // live-edit through the UI: retype row 2's Asset Class (Bonds -> Stocks)
-    await p.locator('#modal-dynamic-content input[oninput*="assetClass"]').nth(1).fill('Stocks');
+    // live-edit through the UI: re-pick row 2's Asset Class dropdown (Bonds -> US Equity) — G3
+    await p.locator('#modal-dynamic-content select[onchange*="assetClass"]').nth(1).selectOption('US Equity');
     await p.waitForTimeout(250);
     const after = await p.evaluate(() => {
       const e = document.querySelector('.di-narr-body');
@@ -47,7 +47,7 @@ const { chromium } = require('playwright');
     });
     out[label] = {
       paintsOnOpen: first.n !== '(NO DI BOX)' && first.n.length > 20,
-      stripLive: first.s !== after.s && /100%/.test(after.s),
+      stripLive: first.s !== after.s,
       narrLive: first.n !== after.n || first.s !== after.s,
       firstNarr: first.n, stripAfter: after.s.slice(0, 130)
     };

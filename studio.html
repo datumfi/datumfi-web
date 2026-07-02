@@ -3813,7 +3813,9 @@
       var val = function (h) { return (parseFloat(h.price) || 0) * (parseFloat(h.shares) || 0); };
       var isCash = function (h) { return String(h.instrumentType || '').trim().toUpperCase() === 'CASH' || String(h.assetClass || '').trim().toLowerCase() === 'cash'; };
       var s = { total: 0, cash: 0, inv: 0, eq: 0, bd: 0, classed: 0, foreign: 0, geoed: 0, invCount: 0, maxRow: 0,
-                inst: {}, instKinds: 0, annuity: false, stockVal: 0, fundVal: 0, maxStockRow: 0, stockCount: 0, fundCount: 0 };
+                inst: {}, instKinds: 0, annuity: false, stockVal: 0, fundVal: 0, maxStockRow: 0, stockCount: 0, fundCount: 0,
+                betaCovVal: 0, yldCovVal: 0 };
+      var hasNum = function (x) { return x !== '' && x !== null && x !== undefined && isFinite(parseFloat(x)); };
       (acc.holdings || []).forEach(function (h) {
         var v = val(h); if (v <= 0) return;
         s.total += v;
@@ -3825,9 +3827,14 @@
         if (it) { if (!s.inst[it]) { s.inst[it] = 0; s.instKinds++; } s.inst[it]++; if (/annuit/.test(it)) s.annuity = true; }
         if (isStock) { s.stockVal += v; s.stockCount++; if (v > s.maxStockRow) s.maxStockRow = v; }
         if (isFund)  { s.fundVal += v; s.fundCount++; }
+        // R1/R2 — DATA COVERAGE: how much of the invested value actually publishes a beta / yield.
+        // A stat computed on a minority of dollars must never narrate as a whole-account read.
+        if (hasNum(h.beta)) s.betaCovVal += v;
+        if (hasNum(h.dividendYield)) s.yldCovVal += v;
         var ac = String(h.assetClass || '').toLowerCase();
         if (ac) { s.classed += v; if (/stock|equit/.test(ac)) s.eq += v; else if (/bond|fixed/.test(ac)) s.bd += v; }
         else if (isStock) { s.classed += v; s.eq += v; }   // a Stock instrument IS equity — sourced, not guessed
+        else if (/^bond|^cd/.test(it)) { s.classed += v; s.bd += v; }   // a Bond/CD instrument IS fixed income
         var g = String(h.geography || '').toLowerCase();
         if (g) { s.geoed += v; if (/foreign|international|global|emerging/.test(g)) s.foreign += v; }
       });
@@ -3844,8 +3851,17 @@
       s.maxStockShare = s.inv > 0 ? s.maxStockRow / s.inv : 0;
       s.fundShare     = s.inv > 0 ? s.fundVal / s.inv : 0;
       s.stockShare    = s.inv > 0 ? s.stockVal / s.inv : 0;
+      s.betaCovPct    = s.inv > 0 ? (s.betaCovVal / s.inv) * 100 : 0;
+      s.yldCovPct     = s.inv > 0 ? (s.yldCovVal / s.inv) * 100 : 0;
       return s;
     }
+    // R1/R2 — coverage footnote under a stat box; blanks the value below 50% coverage.
+    function _diCovSub(cov, word) {
+      if (cov >= 95) return '';
+      if (cov >= 50) return '<div class="hr-sub">on ' + Math.round(cov) + '% of value</div>';
+      return '<div class="hr-sub">only ' + Math.round(cov) + '% of value reports a ' + word + '</div>';
+    }
+    function _diCovVal(cov, valTxt) { return cov >= 50 ? valTxt : '—'; }
     // P4 — VALUE-WEIGHTED shape + mix (dollars, never ticker count). Concentration keys off
     // single-NAME (Instrument=Stock) dollar share; a broad fund carrying most of the value
     // reads as a diversified core per the banks' own descriptor doctrine (§9 Layer C).
@@ -3926,13 +3942,19 @@
       }
       out.push('Every dollar here went in pre-tax, grows tax-free, and comes out tax-free for medical — the only account taxed nowhere.');
       var beta = agg && agg.weightedBeta;
-      if (s.inv > 0 && beta !== null && beta !== undefined && (beta >= 1.15 || beta <= 0.85)) {
+      // R2 — the whole-account behavior claim needs real coverage: fire only when ≥60% of
+      // invested value publishes a beta (a stat on a minority of dollars stays silent).
+      if (s.inv > 0 && beta !== null && beta !== undefined && s.betaCovPct >= 60 && (beta >= 1.15 || beta <= 0.85)) {
         out.push('It rides ' + (beta >= 1.15 ? 'hotter than' : 'calmer than') + ' the market — and because an HSA grows and pays out tax-free for medical, it’s a fitting home for your higher-growth, higher-volatility bets.');
       }
       out.push(acc.isFriction
         ? 'You’ve earmarked this as a medical reserve, so it grows untouched outside your spending plan.'
         : 'This HSA is counted in your retirement spending plan.');
-      out.push('<span class="modal-tt-wrap" style="display:inline; cursor:help; border-bottom:1px dotted rgba(255,255,255,0.25);">Pay smaller medical bills out-of-pocket and save the receipts — each one is a future tax-free withdrawal you can take any year.<div class="modal-tt" style="bottom:100%;"><strong>Receipt-Bank Potential</strong>Every qualified medical receipt you pay out-of-pocket today is a future TAX-FREE withdrawal you can take any year.</div></span>');
+      // R3 — the receipt-bank hover anchors to a compact glyph, not the wrapped sentence: an
+      // absolutely-positioned tooltip on a MULTI-LINE inline span can paint displaced/clipped
+      // (the smoke-test "glowing box"). A one-glyph anchor kills the phantom class.
+      out.push('Pay smaller medical bills out-of-pocket and save the receipts — each one is a future tax-free withdrawal you can take any year.' +
+        ' <span class="modal-tt-wrap di-info" style="display:inline-block; width:16px; vertical-align:baseline; cursor:help; opacity:0.65;">ⓘ<div class="modal-tt" style="bottom:100%; left:auto; right:0;"><strong>Receipt-Bank Potential</strong>Every qualified medical receipt you pay out-of-pocket today is a future TAX-FREE withdrawal you can take any year.</div></span>');
       return out.join(' ');
     }
 
@@ -3952,7 +3974,7 @@
       }
       out.push('Money here grows tax-free and comes out tax-free for education — and OBBBA now stretches that to K-12, credentials, and trade programs, not just a four-year degree.');
       var beta5 = agg && agg.weightedBeta;
-      if (s.inv > 0 && beta5 !== null && beta5 !== undefined && (beta5 >= 1.15 || beta5 <= 0.85)) {
+      if (s.inv > 0 && beta5 !== null && beta5 !== undefined && s.betaCovPct >= 60 && (beta5 >= 1.15 || beta5 <= 0.85)) {
         out.push('The invested sleeve rides ' + (beta5 >= 1.15 ? 'hotter than' : 'calmer than') + ' the market.');
       }
       out.push(acc.isFriction
@@ -3973,7 +3995,7 @@
         : 'This Traditional 403(b) is ' + _diSpine(s) + ', built ' + mix + ' — pre-tax salary deferrals inside your tax-sheltered employer plan, growing tax-deferred until you draw on it.');
       var tilt = _diTiltSentence(acc, s, isRoth); if (tilt) out.push(tilt);
       var beta = agg && agg.weightedBeta;
-      if (beta !== null && beta !== undefined && (beta >= 1.15 || beta <= 0.85)) {
+      if (beta !== null && beta !== undefined && s.betaCovPct >= 60 && (beta >= 1.15 || beta <= 0.85)) {
         var bw = beta >= 1.15 ? 'harder than' : 'gentler than';
         out.push(isRoth
           ? 'It rides ' + bw + ' the market — and because the Roth Shelter pays out tax-free, it’s a fitting home for your higher-growth, higher-volatility bets.'
@@ -4004,11 +4026,11 @@
       return out.join(' ');
     }
 
-    // Strip cell with the §1 hover pair (one tooltip, both labeled parts)
-    function _diCell(lbl, valHtml, tipTitle, tip1a, tip1b, valId) {
+    // Strip cell with the §1 hover pair (one tooltip, both labeled parts) + optional coverage sub
+    function _diCell(lbl, valHtml, tipTitle, tip1a, tip1b, valId, sub) {
       var tt = '<div class="modal-tt" style="bottom:100%; left:0;"><strong>' + tipTitle + '</strong>' + tip1a +
                (tip1b ? '<br><br><strong>Why it matters for your retirement</strong>' + tip1b : '') + '</div>';
-      return '<div class="hr-cell modal-tt-wrap" style="display:block; cursor:help;"><div class="hr-lbl">' + lbl + '</div><div class="hr-val"' + (valId ? ' id="' + valId + '"' : '') + '>' + valHtml + '</div>' + tt + '</div>';
+      return '<div class="hr-cell modal-tt-wrap" style="display:block; cursor:help;"><div class="hr-lbl">' + lbl + '</div><div class="hr-val"' + (valId ? ' id="' + valId + '"' : '') + '>' + valHtml + '</div>' + (sub || '') + tt + '</div>';
     }
 
     // Bank-room rollup strip (replaces the generic strip for hsa / 403(b) rooms). Contains no
@@ -4019,9 +4041,11 @@
       var h = '<div class="holdings-rollup" id="bank-strip-' + id + '">';
       if (base.id === '529plan') {
         var g = _DI_529[new Date().getFullYear()];
+        // C1 — {yearsToCollege} is unsourced (§7 ask): the whole "appropriate for…" clause stays
+        // silent rather than printing a naked dash (SOURCED-OR-BLANK).
         h += _diCell('Enrollment Tilt', s.equityPct === null ? '—' : (_diP(s.equityPct) + ' / ' + _diP(s.bondPct)), 'Time-to-enrollment tilt',
-          _diP(s.equityPct) + ' stocks / ' + _diP(s.bondPct) + ' bonds — appropriate for a beneficiary roughly — years from enrollment (add the beneficiary’s age to sharpen this).',
-          'The glidepath decision is the core 529 lever: too much equity right before tuition is the classic 529 risk.');
+          _diP(s.equityPct) + ' stocks / ' + _diP(s.bondPct) + ' bonds.',
+          'The glidepath decision is the core 529 lever: too much equity right before tuition is the classic 529 risk. Add the beneficiary’s age to see whether this tilt fits their years to enrollment.');
         h += _diCell('Equity %', _diP(s.equityPct), 'Equity share (invested sleeve)',
           _diP(s.equityPct) + ' of this 529 is in stocks — the long-horizon growth engine for a tuition bill that may be years away.',
           'Most 529s use an age-based glidepath that is equity-heavy when the child is young and de-risks toward college.');
@@ -4035,10 +4059,14 @@
           _diP(s.foreignPct) + ' of the invested sleeve is international.',
           'Identical signal to your other investment accounts — no 529-specific nuance.');
         if (beta !== null && beta !== undefined) {
-          h += _diCell('Weighted Beta', beta.toFixed(2), 'Invested-sleeve beta',
+          h += _diCell('Weighted Beta', _diCovVal(s.betaCovPct, beta.toFixed(2)), 'Invested-sleeve beta',
             'Invested-sleeve beta ' + beta.toFixed(2) + ' vs market.',
-            'Computed on the invested portion only — cash/stable-value is beta 0. Left blank rather than faked when holdings don’t publish one.', 'hr-beta');
+            'Computed on the invested portion only — cash/stable-value is beta 0. Left blank rather than faked when holdings don’t publish one.', 'hr-beta', _diCovSub(s.betaCovPct, 'beta'));
         }
+        h += _diCell('Blended Yield', _diCovVal(s.yldCovPct, _yld(agg && agg.blendedYield)), 'Value-weighted dividend yield',
+          'Value-weighted dividend yield.',
+          'Income thrown off inside the account. In a 529 these dividends reinvest untaxed toward tuition — no yearly tax drag, so yield is pure compounding here.', 'hr-yield',
+          s.yldCovVal > 0 ? _diCovSub(s.yldCovPct, 'yield') : '');
         h += _diCell('Avg Expense', (_diE(agg && agg.blendedExpense) || '—'), 'Blended expense',
           'Weighted expense ratio ' + (_diE(agg && agg.blendedExpense) || '—') + '/yr across the invested sleeve.',
           '529 platforms sometimes add a program/admin fee on top — advisor-sold plans can carry meaningfully higher fees than direct-sold.', 'hr-expense');
@@ -4064,15 +4092,35 @@
           _diP(s.foreignPct) + ' of the invested sleeve is international.',
           'Diversifies the sleeve beyond one economy — identical signal to your other investment accounts.');
         if (beta !== null && beta !== undefined) {
-          h += _diCell('Weighted Beta', beta.toFixed(2), 'Invested-sleeve beta',
+          h += _diCell('Weighted Beta', _diCovVal(s.betaCovPct, beta.toFixed(2)), 'Invested-sleeve beta',
             'Invested-sleeve beta ' + beta.toFixed(2) + ' vs market.',
-            'Computed on the invested portion only — the cash sweep is beta 0. Left blank rather than faked when holdings don’t publish one.', 'hr-beta');
+            'Computed on the invested portion only — the cash sweep is beta 0. Left blank rather than faked when holdings don’t publish one.', 'hr-beta', _diCovSub(s.betaCovPct, 'beta'));
         }
-        h += '<div class="hr-cell"><div class="hr-lbl">Blended Yield</div><div class="hr-val" id="hr-yield">' + _yld(agg && agg.blendedYield) + '</div></div>';
+        h += _diCell('Blended Yield', _diCovVal(s.yldCovPct, _yld(agg && agg.blendedYield)), 'Value-weighted dividend yield',
+          'Value-weighted dividend yield.',
+          'Income thrown off inside the account. In an HSA these dividends reinvest untaxed — no yearly tax drag, so yield is pure compounding for your medical war-chest.', 'hr-yield',
+          s.yldCovVal > 0 ? _diCovSub(s.yldCovPct, 'yield') : '');
         h += _diCell('Avg Expense', (_diE(agg && agg.blendedExpense) || '—'), 'Blended expense',
           'Weighted expense ratio ' + (_diE(agg && agg.blendedExpense) || '—') + '/yr across the invested sleeve.',
           'HSA platforms sometimes add an account/admin fee on top — check your provider’s fee schedule alongside the fund expenses.');
       } else {
+        // B2 — unified lead block (matches the HSA opening set), then 403(b)-specific metrics.
+        var unclSub = (s.unclassedPct || 0) >= 1 ? '<div class="hr-sub">' + _diP(s.unclassedPct) + ' of value unclassified — set Asset Class in the table below</div>' : '';
+        h += _diCell('Invested / Cash', _diP(s.investedPct) + ' / ' + _diP(s.cashPct), 'Invested vs Cash split',
+          _diP(s.investedPct) + ' invested / ' + _diP(s.cashPct) + ' parked in cash.',
+          'The cash line is money standing still; the invested share is what compounds toward retirement.');
+        h += _diCell('Equity %', _diP(s.equityPct), 'Equity share (invested value)',
+          _diP(s.equityPct) + ' of this account’s invested value is in stocks.',
+          'The growth engine — stocks carry the long-horizon compounding this account’s tax shelter is built to protect.', null, unclSub);
+        h += _diCell('Bond %', _diP(s.bondPct), 'Bond share (invested value)',
+          _diP(s.bondPct) + ' sits in bonds.',
+          'Ballast — steadier, income-bearing holdings that damp the swings as retirement nears.');
+        h += _diCell('Cash %', _diP(s.cashPct), 'Cash share',
+          _diP(s.cashPct) + ' is in cash.',
+          'Dry powder inside the account — value that isn’t compounding until it’s put to work.');
+        h += _diCell('International', _diP(s.foreignPct), 'International share',
+          _diP(s.foreignPct) + ' of the invested value is international.',
+          'Diversifies the account beyond one economy — identical signal to your other investment accounts.');
         // Balance / Contribution hovers — Captain-reauthored verbatim (403(b) bank D19/D20, 2026-07-01)
         var bTail = ' Same balance, very different after-tax worth. Reaching it before 59½ generally triggers a 10% penalty on the taxable part, so plan to leave it until then.';
         h += _diCell('Balance', _diMoney(acc.value), 'Current balance in the account',
@@ -4084,18 +4132,15 @@
           'What you’re deferring per year.',
           'Capped HIGH — the 403(b) deferral limit is one of the largest available. One thing worth knowing: if you also put money in a 401(k), the two share the same yearly contribution limit — it’s one combined ceiling, not two separate ones, so filling one leaves less room in the other. ' +
           (isRoth ? 'Roth deferrals lock in tax-free growth on today’s dollars.' : 'Pre-tax deferrals lower this year’s taxable income now.'));
-        var mixVal = s.equityPct === null ? '—' : (_diP(s.equityPct) + ' stocks · ' + _diP(s.bondPct) + ' bonds' + ((s.cashPct || 0) >= 1 ? ' · ' + _diP(s.cashPct) + ' cash' : '') + ((s.unclassedPct || 0) >= 1 ? ' · ' + _diP(s.unclassedPct) + ' unclassified' : ''));
-        h += _diCell('Asset Mix', mixVal, 'Value-weighted asset mix',
-          'Value-weighted asset mix.',
-          'How your 403(b) is actually invested — chosen from the plan’s menu (often mutual funds AND annuity products). Watch for annuity sub-accounts: they can carry higher fees and surrender charges than plain funds.');
         if (beta !== null && beta !== undefined) {
-          h += _diCell('Weighted Beta', beta.toFixed(2), 'Value-weighted market sensitivity',
+          h += _diCell('Weighted Beta', _diCovVal(s.betaCovPct, beta.toFixed(2)), 'Value-weighted market sensitivity',
             'Value-weighted market sensitivity (holdings with a beta).',
-            'How hard your 403(b) swings with the market. Left blank when holdings don’t publish a beta — we leave it empty rather than fake it.', 'hr-beta');
+            'How hard your 403(b) swings with the market. Left blank when holdings don’t publish a beta — we leave it empty rather than fake it.', 'hr-beta', _diCovSub(s.betaCovPct, 'beta'));
         }
-        h += _diCell('Blended Yield', _yld(agg && agg.blendedYield), 'Value-weighted dividend yield',
+        h += _diCell('Blended Yield', _diCovVal(s.yldCovPct, _yld(agg && agg.blendedYield)), 'Value-weighted dividend yield',
           'Value-weighted dividend yield.',
-          'Income thrown off inside the account. In a 403(b) these dividends reinvest untaxed — no yearly tax drag, so yield is pure compounding here.', 'hr-yield');
+          'Income thrown off inside the account. In a 403(b) these dividends reinvest untaxed — no yearly tax drag, so yield is pure compounding here.', 'hr-yield',
+          s.yldCovVal > 0 ? _diCovSub(s.yldCovPct, 'yield') : '');
         h += _diCell('Avg Expense', (_diE(agg && agg.blendedExpense) || '—'), 'Value-weighted expense ratio',
           'Value-weighted expense ratio.',
           'Your annual drag. 403(b) menus historically run EXPENSIVE — especially annuity/insurance products with M&E charges. The cheapest available share class (or a low-cost index option if your plan offers one) is the single biggest lever you control.', 'hr-expense');
@@ -4123,10 +4168,12 @@
     };
     function _diTitleInput(acc, base) {
       var v = String(acc.name || (base && base.title) || '').replace(/"/g, '&quot;');
-      // P6 — width tracks content (ch units) so " Details" hugs the name; grows live as you type
+      // B1 — width must count the hud-title's 0.15em letter-spacing per character, which `ch`
+      // alone does not (the "403(" clip). calc(Nch + N*0.15em) + a 1ch cushion; grows as you type.
+      var w = function (n) { return 'calc(' + (n + 1) + 'ch + ' + ((n + 1) * 0.15).toFixed(2) + 'em)'; };
       return '<input type="text" maxlength="20" value="' + v + '"' +
-        ' style="background:transparent; border:none; border-bottom:1px dashed rgba(255,255,255,0.25); color:var(--white); font:inherit; letter-spacing:inherit; width:' + (v.length + 1) + 'ch; min-width:6ch; outline:none; padding:0;"' +
-        ' oninput="this.style.width=(this.value.length+1)+\'ch\'"' +
+        ' style="background:transparent; border:none; border-bottom:1px dashed rgba(255,255,255,0.25); color:var(--white); font:inherit; letter-spacing:inherit; width:' + w(v.length) + '; min-width:6ch; outline:none; padding:0;"' +
+        ' oninput="var n=this.value.length+1; this.style.width=\'calc(\'+n+\'ch + \'+(n*0.15).toFixed(2)+\'em)\'"' +
         ' onchange="renameFromModal(\'' + acc.id + '\', this.value)"> Details';
     }
     function _diSetTitle(acc, base) {
@@ -4279,6 +4326,7 @@
             // §402(g)-class plans (401k / 403b / 457b) share the high elective-deferral figures; IRA is its own bucket.
             let is401k = /401k|403|457b/.test(base.id);
             let is403 = base.id.includes('403');
+            let is457 = base.id.includes('457b');       // 457(b)-only: special final-3-year catch-up (2× base)
             let hasRule55 = /401k|403/.test(base.id);   // Rule-of-55 axis: 401(k)/403(b) only — the 457(b) never carries the penalty
             let ownerPrefix = base.type === 'coarch' ? 'co' : 'pri';
             let dobVal = document.getElementById(ownerPrefix + '-dob').value;
@@ -4342,7 +4390,8 @@
             let f15 = acc.fifteenYearLimit !== undefined ? acc.fifteenYearLimit : 3000;   // 403(b)-only: 15-yr-of-service tier ($3k/yr, $15k lifetime)
 
             let currentLimit = parseInt(baseLim);
-            if(acc.superCatchUp) currentLimit += parseInt(sc60);
+            if(is457 && acc.specialCatchUp) currentLimit += parseInt(baseLim);   // 457(b) special: up to 2× base, REPLACES the age tiers
+            else if(acc.superCatchUp) currentLimit += parseInt(sc60);
             else if(acc.catchUp50) currentLimit += parseInt(c50);
             if(is403 && acc.fifteenYear) currentLimit += parseInt(f15);
 
@@ -4361,24 +4410,38 @@
                     ${is403 ? `<div><div class="input-label">15-Yr Service Catch-Up</div><input type="number" class="small-field" value="${f15}" oninput="updateAccField('${id}', 'fifteenYearLimit', this.value)"></div>` : ``}
                 </div>` : `<div style="border-bottom:1px solid rgba(255,255,255,0.05); margin-bottom:15px;"></div>`}
 
-                <div class="toggle-row" style="border-bottom:none; padding-bottom: 0; margin-bottom: 8px;">
+                <div class="toggle-row modal-tt-wrap" style="border-bottom:none; padding-bottom: 0; margin-bottom: 8px;">
                     <span class="toggle-label" style="color:var(--teal-mid);">Enable Catch-Up (Age 50+)</span>
                     <label class="switch">
                       <input type="checkbox" ${acc.catchUp50 ? 'checked' : ''} onchange="updateAccToggle('${id}', 'catchUp50', this.checked)">
                       <span class="slider"></span>
                     </label>
+                    <div class="modal-tt"><strong>Age 50 Unlock</strong>From the calendar year you turn 50, the IRS lets you defer past the base ceiling. Peak-earning years usually land here — flip it on to raise this account's Annual Maximum.</div>
                 </div>
             `;
             if(is401k) {
                 html += `
-                <div class="toggle-row" style="border-bottom:${is403 ? 'none' : '1px solid rgba(255,255,255,0.05)'}; padding-bottom: 12px; margin-bottom: 8px; margin-top: 8px;">
+                <div class="toggle-row modal-tt-wrap" style="border-bottom:${(is403 || is457) ? 'none' : '1px solid rgba(255,255,255,0.05)'}; padding-bottom: 12px; margin-bottom: 8px; margin-top: 8px;">
                     <span class="toggle-label" style="color:var(--gold);">Enable Super Catch-Up (Age 60-63)</span>
                     <label class="switch">
                       <input type="checkbox" ${acc.superCatchUp ? 'checked' : ''} onchange="updateAccToggle('${id}', 'superCatchUp', this.checked)">
                       <span class="slider"></span>
                     </label>
+                    <div class="modal-tt"><strong>The 60–63 Window</strong>A SECURE 2.0 boost: in the calendar years you're 60 through 63, a larger catch-up replaces the standard one (if your plan offers it). Four years to push hardest, right before the drawdown turn.</div>
                 </div>
                 `;
+                if(is457) {
+                    html += `
+                <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 12px; margin-bottom: 8px; margin-top: 8px;">
+                    <span class="toggle-label" style="color:var(--gold);">Enable Special 3-Year Catch-Up</span>
+                    <label class="switch">
+                      <input type="checkbox" ${acc.specialCatchUp ? 'checked' : ''} onchange="updateAccToggle('${id}', 'specialCatchUp', this.checked)">
+                      <span class="slider"></span>
+                    </label>
+                    <div class="modal-tt"><strong>Final-3-Year Sprint</strong>In the THREE years before your plan's normal retirement age you may be able to defer up to DOUBLE the base limit (~$47,000 in 2025 / ~$49,000 in 2026) to make up unused room from prior years — a feature unique to the 457(b). You cannot use this AND the age-50 catch-up in the same year.</div>
+                </div>
+                    `;
+                }
                 if(is403) {
                     html += `
                 <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 12px; margin-bottom: 8px; margin-top: 8px;">
@@ -4846,21 +4909,40 @@
                   if (hasVal) return '<td>' + _inp(h, i, f, ph, num, _CURREF) + '</td>';
                   return '<td>' + _inp(h, i, f, ph, num) + '</td>';
                 };
+                // G3 — controlled vocab for classification fields (Captain-approved 2026-07-01).
+                // Values match the normalization maps so a pick flows straight into the signal math;
+                // blank stays valid; a legacy/typed value not in the list is preserved as an option.
+                var _sel = function (h, i, f, opts) {
+                  var cur = String(h[f] === undefined || h[f] === null ? '' : h[f]);
+                  var found = false;
+                  var o = '<option value=""' + (!cur ? ' selected' : '') + '>—</option>';
+                  opts.forEach(function (v) { var val = v[0], lbl = v[1] || v[0]; if (val === cur) found = true;
+                    o += '<option value="' + val + '"' + (val === cur ? ' selected' : '') + '>' + lbl + '</option>'; });
+                  if (cur && !found) o += '<option value="' + _esc(cur) + '" selected>' + _esc(cur) + '</option>';
+                  var src = { geography: 'geographySrc', sector: 'sectorSrc', assetClass: 'assetClassSrc' }[f];
+                  var ttl = (src && h[src]) ? _esc(f + ' — source: ' + h[src]) : '';
+                  return '<td><select class="holding-input" style="background:var(--bg-navy);"' + (ttl ? ' title="' + ttl + '"' : '') + ' onchange="updateHolding(\'' + id + '\', ' + i + ', \'' + f + '\', this.value)">' + o + '</select></td>';
+                };
+                var _V_AC = [['US Equity'], ['International Equity'], ['Bonds'], ['Cash'], ['Real Assets/Commodities'], ['Crypto'], ['Mixed/Allocation']];
+                var _V_IN = [['Stock'], ['ETF'], ['Mutual Fund'], ['Annuity'], ['CASH', 'CASH (sweep)'], ['Bond'], ['CD']];
+                var _V_GE = [['US'], ['International'], ['Global']];
+                var _V_SE = [['Broad Market/Blend'], ['Technology'], ['Energy'], ['Industrials & Defense'], ['Biotech'], ['Gold'], ['Crypto'], ['Dividend Growth'], ['Utilities'], ['Real Estate/REIT']];
+                // G2 — column-header hovers: what the field IS + what it MEANS for the plan.
                 var COLS = [
-                  { lbl: 'Ticker', w: 80, td: function (h, i) { return '<td><input type="text" class="holding-input" value="' + _esc(h.ticker) + '" placeholder="AAPL" onchange="fetchMockData(\'' + id + '\', ' + i + ', this.value)"></td>'; } },
-                  { lbl: 'Name', w: 155, td: function (h, i) { return _ti(h, i, 'name', 'Apple Inc.'); } },
-                  { lbl: 'Price', w: 80, td: function (h, i) { return _ti(h, i, 'price', '0', true); } },
-                  { lbl: 'Shares', w: 75, td: function (h, i) { return _ti(h, i, 'shares', '0', true); } },
-                  { lbl: 'Value', w: 90, td: function (h, i) { var v = (parseFloat(h.price) || 0) * (parseFloat(h.shares) || 0); return '<td style="color:var(--teal-mid); font-weight:bold;" id="holding-val-' + i + '">$' + v.toLocaleString('en-US') + '</td>'; } },
+                  { lbl: 'Ticker', w: 80, tip: { t: 'Ticker', b: 'The market symbol for this holding. Type it and we auto-fill everything we can source — every field stays yours to override.' }, td: function (h, i) { return '<td><input type="text" class="holding-input" value="' + _esc(h.ticker) + '" placeholder="AAPL" onchange="fetchMockData(\'' + id + '\', ' + i + ', this.value)"></td>'; } },
+                  { lbl: 'Name', w: 155, tip: { t: 'Name', b: 'What the holding actually is, in words. Worth a glance — a fund name often tells you its whole strategy.' }, td: function (h, i) { return _ti(h, i, 'name', 'Apple Inc.'); } },
+                  { lbl: 'Price', w: 80, tip: { t: 'Price', b: 'What one unit costs. Price × shares is the value doing the work — every signal above is weighted by it.' }, td: function (h, i) { return _ti(h, i, 'price', '0', true); } },
+                  { lbl: 'Shares', w: 75, tip: { t: 'Shares', b: 'How many units you hold. Small price, many shares can outweigh a big price, few shares — dollars decide, not tickers.' }, td: function (h, i) { return _ti(h, i, 'shares', '0', true); } },
+                  { lbl: 'Value', w: 90, tip: { t: 'Value', b: 'The dollars actually riding on this holding — the weight it carries in every signal and in your retirement math.' }, td: function (h, i) { var v = (parseFloat(h.price) || 0) * (parseFloat(h.shares) || 0); return '<td style="color:var(--teal-mid); font-weight:bold;" id="holding-val-' + i + '">$' + v.toLocaleString('en-US') + '</td>'; } },
                   { lbl: 'Cost Basis', w: 90, taxableOnly: true, tip: { t: 'Cost Basis', b: 'What you paid for this holding. Lets the math use your real embedded gain (capital-gains tax) when this account funds your retirement spend, instead of an estimate.' }, td: function (h, i) { return _ti(h, i, 'costBasis', '0', true); } },
-                  { lbl: 'Unrealized Gain', w: 100, taxableOnly: true, td: function (h, i) { var cb = parseFloat(h.costBasis); if (!isFinite(cb) || cb <= 0) return '<td id="holding-gain-' + i + '" style="color:var(--muted);">—</td>'; var g = (parseFloat(h.price) || 0) * (parseFloat(h.shares) || 0) - cb; return '<td id="holding-gain-' + i + '" style="color:' + (g >= 0 ? 'var(--teal-mid)' : 'var(--danger)') + ';">' + (g >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(g)).toLocaleString('en-US') + '</td>'; } },
-                  { lbl: 'Beta', w: 72, td: function (h, i) { return _prov(h, i, 'beta', '—', true, 'betaSrc', _T2BETA, 'Beta'); } },
-                  { lbl: 'Yield', w: 72, td: function (h, i) { return _prov(h, i, 'dividendYield', '—', true, 'dividendYieldSrc', _T2YLD, 'Yield'); } },
-                  { lbl: 'Geography', w: 110, td: function (h, i) { return _prov(h, i, 'geography', '—', false, 'geographySrc', null, 'Geography'); } },
-                  { lbl: 'Sector', w: 110, td: function (h, i) { return _prov(h, i, 'sector', '', false, 'sectorSrc', null, 'Sector'); } },
-                  { lbl: 'Exp Ratio', w: 72, td: function (h, i) { return _prov(h, i, 'expRatio', '0', true, 'expRatioSrc', null, 'Exp Ratio'); } },
-                  { lbl: 'Asset Class', w: 110, td: function (h, i) { return _prov(h, i, 'assetClass', '', false, 'assetClassSrc', null, 'Asset Class'); } },
-                  { lbl: 'Instrument', w: 95, td: function (h, i) { return _ti(h, i, 'instrumentType', '—'); } },
+                  { lbl: 'Unrealized Gain', w: 100, taxableOnly: true, tip: { t: 'Unrealized Gain', b: 'Value minus what you paid — growth you haven\'t sold yet. In a taxable account this is the slice the capital-gains tax will touch.' }, td: function (h, i) { var cb = parseFloat(h.costBasis); if (!isFinite(cb) || cb <= 0) return '<td id="holding-gain-' + i + '" style="color:var(--muted);">—</td>'; var g = (parseFloat(h.price) || 0) * (parseFloat(h.shares) || 0) - cb; return '<td id="holding-gain-' + i + '" style="color:' + (g >= 0 ? 'var(--teal-mid)' : 'var(--danger)') + ';">' + (g >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(g)).toLocaleString('en-US') + '</td>'; } },
+                  { lbl: 'Beta', w: 72, tip: { t: 'Beta', b: 'How hard this holding swings versus the market (1.0 = in step). It drives the range of outcomes your Shape stress-tests. Blank when unpublished — we never fake it.' }, td: function (h, i) { return _prov(h, i, 'beta', '—', true, 'betaSrc', _T2BETA, 'Beta'); } },
+                  { lbl: 'Yield', w: 72, tip: { t: 'Yield', b: 'Cash this holding pays you per year, as a % of its price. Inside a tax-advantaged account it reinvests untaxed — pure compounding.' }, td: function (h, i) { return _prov(h, i, 'dividendYield', '—', true, 'dividendYieldSrc', _T2YLD, 'Yield'); } },
+                  { lbl: 'Geography', w: 110, tip: { t: 'Geography', b: 'Where the assets live. Drives the International signal — how much of your growth depends on one economy.' }, td: function (h, i) { return _sel(h, i, 'geography', _V_GE); } },
+                  { lbl: 'Sector', w: 130, tip: { t: 'Sector', b: 'The theme this holding rides. One theme dominating your equity is a tilt worth knowing about — it shows up in your Datum Intelligence.' }, td: function (h, i) { return _sel(h, i, 'sector', _V_SE); } },
+                  { lbl: 'Exp Ratio', w: 72, tip: { t: 'Exp Ratio', b: 'The fund\'s yearly fee, quietly subtracted before you see returns. Over decades this is one of the few levers you fully control.' }, td: function (h, i) { return _prov(h, i, 'expRatio', '0', true, 'expRatioSrc', null, 'Exp Ratio'); } },
+                  { lbl: 'Asset Class', w: 130, tip: { t: 'Asset Class', b: 'The stocks / bonds / cash bucket. It sets your mix — the single biggest driver of how your account behaves on the way to retirement.' }, td: function (h, i) { return _sel(h, i, 'assetClass', _V_AC); } },
+                  { lbl: 'Instrument', w: 110, tip: { t: 'Instrument', b: 'What kind of wrapper this is — a single stock, a fund, an annuity, a cash sweep. Single names concentrate risk; funds spread it; the cash sweep sits out of the market.' }, td: function (h, i) { return _sel(h, i, 'instrumentType', _V_IN); } },
                   { lbl: '', w: null, td: function (h, i) { return '<td><button onclick="removeHolding(\'' + id + '\', ' + i + ')" style="background:none; border:none; color:var(--muted); cursor:pointer;">×</button></td>'; } }
                 ];
                 var cols = COLS.filter(function (c) { return !c.taxableOnly || isTaxable; });
@@ -4914,8 +4996,10 @@
                  let el = document.getElementById(`limit-calc-${id}`);
                  if(el) {
                      let hiClass = /401k|403|457b/.test(acc.baseId);
-                     let cLim = parseInt(acc.baseLimit !== undefined ? acc.baseLimit : (hiClass ? 24500 : 7500));
-                     if(acc.superCatchUp) cLim += parseInt(acc.superCatchUpLimit !== undefined ? acc.superCatchUpLimit : (hiClass ? 11250 : 0));
+                     let bLim = parseInt(acc.baseLimit !== undefined ? acc.baseLimit : (hiClass ? 24500 : 7500));
+                     let cLim = bLim;
+                     if(acc.baseId.includes('457b') && acc.specialCatchUp) cLim += bLim;
+                     else if(acc.superCatchUp) cLim += parseInt(acc.superCatchUpLimit !== undefined ? acc.superCatchUpLimit : (hiClass ? 11250 : 0));
                      else if (acc.catchUp50) cLim += parseInt(acc.catchUpLimit !== undefined ? acc.catchUpLimit : (hiClass ? 8000 : 1100));
                      if(acc.baseId.includes('403') && acc.fifteenYear) cLim += parseInt(acc.fifteenYearLimit !== undefined ? acc.fifteenYearLimit : 3000);
                      el.innerText = `$${cLim.toLocaleString()} / YR`;
@@ -5033,8 +5117,9 @@
     window.updateAccToggle = function(id, field, val) {
         const acc = state.accounts.find(a => a.id === id);
         if(acc) {
-            if (field === 'superCatchUp' && val) acc.catchUp50 = false;
-            if (field === 'catchUp50' && val) acc.superCatchUp = false;
+            if (field === 'superCatchUp' && val) { acc.catchUp50 = false; acc.specialCatchUp = false; }
+            if (field === 'catchUp50' && val) { acc.superCatchUp = false; acc.specialCatchUp = false; }
+            if (field === 'specialCatchUp' && val) { acc.catchUp50 = false; acc.superCatchUp = false; }   // 457(b): special 3-yr REPLACES the age tiers
             
             acc[field] = val;
             renderInputs(); 
