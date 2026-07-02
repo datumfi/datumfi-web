@@ -4085,13 +4085,20 @@
         else if (/industrial|aerospace|defense/i.test(sec)) k = 'industrials/defense';
         else if (/biotech/i.test(sec)) k = 'biotech';
         else if (/small (cap|blend)/i.test(sec)) k = 'US small-cap';
+        // HONESTY GUARD (ruled 2026-07-02): a row with NO classification signal at all is never
+        // NAMED a sleeve — it buckets internally as 'unclassified', is excluded from the printed
+        // list, and >10% of account value silences B2 (guard in _diIraCompRead). The authored
+        // else→core stays for TAGGED rows (US large-blend/total-market etc.). Bonds remain
+        // positive-signal-only above — nothing defaults into them (L47).
+        else if (!(ac + geo + sec).trim()) k = 'unclassified';
         else k = 'US large-cap core';
         b[k] = (b[k] || 0) + v;
       });
+      var uncl = b['unclassified'] || 0; delete b['unclassified'];
       var list = Object.keys(b).map(function (k) { return { k: k, pct: (b[k] / s.total) * 100 }; })
         .sort(function (x, y) { return y.pct - x.pct; });
       var sat = 0; list.forEach(function (x) { if (_DI_SLEEVE_SAT[x.k]) sat += x.pct; });
-      return { list: list, top: list.length ? list[0].pct : 0, satPct: sat };
+      return { list: list, top: list.length ? list[0].pct : 0, satPct: sat, unclPct: (uncl / s.total) * 100 };
     }
 
     function _diIraSpine(acc, s, agg, isRoth) {
@@ -4107,7 +4114,7 @@
     // lives in the _diTiltSentence ladder. Sleeve clause is BYTE-IDENTICAL [R]/[T] (R96).
     function _diIraCompRead(acc, s, agg, isRoth) {
       var c = _diSleeves(acc, s);
-      if (!c || s.invCount < 8 || c.list.length < 3 || c.top >= 50 || c.satPct > 30) return null;
+      if (!c || s.invCount < 8 || c.list.length < 3 || c.top >= 50 || c.satPct > 30 || c.unclPct > 10) return null;
       var names = c.list.map(function (x) { return Math.round(x.pct) + '% ' + x.k; });
       var txt = names.length > 4
         ? names.slice(0, 4).join(', ') + ' and a handful of smaller satellite positions (' +

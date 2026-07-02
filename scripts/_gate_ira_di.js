@@ -70,6 +70,38 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     recalcPortfolio(r);
     const V = open('rothira');
 
+    // FAST-FOLLOW fixtures (untagged-row honesty, ruled 2026-07-02). U: two blank-classification
+    // rows = 12% of value — on defective code B2 NAMES the phantom ("42% US large-cap core");
+    // fixed code goes SILENT (>10% unclassified) while the strip still surfaces the honest
+    // "unclassified — set Asset Class" panel note. W: one blank row = 5% — B2 may fire but the
+    // unclassified slice must be EXCLUDED (core prints its true 30%, never 35%, never named).
+    r.holdings = [
+      mk({ ticker: 'VOO',   name: 'Vanguard S&P 500',      price: 100, shares: 180, expRatio: 0.03, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Large Cap',      instrumentType: 'ETF' }),
+      mk({ ticker: 'VTI',   name: 'Vanguard Total Market', price: 100, shares: 120, expRatio: 0.03, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Total Market',   instrumentType: 'ETF' }),
+      mk({ ticker: 'VXUS',  name: 'Vanguard Intl',         price: 100, shares: 220, expRatio: 0.07, assetClass: 'Stocks', geography: 'International',           sector: 'Total Market (minus US)', instrumentType: 'ETF' }),
+      mk({ ticker: 'BND',   name: 'Vanguard Total Bond',   price: 100, shares: 200, expRatio: 0.03, assetClass: 'Bonds',  geography: 'US Bonds',                sector: 'Bonds',          instrumentType: 'ETF' }),
+      mk({ ticker: 'SMH',   name: 'VanEck Semiconductor',  price: 100, shares: 100, expRatio: 0.35, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Semiconductors', instrumentType: 'ETF' }),
+      mk({ ticker: 'XSD',   name: 'SPDR Semiconductor',    price: 100, shares: 60,  expRatio: 0.35, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Semiconductors', instrumentType: 'ETF' }),
+      mk({ ticker: 'MYST1', name: 'Mystery Fund One',      price: 100, shares: 70,  instrumentType: 'ETF' }),
+      mk({ ticker: 'MYST2', name: 'Mystery Fund Two',      price: 100, shares: 50,  instrumentType: 'ETF' })
+    ];
+    recalcPortfolio(r);
+    const U = open('rothira');
+
+    r.holdings = [
+      mk({ ticker: 'VOO',   name: 'Vanguard S&P 500',      price: 100, shares: 180, expRatio: 0.03, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Large Cap',      instrumentType: 'ETF' }),
+      mk({ ticker: 'VTI',   name: 'Vanguard Total Market', price: 100, shares: 120, expRatio: 0.03, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Total Market',   instrumentType: 'ETF' }),
+      mk({ ticker: 'VXUS',  name: 'Vanguard Intl',         price: 100, shares: 140, expRatio: 0.07, assetClass: 'Stocks', geography: 'International',           sector: 'Total Market (minus US)', instrumentType: 'ETF' }),
+      mk({ ticker: 'VEA',   name: 'Vanguard Developed',    price: 100, shares: 80,  expRatio: 0.05, assetClass: 'Stocks', geography: 'International',           sector: 'Developled Markets', instrumentType: 'ETF' }),
+      mk({ ticker: 'BND',   name: 'Vanguard Total Bond',   price: 100, shares: 200, expRatio: 0.03, assetClass: 'Bonds',  geography: 'US Bonds',                sector: 'Bonds',          instrumentType: 'ETF' }),
+      mk({ ticker: 'AGG',   name: 'iShares Core Bond',     price: 100, shares: 60,  expRatio: 0.03, assetClass: 'Bonds',  geography: 'US Bonds',                sector: 'Bonds',          instrumentType: 'ETF' }),
+      mk({ ticker: 'SMH',   name: 'VanEck Semiconductor',  price: 100, shares: 100, expRatio: 0.35, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Semiconductors', instrumentType: 'ETF' }),
+      mk({ ticker: 'XSD',   name: 'SPDR Semiconductor',    price: 100, shares: 70,  expRatio: 0.35, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Semiconductors', instrumentType: 'ETF' }),
+      mk({ ticker: 'MYST',  name: 'Mystery Fund',          price: 100, shares: 50,  instrumentType: 'ETF' })
+    ];
+    recalcPortfolio(r);
+    const W = open('rothira');
+
     // Regression: 403(b) keeps its OWN tilt tail (plan-menu wording) after the wrap refactor.
     const t4 = window.state.accounts.find(a => a.baseId === 'trad403');
     t4.holdings = [
@@ -91,7 +123,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     co.showHoldings = true; window.openAccountModal(co.id);
     const E = document.getElementById('modal-dynamic-content').innerHTML;
 
-    return { T, Rt, V, F, X, E };
+    return { T, Rt, V, U, W, F, X, E };
   });
   await b.close();
 
@@ -101,7 +133,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   // Wrapper-neutral cores: the stretch between the shared lead and the branch tail must be
   // byte-identical across [R]/[T] (§11 R104 / B2 R96 — the divergence-proof heart).
   const between = (s, a, z) => { const i = s.indexOf(a); if (i < 0) return null; const j = s.indexOf(z, i); return j < 0 ? null : s.slice(i, j); };
-  const nT = narr(R.T.html), nR = narr(R.Rt.html), nV = narr(R.V.html);
+  const nT = narr(R.T.html), nR = narr(R.Rt.html), nV = narr(R.V.html), nU = narr(R.U.html), nW = narr(R.W.html);
 
   console.log('===== IRA DI GATE [' + LABEL + '] =====');
   let all = true;
@@ -145,6 +177,13 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   all = ok('variant R: bond 35% asset-location clause',         has(nV, '35%') && has(nV, 'most valuable tax shelter')) && all;
   all = ok('variant: beta clause SILENT (coverage 50% < 60)',   !has(nV, 'It rides')) && all;
   all = ok('variant: B2 SILENT (3 tickers < 8)',                !has(nV, 'under the hood')) && all;
+  // Job 2b — FAST-FOLLOW: untagged rows are never NAMED a sleeve (Lesson 47 honesty guard)
+  all = ok('untagged>10%: B2 SILENT (12% unclassified)',        !has(nU, 'under the hood')) && all;
+  all = ok('untagged>10%: phantom "42% US large-cap core" gone', !has(nU, '42% US large-cap core')) && all;
+  all = ok('untagged>10%: strip surfaces honest panel note',    has(R.U.html, 'unclassified — set Asset Class')) && all;
+  all = ok('untagged<=10%: B2 fires (5% unclassified)',         has(nW, 'under the hood')) && all;
+  all = ok('untagged<=10%: core prints TRUE 30% (not 35%)',     has(nW, '30% US large-cap core') && !has(nW, '35% US large-cap core')) && all;
+  all = ok('untagged<=10%: "unclassified" never named in DI',   !has(nW, 'unclassified') && !has(nU, 'unclassified')) && all;
   // Job 3 — §1 strip (incl. NEW Unrealized Gain cell) + §2 title + §3/§4 + §12 columns
   all = ok('strip T: Library balance hover (R10)',              has(R.T.html, 'The Library: pre-tax dollars')) && all;
   all = ok('strip R: Conservatory balance hover (R10)',         has(R.Rt.html, 'The Conservatory: already-taxed dollars')) && all;
