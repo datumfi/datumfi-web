@@ -3799,7 +3799,7 @@
        singleNameStock_fmt token contract is wired (the IRA/401k/457 §7 ask — L48, don't rebuild).
        NOTE: distinct from the Want-canvas "Datum Intelligence" slider tooltips (~L1844) — name
        collision only; do not merge. */
-    function _diIsBankRoom(baseId) { return /^(hsa|trad403|roth403|tradira|rothira)(_co)?$/.test(String(baseId || '')) || baseId === '529plan'; }
+    function _diIsBankRoom(baseId) { return /^(hsa|trad403|roth403|tradira|rothira|pretax457b|roth457b)(_co)?$/.test(String(baseId || '')) || baseId === '529plan'; }
     // 529 §8 dated constants (gift exclusion / superfund / K-12 / 529→Roth) — LOOKUP by tax year (L47)
     var _DI_529 = { 2025: { excl: 18000, superS: 90000, superC: 180000, k12: 10000, roth: 35000 },
                     2026: { excl: 19000, superS: 95000, superC: 190000, k12: 20000, roth: 35000 } };
@@ -4227,6 +4227,127 @@
       };
     }
 
+    /* ── 457(b) bank (pretax457b "The Workshop" / roth457b "The Annex" — names FINALIZED by
+       Captain 2026-07-02; the bank sheet's original pair collided with the live 401(k) and the
+       Architect is syncing the sheet to match). Same layer-table shape as the IRA. The 457's
+       load-bearing truth in EVERY layer: penalty-free access on separation, at any age.
+       NO B2 Composition Read verbatims authored for 457 yet — the seam stays empty (L47);
+       splice one entry when the Architect authors the [R]/[T] tax tails. */
+    function _di457Spine(acc, s, agg, isRoth) {
+      var mix = _diInstMix(s);
+      var built = mix ? ', built ' + mix : '';
+      return isRoth
+        ? 'This Roth 457(b) is ' + _diSpine(s) + built + ' — designated Roth dollars inside your governmental deferred-comp plan, where everything grows tax-free.'
+        : 'This Traditional 457(b) is ' + _diSpine(s) + built + ' — pre-tax deferred compensation in your governmental plan, growing tax-deferred until you draw on it.';
+    }
+    function _di457Tilt(acc, s, agg, isRoth) { return _diTiltSentence(acc, s, isRoth); }   // R105 = the plan-menu tails (shared 403 wrap, verbatim)
+    // C · BEHAVIOR (R106) — beta first, then concentration / asset-location, cap 2. §7.5:
+    // singleNamePct = LARGEST single security ÷ account value (differs from the IRA's Σ-share).
+    function _di457Behavior(acc, s, agg, isRoth) {
+      var out = [];
+      var beta = agg && agg.weightedBeta;
+      if (beta !== null && beta !== undefined && s.betaCovPct >= 60 && (beta >= 1.15 || beta <= 0.85)) {
+        var bw = beta >= 1.15 ? 'harder than' : 'gentler than';
+        out.push(isRoth
+          ? 'It rides ' + bw + ' the market — and because the Annex pays out tax-free, it’s a fitting home for your higher-growth, higher-volatility bets.'
+          : 'It rides ' + bw + ' the market; in the Workshop both the gains and the swings are yours until withdrawal, when they’re taxed as ordinary income.');
+      }
+      var snp = s.total > 0 ? (s.maxStockRow / s.total) : 0;
+      if (out.length < 2 && snp >= 0.10 && s.maxStockTicker) {
+        var pct = Math.round(snp * 100) + '%';
+        out.push(isRoth
+          ? 'A single position — ' + s.maxStockTicker + ' — carries ' + pct + ' of this account, so a large share of that tax-free upside (and its risk) rides on one name.'
+          : 'A single position — ' + s.maxStockTicker + ' — carries ' + pct + ' of this account, so one name drives an outsized share of the pre-tax balance you’ll eventually draw down.');
+      }
+      if (out.length < 2 && s.bondPct !== null && s.bondPct >= 30) {
+        out.push(isRoth
+          ? 'With ' + _diP(s.bondPct) + ' of the account in bonds, though, a heavy ballast slightly wastes your best tax shelter — fixed income’s modest growth would shield less tax in a Roth than your fastest-growing holdings would.'
+          : 'With ' + _diP(s.bondPct) + ' of the account in bonds, the ballast sits naturally here — a Traditional is a sensible home for income-heavy holdings, since that ordinary-income growth would be taxed the same on the way out either way.');
+      }
+      return out.length ? out.join(' ') : null;
+    }
+    // D · MENU & FEES (R107) — fires when sourced (the bank's own §11 worked example renders it
+    // on an average-expense plan menu; the plan-menu MEANING is the layer, not a fee verdict).
+    function _di457MenuFees(acc, s, agg, isRoth) {
+      var e = agg && agg.blendedExpense;
+      var t = _diE(e); if (t === null) return null;
+      // Middle band = "about average for a plan menu" (Captain ruling 2026-07-02, matches the
+      // §11 worked examples R120/R122 — which also drop the redundant plan-menu clause on [R]).
+      if (e > 0.40 && e <= 0.75) {
+        return isRoth
+          ? 'Your funds run about average for a plan menu; the lever here is picking the cheapest available share class, not switching providers.'
+          : 'Your funds run about average for a plan menu; like any employer plan the menu is fixed, so fee control means choosing the lowest-cost option your plan offers.';
+      }
+      var w = e <= 0.15 ? 'exceptionally lean (a value-weighted ≈' + t + ' expense ratio)'
+            : e <= 0.40 ? 'lean (a value-weighted ≈' + t + ' expense ratio)'
+            : 'on the expensive side (≈' + t + '/yr value-weighted)';
+      return isRoth
+        ? 'Your funds run ' + w + ' — and since a 457(b) draws from a plan menu (not the open market), the lever here is picking the cheapest available share class, not switching providers.'
+        : 'Your funds run ' + w + '; like any employer plan the menu is fixed, so fee control means choosing the lowest-cost option your plan offers.';
+    }
+    function _di457Tax(acc, s, agg, isRoth) {
+      return isRoth
+        ? 'Every dollar here — growth included — comes out tax-free once the 5-year clock is met, with no RMDs for you ever. And the 457(b)’s signature: once you separate from this employer you can tap it at ANY age, with no 10% penalty — a rare tax-free bridge you don’t have to wait until 59.5 to use.'
+        : 'This is pre-tax money: every dollar — deferrals and growth — is ordinary income when you withdraw, and RMDs begin at 73. But the 457(b)’s edge is access: the day you separate from this employer you can draw on it at ANY age with no 10% penalty — the classic bridge for an early retirement, taxed but never penalized.';
+    }
+    function _di457Toggle(acc, s, agg, isRoth) {
+      if (!(acc.catchUp50 || acc.superCatchUp || acc.specialCatchUp)) return null;
+      return isRoth
+        ? 'You’ve switched on the catch-up — extra tax-free room layered on an already-high 457(b) ceiling, valuable right as your earnings peak.'
+        : 'You’ve switched on the catch-up — extra deductible room on top of an already-high 457(b) ceiling, often worth the most in your top earning years.';
+    }
+    function _di457Contrib(acc, s, agg, isRoth) {
+      var contrib = (acc.inflow || 0) * (acc.freq || 0);
+      if (!(contrib > 0)) return null;
+      return isRoth
+        ? 'At ' + _diMoney(contrib) + '/yr you’re filling a high-limit, tax-free bucket that also happens to be the most accessible retirement account you own.'
+        : 'At ' + _diMoney(contrib) + '/yr you’re deferring meaningful pre-tax capital into the one account you can reach penalty-free the moment you leave the job.';
+    }
+    var _DI_457_LAYERS = [
+      _di457Spine,      // A — always
+      _di457Tilt,       // B — 0–2 (shared §13 maps; the 457 sheet's map is the same account-agnostic map)
+      /* B2 seam — no 457 Composition Read verbatims authored yet (L47: silent, not invented) */
+      _di457Behavior,   // C — 0–2, beta first
+      _di457MenuFees,   // D — plan-menu meaning
+      _di457Tax,        // E — always (the separation-based access line — the 457 signature)
+      _di457Toggle,     // F
+      _di457Contrib     // G
+    ];
+    function _diNarr457(acc, s, agg, isRoth) {
+      if (!s.total || !(acc.holdings || []).length) return '';
+      var out = [];
+      _DI_457_LAYERS.forEach(function (fn) { var t = fn(acc, s, agg, isRoth); if (t) out.push(t); });
+      return out.join(' ');
+    }
+
+    // §12 457(b)-aware column hovers (bank R129–R142; {planProvider}/{instrumentType}
+    // parentheticals dropped — tokens unsourced, never fabricated).
+    function _di457ColTips(isRoth) {
+      var why = '<br><br><strong>Why it matters for your retirement</strong>';
+      return {
+        'Ticker': { t: 'Ticker', b: 'The symbol of this single holding.' + why + 'Names the bet on this row. In a 457(b) you picked it from your plan’s fund menu — a shorter list than the open market, so each choice is made within the lineup your employer offers.' },
+        'Name': { t: 'Name', b: 'The full security name behind the ticker.' + why + 'Tells you what you actually own — a broad index fund, a bond fund, a target-date fund. The plainer and broader the name, the more this row is built to be left alone for a long retirement.' },
+        'Price': { t: 'Price', b: 'The latest reference price per share.' + why + 'A reference point, not a live quote — shown sourced-or-blank, never a stale guess. It only matters paired with shares: price × shares is what this row is worth to your plan.' },
+        'Shares': { t: 'Shares', b: 'How many units of this holding you own.' + why + 'The size of the position. Shares × price = this row’s value — the number that decides how much weight this single holding carries in your 457(b).' },
+        'Value': { t: 'Value', b: 'Shares × price — what this holding is worth today.' + why + 'The dollar weight this row pulls. All 4 boxes above are VALUE-WEIGHTED — a big-value row steers the whole account’s beta, yield, and fee far more than a small one.' },
+        'Cost Basis': { t: 'Cost Basis', b: 'What you paid for this holding (user-entered).' + why + 'Always entered by you — no source publishes your basis. ' +
+          (isRoth ? 'In the Annex it never matters for tax — qualified growth is tax-free.' : 'In the Workshop it barely matters at withdrawal: the whole balance is ordinary income regardless of basis.') +
+          ' We still track it so Unrealized Gain can show.' },
+        'Unrealized Gain': { t: 'Unrealized Gain', b: 'Value − Cost Basis for THIS row (blank if no basis).' + why +
+          (isRoth ? 'In a Roth 457(b) this paper gain is yours tax-free once qualified — and reachable penalty-free the day you separate.' : 'In a Traditional it’s tax-DEFERRED: this gain becomes ordinary income on the way out.') +
+          ' Either way no yearly capital-gains tax — the 457(b) wrapper shields the gain while it grows. Feeds the Unrealized Gain box.' },
+        'Beta': { t: 'Beta', b: 'This holding’s market sensitivity (sourced-or-blank).' + why + 'How hard this one position swings — 1.00 moves with the market, above is jumpier, below steadier. BLANK when no source publishes it (we never fake a beta).' +
+          (isRoth ? ' The Roth 457(b) is a fine home for higher-beta bets — the upside is untaxed.' : '') + ' Feeds the Weighted Beta box.' },
+        'Yield': { t: 'Yield', b: 'This holding’s dividend yield (sourced-or-blank).' + why + 'The income this position throws off as a %. In a 457(b) these dividends reinvest with ZERO yearly tax drag — unlike a taxable account. Blank when unpublished. Feeds the Blended Yield box.' },
+        'Geography': { t: 'Geography', b: 'Where this holding is invested — at the granular level we track (US large-blend, foreign developed, emerging, global blend, US bonds, cash).' + why + 'Tells you how much of this row rides on the rest of the world — and WHICH part. We read the granular tag, not just "US vs international." Honest caveat: reflects published domicile, not always true exposure.' },
+        'Sector': { t: 'Sector', b: 'The granular industry or theme this holding sits in — broad-market core, or a named tilt like semiconductors, energy, REITs, dividend growth.' + why + 'Sectors boom and bust together. Reading the granular sector per row spots when several tickers quietly stack into ONE theme. Broad-market rows (large/total/blend) are NOT a tilt.' +
+          (isRoth ? ' A high-risk theme is a natural Roth bet — binary upside comes out untaxed.' : '') },
+        'Exp Ratio': { t: 'Exp Ratio', b: 'The annual fund fee for this holding, as a %.' + why + 'The yearly drag this one fund skims. In a 457(b) you can’t shop the whole market, but you CAN pick the lowest-cost share class your plan offers — so a high number here is still partly fixable from within the menu.' },
+        'Asset Class': { t: 'Asset Class', b: 'Whether this row is equity, bond, cash, or alternative.' + why + 'The job this holding does: equity = growth engine, bond = ballast, cash = buffer, alt = hedge. The mix across rows is your real risk dial — built from the funds your plan makes available.' },
+        'Instrument': { t: 'Instrument', b: 'Whether this row is an ETF, mutual fund, individual stock, or cash.' + why + 'Funds spread your money across many companies so no single failure sinks you. A governmental 457(b) menu is typically all funds — which is exactly what you want for a bucket meant to be left alone for decades.' }
+      };
+    }
+
     // Strip cell with the §1 hover pair (one tooltip, both labeled parts) + optional coverage sub
     function _diCell(lbl, valHtml, tipTitle, tip1a, tip1b, valId, sub) {
       var tt = '<div class="modal-tt" style="bottom:100%; left:0;"><strong>' + tipTitle + '</strong>' + tip1a +
@@ -4239,8 +4360,57 @@
     function _diBankStrip(acc, base, s, agg) {
       var id = acc.id, hsa = base.taxCode === 'hsa', isRoth = /roth403/.test(base.id);
       var ira = /ira/.test(base.id), iraRoth = /^rothira/.test(base.id);
+      var b457 = /457b/.test(base.id), b457Roth = /^roth457b/.test(base.id);
       var beta = agg && agg.weightedBeta;
       var h = '<div class="holdings-rollup" id="bank-strip-' + id + '">';
+      if (b457) {
+        // 457(b) bank §1 (R10–R16) — unified lead block; every hover keeps the 457 signature
+        // (penalty-free on separation) and the own-ceiling truth. {planProvider} unsourced -> dropped.
+        var cu = (s.unclassedPct || 0) >= 1 ? '<div class="hr-sub">' + _diP(s.unclassedPct) + ' of value unclassified — set Asset Class in the table below</div>' : '';
+        h += _diCell('Invested / Cash', _diP(s.investedPct) + ' / ' + _diP(s.cashPct), 'Invested vs Cash split',
+          _diP(s.investedPct) + ' invested / ' + _diP(s.cashPct) + ' parked in cash.',
+          'The cash line is money standing still; the invested share is what compounds toward retirement.');
+        h += _diCell('Equity %', _diP(s.equityPct), 'Value-weighted asset mix',
+          _diP(s.equityPct) + ' of this 457(b)’s invested value is in stocks.',
+          'How your 457(b) is actually invested — chosen from your plan’s fund menu. Because you pick from a set list rather than the whole market, menu quality and fees are the tension to watch.', null, cu);
+        h += _diCell('Bond %', _diP(s.bondPct), 'Bond share (invested value)',
+          _diP(s.bondPct) + ' sits in bonds.',
+          'Ballast — steadier, income-bearing holdings that damp the swings as retirement nears.');
+        h += _diCell('Cash %', _diP(s.cashPct), 'Cash share',
+          _diP(s.cashPct) + ' is in cash.',
+          'Dry powder inside the account — value that isn’t compounding until it’s put to work.');
+        h += _diCell('International', _diP(s.foreignPct), 'International share',
+          _diP(s.foreignPct) + ' of the invested value is international.',
+          'Diversifies the account beyond one economy — identical signal to your other investment accounts.');
+        h += _diCell('Balance', _diMoney(acc.value), 'Current balance in the account',
+          'Current balance in the account.',
+          (b457Roth ? 'The Annex: already-taxed dollars that grow and come out 100% tax-free once qualified.'
+                    : 'The Workshop: pre-tax dollars that grow untaxed until you withdraw — then every dollar is ordinary income.') +
+          ' Same balance, very different after-tax worth — but EITHER way, this is the rare account you can crack open penalty-free the moment you leave the job, at any age.');
+        var c457 = (acc.inflow || 0) * (acc.freq || 0);
+        h += _diCell('Annual Contribution', c457 > 0 ? _diMoney(c457) + ' / yr' : '—', 'What you’re deferring per year',
+          'What you’re deferring per year.',
+          "Capped HIGH — the 457(b) deferral limit is one of the largest available. Here's the part most people miss: this ceiling is its OWN. If you also fund a 401(k) or 403(b), the 457(b) sits on top — you can fill both in the same year, roughly $49k combined pre-tax. " +
+          (b457Roth ? 'Roth deferrals lock in tax-free growth.' : "Pre-tax deferrals lower this year's taxable income now."));
+        h += _diCell('Unrealized Gain', s.unrealGain === null ? '—' : (s.unrealGain >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(s.unrealGain)).toLocaleString('en-US'),
+          'Σ(value − cost basis) where basis exists',
+          'Σ(value − cost basis) where basis exists — cash-sweep rows never enter the Σ.',
+          b457Roth ? 'In the Annex all of this growth is yours tax-free — the right home for your highest-growth bets.'
+                   : 'In the Workshop this growth will be taxed as ordinary income on the way out — the bigger it grows, the bigger the future bill.');
+        if (beta !== null && beta !== undefined) {
+          h += _diCell('Weighted Beta', _diCovVal(s.betaCovPct, beta.toFixed(2)), 'Value-weighted market sensitivity',
+            'Value-weighted market sensitivity (holdings with a beta).',
+            'How hard your 457(b) swings with the market. Left blank when holdings don’t publish a beta — we leave it empty rather than fake it.', 'hr-beta', _diCovSub(s.betaCovPct, 'beta'));
+        }
+        h += _diCell('Blended Yield', _diCovVal(s.yldCovPct, _yld(agg && agg.blendedYield)), 'Value-weighted dividend yield',
+          'Value-weighted dividend yield.',
+          'Income thrown off inside the account. In a 457(b) these dividends reinvest untaxed — no yearly tax drag like a taxable account, so yield is pure compounding here.', 'hr-yield',
+          s.yldCovVal > 0 ? _diCovSub(s.yldCovPct, 'yield') : '');
+        h += _diCell('Avg Expense', (_diE(agg && agg.blendedExpense) || '—'), 'Value-weighted expense ratio',
+          'Value-weighted expense ratio.',
+          'Your annual fund drag. Unlike an IRA you can’t shop the whole market — you’re limited to the plan’s menu, so the cheapest available share class is the lever, not switching providers.', 'hr-expense');
+        return h + '</div>';
+      }
       if (ira) {
         // IRA bank §1 (R10–R16) — unified lead block (B2 precedent), IRA hover pairs, plus the
         // NEW Unrealized Gain box (R13, CASH-guarded Σ from _diSignals — sourced-or-blank).
@@ -4404,6 +4574,7 @@
       var body = base.taxCode === 'hsa' ? _diNarrHSA(acc, s, agg)
                : base.id === '529plan' ? _diNarr529(acc, s, agg)
                : /ira/.test(base.id) ? _diNarrIRA(acc, s, agg, /^rothira/.test(base.id))
+               : /457b/.test(base.id) ? _diNarr457(acc, s, agg, /^roth457b/.test(base.id))
                : _diNarr403(acc, s, agg, /roth403/.test(base.id));
       if (!body) return '<div id="di-narr-' + acc.id + '"></div>';   // empty anchor — no fabricated narrative (L47)
       return '<div class="di-narrative" id="di-narr-' + acc.id + '"><div class="di-narr-head">Datum Intelligence</div><div class="di-narr-body">' + body + '</div></div>';
@@ -4443,6 +4614,20 @@
         tt = '<strong>The Infirmary — your triple-tax-advantaged health account</strong>' +
              'The only account taxed nowhere — in, growing, or out (for medical).<br><br>' +
              'Contributions go in tax-deductible, growth is never taxed, and withdrawals for qualified medical care are tax-free at any age. Not a use-it-or-lose-it FSA: unspent money rolls over, can be invested, and compounds for decades. After 65, non-medical withdrawals simply pay ordinary income tax — a Traditional IRA at worst, tax-free at best.';
+      } else if (/^roth457b/.test(base.id)) {
+        // §2 Roth 457(b) title hover (457 bank R21–R24; Annex = FINALIZED room name)
+        tt = '<strong>The Annex — a Roth 457(b)</strong>' +
+             'A Roth 457(b) — tax-free dollars in a vault you can open the day you leave.<br><br>' +
+             '<strong>What it is</strong>A designated Roth inside your employer’s governmental deferred-comp plan — meaning it’s sponsored by a state or local government (a school district, municipality, public university, or state agency). It’s funded with already-taxed dollars from your paycheck, with the same high deferral limit as a 401(k), plus the 457(b)’s signature escape hatch.<br><br>' +
+             '<strong>Why it matters</strong>Qualified withdrawals (5-year clock met) come out 100% tax-free, growth included — AND, uniquely, once you separate from the employer you can take them at ANY age with no 10% penalty. Post-SECURE-2.0 there are no RMDs on a designated Roth for the original owner.<br><br>' +
+             '<strong>The catch</strong>Your plan must actually offer the Roth option (not all do). Withdrawals before separation are restricted — the penalty-free freedom is unlocked by LEAVING the job, not by reaching an age.';
+      } else if (/^pretax457b/.test(base.id)) {
+        // §2 Traditional 457(b) title hover (457 bank R27–R30; Workshop = FINALIZED room name)
+        tt = '<strong>The Workshop — a Traditional 457(b)</strong>' +
+             'A Traditional 457(b) — pre-tax deferred compensation you can reach early without penalty.<br><br>' +
+             '<strong>What it is</strong>A governmental deferred-comp plan — offered because your employer is a state or local government body (public school, city/county, state university or agency). Funded with pre-tax salary deferrals. Like a 401(k) in how it’s funded and its high limit — but it is NOT a 401(k), and its withdrawal rules are friendlier.<br><br>' +
+             '<strong>Why it matters</strong>Deferrals lower this year’s taxable income, and growth is tax-deferred. The standout feature: after you separate from service you can withdraw at ANY age with only ordinary income tax — NO 10% early-withdrawal penalty. It’s the classic bridge account for public employees who retire in their 50s.<br><br>' +
+             '<strong>The catch</strong>Every dollar — deferrals and growth — is ordinary income on withdrawal, and RMDs begin at 73. The money is locked while you’re still employed; the freedom comes from separating, and a non-governmental 457(b) (rare) does not share these protections.';
       } else if (/^rothira/.test(base.id)) {
         // §2 Roth IRA title hover (IRA bank R21–R24, verbatim)
         tt = '<strong>The Conservatory — a Roth IRA</strong>' +
@@ -4624,9 +4809,10 @@
             <div style="margin-top:20px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px;">
                 <div class="input-label" style="color:var(--gold); margin-bottom:10px;">WITHDRAWAL RULES & ACCESSIBILITY</div>
                 <div style="display:flex; justify-content: space-between; margin-bottom: 8px;">
-                    ${isIRA ? `<span class="input-label modal-tt-wrap" style="color:var(--white); cursor:help;">Standard Penalty-Free Access<div class="modal-tt" style="left:0; right:auto;"><strong>Standard Penalty-Free Access</strong>The IRA penalty-free line. Unlike a 401(k), an IRA has NO Rule-of-55 — leaving a job early doesn’t unlock it. 59.5 is the gate (limited exceptions: first home, education, etc.).</div></span>`
+                    ${is457 ? `<span class="input-label modal-tt-wrap" style="color:var(--white); cursor:help;">Standard Penalty-Free Access<div class="modal-tt" style="left:0; right:auto;"><strong>Standard Penalty-Free Access</strong>⭐ The 457(b) divergence: a governmental 457(b) has NO 10% early-withdrawal penalty — once you leave the employer you can access funds at any age, paying only ordinary income tax (pre-tax) or nothing (qualified Roth).</div></span>`
+                     : isIRA ? `<span class="input-label modal-tt-wrap" style="color:var(--white); cursor:help;">Standard Penalty-Free Access<div class="modal-tt" style="left:0; right:auto;"><strong>Standard Penalty-Free Access</strong>The IRA penalty-free line. Unlike a 401(k), an IRA has NO Rule-of-55 — leaving a job early doesn’t unlock it. 59.5 is the gate (limited exceptions: first home, education, etc.).</div></span>`
                             : `<span class="input-label" style="color:var(--white);">Standard Penalty-Free Access</span>`}
-                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px;">Age 59.5 (Est. ${stdAccessDate})</span>
+                    <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px;">${is457 ? `Upon separation from service — ANY age, no penalty` : `Age 59.5 (Est. ${stdAccessDate})`}</span>
                 </div>
             `;
             
@@ -4646,17 +4832,21 @@
             
             html += `
                 <div style="display:flex; justify-content: space-between; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 12px; margin-top: 8px;">
-                    ${isIRA ? `<span class="input-label modal-tt-wrap" style="color:var(--teal-mid); cursor:help;">Active Availability Benchmark<div class="modal-tt" style="left:0; right:auto;"><strong>Active Availability Benchmark</strong>Same as standard for an IRA — no early-access toggle. We deliberately omit the Rule-of-55 row the 401(k) modal shows, because it does not apply here.</div></span>`
+                    ${is457 ? `<span class="input-label modal-tt-wrap" style="color:var(--teal-mid); cursor:help;">Active Availability Benchmark<div class="modal-tt" style="left:0; right:auto;"><strong>Active Availability Benchmark</strong>The benchmark is an EVENT (leaving the job), not a birthday. While still employed, access is limited to unforeseeable-emergency rules. We deliberately omit the "Age 59.5" benchmark the IRA/401k modals show — it does not apply.</div></span>`
+                     : isIRA ? `<span class="input-label modal-tt-wrap" style="color:var(--teal-mid); cursor:help;">Active Availability Benchmark<div class="modal-tt" style="left:0; right:auto;"><strong>Active Availability Benchmark</strong>Same as standard for an IRA — no early-access toggle. We deliberately omit the Rule-of-55 row the 401(k) modal shows, because it does not apply here.</div></span>`
                             : `<span class="input-label" style="color:var(--teal-mid);">Active Availability Benchmark</span>`}
-                    <span style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold; font-size:13px;">Age ${currentAccessAge} (${currentAccessDate})</span>
+                    <span style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold; font-size:13px;">${is457 ? `Separation from service (not an age)` : `Age ${currentAccessAge} (${currentAccessDate})`}</span>
                 </div>
-                ${isIRA ? `<div style="font-size: 10px; color: var(--muted); font-family: var(--font-serif); font-style: italic; margin-top: 10px; line-height: 1.4;">${base.taxCode === 'roth'
+                ${is457 ? `<div style="font-size: 10px; color: var(--muted); font-family: var(--font-serif); font-style: italic; margin-top: 10px; line-height: 1.4;">${base.taxCode === 'roth'
+                    ? `Roth GROWTH is tax-free only once your first Roth 457(b) contribution is 5 years old. After separation, contributions/qualified amounts come out penalty-free at any age — the 5-yr clock governs the TAX-free part, not the penalty.`
+                    : `After separation, withdrawals are ordinary income tax only — at ANY age, no 10% penalty. While still employed, only unforeseeable-emergency withdrawals are allowed. RMDs begin at 73.`}</div>`
+                 : isIRA ? `<div style="font-size: 10px; color: var(--muted); font-family: var(--font-serif); font-style: italic; margin-top: 10px; line-height: 1.4;">${base.taxCode === 'roth'
                     ? `Even at 59.5, Roth GROWTH is tax-free only once your first Roth IRA contribution is 5 years old. Contributions themselves come out anytime, tax- and penalty-free.`
                     : `Withdrawals before 59.5 face a 10% penalty plus ordinary income tax (exceptions apply). After 59.5 it’s just ordinary income tax — and RMDs force withdrawals starting at 73.`}</div>` : ``}
             </div>`;
 
             // SURGICAL: Structural Injection Limits (Editable constraints) — 2026 IRS defaults
-            let limitName = is403 ? "403(b) Limits" : (is401k ? "401(k) / 457(b) Limits" : "IRA Limits");
+            let limitName = is403 ? "403(b) Limits" : is457 ? "457(b) Limits" : (is401k ? "401(k) / 457(b) Limits" : "IRA Limits");
             let baseLim = acc.baseLimit !== undefined ? acc.baseLimit : (is401k ? 24500 : 7500);
             let c50 = acc.catchUpLimit !== undefined ? acc.catchUpLimit : (is401k ? 8000 : 1100);
             let sc60 = acc.superCatchUpLimit !== undefined ? acc.superCatchUpLimit : (is401k ? 11250 : 0);
@@ -4670,9 +4860,10 @@
 
             html += `
             <div style="margin-top:20px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px;">
-                ${isIRA ? `<div class="input-label modal-tt-wrap" style="color:var(--gold); margin-bottom:6px; cursor:help;">CONTRIBUTION LIMITS (${limitName})<div class="modal-tt" style="left:0; right:auto;"><strong>IRA Limits</strong>The most you can put into ALL your IRAs combined this year (Traditional + Roth share one ceiling). It's a modest cap — think of the IRA as a high-quality top-up, not your main retirement engine.</div></div>`
+                ${is457 ? `<div class="input-label modal-tt-wrap" style="color:var(--gold); margin-bottom:6px; cursor:help;">CONTRIBUTION LIMITS (${limitName})<div class="modal-tt" style="left:0; right:auto;"><strong>457(b) Limits</strong>The most you can defer into this 457(b) this year — one of the highest limits any plan offers. It's a SEPARATE ceiling from any 401(k) or 403(b) you also have, so those don't eat into this room.</div></div>`
+                 : isIRA ? `<div class="input-label modal-tt-wrap" style="color:var(--gold); margin-bottom:6px; cursor:help;">CONTRIBUTION LIMITS (${limitName})<div class="modal-tt" style="left:0; right:auto;"><strong>IRA Limits</strong>The most you can put into ALL your IRAs combined this year (Traditional + Roth share one ceiling). It's a modest cap — think of the IRA as a high-quality top-up, not your main retirement engine.</div></div>`
                         : `<div class="input-label" style="color:var(--gold); margin-bottom:6px;">CONTRIBUTION LIMITS (${limitName})</div>`}
-                <div style="font-family:var(--font-mono);font-size:9px;color:rgba(255,255,255,0.3);margin-bottom:10px;letter-spacing:0.05em;">2026 IRS limits — <a href="https://www.irs.gov/retirement-plans" target="_blank" rel="noopener" style="color:rgba(93,202,165,0.4);text-decoration:none;">irs.gov/retirement-plans</a></div>
+                <div style="font-family:var(--font-mono);font-size:9px;color:rgba(255,255,255,0.3);margin-bottom:10px;letter-spacing:0.05em;">2026 IRS limits — ${is457 ? `<a href="https://www.irs.gov/retirement-plans/irc-457b-deferred-compensation-plans" target="_blank" rel="noopener" style="color:rgba(93,202,165,0.4);text-decoration:none;">irs.gov/retirement-plans/irc-457b-deferred-compensation-plans</a>` : `<a href="https://www.irs.gov/retirement-plans" target="_blank" rel="noopener" style="color:rgba(93,202,165,0.4);text-decoration:none;">irs.gov/retirement-plans</a>`}</div>
                 
                 <div class="field-row" style="margin-bottom:10px;">
                     <div><div class="input-label">Base Limit</div><input type="number" class="small-field" value="${baseLim}" oninput="updateAccField('${id}', 'baseLimit', this.value)"></div>
@@ -4690,9 +4881,11 @@
                       <input type="checkbox" ${acc.catchUp50 ? 'checked' : ''} onchange="updateAccToggle('${id}', 'catchUp50', this.checked)">
                       <span class="slider"></span>
                     </label>
-                    ${isIRA ? `<div class="modal-tt"><strong>Age 50 Unlock</strong>At 50+ the IRS lets you add a fixed catch-up on top of the base — small, but it’s untaxed-growth room (Roth) or a deduction (Traditional) right when you’re likely earning most. NO super catch-up exists for IRAs.</div>`
+                    ${is457 ? `<div class="modal-tt"><strong>Age 50 Unlock</strong>At 50+ the IRS lets you add a catch-up on top of the base ($7,500 in 2025, $8,000 in 2026) — and at 60-63 a larger "super" catch-up (~$11,250) may apply if the plan allows. High-wage earners (>$145k prior year, indexed) must make the age-50 catch-up as Roth.</div>`
+                     : isIRA ? `<div class="modal-tt"><strong>Age 50 Unlock</strong>At 50+ the IRS lets you add a fixed catch-up on top of the base — small, but it’s untaxed-growth room (Roth) or a deduction (Traditional) right when you’re likely earning most. NO super catch-up exists for IRAs.</div>`
                             : `<div class="modal-tt"><strong>Age 50 Unlock</strong>From the calendar year you turn 50, the IRS lets you defer past the base ceiling. Peak-earning years usually land here — flip it on to raise this account's Annual Maximum.</div>`}
                 </div>
+                ${is457 && base.taxCode === 'roth' ? `<div style="font-size: 10px; color: var(--muted); font-family: var(--font-serif); font-style: italic; margin-top: 10px; line-height: 1.4;">A Roth 457(b) only exists if your plan offers it. There's no income limit to contribute — high earners are fully eligible, no matter what they make.</div>` : ``}
                 ${isIRA ? `<div style="font-size: 10px; color: var(--muted); font-family: var(--font-serif); font-style: italic; margin-top: 10px; line-height: 1.4;">${base.taxCode === 'roth'
                     ? `Heads up: direct Roth IRA contributions phase out at higher incomes. If you're over the line, a "backdoor" conversion is the usual route in.`
                     : `Your contribution may be fully deductible, partly deductible, or not at all — it depends on your income AND whether you’re covered by a workplace plan. The deduction is the whole point of the Traditional IRA, so it’s worth checking where you land.`}</div>` : ``}
@@ -5230,9 +5423,12 @@
                 // §12 IRA pass — the IRA bank's [R]/[T]-aware column hovers override the shared
                 // tips, and Cost Basis / Unrealized Gain become VISIBLE for IRA rooms (bank
                 // R115: basis is tracked so Unrealized Gain can show — unlike the 403(b)).
-                var _iraCol = _diBank && /ira/.test(base.id);
-                if (_iraCol) { var _it = _diIraColTips(/^rothira/.test(base.id)); COLS.forEach(function (c) { if (_it[c.lbl]) c.tip = _it[c.lbl]; }); }
-                var cols = COLS.filter(function (c) { return !c.taxableOnly || isTaxable || _iraCol; });
+                var _bankCol = _diBank && /ira|457b/.test(base.id);
+                if (_bankCol) {
+                  var _it = /457b/.test(base.id) ? _di457ColTips(/^roth457b/.test(base.id)) : _diIraColTips(/^rothira/.test(base.id));
+                  COLS.forEach(function (c) { if (_it[c.lbl]) c.tip = _it[c.lbl]; });
+                }
+                var cols = COLS.filter(function (c) { return !c.taxableOnly || isTaxable || _bankCol; });
 
                 html += '<div style="margin-top: 15px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 4px; overflow-x: auto;"><table class="holdings-table"><tr>';
                 cols.forEach(function (c) {

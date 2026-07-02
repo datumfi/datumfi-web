@@ -108,7 +108,9 @@ const URL = 'http://127.0.0.1:8001/studio.html';
       t403_rule55:     t.indexOf('Rule of 55') !== -1,
       t403_15yr:       /15[- ]?(Yr|Year)/i.test(t),
       t403_header2026: t.indexOf('2026 IRS limits') !== -1,
-      s457_limitName:  s.indexOf('401(k) / 457(b) Limits') !== -1,   // live-bug fix (was "IRA Limits")
+      // live-bug fix (was "IRA Limits"); label upgraded to bank-authored "457(b) Limits" in the
+      // 457 Copy Bank pass (R68 verbatim) — the guarded invariant stays IRA-limits-ABSENT.
+      s457_limitName:  s.indexOf('(457(b) Limits)') !== -1 && s.indexOf('(IRA Limits)') === -1,
       s457_base2026:   s.indexOf('24500') !== -1,
       s457_noRule55:   s.indexOf('Rule of 55') === -1,               // 457(b) has no penalty; no Rule-55 axis
       hsa_gate:        h.indexOf('HSA ELIGIBILITY') !== -1,
