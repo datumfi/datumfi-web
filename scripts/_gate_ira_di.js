@@ -48,7 +48,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
       mk({ ticker: 'BND',  name: 'Vanguard Total Bond',     price: 100, shares: 120, beta: 0.5, expRatio: 0.03, assetClass: 'Bonds',  geography: 'US Bonds',                sector: 'Bonds',          instrumentType: 'ETF' }),
       mk({ ticker: 'AGG',  name: 'iShares Core Bond',       price: 100, shares: 80,  beta: 0.5, expRatio: 0.03, assetClass: 'Bonds',  geography: 'US Bonds',                sector: 'Bonds',          instrumentType: 'ETF' })
     ];
-    ['tradira', 'rothira', 'trad403', 'taxable'].forEach(id => { try { addInstance(id); } catch (e) {} });
+    ['tradira', 'rothira', 'trad403', 'crypto_primary'].forEach(id => { try { addInstance(id); } catch (e) {} });
 
     const t = window.state.accounts.find(a => a.baseId === 'tradira');
     t.holdings = FIX(); t.inflow = 5000; t.freq = 1; t.catchUp50 = true;
@@ -112,10 +112,10 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     const F = open('trad403');
 
     // Negative control: taxable modal keeps its existing strip, no DI leak.
-    const tx = window.state.accounts.find(a => a.baseId === 'taxable');
+    const tx = window.state.accounts.find(a => a.baseId === 'crypto_primary');
     tx.holdings = [ mk({ ticker: 'VTI', name: 'V', price: 100, shares: 10, costBasis: '500', assetClass: 'Stocks' }) ];
     recalcPortfolio(tx);
-    const X = open('taxable');
+    const X = open('crypto_primary');
 
     // Empty-state honesty: tradira_co with NO holdings -> no narrative fabricated.
     try { addInstance('tradira_co'); } catch (e) {}
@@ -208,9 +208,9 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   all = ok('§12: ticker hover (not a slot a plan handed you)',  has(R.T.html, 'not a slot a plan handed you')) && all;
   // Job 4 — regression + honesty controls
   all = ok('403: keeps its OWN plan-menu tilt tail',            has(narr(R.F.html), 'a shape drawn from the funds your plan offers')) && all;
-  all = ok('taxable: keeps EXISTING strip (hr-gain-sub)',       has(R.X.html, 'hr-gain-sub')) && all;
-  all = ok('taxable: NO DI narrative leak',                     !has(R.X.html, 'di-narr')) && all;
-  all = ok('taxable: Cost Basis still visible (unchanged)',     has(R.X.html, 'Cost Basis')) && all;
+  all = ok('crypto (non-bank): keeps EXISTING strip (hr-gain-sub)',       has(R.X.html, 'hr-gain-sub')) && all;
+  all = ok('crypto (non-bank): NO DI narrative leak',                     !has(R.X.html, 'di-narr')) && all;
+  all = ok('crypto (non-bank): Cost Basis still visible (unchanged)',     has(R.X.html, 'Cost Basis')) && all;
   all = ok('empty tradira_co: NO narrative fabricated',         !/di-narr-body[^>]*>\s*\S/.test(R.E)) && all;
   console.log('OVERALL: ' + (all ? 'GREEN' : 'RED'));
   process.exit(all ? 0 : 1);

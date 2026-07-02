@@ -31,7 +31,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
                title: document.getElementById('modal-acc-title').innerHTML, acc: acc.id };
     };
 
-    ['hsa', 'trad403', 'roth403', 'taxable'].forEach(id => { try { addInstance(id); } catch (e) {} });
+    ['hsa', 'trad403', 'roth403', 'crypto_primary'].forEach(id => { try { addInstance(id); } catch (e) {} });
 
     // ---- HSA fixture: $25k invested fund (beta 1.3, hot) + $4k cash sweep (GUARD row) ----
     const hsa = window.state.accounts.find(a => a.baseId === 'hsa');
@@ -63,10 +63,10 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     const Rt = open('roth403');
 
     // ---- Negative control: taxable strip untouched ----
-    const tx = window.state.accounts.find(a => a.baseId === 'taxable');
+    const tx = window.state.accounts.find(a => a.baseId === 'crypto_primary');
     tx.holdings = [ mk({ ticker: 'VTI', name: 'V', price: 100, shares: 10, costBasis: '500', assetClass: 'Stocks' }) ];
     recalcPortfolio(tx);
-    const X = open('taxable');
+    const X = open('crypto_primary');
 
     // ---- Empty-state honesty: hsa_co with NO holdings -> no narrative ----
     try { addInstance('hsa_co'); } catch (e) {}
@@ -115,8 +115,8 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   all = ok('403R: title hover (no lifetime RMDs)',            has(R.Rt.title, 'no lifetime RMDs')) && all;
   // Honesty + regression controls
   all = ok('empty hsa_co: NO narrative fabricated',           !has(R.E, 'di-narr-body') || !/di-narr-body[^>]*>\s*\S/.test(R.E)) && all;
-  all = ok('taxable: keeps its EXISTING strip (hr-gain-sub)', has(R.X.html, 'hr-gain-sub')) && all;
-  all = ok('taxable: NO DI narrative leak',                   !has(R.X.html, 'di-narr')) && all;
+  all = ok('crypto (non-bank): keeps its EXISTING strip (hr-gain-sub)', has(R.X.html, 'hr-gain-sub')) && all;
+  all = ok('crypto (non-bank): NO DI narrative leak',                   !has(R.X.html, 'di-narr')) && all;
   console.log('OVERALL: ' + (all ? 'GREEN' : 'RED'));
   process.exit(all ? 0 : 1);
 })().catch(e => { console.error('GATE ERROR:', e.message); process.exit(2); });

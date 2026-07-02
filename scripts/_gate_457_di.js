@@ -49,7 +49,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
       mk({ ticker: 'NRSFX', name: 'NW Fixed Account',    price: 100, shares: 80,  expRatio: 0.30, assetClass: 'Bonds', geography: 'US Bonds', sector: 'Bonds', instrumentType: 'Mutual Fund' }),
       mk({ ticker: 'NWBAL', name: 'NW Balanced Extra',   price: 100, shares: 40,  expRatio: 0.50, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Large Cap', instrumentType: 'Mutual Fund' })
     ];
-    ['pretax457b', 'roth457b', 'tradira', 'trad403', 'taxable'].forEach(id => { try { addInstance(id); } catch (e) {} });
+    ['pretax457b', 'roth457b', 'tradira', 'trad403', 'crypto_primary'].forEach(id => { try { addInstance(id); } catch (e) {} });
 
     const t = window.state.accounts.find(a => a.baseId === 'pretax457b');
     t.holdings = FIX(); t.inflow = 12000; t.freq = 1; t.catchUp50 = true;
@@ -84,10 +84,10 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     ];
     recalcPortfolio(t4);
     const F = open('trad403');
-    const tx = window.state.accounts.find(a => a.baseId === 'taxable');
+    const tx = window.state.accounts.find(a => a.baseId === 'crypto_primary');
     tx.holdings = [ mk({ ticker: 'VTI', name: 'V', price: 100, shares: 10, costBasis: '500', assetClass: 'Stocks' }) ];
     recalcPortfolio(tx);
-    const X = open('taxable');
+    const X = open('crypto_primary');
     try { addInstance('pretax457b_co'); } catch (e) {}
     const co = window.state.accounts.find(a => a.baseId === 'pretax457b_co');
     co.showHoldings = true; window.openAccountModal(co.id);
@@ -159,7 +159,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   // Job 6 — regression + honesty
   all = ok('IRA keeps IRA copy (no 457 leak)',                  has(narr(R.I.html), 'assembled from the open market') && !has(narr(R.I.html), 'governmental')) && all;
   all = ok('403: keeps its OWN plan-menu tilt tail',            has(narr(R.F.html), 'a shape drawn from the funds your plan offers')) && all;
-  all = ok('taxable: keeps EXISTING strip, no DI leak',         has(R.X.html, 'hr-gain-sub') && !has(R.X.html, 'di-narr')) && all;
+  all = ok('crypto (non-bank): keeps EXISTING strip, no DI leak',         has(R.X.html, 'hr-gain-sub') && !has(R.X.html, 'di-narr')) && all;
   all = ok('empty pretax457b_co: NO narrative fabricated',      !/di-narr-body[^>]*>\s*\S/.test(R.E)) && all;
   console.log('OVERALL: ' + (all ? 'GREEN' : 'RED'));
   process.exit(all ? 0 : 1);

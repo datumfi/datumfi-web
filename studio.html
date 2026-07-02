@@ -3799,7 +3799,7 @@
        singleNameStock_fmt token contract is wired (the IRA/401k/457 §7 ask — L48, don't rebuild).
        NOTE: distinct from the Want-canvas "Datum Intelligence" slider tooltips (~L1844) — name
        collision only; do not merge. */
-    function _diIsBankRoom(baseId) { return /^(hsa|trad403|roth403|tradira|rothira|pretax457b|roth457b)(_co)?$/.test(String(baseId || '')) || baseId === '529plan'; }
+    function _diIsBankRoom(baseId) { return /^(hsa|trad403|roth403|tradira|rothira|pretax457b|roth457b|taxable)(_co)?$/.test(String(baseId || '')) || baseId === '529plan'; }
     // 529 §8 dated constants (gift exclusion / superfund / K-12 / 529→Roth) — LOOKUP by tax year (L47)
     var _DI_529 = { 2025: { excl: 18000, superS: 90000, superC: 180000, k12: 10000, roth: 35000 },
                     2026: { excl: 19000, superS: 95000, superC: 190000, k12: 20000, roth: 35000 } };
@@ -4348,6 +4348,228 @@
       };
     }
 
+    /* ── TAXABLE bank ("The Living Room", baseId taxable) — a DIFFERENT machine from the
+       [R]/[T] banks: pick-ONE spine (10 archetypes, first match) + §3b instrument-mix tag riding
+       the spine + prioritized tilt ladder (cap 2) + behavior ladder (fees>beta>yield, cap 2) +
+       Layer D tax character + §8 verdict → §7 standing Datum close. All thresholds are the
+       bank's ratified bands (FIX-1..5). Reconciliations vs the sheet's own worked examples,
+       flagged to the Architect: (a) A-THEMATIC checked before A-ALL-EQUITY-INDEX (EX-3 misfires
+       under literal first-match), (b) D-NO-BASIS fires only on the otherwise-short read
+       (EX-1/EX-2 show it silent when layers spoke), (c) B-HOME-HEAVY gated to equity≥90%
+       (EX-4 all-US shows B silent), (d) C-MARKET-LIKE gated to concentration per its own
+       rationale (EX-5 plain index shows C silent), (e) B-OVERLAP proxy requires ≥2 funds
+       sharing the top broad bucket (kills the one-core+satellites false fire; real
+       shared-underlying signal still PENDING per R90/FIX-5). */
+    var _DI_TAX_THEME_NAMES = [
+      [/semicond|software|it services|electronic|robot/i, 'Technology'],
+      [/clean energy/i, 'Clean energy'], [/energy/i, 'Energy'],
+      [/aerospace|defense|industrial/i, 'Industrials & defense'],
+      [/biotech/i, 'Biotech'], [/gold/i, 'Gold'],
+      [/bitcoin|ether|crypto/i, 'Crypto'], [/dividend/i, 'Dividend growth'],
+      [/utilit/i, 'Utilities'], [/real estate|reit/i, 'Real estate']
+    ];
+    function _diTaxSignals(acc, s) {
+      var x = { n: s.invCount, etf: 0, mf: 0, stock: 0, topVal: 0, topTicker: '', topInst: '',
+                themes: {}, thematic: 0, crypto: 0, sat: 0, satEx: [], hiBeta: 0, buckets: {}, bucketFunds: {} };
+      (acc.holdings || []).forEach(function (h) {
+        var v = (parseFloat(h.price) || 0) * (parseFloat(h.shares) || 0); if (v <= 0) return;
+        var it = String(h.instrumentType || '').trim().toLowerCase();
+        var ac = String(h.assetClass || '').toLowerCase();
+        if (it === 'cash' || /cash|money market/.test(ac)) return;
+        var isETF = /etf/.test(it), isMF = /mutual/.test(it), isStock = /stock|share/.test(it);
+        if (isETF) x.etf += v; else if (isMF) x.mf += v; else if (isStock) x.stock += v;
+        if (v > x.topVal) { x.topVal = v; x.topTicker = String(h.ticker || '').trim().toUpperCase() || String(h.name || '').trim(); x.topInst = isStock ? 'stock' : (isETF || isMF) ? 'fund' : it; }
+        var sec = String(h.sector || ''), geo = String(h.geography || '');
+        var isCrypto = /crypto|bitcoin|ether/i.test(ac + ' ' + geo + ' ' + sec);
+        var theme = null;
+        for (var i = 0; i < _DI_TAX_THEME_NAMES.length; i++) { if (_DI_TAX_THEME_NAMES[i][0].test(sec)) { theme = _DI_TAX_THEME_NAMES[i][1]; break; } }
+        if (theme) x.themes[theme] = (x.themes[theme] || 0) + v;
+        if (isCrypto) x.crypto += v;
+        var isThematicFund = (isETF || isMF) && theme !== null;
+        if (isThematicFund) x.thematic += v;
+        if (isThematicFund || isCrypto) { x.sat += v; x.satEx.push({ t: String(h.ticker || '').trim().toUpperCase() || String(h.name || '').trim(), v: v }); }
+        var bt = parseFloat(h.beta); if (isFinite(bt) && bt > 1.2) x.hiBeta++;
+        if (isETF || isMF) {   // B-OVERLAP stopgap: bucket funds by broad-market family
+          var bk = /total market|large (cap|blend|value|growth)|s&p|500|mid blend|small (cap|blend)/i.test(sec) ? 'broad' : (theme || geo || 'other');
+          x.buckets[bk] = (x.buckets[bk] || 0) + v;
+          x.bucketFunds[bk] = (x.bucketFunds[bk] || 0) + 1;
+        }
+      });
+      var T = s.total || 1;
+      x.eqT = (s.eq / T) * 100; x.bdT = (s.bd / T) * 100; x.cashT = (s.cash / T) * 100;
+      x.foreignT = (s.foreign / T) * 100;
+      x.etfPct = (x.etf / T) * 100; x.mfPct = (x.mf / T) * 100; x.stockPct = (x.stock / T) * 100;
+      x.fundPct = x.etfPct + x.mfPct;
+      x.topPct = (x.topVal / T) * 100;
+      x.topStockPct = (s.maxStockRow / T) * 100;
+      x.thematicPct = (x.thematic / T) * 100; x.satPct = (x.sat / T) * 100; x.cryptoPct = (x.crypto / T) * 100;
+      var topTheme = null; Object.keys(x.themes).forEach(function (k) { if (!topTheme || x.themes[k] > x.themes[topTheme]) topTheme = k; });
+      x.topSector = topTheme || ''; x.topSectorPct = topTheme ? (x.themes[topTheme] / T) * 100 : 0;
+      var topBk = null; Object.keys(x.buckets).forEach(function (k) { if (!topBk || x.buckets[k] > x.buckets[topBk]) topBk = k; });
+      x.overlapPct = (topBk && x.bucketFunds[topBk] >= 2) ? (x.buckets[topBk] / T) * 100 : 0;
+      x.satEx.sort(function (a, b) { return b.v - a.v; });
+      x.satExamples = x.satEx.slice(0, 2).map(function (e) { return e.t; }).join(', ');
+      return x;
+    }
+    var _diNum1 = function (v) { return (Math.round(v * 10) / 10) + '%'; };
+    var _diFee30 = function (e, total) { return '~$' + (Math.round((total * (e / 100) * 79.058) / 100) * 100).toLocaleString('en-US'); };
+    var _diGainFmt = function (g) { return (g >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(g)).toLocaleString('en-US'); };
+    var _diGainTax = function (g) { return '~$' + Math.round(g * 0.15).toLocaleString('en-US'); };
+    function _diTaxSpine(s, x) {
+      var nWord = s.invCount === 1 ? 'one holding' : (_diNW[s.invCount - 1] || String(s.invCount)) + ' holdings';
+      if (x.thematicPct >= 50 || (x.topSectorPct >= 60 && s.invCount >= 1))
+        return { id: 'THEMATIC', txt: 'This account is a focused, thematic bet — ' + _diP(x.topSectorPct) + ' concentrated in ' + x.topSector + '. It’s not a diversified core; it’s a conviction position. Big upside if the theme runs, a hard hit if it doesn’t. Size it like the bet it is.' };
+      if (x.eqT >= 90 && x.fundPct >= 80 && x.stockPct < 10)
+        return { id: 'INDEX', txt: 'This account is built almost entirely from stock funds — a diversified equity engine. It owns the market’s growth and the market’s drops, spread across ' + nWord + ' so no single company makes or breaks you.' };
+      if (x.eqT >= 90 && x.stockPct >= 40)
+        return { id: 'SINGLE', txt: 'This account is mostly individual stocks (' + _diP(x.stockPct) + ' in single names) — a hand-picked equity account, not a fund-and-forget one. Higher ceiling, higher floor: specific companies, not just "the market," drive your result here.' };
+      if (x.eqT >= 60 && x.eqT < 90 && x.bdT >= 10)
+        return { id: 'TILT', txt: 'This account leans toward growth but keeps a cushion — roughly ' + _diP(x.eqT) + ' stocks with ' + _diP(x.bdT) + ' in bonds. It’s built to grow with some shock absorption, a fairly classic retirement tilt.' };
+      if (x.eqT >= 40 && x.eqT < 60 && x.bdT >= 25)
+        return { id: 'BALANCED', txt: 'This account is genuinely balanced — about ' + _diP(x.eqT) + ' stocks, ' + _diP(x.bdT) + ' bonds. It trades some growth for steadiness: it won’t soar in a boom or crater in a bust. A dependable account to draw from.' };
+      if (x.bdT >= 90)
+        return { id: 'ALLBOND', txt: 'This account is essentially all bonds / fixed income. It barely grows, but it barely drops either — it’s here for stability and income, not appreciation. In retirement that’s a safe place to draw from when stocks are down.' };
+      if (x.bdT >= 50)
+        return { id: 'BONDHEAVY', txt: 'This account is built for stability — ' + _diP(x.bdT) + ' sits in bonds, with the rest in stocks. It’s designed to hold its value and pay income more than to grow. Good ballast in retirement.' };
+      if (x.cashT >= 50)
+        return { id: 'CASHHEAVY', txt: 'This account is mostly cash or money-market — ' + _diP(x.cashT) + ' parked. That’s safe and liquid, but cash quietly loses ground to inflation over a long retirement. Fine as a buffer; a drag if this is long-term money meant to grow.' };
+      if (s.invCount === 1)
+        return { id: 'ONEHOLD', txt: 'This whole account is one holding — ' + x.topTicker + '. Everything below reads off that single position: its swings, its yield, its embedded gain ARE the account. Worth knowing nothing here is diversifying anything.' };
+      return { id: 'MIXED', txt: 'This account holds a mix of assets without one type dominating. Datum reads the pieces below — geography, swing, income, cost, and gain — to tell you what the blend actually adds up to.' };
+    }
+    function _diTaxInstTag(spineId, x) {
+      var phrase = x.etfPct >= 80 ? 'built entirely from ETFs'
+                 : x.mfPct >= 80 ? 'built entirely from mutual funds'
+                 : x.stockPct >= 80 ? 'built entirely from individual stocks'
+                 : (x.fundPct >= 80 && x.etfPct >= 20 && x.mfPct >= 20) ? 'a blend of ETFs and mutual funds'
+                 : (x.fundPct >= 20 && x.stockPct >= 20) ? 'a mix of funds and individual stocks'
+                 : 'a mix of fund wrappers and individual names';
+      var parts = [];
+      if (x.etfPct >= 1 && x.etfPct < 99.5) parts.push(_diP(x.etfPct) + ' ETFs');
+      if (x.mfPct >= 1 && x.mfPct < 99.5) parts.push(_diP(x.mfPct) + ' mutual funds');
+      if (x.stockPct >= 1 && x.stockPct < 99.5) parts.push(_diP(x.stockPct) + ' individual stocks');
+      var breakdown = parts.length > 1 ? ' — ' + parts.join(', ') : '';
+      var lead = (spineId === 'INDEX' || spineId === 'SINGLE') ? 'Specifically, it’s ' : 'Under the hood, it’s ';
+      return lead + phrase + breakdown + '.';
+    }
+    function _diTaxTilts(s, x) {
+      var out = [], conc = false, snr = false;
+      if (x.topPct >= 50 && s.invCount >= 2) {
+        if (x.topInst === 'stock') { conc = true; out.push('But it leans hard on one position: ' + _diP(x.topPct) + ' of the account is ' + x.topTicker + '. That single holding will drive your result — for better or worse. Concentration builds wealth and it undoes it; just know this one name is carrying the account.'); }
+        else if (x.topInst === 'fund') out.push('One fund carries most of this account — ' + _diP(x.topPct) + ' sits in ' + x.topTicker + '. That’s a lot riding on a single fund, but because it’s a diversified wrapper (not one company), the risk is concentration of STRATEGY, not single-company blowup risk. Worth knowing it’s effectively a one-fund account; not the same alarm as one stock at this weight.');
+      }
+      if (out.length < 2 && x.stockPct >= 60 && x.fundPct < 30) { snr = true; out.push('And it’s mostly individual stocks with little fund cushion — a single company’s bad year lands directly on your retirement, with nothing spreading the blow. Datum treats this as higher-variance than a fund-based account of the same size.'); }
+      if (out.length < 2 && x.topSectorPct >= 40 && x.topSector && x.thematicPct < 50)
+        out.push('It also tilts heavily into one sector — ' + _diP(x.topSectorPct) + ' in ' + x.topSector + '. When that sector is in favor you’ll feel the lift; when it’s out, you’ll feel that too. More exposure to one slice of the economy than a broad-market account carries.');
+      if (out.length < 2) {
+        if (x.foreignT >= 90) out.push('It’s almost entirely international (' + _diP(x.foreignT) + ' non-US) — real diversification away from the US market, but it carries currency swings and different economic cycles. A fine sleeve to own; just know it won’t track the US headlines you hear every day.');
+        else if (x.foreignT >= 30) out.push('It’s globally diversified — about ' + _diP(x.foreignT) + ' sits outside the US. That spreads your bet across economies and smooths the ride when any one country struggles. A healthy, deliberate-looking spread.');
+        else if (x.foreignT <= 5 && s.invCount >= 2 && x.eqT >= 90) out.push('It’s all-US — familiar and historically strong, but it means your retirement rides entirely on one country’s markets. A slice of international can smooth the ride when the US has a rough decade.');
+      }
+      if (out.length < 2 && x.hiBeta === s.invCount && s.invCount >= 2)
+        out.push('And every holding here swings harder than the market — there’s no calm anchor in the account, no shock absorber when things turn. Big upside, but nothing to lean on in a downturn.');
+      if (out.length < 2 && x.satPct >= 5 && x.satPct <= 25 && x.topPct < 50 && !conc && !snr)
+        out.push('It also carries a small speculative sleeve — about ' + _diP(x.satPct) + ' in higher-risk, higher-conviction names (' + x.satExamples + ') — riding on top of an otherwise broad core. That’s a satellite, not the engine: enough to add some upside (and some bumps) without putting the account’s future on one idea. Datum reads this as a measured way to hold conviction — fine to keep, worth watching that it doesn’t quietly grow into the main position.');
+      if (out.length < 2 && x.cashT >= 15 && x.cashT < 50 && x.eqT >= 40)
+        out.push('It’s also sitting on a real cash pile — ' + _diP(x.cashT) + ' uninvested. In a taxable account that’s a double cost: it’s not compounding with the rest, and the little it does earn is taxed as ordinary income every year. Some dry powder is healthy — this is your accessible, no-penalty money — but if it’s idle by accident rather than on purpose, it’s quietly the most expensive thing in the account.');
+      if (out.length < 2 && s.fundCount >= 5 && x.overlapPct >= 40)
+        out.push('And it holds more funds than it needs — ' + (_diNW[s.fundCount - 1] || String(s.fundCount)) + ' of them, but they overlap heavily, so you own many wrappers of nearly the same market rather than truly different bets. More funds isn’t more diversification here; it just stacks expense ratios and multiplies tax lots, which makes future rebalancing and loss-harvesting messier and more wash-sale-prone. A leaner core would hold the same exposure for less cost and less friction.');
+      return { out: out, conc: conc };
+    }
+    function _diTaxBehavior(s, x, agg, tilt) {
+      var out = [];
+      var e = agg && agg.blendedExpense, beta = agg && agg.weightedBeta, y = agg && agg.blendedYield;
+      var betaOK = beta !== null && beta !== undefined && s.betaCovPct >= 60;
+      if (e !== null && e !== undefined) {
+        if (e > 0.60) out.push('And the fees deserve a hard look: ' + _diE(e) + '/yr doesn’t sound like much, but on this balance it’s about ' + _diFee30(e, s.total) + ' over a 30-year retirement — money that leaves your account every year and never compounds for you. This is one of the few retirement risks you can fix for free: a lower-cost fund with the same exposure could leave that ' + _diFee30(e, s.total) + ' in your pocket instead.');
+        else if (e > 0.30) out.push('Fees are starting to matter here — ' + _diE(e) + '/yr. Not alarming, but over decades it adds up; worth a glance to see if a cheaper fund holds the same thing.');
+      }
+      if (out.length < 2 && betaOK) {
+        var bf = '(' + beta.toFixed(2) + ')';
+        if (beta > 1.4) out.push('It also swings far harder than the market ' + bf + ' — think roughly ' + beta.toFixed(2) + '× the move, up or down. That’s a lot of volatility to draw retirement income from. Powerful as a long-horizon growth sleeve; risky if you need this money soon.');
+        else if (beta > 1.15) out.push('It swings harder than the market ' + bf + ' — bigger gains, but bigger drops. If it’s funding spending soon, a bad stretch lands right when you’re withdrawing.');
+        else if (beta >= 0.85) { if (x.stockPct >= 40 || x.topStockPct >= 25) out.push('It moves roughly in step with the market ' + bf + ' — neither a shock-absorber nor an amplifier on its own. Whatever swing you feel here comes from how concentrated it is, not from the holdings being unusually jumpy.'); }
+        else if (beta >= 0.6) out.push('It moves less than the market ' + bf + ' — steadier than average. It won’t soar in a boom, but it won’t crater in a bust either. A dependable account to draw from when markets are rough.');
+        else out.push('It barely moves with the market ' + bf + ' — very calm. That steadiness is a gift in a downturn, but the flip side is it may not keep pace with inflation over a long retirement. Good ballast; lean on growth elsewhere.');
+      }
+      if (out.length < 2 && y !== null && y !== undefined && s.yldCovPct >= 50) {
+        if (y >= 3.0) out.push('And it’s income-rich — paying ' + _diNum1(y) + ' — enough to cover a real slice of a spending year without selling anything. Just note: in a taxable account those dividends are taxed every year whether you spend them or not, so high yield isn’t free. Datum counts that.');
+        else if (y < 0.5 && x.eqT >= 60) out.push('It pays almost no income (' + _diNum1(y) + ') — built for growth, not cash flow. Funding spending from here means selling shares, not living off dividends.');
+      }
+      if (out.length < 2 && x.topPct >= 40 && x.topPct < 50 && x.topInst === 'fund' && s.invCount >= 4 && !tilt.conc)
+        out.push('And one position has quietly grown into the driver here — ' + x.topTicker + ' is now ' + _diP(x.topPct) + ' of the account, not because you bought it that big but because it ran. Left alone it keeps compounding that tilt; trimming it in a taxable account means realizing gains, so drift like this tends to stick. Worth a deliberate look, not a reflex.');
+      return out;
+    }
+    function _diTaxD(s, quiet) {
+      if (s.basisCount === 0) return quiet ? 'One thing Datum can’t see yet: what you paid. Enter a cost basis on a holding and it’ll show your real embedded gain — and the tax that comes with selling — instead of guessing.' : null;
+      var g = s.unrealGain;
+      if (g < 0) return 'You’re currently down ' + _diGainFmt(g) + ' against what you paid. Not what anyone wants — but in a taxable account a paper loss is usable: selling it can offset gains elsewhere and trim your tax bill. Datum can flag that when it routes your spending.';
+      if (g < 10000) return 'You’re carrying ' + _diGainFmt(g) + ' of embedded gain you haven’t been taxed on yet — small enough that selling won’t sting, roughly ' + _diGainTax(g) + ' in tax if you sold it all today.';
+      if (g < 50000) return 'And there’s ' + _diGainFmt(g) + ' of embedded gain sitting here — real growth, not yet taxed. Selling it all would cost about ' + _diGainTax(g) + ' in capital-gains tax. That’s why this account funds spending differently: here, the gain is part of the math.';
+      return 'You’ve built ' + _diGainFmt(g) + ' of embedded gain — a strong result, and a planning question. Selling all of it triggers roughly ' + _diGainTax(g) + ' in tax, so timing and order matter. Datum draws from your accounts in a tax-smart sequence so this gain isn’t realized all at once.';
+    }
+    function _diTaxClose(s, x, agg) {
+      var e = agg && agg.blendedExpense, beta = agg && agg.weightedBeta, y = agg && agg.blendedYield;
+      var betaOK = beta !== null && beta !== undefined && s.betaCovPct >= 60;
+      var v = 'NEUTRAL';
+      if ((betaOK && beta >= 1.25) || (x.stockPct >= 60 && x.fundPct < 30) || x.thematicPct >= 50 || (e !== null && e !== undefined && e > 0.60)) v = 'STRAINED';
+      else if (x.eqT >= 90 && y !== null && y !== undefined && y < 1.5 && betaOK && beta >= 1.0 && beta < 1.25) v = 'GROWTH';
+      else if ((betaOK && beta <= 0.9) || x.bdT >= 40 || x.cashT >= 50) v = 'STEADY';
+      return v === 'STEADY' ? 'Datum reads this as a calm, dependable contributor when it sequences your spending — the kind of account you draw from first in a rough market.'
+           : v === 'GROWTH' ? 'Datum reads this as a long-horizon growth sleeve — powerful, but better spent late, after your steadier accounts have carried the early, fragile years.'
+           : v === 'STRAINED' ? 'Datum reads this as a higher-variance, watch-it spot — not wrong to own, but worth balancing if this money funds near-term spending.'
+           : 'Datum folds this account into your spending plan as a steady middle contributor — no special handling, no surprises.';
+    }
+    function _diNarrTaxable(acc, s, agg) {
+      if (!s.total || !(acc.holdings || []).length)
+        return 'Add a few tickers below and Datum reads the whole picture — what KIND of account this is, how hard it swings, what it yields, and (once you enter a cost basis) the embedded gain you’re carrying. Right now there’s nothing to read.';
+      var x = _diTaxSignals(acc, s);
+      var spine = _diTaxSpine(s, x);
+      var out = [spine.txt, _diTaxInstTag(spine.id, x)];
+      var tilt = _diTaxTilts(s, x);
+      tilt.out.forEach(function (t) { out.push(t); });
+      var beh = _diTaxBehavior(s, x, agg, tilt);
+      beh.forEach(function (t) { out.push(t); });
+      var d = _diTaxD(s, tilt.out.length === 0 && beh.length === 0);
+      if (d) out.push(d);
+      out.push(_diTaxClose(s, x, agg));
+      return out.join(' ');
+    }
+    // §10 metric ladders — the deep-dive hover BEHIND each of the 4 taxable rollup boxes.
+    function _diTaxUGLadder(s) {
+      if (s.basisCount === 0) return 'Enter what you paid (cost basis) on a holding and Datum shows your embedded gain — and the tax that comes with it when you sell.';
+      var g = s.unrealGain;
+      if (g < 0) return 'You’re down ' + _diGainFmt(g) + ' against what you paid. Not what anyone wants — but in a taxable account a paper loss is usable: selling it can offset gains elsewhere and trim your tax bill.';
+      if (g < 10000) return 'You’re carrying ' + _diGainFmt(g) + ' of gain you haven’t been taxed on yet — small enough that selling won’t sting, roughly ' + _diGainTax(g) + ' in tax if you sold it all today.';
+      if (g < 50000) return _diGainFmt(g) + ' of embedded gain sits here — real growth, not yet taxed. Selling it would cost about ' + _diGainTax(g) + ' in capital-gains tax. That’s why this account funds spending differently — the gain is part of the math.';
+      return 'You’ve built ' + _diGainFmt(g) + ' of embedded gain — a strong result, and a planning question. Selling all of it triggers roughly ' + _diGainTax(g) + ' in tax, so timing and order matter. Datum draws in a tax-smart sequence so it isn’t realized all at once.';
+    }
+    function _diTaxBetaLadder(beta) {
+      if (beta === null || beta === undefined) return 'As you add holdings, Datum reads how hard this account swings with the market — calm, market-like, or jumpy.';
+      var f = beta.toFixed(2);
+      if (beta < 0.5) return 'At ' + f + ', this account barely moves with the market — very calm. A gift in a downturn, but it may not keep pace with inflation over a long retirement. Good ballast; lean on growth elsewhere.';
+      if (beta < 0.85) return 'At ' + f + ', this account moves less than the market — steadier than average. It won’t soar in a boom or crater in a bust. A dependable account to draw from when markets are rough.';
+      if (beta <= 1.15) return 'At ' + f + ', this account moves about in step with the market — a typical broad-market profile. Up in good years, down in bad ones, by roughly what the market does. No surprises.';
+      if (beta <= 1.6) return 'At ' + f + ', this account swings harder than the market — bigger gains, bigger drops. If it’s funding spending soon, a bad stretch lands right when you’re withdrawing.';
+      return 'At ' + f + ', this account swings far harder than the market — roughly ' + f + '× the move, up or down. A lot of volatility to draw income from. Great long-horizon growth sleeve; risky if you need this money soon.';
+    }
+    function _diTaxYldLadder(y) {
+      if (y === null || y === undefined) return 'Add holdings and Datum shows the income this account throws off each year — money that can fund spending without selling.';
+      var f = _diNum1(y);
+      if (y < 0.5) return 'At ' + f + ', this account pays almost no income — built for growth, not cash flow. Funding spending here means selling shares (and possibly realizing gains), not living off dividends.';
+      if (y < 1.8) return 'At ' + f + ', this account pays modest income — a little cash flow, but most of your return rides on growth. You’ll still sell shares to fund a full year of spending.';
+      if (y < 3.0) return 'At ' + f + ', this account pays a healthy stream of income — a meaningful chunk of a spending year could come from dividends alone, leaving more of your shares invested.';
+      return 'At ' + f + ', this account is income-rich — it could cover a real slice of your spending without selling. Just note: in a taxable account those dividends are taxed each year whether you spend them or not, so high yield isn’t free.';
+    }
+    function _diTaxExpLadder(e, total) {
+      if (e === null || e === undefined) return 'As you add funds, Datum shows what you pay each year just to hold them — small numbers that compound over a retirement.';
+      var f = _diE(e);
+      if (e <= 0.10) return 'At ' + f + '/yr, this account is about as cheap as investing gets — fees take almost nothing. Over a 30-year retirement that’s thousands that stay invested for you. Exactly what you want.';
+      if (e <= 0.30) return 'At ' + f + '/yr, costs here are low and reasonable — nothing to fix. Fees this size barely register against your returns.';
+      if (e <= 0.60) return 'At ' + f + '/yr, fees here are starting to matter — over decades they quietly add up to real money. Worth a glance to see if a cheaper fund holds the same thing.';
+      return 'At ' + f + '/yr, this account is expensive to hold — on this balance that’s roughly ' + _diFee30(e, total) + ' over a 30-year retirement, money that never compounds for you. High fees are one of the few retirement risks you can fix for free: a lower-cost fund with the same exposure could leave that ' + _diFee30(e, total) + ' in your pocket.';
+    }
+
     // Strip cell with the §1 hover pair (one tooltip, both labeled parts) + optional coverage sub
     function _diCell(lbl, valHtml, tipTitle, tip1a, tip1b, valId, sub) {
       var tt = '<div class="modal-tt" style="bottom:100%; left:0;"><strong>' + tipTitle + '</strong>' + tip1a +
@@ -4363,6 +4585,40 @@
       var b457 = /457b/.test(base.id), b457Roth = /^roth457b/.test(base.id);
       var beta = agg && agg.weightedBeta;
       var h = '<div class="holdings-rollup" id="bank-strip-' + id + '">';
+      if (base.id === 'taxable') {
+        // Taxable bank strip — §1 mix cells (of ACCOUNT value) + the 4 boxes with §10 metric-
+        // ladder hovers. 14.2: the clinical gain restatement is gone; the gain-tax line stays.
+        var xs = _diTaxSignals(acc, s);
+        var tu = (s.unclassedPct || 0) >= 1 ? '<div class="hr-sub">' + _diP(s.unclassedPct) + ' of value unclassified — set Asset Class in the table below</div>' : '';
+        h += _diCell('Equity %', _diP(xs.eqT), 'Share of value in stocks',
+          'The share of this account in stocks / stock funds — the growth engine.',
+          'Stocks are what outrun inflation over a long retirement, but they’re also what falls hardest. This % is the single biggest dial on whether your money grows enough to last — and how rough the ride gets getting there.', null, tu);
+        h += _diCell('Bond %', _diP(xs.bdT), 'Share of value in bonds',
+          'The share in bonds or other fixed income — the ballast.',
+          'Bonds are the part that’s supposed to hold steady when stocks fall, so you have something safe to spend from without selling stocks at a loss. This % is your shock absorber for the first bad years of retirement.');
+        h += _diCell('Cash %', _diP(xs.cashT), 'Share of value in cash',
+          'The share sitting in cash or money-market — fully liquid, fully safe.',
+          'Cash is your ‘don’t-touch-the-investments’ buffer. A sensible slice means a market crash doesn’t force you to sell anything for a year or two. Too much, though, and inflation slowly bleeds its buying power.');
+        h += _diCell('International', _diP(xs.foreignT), 'Share of value outside the US',
+          'The share invested outside the US — international holdings.',
+          'Foreign exposure spreads your bet beyond one country’s economy, which can steady a long retirement. It’s neither good nor bad on its own — it just tells you how much of your future rides on the rest of the world doing well too.');
+        var tg = s.unrealGain;
+        var tgLine = (typeof tg === 'number' && tg > 0) ? '<div class="hr-sub" id="hr-gaintax" style="margin-top:5px;">Tax if you sold it all today ≈ 15% of that gain — roughly $' + Math.round(tg * 0.15).toLocaleString('en-US') + '.</div>' : '';
+        h += _diCell('Unrealized Gain', tg === null ? '—' : _diGainFmt(tg), 'Your paper profit',
+          'Your paper profit: what everything is worth today minus what you paid for it.',
+          _diTaxUGLadder(s), 'hr-gain', tgLine);
+        h += _diCell('Weighted Beta', beta === null || beta === undefined ? '—' : _diCovVal(s.betaCovPct, beta.toFixed(2)), 'How jumpy this account is',
+          'How jumpy this account is versus the whole market. 1.00 moves with the market; above 1 swings harder, below 1 swings softer.',
+          _diTaxBetaLadder(s.betaCovPct >= 50 ? beta : null), 'hr-beta', beta !== null && beta !== undefined ? _diCovSub(s.betaCovPct, 'beta') : '');
+        h += _diCell('Blended Yield', _diCovVal(s.yldCovPct, _yld(agg && agg.blendedYield)), 'The income this account throws off',
+          'The income this account throws off on its own each year, as a % — dividends without selling anything.',
+          _diTaxYldLadder(s.yldCovPct >= 50 ? (agg && agg.blendedYield) : null), 'hr-yield',
+          s.yldCovVal > 0 ? _diCovSub(s.yldCovPct, 'yield') : '');
+        h += _diCell('Avg Expense', (_diE(agg && agg.blendedExpense) || '—'), 'The yearly fee skim',
+          'The yearly fee, as a %, that funds quietly skim off the top before you ever see a return.',
+          _diTaxExpLadder(agg && agg.blendedExpense, s.total), 'hr-expense');
+        return h + '</div>';
+      }
       if (b457) {
         // 457(b) bank §1 (R10–R16) — unified lead block; every hover keeps the 457 signature
         // (penalty-free on separation) and the own-ceiling truth. {planProvider} unsourced -> dropped.
@@ -4575,6 +4831,7 @@
                : base.id === '529plan' ? _diNarr529(acc, s, agg)
                : /ira/.test(base.id) ? _diNarrIRA(acc, s, agg, /^rothira/.test(base.id))
                : /457b/.test(base.id) ? _diNarr457(acc, s, agg, /^roth457b/.test(base.id))
+               : base.id === 'taxable' ? _diNarrTaxable(acc, s, agg)
                : _diNarr403(acc, s, agg, /roth403/.test(base.id));
       if (!body) return '<div id="di-narr-' + acc.id + '"></div>';   // empty anchor — no fabricated narrative (L47)
       return '<div class="di-narrative" id="di-narr-' + acc.id + '"><div class="di-narr-head">Datum Intelligence</div><div class="di-narr-body">' + body + '</div></div>';
@@ -4614,6 +4871,13 @@
         tt = '<strong>The Infirmary — your triple-tax-advantaged health account</strong>' +
              'The only account taxed nowhere — in, growing, or out (for medical).<br><br>' +
              'Contributions go in tax-deductible, growth is never taxed, and withdrawals for qualified medical care are tax-free at any age. Not a use-it-or-lose-it FSA: unspent money rolls over, can be invested, and compounds for decades. After 65, non-medical withdrawals simply pay ordinary income tax — a Traditional IRA at worst, tax-free at best.';
+      } else if (base.id === 'taxable') {
+        // §16 Taxable title hover (Taxable bank R221–R224, verbatim)
+        tt = '<strong>The Living Room — a Taxable Brokerage</strong>' +
+             'The account with no rules — and that’s the point.<br><br>' +
+             '<strong>What it is</strong>A taxable brokerage is an ordinary investment account you open yourself — no employer, no IRS age gates. You put in money you’ve already paid tax on, then buy stocks, funds, ETFs, or hold cash. Common examples: a Fidelity/Schwab/Vanguard individual or joint account, or a robo like Betterment or Wealthfront. It is not a 401(k), IRA, or HSA — there is no contribution limit and no special tax break going in.<br><br>' +
+             '<strong>Why it matters for retirement</strong>This is your flexible money. You can pull from it at ANY age with no early-withdrawal penalty — which makes it the bridge that funds the years before 59.5, or before a pension or Social Security kicks in. It is also the most tax-efficient pool to draw in many years: you only owe tax on the GAIN, usually at lower long-term capital-gains rates, and losses can offset other income. There are no Required Minimum Distributions forcing your hand, and whatever is left passes to heirs on a stepped-up basis. In your Shape, this is the liquid, always-available layer — the account your plan reaches for first when timing or taxes call for freedom rather than a locked retirement vehicle.<br><br>' +
+             '<strong>The catch</strong>The trade-off for that freedom: no upfront deduction and no tax-deferred growth. Dividends, interest, and realized gains are taxed in the year they happen, so this account works hardest when it holds tax-efficient, low-turnover investments and is drawn down with intent.';
       } else if (/^roth457b/.test(base.id)) {
         // §2 Roth 457(b) title hover (457 bank R21–R24; Annex = FINALIZED room name)
         tt = '<strong>The Annex — a Roth 457(b)</strong>' +
@@ -5427,6 +5691,10 @@
                 if (_bankCol) {
                   var _it = /457b/.test(base.id) ? _di457ColTips(/^roth457b/.test(base.id)) : _diIraColTips(/^rothira/.test(base.id));
                   COLS.forEach(function (c) { if (_it[c.lbl]) c.tip = _it[c.lbl]; });
+                }
+                // Taxable §11: retirement-stakes Cost Basis tooltip (install-map 14.3, verbatim)
+                if (base.id === 'taxable') {
+                  COLS.forEach(function (c) { if (c.lbl === 'Cost Basis') c.tip = { t: 'Cost Basis', b: 'What you originally paid for this holding — your total cost, including reinvested dividends. Datum uses it to find your real embedded gain, so the capital-gains tax is exact instead of a guess.' }; });
                 }
                 var cols = COLS.filter(function (c) { return !c.taxableOnly || isTaxable || _bankCol; });
 
