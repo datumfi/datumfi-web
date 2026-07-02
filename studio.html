@@ -47,7 +47,7 @@
     padding-top: 56px;
   }
 
-  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: var(--bg-navy); }
   ::-webkit-scrollbar-thumb { background: rgba(93, 202, 165, 0.2); border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--teal-mid); }
@@ -1050,7 +1050,12 @@
   /* z-index 10005: above the nav.js privacy banner (9999) — with a modal open the banner's GOT IT
      button used to float over the backdrop as an unlabeled glowing box below the DI (smoke P6). */
   .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10005; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px);}
-  .modal-card { width: 550px; max-height: 90vh; overflow-y: auto; background: var(--bg-navy); border: 1px solid rgba(255,255,255,0.1); padding: 30px; border-radius: 8px; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.9); pointer-events: auto;}
+  /* overflow-x: clip — overflow-y:auto forces overflow-x to compute 'auto', so hidden (opacity-0)
+     tooltips poking past the card edge created a phantom horizontal scrollbar below the DI
+     (long teal bar, brightens on hover — the smoke-test ghost). clip = no h-scrollbar, ever. */
+  .modal-card { width: 550px; max-height: 90vh; overflow-y: auto; overflow-x: clip; background: var(--bg-navy); border: 1px solid rgba(255,255,255,0.1); padding: 30px; border-radius: 8px; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.9); pointer-events: auto;}
+  /* right-half strip cells anchor their tooltip to the cell's RIGHT so it stays inside the card */
+  .holdings-rollup .hr-cell:nth-child(n+5) .modal-tt { left: auto !important; right: 0 !important; }
   .modal-close { position: absolute; top: 20px; right: 20px; background: transparent; border: none; color: var(--muted); font-size: 28px; cursor: pointer; transition: 0.2s; line-height: 1;}
   .modal-close:hover { color: var(--danger); }
   
@@ -3910,9 +3915,15 @@
       [/real estate|reit/i, 'real estate via REITs']
     ];
     function _diTiltSentence(acc, s, isRoth) {
-      // §13a geo lead: vanilla US core -> SILENT (validated against the live 457(b)); pronounced
-      // international (≥20% of geo-tagged value) fires. §13b: ONE theme ≥20% of equity appends.
-      var geo = (s.foreignPct !== null && s.foreignPct >= 20) ? 'meaningfully international' : null;
+      // §13a geo lead: vanilla US core -> SILENT (validated against the live 457(b)). BUG1 —
+      // the tilt is a GRADED LADDER, not a flat trigger: the sentence must scale with the share.
+      var f9 = s.foreignPct, geo = null;
+      if (f9 !== null) {
+        if (f9 >= 95) geo = 'entirely international';
+        else if (f9 >= 80) geo = 'almost entirely international';
+        else if (f9 >= 40) geo = 'meaningfully international';
+        else if (f9 >= 20) geo = 'toward some international exposure';
+      }
       if (!geo) return null;
       var themes = {};
       (acc.holdings || []).forEach(function (h) {
@@ -4059,8 +4070,9 @@
           _diP(s.foreignPct) + ' of the invested sleeve is international.',
           'Identical signal to your other investment accounts — no 529-specific nuance.');
         if (beta !== null && beta !== undefined) {
-          h += _diCell('Weighted Beta', _diCovVal(s.betaCovPct, beta.toFixed(2)), 'Invested-sleeve beta',
-            'Invested-sleeve beta ' + beta.toFixed(2) + ' vs market.',
+          var eB = _diCovVal(s.betaCovPct, beta.toFixed(2));
+          h += _diCell('Weighted Beta', eB, 'Invested-sleeve beta',
+            eB === '—' ? 'Invested-sleeve beta vs market — blanked: too little of this account’s value publishes one.' : 'Invested-sleeve beta ' + beta.toFixed(2) + ' vs market.',
             'Computed on the invested portion only — cash/stable-value is beta 0. Left blank rather than faked when holdings don’t publish one.', 'hr-beta', _diCovSub(s.betaCovPct, 'beta'));
         }
         h += _diCell('Blended Yield', _diCovVal(s.yldCovPct, _yld(agg && agg.blendedYield)), 'Value-weighted dividend yield',
@@ -4092,8 +4104,9 @@
           _diP(s.foreignPct) + ' of the invested sleeve is international.',
           'Diversifies the sleeve beyond one economy — identical signal to your other investment accounts.');
         if (beta !== null && beta !== undefined) {
-          h += _diCell('Weighted Beta', _diCovVal(s.betaCovPct, beta.toFixed(2)), 'Invested-sleeve beta',
-            'Invested-sleeve beta ' + beta.toFixed(2) + ' vs market.',
+          var hB = _diCovVal(s.betaCovPct, beta.toFixed(2));
+          h += _diCell('Weighted Beta', hB, 'Invested-sleeve beta',
+            hB === '—' ? 'Invested-sleeve beta vs market — blanked: too little of this account’s value publishes one.' : 'Invested-sleeve beta ' + beta.toFixed(2) + ' vs market.',
             'Computed on the invested portion only — the cash sweep is beta 0. Left blank rather than faked when holdings don’t publish one.', 'hr-beta', _diCovSub(s.betaCovPct, 'beta'));
         }
         h += _diCell('Blended Yield', _diCovVal(s.yldCovPct, _yld(agg && agg.blendedYield)), 'Value-weighted dividend yield',
@@ -4869,7 +4882,11 @@
             
             if(acc.showHoldings) {
                 if (window.ensureTickerBundle) window.ensureTickerBundle();   // Stage-3: lazy-load bundle on first holdings-modal open
-                document.getElementById('modal-card').style.width = "1200px";
+                // PHANTOM FIX — a fixed 1200px card overflows narrower viewports, and the card's own
+                // HORIZONTAL scrollbar (teal thumb, brightens on :hover, line ~52) renders below the
+                // DI as a long glowing inert bar. Cap the card to the viewport; the holdings TABLE
+                // keeps its own overflow-x scroll inside its labeled container.
+                document.getElementById('modal-card').style.width = "min(1200px, 96vw)";
                 var isTaxable = (base.taxCode === 'liquid' && base.isInvestment);
                 var _agg = (window.DatumMath ? DatumMath.portfolioStats([acc]) : null);   // display-only (LOCK-3)
                 var _esc = function (s) { return (s === undefined || s === null) ? '' : String(s); };
@@ -5239,12 +5256,17 @@
             if (_ne) _ne.outerHTML = _diNarrBlock(acc, base, _s, agg);
         }
         var setT = function (elid, txt) { var e = document.getElementById(elid); if (e) e.innerText = txt; };
+        // BUG2 GUARD — bank rooms were fully rebuilt above with the R1/R2 coverage rules; these
+        // generic writes would OVERWRITE the blanked hr-beta/hr-yield with raw numbers on every
+        // edit-refresh (the "shows on 403/529 after typing" leak). Generic strip rooms only.
+        if (!_diIsBankRoom(base.id)) {
         setT('hr-gain', _gn(agg && agg.unrealizedGain));
         var _ug = agg && agg.unrealizedGain; var _gt = document.getElementById('hr-gaintax');
         if (_gt) _gt.innerHTML = (typeof _ug === 'number' && _ug > 0) ? ('Tax if you sold it all today ≈ 15% of that gain — roughly $' + Math.round(_ug * 0.15).toLocaleString('en-US') + '.') : '';
         setT('hr-beta', _bet(agg && agg.weightedBeta));
         setT('hr-yield', _yld(agg && agg.blendedYield));
         setT('hr-expense', _pct(agg && agg.blendedExpense));
+        }
         var te = document.getElementById('modal-total-val'); if (te) te.innerText = '$' + (acc.value || 0).toLocaleString('en-US');
     }
     
@@ -5294,7 +5316,28 @@
             // mid-flight, an unconditional reopen silently SWAPS the visible modal back to the stale
             // account and every subsequent keystroke lands in the wrong room (the smoke-test "bleed").
             var _ov = document.getElementById('account-modal-overlay');
-            if (activeModalId === id && _ov && _ov.style.display === 'flex') openAccountModal(id);
+            if (activeModalId === id && _ov && _ov.style.display === 'flex') {
+                // BUG3 — the re-render resets the tab ring to the modal's first control. With the
+                // bundle pre-loaded this .then is a MICROTASK that would repaint BETWEEN the ticker's
+                // change event and the browser moving focus to the next field — killing Tab entirely.
+                // Defer one macrotask so Tab lands first, then capture that focus and restore it after
+                // the repaint: tabbing walks the row Ticker -> Name -> Price -> …
+                setTimeout(function () {
+                    if (!(activeModalId === id && _ov.style.display === 'flex')) return;   // re-check after the hop
+                    var _af = document.activeElement;
+                    var _sig = _af && (_af.getAttribute('oninput') || _af.getAttribute('onchange'));
+                    openAccountModal(id);
+                    if (_sig) {
+                        var _els = document.getElementById('modal-dynamic-content').querySelectorAll('input,select,textarea');
+                        for (var _k = 0; _k < _els.length; _k++) {
+                            if ((_els[_k].getAttribute('oninput') || _els[_k].getAttribute('onchange')) === _sig) {
+                                _els[_k].focus(); try { if (_els[_k].select) _els[_k].select(); } catch (_e) {}
+                                break;
+                            }
+                        }
+                    }
+                }, 0);
+            }
         });
     }
     
