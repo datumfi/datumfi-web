@@ -90,7 +90,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   all = ok('hsa: split box computes 86% / 14%',               has(R.H.html, '86%') && has(R.H.html, '14%')) && all;
   all = ok('hsa: beta box PRESENT when sourced (1.30)',       /hr-beta[^>]*>(\s|<[^>]*>)*1\.30/.test(R.H.html.replace(/\n/g, ''))) && all;
   all = ok('403T: balance hover 1b (ordinary income)',        has(R.T.html, 'Same balance, very different after-tax worth')) && all;
-  all = ok('403T: contrib hover (shares the 402(g))',         has(R.T.html, 'SHARES the 402(g) elective-deferral limit')) && all;
+  all = ok('403T: contrib hover (combined 401k ceiling, D20)', has(R.T.html, 'one combined ceiling, not two separate ones')) && all;
   all = ok('403T: expense hover (menus run EXPENSIVE)',       has(R.T.html, '403(b) menus historically run EXPENSIVE')) && all;
   all = ok('403T: beta box SUPPRESSED when unsourced (L47)',  !/id="hr-beta"[^>]*>\s*(0(\.0+)?|—)\s*</.test(R.T.html) || /hr-beta[^"]*"[^>]*display:\s*none/.test(R.T.html)) && all;
   // Job 2 — narrative
