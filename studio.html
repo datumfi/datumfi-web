@@ -3799,7 +3799,7 @@
        singleNameStock_fmt token contract is wired (the IRA/401k/457 §7 ask — L48, don't rebuild).
        NOTE: distinct from the Want-canvas "Datum Intelligence" slider tooltips (~L1844) — name
        collision only; do not merge. */
-    function _diIsBankRoom(baseId) { return /^(hsa|trad403|roth403)(_co)?$/.test(String(baseId || '')) || baseId === '529plan'; }
+    function _diIsBankRoom(baseId) { return /^(hsa|trad403|roth403|tradira|rothira)(_co)?$/.test(String(baseId || '')) || baseId === '529plan'; }
     // 529 §8 dated constants (gift exclusion / superfund / K-12 / 529→Roth) — LOOKUP by tax year (L47)
     var _DI_529 = { 2025: { excl: 18000, superS: 90000, superC: 180000, k12: 10000, roth: 35000 },
                     2026: { excl: 19000, superS: 95000, superC: 190000, k12: 20000, roth: 35000 } };
@@ -3819,7 +3819,7 @@
       var isCash = function (h) { return String(h.instrumentType || '').trim().toUpperCase() === 'CASH' || String(h.assetClass || '').trim().toLowerCase() === 'cash'; };
       var s = { total: 0, cash: 0, inv: 0, eq: 0, bd: 0, classed: 0, foreign: 0, geoed: 0, invCount: 0, maxRow: 0,
                 inst: {}, instKinds: 0, annuity: false, stockVal: 0, fundVal: 0, maxStockRow: 0, stockCount: 0, fundCount: 0,
-                betaCovVal: 0, yldCovVal: 0 };
+                betaCovVal: 0, yldCovVal: 0, maxStockTicker: '', unrealGain: null, basisCount: 0 };
       var hasNum = function (x) { return x !== '' && x !== null && x !== undefined && isFinite(parseFloat(x)); };
       (acc.holdings || []).forEach(function (h) {
         var v = val(h); if (v <= 0) return;
@@ -3830,12 +3830,16 @@
         var it = String(h.instrumentType || '').trim().toLowerCase();
         var isStock = /stock|share/.test(it), isFund = /etf|mutual|fund/.test(it);
         if (it) { if (!s.inst[it]) { s.inst[it] = 0; s.instKinds++; } s.inst[it]++; if (/annuit/.test(it)) s.annuity = true; }
-        if (isStock) { s.stockVal += v; s.stockCount++; if (v > s.maxStockRow) s.maxStockRow = v; }
+        if (isStock) { s.stockVal += v; s.stockCount++; if (v > s.maxStockRow) { s.maxStockRow = v; s.maxStockTicker = String(h.ticker || '').trim().toUpperCase() || String(h.name || '').trim(); } }
         if (isFund)  { s.fundVal += v; s.fundCount++; }
         // R1/R2 — DATA COVERAGE: how much of the invested value actually publishes a beta / yield.
         // A stat computed on a minority of dollars must never narrate as a whole-account read.
         if (hasNum(h.beta)) s.betaCovVal += v;
         if (hasNum(h.dividendYield)) s.yldCovVal += v;
+        // §12 R127 CASH-BASIS GUARD (ratified): the early cash return above keeps sweep rows out
+        // of this Σ; blank/0 basis = not entered (same rule as DatumMath.portfolioStats).
+        var cb = parseFloat(h.costBasis);
+        if (isFinite(cb) && cb > 0) { s.unrealGain = (s.unrealGain === null ? 0 : s.unrealGain) + (v - cb); s.basisCount++; }
         var ac = String(h.assetClass || '').toLowerCase();
         if (ac) { s.classed += v; if (/stock|equit/.test(ac)) s.eq += v; else if (/bond|fixed/.test(ac)) s.bd += v; }
         else if (isStock) { s.classed += v; s.eq += v; }   // a Stock instrument IS equity — sourced, not guessed
@@ -3914,7 +3918,15 @@
       [/utilit/i, 'steady, regulated utilities'],
       [/real estate|reit/i, 'real estate via REITs']
     ];
-    function _diTiltSentence(acc, s, isRoth) {
+    // §9 Layer B wraps — the tilt CORE (geo ladder + §13b theme) is wrapper-neutral; only the
+    // bank-authored tail differs. One function, tails as data (§16.2-iii hooks-once, no fork).
+    var _DI_TILT_WRAP_403 = {
+      r: ', a shape drawn from the funds your plan offers — and in a Roth that tilt’s upside compounds entirely tax-free.',
+      t: ', a shape drawn from the funds your plan offers — though in a Traditional account that growth is only tax-deferred, not tax-free.' };
+    var _DI_TILT_WRAP_IRA = {   // IRA bank R86 verbatim (open-market account — the shape was CHOSEN)
+      r: ', a deliberate shape you chose — and in a Roth that tilt’s upside compounds entirely tax-free.',
+      t: ', a deliberate shape — though in a Traditional account that growth is only tax-deferred, not tax-free.' };
+    function _diTiltSentence(acc, s, isRoth, wrap) {
       // §13a geo lead: vanilla US core -> SILENT (validated against the live 457(b)). BUG1 —
       // the tilt is a GRADED LADDER, not a flat trigger: the sentence must scale with the share.
       var f9 = s.foreignPct, geo = null;
@@ -3933,9 +3945,8 @@
       });
       var top = null; Object.keys(themes).forEach(function (k) { if (!top || themes[k] > themes[top]) top = k; });
       var sect = (top && s.eq > 0 && themes[top] >= 0.2 * s.eq) ? ', with a tilt toward ' + top : '';
-      return isRoth
-        ? 'It leans ' + geo + sect + ', a shape drawn from the funds your plan offers — and in a Roth that tilt’s upside compounds entirely tax-free.'
-        : 'It leans ' + geo + sect + ', a shape drawn from the funds your plan offers — though in a Traditional account that growth is only tax-deferred, not tax-free.';
+      var w = wrap || _DI_TILT_WRAP_403;
+      return 'It leans ' + geo + sect + (isRoth ? w.r : w.t);
     }
 
     // §9 assembler — HSA (Layers A/A2 · B · C · C2 · D · E; [IF] clauses dormant)
@@ -4037,6 +4048,178 @@
       return out.join(' ');
     }
 
+    /* ── IRA bank (tradira "The Library" / rothira "The Conservatory") — §9 assembler as a
+       LAYER TABLE, not a hard-baked body: the walker runs an ordered array of layer fns, so a
+       new bank-authored layer (e.g. the Composition Read, landed 2026-07-02) splices in as one
+       array edit. BUILD LOG: retrofit _diNarrHSA/529/403 to this table shape when their
+       Composition Read copy is ratified — one MD5 bump, no forked assemblers. */
+
+    // B2 · COMPOSITION READ sleeve derivation (IRA bank R94, first match wins; misspellings
+    // absorbed verbatim, never fixed). Two documented interpretation calls (flagged to the
+    // Architect): CASH sweep rows stay OUT of the sleeve list (they're the spend layer, not the
+    // invested shape) and bond rows bucket to an honest 'bonds' sleeve so the else→'US large-cap
+    // core' fallthrough can never misname ballast as equity (L47). % of ACCOUNT value (R93).
+    var _DI_SLEEVE_SAT = { 'crypto': 1, 'gold': 1, 'tech/semiconductors': 1, 'dividend-growth': 1,
+      'covered-call income': 1, 'clean energy': 1, 'energy': 1, 'utilities': 1,
+      'industrials/defense': 1, 'biotech': 1 };
+    function _diSleeves(acc, s) {
+      if (!s.total) return null;
+      var b = {};
+      (acc.holdings || []).forEach(function (h) {
+        var v = (parseFloat(h.price) || 0) * (parseFloat(h.shares) || 0); if (v <= 0) return;
+        var it = String(h.instrumentType || '').trim().toLowerCase();
+        var ac = String(h.assetClass || '').toLowerCase();
+        if (it === 'cash' || /cash|money market/.test(ac)) return;
+        var geo = String(h.geography || ''), sec = String(h.sector || '');
+        var all = ac + ' ' + geo + ' ' + sec, k;
+        if (/crypto|bitcoin|ether/i.test(all)) k = 'crypto';
+        else if (/bond|fixed|treasur/.test(ac) || /bond/i.test(geo) || /^bond|^cd/.test(it)) k = 'bonds';
+        else if (/gold/i.test(sec)) k = 'gold';
+        else if (/foreign|international|emerging|minus us/i.test(geo)) k = 'international';
+        else if (/semicond|robot/i.test(sec)) k = 'tech/semiconductors';
+        else if (/dividend/i.test(sec)) k = 'dividend-growth';
+        else if (/cover/i.test(geo)) k = 'covered-call income';   // absorbs "Covererd Calls"
+        else if (/clean energy/i.test(sec)) k = 'clean energy';
+        else if (/energy/i.test(sec)) k = 'energy';
+        else if (/utilit/i.test(sec)) k = 'utilities';            // absorbs "Utilties"
+        else if (/industrial|aerospace|defense/i.test(sec)) k = 'industrials/defense';
+        else if (/biotech/i.test(sec)) k = 'biotech';
+        else if (/small (cap|blend)/i.test(sec)) k = 'US small-cap';
+        else k = 'US large-cap core';
+        b[k] = (b[k] || 0) + v;
+      });
+      var list = Object.keys(b).map(function (k) { return { k: k, pct: (b[k] / s.total) * 100 }; })
+        .sort(function (x, y) { return y.pct - x.pct; });
+      var sat = 0; list.forEach(function (x) { if (_DI_SLEEVE_SAT[x.k]) sat += x.pct; });
+      return { list: list, top: list.length ? list[0].pct : 0, satPct: sat };
+    }
+
+    function _diIraSpine(acc, s, agg, isRoth) {
+      var mix = _diInstMix(s);
+      var built = mix ? ', built ' + mix : '';   // token unsourced -> clause silent (L47)
+      return isRoth
+        ? 'This Roth IRA is ' + _diSpine(s) + built + ' — a personal account you assembled from the open market, where everything inside grows tax-free.'
+        : 'This Traditional IRA is ' + _diSpine(s) + built + ' — a personal account you assembled from the open market, holding pre-tax capital that grows tax-deferred.';
+    }
+    // B2 fires per R87/R95 + Captain's retuned floors (2026-07-02): tickerCount≥8 AND top
+    // sleeve <50% AND ≥3 sleeves AND combined thematic+crypto satellites ≤30% (above that the
+    // §13b tilt clause is already telling the story — silence = nuance). Foreign≥20% floor
+    // lives in the _diTiltSentence ladder. Sleeve clause is BYTE-IDENTICAL [R]/[T] (R96).
+    function _diIraCompRead(acc, s, agg, isRoth) {
+      var c = _diSleeves(acc, s);
+      if (!c || s.invCount < 8 || c.list.length < 3 || c.top >= 50 || c.satPct > 30) return null;
+      var names = c.list.map(function (x) { return Math.round(x.pct) + '% ' + x.k; });
+      var txt = names.length > 4
+        ? names.slice(0, 4).join(', ') + ' and a handful of smaller satellite positions (' +
+          c.list.slice(4).map(function (x) { return x.k; }).join(', ') + ')'
+        : names.join(', ');
+      return 'Here’s what’s actually under the hood, biggest first: ' + txt + '. ' + (isRoth
+        ? 'Seeing the real shape matters more here than anywhere — in a Roth this is the exact mix whose every gain you’ll one day pull out tax-free, so you want the growth engines, not the ballast, doing the heavy lifting.'
+        : 'Knowing the real shape matters — in a Traditional account this mix grows tax-deferred, and every sleeve’s eventual withdrawal is taxed as ordinary income, so it’s worth seeing exactly what you’re building.');
+    }
+    function _diIraTilt(acc, s, agg, isRoth) { return _diTiltSentence(acc, s, isRoth, _DI_TILT_WRAP_IRA); }
+    // C · BEHAVIOR — 0–2 sentences, beta first (R88). §7.4 tokens wired HONEST: singleNamePct =
+    // Σ single-name value ÷ acctValue (fires ≥10%); {singleNameStock_fmt} = largest name as
+    // "NN% (TICKER)" (ruled 2026-07-02); Roth asset-location at bondPct ≥30% of invested.
+    function _diIraBehavior(acc, s, agg, isRoth) {
+      var out = [];
+      var beta = agg && agg.weightedBeta;
+      if (beta !== null && beta !== undefined && s.betaCovPct >= 60 && (beta >= 1.15 || beta <= 0.85)) {
+        var bw = beta >= 1.15 ? 'harder than' : 'gentler than';
+        out.push(isRoth
+          ? 'It rides ' + bw + ' the market — fitting for a Roth, the right home for your highest-growth, highest-volatility bets since the payoff is untaxed.'
+          : 'It rides ' + bw + ' the market; in a Traditional account both the gains and the swings are yours until withdrawal, when they’re taxed as ordinary income.');
+      }
+      if (out.length < 2 && s.total > 0 && (s.stockVal / s.total) >= 0.10 && s.maxStockTicker) {
+        var tag = Math.round((s.maxStockRow / s.total) * 100) + '% (' + s.maxStockTicker + ')';
+        out.push(isRoth
+          ? "A sizable " + tag + " sits in a single name — concentration is the one risk a tax-free wrapper can't offset, so size it on purpose, not by accident."
+          : 'A sizable ' + tag + ' sits in a single name — the concentration risk is the same, and here a big drop would also shrink a future taxable withdrawal, cutting both ways.');
+      }
+      if (out.length < 2 && s.bondPct !== null && s.bondPct >= 30) {
+        out.push(isRoth
+          ? 'And a meaningful ' + _diP(s.bondPct) + ' rides in bonds — safe, but a Roth is your most valuable tax shelter, so heavy ballast here slightly wastes space that highest-growth assets would use best.'
+          : 'A meaningful ' + _diP(s.bondPct) + ' rides in bonds — sensible ballast, and in a Traditional account bonds sit more naturally than in a Roth, since their income would be taxed on the way out either way.');
+      }
+      return out.length ? out.join(' ') : null;
+    }
+    // D · MENU & FEES — fires only when NOTABLE (lean ≤0.40 or expensive >0.75; moderate stays
+    // silent — ruled 2026-07-02). Local descriptor: the shared _diExpenseWord's expensive tier
+    // carries its own lever line, which would double the IRA tail's "one trade away".
+    function _diIraMenuFees(acc, s, agg, isRoth) {
+      var e = agg && agg.blendedExpense;
+      var t = _diE(e); if (t === null) return null;
+      if (e > 0.40 && e <= 0.75) return null;
+      var w = e <= 0.15 ? 'exceptionally lean (a value-weighted ≈' + t + ' expense ratio)'
+            : e <= 0.40 ? 'lean (a value-weighted ≈' + t + ' expense ratio)'
+            : 'on the expensive side (≈' + t + '/yr value-weighted)';
+      return isRoth
+        ? 'Your funds run ' + w + ' — and because you opened this yourself on the open market, you’re never stuck with a bad menu: a cheaper equivalent is one trade away.'
+        : 'Your funds run ' + w + '; the open-market freedom of an IRA means any drag here is yours to fix — a cheaper equivalent is one trade away.';
+    }
+    function _diIraTax(acc, s, agg, isRoth) {
+      return isRoth
+        ? 'Every dollar here — growth included — comes out tax-free once you’re 59.5 and the 5-year clock is met, and there are no RMDs ever, so it can compound untouched for life. Just note: direct Roth contributions phase out at higher incomes.'
+        : 'This is pre-tax money: every dollar — contributions and growth — is taxed as ordinary income when you withdraw, and RMDs begin at 73. Your contribution may be deductible today, but only if your income sits under the phaseout when you’re covered by a workplace plan.';
+    }
+    function _diIraToggle(acc, s, agg, isRoth) {
+      if (!acc.catchUp50) return null;
+      return isRoth
+        ? 'You’ve switched on the 50+ catch-up — a small extra slug of tax-free room, smart to use when your earnings (and the value of tax-free growth) are near their peak.'
+        : 'You’ve switched on the 50+ catch-up — extra deductible room right when a deduction is often worth the most.';
+    }
+    function _diIraContrib(acc, s, agg, isRoth) {
+      var contrib = (acc.inflow || 0) * (acc.freq || 0);
+      if (!(contrib > 0)) return null;
+      return isRoth
+        ? 'At ' + _diMoney(contrib) + '/yr you’re feeding the most tax-advantaged dollar in the code — small ceiling, but every dollar in is a dollar that’s never taxed again.'
+        : 'At ' + _diMoney(contrib) + '/yr you’re building deferred capital — a smaller lever than a 401(k), but a real one, especially if the contribution is deductible.';
+    }
+    var _DI_IRA_LAYERS = [
+      _diIraSpine,      // A — always
+      _diIraTilt,       // B — 0–2, §13 maps via the shared core
+      _diIraCompRead,   // B2 — Composition Read (landed at the reserved seam, 2026-07-02)
+      _diIraBehavior,   // C — 0–2, beta first
+      _diIraMenuFees,   // D
+      _diIraTax,        // E — always (the §11 divergence line)
+      _diIraToggle,     // F
+      _diIraContrib     // G
+    ];
+    function _diNarrIRA(acc, s, agg, isRoth) {
+      if (!s.total || !(acc.holdings || []).length) return '';
+      var out = [];
+      _DI_IRA_LAYERS.forEach(function (fn) { var t = fn(acc, s, agg, isRoth); if (t) out.push(t); });
+      return out.join(' ');
+    }
+
+    // §12 IRA-aware column hovers ([R]/[T] resolved per room; overrides the shared COLS tips).
+    // The unmarked sentences apply to both branches — resolution keeps them.
+    function _diIraColTips(isRoth) {
+      var why = '<br><br><strong>Why it matters for your retirement</strong>';
+      return {
+        'Ticker': { t: 'Ticker', b: 'The symbol of this single holding.' + why + 'Names the bet on this row. In an IRA you picked every one of these off the open market — so each ticker is a choice you made, not a slot a plan handed you.' },
+        'Name': { t: 'Name', b: 'The full security name behind the ticker.' + why + 'Tells you what you actually own — a broad index, a single company, a bond fund. The plainer and broader the name, the more this row is built to be left alone for a long retirement.' },
+        'Price': { t: 'Price', b: 'The latest reference price per share.' + why + 'A reference point, not a live quote — we show it sourced-or-blank, never a stale guess. It only matters paired with shares: price × shares is what this row is worth to your plan.' },
+        'Shares': { t: 'Shares', b: 'How many units of this holding you own.' + why + 'The size of the position. Shares × price = this row\'s value — the number that decides how much weight this single holding carries in your IRA.' },
+        'Value': { t: 'Value', b: 'Shares × price — what this holding is worth today.' + why + 'This is the dollar weight this row pulls in the account. Every one of the 4 boxes above is VALUE-WEIGHTED — so a big-value row steers the whole account\'s beta, yield, and fee far more than a small one.' },
+        'Cost Basis': { t: 'Cost Basis', b: 'What you paid for this holding (user-entered).' + why + 'Always entered by you — no source publishes your basis. ' +
+          (isRoth ? 'In the Conservatory it never matters for tax — qualified growth is tax-free.' : 'In the Library it barely matters at withdrawal: the whole balance is taxed as ordinary income regardless of basis.') +
+          ' We still track it so Unrealized Gain can show.' },
+        'Unrealized Gain': { t: 'Unrealized Gain', b: 'Value − Cost Basis for THIS row (blank if no basis).' + why +
+          (isRoth ? 'In a Roth this paper gain is yours tax-free forever once qualified — the single best reason to hold your biggest-growth names here.' : 'In a Traditional it\'s tax-DEFERRED, not tax-free: this gain becomes ordinary income on the way out.') +
+          ' Either way, no yearly capital-gains tax like a taxable account — the IRA wrapper shields the gain while it grows. This row feeds the Unrealized Gain box above.' },
+        'Beta': { t: 'Beta', b: 'This holding\'s market sensitivity (sourced-or-blank).' + why + 'How hard this one position swings with the market — 1.00 moves with it, above is jumpier, below is steadier. Left BLANK when no source publishes it (we never fake a beta).' +
+          (isRoth ? ' The Roth is the right home for your highest-beta bets — the violent upside is untaxed.' : '') + ' This row feeds the Weighted Beta box above.' },
+        'Yield': { t: 'Yield', b: 'This holding\'s dividend yield (sourced-or-blank).' + why + 'The income this position throws off as a %. In ANY IRA these dividends reinvest with ZERO yearly tax drag — unlike a taxable account where you\'d owe tax each year. Blank when unpublished. This row feeds the Blended Yield box above.' },
+        'Geography': { t: 'Geography', b: 'Where this holding is invested — at the granular level we track (e.g. US large-blend, foreign developed, emerging markets, global blend, US bonds, real assets, crypto, cash).' + why + 'Tells you how much of this row rides on the rest of the world — and WHICH part of the world. We read the granular tag, not just "US vs international," so a developed-market fund and an emerging-market bet aren\'t blurred into one word. Caveat we keep honest: this reflects published domicile, which isn\'t always true investment exposure.' },
+        'Sector': { t: 'Sector', b: 'The granular industry or theme this holding sits in — broad-market core, or a named tilt like semiconductors, energy, biotech, gold, REITs, or dividend growth.' + why + 'Sectors boom and bust together. Reading the granular sector on each row lets you spot when several tickers quietly stack into ONE theme — the concentration most people never see because it hides across different names.' +
+          (isRoth ? ' A high-risk theme like biotech or crypto is a natural Roth bet — the binary upside comes out untaxed.' : '') },
+        'Exp Ratio': { t: 'Exp Ratio', b: 'The annual fund fee for this holding, as a %.' + why + 'The yearly drag this one fund skims before you see a return. Because you bought it on the open market, a high number here is FIXABLE — a cheaper index equivalent is usually one trade away. This row feeds the Avg Expense box above.' },
+        'Asset Class': { t: 'Asset Class', b: 'Whether this row is equity, bond, cash, or alternative.' + why + 'The job this holding does: equity = growth engine, bond = ballast, cash = buffer, alt = different-drummer hedge. The mix of these across rows is your real risk dial — and in an IRA the whole mix is your design, not a plan\'s glidepath.' },
+        'Instrument': { t: 'Instrument', b: 'Whether this row is an ETF, mutual fund, individual stock, or cash.' + why + 'Funds (ETF/MF) spread your money across many companies so no single failure sinks you; a single stock is where one company\'s bad year becomes YOUR bad year. The wrapper mix across rows tells you how much of your IRA is built to survive being left alone.' }
+      };
+    }
+
     // Strip cell with the §1 hover pair (one tooltip, both labeled parts) + optional coverage sub
     function _diCell(lbl, valHtml, tipTitle, tip1a, tip1b, valId, sub) {
       var tt = '<div class="modal-tt" style="bottom:100%; left:0;"><strong>' + tipTitle + '</strong>' + tip1a +
@@ -4048,8 +4231,57 @@
     // inputs, so full re-render on refresh is focus-safe. Blank beta -> the box is OMITTED (L47).
     function _diBankStrip(acc, base, s, agg) {
       var id = acc.id, hsa = base.taxCode === 'hsa', isRoth = /roth403/.test(base.id);
+      var ira = /ira/.test(base.id), iraRoth = /^rothira/.test(base.id);
       var beta = agg && agg.weightedBeta;
       var h = '<div class="holdings-rollup" id="bank-strip-' + id + '">';
+      if (ira) {
+        // IRA bank §1 (R10–R16) — unified lead block (B2 precedent), IRA hover pairs, plus the
+        // NEW Unrealized Gain box (R13, CASH-guarded Σ from _diSignals — sourced-or-blank).
+        var iu = (s.unclassedPct || 0) >= 1 ? '<div class="hr-sub">' + _diP(s.unclassedPct) + ' of value unclassified — set Asset Class in the table below</div>' : '';
+        h += _diCell('Invested / Cash', _diP(s.investedPct) + ' / ' + _diP(s.cashPct), 'Invested vs Cash split',
+          _diP(s.investedPct) + ' invested / ' + _diP(s.cashPct) + ' parked in cash.',
+          'The cash line is money standing still; the invested share is what compounds toward retirement.');
+        h += _diCell('Equity %', _diP(s.equityPct), 'Value-weighted asset mix',
+          _diP(s.equityPct) + ' of this IRA’s invested value is in stocks.',
+          'How your IRA is actually invested. Because you opened this yourself, you control the full menu — this mix is entirely your design, and the place to hold your highest-growth assets if this is a Roth.', null, iu);
+        h += _diCell('Bond %', _diP(s.bondPct), 'Bond share (invested value)',
+          _diP(s.bondPct) + ' sits in bonds.',
+          'Ballast — steadier, income-bearing holdings that damp the swings as retirement nears.');
+        h += _diCell('Cash %', _diP(s.cashPct), 'Cash share',
+          _diP(s.cashPct) + ' is in cash.',
+          'Dry powder inside the account — value that isn’t compounding until it’s put to work.');
+        h += _diCell('International', _diP(s.foreignPct), 'International share',
+          _diP(s.foreignPct) + ' of the invested value is international.',
+          'Diversifies the account beyond one economy — identical signal to your other investment accounts.');
+        h += _diCell('Balance', _diMoney(acc.value), 'Current balance in the account',
+          'Current balance in the account.',
+          (iraRoth ? 'The Conservatory: already-taxed dollars that grow and come out 100% tax-free once qualified.'
+                   : 'The Library: pre-tax dollars that grow untaxed until you withdraw — then every dollar is ordinary income.') +
+          ' Same balance, very different after-tax worth.');
+        var iContrib = (acc.inflow || 0) * (acc.freq || 0);
+        h += _diCell('Annual Contribution', iContrib > 0 ? _diMoney(iContrib) + ' / yr' : '—', 'What you’re putting in per year',
+          'What you’re putting in per year.',
+          "Capped LOW — the IRA limit is modest, and it's SHARED across all your IRAs (Traditional + Roth combined, one ceiling). Filling it is a small but pure lever: " +
+          (iraRoth ? "it locks in tax-free growth at today's rate." : "it may lower this year's taxable income if you're eligible to deduct."));
+        h += _diCell('Unrealized Gain', s.unrealGain === null ? '—' : (s.unrealGain >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(s.unrealGain)).toLocaleString('en-US'),
+          'Σ(value − cost basis) where basis exists',
+          'Σ(value − cost basis) where basis exists — cash-sweep rows never enter the Σ.',
+          iraRoth ? 'In the Conservatory all of this growth is yours tax-free — exactly why high-growth belongs here.'
+                  : 'In the Library this growth will be taxed as ordinary income on the way out — the bigger it grows, the bigger the future bill.');
+        if (beta !== null && beta !== undefined) {
+          h += _diCell('Weighted Beta', _diCovVal(s.betaCovPct, beta.toFixed(2)), 'Value-weighted market sensitivity',
+            'Value-weighted market sensitivity (holdings with a beta).',
+            'How hard your IRA swings with the market. Left blank when holdings don’t publish a beta — we leave it empty rather than fake it.', 'hr-beta', _diCovSub(s.betaCovPct, 'beta'));
+        }
+        h += _diCell('Blended Yield', _diCovVal(s.yldCovPct, _yld(agg && agg.blendedYield)), 'Value-weighted dividend yield',
+          'Value-weighted dividend yield.',
+          'Income thrown off inside the account. In any IRA these dividends reinvest untaxed — no yearly tax drag like a taxable account, so yield is pure compounding here.', 'hr-yield',
+          s.yldCovVal > 0 ? _diCovSub(s.yldCovPct, 'yield') : '');
+        h += _diCell('Avg Expense', (_diE(agg && agg.blendedExpense) || '—'), 'Value-weighted expense ratio',
+          'Value-weighted expense ratio.',
+          'Your annual fund drag. Because you picked these funds on the open market, a high number here is fixable — cheaper index equivalents are usually one trade away.', 'hr-expense');
+        return h + '</div>';
+      }
       if (base.id === '529plan') {
         var g = _DI_529[new Date().getFullYear()];
         // C1 — {yearsToCollege} is unsourced (§7 ask): the whole "appropriate for…" clause stays
@@ -4164,6 +4396,7 @@
     function _diNarrBlock(acc, base, s, agg) {
       var body = base.taxCode === 'hsa' ? _diNarrHSA(acc, s, agg)
                : base.id === '529plan' ? _diNarr529(acc, s, agg)
+               : /ira/.test(base.id) ? _diNarrIRA(acc, s, agg, /^rothira/.test(base.id))
                : _diNarr403(acc, s, agg, /roth403/.test(base.id));
       if (!body) return '<div id="di-narr-' + acc.id + '"></div>';   // empty anchor — no fabricated narrative (L47)
       return '<div class="di-narrative" id="di-narr-' + acc.id + '"><div class="di-narr-head">Datum Intelligence</div><div class="di-narr-body">' + body + '</div></div>';
@@ -4203,6 +4436,20 @@
         tt = '<strong>The Infirmary — your triple-tax-advantaged health account</strong>' +
              'The only account taxed nowhere — in, growing, or out (for medical).<br><br>' +
              'Contributions go in tax-deductible, growth is never taxed, and withdrawals for qualified medical care are tax-free at any age. Not a use-it-or-lose-it FSA: unspent money rolls over, can be invested, and compounds for decades. After 65, non-medical withdrawals simply pay ordinary income tax — a Traditional IRA at worst, tax-free at best.';
+      } else if (/^rothira/.test(base.id)) {
+        // §2 Roth IRA title hover (IRA bank R21–R24, verbatim)
+        tt = '<strong>The Conservatory — a Roth IRA</strong>' +
+             'A Roth IRA — your personal tax-free greenhouse.<br><br>' +
+             '<strong>What it is</strong>An IRA you open and fund yourself with already-taxed dollars. You pick from the whole market — not a plan’s short menu — and everything inside grows tax-free.<br><br>' +
+             '<strong>Why it matters</strong>Qualified withdrawals (age 59.5 with the 5-year clock met) come out 100% tax-free, growth included. No RMDs ever for you — it can compound untouched for life and pass tax-free to heirs.<br><br>' +
+             '<strong>The catch</strong>The limit is small and SHARED with your Traditional IRA, and high earners get phased out of contributing directly — the door narrows as income rises (a backdoor route exists).';
+      } else if (/^tradira/.test(base.id)) {
+        // §2 Traditional IRA title hover (IRA bank R27–R30, verbatim)
+        tt = '<strong>The Library — a Traditional IRA</strong>' +
+             'A Traditional IRA — your own pre-tax library of capital.<br><br>' +
+             '<strong>What it is</strong>An IRA you open yourself, often funded with pre-tax dollars. Like the Roth, you control the full investment menu — the difference is purely WHEN the tax is paid.<br><br>' +
+             '<strong>Why it matters</strong>Contributions may be deductible TODAY, lowering this year’s taxable income — but only if your income is under the phaseout when you’re covered by a workplace plan. The growth is tax-deferred until you pull it.<br><br>' +
+             '<strong>The catch</strong>Every dollar — contributions and growth — is taxed as ordinary income on withdrawal, and RMDs begin at 73. It’s a tax bill deferred, not erased.';
       } else if (/roth403/.test(base.id)) {
         tt = '<strong>The Roth Shelter — a Roth 403(b)</strong>' +
              'Tax-free retirement dollars inside a public-school / nonprofit plan.<br><br>' +
@@ -4341,6 +4588,7 @@
             let is403 = base.id.includes('403');
             let is457 = base.id.includes('457b');       // 457(b)-only: special final-3-year catch-up (2× base)
             let hasRule55 = /401k|403/.test(base.id);   // Rule-of-55 axis: 401(k)/403(b) only — the 457(b) never carries the penalty
+            let isIRA = /ira/.test(base.id);            // IRA bank §3/§4: no Rule-of-55, no super tier; IRA-aware hovers + notes
             let ownerPrefix = base.type === 'coarch' ? 'co' : 'pri';
             let dobVal = document.getElementById(ownerPrefix + '-dob').value;
             
@@ -4369,7 +4617,8 @@
             <div style="margin-top:20px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px;">
                 <div class="input-label" style="color:var(--gold); margin-bottom:10px;">WITHDRAWAL RULES & ACCESSIBILITY</div>
                 <div style="display:flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span class="input-label" style="color:var(--white);">Standard Penalty-Free Access</span>
+                    ${isIRA ? `<span class="input-label modal-tt-wrap" style="color:var(--white); cursor:help;">Standard Penalty-Free Access<div class="modal-tt" style="left:0; right:auto;"><strong>Standard Penalty-Free Access</strong>The IRA penalty-free line. Unlike a 401(k), an IRA has NO Rule-of-55 — leaving a job early doesn’t unlock it. 59.5 is the gate (limited exceptions: first home, education, etc.).</div></span>`
+                            : `<span class="input-label" style="color:var(--white);">Standard Penalty-Free Access</span>`}
                     <span style="font-family: var(--font-mono); color: var(--muted); font-size:10px;">Age 59.5 (Est. ${stdAccessDate})</span>
                 </div>
             `;
@@ -4390,9 +4639,13 @@
             
             html += `
                 <div style="display:flex; justify-content: space-between; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 12px; margin-top: 8px;">
-                    <span class="input-label" style="color:var(--teal-mid);">Active Availability Benchmark</span>
+                    ${isIRA ? `<span class="input-label modal-tt-wrap" style="color:var(--teal-mid); cursor:help;">Active Availability Benchmark<div class="modal-tt" style="left:0; right:auto;"><strong>Active Availability Benchmark</strong>Same as standard for an IRA — no early-access toggle. We deliberately omit the Rule-of-55 row the 401(k) modal shows, because it does not apply here.</div></span>`
+                            : `<span class="input-label" style="color:var(--teal-mid);">Active Availability Benchmark</span>`}
                     <span style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold; font-size:13px;">Age ${currentAccessAge} (${currentAccessDate})</span>
                 </div>
+                ${isIRA ? `<div style="font-size: 10px; color: var(--muted); font-family: var(--font-serif); font-style: italic; margin-top: 10px; line-height: 1.4;">${base.taxCode === 'roth'
+                    ? `Even at 59.5, Roth GROWTH is tax-free only once your first Roth IRA contribution is 5 years old. Contributions themselves come out anytime, tax- and penalty-free.`
+                    : `Withdrawals before 59.5 face a 10% penalty plus ordinary income tax (exceptions apply). After 59.5 it’s just ordinary income tax — and RMDs force withdrawals starting at 73.`}</div>` : ``}
             </div>`;
 
             // SURGICAL: Structural Injection Limits (Editable constraints) — 2026 IRS defaults
@@ -4410,7 +4663,8 @@
 
             html += `
             <div style="margin-top:20px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px;">
-                <div class="input-label" style="color:var(--gold); margin-bottom:6px;">CONTRIBUTION LIMITS (${limitName})</div>
+                ${isIRA ? `<div class="input-label modal-tt-wrap" style="color:var(--gold); margin-bottom:6px; cursor:help;">CONTRIBUTION LIMITS (${limitName})<div class="modal-tt" style="left:0; right:auto;"><strong>IRA Limits</strong>The most you can put into ALL your IRAs combined this year (Traditional + Roth share one ceiling). It's a modest cap — think of the IRA as a high-quality top-up, not your main retirement engine.</div></div>`
+                        : `<div class="input-label" style="color:var(--gold); margin-bottom:6px;">CONTRIBUTION LIMITS (${limitName})</div>`}
                 <div style="font-family:var(--font-mono);font-size:9px;color:rgba(255,255,255,0.3);margin-bottom:10px;letter-spacing:0.05em;">2026 IRS limits — <a href="https://www.irs.gov/retirement-plans" target="_blank" rel="noopener" style="color:rgba(93,202,165,0.4);text-decoration:none;">irs.gov/retirement-plans</a></div>
                 
                 <div class="field-row" style="margin-bottom:10px;">
@@ -4429,8 +4683,12 @@
                       <input type="checkbox" ${acc.catchUp50 ? 'checked' : ''} onchange="updateAccToggle('${id}', 'catchUp50', this.checked)">
                       <span class="slider"></span>
                     </label>
-                    <div class="modal-tt"><strong>Age 50 Unlock</strong>From the calendar year you turn 50, the IRS lets you defer past the base ceiling. Peak-earning years usually land here — flip it on to raise this account's Annual Maximum.</div>
+                    ${isIRA ? `<div class="modal-tt"><strong>Age 50 Unlock</strong>At 50+ the IRS lets you add a fixed catch-up on top of the base — small, but it’s untaxed-growth room (Roth) or a deduction (Traditional) right when you’re likely earning most. NO super catch-up exists for IRAs.</div>`
+                            : `<div class="modal-tt"><strong>Age 50 Unlock</strong>From the calendar year you turn 50, the IRS lets you defer past the base ceiling. Peak-earning years usually land here — flip it on to raise this account's Annual Maximum.</div>`}
                 </div>
+                ${isIRA ? `<div style="font-size: 10px; color: var(--muted); font-family: var(--font-serif); font-style: italic; margin-top: 10px; line-height: 1.4;">${base.taxCode === 'roth'
+                    ? `Heads up: direct Roth IRA contributions phase out at higher incomes. If you're over the line, a "backdoor" conversion is the usual route in.`
+                    : `Your contribution may be fully deductible, partly deductible, or not at all — it depends on your income AND whether you’re covered by a workplace plan. The deduction is the whole point of the Traditional IRA, so it’s worth checking where you land.`}</div>` : ``}
             `;
             if(is401k) {
                 html += `
@@ -4962,7 +5220,12 @@
                   { lbl: 'Instrument', w: 110, tip: { t: 'Instrument', b: 'What kind of wrapper this is — a single stock, a fund, an annuity, a cash sweep. Single names concentrate risk; funds spread it; the cash sweep sits out of the market.' }, td: function (h, i) { return _sel(h, i, 'instrumentType', _V_IN); } },
                   { lbl: '', w: null, td: function (h, i) { return '<td><button onclick="removeHolding(\'' + id + '\', ' + i + ')" style="background:none; border:none; color:var(--muted); cursor:pointer;">×</button></td>'; } }
                 ];
-                var cols = COLS.filter(function (c) { return !c.taxableOnly || isTaxable; });
+                // §12 IRA pass — the IRA bank's [R]/[T]-aware column hovers override the shared
+                // tips, and Cost Basis / Unrealized Gain become VISIBLE for IRA rooms (bank
+                // R115: basis is tracked so Unrealized Gain can show — unlike the 403(b)).
+                var _iraCol = _diBank && /ira/.test(base.id);
+                if (_iraCol) { var _it = _diIraColTips(/^rothira/.test(base.id)); COLS.forEach(function (c) { if (_it[c.lbl]) c.tip = _it[c.lbl]; }); }
+                var cols = COLS.filter(function (c) { return !c.taxableOnly || isTaxable || _iraCol; });
 
                 html += '<div style="margin-top: 15px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 4px; overflow-x: auto;"><table class="holdings-table"><tr>';
                 cols.forEach(function (c) {
