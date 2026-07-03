@@ -4679,6 +4679,58 @@
           'Your annual fund drag. Unlike an IRA you can’t shop the whole market — you’re limited to the plan’s menu, so the cheapest available share class is the lever, not switching providers.', 'hr-expense');
         return h + '</div>';
       }
+      if (/401k/.test(base.id)) {
+        // 401(k) bank §1 (R9–R29) — signal-strip hovers, [R] Treasury / [T] Vault via taxCode.
+        // Authored 401k copy on Balance/Equity/Bond/Contribution/Avg-Expense; the asset-mix cells
+        // (Invested-Cash / Cash / International) reuse the shared sibling hovers (Lesson 48, neutral
+        // factual signals). The 4 auto-boxes' DEEP-DIVE why-hovers are the §12 metric-ladders (a
+        // later pass) — here they carry the neutral "what it measures" read.
+        var rothK = base.taxCode === 'roth';
+        var cK = (acc.inflow || 0) * (acc.freq || 0);
+        var uK = (s.unclassedPct || 0) >= 1 ? '<div class="hr-sub">' + _diP(s.unclassedPct) + ' of value unclassified — set Asset Class in the table below</div>' : '';
+        h += _diCell('Invested / Cash', _diP(s.investedPct) + ' / ' + _diP(s.cashPct), 'Invested vs Cash split',
+          _diP(s.investedPct) + ' invested / ' + _diP(s.cashPct) + ' parked in cash.',
+          'The cash line is money standing still; the invested share is what compounds toward retirement.');
+        h += _diCell('Equity %', _diP(s.equityPct), '% of the account in stocks',
+          '% of the account in stocks / equity funds.',
+          rothK ? 'Sets the growth engine and the turbulence. In a Roth, high equity is especially powerful — because all that growth comes out untaxed, this is the best account to hold your highest-expected-return assets.'
+                : 'Sets the growth engine and the turbulence. In a pre-tax account, growth is tax-DEFERRED, not tax-free — so unlike a Roth, holding your highest-return assets here means Uncle Sam eventually shares the upside. Many planners keep the highest-growth assets in Roth and steadier assets here.', null, uK);
+        h += _diCell('Bond %', _diP(s.bondPct), '% in bonds / fixed income',
+          '% in bonds / fixed income.',
+          rothK ? 'Your ballast. In a Roth, bonds are slightly "wasted" — their lower returns mean less tax-free growth to harvest. Many planners hold bonds in pre-tax accounts and keep the Roth stock-heavy. Worth knowing where yours sit.'
+                : 'Your ballast. In a pre-tax account, bonds are a natural fit — their taxable income is sheltered until withdrawal, and their lower returns mean less deferred-gain the IRS eventually taxes. This is often the RIGHT home for bonds (the mirror of the Roth logic).');
+        h += _diCell('Cash %', _diP(s.cashPct), 'Cash share',
+          _diP(s.cashPct) + ' is in cash.',
+          'Dry powder inside the account — value that isn’t compounding until it’s put to work.');
+        h += _diCell('International', _diP(s.foreignPct), 'International share',
+          _diP(s.foreignPct) + ' of the invested value is international.',
+          'Diversifies the account beyond one economy — identical signal to your other investment accounts.');
+        h += _diCell('Balance', _diMoney(acc.value), 'Current balance in the account',
+          'Current balance in the account.',
+          rothK ? 'This is tax-FREE money in waiting. Every dollar here is worth more than a dollar in a pre-tax account because you’ll never owe tax on it again — at withdrawal it’s yours, clean.'
+                : 'This is PRE-TAX money — every dollar here still owes income tax when it comes out. A dollar in The Vault is worth less after-tax than a dollar in a Roth, but you already banked the tax break when you put it in. Think of the balance as gross, not spendable.');
+        h += _diCell('Annual Contribution', cK > 0 ? _diMoney(cK) + ' / yr' : '—', 'What you’re deferring per year',
+          'What you’re putting in per year (your deferral).',
+          rothK ? 'Roth dollars are capped by the same IRS limit as pre-tax. Filling this is locking in tax-free growth at today’s tax rate — a bet that your future rate is higher, or that tax-free flexibility is worth it regardless.'
+                : 'Pre-tax dollars lower this year’s taxable income — the deduction is immediate. Filling this is a bet that your retirement tax rate will be LOWER than today’s. It shares one IRS ceiling with any Roth 401(k) deferrals you make.');
+        h += _diCell('Unrealized Gain', s.unrealGain === null ? '—' : (s.unrealGain >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(s.unrealGain)).toLocaleString('en-US'),
+          'Growth captured so far', 'Σ(value − cost basis) where basis exists — cash-sweep rows never enter the Σ.',
+          rothK ? 'Inside a Roth 401(k) this growth isn’t a tax event — it comes out tax-free once qualified. (Hover the box for the full read.)'
+                : 'Inside a Traditional 401(k) this growth is tax-deferred — taxed as ordinary income on the way out. (Hover the box for the full read.)', 'hr-gain');
+        if (beta !== null && beta !== undefined) {
+          h += _diCell('Weighted Beta', _diCovVal(s.betaCovPct, beta.toFixed(2)), 'Value-weighted market sensitivity',
+            'Value-weighted market sensitivity (holdings with a beta).',
+            'How hard this 401(k) swings with the market. Left blank when holdings don’t publish a beta — we leave it empty rather than fake it.', 'hr-beta', _diCovSub(s.betaCovPct, 'beta'));
+        }
+        h += _diCell('Blended Yield', _diCovVal(s.yldCovPct, _yld(agg && agg.blendedYield)), 'Value-weighted dividend yield',
+          'Value-weighted dividend yield.',
+          'Income thrown off inside the account. In a 401(k) these dividends reinvest untaxed — no yearly tax drag, so yield is pure compounding here.', 'hr-yield',
+          s.yldCovVal > 0 ? _diCovSub(s.yldCovPct, 'yield') : '');
+        h += _diCell('Avg Expense', (_diE(agg && agg.blendedExpense) || '—'), 'Value-weighted expense ratio across your funds',
+          'Value-weighted expense ratio across your funds.',
+          'The one cost you fully control inside a limited menu. ' + (rothK ? 'In a tax-free account compounding for decades, every extra basis point is tax-free growth you hand away — silently, every year, forever.' : 'In a tax-deferred account compounding for decades, every extra basis point is growth you hand away — silently, every year, forever.'), 'hr-expense');
+        return h + '</div>';
+      }
       if (ira) {
         // IRA bank §1 (R10–R16) — unified lead block (B2 precedent), IRA hover pairs, plus the
         // NEW Unrealized Gain box (R13, CASH-guarded Σ from _diSignals — sourced-or-blank).
