@@ -53,6 +53,34 @@ it surfaces the key finding for the whole effort (see ⚠️ at the end).
 
 ---
 
+## ✅ 401(k) — CERTIFIED-100% (Lesson-50 wire-then-audit passed) · SMOKELIST
+
+All 9 authored sections render live on BOTH rooms — Treasury (roth401k) [R] / Vault (pretax401k) [T].
+Certification gate `scripts/_gate_401k_cert.js` = **26/26 GREEN**; full regression 13/13 exit 0.
+Deliberate ⬜ blanks (sourced-or-blank, by design): §9 menuQuality (no menu-quality data) · §9 5-yr-clock
+(no clock data) · §9 bracket-arbitrage (no expected-retirement-rate input) · §9 G R156 (no age-eligibility
+signal). Zero unexplained NOT-WIRED.
+
+**Captain smoke walk** — open a Roth 401(k) ("The Treasury") and a Pre-Tax 401(k) ("The Vault"), add a
+few funds, and check each:
+
+| # | Section · element | Commit | Smoke gesture → expected | Verdict |
+|---|---|---|---|---|
+| 1 | §8 employer-match input | `f16c17c` (live) | Scroll to **EMPLOYER MATCH** block → Match Rate/Up-To/Vesting on both; **Employer-Match Balance** on Treasury only; hover each → bank copy | ✅ |
+| 2 | §9 DI paragraph (Treasury) | `135ca92` (live) | Add an equity fund book → paragraph reads "**tax-free growth engine**… every gain untaxed"; with a match balance → "**two tax buckets wearing one name**", "NO required minimum distributions" | ✅ |
+| 3 | §9 DI paragraph (Vault) | `b9c77ec` (live) | Same book on the Vault → "**tax-deferred growth engine**… taxed as ordinary income", "RMDs kick in at 73"; bond-heavy → "bonds are **tax-efficient to hold HERE**" | ✅ |
+| 4 | §3 withdrawal modal | `48046b5` | Open modal → **no** "capital extraction" robotic line; Rule-of-55 hover reads plain-coach ([R] 5-yr clock / [T] "penalty waiver, not a tax waiver") | ✅ |
+| 5 | §2 title hover | `1ab623f` | Hover the modal title ⓘ → Treasury: "**The Treasury — a Roth 401(k)**"; Vault: "**The Vault — a Traditional 401(k)**" (was wrongly showing 403(b) copy) | ✅ |
+| 6 | §4 limits header + §5 toggles | `7a919a4` | Hover CONTRIBUTION LIMITS header → "SHARE one limit" [R] / "sits OUTSIDE this elective limit" [T]; toggles read "Include this account…" / "Count it, but never spend…" | ✅ |
+| 7 | §4 field hovers | `b3f1884` | Hover Base Limit / Catch-Up / Super fields → [R] "buying tax-free compounding" / [T] "tax-DEFERRED growth… taxed later as ordinary income" | ✅ |
+| 8 | §1 signal-strip hovers | `6e812de` | Hover the strip cells (Balance, Equity %, Bond %, Contribution, Avg Expense) → bank §1 [R]/[T] copy | ✅ |
+| 9 | §12 metric-ladders | `7f3e03a` | Hover the 4 auto-boxes → deep-dive rung by value (e.g. big gain → "pure growth… [R] why high-growth belongs here / [T] taxed on the way out"; all-MF book → beta "we leave it blank") | ✅ |
+| 10 | §15 dated limits table | `7f3e03a` | Limit fields show 2026 figures (24,500 / 8,000 / 11,250); now LOOKUP-by-year (no baked literal) | ✅ |
+
+Certification commit: (this commit) — adds `_gate_401k_cert.js`. **401(k) = first CERTIFIED-100% room.**
+
+---
+
 ### ⚠️ CALIBRATION FINDING — this changes the scope
 The read method is **sound** (§9 came back all-✅-or-⬜, every miss explained — exactly the control we
 wanted). But it also proves the honest truth: **even the 401(k) — the room we called "fully cooked" —
