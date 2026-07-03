@@ -48,8 +48,8 @@ it surfaces the key finding for the whole effort (see ⚠️ at the end).
 | §3 WITHDRAWAL MODAL — plain-coach rewrite + 5-yr rule (R40–R42) | ✅ WIRED | R40/R41/R42 [R] + R309/R310/R311 [T], scoped to real 401k rooms via `!is403`; robotic "capital extraction" tooltip KILLED for 401k (403 keeps current until its own pass). Both rooms verified; 403/457/IRA regression green. |
 | §4 CONTRIBUTION LIMITS — header + all field hovers | ✅ WIRED | header R46 [R]/R314 [T]; field hovers Base R47/R337, Catch-Up R48/R338, Super R49/R339 ([R]/[T]), Active-Max R50 (neutral, both) — `/401k/`-scoped, both rooms. [R]/[T] gap RESOLVED by Architect [T] twins A337–339. 403/457/IRA fields untouched. |
 | §5 UNIVERSAL TOGGLES — 2a include / 2b isFriction (R55/R318 + R56/R319) | ✅ WIRED | both toggles, [R]/[T], scoped `/401k/`; other rooms keep generic copy. (Dropped the "NOTE for the Vault:" editorial prefix from R319 — flagged as a judgment call.) |
-| §12 METRIC LADDERS — 4-box deep-dive tooltips, ~24 rungs (R186–R215) | ❌ | ladders never built; boxes use generic one-line hovers |
-| §15 IRS LIMITS dated table — LOOKUP(taxYear) auto-update (R245–R255) | ❌ | figures are hard-coded literals (correct for 2026) but not the dated table; auto-update not implemented |
+| §12 METRIC LADDERS — 4-box deep-dive tooltips (R191–R216) | ✅ WIRED | `_di401kUGLadder`/`BetaLadder`/`YldLadder`/`ExpLadder` — one rung per box on hover, [R]/[T] on UG+Beta; FAIL-TO-BLANK (BETA-NONE/YLD-NONE/EXP-NONE/UG-NONE). Wired as the auto-box tip1b in the 401k strip; beta box now always renders so BETA-NONE shows. |
+| §15 IRS LIMITS dated table — LOOKUP(taxYear) (R246–R252) | ✅ WIRED | `_DI_402G_LIMITS` dated constants + `_di402gLimits()`; modal defaults + updateAccField live-recalc both read it. Current 2026 figures unchanged (base 24500 / c50 8000 / super 11250 / 415c 72000); 2025 row present. No baked year — next IRS bump = one-row edit. Makes the §4 "see the dated LIMITS table, §15" reference truthful. |
 
 ---
 

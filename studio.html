@@ -3803,6 +3803,13 @@
     // 529 §8 dated constants (gift exclusion / superfund / K-12 / 529→Roth) — LOOKUP by tax year (L47)
     var _DI_529 = { 2025: { excl: 18000, superS: 90000, superC: 180000, k12: 10000, roth: 35000 },
                     2026: { excl: 19000, superS: 95000, superC: 190000, k12: 20000, roth: 35000 } };
+    // §15 · 401(k)/§402(g) IRS LIMITS — dated constants (bank '401(k) Copy Bank' §15, R246–R252).
+    // Shared elective-deferral figures for 401k/403b/457b; LOOKUP by tax year so a next-Jan IRS bump
+    // is a one-row edit, never a hard-coded literal (the §4 hovers point here). superCU = SECURE-2.0
+    // 60–63 catch-up (constant); c415 = annual-additions (415(c)) cap. ESTABLISHED years only.
+    var _DI_402G_LIMITS = { 2025: { base: 23500, c50: 7500, superCU: 11250, c415: 70000 },
+                            2026: { base: 24500, c50: 8000, superCU: 11250, c415: 72000 } };
+    var _di402gLimits = function () { return _DI_402G_LIMITS[new Date().getFullYear()] || _DI_402G_LIMITS[2026]; };
     var _diMoney = function (v) { return '$' + Math.round(v || 0).toLocaleString('en-US'); };
     var _diP  = function (x) { return (x === null || x === undefined) ? '—' : Math.round(x) + '%'; };
     var _diE  = function (x) { return (x === null || x === undefined) ? null : (Math.round(x * 100) / 100) + '%'; };
@@ -4427,6 +4434,40 @@
     var _diFee30 = function (e, total) { return '~$' + (Math.round((total * (e / 100) * 79.058) / 100) * 100).toLocaleString('en-US'); };
     var _diGainFmt = function (g) { return (g >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(g)).toLocaleString('en-US'); };
     var _diGainTax = function (g) { return '~$' + Math.round(g * 0.15).toLocaleString('en-US'); };
+    // §12 · 401(k) METRIC-LADDER deep-dives (bank '401(k) Copy Bank' §12, R191–R216) — one rung fires
+    // per auto-box on hover; [R]/[T] where tagged, shared otherwise; FAIL-TO-BLANK when data absent (L47).
+    function _di401kUGLadder(s, isRoth) {
+      if (s.basisCount === 0 || s.unrealGain === null) return 'We don’t have a cost basis for these holdings yet, so we can’t show how much is growth versus contributions — but inside a 401(k) it barely matters: nothing here is taxed until you withdraw.';
+      var g = s.unrealGain;
+      if (g <= 0) return 'This account is roughly flat or slightly down on paper right now. Inside a 401(k) that’s purely a timing snapshot — there’s no tax loss to harvest here, and a long runway to recover.';
+      var f = _diGainFmt(g);
+      if (g < 25000) return 'About ' + f + ' of this balance is growth on top of what went in. ' + (isRoth ? 'In a Roth that growth is the prize — it comes out completely tax-free.' : 'In a Traditional plan that growth is real, but remember every dollar of it is taxed as income when you withdraw.');
+      return 'A substantial ' + f + ' of this balance is pure growth. ' + (isRoth ? 'In a Roth, all of it is yours tax-free — this is exactly why high-growth assets belong here.' : 'In a Traditional plan this is the part that will be taxed as ordinary income on the way out — the bigger it grows, the bigger that future bill.');
+    }
+    function _di401kBetaLadder(beta, cov, isRoth) {
+      if (beta === null || beta === undefined || cov < 50) return 'We don’t have a reliable market-sensitivity (beta) figure for these holdings — common for mutual-fund menus, where beta often isn’t published. We leave it blank rather than show a number we can’t stand behind.';
+      var b = beta.toFixed(2);
+      if (beta < 0.5) return 'At a weighted beta near ' + b + ', this account moves far more gently than the market. Calm — but in tax-advantaged money with a long horizon, very low volatility often means leaving growth on the table.';
+      if (beta < 0.85) return 'A weighted beta around ' + b + ' means this rides somewhat calmer than the broad market — a measured, defensive tilt.';
+      if (beta <= 1.15) return 'At a weighted beta near ' + b + ', this account moves essentially in step with the broad market — neither dampened nor amplified.';
+      if (beta <= 1.6) return 'A weighted beta around ' + b + ' means bigger swings than the market — more turbulence. ' + (isRoth ? 'In a Roth with a long runway, that volatility is a feature: you have decades for recoveries to compound tax-free.' : 'In a Traditional plan the same swings apply; just know the eventual withdrawals are taxed as income.');
+      return 'At a weighted beta above ' + b + ', this is a high-octane mix that will swing hard both ways — powerful over a long horizon, but only if you can hold through the drops.';
+    }
+    function _di401kYldLadder(y, cov) {
+      if (y === null || y === undefined || cov < 50) return 'We don’t have dividend-yield data for these holdings, so we can’t characterize the income tilt here.';
+      var f = _diNum1(y);
+      if (y < 0.5) return 'This account throws off almost no dividends — a pure growth posture. Inside a 401(k) that’s often the right call: any income it did pay would just reinvest untaxed anyway, so you lose nothing by tilting to growth.';
+      if (y < 1.8) return 'A blended yield around ' + f + ' — a growth-leaning mix that pays modest dividends. In a tax-advantaged plan those dividends reinvest with zero tax drag, compounding for you.';
+      if (y < 3.0) return 'A blended yield near ' + f + ' — a balanced income tilt. Worth noting: holding income-producing assets HERE is smart asset-location, since the dividends compound untaxed.';
+      return 'A blended yield at ' + f + ' — a strong income tilt. This is a textbook-good place for it: inside the plan these dividends reinvest completely untaxed instead of being taxed year by year.';
+    }
+    function _di401kExpLadder(e) {
+      var t = _diE(e); if (t === null) return 'We don’t have expense-ratio data for these funds — worth checking your plan’s fee disclosure, since cost is the one return you can control.';
+      if (e <= 0.10) return 'At about ' + t + ' a year, your funds are about as cheap as investing gets — institutional-grade pricing. Over decades this low drag is worth tens of thousands versus a typical retail menu. Nothing to fix here; this is the win.';
+      if (e <= 0.30) return 'At about ' + t + ' a year, your costs are low and reasonable for a 401(k) menu. Keep an eye out for index options if any single fund runs hot.';
+      if (e <= 0.60) return 'At about ' + t + ' a year, your blended fees are moderate — several times the cost of a broad index fund. Check whether your menu has a lower-cost index equivalent; over 20+ years this gap quietly compounds against you.';
+      return 'At about ' + t + ' a year, your fees are high for a 401(k). This is the single biggest controllable drag on tax-advantaged growth — hunt your menu for index or institutional share classes, because this cost compounds against you every year you hold.';
+    }
     function _diTaxSpine(s, x) {
       var nWord = s.invCount === 1 ? 'one holding' : (_diNW[s.invCount - 1] || String(s.invCount)) + ' holdings';
       if (x.thematicPct >= 50 || (x.topSectorPct >= 60 && s.invCount >= 1))
@@ -4715,20 +4756,17 @@
                 : 'Pre-tax dollars lower this year’s taxable income — the deduction is immediate. Filling this is a bet that your retirement tax rate will be LOWER than today’s. It shares one IRS ceiling with any Roth 401(k) deferrals you make.');
         h += _diCell('Unrealized Gain', s.unrealGain === null ? '—' : (s.unrealGain >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(s.unrealGain)).toLocaleString('en-US'),
           'Growth captured so far', 'Σ(value − cost basis) where basis exists — cash-sweep rows never enter the Σ.',
-          rothK ? 'Inside a Roth 401(k) this growth isn’t a tax event — it comes out tax-free once qualified. (Hover the box for the full read.)'
-                : 'Inside a Traditional 401(k) this growth is tax-deferred — taxed as ordinary income on the way out. (Hover the box for the full read.)', 'hr-gain');
-        if (beta !== null && beta !== undefined) {
-          h += _diCell('Weighted Beta', _diCovVal(s.betaCovPct, beta.toFixed(2)), 'Value-weighted market sensitivity',
-            'Value-weighted market sensitivity (holdings with a beta).',
-            'How hard this 401(k) swings with the market. Left blank when holdings don’t publish a beta — we leave it empty rather than fake it.', 'hr-beta', _diCovSub(s.betaCovPct, 'beta'));
-        }
+          _di401kUGLadder(s, rothK), 'hr-gain');
+        h += _diCell('Weighted Beta', (beta === null || beta === undefined) ? '—' : _diCovVal(s.betaCovPct, beta.toFixed(2)), 'How jumpy this account is vs the market',
+          'Value-weighted market sensitivity (holdings with a beta). 1.00 moves with the market; higher swings harder.',
+          _di401kBetaLadder(beta, s.betaCovPct, rothK), 'hr-beta', (beta !== null && beta !== undefined) ? _diCovSub(s.betaCovPct, 'beta') : '');
         h += _diCell('Blended Yield', _diCovVal(s.yldCovPct, _yld(agg && agg.blendedYield)), 'Value-weighted dividend yield',
           'Value-weighted dividend yield.',
-          'Income thrown off inside the account. In a 401(k) these dividends reinvest untaxed — no yearly tax drag, so yield is pure compounding here.', 'hr-yield',
+          _di401kYldLadder(agg && agg.blendedYield, s.yldCovPct), 'hr-yield',
           s.yldCovVal > 0 ? _diCovSub(s.yldCovPct, 'yield') : '');
         h += _diCell('Avg Expense', (_diE(agg && agg.blendedExpense) || '—'), 'Value-weighted expense ratio across your funds',
           'Value-weighted expense ratio across your funds.',
-          'The one cost you fully control inside a limited menu. ' + (rothK ? 'In a tax-free account compounding for decades, every extra basis point is tax-free growth you hand away — silently, every year, forever.' : 'In a tax-deferred account compounding for decades, every extra basis point is growth you hand away — silently, every year, forever.'), 'hr-expense');
+          _di401kExpLadder(agg && agg.blendedExpense), 'hr-expense');
         return h + '</div>';
       }
       if (ira) {
@@ -5494,9 +5532,10 @@
 
             // SURGICAL: Structural Injection Limits (Editable constraints) — 2026 IRS defaults
             let limitName = is403 ? "403(b) Limits" : is457 ? "457(b) Limits" : (is401k ? "401(k) / 457(b) Limits" : "IRA Limits");
-            let baseLim = acc.baseLimit !== undefined ? acc.baseLimit : (is401k ? 24500 : 7500);
-            let c50 = acc.catchUpLimit !== undefined ? acc.catchUpLimit : (is401k ? 8000 : 1100);
-            let sc60 = acc.superCatchUpLimit !== undefined ? acc.superCatchUpLimit : (is401k ? 11250 : 0);
+            let _k4 = _di402gLimits();   // §15 dated LOOKUP(taxYear) — shared §402(g) figures, no baked year
+            let baseLim = acc.baseLimit !== undefined ? acc.baseLimit : (is401k ? _k4.base : 7500);
+            let c50 = acc.catchUpLimit !== undefined ? acc.catchUpLimit : (is401k ? _k4.c50 : 1100);
+            let sc60 = acc.superCatchUpLimit !== undefined ? acc.superCatchUpLimit : (is401k ? _k4.superCU : 0);
             let f15 = acc.fifteenYearLimit !== undefined ? acc.fifteenYearLimit : 3000;   // 403(b)-only: 15-yr-of-service tier ($3k/yr, $15k lifetime)
 
             let currentLimit = parseInt(baseLim);
@@ -6158,11 +6197,12 @@
                  let el = document.getElementById(`limit-calc-${id}`);
                  if(el) {
                      let hiClass = /401k|403|457b/.test(acc.baseId);
-                     let bLim = parseInt(acc.baseLimit !== undefined ? acc.baseLimit : (hiClass ? 24500 : 7500));
+                     let _k4r = _di402gLimits();   // §15 dated LOOKUP — keep live-recalc off the same source
+                     let bLim = parseInt(acc.baseLimit !== undefined ? acc.baseLimit : (hiClass ? _k4r.base : 7500));
                      let cLim = bLim;
                      if(acc.baseId.includes('457b') && acc.specialCatchUp) cLim += bLim;
-                     else if(acc.superCatchUp) cLim += parseInt(acc.superCatchUpLimit !== undefined ? acc.superCatchUpLimit : (hiClass ? 11250 : 0));
-                     else if (acc.catchUp50) cLim += parseInt(acc.catchUpLimit !== undefined ? acc.catchUpLimit : (hiClass ? 8000 : 1100));
+                     else if(acc.superCatchUp) cLim += parseInt(acc.superCatchUpLimit !== undefined ? acc.superCatchUpLimit : (hiClass ? _k4r.superCU : 0));
+                     else if (acc.catchUp50) cLim += parseInt(acc.catchUpLimit !== undefined ? acc.catchUpLimit : (hiClass ? _k4r.c50 : 1100));
                      if(acc.baseId.includes('403') && acc.fifteenYear) cLim += parseInt(acc.fifteenYearLimit !== undefined ? acc.fifteenYearLimit : 3000);
                      el.innerText = `$${cLim.toLocaleString()} / YR`;
                  }
