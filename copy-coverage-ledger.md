@@ -44,7 +44,7 @@ it surfaces the key finding for the whole effort (see ⚠️ at the end).
 | Bank section | Status | Evidence / reason |
 |---|---|---|
 | §1 SIGNALS — the 4-box strip + balance/token "why it matters" hovers (R9–R29) | ❌ | strip renders via the shared generic `_diCell` path; bank §1 hover copy not live |
-| §2 TITLE HOVER — "What is a Roth 401(k)?" (R33–R36) | ❌ | no explainer wired; title = editable input + base.desc |
+| §2 TITLE HOVER — "What is a Roth 401(k)?" (R33–R36) | ✅ WIRED | R33–R36 [R] Treasury / R303–R306 [T] Vault installed in `_diSetTitle` (before the 403 branch). Also FIXED a live drift bug: 401k rooms were falling through to the 403(b) title hover. Verified both rooms; 403 untouched. |
 | §3 WITHDRAWAL MODAL — plain-coach rewrite + 5-yr rule (R40–R42) | ✅ WIRED | R40/R41/R42 [R] + R309/R310/R311 [T], scoped to real 401k rooms via `!is403`; robotic "capital extraction" tooltip KILLED for 401k (403 keeps current until its own pass). Both rooms verified; 403/457/IRA regression green. |
 | §4 CONTRIBUTION LIMITS — shared-limit / plain-coach hovers (R46–R50) | ❌ | limit fields render; bank §4 hover copy not live (generic) |
 | §5 UNIVERSAL TOGGLES — exclude / isFriction plain-coach (R55–R57) | ❌ | generic toggle copy live, not bank §5 verbatim |
