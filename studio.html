@@ -3799,7 +3799,7 @@
        singleNameStock_fmt token contract is wired (the IRA/401k/457 §7 ask — L48, don't rebuild).
        NOTE: distinct from the Want-canvas "Datum Intelligence" slider tooltips (~L1844) — name
        collision only; do not merge. */
-    function _diIsBankRoom(baseId) { return /^(hsa|trad403|roth403|tradira|rothira|pretax457b|roth457b|roth401k|taxable)(_co)?$/.test(String(baseId || '')) || baseId === '529plan'; }
+    function _diIsBankRoom(baseId) { return /^(hsa|trad403|roth403|tradira|rothira|pretax457b|roth457b|roth401k|pretax401k|taxable)(_co)?$/.test(String(baseId || '')) || baseId === '529plan'; }
     // 529 §8 dated constants (gift exclusion / superfund / K-12 / 529→Roth) — LOOKUP by tax year (L47)
     var _DI_529 = { 2025: { excl: 18000, superS: 90000, superC: 180000, k12: 10000, roth: 35000 },
                     2026: { excl: 19000, superS: 95000, superC: 190000, k12: 20000, roth: 35000 } };
@@ -4879,8 +4879,11 @@
     // Taxable engine (_diTaxSignals); B2 reuses _diSleeves + the _diIraCompRead gate; fees reuse
     // _diExpenseWord/_diFee30; the match split/cap ride _di401kMatch (STEP 1a). SOURCED-OR-BLANK
     // (Lesson 47): menuQuality, the 5-yr clock, and bracket-arbitrage are UNSOURCED today → silent.
-    // isRoth carried for the coming Vault branch; the [T] spine/behavior/tilt/G sentences are NOT
-    // yet authored in the bank (flagged) — pretax401k is intentionally NOT yet in _diIsBankRoom.
+    // BRANCH-AWARE (isRoth): roth401k "The Treasury" renders col-B [R]; pretax401k "The Vault"
+    // renders the col-D [T] in-layer twins (Architect, 2026-07-03) + §13 Layer-E flips (R223/R224).
+    // Residual [T] gaps SUPPRESSED on pre-tax (silent, Lesson 47, flagged): R109 mid-equity spine
+    // tier + the Rule-55/catch-up toggle lines (R145/R147/R148). R138 match readout is roth-only
+    // (the match-balance field is roth-only per STEP 1a), so the Vault uses R223/R224 for Layer E.
     function _di401kArchSignals(acc, s) {
       var x = _diTaxSignals(acc, s);   // etf/mf/stock %, themes{}, crypto, topSector, overlap
       var T = s.total || 1, th = x.themes || {};
@@ -4955,17 +4958,29 @@
       if (!body) {
         var eq = s.equityPct, cash = s.cashPct;
         if (cash !== null && cash >= 50)
-          body = 'Right now ' + _diP(cash) + ' of this account is sitting in cash — safe, but it’s tax-free shelter space being used to hold money that isn’t growing; cash belongs almost anywhere but your most precious tax-free bucket.';
+          body = isRoth
+            ? 'Right now ' + _diP(cash) + ' of this account is sitting in cash — safe, but it’s tax-free shelter space being used to hold money that isn’t growing; cash belongs almost anywhere but your most precious tax-free bucket.'
+            : 'Right now ' + _diP(cash) + ' of this account is sitting in cash — safe, but it’s tax-deferred space being used to hold money that isn’t growing; cash earns little and still gets taxed as income on the way out, so it rarely belongs in this bucket.';
         else if (eq === null) return null;
         else if (eq >= 85)
-          body = 'This is a tax-free growth engine: ' + _diP(eq) + ' of it is in stocks, and because every dollar of that growth comes out untaxed, this is exactly the account where high-octane assets belong — the IRS never takes a cut of what compounds here.';
+          body = isRoth
+            ? 'This is a tax-free growth engine: ' + _diP(eq) + ' of it is in stocks, and because every dollar of that growth comes out untaxed, this is exactly the account where high-octane assets belong — the IRS never takes a cut of what compounds here.'
+            : 'This is a tax-deferred growth engine: ' + _diP(eq) + ' of it is in stocks, and because you got the deduction going in, the whole balance — contributions and growth alike — grows untaxed until withdrawal, when every dollar is taxed as ordinary income. High-octane growth still belongs here; just know the eventual bill scales with it.';
         else if (eq >= 55)
-          body = 'This account leans toward growth — ' + _diP(eq) + ' stocks, the rest in ballast — and in a Roth that growth is the prize, since all of it is yours tax-free when you draw it decades from now.';
+          body = isRoth
+            ? 'This account leans toward growth — ' + _diP(eq) + ' stocks, the rest in ballast — and in a Roth that growth is the prize, since all of it is yours tax-free when you draw it decades from now.'
+            : 'This account leans toward growth — ' + _diP(eq) + ' stocks, the rest in ballast — and in a Traditional plan that growth compounds tax-deferred, but remember it is all taxed as ordinary income when you draw it decades from now.';
         else if (eq >= 30)
-          body = 'This is a middle-of-the-road mix — ' + _diP(eq) + ' stocks against meaningful bonds — which is steady, but worth a thought: a Roth is your most tax-advantaged account, so dialing the growth assets UP here often does more for you than playing it safe.';
+          // R109 mid-tier [T] UNAUTHORED — silent on pretax (Lesson 47, flagged to Architect).
+          body = isRoth
+            ? 'This is a middle-of-the-road mix — ' + _diP(eq) + ' stocks against meaningful bonds — which is steady, but worth a thought: a Roth is your most tax-advantaged account, so dialing the growth assets UP here often does more for you than playing it safe.'
+            : null;
         else
-          body = 'This account is playing defense — only ' + _diP(eq) + ' in stocks — which is unusually cautious for tax-free money you may not touch for decades; the lower the growth here, the less of the Roth’s rarest gift (untaxed compounding) you actually capture.';
+          body = isRoth
+            ? 'This account is playing defense — only ' + _diP(eq) + ' in stocks — which is unusually cautious for tax-free money you may not touch for decades; the lower the growth here, the less of the Roth’s rarest gift (untaxed compounding) you actually capture.'
+            : 'This account is playing defense — only ' + _diP(eq) + ' in stocks — which is cautious even for tax-deferred money; the lower the growth here, the less this account builds before its withdrawals get taxed as ordinary income.';
       }
+      if (!body) return null;
       var tag = _di401kInstTag(x, s);
       return body + (tag ? ' ' + tag : '');
     }
@@ -4973,14 +4988,20 @@
     function _di401kTilts(acc, s, x, isRoth) {
       var out = [];
       if (s.foreignPct !== null && s.foreignPct >= 20)
-        out.push('You’ve got a real international tilt here — about ' + _diP(s.foreignPct) + ' sits in foreign markets — which widens your diversification; in a Roth it’s clean to hold, with none of the foreign-tax-credit friction you\'d otherwise face.');
+        out.push(isRoth
+          ? 'You’ve got a real international tilt here — about ' + _diP(s.foreignPct) + ' sits in foreign markets — which widens your diversification; in a Roth it’s clean to hold, with none of the foreign-tax-credit friction you\'d otherwise face.'
+          : 'You’ve got a real international tilt here — about ' + _diP(s.foreignPct) + ' sits in foreign markets — which widens your diversification; inside a tax-deferred 401(k) it’s clean to hold, with none of the foreign-tax-credit friction you\'d face in a taxable account.');
       if (out.length < 2 && x.targetDatePct >= 60)
-        out.push('Most of this account — ' + _diP(x.targetDatePct) + ' — rides in a single target-date fund, the plan’s autopilot; convenient, but it quietly de-risks as its date nears, which can be too cautious for tax-free money you may not touch for decades. Check its glidepath matches YOUR timeline, not the fund’s.');
+        out.push(isRoth
+          ? 'Most of this account — ' + _diP(x.targetDatePct) + ' — rides in a single target-date fund, the plan’s autopilot; convenient, but it quietly de-risks as its date nears, which can be too cautious for tax-free money you may not touch for decades. Check its glidepath matches YOUR timeline, not the fund’s.'
+          : 'Most of this account — ' + _diP(x.targetDatePct) + ' — rides in a single target-date fund, the plan’s autopilot; convenient, but it quietly de-risks as its date nears, which can be too cautious for tax-deferred money you may not touch for decades. Check its glidepath matches YOUR timeline, not the fund’s.');
       if (out.length < 2 && s.fundCount >= 5 && x.overlapPct >= 40)
         out.push('You’re holding ' + (_diNW[s.fundCount - 1] || String(s.fundCount)) + ' funds, which in a fixed 401(k) menu often just re-creates the broad market at a higher blended fee — more funds rarely means more diversification here, it usually means more overlap and more cost.');
       if (out.length < 2 && s.total > 0 && (s.stockVal / s.total) >= 0.10 && s.maxStockTicker) {
         var tag = Math.round((s.maxStockRow / s.total) * 100) + '% (' + s.maxStockTicker + ')';
-        out.push('An unusual chunk — ' + tag + ' — sits in individual company stock (often employer shares); concentrating your tax-free account in one name ties your retirement to a single employer’s fate, the opposite of what this bucket is best at.');
+        out.push(isRoth
+          ? 'An unusual chunk — ' + tag + ' — sits in individual company stock (often employer shares); concentrating your tax-free account in one name ties your retirement to a single employer’s fate, the opposite of what this bucket is best at.'
+          : 'An unusual chunk — ' + tag + ' — sits in individual company stock (often employer shares); concentrating a tax-deferred account in one name ties your retirement to a single employer’s fate, the opposite of what this bucket is best at. (If these are appreciated employer shares, ask about NUA before rolling out.)');
       }
       return out.slice(0, 2);
     }
@@ -4996,24 +5017,34 @@
         : names.join(', ');
       return 'Here’s what’s actually under the hood, biggest first: ' + txt + '. ' + (isRoth
         ? 'Seeing the real shape matters — in a Roth 401(k) this is the exact mix whose every gain comes out tax-free once you’re 59.5 and the 5-year clock is met, so you want the growth engines, not the ballast, doing the heavy lifting inside your most valuable shelter.'
-        : '');
+        : 'Seeing the real shape matters — in a Traditional 401(k) this whole mix grows tax-deferred and every dollar withdrawn is taxed as ordinary income, so you want the growth engines, not idle ballast, doing the work while the deferral runs.');
     }
     // LAYER C · BEHAVIOR (R125–R127) — cap 2, beta first (≥60% coverage, honesty-gated).
     function _di401kBehavior(acc, s, agg, isRoth) {
       var out = [], beta = agg && agg.weightedBeta;
       if (beta !== null && beta !== undefined && s.betaCovPct >= 60) {
-        if (beta >= 1.15) out.push('This mix will swing harder than the market — a weighted beta near ' + beta.toFixed(2) + ' means bigger ups AND downs; in a Roth with a long runway that volatility is a feature, not a flaw, because you have decades for the recoveries to play out tax-free.');
-        else if (beta <= 0.85) out.push('This account moves more gently than the market (beta around ' + beta.toFixed(2) + ') — calmer, but in tax-free money with a long horizon, smoothing out the ride can also mean leaving growth — your most valuable Roth asset — on the table.');
+        if (beta >= 1.15) out.push(isRoth
+          ? 'This mix will swing harder than the market — a weighted beta near ' + beta.toFixed(2) + ' means bigger ups AND downs; in a Roth with a long runway that volatility is a feature, not a flaw, because you have decades for the recoveries to play out tax-free.'
+          : 'This mix will swing harder than the market — a weighted beta near ' + beta.toFixed(2) + ' means bigger ups AND downs; in tax-deferred money with a long runway that volatility is manageable, because you have decades for recoveries to play out before withdrawals begin.');
+        else if (beta <= 0.85) out.push(isRoth
+          ? 'This account moves more gently than the market (beta around ' + beta.toFixed(2) + ') — calmer, but in tax-free money with a long horizon, smoothing out the ride can also mean leaving growth — your most valuable Roth asset — on the table.'
+          : 'This account moves more gently than the market (beta around ' + beta.toFixed(2) + ') — calmer, but in tax-deferred money with a long horizon, smoothing out the ride can also mean leaving growth on the table, and a bigger balance is what a deferred account is for.');
       }
       if (out.length < 2 && s.bondPct !== null && s.bondPct >= 30)
-        out.push('A meaningful ' + _diP(s.bondPct) + ' is in bonds — solid ballast, but worth knowing: bonds earn less, so holding them HERE means less tax-free growth to harvest. Many planners park bonds in a pre-tax account and keep the Roth stock-heavy. Worth checking where yours sit across accounts.');
+        out.push(isRoth
+          ? 'A meaningful ' + _diP(s.bondPct) + ' is in bonds — solid ballast, but worth knowing: bonds earn less, so holding them HERE means less tax-free growth to harvest. Many planners park bonds in a pre-tax account and keep the Roth stock-heavy. Worth checking where yours sit across accounts.'
+          : 'A meaningful ' + _diP(s.bondPct) + ' is in bonds — solid ballast, and worth knowing: bonds are actually tax-efficient to hold HERE, since their ordinary-income interest is sheltered until withdrawal. Many planners deliberately park bonds in a pre-tax account like this and keep Roth space stock-heavy. Worth checking where yours sit across accounts.');
       return out.slice(0, 2);
     }
     // LAYER D · MENU & FEES (R131–R132) — notable only (menuQuality R133 UNSOURCED → silent, L47).
-    function _di401kMenuFees(agg, s) {
+    function _di401kMenuFees(agg, s, isRoth) {
       var e = agg && agg.blendedExpense, t = _diE(e); if (t === null) return null;
-      if (e >= 0.50) return 'Your funds carry a weighted expense ratio of ' + t + ' — on the high side. In a tax-free account compounding for decades, every basis point is untaxed growth handed away silently, every year, forever; over 30 years that’s roughly ' + _diFee30(e, s.total) + ' gone. If a cheaper near-identical index fund sits on your menu, that gap is yours to close.';
-      if (e <= 0.15) return 'Your fund costs are lean — a weighted ' + t + ' — which means almost all of the tax-free compounding stays with you. In a limited 401(k) menu that’s the best outcome: you’ve found the low-cost core.';
+      if (e >= 0.50) return isRoth
+        ? 'Your funds carry a weighted expense ratio of ' + t + ' — on the high side. In a tax-free account compounding for decades, every basis point is untaxed growth handed away silently, every year, forever; over 30 years that’s roughly ' + _diFee30(e, s.total) + ' gone. If a cheaper near-identical index fund sits on your menu, that gap is yours to close.'
+        : 'Your funds carry a weighted expense ratio of ' + t + ' — on the high side. In a tax-deferred account compounding for decades, every basis point is growth handed away silently, every year, forever; over 30 years that’s roughly ' + _diFee30(e, s.total) + ' gone. If a cheaper near-identical index fund sits on your menu, that gap is yours to close.';
+      if (e <= 0.15) return isRoth
+        ? 'Your fund costs are lean — a weighted ' + t + ' — which means almost all of the tax-free compounding stays with you. In a limited 401(k) menu that’s the best outcome: you’ve found the low-cost core.'
+        : 'Your fund costs are lean — a weighted ' + t + ' — which means almost all of the tax-deferred compounding stays with you. In a limited 401(k) menu that’s the best outcome: you’ve found the low-cost core.';
       return null;
     }
     // LAYER E · TAX & STRUCTURE (R137–R139) — match-split now REAL (from _di401kMatch STEP 1a);
@@ -5024,35 +5055,51 @@
         if (m.matchBalance !== null && m.matchBalance > 0)
           out.push('One thing the single balance hides: ' + _diMoney(m.matchBalance) + ' of this account is employer-match money, and that piece is PRE-TAX — it’s taxed as ordinary income when you withdraw it and carries its own RMDs. So this one account is really two tax buckets wearing one name: your tax-free Roth core and a taxable match.');
         out.push('Good news the screen buries: the Roth side of this account has NO required minimum distributions for you — it can compound untouched for life and pass to heirs tax-free.' + (m.matchBalance !== null && m.matchBalance > 0 ? ' (Only the pre-tax match portion still carries RMDs.)' : ''));
+      } else {
+        // Traditional Layer E — §13 R223 (tax character) + R224 (RMD@73), replaces the Roth E lines.
+        // R138 [T] "match blends in" is moot here: the match-balance field is roth-only (STEP 1a),
+        // so {matchBalance_fmt} is unsourced on pre-tax → that readout is suppressed (the match is
+        // still acknowledged in Layer F). Flagged to Architect.
+        out.push('Every dollar here is taxed as ordinary income when you withdraw it — contributions and growth alike. That makes this account your lever for lowering THIS year’s taxable income, and a future tax bill you’ll manage with withdrawal timing and Roth conversions.');
+        out.push('Required Minimum Distributions kick in at 73 — the IRS forces money out (and taxes it) whether you need it or not. This shapes your withdrawal sequencing and is a core reason to weigh Roth conversions in low-income years before then.');
       }
       return out.slice(0, 2);
     }
     // LAYER F · TOGGLE-AWARE (R144–R147) — fire only when the toggle/match is ON (tax-agnostic).
     function _di401kToggle(acc, m, isRoth) {
       var out = [];
-      if (acc.useRule55)
+      // Rule-55 + catch-up toggle lines carry Roth-specific tax phrasing (R145/R147/R148) with no
+      // authored [T] twin → rendered on the Roth room only; suppressed on pre-tax (Lesson 47, flagged
+      // to Architect). The match line (R146) is tax-agnostic and shared across both branches.
+      if (acc.useRule55 && isRoth)
         out.push('You’ve switched on Rule of 55 — so if you leave THIS employer in or after the year you turn 55, this account opens four years early, penalty-free. It widens your bridge before 59.5; just remember it only covers this plan (not old 401(k)s or IRAs), and on the Roth side your growth is still tax-free only once the 5-year clock is met.');
       if (m.rate !== null)
         out.push('Your employer match is in play — the single highest-guaranteed return in your plan. At ' + m.rate + '%, every dollar you defer up to the cap is met with free money; if your deferral reads short of that cap, closing the gap beats any market move available to you. (Remember the match lands pre-tax — taxed on the way out.)');
-      if (acc.catchUp50)
+      if (acc.catchUp50 && isRoth)
         out.push('You’ve enabled the 50+ catch-up — the IRS lets you pack extra in on top of the base limit. In a tax-free account that’s unusually smart late in your career: you’re buying untaxed growth right when your income, and your tax rate, are often at their peak.');
-      if (acc.superCatchUp)
+      if (acc.superCatchUp && isRoth)
         out.push('You’ve enabled the 60–63 super catch-up — a short, powerful runway SECURE 2.0 opened for just those four years to stuff in even more tax-free dollars right before retirement. It replaces the regular 50+ catch-up for this window — you get one or the other, not both — so it’s the moment to max it.');
       return out;
     }
     // LAYER G · CONTRIBUTION LEVEL (R151–R154) — one line; needs a deferral (else silent, L47).
     // The match-cap headline (R151/R152) needs match data; without it, %-of-max only (R153/R154).
-    function _di401kContrib(acc, s, m, limit) {
+    function _di401kContrib(acc, s, m, limit, isRoth) {
       var contrib = m.annualContrib; if (!(contrib > 0)) return null;
-      if (m.matchCapHit === 'short')
+      if (m.matchCapHit === 'short')   // R152 — tax-agnostic, shared across both branches
         return 'And the headline: you’re contributing ' + _diMoney(contrib) + ' — below the level that captures your full employer match. This is the one gap to close before anything else; you’re currently declining free, guaranteed salary.';
       var pct = (limit > 0) ? (contrib / limit) * 100 : null;
       if (m.matchCapHit === 'full' && pct !== null && pct < 50)
-        return 'You’re putting in ' + _diMoney(contrib) + ' — enough to grab the match, but only about ' + _diP(pct) + ' of the year’s tax-free ceiling. There’s real room left, and Roth space is use-it-or-lose-it: each year that closes takes its unused room with it.';
+        return isRoth
+          ? 'You’re putting in ' + _diMoney(contrib) + ' — enough to grab the match, but only about ' + _diP(pct) + ' of the year’s tax-free ceiling. There’s real room left, and Roth space is use-it-or-lose-it: each year that closes takes its unused room with it.'
+          : 'You’re putting in ' + _diMoney(contrib) + ' — enough to grab the match, but only about ' + _diP(pct) + ' of the year’s limit. There’s real room left, and this year’s tax deduction is use-it-or-lose-it: each year that closes takes its unused pre-tax room with it.';
       if (pct !== null && pct >= 100)
-        return 'You’re maxing this account — ' + _diP(Math.min(pct, 100)) + ' of the limit filled. You’re planting the most tax-free growth the IRS allows in a single year; if you’re 50+ or 60–63, the catch-up windows are the only way to go higher.';
+        return isRoth
+          ? 'You’re maxing this account — ' + _diP(Math.min(pct, 100)) + ' of the limit filled. You’re planting the most tax-free growth the IRS allows in a single year; if you’re 50+ or 60–63, the catch-up windows are the only way to go higher.'
+          : 'You’re maxing this account — ' + _diP(Math.min(pct, 100)) + ' of the limit filled. You’re taking the largest pre-tax deduction the IRS allows in a single year; if you’re 50+ or 60–63, the catch-up windows are the only way to shelter more.';
       if (pct !== null && pct >= 50)
-        return 'You’re filling ' + _diP(pct) + ' of this year’s limit — strong. The last stretch to the cap is the most valuable tax-free growth you can plant, if the cash flow allows it.';
+        return isRoth
+          ? 'You’re filling ' + _diP(pct) + ' of this year’s limit — strong. The last stretch to the cap is the most valuable tax-free growth you can plant, if the cash flow allows it.'
+          : 'You’re filling ' + _diP(pct) + ' of this year’s limit — strong. The last stretch to the cap is also the last of this year’s tax deduction, the most you can shelter from today’s income, if the cash flow allows it.';
       return null;
     }
     function _di401kLimit(acc) {
@@ -5073,10 +5120,10 @@
       _di401kTilts(acc, s, x, isRoth).forEach(function (t) { out.push(t); });
       var b2 = _di401kCompRead(acc, s, isRoth); if (b2) out.push(b2);
       _di401kBehavior(acc, s, agg, isRoth).forEach(function (t) { out.push(t); });
-      var d = _di401kMenuFees(agg, s); if (d) out.push(d);
+      var d = _di401kMenuFees(agg, s, isRoth); if (d) out.push(d);
       _di401kTax(acc, s, m, isRoth).forEach(function (t) { out.push(t); });
       _di401kToggle(acc, m, isRoth).forEach(function (t) { out.push(t); });
-      var g = _di401kContrib(acc, s, m, limit); if (g) out.push(g);
+      var g = _di401kContrib(acc, s, m, limit, isRoth); if (g) out.push(g);
       return out.join(' ');
     }
 
@@ -5085,7 +5132,7 @@
                : base.id === '529plan' ? _diNarr529(acc, s, agg)
                : /ira/.test(base.id) ? _diNarrIRA(acc, s, agg, /^rothira/.test(base.id))
                : /457b/.test(base.id) ? _diNarr457(acc, s, agg, /^roth457b/.test(base.id))
-               : /^roth401k/.test(base.id) ? _diNarr401k(acc, s, agg, true)
+               : /401k/.test(base.id) ? _diNarr401k(acc, s, agg, /^roth401k/.test(base.id))
                : base.id === 'taxable' ? _diNarrTaxable(acc, s, agg)
                : _diNarr403(acc, s, agg, /roth403/.test(base.id));
       if (!body) return '<div id="di-narr-' + acc.id + '"></div>';   // empty anchor — no fabricated narrative (L47)

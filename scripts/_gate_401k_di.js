@@ -120,8 +120,10 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   all = ok('C blank: no-RMD fires WITHOUT match parenthetical', has(nC, 'NO required minimum distributions') && !has(nC, 'Only the pre-tax match portion')) && all;
   all = ok('C LayerG: near-max "filling ... strong"',        has(nC, 'of this year’s limit — strong')) && all;
   // Job 7 — Vault held (no DI room, no Treasury leak)
-  all = ok('VAULT: pretax401k has NO DI narrative block',    !has(preHtml, 'di-narr-head')) && all;
-  all = ok('VAULT: no Treasury copy leaks onto pre-tax',     !has(preHtml, 'tax-free growth engine')) && all;
+  // Vault is now WIRED (STEP 1b(ii)) — it renders its OWN [T] narrative; the deep Vault coverage
+  // lives in _gate_401k_vault.js. Here we only assert no Roth [R] tax-claim leaks onto pre-tax.
+  all = ok('VAULT: pretax renders [T] (tax-deferred engine)', has(preHtml, 'tax-deferred growth engine')) && all;
+  all = ok('VAULT: no Roth [R] tax-free claim leaks onto it', !has(preHtml, 'tax-free growth engine')) && all;
   console.log('OVERALL: ' + (all ? 'GREEN' : 'RED'));
   process.exit(all ? 0 : 1);
 })().catch(e => { console.error('GATE ERROR:', e.message); process.exit(2); });
