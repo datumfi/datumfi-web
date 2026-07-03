@@ -71,8 +71,17 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     recalcPortfolio(rk); rk.value = 90000;
     const ROTH = open('roth401k');
 
+    // X-RENDER (Captain item-3): the EXACT smoke book — BND/VTI 50/50, equity 50% — rendered on
+    // BOTH rooms, to prove the DI-paragraph layer branches on isRoth (no [R]/[T] cross-leak).
+    const half = () => [
+      mk({ ticker: 'BND', name: 'Vanguard Total Bond',  price: 100, shares: 25, expRatio: 0.03, assetClass: 'Bonds',  geography: 'US Bonds', sector: 'Bonds', instrumentType: 'ETF' }),
+      mk({ ticker: 'VTI', name: 'Vanguard Total Market', price: 100, shares: 25, expRatio: 0.03, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Total Market', instrumentType: 'ETF' })
+    ];
+    pk.holdings = half(); recalcPortfolio(pk); pk.value = 5000; const PT50 = open('pretax401k');
+    rk.holdings = half(); recalcPortfolio(rk); rk.value = 5000; const RT50 = open('roth401k');
+
     const narr = (html) => { const m = /di-narr-body[^>]*>([\s\S]*?)<\/div>/.exec(html); return m ? m[1] : ''; };
-    return { nA: narr(A), nB: narr(B), nC: narr(C), nRoth: narr(ROTH) };
+    return { nA: narr(A), nB: narr(B), nC: narr(C), nRoth: narr(ROTH), nPT50: narr(PT50), nRT50: narr(RT50) };
   });
   await b.close();
 
@@ -103,6 +112,11 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   // Job 6 — no [T] leak onto Roth
   all = ok('ROTH still [R]: tax-free growth engine',         has(nRoth, 'This is a tax-free growth engine')) && all;
   all = ok('ROTH: NO [T] "tax-deferred growth engine" leak', !has(nRoth, 'tax-deferred growth engine')) && all;
+  // Job 7 — item-3 cross-render: SAME book (BND/VTI 50/50) → paragraph tax-character matches isRoth.
+  all = ok('X-render: Vault paragraph [T] (ord income+RMD73)', has(R.nPT50, 'taxed as ordinary income when you withdraw it') && has(R.nPT50, 'Required Minimum Distributions kick in at 73')) && all;
+  all = ok('X-render: Vault paragraph NO Roth [R] leak',      !has(R.nPT50, 'NO required minimum distributions') && !has(R.nPT50, 'most tax-advantaged account') && !has(R.nPT50, 'less tax-free growth to harvest')) && all;
+  all = ok('X-render: Roth paragraph [R] (no-RMD + most tax-adv)', has(R.nRT50, 'NO required minimum distributions') && has(R.nRT50, 'most tax-advantaged account')) && all;
+  all = ok('X-render: Roth paragraph NO [T] leak',           !has(R.nRT50, 'taxed as ordinary income when you withdraw it') && !has(R.nRT50, 'tax-deferred compounding')) && all;
   console.log('OVERALL: ' + (all ? 'GREEN' : 'RED'));
   process.exit(all ? 0 : 1);
 })().catch(e => { console.error('GATE ERROR:', e.message); process.exit(2); });
