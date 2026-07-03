@@ -5267,12 +5267,12 @@
         // SURGICAL: Physics Toggles with explicit mathematical tooltips
         html += `
         <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
-            <span class="toggle-label" style="color:var(--gold);">Count this account in my plan</span>
+            <span class="toggle-label" style="color:var(--gold);">${/401k/.test(base.id) ? 'Include this account in my plan' : 'Count this account in my plan'}</span>
             <label class="switch">
               <input type="checkbox" ${!acc.exclude ? 'checked' : ''} onchange="updateAccToggle('${id}', 'exclude', !this.checked)">
               <span class="slider"></span>
             </label>
-            <div class="modal-tt" style="top:100%; bottom:auto;"><strong>Leave it out</strong>Off = this account sits outside your plan entirely — not in your net worth, not funding your spending. Use it for money that isn't part of this picture.</div>
+            <div class="modal-tt" style="top:100%; bottom:auto;">${/401k/.test(base.id) ? (base.taxCode === 'roth' ? `<strong>Counts toward everything.</strong>On: this Roth 401(k) is fully part of your plan — it shows up in your net worth, helps form your Shape, and your plan can draw from it in retirement. Turn it OFF to remove it completely — gone from your net worth, your Shape, and your spending, as if it isn't yours. Use OFF only for an account you track elsewhere or that genuinely isn't part of this picture.` : `<strong>Counts toward everything.</strong>On: this Traditional 401(k) is fully part of your plan — net worth, Shape, and your plan can draw from it in retirement (as taxable income). Turn it OFF to remove it completely.`) : `<strong>Leave it out</strong>Off = this account sits outside your plan entirely — not in your net worth, not funding your spending. Use it for money that isn't part of this picture.`}</div>
         </div>`;
 
         if (base.taxCode === 'hsa') {
@@ -5300,12 +5300,12 @@
         } else {
             html += `
         <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
-            <span class="toggle-label" style="color:var(--teal-mid);">Keep it, but don't spend from it</span>
+            <span class="toggle-label" style="color:var(--teal-mid);">${/401k/.test(base.id) ? 'Count it, but never spend from it' : "Keep it, but don't spend from it"}</span>
             <label class="switch">
               <input type="checkbox" ${acc.isFriction ? 'checked' : ''} onchange="updateAccToggle('${id}', 'isFriction', this.checked)">
               <span class="slider"></span>
             </label>
-            <div class="modal-tt" style="top:100%; bottom:auto;"><strong>Set aside, untouched</strong>On = this account still counts in your net worth and keeps growing — but your plan won't pull from it to cover spending. For money you've earmarked for something else.</div>
+            <div class="modal-tt" style="top:100%; bottom:auto;">${/401k/.test(base.id) ? (base.taxCode === 'roth' ? `<strong>Held, not spent.</strong>On: this account stays in your net worth and keeps growing tax-free — but your plan will never pull from it to cover spending. For a Roth, this is a natural fit: it's often the account you WANT to touch last, leaving the most precious tax-free dollars to compound or pass to heirs. Use it for money you've earmarked to stay whole.` : `<strong>Held, not spent.</strong>On: this account stays in your net worth and keeps compounding tax-deferred — but your plan never pulls from it for spending. Because RMDs at 73 FORCE withdrawals, 'never spend' is only partly in your control here — the IRS eventually makes you draw it down. (The opposite of the Roth Treasury, where 'hold forever' truly works.)`) : `<strong>Set aside, untouched</strong>On = this account still counts in your net worth and keeps growing — but your plan won't pull from it to cover spending. For money you've earmarked for something else.`}</div>
         </div>`;
         }
 
@@ -5457,6 +5457,7 @@
             <div style="margin-top:20px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px;">
                 ${is457 ? `<div class="input-label modal-tt-wrap" style="color:var(--gold); margin-bottom:6px; cursor:help;">CONTRIBUTION LIMITS (${limitName})<div class="modal-tt" style="left:0; right:auto;"><strong>457(b) Limits</strong>The most you can defer into this 457(b) this year — one of the highest limits any plan offers. It's a SEPARATE ceiling from any 401(k) or 403(b) you also have, so those don't eat into this room.</div></div>`
                  : isIRA ? `<div class="input-label modal-tt-wrap" style="color:var(--gold); margin-bottom:6px; cursor:help;">CONTRIBUTION LIMITS (${limitName})<div class="modal-tt" style="left:0; right:auto;"><strong>IRA Limits</strong>The most you can put into ALL your IRAs combined this year (Traditional + Roth share one ceiling). It's a modest cap — think of the IRA as a high-quality top-up, not your main retirement engine.</div></div>`
+                 : !is403 ? `<div class="input-label modal-tt-wrap" style="color:var(--gold); margin-bottom:6px; cursor:help;">CONTRIBUTION LIMITS (${limitName})<div class="modal-tt" style="left:0; right:auto;"><strong>401(k) Limits</strong>${base.taxCode === 'roth' ? `The ceiling the IRS sets on what you can defer into this plan each year. Roth and pre-tax 401(k) contributions SHARE one limit — putting $10k in Roth leaves only the remainder for pre-tax. The employer match does NOT count against your limit; it sits on top. Unused room doesn't roll over — each year is its own window.` : `The ceiling the IRS sets on what you can defer into this plan each year. Pre-tax and Roth 401(k) contributions SHARE one limit — putting $10k pre-tax leaves only the remainder for Roth. The employer match sits OUTSIDE this elective limit (it counts toward the higher overall 415(c) cap). Figures live in the dated §15 LIMITS table.`}</div></div>`
                         : `<div class="input-label" style="color:var(--gold); margin-bottom:6px;">CONTRIBUTION LIMITS (${limitName})</div>`}
                 <div style="font-family:var(--font-mono);font-size:9px;color:rgba(255,255,255,0.3);margin-bottom:10px;letter-spacing:0.05em;">2026 IRS limits — ${is457 ? `<a href="https://www.irs.gov/retirement-plans/irc-457b-deferred-compensation-plans" target="_blank" rel="noopener" style="color:rgba(93,202,165,0.4);text-decoration:none;">irs.gov/retirement-plans/irc-457b-deferred-compensation-plans</a>` : `<a href="https://www.irs.gov/retirement-plans" target="_blank" rel="noopener" style="color:rgba(93,202,165,0.4);text-decoration:none;">irs.gov/retirement-plans</a>`}</div>
                 

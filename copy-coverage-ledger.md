@@ -46,8 +46,8 @@ it surfaces the key finding for the whole effort (see ⚠️ at the end).
 | §1 SIGNALS — the 4-box strip + balance/token "why it matters" hovers (R9–R29) | ❌ | strip renders via the shared generic `_diCell` path; bank §1 hover copy not live |
 | §2 TITLE HOVER — "What is a Roth 401(k)?" (R33–R36) | ✅ WIRED | R33–R36 [R] Treasury / R303–R306 [T] Vault installed in `_diSetTitle` (before the 403 branch). Also FIXED a live drift bug: 401k rooms were falling through to the 403(b) title hover. Verified both rooms; 403 untouched. |
 | §3 WITHDRAWAL MODAL — plain-coach rewrite + 5-yr rule (R40–R42) | ✅ WIRED | R40/R41/R42 [R] + R309/R310/R311 [T], scoped to real 401k rooms via `!is403`; robotic "capital extraction" tooltip KILLED for 401k (403 keeps current until its own pass). Both rooms verified; 403/457/IRA regression green. |
-| §4 CONTRIBUTION LIMITS — shared-limit / plain-coach hovers (R46–R50) | ❌ | limit fields render; bank §4 hover copy not live (generic) |
-| §5 UNIVERSAL TOGGLES — exclude / isFriction plain-coach (R55–R57) | ❌ | generic toggle copy live, not bank §5 verbatim |
+| §4 CONTRIBUTION LIMITS — header hover (R46 [R] / R314 [T]) | ✅ WIRED | shared-limit + match-on-top nuance, `!is403`-scoped, both rooms. ⚠️ FIELD hovers (R47 base / R48 catch-up / R49 super) HELD + flagged: Roth-worded ("for a Roth… tax-free"), Vault R315 says "reuse verbatim" but that puts Roth language on pre-tax = [R]/[T] gap; need [T] field-hover copy from Architect (do not draft). R50 active-max is neutral (wire-able). |
+| §5 UNIVERSAL TOGGLES — 2a include / 2b isFriction (R55/R318 + R56/R319) | ✅ WIRED | both toggles, [R]/[T], scoped `/401k/`; other rooms keep generic copy. (Dropped the "NOTE for the Vault:" editorial prefix from R319 — flagged as a judgment call.) |
 | §12 METRIC LADDERS — 4-box deep-dive tooltips, ~24 rungs (R186–R215) | ❌ | ladders never built; boxes use generic one-line hovers |
 | §15 IRS LIMITS dated table — LOOKUP(taxYear) auto-update (R245–R255) | ❌ | figures are hard-coded literals (correct for 2026) but not the dated table; auto-update not implemented |
 
