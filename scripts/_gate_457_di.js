@@ -63,14 +63,30 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     const Rt = open('roth457b');
     const wdR = (Rt.html.split('WITHDRAWAL RULES')[1] || '').split('CONTRIBUTION LIMITS')[0];
 
-    // Variant ([IF] clauses on the Annex): TSLA 15% single name, bonds 35%, beta blank.
+    // Variant ([IF] clauses on the Annex): TSLA 45% dominant single name (SMOKE-FIX 2026-07-02:
+    // clause floor raised 0.10 → 0.40 + ≤5-pt tie-guard, so the fixture must be a REAL leader),
+    // bonds 35%, beta blank.
     r.holdings = [
-      mk({ ticker: 'TSLA', name: 'Tesla Inc',           price: 100, shares: 150, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Automobiles & Auto Parts', instrumentType: 'Stock' }),
-      mk({ ticker: 'NWLGX', name: 'NW Large Cap Core',  price: 100, shares: 500, expRatio: 0.45, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Large Cap', instrumentType: 'Mutual Fund' }),
+      mk({ ticker: 'TSLA', name: 'Tesla Inc',           price: 100, shares: 450, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Automobiles & Auto Parts', instrumentType: 'Stock' }),
+      mk({ ticker: 'NWLGX', name: 'NW Large Cap Core',  price: 100, shares: 200, expRatio: 0.45, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Large Cap', instrumentType: 'Mutual Fund' }),
       mk({ ticker: 'DODIX', name: 'Dodge & Cox Income', price: 100, shares: 350, expRatio: 0.41, assetClass: 'Bonds', geography: 'US Bonds', sector: 'Bonds', instrumentType: 'Mutual Fund' })
     ];
     recalcPortfolio(r);
     const V = open('roth457b');
+
+    // NEGATIVE CONTROL (SMOKE-FIX 2026-07-02): the Captain's equal-weight book — five names at
+    // 20% each. Pre-fix code (snp >= 0.10, no tie-guard) printed the false leader "A single
+    // position — TSLA — carries 20%" on exactly this shape; the 0.40 dominance floor + tie-guard
+    // must read it as SILENCE, not a leader.
+    r.holdings = [
+      mk({ ticker: 'TSLA', name: 'Tesla Inc',            price: 100, shares: 200, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Automobiles & Auto Parts', instrumentType: 'Stock' }),
+      mk({ ticker: 'BND',  name: 'Vanguard Total Bond',  price: 100, shares: 200, expRatio: 0.03, assetClass: 'Bonds', geography: 'US Bonds', sector: 'Bonds', instrumentType: 'ETF' }),
+      mk({ ticker: 'IBM',  name: 'IBM',                  price: 100, shares: 200, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Technology', instrumentType: 'Stock' }),
+      mk({ ticker: 'VTI',  name: 'Vanguard Total Market', price: 100, shares: 200, expRatio: 0.03, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Total Market', instrumentType: 'ETF' }),
+      mk({ ticker: 'LUNR', name: 'Intuitive Machines',   price: 100, shares: 200, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Aerospace & Defense', instrumentType: 'Stock' })
+    ];
+    recalcPortfolio(r);
+    const N = open('roth457b');
 
     // Regression: IRA keeps IRA copy; 403 keeps its tilt tail; taxable untouched.
     const ir = window.state.accounts.find(a => a.baseId === 'tradira');
@@ -93,14 +109,14 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     co.showHoldings = true; window.openAccountModal(co.id);
     const E = document.getElementById('modal-dynamic-content').innerHTML;
 
-    return { T, Rt, V, I, F, X, E, wdT, wdR };
+    return { T, Rt, V, N, I, F, X, E, wdT, wdR };
   });
   await b.close();
 
   const ok = (n, c) => { console.log(`${n.padEnd(58)} -> ${c ? 'GREEN' : 'RED'}`); return c; };
   const has = (s, t) => s.indexOf(t) !== -1;
   const narr = (html) => { const m = /di-narr-body[^>]*>([\s\S]*?)<\/div>/.exec(html); return m ? m[1] : ''; };
-  const nT = narr(R.T.html), nR = narr(R.Rt.html), nV = narr(R.V.html);
+  const nT = narr(R.T.html), nR = narr(R.Rt.html), nV = narr(R.V.html), nN = narr(R.N.html);
 
   console.log('===== 457(b) DI GATE [' + LABEL + '] =====');
   let all = true;
@@ -152,10 +168,13 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   all = ok('§12 T: Vault→Workshop basis hover, ordinary income', has(R.T.html, 'ordinary income regardless of basis')) && all;
   all = ok('§12 R: higher-beta bets hover only on Annex',       has(R.Rt.html, 'fine home for higher-beta bets') && !has(R.T.html, 'fine home for higher-beta bets')) && all;
   // Job 5 — variant [IF] clauses
-  all = ok('variant: single position TSLA carries 15%',         has(nV, 'A single position — TSLA — carries 15% of this account')) && all;
+  all = ok('variant: single position TSLA carries 45%',         has(nV, 'A single position — TSLA — carries 45% of this account')) && all;
   all = ok('variant R: tax-free upside rides on one name',      has(nV, 'rides on one name')) && all;
   all = ok('variant R: bond ballast wastes best shelter',       has(nV, '35%') && has(nV, 'wastes your best tax shelter')) && all;
   all = ok('variant: B2 still ABSENT',                          !has(nV, 'under the hood')) && all;
+  // SMOKE-FIX negative control — equal-weight book stays SILENT (no false "carries 20%" leader)
+  all = ok('NEG: equal-weight book — concentration SILENT',     !has(nN, 'A single position')) && all;
+  all = ok('NEG: equal-weight book — no invented leader name',  !has(nN, 'carries 20%')) && all;
   // Job 6 — regression + honesty
   all = ok('IRA keeps IRA copy (no 457 leak)',                  has(narr(R.I.html), 'assembled from the open market') && !has(narr(R.I.html), 'governmental')) && all;
   all = ok('403: keeps its OWN plan-menu tilt tail',            has(narr(R.F.html), 'a shape drawn from the funds your plan offers')) && all;

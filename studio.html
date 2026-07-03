@@ -3818,7 +3818,7 @@
       var val = function (h) { return (parseFloat(h.price) || 0) * (parseFloat(h.shares) || 0); };
       var isCash = function (h) { return String(h.instrumentType || '').trim().toUpperCase() === 'CASH' || String(h.assetClass || '').trim().toLowerCase() === 'cash'; };
       var s = { total: 0, cash: 0, inv: 0, eq: 0, bd: 0, classed: 0, foreign: 0, geoed: 0, invCount: 0, maxRow: 0,
-                inst: {}, instKinds: 0, annuity: false, stockVal: 0, fundVal: 0, maxStockRow: 0, stockCount: 0, fundCount: 0,
+                inst: {}, instKinds: 0, annuity: false, stockVal: 0, fundVal: 0, maxStockRow: 0, secondStockRow: 0, stockCount: 0, fundCount: 0,
                 betaCovVal: 0, yldCovVal: 0, maxStockTicker: '', unrealGain: null, basisCount: 0 };
       var hasNum = function (x) { return x !== '' && x !== null && x !== undefined && isFinite(parseFloat(x)); };
       (acc.holdings || []).forEach(function (h) {
@@ -3830,7 +3830,11 @@
         var it = String(h.instrumentType || '').trim().toLowerCase();
         var isStock = /stock|share/.test(it), isFund = /etf|mutual|fund/.test(it);
         if (it) { if (!s.inst[it]) { s.inst[it] = 0; s.instKinds++; } s.inst[it]++; if (/annuit/.test(it)) s.annuity = true; }
-        if (isStock) { s.stockVal += v; s.stockCount++; if (v > s.maxStockRow) { s.maxStockRow = v; s.maxStockTicker = String(h.ticker || '').trim().toUpperCase() || String(h.name || '').trim(); } }
+        // secondStockRow rides the SAME value-weighted pass (Instrument=Stock only, dollar
+        // share) — it feeds the 457 concentration tie-guard; never fabricated (L47).
+        if (isStock) { s.stockVal += v; s.stockCount++;
+          if (v > s.maxStockRow) { s.secondStockRow = s.maxStockRow; s.maxStockRow = v; s.maxStockTicker = String(h.ticker || '').trim().toUpperCase() || String(h.name || '').trim(); }
+          else if (v > s.secondStockRow) { s.secondStockRow = v; } }
         if (isFund)  { s.fundVal += v; s.fundCount++; }
         // R1/R2 — DATA COVERAGE: how much of the invested value actually publishes a beta / yield.
         // A stat computed on a minority of dollars must never narrate as a whole-account read.
@@ -4108,13 +4112,16 @@
         ? 'This Roth IRA is ' + _diSpine(s) + built + ' — a personal account you assembled from the open market, where everything inside grows tax-free.'
         : 'This Traditional IRA is ' + _diSpine(s) + built + ' — a personal account you assembled from the open market, holding pre-tax capital that grows tax-deferred.';
     }
-    // B2 fires per R87/R95 + Captain's retuned floors (2026-07-02): tickerCount≥8 AND top
-    // sleeve <50% AND ≥3 sleeves AND combined thematic+crypto satellites ≤30% (above that the
-    // §13b tilt clause is already telling the story — silence = nuance). Foreign≥20% floor
-    // lives in the _diTiltSentence ladder. Sleeve clause is BYTE-IDENTICAL [R]/[T] (R96).
+    // B2 fires per R87/R95 + Captain's SMOKE-FIX floors (2026-07-02, lowered from 8/3):
+    // tickerCount≥3 AND ≥2 sleeves AND top sleeve <50% AND combined thematic+crypto satellites
+    // ≤30% AND unclassified ≤10% (the dominance/satellite/honesty guards are correct and STAY —
+    // silence = nuance). Foreign≥20% floor lives in the _diTiltSentence ladder. Sleeve clause is
+    // BYTE-IDENTICAL [R]/[T] (R96). NOTE (flagged): this is the ONLY composition-gate path —
+    // B2 is installed in the IRA layer table alone; the 457 seam awaits its [R]/[T] tails and
+    // the Taxable bank has no B2 section authored (its spine+tag machine names the mix instead).
     function _diIraCompRead(acc, s, agg, isRoth) {
       var c = _diSleeves(acc, s);
-      if (!c || s.invCount < 8 || c.list.length < 3 || c.top >= 50 || c.satPct > 30 || c.unclPct > 10) return null;
+      if (!c || s.invCount < 3 || c.list.length < 2 || c.top >= 50 || c.satPct > 30 || c.unclPct > 10) return null;
       var names = c.list.map(function (x) { return Math.round(x.pct) + '% ' + x.k; });
       var txt = names.length > 4
         ? names.slice(0, 4).join(', ') + ' and a handful of smaller satellite positions (' +
@@ -4253,7 +4260,12 @@
           : 'It rides ' + bw + ' the market; in the Workshop both the gains and the swings are yours until withdrawal, when they’re taxed as ordinary income.');
       }
       var snp = s.total > 0 ? (s.maxStockRow / s.total) : 0;
-      if (out.length < 2 && snp >= 0.10 && s.maxStockTicker) {
+      // SMOKE-FIX (2026-07-02): dominance floor 0.40 (was 0.10) + tie-guard: do NOT name a
+      // "top" name when the runner-up is within a rounding band (≤5 pts) of it — on an
+      // equal-weight book that is SILENCE, not a false leader. Aligns to the Taxable
+      // B-CONCENTRATED ≥50% / C-DRIFT 40–50% dominance doctrine.
+      var snp2 = s.total > 0 ? (s.secondStockRow / s.total) : 0;
+      if (out.length < 2 && snp >= 0.40 && s.maxStockTicker && (snp - snp2) > 0.05) {
         var pct = Math.round(snp * 100) + '%';
         out.push(isRoth
           ? 'A single position — ' + s.maxStockTicker + ' — carries ' + pct + ' of this account, so a large share of that tax-free upside (and its risk) rides on one name.'
@@ -4919,9 +4931,18 @@
              '<strong>Why it matters</strong>Deferrals lower this year’s taxable income; growth is tax-deferred. Many plans add an EMPLOYER MATCH — free money you should capture first. Long-tenured staff get a unique 15-year-of-service catch-up on top of the usual limits.<br><br>' +
              '<strong>The catch</strong>Withdrawals are ordinary income, and before 59½ a 10% early-withdrawal penalty generally applies (Rule-of-55 and hardship are the main exceptions). RMDs begin at 73. Historically these plans lean on annuity products — watch for higher fees and surrender charges.';
       }
-      el.innerHTML = '<span class="modal-tt-wrap" style="display:inline-flex; width:auto; cursor:help;">' + _diTitleInput(acc, base) +
+      // SMOKE-FIX (2026-07-02) — title-tooltip clip: .modal-card is a scroll container
+      // (overflow-y:auto), so an absolute tooltip is clipped at the card's bottom edge whenever
+      // the card is SHORT (pre-"add tickers" state). position:fixed escapes that clip — its
+      // containing block is .modal-overlay (full-viewport, via backdrop-filter) — and the
+      // onmouseenter anchor pins it just below the title in BOTH modal states, clamped to the
+      // viewport. Post-click placement is unchanged (below title, left-aligned).
+      el.innerHTML = '<span class="modal-tt-wrap" style="display:inline-flex; width:auto; cursor:help;"' +
+                     ' onmouseenter="var t=this.querySelector(\'.modal-tt\'), r=this.getBoundingClientRect();' +
+                     ' t.style.top=Math.max(12, Math.min(r.bottom+10, innerHeight-t.offsetHeight-12))+\'px\';' +
+                     ' t.style.left=Math.max(12, Math.min(r.left, innerWidth-440))+\'px\';">' + _diTitleInput(acc, base) +
                      '<span style="margin-left:8px; opacity:0.5; border-bottom:1px dotted rgba(255,255,255,0.5); font-size:11px;">ⓘ</span>' +
-                     '<div class="modal-tt" style="top:100%; bottom:auto; left:0; width:420px;">' + tt + '</div></span>';
+                     '<div class="modal-tt" style="position:fixed; top:0; bottom:auto; left:0; width:420px;">' + tt + '</div></span>';
     }
 
     // --- MODAL ENGINE (BACK OF CARD) ---

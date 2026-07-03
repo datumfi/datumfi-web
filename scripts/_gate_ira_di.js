@@ -61,7 +61,9 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     const Rt = open('rothira');
 
     // Variant fixture ([IF] clauses): TSLA 15% single name (no beta -> coverage < 60, beta
-    // clause silent), bonds 35% -> Roth asset-location clause. 3 tickers -> B2 SILENT.
+    // clause silent), bonds 35% -> Roth asset-location clause. B2 SILENT — since the SMOKE-FIX
+    // floor drop (2026-07-02: invCount 8→3, sleeves 3→2) the silence reason is the top-sleeve
+    // dominance guard (TSLA+VOO = 65% US large-cap core >= 50), no longer the ticker count.
     r.holdings = [
       mk({ ticker: 'TSLA', name: 'Tesla Inc',           price: 100, shares: 150, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Automobiles & Auto Parts', instrumentType: 'Stock' }),
       mk({ ticker: 'VOO',  name: 'Vanguard S&P 500',    price: 100, shares: 500, beta: 1.0, expRatio: 0.03, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Large Cap', instrumentType: 'ETF' }),
@@ -69,6 +71,19 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     ];
     recalcPortfolio(r);
     const V = open('rothira');
+
+    // POSITIVE CONTROL (SMOKE-FIX 2026-07-02, floors lowered invCount 8→3 / sleeves 3→2): a
+    // small 3-ticker, 2-sleeve book (45% core / 45% bonds / 10% cash — cash dilutes the top
+    // sleeve under the 50% dominance guard) must now GET a composition read; the old invCount<8
+    // gate kept B2 mute on exactly the small accounts that need the read most.
+    r.holdings = [
+      mk({ ticker: 'VOO',  name: 'Vanguard S&P 500',      price: 100, shares: 300, expRatio: 0.03, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Large Cap',    instrumentType: 'ETF' }),
+      mk({ ticker: 'VTI',  name: 'Vanguard Total Market', price: 100, shares: 150, expRatio: 0.03, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Total Market', instrumentType: 'ETF' }),
+      mk({ ticker: 'BND',  name: 'Vanguard Total Bond',   price: 100, shares: 450, expRatio: 0.03, assetClass: 'Bonds',  geography: 'US Bonds',                sector: 'Bonds',        instrumentType: 'ETF' }),
+      mk({ ticker: 'CASH', name: 'Money Market',          price: 100, shares: 100, instrumentType: 'Cash' })
+    ];
+    recalcPortfolio(r);
+    const P = open('rothira');
 
     // FAST-FOLLOW fixtures (untagged-row honesty, ruled 2026-07-02). U: two blank-classification
     // rows = 12% of value — on defective code B2 NAMES the phantom ("42% US large-cap core");
@@ -123,7 +138,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     co.showHoldings = true; window.openAccountModal(co.id);
     const E = document.getElementById('modal-dynamic-content').innerHTML;
 
-    return { T, Rt, V, U, W, F, X, E };
+    return { T, Rt, V, P, U, W, F, X, E };
   });
   await b.close();
 
@@ -133,7 +148,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   // Wrapper-neutral cores: the stretch between the shared lead and the branch tail must be
   // byte-identical across [R]/[T] (§11 R104 / B2 R96 — the divergence-proof heart).
   const between = (s, a, z) => { const i = s.indexOf(a); if (i < 0) return null; const j = s.indexOf(z, i); return j < 0 ? null : s.slice(i, j); };
-  const nT = narr(R.T.html), nR = narr(R.Rt.html), nV = narr(R.V.html), nU = narr(R.U.html), nW = narr(R.W.html);
+  const nT = narr(R.T.html), nR = narr(R.Rt.html), nV = narr(R.V.html), nP = narr(R.P.html), nU = narr(R.U.html), nW = narr(R.W.html);
 
   console.log('===== IRA DI GATE [' + LABEL + '] =====');
   let all = true;
@@ -176,7 +191,11 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   all = ok('variant R: tax-free wrapper can\'t offset',         has(nV, "tax-free wrapper can't offset")) && all;
   all = ok('variant R: bond 35% asset-location clause',         has(nV, '35%') && has(nV, 'most valuable tax shelter')) && all;
   all = ok('variant: beta clause SILENT (coverage 50% < 60)',   !has(nV, 'It rides')) && all;
-  all = ok('variant: B2 SILENT (3 tickers < 8)',                !has(nV, 'under the hood')) && all;
+  all = ok('variant: B2 SILENT (top sleeve 65% >= 50 guard)',   !has(nV, 'under the hood')) && all;
+  // SMOKE-FIX positive control — the lowered floors (invCount>=3, sleeves>=2) light up B2 on
+  // a small book; on pre-fix code (invCount<8) these two lines go RED (B2 mute = the symptom)
+  all = ok('POS: B2 FIRES at 3 tickers / 2 sleeves',            has(nP, 'under the hood, biggest first')) && all;
+  all = ok('POS: sleeves value-weighted 45% core / 45% bonds',  has(nP, '45% US large-cap core') && has(nP, '45% bonds')) && all;
   // Job 2b — FAST-FOLLOW: untagged rows are never NAMED a sleeve (Lesson 47 honesty guard)
   all = ok('untagged>10%: B2 SILENT (12% unclassified)',        !has(nU, 'under the hood')) && all;
   all = ok('untagged>10%: phantom "42% US large-cap core" gone', !has(nU, '42% US large-cap core')) && all;
