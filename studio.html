@@ -4838,6 +4838,41 @@
       return h + '</div>';
     }
 
+    // §8 401(k) EMPLOYER-MATCH ENGINE (STEP 1a · branch-agnostic · Lesson 47 sourced-or-blank).
+    // Consumes the modal match fields (acc.matchRate / matchUpTo / vestedPct / matchBalance), the
+    // annualized employee deferral (inflow × freq), and the global Gross-Salary (passed in — Lesson 48,
+    // reuse the existing field, never a second salary input). EVERY token is null unless its source is
+    // present — never a fabricated rate, cap read, or bucket split. The balance split is DIRECT-ENTRY
+    // and ROTH-ONLY: rothBalance = accountValue − matchBalance (exact, sums to the balance). On a
+    // pre-tax 401(k) the whole balance is already pre-tax, so the split is suppressed (no two buckets).
+    function _di401kMatch(acc, base, salary) {
+      var num = function (x) { var n = parseFloat(x); return isFinite(n) ? n : null; };
+      var isRoth = !!(base && base.taxCode === 'roth');
+      var m = { isRoth: isRoth, rate: num(acc.matchRate), upTo: num(acc.matchUpTo), vested: num(acc.vestedPct),
+                salary: num(salary), annualContrib: null, matchTarget: null, annualMatch: null,
+                matchCapHit: null, matchBalance: null, rothBalance: null };
+      if (m.salary !== null && m.salary <= 0) m.salary = null;
+      var contrib = (parseFloat(acc.inflow) || 0) * (parseFloat(acc.freq) || 0);
+      m.annualContrib = contrib > 0 ? contrib : null;
+      // annual match $ + full/short cap read — need rate + up-to + salary all sourced, plus a deferral
+      if (m.rate !== null && m.upTo !== null && m.salary !== null) {
+        m.matchTarget = (m.upTo / 100) * m.salary;
+        if (m.annualContrib !== null) {
+          m.annualMatch = (m.rate / 100) * Math.min(m.annualContrib, m.matchTarget);
+          m.matchCapHit = (m.annualContrib >= m.matchTarget) ? 'full' : 'short';
+        }
+      }
+      // balance split — direct-entry, ROTH ONLY, exact (suppressed on pre-tax)
+      if (isRoth) {
+        var mb = num(acc.matchBalance), val = parseFloat(acc.value) || 0;
+        if (mb !== null && mb >= 0 && val > 0) {
+          m.matchBalance = Math.min(mb, val);
+          m.rothBalance = val - m.matchBalance;
+        }
+      }
+      return m;
+    }
+
     function _diNarrBlock(acc, base, s, agg) {
       var body = base.taxCode === 'hsa' ? _diNarrHSA(acc, s, agg)
                : base.id === '529plan' ? _diNarr529(acc, s, agg)
@@ -5220,6 +5255,33 @@
                     <span style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold; font-size:13px;" id="limit-calc-${id}">$${currentLimit.toLocaleString()} / YR</span>
                 </div>
             </div>`;
+
+            // §8 EMPLOYER-MATCH INPUT AREA — bank '401(k) Copy Bank' §8 (R92–R97), hovers VERBATIM.
+            // Branch-agnostic: both roth401k "The Treasury" and pretax401k "The Vault" host Match Rate /
+            // Up-To / Vesting; the direct-entry Employer-Match Balance renders on the ROTH room ONLY
+            // (on pre-tax the whole balance is already pre-tax — nothing to split). Salary is REUSED
+            // from the global Gross-Salary field (Lesson 48). Persist via existing updateAccField;
+            // any unset field stays blank — never defaulted, never guessed (Lesson 47).
+            if (/401k/.test(base.id)) {
+                let mr = acc.matchRate   !== undefined ? acc.matchRate   : '';
+                let mu = acc.matchUpTo   !== undefined ? acc.matchUpTo   : '';
+                let vp = acc.vestedPct   !== undefined ? acc.vestedPct   : '';
+                let mb = acc.matchBalance!== undefined ? acc.matchBalance: '';
+                html += `
+            <div style="margin-top:20px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px;">
+                <div class="input-label" style="color:var(--gold); margin-bottom:10px;">EMPLOYER MATCH</div>
+                <div class="field-row" style="margin-bottom:10px;">
+                    <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Match Rate (%)</div><input type="number" class="small-field" value="${mr}" oninput="updateAccField('${id}', 'matchRate', this.value)"><div class="modal-tt"><strong>Match Rate (%)</strong>How much your employer adds for every dollar you put in — e.g., "50%" means they chip in 50¢ per $1 you contribute. This is free money; capturing all of it is the highest-guaranteed-return move in your whole plan.</div></div>
+                    <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Match Up-To (% of salary)</div><input type="number" class="small-field" value="${mu}" oninput="updateAccField('${id}', 'matchUpTo', this.value)"><div class="modal-tt" style="left:auto; right:0;"><strong>Match Up-To (% of salary)</strong>The ceiling on the match — your employer matches your contributions only up to this share of your pay (e.g., "up to 6% of salary"). Contribute at least this much to grab the full match; going under leaves guaranteed money behind.</div></div>
+                </div>
+                <div class="field-row" style="margin-bottom:0;">
+                    <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Vesting (%)</div><input type="number" class="small-field" value="${vp}" oninput="updateAccField('${id}', 'vestedPct', this.value)"><div class="modal-tt"><strong>Vesting Schedule</strong>How long you must stay before the match is truly YOURS. Unvested match dollars vanish if you leave early — this sets whether the match on screen is real money or a promise. Common: cliff (all at once after N years) or graded (a slice per year).</div></div>
+                    ${base.taxCode === 'roth'
+                      ? `<div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Employer-Match Balance ($)</div><input type="number" class="small-field" value="${mb}" oninput="updateAccField('${id}', 'matchBalance', this.value)"><div class="modal-tt" style="left:auto; right:0;"><strong>Employer-Match Balance ($)</strong>The portion of your 401(k) balance that came from your employer's match — read it straight off your statement (many list the "employer source" or "match source" balance as its own line). This money sits in a PRE-TAX pocket inside your Roth 401(k): it grew tax-free, but unlike your own Roth contributions it WILL be taxed as ordinary income when you withdraw it. Entering it here lets us show your two tax buckets exactly, with no guessing — the rest of your balance is treated as your tax-free Roth money.</div></div>`
+                      : `<div></div>`}
+                </div>
+            </div>`;
+            }
         }
 
         if (base.taxCode === 'hsa') {
