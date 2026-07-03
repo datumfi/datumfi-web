@@ -4881,9 +4881,9 @@
     // (Lesson 47): menuQuality, the 5-yr clock, and bracket-arbitrage are UNSOURCED today → silent.
     // BRANCH-AWARE (isRoth): roth401k "The Treasury" renders col-B [R]; pretax401k "The Vault"
     // renders the col-D [T] in-layer twins (Architect, 2026-07-03) + §13 Layer-E flips (R223/R224).
-    // Residual [T] gaps SUPPRESSED on pre-tax (silent, Lesson 47, flagged): R109 mid-equity spine
-    // tier + the Rule-55/catch-up toggle lines (R145/R147/R148). R138 match readout is roth-only
-    // (the match-balance field is roth-only per STEP 1a), so the Vault uses R223/R224 for Layer E.
+    // [T] twins installed for ALL in-layer clauses — ZERO suppressions on pre-tax: R109 mid-equity
+    // spine, the Rule-55/catch-up toggle lines (R145/R147/R148), and the token-free R138 [T]
+    // match-aware Layer-E line (fires when a match is configured). 401(k) STEP 1 is copy-complete.
     function _di401kArchSignals(acc, s) {
       var x = _diTaxSignals(acc, s);   // etf/mf/stock %, themes{}, crypto, topSector, overlap
       var T = s.total || 1, th = x.themes || {};
@@ -4971,10 +4971,9 @@
             ? 'This account leans toward growth — ' + _diP(eq) + ' stocks, the rest in ballast — and in a Roth that growth is the prize, since all of it is yours tax-free when you draw it decades from now.'
             : 'This account leans toward growth — ' + _diP(eq) + ' stocks, the rest in ballast — and in a Traditional plan that growth compounds tax-deferred, but remember it is all taxed as ordinary income when you draw it decades from now.';
         else if (eq >= 30)
-          // R109 mid-tier [T] UNAUTHORED — silent on pretax (Lesson 47, flagged to Architect).
           body = isRoth
             ? 'This is a middle-of-the-road mix — ' + _diP(eq) + ' stocks against meaningful bonds — which is steady, but worth a thought: a Roth is your most tax-advantaged account, so dialing the growth assets UP here often does more for you than playing it safe.'
-            : null;
+            : 'This is a middle-of-the-road mix — ' + _diP(eq) + ' stocks against meaningful bonds — steady, and a defensible choice in a tax-deferred account. Just know the trade-off runs the other way from a Roth: since every dollar comes out as ordinary income, dialing growth UP here builds a bigger balance but also a bigger eventual tax bill, so match the tilt to your timeline rather than to the tax shelter.';
         else
           body = isRoth
             ? 'This account is playing defense — only ' + _diP(eq) + ' in stocks — which is unusually cautious for tax-free money you may not touch for decades; the lower the growth here, the less of the Roth’s rarest gift (untaxed compounding) you actually capture.'
@@ -5055,30 +5054,36 @@
         if (m.matchBalance !== null && m.matchBalance > 0)
           out.push('One thing the single balance hides: ' + _diMoney(m.matchBalance) + ' of this account is employer-match money, and that piece is PRE-TAX — it’s taxed as ordinary income when you withdraw it and carries its own RMDs. So this one account is really two tax buckets wearing one name: your tax-free Roth core and a taxable match.');
         out.push('Good news the screen buries: the Roth side of this account has NO required minimum distributions for you — it can compound untouched for life and pass to heirs tax-free.' + (m.matchBalance !== null && m.matchBalance > 0 ? ' (Only the pre-tax match portion still carries RMDs.)' : ''));
-      } else {
-        // Traditional Layer E — §13 R223 (tax character) + R224 (RMD@73), replaces the Roth E lines.
-        // R138 [T] "match blends in" is moot here: the match-balance field is roth-only (STEP 1a),
-        // so {matchBalance_fmt} is unsourced on pre-tax → that readout is suppressed (the match is
-        // still acknowledged in Layer F). Flagged to Architect.
-        out.push('Every dollar here is taxed as ordinary income when you withdraw it — contributions and growth alike. That makes this account your lever for lowering THIS year’s taxable income, and a future tax bill you’ll manage with withdrawal timing and Roth conversions.');
-        out.push('Required Minimum Distributions kick in at 73 — the IRS forces money out (and taxes it) whether you need it or not. This shapes your withdrawal sequencing and is a core reason to weigh Roth conversions in low-income years before then.');
+        return out.slice(0, 2);
       }
-      return out.slice(0, 2);
+      // Traditional Layer E — §13 R223 (tax character) + R224 (RMD@73) always; the token-free R138 [T]
+      // match-aware line (Architect 2026-07-03) fires when a match is configured — the whole account
+      // is one pre-tax pool, so the match "simply blends in" (no roth-only {matchBalance} token).
+      out.push('Every dollar here is taxed as ordinary income when you withdraw it — contributions and growth alike. That makes this account your lever for lowering THIS year’s taxable income, and a future tax bill you’ll manage with withdrawal timing and Roth conversions.');
+      if (m.rate !== null)
+        out.push('In a Traditional 401(k), the employer match carries NO special tax character — the WHOLE account is pre-tax, so match dollars and your own contributions are taxed identically: ordinary income on withdrawal, with RMDs on all of it. There’s no separate match bucket to call out here — it simply blends in. (The match only splits out in a Roth 401(k), where it lands in its own pre-tax pocket alongside your tax-free Roth core.)');
+      out.push('Required Minimum Distributions kick in at 73 — the IRS forces money out (and taxes it) whether you need it or not. This shapes your withdrawal sequencing and is a core reason to weigh Roth conversions in low-income years before then.');
+      return out;
     }
     // LAYER F · TOGGLE-AWARE (R144–R147) — fire only when the toggle/match is ON (tax-agnostic).
     function _di401kToggle(acc, m, isRoth) {
       var out = [];
-      // Rule-55 + catch-up toggle lines carry Roth-specific tax phrasing (R145/R147/R148) with no
-      // authored [T] twin → rendered on the Roth room only; suppressed on pre-tax (Lesson 47, flagged
-      // to Architect). The match line (R146) is tax-agnostic and shared across both branches.
-      if (acc.useRule55 && isRoth)
-        out.push('You’ve switched on Rule of 55 — so if you leave THIS employer in or after the year you turn 55, this account opens four years early, penalty-free. It widens your bridge before 59.5; just remember it only covers this plan (not old 401(k)s or IRAs), and on the Roth side your growth is still tax-free only once the 5-year clock is met.');
+      // Rule-55 + catch-up toggle lines: [R]/[T] twins both authored (R145/R147/R148). The match
+      // line (R146) is tax-agnostic and shared across both branches.
+      if (acc.useRule55)
+        out.push(isRoth
+          ? 'You’ve switched on Rule of 55 — so if you leave THIS employer in or after the year you turn 55, this account opens four years early, penalty-free. It widens your bridge before 59.5; just remember it only covers this plan (not old 401(k)s or IRAs), and on the Roth side your growth is still tax-free only once the 5-year clock is met.'
+          : 'You’ve switched on Rule of 55 — so if you leave THIS employer in or after the year you turn 55, this account opens four years early, penalty-free. It widens your bridge before 59.5; just remember it only covers this plan (not old 401(k)s or IRAs), and every dollar you pull is still taxed as ordinary income in the year you take it — a penalty waiver, not a tax waiver.');
       if (m.rate !== null)
         out.push('Your employer match is in play — the single highest-guaranteed return in your plan. At ' + m.rate + '%, every dollar you defer up to the cap is met with free money; if your deferral reads short of that cap, closing the gap beats any market move available to you. (Remember the match lands pre-tax — taxed on the way out.)');
-      if (acc.catchUp50 && isRoth)
-        out.push('You’ve enabled the 50+ catch-up — the IRS lets you pack extra in on top of the base limit. In a tax-free account that’s unusually smart late in your career: you’re buying untaxed growth right when your income, and your tax rate, are often at their peak.');
-      if (acc.superCatchUp && isRoth)
-        out.push('You’ve enabled the 60–63 super catch-up — a short, powerful runway SECURE 2.0 opened for just those four years to stuff in even more tax-free dollars right before retirement. It replaces the regular 50+ catch-up for this window — you get one or the other, not both — so it’s the moment to max it.');
+      if (acc.catchUp50)
+        out.push(isRoth
+          ? 'You’ve enabled the 50+ catch-up — the IRS lets you pack extra in on top of the base limit. In a tax-free account that’s unusually smart late in your career: you’re buying untaxed growth right when your income, and your tax rate, are often at their peak.'
+          : 'You’ve enabled the 50+ catch-up — the IRS lets you pack extra in on top of the base limit. In a tax-deferred account that’s often smartest late in your career: you’re deducting these dollars right when your income, and your tax rate, are usually at their peak — the bigger the deduction now, the more this catch-up is worth. (You’ll settle up as ordinary income later, ideally in a lower bracket.)');
+      if (acc.superCatchUp)
+        out.push(isRoth
+          ? 'You’ve enabled the 60–63 super catch-up — a short, powerful runway SECURE 2.0 opened for just those four years to stuff in even more tax-free dollars right before retirement. It replaces the regular 50+ catch-up for this window — you get one or the other, not both — so it’s the moment to max it.'
+          : 'You’ve enabled the 60–63 super catch-up — a short, powerful runway SECURE 2.0 opened for just those four years to defer even more pre-tax dollars right before retirement. It replaces the regular 50+ catch-up for this window — you get one or the other, not both — so it’s the moment to max the deduction while your income, and your bracket, are near their peak.');
       return out;
     }
     // LAYER G · CONTRIBUTION LEVEL (R151–R154) — one line; needs a deferral (else silent, L47).

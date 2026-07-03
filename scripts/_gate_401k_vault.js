@@ -80,8 +80,12 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     pk.holdings = half(); recalcPortfolio(pk); pk.value = 5000; const PT50 = open('pretax401k');
     rk.holdings = half(); recalcPortfolio(rk); rk.value = 5000; const RT50 = open('roth401k');
 
+    // [T] toggle twins (R145/R147/R148) on pre-tax — flip all three toggles ON.
+    Object.assign(pk, { useRule55: true, catchUp50: true, superCatchUp: true, matchRate: 50, matchUpTo: 6 });
+    pk.holdings = half(); recalcPortfolio(pk); pk.value = 5000; const PTTOG = open('pretax401k');
+
     const narr = (html) => { const m = /di-narr-body[^>]*>([\s\S]*?)<\/div>/.exec(html); return m ? m[1] : ''; };
-    return { nA: narr(A), nB: narr(B), nC: narr(C), nRoth: narr(ROTH), nPT50: narr(PT50), nRT50: narr(RT50) };
+    return { nA: narr(A), nB: narr(B), nC: narr(C), nRoth: narr(ROTH), nPT50: narr(PT50), nRT50: narr(RT50), nPTTOG: narr(PTTOG) };
   });
   await b.close();
 
@@ -98,6 +102,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   // Job 2 — Layer E [T]
   all = ok('A LayerE [T]: taxed as ordinary income (R223)',  has(nA, 'taxed as ordinary income when you withdraw it')) && all;
   all = ok('A LayerE [T]: RMDs kick in at 73 (R224)',        has(nA, 'Required Minimum Distributions kick in at 73')) && all;
+  all = ok('A LayerE [T]: R138 match-blends-in (has match)', has(nA, 'the employer match carries NO special tax character')) && all;
   all = ok('A LayerE: NO Roth two-bucket split leak',        !has(nA, 'two tax buckets wearing one name')) && all;
   all = ok('A LayerE: NO Roth no-RMD claim leak',            !has(nA, 'NO required minimum distributions')) && all;
   // Job 3 — behavior bond [T] substantive flip
@@ -117,6 +122,12 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   all = ok('X-render: Vault paragraph NO Roth [R] leak',      !has(R.nPT50, 'NO required minimum distributions') && !has(R.nPT50, 'most tax-advantaged account') && !has(R.nPT50, 'less tax-free growth to harvest')) && all;
   all = ok('X-render: Roth paragraph [R] (no-RMD + most tax-adv)', has(R.nRT50, 'NO required minimum distributions') && has(R.nRT50, 'most tax-advantaged account')) && all;
   all = ok('X-render: Roth paragraph NO [T] leak',           !has(R.nRT50, 'taxed as ordinary income when you withdraw it') && !has(R.nRT50, 'tax-deferred compounding')) && all;
+  // Job 8 — [T] twins now installed (R109 mid-spine + R145/R147/R148 toggles fire on pre-tax)
+  all = ok('R109 [T]: mid-equity spine fires on Vault',      has(R.nPT50, 'a defensible choice in a tax-deferred account')) && all;
+  all = ok('R145 [T]: Rule-55 (penalty waiver, not tax)',    has(R.nPTTOG, 'a penalty waiver, not a tax waiver')) && all;
+  all = ok('R147 [T]: 50+ catch-up (settle up as income)',   has(R.nPTTOG, 'settle up as ordinary income later')) && all;
+  all = ok('R148 [T]: super catch-up (max the deduction)',   has(R.nPTTOG, 'max the deduction while your income')) && all;
+  all = ok('toggles: NO Roth [R] tax-free leak on Vault',    !has(R.nPTTOG, 'buying untaxed growth') && !has(R.nPTTOG, 'tax-free dollars right before retirement') && !has(R.nPTTOG, 'growth is still tax-free only once the 5-year')) && all;
   console.log('OVERALL: ' + (all ? 'GREEN' : 'RED'));
   process.exit(all ? 0 : 1);
 })().catch(e => { console.error('GATE ERROR:', e.message); process.exit(2); });
