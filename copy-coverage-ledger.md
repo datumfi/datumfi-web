@@ -53,6 +53,53 @@ it surfaces the key finding for the whole effort (see ⚠️ at the end).
 
 ---
 
+## 🧭 PARTING OBSERVATIONS — for the next Claude (2026-07-03 handoff, next = TAXABLE → IRA)
+
+Things that will bite you or save you time, from wiring the 401(k) end-to-end:
+
+1. **NEXT = TAXABLE, then IRA** (Captain override; HSA is NOT next). Taxable is the DI root every bank
+   forks from. Audit it LINE-BY-LINE — the retired scraper mis-scored it 6% (false). Taxable is likely
+   MORE wired than that: it already has the richest strip (Equity/Bond/Cash/Intl + 4 boxes with
+   `_diTaxUGLadder`/`_diTaxBetaLadder`/`_diTaxYldLadder`/`_diTaxExpLadder`), a §2 title ("The Living
+   Room"), and its §9 archetype-machine narrator (`_diNarrTaxable`, pick-ONE spine — a DIFFERENT machine
+   from the composed layer-table). Note Taxable has NO withdrawal-age/limits modal (it's the "no rules"
+   account), so §3/§4 don't apply — audit against ITS bank's actual sections (§S3/§4b/§8 verdict shape),
+   not the 401k template.
+
+2. **The shared modal trap.** The withdrawal + limits + toggle block (studio.html ~L5388–5540) is ONE
+   block serving ALL pretax/roth rooms (401k/403/457/IRA). IRA IS in it (has `isIRA` branches — extend,
+   don't fork). Scope every 401k-flavored edit via `!is403`/`/401k/`. ⚠️ NAMING TRAP: the local `is401k`
+   var here = `/401k|403|457b/` (the §402(g) class), NOT 401k-only — I used `/401k/.test(base.id)` for
+   true-401k scoping. `_diBankStrip` (~L4586+) is per-room-branched (taxable/457/ira/401k/…); add a room
+   branch, don't touch siblings.
+
+3. **§ vs live shape mismatch.** Bank §1 authors ~21 signal hovers, but the STRIP only surfaces a subset
+   as cells (Balance/Equity/Bond/Cash/Intl/Contribution + 4 auto-boxes). Tokens with no strip element
+   (rothBalance/matchBalance/matchRate/menuQuality/rule5yr/accessAge/rmd/etc.) surface via §8 inputs or
+   the §9 paragraph — they are ✅ elsewhere, not ⛔. Don't expect 1 bank token = 1 strip cell.
+
+4. **[R]/[T] gaps are real — HOLD, don't draft.** The 401k §4 field hovers were Roth-worded with no [T]
+   twin; I flagged and the Architect authored A337–A339. Expect similar gaps in dual-flavor rooms (IRA
+   Library/Conservatory). Also: bank punctuation is house-standard STRAIGHT quotes + em-dashes — install
+   verbatim; and JS-escape `\'` in the source breaks naive grep (normalize backslashes when comparing).
+
+5. **Reusable cert pattern.** `_gate_<room>_cert.js` (see `_gate_401k_cert.js`) — open the room with one
+   rich fixture, assert a marker from EVERY section, [R]/[T]. GREEN = Lesson-50 done. Clone it per room.
+   Gate harness: `python -m http.server 8001` at repo root, playwright drives `window.state`/`addInstance`/
+   `openAccountModal`; `scripts/_*` are dropped from dist. Python stdout is cp1252 — write UTF-8 dump files
+   and Read them, never print unicode to console.
+
+6. **CF deploy lag.** push = publish, but marker-verify has a ~1–2 min build lag (first curl often shows 0,
+   then live). Poll with a cache-buster; don't conclude "not live" on the first miss.
+
+7. **401(k) deferred ⬜ (NOT gaps — parked till a data source exists):** menuQuality, Roth 5-yr-clock,
+   bracket-arbitrage (needs an "expected retirement tax rate" input — bank §7.3 ask), Layer-G R156
+   (needs age-eligibility). Also the Rule-55 / catch-up TOGGLES are DISPLAY-ONLY — they change the modal
+   label but do NOT gate the projection engine (bank §6/§7 asks); copy ships as-authored. If a future
+   pass wires those inputs, these ⬜ lines light up automatically.
+
+---
+
 ## ✅ 401(k) — CERTIFIED-100% (Lesson-50 wire-then-audit passed) · SMOKELIST
 
 All 9 authored sections render live on BOTH rooms — Treasury (roth401k) [R] / Vault (pretax401k) [T].
