@@ -136,6 +136,13 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     ['I4 [T] emphasis "you hold a Traditional"', has(R.whyWork, 'you hold a Traditional')],
     ['I4 S5 nudge ABSENT with no workplace plan', !has(R.whyNoWork, 'You also hold a workplace plan')],
     ['I4 S5 nudge PRESENT with a workplace plan', has(R.whyWork, 'You also hold a workplace plan')],
+    // I5 · §4 modal limit hovers (verify + close R42)
+    ['I5 R41 header hover (share one ceiling)', has(R.rMulti, 'Traditional + Roth share one ceiling')],
+    ['I5 R42 Base-Limit FIELD hover NOW wired (IRA, distinct from R41 header)', has(R.rMulti, '<strong>Base Limit</strong>The most you can put into ALL your IRAs')],
+    ['I5 R43 catch-up hover (no super catch-up)', has(R.rMulti, 'NO super catch-up exists for IRAs')],
+    ['I5 R44 [R] income-phaseout note (Roth)', has(R.rMulti, 'direct Roth IRA contributions phase out at higher incomes')],
+    ['I5 R45 [T] deductibility note (Traditional)', has(R.tMulti, 'fully deductible, partly deductible, or not at all')],
+    ['I5 [R]/[T] §4 notes distinct', has(R.rMulti, 'backdoor') && !has(R.rMulti, 'fully deductible, partly') && has(R.tMulti, 'the whole point of the Traditional IRA')],
     // junk-safety
     ['no undefined/NaN in any render', ['rMulti','tMulti','rIncome','rNone','tNone','rDiv','rExp','tExp','rLean','whyNoWork','whyWork'].every(k => !has(R[k], 'undefined') && !has(R[k], 'NaN') && !has(R[k], '__'))],
   ];
