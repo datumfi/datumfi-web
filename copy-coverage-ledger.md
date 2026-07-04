@@ -411,3 +411,43 @@ None found in the audited sections — both branches authored throughout (§9, �
 4. **I4 §15 education panel** (net-new).
 5. **I5 §4 modal hovers** verify/close.
 Then Lesson-50 line-by-line zero-⛔ audit → cert gate GREEN → MD5-pin → HOLD for push. §7.2 + §14 stay ⬜/held.
+
+### ✅ IRA — L50 WIRE-THEN-AUDIT CLOSE (Increments I1–I5 complete · HELD for Captain smoke + push)
+Line-by-line bank↔live, zero unexplained ⛔. **All renderable IRA bank copy is ✅ live or ⬜ deliberate:**
+- §1 signals ✅ (strip + feeDrag I2) · §2 title hovers ✅ · §3 withdrawal (59.5, NO Rule-55, [R]/[T]) ✅
+  (5-yr-clock GATING ⬜ §7.2) · §4 limits ✅ (I5: R41/R42/R43/R44/R45) · §5 toggles ✅ (asset+debt canon,
+  same as Taxable) · §8 dated limits ✅ (I3) · §9 DI paragraph ✅ (§3a archetype I1 + A/B/B2/C/D-feeDrag-I2/
+  E/F/G) · §12 all 14 col tips ✅ · §13 geo/sector granular clean clauses ✅ (verified: "technology and the
+  chips/software behind it") · §15 "Why an IRA?" panel ✅ (I4, +S1/S2/S5/S6/S7).
+- ⬜ DELIBERATELY-BLANK / deferred: §7.2 toggle/phaseout GATING (Roth 5-yr clock, [T] deductibility MAGI, [R]
+  Roth income phaseout, catch-up inflow cap) — no data source, ASSUMED-FIXED like 401k · §14 S3/S4/S8 (backdoor
+  eligibility, contribution-room meter, conversion clock) — need net-new inputs, Captain-HELD.
+- ⚑ PENDING ARCHITECT COPY (not fabricated, L47): flag #1 standalone instrument-mix on an archetype fire
+  (bank unchanged 232 rows) · §9 Layer D lean-positive feeDrag variant · S7 pro-rata line.
+
+**7 commits HELD, unpushed:** `2a59328`(audit) `f3e76ef`(I1 §3a) `54167f4`(I2 feeDrag) `7bb9321`(I3 §8 limits)
+`e4303f4`(I4 §15 panel) `e8c5b5f`(I5 §4). Studio pin `edb71dfd`. Gate `_gate_ira_cert.js` = 38/38; regression
+GREEN every increment (tax 23/23, 11b 12/12, routing 36/36, 401k OVERALL).
+
+### 🔎 CAPTAIN SMOKE CHECKLIST — IRA bundle (local :8001 → then push GO)
+Open **http://127.0.0.1:8001/studio.html**. Add a **Roth IRA "The Conservatory"** and a **Traditional IRA
+"The Library"** (Primary Architect Spaces).
+1. **I1 §3a archetype** — open each, ❖ Begin Interior Decorating, add **BTC + ETH + VTI**. DI opens with
+   "…a multi-coin crypto sleeve — 45% of the account…"; tail flips **Roth** "…tax-free forever…steer your
+   highest-upside sleeves here" vs **Trad** "…all pre-tax…ordinary income when you withdraw it." (Archetype
+   REPLACES the generic "This Roth/Traditional IRA is…" spine.)
+2. **I2 feeDrag30yr** — one holding, value **$100,000**, Exp Ratio **0.85**. DI Layer D reads "…on this
+   balance it's about **$162,000** … never compounds for you" (Roth) / "…$162,000 in drag … pure loss you
+   fully control" (Trad). The **Avg Expense** signal box shows "**0.85% · $162,000**".
+3. **I3 §8 dated limits** — scroll to CONTRIBUTION LIMITS: Base **7,500**, Catch-Up **1,100**, Active Max
+   **$7,500 / YR** (2026, LOOKUP-driven — no super-catch-up row).
+4. **I4 §15 panel** — bottom of the modal, click **"Why you'd use an IRA…"** → expands: hero line "Your IRA,
+   your menu — the whole market is your fund list," then the sections. **Now add a Pre-Tax 401(k)** and reopen
+   an IRA → the **gold-highlighted "You also hold a workplace plan…stacks on top"** nudge appears FIRST.
+5. **I5 §4 hovers** — hover **Base Limit** (IRA top-up line), the **Age-50 catch-up** toggle ("NO super
+   catch-up exists for IRAs"), and the italic note under it: **Roth** = "direct Roth…phase out…backdoor" /
+   **Trad** = "fully deductible, partly deductible, or not at all."
+
+Verify live (after push) by markers not MD5: "multi-coin crypto sleeve" · "never compounds for you" ·
+"the whole market is your fund list" · "You also hold a workplace plan". **§7.2 stays behind the ⚠
+ASSUMED-FIXED posture.** HOLD for Captain GO before push.
