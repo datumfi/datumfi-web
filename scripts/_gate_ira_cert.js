@@ -77,6 +77,10 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     var V = 100000, g = 0.07, ef = 0.0085;
     var expDrag = V * Math.pow(1 + g, 30) - V * Math.pow(1 + g - ef, 30);
     out.expDragStr = '$' + Math.round(Math.round(expDrag / 100) * 100).toLocaleString('en-US');
+    // I3 · §8 dated IRA limits — table + LOOKUP (no baked literal)
+    out.iraLimits = (typeof _DI_IRA_LIMITS !== 'undefined')
+      ? { y25: _DI_IRA_LIMITS[2025], y26: _DI_IRA_LIMITS[2026], now: (typeof _diIraLimits === 'function' ? _diIraLimits() : null) }
+      : null;
     return out;
   });
   await b.close();
@@ -114,6 +118,11 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     ['I2 [R]/[T] Layer D distinct', has(R.rExp, 'making the switch') && !has(R.rExp, 'pure loss you fully control')],
     ['I2 §1 strip shows "% · $" feeDrag', has(R.rExp, '0.85% · ' + R.expDragStr)],
     ['I2 LEAN keeps short line (no switch-framing)', !has(R.rLean, 'making the switch') && has(R.rLean, 'never stuck with a bad menu')],
+    // I3 · §8 dated IRA limits table + LOOKUP
+    ['I3 dated table 2025 = 7,000 / 1,000', !!R.iraLimits && R.iraLimits.y25 && R.iraLimits.y25.base === 7000 && R.iraLimits.y25.c50 === 1000],
+    ['I3 dated table 2026 = 7,500 / 1,100 (superCU 0)', !!R.iraLimits && R.iraLimits.y26 && R.iraLimits.y26.base === 7500 && R.iraLimits.y26.c50 === 1100 && R.iraLimits.y26.superCU === 0],
+    ['I3 _diIraLimits() LOOKUP returns current-year row', !!R.iraLimits && !!R.iraLimits.now && R.iraLimits.now.base === 7500 && R.iraLimits.now.c50 === 1100],
+    ['I3 IRA modal renders the 2026 active max $7,500', has(R.rMulti, '7,500')],
     // junk-safety
     ['no undefined/NaN in any render', ['rMulti','tMulti','rIncome','rNone','tNone','rDiv','rExp','tExp','rLean'].every(k => !has(R[k], 'undefined') && !has(R[k], 'NaN') && !has(R[k], '__'))],
   ];

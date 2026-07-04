@@ -3843,6 +3843,14 @@
     var _DI_402G_LIMITS = { 2025: { base: 23500, c50: 7500, superCU: 11250, c415: 70000 },
                             2026: { base: 24500, c50: 8000, superCU: 11250, c415: 72000 } };
     var _di402gLimits = function () { return _DI_402G_LIMITS[new Date().getFullYear()] || _DI_402G_LIMITS[2026]; };
+    // §8 IRA LIMITS — dated constants (IRA bank R70–R79). base + 50-catch-up are SHARED across ALL a person's
+    // IRAs (Traditional + Roth, one ceiling); NO super catch-up (superCU=0, kept only to mirror the 402(g) shape
+    // for one shared assembler). LOOKUP by taxYear so a next-Jan IRS bump is a one-row edit (never a baked literal).
+    // FLAG (R79): unknown future year falls back to the most-recent row (mirrors _di402gLimits); the bank asks for
+    // a "limits pending IRS release" state instead — deferred (the table is a one-row yearly edit, so the gap is hypothetical).
+    var _DI_IRA_LIMITS = { 2025: { base: 7000, c50: 1000, superCU: 0 },
+                           2026: { base: 7500, c50: 1100, superCU: 0 } };
+    var _diIraLimits = function () { return _DI_IRA_LIMITS[new Date().getFullYear()] || _DI_IRA_LIMITS[2026]; };
     var _diMoney = function (v) { return '$' + Math.round(v || 0).toLocaleString('en-US'); };
     var _diP  = function (x) { return (x === null || x === undefined) ? '—' : Math.round(x) + '%'; };
     var _diE  = function (x) { return (x === null || x === undefined) ? null : (Math.round(x * 100) / 100) + '%'; };
@@ -5926,8 +5934,9 @@
             // SURGICAL: Structural Injection Limits (Editable constraints) — 2026 IRS defaults
             let limitName = is403 ? "403(b) Limits" : is457 ? "457(b) Limits" : (is401k ? "401(k) / 457(b) Limits" : "IRA Limits");
             let _k4 = _di402gLimits();   // §15 dated LOOKUP(taxYear) — shared §402(g) figures, no baked year
-            let baseLim = acc.baseLimit !== undefined ? acc.baseLimit : (is401k ? _k4.base : 7500);
-            let c50 = acc.catchUpLimit !== undefined ? acc.catchUpLimit : (is401k ? _k4.c50 : 1100);
+            let _kIra = _diIraLimits();  // §8 dated IRA LOOKUP(taxYear) — 7,000/1,000 (2025) · 7,500/1,100 (2026)
+            let baseLim = acc.baseLimit !== undefined ? acc.baseLimit : (is401k ? _k4.base : (isIRA ? _kIra.base : 7500));
+            let c50 = acc.catchUpLimit !== undefined ? acc.catchUpLimit : (is401k ? _k4.c50 : (isIRA ? _kIra.c50 : 1100));
             let sc60 = acc.superCatchUpLimit !== undefined ? acc.superCatchUpLimit : (is401k ? _k4.superCU : 0);
             let f15 = acc.fifteenYearLimit !== undefined ? acc.fifteenYearLimit : 3000;   // 403(b)-only: 15-yr-of-service tier ($3k/yr, $15k lifetime)
 
@@ -6604,12 +6613,14 @@
                  let el = document.getElementById(`limit-calc-${id}`);
                  if(el) {
                      let hiClass = /401k|403|457b/.test(acc.baseId);
+                     let isIRAr = /ira/.test(acc.baseId);
                      let _k4r = _di402gLimits();   // §15 dated LOOKUP — keep live-recalc off the same source
-                     let bLim = parseInt(acc.baseLimit !== undefined ? acc.baseLimit : (hiClass ? _k4r.base : 7500));
+                     let _kIraR = _diIraLimits();  // §8 dated IRA LOOKUP — recalc reads the same dated source
+                     let bLim = parseInt(acc.baseLimit !== undefined ? acc.baseLimit : (hiClass ? _k4r.base : (isIRAr ? _kIraR.base : 7500)));
                      let cLim = bLim;
                      if(acc.baseId.includes('457b') && acc.specialCatchUp) cLim += bLim;
                      else if(acc.superCatchUp) cLim += parseInt(acc.superCatchUpLimit !== undefined ? acc.superCatchUpLimit : (hiClass ? _k4r.superCU : 0));
-                     else if (acc.catchUp50) cLim += parseInt(acc.catchUpLimit !== undefined ? acc.catchUpLimit : (hiClass ? _k4r.c50 : 1100));
+                     else if (acc.catchUp50) cLim += parseInt(acc.catchUpLimit !== undefined ? acc.catchUpLimit : (hiClass ? _k4r.c50 : (isIRAr ? _kIraR.c50 : 1100)));
                      if(acc.baseId.includes('403') && acc.fifteenYear) cLim += parseInt(acc.fifteenYearLimit !== undefined ? acc.fifteenYearLimit : 3000);
                      el.innerText = `$${cLim.toLocaleString()} / YR`;
                  }
