@@ -311,7 +311,14 @@ Bank` A1:D232, dual [R]/[T], same wire-then-audit method.** (This ledger line co
 
 ---
 
-## STEP 0 — Taxable ROUTING BUCKETS (bank R391–R397, added 2026-07-04) · COMMITTED, HELD FOR PUSH
+## STEP 0 — Taxable ROUTING BUCKETS (bank R391–R397, added 2026-07-04) · ✅ SHIPPED + PUSHED + LIVE
+
+**🏁 origin/main `77c7e91` (2026-07-04) — 3-commit bundle `850e9b9`→`9762055`→`77c7e91` pushed & marker-verified
+LIVE on datumfi.com** (markers serving: "real worth but no ticker" · "the Reveal investable check steps right
+past it" · "More taxable / other" · `_isTaxableRoom` · "flag it as entity-owned"). Studio pin `a09a72f9`. All
+3 buckets + all 3 room-intro hovers ✅ WIRED. ⬜ ONE park remains: R395 "Other Non-taxable" (treatment selector,
+own pass). Detail below (verdicts stand):
+
 
 Post-cert addition to the Taxable Copy Bank: four acknowledged-but-not-baked picker buckets that route into
 EXISTING engines (no new rooms, L48). Captain ruling 2026-07-04: **ship 3 mechanical buckets now, PARK the
