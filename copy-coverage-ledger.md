@@ -304,4 +304,7 @@ is ready for the Architect to paste. **HELD: not committed — Captain smoking, 
   (Captain ruling); scoped engine task for later, NOT a gap. The sector-% stopgap proxy remains; sourced-or-blank
   behaving. Code comment noted in `_diTaxSignals`.
 
-### 🏁 TAXABLE = ✅ SIGNED OFF (all flags closed). Committing now (L49: LF-clean, MD5 pin bumped same commit).
+### 🏁 TAXABLE = ✅ SIGNED OFF + SHIPPED + PUSHED + LIVE — origin/main `26a9df7` (2026-07-04), marker-verified
+on datumfi.com (openCBEstimator / _diTaxArchetype / archetype copy all serving). Studio pin `551d7f69`, guard
+matches. Account #2 done. **NEXT = IRA "The Library" (tradira) / "The Conservatory" (rothira) — bank `IRA Copy
+Bank` A1:D232, dual [R]/[T], same wire-then-audit method.** (This ledger line committed post-push in a follow-up.)
