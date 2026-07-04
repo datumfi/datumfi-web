@@ -362,3 +362,52 @@ Three commits **HELD, unpushed**: `850e9b9` (routing wiring) + `9762055` (Corp/O
 PARK remains (durable): R395 "Other Non-taxable" — needs a treatment-capture selector (pretax/Roth/edu;
 unknown→FLAG, never guess); its own feature pass, do NOT draft copy.** After push: NEXT = IRA "The Library"
 (tradira) / "The Conservatory" (rothira), bank `IRA Copy Bank` A1:D232, dual [R]/[T].
+
+---
+
+## IRA — "The Library" (tradira [T]) / "The Conservatory" (rothira [R]) · ACCOUNT #3 · PHASE-1 AUDIT (2026-07-04)
+
+Fresh re-dump (L50 step 1): `IRA Copy Bank` = 222 rows / 474 non-empty cells (workbook saved 08:48). §1–§15
+authored; NO WIRE-THEN-AUDIT block at 224–232 (bank ends §15/R222 — that landmark estimate was off). Engine:
+`_diNarrIRA` (L4242) runs `_DI_IRA_LAYERS` (L4232); `_diIraColTips` (L4251); IRA `_diBankStrip` branch (L5066);
+title in `_diSetTitle` (L5586 Conservatory / L5593 Library); dispatch L5522. Read against the live engine:
+
+### ✅ WIRED — verbatim, current
+| Bank § | Live | Note |
+|---|---|---|
+| §2 Title hovers [R]/[T] | `_diSetTitle` L5586/L5593 | "The Conservatory — a Roth IRA" / "The Library — a Traditional IRA" verbatim (R21–R30) |
+| §12 Per-column tips (14 cols) [R]/[T] | `_diIraColTips` L4251 | Ticker→Instrument all match R115–R128; [R]/[T] resolved |
+| §9 Layer A Spine [R]/[T] | `_diIraSpine` L4148 | verbatim R85 |
+| §9 Layer B Tilt (§13 geo/sector) | `_diIraTilt`→`_diTiltSentence`/`_DI_TILT_WRAP_IRA` L4174 | verify it emits the granular §13 clean phrases (R139–R174) |
+| §9 Layer B2 Composition Read [R]/[T] | `_diIraCompRead` L4162 | verbatim R87; floors tuned (≥3 tickers, ≤30% sat) |
+| §9 Layer C Behavior (beta + single-name + Roth bond-location) [R]/[T] | `_diIraBehavior` L4178 | verbatim R88; §7.4 tokens wired honest |
+| §9 Layer E Tax / F Toggle / G Contribution [R]/[T] | `_diIraTax`/Toggle/Contrib L4214–4231 | verbatim R90/R91/R92 |
+| §1 Signal strip [R]/[T] | `_diBankStrip` ira branch L5066 | Balance/Contribution/UG/Equity/Bond/Cash/Intl/Beta/Yield match R10–R15 |
+| §3 Withdrawal modal (59.5, NO Rule-55) | shared modal isIRA | bank §6 confirms code omits Rule-55/super — structurally present (verify copy) |
+
+### ❌ NOT-WIRED / DRIFTED — real gaps (red-first, my lane; copy authored)
+| # | Bank § | Gap |
+|---|---|---|
+| I1 | §3a Composition Archetype (R179–R195) | **ENTIRELY UNWIRED** — no `_diIraArchetype` in `_DI_IRA_LAYERS`. 11 archetypes [R]/[T] (crypto/bond/income/real-asset/gold/sector-bet/industrials/dividend), pre-spine, REPLACES spine on fire. **Biggest nuance gap** (mirrors Taxable T7). Reuse shared signals + `_diTaxArchetype` pattern (L48). |
+| I2 | §1 R16 + §9 Layer D (R89) — `{feeDrag30yr_fmt}` | **UNCOMPUTED token** (0 hits). Live §1 Avg-Expense cell + `_diIraMenuFees` (L4203) are the OLDER/shorter versions — missing the "{feeDrag30yr_fmt} of tax-free growth over 30 years" dollar-drag enrichment the bank now authors. Compute feeDrag30yr (avgExpense×value compounded 30yr) + install enriched [R]/[T] sentences. |
+| I3 | §8 Dated limits table (R70–R79) + §7.1 | **UNWIRED mechanism** — modal uses hard `7500` fallback (L5852), no `_DI_IRA_LIMITS` LOOKUP(taxYear) (2025=7000/1000, 2026=7500/1100, superCU=0). Mirror 401k `_DI_402G_LIMITS`. |
+| I4 | §15 Education panel "Why an IRA?" (R208–R222) | **ABSENT** (0 hits). Net-new expandable panel, [R]/[T] emphasis + "IRA stacks ON TOP of workplace plan" nudge. Copy authored verbatim. |
+| I5 | §4 modal limit hovers — [R] income-phaseout (R44) / [T] deductibility (R45) / catch-up (R43) | verify whether isIRA modal surfaces these authored hovers or falls to generic — likely partial. |
+
+### ⬜ DEFERRED (ASSUMED-FIXED / no data source — parked, same posture as 401k)
+- §7.2 toggle/phaseout wiring: Roth 5-yr clock, [T] deductibility MAGI, [R] Roth income phaseout, catch-up inflow
+  cap — all DISPLAY-ONLY, no input source (mirror 401k deferred). Copy ships behind ⚠ ASSUMED-FIXED banner.
+- §14 Architect suggestions S1–S8 (R197–R206): DESIGN RECOMMENDATIONS — "Architect to accept/reject; Claude
+  build once accepted." NOT yet-authorized wiring → HOLD for Captain ruling (several need net-new engine inputs:
+  S3 backdoor eligibility, S4 room meter, S8 conversion clock).
+
+### [R]/[T] TWIN GAPS
+None found in the audited sections — both branches authored throughout (§9, §12, §1, §3a). Confirm per-line during wiring.
+
+### PROPOSED INCREMENT ORDER (HELD for Captain GO — Phase 1, no edits yet)
+1. **I1 §3a Composition Archetype** (biggest nuance; reuse Taxable pattern, L48) → red-first `_gate_ira_cert.js`.
+2. **I2 feeDrag30yr** enrichment (§1 + §9 Layer D drift fix).
+3. **I3 §8 dated limits table** (LOOKUP mechanism).
+4. **I4 §15 education panel** (net-new).
+5. **I5 §4 modal hovers** verify/close.
+Then Lesson-50 line-by-line zero-⛔ audit → cert gate GREEN → MD5-pin → HOLD for push. §7.2 + §14 stay ⬜/held.
