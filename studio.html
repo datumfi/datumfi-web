@@ -1075,6 +1075,18 @@
   .holdings-rollup .hr-sub { font-family: var(--font-sans, sans-serif); font-size: 9px; color: var(--muted); line-height: 1.4; margin-top: 5px; }
   /* DATUM INTELLIGENCE — holdings-modal narrative (Sketch telemetry-card parity) */
   .di-narrative { margin-top: 15px; background: rgba(9, 18, 33, 0.85); border: 1px solid rgba(255,255,255,0.1); border-left: 2px solid var(--teal-mid); border-radius: 4px; padding: 14px 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+  .ira-why-panel { margin-top: 15px; background: rgba(9,18,33,0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
+  .ira-why-toggle { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold); padding: 12px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); }
+  .ira-why-toggle:hover { color: var(--white); }
+  .ira-why-caret { transition: transform 0.15s ease; font-size: 9px; }
+  .ira-why-toggle.open .ira-why-caret { transform: rotate(90deg); }
+  .ira-why-body { padding: 6px 16px 14px; }
+  .ira-why-hero { font-family: var(--font-serif); font-style: italic; font-size: 14px; color: var(--teal-mid); margin: 10px 0 4px; }
+  .ira-why-nudge { font-family: var(--font-sans, sans-serif); font-size: 10.5px; color: var(--gold); margin-top: 10px; line-height: 1.5; }
+  .ira-why-sec { margin-top: 12px; }
+  .ira-why-sec.hot { border-left: 2px solid var(--gold); padding-left: 12px; background: rgba(230,190,110,0.05); border-radius: 3px; padding-top: 8px; padding-bottom: 8px; }
+  .ira-why-h { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); margin-bottom: 4px; }
+  .ira-why-b { font-family: var(--font-serif); font-size: 12px; color: var(--white); line-height: 1.6; }
   .di-narr-head { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--teal-mid); margin-bottom: 8px; }
   .di-narr-body { font-family: var(--font-serif); font-size: 13px; font-style: italic; color: rgba(255,255,255,0.85); line-height: 1.65; }
   .holding-input { width: 100%; min-width: 0; box-sizing: border-box; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: var(--white); font-family: var(--font-mono); font-size: 11px; padding: 4px; border-radius: 2px; }
@@ -4328,6 +4340,35 @@
       return out.join(' ');
     }
 
+    // §15 "Why an IRA?" education panel (IRA bank R208–R222) + accepted §14 suggestions S1 (hero lead),
+    // S2/S6/S7 ([R]/[T] emphasis), S5 (workplace-plan "stacks on top" nudge — surfaced FIRST + highlighted when
+    // a 401k/403b/457b is present). Collapsible, default-collapsed. All section copy is authored VERBATIM;
+    // the ONLY token is the §8 dated limit (R220: never bake "$7,000" — reads _diIraLimits() by taxYear).
+    // S7 pro-rata specific is NOT surfaced (no verbatim §15 copy for it — lives only in the S7 suggestion). FLAG.
+    function _diIraWhyPanel(acc, base) {
+      var isRoth = base.taxCode === 'roth';
+      var hasWorkplace = (state.accounts || []).some(function (a) { var b = getBaseType(a.baseId); return b && /401k|403|457b/.test(b.id); });
+      var lim = _diMoney((_diIraLimits() || { base: 7500 }).base);
+      var sec = function (h, b, hot) { return '<div class="ira-why-sec' + (hot ? ' hot' : '') + '"><div class="ira-why-h">' + h + '</div><div class="ira-why-b">' + b + '</div></div>'; };
+      var overlap = sec('The big overlap (the part most people miss)',
+        'An IRA’s contribution room is SEPARATE from your workplace plan’s. You can max a 401(k)/403(b)/457(b) AND still fund a full IRA the same year — the ' + lim + ' IRA limit stacks ON TOP of the workplace limit. If you’re only contributing to the plan your employer handed you, you may be leaving an entire second tax-advantaged bucket unused.',
+        hasWorkplace);
+      var body =
+        '<div class="ira-why-hero">Your IRA, your menu — the whole market is your fund list.</div>' +
+        (hasWorkplace ? '<div class="ira-why-nudge">You also hold a workplace plan in this estate — so this bucket stacks on top of it:</div>' + overlap : '') +
+        sec('The one-line answer', 'An IRA is the retirement account YOU open and control — independent of any employer. You’d use one to invest in anything the whole market offers (not just a plan’s short menu), to keep saving after you leave a job, and to choose your own tax treatment: pay tax now (Roth) or later (Traditional).') +
+        sec('Who opens an IRA', 'Anyone with earned income (or a spouse with earned income) can open an IRA at any custodian — Vanguard, Fidelity, Schwab, a robo-advisor. There’s no employer involved, no HR enrollment, no plan menu. You pick the custodian, you pick the funds, and the account follows YOU from job to job for life.') +
+        sec('Roth vs Traditional — the core choice' + (isRoth ? ' (you hold a Roth)' : ' (you hold a Traditional)'), 'A ROTH IRA takes after-tax dollars now, then grows and pays out entirely tax-free in retirement — and never forces a withdrawal. A TRADITIONAL IRA may give you a tax deduction now, grows tax-deferred, and is taxed as ordinary income when you pull it out (with required withdrawals starting at 73). Roth wins if you expect higher future tax rates or want tax-free heirs; Traditional wins if you want the deduction today.') +
+        (hasWorkplace ? '' : overlap) +
+        sec('Why you’d choose the IRA — the edge', 'The IRA’s defining advantage over a workplace plan is CONTROL: the entire market as your fund list, the lowest-cost share classes available anywhere, and no plan administrator between you and your money. It’s also where money LANDS when you leave a job — a rollover from an old 401(k) keeps that money tax-deferred and in your hands instead of stranded in a former employer’s menu.') +
+        sec('The income-limit trap (worth knowing)', 'Direct Roth IRA contributions phase out at higher incomes, and a Traditional IRA’s deduction phases out if you’re covered by a workplace plan. But the door is rarely fully shut: a high earner can still fund a non-deductible Traditional IRA and convert it to Roth — the “backdoor Roth.” If your income looks too high to contribute directly, that path usually still works.') +
+        sec('The 5-year rule (don’t get surprised)', 'A Roth IRA’s EARNINGS come out tax-free only after the account has been open five years AND you’re 59½. Separately, each Roth CONVERSION starts its own five-year clock before that converted money can be withdrawn penalty-free. Contributions (the dollars you put in) can always come out tax- and penalty-free — it’s the growth and conversions that carry the clock.') +
+        sec('Bottom line', 'Your workplace plan is the account your employer gave you; the IRA is the one you own outright. Use it to invest in anything, to consolidate old plans, and to pick your tax treatment. If you have both, treat them as separate buckets and try to feed both — and if your income is high, ask about the backdoor Roth before assuming you’re locked out.');
+      return '<div class="ira-why-panel">' +
+        '<div class="ira-why-toggle" onclick="var n=this.nextElementSibling; var open=n.style.display!==\'block\'; n.style.display=open?\'block\':\'none\'; this.classList.toggle(\'open\', open);">Why you’d use an IRA — and how it differs from your workplace plan <span class="ira-why-caret">▸</span></div>' +
+        '<div class="ira-why-body" style="display:none;">' + body + '</div></div>';
+    }
+
     // §12 IRA-aware column hovers ([R]/[T] resolved per room; overrides the shared COLS tips).
     // The unmarked sentences apply to both branches — resolution keeps them.
     function _diIraColTips(isRoth) {
@@ -6586,6 +6627,7 @@
              document.getElementById('modal-card').style.width = "550px";
         }
 
+        if (/ira/.test(base.id)) html += _diIraWhyPanel(acc, base);   // §15 "Why an IRA?" education panel (IRA-only)
         document.getElementById('modal-dynamic-content').innerHTML = html;
         document.getElementById('account-modal-overlay').style.display = 'flex';
     };

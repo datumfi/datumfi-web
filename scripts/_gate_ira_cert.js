@@ -81,6 +81,10 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     out.iraLimits = (typeof _DI_IRA_LIMITS !== 'undefined')
       ? { y25: _DI_IRA_LIMITS[2025], y26: _DI_IRA_LIMITS[2026], now: (typeof _diIraLimits === 'function' ? _diIraLimits() : null) }
       : null;
+    // I4 · §15 "Why an IRA?" panel — no workplace plan yet (fixtures above are only IRAs), Roth branch
+    out.whyNoWork = open('rothira', none());
+    addInstance('pretax401k');   // now the estate holds a workplace plan
+    out.whyWork = open('tradira', none());   // Traditional branch + S5 nudge should fire
     return out;
   });
   await b.close();
@@ -123,8 +127,17 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     ['I3 dated table 2026 = 7,500 / 1,100 (superCU 0)', !!R.iraLimits && R.iraLimits.y26 && R.iraLimits.y26.base === 7500 && R.iraLimits.y26.c50 === 1100 && R.iraLimits.y26.superCU === 0],
     ['I3 _diIraLimits() LOOKUP returns current-year row', !!R.iraLimits && !!R.iraLimits.now && R.iraLimits.now.base === 7500 && R.iraLimits.now.c50 === 1100],
     ['I3 IRA modal renders the 2026 active max $7,500', has(R.rMulti, '7,500')],
+    // I4 · §15 "Why an IRA?" education panel + S1/S5/S6/S7
+    ['I4 panel toggle renders', has(R.whyNoWork, 'Why you’d use an IRA')],
+    ['I4 S1 hero lead renders', has(R.whyNoWork, 'Your IRA, your menu — the whole market is your fund list')],
+    ['I4 authored sections present', has(R.whyNoWork, 'The big overlap') && has(R.whyNoWork, 'backdoor Roth') && has(R.whyNoWork, 'five years AND you’re 59½')],
+    ['I4 dated limit (R220: $7,500, not baked $7,000)', has(R.whyNoWork, '$7,500 IRA limit') && !has(R.whyNoWork, '$7,000 IRA limit')],
+    ['I4 [R] emphasis "you hold a Roth"', has(R.whyNoWork, 'you hold a Roth')],
+    ['I4 [T] emphasis "you hold a Traditional"', has(R.whyWork, 'you hold a Traditional')],
+    ['I4 S5 nudge ABSENT with no workplace plan', !has(R.whyNoWork, 'You also hold a workplace plan')],
+    ['I4 S5 nudge PRESENT with a workplace plan', has(R.whyWork, 'You also hold a workplace plan')],
     // junk-safety
-    ['no undefined/NaN in any render', ['rMulti','tMulti','rIncome','rNone','tNone','rDiv','rExp','tExp','rLean'].every(k => !has(R[k], 'undefined') && !has(R[k], 'NaN') && !has(R[k], '__'))],
+    ['no undefined/NaN in any render', ['rMulti','tMulti','rIncome','rNone','tNone','rDiv','rExp','tExp','rLean','whyNoWork','whyWork'].every(k => !has(R[k], 'undefined') && !has(R[k], 'NaN') && !has(R[k], '__'))],
   ];
   let pass = 0;
   const lines = checks.map(([n, ok]) => { if (ok) pass++; return (ok ? 'PASS ' : 'FAIL ') + n; });
