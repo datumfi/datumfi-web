@@ -5562,6 +5562,19 @@
         tt = '<strong>The Infirmary — your triple-tax-advantaged health account</strong>' +
              'The only account taxed nowhere — in, growing, or out (for medical).<br><br>' +
              'Contributions go in tax-deductible, growth is never taxed, and withdrawals for qualified medical care are tax-free at any age. Not a use-it-or-lose-it FSA: unspent money rolls over, can be invested, and compounds for decades. After 65, non-medical withdrawals simply pay ordinary income tax — a Traditional IRA at worst, tax-free at best.';
+      } else if (base.id === 'taxable_corp') {
+        // STEP-0 room-intro hover — Corporate / Business Taxable (Taxable bank R393, verbatim; straight→curly to
+        // match the file's punctuation, per the Taxable increment ruling). Columns stay the Taxable set (engine identical).
+        tt = '<strong>What it is</strong>A taxable brokerage owned by a business entity — an LLC, an S-corp, a partnership — rather than by you personally.<br><br>' +
+             '<strong>How it works here</strong>Under the hood it’s the same open-market brokerage as your Living Room: the same holdings, the same embedded gains, the same four signal boxes and Datum Intelligence read. Every column tooltip you hover behaves exactly as it does in a personal taxable account.<br><br>' +
+             '<strong>What’s different</strong>The account belongs to the entity, not to you. That changes who files the tax and who the creditors can reach — not how the investments themselves are taxed as they sit. We flag it as entity-owned so your net worth stays honest about what’s held personally versus through a business.<br><br>' +
+             '<strong>What we don’t do</strong>we don’t model your entity’s tax return or its liability shield — those live with your CPA and attorney, not in this room.';
+      } else if (base.id === 'taxable_other') {
+        // STEP-0 room-intro hover — Other Taxable (Taxable bank R394, verbatim; straight→curly to match the file).
+        tt = '<strong>What it is</strong>The catch-all for any taxable account that doesn’t match a named brokerage — an odd account, a one-off, a broker we don’t have a dedicated room for yet.<br><br>' +
+             '<strong>How it works here</strong>It runs on the exact same Living Room engine — open-market holdings, real cost basis, capital-gains treatment, the full Datum Intelligence read. Nothing is watered down; it’s a full taxable room wearing a generic label.<br><br>' +
+             '<strong>Why it exists</strong>So a taxable account you hold never gets silently dropped just because it doesn’t have a branded home. It lands somewhere real, gets read like any other brokerage, and counts.<br><br>' +
+             '<strong>What we don’t do</strong>we don’t guess at a category you didn’t give us — if this account is really a retirement or education wrapper, it belongs in one of those rooms instead, and you can move it any time.';
       } else if (_isTaxableRoom(base.id)) {
         // §16 Taxable title hover (Taxable bank R221–R224, verbatim)
         tt = '<strong>The Living Room — a Taxable Brokerage</strong>' +

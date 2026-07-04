@@ -334,8 +334,25 @@ meta subtitles are utilitarian descriptive placeholders (Captain-approved, no br
 - Regression (shared picker/engine surface): **401(k) cert `OVERALL: GREEN` · Taxable §3a/§4b `23/23` · §11b `12/12`.**
   The `_isTaxableRoom` point-check → helper swap did NOT drift the two certified rooms.
 
+### Room-intro HOVER backfill (Captain-authored, follow-on commit — same held state)
+Post-smoke gap: the 3 buckets had no room-level "what is this room" hover. Captain authored brand-voice intro
+hovers (honest-limits: what it IS / how it works / what it does NOT do). Wired verbatim into `_diSetTitle`
+(the title-ⓘ surface every intelligence room uses; straight→curly punctuation to match the file):
+- **Corporate / Business Taxable** (R393 hover) — ✅ WIRED; distinct branch before the shared `_isTaxableRoom`
+  Living-Room branch. Columns unchanged (engine identical).
+- **Other Taxable** (R394 hover) — ✅ WIRED; own branch.
+- **Other Assets** (R396 hover) — ⬜ **PARKED (no surface).** Value-only tiles hit `_diSetTitle`'s early-return
+  (`!_diIsBankRoom`) → plain `_diTitleInput`, **no ⓘ hover exists** (property/collectibles don't either).
+  Per Captain's "FLAG & HOLD, don't improvise a location" — NOT wired; awaiting his call on whether to extend
+  the title-ⓘ surface to value-only tiles. Copy is authored + ready; only the surface decision blocks it.
+Gate `_gate_tax_routing.js` extended to **33/33** (title-hover red-first: 4 hover checks FAIL pre-wire →
+PASS; plain-Taxable Living-Room title + Other-Assets-no-ⓘ regression PASS both ways). Regression re-run GREEN
+(401k OVERALL, tax 23/23, 11b 12/12).
+
 ### Ship state
-studio.html LF-clean, MD5 `35ec57ee2989ba0816168c9122245eb9` (pin bumped SAME commit, L49 — `build-dist.mjs`).
-**COMMITTED + HELD for Captain local smoke → push on his word.** ⬜ **R395 "Other Non-taxable" PARK captured
-here (durable) — pick it up as a treatment-selector feature pass before/after IRA.** After push: NEXT = IRA
-"The Library" (tradira) / "The Conservatory" (rothira), bank `IRA Copy Bank` A1:D232, dual [R]/[T].
+studio.html LF-clean, MD5 `ffdf6db7876df2c879f85be428e5daf9` (pin bumped SAME commit, L49 — `build-dist.mjs`).
+Two commits **HELD, unpushed**: `850e9b9` (routing wiring) + follow-on (hover backfill). **HELD for Captain
+local smoke → push on his word.** ⬜ **Two PARKS captured here (durable): R395 "Other Non-taxable" (needs a
+treatment selector) + R396 "Other Assets" ROOM-INTRO HOVER (needs a title-ⓘ surface decision for value-only
+tiles).** After push: NEXT = IRA "The Library" (tradira) / "The Conservatory" (rothira), bank `IRA Copy Bank`
+A1:D232, dual [R]/[T].

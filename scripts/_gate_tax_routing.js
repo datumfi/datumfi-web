@@ -36,15 +36,17 @@ const URL = 'http://127.0.0.1:8001/studio.html';
       a.holdings = incomeHoldings(); a.showHoldings = true;
       try { recalcPortfolio(a); } catch (e) {}
       window.openAccountModal(a.id);
-      return document.getElementById('modal-dynamic-content').innerHTML;
+      return { body: document.getElementById('modal-dynamic-content').innerHTML,
+               title: (document.getElementById('modal-acc-title') || {}).innerHTML || '' };
     };
     const openValueOnly = (baseId) => {
-      try { addInstance(baseId); } catch (e) { return '__ADDINSTANCE_THREW__:' + e.message; }
+      try { addInstance(baseId); } catch (e) { return { body: '__ADDINSTANCE_THREW__:' + e.message, title: '' }; }
       const a = window.state.accounts.filter(x => x.baseId === baseId).pop();
-      if (!a) return '__NO_ACCOUNT__';
+      if (!a) return { body: '__NO_ACCOUNT__', title: '' };
       a.value = 250000;
       window.openAccountModal(a.id);
-      return document.getElementById('modal-dynamic-content').innerHTML;
+      return { body: document.getElementById('modal-dynamic-content').innerHTML,
+               title: (document.getElementById('modal-acc-title') || {}).innerHTML || '' };
     };
 
     const out = {};
@@ -58,9 +60,10 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     out.isTax = { corp: isTax('taxable_corp'), other: isTax('taxable_other'),
       oa: isTax('other_assets'), base: isTax('taxable'), crypto: isTax('crypto') };
     out.isBank = { corp: isBank('taxable_corp'), other: isBank('taxable_other'), oa: isBank('other_assets') };
-    // live DI renders
+    // live DI renders (+ title-hover capture)
     out.corpHtml = openBank('taxable_corp');
     out.otherHtml = openBank('taxable_other');
+    out.baseHtml = openBank('taxable');            // plain taxable — Living Room title regression
     out.oaHtml = openValueOnly('other_assets');
     // picker HTML — trigger the build via the add-space button, then read the dropdown
     try { document.querySelector('.action-btn'); } catch (e) {}
@@ -82,7 +85,12 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   const has = (s, m) => typeof s === 'string' && s.indexOf(m) >= 0;
   const TAX_MARK = 'yield-tilted income sleeve';       // Taxable AR-INCOME-YIELD archetype (Taxable engine only)
   const COL_MARK = 'you picked every one of these off the open market'; // §14.4 Taxable-aware Ticker col tip
+  const LIVING_MARK = 'The Living Room — a Taxable Brokerage';          // plain-taxable room-intro title hover
+  const CORP_MARK = 'We flag it as entity-owned so your net worth stays honest'; // R393 room-intro
+  const OTHER_MARK = 'a full taxable room wearing a generic label';     // R394 room-intro
   const c = R.corp || {}, o = R.othertax || {}, oa = R.otherassets || {};
+  const corpB = (R.corpHtml || {}).body, otherB = (R.otherHtml || {}).body, oaB = (R.oaHtml || {}).body;
+  const corpT = (R.corpHtml || {}).title, otherT = (R.otherHtml || {}).title, baseT = (R.baseHtml || {}).title, oaT = (R.oaHtml || {}).title;
 
   const checks = [
     // registry
@@ -99,14 +107,21 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     ['_diIsBankRoom includes corp + other', R.isBank.corp && R.isBank.other],
     ['_diIsBankRoom EXCLUDES other_assets', R.isBank.oa === false],
     // live routing — the two taxable buckets reuse the Taxable engine verbatim
-    ['Corporate routes to Taxable DI (archetype)', has(R.corpHtml, TAX_MARK)],
-    ['Corporate gets §14.4 taxable col tip', has(R.corpHtml, COL_MARK)],
-    ['Other Taxable routes to Taxable DI (archetype)', has(R.otherHtml, TAX_MARK)],
-    ['Other Taxable gets §14.4 taxable col tip', has(R.otherHtml, COL_MARK)],
-    // Other Assets is value-only: renders, but no bank DI / no taxable markers
-    ['Other Assets modal renders (no crash)', typeof R.oaHtml === 'string' && R.oaHtml.length > 0 && !has(R.oaHtml, '__')],
-    ['Other Assets has NO taxable DI archetype', !has(R.oaHtml, TAX_MARK)],
-    ['Other Assets has NO taxable col tip', !has(R.oaHtml, COL_MARK)],
+    ['Corporate routes to Taxable DI (archetype)', has(corpB, TAX_MARK)],
+    ['Corporate gets §14.4 taxable col tip', has(corpB, COL_MARK)],
+    ['Other Taxable routes to Taxable DI (archetype)', has(otherB, TAX_MARK)],
+    ['Other Taxable gets §14.4 taxable col tip', has(otherB, COL_MARK)],
+    // STEP-0 room-intro title hovers (verbatim, distinct per bucket)
+    ['Corporate title hover = R393 room-intro', has(corpT, CORP_MARK)],
+    ['Corporate title hover is NOT the Living Room copy', !has(corpT, LIVING_MARK)],
+    ['Other Taxable title hover = R394 room-intro', has(otherT, OTHER_MARK)],
+    ['Other Taxable title hover is NOT the Living Room copy', !has(otherT, LIVING_MARK)],
+    ['plain Taxable title hover STILL = Living Room (regression)', has(baseT, LIVING_MARK)],
+    // Other Assets is value-only: renders, but no bank DI / no taxable markers / no ⓘ intro hover (parked)
+    ['Other Assets modal renders (no crash)', typeof oaB === 'string' && oaB.length > 0 && !has(oaB, '__')],
+    ['Other Assets has NO taxable DI archetype', !has(oaB, TAX_MARK)],
+    ['Other Assets has NO taxable col tip', !has(oaB, COL_MARK)],
+    ['Other Assets has NO room-intro ⓘ hover yet (PARKED surface)', !has(oaT, 'modal-tt')],
     // picker expander nesting
     ['picker has "More taxable / other" expander', has(R.pickerHtml, 'More taxable / other')],
     ['picker lists Corporate / Business Taxable', has(R.pickerHtml, 'Corporate / Business Taxable')],
@@ -122,11 +137,11 @@ const URL = 'http://127.0.0.1:8001/studio.html';
 
   let pass = 0;
   const lines = checks.map(([n, ok]) => { if (ok) pass++; return (ok ? 'PASS ' : 'FAIL ') + n; });
-  const strip = (s) => (typeof s === 'string' ? s.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 700) : String(s));
+  const strip = (s) => (typeof s === 'string' ? s.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 900) : String(s));
   const summary = `[${LABEL}] ${pass}/${checks.length} GREEN\n` + lines.join('\n') +
-    '\n\n=== CORP (taxable_corp) ===\n' + strip(R.corpHtml) +
-    '\n\n=== OTHER TAXABLE ===\n' + strip(R.otherHtml) +
-    '\n\n=== OTHER ASSETS ===\n' + strip(R.oaHtml) +
+    '\n\n=== CORP title hover ===\n' + strip(corpT) +
+    '\n\n=== OTHER TAXABLE title hover ===\n' + strip(otherT) +
+    '\n\n=== OTHER ASSETS title (should be plain, no ⓘ) ===\n' + strip(oaT) +
     '\n\n=== PICKER ===\n' + strip(R.pickerHtml) + '\n';
   fs.writeFileSync('scripts/_gate_tax_routing.out.txt', summary, 'utf8');
   process.exit(pass === checks.length ? 0 : 1);
