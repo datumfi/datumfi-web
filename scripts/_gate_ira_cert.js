@@ -55,6 +55,13 @@ const URL = 'http://127.0.0.1:8001/studio.html';
       mk({ ticker: 'XLE', name: 'Energy', price: 100, shares: 60, assetClass: 'Stocks', sector: 'Energy', instrumentType: 'ETF' }),
       mk({ ticker: 'GLD', name: 'Gold', price: 100, shares: 50, assetClass: 'Commodity', sector: 'Gold', instrumentType: 'ETF' }),
     ];
+    // I2 feeDrag30yr fixtures — a single expensive equity ETF ($100k @ 0.85%, g=7%) so Layer D fires expensive.
+    const expensive = () => [
+      mk({ ticker: 'ARKK', name: 'Innovation', price: 100, shares: 1000, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Large Blend', instrumentType: 'ETF', expRatio: '0.85' }),
+    ];
+    const leanNoExp = () => [  // cheap + one holding with NO expRatio -> blendedExpense may be 0/low, drag sourced-or-blank
+      mk({ ticker: 'VOO', name: 'S&P 500', price: 100, shares: 1000, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Large Blend', instrumentType: 'ETF', expRatio: '0.03' }),
+    ];
     const out = {};
     out.rMulti = open('rothira', cryptoMulti());
     out.tMulti = open('tradira', cryptoMulti());
@@ -62,6 +69,14 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     out.rNone = open('rothira', none());
     out.tNone = open('tradira', none());
     out.rDiv = open('rothira', diversified());
+    out.rExp = open('rothira', expensive());
+    out.tExp = open('tradira', expensive());
+    out.rLean = open('rothira', leanNoExp());
+    // expected feeDrag for the expensive fixture, computed by the SAME formula (verifies value×expense×
+    // rounding×format end-to-end; the Method-A formula itself was validated against the bank's $11,600 example)
+    var V = 100000, g = 0.07, ef = 0.0085;
+    var expDrag = V * Math.pow(1 + g, 30) - V * Math.pow(1 + g - ef, 30);
+    out.expDragStr = '$' + Math.round(Math.round(expDrag / 100) * 100).toLocaleString('en-US');
     return out;
   });
   await b.close();
@@ -92,8 +107,15 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     ['AR-NONE -> spine [T] ("This Traditional IRA is")', has(R.tNone, SPINE_T)],
     // B2 still fires when NO archetype (regression on a diversified book)
     ['B2 fires on diversified book (no archetype)', has(R.rDiv, B2)],
+    // I2 · feeDrag30yr (§9 Layer D R89 [R]/[T] + §1 R16 strip)
+    ['I2 feeDrag $ figure renders (pipeline-exact)', typeof R.expDragStr === 'string' && has(R.rExp, R.expDragStr)],
+    ['I2 R89 Roth "make the switch" framing', has(R.rExp, 'is what you keep by making the switch')],
+    ['I2 R89 Trad "pure loss you fully control"', has(R.tExp, 'fees are pure loss you fully control')],
+    ['I2 [R]/[T] Layer D distinct', has(R.rExp, 'making the switch') && !has(R.rExp, 'pure loss you fully control')],
+    ['I2 §1 strip shows "% · $" feeDrag', has(R.rExp, '0.85% · ' + R.expDragStr)],
+    ['I2 LEAN keeps short line (no switch-framing)', !has(R.rLean, 'making the switch') && has(R.rLean, 'never stuck with a bad menu')],
     // junk-safety
-    ['no undefined/NaN in any render', ['rMulti','tMulti','rIncome','rNone','tNone','rDiv'].every(k => !has(R[k], 'undefined') && !has(R[k], 'NaN') && !has(R[k], '__'))],
+    ['no undefined/NaN in any render', ['rMulti','tMulti','rIncome','rNone','tNone','rDiv','rExp','tExp','rLean'].every(k => !has(R[k], 'undefined') && !has(R[k], 'NaN') && !has(R[k], '__'))],
   ];
   let pass = 0;
   const lines = checks.map(([n, ok]) => { if (ok) pass++; return (ok ? 'PASS ' : 'FAIL ') + n; });

@@ -4235,13 +4235,43 @@
       }
       return out.length ? out.join(' ') : null;
     }
-    // D · MENU & FEES — fires only when NOTABLE (lean ≤0.40 or expensive >0.75; moderate stays
-    // silent — ruled 2026-07-02). Local descriptor: the shared _diExpenseWord's expensive tier
-    // carries its own lever line, which would double the IRA tail's "one trade away".
+    // feeDrag30yr (bank R16C1/R16C2 + §9 R89): the 30-year DOLLAR cost of fees = the value differential
+    // between the account compounding at its growth rate vs at (growth − expense) — "the fee compounded
+    // against growth, money that never compounds FOR you" (R36C2/R89). Method A, VALIDATED: reproduces the
+    // Taxable bank's worked example exactly ($7,184 balance @ 0.85%, g=7% → ≈$11,600). Growth rate = the
+    // value-weighted per-class _cbRate (reuse the §11b assumption, L48); unclassable value falls back to 5%.
+    // SOURCED-OR-BLANK: null when no expense or no value (the clause/number then stays silent).
+    function _diIraFeeDrag(acc, s, agg) {
+      var e = agg && agg.blendedExpense;
+      if (e === null || e === undefined || !(s.total > 0)) return null;
+      var gw = 0, gwV = 0;
+      (acc.holdings || []).forEach(function (h) {
+        var v = (parseFloat(h.price) || 0) * (parseFloat(h.shares) || 0); if (v <= 0) return;
+        var r = _cbRate(h.assetClass); if (r === null) return;
+        gw += r * v; gwV += v;
+      });
+      var g = gwV > 0 ? gw / gwV : 0.05, V = s.total, ef = e / 100;
+      var drag = V * Math.pow(1 + g, 30) - V * Math.pow(1 + g - ef, 30);
+      return drag > 0 ? drag : null;
+    }
+    function _diFeeDragFmt(drag) { return (drag === null || drag === undefined) ? null : _diMoney(Math.round(drag / 100) * 100); }
+    // D · MENU & FEES — fires only when NOTABLE (lean ≤0.40 or expensive >0.75; moderate stays silent).
+    // EXPENSIVE (>0.75) installs the enriched R89 [R]/[T] with {feeDrag30yr_fmt}. FLAG (Architect): the IRA
+    // bank authors ONE R89 template on "notable (high OR notably low)", but its "cheaper equivalent / what you
+    // keep by making the switch" framing only fits EXPENSIVE — for an already-lean account there is nothing
+    // cheaper to switch to. So the LEAN tier keeps the prior short positive line (unchanged) rather than the
+    // switch-framing (Taxable split these into R169-cheap / R172-expensive — does the IRA §9 Layer D want a
+    // lean-positive variant too?). Not redrafting (L47).
     function _diIraMenuFees(acc, s, agg, isRoth) {
       var e = agg && agg.blendedExpense;
       var t = _diE(e); if (t === null) return null;
       if (e > 0.40 && e <= 0.75) return null;
+      if (e > 0.75) {
+        var drag = _diFeeDragFmt(_diIraFeeDrag(acc, s, agg));
+        if (drag) return isRoth
+          ? 'Your funds run on the expensive side — ' + t + '/yr. That sounds tiny, but on this balance it’s about ' + drag + ' of tax-free growth over a 30-year retirement — money that leaves the account every year and never compounds for you. And because you opened this yourself on the open market, you’re never stuck with a bad menu: a cheaper equivalent is one trade away, and that ' + drag + ' is what you keep by making the switch.'
+          : 'Your funds run on the expensive side — ' + t + '/yr — which works out to roughly ' + drag + ' in drag over 30 years. The open-market freedom of an IRA means any of that leakage is yours to fix: a cheaper equivalent is one trade away, and unlike the tax you’ll eventually owe here, fees are pure loss you fully control.';
+      }
       var w = e <= 0.15 ? 'exceptionally lean (a value-weighted ≈' + t + ' expense ratio)'
             : e <= 0.40 ? 'lean (a value-weighted ≈' + t + ' expense ratio)'
             : 'on the expensive side (≈' + t + '/yr value-weighted)';
@@ -5150,9 +5180,12 @@
           'Value-weighted dividend yield.',
           'Income thrown off inside the account. In any IRA these dividends reinvest untaxed — no yearly tax drag like a taxable account, so yield is pure compounding here.', 'hr-yield',
           s.yldCovVal > 0 ? _diCovSub(s.yldCovPct, 'yield') : '');
-        h += _diCell('Avg Expense', (_diE(agg && agg.blendedExpense) || '—'), 'Value-weighted expense ratio',
-          'Value-weighted expense ratio.',
-          'Your annual fund drag. Because you picked these funds on the open market, a high number here is fixable — cheaper index equivalents are usually one trade away.', 'hr-expense');
+        // §1 R16 — Avg Expense + the feeDrag30yr DOLLAR figure (value shows "X% · $Y"; sourced-or-blank).
+        var iDrag = _diFeeDragFmt(_diIraFeeDrag(acc, s, agg));
+        var iExp = _diE(agg && agg.blendedExpense);
+        h += _diCell('Avg Expense', (iExp ? iExp + (iDrag ? ' · ' + iDrag : '') : '—'), 'Value-weighted expense ratio + 30-yr dollar drag',
+          'Value-weighted expense ratio, and the dollar cost of that drag over 30 years.',
+          'Your annual fund drag turned into a real number. A percent hides the damage; the dollars don’t. Because you picked these funds on the open market, a high figure here is the most fixable line in the whole modal — a cheaper index equivalent is usually one trade away' + (iDrag ? ', and ' + iDrag + ' is the prize for making it.' : '.'), 'hr-expense');
         return h + '</div>';
       }
       if (base.id === '529plan') {
