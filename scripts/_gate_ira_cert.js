@@ -62,6 +62,19 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     const leanNoExp = () => [  // cheap + one holding with NO expRatio -> blendedExpense may be 0/low, drag sourced-or-blank
       mk({ ticker: 'VOO', name: 'S&P 500', price: 100, shares: 1000, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Large Blend', instrumentType: 'ETF', expRatio: '0.03' }),
     ];
+    // §9a SPINE TOKEN fixtures — all fall through §3a to AR-NONE so the §9a spine renders (R116).
+    const bondHeavy = () => [   // 30% equity / 70% bond, bond<80 so no bond archetype -> SS-BOND-HEAVY
+      mk({ ticker: 'VTI', name: 'US Large', price: 100, shares: 300, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Large Cap', instrumentType: 'ETF' }),
+      mk({ ticker: 'BND', name: 'Total Bond', price: 100, shares: 700, assetClass: 'Bond', sector: 'Bonds - Intermediate', instrumentType: 'ETF' }),
+    ];
+    const cashHeavy = () => [   // 30% equity / 70% cash -> SS-CASH-HEAVY
+      mk({ ticker: 'VOO', name: 'S&P 500', price: 100, shares: 300, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Large Blend', instrumentType: 'ETF' }),
+      mk({ ticker: 'CASH', name: 'Cash', price: 1, shares: 70000, assetClass: 'Cash', sector: 'Cash', instrumentType: 'Cash' }),
+    ];
+    const etfStock = () => [    // 58% ETF / 42% single stock, all equity -> SS-ALL-EQUITY + IM-FUND-AND-STOCK + breakdown
+      mk({ ticker: 'VTI', name: 'US Large', price: 100, shares: 580, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Large Blend', instrumentType: 'ETF' }),
+      mk({ ticker: 'NVDA', name: 'Nvidia', price: 100, shares: 420, assetClass: 'Stocks', sector: 'Semiconductors', instrumentType: 'Stock' }),
+    ];
     const out = {};
     out.rMulti = open('rothira', cryptoMulti());
     out.tMulti = open('tradira', cryptoMulti());
@@ -72,6 +85,10 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     out.rExp = open('rothira', expensive());
     out.tExp = open('tradira', expensive());
     out.rLean = open('rothira', leanNoExp());
+    // §9a spine fixtures (AR-NONE fall-through)
+    out.rBond = open('rothira', bondHeavy());
+    out.rCash = open('rothira', cashHeavy());
+    out.rEtfStock = open('rothira', etfStock());
     // expected feeDrag for the expensive fixture, computed by the SAME formula (verifies value×expense×
     // rounding×format end-to-end; the Method-A formula itself was validated against the bank's $11,600 example)
     var V = 100000, g = 0.07, ef = 0.0085;
@@ -85,6 +102,16 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     out.whyNoWork = open('rothira', none());
     addInstance('pretax401k');   // now the estate holds a workplace plan
     out.whyWork = open('tradira', none());   // Traditional branch + S5 nudge should fire
+    // S4 live meter — funded AFTER the empty-state whyNoWork capture so iraUsed sums inflow*freq only here
+    const openContrib = (baseId, holdings, inflow, freq) => {
+      addInstance(baseId);
+      const a = window.state.accounts.filter(x => x.baseId === baseId).pop();
+      a.holdings = holdings; a.showHoldings = true; a.inflow = inflow; a.freq = freq;
+      try { recalcPortfolio(a); } catch (e) {}
+      window.openAccountModal(a.id);
+      return document.getElementById('modal-dynamic-content').innerHTML;
+    };
+    out.rContrib = openContrib('rothira', none(), 6000, 1);
     return out;
   });
   await b.close();
@@ -95,6 +122,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   const SPINE_R = 'This Roth IRA is';                                       // Layer A spine lead
   const SPINE_T = 'This Traditional IRA is';
   const B2 = 'what’s actually under the hood, biggest first';              // Layer B2 sleeve breakdown
+  const YR = new Date().getFullYear();                                     // active tax year (S4/S5 tokens)
 
   const checks = [
     // §3a archetype fires + [R]/[T] tails
@@ -130,8 +158,8 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     // I4 · §15 "Why an IRA?" education panel + S1/S5/S6/S7
     ['I4 panel toggle renders', has(R.whyNoWork, 'Why you’d use an IRA')],
     ['I4 S1 hero lead renders', has(R.whyNoWork, 'Your IRA, your menu — the whole market is your fund list')],
-    ['I4 authored sections present', has(R.whyNoWork, 'The big overlap') && has(R.whyNoWork, 'backdoor Roth') && has(R.whyNoWork, 'five years AND you’re 59½')],
-    ['I4 dated limit (R220: $7,500, not baked $7,000)', has(R.whyNoWork, '$7,500 IRA limit') && !has(R.whyNoWork, '$7,000 IRA limit')],
+    ['I4 authored sections present', has(R.whyNoWork, 'The one-line answer') && has(R.whyNoWork, 'backdoor') && has(R.whyNoWork, 'five years AND you’re 59½')],
+    ['I4 dated limit (R220: $7,500, not baked $7,000) — now via S4 meter', has(R.whyNoWork, '$7,500 IRA room') && !has(R.whyNoWork, '$7,000')],
     ['I4 [R] emphasis "you hold a Roth"', has(R.whyNoWork, 'you hold a Roth')],
     ['I4 [T] emphasis "you hold a Traditional"', has(R.whyWork, 'you hold a Traditional')],
     ['I4 S5 nudge ABSENT with no workplace plan', !has(R.whyNoWork, 'You also hold a workplace plan')],
@@ -143,8 +171,25 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     ['I5 R44 [R] income-phaseout note (Roth)', has(R.rMulti, 'direct Roth IRA contributions phase out at higher incomes')],
     ['I5 R45 [T] deductibility note (Traditional)', has(R.tMulti, 'fully deductible, partly deductible, or not at all')],
     ['I5 [R]/[T] §4 notes distinct', has(R.rMulti, 'backdoor') && !has(R.rMulti, 'fully deductible, partly') && has(R.tMulti, 'the whole point of the Traditional IRA')],
+    // §9a · SPINE TOKEN DERIVATIONS (IRA bank R101–R115) — AR-NONE fall-through only (R116)
+    ['§9a full spine [R] SS-ALL-EQUITY + IM-ALL-ETF + tax-free tail (breakdown empty at 100%)',
+      has(R.rNone, 'This Roth IRA is an all-equity account, built entirely from ETFs — a personal account you assembled from the open market, where everything inside grows tax-free.')],
+    ['§9a full spine [T] SS-ALL-EQUITY + IM-ALL-ETF + tax-deferred tail',
+      has(R.tNone, 'This Traditional IRA is an all-equity account, built entirely from ETFs — a personal account you assembled from the open market, holding pre-tax capital that grows tax-deferred.')],
+    ['§9a SS-BOND-HEAVY (30/70 eq/bond, no bond archetype)', has(R.rBond, 'a bond-heavy, income-leaning account')],
+    ['§9a SS-CASH-HEAVY (70% cash)', has(R.rCash, 'a cash-heavy, largely uninvested account')],
+    ['§9a IM-FUND-AND-STOCK + {breakdown} (58/42)', has(R.rEtfStock, 'from a mix of funds and individual stocks — 58% ETFs, 42% individual stocks')],
+    // S3 · backdoor awareness (v3 R6) — taxCode-gated [R]/[T]
+    ['S3 [R] roth backdoor-awareness gated (no [T] leak)', has(R.whyNoWork, 'the “backdoor” path (contribute to a Traditional IRA non-deductibly') && !has(R.whyNoWork, 'your Traditional IRA DEDUCTION phases out')],
+    ['S3 [T] trad deduction-phaseout gated (no [R] leak)', has(R.whyWork, 'your Traditional IRA DEDUCTION phases out at higher income') && !has(R.whyWork, 'Roth IRAs have an income ceiling')],
+    // S4 · contribution-room meter (v3 R7) — LOOKUP limit, sourced-or-empty-state
+    ['S4 empty-state when no contribution sourced', has(R.whyNoWork, 'Add your ' + YR + ' contributions to track') && has(R.whyNoWork, 'IRA room doesn’t roll over')],
+    ['S4 live meter sums inflow×freq vs LOOKUP limit', has(R.rContrib, 'You’ve used $6,000 of your $7,500 IRA room for ' + YR)],
+    // S5 · separate-bucket nudge (v3 R8) verbatim — replaces the I4 paraphrase
+    ['S5 verbatim nudge present with workplace plan', has(R.whyWork, 'good news: this IRA is a SEPARATE bucket. The $7,500 you can put here for ' + YR + ' stacks ON TOP')],
+    ['S5 old I4 paraphrase GONE', !has(R.whyWork, 'in this estate — so this bucket stacks on top of it')],
     // junk-safety
-    ['no undefined/NaN in any render', ['rMulti','tMulti','rIncome','rNone','tNone','rDiv','rExp','tExp','rLean','whyNoWork','whyWork'].every(k => !has(R[k], 'undefined') && !has(R[k], 'NaN') && !has(R[k], '__'))],
+    ['no undefined/NaN in any render', ['rMulti','tMulti','rIncome','rNone','tNone','rDiv','rExp','tExp','rLean','rBond','rCash','rEtfStock','rContrib','whyNoWork','whyWork'].every(k => !has(R[k], 'undefined') && !has(R[k], 'NaN') && !has(R[k], '__'))],
   ];
   let pass = 0;
   const lines = checks.map(([n, ok]) => { if (ok) pass++; return (ok ? 'PASS ' : 'FAIL ') + n; });

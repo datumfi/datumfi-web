@@ -451,3 +451,41 @@ Open **http://127.0.0.1:8001/studio.html**. Add a **Roth IRA "The Conservatory"*
 Verify live (after push) by markers not MD5: "multi-coin crypto sleeve" · "never compounds for you" ·
 "the whole market is your fund list" · "You also hold a workplace plan". **§7.2 stays behind the ⚠
 ASSUMED-FIXED posture.** HOLD for Captain GO before push.
+
+---
+
+## IRA — TASK 2 · §9a Spine tokens + §14 S3/S4/S5 · L50 WIRE-THEN-AUDIT CLOSE (2026-07-04, HELD for push)
+
+Follow-on to I1–I5 (live `2f1c69a`). NEW authored bank copy — NOT in the 7 pushed commits. Sources (fresh
+13:21 workbook re-pull): **§9a = `IRA Copy Bank` R97–R117** (the stale pre-13:21 save had §10/§11/§12 there —
+re-pulled); **S3/S4/S5 = `IRA Copy Bank v3` R6/R7/R8**. Captain-approved preview; single coherent commit.
+
+### ✅ WIRED — verbatim, gated, zero unexplained ⛔
+| Bank § | Live | Note |
+|---|---|---|
+| §9a `{spineShape}` 6 cases (R101–R106) | `_diIraSpine` rebind | SS-ALL-EQUITY/EQUITY-TILT/BALANCED/BOND-HEAVY/CASH-HEAVY/MIXED, first-match on value-weighted `x.eqT/x.bdT/x.cashT`. Retires the generic `_diSpine` concentration read. Order verbatim R101→R106 (Captain-ruled: 45%eq/55%bond = "a balanced account", not bond-heavy). |
+| §9a `{instrumentMix}` 6 cases (R109–R114) | `_diIraSpine` rebind | IM-ALL-ETF…IM-MIXED on `x.etfPct/mfPct/stockPct/fundPct`; phrases verbatim (Taxable §3b, L48). Retires generic `_diInstMix`. |
+| §9a `{breakdown}` + `{taxTail}` (R115) | `_diIraSpine` | " — NN% ETFs, …" (ETFs→MFs→stocks, ≥1% each); EMPTY at 100% (the `<99.5` guard). taxTail flips [R] tax-free / [T] tax-deferred. Renders ONLY on §3a AR-NONE fall-through (R116) — call site `_diNarrIRA` passes `x`. |
+| §14 S3 backdoor awareness (v3 R6) [R]/[T] | `_diIraWhyPanel` | Replaced the generic non-gated "income-limit trap" body with the taxCode-gated verbatim pair (roth=income-ceiling/backdoor · pretax=deduction-phaseout). Awareness only — no MAGI math (§7.2 deferred). |
+| §14 S4 contribution-room meter (v3 R7) | `_diIraWhyPanel` | Net-new. `{used}` = Σ `inflow×freq` over the estate's IRA lanes (sourced-or-empty-state, L47); `{limit}` = `_diIraLimits()` LOOKUP (reuse I3, no baked 7500); roll-over sub-line verbatim. |
+| §14 S5 separate-bucket nudge (v3 R8) | `_diIraWhyPanel` | Replaced the I4 paraphrase (+ "big overlap" section) with the v3 R8 verbatim nudge; gated on any `401k/403/457b` in the estate, else ⬜ blank. Marker "You also hold a workplace plan" preserved. |
+
+### Gate + regression
+- `scripts/_gate_ira_cert.js` extended **38→49** checks; **red-first PROVEN: 11 new FAIL on HEAD (38/49) → 49/49
+  after wiring.** (2 existing I4 checks re-anchored — they asserted the now-removed "big overlap"/"$7,500 IRA
+  limit" copy; re-pointed to still-authored content + the S4 `$7,500 IRA room` dated-limit, intent preserved.)
+- Regression GREEN: Taxable `_gate_tax_3a` 23/23 · `_gate_tax_11b` 12/12 · routing 36/36 · 401k cert OVERALL.
+- `node scripts/build-dist.mjs` → **sacred hosts byte-identical** (pin bumped `edb71dfd`→`3b4049b9`, L49 same commit, LF-clean).
+
+### Scope notes (durable) & Room Wiring Ledger
+- **S4 single-owner estate-scan** — `{used}` sums ALL IRA lanes' `inflow×freq` regardless of owner (same pattern
+  as S5's workplace scan). **Multi-owner is a future refinement, NOT this pass** (Captain-accepted known scope note).
+- Section-header labels ("The income-limit trap…", "Your {yr} contribution room") are chrome, not brand copy —
+  v3 authors the bodies (Captain-accepted).
+- **Room Wiring Ledger flip (workbook, Copilot-owned):** Trad R80–91 / Roth R93–104 ❔→✅ — verdict text above is
+  ready for the Architect to paste (Claude does not edit the .xlsx).
+
+**§9a + S3/S4/S5 = ✅ WIRED verbatim, zero unexplained ⛔.** ⬜ deferred unchanged (§7.2 phaseout math, §14 S3/S4/S8
+live eligibility — no data source). **HELD for Captain push GO.** Live-verify markers (after push): "an all-equity
+account, built entirely from ETFs" · "a bond-heavy, income-leaning account" · "good news: this IRA is a SEPARATE
+bucket" · "Your {yr} contribution room".

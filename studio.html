@@ -4165,12 +4165,31 @@
       return { list: list, top: list.length ? list[0].pct : 0, satPct: sat, unclPct: (uncl / s.total) * 100 };
     }
 
-    function _diIraSpine(acc, s, agg, isRoth) {
-      var mix = _diInstMix(s);
-      var built = mix ? ', built ' + mix : '';   // token unsourced -> clause silent (L47)
-      return isRoth
-        ? 'This Roth IRA is ' + _diSpine(s) + built + ' — a personal account you assembled from the open market, where everything inside grows tax-free.'
-        : 'This Traditional IRA is ' + _diSpine(s) + built + ' — a personal account you assembled from the open market, holding pre-tax capital that grows tax-deferred.';
+    // §9a SPINE TOKEN DERIVATIONS (IRA bank R97–R117) — resolves {spineShape} + {instrumentMix} + {breakdown}
+    // for the R85 Spine template. Renders ONLY on §3a AR-NONE fall-through (R116). All pcts are value-weighted
+    // over total (x.eqT/x.bdT/x.cashT · x.etfPct/x.mfPct/x.stockPct/x.fundPct) — the same signals _diTaxSignals
+    // already computes; NO new engine inputs. {instrumentMix} phrases + {breakdown} rule mirror Taxable §3b (L48).
+    function _diIraSpine(acc, s, x, isRoth) {
+      var shape = x.eqT >= 85 ? 'an all-equity account'                                // SS-ALL-EQUITY  R101
+                : (x.eqT >= 60 && x.eqT < 85) ? 'a growth-tilted account'              // SS-EQUITY-TILT R102
+                : (x.eqT >= 40 && x.eqT < 60 && x.bdT >= 20) ? 'a balanced account'    // SS-BALANCED    R103
+                : x.bdT >= 50 ? 'a bond-heavy, income-leaning account'                 // SS-BOND-HEAVY  R104
+                : x.cashT >= 50 ? 'a cash-heavy, largely uninvested account'           // SS-CASH-HEAVY  R105
+                : 'a mixed-allocation account';                                        // SS-MIXED       R106
+      var mix = x.etfPct >= 80 ? 'entirely from ETFs'                                  // IM-ALL-ETF     R109
+              : x.mfPct >= 80 ? 'entirely from mutual funds'                           // IM-ALL-MF      R110
+              : x.stockPct >= 80 ? 'entirely from individual stocks'                   // IM-ALL-STOCK   R111
+              : (x.fundPct >= 80 && x.etfPct >= 20 && x.mfPct >= 20) ? 'from a blend of ETFs and mutual funds'  // R112
+              : (x.fundPct >= 20 && x.stockPct >= 20) ? 'from a mix of funds and individual stocks'             // R113
+              : 'from a mix of fund wrappers and individual names';                    // IM-MIXED       R114
+      var parts = [];                                                                  // {breakdown}    R115
+      if (x.etfPct   >= 1 && x.etfPct   < 99.5) parts.push(_diP(x.etfPct)   + ' ETFs');
+      if (x.mfPct    >= 1 && x.mfPct    < 99.5) parts.push(_diP(x.mfPct)    + ' mutual funds');
+      if (x.stockPct >= 1 && x.stockPct < 99.5) parts.push(_diP(x.stockPct) + ' individual stocks');
+      var breakdown = parts.length ? ' — ' + parts.join(', ') : '';                    // EMPTY when one wrapper is 100%
+      var taxTail = isRoth ? 'where everything inside grows tax-free' : 'holding pre-tax capital that grows tax-deferred';
+      return 'This ' + (isRoth ? 'Roth' : 'Traditional') + ' IRA is ' + shape + ', built ' + mix + breakdown +
+        ' — a personal account you assembled from the open market, ' + taxTail + '.';
     }
     // §3a COMPOSITION ARCHETYPE (IRA bank R179–R195) — the "what this account REALLY IS" pre-read. Runs
     // BEFORE the spine; a fire REPLACES the generic spine (R180). REUSE (L48): the signal engine is the shared
@@ -4329,7 +4348,7 @@
       var x = _diTaxSignals(acc, s);                         // shared signal engine (L48)
       var arch = _diIraArchetype(s, x, isRoth);              // §3a — names the identity; REPLACES the spine on a fire
       var out = [];
-      out.push(arch ? arch.txt : _diIraSpine(acc, s, agg, isRoth));
+      out.push(arch ? arch.txt : _diIraSpine(acc, s, x, isRoth));
       var b = _diIraTilt(acc, s, agg, isRoth); if (b) out.push(b);
       var b2 = _diIraCompRead(acc, s, agg, isRoth, !!arch); if (b2) out.push(b2);
       var c = _diIraBehavior(acc, s, agg, isRoth); if (c) out.push(c);
@@ -4350,18 +4369,31 @@
       var hasWorkplace = (state.accounts || []).some(function (a) { var b = getBaseType(a.baseId); return b && /401k|403|457b/.test(b.id); });
       var lim = _diMoney((_diIraLimits() || { base: 7500 }).base);
       var sec = function (h, b, hot) { return '<div class="ira-why-sec' + (hot ? ' hot' : '') + '"><div class="ira-why-h">' + h + '</div><div class="ira-why-b">' + b + '</div></div>'; };
-      var overlap = sec('The big overlap (the part most people miss)',
-        'An IRA’s contribution room is SEPARATE from your workplace plan’s. You can max a 401(k)/403(b)/457(b) AND still fund a full IRA the same year — the ' + lim + ' IRA limit stacks ON TOP of the workplace limit. If you’re only contributing to the plan your employer handed you, you may be leaving an entire second tax-advantaged bucket unused.',
-        hasWorkplace);
+      var yr = new Date().getFullYear();
+      // S5 · separate-bucket nudge (v3 R8) — verbatim; renders only with a workplace plan (else ⬜), gold .ira-why-nudge
+      var s5 = hasWorkplace
+        ? '<div class="ira-why-nudge">You also hold a workplace plan — good news: this IRA is a SEPARATE bucket. The '
+          + lim + ' you can put here for ' + yr + ' stacks ON TOP of your workplace 401k/403b/457b limit; it doesn’t count against it.</div>'
+        : '';
+      // S4 · contribution-room meter (v3 R7) — {used} = Σ inflow×freq over the estate's IRA lanes (single-owner scan,
+      // same pattern as S5), sourced-or-empty-state (L47 — never fabricate); {limit} = _diIraLimits() LOOKUP (reuse I3).
+      var iraUsed = (state.accounts || []).reduce(function (t, a) {
+        var b = getBaseType(a.baseId); return (b && /ira/.test(b.id)) ? t + (a.inflow || 0) * (a.freq || 0) : t; }, 0);
+      var s4 = sec('Your ' + yr + ' contribution room', (iraUsed > 0
+          ? 'You’ve used ' + _diMoney(iraUsed) + ' of your ' + lim + ' IRA room for ' + yr + '. '
+          : 'Add your ' + yr + ' contributions to track how much of your ' + lim + ' IRA room you’ve used. ')
+        + 'IRA room doesn’t roll over — whatever you don’t use for ' + yr + ' is gone for good once the filing deadline passes.');
       var body =
         '<div class="ira-why-hero">Your IRA, your menu — the whole market is your fund list.</div>' +
-        (hasWorkplace ? '<div class="ira-why-nudge">You also hold a workplace plan in this estate — so this bucket stacks on top of it:</div>' + overlap : '') +
+        s5 +
         sec('The one-line answer', 'An IRA is the retirement account YOU open and control — independent of any employer. You’d use one to invest in anything the whole market offers (not just a plan’s short menu), to keep saving after you leave a job, and to choose your own tax treatment: pay tax now (Roth) or later (Traditional).') +
         sec('Who opens an IRA', 'Anyone with earned income (or a spouse with earned income) can open an IRA at any custodian — Vanguard, Fidelity, Schwab, a robo-advisor. There’s no employer involved, no HR enrollment, no plan menu. You pick the custodian, you pick the funds, and the account follows YOU from job to job for life.') +
         sec('Roth vs Traditional — the core choice' + (isRoth ? ' (you hold a Roth)' : ' (you hold a Traditional)'), 'A ROTH IRA takes after-tax dollars now, then grows and pays out entirely tax-free in retirement — and never forces a withdrawal. A TRADITIONAL IRA may give you a tax deduction now, grows tax-deferred, and is taxed as ordinary income when you pull it out (with required withdrawals starting at 73). Roth wins if you expect higher future tax rates or want tax-free heirs; Traditional wins if you want the deduction today.') +
-        (hasWorkplace ? '' : overlap) +
+        s4 +
         sec('Why you’d choose the IRA — the edge', 'The IRA’s defining advantage over a workplace plan is CONTROL: the entire market as your fund list, the lowest-cost share classes available anywhere, and no plan administrator between you and your money. It’s also where money LANDS when you leave a job — a rollover from an old 401(k) keeps that money tax-deferred and in your hands instead of stranded in a former employer’s menu.') +
-        sec('The income-limit trap (worth knowing)', 'Direct Roth IRA contributions phase out at higher incomes, and a Traditional IRA’s deduction phases out if you’re covered by a workplace plan. But the door is rarely fully shut: a high earner can still fund a non-deductible Traditional IRA and convert it to Roth — the “backdoor Roth.” If your income looks too high to contribute directly, that path usually still works.') +
+        sec('The income-limit trap (worth knowing)', isRoth
+          ? 'Heads up: Roth IRAs have an income ceiling. Above a certain MAGI you can’t contribute directly — but the “backdoor” path (contribute to a Traditional IRA non-deductibly, then convert to Roth) is still open to almost everyone. If your income is near the line, this is the beat to check before you fund.'
+          : 'One honest note: if you’re covered by a workplace plan (401k/403b/457b), your Traditional IRA DEDUCTION phases out at higher income — the contribution is still allowed, but it may not be tax-deductible. When that happens, a non-deductible contribution + Roth conversion (the “backdoor”) is often the cleaner move.') +
         sec('The 5-year rule (don’t get surprised)', 'A Roth IRA’s EARNINGS come out tax-free only after the account has been open five years AND you’re 59½. Separately, each Roth CONVERSION starts its own five-year clock before that converted money can be withdrawn penalty-free. Contributions (the dollars you put in) can always come out tax- and penalty-free — it’s the growth and conversions that carry the clock.') +
         sec('Bottom line', 'Your workplace plan is the account your employer gave you; the IRA is the one you own outright. Use it to invest in anything, to consolidate old plans, and to pick your tax treatment. If you have both, treat them as separate buckets and try to feed both — and if your income is high, ask about the backdoor Roth before assuming you’re locked out.');
       return '<div class="ira-why-panel">' +
