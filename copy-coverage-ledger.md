@@ -138,3 +138,170 @@ block still carrying the robotic voice the bank says to replace).
 So "cooked" has meant *DI-paragraph-cooked*, not *whole-bank-cooked* — for every room. The remaining
 program is bigger than the stale-§9 rooms: it's the deferred modal/strip/title/toggle/ladder copy
 across **all** rooms, on top of the §9 nuance retrofit for HSA/529/403.
+
+---
+
+## Taxable Brokerage — "The Living Room" (base.id `taxable`) · LINE-BY-LINE AUDIT (2026-07-03, Phase 1)
+
+Live anchor at audit time: origin/main `0e3a822` (clean). Bank = `Studio Estate Accounts.xlsx` →
+"Taxable Copy Bank" (v2, R1–R275). Engine = `_diNarrTaxable` L4576 (a TRUE composed assembler:
+spine+instTag → all tilts → all behavior → D → close, `join(' ')` — the predecessor's "pick-ONE"
+note was imprecise; the composed A→B→C→D→CLOSE model IS live). Read against ITS OWN shape (no
+withdrawal-age/§4-limits modal — the "no-rules" account).
+
+### ✅ WIRED — verbatim, confirmed in source
+| Bank section | Live | Note |
+|---|---|---|
+| §2 DI-EMPTY (R51) | `_diNarrTaxable` L4578 | verbatim |
+| §3 Layer A Spine — 10 archetypes (R55–R64) | `_diTaxSpine` L4471 | all 10 verbatim; THEMATIC checked first (correct — a 100% thematic ETF would else mis-match INDEX) |
+| §3b Instrument-mix tag (R68–R75) | `_diTaxInstTag` L4493 | 6 phrases + "Specifically/Under the hood" append rule + breakdown-empty-when-100% all correct |
+| §5 Layer C Behavior (R106–R115) | `_diTaxBehavior` L4532 | fees/beta/yield/C-MARKET-LIKE/C-DRIFT + FIX-1 yield-guard + C-INCOME-SILENT all verbatim |
+| §6 Layer D Tax (R118–R122) | `_diTaxD` L4556 | D-NO-BASIS/LOSS/SMALL/MODERATE/LARGE verbatim |
+| §7 Close + §8 Verdict (R126–R136) | `_diTaxClose` L4564 | 4 closes verbatim; verdict bands match |
+| §10 Metric ladders — UG/Beta/Yield/Exp (R149–R172) | `_diTax*Ladder` L4592–4624 | all rungs verbatim, fail-to-blank |
+| §1 Signal strip — Equity/Bond/Cash/Intl/UG/Beta/Yield/Exp hovers (R12,R14–R19,R25) | `_diBankStrip` taxable L4641 | 1a/1b verbatim; 14.2 clinical hr-gain-sub deleted, hr-gaintax kept |
+| §11 Cost-Basis column tooltip (R177) | L6147 | verbatim EXCEPT the trailing "Click 'Cost Basis' for help finding it." (dropped — the modal it points to isn't built; see ❌) |
+| §12 Toggle LABELS (R185, R188) | L5360 / L5393 | "Count this account in my plan" / "Keep it, but don't spend from it" — labels match |
+| §16 Title hover "What is a Taxable Account?" (R233–R236) | `_diSetTitle` L5271 | "The Living Room — a Taxable Brokerage", header/what/why/catch ALL verbatim |
+| §17 FIX-2/3/5 (beta band, fund-vs-single-name, cash-drag/overlap/drift) | L4544/4511-4512/4526-4552 | wired (overlapPct is the acknowledged stopgap proxy, R90/R219 — real pairwise signal = parked enhancement, not a copy gap) |
+
+### ⬜ DELIBERATELY-BLANK / surfaces-elsewhere (sourced-or-blank, by design — NOT gaps)
+- §1 tokens with no standalone strip cell — {acctName}(→modal title), {tickerCount}(→spine "N holdings"),
+  {gainTaxEst}(→hr-gaintax sub-line + UG ladder), {altPct}, {fundPct}, {singleNamePct}, {topPct},
+  {topTicker}, {topSector}, {topSectorPct}, {thematicPct}: their MEANING surfaces inside the DI
+  paragraph. Same 1-token≠1-cell shape ruling as the 401(k) (parting note #3). Verified emitted somewhere live.
+
+### ❌ NOT-WIRED — real gaps (red-first)
+| # | Bank section | Gap | Wireable by Claude? |
+|---|---|---|---|
+| T1 | §4b Layer B-COMPOSITION (R92–R100) — `{compositionSleeves}` sleeve-namer | **ENTIRE LAYER ABSENT.** No `compositionSleeves`/`B-COMPOSITION` anywhere. This is THE R2 nuance-gap fix (names the top value-weighted sleeves so a 29-fund robo stops reading generic). Copy IS authored (R95 sentence + R97 format + R98 bucket derivation). | ✅ YES — copy authored; I build the token resolver + insert between tilts and behavior (R96) |
+| T2 | §18 GEO+SECTOR descriptor map (R238–R275) — `{geoTiltDescriptor}` + `{sectorTiltClause}` | **NOT WIRED.** `_DI_TAX_THEME_NAMES` (L4382) is a *partial* sector→theme-NAME map (gives "Technology"), but the authored §18a geo-lean opener ("It leans …") is DROPPED from B-ALL-FOREIGN/B-GLOBAL-TILT/B-HOME-HEAVY (L4518–4520), and B-SECTOR-BET (L4516) uses the plain theme name, not the §18b clean CLAUSE ("…the chips/software behind it"); revised R83/R84/R85/R86 wording not live. | ✅ YES — all clean phrases authored R243–R271; I build `_DI_GEO_MAP`/`_DI_SECTOR_MAP` resolvers |
+| T3 | §4 trigger retunes (R85, R88) | B-GLOBAL-TILT floor still 30% (L4519); bank R85 retuned to **20%**. B-SATELLITE upper still 25% (L4524); bank R88 retuned to **30%** (but FIX-4/R218 still says 25% — **bank internally conflicts**, flag). B-HOME-HEAVY has an extra `eqT≥90` guard (L4520) not in bank R86. | ✅ YES (one-number edits) — but reconcile R88 vs R218 with Architect first |
+| T4 | §11 Cost-basis EXPLAINER MODAL + estimate autofill (R178–R181) | "Finding your cost basis" modal, "Use this estimate" button, overwrite warning — NONE present. Implies a cost-basis ESTIMATE mechanism that does not appear to exist in-app. | ⚠️ FEATURE build, not just copy — confirm scope/defer with Captain |
+| T5 | §14.4 the other 13 column-header tooltips (Ticker/Name/Price/Shares/Value/UG/Beta/Yield/Geo/Sector/ExpRatio/AssetClass/Instrument) | Only Cost Basis has a `tip` for taxable (L6147); other 13 have none. **No verbatim copy exists in the bank** — §14.4 is a "derive from §10/§11" instruction, not authored cells. | ❌ FLAG Architect — needs authored copy (L47 sourced-or-blank; won't invent) |
+| T6 | §12 / §15 Toggle TOOLTIP TITLE+BODY (R186–R190 vs R220–R230) | Taxable falls to the OLD generic `else`-branch tooltips (L5365 "Leave it out…", L5398 "Set aside, untouched…") — NOT the authored §12 bodies (R187/R190). **AND the bank conflicts with itself**: §12 ("Count this account…") vs §15 rewrite ("Include this account…", asset+debt-aware). SHARED cross-room surface — wiring touches HSA/529/457/IRA. | ⚠️ FLAG Captain — resolve §12-vs-§15 canon first; then scope via `base.id==='taxable'` |
+
+### VERDICT
+Taxable's **DI paragraph + ladders + strip + title = done** (matches the 401(k)'s "DI-cooked" bar and
+then some). The room is **NOT whole-bank-DONE**: two substantive authored nuance layers (**§4b Composition,
+§18 geo/sector map**) are entirely unwired — and these are the exact "description → intelligence" upgrades
+the Captain commissioned. Plus 4 smaller items (retune drifts, cost-basis modal, 13 column tips, toggle bodies).
+**Held at Phase 1** per cadence — no studio.html edits yet. Flags T4/T5/T6 need Captain/Architect input;
+T1/T2/T3 are mine to wire on GO.
+
+### FRESH RE-READ (2026-07-03, sheet updated 275→358 rows) — Architect resolutions + NEW finds
+The Captain flagged the copied sheet felt incomplete; re-dumped fresh (saved 17:13). Findings:
+- **T7 (NEW, was entirely missed) · §3a COMPOSITION ARCHETYPE (R277–R297) + 3a-SPEC (R300–R330).** A whole
+  new **pre-spine ladder**: 11 archetypes (AR-CRYPTO-ALL/-MULTI/-SATELLITE, AR-BOND-LADDER/-INCOME,
+  AR-INCOME-YIELD, AR-REAL-ASSET, AR-GOLD-HEDGE, AR-SECTOR-BET-NAMED, AR-ALL-INDUSTRIALS, AR-DIVIDEND) +
+  AR-NONE fallthrough. Runs BEFORE §3 Spine; a fire REPLACES the spine (richer read), then §3b tag +
+  §4/§4b/§5/§6 proceed unchanged. Needs **11 new value-weighted signals** (cryptoPct, cryptoTickerCount,
+  reitPct, goldPct, commodityPct, industrialPct, dividendGrowthPct, utilitiesPct, bondSubTypeCount +
+  bondSubTypes_phrase, realAssetMix_phrase, topThemeClause), all sourced-or-blank. Taxable sentences =
+  R281–R292 (neutral/LTCG). ⚠️ 3a-SPEC references the OLD `_diNarr*` engine line #s (L3817/3877/3910/3929)
+  — for TAXABLE I adapt into `_diTaxSignals`(L4390) + a new `_diTaxArchetype()` before `_diTaxSpine`(L4471)
+  in `_diNarrTaxable`(L4576). Reconciliation RESOLVED in addendum R324: test **AR-CRYPTO-MULTI before
+  AR-CRYPTO-SATELLITE**. §8 cross-account LOCATION layer (Asset-Location bank) CONSUMES §3a but is the
+  portfolio capstone — OUT of the Taxable-room pass. **My lane; copy authored.**
+- **T5 · 13 column tooltips now AUTHORED verbatim (R344–R358).** Installable — EXCEPT ⛔ **3 cells still carry
+  457(b) copy-paste artifacts** that the Architect's dispatch says he fixed but the SAVED sheet does NOT
+  reflect: **C344 header** reads "(457(b)-aware)"; **C352 Beta** contains "[R] The Roth is the right home
+  for your highest-beta bets… untaxed" (a Taxable account has no Roth branch); **C353 Yield** reads "Inside
+  a tax-advantaged account it reinvests untaxed" (in Taxable, dividends ARE taxed yearly — inverted). Installing
+  verbatim would put FALSE tax copy in the room → **HELD 3 cells, FLAG Architect to re-save the taxable
+  versions.** Other ~10 (Ticker/Name/Price/Shares/Value/CostBasis/UnrealizedGain/Geo/Sector/ExpRatio/
+  AssetClass/Instrument) are taxable-correct → install.
+- **T6 · toggle canon RESOLVED → §15 (asset+debt-aware) is CANONICAL** (title "Include this account in my plan"
+  R224, bodies R226/R230). §12 superseded. Architect wants the SAME pair on EVERY room modal (shared surface,
+  bigger blast radius — do carefully).
+- **T4 · cost-basis: wire tooltip (R177) + explainer-modal body (R178–R179); SKIP the "Use this estimate"
+  autofill + overwrite-warning (R180–R181) → ⬜ DELIBERATELY-BLANK "feature-not-built".**
+- **T3 · satellite cap reconciled → 30%** (R88; old 25% dead). **T1 §4b + T2 §18 unchanged — wire as authored.**
+
+**Revised wire list (Lesson-50 wire-then-audit, single pass):** T7 §3a · T1 §4b · T2 §18 · T3 30% ·
+T5 (10 clean tips) · T6 §15 toggle · T4 cost-basis tip+modal. **BLOCKED pending Architect re-save:** T5's
+3 artifact cells (C344/C352/C353).
+
+#### INCREMENT 1 (working tree, NOT committed) — T7 §3a + T1 §4b · GATE 9/9 GREEN
+`scripts/_gate_tax_3a.js` = 9/9. Wired into `_diTaxSignals`/`_diNarrTaxable`:
+- **§3a `_diTaxArchetype(s,x)`** — 11-archetype first-match pre-spine, REPLACES `_diTaxSpine` on a fire,
+  else null→fall-through. New signals in the existing `_diTaxSignals` loop (REUSE, L48): cryptoTickerCount,
+  reitPct/goldPct/commodityPct/industrialPct/divGrowthPct/utilitiesPct, realAssetPct, bondSubTypeCount +
+  bondSubTypesPhrase, realAssetMixPhrase, topThemeClause, sleeveList. Order per 3a-SPEC R311/R324
+  (CRYPTO-MULTI before CRYPTO-SATELLITE). Verified live: AR-CRYPTO-MULTI, AR-INCOME-YIELD, AR-NONE→spine.
+- **§4b `_diTaxComposition(s,x,archFired)`** — sleeve-namer, fires after tilts / before behavior; silent
+  unless ≥8 holdings, top<50, thematic<50, ≥3 sleeves ≥2%, no archetype. Verified live (names US large-cap
+  core / international / bonds / dividend-growth + smaller satellites).
+- Judgment calls made (defensible literal readings, noted for Architect): topThemeClause = existing short
+  theme name lowercased; §4b sleeve bucketer ADDS bonds/covered-call buckets not in R98's literal list
+  (correctness — R98 would mis-bucket bonds as "large-cap core"); curly ’/— to match the file (not the
+  bank's straight quotes) since the whole file is curly + it's what ships.
+- **NEW FLAGS for Architect (design-nuance, not blockers):** (a) when a crypto archetype fires, B-SECTOR-BET
+  still echoes "X% in Crypto" — redundant; consider suppressing a tilt whose theme the archetype already
+  named. (b) B-OVERLAP's stopgap proxy buckets VXUS(intl) with VTI as "same market" — the parked real
+  pairwise-overlap signal (R90/R219) would fix it; §4b now sits next to it and the two mildly contradict.
+
+**REMAINING (increment 2):** T3 retunes · §18b sector clause (replace raw echo) · §18a geo prefix (HOLD —
+composition ambiguity, ask Architect) · §15 toggle · 10 column tooltips · cost-basis tip+modal.
+
+#### INCREMENT 2 (working tree, NOT committed) — COPY LAYER COMPLETE · GATE 21/21 + 401k regression GREEN
+Sheet re-read (grew 358→389): Architect resolved every flag. Wired + gated (`_gate_tax_3a.js` 21/21;
+`_gate_401k_cert.js` regression GREEN — shared-toggle change did NOT drift the certified 401k):
+- **§18b sector clause** — B-SECTOR-BET now emits "…concentrated, with a tilt toward technology and the
+  chips/software behind it" (`_diTaxSectorClause` off `_DI_TAX_SECTOR_CLAUSE`); raw "in Technology" echo GONE.
+- **§18a geo prefix** — `_diTaxGeoDescriptor` (top value-weighted geo bucket → `_DI_TAX_GEO_PHRASE`) leads
+  B-ALL-FOREIGN/GLOBAL-TILT/HOME-HEAVY ("It leans meaningfully international — it’s globally diversified…");
+  sourced-or-blank (needs `s.geoed>0`); crypto lede suppressed when archetype named crypto.
+- **Dedupe (Architect ruling a)** — `suppressTheme` from the fired archetype drops the matching B-SECTOR-BET
+  tilt (verified: MULTI no longer double-echoes "in Crypto").
+- **T3 retunes** — B-GLOBAL floor 30→20% (22% foreign now speaks); B-SATELLITE cap 25→30%; B-HOME-HEAVY
+  eqT≥90 guard dropped (bank R86).
+- **§15 toggles (T6)** — asset+debt-aware canon on EVERY modal ("Include this account/debt in my plan" +
+  R226/R230 bodies); 401k [R]/[T] override + HSA/529 set-aside toggles left intact (regression-proven).
+- **§14.4 all 14 column tooltips (T5)** — `_diTaxColTips()` verbatim from bank R375–R388 (the 3 former
+  "457(b) artifacts" re-exported clean: Beta = capital-gains-bill, Yield = taxed-yearly, header Taxable-aware).
+- **Design flag (b)** — B-OVERLAP stopgap left PARKED (R90/R219); code comment noted; no user-facing change.
+
+**COPY LAYER = 100% WIRED.** Every renderable Taxable bank copy line is ✅ live or ⬜ deliberate.
+
+#### INCREMENT 3 (working tree, NOT committed) — §11b COST-BASIS ESTIMATOR · GATE 11/11 GREEN
+Feature built per bank A183:D211 + §11 R176–R181. `scripts/_gate_tax_11b.js` = **11/11** (equity/bond/cash
+math exact; est-tag; §203 caveat; Opt5 gating; guard). Full suite: **tax 21/21 · §11b 11/11 · 401k regression
+GREEN · all 11 rooms open error-free.**
+- Per-row **"Finding your cost basis" panel** (`#cb-est-overlay`, layered above the account modal), opened by
+  a **"≈"** button in each taxable Cost Basis cell. Design note: entry is per-ROW (not a header modal) because
+  the estimate needs that row's value/class/date — flagged to Captain, accepted.
+- **Reverse-growth math** `_cbEstimate` = value ÷ (1+rate)^years; `_cbRate` per col Z (equity 7 / bond 3 /
+  cash 0 / other 5%; blank class → null → guard shows "enter class first", button no-op).
+- **5-option dropdown** (Opt4 "Enter my own" default; Opt5 "Match actual return" offered per-row ONLY when that
+  row's Acquisition Date is populated); no-selection fallback = 3 yrs.
+- **Acquisition Date column** added (taxable-only via `taxRoomOnly`, bank R389 tooltip); feeds Opt5.
+- **est. tag** (gold, hover shows assumed rate + year) on the basis cell; **§203 caveat** appended in `_diTaxD`
+  + `_diTaxUGLadder` whenever `s.estCount>0`; **overwrite warning** (R181 verbatim) on a real basis; manual
+  edit clears the est flag.
+
+### ✅ TAXABLE "THE LIVING ROOM" — FULLY BAKED (copy + §11b feature), pending Captain smoke + commit
+Every authored bank line ✅ live or ⬜ deliberate; §11b feature done + gated. **Zero unexplained ⛔.** studio.html
+LF-clean, MD5 `be0ca567db9b513da4885bbb07a0316d` (pin bump goes in the SAME commit — done at commit time after
+smoke, per L49). Open flags for Architect (non-blocking): §18b single-industry theme not yet detected; all-foreign
+geo prefix mildly redundant (wired verbatim per ruling); B-OVERLAP real pairwise signal still parked (R90/R219).
+**Room Wiring Ledger (workbook) row:** not written by Claude (open in Excel + Copilot-owned) — verdict text above
+is ready for the Architect to paste. **HELD: not committed — Captain smoking, then pin-bumped commit.**
+
+#### SMOKE FIXES + POLISH (Captain-directed, working tree) — GATES 23/23 · 12/12 · 401k GREEN
+- **Estimator dropdown color** → `background:var(--bg-navy)` (was white-on-white).
+- **Column-tooltip clipping** → th hovers flip to `position:fixed` on hover, clamped to viewport (escapes the
+  table's `overflow-x` scroll clip; same fix as the title hover). All columns, all rooms.
+- **Cost-basis input width** → forced `min-width` so the auto-layout column can't compress it; full value shows.
+- **Cost-basis currency format** → text input shows `$2,041` (`_cbFmt`), state stays a clean number via
+  strip-on-input; estimator fill re-renders formatted.
+- **Sector / Asset Class (all `_sel` dropdowns)** → `min-width:112px` so they stop truncating to 3–4 letters.
+- **§18b single-industry theme (Captain GO)** → `_DI_TAX_THEME_NAMES` + `_DI_TAX_SECTOR_CLAUSE` entry
+  (Automobiles/Consumer-Goods/Investment-Banking/Insurance → "a single named industry"). L47-safe.
+- **R84 all-foreign re-pulled** → Architect reworded to kill the geo self-echo ("…in fact almost all of it
+  sits outside the US…"); live now matches v4 R84 verbatim.
+- **B-OVERLAP real pairwise-overlap signal (R90/R219) = ⬜ DELIBERATELY-BLANK** — deliberately parked
+  (Captain ruling); scoped engine task for later, NOT a gap. The sector-% stopgap proxy remains; sourced-or-blank
+  behaving. Code comment noted in `_diTaxSignals`.
+
+### 🏁 TAXABLE = ✅ SIGNED OFF (all flags closed). Committing now (L49: LF-clean, MD5 pin bumped same commit).
