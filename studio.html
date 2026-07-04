@@ -4152,6 +4152,43 @@
         ? 'This Roth IRA is ' + _diSpine(s) + built + ' — a personal account you assembled from the open market, where everything inside grows tax-free.'
         : 'This Traditional IRA is ' + _diSpine(s) + built + ' — a personal account you assembled from the open market, holding pre-tax capital that grows tax-deferred.';
     }
+    // §3a COMPOSITION ARCHETYPE (IRA bank R179–R195) — the "what this account REALLY IS" pre-read. Runs
+    // BEFORE the spine; a fire REPLACES the generic spine (R180). REUSE (L48): the signal engine is the shared
+    // _diTaxSignals(acc,s) and the trigger ladder is byte-identical to _diTaxArchetype — only the COPY is the
+    // IRA [R]/[T] verbatim (shared body + a taxCode tail that flips). Order tests CRYPTO-MULTI before
+    // CRYPTO-SATELLITE (matching the live Taxable engine's R324 reconciliation; the IRA sheet lists them in the
+    // opposite order — FLAGGED to Architect: multi-coin is the more specific read, so it must win first).
+    // FLAG (reit floor): mirrors the Taxable engine's ≥9.5 tolerance for the bank's "≥10%" (both display "10%").
+    function _diIraArchetype(s, x, isRoth) {
+      if (s.invCount < 1) return null;
+      var tail = isRoth
+        ? ' In the Roth IRA, this growth is tax-free forever once qualified — steer your highest-upside sleeves here.'
+        : ' In the Traditional IRA, it’s all pre-tax — every dollar becomes ordinary income when you withdraw it.';
+      var A = function (id, body) { return { id: id, txt: body + tail }; };
+      if (x.cryptoPct >= 80)
+        return A('AR-CRYPTO-ALL', 'This account is a pure digital-asset holding — ' + _diP(x.cryptoPct) + ' in crypto. It’s the highest-volatility corner of any portfolio: it can multiply or halve in a single year, so its whole job is small-slice, long-horizon upside.');
+      if (x.cryptoTickerCount >= 2 && x.cryptoPct >= 15 && x.cryptoPct < 80)
+        return A('AR-CRYPTO-MULTI', 'This account runs a multi-coin crypto sleeve — more than one digital asset, ' + _diP(x.cryptoPct) + ' of the account. Several coins spread the bet slightly, but they crash together — treat the sleeve as one high-octane position.');
+      if (x.cryptoPct >= 15 && x.cryptoPct < 80 && x.eqT >= 20)
+        return A('AR-CRYPTO-SATELLITE', 'This account pairs a real portfolio with a genuine crypto satellite — ' + _diP(x.cryptoPct) + ' in digital assets riding alongside the rest. A deliberate speculative sleeve: sized to sting, not to sink you.');
+      if (x.bdT >= 80 && x.bondSubTypeCount >= 2)
+        return A('AR-BOND-LADDER', 'This account is a built-out fixed-income sleeve — ' + _diP(x.bdT) + ' in bonds spanning ' + x.bondSubTypesPhrase + '. Not just ‘bonds’: a laddered income-and-ballast engine — Treasuries for safety, corporates for yield, TIPS for inflation, munis for tax-free income.');
+      if (x.bdT >= 80)
+        return A('AR-BOND-INCOME', 'This account is essentially an income-and-ballast bond sleeve — ' + _diP(x.bdT) + ' fixed income. It barely grows, but it barely flinches: its job is to hold steady and throw off predictable income while riskier accounts grow.');
+      if ((x.bdT + x.reitPct) >= 60 && x.reitPct >= 9.5)
+        return A('AR-INCOME-YIELD', 'This account is a yield-tilted income sleeve — it pairs bonds with real-estate REITs (' + _diP(x.bdT) + ' fixed income + ' + _diP(x.reitPct) + ' REITs). Built to PAY you, not to shoot the lights out: steady interest plus rental-style income.');
+      if (x.realAssetPct >= 50 && x.eqT < 40)
+        return A('AR-REAL-ASSET', 'This account is a real-asset / inflation-hedge sleeve — heavy in ' + x.realAssetMixPhrase + ' rather than ordinary stocks and bonds. It moves to a different drummer: sometimes a shock-absorber, sometimes dead money for years. A hedge, not an engine.');
+      if (x.goldPct >= 40)
+        return A('AR-GOLD-HEDGE', 'This account is built around gold as a store-of-value hedge — ' + _diP(x.goldPct) + '. Gold pays no income and can sit flat for years; it earns its keep only when everything else is falling. Insurance, not a growth bet.');
+      if (x.topSectorPct >= 50 && x.topSector)
+        return A('AR-SECTOR-BET-NAMED', 'This account is a concentrated ' + x.topThemeClause + ' bet — ' + _diP(x.topSectorPct) + ' rides on that one theme. When ' + x.topThemeClause + ' runs, it flies; when it doesn’t, there’s nowhere to hide. A conviction position, not a diversified core.');
+      if (x.industrialPct >= 50)
+        return A('AR-ALL-INDUSTRIALS', 'This account is essentially an all-industrials sector bet — ' + _diP(x.industrialPct) + ' in industrials, aerospace & defense, and the machinery of the physical economy. A direct wager on manufacturing and capital-spending cycles: booms with the economy, bleeds when growth stalls.');
+      if ((x.divGrowthPct + x.utilitiesPct) >= 40 && x.eqT >= 60)
+        return A('AR-DIVIDEND', 'This account is a dividend-and-quality equity sleeve — tilted toward companies that pay and raise (' + _diP(x.divGrowthPct) + ' dividend-growth, steady utilities in the mix). Grows more slowly than pure-growth but pays you along the way.');
+      return null;
+    }
     // B2 fires per R87/R95 + Captain's SMOKE-FIX floors (2026-07-02, lowered from 8/3):
     // tickerCount≥3 AND ≥2 sleeves AND top sleeve <50% AND combined thematic+crypto satellites
     // ≤30% AND unclassified ≤10% (the dominance/satellite/honesty guards are correct and STAY —
@@ -4159,7 +4196,8 @@
     // BYTE-IDENTICAL [R]/[T] (R96). NOTE (flagged): this is the ONLY composition-gate path —
     // B2 is installed in the IRA layer table alone; the 457 seam awaits its [R]/[T] tails and
     // the Taxable bank has no B2 section authored (its spine+tag machine names the mix instead).
-    function _diIraCompRead(acc, s, agg, isRoth) {
+    function _diIraCompRead(acc, s, agg, isRoth, archFired) {
+      if (archFired) return null;   // §3a archetype already named the identity — suppress the sleeve breakdown (mirrors Taxable §4b)
       var c = _diSleeves(acc, s);
       if (!c || s.invCount < 3 || c.list.length < 2 || c.top >= 50 || c.satPct > 30 || c.unclPct > 10) return null;
       var names = c.list.map(function (x) { return Math.round(x.pct) + '% ' + x.k; });
@@ -4229,20 +4267,26 @@
         ? 'At ' + _diMoney(contrib) + '/yr you’re feeding the most tax-advantaged dollar in the code — small ceiling, but every dollar in is a dollar that’s never taxed again.'
         : 'At ' + _diMoney(contrib) + '/yr you’re building deferred capital — a smaller lever than a 401(k), but a real one, especially if the contribution is deductible.';
     }
-    var _DI_IRA_LAYERS = [
-      _diIraSpine,      // A — always
-      _diIraTilt,       // B — 0–2, §13 maps via the shared core
-      _diIraCompRead,   // B2 — Composition Read (landed at the reserved seam, 2026-07-02)
-      _diIraBehavior,   // C — 0–2, beta first
-      _diIraMenuFees,   // D
-      _diIraTax,        // E — always (the §11 divergence line)
-      _diIraToggle,     // F
-      _diIraContrib     // G
-    ];
+    // §9 assembler — IRA. Fixed order: §3a archetype (REPLACES the spine on a fire) → A Spine / B Tilt →
+    // B2 Composition (suppressed on an archetype fire) → C Behavior → D Menu&Fees → E Tax → F Toggle → G
+    // Contribution. Inline (mirrors _diNarrTaxable, L48) so the archetype can replace the spine and gate B2.
+    // FLAG (Architect): §3a doctrine R180 says "instrument-mix proceeds" after the archetype, but the IRA
+    // bank embeds the instrument mix INSIDE the spine (R85) with no standalone §3b tag — so on an archetype
+    // fire the "built from …" detail is currently dropped. Does the Architect want a standalone IRA
+    // instrument-mix sentence (mirroring Taxable §3b _diTaxInstTag)? Not fabricating one (L47).
     function _diNarrIRA(acc, s, agg, isRoth) {
       if (!s.total || !(acc.holdings || []).length) return '';
+      var x = _diTaxSignals(acc, s);                         // shared signal engine (L48)
+      var arch = _diIraArchetype(s, x, isRoth);              // §3a — names the identity; REPLACES the spine on a fire
       var out = [];
-      _DI_IRA_LAYERS.forEach(function (fn) { var t = fn(acc, s, agg, isRoth); if (t) out.push(t); });
+      out.push(arch ? arch.txt : _diIraSpine(acc, s, agg, isRoth));
+      var b = _diIraTilt(acc, s, agg, isRoth); if (b) out.push(b);
+      var b2 = _diIraCompRead(acc, s, agg, isRoth, !!arch); if (b2) out.push(b2);
+      var c = _diIraBehavior(acc, s, agg, isRoth); if (c) out.push(c);
+      var d = _diIraMenuFees(acc, s, agg, isRoth); if (d) out.push(d);
+      var e = _diIraTax(acc, s, agg, isRoth); if (e) out.push(e);
+      var f = _diIraToggle(acc, s, agg, isRoth); if (f) out.push(f);
+      var g = _diIraContrib(acc, s, agg, isRoth); if (g) out.push(g);
       return out.join(' ');
     }
 
