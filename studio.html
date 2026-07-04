@@ -828,6 +828,10 @@
   .space-option { padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--white); display: flex; justify-content: space-between; }
   .space-option:hover { background: rgba(255,255,255,0.05); }
   .space-option span { font-family: var(--font-serif); font-style: italic; color: var(--muted); text-transform: none; letter-spacing: 0; }
+  .picker-expander { cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+  .picker-expander:hover { color: var(--white); }
+  .picker-caret { transition: transform 0.15s ease; font-size: 8px; }
+  .picker-expander.open .picker-caret { transform: rotate(90deg); }
 
   /* HVAC Climate Control */
   .climate-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
@@ -3452,7 +3456,18 @@
       { id: 'savings', type: 'joint', taxCode: 'liquid', hasInflow: true, hasInterest: true, title: 'Savings', meta: 'The Safe', desc: 'Cash buffer.' },
       { id: 'crypto', type: 'joint', taxCode: 'liquid', hasInflow: true, hasInterest: false, isInvestment: true, title: 'Crypto', meta: 'The Game Room', desc: 'Crypto ETFs & brokerage holdings (e.g., IBIT, ETHA, Fidelity Crypto). Modeled as taxable. Not for self-custody wallets.' },
       { id: 'collectibles', type: 'joint', taxCode: 'physical', title: 'Collectibles', meta: 'The Arcade', desc: 'Excluded from Range models. Tracks physical net worth.' },
-      
+
+      // ROUTING — acknowledged-but-not-baked picker buckets (Taxable Copy Bank R391–R397, added 2026-07-04).
+      // Room-less by design (⬜): picker labels + routing rules, NOT their own Copy Bank (L48 reuse-don't-fork).
+      // Nested under the "More taxable / other" picker expander (pickerGroup). taxable_corp/taxable_other route
+      // to the Taxable "Living Room" engine verbatim (same DI/strip/title/columns via _isTaxableRoom); other_assets
+      // is a value-only tile (taxCode 'other', modeled on 'physical' — counts to net worth, excluded from Shape).
+      // NOTE: "Other Non-taxable" (R395) is deliberately PARKED — it needs a treatment-capture selector (Captain
+      // ruling 2026-07-04, ship 3 park #3). meta subtitles below are descriptive placeholders pending Captain naming.
+      { id: 'taxable_corp', type: 'joint', taxCode: 'liquid', hasInflow: true, hasInterest: false, isInvestment: true, owner: 'entity', pickerGroup: 'more-taxable', title: 'Corporate / Business Taxable', meta: 'Entity-owned taxable', desc: 'A taxable brokerage held by an entity (LLC/corp) rather than an individual.' },
+      { id: 'taxable_other', type: 'joint', taxCode: 'liquid', hasInflow: true, hasInterest: false, isInvestment: true, pickerGroup: 'more-taxable', title: 'Other Taxable', meta: 'Uncategorized taxable', desc: 'Any taxable account not matching a named brokerage bucket.' },
+      { id: 'other_assets', type: 'joint', taxCode: 'other', pickerGroup: 'more-taxable', title: 'Other Assets', meta: 'Value-only asset', desc: 'A non-security asset (business interest, private holding) with a value but no ticker/holdings.' },
+
       { id: 'mortgage_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Mortgage', meta: 'The Moat', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'auto_debt_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Auto Loan', meta: 'The Garage', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'rev_debt_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Revolving Debt', meta: 'The Furnace', desc: 'Liability. Subtracts from Estate Sq Footage.' },
@@ -3770,13 +3785,23 @@
       const available = rDataList; 
       
       if(isCo) {
-          const joint = available.filter(r => r.type === 'joint' && r.taxCode !== 'trust');
+          const joint = available.filter(r => r.type === 'joint' && r.taxCode !== 'trust' && !r.pickerGroup);
           if(joint.length > 0) { dropdownHTML += `<div class="dropdown-group-lbl">Joint Spaces</div>`; joint.forEach(addDropOption); }
       } else {
-          const jointAsPrimary = available.filter(r => r.type === 'joint' && r.taxCode !== 'trust');
+          const jointAsPrimary = available.filter(r => r.type === 'joint' && r.taxCode !== 'trust' && !r.pickerGroup);
           if(jointAsPrimary.length > 0) { dropdownHTML += `<div class="dropdown-group-lbl">Additional Spaces</div>`; jointAsPrimary.forEach(addDropOption); }
       }
-      
+
+      // "More taxable / other" expander — nests the acknowledged-but-not-baked routing buckets (Taxable bank
+      // R397: keep the main list clean; reveal on click). Collapsed by default; the label toggles the subgroup.
+      const moreTax = available.filter(r => r.pickerGroup === 'more-taxable');
+      if (moreTax.length > 0) {
+          dropdownHTML += `<div class="dropdown-group-lbl picker-expander" onclick="var n=this.nextElementSibling; var open=n.style.display!=='block'; n.style.display=open?'block':'none'; this.classList.toggle('open', open);">More taxable / other <span class="picker-caret">▸</span></div>`;
+          dropdownHTML += `<div class="picker-subgroup" style="display:none;">`;
+          moreTax.forEach(addDropOption);
+          dropdownHTML += `</div>`;
+      }
+
       const primary = available.filter(r => r.type === 'primary');
       if(primary.length > 0) { dropdownHTML += `<div class="dropdown-group-lbl">Primary Architect Spaces</div>`; primary.forEach(addDropOption); }
       
@@ -3804,7 +3829,10 @@
        singleNameStock_fmt token contract is wired (the IRA/401k/457 §7 ask — L48, don't rebuild).
        NOTE: distinct from the Want-canvas "Datum Intelligence" slider tooltips (~L1844) — name
        collision only; do not merge. */
-    function _diIsBankRoom(baseId) { return /^(hsa|trad403|roth403|tradira|rothira|pretax457b|roth457b|roth401k|pretax401k|taxable)(_co)?$/.test(String(baseId || '')) || baseId === '529plan'; }
+    function _diIsBankRoom(baseId) { return /^(hsa|trad403|roth403|tradira|rothira|pretax457b|roth457b|roth401k|pretax401k|taxable(_corp|_other)?)(_co)?$/.test(String(baseId || '')) || baseId === '529plan'; }
+    // Routing (Taxable bank R393/R394): Corporate & Other-Taxable reuse the Taxable "Living Room" engine verbatim.
+    // One helper replaces the point base.id==='taxable' checks so the DI/strip/title/column-tips all match them (L48).
+    function _isTaxableRoom(baseId) { return /^taxable(_corp|_other)?$/.test(String(baseId || '')); }
     // 529 §8 dated constants (gift exclusion / superfund / K-12 / 529→Roth) — LOOKUP by tax year (L47)
     var _DI_529 = { 2025: { excl: 18000, superS: 90000, superC: 180000, k12: 10000, roth: 35000 },
                     2026: { excl: 19000, superS: 95000, superC: 190000, k12: 20000, roth: 35000 } };
@@ -4904,7 +4932,7 @@
       var b457 = /457b/.test(base.id), b457Roth = /^roth457b/.test(base.id);
       var beta = agg && agg.weightedBeta;
       var h = '<div class="holdings-rollup" id="bank-strip-' + id + '">';
-      if (base.id === 'taxable') {
+      if (_isTaxableRoom(base.id)) {
         // Taxable bank strip — §1 mix cells (of ACCOUNT value) + the 4 boxes with §10 metric-
         // ladder hovers. 14.2: the clinical gain restatement is gone; the gain-tax line stays.
         var xs = _diTaxSignals(acc, s);
@@ -5494,7 +5522,7 @@
                : /ira/.test(base.id) ? _diNarrIRA(acc, s, agg, /^rothira/.test(base.id))
                : /457b/.test(base.id) ? _diNarr457(acc, s, agg, /^roth457b/.test(base.id))
                : /401k/.test(base.id) ? _diNarr401k(acc, s, agg, /^roth401k/.test(base.id))
-               : base.id === 'taxable' ? _diNarrTaxable(acc, s, agg)
+               : _isTaxableRoom(base.id) ? _diNarrTaxable(acc, s, agg)
                : _diNarr403(acc, s, agg, /roth403/.test(base.id));
       if (!body) return '<div id="di-narr-' + acc.id + '"></div>';   // empty anchor — no fabricated narrative (L47)
       return '<div class="di-narrative" id="di-narr-' + acc.id + '"><div class="di-narr-head">Datum Intelligence</div><div class="di-narr-body">' + body + '</div></div>';
@@ -5534,7 +5562,7 @@
         tt = '<strong>The Infirmary — your triple-tax-advantaged health account</strong>' +
              'The only account taxed nowhere — in, growing, or out (for medical).<br><br>' +
              'Contributions go in tax-deductible, growth is never taxed, and withdrawals for qualified medical care are tax-free at any age. Not a use-it-or-lose-it FSA: unspent money rolls over, can be invested, and compounds for decades. After 65, non-medical withdrawals simply pay ordinary income tax — a Traditional IRA at worst, tax-free at best.';
-      } else if (base.id === 'taxable') {
+      } else if (_isTaxableRoom(base.id)) {
         // §16 Taxable title hover (Taxable bank R221–R224, verbatim)
         tt = '<strong>The Living Room — a Taxable Brokerage</strong>' +
              'The account with no rules — and that’s the point.<br><br>' +
@@ -6411,7 +6439,7 @@
                 }
                 // Taxable §14.4-COPY: all 14 column-header tooltips (bank R375–R388, verbatim, two-part) +
                 // §11b: the Cost Basis cell gets the "≈" estimator trigger and the persistent "est." tag.
-                if (base.id === 'taxable') {
+                if (_isTaxableRoom(base.id)) {
                   var _tct = _diTaxColTips();
                   COLS.forEach(function (c) {
                     if (_tct[c.lbl]) c.tip = _tct[c.lbl];
@@ -7005,7 +7033,7 @@
             return;
         }
 
-        let catSums = { pretax: 0, roth: 0, liquid: 0, physical: 0, income: 0, debt: 0 };
+        let catSums = { pretax: 0, roth: 0, liquid: 0, physical: 0, other: 0, income: 0, debt: 0 };
         let validAssetTotal = 0;
 
         let smallestRoom = null;
@@ -7051,9 +7079,10 @@
         if (domKey === 'liquid') report += `Architecture is heavily weighted in <span>Liquid Assets (${pct(catSums.liquid)}%)</span> providing high immediate agility. `;
         if (domKey === 'roth') report += `Extremely efficient tax-structure, anchored by <span>Tax-Free Growth (${pct(catSums.roth)}%)</span>. `;
         if (domKey === 'physical') report += `High illiquidity. Capital is locked firmly in <span>Physical Assets (${pct(catSums.physical)}%)</span>. `;
+        if (domKey === 'other') report += `Meaningful weight sits in <span>Other Assets (${pct(catSums.other)}%)</span> — illiquid, outside the market-return model. `;
 
         if (catSums[secKey] > 0) {
-            let secName = secKey === 'pretax' ? 'The Vault/Pre-Tax' : (secKey === 'liquid' ? 'Liquid Capital' : (secKey === 'roth' ? 'Tax-Free Space' : 'Physical Property'));
+            let secName = secKey === 'pretax' ? 'The Vault/Pre-Tax' : (secKey === 'liquid' ? 'Liquid Capital' : (secKey === 'roth' ? 'Tax-Free Space' : (secKey === 'other' ? 'Other Assets' : 'Physical Property')));
             report += `Secondary load is supported by <span>${secName} (${pct(catSums[secKey])}%)</span>.`;
         }
 
@@ -7641,6 +7670,7 @@
         trad403:       'pretax_401k',  trad403_co:       'pretax_401k',
         roth403:       'roth_401k',    roth403_co:       'roth_401k',
         taxable:       'taxable',
+        taxable_corp:  'taxable',      taxable_other:    'taxable',   // routing buckets → Taxable engine (bank R393/R394)
         savings:       'hysa',         savings_primary:  'hysa',      savings_co: 'hysa',
         crypto:        'taxable',      crypto_primary:   'taxable',   crypto_co:  'taxable',
         pension:       'pension',      pension_co:       'pension'
@@ -7651,6 +7681,7 @@
         'checking', 'checking_primary', 'checking_co',
         'property', 'auto', 'auto_primary', 'auto_co',
         'collectibles', 'collectibles_primary', 'collectibles_co',
+        'other_assets',    // value-only tile (bank R396) — net worth yes, engine Shape no
         'trust', '529plan',
         'hsa', 'hsa_co',   // medical set-aside — never engine spend-mass (Copy Bank §0.6; toggle-OFF inclusion parked)
         'mortgage_joint',   'auto_debt_joint',   'rev_debt_joint',   'personal_loan_joint',
@@ -8046,7 +8077,7 @@
         revealBtn.addEventListener('click', async function() {
           // Block if total investable assets = $0
           var totalInvestable = (state.accounts || [])
-            .filter(function(a) { var b = getBaseType(a.baseId); var tc = b ? b.taxCode : ''; return tc !== 'physical' && tc !== 'debt'; })
+            .filter(function(a) { var b = getBaseType(a.baseId); var tc = b ? b.taxCode : ''; return tc !== 'physical' && tc !== 'other' && tc !== 'debt'; })
             .reduce(function(sum, a) { return sum + (a.value || 0); }, 0);
           if (totalInvestable === 0) {
             var errEl = document.getElementById('reveal-zero-error');

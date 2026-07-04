@@ -308,3 +308,34 @@ is ready for the Architect to paste. **HELD: not committed — Captain smoking, 
 on datumfi.com (openCBEstimator / _diTaxArchetype / archetype copy all serving). Studio pin `551d7f69`, guard
 matches. Account #2 done. **NEXT = IRA "The Library" (tradira) / "The Conservatory" (rothira) — bank `IRA Copy
 Bank` A1:D232, dual [R]/[T], same wire-then-audit method.** (This ledger line committed post-push in a follow-up.)
+
+---
+
+## STEP 0 — Taxable ROUTING BUCKETS (bank R391–R397, added 2026-07-04) · COMMITTED, HELD FOR PUSH
+
+Post-cert addition to the Taxable Copy Bank: four acknowledged-but-not-baked picker buckets that route into
+EXISTING engines (no new rooms, L48). Captain ruling 2026-07-04: **ship 3 mechanical buckets now, PARK the
+one that needs a feature.** Room-less by design (⬜) — picker labels + routing rules, not their own Copy Bank.
+
+### Line-by-line audit (L50 DoD — zero unexplained ⛔)
+| Bank | Bucket | Verdict | Wiring |
+|---|---|---|---|
+| R393 | Corporate / Business Taxable | ✅ WIRED | `taxable_corp` → Taxable "Living Room" engine verbatim (`_isTaxableRoom`), `owner:'entity'` (label-only), engine map → `taxable` |
+| R394 | Other Taxable | ✅ WIRED | `taxable_other` → same Taxable engine, engine map → `taxable` |
+| R396 | Other Assets | ✅ WIRED | `other_assets`, `taxCode:'other'` (modeled on 'physical': counts to net worth, excluded from equity/bond/Shape), in `FILTERED_TYPES`, `catSums.other` |
+| R395 | **Other Non-taxable** | ⬜ **PARKED** | **Needs a user-stated treatment selector (pretax/Roth/edu; unknown→FLAG, never guess — L47). Deferred to its own focused pass. NOT wired, NOT dropped — resurfaces when we revisit STEP 0.** |
+| R397 | "More taxable / other" expander UX | ✅ WIRED | picker nests all 3 under a collapsed-by-default expander after the joint list (`pickerGroup:'more-taxable'` + `.picker-expander`) |
+
+meta subtitles are utilitarian descriptive placeholders (Captain-approved, no brand nicknames): Corporate =
+"Entity-owned taxable" · Other Taxable = "Uncategorized taxable" · Other Assets = "Value-only asset".
+
+### Gates
+- `scripts/_gate_tax_routing.js` — **red-first PROVEN 3/27 (HEAD) → 27/27 (wired).**
+- Regression (shared picker/engine surface): **401(k) cert `OVERALL: GREEN` · Taxable §3a/§4b `23/23` · §11b `12/12`.**
+  The `_isTaxableRoom` point-check → helper swap did NOT drift the two certified rooms.
+
+### Ship state
+studio.html LF-clean, MD5 `35ec57ee2989ba0816168c9122245eb9` (pin bumped SAME commit, L49 — `build-dist.mjs`).
+**COMMITTED + HELD for Captain local smoke → push on his word.** ⬜ **R395 "Other Non-taxable" PARK captured
+here (durable) — pick it up as a treatment-selector feature pass before/after IRA.** After push: NEXT = IRA
+"The Library" (tradira) / "The Conservatory" (rothira), bank `IRA Copy Bank` A1:D232, dual [R]/[T].
