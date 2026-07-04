@@ -341,18 +341,17 @@ hovers (honest-limits: what it IS / how it works / what it does NOT do). Wired v
 - **Corporate / Business Taxable** (R393 hover) — ✅ WIRED; distinct branch before the shared `_isTaxableRoom`
   Living-Room branch. Columns unchanged (engine identical).
 - **Other Taxable** (R394 hover) — ✅ WIRED; own branch.
-- **Other Assets** (R396 hover) — ⬜ **PARKED (no surface).** Value-only tiles hit `_diSetTitle`'s early-return
-  (`!_diIsBankRoom`) → plain `_diTitleInput`, **no ⓘ hover exists** (property/collectibles don't either).
-  Per Captain's "FLAG & HOLD, don't improvise a location" — NOT wired; awaiting his call on whether to extend
-  the title-ⓘ surface to value-only tiles. Copy is authored + ready; only the surface decision blocks it.
-Gate `_gate_tax_routing.js` extended to **33/33** (title-hover red-first: 4 hover checks FAIL pre-wire →
-PASS; plain-Taxable Living-Room title + Other-Assets-no-ⓘ regression PASS both ways). Regression re-run GREEN
-(401k OVERALL, tax 23/23, 11b 12/12).
+- **Other Assets** (R396 hover) — ✅ **WIRED (Captain ruling: Option 1 — extend the ⓘ to other_assets ONLY).**
+  `_diSetTitle` early-return now lets `other_assets` through to the SHARED title-ⓘ wrapper (L48 reuse — same
+  surface, one more id); own branch renders R396 verbatim. **Scoped to other_assets ONLY** — property/collectibles
+  (Grounds/Arcade) stay plain (no authored hover copy, L47); gate proves they don't inherit the ⓘ.
+Gate `_gate_tax_routing.js` = **36/36** (OA red-first: R396 + ⓘ checks FAIL pre-wire → PASS; Grounds/Arcade
+no-ⓘ PASS both ways). Regression re-run GREEN (401k OVERALL, tax 23/23, 11b 12/12).
 
 ### Ship state
-studio.html LF-clean, MD5 `ffdf6db7876df2c879f85be428e5daf9` (pin bumped SAME commit, L49 — `build-dist.mjs`).
-Two commits **HELD, unpushed**: `850e9b9` (routing wiring) + follow-on (hover backfill). **HELD for Captain
-local smoke → push on his word.** ⬜ **Two PARKS captured here (durable): R395 "Other Non-taxable" (needs a
-treatment selector) + R396 "Other Assets" ROOM-INTRO HOVER (needs a title-ⓘ surface decision for value-only
-tiles).** After push: NEXT = IRA "The Library" (tradira) / "The Conservatory" (rothira), bank `IRA Copy Bank`
-A1:D232, dual [R]/[T].
+studio.html LF-clean, MD5 `a09a72f9623d0ef2ad6f6a937409c2a7` (pin bumped SAME commit, L49 — `build-dist.mjs`).
+Three commits **HELD, unpushed**: `850e9b9` (routing wiring) + `9762055` (Corp/Other hovers) + follow-on
+(Other Assets hover). **HELD for Captain final :8001 walk → push all three together on his word.** ⬜ **ONE
+PARK remains (durable): R395 "Other Non-taxable" — needs a treatment-capture selector (pretax/Roth/edu;
+unknown→FLAG, never guess); its own feature pass, do NOT draft copy.** After push: NEXT = IRA "The Library"
+(tradira) / "The Conservatory" (rothira), bank `IRA Copy Bank` A1:D232, dual [R]/[T].

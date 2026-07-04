@@ -65,6 +65,8 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     out.otherHtml = openBank('taxable_other');
     out.baseHtml = openBank('taxable');            // plain taxable — Living Room title regression
     out.oaHtml = openValueOnly('other_assets');
+    out.propHtml = openValueOnly('property');       // The Grounds — must NOT inherit the ⓘ surface
+    out.collHtml = openValueOnly('collectibles');   // The Arcade — must NOT inherit the ⓘ surface
     // picker HTML — trigger the build via the add-space button, then read the dropdown
     try { document.querySelector('.action-btn'); } catch (e) {}
     const btn = document.getElementById('add-space-btn') || document.querySelector('[id*="add-space"]');
@@ -88,9 +90,11 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   const LIVING_MARK = 'The Living Room — a Taxable Brokerage';          // plain-taxable room-intro title hover
   const CORP_MARK = 'We flag it as entity-owned so your net worth stays honest'; // R393 room-intro
   const OTHER_MARK = 'a full taxable room wearing a generic label';     // R394 room-intro
+  const OA_MARK = 'Walling it out keeps your investable mix honest';    // R396 room-intro
   const c = R.corp || {}, o = R.othertax || {}, oa = R.otherassets || {};
   const corpB = (R.corpHtml || {}).body, otherB = (R.otherHtml || {}).body, oaB = (R.oaHtml || {}).body;
   const corpT = (R.corpHtml || {}).title, otherT = (R.otherHtml || {}).title, baseT = (R.baseHtml || {}).title, oaT = (R.oaHtml || {}).title;
+  const propT = (R.propHtml || {}).title, collT = (R.collHtml || {}).title;
 
   const checks = [
     // registry
@@ -121,7 +125,11 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     ['Other Assets modal renders (no crash)', typeof oaB === 'string' && oaB.length > 0 && !has(oaB, '__')],
     ['Other Assets has NO taxable DI archetype', !has(oaB, TAX_MARK)],
     ['Other Assets has NO taxable col tip', !has(oaB, COL_MARK)],
-    ['Other Assets has NO room-intro ⓘ hover yet (PARKED surface)', !has(oaT, 'modal-tt')],
+    // Other Assets room-intro hover (R396) — now wired to the shared title-ⓘ surface, other_assets ONLY
+    ['Other Assets title hover = R396 room-intro', has(oaT, OA_MARK)],
+    ['Other Assets title now HAS the ⓘ wrapper', has(oaT, 'modal-tt')],
+    ['Grounds (property) still NO ⓘ (no surface inherit)', !has(propT, 'modal-tt')],
+    ['Arcade (collectibles) still NO ⓘ (no surface inherit)', !has(collT, 'modal-tt')],
     // picker expander nesting
     ['picker has "More taxable / other" expander', has(R.pickerHtml, 'More taxable / other')],
     ['picker lists Corporate / Business Taxable', has(R.pickerHtml, 'Corporate / Business Taxable')],
@@ -141,7 +149,8 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   const summary = `[${LABEL}] ${pass}/${checks.length} GREEN\n` + lines.join('\n') +
     '\n\n=== CORP title hover ===\n' + strip(corpT) +
     '\n\n=== OTHER TAXABLE title hover ===\n' + strip(otherT) +
-    '\n\n=== OTHER ASSETS title (should be plain, no ⓘ) ===\n' + strip(oaT) +
+    '\n\n=== OTHER ASSETS title hover (R396) ===\n' + strip(oaT) +
+    '\n\n=== GROUNDS title (must stay plain, no ⓘ) ===\n' + strip(propT) +
     '\n\n=== PICKER ===\n' + strip(R.pickerHtml) + '\n';
   fs.writeFileSync('scripts/_gate_tax_routing.out.txt', summary, 'utf8');
   process.exit(pass === checks.length ? 0 : 1);
