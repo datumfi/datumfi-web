@@ -4510,10 +4510,26 @@
         ? 'At ' + _diMoney(contrib) + '/yr you’re filling a high-limit, tax-free bucket that also happens to be the most accessible retirement account you own.'
         : 'At ' + _diMoney(contrib) + '/yr you’re deferring meaningful pre-tax capital into the one account you can reach penalty-free the moment you leave the job.';
     }
+    // LAYER B2 · COMPOSITION READ (R106 / §13c R185–R190) — REUSE _diSleeves + the shared
+    // _diIraCompRead/_di401kCompRead gate VERBATIM (L48: fundCount≥3 / ≥2 sleeves / top<50% /
+    // satPct & unclPct honesty guards). Only the 457 tax-tail differs; the sleeve clause is
+    // wrapper-neutral (identical [R]/[T]) and the tail carries the Workshop/Annex + separation
+    // access truth. SILENT when a sleeve ≥50% — a concentrated account speaks for itself.
+    function _di457CompRead(acc, s, agg, isRoth) {
+      var c = _diSleeves(acc, s);
+      if (!c || s.invCount < 3 || c.list.length < 2 || c.top >= 50 || c.satPct > 30 || c.unclPct > 10) return null;
+      var names = c.list.map(function (o) { return Math.round(o.pct) + '% ' + o.k; });
+      var txt = names.length > 4
+        ? names.slice(0, 4).join(', ') + ' and a handful of smaller satellite positions (' + c.list.slice(4).map(function (o) { return o.k; }).join(', ') + ')'
+        : names.join(', ');
+      return 'Here’s what’s actually under the hood, biggest first: ' + txt + '. ' + (isRoth
+        ? 'Seeing the real shape matters — a plan menu can hide a lot of overlap behind eight fund names, and in the Roth 457(b) every one of those sleeves compounds tax-free, so the mix you build here is the mix you keep, untaxed, and can reach at any age once you’ve separated.'
+        : 'Seeing the real shape matters — a plan menu can hide a lot of overlap behind eight fund names, and in the Traditional 457(b) this whole mix grows tax-deferred, taxed as ordinary income only when you draw on it — which, uniquely for a 457(b), you can do penalty-free at any age once you leave the employer.');
+    }
     var _DI_457_LAYERS = [
       _di457Spine,      // A — always
       _di457Tilt,       // B — 0–2 (shared §13 maps; the 457 sheet's map is the same account-agnostic map)
-      /* B2 seam — no 457 Composition Read verbatims authored yet (L47: silent, not invented) */
+      _di457CompRead,   // B2 — composition read (R106 / §13c), reuse shared gate; silent when top sleeve ≥50%
       _di457Behavior,   // C — 0–2, beta first
       _di457MenuFees,   // D — plan-menu meaning
       _di457Tax,        // E — always (the separation-based access line — the 457 signature)

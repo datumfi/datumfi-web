@@ -9,7 +9,10 @@
    no-income-limit note. (4) §1 strip (Workshop/Annex balance hovers, own-ceiling contrib,
    guarded Unrealized Gain) + §2 title hovers + §12 per-room column tips (Cost Basis visible).
    (5) Variant: Layer C concentration ("A single position — TSLA — carries 15%") + Roth
-   bond-ballast clause; B2 stays ABSENT (no 457 B2 verbatims authored — L47).
+   bond-ballast clause; B2 stays SILENT here (concentrated book, top sleeve >50%).
+   (7) I1 · §13c B2 Composition Read: on a genuinely-diversified book (top sleeve <50%, ≥2
+   sleeves) the "under the hood" sleeve breakdown FIRES, wrapper-neutral clause shared, 457
+   tax-tail per branch (Workshop tax-deferred / Annex tax-free, both separation-access).
    (6) Regression: IRA rooms keep IRA copy (no 457 leak), 403 tilt tail intact, taxable
    untouched, empty co-room fabricates nothing.
    Usage: serve repo root on :8001, then node scripts/_gate_457_di.js [LABEL] */
@@ -88,6 +91,19 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     recalcPortfolio(r);
     const N = open('roth457b');
 
+    // DIVERSIFIED fixture (I1 · §13c B2 fire proof): top sleeve <50%, ≥2 sleeves, invCount≥3 → the
+    // Composition Read MUST fire, tax-tail per branch. The vanilla FIX book has ~66% in one core
+    // sleeve → B2 correctly SILENT (matches the §11 worked example); THIS book is the genuinely-
+    // diversified shape R106 is authored for. core 30% / intl 25% / bonds 25% / small-cap 20%.
+    const DIV = () => [
+      mk({ ticker: 'NWLGX', name: 'NW Large Cap Core',  price: 100, shares: 300, expRatio: 0.45, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Large Cap', instrumentType: 'Mutual Fund' }),
+      mk({ ticker: 'NWINX', name: 'NW International',    price: 100, shares: 250, expRatio: 0.65, assetClass: 'Stocks', geography: 'International', sector: 'International', instrumentType: 'Mutual Fund' }),
+      mk({ ticker: 'DODIX', name: 'Dodge & Cox Income',  price: 100, shares: 250, expRatio: 0.41, assetClass: 'Bonds', geography: 'US Bonds', sector: 'Bonds', instrumentType: 'Mutual Fund' }),
+      mk({ ticker: 'NWSMX', name: 'NW Small Cap',        price: 100, shares: 200, expRatio: 0.60, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Small Cap', instrumentType: 'Mutual Fund' })
+    ];
+    t.holdings = DIV(); recalcPortfolio(t); const DT = open('pretax457b');
+    r.holdings = DIV(); recalcPortfolio(r); const DR = open('roth457b');
+
     // Regression: IRA keeps IRA copy; 403 keeps its tilt tail; taxable untouched.
     const ir = window.state.accounts.find(a => a.baseId === 'tradira');
     ir.holdings = [ mk({ ticker: 'VOO', name: 'V', price: 100, shares: 100, expRatio: 0.03, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Large Cap', instrumentType: 'ETF' }) ];
@@ -109,7 +125,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     co.showHoldings = true; window.openAccountModal(co.id);
     const E = document.getElementById('modal-dynamic-content').innerHTML;
 
-    return { T, Rt, V, N, I, F, X, E, wdT, wdR };
+    return { T, Rt, V, N, DT, DR, I, F, X, E, wdT, wdR };
   });
   await b.close();
 
@@ -117,6 +133,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   const has = (s, t) => s.indexOf(t) !== -1;
   const narr = (html) => { const m = /di-narr-body[^>]*>([\s\S]*?)<\/div>/.exec(html); return m ? m[1] : ''; };
   const nT = narr(R.T.html), nR = narr(R.Rt.html), nV = narr(R.V.html), nN = narr(R.N.html);
+  const nDT = narr(R.DT.html), nDR = narr(R.DR.html);
 
   console.log('===== 457(b) DI GATE [' + LABEL + '] =====');
   let all = true;
@@ -137,7 +154,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   all = ok('Layer D: plan-menu lever (cheapest share class)',   has(nR, 'picking the cheapest available share class')) && all;
   all = ok('Layer D T: lowest-cost option your plan offers',    has(nT, 'lowest-cost option your plan offers')) && all;
   all = ok('beta clause SILENT (blank betas)',                  !has(nT, 'It rides') && !has(nR, 'It rides')) && all;
-  all = ok('B2 ABSENT (no 457 verbatims authored — L47)',       !has(nT, 'under the hood') && !has(nR, 'under the hood')) && all;
+  all = ok('B2 SILENT on vanilla core (top sleeve >50%, correct)', !has(nT, 'under the hood') && !has(nR, 'under the hood')) && all;
   all = ok('VANILLA BAN: "The invested sleeve is" absent',      !has(nT, 'The invested sleeve is') && !has(nR, 'The invested sleeve is')) && all;
   // Job 2 — §3 withdrawal rebuild (parked ticket C2.1: the age gate must be GONE)
   all = ok('§3: withdrawal box has NO "Age 59.5 (…)" value',    R.wdT.length > 0 && !has(R.wdT, 'Age 59.5 (') && !has(R.wdR, 'Age 59.5 (')) && all;
@@ -171,10 +188,17 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   all = ok('variant: single position TSLA carries 45%',         has(nV, 'A single position — TSLA — carries 45% of this account')) && all;
   all = ok('variant R: tax-free upside rides on one name',      has(nV, 'rides on one name')) && all;
   all = ok('variant R: bond ballast wastes best shelter',       has(nV, '35%') && has(nV, 'wastes your best tax shelter')) && all;
-  all = ok('variant: B2 still ABSENT',                          !has(nV, 'under the hood')) && all;
+  all = ok('variant: B2 SILENT (concentrated, top sleeve >50%)', !has(nV, 'under the hood')) && all;
   // SMOKE-FIX negative control — equal-weight book stays SILENT (no false "carries 20%" leader)
   all = ok('NEG: equal-weight book — concentration SILENT',     !has(nN, 'A single position')) && all;
   all = ok('NEG: equal-weight book — no invented leader name',  !has(nN, 'carries 20%')) && all;
+  // Job 7 — I1 §13c B2 COMPOSITION READ fires on a genuinely-diversified book (top sleeve <50%)
+  all = ok('B2 fires (DIV book): "under the hood" present [T]',  has(nDT, 'under the hood')) && all;
+  all = ok('B2 fires (DIV book): "under the hood" present [R]',  has(nDR, 'under the hood')) && all;
+  all = ok('B2 sleeve list: names the real sleeves by name',    has(nDT, 'US large-cap core') && has(nDT, 'international')) && all;
+  all = ok('B2 [T] tail: tax-deferred, ordinary income on draw', has(nDT, 'this whole mix grows tax-deferred') && has(nDT, 'penalty-free at any age once you leave the employer')) && all;
+  all = ok('B2 [R] tail: sleeves compound tax-free, reach early', has(nDR, 'every one of those sleeves compounds tax-free') && has(nDR, 'reach at any age once you’ve separated')) && all;
+  all = ok('B2 wrapper-neutral: sleeve clause shared [R]==[T]',  has(nDT, 'a plan menu can hide a lot of overlap') && has(nDR, 'a plan menu can hide a lot of overlap')) && all;
   // Job 6 — regression + honesty
   all = ok('IRA keeps IRA copy (no 457 leak)',                  has(narr(R.I.html), 'assembled from the open market') && !has(narr(R.I.html), 'governmental')) && all;
   all = ok('403: keeps its OWN plan-menu tilt tail',            has(narr(R.F.html), 'a shape drawn from the funds your plan offers')) && all;
