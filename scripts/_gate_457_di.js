@@ -18,6 +18,9 @@
    AR-NONE (vanilla/DIV diversified core) correctly falls through to the generic spine.
    (9) Captain copy folds (2026-07-05): Layer-E roll-portability caveat (wrapper-neutral, verbatim
    in BOTH [R]/[T]) + SECURE 2.0 high-wage Roth-catch-up threshold $145k→$150k (2026 IRS COLA).
+   (10) I3 · §15 "Why a 457(b)?" education panel (R203–R219): verbatim fields render for BOTH
+   branches; big-overlap figure sourced from §8 (_di402gLimits × 2, never baked) + highlighted
+   when a 403(b) coexists; SAFETY NOTE gated on govPlan===true; no IRA-panel leak.
    (6) Regression: IRA rooms keep IRA copy (no 457 leak), 403 tilt tail intact, taxable
    untouched, empty co-room fabricates nothing.
    Usage: serve repo root on :8001, then node scripts/_gate_457_di.js [LABEL] */
@@ -118,6 +121,13 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     t.holdings = CRYPTOALL(); recalcPortfolio(t); const AT = open('pretax457b');
     r.holdings = CRYPTOALL(); recalcPortfolio(r); const AR = open('roth457b');
 
+    // §15 panel · govPlan gate (I3): the SAFETY NOTE (trust-protection claim) renders ONLY when
+    // govPlan===true. Default T/Rt opens have no govPlan → must be hidden. GT sets the flag → shown.
+    t.govPlan = true; const GT = open('pretax457b');
+    // §8-sourced fill-both fragment (panel-specific): the ~2×base figure IN CONTEXT, so the assertion
+    // can't green-match the same $-figure that already appears in the special-catch-up hover. Never baked.
+    const combined457 = (function () { var L = _di402gLimits(); var yr = new Date().getFullYear(); return '~' + _diMoney(2 * L.base) + ' pre-tax in ' + yr + ' before any catch-up'; })();
+
     // Regression: IRA keeps IRA copy; 403 keeps its tilt tail; taxable untouched.
     const ir = window.state.accounts.find(a => a.baseId === 'tradira');
     ir.holdings = [ mk({ ticker: 'VOO', name: 'V', price: 100, shares: 100, expRatio: 0.03, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Large Cap', instrumentType: 'ETF' }) ];
@@ -139,7 +149,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     co.showHoldings = true; window.openAccountModal(co.id);
     const E = document.getElementById('modal-dynamic-content').innerHTML;
 
-    return { T, Rt, V, N, DT, DR, AT, AR, I, F, X, E, wdT, wdR };
+    return { T, Rt, V, N, DT, DR, AT, AR, GT, combined457, I, F, X, E, wdT, wdR };
   });
   await b.close();
 
@@ -230,6 +240,18 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   all = ok('FOLD2 caveat OUT clause in Layer E [R]',             has(nR, 'roll this money OUT into an IRA or 401(k) and it permanently loses the shield')) && all;
   all = ok('FOLD2 caveat IN clause both branches (identical)',   has(nT, 'those dollars keep their own early-withdrawal rules') && has(nR, 'those dollars keep their own early-withdrawal rules')) && all;
   all = ok('FOLD1 is457 tip reads $150k (145k gone)',           has(R.T.html, '$150k prior year') && !has(R.T.html, '145k')) && all;
+  // Job 10 — I3 §15 "Why a 457(b)?" education panel (bank R203–R219, both branches)
+  all = ok('§15 panel HEADER renders [T]',                       has(R.T.html, 'and how it differs from a 403(b)')) && all;
+  all = ok('§15 panel HEADER renders [R] (both branches)',       has(R.Rt.html, 'and how it differs from a 403(b)')) && all;
+  all = ok('§15 one-line answer verbatim',                       has(R.T.html, 'The account type follows your employer, not your choice.')) && all;
+  all = ok('§15 457(b)-edge: best bridge for early retirement',  has(R.T.html, 'the single best bridge for an early retirement')) && all;
+  all = ok('§15 portability trap: preserves the escape hatch',   has(R.T.html, 'preserves the escape hatch')) && all;
+  all = ok('§15 bottom line: two separate buckets, feed both',   has(R.T.html, 'treat them as two separate buckets and try to feed both')) && all;
+  all = ok('§15 big-overlap figure = §8 2×base (not baked)',     !!R.combined457 && has(R.T.html, R.combined457)) && all;
+  all = ok('§15 big-overlap PROMINENT when a 403(b) coexists',   has(R.T.html, 'ira-why-sec hot')) && all;
+  all = ok('§15 SAFETY NOTE hidden when govPlan unset',          !has(R.T.html, 'held in trust for you')) && all;
+  all = ok('§15 SAFETY NOTE shows when govPlan===true',          has(R.GT.html, 'held in trust for you')) && all;
+  all = ok('§15 no IRA-panel leak into the 457 modal',           !has(R.T.html, 'the account you own outright')) && all;
   // Job 6 — regression + honesty
   all = ok('IRA keeps IRA copy (no 457 leak)',                  has(narr(R.I.html), 'assembled from the open market') && !has(narr(R.I.html), 'governmental')) && all;
   all = ok('403: keeps its OWN plan-menu tilt tail',            has(narr(R.F.html), 'a shape drawn from the funds your plan offers')) && all;

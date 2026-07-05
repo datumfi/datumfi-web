@@ -4589,6 +4589,39 @@
       return out.join(' ');
     }
 
+    // §15 "Why am I offered a 457(b)?" education panel (457 bank R203–R219) — expandable, default-collapsed.
+    // Renders for account type === 457(b), BOTH branches (same copy — it's about employer-type, not tax).
+    // COPY = Architect-owned/verbatim. The ONLY tokens are §8 figures (R217: never bake a literal — the
+    // fill-both figure reads _di402gLimits() by taxYear = 2× base). SAFETY NOTE gated on govPlan===true
+    // (R215/S7 — don't assert trust-protection when the flag is false/unknown). THE BIG OVERLAP is
+    // highlighted (S5 fill-both nudge) when a 403(b) coexists for the owner (single-owner estate scan,
+    // same pattern as the IRA S5 — multi-owner is a future refinement). Reuses the .ira-why-* panel styling (L48).
+    // NOTE: §15's portability trap intentionally overlaps the FOLD-2 Layer-E caveat — different surfaces
+    // (inline nudge vs deep-dive panel), both kept by Captain ruling.
+    function _di457WhyPanel(acc, base) {
+      var L = _di402gLimits();                                  // §8 dated 402(g) LOOKUP(taxYear) — never a baked literal
+      var yr = new Date().getFullYear();
+      var combined = _diMoney(2 * L.base);                      // fill-both figure = 2× base (§8): ~$49,000 in 2026
+      var has403 = (state.accounts || []).some(function (a) { var b = getBaseType(a.baseId); return b && /403/.test(b.id); });
+      var sec = function (h, b, hot) { return '<div class="ira-why-sec' + (hot ? ' hot' : '') + '"><div class="ira-why-h">' + h + '</div><div class="ira-why-b">' + b + '</div></div>'; };
+      var safety = (acc.govPlan === true)
+        ? sec('Safety note (governmental vs not)', 'Your GOVERNMENTAL 457(b) assets are held in trust for you — legally separate from the employer, protected if the government entity hits financial trouble. (This is the key reason the non-governmental version is restricted to executives: there, the assets legally belong to the employer and sit with its creditors. The friendly copy here assumes the governmental type — confirm via the govPlan flag, §14/S7.)')
+        : '';
+      var body =
+        sec('The one-line answer', 'You’re offered a 457(b) because you work for a STATE or LOCAL GOVERNMENT — a public school district, city or county, state university, or government agency. The account type follows your employer, not your choice.') +
+        sec('Who gets a 457(b)', 'GOVERNMENTAL 457(b): sponsored by state and local governments and their agencies — municipalities, public school districts, state colleges and universities. This is the common, structurally safer type, and the one you almost certainly have. (A rarer NON-governmental 457(b) exists at some nonprofits, but only for a small group of highly-paid executives — and it carries real creditor risk. See §14/S7.)') +
+        sec('Who gets a 403(b) instead', 'A 403(b) is the parallel plan for §501(c)(3) TAX-EXEMPT employers: public schools, colleges and universities, hospitals, charitable nonprofits, and churches. Same idea — a payroll retirement plan — but it lives under a different slice of the tax code, so its rules differ in a few important ways.') +
+        sec('The big overlap (the part most people miss)', 'Many public-education and government employees — a state-university professor, for example — are offered BOTH a 403(b) AND a governmental 457(b) through the SAME employer. When that happens, their contribution limits are SEPARATE: you can defer the full limit into EACH in the same year (~' + combined + ' pre-tax in ' + yr + ' before any catch-up), sheltering far more than a private-sector worker ever can. If your employer offers both, filling only one leaves a second tax-advantaged bucket on the table.', has403) +
+        sec('Why the rules differ — 457(b) edge', 'The 457(b)’s defining advantage: once you SEPARATE from the employer, withdrawals skip the 10% early-withdrawal penalty entirely — at ANY age. A 52-year-old who leaves a government job can draw on a 457(b) immediately, owing only ordinary income tax. That makes the governmental 457(b) the single best bridge for an early retirement. (A 403(b) keeps the usual 59½ / Rule-of-55 penalty structure.)') +
+        sec('Why the rules differ — 403(b) traits', 'A 403(b) has its own quirks: an overall §415(c) annual-additions cap, and a unique “15-years-of-service” catch-up (up to $3,000/yr extra) for long-tenured employees of schools, hospitals, and churches — something the 457(b) doesn’t have. Its catch-up math and the 457(b)’s special final-3-year catch-up are different tools for different plans.') +
+        sec('Portability trap (worth knowing)', 'When you leave, a governmental 457(b) can roll into an IRA, 401(k), or 403(b) — but the moment it lands anywhere OTHER than another governmental 457(b), it LOSES the penalty-free-before-59½ access. If early retirement is even possible, think twice before rolling a 457(b) into an IRA; keeping it in the 457(b) world preserves the escape hatch.') +
+        safety +
+        sec('Bottom line', 'You didn’t pick 457(b) over 403(b) — your employer’s status as a government body did. What matters now: it’s a high-limit, government-sponsored account whose superpower is penalty-free access the day you leave the job. If you ALSO have a 403(b), treat them as two separate buckets and try to feed both.');
+      return '<div class="ira-why-panel">' +
+        '<div class="ira-why-toggle" onclick="var n=this.nextElementSibling; var open=n.style.display!==\'block\'; n.style.display=open?\'block\':\'none\'; this.classList.toggle(\'open\', open);">Why you’re offered a 457(b) — and how it differs from a 403(b) <span class="ira-why-caret">▸</span></div>' +
+        '<div class="ira-why-body" style="display:none;">' + body + '</div></div>';
+    }
+
     // §12 457(b)-aware column hovers (bank R129–R142; {planProvider}/{instrumentType}
     // parentheticals dropped — tokens unsourced, never fabricated).
     function _di457ColTips(isRoth) {
@@ -6722,6 +6755,7 @@
         }
 
         if (/ira/.test(base.id)) html += _diIraWhyPanel(acc, base);   // §15 "Why an IRA?" education panel (IRA-only)
+        if (/457b/.test(base.id)) html += _di457WhyPanel(acc, base);  // §15 "Why a 457(b)?" education panel (both branches)
         document.getElementById('modal-dynamic-content').innerHTML = html;
         document.getElementById('account-modal-overlay').style.display = 'flex';
     };
