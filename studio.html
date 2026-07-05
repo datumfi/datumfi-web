@@ -4492,10 +4492,15 @@
         ? 'Your funds run ' + w + ' — and since a 457(b) draws from a plan menu (not the open market), the lever here is picking the cheapest available share class, not switching providers.'
         : 'Your funds run ' + w + '; like any employer plan the menu is fixed, so fee control means choosing the lowest-cost option your plan offers.';
     }
+    // Roll-portability caveat (Captain fold, 2026-07-05) — wrapper-neutral: the no-10%-penalty shield is
+    // NOT portable in either direction (IRS: governmental 457(b) distributions are penalty-exempt EXCEPT
+    // amounts attributable to rollovers). Shared const so both [R]/[T] returns are provably identical.
+    var _CAVEAT_457_ROLL = ' One caveat worth knowing: that penalty-free door is a feature of the 457(b) itself — roll this money OUT into an IRA or 401(k) and it permanently loses the shield (the 10% early-penalty comes back). And money you roll IN from a 401(k) or IRA doesn’t inherit it — those dollars keep their own early-withdrawal rules.';
     function _di457Tax(acc, s, agg, isRoth) {
-      return isRoth
+      return (isRoth
         ? 'Every dollar here — growth included — comes out tax-free once the 5-year clock is met, with no RMDs for you ever. And the 457(b)’s signature: once you separate from this employer you can tap it at ANY age, with no 10% penalty — a rare tax-free bridge you don’t have to wait until 59.5 to use.'
-        : 'This is pre-tax money: every dollar — deferrals and growth — is ordinary income when you withdraw, and RMDs begin at 73. But the 457(b)’s edge is access: the day you separate from this employer you can draw on it at ANY age with no 10% penalty — the classic bridge for an early retirement, taxed but never penalized.';
+        : 'This is pre-tax money: every dollar — deferrals and growth — is ordinary income when you withdraw, and RMDs begin at 73. But the 457(b)’s edge is access: the day you separate from this employer you can draw on it at ANY age with no 10% penalty — the classic bridge for an early retirement, taxed but never penalized.'
+      ) + _CAVEAT_457_ROLL;
     }
     function _di457Toggle(acc, s, agg, isRoth) {
       if (!(acc.catchUp50 || acc.superCatchUp || acc.specialCatchUp)) return null;
@@ -4515,7 +4520,8 @@
     // satPct & unclPct honesty guards). Only the 457 tax-tail differs; the sleeve clause is
     // wrapper-neutral (identical [R]/[T]) and the tail carries the Workshop/Annex + separation
     // access truth. SILENT when a sleeve ≥50% — a concentrated account speaks for itself.
-    function _di457CompRead(acc, s, agg, isRoth) {
+    function _di457CompRead(acc, s, agg, isRoth, archFired) {
+      if (archFired) return null;   // §3a archetype already named the identity — suppress the sleeve breakdown (mirrors IRA/Taxable)
       var c = _diSleeves(acc, s);
       if (!c || s.invCount < 3 || c.list.length < 2 || c.top >= 50 || c.satPct > 30 || c.unclPct > 10) return null;
       var names = c.list.map(function (o) { return Math.round(o.pct) + '% ' + o.k; });
@@ -4526,20 +4532,60 @@
         ? 'Seeing the real shape matters — a plan menu can hide a lot of overlap behind eight fund names, and in the Roth 457(b) every one of those sleeves compounds tax-free, so the mix you build here is the mix you keep, untaxed, and can reach at any age once you’ve separated.'
         : 'Seeing the real shape matters — a plan menu can hide a lot of overlap behind eight fund names, and in the Traditional 457(b) this whole mix grows tax-deferred, taxed as ordinary income only when you draw on it — which, uniquely for a 457(b), you can do penalty-free at any age once you leave the employer.');
     }
-    var _DI_457_LAYERS = [
-      _di457Spine,      // A — always
-      _di457Tilt,       // B — 0–2 (shared §13 maps; the 457 sheet's map is the same account-agnostic map)
-      _di457CompRead,   // B2 — composition read (R106 / §13c), reuse shared gate; silent when top sleeve ≥50%
-      _di457Behavior,   // C — 0–2, beta first
-      _di457MenuFees,   // D — plan-menu meaning
-      _di457Tax,        // E — always (the separation-based access line — the 457 signature)
-      _di457Toggle,     // F
-      _di457Contrib     // G
-    ];
+    // §3a COMPOSITION ARCHETYPE (457 bank R222–R238) — the "what this account REALLY IS" pre-read. Runs
+    // BEFORE the spine; a fire REPLACES the generic spine (R223), then Tilts proceed and B2 is suppressed.
+    // CLONE of _diIraArchetype (L48, R238): the trigger ladder + shared bodies are BYTE-IDENTICAL to the
+    // IRA/401k/Taxable engine, reading the shared _diTaxSignals(acc,s) (L47 guards baked in there —
+    // junk/blank/unmapped rows excluded from BOTH numerator and denominator). ONLY the taxCode tail flips
+    // to the 457 Workshop/Annex verbatim. Order tests CRYPTO-MULTI before CRYPTO-SATELLITE (multi-coin is
+    // the more specific read — the reconciled engine order; the 457 sheet lists them reversed, same FLAG as IRA).
+    function _di457Archetype(s, x, isRoth) {
+      if (s.invCount < 1) return null;
+      var tail = isRoth
+        ? ' In the tax-free Roth 457(b), every dollar this grows is yours untaxed — the ideal home for the highest-upside sleeves.'
+        : ' In the pre-tax Traditional 457(b), both the gains and the swings are shared with the IRS as ordinary income at withdrawal.';
+      var A = function (id, body) { return { id: id, txt: body + tail }; };
+      if (x.cryptoPct >= 80)
+        return A('AR-CRYPTO-ALL', 'This account is a pure digital-asset holding — ' + _diP(x.cryptoPct) + ' in crypto. It’s the highest-volatility corner of any portfolio: it can multiply or halve in a single year, so its whole job is small-slice, long-horizon upside.');
+      if (x.cryptoTickerCount >= 2 && x.cryptoPct >= 15 && x.cryptoPct < 80)
+        return A('AR-CRYPTO-MULTI', 'This account runs a multi-coin crypto sleeve — more than one digital asset, ' + _diP(x.cryptoPct) + ' of the account. Several coins spread the bet slightly, but they crash together — treat the sleeve as one high-octane position.');
+      if (x.cryptoPct >= 15 && x.cryptoPct < 80 && x.eqT >= 20)
+        return A('AR-CRYPTO-SATELLITE', 'This account pairs a real portfolio with a genuine crypto satellite — ' + _diP(x.cryptoPct) + ' in digital assets riding alongside the rest. A deliberate speculative sleeve: sized to sting, not to sink you.');
+      if (x.bdT >= 80 && x.bondSubTypeCount >= 2)
+        return A('AR-BOND-LADDER', 'This account is a built-out fixed-income sleeve — ' + _diP(x.bdT) + ' in bonds spanning ' + x.bondSubTypesPhrase + '. Not just ‘bonds’: a laddered income-and-ballast engine — Treasuries for safety, corporates for yield, TIPS for inflation, munis for tax-free income.');
+      if (x.bdT >= 80)
+        return A('AR-BOND-INCOME', 'This account is essentially an income-and-ballast bond sleeve — ' + _diP(x.bdT) + ' fixed income. It barely grows, but it barely flinches: its job is to hold steady and throw off predictable income while riskier accounts grow.');
+      if ((x.bdT + x.reitPct) >= 60 && x.reitPct >= 9.5)
+        return A('AR-INCOME-YIELD', 'This account is a yield-tilted income sleeve — it pairs bonds with real-estate REITs (' + _diP(x.bdT) + ' fixed income + ' + _diP(x.reitPct) + ' REITs). Built to PAY you, not to shoot the lights out: steady interest plus rental-style income.');
+      if (x.realAssetPct >= 50 && x.eqT < 40)
+        return A('AR-REAL-ASSET', 'This account is a real-asset / inflation-hedge sleeve — heavy in ' + x.realAssetMixPhrase + ' rather than ordinary stocks and bonds. It moves to a different drummer: sometimes a shock-absorber, sometimes dead money for years. A hedge, not an engine.');
+      if (x.goldPct >= 40)
+        return A('AR-GOLD-HEDGE', 'This account is built around gold as a store-of-value hedge — ' + _diP(x.goldPct) + '. Gold pays no income and can sit flat for years; it earns its keep only when everything else is falling. Insurance, not a growth bet.');
+      if (x.topSectorPct >= 50 && x.topSector)
+        return A('AR-SECTOR-BET-NAMED', 'This account is a concentrated ' + x.topThemeClause + ' bet — ' + _diP(x.topSectorPct) + ' rides on that one theme. When ' + x.topThemeClause + ' runs, it flies; when it doesn’t, there’s nowhere to hide. A conviction position, not a diversified core.');
+      if (x.industrialPct >= 50)
+        return A('AR-ALL-INDUSTRIALS', 'This account is essentially an all-industrials sector bet — ' + _diP(x.industrialPct) + ' in industrials, aerospace & defense, and the machinery of the physical economy. A direct wager on manufacturing and capital-spending cycles: booms with the economy, bleeds when growth stalls.');
+      if ((x.divGrowthPct + x.utilitiesPct) >= 40 && x.eqT >= 60)
+        return A('AR-DIVIDEND', 'This account is a dividend-and-quality equity sleeve — tilted toward companies that pay and raise (' + _diP(x.divGrowthPct) + ' dividend-growth, steady utilities in the mix). Grows more slowly than pure-growth but pays you along the way.');
+      return null;   // AR-NONE — the absence of an archetype IS the read; fall through to the spine (R236)
+    }
+    // §9 assembler — 457. Fixed order: §3a archetype (REPLACES the spine on a fire) → A Spine / B Tilt →
+    // B2 Composition (suppressed on a fire) → C Behavior → D Menu&Fees → E Tax → F Toggle → G Contribution.
+    // Inline (mirrors _diNarrIRA, L48) so the archetype can replace the spine and gate B2. Retires the flat
+    // _DI_457_LAYERS table — the archetype needs a spine-replace the forEach could not express.
     function _diNarr457(acc, s, agg, isRoth) {
       if (!s.total || !(acc.holdings || []).length) return '';
+      var x = _diTaxSignals(acc, s);                         // shared signal engine (L48)
+      var arch = _di457Archetype(s, x, isRoth);              // §3a — names the identity; REPLACES the spine on a fire
       var out = [];
-      _DI_457_LAYERS.forEach(function (fn) { var t = fn(acc, s, agg, isRoth); if (t) out.push(t); });
+      out.push(arch ? arch.txt : _di457Spine(acc, s, agg, isRoth));
+      var b = _di457Tilt(acc, s, agg, isRoth); if (b) out.push(b);
+      var b2 = _di457CompRead(acc, s, agg, isRoth, !!arch); if (b2) out.push(b2);
+      var c = _di457Behavior(acc, s, agg, isRoth); if (c) out.push(c);
+      var d = _di457MenuFees(acc, s, agg, isRoth); if (d) out.push(d);
+      var e = _di457Tax(acc, s, agg, isRoth); if (e) out.push(e);
+      var f = _di457Toggle(acc, s, agg, isRoth); if (f) out.push(f);
+      var g = _di457Contrib(acc, s, agg, isRoth); if (g) out.push(g);
       return out.join(' ');
     }
 
@@ -6059,7 +6105,7 @@
                       <input type="checkbox" ${acc.catchUp50 ? 'checked' : ''} onchange="updateAccToggle('${id}', 'catchUp50', this.checked)">
                       <span class="slider"></span>
                     </label>
-                    ${is457 ? `<div class="modal-tt"><strong>Age 50 Unlock</strong>At 50+ the IRS lets you add a catch-up on top of the base ($7,500 in 2025, $8,000 in 2026) — and at 60-63 a larger "super" catch-up (~$11,250) may apply if the plan allows. High-wage earners (>$145k prior year, indexed) must make the age-50 catch-up as Roth.</div>`
+                    ${is457 ? `<div class="modal-tt"><strong>Age 50 Unlock</strong>At 50+ the IRS lets you add a catch-up on top of the base ($7,500 in 2025, $8,000 in 2026) — and at 60-63 a larger "super" catch-up (~$11,250) may apply if the plan allows. High-wage earners (>$150k prior year, indexed) must make the age-50 catch-up as Roth.</div>`
                      : isIRA ? `<div class="modal-tt"><strong>Age 50 Unlock</strong>At 50+ the IRS lets you add a fixed catch-up on top of the base — small, but it’s untaxed-growth room (Roth) or a deduction (Traditional) right when you’re likely earning most. NO super catch-up exists for IRAs.</div>`
                             : `<div class="modal-tt"><strong>Age 50 Unlock</strong>From the calendar year you turn 50, the IRS lets you defer past the base ceiling. Peak-earning years usually land here — flip it on to raise this account's Annual Maximum.</div>`}
                 </div>

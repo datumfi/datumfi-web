@@ -13,6 +13,11 @@
    (7) I1 · §13c B2 Composition Read: on a genuinely-diversified book (top sleeve <50%, ≥2
    sleeves) the "under the hood" sleeve breakdown FIRES, wrapper-neutral clause shared, 457
    tax-tail per branch (Workshop tax-deferred / Annex tax-free, both separation-access).
+   (8) I2 · §3a Composition Archetype: a pure-crypto book fires AR-CRYPTO-ALL — the archetype
+   REPLACES the generic spine, the taxCode tail flips [R]/[T], B2 is suppressed on the fire;
+   AR-NONE (vanilla/DIV diversified core) correctly falls through to the generic spine.
+   (9) Captain copy folds (2026-07-05): Layer-E roll-portability caveat (wrapper-neutral, verbatim
+   in BOTH [R]/[T]) + SECURE 2.0 high-wage Roth-catch-up threshold $145k→$150k (2026 IRS COLA).
    (6) Regression: IRA rooms keep IRA copy (no 457 leak), 403 tilt tail intact, taxable
    untouched, empty co-room fabricates nothing.
    Usage: serve repo root on :8001, then node scripts/_gate_457_di.js [LABEL] */
@@ -104,6 +109,15 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     t.holdings = DIV(); recalcPortfolio(t); const DT = open('pretax457b');
     r.holdings = DIV(); recalcPortfolio(r); const DR = open('roth457b');
 
+    // ARCHETYPE fixture (I2 · §3a): a pure digital-asset book → AR-CRYPTO-ALL (first trigger, unambiguous).
+    // The archetype REPLACES the generic spine; the taxCode tail flips [R]/[T]; B2 is suppressed on a fire.
+    const CRYPTOALL = () => [
+      mk({ ticker: 'BTC', name: 'Bitcoin',  price: 100, shares: 900, assetClass: 'Crypto', sector: 'Bitcoin',  instrumentType: 'Crypto' }),
+      mk({ ticker: 'ETH', name: 'Ethereum', price: 100, shares: 100, assetClass: 'Crypto', sector: 'Etherium', instrumentType: 'Crypto' })
+    ];
+    t.holdings = CRYPTOALL(); recalcPortfolio(t); const AT = open('pretax457b');
+    r.holdings = CRYPTOALL(); recalcPortfolio(r); const AR = open('roth457b');
+
     // Regression: IRA keeps IRA copy; 403 keeps its tilt tail; taxable untouched.
     const ir = window.state.accounts.find(a => a.baseId === 'tradira');
     ir.holdings = [ mk({ ticker: 'VOO', name: 'V', price: 100, shares: 100, expRatio: 0.03, assetClass: 'Stocks', geography: 'US Stocks - Large Blend', sector: 'Large Cap', instrumentType: 'ETF' }) ];
@@ -125,7 +139,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     co.showHoldings = true; window.openAccountModal(co.id);
     const E = document.getElementById('modal-dynamic-content').innerHTML;
 
-    return { T, Rt, V, N, DT, DR, I, F, X, E, wdT, wdR };
+    return { T, Rt, V, N, DT, DR, AT, AR, I, F, X, E, wdT, wdR };
   });
   await b.close();
 
@@ -134,6 +148,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   const narr = (html) => { const m = /di-narr-body[^>]*>([\s\S]*?)<\/div>/.exec(html); return m ? m[1] : ''; };
   const nT = narr(R.T.html), nR = narr(R.Rt.html), nV = narr(R.V.html), nN = narr(R.N.html);
   const nDT = narr(R.DT.html), nDR = narr(R.DR.html);
+  const nAT = narr(R.AT.html), nAR = narr(R.AR.html);
 
   console.log('===== 457(b) DI GATE [' + LABEL + '] =====');
   let all = true;
@@ -199,6 +214,22 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   all = ok('B2 [T] tail: tax-deferred, ordinary income on draw', has(nDT, 'this whole mix grows tax-deferred') && has(nDT, 'penalty-free at any age once you leave the employer')) && all;
   all = ok('B2 [R] tail: sleeves compound tax-free, reach early', has(nDR, 'every one of those sleeves compounds tax-free') && has(nDR, 'reach at any age once you’ve separated')) && all;
   all = ok('B2 wrapper-neutral: sleeve clause shared [R]==[T]',  has(nDT, 'a plan menu can hide a lot of overlap') && has(nDR, 'a plan menu can hide a lot of overlap')) && all;
+  // Job 8 — I2 §3a COMPOSITION ARCHETYPE: fires, REPLACES the spine, tail flips [R]/[T], B2 suppressed
+  all = ok('AR fires [T]: crypto-all archetype body present',    has(nAT, 'This account is a pure digital-asset holding')) && all;
+  all = ok('AR fires [R]: crypto-all archetype body present',    has(nAR, 'This account is a pure digital-asset holding')) && all;
+  all = ok('AR replaces spine [T]: generic spine ABSENT',        !has(nAT, 'This Traditional 457(b) is')) && all;
+  all = ok('AR replaces spine [R]: generic spine ABSENT',        !has(nAR, 'This Roth 457(b) is')) && all;
+  all = ok('AR tail [T]: pre-tax, shared with IRS as ord income', has(nAT, 'both the gains and the swings are shared with the IRS as ordinary income at withdrawal')) && all;
+  all = ok('AR tail [R]: tax-free, ideal home upside sleeves',   has(nAR, 'every dollar this grows is yours untaxed — the ideal home for the highest-upside sleeves')) && all;
+  all = ok('AR tail flips [R]!=[T] (no cross-branch leak)',      !has(nAT, 'yours untaxed') && !has(nAR, 'shared with the IRS')) && all;
+  all = ok('AR fire suppresses B2 (no "under the hood")',        !has(nAT, 'under the hood') && !has(nAR, 'under the hood')) && all;
+  all = ok('AR-NONE: vanilla core keeps generic spine [T]',      has(nT, 'This Traditional 457(b) is') && !has(nT, 'This account is a pure digital-asset')) && all;
+  all = ok('AR-NONE: DIV book keeps generic spine (no fire)',    has(nDT, 'This Traditional 457(b) is')) && all;
+  // Job 9 — Captain copy folds (2026-07-05): roll-portability caveat (Layer E, wrapper-neutral) + $150k COLA
+  all = ok('FOLD2 caveat OUT clause in Layer E [T]',             has(nT, 'roll this money OUT into an IRA or 401(k) and it permanently loses the shield')) && all;
+  all = ok('FOLD2 caveat OUT clause in Layer E [R]',             has(nR, 'roll this money OUT into an IRA or 401(k) and it permanently loses the shield')) && all;
+  all = ok('FOLD2 caveat IN clause both branches (identical)',   has(nT, 'those dollars keep their own early-withdrawal rules') && has(nR, 'those dollars keep their own early-withdrawal rules')) && all;
+  all = ok('FOLD1 is457 tip reads $150k (145k gone)',           has(R.T.html, '$150k prior year') && !has(R.T.html, '145k')) && all;
   // Job 6 — regression + honesty
   all = ok('IRA keeps IRA copy (no 457 leak)',                  has(narr(R.I.html), 'assembled from the open market') && !has(narr(R.I.html), 'governmental')) && all;
   all = ok('403: keeps its OWN plan-menu tilt tail',            has(narr(R.F.html), 'a shape drawn from the funds your plan offers')) && all;
