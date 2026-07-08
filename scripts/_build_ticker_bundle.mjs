@@ -168,22 +168,28 @@ const run = async () => {
     if (c.geography) e.geography = c.geography;
     else if (sf.geography) { e.geography = sf.geography; e.geographySrc = 'SEC domicile'; }
 
-    // expense: issuer (SSGA/SPDR) ONLY -> blank. Curated hand-typed expRatio is walled out (Lesson 47,
-    // same as price): expRatio must be issuer-sourced or BLANK — never a hand-typed guess. Every emitted
-    // expRatio therefore carries expRatioSrc (gate asserts this).
+    // expense: issuer (SSGA/SPDR) FIRST -> curated (Daniel-holdings seed, fund-doc sourced) -> blank.
+    // D2 (#213-A ruling): the old issuer-ONLY wall was over-strict — it blanked Daniel's 58 net-new fund
+    // expenses. Curated expRatio is now accepted (SPDR retains precedence) but MUST carry a src stamp
+    // (expRatioSrc:'curated') so provenance stays honest (Lesson 47: sourced, never a hand-typed guess).
+    // Every emitted expRatio still carries expRatioSrc (gate asserts this).
     if (sp.expRatio != null) { e.expRatio = sp.expRatio; e.expRatioSrc = 'SSGA/SPDR'; bySrc.spdrExp++; }
+    else if (c.expRatio != null) { e.expRatio = c.expRatio; e.expRatioSrc = c.expRatioSrc || 'curated'; }
 
     // asset-class: curated -> SPDR (issuer) -> blank   [NEVER Yahoo]
     if (c.assetClass) e.assetClass = c.assetClass;
     else if (sp.assetClass) { e.assetClass = sp.assetClass; e.assetClassSrc = 'SSGA/SPDR'; }
 
-    // beta: curated -> Yahoo (STOCKS ONLY) -> blank
-    if (c.beta != null) e.beta = c.beta;
+    // beta: curated -> Yahoo (STOCKS ONLY) -> blank.  D3 (#213-A): curated beta now carries its src
+    // stamp (betaSrc:'curated' for the seed) so the UI shows honest provenance, not an unlabeled number.
+    if (c.beta != null) { e.beta = c.beta; if (c.betaSrc) e.betaSrc = c.betaSrc; }
     else if (!isFund && y.beta != null) { e.beta = y.beta; e.betaSrc = y.betaSrc; e.betaAsOf = y.betaAsOf; e.betaMethod = y.betaMethod; bySrc.yahooBeta++; }
 
     // dividend yield: curated -> (STOCKS: Yahoo, ratio->PERCENT ×100) -> blank.  Fund yield = curated ONLY (never Yahoo).
     // App canon (datum-math.js): dividendYield/expRatio are PERCENT numbers (1.5 = 1.5%). Yahoo returns a ratio.
-    if (c.dividendYield != null) e.dividendYield = c.dividendYield;
+    // D3 (#213-A): curated yield carries dividendYieldSrc:'curated'; seed 0/blank yield was already dropped
+    // upstream (curated core omits it) so no fake zeros reach here (Lesson 47: blank != zero).
+    if (c.dividendYield != null) { e.dividendYield = c.dividendYield; if (c.dividendYieldSrc) e.dividendYieldSrc = c.dividendYieldSrc; }
     else if (!isFund && y.divYield != null) { e.dividendYield = Math.round(y.divYield * 10000) / 100; e.dividendYieldSrc = y.divYieldSrc; e.dividendYieldAsOf = y.divYieldAsOf; bySrc.yahooYield++; }
 
     final[sym] = e;
