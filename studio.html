@@ -7849,7 +7849,7 @@
       window._studioBp = bp; // keep the live bp in agreement with what was restored
       // G2 inverse — always restore the Estate rooms (a carried Sketch must NOT purge them).
       try {
-        if (bp.accounts && bp.accounts.length) { state.accounts = bp.accounts.slice(); renderInputs(); updateSVGs(); }
+        if (bp.accounts && bp.accounts.length) { state.accounts = (window.DatumBlueprint ? DatumBlueprint.hydrateAccountNames(bp.accounts.slice(), function (bid) { var b = getBaseType(bid); return b ? b.title : ''; }) : bp.accounts.slice()); renderInputs(); updateSVGs(); }   // W1: slim Clerk mirror drops name -> re-derive from room title (else "undefined (JOINT) …")
       } catch (_e) {}
       // G5 — on a Sketch carry, prefillFromSketch owns the sliders/profile; rooms above kept.
       if (sessionStorage.getItem('datum_currentAge') || sessionStorage.getItem('datum_targetSpend')) return;
@@ -9431,7 +9431,7 @@
       // blueprint-slot load carries accounts (a fresh Sketch contract has none) — no-op then.
       try {
         if (bp.accounts && bp.accounts.length && typeof state !== 'undefined' && state) {
-          state.accounts = bp.accounts.slice();
+          state.accounts = (window.DatumBlueprint ? DatumBlueprint.hydrateAccountNames(bp.accounts.slice(), function (bid) { var b = getBaseType(bid); return b ? b.title : ''; }) : bp.accounts.slice());   // W1: re-derive name dropped by slim Clerk mirror
           if (typeof renderInputs === 'function') renderInputs();
           if (typeof updateSVGs === 'function') updateSVGs();
         }

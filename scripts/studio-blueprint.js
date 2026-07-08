@@ -170,6 +170,24 @@
     };
   }
 
+  /* Restore-side counterpart to slimSlotForClerk — the slim Clerk mirror DROPS `name`
+   * ("derivable from baseId"), so a restored account arrives nameless and renders
+   * "undefined (JOINT) …". This re-derives a MISSING/blank name from the room's
+   * canonical title via the injected resolver (studio.html: getBaseType(baseId).title);
+   * a present custom name (kept by the localStorage full archive) is left untouched.
+   * Mutates in place (accounts arrive as a fresh .slice()) and returns the array. */
+  function hydrateAccountNames(accounts, resolveTitle) {
+    if (!Array.isArray(accounts)) return accounts;
+    for (var i = 0; i < accounts.length; i++) {
+      var a = accounts[i];
+      if (a && (a.name === undefined || a.name === null || a.name === '')) {
+        var t = (typeof resolveTitle === 'function') ? resolveTitle(a.baseId) : '';
+        a.name = t || a.baseId || '';
+      }
+    }
+    return accounts;
+  }
+
   /* V1 Gross Funding ESTIMATE — weighted-average over the supply pools.
    * Pools = Roth balances, Taxable balances, Traditional balances,
    * Pension income stream, SS income stream. Each pool's share of the
@@ -756,6 +774,7 @@
     save:             save,
     toEnginePayload:  toEnginePayload,
     slimSlotForClerk: slimSlotForClerk,
+    hydrateAccountNames: hydrateAccountNames,
     remirrorArchive:  remirrorArchive,
     computeGrossFunding: computeGrossFunding,
     investableTotal:  investableTotal,
