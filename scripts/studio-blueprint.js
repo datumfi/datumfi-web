@@ -152,6 +152,20 @@
         if (a.isPriority)    out.isPriority    = true;
         if (a.trustType    && a.trustType    !== 'Irrevocable')   out.trustType    = a.trustType;
         if (a.disbursement && a.disbursement !== 'Discretionary') out.disbursement = a.disbursement;
+        // STEP A (c) 2026-07-08 — persist holdings as COMPACT-ESSENTIALS (the 13 real-position fields
+        // only). The 8 provenance/source fields + priceSource are intentionally dropped: they are
+        // reference-attribution, re-derivable on reopen (blank-until-re-sourced, L47) — never fabricated.
+        // E[r]/Vol ride at the ACCOUNT level (§7 ruling), not per-holding.
+        if (a.holdings && a.holdings.length) {
+          out.holdings = a.holdings.map(function (h) {
+            return { ticker: h.ticker, name: h.name, price: h.price, shares: h.shares,
+              costBasis: h.costBasis, acquisitionDate: h.acquisitionDate, beta: h.beta,
+              dividendYield: h.dividendYield, expRatio: h.expRatio, geography: h.geography,
+              sector: h.sector, assetClass: h.assetClass, instrumentType: h.instrumentType };
+          });
+        }
+        if (a.erOverride  != null && a.erOverride  !== '') out.erOverride  = a.erOverride;
+        if (a.volOverride != null && a.volOverride !== '') out.volOverride = a.volOverride;
         return out;
       }),
       contributions_total: bp.contributions_total || 0,
@@ -323,8 +337,18 @@
         }
         var res = Codec.safeMerge(base, { blueprint_z: bpZ });
         console.log('[blueprint mirror] blueprint_z bytes:', Codec.byteLen(bpZ), '| merged total:', res.bytes, '/ 8192 | ok:', res.ok);
+        if (!res.ok && typeof Codec.encodeArchiveWithDegrade === 'function') {
+          // STEP A (c) SAFETY VALVE 2026-07-08 — holdings pushed the mirror over cap. Rather than drop
+          // the whole write, shed OLDER-archive-slot holdings (oldest saved_at first), keeping the
+          // ACTIVE blueprint's holdings intact. LS archive stays the full truth (deep-copied inside).
+          var activeId = (bp && bp.blueprint_id) || (arch.slot1 && arch.slot1.blueprint_id) || null;
+          var budget = Codec.CAP - Codec.byteLen(JSON.stringify(base)) - 20;   // reserve for the "blueprint_z":"" key
+          var deg = Codec.encodeArchiveWithDegrade(slimArch, activeId, budget);
+          res = Codec.safeMerge(base, { blueprint_z: deg.blob });
+          if (deg.shed && deg.shed.length) console.warn('[blueprint mirror] cap degrade — shed older-slot holdings:', deg.shed.join(','), '| kept ACTIVE', activeId);
+        }
         if (!res.ok) {
-          console.warn('[blueprint mirror] over 8192B cap; kept LS truth + legacy key, did NOT write:', res.bytes);
+          console.warn('[blueprint mirror] over 8192B cap (even after degrade); kept LS truth + legacy key, did NOT write:', res.bytes);
           done(); return;
         }
         global.Clerk.user.update({ unsafeMetadata: res.merged })

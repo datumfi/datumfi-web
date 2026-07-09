@@ -61,13 +61,32 @@
 
   /* ---- Blueprint slot <-> compact ---- */
   // account positional order (v1 — append-only; never reorder):
-  //   [id, baseId, value, inflow, freq, intRate, cola, linkedAssetId, flags, trustType, disbursement]
+  //   [id, baseId, value, inflow, freq, intRate, cola, linkedAssetId, flags, trustType,
+  //    disbursement, holdings[11], erOverride[12], volOverride[13]]
   // flags bitmask: exclude=1, useRule55=2, isFriction=4, isPriority=8
+  // [11] holdings = array of compact-ESSENTIALS positional arrays (STEP A (c), 2026-07-08 — the
+  //      13 real-position fields; the 8 provenance/source fields + priceSource are NOT stored
+  //      (blank-until-re-sourced, L47). [12]/[13] = account-level E[r]/Vol overrides (§7 ruling).
+  // holding positional order (append-only): [ticker, name, price, shares, costBasis,
+  //   acquisitionDate, beta, dividendYield, expRatio, geography, sector, assetClass, instrumentType]
+  function cHolding(h) {
+    return [h.ticker || 0, h.name || 0, h.price || 0, h.shares || 0, h.costBasis || 0,
+            h.acquisitionDate || 0, h.beta || 0, h.dividendYield || 0, h.expRatio || 0,
+            h.geography || 0, h.sector || 0, h.assetClass || 0, h.instrumentType || 0];
+  }
+  function dHolding(r) {
+    return { ticker: r[0] || '', name: r[1] || '', price: r[2] || '', shares: r[3] || '',
+             costBasis: r[4] || '', acquisitionDate: r[5] || '', beta: r[6] || '',
+             dividendYield: r[7] || '', expRatio: r[8] || '', geography: r[9] || '',
+             sector: r[10] || '', assetClass: r[11] || '', instrumentType: r[12] || '' };
+  }
   function cAcct(a) {
     var f = (a.exclude ? 1 : 0) | (a.useRule55 ? 2 : 0) | (a.isFriction ? 4 : 0) | (a.isPriority ? 8 : 0);
     return [a.id, a.baseId, a.value || 0, a.inflow || 0, a.freq || 12,
             a.intRate || 0, a.cola || 0, a.linkedAssetId || 0, f,
-            a.trustType || 0, a.disbursement || 0];
+            a.trustType || 0, a.disbursement || 0,
+            (a.holdings && a.holdings.length) ? a.holdings.map(cHolding) : 0,
+            a.erOverride || 0, a.volOverride || 0];
   }
   function dAcct(r) {
     var o = { id: r[0], baseId: r[1], value: r[2], inflow: r[3], freq: r[4] };
@@ -80,6 +99,9 @@
     if (r[8] & 8) o.isPriority = true;
     if (r[9]) o.trustType = r[9];
     if (r[10]) o.disbursement = r[10];
+    if (r[11]) o.holdings = r[11].map(dHolding);
+    if (r[12]) o.erOverride = r[12];
+    if (r[13]) o.volOverride = r[13];
     return o;
   }
   function cBlueprint(s) {
@@ -188,6 +210,29 @@
     var c = decode(blob); if (!c) return null;
     return { slot1: dBlueprint(c.s1), slot2: dBlueprint(c.s2), slot3: dBlueprint(c.s3), slot4: dBlueprint(c.s4) };
   }
+
+  /* Graceful-degrade encoder (STEP A (c) safety valve — Captain ruling 2026-07-08). The Clerk
+   * 8192B cap CANNOT hold a heavy multi-blueprint lifetime portfolio (172 holdings is real) — a
+   * proper backend is the actual fix; this valve just guarantees a heavy save never corrupts and
+   * always keeps the ACTIVE blueprint's holdings. Order: encode the whole slim archive; if it fits
+   * blueprintZBudget, done; else shed holdings from NON-active slots, OLDEST saved_at first, until it
+   * fits. NEVER mutates the caller's archive (works on a deep copy — localStorage stays truth).
+   * Returns { blob, shed:[blueprint_id...], fit:bool }; fit:false = still over budget even after
+   * shedding all older-slot holdings (caller keeps LS truth, does not write — never truncates active). */
+  function encodeArchiveWithDegrade(slimArch, activeId, blueprintZBudget) {
+    var work = JSON.parse(JSON.stringify(slimArch || {}));
+    var keys = ['slot1', 'slot2', 'slot3', 'slot4'], shed = [];
+    var blob = encodeBlueprintArchive(work);
+    if (byteLen(blob) <= blueprintZBudget) return { blob: blob, shed: shed, fit: true };
+    var older = keys.filter(function (k) { return work[k] && work[k].blueprint_id !== activeId; })
+                    .sort(function (a, b) { return String(work[a].saved_at) < String(work[b].saved_at) ? -1 : 1; });
+    for (var i = 0; i < older.length && byteLen(blob) > blueprintZBudget; i++) {
+      (work[older[i]].accounts || []).forEach(function (a) { if (a.holdings) delete a.holdings; });
+      shed.push(work[older[i]].blueprint_id);
+      blob = encodeBlueprintArchive(work);
+    }
+    return { blob: blob, shed: shed, fit: byteLen(blob) <= blueprintZBudget };
+  }
   function encodeSketchbook(book) {
     book = book || {};
     return encode({ v: VERSION, t: book.sketchbook_title || '',
@@ -224,6 +269,7 @@
   var API = {
     VERSION: VERSION, CAP: CAP, byteLen: byteLen,
     encodeBlueprintArchive: encodeBlueprintArchive, decodeBlueprintArchive: decodeBlueprintArchive,
+    encodeArchiveWithDegrade: encodeArchiveWithDegrade,
     encodeSketchbook: encodeSketchbook, decodeSketchbook: decodeSketchbook,
     wouldFit: wouldFit, safeMerge: safeMerge,
     _internal: { cBlueprint: cBlueprint, dBlueprint: dBlueprint, cSketch: cSketch, dSketch: dSketch, encode: encode, decode: decode }

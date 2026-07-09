@@ -25,7 +25,7 @@ const DROP_RE = [/^\.claude\//, /^\.wrangler\//, /\.md$/i, /^scripts\/_/, /^_pro
 const SACRED = {
   'studio.html': '99cf58a47af5b0e39b1b540e01c5dc9f',
   'sketch.html': '5ce2067d031a5eef41a6c41fd6971444',
-  'scripts/studio-blueprint.js': 'af1c1da4c49079932642352663d984c8',
+  'scripts/studio-blueprint.js': 'f14b9ec2fdb58a9bc23dcfe9256bc9b2',
 };
 const md5 = (p) => createHash('md5').update(readFileSync(p)).digest('hex');
 

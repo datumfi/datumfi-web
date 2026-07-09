@@ -608,3 +608,31 @@ A cross-device Clerk sign-in loses typed tickers — undercuts Slice 3 parity + 
 
 **Regression GREEN:** tt_anchor · stepA_slice2 (42/42) · stepA_headers · stepC · ira_cert · 457_di (corrected stale-gate) · 401k_cert/match/vault · 403_hsa_rooms · 529_edu_split/namesync · tax_3a/routing/11b · recon/recon2 · smoke_fixes · w1_name_restore.
 **Pre-existing RED (NOT this change — bisected vs a9d952a):** ira_di · taxable_di · di_copy → parked for the Step-A close audit.
+
+---
+
+## 🚩 FINDING (2026-07-08, Captain+Copilot) — Clerk unsafeMetadata is NOT the real portfolio store · backend on critical path
+
+**Measured reality:** Clerk `unsafeMetadata` hard cap = 8192 B (shared: dossier + workspaceName + blueprint_z + sketchbook_z). Canonical archive-parity worst case already burns ~4117 B of blueprint_z with **zero** holdings. Fully-decorated holdings cost ~212 B each COMPACT-ESSENTIALS / ~311 B COMPACT-24 / ~610 B raw. Safe ceiling (margin ≥ 2048): **~52 holdings on a single active blueprint**; multi-blueprint decoration (2 slots × 15) already dips under the 2048 floor against the canonical baseline.
+
+**The proof it can't be the store:** the Captain's own book = **172 holdings / 18 accounts** — the *target* lifetime-retirement user, not an edge case. That blows the 8192 B cap by a wide margin under any client-side encoding.
+
+**Ruling:** (c) = blueprint-as-truth COMPACT-ESSENTIALS + `Codec.wouldFit` graceful-degrade is a **SAFETY VALVE** (heavy saves must not corrupt / must keep LS-truth), **NOT** the real solution. **A proper backend datastore keyed to the Clerk user id is now on the CRITICAL PATH before paid launch.** Logged here so it isn't lost; separate arc from (c).
+
+---
+
+## STEP A · (c) Clerk Save→rehydrate holdings persistence — ✅ WIRED + GATE RED→GREEN (LOCAL, uncommitted; rides with Step-A close)
+
+**Bug:** cross-device Clerk sign-in lost typed tickers — holdings dropped at TWO layers (a fix at one = false pass, proven by the first byte probe): `slimSlotForClerk` (studio-blueprint.js:138) AND the codec positional account schema (datum-archive-codec.js `cAcct`/`dAcct`, no holdings slot).
+
+**Fix (both layers + safety valve, Captain rulings):**
+- **Layer 1** `slimSlotForClerk` (studio-blueprint.js ~156): persist holdings as COMPACT-ESSENTIALS — the 13 real-position fields only (ticker/name/price/shares/costBasis/acquisitionDate/beta/dividendYield/expRatio/geography/sector/assetClass/instrumentType); DROP the 8 provenance/source fields + priceSource (blank-until-re-sourced, L47). Account-level `erOverride`/`volOverride` added (§7 ruling — account-level, not per-holding).
+- **Layer 2** codec `cAcct`/`dAcct` (datum-archive-codec.js): append-only positional slots `[11]`=holdings (compact 13-field arrays), `[12]`=erOverride, `[13]`=volOverride, with `cHolding`/`dHolding`. Backward-compatible (append-only; codec parity stays lossless + in budget).
+- **Layer 3 (safety valve)** `Codec.encodeArchiveWithDegrade` + wired into `mirrorToClerk` (studio-blueprint.js ~340): over-cap → shed OLDER-archive-slot holdings (oldest saved_at first), keep the ACTIVE blueprint's holdings, deep-copy so LS-truth is never mutated, fit-or-don't-write (never truncate active).
+- **Read path** (nav.js:219 `decodeBlueprintArchive` → LS seed → studio `readSlot`/restore): decode-agnostic, holdings flow through with NO nav.js change. W1 `hydrateAccountNames` coexists (name-restore gate green).
+
+**Gate:** `scripts/_gate_c_persist.js` — 16 checks, RED-first (11 failing pre-fix): (a) real slim+codec round-trip — every ticker/name/costBasis/acquisitionDate + account E[r]/Vol rehydrate, zero dropped rows, provenance dropped; (b) budget vs canonical heavy baseline (48 holdings = 4673/8192, margin 3519); (c) degrade — active fully retained, older shed oldest-first, ≤8192, LS-truth untouched. GREEN after.
+
+**L49:** studio-blueprint.js LF-clean, sacred pin bumped `af1c1da4→f14b9ec2` (build-dist.mjs); datum-archive-codec.js + nav.js not pinned. **Regression GREEN:** codec parity, c_persist, w1_name_restore, tt_anchor, stepA_slice2 (42/42), 457/401k/403/529/ira certs, tax gates, recon/recon2, smoke.
+
+**⚠️ Real headroom (safety-valve, not solution):** ~52 holdings/single active blueprint safe; heavy multi-blueprint sheds older holdings cross-device. The Captain's 172-holding book confirms the [[backend]] is on the critical path — see FINDING block above.
