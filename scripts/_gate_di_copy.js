@@ -84,17 +84,17 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   console.log('===== DI COPY GATE [' + LABEL + '] =====');
   let all = true;
   // Job 1 — hover copy (verbatim §1 substrings inside .modal-tt on rollup cells)
-  all = ok('hsa: equity hover (authored §19 — no annual tax drag)', has(R.H.html, 'compounds without an annual tax drag')) && all;
+  all = ok('hsa: equity hover 1b (medical war-chest)',        has(R.H.html, 'medical war-chest')) && all;
   all = ok('hsa: invested-split hover (stealth retirement)',  has(R.H.html, 'stealth retirement account')) && all;
-  all = ok('hsa: cash hover (authored §19 — long-term drag)', has(R.H.html, 'long-term drag on a retirement-purpose account')) && all;
+  all = ok('hsa: cash hover (out-of-pocket bills)',           has(R.H.html, 'out-of-pocket bills')) && all;
   all = ok('hsa: split box computes 86% / 14%',               has(R.H.html, '86%') && has(R.H.html, '14%')) && all;
   all = ok('hsa: beta box PRESENT when sourced (1.30)',       /hr-beta[^>]*>(\s|<[^>]*>)*1\.30/.test(R.H.html.replace(/\n/g, ''))) && all;
-  all = ok('403T: balance hover (authored §19 — ordinary income on withdrawal)', has(R.T.html, 'owe ordinary income on withdrawal')) && all;
-  all = ok('403T: contrib hover (authored §19 — 15-yr-service catch-up)', has(R.T.html, '15-years-of-service employees may get a special catch-up')) && all;
-  all = ok('403T: expense hover (authored §19 — menu-limited)', has(R.T.html, 'In a menu-limited plan this is the number to push down')) && all;
+  all = ok('403T: balance hover 1b (ordinary income)',        has(R.T.html, 'Same balance, very different after-tax worth')) && all;
+  all = ok('403T: contrib hover (combined 401k ceiling, D20)', has(R.T.html, 'one combined ceiling, not two separate ones')) && all;
+  all = ok('403T: expense hover (menus run EXPENSIVE)',       has(R.T.html, '403(b) menus historically run EXPENSIVE')) && all;
   // W7 parity (2026-07-08): Weighted Beta now ALWAYS renders ("—" when unsourced), no longer suppressed —
-  // authored 403(b) beta hover proves the cell is present.
-  all = ok('403T: beta box ALWAYS renders (W7 parity, authored hover)', has(R.T.html, 'will swing in a downturn')) && all;
+  // the RICH 403(b) beta hover proves the cell is present.
+  all = ok('403T: beta box ALWAYS renders (W7 parity, rich hover)', has(R.T.html, 'How hard your 403(b) swings with the market')) && all;
   // Job 2 — narrative
   all = ok('hsa: DI narrative block present',                 has(R.H.html, 'di-narr')) && all;
   all = ok('hsa: Layer A opener (invested and in cash)',      has(R.H.html, 'invested and') && has(R.H.html, 'in cash')) && all;
