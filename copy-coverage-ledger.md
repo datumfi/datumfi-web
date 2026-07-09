@@ -489,3 +489,103 @@ re-pulled); **S3/S4/S5 = `IRA Copy Bank v3` R6/R7/R8**. Captain-approved preview
 live eligibility — no data source). **HELD for Captain push GO.** Live-verify markers (after push): "an all-equity
 account, built entirely from ETFs" · "a bond-heavy, income-leaning account" · "good news: this IRA is a SEPARATE
 bucket" · "Your {yr} contribution room".
+
+## 457(b) — "The Workshop" (pretax457b [T]) / "The Annex" (roth457b [R]) · ACCOUNT #4 · ENRICHMENT + L50 AUDIT (2026-07-05)
+
+### Re-scope finding (Phase 1)
+The onboarding §6.5 "known live bug" (IRA-leak: Age 59.5, "IRA Limits", base 7000) was **ALREADY fixed
+live** at `84a7519` + smoke-fix `962e3d6` — proven by `_gate_457_di.js` **53/53 GREEN before any edit**.
+T2/T3 = DONE (onboarding text described pre-`84a7519` history). Real gap = post-authoring bank enrichments
+un-emitted: §13c B2 (I1), §3a archetype (I2), §15 education (I3). T5 spine-binding: `_di457Spine` binds
+`_diSpine`+`_diInstMix` = the same allocation path as IRA §9a — **NO DRIFT**.
+
+### I1 · §13c B2 Composition Read — ✅ SHIPPED + PUSHED + LIVE (origin/main `976a654`, 2026-07-05)
+| Bank § | Live | Note |
+|---|---|---|
+| §13c B2 Composition Read (R106 / R185–R190) | `_di457CompRead` in `_DI_457_LAYERS` B2 seam | Reuses `_diSleeves` + shared IRA/401k gate **verbatim** (L48: invCount≥3 / ≥2 sleeves / top<50% / satPct & unclPct honesty guards). Wrapper-neutral sleeve clause identical [R]==[T]; 457 tax-tail forks (Annex tax-free / Workshop tax-deferred, both carrying separation-based access). SILENT when a sleeve ≥50% (matches §11 vanilla worked example → correct). |
+
+- Gate: `_gate_457_di.js` **de-staled** — false "B2 ABSENT (no verbatims authored)" → true "top sleeve >50%";
+  + diversified fixture (core30/intl25/bonds25/small20) with **6 red-first B2-FIRES assertions**. RED on
+  un-wired code → GREEN after. Studio pin bumped `3b4049b9`→`b4c26062` (L49 same commit, LF-clean).
+- Regression GREEN: IRA cert 49/49 · tax_3a 23/23 · tax_11b 12/12 · routing 36/36 · 401k cert · 457 OVERALL.
+- Live markers (datumfi.com/studio.html — marker-verified, NOT MD5 per L50): `_di457CompRead` present ·
+  "a plan menu can hide a lot of overlap behind eight fund names" (both branches) · "every one of those
+  sleeves compounds tax-free" [R] · "this whole mix grows tax-deferred, taxed as ordinary income only when
+  you draw on it" [T].
+
+### 🗂️ KNOWN SUPERSEDED-GATE ITEM (backlog — scheduled on its own, NOT folded into a room commit)
+- `scripts/_gate_taxable_di.js` is **RED at HEAD** (proven pre-existing by reverting studio.html to HEAD;
+  4 REDs on an EX2 "52% Technology sector bet" fixture). It is an OLD Taxable DI gate **superseded** by the
+  certified Taxable path (`_gate_tax_3a` 23/23 + `_gate_tax_11b` 12/12 + routing 36/36, all GREEN). Outside
+  the named regression set. **Captain ruling 2026-07-05:** accepted as pre-existing, correctly flagged,
+  correctly untouched — give it its own housekeeping pass (retire or re-anchor the stale fixture); do NOT
+  fold into a room commit.
+
+### I2 · §3a Composition Archetype — ✅ WIRED + GATE-GREEN (HELD for Captain smoke + push)
+| Bank § | Live | Note |
+|---|---|---|
+| §3a Composition Archetype (R222–R238, 11 AR- cells + AR-NONE) | `_di457Archetype` + inline `_diNarr457` dispatch | **Clone of `_diIraArchetype` (L48, R238):** trigger ladder + shared bodies BYTE-IDENTICAL to the IRA/401k/Taxable engine, reading the shared `_diTaxSignals(acc,s)` (L47 guards baked in — junk/blank/unmapped excluded from num AND denom). ONLY the taxCode tail flips to the 457 Workshop/Annex verbatim. Archetype **REPLACES** the generic spine on a fire; Tilts proceed; **B2 suppressed** via `archFired`. Retired the flat `_DI_457_LAYERS` table for an inline dispatch mirroring `_diNarrIRA`. |
+
+- **Order:** tests CRYPTO-MULTI before CRYPTO-SATELLITE (multi-coin = more specific; reconciled engine order,
+  same FLAG as IRA — sheet lists reversed). First-match-wins per R223.
+- **Live archetype audit (probe, both branches):** AR-CRYPTO-ALL ✅ · AR-GOLD-HEDGE ✅ · AR-BOND-INCOME ✅ ·
+  AR-BOND-LADDER ✅ ("spanning Treasuries, corporates and TIPS") · AR-SECTOR-BET-NAMED ✅ (a single ≥50%
+  industrial/dividend theme correctly names itself FIRST, per R233 preceding R234/R235 — AR-ALL-INDUSTRIALS /
+  AR-DIVIDEND fire only on a spread) · **AR-NONE** ✅ vanilla/diversified core falls through to the generic
+  spine on both branches with the right tax tail. Bodies wrapper-neutral [R]==[T]; tail flips ([T] "shared
+  with the IRS as ordinary income at withdrawal" / [R] "yours untaxed — the ideal home for the highest-upside
+  sleeves") — gate-asserted.
+- **Gate:** `_gate_457_di.js` +crypto-all fixture, **10 assertions** (6 red-first FIRE/REPLACE/TAIL flipped
+  RED→GREEN; 2 pre-wire guards stay green; 2 AR-NONE regressions). Studio pin `b4c26062`→`f116439a`
+  (L49 same commit, LF-clean, 0 CRLF).
+- **Regression GREEN:** IRA cert 49/49 · tax_3a 23/23 · tax_11b 12/12 · routing 36/36 · 401k cert · 457 OVERALL.
+- **✅ SHIPPED + PUSHED + LIVE — origin/main `631cc4d` (2026-07-05), marker-verified:** `_di457Archetype`
+  present · archetype bodies live · AR-NONE fallthrough live. (This ledger entry itself stays PARKED with the
+  I1 note + taxable_di item — releases on a future ledger-flush, not with the room push.)
+
+### Captain copy folds (2026-07-05) — baked into the I2 push `631cc4d`, marker-verified live
+| Fold | Live | Note |
+|---|---|---|
+| FOLD 1 · SECURE 2.0 high-wage threshold $145k→$150k | is457 Age-50 tip | 2026 IRS COLA. `150k prior year` live, `145k` = 0 anywhere. Only the SECURE-2.0 wage threshold changed; R145/R147/R148 line-ref comments untouched. |
+| FOLD 2 · roll-portability caveat | `_di457Tax` Layer E, shared const `_CAVEAT_457_ROLL` | Wrapper-neutral, provably identical [R]/[T]: the no-10% shield is not portable — rollout permanently loses it; rollin doesn't inherit it. Live: "roll this money OUT…permanently loses the shield" + "those dollars keep their own early-withdrawal rules". |
+
+> Architect to reconcile the 457(b) Copy Bank sheet AFTER this push (R3/R43/R84/R97 → 150; Layer E R109 + §10/§11 → add the roll-portability caveat) so bank and live stay in lockstep.
+
+### I3 · §15 "Why a 457(b)?" education panel — ✅ WIRED + GATE-GREEN (HELD for Captain smoke + push)
+| Bank § | Live | Note |
+|---|---|---|
+| §15 education panel (R203–R219, 9 fields) | `_di457WhyPanel(acc, base)` + render at call site (`/457b/.test(base.id)`) | Expandable, default-collapsed, reuses shared `.ira-why-*` styling (L48). Renders for BOTH branches (copy is employer-type, not tax). All 9 fields verbatim R208–R216. |
+
+- **Live panel audit (probe, both branches):** one-line answer ✅ · who-gets-457(b) ✅ · who-gets-403(b) ✅ ·
+  **big overlap** ✅ (highlighted `hot` when a 403(b) coexists — S5 fill-both nudge) · 457(b)-edge ✅ ·
+  403(b)-traits ✅ · portability-trap ✅ · **safety note** ✅ shows ONLY under `govPlan===true` (8 sections
+  default / 9 with govPlan) · bottom line ✅.
+- **§8 sourced, never baked:** the fill-both figure = `_diMoney(2 × _di402gLimits().base)` in context
+  ("~$49,000 pre-tax in {yr} before any catch-up"); gate asserts the full panel-specific fragment (not the
+  bare $-figure, which also appears in the special-catch-up hover — avoided a green-for-wrong-reason).
+- **Overlap-by-design kept:** §15 portability-trap ↔ FOLD-2 Layer-E caveat = intentional (deep-dive panel vs
+  inline nudge); both retained per Captain ruling.
+- **Gate:** `_gate_457_di.js` +11 §15 assertions (9 red-first RED→GREEN; 2 guards: safety-hidden-default,
+  no-IRA-panel-leak). Studio pin `81b4122c`→`06f2436c` (L49 same commit, LF-clean). Dist guard byte-identical.
+- **Regression GREEN:** IRA 49/49 · tax_3a 23/23 · tax_11b 12/12 · routing 36/36 · 401k cert · 457 OVERALL.
+- **HELD:** not committed/pushed — awaiting Captain smoke + GO. Room commit = atomic 3-file; this entry rides
+  the parked ledger commit.
+
+### 457 ROOM STATUS: all three enrichments wired (I1 §13c B2 · I2 §3a archetype + folds · I3 §15 panel), each section-audited live. Pending: Captain smoke+GO on I3 → push. Optional formal close = a consolidated R1→R248 sweep filling the workbook Room Wiring Ledger R67 block (offer to Captain).
+
+---
+
+## STEP A · Investment Modal Parity Spec — Slice 1 (W1 name-restore) — ✅ WIRED + GATE RED→GREEN
+
+**Bug:** every account saved then reopened on a fresh/cross-device Clerk session rendered `undefined (JOINT) <meta> $<value>` (systemic, not property-only).
+
+**Root cause (traced):** `slimSlotForClerk` (studio-blueprint.js:130) drops `name` to fit the 8192B Clerk `unsafeMetadata` cap ("derivable from baseId"); both restore sites (studio.html:7852, 9434) did `bp.accounts.slice()` and never re-derived it → `acc.name === undefined`. Same-browser reloads use the localStorage full copy and look fine; the Clerk slim mirror is the trigger.
+
+**Fix (Option A · cap-safe):** `DatumBlueprint.hydrateAccountNames(accounts, resolveTitle)` re-derives a missing/blank name from `getBaseType(baseId).title`; a present custom name is preserved. Called at both restore sites (guarded by `window.DatumBlueprint`, falls back to `.slice()` → no regression). Zero Clerk bytes added. Option B (persist name in slim payload) held in reserve only if users report lost cross-device renames.
+
+**Gate:** `scripts/_gate_w1_name_restore.js` — A1 proves the real serializer drops name (reproduction runs through the app's own path); A2–A7 flip RED→GREEN (property→"Real Estate", roth401k→"Roth 401(k)", custom "Lake House" preserved, unknown baseId→baseId, empty-string re-derives, end-to-end slim→hydrate).
+
+**Regression GREEN:** archive-codec-parity · stepA · tax_3a · routing · ira_cert · tax_11b · stepC. Sacred pins bumped SAME commit (L49): studio.html `5cdd56ee→67db2af4`, studio-blueprint.js `f5c21c36→af1c1da4`. LF-clean.
+
+### ⚠️ PARKED FLAG (separate arc — do NOT bundle): slim Clerk mirror ALSO drops `holdings` (studio-blueprint.js:138)
+A cross-device Clerk sign-in loses typed tickers — undercuts Slice 3 parity + the STEP-C seed for logged-in users. Captain ruling 2026-07-08: tackle BEFORE any logged-in-user STEP-C seed relies on typed tickers surviving cross-device. Not W1 scope; logged here so it is not lost.

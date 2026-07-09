@@ -80,7 +80,7 @@ const LABEL = process.argv[2] || 'RUN';
     t4.holdings = CAP5(); recalcPortfolio(t4); t4.showHoldings = true; openAccountModal(t4.id);
     const th = document.getElementById('modal-dynamic-content').innerHTML;
     const strip = th.slice(th.indexOf('bank-strip-'), th.indexOf('holdings-table'));
-    const order = ['Invested / Cash', 'Equity %', 'Bond %', 'Cash %', 'International', 'Balance', 'Annual Contribution'];
+    const order = ['Account Value', 'Equity %', 'Bond %', 'Cash %', 'International', 'Balance', 'Annual Contribution'];
     let pos = -1, ordered = true;
     order.forEach(lbl => { const i = strip.indexOf('>' + lbl + '<'); if (i === -1 || i < pos) ordered = false; pos = i; });
     res.b2_leadBlock = ordered;

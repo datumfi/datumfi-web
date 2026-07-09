@@ -1075,7 +1075,7 @@
   .holdings-rollup .hr-sub { font-family: var(--font-sans, sans-serif); font-size: 9px; color: var(--muted); line-height: 1.4; margin-top: 5px; }
   /* DATUM INTELLIGENCE — holdings-modal narrative (Sketch telemetry-card parity) */
   .di-narrative { margin-top: 15px; background: rgba(9, 18, 33, 0.85); border: 1px solid rgba(255,255,255,0.1); border-left: 2px solid var(--teal-mid); border-radius: 4px; padding: 14px 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
-  .ira-why-panel { margin-top: 15px; background: rgba(9,18,33,0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
+  .ira-why-panel { margin-top: 4px; margin-bottom: 16px; background: rgba(9,18,33,0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
   .ira-why-toggle { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold); padding: 12px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); }
   .ira-why-toggle:hover { color: var(--white); }
   .ira-why-caret { transition: transform 0.15s ease; font-size: 9px; }
@@ -4013,9 +4013,14 @@
       return 'It leans ' + geo + sect + (isRoth ? w.r : w.t);
     }
 
+    // W5/W6 — universal DI empty-state. The Taxable copy is canonical; EVERY _diNarrX returns this
+    // one const on the zero-holdings guard so Roth/pre-tax 401(k), 457, IRA, 403(b), HSA, 529 all
+    // show the same guidance box on entry instead of a blank (L48 — one source, verbatim reuse).
+    var _DI_EMPTY_STATE = 'Add a few tickers below and Datum reads the whole picture — what KIND of account this is, how hard it swings, what it yields, and (once you enter a cost basis) the embedded gain you’re carrying. Right now there’s nothing to read.';
+
     // §9 assembler — HSA (Layers A/A2 · B · C · C2 · D · E; [IF] clauses dormant)
     function _diNarrHSA(acc, s, agg) {
-      if (!s.total || !(acc.holdings || []).length) return '';
+      if (!s.total || !(acc.holdings || []).length) return _DI_EMPTY_STATE;
       var out = [];
       if (s.inv > 0) out.push('Your HSA holds ' + _diMoney(s.total) + ' — ' + _diP(s.investedPct) + ' invested and ' + _diP(s.cashPct) + ' in cash.');
       else out.push('Your HSA holds ' + _diMoney(s.total) + ', all in the cash sweep — earning interest but not yet invested for growth.');
@@ -4047,7 +4052,7 @@
     // §9 assembler — 529 (Layers A/A2 · B · C · C2 · D · E). {beneficiary}/{yearsToCollege}
     // unsourced -> their clauses stay dormant / fall back to the neutral phrasing (L47; §7 asks parked).
     function _diNarr529(acc, s, agg) {
-      if (!s.total || !(acc.holdings || []).length) return '';
+      if (!s.total || !(acc.holdings || []).length) return _DI_EMPTY_STATE;
       var out = [];
       if (s.inv > 0) out.push('Your 529 holds ' + _diMoney(s.total) + ' — ' + _diP(s.investedPct) + ' invested and ' + _diP(s.cashPct) + ' in the cash/stable-value option.');
       else out.push('Your 529 holds ' + _diMoney(s.total) + ', all in the cash / stable-value option — safe, but not yet invested for the long growth a young beneficiary can capture.');
@@ -4073,7 +4078,7 @@
     // §9 assembler — 403(b), [R]/[T] per room (roth403 = [R] "The Roth Shelter"; trad403 = [T]
     // "The Tax-Shelter"; the planHasRoth gate is inherent — the [R] room only exists if added)
     function _diNarr403(acc, s, agg, isRoth) {
-      if (!s.total || !(acc.holdings || []).length) return '';
+      if (!s.total || !(acc.holdings || []).length) return _DI_EMPTY_STATE;
       var out = [];
       var mix = _diInstMix(s) || 'from your plan’s menu';
       out.push(isRoth
@@ -4344,7 +4349,7 @@
     // fire the "built from …" detail is currently dropped. Does the Architect want a standalone IRA
     // instrument-mix sentence (mirroring Taxable §3b _diTaxInstTag)? Not fabricating one (L47).
     function _diNarrIRA(acc, s, agg, isRoth) {
-      if (!s.total || !(acc.holdings || []).length) return '';
+      if (!s.total || !(acc.holdings || []).length) return _DI_EMPTY_STATE;
       var x = _diTaxSignals(acc, s);                         // shared signal engine (L48)
       var arch = _diIraArchetype(s, x, isRoth);              // §3a — names the identity; REPLACES the spine on a fire
       var out = [];
@@ -4574,7 +4579,7 @@
     // Inline (mirrors _diNarrIRA, L48) so the archetype can replace the spine and gate B2. Retires the flat
     // _DI_457_LAYERS table — the archetype needs a spine-replace the forEach could not express.
     function _diNarr457(acc, s, agg, isRoth) {
-      if (!s.total || !(acc.holdings || []).length) return '';
+      if (!s.total || !(acc.holdings || []).length) return _DI_EMPTY_STATE;
       var x = _diTaxSignals(acc, s);                         // shared signal engine (L48)
       var arch = _di457Archetype(s, x, isRoth);              // §3a — names the identity; REPLACES the spine on a fire
       var out = [];
@@ -5108,7 +5113,7 @@
     }
     function _diNarrTaxable(acc, s, agg) {
       if (!s.total || !(acc.holdings || []).length)
-        return 'Add a few tickers below and Datum reads the whole picture — what KIND of account this is, how hard it swings, what it yields, and (once you enter a cost basis) the embedded gain you’re carrying. Right now there’s nothing to read.';
+        return _DI_EMPTY_STATE;
       var x = _diTaxSignals(acc, s);
       var arch = _diTaxArchetype(s, x);                       // §3a — names the identity; REPLACES the spine on a fire
       var spine = _diTaxSpine(s, x);
@@ -5171,7 +5176,19 @@
     function _diCell(lbl, valHtml, tipTitle, tip1a, tip1b, valId, sub) {
       var tt = '<div class="modal-tt" style="bottom:100%; left:0;"><strong>' + tipTitle + '</strong>' + tip1a +
                (tip1b ? '<br><br><strong>Why it matters for your retirement</strong>' + tip1b : '') + '</div>';
-      return '<div class="hr-cell modal-tt-wrap" style="display:block; cursor:help;"><div class="hr-lbl">' + lbl + '</div><div class="hr-val"' + (valId ? ' id="' + valId + '"' : '') + '>' + valHtml + '</div>' + (sub || '') + tt + '</div>';
+      // Hover-clip fix — the rollup cells sit at the top of the modal, so a bottom:100% tooltip clips
+      // at the modal/viewport top. On hover, reposition to position:fixed BELOW the cell and clamp into
+      // the viewport (same technique as the ticker-bar column headers ~L6737) so no box is ever cut off.
+      return '<div class="hr-cell modal-tt-wrap" style="display:block; cursor:help;" onmouseenter="var t=this.querySelector(\'.modal-tt\'),r=this.getBoundingClientRect();t.style.position=\'fixed\';t.style.bottom=\'auto\';t.style.top=Math.min(r.bottom+6,innerHeight-t.offsetHeight-12)+\'px\';t.style.left=((r.left+t.offsetWidth<=innerWidth-16)?r.left:Math.max(12,r.right-t.offsetWidth))+\'px\';"><div class="hr-lbl">' + lbl + '</div><div class="hr-val"' + (valId ? ' id="' + valId + '"' : '') + '>' + valHtml + '</div>' + (sub || '') + tt + '</div>';
+    }
+
+    // Universal rollup field 1 — "Account Value" = live Σ(price×shares). Reuses s.total from _diSignals
+    // (the SAME derive; no-price holdings excluded per L47), display-only (never writes acc.value, LOCK-3).
+    // Replaced the per-room "Invested / Cash" restatement. One hover for every room (Architect copy,
+    // AUTHORED-lands-after-WIRED this once — Copy Banks backfill field-1 after this wire).
+    function _diAccountValueCell(s) {
+      return _diCell('Account Value', _diMoney(s.total), 'Account Value',
+        "The live, current worth of this account — the sum of every holding's price times the shares you own, updated as prices move. This isn't a target or a contribution figure; it's what the account is actually worth right now, today. It's the number that compounds: every projection, every withdrawal rate, every 'will it last' question starts here. Watch this one grow and you're watching the plan work.");
     }
 
     // Bank-room rollup strip (replaces the generic strip for hsa / 403(b) rooms). Contains no
@@ -5187,6 +5204,9 @@
         // ladder hovers. 14.2: the clinical gain restatement is gone; the gain-tax line stays.
         var xs = _diTaxSignals(acc, s);
         var tu = (s.unclassedPct || 0) >= 1 ? '<div class="hr-sub">' + _diP(s.unclassedPct) + ' of value unclassified — set Asset Class in the table below</div>' : '';
+        // §19 rollup parity — the 3 fields Taxable was missing vs the 401(k) baseline (Invested/Cash,
+        // Balance, Annual Contribution). Hover copy VERBATIM from Taxable Copy Bank R409/R414/R415 (L47).
+        h += _diAccountValueCell(s);
         h += _diCell('Equity %', _diP(xs.eqT), 'Share of value in stocks',
           'The share of this account in stocks / stock funds — the growth engine.',
           'Stocks are what outrun inflation over a long retirement, but they’re also what falls hardest. This % is the single biggest dial on whether your money grows enough to last — and how rough the ride gets getting there.', null, tu);
@@ -5199,6 +5219,11 @@
         h += _diCell('International', _diP(xs.foreignT), 'Share of value outside the US',
           'The share invested outside the US — international holdings.',
           'Foreign exposure spreads your bet beyond one country’s economy, which can steady a long retirement. It’s neither good nor bad on its own — it just tells you how much of your future rides on the rest of the world doing well too.');
+        h += _diCell('Balance', _diMoney(acc.value), 'Balance',
+          "The account's current market value. Unlike a retirement room, every dollar here is already-taxed and fully liquid — no 59½ gate, no penalty, no RMD. The trade-off: growth is taxed as you realize it. This is your most flexible money and your most tax-exposed.");
+        var cTax = (acc.inflow || 0) * (acc.freq || 0);
+        h += _diCell('Annual Contribution', cTax > 0 ? _diMoney(cTax) + ' / yr' : '—', 'Annual Contribution',
+          "What you're adding per year. A taxable brokerage has NO IRS contribution limit — you can add $500 or $5,000,000. That's its superpower: it's the overflow room once tax-advantaged space is maxed. Contributions are after-tax dollars, so there's no deduction, but also no cap and no strings.");
         var tg = s.unrealGain;
         var tgLine = (typeof tg === 'number' && tg > 0) ? '<div class="hr-sub" id="hr-gaintax" style="margin-top:5px;">Tax if you sold it all today ≈ 15% of that gain — roughly $' + Math.round(tg * 0.15).toLocaleString('en-US') + '.</div>' : '';
         h += _diCell('Unrealized Gain', tg === null ? '—' : _diGainFmt(tg), 'Your paper profit',
@@ -5220,9 +5245,7 @@
         // 457(b) bank §1 (R10–R16) — unified lead block; every hover keeps the 457 signature
         // (penalty-free on separation) and the own-ceiling truth. {planProvider} unsourced -> dropped.
         var cu = (s.unclassedPct || 0) >= 1 ? '<div class="hr-sub">' + _diP(s.unclassedPct) + ' of value unclassified — set Asset Class in the table below</div>' : '';
-        h += _diCell('Invested / Cash', _diP(s.investedPct) + ' / ' + _diP(s.cashPct), 'Invested vs Cash split',
-          _diP(s.investedPct) + ' invested / ' + _diP(s.cashPct) + ' parked in cash.',
-          'The cash line is money standing still; the invested share is what compounds toward retirement.');
+        h += _diAccountValueCell(s);
         h += _diCell('Equity %', _diP(s.equityPct), 'Value-weighted asset mix',
           _diP(s.equityPct) + ' of this 457(b)’s invested value is in stocks.',
           'How your 457(b) is actually invested — chosen from your plan’s fund menu. Because you pick from a set list rather than the whole market, menu quality and fees are the tension to watch.', null, cu);
@@ -5250,11 +5273,10 @@
           'Σ(value − cost basis) where basis exists — cash-sweep rows never enter the Σ.',
           b457Roth ? 'In the Annex all of this growth is yours tax-free — the right home for your highest-growth bets.'
                    : 'In the Workshop this growth will be taxed as ordinary income on the way out — the bigger it grows, the bigger the future bill.');
-        if (beta !== null && beta !== undefined) {
-          h += _diCell('Weighted Beta', _diCovVal(s.betaCovPct, beta.toFixed(2)), 'Value-weighted market sensitivity',
+        // W7 parity — always render (— when no beta) so the 457(b) rollup keeps the full 11 fields.
+        h += _diCell('Weighted Beta', (beta === null || beta === undefined) ? '—' : _diCovVal(s.betaCovPct, beta.toFixed(2)), 'Value-weighted market sensitivity',
             'Value-weighted market sensitivity (holdings with a beta).',
-            'How hard your 457(b) swings with the market. Left blank when holdings don’t publish a beta — we leave it empty rather than fake it.', 'hr-beta', _diCovSub(s.betaCovPct, 'beta'));
-        }
+            'How hard your 457(b) swings with the market. Left blank when holdings don’t publish a beta — we leave it empty rather than fake it.', 'hr-beta', (beta !== null && beta !== undefined) ? _diCovSub(s.betaCovPct, 'beta') : '');
         h += _diCell('Blended Yield', _diCovVal(s.yldCovPct, _yld(agg && agg.blendedYield)), 'Value-weighted dividend yield',
           'Value-weighted dividend yield.',
           'Income thrown off inside the account. In a 457(b) these dividends reinvest untaxed — no yearly tax drag like a taxable account, so yield is pure compounding here.', 'hr-yield',
@@ -5273,9 +5295,7 @@
         var rothK = base.taxCode === 'roth';
         var cK = (acc.inflow || 0) * (acc.freq || 0);
         var uK = (s.unclassedPct || 0) >= 1 ? '<div class="hr-sub">' + _diP(s.unclassedPct) + ' of value unclassified — set Asset Class in the table below</div>' : '';
-        h += _diCell('Invested / Cash', _diP(s.investedPct) + ' / ' + _diP(s.cashPct), 'Invested vs Cash split',
-          _diP(s.investedPct) + ' invested / ' + _diP(s.cashPct) + ' parked in cash.',
-          'The cash line is money standing still; the invested share is what compounds toward retirement.');
+        h += _diAccountValueCell(s);
         h += _diCell('Equity %', _diP(s.equityPct), '% of the account in stocks',
           '% of the account in stocks / equity funds.',
           rothK ? 'Sets the growth engine and the turbulence. In a Roth, high equity is especially powerful — because all that growth comes out untaxed, this is the best account to hold your highest-expected-return assets.'
@@ -5317,9 +5337,7 @@
         // IRA bank §1 (R10–R16) — unified lead block (B2 precedent), IRA hover pairs, plus the
         // NEW Unrealized Gain box (R13, CASH-guarded Σ from _diSignals — sourced-or-blank).
         var iu = (s.unclassedPct || 0) >= 1 ? '<div class="hr-sub">' + _diP(s.unclassedPct) + ' of value unclassified — set Asset Class in the table below</div>' : '';
-        h += _diCell('Invested / Cash', _diP(s.investedPct) + ' / ' + _diP(s.cashPct), 'Invested vs Cash split',
-          _diP(s.investedPct) + ' invested / ' + _diP(s.cashPct) + ' parked in cash.',
-          'The cash line is money standing still; the invested share is what compounds toward retirement.');
+        h += _diAccountValueCell(s);
         h += _diCell('Equity %', _diP(s.equityPct), 'Value-weighted asset mix',
           _diP(s.equityPct) + ' of this IRA’s invested value is in stocks.',
           'How your IRA is actually invested. Because you opened this yourself, you control the full menu — this mix is entirely your design, and the place to hold your highest-growth assets if this is a Roth.', null, iu);
@@ -5347,11 +5365,10 @@
           'Σ(value − cost basis) where basis exists — cash-sweep rows never enter the Σ.',
           iraRoth ? 'In the Conservatory all of this growth is yours tax-free — exactly why high-growth belongs here.'
                   : 'In the Library this growth will be taxed as ordinary income on the way out — the bigger it grows, the bigger the future bill.');
-        if (beta !== null && beta !== undefined) {
-          h += _diCell('Weighted Beta', _diCovVal(s.betaCovPct, beta.toFixed(2)), 'Value-weighted market sensitivity',
+        // W7 parity — always render (— when no beta) so the IRA rollup keeps the full 11 fields.
+        h += _diCell('Weighted Beta', (beta === null || beta === undefined) ? '—' : _diCovVal(s.betaCovPct, beta.toFixed(2)), 'Value-weighted market sensitivity',
             'Value-weighted market sensitivity (holdings with a beta).',
-            'How hard your IRA swings with the market. Left blank when holdings don’t publish a beta — we leave it empty rather than fake it.', 'hr-beta', _diCovSub(s.betaCovPct, 'beta'));
-        }
+            'How hard your IRA swings with the market. Left blank when holdings don’t publish a beta — we leave it empty rather than fake it.', 'hr-beta', (beta !== null && beta !== undefined) ? _diCovSub(s.betaCovPct, 'beta') : '');
         h += _diCell('Blended Yield', _diCovVal(s.yldCovPct, _yld(agg && agg.blendedYield)), 'Value-weighted dividend yield',
           'Value-weighted dividend yield.',
           'Income thrown off inside the account. In any IRA these dividends reinvest untaxed — no yearly tax drag like a taxable account, so yield is pure compounding here.', 'hr-yield',
@@ -5402,9 +5419,7 @@
         return h + '</div>';
       }
       if (hsa) {
-        h += _diCell('Invested / Cash', _diP(s.investedPct) + ' / ' + _diP(s.cashPct), 'Invested vs Cash split',
-          _diP(s.investedPct) + ' invested / ' + _diP(s.cashPct) + ' cash. The invested slice is the part working as a stealth retirement account.',
-          'The "invest-above-a-cash-buffer" decision is the core HSA lever — distinguish CASH (spend) from INVESTED (grow).');
+        h += _diAccountValueCell(s);
         h += _diCell('Equity %', _diP(s.equityPct), 'Equity share (invested sleeve)',
           _diP(s.equityPct) + ' of this HSA is in stocks — the long-horizon growth engine of your medical war-chest.',
           'Only meaningful once the HSA is invested. Many HSAs sit 100% in cash — that idle sweep is usually the headline opportunity.');
@@ -5433,9 +5448,7 @@
       } else {
         // B2 — unified lead block (matches the HSA opening set), then 403(b)-specific metrics.
         var unclSub = (s.unclassedPct || 0) >= 1 ? '<div class="hr-sub">' + _diP(s.unclassedPct) + ' of value unclassified — set Asset Class in the table below</div>' : '';
-        h += _diCell('Invested / Cash', _diP(s.investedPct) + ' / ' + _diP(s.cashPct), 'Invested vs Cash split',
-          _diP(s.investedPct) + ' invested / ' + _diP(s.cashPct) + ' parked in cash.',
-          'The cash line is money standing still; the invested share is what compounds toward retirement.');
+        h += _diAccountValueCell(s);
         h += _diCell('Equity %', _diP(s.equityPct), 'Equity share (invested value)',
           _diP(s.equityPct) + ' of this account’s invested value is in stocks.',
           'The growth engine — stocks carry the long-horizon compounding this account’s tax shelter is built to protect.', null, unclSub);
@@ -5751,7 +5764,7 @@
       return lim;
     }
     function _diNarr401k(acc, s, agg, isRoth) {
-      if (!s.total || !(acc.holdings || []).length) return '';
+      if (!s.total || !(acc.holdings || []).length) return _DI_EMPTY_STATE;
       var x = _di401kArchSignals(acc, s);
       var base = getBaseType(acc.baseId);
       var salId = (base && base.type === 'coarch') ? 'co-salary' : 'pri-salary';
@@ -5923,6 +5936,20 @@
 
         let html = '';
         
+        // W2/W6 — on "Begin Interior Decorating" the whole settings/education region collapses so the
+        // holdings area is the SOLE focus. Everything appended below sits inside #modal-edu-collapse
+        // (closed just before the holdings blocks); the account-name header is a separate element set by
+        // _diSetTitle and survives. While decorating, the derive path (Σ price×shares) is the sole
+        // acc.value writer — the Current Balance input rides inside the collapse (display:none, cannot fire).
+        var _hideEdu = base.isInvestment && acc.showHoldings;
+        html += '<div id="modal-edu-collapse"' + (_hideEdu ? ' style="display:none;"' : '') + '>';
+
+        // §15 "Why …?" education panel at the TOP of the overview (above the toggles), inside the collapse
+        // so it hides while decorating. Pure relocation of existing copy (LOCK-3) — previously appended at
+        // the bottom after the decorate button. _diIraWhyPanel/_di457WhyPanel take only (acc, base).
+        if (/ira/.test(base.id)) html += _diIraWhyPanel(acc, base);    // §15 "Why an IRA?" (IRA-only)
+        if (/457b/.test(base.id)) html += _di457WhyPanel(acc, base);   // §15 "Why a 457(b)?" (both branches)
+
         // SURGICAL: Physics Toggles with explicit mathematical tooltips
         html += `
         <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
@@ -6575,6 +6602,8 @@
             </div>`;
         }
 
+        html += '</div>';   // W2 — close #modal-edu-collapse; the holdings blocks below render OUTSIDE the collapse
+
         if (base.id.includes('collectibles')) {
             html += `
             <button class="add-space-btn" type="button" style="margin-top: 15px; width: 100%;" onclick="toggleHoldings('${id}')">
@@ -6617,9 +6646,11 @@
                 document.getElementById('modal-card').style.width = "550px";
             }
         } else if(base.isInvestment) {
-            html += `
+            // W4 — the entry button shows only when CLOSED; on decorate the "← Back … Overview" button
+            // moves to the BOTTOM (after the DI box + rollup + table), rendered further down.
+            if (!acc.showHoldings) html += `
             <button class="add-space-btn" type="button" style="margin-top: 15px; width: 100%;" onclick="toggleHoldings('${id}')">
-                ${acc.showHoldings ? '← Back to Account' : '❖ BEGIN INTERIOR DECORATING (PORTFOLIO HOLDINGS)'}
+                ❖ BEGIN INTERIOR DECORATING (PORTFOLIO HOLDINGS)
             </button>`;
             
             if(acc.showHoldings) {
@@ -6628,7 +6659,7 @@
                 // HORIZONTAL scrollbar (teal thumb, brightens on :hover, line ~52) renders below the
                 // DI as a long glowing inert bar. Cap the card to the viewport; the holdings TABLE
                 // keeps its own overflow-x scroll inside its labeled container.
-                document.getElementById('modal-card').style.width = "min(1200px, 96vw)";
+                document.getElementById('modal-card').style.width = "min(1680px, 96vw)";   // W3 — the 14-col ticker bar needs ~1583px; 1200 clipped it even on a wide monitor. 1680 lets the full bar read on a desktop; 96vw keeps the card within the viewport (phantom-fix guard) so narrower screens still scroll the table inside its own overflow-x container.
                 var isTaxable = (base.taxCode === 'liquid' && base.isInvestment);
                 var _agg = (window.DatumMath ? DatumMath.portfolioStats([acc]) : null);   // display-only (LOCK-3)
                 var _esc = function (s) { return (s === undefined || s === null) ? '' : String(s); };
@@ -6640,6 +6671,9 @@
                 // Bank rooms (HSA / 403(b)) carry the Copy Bank §1 signal boxes + hover pairs instead.
                 var _diBank = _diIsBankRoom(base.id);
                 var _diSig = _diBank ? _diSignals(acc) : null;
+                // W4a — DI box on TOP (above the rollup), anchored to the rollup build, not a line number.
+                // _diNarrBlock now renders the universal empty-state (W5) on zero-holdings entry.
+                if (_diBank) html += _diNarrBlock(acc, base, _diSig, _agg);
                 if (_diBank) {
                   html += _diBankStrip(acc, base, _diSig, _agg);
                 } else {
@@ -6734,7 +6768,7 @@
                 cols.forEach(function (c) {
                   // position:fixed on hover so the hover escapes the table's overflow-x scroll clip and
                   // clamps into the viewport (same fix as the title hover) — rightmost columns were cut off.
-                  if (c.tip) html += '<th style="width:' + c.w + 'px;"><div class="modal-tt-wrap" style="justify-content:flex-start; cursor:help;" onmouseenter="var t=this.querySelector(\'.modal-tt\'),r=this.getBoundingClientRect();t.style.position=\'fixed\';t.style.bottom=\'auto\';t.style.top=Math.min(r.bottom+6,innerHeight-t.offsetHeight-12)+\'px\';t.style.left=Math.max(12,Math.min(r.left,innerWidth-t.offsetWidth-16))+\'px\';">' + c.lbl + '<div class="modal-tt" style="top:100%; bottom:auto;"><strong>' + c.tip.t + '</strong>' + c.tip.b + '</div></div></th>';
+                  if (c.tip) html += '<th style="width:' + c.w + 'px;"><div class="modal-tt-wrap" style="justify-content:flex-start; cursor:help;" onmouseenter="var t=this.querySelector(\'.modal-tt\'),r=this.getBoundingClientRect();t.style.position=\'fixed\';t.style.bottom=\'auto\';t.style.top=Math.min(r.bottom+6,innerHeight-t.offsetHeight-12)+\'px\';t.style.left=((r.left+t.offsetWidth<=innerWidth-16)?r.left:Math.max(12,r.right-t.offsetWidth))+\'px\';">' + c.lbl + '<div class="modal-tt" style="top:100%; bottom:auto;"><strong>' + c.tip.t + '</strong>' + c.tip.b + '</div></div></th>';
                   else html += '<th' + (c.w ? ' style="width:' + c.w + 'px;"' : '') + '>' + c.lbl + '</th>';
                 });
                 html += '</tr>';
@@ -6746,7 +6780,8 @@
                 html += '</table>';
                 html += '<button class="add-space-btn" type="button" style="margin-top: 10px; width: max-content; padding: 6px 12px; border-style: solid; color:var(--white);" onclick="addHolding(\'' + id + '\')">+ Add Holding</button>';
                 html += '</div>';   // P6 — bottom-right TOTAL removed (duplicate of the strip/card balance, Captain ruling)
-                if (_diBank) html += _diNarrBlock(acc, base, _diSig, _agg);   // §9 narrative below the table
+                // W4b — "← Back to <account> Overview" at the BOTTOM (DI box now renders on top, above the rollup).
+                html += '<button class="add-space-btn" type="button" style="margin-top: 15px; width: 100%;" onclick="toggleHoldings(\'' + id + '\')">← Back to ' + base.title + ' Overview</button>';
             } else {
                 document.getElementById('modal-card').style.width = "550px";
             }
@@ -6754,8 +6789,9 @@
              document.getElementById('modal-card').style.width = "550px";
         }
 
-        if (/ira/.test(base.id)) html += _diIraWhyPanel(acc, base);   // §15 "Why an IRA?" education panel (IRA-only)
-        if (/457b/.test(base.id)) html += _di457WhyPanel(acc, base);  // §15 "Why a 457(b)?" education panel (both branches)
+        // §15 "Why …?" education panels RELOCATED to the top of the modal (above the toggles, inside
+        // #modal-edu-collapse) — see the top-insert after the collapse opens. They read backwards at the
+        // bottom; an overview panel belongs at the top of the overview (Captain relocation 2026-07-08).
         document.getElementById('modal-dynamic-content').innerHTML = html;
         document.getElementById('account-modal-overlay').style.display = 'flex';
     };

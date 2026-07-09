@@ -29,6 +29,18 @@ const URL = 'http://127.0.0.1:8001/studio.html';
       window.openAccountModal(a.id);
       return document.getElementById('modal-dynamic-content').innerHTML;
     };
+    // W2 — the §15 "Why …?" panel is an OVERVIEW-mode, top-of-modal feature: it renders with
+    // showHoldings=false and is hidden while decorating. Capture the panel fixtures in overview mode
+    // (assertions unchanged — the capture mode follows the panel to where it renders).
+    const openOverview = (baseId, holdings) => {
+      try { addInstance(baseId); } catch (e) { return '__THREW__:' + e.message; }
+      const a = window.state.accounts.filter(x => x.baseId === baseId).pop();
+      if (!a) return '__NO_ACCOUNT__';
+      a.holdings = holdings; a.showHoldings = false;
+      try { recalcPortfolio(a); } catch (e) {}
+      window.openAccountModal(a.id);
+      return document.getElementById('modal-dynamic-content').innerHTML;
+    };
     // fixtures
     const cryptoMulti = () => [
       mk({ ticker: 'BTC', name: 'Bitcoin', price: 100, shares: 300, assetClass: 'Crypto', sector: 'Bitcoin', instrumentType: 'Crypto' }),
@@ -99,14 +111,14 @@ const URL = 'http://127.0.0.1:8001/studio.html';
       ? { y25: _DI_IRA_LIMITS[2025], y26: _DI_IRA_LIMITS[2026], now: (typeof _diIraLimits === 'function' ? _diIraLimits() : null) }
       : null;
     // I4 · §15 "Why an IRA?" panel — no workplace plan yet (fixtures above are only IRAs), Roth branch
-    out.whyNoWork = open('rothira', none());
+    out.whyNoWork = openOverview('rothira', none());
     addInstance('pretax401k');   // now the estate holds a workplace plan
-    out.whyWork = open('tradira', none());   // Traditional branch + S5 nudge should fire
+    out.whyWork = openOverview('tradira', none());   // Traditional branch + S5 nudge should fire (overview mode)
     // S4 live meter — funded AFTER the empty-state whyNoWork capture so iraUsed sums inflow*freq only here
     const openContrib = (baseId, holdings, inflow, freq) => {
       addInstance(baseId);
       const a = window.state.accounts.filter(x => x.baseId === baseId).pop();
-      a.holdings = holdings; a.showHoldings = true; a.inflow = inflow; a.freq = freq;
+      a.holdings = holdings; a.showHoldings = false; a.inflow = inflow; a.freq = freq;   // W2 — §15 S4 meter is overview-mode
       try { recalcPortfolio(a); } catch (e) {}
       window.openAccountModal(a.id);
       return document.getElementById('modal-dynamic-content').innerHTML;
