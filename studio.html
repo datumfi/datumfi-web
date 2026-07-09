@@ -5193,6 +5193,33 @@
         "The live, current worth of this account — the sum of every holding's price times the shares you own, updated as prices move. This isn't a target or a contribution figure; it's what the account is actually worth right now, today. It's the number that compounds: every projection, every withdrawal rate, every 'will it last' question starts here. Watch this one grow and you're watching the plan work.");
     }
 
+    // §19 tax-lot COLUMN hovers for tax-advantaged rooms (authored §Rollup Parity, install VERBATIM).
+    // The 3 tax-lot cols render in EVERY bank investment room; in a shelter they show "—" + the why-
+    // hover. 401(k) and HSA have their own lens; IRA/457/403 share the generic "shelter" text. (IRA/457
+    // keep their rich editable Cost Basis / computed Unrealized Gain — basis is tracked so UG shows —
+    // and pull only the Acquisition-Date "—" from here.)
+    function _diLotColTips(baseId) {
+      var shelter = {
+        'Cost Basis': 'Shows "—" here. Cost basis is what you paid for a lot — it only drives a TAX event when you sell inside a taxable account. In this shelter there is no capital-gains tax to size, so per-lot basis has nothing to compute against and stays "—".',
+        'Unrealized Gain': 'Shows "—" here. Per-lot embedded gain matters in a taxable account because selling one lot vs another changes your tax bill. Inside this wrapper rebalancing is a tax non-event and there is no wash-sale, so per-lot gain never renders.',
+        'Acquisition Date': 'Shows "—" here. Acquisition date sets the short-vs-long-term holding clock — but that clock only matters where capital-gains rates apply. Inside this shelter the holding-period clock does not run, so the date is not tracked per lot.'
+      };
+      var k401 = {
+        'Cost Basis': 'Shows "—" in a 401(k). Cost basis is what you paid for a lot, and it drives capital-gains tax — but a 401(k) has no capital-gains tax to drive. Traditional withdrawals are taxed as ordinary income on the FULL amount; Roth qualified withdrawals are tax-free entirely. The IRS never asks what you paid, so there\'s no basis to track.',
+        'Unrealized Gain': 'Shows "—" in a 401(k). Per-lot embedded gain matters in a taxable account because selling triggers a tax bill sized by that gain. Here, selling and rebalancing inside the plan is a tax non-event — you can trade freely without a wash-sale or gains worry — so there\'s no per-lot gain to surface.',
+        'Acquisition Date': 'Shows "—" in a 401(k). Acquisition date sets the short-vs-long-term holding clock that changes your tax rate in a brokerage. That clock doesn\'t run inside a 401(k): the holding period is irrelevant to how withdrawals are taxed, so the date carries no tax meaning here.'
+      };
+      var kHsa = {
+        'Cost Basis': 'Shows "—" in an HSA. Cost basis sizes a capital-gains tax on sale — but qualified HSA growth is tax-free and even non-qualified withdrawals are taxed as ordinary income, never as per-lot gains. Nothing to compute, so it stays "—".',
+        'Unrealized Gain': 'Shows "—" in an HSA. Per-lot gain drives lot-selection tax decisions in a taxable account; inside the HSA rebalancing is a tax non-event, so per-lot embedded gain never renders.',
+        'Acquisition Date': 'Shows "—" in an HSA. The short-vs-long-term clock only matters where capital-gains rates apply. The HSA has no holding-period tax event, so acquisition date is not tracked per lot.'
+      };
+      var m = /401k/.test(baseId) ? k401 : /hsa/.test(baseId) ? kHsa : shelter;
+      var out = {};
+      ['Cost Basis', 'Unrealized Gain', 'Acquisition Date'].forEach(function (k) { out[k] = { t: k, b: m[k] }; });
+      return out;
+    }
+
     // Bank-room rollup strip (replaces the generic strip for hsa / 403(b) rooms). Contains no
     // inputs, so full re-render on refresh is focus-safe. Blank beta -> the box is OMITTED (L47).
     function _diBankStrip(acc, base, s, agg) {
@@ -5421,71 +5448,61 @@
         return h + '</div>';
       }
       if (hsa) {
+        // §19 §Rollup Parity — HSA lens, FULL-authored 11-field block installed VERBATIM (HSA Copy
+        // Bank R240–R249; field 1 = universal Account Value). Balance keeps the restored "stealth
+        // retirement account" line (live at e6ad004, dropped by a9d952a WIP — Captain restore ruling).
+        var hUncl = (s.unclassedPct || 0) >= 1 ? '<div class="hr-sub">' + _diP(s.unclassedPct) + ' of value unclassified — set Asset Class in the table below</div>' : '';
+        var hContrib = (acc.inflow || 0) * (acc.freq || 0);
         h += _diAccountValueCell(s);
-        h += _diCell('Equity %', _diP(s.equityPct), 'Equity share (invested sleeve)',
-          _diP(s.equityPct) + ' of this HSA is in stocks — the long-horizon growth engine of your medical war-chest.',
-          'Only meaningful once the HSA is invested. Many HSAs sit 100% in cash — that idle sweep is usually the headline opportunity.');
-        h += _diCell('Bond %', _diP(s.bondPct), 'Bond share (invested sleeve)',
-          _diP(s.bondPct) + ' sits in bonds — ballast for money you may need for near-term medical costs.',
-          'Same bond signal as any account, framed against medical-spend timing rather than retirement-spend.');
-        h += _diCell('Cash %', _diP(s.cashPct), 'Cash sweep',
-          _diP(s.cashPct) + ' is in the HSA cash sweep — the part that covers this year’s out-of-pocket bills.',
-          'HSAs almost always carry a cash floor (the spend layer). That cash-vs-invested split is the HSA’s defining tension.');
-        h += _diCell('International', _diP(s.foreignPct), 'International share',
-          _diP(s.foreignPct) + ' of the invested sleeve is international.',
-          'Diversifies the sleeve beyond one economy — identical signal to your other investment accounts.');
-        if (beta !== null && beta !== undefined) {
-          var hB = _diCovVal(s.betaCovPct, beta.toFixed(2));
-          h += _diCell('Weighted Beta', hB, 'Invested-sleeve beta',
-            hB === '—' ? 'Invested-sleeve beta vs market — blanked: too little of this account’s value publishes one.' : 'Invested-sleeve beta ' + beta.toFixed(2) + ' vs market.',
-            'Computed on the invested portion only — the cash sweep is beta 0. Left blank rather than faked when holdings don’t publish one.', 'hr-beta', _diCovSub(s.betaCovPct, 'beta'));
-        }
-        h += _diCell('Blended Yield', _diCovVal(s.yldCovPct, _yld(agg && agg.blendedYield)), 'Value-weighted dividend yield',
-          'Value-weighted dividend yield.',
-          'Income thrown off inside the account. In an HSA these dividends reinvest untaxed — no yearly tax drag, so yield is pure compounding for your medical war-chest.', 'hr-yield',
+        h += _diCell('Equity %', _diP(s.equityPct), 'Equity %',
+          'Share of the account in stocks and equity funds — your growth engine. Inside a HSA equity growth compounds without an annual tax drag.', null, null, hUncl);
+        h += _diCell('Bond %', _diP(s.bondPct), 'Bond %',
+          'Share in bonds / fixed income. Bonds are the least tax-efficient asset in a taxable account, which is exactly why holding them inside a HSA shelter is efficient.');
+        h += _diCell('Cash %', _diP(s.cashPct), 'Cash %',
+          'Share sitting in cash / money-market / stable value. Useful for stability, but too much is a long-term drag on a retirement-purpose account.');
+        h += _diCell('International', _diP(s.foreignPct), 'International',
+          'Share of holdings outside the U.S. Note the quirk of tax-advantaged accounts: the foreign-tax credit is LOST on international funds held inside a shelter — you can\'t claim what you never paid tax on.');
+        h += _diCell('Balance', _diMoney(acc.value), 'Balance',
+          'The HSA\'s current market value — the triple-tax-free crown jewel: contributions deductible, growth tax-free, and qualified medical withdrawals tax-free. No other account does all three. The invested slice is the part working as a stealth retirement account.');
+        h += _diCell('Annual Contribution', hContrib > 0 ? _diMoney(hContrib) + ' / yr' : '—', 'Annual Contribution',
+          'What you\'re adding per year against the HSA limit. Every dollar is deductible going in AND tax-free coming out for medical — the most tax-efficient contribution you can make.');
+        h += _diCell('Unrealized Gain', s.unrealGain === null ? '—' : _diGainFmt(s.unrealGain), 'Unrealized Gain',
+          'Growth you\'re sitting on but haven\'t sold. In an HSA this is informational only — qualified growth is never taxed, so this figure never drives a tax event.', null, 'hr-gain');
+        h += _diCell('Weighted Beta', (beta === null || beta === undefined) ? '—' : _diCovVal(s.betaCovPct, beta.toFixed(2)), 'Weighted Beta',
+          'How sharply this account tends to move with the market, size-weighted across your holdings. A read on how much this HSA will swing in a downturn.', null, 'hr-beta', (beta !== null && beta !== undefined) ? _diCovSub(s.betaCovPct, 'beta') : '');
+        h += _diCell('Blended Yield', _diCovVal(s.yldCovPct, _yld(agg && agg.blendedYield)), 'Blended Yield',
+          'Income the account throws off per year as a % of value. Unlike a taxable account, dividends and interest here compound with no annual tax bill.', null, 'hr-yield',
           s.yldCovVal > 0 ? _diCovSub(s.yldCovPct, 'yield') : '');
-        h += _diCell('Avg Expense', (_diE(agg && agg.blendedExpense) || '—'), 'Blended expense',
-          'Weighted expense ratio ' + (_diE(agg && agg.blendedExpense) || '—') + '/yr across the invested sleeve.',
-          'HSA platforms sometimes add an account/admin fee on top — check your provider’s fee schedule alongside the fund expenses.');
+        h += _diCell('Avg Expense', (_diE(agg && agg.blendedExpense) || '—'), 'Avg Expense',
+          'The value-weighted expense ratio across your funds — the one cost you fully control. In a menu-limited plan this is the number to push down.', null, 'hr-expense');
       } else {
-        // B2 — unified lead block (matches the HSA opening set), then 403(b)-specific metrics.
+        // §19 §Rollup Parity — 403(b) lens, FULL-authored 11-field block installed VERBATIM (403(b)
+        // Copy Bank R286–R295; field 1 = universal Account Value; Balance/Contribution copy is
+        // branch-agnostic [T]/[R]). Adds Unrealized Gain (was missing) + always-renders Weighted Beta.
         var unclSub = (s.unclassedPct || 0) >= 1 ? '<div class="hr-sub">' + _diP(s.unclassedPct) + ' of value unclassified — set Asset Class in the table below</div>' : '';
+        var f3Contrib = (acc.inflow || 0) * (acc.freq || 0);
         h += _diAccountValueCell(s);
-        h += _diCell('Equity %', _diP(s.equityPct), 'Equity share (invested value)',
-          _diP(s.equityPct) + ' of this account’s invested value is in stocks.',
-          'The growth engine — stocks carry the long-horizon compounding this account’s tax shelter is built to protect.', null, unclSub);
-        h += _diCell('Bond %', _diP(s.bondPct), 'Bond share (invested value)',
-          _diP(s.bondPct) + ' sits in bonds.',
-          'Ballast — steadier, income-bearing holdings that damp the swings as retirement nears.');
-        h += _diCell('Cash %', _diP(s.cashPct), 'Cash share',
-          _diP(s.cashPct) + ' is in cash.',
-          'Dry powder inside the account — value that isn’t compounding until it’s put to work.');
-        h += _diCell('International', _diP(s.foreignPct), 'International share',
-          _diP(s.foreignPct) + ' of the invested value is international.',
-          'Diversifies the account beyond one economy — identical signal to your other investment accounts.');
-        // Balance / Contribution hovers — Captain-reauthored verbatim (403(b) bank D19/D20, 2026-07-01)
-        var bTail = ' Same balance, very different after-tax worth. Reaching it before 59½ generally triggers a 10% penalty on the taxable part, so plan to leave it until then.';
-        h += _diCell('Balance', _diMoney(acc.value), 'Current balance in the account',
-          'Current balance in the account.',
-          (isRoth ? 'The Roth Shelter: already-taxed dollars that grow and come out 100% tax-free once qualified.' :
-                    'The Tax-Shelter: pre-tax dollars that grow untaxed until you withdraw — then every dollar is ordinary income.') + bTail);
-        var contrib = (acc.inflow || 0) * (acc.freq || 0);
-        h += _diCell('Annual Contribution', contrib > 0 ? _diMoney(contrib) + ' / yr' : '—', 'What you’re deferring per year',
-          'What you’re deferring per year.',
-          'Capped HIGH — the 403(b) deferral limit is one of the largest available. One thing worth knowing: if you also put money in a 401(k), the two share the same yearly contribution limit — it’s one combined ceiling, not two separate ones, so filling one leaves less room in the other. ' +
-          (isRoth ? 'Roth deferrals lock in tax-free growth on today’s dollars.' : 'Pre-tax deferrals lower this year’s taxable income now.'));
-        if (beta !== null && beta !== undefined) {
-          h += _diCell('Weighted Beta', _diCovVal(s.betaCovPct, beta.toFixed(2)), 'Value-weighted market sensitivity',
-            'Value-weighted market sensitivity (holdings with a beta).',
-            'How hard your 403(b) swings with the market. Left blank when holdings don’t publish a beta — we leave it empty rather than fake it.', 'hr-beta', _diCovSub(s.betaCovPct, 'beta'));
-        }
-        h += _diCell('Blended Yield', _diCovVal(s.yldCovPct, _yld(agg && agg.blendedYield)), 'Value-weighted dividend yield',
-          'Value-weighted dividend yield.',
-          'Income thrown off inside the account. In a 403(b) these dividends reinvest untaxed — no yearly tax drag, so yield is pure compounding here.', 'hr-yield',
+        h += _diCell('Equity %', _diP(s.equityPct), 'Equity %',
+          'Share of the account in stocks and equity funds — your growth engine. Inside a 403(b) equity growth compounds without an annual tax drag.', null, null, unclSub);
+        h += _diCell('Bond %', _diP(s.bondPct), 'Bond %',
+          'Share in bonds / fixed income. Bonds are the least tax-efficient asset in a taxable account, which is exactly why holding them inside a 403(b) shelter is efficient.');
+        h += _diCell('Cash %', _diP(s.cashPct), 'Cash %',
+          'Share sitting in cash / money-market / stable value. Useful for stability, but too much is a long-term drag on a retirement-purpose account.');
+        h += _diCell('International', _diP(s.foreignPct), 'International',
+          'Share of holdings outside the U.S. Note the quirk of tax-advantaged accounts: the foreign-tax credit is LOST on international funds held inside a shelter — you can\'t claim what you never paid tax on.');
+        h += _diCell('Balance', _diMoney(acc.value), 'Balance',
+          'The account\'s current market value. In a Traditional 403(b) it is all still pre-tax (you\'ll owe ordinary income on withdrawal); in a Roth 403(b) it is yours tax-free in retirement.');
+        h += _diCell('Annual Contribution', f3Contrib > 0 ? _diMoney(f3Contrib) + ' / yr' : '—', 'Annual Contribution',
+          'What you\'re adding per year. A 403(b) shares the elective-deferral limit, and 15-years-of-service employees may get a special catch-up — real headroom most people miss.');
+        h += _diCell('Unrealized Gain', s.unrealGain === null ? '—' : _diGainFmt(s.unrealGain), 'Unrealized Gain',
+          'Growth you\'re sitting on but haven\'t sold. Inside a 403(b) this figure is informational — it never drives a tax event, because rebalancing here is tax-free.', null, 'hr-gain');
+        h += _diCell('Weighted Beta', (beta === null || beta === undefined) ? '—' : _diCovVal(s.betaCovPct, beta.toFixed(2)), 'Weighted Beta',
+          'How sharply this account tends to move with the market, size-weighted across your holdings. A read on how much this 403(b) will swing in a downturn.', null, 'hr-beta', (beta !== null && beta !== undefined) ? _diCovSub(s.betaCovPct, 'beta') : '');
+        h += _diCell('Blended Yield', _diCovVal(s.yldCovPct, _yld(agg && agg.blendedYield)), 'Blended Yield',
+          'Income the account throws off per year as a % of value. Unlike a taxable account, dividends and interest here compound with no annual tax bill.', null, 'hr-yield',
           s.yldCovVal > 0 ? _diCovSub(s.yldCovPct, 'yield') : '');
-        h += _diCell('Avg Expense', (_diE(agg && agg.blendedExpense) || '—'), 'Value-weighted expense ratio',
-          'Value-weighted expense ratio.',
-          'Your annual drag. 403(b) menus historically run EXPENSIVE — especially annuity/insurance products with M&E charges. The cheapest available share class (or a low-cost index option if your plan offers one) is the single biggest lever you control.', 'hr-expense');
+        h += _diCell('Avg Expense', (_diE(agg && agg.blendedExpense) || '—'), 'Avg Expense',
+          'The value-weighted expense ratio across your funds — the one cost you fully control. In a menu-limited plan this is the number to push down.', null, 'hr-expense');
       }
       return h + '</div>';
     }
@@ -6766,10 +6783,24 @@
                 // §12 IRA pass — the IRA bank's [R]/[T]-aware column hovers override the shared
                 // tips, and Cost Basis / Unrealized Gain become VISIBLE for IRA rooms (bank
                 // R115: basis is tracked so Unrealized Gain can show — unlike the 403(b)).
-                var _bankCol = _diBank && /ira|457b/.test(base.id);
+                // W7/W8 — the 3 tax-lot cols are UNIVERSAL across every bank investment room (crypto
+                // deferred, 529 bespoke — both excluded). IRA/457 keep their rich [R]/[T] col hovers +
+                // editable Cost Basis / computed Unrealized Gain (basis tracked so UG shows); 401(k)/403/
+                // HSA render all 3 as "—" + the authored §Rollup-Parity why-hover. Acquisition Date shows
+                // "—" in every shelter (holding-period clock doesn't run).
+                var _bankCol = _diBank && !_isTaxableRoom(base.id) && base.id !== '529plan';
                 if (_bankCol) {
-                  var _it = /457b/.test(base.id) ? _di457ColTips(/^roth457b/.test(base.id)) : _diIraColTips(/^rothira/.test(base.id));
-                  COLS.forEach(function (c) { if (_it[c.lbl]) c.tip = _it[c.lbl]; });
+                  var _it = /457b/.test(base.id) ? _di457ColTips(/^roth457b/.test(base.id))
+                          : /ira/.test(base.id) ? _diIraColTips(/^rothira/.test(base.id)) : null;
+                  if (_it) COLS.forEach(function (c) { if (_it[c.lbl]) c.tip = _it[c.lbl]; });
+                  var _lot = _diLotColTips(base.id), _allNA = !/ira|457b/.test(base.id);
+                  COLS.forEach(function (c) {
+                    if (!_lot[c.lbl]) return;
+                    if (_allNA || c.lbl === 'Acquisition Date') {
+                      c.tip = _lot[c.lbl];
+                      c.td = function () { return '<td style="color:var(--muted);">—</td>'; };
+                    }
+                  });
                 }
                 // Taxable §14.4-COPY: all 14 column-header tooltips (bank R375–R388, verbatim, two-part) +
                 // §11b: the Cost Basis cell gets the "≈" estimator trigger and the persistent "est." tag.
@@ -6786,7 +6817,7 @@
                     }
                   });
                 }
-                var cols = COLS.filter(function (c) { return (!c.taxableOnly || isTaxable || _bankCol) && !(c.taxRoomOnly && !isTaxable); });
+                var cols = COLS.filter(function (c) { return (!c.taxableOnly || isTaxable || _bankCol) && !(c.taxRoomOnly && !isTaxable && !_bankCol); });
 
                 html += '<div style="margin-top: 15px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 4px; overflow-x: auto;"><table class="holdings-table"><tr>';
                 cols.forEach(function (c) {

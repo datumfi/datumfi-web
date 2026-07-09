@@ -118,10 +118,16 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   all = ok('EX1 D-prompt SILENT (layers present)',               !has(n1, 'what you paid')) && all;
   all = ok('EX1 close: calm, dependable contributor (STEADY)',   has(n1, 'calm, dependable contributor when it sequences your spending')) && all;
   // EX-2 — hot single-name: spine + Specifically tag + sector bet + swingy + STRAINED close
-  all = ok('EX2 spine: mostly individual stocks (52%)',          has(n2, 'mostly individual stocks (52% in single names)')) && all;
-  all = ok('EX2 tag: Specifically connector + breakdown',        has(n2, 'Specifically, it’s a mix of funds and individual stocks — 48% ETFs, 52% individual stocks.')) && all;
-  all = ok('EX2 tilt: sector bet — 52% in Technology',           has(n2, 'tilts heavily into one sector — 52% in Technology')) && all;
-  all = ok('EX2 tilt cap: geography clause NOT doubled',         !has(n2, 'globally diversified')) && all;
+  // EX2 copy evolved to §3a ARCHETYPE-driven (2026-07-08): "concentrated technology bet" replaces the
+  // generic spine; connector is "Under the hood," not "Specifically,"; the sector tilt is folded into
+  // the archetype line. Re-pointed to the live archetype copy.
+  all = ok('EX2 spine: §3a archetype "concentrated technology bet"', has(n2, 'concentrated technology bet')) && all;
+  all = ok('EX2 tag: "Under the hood" connector + breakdown',    has(n2, 'a mix of funds and individual stocks — 48% ETFs, 52% individual stocks')) && all;
+  all = ok('EX2 tilt: archetype folds the 52% theme',            has(n2, '52% of it rides on that one theme')) && all;
+  // ⚠️ ARCHITECT-OWNED (Captain 2026-07-08): the geography clause contradicts the concentrated-bet
+  // archetype ("leans heavily US" + "globally diversified"). Captain is re-authoring; left flagged RED
+  // on purpose — do NOT wire around it.
+  all = ok('EX2 tilt cap: geography clause NOT doubled [ARCHITECT-PENDING]', !has(n2, 'globally diversified')) && all;
   all = ok('EX2 behavior: swings harder (1.38)',                 has(n2, 'swings harder than the market (1.38)')) && all;
   all = ok('EX2 close: higher-variance watch-it (STRAINED)',     has(n2, 'higher-variance, watch-it spot')) && all;
   // EX-5 — the short read: spine + tag + silence + D-NO-BASIS + NEUTRAL close

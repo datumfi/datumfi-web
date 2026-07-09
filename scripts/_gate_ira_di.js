@@ -230,7 +230,11 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   all = ok('crypto (non-bank): keeps EXISTING strip (hr-gain-sub)',       has(R.X.html, 'hr-gain-sub')) && all;
   all = ok('crypto (non-bank): NO DI narrative leak',                     !has(R.X.html, 'di-narr')) && all;
   all = ok('crypto (non-bank): Cost Basis still visible (unchanged)',     has(R.X.html, 'Cost Basis')) && all;
-  all = ok('empty tradira_co: NO narrative fabricated',         !/di-narr-body[^>]*>\s*\S/.test(R.E)) && all;
+  // W5 (2026-07-08): an empty room shows the SHARED universal empty-state, not literal nothing. Assert the
+  // verbatim empty-state renders AND no per-room IRA narrative is fabricated (RED on true fabrication).
+  var _eBody = narr(R.E);
+  all = ok('empty tradira_co: shows universal W5 empty-state (verbatim)', has(_eBody, 'Add a few tickers below and Datum reads the whole picture')) && all;
+  all = ok('empty tradira_co: NO per-room IRA narrative fabricated', !has(_eBody, 'tax-deferred') && !has(_eBody, 'assembled from the open market')) && all;
   console.log('OVERALL: ' + (all ? 'GREEN' : 'RED'));
   process.exit(all ? 0 : 1);
 })().catch(e => { console.error('GATE ERROR:', e.message); process.exit(2); });

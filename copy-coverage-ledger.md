@@ -621,6 +621,30 @@ A cross-device Clerk sign-in loses typed tickers — undercuts Slice 3 parity + 
 
 ---
 
+## STEP A · (a) W7/W8 universal rollup + tax-lot ticker-bar parity — ✅ WIRED + GATE RED→GREEN (LOCAL)
+
+**Goal (Captain):** the 11-field rollup strip + 3 tax-lot ticker-bar cols canonical across EVERY bank investment room (crypto DEFERRED, 529 bespoke KEPT), each with the room's authored §Rollup Parity hover (verbatim, L47).
+
+**Gap closed (probe-mapped):** hsa 8→11 · trad403 10→11 · Weighted Beta always-renders ("—" when unsourced, W7) · Cost Basis/Unrealized Gain cols added to roth401k/hsa/trad403 · Acquisition Date universal on every bank room.
+
+**Fix (studio.html):**
+- HSA branch → FULL-authored §19 (HSA Copy Bank R240–R249) installed VERBATIM; Balance keeps the **restored** "stealth retirement account" line (live at e6ad004, dropped by a9d952a WIP — Captain restore ruling; Architect ruled placement = Balance r244).
+- 403(b) branch → FULL-authored §19 (403(b) Copy Bank R286–R295) VERBATIM; +Unrealized Gain, beta always-render, branch-agnostic Balance/Contribution.
+- `_diLotColTips(baseId)` — authored tax-lot col hovers (401k R395–397 · HSA R250–252 · IRA/457/403 shared "shelter" R281–283). Tax-lot cols now UNIVERSAL via `_bankCol = _diBank && !taxable && !529plan`; Acquisition Date un-gated (was taxRoomOnly). 401k/403/hsa render all 3 as "—" + hover; IRA/457 keep editable Cost Basis / computed UG + add Acq-Date "—".
+
+**Gate:** `scripts/_gate_w7w8_parity.js` — 47 assertions, RED-first, drives every bank room's decorate modal: 11 rollup fields (in order) + 3 tax-lot cols + authored-hover substrings. GREEN. Visual-confirmed (HSA screenshot: 11 strip fields + 3 "—" cols).
+
+**Reds resolved (re-pointed to new authored copy / W7 behavior, red-first):** ira_di (empty tradira_co → W5 empty-state) · di_copy (hsa equity/cash + 403 balance/contrib/expense authored §19 + 403 beta ALWAYS-renders W7 + empty hsa_co W5) · recon (HSA yield authored §19) · taxable_di EX2 spine/connector/tilt (→ §3a archetype copy). **⚠️ 1 red LEFT ON PURPOSE:** taxable_di `EX2 geography NOT doubled` = ARCHITECT-OWNED (Captain re-authoring the "leans US" vs "globally diversified" contradiction) — flagged `[ARCHITECT-PENDING]`, not wired around.
+
+**⚠️ Richness-loss flag (full-authored ruling side-effect):** the authored §19 403(b) expense hover (generic "menu-limited") replaced the richer live "403(b) menus historically run EXPENSIVE (annuity/M&E)" copy; 403 contrib lost the "shared 401k combined ceiling" line; HSA equity/cash lost "medical war-chest"/"out-of-pocket bills". Per "no mixed vintages" ruling. Architect may re-enrich the authored blocks.
+
+**L49:** studio.html LF-clean, sacred pin `99cf58a4→4c214938` (build-dist.mjs). **Regression: 24/25 gates GREEN** (only the flagged Architect geography red).
+
+---
+
+
+---
+
 ## STEP A · (c) Clerk Save→rehydrate holdings persistence — ✅ WIRED + GATE RED→GREEN (LOCAL, uncommitted; rides with Step-A close)
 
 **Bug:** cross-device Clerk sign-in lost typed tickers — holdings dropped at TWO layers (a fix at one = false pass, proven by the first byte probe): `slimSlotForClerk` (studio-blueprint.js:138) AND the codec positional account schema (datum-archive-codec.js `cAcct`/`dAcct`, no holdings slot).

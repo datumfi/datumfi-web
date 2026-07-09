@@ -84,15 +84,17 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   console.log('===== DI COPY GATE [' + LABEL + '] =====');
   let all = true;
   // Job 1 — hover copy (verbatim §1 substrings inside .modal-tt on rollup cells)
-  all = ok('hsa: equity hover 1b (medical war-chest)',        has(R.H.html, 'medical war-chest')) && all;
+  all = ok('hsa: equity hover (authored §19 — no annual tax drag)', has(R.H.html, 'compounds without an annual tax drag')) && all;
   all = ok('hsa: invested-split hover (stealth retirement)',  has(R.H.html, 'stealth retirement account')) && all;
-  all = ok('hsa: cash hover (out-of-pocket bills)',           has(R.H.html, 'out-of-pocket bills')) && all;
+  all = ok('hsa: cash hover (authored §19 — long-term drag)', has(R.H.html, 'long-term drag on a retirement-purpose account')) && all;
   all = ok('hsa: split box computes 86% / 14%',               has(R.H.html, '86%') && has(R.H.html, '14%')) && all;
   all = ok('hsa: beta box PRESENT when sourced (1.30)',       /hr-beta[^>]*>(\s|<[^>]*>)*1\.30/.test(R.H.html.replace(/\n/g, ''))) && all;
-  all = ok('403T: balance hover 1b (ordinary income)',        has(R.T.html, 'Same balance, very different after-tax worth')) && all;
-  all = ok('403T: contrib hover (combined 401k ceiling, D20)', has(R.T.html, 'one combined ceiling, not two separate ones')) && all;
-  all = ok('403T: expense hover (menus run EXPENSIVE)',       has(R.T.html, '403(b) menus historically run EXPENSIVE')) && all;
-  all = ok('403T: beta box SUPPRESSED when unsourced (L47)',  !/id="hr-beta"[^>]*>\s*(0(\.0+)?|—)\s*</.test(R.T.html) || /hr-beta[^"]*"[^>]*display:\s*none/.test(R.T.html)) && all;
+  all = ok('403T: balance hover (authored §19 — ordinary income on withdrawal)', has(R.T.html, 'owe ordinary income on withdrawal')) && all;
+  all = ok('403T: contrib hover (authored §19 — 15-yr-service catch-up)', has(R.T.html, '15-years-of-service employees may get a special catch-up')) && all;
+  all = ok('403T: expense hover (authored §19 — menu-limited)', has(R.T.html, 'In a menu-limited plan this is the number to push down')) && all;
+  // W7 parity (2026-07-08): Weighted Beta now ALWAYS renders ("—" when unsourced), no longer suppressed —
+  // authored 403(b) beta hover proves the cell is present.
+  all = ok('403T: beta box ALWAYS renders (W7 parity, authored hover)', has(R.T.html, 'will swing in a downturn')) && all;
   // Job 2 — narrative
   all = ok('hsa: DI narrative block present',                 has(R.H.html, 'di-narr')) && all;
   all = ok('hsa: Layer A opener (invested and in cash)',      has(R.H.html, 'invested and') && has(R.H.html, 'in cash')) && all;
@@ -114,7 +116,10 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   all = ok('403T: title hover (Tax-Sheltered Annuity)',       has(R.T.title, 'Tax-Sheltered Annuity')) && all;
   all = ok('403R: title hover (no lifetime RMDs)',            has(R.Rt.title, 'no lifetime RMDs')) && all;
   // Honesty + regression controls
-  all = ok('empty hsa_co: NO narrative fabricated',           !has(R.E, 'di-narr-body') || !/di-narr-body[^>]*>\s*\S/.test(R.E)) && all;
+  // W5 (2026-07-08): an empty room shows the SHARED universal empty-state, not literal nothing. Assert the
+  // verbatim empty-state renders AND no per-room HSA narrative is fabricated (RED on true fabrication).
+  all = ok('empty hsa_co: shows universal W5 empty-state (verbatim)', has(R.E, 'Add a few tickers below and Datum reads the whole picture')) && all;
+  all = ok('empty hsa_co: NO per-room HSA narrative fabricated', !has(R.E, 'Your HSA holds')) && all;
   all = ok('crypto (non-bank): keeps its EXISTING strip (hr-gain-sub)', has(R.X.html, 'hr-gain-sub')) && all;
   all = ok('crypto (non-bank): NO DI narrative leak',                   !has(R.X.html, 'di-narr')) && all;
   console.log('OVERALL: ' + (all ? 'GREEN' : 'RED'));

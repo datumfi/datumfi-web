@@ -45,7 +45,7 @@ const LABEL = process.argv[2] || 'RUN';
     res.r2_betaBlanked = !/hr-beta[^>]*>\s*1\.23/.test(h.replace(/\n/g, ''));
     res.r2_betaNote = /only 40% of value reports a beta/.test(h);
     res.r2_narrSilent = h.indexOf('hotter than') === -1 && h.indexOf('calmer than') === -1;
-    res.b3_hsaYieldHover = /Income thrown off inside the account/.test(h);
+    res.b3_hsaYieldHover = /Income the account throws off per year as a % of value/.test(h);  // authored §19 HSA yield (2026-07-08 full-authored install)
     res.r3_glyphAnchor = /di-info/.test(h) && !/take any year\.<div class="modal-tt"/.test(h);
     res.g3_selects = (h.match(/<select[^>]*assetClass/g) || []).length >= 1 &&
                      (h.match(/<select[^>]*instrumentType/g) || []).length >= 1 &&
