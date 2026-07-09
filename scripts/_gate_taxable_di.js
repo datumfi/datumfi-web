@@ -124,10 +124,10 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   all = ok('EX2 spine: §3a archetype "concentrated technology bet"', has(n2, 'concentrated technology bet')) && all;
   all = ok('EX2 tag: "Under the hood" connector + breakdown',    has(n2, 'a mix of funds and individual stocks — 48% ETFs, 52% individual stocks')) && all;
   all = ok('EX2 tilt: archetype folds the 52% theme',            has(n2, '52% of it rides on that one theme')) && all;
-  // ⚠️ ARCHITECT-OWNED (Captain 2026-07-08): the geography clause contradicts the concentrated-bet
-  // archetype ("leans heavily US" + "globally diversified"). Captain is re-authoring; left flagged RED
-  // on purpose — do NOT wire around it.
-  all = ok('EX2 tilt cap: geography clause NOT doubled [ARCHITECT-PENDING]', !has(n2, 'globally diversified')) && all;
+  // Architect fix 2026-07-09: a ≥20% ex-US book must read "meaningfully international", NEVER
+  // "heavily toward US". The B-GLOBAL-TILT line keeps "globally diversified" — the fix is the
+  // descriptor, not suppressing the clause.
+  all = ok('EX2 geography: reads meaningfully international, NOT heavily-US', has(n2, 'meaningfully international') && !has(n2, 'heavily toward US')) && all;
   all = ok('EX2 behavior: swings harder (1.38)',                 has(n2, 'swings harder than the market (1.38)')) && all;
   all = ok('EX2 close: higher-variance watch-it (STRAINED)',     has(n2, 'higher-variance, watch-it spot')) && all;
   // EX-5 — the short read: spine + tag + silence + D-NO-BASIS + NEUTRAL close

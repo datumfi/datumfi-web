@@ -4859,6 +4859,10 @@
     // {geoTiltDescriptor}: top value-weighted geo bucket → clean phrase; suppress crypto lede when the
     // §3a archetype already named crypto (dedupe, per Architect ruling); '' when blank/unmapped (silent).
     function _diTaxGeoDescriptor(x, suppressTheme) {
+      // Architect fix 2026-07-09 (R274): a meaningfully-international book (≥20% ex-US) must NEVER read
+      // as "heavily toward US" just because US-equity is the single largest bucket — that contradicts the
+      // "globally diversified, ~N% outside the US" clause the B-GLOBAL-TILT line then adds. Foreign leads.
+      if (x && x.foreignT >= 20) return _DI_TAX_GEO_PHRASE.foreign;   // 'meaningfully international'
       var top = null; Object.keys(x.geo).forEach(function (k) { if (!top || x.geo[k] > x.geo[top]) top = k; });
       if (!top) return '';
       if (top === 'crypto' && suppressTheme === 'Crypto') return '';
@@ -5246,8 +5250,7 @@
           'The share sitting in cash or money-market — fully liquid, fully safe.',
           'Cash is your ‘don’t-touch-the-investments’ buffer. A sensible slice means a market crash doesn’t force you to sell anything for a year or two. Too much, though, and inflation slowly bleeds its buying power.');
         h += _diCell('International', _diP(xs.foreignT), 'Share of value outside the US',
-          'The share invested outside the US — international holdings.',
-          'Foreign exposure spreads your bet beyond one country’s economy, which can steady a long retirement. It’s neither good nor bad on its own — it just tells you how much of your future rides on the rest of the world doing well too.');
+          'About ' + _diP(xs.foreignT) + ' of this account sits outside the U.S. — a meaningful international sleeve, not a rounding note: it spreads your growth across economies that don\'t all move with the U.S. market. In a taxable account there\'s a silver lining most people miss — the foreign taxes those funds pay abroad can flow back to you as a Foreign Tax Credit, a benefit you generally can\'t claim inside any tax-advantaged room. International belongs in taxable more than most realize.');
         h += _diCell('Balance', _diMoney(acc.value), 'Balance',
           "The account's current market value. Unlike a retirement room, every dollar here is already-taxed and fully liquid — no 59½ gate, no penalty, no RMD. The trade-off: growth is taxed as you realize it. This is your most flexible money and your most tax-exposed.");
         var cTax = (acc.inflow || 0) * (acc.freq || 0);
