@@ -636,7 +636,7 @@ A cross-device Clerk sign-in loses typed tickers — undercuts Slice 3 parity + 
 
 **Reds resolved (re-pointed to new authored copy / W7 behavior, red-first):** ira_di (empty tradira_co → W5 empty-state) · di_copy (hsa equity/cash + 403 balance/contrib/expense authored §19 + 403 beta ALWAYS-renders W7 + empty hsa_co W5) · recon (HSA yield authored §19) · taxable_di EX2 spine/connector/tilt (→ §3a archetype copy). **⚠️ 1 red LEFT ON PURPOSE:** taxable_di `EX2 geography NOT doubled` = ARCHITECT-OWNED (Captain re-authoring the "leans US" vs "globally diversified" contradiction) — flagged `[ARCHITECT-PENDING]`, not wired around.
 
-**⚠️ Richness-loss flag (full-authored ruling side-effect):** the authored §19 403(b) expense hover (generic "menu-limited") replaced the richer live "403(b) menus historically run EXPENSIVE (annuity/M&E)" copy; 403 contrib lost the "shared 401k combined ceiling" line; HSA equity/cash lost "medical war-chest"/"out-of-pocket bills". Per "no mixed vintages" ruling. Architect may re-enrich the authored blocks.
+**✅ RESTORED 2026-07-09 (`361278a`):** the full-authored swap had thinned HSA/403 pre-existing hovers — RESTORED to the rich versions (medical-war-chest, out-of-pocket bills, annuity/M&E EXPENSIVE, combined-401k-ceiling, [T]/[R] Balance) while KEEPING the parity structure (new Balance/Contribution/UG fields authored, tax-lot cols, beta-always, stealth line). di_copy/recon reverted to rich substrings; w7w8 stays GREEN. **STANDING RULE:** wiring a Copy Bank = ADD/ENRICH only — never replace a live hover with shorter copy without a before/after diff first.
 
 **L49:** studio.html LF-clean, sacred pin `99cf58a4→4c214938` (build-dist.mjs). **Regression: 24/25 gates GREEN** (only the flagged Architect geography red).
 
