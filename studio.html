@@ -1058,8 +1058,10 @@
      tooltips poking past the card edge created a phantom horizontal scrollbar below the DI
      (long teal bar, brightens on hover — the smoke-test ghost). clip = no h-scrollbar, ever. */
   .modal-card { width: 550px; max-height: 90vh; overflow-y: auto; overflow-x: clip; background: var(--bg-navy); border: 1px solid rgba(255,255,255,0.1); padding: 30px; border-radius: 8px; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.9); pointer-events: auto;}
-  /* right-half strip cells anchor their tooltip to the cell's RIGHT so it stays inside the card */
-  .holdings-rollup .hr-cell:nth-child(n+5) .modal-tt { left: auto !important; right: 0 !important; }
+  /* rollup/header tooltip horizontal anchoring is handled by window._ttDrop (onmouseenter) — it
+     drops the tip BELOW its own cell and clamps into the viewport. The old nth-child(n+5) !important
+     right-pin (absolute-position era) fought that inline clamp and pinned right-half tips to the card
+     edge; removed 2026-07-08. */
   .modal-close { position: absolute; top: 20px; right: 20px; background: transparent; border: none; color: var(--muted); font-size: 28px; cursor: pointer; transition: 0.2s; line-height: 1;}
   .modal-close:hover { color: var(--danger); }
   
@@ -5179,7 +5181,7 @@
       // Hover-clip fix — the rollup cells sit at the top of the modal, so a bottom:100% tooltip clips
       // at the modal/viewport top. On hover, reposition to position:fixed BELOW the cell and clamp into
       // the viewport (same technique as the ticker-bar column headers ~L6737) so no box is ever cut off.
-      return '<div class="hr-cell modal-tt-wrap" style="display:block; cursor:help;" onmouseenter="var t=this.querySelector(\'.modal-tt\'),r=this.getBoundingClientRect();t.style.position=\'fixed\';t.style.bottom=\'auto\';t.style.top=Math.min(r.bottom+6,innerHeight-t.offsetHeight-12)+\'px\';t.style.left=((r.left+t.offsetWidth<=innerWidth-16)?r.left:Math.max(12,r.right-t.offsetWidth))+\'px\';"><div class="hr-lbl">' + lbl + '</div><div class="hr-val"' + (valId ? ' id="' + valId + '"' : '') + '>' + valHtml + '</div>' + (sub || '') + tt + '</div>';
+      return '<div class="hr-cell modal-tt-wrap" style="display:block; cursor:help;" onmouseenter="_ttDrop(this)"><div class="hr-lbl">' + lbl + '</div><div class="hr-val"' + (valId ? ' id="' + valId + '"' : '') + '>' + valHtml + '</div>' + (sub || '') + tt + '</div>';
     }
 
     // Universal rollup field 1 — "Account Value" = live Σ(price×shares). Reuses s.total from _diSignals
@@ -5793,6 +5795,28 @@
       if (!body) return '<div id="di-narr-' + acc.id + '"></div>';   // empty anchor — no fabricated narrative (L47)
       return '<div class="di-narrative" id="di-narr-' + acc.id + '"><div class="di-narr-head">Datum Intelligence</div><div class="di-narr-body">' + body + '</div></div>';
     }
+
+    // Shared modal-tooltip drop-below anchor (called via inline onmouseenter on the rollup-strip
+    // cells AND the holdings-table headers — L48, one engine). The card is overflow-x:clip (phantom-
+    // scrollbar guard) and a 280px tip lives inside ~130px cells, so pure-CSS absolute can't work:
+    // go position:fixed (escapes the clip), drop BELOW the cell, and anchor the tip UNDER its own
+    // cell (at cell.left), pulling left only enough to stay in the viewport — never pinned to an edge.
+    // POSITIONING VIA transform, not left/top: the .modal-overlay's backdrop-filter makes it the
+    // containing block for our position:fixed tip, and Chromium then IGNORES left/top on that fixed
+    // child (renders it at x=0) — but transform positions correctly (proven empirically 2026-07-08).
+    // translate() off a fixed left:0/top:0 origin (= overlay/viewport 0,0) gives absolute viewport px.
+    window._ttDrop = function (wrap) {
+      var t = wrap.querySelector('.modal-tt'); if (!t) return;
+      var r = wrap.getBoundingClientRect(), tw = t.offsetWidth || 280, th = t.offsetHeight || 0;
+      var x = Math.max(12, Math.min(r.left, window.innerWidth - 16 - tw));   // under THIS cell; clamp into viewport
+      var y = Math.min(r.bottom + 6, window.innerHeight - th - 12);          // just below the cell; clamp to bottom
+      t.style.position = 'fixed'; t.style.left = '0'; t.style.top = '0';
+      t.style.right = 'auto'; t.style.bottom = 'auto';
+      // transition only opacity — the base .modal-tt { transition: .3s } would otherwise ANIMATE the
+      // transform, sliding the tip across the screen cell-to-cell (and reading mid-slide). Snap position.
+      t.style.transition = 'opacity 0.3s';
+      t.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+    };
 
     // §2 title hovers + REVERSE NAME-SYNC: the header is an editable input for EVERY account —
     // renaming here writes acc.name and mirrors to the left estate card (renderInputs), the
@@ -6768,7 +6792,7 @@
                 cols.forEach(function (c) {
                   // position:fixed on hover so the hover escapes the table's overflow-x scroll clip and
                   // clamps into the viewport (same fix as the title hover) — rightmost columns were cut off.
-                  if (c.tip) html += '<th style="width:' + c.w + 'px;"><div class="modal-tt-wrap" style="justify-content:flex-start; cursor:help;" onmouseenter="var t=this.querySelector(\'.modal-tt\'),r=this.getBoundingClientRect();t.style.position=\'fixed\';t.style.bottom=\'auto\';t.style.top=Math.min(r.bottom+6,innerHeight-t.offsetHeight-12)+\'px\';t.style.left=((r.left+t.offsetWidth<=innerWidth-16)?r.left:Math.max(12,r.right-t.offsetWidth))+\'px\';">' + c.lbl + '<div class="modal-tt" style="top:100%; bottom:auto;"><strong>' + c.tip.t + '</strong>' + c.tip.b + '</div></div></th>';
+                  if (c.tip) html += '<th style="width:' + c.w + 'px;"><div class="modal-tt-wrap" style="justify-content:flex-start; cursor:help;" onmouseenter="_ttDrop(this)">' + c.lbl + '<div class="modal-tt" style="top:100%; bottom:auto;"><strong>' + c.tip.t + '</strong>' + c.tip.b + '</div></div></th>';
                   else html += '<th' + (c.w ? ' style="width:' + c.w + 'px;"' : '') + '>' + c.lbl + '</th>';
                 });
                 html += '</tr>';

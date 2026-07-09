@@ -256,7 +256,14 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   all = ok('IRA keeps IRA copy (no 457 leak)',                  has(narr(R.I.html), 'assembled from the open market') && !has(narr(R.I.html), 'governmental')) && all;
   all = ok('403: keeps its OWN plan-menu tilt tail',            has(narr(R.F.html), 'a shape drawn from the funds your plan offers')) && all;
   all = ok('crypto (non-bank): keeps EXISTING strip, no DI leak',         has(R.X.html, 'hr-gain-sub') && !has(R.X.html, 'di-narr')) && all;
-  all = ok('empty pretax457b_co: NO narrative fabricated',      !/di-narr-body[^>]*>\s*\S/.test(R.E)) && all;
+  // W5 (2026-07-08): an empty room now shows the SHARED universal empty-state (_DI_EMPTY_STATE,
+  // the SAME string across all 7 _diNarr* families — L48), not literal nothing. So check #6 now
+  // asserts (a) that verbatim empty-state renders AND (b) NO per-room 457 narrative is fabricated.
+  // Stays RED on true fabrication: a leaked 457 spine ("...deferred compensation..." / "designated
+  // Roth...") fails (b), and a real narrative replacing the empty-state fails (a).
+  var eBody = narr(R.E);
+  all = ok('empty pretax457b_co: universal W5 empty-state (verbatim)',   has(eBody, 'Add a few tickers below and Datum reads the whole picture')) && all;
+  all = ok('empty pretax457b_co: NO per-room 457 narrative fabricated',  !has(eBody, 'deferred compensation') && !has(eBody, 'designated Roth')) && all;
   console.log('OVERALL: ' + (all ? 'GREEN' : 'RED'));
   process.exit(all ? 0 : 1);
 })().catch(e => { console.error('GATE ERROR:', e.message); process.exit(2); });

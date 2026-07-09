@@ -588,4 +588,23 @@ un-emitted: §13c B2 (I1), §3a archetype (I2), §15 education (I3). T5 spine-bi
 **Regression GREEN:** archive-codec-parity · stepA · tax_3a · routing · ira_cert · tax_11b · stepC. Sacred pins bumped SAME commit (L49): studio.html `5cdd56ee→67db2af4`, studio-blueprint.js `f5c21c36→af1c1da4`. LF-clean.
 
 ### ⚠️ PARKED FLAG (separate arc — do NOT bundle): slim Clerk mirror ALSO drops `holdings` (studio-blueprint.js:138)
-A cross-device Clerk sign-in loses typed tickers — undercuts Slice 3 parity + the STEP-C seed for logged-in users. Captain ruling 2026-07-08: tackle BEFORE any logged-in-user STEP-C seed relies on typed tickers surviving cross-device. Not W1 scope; logged here so it is not lost.
+A cross-device Clerk sign-in loses typed tickers — undercuts Slice 3 parity + the STEP-C seed for logged-in users. Captain ruling 2026-07-08: tackle BEFORE any logged-in-user STEP-C seed relies on typed tickers surviving cross-device. Not W1 scope; logged here so it is not lost. **← this is now (c), Phase-1 diagnostic in progress 2026-07-08.**
+
+---
+
+## STEP A · Tooltip-Stacking Fix (item "b") — ✅ WIRED + GATE RED→GREEN · smoked+accepted (LOCAL, unpushed)
+
+**Symptom:** on the investment-modal rollup strip (and holdings-table headers), hover tooltips did not drop beneath their field — they scattered to the card/viewport edge ("stacked sideways"). Captain smoked the fix 2026-07-08 and ACCEPTED (local; rides to origin/main only in the full Step-A close).
+
+**Root cause (probe-proven, two stacked defects):**
+1. `studio.html:1062` — a stale `.holdings-rollup .hr-cell:nth-child(n+5) .modal-tt { left:auto!important; right:0!important }` band-aid (absolute-position era) `!important`-overrode the WIP's inline JS `left`, pinning right-half tips to the card edge.
+2. The WIP's inline `left`-clamp was unreliable regardless. **Deeper cause:** `.modal-overlay { backdrop-filter: blur(5px) }` makes the overlay the containing block for the `position:fixed` tip, and **Chromium then ignores `left`/`top` on that fixed child** (renders at x=0). Empirically (5-method matrix) only `transform` / `inset` position correctly.
+
+**Fix (L48 one-engine):** deleted 1062; added shared `window._ttDrop(wrap)` (studio.html ~5802) that positions the tip via `transform: translate(x,y)` (drop-below + viewport clamp; `transition: opacity .3s` so the transform doesn't animate a cross-screen slide). Both call sites now `onmouseenter="_ttDrop(this)"` — rollup-strip cell (studio.html:5181) + holdings-table header (studio.html:6792).
+
+**Gate:** `scripts/_gate_tt_anchor.js` — drives the app's own path, hovers every tip on BOTH the strip AND the headers, asserts drop-BELOW + horizontal-overlap-own-cell + 280px-tip-fully-on-screen (no clip) + position:fixed. RED on pre-fix bytes (strip+header fail overlap+on-screen); GREEN after. Confirmed on the REAL hover path + screenshot.
+
+**L49:** studio.html LF-clean; MD5 pin bumped SAME change `e3bdd376→99cf58a4` (build-dist.mjs:26); sketch.html / studio-blueprint.js pins untouched. Also re-pointed 2 stale `_gate_stepA_slice2.js` assertions (#10) from the old inline-impl source string → `_ttDrop(this)` wiring (tested the *what*, not the *how*).
+
+**Regression GREEN:** tt_anchor · stepA_slice2 (42/42) · stepA_headers · stepC · ira_cert · 457_di (corrected stale-gate) · 401k_cert/match/vault · 403_hsa_rooms · 529_edu_split/namesync · tax_3a/routing/11b · recon/recon2 · smoke_fixes · w1_name_restore.
+**Pre-existing RED (NOT this change — bisected vs a9d952a):** ira_di · taxable_di · di_copy → parked for the Step-A close audit.
