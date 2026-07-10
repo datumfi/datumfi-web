@@ -3519,6 +3519,7 @@
 
       { id: 'pretax401k', type: 'primary', taxCode: 'pretax', hasInflow: true, isInvestment: true, title: 'Pre-Tax 401(k)', meta: 'The Vault', desc: 'Taxed as ordinary income.' },
       { id: 'roth401k', type: 'primary', taxCode: 'roth', hasInflow: true, isInvestment: true, title: 'Roth 401(k)', meta: 'The Treasury', desc: 'Tax-free growth from employer plan.' },
+      { id: 'rollover401k', type: 'primary', taxCode: 'pretax', hasInflow: true, isInvestment: true, title: 'Rollover 401(k)', meta: 'The Conduit', desc: 'Pre-tax retirement money rolled in from a prior employer plan.' },
       { id: 'tradira', type: 'primary', taxCode: 'pretax', hasInflow: true, isInvestment: true, title: 'Traditional IRA', meta: 'The Library', desc: 'Consolidated pre-tax capital.' },
       { id: 'rothira', type: 'primary', taxCode: 'roth', hasInflow: true, isInvestment: true, title: 'Roth IRA', meta: 'The Conservatory', desc: 'The tax-free growth environment.' },
       { id: 'pretax457b', type: 'primary', taxCode: 'pretax', hasInflow: true, isInvestment: true, title: 'Pre-Tax 457(b)', meta: 'The Workshop', desc: 'Accessible penalty-free before 59.5.' },
@@ -3542,6 +3543,7 @@
 
       { id: 'pretax401k_co', type: 'coarch', taxCode: 'pretax', hasInflow: true, isInvestment: true, title: 'Pre-Tax 401(k)', meta: 'Co-Vault', desc: 'Taxed as ordinary income.' },
       { id: 'roth401k_co', type: 'coarch', taxCode: 'roth', hasInflow: true, isInvestment: true, title: 'Roth 401(k)', meta: 'Co-Treasury', desc: 'Tax-free employer growth.' },
+      { id: 'rollover401k_co', type: 'coarch', taxCode: 'pretax', hasInflow: true, isInvestment: true, title: 'Rollover 401(k)', meta: 'Co-Conduit', desc: 'Pre-tax retirement money rolled in from a prior employer plan.' },
       { id: 'tradira_co', type: 'coarch', taxCode: 'pretax', hasInflow: true, isInvestment: true, title: 'Traditional IRA', meta: 'Co-Library', desc: 'Pre-tax capital.' },
       { id: 'rothira_co', type: 'coarch', taxCode: 'roth', hasInflow: true, isInvestment: true, title: 'Roth IRA', meta: 'Co-Conservatory', desc: 'Tax-free environment.' },
       { id: 'pretax457b_co', type: 'coarch', taxCode: 'pretax', hasInflow: true, isInvestment: true, title: 'Pre-Tax 457(b)', meta: 'Co-Workshop', desc: 'Accessible before 59.5.' },
@@ -3831,7 +3833,7 @@
       { l1:'WORKPLACE PLANS', l2:'401(a) / 401(k) Plans', leaf:'The Charter', reg:null },
       { l1:'WORKPLACE PLANS', l2:'401(a) / 401(k) Plans', leaf:'The Treasury', reg:{joint:null,primary:'roth401k',co:'roth401k_co'} },
       { l1:'WORKPLACE PLANS', l2:'401(a) / 401(k) Plans', leaf:'The Vault', reg:{joint:null,primary:'pretax401k',co:'pretax401k_co'} },
-      { l1:'WORKPLACE PLANS', l2:'401(a) / 401(k) Plans', leaf:'The Conduit', reg:null },
+      { l1:'WORKPLACE PLANS', l2:'401(a) / 401(k) Plans', leaf:'The Conduit', reg:{joint:null,primary:'rollover401k',co:'rollover401k_co'} },
       { l1:'WORKPLACE PLANS', l2:'401(a) / 401(k) Plans', leaf:'The Sanctuary', reg:null },
       { l1:'WORKPLACE PLANS', l2:'401(a) / 401(k) Plans', leaf:'The Haven', reg:null },
       { l1:'WORKPLACE PLANS', l2:'401(a) / 401(k) Plans', leaf:'The Guild', reg:null },
@@ -3973,7 +3975,7 @@
        singleNameStock_fmt token contract is wired (the IRA/401k/457 §7 ask — L48, don't rebuild).
        NOTE: distinct from the Want-canvas "Datum Intelligence" slider tooltips (~L1844) — name
        collision only; do not merge. */
-    function _diIsBankRoom(baseId) { return /^(hsa|trad403|roth403|tradira|rothira|pretax457b|roth457b|roth401k|pretax401k|taxable(_corp|_other)?)(_primary|_co)?$/.test(String(baseId || '')) || baseId === '529plan'; }
+    function _diIsBankRoom(baseId) { return /^(hsa|trad403|roth403|tradira|rothira|pretax457b|roth457b|rollover401k|roth401k|pretax401k|taxable(_corp|_other)?)(_primary|_co)?$/.test(String(baseId || '')) || baseId === '529plan'; }
     // Routing (Taxable bank R393/R394): Corporate & Other-Taxable reuse the Taxable "Living Room" engine verbatim.
     // One helper replaces the point base.id==='taxable' checks so the DI/strip/title/column-tips all match them (L48).
     function _isTaxableRoom(baseId) { return /^taxable(_corp|_other)?(_primary|_co)?$/.test(String(baseId || '')); }
@@ -6222,7 +6224,7 @@
         // the bottom after the decorate button. _diIraWhyPanel/_di457WhyPanel take only (acc, base).
         if (/ira/.test(base.id)) html += _diIraWhyPanel(acc, base);    // §15 "Why an IRA?" (IRA-only)
         if (/457b/.test(base.id)) html += _di457WhyPanel(acc, base);   // §15 "Why a 457(b)?" (both branches)
-        if (/401k/.test(base.id)) html += _di401kWhyPanel(acc, base);  // §20 "Why a 401(k)?" + §16 bullets (both branches)
+        if (/401k/.test(base.id) && !/rollover/.test(base.id)) html += _di401kWhyPanel(acc, base);  // §20 "Why a 401(k)?" + §16 bullets (both branches; NOT The Conduit — it gets the §16 rollover panel)
 
         // SURGICAL: Physics Toggles with explicit mathematical tooltips
         html += `
@@ -6500,7 +6502,7 @@
             // (on pre-tax the whole balance is already pre-tax — nothing to split). Salary is REUSED
             // from the global Gross-Salary field (Lesson 48). Persist via existing updateAccField;
             // any unset field stays blank — never defaulted, never guessed (Lesson 47).
-            if (/401k/.test(base.id)) {
+            if (/401k/.test(base.id) && !/rollover/.test(base.id)) {   // NOT The Conduit — a rollover takes no new employer match
                 let mr = acc.matchRate   !== undefined ? acc.matchRate   : '';
                 let mu = acc.matchUpTo   !== undefined ? acc.matchUpTo   : '';
                 let vp = acc.vestedPct   !== undefined ? acc.vestedPct   : '';
@@ -8271,6 +8273,7 @@
       // STU-010: engine enum map — Groups 1 (retirement) + 2 (liquid) + 3 (pension)
       const ACCOUNT_TYPE_MAP = {
         pretax401k:    'pretax_401k',  pretax401k_co:    'pretax_401k',
+        rollover401k:  'pretax_401k',  rollover401k_co:  'pretax_401k',
         roth401k:      'roth_401k',    roth401k_co:      'roth_401k',
         pretax457b:    'pretax_457b',  pretax457b_co:    'pretax_457b',
         roth457b:      'roth_457b',    roth457b_co:      'roth_457b',
