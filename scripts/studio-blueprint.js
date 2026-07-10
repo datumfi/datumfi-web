@@ -53,7 +53,7 @@
     rothira:    'roth',        rothira_co:    'roth',
     // hsa deliberately ABSENT — the medical set-aside keeps The Infirmary in estate/net-worth
     // but OUT of the Shape's investable spend-mass (same mechanism as trust/529, Copy Bank §0.6).
-    taxable:    'taxable',
+    taxable:    'taxable',     taxable_primary: 'taxable', taxable_co: 'taxable',  // A.5: mirror parent (corp/other stay parked-absent)
     savings:    'taxable',     savings_primary: 'taxable', savings_co: 'taxable',
     crypto:     'taxable',     crypto_primary:  'taxable', crypto_co:  'taxable'
   };

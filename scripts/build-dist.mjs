@@ -23,9 +23,9 @@ const DROP_RE = [/^\.claude\//, /^\.wrangler\//, /\.md$/i, /^scripts\/_/, /^_pro
 
 // SACRED HOSTS — must ship byte-identical (LF + content). Build ABORTS on drift.
 const SACRED = {
-  'studio.html': 'b5d419b8ab4950543a1a2bad58ebc468',
+  'studio.html': '79807e6c6c37b032e5cdce5a7ebc908e',
   'sketch.html': '5ce2067d031a5eef41a6c41fd6971444',
-  'scripts/studio-blueprint.js': 'f14b9ec2fdb58a9bc23dcfe9256bc9b2',
+  'scripts/studio-blueprint.js': 'a038f6e33bbcd9631fe97d59b9ada821',
 };
 const md5 = (p) => createHash('md5').update(readFileSync(p)).digest('hex');
 

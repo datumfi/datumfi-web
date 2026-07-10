@@ -3486,6 +3486,22 @@
       { id: 'taxable_other', type: 'joint', taxCode: 'liquid', hasInflow: true, hasInterest: false, isInvestment: true, pickerGroup: 'more-taxable', title: 'Other Taxable', meta: 'Uncategorized taxable', desc: 'Any taxable account not matching a named brokerage bucket.' },
       { id: 'other_assets', type: 'joint', taxCode: 'other', pickerGroup: 'more-taxable', title: 'Other Assets', meta: 'Value-only asset', desc: 'A non-security asset (business interest, private holding) with a value but no ticker/holdings.' },
 
+      // ── A.5 · OWNERSHIP-REALISM VARIANTS — mint primary + co for the taxable family (#227) ──────
+      // PURE MIRROR of the joint parent above; only id/type/meta[/owner] change. Registered in every
+      // baseId-keyed surface the parent lives in (ACCOUNT_TYPE_MAP / BASE_TO_BUCKET / FILTERED_TYPES /
+      // _isTaxableRoom / _diIsBankRoom) — no more, no less. Trust stays JOINT-ONLY; 529 → A.6; per-person
+      // property renders as an ordinary value box (joint 'property' keeps the Grounds plot) → A.7-estate.
+      { id: 'taxable_primary', type: 'primary', taxCode: 'liquid', hasInflow: true, hasInterest: false, isInvestment: true, title: 'Taxable Brokerage', meta: 'The Living Room', desc: 'Capital gains and dividends. Highly liquid.' },
+      { id: 'taxable_co', type: 'coarch', taxCode: 'liquid', hasInflow: true, hasInterest: false, isInvestment: true, title: 'Taxable Brokerage', meta: 'Co-Living Room', desc: 'Capital gains and dividends. Highly liquid.' },
+      { id: 'taxable_corp_primary', type: 'primary', taxCode: 'liquid', hasInflow: true, hasInterest: false, isInvestment: true, owner: 'entity', title: 'Corporate / Business Taxable', meta: 'Entity-owned taxable', desc: 'A taxable brokerage held by an entity (LLC/corp) rather than an individual.' },
+      { id: 'taxable_corp_co', type: 'coarch', taxCode: 'liquid', hasInflow: true, hasInterest: false, isInvestment: true, owner: 'entity', title: 'Corporate / Business Taxable', meta: 'Entity-owned taxable', desc: 'A taxable brokerage held by an entity (LLC/corp) rather than an individual.' },
+      { id: 'taxable_other_primary', type: 'primary', taxCode: 'liquid', hasInflow: true, hasInterest: false, isInvestment: true, title: 'Other Taxable', meta: 'Uncategorized taxable', desc: 'Any taxable account not matching a named brokerage bucket.' },
+      { id: 'taxable_other_co', type: 'coarch', taxCode: 'liquid', hasInflow: true, hasInterest: false, isInvestment: true, title: 'Other Taxable', meta: 'Uncategorized taxable', desc: 'Any taxable account not matching a named brokerage bucket.' },
+      { id: 'other_assets_primary', type: 'primary', taxCode: 'other', title: 'Other Assets', meta: 'Value-only asset', desc: 'A non-security asset (business interest, private holding) with a value but no ticker/holdings.' },
+      { id: 'other_assets_co', type: 'coarch', taxCode: 'other', title: 'Other Assets', meta: 'Value-only asset', desc: 'A non-security asset (business interest, private holding) with a value but no ticker/holdings.' },
+      { id: 'property_primary', type: 'primary', taxCode: 'physical', title: 'Real Estate', meta: 'The Grounds', desc: 'Physical asset footprint.' },
+      { id: 'property_co', type: 'coarch', taxCode: 'physical', title: 'Real Estate', meta: 'Co-Grounds', desc: 'Physical asset footprint.' },
+
       { id: 'mortgage_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Mortgage', meta: 'The Moat', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'auto_debt_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Auto Loan', meta: 'The Garage', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'rev_debt_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Revolving Debt', meta: 'The Furnace', desc: 'Liability. Subtracts from Estate Sq Footage.' },
@@ -3775,15 +3791,15 @@
       { l1:'ASSETS', l2:'Operating Cash', leaf:'The Mattress', reg:null },
       { l1:'ASSETS', l2:'Operating Cash', leaf:'The Safe', reg:{joint:'savings',primary:'savings_primary',co:'savings_co'} },
       { l1:'ASSETS', l2:'Physical Property', leaf:'The Arcade', reg:{joint:'collectibles',primary:'collectibles_primary',co:'collectibles_co'} },
-      { l1:'ASSETS', l2:'Physical Property', leaf:'The Grounds', reg:{joint:'property',primary:null,co:null} },
+      { l1:'ASSETS', l2:'Physical Property', leaf:'The Grounds', reg:{joint:'property',primary:'property_primary',co:'property_co'} },
       { l1:'ASSETS', l2:'Physical Property', leaf:'The Driveway', reg:{joint:'auto',primary:'auto_primary',co:'auto_co'} },
       { l1:'INCOME', l2:'', leaf:'The Keel', reg:null },
       { l1:'INCOME', l2:'', leaf:'The Foundation', reg:{joint:null,primary:'pension',co:'pension_co'} },
       { l1:'INVESTMENTS', l2:'Brokerage & Crypto', leaf:'Cold Storage', reg:{joint:'crypto',primary:'crypto_primary',co:'crypto_co'} },
-      { l1:'INVESTMENTS', l2:'Brokerage & Crypto', leaf:'The Living Room', reg:{joint:'taxable',primary:null,co:null} },
-      { l1:'INVESTMENTS', l2:'More Taxable / Other', leaf:'Corporate / Business Taxable', reg:{joint:'taxable_corp',primary:null,co:null} },
-      { l1:'INVESTMENTS', l2:'More Taxable / Other', leaf:'Other Taxable', reg:{joint:'taxable_other',primary:null,co:null} },
-      { l1:'INVESTMENTS', l2:'More Taxable / Other', leaf:'Other Assets', reg:{joint:'other_assets',primary:null,co:null} },
+      { l1:'INVESTMENTS', l2:'Brokerage & Crypto', leaf:'The Living Room', reg:{joint:'taxable',primary:'taxable_primary',co:'taxable_co'} },
+      { l1:'INVESTMENTS', l2:'More Taxable / Other', leaf:'Corporate / Business Taxable', reg:{joint:'taxable_corp',primary:'taxable_corp_primary',co:'taxable_corp_co'} },
+      { l1:'INVESTMENTS', l2:'More Taxable / Other', leaf:'Other Taxable', reg:{joint:'taxable_other',primary:'taxable_other_primary',co:'taxable_other_co'} },
+      { l1:'INVESTMENTS', l2:'More Taxable / Other', leaf:'Other Assets', reg:{joint:'other_assets',primary:'other_assets_primary',co:'other_assets_co'} },
       { l1:'INVESTMENTS', l2:'Individual Retirement Accounts', leaf:'The Sidedoor', reg:null },
       { l1:'INVESTMENTS', l2:'Individual Retirement Accounts', leaf:'The Sapling', reg:null },
       { l1:'INVESTMENTS', l2:'Individual Retirement Accounts', leaf:'The Bequest', reg:null },
@@ -3957,10 +3973,10 @@
        singleNameStock_fmt token contract is wired (the IRA/401k/457 §7 ask — L48, don't rebuild).
        NOTE: distinct from the Want-canvas "Datum Intelligence" slider tooltips (~L1844) — name
        collision only; do not merge. */
-    function _diIsBankRoom(baseId) { return /^(hsa|trad403|roth403|tradira|rothira|pretax457b|roth457b|roth401k|pretax401k|taxable(_corp|_other)?)(_co)?$/.test(String(baseId || '')) || baseId === '529plan'; }
+    function _diIsBankRoom(baseId) { return /^(hsa|trad403|roth403|tradira|rothira|pretax457b|roth457b|roth401k|pretax401k|taxable(_corp|_other)?)(_primary|_co)?$/.test(String(baseId || '')) || baseId === '529plan'; }
     // Routing (Taxable bank R393/R394): Corporate & Other-Taxable reuse the Taxable "Living Room" engine verbatim.
     // One helper replaces the point base.id==='taxable' checks so the DI/strip/title/column-tips all match them (L48).
-    function _isTaxableRoom(baseId) { return /^taxable(_corp|_other)?$/.test(String(baseId || '')); }
+    function _isTaxableRoom(baseId) { return /^taxable(_corp|_other)?(_primary|_co)?$/.test(String(baseId || '')); }
     // 529 §8 dated constants (gift exclusion / superfund / K-12 / 529→Roth) — LOOKUP by tax year (L47)
     var _DI_529 = { 2025: { excl: 18000, superS: 90000, superC: 180000, k12: 10000, roth: 35000 },
                     2026: { excl: 19000, superS: 95000, superC: 190000, k12: 20000, roth: 35000 } };
@@ -5999,9 +6015,9 @@
       // other_assets is a value-only tile (NOT a bank-DI room) but gets a room-intro ⓘ via the SHARED wrapper
       // below (L48 reuse — the same title-ⓘ surface, aimed at one more id). Scoped to other_assets ONLY: the
       // other value-only tiles (property/collectibles) stay plain — they have no authored hover copy (L47).
-      if (!_diIsBankRoom(base.id) && base.id !== 'other_assets') { el.innerHTML = _diTitleInput(acc, base); return; }
+      if (!_diIsBankRoom(base.id) && !/^other_assets(_primary|_co)?$/.test(base.id)) { el.innerHTML = _diTitleInput(acc, base); return; }
       var tt;
-      if (base.id === 'other_assets') {
+      if (/^other_assets(_primary|_co)?$/.test(base.id)) {
         // STEP-0 room-intro hover — Other Assets (Taxable bank R396, verbatim; straight→curly apostrophes to match the file).
         tt = '<strong>What it is</strong>Something you own that has real worth but no ticker and no holdings to read — a private business interest, a stake in a partnership, an asset that lives outside the market.<br><br>' +
              '<strong>How it works here</strong>You give it a value and a note; that’s the whole room. There’s no Interior Decorating, no holdings table, no beta or yield — because there are no market positions to measure. It behaves like your Real Estate and Collectibles rooms: a single number that stands on its own.<br><br>' +
@@ -6017,14 +6033,14 @@
         tt = '<strong>The Infirmary — your triple-tax-advantaged health account</strong>' +
              'The only account taxed nowhere — in, growing, or out (for medical).<br><br>' +
              'Contributions go in tax-deductible, growth is never taxed, and withdrawals for qualified medical care are tax-free at any age. Not a use-it-or-lose-it FSA: unspent money rolls over, can be invested, and compounds for decades. After 65, non-medical withdrawals simply pay ordinary income tax — a Traditional IRA at worst, tax-free at best.';
-      } else if (base.id === 'taxable_corp') {
+      } else if (/^taxable_corp(_primary|_co)?$/.test(base.id)) {
         // STEP-0 room-intro hover — Corporate / Business Taxable (Taxable bank R393, verbatim; straight→curly to
         // match the file's punctuation, per the Taxable increment ruling). Columns stay the Taxable set (engine identical).
         tt = '<strong>What it is</strong>A taxable brokerage owned by a business entity — an LLC, an S-corp, a partnership — rather than by you personally.<br><br>' +
              '<strong>How it works here</strong>Under the hood it’s the same open-market brokerage as your Living Room: the same holdings, the same embedded gains, the same four signal boxes and Datum Intelligence read. Every column tooltip you hover behaves exactly as it does in a personal taxable account.<br><br>' +
              '<strong>What’s different</strong>The account belongs to the entity, not to you. That changes who files the tax and who the creditors can reach — not how the investments themselves are taxed as they sit. We flag it as entity-owned so your net worth stays honest about what’s held personally versus through a business.<br><br>' +
              '<strong>What we don’t do</strong>we don’t model your entity’s tax return or its liability shield — those live with your CPA and attorney, not in this room.';
-      } else if (base.id === 'taxable_other') {
+      } else if (/^taxable_other(_primary|_co)?$/.test(base.id)) {
         // STEP-0 room-intro hover — Other Taxable (Taxable bank R394, verbatim; straight→curly to match the file).
         tt = '<strong>What it is</strong>The catch-all for any taxable account that doesn’t match a named brokerage — an odd account, a one-off, a broker we don’t have a dedicated room for yet.<br><br>' +
              '<strong>How it works here</strong>It runs on the exact same Living Room engine — open-market holdings, real cost basis, capital-gains treatment, the full Datum Intelligence read. Nothing is watered down; it’s a full taxable room wearing a generic label.<br><br>' +
@@ -8186,6 +8202,9 @@
         roth403:       'roth_401k',    roth403_co:       'roth_401k',
         taxable:       'taxable',
         taxable_corp:  'taxable',      taxable_other:    'taxable',   // routing buckets → Taxable engine (bank R393/R394)
+        taxable_primary:      'taxable', taxable_co:        'taxable',   // A.5 ownership variants → same 'taxable' enum (no 422)
+        taxable_corp_primary: 'taxable', taxable_corp_co:   'taxable',
+        taxable_other_primary:'taxable', taxable_other_co:  'taxable',
         savings:       'hysa',         savings_primary:  'hysa',      savings_co: 'hysa',
         crypto:        'taxable',      crypto_primary:   'taxable',   crypto_co:  'taxable',
         pension:       'pension',      pension_co:       'pension'
@@ -8194,9 +8213,9 @@
       // STU-010: Group 4 — filter before sending to engine (physical, cash, generational, debt)
       const FILTERED_TYPES = new Set([
         'checking', 'checking_primary', 'checking_co',
-        'property', 'auto', 'auto_primary', 'auto_co',
+        'property', 'property_primary', 'property_co', 'auto', 'auto_primary', 'auto_co',
         'collectibles', 'collectibles_primary', 'collectibles_co',
-        'other_assets',    // value-only tile (bank R396) — net worth yes, engine Shape no
+        'other_assets', 'other_assets_primary', 'other_assets_co',    // value-only tile (bank R396) — net worth yes, engine Shape no
         'trust', '529plan',
         'hsa', 'hsa_co',   // medical set-aside — never engine spend-mass (Copy Bank §0.6; toggle-OFF inclusion parked)
         'mortgage_joint',   'auto_debt_joint',   'rev_debt_joint',   'personal_loan_joint',

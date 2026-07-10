@@ -116,7 +116,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     ['#1 solo has NO wing banner at all', !has(Hs, 'picker-expander wing')],
     ['#1 solo has NO Joint/Additional/Co-Arch/possessive header', !has(Hs, 'JOINT SPACES') && !has(Hs, 'Additional') && !has(Hs, 'CO-ARCH') && !has(Hs, "DANIEL'S SPACES")],
     ['#1 solo shows all 6 L1 headers (collapsed)', L1S.every(l => l1Present(Hs, l)) && !/picker-expander l1 open/.test(Hs)],
-    ['#1 solo FOLDS joint-titled rooms (taxable/529/trust)', has(Hs, "addInstance('taxable')") && has(Hs, "addInstance('529plan')") && has(Hs, "addInstance('trust')")],
+    ['#1 solo FOLDS joint rooms (taxable via primary post-A.5; 529/trust via joint)', has(Hs, "addInstance('taxable_primary')") && has(Hs, "addInstance('529plan')") && has(Hs, "addInstance('trust')")],
     ['#1 solo keeps primary rooms (rothira/roth401k)', has(Hs, "addInstance('rothira')") && has(Hs, "addInstance('roth401k')")],
     ['#1 solo prefer-primary, NO duplicate (checking_primary, not joint checking)', has(Hs, "addInstance('checking_primary')") && !has(Hs, "addInstance('checking')")],
     ['#1 solo still greys NET-NEW (The Sidedoor)', has(Hs, 'The Sidedoor <span>Coming soon</span>')],
