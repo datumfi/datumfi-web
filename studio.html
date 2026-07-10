@@ -5041,6 +5041,31 @@
       return c ? ', with a tilt toward ' + c : '';
     }
     // §14.4-COPY — the 14 column-header tooltips for the Taxable table (bank R375–R388, verbatim).
+    // §12 401(k)-aware per-holding column hovers (bank R357–R371 col C: 1a "what it measures" +
+    // "why it matters for YOUR retirement" 1b). Scope = the 12 VALUE columns; Cost Basis / Unrealized
+    // Gain / Acquisition Date stay "—" via _diLotColTips (401k N/A copy — §19 canon). [R]/[T] on Beta +
+    // Sector. Unsourced {planProvider}/{instrumentType} parentheticals dropped (Lesson 47, same as
+    // _di457ColTips). Keyed by CURRENT COLS labels (Shares Owned / Position Value). Curly apostrophes
+    // to match the sibling ColTips convention.
+    function _di401kColTips(isRoth) {
+      var why = '<br><br><strong>Why it matters for your retirement</strong>';
+      var r = !!isRoth;
+      return {
+        'Ticker': { t: 'Ticker', b: 'The symbol of this single holding.' + why + 'Names the bet on this row. In a 401(k) you picked it from your employer’s plan menu — a shorter list than the open market, so each choice is made within the lineup your employer offers.' },
+        'Name': { t: 'Name', b: 'The full security name behind the ticker.' + why + 'Tells you what you actually own — a broad index fund, a bond fund, a target-date fund. The plainer and broader the name, the more this row is built to be left alone for a long retirement.' },
+        'Price': { t: 'Price', b: 'The latest reference price per share.' + why + 'A reference point, not a live quote — shown sourced-or-blank, never a stale guess. It only matters paired with shares: price × shares is what this row is worth to your plan.' },
+        'Shares Owned': { t: 'Shares Owned', b: 'How many units of this holding you own.' + why + 'The size of the position. Shares × price = this row’s value — the number that decides how much weight this single holding carries in your 401(k).' },
+        'Position Value': { t: 'Position Value', b: 'Shares × price — what this holding is worth today.' + why + 'The dollar weight this row pulls. All 4 boxes above are VALUE-WEIGHTED — a big-value row steers the whole account’s beta, yield, and fee far more than a small one.' },
+        'Beta': { t: 'Beta', b: 'This holding’s market sensitivity (sourced-or-blank).' + why + 'How hard this one position swings — 1.00 moves with the market, above is jumpier, below steadier. BLANK when no source publishes it (we never fake a beta).' + (r ? ' The Roth 401(k) is a fine home for higher-beta bets — the upside is untaxed.' : '') + ' Feeds the Weighted Beta box.' },
+        'Yield': { t: 'Yield', b: 'This holding’s dividend yield (sourced-or-blank).' + why + 'The income this position throws off as a %. In a 401(k) these dividends reinvest with ZERO yearly tax drag — unlike a taxable account. Blank when unpublished. Feeds the Blended Yield box.' },
+        'Geography': { t: 'Geography', b: 'Where this holding is invested — at the granular level we track (US large-blend, foreign developed, emerging, global blend, US bonds, cash).' + why + 'Tells you how much of this row rides on the rest of the world — and WHICH part. We read the granular tag, not just “US vs international.” The account’s overall lean rolls up from these rows (see §13 geo map). Honest caveat: reflects published domicile, not always true exposure.' },
+        'Sector': { t: 'Sector', b: 'The granular industry or theme this holding sits in — broad-market core, or a named tilt like semiconductors, energy, REITs, dividend growth.' + why + 'Sectors boom and bust together. Reading the granular sector per row spots when several tickers quietly stack into ONE theme. Broad-market rows (large/total/blend) are NOT a tilt; only a named theme above ~20% of equity surfaces in the account paragraph (see §13 sector map).' + (r ? ' A high-risk theme is a natural Roth bet — binary upside comes out untaxed.' : '') },
+        'Exp Ratio': { t: 'Exp Ratio', b: 'The annual fund fee for this holding, as a %.' + why + 'The yearly drag this one fund skims. In a 401(k) you can’t shop the whole market, but you CAN pick the lowest-cost share class your plan offers — and watch for revenue-sharing funds that quietly pay your plan’s recordkeeper. A high number here is still partly fixable from within the menu.' },
+        'Asset Class': { t: 'Asset Class', b: 'Whether this row is equity, bond, cash, or alternative.' + why + 'The job this holding does: equity = growth engine, bond = ballast, cash = buffer, alt = hedge. The mix across rows is your real risk dial — built from the funds your plan makes available.' },
+        'Instrument': { t: 'Instrument', b: 'Whether this row is an ETF, mutual fund, individual stock, or cash.' + why + 'Funds spread your money across many companies so no single failure sinks you. A 401(k) menu is typically all funds — which is exactly what you want for a bucket meant to be left alone for decades.' },
+      };
+    }
+
     function _diTaxColTips() {
       var why = '<br><br><strong>Why it matters for your retirement</strong>';
       return {
@@ -7005,7 +7030,8 @@
                 var _bankCol = _diBank && !_isTaxableRoom(base.id) && base.id !== '529plan';
                 if (_bankCol) {
                   var _it = /457b/.test(base.id) ? _di457ColTips(/^roth457b/.test(base.id))
-                          : /ira/.test(base.id) ? _diIraColTips(/^rothira/.test(base.id)) : null;
+                          : /ira/.test(base.id) ? _diIraColTips(/^rothira/.test(base.id))
+                          : /401k/.test(base.id) ? _di401kColTips(/^roth401k/.test(base.id)) : null;
                   if (_it) COLS.forEach(function (c) { if (_it[c.lbl]) c.tip = _it[c.lbl]; });
                   var _lot = _diLotColTips(base.id), _allNA = !/ira|457b/.test(base.id);
                   COLS.forEach(function (c) {
