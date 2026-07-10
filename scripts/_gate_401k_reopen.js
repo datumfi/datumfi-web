@@ -31,7 +31,8 @@ const URL = 'http://127.0.0.1:8001/studio.html';
       if (withSplit) { a.profitSharingBalance = 20000; a.rolloverBalance = 15000; }
       recalcPortfolio(a); a.value = 90000;
       window.openAccountModal(a.id);
-      return { html: document.getElementById('modal-dynamic-content').innerHTML, value: a.value };
+      return { html: document.getElementById('modal-dynamic-content').innerHTML, value: a.value,
+        title: (document.getElementById('modal-acc-title') || {}).innerHTML || '' };
     };
     return {
       rothOn: open('roth401k', true), rothOff: open('roth401k', false),
@@ -73,6 +74,14 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     // LOCK-3: split fields do not inflate account value
     ['LOCK-3 value not inflated by split (R)', R.rothOn.value === 90000],
     ['LOCK-3 value not inflated by split (T)', R.preOn.value === 90000],
+    // ① R144 [T] RMD twin (D144) — authored line replaces the older sentence (Vault only)
+    ['[T] D144 authored RMD twin FIRES', has(R.preOn.html, 'The mirror of the Roth advantage, and it cuts the other way')],
+    ['[T] older RMD sentence is GONE', !has(R.preOn.html, 'Required Minimum Distributions kick in at 73')],
+    ['[R] Treasury does NOT show the [T] RMD twin', !has(R.rothOn.html, 'The mirror of the Roth advantage')],
+    // addendum copy-drift swaps (nickname/jargon strip) — NEW present AND OLD gone
+    ['C292 [T] balance hover de-nicknamed', has(R.preOn.html, 'A dollar in your pre-tax 401(k) is worth less') && !has(R.preOn.html, 'A dollar in The Vault')],
+    ['B375 UG box de-jargoned (Σ gone)', has(R.rothOn.html, 'added up across every holding where you') && !has(R.rothOn.html, 'never enter the Σ')],
+    ['B35 [R] title body de-nicknamed', has(R.rothOn.title, 'Think of your Roth 401(k) as the reserve you draw last') && !has(R.rothOn.title, 'this is the Treasury — the reserve')],
   ];
 
   const pass = results.filter(r => r[1]).length, total = results.length;

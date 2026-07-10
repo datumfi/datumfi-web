@@ -697,4 +697,11 @@ Method: contiguous token-free literal per authored install-verbatim line, quote/
 **Verdict:** JOB A's reduced surface (R98/R99 + R141/R142) is DONE + gated. The 401(k) room is **NOT whole-bank-DONE**: one certified-section drift (R144[T]) + three post-cert sections (§16, §19, §12) are authored-but-unwired. All FOUR are beyond JOB A's authorized surface → FLAGGED for a Captain-scoped follow-on, not silently wired.
 
 ### Ship state (JOB A)
-studio.html LF-clean, pin bumped `→ 18dec930402f6730a6267c8c4412f18e` (build-dist.mjs, same commit, L49). `npm run build` GREEN. Regression GREEN: 401k cert/match/di, IRA cert, 457, tax_3a/11b/routing, room_picker, a5_ownership, w7w8_parity, ticker_ui. **HELD for Captain smoke → GO → commit (separate from JOB 0); push held.**
+studio.html LF-clean, pin bumped `→ 18dec930402f6730a6267c8c4412f18e` (build-dist.mjs, same commit, L49). `npm run build` GREEN. Regression GREEN: 401k cert/match/di, IRA cert, 457, tax_3a/11b/routing, room_picker, a5_ownership, w7w8_parity, ticker_ui. **JOB A COMMITTED `1fa207c` (push held).**
+
+### ① + COPY-DRIFT RECONCILE (2026-07-10, Captain GO ①→③, ④ hold) — held-not-committed, gate `_gate_401k_reopen.js` 20/20
+- **✅ ① R144 [T] RMD twin (D144)** — the older "Required Minimum Distributions kick in at 73…" line REPLACED by authored D144 verbatim ("The mirror of the Roth advantage… DOES carry Required Minimum Distributions — starting at 73…"). Red-first proved OLD-gone + D144-present. **`_gate_401k_cert.js` §9[T] marker updated** to the new canonical copy (it was pinned to the old line — a real catch that the swap changed live copy).
+- **✅ Addendum copy-drift swaps** (bank revised this session; live was verbatim → drifted): **C292** [T] balance hover "A dollar in The Vault" → "your pre-tax 401(k)" (5478); **B35** [R] title body "In your Shape, this is the Treasury — the reserve…" → "Think of your Roth 401(k) as the reserve…" (6105); **B375** UG box description Σ/jargon → plain-speak (5484, matches the Taxable standardized UG line). All red-first, verbatim.
+- **⬜ C300** (addendum) — NOT wired as a standalone hover (no `{rmdStatus}` strip cell; the [T] RMD content surfaces via §9 / D144). No live drift to fix — flagged, not fabricated (L47).
+
+**Remaining in room:** ② §16 education bullets + NEW §20 "Why a 401(k)?" panel (author A400:D417) · ③ §12 `_di401kColTips` · ④ §19 §Rollup-Parity (HOLD — bring Captain a field-by-field §1-live-vs-§19 diff before any wire; two-versions trap).

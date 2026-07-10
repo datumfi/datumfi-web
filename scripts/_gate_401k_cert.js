@@ -69,7 +69,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   all = ok('§9 [T] tax-deferred engine',      has(pre,  'This is a tax-deferred growth engine')) && all;
   all = ok('§9 [R] two-bucket match split',   has(roth, 'two tax buckets wearing one name')) && all;
   all = ok('§9 [R] no-RMD advantage',         has(roth, 'NO required minimum distributions')) && all;
-  all = ok('§9 [T] ordinary-income + RMD73',  has(pre, 'taxed as ordinary income when you withdraw it') && has(pre, 'Required Minimum Distributions kick in at 73')) && all;
+  all = ok('§9 [T] ordinary-income + RMD73',  has(pre, 'taxed as ordinary income when you withdraw it') && has(pre, 'DOES carry Required Minimum Distributions — starting at 73')) && all;
   all = ok('§9 G under-match headline',       has(roth, 'declining free, guaranteed salary')) && all;
   // §12 metric-ladders
   all = ok('§12 [R] UG-LARGE prize',          has(roth, 'this is exactly why high-growth assets belong here')) && all;
