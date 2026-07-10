@@ -5674,7 +5674,8 @@
       var isRoth = !!(base && base.taxCode === 'roth');
       var m = { isRoth: isRoth, rate: num(acc.matchRate), upTo: num(acc.matchUpTo), vested: num(acc.vestedPct),
                 salary: num(salary), annualContrib: null, matchTarget: null, annualMatch: null,
-                matchCapHit: null, matchBalance: null, rothBalance: null };
+                matchCapHit: null, matchBalance: null, rothBalance: null,
+                profitSharingBalance: null, rolloverBalance: null };
       if (m.salary !== null && m.salary <= 0) m.salary = null;
       var contrib = (parseFloat(acc.inflow) || 0) * (parseFloat(acc.freq) || 0);
       m.annualContrib = contrib > 0 ? contrib : null;
@@ -5686,13 +5687,19 @@
           m.matchCapHit = (m.annualContrib >= m.matchTarget) ? 'full' : 'short';
         }
       }
-      // balance split — direct-entry, ROTH ONLY, exact (suppressed on pre-tax)
+      // broken-out employer/rolled-in balance components — direct-entry, BOTH rooms (Architect R98/R99,
+      // sourced-or-blank). These are portions OF the existing balance — never added to it (LOCK-3).
+      var _psb = num(acc.profitSharingBalance); if (_psb !== null && _psb >= 0) m.profitSharingBalance = _psb;
+      var _rvb = num(acc.rolloverBalance);      if (_rvb !== null && _rvb >= 0) m.rolloverBalance = _rvb;
+      // balance split — direct-entry, ROTH ONLY. matchBalance keeps its clamped semantics; the tax-free
+      // rothBalance is the remainder after ALL pre-tax employer/rolled buckets (match + profit-sharing +
+      // rollover) per Captain ruling — sourced remainder; ownPretaxContrib is not an input today, deferred
+      // (never fabricated, Lesson 47). rothBalance currently feeds no output — computed for correctness.
       if (isRoth) {
         var mb = num(acc.matchBalance), val = parseFloat(acc.value) || 0;
-        if (mb !== null && mb >= 0 && val > 0) {
-          m.matchBalance = Math.min(mb, val);
-          m.rothBalance = val - m.matchBalance;
-        }
+        if (mb !== null && mb >= 0 && val > 0) m.matchBalance = Math.min(mb, val);
+        var _preTax = (m.matchBalance || 0) + (m.profitSharingBalance || 0) + (m.rolloverBalance || 0);
+        if (val > 0 && _preTax > 0) m.rothBalance = Math.max(0, val - _preTax);
       }
       return m;
     }
@@ -5877,8 +5884,12 @@
       if (isRoth) {
         if (m.matchBalance !== null && m.matchBalance > 0)
           out.push('One thing the single balance hides: ' + _diMoney(m.matchBalance) + ' of this account is employer-match money, and that piece is PRE-TAX — it’s taxed as ordinary income when you withdraw it and carries its own RMDs. So this one account is really two tax buckets wearing one name: your tax-free Roth core and a taxable match.');
+        if (m.profitSharingBalance !== null && m.profitSharingBalance > 0)
+          out.push('Another slice the single balance hides: ' + _diMoney(m.profitSharingBalance) + ' of this account is company profit-sharing — and like the match, it’s EMPLOYER money, so it sits PRE-TAX even inside a Roth 401(k). It’s taxed as ordinary income when you draw it and it carries RMDs. Naming it here means your tax-free Roth figure isn’t quietly inflated by dollars the IRS will still tax.');
+        if (m.rolloverBalance !== null && m.rolloverBalance > 0)
+          out.push('One more slice the single balance hides: ' + _diMoney(m.rolloverBalance) + ' of this account was ROLLED IN from a prior employer\'s plan. Pretax rollover money keeps its pretax character — taxed as ordinary income on withdrawal, carries RMDs. It also has its own standalone room, "The Conduit," if you\'d rather track it separately.');
         out.push('Good news the screen buries: the Roth side of this account has NO required minimum distributions for you — it can compound untouched for life and pass to heirs tax-free.' + (m.matchBalance !== null && m.matchBalance > 0 ? ' (Only the pre-tax match portion still carries RMDs.)' : ''));
-        return out.slice(0, 2);
+        return out;
       }
       // Traditional Layer E — §13 R223 (tax character) + R224 (RMD@73) always; the token-free R138 [T]
       // match-aware line (Architect 2026-07-03) fires when a match is configured — the whole account
@@ -5886,6 +5897,10 @@
       out.push('Every dollar here is taxed as ordinary income when you withdraw it — contributions and growth alike. That makes this account your lever for lowering THIS year’s taxable income, and a future tax bill you’ll manage with withdrawal timing and Roth conversions.');
       if (m.rate !== null)
         out.push('In a Traditional 401(k), the employer match carries NO special tax character — the WHOLE account is pre-tax, so match dollars and your own contributions are taxed identically: ordinary income on withdrawal, with RMDs on all of it. There’s no separate match bucket to call out here — it simply blends in. (The match only splits out in a Roth 401(k), where it lands in its own pre-tax pocket alongside your tax-free Roth core.)');
+      if (m.profitSharingBalance !== null && m.profitSharingBalance > 0)
+        out.push('In a Traditional 401(k), profit-sharing carries no separate tax character — the WHOLE account is already pre-tax, so these employer dollars are taxed exactly like your own: ordinary income on withdrawal, RMDs on all of it. But naming it still tells you something real: ' + _diMoney(m.profitSharingBalance) + ' of this balance is money your employer awarded, not salary you deferred — it wasn\'t capped by your elective-deferral limit, and it\'s a read on how much of your retirement your company built for you versus how much you built yourself.');
+      if (m.rolloverBalance !== null && m.rolloverBalance > 0)
+        out.push('In a Traditional 401(k), a rolled-in balance keeps the same pre-tax character as everything else here — ordinary income on withdrawal, RMDs included — so there\'s no tax split to flag. What it DOES tell you: ' + _diMoney(m.rolloverBalance) + ' of this account isn\'t from this job at all — it\'s a prior employer\'s plan you carried in. That\'s worth tracking on its own, because it\'s portable history stacked into your current plan, and it has its own standalone room, "The Conduit," if you\'d rather watch it separately.');
       out.push('Required Minimum Distributions kick in at 73 — the IRS forces money out (and taxes it) whether you need it or not. This shapes your withdrawal sequencing and is a core reason to weigh Roth conversions in low-income years before then.');
       return out;
     }
@@ -6427,6 +6442,8 @@
                 let mu = acc.matchUpTo   !== undefined ? acc.matchUpTo   : '';
                 let vp = acc.vestedPct   !== undefined ? acc.vestedPct   : '';
                 let mb = acc.matchBalance!== undefined ? acc.matchBalance: '';
+                let psb = acc.profitSharingBalance !== undefined ? acc.profitSharingBalance : '';
+                let rvb = acc.rolloverBalance !== undefined ? acc.rolloverBalance : '';
                 html += `
             <div style="margin-top:20px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px;">
                 <div class="input-label" style="color:var(--gold); margin-bottom:10px;">EMPLOYER MATCH</div>
@@ -6434,11 +6451,15 @@
                     <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Match Rate (%)</div><input type="number" class="small-field" value="${mr}" oninput="updateAccField('${id}', 'matchRate', this.value)"><div class="modal-tt"><strong>Match Rate (%)</strong>How much your employer adds for every dollar you put in — e.g., "50%" means they chip in 50¢ per $1 you contribute. This is free money; capturing all of it is the highest-guaranteed-return move in your whole plan.</div></div>
                     <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Match Up-To (% of salary)</div><input type="number" class="small-field" value="${mu}" oninput="updateAccField('${id}', 'matchUpTo', this.value)"><div class="modal-tt" style="left:auto; right:0;"><strong>Match Up-To (% of salary)</strong>The ceiling on the match — your employer matches your contributions only up to this share of your pay (e.g., "up to 6% of salary"). Contribute at least this much to grab the full match; going under leaves guaranteed money behind.</div></div>
                 </div>
-                <div class="field-row" style="margin-bottom:0;">
+                <div class="field-row" style="margin-bottom:10px;">
                     <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Vesting (%)</div><input type="number" class="small-field" value="${vp}" oninput="updateAccField('${id}', 'vestedPct', this.value)"><div class="modal-tt"><strong>Vesting Schedule</strong>How long you must stay before the match is truly YOURS. Unvested match dollars vanish if you leave early — this sets whether the match on screen is real money or a promise. Common: cliff (all at once after N years) or graded (a slice per year).</div></div>
                     ${base.taxCode === 'roth'
                       ? `<div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Employer-Match Balance ($)</div><input type="number" class="small-field" value="${mb}" oninput="updateAccField('${id}', 'matchBalance', this.value)"><div class="modal-tt" style="left:auto; right:0;"><strong>Employer-Match Balance ($)</strong>The portion of your 401(k) balance that came from your employer's match — read it straight off your statement (many list the "employer source" or "match source" balance as its own line). This money sits in a PRE-TAX pocket inside your Roth 401(k): it grew tax-free, but unlike your own Roth contributions it WILL be taxed as ordinary income when you withdraw it. Entering it here lets us show your two tax buckets exactly, with no guessing — the rest of your balance is treated as your tax-free Roth money.</div></div>`
                       : `<div></div>`}
+                </div>
+                <div class="field-row" style="margin-bottom:0;">
+                    <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Profit-Sharing Balance ($)</div><input type="number" class="small-field" value="${psb}" oninput="updateAccField('${id}', 'profitSharingBalance', this.value)"><div class="modal-tt"><strong>Profit-Sharing Balance ($)</strong>The portion of your 401(k) that came from your company's profit-sharing award — an annual, performance-based contribution your employer makes ON TOP of any match (some years it's large, some years zero). Read it straight off your statement as its own "profit-sharing source" line. Like the match, this is EMPLOYER money: it lands in a PRE-TAX pocket even inside a Roth 401(k) — it grew tax-free, but it is taxed as ordinary income when you withdraw it AND it carries RMDs. Break it out here so it is never silently buried inside your Roth total.</div></div>
+                    <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">In-Plan Rollover Balance ($)</div><input type="number" class="small-field" value="${rvb}" oninput="updateAccField('${id}', 'rolloverBalance', this.value)"><div class="modal-tt" style="left:auto; right:0;"><strong>In-Plan Rollover Balance ($)</strong>The portion of your 401(k) that was ROLLED IN from a PRIOR employer's plan (an old 401(k)/403(b) you carried into this one) — read it straight off your statement as its own "rollover source" line. It keeps its original tax character: pretax rollover money is taxed as ordinary income at withdrawal and carries RMDs. Break it out here so your rolled-in dollars aren't silently merged into your own contributions — and note this same money also has its OWN room, "The Conduit" (Rollover 401(k)), if you want to see it standalone.</div></div>
                 </div>
             </div>`;
             }

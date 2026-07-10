@@ -660,3 +660,41 @@ A cross-device Clerk sign-in loses typed tickers — undercuts Slice 3 parity + 
 **L49:** studio-blueprint.js LF-clean, sacred pin bumped `af1c1da4→f14b9ec2` (build-dist.mjs); datum-archive-codec.js + nav.js not pinned. **Regression GREEN:** codec parity, c_persist, w1_name_restore, tt_anchor, stepA_slice2 (42/42), 457/401k/403/529/ira certs, tax gates, recon/recon2, smoke.
 
 **⚠️ Real headroom (safety-valve, not solution):** ~52 holdings/single active blueprint safe; heavy multi-blueprint sheds older holdings cross-device. The Captain's 172-holding book confirms the [[backend]] is on the critical path — see FINDING block above.
+
+---
+
+## JOB A — 401(k) REOPEN + WHOLE-ROOM L50 RE-AUDIT (2026-07-10) · reduced surface WIRED + gated
+
+Live anchor at audit time: origin/main `747e288` (JOB 0 committed, JOB A held-not-committed). Bank =
+`401(k) Copy Bank` (398 rows). Two agents: matchBalance R97/R140 already live+verbatim (NOT re-done).
+
+### ✅ WIRED this pass (JOB A reduced surface) — `_gate_401k_reopen.js` 14/14, red-first 4/14
+| Bank line | Status | Evidence |
+|---|---|---|
+| §8 R98 Profit-Sharing Balance ($) field + hover [both rooms] | ✅ | §8 EMPLOYER-MATCH block, `profitSharingBalance`; B98 verbatim (HOVER: stripped) |
+| §8 R99 In-Plan Rollover Balance ($) field + hover [both rooms] | ✅ | same block, `rolloverBalance`; B99 verbatim |
+| §9 Layer-E R141 profit-sharing [R] / D141 [T] twin | ✅ | `_di401kTax`; B141 (curly) roth / D141 (straight) vault; fires token>0, silent at 0 |
+| §9 Layer-E R142 rollover [R] / D142 [T] twin | ✅ | `_di401kTax`; B142 roth / D142 vault; fires/suppresses; [R]≠[T] proven |
+| `_di401kMatch` split extended: rothBalance = value − (match+profitSharing+rollover) | ✅ | Captain ruling; sourced remainder; ownPretaxContrib deferred (not fabricated, L47); rothBalance feeds no output today (computed for correctness) |
+LOCK-3 held: the three split fields are portions OF the balance, never added to it (gate asserts value not inflated).
+⚠️ Lifted the roth Layer-E `return out.slice(0,2)` cap (it would have silently dropped the new lines); backward-compatible when ps/rollover=0.
+
+### 🚩 WHOLE-ROOM LINE-BY-LINE RE-AUDIT (Captain directive: do NOT inherit "certified" — cert = ONE marker/section, individual lines were missed)
+Method: contiguous token-free literal per authored install-verbatim line, quote/dash/JS-escape-normalized, tested vs live studio.html source. 97 lines checked; 60 clean-match, 37 raw-miss → triaged. (Caveat: source-grep can FALSE-POSITIVE on per-room-scoped copy whose literal also lives in another room's function — see §12.)
+
+**⛔ REAL GAP inside a "certified" section (this is the Captain's point, proven):**
+- **R144 [T] RMD twin DRIFTED — authored `D144` NOT live.** Bank D144 = "The mirror of the Roth advantage, and it cuts the other way: a Traditional 401(k) DOES carry Required Minimum Distributions — starting at 73…" returns ZERO matches. The live [T] RMD line (`_di401kTax` ~5889) is a DIFFERENT, older sentence ("Required Minimum Distributions kick in at 73 — the IRS forces money out…"). Cert passed on a §9 [T] marker; this authored line was never installed. **FLAG: install D144 (replacing the older line)? — copy REPLACEMENT, needs Architect/Captain GO (not a silent swap).**
+
+**⛔ Post-cert sections NEVER wired (authored after the 2026-07-03 cert):**
+- **§16 ARTICLE-GROUNDED (R346–R352, 2026-07-07)** — 5 education bullets (missed-RMD penalty / small-balance force-out / Roth-401k→Roth-IRA one-way / revenue-sharing fee / 401(k) loan-vs-withdrawal). ZERO live. Needs a §15-style education panel like IRA `_diIraWhyPanel` — 401(k) has none.
+- **§19 §ROLLUP PARITY 11-field manifest (R381–R398, 2026-07-08)** — R385–R394 rollup hovers + R395–R397 N/A table-col lines not live verbatim. OVERLAPS the already-live §1 strip = the **two-versions trap** ([[feedback_copybank_add_enrich_only]]). Do NOT blind-install (risk of THINNING a live hover). Reconcile-vs-live + ruling; may be partly served by W7/W8 parity (`_gate_w7w8_parity` green).
+- **⚠️ §12 PER-COLUMN (R357–R371, 2026-07-07)** — 401(k) has NO `_di401kColTips` (IRA/457/taxable each do); it falls to the GENERIC `COLS` tips, so the 401(k)-specific per-column copy is not the live 401(k) copy. (Source-grep FALSE-PASSED these because the same short literals exist in the IRA/457 ColTips — verified absent from the 401k render path by function search.) Lower severity: generic tips still inform. Ruling: wire `_di401kColTips` or accept generic?
+
+**⬜ DELIBERATELY-BLANK (no data source — NOT gaps, carried from cert, re-confirmed by this pass):** §9 R136 menuQuality · R143 Roth 5-yr-clock · R145 bracket-arbitrage (needs expected-retirement-rate input) · R160 maxed-but-catch-up-off (needs age-eligibility) · §7.2 toggle-gating.
+
+**✅ Re-confirmed WIRED by contiguous literal (NOT inherited from cert):** §2 title bodies [R]+[T] (R34–36/R308–310) · §9 Layer A spine R109–113 [R]+[T] · Layer B tilts R117–120 · B2 composition R124 [R]+[T] · Layer C R128–130 · Layer D fees R134/135 · Layer E R140/141/142 [R]+[T] (JOB A) + R144[R] no-RMD · Layer F R149–152 · Layer G R156–159 [R]+[T]. (R124/R144[R]/R150 initially raw-missed = FALSE miss at a runtime token-assembly boundary; confirmed live at 5849/5850, 5891, 5917.)
+
+**Verdict:** JOB A's reduced surface (R98/R99 + R141/R142) is DONE + gated. The 401(k) room is **NOT whole-bank-DONE**: one certified-section drift (R144[T]) + three post-cert sections (§16, §19, §12) are authored-but-unwired. All FOUR are beyond JOB A's authorized surface → FLAGGED for a Captain-scoped follow-on, not silently wired.
+
+### Ship state (JOB A)
+studio.html LF-clean, pin bumped `→ 18dec930402f6730a6267c8c4412f18e` (build-dist.mjs, same commit, L49). `npm run build` GREEN. Regression GREEN: 401k cert/match/di, IRA cert, 457, tax_3a/11b/routing, room_picker, a5_ownership, w7w8_parity, ticker_ui. **HELD for Captain smoke → GO → commit (separate from JOB 0); push held.**
