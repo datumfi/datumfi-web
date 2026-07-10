@@ -131,7 +131,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     ['Grounds (property) still NO ⓘ (no surface inherit)', !has(propT, 'modal-tt')],
     ['Arcade (collectibles) still NO ⓘ (no surface inherit)', !has(collT, 'modal-tt')],
     // picker expander nesting
-    ['picker has "More taxable / other" expander', has(R.pickerHtml, 'More taxable / other')],
+    ['picker nests fold-outs under "More Taxable / Other" L2 (per-wing taxonomy #223)', has(R.pickerHtml, 'l2-lbl">More Taxable / Other')],
     ['picker lists Corporate / Business Taxable', has(R.pickerHtml, 'Corporate / Business Taxable')],
     ['picker lists Other Taxable', has(R.pickerHtml, 'Other Taxable')],
     ['picker lists Other Assets', has(R.pickerHtml, 'Other Assets')],
