@@ -4759,6 +4759,43 @@
         '<div class="ira-why-body" style="display:none;">' + body + '</div></div>';
     }
 
+    // Reusable "Why this account?" education panel (Lesson 48 — ONE renderer for the 401(k) panel now
+    // and the authored siblings later: Rollover 401(k), Taxable, Stock Plan, Crypto). secList = array of
+    // [header, body, hot?]. Reuses the .ira-why-* CSS + the expand/collapse toggle from the 457/IRA panels.
+    function _diWhyPanel(toggleTitle, secList) {
+      var sec = function (h, b, hot) { return '<div class="ira-why-sec' + (hot ? ' hot' : '') + '"><div class="ira-why-h">' + h + '</div><div class="ira-why-b">' + b + '</div></div>'; };
+      var body = secList.map(function (s) { return sec(s[0], s[1], s[2]); }).join('');
+      return '<div class="ira-why-panel">' +
+        '<div class="ira-why-toggle" onclick="var n=this.nextElementSibling; var open=n.style.display!==\'block\'; n.style.display=open?\'block\':\'none\'; this.classList.toggle(\'open\', open);">' + toggleTitle + ' <span class="ira-why-caret">▸</span></div>' +
+        '<div class="ira-why-body" style="display:none;">' + body + '</div></div>';
+    }
+
+    // §20 "Why a 401(k)?" education panel (bank R404–R413) + §16 article-grounded bullets (R347–R351)
+    // folded into ONE panel per Captain ruling. Renders on BOTH branches (Traditional + Roth). The two
+    // comparative sections (Trad-vs-Roth R406, RMD side R411) render BOTH [T]/[R] segments verbatim —
+    // the copy references both sides ("split between both", "covers BOTH sides", "not a Roth one"), so
+    // gating one branch would break the sentence (judgment call vs R414 "gated on taxCode" — flagged).
+    // Limit figures are prose "(§15)" references (no baked literals). Match nudge (R407) marked hot.
+    // Straight apostrophes rendered curly to match the file's panel convention (documented practice).
+    function _di401kWhyPanel(acc, base) {
+      return _diWhyPanel('Why you have a 401(k) — and how it differs from a 403(b) or an IRA', [
+        ['The one-line answer', 'You have a 401(k) because you work for a PRIVATE-SECTOR EMPLOYER — a company, not a government or a nonprofit. It’s the workplace retirement plan for for-profit America, and for most people it becomes the single biggest account they’ll ever build. The account type follows your employer, not your choice.'],
+        ['Traditional vs Roth — the one choice that IS yours', 'The one real decision inside a 401(k) is WHICH side to feed. The Traditional (pre-tax) side lowers your taxable income today and grows tax-deferred — you pay ordinary income tax later, at withdrawal and via RMDs. The Roth side is funded with already-taxed dollars and grows tax-FREE once qualified (age 59½ + a 5-year clock). Many plans let you split between both in the same year — the shared IRS elective-deferral limit (§15) covers BOTH sides combined, not each separately.'],
+        ['The employer match — the signature edge', 'A 401(k)’s defining superpower: the EMPLOYER MATCH. Many companies add money when you contribute — a classic formula is 50% or 100% of your contributions up to a few percent of pay. That match is an immediate, guaranteed return no other account offers — the closest thing to free money in investing. The rule of thumb: contribute at LEAST enough to capture the full match before funding anything else. (Note: employer-match dollars land on the pre-tax side even if YOUR contributions go Roth.)', true],
+        ['How it differs from a 403(b)', 'A 403(b) is the 401(k)’s near-twin for §501(c)(3) nonprofits — public schools, universities, hospitals, charities. Same payroll-deferral idea, similar limits, but it lives under a different slice of the tax code: a 403(b) carries a unique 15-years-of-service catch-up and an annuity/insurance heritage that can mean higher fees and narrower fund menus. A 401(k) has no 15-year catch-up, is governed by ERISA, and typically offers a broader (though still menu-limited) lineup. Which one you hold is decided entirely by whether your employer is for-profit or nonprofit.'],
+        ['How it differs from an IRA', 'An IRA is the account YOU open on your own, outside any employer. The headline difference is room: a 401(k)’s elective-deferral limit is several times larger than the IRA contribution limit (see §15), so the 401(k) is where the heavy lifting happens. Trade-offs: an IRA gives you the WHOLE market to choose from (a 401(k) is limited to your plan’s menu), but a 401(k) adds the employer match, stronger ERISA creditor protection, and the Rule-of-55. Most plans use both: max the 401(k) match first, then an IRA for choice, then back to the 401(k).'],
+        ['Early-access edge — the Rule of 55', 'A 401(k)’s early-retirement lever: if you leave your job in or after the YEAR you turn 55, you can withdraw from THAT employer’s 401(k) with no 10% early-withdrawal penalty — years before the usual 59½. (An IRA does not have this; rolling a 401(k) into an IRA FORFEITS the Rule-of-55 access.) If early retirement is on the table, think twice before rolling an old 401(k) out — you may be giving up the penalty-free bridge.'],
+        ['The RMD side', 'The Traditional 401(k) has required minimum distributions (RMDs): starting at age 73, the IRS makes you draw the balance down each year whether you need it or not — miss one and the penalty is 25% of the shortfall (§16A). The Roth 401(k) NO LONGER has lifetime RMDs (SECURE 2.0, starting 2024) — but rolling it to a Roth IRA still cleanly removes any doubt and keeps it growing untouched (§16C). RMDs are a pre-tax feature, not a Roth one.'],
+        ['Creditor protection (worth knowing)', 'Because a 401(k) is an ERISA plan, its assets get strong federal protection from creditors and lawsuits — generally stronger and more uniform than an IRA’s (which depends on state law). This is a quiet reason NOT to reflexively roll an old 401(k) into an IRA: beyond the Rule-of-55, you may be trading away creditor protection too.'],
+        ['Missed-RMD penalty — the pre-tax teeth (SECURE 2.0)', 'On the pre-tax side, RMDs aren’t optional — miss one and the IRS penalty is 25% of what you should have taken (down from 50% under SECURE 2.0, and as low as 10% if you fix it quickly). The Roth source has no RMD for you, so this bites only the pre-tax match/rollover portion.'],
+        ['Small-balance force-out — the tiers when you leave', 'If you leave this job with a smaller balance, your old plan can push you out: under ~$1,000 it may be cashed out (taxable), $1,000–$7,000 auto-rolled into an IRA in your name, and above $7,000 it can stay put. Knowing the tier tells you whether to roll it deliberately before they do it for you.'],
+        ['Roth 401(k) → Roth IRA is one-way', 'One quiet asymmetry: a Roth 401(k) can roll into a Roth IRA, but not back into a future employer’s plan — and once it’s in a Roth IRA, RMDs disappear entirely. Pre-tax 401(k) money keeps that two-way flexibility; Roth doesn’t.'],
+        ['Revenue-sharing — the hidden fee inside the expense ratio', 'Watch for ‘revenue-sharing’ funds — options that quietly pay your plan’s recordkeeper out of their expense ratio. They look normal but cost more than an identical index fund; if your menu has a lower-cost equivalent, it’s usually the better pick.'],
+        ['401(k) loan vs. withdrawal — the acceleration trap', 'A 401(k) loan isn’t a withdrawal — you borrow up to half your vested balance (capped at $50,000), repay yourself with interest over ~5 years, and owe no tax if you repay on time. The trap: leave or lose the job and the loan usually accelerates — unpaid, it becomes a taxable distribution plus the 10% penalty. Borrowed dollars also stop compounding while they’re out.'],
+        ['Bottom line', 'You didn’t pick a 401(k) over a 403(b) or IRA — your employer being a private company did. What matters now: it’s your highest-limit workplace account, its superpower is the employer match (capture it in full first), and — if you might retire early — the Rule-of-55 makes it a penalty-free bridge that an IRA can’t match. Feed it to the match, choose your Traditional/Roth split with intent, and don’t roll it out without knowing what you’d give up.'],
+      ]);
+    }
+
     // §12 457(b)-aware column hovers (bank R129–R142; {planProvider}/{instrumentType}
     // parentheticals dropped — tokens unsourced, never fabricated).
     function _di457ColTips(isRoth) {
@@ -6160,6 +6197,7 @@
         // the bottom after the decorate button. _diIraWhyPanel/_di457WhyPanel take only (acc, base).
         if (/ira/.test(base.id)) html += _diIraWhyPanel(acc, base);    // §15 "Why an IRA?" (IRA-only)
         if (/457b/.test(base.id)) html += _di457WhyPanel(acc, base);   // §15 "Why a 457(b)?" (both branches)
+        if (/401k/.test(base.id)) html += _di401kWhyPanel(acc, base);  // §20 "Why a 401(k)?" + §16 bullets (both branches)
 
         // SURGICAL: Physics Toggles with explicit mathematical tooltips
         html += `
