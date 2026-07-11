@@ -4016,7 +4016,8 @@
       var isCash = function (h) { return String(h.instrumentType || '').trim().toUpperCase() === 'CASH' || String(h.assetClass || '').trim().toLowerCase() === 'cash'; };
       var s = { total: 0, cash: 0, inv: 0, eq: 0, bd: 0, classed: 0, foreign: 0, geoed: 0, invCount: 0, maxRow: 0,
                 inst: {}, instKinds: 0, annuity: false, stockVal: 0, fundVal: 0, maxStockRow: 0, secondStockRow: 0, stockCount: 0, fundCount: 0,
-                betaCovVal: 0, yldCovVal: 0, maxStockTicker: '', unrealGain: null, basisCount: 0, estCount: 0 };
+                betaCovVal: 0, yldCovVal: 0, maxStockTicker: '', unrealGain: null, basisCount: 0, estCount: 0,
+                anyLoss: false, anyMissingAcq: false };   // §21 Taxable nudge signals (N-TLH / N-LTCG) — reuse loop (L48)
       var hasNum = function (x) { return x !== '' && x !== null && x !== undefined && isFinite(parseFloat(x)); };
       (acc.holdings || []).forEach(function (h) {
         var v = val(h); if (v <= 0) return;
@@ -4040,7 +4041,8 @@
         // §12 R127 CASH-BASIS GUARD (ratified): the early cash return above keeps sweep rows out
         // of this Σ; blank/0 basis = not entered (same rule as DatumMath.portfolioStats).
         var cb = parseFloat(h.costBasis);
-        if (isFinite(cb) && cb > 0) { s.unrealGain = (s.unrealGain === null ? 0 : s.unrealGain) + (v - cb); s.basisCount++; if (h.costBasisEst) s.estCount++; }
+        if (isFinite(cb) && cb > 0) { s.unrealGain = (s.unrealGain === null ? 0 : s.unrealGain) + (v - cb); s.basisCount++; if (h.costBasisEst) s.estCount++; if (v < cb) s.anyLoss = true; }   // §21 N-TLH: any non-cash holding underwater
+        if (!(h.acquisitionDate && String(h.acquisitionDate).trim())) s.anyMissingAcq = true;   // §21 N-LTCG: any non-cash holding missing a purchase date
         var ac = String(h.assetClass || '').toLowerCase();
         if (ac) { s.classed += v; if (/stock|equit/.test(ac)) s.eq += v; else if (/bond|fixed/.test(ac)) s.bd += v; }
         else if (isStock) { s.classed += v; s.eq += v; }   // a Stock instrument IS equity — sourced, not guessed
@@ -5475,7 +5477,8 @@
         h += _diCell('Bond %', _diP(xs.bdT), 'Bond %',
           'Share in bonds / fixed income. Bonds are the LEAST tax-efficient holding in a taxable account — their interest is taxed as ordinary income every year, with no deferral. If you also hold tax-advantaged rooms, this is the classic \'put bonds THERE, stocks HERE\' asset-location lesson. Datum reads it across all your accounts.');
         h += _diCell('Cash %', _diP(xs.cashT), 'Cash %',
-          'Share sitting in cash / money-market. Handy for flexibility, but taxable-account cash earns interest taxed at your ordinary rate — and it\'s the drag most people forget. A little dry powder is prudent; a lot is a silent cost.');
+          'Share sitting in cash / money-market. Handy for flexibility, but taxable-account cash earns interest taxed at your ordinary rate — and it\'s the drag most people forget. A little dry powder is prudent; a lot is a silent cost.', null, null,
+          _diBlankNudge((xs.cashT || 0) >= 15, 'This cash isn’t invested yet — tell us if that’s intentional (a buffer) or we’ll nudge you to put it to work.'));   // §21 N-CASH-IDLE (R452)
         h += _diCell('International', _diP(xs.foreignT), 'Share of value outside the US',
           'About ' + _diP(xs.foreignT) + ' of this account sits outside the U.S. — a meaningful international sleeve, not a rounding note: it spreads your growth across economies that don\'t all move with the U.S. market. In a taxable account there\'s a silver lining most people miss — the foreign taxes those funds pay abroad can flow back to you as a Foreign Tax Credit, a benefit you generally can\'t claim inside any tax-advantaged room. International belongs in taxable more than most realize.');
         h += _diCell('Balance', _diMoney(acc.value), 'Balance',
@@ -5487,7 +5490,10 @@
         var tgLine = (typeof tg === 'number' && tg > 0) ? '<div class="hr-sub" id="hr-gaintax" style="margin-top:5px;">Tax if you sold it all today ≈ 15% of that gain — roughly $' + Math.round(tg * 0.15).toLocaleString('en-US') + '.</div>' : '';
         h += _diCell('Unrealized Gain', tg === null ? '—' : _diGainFmt(tg), 'Your paper profit',
           'Your paper profit: what everything is worth today minus what you paid for it.',
-          _diTaxUGLadder(s), 'hr-gain', tgLine);
+          _diTaxUGLadder(s), 'hr-gain',
+          tgLine
+          + _diBlankNudge(s.unrealGain === null && (s.total || 0) > 0, 'Add a cost basis and this box comes alive — we’ll show your gain/loss and what’s taxable when you sell.')   // §21 N-COSTBASIS (R448)
+          + _diBlankNudge(s.anyLoss && !acc.tlhReviewed, 'One of your holdings is down — mark it and we’ll show the tax-loss-harvesting move that turns a paper loss into a real tax deduction.'));   // §21 N-TLH (R449)
         h += _diCell('Weighted Beta', beta === null || beta === undefined ? '—' : _diCovVal(s.betaCovPct, beta.toFixed(2)), 'How jumpy this account is',
           'How jumpy this account is versus the whole market. 1.00 moves with the market; above 1 swings harder, below 1 swings softer.',
           _diTaxBetaLadder(s.betaCovPct >= 50 ? beta : null), 'hr-beta', beta !== null && beta !== undefined ? _diCovSub(s.betaCovPct, 'beta') : '');
@@ -6403,6 +6409,38 @@
               <span class="slider"></span>
             </label>
             <div class="modal-tt" style="top:100%; bottom:auto;">${/401k/.test(base.id) ? (base.taxCode === 'roth' ? `<strong>Held, not spent.</strong>On: this account stays in your net worth and keeps growing tax-free — but your plan will never pull from it to cover spending. For a Roth, this is a natural fit: it's often the account you WANT to touch last, leaving the most precious tax-free dollars to compound or pass to heirs. Use it for money you've earmarked to stay whole.` : `<strong>Held, not spent.</strong>On: this account stays in your net worth and keeps compounding tax-deferred — but your plan never pulls from it for spending. Because RMDs at 73 FORCE withdrawals, 'never spend' is only partly in your control here — the IRS eventually makes you draw it down. (The opposite of the Roth Treasury, where 'hold forever' truly works.)`) : (base.taxCode === 'debt' ? `<strong>Carried, not retired.</strong>On: this debt stays in your net worth and keeps accruing interest as it really would — but your plan won't model actively paying it down with free cash flow. It just rides along in the background. Use it for a balance you intend to carry on its normal schedule rather than attack early.` : `<strong>Held, not spent.</strong>On: this account stays in your net worth and keeps growing — but your plan will never pull from it to cover spending. It strengthens the picture without ever being drawn down. Use it for money you've earmarked for something else — a child's inheritance, a home you'll buy, a fund you've promised yourself stays whole.`)}</div>
+        </div>`;
+        }
+
+        // §21-INPUTS · Taxable-facts sub-form (bank R462–R464) — F-BENEFICIARY / F-ALLOCATION / F-LOTMETHOD,
+        // each with its §21 nudge inline (L48 _diBlankNudge). Plus N-LTCG (missing purchase dates) and the
+        // tlhReviewed dismiss for N-TLH. All OPTIONAL / blank-safe (L47); display/education-only (LOCK-3).
+        if (_isTaxableRoom(base.id)) {
+            var _txs = _diSignals(acc);
+            var _ben = acc.beneficiary || '', _alloc = (acc.targetAllocation != null ? acc.targetAllocation : ''), _lot = acc.lotMethod || '';
+            var _hasNonCash = (_txs.invCount || 0) >= 1;
+            html += `
+        <div style="margin-top:16px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 18px;">
+            <div class="ira-why-toggle" onclick="var n=this.nextElementSibling; var open=n.style.display!=='block'; n.style.display=open?'block':'none'; this.classList.toggle('open', open);" style="color:var(--gold);">Taxable facts (optional) <span class="ira-why-caret">▸</span></div>
+            <div style="display:none; margin-top:12px;">
+                <div style="margin-bottom:12px;">
+                    <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Beneficiary (Transfer-on-Death)<div class="modal-tt" style="top:100%; bottom:auto; left:0; right:auto;"><strong>Beneficiary (Transfer-on-Death)</strong>Name who inherits this account. A brokerage account with a Transfer-on-Death (TOD) beneficiary passes straight to them and SKIPS PROBATE — it overrides your will for this account. One field now can spare your family a court process later.</div></div>
+                        <input type="text" class="small-field" value="${String(_ben).replace(/"/g,'&quot;')}" placeholder="Who inherits this account?" oninput="updateAccField('${id}', 'beneficiary', this.value)"></div>
+                    ${_diBlankNudge(!String(_ben).trim(), 'Name a beneficiary and this account skips probate — one field now saves your family a court later.')}
+                </div>
+                <div style="margin-bottom:12px;">
+                    <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Target mix (% in stocks)<div class="modal-tt" style="top:100%; bottom:auto; left:0; right:auto;"><strong>Target mix</strong>Set the target mix you WANT this account to hold — e.g. 80% stocks / 20% bonds. Once set, we’ll flag when your account drifts from it, so a good plan doesn’t quietly rot. Leave it blank and we won’t nag about drift.</div></div>
+                        <input type="number" class="small-field" min="0" max="100" value="${String(_alloc).replace(/"/g,'&quot;')}" placeholder="e.g. 80" oninput="updateAccField('${id}', 'targetAllocation', this.value)"></div>
+                    ${_diBlankNudge(_hasNonCash && !String(_alloc).trim(), 'Set a target mix and we’ll flag when your account drifts from it — so a good plan doesn’t quietly go stale.')}
+                </div>
+                <div style="margin-bottom:8px;">
+                    <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Cost-basis method<div class="modal-tt" style="top:100%; bottom:auto; left:0; right:auto;"><strong>Cost-basis method</strong>Choose how we count which shares you sell first — FIFO (oldest first), specific-lot (you pick), or average cost. It changes the tax on every sale. Set it once and we’ll show the tax read on your sells; leave it blank and we’ll stay quiet.</div></div>
+                        <select class="small-field" style="background: var(--bg-navy); width:100%;" onchange="updateAccField('${id}', 'lotMethod', this.value)"><option value="" ${!_lot ? 'selected' : ''}>— not set —</option><option value="fifo" ${_lot === 'fifo' ? 'selected' : ''}>FIFO (oldest first)</option><option value="specid" ${_lot === 'specid' ? 'selected' : ''}>Specific-lot (you pick)</option><option value="avgcost" ${_lot === 'avgcost' ? 'selected' : ''}>Average cost</option></select></div>
+                    ${_diBlankNudge(!_lot, 'Pick a cost-basis method — FIFO or specific-lot — and we’ll show how to sell your winners while paying the least tax.')}
+                </div>
+                ${_diBlankNudge(_hasNonCash && _txs.anyMissingAcq, 'Add your purchase dates and we’ll flag which holdings have crossed the 1-year line into lower long-term tax rates.')}
+                ${_txs.anyLoss ? `<div class="toggle-row modal-tt-wrap" style="border-bottom:none; padding-bottom:0; margin-top:12px;"><span class="toggle-label" style="color:var(--muted);">I’ve reviewed tax-loss harvesting for this account</span><label class="switch"><input type="checkbox" ${acc.tlhReviewed ? 'checked' : ''} onchange="updateAccToggle('${id}', 'tlhReviewed', this.checked)"><span class="slider"></span></label><div class="modal-tt"><strong>Stops the reminder</strong>Flip this once you’ve considered harvesting a paper loss — it dismisses the tax-loss-harvesting nudge for this account.</div></div>` : ''}
+            </div>
         </div>`;
         }
 
