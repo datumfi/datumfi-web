@@ -6444,6 +6444,31 @@
         </div>`;
         }
 
+        // §21-INPUTS · 401(k) beneficiary + target-mix sub-form (bank R436/R437) — closes §21 to 6/6.
+        // F-BENEFICIARY + F-ALLOCATION with inline N-BENEFICIARY/N-ALLOCATION nudges (L48 _diBlankNudge).
+        // OPTIONAL / blank-safe (L47); display/education-only (LOCK-3). Excludes rollover (The Conduit = ③).
+        if (/401k/.test(base.id) && !/rollover/.test(base.id)) {
+            var _ks = _diSignals(acc);
+            var _kben = acc.beneficiary || '', _kalloc = (acc.targetAllocation != null ? acc.targetAllocation : '');
+            var _kNonCash = (_ks.invCount || 0) >= 1;
+            html += `
+        <div style="margin-top:16px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 18px;">
+            <div class="ira-why-toggle" onclick="var n=this.nextElementSibling; var open=n.style.display!=='block'; n.style.display=open?'block':'none'; this.classList.toggle('open', open);" style="color:var(--gold);">Beneficiary &amp; target mix (optional) <span class="ira-why-caret">▸</span></div>
+            <div style="display:none; margin-top:12px;">
+                <div style="margin-bottom:12px;">
+                    <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Beneficiary<div class="modal-tt" style="top:100%; bottom:auto; left:0; right:auto;"><strong>Beneficiary</strong>Name the person (or people) who inherit this account. A named beneficiary passes straight to them and SKIPS PROBATE — it overrides your will for this account. One field now can save your family a court process later.</div></div>
+                        <input type="text" class="small-field" value="${String(_kben).replace(/"/g,'&quot;')}" placeholder="Who inherits this account?" oninput="updateAccField('${id}', 'beneficiary', this.value)"></div>
+                    ${_diBlankNudge(!String(_kben).trim(), 'Name a beneficiary and this account skips probate — one field now saves your family a court later.')}
+                </div>
+                <div style="margin-bottom:8px;">
+                    <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Target mix (% in stocks)<div class="modal-tt" style="top:100%; bottom:auto; left:0; right:auto;"><strong>Target mix</strong>Set the target mix you WANT this account to hold — e.g. 80% stocks / 20% bonds. Once set, we’ll tell you when your account has drifted away from it, so a good plan doesn’t quietly rot. Leave it blank and we won’t nag about drift.</div></div>
+                        <input type="number" class="small-field" min="0" max="100" value="${String(_kalloc).replace(/"/g,'&quot;')}" placeholder="e.g. 80" oninput="updateAccField('${id}', 'targetAllocation', this.value)"></div>
+                    ${_diBlankNudge(_kNonCash && !String(_kalloc).trim(), 'Set a target mix and we’ll tell you when your account drifts away from it — so a good plan doesn’t quietly go stale.')}
+                </div>
+            </div>
+        </div>`;
+        }
+
         if (base.taxCode === 'debt') {
              html += `
              <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">

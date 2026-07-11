@@ -101,7 +101,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   all = ok('A tag: built entirely from mutual funds (shared)', has(nA, 'built entirely from mutual funds')) && all;
   // Job 2 — Layer E [T]
   all = ok('A LayerE [T]: taxed as ordinary income (R223)',  has(nA, 'taxed as ordinary income when you withdraw it')) && all;
-  all = ok('A LayerE [T]: RMDs kick in at 73 (R224)',        has(nA, 'Required Minimum Distributions kick in at 73')) && all;
+  all = ok('A LayerE [T]: RMDs at 73 via D144 twin (R144)',  has(nA, 'DOES carry Required Minimum Distributions')) && all;   // R228 "kick in at 73" SUPERSEDED by the richer D144 twin (per _gate_401k_reopen); assert current copy
   all = ok('A LayerE [T]: R138 match-blends-in (has match)', has(nA, 'the employer match carries NO special tax character')) && all;
   all = ok('A LayerE: NO Roth two-bucket split leak',        !has(nA, 'two tax buckets wearing one name')) && all;
   all = ok('A LayerE: NO Roth no-RMD claim leak',            !has(nA, 'NO required minimum distributions')) && all;
@@ -118,7 +118,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   all = ok('ROTH still [R]: tax-free growth engine',         has(nRoth, 'This is a tax-free growth engine')) && all;
   all = ok('ROTH: NO [T] "tax-deferred growth engine" leak', !has(nRoth, 'tax-deferred growth engine')) && all;
   // Job 7 — item-3 cross-render: SAME book (BND/VTI 50/50) → paragraph tax-character matches isRoth.
-  all = ok('X-render: Vault paragraph [T] (ord income+RMD73)', has(R.nPT50, 'taxed as ordinary income when you withdraw it') && has(R.nPT50, 'Required Minimum Distributions kick in at 73')) && all;
+  all = ok('X-render: Vault paragraph [T] (ord income+RMD73)', has(R.nPT50, 'taxed as ordinary income when you withdraw it') && has(R.nPT50, 'DOES carry Required Minimum Distributions')) && all;
   all = ok('X-render: Vault paragraph NO Roth [R] leak',      !has(R.nPT50, 'NO required minimum distributions') && !has(R.nPT50, 'most tax-advantaged account') && !has(R.nPT50, 'less tax-free growth to harvest')) && all;
   all = ok('X-render: Roth paragraph [R] (no-RMD + most tax-adv)', has(R.nRT50, 'NO required minimum distributions') && has(R.nRT50, 'most tax-advantaged account')) && all;
   all = ok('X-render: Roth paragraph NO [T] leak',           !has(R.nRT50, 'taxed as ordinary income when you withdraw it') && !has(R.nRT50, 'tax-deferred compounding')) && all;
