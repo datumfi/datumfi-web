@@ -6792,6 +6792,11 @@
                         <span class="toggle-label" style="color:var(--muted);">This is a standalone balance — count it in my plan</span>
                         <label class="switch"><input type="checkbox" ${acc.standaloneRollover === true ? 'checked' : ''} onchange="updateAccToggle('${id}', 'standaloneRollover', this.checked)"><span class="slider"></span></label>
                     </div>
+                    <div style="margin-top:12px;">
+                        <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Beneficiary<div class="modal-tt" style="top:100%; bottom:auto; left:0; right:auto;"><strong>Beneficiary</strong>Name who inherits this rolled-over money. A named beneficiary passes straight to them and SKIPS PROBATE — it overrides your will for this account. Rollovers are easy to open and then forget; one field now can spare your family a court process later.</div></div>
+                            <input type="text" class="small-field" value="${String(acc.beneficiary || '').replace(/"/g,'&quot;')}" placeholder="Who inherits this rolled-over money?" oninput="updateAccField('${id}', 'beneficiary', this.value)"></div>
+                        ${_diBlankNudge(!(acc.beneficiary && String(acc.beneficiary).trim()), 'Name a beneficiary and this rolled-over money skips probate — one field now saves your family a court later.')}
+                    </div>
                 </div>
                 <div style="margin-top:12px; font-size:11px; color:${_informational ? 'var(--muted)' : 'var(--teal-mid)'}; font-family:var(--font-serif); line-height:1.55;">
                     ${_informational
