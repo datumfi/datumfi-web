@@ -1079,6 +1079,9 @@
   .holdings-rollup .hr-lbl { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); margin-bottom: 4px; }
   .holdings-rollup .hr-val { font-family: var(--font-serif); font-size: 18px; font-style: italic; color: var(--white); line-height: 1.1; }
   .holdings-rollup .hr-sub { font-family: var(--font-sans, sans-serif); font-size: 9px; color: var(--muted); line-height: 1.4; margin-top: 5px; }
+  /* §21 SOURCE-OR-BLANK nudge — an unset field becomes a forward invitation (L47: shown only while unset). */
+  .di-nudge { font-family: var(--font-serif); font-size: 10px; font-style: italic; color: rgba(201,168,76,0.85); line-height: 1.45; margin-top: 6px; padding-left: 14px; text-indent: -14px; }
+  .di-nudge::before { content: "✦ "; color: var(--gold); font-style: normal; }
   /* DATUM INTELLIGENCE — holdings-modal narrative (Sketch telemetry-card parity) */
   .di-narrative { margin-top: 15px; background: rgba(9, 18, 33, 0.85); border: 1px solid rgba(255,255,255,0.1); border-left: 2px solid var(--teal-mid); border-radius: 4px; padding: 14px 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
   .ira-why-panel { margin-top: 4px; margin-bottom: 16px; background: rgba(9,18,33,0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
@@ -4772,6 +4775,14 @@
         '<div class="ira-why-body" style="display:none;">' + body + '</div></div>';
     }
 
+    // §21 SOURCE-OR-BLANK NUDGE — ONE shared render engine for every investment room (L48, mirrors
+    // _diWhyPanel's content-as-param pattern). `show` = the caller's field-unset trigger; `text` =
+    // the VERBATIM per-room bank copy. L47: renders ONLY while the field is unset — the instant the
+    // user sources it, the caller renders the real {token} and this returns '' (invite, never fabricate).
+    function _diBlankNudge(show, text) {
+      return show ? '<div class="di-nudge">' + text + '</div>' : '';
+    }
+
     // §20 "Why a 401(k)?" education panel (bank R404–R413) + §16 article-grounded bullets (R347–R351)
     // folded into ONE panel per Captain ruling. Renders on BOTH branches (Traditional + Roth). The two
     // comparative sections (Trad-vs-Roth R406, RMD side R411) render BOTH [T]/[R] segments verbatim —
@@ -5538,7 +5549,10 @@
                 : 'Your ballast. In a pre-tax account, bonds are a natural fit — their taxable income is sheltered until withdrawal, and their lower returns mean less deferred-gain the IRS eventually taxes. This is often the RIGHT home for bonds (the mirror of the Roth logic).');
         h += _diCell('Cash %', _diP(s.cashPct), 'Cash share',
           _diP(s.cashPct) + ' is in cash.',
-          'Share sitting in cash / money-market / stable value. Handy for stability, but 401(k) cash earns little and gives up the tax-deferred growth that is the whole point of the account. Unlike a taxable sweep, the interest isn’t taxed each year — but the opportunity cost is the same.');
+          'Share sitting in cash / money-market / stable value. Handy for stability, but 401(k) cash earns little and gives up the tax-deferred growth that is the whole point of the account. Unlike a taxable sweep, the interest isn’t taxed each year — but the opportunity cost is the same.', null,
+          _diBlankNudge((s.cashPct || 0) >= 15, isRollover   // §21 N-CASH-IDLE ★ (Conduit R227 / 401k R427)
+            ? 'You rolled this over but it’s still sitting in cash — tell us if that’s on purpose, or let’s get it invested. This is the #1 rollover mistake, and it’s a two-minute fix.'
+            : 'This cash isn’t invested yet — tell us if that’s intentional (an emergency buffer) or we’ll keep nudging you to put it to work.'));
         h += _diCell('International', _diP(s.foreignPct), 'International share',
           _diP(s.foreignPct) + ' of the invested value is international.',
           'Share of holdings outside the U.S. Note a quirk unique to tax-advantaged accounts: the Foreign Tax Credit that rewards foreign holdings in a taxable brokerage is LOST inside a 401(k) — there’s no U.S. tax bill for it to offset. Foreign exposure here is a diversification decision, not a tax one.');
@@ -5553,10 +5567,14 @@
           : _diCell('Annual Contribution', cK > 0 ? _diMoney(cK) + ' / yr' : '—', 'What you’re deferring per year',
           'What you’re putting in per year (your deferral).',
           rothK ? 'Roth dollars are capped by the same IRS limit as pre-tax. Filling this is locking in tax-free growth at today’s tax rate — a bet that your future rate is higher, or that tax-free flexibility is worth it regardless.'
-                : 'Pre-tax dollars lower this year’s taxable income — the deduction is immediate. Filling this is a bet that your retirement tax rate will be LOWER than today’s. It shares one IRS ceiling with any Roth 401(k) deferrals you make.');
+                : 'Pre-tax dollars lower this year’s taxable income — the deduction is immediate. Filling this is a bet that your retirement tax rate will be LOWER than today’s. It shares one IRS ceiling with any Roth 401(k) deferrals you make.', null,
+          _diBlankNudge(cK === 0, 'Tell us what you’ve put in this year and we’ll track it against the IRS limit — including how much room is left.'));   // §21 N-CONTRIB (401k R423; rollover excluded — its contribution is legitimately "—")
         h += _diCell('Unrealized Gain', s.unrealGain === null ? '—' : (s.unrealGain >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(s.unrealGain)).toLocaleString('en-US'),
           'Growth captured so far', 'Your paper profit: what these holdings are worth today minus what you paid for them, added up across every holding where you\'ve entered a purchase price. We leave cash out of this — cash has no gain, so counting it would distort the number. Inside a 401(k) this is informational only: you owe nothing on gains while they stay in the plan, and a Traditional withdrawal is taxed on the full amount as ordinary income regardless of what was gain — no capital-gains math.',
-          _di401kUGLadder(s, rothK), 'hr-gain');
+          _di401kUGLadder(s, rothK), 'hr-gain',
+          _diBlankNudge(s.unrealGain === null && (s.total || 0) > 0, isRollover   // §21 N-COSTBASIS (Conduit R229 / 401k R422)
+            ? 'Add a cost basis and this box comes alive — useful even inside a rollover if any of this becomes employer stock with an NUA angle.'
+            : 'Add a cost basis and this box comes alive — we’ll show your gain/loss and how much is taxable when you sell.'));
         h += _diCell('Weighted Beta', (beta === null || beta === undefined) ? '—' : _diCovVal(s.betaCovPct, beta.toFixed(2)), 'How jumpy this account is vs the market',
           'How sharply this account tends to move with the market, size-weighted across holdings. Above 1.0 = more turbulence than the market; below = steadier. Same meaning in every room — a 401(k)’s long time-horizon and tax shelter often justify carrying a higher beta here than you’d want in money you may need sooner.',
           _di401kBetaLadder(beta, s.betaCovPct, rothK), 'hr-beta', (beta !== null && beta !== undefined) ? _diCovSub(s.betaCovPct, 'beta') : '');
@@ -6629,6 +6647,7 @@
                 html += `
             <div style="margin-top:20px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px;">
                 <div class="input-label" style="color:var(--gold); margin-bottom:10px;">EMPLOYER MATCH</div>
+                ${_diBlankNudge(!mr, 'Add your employer’s match and we’ll show whether you’re capturing every free dollar — the single highest-return move in this account.')}
                 <div class="field-row" style="margin-bottom:10px;">
                     <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Match Rate (%)</div><input type="number" class="small-field" value="${mr}" oninput="updateAccField('${id}', 'matchRate', this.value)"><div class="modal-tt"><strong>Match Rate (%)</strong>How much your employer adds for every dollar you put in — e.g., "50%" means they chip in 50¢ per $1 you contribute. This is free money; capturing all of it is the highest-guaranteed-return move in your whole plan.</div></div>
                     <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Match Up-To (% of salary)</div><input type="number" class="small-field" value="${mu}" oninput="updateAccField('${id}', 'matchUpTo', this.value)"><div class="modal-tt" style="left:auto; right:0;"><strong>Match Up-To (% of salary)</strong>The ceiling on the match — your employer matches your contributions only up to this share of your pay (e.g., "up to 6% of salary"). Contribute at least this much to grab the full match; going under leaves guaranteed money behind.</div></div>
@@ -6698,6 +6717,8 @@
                         ? ('<strong>Counted once.</strong> To keep your net worth honest, this rollover is treated as <strong>already counted in ' + (_linkedName ? _linkedName : 'your destination retirement plan') + '</strong> — its balance sits here for reference while the destination holds the dollars. Rolled into a specific account? Pick it above. A separate balance no other account holds? Flip “standalone” on and it counts on its own.')
                         : '<strong>Standalone — counts on its own.</strong> You’ve marked this as a separate balance no other account holds, so its full value counts in your plan. If it actually lives inside another account you already track, turn this off so it isn’t double-counted.'}
                 </div>
+                ${_diBlankNudge(!_link, 'Rolled this into another one of your accounts? Link it here so we count the dollars once, in the right place — no double-counting your net worth.')}
+                ${_diBlankNudge(!_r55, 'Is this your CURRENT employer’s plan? If so and you’re 55+, you may be able to tap it penalty-free years early — tell us and we’ll open that window in your projection.')}
             </div>`;
             }
         }
@@ -7135,6 +7156,7 @@
                         'This money came out of an old ' + _esc(_src) + ' and into your CURRENT employer’s 401(k) — you kept it inside the 401(k) world instead of moving it to an IRA. ' +
                         'Done as a direct rollover, this moved tax-free — nothing withheld, no 60-day clock. ' +
                         'Landing in an employer plan (not an IRA) is what preserves your ERISA shield, loan access, and Rule-of-55 window.' +
+                        _diBlankNudge(!(acc.priorPlan && String(acc.priorPlan).trim()), 'Tell us where this rolled from — an old 401(k), 403(b), 457(b), or TSP — and we’ll tailor the origin story and the perks you carried over.') +   // §21 N-PRIORPLAN (R228)
                         '</div>';
                 }
                 // W4a — DI box on TOP (above the rollup), anchored to the rollup build, not a line number.

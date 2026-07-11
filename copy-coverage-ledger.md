@@ -756,3 +756,30 @@ Baseline HEAD `ce9c112` (A2 foundation). One held commit. Bank = `Rollover 401(k
 - **§21 NUDGES (R224–R235)** — ⬜ DEFERRED (separate wave, Captain: do NOT wire into A3; reuses a future `_diBlankNudge` helper, N-CASH-IDLE ★ leads).
 
 **Verdict:** ZERO unexplained ⛔. Every renderable authored line is ✅ WIRED, ⬜ deliberate (§15 superseded, §21 deferred, TG-CONVERT-WATCH no-signal), or a flagged judgment call with content reachable elsewhere. Three items surfaced for a Captain call (all beyond A3's modal-wiring surface, none silently actioned): **(1) §0.6 R160 picker CTA copy** (not surfaced), **(2) §7.5 L-TAXTAIL** destination-side balance-split stamping (partial — tax character preserved, sub-line stamping not built), **(3) discrete §2 chips / §5 loan+convert toggles** (content woven/always-on instead). Persistence known-gap tracked → rides D1+KV backend.
+
+---
+
+## ✨ §21 SOURCE-OR-BLANK NUDGES — wave 1 (The Conduit + the 401(k) room) (2026-07-10, Captain GO) — held-not-committed
+Wire-only wave (Architect authored §21 into all 22 investment banks; copy ready). ONE reusable engine `_diBlankNudge(show, text)` (L48 — mirrors `_diWhyPanel`'s content-as-param pattern; `show` = the caller's field-unset trigger, `text` = verbatim per-bank copy) + a `.di-nudge` style. **L47 intact:** a nudge renders ONLY while its field is unset; the instant the user sources it, the caller renders the real `{token}` and the nudge returns `''`. Gate `_gate_blanknudge.js` **16/16** (red-first 5/16 on `e08d287` — every "shows" + shared-engine check flips; L47 vanish proven present→absent). Full 36-gate regression: 34 green; the 2 reds are the SAME pre-existing `401k_vault`/`stepA_headers` (not this wave).
+
+### The Conduit (Rollover 401(k) Copy Bank R227–R232) — 5/6 wired, 1 deferred
+- **N-CASH-IDLE ★ (R227)** ✅ — Cash % strip box, fires at cashPct ≥ 15% ("You rolled this over but it's still sitting in cash…").
+- **N-COSTBASIS (R229)** ✅ — Unrealized-Gain strip box when `unrealGain === null` & value > 0 ("…employer stock with an NUA angle").
+- **N-PRIORPLAN (R228)** ✅ — appended INSIDE the §3a origin gate when `priorPlan` unset ("Tell us where this rolled from…").
+- **N-LINK (R230)** ✅ — §7C card footer (always-visible) when `linkedToAccount` unset ("Link it here so we count the dollars once…"). Complements the §7.5 count-once flag.
+- **N-RULE55 (R231)** ✅ — §7C card footer when `rule55Eligible` unset ("…tap it penalty-free years early").
+- **⬜ N-BENEFICIARY (R232)** — DEFERRED: no beneficiary input field exists in the modal (L47 — no surface, not fabricated). Flag for a Captain call if a beneficiary field is ever added.
+
+### The 401(k) room — Vault + Treasury (401(k) Copy Bank R422–R427) — 4/6 wired, 2 deferred
+- **N-CASH-IDLE (R427)** ✅ — Cash % box ("This cash isn't invested yet…").
+- **N-COSTBASIS (R422)** ✅ — Unrealized-Gain box ("…how much is taxable when you sell").
+- **N-CONTRIB (R423)** ✅ — Annual-Contribution box when `inflow === 0` (non-rollover only; a rollover's contribution is legitimately "—") ("…track it against the IRS limit…").
+- **N-MATCH (R424)** ✅ — EMPLOYER-MATCH card when `matchRate` unset ("…capturing every free dollar…").
+- **⬜ N-BENEFICIARY (R425) / ⬜ N-ALLOCATION (R426)** — DEFERRED: no beneficiary / no target-allocation input fields exist (L47 — no surface). Flag for a Captain call.
+
+**Placement note (judgment, flagged):** nudges render at the strip box that shows the blank (Cash %, Unrealized Gain, Annual Contribution) or at the field's card (§3a, §7C footer, match card) — the doctrine's "in place of the bare '—'." Deferred nudges are the ones whose input field doesn't exist yet (beneficiary / target-allocation) — surfacing them would need new inputs (authoring + persistence), out of a wire-only wave.
+
+### 🏁 VERDICT FLIPS
+- **🏁 THE CONDUIT (Rollover 401(k)) = 100% COMPLETE** — A3 transit identity (all authored renderable lines ✅/⬜-deliberate) + §21 nudges (5/6, N-BENEFICIARY deferred no-field). L50-audited, zero unexplained ⛔. **HELD for push.**
+- **🏁 THE 401(k) ROOM (Vault + Treasury) = 100% COMPLETE** — the prior "COMPLETE pending smoke" (§19/§20/§16/§12/§9/§8) + §21 nudges (4/6, N-BENEFICIARY/N-ALLOCATION deferred no-field). **HELD for push.**
+- Remaining 20 investment banks' §21 copy is authored + PARKED — wire each room's nudge when that room is built (same `_diBlankNudge` engine, no re-authoring).
