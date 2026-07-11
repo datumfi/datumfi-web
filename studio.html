@@ -5519,7 +5519,8 @@
           'Share in bonds / fixed income. Bonds are the least tax-efficient asset in a taxable account, which is exactly why holding them inside a 457(b) shelter is efficient.');   // §19 R255 nuance enrich (both branches)
         h += _diCell('Cash %', _diP(s.cashPct), 'Cash share',
           _diP(s.cashPct) + ' is in cash.',
-          'Share sitting in cash / money-market / stable value. Useful for stability, but too much is a long-term drag on a retirement-purpose account.');   // §19 R256 enrich (both branches)
+          'Share sitting in cash / money-market / stable value. Useful for stability, but too much is a long-term drag on a retirement-purpose account.', null,
+          _diBlankNudge((s.cashPct || 0) >= 15, 'This cash isn’t invested yet — tell us if that’s intentional (a buffer) or we’ll nudge you to put it to work.'));   // §19 R256 enrich + §21 N-CASH-IDLE (R275)
         h += _diCell('International', _diP(s.foreignPct), 'International share',
           _diP(s.foreignPct) + ' of the invested value is international.',
           'Share of holdings outside the U.S. Note the quirk of tax-advantaged accounts: the foreign-tax credit is LOST on international funds held inside a shelter — you can’t claim what you never paid tax on.');   // §19 R257 WINNER (FTC-lost), verbatim (both branches)
@@ -5532,12 +5533,14 @@
         h += _diCell('Annual Contribution', c457 > 0 ? _diMoney(c457) + ' / yr' : '—', 'What you’re deferring per year',
           'What you’re deferring per year.',
           "Capped HIGH — the 457(b) deferral limit is one of the largest available. Here's the part most people miss: this ceiling is its OWN. If you also fund a 401(k) or 403(b), the 457(b) sits on top — you can fill both in the same year, roughly $49k combined pre-tax. " +
-          (b457Roth ? 'Roth deferrals lock in tax-free growth.' : "Pre-tax deferrals lower this year's taxable income now."));
+          (b457Roth ? 'Roth deferrals lock in tax-free growth.' : "Pre-tax deferrals lower this year's taxable income now."), null,
+          _diBlankNudge(c457 === 0, 'Tell us what you’ve deferred this year and we’ll track it against the 457(b) limit — plus the special catch-up if you’re near retirement.'));   // §21 N-CONTRIB (R273)
         h += _diCell('Unrealized Gain', s.unrealGain === null ? '—' : (s.unrealGain >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(s.unrealGain)).toLocaleString('en-US'),
           'Σ(value − cost basis) where basis exists',
           'Σ(value − cost basis) where basis exists — cash-sweep rows never enter the Σ.',
           b457Roth ? 'In the Annex all of this growth is yours tax-free — the right home for your highest-growth bets.'
-                   : 'In the Workshop this growth will be taxed as ordinary income on the way out — the bigger it grows, the bigger the future bill.');
+                   : 'In the Workshop this growth will be taxed as ordinary income on the way out — the bigger it grows, the bigger the future bill.', null,
+          _diBlankNudge(s.unrealGain === null && (s.total || 0) > 0, 'Add a cost basis and this box comes alive — we’ll show your gain/loss and what’s taxable when you sell.'));   // §21 N-COSTBASIS (R272)
         // W7 parity — always render (— when no beta) so the 457(b) rollup keeps the full 11 fields.
         h += _diCell('Weighted Beta', (beta === null || beta === undefined) ? '—' : _diCovVal(s.betaCovPct, beta.toFixed(2)), 'Value-weighted market sensitivity',
             'Value-weighted market sensitivity (holdings with a beta).',
@@ -6501,6 +6504,32 @@
                     <div class="toggle-row modal-tt-wrap" style="border-bottom:none; padding-bottom:0;"><span class="toggle-label" style="color:var(--muted);">Covered by a workplace plan this year</span><label class="switch"><input type="checkbox" ${_icov ? 'checked' : ''} onchange="updateAccToggle('${id}', 'coveredByWorkPlan', this.checked)"><span class="slider"></span></label><div class="modal-tt"><strong>Covered by a workplace plan</strong>Are you covered by a workplace retirement plan (401(k)/403(b)/457) this year? We use this to show whether your Traditional contribution is tax-deductible — full, partial, or none.</div></div>
                     ${_diBlankNudge(!_icov, 'Tell us if you’re covered by a workplace plan and we’ll show whether this Traditional contribution is tax-deductible this year.')}
                 </div>`}
+            </div>
+        </div>`;
+        }
+
+        // §21-INPUTS · 457(b) beneficiary + target-mix sub-form (bank R285/R286). F-BENEFICIARY + F-ALLOCATION
+        // with inline N-BENEFICIARY (R277) / N-ALLOCATION (R276) nudges (L48 _diBlankNudge — no fork). OPTIONAL /
+        // blank-safe (L47); display/education-only (LOCK-3). No N-DEDUCT/F-COVERED (457 deductibility N/A); the
+        // 6th bank nudge N-GOVVSNONGOV is input-blocked (no planFlavor input authored) — FLAGGED, not wired.
+        if (/457b/.test(base.id)) {
+            var _7s = _diSignals(acc);
+            var _7ben = acc.beneficiary || '', _7alloc = (acc.targetAllocation != null ? acc.targetAllocation : '');
+            var _7NonCash = (_7s.invCount || 0) >= 1;
+            html += `
+        <div style="margin-top:16px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 18px;">
+            <div class="ira-why-toggle" onclick="var n=this.nextElementSibling; var open=n.style.display!=='block'; n.style.display=open?'block':'none'; this.classList.toggle('open', open);" style="color:var(--gold);">Beneficiary &amp; target mix (optional) <span class="ira-why-caret">▸</span></div>
+            <div style="display:none; margin-top:12px;">
+                <div style="margin-bottom:12px;">
+                    <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Beneficiary<div class="modal-tt" style="top:100%; bottom:auto; left:0; right:auto;"><strong>Beneficiary</strong>Name who inherits this account. A named beneficiary passes straight to them and SKIPS PROBATE — it overrides your will for this account. One field now can spare your family a court process later.</div></div>
+                        <input type="text" class="small-field" value="${String(_7ben).replace(/"/g,'&quot;')}" placeholder="Who inherits this account?" oninput="updateAccField('${id}', 'beneficiary', this.value)"></div>
+                    ${_diBlankNudge(!String(_7ben).trim(), 'Name a beneficiary and this account skips probate — one field now saves your family a court later.')}
+                </div>
+                <div style="margin-bottom:8px;">
+                    <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Target mix (% in stocks)<div class="modal-tt" style="top:100%; bottom:auto; left:0; right:auto;"><strong>Target mix</strong>Set the target mix you WANT this account to hold — e.g. 80% stocks / 20% bonds. Once set, we’ll flag when your account drifts from it, so a good plan doesn’t quietly rot. Leave it blank and we won’t nag about drift.</div></div>
+                        <input type="number" class="small-field" min="0" max="100" value="${String(_7alloc).replace(/"/g,'&quot;')}" placeholder="e.g. 80" oninput="updateAccField('${id}', 'targetAllocation', this.value)"></div>
+                    ${_diBlankNudge(_7NonCash && !String(_7alloc).trim(), 'Set a target mix and we’ll flag when your account drifts from it — so a good plan doesn’t quietly go stale.')}
+                </div>
             </div>
         </div>`;
         }
