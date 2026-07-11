@@ -5412,7 +5412,12 @@
         'Unrealized Gain': 'Shows "—" in an HSA. Per-lot gain drives lot-selection tax decisions in a taxable account; inside the HSA rebalancing is a tax non-event, so per-lot embedded gain never renders.',
         'Acquisition Date': 'Shows "—" in an HSA. The short-vs-long-term clock only matters where capital-gains rates apply. The HSA has no holding-period tax event, so acquisition date is not tracked per lot.'
       };
-      var m = /401k/.test(baseId) ? k401 : /hsa/.test(baseId) ? kHsa : shelter;
+      var kRoll = {   // §RP R190–R192 — Rollover 401(k) "The Conduit" (verbatim); before /401k/ (rollover matches /401k/)
+        'Cost Basis': 'Shows "—" in a Rollover 401(k). Cost basis is what you paid for a lot, and its only job is to size a capital-gains tax — but a Rollover 401(k) has no capital-gains tax to size. Pre-tax dollars are taxed as ordinary income on the FULL amount at withdrawal; any Roth side comes out tax-free. The IRS never asks what you paid, so there is no basis to track.',
+        'Unrealized Gain': 'Shows "—" in a Rollover 401(k). Per-lot embedded gain matters in a brokerage because selling triggers a tax bill sized by that gain. Inside a Rollover 401(k), buying and selling to rebalance is a tax non-event — no wash-sale trap, no gains bill — so there is no per-lot gain to surface.',
+        'Acquisition Date': 'Shows "—" in a Rollover 401(k). Acquisition date sets the short-vs-long-term clock that changes your tax rate in a taxable account. That clock does not run inside a Rollover 401(k): the holding period has no bearing on how withdrawals are taxed, so the date carries no tax meaning here.'
+      };
+      var m = /rollover/.test(baseId) ? kRoll : /401k/.test(baseId) ? k401 : /hsa/.test(baseId) ? kHsa : shelter;
       var out = {};
       ['Cost Basis', 'Unrealized Gain', 'Acquisition Date'].forEach(function (k) { out[k] = { t: k, b: m[k] }; });
       return out;
@@ -5519,6 +5524,7 @@
         // factual signals). The 4 auto-boxes' DEEP-DIVE why-hovers are the §12 metric-ladders (a
         // later pass) — here they carry the neutral "what it measures" read.
         var rothK = base.taxCode === 'roth';
+        var isRollover = /rollover/.test(base.id);   // §RP deltas — The Conduit re-voices Balance (consolidation lens) + Annual Contribution ("—")
         var cK = (acc.inflow || 0) * (acc.freq || 0);
         var uK = (s.unclassedPct || 0) >= 1 ? '<div class="hr-sub">' + _diP(s.unclassedPct) + ' of value unclassified — set Asset Class in the table below</div>' : '';
         h += _diAccountValueCell(s);
@@ -5538,9 +5544,13 @@
           'Share of holdings outside the U.S. Note a quirk unique to tax-advantaged accounts: the Foreign Tax Credit that rewards foreign holdings in a taxable brokerage is LOST inside a 401(k) — there’s no U.S. tax bill for it to offset. Foreign exposure here is a diversification decision, not a tax one.');
         h += _diCell('Balance', _diMoney(acc.value), 'Current balance in the account',
           'Current balance in the account.',
-          rothK ? 'This is tax-FREE money in waiting. Every dollar here is worth more than a dollar in a pre-tax account because you’ll never owe tax on it again — at withdrawal it’s yours, clean. And unlike a taxable account, this sits behind the 59½ gate — reaching it early generally means a 10% penalty plus tax, so this balance is future retirement income, not liquid cash.'
+          isRollover ? 'Current balance — money rolled in from a PRIOR employer’s plan. It keeps its pre-tax (or Roth) character and all the usual retirement gates. The whole point of this room: consolidate old 401(k)s so you can actually see and manage what was scattered across former jobs.'
+                : rothK ? 'This is tax-FREE money in waiting. Every dollar here is worth more than a dollar in a pre-tax account because you’ll never owe tax on it again — at withdrawal it’s yours, clean. And unlike a taxable account, this sits behind the 59½ gate — reaching it early generally means a 10% penalty plus tax, so this balance is future retirement income, not liquid cash.'
                 : 'This is PRE-TAX money — every dollar here still owes income tax when it comes out. A dollar in your pre-tax 401(k) is worth less after-tax than a dollar in a Roth, but you already banked the tax break when you put it in. Think of the balance as gross, not spendable. And unlike a taxable account, this sits behind the 59½ gate — reaching it early generally means a 10% penalty plus tax, so this balance is future retirement income, not liquid cash.');
-        h += _diCell('Annual Contribution', cK > 0 ? _diMoney(cK) + ' / yr' : '—', 'What you’re deferring per year',
+        h += isRollover
+          ? _diCell('Annual Contribution', cK > 0 ? _diMoney(cK) + ' / yr' : '—', 'Typically none for a rollover',
+              'Typically “—” for a pure rollover account: you’re generally NOT making new payroll deferrals here — it holds money moved from a previous plan. If your provider allows new contributions, it shows; otherwise this reads “—” with this explanation, not a defect.')
+          : _diCell('Annual Contribution', cK > 0 ? _diMoney(cK) + ' / yr' : '—', 'What you’re deferring per year',
           'What you’re putting in per year (your deferral).',
           rothK ? 'Roth dollars are capped by the same IRS limit as pre-tax. Filling this is locking in tax-free growth at today’s tax rate — a bet that your future rate is higher, or that tax-free flexibility is worth it regardless.'
                 : 'Pre-tax dollars lower this year’s taxable income — the deduction is immediate. Filling this is a bet that your retirement tax rate will be LOWER than today’s. It shares one IRS ceiling with any Roth 401(k) deferrals you make.');
@@ -6035,11 +6045,89 @@
       return out.join(' ');
     }
 
+    // ══ THE CONDUIT — Rollover 401(k) A3 (bank §3a/§3b/§9/§16/§7C/§7.5/§RP) ═══════════════════
+    // Reuse-don't-fork (L48): the mechanical signal reads (tilts, composition, behavior, fee-drag)
+    // come straight from the _di401k* helpers; only the ROLLOVER-specific layers are re-voiced —
+    // Layer A origin spine, Layer C idle-cash lead (the signature rollover trap), Layer D
+    // portability/employer-perks (the Conduit's whole differentiator), Layer E rollFlavor tax fork
+    // (pretax default; Roth tail ONLY if the source was a designated Roth), Layer G close.
+
+    // §7.5 COUNT-ONCE GUARD (bank R90–R95 · Captain Fork A/B). A Rollover 401(k) room defaults
+    // INFORMATIONAL — its dollars are assumed already counted inside a destination plan (the common
+    // case + Daniel's real ~$108k inside his Milliman pre-tax). The standalone opt-in
+    // (acc.standaloneRollover) is IN-SESSION only (persistence deferred to the D1+KV backend), so a
+    // page reload reverts to this safe default and a linked pair can NEVER sum to more than one
+    // balance. Exposed on window so the count-once gate exercises it (the bank invites this).
+    function _conduitIsInformational(a) {
+      return /rollover/.test(String((a && a.baseId) || '')) && !(a && a.standaloneRollover === true);
+    }
+    if (typeof window !== 'undefined') window._conduitIsInformational = _conduitIsInformational;
+
+    // Layer A — origin spine (bank R99): reads the invested mix, re-voiced as carried-in money.
+    function _diConduitSpine(s, x) {
+      var eq = (x && x.eqT) || 0, cash = (s && s.cashPct) || 0, bd = (x && x.bdT) || 0;
+      var shape = cash >= 60 ? 'still parked in cash'
+                : eq >= 70 ? 'mostly in stocks'
+                : bd >= 40 ? 'conservatively positioned'
+                : 'a balanced mix';
+      return 'This Rollover 401(k) is ' + shape + ' — retirement money you carried from an old employer’s plan into your current one.';
+    }
+    // Layer C lead — the idle-cash trap (bank R18 / R102 / D4). Fires at the S-CASH-DRAG threshold.
+    function _diConduitCashLead(s) {
+      if (s.cashPct === null || s.cashPct === undefined || s.cashPct < 15) return null;
+      return 'About ' + _diP(s.cashPct) + ' is still sitting in cash from the roll — the classic “rolled it over but never reinvested” trap, the single most common rollover mistake. If that isn’t deliberate, putting it to work is the highest-value move here.';
+    }
+    // Layer D — portability / employer-perks (bank R103). Structurally true for every Conduit.
+    function _diConduitPortability(acc) {
+      return 'You kept this money tax-deferred AND inside an employer plan — so your ERISA creditor shield, the option to borrow against it, and the Rule-of-55 early-access window all came with it. Rolling to an IRA would have traded every one of those away.';
+    }
+    // Layer E — tax character, forks on rollFlavor (bank R104). Pretax default; Roth tail only when
+    // the source was a designated Roth account (acc.rollFlavor === 'roth').
+    function _diConduitTax(isRoth) {
+      return isRoth
+        ? 'As designated-Roth rollover money, the qualified tail comes out tax-free — already-taxed dollars whose growth you’ll never owe tax on again.'
+        : 'As pretax rollover money it grows tax-deferred, with ordinary income tax due on withdrawal and RMDs later — it keeps the exact tax character it had in the old plan.';
+    }
+    // Layer G — verdict / close (bank R106).
+    function _diConduitClose() {
+      return 'Net-net: retirement money you rescued from an old plan and kept in the 401(k) world — deferral intact, protections and access wider than an IRA would have left you. Just make sure it’s invested, not idling.';
+    }
+    function _diNarrConduit(acc, s, agg) {
+      if (!s.total || !(acc.holdings || []).length) return _DI_EMPTY_STATE;
+      var x = _di401kArchSignals(acc, s);
+      var roth = (acc.rollFlavor === 'roth');   // Layer E forks on rollFlavor, NOT taxCode (room is pretax)
+      var out = [];
+      out.push(_diConduitSpine(s, x));                                        // Layer A
+      _di401kTilts(acc, s, x, false).forEach(function (t) { out.push(t); });  // Layer B (reuse)
+      var b2 = _di401kCompRead(acc, s, false); if (b2) out.push(b2);          // Layer B2 (reuse)
+      var idle = _diConduitCashLead(s); if (idle) out.push(idle);            // Layer C lead
+      _di401kBehavior(acc, s, agg, false).forEach(function (t) { out.push(t); }); // Layer C beta/bond (reuse)
+      var d = _di401kMenuFees(agg, s, false); if (d) out.push(d);             // fees (reuse)
+      out.push(_diConduitPortability(acc));                                  // Layer D
+      out.push(_diConduitTax(roth));                                         // Layer E
+      out.push(_diConduitClose());                                           // Layer G
+      return out.join(' ');
+    }
+    // §16 "Why a Rollover 401(k)?" education panel (bank R199–R207) on the shared _diWhyPanel engine (L48).
+    function _diConduitWhyPanel(acc, base) {
+      return _diWhyPanel('Why you have a Rollover 401(k) — and how to not lose anything in the move', [
+        ['The one-line answer', 'You have a Rollover 401(k) because you left an employer and moved that old plan’s money into an account you control — without cashing it out. It keeps its retirement tax status; it just no longer lives at a former job.'],
+        ['The whole point — consolidation', 'Old 401(k)s scattered across former jobs are easy to lose track of, and each carries its own fees and fund menu. Rolling them into one place lets you actually see the total, control the investment menu, and manage one balance instead of chasing several. That visibility is the main reason this room exists.'],
+        ['Tax status is preserved', 'A direct rollover is not a taxable event. Pre-tax dollars stay pre-tax (taxed as ordinary income at withdrawal); any Roth dollars stay Roth (tax-free when qualified). The retirement clock and character carry over — you did not “cash out,” so no penalty and no tax are triggered by the move itself.'],
+        ['Your 4 choices when you left (why THIS one)', 'When you leave a job you can (1) leave the money in the old plan, (2) roll it to your NEW employer’s plan, (3) roll it to an IRA or a Rollover 401(k) like this one, or (4) cash out (usually the worst — taxes plus a 10% penalty before 59½). This account is choice 3: you kept the tax shelter and gained control of the menu.'],
+        ['The Rule-of-55 trap (the big one)', 'The Rule of 55 lets you tap the plan at your MOST RECENT employer penalty-free if you leave in or after the year you turn 55. Money rolled OUT of that plan into this rollover account generally LOSES that early access — it reverts to the age-59½ gate. If early retirement is even possible, weigh leaving money in the last employer’s plan before rolling it here.', true],
+        ['Direct vs indirect rollover', 'A DIRECT rollover (plan-to-plan, you never touch the check) is clean — nothing withheld, nothing owed. An INDIRECT rollover (the check comes to you) triggers a mandatory 20% withholding and a 60-day deadline to redeposit the FULL amount, or the shortfall is taxed and penalized. Always prefer direct.'],
+        ['Don’t commingle if you might go backdoor', 'Keeping former-employer money in a Rollover 401(k) (rather than a Traditional IRA) keeps your IRA balances clean — which matters if you ever do a Backdoor Roth. Pre-tax dollars sitting in a Traditional IRA trigger the pro-rata rule and tax part of the conversion; the same dollars parked in a 401(k) do not. It is a real reason to choose a 401(k) rollover over an IRA rollover.'],
+        ['Bottom line', 'You didn’t open this to invest new paychecks — you opened it to rescue and consolidate an old plan without losing its tax shelter. Make the transfer DIRECT, watch the Rule-of-55 forfeiture if early retirement is on the table, and remember it usually holds rolled-in money, not fresh contributions.'],
+      ]);
+    }
+
     function _diNarrBlock(acc, base, s, agg) {
       var body = base.taxCode === 'hsa' ? _diNarrHSA(acc, s, agg)
                : base.id === '529plan' ? _diNarr529(acc, s, agg)
                : /ira/.test(base.id) ? _diNarrIRA(acc, s, agg, /^rothira/.test(base.id))
                : /457b/.test(base.id) ? _diNarr457(acc, s, agg, /^roth457b/.test(base.id))
+               : /rollover/.test(base.id) ? _diNarrConduit(acc, s, agg)   // The Conduit — before /401k/ (rollover matches /401k/ too)
                : /401k/.test(base.id) ? _diNarr401k(acc, s, agg, /^roth401k/.test(base.id))
                : _isTaxableRoom(base.id) ? _diNarrTaxable(acc, s, agg)
                : _diNarr403(acc, s, agg, /roth403/.test(base.id));
@@ -6160,6 +6248,16 @@
              '<strong>What it is</strong>An IRA you open yourself, often funded with pre-tax dollars. Like the Roth, you control the full investment menu — the difference is purely WHEN the tax is paid.<br><br>' +
              '<strong>Why it matters</strong>Contributions may be deductible TODAY, lowering this year’s taxable income — but only if your income is under the phaseout when you’re covered by a workplace plan. The growth is tax-deferred until you pull it.<br><br>' +
              '<strong>The catch</strong>Every dollar — contributions and growth — is taxed as ordinary income on withdrawal, and RMDs begin at 73. It’s a tax bill deferred, not erased.';
+      } else if (/rollover/.test(base.id)) {
+        // §2 title hover — The Conduit. Bank R27 (H-TITLE) identity + the R28–R33 chip-hover facts
+        // (H-ERISA/H-LOANS/H-RULE55/H-DIRECT-INDIRECT/H-RMD/H-CONVERT) woven VERBATIM into What/Why/
+        // Catch — no discrete chips exist, so this makes every H-* line triggerable on the title. Must
+        // precede the /401k/ branch (rollover401k matches /401k/) or the Conduit mis-reads as The Vault.
+        tt = '<strong>The Conduit — a Rollover 401(k)</strong>' +
+             'Retirement money you carried from one employer plan to the next.<br><br>' +
+             '<strong>What it is</strong>A Rollover 401(k) is an EMPLOYER plan that received money you moved out of an OLD employer’s plan — you carried your retirement dollars from one job’s 401(k) into your NEW job’s 401(k), rather than into an IRA. Tax-deferral is preserved, and because the destination is still an employer plan, you KEEP the 401(k)-only perks: ironclad creditor protection, the option to borrow, and Rule-of-55 access.<br><br>' +
+             '<strong>Why it matters — the perks you kept</strong>Money in an employer 401(k) — including rolled-in dollars — gets IRONCLAD federal ERISA creditor protection: it’s shielded from lawsuits and bankruptcy no matter your state. This is STRONGER than an IRA, whose protection depends on state law. Because it’s an employer plan you may also be able to BORROW against it (typically up to 50% / $50k) and pay yourself back — an option an IRA does NOT offer. And Rule of 55: if you leave THIS employer in or after the year you turn 55, you can tap this 401(k) penalty-free — four-plus years before the usual 59½. Rolling into an IRA would have FORFEITED all three.<br><br>' +
+             '<strong>The catch</strong>Always ask for a DIRECT (trustee-to-trustee) rollover: the money moves straight from the old plan to the new one, nothing withheld, no tax. An INDIRECT rollover (a check to you) triggers 20% mandatory withholding and a 60-day clock. Pretax rollover money still follows the same RMD rules as any pretax 401(k) — once you reach the RMD age you must start drawing (and paying ordinary income tax). Some plans allow in-plan Roth conversions of rolled-in pretax money — pay ordinary income tax now for tax-free growth later, optional and plan-dependent.';
       } else if (/401k/.test(base.id)) {
         // §2 401(k) title hover — bank R33–R36 [R] "The Treasury" / R303–R306 [T] "The Vault" (verbatim)
         tt = base.taxCode === 'roth'
@@ -6225,6 +6323,7 @@
         if (/ira/.test(base.id)) html += _diIraWhyPanel(acc, base);    // §15 "Why an IRA?" (IRA-only)
         if (/457b/.test(base.id)) html += _di457WhyPanel(acc, base);   // §15 "Why a 457(b)?" (both branches)
         if (/401k/.test(base.id) && !/rollover/.test(base.id)) html += _di401kWhyPanel(acc, base);  // §20 "Why a 401(k)?" + §16 bullets (both branches; NOT The Conduit — it gets the §16 rollover panel)
+        if (/rollover/.test(base.id)) html += _diConduitWhyPanel(acc, base);   // §16 "Why a Rollover 401(k)?" (The Conduit; §15 SUPERSEDED — not wired)
 
         // SURGICAL: Physics Toggles with explicit mathematical tooltips
         html += `
@@ -6334,6 +6433,7 @@
             let is401k = /401k|403|457b/.test(base.id);
             let is403 = base.id.includes('403');
             let is457 = base.id.includes('457b');       // 457(b)-only: special final-3-year catch-up (2× base)
+            let isRollover = /rollover/.test(base.id);   // The Conduit — §3b portability modal REPLACES the flat contribution ceiling (bank R40); §7C/§7.5 append below
             let hasRule55 = /401k|403/.test(base.id);   // Rule-of-55 axis: 401(k)/403(b) only — the 457(b) never carries the penalty
             let isIRA = /ira/.test(base.id);            // IRA bank §3/§4: no Rule-of-55, no super tier; IRA-aware hovers + notes
             let ownerPrefix = base.type === 'coarch' ? 'co' : 'pri';
@@ -6402,6 +6502,22 @@
                     : `Withdrawals before 59.5 face a 10% penalty plus ordinary income tax (exceptions apply). After 59.5 it’s just ordinary income tax — and RMDs force withdrawals starting at 73.`}</div>` : ``}
             </div>`;
 
+          if (isRollover) {
+            // §3b PORTABILITY & PRESERVATION MODAL (bank R42–R47) — REPLACES the flat contribution
+            // ceiling: a rollover is uncapped, so we frame it as preserved capital + employer-perks.
+            html += `
+            <div style="margin-top:20px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px;">
+                <div class="input-label" style="color:var(--gold); margin-bottom:10px;">PORTABILITY &amp; PRESERVATION</div>
+                <div style="font-size:11px; color:var(--muted); font-family:var(--font-serif); line-height:1.55;">
+                    <p style="margin:0 0 10px;"><strong style="color:var(--white);">How it's funded.</strong> A Rollover 401(k) balance is funded by a TRANSFER of existing retirement money from an old plan — not by fresh annual contributions. Your NEW payroll deferrals build the regular 401(k) buckets alongside it.</p>
+                    <p style="margin:0 0 10px;"><strong style="color:var(--white);">Tax on the rollover.</strong> The rollover itself is tax-free when done as a direct transfer. No contribution limit caps how much you can roll in — the annual 401(k) deferral limit applies only to NEW payroll contributions, not to rolled-over dollars.</p>
+                    <p style="margin:0 0 10px;"><strong style="color:var(--white);">The 60-day / indirect trap.</strong> If the money ever touches your hands (an indirect rollover), the clock is 60 days and 20% is withheld — miss the window and it becomes a taxable distribution (+10% if under 59½).</p>
+                    <p style="margin:0 0 10px;"><strong style="color:var(--teal-mid);">Creditor protection preserved.</strong> By rolling into an employer plan you KEEP ironclad federal ERISA creditor protection — stronger and more portable than the state-dependent protection an IRA rollover would have given you.</p>
+                    <p style="margin:0 0 10px;"><strong style="color:var(--teal-mid);">Loan optionality preserved.</strong> An employer-plan destination keeps the door to a 401(k) loan open (plan-permitting) — a liquidity option an IRA rollover permanently closes.</p>
+                    <p style="margin:0;"><strong style="color:var(--teal-mid);">Early-access window preserved.</strong> Keeping the money in a 401(k) preserves Rule-of-55 access on separation — an IRA rollover would have pushed your penalty-free age back to 59½.</p>
+                </div>
+            </div>`;
+          } else {
             // SURGICAL: Structural Injection Limits (Editable constraints) — 2026 IRS defaults
             let limitName = is403 ? "403(b) Limits" : is457 ? "457(b) Limits" : (is401k ? "401(k) / 457(b) Limits" : "IRA Limits");
             let _k4 = _di402gLimits();   // §15 dated LOOKUP(taxYear) — shared §402(g) figures, no baked year
@@ -6495,6 +6611,7 @@
                     <span style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold; font-size:13px;" id="limit-calc-${id}">$${currentLimit.toLocaleString()} / YR</span>
                 </div>
             </div>`;
+          }   // end §3b-vs-limits (isRollover) branch
 
             // §8 EMPLOYER-MATCH INPUT AREA — bank '401(k) Copy Bank' §8 (R92–R97), hovers VERBATIM.
             // Branch-agnostic: both roth401k "The Treasury" and pretax401k "The Vault" host Match Rate /
@@ -6525,6 +6642,61 @@
                 <div class="field-row" style="margin-bottom:0;">
                     <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Profit-Sharing Balance ($)</div><input type="number" class="small-field" value="${psb}" oninput="updateAccField('${id}', 'profitSharingBalance', this.value)"><div class="modal-tt"><strong>Profit-Sharing Balance ($)</strong>The portion of your 401(k) that came from your company's profit-sharing award — an annual, performance-based contribution your employer makes ON TOP of any match (some years it's large, some years zero). Read it straight off your statement as its own "profit-sharing source" line. Like the match, this is EMPLOYER money: it lands in a PRE-TAX pocket even inside a Roth 401(k) — it grew tax-free, but it is taxed as ordinary income when you withdraw it AND it carries RMDs. Break it out here so it is never silently buried inside your Roth total.</div></div>
                     <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">In-Plan Rollover Balance ($)</div><input type="number" class="small-field" value="${rvb}" oninput="updateAccField('${id}', 'rolloverBalance', this.value)"><div class="modal-tt" style="left:auto; right:0;"><strong>In-Plan Rollover Balance ($)</strong>The portion of your 401(k) that was ROLLED IN from a PRIOR employer's plan (an old 401(k)/403(b) you carried into this one) — read it straight off your statement as its own "rollover source" line. It keeps its original tax character: pretax rollover money is taxed as ordinary income at withdrawal and carries RMDs. Break it out here so your rolled-in dollars aren't silently merged into your own contributions — and note this same money also has its OWN room, "The Conduit" (Rollover 401(k)), if you want to see it standalone.</div></div>
+                </div>
+            </div>`;
+            }
+            if (isRollover) {
+                // §7C ROLLOVER FACTS sub-form (bank R216–R220) + §7.5 destination-link & count-once
+                // guard (bank R90–R95). Every field OPTIONAL / blank-safe (L47). IN-SESSION only —
+                // field persistence deferred to the D1+KV backend (tracked gap). The count-once flag
+                // renders from the SAFE DEFAULT (informational), not a remembered toggle, so a reload
+                // can never double-count (Captain Fork A).
+                let _pp = acc.priorPlan || '', _rf = acc.rollFlavor || 'pretax';
+                let _r55 = acc.rule55Eligible === true, _loan = acc.planAllowsLoans === true;
+                let _link = acc.linkedToAccount || '';
+                let _destOpts = '<option value="">— standalone / still in transit —</option>';
+                (state.accounts || []).forEach(function (d) {
+                    if (d.id === id) return;
+                    let db = getBaseType(d.baseId); if (!db) return;
+                    if (!/ira|401k/.test(db.id)) return;   // destinations = the user's OWN IRA/401(k)-family accounts
+                    _destOpts += `<option value="${d.id}" ${_link === d.id ? 'selected' : ''}>${(d.name || db.title)} (${db.meta})</option>`;
+                });
+                let _linkedName = '';
+                if (_link) { let _la = (state.accounts || []).find(a => a.id === _link); if (_la) { let _lb = getBaseType(_la.baseId); _linkedName = (_la.name || (_lb && _lb.title)) + (_lb ? (' (' + _lb.meta + ')') : ''); } }
+                let _informational = _conduitIsInformational(acc);   // safe-by-default (bank R91)
+                html += `
+            <div style="margin-top:20px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 20px;">
+                <div class="ira-why-toggle" onclick="var n=this.nextElementSibling; var open=n.style.display!=='block'; n.style.display=open?'block':'none'; this.classList.toggle('open', open);" style="color:var(--gold);">Rollover facts (optional) <span class="ira-why-caret">▸</span></div>
+                <div style="display:none; margin-top:12px;">
+                    <div class="field-row" style="margin-bottom:10px;">
+                        <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Where did this roll from?<div class="modal-tt" style="top:100%; bottom:auto; left:0; right:auto;"><strong>Where did this roll from?</strong>401(k) · 403(b) · 457(b) · TSP · other employer plan</div></div>
+                            <input type="text" class="small-field" value="${_pp}" placeholder="401(k) · 403(b) · 457(b) · TSP · other employer plan" oninput="updateAccField('${id}', 'priorPlan', this.value)"></div>
+                        <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Pre-tax or Roth money?<div class="modal-tt" style="top:100%; bottom:auto; left:auto; right:0;"><strong>Pre-tax or Roth money?</strong>Most rollovers are pre-tax. Choose Roth only if the source was a designated Roth account.</div></div>
+                            <select class="small-field" style="background: var(--bg-navy);" onchange="updateAccField('${id}', 'rollFlavor', this.value)"><option value="pretax" ${_rf !== 'roth' ? 'selected' : ''}>Pre-tax</option><option value="roth" ${_rf === 'roth' ? 'selected' : ''}>Roth</option></select></div>
+                    </div>
+                    <div class="toggle-row modal-tt-wrap" style="border-bottom:none; padding-bottom:0; margin-bottom:8px;">
+                        <span class="toggle-label" style="color:var(--teal-mid);">Is this your CURRENT employer’s plan, and did you leave that job at 55+?</span>
+                        <label class="switch"><input type="checkbox" ${_r55 ? 'checked' : ''} onchange="updateAccToggle('${id}', 'rule55Eligible', this.checked)"><span class="slider"></span></label>
+                        <div class="modal-tt"><strong>Rule of 55</strong>Rule of 55 lets you tap THIS plan penalty-free if you separated in/after the year you turned 55.</div>
+                    </div>
+                    <div class="toggle-row modal-tt-wrap" style="border-bottom:none; padding-bottom:0; margin-bottom:8px;">
+                        <span class="toggle-label" style="color:var(--teal-mid);">Does this plan allow loans?</span>
+                        <label class="switch"><input type="checkbox" ${_loan ? 'checked' : ''} onchange="updateAccToggle('${id}', 'planAllowsLoans', this.checked)"><span class="slider"></span></label>
+                        <div class="modal-tt"><strong>Plan loans</strong>Many employer plans do; IRAs never do. Leave blank if unsure.</div>
+                    </div>
+                    <div style="margin-top:12px;">
+                        <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Rolled into… (pick the destination account)<div class="modal-tt" style="top:100%; bottom:auto; left:0; right:auto;"><strong>Rolled into…</strong>Links this rollover to the account that received it, so the dollars are counted once.</div></div>
+                            <select class="small-field" style="background: var(--bg-navy); width:100%;" onchange="updateAccField('${id}', 'linkedToAccount', this.value)">${_destOpts}</select></div>
+                    </div>
+                    <div class="toggle-row" style="border-bottom:none; padding-bottom:0; margin-top:12px;">
+                        <span class="toggle-label" style="color:var(--muted);">This is a standalone balance — count it in my plan</span>
+                        <label class="switch"><input type="checkbox" ${acc.standaloneRollover === true ? 'checked' : ''} onchange="updateAccToggle('${id}', 'standaloneRollover', this.checked)"><span class="slider"></span></label>
+                    </div>
+                </div>
+                <div style="margin-top:12px; font-size:11px; color:${_informational ? 'var(--muted)' : 'var(--teal-mid)'}; font-family:var(--font-serif); line-height:1.55;">
+                    ${_informational
+                        ? ('<strong>Counted once.</strong> To keep your net worth honest, this rollover is treated as <strong>already counted in ' + (_linkedName ? _linkedName : 'your destination retirement plan') + '</strong> — its balance sits here for reference while the destination holds the dollars. Rolled into a specific account? Pick it above. A separate balance no other account holds? Flip “standalone” on and it counts on its own.')
+                        : '<strong>Standalone — counts on its own.</strong> You’ve marked this as a separate balance no other account holds, so its full value counts in your plan. If it actually lives inside another account you already track, turn this off so it isn’t double-counted.'}
                 </div>
             </div>`;
             }
@@ -6953,6 +7125,18 @@
                 // Bank rooms (HSA / 403(b)) carry the Copy Bank §1 signal boxes + hover pairs instead.
                 var _diBank = _diIsBankRoom(base.id);
                 var _diSig = _diBank ? _diSignals(acc) : null;
+                if (/rollover/.test(base.id)) {
+                    // §3a ROLLOVER-ORIGIN GATE (bank R36–R38) — the defining axis; RENDERS FIRST, before
+                    // the DI box + signal strip (V-ORIGIN-FIRST). priorPlan colors the source; generic
+                    // fallback when unset (L47).
+                    var _src = (acc.priorPlan && String(acc.priorPlan).trim()) ? String(acc.priorPlan).trim() : 'employer plan';
+                    html += '<div class="di-origin-gate" style="margin-top:4px; margin-bottom:14px; padding:12px 14px; border-left:3px solid var(--gold); background:rgba(201,168,76,0.06); border-radius:4px; font-family:var(--font-serif); font-size:12px; line-height:1.55; color:var(--white);">' +
+                        '<div style="font-family:var(--font-mono); font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold); margin-bottom:6px;">Rollover origin</div>' +
+                        'This money came out of an old ' + _esc(_src) + ' and into your CURRENT employer’s 401(k) — you kept it inside the 401(k) world instead of moving it to an IRA. ' +
+                        'Done as a direct rollover, this moved tax-free — nothing withheld, no 60-day clock. ' +
+                        'Landing in an employer plan (not an IRA) is what preserves your ERISA shield, loan access, and Rule-of-55 window.' +
+                        '</div>';
+                }
                 // W4a — DI box on TOP (above the rollup), anchored to the rollup build, not a line number.
                 // _diNarrBlock now renders the universal empty-state (W5) on zero-holdings entry.
                 if (_diBank) html += _diNarrBlock(acc, base, _diSig, _agg);
@@ -7109,7 +7293,8 @@
                 acc[field] = value;
             }
 
-            if(field === 'linkedAssetId') openAccountModal(id); 
+            if(field === 'linkedAssetId') openAccountModal(id);
+            if(field === 'linkedToAccount' || field === 'rollFlavor') openAccountModal(id);   // The Conduit — refresh count-once flag (§7.5) + Layer-E tax fork (§9) live
 
             // Live DOM update for limits calculation — same §402(g)-class test as the modal (401k/403b/457b)
             if(field === 'baseLimit' || field === 'catchUpLimit' || field === 'superCatchUpLimit' || field === 'fifteenYearLimit') {
@@ -8438,6 +8623,7 @@
         // STU-010: filter Group 4, remap to engine enums, warn on unmapped future additions
         const accounts = state.accounts
           .filter(a => !FILTERED_TYPES.has(a.baseId))
+          .filter(a => !_conduitIsInformational(a))   // §7.5 count-once guard — an informational Rollover 401(k)'s dollars are counted inside its destination plan, never twice (bank R91; safe-by-default per Captain Fork A)
           .filter(a => (a.value || 0) > 0 || (a.inflow || 0) > 0)
           .map(a => {
             if (!ACCOUNT_TYPE_MAP[a.baseId]) console.warn('[DATUM FI] Unmapped account type:', a.baseId);
@@ -8456,6 +8642,7 @@
         }
         return body;
       }
+      if (typeof window !== 'undefined') window.buildStudioRequest = buildStudioRequest;   // A3 count-once gate seam — read-only payload builder
 
       window._buildStudioRequest = buildStudioRequest;
       window._buildRequestError  = null;

@@ -30,6 +30,9 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     a.value = 108000; a.showHoldings = true; recalcPortfolio(a); a.value = 108000;
     window.openAccountModal(a.id);
     out.html = document.getElementById('modal-dynamic-content').innerHTML;
+    out.title = (document.getElementById('modal-acc-title') || {}).innerHTML || '';
+    out.originIdx = out.html.indexOf('came out of an old');   // §3a origin marker
+    out.stripIdx = out.html.indexOf('bank-strip-');           // signal-strip marker (V-ORIGIN-FIRST)
     // co variant registered too
     out.coBase = !!getBaseType('rollover401k_co');
     out.coEngine = (typeof ACCOUNT_TYPE_MAP !== 'undefined') ? ACCOUNT_TYPE_MAP['rollover401k_co'] : '__nomap__';
@@ -48,6 +51,20 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     ['reuses pretax DI strip (Balance renders)', has('Balance')],
     ['§8 EMPLOYER-MATCH block SCOPED OUT', !has('EMPLOYER MATCH') && !has('Match Rate')],
     ['§20 "Why a 401(k)?" panel SCOPED OUT', !has('Why you have a 401(k)')],
+    // ── A3 transit identity ──────────────────────────────────────────────────
+    ['§2 title = The Conduit (R27), NOT The Vault', (R.title || '').indexOf('an EMPLOYER plan that received money') !== -1 && (R.title || '').indexOf('The Vault — a Traditional 401(k)') === -1],
+    ['§3a origin gate renders (R36)', has('This money came out of an old')],
+    ['§3a renders BEFORE the signal strip (V-ORIGIN-FIRST)', R.originIdx >= 0 && R.stripIdx >= 0 && R.originIdx < R.stripIdx],
+    ['§3b portability modal present (R42)', has('funded by a TRANSFER')],
+    ['§3b REPLACES the flat contribution-limit UI', !has('CONTRIBUTION LIMITS') && !has('Annual Maximum')],
+    ['§9 rollover spine (R99)', has('retirement money you carried from an old employer')],
+    ['§9 Layer D portability/perks (R103)', has('ERISA creditor shield')],
+    ['§9 Layer E pretax tax fork (R104)', has('As pretax rollover money it grows tax-deferred')],
+    ['§16 "Why a Rollover 401(k)?" panel (R199/R204)', has('Why you have a Rollover 401(k)') && has('The Rule-of-55 trap')],
+    ['§RP Balance consolidation lens (R188)', has('consolidate old 401(k)s')],
+    ['§RP Annual Contribution "—" (R189)', has('Typically “—” for a pure rollover account')],
+    ['§RP tax-lot cols rollover copy (R190)', has('no capital-gains tax to size')],
+    ['§7C sub-form fields (R216/R220)', has('Where did this roll from?') && has('Rolled into…')],
   ];
   const pass = results.filter(r => r[1]).length, total = results.length;
   console.log('===== ROLLOVER 401(k) "THE CONDUIT" GATE [' + LABEL + '] ===== ' + pass + '/' + total + (pass === total ? '  GREEN' : '  RED'));
