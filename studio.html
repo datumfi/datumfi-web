@@ -4809,6 +4809,23 @@
       ]);
     }
 
+    // §20 "Why a taxable brokerage?" education panel (Taxable Copy Bank R430–R439, verbatim). Mirrors
+    // _di401kWhyPanel on the shared _diWhyPanel engine (L48 — do NOT fork). Always-true education, not
+    // gated on holdings (bank R440). Reused for Corporate/Other Taxable (same engine via _isTaxableRoom).
+    function _diTaxableWhyPanel(acc, base) {
+      return _diWhyPanel('Why you’d use a taxable brokerage — the account with no rules, and no shelter', [
+        ['The one-line answer', 'A taxable brokerage is the everyday investment account with NO IRS limits, NO early-withdrawal penalty, and NO required withdrawals — in exchange for no upfront tax break. It’s the most flexible money you own, and the most tax-exposed.'],
+        ['No limits, full liquidity', 'You can add any amount and withdraw any day at any age — no $23,500 cap, no 59½ gate, no 10% penalty, no RMDs. That freedom is the whole reason it exists: it’s money you can actually reach before and during retirement without asking permission from the tax code.'],
+        ['The role — after you max the shelters', 'The classic order: capture your employer match, max your tax-advantaged rooms (401(k), IRA, HSA), THEN the overflow lands here. A taxable account isn’t a consolation prize — it’s the bridge that funds early-retirement years before penalty-free access opens, and the bucket with no ceiling once the sheltered ones are full.'],
+        ['How it’s taxed — gains & dividends', 'You’re taxed on what you REALIZE, when you realize it. Sell after holding over a year and the gain gets the lower LONG-TERM capital-gains rate; sell inside a year and it’s taxed as ordinary income. Qualified dividends also get the preferential rate. You control the timing — which is a lever no tax-deferred account gives you.'],
+        ['Tax-loss harvesting (a taxable-only tool)', 'When a holding is down, you can SELL to book the loss, use it to offset other gains (and up to $3,000 of ordinary income a year), then reinvest in something similar. This turns a market dip into a real tax saving — a move that simply doesn’t exist inside a retirement account. Mind the 30-day wash-sale rule.', true],
+        ['The step-up at death (the quiet superpower)', 'If you hold an appreciated position until death, your heirs’ cost basis “steps up” to the value on that date — the entire lifetime gain can escape capital-gains tax forever. This makes a taxable account a surprisingly strong estate-and-legacy vehicle: the very gains you avoided realizing can pass untaxed.'],
+        ['The foreign tax credit edge', 'International funds pay taxes to foreign governments. In a taxable account those foreign taxes can flow back to you as a Foreign Tax Credit on your return — a dollar-for-dollar benefit you generally CANNOT claim inside an IRA or 401(k). It’s a real, often-missed reason to hold international exposure here rather than in a sheltered room.'],
+        ['The asset-location flip', 'Because bond interest is taxed yearly at ordinary rates, bonds are the LEAST efficient holding here — while tax-favored stocks and international funds fit best. If you also hold retirement rooms, the lesson is “bonds THERE, stocks and foreign HERE.” Datum reads this across all your accounts so the whole book sits in the right homes.'],
+        ['Bottom line', 'You use a taxable account for freedom: no limits, no penalties, full liquidity, and tools — harvesting, timing, step-up, the foreign-tax credit — that no sheltered account offers. The price is an annual tax on dividends and a bill when you sell winners. Fill it AFTER the shelters, hold the tax-efficient stuff here, and it becomes your most versatile money.'],
+      ]);
+    }
+
     // §12 457(b)-aware column hovers (bank R129–R142; {planProvider}/{instrumentType}
     // parentheticals dropped — tokens unsourced, never fabricated).
     function _di457ColTips(isRoth) {
@@ -5450,15 +5467,15 @@
         // §19 rollup parity — the 3 fields Taxable was missing vs the 401(k) baseline (Invested/Cash,
         // Balance, Annual Contribution). Hover copy VERBATIM from Taxable Copy Bank R409/R414/R415 (L47).
         h += _diAccountValueCell(s);
-        h += _diCell('Equity %', _diP(xs.eqT), 'Share of value in stocks',
-          'The share of this account in stocks / stock funds — the growth engine.',
-          'Stocks are what outrun inflation over a long retirement, but they’re also what falls hardest. This % is the single biggest dial on whether your money grows enough to last — and how rough the ride gets getting there.', null, tu);
-        h += _diCell('Bond %', _diP(xs.bdT), 'Share of value in bonds',
-          'The share in bonds or other fixed income — the ballast.',
-          'Bonds are the part that’s supposed to hold steady when stocks fall, so you have something safe to spend from without selling stocks at a loss. This % is your shock absorber for the first bad years of retirement.');
-        h += _diCell('Cash %', _diP(xs.cashT), 'Share of value in cash',
-          'The share sitting in cash or money-market — fully liquid, fully safe.',
-          'Cash is your ‘don’t-touch-the-investments’ buffer. A sensible slice means a market crash doesn’t force you to sell anything for a year or two. Too much, though, and inflation slowly bleeds its buying power.');
+        // §19 Rollup-Parity (Taxable lens) — Equity/Bond/Cash carry the TAX-LENS hover (bank R410/R411/R412,
+        // verbatim). L51 WINNER-TAG: §19 wins these 3 fields (nuanced tax framing beats the generic §1 signal);
+        // UG/Beta/Yield/Expense keep their richer §10 dynamic ladders below (they win). Never regress to §1.
+        h += _diCell('Equity %', _diP(xs.eqT), 'Equity %',
+          'Share of the account in stocks and equity funds. In a taxable account, equities are the tax-efficient choice: qualified dividends and long-term gains are taxed at preferential rates, and you control WHEN you realize a gain by choosing when to sell. This is the sleeve that rewards patience most.', null, null, tu);
+        h += _diCell('Bond %', _diP(xs.bdT), 'Bond %',
+          'Share in bonds / fixed income. Bonds are the LEAST tax-efficient holding in a taxable account — their interest is taxed as ordinary income every year, with no deferral. If you also hold tax-advantaged rooms, this is the classic \'put bonds THERE, stocks HERE\' asset-location lesson. Datum reads it across all your accounts.');
+        h += _diCell('Cash %', _diP(xs.cashT), 'Cash %',
+          'Share sitting in cash / money-market. Handy for flexibility, but taxable-account cash earns interest taxed at your ordinary rate — and it\'s the drag most people forget. A little dry powder is prudent; a lot is a silent cost.');
         h += _diCell('International', _diP(xs.foreignT), 'Share of value outside the US',
           'About ' + _diP(xs.foreignT) + ' of this account sits outside the U.S. — a meaningful international sleeve, not a rounding note: it spreads your growth across economies that don\'t all move with the U.S. market. In a taxable account there\'s a silver lining most people miss — the foreign taxes those funds pay abroad can flow back to you as a Foreign Tax Credit, a benefit you generally can\'t claim inside any tax-advantaged room. International belongs in taxable more than most realize.');
         h += _diCell('Balance', _diMoney(acc.value), 'Balance',
@@ -6342,6 +6359,7 @@
         if (/457b/.test(base.id)) html += _di457WhyPanel(acc, base);   // §15 "Why a 457(b)?" (both branches)
         if (/401k/.test(base.id) && !/rollover/.test(base.id)) html += _di401kWhyPanel(acc, base);  // §20 "Why a 401(k)?" + §16 bullets (both branches; NOT The Conduit — it gets the §16 rollover panel)
         if (/rollover/.test(base.id)) html += _diConduitWhyPanel(acc, base);   // §16 "Why a Rollover 401(k)?" (The Conduit; §15 SUPERSEDED — not wired)
+        if (_isTaxableRoom(base.id)) html += _diTaxableWhyPanel(acc, base);   // §20 "Why a taxable brokerage?" (Living Room + Corporate/Other Taxable, same engine)
 
         // SURGICAL: Physics Toggles with explicit mathematical tooltips
         html += `
