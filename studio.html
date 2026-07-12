@@ -6565,6 +6565,27 @@
                  </label>
                  <div class="modal-tt"><strong>Accelerated Payoff</strong>Marks this loan as a priority target. In Outflow Routing, spare cash flows here first — pulling in the payoff date and cutting the interest you'll pay. It's a guaranteed return equal to your rate; weigh it against investing that same cash.</div>
              </div>`;
+             // §5.3 ACCELERATED-PAYOFF SOURCE — when priority is ON, pick the liquid account that funds the
+             // faster payoff. Stored as acc.accelSourceId; the Outflow diagnostic reads it and names it.
+             if (acc.isPriority) {
+                 let srcOpts = `<option value="">All liquid cash (default)</option>`;
+                 state.accounts.forEach(a => {
+                     let aB = getBaseType(a.baseId);
+                     if (aB && aB.taxCode === 'liquid') {
+                         srcOpts += `<option value="${a.id}" ${acc.accelSourceId === a.id ? 'selected' : ''}>${a.name} (${aB.meta})</option>`;
+                     }
+                 });
+                 html += `
+             <div class="field-row modal-tt-wrap" style="grid-template-columns: 1fr; margin-top:12px;">
+                 <div>
+                     <div class="input-label" style="color:var(--teal-mid);">Fund the acceleration from…</div>
+                     <select class="small-field" style="background: var(--bg-navy);" onchange="updateAccField('${id}', 'accelSourceId', this.value)">
+                         ${srcOpts}
+                     </select>
+                 </div>
+                 <div class="modal-tt"><strong>Where the extra comes from</strong>Pick the account that will feed the faster payoff. We'll draw that pipe in Outflow Routing so you can see the tradeoff — every dollar sent here is a dollar not invested or held as buffer.</div>
+             </div>`;
+             }
         }
 
         // SURGICAL: Trust Settings with tooltips — trust ONLY. The 529 shares taxCode 'trust'
@@ -8308,7 +8329,9 @@
             
             if (freeCashFlow > 0) {
                 if (biggestDebt && biggestDebt.isPriority) {
-                     report += `Deploying excess velocity to accelerate the demolition of ${biggestDebt.name} (Priority Engaged).`;
+                     let _accSrc = biggestDebt.accelSourceId ? state.accounts.find(a => a.id === biggestDebt.accelSourceId) : null;   // §5.3 — name the chosen funding source
+                     let _srcClause = _accSrc ? ` sourced from ${_accSrc.name}` : '';
+                     report += `Deploying excess velocity${_srcClause} to accelerate the demolition of ${biggestDebt.name} (Priority Engaged).`;
                 } else if (biggestDebt) {
                      report += `Consider deploying this excess velocity to accelerate the demolition of ${biggestDebt.name || 'your largest debt'}.`;
                 } else if (smallestRoom) {
