@@ -7219,6 +7219,7 @@
                     <span class="input-label" style="color:var(--teal-mid);">Expected Payoff Date</span>
                     <span id="modal-calc-payoff-${id}" style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold; font-size:14px;">${calculatePayoff(acc)}</span>
                 </div>
+                <div id="modal-payoff-intel-${id}">${_payoffIntelHTML(id, acc)}</div>
             </div>
             `;
         } else if (base.taxCode === 'physical' && !base.id.includes('collectibles')) {
@@ -7568,6 +7569,10 @@
                         escrowRow.style.display = 'none';
                     }
                 }
+                // §4.2/§4.3 payoff intelligence — refresh lifetime interest / total cost / accelerated
+                // delta / amort button in place (no re-render, keeps input focus).
+                const piEl = document.getElementById(`modal-payoff-intel-${id}`);
+                if(piEl) piEl.innerHTML = _payoffIntelHTML(id, acc);
             }
         }
     };
@@ -7643,6 +7648,9 @@
                     eqEl.innerText = '$' + eq.toLocaleString('en-US');
                     eqEl.style.color = eq >= 0 ? 'var(--teal-mid)' : 'var(--danger)';
                 }
+                // §4.2/§4.3 payoff intelligence refresh (balance change moves lifetime interest too).
+                const piEl2 = document.getElementById(`modal-payoff-intel-${id}`);
+                if(piEl2) piEl2.innerHTML = _payoffIntelHTML(id, acc);
             }
         }
     };
@@ -7914,29 +7922,150 @@
             </div>`;
     }
 
-    function calculatePayoff(acc) {
-        let pmt = calculateTotalPmt(acc);
+    // §4.2 shared payoff-months engine (L48 — amortization / lifetime-interest / accelerated-delta all
+    // read off this). Returns a guard code or the integer month count. pmtOverride lets §4.3 model the
+    // minimum-only vs accelerated schedules with the SAME math. Non-breaking: calculatePayoff wraps it.
+    function payoffMonths(acc, pmtOverride) {
+        let pmt = (pmtOverride !== undefined) ? pmtOverride : calculateTotalPmt(acc);
         let bal = parseFloat(acc.value) || 0;
         let r = (parseFloat(acc.intRate) || 0) / 100 / 12;
-        
-        if (bal <= 0) return "Paid Off";
-        if (pmt <= 0) return "No Payment Set";
-        if (r * bal >= pmt) return "Payment too low (Negative Amortization)";
-        
-        let months = 0;
-        if (r === 0) {
-            months = bal / pmt;
-        } else {
-            months = -Math.log(1 - (r * bal) / pmt) / Math.log(1 + r);
-        }
-        months = Math.ceil(months);
-        
+        if (bal <= 0) return { code: 'PAID' };
+        if (pmt <= 0) return { code: 'NOPMT' };
+        if (r * bal >= pmt) return { code: 'NEGAM' };
+        let months = (r === 0) ? bal / pmt : -Math.log(1 - (r * bal) / pmt) / Math.log(1 + r);
+        return { code: 'OK', months: Math.ceil(months) };
+    }
+    function _payoffDateFrom(acc, months) {
         let startDate = acc.nextPmtDate ? new Date(acc.nextPmtDate + 'T00:00:00') : new Date();
-        if(isNaN(startDate)) startDate = new Date();
-        
+        if (isNaN(startDate)) startDate = new Date();
         startDate.setMonth(startDate.getMonth() + months);
         return startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     }
+    function calculatePayoff(acc) {
+        let m = payoffMonths(acc);
+        if (m.code === 'PAID') return "Paid Off";
+        if (m.code === 'NOPMT') return "No Payment Set";
+        if (m.code === 'NEGAM') return "Payment too low (Negative Amortization)";
+        return _payoffDateFrom(acc, m.months);
+    }
+
+    // §4.2 lifetime interest + all-in total cost. Sourced-or-blank: null when we can't honestly compute
+    // (paid off / no payment / negative amortization) — the caller then omits the line, never fakes $0.
+    function lifetimeInterest(acc, pmtOverride) {
+        let m = payoffMonths(acc, pmtOverride);
+        if (m.code !== 'OK') return null;
+        let pmt = (pmtOverride !== undefined) ? pmtOverride : calculateTotalPmt(acc);
+        let bal = parseFloat(acc.value) || 0;
+        return Math.max(0, pmt * m.months - bal);
+    }
+    function totalCost(acc) {
+        let li = lifetimeInterest(acc);
+        if (li === null) return null;
+        let orig = parseFloat(acc.origAmount) || 0;
+        let bal = parseFloat(acc.value) || 0;
+        return (orig > 0 ? orig : bal) + li;
+    }
+    // §4.3 accelerated-payoff delta — minimum-only vs (minimum + additional). Null unless a real
+    // additional payment produces a real saving. Toggle-gated at the render layer.
+    function acceleratedDelta(acc) {
+        let min = parseFloat(acc.minPmt) || 0;
+        let add = parseFloat(acc.addPmt) || 0;
+        if (min <= 0 || add <= 0) return null;
+        let baseM = payoffMonths(acc, min);
+        let accM = payoffMonths(acc, min + add);
+        if (baseM.code !== 'OK' || accM.code !== 'OK') return null;
+        let baseLI = lifetimeInterest(acc, min);
+        let accLI = lifetimeInterest(acc, min + add);
+        if (baseLI === null || accLI === null) return null;
+        return { date: _payoffDateFrom(acc, accM.months), monthsSaved: baseM.months - accM.months, interestSaved: Math.max(0, baseLI - accLI) };
+    }
+
+    // §4.2/§4.3/§7 payoff-intelligence block — lifetime interest, all-in cost, accelerated delta (toggle-
+    // gated), and the amortization button. Every line sourced-or-blank. Shared across all secured debts.
+    function _payoffIntelHTML(id, acc) {
+        var out = '';
+        var li = lifetimeInterest(acc);
+        var tc = totalCost(acc);
+        if (li !== null) {
+            out += `
+                <div style="display:flex; justify-content: space-between; margin-top:8px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px;">
+                    <span class="input-label" style="color:var(--white);">Lifetime Interest</span>
+                    <span style="font-family: var(--font-mono); color: var(--danger); font-weight:bold;">$${Math.round(li).toLocaleString('en-US')}</span>
+                </div>`;
+        }
+        if (tc !== null) {
+            out += `
+                <div style="display:flex; justify-content: space-between; margin-top:4px;">
+                    <span class="input-label" style="color:var(--white);">Total Cost (all-in)</span>
+                    <span style="font-family: var(--font-mono); color: var(--white); font-weight:bold;">$${Math.round(tc).toLocaleString('en-US')}</span>
+                </div>`;
+        }
+        // §4.3/§5.4 accelerated delta — toggle-gated. NOTE: Expected Payoff Date already reflects the
+        // additional payment (calculateTotalPmt = min+add), so the accelerated DATE equals it; we surface
+        // the non-redundant value — interest saved vs paying only the minimum — plus the §5.4 caption.
+        if (acc.isPriority) {
+            var d = acceleratedDelta(acc);
+            if (d && d.interestSaved > 0) {
+                var isv = '$' + Math.round(d.interestSaved).toLocaleString('en-US');
+                out += `
+                <div style="display:flex; justify-content: space-between; margin-top:8px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px;">
+                    <span class="input-label" style="color:var(--teal-mid);">Interest Saved</span>
+                    <span style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold;">${isv}</span>
+                </div>
+                <div style="font-size:11px; color: rgba(255,255,255,0.55); margin-top:6px; line-height:1.45;">That's ${isv} kept out of the bank's pocket — money that could instead compound in a retirement account. Your call: a sure thing today vs. a bigger maybe tomorrow.</div>`;
+            }
+        }
+        out += `
+                <div style="text-align:center; margin-top:14px;">
+                    <button class="add-space-btn" style="width:auto; padding: 4px 8px; border: none; background: transparent; border-bottom: 1px dashed var(--teal-mid); color: var(--teal-mid);" onclick="openAmortizationModal('${id}')">📊 VIEW AMORTIZATION SCHEDULE</button>
+                </div>`;
+        return out;
+    }
+
+    // §4.4/§7 amortization schedule modal — brand-styled table (mono; --teal-mid principal / --danger
+    // interest), negative-amort guarded with the empty-state copy. Lazily builds a reusable overlay.
+    window.openAmortizationModal = function(id) {
+        var acc = state.accounts.find(a => a.id === id);
+        if (!acc) return;
+        var ov = document.getElementById('amort-modal-overlay');
+        if (!ov) {
+            ov = document.createElement('div');
+            ov.id = 'amort-modal-overlay';
+            ov.style.cssText = 'display:none; position:fixed; inset:0; background:rgba(0,0,0,0.72); z-index:10000; align-items:center; justify-content:center;';
+            ov.onclick = function(e) { if (e.target === ov) ov.style.display = 'none'; };
+            document.body.appendChild(ov);
+        }
+        var m = payoffMonths(acc);
+        var body;
+        if (m.code !== 'OK') {
+            body = `<div style="color: rgba(255,255,255,0.6); font-size:13px; padding: 18px 0;">Add a balance, rate, and payment and this schedule fills in.</div>`;
+        } else {
+            var bal = parseFloat(acc.value) || 0;
+            var r = (parseFloat(acc.intRate) || 0) / 100 / 12;
+            var pmt = calculateTotalPmt(acc);
+            var d = acc.nextPmtDate ? new Date(acc.nextPmtDate + 'T00:00:00') : new Date();
+            if (isNaN(d)) d = new Date();
+            var rows = '', n = Math.min(m.months, 600);
+            for (var i = 1; i <= n; i++) {
+                var interest = bal * r;
+                var principal = Math.min(pmt - interest, bal);
+                bal = Math.max(0, bal - principal);
+                rows += `<tr><td style="padding:3px 8px; opacity:0.55;">${i}</td><td style="padding:3px 8px;">${d.toLocaleDateString('en-US',{month:'short',year:'numeric'})}</td><td style="padding:3px 8px; text-align:right;">$${Math.round(pmt).toLocaleString('en-US')}</td><td style="padding:3px 8px; text-align:right; color:var(--teal-mid);">$${Math.round(principal).toLocaleString('en-US')}</td><td style="padding:3px 8px; text-align:right; color:var(--danger);">$${Math.round(interest).toLocaleString('en-US')}</td><td style="padding:3px 8px; text-align:right;">$${Math.round(bal).toLocaleString('en-US')}</td></tr>`;
+                d = new Date(d); d.setMonth(d.getMonth() + 1);
+                if (bal <= 0) break;
+            }
+            body = `<div style="color: rgba(255,255,255,0.7); font-size:12px; margin-bottom:12px; line-height:1.5;">Here's every payment from now to payoff — how much goes to the house (principal) versus the bank (interest), month by month. Early on, interest dominates; over time principal takes over. Adding to your payment flips that sooner.</div>
+                <div style="max-height:50vh; overflow-y:auto;"><table style="width:100%; border-collapse:collapse; font-family: var(--font-mono); font-size:11px; color: var(--white);">
+                    <thead><tr style="position:sticky; top:0; background: var(--bg-navy);"><th style="padding:5px 8px; text-align:left; opacity:0.55;">#</th><th style="padding:5px 8px; text-align:left; opacity:0.55;">Date</th><th style="padding:5px 8px; text-align:right; opacity:0.55;">Payment</th><th style="padding:5px 8px; text-align:right; color:var(--teal-mid);">Principal</th><th style="padding:5px 8px; text-align:right; color:var(--danger);">Interest</th><th style="padding:5px 8px; text-align:right; opacity:0.55;">Balance</th></tr></thead>
+                    <tbody>${rows}</tbody></table></div>`;
+        }
+        ov.innerHTML = `<div style="background: var(--bg-navy, #0a1628); border:1px solid rgba(255,255,255,0.12); border-radius:8px; max-width:560px; width:92vw; max-height:82vh; overflow:hidden; padding:24px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                <div class="hud-title" style="color:var(--white); font-size:15px;">Amortization Schedule — ${(acc.name || 'Loan')}</div>
+                <button onclick="document.getElementById('amort-modal-overlay').style.display='none';" style="background:transparent; border:none; color:var(--white); font-size:22px; cursor:pointer; line-height:1;">&times;</button>
+            </div>${body}</div>`;
+        ov.style.display = 'flex';
+    };
 
     // SECURED-DEBT LINK SCOPE (§0.2 · L48 shared seam — The Moat / The Garage / The Cellar import this).
     // Maps a debt room to the physical-asset FAMILY it may legitimately secure against, closing the bug
