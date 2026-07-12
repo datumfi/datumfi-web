@@ -4659,6 +4659,20 @@
         ? 'At ' + _diMoney(contrib) + '/yr you’re filling a high-limit, tax-free bucket that also happens to be the most accessible retirement account you own.'
         : 'At ' + _diMoney(contrib) + '/yr you’re deferring meaningful pre-tax capital into the one account you can reach penalty-free the moment you leave the job.';
     }
+    // E2 · BRIDGE / SPEND-FIRST (457 bank C110/D110, trigger B110) — the cross-account spend-ORDER
+    // intelligence (distinct from Layer E, which states ACCESS; this states what to DO with it). Fires ONLY
+    // when the book holds another penalty-gated retirement account to protect (IRA/401k/403b, excluding self);
+    // the age/pre-separation softness is carried by the copy itself (no per-account age/separation input). [R]
+    // keeps the 5-yr-clock-governs-growth caveat. Sits AFTER Layer E, BEFORE Layer F (bank §9 order).
+    function _di457Bridge(acc, s, agg, isRoth) {
+      var hasProtect = (state.accounts || []).some(function (a) {
+        if (a.id === acc.id) return false; var bb = getBaseType(a.baseId); return bb && /401k|403|ira/.test(bb.id);
+      });
+      if (!hasProtect) return null;
+      return isRoth
+        ? 'Spend-order intelligence: this is usually the account you can spend FIRST in early retirement without waiting for 59.5 — but with a Roth twist. Because its withdrawals are already tax-free, the common move is to drain a PRE-TAX bridge (a Traditional 457(b) or taxable) first and let these Roth dollars compound longest, since Roth growth is your most valuable untaxed compounding. Either way, tapping 457(b) money before your IRA/401(k) lets those penalty-gated accounts keep growing to 59.5 — and remember the 5-year clock still governs tax-free GROWTH here even though access never waits for an age.'
+        : 'Spend-order intelligence: in early retirement, draw THIS account down first — before your IRA and 401(k). Because a 457(b) is reachable penalty-free the day you separate (at any age), it’s the natural bridge to spend in the gap years, which lets your penalty-gated IRA and 401(k) keep compounding untouched until 59.5. Every year you live on 457(b) dollars is a year those other accounts grow before you ever have to touch them — taxed as ordinary income here, but never penalized.';
+    }
     // LAYER B2 · COMPOSITION READ (R106 / §13c R185–R190) — REUSE _diSleeves + the shared
     // _diIraCompRead/_di401kCompRead gate VERBATIM (L48: fundCount≥3 / ≥2 sleeves / top<50% /
     // satPct & unclPct honesty guards). Only the 457 tax-tail differs; the sleeve clause is
@@ -4728,6 +4742,7 @@
       var c = _di457Behavior(acc, s, agg, isRoth); if (c) out.push(c);
       var d = _di457MenuFees(acc, s, agg, isRoth); if (d) out.push(d);
       var e = _di457Tax(acc, s, agg, isRoth); if (e) out.push(e);
+      var e2 = _di457Bridge(acc, s, agg, isRoth); if (e2) out.push(e2);   // E2 spend-first (fires only w/ a sibling penalty-gated account)
       var f = _di457Toggle(acc, s, agg, isRoth); if (f) out.push(f);
       var g = _di457Contrib(acc, s, agg, isRoth); if (g) out.push(g);
       return out.join(' ');
@@ -5520,7 +5535,7 @@
         h += _diCell('Cash %', _diP(s.cashPct), 'Cash share',
           _diP(s.cashPct) + ' is in cash.',
           'Share sitting in cash / money-market / stable value. Useful for stability, but too much is a long-term drag on a retirement-purpose account.', null,
-          _diBlankNudge((s.cashPct || 0) >= 15, 'This cash isn’t invested yet — tell us if that’s intentional (a buffer) or we’ll nudge you to put it to work.'));   // §19 R256 enrich + §21 N-CASH-IDLE (R275)
+          _diBlankNudge((s.cashPct || 0) >= 15, 'This cash isn’t invested yet — tell us if that’s intentional (a buffer) or we’ll nudge you to put it to work.'));   // §19 R256 enrich + §21 N-CASH-IDLE (R276)
         h += _diCell('International', _diP(s.foreignPct), 'International share',
           _diP(s.foreignPct) + ' of the invested value is international.',
           'Share of holdings outside the U.S. Note the quirk of tax-advantaged accounts: the foreign-tax credit is LOST on international funds held inside a shelter — you can’t claim what you never paid tax on.');   // §19 R257 WINNER (FTC-lost), verbatim (both branches)
@@ -5534,13 +5549,13 @@
           'What you’re deferring per year.',
           "Capped HIGH — the 457(b) deferral limit is one of the largest available. Here's the part most people miss: this ceiling is its OWN. If you also fund a 401(k) or 403(b), the 457(b) sits on top — you can fill both in the same year, roughly $49k combined pre-tax. " +
           (b457Roth ? 'Roth deferrals lock in tax-free growth.' : "Pre-tax deferrals lower this year's taxable income now."), null,
-          _diBlankNudge(c457 === 0, 'Tell us what you’ve deferred this year and we’ll track it against the 457(b) limit — plus the special catch-up if you’re near retirement.'));   // §21 N-CONTRIB (R273)
+          _diBlankNudge(c457 === 0, 'Tell us what you’ve deferred this year and we’ll track it against the 457(b) limit — plus the special catch-up if you’re near retirement.'));   // §21 N-CONTRIB (R274)
         h += _diCell('Unrealized Gain', s.unrealGain === null ? '—' : (s.unrealGain >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(s.unrealGain)).toLocaleString('en-US'),
           'Σ(value − cost basis) where basis exists',
           'Σ(value − cost basis) where basis exists — cash-sweep rows never enter the Σ.',
           b457Roth ? 'In the Annex all of this growth is yours tax-free — the right home for your highest-growth bets.'
                    : 'In the Workshop this growth will be taxed as ordinary income on the way out — the bigger it grows, the bigger the future bill.', null,
-          _diBlankNudge(s.unrealGain === null && (s.total || 0) > 0, 'Add a cost basis and this box comes alive — we’ll show your gain/loss and what’s taxable when you sell.'));   // §21 N-COSTBASIS (R272)
+          _diBlankNudge(s.unrealGain === null && (s.total || 0) > 0, 'Add a cost basis and this box comes alive — we’ll show your gain/loss and what’s taxable when you sell.'));   // §21 N-COSTBASIS (R273)
         // W7 parity — always render (— when no beta) so the 457(b) rollup keeps the full 11 fields.
         h += _diCell('Weighted Beta', (beta === null || beta === undefined) ? '—' : _diCovVal(s.betaCovPct, beta.toFixed(2)), 'Value-weighted market sensitivity',
             'Value-weighted market sensitivity (holdings with a beta).',
