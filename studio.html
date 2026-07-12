@@ -8003,6 +8003,41 @@
             var pmiC = pmi > 0 ? ' PMI drops off once you cross ~20% equity — worth watching.' : '';
             parts.push('Beyond principal + interest, taxes and insurance add about ' + $(em) + '/mo — your real monthly is ' + $(totalMo + em) + '.' + pmiC);
         }
+        // ---- §1.7-1.9 PRESCRIPTIVE (Mortgage Copy Bank §1 R25-R27, verbatim; composed, sourced-or-blank) ----
+        var payoffPct = (orig > 0 && orig >= bal && bal > 0) ? (1 - bal / orig) : null;
+        // 1.7 RATE-AWARE ACCELERATE-vs-INVEST — banded off intRate; never picks a side (§3b). Blank if no rate.
+        if (rate > 0) {
+            var itc;
+            if (acc.rateType === 'Variable' || rate >= 6) itc = 'At this rate, paying it down is a strong, certain win — hard to beat reliably in the market.';
+            else if (rate < 5) itc = 'At a rate this low, invested dollars have historically out-earned it — so accelerating here is more about peace of mind than pure math. Both are valid; the tradeoff is yours to make.';
+            else itc = 'This rate sits right on the fence — reasonable people go either way.';
+            parts.push('Here\'s the real decision this loan poses: paying it down early earns you a guaranteed ' + rate + '% — that\'s your rate, tax-free of market risk. ' + itc);
+        }
+        // 1.8 ACCELERATOR HONESTY — fires only when addPmt>0; monthsSaved = baseline(min) − accelerated(min+add).
+        if (addP > 0) {
+            var baseM = payoffMonths(acc, parseFloat(acc.minPmt) || 0);
+            var accM = payoffMonths(acc, totalMo);
+            if (baseM.code === 'OK' && accM.code === 'OK') {
+                var monthsSaved = baseM.months - accM.months;
+                if (monthsSaved < 2 && payoffPct !== null && payoffPct >= 0.85) {
+                    parts.push('Honest note: with this loan nearly paid off, that extra ' + $(addP) + '/mo moves your payoff in by less than a month — it barely matters now. No harm in it, but those dollars would stretch further almost anywhere else.');
+                } else if (monthsSaved >= 12) {
+                    var d18 = acceleratedDelta(acc);
+                    var yrs = Math.round(monthsSaved / 12);
+                    var yStr = yrs + ' year' + (yrs === 1 ? '' : 's');
+                    parts.push('That extra ' + $(addP) + '/mo is doing real work — it pulls your payoff in by about ' + yStr + (d18 ? ' and saves ' + $(d18.interestSaved) + ' in interest.' : '.'));
+                } else if (monthsSaved >= 2) {
+                    parts.push('The extra ' + $(addP) + '/mo trims your payoff by about ' + monthsSaved + ' months.');
+                }
+            }
+        }
+        // 1.9 PAID-OFF → REQUIRED-INCOME DROP — fires only when payoffPct ≥ 85%; a dollar insight, no cross-room %.
+        if (payoffPct !== null && payoffPct >= 0.85 && totalMo > 0) {
+            var pd19 = calculatePayoff(acc);
+            if (/\d{4}/.test(pd19)) {
+                parts.push('One more thing the payoff date buys you: once this loan ends around ' + pd19 + ', the ' + $(totalMo) + '/mo it takes disappears from your required monthly income — for the rest of your life. A paid-off Moat is one of the biggest levers you have on the income you must generate in retirement.');
+            }
+        }
         return parts.join(' ');
     }
 
