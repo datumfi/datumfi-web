@@ -7153,7 +7153,17 @@
 
         if (base.taxCode === 'debt') {
             let isStudentLoan = base.id.includes('student_loan');
-            
+
+            // §1 DATUM INTELLIGENCE strip (Mortgage-only) — composed, sourced-or-blank; live-refreshed.
+            if (base.title === 'Mortgage') {
+                let _diTxt = _moatDI(acc);
+                html += `
+            <div style="margin-bottom:18px; padding:14px; background: rgba(93,202,165,0.05); border:1px solid rgba(93,202,165,0.25); border-radius:4px;">
+                <div style="color:var(--teal-mid); font-weight:bold; font-size:11px; letter-spacing:1px; margin-bottom:8px;">DATUM INTELLIGENCE</div>
+                <div id="modal-moat-di-${id}" style="font-size:12px; color: rgba(255,255,255,0.8); line-height:1.55;">${_diTxt || 'Add this loan\'s balance, rate, and payment and Datum reads it back — the payoff clock, the lifetime interest, and the equity behind it.'}</div>
+            </div>`;
+            }
+
             if (!isStudentLoan) {
                 let linkOpts = `<option value="">None (Unsecured / Isolated Liability)</option>`;
                 let _linkScope = _securedLinkScope(base);
@@ -7611,6 +7621,9 @@
                 // delta / amort button in place (no re-render, keeps input focus).
                 const piEl = document.getElementById(`modal-payoff-intel-${id}`);
                 if(piEl) piEl.innerHTML = _payoffIntelHTML(id, acc);
+                // §1 Moat DI — live recompose (sourced-or-blank).
+                const diEl = document.getElementById(`modal-moat-di-${id}`);
+                if(diEl) diEl.innerHTML = _moatDI(acc) || 'Add this loan\'s balance, rate, and payment and Datum reads it back — the payoff clock, the lifetime interest, and the equity behind it.';
             }
         }
     };
@@ -7689,6 +7702,9 @@
                 // §4.2/§4.3 payoff intelligence refresh (balance change moves lifetime interest too).
                 const piEl2 = document.getElementById(`modal-payoff-intel-${id}`);
                 if(piEl2) piEl2.innerHTML = _payoffIntelHTML(id, acc);
+                // §1 Moat DI — live recompose on balance change (equity + payoff shift).
+                const diEl2 = document.getElementById(`modal-moat-di-${id}`);
+                if(diEl2) diEl2.innerHTML = _moatDI(acc) || 'Add this loan\'s balance, rate, and payment and Datum reads it back — the payoff clock, the lifetime interest, and the equity behind it.';
             }
         }
     };
@@ -7940,6 +7956,56 @@
     function hasEscrow(acc) {
         return (parseFloat(acc.propTaxAnnual) || 0) > 0 || (parseFloat(acc.insAnnual) || 0) > 0 || (parseFloat(acc.pmiMonthly) || 0) > 0;
     }
+    // §1 MOAT DATUM INTELLIGENCE — composes the debt-native signal paragraph from LIVE signals only
+    // (balance-vs-original · rate+type · payoff clock · lifetime interest · equity-vs-Grounds · escrow
+    // load). Every clause sourced-or-blank: a clause appears only when its inputs are present (L47).
+    function _moatDI(acc) {
+        var parts = [];
+        var bal = parseFloat(acc.value) || 0;
+        var orig = parseFloat(acc.origAmount) || 0;
+        var rate = parseFloat(acc.intRate) || 0;
+        var addP = parseFloat(acc.addPmt) || 0;
+        var totalMo = calculateTotalPmt(acc);
+        var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
+        // 1.1 balance vs original (the % clause needs origAmount)
+        if (bal > 0 && orig >= bal && orig > 0) {
+            var pct = Math.round((1 - bal / orig) * 100);
+            parts.push('You\'ve paid down ' + pct + '% of the original ' + $(orig) + ' — ' + $(bal) + ' of the loan is left. Every payment now buys you more house and less lender.');
+        }
+        // 1.2 rate + type
+        if (rate > 0) {
+            var rtc = acc.rateType === 'Variable' ? ' it can move — watch the reset.' : (acc.rateType === 'Fixed' ? ' locked — it won\'t move on you.' : '');
+            parts.push('This loan runs ' + rate + '% APR' + (acc.rateType ? ', ' + acc.rateType + '.' : '.') + rtc);
+        }
+        // 1.3 payoff clock (only when we have a real date)
+        var payoff = calculatePayoff(acc);
+        if (bal > 0 && totalMo > 0 && /\d{4}/.test(payoff)) {
+            var ahead = addP > 0 ? ' The extra ' + $(addP) + '/mo pulls that in sooner.' : '';
+            parts.push('At ' + $(totalMo) + '/mo you\'re mortgage-free around ' + payoff + '.' + ahead);
+        }
+        // 1.4 lifetime interest / all-in cost
+        var li = lifetimeInterest(acc), tc = totalCost(acc);
+        if (li !== null && tc !== null) {
+            parts.push('Paying the minimum, this house costs about ' + $(tc) + ' all-in — ' + $(li) + ' of that is interest to the bank.');
+        }
+        // 1.5 equity vs The Grounds (only when linked to a property asset)
+        if (acc.linkedAssetId) {
+            var la = state.accounts.find(function (a) { return a.id === acc.linkedAssetId; });
+            var lb = la ? getBaseType(la.baseId) : null;
+            if (lb && String(lb.id).indexOf('property') === 0) {
+                var lv = la.value || 0, eq = lv - bal;
+                parts.push('Against The Grounds (' + $(lv) + '), your equity here is ' + $(eq) + '. ' + (eq >= 0 ? 'You own more than you owe.' : 'Underwater — you owe more than it\'s worth.'));
+            }
+        }
+        // 1.6 escrow load
+        if (hasEscrow(acc)) {
+            var em = calculateEscrowMonthly(acc), pmi = parseFloat(acc.pmiMonthly) || 0;
+            var pmiC = pmi > 0 ? ' PMI drops off once you cross ~20% equity — worth watching.' : '';
+            parts.push('Beyond principal + interest, taxes and insurance add about ' + $(em) + '/mo — your real monthly is ' + $(totalMo + em) + '.' + pmiC);
+        }
+        return parts.join(' ');
+    }
+
     // §0.3b escrow computed footer — plain-coach all-in line + PMI-dropoff clause (only when pmi>0).
     function _escrowFooter(acc) {
         var em = calculateEscrowMonthly(acc);
