@@ -7191,11 +7191,11 @@
             html += `
             <div class="field-row">
                 <div>${_dLbl(base, 'Current Balance', 'What you still owe', 'The payoff figure today — what it\'d take to clear this loan right now, before any more interest. This is the number the estate subtracts from your net worth.', 'color:var(--gold);')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.value?.toString()||'')}" oninput="updateValueWithoutRender('${id}', this.value)"></div>
-                <div>${_dLbl(base, 'Original Amount', 'Where it started', 'The loan\'s opening balance. We compare it to today\'s balance to show how much house you\'ve bought back from the bank.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.origAmount||'')}" oninput="updateAccField('${id}', 'origAmount', this.value)"></div>
+                <div>${_dLbl(base, 'Original Amount', 'Where it started', 'The loan\'s opening balance. We compare it to today\'s balance to show how much house you\'ve bought back from the bank.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.origAmount||'')}" oninput="updateAccField('${id}', 'origAmount', this.value)"></div>
             </div>
             <div class="field-row">
                 <div>${_dLbl(base, 'Interest Rate (APR) %', 'Your cost of borrowing', 'The yearly rate the lender charges. On a mortgage even half a point, over 30 years, is real money — it\'s the biggest lever on lifetime cost.')}<input type="number" class="small-field" placeholder="0" value="${acc.intRate||''}" oninput="updateAccField('${id}', 'intRate', this.value)"></div>
-                <div>${_dLbl(base, 'Rate Type', 'Locked or moving', 'Fixed = this rate never changes. Variable/ARM = it can reset up or down on a schedule. Pick Variable to reveal the index, margin, and caps that govern the moves.')}
+                <div>${_dLbl(base, 'Rate Type', 'Locked or moving', 'Fixed = this rate never changes. Variable/ARM = it can reset up or down on a schedule. Pick Variable to reveal the index, margin, and caps that govern the moves.', '', 'right')}
                     <select class="small-field" style="background: var(--bg-navy);" onchange="updateAccField('${id}', 'rateType', this.value)">
                         <option value="Fixed" ${acc.rateType==='Fixed'?'selected':''}>Fixed</option>
                         <option value="Variable" ${acc.rateType==='Variable'?'selected':''}>Variable</option>
@@ -7205,11 +7205,11 @@
             ${_variableRateClusterHTML(id, acc)}
             <div class="field-row">
                 <div>${_dLbl(base, 'Origination Date', 'The day it started', 'When the loan was funded. Sets the amortization clock we use to estimate your payoff date.')}<input type="date" class="small-field" value="${acc.origDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'origDate', this.value)"></div>
-                <div>${_dLbl(base, 'Maturity Date', 'The finish line', 'The contractual payoff date if you only ever pay the minimum. Extra payments beat this date; we\'ll show how much sooner.')}<input type="date" class="small-field" value="${acc.maturityDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'maturityDate', this.value)"></div>
+                <div>${_dLbl(base, 'Maturity Date', 'The finish line', 'The contractual payoff date if you only ever pay the minimum. Extra payments beat this date; we\'ll show how much sooner.', '', 'right')}<input type="date" class="small-field" value="${acc.maturityDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'maturityDate', this.value)"></div>
             </div>
             <div class="field-row">
                 <div>${_dLbl(base, 'Minimum Payment', 'The required amount', 'Your contractual principal + interest each month. Escrow (taxes/insurance) may be collected on top — see the escrow fields.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.minPmt||'')}" oninput="updateAccField('${id}', 'minPmt', this.value)"></div>
-                <div>${_dLbl(base, 'Additional Payment', 'Your accelerator', 'Anything you add on top of the minimum goes straight at principal — it shrinks both the payoff clock and the lifetime interest. Even a little compounds.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.addPmt||'')}" oninput="updateAccField('${id}', 'addPmt', this.value)"></div>
+                <div>${_dLbl(base, 'Additional Payment', 'Your accelerator', 'Anything you add on top of the minimum goes straight at principal — it shrinks both the payoff clock and the lifetime interest. Even a little compounds.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.addPmt||'')}" oninput="updateAccField('${id}', 'addPmt', this.value)"></div>
             </div>
             <div class="field-row" style="grid-template-columns: 1fr;">
                 <div>${_dLbl(base, 'Next Payment Date', 'The clock\'s start', 'We count the payoff timeline from here. Setting it keeps the estimated payoff date honest.')}<input type="date" class="small-field" value="${acc.nextPmtDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'nextPmtDate', this.value)"></div>
@@ -7225,7 +7225,7 @@
                 <div style="font-size:11px; color: rgba(255,255,255,0.6); line-height:1.45; margin-bottom:12px;">Escrow is the slice of your monthly payment that isn't principal or interest — your lender collects property taxes, homeowner's insurance, and (if you're under ~20% equity) PMI, then pays those bills for you. It's real money you owe every month, just not to the loan itself.</div>
                 <div class="field-row">
                     <div>${_dLbl(base, 'Annual Property Taxes', 'The town\'s cut', 'What the county charges yearly on the home. Usually escrowed into your monthly payment. Part of the real cost of owning, not just borrowing.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.propTaxAnnual||'')}" oninput="updateAccField('${id}', 'propTaxAnnual', this.value)"></div>
-                    <div>${_dLbl(base, 'Annual Insurance', 'Protecting the asset', 'Homeowner\'s/hazard insurance, billed yearly, usually escrowed. Required by the lender while there\'s a balance.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.insAnnual||'')}" oninput="updateAccField('${id}', 'insAnnual', this.value)"></div>
+                    <div>${_dLbl(base, 'Annual Insurance', 'Protecting the asset', 'Homeowner\'s/hazard insurance, billed yearly, usually escrowed. Required by the lender while there\'s a balance.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.insAnnual||'')}" oninput="updateAccField('${id}', 'insAnnual', this.value)"></div>
                 </div>
                 <div class="field-row" style="grid-template-columns: 1fr;">
                     <div>${_dLbl(base, 'Monthly PMI', 'The lender\'s safety net', 'Private Mortgage Insurance — charged while your equity is under ~20%. It protects the lender, not you, and drops off once you cross the line. Worth targeting.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.pmiMonthly||'')}" oninput="updateAccField('${id}', 'pmiMonthly', this.value)"></div>
@@ -8017,10 +8017,12 @@
 
     // §2 debt field-label hover (mortgage-only, Moat-voiced). Non-mortgage debt keeps a plain label so
     // Auto/Personal/etc. are untouched until their own wave. Reuses the shared .modal-tt-wrap/.modal-tt.
-    function _dLbl(base, text, title, body, extraStyle) {
+    function _dLbl(base, text, title, body, extraStyle, align) {
         var st = extraStyle || '';
         if (base.title !== 'Mortgage' || !body) return `<div class="input-label" style="${st}">${text}</div>`;
-        return `<span class="input-label modal-tt-wrap" style="cursor:help;${st}">${text}<div class="modal-tt" style="left:0; right:auto;"><strong>${title}</strong>${body}</div></span>`;
+        // Right-column fields must open the 280px tooltip LEFTWARD or it clips at the modal card's right edge.
+        var ttPos = align === 'right' ? 'right:0; left:auto;' : 'left:0; right:auto;';
+        return `<span class="input-label modal-tt-wrap" style="cursor:help;${st}">${text}<div class="modal-tt" style="${ttPos}"><strong>${title}</strong>${body}</div></span>`;
     }
 
     // §0.4 VARIABLE-RATE CLUSTER (L48 shared seam — The Moat / The Garage / The Cellar import this).
@@ -8071,12 +8073,25 @@
 
     // §4.2 lifetime interest + all-in total cost. Sourced-or-blank: null when we can't honestly compute
     // (paid off / no payment / negative amortization) — the caller then omits the line, never fakes $0.
+    // EXACT amortized interest — sums each period's real interest with a fractional final payment, so it
+    // matches the amortization table. (Supersedes the rough totalMonthly*ceilMonths-balance estimate,
+    // which overstated by up to one payment's rounding — e.g. $850 vs the true $621 on a 17k/3.99%/850 loan.)
     function lifetimeInterest(acc, pmtOverride) {
         let m = payoffMonths(acc, pmtOverride);
         if (m.code !== 'OK') return null;
         let pmt = (pmtOverride !== undefined) ? pmtOverride : calculateTotalPmt(acc);
         let bal = parseFloat(acc.value) || 0;
-        return Math.max(0, pmt * m.months - bal);
+        let r = (parseFloat(acc.intRate) || 0) / 100 / 12;
+        let total = 0, n = 0;
+        while (bal > 0.005 && n < 1200) {
+            let i = bal * r;
+            let principal = pmt - i;
+            if (principal > bal) principal = bal;   // final partial payment
+            total += i;
+            bal -= principal;
+            n++;
+        }
+        return Math.max(0, total);
     }
     function totalCost(acc) {
         let li = lifetimeInterest(acc);
