@@ -6563,7 +6563,7 @@
                    <input type="checkbox" ${acc.isPriority ? 'checked' : ''} onchange="updateAccToggle('${id}', 'isPriority', this.checked)">
                    <span class="slider"></span>
                  </label>
-                 <div class="modal-tt"><strong>Target For Demolition</strong>Programs the engine to route all Free Cash Flow directly into this liability, mathematically accelerating its payoff date and minimizing lifetime interest drag.</div>
+                 <div class="modal-tt"><strong>Accelerated Payoff</strong>Marks this loan as a priority target. In Outflow Routing, spare cash flows here first — pulling in the payoff date and cutting the interest you'll pay. It's a guaranteed return equal to your rate; weigh it against investing that same cash.</div>
              </div>`;
         }
 
@@ -7129,9 +7129,10 @@
             
             if (!isStudentLoan) {
                 let linkOpts = `<option value="">None (Unsecured / Isolated Liability)</option>`;
+                let _linkScope = _securedLinkScope(base);
                 state.accounts.forEach(a => {
                     let aBase = getBaseType(a.baseId);
-                    if(aBase && aBase.taxCode === 'physical' && !aBase.id.includes('collectibles')) {
+                    if(aBase && aBase.taxCode === 'physical' && _linkScope(aBase)) {
                         linkOpts += `<option value="${a.id}" ${acc.linkedAssetId === a.id ? 'selected' : ''}>Map to: ${a.name} (${aBase.meta})</option>`;
                     }
                 });
@@ -7874,6 +7875,19 @@
         
         startDate.setMonth(startDate.getMonth() + months);
         return startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+
+    // SECURED-DEBT LINK SCOPE (§0.2 · L48 shared seam — The Moat / The Garage / The Cellar import this).
+    // Maps a debt room to the physical-asset FAMILY it may legitimately secure against, closing the bug
+    // where any debt could link to any physical asset (a Mortgage cross-linking to a Vehicle, etc.).
+    function _securedLinkScope(debtBase) {
+        var id = String(debtBase && debtBase.id || '');
+        if (id.indexOf('mortgage') === 0 || id.indexOf('heloc') === 0)
+            return function(aB) { return aB.id === 'property' || aB.id === 'property_primary' || aB.id === 'property_co'; };
+        if (id.indexOf('auto_debt') === 0)
+            return function(aB) { return aB.id === 'auto' || aB.id === 'auto_primary' || aB.id === 'auto_co'; };
+        // Other debts (personal / revolving) keep the prior broad physical scope (collectibles excluded).
+        return function(aB) { return aB.taxCode === 'physical' && !String(aB.id).includes('collectibles'); };
     }
 
     // RAF + 100ms debounce wrapper (5E) — replaces direct calls
