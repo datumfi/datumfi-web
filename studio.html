@@ -7983,10 +7983,19 @@
             var ahead = addP > 0 ? ' The extra ' + $(addP) + '/mo pulls that in sooner.' : '';
             parts.push('At ' + $(totalMo) + '/mo you\'re mortgage-free around ' + payoff + '.' + ahead);
         }
-        // 1.4 lifetime interest / all-in cost
-        var li = lifetimeInterest(acc), tc = totalCost(acc);
-        if (li !== null && tc !== null) {
-            parts.push('Paying the minimum, this house costs about ' + $(tc) + ' all-in — ' + $(li) + ' of that is interest to the bank.');
+        // 1.4 cost — LIFE-OF-LOAN vs REMAINING (term-derived; two framings never conflated, sourced-or-blank).
+        var liRemain = lifetimeInterest(acc);
+        if (liRemain !== null && bal > 0) {
+            var lol = lifeOfLoan(acc);
+            var lifeLine = lol ? ('Over its full life this mortgage runs about ' + $(lol.costLife) + ' all-in — ' + $(lol.intLife) + ' of that is interest to the bank. ') : '';
+            var remainLine;
+            if (orig > 0 && orig >= bal) {
+                var pPaid = orig - bal, pPct = Math.round((1 - bal / orig) * 100);
+                remainLine = 'You\'ve already retired ' + $(pPaid) + ' of principal (' + pPct + '%); from here to payoff, ' + $(bal) + ' remains, ' + $(liRemain) + ' of it interest.';
+            } else {
+                remainLine = 'From here to payoff, ' + $(bal) + ' remains, ' + $(liRemain) + ' of it interest.';
+            }
+            parts.push(lifeLine + remainLine);
         }
         // 1.5 equity vs The Grounds (only when linked to a property asset)
         if (acc.linkedAssetId) {
@@ -8013,21 +8022,20 @@
             else itc = 'This rate sits right on the fence — reasonable people go either way.';
             parts.push('Here\'s the real decision this loan poses: paying it down early earns you a guaranteed ' + rate + '% — that\'s your rate, tax-free of market risk. ' + itc);
         }
-        // 1.8 ACCELERATOR HONESTY — fires only when addPmt>0; monthsSaved = baseline(min) − accelerated(min+add).
+        // 1.8 ACCELERATOR — ALWAYS both concrete numbers (time AND interest), never an adjective alone.
+        // monthsSaved = baseline(min) − accelerated(min+add); interestSaved = remaining-interest delta.
         if (addP > 0) {
-            var baseM = payoffMonths(acc, parseFloat(acc.minPmt) || 0);
-            var accM = payoffMonths(acc, totalMo);
-            if (baseM.code === 'OK' && accM.code === 'OK') {
-                var monthsSaved = baseM.months - accM.months;
-                if (monthsSaved < 2 && payoffPct !== null && payoffPct >= 0.85) {
-                    parts.push('Honest note: with this loan nearly paid off, that extra ' + $(addP) + '/mo moves your payoff in by less than a month — it barely matters now. No harm in it, but those dollars would stretch further almost anywhere else.');
-                } else if (monthsSaved >= 12) {
-                    var d18 = acceleratedDelta(acc);
-                    var yrs = Math.round(monthsSaved / 12);
-                    var yStr = yrs + ' year' + (yrs === 1 ? '' : 's');
-                    parts.push('That extra ' + $(addP) + '/mo is doing real work — it pulls your payoff in by about ' + yStr + (d18 ? ' and saves ' + $(d18.interestSaved) + ' in interest.' : '.'));
-                } else if (monthsSaved >= 2) {
-                    parts.push('The extra ' + $(addP) + '/mo trims your payoff by about ' + monthsSaved + ' months.');
+            var d18 = acceleratedDelta(acc);
+            if (d18) {
+                var ms18 = d18.monthsSaved, iS18 = $(d18.interestSaved);
+                if (ms18 >= 12) {
+                    var yrs18 = Math.round(ms18 / 12);
+                    var yStr18 = yrs18 + ' year' + (yrs18 === 1 ? '' : 's');
+                    parts.push('That extra ' + $(addP) + '/mo is doing real work — it pulls your payoff in by about ' + yStr18 + ' and saves ' + iS18 + ' in interest.');
+                } else if (ms18 >= 2) {
+                    parts.push('The extra ' + $(addP) + '/mo trims your payoff by about ' + ms18 + ' months and saves ' + iS18 + ' in interest.');
+                } else if (payoffPct !== null && payoffPct >= 0.85) {
+                    parts.push('Honest note: this loan\'s nearly paid off, so that extra ' + $(addP) + '/mo moves payoff in by about ' + ms18 + ' months and saves only ' + iS18 + ' in interest — small, and worth knowing those dollars would stretch further almost anywhere else.');
                 }
             }
         }
@@ -8128,12 +8136,26 @@
         }
         return Math.max(0, total);
     }
-    function totalCost(acc) {
-        let li = lifetimeInterest(acc);
-        if (li === null) return null;
-        let orig = parseFloat(acc.origAmount) || 0;
-        let bal = parseFloat(acc.value) || 0;
-        return (orig > 0 ? orig : bal) + li;
+    // §4.2 term-derived LIFE-OF-LOAN cost — distinct from remaining. term = completed months between
+    // origDate and maturityDate (never hardcoded 15/20/30/refi); CUMIPMT over the full original term.
+    // Null unless origAmount + both dates + rate all present (L47).
+    function _monthsBetween(d1, d2) {
+        var a = new Date(d1 + 'T00:00:00'), b = new Date(d2 + 'T00:00:00');
+        if (isNaN(a) || isNaN(b)) return 0;
+        var m = (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+        if (b.getDate() < a.getDate()) m -= 1;   // DATEDIF "m" semantics = completed months
+        return m > 0 ? m : 0;
+    }
+    function lifeOfLoan(acc) {
+        var orig = parseFloat(acc.origAmount) || 0;
+        var rate = parseFloat(acc.intRate) || 0;
+        if (orig <= 0 || rate <= 0 || !acc.origDate || !acc.maturityDate) return null;
+        var term = _monthsBetween(acc.origDate, acc.maturityDate);
+        if (term <= 0) return null;
+        var r = rate / 100 / 12;
+        var pmt = (r === 0) ? orig / term : orig * r / (1 - Math.pow(1 + r, -term));
+        var costLife = pmt * term;
+        return { term: term, costLife: costLife, intLife: costLife - orig };
     }
     // §4.3 accelerated-payoff delta — minimum-only vs (minimum + additional). Null unless a real
     // additional payment produces a real saving. Toggle-gated at the render layer.
@@ -8154,21 +8176,26 @@
     // gated), and the amortization button. Every line sourced-or-blank. Shared across all secured debts.
     function _payoffIntelHTML(id, acc) {
         var out = '';
-        var li = lifetimeInterest(acc);
-        var tc = totalCost(acc);
+        var li = lifetimeInterest(acc);   // REMAINING interest from today (exact)
         if (li !== null) {
+            var _bal = parseFloat(acc.value) || 0;
+            var _lol = lifeOfLoan(acc);
             out += `
                 <div style="display:flex; justify-content: space-between; margin-top:8px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px;">
-                    <span class="input-label" style="color:var(--white);">Lifetime Interest</span>
+                    <span class="input-label" style="color:var(--white);">Interest Remaining</span>
                     <span style="font-family: var(--font-mono); color: var(--danger); font-weight:bold;">$${Math.round(li).toLocaleString('en-US')}</span>
-                </div>`;
-        }
-        if (tc !== null) {
-            out += `
+                </div>
                 <div style="display:flex; justify-content: space-between; margin-top:4px;">
-                    <span class="input-label" style="color:var(--white);">Total Cost (all-in)</span>
-                    <span style="font-family: var(--font-mono); color: var(--white); font-weight:bold;">$${Math.round(tc).toLocaleString('en-US')}</span>
+                    <span class="input-label" style="color:var(--white);">Remaining Cost</span>
+                    <span style="font-family: var(--font-mono); color: var(--white); font-weight:bold;">$${Math.round(_bal + li).toLocaleString('en-US')}</span>
                 </div>`;
+            if (_lol) {
+                out += `
+                <div style="display:flex; justify-content: space-between; margin-top:4px;">
+                    <span class="input-label" style="color:rgba(255,255,255,0.6);">Life-of-Loan Interest</span>
+                    <span style="font-family: var(--font-mono); color: rgba(255,255,255,0.6); font-weight:bold;">$${Math.round(_lol.intLife).toLocaleString('en-US')}</span>
+                </div>`;
+            }
         }
         // §4.3/§5.4 accelerated delta — toggle-gated. NOTE: Expected Payoff Date already reflects the
         // additional payment (calculateTotalPmt = min+add), so the accelerated DATE equals it; we surface
