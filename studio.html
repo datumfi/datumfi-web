@@ -7268,7 +7268,7 @@
             // as meta-text — flagged for Captain.
             if (base.title === 'Mortgage') {
                 html += _diWhyPanel('Should you pay it down, or invest the difference?', [
-                    ['The mortgage-vs-invest tension', 'A mortgage is the cheapest large loan most people ever get, and it\'s secured by an asset that can grow. That creates the classic tension: a guaranteed return equal to your rate (pay it down) versus an uncertain, historically-higher return (invest the difference). At a low fixed 3%, the math often favors investing; at a higher or variable rate, paying down looks better — and closer to retirement, a paid-off house lowers the income you must generate every month for the rest of your life. There\'s also the part no spreadsheet captures: for some people, owning the home free and clear is worth more than the last dollar of return. Datum shows you both numbers and both truths. The choice is yours.']
+                    ['The mortgage-vs-invest tension', 'A mortgage is the cheapest large loan most people ever get, and it\'s secured by an asset that can grow. That creates the classic tension: a guaranteed return equal to your rate (pay it down) versus an uncertain, historically-higher return (invest the difference). At a low fixed 3%, the math often favors investing — that cheap, locked-in rate is hard to pass up, and your dollars have historically earned more in the market than they\'d save against the loan. At a high 8% (or a variable rate that could climb), the reverse is usually true: paying it down is a guaranteed 8% return with zero risk — very hard to beat reliably anywhere else, so accelerating the payoff often wins. And closer to retirement, a paid-off house lowers the income you must generate every month for the rest of your life. There\'s also the part no spreadsheet captures: for some people, owning the home free and clear is worth more than the last dollar of return. Datum shows you both numbers and both truths. The choice is yours.']
                 ]);
             }
         } else if (base.taxCode === 'physical' && !base.id.includes('collectibles')) {
@@ -7977,11 +7977,19 @@
             var rtc = acc.rateType === 'Variable' ? ' it can move — watch the reset.' : (acc.rateType === 'Fixed' ? ' locked — it won\'t move on you.' : '');
             parts.push('This loan runs ' + rate + '% APR' + (acc.rateType ? ', ' + acc.rateType + '.' : '.') + rtc);
         }
-        // 1.3 payoff clock (only when we have a real date)
+        // 1.3 payoff clock (only when we have a real date). The shown date already includes addPmt, so the
+        // aheadClause names the MINIMUM-ONLY baseline date it beats — not "sooner than the date just shown".
         var payoff = calculatePayoff(acc);
         if (bal > 0 && totalMo > 0 && /\d{4}/.test(payoff)) {
-            var ahead = addP > 0 ? ' The extra ' + $(addP) + '/mo pulls that in sooner.' : '';
-            parts.push('At ' + $(totalMo) + '/mo you\'re mortgage-free around ' + payoff + '.' + ahead);
+            var ahead = '';
+            if (addP > 0) {
+                var minM13 = payoffMonths(acc, parseFloat(acc.minPmt) || 0);
+                var accM13 = payoffMonths(acc, totalMo);
+                if (minM13.code === 'OK' && accM13.code === 'OK') {
+                    ahead = ' — about ' + (minM13.months - accM13.months) + ' months sooner than the ' + _payoffDateFrom(acc, minM13.months) + ' you\'d hit paying the minimum alone.';
+                }
+            }
+            parts.push('At ' + $(totalMo) + '/mo you\'re mortgage-free around ' + payoff + (ahead || '.'));
         }
         // 1.4 cost — LIFE-OF-LOAN vs REMAINING (term-derived; two framings never conflated, sourced-or-blank).
         var liRemain = lifetimeInterest(acc);
