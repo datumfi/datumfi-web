@@ -7342,10 +7342,15 @@
                     <span class="input-label" style="color:var(--white);">Total Annual Carrying Cost</span>
                     <span id="modal-carry-total-${id}" style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold;">$${Math.round(calcCarryTotal(acc)).toLocaleString('en-US')}</span>
                 </div>
-                <div class="toggle-row modal-tt-wrap" style="border-bottom:none; padding-top:12px;">
+                <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-top:12px; padding-bottom:12px;">
                     <span class="toggle-label" style="color:var(--muted);">Include in Datum Builder</span>
                     <label class="switch"><input type="checkbox" ${inDB ? 'checked' : ''} onchange="updateAccToggle('${id}', 'includeDatumBuilder', this.checked)"><span class="slider"></span></label>
                     <div class="modal-tt"><strong>Retirement-spend rollup</strong>Includes this asset's carrying cost in your future Datum Builder spending number. Turn off to exclude a specific asset.</div>
+                </div>
+                <div class="toggle-row modal-tt-wrap" style="border-bottom:none; padding-top:12px;">
+                    <span class="toggle-label" style="color:var(--muted);">Use value estimate (API) · OFF until key present</span>
+                    <label class="switch"><input type="checkbox" ${acc.useValueApi === true ? 'checked' : ''} onchange="updateAccToggle('${id}', 'useValueApi', this.checked)"><span class="slider"></span></label>
+                    <div class="modal-tt"><strong>Automated valuation (off by default)</strong>When enabled with a key, Datum fetches an estimated market RANGE (via RentCast) and tags it 'est.' — your own number always wins and is never overwritten. Hard-capped at the free tier so it can't run up a bill; the key lives only on our server, never in your browser.</div>
                 </div>
             </div>`;
                 }
@@ -8190,6 +8195,35 @@
         return out;
     }
     var _GROUNDS_DI_EMPTY = 'Enter a value for this property (and link any mortgage) and Datum reads back your equity and the annual cost to hold it.';
+
+    // ── ASSET INTELLIGENCE (§6/§6b) — provider-agnostic valuation seam, GUARDRAIL-FIRST, key OFF/stubbed.
+    // The real RentCast/VinAudit/vPIC fetch runs in a Cloudflare Worker (key = Worker SECRET, NEVER in the
+    // browser). This client layer is the abstraction + the anti-overage guardrail (§6.3 / §6b): hard-cap
+    // 50/mo on Datum's key (never issue call #51), BYO-key is the only paid path, de-dupe cache, manual-
+    // first. It NEVER touches the network in this build — the Worker fetch is wired after the live signup.
+    window._AssetIntel = (function () {
+        var CAP = 50, REFRESH_MS = 30 * 24 * 3600 * 1000;   // homes refresh 30–90d (§6b.5) — the de-dupe window
+        function monthKey() { var d = new Date(); return 'aiCalls:' + d.getFullYear() + '-' + (d.getMonth() + 1); }
+        function count() { try { return parseInt(localStorage.getItem(monthKey()) || '0', 10) || 0; } catch (e) { return 0; } }
+        function bump() { try { localStorage.setItem(monthKey(), String(count() + 1)); } catch (e) {} }
+        function hasByoKey() { try { return !!localStorage.getItem('aiByoKey'); } catch (e) { return false; } }
+        function cacheGet(k) { try { var r = JSON.parse(localStorage.getItem('aiCache:' + k) || 'null'); if (r && (Date.now() - (r._t || 0)) < REFRESH_MS) return r; } catch (e) {} return null; }
+        function cacheSet(k, v) { try { v = v || {}; v._t = Date.now(); localStorage.setItem('aiCache:' + k, JSON.stringify(v)); } catch (e) {} }
+        function cacheClear() { try { Object.keys(localStorage).forEach(function (kk) { if (kk.indexOf('aiCache:') === 0) localStorage.removeItem(kk); }); } catch (e) {} }
+        return {
+            MONTHLY_CAP: CAP,
+            _monthKey: monthKey, _count: count, _cacheSet: cacheSet, _cacheClear: cacheClear, hasByoKey: hasByoKey,
+            // Decision layer — returns whether a call MAY be issued; never fetches in this build.
+            request: function (acc, assetKey) {
+                if (!acc || acc.useValueApi !== true) return { status: 'disabled' };   // §5 toggle OFF by default → no call
+                var cached = cacheGet(assetKey);
+                if (cached) return { status: 'cached', data: cached };                 // de-dupe within the refresh window
+                if (!hasByoKey() && count() >= CAP) return { status: 'capped' };       // NEVER issue call #51 on Datum's key
+                if (!hasByoKey()) bump();                                              // a Datum-key call consumes the free tier
+                return { status: 'stubbed' };                                          // would call the Worker; BYO-key = the only paid path past the cap
+            }
+        };
+    })();
 
     // §0.4 VARIABLE-RATE CLUSTER (L48 shared seam — The Moat / The Garage / The Cellar import this).
     // Revealed only when rateType==='Variable'; every field sourced-or-blank; Fixed hides the block.
