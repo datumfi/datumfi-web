@@ -7165,6 +7165,7 @@
                     </select>
                 </div>
             </div>
+            ${_variableRateClusterHTML(id, acc)}
             <div class="field-row">
                 <div><div class="input-label">Origination Date</div><input type="date" class="small-field" value="${acc.origDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'origDate', this.value)"></div>
                 <div><div class="input-label">Maturity Date</div><input type="date" class="small-field" value="${acc.maturityDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'maturityDate', this.value)"></div>
@@ -7506,6 +7507,7 @@
             }
 
             if(field === 'linkedAssetId') openAccountModal(id);
+            if(field === 'rateType') openAccountModal(id);   // §0.4/§5.1 — reveal/hide the Variable-rate cluster
             if(field === 'linkedToAccount' || field === 'rollFlavor') openAccountModal(id);   // The Conduit — refresh count-once flag (§7.5) + Layer-E tax fork (§9) live
 
             // Live DOM update for limits calculation — same §402(g)-class test as the modal (401k/403b/457b)
@@ -7891,6 +7893,25 @@
     // Sourced-or-blank guard (L47): the "with escrow" line surfaces only when a real escrow input exists.
     function hasEscrow(acc) {
         return (parseFloat(acc.propTaxAnnual) || 0) > 0 || (parseFloat(acc.insAnnual) || 0) > 0 || (parseFloat(acc.pmiMonthly) || 0) > 0;
+    }
+
+    // §0.4 VARIABLE-RATE CLUSTER (L48 shared seam — The Moat / The Garage / The Cellar import this).
+    // Revealed only when rateType==='Variable'; every field sourced-or-blank; Fixed hides the block.
+    function _variableRateClusterHTML(id, acc) {
+        if (acc.rateType !== 'Variable') return '';
+        var iv = String(acc.rateIndex || '').replace(/"/g, '&quot;');
+        return `
+            <div class="field-row">
+                <div><div class="input-label">Rate Index</div><input type="text" class="small-field" placeholder="e.g. SOFR, Prime" value="${iv}" oninput="updateAccField('${id}', 'rateIndex', this.value)"></div>
+                <div><div class="input-label">Margin %</div><input type="number" class="small-field" placeholder="0" value="${acc.rateMargin||''}" oninput="updateAccField('${id}', 'rateMargin', this.value)"></div>
+            </div>
+            <div class="field-row">
+                <div><div class="input-label">Periodic Cap %</div><input type="number" class="small-field" placeholder="0" value="${acc.capPeriodic||''}" oninput="updateAccField('${id}', 'capPeriodic', this.value)"></div>
+                <div><div class="input-label">Lifetime Cap %</div><input type="number" class="small-field" placeholder="0" value="${acc.capLifetime||''}" oninput="updateAccField('${id}', 'capLifetime', this.value)"></div>
+            </div>
+            <div class="field-row" style="grid-template-columns: 1fr;">
+                <div><div class="input-label">Next Reset Date</div><input type="date" class="small-field" value="${acc.rateResetDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'rateResetDate', this.value)"></div>
+            </div>`;
     }
 
     function calculatePayoff(acc) {
