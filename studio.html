@@ -7199,15 +7199,22 @@
                 <div><div class="input-label">Next Payment Date</div><input type="date" class="small-field" value="${acc.nextPmtDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'nextPmtDate', this.value)"></div>
             </div>`;
 
-            // §0.3/§4.1 ESCROW — mortgage-only. Property tax + insurance + PMI build the true all-in monthly.
+            // §0.3/§0.3b/§4.1 ESCROW — mortgage-only, one labeled section: header + plain-coach definition
+            // + the three grouped fields (always visible so escrow is discoverable/enterable) + a computed
+            // footer that is sourced-or-blank (hidden until a value is entered — no empty numeric shell).
             if (base.title === 'Mortgage') {
                 html += `
-            <div class="field-row">
-                <div><div class="input-label">Annual Property Taxes</div><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.propTaxAnnual||'')}" oninput="updateAccField('${id}', 'propTaxAnnual', this.value)"></div>
-                <div><div class="input-label">Annual Insurance</div><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.insAnnual||'')}" oninput="updateAccField('${id}', 'insAnnual', this.value)"></div>
-            </div>
-            <div class="field-row" style="grid-template-columns: 1fr;">
-                <div><div class="input-label">Monthly PMI</div><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.pmiMonthly||'')}" oninput="updateAccField('${id}', 'pmiMonthly', this.value)"></div>
+            <div style="margin-top:16px; padding:14px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:4px;">
+                <div style="color:var(--teal-mid); font-weight:bold; font-size:13px; margin-bottom:6px;">🏦 Escrow — the monthly bundle</div>
+                <div style="font-size:11px; color: rgba(255,255,255,0.6); line-height:1.45; margin-bottom:12px;">Escrow is the slice of your monthly payment that isn't principal or interest — your lender collects property taxes, homeowner's insurance, and (if you're under ~20% equity) PMI, then pays those bills for you. It's real money you owe every month, just not to the loan itself.</div>
+                <div class="field-row">
+                    <div><div class="input-label">Annual Property Taxes</div><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.propTaxAnnual||'')}" oninput="updateAccField('${id}', 'propTaxAnnual', this.value)"></div>
+                    <div><div class="input-label">Annual Insurance</div><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.insAnnual||'')}" oninput="updateAccField('${id}', 'insAnnual', this.value)"></div>
+                </div>
+                <div class="field-row" style="grid-template-columns: 1fr;">
+                    <div><div class="input-label">Monthly PMI</div><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.pmiMonthly||'')}" oninput="updateAccField('${id}', 'pmiMonthly', this.value)"></div>
+                </div>
+                <div id="modal-escrow-foot-${id}" style="display:${hasEscrow(acc)?'block':'none'}; font-size:11px; color: rgba(255,255,255,0.72); line-height:1.5; margin-top:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;">${_escrowFooter(acc)}</div>
             </div>`;
             }
 
@@ -7232,10 +7239,6 @@
                     <span class="input-label" style="color:var(--white);">Total Monthly Payment</span>
                     <span id="modal-calc-pmt-${id}" style="font-family: var(--font-mono); color: var(--danger); font-weight:bold;">$${calculateTotalPmt(acc).toLocaleString('en-US')}</span>
                 </div>
-                ${base.title === 'Mortgage' ? `<div id="modal-escrow-row-${id}" style="display:${hasEscrow(acc)?'flex':'none'}; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 8px;">
-                    <span class="input-label" style="color:var(--teal-mid);">Total Monthly (with escrow)</span>
-                    <span id="modal-calc-escrow-${id}" style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold;">$${Math.round(calculateTotalPmt(acc)+calculateEscrowMonthly(acc)).toLocaleString('en-US')}</span>
-                </div>` : ''}
                 <div style="display:flex; justify-content: space-between;">
                     <span class="input-label" style="color:var(--teal-mid);">Expected Payoff Date</span>
                     <span id="modal-calc-payoff-${id}" style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold; font-size:14px;">${calculatePayoff(acc)}</span>
@@ -7579,15 +7582,14 @@
                     eqEl.innerText = '$' + eq.toLocaleString('en-US');
                     eqEl.style.color = eq >= 0 ? 'var(--teal-mid)' : 'var(--danger)';
                 }
-                // §4.1 escrow — live show/hide + recompute the all-in monthly (sourced-or-blank).
-                const escrowRow = document.getElementById(`modal-escrow-row-${id}`);
-                const escrowEl = document.getElementById(`modal-calc-escrow-${id}`);
-                if(escrowRow && escrowEl) {
+                // §0.3b escrow footer — live show/hide + recompute the all-in line (sourced-or-blank).
+                const escrowFoot = document.getElementById(`modal-escrow-foot-${id}`);
+                if(escrowFoot) {
                     if(hasEscrow(acc)) {
-                        escrowRow.style.display = 'flex';
-                        escrowEl.innerText = '$' + Math.round(calculateTotalPmt(acc) + calculateEscrowMonthly(acc)).toLocaleString('en-US');
+                        escrowFoot.style.display = 'block';
+                        escrowFoot.innerHTML = _escrowFooter(acc);
                     } else {
-                        escrowRow.style.display = 'none';
+                        escrowFoot.style.display = 'none';
                     }
                 }
                 // §4.2/§4.3 payoff intelligence — refresh lifetime interest / total cost / accelerated
@@ -7919,9 +7921,17 @@
         let pmi = parseFloat(acc.pmiMonthly) || 0;
         return pt / 12 + ins / 12 + pmi;
     }
-    // Sourced-or-blank guard (L47): the "with escrow" line surfaces only when a real escrow input exists.
+    // Sourced-or-blank guard (L47): the escrow computed footer surfaces only when a real input exists.
     function hasEscrow(acc) {
         return (parseFloat(acc.propTaxAnnual) || 0) > 0 || (parseFloat(acc.insAnnual) || 0) > 0 || (parseFloat(acc.pmiMonthly) || 0) > 0;
+    }
+    // §0.3b escrow computed footer — plain-coach all-in line + PMI-dropoff clause (only when pmi>0).
+    function _escrowFooter(acc) {
+        var em = calculateEscrowMonthly(acc);
+        var pi = calculateTotalPmt(acc);
+        var pmi = parseFloat(acc.pmiMonthly) || 0;
+        var pmiClause = pmi > 0 ? ' Your PMI drops off once you cross ~20% equity — worth watching.' : '';
+        return `That's about $${Math.round(em).toLocaleString('en-US')}/mo in escrow, on top of your $${Math.round(pi).toLocaleString('en-US')} principal + interest — so your real all-in payment is $${Math.round(pi + em).toLocaleString('en-US')}/mo.${pmiClause}`;
     }
 
     // §0.4 VARIABLE-RATE CLUSTER (L48 shared seam — The Moat / The Garage / The Cellar import this).
