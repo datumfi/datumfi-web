@@ -6244,9 +6244,15 @@
       // other_assets is a value-only tile (NOT a bank-DI room) but gets a room-intro ⓘ via the SHARED wrapper
       // below (L48 reuse — the same title-ⓘ surface, aimed at one more id). Scoped to other_assets ONLY: the
       // other value-only tiles (property/collectibles) stay plain — they have no authored hover copy (L47).
-      if (!_diIsBankRoom(base.id) && !/^other_assets(_primary|_co)?$/.test(base.id)) { el.innerHTML = _diTitleInput(acc, base); return; }
+      // Mortgage rooms (The Moat) are debt, not a bank-DI room, but carry a §3a header hover — let them past.
+      var _isMortgageRoom = (base.title === 'Mortgage');
+      if (!_diIsBankRoom(base.id) && !/^other_assets(_primary|_co)?$/.test(base.id) && !_isMortgageRoom) { el.innerHTML = _diTitleInput(acc, base); return; }
       var tt;
-      if (/^other_assets(_primary|_co)?$/.test(base.id)) {
+      if (_isMortgageRoom) {
+        // §3a header hover — The Moat (Mortgage Copy Bank §3a R36, verbatim).
+        tt = '<strong>The debt that guards the house</strong>' +
+             'A mortgage is a long loan secured by your home — miss enough and the lender can take the house, which is why it\'s usually the cheapest debt you\'ll ever hold. Common shapes: 30- or 15-year fixed, or an adjustable-rate (ARM). For retirement it cuts two ways: a low fixed rate is cheap leverage you may not want to rush to kill, but carrying a payment INTO retirement raises the income floor you must cover every month. Clearing it before you stop working lowers that floor for life — the math and the peace-of-mind can point different directions, and both count.';
+      } else if (/^other_assets(_primary|_co)?$/.test(base.id)) {
         // STEP-0 room-intro hover — Other Assets (Taxable bank R396, verbatim; straight→curly apostrophes to match the file).
         tt = '<strong>What it is</strong>Something you own that has real worth but no ticker and no holdings to read — a private business interest, a stake in a partnership, an asset that lives outside the market.<br><br>' +
              '<strong>How it works here</strong>You give it a value and a note; that’s the whole room. There’s no Interior Decorating, no holdings table, no beta or yield — because there are no market positions to measure. It behaves like your Real Estate and Collectibles rooms: a single number that stands on its own.<br><br>' +
@@ -7246,6 +7252,15 @@
                 <div id="modal-payoff-intel-${id}">${_payoffIntelHTML(id, acc)}</div>
             </div>
             `;
+            // §15 education panel (Mortgage Copy Bank §15 R70, verbatim) — pay-down-vs-invest tension.
+            // Reuses the shared _diWhyPanel renderer (L48). §3b doctrine is embodied across the wired
+            // surfaces (equity · fixed-vs-variable · all-in monthly · accelerate-vs-invest), not printed
+            // as meta-text — flagged for Captain.
+            if (base.title === 'Mortgage') {
+                html += _diWhyPanel('Should you pay it down, or invest the difference?', [
+                    ['The mortgage-vs-invest tension', 'A mortgage is the cheapest large loan most people ever get, and it\'s secured by an asset that can grow. That creates the classic tension: a guaranteed return equal to your rate (pay it down) versus an uncertain, historically-higher return (invest the difference). At a low fixed 3%, the math often favors investing; at a higher or variable rate, paying down looks better — and closer to retirement, a paid-off house lowers the income you must generate every month for the rest of your life. There\'s also the part no spreadsheet captures: for some people, owning the home free and clear is worth more than the last dollar of return. Datum shows you both numbers and both truths. The choice is yours.']
+                ]);
+            }
         } else if (base.taxCode === 'physical' && !base.id.includes('collectibles')) {
             let myDebts = state.accounts.filter(a => a.linkedAssetId === id);
             let linkOpts = `<option value="">Select a liability to link...</option>`;
