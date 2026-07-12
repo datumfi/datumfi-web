@@ -7175,8 +7175,21 @@
             </div>
             <div class="field-row" style="grid-template-columns: 1fr;">
                 <div><div class="input-label">Next Payment Date</div><input type="date" class="small-field" value="${acc.nextPmtDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'nextPmtDate', this.value)"></div>
+            </div>`;
+
+            // §0.3/§4.1 ESCROW — mortgage-only. Property tax + insurance + PMI build the true all-in monthly.
+            if (base.title === 'Mortgage') {
+                html += `
+            <div class="field-row">
+                <div><div class="input-label">Annual Property Taxes</div><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.propTaxAnnual||'')}" oninput="updateAccField('${id}', 'propTaxAnnual', this.value)"></div>
+                <div><div class="input-label">Annual Insurance</div><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.insAnnual||'')}" oninput="updateAccField('${id}', 'insAnnual', this.value)"></div>
             </div>
-            
+            <div class="field-row" style="grid-template-columns: 1fr;">
+                <div><div class="input-label">Monthly PMI</div><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.pmiMonthly||'')}" oninput="updateAccField('${id}', 'pmiMonthly', this.value)"></div>
+            </div>`;
+            }
+
+            html += `
             <div style="margin-top:20px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px;">
                 `;
             
@@ -7197,6 +7210,10 @@
                     <span class="input-label" style="color:var(--white);">Total Monthly Payment</span>
                     <span id="modal-calc-pmt-${id}" style="font-family: var(--font-mono); color: var(--danger); font-weight:bold;">$${calculateTotalPmt(acc).toLocaleString('en-US')}</span>
                 </div>
+                ${base.title === 'Mortgage' ? `<div id="modal-escrow-row-${id}" style="display:${hasEscrow(acc)?'flex':'none'}; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 8px;">
+                    <span class="input-label" style="color:var(--teal-mid);">Total Monthly (with escrow)</span>
+                    <span id="modal-calc-escrow-${id}" style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold;">$${Math.round(calculateTotalPmt(acc)+calculateEscrowMonthly(acc)).toLocaleString('en-US')}</span>
+                </div>` : ''}
                 <div style="display:flex; justify-content: space-between;">
                     <span class="input-label" style="color:var(--teal-mid);">Expected Payoff Date</span>
                     <span id="modal-calc-payoff-${id}" style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold; font-size:14px;">${calculatePayoff(acc)}</span>
@@ -7480,7 +7497,7 @@
     window.updateAccField = function(id, field, value) {
         const acc = state.accounts.find(a => a.id === id);
         if(acc) {
-            if(field === 'origAmount' || field === 'minPmt' || field === 'addPmt') {
+            if(field === 'origAmount' || field === 'minPmt' || field === 'addPmt' || field === 'propTaxAnnual' || field === 'insAnnual' || field === 'pmiMonthly') {
                 acc[field] = value.replace(/[^0-9.-]/g, '');
             } else if (field === 'intRate' || field === 'cola') {
                 acc[field] = parseFloat(value) || 0;
@@ -7537,6 +7554,17 @@
                     let eq = (lAst ? lAst.value || 0 : 0) - (acc.value || 0);
                     eqEl.innerText = '$' + eq.toLocaleString('en-US');
                     eqEl.style.color = eq >= 0 ? 'var(--teal-mid)' : 'var(--danger)';
+                }
+                // §4.1 escrow — live show/hide + recompute the all-in monthly (sourced-or-blank).
+                const escrowRow = document.getElementById(`modal-escrow-row-${id}`);
+                const escrowEl = document.getElementById(`modal-calc-escrow-${id}`);
+                if(escrowRow && escrowEl) {
+                    if(hasEscrow(acc)) {
+                        escrowRow.style.display = 'flex';
+                        escrowEl.innerText = '$' + Math.round(calculateTotalPmt(acc) + calculateEscrowMonthly(acc)).toLocaleString('en-US');
+                    } else {
+                        escrowRow.style.display = 'none';
+                    }
                 }
             }
         }
@@ -7851,6 +7879,18 @@
         let min = parseFloat(acc.minPmt) || 0;
         let add = parseFloat(acc.addPmt) || 0;
         return min + add;
+    }
+
+    // §4.1 ESCROW — mortgage-only monthly escrow load (property tax + insurance are annual; PMI is monthly).
+    function calculateEscrowMonthly(acc) {
+        let pt = parseFloat(acc.propTaxAnnual) || 0;
+        let ins = parseFloat(acc.insAnnual) || 0;
+        let pmi = parseFloat(acc.pmiMonthly) || 0;
+        return pt / 12 + ins / 12 + pmi;
+    }
+    // Sourced-or-blank guard (L47): the "with escrow" line surfaces only when a real escrow input exists.
+    function hasEscrow(acc) {
+        return (parseFloat(acc.propTaxAnnual) || 0) > 0 || (parseFloat(acc.insAnnual) || 0) > 0 || (parseFloat(acc.pmiMonthly) || 0) > 0;
     }
 
     function calculatePayoff(acc) {
