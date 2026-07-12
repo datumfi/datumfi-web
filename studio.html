@@ -6246,9 +6246,17 @@
       // other value-only tiles (property/collectibles) stay plain — they have no authored hover copy (L47).
       // Mortgage rooms (The Moat) are debt, not a bank-DI room, but carry a §3a header hover — let them past.
       var _isMortgageRoom = (base.title === 'Mortgage');
-      if (!_diIsBankRoom(base.id) && !/^other_assets(_primary|_co)?$/.test(base.id) && !_isMortgageRoom) { el.innerHTML = _diTitleInput(acc, base); return; }
+      // The Grounds (Real Estate) — a physical room that carries a §3b room-level intro ⓘ (Property Copy Bank).
+      var _isGroundsRoom = /^property(_primary|_co)?$/.test(base.id);
+      if (!_diIsBankRoom(base.id) && !/^other_assets(_primary|_co)?$/.test(base.id) && !_isMortgageRoom && !_isGroundsRoom) { el.innerHTML = _diTitleInput(acc, base); return; }
       var tt;
-      if (_isMortgageRoom) {
+      if (_isGroundsRoom) {
+        // §3a header hover + §3b full room intro (R26/R100) + §29 doctrine — The Grounds (verbatim).
+        tt = '<strong>The Grounds — your real estate</strong>' +
+             'Your real property and the equity inside it.<br><br>' +
+             'What it is: your real property — homes, land, rental units — and the equity you hold inside them (value minus any linked mortgage). How it works: you enter or estimate a value, link the debt against it, and the room shows your net equity plus the annual cost to simply keep it (taxes, insurance, upkeep). What it does NOT do: this counts toward your net worth and your estate, but it is illiquid and physical — it is NOT part of the invest-able Shape (your stock-and-bond mix) and the Reveal skips it. You can\'t rebalance a house.<br><br>' +
+             '<strong>The one doctrine</strong>An asset APPRECIATES but is never free to hold — equity grows while carrying cost quietly runs in the background.';
+      } else if (_isMortgageRoom) {
         // §3a header hover — The Moat (Mortgage Copy Bank §3a R36, verbatim).
         tt = '<strong>The debt that guards the house</strong>' +
              'A mortgage is a long loan secured by your home — miss enough and the lender can take the house, which is why it\'s usually the cheapest debt you\'ll ever hold. Common shapes: 30- or 15-year fixed, or an adjustable-rate (ARM). For retirement it cuts two ways: a low fixed rate is cheap leverage you may not want to rush to kill, but carrying a payment INTO retirement raises the income floor you must cover every month. Clearing it before you stop working lowers that floor for life — the math and the peace-of-mind can point different directions, and both count.';
@@ -7299,7 +7307,46 @@
             } else {
                  html += `<div style="margin-bottom: 20px;"></div>`;
             }
-        } 
+
+            // ── THE GROUNDS (Real Estate) — §5 toggles + §4 carrying-cost block (Property Copy Bank, Grounds).
+            if (_isGrounds(base)) {
+                var showCarry = acc.showCarryCosts !== false;   // §5.1 default ON
+                var inDB = acc.includeDatumBuilder !== false;    // §5.3 default ON
+                var maintPH = _groundsMaintDefault(acc);
+                html += `
+            <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
+                <span class="toggle-label" style="color:var(--teal-mid);">Show carrying costs</span>
+                <label class="switch"><input type="checkbox" ${showCarry ? 'checked' : ''} onchange="updateAccToggle('${id}', 'showCarryCosts', this.checked)"><span class="slider"></span></label>
+                <div class="modal-tt"><strong>Carrying costs</strong>Everything it costs to simply keep this — taxes, insurance, upkeep, and the small recurring bills — separate from any loan payment.</div>
+            </div>`;
+                if (showCarry) {
+                    html += `
+            <div style="margin-top:14px; padding:14px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:4px;">
+                <div style="color:var(--teal-mid); font-weight:bold; font-size:13px; margin-bottom:10px;">🧾 Annual Carrying Cost</div>
+                <div class="field-row">
+                    <div><div class="input-label">Property Tax (yr)</div><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.propTaxYr||'')}" oninput="updateAccField('${id}', 'propTaxYr', this.value)"></div>
+                    <div><div class="input-label">Homeowners / Hazard Insurance (yr)</div><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.homeInsYr||'')}" oninput="updateAccField('${id}', 'homeInsYr', this.value)"></div>
+                </div>
+                <div class="field-row">
+                    <div><span class="input-label modal-tt-wrap" style="cursor:help;">Est. Maintenance / Repairs (yr)<div class="modal-tt" style="left:0; right:auto;"><strong>est. · ~1% of value</strong>A rule-of-thumb estimate — about 1% of the home's value per year. It's an est.; type your own number to overwrite it.</div></span><input type="text" class="small-field curr-format" placeholder="${maintPH>0 ? 'est. $'+maintPH.toLocaleString('en-US') : '$0'}" value="${formatCurrency(acc.maintYr||'')}" oninput="updateAccField('${id}', 'maintYr', this.value)"></div>
+                    <div><div class="input-label">HOA / Condo Fees (yr)</div><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.hoaYr||'')}" oninput="updateAccField('${id}', 'hoaYr', this.value)"></div>
+                </div>
+                <div class="field-row" style="grid-template-columns: 1fr;">
+                    <div><span class="input-label modal-tt-wrap" style="cursor:help;">Utilities — electric / gas / water (yr)<div class="modal-tt" style="left:0; right:auto;"><strong>Link or enter</strong>Link a utility bill/account where available; otherwise enter your yearly total. Feeds your Datum Builder retirement-spend number.</div></span><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.utilYr||'')}" oninput="updateAccField('${id}', 'utilYr', this.value)"></div>
+                </div>
+                <div style="display:flex; justify-content: space-between; margin-top:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;">
+                    <span class="input-label" style="color:var(--white);">Total Annual Carrying Cost</span>
+                    <span id="modal-carry-total-${id}" style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold;">$${Math.round(calcCarryTotal(acc)).toLocaleString('en-US')}</span>
+                </div>
+                <div class="toggle-row modal-tt-wrap" style="border-bottom:none; padding-top:12px;">
+                    <span class="toggle-label" style="color:var(--muted);">Include in Datum Builder</span>
+                    <label class="switch"><input type="checkbox" ${inDB ? 'checked' : ''} onchange="updateAccToggle('${id}', 'includeDatumBuilder', this.checked)"><span class="slider"></span></label>
+                    <div class="modal-tt"><strong>Retirement-spend rollup</strong>Includes this asset's carrying cost in your future Datum Builder spending number. Turn off to exclude a specific asset.</div>
+                </div>
+            </div>`;
+                }
+            }
+        }
         
         if (base.hasInterest && base.taxCode !== 'debt') {
             html += `
@@ -7548,7 +7595,7 @@
     window.updateAccField = function(id, field, value) {
         const acc = state.accounts.find(a => a.id === id);
         if(acc) {
-            if(field === 'origAmount' || field === 'minPmt' || field === 'addPmt' || field === 'propTaxAnnual' || field === 'insAnnual' || field === 'pmiMonthly') {
+            if(field === 'origAmount' || field === 'minPmt' || field === 'addPmt' || field === 'propTaxAnnual' || field === 'insAnnual' || field === 'pmiMonthly' || field === 'propTaxYr' || field === 'homeInsYr' || field === 'maintYr' || field === 'hoaYr' || field === 'utilYr') {
                 acc[field] = value.replace(/[^0-9.-]/g, '');
             } else if (field === 'intRate' || field === 'cola') {
                 acc[field] = parseFloat(value) || 0;
@@ -7624,6 +7671,11 @@
                 // §1 Moat DI — live recompose (sourced-or-blank).
                 const diEl = document.getElementById(`modal-moat-di-${id}`);
                 if(diEl) diEl.innerHTML = _moatDI(acc) || 'Add this loan\'s balance, rate, and payment and Datum reads it back — the payoff clock, the lifetime interest, and the equity behind it.';
+                // The Grounds — live carrying-cost total (+ §1 signal strip refresh in G2).
+                const carryEl = document.getElementById(`modal-carry-total-${id}`);
+                if(carryEl) carryEl.innerText = '$' + Math.round(calcCarryTotal(acc)).toLocaleString('en-US');
+                const gdiEl = document.getElementById(`modal-grounds-di-${id}`);
+                if(gdiEl && typeof _groundsSignalsHTML === 'function') gdiEl.innerHTML = _groundsSignalsHTML(id, acc);
             }
         }
     };
@@ -8075,6 +8127,25 @@
         var ttPos = align === 'right' ? 'right:0; left:auto;' : 'left:0; right:auto;';
         return `<span class="input-label modal-tt-wrap" style="cursor:help;${st}">${text}<div class="modal-tt" style="${ttPos}"><strong>${title}</strong>${body}</div></span>`;
     }
+
+    // ── THE GROUNDS (Real Estate) — carrying-cost engine + Datum Builder feed hook (Property Copy Bank §4) ──
+    function _isGrounds(base) { return /^property(_primary|_co)?$/.test(base.id); }
+    function _groundsMaintDefault(acc) { var v = parseFloat(acc.value) || 0; return v > 0 ? Math.round(v * 0.01) : 0; }  // §4.3 ~1%-of-value rule-of-thumb (est., placeholder only)
+    // §4.16 TOTAL — sums the ACTUAL entered fields only (blank = 0, never fabricated). The maint est. is a
+    // placeholder suggestion, not auto-summed, so nothing is invented into the Datum Builder feed.
+    function calcCarryTotal(acc) {
+        return (parseFloat(acc.propTaxYr) || 0) + (parseFloat(acc.homeInsYr) || 0) + (parseFloat(acc.maintYr) || 0) + (parseFloat(acc.hoaYr) || 0) + (parseFloat(acc.utilYr) || 0);
+    }
+    function _groundsLinkedDebt(id) {   // §1.2 sum of linked liabilities (mortgage / HELOC etc.)
+        return (state.accounts || []).filter(function (a) { return a.linkedAssetId === id; }).reduce(function (s, a) { return s + (parseFloat(a.value) || 0); }, 0);
+    }
+    // Datum Builder feed HOOK (build-to-the-seam) — named emitter the future Datum Builder consumes; the
+    // consumer doesn't exist yet, so this stub simply exposes each opted-in physical asset's annual carry.
+    window.datumBuilderCarryingFeed = function () {
+        return (state.accounts || []).filter(function (a) {
+            var b = getBaseType(a.baseId); return b && b.taxCode === 'physical' && a.includeDatumBuilder !== false;
+        }).map(function (a) { return { id: a.id, name: a.name, annualCarry: calcCarryTotal(a) }; });
+    };
 
     // §0.4 VARIABLE-RATE CLUSTER (L48 shared seam — The Moat / The Garage / The Cellar import this).
     // Revealed only when rateType==='Variable'; every field sourced-or-blank; Fixed hides the block.
