@@ -7308,12 +7308,16 @@
                  html += `<div style="margin-bottom: 20px;"></div>`;
             }
 
-            // ── THE GROUNDS (Real Estate) — §5 toggles + §4 carrying-cost block (Property Copy Bank, Grounds).
+            // ── THE GROUNDS (Real Estate) — §1 DI/signals + §5 toggles + §4 carrying-cost block (Grounds).
             if (_isGrounds(base)) {
                 var showCarry = acc.showCarryCosts !== false;   // §5.1 default ON
                 var inDB = acc.includeDatumBuilder !== false;    // §5.3 default ON
                 var maintPH = _groundsMaintDefault(acc);
                 html += `
+            <div style="margin-bottom:16px; padding:14px; background: rgba(93,202,165,0.05); border:1px solid rgba(93,202,165,0.25); border-radius:4px;">
+                <div style="color:var(--teal-mid); font-weight:bold; font-size:11px; letter-spacing:1px; margin-bottom:8px;">DATUM INTELLIGENCE</div>
+                <div id="modal-grounds-di-${id}">${_groundsSignalsHTML(id, acc) || _GROUNDS_DI_EMPTY}</div>
+            </div>
             <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
                 <span class="toggle-label" style="color:var(--teal-mid);">Show carrying costs</span>
                 <label class="switch"><input type="checkbox" ${showCarry ? 'checked' : ''} onchange="updateAccToggle('${id}', 'showCarryCosts', this.checked)"><span class="slider"></span></label>
@@ -7345,9 +7349,13 @@
                 </div>
             </div>`;
                 }
+                // §15 education panel (Property Copy Bank §15 R87, verbatim) — home equity + carrying cost.
+                html += _diWhyPanel('What is home equity — and why owning isn\'t free', [
+                    ['Home equity + carrying cost', 'Home equity is your value minus what you owe. But owning isn\'t free — taxes, insurance, and upkeep run every year whether or not you have a mortgage. Planning for those is what keeps a paid-off home affordable.']
+                ]);
             }
         }
-        
+
         if (base.hasInterest && base.taxCode !== 'debt') {
             html += `
             <div class="field-row" style="grid-template-columns: 1fr;">
@@ -7675,7 +7683,7 @@
                 const carryEl = document.getElementById(`modal-carry-total-${id}`);
                 if(carryEl) carryEl.innerText = '$' + Math.round(calcCarryTotal(acc)).toLocaleString('en-US');
                 const gdiEl = document.getElementById(`modal-grounds-di-${id}`);
-                if(gdiEl && typeof _groundsSignalsHTML === 'function') gdiEl.innerHTML = _groundsSignalsHTML(id, acc);
+                if(gdiEl && typeof _groundsSignalsHTML === 'function') gdiEl.innerHTML = _groundsSignalsHTML(id, acc) || _GROUNDS_DI_EMPTY;
             }
         }
     };
@@ -8146,6 +8154,42 @@
             var b = getBaseType(a.baseId); return b && b.taxCode === 'physical' && a.includeDatumBuilder !== false;
         }).map(function (a) { return { id: a.id, name: a.name, annualCarry: calcCarryTotal(a) }; });
     };
+
+    // §9 GROUNDS DI paragraph — composes from LIVE signals only (value → net equity → carrying-cost
+    // reality); blank clauses drop (L47). Net Equity is DISPLAY-derived (value − linked debt), §0.4/§6b.10.
+    function _groundsDI(id, acc) {
+        var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
+        var val = parseFloat(acc.value) || 0;
+        if (val <= 0) return '';
+        var debt = _groundsLinkedDebt(id), eq = val - debt, carry = calcCarryTotal(acc), parts = [];
+        if (debt > 0) parts.push('You have ' + $(eq) + ' of equity here — ' + $(val) + ' in value against ' + $(debt) + ' of linked debt.');
+        else parts.push('This property is worth ' + $(val) + ', with no debt linked against it — that\'s ' + $(val) + ' of equity.');
+        if (carry > 0) parts.push('Holding it runs about ' + $(carry) + '/yr' + (debt > 0 ? ' beyond the mortgage' : '') + ' — taxes, insurance, upkeep, and the recurring bills that come with owning.');
+        return parts.join(' ');
+    }
+    // §1 GROUNDS signal strip — 1.1 Est. Value · 1.2 Linked Debt · 1.3 Net Equity · 1.4 LTV ·
+    // 1.5 Annual Carrying Cost · 1.6 Cost-to-Value. Each sourced-or-blank; §2 hovers on Value + Carry.
+    function _groundsSignalsHTML(id, acc) {
+        var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
+        var val = parseFloat(acc.value) || 0, debt = _groundsLinkedDebt(id), carry = calcCarryTotal(acc);
+        var row = function (label, value, hover) {
+            var lbl = hover
+              ? '<span class="input-label modal-tt-wrap" style="cursor:help; width:auto;">' + label + '<div class="modal-tt" style="left:0; right:auto;">' + hover + '</div></span>'
+              : '<span class="input-label">' + label + '</span>';
+            return '<div style="display:flex; justify-content:space-between; margin-top:6px;">' + lbl + '<span style="font-family:var(--font-mono); color:var(--white); font-weight:bold;">' + value + '</span></div>';
+        };
+        var out = '';
+        var di = _groundsDI(id, acc);
+        if (di) out += '<div style="font-size:12px; color: rgba(255,255,255,0.8); line-height:1.55; margin-bottom:10px;">' + di + '</div>';
+        if (val > 0) out += row('Est. Value', $(val), '<strong>est.</strong>An automated estimate from recent nearby sales — a starting point, not an appraisal. Your own number always wins.');
+        if (debt > 0) out += row('Linked Debt', $(debt), '');
+        if (val > 0) out += row('Net Equity', $(val - debt), '');
+        if (val > 0 && debt > 0) out += row('Loan-to-Value', Math.round(debt / val * 100) + '%', '');
+        if (carry > 0) out += row('Annual Carrying Cost', $(carry) + '/yr', '<strong>Carrying cost</strong>Everything it costs to simply keep this — taxes, insurance, upkeep, and the small recurring bills — separate from any loan payment.');
+        if (carry > 0 && val > 0) out += row('Cost-to-Value', (Math.round(carry / val * 1000) / 10) + '%', '');
+        return out;
+    }
+    var _GROUNDS_DI_EMPTY = 'Enter a value for this property (and link any mortgage) and Datum reads back your equity and the annual cost to hold it.';
 
     // §0.4 VARIABLE-RATE CLUSTER (L48 shared seam — The Moat / The Garage / The Cellar import this).
     // Revealed only when rateType==='Variable'; every field sourced-or-blank; Fixed hides the block.
