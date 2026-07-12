@@ -4763,7 +4763,7 @@
       var combined = _diMoney(2 * L.base);                      // fill-both figure = 2× base (§8): ~$49,000 in 2026
       var has403 = (state.accounts || []).some(function (a) { var b = getBaseType(a.baseId); return b && /403/.test(b.id); });
       var sec = function (h, b, hot) { return '<div class="ira-why-sec' + (hot ? ' hot' : '') + '"><div class="ira-why-h">' + h + '</div><div class="ira-why-b">' + b + '</div></div>'; };
-      var safety = (acc.govPlan === true)
+      var safety = (acc.planFlavor === 'governmental' || acc.govPlan === true)   // §15 gov branch now driven by F-PLANFLAVOR (bank D288); legacy govPlan preserved
         ? sec('Safety note (governmental vs not)', 'Your GOVERNMENTAL 457(b) assets are held in trust for you — legally separate from the employer, protected if the government entity hits financial trouble. (This is the key reason the non-governmental version is restricted to executives: there, the assets legally belong to the employer and sit with its creditors. The friendly copy here assumes the governmental type — confirm via the govPlan flag, §14/S7.)')
         : '';
       var body =
@@ -6531,6 +6531,7 @@
             var _7s = _diSignals(acc);
             var _7ben = acc.beneficiary || '', _7alloc = (acc.targetAllocation != null ? acc.targetAllocation : '');
             var _7NonCash = (_7s.invCount || 0) >= 1;
+            var _7flavor = acc.planFlavor || '';   // F-PLANFLAVOR (bank R288) — unset fires N-GOVVSNONGOV (R275)
             html += `
         <div style="margin-top:16px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 18px;">
             <div class="ira-why-toggle" onclick="var n=this.nextElementSibling; var open=n.style.display!=='block'; n.style.display=open?'block':'none'; this.classList.toggle('open', open);" style="color:var(--gold);">Beneficiary &amp; target mix (optional) <span class="ira-why-caret">▸</span></div>
@@ -6544,6 +6545,11 @@
                     <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Target mix (% in stocks)<div class="modal-tt" style="top:100%; bottom:auto; left:0; right:auto;"><strong>Target mix</strong>Set the target mix you WANT this account to hold — e.g. 80% stocks / 20% bonds. Once set, we’ll flag when your account drifts from it, so a good plan doesn’t quietly rot. Leave it blank and we won’t nag about drift.</div></div>
                         <input type="number" class="small-field" min="0" max="100" value="${String(_7alloc).replace(/"/g,'&quot;')}" placeholder="e.g. 80" oninput="updateAccField('${id}', 'targetAllocation', this.value)"></div>
                     ${_diBlankNudge(_7NonCash && !String(_7alloc).trim(), 'Set a target mix and we’ll flag when your account drifts from it — so a good plan doesn’t quietly go stale.')}
+                </div>
+                <div style="margin-bottom:8px;">
+                    <div class="modal-tt-wrap" style="display:block;"><div class="input-label" style="cursor:help;">Plan type<div class="modal-tt" style="top:100%; bottom:auto; left:0; right:auto;"><strong>Plan type</strong>Tell us if this is a GOVERNMENTAL or NON-GOVERNMENTAL 457(b) — the two are different animals at withdrawal. Governmental: held in trust, protected from your employer’s creditors, and rollable to an IRA/401(k) when you leave. Non-governmental: still your employer’s asset until paid out, exposed to their creditors, and can usually only roll to another non-gov 457(b). Pick one and we’ll tailor the rollover and bridge guidance to YOUR plan.</div></div>
+                        <select class="small-field" style="background: var(--bg-navy); width:100%;" onchange="updateAccField('${id}', 'planFlavor', this.value)"><option value="" ${!_7flavor ? 'selected' : ''}>— not set —</option><option value="governmental" ${_7flavor === 'governmental' ? 'selected' : ''}>Governmental</option><option value="non-governmental" ${_7flavor === 'non-governmental' ? 'selected' : ''}>Non-governmental</option></select></div>
+                    ${_diBlankNudge(!_7flavor, 'Tell us if this is a governmental or non-governmental 457(b) — it changes your rollover and creditor-protection rules, and we’ll tailor the guidance.')}
                 </div>
             </div>
         </div>`;
