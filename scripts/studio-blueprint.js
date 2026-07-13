@@ -150,6 +150,12 @@
         if (a.useRule55)     out.useRule55     = true;
         if (a.isFriction)    out.isFriction    = true;
         if (a.isPriority)    out.isPriority    = true;
+        // Grounds carrying-cost fields (#244 OPEN-1) — a signed-in user must NOT lose these on restore.
+        if (a.propTaxYr)     out.propTaxYr     = a.propTaxYr;
+        if (a.homeInsYr)     out.homeInsYr     = a.homeInsYr;
+        if (a.maintYr)       out.maintYr       = a.maintYr;
+        if (a.hoaYr)         out.hoaYr          = a.hoaYr;
+        if (a.utilYr)        out.utilYr         = a.utilYr;
         if (a.trustType    && a.trustType    !== 'Irrevocable')   out.trustType    = a.trustType;
         if (a.disbursement && a.disbursement !== 'Discretionary') out.disbursement = a.disbursement;
         // STEP A (c) 2026-07-08 — persist holdings as COMPACT-ESSENTIALS (the 13 real-position fields

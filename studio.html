@@ -8224,12 +8224,12 @@
         if (di) out += '<div style="font-size:12px; color: rgba(255,255,255,0.8); line-height:1.55; margin-bottom:10px;">' + di + '</div>';
         var di9b = _groundsDI9b(id, acc);   // §9b prescriptive cross-signal — composes on top of §9
         if (di9b) out += '<div style="font-size:12px; color: rgba(255,255,255,0.72); line-height:1.55; margin-bottom:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;">' + di9b + '</div>';
-        if (val > 0) out += row('Est. Value', $(val), '<strong>est.</strong>An automated estimate from recent nearby sales — a starting point, not an appraisal. Your own number always wins.');
-        if (debt > 0) out += row('Linked Debt', $(debt), '');
-        if (val > 0) out += row('Net Equity', $(val - debt), '');
-        if (val > 0 && debt > 0) out += row('Loan-to-Value', Math.round(debt / val * 100) + '%', '');
+        if (val > 0) out += row('Est. Value', $(val), '<strong>Est. Value</strong>An automated estimate from recent nearby sales — a starting point, not an appraisal. Your own number always wins.');
+        if (debt > 0) out += row('Linked Debt', $(debt), '<strong>Linked Debt</strong>The loans tied to this home — usually your mortgage. Link a debt up top and it shows here automatically; nothing linked, nothing owed.');
+        if (val > 0) out += row('Net Equity', $(val - debt), '<strong>Net Equity</strong>What you’d keep if you sold today — the home’s value minus everything linked against it. For most homes this grows over time as you pay down the loan and the value climbs.');
+        if (val > 0 && debt > 0) out += row('Loan-to-Value', Math.round(debt / val * 100) + '%', '<strong>Loan-to-Value</strong>How much of the home you still owe, as a share of its value. Lower is more cushion; it falls as you pay the loan down or the home appreciates.');
         if (carry > 0) out += row('Annual Carrying Cost', $(carry) + '/yr', '<strong>Carrying cost</strong>Everything it costs to simply keep this — taxes, insurance, upkeep, and the small recurring bills — separate from any loan payment.');
-        if (carry > 0 && val > 0) out += row('Cost-to-Value', (Math.round(carry / val * 1000) / 10) + '%', '');
+        if (carry > 0 && val > 0) out += row('Cost-to-Value', (Math.round(carry / val * 1000) / 10) + '%', '<strong>Cost-to-Value</strong>What it costs each year just to hold this home, as a share of its value — a quick read on how expensive it is to simply keep, separate from any loan.');
         return out;
     }
     var _GROUNDS_DI_EMPTY = 'Enter a value for this property (and link any mortgage) and Datum reads back your equity and the annual cost to hold it.';
