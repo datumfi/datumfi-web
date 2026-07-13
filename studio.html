@@ -7352,7 +7352,20 @@
                     <span class="toggle-label" style="color:var(--muted);">Use value estimate (API) · OFF until key present</span>
                     <label class="switch"><input type="checkbox" ${acc.useValueApi === true ? 'checked' : ''} onchange="updateAccToggle('${id}', 'useValueApi', this.checked)"><span class="slider"></span></label>
                     <div class="modal-tt"><strong>Automated valuation (off by default)</strong>When enabled with a key, Datum fetches an estimated market RANGE (via RentCast) and tags it 'est.' — your own number always wins and is never overwritten. Hard-capped at the free tier so it can't run up a bill; the key lives only on our server, never in your browser.</div>
-                </div>
+                </div>`;
+                // §6/§6b valuation — revealed only when the API toggle is ON. Address is the ONLY thing sent
+                // to the Worker; a returned est. never overwrites the user's own figure without an explicit confirm.
+                if (acc.useValueApi === true) {
+                    var _addr = String(acc.propAddress || '').replace(/"/g, '&quot;');
+                    html += `
+                <div style="margin-top:12px; padding-top:12px; border-top:1px dashed rgba(255,255,255,0.08);">
+                    <span class="input-label modal-tt-wrap" style="cursor:help;">Property Address<div class="modal-tt" style="left:0; right:auto;"><strong>Property Address</strong>Add the property address to pull an automated value estimate — a starting point, not an appraisal. Your own number always wins.</div></span>
+                    <input type="text" class="small-field" placeholder="123 Main St, City, ST" value="${_addr}" oninput="updateAccField('${id}', 'propAddress', this.value); var gb=document.getElementById('avm-getbtn-${id}'); if(gb) gb.disabled=!this.value.trim();">
+                    <div style="text-align:right; margin-top:8px;"><button id="avm-getbtn-${id}" class="add-space-btn" style="width:auto; padding:4px 10px; border:none; background:transparent; border-bottom:1px dashed var(--teal-mid); color:var(--teal-mid);" ${_addr ? '' : 'disabled'} onclick="groundsGetEstimate('${id}')">Get estimate</button></div>
+                    <div id="modal-avm-result-${id}"></div>
+                </div>`;
+                }
+                html += `
             </div>`;
                 }
                 // §15 education panel (Property Copy Bank §15 R87, verbatim) — home equity + carrying cost.
@@ -8249,10 +8262,12 @@
         function cacheGet(k) { try { var r = JSON.parse(localStorage.getItem('aiCache:' + k) || 'null'); if (r && (Date.now() - (r._t || 0)) < REFRESH_MS) return r; } catch (e) {} return null; }
         function cacheSet(k, v) { try { v = v || {}; v._t = Date.now(); localStorage.setItem('aiCache:' + k, JSON.stringify(v)); } catch (e) {} }
         function cacheClear() { try { Object.keys(localStorage).forEach(function (kk) { if (kk.indexOf('aiCache:') === 0) localStorage.removeItem(kk); }); } catch (e) {} }
+        var WORKER_URL = 'https://rentcast-avm.dmerced1.workers.dev';   // provider-agnostic seam — never RentCast directly (R73/R78)
         return {
             MONTHLY_CAP: CAP,
+            WORKER_URL: WORKER_URL,
             _monthKey: monthKey, _count: count, _cacheSet: cacheSet, _cacheClear: cacheClear, hasByoKey: hasByoKey,
-            // Decision layer — returns whether a call MAY be issued; never fetches in this build.
+            // Client-side advisory decision (the Worker's KV cap is authoritative; this is defense-in-depth UX).
             request: function (acc, assetKey) {
                 if (!acc || acc.useValueApi !== true) return { status: 'disabled' };   // §5 toggle OFF by default → no call
                 var cached = cacheGet(assetKey);
@@ -8260,9 +8275,49 @@
                 if (!hasByoKey() && count() >= CAP) return { status: 'capped' };       // NEVER issue call #51 on Datum's key
                 if (!hasByoKey()) bump();                                              // a Datum-key call consumes the free tier
                 return { status: 'stubbed' };                                          // would call the Worker; BYO-key = the only paid path past the cap
+            },
+            // Real estimate fetch — hits the Datum Worker (key = Worker secret; the Worker enforces the 50/mo cap
+            // server-side and returns a RANGE). The browser never sees RentCast or the key.
+            fetchEstimate: async function (address) {
+                try { var r = await fetch(WORKER_URL + '?address=' + encodeURIComponent(address)); return await r.json(); }
+                catch (e) { return { status: 'error' }; }
             }
         };
     })();
+
+    // ── GROUNDS VALUATION (§6/§6b activation) — address-driven AVM via the Datum Worker. Toggle OFF by
+    // default; a returned est. NEVER overwrites the user's own figure without an explicit confirm (R76/R77).
+    function _avmDate(iso) { var d = iso ? new Date(iso) : new Date(); if (isNaN(d)) d = new Date(); return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }); }
+    function _groundsAvmResultHTML(id, r) {
+        var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
+        if (!r) return '';
+        if (r.status === 'capped') return '<div style="font-size:11px; color: rgba(255,255,255,0.6); margin-top:8px;">' + (r.message || 'Monthly estimate limit reached — enter your own value.') + '</div>';
+        if (r.status !== 'ok' && r.status !== 'cached') return '';   // no-key / error → blank (L47)
+        if (r.value == null || r.low == null || r.high == null) return '';
+        // R75 range (low/mid/high, never one figure) + R61 tag.
+        return '<div style="font-size:12px; color: rgba(255,255,255,0.82); margin-top:10px; line-height:1.5;">Estimated Market Range ' + $(r.low) + ' / ' + $(r.value) + ' / ' + $(r.high) + ' · est. · via RentCast · ' + _avmDate(r.updated) + '</div>' +
+            '<div style="text-align:center; margin-top:8px;"><button class="add-space-btn" style="width:auto; padding:4px 10px; border:none; background:transparent; border-bottom:1px dashed var(--teal-mid); color:var(--teal-mid);" onclick="groundsUseEstimate(\'' + id + '\', ' + r.value + ')">Use ' + $(r.value) + ' as this home\'s value</button></div>';
+    }
+    window.groundsGetEstimate = async function (id) {
+        var acc = state.accounts.find(function (a) { return a.id === id; });
+        var el = document.getElementById('modal-avm-result-' + id);
+        if (!acc || !el) return;
+        var addr = String(acc.propAddress || '').trim();
+        if (!addr) return;
+        el.innerHTML = '<div style="font-size:11px; color: rgba(255,255,255,0.5); margin-top:8px;">Fetching estimate…</div>';
+        var r = await _AssetIntel.fetchEstimate(addr);
+        var el2 = document.getElementById('modal-avm-result-' + id);   // re-check (modal may have closed)
+        if (el2) el2.innerHTML = _groundsAvmResultHTML(id, r);
+    };
+    window.groundsUseEstimate = function (id, value) {
+        var acc = state.accounts.find(function (a) { return a.id === id; });
+        if (!acc) return;
+        var apply = function () { updateValueWithoutRender(id, String(value)); openAccountModal(id); };
+        if (_num(acc.value) > 0) {
+            // Overwrite-warn (R20 verbatim message; R76/R77 — never write the API value over the user's own figure).
+            showBrandConfirm({ title: 'Use the estimate?', message: 'An automated estimate from recent nearby sales — a starting point, not an appraisal. Your own number always wins.', confirmText: 'Use estimate', cancelText: 'Keep my number', onConfirm: apply });
+        } else { apply(); }
+    };
 
     // §0.4 VARIABLE-RATE CLUSTER (L48 shared seam — The Moat / The Garage / The Cellar import this).
     // Revealed only when rateType==='Variable'; every field sourced-or-blank; Fixed hides the block.

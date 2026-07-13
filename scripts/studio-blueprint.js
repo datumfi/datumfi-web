@@ -156,6 +156,8 @@
         if (a.maintYr)       out.maintYr       = a.maintYr;
         if (a.hoaYr)         out.hoaYr          = a.hoaYr;
         if (a.utilYr)        out.utilYr         = a.utilYr;
+        if (a.propAddress)   out.propAddress   = a.propAddress;   // Grounds valuation address (#249) — round-trips too
+        if (a.useValueApi)   out.useValueApi   = true;
         if (a.trustType    && a.trustType    !== 'Irrevocable')   out.trustType    = a.trustType;
         if (a.disbursement && a.disbursement !== 'Discretionary') out.disbursement = a.disbursement;
         // STEP A (c) 2026-07-08 — persist holdings as COMPACT-ESSENTIALS (the 13 real-position fields
