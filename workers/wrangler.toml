@@ -1,0 +1,21 @@
+# Cloudflare Worker — RentCast property AVM (hard-capped 50/mo). SEPARATE deploy from
+# the Pages site; NOT part of the studio.html/dist bundle.
+#
+# SETUP (Captain, at signup — do NOT wire the toggle on until both are done):
+#   1) KV:      wrangler kv:namespace create AVM_KV   (paste the id below)
+#   2) SECRET:  wrangler secret put RENTCAST_API_KEY   (encrypted; NEVER in git/browser)
+#   3) GATE:    node scripts/_gate_rentcast_cap.mjs   must be GREEN (call #51 blocked)
+#   4) DEPLOY:  wrangler deploy
+# The "Use value estimate (API)" toggle stays OFF until (2) key present AND (3) cap-gate green.
+
+name = "rentcast-avm"
+main = "rentcast-avm.mjs"
+compatibility_date = "2026-07-12"
+
+# Monthly call counter + cached estimates. Fill the id after step 1 above.
+[[kv_namespaces]]
+binding = "AVM_KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# RENTCAST_API_KEY is intentionally NOT declared here — it is a runtime SECRET
+# (wrangler secret put), never a plaintext var, never committed.
