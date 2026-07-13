@@ -7392,7 +7392,7 @@
                     <div id="modal-avm-addrpreview-${id}" style="font-family:var(--font-mono); font-size:11px; color:rgba(255,255,255,0.6); margin-top:4px;">${_addrComplete ? _joinAddr.replace(/</g,'&lt;') : '— enter street, city, state &amp; ZIP above —'}</div>
                     <div style="text-align:right; margin-top:8px;"><button id="avm-getbtn-${id}" class="add-space-btn" style="width:auto; padding:4px 10px; border:none; background:transparent; border-bottom:1px dashed var(--teal-mid); color:var(--teal-mid);" onclick="groundsVerifyAndEstimate('${id}')">Get estimate</button></div>
                     <div id="modal-avm-verify-${id}"></div>
-                    <div id="modal-avm-result-${id}"></div>
+                    <div id="modal-avm-result-${id}">${acc._avmLast ? _groundsAvmResultHTML(id, acc._avmLast) : ''}</div>
                 </div>`;
                 }
                 html += `
@@ -8406,6 +8406,8 @@
         acc.propAddress = (v && v.status === 'verified' && v.canonical) ? v.canonical : joined;
         if (rEl) rEl.innerHTML = _avmNote('Fetching estimate…');
         var r = await _AssetIntel.fetchEstimate(acc.propAddress);
+        acc._avmLast = r;   // #260 — persist the last estimate so range + comps survive the accept re-render
+                            // and modal close/reopen; only a FRESH Get-estimate replaces it.
         var rEl2 = document.getElementById('modal-avm-result-' + id);   // re-check (modal may have closed)
         if (rEl2) rEl2.innerHTML = _groundsAvmResultHTML(id, r);
     };
