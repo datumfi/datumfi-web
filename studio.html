@@ -8215,6 +8215,11 @@
             return '<div style="display:flex; justify-content:space-between; margin-top:6px;">' + lbl + '<span style="font-family:var(--font-mono); color:var(--white); font-weight:bold;">' + value + '</span></div>';
         };
         var out = '';
+        // §9c VALUE-MISSING NUDGE (Property Copy Bank §9c, verbatim) — carrying costs entered but no value
+        // yet (val<=0 AND carry>0). §9/§9b correctly stay silent without a value; this fills the guidance gap.
+        if (val <= 0 && carry > 0) {
+            out += '<div style="font-size:12px; color: rgba(255,255,255,0.8); line-height:1.55; margin-bottom:10px;">You\'ve got the carrying costs in — that\'s the hard part. The one thing left is this home\'s value: add it in from the Estate screen and Datum reads back your equity, your loan-to-value, and how many years of carrying cost your cushion covers. Don\'t have a number handy? Link the estimate and we\'ll pull a starting figure for you — your own number always wins.</div>';
+        }
         var di = _groundsDI(id, acc);
         if (di) out += '<div style="font-size:12px; color: rgba(255,255,255,0.8); line-height:1.55; margin-bottom:10px;">' + di + '</div>';
         var di9b = _groundsDI9b(id, acc);   // §9b prescriptive cross-signal — composes on top of §9
