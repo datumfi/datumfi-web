@@ -8143,14 +8143,18 @@
 
     // ── THE GROUNDS (Real Estate) — carrying-cost engine + Datum Builder feed hook (Property Copy Bank §4) ──
     function _isGrounds(base) { return /^property(_primary|_co)?$/.test(base.id); }
-    function _groundsMaintDefault(acc) { var v = parseFloat(acc.value) || 0; return v > 0 ? Math.round(v * 0.01) : 0; }  // §4.3 ~1%-of-value rule-of-thumb (est., placeholder only)
+    // Robust numeric read: acc.value (and carry fields) can arrive as a NUMBER or a formatted STRING
+    // ("$400,000" / "400,000") when restored from a saved blueprint — bare parseFloat mis-reads both
+    // (NaN or a comma-truncated 400). Strip non-numeric first so every §1/§9/§9b signal reads sourced.
+    function _num(v) { return parseFloat(String(v == null ? '' : v).replace(/[^0-9.\-]/g, '')) || 0; }
+    function _groundsMaintDefault(acc) { var v = _num(acc.value); return v > 0 ? Math.round(v * 0.01) : 0; }  // §4.3 ~1%-of-value rule-of-thumb (est., placeholder only)
     // §4.16 TOTAL — sums the ACTUAL entered fields only (blank = 0, never fabricated). The maint est. is a
     // placeholder suggestion, not auto-summed, so nothing is invented into the Datum Builder feed.
     function calcCarryTotal(acc) {
-        return (parseFloat(acc.propTaxYr) || 0) + (parseFloat(acc.homeInsYr) || 0) + (parseFloat(acc.maintYr) || 0) + (parseFloat(acc.hoaYr) || 0) + (parseFloat(acc.utilYr) || 0);
+        return _num(acc.propTaxYr) + _num(acc.homeInsYr) + _num(acc.maintYr) + _num(acc.hoaYr) + _num(acc.utilYr);
     }
     function _groundsLinkedDebt(id) {   // §1.2 sum of linked liabilities (mortgage / HELOC etc.)
-        return (state.accounts || []).filter(function (a) { return a.linkedAssetId === id; }).reduce(function (s, a) { return s + (parseFloat(a.value) || 0); }, 0);
+        return (state.accounts || []).filter(function (a) { return a.linkedAssetId === id; }).reduce(function (s, a) { return s + _num(a.value); }, 0);
     }
     // Datum Builder feed HOOK (build-to-the-seam) — named emitter the future Datum Builder consumes; the
     // consumer doesn't exist yet, so this stub simply exposes each opted-in physical asset's annual carry.
@@ -8164,7 +8168,7 @@
     // reality); blank clauses drop (L47). Net Equity is DISPLAY-derived (value − linked debt), §0.4/§6b.10.
     function _groundsDI(id, acc) {
         var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
-        var val = parseFloat(acc.value) || 0;
+        var val = _num(acc.value);
         if (val <= 0) return '';
         var debt = _groundsLinkedDebt(id), eq = val - debt, carry = calcCarryTotal(acc), parts = [];
         if (debt > 0) parts.push('You have ' + $(eq) + ' of equity here — ' + $(val) + ' in value against ' + $(debt) + ' of linked debt.');
@@ -8181,7 +8185,7 @@
     function _groundsDI9b(id, acc) {
         var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
         var pct = function (n) { return (Math.round(n * 10) / 10) + '%'; };
-        var val = parseFloat(acc.value) || 0;
+        var val = _num(acc.value);
         if (val <= 0) return '';
         var debt = _groundsLinkedDebt(id), carry = calcCarryTotal(acc), eq = val - debt;
         var ctv = carry / val * 100, ltv = debt / val * 100, parts = [];
@@ -8195,7 +8199,7 @@
         if (eq > 0 && carry > 0)
             parts.push('Your net equity of ' + $(eq) + ' is about ' + Math.round(eq / carry) + ' years of this home\'s carrying cost — a plain way to see how much cushion the home itself holds relative to what it costs to keep.');
         // 9b.4 Utilities-link nudge — utilities MANUAL (unlinked) AND has value (product-capability, not advice)
-        if ((parseFloat(acc.utilYr) || 0) > 0 && !acc.utilLinked)
+        if (_num(acc.utilYr) > 0 && !acc.utilLinked)
             parts.push('Your utilities here are entered by hand. If you link the account, Datum can keep this number current on its own — one less thing to update.');
         return parts.join(' ');
     }
@@ -8203,7 +8207,7 @@
     // 1.5 Annual Carrying Cost · 1.6 Cost-to-Value. Each sourced-or-blank; §2 hovers on Value + Carry.
     function _groundsSignalsHTML(id, acc) {
         var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
-        var val = parseFloat(acc.value) || 0, debt = _groundsLinkedDebt(id), carry = calcCarryTotal(acc);
+        var val = _num(acc.value), debt = _groundsLinkedDebt(id), carry = calcCarryTotal(acc);
         var row = function (label, value, hover) {
             var lbl = hover
               ? '<span class="input-label modal-tt-wrap" style="cursor:help; width:auto;">' + label + '<div class="modal-tt" style="left:0; right:auto;">' + hover + '</div></span>'
