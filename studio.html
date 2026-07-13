@@ -7349,7 +7349,7 @@
                     <div class="modal-tt"><strong>Retirement-spend rollup</strong>Includes this asset's carrying cost in your future Datum Builder spending number. Turn off to exclude a specific asset.</div>
                 </div>
                 <div class="toggle-row modal-tt-wrap" style="border-bottom:none; padding-top:12px;">
-                    <span class="toggle-label" style="color:var(--muted);">Use value estimate (API) · OFF until key present</span>
+                    <span class="toggle-label" style="color:var(--muted);">Use value estimate (API)</span>
                     <label class="switch"><input type="checkbox" ${acc.useValueApi === true ? 'checked' : ''} onchange="updateAccToggle('${id}', 'useValueApi', this.checked)"><span class="slider"></span></label>
                     <div class="modal-tt"><strong>Automated valuation (off by default)</strong>When enabled with a key, Datum fetches an estimated market RANGE (via RentCast) and tags it 'est.' — your own number always wins and is never overwritten. Hard-capped at the free tier so it can't run up a bill; the key lives only on our server, never in your browser.</div>
                 </div>`;
@@ -8314,8 +8314,10 @@
         if (!acc) return;
         var apply = function () { updateValueWithoutRender(id, String(value)); openAccountModal(id); };
         if (_num(acc.value) > 0) {
-            // Overwrite-warn (R20 verbatim message; R76/R77 — never write the API value over the user's own figure).
-            showBrandConfirm({ title: 'Use the estimate?', message: 'An automated estimate from recent nearby sales — a starting point, not an appraisal. Your own number always wins.', confirmText: 'Use estimate', cancelText: 'Keep my number', onConfirm: apply });
+            // Overwrite-warn — R134 title · R20 body (verbatim) · R133 buttons (primary templated to the live
+            // mid; DEFAULT = Keep my value). R76/R77: never write the API value over the user's own figure.
+            showBrandConfirm({ title: 'Use the estimate?', message: 'An automated estimate from recent nearby sales — a starting point, not an appraisal. Your own number always wins.', confirmText: 'Use $' + Math.round(value).toLocaleString('en-US'), cancelText: 'Keep my value', onConfirm: apply });
+            var _kb = document.getElementById('bc-cancel'); if (_kb) _kb.focus();   // R133 default/focused = Keep my value
         } else { apply(); }
     };
 
