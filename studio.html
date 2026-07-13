@@ -7282,9 +7282,10 @@
         } else if (base.taxCode === 'physical' && !base.id.includes('collectibles')) {
             let myDebts = state.accounts.filter(a => a.linkedAssetId === id);
             let linkOpts = `<option value="">Select a liability to link...</option>`;
+            let _revScope = _assetReverseScope(base);   // §0.2 — Grounds accepts ONLY Mortgage / HELOC
             state.accounts.forEach(a => {
                 let aBase = getBaseType(a.baseId);
-                if(aBase && aBase.taxCode === 'debt' && !aBase.id.includes('student_loan')) {
+                if(aBase && aBase.taxCode === 'debt' && _revScope(aBase)) {
                     linkOpts += `<option value="${a.id}">${a.name} (${aBase.meta})</option>`;
                 }
             });
@@ -8470,6 +8471,17 @@
             return function(aB) { return aB.id === 'auto' || aB.id === 'auto_primary' || aB.id === 'auto_co'; };
         // Other debts (personal / revolving) keep the prior broad physical scope (collectibles excluded).
         return function(aB) { return aB.taxCode === 'physical' && !String(aB.id).includes('collectibles'); };
+    }
+
+    // ASSET-SIDE REVERSE SCOPE (§0.2 — the mirror of _securedLinkScope). Which DEBT families a given asset
+    // room may accept in its "Map Existing Liability" dropdown. The Grounds (real estate) accepts ONLY a
+    // Mortgage or HELOC — not any non-student debt. (Driveway auto-scope lands with the Driveway wave.)
+    function _assetReverseScope(assetBase) {
+        var id = String(assetBase && assetBase.id || '');
+        if (id.indexOf('property') === 0)
+            return function(dB) { return String(dB.id).indexOf('mortgage') === 0 || String(dB.id).indexOf('heloc') === 0; };
+        // Non-Grounds physical assets keep the prior broad scope (any non-student debt) until their wave.
+        return function(dB) { return dB.taxCode === 'debt' && !String(dB.id).includes('student_loan'); };
     }
 
     // RAF + 100ms debounce wrapper (5E) — replaces direct calls
