@@ -737,14 +737,14 @@
   .toggle-label { font-family: var(--font-mono); font-size: 11px; color: var(--white); text-transform: uppercase; }
   .switch { position: relative; display: inline-block; width: 36px; height: 18px; }
   .switch input { opacity: 0; width: 0; height: 0; }
-  .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); transition: .4s; border-radius: 20px; }
-  .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: var(--muted); transition: .4s; border-radius: 50%; }
-  input:checked + .slider { background-color: var(--teal); }
+  .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.08); transition: .4s; border-radius: 20px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.45); }
+  .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: var(--muted); transition: .4s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.55); }
+  input:checked + .slider { background: linear-gradient(180deg, var(--teal), var(--teal-mid)); box-shadow: inset 0 1px 2px rgba(0,0,0,0.3), 0 0 8px rgba(93,202,165,0.35); }
   input:checked + .slider:before { transform: translateX(18px); background-color: white; }
 
   .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
-  .input-label { font-family: var(--font-mono); font-size: 10px; color: var(--muted); text-transform: uppercase; margin-bottom: 5px; }
-  .small-field { width: 100%; background: transparent; border: 1px solid rgba(255,255,255,0.1); padding: 8px; color: white; font-family: var(--font-mono); font-size: 12px; border-radius: 3px; transition: 0.3s; }
+  .input-label { font-family: var(--font-mono); font-size: 11px; color: var(--muted); text-transform: uppercase; margin-bottom: 5px; }
+  .small-field { width: 100%; background: transparent; border: 1px solid rgba(255,255,255,0.1); padding: 9px; color: white; font-family: var(--font-mono); font-size: 13px; border-radius: 3px; transition: 0.3s; }
   .small-field:focus { border-color: var(--teal-mid); outline: none; }
   
   .salary-tooltip { position: absolute; bottom: 105%; left: 0; background: #060b14; border: 1px solid rgba(255,255,255,0.1); padding: 10px; border-radius: 4px; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 60; width: max-content; box-shadow: 0 10px 30px rgba(0,0,0,0.8);}
@@ -1061,7 +1061,7 @@
   /* overflow-x: clip — overflow-y:auto forces overflow-x to compute 'auto', so hidden (opacity-0)
      tooltips poking past the card edge created a phantom horizontal scrollbar below the DI
      (long teal bar, brightens on hover — the smoke-test ghost). clip = no h-scrollbar, ever. */
-  .modal-card { width: 550px; max-height: 90vh; overflow-y: auto; overflow-x: clip; background: var(--bg-navy); border: 1px solid rgba(255,255,255,0.1); padding: 30px; border-radius: 8px; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.9); pointer-events: auto;}
+  .modal-card { width: min(620px, 94vw); max-height: 90vh; overflow-y: auto; overflow-x: clip; background: linear-gradient(180deg, #0c1626 0%, var(--bg-navy) 62%); border: 1px solid rgba(255,255,255,0.14); padding: 30px; border-radius: 10px; position: relative; box-shadow: 0 24px 64px rgba(0,0,0,0.92), inset 0 1px 0 rgba(255,255,255,0.06); pointer-events: auto; font-size: 13px;}
   /* rollup/header tooltip horizontal anchoring is handled by window._ttDrop (onmouseenter) — it
      drops the tip BELOW its own cell and clamps into the viewport. The old nth-child(n+5) !important
      right-pin (absolute-position era) fought that inline clamp and pinned right-half tips to the card
@@ -1110,8 +1110,8 @@
 
   /* SURGICAL: Modal Tooltip Engine */
   .modal-tt-wrap { position: relative; width: 100%; display: flex; justify-content: space-between; align-items: center; }
-  .modal-tt { position: absolute; bottom: 100%; right: auto; left: 0; background: #060b14; border: 1px solid var(--teal-mid); padding: 12px; border-radius: 4px; opacity: 0; pointer-events: none; transition: 0.3s; transform: translateY(-5px); z-index: 100; font-family: var(--font-serif); font-size: 11px; color: var(--muted); line-height: 1.4; width: 280px; text-transform: none; letter-spacing: normal; font-weight: normal; box-shadow: 0 10px 25px rgba(0,0,0,0.9); }
-  .modal-tt strong { font-family: var(--font-mono); color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em; font-size: 9px; display: block; margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 3px;}
+  .modal-tt { position: absolute; bottom: 100%; right: auto; left: 0; background: #060b14; border: 1px solid var(--teal-mid); padding: 13px 14px; border-radius: 5px; opacity: 0; pointer-events: none; transition: 0.3s; transform: translateY(-5px); z-index: 100; font-family: var(--font-serif); font-size: 12.5px; color: rgba(255,255,255,0.92); line-height: 1.5; width: 300px; text-transform: none; letter-spacing: normal; font-weight: normal; box-shadow: 0 12px 30px rgba(0,0,0,0.92); }
+  .modal-tt strong { font-family: var(--font-mono); color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em; font-size: 10px; display: block; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px;}
   .modal-tt-wrap:hover .modal-tt { opacity: 1; transform: translateY(-10px); }
 
   /* SURGICAL: Floating Trust Tooltip */
@@ -7463,7 +7463,7 @@
                 </div>
                 `;
             } else {
-                document.getElementById('modal-card').style.width = "550px";
+                document.getElementById('modal-card').style.width = "min(620px, 94vw)";
             }
         } else if(base.isInvestment) {
             // W4 — the entry button shows only when CLOSED; on decorate the "← Back … Overview" button
@@ -7631,10 +7631,10 @@
                 // W4b — "← Back to <account> Overview" at the BOTTOM (DI box now renders on top, above the rollup).
                 html += '<button class="add-space-btn" type="button" style="margin-top: 15px; width: 100%;" onclick="toggleHoldings(\'' + id + '\')">← Back to ' + base.title + ' Overview</button>';
             } else {
-                document.getElementById('modal-card').style.width = "550px";
+                document.getElementById('modal-card').style.width = "min(620px, 94vw)";
             }
         } else {
-             document.getElementById('modal-card').style.width = "550px";
+             document.getElementById('modal-card').style.width = "min(620px, 94vw)";
         }
 
         // §15 "Why …?" education panels RELOCATED to the top of the modal (above the toggles, inside
