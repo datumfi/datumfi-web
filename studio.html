@@ -7344,12 +7344,36 @@
                     <div><span class="input-label modal-tt-wrap" style="cursor:help;">Living area (sq.ft.)<div class="modal-tt" style="left:0; right:auto;"><strong>Living area (sq.ft.)</strong>The finished square footage. A quick gauge of the home’s size and upkeep — square footage tends to track with maintenance, taxes, and heating/cooling, the carrying costs that follow you into retirement.</div></span><input type="text" class="small-field" placeholder="sq.ft." inputmode="numeric" value="${String(acc.propSqft||'').replace(/[^0-9]/g,'')}" oninput="this.value=this.value.replace(/[^0-9]/g,''); updateAccField('${id}', 'propSqft', this.value)"></div>
                     <div><span class="input-label modal-tt-wrap" style="cursor:help;">Year built<div class="modal-tt" style="right:0; left:auto;"><strong>Year built</strong>The year the home was built. Older homes can carry bigger upkeep and insurance down the road — good to have in view when you’re planning what to hold long-term.</div></span><input type="text" class="small-field" placeholder="YYYY" maxlength="4" inputmode="numeric" value="${String(acc.propYear||'').replace(/[^0-9]/g,'')}" oninput="this.value=this.value.replace(/[^0-9]/g,''); updateAccField('${id}', 'propYear', this.value)"></div>
                 </div>
+                <div class="toggle-row modal-tt-wrap" style="border-bottom:none; padding-top:14px; margin-top:8px; border-top:1px solid rgba(255,255,255,0.06);">
+                    <span class="toggle-label" style="color:var(--muted);">Estimate this home's value</span>
+                    <label class="switch"><input type="checkbox" ${acc.useValueApi === true ? 'checked' : ''} onchange="updateAccToggle('${id}', 'useValueApi', this.checked)"><span class="slider"></span></label>
+                    <div class="modal-tt"><strong>Estimate this home's value</strong>Turn this on and Datum looks up an estimated market range for this address, tagged 'est.' Your own number always wins — we'll never overwrite it without asking.</div>
+                </div>`;
+                // §6/§6b valuation — now UNDER Property details (item 3), NOT inside carrying costs. Revealed
+                // only when the toggle is ON; address joins the structured fields -> Census verify -> RentCast.
+                if (acc.useValueApi === true) {
+                    var _joinAddr = [acc.propStreet, acc.propCity, acc.propState, acc.propZip].map(function(s){return String(s||'').trim();}).filter(Boolean).join(', ');
+                    var _addrComplete = ['propStreet','propCity','propState','propZip'].every(function(k){return String(acc[k]||'').trim();});
+                    html += `
+                <div style="margin-top:12px; padding-top:12px; border-top:1px dashed rgba(255,255,255,0.08);">
+                    <span class="input-label modal-tt-wrap" style="cursor:help;">Property Address<div class="modal-tt" style="left:0; right:auto;"><strong>Property Address</strong>Add the property address to pull an automated value estimate — a starting point, not an appraisal. Your own number always wins.</div></span>
+                    <div id="modal-avm-addrpreview-${id}" style="font-family:var(--font-mono); font-size:11px; color:rgba(255,255,255,0.6); margin-top:4px;">${_addrComplete ? _joinAddr.replace(/</g,'&lt;') : '— enter street, city, state &amp; ZIP above —'}</div>
+                    <div style="text-align:right; margin-top:8px;"><button id="avm-getbtn-${id}" class="add-space-btn" style="width:auto; padding:4px 10px; border:none; background:transparent; border-bottom:1px dashed var(--teal-mid); color:var(--teal-mid);" onclick="groundsVerifyAndEstimate('${id}')">Get estimate</button></div>
+                    <div id="modal-avm-verify-${id}"></div>
+                    <div id="modal-avm-result-${id}">${acc._avmLast ? _groundsAvmResultHTML(id, acc._avmLast) : ''}</div>
+                </div>`;
+                }
+                html += `
             </div>
             <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
                 <span class="toggle-label" style="color:var(--teal-mid);">Show carrying costs</span>
                 <label class="switch"><input type="checkbox" ${showCarry ? 'checked' : ''} onchange="updateAccToggle('${id}', 'showCarryCosts', this.checked)"><span class="slider"></span></label>
                 <div class="modal-tt"><strong>Carrying costs</strong>Everything it costs to simply keep this — taxes, insurance, upkeep, and the small recurring bills — separate from any loan payment.</div>
             </div>`;
+                // §15 education panel — moved ABOVE the carrying-cost fields (item 4): read the why, THEN enter numbers.
+                html += _diWhyPanel('What is home equity — and why owning isn\'t free', [
+                    ['Home equity + carrying cost', 'Home equity is your value minus what you owe. But owning isn\'t free — taxes, insurance, and upkeep run every year whether or not you have a mortgage. Planning for those is what keeps a paid-off home affordable.']
+                ]);
                 if (showCarry) {
                     html += `
             <div style="margin-top:14px; padding:14px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:4px;">
@@ -7374,34 +7398,8 @@
                     <label class="switch"><input type="checkbox" ${inDB ? 'checked' : ''} onchange="updateAccToggle('${id}', 'includeDatumBuilder', this.checked)"><span class="slider"></span></label>
                     <div class="modal-tt"><strong>Retirement-spend rollup</strong>Includes this asset's carrying cost in your future Datum Builder spending number. Turn off to exclude a specific asset.</div>
                 </div>
-                <div class="toggle-row modal-tt-wrap" style="border-bottom:none; padding-top:12px;">
-                    <span class="toggle-label" style="color:var(--muted);">Estimate this home's value</span>
-                    <label class="switch"><input type="checkbox" ${acc.useValueApi === true ? 'checked' : ''} onchange="updateAccToggle('${id}', 'useValueApi', this.checked)"><span class="slider"></span></label>
-                    <div class="modal-tt"><strong>Estimate this home's value</strong>Turn this on and Datum looks up an estimated market range for this address, tagged 'est.' Your own number always wins — we'll never overwrite it without asking.</div>
-                </div>`;
-                // §6/§6b valuation — revealed only when the API toggle is ON. Address is the ONLY thing sent
-                // to the Worker; a returned est. never overwrites the user's own figure without an explicit confirm.
-                if (acc.useValueApi === true) {
-                    // §A135 — the address now comes from the STRUCTURED fields above; on Get-estimate we join
-                    // them, free US-Census verify (confirm-exists), and only a VERIFIED address feeds RentCast.
-                    var _joinAddr = [acc.propStreet, acc.propCity, acc.propState, acc.propZip].map(function(s){return String(s||'').trim();}).filter(Boolean).join(', ');
-                    var _addrComplete = ['propStreet','propCity','propState','propZip'].every(function(k){return String(acc[k]||'').trim();});
-                    html += `
-                <div style="margin-top:12px; padding-top:12px; border-top:1px dashed rgba(255,255,255,0.08);">
-                    <span class="input-label modal-tt-wrap" style="cursor:help;">Property Address<div class="modal-tt" style="left:0; right:auto;"><strong>Property Address</strong>Add the property address to pull an automated value estimate — a starting point, not an appraisal. Your own number always wins.</div></span>
-                    <div id="modal-avm-addrpreview-${id}" style="font-family:var(--font-mono); font-size:11px; color:rgba(255,255,255,0.6); margin-top:4px;">${_addrComplete ? _joinAddr.replace(/</g,'&lt;') : '— enter street, city, state &amp; ZIP above —'}</div>
-                    <div style="text-align:right; margin-top:8px;"><button id="avm-getbtn-${id}" class="add-space-btn" style="width:auto; padding:4px 10px; border:none; background:transparent; border-bottom:1px dashed var(--teal-mid); color:var(--teal-mid);" onclick="groundsVerifyAndEstimate('${id}')">Get estimate</button></div>
-                    <div id="modal-avm-verify-${id}"></div>
-                    <div id="modal-avm-result-${id}">${acc._avmLast ? _groundsAvmResultHTML(id, acc._avmLast) : ''}</div>
-                </div>`;
-                }
-                html += `
             </div>`;
                 }
-                // §15 education panel (Property Copy Bank §15 R87, verbatim) — home equity + carrying cost.
-                html += _diWhyPanel('What is home equity — and why owning isn\'t free', [
-                    ['Home equity + carrying cost', 'Home equity is your value minus what you owe. But owning isn\'t free — taxes, insurance, and upkeep run every year whether or not you have a mortgage. Planning for those is what keeps a paid-off home affordable.']
-                ]);
             }
         }
 
@@ -8361,16 +8359,17 @@
         // in the provenance footer (§1.4). Attribution stays.
         var HOVER_HEAD = "This is an automated estimate for THIS home from RentCast, shown as a range: the middle is its best single guess, and the low and high are how confident it is around that. It's built from recent nearby sales (the comps below) — so in quieter areas those sales can come from the wider city, not just your street, which is why we show a range instead of one hard number. Treat it as a solid starting point for planning, not an appraisal — your own value always wins.";
         var HOVER_PICK = "Pick the number you're comfortable planning with — conservative, balanced, or optimistic. The middle is the estimate's best guess; the low and high let you plan cautiously or generously. You can change it any time, and your own value always wins.";
-        var wing = function (label, val, useLabel, mid) {
+        var wing = function (val, useLabel, mid) {
+            // #263 item 2 — the on-top Low/Middle/High word-labels are removed (redundant with the accept
+            // buttons below); the middle's emphasis + the button text carry the meaning.
             return '<div style="flex:1; text-align:center;">' +
-                '<div style="font-size:9px; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.4);">' + label + '</div>' +
-                '<div style="font-family:var(--font-mono); font-size:' + (mid ? '21px' : '13px') + '; line-height:1.3; color:' + (mid ? 'var(--teal-mid)' : 'rgba(255,255,255,0.72)') + '; font-weight:' + (mid ? '700' : '400') + ';">' + $(val) + '</div>' +
+                '<div style="font-family:var(--font-mono); font-size:' + (mid ? '22px' : '14px') + '; line-height:1.3; color:' + (mid ? 'var(--teal-mid)' : 'rgba(255,255,255,0.72)') + '; font-weight:' + (mid ? '700' : '400') + ';">' + $(val) + '</div>' +
                 '<div style="margin-top:5px;"><button class="add-space-btn" style="width:auto; padding:3px 9px; font-size:10px; border:none; background:transparent; border-bottom:1px dashed ' + (mid ? 'var(--teal-mid)' : 'rgba(255,255,255,0.28)') + '; color:' + (mid ? 'var(--teal-mid)' : 'rgba(255,255,255,0.55)') + ';" onclick="groundsUseEstimate(\'' + id + '\', ' + val + ')">' + useLabel + '</button></div>' +
             '</div>';
         };
         return '<div style="margin-top:12px; padding:14px; background:rgba(93,202,165,0.06); border:1px solid rgba(93,202,165,0.22); border-radius:6px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 10px rgba(0,0,0,0.28);">' +
             '<div class="modal-tt-wrap" style="cursor:help; justify-content:flex-start; margin-bottom:10px;"><span style="font-size:11px; text-transform:uppercase; letter-spacing:0.1em; color:var(--teal-mid); font-weight:600;">Market Range</span><div class="modal-tt" style="left:0; right:auto;"><strong>Market Range</strong>' + HOVER_HEAD + '</div></div>' +
-            '<div style="display:flex; align-items:flex-end; gap:8px;">' + wing('Low', r.low, 'Use the low end', false) + wing('Middle', r.value, 'Use the middle', true) + wing('High', r.high, 'Use the high end', false) + '</div>' +
+            '<div style="display:flex; align-items:flex-end; gap:8px;">' + wing(r.low, 'Use the low end', false) + wing(r.value, 'Use the middle', true) + wing(r.high, 'Use the high end', false) + '</div>' +
             '<div class="modal-tt-wrap" style="cursor:help; justify-content:center; margin-top:10px;"><span style="font-size:10px; color:rgba(255,255,255,0.42); border-bottom:1px dotted rgba(255,255,255,0.25);">Which number should I use?</span><div class="modal-tt"><strong>Pick your comfort level</strong>' + HOVER_PICK + '</div></div>' +
             '<div style="text-align:center; font-size:10px; color:rgba(255,255,255,0.38); margin-top:8px;">est. · via RentCast · ' + _avmDate(r.updated) + '</div>' +
         '</div>' +
