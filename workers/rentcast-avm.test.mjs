@@ -44,7 +44,7 @@ const okProvider = async () => ({ ok: true, json: async () => ({ price: 500000, 
   // ---- #51 BLOCKED: at count=50, no fetch, counter unchanged ----
   installFetch(okProvider);
   let kv = mockKV({ [mk]: '50' });
-  let r = await handle(req('123 Main St'), { AVM_KV: kv, RENTCAST_API_KEY: 'dummy' });
+  let r = await handle(req('123 Main St'), { RENTCAST_KV: kv, RENTCAST_API_KEY: 'dummy' });
   let body = await r.json();
   ok(body.status === 'capped', 'call #51 -> status "capped"');
   ok(pick(fetchCalls === 0, fetchCalls > 0), 'call #51 issues NO network fetch [BITE]');
@@ -53,7 +53,7 @@ const okProvider = async () => ({ ok: true, json: async () => ({ price: 500000, 
   // ---- count=49: exactly one fetch, counter reserves to 50 (never exceeds cap) ----
   installFetch(okProvider);
   kv = mockKV({ [mk]: '49' });
-  r = await handle(req('456 Oak Ave'), { AVM_KV: kv, RENTCAST_API_KEY: 'dummy' });
+  r = await handle(req('456 Oak Ave'), { RENTCAST_KV: kv, RENTCAST_API_KEY: 'dummy' });
   body = await r.json();
   ok(body.status === 'ok' && body.low === 480000 && body.high === 520000, 'call #50 -> ok + RANGE (low/high, no false precision)');
   ok(fetchCalls === 1, 'call #50 fires exactly ONE provider fetch');
@@ -62,14 +62,14 @@ const okProvider = async () => ({ ok: true, json: async () => ({ price: 500000, 
   // ---- de-dupe: cached asset returns with zero calls ----
   installFetch(okProvider);
   kv = mockKV({ [mk]: '10', ['avm:789 elm st']: JSON.stringify({ value: 300000, low: 290000, high: 310000 }) });
-  r = await handle(req('789 Elm St'), { AVM_KV: kv, RENTCAST_API_KEY: 'dummy' });
+  r = await handle(req('789 Elm St'), { RENTCAST_KV: kv, RENTCAST_API_KEY: 'dummy' });
   body = await r.json();
   ok(body.status === 'cached' && fetchCalls === 0, 'cached asset -> "cached", zero fetch (de-dupe)');
 
   // ---- no-key: permitted but key absent -> graceful, no crash ----
   installFetch(okProvider);
   kv = mockKV({ [mk]: '0' });
-  r = await handle(req('1 New Rd'), { AVM_KV: kv });   // no RENTCAST_API_KEY
+  r = await handle(req('1 New Rd'), { RENTCAST_KV: kv });   // no RENTCAST_API_KEY
   body = await r.json();
   ok(body.status === 'no-key', 'no key present -> graceful "no-key" (toggle stays OFF)');
 

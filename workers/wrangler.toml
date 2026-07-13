@@ -1,21 +1,25 @@
 # Cloudflare Worker — RentCast property AVM (hard-capped 50/mo). SEPARATE deploy from
 # the Pages site; NOT part of the studio.html/dist bundle.
 #
-# SETUP (Captain, at signup — do NOT wire the toggle on until both are done):
-#   1) KV:      wrangler kv:namespace create AVM_KV   (paste the id below)
-#   2) SECRET:  wrangler secret put RENTCAST_API_KEY   (encrypted; NEVER in git/browser)
-#   3) GATE:    node scripts/_gate_rentcast_cap.mjs   must be GREEN (call #51 blocked)
-#   4) DEPLOY:  wrangler deploy
-# The "Use value estimate (API)" toggle stays OFF until (2) key present AND (3) cap-gate green.
+# SETUP (Captain, at signup — toggle stays OFF until key present AND cap-gate green on the deploy):
+#   0) KV RENTCAST_KV already created (id below). Binding name === env.RENTCAST_KV in the Worker.
+#   1) SECRET:  wrangler secret put RENTCAST_API_KEY   (encrypted; NEVER in git/browser)
+#              verify with:  wrangler secret list   (RENTCAST_API_KEY present)
+#   2) LOCAL GATE:  node workers/rentcast-avm.test.mjs   must be GREEN (call #51 blocked, mocked)
+#   3) DEPLOY:  wrangler deploy   (NOT `wrangler pages deploy` — that's the site)
+#   4) LIVE #51 PROOF (zero charge): wrangler kv:key put --binding=RENTCAST_KV "calls:<YYYY-M>" "50"
+#              then one request -> expect {"status":"capped"} (NO RentCast call); reset counter to 0 after.
+#   5) ONE real test call (counter=0) -> {"status":"ok",...range...} = the single allowed live call.
 
 name = "rentcast-avm"
 main = "rentcast-avm.mjs"
 compatibility_date = "2026-07-12"
 
-# Monthly call counter + cached estimates. Fill the id after step 1 above.
+# Monthly call counter + cached estimates. Binding name MUST equal what the Worker reads
+# (env.RENTCAST_KV) — a mismatch = counter reads null and the 50-cap SILENTLY FAILS.
 [[kv_namespaces]]
-binding = "AVM_KV"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+binding = "RENTCAST_KV"
+id = "709ace0a5a4e4b78a74c61f666a5084f"
 
 # RENTCAST_API_KEY is intentionally NOT declared here — it is a runtime SECRET
 # (wrangler secret put), never a plaintext var, never committed.

@@ -6,7 +6,7 @@
 //
 // ANTI-OVERAGE: RentCast bills per request on every plan, incl. free. We NEVER issue
 // call #51 on Datum's key. The monthly counter + cached estimates live in KV
-// (env.AVM_KV). BYO-key is the only paid path past the cap (handled client-side).
+// (env.RENTCAST_KV). BYO-key is the only paid path past the cap (handled client-side).
 //
 // The cap decision is a PURE function (decideCall) so the red-first cap-gate can prove
 // call #51 is blocked WITHOUT any network — the acceptance criterion before the
@@ -41,7 +41,7 @@ export async function handle(request, env) {
   try { addr = (new URL(request.url).searchParams.get('address') || '').trim(); } catch (e) {}
   if (!addr) return json({ status: 'error', error: 'address required' }, 400);
 
-  const kv = env && env.AVM_KV;
+  const kv = env && env.RENTCAST_KV;   // binding MUST match wrangler.toml + the Captain's KV (RENTCAST_KV)
   const ck = cacheKey(addr);
   const mk = monthKey();
 
