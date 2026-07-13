@@ -7382,12 +7382,16 @@
                 // §6/§6b valuation — revealed only when the API toggle is ON. Address is the ONLY thing sent
                 // to the Worker; a returned est. never overwrites the user's own figure without an explicit confirm.
                 if (acc.useValueApi === true) {
-                    var _addr = String(acc.propAddress || '').replace(/"/g, '&quot;');
+                    // §A135 — the address now comes from the STRUCTURED fields above; on Get-estimate we join
+                    // them, free US-Census verify (confirm-exists), and only a VERIFIED address feeds RentCast.
+                    var _joinAddr = [acc.propStreet, acc.propCity, acc.propState, acc.propZip].map(function(s){return String(s||'').trim();}).filter(Boolean).join(', ');
+                    var _addrComplete = ['propStreet','propCity','propState','propZip'].every(function(k){return String(acc[k]||'').trim();});
                     html += `
                 <div style="margin-top:12px; padding-top:12px; border-top:1px dashed rgba(255,255,255,0.08);">
                     <span class="input-label modal-tt-wrap" style="cursor:help;">Property Address<div class="modal-tt" style="left:0; right:auto;"><strong>Property Address</strong>Add the property address to pull an automated value estimate — a starting point, not an appraisal. Your own number always wins.</div></span>
-                    <input type="text" class="small-field" placeholder="123 Main St, City, ST" value="${_addr}" oninput="updateAccField('${id}', 'propAddress', this.value); var gb=document.getElementById('avm-getbtn-${id}'); if(gb) gb.disabled=!this.value.trim();">
-                    <div style="text-align:right; margin-top:8px;"><button id="avm-getbtn-${id}" class="add-space-btn" style="width:auto; padding:4px 10px; border:none; background:transparent; border-bottom:1px dashed var(--teal-mid); color:var(--teal-mid);" ${_addr ? '' : 'disabled'} onclick="groundsGetEstimate('${id}')">Get estimate</button></div>
+                    <div style="font-family:var(--font-mono); font-size:11px; color:rgba(255,255,255,0.6); margin-top:4px;">${_addrComplete ? _joinAddr.replace(/</g,'&lt;') : '— enter street, city, state &amp; ZIP above —'}</div>
+                    <div style="text-align:right; margin-top:8px;"><button id="avm-getbtn-${id}" class="add-space-btn" style="width:auto; padding:4px 10px; border:none; background:transparent; border-bottom:1px dashed var(--teal-mid); color:var(--teal-mid);" ${_addrComplete ? '' : 'disabled'} onclick="groundsVerifyAndEstimate('${id}')">Get estimate</button></div>
+                    <div id="modal-avm-verify-${id}"></div>
                     <div id="modal-avm-result-${id}"></div>
                 </div>`;
                 }
@@ -8307,6 +8311,12 @@
             fetchEstimate: async function (address) {
                 try { var r = await fetch(WORKER_URL + '?address=' + encodeURIComponent(address)); return await r.json(); }
                 catch (e) { return { status: 'error' }; }
+            },
+            // Free US-Census confirm-exists proxy (server-side; browser is CORS-blocked by Census). Same
+            // Worker ORIGIN, so it's already on the CSP connect-src allow-list. $0, no key, never caps.
+            verifyAddress: async function (address) {
+                try { var r = await fetch(WORKER_URL + '/verify?address=' + encodeURIComponent(address)); return await r.json(); }
+                catch (e) { return { status: 'error' }; }
             }
         };
     })();
@@ -8314,6 +8324,32 @@
     // ── GROUNDS VALUATION (§6/§6b activation) — address-driven AVM via the Datum Worker. Toggle OFF by
     // default; a returned est. NEVER overwrites the user's own figure without an explicit confirm (R76/R77).
     function _avmDate(iso) { var d = iso ? new Date(iso) : new Date(); if (isNaN(d)) d = new Date(); return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }); }
+    function _avmNote(t) { return '<div style="font-size:11px; color: rgba(255,255,255,0.5); margin-top:8px;">' + t + '</div>'; }
+    // One comp row — sourced-or-blank per field (address · price · beds/baths/sqft · distance · sale date).
+    function _groundsCompRow(c) {
+        if (!c) return '';
+        var money = function (n) { return n != null ? '$' + Math.round(n).toLocaleString('en-US') : ''; };
+        var esc = function (s) { return String(s == null ? '' : s).replace(/</g, '&lt;'); };
+        var bits = [];
+        if (c.beds  != null) bits.push(c.beds + ' bd');
+        if (c.baths != null) bits.push(c.baths + ' ba');
+        if (c.sqft  != null) bits.push(Math.round(c.sqft).toLocaleString('en-US') + ' sqft');
+        if (c.distance != null) bits.push(Number(c.distance).toFixed(1) + ' mi');
+        var meta = bits.length ? ' <span style="color:rgba(255,255,255,0.45);">· ' + bits.join(' · ') + '</span>' : '';
+        var date = c.saleDate ? ' <span style="color:rgba(255,255,255,0.45);">' + _avmDate(c.saleDate) + '</span>' : '';
+        return '<div style="display:flex; justify-content:space-between; gap:10px; font-size:11px; color: rgba(255,255,255,0.75); padding:4px 0; border-bottom:1px dashed rgba(255,255,255,0.05);">' +
+            '<span>' + (esc(c.address) || '—') + meta + '</span>' +
+            '<span style="font-family:var(--font-mono); white-space:nowrap;">' + money(c.price) + date + '</span></div>';
+    }
+    // R147 comps section / R148 honest empty-state (sourced-or-blank; NEVER fabricate a comp — L47).
+    function _groundsCompsHTML(r) {
+        var comps = (r && Array.isArray(r.comps)) ? r.comps.filter(function (c) { return c && (c.address || c.price != null); }) : [];
+        if (!comps.length)
+            return '<div style="font-size:12px; color: rgba(255,255,255,0.6); margin-top:12px; line-height:1.5;">No solid nearby sales to show yet — that just means this area is quiet or unique. Your own value still stands; we simply won’t invent comparisons we don’t have.</div>';
+        return '<div style="margin-top:12px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.08);">' +
+            '<span class="input-label modal-tt-wrap" style="cursor:help;">Comparable sales<div class="modal-tt" style="left:0; right:auto;"><strong>Comparable sales</strong>Recent nearby sales the estimate leans on. These are real homes that sold close by — your home’s ‘est.’ value is a read of this neighborhood, not a guess. Seeing the comps is how you sanity-check whether the number feels right for your plan.</div></span>' +
+            comps.map(_groundsCompRow).join('') + '</div>';
+    }
     function _groundsAvmResultHTML(id, r) {
         var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
         if (!r) return '';
@@ -8322,7 +8358,8 @@
         if (r.value == null || r.low == null || r.high == null) return '';
         // R75 range (low/mid/high, never one figure) + R61 tag.
         return '<div style="font-size:12px; color: rgba(255,255,255,0.82); margin-top:10px; line-height:1.5;">Estimated Market Range ' + $(r.low) + ' / ' + $(r.value) + ' / ' + $(r.high) + ' · est. · via RentCast · ' + _avmDate(r.updated) + '</div>' +
-            '<div style="text-align:center; margin-top:8px;"><button class="add-space-btn" style="width:auto; padding:4px 10px; border:none; background:transparent; border-bottom:1px dashed var(--teal-mid); color:var(--teal-mid);" onclick="groundsUseEstimate(\'' + id + '\', ' + r.value + ')">Use ' + $(r.value) + ' as this home\'s value</button></div>';
+            '<div style="text-align:center; margin-top:8px;"><button class="add-space-btn" style="width:auto; padding:4px 10px; border:none; background:transparent; border-bottom:1px dashed var(--teal-mid); color:var(--teal-mid);" onclick="groundsUseEstimate(\'' + id + '\', ' + r.value + ')">Use ' + $(r.value) + ' as this home\'s value</button></div>' +
+            _groundsCompsHTML(r);
     }
     window.groundsGetEstimate = async function (id) {
         var acc = state.accounts.find(function (a) { return a.id === id; });
@@ -8334,6 +8371,34 @@
         var r = await _AssetIntel.fetchEstimate(addr);
         var el2 = document.getElementById('modal-avm-result-' + id);   // re-check (modal may have closed)
         if (el2) el2.innerHTML = _groundsAvmResultHTML(id, r);
+    };
+    // §A135 — verify-then-estimate. Join the structured address, free US-Census confirm-exists, and ONLY a
+    // verified address feeds RentCast; a not-found result BLOCKS the paid call and shows R149.
+    window.groundsVerifyAndEstimate = async function (id) {
+        var acc = state.accounts.find(function (a) { return a.id === id; });
+        if (!acc) return;
+        var parts = [acc.propStreet, acc.propCity, acc.propState, acc.propZip].map(function (s) { return String(s || '').trim(); }).filter(Boolean);
+        var vEl = document.getElementById('modal-avm-verify-' + id);
+        var rEl = document.getElementById('modal-avm-result-' + id);
+        if (rEl) rEl.innerHTML = '';
+        if (parts.length < 4) { if (vEl) vEl.innerHTML = _avmNote('Add the full street, city, state, and ZIP above first.'); return; }
+        var joined = parts.join(', ');
+        if (vEl) vEl.innerHTML = _avmNote('Checking the address…');
+        var v = await _AssetIntel.verifyAddress(joined);
+        if (v && v.status === 'not-found') {
+            // R149 — Census CONFIRMED no such address: BLOCK the paid call (this is a typo). Nothing paid fires.
+            if (vEl) vEl.innerHTML = '<div style="font-size:12px; color: rgba(240,200,120,0.92); margin-top:8px; line-height:1.5;">Hmm — we couldn’t confirm that address. Check the street, city, state, and ZIP for a typo, or enter it the way it appears on your mail. We only look up real, findable homes — no guesses, no wasted lookups.</div>';
+            return;
+        }
+        // 'verified' -> use the canonical form. Census unreachable/'error' -> FAIL-OPEN with the entered
+        // address (Census throttles Worker egress IPs; don't block a real user for a verify outage — the
+        // 50/mo cap + de-dupe still protect spend). Only a CONFIRMED not-found blocks.
+        if (vEl) vEl.innerHTML = '';
+        acc.propAddress = (v && v.status === 'verified' && v.canonical) ? v.canonical : joined;
+        if (rEl) rEl.innerHTML = _avmNote('Fetching estimate…');
+        var r = await _AssetIntel.fetchEstimate(acc.propAddress);
+        var rEl2 = document.getElementById('modal-avm-result-' + id);   // re-check (modal may have closed)
+        if (rEl2) rEl2.innerHTML = _groundsAvmResultHTML(id, r);
     };
     window.groundsUseEstimate = function (id, value) {
         var acc = state.accounts.find(function (a) { return a.id === id; });

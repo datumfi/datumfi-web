@@ -35,10 +35,56 @@ export function decideCall(count, cached) {
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
 const json = (obj, status) => new Response(JSON.stringify(obj), { status: status || 200, headers: CORS });
 
+// Trim comparable sales to ONLY the fields the R147 comps view renders — NEVER forward the raw
+// RentCast comparables[] wholesale (PII/scope, #259 fence). Rides the SAME /avm/value call: $0,
+// no extra call, no cap increment.
+export function trimComps(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.slice(0, 8).map(function (c) {
+    c = c || {};
+    return {
+      address:  c.formattedAddress || c.address || null,
+      price:    c.price != null ? c.price : null,
+      beds:     c.bedrooms != null ? c.bedrooms : null,
+      baths:    c.bathrooms != null ? c.bathrooms : null,
+      sqft:     c.squareFootage != null ? c.squareFootage : null,
+      distance: c.distance != null ? c.distance : null,
+      saleDate: c.removedDate || c.lastSeenDate || c.listedDate || null
+    };
+  });
+}
+
+// PURE parse of the Census onelineaddress payload (no I/O) so the gate can prove verified/not-found
+// mapping without any network call.
+export function parseCensus(d) {
+  const m = d && d.result && Array.isArray(d.result.addressMatches) ? d.result.addressMatches : [];
+  if (!m.length) return { status: 'not-found' };
+  return { status: 'verified', canonical: m[0].matchedAddress || null };
+}
+
+// Free US Census 'onelineaddress' confirm-exists proxy. Server-side (the browser is CORS-blocked by
+// Census). No key, US-only, $0 — reads/writes NO KV, so it can NEVER touch the RentCast cap.
+async function handleVerify(addr) {
+  if (!addr) return json({ status: 'error', error: 'address required' }, 400);
+  const u = 'https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=' + encodeURIComponent(addr) + '&benchmark=Public_AR_Current&format=json';
+  // Census is intermittently flaky (sporadic non-JSON/5xx on the Worker egress IP) — retry ONCE so a
+  // transient hiccup doesn't reject a real address. Still fail-CLOSED to the client on a hard error.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await fetch(u, { headers: { 'Accept': 'application/json' } });
+      if (!r.ok) continue;
+      return json(parseCensus(await r.json()));
+    } catch (e) { /* transient — retry once */ }
+  }
+  return json({ status: 'error', error: 'verify unavailable' });
+}
+
 export async function handle(request, env) {
   if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
-  let addr = '';
-  try { addr = (new URL(request.url).searchParams.get('address') || '').trim(); } catch (e) {}
+  let url; try { url = new URL(request.url); } catch (e) { return json({ status: 'error', error: 'bad url' }, 400); }
+  const addr = (url.searchParams.get('address') || '').trim();
+  // /verify — free Census confirm-exists proxy; NEVER touches the RentCast cap (no KV, no RentCast call).
+  if (url.pathname === '/verify' || url.pathname.endsWith('/verify')) return handleVerify(addr);
   if (!addr) return json({ status: 'error', error: 'address required' }, 400);
 
   const kv = env && env.RENTCAST_KV;   // binding MUST match wrangler.toml + the Captain's KV (RENTCAST_KV)
@@ -74,7 +120,8 @@ export async function handle(request, env) {
       status: 'ok', source: 'RentCast', updated: new Date().toISOString(),
       value: d && d.price != null ? d.price : null,
       low: d && d.priceRangeLow != null ? d.priceRangeLow : null,
-      high: d && d.priceRangeHigh != null ? d.priceRangeHigh : null
+      high: d && d.priceRangeHigh != null ? d.priceRangeHigh : null,
+      comps: trimComps(d && d.comparables)
     };
     if (kv && out.value != null) { try { await kv.put(ck, JSON.stringify(out), { expirationTtl: CACHE_TTL }); } catch (e) {} }
     return json(out);
