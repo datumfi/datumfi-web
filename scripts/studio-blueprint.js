@@ -158,6 +158,18 @@
         if (a.utilYr)        out.utilYr         = a.utilYr;
         if (a.propAddress)   out.propAddress   = a.propAddress;   // Grounds valuation address (#249) — round-trips too
         if (a.useValueApi)   out.useValueApi   = true;
+        // Grounds property-detail fields (#258/#259) — manual/context; a signed-in user must NOT lose these on restore.
+        if (a.propName)      out.propName      = a.propName;
+        if (a.propPurpose)   out.propPurpose   = a.propPurpose;
+        if (a.propType)      out.propType      = a.propType;
+        if (a.propStreet)    out.propStreet    = a.propStreet;
+        if (a.propCity)      out.propCity      = a.propCity;
+        if (a.propState)     out.propState     = a.propState;
+        if (a.propZip)       out.propZip       = a.propZip;
+        if (a.propBeds)      out.propBeds      = a.propBeds;
+        if (a.propBaths)     out.propBaths     = a.propBaths;
+        if (a.propSqft)      out.propSqft      = a.propSqft;
+        if (a.propYear)      out.propYear      = a.propYear;
         if (a.trustType    && a.trustType    !== 'Irrevocable')   out.trustType    = a.trustType;
         if (a.disbursement && a.disbursement !== 'Discretionary') out.disbursement = a.disbursement;
         // STEP A (c) 2026-07-08 — persist holdings as COMPACT-ESSENTIALS (the 13 real-position fields
