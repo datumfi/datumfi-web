@@ -1,6 +1,7 @@
 // D1 Phase 2 — /api/documents  (GET | PUT), Clerk-JWT-verified, D1-bound (env.DB).
 // Same-origin under datumfi.com/api/* (Pages Function) => covered by CSP 'self', no CORS.
 // GET  /api/documents?type=studio&key=active            -> { payload, revision, updated_at } | 404
+// GET  /api/documents?type=blueprint&list=1             -> { documents: [{ doc_key, revision, updated_at }] }
 // PUT  /api/documents?type=studio&key=active  body { payload, revision? } -> { revision, updated_at } | 409
 import { verifyClerk } from './_lib/auth.js';
 import { dispatch } from './_lib/documents-core.js';
@@ -22,6 +23,7 @@ export async function onRequest(context) {
   const url = new URL(request.url);
   const type = url.searchParams.get('type') || '';
   const key = url.searchParams.get('key') || 'active';
+  const list = url.searchParams.get('list') === '1';   // P5a — GET ?type=blueprint&list=1 -> ids+revisions only
 
   let payloadStr = null, ifRevision = null;
   if (request.method === 'PUT') {
@@ -33,7 +35,7 @@ export async function onRequest(context) {
   }
 
   try {
-    const r = await dispatch({ method: request.method, type, key, payloadStr, ifRevision, db: env.DB, sub });
+    const r = await dispatch({ method: request.method, type, key, payloadStr, ifRevision, list, db: env.DB, sub });
     return json(r.body, r.status);
   } catch (e) {
     // SECURITY: never log payload_json / balances / holdings / names — only a generic error name.

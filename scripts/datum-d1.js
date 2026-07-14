@@ -38,6 +38,23 @@
     }).catch(function () { return null; });
   }
 
+  // LIST -> [{ doc_key, revision, updated_at }] (ids+revisions only, NEVER payloads) | [] on
+  // miss/error/timeout/no-auth. P5a: lets a fresh device enumerate every saved blueprint, then
+  // getDoc each to rebuild the archive from D1 (no Clerk blueprint_z needed).
+  function listDocs(type) {
+    return getToken().then(function (tok) {
+      if (!tok) return [];
+      var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+      var to = ctrl ? setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, API.LOAD_TIMEOUT_MS) : null;
+      return doFetch(BASE + '?type=' + encodeURIComponent(type) + '&list=1', {
+        method: 'GET', headers: { Authorization: 'Bearer ' + tok }, signal: ctrl ? ctrl.signal : undefined
+      }).then(function (r) {
+        if (to) clearTimeout(to);
+        return (r && r.status === 200) ? r.json().then(function (j) { return (j && j.documents) || []; }) : [];
+      }).catch(function () { if (to) clearTimeout(to); return []; });
+    }).catch(function () { return []; });
+  }
+
   // PUT -> { ok:true, revision } | { ok:false, conflict:true, server_revision } | { ok:false }.
   function putDoc(type, key, payload, revision) {
     key = key || 'active';
@@ -86,7 +103,7 @@
     CUTOVER: true,
     WRITE_DEBOUNCE_MS: 1500,   // coarse network write (vs 350ms local commit)
     LOAD_TIMEOUT_MS: 1200,     // D1-first load falls back to LS/Clerk after this
-    getDoc: getDoc, putDoc: putDoc, scheduleWrite: scheduleWrite,
+    getDoc: getDoc, putDoc: putDoc, listDocs: listDocs, scheduleWrite: scheduleWrite,
     setRevision: setRevision, knownRevision: knownRevision, signedIn: signedIn,
     _fetch: null
   };

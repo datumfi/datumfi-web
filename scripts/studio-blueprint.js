@@ -340,10 +340,10 @@
     if (typeof done !== 'function') done = function () {};
     try {
       if (!global.Clerk) { done(); return; }
-      // P4 SCOPE NOTE (Option A, #271): this is the saved-Blueprint ARCHIVE mirror (blueprint_z, the 4
-      // slots) — NOT the active studio (which is Clerk-free on D1 since P3). We NEVER retire a capability
-      // before its replacement is live: blueprint_z STAYS ON until P5 moves blueprints into D1, then it
-      // retires there with zero cross-device loss. Do NOT short-circuit this on the cutover flag.
+      // P5a SCOPE NOTE (Layer-1 dual-write, #271): this saved-Blueprint ARCHIVE mirror (blueprint_z)
+      // STAYS ON. Layer 1 ADDS the D1 blueprint rows ALONGSIDE it (d1WriteBlueprint) — additive, exactly
+      // like P3 did for Studio — so nothing on Clerk is at risk. blueprint_z RETIRES in Layer 2, only once
+      // the Blueprint archive UI reads from D1 (its replacement fully live). Do NOT short-circuit here yet.
       var Codec = global.DatumArchiveCodec;
       if (!Codec) { console.warn('[blueprint mirror] codec unavailable; skipped Clerk mirror'); done(); return; }
       global.Clerk.load().then(function () {
@@ -416,6 +416,38 @@
         } catch (e) {}
       });
     } catch (e) {}
+  }
+
+  // P5a Layer-1 — write a SAVED BLUEPRINT as its OWN D1 document (doc_key = blueprint_id). This is the
+  // per-blueprint home that GROWS UNLIMITED (one row each, no 4-slot cap) at FULL fidelity, with per-doc
+  // 409. ADDITIVE: written ALONGSIDE the Clerk blueprint_z mirror (which stays on until Layer 2), so
+  // nothing on Clerk is at risk. We snapshot the doc at save time (toD1Document deep-clones + strips
+  // _-ephemerals) so a later live-studio edit can't leak into this saved sheet. No-op when D1 absent /
+  // signed out / rolled back (CUTOVER=false) — the Clerk mirror + LS remain the truth in those states.
+  function d1WriteBlueprint(bp) {
+    try {
+      if (!global.DatumD1 || global.DatumD1.CUTOVER === false || !global.DatumD1.signedIn()) return;
+      if (!bp || !bp.blueprint_id) return;
+      var id = bp.blueprint_id;
+      var snap = toD1Document(bp);   // snapshot NOW — independent deep copy, not the live-mutating bp
+      global.DatumD1.scheduleWrite('blueprint', id, function () { return snap; }, function () {
+        console.warn('[d1] blueprint ' + id + ' changed in another tab — reloaded the server revision (no merge)');
+      });
+    } catch (e) {}
+  }
+
+  // P5a — is `id` already the stable identity of a DIFFERENT saved slot? Guards fresh saves so the
+  // single live-studio blueprint_id is never reused across slots (which would collide onto one D1
+  // row). Reads the 4-slot LS archive today; generalizes to N when the archive UI moves off slots.
+  function _idInAnySlot(id, exceptSlot) {
+    if (!id) return false;
+    var arch = readArchive(); if (!arch) return false;
+    for (var n = 1; n <= 4; n++) {
+      if (n === exceptSlot) continue;
+      var s = arch['slot' + n];
+      if (s && s.blueprint_id === id) return true;
+    }
+    return false;
   }
 
   /* ---- Prefill ladder ---- */
@@ -648,14 +680,21 @@
     opts = opts || {};
     var slotId = opts.slot || 1;
     bp.saved_at = new Date().toISOString();
-    if (!bp.blueprint_id) bp.blueprint_id = generateUUID();
+    // P5a — resolve a STABLE, DISTINCT blueprint identity for this slot so the saved sheet becomes
+    // its OWN D1 row (doc_key = blueprint_id). Overwriting a slot reuses THAT slot's id (updates the
+    // same row in place); a fresh save mints a new id not owned by another slot (a brand-new row).
+    // Without this the one live-studio id would be reused across slots and collide onto a single doc.
+    var existingSlot = readSlot(slotId);
+    if (existingSlot && existingSlot.blueprint_id) bp.blueprint_id = existingSlot.blueprint_id;
+    else if (!bp.blueprint_id || _idInAnySlot(bp.blueprint_id, slotId)) bp.blueprint_id = generateUUID();
     var gf = computeGrossFunding(bp);
     bp.datum.gross_funding_need      = gf.gross;
     bp.datum.gross_funding_breakdown = gf.breakdown;
     writeSlot(slotId, bp);
     writeSessionDraft(bp);
-    mirrorToClerk(bp, opts.done);
-    d1WriteStudio(bp);                 // P3 — additive D1 write (full fidelity), alongside LS+Clerk
+    mirrorToClerk(bp, opts.done);      // Clerk blueprint_z mirror — STAYS ON in Layer 1 (retires in Layer 2)
+    d1WriteStudio(bp);                 // P3 — active studio doc (key='active'), full fidelity
+    d1WriteBlueprint(bp);              // P5a Layer-1 — ADDITIVE: this saved blueprint as its OWN D1 row (key=blueprint_id)
     return bp;
   }
 
@@ -867,6 +906,7 @@
     slimSlotForClerk: slimSlotForClerk,
     toD1Document: toD1Document,
     d1WriteStudio: d1WriteStudio,
+    d1WriteBlueprint: d1WriteBlueprint,
     hydrateAccountNames: hydrateAccountNames,
     remirrorArchive:  remirrorArchive,
     computeGrossFunding: computeGrossFunding,

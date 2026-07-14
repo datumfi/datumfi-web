@@ -228,6 +228,46 @@
     [1,2,3,4].forEach(function(n) { if (arch['slot' + n]) { try { localStorage.setItem(_BP_SLOT_PREFIX + n, JSON.stringify(arch['slot' + n])); } catch(_e) {} } });
   }
 
+  // P5a Layer-1 — under cutover, prefer rebuilding the blueprint archive FROM D1 (the full-fidelity,
+  // uncapped source): list the user's blueprint docs, fetch each, reconstruct the local archive.
+  // blueprint_z is still written (dual-write) and remains the ESCAPE ROUTE where D1 is absent/rolled
+  // back. Only the blueprint leg moves here; sketchbook_z + dossier still ride Clerk until P5b/P5c.
+  function _commitBlueprintArch(docs, done) {
+    if (!docs || !docs.length) { done(); return; }
+    // Newest-first; fold into the 4-slot archive shape today (the archive UI moves to N in a later
+    // pass — every blueprint stays safe in D1 regardless; only this local VIEW is slot-capped for now).
+    docs.sort(function(a, b) { return String(b.updated_at || '').localeCompare(String(a.updated_at || '')); });
+    var _la = null; try { _la = JSON.parse(localStorage.getItem(_BP_ARCH_KEY) || 'null'); } catch(_e) {}
+    var out = { slot1: null, slot2: null, slot3: null, slot4: null,
+                activeBlueprintSlot: 1, userHasPremiumToken: !!(_la && _la.userHasPremiumToken) };
+    for (var i = 0; i < docs.length && i < 4; i++) {
+      out['slot' + (i + 1)] = docs[i].bp;
+      try { localStorage.setItem(_BP_SLOT_PREFIX + (i + 1), JSON.stringify(docs[i].bp)); } catch(_e) {}
+    }
+    try { localStorage.setItem(_BP_ARCH_KEY, JSON.stringify(out)); } catch(_e) {}
+    done();
+  }
+  function _restoreBlueprintFromD1(done) {
+    if (typeof done !== 'function') done = function() {};
+    if (_hasArch()) { done(); return; }                               // local cache wins
+    try {
+      window.DatumD1.listDocs('blueprint').then(function(list) {
+        if (!list || !list.length) { done(); return; }
+        var docs = [], pending = list.length;
+        function settle() { if (--pending === 0) _commitBlueprintArch(docs, done); }
+        list.forEach(function(item) {
+          window.DatumD1.getDoc('blueprint', item.doc_key).then(function(d) {
+            if (d && d.payload) { try { docs.push({ bp: JSON.parse(d.payload), updated_at: item.updated_at }); } catch(_e) {} }
+            settle();
+          }).catch(settle);
+        });
+      }).catch(function() { done(); });
+    } catch(_e) { done(); }
+  }
+  function _blueprintD1Live() {
+    return !!(window.DatumD1 && window.DatumD1.CUTOVER !== false && window.DatumD1.signedIn && window.DatumD1.signedIn());
+  }
+
   window._datumRestoreFromClerk = function(done) {
     if (typeof done !== 'function') done = function() {};
     try {
@@ -253,8 +293,17 @@
           if (meta.bp_title && !localStorage.getItem('datum_blueprint_archive_title')) localStorage.setItem('datum_blueprint_archive_title', meta.bp_title);
           if (meta.sb_title && !localStorage.getItem('datum_sketchbook_title')) localStorage.setItem('datum_sketchbook_title', meta.sb_title);
         } catch (_te) {}
-        var wantCodec = (!_hasBook() && meta.sketchbook_z) || (!_hasArch() && meta.blueprint_z);
-        function go() { var C = window.DatumArchiveCodec || null; _restoreSketchbook(meta, C); _restoreBlueprint(meta, C); done(); }
+        // P5a — under cutover the blueprint leg rebuilds from D1 (async list+fetch), not blueprint_z;
+        // the codec is still needed for the sketchbook_z leg (and the blueprint_z ESCAPE ROUTE when
+        // rolled back / D1 absent).
+        var _bpD1 = _blueprintD1Live();
+        var wantCodec = (!_hasBook() && meta.sketchbook_z) || (!_bpD1 && !_hasArch() && meta.blueprint_z);
+        function go() {
+          var C = window.DatumArchiveCodec || null;
+          _restoreSketchbook(meta, C);
+          if (_bpD1) { _restoreBlueprintFromD1(done); }         // D1 is the blueprint home now
+          else { _restoreBlueprint(meta, C); done(); }          // rollback / D1 absent -> blueprint_z
+        }
         if (wantCodec) _ensureCodec(go); else go();
       }).catch(function() { done(); });
     } catch(_e) { done(); }

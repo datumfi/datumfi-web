@@ -52,10 +52,16 @@ export async function putDoc(db, sub, type, key, payloadStr, ifRevision) {
 }
 
 // Pure dispatch (post-auth). Allow-list -> 400; route GET/PUT. `sub` is the VERIFIED user id.
-export async function dispatch({ method, type, key, payloadStr, ifRevision, db, sub }) {
+// GET with list=true returns the user's document ids+revisions of that type (NEVER payloads) — the
+// P5a "get all my blueprints" path that lets a fresh device rebuild the archive (list -> getDoc each).
+export async function dispatch({ method, type, key, payloadStr, ifRevision, list, db, sub }) {
   if (!DOC_TYPES.has(type)) return { status: 400, body: { error: 'invalid document_type' } };
   key = key || 'active';
   if (method === 'GET') {
+    if (list) {
+      const docs = await listDocs(db, sub, type);
+      return { status: 200, body: { documents: docs } };
+    }
     const doc = await getDoc(db, sub, type, key);
     return doc ? { status: 200, body: doc } : { status: 404, body: { error: 'not found' } };
   }
