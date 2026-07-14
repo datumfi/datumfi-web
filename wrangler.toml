@@ -1,3 +1,13 @@
 name = "datumfi-web"
 pages_build_output_dir = "dist"
 compatibility_date = "2026-06-25"
+compatibility_flags = ["nodejs_compat"]
+
+# D1 Phase 2 — persistence store keyed to the VERIFIED Clerk user id (never the browser).
+# Binding "DB" resolves to datumfi-dev in preview/local (wrangler pages dev) and datumfi-prod
+# in production. Migrations are applied to DEV first; prod is only migrated after cutover sign-off.
+[[d1_databases]]
+binding = "DB"
+database_name = "datumfi-prod"
+database_id = "347cd869-7dfe-4f6d-83b1-7c2b56bf2bb6"
+preview_database_id = "ffeda412-3cf2-46c0-9ba6-7f0ddbe06539"
