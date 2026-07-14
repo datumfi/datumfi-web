@@ -13323,9 +13323,9 @@
       if (S1_DEFAULT_SHAPE && !document.getElementById('studio-layout').classList.contains('mode-shape') && window.toggleShapeMode) window.toggleShapeMode();
     } catch (e) { console.warn('[blueprint] init failed', e); }
     }
-    if (window.DatumD1 && window.DatumD1.signedIn && window.DatumD1.signedIn()) {
-      window.DatumD1.getDoc('studio', 'active').then(boot).catch(function () { boot(null); });
-    } else { boot(null); }
+    if (window.DatumD1 && window.DatumD1.CUTOVER !== false && window.DatumD1.signedIn && window.DatumD1.signedIn()) {
+      window.DatumD1.getDoc('studio', 'active').then(boot).catch(function () { boot(null); });   // P4 — D1 sole truth
+    } else { boot(null); }   // rollback (DatumD1.CUTOVER=false) or signed-out -> today's LS->Clerk path
   });
   </script>
   <script>document.addEventListener('DOMContentLoaded', function() { if (window.dfTrack) dfTrack('studio_started'); });</script>

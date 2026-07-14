@@ -340,6 +340,10 @@
     if (typeof done !== 'function') done = function () {};
     try {
       if (!global.Clerk) { done(); return; }
+      // P4 SCOPE NOTE (Option A, #271): this is the saved-Blueprint ARCHIVE mirror (blueprint_z, the 4
+      // slots) — NOT the active studio (which is Clerk-free on D1 since P3). We NEVER retire a capability
+      // before its replacement is live: blueprint_z STAYS ON until P5 moves blueprints into D1, then it
+      // retires there with zero cross-device loss. Do NOT short-circuit this on the cutover flag.
       var Codec = global.DatumArchiveCodec;
       if (!Codec) { console.warn('[blueprint mirror] codec unavailable; skipped Clerk mirror'); done(); return; }
       global.Clerk.load().then(function () {
@@ -403,7 +407,8 @@
   // user is signed out (LS/Clerk stay the truth — the escape route). 409 => reload server doc + warn.
   function d1WriteStudio(bp) {
     try {
-      if (!global.DatumD1 || !global.DatumD1.signedIn()) return;
+      // No-op when D1 absent, signed out, OR rolled back (CUTOVER=false = D1 fully off = today's path).
+      if (!global.DatumD1 || global.DatumD1.CUTOVER === false || !global.DatumD1.signedIn()) return;
       global.DatumD1.scheduleWrite('studio', 'active', function () { return toD1Document(bp); }, function (server) {
         try {
           if (server && server.payload) { Object.assign(bp, JSON.parse(server.payload)); writeSessionDraft(bp); }
@@ -861,6 +866,7 @@
     toEnginePayload:  toEnginePayload,
     slimSlotForClerk: slimSlotForClerk,
     toD1Document: toD1Document,
+    d1WriteStudio: d1WriteStudio,
     hydrateAccountNames: hydrateAccountNames,
     remirrorArchive:  remirrorArchive,
     computeGrossFunding: computeGrossFunding,

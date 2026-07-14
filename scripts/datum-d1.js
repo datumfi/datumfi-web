@@ -80,6 +80,10 @@
   function knownRevision(type, key) { return _rev[idOf(type, key)]; }
 
   var API = {
+    // P4 CUTOVER flag (default ON): D1 is the sole truth for Studio + the Clerk studio-slim mirror is
+    // OFF. ONE-FLIP ROLLBACK: set DatumD1.CUTOVER = false -> Clerk mirror fires again + LS-authority
+    // load restored = today's exact behavior, instantly, no redeploy (the metadata code stays intact).
+    CUTOVER: true,
     WRITE_DEBOUNCE_MS: 1500,   // coarse network write (vs 350ms local commit)
     LOAD_TIMEOUT_MS: 1200,     // D1-first load falls back to LS/Clerk after this
     getDoc: getDoc, putDoc: putDoc, scheduleWrite: scheduleWrite,
