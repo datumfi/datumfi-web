@@ -384,6 +384,35 @@
    * erase without inlining a second encoder. */
   function remirrorArchive(done) { mirrorToClerk(null, done); }
 
+  /* P3 — D1 dual-write (ADDITIVE; alongside LS + Clerk, never instead of). FULL FIDELITY: strip only
+   * runtime _-prefixed ephemerals (_avmLast, _agg, ...) — NO slim, NO graceful-degrade, so every
+   * room/holding/name reaches D1. This is the path that makes "save persists everything" true. */
+  function toD1Document(bp) {
+    function clean(o) {
+      if (Array.isArray(o)) return o.map(clean);
+      if (o && typeof o === 'object') {
+        var out = {};
+        for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k) && k.charAt(0) !== '_') out[k] = clean(o[k]);
+        return out;
+      }
+      return o;
+    }
+    return clean(bp);
+  }
+  // Coarse-debounced D1 write of the ACTIVE studio doc. No-op when the D1 client is absent or the
+  // user is signed out (LS/Clerk stay the truth — the escape route). 409 => reload server doc + warn.
+  function d1WriteStudio(bp) {
+    try {
+      if (!global.DatumD1 || !global.DatumD1.signedIn()) return;
+      global.DatumD1.scheduleWrite('studio', 'active', function () { return toD1Document(bp); }, function (server) {
+        try {
+          if (server && server.payload) { Object.assign(bp, JSON.parse(server.payload)); writeSessionDraft(bp); }
+          console.warn('[d1] studio doc changed in another tab — reloaded the server copy (no merge)');
+        } catch (e) {}
+      });
+    } catch (e) {}
+  }
+
   /* ---- Prefill ladder ---- */
 
   function readDossier() {
@@ -563,6 +592,17 @@
     opts = opts || {};
     var bp = newBlueprint();
 
+    // P3 — D1-FIRST: if the caller handed us a D1 studio doc, hydrate from it (full fidelity) and
+    // adopt its revision for optimistic CAS. Any absence/error falls through to the existing
+    // LS(session-draft)->Clerk path below, unchanged (silent + lossless fallback).
+    if (opts.d1Doc && opts.d1Doc.payload) {
+      try {
+        Object.assign(bp, JSON.parse(opts.d1Doc.payload));
+        if (global.DatumD1 && typeof opts.d1Doc.revision === 'number') global.DatumD1.setRevision('studio', 'active', opts.d1Doc.revision);
+        return finishLoad(bp, 'd1');
+      } catch (_e) {}
+    }
+
     try {
       var params = new URLSearchParams(global.location.search);
       var id     = parseInt(params.get('id'), 10);
@@ -610,6 +650,7 @@
     writeSlot(slotId, bp);
     writeSessionDraft(bp);
     mirrorToClerk(bp, opts.done);
+    d1WriteStudio(bp);                 // P3 — additive D1 write (full fidelity), alongside LS+Clerk
     return bp;
   }
 
@@ -661,6 +702,7 @@
           bp.datum.gross_funding_need      = gf.gross;
           bp.datum.gross_funding_breakdown = gf.breakdown;
           writeSessionDraft(bp);
+          d1WriteStudio(bp);           // P3 — additive; coarse-debounced inside DatumD1 (~1.5s)
         }, debounceMs);
       };
     }());
@@ -818,6 +860,7 @@
     save:             save,
     toEnginePayload:  toEnginePayload,
     slimSlotForClerk: slimSlotForClerk,
+    toD1Document: toD1Document,
     hydrateAccountNames: hydrateAccountNames,
     remirrorArchive:  remirrorArchive,
     computeGrossFunding: computeGrossFunding,

@@ -13278,6 +13278,7 @@
   <script src="/scripts/studio-wantface.js" defer></script>
   <script src="/scripts/lz-string.min.js" defer></script>
   <script src="/scripts/datum-archive-codec.js" defer></script>
+  <script src="/scripts/datum-d1.js" defer></script>
   <script src="/scripts/studio-blueprint.js" defer></script>
   <script>
   // Blueprint v1 wiring — prefill the two new header fields from the loaded
@@ -13285,8 +13286,12 @@
   // guarantees DatumBlueprint exists by DOMContentLoaded.
   document.addEventListener('DOMContentLoaded', function () {
     if (!window.DatumBlueprint) return;
+    // P3 — D1-FIRST hydration. boot() runs the (unchanged) init with an optional D1 studio doc; when
+    // D1 is absent / errors / times out or the user is signed out, boot(null) reproduces today's
+    // LS->Clerk path exactly (silent, lossless fallback — the escape route).
+    function boot(d1Doc) {
     try {
-      var bp = window.DatumBlueprint.load();
+      var bp = window.DatumBlueprint.load(d1Doc ? { d1Doc: d1Doc } : {});
       if (window._applyUpkeepFromBp) window._applyUpkeepFromBp(bp);   // U1 — restore Operating Upkeep ledger (hub ready here)
       var portEl = document.getElementById('bp-portfolio-total');
       var contEl = document.getElementById('bp-contributions-total');
@@ -13317,6 +13322,10 @@
       var S1_DEFAULT_SHAPE = true;
       if (S1_DEFAULT_SHAPE && !document.getElementById('studio-layout').classList.contains('mode-shape') && window.toggleShapeMode) window.toggleShapeMode();
     } catch (e) { console.warn('[blueprint] init failed', e); }
+    }
+    if (window.DatumD1 && window.DatumD1.signedIn && window.DatumD1.signedIn()) {
+      window.DatumD1.getDoc('studio', 'active').then(boot).catch(function () { boot(null); });
+    } else { boot(null); }
   });
   </script>
   <script>document.addEventListener('DOMContentLoaded', function() { if (window.dfTrack) dfTrack('studio_started'); });</script>
