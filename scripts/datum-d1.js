@@ -72,6 +72,19 @@
     }).catch(function () { return { ok: false }; });
   }
 
+  // DELETE -> { ok:true, deleted } | { ok:false }. Erase one document (used by the archive "Erase").
+  function deleteDoc(type, key) {
+    key = key || 'active';
+    return getToken().then(function (tok) {
+      if (!tok) return { ok: false };
+      return doFetch(BASE + '?type=' + encodeURIComponent(type) + '&key=' + encodeURIComponent(key), {
+        method: 'DELETE', headers: { Authorization: 'Bearer ' + tok }
+      }).then(function (r) {
+        return (r && r.status === 200) ? r.json().then(function (j) { return { ok: true, deleted: (j && j.deleted) || 0 }; }) : { ok: false };
+      }).catch(function () { return { ok: false }; });
+    }).catch(function () { return { ok: false }; });
+  }
+
   // Coarse-debounced writer keyed by type:key; tracks last revision for optimistic CAS. On 409 the
   // client policy is reload-server-doc + warn (no silent clobber, no auto-merge): re-read, adopt the
   // server revision, and hand the fresh doc to onConflict so the caller can re-hydrate + warn.
@@ -103,7 +116,7 @@
     CUTOVER: true,
     WRITE_DEBOUNCE_MS: 1500,   // coarse network write (vs 350ms local commit)
     LOAD_TIMEOUT_MS: 1200,     // D1-first load falls back to LS/Clerk after this
-    getDoc: getDoc, putDoc: putDoc, listDocs: listDocs, scheduleWrite: scheduleWrite,
+    getDoc: getDoc, putDoc: putDoc, listDocs: listDocs, deleteDoc: deleteDoc, scheduleWrite: scheduleWrite,
     setRevision: setRevision, knownRevision: knownRevision, signedIn: signedIn,
     _fetch: null
   };

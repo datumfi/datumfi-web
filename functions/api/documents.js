@@ -3,6 +3,7 @@
 // GET  /api/documents?type=studio&key=active            -> { payload, revision, updated_at } | 404
 // GET  /api/documents?type=blueprint&list=1             -> { documents: [{ doc_key, revision, updated_at }] }
 // PUT  /api/documents?type=studio&key=active  body { payload, revision? } -> { revision, updated_at } | 409
+// DELETE /api/documents?type=blueprint&key=<id>          -> { deleted: 0|1 }  (erase; no cross-device resurrect)
 import { verifyClerk } from './_lib/auth.js';
 import { dispatch } from './_lib/documents-core.js';
 

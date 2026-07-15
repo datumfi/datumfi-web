@@ -51,7 +51,18 @@ export async function putDoc(db, sub, type, key, payloadStr, ifRevision) {
   return { status: 200, body: { revision: expected + 1, updated_at: now } };
 }
 
-// Pure dispatch (post-auth). Allow-list -> 400; route GET/PUT. `sub` is the VERIFIED user id.
+// Hard-delete one document (user-scoped). Used by the archive "Erase" so a removed blueprint does
+// NOT resurrect cross-device off D1. Idempotent: deleting a missing row returns { deleted: 0 }.
+export async function deleteDoc(db, sub, type, key) {
+  const res = await db.prepare(
+    'DELETE FROM documents WHERE clerk_user_id = ? AND document_type = ? AND doc_key = ?'
+  ).bind(sub, type, key).run();
+  const changed = (res && res.meta && typeof res.meta.changes === 'number') ? res.meta.changes
+                : (res && typeof res.changes === 'number') ? res.changes : 0;
+  return { status: 200, body: { deleted: changed } };
+}
+
+// Pure dispatch (post-auth). Allow-list -> 400; route GET/PUT/DELETE. `sub` is the VERIFIED user id.
 // GET with list=true returns the user's document ids+revisions of that type (NEVER payloads) — the
 // P5a "get all my blueprints" path that lets a fresh device rebuild the archive (list -> getDoc each).
 export async function dispatch({ method, type, key, payloadStr, ifRevision, list, db, sub }) {
@@ -68,6 +79,9 @@ export async function dispatch({ method, type, key, payloadStr, ifRevision, list
   if (method === 'PUT') {
     if (typeof payloadStr !== 'string' || !payloadStr.length) return { status: 400, body: { error: 'empty payload' } };
     return await putDoc(db, sub, type, key, payloadStr, ifRevision);
+  }
+  if (method === 'DELETE') {
+    return await deleteDoc(db, sub, type, key);
   }
   return { status: 405, body: { error: 'method not allowed' } };
 }
