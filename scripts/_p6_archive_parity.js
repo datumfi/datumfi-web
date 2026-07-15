@@ -32,8 +32,10 @@ const fails = [];
 const check = (name, cond, detail) => { console.log((cond ? '  PASS  ' : '  FAIL  ') + name + (detail != null ? ' (' + detail + ')' : '')); if (!cond) fails.push(name); };
 
 async function eraseBlueprint(page, slot) {
+  // Slice-1 Blueprint.html is id-based (render-N): the Erase button carries data-purge-id="<bpId>",
+  // not the old data-purge-target="<slot>". The gate seeds bp-<slot> into each slot, so slot N == bp-N.
   await page.evaluate((s) => {
-    var b = document.querySelector('.erase-action[data-purge-target="' + s + '"]');
+    var b = document.querySelector('.erase-action[data-purge-id="bp-' + s + '"]');
     if (b) b.click();
   }, slot);
   await page.waitForTimeout(120);
@@ -91,8 +93,8 @@ async function eraseSketch(page, slot) {
   const bpUnlock = await page.evaluate(() => {
     var locked = [];
     for (var n = 1; n <= 4; n++) { var t = document.getElementById('blueprint-slot-' + n); if (t && t.classList.contains('locked')) locked.push(n); }
-    var openable = 0;
-    for (var m = 1; m <= 4; m++) { if (document.querySelector('.open-blueprint-action[data-open-slot="' + m + '"]')) openable++; }
+    // Slice-1 render-N: Open buttons carry data-open-id="<bpId>" (was data-open-slot). Count the 4 seeded.
+    var openable = document.querySelectorAll('.open-blueprint-action[data-open-id]').length;
     var acc = document.getElementById('summary-access');
     return {
       token: !!(acc && acc.textContent.trim() === 'Studio'),   // UI proxy for userHasPremiumToken
@@ -149,8 +151,10 @@ async function eraseSketch(page, slot) {
 
   // (P6.1) AUTO-CONSUME on landing: a signed-out Studio save carried a snapshot +
   // pending flag through the vault hop → must auto-save inline on the next signed-in
-  // landing (no "Save Current" button), fire ONCE, and clear the flag. Slots 2,3 are
-  // empty after the purge tests, so auto-consume fills the first free slot (2).
+  // landing (no "Save Current" button), fire ONCE, and clear the flag. saveCarriedSnapshot()
+  // writes {slot:1}; slot 1 is still occupied (bp-1), so P5a's per-slot stable-id REUSES bp-1's
+  // id (cleanly updates that D1 row). We therefore verify by the carried CONTENT (net_datum_v1
+  // = 77000, distinct from the seeds' 90001-4) landing in exactly one slot — id-agnostic.
   await page.evaluate(() => {
     var bp = window.DatumBlueprint['new']();
     bp.blueprint_id = 'bp-auto';
@@ -163,7 +167,7 @@ async function eraseSketch(page, slot) {
   await page.waitForTimeout(2600);
   const bpAuto = await page.evaluate(() => {
     var arch = null; try { arch = JSON.parse(localStorage.getItem('datumfi_blueprint_archive_v1') || 'null'); } catch (e) {}
-    var slot = 0; for (var n = 1; n <= 4; n++) { var s = arch && arch['slot' + n]; if (s && s.blueprint_id === 'bp-auto') { slot = n; break; } }
+    var slot = 0; for (var n = 1; n <= 4; n++) { var s = arch && arch['slot' + n]; if (s && s.datum && s.datum.net_datum_v1 === 77000) { slot = n; break; } }
     return {
       savedSlot: slot,
       pending: sessionStorage.getItem('datumfi_pending_save') != null,
@@ -177,7 +181,7 @@ async function eraseSketch(page, slot) {
   await page.waitForTimeout(2200);
   const bpAutoOnce = await page.evaluate(() => {
     var arch = null; try { arch = JSON.parse(localStorage.getItem('datumfi_blueprint_archive_v1') || 'null'); } catch (e) {}
-    var c = 0; for (var n = 1; n <= 4; n++) { var s = arch && arch['slot' + n]; if (s && s.blueprint_id === 'bp-auto') c++; }
+    var c = 0; for (var n = 1; n <= 4; n++) { var s = arch && arch['slot' + n]; if (s && s.datum && s.datum.net_datum_v1 === 77000) c++; }
     return c;
   });
   check('BP P6.1: auto-consume fires ONCE (no double-save)', bpAutoOnce === 1, bpAutoOnce);
