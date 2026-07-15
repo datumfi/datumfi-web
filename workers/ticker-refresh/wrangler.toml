@@ -1,0 +1,29 @@
+# Cloudflare Worker — ticker-refresh (monthly Cron). SEPARATE deploy from the Pages site
+# (`wrangler deploy`, NOT `wrangler pages deploy`). Syncs the served ticker-bundle.js into the GLOBAL
+# ticker_reference D1 table (sync-committed-bundle -> D1). The heavy provider refresh stays on-machine
+# (`node scripts/_build_ticker_bundle.mjs --refresh` + commit); this Worker is thin + idempotent.
+#
+# NOT DEPLOYED YET. Deploy + trigger registration + prod D1 migration are the NEXT milestone, on the
+# Captain's explicit GO. The ROOT wrangler.toml stays clean — Cron Triggers live ONLY here (Pages can't
+# run Cron), never at the repo root.
+#
+# DEPLOY (Captain, at the milestone, AFTER prod D1 has the ticker_reference table):
+#   1) local gate GREEN:  node --experimental-sqlite scripts/_gate_d1_ticker.mjs
+#   2) deploy:            cd workers/ticker-refresh && wrangler deploy    (registers the monthly Cron)
+#   3) one-shot verify:   GET the Worker URL -> { ok:true, symbols:<N>, upserted:<N> }
+name = "ticker-refresh"
+main = "ticker-refresh.mjs"
+compatibility_date = "2026-07-15"
+compatibility_flags = ["nodejs_compat"]
+
+# Monthly — 00:00 UTC on the 1st. Idempotent (upsert), so a missed or re-run tick is safe.
+[triggers]
+crons = ["0 0 1 * *"]
+
+# Same GLOBAL ticker_reference store the Pages read endpoint queries. Binding "DB" -> datumfi-prod in
+# production, datumfi-dev under `wrangler dev`. The table is un-scoped — there is NO user id here.
+[[d1_databases]]
+binding = "DB"
+database_name = "datumfi-prod"
+database_id = "347cd869-7dfe-4f6d-83b1-7c2b56bf2bb6"
+preview_database_id = "ffeda412-3cf2-46c0-9ba6-7f0ddbe06539"
