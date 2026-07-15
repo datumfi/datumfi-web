@@ -87,18 +87,26 @@ const out = { findings: [], pageErrors: [] };
   // set at action time because studio.html's load-time Clerk check (no real user on
   // this host) clears it — a real signed-in user keeps it.
   await page.evaluate(() => { try { sessionStorage.setItem('datum_auth_hint', '1'); } catch (e) {} });
-  await page.evaluate(() => window.studioSaveCurrent());
-  await page.waitForTimeout(150);
-  out.popoverPresent = await page.evaluate(() => !!document.getElementById('studio-save-bp-pop'));
-  // Click slot A-02 in-page (empty -> immediate save). Direct .click() avoids popover
-  // positioning quirks when invoked headlessly without a visible anchor button.
-  await page.evaluate(() => {
-    var pop = document.getElementById('studio-save-bp-pop');
-    if (!pop) return;
-    var b = Array.prototype.slice.call(pop.querySelectorAll('button')).find(function (x) { return /A-02/.test(x.textContent); });
-    if (b) b.click();
-  });
-  await page.waitForTimeout(400);
+  // L2 slice-2 picker: the fixed A-0n slot buttons are gone. "＋ Save as a new blueprint" fills the
+  // rolling-4 LS net's empty slots in order, so TWO save-as-new clicks populate slot 1 then slot 2 —
+  // and this gate inspects slot 2 (?id=2 / datum_blueprint_state_2). Both saves capture the same live
+  // plan. (The parked plan-end-age date-quirk finding below is pre-existing + unrelated to D1 — see
+  // memory project_d1_l2_handoff §7. Repointing the driver just converts a stale-selector crash back
+  // into that clean known fail.)
+  async function _saveAsNew() {
+    await page.evaluate(() => window.studioSaveCurrent());
+    await page.waitForTimeout(150);
+    var present = await page.evaluate(() => {
+      var pop = document.getElementById('studio-save-bp-pop'); if (!pop) return false;
+      var b = Array.prototype.slice.call(pop.querySelectorAll('button')).find(function (x) { return /Save as a new blueprint/.test(x.textContent); });
+      if (b) b.click();
+      return true;
+    });
+    await page.waitForTimeout(400);
+    return present;
+  }
+  out.popoverPresent = await _saveAsNew();   // -> slot 1
+  await _saveAsNew();                          // -> slot 2 (the slot this gate inspects)
 
   out.afterSave = await page.evaluate(() => {
     var slot = null, arch = null;

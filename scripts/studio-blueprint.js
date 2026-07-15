@@ -676,25 +676,52 @@
     return finishLoad(bp, 'fresh+dossier');
   }
 
+  // P5a Layer-2 — the LS / blueprint_z 4-slot archive is now a ROLLING newest-4 CACHE (D1 is the
+  // unlimited truth). _placeInNet resolves which slot (1..4) a saved bp should occupy WITHOUT the old
+  // 4-cap: update-in-place when its id already holds a slot; else the first empty slot; else EVICT the
+  // OLDEST saved_at slot (recency wins — what the user was last working on survives). The evicted
+  // blueprint stays in D1 (its own row, unlimited) — only this degraded LS/Clerk fallback truncates.
+  function _placeInNet(bp) {
+    var arch = readArchive() || {};
+    var oldestN = 1, oldestT = Infinity, emptyN = 0;
+    for (var n = 1; n <= 4; n++) {
+      var s = arch['slot' + n];
+      if (s && s.blueprint_id && bp.blueprint_id && s.blueprint_id === bp.blueprint_id) return n;   // update in place
+      if (!s && !emptyN) emptyN = n;
+      if (s) { var t = s.saved_at ? Date.parse(s.saved_at) : -Infinity; if (t < oldestT) { oldestT = t; oldestN = n; } }
+    }
+    return emptyN || oldestN;
+  }
+
   function save(bp, opts) {
     opts = opts || {};
-    var slotId = opts.slot || 1;
     bp.saved_at = new Date().toISOString();
-    // P5a — resolve a STABLE, DISTINCT blueprint identity for this slot so the saved sheet becomes
-    // its OWN D1 row (doc_key = blueprint_id). Overwriting a slot reuses THAT slot's id (updates the
-    // same row in place); a fresh save mints a new id not owned by another slot (a brand-new row).
-    // Without this the one live-studio id would be reused across slots and collide onto a single doc.
-    var existingSlot = readSlot(slotId);
-    if (existingSlot && existingSlot.blueprint_id) bp.blueprint_id = existingSlot.blueprint_id;
-    else if (!bp.blueprint_id || _idInAnySlot(bp.blueprint_id, slotId)) bp.blueprint_id = generateUUID();
+    // P5a Layer-2 — the two-branch save-picker contract (#276, Captain-ratified Option 1), PLUS the
+    // legacy exact-slot path kept intact. Each saved sheet becomes its OWN D1 row (doc_key = blueprint_id):
+    //   • opts.newBlueprint  -> ALWAYS mint a fresh id  ("＋ Save as a new blueprint" -> a brand-new D1 row)
+    //   • opts.blueprint_id  -> reuse that id           ("Overwrite <sheet>" -> the SAME row, revision bumped)
+    //   • opts.slot (legacy) -> reuse THAT slot's id    (archive-landing saveCarriedSnapshot + parity gates)
+    if (opts.newBlueprint) {
+      bp.blueprint_id = generateUUID();
+    } else if (opts.blueprint_id) {
+      bp.blueprint_id = opts.blueprint_id;
+    } else if (opts.slot) {
+      var existingSlot = readSlot(opts.slot);
+      if (existingSlot && existingSlot.blueprint_id) bp.blueprint_id = existingSlot.blueprint_id;
+      else if (!bp.blueprint_id || _idInAnySlot(bp.blueprint_id, opts.slot)) bp.blueprint_id = generateUUID();
+    } else if (!bp.blueprint_id) {
+      bp.blueprint_id = generateUUID();
+    }
     var gf = computeGrossFunding(bp);
     bp.datum.gross_funding_need      = gf.gross;
     bp.datum.gross_funding_breakdown = gf.breakdown;
+    // Legacy callers pin an exact slot; the picker branches roll the newest-4 LS-net window.
+    var slotId = opts.slot || _placeInNet(bp);
     writeSlot(slotId, bp);
     writeSessionDraft(bp);
-    mirrorToClerk(bp, opts.done);      // Clerk blueprint_z mirror — STAYS ON in Layer 1 (retires in Layer 2)
+    mirrorToClerk(bp, opts.done);      // Clerk blueprint_z mirror — newest-4 rolling; STILL ON (retires in the LAST L2 slice)
     d1WriteStudio(bp);                 // P3 — active studio doc (key='active'), full fidelity
-    d1WriteBlueprint(bp);              // P5a Layer-1 — ADDITIVE: this saved blueprint as its OWN D1 row (key=blueprint_id)
+    d1WriteBlueprint(bp);              // P5a Layer-1 — this saved blueprint as its OWN unlimited D1 row (key=blueprint_id)
     return bp;
   }
 

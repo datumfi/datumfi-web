@@ -77,11 +77,14 @@ const check = (name, cond, detail) => { console.log((cond ? '  PASS  ' : '  FAIL
     await page.waitForTimeout(250);
     await page.evaluate(() => window.studioSaveCurrent());
     await page.waitForTimeout(120);
-    await page.evaluate((slot) => {
+    await page.evaluate(() => {
+      // L2 slice-2 picker: the fixed A-0n slot buttons are gone. "＋ Save as a new blueprint" mints a
+      // fresh row and the rolling-4 LS net fills empty slots in order (save 1->slot1 ... save 4->slot4),
+      // so ROOMS[n] still lands in slot n — the cross-device restore assertions are unchanged.
       var pop = document.getElementById('studio-save-bp-pop'); if (!pop) return;
-      var b = Array.prototype.slice.call(pop.querySelectorAll('button')).find((x) => new RegExp('A-0' + slot).test(x.textContent));
+      var b = Array.prototype.slice.call(pop.querySelectorAll('button')).find((x) => /Save as a new blueprint/.test(x.textContent));
       if (b) b.click();
-    }, n);
+    });
     await page.waitForTimeout(450);
   }
   const deviceA = await page.evaluate(() => {

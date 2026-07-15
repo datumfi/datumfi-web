@@ -13353,24 +13353,75 @@
       if (!bp) bp = window._studioBp = DatumBlueprint['new']();
       return bp;
     }
-    function slotLabel(n) {
-      var slot = null; try { slot = DatumBlueprint._internal.readSlot(n); } catch (e) {}
-      if (!slot) return 'A-0' + n + '  ·  Empty';
-      var rooms = (slot.accounts || []).length;
-      var when = slot.saved_at ? new Date(slot.saved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
-      return 'A-0' + n + '  ·  ' + rooms + ' rooms' + (when ? '  ·  ' + when : '');
-    }
     var HEAD_CSS = 'font-family:var(--font-mono);font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);padding:2px 4px 4px;';
-    function isFilled(n) {
-      try { return !!DatumBlueprint._internal.readSlot(n); } catch (e) { return false; }
+    // L2 slice-2 premium-Option-B chrome — bevel-gold "Save as new" light-sweep + gold scrollbar on the
+    // overwrite list. Injected ONCE (pseudo-elements / keyframes cannot be inlined).
+    function ensurePickStyle() {
+      if (document.getElementById('studio-bp-pick-style')) return;
+      var s = document.createElement('style'); s.id = 'studio-bp-pick-style';
+      s.textContent =
+        '@keyframes bpSweep{0%{left:-60%}100%{left:130%}}' +
+        '#studio-save-bp-pop .bp-newbtn{position:relative;overflow:hidden;}' +
+        '#studio-save-bp-pop .bp-newbtn::after{content:"";position:absolute;top:0;left:-60%;width:45%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,0.28),transparent);transform:skewX(-18deg);pointer-events:none;}' +
+        '#studio-save-bp-pop .bp-newbtn:hover::after{animation:bpSweep 0.85s ease;}' +
+        '#studio-save-bp-pop .bp-ovlist{max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:5px;padding-right:2px;scrollbar-width:thin;scrollbar-color:var(--gold,#c9a84c) rgba(255,255,255,0.05);}' +
+        '#studio-save-bp-pop .bp-ovlist::-webkit-scrollbar{width:7px;}' +
+        '#studio-save-bp-pop .bp-ovlist::-webkit-scrollbar-track{background:rgba(255,255,255,0.04);border-radius:4px;}' +
+        '#studio-save-bp-pop .bp-ovlist::-webkit-scrollbar-thumb{background:linear-gradient(var(--gold,#c9a84c),#8f7629);border-radius:4px;}' +
+        '#studio-save-bp-pop .bp-ovrow{text-align:left;background:linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02));border:1px solid rgba(255,255,255,0.10);color:var(--white,#fff);font-family:var(--font-mono);font-size:11px;padding:8px 10px;border-radius:5px;cursor:pointer;transition:border-color .12s,background .12s;box-shadow:inset 0 1px 0 rgba(255,255,255,0.05);}' +
+        '#studio-save-bp-pop .bp-ovrow:hover{border-color:var(--teal,#1d9e75);background:linear-gradient(180deg,rgba(29,158,117,0.14),rgba(29,158,117,0.05));}' +
+        '#studio-save-bp-pop .bp-ovrow .bp-ovsub{display:block;margin-top:3px;font-size:9px;color:rgba(255,255,255,0.55);letter-spacing:0.04em;}';
+      document.head.appendChild(s);
     }
-    function saveTo(n) {
+    // Enumerate saved blueprints for the overwrite list — D1 (ALL N, newest-first) with an LS 4-slot
+    // fallback when signed-out / D1 unreachable. Mirrors Blueprint.html loadArchive so the picker and
+    // the archive agree on what exists.
+    function bpMeta(bp, id) {
+      var prof = (bp && bp.profile) || {};
+      var name = prof.primary_name ? (prof.primary_name + "'s Blueprint") : 'Studio Blueprint';
+      var rooms = ((bp && bp.accounts) || []).length;
+      var when = bp && bp.saved_at ? new Date(bp.saved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+      return { id: id, name: name, rooms: rooms, when: when };
+    }
+    function listFromLS() {
+      var rows = [];
+      for (var n = 1; n <= 4; n++) { var s = null; try { s = DatumBlueprint._internal.readSlot(n); } catch (e) {}
+        if (s && s.blueprint_id) rows.push({ m: bpMeta(s, s.blueprint_id), t: s.saved_at ? Date.parse(s.saved_at) : 0 }); }
+      rows.sort(function (a, b) { return b.t - a.t; });
+      return rows.map(function (r) { return r.m; });
+    }
+    function listBlueprints() {
+      return new Promise(function (resolve) {
+        var D1 = window.DatumD1;
+        if (!(D1 && D1.CUTOVER !== false && D1.signedIn && D1.signedIn())) { resolve(listFromLS()); return; }
+        D1.listDocs('blueprint').then(function (docs) {
+          if (!docs || !docs.length) { resolve(listFromLS()); return; }
+          docs.sort(function (a, b) { return String(b.updated_at || '').localeCompare(String(a.updated_at || '')); });
+          Promise.all(docs.map(function (d) { return D1.getDoc('blueprint', d.doc_key); })).then(function (full) {
+            var out = [];
+            full.forEach(function (f, i) { if (f && f.payload) { try { var bp = JSON.parse(f.payload); out.push(bpMeta(bp, docs[i].doc_key)); } catch (e) {} } });
+            resolve(out.length ? out : listFromLS());
+          }).catch(function () { resolve(listFromLS()); });
+        }).catch(function () { resolve(listFromLS()); });
+      });
+    }
+    function saveNew() {
       try {
         var bp = liveBp();
         DatumBlueprint.captureDOM(bp);
-        DatumBlueprint.save(bp, { slot: n });
+        DatumBlueprint.save(bp, { newBlueprint: true });   // mint a fresh id -> its OWN unlimited D1 row
         window._studioBp = bp;
-        toast('Saved to Blueprint A-0' + n + '.');
+        toast('Saved as a new blueprint.');
+      } catch (e) { toast('Save failed.'); }
+      close();
+    }
+    function saveOver(id, name) {
+      try {
+        var bp = liveBp();
+        DatumBlueprint.captureDOM(bp);
+        DatumBlueprint.save(bp, { blueprint_id: id });     // reuse that sheet's id -> SAME D1 row, bumped revision
+        window._studioBp = bp;
+        toast('Overwrote ' + (name || 'the blueprint') + '.');
       } catch (e) { toast('Save failed.'); }
       close();
     }
@@ -13378,15 +13429,15 @@
     function onDoc(e) { if (pop && !pop.contains(e.target) && e.target !== btn) close(); }
     /* Gated picker: an EMPTY slot saves immediately; a FILLED slot must confirm the
        overwrite first — no silent clobber, no first-available auto-fire. */
-    function confirmOverwrite(n) {
+    function confirmOverwrite(meta) {
       if (!pop) return;
       pop.innerHTML = '';
       var head = document.createElement('div');
-      head.textContent = 'Overwrite A-0' + n + '?';
+      head.textContent = 'Overwrite this blueprint?';
       head.style.cssText = HEAD_CSS;
       pop.appendChild(head);
       var sub = document.createElement('div');
-      sub.textContent = 'This sheet — ' + slotLabel(n) + ' — will be replaced.';
+      sub.textContent = meta.name + (meta.rooms ? '  ·  ' + meta.rooms + ' rooms' : '') + ' will be replaced.';
       sub.style.cssText = 'font-family:var(--font-mono);font-size:10px;color:rgba(255,255,255,0.6);padding:0 4px 4px;line-height:1.4;';
       pop.appendChild(sub);
       var row = document.createElement('div');
@@ -13394,41 +13445,71 @@
       var ov = document.createElement('button');
       ov.type = 'button'; ov.textContent = 'Overwrite';
       ov.style.cssText = 'flex:1;background:rgba(201,168,76,0.15);border:1px solid var(--gold,#c9a84c);color:var(--gold,#c9a84c);font-family:var(--font-mono);font-size:11px;padding:8px 10px;border-radius:4px;cursor:pointer;';
-      ov.addEventListener('click', function (e) { e.stopPropagation(); saveTo(n); });
+      ov.addEventListener('click', function (e) { e.stopPropagation(); saveOver(meta.id, meta.name); });
       var ca = document.createElement('button');
       ca.type = 'button'; ca.textContent = 'Cancel';
       ca.style.cssText = 'flex:1;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.12);color:var(--white,#fff);font-family:var(--font-mono);font-size:11px;padding:8px 10px;border-radius:4px;cursor:pointer;';
-      ca.addEventListener('click', function (e) { e.stopPropagation(); renderSlots(); });
+      ca.addEventListener('click', function (e) { e.stopPropagation(); renderPicker(); });
       row.appendChild(ov); row.appendChild(ca);
       pop.appendChild(row);
     }
-    function renderSlots() {
+    /* Premium Option B — "＋ Save as a new blueprint" (fresh unlimited D1 row) ABOVE a scrollable list
+       of existing sheets (D1 listDocs, ALL N, newest-first; LS-4 fallback when signed-out). Overwrite
+       reuses the chosen sheet's id (same row, bumped revision). The old fixed 4-slot A-0n picker is dead. */
+    function renderPicker() {
       if (!pop) return;
+      ensurePickStyle();
       pop.innerHTML = '';
       var head = document.createElement('div');
-      head.textContent = 'Save to which sheet?';
+      head.textContent = 'Save to Blueprint';
       head.style.cssText = HEAD_CSS;
       pop.appendChild(head);
-      [1, 2, 3, 4].forEach(function (n) {
-        var b = document.createElement('button');
-        b.type = 'button';
-        b.textContent = slotLabel(n);
-        b.style.cssText = 'text-align:left;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.12);color:var(--white,#fff);font-family:var(--font-mono);font-size:11px;padding:8px 10px;border-radius:4px;cursor:pointer;';
-        b.addEventListener('mouseenter', function () { b.style.borderColor = 'var(--teal,#1d9e75)'; });
-        b.addEventListener('mouseleave', function () { b.style.borderColor = 'rgba(255,255,255,0.12)'; });
-        b.addEventListener('click', function (e) { e.stopPropagation(); if (isFilled(n)) confirmOverwrite(n); else saveTo(n); });
-        pop.appendChild(b);
+      var nb = document.createElement('button');
+      nb.type = 'button'; nb.className = 'bp-newbtn'; nb.textContent = '＋ Save as a new blueprint';
+      nb.style.cssText = 'text-align:left;background:linear-gradient(180deg,rgba(201,168,76,0.30),rgba(201,168,76,0.12));border:1px solid var(--gold,#c9a84c);color:var(--gold,#c9a84c);font-family:var(--font-mono);font-size:11.5px;font-weight:600;letter-spacing:0.03em;padding:10px 12px;border-radius:5px;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,0.18),0 2px 8px rgba(0,0,0,0.4);';
+      nb.addEventListener('click', function (e) { e.stopPropagation(); saveNew(); });
+      pop.appendChild(nb);
+      var lbl = document.createElement('div');
+      lbl.textContent = 'or overwrite an existing sheet';
+      lbl.style.cssText = 'font-family:var(--font-mono);font-size:8.5px;letter-spacing:0.09em;text-transform:uppercase;color:rgba(255,255,255,0.4);padding:6px 4px 3px;';
+      pop.appendChild(lbl);
+      var list = document.createElement('div');
+      list.className = 'bp-ovlist';
+      var loading = document.createElement('div');
+      loading.textContent = 'Loading…';
+      loading.style.cssText = 'font-family:var(--font-mono);font-size:10px;color:rgba(255,255,255,0.4);padding:6px 4px;';
+      list.appendChild(loading);
+      pop.appendChild(list);
+      listBlueprints().then(function (items) {
+        if (!pop || !list.isConnected) return;
+        list.innerHTML = '';
+        if (!items.length) {
+          var none = document.createElement('div');
+          none.textContent = 'No saved sheets yet — save your first above.';
+          none.style.cssText = 'font-family:var(--font-mono);font-size:10px;color:rgba(255,255,255,0.4);padding:6px 4px;';
+          list.appendChild(none); return;
+        }
+        items.forEach(function (m) {
+          var r = document.createElement('button');
+          r.type = 'button'; r.className = 'bp-ovrow'; r.setAttribute('data-overwrite-id', m.id);
+          var t = document.createElement('span'); t.textContent = m.name; r.appendChild(t);
+          var sub = document.createElement('span'); sub.className = 'bp-ovsub';
+          sub.textContent = (m.rooms ? m.rooms + ' rooms' : 'Empty') + (m.when ? '  ·  ' + m.when : '');
+          r.appendChild(sub);
+          r.addEventListener('click', function (e) { e.stopPropagation(); confirmOverwrite(m); });
+          list.appendChild(r);
+        });
       });
     }
     function open(anchor) {
       anchor = anchor || btn;
       pop = document.createElement('div');
       pop.id = 'studio-save-bp-pop';
-      pop.style.cssText = 'position:fixed;z-index:10001;background:#0a1018;border:1px solid rgba(93,202,165,0.4);border-radius:6px;padding:8px;display:flex;flex-direction:column;gap:6px;box-shadow:0 10px 30px rgba(0,0,0,0.7);min-width:230px;';
+      pop.style.cssText = 'position:fixed;z-index:10001;background:#0a1018;border:1px solid rgba(93,202,165,0.4);border-radius:6px;padding:8px;display:flex;flex-direction:column;gap:6px;box-shadow:0 10px 30px rgba(0,0,0,0.7);min-width:264px;';
       var r = anchor.getBoundingClientRect();
       pop.style.top = (r.bottom + 6) + 'px';
       pop.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
-      renderSlots();
+      renderPicker();
       document.body.appendChild(pop);
       setTimeout(function () { document.addEventListener('click', onDoc, true); }, 0);
     }
