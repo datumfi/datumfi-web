@@ -33,8 +33,16 @@ const F = (cond, msg) => { if (!cond) out.findings.push(msg); };
   // ONE route handler: serve the signed-out vault hop as a LOCAL stub (so origin-scoped
   // sessionStorage survives and we can read the carried snapshot + the returnTo it got),
   // pass through 127.0.0.1, abort everything external (keeps the Clerk stub authoritative).
+  const d1Puts = [];   // captured /api/documents PUTs — proves the landing carry DUAL-WRITES to D1
   await ctx.route('**/*', (route) => {
-    const u = route.request().url();
+    const req = route.request(); const u = req.url();
+    if (u.indexOf('/api/documents') >= 0) {
+      if (req.method() === 'PUT') {
+        try { const b = JSON.parse(req.postData() || '{}'); const q = new URL(u).searchParams; d1Puts.push({ type: q.get('type'), key: q.get('key'), payload: b.payload }); } catch (e) {}
+        return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ revision: 1 }) });
+      }
+      return route.fulfill({ status: 404, contentType: 'application/json', body: '{}' });   // GET miss -> caller falls back to LS
+    }
     if (/\/vault\.html/.test(u)) { return route.fulfill({ status: 200, contentType: 'text/html', body: '<html><body>vault-stub</body></html>' }); }
     if (u.startsWith('http://127.0.0.1') || u.startsWith('data:') || u.startsWith('blob:')) return route.continue();
     return route.abort();
@@ -45,7 +53,7 @@ const F = (cond, msg) => { if (!cond) out.findings.push(msg); };
   // signed-IN Clerk stub (Sweety) — persists across navigations via addInitScript.
   await page.addInitScript(() => {
     try { sessionStorage.setItem('datumfi_skip_entry_overlay', '1'); } catch (e) {}
-    window.Clerk = { load: function () { return Promise.resolve(); }, user: { unsafeMetadata: {}, update: function () { return Promise.resolve(); }, firstName: 'Sweety', primaryEmailAddress: { emailAddress: 's@s.co' } } };
+    window.Clerk = { load: function () { return Promise.resolve(); }, session: { getToken: function () { return Promise.resolve('tok:sweety'); } }, user: { id: 'sweety', unsafeMetadata: {}, update: function () { return Promise.resolve(); }, firstName: 'Sweety', primaryEmailAddress: { emailAddress: 's@s.co' } } };
   });
 
   // ── A1 — Studio stashes a snapshot before the signed-out hop ──────────────────────
@@ -82,19 +90,41 @@ const F = (cond, msg) => { if (!cond) out.findings.push(msg); };
     };
   });
 
-  // ── D — all writable slots full -> auto-consume on the next landing shows the all-full
-  //    guard, writes nothing, and PRESERVES the snapshot (no silent drop). Seed a full LS
-  //    archive + a fresh pending snapshot, then reload to re-fire onSessionConfirmed.
+  // ── D — SAVE-AS-NEW (ratified Rolling-4, #278 (b)): a landing carry with a FULL archive must NOT
+  //    clobber slot 1. Seed 4 DISTINCT saved blueprints (slot 1 = NEWEST, slot 4 = OLDEST by saved_at)
+  //    + a carried snapshot whose id is seed-1 (to prove save-as-new IGNORES it and mints fresh).
+  //    Reload -> auto-consume. Under save-as-new the carry mints a NEW blueprint and Rolling-4 evicts
+  //    the OLDEST (slot 4), so slot 1's blueprint (net_datum 111) SURVIVES. Under the old {slot:1} it
+  //    reused seed-1's id and clobbered slot 1 -> RED. D1 dual-write must fire for the new row.
   await page.evaluate(() => {
-    var full = { schema: 'DatumFIBlueprintV1', accounts: [], datum: { net_datum_v1: 1 }, profile: {}, blueprint_id: 'full' };
-    var arch = { slot1: full, slot2: full, slot3: full, slot4: full, activeBlueprintSlot: 1, userHasPremiumToken: true };
+    function seed(n, when) { return { schema: 'DatumFIBlueprintV1', accounts: [], datum: { net_datum_v1: n * 111 }, profile: {}, blueprint_id: 'seed-' + n, saved_at: when }; }
+    var arch = { slot1: seed(1, '2026-07-15T12:00:00Z'), slot2: seed(2, '2026-07-15T10:00:00Z'), slot3: seed(3, '2026-07-15T08:00:00Z'), slot4: seed(4, '2026-07-15T06:00:00Z'), activeBlueprintSlot: 1, userHasPremiumToken: true };
     try { localStorage.setItem('datumfi_blueprint_archive_v1', JSON.stringify(arch)); } catch (e) {}
-    sessionStorage.setItem('datumfi_blueprint_current_snapshot', JSON.stringify({ schema: 'DatumFIBlueprintV1', accounts: [], datum: { net_datum_v1: 1 }, profile: {}, blueprint_id: 'carry' }));
+    for (var n = 1; n <= 4; n++) { try { localStorage.setItem('datum_blueprint_state_' + n, JSON.stringify(arch['slot' + n])); } catch (e) {} }
+    sessionStorage.setItem('datumfi_blueprint_current_snapshot', JSON.stringify({ schema: 'DatumFIBlueprintV1', accounts: [], datum: { net_datum_v1: 999 }, profile: {}, blueprint_id: 'seed-1' }));
     sessionStorage.setItem('datumfi_pending_save', 'blueprint');
   });
+  d1Puts.length = 0;
   await page.reload({ waitUntil: 'load' });
-  await page.waitForTimeout(1800);
-  out.bpAllFull = await page.evaluate(() => ({ toast: (document.getElementById('toast') || {}).textContent || '', snapStillThere: !!sessionStorage.getItem('datumfi_blueprint_current_snapshot') }));
+  await page.waitForTimeout(200);
+  await page.evaluate(() => { if (window.DatumD1) window.DatumD1.WRITE_DEBOUNCE_MS = 40; });   // snappy debounced D1 write
+  await page.waitForTimeout(2000);
+  out.bpSaveAsNew = await page.evaluate(() => {
+    var arch = null; try { arch = JSON.parse(localStorage.getItem('datumfi_blueprint_archive_v1') || 'null'); } catch (e) {}
+    var slots = [];
+    for (var n = 1; n <= 4; n++) { var s = arch && arch['slot' + n]; slots.push(s ? { id: s.blueprint_id, datum: s.datum && s.datum.net_datum_v1 } : null); }
+    var carried = slots.find(function (s) { return s && s.datum === 999; }) || null;
+    return {
+      slots: slots,
+      carriedSomewhere: !!carried,
+      carriedId: carried && carried.id,
+      seed1Alive: slots.some(function (s) { return s && s.datum === 111; }),   // slot-1 seed (net_datum 111) survived?
+      snapCleared: !sessionStorage.getItem('datumfi_blueprint_current_snapshot'),
+      pendingCleared: !sessionStorage.getItem('datumfi_pending_save')
+    };
+  });
+  out.bpSaveAsNewD1 = { blueprintPut: d1Puts.some(function (p) { return p.type === 'blueprint'; }),
+    newRowKey: (d1Puts.find(function (p) { return p.type === 'blueprint'; }) || {}).key };
 
   // ── A2 — Sketch stashes a snapshot before the signed-out hop ──────────────────────
   await page.goto(base + '/sketch.html', { waitUntil: 'load' });
@@ -120,7 +150,7 @@ const F = (cond, msg) => { if (!cond) out.findings.push(msg); };
   await ctx.close();
 
   // ── verdict ──
-  const a = out.studioStash, c = out.bpAfterSave, d = out.bpAllFull, sk = out.sketchStash;
+  const a = out.studioStash, c = out.bpAfterSave, sk = out.sketchStash;
   // A1
   F(a.pending === 'blueprint', 'A1: studio did not set pending_save=blueprint (' + a.pending + ')');
   F(a.schema === 'DatumFIBlueprintV1', 'A1: studio snapshot is not a hub bp (schema=' + a.schema + ')');
@@ -131,12 +161,17 @@ const F = (cond, msg) => { if (!cond) out.findings.push(msg); };
   F(c.schema === 'DatumFIBlueprintV1', 'C: saved slot1 is not the carried bp (schema=' + c.schema + ')');
   F(c.accounts === 1, 'C: saved slot1 lost the rooms (accounts=' + c.accounts + ')');
   F(c.archSlot1, 'C: archive slot1 not written');
-  F(/Saved to Blueprint A-01/.test(c.toast), 'C: success toast wrong (' + c.toast + ')');
+  F(/Blueprint saved\./.test(c.toast), 'C: success toast wrong (' + c.toast + ')');
   F(c.pendingCleared, 'E: pending_save not cleared after save (double-save risk)');
   F(c.snapCleared, 'E: snapshot not cleared after save (double-save risk)');
-  // D
-  F(/All slots taken, please delete one first\./.test(d.toast), 'D: all-full message missing (' + d.toast + ')');
-  F(d.snapStillThere, 'D: snapshot was consumed on the all-full case (should be preserved)');
+  // D — SAVE-AS-NEW / NO-CLOBBER / D1 DUAL-WRITE (#278 (b))
+  const sn = out.bpSaveAsNew, snd = out.bpSaveAsNewD1;
+  F(sn.carriedSomewhere, 'D: landing carry (net_datum 999) was NOT saved (' + JSON.stringify(sn.slots) + ')');
+  F(sn.carriedId && sn.carriedId !== 'seed-1', 'D: carry did NOT mint a NEW blueprint_id (got ' + sn.carriedId + ' = reused a slot id = clobber)');
+  F(sn.seed1Alive, 'D: slot-1 blueprint (net_datum 111) was CLOBBERED (must survive; Rolling-4 evicts the OLDEST, slot 4)');
+  F(sn.snapCleared && sn.pendingCleared, 'D: pending/snapshot not cleared after save-as-new');
+  F(snd.blueprintPut, 'D: D1 dual-write did NOT fire for the landing carry (no PUT type=blueprint)');
+  F(snd.newRowKey && snd.newRowKey !== 'seed-1', 'D: D1 PUT reused a seed key instead of a NEW row (' + snd.newRowKey + ')');
   // A2
   F(sk.pending === 'sketch', 'A2: sketch did not set pending_save=sketch (' + sk.pending + ')');
   F(sk.hasSnap, 'A2: sketch did not stash a snapshot before the hop');

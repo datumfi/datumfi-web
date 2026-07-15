@@ -151,10 +151,10 @@ async function eraseSketch(page, slot) {
 
   // (P6.1) AUTO-CONSUME on landing: a signed-out Studio save carried a snapshot +
   // pending flag through the vault hop → must auto-save inline on the next signed-in
-  // landing (no "Save Current" button), fire ONCE, and clear the flag. saveCarriedSnapshot()
-  // writes {slot:1}; slot 1 is still occupied (bp-1), so P5a's per-slot stable-id REUSES bp-1's
-  // id (cleanly updates that D1 row). We therefore verify by the carried CONTENT (net_datum_v1
-  // = 77000, distinct from the seeds' 90001-4) landing in exactly one slot — id-agnostic.
+  // landing (no "Save Current" button), fire ONCE, and clear the flag. #278 (b): saveCarriedSnapshot()
+  // now mints a NEW blueprint ({newBlueprint:true}, save-as-new); slots 2,3 are empty after the purge
+  // tests, so Rolling-4 lands it in slot 2 (no slot-1 clobber). We verify by the carried CONTENT
+  // (net_datum_v1 = 77000, distinct from the seeds' 90001-4) landing in exactly one slot — id/slot-agnostic.
   await page.evaluate(() => {
     var bp = window.DatumBlueprint['new']();
     bp.blueprint_id = 'bp-auto';

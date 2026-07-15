@@ -1630,13 +1630,16 @@ function turnPage(to) {
   }
 }
 
-// signed-out Studio save carried through the vault hop -> save on landing, then reload from D1
+// signed-out Studio save carried through the vault hop -> save on landing, then reload from D1.
+// #278 (b): the archive is UNLIMITED (cap dead, Rolling-4). The landing carry mints a NEW blueprint
+// ({newBlueprint:true}) instead of clobbering slot 1 — matches the ratified save-as-new model; the
+// carried plan gets its own D1 row and the LS net rolls (evicts the oldest) rather than overwriting.
 function saveCarriedSnapshot() {
   let snapRaw = null; try { snapRaw = sessionStorage.getItem('datumfi_blueprint_current_snapshot'); } catch (e) {}
   if (!snapRaw) return;
   let bp = null; try { bp = JSON.parse(snapRaw); } catch (e) {}
   if (!bp) return;
-  try { DatumBlueprint.save(bp, { slot: 1 }); } catch (e) { showToast('Save failed.'); return; }
+  try { DatumBlueprint.save(bp, { newBlueprint: true }); } catch (e) { showToast('Save failed.'); return; }
   try { sessionStorage.removeItem('datumfi_pending_save'); } catch (e) {}
   try { sessionStorage.removeItem('datumfi_blueprint_current_snapshot'); } catch (e) {}
   AppSessionState.activeBlueprintId = bp.blueprint_id || null;
