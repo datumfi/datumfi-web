@@ -2878,6 +2878,7 @@
   <script src="/scripts/datum-shape-copy.js"></script>
   <script src="/scripts/lz-string.min.js"></script>
   <script src="/scripts/datum-archive-codec.js"></script>
+  <script src="/scripts/datum-d1.js"></script>
   <script>
     const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
 
@@ -8990,6 +8991,33 @@ Studio is built for exactly this. See If This Shape Holds →`;
         };
       }
 
+      // P5b — resolve a STABLE, DISTINCT sketch identity for this slot so the saved sketch becomes its
+      // OWN D1 row (doc_key = sketch_id). serializeSketchState() mints a FRESH uuid every call, so an
+      // OVERWRITE of a filled slot must REUSE that slot's existing sketch_id (updates the same D1 row);
+      // a fresh save keeps the newly-minted id (a brand-new row). Mirrors studio-blueprint's per-slot id.
+      function _stableSketchId(slotN, payload) {
+        try {
+          var prev = JSON.parse(localStorage.getItem('datum_sketch_state_' + slotN) || 'null');
+          if (prev && prev.sketch_id) return prev.sketch_id;
+        } catch (ex) {}
+        return payload.sketch_id;   // fresh uuid from serializeSketchState — a new row
+      }
+      // P5b Layer-1 — write a SAVED SKETCH as its OWN D1 document (type='sketchbook', key=sketch_id),
+      // ADDITIVE alongside the sketchbook_z Clerk mirror + LS 4-slot book (nothing retired). Snapshot at
+      // save time (strip _-ephemerals) so a later edit can't leak in. No-op when D1 absent / signed out /
+      // rolled back (CUTOVER === false) — the LS + Clerk net remain the truth in those states.
+      function _d1WriteSketch(payload) {
+        try {
+          if (!window.DatumD1 || window.DatumD1.CUTOVER === false || !window.DatumD1.signedIn()) return;
+          if (!payload || !payload.sketch_id) return;
+          var id = payload.sketch_id;
+          var snap = {}; for (var k in payload) { if (Object.prototype.hasOwnProperty.call(payload, k) && k.charAt(0) !== '_') snap[k] = payload[k]; }
+          window.DatumD1.scheduleWrite('sketchbook', id, function () { return snap; }, function () {
+            console.warn('[d1] sketch ' + id + ' changed in another tab — reloaded the server revision (no merge)');
+          });
+        } catch (e) {}
+      }
+
       // P5 Step-3: write the CHOSEN slot (1..4), preserving the other slots. source:'nav'
       // (picker, any phase) -> DRAFTED; source:'phaseV' (full-experience CTA) -> MODELED.
       function _doSave(slotN, source) {
@@ -8997,6 +9025,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
         var prev = null;
         try { prev = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch(ex) {}
         var payload = serializeSketchState();
+        payload.sketch_id = _stableSketchId(_slot, payload);   // P5b — stable per-slot D1 identity (LS + D1 share it)
         payload.status = (source === 'phaseV') ? 'Modeled' : 'Drafted';
         var now = new Date();
         var mm  = String(now.getMonth() + 1).padStart(2, '0');
@@ -9006,6 +9035,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
         data['slot_' + _slot] = payload;
         try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch(ex) {}
         try { localStorage.setItem('datum_sketch_state_' + _slot, JSON.stringify(payload)); } catch(ex) {}
+        _d1WriteSketch(payload);   // P5b Layer-1 — ADDITIVE: this saved sketch as its OWN D1 row (key=sketch_id)
         sessionStorage.setItem('datumfi_just_saved', '1');
         sessionStorage.setItem('datumfi_sketch_return_screen', window.location.hash || '#screen-5-build');
         sessionStorage.setItem('datumfi_sketch_current_snapshot', JSON.stringify(payload));
