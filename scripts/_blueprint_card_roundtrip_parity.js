@@ -184,7 +184,7 @@ const out = { findings: [], pageErrors: [] };
   await ctx.route('**/*', abortExternal);
   await page.goto(base + '/Blueprint.html', { waitUntil: 'load' });
   await page.waitForTimeout(1200);
-  await page.click('.erase-action[data-purge-target="2"]');
+  await page.click('.blueprint-slot .erase-action');   // P5a: id-based erase (was data-purge-target="2")
   await page.waitForTimeout(200);
   await page.click('#action-confirm-erase');
   await page.waitForTimeout(1100); // 730ms erase animation

@@ -247,22 +247,25 @@
     try { localStorage.setItem(_BP_ARCH_KEY, JSON.stringify(out)); } catch(_e) {}
     done();
   }
-  function _restoreBlueprintFromD1(done) {
+  function _restoreBlueprintFromD1(meta, Codec, done) {
     if (typeof done !== 'function') done = function() {};
     if (_hasArch()) { done(); return; }                               // local cache wins
+    // D1 is PREFERRED, blueprint_z is the fallback (dual-write window): if D1 lists nothing OR is
+    // unreachable, rebuild from the Clerk blueprint_z mirror so cross-device never goes empty.
+    function fallback() { _restoreBlueprint(meta, Codec); done(); }
     try {
       window.DatumD1.listDocs('blueprint').then(function(list) {
-        if (!list || !list.length) { done(); return; }
+        if (!list || !list.length) { fallback(); return; }
         var docs = [], pending = list.length;
-        function settle() { if (--pending === 0) _commitBlueprintArch(docs, done); }
+        function settle() { if (--pending === 0) { if (docs.length) _commitBlueprintArch(docs, done); else fallback(); } }
         list.forEach(function(item) {
           window.DatumD1.getDoc('blueprint', item.doc_key).then(function(d) {
             if (d && d.payload) { try { docs.push({ bp: JSON.parse(d.payload), updated_at: item.updated_at }); } catch(_e) {} }
             settle();
           }).catch(settle);
         });
-      }).catch(function() { done(); });
-    } catch(_e) { done(); }
+      }).catch(fallback);
+    } catch(_e) { fallback(); }
   }
   function _blueprintD1Live() {
     return !!(window.DatumD1 && window.DatumD1.CUTOVER !== false && window.DatumD1.signedIn && window.DatumD1.signedIn());
@@ -301,7 +304,7 @@
         function go() {
           var C = window.DatumArchiveCodec || null;
           _restoreSketchbook(meta, C);
-          if (_bpD1) { _restoreBlueprintFromD1(done); }         // D1 is the blueprint home now
+          if (_bpD1) { _restoreBlueprintFromD1(meta, C, done); } // D1 preferred, blueprint_z fallback
           else { _restoreBlueprint(meta, C); done(); }          // rollback / D1 absent -> blueprint_z
         }
         if (wantCodec) _ensureCodec(go); else go();
