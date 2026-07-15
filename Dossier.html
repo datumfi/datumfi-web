@@ -3719,6 +3719,10 @@ input:focus,select:focus{
           workspaceName: wn || undefined
         });
         window.Clerk.user.update({ unsafeMetadata: meta }).catch(function () {});
+        // P5c — ADDITIVE preferences dual-write to D1 (one row per key: dossier + workspaceName). The
+        // Clerk unsafeMetadata mirror above STAYS the net; this is written ALONGSIDE it. No-op when D1
+        // absent / signed out / rolled back (CUTOVER===false) inside writePreferences = escape route.
+        if (window.DatumD1) window.DatumD1.writePreferences({ dossier: p, workspaceName: wn });
       }
     } catch (e) {}
     if (typeof els !== 'undefined' && els && els.summaryStatus) {
@@ -4036,6 +4040,7 @@ input:focus,select:focus{
   });
 })();
 </script>
+<script src="/scripts/datum-d1.js"></script>
 <script src="/nav.js"></script>
 
 </body></html>

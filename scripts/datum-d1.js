@@ -109,6 +109,26 @@
   function setRevision(type, key, rev) { if (typeof rev === 'number') _rev[idOf(type, key)] = rev; }
   function knownRevision(type, key) { return _rev[idOf(type, key)]; }
 
+  // P5c — preferences (dossier + workspaceName) dual-write. ADDITIVE alongside the Clerk unsafeMetadata
+  // mirror (the net stays on; nothing retired). ONE ROW PER KEY so a workspaceName-only save can't stomp
+  // the dossier row: type='preferences', key='dossier' | 'workspaceName'. Pass ONLY the prefs you are
+  // changing (undefined/null skips that key). No-op when D1 absent / signed out / rolled back
+  // (CUTOVER === false) = escape route. Coarse-debounced + optimistic-CAS via scheduleWrite, like the rest.
+  function writePreferences(prefs) {
+    try {
+      if (API.CUTOVER === false || !signedIn()) return;
+      prefs = prefs || {};
+      if (prefs.dossier != null) {
+        var d = prefs.dossier;
+        scheduleWrite('preferences', 'dossier', function () { return d; }, function () { console.warn('[d1] preferences/dossier changed in another tab — reloaded the server revision (no merge)'); });
+      }
+      if (prefs.workspaceName != null) {
+        var wn = prefs.workspaceName;
+        scheduleWrite('preferences', 'workspaceName', function () { return { workspaceName: wn }; }, function () { console.warn('[d1] preferences/workspaceName changed in another tab — reloaded the server revision (no merge)'); });
+      }
+    } catch (e) {}
+  }
+
   var API = {
     // P4 CUTOVER flag (default ON): D1 is the sole truth for Studio + the Clerk studio-slim mirror is
     // OFF. ONE-FLIP ROLLBACK: set DatumD1.CUTOVER = false -> Clerk mirror fires again + LS-authority
@@ -117,7 +137,7 @@
     WRITE_DEBOUNCE_MS: 1500,   // coarse network write (vs 350ms local commit)
     LOAD_TIMEOUT_MS: 1200,     // D1-first load falls back to LS/Clerk after this
     getDoc: getDoc, putDoc: putDoc, listDocs: listDocs, deleteDoc: deleteDoc, scheduleWrite: scheduleWrite,
-    setRevision: setRevision, knownRevision: knownRevision, signedIn: signedIn,
+    setRevision: setRevision, knownRevision: knownRevision, signedIn: signedIn, writePreferences: writePreferences,
     _fetch: null
   };
   global.DatumD1 = API;

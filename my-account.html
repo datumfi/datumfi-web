@@ -733,6 +733,9 @@ h1{text-shadow:0 0 34px rgba(93,202,165,.052),0 16px 34px rgba(0,0,0,.18)}
           try {
             var updMeta = Object.assign({}, Clerk.user.unsafeMetadata || {}, { workspaceName: n });
             Clerk.user.update({ unsafeMetadata: updMeta }).catch(function () {});
+            // P5c — ADDITIVE: mirror the workspaceName to D1 (its own preferences row). The Clerk
+            // mirror above stays the net; no-op when D1 absent / signed out / rolled back.
+            if (window.DatumD1) window.DatumD1.writePreferences({ workspaceName: n });
           } catch (e) {}
         });
       }
@@ -742,6 +745,7 @@ h1{text-shadow:0 0 34px rgba(93,202,165,.052),0 16px 34px rgba(0,0,0,.18)}
 }());
 </script>
 
+<script src="/scripts/datum-d1.js"></script>
 <script src="/nav.js"></script>
 </body>
 </html>
