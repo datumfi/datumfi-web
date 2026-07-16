@@ -3566,6 +3566,22 @@
 
     const getBaseType = (id) => rDataList.find(r => r.id === id);
 
+    /* A (#288) — Net Worth = assets − debts, computed HERE where the base-type taxCode classifier lives,
+       and stamped onto bp.datum.net_worth at capture time (DatumBlueprint.captureDOM calls this host hook,
+       exactly like _getUpkeepModel). Every non-debt room counts at its value (checking/property/pension all
+       "live in net worth"); a taxCode 'debt' room subtracts. Excluded rooms are omitted. Display-only —
+       investableTotal (LOCK-3 for the Shape) is untouched; the Blueprint card reads this scalar. */
+    window._computeNetWorth = function (accounts) {
+      var nw = 0;
+      (accounts || []).forEach(function (a) {
+        if (!a || a.exclude) return;
+        var b = getBaseType(a.baseId);
+        var v = Number(a.value) || 0;
+        nw += (b && b.taxCode === 'debt') ? -Math.abs(v) : v;
+      });
+      return nw;
+    };
+
     /* Step 4 — Shape-exclusion micro-copy (display-only). Keyed on baseId, NOT taxCode, so
        Checking (The Foyer) is told apart from a Taxable/Savings brokerage despite all three
        being taxCode 'liquid'. Mirrors the Step-3 canonical investable set: any room NOT in

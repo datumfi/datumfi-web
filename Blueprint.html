@@ -868,6 +868,11 @@ button {
   color: rgba(32,36,43,.86);
 }
 
+/* A (#288) — Net Worth is the card headline: heavier, larger, its own baseline rule. */
+.metric-row.metric-headline { border-bottom: 1px solid rgba(23,27,34,.16); padding-bottom: 4px; }
+.metric-row.metric-headline span { color: rgba(32,36,43,.72); }
+.metric-row.metric-headline strong { font-size: 13.5px; font-weight: 700; }
+
 .card-bottom {
   margin-top: auto;
   display: flex;
@@ -1481,6 +1486,10 @@ function bpToCard(bp) {
   return {
     id: bp.blueprint_id || ('bp-' + (bp.saved_at || Date.now())),
     name: prof.primary_name ? (prof.primary_name + "'s Blueprint") : 'Studio Blueprint',
+    // A (#288) — Net Worth = assets − debts, the honest headline. Stamped at save time by the studio host
+    // hook (bp.datum.net_worth); null for pre-A saves (card shows '—' until re-saved). netEstate stays the
+    // investableTotal (LOCK-3) and is relabeled "Amount Invested" below — two distinct money lines.
+    netWorth: (datum && typeof datum.net_worth === 'number') ? datum.net_worth : null,
     netEstate: netEstate,
     annualDatum: Number(datum.net_datum_v1) || 0,
     rooms: accounts.length,
@@ -1488,6 +1497,13 @@ function bpToCard(bp) {
     status: modeled ? 'Modeled' : 'Drafted',
     dateStamped: stamp
   };
+}
+
+// A (#288) — Net Worth can be negative (debts > assets); show it honestly with a real minus, never $0 or a
+// clamped positive. Null (pre-A save, not yet re-saved) -> em dash.
+function netWorthMoney(nw) {
+  if (typeof nw !== 'number' || isNaN(nw)) return '—';
+  return (nw < 0 ? '−' : '') + compactMoney(Math.abs(nw));
 }
 
 function renderEmptySlot(label) {
@@ -1517,10 +1533,11 @@ function renderBlueprintSlot(label, bpId, data) {
     <div class="blueprint-mini">${blueprintSvg(data, label)}</div>
 
     <div class="blueprint-metrics">
-      <div class="metric-row"><span>Net Estate</span><strong>${compactMoney(data.netEstate)}</strong></div>
-      <div class="metric-row"><span>Datum</span><strong>$${addCommas(data.annualDatum)}/yr</strong></div>
-      <div class="metric-row"><span>Rooms</span><strong>${data.rooms}</strong></div>
-      <div class="metric-row"><span>Climate</span><strong>${data.climate}</strong></div>
+      <div class="metric-row metric-headline"><span>Net Worth</span><strong>${netWorthMoney(data.netWorth)}</strong></div>
+      <div class="metric-row"><span>Amount Invested</span><strong>${compactMoney(data.netEstate)}</strong></div>
+      <div class="metric-row"><span>Desired Spend</span><strong>$${addCommas(data.annualDatum)}/yr</strong></div>
+      <div class="metric-row"><span>Rooms Built</span><strong>${data.rooms}</strong></div>
+      <div class="metric-row"><span>Market Outlook</span><strong>${data.climate}</strong></div>
     </div>
 
     <div class="card-bottom">

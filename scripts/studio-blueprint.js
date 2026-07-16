@@ -944,6 +944,14 @@
       bp.upkeep.upkeep_total  = upkeepMonthlyTotal(bp);
       bp.upkeep.charity_total = (bp.upkeep.charity || []).reduce(function (s, it) { return s + upkeepMonthly(it); }, 0);
     }
+
+    // A (#288) — stamp Net Worth (assets − debts) at capture time via the studio host hook, where the
+    // base-type taxCode classifier (getBaseType) lives — same host-hook pattern as _getUpkeepModel above.
+    // The Blueprint card reads bp.datum.net_worth; investableTotal (LOCK-3) stays untouched. Absent hook
+    // (node gates / stub hosts) -> left unset -> the card shows '—' until the plan is re-saved.
+    if (typeof global._computeNetWorth === 'function' && bp.datum) {
+      try { bp.datum.net_worth = global._computeNetWorth(bp.accounts); } catch (_e) {}
+    }
   }
 
   global.DatumBlueprint = {
