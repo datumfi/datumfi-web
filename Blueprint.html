@@ -1556,7 +1556,10 @@ function loadArchive() {
   return new Promise(function (resolve) {
     if (!d1Live()) { _loadArchiveFromLS(); resolve(); return; }
     window.DatumD1.listDocs('blueprint').then(function (docs) {
-      if (!docs || !docs.length) { _loadArchiveFromLS(); resolve(); return; }
+      // L51 — a reachable D1 list is AUTHORITATIVE even when EMPTY: render it, do NOT fall back to the
+      // LS/Clerk net (that fallback resurrected deleted blueprints). Fallback lives ONLY in .catch below,
+      // which now fires only when listDocs REJECTS (genuinely unreachable), never on a true empty.
+      if (!docs || !docs.length) { ARCH.list = []; resolve(); return; }
       docs.sort(function (a, b) { return String(b.updated_at || '').localeCompare(String(a.updated_at || '')); });
       Promise.all(docs.map(function (d) { return window.DatumD1.getDoc('blueprint', d.doc_key); })).then(function (full) {
         const list = [];

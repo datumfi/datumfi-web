@@ -38,21 +38,26 @@
     }).catch(function () { return null; });
   }
 
-  // LIST -> [{ doc_key, revision, updated_at }] (ids+revisions only, NEVER payloads) | [] on
-  // miss/error/timeout/no-auth. P5a: lets a fresh device enumerate every saved blueprint, then
-  // getDoc each to rebuild the archive from D1 (no Clerk blueprint_z needed).
+  // LIST -> [{ doc_key, revision, updated_at }] (ids+revisions only, NEVER payloads).
+  // L51 SOURCE-OF-TRUTH LAW: a REACHABLE-empty D1 list is AUTHORITATIVE (resolves []); the Clerk/LS net is
+  // a fallback ONLY on an explicit unreachable signal — this promise REJECTS on no-token / non-200 / network
+  // / timeout, and resolves (possibly []) ONLY when D1 actually answered. Callers MUST render a resolved []
+  // as EMPTY (trust it) and fall back to the net solely in .catch. Collapsing empty-and-error into [] is
+  // what resurrected deleted blueprints (delete -> D1 empty -> old code fell back to the lagging net). #3's
+  // backfill depends on this same rule. Every listDocs caller has a .catch fallback (verified).
   function listDocs(type) {
     return getToken().then(function (tok) {
-      if (!tok) return [];
+      if (!tok) throw new Error('d1-unreachable:no-token');            // no auth = unreachable, NOT empty
       var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
       var to = ctrl ? setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, API.LOAD_TIMEOUT_MS) : null;
       return doFetch(BASE + '?type=' + encodeURIComponent(type) + '&list=1', {
         method: 'GET', headers: { Authorization: 'Bearer ' + tok }, signal: ctrl ? ctrl.signal : undefined
       }).then(function (r) {
         if (to) clearTimeout(to);
-        return (r && r.status === 200) ? r.json().then(function (j) { return (j && j.documents) || []; }) : [];
-      }).catch(function () { if (to) clearTimeout(to); return []; });
-    }).catch(function () { return []; });
+        if (r && r.status === 200) return r.json().then(function (j) { return (j && j.documents) || []; });  // reachable (incl. empty) = authoritative
+        throw new Error('d1-unreachable:' + (r && r.status));          // non-200 = unreachable -> caller falls back
+      }).catch(function (e) { if (to) clearTimeout(to); throw e; });    // network / abort / timeout = unreachable -> REJECT
+    });
   }
 
   // PUT -> { ok:true, revision } | { ok:false, conflict:true, server_revision } | { ok:false }.

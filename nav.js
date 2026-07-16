@@ -255,7 +255,10 @@
     function fallback() { _restoreBlueprint(meta, Codec); done(); }
     try {
       window.DatumD1.listDocs('blueprint').then(function(list) {
-        if (!list || !list.length) { fallback(); return; }
+        // L51 — a reachable-empty D1 list is AUTHORITATIVE: the archive IS empty, so do NOT reseed from the
+        // lagging Clerk blueprint_z net (that resurrected deletes). done() leaves the pruned LS empty.
+        // The blueprint_z fallback survives ONLY on the .catch below (listDocs REJECTS = genuinely unreachable).
+        if (!list || !list.length) { done(); return; }
         var docs = [], pending = list.length;
         function settle() { if (--pending === 0) { if (docs.length) _commitBlueprintArch(docs, done); else fallback(); } }
         list.forEach(function(item) {
