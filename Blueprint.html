@@ -1740,8 +1740,9 @@ document.getElementById('blueprint-grid').addEventListener('click', function (e)
     AppSessionState.userExplicitlySelectedBlueprint = true;
     renderArchivePage();   // selection shown by the tile's active state; no toast
   } else {
+    // C (#288) — clicking an EMPTY card opens a FRESH studio (seed, no rooms), never the last session.
     try { sessionStorage.setItem('datumfi_skip_entry_overlay', '1'); } catch (x) {}
-    window.location.href = '/studio.html';
+    window.location.href = '/studio.html?fresh=1';
   }
 });
 
@@ -1780,8 +1781,9 @@ document.getElementById('action-open-studio').addEventListener('click', () => {
     try { sessionStorage.setItem('datumfi_blueprint_explicit_load', '1'); } catch(e) {}
     window.location.href = '/studio.html?id=' + encodeURIComponent(id) + '&hydrate=blueprint';
   } else {
+    // C (#288) — "Open Studio" with NOTHING selected opens a FRESH studio (seed, no rooms), not a resume.
     try { sessionStorage.setItem('datumfi_skip_entry_overlay', '1'); } catch(e) {}
-    window.location.href = '/studio.html';
+    window.location.href = '/studio.html?fresh=1';
   }
 });
 

@@ -9373,6 +9373,10 @@
       } catch (_e) { return false; }
     };
     function restoreDraft() {
+      // C (#288) DESIGN FLIP — a FRESH (?fresh=1) or SKETCH (?hydrate=sketch) open must NOT resume the last
+      // draft's rooms/profile; it starts from seed / sketch inputs. Skip the whole draft restore (this runs
+      // at parse time, BEFORE boot, so it is the earliest room-leak path — guard it here too, not just load()).
+      try { var _q = new URLSearchParams(location.search); if (_q.get('fresh') === '1' || _q.get('hydrate') === 'sketch') return; } catch (_e) {}
       // G1 — single source of truth: restore from the hub session draft (the bp), not the
       // retired flat datum_studio_draft. Map bp -> DOM symmetrically to captureDOM.
       if (!window.DatumBlueprint || !DatumBlueprint._internal) return;
@@ -13357,6 +13361,11 @@
     // FIX #1 — the gate OPENS here, and ONLY here: after boot() has attempted hydration (from the D1 doc
     // OR the LS/session-draft fallback). Every disarm is therefore preceded by a hydration attempt.
     window._d1BootPending = false;
+    // C (#288) MISCLICK GUARD — make ?fresh=1 / ?hydrate=sketch ONE-SHOT: strip the signal from the URL
+    // AFTER every consumer (restoreDraft / seedFromBlueprint / this boot) has read it, so a plain browser
+    // reload (F5) RESUMES the now-built draft instead of re-firing fresh and nuking rooms built this
+    // session. Only fresh/sketch are stripped; a blueprint-slot ?id open keeps its URL (unchanged).
+    try { var _fq = new URLSearchParams(location.search); if (_fq.get('fresh') === '1' || _fq.get('hydrate') === 'sketch') history.replaceState(null, '', location.pathname); } catch (_e) {}
     }
     // FIX #1 (edit 2 — close the >3s slow-getDoc race). getDoc self-resolves within LOAD_TIMEOUT_MS
     // (~1.2s, never rejects/hangs), so boot normally runs fast and clears the anti-wedge. The wedge ONLY

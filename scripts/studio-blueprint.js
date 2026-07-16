@@ -621,7 +621,12 @@
     // none (e.g. a Sketch contract carry seeds sliders, not rooms). Preserve an existing
     // drafted Estate so finishLoad's writeSessionDraft below does not purge it. A blueprint
     // slot load (which HAS accounts) and a cleared draft are unaffected.
-    if (!bp.accounts || !bp.accounts.length) {
+    // C (#288) DESIGN FLIP — a FRESH open ('fresh') or a SKETCH carry ('sketch-contract') must start with an
+    // EMPTY Estate (section 02): a sketch carries INPUTS only, a fresh open carries nothing. The G1 back-fill
+    // below (preserve a drafted Estate across a room-less load) was INTENTIONAL for a sketch carry; the ruling
+    // flips it for these two sources. All other loads (plain reload / blueprint-slot) keep the preserve.
+    var _seedOnly = source === 'fresh' || source.indexOf('sketch-contract') === 0;
+    if (!_seedOnly && (!bp.accounts || !bp.accounts.length)) {
       try { var _prev = readSessionDraft(); if (_prev && _prev.accounts && _prev.accounts.length) bp.accounts = _prev.accounts; } catch (_e) {}
     }
     var gf = computeGrossFunding(bp);
@@ -642,6 +647,10 @@
     // used to short-circuit on opts.d1Doc and render the empty active draft instead of the blueprint.
     try {
       var params = new URLSearchParams(global.location.search);
+      // C (#288) DESIGN FLIP — an explicit FRESH open (?fresh=1 from an empty card / "Open Studio" with
+      // nothing selected) starts from SEED: ignore BOTH the D1 active doc and the session draft, and (via
+      // finishLoad's 'fresh' source) skip the room back-fill. This is intentionally NOT a resume.
+      if (params.get('fresh') === '1') { applyDossier(bp, readDossier()); return finishLoad(bp, 'fresh'); }
       // FIX #2 — use the RAW string id. The stash/slot key is `datum_blueprint_state_<id>` where <id> is
       // the blueprint_id (a UUID, e.g. "4617c527-..."). parseInt() mangled that ("4617c527"->4617, or NaN
       // for a letter-leading UUID) so readSlot() missed the stash and the open fell through to the empty
