@@ -3595,6 +3595,11 @@
     // the hub could never capture the Estate — the reason it sat dormant. `state` is never
     // reassigned (only state.accounts is mutated), so this binding stays live.
     window.state = state;
+    // FIX #1 (RC-A) — arm the write-capture gate as EARLY as possible, BEFORE any captureDOM/autosave can
+    // fire. While armed, captureDOM (studio-blueprint.js) refuses to let an EMPTY live state clobber rooms
+    // already on bp (loaded from D1 / session draft). Disarmed ONLY inside boot(), after hydration (boot
+    // dispatch below). boot(null) — signed-out / rollback — clears it promptly too.
+    window._d1BootPending = true;
 
     let isMeasured = false; 
     let activeModalId = null;
@@ -9335,6 +9340,22 @@
       renderInputs(); updateSVGs();
       var ban = document.getElementById('draft-restored-banner'); if (ban) ban.remove();
     };
+    // FIX #1 (L48 reuse — one hydration path, no forks) — push a bp's saved Estate rooms INTO the live
+    // `state` and repaint. Shared by restoreDraft (session draft), seedFromBlueprint (blueprint/sketch
+    // open) and the D1 boot hydration (boot() below) so the three can never drift. Attached to window so
+    // the separate boot <script> block can reach it; the closure captures this block's state/renderInputs/
+    // getBaseType/updateSVGs. No-op when the bp carries no rooms.
+    window._hydrateRooms = function (bp) {
+      try {
+        if (!bp || !bp.accounts || !bp.accounts.length || typeof state === 'undefined' || !state) return false;
+        state.accounts = (window.DatumBlueprint
+          ? DatumBlueprint.hydrateAccountNames(bp.accounts.slice(), function (bid) { var b = getBaseType(bid); return b ? b.title : ''; })
+          : bp.accounts.slice());   // W1: slim Clerk mirror drops name -> re-derive from room title
+        if (typeof renderInputs === 'function') renderInputs();
+        if (typeof updateSVGs === 'function') updateSVGs();
+        return true;
+      } catch (_e) { return false; }
+    };
     function restoreDraft() {
       // G1 — single source of truth: restore from the hub session draft (the bp), not the
       // retired flat datum_studio_draft. Map bp -> DOM symmetrically to captureDOM.
@@ -9344,9 +9365,7 @@
       if (!bp) return;
       window._studioBp = bp; // keep the live bp in agreement with what was restored
       // G2 inverse — always restore the Estate rooms (a carried Sketch must NOT purge them).
-      try {
-        if (bp.accounts && bp.accounts.length) { state.accounts = (window.DatumBlueprint ? DatumBlueprint.hydrateAccountNames(bp.accounts.slice(), function (bid) { var b = getBaseType(bid); return b ? b.title : ''; }) : bp.accounts.slice()); renderInputs(); updateSVGs(); }   // W1: slim Clerk mirror drops name -> re-derive from room title (else "undefined (JOINT) …")
-      } catch (_e) {}
+      window._hydrateRooms(bp);
       // G5 — on a Sketch carry, prefillFromSketch owns the sliders/profile; rooms above kept.
       if (sessionStorage.getItem('datum_currentAge') || sessionStorage.getItem('datum_targetSpend')) return;
       try {
@@ -10931,13 +10950,7 @@
       // sliders are seeded above; the itemized rooms must also be restored so renderInputs
       // draws them and the G5 reconcile makes the rooms authoritative for the Shape. Only a
       // blueprint-slot load carries accounts (a fresh Sketch contract has none) — no-op then.
-      try {
-        if (bp.accounts && bp.accounts.length && typeof state !== 'undefined' && state) {
-          state.accounts = (window.DatumBlueprint ? DatumBlueprint.hydrateAccountNames(bp.accounts.slice(), function (bid) { var b = getBaseType(bid); return b ? b.title : ''; }) : bp.accounts.slice());   // W1: re-derive name dropped by slim Clerk mirror
-          if (typeof renderInputs === 'function') renderInputs();
-          if (typeof updateSVGs === 'function') updateSVGs();
-        }
-      } catch (e) {}
+      window._hydrateRooms(bp);   // FIX #1 (L48) — shared hydration path (see restoreDraft def)
       // Honest applied-signal. The visible seed symptom (sliders stuck at 40/65/93) is a
       // MISSING profile, not a present-but-wrong one. Explicit hydration (?id=blueprint /
       // ?hydrate=sketch) OWNS its seed and always counts as applied — never re-fetch dossier.
@@ -13315,6 +13328,9 @@
                : (SCb ? SCb.contribPosToVal(parseInt(sCn.value, 10)) : 0);
         if (cv > 0) contEl.value = fmt(cv);
       }
+      // FIX #1 (RC-A) — push the loaded rooms INTO the live state BEFORE bind, so bind's immediate
+      // captureDOM (and every autosave) serializes the real Estate, not the empty default. Shared helper.
+      if (window._hydrateRooms) window._hydrateRooms(bp);
       window.DatumBlueprint.bind({ blueprint: bp });
       window._studioBlueprint = bp;
       if (typeof updateShapePanel === 'function') updateShapePanel();
@@ -13322,10 +13338,23 @@
       var S1_DEFAULT_SHAPE = true;
       if (S1_DEFAULT_SHAPE && !document.getElementById('studio-layout').classList.contains('mode-shape') && window.toggleShapeMode) window.toggleShapeMode();
     } catch (e) { console.warn('[blueprint] init failed', e); }
+    // FIX #1 — the gate OPENS here, and ONLY here: after boot() has attempted hydration (from the D1 doc
+    // OR the LS/session-draft fallback). Every disarm is therefore preceded by a hydration attempt.
+    window._d1BootPending = false;
     }
+    // FIX #1 (edit 2 — close the >3s slow-getDoc race). getDoc self-resolves within LOAD_TIMEOUT_MS
+    // (~1.2s, never rejects/hangs), so boot normally runs fast and clears the anti-wedge. The wedge ONLY
+    // fires on a genuinely hung read; it then runs boot(null) — hydrate-from-LS THEN disarm — NEVER a bare
+    // disarm, so the gate can never open before a hydration attempt. _bootOnce guards against a double boot
+    // (a late getDoc resolve after the wedge already booted is dropped — matches the load-from-LS contract).
+    var _booted = false;
+    function _bootOnce(d1Doc) { if (_booted) return; _booted = true; boot(d1Doc); }
     if (window.DatumD1 && window.DatumD1.CUTOVER !== false && window.DatumD1.signedIn && window.DatumD1.signedIn()) {
-      window.DatumD1.getDoc('studio', 'active').then(boot).catch(function () { boot(null); });   // P4 — D1 sole truth
-    } else { boot(null); }   // rollback (DatumD1.CUTOVER=false) or signed-out -> today's LS->Clerk path
+      var _wedge = setTimeout(function () { _bootOnce(null); }, 5000);   // anti-wedge: hung-read only; > getDoc's 1.2s cap
+      window.DatumD1.getDoc('studio', 'active')
+        .then(function (doc) { clearTimeout(_wedge); _bootOnce(doc); })      // P4 — D1 sole truth
+        .catch(function () { clearTimeout(_wedge); _bootOnce(null); });
+    } else { _bootOnce(null); }   // rollback (DatumD1.CUTOVER=false) or signed-out -> today's LS->Clerk path
   });
   </script>
   <script>document.addEventListener('DOMContentLoaded', function() { if (window.dfTrack) dfTrack('studio_started'); });</script>

@@ -409,6 +409,12 @@
     try {
       // No-op when D1 absent, signed out, OR rolled back (CUTOVER=false = D1 fully off = today's path).
       if (!global.DatumD1 || global.DatumD1.CUTOVER === false || !global.DatumD1.signedIn()) return;
+      // FIX #1 (slow-read anti-clobber) — refuse to blind-write an EMPTY active doc when we have NOT
+      // confirmed the current server doc (no known revision = the D1 read never landed, e.g. a slow/failed
+      // getDoc that fell back to boot(null) at the 1.2s LOAD_TIMEOUT). Writing empty here would clobber a
+      // real, unread D1 doc. A genuine "delete all rooms" always has a known revision (the doc WAS read at
+      // boot); a brand-new user's first real save is non-empty. LS + the Clerk net still hold everything.
+      if ((!bp.accounts || !bp.accounts.length) && typeof global.DatumD1.knownRevision('studio', 'active') !== 'number') return;
       global.DatumD1.scheduleWrite('studio', 'active', function () { return toD1Document(bp); }, function (server) {
         try {
           if (server && server.payload) { Object.assign(bp, JSON.parse(server.payload)); writeSessionDraft(bp); }
@@ -629,20 +635,19 @@
     opts = opts || {};
     var bp = newBlueprint();
 
-    // P3 — D1-FIRST: if the caller handed us a D1 studio doc, hydrate from it (full fidelity) and
-    // adopt its revision for optimistic CAS. Any absence/error falls through to the existing
-    // LS(session-draft)->Clerk path below, unchanged (silent + lossless fallback).
-    if (opts.d1Doc && opts.d1Doc.payload) {
-      try {
-        Object.assign(bp, JSON.parse(opts.d1Doc.payload));
-        if (global.DatumD1 && typeof opts.d1Doc.revision === 'number') global.DatumD1.setRevision('studio', 'active', opts.d1Doc.revision);
-        return finishLoad(bp, 'd1');
-      } catch (_e) {}
-    }
-
+    // FIX #2 (RC-B) — an EXPLICIT open (?id=blueprint / ?hydrate=sketch) is authoritative and MUST win
+    // over the ambient D1 'active' studio doc. Check the URL FIRST; only a plain reload (no matching ?id)
+    // falls through to the D1-first short-circuit below. A plain reload has no id -> skips this block and
+    // behaves exactly as before (loads the D1 active doc). This closes bug #1: opening a saved blueprint
+    // used to short-circuit on opts.d1Doc and render the empty active draft instead of the blueprint.
     try {
       var params = new URLSearchParams(global.location.search);
-      var id     = parseInt(params.get('id'), 10);
+      // FIX #2 — use the RAW string id. The stash/slot key is `datum_blueprint_state_<id>` where <id> is
+      // the blueprint_id (a UUID, e.g. "4617c527-..."). parseInt() mangled that ("4617c527"->4617, or NaN
+      // for a letter-leading UUID) so readSlot() missed the stash and the open fell through to the empty
+      // active doc — which is why reordering alone was not enough to fix bug #1. Numeric legacy slots are
+      // unaffected: readSlot('1') and readSlot(1) both resolve `datum_blueprint_state_1`.
+      var id     = params.get('id');
       var mode   = params.get('hydrate');
       if (id && mode === 'blueprint') {
         var slot = readSlot(id);
@@ -654,6 +659,17 @@
         return finishLoad(bp, 'sketch-contract:' + id);
       }
     } catch (_e) {}
+
+    // P3 — D1-FIRST: if the caller handed us a D1 studio doc, hydrate from it (full fidelity) and
+    // adopt its revision for optimistic CAS. Any absence/error falls through to the existing
+    // LS(session-draft)->Clerk path below, unchanged (silent + lossless fallback).
+    if (opts.d1Doc && opts.d1Doc.payload) {
+      try {
+        Object.assign(bp, JSON.parse(opts.d1Doc.payload));
+        if (global.DatumD1 && typeof opts.d1Doc.revision === 'number') global.DatumD1.setRevision('studio', 'active', opts.d1Doc.revision);
+        return finishLoad(bp, 'd1');
+      } catch (_e) {}
+    }
 
     var draft = readSessionDraft();
     if (draft && !opts.ignoreDraft) {
@@ -860,7 +876,15 @@
     if (contE) bp.contributions_total = moneyToInt(contE.value);
 
     if (global.state && Array.isArray(global.state.accounts)) {
-      bp.accounts = global.state.accounts.slice();
+      // FIX #1 (RC-A) — while the D1 active-doc boot is still pending (global._d1BootPending), an EMPTY
+      // live state must NOT clobber rooms already on bp (loaded from D1 / session draft). This is the
+      // single write-side chokepoint (protects BOTH writeSessionDraft and the d1WriteStudio thunk).
+      // Once boot completes and clears the flag, behavior is UNCHANGED — an intentional "delete all
+      // rooms" (empty state, no boot pending) still empties bp. Absent flag (node gates) => today's path.
+      var _incoming = global.state.accounts;
+      if (!global._d1BootPending || _incoming.length || !(bp.accounts && bp.accounts.length)) {
+        bp.accounts = _incoming.slice();
+      }
     }
 
     var act = d.querySelector('.climate-option.active');
