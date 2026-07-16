@@ -2983,6 +2983,7 @@
 </div>
 
 <script src="/scripts/datum-archive-purge.js"></script>
+<script defer src="/scripts/datum-d1.js"></script>
 <script>
   // ── ARCHITECTURAL APP STATE SIMULATION ──
   const AppSessionState = {
@@ -3066,6 +3067,15 @@
   // stays single-sourced. Falls back to _clearLsSlot only if the helper failed to load.
   function _purgeSketchSlot(idx) {
     if (idx < 1 || idx > 4) return;
+    // D (#288) — sketch delete MUST reach D1 too, else the READ-CUTOVER would resurrect it (the Bug B / L51
+    // lesson on the sketch side). Read the slot's sketch_id BEFORE DatumPurge clears datum_sketch_state_idx,
+    // then deleteDoc. Guarded / no-op when D1 absent / signed-out / rolled back (the net stays the truth then).
+    try {
+      if (_sbD1Live()) {
+        var _prev = JSON.parse(localStorage.getItem('datum_sketch_state_' + idx) || 'null');
+        if (_prev && _prev.sketch_id) window.DatumD1.deleteDoc('sketchbook', _prev.sketch_id);
+      }
+    } catch (_e) {}
     if (window.DatumPurge) {
       DatumPurge.sketch({ slotId: idx, remirror: _mirrorSketchbookToClerk });
     } else {
@@ -3136,6 +3146,54 @@
         window.Clerk.user.update({ unsafeMetadata: _m }).catch(function(e) { console.warn('[mirror] sketchbook failed', e); });
       }).catch(function(){});
     } catch(_e) {}
+  }
+
+  // ── D (#288) SKETCHBOOK READ-CUTOVER TO D1 ───────────────────────────────
+  function _sbD1Live() {
+    try { return !!(window.DatumD1 && window.DatumD1.CUTOVER !== false && window.DatumD1.signedIn && window.DatumD1.signedIn()); }
+    catch (e) { return false; }
+  }
+  // Authoritative overwrite of the 4-slot book from a D1 result (contracts, newest-first). Writes the UI
+  // slots, the LS book, AND datum_sketch_state_N per slot (so a subsequent erase can find the sketch_id and
+  // delete the right D1 row cross-device). Empty contracts -> the book is EMPTY (L51: trust reachable-empty).
+  function _applySketchBook(contracts) {
+    var book = { sketchbook_title: '', slot_1: null, slot_2: null, slot_3: null, slot_4: null };
+    try { var _ex = JSON.parse(localStorage.getItem(LS_KEY) || '{}'); if (_ex && _ex.sketchbook_title) book.sketchbook_title = _ex.sketchbook_title; } catch (e) {}
+    for (var i = 0; i < 4; i++) {
+      var c = contracts[i] || null, n = i + 1;
+      if (c) {
+        book['slot_' + n] = c;
+        SketchbookDatabase['slot' + n] = _contractToSlot(c);
+        try { localStorage.setItem('datum_sketch_state_' + n, JSON.stringify(c)); } catch (e) {}   // slot<->sketch_id for durable cross-device delete
+      } else {
+        SketchbookDatabase['slot' + n] = null;
+        try { localStorage.removeItem('datum_sketch_state_' + n); } catch (e) {}
+      }
+    }
+    try { localStorage.setItem(LS_KEY, JSON.stringify(book)); } catch (e) {}
+    var _tEl = document.getElementById('editable-notebook-title');
+    if (_tEl && book.sketchbook_title) _tEl.value = book.sketchbook_title;
+    if (typeof syncDesktopSketchbookUI === 'function') syncDesktopSketchbookUI();
+  }
+  // READ-CUTOVER: the sketchbook now reads from D1 (unlimited truth, cross-device fresh), mirroring the
+  // Blueprint archive slice-1. L51 (2nd use): a REACHABLE-empty D1 list is AUTHORITATIVE (render empty, do
+  // NOT fall back to the stale Clerk/LS net); Clerk/LS is the fallback ONLY on signed-out / unreachable
+  // (reject). Newest-4 fold — the 4-slot cap is held on purpose ("unlimited sketches" stays a follow-up).
+  function _sketchbookRestoreFromD1() {
+    if (!_sbD1Live()) { _sketchbookRestoreFromClerk(); return; }
+    try {
+      window.DatumD1.listDocs('sketchbook').then(function (docs) {
+        docs = docs || [];
+        docs.sort(function (a, b) { return String(b.updated_at || '').localeCompare(String(a.updated_at || '')); });
+        var top = docs.slice(0, 4);
+        if (!top.length) { _applySketchBook([]); return; }   // L51 reachable-empty -> render empty (no resurrect)
+        Promise.all(top.map(function (d) { return window.DatumD1.getDoc('sketchbook', d.doc_key); })).then(function (full) {
+          var contracts = [];
+          full.forEach(function (f) { if (f && f.payload) { try { contracts.push(JSON.parse(f.payload)); } catch (e) {} } });
+          if (contracts.length) _applySketchBook(contracts); else _sketchbookRestoreFromClerk();
+        }).catch(function () { _sketchbookRestoreFromClerk(); });   // unreachable mid-fetch -> net fallback
+      }).catch(function () { _sketchbookRestoreFromClerk(); });      // L51 reject = unreachable -> net fallback
+    } catch (e) { _sketchbookRestoreFromClerk(); }
   }
 
   function _sketchbookRestoreFromClerk() {
@@ -3798,7 +3856,10 @@
     // the page), so signed-in == all 4 sketch pages. The premium overlay/modals stay
     // in the DOM, deactivated — ready to re-enable as "1 free + premium" later.
     AppSessionState.userHasPremiumToken = true;
-    if (typeof _sketchbookRestoreFromClerk === 'function') _sketchbookRestoreFromClerk();
+    // D (#288) — read from D1 first (cross-device fresh); _sketchbookRestoreFromD1 falls back to the Clerk/LS
+    // net internally on signed-out / unreachable (L51 — never on a genuine reachable-empty).
+    if (typeof _sketchbookRestoreFromD1 === 'function') _sketchbookRestoreFromD1();
+    else if (typeof _sketchbookRestoreFromClerk === 'function') _sketchbookRestoreFromClerk();
     if (typeof syncDesktopSketchbookUI === 'function') {
       requestAnimationFrame(syncDesktopSketchbookUI);
     }
