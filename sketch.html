@@ -2880,6 +2880,20 @@
   <script src="/scripts/datum-archive-codec.js"></script>
   <script src="/scripts/datum-d1.js"></script>
   <script>
+    // #310 Part 3 — hold an in-app navigation until DatumD1.drain() settles (flush the debounced sketch
+    // autosave + await in-flight non-keepalive writes) so a big sketch the user clicks away from is not
+    // abandoned mid-flight. Same helper studio.html uses; rides the ONE shared DatumD1 tracker (no fork).
+    // drain() is self-capped so the nav ALWAYS proceeds; falls straight through when D1 is absent / rolled
+    // back. (Hard reload / tab-close is covered separately by datum-d1's beforeunload guard.)
+    window._navDrain = function (url) {
+      try {
+        if (window.DatumD1 && typeof window.DatumD1.drain === 'function') {
+          window.DatumD1.drain().then(function () { window.location.href = url; });
+          return;
+        }
+      } catch (e) {}
+      window.location.href = url;
+    };
     const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
 
     // Log-scale helpers: sliders store position 0-1000; these convert to/from actual values.
@@ -9049,7 +9063,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
         // + keep working, no forced reopen). Only the Phase-V completion CTA hands off
         // to the Sketchbook. Origin-relative so the hop stays on the current host.
         function _finish() {
-          if (source === 'phaseV') { window.location.href = new URL('sketchbook.html', window.location.href).href; return; }
+          if (source === 'phaseV') { window._navDrain(new URL('sketchbook.html', window.location.href).href); return; }
           var _t = document.getElementById('sketchOverlayToast');
           if (_t) { _t.textContent = 'Saved to A-0' + _slot; _t.classList.add('show'); clearTimeout(_finish._t); _finish._t = setTimeout(function() { _t.classList.remove('show'); }, 2400); }
         }
@@ -9094,7 +9108,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
           sessionStorage.setItem('datumfi_sketch_current_snapshot', JSON.stringify(serializeSketchState()));
           sessionStorage.setItem('datumfi_pending_save', 'sketch');
         } catch (e) {}
-        window.location.href = '/vault.html?returnTo=' + encodeURIComponent('/sketchbook.html');
+        window._navDrain('/vault.html?returnTo=' + encodeURIComponent('/sketchbook.html'));
       }
       function _readBook() { try { return JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch(ex) { return null; } }
       function _skIsFilled(n) { var b = _readBook(); return !!(b && b['slot_' + n]); }
@@ -9538,9 +9552,9 @@ Studio is built for exactly this. See If This Shape Holds →`;
   if (_startSaved && !_startSaved.classList.contains('disabled-cta')) {
     _startSaved.addEventListener('click', function() {
       if (isSignedIn) {
-        window.location.href = '/sketchbook.html';
+        window._navDrain('/sketchbook.html');
       } else {
-        window.location.href = '/vault.html?returnTo=' + encodeURIComponent('/sketchbook.html');
+        window._navDrain('/vault.html?returnTo=' + encodeURIComponent('/sketchbook.html'));
       }
     });
   }
