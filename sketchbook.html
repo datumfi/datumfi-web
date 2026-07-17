@@ -3018,6 +3018,8 @@
     var mapped   = STATE_BRAND_MAP[c.resolved_state]    || STATE_BRAND_MAP.EXPANSIVE;
     var s1Mapped = STATE_BRAND_MAP[c.s1_resolved_state] || mapped;
     return {
+      sketchId:    c.sketch_id || '',   // #1 (#298) — carry the D1 doc_key onto the rendered slot so the
+                                        // erase can resolve it synchronously on ANY render path (no dep on datum_sketch_state).
       age:         c.age,
       retire:      c.retire_age,
       port:        c.portfolio_mass,
@@ -3067,13 +3069,20 @@
   // stays single-sourced. Falls back to _clearLsSlot only if the helper failed to load.
   function _purgeSketchSlot(idx) {
     if (idx < 1 || idx > 4) return;
-    // D (#288) — sketch delete MUST reach D1 too, else the READ-CUTOVER would resurrect it (the Bug B / L51
-    // lesson on the sketch side). Read the slot's sketch_id BEFORE DatumPurge clears datum_sketch_state_idx,
-    // then deleteDoc. Guarded / no-op when D1 absent / signed-out / rolled back (the net stays the truth then).
+    // D (#288) + #1 (#298) — sketch delete MUST reach D1 (else the read-cutover resurrects it — L51). The
+    // BUG: this resolved sketch_id ONLY from datum_sketch_state_<idx>, which the D1 fold writes but the
+    // Clerk/LS FALLBACK render does not — so on a fallback render (or before the async fold lands) sketch_id
+    // was null and the deleteDoc was silently skipped (zero Network at erase; cross-device never converged).
+    // FIX: resolve sketch_id from ANY rendered source — datum_sketch_state, the LS book slot, or the live
+    // SketchbookDatabase slot (all now carry it) — BEFORE DatumPurge wipes the map. keepalive (from #2) lets
+    // it finish across a fast nav. No-op when D1 absent / signed-out / rolled back.
     try {
       if (_sbD1Live()) {
-        var _prev = JSON.parse(localStorage.getItem('datum_sketch_state_' + idx) || 'null');
-        if (_prev && _prev.sketch_id) window.DatumD1.deleteDoc('sketchbook', _prev.sketch_id);
+        var _sid = '';
+        try { var _ps = JSON.parse(localStorage.getItem('datum_sketch_state_' + idx) || 'null'); if (_ps && _ps.sketch_id) _sid = _ps.sketch_id; } catch (_e1) {}
+        if (!_sid) { try { var _bk = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); var _bs = _bk && _bk['slot_' + idx]; if (_bs && _bs.sketch_id) _sid = _bs.sketch_id; } catch (_e2) {} }
+        if (!_sid) { var _dbs = SketchbookDatabase['slot' + idx]; if (_dbs && _dbs.sketchId) _sid = _dbs.sketchId; }
+        if (_sid) window.DatumD1.deleteDoc('sketchbook', _sid);
       }
     } catch (_e) {}
     if (window.DatumPurge) {
@@ -3086,6 +3095,8 @@
   function _slimOne(s) {
     if (!s) return null;
     return {
+      sketch_id:         s.sketch_id,   // #1 (#298) — KEEP the D1 doc_key in the Clerk mirror so a fallback
+                                        // render cross-device can resolve it and fire a durable D1 delete.
       age:               s.age,
       retire_age:        s.retire_age,
       portfolio_mass:    s.portfolio_mass,
@@ -3229,6 +3240,9 @@
           delete _clean.s1_floor_path; delete _clean.s1_datum_path;
           delete _clean.s1_canvas_viewbox;
           SketchbookDatabase['slot' + _rn] = _contractToSlot(_clean);
+          // #1 (#298) — the Clerk/LS FALLBACK render must ALSO populate the slot<->sketch_id map so a later
+          // erase can fire a durable D1 delete (the D1 fold path already does this; the fallback did not).
+          try { if (_raw && _raw.sketch_id) localStorage.setItem('datum_sketch_state_' + _rn, JSON.stringify(_raw)); } catch (_se) {}
         }
         var _tEl = document.getElementById('editable-notebook-title');
         if (_tEl && _ckBook.sketchbook_title) _tEl.value = _ckBook.sketchbook_title;
