@@ -436,7 +436,11 @@
       if (!bp || !bp.blueprint_id) return;
       var id = bp.blueprint_id;
       var snap = toD1Document(bp);   // snapshot NOW — independent deep copy, not the live-mutating bp
-      global.DatumD1.scheduleWrite('blueprint', id, function () { return snap; }, function () {
+      // #2 (save-lag fix) — a saved blueprint is a DISCRETE, deliberate act: write it IMMEDIATELY (writeNow),
+      // not on the ~1.5s autosave debounce, so navigating to the archive right after "Save" can't abandon it
+      // in the debounce window. Falls back to scheduleWrite on hosts/gates without writeNow.
+      var _write = global.DatumD1.writeNow || global.DatumD1.scheduleWrite;
+      _write.call(global.DatumD1, 'blueprint', id, function () { return snap; }, function () {
         console.warn('[d1] blueprint ' + id + ' changed in another tab — reloaded the server revision (no merge)');
       });
     } catch (e) {}
