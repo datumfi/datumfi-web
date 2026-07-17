@@ -10001,7 +10001,7 @@
             if (window.dfTrack) dfTrack('studio_reveal_completed', { api_success: !!apiResult, reduced_motion: true });
             await new Promise(function(r) { setTimeout(r, 500); });
             sessionStorage.removeItem('datumfi_blueprint_draft_v1'); window._studioBp = null; // G1 hub draft
-            window.location.href = '/range.html';
+            window._navDrain('/range.html');
             return;
           }
 
@@ -10114,7 +10114,7 @@
 
           await new Promise(function(r) { setTimeout(r, 2000); });
           sessionStorage.removeItem('datumfi_blueprint_draft_v1'); window._studioBp = null; // G1 hub draft
-          window.location.href = '/range.html';
+          window._navDrain('/range.html');
         });
       }
     })();
@@ -13136,7 +13136,7 @@
       if (_wrap.style.display === 'none' || _wrap.classList.contains('dismissed')) return;
       if (_scratchReset()) {
         try { sessionStorage.setItem('datumfi_skip_entry_overlay', '1'); } catch(e) {}
-        window.location.href = '/studio.html';
+        window._navDrain('/studio.html');
       } else {
         dismissOverlay();
       }
@@ -13152,14 +13152,14 @@
     if (_startSketch) {
       _startSketch.addEventListener('click', function() {
         try { localStorage.setItem('datum_sketch_pickup_for_studio', JSON.stringify({ts: Date.now()})); } catch(ex) {}
-        window.location.href = _signedIn ? '/sketchbook.html'
-          : ('/vault.html?returnTo=' + encodeURIComponent('/sketchbook.html'));
+        window._navDrain(_signedIn ? '/sketchbook.html'
+          : ('/vault.html?returnTo=' + encodeURIComponent('/sketchbook.html')));
       });
     }
     if (_startBlueprint) {
       _startBlueprint.addEventListener('click', function() {
-        window.location.href = _signedIn ? '/Blueprint.html'
-          : ('/vault.html?returnTo=' + encodeURIComponent('/Blueprint.html'));
+        window._navDrain(_signedIn ? '/Blueprint.html'
+          : ('/vault.html?returnTo=' + encodeURIComponent('/Blueprint.html')));
       });
     }
 
@@ -13314,6 +13314,20 @@
   <script src="/scripts/datum-d1.js" defer></script>
   <script src="/scripts/studio-blueprint.js" defer></script>
   <script>
+  // #310 Part 2 — hold an in-app navigation until DatumD1.drain() settles (flush any debounced autosave +
+  // await in-flight non-keepalive writes) so a big save the user clicks away from is not abandoned mid-flight.
+  // drain() is self-capped so the nav ALWAYS proceeds; falls straight through when D1 is absent / rolled back.
+  // Small saves stay keepalive and survive unload on their own. On window so all three studio script blocks
+  // reach it at click time. (Hard reload / tab-close is covered separately by datum-d1's beforeunload guard.)
+  window._navDrain = function (url) {
+    try {
+      if (window.DatumD1 && typeof window.DatumD1.drain === 'function') {
+        window.DatumD1.drain().then(function () { window.location.href = url; });
+        return;
+      }
+    } catch (e) {}
+    window.location.href = url;
+  };
   // Blueprint v1 wiring — prefill the two new header fields from the loaded
   // contract, then bind for auto-commit. defer attribute on studio-blueprint.js
   // guarantees DatumBlueprint exists by DOMContentLoaded.
@@ -13586,7 +13600,7 @@
           sessionStorage.setItem('datumfi_blueprint_current_snapshot', JSON.stringify(_bp));
           sessionStorage.setItem('datumfi_pending_save', 'blueprint');
         } catch (e) {}
-        window.location.href = '/vault.html?returnTo=' + encodeURIComponent('/Blueprint.html');
+        window._navDrain('/vault.html?returnTo=' + encodeURIComponent('/Blueprint.html'));
         return;
       }
       if (pop) close(); else open(anchor || btn);

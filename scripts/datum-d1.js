@@ -120,6 +120,8 @@
   // client policy is reload-server-doc + warn (no silent clobber, no auto-merge): re-read, adopt the
   // server revision, and hand the fresh doc to onConflict so the caller can re-hydrate + warn.
   var _timers = {}, _rev = {};
+  var _pending = {};          // #310 P2 — id -> { type,key,getPayload,onConflict } for a debounced write NOT yet fired
+  var _inflight = new Set();  // #310 P2 — in-flight _doPut promises; drain() awaits these before an in-app nav
   function idOf(type, key) { return type + ':' + (key || 'active'); }
   // Shared CAS put (revision-tracked, 409 -> reload server rev + onConflict). Used by BOTH the debounced
   // scheduleWrite (continuous autosave) and the immediate writeNow (explicit save). Returns the promise.
@@ -136,19 +138,122 @@
       return res;
     });
   }
+  // Fire a write NOW and TRACK its promise so drain() can await real completion + the save-state signal can
+  // reflect it. Clears the pending descriptor. Drives _recompute on dispatch (saving) and on settle (saved/error).
+  function _dispatch(id, type, key, getPayload, onConflict) {
+    _pending[id] = null;
+    var pr = _doPut(id, type, key, getPayload, onConflict);
+    _inflight.add(pr);
+    _recompute(false);
+    pr.then(function (res) { _inflight.delete(pr); _recompute(!(res && res.ok)); },
+            function () { _inflight.delete(pr); _recompute(true); });
+    return pr;
+  }
   function scheduleWrite(type, key, getPayload, onConflict) {
     var id = idOf(type, key);
+    _pending[id] = { type: type, key: key, getPayload: getPayload, onConflict: onConflict };   // latest debounced args win
+    _recompute(false);   // pending work counts as "Saving…" + arms beforeunload immediately (before the debounce fires)
     if (_timers[id]) clearTimeout(_timers[id]);
-    _timers[id] = setTimeout(function () { _timers[id] = null; _doPut(id, type, key, getPayload, onConflict); }, API.WRITE_DEBOUNCE_MS);
+    _timers[id] = setTimeout(function () { _timers[id] = null; if (_pending[id]) _dispatch(id, type, key, getPayload, onConflict); }, API.WRITE_DEBOUNCE_MS);
   }
   // #2 (async-completion) — write NOW, bypassing the ~1.5s debounce, for an EXPLICIT save (a deliberate
   // "Save Blueprint" click, not the continuous autosave). Cancels any pending debounced write for this key
-  // and fires the (keepalive) putDoc immediately, so a fast nav/reload can't abandon it inside the debounce
-  // window (the confirmed save-lag bug). Returns the promise so a caller CAN await the real completion.
+  // and fires putDoc immediately, so a fast nav/reload can't abandon it inside the debounce window (the
+  // confirmed save-lag bug). Returns the promise so a caller CAN await the real completion.
   function writeNow(type, key, getPayload, onConflict) {
     var id = idOf(type, key);
     if (_timers[id]) { clearTimeout(_timers[id]); _timers[id] = null; }
-    return _doPut(id, type, key, getPayload, onConflict);
+    return _dispatch(id, type, key, getPayload, onConflict);
+  }
+  // #310 Part 2 — DRAIN: flush every pending debounced write NOW, then resolve when all in-flight writes
+  // settle (capped by DRAIN_MAX_MS so a nav ALWAYS proceeds). The app awaits this at in-app navigation
+  // points (studio.html _navDrain) so a big (>60KB, non-keepalive) write — an explicit blueprint save OR the
+  // active-studio autosave — is not abandoned mid-flight when the page unloads. Small writes stay keepalive
+  // and survive unload on their own; this closes the common save-then-navigate flow. RESIDUAL: a hard
+  // tab-close / F5 mid-drain of an over-64KB write is an inherent browser floor (you cannot await a fetch
+  // during unload). Never rejects — the nav proceeds regardless.
+  function drain() {
+    try {
+      for (var id in _pending) {
+        if (_pending.hasOwnProperty(id) && _pending[id]) {
+          var w = _pending[id];
+          if (_timers[id]) { clearTimeout(_timers[id]); _timers[id] = null; }
+          _dispatch(id, w.type, w.key, w.getPayload, w.onConflict);
+        }
+      }
+    } catch (e) {}
+    var arr = [];
+    _inflight.forEach(function (p) { arr.push(p.catch(function () {})); });
+    var settled = Promise.all(arr);
+    var capped = new Promise(function (res) { setTimeout(res, API.DRAIN_MAX_MS); });
+    return Promise.race([settled, capped]);
+  }
+
+  // ---- #310 Part 2 (A2) — honest save-state signal + self-owned "Saving…/Saved" pill --------------
+  // ONE source of truth = the in-flight tracker above (L48 — no second bookkeeping). State machine:
+  // idle -> saving (a write is pending/in-flight) -> saved (brief, on settle) -> idle; error on a failed
+  // settle. Any surface can subscribe via onState(); datum-d1 ALSO renders a subtle fixed pill itself so the
+  // awareness signal ships with zero page/sacred surface (studio, blueprint, sketch — every page that loads
+  // this file). Headless-safe: the pill no-ops when document/createElement is absent (the gates).
+  var _state = 'idle', _lastErr = false, _savedTimer = null, _stateSubs = [], _pillEl = null;
+  function _busy() { if (_inflight.size > 0) return true; for (var k in _pending) { if (_pending.hasOwnProperty(k) && _pending[k]) return true; } return false; }
+  function _emit(s) {
+    if (s === _state) return;
+    _state = s;
+    for (var i = 0; i < _stateSubs.length; i++) { try { _stateSubs[i](s); } catch (e) {} }
+    _renderPill(s);
+  }
+  function _recompute(err) {
+    if (err) _lastErr = true;
+    if (_busy()) { if (_savedTimer) { clearTimeout(_savedTimer); _savedTimer = null; } _emit('saving'); return; }
+    if (_savedTimer) { clearTimeout(_savedTimer); _savedTimer = null; }
+    if (_lastErr) { _lastErr = false; _emit('error'); _savedTimer = setTimeout(function () { _emit('idle'); }, 4000); return; }
+    _emit('saved'); _savedTimer = setTimeout(function () { _emit('idle'); }, 1600);
+  }
+  function _pill() {
+    if (typeof document === 'undefined' || !document.createElement) return null;   // headless / gate -> no DOM pill
+    if (_pillEl) return _pillEl;
+    var el = document.createElement('div');
+    el.id = 'datum-save-pill';
+    el.setAttribute('aria-live', 'polite');
+    el.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:2147483000;font:500 11px/1 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;letter-spacing:.02em;padding:7px 12px;border-radius:999px;color:rgba(255,255,255,.92);background:rgba(20,22,28,.86);box-shadow:0 2px 10px rgba(0,0,0,.28);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);opacity:0;transform:translateY(4px);transition:opacity .22s ease,transform .22s ease;pointer-events:none;';
+    (document.body || document.documentElement).appendChild(el);
+    _pillEl = el;
+    return el;
+  }
+  function _renderPill(s) {
+    var el = _pill(); if (!el) return;
+    var txt = s === 'saving' ? 'Saving…' : s === 'saved' ? 'Saved' : s === 'error' ? 'Save failed — retrying on next change' : '';
+    if (txt) { el.textContent = txt; el.setAttribute('data-state', s); el.style.opacity = '1'; el.style.transform = 'translateY(0)'; }
+    else { el.style.opacity = '0'; el.style.transform = 'translateY(4px)'; }
+    el.style.background = s === 'error' ? 'rgba(120,26,26,.9)' : 'rgba(20,22,28,.86)';
+  }
+
+  // ---- #310 Part 2 (B) — beforeunload guard + pagehide keepalive flush -----------------------------
+  // beforeunload: native "Leave/Stay?" ONLY while a save is in flight (armed by the SAME tracker), so a hard
+  // reload / tab-close mid-drain can never SILENTLY drop work. It stays silent once drained to zero, so a
+  // smooth in-app _navDrain (which awaits drain() -> tracker empty BEFORE navigating) does NOT double-prompt.
+  // pagehide/visibilitychange->hidden: best-effort flush of any debounced-but-unsent write so the sub-64KB
+  // tail still lands via keepalive even if the user leaves. Over-64KB cannot (that IS the keepalive cap) —
+  // the honest floor. All headless-guarded so the gates can load the module without a real window.
+  function _flushKeepaliveTail() {
+    for (var id in _pending) {
+      if (_pending.hasOwnProperty(id) && _pending[id]) {
+        var w = _pending[id];
+        if (_timers[id]) { clearTimeout(_timers[id]); _timers[id] = null; }
+        _dispatch(id, w.type, w.key, w.getPayload, w.onConflict);   // putDoc sizes keepalive: <=budget survives unload
+      }
+    }
+  }
+  if (typeof window !== 'undefined' && window.addEventListener) {
+    window.addEventListener('beforeunload', function (e) {
+      if (API.CUTOVER === false || !_busy()) return;                // silent when rolled back or nothing in flight
+      e.preventDefault(); e.returnValue = ''; return '';            // arm the native leave-confirm
+    });
+    window.addEventListener('pagehide', function () { try { _flushKeepaliveTail(); } catch (e) {} });
+    if (typeof document !== 'undefined' && document.addEventListener) {
+      document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') { try { _flushKeepaliveTail(); } catch (e) {} } });
+    }
   }
   function setRevision(type, key, rev) { if (typeof rev === 'number') _rev[idOf(type, key)] = rev; }
   function knownRevision(type, key) { return _rev[idOf(type, key)]; }
@@ -180,7 +285,9 @@
     CUTOVER: true,
     WRITE_DEBOUNCE_MS: 1500,   // coarse network write (vs 350ms local commit)
     LOAD_TIMEOUT_MS: 1200,     // D1-first load falls back to LS/Clerk after this
+    DRAIN_MAX_MS: 3000,        // #310 P2 — cap on how long an in-app nav is held for drain (nav always proceeds)
     getDoc: getDoc, putDoc: putDoc, listDocs: listDocs, deleteDoc: deleteDoc, scheduleWrite: scheduleWrite, writeNow: writeNow,
+    drain: drain, onState: function (cb) { if (typeof cb === 'function') _stateSubs.push(cb); return _state; }, getState: function () { return _state; },
     setRevision: setRevision, knownRevision: knownRevision, signedIn: signedIn, writePreferences: writePreferences,
     _fetch: null
   };

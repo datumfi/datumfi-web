@@ -23,7 +23,7 @@ const DROP_RE = [/^\.claude\//, /^\.wrangler\//, /^workers\//, /^functions\//, /
 
 // SACRED HOSTS — must ship byte-identical (LF + content). Build ABORTS on drift.
 const SACRED = {
-  'studio.html': '589e8cb2330b364b8e596abc873af8ab',
+  'studio.html': '6682399c13f5589bb3a31ea47ce599fd',
   'sketch.html': '18d8b00066a698cea07f3aa74d1fd5cd',
   'scripts/studio-blueprint.js': '62286adc73ffc44e85b0ce7f294528fa',
 };
