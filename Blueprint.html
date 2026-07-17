@@ -1833,9 +1833,20 @@ archiveTitle.addEventListener('blur', function() {
   if (this.value.trim() === '') this.value = (typeof _bpDefaultTitle === 'function') ? _bpDefaultTitle() : 'My Blueprint Archive';
 });
 
-// Cold start: render immediately from LS (D1 not signed-in yet); onSessionConfirmed re-loads
-// the full archive from D1 once Clerk resolves. An empty archive renders empty sheets.
-loadArchive().then(renderArchivePage);
+// #4 (#301) — SINGLE AUTHORITATIVE D1-GATED PAINT. The old cold-start painted the stale LS 4-slot
+// immediately, then onSessionConfirmed repainted from D1 — two sources disagreeing on ORDER (LS slot-order
+// vs D1 newest-first) AND values, so cards visibly reordered/refreshed on the 2nd paint (the number "swap"
+// + the 28M->$0 flash). Fix: a RETURNING signed-in user (datum_auth_hint set on a prior auth) skips the
+// stale LS pre-paint and shows neutral empty sheets until the D1 pass — the FIRST data paint is D1. A
+// signed-out / never-authed visitor (no hint) still paints LS immediately (unchanged). Safety net: if the
+// D1 pass never lands (Clerk stalls), fall back to a load so we never strand on blank sheets.
+var _bpAuthHint = false; try { _bpAuthHint = sessionStorage.getItem('datum_auth_hint') === '1'; } catch (e) {}
+if (_bpAuthHint) {
+  renderArchivePage();                                                                 // neutral empty sheets; D1 pass fills them
+  setTimeout(function () { if (!ARCH.list.length) loadArchive().then(renderArchivePage); }, 4000);   // outage safety net
+} else {
+  loadArchive().then(renderArchivePage);                                               // signed-out / never-authed: LS immediately
+}
 
 // Personalized title — F30 / P5 Step-2. Computed from the signed-in account EACH render
 // and re-run after Clerk resolves (onSessionConfirmed) so a fresh-incognito sign-in shows
