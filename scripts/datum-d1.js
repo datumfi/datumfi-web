@@ -60,6 +60,21 @@
     });
   }
 
+  // ---- #310 keepalive size-ceiling (cumulative-cap aware) -------------------------------------
+  // keepalive (#2) lets an in-flight write COMPLETE across a fast nav/reload — but the browser REJECTS a
+  // keepalive fetch (TypeError, silently dropping the write) once the CUMULATIVE in-flight keepalive
+  // request-body bytes exceed ~64KB (65536). Hardcoding keepalive:true therefore dropped EVERY >64KB save,
+  // and even two concurrent mid-size saves (the active-studio autosave + an explicit blueprint save serialize
+  // the same holdings). Fix: use keepalive ONLY when THIS write plus what is already in flight stays under a
+  // conservative budget; otherwise send a NORMAL (uncapped) fetch that always LANDS while the page is alive.
+  // We track our own in-flight keepalive bytes so the write pipe is as unbounded as the D1 store — no
+  // blueprint is undroppable by size. OVER-budget writes go non-keepalive: on stay-on-page (the dominant
+  // save) they always land; their fast-nav survival is Part 2 (hold the nav until the fetch resolves). We do
+  // NOT queue — a queued write would itself be lost on unload with no gain, and immediate non-keepalive lands.
+  var KEEPALIVE_BUDGET_BYTES = 60000;   // < 65536 spec cap; headroom for request overhead + rounding
+  var _kaInflightBytes = 0;             // sum of our in-flight keepalive PUT body bytes (cumulative-cap aware)
+  function byteLen(s) { try { return new TextEncoder().encode(s).length; } catch (e) { return s ? s.length : 0; } }
+
   // PUT -> { ok:true, revision } | { ok:false, conflict:true, server_revision } | { ok:false }.
   function putDoc(type, key, payload, revision) {
     key = key || 'active';
@@ -67,16 +82,22 @@
       if (!tok) return { ok: false };
       var body = { payload: payload };
       if (typeof revision === 'number') body.revision = revision;
+      var bodyStr = JSON.stringify(body);
+      var bytes = byteLen(bodyStr);
+      // keepalive only if THIS write + what is already in flight stays under the cumulative budget; else a
+      // normal fetch (no size cap) so the write LANDS. Reserve now, release on settle (idempotent).
+      var useKA = (_kaInflightBytes + bytes) <= KEEPALIVE_BUDGET_BYTES;
+      if (useKA) _kaInflightBytes += bytes;
+      var released = false;
+      var release = function () { if (released) return; released = true; if (useKA) { _kaInflightBytes -= bytes; if (_kaInflightBytes < 0) _kaInflightBytes = 0; } };
       return doFetch(BASE + '?type=' + encodeURIComponent(type) + '&key=' + encodeURIComponent(key), {
-        // #2 (async-completion) — keepalive lets an in-flight write COMPLETE even if the page unloads
-        // (fast nav/reload right after a save). Without it the browser cancels the request and the save
-        // is silently lost. Blueprint payloads are well under the 64KB keepalive cap.
-        method: 'PUT', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive: true
+        method: 'PUT', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' }, body: bodyStr, keepalive: useKA
       }).then(function (r) {
+        release();
         if (r.status === 200 || r.status === 201) return r.json().then(function (j) { return { ok: true, revision: j.revision }; });
         if (r.status === 409) return r.json().then(function (j) { return { ok: false, conflict: true, server_revision: j.server_revision }; });
         return { ok: false };
-      }).catch(function () { return { ok: false }; });
+      }).catch(function () { release(); return { ok: false }; });
     }).catch(function () { return { ok: false }; });
   }
 
