@@ -3106,6 +3106,17 @@
       leafFront.innerHTML = ''; leafFront.appendChild(clone);
       p.page = to; renderPage();
       stage.classList.add('leaf-on');
+      // Forward turn BEYOND page 1: the stage is still 'folded' from the prior turn, so re-adding
+      // 'folded' is a no-op and the fold never animates (it flashes straight to the next page).
+      // Reset the leaf flat WITHOUT a transition first (mirror the reverse mid-book re-settle at
+      // ~3121), so the double-rAF fold below animates on EVERY forward turn.
+      var _lfF = document.getElementById('sk-leaf');
+      if (_lfF && stage.classList.contains('folded')) {
+        _lfF.style.transition = 'none';
+        stage.classList.remove('folded');
+        void _lfF.offsetWidth;
+        _lfF.style.transition = '';
+      }
       requestAnimationFrame(function () { requestAnimationFrame(function () { stage.classList.add('folded'); }); });
       setTimeout(function () { _skFolding = false; }, ms + 60);
     } else {
