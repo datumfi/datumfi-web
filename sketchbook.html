@@ -3140,6 +3140,7 @@
                                         // erase can resolve it synchronously on ANY render path (no dep on datum_sketch_state).
       age:         c.age,
       retire:      c.retire_age,
+      plan_end:    c.plan_end_age,
       port:        c.portfolio_mass,
       contrib:     c.contributions,
       datum:       c.datum_spend,
@@ -3466,7 +3467,7 @@
                 <td>${data.stateName}</td>
                 <td>${compactMoney(data.port)}</td>
                 <td>$${addCommas(data.datum)}/yr</td>
-                <td>${data.age} → ${data.retire}</td>
+                <td>${data.age} → ${data.retire}${data.plan_end ? ' → ' + data.plan_end : ''}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -3543,7 +3544,7 @@
       </div>
       <div class="slot-state-title" style="color: ${data.s1StateColor || data.stateColor};">${data.s1StateName || data.stateName}</div>
       <div class="slot-metrics-table">
-        <div class="sm-row"><span class="sm-key">Timeline</span><span class="sm-val">${data.age} &rarr; ${data.retire}</span></div>
+        <div class="sm-row"><span class="sm-key">Timeline</span><span class="sm-val">${data.age} &rarr; ${data.retire}${data.plan_end ? ' &rarr; ' + data.plan_end : ''}</span></div>
         <div class="sm-row"><span class="sm-key">Portfolio</span><span class="sm-val">${compactMoney(data.port)}</span></div>
         <div class="sm-row"><span class="sm-key">Contrib</span><span class="sm-val">$${addCommas(data.contrib)}/yr</span></div>
         <div class="sm-row"><span class="sm-key">Target Spend</span><span class="sm-val">$${addCommas(data.s1Datum || data.datum)}/yr</span></div>
