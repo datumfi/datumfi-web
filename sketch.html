@@ -9041,19 +9041,25 @@ Studio is built for exactly this. See If This Shape Holds →`;
 
       // P5 Step-3: write the CHOSEN slot (1..4), preserving the other slots. source:'nav'
       // (picker, any phase) -> DRAFTED; source:'phaseV' (full-experience CTA) -> MODELED.
-      function _doSave(slotN, source, forceNew) {
+      function _doSave(slotN, source, forceNew, overwriteId) {
         var _slot = (slotN >= 1 && slotN <= 4) ? slotN : 1;
         var prev = null;
         try { prev = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch(ex) {}
         var payload = serializeSketchState();
-        payload.sketch_id = _stableSketchId(_slot, payload, forceNew);   // P5b — stable per-slot id; forceNew mints a NEW row
+        payload.sketch_id = overwriteId ? overwriteId : _stableSketchId(_slot, payload, forceNew);   // overwriteId -> that exact D1 row; forceNew mints a NEW row
         payload.status = (source === 'phaseV') ? 'Modeled' : 'Drafted';
         var now = new Date();
         var mm  = String(now.getMonth() + 1).padStart(2, '0');
         var ddS = String(now.getDate()).padStart(2, '0');
         var data = (prev && typeof prev === 'object') ? prev : {};
         if (!data.sketchbook_title) data.sketchbook_title = 'Sketch from ' + mm + '/' + ddS + '/' + now.getFullYear();
-        if (forceNew) {
+        var _stateSlot = 0;   // which LS slot's datum_sketch_state_N to refresh (0 = not in the offline newest-4 net)
+        if (overwriteId) {
+          // Overwrite-by-id (Issue 1 — reach PAST the newest-4): the D1 row + per-id stash are the truth.
+          // If this sketch also sits in the offline newest-4 net, refresh that slot in place; if it's a
+          // page-2 sketch not in the net, leave the net untouched (never roll/evict on an overwrite).
+          for (var _on = 1; _on <= 4; _on++) { var _os = data['slot_' + _on]; if (_os && _os.sketch_id === overwriteId) { data['slot_' + _on] = payload; _stateSlot = _on; break; } }
+        } else if (forceNew) {
           // Save-as-new (unlimited): the NEW D1 row + per-id stash (datum_sketch_byid_<id>) are the
           // SOURCE OF TRUTH. The newest-4 LS net-roll below is a DEGRADED-OFFLINE CACHE ONLY — slot_4
           // dropping out of the 4-deep net is NOT a delete: the sketch still lives in D1/stash and
@@ -9062,12 +9068,13 @@ Studio is built for exactly this. See If This Shape Holds →`;
           data.slot_3 = data.slot_2 || null;
           data.slot_2 = data.slot_1 || null;
           data.slot_1 = payload;
-          _slot = 1;
+          _slot = 1; _stateSlot = 1;
         } else {
           data['slot_' + _slot] = payload;
+          _stateSlot = _slot;
         }
         try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch(ex) {}
-        try { localStorage.setItem('datum_sketch_state_' + _slot, JSON.stringify(payload)); } catch(ex) {}
+        if (_stateSlot) { try { localStorage.setItem('datum_sketch_state_' + _stateSlot, JSON.stringify(payload)); } catch(ex) {} }
         try { localStorage.setItem('datum_sketch_byid_' + payload.sketch_id, JSON.stringify(payload)); } catch(ex) {}   // per-id stash -> open ANY sketch by id (mirror sketchbook _stashSketchForOpen)
         _d1WriteSketch(payload);   // P5b Layer-1 — ADDITIVE: this saved sketch as its OWN D1 row (key=sketch_id)
         sessionStorage.setItem('datumfi_just_saved', '1');
@@ -9080,10 +9087,11 @@ Studio is built for exactly this. See If This Shape Holds →`;
         // P6.1 Item-3: the NAV picker save STAYS on the Sketch (Studio parity — save
         // + keep working, no forced reopen). Only the Phase-V completion CTA hands off
         // to the Sketchbook. Origin-relative so the hop stays on the current host.
+        var _toastMsg = overwriteId ? 'Sketch updated' : (forceNew ? 'Saved as a new sketch' : ('Saved to A-0' + _slot));
         function _finish() {
           if (source === 'phaseV') { window._navDrain(new URL('sketchbook.html', window.location.href).href); return; }
           var _t = document.getElementById('sketchOverlayToast');
-          if (_t) { _t.textContent = 'Saved to A-0' + _slot; _t.classList.add('show'); clearTimeout(_finish._t); _finish._t = setTimeout(function() { _t.classList.remove('show'); }, 2400); }
+          if (_t) { _t.textContent = _toastMsg; _t.classList.add('show'); clearTimeout(_finish._t); _finish._t = setTimeout(function() { _t.classList.remove('show'); }, 2400); }
         }
         // Skip the Clerk cross-device mirror on localhost: the production Clerk
         // instance (clerk.datumfi.com) redirects to the primary domain when
@@ -9144,16 +9152,59 @@ Studio is built for exactly this. See If This Shape Holds →`;
       function _skClose() { if (_pop) { if (_pop.parentNode) _pop.remove(); _pop = null; document.removeEventListener('click', _skOnDoc, true); } }
       function _skOnDoc(e) { if (_pop && !_pop.contains(e.target) && e.target !== _navSaveBtn && e.target !== _skAnchor) _skClose(); }
       function _skSaveTo(n) { _skClose(); _doSave(n, 'nav'); }
-      function _skConfirmOverwrite(n) {
+      // ── Issue-1 parity: a SCROLLABLE list of ALL saved sketches (mirror studio.html renderPicker
+      //    13427-13571) so OVERWRITE reaches PAST the newest-4. D1 listDocs (ALL N, newest-first);
+      //    LS newest-4 fallback when signed-out / D1 unreachable (degraded-offline). ──────────────
+      function _skEnsurePickStyle() {
+        if (document.getElementById('sketch-sb-pick-style')) return;
+        var s = document.createElement('style'); s.id = 'sketch-sb-pick-style';
+        s.textContent =
+          '#sketch-save-sb-pop .sk-ovlist{max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:5px;padding-right:2px;scrollbar-width:thin;scrollbar-color:var(--gold,#c9a84c) rgba(255,255,255,0.05);}' +
+          '#sketch-save-sb-pop .sk-ovlist::-webkit-scrollbar{width:7px;}' +
+          '#sketch-save-sb-pop .sk-ovlist::-webkit-scrollbar-track{background:rgba(255,255,255,0.04);border-radius:4px;}' +
+          '#sketch-save-sb-pop .sk-ovlist::-webkit-scrollbar-thumb{background:linear-gradient(var(--gold,#c9a84c),#8f7629);border-radius:4px;}' +
+          '#sketch-save-sb-pop .sk-ovrow{text-align:left;background:linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02));border:1px solid rgba(255,255,255,0.10);color:var(--white,#fff);font-family:var(--font-mono);font-size:11px;padding:8px 10px;border-radius:5px;cursor:pointer;transition:border-color .12s,background .12s;box-shadow:inset 0 1px 0 rgba(255,255,255,0.05);}' +
+          '#sketch-save-sb-pop .sk-ovrow:hover{border-color:var(--teal,#1d9e75);background:linear-gradient(180deg,rgba(29,158,117,0.14),rgba(29,158,117,0.05));}' +
+          '#sketch-save-sb-pop .sk-ovrow .sk-ovsub{display:block;margin-top:3px;font-size:9px;color:rgba(255,255,255,0.55);letter-spacing:0.04em;}';
+        document.head.appendChild(s);
+      }
+      function _skMeta(c, id) {
+        var st = (c && (c.s1_resolved_state || c.resolved_state)) || '';
+        var status = (c && c.status) || '';
+        var when = (c && c.date_stamped) || '';
+        var sub = [status, when].filter(function (x) { return x; }).join('  ·  ');
+        return { id: id, name: st || 'Sketch', sub: sub };
+      }
+      function _skListFromLS() {
+        var out = [], b = _readBook();
+        if (b) { for (var n = 1; n <= 4; n++) { var s = b['slot_' + n]; if (s && s.sketch_id) out.push(_skMeta(s, s.sketch_id)); } }
+        return out;
+      }
+      function _skListSketches() {
+        return new Promise(function (resolve) {
+          var D1 = window.DatumD1;
+          if (!(D1 && D1.CUTOVER !== false && D1.signedIn && D1.signedIn())) { resolve(_skListFromLS()); return; }
+          D1.listDocs('sketchbook').then(function (docs) {
+            if (!docs || !docs.length) { resolve(_skListFromLS()); return; }
+            docs.sort(function (a, b) { return String(b.updated_at || '').localeCompare(String(a.updated_at || '')); });
+            Promise.all(docs.map(function (d) { return D1.getDoc('sketchbook', d.doc_key); })).then(function (full) {
+              var out = [];
+              full.forEach(function (f, i) { if (f && f.payload) { try { out.push(_skMeta(JSON.parse(f.payload), docs[i].doc_key)); } catch (e) {} } });
+              resolve(out.length ? out : _skListFromLS());
+            }).catch(function () { resolve(_skListFromLS()); });
+          }).catch(function () { resolve(_skListFromLS()); });
+        });
+      }
+      function _skConfirmOverwrite(m) {
         if (!_pop) return;
         _pop.innerHTML = '';
-        var head = document.createElement('div'); head.textContent = 'Overwrite A-0' + n + '?'; head.style.cssText = _PHEAD; _pop.appendChild(head);
-        var sub = document.createElement('div'); sub.textContent = 'This sheet — ' + _skSlotLabel(n) + ' — will be replaced.';
+        var head = document.createElement('div'); head.textContent = 'Overwrite this sketch?'; head.style.cssText = _PHEAD; _pop.appendChild(head);
+        var sub = document.createElement('div'); sub.textContent = (m.name || 'This sketch') + (m.sub ? '  ·  ' + m.sub : '') + ' will be replaced.';
         sub.style.cssText = 'font-family:var(--font-mono);font-size:10px;color:rgba(255,255,255,0.6);padding:0 4px 4px;line-height:1.4;'; _pop.appendChild(sub);
         var row = document.createElement('div'); row.style.cssText = 'display:flex;gap:6px;';
         var ov = document.createElement('button'); ov.type = 'button'; ov.textContent = 'Overwrite';
         ov.style.cssText = 'flex:1;background:rgba(201,168,76,0.15);border:1px solid var(--gold,#c9a84c);color:var(--gold,#c9a84c);font-family:var(--font-mono);font-size:11px;padding:8px 10px;border-radius:4px;cursor:pointer;';
-        ov.addEventListener('click', function (e) { e.stopPropagation(); _skSaveTo(n); });
+        ov.addEventListener('click', function (e) { e.stopPropagation(); _skClose(); _doSave(1, 'nav', false, m.id); });
         var ca = document.createElement('button'); ca.type = 'button'; ca.textContent = 'Cancel';
         ca.style.cssText = 'flex:1;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.12);color:var(--white,#fff);font-family:var(--font-mono);font-size:11px;padding:8px 10px;border-radius:4px;cursor:pointer;';
         ca.addEventListener('click', function (e) { e.stopPropagation(); _skRenderSlots(); });
@@ -9161,6 +9212,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
       }
       function _skRenderSlots() {
         if (!_pop) return;
+        _skEnsurePickStyle();
         _pop.innerHTML = '';
         var head = document.createElement('div'); head.textContent = 'Save this sketch'; head.style.cssText = _PHEAD; _pop.appendChild(head);
         // PRIMARY — save as a NEW sketch (unlimited: mints its own D1 row). Under the Design tier
@@ -9171,19 +9223,29 @@ Studio is built for exactly this. See If This Shape Holds →`;
         _nb.style.cssText = 'text-align:left;background:rgba(201,168,76,0.12);border:1px solid var(--gold,#c9a84c);color:var(--gold,#c9a84c);font-family:var(--font-mono);font-size:11px;padding:8px 10px;border-radius:4px;cursor:pointer;';
         _nb.addEventListener('click', function (e) { e.stopPropagation(); _skClose(); _doSave(1, 'nav', true); });
         _pop.appendChild(_nb);
-        // Secondary — OVERWRITE one of the visible recent sketches (newest-4 LS view). Filled slots only.
-        var _slots = []; for (var _n = 1; _n <= 4; _n++) { if (_skIsFilled(_n)) _slots.push(_n); }
-        if (_slots.length) {
-          var _oh = document.createElement('div'); _oh.textContent = 'or overwrite a recent sketch'; _oh.style.cssText = _PHEAD; _pop.appendChild(_oh);
-          _slots.forEach(function (n) {
-            var b = document.createElement('button'); b.type = 'button'; b.textContent = _skSlotLabel(n);
-            b.style.cssText = 'text-align:left;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.12);color:var(--white,#fff);font-family:var(--font-mono);font-size:11px;padding:8px 10px;border-radius:4px;cursor:pointer;';
-            b.addEventListener('mouseenter', function () { b.style.borderColor = 'var(--teal,#1d9e75)'; });
-            b.addEventListener('mouseleave', function () { b.style.borderColor = 'rgba(255,255,255,0.12)'; });
-            b.addEventListener('click', function (e) { e.stopPropagation(); _skConfirmOverwrite(n); });
-            _pop.appendChild(b);
+        // SECONDARY — OVERWRITE any existing sketch. Scrollable list of ALL N (studio parity), not just
+        // the newest-4, so a 5th/6th sketch on sketchbook page 2+ is reachable to overwrite.
+        var _lbl = document.createElement('div'); _lbl.textContent = 'or overwrite an existing sketch'; _lbl.style.cssText = _PHEAD; _pop.appendChild(_lbl);
+        var _list = document.createElement('div'); _list.className = 'sk-ovlist';
+        var _loading = document.createElement('div'); _loading.textContent = 'Loading…';
+        _loading.style.cssText = 'font-family:var(--font-mono);font-size:10px;color:rgba(255,255,255,0.4);padding:6px 4px;';
+        _list.appendChild(_loading); _pop.appendChild(_list);
+        _skListSketches().then(function (items) {
+          if (!_pop || !_list.isConnected) return;
+          _list.innerHTML = '';
+          if (!items.length) {
+            var _none = document.createElement('div'); _none.textContent = 'No saved sketches yet — save your first above.';
+            _none.style.cssText = 'font-family:var(--font-mono);font-size:10px;color:rgba(255,255,255,0.4);padding:6px 4px;';
+            _list.appendChild(_none); return;
+          }
+          items.forEach(function (m) {
+            var r = document.createElement('button'); r.type = 'button'; r.className = 'sk-ovrow'; r.setAttribute('data-overwrite-id', m.id);
+            var t = document.createElement('span'); t.textContent = m.name; r.appendChild(t);
+            var sub = document.createElement('span'); sub.className = 'sk-ovsub'; sub.textContent = m.sub || 'Sketch'; r.appendChild(sub);
+            r.addEventListener('click', function (e) { e.stopPropagation(); _skConfirmOverwrite(m); });
+            _list.appendChild(r);
           });
-        }
+        });
       }
       function _skOpen(anchor) {
         anchor = anchor || _navSaveBtn || document.body;
