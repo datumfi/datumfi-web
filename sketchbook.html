@@ -3554,8 +3554,8 @@
       <div class="saved-bottom">
         <span class="saved-time">Sketched Saved · ${data.dateStamped}</span>
         <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
-          <button type="button" class="slot-open-action" data-open-slot="${idx}" aria-label="Open this Sketch" title="Open in Sketch">Open Sketch</button>
-          <button type="button" class="slot-studio-action" data-studio-slot="${idx}" aria-label="Open this Sketch in Studio" title="Open in Studio">Open Studio</button>
+          <button type="button" class="slot-open-action" data-open-slot="${data.sketchId || idx}" aria-label="Open this Sketch" title="Open in Sketch">Open Sketch</button>
+          <button type="button" class="slot-studio-action" data-studio-slot="${data.sketchId || idx}" aria-label="Open this Sketch in Studio" title="Open in Studio">Open Studio</button>
           <button type="button" class="slot-erase-action" data-purge-target="${idx}" aria-label="Erase ${_skLabel(gi)}" title="Erase this saved Sketch">Erase Slot</button>
         </div>
       </div>
@@ -3771,7 +3771,7 @@
       try { sessionStorage.setItem('datumfi_hydrate_sketch_id', slotData.sketchId || ''); } catch (ex) {}
       if (_studioPickup2) {
         try { localStorage.removeItem('datum_sketch_pickup_for_studio'); } catch(ex) {}
-        window.location.href = '/studio.html?id=' + slotIdx + '&hydrate=sketch';
+        window.location.href = '/studio.html?id=' + encodeURIComponent(slotData.sketchId || slotIdx) + '&hydrate=sketch';
       } else {
         sessionStorage.setItem('datumfi_skip_entry_overlay', '1');
         window.location.href = '/sketch.html';

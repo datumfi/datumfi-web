@@ -13211,37 +13211,49 @@
     var _id = params.get('id');
     if (!_id || params.get('hydrate') !== 'sketch') return;
 
-    var _sketch = null;
-    try { _sketch = JSON.parse(localStorage.getItem('datum_sketch_state_' + _id) || 'null'); } catch(ex) {}
-    if (!_sketch) {
-      var _sBlob = null;
-      try { _sBlob = JSON.parse(localStorage.getItem('datumfi_sketchbook_v1') || 'null'); } catch(ex) {}
-      _sketch = (_sBlob && (_sBlob['slot_' + _id] || _sBlob.slot_1)) || null;
+    // Open BY sketch_id (uuid) — the per-id stash holds the CORRECT record for ANY page (mirror the
+    // blueprint consumer's datum_blueprint_state_<id> above); D1-by-uuid is the fresh truth when
+    // reachable. The OLD datum_sketch_state_<id> read used a PAGE-LOCAL slot index (1-4) and
+    // wrong-opened any page-2+ sketch (it could only ever see the newest-4). No slot fallback now.
+    function _applySketch(_sketch) {
+      if (!_sketch) return;
+      setTimeout(function() {
+        var _now = new Date().getFullYear();
+        if (_sketch.age) {
+          var _dobEl = document.getElementById('pri-dob');
+          if (_dobEl) _dobEl.value = '01 / ' + (_now - _sketch.age);
+        }
+        if (_sketch.age && _sketch.retire_age) {
+          var _retEl = document.getElementById('target-ret');
+          if (_retEl) _retEl.value = '01 / ' + (_now + (_sketch.retire_age - _sketch.age));
+        }
+        // #4b: spend-input mirrors the HAVE datum slider, so seed it from the CURRENT
+        // (S1) datum, not the collapsed designed datum_spend. (Mirror is overwritten by
+        // syncSpendFromDatumSlider on next render; kept in agreement to avoid a flash.)
+        var _haveSpend = _sketch.s1_datum || _sketch.datum_spend;
+        if (_haveSpend) {
+          var _spendEl = document.getElementById('spend-input');
+          if (_spendEl) _spendEl.value = '$' + Math.round(_haveSpend).toLocaleString('en-US');
+        }
+        if (typeof updateSVGs === 'function') updateSVGs();
+        // Entry toast suppressed (Captain): the prefill above is silent — no
+        // "Sketch outline loaded" pop on hydration.
+      }, 600);
     }
-    if (!_sketch) return;
-
-    setTimeout(function() {
-      var _now = new Date().getFullYear();
-      if (_sketch.age) {
-        var _dobEl = document.getElementById('pri-dob');
-        if (_dobEl) _dobEl.value = '01 / ' + (_now - _sketch.age);
+    var _sketch = null;
+    try { _sketch = JSON.parse(localStorage.getItem('datum_sketch_byid_' + _id) || 'null'); } catch(ex) {}
+    if (_sketch) { _applySketch(_sketch); return; }
+    // Not stashed locally (rare — e.g. a fresh device that hasn't opened the Sketchbook) — pull the
+    // EXACT row from D1 by uuid. Still NO page-local slot fallback: unreachable + unstashed hydrates
+    // nothing rather than ever showing a different sketch.
+    try {
+      if (window.DatumD1 && DatumD1.getDoc && DatumD1.CUTOVER !== false && DatumD1.signedIn && DatumD1.signedIn()) {
+        DatumD1.getDoc('sketchbook', _id).then(function (f) {
+          var s = null; try { s = (f && f.payload) ? JSON.parse(f.payload) : null; } catch (e) {}
+          _applySketch(s);
+        }).catch(function () {});
       }
-      if (_sketch.age && _sketch.retire_age) {
-        var _retEl = document.getElementById('target-ret');
-        if (_retEl) _retEl.value = '01 / ' + (_now + (_sketch.retire_age - _sketch.age));
-      }
-      // #4b: spend-input mirrors the HAVE datum slider, so seed it from the CURRENT
-      // (S1) datum, not the collapsed designed datum_spend. (Mirror is overwritten by
-      // syncSpendFromDatumSlider on next render; kept in agreement to avoid a flash.)
-      var _haveSpend = _sketch.s1_datum || _sketch.datum_spend;
-      if (_haveSpend) {
-        var _spendEl = document.getElementById('spend-input');
-        if (_spendEl) _spendEl.value = '$' + Math.round(_haveSpend).toLocaleString('en-US');
-      }
-      if (typeof updateSVGs === 'function') updateSVGs();
-      // Entry toast suppressed (Captain): the prefill above is silent — no
-      // "Sketch outline loaded" pop on hydration.
-    }, 600);
+    } catch (ex) {}
   })();
   /* ── END R3.6 SKETCH HYDRATION HANDSHAKE ───────────────── */
   </script>

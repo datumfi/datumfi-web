@@ -9312,9 +9312,13 @@ Studio is built for exactly this. See If This Shape Holds →`;
       try { _lsData = JSON.parse(localStorage.getItem('datumfi_sketchbook_v1') || 'null'); } catch(ex) {}
       var _contract = null;
       if (_hid) { try { _contract = JSON.parse(localStorage.getItem('datum_sketch_byid_' + _hid) || 'null'); } catch(e) {} }
-      // SLOT FALLBACK — only when there is no id / no stash (rare, offline). Prefer the clicked slot,
-      // then slot_1. Never wrong-open a page-2 sketch: the id-stash path above wins whenever reachable.
-      if (!_contract) { _contract = _lsData && (_lsData['slot_' + _hydrateSlot] || _lsData.slot_1); }
+      // When we HAVE an id but the stash missed, accept a net slot ONLY if it IS this id — never a
+      // page-local slot of a different (newest-4) sketch. This closes the page-2 wrong-open entirely.
+      if (!_contract && _hid && _lsData) {
+        for (var _mn = 1; _mn <= 4; _mn++) { var _ms = _lsData['slot_' + _mn]; if (_ms && _ms.sketch_id === _hid) { _contract = _ms; break; } }
+      }
+      // Legacy no-id path only (older opens that never carried a sketch_id): fall back to the clicked slot.
+      if (!_contract && !_hid) { _contract = _lsData && (_lsData['slot_' + _hydrateSlot] || _lsData.slot_1); }
       if (!_contract) return;
 
       var _slAge     = document.getElementById('slider-age');
