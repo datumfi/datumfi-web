@@ -10644,6 +10644,11 @@
     // syncs run (init + the +600ms hydration handshake), so the recomputed ceiling uses
     // Sketch's compounding window and not a year-short date round-trip. No-op without a carry.
     function _reassertCarriedAges() {
+      // #345 — no-op on a ?hydrate=sketch open. Carried ages come from the newest blueprint
+      // (bp.current), not the opened sketch, so re-asserting repaints the wrong age over the
+      // seed. Read the load URL from the nav entry — the replaceState at :13394 wipes
+      // location.search after hydration, so location.search here is unreliable.
+      try { var _navC = performance.getEntriesByType('navigation')[0]; if (_navC && new URL(_navC.name).searchParams.get('hydrate') === 'sketch') return; } catch (e) {}
       var a = window._studioCarriedAges; if (!a) return;
       var sA = $('slider-age'), sR = $('slider-activation');
       if (sA && a.age > 0)    { sA.value = clampN(a.age, 18, 85); updateAgeLabel(); }
@@ -10655,6 +10660,12 @@
     // climate selection. Re-assert them from the live bp AFTER those syncs settle, symmetric
     // to captureDOM's read. No-op on a Sketch carry (the ?hydrate=sketch handshake owns dates).
     function _reassertRestoredProfile() {
+      // #345 — no-op on a ?hydrate=sketch open. This repaints pri-dob/target-ret/age from
+      // window._studioBp.profile (the NEWEST blueprint), clobbering the correct sketch seed.
+      // The sessionStorage guard below was meant to skip sketch carries but the direct card-open
+      // never sets those keys (they're written only in sketch.html), so it never fired. Gate on
+      // the actual load URL as well — keep the sessionStorage guard too (belt-and-suspenders).
+      try { var _navP = performance.getEntriesByType('navigation')[0]; if (_navP && new URL(_navP.name).searchParams.get('hydrate') === 'sketch') return; } catch (e) {}
       if (sessionStorage.getItem('datum_currentAge') || sessionStorage.getItem('datum_targetSpend')) return;
       var bp = window._studioBp; if (!bp) return;
       var prof = bp.profile || {};
@@ -13235,6 +13246,14 @@
           var _spendEl = document.getElementById('spend-input');
           if (_spendEl) _spendEl.value = '$' + Math.round(_haveSpend).toLocaleString('en-US');
         }
+        // #345 — flow the seeded dates into the age/activation sliders + Shape via the SAME
+        // wired 'change' path a user's date edit uses (wireProfileBindings :11331 ->
+        // syncFromProfileDates -> slider-age/activation + refreshAllLabels + fireUpdate).
+        // Text-only seeding left the sliders reading the blueprint's age; the guarded reasserts
+        // above no longer repaint over this. _dobEl/_retEl are var-declared earlier in this
+        // callback (undefined if that field was skipped — the if-guard covers it).
+        if (_dobEl) _dobEl.dispatchEvent(new Event('change', { bubbles: true }));
+        if (_retEl) _retEl.dispatchEvent(new Event('change', { bubbles: true }));
         if (typeof updateSVGs === 'function') updateSVGs();
         // Entry toast suppressed (Captain): the prefill above is silent — no
         // "Sketch outline loaded" pop on hydration.
