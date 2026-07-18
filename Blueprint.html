@@ -1646,7 +1646,21 @@ function turnPage(to) {
     setTimeout(function () { _folding = false; }, ms + 60);
   } else {
     stage.classList.remove('folded');
-    setTimeout(function () { ARCH.page = to; renderArchivePage(); stage.classList.remove('leaf-on'); _folding = false; }, ms + 60);
+    setTimeout(function () {
+      ARCH.page = to; renderArchivePage();
+      if (to >= 1) {
+        // Landed mid-book (page >=2): a folded leaf must stay over the brass so the spiral rings
+        // show ONLY on page 1 — same end-state as a forward turn. Re-settle folded WITHOUT a
+        // transition (no second fold animation), then restore it for the next turn.
+        var _lf = document.getElementById('bp-leaf');
+        stage.classList.add('leaf-on');
+        if (_lf) { _lf.style.transition = 'none'; stage.classList.add('folded'); void _lf.offsetWidth; _lf.style.transition = ''; }
+        else { stage.classList.add('folded'); }
+      } else {
+        stage.classList.remove('leaf-on');   // landed on page 1 — brass rings visible
+      }
+      _folding = false;
+    }, ms + 60);
   }
 }
 
