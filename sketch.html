@@ -2878,6 +2878,8 @@
   <script src="/scripts/datum-shape-copy.js"></script>
   <script src="/scripts/lz-string.min.js"></script>
   <script src="/scripts/datum-archive-codec.js"></script>
+  <script src="/scripts/datum-tier.js"></script>
+  <script src="/scripts/datum-archive-paging.js"></script>
   <script src="/scripts/datum-d1.js"></script>
   <script>
     // #310 Part 3 — hold an in-app navigation until DatumD1.drain() settles (flush the debounced sketch
@@ -9011,7 +9013,10 @@ Studio is built for exactly this. See If This Shape Holds →`;
       // OWN D1 row (doc_key = sketch_id). serializeSketchState() mints a FRESH uuid every call, so an
       // OVERWRITE of a filled slot must REUSE that slot's existing sketch_id (updates the same D1 row);
       // a fresh save keeps the newly-minted id (a brand-new row). Mirrors studio-blueprint's per-slot id.
-      function _stableSketchId(slotN, payload) {
+      function _stableSketchId(slotN, payload, forceNew) {
+        // forceNew = save-as-a-new-sketch: KEEP the freshly-minted uuid so this becomes its OWN
+        // brand-new D1 row (unlimited sketches). Overwrite (forceNew falsy) reuses the slot's id.
+        if (forceNew) return payload.sketch_id;
         try {
           var prev = JSON.parse(localStorage.getItem('datum_sketch_state_' + slotN) || 'null');
           if (prev && prev.sketch_id) return prev.sketch_id;
@@ -9036,21 +9041,34 @@ Studio is built for exactly this. See If This Shape Holds →`;
 
       // P5 Step-3: write the CHOSEN slot (1..4), preserving the other slots. source:'nav'
       // (picker, any phase) -> DRAFTED; source:'phaseV' (full-experience CTA) -> MODELED.
-      function _doSave(slotN, source) {
+      function _doSave(slotN, source, forceNew) {
         var _slot = (slotN >= 1 && slotN <= 4) ? slotN : 1;
         var prev = null;
         try { prev = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch(ex) {}
         var payload = serializeSketchState();
-        payload.sketch_id = _stableSketchId(_slot, payload);   // P5b — stable per-slot D1 identity (LS + D1 share it)
+        payload.sketch_id = _stableSketchId(_slot, payload, forceNew);   // P5b — stable per-slot id; forceNew mints a NEW row
         payload.status = (source === 'phaseV') ? 'Modeled' : 'Drafted';
         var now = new Date();
         var mm  = String(now.getMonth() + 1).padStart(2, '0');
         var ddS = String(now.getDate()).padStart(2, '0');
         var data = (prev && typeof prev === 'object') ? prev : {};
         if (!data.sketchbook_title) data.sketchbook_title = 'Sketch from ' + mm + '/' + ddS + '/' + now.getFullYear();
-        data['slot_' + _slot] = payload;
+        if (forceNew) {
+          // Save-as-new (unlimited): the NEW D1 row + per-id stash (datum_sketch_byid_<id>) are the
+          // SOURCE OF TRUTH. The newest-4 LS net-roll below is a DEGRADED-OFFLINE CACHE ONLY — slot_4
+          // dropping out of the 4-deep net is NOT a delete: the sketch still lives in D1/stash and
+          // still opens by id + appears in the full paged list. The net must never re-cap D1 truth.
+          data.slot_4 = data.slot_3 || null;
+          data.slot_3 = data.slot_2 || null;
+          data.slot_2 = data.slot_1 || null;
+          data.slot_1 = payload;
+          _slot = 1;
+        } else {
+          data['slot_' + _slot] = payload;
+        }
         try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch(ex) {}
         try { localStorage.setItem('datum_sketch_state_' + _slot, JSON.stringify(payload)); } catch(ex) {}
+        try { localStorage.setItem('datum_sketch_byid_' + payload.sketch_id, JSON.stringify(payload)); } catch(ex) {}   // per-id stash -> open ANY sketch by id (mirror sketchbook _stashSketchForOpen)
         _d1WriteSketch(payload);   // P5b Layer-1 — ADDITIVE: this saved sketch as its OWN D1 row (key=sketch_id)
         sessionStorage.setItem('datumfi_just_saved', '1');
         sessionStorage.setItem('datumfi_sketch_return_screen', window.location.hash || '#screen-5-build');
@@ -9144,15 +9162,28 @@ Studio is built for exactly this. See If This Shape Holds →`;
       function _skRenderSlots() {
         if (!_pop) return;
         _pop.innerHTML = '';
-        var head = document.createElement('div'); head.textContent = 'Save to which sheet?'; head.style.cssText = _PHEAD; _pop.appendChild(head);
-        [1, 2, 3, 4].forEach(function (n) {
-          var b = document.createElement('button'); b.type = 'button'; b.textContent = _skSlotLabel(n);
-          b.style.cssText = 'text-align:left;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.12);color:var(--white,#fff);font-family:var(--font-mono);font-size:11px;padding:8px 10px;border-radius:4px;cursor:pointer;';
-          b.addEventListener('mouseenter', function () { b.style.borderColor = 'var(--teal,#1d9e75)'; });
-          b.addEventListener('mouseleave', function () { b.style.borderColor = 'rgba(255,255,255,0.12)'; });
-          b.addEventListener('click', function (e) { e.stopPropagation(); if (_skIsFilled(n)) _skConfirmOverwrite(n); else _skSaveTo(n); });
-          _pop.appendChild(b);
-        });
+        var head = document.createElement('div'); head.textContent = 'Save this sketch'; head.style.cssText = _PHEAD; _pop.appendChild(head);
+        // PRIMARY — save as a NEW sketch (unlimited: mints its own D1 row). Under the Design tier
+        // DatumTier.savedCap() === Infinity, so this is always allowed. When the single tier switch
+        // later flips to Discover the dormant #discover-capacity-modal becomes the gate here — that
+        // is intentionally NOT wired now (constraint #1: the modal stays dormant).
+        var _nb = document.createElement('button'); _nb.type = 'button'; _nb.textContent = '＋  Save as a new sketch';
+        _nb.style.cssText = 'text-align:left;background:rgba(201,168,76,0.12);border:1px solid var(--gold,#c9a84c);color:var(--gold,#c9a84c);font-family:var(--font-mono);font-size:11px;padding:8px 10px;border-radius:4px;cursor:pointer;';
+        _nb.addEventListener('click', function (e) { e.stopPropagation(); _skClose(); _doSave(1, 'nav', true); });
+        _pop.appendChild(_nb);
+        // Secondary — OVERWRITE one of the visible recent sketches (newest-4 LS view). Filled slots only.
+        var _slots = []; for (var _n = 1; _n <= 4; _n++) { if (_skIsFilled(_n)) _slots.push(_n); }
+        if (_slots.length) {
+          var _oh = document.createElement('div'); _oh.textContent = 'or overwrite a recent sketch'; _oh.style.cssText = _PHEAD; _pop.appendChild(_oh);
+          _slots.forEach(function (n) {
+            var b = document.createElement('button'); b.type = 'button'; b.textContent = _skSlotLabel(n);
+            b.style.cssText = 'text-align:left;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.12);color:var(--white,#fff);font-family:var(--font-mono);font-size:11px;padding:8px 10px;border-radius:4px;cursor:pointer;';
+            b.addEventListener('mouseenter', function () { b.style.borderColor = 'var(--teal,#1d9e75)'; });
+            b.addEventListener('mouseleave', function () { b.style.borderColor = 'rgba(255,255,255,0.12)'; });
+            b.addEventListener('click', function (e) { e.stopPropagation(); _skConfirmOverwrite(n); });
+            _pop.appendChild(b);
+          });
+        }
       }
       function _skOpen(anchor) {
         anchor = anchor || _navSaveBtn || document.body;
@@ -9183,12 +9214,9 @@ Studio is built for exactly this. See If This Shape Holds →`;
       function _firstEmptySlot() { for (var n = 1; n <= 4; n++) { if (!_skIsFilled(n)) return n; } return null; }
       function _gatedPhaseVSave() {
         if (!sessionStorage.getItem('datum_auth_hint')) { _hopToVaultSave(); return; }
-        var n = _firstEmptySlot();
-        if (n) { _doSave(n, 'phaseV'); return; }
-        _ovSlot = 1; _ovSource = 'phaseV';
-        var modal = document.getElementById('sketch-overwrite-modal');
-        if (modal) { modal.classList.add('open'); return; }
-        _doSave(1, 'phaseV');
+        // Unlimited: every Phase-V completion mints its OWN sketch row (roll the newest-4 net) so a
+        // 5th save becomes a 5th sketch, not an overwrite. (Nav picker still offers explicit overwrite.)
+        _doSave(1, 'phaseV', true);
       }
       _ctaMain.addEventListener('click', function(e) { e.preventDefault(); _gatedPhaseVSave(); });
       window.sketchSaveCurrent = function (anchor) { _gatedNavSave(anchor); };
@@ -9214,9 +9242,17 @@ Studio is built for exactly this. See If This Shape Holds →`;
       var _hydrateSlot = sessionStorage.getItem('datumfi_hydrate_from_slot');
       if (!_hydrateSlot) return;
       sessionStorage.removeItem('datumfi_hydrate_from_slot');
+      // Open BY sketch_id (paged-safe — works for A-05+ on page 2+). The per-id stash
+      // (datum_sketch_byid_<id>) is written for every saved sketch, so this is the truth path.
+      var _hid = sessionStorage.getItem('datumfi_hydrate_sketch_id');
+      sessionStorage.removeItem('datumfi_hydrate_sketch_id');
       var _lsData = null;
       try { _lsData = JSON.parse(localStorage.getItem('datumfi_sketchbook_v1') || 'null'); } catch(ex) {}
-      var _contract = _lsData && _lsData.slot_1;
+      var _contract = null;
+      if (_hid) { try { _contract = JSON.parse(localStorage.getItem('datum_sketch_byid_' + _hid) || 'null'); } catch(e) {} }
+      // SLOT FALLBACK — only when there is no id / no stash (rare, offline). Prefer the clicked slot,
+      // then slot_1. Never wrong-open a page-2 sketch: the id-stash path above wins whenever reachable.
+      if (!_contract) { _contract = _lsData && (_lsData['slot_' + _hydrateSlot] || _lsData.slot_1); }
       if (!_contract) return;
 
       var _slAge     = document.getElementById('slider-age');
@@ -9291,7 +9327,8 @@ Studio is built for exactly this. See If This Shape Holds →`;
       var _id = new URLSearchParams(window.location.search).get('id');
       if (!_id) return;
       var _contract = null;
-      try { _contract = JSON.parse(localStorage.getItem('datum_sketch_state_' + _id) || 'null'); } catch(ex) {}
+      try { _contract = JSON.parse(localStorage.getItem('datum_sketch_byid_' + _id) || 'null'); } catch(ex) {}   // prefer per-id stash (paged-safe)
+      if (!_contract) { try { _contract = JSON.parse(localStorage.getItem('datum_sketch_state_' + _id) || 'null'); } catch(ex) {} }
       if (!_contract) {
         var _blob = null;
         try { _blob = JSON.parse(localStorage.getItem('datumfi_sketchbook_v1') || 'null'); } catch(ex) {}
