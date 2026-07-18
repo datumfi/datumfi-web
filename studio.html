@@ -13246,6 +13246,33 @@
           var _spendEl = document.getElementById('spend-input');
           if (_spendEl) _spendEl.value = '$' + Math.round(_haveSpend).toLocaleString('en-US');
         }
+        // #345 Tier 2 — seed 02/YOUR CAPITAL + 03/YOUR CONTRIBUTIONS + 04/YOUR DATUM sliders from
+        // the sketch stash (dollars) via the shared log scales (window.DatumShape.scales; the
+        // in-scope SC/clampN live in a different <script>). Set .value (log position) +
+        // .dataset.exactVal (exact dollars — the label updaters prefer it) so each section shows
+        // the card's real figure. slider-datum is the SINGLE SOURCE (spend-input is a mirror only,
+        // :9602), so seeding it fixes the 04/YOUR DATUM headline AND the downstream DEFINE-YOUR-DATUM
+        // Target Annual Spend. The date 'change' dispatch below then runs refreshAllLabels +
+        // fireUpdate to repaint + recompute. G5 capital-authority (:8808) only overwrites
+        // slider-portfolio when real account rooms exist (_invTotal>0) — a sketch open has none, so
+        // the seeded portfolio stands until the user builds rooms in Studio.
+        var _scales = window.DatumShape && DatumShape.scales;
+        if (_scales) {
+          var _clamp = function (v) { return Math.max(0, Math.min(100000, v)); };
+          if (_sketch.portfolio_mass > 0 && _scales.portValToPos) {
+            var _sPo = document.getElementById('slider-portfolio');
+            if (_sPo) { _sPo.value = _clamp(_scales.portValToPos(_sketch.portfolio_mass / 1e6)); _sPo.dataset.exactVal = String(Math.round(_sketch.portfolio_mass)); }
+          }
+          if (typeof _sketch.contributions === 'number' && _scales.contribValToPos) {
+            var _sCon = document.getElementById('slider-contrib');
+            if (_sCon) { _sCon.value = _clamp(_scales.contribValToPos(Math.round(_sketch.contributions))); _sCon.dataset.exactVal = String(Math.round(_sketch.contributions)); }
+          }
+          var _datumD = _sketch.s1_datum || _sketch.datum_spend;
+          if (_datumD > 0 && _scales.datumValToPos) {
+            var _sDat = document.getElementById('slider-datum');
+            if (_sDat) { _sDat.value = _clamp(_scales.datumValToPos(_datumD / 1000)); _sDat.dataset.exactVal = String(Math.round(_datumD)); }
+          }
+        }
         // #345 — flow the seeded dates into the age/activation sliders + Shape via the SAME
         // wired 'change' path a user's date edit uses (wireProfileBindings :11331 ->
         // syncFromProfileDates -> slider-age/activation + refreshAllLabels + fireUpdate).
