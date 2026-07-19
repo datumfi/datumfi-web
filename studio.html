@@ -13273,6 +13273,18 @@
             if (_sDat) { _sDat.value = _clamp(_scales.datumValToPos(_datumD / 1000)); _sDat.dataset.exactVal = String(Math.round(_datumD)); }
           }
         }
+        // #357-fix — carry Plan-Through Age too: it lives in the sketch payload (plan_end_age,
+        // sketch.html:8963) but NOTHING seeded it, so the newest blueprint's value (e.g. 85) stood.
+        // sl-plan-through is the SINGLE PTA-age source (:9614). Set it here; the date 'change'
+        // dispatch below runs refreshAllLabels (-> updatePlanThroughLabel) + fireUpdate, so the label
+        // + Shape + engine payload (plan_end_age) all pick it up — the SAME event-driven repaint the
+        // seeded capital/contrib/datum sliders above rely on. Saved sketches already satisfy the
+        // RA+20 floor, so no re-clamp is needed beyond the slider's own [75,105] range.
+        var _pta = parseInt(_sketch.plan_end_age, 10);
+        if (_pta > 0) {
+          var _sPlan = document.getElementById('sl-plan-through');
+          if (_sPlan) _sPlan.value = Math.max(75, Math.min(105, _pta));
+        }
         // #345 — flow the seeded dates into the age/activation sliders + Shape via the SAME
         // wired 'change' path a user's date edit uses (wireProfileBindings :11331 ->
         // syncFromProfileDates -> slider-age/activation + refreshAllLabels + fireUpdate).
