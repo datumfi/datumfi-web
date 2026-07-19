@@ -7494,7 +7494,9 @@
             </button>`;
             
             if(acc.showHoldings) {
-                if (window.ensureTickerBundle) window.ensureTickerBundle();   // Stage-3: lazy-load bundle on first holdings-modal open
+                // #364 MISS-6 sub#3 — NO eager bundle prefetch: fundamentals now resolve D1-first per
+                // ticker (fetchTickerFundamentals -> /api/tickers); the ~1.74MB curated bundle loads ONLY
+                // as a fail-soft fallback when a D1 lookup misses. This is the client-payload win.
                 // PHANTOM FIX — a fixed 1200px card overflows narrower viewports, and the card's own
                 // HORIZONTAL scrollbar (teal thumb, brightens on :hover, line ~52) renders below the
                 // DI as a long glowing inert bar. Cap the card to the viewport; the holdings TABLE
@@ -8008,11 +8010,37 @@
     var _BUNDLE_FIELDS = { name: [], instrumentType: [], sector: ['sectorSrc'], geography: ['geographySrc'], expRatio: ['expRatioSrc'], assetClass: ['assetClassSrc'], beta: ['betaSrc', 'betaAsOf', 'betaMethod'], dividendYield: ['dividendYieldSrc', 'dividendYieldAsOf'] };
     var _SRC_TO_BASE = {}; for (var _bf in _BUNDLE_FIELDS) { _BUNDLE_FIELDS[_bf].forEach(function (k) { _SRC_TO_BASE[k] = _bf; }); }
 
+    // #364 MISS-6 sub#3 — per-ticker fundamentals from the D1-backed /api/tickers endpoint (GLOBAL,
+    // unauthenticated PUBLIC reference — no Clerk token; same-origin, allowed by connect-src 'self').
+    // Cached per symbol. Returns the fundamentals object (same shape as a bundle entry) or null
+    // (reachable-but-absent OR unreachable) -> the caller falls back to the lazy curated bundle. This
+    // replaces loading the whole ~1.74MB universe up front with an on-demand per-symbol read.
+    var _tickerCache = {};
+    window.fetchTickerFundamentals = function (ticker) {
+        ticker = (ticker || '').toUpperCase();
+        if (!ticker) return Promise.resolve(null);
+        if (Object.prototype.hasOwnProperty.call(_tickerCache, ticker)) return Promise.resolve(_tickerCache[ticker]);
+        return fetch('/api/tickers?symbols=' + encodeURIComponent(ticker))
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (j) {
+                var row = j && j.tickers && j.tickers[0], e = null;
+                if (row && row.payload_json) { try { e = JSON.parse(row.payload_json); } catch (x) {} }
+                _tickerCache[ticker] = e;   // cache the hit OR a reachable-absent null (no refetch this session)
+                return e;
+            })
+            .catch(function () { return null; });   // unreachable (NOT cached) -> caller falls back to the bundle
+    };
+
     window.fetchMockData = function(id, index, ticker) {
         ticker = ticker.toUpperCase();
-        // Auto-fill STABLE non-price fields from the lazy-loaded curated+sourced universe. PRICE never
-        // comes from the bundle (live-feed only; CF-Worker parked) — it stays a user-entered field.
-        window.ensureTickerBundle().then(function (bundle) {
+        // #364 MISS-6 sub#3 — resolve fundamentals D1-FIRST (/api/tickers via fetchTickerFundamentals),
+        // falling back to the lazy ~1.74MB curated bundle ONLY if D1 is unreachable or lacks the symbol.
+        // The bundle no longer loads on the common path (the payload win); nothing it knew is ever lost.
+        // PRICE never comes from either source (live-feed only) — it stays a user-entered field.
+        window.fetchTickerFundamentals(ticker).then(function (e) {
+            if (e) return e;
+            return window.ensureTickerBundle().then(function (bundle) { return bundle[ticker] || null; });
+        }).then(function (e) {
             let acc = state.accounts.find(a=>a.id===id);
             if (!acc) return;
             let h = acc.holdings[index];
@@ -8021,8 +8049,7 @@
             var owned = h._userSet || {};
             // CLEAR every bundle-derived field (+ its provenance companions) the user did NOT hand-enter.
             for (var f in _BUNDLE_FIELDS) { if (!owned[f]) { delete h[f]; _BUNDLE_FIELDS[f].forEach(function (k) { delete h[k]; }); } }
-            // RE-RESOLVE from the new ticker through the normal ladder; never clobber a user-owned field.
-            var e = bundle[ticker];
+            // APPLY the resolved fundamentals (D1 or bundle-fallback); never clobber a user-owned field.
             if (e) { Object.keys(e).forEach(function (k) { var base = _SRC_TO_BASE[k] || k; if (_BUNDLE_FIELDS.hasOwnProperty(base) && owned[base]) return; h[k] = e[k]; }); }
             recalcPortfolio(acc);
             // P0 GUARD — re-render ONLY if this account's modal is still the one on screen. The bundle
