@@ -20,10 +20,12 @@ compatibility_flags = ["nodejs_compat"]
 [triggers]
 crons = ["0 0 1 * *"]
 
-# Same GLOBAL ticker_reference store the Pages read endpoint queries. Binding "DB" -> datumfi-prod in
-# production, datumfi-dev under `wrangler dev`. The table is un-scoped — there is NO user id here.
+# Same GLOBAL ticker_reference store the Pages read endpoint queries. Binding "DB" -> datumfi-prod
+# (347cd869). The table is un-scoped — there is NO user id here.
+# #363 — preview_database_id (datumfi-dev ffeda412) REMOVED: `wrangler deploy` was binding env.DB to the
+# PREVIEW id, so the populate landed in the DEV db while datumfi.com (prod) stayed empty. This Worker only
+# ever targets the prod ticker table (a monthly idempotent refresh), so there is no dev binding to keep.
 [[d1_databases]]
 binding = "DB"
 database_name = "datumfi-prod"
 database_id = "347cd869-7dfe-4f6d-83b1-7c2b56bf2bb6"
-preview_database_id = "ffeda412-3cf2-46c0-9ba6-7f0ddbe06539"
