@@ -3756,27 +3756,45 @@ input:focus,select:focus{
     Clerk.load().then(function () {
       if (!Clerk.user) return;
       var meta = Clerk.user.unsafeMetadata || {};
-      var clerkDossier = meta.dossier;
-      var localData = readLocal();
-      if (clerkDossier) {
-        var clerkTime = new Date(clerkDossier.savedAt || 0).getTime();
-        var localTime = new Date((localData && localData.savedAt) || 0).getTime();
-        if (localTime > clerkTime) {
-          var pushMeta = Object.assign({}, meta, { dossier: localData });
-          Clerk.user.update({ unsafeMetadata: pushMeta }).catch(function () {});
-          pinFromPayload(localData);
-        } else {
-          reloadFromPayload(clerkDossier);
-        }
-      } else {
-        if (localData) {
-          var migMeta = Object.assign({}, meta, {
-            dossier: localData,
-            workspaceName: localStorage.getItem('datum_workspace_name') || undefined
-          });
-          Clerk.user.update({ unsafeMetadata: migMeta }).catch(function () {});
-        }
+      // MISS-6 sub #2 — dossier prefs READ-cutover (additive, lossless): prefer the D1
+      // preferences/dossier row; the Clerk unsafeMetadata.dossier stays a SILENT FALLBACK (D1
+      // absent / unreachable / signed out / CUTOVER=false / no row yet). Nothing retired — the
+      // newest-wins push below + the save-time writePreferences keep both mirrors intact, and a
+      // CUTOVER=false rollback is an instant no-op. The D1 row IS the dossier object (carries savedAt),
+      // so the same newest-wins-vs-local comparison runs unchanged.
+      function _resolveDossier(cb) {
+        var _clerk = meta.dossier;
+        var D1 = window.DatumD1;
+        var _live = D1 && D1.CUTOVER !== false && typeof D1.signedIn === 'function' && D1.signedIn() && typeof D1.getDoc === 'function';
+        if (!_live) { cb(_clerk); return; }
+        D1.getDoc('preferences', 'dossier').then(function (d) {
+          var dos = null;
+          try { if (d && d.payload) dos = JSON.parse(d.payload); } catch (e) {}
+          cb(dos || _clerk);                         // D1 wins when present; else the Clerk mirror
+        }).catch(function () { cb(_clerk); });         // unreachable / timeout -> Clerk fallback
       }
+      _resolveDossier(function (clerkDossier) {
+        var localData = readLocal();
+        if (clerkDossier) {
+          var clerkTime = new Date(clerkDossier.savedAt || 0).getTime();
+          var localTime = new Date((localData && localData.savedAt) || 0).getTime();
+          if (localTime > clerkTime) {
+            var pushMeta = Object.assign({}, meta, { dossier: localData });
+            Clerk.user.update({ unsafeMetadata: pushMeta }).catch(function () {});
+            pinFromPayload(localData);
+          } else {
+            reloadFromPayload(clerkDossier);
+          }
+        } else {
+          if (localData) {
+            var migMeta = Object.assign({}, meta, {
+              dossier: localData,
+              workspaceName: localStorage.getItem('datum_workspace_name') || undefined
+            });
+            Clerk.user.update({ unsafeMetadata: migMeta }).catch(function () {});
+          }
+        }
+      });
     }).catch(function () {});
   });
 
