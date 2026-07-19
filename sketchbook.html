@@ -3037,6 +3037,7 @@
    Decoupled from the folding leaf so a mid-book turn can never re-reveal the spine. */
 .spiral{ transition:opacity var(--fold-ms) ease; }   /* fade tracks the page fold (was .45s = faded before the fold finished) */
 .sketchbook-wrapper.past-cover .spiral{ opacity:0; }
+.sketchbook-wrapper.rings-front .spiral{ z-index:40; }   /* reverse-to-p1: rings ride ABOVE the leaf so both staggered rings come in together (not occluded) */
 .sheet-stack.folded .leaf .front::after{ opacity:1; }
 @media(prefers-reduced-motion:reduce){ .leaf{ transition:none; } }
 </style>
@@ -3149,7 +3150,7 @@
       if (to >= 1) stage.classList.add('cover-on');
       // FIX 2 timing — reveal the brass as the page STARTS lifting (not after the fold completes):
       // drop the page-gate at unfold start when returning to page 1, so the rings fade in with the motion.
-      if (to === 0) { var _wr = document.querySelector('.sketchbook-wrapper'); if (_wr) _wr.classList.remove('past-cover'); }
+      if (to === 0) { var _wr = document.querySelector('.sketchbook-wrapper'); if (_wr) { _wr.classList.remove('past-cover'); _wr.classList.add('rings-front'); } }
       stage.classList.remove('folded');
       setTimeout(function () {
         p.page = to; renderPage();
@@ -3163,6 +3164,7 @@
           else { stage.classList.add('folded'); }
         } else {
           stage.classList.remove('leaf-on');   // landed on page 1 — brass rings visible
+          var _wr2 = document.querySelector('.sketchbook-wrapper'); if (_wr2) _wr2.classList.remove('rings-front');
         }
         stage.classList.remove('cover-on');   // leaf re-settled folded above (to>=1) — drop the backing now
         _skFolding = false;
