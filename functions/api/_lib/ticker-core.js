@@ -13,16 +13,24 @@
 // UPDATE) — no duplicates. payload_json is stored EXACTLY as given (forward-compatible; fields can grow).
 export async function upsertTickers(db, tickerMap) {
   const now = new Date().toISOString();
-  const symbols = Object.keys(tickerMap || {});
+  const symbols = Object.keys(tickerMap || {}).filter(Boolean);
+  const SQL =
+    'INSERT INTO ticker_reference (symbol, payload_json, updated_at) VALUES (?, ?, ?) ' +
+    'ON CONFLICT(symbol) DO UPDATE SET payload_json = excluded.payload_json, updated_at = excluded.updated_at';
+  // The universe is ~13k symbols. The old loop awaited ONE D1 write per symbol = ~13k sequential network
+  // round-trips in a single Worker invocation, which blew past the request/subrequest/time limits and HUNG
+  // the populate (both the manual GET and the Cron). Batch instead: db.batch() sends a whole chunk in ONE
+  // round-trip (transactional). ~13k / 100 = ~130 round-trips instead of ~13k. Idempotent as before
+  // (ON CONFLICT ... DO UPDATE). NOTE: .bind() returns a NEW statement — mint a fresh one per row, never
+  // share one across rows. In-memory sqlite has no such limits, which is why the gate never caught this.
+  const CHUNK = 100;
   let upserted = 0;
-  for (const sym of symbols) {
-    if (!sym) continue;
-    const payload = JSON.stringify(tickerMap[sym] || {});
-    await db.prepare(
-      'INSERT INTO ticker_reference (symbol, payload_json, updated_at) VALUES (?, ?, ?) ' +
-      'ON CONFLICT(symbol) DO UPDATE SET payload_json = excluded.payload_json, updated_at = excluded.updated_at'
-    ).bind(String(sym).toUpperCase(), payload, now).run();
-    upserted++;
+  for (let i = 0; i < symbols.length; i += CHUNK) {
+    const slice = symbols.slice(i, i + CHUNK);
+    const stmts = slice.map((sym) =>
+      db.prepare(SQL).bind(String(sym).toUpperCase(), JSON.stringify(tickerMap[sym] || {}), now));
+    await db.batch(stmts);
+    upserted += slice.length;
   }
   return { upserted };
 }
