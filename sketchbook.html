@@ -2861,14 +2861,16 @@
       <div class="book-cover" aria-hidden="true"></div>
       <div class="book-shadow" aria-hidden="true"></div>
 
+      <div class="sheet-stack" id="sk-stage">
+      <!-- #353 Edit A — spiral moved INTO the stage (was a sibling of #sk-stage) so the folding leaf
+           occludes BOTH staggered rings equally; combined with Edit B (z-18) this kills the p2->p1
+           inboard ::after reveal lag. -->
       <div class="spiral" aria-hidden="true">
         <div class="ring"></div><div class="ring"></div><div class="ring"></div><div class="ring"></div>
         <div class="ring"></div><div class="ring"></div><div class="ring"></div><div class="ring"></div>
         <div class="ring"></div><div class="ring"></div><div class="ring"></div><div class="ring"></div>
         <div class="ring"></div><div class="ring"></div><div class="ring"></div>
       </div>
-
-      <div class="sheet-stack" id="sk-stage">
       <div class="sketchbook-sheet">
 
         <div class="paper-smudge-overlay" aria-hidden="true">
@@ -3035,7 +3037,7 @@
 .sheet-stack.cover-on .leaf-base{ visibility:visible; }
 /* #352 FIX 2 — brass spine is page-state, NOT leaf-position: rings show ONLY on page 1.
    Decoupled from the folding leaf so a mid-book turn can never re-reveal the spine. */
-.spiral{ transition:opacity var(--fold-ms) ease; }   /* fade tracks the page fold (was .45s = faded before the fold finished) */
+.spiral{ z-index:18; transition:opacity var(--fold-ms) ease; }   /* #353 Edit B — z-18: within #sk-stage, above base page & leaf-base(16), below the moving leaf(20). Kills the p2->p1 ::after lag; without it the live z-24 sits ABOVE the leaf and rings paint through the paper. fade tracks the page fold. */
 .sketchbook-wrapper.past-cover .spiral{ opacity:0; }
 .sheet-stack.folded .leaf .front::after{ opacity:1; }
 @media(prefers-reduced-motion:reduce){ .leaf{ transition:none; } }
