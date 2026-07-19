@@ -2983,6 +2983,7 @@
         </footer>
 
       </div>
+      <div class="leaf-base" aria-hidden="true"><div class="back"></div></div>
       <div class="leaf" id="sk-leaf"><div class="face front" id="sk-leaf-front"></div><div class="face back"></div></div>
       </div>
     </div>
@@ -3021,6 +3022,17 @@
 .sheet-stack.leaf-on{ z-index:30; }
 .sheet-stack.leaf-on .leaf{ visibility:visible; }
 .sheet-stack.folded .leaf{ transform:rotateY(-178deg); }
+/* #352 FIX 2b — persistent "already-turned pages" cover. The ONE animating leaf can't be both the
+   resting left-cover AND the turning page, so a mid-book turn briefly vacated the left and exposed
+   the spine/blue. This static folded backing holds the left covered while the leaf turns; shown ONLY
+   for turns that stay past page 1 (.cover-on). At rest the folded leaf still covers, unchanged. */
+.leaf-base{ position:absolute; inset:0; z-index:16; transform-origin:left center; transform:rotateY(-178deg);
+  pointer-events:none; visibility:hidden; transform-style:preserve-3d; }
+.leaf-base .back{ position:absolute; inset:0; border-radius:18px 32px 32px 18px; overflow:hidden;
+  transform:rotateY(180deg); backface-visibility:hidden;
+  background:repeating-linear-gradient(-21deg, rgba(46,34,20,.02) 0 1px, transparent 1px 9px),linear-gradient(112deg,#f4edde 0%,#e9dec8 58%,#d7cab0 100%);
+  box-shadow:inset 0 0 0 1px rgba(45,36,20,.22),inset 44px 0 66px rgba(77,54,22,.14),inset 0 30px 44px rgba(255,255,255,.4); }
+.sheet-stack.cover-on .leaf-base{ visibility:visible; }
 /* #352 FIX 2 — brass spine is page-state, NOT leaf-position: rings show ONLY on page 1.
    Decoupled from the folding leaf so a mid-book turn can never re-reveal the spine. */
 .spiral{ transition:opacity .45s ease; }
@@ -3106,13 +3118,16 @@
     var stage = document.getElementById('sk-stage'), leafFront = document.getElementById('sk-leaf-front');
     if (!stage || !leafFront) { p.page = to; renderPage(); return; }
     _skFolding = true;
-    var forward = to > p.page, ms = _skFoldMs();
+    var forward = to > p.page, ms = _skFoldMs(), fromPg = p.page;
     if (forward) {
       var clone = document.querySelector('#sk-stage .sketchbook-sheet').cloneNode(true);
       clone.querySelectorAll('[id]').forEach(function (n) { n.removeAttribute('id'); });
       leafFront.innerHTML = ''; leafFront.appendChild(clone);
       p.page = to; renderPage();
       stage.classList.add('leaf-on');
+      // FIX 2b — mid-book forward turn (leaving page >=2): hold the left covered with the static
+      // backing so the vacating leaf never re-exposes the spine/blue. p1->p2 skips it (spine shows).
+      if (fromPg >= 1) stage.classList.add('cover-on');
       // Forward turn BEYOND page 1: the stage is still 'folded' from the prior turn, so re-adding
       // 'folded' is a no-op and the fold never animates (it flashes straight to the next page).
       // Reset the leaf flat WITHOUT a transition first (mirror the reverse mid-book re-settle at
@@ -3125,8 +3140,13 @@
         _lfF.style.transition = '';
       }
       requestAnimationFrame(function () { requestAnimationFrame(function () { stage.classList.add('folded'); }); });
-      setTimeout(function () { _skFolding = false; }, ms + 60);
+      // ms+60 fires ~28ms AFTER the fold transition ends (start+~32ms + fold_ms), so the leaf is
+      // provably settled folded-over-the-left before the backing drops — no seam.
+      setTimeout(function () { stage.classList.remove('cover-on'); _skFolding = false; }, ms + 60);
     } else {
+      // FIX 2b — mid-book back-turn (landing page >=2): keep the left covered during the unfold.
+      // Landing on page 1 (to===0) skips it so the leaf lift reveals the spine.
+      if (to >= 1) stage.classList.add('cover-on');
       stage.classList.remove('folded');
       setTimeout(function () {
         p.page = to; renderPage();
@@ -3141,6 +3161,7 @@
         } else {
           stage.classList.remove('leaf-on');   // landed on page 1 — brass rings visible
         }
+        stage.classList.remove('cover-on');   // leaf re-settled folded above (to>=1) — drop the backing now
         _skFolding = false;
       }, ms + 60);
     }
