@@ -701,29 +701,46 @@ h1{text-shadow:0 0 34px rgba(93,202,165,.052),0 16px 34px rgba(0,0,0,.18)}
 
   var NAME_KEY = 'datum_workspace_name';
 
+  // MISS-6 — prefs READ-cutover (additive, lossless): prefer the D1 preferences/workspaceName row;
+  // the Clerk unsafeMetadata.workspaceName stays a SILENT FALLBACK (D1 absent / unreachable / signed
+  // out / CUTOVER=false / no D1 row yet). Nothing retired — the blur handler below still dual-writes
+  // to BOTH Clerk and D1, so the mirror is intact and a CUTOVER=false rollback is an instant no-op.
+  function _resolveWorkspaceName(meta, cb) {
+    var _clerk = (meta && meta.workspaceName) || '';
+    var D1 = window.DatumD1;
+    var _live = D1 && D1.CUTOVER !== false && typeof D1.signedIn === 'function' && D1.signedIn() && typeof D1.getDoc === 'function';
+    if (!_live) { cb(_clerk); return; }
+    D1.getDoc('preferences', 'workspaceName').then(function (d) {
+      var wn = '';
+      try { if (d && d.payload) wn = (JSON.parse(d.payload).workspaceName || ''); } catch (e) {}
+      cb(wn || _clerk);                          // D1 wins when present; else the Clerk mirror
+    }).catch(function () { cb(_clerk); });         // unreachable / timeout -> Clerk fallback
+  }
+
   window.addEventListener('load', function () {
     if (!window.Clerk) return;
     Clerk.load().then(function () {
       if (!Clerk.user) return;
       var meta = Clerk.user.unsafeMetadata || {};
-      var clerkName = meta.workspaceName || '';
 
-      if (clerkName) {
-        var localName = localStorage.getItem(NAME_KEY) || '';
-        if (clerkName !== localName) {
-          localStorage.setItem(NAME_KEY, clerkName);
-          var nameEl = document.getElementById('workspaceName');
-          if (nameEl) nameEl.textContent = clerkName;
-          var profileEl = document.getElementById('acct-profile-name');
-          if (profileEl) profileEl.textContent = clerkName;
+      _resolveWorkspaceName(meta, function (resolvedName) {
+        if (resolvedName) {
+          var localName = localStorage.getItem(NAME_KEY) || '';
+          if (resolvedName !== localName) {
+            localStorage.setItem(NAME_KEY, resolvedName);
+            var nameEl = document.getElementById('workspaceName');
+            if (nameEl) nameEl.textContent = resolvedName;
+            var profileEl = document.getElementById('acct-profile-name');
+            if (profileEl) profileEl.textContent = resolvedName;
+          }
+        } else {
+          var localName = localStorage.getItem(NAME_KEY) || '';
+          if (localName) {
+            var migMeta = Object.assign({}, meta, { workspaceName: localName });
+            Clerk.user.update({ unsafeMetadata: migMeta }).catch(function () {});
+          }
         }
-      } else {
-        var localName = localStorage.getItem(NAME_KEY) || '';
-        if (localName) {
-          var migMeta = Object.assign({}, meta, { workspaceName: localName });
-          Clerk.user.update({ unsafeMetadata: migMeta }).catch(function () {});
-        }
-      }
+      });
 
       var nameEl = document.getElementById('workspaceName');
       if (nameEl) {
