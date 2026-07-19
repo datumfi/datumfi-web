@@ -3021,6 +3021,10 @@
 .sheet-stack.leaf-on{ z-index:30; }
 .sheet-stack.leaf-on .leaf{ visibility:visible; }
 .sheet-stack.folded .leaf{ transform:rotateY(-178deg); }
+/* #352 FIX 2 — brass spine is page-state, NOT leaf-position: rings show ONLY on page 1.
+   Decoupled from the folding leaf so a mid-book turn can never re-reveal the spine. */
+.spiral{ transition:opacity .45s ease; }
+.sketchbook-wrapper.past-cover .spiral{ opacity:0; }
 .sheet-stack.folded .leaf .front::after{ opacity:1; }
 @media(prefers-reduced-motion:reduce){ .leaf{ transition:none; } }
 </style>
@@ -3083,6 +3087,9 @@
   function _renderPageFoot() {
     var foot = document.getElementById('sk-page-foot'); if (!foot) return;
     var pc = _skPageCount(), pg = _skPageIdx();
+    // #352 FIX 2 — page-gate the brass spine (decoupled from the folding leaf): show ONLY on page 1.
+    var _wrap = document.querySelector('.sketchbook-wrapper');
+    if (_wrap) _wrap.classList.toggle('past-cover', pg >= 1);
     foot.style.display = pc > 1 ? '' : 'none';   // LAZY: turn UI shows ONLY when there is a 2nd page (5th sketch)
     var cnt = document.getElementById('sk-page-count'); if (cnt) cnt.textContent = 'Page ' + (pg + 1) + ' / ' + pc;
     var prev = document.getElementById('sk-turn-prev'), next = document.getElementById('sk-turn-next');

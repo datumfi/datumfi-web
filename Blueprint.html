@@ -1337,6 +1337,9 @@ button {
 .sheet-stack.leaf-on{ z-index:30; }
 .sheet-stack.leaf-on .leaf{ visibility:visible; }
 .sheet-stack.folded .leaf{ transform:rotateY(-178deg); }
+/* #352 FIX 2 — brass rail is page-state, NOT leaf-position: rings show ONLY on page 1. */
+.archive-rail{ transition:opacity .45s ease; }
+.archive-wrapper.past-cover .archive-rail{ opacity:0; }
 .sheet-stack.folded .leaf .front::after{ opacity:1; }
 @media(prefers-reduced-motion:reduce){ .leaf{ transition:none; } }
 </style>
@@ -1623,6 +1626,9 @@ function renderArchivePage() {
   const prev = document.getElementById('bp-turn-prev'), next = document.getElementById('bp-turn-next');
   if (prev) { prev.disabled = ARCH.page === 0; prev.classList.toggle('ghost', ARCH.page === 0); }
   if (next) { next.disabled = ARCH.page >= pc - 1; next.classList.toggle('ghost', ARCH.page >= pc - 1); }
+  // #352 FIX 2 — page-gate the brass rail (decoupled from the folding leaf): show ONLY on page 1.
+  var _wrapBp = document.querySelector('.archive-wrapper');
+  if (_wrapBp) _wrapBp.classList.toggle('past-cover', ARCH.page >= 1);
   if (!d1Live()) safePersistArchive();
 }
 
