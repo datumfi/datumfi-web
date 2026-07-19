@@ -3035,7 +3035,7 @@
 .sheet-stack.cover-on .leaf-base{ visibility:visible; }
 /* #352 FIX 2 — brass spine is page-state, NOT leaf-position: rings show ONLY on page 1.
    Decoupled from the folding leaf so a mid-book turn can never re-reveal the spine. */
-.spiral{ transition:opacity .45s ease; }
+.spiral{ transition:opacity var(--fold-ms) ease; }   /* fade tracks the page fold (was .45s = faded before the fold finished) */
 .sketchbook-wrapper.past-cover .spiral{ opacity:0; }
 .sheet-stack.folded .leaf .front::after{ opacity:1; }
 @media(prefers-reduced-motion:reduce){ .leaf{ transition:none; } }
@@ -3147,6 +3147,9 @@
       // FIX 2b — mid-book back-turn (landing page >=2): keep the left covered during the unfold.
       // Landing on page 1 (to===0) skips it so the leaf lift reveals the spine.
       if (to >= 1) stage.classList.add('cover-on');
+      // FIX 2 timing — reveal the brass as the page STARTS lifting (not after the fold completes):
+      // drop the page-gate at unfold start when returning to page 1, so the rings fade in with the motion.
+      if (to === 0) { var _wr = document.querySelector('.sketchbook-wrapper'); if (_wr) _wr.classList.remove('past-cover'); }
       stage.classList.remove('folded');
       setTimeout(function () {
         p.page = to; renderPage();

@@ -1682,6 +1682,9 @@ function turnPage(to) {
     // FIX 2b — mid-book back-turn (landing page >=2): keep the left covered during the unfold.
     // Landing on page 1 (to===0) skips it so the leaf lift reveals the spine.
     if (to >= 1) stage.classList.add('cover-on');
+    // FIX 2 timing — reveal the brass rail as the page STARTS lifting (not after the fold completes):
+    // drop the page-gate at unfold start when returning to page 1, so the rail fades in with the motion.
+    if (to === 0) { var _wr = document.querySelector('.archive-wrapper'); if (_wr) _wr.classList.remove('past-cover'); }
     stage.classList.remove('folded');
     setTimeout(function () {
       ARCH.page = to; renderArchivePage();
