@@ -8503,16 +8503,16 @@
                 beats.push('Your rate is built as ' + idx + ' + ' + mgn + '%. When ' + idx + ' moves, your rate moves with it (inside the caps above).');
             }
             // 18.B cap-bounded worst-case band — quantifies A1's "these numbers move" with a real second
-            // number. PROVISIONAL COPY (R125 example) — Architect to finalize the sentence; the ENGINE
-            // (_helocCeilingBand, reused amortization) is what this commit proves. Display-only (LOCK-3).
+            // number. FINAL COPY (Architect-authored, HELOC Copy Bank!A123). NEGAM/maturity-overshoot degrade
+            // to honest fallbacks (a post-maturity date would violate §17.1). Display-only (LOCK-3).
             var band = _helocCeilingBand(acc);
             if (band) {
                 if (band.code === 'NEGAM') {
                     beats.push('At the ceiling rate (' + band.ceilRate + '%), your ' + $(band.payment) + '/mo wouldn\'t cover the interest — the balance would grow rather than shrink. That is the worst the caps allow, worth knowing even if today\'s rate is far below it.');
                 } else if (band.exceedsMaturity) {
-                    beats.push('Payoff lands ' + band.basePayoff + ' at today\'s rate; if your rate climbs to its ' + band.ceilRate + '% cap, this pace no longer clears the balance by maturity — you\'d face a higher required payment near the end.');
+                    beats.push('At today\'s rate you\'re on track to be paid off around ' + band.basePayoff + ' with about ' + $(band.baseInterest) + ' in interest. But if your rate climbs to its ' + band.ceilRate + '% ceiling, this pace no longer clears the balance by maturity — you\'d face a higher required payment near the end. The caps still bound how far the rate itself can move.');
                 } else {
-                    beats.push('Payoff lands ' + band.basePayoff + ' at today\'s rate — as late as ' + band.ceilPayoff + ' if your rate climbs to its ' + band.ceilRate + '% cap, with interest as high as about ' + $(band.ceilInterest) + '. That\'s the worst the caps allow.');
+                    beats.push('At today\'s rate you\'re on track to be paid off around ' + band.basePayoff + ' with about ' + $(band.baseInterest) + ' in interest. Even in the worst case your caps allow — your rate climbing to its ' + band.ceilRate + '% ceiling and staying there — that stretches to ' + band.ceilPayoff + ' and about ' + $(band.ceilInterest) + '. So the caps put a hard limit on the bad case: ' + $(Math.max(0, band.ceilInterest - band.baseInterest)) + ' is the most this rate can add.');
                 }
             }
         }
@@ -8562,7 +8562,8 @@
         }
         return { code: 'OK', ceilRate: ceilRate, baseMonths: base.months, ceilMonths: ceil.months,
                  basePayoff: _payoffDateFrom(acc, base.months), ceilPayoff: _payoffDateFrom(clone, ceil.months),
-                 ceilInterest: lifetimeInterest(clone, pmt), exceedsMaturity: exceedsMat, payment: pmt };
+                 baseInterest: lifetimeInterest(acc), ceilInterest: lifetimeInterest(clone, pmt),
+                 exceedsMaturity: exceedsMat, payment: pmt };
     }
 
     // ── THE GROUNDS (Real Estate) — carrying-cost engine + Datum Builder feed hook (Property Copy Bank §4) ──

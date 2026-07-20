@@ -46,8 +46,11 @@ if (api) {
   need('(A) ceiling interest ~ $1,472 (base 5% lifetime cap, payment held)',
     band && band.code === 'OK' && Math.round(band.ceilInterest) >= 1450 && Math.round(band.ceilInterest) <= 1500);
   const full = J(api.b(acc));
-  need('(A) §18.B beat renders the band (base + ceiling + cap %)',
-    /Payoff lands March 2028 at today's rate — as late as April 2028 if your rate climbs to its 10\.99% cap/.test(full) && /worst the caps allow/.test(full));
+  need('(A) §18.B beat renders the FINAL band sentence (base $760 -> ceiling Apr 2028 $1,472, delta $712)',
+    /on track to be paid off around March 2028 with about \$760 in interest/.test(full) &&
+    /climbing to its 10\.99% ceiling and staying there/.test(full) &&
+    /stretches to April 2028 and about \$1,472/.test(full) &&
+    /\$712 is the most this rate can add/.test(full));
 
   // (B) LOCK-3 — the clone must not mutate the caller's acc.
   const before = acc.intRate;
@@ -73,10 +76,10 @@ if (api) {
   // (E) BITE — no lifetime cap, and Fixed, both suppress the band.
   const noCap = { ...acc, capLifetime: '' };
   need('(E) bite: no lifetime cap -> band null + §18.B beat SILENT',
-    (api.band ? api.band(noCap) : null) === null && !/worst the caps allow/.test(J(api.b(noCap))));
+    (api.band ? api.band(noCap) : null) === null && !/is the most this rate can add/.test(J(api.b(noCap))));
   const fixed = { ...acc, rateType: 'Fixed' };
   need('(E) bite: Fixed -> band null + §18.B beat SILENT',
-    (api.band ? api.band(fixed) : null) === null && !/worst the caps allow/.test(J(api.b(fixed))));
+    (api.band ? api.band(fixed) : null) === null && !/is the most this rate can add/.test(J(api.b(fixed))));
 }
 
 let pass = 0;
