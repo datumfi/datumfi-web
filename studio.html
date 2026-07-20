@@ -3021,6 +3021,16 @@
         }
     };
 
+    // #390 — clamp a numeric input to a realistic [min,max] range on the fly (blocks nonsense like a
+    // 15-digit cap %). Leaves empty / mid-typing values alone; only reins in out-of-range magnitudes.
+    window.enforceNumRange = function(el, min, max) {
+        if(!el) return;
+        var v = parseFloat(el.value);
+        if(isNaN(v)) return;
+        if(v < min) el.value = String(min);
+        else if(v > max) el.value = String(max);
+    };
+
     const spendInput = document.getElementById('spend-input');
     spendInput.addEventListener('input', (e) => { 
         updateSVGs();
@@ -7267,7 +7277,6 @@
                 </div>
             </div>
             ${_variableRateClusterHTML(id, acc)}
-            ${base.title === 'HELOC' ? `<div id="modal-heloc-liverate-${id}">${_helocLiveRateHTML(id, acc)}</div>` : ''}
             <div class="field-row">
                 <div>${_dLbl(base, 'Origination Date', 'The day it started', 'When the loan was funded. Sets the amortization clock we use to estimate your payoff date.')}<input type="date" class="small-field" value="${acc.origDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'origDate', this.value)"></div>
                 <div>${_dLbl(base, 'Maturity Date', 'The finish line', 'The contractual payoff date if you only ever pay the minimum. Extra payments beat this date; we\'ll show how much sooner.', '', 'right')}<input type="date" class="small-field" value="${acc.maturityDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'maturityDate', this.value)"></div>
@@ -8916,22 +8925,38 @@
         if (acc.rateType !== 'Variable') return '';
         var iv = String(acc.rateIndex || '').replace(/"/g, '&quot;');
         if ((getBaseType(acc.baseId) || {}).title === 'HELOC') {
-            // §2c HELOC — every variable-cluster field carries the R84 "How your variable rate moves" explainer
-            // (bank §2b, verbatim), reset risk headlined (§0.6/§1.5). SOURCED-OR-BLANK: shows even when empty.
-            // Mortgage keeps its own cluster markup below (byte-identical, untouched — Moat leave-as-is).
-            var _mkTT = function (align) { return '<div class="modal-tt" style="' + (align === 'right' ? 'right:0; left:auto;' : 'left:0; right:auto;') + '"><strong>How your variable rate moves</strong>Your rate = an index (like SOFR or Prime) plus a fixed margin, bounded by periodic and lifetime caps. When the index climbs, so can your payment — up to the cap. On a HELOC this reset risk is a headline, since the rate is usually variable.</div>'; };
-            var _hl = function (t, align) { return '<span class="input-label modal-tt-wrap" style="cursor:help;">' + t + _mkTT(align) + '</span>'; };
+            // §2c HELOC variable cluster. #390: Rate Index is now a canonical DROPDOWN (kills the free-text
+            // spelling fragility that silently broke the live-index trigger); each field carries its OWN
+            // plain-coach hover (was one shared explainer); the number fields clamp to a sane 0–100 range
+            // (enforceNumRange); and the §20 live-index sub-line renders directly UNDER the Rate Index row.
+            // Prime is fed live; SOFR is a selectable option that lights up once its series is added
+            // (sourced-or-blank until then). Mortgage keeps its own cluster below (untouched — Moat leave-as-is).
+            var _hlF = function (label, ttTitle, ttBody, align) {
+                var pos = align === 'right' ? 'right:0; left:auto;' : 'left:0; right:auto;';
+                return '<span class="input-label modal-tt-wrap" style="cursor:help;">' + label +
+                    '<div class="modal-tt" style="' + pos + '"><strong>' + ttTitle + '</strong>' + ttBody + '</div></span>';
+            };
+            var _idxU = String(acc.rateIndex || '').trim().toUpperCase();
+            var _idxOpts = ['Prime', 'SOFR'];
+            var _idxKnown = _idxOpts.some(function (o) { return o.toUpperCase() === _idxU; });
+            var _idxSelect =
+                '<select class="small-field" style="background: var(--bg-navy);" onchange="updateAccField(\'' + id + '\', \'rateIndex\', this.value)">' +
+                '<option value="">Select…</option>' +
+                _idxOpts.map(function (o) { return '<option value="' + o + '"' + (o.toUpperCase() === _idxU ? ' selected' : '') + '>' + o + '</option>'; }).join('') +
+                (acc.rateIndex && !_idxKnown ? '<option value="' + iv + '" selected>' + iv + ' (custom)</option>' : '') +
+                '</select>';
             return `
             <div class="field-row">
-                <div>${_hl('Rate Index')}<input type="text" class="small-field" placeholder="e.g. SOFR, Prime" value="${iv}" oninput="updateAccField('${id}', 'rateIndex', this.value)"></div>
-                <div>${_hl('Margin %', 'right')}<input type="number" class="small-field" placeholder="0" value="${acc.rateMargin||''}" oninput="updateAccField('${id}', 'rateMargin', this.value)"></div>
+                <div>${_hlF('Rate Index', 'The benchmark you track', 'The published rate your line follows — usually Prime, sometimes SOFR. Your actual rate is this index plus your margin, and it moves with the index at each reset. Today\'s live figure shows just below.')}${_idxSelect}</div>
+                <div>${_hlF('Margin %', 'The lender\'s fixed add-on', 'The fixed amount your lender adds on top of the index — set at signing, never changes. Your rate = index + margin, so a lower margin is a better deal for the life of the line.', 'right')}<input type="number" min="0" max="100" step="0.01" class="small-field" placeholder="0" value="${acc.rateMargin||''}" oninput="enforceNumRange(this, 0, 100); updateAccField('${id}', 'rateMargin', this.value)"></div>
             </div>
+            <div id="modal-heloc-liverate-${id}">${_helocLiveRateHTML(id, acc)}</div>
             <div class="field-row">
-                <div>${_hl('Periodic Cap %')}<input type="number" class="small-field" placeholder="0" value="${acc.capPeriodic||''}" oninput="updateAccField('${id}', 'capPeriodic', this.value)"></div>
-                <div>${_hl('Lifetime Cap %', 'right')}<input type="number" class="small-field" placeholder="0" value="${acc.capLifetime||''}" oninput="updateAccField('${id}', 'capLifetime', this.value)"></div>
+                <div>${_hlF('Periodic Cap %', 'The most it can jump at once', 'The largest your rate can move at any single reset, up or down. Even if the index spikes, one reset can\'t move you more than this.')}<input type="number" min="0" max="100" step="0.01" class="small-field" placeholder="0" value="${acc.capPeriodic||''}" oninput="enforceNumRange(this, 0, 100); updateAccField('${id}', 'capPeriodic', this.value)"></div>
+                <div>${_hlF('Lifetime Cap %', 'The ceiling over the whole loan', 'The most your rate can ever climb above where it started, across the entire line. It sets your worst case — the ceiling the rate can\'t cross no matter what the index does.', 'right')}<input type="number" min="0" max="100" step="0.01" class="small-field" placeholder="0" value="${acc.capLifetime||''}" oninput="enforceNumRange(this, 0, 100); updateAccField('${id}', 'capLifetime', this.value)"></div>
             </div>
             <div class="field-row" style="grid-template-columns: 1fr;">
-                <div>${_hl('Next Reset Date')}<input type="date" class="small-field" value="${acc.rateResetDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'rateResetDate', this.value)"></div>
+                <div>${_hlF('Next Reset Date', 'When the rate can change next', 'The next date your rate re-prices to the current index plus your margin. Until then today\'s rate holds; after it, your payment may shift. Datum re-checks the math when this date arrives.')}<input type="date" class="small-field" value="${acc.rateResetDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'rateResetDate', this.value)"></div>
             </div>`;
         }
         return `
