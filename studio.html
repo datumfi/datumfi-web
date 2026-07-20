@@ -8307,12 +8307,12 @@
         return 'Utilization <strong style="color:var(--white);">' + _helocUtilPct(acc) + '%</strong> · <strong style="color:var(--teal-mid);">$' + _helocHeadroom(acc).toLocaleString('en-US') + '</strong> still available to draw';
     }
     // The Credit Limit field-row + its live readout (HELOC-only; injected into the shared debt modal). The
-    // §2 authored hover (bank R24) is passed to _dLbl now but stays dormant until §2 opens HELOC hovers.
+    // §2 hover (bank R24) is served by _dLbl from _HELOC_HOVERS — the single source (L48, no dual-source).
     function _helocLimitFieldHTML(id, acc) {
         var hh = _helocHeadroomHTML(acc);
         return `
             <div class="field-row" style="grid-template-columns: 1fr;">
-                <div>${_dLbl(getBaseType(acc.baseId), 'Credit Limit', 'Your equity headroom', 'The most you can draw. Because it\'s backed by home equity, this is usually far larger than a card limit — which cuts both ways.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.helocCreditLimit||'')}" oninput="updateAccField('${id}', 'helocCreditLimit', this.value)"></div>
+                <div>${_dLbl(getBaseType(acc.baseId), 'Credit Limit')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.helocCreditLimit||'')}" oninput="updateAccField('${id}', 'helocCreditLimit', this.value)"></div>
             </div>
             <div id="modal-heloc-headroom-${id}" style="display:${hh ? 'block' : 'none'}; font-size:11px; color: rgba(255,255,255,0.72); line-height:1.5; margin:-6px 0 14px;">${hh}</div>`;
     }
@@ -8326,14 +8326,14 @@
         if (p === 'Repayment') return 'You\'re in the repayment period — no new draws, and payments now pay down principal on a set schedule.';
         return '';
     }
-    // The Phase select + its live caption (HELOC-only; injected into the shared debt modal). The §2 authored
-    // hover (bank R26) is passed to _dLbl now but stays dormant until §2 opens HELOC hovers.
+    // The Phase select + its live caption (HELOC-only; injected into the shared debt modal). The §2 hover
+    // (bank R26) is served by _dLbl from _HELOC_HOVERS — the single source (L48, no dual-source).
     function _helocPhaseFieldHTML(id, acc) {
         var pc = _helocPhaseClause(acc);
         var opts = ['Draw', 'Repayment'].map(function (o) { return '<option ' + (acc.helocPhase === o ? 'selected' : '') + '>' + o + '</option>'; }).join('');
         return `
             <div class="field-row" style="grid-template-columns: 1fr;">
-                <div>${_dLbl(getBaseType(acc.baseId), 'Phase', 'Draw or repayment', 'In the draw period you can borrow and often pay interest-only; in repayment you pay down principal on a schedule with no new draws.')}
+                <div>${_dLbl(getBaseType(acc.baseId), 'Phase')}
                     <select class="small-field" style="background: var(--bg-navy);" onchange="updateAccField('${id}', 'helocPhase', this.value)">
                         <option value="">Select phase…</option>${opts}
                     </select>
