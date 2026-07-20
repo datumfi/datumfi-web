@@ -25,7 +25,7 @@ const need = (label, cond) => checks.push([label, !!cond]);
 const extract = (name) => { const m = s.match(new RegExp('    function ' + name + '\\([\\s\\S]*?\\n    }\\n')); return m ? m[0] : ''; };
 const NAMES = ['calculateTotalPmt','payoffMonths','_payoffDateFrom','calculatePayoff','lifetimeInterest',
                'acceleratedDelta','_helocLimit','_helocUtilPct','_helocHeadroom','_payoffVsMaturity',
-               '_debtPayoffDisplay','_helocCeilingBand','_helocIntelBeats','_diIntelligence'];
+               '_debtPayoffDisplay','_helocCeilingBand','_livePrime','_fmtAsOf','_helocIntelBeats','_diIntelligence'];
 let api = null, extractErr = '';
 try {
   const body = NAMES.map(extract).join('\n') + '\nreturn {band:(typeof _helocCeilingBand===\'function\'?_helocCeilingBand:null), b:_helocIntelBeats};';

@@ -34,7 +34,7 @@ need('(C) de-dup: §1.5 summary keeps the plain variable-rate fact', /This rate 
 const extract = (name) => { const m = s.match(new RegExp('    function ' + name + '\\([\\s\\S]*?\\n    }\\n')); return m ? m[0] : ''; };
 const NAMES = ['calculateTotalPmt','payoffMonths','_payoffDateFrom','calculatePayoff','lifetimeInterest',
                'acceleratedDelta','_helocLimit','_helocUtilPct','_helocHeadroom','_payoffVsMaturity',
-               '_debtPayoffDisplay','_helocCeilingBand','_helocIntelBeats','_diIntelligence'];
+               '_debtPayoffDisplay','_helocCeilingBand','_livePrime','_fmtAsOf','_helocIntelBeats','_diIntelligence'];
 let api = null, extractErr = '';
 try {
   const body = NAMES.map(extract).join('\n') + '\nreturn {b:_helocIntelBeats};';
