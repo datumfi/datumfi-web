@@ -6271,9 +6271,11 @@
       // other value-only tiles (property/collectibles) stay plain — they have no authored hover copy (L47).
       // Mortgage rooms (The Moat) are debt, not a bank-DI room, but carry a §3a header hover — let them past.
       var _isMortgageRoom = (base.title === 'Mortgage');
+      // HELOC (The Cellar) — debt, not a bank-DI room, but carries a §3a header hover (HELOC Copy Bank R31).
+      var _isHelocRoom = (base.title === 'HELOC');
       // The Grounds (Real Estate) — a physical room that carries a §3b room-level intro ⓘ (Property Copy Bank).
       var _isGroundsRoom = /^property(_primary|_co)?$/.test(base.id);
-      if (!_diIsBankRoom(base.id) && !/^other_assets(_primary|_co)?$/.test(base.id) && !_isMortgageRoom && !_isGroundsRoom) { el.innerHTML = _diTitleInput(acc, base); return; }
+      if (!_diIsBankRoom(base.id) && !/^other_assets(_primary|_co)?$/.test(base.id) && !_isMortgageRoom && !_isHelocRoom && !_isGroundsRoom) { el.innerHTML = _diTitleInput(acc, base); return; }
       var tt;
       if (_isGroundsRoom) {
         // §3a header hover + §3b full room intro (R26/R100) + §29 doctrine — The Grounds (verbatim).
@@ -6285,6 +6287,10 @@
         // §3a header hover — The Moat (Mortgage Copy Bank §3a R36, verbatim).
         tt = '<strong>The debt that guards the house</strong>' +
              'A mortgage is a long loan secured by your home — miss enough and the lender can take the house, which is why it\'s usually the cheapest debt you\'ll ever hold. Common shapes: 30- or 15-year fixed, or an adjustable-rate (ARM). For retirement it cuts two ways: a low fixed rate is cheap leverage you may not want to rush to kill, but carrying a payment INTO retirement raises the income floor you must cover every month. Clearing it before you stop working lowers that floor for life — the math and the peace-of-mind can point different directions, and both count.';
+      } else if (_isHelocRoom) {
+        // §3a header hover — The Cellar (HELOC Copy Bank §3a R31, verbatim).
+        tt = '<strong>A revolving line, backed by your home</strong>' +
+             'A HELOC is a hybrid: it works like a credit card you can draw from and repay repeatedly, but it\'s secured by your home\'s equity — which is why the rate is usually lower than an unsecured line, and why the stakes are higher. It runs in two phases: a draw period, where you can borrow and often pay interest-only, and a repayment period, where the balance amortizes and no new draws are allowed. The rate is typically variable, so payments can rise. Datum shows your balance, your available headroom, your phase, and the equity relationship to the linked home — so you can see the whole picture, not just the minimum due.';
       } else if (/^other_assets(_primary|_co)?$/.test(base.id)) {
         // STEP-0 room-intro hover — Other Assets (Taxable bank R396, verbatim; straight→curly apostrophes to match the file).
         tt = '<strong>What it is</strong>Something you own that has real worth but no ticker and no holdings to read — a private business interest, a stake in a partnership, an asset that lives outside the market.<br><br>' +
@@ -7220,7 +7226,9 @@
                 html += `
                 <div class="field-row" style="grid-template-columns: 1fr; margin-bottom: 5px;">
                     <div>
-                        <div class="input-label" style="color:var(--teal-mid);">Link to Physical Asset (Calculate Equity)</div>
+                        ${base.title === 'HELOC'
+                          ? '<div class="input-label modal-tt-wrap" style="color:var(--teal-mid); cursor:help;">Link to Physical Asset (Calculate Equity)<div class="modal-tt" style="left:0; right:auto;"><strong>Your collateral</strong>This line is secured by the linked property. Your equity is what backs it — and what\'s at risk if it goes unpaid.</div></div>'
+                          : '<div class="input-label" style="color:var(--teal-mid);">Link to Physical Asset (Calculate Equity)</div>'}
                         <select class="small-field" style="background: var(--bg-navy);" onchange="updateAccField('${id}', 'linkedAssetId', this.value)">
                             ${linkOpts}
                         </select>
@@ -8261,11 +8269,26 @@
 
     // §2 debt field-label hover (mortgage-only, Moat-voiced). Non-mortgage debt keeps a plain label so
     // Auto/Personal/etc. are untouched until their own wave. Reuses the shared .modal-tt-wrap/.modal-tt.
+    // §2 HELOC field hovers (bank R23–R28, verbatim) — HELOC serves its OWN copy, never the Mortgage bodies
+    // passed on the shared debt fields. Only these labels get a tooltip; unlisted HELOC fields stay plain
+    // (no Mortgage-copy leakage). Credit Limit + Phase live here as the single source (L47/L48).
+    var _HELOC_HOVERS = {
+        'Current Balance': ['What you\'ve drawn', 'The amount currently borrowed against your line — not the limit. In the draw period this can climb if you keep drawing or pay interest-only.'],
+        'Credit Limit': ['Your equity headroom', 'The most you can draw. Because it\'s backed by home equity, this is usually far larger than a card limit — which cuts both ways.'],
+        'Interest Rate (APR) %': ['Your (usually variable) cost', 'Most HELOCs carry a variable rate tied to an index, so this number can move. Watch the reset terms.'],
+        'Phase': ['Draw or repayment', 'In the draw period you can borrow and often pay interest-only; in repayment you pay down principal on a schedule with no new draws.'],
+        'Additional Payment': ['Your accelerator', 'Extra hits principal and frees up equity headroom — especially valuable before the repayment phase forces amortization.']
+    };
     function _dLbl(base, text, title, body, extraStyle, align) {
         var st = extraStyle || '';
-        if (base.title !== 'Mortgage' || !body) return `<div class="input-label" style="${st}">${text}</div>`;
         // Right-column fields must open the 280px tooltip LEFTWARD or it clips at the modal card's right edge.
         var ttPos = align === 'right' ? 'right:0; left:auto;' : 'left:0; right:auto;';
+        if (base.title === 'HELOC') {
+            var hov = _HELOC_HOVERS[text];
+            if (!hov) return `<div class="input-label" style="${st}">${text}</div>`;
+            return `<span class="input-label modal-tt-wrap" style="cursor:help;${st}">${text}<div class="modal-tt" style="${ttPos}"><strong>${hov[0]}</strong>${hov[1]}</div></span>`;
+        }
+        if (base.title !== 'Mortgage' || !body) return `<div class="input-label" style="${st}">${text}</div>`;
         return `<span class="input-label modal-tt-wrap" style="cursor:help;${st}">${text}<div class="modal-tt" style="${ttPos}"><strong>${title}</strong>${body}</div></span>`;
     }
 
