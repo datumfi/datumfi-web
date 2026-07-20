@@ -7213,6 +7213,16 @@
             </div>`;
             }
 
+            // §15 education panel (HELOC Copy Bank §15 R58, verbatim) — MOVED UP (§2d) to sit at the top of the
+            // overview, below the DI strip and ABOVE the Current Balance box (read the why, THEN enter numbers;
+            // matches the Grounds precedent). Stays INSIDE #modal-edu-collapse so it collapses with the overview
+            // on decorate — never leaks into the holdings view. No escrow block. Copy is R58 verbatim (a MOVE).
+            if (base.title === 'HELOC') {
+                html += _diWhyPanel('What a HELOC is — and the catch behind the low rate', [
+                    ['Draw, repay, and the phase shift', `A HELOC lets you borrow against your home's equity like a revolving line — draw, repay, draw again — usually at a lower rate than unsecured credit because your house backs it. That lower rate is the upside; the collateral is the catch. It runs in two phases: during the draw period you can keep borrowing and often pay interest-only, so the balance may not shrink; when the repayment period begins, no new draws are allowed and the balance amortizes, which can make the payment jump. Most HELOCs are variable-rate, so payments can also rise with the market. Datum tracks your drawn balance, available headroom, phase, and how the line sits against your home's equity — the full picture behind a single monthly minimum.`]
+                ]);
+            }
+
             if (!isStudentLoan) {
                 let linkOpts = `<option value="">None (Unsecured / Isolated Liability)</option>`;
                 let _linkScope = _securedLinkScope(base);
@@ -7322,13 +7332,6 @@
             if (base.title === 'Mortgage') {
                 html += _diWhyPanel('Should you pay it down, or invest the difference?', [
                     ['The mortgage-vs-invest tension', 'A mortgage is the cheapest large loan most people ever get, and it\'s secured by an asset that can grow. That creates the classic tension: a guaranteed return equal to your rate (pay it down) versus an uncertain, historically-higher return (invest the difference). At a low fixed 3%, the math often favors investing — that cheap, locked-in rate is hard to pass up, and your dollars have historically earned more in the market than they\'d save against the loan. At a high 8% (or a variable rate that could climb), the reverse is usually true: paying it down is a guaranteed 8% return with zero risk — very hard to beat reliably anywhere else, so accelerating the payoff often wins. And closer to retirement, a paid-off house lowers the income you must generate every month for the rest of your life. There\'s also the part no spreadsheet captures: for some people, owning the home free and clear is worth more than the last dollar of return. Datum shows you both numbers and both truths. The choice is yours.']
-                ]);
-            }
-            // §15 education panel (HELOC Copy Bank §15 R58, verbatim) — the low-rate-with-a-catch, two-phase
-            // lifecycle, variable-rate reality. Reuses the shared _diWhyPanel renderer (L48). No escrow block.
-            if (base.title === 'HELOC') {
-                html += _diWhyPanel('What a HELOC is — and the catch behind the low rate', [
-                    ['Draw, repay, and the phase shift', `A HELOC lets you borrow against your home's equity like a revolving line — draw, repay, draw again — usually at a lower rate than unsecured credit because your house backs it. That lower rate is the upside; the collateral is the catch. It runs in two phases: during the draw period you can keep borrowing and often pay interest-only, so the balance may not shrink; when the repayment period begins, no new draws are allowed and the balance amortizes, which can make the payment jump. Most HELOCs are variable-rate, so payments can also rise with the market. Datum tracks your drawn balance, available headroom, phase, and how the line sits against your home's equity — the full picture behind a single monthly minimum.`]
                 ]);
             }
         } else if (base.taxCode === 'physical' && !base.id.includes('collectibles')) {
