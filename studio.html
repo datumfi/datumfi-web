@@ -8277,7 +8277,15 @@
         'Credit Limit': ['Your equity headroom', 'The most you can draw. Because it\'s backed by home equity, this is usually far larger than a card limit — which cuts both ways.'],
         'Interest Rate (APR) %': ['Your (usually variable) cost', 'Most HELOCs carry a variable rate tied to an index, so this number can move. Watch the reset terms.'],
         'Phase': ['Draw or repayment', 'In the draw period you can borrow and often pay interest-only; in repayment you pay down principal on a schedule with no new draws.'],
-        'Additional Payment': ['Your accelerator', 'Extra hits principal and frees up equity headroom — especially valuable before the repayment phase forces amortization.']
+        'Additional Payment': ['Your accelerator', 'Extra hits principal and frees up equity headroom — especially valuable before the repayment phase forces amortization.'],
+        // §2c completion set (bank §2b R82–R88, verbatim) — every field gets a hover (House Rule); plain-coach,
+        // sourced-or-blank (the explainer shows even when the field is empty). Curly apostrophes match the bank.
+        'Original Amount': ['Where the line opened', 'The credit line’s original size when you set it up. On a revolving line this is your starting headroom, not a lump you borrowed — what you actually owe is the drawn balance above.'],
+        'Rate Type': ['Locked or moving', 'Most HELOCs are Variable — the rate is tied to an index and can reset up or down on a schedule, so your payment can move. Fixed is rarer here. Pick Variable to reveal the index, margin, and caps that govern the moves.'],
+        'Origination Date': ['The day the line opened', 'When the HELOC was funded. It anchors the draw-period clock — the window before repayment begins and the balance starts amortizing.'],
+        'Maturity Date': ['When the line closes out', 'The contractual end of the line — by here the balance must be repaid. Read it alongside the phase: the draw period ends first, then repayment carries you to this date.'],
+        'Minimum Payment': ['The required amount', 'What you must pay each period. In the draw phase this can be interest-only — so the balance may not shrink on its own; in repayment it covers principal too, which is why the minimum can jump when the phase turns.'],
+        'Next Payment Date': ['The clock’s start', 'We count the timeline from here. Setting it keeps the phase and payoff estimates honest — especially the countdown to when the draw period ends.']
     };
     function _dLbl(base, text, title, body, extraStyle, align) {
         var st = extraStyle || '';
@@ -8652,6 +8660,25 @@
     function _variableRateClusterHTML(id, acc) {
         if (acc.rateType !== 'Variable') return '';
         var iv = String(acc.rateIndex || '').replace(/"/g, '&quot;');
+        if ((getBaseType(acc.baseId) || {}).title === 'HELOC') {
+            // §2c HELOC — every variable-cluster field carries the R84 "How your variable rate moves" explainer
+            // (bank §2b, verbatim), reset risk headlined (§0.6/§1.5). SOURCED-OR-BLANK: shows even when empty.
+            // Mortgage keeps its own cluster markup below (byte-identical, untouched — Moat leave-as-is).
+            var _mkTT = function (align) { return '<div class="modal-tt" style="' + (align === 'right' ? 'right:0; left:auto;' : 'left:0; right:auto;') + '"><strong>How your variable rate moves</strong>Your rate = an index (like SOFR or Prime) plus a fixed margin, bounded by periodic and lifetime caps. When the index climbs, so can your payment — up to the cap. On a HELOC this reset risk is a headline, since the rate is usually variable.</div>'; };
+            var _hl = function (t, align) { return '<span class="input-label modal-tt-wrap" style="cursor:help;">' + t + _mkTT(align) + '</span>'; };
+            return `
+            <div class="field-row">
+                <div>${_hl('Rate Index')}<input type="text" class="small-field" placeholder="e.g. SOFR, Prime" value="${iv}" oninput="updateAccField('${id}', 'rateIndex', this.value)"></div>
+                <div>${_hl('Margin %', 'right')}<input type="number" class="small-field" placeholder="0" value="${acc.rateMargin||''}" oninput="updateAccField('${id}', 'rateMargin', this.value)"></div>
+            </div>
+            <div class="field-row">
+                <div>${_hl('Periodic Cap %')}<input type="number" class="small-field" placeholder="0" value="${acc.capPeriodic||''}" oninput="updateAccField('${id}', 'capPeriodic', this.value)"></div>
+                <div>${_hl('Lifetime Cap %', 'right')}<input type="number" class="small-field" placeholder="0" value="${acc.capLifetime||''}" oninput="updateAccField('${id}', 'capLifetime', this.value)"></div>
+            </div>
+            <div class="field-row" style="grid-template-columns: 1fr;">
+                <div>${_hl('Next Reset Date')}<input type="date" class="small-field" value="${acc.rateResetDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'rateResetDate', this.value)"></div>
+            </div>`;
+        }
         return `
             <div class="field-row">
                 <div><span class="input-label modal-tt-wrap" style="cursor:help;">Rate Index<div class="modal-tt" style="left:0; right:auto;"><strong>How a variable rate moves</strong>Your rate = the index (like SOFR or Prime) + a fixed margin, bounded by periodic and lifetime caps. When the index moves, your payment can too — up to the cap.</div></span><input type="text" class="small-field" placeholder="e.g. SOFR, Prime" value="${iv}" oninput="updateAccField('${id}', 'rateIndex', this.value)"></div>
