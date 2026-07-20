@@ -8461,9 +8461,14 @@
         if (!(lb && String(lb.id).indexOf('property') === 0)) {
             beats.push('This line is secured by your home — but you haven\'t linked the property yet. Link it and Datum can show your true equity headroom (home value - any senior mortgage - this balance) and exactly what\'s backing the line. Right now that picture is dark.');
         }
-        // 16.5 fixed-rate acknowledgment ({marketRateClause} is OPTIONAL/needs-external → omitted, L47).
+        // 16.5 fixed-rate acknowledgment. {marketRateClause} (HELOC Copy Bank §16.5/D98, verbatim) lights when
+        // the Prime feed is live — Prime as BACKGROUND CONTEXT ONLY (never a "you vs market" / refi signal on a
+        // fixed line; that would be advice + apples-to-oranges). Blank if livePrime missing; the acknowledgment
+        // body still stands on its own (L47/L51). Display-only (LOCK-3).
         if (acc.rateType === 'Fixed') {
-            beats.push('You\'ve locked a fixed rate on this line — unusual for a HELOC, which is typically variable. The upside: your payment can\'t drift upward with the market the way a variable HELOC\'s can. The tradeoff: if rates fall, you won\'t automatically follow them down.');
+            var _live5 = _livePrime();
+            var _mkt5 = _live5 ? ' For context, Prime sits near ' + _live5.prime.toFixed(2) + '% today (as of ' + _fmtAsOf(_live5.asOf) + ', source FRED). Your rate is locked, so it won\'t move with Prime either way — that\'s the whole point of a fixed line.' : '';
+            beats.push('You\'ve locked a fixed rate on this line — unusual for a HELOC, which is typically variable. The upside: your payment can\'t drift upward with the market the way a variable HELOC\'s can. The tradeoff: if rates fall, you won\'t automatically follow them down.' + _mkt5);
         }
         // 16.6 repayment-phase lens correction (reframes the summary's utilization figure).
         if (acc.helocPhase === 'Repayment' && _helocLimit(acc) !== null) {
@@ -8534,6 +8539,15 @@
                 var _impl = apr - live.prime;
                 var _sgn = _impl >= 0 ? '+' : '-';
                 beats.push('Your ' + apr + '% is about Prime ' + _sgn + Math.abs(_impl).toFixed(2) + ' today — Prime sits near ' + live.prime.toFixed(2) + '% (as of ' + _fmtAsOf(live.asOf) + '). If Prime moves, your rate moves with it.');
+            }
+            // §20.4 FRED caps-context — cap-headroom clause (HELOC Copy Bank §20.4/D170, verbatim). Captain
+            // ruling: capHeadroom = ceilingRate − userAPR (points still left in the USER'S rate before the
+            // lifetime cap bites; ceilingRate is the SAME one §18.B computes). NOT ceiling−Prime. Blank if
+            // ceilingRate or userAPR unsourced (L47). Display-only (LOCK-3) — never writes back to any math.
+            if (showLiveClause && band && typeof band.ceilRate === 'number') {
+                var _hr = band.ceilRate - apr;
+                var _hrStr = (Math.round(_hr * 100) % 100 === 0) ? String(Math.round(_hr)) : (Math.round(_hr * 100) / 100).toFixed(2);
+                beats.push('With Prime near ' + live.prime.toFixed(2) + '% today and your ' + band.ceilRate + '% lifetime cap, there\'s about ' + _hrStr + ' points of headroom before you hit the ceiling.');
             }
         }
         return beats;

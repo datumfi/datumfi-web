@@ -13,7 +13,9 @@ let s = readFileSync('studio.html', 'utf8');
 
 if (RED) {
   s = s.replace(/            \/\/ §20\.3 FRED live-rate color[\s\S]*?\n            }\n/, '');
+  s = s.replace(/            \/\/ §20\.4 FRED caps-context[\s\S]*?\n            }\n/, '');
   s = s.replace(/return '<div style="font-size:11px[^\n]*source FRED\)<\/div>';/, "return '';");
+  s = s.replace(/var _mkt5 = _live5 \?[^\n]*the whole point of a fixed line\.' : '';/, "var _mkt5 = '';");
 }
 
 const checks = [];
@@ -52,6 +54,20 @@ if (live && blank) {
   // (L51) §18.A4 structure clause is SUPPRESSED when the live clause fires.
   need('(L51) §18.A4 "Your rate is built as Prime + 4%" SUPPRESSED when §20.3 live clause fires',
     !/Your rate is built as Prime \+ 4%/.test(liveBeats) && /is about Prime -0\.76 today/.test(liveBeats));
+  // (§20.4) cap-headroom clause, verbatim: ceilingRate 10.99, capHeadroom = 10.99 - 5.99 = 5 points.
+  need('(§20.4) cap-headroom renders "…your 10.99% lifetime cap, there\'s about 5 points of headroom…"',
+    /With Prime near 6\.75% today and your 10\.99% lifetime cap, there's about 5 points of headroom before you hit the ceiling\./.test(liveBeats));
+  need('(§20.4) guard: no lifetime cap -> §20.4 clause BLANK',
+    !/points of headroom before you hit the ceiling/.test(J(live.b({ ...acc, capLifetime: '' }))));
+
+  // (§16.5) fixed-line Prime CONTEXT clause (verbatim) — background only, never a "vs market" signal.
+  const fx = { ...acc, rateType: 'Fixed', helocPhase: 'Repayment' };
+  need('(§16.5) Fixed line + live Prime -> context clause renders verbatim',
+    /For context, Prime sits near 6\.75% today \(as of Jul 16, 2026, source FRED\)\. Your rate is locked, so it won't move with Prime either way — that's the whole point of a fixed line\./.test(J(live.b(fx))));
+  need('(§16.5) Fixed line -> NO implied-margin / vs-market language (advice guard)',
+    !/is about Prime/.test(J(live.b(fx))) && !/moves with it/.test(J(live.b(fx))));
+  need('(§16.5) degrade: live=null -> clause absent, fixed-rate body still stands',
+    !/For context, Prime sits near/.test(J(blank.b(fx))) && /You've locked a fixed rate on this line/.test(J(blank.b(fx))));
 
   // (DEGRADE) live=null -> sub-line blank, §20.3 absent, §18.A4 FIRES (graceful fallback, L47).
   const blankBeats = J(blank.b(acc));
