@@ -7197,6 +7197,16 @@
             </div>`;
             }
 
+            // §1 DATUM INTELLIGENCE strip (HELOC / The Cellar) — composed, sourced-or-blank; live-refreshed.
+            if (base.title === 'HELOC') {
+                let _cdiTxt = _cellarDI(acc);
+                html += `
+            <div style="margin-bottom:18px; padding:14px; background: rgba(93,202,165,0.05); border:1px solid rgba(93,202,165,0.25); border-radius:4px;">
+                <div style="color:var(--teal-mid); font-weight:bold; font-size:11px; letter-spacing:1px; margin-bottom:8px;">DATUM INTELLIGENCE</div>
+                <div id="modal-cellar-di-${id}" style="font-size:12px; color: rgba(255,255,255,0.8); line-height:1.55;">${_cdiTxt || 'Add this line\'s balance and credit limit and Datum reads it back — your utilization, your headroom, the phase you\'re in, and the equity behind it.'}</div>
+            </div>`;
+            }
+
             if (!isStudentLoan) {
                 let linkOpts = `<option value="">None (Unsecured / Isolated Liability)</option>`;
                 let _linkScope = _securedLinkScope(base);
@@ -7304,6 +7314,13 @@
             if (base.title === 'Mortgage') {
                 html += _diWhyPanel('Should you pay it down, or invest the difference?', [
                     ['The mortgage-vs-invest tension', 'A mortgage is the cheapest large loan most people ever get, and it\'s secured by an asset that can grow. That creates the classic tension: a guaranteed return equal to your rate (pay it down) versus an uncertain, historically-higher return (invest the difference). At a low fixed 3%, the math often favors investing — that cheap, locked-in rate is hard to pass up, and your dollars have historically earned more in the market than they\'d save against the loan. At a high 8% (or a variable rate that could climb), the reverse is usually true: paying it down is a guaranteed 8% return with zero risk — very hard to beat reliably anywhere else, so accelerating the payoff often wins. And closer to retirement, a paid-off house lowers the income you must generate every month for the rest of your life. There\'s also the part no spreadsheet captures: for some people, owning the home free and clear is worth more than the last dollar of return. Datum shows you both numbers and both truths. The choice is yours.']
+                ]);
+            }
+            // §15 education panel (HELOC Copy Bank §15 R58, verbatim) — the low-rate-with-a-catch, two-phase
+            // lifecycle, variable-rate reality. Reuses the shared _diWhyPanel renderer (L48). No escrow block.
+            if (base.title === 'HELOC') {
+                html += _diWhyPanel('What a HELOC is — and the catch behind the low rate', [
+                    ['Draw, repay, and the phase shift', `A HELOC lets you borrow against your home's equity like a revolving line — draw, repay, draw again — usually at a lower rate than unsecured credit because your house backs it. That lower rate is the upside; the collateral is the catch. It runs in two phases: during the draw period you can keep borrowing and often pay interest-only, so the balance may not shrink; when the repayment period begins, no new draws are allowed and the balance amortizes, which can make the payment jump. Most HELOCs are variable-rate, so payments can also rise with the market. Datum tracks your drawn balance, available headroom, phase, and how the line sits against your home's equity — the full picture behind a single monthly minimum.`]
                 ]);
             }
         } else if (base.taxCode === 'physical' && !base.id.includes('collectibles')) {
@@ -7766,6 +7783,9 @@
                 // §0.3 HELOC — live phase caption (sourced-or-blank; select change branches the clause).
                 const helocPh = document.getElementById(`modal-heloc-phase-${id}`);
                 if(helocPh) { var _pc = _helocPhaseClause(acc); helocPh.style.display = _pc ? 'block' : 'none'; helocPh.innerHTML = _pc; }
+                // §1 Cellar DI — live recompose (limit/phase/rate/link all move it; sourced-or-blank).
+                const cdiEl = document.getElementById(`modal-cellar-di-${id}`);
+                if(cdiEl) cdiEl.innerHTML = _cellarDI(acc) || 'Add this line\'s balance and credit limit and Datum reads it back — your utilization, your headroom, the phase you\'re in, and the equity behind it.';
             }
         }
     };
@@ -7850,6 +7870,9 @@
                 // §0.4 HELOC — balance change moves utilization/headroom too (sourced-or-blank).
                 const helocHR2 = document.getElementById(`modal-heloc-headroom-${id}`);
                 if(helocHR2) { var _hh2 = _helocHeadroomHTML(acc); helocHR2.style.display = _hh2 ? 'block' : 'none'; helocHR2.innerHTML = _hh2; }
+                // §1 Cellar DI — balance change moves utilization / headroom / equity (sourced-or-blank).
+                const cdiEl2 = document.getElementById(`modal-cellar-di-${id}`);
+                if(cdiEl2) cdiEl2.innerHTML = _cellarDI(acc) || 'Add this line\'s balance and credit limit and Datum reads it back — your utilization, your headroom, the phase you\'re in, and the equity behind it.';
             }
         }
     };
@@ -8294,6 +8317,57 @@
                 </div>
             </div>
             <div id="modal-heloc-phase-${id}" style="display:${pc ? 'block' : 'none'}; font-size:11px; color: rgba(255,255,255,0.72); line-height:1.5; margin:-6px 0 14px;">${pc}</div>`;
+    }
+
+    // §1 THE CELLAR (HELOC) — Datum Intelligence signal strip. Composed part-by-part like _moatDI (L48),
+    // every clause SOURCED-OR-BLANK (L47 — an unset field's clause simply never pushes; no $0/NaN/undefined).
+    // Signals verbatim from bank §1: 1.1 balance+limit · 1.2 secured-by-home (ALWAYS) · 1.3 utilization ·
+    // 1.4 phase (reuses _helocPhaseClause) + the D19 Draw-phase payment-jump heads-up · 1.5 variable rate ·
+    // §4.3 net equity vs The Grounds subtracting EVERY loan secured by the home (mortgage + this HELOC).
+    function _cellarDI(acc) {
+        var parts = [];
+        var bal = parseFloat(acc.value) || 0;
+        var lim = _helocLimit(acc);
+        var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
+        // 1.1 balance drawn against the line (needs both) + headroom clause.
+        if (bal > 0 && lim !== null) {
+            var avail = _helocHeadroom(acc);
+            parts.push($(bal) + ' drawn against a ' + $(lim) + ' line.' + (avail !== null ? ' ' + $(avail) + ' still available to draw.' : ''));
+        }
+        // 1.2 secured-by-home — ALWAYS render; the defining fact.
+        parts.push('This line is secured by your home. That usually buys a lower rate than an unsecured line — but the tradeoff is real: fall behind and the house is the collateral.');
+        // 1.3 utilization.
+        if (bal > 0 && lim !== null) parts.push('You\'re using ' + _helocUtilPct(acc) + '% of your available equity line.');
+        // 1.4 phase clause (reuse) + Draw-phase payment-jump heads-up (D19, sourced-or-blank).
+        var pc = _helocPhaseClause(acc);
+        if (pc) {
+            var headsUp = (acc.helocPhase === 'Draw' && lim !== null && bal > 0)
+                ? ' Interest-only now — but when the repayment period begins, this balance amortizes and the minimum payment can rise sharply.'
+                : '';
+            parts.push(pc + headsUp);
+        }
+        // 1.5 variable rate — reuse the Mortgage variable cluster; reset clause sourced-or-blank.
+        if (acc.rateType === 'Variable') {
+            var resetClause = '';
+            if (acc.rateResetDate) {
+                var rd = new Date(acc.rateResetDate + 'T00:00:00');
+                if (!isNaN(rd)) resetClause = ' Your next reset is ' + rd.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) + ' — worth watching.';
+            }
+            parts.push('This rate is variable — tied to an index, so your payment can rise if rates do.' + resetClause);
+        }
+        // §4.3 net equity vs The Grounds — subtract EVERY loan secured by the home (mortgage + this HELOC).
+        if (acc.linkedAssetId) {
+            var la = state.accounts.find(function (a) { return a.id === acc.linkedAssetId; });
+            var lb = la ? getBaseType(la.baseId) : null;
+            if (lb && String(lb.id).indexOf('property') === 0) {
+                var hv = parseFloat(la.value) || 0;
+                if (hv > 0) {
+                    var netEq = hv - _groundsLinkedDebt(la.id);
+                    parts.push('Against The Grounds (' + $(hv) + '), your equity after every loan secured by it is ' + $(netEq) + '.' + (netEq >= 0 ? '' : ' You owe more against the home than it\'s worth.'));
+                }
+            }
+        }
+        return parts.join(' ');
     }
 
     // ── THE GROUNDS (Real Estate) — carrying-cost engine + Datum Builder feed hook (Property Copy Bank §4) ──
