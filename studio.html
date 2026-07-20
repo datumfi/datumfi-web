@@ -8465,7 +8465,11 @@
         // the Prime feed is live — Prime as BACKGROUND CONTEXT ONLY (never a "you vs market" / refi signal on a
         // fixed line; that would be advice + apples-to-oranges). Blank if livePrime missing; the acknowledgment
         // body still stands on its own (L47/L51). Display-only (LOCK-3).
-        if (acc.rateType === 'Fixed') {
+        // FIRE on Fixed OR unset — the Rate Type <select> DEFAULTS to Fixed but stores nothing until the user
+        // actively changes it, so an untouched line reads acc.rateType === undefined while showing "Fixed"
+        // (same default-select trap class as the Prime case-bug). "Not Variable" = Fixed; apr>0 so we only
+        // acknowledge a LOCKED RATE once there is a rate. Inverse of §20.3 (which is Variable-only).
+        if (acc.rateType !== 'Variable' && apr > 0) {
             var _live5 = _livePrime();
             var _mkt5 = _live5 ? ' For context, Prime sits near ' + _live5.prime.toFixed(2) + '% today (as of ' + _fmtAsOf(_live5.asOf) + ', source FRED). Your rate is locked, so it won\'t move with Prime either way — that\'s the whole point of a fixed line.' : '';
             beats.push('You\'ve locked a fixed rate on this line — unusual for a HELOC, which is typically variable. The upside: your payment can\'t drift upward with the market the way a variable HELOC\'s can. The tradeoff: if rates fall, you won\'t automatically follow them down.' + _mkt5);

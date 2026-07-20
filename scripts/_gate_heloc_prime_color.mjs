@@ -16,6 +16,7 @@ if (RED) {
   s = s.replace(/            \/\/ §20\.4 FRED caps-context[\s\S]*?\n            }\n/, '');
   s = s.replace(/return '<div style="font-size:11px[^\n]*source FRED\)<\/div>';/, "return '';");
   s = s.replace(/var _mkt5 = _live5 \?[^\n]*the whole point of a fixed line\.' : '';/, "var _mkt5 = '';");
+  s = s.replace("acc.rateType !== 'Variable' && apr > 0", "acc.rateType === 'Fixed'");   // revert #389 fix -> reproduce dark §16.5
 }
 
 const checks = [];
@@ -68,6 +69,18 @@ if (live && blank) {
     !/is about Prime/.test(J(live.b(fx))) && !/moves with it/.test(J(live.b(fx))));
   need('(§16.5) degrade: live=null -> clause absent, fixed-rate body still stands',
     !/For context, Prime sits near/.test(J(blank.b(fx))) && /You've locked a fixed rate on this line/.test(J(blank.b(fx))));
+  // (§16.5 #389 BUG REPRO) — the SMOKED line had rateType UNSET (the <select> defaults to "Fixed" but stores
+  // nothing until actively changed). The old `=== 'Fixed'` check went dark on undefined. Must fire on unset.
+  const fxDefault = { baseId: 'heloc_primary', value: 15000, intRate: 8.99, minPmt: 250, addPmt: 20,
+    helocPhase: 'Draw', helocCreditLimit: 160000, maturityDate: '2030-12-22', nextPmtDate: '2026-08-01' };
+  need('(§16.5 #389) UNSET rateType (default-Fixed) + apr -> §16.5 body RENDERS',
+    /You've locked a fixed rate on this line/.test(J(live.b(fxDefault))));
+  need('(§16.5 #389) unset default-Fixed + live Prime -> FRED context tail present',
+    /For context, Prime sits near 6\.75% today \(as of Jul 16, 2026, source FRED\)/.test(J(live.b(fxDefault))));
+  need('(§16.5 guard) unset rateType + NO apr -> §16.5 SILENT (no premature lock claim)',
+    !/You've locked a fixed rate on this line/.test(J(live.b({ ...fxDefault, intRate: '' }))));
+  need('(§16.5 guard) Variable line -> §16.5 SILENT (inverse of §20.3)',
+    !/You've locked a fixed rate on this line/.test(J(live.b({ ...fxDefault, rateType: 'Variable', rateIndex: 'Prime', rateMargin: 4, capLifetime: 5 }))));
 
   // (DEGRADE) live=null -> sub-line blank, §20.3 absent, §18.A4 FIRES (graceful fallback, L47).
   const blankBeats = J(blank.b(acc));
