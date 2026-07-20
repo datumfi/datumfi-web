@@ -8502,6 +8502,19 @@
             if (idx && mgn !== null) {
                 beats.push('Your rate is built as ' + idx + ' + ' + mgn + '%. When ' + idx + ' moves, your rate moves with it (inside the caps above).');
             }
+            // 18.B cap-bounded worst-case band — quantifies A1's "these numbers move" with a real second
+            // number. PROVISIONAL COPY (R125 example) — Architect to finalize the sentence; the ENGINE
+            // (_helocCeilingBand, reused amortization) is what this commit proves. Display-only (LOCK-3).
+            var band = _helocCeilingBand(acc);
+            if (band) {
+                if (band.code === 'NEGAM') {
+                    beats.push('At the ceiling rate (' + band.ceilRate + '%), your ' + $(band.payment) + '/mo wouldn\'t cover the interest — the balance would grow rather than shrink. That is the worst the caps allow, worth knowing even if today\'s rate is far below it.');
+                } else if (band.exceedsMaturity) {
+                    beats.push('Payoff lands ' + band.basePayoff + ' at today\'s rate; if your rate climbs to its ' + band.ceilRate + '% cap, this pace no longer clears the balance by maturity — you\'d face a higher required payment near the end.');
+                } else {
+                    beats.push('Payoff lands ' + band.basePayoff + ' at today\'s rate — as late as ' + band.ceilPayoff + ' if your rate climbs to its ' + band.ceilRate + '% cap, with interest as high as about ' + $(band.ceilInterest) + '. That\'s the worst the caps allow.');
+                }
+            }
         }
         return beats;
     }
@@ -8517,6 +8530,39 @@
         return '<div style="margin-top:14px; padding-top:12px; border-top:1px solid rgba(93,202,165,0.28);">' +
                '<div style="color:var(--teal-mid); font-weight:bold; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; opacity:0.9;">What this means for you</div>' +
                rows + '</div>';
+    }
+
+    // §18.B CAP-BOUNDED WORST-CASE BAND — re-runs the SAME amortization at the ceiling rate (startRate +
+    // lifetime cap), payment HELD CONSTANT, to bound the worst case the caps allow. REUSES payoffMonths +
+    // lifetimeInterest via a shallow acc-CLONE (L48 — no fork; just a different intRate). Display-only
+    // (LOCK-3): never writes back to engine/DI totals; the base figures are unchanged. Returns null unless it
+    // can honestly compute (Variable + lifetime cap + a base schedule that itself amortizes).
+    function _helocCeilingBand(acc) {
+        if ((getBaseType(acc.baseId) || {}).title !== 'HELOC' || acc.rateType !== 'Variable') return null;
+        var capL = parseFloat(acc.capLifetime);
+        var startRate = parseFloat(acc.intRate) || 0;
+        var bal = parseFloat(acc.value) || 0;
+        if (!isFinite(capL) || capL <= 0 || startRate <= 0 || bal <= 0) return null;
+        var base = payoffMonths(acc);
+        if (base.code !== 'OK') return null;                          // band only meaningful when base amortizes
+        var pmt = calculateTotalPmt(acc);
+        var ceilRate = Math.round((startRate + capL) * 100) / 100;    // 2dp for display; full precision below
+        var clone = Object.assign({}, acc, { intRate: ceilRate });    // shallow clone — L48, no fork
+        var ceil = payoffMonths(clone, pmt);
+        if (ceil.code === 'NEGAM') return { code: 'NEGAM', ceilRate: ceilRate, payment: pmt };
+        if (ceil.code !== 'OK') return null;
+        // maturity guard (ties to §17.1): does even the ceiling pace overshoot the contractual maturity?
+        var exceedsMat = false;
+        if (acc.maturityDate) {
+            var start = acc.nextPmtDate ? new Date(acc.nextPmtDate + 'T00:00:00') : new Date();
+            if (isNaN(start)) start = new Date();
+            var cp = new Date(start.getTime()); cp.setMonth(cp.getMonth() + ceil.months);
+            var mat = new Date(acc.maturityDate + 'T00:00:00');
+            if (!isNaN(mat) && cp > mat) exceedsMat = true;
+        }
+        return { code: 'OK', ceilRate: ceilRate, baseMonths: base.months, ceilMonths: ceil.months,
+                 basePayoff: _payoffDateFrom(acc, base.months), ceilPayoff: _payoffDateFrom(clone, ceil.months),
+                 ceilInterest: lifetimeInterest(clone, pmt), exceedsMaturity: exceedsMat, payment: pmt };
     }
 
     // ── THE GROUNDS (Real Estate) — carrying-cost engine + Datum Builder feed hook (Property Copy Bank §4) ──
