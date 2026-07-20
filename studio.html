@@ -7210,6 +7210,7 @@
             <div style="margin-bottom:18px; padding:14px; background: rgba(93,202,165,0.05); border:1px solid rgba(93,202,165,0.25); border-radius:4px;">
                 <div style="color:var(--teal-mid); font-weight:bold; font-size:11px; letter-spacing:1px; margin-bottom:8px;">DATUM INTELLIGENCE</div>
                 <div id="modal-cellar-di-${id}" style="font-size:12px; color: rgba(255,255,255,0.8); line-height:1.55;">${_cdiTxt || 'Add this line\'s balance and credit limit and Datum reads it back — your utilization, your headroom, the phase you\'re in, and the equity behind it.'}</div>
+                <div id="modal-cellar-intel-${id}" style="font-size:12px; color: rgba(255,255,255,0.82);">${_diIntelligence(acc)}</div>
             </div>`;
             }
 
@@ -7320,7 +7321,7 @@
                 </div>
                 <div style="display:flex; justify-content: space-between;">
                     <span class="input-label" style="color:var(--teal-mid);">Expected Payoff Date</span>
-                    <span id="modal-calc-payoff-${id}" style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold; font-size:14px;">${calculatePayoff(acc)}</span>
+                    <span id="modal-calc-payoff-${id}" style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold; font-size:14px;">${_debtPayoffDisplay(acc)}</span>
                 </div>
                 <div id="modal-payoff-intel-${id}">${_payoffIntelHTML(id, acc)}</div>
             </div>
@@ -7759,7 +7760,7 @@
                 const eqEl = document.getElementById(`modal-calc-equity-${id}`);
                 
                 if(pmtEl) pmtEl.innerText = '$' + calculateTotalPmt(acc).toLocaleString('en-US');
-                if(payoffEl) payoffEl.innerText = calculatePayoff(acc);
+                if(payoffEl) payoffEl.innerText = _debtPayoffDisplay(acc);
                 if(eqEl && acc.linkedAssetId) {
                     let lAst = state.accounts.find(a => a.id === acc.linkedAssetId);
                     let eq = (lAst ? lAst.value || 0 : 0) - (acc.value || 0);
@@ -7797,6 +7798,9 @@
                 // §1 Cellar DI — live recompose (limit/phase/rate/link all move it; sourced-or-blank).
                 const cdiEl = document.getElementById(`modal-cellar-di-${id}`);
                 if(cdiEl) cdiEl.innerHTML = _cellarDI(acc) || 'Add this line\'s balance and credit limit and Datum reads it back — your utilization, your headroom, the phase you\'re in, and the equity behind it.';
+                // §16 intelligence layer — live recompose (crossed-field beats; sourced-or-blank).
+                const cintEl = document.getElementById(`modal-cellar-intel-${id}`);
+                if(cintEl) cintEl.innerHTML = _diIntelligence(acc);
             }
         }
     };
@@ -7865,7 +7869,7 @@
                 const eqEl = document.getElementById(`modal-calc-equity-${id}`);
                 
                 if(pmtEl) pmtEl.innerText = '$' + calculateTotalPmt(acc).toLocaleString('en-US');
-                if(payoffEl) payoffEl.innerText = calculatePayoff(acc);
+                if(payoffEl) payoffEl.innerText = _debtPayoffDisplay(acc);
                 if(eqEl && acc.linkedAssetId) {
                     let lAst = state.accounts.find(a => a.id === acc.linkedAssetId);
                     let eq = (lAst ? lAst.value || 0 : 0) - (acc.value || 0);
@@ -7884,6 +7888,9 @@
                 // §1 Cellar DI — balance change moves utilization / headroom / equity (sourced-or-blank).
                 const cdiEl2 = document.getElementById(`modal-cellar-di-${id}`);
                 if(cdiEl2) cdiEl2.innerHTML = _cellarDI(acc) || 'Add this line\'s balance and credit limit and Datum reads it back — your utilization, your headroom, the phase you\'re in, and the equity behind it.';
+                // §16 intelligence layer — balance change moves the beats (payoff/maturity, interest split).
+                const cintEl2 = document.getElementById(`modal-cellar-intel-${id}`);
+                if(cintEl2) cintEl2.innerHTML = _diIntelligence(acc);
             }
         }
     };
@@ -8404,6 +8411,77 @@
         return parts.join(' ');
     }
 
+    // §16 THE INTELLIGENCE LAYER — crosses ≥2 sourced fields to surface a CONSEQUENCE the summary can't show.
+    // COMPOSED (emit every beat that fires; silence the rest — the silence is the nuance). SOURCED-OR-BLANK
+    // (L47). PLAIN COACH, never advises. Copy verbatim from HELOC Copy Bank §16 (16.1–16.6). Per-room beat
+    // table; the shared renderer (_diIntelligence) is generic (§16.7 — Grounds/Moat plug in their own beats).
+    function _helocIntelBeats(acc) {
+        var beats = [];
+        var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
+        var bal = parseFloat(acc.value) || 0;
+        var apr = parseFloat(acc.intRate) || 0;
+        var min = parseFloat(acc.minPmt) || 0;
+        var add = parseFloat(acc.addPmt) || 0;
+        var totalMo = calculateTotalPmt(acc);
+        // 16.1 payoff-past-maturity reality check (the #1 nuance the summary misses).
+        var pv = _payoffVsMaturity(acc);
+        if (pv) {
+            var payoffStr = _payoffDateFrom(acc, pv.payoffMonths);
+            var matStr = pv.maturityDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            beats.push('Heads up: at your current ' + $(totalMo) + '/mo, this line pays off around ' + payoffStr + ' — but the contract matures ' + matStr + '. A HELOC must be cleared by maturity, so on this pace you\'d face a balloon or a higher required payment near the end. To finish by ' + matStr + ' you\'d need about ' + $(pv.requiredPmt) + '/mo.');
+        }
+        // 16.2 minimum barely dents principal (not the Draw interest-only phase).
+        if (min > 0 && bal > 0 && apr > 0 && acc.helocPhase !== 'Draw') {
+            var monthlyInterest = bal * (apr / 100) / 12;
+            var minPrincipal = min - monthlyInterest;
+            if (minPrincipal > 0) {
+                var pmMin = payoffMonths(acc, min);
+                var atMin = (pmMin.code === 'OK') ? _payoffDateFrom(acc, pmMin.months) : null;
+                beats.push('Of your ' + $(min) + ' minimum, about ' + $(monthlyInterest) + ' is just interest — only ' + $(minPrincipal) + ' actually pays down the balance.' + (atMin ? ' At the minimum alone you\'d clear it around ' + atMin + '.' : ''));
+            } else {
+                beats.push('Your minimum barely covers the interest — the balance won\'t shrink on its own.');
+            }
+        }
+        // 16.3 what the extra payment actually buys (reuse §4.4 accelerated-delta machinery).
+        if (add > 0 && bal > 0 && apr > 0 && min > 0) {
+            var d = acceleratedDelta(acc);
+            var pmMin2 = payoffMonths(acc, min);
+            if (d && d.interestSaved > 0 && pmMin2.code === 'OK') {
+                var atMinStr = _payoffDateFrom(acc, pmMin2.months);
+                var atAccStr = _payoffDateFrom(acc, payoffMonths(acc).months);
+                beats.push('Your extra ' + $(add) + '/mo isn\'t decoration: it moves your payoff from about ' + atMinStr + ' to ' + atAccStr + ' and saves roughly ' + $(d.interestSaved) + ' in interest over the life of the line.');
+            }
+        }
+        // 16.4 secured debt with no linked home — the dark-equity prompt (goes silent once a property links).
+        var la = acc.linkedAssetId ? state.accounts.find(function (a) { return a.id === acc.linkedAssetId; }) : null;
+        var lb = la ? getBaseType(la.baseId) : null;
+        if (!(lb && String(lb.id).indexOf('property') === 0)) {
+            beats.push('This line is secured by your home — but you haven\'t linked the property yet. Link it and Datum can show your true equity headroom (home value - any senior mortgage - this balance) and exactly what\'s backing the line. Right now that picture is dark.');
+        }
+        // 16.5 fixed-rate acknowledgment ({marketRateClause} is OPTIONAL/needs-external → omitted, L47).
+        if (acc.rateType === 'Fixed') {
+            beats.push('You\'ve locked a fixed rate on this line — unusual for a HELOC, which is typically variable. The upside: your payment can\'t drift upward with the market the way a variable HELOC\'s can. The tradeoff: if rates fall, you won\'t automatically follow them down.');
+        }
+        // 16.6 repayment-phase lens correction (reframes the summary's utilization figure).
+        if (acc.helocPhase === 'Repayment' && _helocLimit(acc) !== null) {
+            beats.push('You\'re in the repayment period, so the \'' + _helocUtilPct(acc) + '% utilization\' above is really a paydown figure, not spare headroom — no new draws are allowed here. What matters now is how fast the balance falls, not how much line is left.');
+        }
+        return beats;
+    }
+    // §16.7 shared intelligence renderer — a VISUALLY DISTINCT sub-block under the §1 summary (top rule +
+    // 'What this means for you' subhead + a ▸ per composed beat). Per-room beat tables plug in; '' if none fire.
+    function _diIntelligence(acc) {
+        var base = getBaseType(acc.baseId);
+        var beats = (base && base.title === 'HELOC') ? _helocIntelBeats(acc) : [];
+        if (!beats.length) return '';
+        var rows = beats.map(function (b) {
+            return '<div style="display:flex; gap:8px; margin-top:8px; line-height:1.5;"><span style="color:var(--teal-mid); flex:0 0 auto;">▸</span><span>' + b + '</span></div>';
+        }).join('');
+        return '<div style="margin-top:14px; padding-top:12px; border-top:1px solid rgba(93,202,165,0.28);">' +
+               '<div style="color:var(--teal-mid); font-weight:bold; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; opacity:0.9;">What this means for you</div>' +
+               rows + '</div>';
+    }
+
     // ── THE GROUNDS (Real Estate) — carrying-cost engine + Datum Builder feed hook (Property Copy Bank §4) ──
     function _isGrounds(base) { return /^property(_primary|_co)?$/.test(base.id); }
     // Robust numeric read: acc.value (and carry fields) can arrive as a NUMBER or a formatted STRING
@@ -8723,6 +8801,38 @@
         return _payoffDateFrom(acc, m.months);
     }
 
+    // §17.1 — a loan whose payment doesn't reach the contractual maturity. Returns null unless maturity +
+    // balance + apr + a payment are all set AND the computed payoff runs PAST maturity; then gives the binding
+    // maturity date + the payment required to actually amortize to maturity. Feeds both the display clamp
+    // (_debtPayoffDisplay) and beat 16.1. VERIFIED: $630/mo on $65,655 @5.77% = 145mo/Aug-2038; ~66mo to a
+    // Jan-2032 maturity needs ~$1,180/mo.
+    function _payoffVsMaturity(acc) {
+        var bal = parseFloat(acc.value) || 0;
+        var apr = parseFloat(acc.intRate) || 0;
+        if (bal <= 0 || apr <= 0 || !acc.maturityDate) return null;
+        var pm = payoffMonths(acc);
+        if (pm.code !== 'OK') return null;
+        var start = acc.nextPmtDate ? new Date(acc.nextPmtDate + 'T00:00:00') : new Date();
+        if (isNaN(start)) start = new Date();
+        var payoff = new Date(start.getTime()); payoff.setMonth(payoff.getMonth() + pm.months);
+        var mat = new Date(acc.maturityDate + 'T00:00:00');
+        if (isNaN(mat) || payoff <= mat) return null;   // pace makes maturity → no issue, stay silent
+        var nToMat = (mat.getFullYear() - start.getFullYear()) * 12 + (mat.getMonth() - start.getMonth());
+        if (nToMat <= 0) return null;
+        var r = apr / 100 / 12;
+        var reqPmt = (r === 0) ? bal / nToMat : bal * r / (1 - Math.pow(1 + r, -nToMat));
+        return { maturityDate: mat, monthsToMaturity: nToMat, requiredPmt: reqPmt, payoffMonths: pm.months };
+    }
+    // §17.1 display — the Expected Payoff Date. For a HELOC whose pace overshoots maturity, show the binding
+    // maturity date (beat 16.1 carries the shortfall + required payment). Non-HELOC is unchanged (Moat as-is).
+    function _debtPayoffDisplay(acc) {
+        if ((getBaseType(acc.baseId) || {}).title === 'HELOC') {
+            var pv = _payoffVsMaturity(acc);
+            if (pv) return pv.maturityDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) + ' (maturity)';
+        }
+        return calculatePayoff(acc);
+    }
+
     // §4.2 lifetime interest + all-in total cost. Sourced-or-blank: null when we can't honestly compute
     // (paid off / no payment / negative amortization) — the caller then omits the line, never fakes $0.
     // EXACT amortized interest — sums each period's real interest with a fractional final payment, so it
@@ -8788,7 +8898,10 @@
         var li = lifetimeInterest(acc);   // REMAINING interest from today (exact)
         if (li !== null) {
             var _bal = parseFloat(acc.value) || 0;
-            var _lol = lifeOfLoan(acc);
+            // §17.2 — for a HELOC, origAmount is the credit-LINE size (not a borrowed lump), so amortizing it
+            // over the term yields a meaningless figure that reads as a contradiction beside Interest Remaining.
+            // Drop it for HELOC (unsourced provenance); Mortgage keeps its life-of-loan line unchanged (Moat as-is).
+            var _lol = ((getBaseType(acc.baseId) || {}).title === 'HELOC') ? null : lifeOfLoan(acc);
             out += `
                 <div style="display:flex; justify-content: space-between; margin-top:8px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px;">
                     <span class="input-label" style="color:var(--white);">Interest Remaining</span>
@@ -9238,7 +9351,7 @@
             const eqEl = document.getElementById(`modal-calc-equity-${id}`);
             
             if(pmtEl) pmtEl.innerText = '$' + calculateTotalPmt(acc).toLocaleString('en-US');
-            if(payoffEl) payoffEl.innerText = calculatePayoff(acc);
+            if(payoffEl) payoffEl.innerText = _debtPayoffDisplay(acc);
             if(eqEl && acc.linkedAssetId) {
                 let lAst = state.accounts.find(a => a.id === acc.linkedAssetId);
                 let eq = (lAst ? lAst.value || 0 : 0) - (acc.value || 0);
