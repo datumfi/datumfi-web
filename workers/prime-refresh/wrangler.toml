@@ -20,10 +20,12 @@ main = "prime-refresh.mjs"
 compatibility_date = "2026-07-20"
 compatibility_flags = ["nodejs_compat"]
 
-# Weekly — 00:00 UTC every Sunday. Prime changes only a few times a year, so weekly is generous.
-# Idempotent (upsert), so a missed or re-run tick is safe.
+# Weekly — 00:00 UTC every Monday. Prime changes only a few times a year, so weekly is generous.
+# NOTE: Cloudflare's cron API rejects day-of-week `0` (code 10100) — it validates DOW as 1-7. `1` = Monday
+# is valid in BOTH the 0-6 (Sun-Sat) and 1-7 (Mon-Sun) schemes, so it's unambiguous and portable. Any
+# weekly day is fine here. Idempotent (upsert), so a missed or re-run tick is safe.
 [triggers]
-crons = ["0 0 * * 0"]
+crons = ["0 0 * * 1"]
 
 # Same GLOBAL market_reference store the Pages read endpoint (/api/prime) queries. Binding "DB" ->
 # datumfi-prod. The table is un-scoped — there is NO user id here. (Mirrors ticker-refresh: prod-only
