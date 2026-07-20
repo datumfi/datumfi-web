@@ -8505,8 +8505,12 @@
                 beats.push('One thing to know: this is a variable-rate line, but the payoff date and interest above assume today\'s ' + apr + '% holds the whole way. It\'s the right estimate right now — just remember it\'s a snapshot, not a lock. If your rate moves, these numbers move with it.');
             }
             // 18.A2 the reset is coming — owns the reset DATE (de-duped from the §1.5 summary clause).
+            // #390 guard: suppress when the reset lands AFTER maturity — the line is contractually done by
+            // then, so a reset that can never happen would be dishonest (Captain live-smoke, Variable test #1).
             var rd = _resetDate();
-            if (rd && rd > new Date()) {
+            var _matA2 = acc.maturityDate ? new Date(acc.maturityDate + 'T00:00:00') : null;
+            var _matOK = !(_matA2 && !isNaN(_matA2) && rd && rd > _matA2);
+            if (rd && rd > new Date() && _matOK) {
                 var rdStr = rd.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
                 var a2 = 'Your rate can next adjust on ' + rdStr + '.';
                 if (apr > 0 && idx && mgn !== null) a2 += ' Until then you\'re at ' + apr + '%; after that it re-prices to ' + idx + ' + ' + mgn + '%.';
