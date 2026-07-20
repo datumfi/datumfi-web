@@ -7226,6 +7226,7 @@
                 <div>${_dLbl(base, 'Current Balance', 'What you still owe', 'The payoff figure today — what it\'d take to clear this loan right now, before any more interest. This is the number the estate subtracts from your net worth.', 'color:var(--gold);')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.value?.toString()||'')}" oninput="updateValueWithoutRender('${id}', this.value)"></div>
                 <div>${_dLbl(base, 'Original Amount', 'Where it started', 'The loan\'s opening balance. We compare it to today\'s balance to show how much house you\'ve bought back from the bank.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.origAmount||'')}" oninput="updateAccField('${id}', 'origAmount', this.value)"></div>
             </div>
+            ${base.title === 'HELOC' ? _helocLimitFieldHTML(id, acc) : ''}
             <div class="field-row">
                 <div>${_dLbl(base, 'Interest Rate (APR) %', 'Your cost of borrowing', 'The yearly rate the lender charges. On a mortgage even half a point, over 30 years, is real money — it\'s the biggest lever on lifetime cost.')}<input type="number" class="small-field" placeholder="0" value="${acc.intRate||''}" oninput="updateAccField('${id}', 'intRate', this.value)"></div>
                 <div>${_dLbl(base, 'Rate Type', 'Locked or moving', 'Fixed = this rate never changes. Variable/ARM = it can reset up or down on a schedule. Pick Variable to reveal the index, margin, and caps that govern the moves.', '', 'right')}
@@ -7677,7 +7678,7 @@
     window.updateAccField = function(id, field, value) {
         const acc = state.accounts.find(a => a.id === id);
         if(acc) {
-            if(field === 'origAmount' || field === 'minPmt' || field === 'addPmt' || field === 'propTaxAnnual' || field === 'insAnnual' || field === 'pmiMonthly' || field === 'propTaxYr' || field === 'homeInsYr' || field === 'maintYr' || field === 'hoaYr' || field === 'utilYr') {
+            if(field === 'origAmount' || field === 'minPmt' || field === 'addPmt' || field === 'propTaxAnnual' || field === 'insAnnual' || field === 'pmiMonthly' || field === 'propTaxYr' || field === 'homeInsYr' || field === 'maintYr' || field === 'hoaYr' || field === 'utilYr' || field === 'helocCreditLimit') {
                 acc[field] = value.replace(/[^0-9.-]/g, '');
             } else if (field === 'intRate' || field === 'cola') {
                 acc[field] = parseFloat(value) || 0;
@@ -7758,6 +7759,9 @@
                 if(carryEl) carryEl.innerText = '$' + Math.round(calcCarryTotal(acc)).toLocaleString('en-US');
                 const gdiEl = document.getElementById(`modal-grounds-di-${id}`);
                 if(gdiEl && typeof _groundsSignalsHTML === 'function') gdiEl.innerHTML = _groundsSignalsHTML(id, acc) || _GROUNDS_DI_EMPTY;
+                // §0.4 HELOC — live utilization/headroom readout (sourced-or-blank; limit change moves both).
+                const helocHR = document.getElementById(`modal-heloc-headroom-${id}`);
+                if(helocHR) { var _hh = _helocHeadroomHTML(acc); helocHR.style.display = _hh ? 'block' : 'none'; helocHR.innerHTML = _hh; }
             }
         }
     };
@@ -7839,6 +7843,9 @@
                 // §1 Moat DI — live recompose on balance change (equity + payoff shift).
                 const diEl2 = document.getElementById(`modal-moat-di-${id}`);
                 if(diEl2) diEl2.innerHTML = _moatDI(acc) || 'Add this loan\'s balance, rate, and payment and Datum reads it back — the payoff clock, the lifetime interest, and the equity behind it.';
+                // §0.4 HELOC — balance change moves utilization/headroom too (sourced-or-blank).
+                const helocHR2 = document.getElementById(`modal-heloc-headroom-${id}`);
+                if(helocHR2) { var _hh2 = _helocHeadroomHTML(acc); helocHR2.style.display = _hh2 ? 'block' : 'none'; helocHR2.innerHTML = _hh2; }
             }
         }
     };
@@ -8233,6 +8240,31 @@
         // Right-column fields must open the 280px tooltip LEFTWARD or it clips at the modal card's right edge.
         var ttPos = align === 'right' ? 'right:0; left:auto;' : 'left:0; right:auto;';
         return `<span class="input-label modal-tt-wrap" style="cursor:help;${st}">${text}<div class="modal-tt" style="${ttPos}"><strong>${title}</strong>${body}</div></span>`;
+    }
+
+    // ── §0.4 THE CELLAR (HELOC) — revolving mechanics: credit limit, utilization, available headroom.
+    // SOURCED-OR-BLANK (L47): a blank/zero limit yields null → no fabricated % or headroom. Reuses the
+    // Revolving utilization idea (balance / limit), framed here as available EQUITY headroom, not card optics.
+    function _helocLimit(acc) {
+        var l = parseFloat(String(acc && acc.helocCreditLimit != null ? acc.helocCreditLimit : '').replace(/[^0-9.]/g, '')) || 0;
+        return l > 0 ? l : null;
+    }
+    function _helocUtilPct(acc) { var l = _helocLimit(acc); if (l === null) return null; return Math.round(((parseFloat(acc.value) || 0) / l) * 100); }
+    function _helocHeadroom(acc) { var l = _helocLimit(acc); if (l === null) return null; return Math.max(0, l - (parseFloat(acc.value) || 0)); }
+    // Inline readout under the Credit Limit field — sourced-or-blank ('' when no limit set → caller hides it).
+    function _helocHeadroomHTML(acc) {
+        if (_helocLimit(acc) === null) return '';
+        return 'Utilization <strong style="color:var(--white);">' + _helocUtilPct(acc) + '%</strong> · <strong style="color:var(--teal-mid);">$' + _helocHeadroom(acc).toLocaleString('en-US') + '</strong> still available to draw';
+    }
+    // The Credit Limit field-row + its live readout (HELOC-only; injected into the shared debt modal). The
+    // §2 authored hover (bank R24) is passed to _dLbl now but stays dormant until §2 opens HELOC hovers.
+    function _helocLimitFieldHTML(id, acc) {
+        var hh = _helocHeadroomHTML(acc);
+        return `
+            <div class="field-row" style="grid-template-columns: 1fr;">
+                <div>${_dLbl(getBaseType(acc.baseId), 'Credit Limit', 'Your equity headroom', 'The most you can draw. Because it\'s backed by home equity, this is usually far larger than a card limit — which cuts both ways.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.helocCreditLimit||'')}" oninput="updateAccField('${id}', 'helocCreditLimit', this.value)"></div>
+            </div>
+            <div id="modal-heloc-headroom-${id}" style="display:${hh ? 'block' : 'none'}; font-size:11px; color: rgba(255,255,255,0.72); line-height:1.5; margin:-6px 0 14px;">${hh}</div>`;
     }
 
     // ── THE GROUNDS (Real Estate) — carrying-cost engine + Datum Builder feed hook (Property Copy Bank §4) ──
