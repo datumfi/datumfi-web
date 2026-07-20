@@ -7227,6 +7227,7 @@
                 <div>${_dLbl(base, 'Original Amount', 'Where it started', 'The loan\'s opening balance. We compare it to today\'s balance to show how much house you\'ve bought back from the bank.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.origAmount||'')}" oninput="updateAccField('${id}', 'origAmount', this.value)"></div>
             </div>
             ${base.title === 'HELOC' ? _helocLimitFieldHTML(id, acc) : ''}
+            ${base.title === 'HELOC' ? _helocPhaseFieldHTML(id, acc) : ''}
             <div class="field-row">
                 <div>${_dLbl(base, 'Interest Rate (APR) %', 'Your cost of borrowing', 'The yearly rate the lender charges. On a mortgage even half a point, over 30 years, is real money — it\'s the biggest lever on lifetime cost.')}<input type="number" class="small-field" placeholder="0" value="${acc.intRate||''}" oninput="updateAccField('${id}', 'intRate', this.value)"></div>
                 <div>${_dLbl(base, 'Rate Type', 'Locked or moving', 'Fixed = this rate never changes. Variable/ARM = it can reset up or down on a schedule. Pick Variable to reveal the index, margin, and caps that govern the moves.', '', 'right')}
@@ -7762,6 +7763,9 @@
                 // §0.4 HELOC — live utilization/headroom readout (sourced-or-blank; limit change moves both).
                 const helocHR = document.getElementById(`modal-heloc-headroom-${id}`);
                 if(helocHR) { var _hh = _helocHeadroomHTML(acc); helocHR.style.display = _hh ? 'block' : 'none'; helocHR.innerHTML = _hh; }
+                // §0.3 HELOC — live phase caption (sourced-or-blank; select change branches the clause).
+                const helocPh = document.getElementById(`modal-heloc-phase-${id}`);
+                if(helocPh) { var _pc = _helocPhaseClause(acc); helocPh.style.display = _pc ? 'block' : 'none'; helocPh.innerHTML = _pc; }
             }
         }
     };
@@ -8265,6 +8269,31 @@
                 <div>${_dLbl(getBaseType(acc.baseId), 'Credit Limit', 'Your equity headroom', 'The most you can draw. Because it\'s backed by home equity, this is usually far larger than a card limit — which cuts both ways.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.helocCreditLimit||'')}" oninput="updateAccField('${id}', 'helocCreditLimit', this.value)"></div>
             </div>
             <div id="modal-heloc-headroom-${id}" style="display:${hh ? 'block' : 'none'}; font-size:11px; color: rgba(255,255,255,0.72); line-height:1.5; margin:-6px 0 14px;">${hh}</div>`;
+    }
+
+    // ── §0.3 THE CELLAR (HELOC) — Draw vs Repayment phase (two-phase lifecycle). Branched copy verbatim
+    // from bank R19; SOURCED-OR-BLANK ('' when no phase set → caller hides the caption). §1 reuses this
+    // clause in the DI strip (L48 — the Draw-phase payment-jump heads-up on D19 lands there, not here).
+    function _helocPhaseClause(acc) {
+        var p = acc && acc.helocPhase;
+        if (p === 'Draw') return 'You\'re in the draw period — you can still borrow, and minimums may be interest-only, so the balance won\'t shrink on its own.';
+        if (p === 'Repayment') return 'You\'re in the repayment period — no new draws, and payments now pay down principal on a set schedule.';
+        return '';
+    }
+    // The Phase select + its live caption (HELOC-only; injected into the shared debt modal). The §2 authored
+    // hover (bank R26) is passed to _dLbl now but stays dormant until §2 opens HELOC hovers.
+    function _helocPhaseFieldHTML(id, acc) {
+        var pc = _helocPhaseClause(acc);
+        var opts = ['Draw', 'Repayment'].map(function (o) { return '<option ' + (acc.helocPhase === o ? 'selected' : '') + '>' + o + '</option>'; }).join('');
+        return `
+            <div class="field-row" style="grid-template-columns: 1fr;">
+                <div>${_dLbl(getBaseType(acc.baseId), 'Phase', 'Draw or repayment', 'In the draw period you can borrow and often pay interest-only; in repayment you pay down principal on a schedule with no new draws.')}
+                    <select class="small-field" style="background: var(--bg-navy);" onchange="updateAccField('${id}', 'helocPhase', this.value)">
+                        <option value="">Select phase…</option>${opts}
+                    </select>
+                </div>
+            </div>
+            <div id="modal-heloc-phase-${id}" style="display:${pc ? 'block' : 'none'}; font-size:11px; color: rgba(255,255,255,0.72); line-height:1.5; margin:-6px 0 14px;">${pc}</div>`;
     }
 
     // ── THE GROUNDS (Real Estate) — carrying-cost engine + Datum Builder feed hook (Property Copy Bank §4) ──
