@@ -3507,6 +3507,7 @@
       { id: 'property_co', type: 'coarch', taxCode: 'physical', title: 'Real Estate', meta: 'Co-Grounds', desc: 'Physical asset footprint.' },
 
       { id: 'mortgage_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Mortgage', meta: 'The Moat', desc: 'Liability. Subtracts from Estate Sq Footage.' },
+      { id: 'heloc_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'HELOC', meta: 'The Cellar', desc: 'Liability. Secured revolving line against home equity. Subtracts from Estate Sq Footage.' },
       { id: 'auto_debt_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Auto Loan', meta: 'The Garage', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'rev_debt_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Revolving Debt', meta: 'The Furnace', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'personal_loan_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Personal Loan', meta: 'The Ledger', desc: 'Liability. Subtracts from Estate Sq Footage.' },
@@ -3534,6 +3535,7 @@
       { id: 'pension', type: 'primary', taxCode: 'income', hasCOLA: true, title: 'Pension (Annual)', meta: 'The Foundation', desc: 'Secure, fixed income floor.' },
       
       { id: 'mortgage_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'Mortgage', meta: 'The Moat', desc: 'Liability. Subtracts from Estate Sq Footage.' },
+      { id: 'heloc_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'HELOC', meta: 'The Cellar', desc: 'Liability. Secured revolving line against home equity. Subtracts from Estate Sq Footage.' },
       { id: 'auto_debt_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'Auto Loan', meta: 'The Garage', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'student_loan_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'Student Loan', meta: 'The Study', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'rev_debt_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'Revolving Debt', meta: 'The Furnace', desc: 'Liability. Subtracts from Estate Sq Footage.' },
@@ -3558,6 +3560,7 @@
       { id: 'pension_co', type: 'coarch', taxCode: 'income', hasCOLA: true, title: 'Pension (Annual)', meta: 'Co-Foundation', desc: 'Secure income floor.' },
       
       { id: 'mortgage_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'Mortgage', meta: 'Co-Moat', desc: 'Liability. Subtracts from Estate Sq Footage.' },
+      { id: 'heloc_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'HELOC', meta: 'The Co-Cellar', desc: 'Liability. Secured revolving line against home equity. Subtracts from Estate Sq Footage.' },
       { id: 'auto_debt_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'Auto Loan', meta: 'Co-Garage', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'student_loan_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'Student Loan', meta: 'Co-Study', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'rev_debt_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'Revolving Debt', meta: 'Co-Furnace', desc: 'Liability. Subtracts from Estate Sq Footage.' },
@@ -3846,7 +3849,7 @@
       { l1:'INVESTMENTS', l2:'Savings Bonds', leaf:'The Bulwark', reg:null },
       { l1:'LIABILITIES', l2:'Secured Debt', leaf:'The Moat', reg:{joint:'mortgage_joint',primary:'mortgage_primary',co:'mortgage_co'} },
       { l1:'LIABILITIES', l2:'Secured Debt', leaf:'The Garage', reg:{joint:'auto_debt_joint',primary:'auto_debt_primary',co:'auto_debt_co'} },
-      { l1:'LIABILITIES', l2:'Secured Debt', leaf:'The Cellar', reg:null },
+      { l1:'LIABILITIES', l2:'Secured Debt', leaf:'The Cellar', reg:{joint:'heloc_joint',primary:'heloc_primary',co:'heloc_co'} },
       { l1:'LIABILITIES', l2:'Secured Debt', leaf:'The Lever', reg:null },
       { l1:'LIABILITIES', l2:'Unsecured Debt', leaf:'The Ledger', reg:{joint:'personal_loan_joint',primary:'personal_loan_primary',co:'personal_loan_co'} },
       { l1:'LIABILITIES', l2:'Unsecured Debt', leaf:'The Furnace', reg:{joint:'rev_debt_joint',primary:'rev_debt_primary',co:'rev_debt_co'} },
@@ -9537,7 +9540,8 @@
         'hsa', 'hsa_co',   // medical set-aside — never engine spend-mass (Copy Bank §0.6; toggle-OFF inclusion parked)
         'mortgage_joint',   'auto_debt_joint',   'rev_debt_joint',   'personal_loan_joint',
         'mortgage_primary', 'auto_debt_primary', 'student_loan_primary', 'rev_debt_primary', 'personal_loan_primary',
-        'mortgage_co',      'auto_debt_co',      'student_loan_co',  'rev_debt_co', 'personal_loan_co'
+        'mortgage_co',      'auto_debt_co',      'student_loan_co',  'rev_debt_co', 'personal_loan_co',
+        'heloc_joint',      'heloc_primary',     'heloc_co'
       ]);
 
       const SS_AGE_MAP = { '62': 'early_62', '67': 'full_67', '70': 'optimal_70' };
