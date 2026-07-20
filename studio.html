@@ -8387,14 +8387,10 @@
                 : '';
             parts.push(pc + headsUp);
         }
-        // 1.5 variable rate — reuse the Mortgage variable cluster; reset clause sourced-or-blank.
+        // 1.5 variable rate — the reset DATE now lives in the §18.A2 intelligence beat (L51 richest-hover-wins:
+        // the layer that EXPLAINS the reset owns the date). Summary keeps only the plain variable-rate fact.
         if (acc.rateType === 'Variable') {
-            var resetClause = '';
-            if (acc.rateResetDate) {
-                var rd = new Date(acc.rateResetDate + 'T00:00:00');
-                if (!isNaN(rd)) resetClause = ' Your next reset is ' + rd.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) + ' — worth watching.';
-            }
-            parts.push('This rate is variable — tied to an index, so your payment can rise if rates do.' + resetClause);
+            parts.push('This rate is variable — tied to an index, so your payment can rise if rates do.');
         }
         // §4.3 net equity vs The Grounds — subtract EVERY loan secured by the home (mortgage + this HELOC).
         if (acc.linkedAssetId) {
@@ -8465,6 +8461,47 @@
         // 16.6 repayment-phase lens correction (reframes the summary's utilization figure).
         if (acc.helocPhase === 'Repayment' && _helocLimit(acc) !== null) {
             beats.push('You\'re in the repayment period, so the \'' + _helocUtilPct(acc) + '% utilization\' above is really a paydown figure, not spare headroom — no new draws are allowed here. What matters now is how fast the balance falls, not how much line is left.');
+        }
+        // ── §18.A VARIABLE-RATE ACKNOWLEDGMENT BEATS (verbatim, sourced-or-blank, PLAIN COACH) ──
+        // These read the variable fields already on the modal and state the consequence — NO new math.
+        // They compose WITH the §16 beats above; each silent unless its inputs are sourced.
+        var idx = String(acc.rateIndex || '').trim();
+        var mgn = parseFloat(acc.rateMargin);   mgn = isFinite(mgn) ? mgn : null;
+        var capP = parseFloat(acc.capPeriodic); capP = isFinite(capP) && capP > 0 ? capP : null;
+        var capL = parseFloat(acc.capLifetime); capL = isFinite(capL) && capL > 0 ? capL : null;
+        var _resetDate = function () {
+            if (!acc.rateResetDate) return null;
+            var d = new Date(acc.rateResetDate + 'T00:00:00');
+            return isNaN(d) ? null : d;
+        };
+        if (acc.rateType === 'Variable') {
+            // 18.A1 the flat-rate assumption, named honestly — the honesty floor; fires whenever a payoff shows.
+            if (apr > 0 && payoffMonths(acc).code === 'OK') {
+                beats.push('One thing to know: this is a variable-rate line, but the payoff date and interest above assume today\'s ' + apr + '% holds the whole way. It\'s the right estimate right now — just remember it\'s a snapshot, not a lock. If your rate moves, these numbers move with it.');
+            }
+            // 18.A2 the reset is coming — owns the reset DATE (de-duped from the §1.5 summary clause).
+            var rd = _resetDate();
+            if (rd && rd > new Date()) {
+                var rdStr = rd.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                var a2 = 'Your rate can next adjust on ' + rdStr + '.';
+                if (apr > 0 && idx && mgn !== null) a2 += ' Until then you\'re at ' + apr + '%; after that it re-prices to ' + idx + ' + ' + mgn + '%.';
+                else if (apr > 0) a2 += ' Until then you\'re at ' + apr + '%.';
+                a2 += ' Datum will re-check the math when that date arrives.';
+                beats.push(a2);
+            }
+            // 18.A3 what the caps mean in plain words — render whichever cap is sourced.
+            if (capP !== null || capL !== null) {
+                var a3 = 'Your line has guardrails: ';
+                if (capP !== null && capL !== null) a3 += 'the rate can move at most ' + capP + '% at any single reset, and no more than ' + capL + '% above where it started over the life of the loan.';
+                else if (capP !== null) a3 += 'the rate can move at most ' + capP + '% at any single reset.';
+                else a3 += 'the rate can rise no more than ' + capL + '% above where it started over the life of the loan.';
+                a3 += ' That caps the worst case — your payment can\'t run away without limit.';
+                beats.push(a3);
+            }
+            // 18.A4 index+margin transparency — pure structure; silent unless BOTH sourced.
+            if (idx && mgn !== null) {
+                beats.push('Your rate is built as ' + idx + ' + ' + mgn + '%. When ' + idx + ' moves, your rate moves with it (inside the caps above).');
+            }
         }
         return beats;
     }
