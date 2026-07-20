@@ -1,0 +1,34 @@
+# Cloudflare Worker — prime-refresh (weekly Cron). SEPARATE deploy from the Pages site
+# (`wrangler deploy`, NOT `wrangler pages deploy`). Fetches FRED DPRIME (Bank Prime Loan Rate) into the
+# GLOBAL market_reference D1 table. Thin + idempotent; the never-overwrite guard keeps the last good row on
+# any bad/missing fetch. The ROOT wrangler.toml stays clean — Cron Triggers live ONLY here (Pages can't run
+# Cron), never at the repo root.
+#
+# NOT DEPLOYED YET. Deploy + trigger registration + prod D1 migration (0003_market_reference.sql) are the
+# NEXT milestone, on the Captain's explicit GO.
+#
+# SECRET (Captain, BEFORE deploy — the key never touches git/browser). Run in THIS directory:
+#   cd workers/prime-refresh
+#   wrangler secret put FRED_API_KEY     -> paste the FRED key at the "Enter a secret value:" prompt
+#   verify:  wrangler secret list        (FRED_API_KEY present)
+# DEPLOY (Captain, AFTER prod D1 has market_reference):
+#   1) local gate GREEN:  node --experimental-sqlite scripts/_gate_d1_prime.mjs
+#   2) deploy:            cd workers/prime-refresh && wrangler deploy   (registers the weekly Cron)
+#   3) one-shot verify:   GET the Worker URL -> { ok:true, series:"DPRIME", value:<N>, asOf:<date> }
+name = "prime-refresh"
+main = "prime-refresh.mjs"
+compatibility_date = "2026-07-20"
+compatibility_flags = ["nodejs_compat"]
+
+# Weekly — 00:00 UTC every Sunday. Prime changes only a few times a year, so weekly is generous.
+# Idempotent (upsert), so a missed or re-run tick is safe.
+[triggers]
+crons = ["0 0 * * 0"]
+
+# Same GLOBAL market_reference store the Pages read endpoint (/api/prime) queries. Binding "DB" ->
+# datumfi-prod. The table is un-scoped — there is NO user id here. (Mirrors ticker-refresh: prod-only
+# binding; no preview_database_id, so `wrangler deploy` can't misroute the write to the dev db.)
+[[d1_databases]]
+binding = "DB"
+database_name = "datumfi-prod"
+database_id = "347cd869-7dfe-4f6d-83b1-7c2b56bf2bb6"
