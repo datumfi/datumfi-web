@@ -7312,8 +7312,9 @@
                     <div>${_dLbl(base, 'Annual Property Taxes', 'The town\'s cut', 'What the county charges yearly on the home. Usually escrowed into your monthly payment. Part of the real cost of owning, not just borrowing.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.propTaxAnnual||'')}" oninput="updateAccField('${id}', 'propTaxAnnual', this.value)"></div>
                     <div>${_dLbl(base, 'Annual Insurance', 'Protecting the asset', 'Homeowner\'s/hazard insurance, billed yearly, usually escrowed. Required by the lender while there\'s a balance.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.insAnnual||'')}" oninput="updateAccField('${id}', 'insAnnual', this.value)"></div>
                 </div>
-                <div class="field-row" style="grid-template-columns: 1fr;">
+                <div class="field-row">
                     <div>${_dLbl(base, 'Monthly PMI', 'The lender\'s safety net', 'Private Mortgage Insurance — charged while your equity is under ~20%. It protects the lender, not you, and drops off once you cross the line. Worth targeting.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.pmiMonthly||'')}" oninput="updateAccField('${id}', 'pmiMonthly', this.value)"></div>
+                    <div>${_dLbl(base, 'Other (yr)', 'Everything else escrowed', 'Anything else that rides with this mortgage each year — flood insurance, lender-placed coverage, an extra assessment. Enter it here and it joins your true all-in monthly. Leave it blank and it simply won\'t count.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.mortgageOtherCost||'')}" oninput="updateAccField('${id}', 'mortgageOtherCost', this.value)"></div>
                 </div>
                 <div id="modal-escrow-foot-${id}" style="display:${hasEscrow(acc)?'block':'none'}; font-size:11px; color: rgba(255,255,255,0.72); line-height:1.5; margin-top:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;">${_escrowFooter(acc)}</div>
             </div>`;
@@ -7743,7 +7744,7 @@
     window.updateAccField = function(id, field, value) {
         const acc = state.accounts.find(a => a.id === id);
         if(acc) {
-            if(field === 'origAmount' || field === 'minPmt' || field === 'addPmt' || field === 'propTaxAnnual' || field === 'insAnnual' || field === 'pmiMonthly' || field === 'propTaxYr' || field === 'homeInsYr' || field === 'maintYr' || field === 'hoaYr' || field === 'utilYr' || field === 'helocCreditLimit' || field === 'cltvCapPct') {
+            if(field === 'origAmount' || field === 'minPmt' || field === 'addPmt' || field === 'propTaxAnnual' || field === 'insAnnual' || field === 'pmiMonthly' || field === 'propTaxYr' || field === 'homeInsYr' || field === 'maintYr' || field === 'hoaYr' || field === 'utilYr' || field === 'helocCreditLimit' || field === 'cltvCapPct' || field === 'mortgageOtherCost') {
                 acc[field] = window.enforceAmt(value);   // #393 non-negative + $100B ceiling
             } else if (field === 'intRate' || field === 'cola') {
                 acc[field] = parseFloat(value) || 0;
@@ -8202,11 +8203,12 @@
         let pt = parseFloat(acc.propTaxAnnual) || 0;
         let ins = parseFloat(acc.insAnnual) || 0;
         let pmi = parseFloat(acc.pmiMonthly) || 0;
-        return pt / 12 + ins / 12 + pmi;
+        let other = parseFloat(acc.mortgageOtherCost) || 0;   // §18.1 'Other (yr)' — flood/assessments/etc.
+        return pt / 12 + ins / 12 + pmi + other / 12;
     }
     // Sourced-or-blank guard (L47): the escrow computed footer surfaces only when a real input exists.
     function hasEscrow(acc) {
-        return (parseFloat(acc.propTaxAnnual) || 0) > 0 || (parseFloat(acc.insAnnual) || 0) > 0 || (parseFloat(acc.pmiMonthly) || 0) > 0;
+        return (parseFloat(acc.propTaxAnnual) || 0) > 0 || (parseFloat(acc.insAnnual) || 0) > 0 || (parseFloat(acc.pmiMonthly) || 0) > 0 || (parseFloat(acc.mortgageOtherCost) || 0) > 0;
     }
     // §1 MOAT DATUM INTELLIGENCE — composes the debt-native signal paragraph from LIVE signals only
     // (balance-vs-original · rate+type · payoff clock · lifetime interest · equity-vs-Grounds · escrow
@@ -8966,14 +8968,16 @@
     // = P&I only for a mortgage; escrow is NOT here, so taxes/insurance are never double-counted, R172). Draws
     // once from the linked accounts — the hub's single source for lien payments.
     function _groundsLinkedPmts(id) {
-        var m = 0, h = 0;
+        var m = 0, h = 0, other = 0;
         (state.accounts || []).forEach(function (a) {
             if (a.linkedAssetId !== id) return;
-            var b = getBaseType(a.baseId), bid = String(b && b.id || ''), p = _num(a.minPmt);
-            if (bid.indexOf('mortgage') === 0) m += p;
-            else if (bid.indexOf('heloc') === 0) h += p;
+            var b = getBaseType(a.baseId), bid = String(b && b.id || '');
+            // §18.1 the mortgage's 'Other (yr)' escrow (flood/assessments) rides into the home's all-in — it
+            // has NO Grounds carry twin, so counting it here can't double-count anything the hub already sums.
+            if (bid.indexOf('mortgage') === 0) { m += _num(a.minPmt); other += _num(a.mortgageOtherCost); }
+            else if (bid.indexOf('heloc') === 0) h += _num(a.minPmt);
         });
-        return { mortgage: m, heloc: h };
+        return { mortgage: m, heloc: h, other: other };
     }
     // §16.5 True all-in monthly cost to HOLD this home (Property Copy Bank §16.5). all-in = mortgage P&I +
     // HELOC payment + carrying costs (tax/ins/upkeep/HOA/utilities)/12. FIRES-WHEN (R169): >=1 lien payment
@@ -8982,12 +8986,13 @@
     function _groundsAllIn(id, acc) {
         var p = _groundsLinkedPmts(id);
         if (p.mortgage <= 0 && p.heloc <= 0) return null;
-        if (calcCarryTotal(acc) <= 0) return null;
+        var otherMo = p.other / 12;   // §18.1 mortgage 'Other (yr)' escrow → monthly
+        if (calcCarryTotal(acc) <= 0 && otherMo <= 0) return null;   // need >=1 carry cost (Grounds carry OR mortgage 'Other')
         var propTaxMo = _num(acc.propTaxYr) / 12, insMo = _num(acc.homeInsYr) / 12, upkeepMo = _num(acc.maintYr) / 12,
             hoaMo = _num(acc.hoaYr) / 12, utilMo = _num(acc.utilYr) / 12;
-        var carryMo = propTaxMo + insMo + upkeepMo + hoaMo + utilMo;
+        var carryMo = propTaxMo + insMo + upkeepMo + hoaMo + utilMo + otherMo;
         return { mortgagePmt: p.mortgage, helocPmt: p.heloc, propTaxMo: propTaxMo, insMo: insMo, upkeepMo: upkeepMo,
-                 hoaMo: hoaMo, utilMo: utilMo, carryMo: carryMo, allIn: p.mortgage + p.heloc + carryMo };
+                 hoaMo: hoaMo, utilMo: utilMo, otherMo: otherMo, carryMo: carryMo, allIn: p.mortgage + p.heloc + carryMo };
     }
     // §16.5 base beat (Property Copy Bank R170) — the frame is VERBATIM; the liability + carrying-cost NAMING is
     // SOURCED (names only what's entered — same L47 resolution as §16.1's lien-naming, not the bank's HELOC-voice
@@ -9004,6 +9009,7 @@
         if (a.upkeepMo > 0) cats.push('upkeep');
         if (a.hoaMo > 0) cats.push('HOA');
         if (a.utilMo > 0) cats.push('utilities');
+        if (a.otherMo > 0) cats.push('other costs');
         return 'All in, this home costs about ' + $(a.allIn) + '/mo to hold — ' + join(libs) + ', plus ' + join(cats) + '. In retirement, that\'s income you\'ll need to generate every month for as long as you keep it.';
     }
     // §16.5 optional breakdown (Property Copy Bank R171) — itemizes every SOURCED component so the parts sum to
@@ -9018,6 +9024,7 @@
         if (a.upkeepMo > 0) parts.push($(a.upkeepMo) + ' upkeep (estimated)');
         if (a.hoaMo > 0) parts.push($(a.hoaMo) + ' HOA');
         if (a.utilMo > 0) parts.push($(a.utilMo) + ' utilities');
+        if (a.otherMo > 0) parts.push($(a.otherMo) + ' other');
         return 'Of that ' + $(a.allIn) + ': ' + parts.join(' · ') + '.';
     }
     // Datum Builder feed HOOK (build-to-the-seam) — named emitter the future Datum Builder consumes; the
