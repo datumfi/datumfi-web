@@ -8900,6 +8900,64 @@
         return '<div style="margin:2px 0 12px;"><div style="display:flex; height:14px; border-radius:3px; overflow:hidden; background:rgba(255,255,255,0.06);">' + bars + '</div>' +
                '<div style="font-size:10px; font-family:var(--font-mono); color:rgba(255,255,255,0.7); margin-top:5px; line-height:1.8;">' + legend + '</div></div>';
     }
+    // §16.5 — linked-lien MONTHLY payments, split mortgage vs HELOC, from each lien's REQUIRED payment (minPmt
+    // = P&I only for a mortgage; escrow is NOT here, so taxes/insurance are never double-counted, R172). Draws
+    // once from the linked accounts — the hub's single source for lien payments.
+    function _groundsLinkedPmts(id) {
+        var m = 0, h = 0;
+        (state.accounts || []).forEach(function (a) {
+            if (a.linkedAssetId !== id) return;
+            var b = getBaseType(a.baseId), bid = String(b && b.id || ''), p = _num(a.minPmt);
+            if (bid.indexOf('mortgage') === 0) m += p;
+            else if (bid.indexOf('heloc') === 0) h += p;
+        });
+        return { mortgage: m, heloc: h };
+    }
+    // §16.5 True all-in monthly cost to HOLD this home (Property Copy Bank §16.5). all-in = mortgage P&I +
+    // HELOC payment + carrying costs (tax/ins/upkeep/HOA/utilities)/12. FIRES-WHEN (R169): >=1 lien payment
+    // sourced AND >=1 carrying cost sourced (else null). Double-count guard (R172): mortgage P&I excludes
+    // escrow; taxes/insurance come ONCE from the Grounds carry fields. Display-only (LOCK-3), sourced-or-blank.
+    function _groundsAllIn(id, acc) {
+        var p = _groundsLinkedPmts(id);
+        if (p.mortgage <= 0 && p.heloc <= 0) return null;
+        if (calcCarryTotal(acc) <= 0) return null;
+        var propTaxMo = _num(acc.propTaxYr) / 12, insMo = _num(acc.homeInsYr) / 12, upkeepMo = _num(acc.maintYr) / 12,
+            hoaMo = _num(acc.hoaYr) / 12, utilMo = _num(acc.utilYr) / 12;
+        var carryMo = propTaxMo + insMo + upkeepMo + hoaMo + utilMo;
+        return { mortgagePmt: p.mortgage, helocPmt: p.heloc, propTaxMo: propTaxMo, insMo: insMo, upkeepMo: upkeepMo,
+                 hoaMo: hoaMo, utilMo: utilMo, carryMo: carryMo, allIn: p.mortgage + p.heloc + carryMo };
+    }
+    // §16.5 base beat (Property Copy Bank R170) — the frame is VERBATIM; the liability + carrying-cost NAMING is
+    // SOURCED (names only what's entered — same L47 resolution as §16.1's lien-naming, not the bank's HELOC-voice
+    // 'this line'). Retirement consequence is the intelligence, not the sum.
+    function _groundsAllInBeat(a) {
+        var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
+        var join = function (arr) { return arr.length <= 1 ? (arr[0] || '') : arr.length === 2 ? arr[0] + ' and ' + arr[1] : arr.slice(0, -1).join(', ') + ', and ' + arr[arr.length - 1]; };
+        var libs = [];
+        if (a.mortgagePmt > 0) libs.push('mortgage ' + $(a.mortgagePmt));
+        if (a.helocPmt > 0) libs.push('HELOC ' + $(a.helocPmt));
+        var cats = [];
+        if (a.propTaxMo > 0) cats.push('taxes');
+        if (a.insMo > 0) cats.push('insurance');
+        if (a.upkeepMo > 0) cats.push('upkeep');
+        if (a.hoaMo > 0) cats.push('HOA');
+        if (a.utilMo > 0) cats.push('utilities');
+        return 'All in, this home costs about ' + $(a.allIn) + '/mo to hold — ' + join(libs) + ', plus ' + join(cats) + '. In retirement, that\'s income you\'ll need to generate every month for as long as you keep it.';
+    }
+    // §16.5 optional breakdown (Property Copy Bank R171) — itemizes every SOURCED component so the parts sum to
+    // the all-in figure; 'upkeep (estimated)' keeps its estimate tag (R172). Omits any blank component.
+    function _groundsAllInBreakdown(a) {
+        var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
+        var parts = [];
+        if (a.mortgagePmt > 0) parts.push($(a.mortgagePmt) + ' mortgage');
+        if (a.helocPmt > 0) parts.push($(a.helocPmt) + ' HELOC');
+        if (a.propTaxMo > 0) parts.push($(a.propTaxMo) + ' taxes');
+        if (a.insMo > 0) parts.push($(a.insMo) + ' insurance');
+        if (a.upkeepMo > 0) parts.push($(a.upkeepMo) + ' upkeep (estimated)');
+        if (a.hoaMo > 0) parts.push($(a.hoaMo) + ' HOA');
+        if (a.utilMo > 0) parts.push($(a.utilMo) + ' utilities');
+        return 'Of that ' + $(a.allIn) + ': ' + parts.join(' · ') + '.';
+    }
     // Datum Builder feed HOOK (build-to-the-seam) — named emitter the future Datum Builder consumes; the
     // consumer doesn't exist yet, so this stub simply exposes each opted-in physical asset's annual carry.
     window.datumBuilderCarryingFeed = function () {
@@ -8975,6 +9033,14 @@
         if (cltv) {
             out += '<div style="font-size:12px; color: rgba(255,255,255,0.8); line-height:1.55; margin-bottom:8px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;">' + _groundsCLTVBeat(cltv) + '</div>';
             out += _groundsEquityBarHTML(cltv);
+        }
+        // §16.5 true all-in cost-of-this-home beat + itemized breakdown (Property Copy Bank §16.5). Mortgage P&I
+        // + HELOC payment + carrying costs, counted ONCE (R172 double-count guard: minPmt is P&I, taxes/ins from
+        // the Grounds carry). LOCK-3 display-only, sourced-or-blank. Composes below the §16.1 CLTV beat/bar.
+        var allIn = _groundsAllIn(id, acc);
+        if (allIn) {
+            out += '<div style="font-size:12px; color: rgba(255,255,255,0.8); line-height:1.55; margin-bottom:6px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;">' + _groundsAllInBeat(allIn) + '</div>';
+            out += '<div style="font-size:11px; color: rgba(255,255,255,0.62); line-height:1.5; margin-bottom:10px;">' + _groundsAllInBreakdown(allIn) + '</div>';
         }
         if (val > 0) out += row('Est. Value', $(val), '<strong>Est. Value</strong>An automated estimate from recent nearby sales — a starting point, not an appraisal. Your own number always wins.');
         if (debt > 0) out += row('Linked Debt', $(debt), '<strong>Linked Debt</strong>The loans tied to this home — usually your mortgage. Link a debt up top and it shows here automatically; nothing linked, nothing owed.');

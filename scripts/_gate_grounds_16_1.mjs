@@ -25,7 +25,8 @@ const need = (label, cond) => checks.push([label, !!cond]);
 
 const extract = (name) => { const m = s.match(new RegExp('    function ' + name + '\\([\\s\\S]*?\\n    }\\n')); return m ? m[0] : ''; };
 const NAMES = ['_num','calcCarryTotal','_groundsLinkedDebt','_groundsLiens','_groundsCLTV','_groundsCLTVBeat',
-               '_groundsEquityBarHTML','_groundsDI','_groundsDI9b','_groundsSignalsHTML'];
+               '_groundsEquityBarHTML','_groundsLinkedPmts','_groundsAllIn','_groundsAllInBeat','_groundsAllInBreakdown',
+               '_groundsDI','_groundsDI9b','_groundsSignalsHTML'];
 const getBaseType = (baseId) => {
   const id = String(baseId);
   if (id.indexOf('property') === 0) return { id, title: 'Real Estate' };
