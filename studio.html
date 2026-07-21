@@ -3030,6 +3030,14 @@
         if(v < min) el.value = String(min);
         else if(v > max) el.value = String(max);
     };
+    // #393 — normalize a currency entry: digits + one decimal only (amounts are NON-NEGATIVE, so drop any
+    // '-'), capped at a $100B sanity ceiling so a mis-typed 15-digit figure can't wreck the math/display.
+    window.enforceAmt = function(str) {
+        var c = String(str == null ? '' : str).replace(/[^0-9.]/g, '');
+        var n = parseFloat(c);
+        if(isFinite(n) && n > 100000000000) return '100000000000';
+        return c;
+    };
 
     const spendInput = document.getElementById('spend-input');
     spendInput.addEventListener('input', (e) => { 
@@ -7722,7 +7730,7 @@
         const acc = state.accounts.find(a => a.id === id);
         if(acc) {
             if(field === 'origAmount' || field === 'minPmt' || field === 'addPmt' || field === 'propTaxAnnual' || field === 'insAnnual' || field === 'pmiMonthly' || field === 'propTaxYr' || field === 'homeInsYr' || field === 'maintYr' || field === 'hoaYr' || field === 'utilYr' || field === 'helocCreditLimit') {
-                acc[field] = value.replace(/[^0-9.-]/g, '');
+                acc[field] = window.enforceAmt(value);   // #393 non-negative + $100B ceiling
             } else if (field === 'intRate' || field === 'cola') {
                 acc[field] = parseFloat(value) || 0;
             } else {
@@ -7871,7 +7879,7 @@
     window.updateValueWithoutRender = function(id, valStr) {
         const acc = state.accounts.find(a => a.id === id);
         if(acc) {
-            acc.value = parseInt(valStr.replace(/[^0-9]/g, ''), 10) || 0;
+            acc.value = Math.min(100000000000, parseInt(valStr.replace(/[^0-9]/g, ''), 10) || 0);   // #393 $100B ceiling
             // Instantly sync the front input field if it exists
             let frontInp = document.getElementById('room-val-inp-' + id);
             if(frontInp) frontInp.value = formatCurrency(acc.value.toString());
