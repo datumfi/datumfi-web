@@ -8,25 +8,31 @@
 // leaves the last good row in place (L47 — never wipe or fabricate on a bad fetch).
 import { upsertSeries, parseFredLatest } from '../../functions/api/_lib/prime-core.js';
 
-const SERIES = 'DPRIME';   // FRED: Bank Prime Loan Rate. Add SOFR / MORTGAGE30US as more ROWS later (no fork).
-const FRED_URL = (key) =>
-  'https://api.stlouisfed.org/fred/series/observations?series_id=' + SERIES +
+// FRED series to sync. DPRIME = Bank Prime Loan Rate, SOFR = Secured Overnight Financing Rate (the alternate
+// HELOC/ARM index). Add MORTGAGE30US / FEDFUNDS / … as more ids here later — no fork (§20.1/§20.6).
+const SERIES = ['DPRIME', 'SOFR'];
+const FRED_URL = (sid, key) =>
+  'https://api.stlouisfed.org/fred/series/observations?series_id=' + sid +
   '&api_key=' + encodeURIComponent(key) + '&file_type=json&sort_order=desc&limit=1';
 
 async function refresh(env) {
   const key = env && env.FRED_API_KEY;
-  if (!key) return { ok: false, reason: 'FRED_API_KEY secret missing — refused (kept last good row)' };
-  let json = null;
-  try {
-    const res = await fetch(FRED_URL(key), { cf: { cacheTtl: 0 } });
-    if (!res || !res.ok) return { ok: false, status: res && res.status, reason: 'fetch not ok — refused' };
-    json = await res.json();
-  } catch (e) { return { ok: false, reason: 'fetch/parse threw — refused (' + ((e && e.name) || 'error') + ')' }; }
-  const latest = parseFredLatest(json);
-  // Never overwrite on a bad / thin / missing observation — keep the last good row (L47).
-  if (!latest) return { ok: false, reason: 'no usable observation — refused (kept last good row)' };
-  const r = await upsertSeries(env.DB, [{ series_id: SERIES, value: latest.value, effective_date: latest.date, source: 'FRED:' + SERIES }]);
-  return { ok: true, series: SERIES, value: latest.value, asOf: latest.date, upserted: r.upserted };
+  if (!key) return { ok: false, reason: 'FRED_API_KEY secret missing — refused (kept last good rows)' };
+  const rows = [], results = {};
+  // Per-series: a bad fetch/observation on ONE series NEVER wipes the other — only the clean ones upsert (L47).
+  for (const sid of SERIES) {
+    try {
+      const res = await fetch(FRED_URL(sid, key), { cf: { cacheTtl: 0 } });
+      if (!res || !res.ok) { results[sid] = 'fetch not ok (' + (res && res.status) + ') — kept last good'; continue; }
+      const latest = parseFredLatest(await res.json());
+      if (!latest) { results[sid] = 'no usable observation — kept last good'; continue; }
+      rows.push({ series_id: sid, value: latest.value, effective_date: latest.date, source: 'FRED:' + sid });
+      results[sid] = latest.value + ' @ ' + latest.date;
+    } catch (e) { results[sid] = 'threw (' + ((e && e.name) || 'error') + ') — kept last good'; }
+  }
+  if (!rows.length) return { ok: false, reason: 'no series fetched cleanly — refused', results };
+  const r = await upsertSeries(env.DB, rows);
+  return { ok: true, upserted: r.upserted, results };
 }
 
 export default {
