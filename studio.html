@@ -8335,9 +8335,13 @@
     }
     function _helocUtilPct(acc) { var l = _helocLimit(acc); if (l === null) return null; return Math.round(((parseFloat(acc.value) || 0) / l) * 100); }
     function _helocHeadroom(acc) { var l = _helocLimit(acc); if (l === null) return null; return Math.max(0, l - (parseFloat(acc.value) || 0)); }
+    // Invalid input: a drawn balance larger than the entered credit limit (a HELOC can't be drawn past it).
+    function _helocOverLimit(acc) { var l = _helocLimit(acc); var b = parseFloat(acc.value) || 0; return l !== null && l > 0 && b > l; }
     // Inline readout under the Credit Limit field — sourced-or-blank ('' when no limit set → caller hides it).
+    // When the balance exceeds the limit, show a data-check note instead of a bogus ">100% · $0" readout.
     function _helocHeadroomHTML(acc) {
         if (_helocLimit(acc) === null) return '';
+        if (_helocOverLimit(acc)) return '<strong style="color:var(--gold);">Balance exceeds this limit</strong> — a HELOC can\'t be drawn past its credit limit; double-check these two figures.';
         return 'Utilization <strong style="color:var(--white);">' + _helocUtilPct(acc) + '%</strong> · <strong style="color:var(--teal-mid);">$' + _helocHeadroom(acc).toLocaleString('en-US') + '</strong> still available to draw';
     }
     // The Credit Limit field-row + its live readout (HELOC-only; injected into the shared debt modal). The
@@ -8386,15 +8390,20 @@
         var bal = parseFloat(acc.value) || 0;
         var lim = _helocLimit(acc);
         var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
-        // 1.1 balance drawn against the line (needs both) + headroom clause.
+        // 1.1 balance drawn against the line (needs both) + headroom clause (suppress "still available" when
+        // the balance exceeds the limit — that's invalid data, flagged by §1.3 instead of a bogus "$0").
         if (bal > 0 && lim !== null) {
             var avail = _helocHeadroom(acc);
-            parts.push($(bal) + ' drawn against a ' + $(lim) + ' line.' + (avail !== null ? ' ' + $(avail) + ' still available to draw.' : ''));
+            parts.push($(bal) + ' drawn against a ' + $(lim) + ' line.' + (avail !== null && !_helocOverLimit(acc) ? ' ' + $(avail) + ' still available to draw.' : ''));
         }
         // 1.2 secured-by-home — ALWAYS render; the defining fact.
         parts.push('This line is secured by your home. That usually buys a lower rate than an unsecured line — but the tradeoff is real: fall behind and the house is the collateral.');
-        // 1.3 utilization.
-        if (bal > 0 && lim !== null) parts.push('You\'re using ' + _helocUtilPct(acc) + '% of your available equity line.');
+        // 1.3 utilization — OR a data-check note when the drawn balance exceeds the entered limit (a HELOC
+        // can't be drawn past its credit limit, so a >100% "utilization" is invalid input, not a real signal).
+        if (bal > 0 && lim !== null) {
+            if (_helocOverLimit(acc)) parts.push('Heads up: the ' + $(bal) + ' balance you entered is larger than this line\'s ' + $(lim) + ' limit — a HELOC balance can\'t exceed its credit limit, so it\'s worth double-checking those two figures.');
+            else parts.push('You\'re using ' + _helocUtilPct(acc) + '% of your available equity line.');
+        }
         // 1.4 phase clause (reuse) + Draw-phase payment-jump heads-up (D19, sourced-or-blank).
         var pc = _helocPhaseClause(acc);
         if (pc) {
@@ -8634,8 +8643,8 @@
     function _fetchLivePrime() {
         if (typeof _livePrimeCache !== 'undefined') return Promise.resolve(_livePrimeCache);
         if (_livePrimePending) return _livePrimePending;
-        _livePrimePending = fetch('/api/prime')
-            .then(function (r) { return r.ok ? r.json() : null; })
+        _livePrimePending = fetch('/api/prime', { cache: 'no-store' })   // no-store: never serve a stale cached
+            .then(function (r) { return r.ok ? r.json() : null; })       // rates body (e.g. one missing SOFR)
             .then(function (j) { _livePrimeCache = _normalizeRatesResp(j); return _livePrimeCache; })
             .catch(function () { _livePrimeCache = null; return null; });
         return _livePrimePending;
