@@ -8570,9 +8570,25 @@
         var _rbUtil = _helocUtilPct(acc);   // null when no credit limit set
         var _rbStrongEq = _rbHv > 0 && (_rbHv - _groundsLinkedDebt(_rbLa.id)) >= 0.5 * _rbHv;
         var _rbLightlyDrawn = bal === 0 || (_rbUtil !== null && _rbUtil < 25);
+        // §19.4-B retirement-horizon gate (Captain ruling 2026-07-21). Fire the income-floor variant ONLY when
+        // the Architect is near/in retirement (currentAge >= retireAge - 5), read from the Profile DOB +
+        // Target Retirement Date via window.parseAgeFromDob — a READ, no new field. SOURCED-OR-BLANK + P8.1:
+        // never fabricate an age; blank DOB or retirement date → horizon unknown → false (beat silent, never a
+        // default age). typeof-guarded so it is inert in the extracted-function node gates unless they inject
+        // _helocAgeOverride. Variant A (standby-buffer reframe) is NOT age-gated — it names what the line CAN be.
+        var _nearRet = false;
+        if (typeof _helocAgeOverride !== 'undefined' && _helocAgeOverride) {
+            _nearRet = (_helocAgeOverride.currentAge != null && _helocAgeOverride.retireAge != null) && _helocAgeOverride.currentAge >= _helocAgeOverride.retireAge - 5;
+        } else if (typeof document !== 'undefined' && document.getElementById && typeof window !== 'undefined' && typeof window.parseAgeFromDob === 'function') {
+            var _dobV = (document.getElementById('pri-dob') || {}).value || '';
+            var _retV = (document.getElementById('target-ret') || {}).value || '';
+            var _cAge = window.parseAgeFromDob(_dobV);
+            var _rYear = parseInt((_retV.replace(/\s/g, '').split('/')[1] || ''), 10);
+            if (_cAge != null && _rYear) { _nearRet = _cAge >= (_rYear - (new Date().getFullYear() - _cAge)) - 5; }
+        }
         if (_rbStrongEq && _rbLightlyDrawn) {
             beats.push('With little drawn and strong equity behind it, this line can also serve as a standby buffer in retirement — a source to lean on during a market downturn rather than selling investments while they\'re down. It costs nothing until you use it.');
-        } else if (bal > 0 && totalMo > 0) {
+        } else if (bal > 0 && totalMo > 0 && _nearRet) {
             beats.push('Carrying this payment into retirement adds about ' + $(totalMo) + '/mo to the income your plan must cover for life — worth weighing alongside its flexibility.');
         }
         // ── §18.A VARIABLE-RATE ACKNOWLEDGMENT BEATS (verbatim, sourced-or-blank, PLAIN COACH) ──
