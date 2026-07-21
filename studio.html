@@ -7275,6 +7275,7 @@
             </div>
             ${base.title === 'HELOC' ? _helocLimitFieldHTML(id, acc) : ''}
             ${base.title === 'HELOC' ? _helocPhaseFieldHTML(id, acc) : ''}
+            ${base.title === 'HELOC' ? _helocDrawEndFieldHTML(id, acc) : ''}
             ${base.title === 'HELOC' ? _helocUsePurposeFieldHTML(id, acc) : ''}
             <div class="field-row">
                 <div>${_dLbl(base, 'Interest Rate (APR) %', 'Your cost of borrowing', 'The yearly rate the lender charges. On a mortgage even half a point, over 30 years, is real money — it\'s the biggest lever on lifetime cost.')}<input type="number" class="small-field" placeholder="0" value="${acc.intRate||''}" oninput="updateAccField('${id}', 'intRate', this.value)"></div>
@@ -8322,7 +8323,9 @@
         'Minimum Payment': ['The required amount', 'What you must pay each period. In the draw phase this can be interest-only — so the balance may not shrink on its own; in repayment it covers principal too, which is why the minimum can jump when the phase turns.'],
         'Next Payment Date': ['The clock’s start', 'We count the timeline from here. Setting it keeps the phase and payoff estimates honest — especially the countdown to when the draw period ends.'],
         // §19.2 field hover (Claude-authored per House Rule — every field gets one; flagged for Captain sign-off).
-        'Use of Funds': ['Why it matters for taxes', 'Since 2018, HELOC interest is only tax-deductible when the money was used to buy, build, or substantially improve the home that secures the line — used for anything else (a car, debt, tuition) it generally isn’t. This just tells Datum which case applies to you.']
+        'Use of Funds': ['Why it matters for taxes', 'Since 2018, HELOC interest is only tax-deductible when the money was used to buy, build, or substantially improve the home that secures the line — used for anything else (a car, debt, tuition) it generally isn’t. This just tells Datum which case applies to you.'],
+        // §19.3 field hover (Claude-authored per House Rule — flagged for Captain sign-off).
+        'Draw Period Ends': ['When interest-only stops', 'The date your draw window closes and repayment begins. It’s the whole ballgame for a HELOC: once it passes, the balance starts amortizing and your minimum payment can jump. Add it and Datum estimates that jump for you.']
     };
     function _dLbl(base, text, title, body, extraStyle, align) {
         var st = extraStyle || '';
@@ -8389,6 +8392,16 @@
                 </div>
             </div>
             <div id="modal-heloc-phase-${id}" style="display:${pc ? 'block' : 'none'}; font-size:11px; color: rgba(255,255,255,0.72); line-height:1.5; margin:-6px 0 14px;">${pc}</div>`;
+    }
+
+    // §19.3 Draw-Period-Ends date (HELOC-only; injected into the shared debt modal). OPTIONAL/PROGRESSIVE —
+    // blank leaves the §19.3 payment-shock beat dark (sourced-or-blank, L47). Feeds _helocDrawEndShock, which
+    // estimates the interest-only→amortizing jump. Hover from _HELOC_HOVERS (single source, L48).
+    function _helocDrawEndFieldHTML(id, acc) {
+        return `
+            <div class="field-row" style="grid-template-columns: 1fr;">
+                <div>${_dLbl(getBaseType(acc.baseId), 'Draw Period Ends')}<input type="date" class="small-field" value="${acc.drawPeriodEndDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'drawPeriodEndDate', this.value)"></div>
+            </div>`;
     }
 
     // §19.2 Use-of-Funds select (HELOC-only; injected into the shared debt modal). OPTIONAL/PROGRESSIVE — a
@@ -8534,6 +8547,14 @@
             beats.push('Because you used this line to improve the home that secures it, the interest may be tax-deductible (up to the combined $750k mortgage-plus-HELOC limit) — worth confirming with your tax advisor.');
         } else if (acc.helocUsePurpose === 'Other') {
             beats.push('Heads up: because this draw wasn\'t used to buy, build, or improve the home, the interest generally isn\'t tax-deductible — a common surprise, since HELOC interest used to be deductible regardless before 2018.');
+        }
+        // §19.3 draw-period-end payment shock (HELOC Copy Bank R154, verbatim). Quantifies the #1 HELOC
+        // surprise — the jump from interest-only to amortizing. Draw-phase only; sourced-or-blank via
+        // _helocDrawEndShock (needs the new {drawPeriodEndDate} + maturity + balance + apr). "about/around"
+        // hedged (day-count + lender specifics vary). Composes WITH §18 variable caps when both apply.
+        var _shock = _helocDrawEndShock(acc);
+        if (_shock) {
+            beats.push('You\'re paying interest-only right now — about ' + $(_shock.monthlyInterest) + '/mo. When your draw period ends around ' + _shock.drawEndStr + ', this balance starts amortizing over the shorter remaining term, and your minimum could rise to about ' + $(_shock.repayMin) + '/mo. The longer you pay interest-only, the sharper that jump.');
         }
         // ── §18.A VARIABLE-RATE ACKNOWLEDGMENT BEATS (verbatim, sourced-or-blank, PLAIN COACH) ──
         // These read the variable fields already on the modal and state the consequence — NO new math.
@@ -9100,6 +9121,26 @@
         var r = apr / 100 / 12;
         var reqPmt = (r === 0) ? bal / nToMat : bal * r / (1 - Math.pow(1 + r, -nToMat));
         return { maturityDate: mat, monthsToMaturity: nToMat, requiredPmt: reqPmt, payoffMonths: pm.months };
+    }
+    // §19.3 draw-period-end payment shock. Returns the interest-only run-rate now + the estimated repayment
+    // minimum once the draw window closes (PMT of the balance over draw-end→maturity months), or null. Draw-
+    // phase only; sourced-or-blank — needs {drawPeriodEndDate} + maturity + balance + apr, and the draw-end
+    // must sit before maturity with runway to amortize. Same PMT formula as _payoffVsMaturity (L48). Display-
+    // only (LOCK-3) — reads acc, never writes.
+    function _helocDrawEndShock(acc) {
+        if (acc.helocPhase !== 'Draw' || !acc.drawPeriodEndDate || !acc.maturityDate) return null;
+        var bal = parseFloat(acc.value) || 0;
+        var apr = parseFloat(acc.intRate) || 0;
+        if (bal <= 0 || apr <= 0) return null;
+        var de = new Date(acc.drawPeriodEndDate + 'T00:00:00');
+        var mat = new Date(acc.maturityDate + 'T00:00:00');
+        if (isNaN(de) || isNaN(mat)) return null;
+        var nRepay = (mat.getFullYear() - de.getFullYear()) * 12 + (mat.getMonth() - de.getMonth());
+        if (nRepay <= 0) return null;   // draw-end at/after maturity → no repayment runway to amortize
+        var r = apr / 100 / 12;
+        var repayMin = (r === 0) ? bal / nRepay : bal * r / (1 - Math.pow(1 + r, -nRepay));
+        return { monthlyInterest: bal * (apr / 100) / 12, repayMin: repayMin,
+                 drawEndStr: de.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) };
     }
     // §17.1 display — the Expected Payoff Date. For a HELOC whose pace overshoots maturity, show the binding
     // maturity date (beat 16.1 carries the shortfall + required payment). Non-HELOC is unchanged (Moat as-is).
