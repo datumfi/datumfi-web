@@ -15,7 +15,9 @@ const SERIES_BY_LABEL = { Prime: 'DPRIME', SOFR: 'SOFR' };
 
 const json = (body, status) => new Response(JSON.stringify(body), {
   status: status || 200,
-  headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=86400' }
+  // 1h (was 24h) — a market rate updates at most weekly, but a short cache keeps shape/value changes
+  // (e.g. adding SOFR) from lingering stale at the edge/browser after a deploy.
+  headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' }
 });
 
 export async function onRequestGet(context) {

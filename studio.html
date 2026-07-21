@@ -8622,17 +8622,21 @@
     // Display-only (LOCK-3): never touches the stored APR or any §18 math. Same-origin public endpoint (no auth).
     var _livePrimeCache;               // undefined = unfetched · null = empty · {prime,asOf,source,rates}
     var _livePrimePending = null;
+    // Normalize the /api/prime response into {prime,asOf,source,rates}. RESILIENCE: if the payload has no
+    // `rates` map (an older or edge-cached endpoint that predates the SOFR change), synthesize Prime from the
+    // top-level fields so the Prime color can NEVER regress during a deploy/cache transition. Pure + testable.
+    function _normalizeRatesResp(j) {
+        if (!j || (typeof j.prime !== 'number' && !j.rates)) return null;
+        var rates = j.rates || {};
+        if (!rates.Prime && typeof j.prime === 'number' && j.asOf) rates.Prime = { value: j.prime, asOf: j.asOf, source: j.source };
+        return { prime: (typeof j.prime === 'number' ? j.prime : null), asOf: j.asOf || null, source: j.source || null, rates: rates };
+    }
     function _fetchLivePrime() {
         if (typeof _livePrimeCache !== 'undefined') return Promise.resolve(_livePrimeCache);
         if (_livePrimePending) return _livePrimePending;
         _livePrimePending = fetch('/api/prime')
             .then(function (r) { return r.ok ? r.json() : null; })
-            .then(function (j) {
-                _livePrimeCache = (j && (typeof j.prime === 'number' || j.rates))
-                    ? { prime: (typeof j.prime === 'number' ? j.prime : null), asOf: j.asOf || null, source: j.source || null, rates: j.rates || {} }
-                    : null;
-                return _livePrimeCache;
-            })
+            .then(function (j) { _livePrimeCache = _normalizeRatesResp(j); return _livePrimeCache; })
             .catch(function () { _livePrimeCache = null; return null; });
         return _livePrimePending;
     }

@@ -25,12 +25,12 @@ const need = (label, cond) => checks.push([label, !!cond]);
 const extract = (name) => { const m = s.match(new RegExp('    function ' + name + '\\([\\s\\S]*?\\n    }\\n')); return m ? m[0] : ''; };
 const NAMES = ['calculateTotalPmt','payoffMonths','_payoffDateFrom','calculatePayoff','lifetimeInterest',
                'acceleratedDelta','_helocLimit','_helocUtilPct','_helocHeadroom','_payoffVsMaturity',
-               '_debtPayoffDisplay','_helocCeilingBand','_livePrime','_liveRates','_liveIndex','_fmtAsOf','_helocLiveRateHTML',
+               '_debtPayoffDisplay','_helocCeilingBand','_normalizeRatesResp','_livePrime','_liveRates','_liveIndex','_fmtAsOf','_helocLiveRateHTML',
                '_helocIntelBeats','_diIntelligence'];
 // Build an engine context with a chosen live-rates cache injected (the var the render paths read).
 function build(cacheLiteral) {
   const body = 'var _livePrimeCache = ' + cacheLiteral + ';\n' + NAMES.map(extract).join('\n') +
-    '\nreturn { b:_helocIntelBeats, liveHTML:_helocLiveRateHTML, prime:_livePrime };';
+    '\nreturn { b:_helocIntelBeats, liveHTML:_helocLiveRateHTML, prime:_livePrime, norm:_normalizeRatesResp };';
   return new Function('state', 'getBaseType', body)({ accounts: [] }, () => ({ id: 'heloc_primary', title: 'HELOC' }));
 }
 // rates map keyed by index LABEL (mirrors the /api/prime response shape).
@@ -111,6 +111,16 @@ if (live && blank && liveSofr) {
   // (LOCK-3) the render paths never mutate the stored APR.
   const before = acc.intRate; live.liveHTML('x', acc); live.b(acc);
   need('(LOCK-3) render paths never mutate acc.intRate', acc.intRate === before && before === 5.99);
+
+  // (RESILIENCE) _normalizeRatesResp synthesizes Prime from top-level when `rates` is absent (stale/old
+  // endpoint) so the Prime colour can't regress in a deploy/cache transition; passes a real rates map through.
+  const oldShape = live.norm({ prime: 6.75, asOf: '2026-07-16', source: 'FRED:DPRIME' });
+  need('(RESILIENCE) rates-less response -> Prime synthesized from top-level',
+    oldShape && oldShape.rates && oldShape.rates.Prime && oldShape.rates.Prime.value === 6.75 && !oldShape.rates.SOFR);
+  const newShape = live.norm({ prime: 6.75, asOf: '2026-07-16', source: 'FRED:DPRIME', rates: { Prime: { value: 6.75, asOf: '2026-07-16', source: 'FRED:DPRIME' }, SOFR: { value: 3.59, asOf: '2026-07-17', source: 'FRED:SOFR' } } });
+  need('(RESILIENCE) full rates map passes through (SOFR preserved)',
+    newShape && newShape.rates.SOFR && newShape.rates.SOFR.value === 3.59);
+  need('(RESILIENCE) empty / garbage -> null', live.norm(null) === null && live.norm({}) === null);
 }
 
 let pass = 0;
