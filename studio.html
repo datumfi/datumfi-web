@@ -8582,6 +8582,15 @@
                 var _hrStr = (Math.round(_hr * 100) % 100 === 0) ? String(Math.round(_hr)) : (Math.round(_hr * 100) / 100).toFixed(2);
                 beats.push('With ' + liveIdx.label + ' near ' + liveIdx.value.toFixed(2) + '% today and your ' + band.ceilRate + '% lifetime cap, there\'s about ' + _hrStr + ' points of headroom before you hit the ceiling.');
             }
+            // §18.A5 entered-margin vs implied-margin reconciliation (HELOC Copy Bank R126, verbatim). Interim
+            // honesty beat until the Phase-2 segmented amortizer resolves stored-flat-APR vs (index+margin)
+            // structurally. Fires ONLY when the stored apr's implied spread and the filed margin disagree by
+            // >= 0.10pt (small gaps are normal — stored rates lag the index between resets), so it composes with
+            // §20.3 (which STATES the spread) without echoing it. impliedMargin = apr - liveIndex, DISPLAY-
+            // derived — never overwrites stored apr (LOCK-3). Sourced-or-blank: needs apr + live index + margin.
+            if (liveIdx && apr > 0 && mgn !== null && Math.abs((apr - liveIdx.value) - mgn) >= 0.10) {
+                beats.push('One note on the math: your line\'s stored rate is ' + apr + '%. Today that works out to about ' + (apr - liveIdx.value).toFixed(2) + '% over ' + liveIdx.label + ' (' + liveIdx.value.toFixed(2) + '%), while the margin on file reads ' + mgn + '%. Small gaps are normal — stored rates lag the index between resets — so we show your actual ' + apr + '% as the source of truth here, and re-check margin at the next reset.');
+            }
         }
         return beats;
     }
