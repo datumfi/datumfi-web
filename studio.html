@@ -7275,6 +7275,7 @@
             </div>
             ${base.title === 'HELOC' ? _helocLimitFieldHTML(id, acc) : ''}
             ${base.title === 'HELOC' ? _helocPhaseFieldHTML(id, acc) : ''}
+            ${base.title === 'HELOC' ? _helocUsePurposeFieldHTML(id, acc) : ''}
             <div class="field-row">
                 <div>${_dLbl(base, 'Interest Rate (APR) %', 'Your cost of borrowing', 'The yearly rate the lender charges. On a mortgage even half a point, over 30 years, is real money — it\'s the biggest lever on lifetime cost.')}<input type="number" class="small-field" placeholder="0" value="${acc.intRate||''}" oninput="updateAccField('${id}', 'intRate', this.value)"></div>
                 <div>${_dLbl(base, 'Rate Type', 'Locked or moving', 'Fixed = this rate never changes. Variable/ARM = it can reset up or down on a schedule. Pick Variable to reveal the index, margin, and caps that govern the moves.', '', 'right')}
@@ -8319,7 +8320,9 @@
         'Origination Date': ['The day the line opened', 'When the HELOC was funded. It anchors the draw-period clock — the window before repayment begins and the balance starts amortizing.'],
         'Maturity Date': ['When the line closes out', 'The contractual end of the line — by here the balance must be repaid. Read it alongside the phase: the draw period ends first, then repayment carries you to this date.'],
         'Minimum Payment': ['The required amount', 'What you must pay each period. In the draw phase this can be interest-only — so the balance may not shrink on its own; in repayment it covers principal too, which is why the minimum can jump when the phase turns.'],
-        'Next Payment Date': ['The clock’s start', 'We count the timeline from here. Setting it keeps the phase and payoff estimates honest — especially the countdown to when the draw period ends.']
+        'Next Payment Date': ['The clock’s start', 'We count the timeline from here. Setting it keeps the phase and payoff estimates honest — especially the countdown to when the draw period ends.'],
+        // §19.2 field hover (Claude-authored per House Rule — every field gets one; flagged for Captain sign-off).
+        'Use of Funds': ['Why it matters for taxes', 'Since 2018, HELOC interest is only tax-deductible when the money was used to buy, build, or substantially improve the home that secures the line — used for anything else (a car, debt, tuition) it generally isn’t. This just tells Datum which case applies to you.']
     };
     function _dLbl(base, text, title, body, extraStyle, align) {
         var st = extraStyle || '';
@@ -8386,6 +8389,24 @@
                 </div>
             </div>
             <div id="modal-heloc-phase-${id}" style="display:${pc ? 'block' : 'none'}; font-size:11px; color: rgba(255,255,255,0.72); line-height:1.5; margin:-6px 0 14px;">${pc}</div>`;
+    }
+
+    // §19.2 Use-of-Funds select (HELOC-only; injected into the shared debt modal). OPTIONAL/PROGRESSIVE — a
+    // blank purpose leaves the §19.2 tax-deductibility beat dark (sourced-or-blank, L47), protecting against
+    // form fatigue. 'Home improvement' vs 'Other' selects which verbatim beat variant fires. Hover from
+    // _HELOC_HOVERS (single source, L48). No caption row — the beat carries the meaning.
+    function _helocUsePurposeFieldHTML(id, acc) {
+        var p = acc.helocUsePurpose;
+        return `
+            <div class="field-row" style="grid-template-columns: 1fr;">
+                <div>${_dLbl(getBaseType(acc.baseId), 'Use of Funds')}
+                    <select class="small-field" style="background: var(--bg-navy);" onchange="updateAccField('${id}', 'helocUsePurpose', this.value)">
+                        <option value="">Select… (optional)</option>
+                        <option ${p === 'Home improvement' ? 'selected' : ''}>Home improvement</option>
+                        <option ${p === 'Other' ? 'selected' : ''}>Other</option>
+                    </select>
+                </div>
+            </div>`;
     }
 
     // §1 THE CELLAR (HELOC) — Datum Intelligence signal strip. Composed part-by-part like _moatDI (L48),
@@ -8503,6 +8524,16 @@
         // 16.6 repayment-phase lens correction (reframes the summary's utilization figure).
         if (acc.helocPhase === 'Repayment' && _helocLimit(acc) !== null) {
             beats.push('You\'re in the repayment period, so the \'' + _helocUtilPct(acc) + '% utilization\' above is really a paydown figure, not spare headroom — no new draws are allowed here. What matters now is how fast the balance falls, not how much line is left.');
+        }
+        // §19.2 tax-deductibility-by-use (HELOC Copy Bank R150, verbatim, two variants). Post-2017 TCJA: HELOC
+        // interest is deductible ONLY when the draw bought / built / substantially improved the home that
+        // secures it (within the combined $750k acquisition-debt cap). PLAIN COACH — "may be" / "generally
+        // isn't" / "worth confirming with your tax advisor", never "deduct this". Sourced-or-blank on the new
+        // {helocUsePurpose} field: blank purpose → silent (L47). The liability beat — advisor-deferring.
+        if (acc.helocUsePurpose === 'Home improvement') {
+            beats.push('Because you used this line to improve the home that secures it, the interest may be tax-deductible (up to the combined $750k mortgage-plus-HELOC limit) — worth confirming with your tax advisor.');
+        } else if (acc.helocUsePurpose === 'Other') {
+            beats.push('Heads up: because this draw wasn\'t used to buy, build, or improve the home, the interest generally isn\'t tax-deductible — a common surprise, since HELOC interest used to be deductible regardless before 2018.');
         }
         // ── §18.A VARIABLE-RATE ACKNOWLEDGMENT BEATS (verbatim, sourced-or-blank, PLAIN COACH) ──
         // These read the variable fields already on the modal and state the consequence — NO new math.
