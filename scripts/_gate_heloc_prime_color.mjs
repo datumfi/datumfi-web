@@ -25,22 +25,26 @@ const need = (label, cond) => checks.push([label, !!cond]);
 const extract = (name) => { const m = s.match(new RegExp('    function ' + name + '\\([\\s\\S]*?\\n    }\\n')); return m ? m[0] : ''; };
 const NAMES = ['calculateTotalPmt','payoffMonths','_payoffDateFrom','calculatePayoff','lifetimeInterest',
                'acceleratedDelta','_helocLimit','_helocUtilPct','_helocHeadroom','_payoffVsMaturity',
-               '_debtPayoffDisplay','_helocCeilingBand','_livePrime','_fmtAsOf','_helocLiveRateHTML',
+               '_debtPayoffDisplay','_helocCeilingBand','_livePrime','_liveRates','_liveIndex','_fmtAsOf','_helocLiveRateHTML',
                '_helocIntelBeats','_diIntelligence'];
-// Build an engine context with a chosen live-Prime cache value injected (the var the render paths read).
+// Build an engine context with a chosen live-rates cache injected (the var the render paths read).
 function build(cacheLiteral) {
   const body = 'var _livePrimeCache = ' + cacheLiteral + ';\n' + NAMES.map(extract).join('\n') +
     '\nreturn { b:_helocIntelBeats, liveHTML:_helocLiveRateHTML, prime:_livePrime };';
   return new Function('state', 'getBaseType', body)({ accounts: [] }, () => ({ id: 'heloc_primary', title: 'HELOC' }));
 }
-let live = null, blank = null, err = '';
+// rates map keyed by index LABEL (mirrors the /api/prime response shape).
+const PRIME = "{ prime: 6.75, asOf: '2026-07-16', source: 'FRED:DPRIME', rates: { Prime: { value: 6.75, asOf: '2026-07-16', source: 'FRED:DPRIME' } } }";
+const PRIME_AND_SOFR = "{ prime: 6.75, asOf: '2026-07-16', source: 'FRED:DPRIME', rates: { Prime: { value: 6.75, asOf: '2026-07-16', source: 'FRED:DPRIME' }, SOFR: { value: 5.31, asOf: '2026-07-16', source: 'FRED:SOFR' } } }";
+let live = null, blank = null, liveSofr = null, err = '';
 try {
-  live = build("{ prime: 6.75, asOf: '2026-07-16', source: 'FRED:DPRIME' }");
+  live = build(PRIME);                 // only Prime fed (SOFR series absent)
+  liveSofr = build(PRIME_AND_SOFR);    // both fed
   blank = build('null');
 } catch (e) { err = e.message; }
-need('engine builds with an injected live-Prime cache' + (err ? ' (' + err + ')' : ''), !!live && !!blank);
+need('engine builds with an injected live-rates cache' + (err ? ' (' + err + ')' : ''), !!live && !!blank && !!liveSofr);
 
-if (live && blank) {
+if (live && blank && liveSofr) {
   const acc = { baseId: 'heloc_primary', value: 15222, intRate: 5.99, minPmt: 200, addPmt: 655,
     rateType: 'Variable', helocPhase: 'Draw', helocCreditLimit: 150000, rateIndex: 'Prime', rateMargin: 4,
     capPeriodic: 5, capLifetime: 5, maturityDate: '2030-01-12', nextPmtDate: '2026-08-01' };
@@ -88,10 +92,17 @@ if (live && blank) {
   need('(DEGRADE) live=null -> §20.3 absent AND §18.A4 fallback FIRES',
     !/is about Prime/.test(blankBeats) && /Your rate is built as Prime \+ 4%\. When Prime moves/.test(blankBeats));
 
-  // (§20.5d) never assume Prime — SOFR-indexed line stays dark even with a live Prime; Fixed stays dark.
+  // (§20.5d) never assume Prime — a SOFR-indexed line stays DARK when only Prime is fed (SOFR series absent).
   const sofr = { ...acc, rateIndex: 'SOFR' };
-  need('(§20.5d) SOFR-indexed line -> §20.2 blank + §20.3 absent (never assume Prime)',
-    live.liveHTML('x', sofr) === '' && !/is about Prime/.test(J(live.b(sofr))));
+  need('(§20.5d) SOFR-indexed line + only Prime fed -> §20.2 blank + §20.3 absent (SOFR not fed)',
+    live.liveHTML('x', sofr) === '' && !/is about/.test(J(live.b(sofr))));
+  // (SOFR) once SOFR IS fed, a SOFR line colours with the SOFR label (not Prime) — same work as Prime.
+  need('(SOFR) SOFR line + SOFR fed -> §20.2 "Today: SOFR ~5.31%"',
+    /Today: SOFR ~5\.31% \(as of Jul 16, 2026, source FRED\)/.test(liveSofr.liveHTML('x', sofr)));
+  need('(SOFR) SOFR line + SOFR fed -> §20.3 uses SOFR label (5.99% is about SOFR +0.68)',
+    /Your 5\.99% is about SOFR \+0\.68 today — SOFR sits near 5\.31% \(as of Jul 16, 2026\)\. If SOFR moves, your rate moves with it\./.test(J(liveSofr.b(sofr))) && !/about Prime/.test(J(liveSofr.b(sofr))));
+  need('(SOFR) SOFR line + SOFR fed -> §20.4 uses SOFR label',
+    /With SOFR near 5\.31% today and your 10\.99% lifetime cap, there's about 5 points of headroom/.test(J(liveSofr.b(sofr))));
   const noIdx = { ...acc, rateIndex: '' };
   need('(§20.5d) blank index -> §20.2 blank (never assume Prime)', live.liveHTML('x', noIdx) === '');
   const fixed = { ...acc, rateType: 'Fixed' };

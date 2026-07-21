@@ -34,7 +34,7 @@ need('(C) de-dup: §1.5 summary keeps the plain variable-rate fact', /This rate 
 const extract = (name) => { const m = s.match(new RegExp('    function ' + name + '\\([\\s\\S]*?\\n    }\\n')); return m ? m[0] : ''; };
 const NAMES = ['calculateTotalPmt','payoffMonths','_payoffDateFrom','calculatePayoff','lifetimeInterest',
                'acceleratedDelta','_helocLimit','_helocUtilPct','_helocHeadroom','_payoffVsMaturity',
-               '_debtPayoffDisplay','_helocCeilingBand','_livePrime','_fmtAsOf','_helocIntelBeats','_diIntelligence'];
+               '_debtPayoffDisplay','_helocCeilingBand','_livePrime','_liveRates','_liveIndex','_fmtAsOf','_helocIntelBeats','_diIntelligence'];
 let api = null, extractErr = '';
 try {
   const body = NAMES.map(extract).join('\n') + '\nreturn {b:_helocIntelBeats};';
@@ -78,6 +78,10 @@ if (api) {
   const pastR = J(api.b({ ...acc, rateResetDate: pastReset }));
   need('(B) bite: reset date in the past → 18.A2 SILENT',
     !/Your rate can next adjust on /.test(pastR));
+  // (#390) reset AFTER maturity → A2 silent (the reset can never happen; the line closes at maturity).
+  const resetPastMat = J(api.b({ ...acc, rateResetDate: '2035-01-01', maturityDate: '2030-01-12' }));
+  need('(#390) reset AFTER maturity → 18.A2 SILENT (line closes at maturity)',
+    !/Your rate can next adjust on /.test(resetPastMat));
   // only-one-cap variant.
   const oneCap = J(api.b({ ...acc, capPeriodic: 5, capLifetime: '' }));
   need('(B) one cap only → 18.A3 renders just the periodic cap',

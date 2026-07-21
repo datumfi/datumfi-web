@@ -8530,9 +8530,8 @@
             // 18.A4 index+margin transparency — pure STRUCTURE; SUPPRESSED when the richer §20.3 live-Prime
             // clause fires (L51 richest-hover-wins: the live number beats the bare structure). Silent unless
             // both index+margin sourced.
-            var live = _livePrime();
-            var primeIndexed = idx.toUpperCase().indexOf('PRIME') >= 0;
-            var showLiveClause = !!(live && primeIndexed && apr > 0);
+            var liveIdx = _liveIndex(acc);          // Prime OR SOFR by the line's own index (§20.5d)
+            var showLiveClause = !!(liveIdx && apr > 0);
             if (idx && mgn !== null && !showLiveClause) {
                 beats.push('Your rate is built as ' + idx + ' + ' + mgn + '%. When ' + idx + ' moves, your rate moves with it (inside the caps above).');
             }
@@ -8553,9 +8552,9 @@
             // than §18.A4 (carries the LIVE Prime number), so it WINS for a Prime-indexed line when the feed
             // is live; §18.A4 degrades in gracefully when it isn't. Display-only (LOCK-3), sourced-or-blank.
             if (showLiveClause) {
-                var _impl = apr - live.prime;
+                var _impl = apr - liveIdx.value;
                 var _sgn = _impl >= 0 ? '+' : '-';
-                beats.push('Your ' + apr + '% is about Prime ' + _sgn + Math.abs(_impl).toFixed(2) + ' today — Prime sits near ' + live.prime.toFixed(2) + '% (as of ' + _fmtAsOf(live.asOf) + '). If Prime moves, your rate moves with it.');
+                beats.push('Your ' + apr + '% is about ' + liveIdx.label + ' ' + _sgn + Math.abs(_impl).toFixed(2) + ' today — ' + liveIdx.label + ' sits near ' + liveIdx.value.toFixed(2) + '% (as of ' + _fmtAsOf(liveIdx.asOf) + '). If ' + liveIdx.label + ' moves, your rate moves with it.');
             }
             // §20.4 FRED caps-context — cap-headroom clause (HELOC Copy Bank §20.4/D170, verbatim). Captain
             // ruling: capHeadroom = ceilingRate − userAPR (points still left in the USER'S rate before the
@@ -8564,7 +8563,7 @@
             if (showLiveClause && band && typeof band.ceilRate === 'number') {
                 var _hr = band.ceilRate - apr;
                 var _hrStr = (Math.round(_hr * 100) % 100 === 0) ? String(Math.round(_hr)) : (Math.round(_hr * 100) / 100).toFixed(2);
-                beats.push('With Prime near ' + live.prime.toFixed(2) + '% today and your ' + band.ceilRate + '% lifetime cap, there\'s about ' + _hrStr + ' points of headroom before you hit the ceiling.');
+                beats.push('With ' + liveIdx.label + ' near ' + liveIdx.value.toFixed(2) + '% today and your ' + band.ceilRate + '% lifetime cap, there\'s about ' + _hrStr + ' points of headroom before you hit the ceiling.');
             }
         }
         return beats;
@@ -8617,11 +8616,11 @@
                  exceedsMaturity: exceedsMat, payment: pmt };
     }
 
-    // ── §20 FRED LIVE-RATE COLOR (HELOC Copy Bank §20) — read the GLOBAL /api/prime (Prime = FRED DPRIME)
-    // ONCE, cache it. SOURCED-OR-BLANK (L47): null/error -> render NOTHING (no guessed rate, no hard-coded
-    // fallback). Display-only (LOCK-3): never touches the stored APR or any §18 math. Same-origin public
-    // endpoint (no auth; connect-src 'self'). SOFR is a future series ROW on the same rail (§20.1/§20.6).
-    var _livePrimeCache;               // undefined = unfetched · null = loaded-but-empty · {prime,asOf,source}
+    // ── §20 FRED LIVE-RATE COLOR (HELOC Copy Bank §20) — read the GLOBAL /api/prime ONCE, cache it. The
+    // endpoint returns a `rates` map keyed by index LABEL (Prime = FRED DPRIME, SOFR = FRED SOFR). SOURCED-OR-
+    // BLANK (L47): null/error/absent series -> render NOTHING (no guessed rate, no hard-coded fallback).
+    // Display-only (LOCK-3): never touches the stored APR or any §18 math. Same-origin public endpoint (no auth).
+    var _livePrimeCache;               // undefined = unfetched · null = empty · {prime,asOf,source,rates}
     var _livePrimePending = null;
     function _fetchLivePrime() {
         if (typeof _livePrimeCache !== 'undefined') return Promise.resolve(_livePrimeCache);
@@ -8629,16 +8628,32 @@
         _livePrimePending = fetch('/api/prime')
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (j) {
-                _livePrimeCache = (j && typeof j.prime === 'number' && j.asOf) ? { prime: j.prime, asOf: j.asOf, source: j.source || 'FRED' } : null;
+                _livePrimeCache = (j && (typeof j.prime === 'number' || j.rates))
+                    ? { prime: (typeof j.prime === 'number' ? j.prime : null), asOf: j.asOf || null, source: j.source || null, rates: j.rates || {} }
+                    : null;
                 return _livePrimeCache;
             })
             .catch(function () { _livePrimeCache = null; return null; });
         return _livePrimePending;
     }
-    // Synchronous accessor for the render paths. typeof-guarded so it is SAFE even where the cache var is not
-    // in scope (the extracted-function gates run _helocIntelBeats in isolation — there it returns null).
+    // Synchronous accessors for the render paths. typeof-guarded so they are SAFE where the cache var is not in
+    // scope (the extracted-function gates run _helocIntelBeats in isolation — there they return null).
+    function _liveRates() {
+        return (typeof _livePrimeCache !== 'undefined' && _livePrimeCache && _livePrimeCache.rates) ? _livePrimeCache.rates : null;
+    }
+    // Prime specifically — the market reference the §16.5 FIXED-line clause always cites. {prime,asOf,source}.
     function _livePrime() {
-        return (typeof _livePrimeCache !== 'undefined' && _livePrimeCache && typeof _livePrimeCache.prime === 'number') ? _livePrimeCache : null;
+        var r = _liveRates(), p = r && r.Prime;
+        return (p && typeof p.value === 'number') ? { prime: p.value, asOf: p.asOf, source: p.source } : null;
+    }
+    // The live figure for THIS line's OWN index (§20.5d — Prime or SOFR by the Rate Index field; never assume).
+    // Returns { label, value, asOf, source } or null (unknown index / not fed / stale).
+    function _liveIndex(acc) {
+        var idx = String(acc && acc.rateIndex || '').trim().toUpperCase();
+        var label = idx.indexOf('PRIME') >= 0 ? 'Prime' : (idx.indexOf('SOFR') >= 0 ? 'SOFR' : null);
+        if (!label) return null;
+        var r = _liveRates(), row = r && r[label];
+        return (row && typeof row.value === 'number') ? { label: label, value: row.value, asOf: row.asOf, source: row.source } : null;
     }
     function _fmtAsOf(ds) {
         if (!ds) return '';
@@ -8646,14 +8661,13 @@
         return isNaN(d) ? String(ds) : d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
     }
     // §20.2 — the live-index sub-line rendered AT the rate field of a HELOC modal. §20.5(d): pick the index
-    // by the line's OWN Rate Index field, never assume Prime; SOFR isn't fed yet, so a SOFR/other/blank index
-    // stays dark. §20.5(a): blank if the live index is missing/stale. §20.5(c): 2dp + {asOf} + 'source FRED'.
+    // by the line's OWN Rate Index field (Prime or SOFR), never assume. §20.5(a): blank if missing/stale.
+    // §20.5(c): 2dp + {asOf} + 'source FRED'.
     function _helocLiveRateHTML(id, acc) {
         if (!acc || acc.rateType !== 'Variable') return '';
-        if (String(acc.rateIndex || '').trim().toUpperCase().indexOf('PRIME') < 0) return '';
-        var live = _livePrime();
-        if (!live) return '';
-        return '<div style="font-size:11px; color: rgba(93,202,165,0.9); margin:-6px 0 12px;">Today: Prime ~' + live.prime.toFixed(2) + '% (as of ' + _fmtAsOf(live.asOf) + ', source FRED)</div>';
+        var li = _liveIndex(acc);
+        if (!li) return '';
+        return '<div style="font-size:11px; color: rgba(93,202,165,0.9); margin:-6px 0 12px;">Today: ' + li.label + ' ~' + li.value.toFixed(2) + '% (as of ' + _fmtAsOf(li.asOf) + ', source FRED)</div>';
     }
     // Re-render any open HELOC modal's live-rate sub-line + intelligence layer once the async Prime fetch
     // resolves (the modal may have opened before the value arrived). Idempotent; blank stays blank.
@@ -8951,16 +8965,16 @@
                 '</select>';
             return `
             <div class="field-row">
-                <div>${_hlF('Rate Index', 'The benchmark you track', 'The published rate your line follows — usually Prime, sometimes SOFR. Your actual rate is this index plus your margin, and it moves with the index at each reset. Today\'s live figure shows just below.')}${_idxSelect}</div>
-                <div>${_hlF('Margin %', 'The lender\'s fixed add-on', 'The fixed amount your lender adds on top of the index — set at signing, never changes. Your rate = index + margin, so a lower margin is a better deal for the life of the line.', 'right')}<input type="number" min="0" max="100" step="0.01" class="small-field" placeholder="0" value="${acc.rateMargin||''}" oninput="enforceNumRange(this, 0, 100); updateAccField('${id}', 'rateMargin', this.value)"></div>
+                <div>${_hlF('Rate Index', 'The benchmark you track', 'The published rate your line follows — usually Prime, sometimes SOFR. Your actual rate is this index plus your margin, and it moves with the index at each reset. Today’s live figure shows just below.')}${_idxSelect}</div>
+                <div>${_hlF('Margin %', 'The lender’s fixed add-on', 'The fixed amount your lender adds on top of the index — set at signing, never changes. Your rate = index + margin, so a lower margin is a better deal for the life of the line.', 'right')}<input type="number" min="0" max="100" step="0.01" class="small-field" placeholder="0" value="${acc.rateMargin||''}" oninput="enforceNumRange(this, 0, 100); updateAccField('${id}', 'rateMargin', this.value)"></div>
             </div>
             <div id="modal-heloc-liverate-${id}">${_helocLiveRateHTML(id, acc)}</div>
             <div class="field-row">
-                <div>${_hlF('Periodic Cap %', 'The most it can jump at once', 'The largest your rate can move at any single reset, up or down. Even if the index spikes, one reset can\'t move you more than this.')}<input type="number" min="0" max="100" step="0.01" class="small-field" placeholder="0" value="${acc.capPeriodic||''}" oninput="enforceNumRange(this, 0, 100); updateAccField('${id}', 'capPeriodic', this.value)"></div>
-                <div>${_hlF('Lifetime Cap %', 'The ceiling over the whole loan', 'The most your rate can ever climb above where it started, across the entire line. It sets your worst case — the ceiling the rate can\'t cross no matter what the index does.', 'right')}<input type="number" min="0" max="100" step="0.01" class="small-field" placeholder="0" value="${acc.capLifetime||''}" oninput="enforceNumRange(this, 0, 100); updateAccField('${id}', 'capLifetime', this.value)"></div>
+                <div>${_hlF('Periodic Cap %', 'The most it can jump at once', 'The largest your rate can move at any single reset, up or down. Even if the index spikes, one reset can’t move you more than this.')}<input type="number" min="0" max="100" step="0.01" class="small-field" placeholder="0" value="${acc.capPeriodic||''}" oninput="enforceNumRange(this, 0, 100); updateAccField('${id}', 'capPeriodic', this.value)"></div>
+                <div>${_hlF('Lifetime Cap %', 'The ceiling over the whole loan', 'The most your rate can ever climb above where it started, across the entire line. It sets your worst case — the ceiling the rate can’t cross no matter what the index does.', 'right')}<input type="number" min="0" max="100" step="0.01" class="small-field" placeholder="0" value="${acc.capLifetime||''}" oninput="enforceNumRange(this, 0, 100); updateAccField('${id}', 'capLifetime', this.value)"></div>
             </div>
             <div class="field-row" style="grid-template-columns: 1fr;">
-                <div>${_hlF('Next Reset Date', 'When the rate can change next', 'The next date your rate re-prices to the current index plus your margin. Until then today\'s rate holds; after it, your payment may shift. Datum re-checks the math when this date arrives.')}<input type="date" class="small-field" value="${acc.rateResetDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'rateResetDate', this.value)"></div>
+                <div>${_hlF('Next Reset Date', 'When the rate can change next', 'The next date your rate re-prices to the current index plus your margin. Until then today’s rate holds; after it, your payment may shift. Datum re-checks the math when this date arrives.')}<input type="date" class="small-field" value="${acc.rateResetDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'rateResetDate', this.value)"></div>
             </div>`;
         }
         return `

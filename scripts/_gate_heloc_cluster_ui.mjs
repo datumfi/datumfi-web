@@ -11,7 +11,7 @@ const RED = process.argv.includes('--redfirst');
 let s = readFileSync('studio.html', 'utf8');
 
 if (RED) {
-  for (const t of ['The benchmark you track','The lender\'s fixed add-on','The most it can jump at once','The ceiling over the whole loan','When the rate can change next'])
+  for (const t of ['The benchmark you track','The lender’s fixed add-on','The most it can jump at once','The ceiling over the whole loan','When the rate can change next'])
     s = s.split(t).join('How your variable rate moves');
   s = s.split('min="0" max="100" step="0.01" ').join('');
 }
@@ -20,10 +20,10 @@ const checks = [];
 const need = (label, cond) => checks.push([label, !!cond]);
 
 const extract = (name) => { const m = s.match(new RegExp('    function ' + name + '\\([\\s\\S]*?\\n    }\\n')); return m ? m[0] : ''; };
-const NAMES = ['_livePrime','_fmtAsOf','_helocLiveRateHTML','_variableRateClusterHTML'];
+const NAMES = ['_livePrime','_liveRates','_liveIndex','_fmtAsOf','_helocLiveRateHTML','_variableRateClusterHTML'];
 let api = null, err = '';
 try {
-  const body = "var _livePrimeCache = { prime: 6.75, asOf: '2026-07-16', source: 'FRED:DPRIME' };\n" +
+  const body = "var _livePrimeCache = { prime: 6.75, asOf: '2026-07-16', source: 'FRED:DPRIME', rates: { Prime: { value: 6.75, asOf: '2026-07-16', source: 'FRED:DPRIME' } } };\n" +
     NAMES.map(extract).join('\n') + '\nreturn { cluster:_variableRateClusterHTML };';
   api = new Function('state', 'getBaseType', body)({ accounts: [] }, () => ({ id: 'heloc_primary', title: 'HELOC' }));
 } catch (e) { err = e.message; }
@@ -39,7 +39,7 @@ if (api) {
   need('current index (Prime) is the selected option', /<option value="Prime" selected>/.test(h));
   need('NO free-text Rate Index input in the HELOC branch', !/type="text"[^>]*rateIndex/.test(h));
 
-  const titles = ['The benchmark you track','The lender\'s fixed add-on','The most it can jump at once','The ceiling over the whole loan','When the rate can change next'];
+  const titles = ['The benchmark you track','The lender’s fixed add-on','The most it can jump at once','The ceiling over the whole loan','When the rate can change next'];
   need('all 5 fields carry DISTINCT hovers', titles.every((t) => h.includes(t)));
   need('the single shared "How your variable rate moves" hover is GONE', !h.includes('How your variable rate moves'));
 
