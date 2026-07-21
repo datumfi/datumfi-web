@@ -10,8 +10,9 @@
 // end shows nothing for it rather than a fabricated rate (sourced-or-blank, L47).
 import { getSeries } from './_lib/prime-core.js';
 
-// index LABEL -> FRED series_id. Add more indices here as ROWS (no fork).
-const SERIES_BY_LABEL = { Prime: 'DPRIME', SOFR: 'SOFR' };
+// index LABEL -> FRED series_id. Add more indices here as ROWS (no fork). MORTGAGE30US/15US = Freddie Mac
+// PMMS fixed averages for The Moat §17 (keyed by their own series_id — the front end reads by term).
+const SERIES_BY_LABEL = { Prime: 'DPRIME', SOFR: 'SOFR', MORTGAGE30US: 'MORTGAGE30US', MORTGAGE15US: 'MORTGAGE15US' };
 
 const json = (body, status) => new Response(JSON.stringify(body), {
   status: status || 200,

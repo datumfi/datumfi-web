@@ -9,8 +9,9 @@
 import { upsertSeries, parseFredLatest } from '../../functions/api/_lib/prime-core.js';
 
 // FRED series to sync. DPRIME = Bank Prime Loan Rate, SOFR = Secured Overnight Financing Rate (the alternate
-// HELOC/ARM index). Add MORTGAGE30US / FEDFUNDS / … as more ids here later — no fork (§20.1/§20.6).
-const SERIES = ['DPRIME', 'SOFR'];
+// HELOC/ARM index), MORTGAGE30US / MORTGAGE15US = Freddie Mac PMMS 30-/15-yr fixed averages (The Moat §17
+// live-rate color). Add FEDFUNDS / … as more ids here later — no fork (§20.1/§20.6).
+const SERIES = ['DPRIME', 'SOFR', 'MORTGAGE30US', 'MORTGAGE15US'];
 const FRED_URL = (sid, key) =>
   'https://api.stlouisfed.org/fred/series/observations?series_id=' + sid +
   '&api_key=' + encodeURIComponent(key) + '&file_type=json&sort_order=desc&limit=1';

@@ -7286,6 +7286,7 @@
                     </select>
                 </div>
             </div>
+            ${base.title === 'Mortgage' ? `<div id="modal-moat-liverate-${id}">${_moatLiveRateHTML(id, acc)}</div>` : ''}
             ${_variableRateClusterHTML(id, acc)}
             <div class="field-row">
                 <div>${_dLbl(base, 'Origination Date', 'The day it started', 'When the loan was funded. Sets the amortization clock we use to estimate your payoff date.')}<input type="date" class="small-field" value="${acc.origDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'origDate', this.value)"></div>
@@ -7731,6 +7732,7 @@
         // §20 — warm the live-Prime cache on HELOC open; re-render the sub-line + intel when it resolves
         // (the modal may open before the async /api/prime read returns). Sourced-or-blank until it does.
         if (base && base.title === 'HELOC') _fetchLivePrime().then(_refreshHelocLiveColor);
+        if (base && base.title === 'Mortgage') _fetchLivePrime().then(_refreshMoatLiveColor);
     };
 
     window.closeAccountModal = function() {
@@ -7817,6 +7819,9 @@
                 // §1 Moat DI — live recompose (sourced-or-blank).
                 const diEl = document.getElementById(`modal-moat-di-${id}`);
                 if(diEl) diEl.innerHTML = _moatDI(acc) || 'Add this loan\'s balance, rate, and payment and Datum reads it back — the payoff clock, the lifetime interest, and the equity behind it.';
+                // §17 — live-rate sub-line at the mortgage APR field (rate/type/term change moves it).
+                const moatLR = document.getElementById(`modal-moat-liverate-${id}`);
+                if(moatLR) moatLR.innerHTML = _moatLiveRateHTML(id, acc);
                 // The Grounds — live carrying-cost total (+ §1 signal strip refresh in G2).
                 const carryEl = document.getElementById(`modal-carry-total-${id}`);
                 if(carryEl) carryEl.innerText = '$' + Math.round(calcCarryTotal(acc)).toLocaleString('en-US');
@@ -8223,6 +8228,24 @@
         if (rate > 0) {
             var rtc = acc.rateType === 'Variable' ? ' it can move — watch the reset.' : (acc.rateType === 'Fixed' ? ' locked — it won\'t move on you.' : '');
             parts.push('This loan runs ' + rate + '% APR' + (acc.rateType ? ', ' + acc.rateType + '.' : '.') + rtc);
+        }
+        // §17 FRED live market-rate color (Mortgage Copy Bank §17.2–17.4, verbatim). Compares the user's APR to
+        // today's Freddie Mac fixed average for THIS loan's term. Non-Variable only (PMMS is a fixed benchmark;
+        // an ARM rate isn't apples-to-apples). BANDS: well-below (< avg−1.0) · above (> avg+0.5) · at/"right
+        // around" (between). rateGap 2dp only in the above case (§17.5d). BLANK if the feed is stale (§17.5a).
+        // Display-only (LOCK-3) — context only, never changes the stored rate or any §4 math.
+        if (rate > 0 && acc.rateType !== 'Variable') {
+            var mkt = _moatLiveMktRate(acc);
+            if (mkt) {
+                var avg = mkt.avg, term = mkt.termN + '-year';
+                if (rate < avg - 1.0) {
+                    parts.push('Your ' + rate + '% is well under today\'s ~' + avg.toFixed(2) + '% average — this is a rate worth protecting. Paying it off early trades a cheap, tax-favored loan for cash you could invest; weigh accordingly.');
+                } else if (rate > avg + 0.5) {
+                    parts.push('You\'re paying ' + rate + '% while today\'s ' + term + ' average is about ' + avg.toFixed(2) + '%. That gap is worth a refinance look — even ' + (rate - avg).toFixed(2) + ' points off ' + $(bal) + ' is real money over the remaining term.');
+                } else {
+                    parts.push('You\'re locked at ' + rate + '% — right around today\'s ~' + avg.toFixed(2) + '% average, so there\'s little to gain from refinancing at these rates.');
+                }
+            }
         }
         // 1.3 payoff clock (only when we have a real date). The shown date already includes addPmt, so the
         // aheadClause names the MINIMUM-ONLY baseline date it beats — not "sooner than the date just shown".
@@ -8807,6 +8830,45 @@
             subs[i].innerHTML = _helocLiveRateHTML(id, acc);
             var intel = document.getElementById('modal-cellar-intel-' + id);
             if (intel) intel.innerHTML = _diIntelligence(acc);
+        }
+    }
+    // §17 THE MOAT — today's Freddie Mac fixed-rate average for THIS loan's term. Picks MORTGAGE30US vs
+    // MORTGAGE15US by the DATEDIF(origDate, maturityDate) term (nearest of 15/30; default 30-yr when the dates
+    // aren't set). Returns { avg, asOf, source, termN } or null (feed absent/stale → BLANK, §17.5a). Display-
+    // only (LOCK-3): never touches the stored APR. typeof-guarded via _liveRates (null in the isolated gates).
+    function _moatLiveMktRate(acc) {
+        var r = _liveRates();
+        if (!r) return null;
+        var termN = 30, series = 'MORTGAGE30US';
+        var od = acc && acc.origDate ? new Date(acc.origDate + 'T00:00:00') : null;
+        var md = acc && acc.maturityDate ? new Date(acc.maturityDate + 'T00:00:00') : null;
+        if (od && md && !isNaN(od) && !isNaN(md)) {
+            var yrs = (md - od) / (365.25 * 24 * 3600 * 1000);
+            if (Math.abs(yrs - 15) < Math.abs(yrs - 30)) { termN = 15; series = 'MORTGAGE15US'; }
+        }
+        var row = r[series];
+        return (row && typeof row.value === 'number') ? { avg: row.value, asOf: row.asOf, source: row.source, termN: termN } : null;
+    }
+    // §17.1 sub-line rendered AT the mortgage APR field — "Today's avg: ~{liveAvg}% · {term}-yr fixed · Freddie
+    // Mac via FRED, as of {asOf}". Mortgage-only AND non-Variable (Fixed or unset-default): the PMMS average is
+    // a FIXED-rate benchmark, so an ARM's variable rate isn't an apples-to-apples compare. Blank if feed stale.
+    function _moatLiveRateHTML(id, acc) {
+        if (!acc || (getBaseType(acc.baseId) || {}).title !== 'Mortgage' || acc.rateType === 'Variable') return '';
+        var m = _moatLiveMktRate(acc);
+        if (!m) return '';
+        return '<div style="font-size:11px; color: rgba(93,202,165,0.9); margin:-6px 0 12px;">Today\'s avg: ~' + m.avg.toFixed(2) + '% · ' + m.termN + '-yr fixed · Freddie Mac via FRED, as of ' + _fmtAsOf(m.asOf) + '</div>';
+    }
+    // Re-render any open MORTGAGE modal's live-rate sub-line + DI paragraph once the async /api/prime fetch
+    // resolves (the modal may have opened before the value arrived). Idempotent; blank stays blank.
+    function _refreshMoatLiveColor() {
+        var subs = document.querySelectorAll('[id^="modal-moat-liverate-"]');
+        for (var i = 0; i < subs.length; i++) {
+            var id = subs[i].id.replace('modal-moat-liverate-', '');
+            var acc = (state.accounts || []).find(function (a) { return a.id === id; });
+            if (!acc) continue;
+            subs[i].innerHTML = _moatLiveRateHTML(id, acc);
+            var di = document.getElementById('modal-moat-di-' + id);
+            if (di) di.innerHTML = _moatDI(acc) || di.innerHTML;
         }
     }
 
