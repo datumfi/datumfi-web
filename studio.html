@@ -8815,6 +8815,71 @@
     function _groundsLinkedDebt(id) {   // §1.2 sum of linked liabilities (mortgage / HELOC etc.)
         return (state.accounts || []).filter(function (a) { return a.linkedAssetId === id; }).reduce(function (s, a) { return s + _num(a.value); }, 0);
     }
+    // §16.1 — split the linked liens by family so the stacked equity bar shows mortgage vs HELOC vs other as
+    // distinct segments (bank R166). The TOTAL equals _groundsLinkedDebt(id) exactly — SAME tally, so the bar,
+    // the beat sentence, and the strip's Linked Debt / LTV rows can never disagree.
+    function _groundsLiens(id) {
+        var m = 0, h = 0, o = 0;
+        (state.accounts || []).forEach(function (a) {
+            if (a.linkedAssetId !== id) return;
+            var b = getBaseType(a.baseId), bid = String(b && b.id || ''), v = _num(a.value);
+            if (bid.indexOf('mortgage') === 0) m += v;
+            else if (bid.indexOf('heloc') === 0) h += v;
+            else o += v;
+        });
+        return { mortgage: m, heloc: h, other: o, total: m + h + o };
+    }
+    // §16.1 CLTV + borrowing-capacity (Property Copy Bank §16.1). CLTV = every linked lien ÷ home value.
+    // FIRES-WHEN (R163): home value sourced AND >=1 lien sourced; else null (never a 0% or a 'no debt' line).
+    // capPct is a LABELED ASSUMPTION (~80%, R167) — the beat names it 'typically ~80%'; commit #1b makes it
+    // user-editable. Display-only (LOCK-3): reads acc/state, never writes. untapped = max(0, cap*value − debt);
+    // nearCeiling at CLTV >= 90% of cap (R165). Single-lien is valid (R167 — CLTV of one lien is fine).
+    function _groundsCLTV(id, acc) {
+        var val = _num(acc && acc.value);
+        if (val <= 0) return null;
+        var liens = _groundsLiens(id);
+        if (liens.total <= 0) return null;
+        var capPct = 80;
+        return { val: val, debt: liens.total, eq: val - liens.total, liens: liens, capPct: capPct,
+                 cltvPct: liens.total / val * 100, untapped: Math.max(0, capPct / 100 * val - liens.total),
+                 nearCeiling: (liens.total / val * 100) >= 0.9 * capPct };
+    }
+    // §16.1 beat sentence — base vs near-ceiling variant (Property Copy Bank R164/R165). The capacity / cap /
+    // fragility clauses are VERBATIM; the lien-naming phrase is SOURCED (names only the liens actually linked)
+    // rather than the bank's literal 'your mortgage and this line' — 'this line' is HELOC-voice that misreads on
+    // the Grounds and breaks on a mortgage-only home (which R167 says must still fire). cltvCapPct rendered
+    // inline as the labeled assumption (R167 — 'typically ~80%', visible from byte one).
+    function _groundsCLTVBeat(c) {
+        var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
+        var names = [];
+        if (c.liens.mortgage > 0) names.push('mortgage');
+        if (c.liens.heloc > 0) names.push('HELOC');
+        if (c.liens.other > 0) names.push('other loans');
+        var phrase = names.length <= 1 ? ' against your ' + (names[0] || 'linked loan')
+                   : ' across your ' + names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+        var pct = Math.round(c.cltvPct);
+        if (c.nearCeiling) {
+            return 'You\'ve borrowed about ' + pct + '% of your home\'s value' + phrase + ' — close to the ceiling lenders typically allow (~' + c.capPct + '%). A dip in home value would erase your remaining cushion fast.';
+        }
+        return 'You\'ve borrowed about ' + pct + '% of your home\'s value' + phrase + '. Lenders typically cap total borrowing near ' + c.capPct + '%, so you have roughly ' + $(c.untapped) + ' of untapped borrowing power.';
+    }
+    // §16.1 stacked equity bar (bank R166) — one horizontal bar = home value, split EQUITY / MORTGAGE / HELOC /
+    // other. Segments proportional to value, each sourced-or-blank (omit a blank segment, never zero-fill).
+    // Display-only (LOCK-3). Uses the SAME _groundsLiens tally as the beat so bar and copy can never disagree.
+    function _groundsEquityBarHTML(c) {
+        var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
+        var segs = [];
+        if (c.eq > 0) segs.push({ label: 'Equity', amt: c.eq, color: 'var(--teal-mid)' });
+        if (c.liens.mortgage > 0) segs.push({ label: 'Mortgage', amt: c.liens.mortgage, color: 'var(--gold)' });
+        if (c.liens.heloc > 0) segs.push({ label: 'HELOC', amt: c.liens.heloc, color: 'rgba(224,122,95,0.9)' });
+        if (c.liens.other > 0) segs.push({ label: 'Other lien', amt: c.liens.other, color: 'rgba(160,160,180,0.8)' });
+        if (!segs.length) return '';
+        var denom = c.val > 0 ? c.val : c.debt;
+        var bars = segs.map(function (s) { return '<div style="width:' + (s.amt / denom * 100) + '%; background:' + s.color + ';"></div>'; }).join('');
+        var legend = segs.map(function (s) { return '<span style="display:inline-flex; align-items:center; gap:4px; margin-right:12px;"><span style="width:8px; height:8px; border-radius:2px; background:' + s.color + '; display:inline-block;"></span>' + s.label + ' ' + $(s.amt) + '</span>'; }).join('');
+        return '<div style="margin:2px 0 12px;"><div style="display:flex; height:14px; border-radius:3px; overflow:hidden; background:rgba(255,255,255,0.06);">' + bars + '</div>' +
+               '<div style="font-size:10px; font-family:var(--font-mono); color:rgba(255,255,255,0.7); margin-top:5px; line-height:1.8;">' + legend + '</div></div>';
+    }
     // Datum Builder feed HOOK (build-to-the-seam) — named emitter the future Datum Builder consumes; the
     // consumer doesn't exist yet, so this stub simply exposes each opted-in physical asset's annual carry.
     window.datumBuilderCarryingFeed = function () {
@@ -8883,6 +8948,14 @@
         if (di) out += '<div style="font-size:12px; color: rgba(255,255,255,0.8); line-height:1.55; margin-bottom:10px;">' + di + '</div>';
         var di9b = _groundsDI9b(id, acc);   // §9b prescriptive cross-signal — composes on top of §9
         if (di9b) out += '<div style="font-size:12px; color: rgba(255,255,255,0.72); line-height:1.55; margin-bottom:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;">' + di9b + '</div>';
+        // §16.1 CLTV + borrowing-capacity beat + stacked equity bar (Property Copy Bank §16.1). Reuses the SAME
+        // _groundsLiens/_groundsLinkedDebt tally as the strip so bar/beat/rows never disagree (R166). Cap% is a
+        // labeled ~80% assumption (R167 — editable in commit #1b). LOCK-3 display-only, sourced-or-blank.
+        var cltv = _groundsCLTV(id, acc);
+        if (cltv) {
+            out += '<div style="font-size:12px; color: rgba(255,255,255,0.8); line-height:1.55; margin-bottom:8px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;">' + _groundsCLTVBeat(cltv) + '</div>';
+            out += _groundsEquityBarHTML(cltv);
+        }
         if (val > 0) out += row('Est. Value', $(val), '<strong>Est. Value</strong>An automated estimate from recent nearby sales — a starting point, not an appraisal. Your own number always wins.');
         if (debt > 0) out += row('Linked Debt', $(debt), '<strong>Linked Debt</strong>The loans tied to this home — usually your mortgage. Link a debt up top and it shows here automatically; nothing linked, nothing owed.');
         if (val > 0) out += row('Net Equity', $(val - debt), '<strong>Net Equity</strong>What you’d keep if you sold today — the home’s value minus everything linked against it. For most homes this grows over time as you pay down the loan and the value climbs.');
