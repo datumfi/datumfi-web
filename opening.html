@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#091221">
+<title>Datum FI — Sketch Screen 1 Discovery Animation v10</title>
+<meta name="description" content="Screen 1 only prototype: exact original Sketch shape paths with staged discovery animation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300;1,9..40,400&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&display=swap" rel="stylesheet">
+<style>
+  :root{--bg-navy:#091221;--panel:#07101d;--teal-mid:#5DCAA5;--teal:#1D9E75;--gold:#C9A84C;--danger-red:#e24b4a;--white:#fff;--muted:rgba(255,255,255,.42);--font-serif:'Fraunces',Georgia,serif;--font-mono:'DM Mono',monospace;--font-sans:'DM Sans',system-ui,sans-serif;}
+  *{box-sizing:border-box} html{overflow-x:clip} body{margin:0;background:var(--bg-navy);color:var(--white);font-family:var(--font-sans);font-weight:300;-webkit-font-smoothing:antialiased;overflow-x:clip;padding-top:56px}
+  button,input{font-family:inherit}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  #app-nav{position:fixed;z-index:80;top:0;left:0;right:0;height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 5%;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(5,10,18,.82);backdrop-filter:blur(16px);box-shadow:0 12px 34px rgba(0,0,0,.30)}
+  .brand-header{display:inline-flex;align-items:baseline;text-decoration:none;user-select:none;font-size:22px;color:inherit}.brand-datum{font-family:var(--font-serif);font-weight:300;letter-spacing:.15em;color:var(--teal-mid);position:relative;padding-bottom:.12em}.brand-datum::after{content:'';position:absolute;bottom:0;left:4%;width:92%;height:.06em;background-color:var(--gold);border-radius:2px}.brand-fi{font-family:var(--font-mono);font-size:.73em;font-weight:300;letter-spacing:.1em;color:var(--teal-mid);margin-left:.35em;transform:translateY(.05em)}.nav-note{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:rgba(255,255,255,.38)}
+  .hero-screen{display:flex;height:calc(100vh - 56px);width:100vw}.panel-left{width:35%;height:100%;padding:20px 4% 16px 5%;display:flex;flex-direction:column;justify-content:flex-start;overflow-y:auto;border-right:1px solid rgba(255,255,255,.05);background:rgba(9,18,33,.95);z-index:10}.panel-right{width:65%;height:100%;min-height:500px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:16px 40px 20px;overflow-y:auto;background-color:var(--bg-navy);background-image:linear-gradient(rgba(93,202,165,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(93,202,165,.03) 1px,transparent 1px),radial-gradient(circle at center,rgba(29,158,117,.05) 0%,transparent 70%);background-size:40px 40px,40px 40px,100% 100%;background-position:center center;overflow-x:hidden}
+  .title-block{margin-bottom:12px}.sub-head{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.2em;color:var(--gold);margin-bottom:8px}.page-h1{font-family:var(--font-serif);font-size:36px;font-style:italic;font-weight:300;margin:0 0 8px;color:var(--white)}.page-lead{font-family:var(--font-sans);font-size:14px;font-weight:300;color:rgba(255,255,255,.6);line-height:1.4}.dialogue-block{margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.05)}.dialogue-block:last-child{border-bottom:none}.mono-label{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.2em;color:var(--gold);margin-bottom:8px;font-style:normal}.control-group{margin-bottom:10px;position:relative;border-radius:8px;padding:5px 6px 7px;margin-left:-6px;margin-right:-6px;transition:background .2s ease,box-shadow .2s ease,opacity .2s ease}.control-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px}.control-label{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:var(--muted);cursor:pointer}.control-value{font-family:var(--font-serif);font-size:20px;font-weight:300;font-style:italic;color:var(--white);cursor:text;transition:color .2s}.control-value:hover{color:var(--teal-mid)}
+  .control-group.locked{opacity:.38}.control-group.invite{background:rgba(93,202,165,.045);box-shadow:0 0 0 1px rgba(93,202,165,.10),0 0 28px rgba(93,202,165,.055)}.control-group.invite input[type=range]::-webkit-slider-thumb{animation:beckon 1.05s ease-in-out infinite}.control-group.invite input[type=range]::-moz-range-thumb{animation:beckon 1.05s ease-in-out infinite}.control-group.datum-invite{background:rgba(93,202,165,.075);box-shadow:0 0 0 1px rgba(93,202,165,.18),0 0 42px rgba(93,202,165,.11)}.control-group.datum-invite input[type=range]::-webkit-slider-thumb{width:22px;height:22px;margin-top:-10px;animation:datumBeckon .74s ease-in-out infinite}.control-group.datum-invite input[type=range]::-moz-range-thumb{width:22px;height:22px;animation:datumBeckon .74s ease-in-out infinite}@keyframes beckon{0%,100%{transform:scale(1);box-shadow:0 0 10px rgba(93,202,165,.45)}50%{transform:scale(1.42);box-shadow:0 0 22px rgba(93,202,165,.95)}}@keyframes datumBeckon{0%,100%{transform:translateX(0) scale(1);box-shadow:0 0 14px rgba(93,202,165,.7)}30%{transform:translateX(-2px) scale(1.42);box-shadow:0 0 30px rgba(93,202,165,1)}60%{transform:translateX(2px) scale(1.28)}}
+  input[type=range]{-webkit-appearance:none;width:100%;background:transparent;margin:4px 0}input[type=range]:focus{outline:none}input[type=range]::-webkit-slider-runnable-track{width:100%;height:1px;cursor:pointer;background:rgba(255,255,255,.2);border-radius:1px}input[type=range]::-webkit-slider-thumb{height:14px;width:14px;border-radius:50%;background:var(--teal-mid)!important;border:none!important;cursor:pointer;-webkit-appearance:none;margin-top:-6px;box-shadow:0 0 10px rgba(93,202,165,.4);transition:transform .1s,box-shadow .2s}input[type=range]:disabled::-webkit-slider-thumb{background:rgba(255,255,255,.28)!important;box-shadow:none}input[type=range]::-moz-range-track{height:1px;background:rgba(255,255,255,.2)}input[type=range]::-moz-range-thumb{height:14px;width:14px;border:none;border-radius:50%;background:var(--teal-mid);box-shadow:0 0 10px rgba(93,202,165,.4)}#slider-datum::-webkit-slider-runnable-track{height:2px;background:rgba(93,202,165,.3)}#slider-datum::-webkit-slider-thumb{height:18px;width:18px;margin-top:-8px;box-shadow:0 0 15px rgba(93,202,165,.6)}
+  .toggle-wrapper{position:relative;overflow:visible}.toggle-container{display:flex;background:rgba(255,255,255,.03);border-radius:4px;overflow:visible;border:1px solid rgba(255,255,255,.08);margin-top:5px}.toggle-option{flex:1;position:relative;border-right:1px solid rgba(255,255,255,.05)}.toggle-option:last-child{border-right:none}.toggle-container input{position:absolute;opacity:0;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0,0,0,0)}.toggle-container label{display:block;text-align:center;font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;padding:8px 0;color:rgba(255,255,255,.5);cursor:pointer;transition:all .3s ease}#market-opt:checked+label{background:rgba(201,168,76,.15);color:var(--gold)}#market-avg:checked+label{background:rgba(93,202,165,.15);color:var(--teal-mid)}#market-stress:checked+label{background:rgba(226,75,74,.15);color:var(--danger-red)}
+  .interactive-layer{width:100%;max-width:900px;opacity:0;max-height:0;transition:max-height .45s ease,opacity .45s ease;margin-bottom:0;overflow:hidden}.interactive-layer.active{opacity:1;max-height:180px;margin-bottom:10px}.telemetry-card{background:rgba(9,18,33,.85);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1);border-left:2px solid var(--teal-mid);border-radius:4px;padding:10px 16px;box-shadow:0 10px 30px rgba(0,0,0,.4);display:flex;flex-direction:row;align-items:center}.hud-split{display:flex;gap:16px;width:100%;align-items:center}.hud-metrics{display:flex;flex-direction:column;gap:6px;border-right:1px solid rgba(255,255,255,.1);padding-right:16px;justify-content:center;min-width:190px}.tel-status{font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:.1em;line-height:1.3;color:var(--teal-mid)}.tel-metric{display:flex;align-items:center;justify-content:space-between;gap:16px;font-family:var(--font-mono)}.tel-metric span:first-child{font-size:9px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.1em}.tel-metric span:last-child{font-size:13px;font-weight:bold;text-align:right;white-space:nowrap}.tel-metric.m-ceil span:last-child{color:var(--gold)}.tel-metric.m-datum span:last-child{color:var(--white);font-size:14px}.tel-metric.m-floor span:last-child{color:var(--danger-red)}.tel-readout{font-family:var(--font-mono);font-size:9px;color:rgba(255,255,255,.65);line-height:1.4;display:flex;flex-direction:column;gap:4px}.tel-readout strong{color:var(--white);display:inline;margin-right:4px}.canvas-actions{display:flex;flex-direction:column;gap:6px;border-left:1px dashed rgba(255,255,255,.1);padding-left:16px;justify-content:center}.canvas-btn{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.6);font-family:var(--font-mono);font-size:8px;text-transform:uppercase;letter-spacing:.1em;padding:6px 12px;border-radius:4px;cursor:pointer;transition:all .2s;white-space:nowrap}.canvas-btn:hover{border-color:var(--teal-mid);color:var(--teal-mid);background:rgba(93,202,165,.05)}
+  .canvas-wrap{position:relative;width:100%;max-width:900px;display:flex;flex-direction:column;align-items:center;justify-content:center;margin-top:-12px}.range-svg{width:100%;max-height:480px;overflow:visible;z-index:10;cursor:crosshair}.grid-tick{stroke:rgba(255,255,255,.05);stroke-width:1;stroke-dasharray:2 4}.grid-label{font-family:var(--font-mono);font-size:10px;fill:rgba(255,255,255,.8)}.axis-title{font-family:var(--font-mono);font-size:10px;fill:rgba(255,255,255,.8);letter-spacing:.2em;text-transform:uppercase}.time-axis-line{stroke:rgba(255,255,255,.2);stroke-width:1}.time-label{font-family:var(--font-mono);font-size:10px;fill:rgba(255,255,255,.8);letter-spacing:.15em;text-transform:uppercase}.morph{transition:d .36s cubic-bezier(.2,.8,.2,1),stroke .3s ease}.morph-node{transition:cx .36s cubic-bezier(.2,.8,.2,1),cy .36s cubic-bezier(.2,.8,.2,1)}
+  .await-text{font-family:var(--font-serif);font-size:52px;font-style:italic;font-weight:300;letter-spacing:-.035em;fill:rgba(255,255,255,.055);text-anchor:middle;pointer-events:none;transition:opacity .7s ease,filter .7s ease}.stage-started .await-text{opacity:0;filter:blur(8px)}
+  .boundary-line{stroke-width:2;stroke-linecap:round;fill:none}.b-ceiling{stroke:var(--gold)}.b-floor{stroke:var(--danger-red)}.b-datum{stroke:var(--teal-mid);stroke-width:3;filter:drop-shadow(0 0 6px rgba(93,202,165,.55))}.guide-line{fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-width:2;opacity:0;stroke-dasharray:7 9}.guide-line.ceiling{stroke:var(--gold)}.guide-line.floor{stroke:var(--danger-red)}.guide-line.revealed{opacity:.82}.solid-line{fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-width:2;opacity:0}.solid-line.ceiling{stroke:var(--gold);filter:drop-shadow(0 0 10px rgba(201,168,76,.40))}.solid-line.floor{stroke:var(--danger-red);filter:drop-shadow(0 0 10px rgba(226,75,74,.36))}.solid-line.revealed{opacity:1}.line-hidden{opacity:0}.range-label{font-family:var(--font-mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;opacity:0;transition:opacity .45s ease, x .36s ease, y .36s ease}.node{opacity:0;transition:opacity .45s ease,cx .36s ease,cy .36s ease}.range-label.revealed,.node.revealed{opacity:1}.datum-line{opacity:0}.datum-line.revealed{opacity:1}.datum-line.slicing{stroke-width:5;filter:drop-shadow(0 0 16px rgba(93,202,165,.85))}.scrubber{opacity:0;transition:opacity .45s ease}.stage-complete .scrubber{opacity:1}
+  .cone-layer{opacity:0;transition:opacity .6s ease,d .36s cubic-bezier(.2,.8,.2,1);pointer-events:none}.cone-layer.active{opacity:.86}.cone-layer.partial{opacity:.68}.cone-liquid{fill:url(#liquid-grad);filter:url(#premiumMetal);mix-blend-mode:screen}.cone-aura{fill:url(#aura-grad);filter:blur(17px);opacity:0;transition:opacity .55s ease;mix-blend-mode:screen}.cone-aura.active{opacity:.50}.teal-band{fill:url(#teal-band-grad);opacity:0;filter:url(#tealMetal);transition:opacity .45s ease,d .22s cubic-bezier(.2,.8,.2,1);mix-blend-mode:screen}.teal-band.active{opacity:.82}.liquid-shine{fill:url(#shine-grad);opacity:0;filter:blur(6px);mix-blend-mode:screen;transition:opacity .4s ease,d .22s ease}.liquid-shine.active{opacity:.44}.dragging-datum .teal-band.active{opacity:.93}.dragging-datum .liquid-shine.active{opacity:.58}.dragging-datum .b-datum{stroke-width:6;filter:drop-shadow(0 0 22px rgba(93,202,165,1)) drop-shadow(0 0 20px rgba(201,168,76,.15))}
+  .reveal-rect{width:0;transition:width 1.3s cubic-bezier(.13,.84,.16,1)}.reveal-rect.active{width:840px}.progression-tracker{display:flex;justify-content:flex-start;gap:20px;align-items:center;width:100%;max-width:900px;padding:12px 20px;background:rgba(9,18,33,.8);border:1px solid rgba(255,255,255,.05);border-radius:4px;margin-top:16px;margin-bottom:30px;opacity:1;pointer-events:auto}.prog-steps{display:flex;gap:14px;flex-wrap:wrap;align-items:center;width:100%}.prog-step{font-family:var(--font-mono);font-size:9px;text-transform:uppercase;color:rgba(255,255,255,.3);display:flex;align-items:center;gap:6px;transition:color .3s}.prog-step.active{color:var(--white)}.prog-dot{width:7px;height:7px;border-radius:50%;border:1px solid rgba(255,255,255,.3);transition:all .3s;display:inline-block}.prog-step.active .prog-dot{background:var(--teal-mid);border-color:var(--teal-mid);box-shadow:0 0 6px rgba(93,202,165,.5)}.prog-btn{margin-left:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.6);font-family:var(--font-mono);font-size:10px;text-transform:uppercase;padding:10px 16px;border-radius:4px;transition:all .3s;cursor:pointer;pointer-events:all}.prog-btn:hover{color:var(--white);border-color:rgba(255,255,255,.3)}.prog-btn.ready{border-color:var(--teal-mid)!important;color:var(--bg-navy)!important;background:var(--teal-mid)!important;font-weight:bold;box-shadow:0 0 15px rgba(93,202,165,.4)!important;outline:3px solid rgba(93,202,165,.5);outline-offset:3px}.toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:999;border:1px solid rgba(93,202,165,.36);border-radius:999px;padding:12px 16px;background:rgba(5,11,20,.94);color:rgba(255,255,255,.80);font-family:var(--font-mono);font-size:10px;letter-spacing:.13em;text-transform:uppercase;box-shadow:0 26px 66px rgba(0,0,0,.46);transition:.22s ease}.toast.show{opacity:1;transform:translate(-50%,0)}
+  @media(max-width:900px){.hero-screen{flex-direction:column;height:auto;min-height:100vh}.panel-left{width:100%;height:auto;padding:40px 20px;border-right:none;border-bottom:1px solid rgba(255,255,255,.05)}.panel-right{width:100%;height:auto;padding:20px;overflow-x:hidden}.hud-split{flex-direction:column;align-items:stretch}.hud-metrics{border-right:none;padding-right:0}.canvas-actions{flex-direction:row;border-left:none;padding-left:0;border-top:1px dashed rgba(255,255,255,.1);padding-top:12px}.range-svg{min-height:320px}.progression-tracker{flex-direction:column;gap:16px;align-items:stretch}.prog-btn{width:100%;text-align:center;margin-left:0}}
+</style>
+
+<style>
+/* V3 surgical fix: Datum line is hidden until first Datum interaction. */
+#datum-line{
+  opacity:0 !important;
+  pointer-events:none;
+  transition:
+    opacity .38s ease,
+    stroke-width .28s ease,
+    filter .28s ease,
+    d .36s cubic-bezier(.2,.8,.2,1);
+}
+#datum-line.revealed{
+  opacity:1 !important;
+}
+#datum-line.slicing{
+  opacity:1 !important;
+}
+#node-datum,
+#datum-lbl{
+  opacity:0;
+}
+#node-datum.revealed,
+#datum-lbl.revealed{
+  opacity:1;
+}
+
+/* Keep the pre-Datum fill honest: no teal slice before the Datum is earned. */
+#teal-band:not(.active),
+#liquid-shine:not(.active){
+  opacity:0 !important;
+}
+
+/* Slightly cleaner first reveal behavior. */
+.stage-started #datum-line:not(.revealed){
+  opacity:0 !important;
+}
+</style>
+
+
+<style>
+/* V4 surgical cleanup:
+   - Stage 3/4 fills are true upper/lower Shape masses, not a hidden-Datum corner.
+   - Datum reveal makes teal the dominant field.
+   - Datum highlight is clipped to the true cone and follows the Datum path.
+   - Resting state remains settled; motion effects only occur during Datum movement.
+*/
+#cone-liquid{display:none!important;}
+
+.natural-mass{
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .55s ease,d .36s cubic-bezier(.2,.8,.2,1);
+  mix-blend-mode:screen;
+}
+.natural-mass.active{opacity:1;}
+
+.mass-top{
+  fill:url(#gold-mass-grad);
+  filter:url(#premiumMetal);
+}
+.mass-bottom{
+  fill:url(#red-mass-grad);
+  filter:url(#premiumMetal);
+}
+.teal-mass{
+  fill:url(#teal-mass-grad);
+  filter:url(#premiumMetal);
+  opacity:0;
+}
+.teal-mass.active{opacity:.88;}
+
+.stage-complete .mass-top.active{
+  opacity:.24;
+}
+.stage-complete .mass-bottom.active{
+  opacity:.20;
+}
+.stage-complete.dragging-datum .mass-top.active{
+  opacity:.28;
+}
+.stage-complete.dragging-datum .mass-bottom.active{
+  opacity:.24;
+}
+.cone-aura.gold-phase{
+  fill:url(#gold-mass-grad);
+  opacity:.42;
+}
+.cone-aura.range-phase{
+  fill:url(#aura-grad);
+  opacity:.46;
+}
+.stage-complete .cone-aura.active{
+  opacity:.32;
+}
+
+/* Premium Datum membrane — no rectangular/amateur bar. */
+.teal-band{
+  fill:url(#datum-membrane-grad)!important;
+  filter:url(#tealMetal);
+  mix-blend-mode:screen;
+  opacity:0;
+  transition:opacity .36s ease,d .22s cubic-bezier(.2,.8,.2,1);
+}
+.teal-band.active{
+  opacity:.52;
+}
+.dragging-datum .teal-band.active{
+  opacity:.66;
+}
+.liquid-shine{
+  clip-path:url(#cone-clip);
+  filter:blur(4px);
+  opacity:0;
+  mix-blend-mode:screen;
+}
+.liquid-shine.active{
+  opacity:.20;
+}
+.dragging-datum .liquid-shine.active{
+  opacity:.32;
+}
+
+/* Datum line: thinner, more expensive glow; no chunky neon rail. */
+#datum-line.revealed{
+  stroke-width:3.4;
+  filter:
+    drop-shadow(0 0 8px rgba(93,202,165,.55))
+    drop-shadow(0 0 18px rgba(93,202,165,.24));
+}
+#datum-line.slicing{
+  stroke-width:3.8;
+  filter:
+    drop-shadow(0 0 10px rgba(164,255,224,.62))
+    drop-shadow(0 0 18px rgba(93,202,165,.34))
+    drop-shadow(0 0 26px rgba(201,168,76,.08));
+}
+.dragging-datum #datum-line.revealed{
+  stroke-width:4.2;
+  filter:
+    drop-shadow(0 0 12px rgba(164,255,224,.74))
+    drop-shadow(0 0 24px rgba(93,202,165,.42))
+    drop-shadow(0 0 28px rgba(201,168,76,.10));
+}
+
+/* Keep pre-Datum phases clean and physically legible. */
+#teal-band:not(.active),
+#liquid-shine:not(.active),
+#teal-mass:not(.active){
+  opacity:0!important;
+}
+.stage-started #datum-line:not(.revealed){
+  opacity:0!important;
+}
+</style>
+
+
+<style>
+/* V5 surgical fill balance:
+   - Datum no longer floods the whole Shape teal.
+   - Top remains gold, bottom remains red, teal becomes the livable range between them.
+   - Removes the old center seam by changing the geometry, not just covering it.
+*/
+
+/* Use normal compositing for the three mass zones so the old meet-line does not show through. */
+.natural-mass{
+  mix-blend-mode:normal!important;
+}
+
+/* Preserve gold and red after Datum appears. */
+.stage-complete .mass-top.active{
+  opacity:.56!important;
+}
+.stage-complete .mass-bottom.active{
+  opacity:.48!important;
+}
+.stage-complete.dragging-datum .mass-top.active{
+  opacity:.60!important;
+}
+.stage-complete.dragging-datum .mass-bottom.active{
+  opacity:.52!important;
+}
+
+/* Teal is now the livable band, not the whole cone. */
+.teal-mass{
+  fill:url(#teal-mass-grad);
+  filter:url(#premiumMetal);
+}
+.teal-mass.active{
+  opacity:.58!important;
+}
+.dragging-datum .teal-mass.active{
+  opacity:.66!important;
+}
+
+/* Slimmer, more premium Datum membrane/glow. */
+.teal-band.active{
+  opacity:.38!important;
+}
+.dragging-datum .teal-band.active{
+  opacity:.50!important;
+}
+.liquid-shine.active{
+  opacity:.14!important;
+}
+.dragging-datum .liquid-shine.active{
+  opacity:.24!important;
+}
+
+/* Keep linework crisp on top, but make the mass underneath read as one resolved material. */
+#ceil-solid.revealed,
+#floor-solid.revealed{
+  opacity:.96;
+}
+.stage-complete #ceil-solid.revealed{
+  filter:
+    drop-shadow(0 0 8px rgba(201,168,76,.34))
+    drop-shadow(0 0 18px rgba(201,168,76,.10));
+}
+.stage-complete #floor-solid.revealed{
+  filter:
+    drop-shadow(0 0 8px rgba(226,75,74,.30))
+    drop-shadow(0 0 18px rgba(226,75,74,.08));
+}
+
+/* Datum glow stays elegant, not a thick neon stripe. */
+#datum-line.slicing{
+  stroke-width:3.35!important;
+  filter:
+    drop-shadow(0 0 8px rgba(164,255,224,.55))
+    drop-shadow(0 0 16px rgba(93,202,165,.28))
+    drop-shadow(0 0 22px rgba(201,168,76,.06))!important;
+}
+.dragging-datum #datum-line.revealed{
+  stroke-width:3.75!important;
+  filter:
+    drop-shadow(0 0 10px rgba(164,255,224,.64))
+    drop-shadow(0 0 20px rgba(93,202,165,.36))
+    drop-shadow(0 0 24px rgba(201,168,76,.08))!important;
+}
+
+/* The aura should not wash out the red/gold zones once Datum has been earned. */
+.stage-complete .cone-aura.active{
+  opacity:.20!important;
+}
+.stage-complete.dragging-datum .cone-aura.active{
+  opacity:.26!important;
+}
+</style>
+
+
+<style>
+/* V6 surgical cleanup:
+   - Removes the angled Datum wedge by using the true cone as the resolved material field.
+   - Gold/red stage masses fade out when Datum is earned, so their internal meet-line cannot show through teal.
+   - Full cone uses the balanced resolved gradient: gold top, teal livable middle, red bottom.
+*/
+
+/* The resolved Datum mass is the true cone, not an internal angular split polygon. */
+.teal-mass{
+  fill:url(#liquid-grad)!important;
+  filter:url(#premiumMetal);
+  mix-blend-mode:screen!important;
+}
+.teal-mass.active{
+  opacity:.76!important;
+}
+.dragging-datum .teal-mass.active{
+  opacity:.82!important;
+}
+
+/* Once Datum is earned, hide the construction fills that created the visible seam. */
+.stage-complete .mass-top.active,
+.stage-complete .mass-bottom.active,
+.stage-complete.dragging-datum .mass-top.active,
+.stage-complete.dragging-datum .mass-bottom.active{
+  opacity:0!important;
+}
+
+/* Keep the cone aura subtle so the resolved gradient does not wash into one color. */
+.stage-complete .cone-aura.active{
+  opacity:.18!important;
+}
+.stage-complete.dragging-datum .cone-aura.active{
+  opacity:.22!important;
+}
+
+/* Datum membrane stays slim and premium; it is a highlight, not a thick shape region. */
+.teal-band.active{
+  opacity:.30!important;
+}
+.dragging-datum .teal-band.active{
+  opacity:.42!important;
+}
+.liquid-shine.active{
+  opacity:.10!important;
+}
+.dragging-datum .liquid-shine.active{
+  opacity:.18!important;
+}
+
+/* Make the Datum line feel like a precise cut through the material, not a chunky rail. */
+#datum-line.slicing{
+  stroke-width:3.1!important;
+  filter:
+    drop-shadow(0 0 7px rgba(164,255,224,.50))
+    drop-shadow(0 0 14px rgba(93,202,165,.25))
+    drop-shadow(0 0 20px rgba(201,168,76,.05))!important;
+}
+.dragging-datum #datum-line.revealed{
+  stroke-width:3.55!important;
+  filter:
+    drop-shadow(0 0 9px rgba(164,255,224,.62))
+    drop-shadow(0 0 18px rgba(93,202,165,.34))
+    drop-shadow(0 0 22px rgba(201,168,76,.07))!important;
+}
+
+/* Construction phases still work before Datum: top then bottom. */
+:not(.stage-complete) .mass-top.active{
+  opacity:1!important;
+}
+:not(.stage-complete) .mass-bottom.active{
+  opacity:1!important;
+}
+</style>
+
+
+<style>
+/* V7 surgical cleanup:
+   - Fixes construction fills leaking after Datum reveal.
+   - Removes the strange teal wedge/channel by using ONE resolved cone fill.
+   - Disables the broad Datum membrane fill; Datum is now a precise premium line/glow.
+   - Keeps construction phases intact before Datum.
+*/
+
+/* Fix earlier selector leak: construction masses must disappear once Datum is earned. */
+#sketch-canvas.stage-complete .mass-top.active,
+#sketch-canvas.stage-complete .mass-bottom.active,
+#sketch-canvas.stage-complete.dragging-datum .mass-top.active,
+#sketch-canvas.stage-complete.dragging-datum .mass-bottom.active{
+  opacity:0!important;
+}
+
+/* Only show construction masses before final Datum reveal. */
+#sketch-canvas:not(.stage-complete) .mass-top.active{
+  opacity:1!important;
+}
+#sketch-canvas:not(.stage-complete) .mass-bottom.active{
+  opacity:1!important;
+}
+
+/* Resolved state: a single full-cone fill. No internal polygon seam, no angular channel. */
+#sketch-canvas.stage-complete .teal-mass.active{
+  fill:url(#liquid-grad)!important;
+  opacity:.70!important;
+  mix-blend-mode:screen!important;
+  filter:url(#premiumMetal);
+}
+#sketch-canvas.stage-complete.dragging-datum .teal-mass.active{
+  opacity:.76!important;
+}
+
+/* The previous Datum membrane was causing the visible wedge/channel. Remove the fill region. */
+#sketch-canvas.stage-complete #teal-band,
+#sketch-canvas.stage-complete #liquid-shine{
+  opacity:0!important;
+}
+
+/* Let the material breathe only through subtle full-cone glow while dragging. */
+#sketch-canvas.stage-complete .cone-aura.active{
+  opacity:.15!important;
+  fill:url(#aura-grad)!important;
+}
+#sketch-canvas.stage-complete.dragging-datum .cone-aura.active{
+  opacity:.22!important;
+}
+
+/* Premium Datum line: exact line, no thick horizontal slab. */
+#datum-line.revealed{
+  stroke-width:3.1!important;
+  opacity:1!important;
+  filter:
+    drop-shadow(0 0 7px rgba(164,255,224,.46))
+    drop-shadow(0 0 14px rgba(93,202,165,.22))!important;
+}
+#datum-line.slicing{
+  stroke-width:3.25!important;
+  filter:
+    drop-shadow(0 0 8px rgba(164,255,224,.52))
+    drop-shadow(0 0 15px rgba(93,202,165,.26))
+    drop-shadow(0 0 22px rgba(201,168,76,.05))!important;
+}
+#sketch-canvas.dragging-datum #datum-line.revealed{
+  stroke-width:3.45!important;
+  filter:
+    drop-shadow(0 0 10px rgba(164,255,224,.62))
+    drop-shadow(0 0 19px rgba(93,202,165,.34))
+    drop-shadow(0 0 24px rgba(201,168,76,.07))!important;
+}
+
+/* Avoid overly hard teal bands inside the cone. */
+#sketch-canvas.stage-complete .teal-mass{
+  transition:opacity .42s ease,d .30s cubic-bezier(.2,.8,.2,1);
+}
+</style>
+
+
+<style>
+/* V9 resolved color balance:
+   The Datum state should not collapse into black. The cone reads as
+   gold capacity at the top, teal livable range through the middle,
+   and red floor pressure at the bottom.
+*/
+#sketch-canvas.stage-complete .teal-mass.active{
+  opacity:.88!important;
+  mix-blend-mode:screen!important;
+  filter:
+    url(#premiumMetal)
+    drop-shadow(0 0 18px rgba(93,202,165,.055));
+}
+#sketch-canvas.stage-complete.dragging-datum .teal-mass.active{
+  opacity:.92!important;
+}
+
+/* Keep the edge zones visible without letting them dominate the entire cone. */
+#sketch-canvas.stage-complete .cone-aura.active{
+  opacity:.24!important;
+  fill:url(#aura-grad)!important;
+}
+#sketch-canvas.stage-complete.dragging-datum .cone-aura.active{
+  opacity:.30!important;
+}
+
+/* Strengthen line identity now that the material is brighter. */
+#sketch-canvas.stage-complete #ceil-solid.revealed{
+  stroke-width:3.1!important;
+  filter:
+    drop-shadow(0 0 9px rgba(201,168,76,.48))
+    drop-shadow(0 0 18px rgba(201,168,76,.16))!important;
+}
+#sketch-canvas.stage-complete #floor-solid.revealed{
+  stroke-width:3.1!important;
+  filter:
+    drop-shadow(0 0 9px rgba(226,75,74,.44))
+    drop-shadow(0 0 18px rgba(226,75,74,.14))!important;
+}
+
+/* Datum remains precise and premium, not a thick teal slab. */
+#sketch-canvas.stage-complete #datum-line.revealed{
+  stroke-width:3.25!important;
+  filter:
+    drop-shadow(0 0 8px rgba(164,255,224,.54))
+    drop-shadow(0 0 16px rgba(93,202,165,.28))!important;
+}
+#sketch-canvas.stage-complete.dragging-datum #datum-line.revealed{
+  stroke-width:3.55!important;
+  filter:
+    drop-shadow(0 0 10px rgba(164,255,224,.64))
+    drop-shadow(0 0 20px rgba(93,202,165,.36))!important;
+}
+
+/* Keep construction seams gone after Datum reveal. */
+#sketch-canvas.stage-complete .mass-top.active,
+#sketch-canvas.stage-complete .mass-bottom.active{
+  opacity:0!important;
+}
+</style>
+
+
+<style>
+/* V10 surgical fix: keep Datum entry visually clean.
+   During first Datum reveal, suppress the teal field/membrane/shimmer
+   until the Datum line has finished sweeping across the cone. */
+#sketch-canvas.entering-datum #teal-mass,
+#sketch-canvas.entering-datum #teal-band,
+#sketch-canvas.entering-datum #liquid-shine,
+#sketch-canvas.entering-datum #node-datum,
+#sketch-canvas.entering-datum #datum-lbl{
+  opacity:0 !important;
+}
+#sketch-canvas.entering-datum #datum-line.revealed,
+#sketch-canvas.entering-datum #datum-line.slicing{
+  opacity:1 !important;
+}
+</style>
+
+</head>
+<body>
+<nav id="app-nav"><a href="#" class="brand-header"><span class="brand-datum">DATUM</span><span class="brand-fi">FI</span></a><div class="nav-note">Screen 1 · Discovery animation prototype</div></nav>
+<main class="hero-screen" id="screen-1-discover">
+  <section class="panel-left" aria-label="Sketch inputs">
+    <div class="title-block"><div class="sub-head">Phase I — Data</div><h1 class="page-h1">The Sketch</h1><div class="page-lead">Draw the Shape of your retirement. The canvas begins empty; each input discovers another structural boundary.</div></div>
+    <div class="dialogue-block"><div class="mono-label">Timeline</div>
+      <div class="control-group" id="grp-age"><div class="control-header"><span class="control-label">Current Age</span><span class="control-value" id="val-age">40 yrs</span></div><input type="range" id="slider-age" min="18" max="85" value="40" step="1"></div>
+      <div class="control-group locked" id="grp-retire"><div class="control-header"><span class="control-label" id="lbl-retire">Retirement Age</span><span class="control-value" id="val-activation">65 yrs</span></div><input type="range" id="slider-activation" min="45" max="90" value="65" step="1" disabled></div>
+    </div>
+    <div class="dialogue-block"><div class="mono-label">Mass & Runway</div>
+      <div class="control-group locked" id="grp-portfolio"><div class="control-header"><span class="control-label">Portfolio Balance</span><span class="control-value" id="val-portfolio">$750k</span></div><input type="range" id="slider-portfolio" min="100000" max="3000000" value="750000" step="10000" disabled></div>
+      <div class="control-group locked" id="grp-contrib"><div class="control-header"><span class="control-label">Annual Contributions</span><span class="control-value" id="val-contrib">$25,000</span></div><input type="range" id="slider-contrib" min="0" max="150000" value="25000" step="1000" disabled></div>
+    </div>
+    <div class="dialogue-block"><div class="mono-label">Fixed Point</div>
+      <div class="control-group locked" id="grp-datum"><div class="control-header"><span class="control-label">Target Datum</span><span class="control-value" id="val-datum">$100k / yr</span></div><input type="range" id="slider-datum" min="40000" max="250000" value="100000" step="1000" disabled></div>
+    </div>
+    <div class="dialogue-block"><div class="mono-label">Conditions</div><div class="toggle-wrapper"><div class="toggle-container"><div class="toggle-option"><input type="radio" id="market-opt" name="market" value="optimistic"><label for="market-opt">Optimistic</label></div><div class="toggle-option"><input type="radio" id="market-avg" name="market" value="average" checked><label for="market-avg">Historical</label></div><div class="toggle-option"><input type="radio" id="market-stress" name="market" value="stress"><label for="market-stress">Stress</label></div></div></div></div>
+  </section>
+  <section class="panel-right" aria-label="Shape canvas">
+    <div class="interactive-layer" id="interactive-layer"><div class="telemetry-card" id="hud-main"><div class="hud-split"><div class="hud-metrics"><div class="tel-status" id="shape-state-name">Awaiting input</div><div class="tel-metric m-ceil"><span>Ceiling</span><span id="ri-ceiling-val">—</span></div><div class="tel-metric m-datum"><span>Datum</span><span id="ri-datum-val">—</span></div><div class="tel-metric m-floor"><span>Floor</span><span id="ri-floor-val">—</span></div></div><div class="hud-diff"><div class="tel-readout"><span><strong>What it Means:</strong><span id="val-physics">Touch Current Age to begin discovering the Shape.</span></span><span><strong>What to Consider:</strong><span id="val-action">The canvas stays empty until the first boundary is earned.</span></span></div></div><div class="canvas-actions"><button type="button" class="canvas-btn" id="btn-restart">Replay</button></div></div></div></div>
+    <div class="canvas-wrap"><svg class="range-svg" id="sketch-canvas" viewBox="0 0 840 480" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <defs>
+        <linearGradient id="liquid-grad" x1="0%" y1="0%" x2="0%" y2="100%"><stop id="lgold1" offset="0%" stop-color="#ffe38a" stop-opacity="0.55"/><stop id="lgold2" offset="42%" stop-color="#C9A84C" stop-opacity="0.32"/><stop id="lteal1" offset="46%" stop-color="#5DCAA5" stop-opacity="0.00"/><stop id="lteal2" offset="54%" stop-color="#5DCAA5" stop-opacity="0.00"/><stop id="lred1" offset="58%" stop-color="#e24b4a" stop-opacity="0.22"/><stop id="lred2" offset="100%" stop-color="#ff6b68" stop-opacity="0.48"/></linearGradient>
+        <linearGradient id="aura-grad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#C9A84C" stop-opacity="0.34"/><stop offset="50%" stop-color="#5DCAA5" stop-opacity="0.16"/><stop offset="100%" stop-color="#e24b4a" stop-opacity="0.30"/></linearGradient>
+        <linearGradient id="teal-band-grad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#d5fff0" stop-opacity="0.28"/><stop offset="45%" stop-color="#5DCAA5" stop-opacity="0.66"/><stop offset="100%" stop-color="#1D9E75" stop-opacity="0.42"/></linearGradient>
+        <linearGradient id="shine-grad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#fff" stop-opacity="0"/><stop offset="45%" stop-color="#fff" stop-opacity="0.54"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></linearGradient>
+        <linearGradient id="gold-mass-grad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ffeaa3" stop-opacity=".72"/><stop offset="46%" stop-color="#C9A84C" stop-opacity=".40"/><stop offset="100%" stop-color="#5DCAA5" stop-opacity=".10"/></linearGradient>
+        <linearGradient id="red-mass-grad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5DCAA5" stop-opacity=".08"/><stop offset="42%" stop-color="#e24b4a" stop-opacity=".30"/><stop offset="100%" stop-color="#ff6b68" stop-opacity=".62"/></linearGradient>
+        <linearGradient id="teal-mass-grad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ffeaa3" stop-opacity=".18"/><stop offset="18%" stop-color="#5DCAA5" stop-opacity=".52"/><stop offset="50%" stop-color="#7ee0bd" stop-opacity=".82"/><stop offset="82%" stop-color="#5DCAA5" stop-opacity=".52"/><stop offset="100%" stop-color="#e24b4a" stop-opacity=".18"/></linearGradient>
+        <linearGradient id="datum-membrane-grad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#d7fff2" stop-opacity=".10"/><stop offset="18%" stop-color="#5DCAA5" stop-opacity=".44"/><stop offset="52%" stop-color="#a6ffe0" stop-opacity=".72"/><stop offset="82%" stop-color="#1D9E75" stop-opacity=".46"/><stop offset="100%" stop-color="#d7fff2" stop-opacity=".08"/></linearGradient>
+        <filter id="premiumMetal" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur in="SourceAlpha" stdDeviation="2.4" result="blur"/><feSpecularLighting in="blur" surfaceScale="8" specularConstant=".6" specularExponent="18" lighting-color="#ffffff" result="spec"><fePointLight x="250" y="-120" z="180"/></feSpecularLighting><feComposite in="spec" in2="SourceAlpha" operator="in" result="specOut"/><feBlend in="SourceGraphic" in2="specOut" mode="screen"/></filter>
+        <filter id="tealMetal" x="-10%" y="-30%" width="120%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="1.3" result="soft"/><feBlend in="SourceGraphic" in2="soft" mode="screen"/></filter>
+        <clipPath id="cone-clip"><path id="clip-cone-path" d=""/></clipPath>
+        <clipPath id="top-reveal"><rect id="top-reveal-rect" class="reveal-rect" x="0" y="0" width="0" height="480"/></clipPath>
+        <clipPath id="full-reveal"><rect id="full-reveal-rect" class="reveal-rect" x="0" y="0" width="0" height="480"/></clipPath>
+      </defs>
+      <rect id="state-tint-rect" x="0" y="0" width="840" height="480" fill="none" pointer-events="none"/>
+      <g id="grid-axes-group"><text x="80" y="40" text-anchor="end" class="axis-title">ANNUAL SPEND</text><line x1="80" y1="50" x2="700" y2="50" class="grid-tick"/><text id="grid-lbl-1" x="70" y="54" text-anchor="end" class="grid-label">$400k</text><line x1="80" y1="150" x2="700" y2="150" class="grid-tick"/><text id="grid-lbl-2" x="70" y="154" text-anchor="end" class="grid-label">$300k</text><line x1="80" y1="250" x2="700" y2="250" class="grid-tick"/><text id="grid-lbl-3" x="70" y="254" text-anchor="end" class="grid-label" style="font-weight:bold;">$200k</text><line x1="80" y1="350" x2="700" y2="350" class="grid-tick"/><text id="grid-lbl-4" x="70" y="354" text-anchor="end" class="grid-label">$100k</text><line x1="80" y1="450" x2="700" y2="450" class="grid-tick"/><text id="grid-lbl-5" x="70" y="454" text-anchor="end" class="grid-label">$0k</text><line x1="120" y1="460" x2="650" y2="460" class="time-axis-line"/><line x1="120" y1="455" x2="120" y2="465" class="time-axis-line"/><line x1="650" y1="455" x2="650" y2="465" class="time-axis-line"/><text id="time-start" x="120" y="475" text-anchor="middle" class="time-label">AGE 40</text><text id="time-end" x="650" y="475" text-anchor="middle" class="time-label" style="fill:var(--teal-mid);">RETIRE: 65</text></g>
+      <text id="await-text" class="await-text" x="390" y="230">Your Shape Awaits</text>
+      <g id="clean-layer"><path id="cone-aura" class="cone-aura" d=""/><path id="mass-top" class="natural-mass mass-top" d="" clip-path="url(#full-reveal)"/><path id="mass-bottom" class="natural-mass mass-bottom" d="" clip-path="url(#full-reveal)"/><path id="teal-mass" class="natural-mass teal-mass" d="" clip-path="url(#full-reveal)"/><path id="cone-liquid" class="cone-layer cone-liquid" d="" clip-path="url(#full-reveal)"/><path id="teal-band" class="teal-band" d="" clip-path="url(#cone-clip)"/><path id="liquid-shine" class="liquid-shine" d="" clip-path="url(#cone-clip)"/><g id="line-layer"><path id="ceil-guide" class="guide-line ceiling morph" d=""/><path id="floor-guide" class="guide-line floor morph" d=""/><path id="ceil-solid" class="solid-line ceiling morph" d=""/><path id="floor-solid" class="solid-line floor morph" d=""/><path id="datum-line" class="boundary-line b-datum datum-line morph" d=""/><circle id="node-ceil" class="node morph-node" cx="650" cy="0" r="4" fill="var(--gold)"/><text id="ceil-lbl" class="range-label morph-node" x="665" y="0" text-anchor="start" style="fill:var(--gold);">STRUCTURAL CEILING</text><circle id="node-floor" class="node morph-node" cx="650" cy="0" r="4" fill="var(--danger-red)"/><text id="floor-lbl" class="range-label morph-node" x="665" y="0" text-anchor="start" style="fill:var(--danger-red);">SURVIVAL FLOOR</text><circle id="node-datum" class="node morph-node" cx="650" cy="0" r="6" fill="var(--teal-mid)"/><text id="datum-lbl" class="range-label morph-node" x="665" y="0" text-anchor="start" style="fill:var(--teal-mid);">YOUR DATUM</text></g><g id="scrubber" class="scrubber"><line id="scrubber-line" x1="650" y1="50" x2="650" y2="460" stroke="#fff" stroke-opacity=".32" stroke-width="1" stroke-dasharray="4 4"/><rect x="665" y="88" width="148" height="30" fill="#091221" fill-opacity=".9" stroke="rgba(255,255,255,.12)" rx="4"/><text x="676" y="106" font-family="var(--font-mono)" font-size="10" fill="var(--gold)">CEILING · LIVE</text><rect x="665" y="218" width="148" height="30" fill="#091221" fill-opacity=".9" stroke="rgba(255,255,255,.12)" rx="4"/><text x="676" y="236" font-family="var(--font-mono)" font-size="10" fill="var(--teal-mid)">DATUM · LIVE</text><rect x="665" y="338" width="148" height="30" fill="#091221" fill-opacity=".9" stroke="rgba(255,255,255,.12)" rx="4"/><text x="676" y="356" font-family="var(--font-mono)" font-size="10" fill="var(--danger-red)">FLOOR · LIVE</text></g></g>
+      <text x="390" y="472" text-anchor="middle" class="axis-title">YEARS UNTIL RETIREMENT</text>
+    </svg></div>
+    <div class="progression-tracker"><div class="prog-steps"><div class="prog-step" id="prog-age"><span class="prog-dot"></span> Age</div><div class="prog-step" id="prog-retire"><span class="prog-dot"></span> Retire</div><div class="prog-step" id="prog-capital"><span class="prog-dot"></span> Capital</div><div class="prog-step" id="prog-contrib"><span class="prog-dot"></span> Contributions</div><div class="prog-step" id="prog-spending"><span class="prog-dot"></span> Datum</div></div><button type="button" class="prog-btn" id="btn-submit">Design This Shape</button></div>
+  </section>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+(function(){
+  const $ = (id)=>document.getElementById(id); const clamp=(v,min,max)=>Math.min(Math.max(v,min),max);
+  const canvas=$('sketch-canvas'), toast=$('toast'); let stage=0; let globalYMin=0, globalYMax=400; let sloshTimer=null; let dragTimer=null; let lastDatumY=null;
+  const touched={age:false,retire:false,portfolio:false,contrib:false,datum:false}; const stageIndex={age:0,retire:1,portfolio:2,contrib:3,datum:4};
+  const els={age:$('slider-age'),retire:$('slider-activation'),port:$('slider-portfolio'),contrib:$('slider-contrib'),datum:$('slider-datum'),valAge:$('val-age'),valRetire:$('val-activation'),valPort:$('val-portfolio'),valContrib:$('val-contrib'),valDatum:$('val-datum'),ceilGuide:$('ceil-guide'),floorGuide:$('floor-guide'),ceilSolid:$('ceil-solid'),floorSolid:$('floor-solid'),datumLine:$('datum-line'),cone:$('cone-liquid'),aura:$('cone-aura'),topMass:$('mass-top'),bottomMass:$('mass-bottom'),tealMass:$('teal-mass'),tealBand:$('teal-band'),shine:$('liquid-shine'),nodeCeil:$('node-ceil'),nodeFloor:$('node-floor'),nodeDatum:$('node-datum'),ceilLbl:$('ceil-lbl'),floorLbl:$('floor-lbl'),datumLbl:$('datum-lbl'),hud:$('interactive-layer')};
+  function fmtY(v){ if(v>=1000)return '$'+(v/1000).toFixed(2).replace(/\.00$/,'')+'M'; return '$'+Math.round(v).toLocaleString('en-US')+'k'; }
+  function fmtPort(v){ return v<1?'$'+Math.round(v*1000).toLocaleString('en-US')+'k':'$'+v.toFixed(2)+'M'; }
+  function toastMsg(msg){ toast.textContent=msg; toast.classList.add('show'); clearTimeout(toastMsg.t); toastMsg.t=setTimeout(()=>toast.classList.remove('show'),1900); }
+  function readState(){ const paradigm=(document.querySelector('input[name="market"]:checked')||{}).value||'average'; let rates=paradigm==='optimistic'?[1.020,1.040,1.065]:paradigm==='stress'?[1.005,1.015,1.035]:[1.015,1.035,1.055]; const age=+els.age.value; const activationAge=clamp(+els.retire.value,age+1,90); return {currentAge:age,activationAge,yearsToGrow:Math.max(1,activationAge-age),portfolioVol:clamp(+els.port.value/1000000,.001,50),annualContrib:clamp(+els.contrib.value,0,200000),targetSpend:Math.round(clamp(+els.datum.value/1000,20,1000)),conservativeRate:rates[0],baselineRate:rates[1],upsideRate:rates[2],isNominal:false,taxMult:1,inflRate:.03}; }
+  function getMathPoint(offset,yearsToGrow,s){ const rCon=s.conservativeRate-1,rBase=s.baselineRate-1,rUp=s.upsideRate-1; const pFvCon=s.portfolioVol*Math.pow(s.conservativeRate,offset),pFvBase=s.portfolioVol*Math.pow(s.baselineRate,offset),pFvUp=s.portfolioVol*Math.pow(s.upsideRate,offset); const cFvCon=rCon>0?(s.annualContrib/1000000)*((Math.pow(s.conservativeRate,offset)-1)/rCon):(s.annualContrib/1000000)*offset; const cFvBase=rBase>0?(s.annualContrib/1000000)*((Math.pow(s.baselineRate,offset)-1)/rBase):(s.annualContrib/1000000)*offset; const cFvUp=rUp>0?(s.annualContrib/1000000)*((Math.pow(s.upsideRate,offset)-1)/rUp):(s.annualContrib/1000000)*offset; const fvCon=pFvCon+cFvCon,fvBase=pFvBase+cFvBase,fvUp=pFvUp+cFvUp; const inflMult=s.isNominal?Math.pow(1+s.inflRate,offset):1; const t=yearsToGrow>0?offset/yearsToGrow:0; const wrCon=.04-(.04-.028)*t,wrUp=.04+(.050-.04)*t; const floorSpend=fvCon*1000*wrCon*inflMult*s.taxMult,ceilSpend=fvUp*1000*wrUp*inflMult*s.taxMult,datumSpend=s.targetSpend*inflMult; return {fvCon,fvBase,fvUp,floorSpend,ceilSpend,datumSpend}; }
+  function spendToY(spend){ const clamped=clamp(spend,globalYMin,globalYMax); return 450-((clamped-globalYMin)/(globalYMax-globalYMin))*400; }
+  function pathData(){
+    const s=readState();
+    const xStart=120,xEnd=650,steps=50,yrs=s.yearsToGrow;
+    const ptsStart=getMathPoint(0,yrs,s),ptsEnd=getMathPoint(yrs,yrs,s);
+    const all=[ptsStart.floorSpend,ptsEnd.ceilSpend,ptsEnd.floorSpend,ptsStart.datumSpend,ptsEnd.datumSpend];
+    const valMin=Math.min(...all),valMax=Math.max(...all),valRange=valMax-valMin,paddedRange=Math.max(valRange*1.10,60),mid=(valMin+valMax)/2;
+    globalYMin=Math.max(0,mid-paddedRange/2);
+    globalYMax=mid+paddedRange/2;
+
+    let dCeil=`M ${xStart} ${spendToY(ptsStart.ceilSpend)}`,
+        dFloor=`M ${xStart} ${spendToY(ptsStart.floorSpend)}`,
+        dDatum=`M ${xStart} ${spendToY(ptsStart.datumSpend)}`;
+
+    const coneCeil=[], coneFloor=[];
+    const topUpper=[], topInner=[];
+    const tealUpper=[], tealLower=[];
+    const bottomInner=[], bottomLower=[];
+    const membraneUpper=[], membraneLower=[];
+    const shineUpper=[], shineLower=[];
+
+    const hasDatum = stage >= 5;
+
+    for(let i=0;i<=steps;i++){
+      const offset=(i/steps)*yrs, x=xStart+(i/steps)*(xEnd-xStart), pts=getMathPoint(offset,yrs,s);
+      const yC=spendToY(pts.ceilSpend), yF=spendToY(pts.floorSpend), yD=spendToY(pts.datumSpend);
+      const yRange=Math.max(24,yF-yC);
+      const yMid=(yC+yF)/2;
+
+      // Before Datum is earned, gold and red meet through the natural center.
+      // After Datum is earned, gold/red remain as boundary zones and teal becomes a moderate livable band.
+      let yTopSplit=yMid;
+      let yBottomSplit=yMid;
+
+      if(hasDatum){
+        const halfBand=clamp(yRange*.17,18,50);
+        const minTopSpace=yRange*.14;
+        const minBottomSpace=yRange*.14;
+
+        yTopSplit=clamp(yD-halfBand, yC+minTopSpace, yF-(minBottomSpace+halfBand*1.15));
+        yBottomSplit=clamp(yD+halfBand, yC+(minTopSpace+halfBand*1.15), yF-minBottomSpace);
+
+        if(yBottomSplit < yTopSplit + 18){
+          const center=clamp(yD, yC+yRange*.32, yF-yRange*.32);
+          yTopSplit=center-9;
+          yBottomSplit=center+9;
+        }
+      }
+
+      if(i>0){ dCeil+=` L ${x} ${yC}`; dFloor+=` L ${x} ${yF}`; dDatum+=` L ${x} ${yD}`; }
+
+      coneCeil.push(`${x} ${yC}`);
+      coneFloor.unshift(`${x} ${yF}`);
+
+      topUpper.push(`${x} ${yC}`);
+      topInner.unshift(`${x} ${yTopSplit}`);
+
+      tealUpper.push(`${x} ${yTopSplit}`);
+      tealLower.unshift(`${x} ${yBottomSplit}`);
+
+      bottomInner.push(`${x} ${yBottomSplit}`);
+      bottomLower.unshift(`${x} ${yF}`);
+
+      // Premium membrane: slimmer than the livable teal field, follows the actual Datum path.
+      const membrane = clamp(yRange*.055,7,18) + Math.sin(i*.72)*1.3 + Math.sin(i*.21)*.8;
+      const shine = clamp(yRange*.020,3,7) + Math.sin(i*.58)*.7;
+      membraneUpper.push(`${x} ${yD-membrane}`);
+      membraneLower.unshift(`${x} ${yD+membrane}`);
+      shineUpper.push(`${x} ${yD-shine}`);
+      shineLower.unshift(`${x} ${yD+shine}`);
+    }
+
+    const dCone=`M ${coneCeil[0]} `+coneCeil.map(p=>`L ${p}`).join(' ')+' '+coneFloor.map(p=>`L ${p}`).join(' ')+' Z';
+    const dTopMass=`M ${topUpper[0]} `+topUpper.map(p=>`L ${p}`).join(' ')+' '+topInner.map(p=>`L ${p}`).join(' ')+' Z';
+    const dTealMass=dCone;
+    const dBottomMass=`M ${bottomInner[0]} `+bottomInner.map(p=>`L ${p}`).join(' ')+' '+bottomLower.map(p=>`L ${p}`).join(' ')+' Z';
+    const dDatumBand=`M ${membraneUpper[0]} `+membraneUpper.map(p=>`L ${p}`).join(' ')+' '+membraneLower.map(p=>`L ${p}`).join(' ')+' Z';
+    const dShine=`M ${shineUpper[0]} `+shineUpper.map(p=>`L ${p}`).join(' ')+' '+shineLower.map(p=>`L ${p}`).join(' ')+' Z';
+
+    const yC=spendToY(ptsEnd.ceilSpend), yF=spendToY(ptsEnd.floorSpend), yD=spendToY(ptsEnd.datumSpend);
+    return {s,ptsStart,ptsEnd,dCeil,dFloor,dDatum,dCone,dTopMass,dBottomMass,dTealMass,dDatumBand,dShine,yC,yF,yD,xEnd};
+  }
+  function setPath(el,d){ if(el) el.setAttribute('d',d); }
+  function setStop(id,pct,opacity){ const el=$(id); if(el){ el.setAttribute('offset',clamp(pct,0,100).toFixed(1)+'%'); if(opacity!=null)el.setAttribute('stop-opacity',opacity); } }
+  function updateGradient(yD){
+    if(stage<5){
+      // Before Datum is earned, keep the construction field clean: gold above, red below.
+      setStop('lgold1',0,.56);
+      setStop('lgold2',42,.36);
+      setStop('lteal1',49,0);
+      setStop('lteal2',51,0);
+      setStop('lred1',58,.26);
+      setStop('lred2',100,.50);
+    } else {
+      // Resolved Shape: material field should stay readable.
+      // Top ~15% is visibly gold, bottom ~15% is visibly red, and the broad middle remains teal.
+      setStop('lgold1',0,.70);
+      setStop('lgold2',15,.44);
+      setStop('lteal1',24,.50);
+      setStop('lteal2',76,.56);
+      setStop('lred1',85,.42);
+      setStop('lred2',100,.66);
+    }
+  }
+  function updateLabels(){ const g=pathData(); ['grid-lbl-1','grid-lbl-2','grid-lbl-3','grid-lbl-4','grid-lbl-5'].forEach((id,i)=>{ $(id).textContent=fmtY(globalYMax-(i/4)*(globalYMax-globalYMin)); }); return g; }
+  function render(){
+    const g=updateLabels();
+    setPath(els.ceilGuide,g.dCeil);
+    setPath(els.ceilSolid,g.dCeil);
+    setPath(els.floorGuide,g.dFloor);
+    setPath(els.floorSolid,g.dFloor);
+    setPath(els.datumLine,g.dDatum);
+    setPath(els.cone,g.dCone);
+    setPath(els.aura,g.dCone);
+    setPath(els.topMass,g.dTopMass);
+    setPath(els.bottomMass,g.dBottomMass);
+    setPath(els.tealMass,g.dTealMass);
+    $('clip-cone-path').setAttribute('d',g.dCone);
+    setPath(els.tealBand,g.dDatumBand);
+    setPath(els.shine,g.dShine);
+
+    [[els.nodeCeil,els.ceilLbl,g.yC],[els.nodeFloor,els.floorLbl,g.yF],[els.nodeDatum,els.datumLbl,g.yD]].forEach(([n,l,y])=>{
+      n.setAttribute('cy',y);
+      l.setAttribute('y',y+4);
+    });
+
+    $('time-start').textContent='AGE '+g.s.currentAge;
+    $('time-end').textContent='RETIRE: '+g.s.activationAge;
+    els.valAge.textContent=g.s.currentAge+' yrs';
+    els.valRetire.textContent=g.s.activationAge+' yrs';
+    els.valPort.textContent=fmtPort(g.s.portfolioVol);
+    els.valContrib.textContent='$'+g.s.annualContrib.toLocaleString('en-US');
+    els.valDatum.textContent=fmtY(g.s.targetSpend)+' / yr';
+    $('ri-ceiling-val').textContent=fmtPort(g.ptsEnd.fvUp)+' / '+fmtY(g.ptsEnd.ceilSpend)+' yr';
+    $('ri-floor-val').textContent=fmtPort(g.ptsEnd.fvCon)+' / '+fmtY(g.ptsEnd.floorSpend)+' yr';
+    $('ri-datum-val').textContent=fmtY(g.ptsEnd.datumSpend)+' / yr';
+    updateGradient(g.yD);
+    return g;
+  }
+  function drawPath(el){ el.classList.add('revealed'); const len=el.getTotalLength?el.getTotalLength():1200; el.style.transition='none'; el.style.strokeDasharray=String(len); el.style.strokeDashoffset=String(len); el.getBoundingClientRect(); el.style.transition='stroke-dashoffset 1.15s cubic-bezier(.16,.84,.2,1), opacity .28s ease, stroke-width .35s ease, d .36s cubic-bezier(.2,.8,.2,1)'; el.style.strokeDashoffset='0'; }
+  function revealNode(n,l){ n.classList.add('revealed'); l.classList.add('revealed'); }
+  function setHUD(name,means,action){ els.hud.classList.add('active'); $('shape-state-name').textContent=name; $('val-physics').textContent=means; $('val-action').textContent=action; }
+  function setInvite(name){ const map={age:'grp-age',retire:'grp-retire',portfolio:'grp-portfolio',contrib:'grp-contrib',datum:'grp-datum'}; Object.entries(map).forEach(([k,id])=>{ const grp=$(id), input=grp.querySelector('input'); grp.classList.remove('invite','datum-invite','locked'); const locked=!touched[k]&&name!==k; if(locked) grp.classList.add('locked'); if(input) input.disabled=locked; if(name===k){grp.classList.add('invite'); if(k==='datum')grp.classList.add('datum-invite');} }); }
+  function progress(){ $('prog-age').classList.toggle('active',touched.age); $('prog-retire').classList.toggle('active',touched.retire); $('prog-capital').classList.toggle('active',touched.portfolio); $('prog-contrib').classList.toggle('active',touched.contrib); $('prog-spending').classList.toggle('active',touched.datum); $('btn-submit').classList.toggle('ready',touched.datum); }
+  function advance(name){
+    const idx=stageIndex[name];
+    if(touched[name]||idx!==stage) return;
+    touched[name]=true;
+    stage++;
+    canvas.classList.add('stage-started');
+    const g=render();
+
+    if(name==='age'){
+      drawPath(els.ceilGuide);
+      revealNode(els.nodeCeil,els.ceilLbl);
+      setHUD('CEILING DISCOVERED','The upper boundary appears first as a dashed capacity line. It has not solidified yet.','Move Retirement Age to discover the lower boundary.');
+      toastMsg('Structural Ceiling discovered.');
+      setInvite('retire');
+    }
+
+    if(name==='retire'){
+      drawPath(els.floorGuide);
+      revealNode(els.nodeFloor,els.floorLbl);
+      setHUD('FLOOR DISCOVERED','The stress boundary appears below it. The Shape has edges, but still no mass.','Move Portfolio Balance to give the Ceiling weight.');
+      toastMsg('Survival Floor discovered.');
+      setInvite('portfolio');
+    }
+
+    if(name==='portfolio'){
+      els.ceilGuide.style.opacity=.18;
+      els.ceilGuide.style.strokeDasharray='1 0';
+      drawPath(els.ceilSolid);
+      els.topMass.classList.add('active');
+      els.aura.classList.add('active','gold-phase');
+      $('full-reveal-rect').classList.add('active');
+      setHUD('CEILING SOLIDIFIED','Capital gives the upper Shape weight. Gold now fills the natural upper half of the Shape, not a hidden Datum corner.','Now move Contributions to complete the Floor.');
+      toastMsg('Capital added mass to the Shape.');
+      setInvite('contrib');
+    }
+
+    if(name==='contrib'){
+      els.floorGuide.style.opacity=.18;
+      els.floorGuide.style.strokeDasharray='1 0';
+      drawPath(els.floorSolid);
+      els.bottomMass.classList.add('active');
+      els.aura.classList.remove('gold-phase');
+      els.aura.classList.add('active','range-phase');
+      setHUD('FLOOR SOLIDIFIED','The range now has a top and bottom. Gold and red meet through the true middle of the Shape.','Now move the Datum. This is the fixed point the Shape has to carry.');
+      toastMsg('Contributions completed the boundary.');
+      setInvite('datum');
+    }
+
+    if(name==='datum'){
+      canvas.classList.add('stage-complete','entering-datum');
+      els.datumLine.classList.add('revealed','slicing');
+      drawPath(els.datumLine);
+      setHUD('DATUM REVEALED','The Datum opens the Shape. Teal becomes the dominant field while gold and red remain as boundary pressure.','Move Datum up or down. The liquid responds only while you are moving it, then settles.');
+      toastMsg('Datum revealed.');
+      setInvite(null);
+      window.setTimeout(()=>{
+        els.tealMass.classList.add('active');
+        els.tealBand.classList.add('active');
+        els.shine.classList.add('active');
+        revealNode(els.nodeDatum,els.datumLbl);
+        canvas.classList.remove('entering-datum');
+      }, 1125);
+    }
+    progress();
+  }
+  function slosh(name){ const g=render(); if(stage>=5 && name==='datum'){ const dy=lastDatumY==null?0:g.yD-lastDatumY; lastDatumY=g.yD; canvas.classList.add('dragging-datum'); clearTimeout(sloshTimer); sloshTimer=setTimeout(()=>canvas.classList.remove('dragging-datum'),260); setHUD('DATUM IN MOTION',dy<0?'The Datum is pushing toward the Ceiling. Gold compresses upward while teal claims space.':'The Datum is easing toward the Floor. Red breathes upward while teal settles lower.','When movement stops, the liquid settles. No idle jitter.'); } }
+  function bind(input,name){ const start=()=>{ if(stageIndex[name]===stage) advance(name); }; input.addEventListener('pointerdown',start); input.addEventListener('touchstart',start,{passive:true}); input.addEventListener('keydown',e=>{ if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown'].includes(e.key))start(); }); input.addEventListener('input',()=>{ if(!touched[name]&&stageIndex[name]===stage)advance(name); slosh(name); }); input.addEventListener('change',()=>slosh(name)); }
+  function reset(){ stage=0; Object.keys(touched).forEach(k=>touched[k]=false); canvas.classList.remove('stage-started','stage-complete','dragging-datum'); [els.ceilGuide,els.floorGuide,els.ceilSolid,els.floorSolid,els.datumLine].forEach(el=>{el.classList.remove('revealed','slicing');el.style.cssText='';}); [els.nodeCeil,els.nodeFloor,els.nodeDatum,els.ceilLbl,els.floorLbl,els.datumLbl].forEach(el=>el.classList.remove('revealed')); [els.cone,els.aura,els.topMass,els.bottomMass,els.tealMass,els.tealBand,els.shine].forEach(el=>el.classList.remove('active','partial','gold-phase','range-phase')); $('full-reveal-rect').classList.remove('active'); els.hud.classList.remove('active'); render(); setInvite('age'); progress(); toastMsg('Discovery reset.'); }
+  document.querySelectorAll('input[name="market"]').forEach(r=>r.addEventListener('change',()=>{ render(); if(stage>0)toastMsg('Market climate adjusted.'); }));
+  bind(els.age,'age'); bind(els.retire,'retire'); bind(els.port,'portfolio'); bind(els.contrib,'contrib'); bind(els.datum,'datum'); $('btn-restart').addEventListener('click',reset); $('btn-submit').addEventListener('click',()=>toastMsg('Screen 2 remains reserved for Design.'));
+  render(); setInvite('age'); progress();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+[RUN] 28/28 GREEN
+PASS (a) taxable_primary = primary/liquid/The Living Room
+PASS (a) taxable_co = coarch/liquid/Co-Living Room
+PASS (a) taxable_corp_primary = primary/liquid/Entity-owned + owner=entity
+PASS (a) taxable_corp_co = coarch + owner=entity (no Co- on descriptive meta)
+PASS (a) taxable_other_primary/_co = Uncategorized taxable
+PASS (a) other_assets_primary/_co = other/Value-only asset
+PASS (a) property_primary = primary/physical/The Grounds
+PASS (a) property_co = coarch/physical/Co-Grounds
+PASS (a) taxable_corp variants are isInvestment; other_assets are NOT
+PASS (b) Primary wing has taxable_primary + property_primary + taxable_corp_primary
+PASS (b) Primary wing shows Co-less nicknames (The Living Room / The Grounds)
+PASS (b) Co-Arch wing has taxable_co + property_co (Co- nicknames)
+PASS (b) Co-Arch wing has the fold-out trio variants
+PASS (c) ACCOUNT_TYPE_MAP: taxable_primary/_co → taxable
+PASS (c) ACCOUNT_TYPE_MAP: taxable_corp/other variants → taxable
+PASS (c) FILTERED_TYPES: property + other_assets variants filtered
+PASS (c) property/other_assets variants NOT in ACCOUNT_TYPE_MAP (mirror: filtered, not enum)
+PASS (c) taxable variants NOT in FILTERED_TYPES (mirror: they feed the engine)
+PASS (c) zero "Unmapped account type" console warn
+PASS (d) taxable_primary counts like taxable (1000 → 2000)
+PASS (d) property_primary + other_assets_primary do NOT feed investableTotal
+PASS (d) BASE_TO_BUCKET: taxable_primary/_co → taxable (corp/other stay absent)
+PASS (d) existing mappings unchanged (taxable→taxable, roth401k→roth_401k)
+PASS (e) taxable_primary → Living Room engine (archetype) + title
+PASS (e) taxable_corp_primary → R393 entity-owned intro
+PASS (e) other_assets_primary → R396 value-only intro
+PASS (e) _isTaxableRoom matches taxable_primary/_co + taxable_corp_primary
+PASS renderInputs did not throw
+
+inv: base=1000 +primary=2000 prop=0 oa=0 warns=0
+
+=== PRIMARY WING (variants) ===
+DANIEL'S SPACES ▸ ASSETS ▸ Operating Cash Checking The Foyer Savings The Safe The Mattress Coming soon Physical Property Collectibles The Arcade Real Estate The Grounds Vehicle The Driveway INCOME ▸ Pension (Annual) The Foundation The Keel Coming soon INVESTMENTS ▸ Brokerage &amp; Crypto Taxable Brokerage The Living Room Crypto Cold Storage More Taxable / Other Corporate / Business Taxable Entity-owned taxable Other Taxable Uncategorized taxable Other Assets Value-only asset Individual Retirement Accounts Roth IRA The Conservatory Traditional IRA The Library The Sidedoor Coming soon The Sapling Coming soon The Bequest Coming soon The Passage Coming soon The Reserve Coming soon The Homestead 
+
+=== CO WING (variants) ===
+ANA'S SPACES ▸ ASSETS ▸ Operating Cash Checking Co-Foyer Savings Co-Safe Physical Property Collectibles Co-Arcade Real Estate Co-Grounds Vehicle Co-Driveway INCOME ▸ Pension (Annual) Co-Foundation INVESTMENTS ▸ Brokerage &amp; Crypto Taxable Brokerage Co-Living Room Crypto Co-Cold Storage More Taxable / Other Corporate / Business Taxable Entity-owned taxable Other Taxable Uncategorized taxable Other Assets Value-only asset Individual Retirement Accounts Roth IRA Co-Conservatory Traditional IRA Co-Library Education &amp; Health HSA Co-Infirmary LIABILITIES ▸ Secured Debt Mortgage Co-Moat Auto Loan Co-Garage Unsecured Debt Personal Loan Co-Ledger Revolving Debt Co-Furnace Student Loan Co-Study

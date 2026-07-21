@@ -7309,8 +7309,8 @@
                 <div style="color:var(--teal-mid); font-weight:bold; font-size:13px; margin-bottom:6px;">🏦 Escrow — the monthly bundle</div>
                 <div style="font-size:11px; color: rgba(255,255,255,0.6); line-height:1.45; margin-bottom:12px;">Escrow is the slice of your monthly payment that isn't principal or interest — your lender collects property taxes, homeowner's insurance, and (if you're under ~20% equity) PMI, then pays those bills for you. It's real money you owe every month, just not to the loan itself.</div>
                 <div class="field-row">
-                    <div>${_dLbl(base, 'Annual Property Taxes', 'The town\'s cut', 'What the county charges yearly on the home. Usually escrowed into your monthly payment. Part of the real cost of owning, not just borrowing.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.propTaxAnnual||'')}" oninput="updateAccField('${id}', 'propTaxAnnual', this.value)"></div>
-                    <div>${_dLbl(base, 'Annual Insurance', 'Protecting the asset', 'Homeowner\'s/hazard insurance, billed yearly, usually escrowed. Required by the lender while there\'s a balance.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.insAnnual||'')}" oninput="updateAccField('${id}', 'insAnnual', this.value)"></div>
+                    <div>${_dLbl(base, 'Property Tax (yr)', 'The town\'s cut', 'What the county charges yearly on the home. Usually escrowed into your monthly payment. Part of the real cost of owning, not just borrowing.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.propTaxAnnual||'')}" oninput="updateAccField('${id}', 'propTaxAnnual', this.value)"></div>
+                    <div>${_dLbl(base, 'Homeowners / Hazard Insurance (yr)', 'Protecting the asset', 'Homeowner\'s/hazard insurance, billed yearly, usually escrowed. Required by the lender while there\'s a balance.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.insAnnual||'')}" oninput="updateAccField('${id}', 'insAnnual', this.value)"></div>
                 </div>
                 <div class="field-row">
                     <div>${_dLbl(base, 'Monthly PMI', 'The lender\'s safety net', 'Private Mortgage Insurance — charged while your equity is under ~20%. It protects the lender, not you, and drops off once you cross the line. Worth targeting.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.pmiMonthly||'')}" oninput="updateAccField('${id}', 'pmiMonthly', this.value)"></div>
@@ -7457,8 +7457,8 @@
             <div style="margin-top:14px; padding:14px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:4px;">
                 <div style="color:var(--teal-mid); font-weight:bold; font-size:13px; margin-bottom:10px;">🧾 Annual Carrying Cost</div>
                 <div class="field-row">
-                    <div><span class="input-label modal-tt-wrap" style="cursor:help;">Property Tax (yr)<div class="modal-tt" style="left:0; right:auto;"><strong>Property tax</strong>Your yearly property tax, set by your local assessor. Enter your bill amount — it can change each year as assessments and rates do.</div></span><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.propTaxYr||'')}" oninput="updateAccField('${id}', 'propTaxYr', this.value)"></div>
-                    <div><span class="input-label modal-tt-wrap" style="cursor:help;">Homeowners / Hazard Insurance (yr)<div class="modal-tt" style="right:0; left:auto;"><strong>Homeowners insurance</strong>What you pay each year to insure the home itself against damage — separate from the mortgage. Enter your policy's annual premium.</div></span><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.homeInsYr||'')}" oninput="updateAccField('${id}', 'homeInsYr', this.value)"></div>
+                    ${_carryMirrorField(id, acc, 'propTaxAnnual', 'propTaxYr', 'Property Tax (yr)', 'Property tax', 'Your yearly property tax, set by your local assessor. Enter your bill amount — it can change each year as assessments and rates do.', 'left')}
+                    ${_carryMirrorField(id, acc, 'insAnnual', 'homeInsYr', 'Homeowners / Hazard Insurance (yr)', 'Homeowners insurance', 'What you pay each year to insure the home itself against damage — separate from the mortgage. Enter your policy\'s annual premium.', 'right')}
                 </div>
                 <div class="field-row">
                     <div><span class="input-label modal-tt-wrap" style="cursor:help;">Est. Maintenance / Repairs (yr)<div class="modal-tt" style="left:0; right:auto;"><strong>est. · ~1% of value</strong>A rough estimate — about 1% of the home's value is a common rule of thumb. It's only a starting point; your own number always wins.</div></span><input type="text" class="small-field curr-format" placeholder="${maintPH>0 ? 'est. $'+maintPH.toLocaleString('en-US') : '$0'}" value="${formatCurrency(acc.maintYr||'')}" oninput="updateAccField('${id}', 'maintYr', this.value)"></div>
@@ -7752,7 +7752,7 @@
                 acc[field] = value;
             }
 
-            if(field === 'linkedAssetId') openAccountModal(id);
+            if(field === 'linkedAssetId') { openAccountModal(id); if(value) _onSecuredLinkFormed(id, value, id); }   // §18.2 reconcile shared escrow (returns to this room)
             if(field === 'rateType') openAccountModal(id);   // §0.4/§5.1 — reveal/hide the Variable-rate cluster
             if(field === 'linkedToAccount' || field === 'rollFlavor') openAccountModal(id);   // The Conduit — refresh count-once flag (§7.5) + Layer-E tax fork (§9) live
 
@@ -7953,13 +7953,54 @@
     };
     
     // SURGICAL: Bi-Directional Mapping Functions
+    // §18.2 — when a mortgage↔property link forms, reconcile the escrow figures the two rooms share (property
+    // tax, then homeowners insurance). Fires the §6b overwrite-warn (L48 reuse — showBrandConfirm, no new modal)
+    // ONLY when BOTH sides already hold a value AND they differ. D3 direction: 'Use the shared figure' adopts
+    // the GROUNDS number onto the Moat (canonical); 'Keep this room's own' keeps the Moat's escrow figure. On
+    // resolution the chosen number is written to BOTH fields so a future §18.4 unlink releases cleanly. No
+    // warn, no write when only one side (or neither) holds a value — the resolver/mirror handles display and we
+    // never silent-clobber. Called by BOTH link entry points; returnToId reopens the room the user came from.
+    function _onSecuredLinkFormed(debtId, assetId, returnToId) {
+        var debt = state.accounts.find(function (a) { return a.id === debtId; });
+        var asset = state.accounts.find(function (a) { return a.id === assetId; });
+        if (!debt || !asset) return;
+        var db = getBaseType(debt.baseId);
+        if (String(db && db.id || '').indexOf('mortgage') !== 0) return;   // only a mortgage shares escrow with a property
+        var jobs = [
+            { moat: 'propTaxAnnual', grounds: 'propTaxYr', body: 'You already entered a property-tax amount on The Grounds. Linking can keep both rooms in step so you only maintain one number. Want to use it here too?' },
+            { moat: 'insAnnual',     grounds: 'homeInsYr', body: 'You already entered a homeowners-insurance amount on The Grounds. Linking can keep both rooms in step so you only maintain one number. Want to use it here too?' }
+        ];
+        var i = 0, touched = false;
+        var step = function () {
+            while (i < jobs.length) {
+                var j = jobs[i]; i++;
+                var mo = _num(debt[j.moat]), gr = _num(asset[j.grounds]);
+                if (mo > 0 && gr > 0 && Math.round(mo) !== Math.round(gr)) {
+                    touched = true;
+                    showBrandConfirm({
+                        title: 'Use the same figure in both rooms?',
+                        message: j.body,
+                        confirmText: 'Use the shared figure',       // D3 — the Grounds number becomes canonical
+                        cancelText: "Keep this room's own",          // keep the Moat's own escrow figure
+                        onConfirm: (function (job) { return function () { debt[job.moat] = asset[job.grounds]; step(); }; })(j),
+                        onCancel:  (function (job) { return function () { asset[job.grounds] = debt[job.moat]; step(); }; })(j)
+                    });
+                    return;   // await the user's choice; the chain resumes in the callback
+                }
+            }
+            if (touched) { renderInputs(); updateSVGs(); updateAnalysisText(); if (returnToId && typeof openAccountModal === 'function') openAccountModal(returnToId); }
+        };
+        step();
+    }
+
     window.linkDebtToAsset = function(assetId, debtId) {
         if(!debtId) return;
         let debt = state.accounts.find(a => a.id === debtId);
         if(debt) {
             debt.linkedAssetId = assetId;
-            openAccountModal(assetId); 
+            openAccountModal(assetId);
             updateSVGs();
+            _onSecuredLinkFormed(debtId, assetId, assetId);   // §18.2 reconcile shared escrow (returns to The Grounds)
         }
     }
     
@@ -8881,10 +8922,52 @@
     // (NaN or a comma-truncated 400). Strip non-numeric first so every §1/§9/§9b signal reads sourced.
     function _num(v) { return parseFloat(String(v == null ? '' : v).replace(/[^0-9.\-]/g, '')) || 0; }
     function _groundsMaintDefault(acc) { var v = _num(acc.value); return v > 0 ? Math.round(v * 0.01) : 0; }  // §4.3 ~1%-of-value rule-of-thumb (est., placeholder only)
+    // §18.2 CANONICAL ESCROW RESOLVER — Option B (the Moat is the source of truth). When a mortgage is linked
+    // to this property AND carries the escrow figure, THAT figure IS the home's tax/insurance; the Grounds
+    // carry field is a read-only MIRROR of it, never a second independently-stored number that could drift or
+    // be double-summed. Falls back to the Grounds' own field when no linked mortgage supplies the value.
+    // Sourced-or-blank, LOCK-3 (display/derivation only — emits no cross-room %).
+    function _linkedMortgageWith(id, moatField) {
+        var found = null;
+        (state.accounts || []).forEach(function (a) {
+            if (a.linkedAssetId !== id) return;
+            var b = getBaseType(a.baseId), bid = String(b && b.id || '');
+            if (bid.indexOf('mortgage') === 0 && _num(a[moatField]) > 0) found = a;
+        });
+        return found;
+    }
+    function _canonPropTax(acc) {
+        var m = _linkedMortgageWith(acc.id, 'propTaxAnnual');
+        return m ? m.propTaxAnnual : acc.propTaxYr;
+    }
+    function _canonHomeIns(acc) {
+        var m = _linkedMortgageWith(acc.id, 'insAnnual');
+        return m ? m.insAnnual : acc.homeInsYr;
+    }
+    // §18.2 render ONE shared escrow carry field (property-tax / insurance). Normally an editable Grounds input;
+    // but a READ-ONLY MIRROR of the linked mortgage's escrow figure the moment one exists (Option B). The
+    // not-linked branch reproduces the original field byte-for-byte, so nothing changes for an unlinked home.
+    function _carryMirrorField(id, acc, moatField, groundField, label, ttTitle, ttBody, align) {
+        var pos = align === 'right' ? 'right:0; left:auto;' : 'left:0; right:auto;';
+        var tt = '<span class="input-label modal-tt-wrap" style="cursor:help;">' + label +
+                 '<div class="modal-tt" style="' + pos + '"><strong>' + ttTitle + '</strong>' + ttBody + '</div></span>';
+        var m = _linkedMortgageWith(id, moatField);
+        if (m) {
+            return '<div>' + tt +
+                '<input type="text" class="small-field curr-format" value="' + formatCurrency(m[moatField] || '') + '" readonly ' +
+                'style="opacity:0.7; cursor:not-allowed; border-style:dashed;" title="Set on the linked mortgage (The Moat)">' +
+                '<div style="font-size:10px; color:var(--teal-mid); margin-top:3px; font-family:var(--font-mono);">🔗 mirrored from The Moat</div></div>';
+        }
+        return '<div>' + tt +
+            '<input type="text" class="small-field curr-format" placeholder="$0" value="' + formatCurrency(acc[groundField] || '') +
+            '" oninput="updateAccField(\'' + id + '\', \'' + groundField + '\', this.value)"></div>';
+    }
     // §4.16 TOTAL — sums the ACTUAL entered fields only (blank = 0, never fabricated). The maint est. is a
-    // placeholder suggestion, not auto-summed, so nothing is invented into the Datum Builder feed.
+    // placeholder suggestion, not auto-summed, so nothing is invented into the Datum Builder feed. §18.2: tax &
+    // insurance resolve through the canonical escrow resolver, so a mirrored (linked-mortgage) figure is counted
+    // here exactly ONCE and the total stays honest whether the number was entered on the Moat or the Grounds.
     function calcCarryTotal(acc) {
-        return _num(acc.propTaxYr) + _num(acc.homeInsYr) + _num(acc.maintYr) + _num(acc.hoaYr) + _num(acc.utilYr);
+        return _num(_canonPropTax(acc)) + _num(_canonHomeIns(acc)) + _num(acc.maintYr) + _num(acc.hoaYr) + _num(acc.utilYr);
     }
     function _groundsLinkedDebt(id) {   // §1.2 sum of linked liabilities (mortgage / HELOC etc.)
         return (state.accounts || []).filter(function (a) { return a.linkedAssetId === id; }).reduce(function (s, a) { return s + _num(a.value); }, 0);
@@ -8987,8 +9070,8 @@
         var p = _groundsLinkedPmts(id);
         if (p.mortgage <= 0 && p.heloc <= 0) return null;
         var otherMo = p.other / 12;   // §18.1 mortgage 'Other (yr)' escrow → monthly
-        if (calcCarryTotal(acc) <= 0 && otherMo <= 0) return null;   // need >=1 carry cost (Grounds carry OR mortgage 'Other')
-        var propTaxMo = _num(acc.propTaxYr) / 12, insMo = _num(acc.homeInsYr) / 12, upkeepMo = _num(acc.maintYr) / 12,
+        if (calcCarryTotal(acc) <= 0 && otherMo <= 0) return null;   // need >=1 carry cost (canonical tax/ins, Grounds carry, OR mortgage 'Other')
+        var propTaxMo = _num(_canonPropTax(acc)) / 12, insMo = _num(_canonHomeIns(acc)) / 12, upkeepMo = _num(acc.maintYr) / 12,
             hoaMo = _num(acc.hoaYr) / 12, utilMo = _num(acc.utilYr) / 12;
         var carryMo = propTaxMo + insMo + upkeepMo + hoaMo + utilMo + otherMo;
         return { mortgagePmt: p.mortgage, helocPmt: p.heloc, propTaxMo: propTaxMo, insMo: insMo, upkeepMo: upkeepMo,

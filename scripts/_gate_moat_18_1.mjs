@@ -18,7 +18,7 @@ const checks = [];
 const need = (label, cond) => checks.push([label, !!cond]);
 
 const extract = (name) => { const m = s.match(new RegExp('    function ' + name + '\\([\\s\\S]*?\\n    }\\n')); return m ? m[0] : ''; };
-const NAMES = ['calculateTotalPmt','calculateEscrowMonthly','hasEscrow','_escrowFooter','_num','calcCarryTotal',
+const NAMES = ['calculateTotalPmt','calculateEscrowMonthly','hasEscrow','_escrowFooter','_num','_linkedMortgageWith','_canonPropTax','_canonHomeIns','calcCarryTotal',
                '_groundsLinkedDebt','_groundsLiens','_groundsCLTV','_groundsCLTVBeat','_groundsEquityBarHTML',
                '_groundsLinkedPmts','_groundsAllIn','_groundsAllInBeat','_groundsAllInBreakdown','_groundsDI','_groundsDI9b','_groundsSignalsHTML'];
 const getBaseType = (baseId) => {

@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Datum FI — Account Workspace v7</title>
+<meta name="theme-color" content="#091221">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500;700&family=DM+Sans:wght@300;400;500;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#091221;--deep:#050b14;--teal:#5DCAA5;--brand:#1D9E75;--gold:#C9A84C;--red:#e24b4a;--purple:#6B7BC4;--blue:#4da8da;--ink:#20242b;--paper:#fbf6ea;--muted:rgba(255,255,255,.52);--font-serif:'Fraunces',Georgia,serif;--font-mono:'DM Mono',monospace;--font-sans:'DM Sans',system-ui,sans-serif}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:var(--bg);color:#fff;font-family:var(--font-sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}button,a{font-family:inherit}a{text-decoration:none;color:inherit}button{cursor:pointer}.shell{min-height:100vh;position:relative;padding:92px 42px 64px;background:radial-gradient(circle at 50% 26%,rgba(93,202,165,.082),transparent 34%),radial-gradient(circle at 16% 68%,rgba(107,123,196,.060),transparent 29%),radial-gradient(circle at 86% 74%,rgba(201,168,76,.046),transparent 31%),linear-gradient(180deg,#0a1424 0%,#07101d 48%,#030812 100%)}.shell:before{content:"";position:fixed;inset:0;pointer-events:none;background:linear-gradient(rgba(93,202,165,.022) 1px,transparent 1px),linear-gradient(90deg,rgba(93,202,165,.022) 1px,transparent 1px);background-size:48px 48px;mask-image:radial-gradient(circle at 50% 43%,rgba(0,0,0,.76),transparent 76%)}.shell:after{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 0%,rgba(255,255,255,.045),transparent 34%),linear-gradient(180deg,transparent 0%,rgba(0,0,0,.28) 100%)}.topbar{position:fixed;top:0;left:0;right:0;height:64px;z-index:100;border-bottom:1px solid rgba(255,255,255,.075);background:rgba(5,11,20,.78);backdrop-filter:blur(16px)}.brand{position:absolute;left:31px;top:18px;display:flex;align-items:center;gap:14px}.logo{width:28px;height:28px;filter:drop-shadow(0 0 12px rgba(29,158,117,.32))}.wordmark{font-family:var(--font-serif);font-size:29px;letter-spacing:.02em}.nav{position:absolute;left:214px;top:22px;display:flex;gap:24px}.nav a{font-family:var(--font-mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.42);transition:.18s ease}.nav a:hover{color:rgba(255,255,255,.78)}.login{position:absolute;right:28px;top:14px;display:flex;gap:10px}.login button{height:36px;padding:0 14px;border-radius:999px;background:rgba(255,255,255,.035);font-family:var(--font-mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase}.upgrade{border:1px solid rgba(201,168,76,.62);color:var(--gold);box-shadow:0 0 18px rgba(201,168,76,.08),inset 0 1px rgba(255,255,255,.06)}.loginbtn{border:1px solid rgba(93,202,165,.56);color:var(--teal)}.workspace{width:min(1180px,calc(100vw - 76px));position:relative;z-index:4;margin:0 auto}.welcome{position:relative;margin:0 auto 28px;padding:34px 38px 30px;border:1px solid rgba(255,255,255,.092);border-radius:30px;background:radial-gradient(circle at 18% 7%,rgba(93,202,165,.16),transparent 32%),radial-gradient(circle at 88% 15%,rgba(201,168,76,.10),transparent 36%),linear-gradient(180deg,rgba(255,255,255,.060),rgba(255,255,255,.026));box-shadow:0 38px 92px rgba(0,0,0,.38),inset 0 1px rgba(255,255,255,.075),inset 0 0 0 1px rgba(255,255,255,.025);overflow:hidden}.welcome:before{content:"";position:absolute;inset:-40% -20% auto -20%;height:220px;background:linear-gradient(112deg,transparent,rgba(255,255,255,.10),transparent);transform:translateX(-40%);opacity:.62}.welcome-grid{position:relative;z-index:2;display:grid;grid-template-columns:1fr 310px;gap:28px;align-items:end}.eyebrow{margin:0 0 12px;font-family:var(--font-mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:rgba(201,168,76,.78)}h1{margin:0;font-family:var(--font-serif);font-size:clamp(44px,6vw,72px);font-style:italic;font-weight:300;line-height:.93;letter-spacing:-.025em}.welcome-copy{max-width:760px;margin:16px 0 0;font-size:15.5px;font-weight:300;line-height:1.68;color:rgba(255,255,255,.58)}.welcome-copy strong{color:rgba(255,255,255,.90);font-weight:400}.profile-tile{position:relative;min-height:166px;border-radius:24px;border:1px solid rgba(255,255,255,.095);background:radial-gradient(circle at 20% 0%,rgba(255,255,255,.13),transparent 36%),radial-gradient(circle at 88% 92%,rgba(93,202,165,.10),transparent 40%),linear-gradient(180deg,rgba(255,255,255,.062),rgba(255,255,255,.025));box-shadow:0 18px 42px rgba(0,0,0,.20),inset 0 1px rgba(255,255,255,.07);padding:18px 18px 16px;overflow:hidden}.profile-tile:before{content:"";position:absolute;right:-22px;top:-28px;width:110px;height:110px;border:1px solid rgba(201,168,76,.22);border-radius:50%;background:radial-gradient(circle at 50% 50%,transparent 0 32px,rgba(201,168,76,.12) 33px 34px,transparent 35px),radial-gradient(circle at 50% 50%,transparent 0 44px,rgba(201,168,76,.18) 45px 46px,transparent 47px);transform:rotate(8deg)}.profile-top{display:flex;align-items:center;gap:12px;margin-bottom:17px}.mini-logo{width:46px;height:46px;border-radius:15px;display:grid;place-items:center;color:var(--brand);border:1px solid rgba(29,158,117,.28);background:radial-gradient(circle at 30% 22%,rgba(93,202,165,.30),transparent 38%),linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.035));box-shadow:inset 0 1px rgba(255,255,255,.18),0 10px 22px rgba(0,0,0,.20),0 0 20px rgba(93,202,165,.07)}.mini-logo svg{width:28px}.profile-name{font-family:var(--font-serif);font-style:italic;font-size:27px;line-height:1}.profile-sub{margin-top:4px;font-family:var(--font-mono);font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.42)}.profile-meta{display:grid;gap:8px}.meta-row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px dashed rgba(255,255,255,.085);font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.40)}.meta-row:last-child{border-bottom:0}.meta-row strong{color:rgba(255,255,255,.75);font-weight:500}.surface{position:relative;border-radius:34px;padding:31px;border:1px solid rgba(255,255,255,.086);background:linear-gradient(90deg,rgba(255,255,255,.095),rgba(255,255,255,.030) 5%,transparent 17%,transparent 82%,rgba(0,0,0,.34) 96%),radial-gradient(circle at 16% 6%,rgba(255,255,255,.10),transparent 24%),radial-gradient(circle at 84% 88%,rgba(0,0,0,.50),transparent 38%),repeating-linear-gradient(31deg,rgba(255,255,255,.018) 0 1px,transparent 1px 8px),repeating-linear-gradient(-28deg,rgba(0,0,0,.030) 0 1px,transparent 1px 11px),linear-gradient(180deg,#15243a 0%,#091322 52%,#02050b 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.060),inset 42px 0 68px rgba(255,255,255,.038),inset -46px 0 80px rgba(0,0,0,.58),inset 0 -78px 100px rgba(0,0,0,.58),0 62px 120px rgba(0,0,0,.62)}.surface:before{content:"";position:absolute;inset:16px;pointer-events:none;border-radius:25px;border:1px solid rgba(255,255,255,.056);box-shadow:inset 0 0 0 1px rgba(0,0,0,.22)}.surface-head{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:22px;padding:2px 4px 0}.surface-head h2{margin:0;font-family:var(--font-serif);font-size:36px;font-style:italic;font-weight:300;line-height:1}.surface-head p{margin:8px 0 0;color:rgba(255,255,255,.46);font-size:13px;line-height:1.55}.mode-pill{flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(93,202,165,.22);border-radius:999px;background:rgba(93,202,165,.065);color:rgba(255,255,255,.66);padding:9px 12px;font-family:var(--font-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;box-shadow:inset 0 1px rgba(255,255,255,.06),0 8px 18px rgba(0,0,0,.16)}.mode-dot{width:7px;height:7px;border-radius:50%;background:var(--teal);box-shadow:0 0 12px rgba(93,202,165,.62)}.cards{position:relative;z-index:2;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.card{--accent:var(--teal);position:relative;min-height:314px;display:flex;flex-direction:column;justify-content:space-between;border-radius:22px;padding:23px 23px 21px;border:1px solid rgba(255,255,255,.098);background:radial-gradient(circle at 18% 8%,rgba(255,255,255,.105),transparent 36%),radial-gradient(circle at 92% 94%,color-mix(in srgb,var(--accent) 18%,transparent),transparent 38%),linear-gradient(180deg,rgba(255,255,255,.058),rgba(255,255,255,.024));box-shadow:inset 0 1px rgba(255,255,255,.085),inset 0 0 0 1px rgba(255,255,255,.025),0 22px 48px rgba(0,0,0,.27);overflow:hidden;transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease,filter .22s ease}.card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,var(--accent),rgba(201,168,76,.82));box-shadow:0 0 20px color-mix(in srgb,var(--accent) 22%,transparent)}.card:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(118deg,transparent 0%,rgba(255,255,255,.15) 42%,transparent 58%),radial-gradient(circle at 13% 0%,rgba(255,255,255,.12),transparent 30%);transform:translateX(-78%);opacity:.60;transition:transform .70s ease}.card:hover{transform:translateY(-5px);border-color:color-mix(in srgb,var(--accent) 38%,rgba(255,255,255,.14));box-shadow:inset 0 1px rgba(255,255,255,.11),inset 0 0 0 1px rgba(255,255,255,.030),0 30px 62px rgba(0,0,0,.36),0 0 28px color-mix(in srgb,var(--accent) 10%,transparent)}.card:hover:after{transform:translateX(68%)}.card-top,.card-bottom{position:relative;z-index:2}.card-icon{width:58px;height:58px;border-radius:18px;display:grid;place-items:center;margin-bottom:18px;color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 31%,rgba(255,255,255,.12));background:radial-gradient(circle at 30% 20%,color-mix(in srgb,var(--accent) 28%,transparent),transparent 38%),linear-gradient(180deg,rgba(255,255,255,.105),rgba(255,255,255,.030));box-shadow:inset 0 1px rgba(255,255,255,.12),0 14px 30px rgba(0,0,0,.20),0 0 22px color-mix(in srgb,var(--accent) 10%,transparent)}.card-icon svg{width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}.card-kicker{margin:0 0 8px;font-family:var(--font-mono);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:color-mix(in srgb,var(--accent) 74%,white)}.card h3{margin:0 0 11px;font-family:var(--font-serif);font-size:31px;font-style:italic;font-weight:300;line-height:1.02;letter-spacing:-.015em;color:rgba(255,255,255,.92)}.card p{margin:0;color:rgba(255,255,255,.56);font-size:13.5px;line-height:1.62}.card-chips{display:flex;flex-wrap:wrap;gap:7px;margin:18px 0 0}.chip{border:1px solid rgba(255,255,255,.096);border-radius:999px;padding:6px 8px;background:rgba(255,255,255,.038);color:rgba(255,255,255,.45);font-family:var(--font-mono);font-size:8px;letter-spacing:.12em;text-transform:uppercase}.card-bottom{margin-top:22px}.cta{position:relative;overflow:hidden;width:100%;height:46px;border:1px solid color-mix(in srgb,var(--accent) 34%,rgba(255,255,255,.10));border-radius:999px;background:radial-gradient(circle at 20% 0%,rgba(255,255,255,.135),transparent 36%),color-mix(in srgb,var(--accent) 13%,rgba(255,255,255,.030));color:rgba(255,255,255,.82);font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;box-shadow:inset 0 1px rgba(255,255,255,.085),0 12px 26px rgba(0,0,0,.19);transition:.18s ease}.cta:before{content:"";position:absolute;inset:0;background:linear-gradient(112deg,transparent 0%,rgba(255,255,255,.26) 44%,transparent 58%);transform:translateX(-120%);transition:transform .60s ease}.card:hover .cta:before{transform:translateX(120%)}.card:hover .cta{background:radial-gradient(circle at 20% 0%,rgba(255,255,255,.18),transparent 36%),color-mix(in srgb,var(--accent) 19%,rgba(255,255,255,.034));color:#fff}.card.primary-card{min-height:342px;border-color:rgba(201,168,76,.20);background:radial-gradient(circle at 18% 8%,rgba(201,168,76,.13),transparent 36%),radial-gradient(circle at 92% 94%,rgba(93,202,165,.08),transparent 38%),linear-gradient(180deg,rgba(255,255,255,.066),rgba(255,255,255,.025))}.card.primary-card .cta{color:#171205;border:0;background:radial-gradient(circle at 18% 10%,rgba(255,255,255,.75),transparent 31%),linear-gradient(180deg,#f0d783,#c9a84c);box-shadow:0 18px 36px rgba(201,168,76,.22),0 0 26px rgba(201,168,76,.12),inset 0 1px rgba(255,255,255,.38)}.card.sketchbook{--accent:var(--purple)}.card.archive{--accent:var(--gold)}.card.studio{--accent:var(--teal)}.card.sketch{--accent:var(--blue)}.card.shape{--accent:var(--brand)}.card.profile{--accent:var(--gold)}.footnote{position:relative;z-index:2;margin:20px 4px 0;display:flex;justify-content:space-between;gap:18px;color:rgba(255,255,255,.34);font-family:var(--font-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase}.footnote strong{color:rgba(93,202,165,.64);font-weight:500}.toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:999;border:1px solid rgba(93,202,165,.32);border-radius:999px;padding:12px 16px;background:rgba(5,11,20,.92);color:rgba(255,255,255,.80);font-family:var(--font-mono);font-size:10px;letter-spacing:.13em;text-transform:uppercase;box-shadow:0 24px 62px rgba(0,0,0,.42);transition:.22s ease}.toast.show{opacity:1;transform:translate(-50%,0)}@media(max-width:1060px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.welcome-grid{grid-template-columns:1fr}.profile-tile{max-width:520px}.nav{display:none}}@media(max-width:720px){.shell{padding:86px 18px 46px}.workspace{width:100%}.welcome{padding:26px 22px;border-radius:24px}.surface{padding:22px 16px;border-radius:26px}.surface-head{display:block}.mode-pill{margin-top:16px}.cards{grid-template-columns:1fr}.card{min-height:auto}.topbar{height:62px}.brand{left:18px}.login{right:16px}.login .upgrade{display:none}.footnote{display:block;line-height:1.8}}
+</style>
+
+<style>
+/* ─────────────────────────────────────────────────────────────
+   V2 SURGICAL POLISH
+   - Reordered workspace rooms.
+   - Editable welcome name.
+   - More Datum-like Shape cone icon.
+   - Additional premium material / hover / card depth pass.
+   ───────────────────────────────────────────────────────────── */
+.editable-name{
+  display:inline-block;
+  min-width:3.2ch;
+  padding:0 .065em .035em;
+  border-radius:14px;
+  color:rgba(255,255,255,.96);
+  text-shadow:0 0 26px rgba(93,202,165,.08);
+  cursor:text;
+  transition:background .18s ease, box-shadow .18s ease, color .18s ease;
+}
+.editable-name:hover{
+  background:rgba(255,255,255,.045);
+  box-shadow:0 0 0 1px rgba(255,255,255,.070) inset;
+}
+.editable-name:focus{
+  outline:0;
+  background:
+    radial-gradient(circle at 20% 0%,rgba(93,202,165,.15),transparent 36%),
+    rgba(255,255,255,.060);
+  box-shadow:
+    0 0 0 1px rgba(93,202,165,.24) inset,
+    0 10px 24px rgba(0,0,0,.18);
+}
+.welcome{
+  box-shadow:
+    0 42px 98px rgba(0,0,0,.42),
+    0 0 36px rgba(93,202,165,.030),
+    inset 0 1px rgba(255,255,255,.083),
+    inset 0 0 0 1px rgba(255,255,255,.030);
+}
+.welcome:after{
+  content:"";
+  position:absolute;
+  right:24px;
+  top:22px;
+  width:94px;
+  height:94px;
+  border-radius:50%;
+  border:1px solid rgba(201,168,76,.20);
+  background:
+    radial-gradient(circle at 50% 50%,transparent 0 29px,rgba(201,168,76,.105) 30px 31px,transparent 32px),
+    radial-gradient(circle at 50% 50%,transparent 0 39px,rgba(201,168,76,.175) 40px 41px,transparent 42px);
+  transform:rotate(7deg);
+  pointer-events:none;
+  opacity:.66;
+}
+.surface{
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.066),
+    inset 46px 0 74px rgba(255,255,255,.042),
+    inset -50px 0 86px rgba(0,0,0,.61),
+    inset 0 -82px 108px rgba(0,0,0,.62),
+    0 68px 132px rgba(0,0,0,.66),
+    0 0 46px rgba(93,202,165,.030);
+}
+.surface-head{
+  padding-bottom:3px;
+}
+.card{
+  min-height:326px;
+  border-color:rgba(255,255,255,.108);
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.095),
+    inset 0 0 0 1px rgba(255,255,255,.030),
+    0 24px 52px rgba(0,0,0,.30);
+}
+.card:hover{
+  transform:translateY(-6px);
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.125),
+    inset 0 0 0 1px rgba(255,255,255,.036),
+    0 34px 70px rgba(0,0,0,.40),
+    0 0 32px color-mix(in srgb,var(--accent) 12%,transparent);
+}
+.card.primary-card{
+  grid-column:auto;
+  min-height:326px;
+}
+.card.sketch{
+  border-color:rgba(77,168,218,.18);
+  background:
+    radial-gradient(circle at 18% 8%,rgba(77,168,218,.14),transparent 36%),
+    radial-gradient(circle at 92% 94%,rgba(93,202,165,.08),transparent 38%),
+    linear-gradient(180deg,rgba(255,255,255,.064),rgba(255,255,255,.025));
+}
+.card.studio{
+  border-color:rgba(93,202,165,.20);
+}
+.card.shape{
+  border-color:rgba(29,158,117,.19);
+}
+.card-icon{
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.14),
+    inset 0 0 0 1px rgba(255,255,255,.030),
+    0 15px 32px rgba(0,0,0,.22),
+    0 0 24px color-mix(in srgb,var(--accent) 12%,transparent);
+}
+.card.shape .card-icon svg{
+  width:34px;
+  height:34px;
+  overflow:visible;
+}
+.card.shape .card-icon path{
+  stroke-width:1.35;
+}
+.card.shape .card-icon path:nth-child(2){
+  stroke:color-mix(in srgb,var(--accent) 72%, white);
+}
+.card.shape .card-icon path:nth-child(3){
+  stroke:rgba(201,168,76,.96);
+}
+.card.shape .card-icon path:nth-child(7){
+  opacity:.68;
+}
+.cta{
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.095),
+    inset 0 0 0 1px rgba(255,255,255,.020),
+    0 13px 28px rgba(0,0,0,.21);
+}
+.card.primary-card .cta{
+  box-shadow:
+    0 20px 40px rgba(201,168,76,.24),
+    0 0 30px rgba(201,168,76,.14),
+    inset 0 1px rgba(255,255,255,.42);
+}
+.profile-tile{
+  box-shadow:
+    0 20px 48px rgba(0,0,0,.24),
+    0 0 26px rgba(93,202,165,.030),
+    inset 0 1px rgba(255,255,255,.080),
+    inset 0 0 0 1px rgba(255,255,255,.025);
+}
+.mode-pill{
+  border-color:rgba(93,202,165,.25);
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.070),
+    0 9px 20px rgba(0,0,0,.18),
+    0 0 18px rgba(93,202,165,.035);
+}
+@media(max-width:1060px){
+  .card.primary-card{grid-column:auto}
+}
+</style>
+
+
+<style>
+/* ─────────────────────────────────────────────────────────────
+   V3 DESK REFERENCE LAYER
+   Adds Methodology, Philosophy, and How It Works as a clearly
+   separated lower row while leaning into "The Desk".
+   ───────────────────────────────────────────────────────────── */
+.surface{padding-bottom:34px;}
+.cards{margin-bottom:28px;}
+.desk-reference{
+  position:relative;
+  z-index:2;
+  margin:30px 4px 0;
+  padding:26px;
+  border-radius:28px;
+  border:1px solid rgba(255,255,255,.082);
+  background:
+    radial-gradient(circle at 18% 0%,rgba(255,255,255,.075),transparent 32%),
+    radial-gradient(circle at 86% 95%,rgba(201,168,76,.060),transparent 36%),
+    linear-gradient(180deg,rgba(255,255,255,.042),rgba(255,255,255,.018));
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.066),
+    inset 0 0 0 1px rgba(255,255,255,.020),
+    0 28px 70px rgba(0,0,0,.30);
+  overflow:hidden;
+}
+.desk-reference:before{
+  content:"";
+  position:absolute;
+  left:20px;
+  right:20px;
+  top:0;
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(93,202,165,.25),rgba(201,168,76,.22),transparent);
+}
+.desk-reference:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    repeating-linear-gradient(90deg,rgba(255,255,255,.014) 0 1px,transparent 1px 20px),
+    repeating-linear-gradient(0deg,rgba(255,255,255,.010) 0 1px,transparent 1px 18px);
+  mask-image:radial-gradient(circle at 50% 0%,rgba(0,0,0,.62),transparent 74%);
+}
+.reference-head{
+  position:relative;
+  z-index:2;
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:24px;
+  margin-bottom:20px;
+}
+.reference-head h2{
+  margin:0;
+  font-family:var(--font-serif);
+  font-size:32px;
+  line-height:1;
+  font-style:italic;
+  font-weight:300;
+}
+.reference-head p:not(.eyebrow){
+  max-width:720px;
+  margin:9px 0 0;
+  color:rgba(255,255,255,.48);
+  font-size:13px;
+  line-height:1.58;
+}
+.reference-stamp{
+  flex:0 0 auto;
+  width:86px;
+  height:86px;
+  border-radius:999px;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(201,168,76,.22);
+  background:
+    radial-gradient(circle at 50% 50%,transparent 0 29px,rgba(201,168,76,.12) 30px 31px,transparent 32px),
+    radial-gradient(circle at 50% 50%,transparent 0 39px,rgba(201,168,76,.18) 40px 41px,transparent 42px),
+    rgba(255,255,255,.018);
+  color:rgba(201,168,76,.35);
+  font-family:var(--font-serif);
+  font-size:38px;
+  font-style:italic;
+  transform:rotate(7deg);
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.040),
+    0 12px 26px rgba(0,0,0,.16);
+}
+.reference-cards{
+  position:relative;
+  z-index:2;
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:16px;
+}
+.reference-card{
+  min-height:298px;
+  background:
+    radial-gradient(circle at 18% 8%,rgba(255,255,255,.095),transparent 36%),
+    radial-gradient(circle at 92% 94%,color-mix(in srgb,var(--accent) 15%,transparent),transparent 38%),
+    linear-gradient(180deg,rgba(255,255,255,.050),rgba(255,255,255,.020));
+}
+.reference-card.methodology{--accent:var(--purple)}
+.reference-card.philosophy{--accent:var(--gold)}
+.reference-card.how{--accent:var(--teal)}
+.reference-card h3{font-size:29px;}
+.reference-card p{font-size:13px;}
+.reference-card .card-icon{width:54px;height:54px;border-radius:17px;}
+.reference-card .card-icon svg{width:29px;height:29px;}
+.reference-card .cta{height:44px;}
+.cards:after{
+  content:"";
+  grid-column:1/-1;
+  height:1px;
+  margin:10px 6px -8px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.10),rgba(93,202,165,.13),rgba(201,168,76,.11),transparent);
+  box-shadow:0 1px rgba(0,0,0,.28);
+}
+.welcome-copy strong{
+  color:rgba(201,168,76,.92);
+  text-shadow:0 0 18px rgba(201,168,76,.08);
+}
+.surface-head h2,.reference-head h2{text-shadow:0 0 22px rgba(93,202,165,.045);}
+.card{backdrop-filter:saturate(1.05);}
+.card-kicker{text-shadow:0 0 12px color-mix(in srgb,var(--accent) 22%,transparent);}
+.chip{box-shadow:inset 0 1px rgba(255,255,255,.045);}
+.footnote{margin-top:22px;}
+@media(max-width:1060px){
+  .reference-cards{grid-template-columns:1fr}
+  .reference-head{display:block}
+  .reference-stamp{margin-top:16px}
+}
+@media(max-width:720px){
+  .desk-reference{padding:20px 16px;border-radius:24px}
+  .reference-head h2{font-size:28px}
+  .reference-stamp{width:72px;height:72px;font-size:32px}
+}
+</style>
+
+
+<style>
+/* ─────────────────────────────────────────────────────────────
+   V4 COLOR RHYTHM + DESK POLISH
+   - Every card gets a distinct accent rhythm.
+   - Adjacent cards avoid near-identical hues.
+   - Reference seal becomes DF.
+   - Adds another premium lighting/material pass.
+   ───────────────────────────────────────────────────────────── */
+
+.card.sketch{--accent:#4da8da;}       /* blue */
+.card.studio{--accent:#C9A84C;}       /* gold */
+.card.shape{--accent:#1D9E75;}        /* deep teal */
+
+.card.sketchbook{--accent:#6B7BC4;}   /* purple */
+.card.archive{--accent:#E58E26;}      /* warm orange */
+.card.profile{--accent:#5DCAA5;}      /* mint */
+
+.reference-card.methodology{--accent:#8B6FBF;} /* violet */
+.reference-card.philosophy{--accent:#C9A84C;}  /* gold */
+.reference-card.how{--accent:#4da8da;}         /* blue */
+
+/* Keep the Studio card premium without making it identical to Archive. */
+.card.studio.primary-card{
+  border-color:rgba(201,168,76,.24);
+  background:
+    radial-gradient(circle at 18% 8%,rgba(201,168,76,.145),transparent 36%),
+    radial-gradient(circle at 92% 94%,rgba(93,202,165,.080),transparent 38%),
+    linear-gradient(180deg,rgba(255,255,255,.068),rgba(255,255,255,.025));
+}
+.card.archive{
+  border-color:rgba(229,142,38,.20);
+  background:
+    radial-gradient(circle at 18% 8%,rgba(229,142,38,.125),transparent 36%),
+    radial-gradient(circle at 92% 94%,rgba(201,168,76,.075),transparent 38%),
+    linear-gradient(180deg,rgba(255,255,255,.058),rgba(255,255,255,.024));
+}
+.card.profile{
+  border-color:rgba(93,202,165,.19);
+}
+.card.sketchbook{
+  border-color:rgba(107,123,196,.21);
+}
+.reference-card.methodology{
+  border-color:rgba(139,111,191,.21);
+}
+.reference-card.philosophy{
+  border-color:rgba(201,168,76,.22);
+}
+.reference-card.how{
+  border-color:rgba(77,168,218,.21);
+}
+
+/* DF seal treatment */
+.reference-stamp{
+  width:92px;
+  height:92px;
+  color:rgba(201,168,76,.38);
+  letter-spacing:-.065em;
+  font-size:32px;
+  text-indent:-2px;
+  background:
+    radial-gradient(circle at 50% 50%,transparent 0 29px,rgba(201,168,76,.125) 30px 31px,transparent 32px),
+    radial-gradient(circle at 50% 50%,transparent 0 39px,rgba(201,168,76,.195) 40px 41px,transparent 42px),
+    radial-gradient(circle at 50% 50%,rgba(255,255,255,.035),transparent 62%),
+    rgba(255,255,255,.018);
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.045),
+    inset 0 0 0 1px rgba(201,168,76,.060),
+    0 14px 30px rgba(0,0,0,.18),
+    0 0 20px rgba(201,168,76,.040);
+}
+.reference-stamp span{
+  transform:translateX(-1px) rotate(-7deg);
+  display:inline-block;
+  font-family:var(--font-serif);
+  font-style:italic;
+}
+
+/* The Desk should feel like a single premium work surface. */
+.welcome{
+  border-color:rgba(255,255,255,.102);
+  background:
+    radial-gradient(circle at 18% 7%,rgba(93,202,165,.17),transparent 32%),
+    radial-gradient(circle at 88% 15%,rgba(201,168,76,.112),transparent 36%),
+    radial-gradient(circle at 50% 120%,rgba(77,168,218,.050),transparent 42%),
+    linear-gradient(180deg,rgba(255,255,255,.064),rgba(255,255,255,.027));
+  box-shadow:
+    0 44px 102px rgba(0,0,0,.44),
+    0 0 40px rgba(93,202,165,.034),
+    inset 0 1px rgba(255,255,255,.086),
+    inset 0 0 0 1px rgba(255,255,255,.032);
+}
+.surface{
+  border-color:rgba(255,255,255,.094);
+  background:
+    linear-gradient(90deg,rgba(255,255,255,.106),rgba(255,255,255,.033) 5%,transparent 17%,transparent 82%,rgba(0,0,0,.36) 96%),
+    radial-gradient(circle at 16% 6%,rgba(255,255,255,.108),transparent 24%),
+    radial-gradient(circle at 84% 88%,rgba(0,0,0,.52),transparent 38%),
+    radial-gradient(circle at 50% 0%,rgba(93,202,165,.042),transparent 38%),
+    repeating-linear-gradient(31deg,rgba(255,255,255,.019) 0 1px,transparent 1px 8px),
+    repeating-linear-gradient(-28deg,rgba(0,0,0,.032) 0 1px,transparent 1px 11px),
+    linear-gradient(180deg,#16263d 0%,#091322 52%,#02050b 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.070),
+    inset 48px 0 78px rgba(255,255,255,.044),
+    inset -52px 0 90px rgba(0,0,0,.63),
+    inset 0 -86px 112px rgba(0,0,0,.64),
+    0 72px 140px rgba(0,0,0,.68),
+    0 0 52px rgba(93,202,165,.034);
+}
+
+/* Card material pass: more depth, more individual identity. */
+.card{
+  border-color:color-mix(in srgb,var(--accent) 16%,rgba(255,255,255,.112));
+  background:
+    radial-gradient(circle at 18% 8%,color-mix(in srgb,var(--accent) 14%,rgba(255,255,255,.065)),transparent 36%),
+    radial-gradient(circle at 92% 94%,color-mix(in srgb,var(--accent) 18%,transparent),transparent 38%),
+    linear-gradient(180deg,rgba(255,255,255,.060),rgba(255,255,255,.023));
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.105),
+    inset 0 0 0 1px rgba(255,255,255,.032),
+    0 26px 56px rgba(0,0,0,.32),
+    0 0 22px color-mix(in srgb,var(--accent) 6%,transparent);
+}
+.card:before{
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb,var(--accent) 96%,white 4%),
+      color-mix(in srgb,var(--accent) 42%,#C9A84C 58%));
+  box-shadow:
+    0 0 22px color-mix(in srgb,var(--accent) 25%,transparent),
+    inset 0 1px rgba(255,255,255,.25);
+}
+.card:hover{
+  border-color:color-mix(in srgb,var(--accent) 42%,rgba(255,255,255,.15));
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.13),
+    inset 0 0 0 1px rgba(255,255,255,.038),
+    0 36px 74px rgba(0,0,0,.42),
+    0 0 36px color-mix(in srgb,var(--accent) 14%,transparent);
+}
+.card-icon{
+  border-color:color-mix(in srgb,var(--accent) 36%,rgba(255,255,255,.12));
+  background:
+    radial-gradient(circle at 30% 20%,color-mix(in srgb,var(--accent) 32%,transparent),transparent 38%),
+    linear-gradient(180deg,rgba(255,255,255,.112),rgba(255,255,255,.032));
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.15),
+    inset 0 0 0 1px rgba(255,255,255,.032),
+    0 16px 34px rgba(0,0,0,.24),
+    0 0 26px color-mix(in srgb,var(--accent) 13%,transparent);
+}
+.card-kicker{
+  color:color-mix(in srgb,var(--accent) 68%,white);
+}
+.chip{
+  border-color:color-mix(in srgb,var(--accent) 18%,rgba(255,255,255,.10));
+  background:color-mix(in srgb,var(--accent) 7%,rgba(255,255,255,.034));
+}
+.cta{
+  border-color:color-mix(in srgb,var(--accent) 38%,rgba(255,255,255,.10));
+  background:
+    radial-gradient(circle at 20% 0%,rgba(255,255,255,.145),transparent 36%),
+    color-mix(in srgb,var(--accent) 14%,rgba(255,255,255,.030));
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.102),
+    inset 0 0 0 1px rgba(255,255,255,.022),
+    0 14px 30px rgba(0,0,0,.23);
+}
+
+/* Make the top-row flow feel intentionally graduated. */
+.card.sketch .card-icon{border-radius:19px 15px 19px 15px;}
+.card.studio .card-icon{border-radius:18px;}
+.card.shape .card-icon{border-radius:15px 19px 15px 19px;}
+
+/* Reference layer: related, but separate and quieter. */
+.desk-reference{
+  border-color:rgba(255,255,255,.090);
+  background:
+    radial-gradient(circle at 18% 0%,rgba(255,255,255,.082),transparent 32%),
+    radial-gradient(circle at 86% 95%,rgba(201,168,76,.066),transparent 36%),
+    radial-gradient(circle at 50% 105%,rgba(77,168,218,.035),transparent 42%),
+    linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.019));
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.070),
+    inset 0 0 0 1px rgba(255,255,255,.023),
+    0 30px 76px rgba(0,0,0,.32);
+}
+.reference-card{
+  min-height:302px;
+}
+
+/* Polished headline / workspace summary details. */
+.editable-name{
+  text-decoration-color:rgba(93,202,165,.18);
+  text-decoration-thickness:1px;
+  text-underline-offset:.10em;
+}
+.editable-name:hover{
+  text-decoration:underline;
+}
+.profile-tile{
+  border-color:rgba(255,255,255,.105);
+}
+.mode-pill{
+  background:
+    radial-gradient(circle at 14% 0%,rgba(93,202,165,.11),transparent 38%),
+    rgba(93,202,165,.065);
+}
+.footnote{
+  color:rgba(255,255,255,.36);
+}
+.footnote strong{
+  color:rgba(93,202,165,.68);
+}
+</style>
+
+
+<style>
+/* ─────────────────────────────────────────────────────────────
+   V5 PREMIUM DESK PASS
+   No structure changes. Adds richer surface physics, refined card
+   depth, stronger CTAs, better tactile hover states, and more
+   sophisticated desk-lighting detail.
+   ───────────────────────────────────────────────────────────── */
+
+.shell{
+  background:
+    radial-gradient(circle at 50% 24%,rgba(93,202,165,.092),transparent 34%),
+    radial-gradient(circle at 18% 68%,rgba(107,123,196,.066),transparent 30%),
+    radial-gradient(circle at 86% 74%,rgba(201,168,76,.052),transparent 32%),
+    radial-gradient(circle at 50% 108%,rgba(77,168,218,.045),transparent 42%),
+    linear-gradient(180deg,#0b1627 0%,#07101d 48%,#030812 100%);
+}
+.shell:before{
+  background:
+    linear-gradient(rgba(93,202,165,.024) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(93,202,165,.024) 1px,transparent 1px),
+    linear-gradient(45deg,rgba(255,255,255,.010) 1px,transparent 1px);
+  background-size:48px 48px,48px 48px,96px 96px;
+}
+.topbar{
+  border-bottom-color:rgba(255,255,255,.085);
+  background:
+    radial-gradient(circle at 16% 0%,rgba(93,202,165,.065),transparent 34%),
+    rgba(5,11,20,.80);
+  box-shadow:
+    0 12px 34px rgba(0,0,0,.24),
+    inset 0 1px rgba(255,255,255,.040);
+}
+.logo{
+  filter:
+    drop-shadow(0 0 14px rgba(29,158,117,.36))
+    drop-shadow(0 8px 16px rgba(0,0,0,.18));
+}
+.wordmark{
+  text-shadow:0 0 24px rgba(93,202,165,.060);
+}
+.upgrade,.loginbtn{
+  transition:transform .18s ease, filter .18s ease, box-shadow .18s ease;
+}
+.upgrade:hover,.loginbtn:hover{
+  transform:translateY(-1px);
+  filter:brightness(1.08);
+}
+.upgrade{
+  background:
+    radial-gradient(circle at 18% 0%,rgba(255,255,255,.12),transparent 38%),
+    rgba(201,168,76,.045);
+}
+.loginbtn{
+  background:
+    radial-gradient(circle at 18% 0%,rgba(255,255,255,.12),transparent 38%),
+    rgba(93,202,165,.040);
+}
+
+.welcome{
+  border-color:rgba(255,255,255,.112);
+  background:
+    radial-gradient(circle at 18% 7%,rgba(93,202,165,.182),transparent 32%),
+    radial-gradient(circle at 88% 15%,rgba(201,168,76,.120),transparent 36%),
+    radial-gradient(circle at 50% 118%,rgba(77,168,218,.058),transparent 42%),
+    linear-gradient(180deg,rgba(255,255,255,.071),rgba(255,255,255,.029));
+  box-shadow:
+    0 48px 112px rgba(0,0,0,.46),
+    0 0 46px rgba(93,202,165,.040),
+    inset 0 1px rgba(255,255,255,.092),
+    inset 0 0 0 1px rgba(255,255,255,.036);
+}
+.welcome:before{
+  opacity:.72;
+  filter:blur(.2px);
+}
+.welcome:after{
+  opacity:.74;
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.040),
+    0 15px 32px rgba(0,0,0,.16),
+    0 0 18px rgba(201,168,76,.050);
+}
+.editable-name:focus{
+  box-shadow:
+    0 0 0 1px rgba(93,202,165,.29) inset,
+    0 12px 28px rgba(0,0,0,.20),
+    0 0 24px rgba(93,202,165,.055);
+}
+.profile-tile{
+  border-color:rgba(255,255,255,.112);
+  background:
+    radial-gradient(circle at 20% 0%,rgba(255,255,255,.145),transparent 36%),
+    radial-gradient(circle at 88% 92%,rgba(93,202,165,.115),transparent 40%),
+    radial-gradient(circle at 0% 100%,rgba(201,168,76,.045),transparent 38%),
+    linear-gradient(180deg,rgba(255,255,255,.068),rgba(255,255,255,.027));
+  box-shadow:
+    0 24px 54px rgba(0,0,0,.27),
+    0 0 32px rgba(93,202,165,.036),
+    inset 0 1px rgba(255,255,255,.088),
+    inset 0 0 0 1px rgba(255,255,255,.030);
+}
+.profile-tile:before{
+  opacity:.82;
+}
+.mini-logo{
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.20),
+    inset 0 0 0 1px rgba(255,255,255,.040),
+    0 12px 26px rgba(0,0,0,.23),
+    0 0 24px rgba(93,202,165,.085);
+}
+.meta-row{
+  border-bottom-color:rgba(255,255,255,.095);
+}
+
+.surface{
+  border-color:rgba(255,255,255,.102);
+  background:
+    linear-gradient(90deg,rgba(255,255,255,.112),rgba(255,255,255,.036) 5%,transparent 17%,transparent 82%,rgba(0,0,0,.37) 96%),
+    radial-gradient(circle at 16% 6%,rgba(255,255,255,.116),transparent 24%),
+    radial-gradient(circle at 84% 88%,rgba(0,0,0,.54),transparent 38%),
+    radial-gradient(circle at 50% 0%,rgba(93,202,165,.048),transparent 38%),
+    radial-gradient(circle at 92% 4%,rgba(201,168,76,.040),transparent 32%),
+    repeating-linear-gradient(31deg,rgba(255,255,255,.020) 0 1px,transparent 1px 8px),
+    repeating-linear-gradient(-28deg,rgba(0,0,0,.034) 0 1px,transparent 1px 11px),
+    linear-gradient(180deg,#17283f 0%,#091322 52%,#02050b 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.075),
+    inset 50px 0 82px rgba(255,255,255,.046),
+    inset -54px 0 94px rgba(0,0,0,.65),
+    inset 0 -90px 118px rgba(0,0,0,.66),
+    0 76px 148px rgba(0,0,0,.70),
+    0 0 58px rgba(93,202,165,.038);
+}
+.surface:before{
+  border-color:rgba(255,255,255,.064);
+  box-shadow:
+    inset 0 0 0 1px rgba(0,0,0,.24),
+    inset 0 1px rgba(255,255,255,.028);
+}
+.surface:after{
+  content:"";
+  position:absolute;
+  left:26px;
+  right:26px;
+  top:22px;
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.13),rgba(93,202,165,.14),rgba(201,168,76,.12),transparent);
+  pointer-events:none;
+  opacity:.78;
+}
+.mode-pill{
+  border-color:rgba(93,202,165,.28);
+  background:
+    radial-gradient(circle at 14% 0%,rgba(93,202,165,.13),transparent 38%),
+    rgba(93,202,165,.070);
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.078),
+    0 10px 22px rgba(0,0,0,.20),
+    0 0 22px rgba(93,202,165,.044);
+}
+.mode-dot{
+  box-shadow:
+    0 0 12px rgba(93,202,165,.72),
+    0 0 24px rgba(93,202,165,.36);
+}
+
+.card{
+  border-color:color-mix(in srgb,var(--accent) 18%,rgba(255,255,255,.116));
+  background:
+    radial-gradient(circle at 18% 8%,color-mix(in srgb,var(--accent) 16%,rgba(255,255,255,.070)),transparent 36%),
+    radial-gradient(circle at 92% 94%,color-mix(in srgb,var(--accent) 20%,transparent),transparent 38%),
+    radial-gradient(circle at 52% -8%,rgba(255,255,255,.055),transparent 34%),
+    linear-gradient(180deg,rgba(255,255,255,.064),rgba(255,255,255,.024));
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.112),
+    inset 0 0 0 1px rgba(255,255,255,.035),
+    0 28px 60px rgba(0,0,0,.34),
+    0 0 24px color-mix(in srgb,var(--accent) 7%,transparent);
+}
+.card:before{
+  width:5px;
+  box-shadow:
+    0 0 24px color-mix(in srgb,var(--accent) 28%,transparent),
+    inset 0 1px rgba(255,255,255,.28);
+}
+.card:after{
+  opacity:.66;
+}
+.card:hover{
+  transform:translateY(-7px);
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.14),
+    inset 0 0 0 1px rgba(255,255,255,.042),
+    0 40px 82px rgba(0,0,0,.45),
+    0 0 40px color-mix(in srgb,var(--accent) 16%,transparent);
+}
+.card-icon{
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.16),
+    inset 0 0 0 1px rgba(255,255,255,.036),
+    0 18px 38px rgba(0,0,0,.25),
+    0 0 30px color-mix(in srgb,var(--accent) 14%,transparent);
+  transition:transform .22s ease, box-shadow .22s ease;
+}
+.card:hover .card-icon{
+  transform:translateY(-2px);
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.18),
+    inset 0 0 0 1px rgba(255,255,255,.040),
+    0 21px 42px rgba(0,0,0,.29),
+    0 0 34px color-mix(in srgb,var(--accent) 18%,transparent);
+}
+.card h3{
+  text-shadow:0 0 24px color-mix(in srgb,var(--accent) 6%,transparent);
+}
+.card p{
+  color:rgba(255,255,255,.585);
+}
+.chip{
+  color:rgba(255,255,255,.49);
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.052),
+    0 4px 12px rgba(0,0,0,.10);
+}
+.cta{
+  height:47px;
+  border-color:color-mix(in srgb,var(--accent) 42%,rgba(255,255,255,.11));
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.110),
+    inset 0 0 0 1px rgba(255,255,255,.025),
+    0 15px 32px rgba(0,0,0,.25),
+    0 0 20px color-mix(in srgb,var(--accent) 7%,transparent);
+}
+.card:hover .cta{
+  transform:translateY(-1px);
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.125),
+    inset 0 0 0 1px rgba(255,255,255,.028),
+    0 18px 36px rgba(0,0,0,.28),
+    0 0 24px color-mix(in srgb,var(--accent) 10%,transparent);
+}
+.card.primary-card .cta{
+  box-shadow:
+    0 22px 44px rgba(201,168,76,.26),
+    0 0 34px rgba(201,168,76,.16),
+    inset 0 1px rgba(255,255,255,.46),
+    inset 0 -1px rgba(0,0,0,.15);
+}
+.card.primary-card:hover .cta{
+  box-shadow:
+    0 25px 50px rgba(201,168,76,.30),
+    0 0 40px rgba(201,168,76,.19),
+    inset 0 1px rgba(255,255,255,.50),
+    inset 0 -1px rgba(0,0,0,.16);
+}
+
+/* Reference layer refinement */
+.desk-reference{
+  border-color:rgba(255,255,255,.098);
+  background:
+    radial-gradient(circle at 18% 0%,rgba(255,255,255,.090),transparent 32%),
+    radial-gradient(circle at 86% 95%,rgba(201,168,76,.073),transparent 36%),
+    radial-gradient(circle at 50% 105%,rgba(77,168,218,.040),transparent 42%),
+    linear-gradient(180deg,rgba(255,255,255,.050),rgba(255,255,255,.020));
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.078),
+    inset 0 0 0 1px rgba(255,255,255,.027),
+    0 32px 82px rgba(0,0,0,.34);
+}
+.desk-reference:before{
+  background:linear-gradient(90deg,transparent,rgba(93,202,165,.30),rgba(201,168,76,.25),rgba(77,168,218,.20),transparent);
+}
+.reference-stamp{
+  border-color:rgba(201,168,76,.25);
+  color:rgba(201,168,76,.42);
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.050),
+    inset 0 0 0 1px rgba(201,168,76,.070),
+    0 16px 34px rgba(0,0,0,.20),
+    0 0 24px rgba(201,168,76,.050);
+}
+.reference-card{
+  min-height:306px;
+}
+
+/* Small tactile details */
+.card-top,.card-bottom,.surface-head,.reference-head{
+  transform:translateZ(0);
+}
+.toast{
+  border-color:rgba(93,202,165,.36);
+  box-shadow:
+    0 26px 66px rgba(0,0,0,.46),
+    0 0 24px rgba(93,202,165,.055),
+    inset 0 1px rgba(255,255,255,.060);
+}
+</style>
+
+
+<style>
+/* ─────────────────────────────────────────────────────────────
+   V6 SHAPE COPY + PREMIUM PASS
+   - Renames Your Shape to The Shape.
+   - Updates Shape card to reflect post-retirement living experience.
+   - Adds deeper surface/card polish and a stronger Shape cone treatment.
+   ───────────────────────────────────────────────────────────── */
+
+/* Shape card should feel like a living, post-retirement map. */
+.card.shape{
+  border-color:rgba(29,158,117,.235);
+  background:
+    radial-gradient(circle at 20% 8%,rgba(29,158,117,.150),transparent 34%),
+    radial-gradient(circle at 90% 20%,rgba(201,168,76,.075),transparent 34%),
+    radial-gradient(circle at 92% 94%,rgba(93,202,165,.110),transparent 40%),
+    linear-gradient(180deg,rgba(255,255,255,.067),rgba(255,255,255,.025));
+}
+.card.shape:before{
+  background:
+    linear-gradient(180deg,
+      rgba(201,168,76,.95) 0%,
+      rgba(93,202,165,.98) 48%,
+      rgba(29,158,117,.82) 100%);
+  box-shadow:
+    0 0 26px rgba(93,202,165,.24),
+    inset 0 1px rgba(255,255,255,.28);
+}
+.card.shape .card-icon{
+  color:#5DCAA5;
+  border-color:rgba(93,202,165,.38);
+  background:
+    radial-gradient(circle at 30% 18%,rgba(93,202,165,.34),transparent 38%),
+    radial-gradient(circle at 82% 82%,rgba(201,168,76,.14),transparent 40%),
+    linear-gradient(180deg,rgba(255,255,255,.120),rgba(255,255,255,.034));
+}
+.card.shape .card-icon svg{
+  filter:drop-shadow(0 0 10px rgba(93,202,165,.16));
+}
+.card.shape .card-icon path:nth-child(1){
+  stroke:#C9A84C;
+}
+.card.shape .card-icon path:nth-child(2){
+  stroke:#5DCAA5;
+}
+.card.shape .card-icon path:nth-child(3){
+  stroke:#1D9E75;
+}
+.card.shape .card-icon path:nth-child(4){
+  stroke:rgba(93,202,165,.72);
+}
+.card.shape .chip:nth-child(1){
+  border-color:rgba(201,168,76,.20);
+  background:rgba(201,168,76,.055);
+}
+.card.shape .chip:nth-child(2){
+  border-color:rgba(93,202,165,.22);
+  background:rgba(93,202,165,.065);
+}
+.card.shape .chip:nth-child(3){
+  border-color:rgba(29,158,117,.22);
+  background:rgba(29,158,117,.065);
+}
+
+/* A little more desk sophistication without changing layout. */
+.welcome{
+  box-shadow:
+    0 50px 116px rgba(0,0,0,.47),
+    0 0 48px rgba(93,202,165,.042),
+    inset 0 1px rgba(255,255,255,.096),
+    inset 0 0 0 1px rgba(255,255,255,.038);
+}
+.welcome:after{
+  background:
+    radial-gradient(circle at 50% 50%,transparent 0 29px,rgba(201,168,76,.120) 30px 31px,transparent 32px),
+    radial-gradient(circle at 50% 50%,transparent 0 39px,rgba(201,168,76,.190) 40px 41px,transparent 42px),
+    radial-gradient(circle at 50% 50%,rgba(255,255,255,.028),transparent 62%);
+}
+.surface{
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.078),
+    inset 52px 0 86px rgba(255,255,255,.048),
+    inset -56px 0 98px rgba(0,0,0,.66),
+    inset 0 -94px 122px rgba(0,0,0,.68),
+    0 80px 154px rgba(0,0,0,.71),
+    0 0 60px rgba(93,202,165,.040);
+}
+.card{
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.116),
+    inset 0 0 0 1px rgba(255,255,255,.036),
+    0 30px 64px rgba(0,0,0,.35),
+    0 0 26px color-mix(in srgb,var(--accent) 7%,transparent);
+}
+.card:hover{
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.145),
+    inset 0 0 0 1px rgba(255,255,255,.044),
+    0 42px 86px rgba(0,0,0,.46),
+    0 0 42px color-mix(in srgb,var(--accent) 17%,transparent);
+}
+.card h3{
+  letter-spacing:-.018em;
+}
+.card p{
+  color:rgba(255,255,255,.60);
+}
+.cta{
+  border-color:color-mix(in srgb,var(--accent) 44%,rgba(255,255,255,.115));
+}
+.card:hover .cta{
+  color:#fff;
+}
+.card.primary-card .cta{
+  color:#171205;
+}
+.desk-reference{
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.082),
+    inset 0 0 0 1px rgba(255,255,255,.030),
+    0 34px 86px rgba(0,0,0,.35);
+}
+.reference-stamp{
+  color:rgba(201,168,76,.45);
+}
+.profile-tile{
+  box-shadow:
+    0 26px 58px rgba(0,0,0,.28),
+    0 0 34px rgba(93,202,165,.038),
+    inset 0 1px rgba(255,255,255,.092),
+    inset 0 0 0 1px rgba(255,255,255,.032);
+}
+</style>
+
+
+<style>
+/* ─────────────────────────────────────────────────────────────
+   V7 PREMIUM MATERIAL PASS
+   No structural changes. Adds more Desk texture, deeper lighting,
+   better tactile shadows, refined cards, richer CTAs, and more
+   sophisticated hover/read depth.
+   ───────────────────────────────────────────────────────────── */
+
+body{
+  background:
+    radial-gradient(circle at 50% 0%,rgba(93,202,165,.055),transparent 31%),
+    var(--bg);
+}
+
+.shell{
+  background:
+    radial-gradient(circle at 50% 22%,rgba(93,202,165,.102),transparent 35%),
+    radial-gradient(circle at 17% 68%,rgba(107,123,196,.073),transparent 31%),
+    radial-gradient(circle at 87% 73%,rgba(201,168,76,.060),transparent 33%),
+    radial-gradient(circle at 50% 110%,rgba(77,168,218,.050),transparent 43%),
+    linear-gradient(180deg,#0c182b 0%,#07101d 48%,#030811 100%);
+}
+.shell:before{
+  opacity:.95;
+  background:
+    linear-gradient(rgba(93,202,165,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(93,202,165,.025) 1px,transparent 1px),
+    linear-gradient(45deg,rgba(255,255,255,.011) 1px,transparent 1px),
+    radial-gradient(circle at 50% 36%,rgba(255,255,255,.018),transparent 34%);
+  background-size:48px 48px,48px 48px,96px 96px,100% 100%;
+}
+.shell:after{
+  background:
+    radial-gradient(circle at 50% 0%,rgba(255,255,255,.052),transparent 34%),
+    radial-gradient(circle at 50% 76%,rgba(0,0,0,.18),transparent 45%),
+    linear-gradient(180deg,transparent 0%,rgba(0,0,0,.31) 100%);
+}
+
+.topbar{
+  border-bottom-color:rgba(255,255,255,.092);
+  background:
+    radial-gradient(circle at 16% 0%,rgba(93,202,165,.074),transparent 34%),
+    radial-gradient(circle at 86% 0%,rgba(201,168,76,.042),transparent 29%),
+    rgba(5,11,20,.82);
+  box-shadow:
+    0 14px 38px rgba(0,0,0,.28),
+    inset 0 1px rgba(255,255,255,.046),
+    inset 0 -1px rgba(255,255,255,.020);
+}
+
+.nav a{
+  transition:color .18s ease, text-shadow .18s ease;
+}
+.nav a:hover{
+  text-shadow:0 0 16px rgba(93,202,165,.16);
+}
+.upgrade,.loginbtn{
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.082),
+    0 10px 22px rgba(0,0,0,.18);
+}
+.upgrade:hover,.loginbtn:hover{
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.120),
+    0 13px 27px rgba(0,0,0,.22),
+    0 0 22px rgba(93,202,165,.055);
+}
+
+.workspace{
+  filter:
+    drop-shadow(0 38px 90px rgba(0,0,0,.28))
+    drop-shadow(0 0 34px rgba(93,202,165,.018));
+}
+
+.welcome{
+  border-color:rgba(255,255,255,.120);
+  background:
+    radial-gradient(circle at 18% 7%,rgba(93,202,165,.195),transparent 32%),
+    radial-gradient(circle at 88% 15%,rgba(201,168,76,.130),transparent 36%),
+    radial-gradient(circle at 50% 118%,rgba(77,168,218,.064),transparent 42%),
+    linear-gradient(115deg,rgba(255,255,255,.030),transparent 18%,transparent 78%,rgba(255,255,255,.020)),
+    linear-gradient(180deg,rgba(255,255,255,.076),rgba(255,255,255,.031));
+  box-shadow:
+    0 54px 126px rgba(0,0,0,.50),
+    0 0 52px rgba(93,202,165,.046),
+    inset 0 1px rgba(255,255,255,.105),
+    inset 0 0 0 1px rgba(255,255,255,.040),
+    inset 0 -1px rgba(0,0,0,.26);
+}
+.welcome:before{
+  opacity:.77;
+  height:250px;
+  filter:blur(.15px);
+}
+.welcome:after{
+  right:28px;
+  top:24px;
+  opacity:.79;
+  filter:drop-shadow(0 12px 26px rgba(0,0,0,.14));
+}
+h1{
+  text-shadow:
+    0 0 34px rgba(93,202,165,.052),
+    0 16px 34px rgba(0,0,0,.18);
+}
+.eyebrow{
+  text-shadow:0 0 18px rgba(201,168,76,.08);
+}
+.welcome-copy{
+  color:rgba(255,255,255,.61);
+}
+.editable-name{
+  text-shadow:
+    0 0 28px rgba(93,202,165,.095),
+    0 14px 30px rgba(0,0,0,.12);
+}
+.editable-name:hover{
+  background:rgba(255,255,255,.052);
+}
+.editable-name:focus{
+  background:
+    radial-gradient(circle at 20% 0%,rgba(93,202,165,.170),transparent 36%),
+    rgba(255,255,255,.066);
+  box-shadow:
+    0 0 0 1px rgba(93,202,165,.32) inset,
+    0 14px 32px rgba(0,0,0,.22),
+    0 0 28px rgba(93,202,165,.065);
+}
+
+.profile-tile{
+  border-color:rgba(255,255,255,.120);
+  background:
+    radial-gradient(circle at 20% 0%,rgba(255,255,255,.155),transparent 36%),
+    radial-gradient(circle at 88% 92%,rgba(93,202,165,.126),transparent 40%),
+    radial-gradient(circle at 0% 100%,rgba(201,168,76,.052),transparent 38%),
+    linear-gradient(130deg,rgba(255,255,255,.028),transparent 36%,rgba(0,0,0,.040)),
+    linear-gradient(180deg,rgba(255,255,255,.073),rgba(255,255,255,.030));
+  box-shadow:
+    0 28px 64px rgba(0,0,0,.30),
+    0 0 38px rgba(93,202,165,.042),
+    inset 0 1px rgba(255,255,255,.100),
+    inset 0 0 0 1px rgba(255,255,255,.034),
+    inset 0 -1px rgba(0,0,0,.18);
+}
+.profile-tile:after{
+  content:"";
+  position:absolute;
+  inset:9px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.050);
+  pointer-events:none;
+}
+.profile-name{
+  text-shadow:0 0 20px rgba(93,202,165,.05);
+}
+.profile-sub{
+  color:rgba(255,255,255,.46);
+}
+.meta-row strong{
+  text-shadow:0 0 16px rgba(255,255,255,.05);
+}
+.mini-logo{
+  border-color:rgba(29,158,117,.32);
+  background:
+    radial-gradient(circle at 30% 22%,rgba(93,202,165,.34),transparent 38%),
+    radial-gradient(circle at 82% 86%,rgba(201,168,76,.10),transparent 40%),
+    linear-gradient(180deg,rgba(255,255,255,.128),rgba(255,255,255,.036));
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.22),
+    inset 0 0 0 1px rgba(255,255,255,.044),
+    0 14px 30px rgba(0,0,0,.25),
+    0 0 28px rgba(93,202,165,.092);
+}
+
+.surface{
+  border-color:rgba(255,255,255,.110);
+  background:
+    linear-gradient(90deg,rgba(255,255,255,.120),rgba(255,255,255,.039) 5%,transparent 17%,transparent 82%,rgba(0,0,0,.39) 96%),
+    radial-gradient(circle at 16% 6%,rgba(255,255,255,.126),transparent 24%),
+    radial-gradient(circle at 84% 88%,rgba(0,0,0,.56),transparent 38%),
+    radial-gradient(circle at 50% 0%,rgba(93,202,165,.055),transparent 38%),
+    radial-gradient(circle at 92% 4%,rgba(201,168,76,.048),transparent 32%),
+    repeating-linear-gradient(31deg,rgba(255,255,255,.021) 0 1px,transparent 1px 8px),
+    repeating-linear-gradient(-28deg,rgba(0,0,0,.036) 0 1px,transparent 1px 11px),
+    linear-gradient(180deg,#182a43 0%,#091322 52%,#02050b 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.082),
+    inset 54px 0 90px rgba(255,255,255,.052),
+    inset -58px 0 104px rgba(0,0,0,.69),
+    inset 0 -98px 130px rgba(0,0,0,.71),
+    inset 0 28px 60px rgba(255,255,255,.020),
+    0 84px 164px rgba(0,0,0,.74),
+    0 0 66px rgba(93,202,165,.043);
+}
+.surface:before{
+  inset:15px;
+  border-color:rgba(255,255,255,.070);
+  box-shadow:
+    inset 0 0 0 1px rgba(0,0,0,.25),
+    inset 0 1px rgba(255,255,255,.032),
+    0 1px rgba(255,255,255,.014);
+}
+.surface:after{
+  opacity:.84;
+  box-shadow:0 1px rgba(0,0,0,.32);
+}
+.surface-head h2{
+  text-shadow:
+    0 0 26px rgba(93,202,165,.050),
+    0 18px 36px rgba(0,0,0,.18);
+}
+.surface-head p{
+  color:rgba(255,255,255,.49);
+}
+.mode-pill{
+  border-color:rgba(93,202,165,.31);
+  background:
+    radial-gradient(circle at 14% 0%,rgba(93,202,165,.145),transparent 38%),
+    linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.012)),
+    rgba(93,202,165,.074);
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.086),
+    inset 0 0 0 1px rgba(255,255,255,.025),
+    0 11px 24px rgba(0,0,0,.22),
+    0 0 24px rgba(93,202,165,.050);
+}
+
+.card{
+  border-color:color-mix(in srgb,var(--accent) 20%,rgba(255,255,255,.120));
+  background:
+    radial-gradient(circle at 18% 8%,color-mix(in srgb,var(--accent) 17%,rgba(255,255,255,.075)),transparent 36%),
+    radial-gradient(circle at 92% 94%,color-mix(in srgb,var(--accent) 22%,transparent),transparent 38%),
+    radial-gradient(circle at 52% -8%,rgba(255,255,255,.064),transparent 34%),
+    linear-gradient(122deg,rgba(255,255,255,.020),transparent 28%,rgba(0,0,0,.028) 100%),
+    linear-gradient(180deg,rgba(255,255,255,.069),rgba(255,255,255,.025));
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.122),
+    inset 0 0 0 1px rgba(255,255,255,.038),
+    inset 0 -1px rgba(0,0,0,.18),
+    0 32px 68px rgba(0,0,0,.37),
+    0 0 28px color-mix(in srgb,var(--accent) 8%,transparent);
+}
+.card:before{
+  width:5px;
+  filter:saturate(1.08);
+  box-shadow:
+    0 0 28px color-mix(in srgb,var(--accent) 31%,transparent),
+    inset 0 1px rgba(255,255,255,.30);
+}
+.card:after{
+  opacity:.70;
+  background:
+    linear-gradient(118deg,transparent 0%,rgba(255,255,255,.172) 42%,transparent 58%),
+    radial-gradient(circle at 13% 0%,rgba(255,255,255,.130),transparent 30%);
+}
+.card:hover{
+  transform:translateY(-8px);
+  border-color:color-mix(in srgb,var(--accent) 48%,rgba(255,255,255,.16));
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.152),
+    inset 0 0 0 1px rgba(255,255,255,.046),
+    inset 0 -1px rgba(0,0,0,.14),
+    0 46px 92px rgba(0,0,0,.48),
+    0 0 46px color-mix(in srgb,var(--accent) 18%,transparent);
+}
+.card-icon{
+  border-color:color-mix(in srgb,var(--accent) 40%,rgba(255,255,255,.12));
+  background:
+    radial-gradient(circle at 30% 20%,color-mix(in srgb,var(--accent) 35%,transparent),transparent 38%),
+    radial-gradient(circle at 80% 88%,rgba(201,168,76,.070),transparent 40%),
+    linear-gradient(180deg,rgba(255,255,255,.125),rgba(255,255,255,.036));
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.18),
+    inset 0 0 0 1px rgba(255,255,255,.040),
+    0 20px 42px rgba(0,0,0,.27),
+    0 0 33px color-mix(in srgb,var(--accent) 16%,transparent);
+}
+.card:hover .card-icon{
+  transform:translateY(-3px) scale(1.015);
+}
+.card h3{
+  color:rgba(255,255,255,.945);
+  text-shadow:
+    0 0 28px color-mix(in srgb,var(--accent) 7%,transparent),
+    0 14px 28px rgba(0,0,0,.13);
+}
+.card-kicker{
+  color:color-mix(in srgb,var(--accent) 71%,white);
+}
+.card p{
+  color:rgba(255,255,255,.62);
+}
+.chip{
+  border-color:color-mix(in srgb,var(--accent) 20%,rgba(255,255,255,.11));
+  background:
+    radial-gradient(circle at 18% 0%,rgba(255,255,255,.070),transparent 40%),
+    color-mix(in srgb,var(--accent) 8%,rgba(255,255,255,.034));
+  color:rgba(255,255,255,.51);
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.060),
+    0 5px 14px rgba(0,0,0,.12);
+}
+.cta{
+  height:48px;
+  border-color:color-mix(in srgb,var(--accent) 46%,rgba(255,255,255,.120));
+  background:
+    radial-gradient(circle at 20% 0%,rgba(255,255,255,.160),transparent 36%),
+    linear-gradient(180deg,rgba(255,255,255,.040),rgba(255,255,255,.014)),
+    color-mix(in srgb,var(--accent) 15%,rgba(255,255,255,.030));
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.120),
+    inset 0 0 0 1px rgba(255,255,255,.028),
+    0 16px 34px rgba(0,0,0,.27),
+    0 0 22px color-mix(in srgb,var(--accent) 8%,transparent);
+}
+.card:hover .cta{
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.138),
+    inset 0 0 0 1px rgba(255,255,255,.032),
+    0 20px 40px rgba(0,0,0,.31),
+    0 0 28px color-mix(in srgb,var(--accent) 12%,transparent);
+}
+.card.primary-card .cta{
+  background:
+    radial-gradient(circle at 18% 10%,rgba(255,255,255,.82),transparent 31%),
+    linear-gradient(180deg,#f4dc8a,#c9a84c);
+  box-shadow:
+    0 24px 48px rgba(201,168,76,.29),
+    0 0 38px rgba(201,168,76,.18),
+    inset 0 1px rgba(255,255,255,.50),
+    inset 0 -1px rgba(0,0,0,.16);
+}
+.card.primary-card:hover .cta{
+  box-shadow:
+    0 28px 56px rgba(201,168,76,.33),
+    0 0 44px rgba(201,168,76,.22),
+    inset 0 1px rgba(255,255,255,.54),
+    inset 0 -1px rgba(0,0,0,.17);
+}
+
+/* Make Shape feel like the most resolved destination without changing layout. */
+.card.shape{
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.126),
+    inset 0 0 0 1px rgba(255,255,255,.040),
+    inset 0 -1px rgba(0,0,0,.16),
+    0 34px 70px rgba(0,0,0,.38),
+    0 0 34px rgba(93,202,165,.095);
+}
+.card.shape:hover{
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.156),
+    inset 0 0 0 1px rgba(255,255,255,.048),
+    0 48px 96px rgba(0,0,0,.50),
+    0 0 54px rgba(93,202,165,.150);
+}
+
+/* Reference surface: a lower shelf on The Desk. */
+.desk-reference{
+  border-color:rgba(255,255,255,.106);
+  background:
+    radial-gradient(circle at 18% 0%,rgba(255,255,255,.098),transparent 32%),
+    radial-gradient(circle at 86% 95%,rgba(201,168,76,.082),transparent 36%),
+    radial-gradient(circle at 50% 105%,rgba(77,168,218,.046),transparent 42%),
+    repeating-linear-gradient(90deg,rgba(255,255,255,.011) 0 1px,transparent 1px 18px),
+    linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.022));
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.090),
+    inset 0 0 0 1px rgba(255,255,255,.032),
+    inset 0 -1px rgba(0,0,0,.18),
+    0 36px 92px rgba(0,0,0,.38);
+}
+.desk-reference:before{
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(93,202,165,.34),rgba(201,168,76,.30),rgba(77,168,218,.24),transparent);
+}
+.reference-head h2{
+  text-shadow:
+    0 0 26px rgba(201,168,76,.040),
+    0 16px 32px rgba(0,0,0,.16);
+}
+.reference-stamp{
+  border-color:rgba(201,168,76,.28);
+  color:rgba(201,168,76,.48);
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.058),
+    inset 0 0 0 1px rgba(201,168,76,.082),
+    0 18px 38px rgba(0,0,0,.22),
+    0 0 28px rgba(201,168,76,.062);
+}
+.reference-card{
+  min-height:310px;
+}
+
+.footnote{
+  color:rgba(255,255,255,.38);
+  padding-top:2px;
+}
+.toast{
+  background:
+    radial-gradient(circle at 18% 0%,rgba(93,202,165,.110),transparent 42%),
+    rgba(5,11,20,.94);
+}
+</style>
+
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 100 100" aria-hidden="true"><path fill="#1D9E75" d="M13 14h38c23 0 37 15 37 36S74 86 51 86H13V14Zm18 18v36h20c11 0 19-7 19-18s-8-18-19-18H31Z"/><path fill="#091221" d="M13 14h16L13 30V14Zm0 56 16 16H13V70Zm0-40 13 11v18L13 70V30Z"/><rect x="38" y="37" width="30" height="4" fill="#1D9E75"/><rect x="38" y="48" width="30" height="4" fill="#C9A84C"/><rect x="38" y="59" width="30" height="4" fill="#1D9E75"/></svg>
+      <div class="wordmark">Datum FI</div>
+    </div>
+    <nav class="nav" aria-label="Primary"><a href="#">Sketch</a><a href="#">Sketchbook</a><a href="#">Blueprints</a><a href="#">Studio</a><a href="#">Shape</a></nav>
+    <div class="login"><button class="upgrade" type="button" data-action="upgrade">Upgrade</button><button class="loginbtn" type="button">Account</button></div>
+  </header>
+  <main class="workspace">
+    <section class="welcome" aria-labelledby="welcome-title">
+      <div class="welcome-grid">
+        <div>
+          <p class="eyebrow">Welcome back · Account workspace</p>
+          <h1 id="welcome-title">Hello, <span id="workspaceName" class="editable-name" contenteditable="true" spellcheck="false" role="textbox" aria-label="Edit workspace name">dmerced</span>.</h1>
+          <p class="welcome-copy">This is your Datum FI desk: saved outlines, filed Blueprints, live planning rooms, and the profile layer that keeps your assumptions consistent. <strong>Pick up where you left off, or start a fresh Shape.</strong></p>
+        </div>
+        <aside class="profile-tile" aria-label="Workspace profile summary">
+          <div class="profile-top"><div class="mini-logo" aria-hidden="true"><svg viewBox="0 0 100 100"><path fill="currentColor" d="M13 14h38c23 0 37 15 37 36S74 86 51 86H13V14Zm18 18v36h20c11 0 19-7 19-18s-8-18-19-18H31Z"/><path fill="#091221" d="M13 14h16L13 30V14Zm0 56 16 16H13V70Zm0-40 13 11v18L13 70V30Z"/><rect x="38" y="37" width="30" height="4" fill="#1D9E75"/><rect x="38" y="48" width="30" height="4" fill="#C9A84C"/><rect x="38" y="59" width="30" height="4" fill="#1D9E75"/></svg></div><div><div class="profile-name">Workspace</div><div class="profile-sub">Discover mode · profile ready</div></div></div>
+          <div class="profile-meta"><div class="meta-row"><span>Last login</span><strong>May 31, 2026</strong></div><div class="meta-row"><span>Saved work</span><strong>Sketches + Blueprints</strong></div><div class="meta-row"><span>Dossier</span><strong>Ready</strong></div></div>
+        </aside>
+      </div>
+    </section>
+    <section class="surface" aria-labelledby="workspace-title">
+      <div class="surface-head"><div><p class="eyebrow">Choose a room</p><h2 id="workspace-title">Where do you want to work?</h2><p>Saved work lives on the left side of the desk. Live experiences start new motion. Your Dossier carries the assumptions between them.</p></div><div class="mode-pill"><span class="mode-dot"></span> Discover workspace</div></div>
+      <div class="cards">
+        <article class="card sketch"><div class="card-top"><div class="card-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M6 25 23 8l3 3L9 28H6v-3Z"/><path d="M20 11l3 3"/><path d="M6 8h9"/><path d="M6 13h6"/></svg></div><p class="card-kicker">Live Experience</p><h3>The Sketch</h3><p>Begin with the few numbers that matter most. Set the outline, move the levers, and get the first readable Shape before committing to deeper work.</p><div class="card-chips"><span class="chip">Fast Outline</span><span class="chip">First Read</span><span class="chip">Shape Preview</span></div></div><div class="card-bottom"><button class="cta" type="button" data-action="sketch">Start Sketch →</button></div></article>
+
+        <article class="card studio primary-card"><div class="card-top"><div class="card-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M5 24h22"/><path d="M7 24V10l9-5 9 5v14"/><path d="M11 24v-8h10v8"/><path d="M10 12h3"/><path d="M19 12h3"/></svg></div><p class="card-kicker">Live Experience</p><h3>The Studio</h3><p>Move from outline to architecture. Add rooms, model taxes, test retirement timing, and see how your Floor, Datum, and Ceiling respond.</p><div class="card-chips"><span class="chip">Monte Carlo</span><span class="chip">Tax Rooms</span><span class="chip">Remodels</span></div></div><div class="card-bottom"><button class="cta" type="button" data-action="studio">Enter Studio →</button></div></article>
+
+        <article class="card shape"><div class="card-top"><div class="card-icon" aria-hidden="true"><svg viewBox="0 0 32 32" aria-hidden="true">
+                <path d="M5 23 C10 16 18 13 28 15"/>
+                <path d="M5 18 C11 13 19 11 27 10"/>
+                <path d="M5 13 C12 10 20 9 26 7"/>
+                <path d="M8 24 C13 27 21 27 29 22"/>
+                <path d="M6 23 L5 13"/>
+                <path d="M28 15 L29 22"/>
+                <path d="M13 21 C17 19 21 18 26 18"/>
+              </svg></div><p class="card-kicker">Current Read</p><h3>The Shape</h3><p>View the clean read of your Floor, Datum, and Ceiling. See where the target sits, what feels stretched, and what changed since the last saved version.</p><div class="card-chips"><span class="chip">Floor</span><span class="chip">Datum</span><span class="chip">Ceiling</span></div></div><div class="card-bottom"><button class="cta" type="button" data-action="shape">Open Shape →</button></div></article>
+
+        <article class="card sketchbook"><div class="card-top"><div class="card-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M9 5h15a2 2 0 0 1 2 2v20H8a2 2 0 0 1-2-2V8a3 3 0 0 1 3-3Z"/><path d="M10 5v22"/><path d="M14 11h8"/><path d="M14 16h6"/><path d="M14 21h8"/></svg></div><p class="card-kicker">Saved Work</p><h3>The Sketchbook</h3><p>Your saved retirement outlines, rough Shapes, and early “what if” paths. Reopen a Sketch, compare versions, or carry the best outline forward.</p><div class="card-chips"><span class="chip">Saved Sketches</span><span class="chip">Compare</span><span class="chip">Continue</span></div></div><div class="card-bottom"><button class="cta" type="button" data-action="sketchbook">Open Sketchbook →</button></div></article>
+
+        <article class="card archive"><div class="card-top"><div class="card-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M5 9h22v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9Z"/><path d="M8 5h16l3 4H5l3-4Z"/><path d="M12 14h8"/><path d="M12 19h5"/></svg></div><p class="card-kicker">Studio Output</p><h3>Blueprint Archive</h3><p>Filed Studio runs with names, assumptions, and dates intact. Review the versions you trusted enough to save, then compare or promote the strongest plan.</p><div class="card-chips"><span class="chip">Filed Runs</span><span class="chip">Versions</span><span class="chip">Promote</span></div></div><div class="card-bottom"><button class="cta" type="button" data-action="archive">Open Archive →</button></div></article>
+
+        <article class="card profile"><div class="card-top"><div class="card-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M7 6h18v22H7z"/><path d="M11 11h10"/><path d="M11 16h10"/><path d="M11 21h6"/><path d="M23 6v22"/></svg></div><p class="card-kicker">My Profile</p><h3>Account Dossier</h3><p>The household assumptions layer: identity, tax base, planning horizon, contact preferences, and the defaults Sketch and Studio should carry forward.</p><div class="card-chips"><span class="chip">Profile</span><span class="chip">Tax Base</span><span class="chip">Defaults</span></div></div><div class="card-bottom"><button class="cta" type="button" data-action="dossier">Open Dossier →</button></div></article>
+      </div>
+
+      <section class="desk-reference" aria-labelledby="reference-title">
+        <div class="reference-head">
+          <div>
+            <p class="eyebrow">The Desk · Reference Layer</p>
+            <h2 id="reference-title">Read the system behind the work.</h2>
+            <p>These cards do not start a plan. They explain how Datum FI thinks, measures, and moves from first outline to lived Shape.</p>
+          </div>
+          <div class="reference-stamp" aria-hidden="true">
+            <span>DF</span>
+          </div>
+        </div>
+
+        <div class="reference-cards">
+          <article class="card reference-card methodology">
+            <div class="card-top">
+              <div class="card-icon" aria-hidden="true">
+                <svg viewBox="0 0 32 32"><path d="M6 23h20"/><path d="M8 18l5-8 5 8 6-11"/><path d="M8 18h16"/><path d="M10 26h12"/></svg>
+              </div>
+              <p class="card-kicker">The Method</p>
+              <h3>Methodology</h3>
+              <p>The math sequence behind Datum FI: Data, Architecture, Tension, Uncertainty, and Measurement. See what each layer models, what it holds constant, and why the Shape is resolved instead of guessed.</p>
+              <div class="card-chips">
+                <span class="chip">D + A</span>
+                <span class="chip">T + U</span>
+                <span class="chip">Measurement</span>
+              </div>
+            </div>
+            <div class="card-bottom">
+              <button class="cta" type="button" data-action="methodology">Read Methodology →</button>
+            </div>
+          </article>
+
+          <article class="card reference-card philosophy">
+            <div class="card-top">
+              <div class="card-icon" aria-hidden="true">
+                <svg viewBox="0 0 32 32"><path d="M16 5v22"/><path d="M7 16h18"/><path d="M10 9c2-2 10-2 12 0"/><path d="M10 23c2 2 10 2 12 0"/><path d="M16 11a5 5 0 0 1 0 10"/></svg>
+              </div>
+              <p class="card-kicker">First Principles</p>
+              <h3>Philosophy</h3>
+              <p>A fixed point. A clear structure. A measured range. Read why Datum FI treats retirement as geometry, not a score, and why confidence comes from structure instead of prediction.</p>
+              <div class="card-chips">
+                <span class="chip">Fixed Point</span>
+                <span class="chip">Clarity</span>
+                <span class="chip">Structure</span>
+              </div>
+            </div>
+            <div class="card-bottom">
+              <button class="cta" type="button" data-action="philosophy">Read Philosophy →</button>
+            </div>
+          </article>
+
+          <article class="card reference-card how">
+            <div class="card-top">
+              <div class="card-icon" aria-hidden="true">
+                <svg viewBox="0 0 32 32"><path d="M5 9h7"/><path d="M20 9h7"/><path d="M12 9c3 0 5 2 5 5v4"/><path d="M20 9c-3 0-5 2-5 5v4"/><path d="M10 23h12"/><path d="M16 18v5"/></svg>
+              </div>
+              <p class="card-kicker">Experience Map</p>
+              <h3>How It Works</h3>
+              <p>The Sketch draws the first outline. The Studio opens the architecture and tests the levers. The Shape resolves the range you can read: Floor, Datum, and Ceiling.</p>
+              <div class="card-chips">
+                <span class="chip">Sketch</span>
+                <span class="chip">Studio</span>
+                <span class="chip">Shape</span>
+              </div>
+            </div>
+            <div class="card-bottom">
+              <button class="cta" type="button" data-action="how">See How It Works →</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+
+      <div class="footnote"><span><strong>Datum FI</strong> · Account workspace · Saved work and live planning</span><span>Data in. Shape out.</span></div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+(function(){const routes={sketchbook:'Sketchbook would open here.',archive:'Blueprint Archive would open here.',studio:'Studio would launch here.',sketch:'New Sketch would begin here.',shape:'Current Shape would open here.',dossier:'Account Dossier would open here.',upgrade:'Design mode upgrade would open here.'};function showToast(message){const toast=document.getElementById('toast');if(!toast)return;toast.textContent=message;toast.classList.add('show');clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.classList.remove('show'),2300)}document.querySelectorAll('[data-action]').forEach(button=>{button.addEventListener('click',()=>{const action=button.dataset.action;showToast(routes[action]||'Opening...')})})})();
+</script>
+
+<script>
+/* V2 workspace-name persistence */
+(function(){
+  const nameEl = document.getElementById('workspaceName');
+  const key = 'datumfi.workspaceName';
+  if(!nameEl) return;
+
+  const saved = localStorage.getItem(key);
+  if(saved) nameEl.textContent = saved;
+
+  function cleanName(){
+    const cleaned = (nameEl.textContent || '').replace(/\s+/g,' ').trim().slice(0,32);
+    nameEl.textContent = cleaned || 'dmerced';
+    localStorage.setItem(key, nameEl.textContent);
+  }
+
+  nameEl.addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      nameEl.blur();
+    }
+  });
+  nameEl.addEventListener('blur', cleanName);
+})();
+</script>
+
+</body>
+</html>
