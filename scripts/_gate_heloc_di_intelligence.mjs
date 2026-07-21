@@ -36,7 +36,7 @@ need('§17.2 life-of-loan figure dropped for HELOC', /title === 'HELOC'\) \? nul
 const extract = (name) => { const m = s.match(new RegExp('    function ' + name + '\\([\\s\\S]*?\\n    }\\n')); return m ? m[0] : ''; };
 const NAMES = ['calculateTotalPmt','payoffMonths','_payoffDateFrom','calculatePayoff','lifetimeInterest',
                'acceleratedDelta','_helocLimit','_helocUtilPct','_helocHeadroom','_payoffVsMaturity','_helocDrawEndShock',
-               '_debtPayoffDisplay','_helocCeilingBand','_livePrime','_liveRates','_liveIndex','_fmtAsOf','_helocIntelBeats','_diIntelligence'];
+               '_debtPayoffDisplay','_helocCeilingBand','_groundsLinkedDebt','_num','_livePrime','_liveRates','_liveIndex','_fmtAsOf','_helocIntelBeats','_diIntelligence'];
 let api = null, extractErr = '';
 try {
   const body = NAMES.map(extract).join('\n') +
@@ -55,7 +55,9 @@ if (api) {
 
   const beats = api.b(acc);
   const joined = beats.join(' || ');
-  need('(c) COMPOSE: all 6 beats fire on the test inputs', beats.length === 6);
+  // (c) the six §16 beats COMPOSE (each asserted individually below); this acc also carries a payment with no
+  // linked home, so §19.4 Variant B (retirement income-floor) legitimately rides along → >= 6, not exactly 6.
+  need('(c) COMPOSE: the §16 beats fire together (>=6 beats on the test inputs)', beats.length >= 6);
   need('16.1 payoff-past-maturity fires (mentions maturity + required pmt)',
     /pays off around/.test(joined) && /the contract matures January 2032/.test(joined) && /you\'d need about \$/.test(joined));
   need('16.2 minimum-barely-dents fires (interest vs principal split)',

@@ -8556,6 +8556,25 @@
         if (_shock) {
             beats.push('You\'re paying interest-only right now — about ' + $(_shock.monthlyInterest) + '/mo. When your draw period ends around ' + _shock.drawEndStr + ', this balance starts amortizing over the shorter remaining term, and your minimum could rise to about ' + $(_shock.repayMin) + '/mo. The longer you pay interest-only, the sharper that jump.');
         }
+        // §19.4 HELOC-as-retirement-buffer (HELOC Copy Bank R158, verbatim two variants). The mission beat —
+        // reframes a little-drawn, high-equity line as a standby liquidity buffer; or, when a balance is
+        // carried, names its payment as a lifetime income-floor item. VOICE (the riskiest beat): it NAMES a use
+        // / WEIGHS a cost, it never INSTRUCTS ("can also serve as" / "worth weighing"). Captain-review wording
+        // gate CLEARED (bank R156) — copy is verbatim. FIRING LOGIC (Claude-authored, flagged for Captain
+        // veto): Variant A when the line is little-drawn (bal 0, or utilization < 25%) AND backed by strong
+        // equity (net equity >= 50% of a linked property's value); ELSE Variant B when a balance is carried
+        // with a payment. A and B are mutually exclusive. Sourced-or-blank. Reuses §4.3 equity math (L48).
+        var _rbLa = acc.linkedAssetId ? state.accounts.find(function (a) { return a.id === acc.linkedAssetId; }) : null;
+        var _rbLb = _rbLa ? getBaseType(_rbLa.baseId) : null;
+        var _rbHv = (_rbLb && String(_rbLb.id).indexOf('property') === 0) ? (parseFloat(_rbLa.value) || 0) : 0;
+        var _rbUtil = _helocUtilPct(acc);   // null when no credit limit set
+        var _rbStrongEq = _rbHv > 0 && (_rbHv - _groundsLinkedDebt(_rbLa.id)) >= 0.5 * _rbHv;
+        var _rbLightlyDrawn = bal === 0 || (_rbUtil !== null && _rbUtil < 25);
+        if (_rbStrongEq && _rbLightlyDrawn) {
+            beats.push('With little drawn and strong equity behind it, this line can also serve as a standby buffer in retirement — a source to lean on during a market downturn rather than selling investments while they\'re down. It costs nothing until you use it.');
+        } else if (bal > 0 && totalMo > 0) {
+            beats.push('Carrying this payment into retirement adds about ' + $(totalMo) + '/mo to the income your plan must cover for life — worth weighing alongside its flexibility.');
+        }
         // ── §18.A VARIABLE-RATE ACKNOWLEDGMENT BEATS (verbatim, sourced-or-blank, PLAIN COACH) ──
         // These read the variable fields already on the modal and state the consequence — NO new math.
         // They compose WITH the §16 beats above; each silent unless its inputs are sourced.
