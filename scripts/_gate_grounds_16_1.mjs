@@ -85,6 +85,31 @@ if (e) {
   need('(R167 single-lien valid) one lien still produces a CLTV beat',
     /borrowed about 50% of your home's value against your mortgage/.test(baseOut));
 
+  // ── #1b — editable cap override ──────────────────────────────────────────────────────────────────
+  const propCap = (v, cap) => ({ id: 'prop1', baseId: 'property_primary', value: v, cltvCapPct: cap, linkedAssetId: null });
+  const runCap = (accts) => build(accts).sig('prop1', accts[0]);
+  const mtg = (v) => ({ id: 'm1', baseId: 'mortgage_primary', value: v, linkedAssetId: 'prop1' });
+
+  const ovOut = runCap([propCap(800000, 85), mtg(400000)]);   // 0.85*800 - 400 = 280k
+  need('(#1b override) cap 85% recomputes untapped to $280,000 + "cap you set" copy',
+    /At the 85% cap you set, you have roughly \$280,000 of untapped borrowing power\./.test(ovOut));
+  need('(#1b override) drops the "typically" framing when the user set a cap',
+    !/typically cap total borrowing/.test(ovOut));
+  need('(#1b override) tight cap (55%) flips a 50% CLTV to near-ceiling, "cap you set"',
+    /close to the 55% cap you set\. A dip in home value/.test(runCap([propCap(800000, 55), mtg(400000)])));
+  need('(#1b fallback) invalid cap (0) -> labeled ~80% typical default',
+    /Lenders typically cap total borrowing near 80%/.test(runCap([propCap(800000, 0), mtg(400000)])));
+
+  need('(#1b recolor) mortgage bar segment uses var(--danger), not var(--gold)',
+    /background:var\(--danger\)/.test(baseOut) && !/background:var\(--gold\)/.test(baseOut));
+
+  need('(FIELD) cap-override input persists to cltvCapPct via updateAccField',
+    /updateAccField\('\$\{id\}', 'cltvCapPct', this\.value\)/.test(s));
+  need('(FIELD) cap-override gated on a linked lien + clamped 0–100',
+    /if \(_groundsLinkedDebt\(id\) > 0\)/.test(s) && /enforceNumRange\(this, 0, 100\); updateAccField\('\$\{id\}', 'cltvCapPct'/.test(s));
+  need('(FIELD) cap-override re-renders the Grounds DI on change (updateAccField trigger list)',
+    /field === 'cltvCapPct'/.test(s));
+
   // LOCK-3.
   const acc = baseAcc.find(a => a.id === 'prop1'); const before = acc.value; run(baseAcc);
   need('(LOCK-3) render never mutates acc.value', acc.value === before && before === 800000);

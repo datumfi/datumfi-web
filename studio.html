@@ -7476,6 +7476,16 @@
                 </div>
             </div>`;
                 }
+                // §16.1b editable CLTV cap override (Property Copy Bank §16.1 GUARD / R167). Shows only when a
+                // lien is linked (i.e. exactly when the §16.1 CLTV beat fires). Blank keeps the labeled ~80%
+                // typical default; a value recomputes untapped borrowing + the near-ceiling threshold off the
+                // user's own cap. Clamped 0–100. Sourced-or-blank (L47).
+                if (_groundsLinkedDebt(id) > 0) {
+                    html += `
+            <div class="field-row" style="grid-template-columns: 1fr; margin-top:10px;">
+                <div><span class="input-label modal-tt-wrap" style="cursor:help;">Lender CLTV Cap (%)<div class="modal-tt" style="left:0; right:auto;"><strong>A typical assumption — set your own</strong>Most lenders cap total borrowing against a home near 80% of its value (some allow 85% or more). We use ~80% as a typical default to estimate your untapped borrowing power. Enter your lender's actual cap to make it exact, or leave it blank to keep the ~80% typical.</div></span><input type="number" min="0" max="100" step="1" class="small-field" placeholder="80 (typical)" value="${acc.cltvCapPct||''}" oninput="enforceNumRange(this, 0, 100); updateAccField('${id}', 'cltvCapPct', this.value)"></div>
+            </div>`;
+                }
             }
         }
 
@@ -7731,7 +7741,7 @@
     window.updateAccField = function(id, field, value) {
         const acc = state.accounts.find(a => a.id === id);
         if(acc) {
-            if(field === 'origAmount' || field === 'minPmt' || field === 'addPmt' || field === 'propTaxAnnual' || field === 'insAnnual' || field === 'pmiMonthly' || field === 'propTaxYr' || field === 'homeInsYr' || field === 'maintYr' || field === 'hoaYr' || field === 'utilYr' || field === 'helocCreditLimit') {
+            if(field === 'origAmount' || field === 'minPmt' || field === 'addPmt' || field === 'propTaxAnnual' || field === 'insAnnual' || field === 'pmiMonthly' || field === 'propTaxYr' || field === 'homeInsYr' || field === 'maintYr' || field === 'hoaYr' || field === 'utilYr' || field === 'helocCreditLimit' || field === 'cltvCapPct') {
                 acc[field] = window.enforceAmt(value);   // #393 non-negative + $100B ceiling
             } else if (field === 'intRate' || field === 'cola') {
                 acc[field] = parseFloat(value) || 0;
@@ -8839,8 +8849,12 @@
         if (val <= 0) return null;
         var liens = _groundsLiens(id);
         if (liens.total <= 0) return null;
-        var capPct = 80;
-        return { val: val, debt: liens.total, eq: val - liens.total, liens: liens, capPct: capPct,
+        // §16.1 cap = user override {cltvCapPct} (0 < x <= 100) when set, else the labeled ~80% typical
+        // assumption (R167). untapped + the near-ceiling threshold both recompute off whichever cap is in force.
+        var capOv = parseFloat(acc && acc.cltvCapPct);
+        var capValid = isFinite(capOv) && capOv > 0 && capOv <= 100;
+        var capPct = capValid ? capOv : 80;
+        return { val: val, debt: liens.total, eq: val - liens.total, liens: liens, capPct: capPct, capIsDefault: !capValid,
                  cltvPct: liens.total / val * 100, untapped: Math.max(0, capPct / 100 * val - liens.total),
                  nearCeiling: (liens.total / val * 100) >= 0.9 * capPct };
     }
@@ -8859,9 +8873,15 @@
                    : ' across your ' + names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
         var pct = Math.round(c.cltvPct);
         if (c.nearCeiling) {
-            return 'You\'ve borrowed about ' + pct + '% of your home\'s value' + phrase + ' — close to the ceiling lenders typically allow (~' + c.capPct + '%). A dip in home value would erase your remaining cushion fast.';
+            var ceilTail = c.capIsDefault
+                ? ' — close to the ceiling lenders typically allow (~' + c.capPct + '%).'
+                : ' — close to the ' + c.capPct + '% cap you set.';
+            return 'You\'ve borrowed about ' + pct + '% of your home\'s value' + phrase + ceilTail + ' A dip in home value would erase your remaining cushion fast.';
         }
-        return 'You\'ve borrowed about ' + pct + '% of your home\'s value' + phrase + '. Lenders typically cap total borrowing near ' + c.capPct + '%, so you have roughly ' + $(c.untapped) + ' of untapped borrowing power.';
+        var capClause = c.capIsDefault
+            ? 'Lenders typically cap total borrowing near ' + c.capPct + '%, so you have roughly ' + $(c.untapped) + ' of untapped borrowing power.'
+            : 'At the ' + c.capPct + '% cap you set, you have roughly ' + $(c.untapped) + ' of untapped borrowing power.';
+        return 'You\'ve borrowed about ' + pct + '% of your home\'s value' + phrase + '. ' + capClause;
     }
     // §16.1 stacked equity bar (bank R166) — one horizontal bar = home value, split EQUITY / MORTGAGE / HELOC /
     // other. Segments proportional to value, each sourced-or-blank (omit a blank segment, never zero-fill).
@@ -8870,7 +8890,7 @@
         var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
         var segs = [];
         if (c.eq > 0) segs.push({ label: 'Equity', amt: c.eq, color: 'var(--teal-mid)' });
-        if (c.liens.mortgage > 0) segs.push({ label: 'Mortgage', amt: c.liens.mortgage, color: 'var(--gold)' });
+        if (c.liens.mortgage > 0) segs.push({ label: 'Mortgage', amt: c.liens.mortgage, color: 'var(--danger)' });
         if (c.liens.heloc > 0) segs.push({ label: 'HELOC', amt: c.liens.heloc, color: 'rgba(224,122,95,0.9)' });
         if (c.liens.other > 0) segs.push({ label: 'Other lien', amt: c.liens.other, color: 'rgba(160,160,180,0.8)' });
         if (!segs.length) return '';
