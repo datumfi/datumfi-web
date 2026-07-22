@@ -6423,49 +6423,34 @@
                      '<div class="modal-tt" style="position:fixed; top:0; bottom:auto; left:0; width:420px;">' + tt + '</div></span>';
     }
 
-    // §18.3 — RETURN-NAV (Mortgage Copy Bank R137). A linked room is reached one-way (the link jump, or the
-    // linked-liabilities list), so give the destination a trail back: a "← Back to {room}" button for every
-    // link that actually exists. Debt side → its single linked collateral asset; asset side → every debt
-    // secured against it, first-lien (mortgage) before second-lien (HELOC). Wayfinding beats flavor here: the
-    // button names the account TYPE in plain terms ("your Mortgage" / "your HELOC" / "your Home"), NOT the
-    // branded room name — a "Back" button must read as clarity, not a metaphor to decode (brand names stay in
-    // DI beats and titles only). LOCK-3 display-only: reuses openAccountModal + the existing
-    // linkedAssetId field and adds no state; when a link is severed (§18.4) the account re-renders and the
-    // button simply stops being emitted, so #7 (unlink) and #9 (mirror) share this seam for free.
+    // §18.3 (consolidated) — LINK WAYFINDING. First-lien ordering for a property's liabilities (mortgage before
+    // HELOC), and a plain account-TYPE label used by the clickable jump-line (and, in Commit 2, the unlink
+    // sentence). The label is the HONEST type — "Real Estate" / "Mortgage" / "HELOC" — sourced from the account
+    // type, NEVER a branded room name (base.meta) and never an invented specific like "Home" (the asset may be a
+    // rental, land, or a second/commercial property; sourced-or-blank / don't-invent).
     function _lienRank(a) {
         var id = String(a && a.baseId || '');
         if (id.indexOf('mortgage') === 0) return 0;   // first lien
         if (id.indexOf('heloc') === 0) return 1;       // second lien
         return 2;
     }
-    // Plain account-TYPE label for the return-nav button (type-first clarity, not the branded room name).
     function _returnNavLabel(base) {
         var id = String(base && base.id || '');
-        if (id.indexOf('mortgage') === 0) return 'your Mortgage';
-        if (id.indexOf('heloc') === 0) return 'your HELOC';
-        if (id.indexOf('property') === 0) return 'your Home';
-        return base && base.title ? 'your ' + base.title : 'the linked account';   // sourced-or-blank fallback
+        if (id.indexOf('mortgage') === 0) return 'Mortgage';
+        if (id.indexOf('heloc') === 0) return 'HELOC';
+        if (id.indexOf('property') === 0) return 'Real Estate';
+        return base && base.title ? base.title : 'the linked account';   // sourced-or-blank fallback (plain type)
     }
-    function _returnNavHTML(acc, base) {
-        if (!acc || !base) return '';
-        var targets = [];
-        if (base.taxCode === 'debt' && acc.linkedAssetId) {
-            var la = state.accounts.find(function (a) { return a.id === acc.linkedAssetId; });
-            if (la) targets.push(la);
-        } else if (base.taxCode === 'physical') {
-            targets = (state.accounts || []).filter(function (a) { return a.linkedAssetId === acc.id; });
-            targets.sort(function (a, b) { return _lienRank(a) - _lienRank(b); });   // first-lien first; stable otherwise
-        }
-        if (!targets.length) return '';
-        var btns = targets.map(function (t) {
-            var tBase = getBaseType(t.baseId);
-            var room = _returnNavLabel(tBase);   // type-first plain label, sourced from the account type
-            return '<button class="add-space-btn" style="width:auto; padding:4px 10px; border:none; background:transparent; '
-                 + 'border-bottom:1px dashed var(--teal-mid); color:var(--teal-mid); font-size:11px;" '
-                 + 'onclick="openAccountModal(\'' + t.id + '\')" '
-                 + 'title="Return to the account you came from">← Back to ' + room + '</button>';
-        }).join('');
-        return '<div id="modal-return-nav" style="margin-bottom:14px; display:flex; gap:10px; flex-wrap:wrap;">' + btns + '</div>';
+    // The ONE outside link affordance: a clickable jump-line to the linked account(s). Type-first honest labels
+    // via _returnNavLabel; sourced-or-blank (renders nothing when there are no links). LOCK-3 display-only —
+    // reuses openAccountModal + the existing linkedAssetId field, no new state.
+    function _linkedJumpLine(label, accts, color) {
+        if (!accts || !accts.length) return '';
+        var chips = accts.map(function (a) {
+            var t = _returnNavLabel(getBaseType(a.baseId));
+            return '<span onclick="openAccountModal(\'' + a.id + '\')" style="cursor:pointer; border-bottom:1px dotted currentColor;" title="Open this account">' + t + '</span>';
+        }).join(' · ');
+        return '<div style="margin-bottom: 20px; font-family: var(--font-mono); font-size: 10px; color: ' + (color || 'var(--danger)') + ';">' + label + ' ' + chips + '</div>';
     }
 
     // --- MODAL ENGINE (BACK OF CARD) ---
@@ -6478,8 +6463,6 @@
         _diSetTitle(acc, base);   // §2 title hover for bank rooms; plain title otherwise
 
         let html = '';
-
-        html += _returnNavHTML(acc, base);   // §18.3 return-nav — trail back to the room(s) this one is linked with
 
         // W2/W6 — on "Begin Interior Decorating" the whole settings/education region collapses so the
         // holdings area is the SOLE focus. Everything appended below sits inside #modal-edu-collapse
@@ -7395,6 +7378,11 @@
                 <div id="modal-payoff-intel-${id}">${_payoffIntelHTML(id, acc)}</div>
             </div>
             `;
+            // §18.3 (consolidated) — symmetric outside jump-line: the linked ASSET, clickable, type-first.
+            if (acc.linkedAssetId && !isStudentLoan) {
+                var _la = state.accounts.find(function (a) { return a.id === acc.linkedAssetId; });
+                if (_la) html += _linkedJumpLine('Linked Assets:', [_la], 'var(--teal-mid)');
+            }
             // §15 education panel (Mortgage Copy Bank §15 R70, verbatim) — pay-down-vs-invest tension.
             // Reuses the shared _diWhyPanel renderer (L48). §3b doctrine is embodied across the wired
             // surfaces (equity · fixed-vs-variable · all-in monthly · accelerate-vs-invest), not printed
@@ -7429,7 +7417,11 @@
             </div>
             `;
             if (myDebts.length > 0) {
-                 html += `<div style="margin-bottom: 20px; font-family: var(--font-mono); font-size: 10px; color: var(--danger);">Linked Liabilities: ${myDebts.map(d => d.name).join(', ')}</div>`;
+                 myDebts.sort(function (a, b) { return _lienRank(a) - _lienRank(b); });   // first-lien (mortgage) first
+                 // PARKED (not built): two same-type liens on one property render "Mortgage · Mortgage". Rare, and
+                 // the click already disambiguates. Future fix ONLY if it bites in real use: append each account's
+                 // own custom name as a secondary label when a same-type collision is detected (sourced-or-blank).
+                 html += _linkedJumpLine('Linked Liabilities:', myDebts, 'var(--danger)');   // clickable jump-line, type-first
             } else {
                  html += `<div style="margin-bottom: 20px;"></div>`;
             }
