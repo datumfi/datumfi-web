@@ -6459,7 +6459,11 @@
             }
             return chip;
         }).join(' · ');
-        return '<div style="margin-bottom: 20px; font-family: var(--font-mono); font-size: 10px; color: ' + (color || 'var(--danger)') + ';">' + label + ' ' + chips + '</div>';
+        // §18.5 — a healthy link reads as an informational STATUS, not a 10px danger warning: a subtle pill,
+        // readable body size, muted mono label, chips in their semantic color (teal asset / danger debt).
+        return '<div style="margin-bottom:16px; padding:8px 11px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:4px; font-size:12px; line-height:1.5;">'
+             + '<span style="color:rgba(255,255,255,0.55); font-family:var(--font-mono); font-size:10px; letter-spacing:0.05em;">' + label + '</span> '
+             + '<span style="color:' + (color || 'var(--danger)') + ';">' + chips + '</span></div>';
     }
 
     // §18.3 (consolidated · Commit 2a) — the ONE link/manage control, shared by both sides (direction from
