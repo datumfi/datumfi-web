@@ -6453,6 +6453,97 @@
         return '<div style="margin-bottom: 20px; font-family: var(--font-mono); font-size: 10px; color: ' + (color || 'var(--danger)') + ';">' + label + ' ' + chips + '</div>';
     }
 
+    // §18.3 (consolidated · Commit 2a) — the ONE link/manage control, shared by both sides (direction from
+    // base.taxCode). Native <details> disclosure (NOT a native <select>: it must also carry a draft row and — in
+    // 2b — a per-row ✕). Every list is scope-sourced (L48: _securedLinkScope / _assetReverseScope), sourced-or-
+    // blank, type-first labels. Debt side is SINGLE-LINK: once linked it shows status only — the link/draft
+    // disclosure disappears (one-link-of-record; no silent orphaning, unlink first to change). Asset side is
+    // MULTI-LINK: the "link existing" list shows ONLY currently-UNLINKED debts, so linking never steals another
+    // asset's lien. The prominent 🔗 status sits AT the control (fixes the Commit-1 burial). Inline ✕ + unlink
+    // land in Commit 2b.
+    function _linkControlHTML(id, acc, base) {
+        var isDebt = base.taxCode === 'debt';
+        var linkedNow, linkable, canManage, statusColor, statusLabel, triggerLabel, draftLabel, sectionNoun;
+        if (isDebt) {
+            var scope = _securedLinkScope(base);
+            var la = acc.linkedAssetId ? state.accounts.find(function (a) { return a.id === acc.linkedAssetId; }) : null;
+            linkedNow = la ? [la] : [];
+            linkable = la ? [] : state.accounts.filter(function (a) { var b = getBaseType(a.baseId); return b && b.taxCode === 'physical' && scope(b); });
+            canManage = !la;   // single-link: no link/draft while already linked (one-link-of-record)
+            statusColor = 'var(--teal-mid)'; statusLabel = 'Linked Asset';
+            triggerLabel = 'Link or draft a property…'; draftLabel = '+ Draft New Property'; sectionNoun = 'PROPERTY';
+        } else {
+            var rev = _assetReverseScope(base);
+            linkedNow = state.accounts.filter(function (a) { return a.linkedAssetId === id; });
+            linkedNow.sort(function (a, b) { return _lienRank(a) - _lienRank(b); });   // first-lien first
+            // PARKED edge (not built): two escrow-carrying mortgages on ONE property — the §18.2 resolver
+            // (_linkedMortgageWith) picks the FIRST. Rare (1st/2nd mortgage both escrowing tax/ins); disambiguate
+            // only if it's ever hit in real use.
+            linkable = state.accounts.filter(function (a) { var b = getBaseType(a.baseId); return b && b.taxCode === 'debt' && rev(b) && !a.linkedAssetId; });
+            canManage = true;   // multi-link
+            statusColor = 'var(--danger)'; statusLabel = 'Linked Debts';
+            triggerLabel = 'Link or draft a liability…'; draftLabel = '+ Draft New Liability'; sectionNoun = 'LIABILITY';
+        }
+        var out = '';
+        // header label — preserve the HELOC "your collateral" authored hover (L47/L48)
+        out += isDebt
+            ? (base.title === 'HELOC'
+                ? '<div class="input-label modal-tt-wrap" style="color:var(--teal-mid); cursor:help; margin-bottom:4px;">Linked collateral (calculates equity)<div class="modal-tt" style="left:0; right:auto;"><strong>Your collateral</strong>This line is secured by the linked property. Your equity is what backs it — and what\'s at risk if it goes unpaid.</div></div>'
+                : '<div class="input-label" style="color:var(--teal-mid); margin-bottom:4px;">Linked collateral (calculates equity)</div>')
+            : '<div class="input-label" style="color:var(--danger); margin-bottom:4px;">Liabilities secured by this property</div>';
+        // prominent 🔗 status line — clickable nav, at the control, sourced-or-blank
+        if (linkedNow.length) out += _linkedJumpLine('🔗 ' + statusLabel + ':', linkedNow, statusColor);
+        // the disclosure: link an existing + draft a new (hidden on a single-link debt that's already linked)
+        if (canManage) {
+            var rows = linkable.map(function (a) {
+                var t = _returnNavLabel(getBaseType(a.baseId));
+                var nm = String(a.propName || a.name || '');
+                var extra = (nm && nm !== t) ? ' <span style="opacity:0.55;">— ' + nm.replace(/</g, '&lt;').replace(/"/g, '&quot;') + '</span>' : '';
+                var onclk = isDebt ? "updateAccField('" + id + "', 'linkedAssetId', '" + a.id + "')" : "linkDebtToAsset('" + id + "', '" + a.id + "')";
+                return '<div onclick="' + onclk + '" style="padding:7px 10px; cursor:pointer; color:var(--white); font-size:12px; border-radius:3px;" onmouseover="this.style.background=\'rgba(255,255,255,0.06)\'" onmouseout="this.style.background=\'transparent\'">' + t + extra + '<span style="float:right; opacity:0.45; font-size:10px; font-family:var(--font-mono);">link</span></div>';
+            }).join('');
+            if (!rows) rows = '<div style="padding:7px 10px; color:rgba(255,255,255,0.4); font-size:11px; font-style:italic;">Nothing available to link — draft one below.</div>';
+            var draftOnclk = isDebt ? "createLinkedAsset('" + id + "')" : "_draftLiabilityChooser('" + id + "')";
+            out += '<details style="margin:6px 0 18px;">'
+                 + '<summary style="list-style:none; cursor:pointer; padding:9px 12px; background:var(--bg-navy); border:1px solid rgba(255,255,255,0.14); border-radius:4px; color:rgba(255,255,255,0.75); font-size:12px;">' + triggerLabel + '  ▾</summary>'
+                 + '<div style="border:1px solid rgba(255,255,255,0.10); border-top:none; border-radius:0 0 4px 4px; padding:6px; background:rgba(255,255,255,0.02);">'
+                 + '<div style="font-family:var(--font-mono); font-size:9px; letter-spacing:0.1em; color:var(--gold); padding:5px 10px;">LINK AN EXISTING ' + sectionNoun + '</div>'
+                 + rows
+                 + '<div style="border-top:1px dashed rgba(255,255,255,0.1); margin:6px 0;"></div>'
+                 + '<div onclick="' + draftOnclk + '" style="padding:7px 10px; cursor:pointer; color:' + statusColor + '; font-size:12px; font-weight:bold;">' + draftLabel + '</div>'
+                 + '</div></details>';
+        }
+        return out;
+    }
+
+    // §18.3 (consolidated) — "+ Draft New Liability" (asset side): pick the debt TYPE, then draft + link + STAY.
+    // The type options are SOURCED from the asset's reverse-scope × arch (rDataList), never hardcoded — a
+    // property yields Mortgage / HELOC. Reuses the brand-confirm visual chrome (L48).
+    window._draftLiabilityChooser = function (assetId) {
+        var asset = state.accounts.find(function (a) { return a.id === assetId; });
+        if (!asset) return;
+        var assetBase = getBaseType(asset.baseId);
+        var rev = _assetReverseScope(assetBase);
+        var types = rDataList.filter(function (r) { return r.taxCode === 'debt' && rev(r) && r.type === assetBase.type; });
+        if (!types.length) return;
+        if (types.length === 1) { createLinkedLiability(assetId, types[0].id); return; }   // single valid type: skip the popup
+        var ov = document.getElementById('type-chooser-overlay');
+        if (!ov) { ov = document.createElement('div'); ov.id = 'type-chooser-overlay'; ov.style.cssText = 'position:fixed; inset:0; background:rgba(2,6,14,0.72); display:none; align-items:center; justify-content:center; z-index:99999; backdrop-filter:blur(3px);'; document.body.appendChild(ov); }
+        var btns = types.map(function (r) { return '<button type="button" data-base="' + r.id + '" style="background:rgba(93,202,165,0.12); border:1px solid var(--teal-mid); color:var(--teal-mid); font-family:var(--font-mono); font-size:12px; text-transform:uppercase; letter-spacing:0.06em; padding:10px 18px; border-radius:4px; cursor:pointer;">' + _returnNavLabel(r) + '</button>'; }).join('');
+        ov.innerHTML = '<div style="background:var(--bg-navy); border:1px solid var(--teal-mid); border-radius:8px; padding:24px 28px; max-width:440px; box-shadow:0 24px 64px rgba(0,0,0,0.85);">'
+            + '<div style="font-family:var(--font-mono); color:var(--gold); font-size:11px; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;">Draft a new liability</div>'
+            + '<div style="font-family:var(--font-serif); color:rgba(255,255,255,0.85); font-size:14px; line-height:1.55; margin-bottom:22px;">What kind of debt is secured by this property?</div>'
+            + '<div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; align-items:center;">' + btns
+            + '<button type="button" id="tc-cancel" style="background:transparent; border:1px solid rgba(255,255,255,0.25); color:var(--white); font-family:var(--font-mono); font-size:11px; text-transform:uppercase; letter-spacing:0.08em; padding:9px 16px; border-radius:4px; cursor:pointer;">Cancel</button>'
+            + '</div></div>';
+        var close = function () { ov.style.display = 'none'; };
+        ov.querySelector('#tc-cancel').onclick = close;
+        Array.prototype.forEach.call(ov.querySelectorAll('button[data-base]'), function (b) {
+            b.onclick = function () { close(); createLinkedLiability(assetId, b.getAttribute('data-base')); };
+        });
+        ov.style.display = 'flex';
+    };
+
     // --- MODAL ENGINE (BACK OF CARD) ---
     window.openAccountModal = function(id) {
         activeModalId = id;
@@ -7273,29 +7364,7 @@
             }
 
             if (!isStudentLoan) {
-                let linkOpts = `<option value="">None (Unsecured / Isolated Liability)</option>`;
-                let _linkScope = _securedLinkScope(base);
-                state.accounts.forEach(a => {
-                    let aBase = getBaseType(a.baseId);
-                    if(aBase && aBase.taxCode === 'physical' && _linkScope(aBase)) {
-                        linkOpts += `<option value="${a.id}" ${acc.linkedAssetId === a.id ? 'selected' : ''}>Map to: ${a.name} (${aBase.meta})</option>`;
-                    }
-                });
-
-                html += `
-                <div class="field-row" style="grid-template-columns: 1fr; margin-bottom: 5px;">
-                    <div>
-                        ${base.title === 'HELOC'
-                          ? '<div class="input-label modal-tt-wrap" style="color:var(--teal-mid); cursor:help;">Link to Physical Asset (Calculate Equity)<div class="modal-tt" style="left:0; right:auto;"><strong>Your collateral</strong>This line is secured by the linked property. Your equity is what backs it — and what\'s at risk if it goes unpaid.</div></div>'
-                          : '<div class="input-label" style="color:var(--teal-mid);">Link to Physical Asset (Calculate Equity)</div>'}
-                        <select class="small-field" style="background: var(--bg-navy);" onchange="updateAccField('${id}', 'linkedAssetId', this.value)">
-                            ${linkOpts}
-                        </select>
-                    </div>
-                </div>
-                <div style="text-align: right; margin-bottom: 20px;">
-                   <button class="add-space-btn" style="width:auto; padding: 4px 8px; border: none; background: transparent; border-bottom: 1px dashed var(--teal-mid);" onclick="createLinkedAsset('${id}')">+ Draft New Structure</button>
-                </div>`;
+                html += _linkControlHTML(id, acc, base);   // §18.3 (consolidated) — link/draft control + prominent 🔗 status
             }
             
             html += `
@@ -7378,11 +7447,6 @@
                 <div id="modal-payoff-intel-${id}">${_payoffIntelHTML(id, acc)}</div>
             </div>
             `;
-            // §18.3 (consolidated) — symmetric outside jump-line: the linked ASSET, clickable, type-first.
-            if (acc.linkedAssetId && !isStudentLoan) {
-                var _la = state.accounts.find(function (a) { return a.id === acc.linkedAssetId; });
-                if (_la) html += _linkedJumpLine('Linked Assets:', [_la], 'var(--teal-mid)');
-            }
             // §15 education panel (Mortgage Copy Bank §15 R70, verbatim) — pay-down-vs-invest tension.
             // Reuses the shared _diWhyPanel renderer (L48). §3b doctrine is embodied across the wired
             // surfaces (equity · fixed-vs-variable · all-in monthly · accelerate-vs-invest), not printed
@@ -7393,38 +7457,7 @@
                 ]);
             }
         } else if (base.taxCode === 'physical' && !base.id.includes('collectibles')) {
-            let myDebts = state.accounts.filter(a => a.linkedAssetId === id);
-            let linkOpts = `<option value="">Select a liability to link...</option>`;
-            let _revScope = _assetReverseScope(base);   // §0.2 — Grounds accepts ONLY Mortgage / HELOC
-            state.accounts.forEach(a => {
-                let aBase = getBaseType(a.baseId);
-                if(aBase && aBase.taxCode === 'debt' && _revScope(aBase)) {
-                    linkOpts += `<option value="${a.id}">${a.name} (${aBase.meta})</option>`;
-                }
-            });
-
-            html += `
-            <div class="field-row" style="grid-template-columns: 1fr; margin-bottom: 5px;">
-                <div>
-                    <div class="input-label" style="color:var(--danger);">Map Existing Liability to this Structure</div>
-                    <select class="small-field" style="background: var(--bg-navy);" onchange="linkDebtToAsset('${id}', this.value); this.value='';">
-                        ${linkOpts}
-                    </select>
-                </div>
-            </div>
-            <div style="text-align: right; margin-bottom: 10px;">
-               <button class="add-space-btn" style="width:auto; padding: 4px 8px; border: none; background: transparent; border-bottom: 1px dashed var(--danger); color: var(--danger);" onclick="createLinkedLiability('${id}')">+ Draft New Liability</button>
-            </div>
-            `;
-            if (myDebts.length > 0) {
-                 myDebts.sort(function (a, b) { return _lienRank(a) - _lienRank(b); });   // first-lien (mortgage) first
-                 // PARKED (not built): two same-type liens on one property render "Mortgage · Mortgage". Rare, and
-                 // the click already disambiguates. Future fix ONLY if it bites in real use: append each account's
-                 // own custom name as a secondary label when a same-type collision is detected (sourced-or-blank).
-                 html += _linkedJumpLine('Linked Liabilities:', myDebts, 'var(--danger)');   // clickable jump-line, type-first
-            } else {
-                 html += `<div style="margin-bottom: 20px;"></div>`;
-            }
+            html += _linkControlHTML(id, acc, base);   // §18.3 (consolidated) — link/draft control + prominent 🔗 status
 
             // ── THE GROUNDS (Real Estate) — §1 DI/signals + §5 toggles + §4 carrying-cost block (Grounds).
             if (_isGrounds(base)) {
@@ -8054,22 +8087,29 @@
         state.accounts.push({ id: newId, baseId: newBaseId, name: newBase.title, value: 0, inflow: 0, freq: 12, intRate: 0, exclude: false, notes: '', cola: 0, linkedAssetId: null, useRule55: false, isNew: true, isFriction: false, isPriority: false, holdings: [], trustType: 'Irrevocable', disbursement: 'Discretionary' });
         
         debt.linkedAssetId = newId;
-        renderInputs(); updateSVGs(); updateAnalysisText(); openAccountModal(newId);
+        // §18.3 (consolidated) — AUTO-LINK the counterpart + STAY in this room (no teleport into the new asset).
+        renderInputs(); updateSVGs(); updateAnalysisText(); openAccountModal(debtId);
     }
-    
-    window.createLinkedLiability = function(assetId) {
+
+    window.createLinkedLiability = function(assetId, baseId) {
         let asset = state.accounts.find(a => a.id === assetId);
         let assetBase = getBaseType(asset.baseId);
-        let newBaseId = 'mortgage_joint';
-        if (assetBase.id.includes('auto')) newBaseId = assetBase.type === 'primary' ? 'auto_debt_primary' : (assetBase.type === 'coarch' ? 'auto_debt_co' : 'auto_debt_joint');
-        else if (assetBase.type === 'primary') newBaseId = 'mortgage_primary';
-        else if (assetBase.type === 'coarch') newBaseId = 'mortgage_co';
+        // baseId is supplied by _draftLiabilityChooser (SOURCED type). Fall back to the arch-appropriate mortgage
+        // for any legacy caller so the one-type path stays safe.
+        let newBaseId = baseId;
+        if (!newBaseId) {
+            newBaseId = 'mortgage_joint';
+            if (assetBase.id.includes('auto')) newBaseId = assetBase.type === 'primary' ? 'auto_debt_primary' : (assetBase.type === 'coarch' ? 'auto_debt_co' : 'auto_debt_joint');
+            else if (assetBase.type === 'primary') newBaseId = 'mortgage_primary';
+            else if (assetBase.type === 'coarch') newBaseId = 'mortgage_co';
+        }
 
         let newBase = getBaseType(newBaseId);
         let newId = 'inst_' + Math.random().toString(36).substr(2, 9);
         state.accounts.push({ id: newId, baseId: newBaseId, name: newBase.title, value: 0, inflow: 0, freq: 12, intRate: 0, exclude: false, notes: '', cola: 0, linkedAssetId: assetId, useRule55: false, isNew: true, isFriction: false, isPriority: false, holdings: [] });
-        
-        renderInputs(); updateSVGs(); updateAnalysisText(); openAccountModal(newId);
+
+        // §18.3 (consolidated) — AUTO-LINK the counterpart + STAY in this room (no teleport into the new debt).
+        renderInputs(); updateSVGs(); updateAnalysisText(); openAccountModal(assetId);
     }
 
     window.toggleHoldings = function(id) {
