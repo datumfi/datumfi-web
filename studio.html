@@ -7467,6 +7467,7 @@
                 </div>
                 <div id="modal-escrow-foot-${id}" style="display:${hasEscrow(acc)?'block':'none'}; font-size:11px; color: rgba(255,255,255,0.72); line-height:1.5; margin-top:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;">${_escrowFooter(acc)}</div>
             </div>`;
+                html += _moatPmiBarHTML(id, acc);   // §18.9 — PMI drop-off bar + beat (fires only when PMI charged + value + balance)
             }
 
             html += `
@@ -9175,6 +9176,35 @@
         var legend = segs.map(function (s) { return '<span style="display:inline-flex; align-items:center; gap:4px; margin-right:12px;"><span style="width:8px; height:8px; border-radius:2px; background:' + s.color + '; display:inline-block;"></span>' + s.label + ' ' + $(s.amt) + '</span>'; }).join('');
         return '<div style="margin:2px 0 12px;"><div style="display:flex; height:14px; border-radius:3px; overflow:hidden; background:rgba(255,255,255,0.06);">' + bars + '</div>' +
                '<div style="font-size:10px; font-family:var(--font-mono); color:rgba(255,255,255,0.7); margin-top:5px; line-height:1.8;">' + legend + '</div></div>';
+    }
+    // §18.9 — PMI DROP-OFF bar + beat (Mortgage Copy Bank R159-162). Fires ONLY when PMI is actually charged
+    // (pmiMonthly>0) AND the mortgage balance AND the linked home value are both sourced. PMI is a FIRST-mortgage
+    // LTV charge, so the equity math is mortgage-only (home value − THIS mortgage's balance) — a HELOC does not
+    // move PMI drop-off, and this keeps the bar and the beat in agreement. Reuses the §16.1 stacked equity bar
+    // (L48 — same helper, no forked visual) and overlays a 20%-equity marker (the 80% LTV line PMI ends at).
+    // Display-only (LOCK-3), sourced-or-blank — nothing renders unless all three inputs exist and equity < 20%.
+    function _moatPmiBarHTML(id, acc) {
+        var pmi = _num(acc.pmiMonthly);
+        if (pmi <= 0) return '';
+        var bal = _num(acc.value);
+        if (bal <= 0) return '';
+        var prop = acc.linkedAssetId ? (state.accounts || []).find(function (a) { return a.id === acc.linkedAssetId; }) : null;
+        var H = prop ? _num(prop.value) : 0;
+        if (H <= 0) return '';                                   // home value is sourced from the linked property
+        var equity = H - bal, equityPct = equity / H * 100;
+        if (equityPct >= 20) return '';                          // already >=20% equity — PMI should be gone, nothing to nudge
+        var principalToPmiEnd = bal - 0.80 * H;                  // pay this down to reach 80% LTV / 20% equity
+        if (principalToPmiEnd <= 0) return '';
+        var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
+        var bar = _groundsEquityBarHTML({ val: H, eq: equity, debt: bal, liens: { mortgage: bal, heloc: 0, other: 0 } });
+        var beat = 'You\'re about ' + Math.round(equityPct) + '% to 20% equity — ~' + $(principalToPmiEnd) +
+                   ' more in principal. Crossing 20% typically ends PMI, ~' + $(pmi) + '/mo back in your pocket.';
+        return '<div style="margin-top:16px; padding:14px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:4px;">' +
+               '<div style="color:var(--teal-mid); font-weight:bold; font-size:13px; margin-bottom:8px;">🎯 PMI drop-off</div>' +
+               '<div style="position:relative;">' + bar +
+                 '<div style="position:absolute; top:2px; left:20%; width:0; height:14px; border-left:2px dotted var(--gold);" title="20% equity — PMI typically ends"></div>' +
+               '</div>' +
+               '<div style="font-size:11px; color: rgba(255,255,255,0.72); line-height:1.5; margin-top:8px;">' + beat + '</div></div>';
     }
     // §16.5 — linked-lien MONTHLY payments, split mortgage vs HELOC, from each lien's REQUIRED payment (minPmt
     // = P&I only for a mortgage; escrow is NOT here, so taxes/insurance are never double-counted, R172). Draws
