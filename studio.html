@@ -6423,6 +6423,51 @@
                      '<div class="modal-tt" style="position:fixed; top:0; bottom:auto; left:0; width:420px;">' + tt + '</div></span>';
     }
 
+    // §18.3 — RETURN-NAV (Mortgage Copy Bank R137). A linked room is reached one-way (the link jump, or the
+    // linked-liabilities list), so give the destination a trail back: a "← Back to {room}" button for every
+    // link that actually exists. Debt side → its single linked collateral asset; asset side → every debt
+    // secured against it, first-lien (mortgage) before second-lien (HELOC). Wayfinding beats flavor here: the
+    // button names the account TYPE in plain terms ("your Mortgage" / "your HELOC" / "your Home"), NOT the
+    // branded room name — a "Back" button must read as clarity, not a metaphor to decode (brand names stay in
+    // DI beats and titles only). LOCK-3 display-only: reuses openAccountModal + the existing
+    // linkedAssetId field and adds no state; when a link is severed (§18.4) the account re-renders and the
+    // button simply stops being emitted, so #7 (unlink) and #9 (mirror) share this seam for free.
+    function _lienRank(a) {
+        var id = String(a && a.baseId || '');
+        if (id.indexOf('mortgage') === 0) return 0;   // first lien
+        if (id.indexOf('heloc') === 0) return 1;       // second lien
+        return 2;
+    }
+    // Plain account-TYPE label for the return-nav button (type-first clarity, not the branded room name).
+    function _returnNavLabel(base) {
+        var id = String(base && base.id || '');
+        if (id.indexOf('mortgage') === 0) return 'your Mortgage';
+        if (id.indexOf('heloc') === 0) return 'your HELOC';
+        if (id.indexOf('property') === 0) return 'your Home';
+        return base && base.title ? 'your ' + base.title : 'the linked account';   // sourced-or-blank fallback
+    }
+    function _returnNavHTML(acc, base) {
+        if (!acc || !base) return '';
+        var targets = [];
+        if (base.taxCode === 'debt' && acc.linkedAssetId) {
+            var la = state.accounts.find(function (a) { return a.id === acc.linkedAssetId; });
+            if (la) targets.push(la);
+        } else if (base.taxCode === 'physical') {
+            targets = (state.accounts || []).filter(function (a) { return a.linkedAssetId === acc.id; });
+            targets.sort(function (a, b) { return _lienRank(a) - _lienRank(b); });   // first-lien first; stable otherwise
+        }
+        if (!targets.length) return '';
+        var btns = targets.map(function (t) {
+            var tBase = getBaseType(t.baseId);
+            var room = _returnNavLabel(tBase);   // type-first plain label, sourced from the account type
+            return '<button class="add-space-btn" style="width:auto; padding:4px 10px; border:none; background:transparent; '
+                 + 'border-bottom:1px dashed var(--teal-mid); color:var(--teal-mid); font-size:11px;" '
+                 + 'onclick="openAccountModal(\'' + t.id + '\')" '
+                 + 'title="Return to the account you came from">← Back to ' + room + '</button>';
+        }).join('');
+        return '<div id="modal-return-nav" style="margin-bottom:14px; display:flex; gap:10px; flex-wrap:wrap;">' + btns + '</div>';
+    }
+
     // --- MODAL ENGINE (BACK OF CARD) ---
     window.openAccountModal = function(id) {
         activeModalId = id;
@@ -6433,7 +6478,9 @@
         _diSetTitle(acc, base);   // §2 title hover for bank rooms; plain title otherwise
 
         let html = '';
-        
+
+        html += _returnNavHTML(acc, base);   // §18.3 return-nav — trail back to the room(s) this one is linked with
+
         // W2/W6 — on "Begin Interior Decorating" the whole settings/education region collapses so the
         // holdings area is the SOLE focus. Everything appended below sits inside #modal-edu-collapse
         // (closed just before the holdings blocks); the account-name header is a separate element set by
