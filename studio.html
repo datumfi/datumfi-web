@@ -6444,11 +6444,20 @@
     // The ONE outside link affordance: a clickable jump-line to the linked account(s). Type-first honest labels
     // via _returnNavLabel; sourced-or-blank (renders nothing when there are no links). LOCK-3 display-only —
     // reuses openAccountModal + the existing linkedAssetId field, no new state.
-    function _linkedJumpLine(label, accts, color) {
+    // removeCtx (Commit 2b, optional) = { selfId, selfIsDebt } — when present each chip gets a ✕ that unlinks the
+    // pair non-destructively. Chip = jump; ✕ = unlink. selfIsDebt tells us which side we're on so _unlinkSecured
+    // is always called (debtId, assetId): on a debt the chip is the asset, on an asset the chip is the debt.
+    function _linkedJumpLine(label, accts, color, removeCtx) {
         if (!accts || !accts.length) return '';
         var chips = accts.map(function (a) {
             var t = _returnNavLabel(getBaseType(a.baseId));
-            return '<span onclick="openAccountModal(\'' + a.id + '\')" style="cursor:pointer; border-bottom:1px dotted currentColor;" title="Open this account">' + t + '</span>';
+            var chip = '<span onclick="openAccountModal(\'' + a.id + '\')" style="cursor:pointer; border-bottom:1px dotted currentColor;" title="Open this account">' + t + '</span>';
+            if (removeCtx) {
+                var debtId = removeCtx.selfIsDebt ? removeCtx.selfId : a.id;
+                var assetId = removeCtx.selfIsDebt ? a.id : removeCtx.selfId;
+                chip += '<span onclick="_unlinkSecured(\'' + debtId + '\', \'' + assetId + '\')" style="cursor:pointer; margin-left:5px; opacity:0.55; font-weight:bold;" title="Unlink — separates the two, deletes nothing">✕</span>';
+            }
+            return chip;
         }).join(' · ');
         return '<div style="margin-bottom: 20px; font-family: var(--font-mono); font-size: 10px; color: ' + (color || 'var(--danger)') + ';">' + label + ' ' + chips + '</div>';
     }
@@ -6491,8 +6500,8 @@
                 ? '<div class="input-label modal-tt-wrap" style="color:var(--teal-mid); cursor:help; margin-bottom:4px;">Linked collateral (calculates equity)<div class="modal-tt" style="left:0; right:auto;"><strong>Your collateral</strong>This line is secured by the linked property. Your equity is what backs it — and what\'s at risk if it goes unpaid.</div></div>'
                 : '<div class="input-label" style="color:var(--teal-mid); margin-bottom:4px;">Linked collateral (calculates equity)</div>')
             : '<div class="input-label" style="color:var(--danger); margin-bottom:4px;">Liabilities secured by this property</div>';
-        // prominent 🔗 status line — clickable nav, at the control, sourced-or-blank
-        if (linkedNow.length) out += _linkedJumpLine('🔗 ' + statusLabel + ':', linkedNow, statusColor);
+        // prominent 🔗 status line — clickable nav + inline ✕ unlink (Commit 2b), at the control, sourced-or-blank
+        if (linkedNow.length) out += _linkedJumpLine('🔗 ' + statusLabel + ':', linkedNow, statusColor, { selfId: id, selfIsDebt: isDebt });
         // the disclosure: link an existing + draft a new (hidden on a single-link debt that's already linked)
         if (canManage) {
             var rows = linkable.map(function (a) {
@@ -6542,6 +6551,43 @@
             b.onclick = function () { close(); createLinkedLiability(assetId, b.getAttribute('data-base')); };
         });
         ov.style.display = 'flex';
+    };
+
+    // §18.3 (consolidated · Commit 2b) — NON-DESTRUCTIVE unlink. It SEPARATES two accounts; it deletes NOTHING.
+    // _unlinkApply is the pure mutation (gate-driven, no DOM); _unlinkSecured is the confirm wrapper (reuses
+    // showBrandConfirm, L48). Order matters: re-derive the §18.2-shared escrow DOWN to the property's OWN field
+    // FIRST — only when that field is empty (sourced-or-blank: restore a real figure, never invent) — THEN null
+    // the single link-of-record on the debt. The asset drops the debt by derivation (its list filters
+    // linkedAssetId === asset.id) — no second field, no orphan, no removeInstance. Both accounts survive intact.
+    function _unlinkApply(debtId, assetId) {
+        var debt = state.accounts.find(function (a) { return a.id === debtId; });
+        var asset = state.accounts.find(function (a) { return a.id === assetId; });
+        if (!debt || !asset) return;
+        // 1) re-derive shared escrow onto the Grounds' OWN fields before severing (mortgage↔property only)
+        if (String(getBaseType(debt.baseId).id).indexOf('mortgage') === 0) {
+            if (_num(debt.propTaxAnnual) > 0 && !(_num(asset.propTaxYr) > 0)) asset.propTaxYr = debt.propTaxAnnual;
+            if (_num(debt.insAnnual) > 0 && !(_num(asset.homeInsYr) > 0)) asset.homeInsYr = debt.insAnnual;
+        }
+        // 2) sever the ONE link-of-record; the asset-side list drops it by derivation
+        debt.linkedAssetId = null;
+    }
+    window._unlinkSecured = function (debtId, assetId) {
+        var debt = state.accounts.find(function (a) { return a.id === debtId; });
+        var asset = state.accounts.find(function (a) { return a.id === assetId; });
+        if (!debt || !asset) return;
+        var debtLabel = _returnNavLabel(getBaseType(debt.baseId));     // type-first: Mortgage / HELOC
+        var assetLabel = _returnNavLabel(getBaseType(asset.baseId));   // type-first: Real Estate
+        showBrandConfirm({
+            title: 'Unlink this ' + debtLabel + ' from ' + assetLabel + '?',
+            message: 'This just separates them — nothing is deleted. Each keeps its own values.',
+            confirmText: 'Unlink',
+            cancelText: 'Keep linked',
+            onConfirm: function () {
+                _unlinkApply(debtId, assetId);
+                renderInputs(); updateSVGs(); updateAnalysisText();
+                if (activeModalId && typeof openAccountModal === 'function') openAccountModal(activeModalId);
+            }
+        });
     };
 
     // --- MODAL ENGINE (BACK OF CARD) ---
