@@ -3011,6 +3011,22 @@
       return (isNeg ? '-' : '') + '$' + out;
     }
 
+    // #407 §19.1c — settled-value display for a currency field: integers stay clean ($20,000), while a
+    // fractional value shows EXACTLY 2 decimals ($20,000.50, not $20,000.5). Distinct from formatCurrency,
+    // which preserves keystrokes as-typed (a trailing '.', a single decimal) so live entry isn't padded
+    // out from under the user. Use this for rendering STORED values; use formatCurrency in the live listener.
+    function formatCurrencyDisplay(val) {
+      if (val === '' || val === null || val === undefined) return '';
+      if (String(val).replace(/[^0-9]/g, '') === '') return '';   // no digits -> blank (matches formatCurrency)
+      let n = _num(val);                                           // decimal-safe parse (keeps the '.')
+      let neg = n < 0; n = Math.abs(n);
+      let hasFrac = Math.round(n * 100) % 100 !== 0;
+      let body = n.toLocaleString('en-US', hasFrac
+        ? { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+        : { maximumFractionDigits: 0 });
+      return (neg ? '-' : '') + '$' + body;
+    }
+
     document.addEventListener('input', function (e) {
       if (e.target.classList.contains('curr-format')) {
         let originalLen = e.target.value.length;
@@ -3021,11 +3037,12 @@
       }
     });
 
-    // #407 §19.1 — normalize a currency field on blur: drop a dangling trailing '.' left mid-entry
-    // (e.g. "$1,234." -> "$1,234"). Magnitude is unchanged, so no need to re-fire downstream handlers.
+    // #407 §19.1/§19.1c — normalize a currency field on blur: reformat the settled value so a bare trailing
+    // '.' is dropped AND a fractional entry is padded to 2 decimals ("$1,234." -> "$1,234", "$20,000.5" ->
+    // "$20,000.50"). Purely cosmetic — same number — so no need to re-fire downstream handlers.
     document.addEventListener('focusout', function (e) {
-      if (e.target.classList && e.target.classList.contains('curr-format') && /\.$/.test(e.target.value)) {
-        e.target.value = e.target.value.replace(/\.$/, '');
+      if (e.target.classList && e.target.classList.contains('curr-format') && e.target.value.trim() !== '') {
+        e.target.value = formatCurrencyDisplay(e.target.value);
       }
     });
 
@@ -3800,8 +3817,8 @@
       else if (base.type === 'primary') ownerTag = `(${priName})`;
       else if (base.type === 'joint' && isCo) ownerTag = `(JOINT)`;
 
-      let valStr = acc.value ? formatCurrency(acc.value.toString()) : '';
-      let inflowStr = acc.inflow ? formatCurrency(acc.inflow.toString()) : '';
+      let valStr = acc.value ? formatCurrencyDisplay(acc.value) : '';        // #407 §19.1c — pad cents on the card
+      let inflowStr = acc.inflow ? formatCurrencyDisplay(acc.inflow) : '';   // #407 §19.1c
 
       let extraRows = '';
 
@@ -7446,8 +7463,8 @@
             
             html += `
             <div class="field-row">
-                <div>${_dLbl(base, 'Current Balance', 'What you still owe', 'The payoff figure today — what it\'d take to clear this loan right now, before any more interest. This is the number the estate subtracts from your net worth.', 'color:var(--gold);')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.value?.toString()||'')}" oninput="updateValueWithoutRender('${id}', this.value)"></div>
-                <div>${_dLbl(base, 'Original Amount', 'Where it started', 'The loan\'s opening balance. We compare it to today\'s balance to show how much house you\'ve bought back from the bank.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.origAmount||'')}" oninput="updateAccField('${id}', 'origAmount', this.value)"></div>
+                <div>${_dLbl(base, 'Current Balance', 'What you still owe', 'The payoff figure today — what it\'d take to clear this loan right now, before any more interest. This is the number the estate subtracts from your net worth.', 'color:var(--gold);')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.value?.toString()||'')}" oninput="updateValueWithoutRender('${id}', this.value)"></div>
+                <div>${_dLbl(base, 'Original Amount', 'Where it started', 'The loan\'s opening balance. We compare it to today\'s balance to show how much house you\'ve bought back from the bank.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.origAmount||'')}" oninput="updateAccField('${id}', 'origAmount', this.value)"></div>
             </div>
             ${base.title === 'HELOC' ? _helocLimitFieldHTML(id, acc) : ''}
             ${base.title === 'HELOC' ? _helocPhaseFieldHTML(id, acc) : ''}
@@ -7469,8 +7486,8 @@
                 <div>${_dLbl(base, 'Maturity Date', 'The finish line', 'The contractual payoff date if you only ever pay the minimum. Extra payments beat this date; we\'ll show how much sooner.', '', 'right')}<input type="date" class="small-field" value="${acc.maturityDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'maturityDate', this.value)"></div>
             </div>
             <div class="field-row">
-                <div>${_dLbl(base, 'Minimum Payment', 'The required amount', 'Your contractual principal + interest each month. Escrow (taxes/insurance) may be collected on top — see the escrow fields.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.minPmt||'')}" oninput="updateAccField('${id}', 'minPmt', this.value)"></div>
-                <div>${_dLbl(base, 'Additional Payment', 'Your accelerator', 'Anything you add on top of the minimum goes straight at principal — it shrinks both the payoff clock and the lifetime interest. Even a little compounds.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.addPmt||'')}" oninput="updateAccField('${id}', 'addPmt', this.value)"></div>
+                <div>${_dLbl(base, 'Minimum Payment', 'The required amount', 'Your contractual principal + interest each month. Escrow (taxes/insurance) may be collected on top — see the escrow fields.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.minPmt||'')}" oninput="updateAccField('${id}', 'minPmt', this.value)"></div>
+                <div>${_dLbl(base, 'Additional Payment', 'Your accelerator', 'Anything you add on top of the minimum goes straight at principal — it shrinks both the payoff clock and the lifetime interest. Even a little compounds.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.addPmt||'')}" oninput="updateAccField('${id}', 'addPmt', this.value)"></div>
             </div>
             <div class="field-row" style="grid-template-columns: 1fr;">
                 <div>${_dLbl(base, 'Next Payment Date', 'The clock\'s start', 'We count the payoff timeline from here. Setting it keeps the estimated payoff date honest.')}<input type="date" class="small-field" value="${acc.nextPmtDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'nextPmtDate', this.value)"></div>
@@ -7485,12 +7502,12 @@
                 <div style="color:var(--teal-mid); font-weight:bold; font-size:13px; margin-bottom:6px;">🏦 Escrow — the monthly bundle</div>
                 <div style="font-size:11px; color: rgba(255,255,255,0.6); line-height:1.45; margin-bottom:12px;">Escrow is the slice of your monthly payment that isn't principal or interest — your lender collects property taxes, homeowner's insurance, and (if you're under ~20% equity) PMI, then pays those bills for you. It's real money you owe every month, just not to the loan itself.</div>
                 <div class="field-row">
-                    <div>${_dLbl(base, 'Property Tax (yr)', 'The town\'s cut', 'What the county charges yearly on the home. Usually escrowed into your monthly payment. Part of the real cost of owning, not just borrowing.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.propTaxAnnual||'')}" oninput="updateAccField('${id}', 'propTaxAnnual', this.value)"></div>
-                    <div>${_dLbl(base, 'Homeowners / Hazard Insurance (yr)', 'Protecting the asset', 'Homeowner\'s/hazard insurance, billed yearly, usually escrowed. Required by the lender while there\'s a balance.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.insAnnual||'')}" oninput="updateAccField('${id}', 'insAnnual', this.value)"></div>
+                    <div>${_dLbl(base, 'Property Tax (yr)', 'The town\'s cut', 'What the county charges yearly on the home. Usually escrowed into your monthly payment. Part of the real cost of owning, not just borrowing.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.propTaxAnnual||'')}" oninput="updateAccField('${id}', 'propTaxAnnual', this.value)"></div>
+                    <div>${_dLbl(base, 'Homeowners / Hazard Insurance (yr)', 'Protecting the asset', 'Homeowner\'s/hazard insurance, billed yearly, usually escrowed. Required by the lender while there\'s a balance.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.insAnnual||'')}" oninput="updateAccField('${id}', 'insAnnual', this.value)"></div>
                 </div>
                 <div class="field-row">
-                    <div>${_dLbl(base, 'Monthly PMI', 'The lender\'s safety net', 'Private Mortgage Insurance — charged while your equity is under ~20%. It protects the lender, not you, and drops off once you cross the line. Worth targeting.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.pmiMonthly||'')}" oninput="updateAccField('${id}', 'pmiMonthly', this.value)"></div>
-                    <div>${_dLbl(base, 'Other (yr)', 'Everything else escrowed', 'Anything else that rides with this mortgage each year — flood insurance, lender-placed coverage, an extra assessment. Enter it here and it joins your true all-in monthly. Leave it blank and it simply won\'t count.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.mortgageOtherCost||'')}" oninput="updateAccField('${id}', 'mortgageOtherCost', this.value)"></div>
+                    <div>${_dLbl(base, 'Monthly PMI', 'The lender\'s safety net', 'Private Mortgage Insurance — charged while your equity is under ~20%. It protects the lender, not you, and drops off once you cross the line. Worth targeting.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.pmiMonthly||'')}" oninput="updateAccField('${id}', 'pmiMonthly', this.value)"></div>
+                    <div>${_dLbl(base, 'Other (yr)', 'Everything else escrowed', 'Anything else that rides with this mortgage each year — flood insurance, lender-placed coverage, an extra assessment. Enter it here and it joins your true all-in monthly. Leave it blank and it simply won\'t count.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.mortgageOtherCost||'')}" oninput="updateAccField('${id}', 'mortgageOtherCost', this.value)"></div>
                 </div>
                 <div id="modal-escrow-foot-${id}" style="display:${hasEscrow(acc)?'block':'none'}; font-size:11px; color: rgba(255,255,255,0.72); line-height:1.5; margin-top:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;">${_escrowFooter(acc)}</div>
             </div>`;
@@ -7611,11 +7628,11 @@
                     ${_carryMirrorField(id, acc, 'insAnnual', 'homeInsYr', 'Homeowners / Hazard Insurance (yr)', 'Homeowners insurance', 'What you pay each year to insure the home itself against damage — separate from the mortgage. Enter your policy\'s annual premium.', 'right')}
                 </div>
                 <div class="field-row">
-                    <div><span class="input-label modal-tt-wrap" style="cursor:help;">Est. Maintenance / Repairs (yr)<div class="modal-tt" style="left:0; right:auto;"><strong>est. · ~1% of value</strong>A rough estimate — about 1% of the home's value is a common rule of thumb. It's only a starting point; your own number always wins.</div></span><input type="text" class="small-field curr-format" placeholder="${maintPH>0 ? 'est. $'+maintPH.toLocaleString('en-US') : '$0'}" value="${formatCurrency(acc.maintYr||'')}" oninput="updateAccField('${id}', 'maintYr', this.value)"></div>
-                    <div><span class="input-label modal-tt-wrap" style="cursor:help;">HOA / Condo Fees (yr)<div class="modal-tt" style="right:0; left:auto;"><strong>HOA / condo dues</strong>Yearly dues for a homeowners or condo association, where you have one. Leave it blank if this home has none.</div></span><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.hoaYr||'')}" oninput="updateAccField('${id}', 'hoaYr', this.value)"></div>
+                    <div><span class="input-label modal-tt-wrap" style="cursor:help;">Est. Maintenance / Repairs (yr)<div class="modal-tt" style="left:0; right:auto;"><strong>est. · ~1% of value</strong>A rough estimate — about 1% of the home's value is a common rule of thumb. It's only a starting point; your own number always wins.</div></span><input type="text" class="small-field curr-format" placeholder="${maintPH>0 ? 'est. $'+maintPH.toLocaleString('en-US') : '$0'}" value="${formatCurrencyDisplay(acc.maintYr||'')}" oninput="updateAccField('${id}', 'maintYr', this.value)"></div>
+                    <div><span class="input-label modal-tt-wrap" style="cursor:help;">HOA / Condo Fees (yr)<div class="modal-tt" style="right:0; left:auto;"><strong>HOA / condo dues</strong>Yearly dues for a homeowners or condo association, where you have one. Leave it blank if this home has none.</div></span><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.hoaYr||'')}" oninput="updateAccField('${id}', 'hoaYr', this.value)"></div>
                 </div>
                 <div class="field-row" style="grid-template-columns: 1fr;">
-                    <div><span class="input-label modal-tt-wrap" style="cursor:help;">Utilities — electric / gas / water (yr)<div class="modal-tt" style="left:0; right:auto;"><strong>Link or enter</strong>The recurring bills to keep the lights on and water running — electric, gas, water. Link an account to keep it current, or enter your own yearly figure.</div></span><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.utilYr||'')}" oninput="updateAccField('${id}', 'utilYr', this.value)"></div>
+                    <div><span class="input-label modal-tt-wrap" style="cursor:help;">Utilities — electric / gas / water (yr)<div class="modal-tt" style="left:0; right:auto;"><strong>Link or enter</strong>The recurring bills to keep the lights on and water running — electric, gas, water. Link an account to keep it current, or enter your own yearly figure.</div></span><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.utilYr||'')}" oninput="updateAccField('${id}', 'utilYr', this.value)"></div>
                 </div>
                 <div style="display:flex; justify-content: space-between; margin-top:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;">
                     <span class="input-label" style="color:var(--white);">Total Annual Carrying Cost</span>
@@ -8051,9 +8068,11 @@
         const acc = state.accounts.find(a => a.id === id);
         if(acc) {
             acc.value = Math.min(100000000000, Math.round(_num(valStr) * 100) / 100);   // #393 $100B ceiling · #407 §19.1 cents-safe (_num keeps the decimal; parseInt-strip concatenated cents -> 100x)
-            // Instantly sync the front input field if it exists
+            // Instantly sync the front input field if it exists — but NOT while the user is typing in it
+            // (#407 §19.1c: reformatting a focused field would pad "$20,000.5" out from under the keystrokes;
+            //  the live curr-format listener already keeps the focused field as-typed).
             let frontInp = document.getElementById('room-val-inp-' + id);
-            if(frontInp) frontInp.value = formatCurrency(acc.value.toString());
+            if(frontInp && document.activeElement !== frontInp) frontInp.value = formatCurrencyDisplay(acc.value);
             
             updateSVGs();
             updateAnalysisText();
@@ -8610,7 +8629,7 @@
         var hh = _helocHeadroomHTML(acc);
         return `
             <div class="field-row" style="grid-template-columns: 1fr;">
-                <div>${_dLbl(getBaseType(acc.baseId), 'Credit Limit')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrency(acc.helocCreditLimit||'')}" oninput="updateAccField('${id}', 'helocCreditLimit', this.value)"></div>
+                <div>${_dLbl(getBaseType(acc.baseId), 'Credit Limit')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.helocCreditLimit||'')}" oninput="updateAccField('${id}', 'helocCreditLimit', this.value)"></div>
             </div>
             <div id="modal-heloc-headroom-${id}" style="display:${hh ? 'block' : 'none'}; font-size:11px; color: rgba(255,255,255,0.72); line-height:1.5; margin:-6px 0 14px;">${hh}</div>`;
     }
@@ -9124,12 +9143,12 @@
         var m = _linkedMortgageWith(id, moatField);
         if (m) {
             return '<div>' + tt +
-                '<input type="text" class="small-field curr-format" value="' + formatCurrency(m[moatField] || '') + '" readonly ' +
+                '<input type="text" class="small-field curr-format" value="' + formatCurrencyDisplay(m[moatField] || '') + '" readonly ' +
                 'style="opacity:0.7; cursor:not-allowed; border-style:dashed;" title="Set on the linked mortgage (The Moat)">' +
                 '<div style="font-size:10px; color:var(--teal-mid); margin-top:3px; font-family:var(--font-mono);">🔗 mirrored from The Moat</div></div>';
         }
         return '<div>' + tt +
-            '<input type="text" class="small-field curr-format" placeholder="$0" value="' + formatCurrency(acc[groundField] || '') +
+            '<input type="text" class="small-field curr-format" placeholder="$0" value="' + formatCurrencyDisplay(acc[groundField] || '') +
             '" oninput="updateAccField(\'' + id + '\', \'' + groundField + '\', this.value)"></div>';
     }
     // §4.16 TOTAL — sums the ACTUAL entered fields only (blank = 0, never fabricated). The maint est. is a

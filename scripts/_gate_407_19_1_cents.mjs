@@ -41,8 +41,10 @@ need("capped at 2 decimals",  formatCurrency('1234.567'), '$1,234.56');
 need("integer no-regression", formatCurrency('1000000'),  '$1,000,000');
 need("empty stays empty",     formatCurrency(''),         '');
 
-// on-blur normalizer present in the served bytes (strips a dangling trailing '.')
-const blurOk = /focusout[\s\S]*?curr-format[\s\S]*?replace\(\/\\\.\$\/, ''\)/.test(s);
+// on-blur normalizer present in the served bytes. §19.1 stripped a dangling trailing '.'; §19.1c
+// superseded that by reformatting through formatCurrencyDisplay (which drops the trailing '.' via _num
+// AND pads cents). Accept either wiring so this gate survives the §19.1c evolution.
+const blurOk = /focusout[\s\S]*?curr-format[\s\S]*?(replace\(\/\\\.\$\/, ''\)|formatCurrencyDisplay\(e\.target\.value\))/.test(s);
 checks.push(['on-blur trailing-dot normalizer wired', blurOk]);
 
 let pass = 0;
