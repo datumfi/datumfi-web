@@ -8047,6 +8047,13 @@
                 // §18.9 PMI drop-off bar — balance change moves equity, so re-render it live too.
                 const pmiBar2 = document.getElementById(`modal-pmi-bar-${id}`);
                 if(pmiBar2) pmiBar2.innerHTML = _moatPmiBarHTML(id, acc);
+                // §0.3b escrow footer — its PMI sub-line is now equity-gated, so a balance change must refresh it
+                // too (updateAccField already does; this closes the balance-path gap). Sourced-or-blank show/hide.
+                const escrowFoot2 = document.getElementById(`modal-escrow-foot-${id}`);
+                if(escrowFoot2) {
+                    if(hasEscrow(acc)) { escrowFoot2.style.display = 'block'; escrowFoot2.innerHTML = _escrowFooter(acc); }
+                    else { escrowFoot2.style.display = 'none'; }
+                }
                 // §4.2/§4.3 payoff intelligence refresh (balance change moves lifetime interest too).
                 const piEl2 = document.getElementById(`modal-payoff-intel-${id}`);
                 if(piEl2) piEl2.innerHTML = _payoffIntelHTML(id, acc);
