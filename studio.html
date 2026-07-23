@@ -2995,9 +2995,20 @@
       if (num === '') return '';
       let isNeg = num.startsWith('-');
       num = num.replace(/-/g, '');
-      let parsed = parseInt(num, 10);
-      if (isNaN(parsed)) return '';
-      return (isNeg ? '-' : '') + '$' + parsed.toLocaleString('en-US');
+      // #407 §19.1 — keep cents: parseInt truncated the fraction on every keystroke. Split on the first
+      // decimal point, format the integer part with thousands separators, and preserve up to 2 typed
+      // decimals — including a bare trailing '.' mid-entry so the user can keep typing (normalized on blur).
+      let dot = num.indexOf('.');
+      let intStr = dot === -1 ? num : num.slice(0, dot);
+      let fracStr = dot === -1 ? '' : num.slice(dot + 1).replace(/\./g, '').slice(0, 2);
+      let intNum = parseInt(intStr, 10);
+      if (isNaN(intNum)) {
+        if (dot === -1) return '';   // no digits at all
+        intNum = 0;                  // leading '.' before any integer digit -> treat as 0
+      }
+      let out = intNum.toLocaleString('en-US');
+      if (dot !== -1) out += '.' + fracStr;
+      return (isNeg ? '-' : '') + '$' + out;
     }
 
     document.addEventListener('input', function (e) {
@@ -3007,6 +3018,14 @@
         e.target.value = formatCurrency(e.target.value);
         let newLen = e.target.value.length;
         e.target.setSelectionRange(caretPos + (newLen - originalLen), caretPos + (newLen - originalLen));
+      }
+    });
+
+    // #407 §19.1 — normalize a currency field on blur: drop a dangling trailing '.' left mid-entry
+    // (e.g. "$1,234." -> "$1,234"). Magnitude is unchanged, so no need to re-fire downstream handlers.
+    document.addEventListener('focusout', function (e) {
+      if (e.target.classList && e.target.classList.contains('curr-format') && /\.$/.test(e.target.value)) {
+        e.target.value = e.target.value.replace(/\.$/, '');
       }
     });
 
