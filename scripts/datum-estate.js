@@ -387,14 +387,16 @@
       // This early group carries only the label/title + an invisible .grounds-rect anchor.
       let gSVG = document.createElementNS("http://www.w3.org/2000/svg", "g");
       if (_moatDebts.length) {
-          let _grLabel = getBaseType(propertyAccount.baseId).meta.toUpperCase() + _lienMetaSuffix(_moatDebts);   // decision 1 — brand flavor on the canvas, all liens named
+          // §1.5 THE YARD — 3-line stack applied to the EXISTING merged tile (Correction B: reuse this tile, no new art).
+          let _grLabel = getBaseType(propertyAccount.baseId).meta.toUpperCase() + _lienMetaSuffix(_moatDebts);   // brand sub-line (decision 1), all liens named
+          let _eqFig = (parseFloat(propertyAccount.value) || 0) > 0 ? _eqStr(_moatEq) : '';                      // sourced-or-blank: no home value → label with no figure (L47, R86)
           gSVG.innerHTML = `
-          <title>Physical asset + secured liabilities. Click for detail.</title>
-          ${_linkChipSVG(gX + gW/2 - 13, gY + gH - 66, _lienMirrorNotice(_moatDebts, 'home'))}
+          <title>The Yard — this home and its linked debts, combined. Click for the true cost of ownership.</title>
+          ${_linkChipSVG(gX + gW/2 - 13, gY + gH - 82, _lienMirrorNotice(_moatDebts, 'home'))}
           <rect x="${gX}" y="${gY}" width="${gW}" height="${gH}" class="grounds-rect" style="stroke:none; fill:none; pointer-events:none;" />
-          <text x="${gX + gW/2}" y="${gY + gH - 38}" class="grounds-title" style="fill: ${_grLine};">${_grLabel}</text>
-          <text x="${gX + gW/2}" y="${gY + gH - 20}" class="grounds-title" style="fill: ${_grLine}; opacity:0.7; font-size:11px; letter-spacing:0.12em;">NET EQUITY</text>
-          <text x="${gX + gW/2}" y="${gY + gH - 4}" class="grounds-title" style="fill: ${_grValColor}; font-size:16px;">${_eqStr(_moatEq)}</text>
+          <text x="${gX + gW/2}" y="${gY + gH - 48}" class="grounds-title" style="fill: ${_grLine}; font-size:20px; letter-spacing:0.16em;">THE YARD</text>
+          <text x="${gX + gW/2}" y="${gY + gH - 26}" class="grounds-title" style="fill: ${_grLine}; opacity:0.85;">${_grLabel}</text>
+          <text x="${gX + gW/2}" y="${gY + gH - 6}" class="grounds-title" style="fill: ${_grValColor}; font-size:14px;">Net Equity: ${_eqFig}</text>
       `;
       } else {
           gSVG.innerHTML = `
@@ -726,7 +728,7 @@
         gf.setAttribute('d', fillD);
         gf.setAttribute('fill-rule', 'evenodd');
         gf.setAttribute('style', 'fill:url(#' + _grGrad + '); stroke:none; ' + (_moatDebts.length ? 'cursor:pointer; pointer-events:auto;' : 'pointer-events:none;'));
-        if (_moatDebts.length) gf.setAttribute('onclick', "openAccountModal('" + propertyAccount.id + "')");
+        if (_moatDebts.length) gf.setAttribute('onclick', "openYardModal('" + propertyAccount.id + "')");   // §1.2 — the merged tile now opens The Yard, not the Real Estate modal
         svgContainer.insertBefore(gf, svgContainer.firstChild);            // behind the rooms (frame backdrop)
 
         var gb = document.createElementNS("http://www.w3.org/2000/svg", "path");

@@ -9832,6 +9832,155 @@
         ov.style.display = 'flex';
     };
 
+    // ═══════════ 🌳 THE YARD — combined cost-of-ownership room (Yard Copy Bank) ═══════════
+    // Canvas-only: born when a linked Real Estate square carries >=1 lien; the merged tile's click opens THIS
+    // modal instead of the Real Estate modal (datum-estate.js reroute). Authors NO new numbers — assembles
+    // existing sourced fields (L48). Every term sourced-or-blank (L47): Yard = Real Estate + Mortgage and/or
+    // HELOC, so no mortgage → no P&I/escrow terms; no drawn HELOC → no line payment. Real-monthly is DE-DUPED
+    // (tax/ins counted ONCE, from carry — the §16.5 lesson): only PMI + Other are pulled from escrow.
+    function _yardLiens(propId) { return (state.accounts || []).filter(function (a) { var b = getBaseType(a.baseId); return a.linkedAssetId === propId && b && b.taxCode === 'debt'; }); }
+    function _yardMortgage(propId) { var L = _yardLiens(propId); for (var i = 0; i < L.length; i++) if (String((getBaseType(L[i].baseId) || {}).id).indexOf('mortgage') === 0) return L[i]; return null; }
+    function _yardHeloc(propId) { var L = _yardLiens(propId); for (var i = 0; i < L.length; i++) if (String((getBaseType(L[i].baseId) || {}).id).indexOf('heloc') === 0) return L[i]; return null; }
+    function _yardRealMonthly(propId) {
+        var prop = (state.accounts || []).find(function (a) { return a.id === propId; });
+        if (!prop) return 0;
+        var m = _yardMortgage(propId), h = _yardHeloc(propId);
+        var pAndI = m ? calculateTotalPmt(m) : 0;                                          // no mortgage → 0 (L47)
+        var escrowExtra = m ? (_num(m.pmiMonthly) + _num(m.mortgageOtherCost) / 12) : 0;   // PMI + Other only; tax/ins live in carry (DE-DUPE)
+        var carryMo = calcCarryTotal(prop) / 12;                                           // tax + ins + maint + HOA + util, ONCE (canonical §18.2)
+        var helocPmt = (h && _num(h.value) > 0) ? calculateTotalPmt(h) : 0;                // drawn HELOC only (Ruling 2)
+        return pAndI + escrowExtra + carryMo + helocPmt;
+    }
+    function _yardNetEquity(propId) {
+        var prop = (state.accounts || []).find(function (a) { return a.id === propId; });
+        if (!prop) return null;
+        var hv = _num(prop.value);
+        if (hv <= 0) return null;                                                          // sourced-or-blank — never imply (Property §0.4)
+        return hv - _groundsLinkedDebt(propId);
+    }
+    function _yardHouseholdIncome() {
+        if (typeof document === 'undefined' || !document.getElementById) return 0;
+        var g = function (id) { var el = document.getElementById(id); return el ? (parseInt(String(el.value || '').replace(/[^0-9]/g, ''), 10) || 0) : 0; };
+        var co = ((document.getElementById('co-arch-toggle') || {}).checked) ? g('co-salary') : 0;   // §8.4b — co only when toggle on
+        return g('pri-salary') + co;
+    }
+    function _yardYearsToRetire() {   // reuse the HELOC P8.1-safe DOB→age read (L48); null when unsourced
+        try {
+            if (typeof window === 'undefined' || typeof window.parseAgeFromDob !== 'function' || !document.getElementById) return null;
+            var cAge = window.parseAgeFromDob((document.getElementById('pri-dob') || {}).value || '');
+            var rYear = parseInt(((((document.getElementById('target-ret') || {}).value || '').replace(/\s/g, '').split('/')[1]) || ''), 10);
+            if (cAge == null || !rYear) return null;
+            var y = rYear - new Date().getFullYear();
+            return y > 0 ? y : null;
+        } catch (e) { return null; }
+    }
+    // §3.5 — the retirement-lens intelligence engine. Trait-keyed, composed (emit every rule that fires), zero
+    // hard-coded figures; silence is nuance → the calm line (Z) when nothing lights up. Verbatim R70-R77.
+    function _yardIntelligence(propId) {
+        var prop = (state.accounts || []).find(function (a) { return a.id === propId; });
+        if (!prop) return '';
+        var m = _yardMortgage(propId), h = _yardHeloc(propId);
+        if (!m && !h) return '';
+        var beats = [], yTR = _yardYearsToRetire(), hv = _num(prop.value), netEq = _yardNetEquity(propId);
+        var equityPct = (hv > 0 && netEq != null) ? (netEq / hv) : null;
+        var mBal = m ? _num(m.value) : 0, helocDrawn = !!(h && _num(h.value) > 0);
+        var helocAvail = !!(h && (_num(h.helocCreditLimit) - _num(h.value)) > 0);
+        var income = _yardHouseholdIncome(), realAnnual = _yardRealMonthly(propId) * 12;
+        var burden = income > 0 ? (realAnnual / income) : null;
+        var mAPR = m ? parseFloat(m.intRate) : NaN, mVar = !!(m && m.rateType === 'Variable'), helocVar = !!(h && h.rateType === 'Variable' && helocDrawn);
+        // RULE A — the mortgage IS a negative bond (any mortgage linked)
+        if (m) {
+            var aprHas = isFinite(mAPR) && mAPR > 0, apr = mAPR + '%';
+            beats.push('Here’s the retirement way to see this: the loan against your home behaves like a bond you’ve sold short. Its rate is a guaranteed, risk-free “return” you earn by paying it down — no market can take it away. ' + (aprHas ? ('A ' + apr + ' mortgage is a ' + apr + ' guaranteed return waiting inside your own house. ') : '') + 'Weigh that against what the same dollars might earn invested — and against the calm of owing nothing when the paychecks stop.');
+        }
+        // RULE B — payoff-before-retirement crossover
+        if (m && yTR != null && mBal > 0) {
+            var pm = payoffMonths(m);
+            if (pm.code === 'OK') {
+                var payYrs = pm.months / 12, n, clause;
+                if (payYrs <= yTR) { n = Math.max(1, Math.round(yTR - payYrs)); clause = 'is on track to be gone about ' + n + ' year' + (n === 1 ? '' : 's') + ' before you retire'; }
+                else { n = Math.max(1, Math.round(payYrs - yTR)); clause = 'still has about ' + n + ' year' + (n === 1 ? '' : 's') + ' left when you reach your target retirement date'; }
+                beats.push('At today’s pace, this loan ' + clause + '. That timing is one of the biggest levers you hold: a home paid off before the paychecks stop drops your required retirement income by a full housing payment — which can shrink the nest egg you need by roughly 25x that annual payment under a 4% draw. Carrying it into retirement isn’t wrong, but it means your portfolio must cover this payment every year the market is down too.');
+            }
+        }
+        // RULE C — variable rate into the fixed-income years
+        if ((mVar || helocVar) && yTR != null && yTR <= 10) {
+            beats.push('One structural note as retirement nears: part of this housing cost floats with rates, while the income you’ll live on will be far more fixed. A rising-rate year is survivable on a salary; it’s harder on a withdrawal plan. Many people use the working years — while income is highest — to refinance the variable piece to fixed, or to retire the floating balance first, so the payment that follows them into retirement can’t surprise them.');
+        }
+        // RULE D — HELOC as remodel/bridge tool (heloc linked, drawn OR available)
+        if (h && (helocDrawn || helocAvail)) {
+            beats.push('A line against the house is a tool with two very different edges. Used to reinvest IN the home — a kitchen, a roof, an addition that raises the property’s value — it can lift the asset side of your estate while the balance stays modest. Used to fund everyday spending, it quietly converts home equity into a monthly bill that follows you toward retirement. The same line, opposite effects. If you’re weighing a remodel, this is the cheaper-than-most way to fund it; if you’re eyeing retirement, an undrawn line is a standby safety valve you never have to use.');
+        }
+        // RULE E — equity as a retirement asset
+        if (equityPct != null && equityPct >= 0.5 && yTR != null && yTR <= 15) {
+            beats.push('You’re now more than halfway to owning this outright, and that equity is quietly becoming a retirement asset in its own right. Down the road it can be tapped without selling stocks in a down market — by downsizing, or with a reverse mortgage as a last-resort income floor. You don’t have to plan that today; just know the house is doing double duty — a place to live AND a reserve that isn’t tied to the market’s mood.');
+        }
+        // RULE F — affordability into retirement
+        if (burden != null && burden > 0.28) {
+            beats.push('Housing is taking a meaningful slice of today’s income — and today’s income is the high-water mark. The question worth sitting with: when the salary becomes a withdrawal, does this same real monthly still fit? If the answer’s tight, the working years are the time to either shrink the balance or plan the downsize — options that get harder to exercise once the paychecks stop.');
+        }
+        // RULE G — all-in leverage (BOTH mortgage AND heloc drawn)
+        if (m && mBal > 0 && helocDrawn) {
+            beats.push('Two liens ride on this house at once. Combined, they mean more of the home’s value is spoken for — and in a soft housing market, stacked debt is what can tip equity toward thin or negative. It’s not alarming while values hold and payments are made; it’s simply worth knowing that the mortgage and the line move your equity in the same direction, and that paying down the higher-rate one first (usually the line) buys back your cushion fastest.');
+        }
+        // §3.5-Z — the calm line (nothing fired)
+        if (!beats.length) beats.push('Right now the house and its financing sit in quiet balance — the costs are covered, the equity’s building, and nothing here is pulling against your retirement plan. That’s exactly where you want a home to be: an asset that works for you in the background while the plan does the heavy lifting up front.');
+        return beats.map(function (b) { return '<div style="margin-bottom:10px; line-height:1.55;">' + b + '</div>'; }).join('');
+    }
+    window.openYardModal = function (propId) {
+        var prop = (state.accounts || []).find(function (a) { return a.id === propId; });
+        if (!prop) return;
+        var m = _yardMortgage(propId), h = _yardHeloc(propId);
+        var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
+        var hov = function (label, body) { return '<span class="modal-tt-wrap" style="cursor:help;">' + label + '<div class="modal-tt" style="left:0; right:auto;"><strong>' + label + '</strong>' + body + '</div></span>'; };
+        var row = function (label, val, color) { return '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span class="input-label" style="color:rgba(255,255,255,0.65);">' + label + '</span><span style="font-family:var(--font-mono); color:' + (color || 'var(--white)') + '; font-weight:bold;">' + val + '</span></div>'; };
+        var pAndI = m ? calculateTotalPmt(m) : 0, escrowMo = m ? calculateEscrowMonthly(m) : 0;
+        var carryAnnual = calcCarryTotal(prop), helocPmt = (h && _num(h.value) > 0) ? calculateTotalPmt(h) : 0;
+        var realMonthly = _yardRealMonthly(propId), realAnnual = realMonthly * 12, netEq = _yardNetEquity(propId);
+        var income = _yardHouseholdIncome();
+        // Section A — 🏡 The Property (reuse Property §4)
+        var secA = '<div class="yard-sec"><div class="yard-h">🏡 ' + hov('The Property', 'Home value, net equity, and the carrying costs of simply keeping the home.') + '</div>' +
+            row('Home value', _num(prop.value) > 0 ? $(_num(prop.value)) : '—') +
+            row(hov('Net Equity', 'What you’d keep if you sold today — the home’s value minus everything linked against it (all mortgages and lines). For most homes this grows over time as you pay down the loans and the value climbs.'), netEq != null ? $(netEq) : '—', (netEq != null && netEq < 0) ? 'var(--danger)' : 'var(--teal-mid)') +
+            row(hov('Annual carrying cost', 'Everything it costs to simply keep this home — taxes, insurance, upkeep, and the small recurring bills — separate from any loan payment.'), carryAnnual > 0 ? $(carryAnnual) + '/yr' : '—') + '</div>';
+        // Section B — 🏰 The Mortgage (reuse Mortgage §0.3b) — only when a mortgage links
+        var secB = m ? ('<div class="yard-sec"><div class="yard-h">🏰 The Mortgage</div>' +
+            row('Balance', $(_num(m.value))) + row('APR', (parseFloat(m.intRate) || 0) > 0 ? (parseFloat(m.intRate) + '%') : '—') +
+            row('Rate type', m.rateType || '—') + row('Principal + interest', pAndI > 0 ? $(pAndI) + '/mo' : '—') +
+            row(hov('Escrow', 'The slice of your monthly payment that isn’t principal or interest — your lender collects property taxes, homeowner’s insurance, and (under ~20% equity) PMI, then pays those bills for you. Real money you owe every month, just not to the loan itself.'), escrowMo > 0 ? $(escrowMo) + '/mo' : '—') + '</div>') : '';
+        // The HELOC (when linked)
+        var secH = h ? ('<div class="yard-sec"><div class="yard-h">🍷 The HELOC</div>' + row('Balance drawn', $(_num(h.value))) + row('Monthly payment', helocPmt > 0 ? $(helocPmt) + '/mo' : '—') + '</div>') : '';
+        // Section C — 💰 The Real Cost of Ownership (NET-NEW, §3)
+        var pmiClause = (m && _num(m.pmiMonthly) > 0) ? ' PMI drops off once you cross ~20% equity.' : '';
+        var headline;
+        if (m && (escrowMo > 0 || carryAnnual > 0)) headline = 'Your mortgage is ' + $(pAndI) + '/mo in principal + interest — but the real cost of owning this home is ' + $(realMonthly) + '/mo once taxes, insurance, and upkeep are counted. That’s ' + $(realAnnual) + '/yr to keep the home, on top of what you borrowed to buy it.';
+        else if (m) headline = 'Beyond principal + interest, taxes and insurance add about ' + $(escrowMo) + '/mo — your real monthly is ' + $(pAndI + escrowMo) + '.' + pmiClause;
+        else headline = 'The real cost of keeping this home is about ' + $(realMonthly) + '/mo — ' + $(realAnnual) + '/yr — in taxes, insurance, upkeep' + (helocPmt > 0 ? ', and the line against it' : '') + '.';
+        var carryLine = carryAnnual > 0 ? '<div style="font-size:12px; color:rgba(255,255,255,0.6); margin-top:8px; line-height:1.5;">On top of the loan, this home costs about ' + $(carryAnnual) + '/yr to simply hold — property tax, insurance, upkeep, and the recurring bills. That’s the part of ownership the monthly payment never shows.</div>' : '';
+        var secC = '<div class="yard-sec" style="border-color:rgba(212,160,72,0.35);"><div class="yard-h" style="color:var(--gold);">💰 ' + hov('The Real Cost of Ownership', 'Your true monthly cost of owning — principal and interest, plus the escrow bundle (taxes, insurance, PMI), plus the yearly upkeep spread over twelve months. It’s almost always more than the mortgage alone.') + '</div>' +
+            '<div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;"><span class="input-label" style="color:var(--gold);">' + hov('Real Monthly', 'Your true monthly cost of owning — principal and interest, plus the escrow bundle (taxes, insurance, PMI), plus the yearly upkeep spread over twelve months. It’s almost always more than the mortgage alone.') + '</span><span style="font-family:var(--font-mono); color:var(--gold); font-weight:bold; font-size:20px;">' + (realMonthly > 0 ? $(realMonthly) + '/mo' : '—') + '</span></div>' +
+            row(hov('Real Annual', 'The same true cost over a full year — a cleaner number for comparing against income or planning a move. Twelve months of everything it takes to keep this home.'), realAnnual > 0 ? $(realAnnual) + '/yr' : '—') +
+            '<div style="font-size:12px; color:rgba(255,255,255,0.72); margin-top:10px; line-height:1.55;">' + headline + '</div>' + carryLine + '</div>';
+        // Section D — 📊 Share of income (sourced-or-blank; silent if no income)
+        var secD = '';
+        if (income > 0 && realAnnual > 0) {
+            var pct = Math.round(realAnnual / income * 100), coOn = !!((document.getElementById('co-arch-toggle') || {}).checked);
+            secD = '<div class="yard-sec"><div class="yard-h">📊 ' + hov('Share of income', 'How much of your income goes just to housing — the loan, the taxes, the insurance, the upkeep. It excludes food, fuel, and everyday spending. A gauge, not a verdict.') + '</div>' +
+                '<div style="font-size:12px; color:rgba(255,255,255,0.72); line-height:1.55;">Keeping this home runs about ' + pct + '% of what you' + (coOn ? ' and your co-architect' : '') + ' earn — housing only (loan, taxes, insurance, upkeep), not food, fuel, or the rest of life. A common yardstick keeps housing under ~28–30% of gross; sitting well below it in your working years is one of the quiet reasons a plan holds together. Your own number always wins.</div></div>';
+        }
+        var di = _yardIntelligence(propId);
+        var diBlock = di ? '<div class="yard-sec" style="background:rgba(93,202,165,0.05); border-color:rgba(93,202,165,0.25);"><div class="yard-h" style="color:var(--teal-mid);">🧠 Datum Intelligence</div><div style="font-size:12px; color:rgba(255,255,255,0.8);">' + di + '</div></div>' : '';
+        var ov = document.getElementById('yard-modal-overlay');
+        if (!ov) { ov = document.createElement('div'); ov.id = 'yard-modal-overlay'; ov.style.cssText = 'display:none; position:fixed; inset:0; background:rgba(0,0,0,0.72); z-index:10020; align-items:center; justify-content:center;'; ov.onclick = function (e) { if (e.target === ov) ov.style.display = 'none'; }; document.body.appendChild(ov); }
+        ov.innerHTML = '<style>.yard-sec{background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:14px 16px; margin-bottom:12px;} .yard-h{font-weight:bold; font-size:13px; color:var(--teal-mid); margin-bottom:10px;}</style>' +
+            '<div style="background:var(--bg-navy,#0a1628); border:1px solid rgba(255,255,255,0.14); border-radius:10px; max-width:600px; width:94vw; max-height:88vh; overflow-y:auto; padding:24px;">' +
+            '<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;"><div class="hud-title modal-tt-wrap" style="color:var(--white); font-size:18px; cursor:help;">🌳 The Yard<div class="modal-tt" style="left:0; right:auto;"><strong>The Yard</strong>The Yard is your home and its loans seen as one — what the place is worth, what you owe against it, and what it truly costs to keep. Not just the mortgage: the whole cost of ownership in one view.</div></div>' +
+            '<button onclick="document.getElementById(\'yard-modal-overlay\').style.display=\'none\';" style="background:transparent; border:none; color:var(--white); font-size:24px; cursor:pointer; line-height:1;">&times;</button></div>' +
+            '<div style="font-size:11px; color:rgba(255,255,255,0.45); margin-bottom:16px;">The whole cost of ownership, in one view. Open each account on its own from the left list.</div>' +
+            secA + secB + secH + secC + secD + diBlock + '</div>';
+        ov.style.display = 'flex';
+    };
+
     // SECURED-DEBT LINK SCOPE (§0.2 · L48 shared seam — The Moat / The Garage / The Cellar import this).
     // Maps a debt room to the physical-asset FAMILY it may legitimately secure against, closing the bug
     // where any debt could link to any physical asset (a Mortgage cross-linking to a Vehicle, etc.).
