@@ -68,6 +68,7 @@ need('(DI) calm line Z present', sStudio.includes('sit in quiet balance'));
 need('(SECTIONS) all four sections rendered', sStudio.includes("'The Property'") && sStudio.includes("'The Mortgage'") && sStudio.includes('The Real Cost of Ownership') && sStudio.includes('Share of income'));
 need('(CLICKABLE) property/mortgage/HELOC headers open their own room via secHead', sStudio.includes('var secHead = function') && sStudio.includes("openAccountModal(\\'") && sStudio.includes("secHead('🏰', m.id") && sStudio.includes("secHead('🍷', h.id"));
 need('(TOOLTIP) Yard hovers open downward (top:100%), not off the top', /var hov = function[\s\S]*?top:100%; bottom:auto;/.test(sStudio));
+need('(ROOM→YARD) a linked single room offers "Open The Yard" (property-gated)', sStudio.includes('🌳 Open The Yard — the combined view') && /indexOf\('property'\) === 0[\s\S]*?openYardModal\(/.test(sStudio));
 
 // ── served bytes — datum-estate.js (routing + label restack) ──
 need('(ROUTING) merged tile opens The Yard', /if \(_moatDebts\.length\) gf\.setAttribute\('onclick', "openYardModal\('/.test(sEstate));

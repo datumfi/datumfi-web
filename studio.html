@@ -6505,7 +6505,15 @@
                 : '<div class="input-label" style="color:var(--teal-mid); margin-bottom:4px;">Linked collateral (calculates equity)</div>')
             : '<div class="input-label" style="color:var(--danger); margin-bottom:4px;">Liabilities secured by this property</div>';
         // prominent 🔗 status line — clickable nav + inline ✕ unlink (Commit 2b), at the control, sourced-or-blank
-        if (linkedNow.length) out += _linkedJumpLine('🔗 ' + statusLabel + ':', linkedNow, statusColor, { selfId: id, selfIsDebt: isDebt });
+        if (linkedNow.length) {
+            out += _linkedJumpLine('🔗 ' + statusLabel + ':', linkedNow, statusColor, { selfId: id, selfIsDebt: isDebt });
+            // 🌳 THE YARD — when a property + its lien(s) form a Yard, offer the combined view from the single room
+            // too. propId = the linked property (the asset on a debt; this room itself on the property side).
+            var _yardProp = isDebt ? (linkedNow[0] || null) : { id: id, baseId: base.id };
+            if (_yardProp && String((getBaseType(_yardProp.baseId) || {}).id).indexOf('property') === 0) {
+                out += '<div onclick="if(typeof closeAccountModal===\'function\')closeAccountModal(); if(typeof openYardModal===\'function\')openYardModal(\'' + _yardProp.id + '\');" style="cursor:pointer; margin:-6px 0 16px; font-size:11px; color:var(--gold); display:inline-block; border-bottom:1px dotted var(--gold);" title="See this home and everything linked against it as one combined room">🌳 Open The Yard — the combined view</div>';
+            }
+        }
         // the disclosure: link an existing + draft a new (hidden on a single-link debt that's already linked)
         if (canManage) {
             var rows = linkable.map(function (a) {
