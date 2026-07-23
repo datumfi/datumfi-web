@@ -7466,6 +7466,9 @@
                 <div>${_dLbl(base, 'Current Balance', 'What you still owe', 'The payoff figure today — what it\'d take to clear this loan right now, before any more interest. This is the number the estate subtracts from your net worth.', 'color:var(--gold);')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.value?.toString()||'')}" oninput="updateValueWithoutRender('${id}', this.value)"></div>
                 <div>${_dLbl(base, 'Original Amount', 'Where it started', 'The loan\'s opening balance. We compare it to today\'s balance to show how much house you\'ve bought back from the bank.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.origAmount||'')}" oninput="updateAccField('${id}', 'origAmount', this.value)"></div>
             </div>
+            ${String(base.id).indexOf('mortgage') === 0 ? `<div class="field-row">
+                <div><span class="input-label modal-tt-wrap" style="cursor:help;">Interest Paid to Date<div class="modal-tt" style="left:0; right:auto;"><strong>from your statement · optional</strong>The total interest you&rsquo;ve paid so far &mdash; straight off your latest mortgage statement. We can&rsquo;t derive this from the balance alone (it depends on your exact payment history), so enter your lender&rsquo;s figure to light up the donut&rsquo;s gold &ldquo;Interest Paid&rdquo; slice. Leave it blank and we won&rsquo;t guess.</div></span><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.interestPaidToDate||'')}" oninput="updateAccField('${id}', 'interestPaidToDate', this.value)"></div>
+            </div>` : ''}
             ${base.title === 'HELOC' ? _helocLimitFieldHTML(id, acc) : ''}
             ${base.title === 'HELOC' ? _helocPhaseFieldHTML(id, acc) : ''}
             ${base.title === 'HELOC' ? _helocDrawEndFieldHTML(id, acc) : ''}
@@ -7911,7 +7914,7 @@
     window.updateAccField = function(id, field, value) {
         const acc = state.accounts.find(a => a.id === id);
         if(acc) {
-            if(field === 'origAmount' || field === 'minPmt' || field === 'addPmt' || field === 'propTaxAnnual' || field === 'insAnnual' || field === 'pmiMonthly' || field === 'propTaxYr' || field === 'homeInsYr' || field === 'maintYr' || field === 'hoaYr' || field === 'utilYr' || field === 'helocCreditLimit' || field === 'cltvCapPct' || field === 'mortgageOtherCost') {
+            if(field === 'origAmount' || field === 'minPmt' || field === 'addPmt' || field === 'propTaxAnnual' || field === 'insAnnual' || field === 'pmiMonthly' || field === 'propTaxYr' || field === 'homeInsYr' || field === 'maintYr' || field === 'hoaYr' || field === 'utilYr' || field === 'helocCreditLimit' || field === 'cltvCapPct' || field === 'mortgageOtherCost' || field === 'interestPaidToDate') {
                 acc[field] = window.enforceAmt(value);   // #393 non-negative + $100B ceiling
             } else if (field === 'intRate' || field === 'cola') {
                 acc[field] = parseFloat(value) || 0;
