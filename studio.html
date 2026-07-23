@@ -9547,6 +9547,12 @@
     function _variableRateClusterHTML(id, acc) {
         if (acc.rateType !== 'Variable') return '';
         var iv = String(acc.rateIndex || '').replace(/"/g, '&quot;');
+        // §2 per-field hover renderer — shared by the HELOC (§2c) and the Mortgage (§2b) clusters (L48 reuse).
+        var _hlF = function (label, ttTitle, ttBody, align) {
+            var pos = align === 'right' ? 'right:0; left:auto;' : 'left:0; right:auto;';
+            return '<span class="input-label modal-tt-wrap" style="cursor:help;">' + label +
+                '<div class="modal-tt" style="' + pos + '"><strong>' + ttTitle + '</strong>' + ttBody + '</div></span>';
+        };
         if ((getBaseType(acc.baseId) || {}).title === 'HELOC') {
             // §2c HELOC variable cluster. #390: Rate Index is now a canonical DROPDOWN (kills the free-text
             // spelling fragility that silently broke the live-index trigger); each field carries its OWN
@@ -9554,11 +9560,6 @@
             // (enforceNumRange); and the §20 live-index sub-line renders directly UNDER the Rate Index row.
             // Prime is fed live; SOFR is a selectable option that lights up once its series is added
             // (sourced-or-blank until then). Mortgage keeps its own cluster below (untouched — Moat leave-as-is).
-            var _hlF = function (label, ttTitle, ttBody, align) {
-                var pos = align === 'right' ? 'right:0; left:auto;' : 'left:0; right:auto;';
-                return '<span class="input-label modal-tt-wrap" style="cursor:help;">' + label +
-                    '<div class="modal-tt" style="' + pos + '"><strong>' + ttTitle + '</strong>' + ttBody + '</div></span>';
-            };
             var _idxU = String(acc.rateIndex || '').trim().toUpperCase();
             var _idxOpts = ['Prime', 'SOFR'];
             var _idxKnown = _idxOpts.some(function (o) { return o.toUpperCase() === _idxU; });
@@ -9582,17 +9583,20 @@
                 <div>${_hlF('Next Reset Date', 'When the rate can change next', 'The next date your rate re-prices to the current index plus your margin. Until then today’s rate holds; after it, your payment may shift. Datum re-checks the math when this date arrives.')}<input type="date" class="small-field" value="${acc.rateResetDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'rateResetDate', this.value)"></div>
             </div>`;
         }
+        // §18.8 — five per-field hovers (Mortgage Copy Bank R142-147), mirroring the HELOC §2c split (R84-88) via
+        // the shared _hlF (L48). HELOC "line" → mortgage "loan"; Rate Index drops HELOC's "live figure below" line
+        // (the mortgage variable field has no live sub-line — L47, don't promise a figure that isn't there).
         return `
             <div class="field-row">
-                <div><span class="input-label modal-tt-wrap" style="cursor:help;">Rate Index<div class="modal-tt" style="left:0; right:auto;"><strong>How a variable rate moves</strong>Your rate = the index (like SOFR or Prime) + a fixed margin, bounded by periodic and lifetime caps. When the index moves, your payment can too — up to the cap.</div></span><input type="text" class="small-field" placeholder="e.g. SOFR, Prime" value="${iv}" oninput="updateAccField('${id}', 'rateIndex', this.value)"></div>
-                <div><div class="input-label">Margin %</div><input type="number" class="small-field" placeholder="0" value="${acc.rateMargin||''}" oninput="updateAccField('${id}', 'rateMargin', this.value)"></div>
+                <div>${_hlF('Rate Index', 'The benchmark you track', 'The published rate your loan follows — often SOFR, sometimes Prime or a Treasury index. Your actual rate is this index plus your margin, and it moves with the index at each reset.')}<input type="text" class="small-field" placeholder="e.g. SOFR, Prime" value="${iv}" oninput="updateAccField('${id}', 'rateIndex', this.value)"></div>
+                <div>${_hlF('Margin %', 'The lender’s fixed add-on', 'The fixed amount your lender adds on top of the index — set at signing, never changes. Your rate = index + margin, so a lower margin is a better deal for the life of the loan.', 'right')}<input type="number" class="small-field" placeholder="0" value="${acc.rateMargin||''}" oninput="updateAccField('${id}', 'rateMargin', this.value)"></div>
             </div>
             <div class="field-row">
-                <div><div class="input-label">Periodic Cap %</div><input type="number" class="small-field" placeholder="0" value="${acc.capPeriodic||''}" oninput="updateAccField('${id}', 'capPeriodic', this.value)"></div>
-                <div><div class="input-label">Lifetime Cap %</div><input type="number" class="small-field" placeholder="0" value="${acc.capLifetime||''}" oninput="updateAccField('${id}', 'capLifetime', this.value)"></div>
+                <div>${_hlF('Periodic Cap %', 'The most it can jump at once', 'The largest your rate can move at any single reset, up or down. Even if the index spikes, one reset can’t move you more than this.')}<input type="number" class="small-field" placeholder="0" value="${acc.capPeriodic||''}" oninput="updateAccField('${id}', 'capPeriodic', this.value)"></div>
+                <div>${_hlF('Lifetime Cap %', 'The ceiling over the whole loan', 'The most your rate can ever climb above where it started, across the entire loan. It sets your worst case — the ceiling the rate can’t cross no matter what the index does.', 'right')}<input type="number" class="small-field" placeholder="0" value="${acc.capLifetime||''}" oninput="updateAccField('${id}', 'capLifetime', this.value)"></div>
             </div>
             <div class="field-row" style="grid-template-columns: 1fr;">
-                <div><div class="input-label">Next Reset Date</div><input type="date" class="small-field" value="${acc.rateResetDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'rateResetDate', this.value)"></div>
+                <div>${_hlF('Next Reset Date', 'When the rate can change next', 'The next date your rate re-prices to the current index plus your margin. Until then today’s rate holds; after it, your payment may shift. Datum re-checks the math when this date arrives.')}<input type="date" class="small-field" value="${acc.rateResetDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'rateResetDate', this.value)"></div>
             </div>`;
     }
 
