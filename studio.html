@@ -9768,42 +9768,12 @@
         var costLife = pmt * term;
         return { term: term, costLife: costLife, intLife: costLife - orig };
     }
-    // §19.2 — interest PAID TO DATE. Reconciles the DI's theoretical life-of-loan interest (§4.2 lifeOfLoan,
-    // the ~$61k number) with the lender's statement (~$31,684 for Daniel). principalPaid = origAmount − balance
-    // (exact — matches the lender to the penny). Then, over the k months elapsed since origination, solve the
-    // level payment P that carries origAmount down to today's balance at the note rate and WALK the amortization,
-    // summing each month's interest — that sum is the interest actually paid so far, NOT the full-term figure.
-    // (A minimum-only walk to the same balance would cost ~$61k — Daniel paid ahead, so the honest paid-to-date
-    // is far lower.) Shared value feeding the §19.3 pie ('Interest Paid' slice) AND the §19.5 DI copy. Sourced-
-    // or-blank (L47): needs origAmount, balance, rate AND origDate; returns null otherwise. Display-only (LOCK-3).
-    function _moatInterestPaid(acc) {
-        var orig = parseFloat(acc.origAmount) || 0;
-        var bal  = parseFloat(acc.value) || 0;
-        var rate = parseFloat(acc.intRate) || 0;
-        if (orig <= 0 || bal < 0 || bal > orig || rate <= 0 || !acc.origDate) return null;
-        var t = new Date();
-        var todayISO = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
-        var k = _monthsBetween(acc.origDate, todayISO);   // payments elapsed since origination
-        if (k <= 0) return null;
-        var principalPaid = orig - bal;
-        var r = rate / 100 / 12;
-        var P = (r === 0) ? (orig - bal) / k : r * (orig * Math.pow(1 + r, k) - bal) / (Math.pow(1 + r, k) - 1);
-        var b = orig, interestPaid = 0;                   // walk the k payments (matches the amort table; L48)
-        for (var n = 0; n < k; n++) { var i = b * r; interestPaid += i; b -= (P - i); }
-        interestPaid = Math.max(0, interestPaid);
-        var lol = lifeOfLoan(acc);
-        return {
-            principalPaid: principalPaid,
-            interestPaidToDate: interestPaid,
-            paymentsElapsed: k,
-            impliedPmt: P,
-            lifetimeInterestLife: lol ? lol.intLife : null,   // §4.2 theoretical full-term interest (the ~$61k)
-            interestRemainingTrue: lifetimeInterest(acc),      // honest interest still to pay (small near payoff)
-            // interest AVOIDED by paying ahead vs the original minimum schedule (theoretical life − actual paid).
-            // A savings figure, NOT "remaining" — §19.5 renders it as a GOLD lever beat, never as remaining.
-            interestAvoidedVsSchedule: (lol ? Math.max(0, lol.intLife - interestPaid) : null)
-        };
-    }
+    // §19.2 NOTE — a COMPUTED interest-paid-to-date was retired (#407 hotfix). It is bounded but NOT determined
+    // by {origAmount, balance, rate, origDate}: the missing ingredient is payment TIMING (Daniel front-loaded
+    // principal), which lives only on the lender statement. Any closed form lands somewhere in a wide band
+    // (~$25.8k–$54k for Daniel) — a smooth-payment reconstruction gave $44,202 vs his real $31,684 — so it could
+    // contradict the statement (L47). Interest-paid-to-date is now a SOURCED field (§19.2b, acc.interestPaidToDate)
+    // read straight off the statement; the pie/DI show it only when the user provides it, never a fabricated number.
     // §4.3 accelerated-payoff delta — minimum-only vs (minimum + additional). Null unless a real
     // additional payment produces a real saving. Toggle-gated at the render layer.
     function acceleratedDelta(acc) {
@@ -9872,27 +9842,29 @@
     // §4.4/§7 amortization schedule modal — brand-styled table (mono; --teal-mid principal / --danger
     // interest), negative-amort guarded with the empty-state copy. Lazily builds a reusable overlay.
     // §19.3 — premium debt donut. Slices: Principal Balance (red, still owed) · Principal Paid (teal, yours) ·
-    // Interest Paid (gold, cost of borrowing = §19.2 interestPaidToDate) · Escrow (grey, escrowYtd). Zero slices
-    // hidden (L47 — Daniel's escrow $0 → no slice). Center = % of principal paid down; legend shows $ + %; hover
-    // <title> gives $ + %. Sourced-or-blank: '' unless §19.2 computes (origAmount+balance+rate+origDate), and
-    // HELOC excluded (its origAmount is a credit LINE, not a borrowed lump — §17.2). Display-only (LOCK-3):
-    // reads acc, never feeds engine/taxCode/DI totals. Shared by the amortization modal AND the Yard twin.
+    // Interest Paid (gold, = SOURCED acc.interestPaidToDate off the lender statement, §19.2b) · Escrow (grey,
+    // escrowYtd). Zero slices hidden (L47 — Daniel's escrow $0 → no slice; no statement interest → no gold slice,
+    // never a fabricated number). Center = % of principal paid down; legend shows $ + %; hover <title> gives $ + %.
+    // Sourced-or-blank: '' unless origAmount + balance are real (principal split is exact from those two). HELOC
+    // excluded (origAmount is a credit LINE, not a borrowed lump — §17.2). Display-only (LOCK-3): reads acc, never
+    // feeds engine/taxCode/DI totals. Shared by the amortization modal AND the Yard twin.
     function _moatDebtPieHTML(acc) {
         if ((getBaseType(acc.baseId) || {}).title === 'HELOC') return '';
-        var ip = _moatInterestPaid(acc);
-        if (!ip) return '';
+        var orig = parseFloat(acc.origAmount) || 0;
         var balance = parseFloat(acc.value) || 0;
-        var escrow = parseFloat(acc.escrowYtd) || 0;   // not tracked today → 0 → no slice (sourced-or-blank)
+        if (orig <= 0 || balance < 0 || balance > orig) return '';   // sourced-or-blank: need real origAmount + balance
+        var principalPaid = orig - balance;
+        var interestPaid = parseFloat(acc.interestPaidToDate) || 0;   // §19.2b — SOURCED off the statement, never computed
+        var escrow = parseFloat(acc.escrowYtd) || 0;                  // not tracked today → 0 → no slice (sourced-or-blank)
         var slices = [
-            { label: 'Principal Balance', val: balance,              color: 'var(--danger)' },
-            { label: 'Principal Paid',    val: ip.principalPaid,      color: 'var(--teal-mid)' },
-            { label: 'Interest Paid',     val: ip.interestPaidToDate, color: 'var(--gold)' },
-            { label: 'Escrow',            val: escrow,                color: 'rgba(165,175,188,0.75)' }
+            { label: 'Principal Balance', val: balance,       color: 'var(--danger)' },
+            { label: 'Principal Paid',    val: principalPaid, color: 'var(--teal-mid)' },
+            { label: 'Interest Paid',     val: interestPaid,  color: 'var(--gold)' },
+            { label: 'Escrow',            val: escrow,        color: 'rgba(165,175,188,0.75)' }
         ].filter(function (s) { return s.val > 0; });
         var total = slices.reduce(function (a, s) { return a + s.val; }, 0);
         if (total <= 0) return '';
-        var orig = ip.principalPaid + balance;
-        var paidPct = orig > 0 ? Math.round(ip.principalPaid / orig * 100) : 0;
+        var paidPct = orig > 0 ? Math.round(principalPaid / orig * 100) : 0;
         var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
         var gap = slices.length > 1 ? 0.9 : 0, cum = 0, arcs = '';
         slices.forEach(function (s) {
