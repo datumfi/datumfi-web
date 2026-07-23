@@ -7467,7 +7467,7 @@
                 </div>
                 <div id="modal-escrow-foot-${id}" style="display:${hasEscrow(acc)?'block':'none'}; font-size:11px; color: rgba(255,255,255,0.72); line-height:1.5; margin-top:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;">${_escrowFooter(acc)}</div>
             </div>`;
-                html += _moatPmiBarHTML(id, acc);   // §18.9 — PMI drop-off bar + beat (fires only when PMI charged + value + balance)
+                html += '<div id="modal-pmi-bar-' + id + '">' + _moatPmiBarHTML(id, acc) + '</div>';   // §18.9 — always-present container so the bar can appear / update / vanish live
             }
 
             html += `
@@ -7936,6 +7936,9 @@
                         escrowFoot.style.display = 'none';
                     }
                 }
+                // §18.9 PMI drop-off bar — appears / updates / vanishes live (PMI + balance + equity all move it).
+                const pmiBar = document.getElementById(`modal-pmi-bar-${id}`);
+                if(pmiBar) pmiBar.innerHTML = _moatPmiBarHTML(id, acc);
                 // §4.2/§4.3 payoff intelligence — refresh lifetime interest / total cost / accelerated
                 // delta / amort button in place (no re-render, keeps input focus).
                 const piEl = document.getElementById(`modal-payoff-intel-${id}`);
@@ -8041,6 +8044,9 @@
                     eqEl.innerText = '$' + eq.toLocaleString('en-US');
                     eqEl.style.color = eq >= 0 ? 'var(--teal-mid)' : 'var(--danger)';
                 }
+                // §18.9 PMI drop-off bar — balance change moves equity, so re-render it live too.
+                const pmiBar2 = document.getElementById(`modal-pmi-bar-${id}`);
+                if(pmiBar2) pmiBar2.innerHTML = _moatPmiBarHTML(id, acc);
                 // §4.2/§4.3 payoff intelligence refresh (balance change moves lifetime interest too).
                 const piEl2 = document.getElementById(`modal-payoff-intel-${id}`);
                 if(piEl2) piEl2.innerHTML = _payoffIntelHTML(id, acc);

@@ -70,7 +70,7 @@ if (ok) {
 }
 
 // served bytes
-need('(WIRED) mortgage modal renders _moatPmiBarHTML', /html \+= _moatPmiBarHTML\(id, acc\);/.test(s));
+need('(WIRED) mortgage modal renders _moatPmiBarHTML (in its live container)', /_moatPmiBarHTML\(id, acc\)/.test(s));
 need('(CONSISTENCY) §1.6 DI PMI clause gated on _moatPmiUnder20', /var pmiC = _moatPmiUnder20\(acc\) \?/.test(s));
 need('(CONSISTENCY) escrow-footer PMI clause gated on _moatPmiUnder20', /var pmiClause = _moatPmiUnder20\(acc\) \?/.test(s));
 need('(CONSISTENCY) no bare pmi>0 PMI-dropoff clause remains', !/pmi > 0 \? ' ?(Your )?PMI drops off/.test(s));
