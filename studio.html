@@ -9768,6 +9768,42 @@
         var costLife = pmt * term;
         return { term: term, costLife: costLife, intLife: costLife - orig };
     }
+    // §19.2 — interest PAID TO DATE. Reconciles the DI's theoretical life-of-loan interest (§4.2 lifeOfLoan,
+    // the ~$61k number) with the lender's statement (~$31,684 for Daniel). principalPaid = origAmount − balance
+    // (exact — matches the lender to the penny). Then, over the k months elapsed since origination, solve the
+    // level payment P that carries origAmount down to today's balance at the note rate and WALK the amortization,
+    // summing each month's interest — that sum is the interest actually paid so far, NOT the full-term figure.
+    // (A minimum-only walk to the same balance would cost ~$61k — Daniel paid ahead, so the honest paid-to-date
+    // is far lower.) Shared value feeding the §19.3 pie ('Interest Paid' slice) AND the §19.5 DI copy. Sourced-
+    // or-blank (L47): needs origAmount, balance, rate AND origDate; returns null otherwise. Display-only (LOCK-3).
+    function _moatInterestPaid(acc) {
+        var orig = parseFloat(acc.origAmount) || 0;
+        var bal  = parseFloat(acc.value) || 0;
+        var rate = parseFloat(acc.intRate) || 0;
+        if (orig <= 0 || bal < 0 || bal > orig || rate <= 0 || !acc.origDate) return null;
+        var t = new Date();
+        var todayISO = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+        var k = _monthsBetween(acc.origDate, todayISO);   // payments elapsed since origination
+        if (k <= 0) return null;
+        var principalPaid = orig - bal;
+        var r = rate / 100 / 12;
+        var P = (r === 0) ? (orig - bal) / k : r * (orig * Math.pow(1 + r, k) - bal) / (Math.pow(1 + r, k) - 1);
+        var b = orig, interestPaid = 0;                   // walk the k payments (matches the amort table; L48)
+        for (var n = 0; n < k; n++) { var i = b * r; interestPaid += i; b -= (P - i); }
+        interestPaid = Math.max(0, interestPaid);
+        var lol = lifeOfLoan(acc);
+        return {
+            principalPaid: principalPaid,
+            interestPaidToDate: interestPaid,
+            paymentsElapsed: k,
+            impliedPmt: P,
+            lifetimeInterestLife: lol ? lol.intLife : null,   // §4.2 theoretical full-term interest (the ~$61k)
+            interestRemainingTrue: lifetimeInterest(acc),      // honest interest still to pay (small near payoff)
+            // interest AVOIDED by paying ahead vs the original minimum schedule (theoretical life − actual paid).
+            // A savings figure, NOT "remaining" — §19.5 renders it as a GOLD lever beat, never as remaining.
+            interestAvoidedVsSchedule: (lol ? Math.max(0, lol.intLife - interestPaid) : null)
+        };
+    }
     // §4.3 accelerated-payoff delta — minimum-only vs (minimum + additional). Null unless a real
     // additional payment produces a real saving. Toggle-gated at the render layer.
     function acceleratedDelta(acc) {
