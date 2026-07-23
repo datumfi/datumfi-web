@@ -10084,7 +10084,10 @@
                 '<div style="font-size:12px; color:rgba(255,255,255,0.72); line-height:1.55;">Keeping this home runs about ' + pct + '% of what you' + (coOn ? ' and your co-architect' : '') + ' earn — housing only (loan, taxes, insurance, upkeep), not food, fuel, or the rest of life. A common yardstick keeps housing under ~28–30% of gross; sitting well below it in your working years is one of the quiet reasons a plan holds together. Your own number always wins.</div></div>';
         }
         var di = _yardIntelligence(propId);
-        var diBlock = di ? '<div class="yard-sec" style="background:rgba(93,202,165,0.05); border-color:rgba(93,202,165,0.25);"><div class="yard-h" style="color:var(--teal-mid);">🧠 Datum Intelligence</div><div style="font-size:12px; color:rgba(255,255,255,0.8);">' + di + '</div></div>' : '';
+        // #407 §19.4b — the Yard's DI twin reuses the SAME .di-narrative chrome as every room modal (L48 —
+        // no fork), so the §19.4 upgrade (layered depth, 4px glowing teal bar, ✦ header, gradient, line-height)
+        // carries here too. Was a bespoke .yard-sec block that didn't inherit; now there are no orphan DI boxes.
+        var diBlock = di ? '<div class="di-narrative"><div class="di-narr-head">Datum Intelligence</div><div class="di-narr-body">' + di + '</div></div>' : '';
         var ov = document.getElementById('yard-modal-overlay');
         if (!ov) { ov = document.createElement('div'); ov.id = 'yard-modal-overlay'; ov.style.cssText = 'display:none; position:fixed; inset:0; background:rgba(0,0,0,0.72); z-index:10020; align-items:center; justify-content:center;'; ov.onclick = function (e) { if (e.target === ov) ov.style.display = 'none'; }; document.body.appendChild(ov); }
         ov.innerHTML = '<style>.yard-sec{background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:14px 16px; margin-bottom:12px;} .yard-h{font-weight:bold; font-size:13px; color:var(--teal-mid); margin-bottom:10px;}</style>' +
