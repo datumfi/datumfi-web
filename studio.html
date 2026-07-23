@@ -9932,24 +9932,26 @@
         if (!prop) return;
         var m = _yardMortgage(propId), h = _yardHeloc(propId);
         var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
-        var hov = function (label, body) { return '<span class="modal-tt-wrap" style="cursor:help;">' + label + '<div class="modal-tt" style="left:0; right:auto;"><strong>' + label + '</strong>' + body + '</div></span>'; };
+        var hov = function (label, body) { return '<span class="modal-tt-wrap" style="cursor:help;">' + label + '<div class="modal-tt" style="left:0; right:auto; top:100%; bottom:auto;"><strong>' + label + '</strong>' + body + '</div></span>'; };
+        // clickable section header — opens the underlying account's own room (closes the Yard first), with a hover.
+        var secHead = function (emoji, acctId, label, body) { return '<div class="yard-h" onclick="document.getElementById(\'yard-modal-overlay\').style.display=\'none\'; openAccountModal(\'' + acctId + '\');" style="cursor:pointer; display:flex; align-items:center; gap:6px;">' + emoji + ' ' + hov(label, body + ' Click to open its own room.') + ' <span style="opacity:0.4; font-size:11px; font-weight:normal;">↗</span></div>'; };
         var row = function (label, val, color) { return '<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span class="input-label" style="color:rgba(255,255,255,0.65);">' + label + '</span><span style="font-family:var(--font-mono); color:' + (color || 'var(--white)') + '; font-weight:bold;">' + val + '</span></div>'; };
         var pAndI = m ? calculateTotalPmt(m) : 0, escrowMo = m ? calculateEscrowMonthly(m) : 0;
         var carryAnnual = calcCarryTotal(prop), helocPmt = (h && _num(h.value) > 0) ? calculateTotalPmt(h) : 0;
         var realMonthly = _yardRealMonthly(propId), realAnnual = realMonthly * 12, netEq = _yardNetEquity(propId);
         var income = _yardHouseholdIncome();
         // Section A — 🏡 The Property (reuse Property §4)
-        var secA = '<div class="yard-sec"><div class="yard-h">🏡 ' + hov('The Property', 'Home value, net equity, and the carrying costs of simply keeping the home.') + '</div>' +
+        var secA = '<div class="yard-sec">' + secHead('🏡', prop.id, 'The Property', 'Home value, net equity, and the carrying costs of simply keeping the home.') +
             row('Home value', _num(prop.value) > 0 ? $(_num(prop.value)) : '—') +
             row(hov('Net Equity', 'What you’d keep if you sold today — the home’s value minus everything linked against it (all mortgages and lines). For most homes this grows over time as you pay down the loans and the value climbs.'), netEq != null ? $(netEq) : '—', (netEq != null && netEq < 0) ? 'var(--danger)' : 'var(--teal-mid)') +
             row(hov('Annual carrying cost', 'Everything it costs to simply keep this home — taxes, insurance, upkeep, and the small recurring bills — separate from any loan payment.'), carryAnnual > 0 ? $(carryAnnual) + '/yr' : '—') + '</div>';
         // Section B — 🏰 The Mortgage (reuse Mortgage §0.3b) — only when a mortgage links
-        var secB = m ? ('<div class="yard-sec"><div class="yard-h">🏰 The Mortgage</div>' +
+        var secB = m ? ('<div class="yard-sec">' + secHead('🏰', m.id, 'The Mortgage', 'The debt that guards the house — its balance, its rate, the principal-and-interest you pay each month, and the escrow bundle riding alongside it.') +
             row('Balance', $(_num(m.value))) + row('APR', (parseFloat(m.intRate) || 0) > 0 ? (parseFloat(m.intRate) + '%') : '—') +
             row('Rate type', m.rateType || '—') + row('Principal + interest', pAndI > 0 ? $(pAndI) + '/mo' : '—') +
             row(hov('Escrow', 'The slice of your monthly payment that isn’t principal or interest — your lender collects property taxes, homeowner’s insurance, and (under ~20% equity) PMI, then pays those bills for you. Real money you owe every month, just not to the loan itself.'), escrowMo > 0 ? $(escrowMo) + '/mo' : '—') + '</div>') : '';
         // The HELOC (when linked)
-        var secH = h ? ('<div class="yard-sec"><div class="yard-h">🍷 The HELOC</div>' + row('Balance drawn', $(_num(h.value))) + row('Monthly payment', helocPmt > 0 ? $(helocPmt) + '/mo' : '—') + '</div>') : '';
+        var secH = h ? ('<div class="yard-sec">' + secHead('🍷', h.id, 'The HELOC', 'A revolving line drawn against your home’s equity — what you’ve borrowed against the house, and the payment that balance carries.') + row('Balance drawn', $(_num(h.value))) + row('Monthly payment', helocPmt > 0 ? $(helocPmt) + '/mo' : '—') + '</div>') : '';
         // Section C — 💰 The Real Cost of Ownership (NET-NEW, §3)
         var pmiClause = (m && _num(m.pmiMonthly) > 0) ? ' PMI drops off once you cross ~20% equity.' : '';
         var headline;
@@ -9974,9 +9976,9 @@
         if (!ov) { ov = document.createElement('div'); ov.id = 'yard-modal-overlay'; ov.style.cssText = 'display:none; position:fixed; inset:0; background:rgba(0,0,0,0.72); z-index:10020; align-items:center; justify-content:center;'; ov.onclick = function (e) { if (e.target === ov) ov.style.display = 'none'; }; document.body.appendChild(ov); }
         ov.innerHTML = '<style>.yard-sec{background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:14px 16px; margin-bottom:12px;} .yard-h{font-weight:bold; font-size:13px; color:var(--teal-mid); margin-bottom:10px;}</style>' +
             '<div style="background:var(--bg-navy,#0a1628); border:1px solid rgba(255,255,255,0.14); border-radius:10px; max-width:600px; width:94vw; max-height:88vh; overflow-y:auto; padding:24px;">' +
-            '<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;"><div class="hud-title modal-tt-wrap" style="color:var(--white); font-size:18px; cursor:help;">🌳 The Yard<div class="modal-tt" style="left:0; right:auto;"><strong>The Yard</strong>The Yard is your home and its loans seen as one — what the place is worth, what you owe against it, and what it truly costs to keep. Not just the mortgage: the whole cost of ownership in one view.</div></div>' +
+            '<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;"><div class="hud-title modal-tt-wrap" style="color:var(--white); font-size:18px; cursor:help;">🌳 The Yard<div class="modal-tt" style="left:0; right:auto; top:100%; bottom:auto;"><strong>The Yard</strong>The Yard is your home and its loans seen as one — what the place is worth, what you owe against it, and what it truly costs to keep. Not just the mortgage: the whole cost of ownership in one view.</div></div>' +
             '<button onclick="document.getElementById(\'yard-modal-overlay\').style.display=\'none\';" style="background:transparent; border:none; color:var(--white); font-size:24px; cursor:pointer; line-height:1;">&times;</button></div>' +
-            '<div style="font-size:11px; color:rgba(255,255,255,0.45); margin-bottom:16px;">The whole cost of ownership, in one view. Open each account on its own from the left list.</div>' +
+            '<div style="font-size:11px; color:rgba(255,255,255,0.45); margin-bottom:16px;">The whole cost of ownership, in one view. Open each account on its own — from the left list, or by clicking a section below.</div>' +
             secA + secB + secH + secC + secD + diBlock + '</div>';
         ov.style.display = 'flex';
     };
