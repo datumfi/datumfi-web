@@ -325,8 +325,11 @@
     // READ linkedAssetId here; suppression + net-equity are DISPLAY-ONLY — grandTotal/Shape/all totals
     // were computed by the host (link-agnostic) BEFORE this renderer ran, so nothing here moves a total.
     var _accts = ctx.accounts || [];
-    var _mergeDebtByAsset = {};   // assetId -> the debt acc merging onto it (first link wins)
-    var _suppressedDebt = {};     // debt id -> true (don't draw its box)
+    // §18.6 — ALL linked liens merge onto their asset (was first-link-wins). Every linked debt is suppressed AND
+    // its balance subtracts from the asset for a TRUE net equity (Property Copy Bank §0.4 R9 / §1.2 R13). L47: a
+    // lien with no sourced balance contributes 0 to the sum (never guessed) though it's still named (it IS linked).
+    var _mergeDebtsByAsset = {};   // assetId -> [all linked debts, first-lien (mortgage) first]
+    var _suppressedDebt = {};      // debt id -> true (don't draw its own box; it lives on the asset now)
     _accts.forEach(function (a) {
       if (a.exclude || !a.linkedAssetId) return;
       var ab = getBaseType(a.baseId);
@@ -336,9 +339,25 @@
       if (!asset) return;                                   // linked-to-absent/excluded -> plain box (fallback)
       var sb = getBaseType(asset.baseId);
       if (!sb || sb.taxCode !== 'physical') return;         // only physical merge targets (matches link <select>)
-      if (!_mergeDebtByAsset[asset.id]) _mergeDebtByAsset[asset.id] = a;
+      (_mergeDebtsByAsset[asset.id] = _mergeDebtsByAsset[asset.id] || []).push(a);
       _suppressedDebt[a.id] = true;
     });
+    function _lienRankE(a) { var id = String((getBaseType(a.baseId) || {}).id || ''); return id.indexOf('mortgage') === 0 ? 0 : (id.indexOf('heloc') === 0 ? 1 : 2); }
+    Object.keys(_mergeDebtsByAsset).forEach(function (k) { _mergeDebtsByAsset[k].sort(function (x, y) { return _lienRankE(x) - _lienRankE(y); }); });
+    function _lienSum(debts) { var s = 0; for (var i = 0; i < debts.length; i++) { var v = parseFloat(debts[i].value) || 0; if (v > 0) s += v; } return s; }
+    function _netEquityOf(assetVal, debts) { return (parseFloat(assetVal) || 0) - _lienSum(debts); }
+    function _lienMetaSuffix(debts) { var o = ''; for (var i = 0; i < debts.length; i++) { o += ' / ' + getBaseType(debts[i].baseId).meta.toUpperCase(); } return o; }
+    // §18.6 mirror notice — TYPE-first (decision 1: math-facing copy names the type, never the brand), sourced.
+    // The estate LABEL keeps its brand flavor; this hover, which explains the net-equity math, says "mortgage"/"HELOC".
+    function _lienMirrorNotice(debts, assetNoun) {
+      var hasM = false, hasH = false;
+      for (var i = 0; i < debts.length; i++) { var id = String((getBaseType(debts[i].baseId) || {}).id || ''); if (id.indexOf('mortgage') === 0) hasM = true; else if (id.indexOf('heloc') === 0) hasH = true; }
+      var lead = hasM ? 'Your mortgage is linked here' : (hasH ? 'Your HELOC is linked here' : 'A linked liability sits here');
+      var out = '🔗 ' + lead + ' — its balance is subtracted from this ' + (assetNoun || 'asset') + '’s value to show your true equity.';
+      if (hasM && hasH) out += ' Your HELOC is linked here too.';
+      return out;
+    }
+    function _linkChipSVG(x, y, notice) { return '<g class="link-chip" style="cursor:help;"><title>' + String(notice).replace(/</g, '&lt;') + '</title><rect x="' + x + '" y="' + y + '" width="26" height="20" rx="4" fill="rgba(93,202,165,0.12)" stroke="var(--teal-mid)" stroke-width="1"/><text x="' + (x + 13) + '" y="' + (y + 14) + '" text-anchor="middle" style="font-size:12px; fill:var(--teal-mid);">🔗</text></g>'; }
     function _visibleCol(list) { return list.filter(function (a) { return !_suppressedDebt[a.id]; }); }
     function _eqStr(v) {   // NET EQUITY display string (asset - debt); mirrors the room value format
       var n = Math.abs(v);
@@ -357,8 +376,8 @@
       // The Grounds finally carry COLOR regardless of link: a teal gradient fill like every other block,
       // flipping to red only when a linked mortgage is UNDERWATER. The dashed boundary (drawn after the
       // rooms, so it can step around the north entry jut) matches that same color. All display-only.
-      let _moatDebt = propertyAccount ? _mergeDebtByAsset[propertyAccount.id] : null;
-      let _moatEq = _moatDebt ? ((propertyAccount.value || 0) - (_moatDebt.value || 0)) : null;
+      let _moatDebts = propertyAccount ? (_mergeDebtsByAsset[propertyAccount.id] || []) : [];
+      let _moatEq = _moatDebts.length ? _netEquityOf(propertyAccount.value, _moatDebts) : null;
       let _grUnderwater = (_moatEq !== null && _moatEq < 0);
       let _grGrad = _grUnderwater ? 'fillGradDebt' : 'fillGradAsset';      // teal default, red underwater
       let _grLine = _grUnderwater ? 'var(--danger)' : 'var(--teal-mid)';   // dashed boundary + label accent
@@ -367,11 +386,11 @@
       // frame the estate (footprint punched out — no bleed-through) and follow the entry jut outside.
       // This early group carries only the label/title + an invisible .grounds-rect anchor.
       let gSVG = document.createElementNS("http://www.w3.org/2000/svg", "g");
-      if (_moatDebt) {
-          let _moatBase = getBaseType(_moatDebt.baseId);
-          let _grLabel = ((getBaseType(propertyAccount.baseId).meta) + ' / ' + _moatBase.meta).toUpperCase();
+      if (_moatDebts.length) {
+          let _grLabel = getBaseType(propertyAccount.baseId).meta.toUpperCase() + _lienMetaSuffix(_moatDebts);   // decision 1 — brand flavor on the canvas, all liens named
           gSVG.innerHTML = `
-          <title>Physical asset + secured liability (The Moat). Click for detail.</title>
+          <title>Physical asset + secured liabilities. Click for detail.</title>
+          ${_linkChipSVG(gX + gW/2 - 13, gY + gH - 66, _lienMirrorNotice(_moatDebts, 'home'))}
           <rect x="${gX}" y="${gY}" width="${gW}" height="${gH}" class="grounds-rect" style="stroke:none; fill:none; pointer-events:none;" />
           <text x="${gX + gW/2}" y="${gY + gH - 38}" class="grounds-title" style="fill: ${_grLine};">${_grLabel}</text>
           <text x="${gX + gW/2}" y="${gY + gH - 20}" class="grounds-title" style="fill: ${_grLine}; opacity:0.7; font-size:11px; letter-spacing:0.12em;">NET EQUITY</text>
@@ -580,12 +599,13 @@
                   // The room stays OPEN (no border, no seal); EQUITY drives the FILL color exactly like
                   // every other block — teal when positive, the debt red gradient when underwater — so
                   // pos/neg reads at a glance. Dual label + NET EQUITY (asset - debt) are DISPLAY-only.
-                  let _mergeDebt = (!isDebt) ? _mergeDebtByAsset[acc.id] : null;
-                  let _mergeEq = _mergeDebt ? ((acc.value || 0) - (_mergeDebt.value || 0)) : null;
+                  let _mergeDebts = (!isDebt) ? (_mergeDebtsByAsset[acc.id] || []) : [];   // §18.6 — ALL liens
+                  let _mergeEq = _mergeDebts.length ? _netEquityOf(acc.value, _mergeDebts) : null;
                   let _mergeNeg = (_mergeEq !== null && _mergeEq < 0);
-                  let _roomTitle = _mergeDebt ? (base.meta + ' / ' + getBaseType(_mergeDebt.baseId).meta).toUpperCase() : base.meta.toUpperCase();
-                  let _titleY = _mergeDebt ? (d.cy - 20) : (d.cy - 10);
-                  let _valBlock = _mergeDebt
+                  let _roomTitle = _mergeDebts.length ? (base.meta.toUpperCase() + _lienMetaSuffix(_mergeDebts)) : base.meta.toUpperCase();
+                  let _titleY = _mergeDebts.length ? (d.cy - 20) : (d.cy - 10);
+                  let _mergeChip = _mergeDebts.length ? _linkChipSVG(d.x + 6, d.y + 6, _lienMirrorNotice(_mergeDebts, 'asset')) : '';
+                  let _valBlock = _mergeDebts.length
                     ? `
                     <text x="${d.cx}" y="${d.cy - 2}" class="bp-title" style="fill:${_mergeNeg ? 'var(--danger)' : 'var(--teal-mid)'}; opacity:0.75; font-size:11px; letter-spacing:0.12em;">NET EQUITY</text>
                     <text x="${d.cx}" y="${d.cy + 24}" class="bp-val" style="fill:${_mergeNeg ? 'var(--danger)' : 'var(--gold)'}; font-size:18px;">${_eqStr(_mergeEq)}</text>`
@@ -604,6 +624,7 @@
                     ${tooltipHTML}
                     <rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" class="room-rect active ${animClass} ${frictionClass} ${priorityClass} ${taxClass}" style="stroke:none" />
                     ${fillHTML}
+                    ${_mergeChip}
                     <text x="${d.cx}" y="${_titleY}" class="bp-title">${_roomTitle}</text>
                     ${_valBlock}
                   `;
@@ -704,8 +725,8 @@
         gf.setAttribute('class', 'grounds-fill');
         gf.setAttribute('d', fillD);
         gf.setAttribute('fill-rule', 'evenodd');
-        gf.setAttribute('style', 'fill:url(#' + _grGrad + '); stroke:none; ' + (_moatDebt ? 'cursor:pointer; pointer-events:auto;' : 'pointer-events:none;'));
-        if (_moatDebt) gf.setAttribute('onclick', "openAccountModal('" + propertyAccount.id + "')");
+        gf.setAttribute('style', 'fill:url(#' + _grGrad + '); stroke:none; ' + (_moatDebts.length ? 'cursor:pointer; pointer-events:auto;' : 'pointer-events:none;'));
+        if (_moatDebts.length) gf.setAttribute('onclick', "openAccountModal('" + propertyAccount.id + "')");
         svgContainer.insertBefore(gf, svgContainer.firstChild);            // behind the rooms (frame backdrop)
 
         var gb = document.createElementNS("http://www.w3.org/2000/svg", "path");
