@@ -1,25 +1,27 @@
-/* DEV-ONLY red-first FUNCTIONAL gate — §18.9 PMI drop-off bar + beat (Mortgage Copy Bank R159-162).
-   _moatPmiBarHTML fires ONLY when pmiMonthly>0 AND the mortgage balance AND the linked home value are all
-   sourced AND equity < 20%. Equity math is mortgage-only (home value − this mortgage's balance): a HELOC does
-   NOT move PMI drop-off. Reuses the §16.1 equity bar (_groundsEquityBarHTML). Asserts:
-     (FIRES)     with pmi + balance + linked home value + <20% equity → bar + beat with equityPct, principal-to-
-                 20%, and the monthly PMI, and a 20%-equity marker.
-     (GUARDS)    no PMI / no linked home value / balance 0 / already >=20% equity → nothing (sourced-or-blank).
-     (MORTGAGE-ONLY) a linked HELOC does NOT change the PMI equityPct/principal (PMI is a first-mortgage charge).
-   --redfirst strips the pmi<=0 guard -> a mortgage with NO PMI wrongly fires -> the no-PMI guard check bites. */
+/* DEV-ONLY red-first FUNCTIONAL gate — §18.9 PMI drop-off bar + beat (R159-162) AND the PMI-messaging
+   consistency fix. ONE test, _moatPmiUnder20, decides whether the PMI nudge applies (pmiMonthly>0 AND balance
+   AND linked home value sourced AND equity < 20%, mortgage-only LTV) — the bar, the §1.6 DI clause, and the
+   escrow footer all read it, so they can never disagree. Asserts:
+     (FIRES)     under 20% equity → reused §16.1 bar + 20% marker + the reworded beat (equity to one decimal;
+                 clear cause→effect: pay principal → reach 20% → PMI ends → money back).
+     (GUARDS)    no PMI / no linked home value / balance 0 / already >=20% equity → nothing.
+     (MORTGAGE-ONLY) a linked HELOC does not move the PMI equity/principal.
+     (CONSISTENCY) both DI clauses are gated on _moatPmiUnder20, not a bare pmi>0.
+   --redfirst makes _moatPmiUnder20 ignore the equity threshold (return true) -> the >=20% guard + the direct
+   threshold check bite. */
 import { readFileSync } from 'node:fs';
 const RED = process.argv.includes('--redfirst');
 let s = readFileSync('studio.html', 'utf8');
 
 if (RED) {
-  s = s.replace('        var pmi = _num(acc.pmiMonthly);\n        if (pmi <= 0) return \'\';', '        var pmi = _num(acc.pmiMonthly);\n        ;');
+  s = s.replace('        return (H - bal) / H * 100 < 20;                       // still under the 20%-equity PMI threshold', '        return true;');
 }
 
 const checks = [];
 const need = (label, cond) => checks.push([label, !!cond]);
 
 const extract = (name) => { const m = s.match(new RegExp('    function ' + name + '\\([\\s\\S]*?\\n    }\\n')); return m ? m[0] : ''; };
-const NAMES = ['_num', '_groundsEquityBarHTML', '_moatPmiBarHTML'];
+const NAMES = ['_num', '_groundsEquityBarHTML', '_moatPmiUnder20', '_moatPmiBarHTML'];
 const getBaseType = (baseId) => {
   const id = String(baseId);
   if (id.indexOf('property') === 0) return { id, title: 'Real Estate' };
@@ -28,7 +30,7 @@ const getBaseType = (baseId) => {
   return { id, title: 'Other' };
 };
 function build(accounts) {
-  const body = NAMES.map(extract).join('\n') + '\nreturn { pmi:_moatPmiBarHTML };';
+  const body = NAMES.map(extract).join('\n') + '\nreturn { pmi:_moatPmiBarHTML, under20:_moatPmiUnder20 };';
   return new Function('state', 'getBaseType', body)({ accounts }, getBaseType);
 }
 let err = '', ok = null;
@@ -40,14 +42,16 @@ if (ok) {
   const mtg = (extra) => Object.assign({ id: 'm1', baseId: 'mortgage_primary', value: 450000, pmiMonthly: 200, linkedAssetId: 'p1' }, extra || {});
   const heloc = { id: 'h1', baseId: 'heloc_primary', value: 30000, linkedAssetId: 'p1' };
   const pmiOf = (accts) => build(accts).pmi('m1', accts.find(a => a.id === 'm1'));
+  const under20 = (accts) => build(accts).under20(accts.find(a => a.id === 'm1'));
 
-  // ── FIRES: H=500k, bal=450k → equity 50k = 10%; principal to 20% = 450k − 400k = 50k; PMI $200 ──
+  // ── FIRES: H=500k, bal=450k → equity 50k = 10.0%; principal to 20% = $50,000; PMI $200 ──
   const fire = pmiOf([prop(500000), mtg({})]);
-  need('(FIRES) renders the reused equity bar', fire.includes('🎯 PMI drop-off') && fire.includes('height:14px'));
-  need('(FIRES) beat: "10% to 20% equity"', fire.includes("You're about 10% to 20% equity"));
-  need('(FIRES) beat: ~$50,000 more principal + ~$200/mo PMI back',
-    fire.includes('~$50,000 more in principal') && fire.includes('~$200/mo back in your pocket'));
-  need('(FIRES) 20%-equity marker present', fire.includes('left:20%') && fire.includes('20% equity — PMI typically ends'));
+  need('(FIRES) renders the reused equity bar + 20% marker',
+    fire.includes('🎯 PMI drop-off') && fire.includes('height:14px') && fire.includes('left:20%'));
+  need('(FIRES) reworded beat, equity to one decimal ("about 10.0% equity")', fire.includes("You're at about 10.0% equity"));
+  need('(FIRES) beat spells the cause→effect (pay principal → reach 20% → PMI back)',
+    fire.includes('paying down about $50,000 more in principal reaches 20%') &&
+    fire.includes('PMI (about $200/mo) typically drops off and comes back to you'));
 
   // ── GUARDS (sourced-or-blank) ──
   need('(GUARD) no PMI charged → nothing', pmiOf([prop(500000), mtg({ pmiMonthly: 0 })]) === '');
@@ -56,13 +60,20 @@ if (ok) {
   need('(GUARD) already >=20% equity → nothing', pmiOf([prop(600000), mtg({ value: 450000 })]) === '');
 
   // ── MORTGAGE-ONLY: a linked HELOC must NOT change the PMI equity/principal ──
-  const withHeloc = pmiOf([prop(500000), mtg({}), heloc]);
-  need('(MORTGAGE-ONLY) a linked HELOC does not change equityPct or principal-to-20%',
-    withHeloc.includes("You're about 10% to 20% equity") && withHeloc.includes('~$50,000 more in principal'));
+  need('(MORTGAGE-ONLY) a linked HELOC does not change the beat',
+    pmiOf([prop(500000), mtg({}), heloc]).includes("You're at about 10.0% equity"));
+
+  // ── _moatPmiUnder20 direct (the single source of truth) ──
+  need('(TEST) under20 = true at 10% equity with PMI', under20([prop(500000), mtg({})]) === true);
+  need('(TEST) under20 = false at >=20% equity', under20([prop(600000), mtg({ value: 450000 })]) === false);
+  need('(TEST) under20 = false with no PMI', under20([prop(500000), mtg({ pmiMonthly: 0 })]) === false);
 }
 
-// served bytes: wired in the mortgage escrow block
+// served bytes
 need('(WIRED) mortgage modal renders _moatPmiBarHTML', /html \+= _moatPmiBarHTML\(id, acc\);/.test(s));
+need('(CONSISTENCY) §1.6 DI PMI clause gated on _moatPmiUnder20', /var pmiC = _moatPmiUnder20\(acc\) \?/.test(s));
+need('(CONSISTENCY) escrow-footer PMI clause gated on _moatPmiUnder20', /var pmiClause = _moatPmiUnder20\(acc\) \?/.test(s));
+need('(CONSISTENCY) no bare pmi>0 PMI-dropoff clause remains', !/pmi > 0 \? ' ?(Your )?PMI drops off/.test(s));
 
 let pass = 0;
 for (const [label, ok2] of checks) { console.log((ok2 ? '✅' : '⛔') + ' ' + label); if (ok2) pass++; }
@@ -70,8 +81,8 @@ const allGreen = pass === checks.length;
 console.log(`\n${pass}/${checks.length} checks green${RED ? '  [--redfirst: expect NOT all-green]' : ''}`);
 
 if (RED) {
-  if (allGreen) { console.error('\n❌ RED-FIRST FAILED — gate stayed green with the PMI fire-guard stripped.'); process.exit(1); }
-  console.log('\n✅ RED-FIRST OK — gate correctly FAILS when a no-PMI mortgage wrongly fires.');
+  if (allGreen) { console.error('\n❌ RED-FIRST FAILED — gate stayed green with the equity threshold removed.'); process.exit(1); }
+  console.log('\n✅ RED-FIRST OK — gate correctly FAILS when the PMI nudge ignores the 20%-equity threshold.');
   process.exit(0);
 }
 if (!allGreen) { console.error('\n❌ GATE FAILED'); process.exit(1); }
