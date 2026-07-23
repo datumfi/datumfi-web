@@ -3126,7 +3126,7 @@
     // --- SALARY TOOLTIP LOGIC ---
     window.updateSalaryTT = function(type) {
         let val = document.getElementById(type + '-salary').value;
-        let num = parseInt(val.replace(/[^0-9]/g, ''), 10) || 0;
+        let num = parseInt(val.replace(/[^0-9.]/g, ''), 10) || 0;
         let biweekly = Math.round(num / 26);
         let monthly = Math.round(num / 12);
         let daily = Math.round(num / 365);
@@ -3336,9 +3336,9 @@
       var monthlyTotal = upkeepItems.reduce(function (s, i) { return s + _upkMo(i); }, 0);
       var essMo = byCat.essential.reduce(function (s, it) { return s + _upkMo(it); }, 0);
       var disMo = byCat.discretionary.reduce(function (s, it) { return s + _upkMo(it); }, 0);
-      var priSal = parseInt(((document.getElementById('pri-salary') || {}).value || '').replace(/[^0-9]/g, ''), 10) || 0;
+      var priSal = parseInt(((document.getElementById('pri-salary') || {}).value || '').replace(/[^0-9.]/g, ''), 10) || 0;
       var coSal = 0; var coT = document.getElementById('co-arch-toggle');
-      if (coT && coT.checked) coSal = parseInt(((document.getElementById('co-salary') || {}).value || '').replace(/[^0-9]/g, ''), 10) || 0;
+      if (coT && coT.checked) coSal = parseInt(((document.getElementById('co-salary') || {}).value || '').replace(/[^0-9.]/g, ''), 10) || 0;
       var moInc = (priSal + coSal) / 12;
       var needsPct = moInc > 0 ? Math.round(essMo / moInc * 100) : 0;
       var wantsPct = moInc > 0 ? Math.round(disMo / moInc * 100) : 0;
@@ -3469,7 +3469,7 @@
         let arr = isCharity ? charityItems : upkeepItems;
         const item = arr.find(i => i.id === id);
         if(!item) return;
-        if(field === 'amount')         item.amount = parseInt(String(val).replace(/[^0-9]/g, ''), 10) || 0;
+        if(field === 'amount')         item.amount = Math.round((parseFloat(String(val).replace(/[^0-9.]/g, '')) || 0) * 100) / 100;   // #407 §19.1d cents-safe store
         else if(field === 'endsAtRet') item.endsAtRet = !!val;
         else                           item[field] = val;   // name/freq/category/endDate/tag/note (controlled callers)
 
@@ -3491,10 +3491,10 @@
         let totalUpkeep = manualTotal !== null ? manualTotal : upkeepItems.reduce((sum, i) => sum + _upkMo(i), 0);
         let totalCharity = cTotal !== null ? cTotal : charityItems.reduce((sum, i) => sum + _upkMo(i), 0);
         
-        let priSal = parseInt(document.getElementById('pri-salary').value.replace(/[^0-9]/g, ''), 10) || 0;
+        let priSal = parseInt(document.getElementById('pri-salary').value.replace(/[^0-9.]/g, ''), 10) || 0;
         let coSal = 0;
         if(document.getElementById('co-arch-toggle').checked) {
-            coSal = parseInt(document.getElementById('co-salary').value.replace(/[^0-9]/g, ''), 10) || 0;
+            coSal = parseInt(document.getElementById('co-salary').value.replace(/[^0-9.]/g, ''), 10) || 0;
         }
         
         let monthlyGrossIncome = (priSal + coSal) / 12;
@@ -3755,7 +3755,7 @@
             var b = getBaseType(a.baseId); return s + ((b && b.taxCode === 'income') ? Math.abs(a.value || 0) : 0);
         }, 0);
         var spendEl = document.getElementById('spend-input');
-        var spend = spendEl ? (parseInt(String(spendEl.value).replace(/[^0-9]/g, ''), 10) || 0) : 0;
+        var spend = spendEl ? (parseInt(String(spendEl.value).replace(/[^0-9.]/g, ''), 10) || 0) : 0;
 
         var r = DatumMath.waterfall({ accounts: _wantInputAccts(), spendAnnual: spend, incomeAnnual: income });   // PURE / read-only
 
@@ -9906,7 +9906,7 @@
     }
     function _yardHouseholdIncome() {
         if (typeof document === 'undefined' || !document.getElementById) return 0;
-        var g = function (id) { var el = document.getElementById(id); return el ? (parseInt(String(el.value || '').replace(/[^0-9]/g, ''), 10) || 0) : 0; };
+        var g = function (id) { var el = document.getElementById(id); return el ? (parseInt(String(el.value || '').replace(/[^0-9.]/g, ''), 10) || 0) : 0; };
         var co = ((document.getElementById('co-arch-toggle') || {}).checked) ? g('co-salary') : 0;   // §8.4b — co only when toggle on
         return g('pri-salary') + co;
     }
@@ -10133,8 +10133,8 @@
       let totalCharityAnnual = charityItems.reduce((sum, i) => sum + _upkMo(i), 0) * 12;
       let displayCharity = totalCharityAnnual / tf;
 
-      let priSal = parseInt(document.getElementById('pri-salary').value.replace(/[^0-9]/g, ''), 10) || 0;
-      let coSal = document.getElementById('co-arch-toggle').checked ? (parseInt(document.getElementById('co-salary').value.replace(/[^0-9]/g, ''), 10) || 0) : 0;
+      let priSal = parseInt(document.getElementById('pri-salary').value.replace(/[^0-9.]/g, ''), 10) || 0;
+      let coSal = document.getElementById('co-arch-toggle').checked ? (parseInt(document.getElementById('co-salary').value.replace(/[^0-9.]/g, ''), 10) || 0) : 0;
       let grossAnnual = priSal + coSal;
       let charPct = grossAnnual > 0 ? Math.round((totalCharityAnnual / grossAnnual) * 100) : 0;
       
@@ -10265,8 +10265,8 @@
         }
 
         // Cash Flow Physics Module
-        let priSal = parseInt(document.getElementById('pri-salary').value.replace(/[^0-9]/g, ''), 10) || 0;
-        let coSal = document.getElementById('co-arch-toggle').checked ? (parseInt(document.getElementById('co-salary').value.replace(/[^0-9]/g, ''), 10) || 0) : 0;
+        let priSal = parseInt(document.getElementById('pri-salary').value.replace(/[^0-9.]/g, ''), 10) || 0;
+        let coSal = document.getElementById('co-arch-toggle').checked ? (parseInt(document.getElementById('co-salary').value.replace(/[^0-9.]/g, ''), 10) || 0) : 0;
         let effTax = parseFloat(document.getElementById('eff-tax-rate').value) || 0;
         
         let grossAnnual = priSal + coSal;
@@ -10907,7 +10907,7 @@
       // state: 'full' | 'fra_only' | 'partial' | 'empty'
       // Inputs are annual — no ×12 conversion needed (engine is annual-native)
       function _readSSOverride(prefix) {
-        function _pa(id) { var el = document.getElementById(id); return parseInt(((el && el.value) || '').replace(/[^\d]/g, ''), 10) || 0; }
+        function _pa(id) { var el = document.getElementById(id); return parseInt(((el && el.value) || '').replace(/[^\d.]/g, ''), 10) || 0; }
         var v62 = _pa(prefix + '-62');
         var v67 = _pa(prefix + '-67');
         var v70 = _pa(prefix + '-70');
@@ -10983,7 +10983,7 @@
             if (ex !== undefined && ex !== '') return Math.round(parseFloat(ex)) || 100000;
             if (window.DatumShape && DatumShape.scales) return Math.round(DatumShape.scales.datumPosToVal(parseInt(sDat.value, 10)) * 1000);
           }
-          return parseInt(spendVal.replace(/[^\d]/g, ''), 10) || 100000;
+          return parseInt(spendVal.replace(/[^\d.]/g, ''), 10) || 100000;
         })();
         // 2A — read the slider (single PTA-age source), not the plan-end-age field (now a date mirror).
         const planEndAge  = Math.min(120, Math.max(_planEndAgeMin, parseInt((document.getElementById('sl-plan-through')?.value) || '', 10) || 93));
@@ -11245,7 +11245,7 @@
         var spendEl  =  document.getElementById('spend-input');
         var age      = parseAgeFromDob(dobVal);
         var retYear  = parseInt((retVal.replace(/\s/g, '').split('/')[1] || ''), 10);
-        var spendVal = parseInt(((spendEl && spendEl.value) || '').replace(/[^\d]/g, ''), 10) || 0;
+        var spendVal = parseInt(((spendEl && spendEl.value) || '').replace(/[^\d.]/g, ''), 10) || 0;
         var accts    = state.accounts || [];
 
         var items = [
@@ -12511,17 +12511,17 @@
           toSlider: function (v) { return v; } },
         { valId: 'val-portfolio',   slider: slPort, w: '140px', isCurrency: true,
           getEditVal: function () { return '$' + Math.round(SC.portPosToVal(parseInt(slPort.value,10)) * 1e6).toLocaleString('en-US'); },
-          clean: function (s) { return s.replace(/[^0-9]/g, ''); },
+          clean: function (s) { return s.replace(/[^0-9.]/g, ''); },
           validate: function (v) { return v >= 1000 && v <= 50000000; },
           toSlider: function (v) { return SC.portValToPos(v / 1e6); } },
         { valId: 'val-contrib',     slider: slCont, w: '140px', isCurrency: true,
           getEditVal: function () { return '$' + SC.contribPosToVal(parseInt(slCont.value,10)).toLocaleString('en-US'); },
-          clean: function (s) { return s.replace(/[^0-9]/g, ''); },
+          clean: function (s) { return s.replace(/[^0-9.]/g, ''); },
           validate: function (v) { return v >= 0 && v <= 200000; },
           toSlider: function (v) { return SC.contribValToPos(v); } },
         { valId: 'val-datum',       slider: slDat,  w: '140px', isCurrency: true,
           getEditVal: function () { return '$' + Math.round(SC.datumPosToVal(parseInt(slDat.value,10)) * 1000).toLocaleString('en-US'); },
-          clean: function (s) { return s.replace(/[^0-9]/g, ''); },
+          clean: function (s) { return s.replace(/[^0-9.]/g, ''); },
           validate: function (v) { return v >= 20000 && v <= 1000000; },
           toSlider: function (v) { return SC.datumValToPos(v / 1000); } }
       ];
@@ -12735,7 +12735,7 @@
       var portEl = $('bp-portfolio-total'), contEl = $('bp-contributions-total');
       if (portEl) portEl.addEventListener('input', function () {
         if (!SC) return;
-        var v = parseInt(String(portEl.value).replace(/[^\d]/g, ''), 10);
+        var v = parseInt(String(portEl.value).replace(/[^\d.]/g, ''), 10);
         if (isNaN(v) || v < 1000 || v > 50000000) return;
         var sP = $('slider-portfolio');
         if (sP) { sP.value = clampN(SC.portValToPos(v / 1e6), 0, 100000); sP.dataset.exactVal = String(v); }
@@ -12743,7 +12743,7 @@
       });
       if (contEl) contEl.addEventListener('input', function () {
         if (!SC) return;
-        var v = parseInt(String(contEl.value).replace(/[^\d]/g, ''), 10);
+        var v = parseInt(String(contEl.value).replace(/[^\d.]/g, ''), 10);
         if (isNaN(v) || v < 0 || v > 200000) return;
         var sC = $('slider-contrib');
         if (sC) { sC.value = clampN(SC.contribValToPos(v), 0, 100000); sC.dataset.exactVal = String(v); }
@@ -13257,8 +13257,8 @@
       // Role-aware insight: read Primary and Co-Architect FRA monthly estimates from DOM
       var _raPri67El  = document.getElementById('ss-pri-67');
       var _raSec67El  = document.getElementById('ss-sec-67');
-      var _raPriMo    = _raPri67El ? parseInt((_raPri67El.value || '').replace(/[^\d]/g, ''), 10) || 0 : 0;
-      var _raSecMo    = _raSec67El ? parseInt((_raSec67El.value || '').replace(/[^\d]/g, ''), 10) || 0 : 0;
+      var _raPriMo    = _raPri67El ? parseInt((_raPri67El.value || '').replace(/[^\d.]/g, ''), 10) || 0 : 0;
+      var _raSecMo    = _raSec67El ? parseInt((_raSec67El.value || '').replace(/[^\d.]/g, ''), 10) || 0 : 0;
       var _raPriLarger = (_raPriMo - _raSecMo) >= 500;
       var _raSecLarger = (_raSecMo - _raPriMo) >= 500;
 
