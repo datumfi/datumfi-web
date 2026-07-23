@@ -8050,7 +8050,7 @@
     window.updateValueWithoutRender = function(id, valStr) {
         const acc = state.accounts.find(a => a.id === id);
         if(acc) {
-            acc.value = Math.min(100000000000, parseInt(valStr.replace(/[^0-9]/g, ''), 10) || 0);   // #393 $100B ceiling
+            acc.value = Math.min(100000000000, Math.round(_num(valStr) * 100) / 100);   // #393 $100B ceiling · #407 §19.1 cents-safe (_num keeps the decimal; parseInt-strip concatenated cents -> 100x)
             // Instantly sync the front input field if it exists
             let frontInp = document.getElementById('room-val-inp-' + id);
             if(frontInp) frontInp.value = formatCurrency(acc.value.toString());
@@ -10366,7 +10366,7 @@
     window.updateValue = function(id, valStr) {
       const acc = state.accounts.find(a => a.id === id);
       if(acc) {
-        acc.value = parseInt(valStr.replace(/[^0-9]/g, ''), 10) || 0;
+        acc.value = Math.min(100000000000, Math.round(_num(valStr) * 100) / 100);   // #407 §19.1 cents-safe (was parseInt-strip -> dropped the '.' and concatenated cents)
         updateSVGs();
         updateAnalysisText();
         if(activeModalId === id) {
@@ -10389,7 +10389,7 @@
     window.updateInflow = function(id, valStr) {
       const acc = state.accounts.find(a => a.id === id);
       if(acc) {
-        acc.inflow = parseInt(valStr.replace(/[^0-9]/g, ''), 10) || 0;
+        acc.inflow = Math.round(_num(valStr) * 100) / 100;   // #407 §19.1 cents-safe
         updateSVGs();
       }
     };
