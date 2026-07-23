@@ -7433,9 +7433,9 @@
             if (base.title === 'Mortgage') {
                 let _diTxt = _moatDI(acc);
                 html += `
-            <div style="margin-bottom:18px; padding:14px; background: rgba(93,202,165,0.05); border:1px solid rgba(93,202,165,0.25); border-radius:4px;">
-                <div style="color:var(--teal-mid); font-weight:bold; font-size:11px; letter-spacing:1px; margin-bottom:8px;">DATUM INTELLIGENCE</div>
-                <div id="modal-moat-di-${id}" style="font-size:12px; color: rgba(255,255,255,0.8); line-height:1.55;">${_diTxt || 'Add this loan\'s balance, rate, and payment and Datum reads it back — the payoff clock, the lifetime interest, and the equity behind it.'}</div>
+            <div class="di-narrative">
+                <div class="di-narr-head">Datum Intelligence</div>
+                <div class="di-narr-body" id="modal-moat-di-${id}">${_diTxt || 'Add this loan\'s balance, rate, and payment and Datum reads it back — the payoff clock, the lifetime interest, and the equity behind it.'}</div>
             </div>`;
             }
 
@@ -7443,10 +7443,10 @@
             if (base.title === 'HELOC') {
                 let _cdiTxt = _cellarDI(acc);
                 html += `
-            <div style="margin-bottom:18px; padding:14px; background: rgba(93,202,165,0.05); border:1px solid rgba(93,202,165,0.25); border-radius:4px;">
-                <div style="color:var(--teal-mid); font-weight:bold; font-size:11px; letter-spacing:1px; margin-bottom:8px;">DATUM INTELLIGENCE</div>
-                <div id="modal-cellar-di-${id}" style="font-size:12px; color: rgba(255,255,255,0.8); line-height:1.55;">${_cdiTxt || 'Add this line\'s balance and credit limit and Datum reads it back — your utilization, your headroom, the phase you\'re in, and the equity behind it.'}</div>
-                <div id="modal-cellar-intel-${id}" style="font-size:12px; color: rgba(255,255,255,0.82);">${_diIntelligence(acc)}</div>
+            <div class="di-narrative">
+                <div class="di-narr-head">Datum Intelligence</div>
+                <div class="di-narr-body" id="modal-cellar-di-${id}">${_cdiTxt || 'Add this line\'s balance and credit limit and Datum reads it back — your utilization, your headroom, the phase you\'re in, and the equity behind it.'}</div>
+                <div id="modal-cellar-intel-${id}" class="di-narr-body" style="margin-top:8px;">${_diIntelligence(acc)}</div>
             </div>`;
             }
 
@@ -7566,8 +7566,8 @@
                 var inDB = acc.includeDatumBuilder !== false;    // §5.3 default ON
                 var maintPH = _groundsMaintDefault(acc);
                 html += `
-            <div style="margin-bottom:16px; padding:14px; background: rgba(93,202,165,0.05); border:1px solid rgba(93,202,165,0.25); border-radius:4px;">
-                <div style="color:var(--teal-mid); font-weight:bold; font-size:11px; letter-spacing:1px; margin-bottom:8px;">DATUM INTELLIGENCE</div>
+            <div class="di-narrative">
+                <div class="di-narr-head">Datum Intelligence</div>
                 <div id="modal-grounds-di-${id}">${_groundsSignalsHTML(id, acc) || _GROUNDS_DI_EMPTY}</div>
             </div>
             <div style="margin-bottom:16px; padding:14px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:4px;">

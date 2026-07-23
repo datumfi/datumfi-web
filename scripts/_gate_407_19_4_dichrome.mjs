@@ -1,31 +1,48 @@
-/* DEV-ONLY red-first gate — #407 §19.4 UNIVERSAL .di-narrative chrome upgrade (Mortgage Copy Bank §19.4).
-   Every DI narrative (every room modal) inherits this. Asserts the served CSS carries the premium chrome:
-     stronger glowing teal accent bar (4px + teal glow in the shadow) · layered depth · subtle navy gradient
-     background · a more prominent header (700 weight, wider tracking, ✦ glyph) · raised body line-height.
-   --redfirst reverts those tokens to the flat pre-§19.4 look -> the new-chrome asserts fail (gate bites). */
+/* DEV-ONLY red-first gate — #407 §19.4 UNIVERSAL DI chrome, CORRECTED after the audit.
+   The first cut only checked that the .di-narrative CSS RULE existed — a blind spot: the Mortgage, HELOC and
+   Grounds DI boxes rendered with bespoke INLINE styles (no class), so the chrome was invisible on screen while
+   the gate stayed green. This gate now asserts the RENDER SITES actually emit class="di-narrative" +
+   .di-narr-head (so an element carries it), that NO bespoke inline "DATUM INTELLIGENCE" modal header survives,
+   AND that the CSS chrome exists to be inherited.
+   --redfirst strips the class off the Mortgage DI body (the exact audit symptom) -> the render-site check fails. */
 import { readFileSync } from 'node:fs';
 const RED = process.argv.includes('--redfirst');
 let s = readFileSync('studio.html', 'utf8');
 
 if (RED) {
-  s = s.split('border-left: 4px solid var(--teal-mid)').join('border-left: 2px solid var(--teal-mid)');
-  s = s.split('background: linear-gradient(155deg, rgba(14,28,48,0.92), rgba(9,18,33,0.80))').join('background: rgba(9, 18, 33, 0.85)');
-  s = s.split(', -7px 0 20px -10px rgba(93,202,165,0.45)').join('');
-  s = s.split("  .di-narr-head::before { content: '\\2726'; margin-right: 7px; font-size: 11px; opacity: 0.95; }   /* ✦ glyph */\n").join('');
-  s = s.split('font-weight: 700; ').join('');
-  s = s.split('line-height: 1.75').join('line-height: 1.65');
+  s = s.split('class="di-narr-body" id="modal-moat-di-${id}"').join('id="modal-moat-di-${id}"');
 }
 
 const checks = [];
 const need = (label, cond) => checks.push([label, !!cond]);
 
-need('stronger accent bar (4px teal border-left)', /\.di-narrative \{[^}]*border-left: 4px solid var\(--teal-mid\)/.test(s));
-need('subtle navy gradient background', /\.di-narrative \{[^}]*background: linear-gradient\(155deg/.test(s));
-need('layered shadow + soft teal glow', /\.di-narrative \{[^}]*0 8px 24px rgba\(9,18,33,0\.45\)[^}]*rgba\(93,202,165,0\.45\)/.test(s));
-need('more prominent header (700 weight + wider tracking)', /\.di-narr-head \{[^}]*font-weight: 700[^}]*letter-spacing: 0\.16em/.test(s));
-need('header glyph (✦ via ::before)', /\.di-narr-head::before \{ content: '\\2726'/.test(s));
-need('raised body line-height (1.75)', /\.di-narr-body \{[^}]*line-height: 1\.75/.test(s));
-need('still navy-friendly (teal token retained, no light bg)', s.includes('.di-narrative') && !/\.di-narrative \{[^}]*background: (#fff|white|rgba\(255,255,255)/.test(s));
+// ── RENDER SITES: every DI box must carry the class (this is what the audit proved was missing) ──
+need('Mortgage DI renders via .di-narrative + .di-narr-body#modal-moat-di',
+  /<div class="di-narrative">\s*<div class="di-narr-head">Datum Intelligence<\/div>\s*<div class="di-narr-body" id="modal-moat-di-\$\{id\}">/.test(s));
+need('HELOC DI renders via .di-narrative + .di-narr-body#modal-cellar-di',
+  /<div class="di-narrative">\s*<div class="di-narr-head">Datum Intelligence<\/div>\s*<div class="di-narr-body" id="modal-cellar-di-\$\{id\}">/.test(s));
+need('Grounds DI renders via .di-narrative + .di-narr-head#modal-grounds-di',
+  /<div class="di-narrative">\s*<div class="di-narr-head">Datum Intelligence<\/div>\s*<div id="modal-grounds-di-\$\{id\}">/.test(s));
+need('Investment rooms (_diNarrBlock) render via .di-narrative + head + body',
+  s.includes('class="di-narrative" id="di-narr-') && s.includes('class="di-narr-head">Datum Intelligence</div><div class="di-narr-body">'));
+need('Yard DI twin renders via .di-narrative (§19.4b)',
+  s.includes('var diBlock = di ? \'<div class="di-narrative"><div class="di-narr-head">Datum Intelligence'));
+
+// ── NEGATIVE: no bespoke inline modal DI header may survive (the hud-status telemetry line is not this) ──
+const bespoke = (s.match(/font-weight:bold; font-size:11px; letter-spacing:1px; margin-bottom:8px;">DATUM INTELLIGENCE/g) || []).length;
+need('no bespoke inline "DATUM INTELLIGENCE" modal header survives (0)', bespoke === 0);
+
+// ── COUNT: at least the 5 render sites carry class="di-narrative" ──
+const cnt = (s.match(/class="di-narrative"/g) || []).length;
+need(`>=5 render sites carry class="di-narrative" (got ${cnt})`, cnt >= 5);
+
+// ── CSS chrome exists to be inherited ──
+need('CSS: stronger 4px teal accent bar', /\.di-narrative \{[^}]*border-left: 4px solid var\(--teal-mid\)/.test(s));
+need('CSS: layered shadow + teal glow + navy gradient',
+  /\.di-narrative \{[^}]*linear-gradient\(155deg/.test(s) && /\.di-narrative \{[^}]*rgba\(93,202,165,0\.45\)/.test(s));
+need('CSS: ✦ glyph via .di-narr-head::before', /\.di-narr-head::before \{ content: '\\2726'/.test(s));
+need('CSS: prominent header (700) + raised body line-height (1.75)',
+  /\.di-narr-head \{[^}]*font-weight: 700/.test(s) && /\.di-narr-body \{[^}]*line-height: 1\.75/.test(s));
 
 let pass = 0;
 for (const [label, ok] of checks) { console.log((ok ? '✅' : '⛔') + ' ' + label); if (ok) pass++; }
@@ -33,8 +50,8 @@ const allGreen = pass === checks.length;
 console.log(`\n${pass}/${checks.length} checks green${RED ? '  [--redfirst: expect NOT all-green]' : ''}`);
 
 if (RED) {
-  if (allGreen) { console.error('\n❌ RED-FIRST FAILED — gate stayed green on the flat pre-§19.4 chrome.'); process.exit(1); }
-  console.log('\n✅ RED-FIRST OK — gate correctly FAILS on the pre-§19.4 flat chrome.');
+  if (allGreen) { console.error('\n❌ RED-FIRST FAILED — gate stayed green with the Mortgage DI unclassed.'); process.exit(1); }
+  console.log('\n✅ RED-FIRST OK — gate correctly FAILS when a room DI box lacks the class.');
   process.exit(0);
 }
 if (!allGreen) { console.error('\n❌ GATE FAILED'); process.exit(1); }
