@@ -9920,6 +9920,43 @@
             { label: 'Escrow',            val: escrow,        color: 'rgba(165,175,188,0.75)' }
         ], paidPct, 'PAID DOWN', 'WHERE THIS LOAN STANDS');
     }
+    // §19.7 — YARD all-liens debt pie. The Yard composes the property + EVERY lien secured against it, so a HELOC
+    // drafted under the mortgage is no longer invisible in the debt view. HONESTY (R187): a HELOC's origAmount is a
+    // credit LINE, not a borrowed lump — no honest principalPaid, no sourced interest split — so it contributes ONE
+    // slice only, its drawn balance (h.value). Never fabricate a HELOC principal/interest split (L47). With no drawn
+    // HELOC the view is byte-identical to the Mortgage pie ("WHERE THIS LOAN STANDS"); with one, the title shifts to
+    // "ALL DEBT ON THE GROUNDS" and the center reads OVERALL equity-% of the home (all-liens-aware, not the
+    // mortgage-only paid-down %). Reuses the shared _debtDonutSVG drawer. Display-only (LOCK-3).
+    function _yardDebtPieHTML(propId) {
+        // §19.7 (Ruling B2) — the Yard debt pie is ALWAYS a POSITION view: total secured debt vs equity, arcs
+        // summing to HOME VALUE so the equity arc equals the center %. Every lien contributes its CURRENT balance
+        // only — the mortgage its still-owed balance, a HELOC its drawn balance (a credit line, never a P/I split,
+        // L47). The mortgage's principal-paid / interest history stays on the Mortgage modal (Yard = position, not
+        // progress). Title flips to "ALL DEBT ON THE GROUNDS" only with 2+ liens; a lone lien keeps "WHERE THIS
+        // LOAN STANDS". Blank when home value is unsourced (no honest equity, L47) or no active debt sits on the
+        // grounds. Hide any zero slice (L47). Display-only, LOCK-3 — never feeds engine/taxCode/DI totals.
+        var eq = _yardNetEquity(propId);            // home value − ALL linked liens; null when home value unsourced
+        if (eq === null) {                          // no sourced home value → coach the ONE next step, don't compute-shame
+            return '<div style="margin-bottom:16px; padding:14px 18px; background:linear-gradient(155deg, rgba(255,255,255,0.04), rgba(9,18,33,0.14)); '
+                 + 'border:1px solid rgba(255,255,255,0.08); border-radius:9px; font-size:12px; color:rgba(255,255,255,0.72); line-height:1.55;">'
+                 + 'Add this home&rsquo;s value and we&rsquo;ll show you exactly how much of it is already yours.</div>';
+        }
+        var prop = (state.accounts || []).find(function (a) { return a.id === propId; });
+        var homeVal = _num(prop.value);
+        var m = _yardMortgage(propId), h = _yardHeloc(propId);
+        var slices = [], lienCount = 0;
+        var mbal = m ? (parseFloat(m.value) || 0) : 0;
+        if (mbal > 0) { slices.push({ label: 'Mortgage Balance', val: mbal, color: 'var(--danger)' }); lienCount++; }
+        var helocDrawn = (h && _num(h.value) > 0) ? _num(h.value) : 0;
+        if (helocDrawn > 0) { slices.push({ label: 'HELOC Drawn', val: helocDrawn, color: '#9B7EDE' }); lienCount++; }   // credit line: DRAWN balance only
+        if (eq > 0) slices.push({ label: 'Equity', val: eq, color: 'var(--teal)' });
+        if (!slices.length) return '';              // defensive: no debt AND no positive equity → nothing honest to show
+        var eqPct = homeVal > 0 ? Math.round(eq / homeVal * 100) : 0;
+        // Title by lien count: 0 liens = the home is fully owned (the reward, 100% equity circle); 2+ = all-liens; 1 = single-lien.
+        var title = lienCount === 0 ? 'THIS PROPERTY IS FULLY YOURS'
+                  : (lienCount > 1 ? 'ALL DEBT ON THE GROUNDS' : 'WHERE THIS LOAN STANDS');
+        return _debtDonutSVG(slices, eqPct, 'EQUITY', title);
+    }
 
     window.openAmortizationModal = function(id) {
         var acc = state.accounts.find(a => a.id === id);
@@ -10114,7 +10151,7 @@
             '<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;"><div class="hud-title modal-tt-wrap" style="color:var(--white); font-size:18px; cursor:help;">🌳 The Yard<div class="modal-tt" style="left:0; right:auto; top:100%; bottom:auto;"><strong>The Yard</strong>The Yard is your home and its loans seen as one — what the place is worth, what you owe against it, and what it truly costs to keep. Not just the mortgage: the whole cost of ownership in one view.</div></div>' +
             '<button onclick="document.getElementById(\'yard-modal-overlay\').style.display=\'none\';" style="background:transparent; border:none; color:var(--white); font-size:24px; cursor:pointer; line-height:1;">&times;</button></div>' +
             '<div style="font-size:11px; color:rgba(255,255,255,0.45); margin-bottom:16px;">The whole cost of ownership, in one view. Open each account on its own — from the left list, or by clicking a section below.</div>' +
-            secA + secB + (m ? _moatDebtPieHTML(m) : '') + secH + secC + secD + diBlock + '</div>';
+            secA + secB + _yardDebtPieHTML(propId) + secH + secC + secD + diBlock + '</div>';   // §19.7 — all-liens (mortgage + HELOC) vs equity
         ov.style.display = 'flex';
     };
 
