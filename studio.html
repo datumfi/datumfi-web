@@ -8511,12 +8511,12 @@
     // Forward PMT-solve (#379-OK): the level monthly payment that amortizes `bal` at `apr`% to zero by `byDate`.
     // null when inputs are unsourced or the date is already past (no honest forward solve). Whole-dollar at display.
     function _targetPayment(bal, apr, byDate) {
-        if (!(bal > 0) || !(apr > 0) || !byDate) return null;
+        if (!(bal > 0) || !byDate || !(apr >= 0)) return null;   // blank/NaN apr → null; a real 0% loan is linear (below)
         var now = new Date();
         var months = (byDate.getFullYear() - now.getFullYear()) * 12 + (byDate.getMonth() - now.getMonth());
         if (months <= 0) return null;
         var r = apr / 100 / 12;
-        return bal * r / (1 - Math.pow(1 + r, -months));
+        return (r === 0) ? bal / months : bal * r / (1 - Math.pow(1 + r, -months));
     }
     // Calendar year a loan pays off, `months` from its next payment (or today) — used by the §19.10 horizon beat.
     function _payoffYearOf(acc, months) {
@@ -8660,12 +8660,16 @@
         var _r10 = _retireInfo(), _pm10 = payoffMonths(acc);
         if (_pm10.code === 'OK' && bal > 0 && _r10 && _r10.retireYear) {
             var _payYear = _payoffYearOf(acc, _pm10.months);
+            var _tp10 = _targetPayment(bal, rate, _r10.retireDate);
+            var _tpc10 = _tp10 ? (' Around ' + GOLD($(_tp10)) + '/mo would clear it by ' + GOLD(_r10.retireYear) + '.') : '';
             if (_payYear <= _r10.retireYear) {
                 lever.push('On this payment, it\'s clear by ' + GOLD(_payYear) + ' — before you retire.');
+            } else if (_payYear > _r10.retireYear + 30) {
+                // §19.11 🟠 sanity clamp — an absurd payoff year ("2526 / 491 years") reads as nonsense; suppress it.
+                lever.push('At ' + TEAL($(totalMo)) + '/mo you\'re only just ahead of the interest — this balance would take generations to clear.' + _tpc10);
             } else {
-                var _tp10 = _targetPayment(bal, rate, _r10.retireDate);
                 var _yp10 = _payYear - _r10.retireYear;
-                lever.push('You\'re paying it down — but at ' + TEAL($(totalMo)) + '/mo it isn\'t gone until ' + GOLD(_payYear) + ', about ' + GOLD(_yp10 + ' year' + (_yp10 === 1 ? '' : 's')) + ' into retirement.' + (_tp10 ? ' Around ' + GOLD($(_tp10)) + '/mo would clear it by ' + GOLD(_r10.retireYear) + '.' : ''));
+                lever.push('You\'re paying it down — but at ' + TEAL($(totalMo)) + '/mo it isn\'t gone until ' + GOLD(_payYear) + ', about ' + GOLD(_yp10 + ' year' + (_yp10 === 1 ? '' : 's')) + ' into retirement.' + _tpc10);
             }
         }
         // §19.9 Part B — negative-amortization echo (retirement slant): persists whenever the modal reopens. Leads
@@ -8990,12 +8994,15 @@
         // targetPayment = forward PMT-solve to retireDate (#379-OK), an estimate — never advice. Sourced-or-blank.
         var _r2210 = _retireInfo(), _pm2210 = payoffMonths(acc);
         if (_pm2210.code === 'OK' && bal > 0 && apr > 0 && _r2210 && _r2210.retireYear && !_payoffVsMaturity(acc) && !_helocInterestOnlyDraw(acc)) {
-            var _payDate2210 = _payoffDateFrom(acc, _pm2210.months);
-            if (_payoffYearOf(acc, _pm2210.months) <= _r2210.retireYear) {
+            var _payDate2210 = _payoffDateFrom(acc, _pm2210.months), _payYr2210 = _payoffYearOf(acc, _pm2210.months);
+            var _tp2210 = _targetPayment(bal, apr, _r2210.retireDate);
+            var _tpc2210 = _tp2210 ? (' Around ' + $(_tp2210) + '/mo would clear it by ' + _r2210.retireYear + '.') : '';
+            if (_payYr2210 <= _r2210.retireYear) {
                 beats.push('On this pace it\'s cleared by ' + _payDate2210 + ' — before both maturity and your retirement.');
+            } else if (_payYr2210 > _r2210.retireYear + 30) {
+                beats.push('At ' + $(totalMo) + '/mo you\'re only just ahead of the interest — this balance would take generations to clear.' + _tpc2210);   // §19.11 🟠 clamp mirrored
             } else {
-                var _tp2210 = _targetPayment(bal, apr, _r2210.retireDate);
-                beats.push('You\'re paying down principal — but at ' + $(totalMo) + '/mo it isn\'t gone until ' + _payDate2210 + ', past the retirement year you\'ve set.' + (_tp2210 ? ' Around ' + $(_tp2210) + '/mo would clear it by ' + _r2210.retireYear + '.' : ''));
+                beats.push('You\'re paying down principal — but at ' + $(totalMo) + '/mo it isn\'t gone until ' + _payDate2210 + ', past the retirement year you\'ve set.' + _tpc2210);
             }
         }
         // ── §18.A VARIABLE-RATE ACKNOWLEDGMENT BEATS (verbatim, sourced-or-blank, PLAIN COACH) ──
@@ -10232,7 +10239,7 @@
         }
         // RULE D — HELOC as remodel/bridge tool (heloc linked, drawn OR available)
         if (h && (helocDrawn || helocAvail)) {
-            beats.push('A line against the house is a tool with two very different edges. Used to reinvest IN the home — a kitchen, a roof, an addition that raises the property’s value — it can lift the asset side of your estate while the balance stays modest. Used to fund everyday spending, it quietly converts home equity into a monthly bill that follows you toward retirement. The same line, opposite effects. If you’re weighing a remodel, this is the cheaper-than-most way to fund it; if you’re eyeing retirement, an undrawn line is a standby safety valve you never have to use.');
+            beats.push('A home-equity line (a HELOC) against the house is a tool with two very different edges. Used to reinvest IN the home — a kitchen, a roof, an addition that raises the property’s value — it can lift the asset side of your estate while the balance stays modest. Used to fund everyday spending, it quietly converts home equity into a monthly bill that follows you toward retirement. The same home-equity line, opposite effects. If you’re weighing a remodel, this is the cheaper-than-most way to fund it; if you’re eyeing retirement, an undrawn home-equity line is a standby safety valve you never have to use.');
         }
         // RULE E — equity as a retirement asset
         if (equityPct != null && equityPct >= 0.5 && yTR != null && yTR <= 15) {

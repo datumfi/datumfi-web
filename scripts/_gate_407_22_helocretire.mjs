@@ -38,6 +38,7 @@ const mk = (acc) => new Function(...Object.keys(deps), 'state', body + '\nreturn
 const draw = { baseId: 'heloc_a', value: 60000, intRate: 7, helocPhase: 'Draw', drawPeriodEndDate: '2030-06-01', maturityDate: '2045-06-01', minPmt: 350, addPmt: 0 };
 const late = { baseId: 'heloc_a', value: 60000, intRate: 7, helocPhase: 'Repayment', maturityDate: '2050-06-01', minPmt: 500, addPmt: 0, nextPmtDate: '2026-08-01' };
 const ontrack = { baseId: 'heloc_a', value: 20000, intRate: 7, helocPhase: 'Repayment', maturityDate: '2050-06-01', minPmt: 800, addPmt: 0, nextPmtDate: '2026-08-01' };
+const orange = { baseId: 'heloc_a', value: 60000, intRate: 8, helocPhase: 'Repayment', maturityDate: '2150-01-01', minPmt: 402, addPmt: 0, nextPmtDate: '2026-08-01' };   // barely amortizing, payoff > retire+30 but < a far maturity
 
 const checks = [];
 const need = (label, cond) => checks.push([label, !!cond]);
@@ -69,6 +70,11 @@ const S2210_Y = 'past the retirement year you';
   const beats = api._helocIntelBeats(ontrack).join(' ');
   need('on-track: §22.10 🟢 present ("before both maturity and your retirement")', beats.includes(S2210_G));
   need('on-track: not the 🟡 line', !beats.includes(S2210_Y));
+}
+// amortizing, absurd payoff (🟠 clamp)
+{
+  const beats = mk(orange)._helocIntelBeats(orange).join(' ');
+  need('orange: §22.10 🟠 "generations to clear", no absurd year', beats.includes('would take generations to clear') && !beats.includes(S2210_Y));
 }
 
 let pass = 0;
