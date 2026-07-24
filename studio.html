@@ -6911,23 +6911,6 @@
             </div>`;
         }
 
-        let notePH = "e.g. Important notes...";
-        if(base.taxCode === 'debt') notePH = "e.g. Lender name, escrow details, account number...";
-        if(base.taxCode === 'liquid') {
-             if(base.id.includes('savings')) notePH = "e.g. Emergency Fund, Sinking Fund, Tax Reserve...";
-             else notePH = "e.g. Primary Operations, Joint Expenses, Vacation Fund...";
-        }
-        if(base.taxCode === 'physical') {
-             if(base.id.includes('collectibles')) notePH = "e.g. Storage location, provenance, condition details, insurance riders...";
-             else notePH = "e.g. Address, Zillow link, appraisal notes...";
-        }
-        
-        html += `
-        <div style="margin-bottom: 20px;">
-            <div class="input-label">Purpose / Notes</div>
-            <textarea class="small-field" style="width:100%; height: 60px; resize:none; font-family: var(--font-serif);" placeholder="${notePH}" oninput="updateAccField('${id}', 'notes', this.value)">${acc.notes || ''}</textarea>
-        </div>`;
-
         if(base.taxCode === 'pretax' || base.taxCode === 'roth') {
             // §402(g)-class plans (401k / 403b / 457b) share the high elective-deferral figures; IRA is its own bucket.
             let is401k = /401k|403|457b/.test(base.id);
@@ -7695,6 +7678,29 @@
                 </div>
             </div>`;
         }
+
+        // §20 #9 — Purpose / Notes renders LAST in every estate modal (universal, all rooms). Relocated from
+        // the top of the overview (it used to sit above every room's own fields, so the free-text box was the
+        // first thing between the toggles and the numbers). Notes are a footnote to the account, not a preamble
+        // — they belong under the room's own content. Stays INSIDE #modal-edu-collapse so it still hides while
+        // decorating (W2/W6: holdings are the sole focus). Pure relocation (LOCK-3) — same markup, same
+        // placeholder logic, same updateAccField('notes') write path; no engine/DI total is touched.
+        let notePH = "e.g. Important notes...";
+        if(base.taxCode === 'debt') notePH = "e.g. Lender name, escrow details, account number...";
+        if(base.taxCode === 'liquid') {
+             if(base.id.includes('savings')) notePH = "e.g. Emergency Fund, Sinking Fund, Tax Reserve...";
+             else notePH = "e.g. Primary Operations, Joint Expenses, Vacation Fund...";
+        }
+        if(base.taxCode === 'physical') {
+             if(base.id.includes('collectibles')) notePH = "e.g. Storage location, provenance, condition details, insurance riders...";
+             else notePH = "e.g. Address, Zillow link, appraisal notes...";
+        }
+
+        html += `
+        <div style="margin-bottom: 20px;">
+            <div class="input-label">Purpose / Notes</div>
+            <textarea class="small-field" style="width:100%; height: 60px; resize:none; font-family: var(--font-serif);" placeholder="${notePH}" oninput="updateAccField('${id}', 'notes', this.value)">${acc.notes || ''}</textarea>
+        </div>`;
 
         html += '</div>';   // W2 — close #modal-edu-collapse; the holdings blocks below render OUTSIDE the collapse
 
