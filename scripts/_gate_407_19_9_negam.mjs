@@ -25,7 +25,7 @@ function extractFn(s, name) {
 
 const names = ['calculateTotalPmt', 'payoffMonths', '_payoffDateFrom', 'calculatePayoff', '_monthsBetween',
                'lifeOfLoan', 'lifetimeInterest', '_moatNegAm', '_moatNegAmInlineHTML', '_debtDonutSVG',
-               '_moatDebtPieHTML', '_retireInfo', '_targetPayment', '_payoffYearOf', '_moatDI'];   // §19.10 shared helpers
+               '_moatDebtPieHTML', '_retireInfo', '_targetPayment', '_payoffYearOf', '_moatSanePayoff', '_moatDI'];   // §19.10 shared helpers
 let body = names.map(n => extractFn(src, n)).join('\n');
 if (RED) body = body.replace('if (payment <= 0 || payment >= monthlyInterest) return null;', 'if (true) return null;');   // force never-neg-am
 

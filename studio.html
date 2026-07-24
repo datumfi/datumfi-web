@@ -8518,6 +8518,13 @@
         var r = apr / 100 / 12;
         return (r === 0) ? bal / months : bal * r / (1 - Math.pow(1 + r, -months));
     }
+    // §19.11 — is the payoff within a sane human horizon? Beyond ~50 years (a payment barely above interest) the
+    // specific date/duration reads as nonsense ("2539", "231 years"), so the date-naming beats suppress it and let
+    // the §19.10 🟠 "generations to clear" line carry the meaning instead.
+    function _moatSanePayoff(acc) {
+        var pm = payoffMonths(acc);
+        return pm.code === 'OK' && pm.months <= 600;
+    }
     // Calendar year a loan pays off, `months` from its next payment (or today) — used by the §19.10 horizon beat.
     function _payoffYearOf(acc, months) {
         var d = acc.nextPmtDate ? new Date(acc.nextPmtDate + 'T00:00:00') : new Date();
@@ -8568,7 +8575,7 @@
         // 1.3 payoff clock (only when we have a real date). The shown date already includes addPmt, so the
         // aheadClause names the MINIMUM-ONLY baseline date it beats — not "sooner than the date just shown".
         var payoff = calculatePayoff(acc);
-        if (bal > 0 && totalMo > 0 && /\d{4}/.test(payoff)) {
+        if (bal > 0 && totalMo > 0 && /\d{4}/.test(payoff) && _moatSanePayoff(acc)) {   // §19.11 — suppress absurd far-future dates
             var ahead = '';
             if (addP > 0) {
                 var minM13 = payoffMonths(acc, parseFloat(acc.minPmt) || 0);
@@ -8632,7 +8639,7 @@
         }
         // 1.8 ACCELERATOR — ALWAYS both concrete numbers (time AND interest), never an adjective alone.
         // monthsSaved = baseline(min) − accelerated(min+add); interestSaved = remaining-interest delta.
-        if (addP > 0) {
+        if (addP > 0 && _moatSanePayoff(acc)) {   // §19.11 — a degenerate loan's "231 years sooner" is nonsense; suppress
             var d18 = acceleratedDelta(acc);
             if (d18) {
                 var ms18 = d18.monthsSaved, iS18 = $(d18.interestSaved);

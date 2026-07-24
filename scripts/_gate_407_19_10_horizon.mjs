@@ -9,19 +9,19 @@ import { readFileSync } from 'node:fs';
 const RED = process.argv.includes('--redfirst');
 const src = readFileSync('studio.html', 'utf8');
 function ex(s,n){const st=s.indexOf('function '+n+'(');if(st<0)throw new Error('missing '+n);let d=0,b=false;for(let j=s.indexOf('{',st);j<s.length;j++){if(s[j]==='{'){d++;b=true;}else if(s[j]==='}'){d--;if(b&&d===0)return s.slice(st,j+1);}}}
-let body=['calculateTotalPmt','payoffMonths','_payoffDateFrom','calculatePayoff','_monthsBetween','lifeOfLoan','lifetimeInterest','_moatNegAm','_retireInfo','_targetPayment','_payoffYearOf','_moatDI'].map(n=>ex(src,n)).join('\n');
+let body=['calculateTotalPmt','payoffMonths','_payoffDateFrom','calculatePayoff','_monthsBetween','lifeOfLoan','lifetimeInterest','_moatNegAm','_retireInfo','_targetPayment','_payoffYearOf','_moatSanePayoff','_moatDI'].map(n=>ex(src,n)).join('\n');
 if(RED) body=body.replace('_payYear > _r10.retireYear + 30','_payYear > _r10.retireYear + 999999');
 const deps={acceleratedDelta:()=>null,hasEscrow:()=>false,calculateEscrowMonthly:()=>0,_moatPmiUnder20:()=>false,_moatLiveMktRate:()=>null,getBaseType:()=>({id:'mortgage_x',title:'Mortgage'}),state:{accounts:[]},_retireOverride:{retireYear:2035,retireDate:new Date(2035,2,1),currentAge:52}};
 const {_moatDI}=new Function(...Object.keys(deps),body+'\nreturn {_moatDI};')(...Object.values(deps));
 const di=(acc)=>_moatDI(acc).replace(/<[^>]+>/g,'');
 const green=di({baseId:'mortgage_a',origAmount:200000,value:40000,intRate:4,minPmt:1200,addPmt:0,nextPmtDate:'2026-08-01',maturityDate:'2040-01-01'});
 const yellow=di({baseId:'mortgage_a',origAmount:200000,value:150000,intRate:5.99,minPmt:950,addPmt:0,nextPmtDate:'2026-08-01',maturityDate:'2055-01-01'});
-const orange=di({baseId:'mortgage_a',origAmount:200000,value:150000,intRate:0.01,minPmt:25,addPmt:0,nextPmtDate:'2026-08-01',maturityDate:'2600-01-01'});
+const orange=di({baseId:'mortgage_a',origAmount:200000,value:150000,intRate:0.01,minPmt:25,addPmt:20,nextPmtDate:'2026-08-01',maturityDate:'2600-01-01'});
 const red=di({baseId:'mortgage_a',origAmount:200000,value:150000,intRate:5.99,minPmt:100,addPmt:0,nextPmtDate:'2026-08-01',maturityDate:'2055-01-01'});
 const checks=[]; const need=(l,c)=>checks.push([l,!!c]);
 need('🟢 on-track: "before you retire"', green.includes('before you retire') && !green.includes('into retirement'));
 need('🟡 names the year + years-past + target', yellow.includes("isn't gone until 2052") && yellow.includes('17 years into retirement') && yellow.includes('would clear it by 2035'));
-need('🟠 "generations to clear" + target, NO absurd year', orange.includes('would take generations to clear') && orange.includes('would clear it by 2035') && !orange.includes("isn't gone until"));
+need('🟠 "generations to clear" + target, NO absurd year', orange.includes('would take generations to clear') && orange.includes('would clear it by 2035') && !orange.includes("isn't gone until") && !orange.includes('mortgage-free around') && !orange.includes('pulls your payoff in by'));
 need('🔴 neg-am echo, no §19.10 horizon beat', red.includes('stops the bleed') && !red.includes('generations') && !red.includes('would clear it by') && !red.includes('before you retire'));
 let pass=0; for(const[l,ok]of checks){console.log((ok?'✅':'⛔')+' '+l); if(ok)pass++;}
 const allGreen=pass===checks.length; console.log('\n'+pass+'/'+checks.length+' green'+(RED?'  [--redfirst]':''));
