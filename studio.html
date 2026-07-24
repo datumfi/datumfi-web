@@ -1102,6 +1102,14 @@
   .di-narr-head { font-family: var(--font-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: var(--teal-mid); margin-bottom: 10px; text-shadow: 0 0 10px rgba(93,202,165,0.35); }
   .di-narr-head::before { content: '\2726'; margin-right: 7px; font-size: 11px; opacity: 0.95; }   /* ✦ glyph */
   .di-narr-body { font-family: var(--font-serif); font-size: 13px; font-style: italic; color: rgba(255,255,255,0.88); line-height: 1.75; }
+  /* §19.5 — DI copy paragraph breaks (fixes "one dense paragraph") + semantic number tokens:
+     RED = interest / money lost to the lender · TEAL = balance / equity / neutral · GOLD = decision lever. */
+  .di-p { margin: 0 0 0.9em; }
+  .di-p:last-child { margin-bottom: 0; }
+  .di-n-red  { color: var(--danger-red); font-weight: 600; }
+  .di-n-teal { color: var(--teal-mid);   font-weight: 600; }
+  .di-n-gold { color: var(--gold);       font-weight: 600; }
+  .di-aside  { opacity: 0.62; }
   .holding-input { width: 100%; min-width: 0; box-sizing: border-box; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: var(--white); font-family: var(--font-mono); font-size: 11px; padding: 4px; border-radius: 2px; }
   .holding-input:focus { border-color: var(--teal-mid); outline: none; }
   /* kill number spinners so 2-decimal values never clip in narrow columns */
@@ -7470,7 +7478,7 @@
                 <div>${_dLbl(base, 'Original Amount', 'Where it started', 'The loan\'s opening balance. We compare it to today\'s balance to show how much house you\'ve bought back from the bank.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.origAmount||'')}" oninput="updateAccField('${id}', 'origAmount', this.value)"></div>
             </div>
             ${String(base.id).indexOf('mortgage') === 0 ? `<div class="field-row">
-                <div><span class="input-label modal-tt-wrap" style="cursor:help;">Interest Paid to Date<div class="modal-tt" style="left:0; right:auto;"><strong>from your statement · optional</strong>The total interest you&rsquo;ve paid so far &mdash; straight off your latest mortgage statement. We can&rsquo;t derive this from the balance alone (it depends on your exact payment history), so enter your lender&rsquo;s figure to light up the donut&rsquo;s gold &ldquo;Interest Paid&rdquo; slice. Leave it blank and we won&rsquo;t guess.</div></span><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.interestPaidToDate||'')}" oninput="updateAccField('${id}', 'interestPaidToDate', this.value)"></div>
+                <div><span class="input-label modal-tt-wrap" style="cursor:help;">Interest Paid to Date<div class="modal-tt" style="left:0; right:auto;"><strong>from your statement · optional</strong>The total interest you&rsquo;ve paid since this loan began &mdash; copy it straight off your latest mortgage statement. It&rsquo;s the one figure Datum can&rsquo;t compute for you: it turns on the exact timing of every past payment, which only your statement knows. Enter it and Datum reads it back in the payoff story and lights the gold &ldquo;Interest Paid&rdquo; slice in the donut. Leave it blank and we simply won&rsquo;t guess &mdash; nothing here is ever invented.</div></span><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.interestPaidToDate||'')}" oninput="updateAccField('${id}', 'interestPaidToDate', this.value)"></div>
             </div>` : ''}
             ${base.title === 'HELOC' ? _helocLimitFieldHTML(id, acc) : ''}
             ${base.title === 'HELOC' ? _helocPhaseFieldHTML(id, acc) : ''}
@@ -8450,38 +8458,39 @@
     // (balance-vs-original · rate+type · payoff clock · lifetime interest · equity-vs-Grounds · escrow
     // load). Every clause sourced-or-blank: a clause appears only when its inputs are present (L47).
     function _moatDI(acc) {
-        var parts = [];
+        // §19.5 — DI copy restructured into three thematic paragraphs (fixes complaint 7d "one dense paragraph"):
+        // WHERE YOU STAND · WHAT IT'S COST · THE LEVER. Numbers wear semantic color (RED = interest / cost to the
+        // lender · TEAL = balance / equity / neutral · GOLD = decision lever, R179). Every figure sourced-or-blank
+        // (L47) — a beat lacking its inputs simply doesn't push. Display-only (LOCK-3): never feeds engine/DI totals.
+        var stand = [], cost = [], lever = [];
         var bal = parseFloat(acc.value) || 0;
         var orig = parseFloat(acc.origAmount) || 0;
         var rate = parseFloat(acc.intRate) || 0;
         var addP = parseFloat(acc.addPmt) || 0;
         var totalMo = calculateTotalPmt(acc);
         var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
-        // 1.1 balance vs original (the % clause needs origAmount)
+        var RED  = function (s) { return '<span class="di-n-red">'  + s + '</span>'; };
+        var TEAL = function (s) { return '<span class="di-n-teal">' + s + '</span>'; };
+        var GOLD = function (s) { return '<span class="di-n-gold">' + s + '</span>'; };
+        // 1.1 → ¶1 lead: the ONE de-duped "paid down" line (§19.5 cut ②: dropped "buys you more house / less lender").
         if (bal > 0 && orig >= bal && orig > 0) {
             var pct = Math.round((1 - bal / orig) * 100);
-            parts.push('You\'ve paid down ' + pct + '% of the original ' + $(orig) + ' — ' + $(bal) + ' of the loan is left. Every payment now buys you more house and less lender.');
+            stand.push('You\'re ' + TEAL(pct + '%') + ' paid down — only ' + TEAL($(bal)) + ' left of the original ' + TEAL($(orig)) + '.');
         }
-        // 1.2 rate + type
-        if (rate > 0) {
-            var rtc = acc.rateType === 'Variable' ? ' it can move — watch the reset.' : (acc.rateType === 'Fixed' ? ' locked — it won\'t move on you.' : '');
-            parts.push('This loan runs ' + rate + '% APR' + (acc.rateType ? ', ' + acc.rateType + '.' : '.') + rtc);
-        }
-        // §17 FRED live market-rate color (Mortgage Copy Bank §17.2–17.4, verbatim). Compares the user's APR to
-        // today's Freddie Mac fixed average for THIS loan's term. Non-Variable only (PMMS is a fixed benchmark;
-        // an ARM rate isn't apples-to-apples). BANDS: well-below (< avg−1.0) · above (> avg+0.5) · at/"right
-        // around" (between). rateGap 2dp only in the above case (§17.5d). BLANK if the feed is stale (§17.5a).
+        // §19.5 cut ①: the old §1.2 "This loan runs X% APR" line is GONE — it restated the §1.2 rate already on the card.
+        // §17 FRED live market-rate color (Mortgage Copy Bank §17.2–17.4, verbatim; left uncolored — §17-authored,
+        // out of §19.5 token scope). Non-Variable only. BANDS: well-below (< avg−1.0) · above (> avg+0.5) · at.
         // Display-only (LOCK-3) — context only, never changes the stored rate or any §4 math.
         if (rate > 0 && acc.rateType !== 'Variable') {
             var mkt = _moatLiveMktRate(acc);
             if (mkt) {
                 var avg = mkt.avg, term = mkt.termN + '-year';
                 if (rate < avg - 1.0) {
-                    parts.push('Your ' + rate + '% is well under today\'s ~' + avg.toFixed(2) + '% average — this is a rate worth protecting. Paying it off early trades a cheap, tax-favored loan for cash you could invest; weigh accordingly.');
+                    stand.push('Your ' + rate + '% is well under today\'s ~' + avg.toFixed(2) + '% average — this is a rate worth protecting. Paying it off early trades a cheap, tax-favored loan for cash you could invest; weigh accordingly.');
                 } else if (rate > avg + 0.5) {
-                    parts.push('You\'re paying ' + rate + '% while today\'s ' + term + ' average is about ' + avg.toFixed(2) + '%. That gap is worth a refinance look — even ' + (rate - avg).toFixed(2) + ' points off ' + $(bal) + ' is real money over the remaining term.');
+                    stand.push('You\'re paying ' + rate + '% while today\'s ' + term + ' average is about ' + avg.toFixed(2) + '%. That gap is worth a refinance look — even ' + (rate - avg).toFixed(2) + ' points off ' + $(bal) + ' is real money over the remaining term.');
                 } else {
-                    parts.push('You\'re locked at ' + rate + '% — right around today\'s ~' + avg.toFixed(2) + '% average, so there\'s little to gain from refinancing at these rates.');
+                    stand.push('You\'re locked at ' + rate + '% — right around today\'s ~' + avg.toFixed(2) + '% average, so there\'s little to gain from refinancing at these rates.');
                 }
             }
         }
@@ -8494,24 +8503,10 @@
                 var minM13 = payoffMonths(acc, parseFloat(acc.minPmt) || 0);
                 var accM13 = payoffMonths(acc, totalMo);
                 if (minM13.code === 'OK' && accM13.code === 'OK') {
-                    ahead = ' — about ' + (minM13.months - accM13.months) + ' months sooner than the ' + _payoffDateFrom(acc, minM13.months) + ' you\'d hit paying the minimum alone.';
+                    ahead = ' — about ' + GOLD((minM13.months - accM13.months) + ' months') + ' sooner than the ' + _payoffDateFrom(acc, minM13.months) + ' you\'d hit paying the minimum alone.';
                 }
             }
-            parts.push('At ' + $(totalMo) + '/mo you\'re mortgage-free around ' + payoff + (ahead || '.'));
-        }
-        // 1.4 cost — LIFE-OF-LOAN vs REMAINING (term-derived; two framings never conflated, sourced-or-blank).
-        var liRemain = lifetimeInterest(acc);
-        if (liRemain !== null && bal > 0) {
-            var lol = lifeOfLoan(acc);
-            var lifeLine = lol ? ('Over its full life this mortgage runs about ' + $(lol.costLife) + ' all-in — ' + $(lol.intLife) + ' of that is interest to the bank. ') : '';
-            var remainLine;
-            if (orig > 0 && orig >= bal) {
-                var pPaid = orig - bal, pPct = Math.round((1 - bal / orig) * 100);
-                remainLine = 'You\'ve already retired ' + $(pPaid) + ' of principal (' + pPct + '%); from here to payoff, ' + $(bal) + ' remains, ' + $(liRemain) + ' of it interest.';
-            } else {
-                remainLine = 'From here to payoff, ' + $(bal) + ' remains, ' + $(liRemain) + ' of it interest.';
-            }
-            parts.push(lifeLine + remainLine);
+            stand.push('At ' + TEAL($(totalMo)) + '/mo you\'re mortgage-free around ' + GOLD(payoff) + (ahead || '.'));
         }
         // 1.5 equity vs The Grounds (only when linked to a property asset)
         if (acc.linkedAssetId) {
@@ -8519,16 +8514,31 @@
             var lb = la ? getBaseType(la.baseId) : null;
             if (lb && String(lb.id).indexOf('property') === 0) {
                 var lv = la.value || 0, eq = lv - bal;
-                parts.push('Against The Grounds (' + $(lv) + '), your equity here is ' + $(eq) + '. ' + (eq >= 0 ? 'You own more than you owe.' : 'Underwater — you owe more than it\'s worth.'));
+                stand.push('Against The Grounds (' + TEAL($(lv)) + '), your equity here is ' + (eq >= 0 ? TEAL($(eq)) : RED($(eq))) + '. ' + (eq >= 0 ? 'You own more than you owe.' : 'Underwater — you owe more than it\'s worth.'));
             }
+        }
+        // 1.4 → ¶2 THE HONEST THREE-NUMBER INTEREST SET (§19.5 R180 + the ¶2 ruling). paid-to-date = SOURCED
+        // (acc.interestPaidToDate; omit the clause if blank). remains-from-here = lifetimeInterest(acc) — the
+        // FORWARD walk from TODAY (~$471), NEVER life-of-loan minus paid-to-date (two different bases, #379
+        // forward/backward interest law). life-of-loan = de-emphasized THEORETICAL parenthetical aside. The
+        // principal-paid % is NOT repeated here — it lives once in ¶1 (§19.5 de-dupe ③).
+        var liRemain = lifetimeInterest(acc);
+        if (liRemain !== null && bal > 0) {
+            var ipd = parseFloat(acc.interestPaidToDate) || 0;
+            var costLine = ipd > 0
+                ? ('You\'ve paid ' + RED($(ipd)) + ' in interest so far, and from here to payoff about ' + RED($(liRemain)) + ' more goes to interest before it\'s done.')
+                : ('From here to payoff, about ' + RED($(liRemain)) + ' of what\'s ahead goes to interest before it\'s done.');
+            var lol = lifeOfLoan(acc);
+            if (lol) costLine += ' <span class="di-aside">(Over the loan\'s full original life the interest runs about ' + RED($(lol.intLife)) + ' all-in — a theoretical figure, not what you\'ll actually pay from here.)</span>';
+            cost.push(costLine);
         }
         // 1.6 escrow load
         if (hasEscrow(acc)) {
             var em = calculateEscrowMonthly(acc), pmi = parseFloat(acc.pmiMonthly) || 0;
             var pmiC = _moatPmiUnder20(acc) ? ' PMI drops off once you cross ~20% equity — worth watching.' : '';
-            parts.push('Beyond principal + interest, taxes and insurance add about ' + $(em) + '/mo — your real monthly is ' + $(totalMo + em) + '.' + pmiC);
+            cost.push('Beyond principal + interest, taxes and insurance add about ' + TEAL($(em)) + '/mo — your real monthly is ' + TEAL($(totalMo + em)) + '.' + pmiC);
         }
-        // ---- §1.7-1.9 PRESCRIPTIVE (Mortgage Copy Bank §1 R25-R27, verbatim; composed, sourced-or-blank) ----
+        // ---- §1.7-1.9 → ¶3 THE LEVER (Mortgage Copy Bank §1 R25-R27; the genuine nuance R178D protects) ----
         var payoffPct = (orig > 0 && orig >= bal && bal > 0) ? (1 - bal / orig) : null;
         // 1.7 RATE-AWARE ACCELERATE-vs-INVEST — banded off intRate; never picks a side (§3b). Blank if no rate.
         if (rate > 0) {
@@ -8536,7 +8546,7 @@
             if (acc.rateType === 'Variable' || rate >= 6) itc = 'At this rate, paying it down is a strong, certain win — hard to beat reliably in the market.';
             else if (rate < 5) itc = 'At a rate this low, invested dollars have historically out-earned it — so accelerating here is more about peace of mind than pure math. Both are valid; the tradeoff is yours to make.';
             else itc = 'This rate sits right on the fence — reasonable people go either way.';
-            parts.push('Here\'s the real decision this loan poses: paying it down early earns you a guaranteed ' + rate + '% — that\'s your rate, tax-free of market risk. ' + itc);
+            lever.push('Here\'s the real decision this loan poses: paying it down early earns you a guaranteed ' + GOLD(rate + '%') + ' — that\'s your rate, tax-free of market risk. ' + itc);
         }
         // 1.8 ACCELERATOR — ALWAYS both concrete numbers (time AND interest), never an adjective alone.
         // monthsSaved = baseline(min) − accelerated(min+add); interestSaved = remaining-interest delta.
@@ -8547,11 +8557,11 @@
                 if (ms18 >= 12) {
                     var yrs18 = Math.round(ms18 / 12);
                     var yStr18 = yrs18 + ' year' + (yrs18 === 1 ? '' : 's');
-                    parts.push('That extra ' + $(addP) + '/mo is doing real work — it pulls your payoff in by about ' + yStr18 + ' and saves ' + iS18 + ' in interest.');
+                    lever.push('That extra ' + GOLD($(addP)) + '/mo is doing real work — it pulls your payoff in by about ' + GOLD(yStr18) + ' and saves ' + GOLD(iS18) + ' in interest.');
                 } else if (ms18 >= 2) {
-                    parts.push('The extra ' + $(addP) + '/mo trims your payoff by about ' + ms18 + ' months and saves ' + iS18 + ' in interest.');
+                    lever.push('The extra ' + GOLD($(addP)) + '/mo trims your payoff by about ' + GOLD(ms18 + ' months') + ' and saves ' + GOLD(iS18) + ' in interest.');
                 } else if (payoffPct !== null && payoffPct >= 0.85) {
-                    parts.push('Honest note: this loan\'s nearly paid off, so that extra ' + $(addP) + '/mo moves payoff in by about ' + ms18 + ' months and saves only ' + iS18 + ' in interest — small, and worth knowing those dollars would stretch further almost anywhere else.');
+                    lever.push('Honest note: this loan\'s nearly paid off, so that extra ' + GOLD($(addP)) + '/mo moves payoff in by about ' + GOLD(ms18 + ' months') + ' and saves only ' + GOLD(iS18) + ' in interest — small, and worth knowing those dollars would stretch further almost anywhere else.');
                 }
             }
         }
@@ -8559,10 +8569,11 @@
         if (payoffPct !== null && payoffPct >= 0.85 && totalMo > 0) {
             var pd19 = calculatePayoff(acc);
             if (/\d{4}/.test(pd19)) {
-                parts.push('One more thing the payoff date buys you: once this loan ends around ' + pd19 + ', the ' + $(totalMo) + '/mo it takes disappears from your required monthly income — for the rest of your life. A paid-off Moat is one of the biggest levers you have on the income you must generate in retirement.');
+                lever.push('One more thing the payoff date buys you: once this loan ends around ' + GOLD(pd19) + ', the ' + GOLD($(totalMo)) + '/mo it takes disappears from your required monthly income — for the rest of your life. A paid-off Moat is one of the biggest levers you have on the income you must generate in retirement.');
             }
         }
-        return parts.join(' ');
+        return [stand, cost, lever].filter(function (g) { return g.length; })
+            .map(function (g) { return '<p class="di-p">' + g.join(' ') + '</p>'; }).join('');
     }
 
     // §0.3b escrow computed footer — plain-coach all-in line + PMI-dropoff clause (only when pmi>0).
