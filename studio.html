@@ -8523,7 +8523,9 @@
     // the §19.10 🟠 "generations to clear" line carry the meaning instead.
     function _moatSanePayoff(acc) {
         var pm = payoffMonths(acc);
-        return pm.code === 'OK' && pm.months <= 600;
+        if (pm.code !== 'OK' || pm.months > 600) return false;   // absolute floor: a payoff >~50 years reads as nonsense
+        var r = _retireInfo();                                   // and align with the §19.10 🟠 clamp when a retirement year is known
+        return !(r && r.retireYear && _payoffYearOf(acc, pm.months) > r.retireYear + 30);
     }
     // Calendar year a loan pays off, `months` from its next payment (or today) — used by the §19.10 horizon beat.
     function _payoffYearOf(acc, months) {

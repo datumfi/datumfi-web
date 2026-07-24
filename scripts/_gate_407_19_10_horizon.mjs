@@ -18,11 +18,13 @@ const green=di({baseId:'mortgage_a',origAmount:200000,value:40000,intRate:4,minP
 const yellow=di({baseId:'mortgage_a',origAmount:200000,value:150000,intRate:5.99,minPmt:950,addPmt:0,nextPmtDate:'2026-08-01',maturityDate:'2055-01-01'});
 const orange=di({baseId:'mortgage_a',origAmount:200000,value:150000,intRate:0.01,minPmt:25,addPmt:20,nextPmtDate:'2026-08-01',maturityDate:'2600-01-01'});
 const red=di({baseId:'mortgage_a',origAmount:200000,value:150000,intRate:5.99,minPmt:100,addPmt:0,nextPmtDate:'2026-08-01',maturityDate:'2055-01-01'});
+const gray=di({baseId:'mortgage_a',origAmount:200000,value:150000,intRate:6,minPmt:800,addPmt:0,nextPmtDate:'2026-08-01',maturityDate:'2033-01-01'});   // ~2072: past retire+30 but < 50yr (normal rate)
 const checks=[]; const need=(l,c)=>checks.push([l,!!c]);
 need('🟢 on-track: "before you retire"', green.includes('before you retire') && !green.includes('into retirement'));
 need('🟡 names the year + years-past + target', yellow.includes("isn't gone until 2052") && yellow.includes('17 years into retirement') && yellow.includes('would clear it by 2035'));
 need('🟠 "generations to clear" + target, NO absurd year', orange.includes('would take generations to clear') && orange.includes('would clear it by 2035') && !orange.includes("isn't gone until") && !orange.includes('mortgage-free around') && !orange.includes('pulls your payoff in by'));
 need('🔴 neg-am echo, no §19.10 horizon beat', red.includes('stops the bleed') && !red.includes('generations') && !red.includes('would clear it by') && !red.includes('before you retire'));
+need('🟠 gray-zone (normal rate, payoff past retire+30 but <50yr): §1.3 suppressed + clamp fires', gray.includes('would take generations to clear') && !gray.includes('mortgage-free around'));
 let pass=0; for(const[l,ok]of checks){console.log((ok?'✅':'⛔')+' '+l); if(ok)pass++;}
 const allGreen=pass===checks.length; console.log('\n'+pass+'/'+checks.length+' green'+(RED?'  [--redfirst]':''));
 if(RED){ if(allGreen){console.error('❌ RED-FIRST FAILED'); process.exit(1);} console.log('✅ RED-FIRST OK'); process.exit(0);}
