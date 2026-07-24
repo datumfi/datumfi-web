@@ -1111,7 +1111,7 @@
   .di-n-gold { color: var(--gold);       font-weight: 600; }
   .di-aside  { opacity: 0.62; }
   /* §19.9 — negative-amortization alerts (total P&I payment < monthly interest). Warning-tinted, in-voice. */
-  .moat-negam-inline { margin: 2px 0 12px; padding: 9px 12px; background: rgba(226,75,74,0.10); border: 1px solid rgba(226,75,74,0.32); border-left: 3px solid var(--danger-red); border-radius: 5px; font-size: 11.5px; line-height: 1.5; color: rgba(255,255,255,0.86); }
+  .moat-negam-inline, .heloc-draw-inline { margin: 2px 0 12px; padding: 9px 12px; background: rgba(226,75,74,0.10); border: 1px solid rgba(226,75,74,0.32); border-left: 3px solid var(--danger-red); border-radius: 5px; font-size: 11.5px; line-height: 1.5; color: rgba(255,255,255,0.86); }
   .di-negam { border-left: 3px solid var(--danger-red); background: rgba(226,75,74,0.09); padding: 9px 13px; border-radius: 5px; }
   /* §19.9b — blank-Original-Amount nudge in the amort modal where the pie would be (info, not alarm). */
   .moat-pie-nudge { margin-bottom: 16px; padding: 14px 18px; background: linear-gradient(155deg, rgba(255,255,255,0.04), rgba(9,18,33,0.14)); border: 1px solid rgba(255,255,255,0.08); border-radius: 9px; font-size: 12px; color: rgba(255,255,255,0.72); line-height: 1.55; }
@@ -7509,6 +7509,7 @@
                 <div>${_dLbl(base, 'Additional Payment', 'Your accelerator', 'Anything you add on top of the minimum goes straight at principal — it shrinks both the payoff clock and the lifetime interest. Even a little compounds.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.addPmt||'')}" oninput="updateAccField('${id}', 'addPmt', this.value)"></div>
             </div>
             ${String(base.id).indexOf('mortgage') === 0 ? `<div id="modal-moat-negam-${id}">${_moatNegAmInlineHTML(acc)}</div>` : ''}
+            ${base.title === 'HELOC' ? `<div id="modal-heloc-draw-${id}">${_helocDrawInlineHTML(acc)}</div>` : ''}
             <div class="field-row" style="grid-template-columns: 1fr;">
                 <div>${_dLbl(base, 'Next Payment Date', 'The clock\'s start', 'We count the payoff timeline from here. Setting it keeps the estimated payoff date honest.')}<input type="date" class="small-field" value="${acc.nextPmtDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'nextPmtDate', this.value)"></div>
             </div>`;
@@ -8036,6 +8037,9 @@
                 // §16 intelligence layer — live recompose (crossed-field beats; sourced-or-blank).
                 const cintEl = document.getElementById(`modal-cellar-intel-${id}`);
                 if(cintEl) cintEl.innerHTML = _diIntelligence(acc);
+                // §22-A — inline interest-only-draw notice under the payment field, live as payment/balance/phase move.
+                const helocDrawEl = document.getElementById(`modal-heloc-draw-${id}`);
+                if(helocDrawEl) helocDrawEl.innerHTML = _helocDrawInlineHTML(acc);
             }
         }
     };
@@ -8141,6 +8145,9 @@
                 // §16 intelligence layer — balance change moves the beats (payoff/maturity, interest split).
                 const cintEl2 = document.getElementById(`modal-cellar-intel-${id}`);
                 if(cintEl2) cintEl2.innerHTML = _diIntelligence(acc);
+                // §22-A — inline notice refresh on balance change (balance moves the interest run-rate too).
+                const helocDrawEl2 = document.getElementById(`modal-heloc-draw-${id}`);
+                if(helocDrawEl2) helocDrawEl2.innerHTML = _helocDrawInlineHTML(acc);
             }
         }
     };
@@ -8487,6 +8494,37 @@
         return '<div class="moat-negam-inline">⚠️ At ' + $(n.payment) + '/mo, you\'re not covering the ' + $(n.monthlyInterest)
              + '/mo in interest — the balance grows by about ' + $(n.gap) + ' every month instead of shrinking. At this rate the loan never pays off.</div>';
     }
+    // §19.10 — SHARED retirement-horizon engine (Mortgage §19.10 · HELOC §22.10 · Yard Rule H). READ-ONLY, L48.
+    // _retireInfo() reads the Architect profile (Target Retirement Date + DOB) → { retireYear, retireDate,
+    // currentAge } or null when unsourced (L47 — never fabricate a retirement date). typeof-guarded, with a
+    // _retireOverride hook so the node gates can inject a horizon without a DOM.
+    function _retireInfo() {
+        if (typeof _retireOverride !== 'undefined' && _retireOverride) return _retireOverride;
+        if (typeof document === 'undefined' || !document.getElementById || typeof window === 'undefined' || typeof window.parseAgeFromDob !== 'function') return null;
+        var retV = (document.getElementById('target-ret') || {}).value || '';
+        var seg = retV.replace(/\s/g, '').split('/');
+        var rYear = parseInt(seg[seg.length - 1] || '', 10);
+        if (!rYear) return null;                                          // no sourced retirement year → horizon unknown
+        var rMonth = (seg.length >= 2) ? (parseInt(seg[0], 10) || 1) : 1;
+        return { retireYear: rYear, retireDate: new Date(rYear, rMonth - 1, 1), currentAge: window.parseAgeFromDob((document.getElementById('pri-dob') || {}).value || '') };
+    }
+    // Forward PMT-solve (#379-OK): the level monthly payment that amortizes `bal` at `apr`% to zero by `byDate`.
+    // null when inputs are unsourced or the date is already past (no honest forward solve). Whole-dollar at display.
+    function _targetPayment(bal, apr, byDate) {
+        if (!(bal > 0) || !(apr > 0) || !byDate) return null;
+        var now = new Date();
+        var months = (byDate.getFullYear() - now.getFullYear()) * 12 + (byDate.getMonth() - now.getMonth());
+        if (months <= 0) return null;
+        var r = apr / 100 / 12;
+        return bal * r / (1 - Math.pow(1 + r, -months));
+    }
+    // Calendar year a loan pays off, `months` from its next payment (or today) — used by the §19.10 horizon beat.
+    function _payoffYearOf(acc, months) {
+        var d = acc.nextPmtDate ? new Date(acc.nextPmtDate + 'T00:00:00') : new Date();
+        if (isNaN(d)) d = new Date();
+        d.setMonth(d.getMonth() + months);
+        return d.getFullYear();
+    }
     // §1 MOAT DATUM INTELLIGENCE — composes the debt-native signal paragraph from LIVE signals only
     // (balance-vs-original · rate+type · payoff clock · lifetime interest · equity-vs-Grounds · escrow
     // load). Every clause sourced-or-blank: a clause appears only when its inputs are present (L47).
@@ -8616,13 +8654,28 @@
                 lever.push('One more thing the payoff date buys you: once this loan ends around ' + GOLD(pd19) + ', the ' + GOLD($(totalMo)) + '/mo it takes disappears from your required monthly income — for the rest of your life. A paid-off Moat is one of the biggest levers you have on the income you must generate in retirement.');
             }
         }
+        // §19.10 — RETIRE-BEFORE-YOU-DO: payoff-year vs retirement-year. Fires only when the loan AMORTIZES (the
+        // neg-am 🔴 case is owned by the §19.9 echo below) and a retirement year is sourced (L47). {targetPayment} =
+        // forward PMT-solve to clear by retireDate (#379-OK) — an estimate ("around"), never advice.
+        var _r10 = _retireInfo(), _pm10 = payoffMonths(acc);
+        if (_pm10.code === 'OK' && bal > 0 && _r10 && _r10.retireYear) {
+            var _payYear = _payoffYearOf(acc, _pm10.months);
+            if (_payYear <= _r10.retireYear) {
+                lever.push('On this payment, it\'s clear by ' + GOLD(_payYear) + ' — before you retire.');
+            } else {
+                var _tp10 = _targetPayment(bal, rate, _r10.retireDate);
+                var _yp10 = _payYear - _r10.retireYear;
+                lever.push('You\'re paying it down — but at ' + TEAL($(totalMo)) + '/mo it isn\'t gone until ' + GOLD(_payYear) + ', about ' + GOLD(_yp10 + ' year' + (_yp10 === 1 ? '' : 's')) + ' into retirement.' + (_tp10 ? ' Around ' + GOLD($(_tp10)) + '/mo would clear it by ' + GOLD(_r10.retireYear) + '.' : ''));
+            }
+        }
         // §19.9 Part B — negative-amortization echo (retirement slant): persists whenever the modal reopens. Leads
         // the narrative as an alert when the total P&I payment can't cover the monthly interest. Interest = RED (§19.5).
+        // §19.10 owns the payoff-vs-retirement idea now, so the neg-am echo ends at "stops the bleed" (tail trimmed).
         var negAmHtml = '';
         var _na = _moatNegAm(acc);
         if (_na) {
             var _mi = RED($(_na.monthlyInterest));
-            negAmHtml = '<p class="di-p di-negam">This loan is currently set to outlive the plan. A payment that doesn\'t cover interest means the debt never ends — it follows you into retirement as a bill that never stops, pulling ' + _mi + '/mo off the income you\'re counting on to live. Covering at least the ' + _mi + '/mo interest stops the bleed; paying above it is what actually retires the debt before you do.</p>';
+            negAmHtml = '<p class="di-p di-negam">This loan is currently set to outlive the plan. A payment that doesn\'t cover interest means the debt never ends — it follows you into retirement as a bill that never stops, pulling ' + _mi + '/mo off the income you\'re counting on to live. Covering at least the ' + _mi + '/mo interest stops the bleed.</p>';
         }
         return negAmHtml + [stand, cost, lever].filter(function (g) { return g.length; })
             .map(function (g) { return '<p class="di-p">' + g.join(' ') + '</p>'; }).join('');
@@ -8922,8 +8975,28 @@
         }
         if (_rbStrongEq && _rbLightlyDrawn) {
             beats.push('With little drawn and strong equity behind it, this line can also serve as a standby buffer in retirement — a source to lean on during a market downturn rather than selling investments while they\'re down. It costs nothing until you use it.');
-        } else if (bal > 0 && totalMo > 0 && _nearRet) {
+        } else if (bal > 0 && totalMo > 0 && _nearRet && !_helocInterestOnlyDraw(acc)) {   // §22-B owns the interest-only-draw retirement carry
             beats.push('Carrying this payment into retirement adds about ' + $(totalMo) + '/mo to the income your plan must cover for life — worth weighing alongside its flexibility.');
+        }
+        // §22-B — interest-only-draw retirement carry (HELOC Copy Bank §22-B, verbatim). Same fire condition as the
+        // §22-A inline. Retirement slant; composes with the §19.3 draw-shock (which carries the payment-jump numbers)
+        // — this one names the carry-into-retirement consequence, a distinct fact.
+        if (_helocInterestOnlyDraw(acc)) {
+            beats.push('An interest-only line that never gets paid down doesn\'t disappear — it carries into retirement as a balance that still charges interest every month, on income that has stopped growing. Worse, when the draw window ends the payment steps up right around the time your paycheck stops. Paying into the principal now is what keeps this line from becoming a retirement bill.');
+        }
+        // §22.10 — RETIRE-BEFORE-YOU-DO three-state (extends §16.1 + §22). Amortizing HELOC only: the interest-only
+        // 🔴 case is owned by §22 above; the maturity-overshoot case by §16.1 — the !_payoffVsMaturity guard keeps
+        // them from double-narrating (guardrail #2). Anchors to retirement (the binding deadline in this branch).
+        // targetPayment = forward PMT-solve to retireDate (#379-OK), an estimate — never advice. Sourced-or-blank.
+        var _r2210 = _retireInfo(), _pm2210 = payoffMonths(acc);
+        if (_pm2210.code === 'OK' && bal > 0 && apr > 0 && _r2210 && _r2210.retireYear && !_payoffVsMaturity(acc) && !_helocInterestOnlyDraw(acc)) {
+            var _payDate2210 = _payoffDateFrom(acc, _pm2210.months);
+            if (_payoffYearOf(acc, _pm2210.months) <= _r2210.retireYear) {
+                beats.push('On this pace it\'s cleared by ' + _payDate2210 + ' — before both maturity and your retirement.');
+            } else {
+                var _tp2210 = _targetPayment(bal, apr, _r2210.retireDate);
+                beats.push('You\'re paying down principal — but at ' + $(totalMo) + '/mo it isn\'t gone until ' + _payDate2210 + ', past the retirement year you\'ve set.' + (_tp2210 ? ' Around ' + $(_tp2210) + '/mo would clear it by ' + _r2210.retireYear + '.' : ''));
+            }
         }
         // ── §18.A VARIABLE-RATE ACKNOWLEDGMENT BEATS (verbatim, sourced-or-blank, PLAIN COACH) ──
         // These read the variable fields already on the modal and state the consequence — NO new math.
@@ -9784,6 +9857,21 @@
         return { monthlyInterest: bal * (apr / 100) / 12, repayMin: repayMin,
                  drawEndStr: de.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) };
     }
+    // §22 — interest-only-draw trap detector: in the Draw window (reuse the _helocDrawEndShock gate, L48) AND the
+    // total payment isn't meaningfully reducing principal (P&I ≈ the interest run-rate). null otherwise (L47).
+    function _helocInterestOnlyDraw(acc) {
+        var shock = _helocDrawEndShock(acc);
+        if (!shock) return null;
+        if (calculateTotalPmt(acc) - shock.monthlyInterest > 1) return null;   // paying real principal → not the trap
+        return { balance: parseFloat(acc.value) || 0, monthlyInterest: shock.monthlyInterest };
+    }
+    // §22-A inline notice (verbatim) beneath the payment field — HELOC-scoped; blank unless the interest-only draw trap.
+    function _helocDrawInlineHTML(acc) {
+        var n = _helocInterestOnlyDraw(acc);
+        if (!n) return '';
+        var $ = function (v) { return '$' + Math.round(v).toLocaleString('en-US'); };
+        return '<div class="heloc-draw-inline">⚠️ During the draw period, this payment only covers interest — the ' + $(n.balance) + ' you\'ve borrowed isn\'t going down. When the draw window closes, the payment jumps to include principal too. Paying above interest now is the only thing that shrinks what you owe.</div>';
+    }
     // §17.1 display — the Expected Payoff Date. For a HELOC whose pace overshoots maturity, show the binding
     // maturity date (beat 16.1 carries the shortfall + required payment). Non-HELOC is unchanged (Moat as-is).
     function _debtPayoffDisplay(acc) {
@@ -10156,7 +10244,42 @@
         }
         // RULE G — all-in leverage (BOTH mortgage AND heloc drawn)
         if (m && mBal > 0 && helocDrawn) {
-            beats.push('Two liens ride on this house at once. Combined, they mean more of the home’s value is spoken for — and in a soft housing market, stacked debt is what can tip equity toward thin or negative. It’s not alarming while values hold and payments are made; it’s simply worth knowing that the mortgage and the line move your equity in the same direction, and that paying down the higher-rate one first (usually the line) buys back your cushion fastest.');
+            beats.push('Two liens ride on this house at once. Combined, they mean more of the home’s value is spoken for — and in a soft housing market, stacked debt is what can tip equity toward thin or negative. It’s not alarming while values hold and payments are made; it’s simply worth knowing that your mortgage and your home-equity line (a HELOC) move your equity in the same direction, and that paying down the higher-rate one first (usually the home-equity line) buys back your cushion fastest.');
+        }
+        // RULE H — §3.8 the COMBINED underpayment-into-retirement beat (Yard Copy Bank §3.8, verbatim). Crosses BOTH
+        // liens into one household figure: sums each lien's §X.10 {targetPayment} (never recomputes — L48). Fires when
+        // ≥1 lien's payoff runs past retirement; SILENT when both on-track (§3.5-Z covers that — exactly one speaks).
+        // Composes with Rule B (per-loan) — Rule H names the ONE combined push Rule B can't. Sourced-or-blank (L47).
+        var _rH = _retireInfo();
+        if (_rH && _rH.retireYear) {
+            var $H = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
+            var _mLate = false, _hLate = false, _mPast = 0, _hPast = 0, _mTgt = 0, _hTgt = 0, _mInH = false, _hInH = false;
+            var _mPresent = !!(m && mBal > 0), _hPresent = helocDrawn;
+            if (_mPresent) { var _mpmH = payoffMonths(m); if (_mpmH.code === 'OK') { _mInH = true; var _mPayYrH = _payoffYearOf(m, _mpmH.months);
+                if (_mPayYrH > _rH.retireYear) { _mLate = true; _mPast = _mPayYrH - _rH.retireYear; _mTgt = _targetPayment(mBal, parseFloat(m.intRate) || 0, _rH.retireDate) || 0; }
+                else { _mTgt = calculateTotalPmt(m); } } }               // on-track lien → its current payment already clears it in time
+            if (_hPresent) { var _hpmH = payoffMonths(h); if (_hpmH.code === 'OK') { _hInH = true; var _hPayYrH = _payoffYearOf(h, _hpmH.months);
+                if (_hPayYrH > _rH.retireYear) { _hLate = true; _hPast = _hPayYrH - _rH.retireYear; _hTgt = _targetPayment(_num(h.value), parseFloat(h.intRate) || 0, _rH.retireDate) || 0; }
+                else { _hTgt = calculateTotalPmt(h); } } }
+            var _liensH = (_mInH ? 1 : 0) + (_hInH ? 1 : 0);
+            if ((_mLate || _hLate) && _liensH >= 1) {
+                // §3.8 jargon fix (Captain #414): teach "home-equity line (a HELOC)" on FIRST mention — never bare "the line".
+                var _taughtH = false, _clauseH;
+                if (_mLate && _hLate) { _clauseH = 'both your mortgage and your home-equity line (a HELOC) are still being paid ' + _mPast + '/' + _hPast + ' years into retirement'; _taughtH = true; }
+                else if (_mLate) { _clauseH = 'the mortgage alone still runs about ' + _mPast + ' year' + (_mPast === 1 ? '' : 's') + ' past retirement'; }
+                else { _clauseH = 'your home-equity line (a HELOC) still runs about ' + _hPast + ' year' + (_hPast === 1 ? '' : 's') + ' past retirement'; _taughtH = true; }
+                var _helocTermH = _taughtH ? 'your home-equity line' : 'your home-equity line (a HELOC)';
+                var _tailH = (_mInH && _hInH) ? ('across both your mortgage and ' + _helocTermH) : (_mInH ? 'on the mortgage' : 'on ' + _helocTermH);
+                var _combTgt = _mTgt + _hTgt;
+                var _debtPortionH = (m ? calculateTotalPmt(m) : 0) + (_hPresent ? calculateTotalPmt(h) : 0);
+                var _combExtra = Math.max(0, _combTgt - _debtPortionH);
+                var _hText = 'Seen as one house: at today’s payments, ' + _clauseH + '. Carrying housing debt past the day the paychecks stop means your portfolio — not your salary — covers this payment every year, including the down ones. To own this home free and clear by ' + _rH.retireYear + ', the combined push is about ' + $H(_combTgt) + '/mo ' + _tailH + ' — roughly ' + $H(_combExtra) + '/mo more than you pay today. Not a must; just the number, so the choice is yours to see.';
+                if (income > 0 && realAnnual > 0) {
+                    var _realAnnualDebt = _debtPortionH * 12;
+                    _hText += ' That combined housing payment is also the single biggest fixed cost that follows you in — and under a 4% draw, every ' + $H(_realAnnualDebt) + '/yr of it is like needing roughly ' + $H(_realAnnualDebt * 25) + ' more in the portfolio to safely cover it for life. Clearing even one lien before retirement shrinks that number.';
+                }
+                beats.push(_hText);
+            }
         }
         // §3.5-Z — the calm line (nothing fired)
         if (!beats.length) beats.push('Right now the house and its financing sit in quiet balance — the costs are covered, the equity’s building, and nothing here is pulling against your retirement plan. That’s exactly where you want a home to be: an asset that works for you in the background while the plan does the heavy lifting up front.');

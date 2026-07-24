@@ -21,7 +21,7 @@ function extractFn(s, name) {
   throw new Error('unbalanced braces: ' + name);
 }
 
-let body = ['_monthsBetween', 'lifeOfLoan', 'lifetimeInterest', '_moatNegAm', '_moatDI'].map(n => extractFn(src, n)).join('\n');   // §19.9 — _moatDI now calls _moatNegAm
+let body = ['_monthsBetween', 'lifeOfLoan', 'lifetimeInterest', '_moatNegAm', '_retireInfo', '_targetPayment', '_payoffYearOf', '_moatDI'].map(n => extractFn(src, n)).join('\n');   // §19.9 _moatNegAm · §19.10 _retireInfo/_targetPayment/_payoffYearOf
 if (RED) body = body.split('di-n-red').join('zz').split('di-n-teal').join('zz').split('di-n-gold').join('zz').split('di-p').join('zz');
 
 // Leaf-dep stubs shaped so every governed beat fires: ¶1 paid-down, payoff clock, ¶2 interest set, §1.7 lever, §1.9 income-drop.
