@@ -49,6 +49,31 @@ const need = (label, cond) => checks.push([label, !!cond]);
 need('Part A: pie computed before the schedule branch (var pie = _moatDebtPieHTML)', src.includes('var pie = _moatDebtPieHTML(acc);'));
 need('Part A: modal body = pie + schedule (pie no longer inside the else)', src.includes('var body = pie + schedule;') && !src.includes('body = `${_moatDebtPieHTML(acc)}'));
 
+// ── #380 — EXECUTE the real openAmortizationModal against a captured overlay and assert the SVG element actually
+//    lands in the rendered modal body (not just that the pie function or source structure exists). ──
+function extractAt(s, marker) {
+  const start = s.indexOf(marker); let depth = 0, began = false;
+  for (let j = s.indexOf('{', start); j < s.length; j++) {
+    if (s[j] === '{') { depth++; began = true; }
+    else if (s[j] === '}') { depth--; if (began && depth === 0) return s.slice(start, j + 1); }
+  }
+}
+const amortSrc = extractAt(src, 'window.openAmortizationModal = function');
+const modalBody = ['calculateTotalPmt', 'payoffMonths', '_debtDonutSVG', '_moatDebtPieHTML'].map(n => extractFn(src, n)).join('\n');
+function renderModal(acc) {
+  let captured = '';
+  const el = () => ({ style: {}, appendChild() {}, onclick: null, id: '', set innerHTML(v) { captured = v; }, get innerHTML() { return captured; } });
+  const win = {}, doc = { getElementById: () => null, createElement: () => el(), body: { appendChild() {} } };
+  const gbt = () => ({ id: 'mortgage_x', title: 'Mortgage' });
+  new Function('window', 'document', 'state', 'getBaseType', modalBody + '\n' + amortSrc)(win, doc, { accounts: [acc] }, gbt);
+  win.openAmortizationModal(acc.id);
+  return captured;
+}
+const modNeg = renderModal({ id: 'x', ...negam });
+need('#380: amort modal renders the pie SVG under neg-am (orig sourced)', modNeg.includes('<svg') && modNeg.includes('balance never reaches zero'));
+const modBlank = renderModal({ id: 'x', baseId: 'mortgage_a', value: 150000, minPmt: 500, addPmt: 50 });   // no origAmount / no APR
+need('#380: sourced-or-blank — no pie SVG when Original Amount is blank', !modBlank.includes('<svg'));
+
 // ── NEG-AM ──
 {
   const inline = api._moatNegAmInlineHTML(negam);
