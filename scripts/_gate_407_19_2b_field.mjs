@@ -33,7 +33,8 @@ need('label present: Interest Paid to Date', s.includes('Interest Paid to Date')
 const enforceAmt = new Function('return (' + s.match(/window\.enforceAmt = (function\(str\) \{[\s\S]*?\n    \});/)[1] + ');')();
 need("enforceAmt('$31,684.35') === '31684.35' (cents kept)", enforceAmt('$31,684.35') === '31684.35');
 
-const pieSrc = s.match(/    function _moatDebtPieHTML\(acc\)[\s\S]*?\n    \}\n/)[0];
+const drawerSrc = s.match(/    function _debtDonutSVG\([\s\S]*?\n    \}\n/)[0];   // §19.7 — pie now delegates to the shared drawer
+const pieSrc = drawerSrc + s.match(/    function _moatDebtPieHTML\(acc\)[\s\S]*?\n    \}\n/)[0];
 const getBaseType = (baseId) => ({ title: String(baseId).indexOf('heloc') === 0 ? 'HELOC' : 'Mortgage' });
 const pie = new Function('getBaseType', pieSrc + '\n return _moatDebtPieHTML;')(getBaseType);
 

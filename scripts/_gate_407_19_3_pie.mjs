@@ -11,13 +11,14 @@ import { readFileSync } from 'node:fs';
 const RED = process.argv.includes('--redfirst');
 const s = readFileSync('studio.html', 'utf8');
 
+const drawerSrc = s.match(/    function _debtDonutSVG\([\s\S]*?\n    \}\n/)[0];   // §19.7 — pie now delegates to the shared drawer
 let pieSrc = s.match(/    function _moatDebtPieHTML\(acc\)[\s\S]*?\n    \}\n/)[0];
 if (RED) {
   pieSrc = pieSrc.replace('var interestPaid = parseFloat(acc.interestPaidToDate) || 0;',
                           () => 'var interestPaid = parseFloat(acc.interestPaidToDate) || 44202;');
 }
 const getBaseType = (baseId) => ({ title: String(baseId).indexOf('heloc') === 0 ? 'HELOC' : 'Mortgage' });
-const pie = new Function('getBaseType', pieSrc + '\n return _moatDebtPieHTML;')(getBaseType);
+const pie = new Function('getBaseType', drawerSrc + pieSrc + '\n return _moatDebtPieHTML;')(getBaseType);
 
 const acc = { baseId: 'mortgage_primary', origAmount: '135675', value: '14796.93' };
 

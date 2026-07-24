@@ -9865,23 +9865,15 @@
     // Sourced-or-blank: '' unless origAmount + balance are real (principal split is exact from those two). HELOC
     // excluded (origAmount is a credit LINE, not a borrowed lump — §17.2). Display-only (LOCK-3): reads acc, never
     // feeds engine/taxCode/DI totals. Shared by the amortization modal AND the Yard twin.
-    function _moatDebtPieHTML(acc) {
-        if ((getBaseType(acc.baseId) || {}).title === 'HELOC') return '';
-        var orig = parseFloat(acc.origAmount) || 0;
-        var balance = parseFloat(acc.value) || 0;
-        if (orig <= 0 || balance < 0 || balance > orig) return '';   // sourced-or-blank: need real origAmount + balance
-        var principalPaid = orig - balance;
-        var interestPaid = parseFloat(acc.interestPaidToDate) || 0;   // §19.2b — SOURCED off the statement, never computed
-        var escrow = parseFloat(acc.escrowYtd) || 0;                  // not tracked today → 0 → no slice (sourced-or-blank)
-        var slices = [
-            { label: 'Principal Balance', val: balance,       color: 'var(--danger)' },
-            { label: 'Principal Paid',    val: principalPaid, color: 'var(--teal-mid)' },
-            { label: 'Interest Paid',     val: interestPaid,  color: 'var(--gold)' },
-            { label: 'Escrow',            val: escrow,        color: 'rgba(165,175,188,0.75)' }
-        ].filter(function (s) { return s.val > 0; });
+    // §19.7 — shared debt-donut DRAWER, extracted verbatim from _moatDebtPieHTML (L48 reuse-don't-fork). Two thin
+    // composers feed it their own slice set + heading: the Mortgage pie ("WHERE THIS LOAN STANDS") and the Yard
+    // all-liens pie ("ALL DEBT ON THE GROUNDS"). slices = [{label,val,color}]; zero-value slices are hidden (L47);
+    // returns '' if nothing survives. The card assembly (donut + legend + title) lives HERE, in one place only.
+    // Display-only (LOCK-3). centerPct = big center number · centerSub = its caption · title = card heading.
+    function _debtDonutSVG(slices, centerPct, centerSub, title) {
+        slices = (slices || []).filter(function (s) { return s.val > 0; });
         var total = slices.reduce(function (a, s) { return a + s.val; }, 0);
         if (total <= 0) return '';
-        var paidPct = orig > 0 ? Math.round(principalPaid / orig * 100) : 0;
         var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
         var gap = slices.length > 1 ? 0.9 : 0, cum = 0, arcs = '';
         slices.forEach(function (s) {
@@ -9906,11 +9898,27 @@
              + '<circle cx="21" cy="21" r="15.91549" fill="transparent" stroke="#ffffff" stroke-width="5.4" opacity="0.85"/>'
              + arcs
              + '<circle cx="21" cy="21" r="13.35" fill="url(#moatPieHole)"/>'
-             + '<text x="21" y="20.2" text-anchor="middle" fill="var(--white)" style="font-size:6.6px; font-weight:700; font-family:var(--font-mono);">' + paidPct + '%</text>'
-             + '<text x="21" y="24.4" text-anchor="middle" fill="rgba(255,255,255,0.6)" style="font-size:2.6px; letter-spacing:0.4px;">PAID DOWN</text>'
+             + '<text x="21" y="20.2" text-anchor="middle" fill="var(--white)" style="font-size:6.6px; font-weight:700; font-family:var(--font-mono);">' + centerPct + '%</text>'
+             + '<text x="21" y="24.4" text-anchor="middle" fill="rgba(255,255,255,0.6)" style="font-size:2.6px; letter-spacing:0.4px;">' + centerSub + '</text>'
              + '</svg>'
-             + '<div style="flex:1; min-width:0;"><div style="font-size:10px; letter-spacing:0.5px; color:rgba(255,255,255,0.5); margin-bottom:8px;">WHERE THIS LOAN STANDS</div>' + legend + '</div>'
+             + '<div style="flex:1; min-width:0;"><div style="font-size:10px; letter-spacing:0.5px; color:rgba(255,255,255,0.5); margin-bottom:8px;">' + title + '</div>' + legend + '</div>'
              + '</div>';
+    }
+    function _moatDebtPieHTML(acc) {
+        if ((getBaseType(acc.baseId) || {}).title === 'HELOC') return '';
+        var orig = parseFloat(acc.origAmount) || 0;
+        var balance = parseFloat(acc.value) || 0;
+        if (orig <= 0 || balance < 0 || balance > orig) return '';   // sourced-or-blank: need real origAmount + balance
+        var principalPaid = orig - balance;
+        var interestPaid = parseFloat(acc.interestPaidToDate) || 0;   // §19.2b — SOURCED off the statement, never computed
+        var escrow = parseFloat(acc.escrowYtd) || 0;                  // not tracked today → 0 → no slice (sourced-or-blank)
+        var paidPct = orig > 0 ? Math.round(principalPaid / orig * 100) : 0;
+        return _debtDonutSVG([
+            { label: 'Principal Balance', val: balance,       color: 'var(--danger)' },
+            { label: 'Principal Paid',    val: principalPaid, color: 'var(--teal-mid)' },
+            { label: 'Interest Paid',     val: interestPaid,  color: 'var(--gold)' },
+            { label: 'Escrow',            val: escrow,        color: 'rgba(165,175,188,0.75)' }
+        ], paidPct, 'PAID DOWN', 'WHERE THIS LOAN STANDS');
     }
 
     window.openAmortizationModal = function(id) {
