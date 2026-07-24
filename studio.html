@@ -1110,6 +1110,9 @@
   .di-n-teal { color: var(--teal-mid);   font-weight: 600; }
   .di-n-gold { color: var(--gold);       font-weight: 600; }
   .di-aside  { opacity: 0.62; }
+  /* §19.9 — negative-amortization alerts (total P&I payment < monthly interest). Warning-tinted, in-voice. */
+  .moat-negam-inline { margin: 2px 0 12px; padding: 9px 12px; background: rgba(226,75,74,0.10); border: 1px solid rgba(226,75,74,0.32); border-left: 3px solid var(--danger-red); border-radius: 5px; font-size: 11.5px; line-height: 1.5; color: rgba(255,255,255,0.86); }
+  .di-negam { border-left: 3px solid var(--danger-red); background: rgba(226,75,74,0.09); padding: 9px 13px; border-radius: 5px; }
   .holding-input { width: 100%; min-width: 0; box-sizing: border-box; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: var(--white); font-family: var(--font-mono); font-size: 11px; padding: 4px; border-radius: 2px; }
   .holding-input:focus { border-color: var(--teal-mid); outline: none; }
   /* kill number spinners so 2-decimal values never clip in narrow columns */
@@ -7503,6 +7506,7 @@
                 <div>${_dLbl(base, 'Minimum Payment', 'The required amount', 'Your contractual principal + interest each month. Escrow (taxes/insurance) may be collected on top — see the escrow fields.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.minPmt||'')}" oninput="updateAccField('${id}', 'minPmt', this.value)"></div>
                 <div>${_dLbl(base, 'Additional Payment', 'Your accelerator', 'Anything you add on top of the minimum goes straight at principal — it shrinks both the payoff clock and the lifetime interest. Even a little compounds.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.addPmt||'')}" oninput="updateAccField('${id}', 'addPmt', this.value)"></div>
             </div>
+            ${String(base.id).indexOf('mortgage') === 0 ? `<div id="modal-moat-negam-${id}">${_moatNegAmInlineHTML(acc)}</div>` : ''}
             <div class="field-row" style="grid-template-columns: 1fr;">
                 <div>${_dLbl(base, 'Next Payment Date', 'The clock\'s start', 'We count the payoff timeline from here. Setting it keeps the estimated payoff date honest.')}<input type="date" class="small-field" value="${acc.nextPmtDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'nextPmtDate', this.value)"></div>
             </div>`;
@@ -8004,6 +8008,9 @@
                 // §1 Moat DI — live recompose (sourced-or-blank).
                 const diEl = document.getElementById(`modal-moat-di-${id}`);
                 if(diEl) diEl.innerHTML = _moatDI(acc) || 'Add this loan\'s balance, rate, and payment and Datum reads it back — the payoff clock, the lifetime interest, and the equity behind it.';
+                // §19.9 — inline neg-am notice under the Minimum Payment field, live as the payment/balance/rate move.
+                const negEl = document.getElementById(`modal-moat-negam-${id}`);
+                if(negEl) negEl.innerHTML = _moatNegAmInlineHTML(acc);
                 // §17 — live-rate sub-line at the mortgage APR field (rate/type/term change moves it).
                 const moatLR = document.getElementById(`modal-moat-liverate-${id}`);
                 if(moatLR) moatLR.innerHTML = _moatLiveRateHTML(id, acc);
@@ -8120,6 +8127,9 @@
                 // §1 Moat DI — live recompose on balance change (equity + payoff shift).
                 const diEl2 = document.getElementById(`modal-moat-di-${id}`);
                 if(diEl2) diEl2.innerHTML = _moatDI(acc) || 'Add this loan\'s balance, rate, and payment and Datum reads it back — the payoff clock, the lifetime interest, and the equity behind it.';
+                // §19.9 — inline neg-am notice refresh on balance change (balance moves the interest line too).
+                const negEl2 = document.getElementById(`modal-moat-negam-${id}`);
+                if(negEl2) negEl2.innerHTML = _moatNegAmInlineHTML(acc);
                 // §0.4 HELOC — balance change moves utilization/headroom too (sourced-or-blank).
                 const helocHR2 = document.getElementById(`modal-heloc-headroom-${id}`);
                 if(helocHR2) { var _hh2 = _helocHeadroomHTML(acc); helocHR2.style.display = _hh2 ? 'block' : 'none'; helocHR2.innerHTML = _hh2; }
@@ -8454,6 +8464,27 @@
     function hasEscrow(acc) {
         return (parseFloat(acc.propTaxAnnual) || 0) > 0 || (parseFloat(acc.insAnnual) || 0) > 0 || (parseFloat(acc.pmiMonthly) || 0) > 0 || (parseFloat(acc.mortgageOtherCost) || 0) > 0;
     }
+    // §19.9 — negative-amortization detector (position truth, sourced-or-blank). Neg-am = the total P&I payment
+    // (min + additional) doesn't cover the monthly interest (balance × APR ÷ 12), so the balance grows and the loan
+    // never pays off. Returns the three figures or null (blank APR/balance/payment → null, never a guessed number).
+    function _moatNegAm(acc) {
+        var bal = parseFloat(acc.value) || 0;
+        var apr = parseFloat(acc.intRate) || 0;
+        if (bal <= 0 || apr <= 0) return null;
+        var monthlyInterest = bal * apr / 100 / 12;
+        var payment = calculateTotalPmt(acc);                             // total P&I (min + additional) — what services the loan
+        if (payment <= 0 || payment >= monthlyInterest) return null;      // no payment, or it covers interest → no notice
+        return { payment: payment, monthlyInterest: monthlyInterest, gap: monthlyInterest - payment };
+    }
+    // §19.9 — inline neg-am notice beneath the Minimum Payment field (mortgage-scoped; refreshes live). Blank unless neg-am.
+    function _moatNegAmInlineHTML(acc) {
+        if (String((getBaseType(acc.baseId) || {}).id).indexOf('mortgage') !== 0) return '';   // §19.9 scoped to Mortgage
+        var n = _moatNegAm(acc);
+        if (!n) return '';
+        var $ = function (v) { return '$' + Math.round(v).toLocaleString('en-US'); };
+        return '<div class="moat-negam-inline">⚠️ At ' + $(n.payment) + '/mo, you\'re not covering the ' + $(n.monthlyInterest)
+             + '/mo in interest — the balance grows by about ' + $(n.gap) + ' every month instead of shrinking. At this rate the loan never pays off.</div>';
+    }
     // §1 MOAT DATUM INTELLIGENCE — composes the debt-native signal paragraph from LIVE signals only
     // (balance-vs-original · rate+type · payoff clock · lifetime interest · equity-vs-Grounds · escrow
     // load). Every clause sourced-or-blank: a clause appears only when its inputs are present (L47).
@@ -8522,15 +8553,26 @@
         // FORWARD walk from TODAY (~$471), NEVER life-of-loan minus paid-to-date (two different bases, #379
         // forward/backward interest law). life-of-loan = de-emphasized THEORETICAL parenthetical aside. The
         // principal-paid % is NOT repeated here — it lives once in ¶1 (§19.5 de-dupe ③).
-        var liRemain = lifetimeInterest(acc);
-        if (liRemain !== null && bal > 0) {
-            var ipd = parseFloat(acc.interestPaidToDate) || 0;
-            var costLine = ipd > 0
-                ? ('You\'ve paid ' + RED($(ipd)) + ' in interest so far, and from here to payoff about ' + RED($(liRemain)) + ' more goes to interest before it\'s done.')
-                : ('From here to payoff, about ' + RED($(liRemain)) + ' of what\'s ahead goes to interest before it\'s done.');
-            var lol = lifeOfLoan(acc);
-            if (lol) costLine += ' <span class="di-aside">(Over the loan\'s full original life the interest runs about ' + RED($(lol.intLife)) + ' all-in — a theoretical figure, not what you\'ll actually pay from here.)</span>';
-            cost.push(costLine);
+        // §19.9 Part A — DECOUPLE: paid-to-date and life-of-loan are POSITION facts, sourced-or-blank; they render
+        // even when the forward walk lifetimeInterest is null under negative amortization. Only the "remains from
+        // here" clause needs the forward figure — it simply drops out when there's no valid payoff ahead.
+        var liRemain = lifetimeInterest(acc);        // forward walk; null under neg-am / missing inputs
+        var ipd = parseFloat(acc.interestPaidToDate) || 0;
+        var lol = lifeOfLoan(acc);
+        if (bal > 0 && (ipd > 0 || liRemain !== null || lol)) {
+            var lead = '';
+            if (ipd > 0 && liRemain !== null) {
+                lead = 'You\'ve paid ' + RED($(ipd)) + ' in interest so far, and from here to payoff about ' + RED($(liRemain)) + ' more goes to interest before it\'s done.';
+            } else if (ipd > 0) {
+                lead = 'You\'ve paid ' + RED($(ipd)) + ' in interest on this loan so far.';
+            } else if (liRemain !== null) {
+                lead = 'From here to payoff, about ' + RED($(liRemain)) + ' of what\'s ahead goes to interest before it\'s done.';
+            }
+            var aside = lol
+                ? (lead ? ' <span class="di-aside">(Over the loan\'s full original life the interest runs about ' + RED($(lol.intLife)) + ' all-in — a theoretical figure, not what you\'ll actually pay from here.)</span>'
+                        : 'Over the loan\'s full original life the interest would run about ' + RED($(lol.intLife)) + ' all-in — a theoretical figure.')
+                : '';
+            if (lead || aside) cost.push(lead + aside);
         }
         // 1.6 escrow load
         if (hasEscrow(acc)) {
@@ -8572,7 +8614,15 @@
                 lever.push('One more thing the payoff date buys you: once this loan ends around ' + GOLD(pd19) + ', the ' + GOLD($(totalMo)) + '/mo it takes disappears from your required monthly income — for the rest of your life. A paid-off Moat is one of the biggest levers you have on the income you must generate in retirement.');
             }
         }
-        return [stand, cost, lever].filter(function (g) { return g.length; })
+        // §19.9 Part B — negative-amortization echo (retirement slant): persists whenever the modal reopens. Leads
+        // the narrative as an alert when the total P&I payment can't cover the monthly interest. Interest = RED (§19.5).
+        var negAmHtml = '';
+        var _na = _moatNegAm(acc);
+        if (_na) {
+            var _mi = RED($(_na.monthlyInterest));
+            negAmHtml = '<p class="di-p di-negam">This loan is currently set to outlive the plan. A payment that doesn\'t cover interest means the debt never ends — it follows you into retirement as a bill that never stops, pulling ' + _mi + '/mo off the income you\'re counting on to live. Covering at least the ' + _mi + '/mo interest stops the bleed; paying above it is what actually retires the debt before you do.</p>';
+        }
+        return negAmHtml + [stand, cost, lever].filter(function (g) { return g.length; })
             .map(function (g) { return '<p class="di-p">' + g.join(' ') + '</p>'; }).join('');
     }
 
@@ -9970,9 +10020,16 @@
             document.body.appendChild(ov);
         }
         var m = payoffMonths(acc);
-        var body;
+        // §19.9 Part A — the debt pie is a POSITION snapshot (balance / paid / interest / escrow), honestly
+        // computable whenever its inputs are sourced. It renders ABOVE the schedule regardless of whether a valid
+        // payoff schedule exists — the schedule's "can't draw" state is a separate note below, never a blanket.
+        var pie = _moatDebtPieHTML(acc);
+        var schedule;
         if (m.code !== 'OK') {
-            body = `<div style="color: rgba(255,255,255,0.6); font-size:13px; padding: 18px 0;">Add a balance, rate, and payment and this schedule fills in.</div>`;
+            var why = (m.code === 'NEGAM')
+                ? 'This payment doesn\'t cover the monthly interest, so the balance never reaches zero — there\'s no payoff schedule to draw. The numbers are in the notice under your payment.'
+                : 'Add a balance, rate, and payment and this schedule fills in.';
+            schedule = `<div style="color: rgba(255,255,255,0.6); font-size:13px; padding: 18px 0;">${why}</div>`;
         } else {
             var bal = parseFloat(acc.value) || 0;
             var r = (parseFloat(acc.intRate) || 0) / 100 / 12;
@@ -9988,11 +10045,12 @@
                 d = new Date(d); d.setMonth(d.getMonth() + 1);
                 if (bal <= 0) break;
             }
-            body = `${_moatDebtPieHTML(acc)}<div style="color: rgba(255,255,255,0.7); font-size:12px; margin-bottom:12px; line-height:1.5;">Here's every payment from now to payoff — how much goes to the house (principal) versus the bank (interest), month by month. Early on, interest dominates; over time principal takes over. Adding to your payment flips that sooner.</div>
+            schedule = `<div style="color: rgba(255,255,255,0.7); font-size:12px; margin-bottom:12px; line-height:1.5;">Here's every payment from now to payoff — how much goes to the house (principal) versus the bank (interest), month by month. Early on, interest dominates; over time principal takes over. Adding to your payment flips that sooner.</div>
                 <div style="max-height:50vh; overflow-y:auto;"><table style="width:100%; border-collapse:collapse; font-family: var(--font-mono); font-size:11px; color: var(--white);">
                     <thead><tr style="position:sticky; top:0; background: var(--bg-navy);"><th style="padding:5px 8px; text-align:left; opacity:0.55;">#</th><th style="padding:5px 8px; text-align:left; opacity:0.55;">Date</th><th style="padding:5px 8px; text-align:right; opacity:0.55;">Payment</th><th style="padding:5px 8px; text-align:right; color:var(--teal-mid);">Principal</th><th style="padding:5px 8px; text-align:right; color:var(--danger);">Interest</th><th style="padding:5px 8px; text-align:right; opacity:0.55;">Balance</th></tr></thead>
                     <tbody>${rows}</tbody></table></div>`;
         }
+        var body = pie + schedule;
         ov.innerHTML = `<div style="background: var(--bg-navy, #0a1628); border:1px solid rgba(255,255,255,0.12); border-radius:8px; max-width:560px; width:92vw; max-height:82vh; overflow:hidden; padding:24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
                 <div class="hud-title" style="color:var(--white); font-size:15px;">Amortization Schedule — ${(acc.name || 'Loan')}</div>
