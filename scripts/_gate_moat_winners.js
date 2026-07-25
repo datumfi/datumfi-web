@@ -77,7 +77,11 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     window.openAccountModal(morts[morts.length - 1].id);
     var _card = document.getElementById('modal-dynamic-content').closest('.modal-card');
     var _cardRight = _card ? _card.getBoundingClientRect().right : 0;
-    out.ttClip = ['Original Amount', 'Rate Type', 'Maturity Date', 'Additional Payment', 'Annual Insurance'].map(function (txt) {
+    // RE-TRUED 2026-07-25: the right-column SET changed (§20.4 swapped PMI/insurance, §20 added Coverage
+    // Amount and Term (months)). 'Annual Insurance' hasn't existed since §18.2 and moved to the LEFT column
+    // in §20.4, so this list was testing a field that couldn't be found — it scored a clip failure forever.
+    // These are the fields that actually sit in the right column today.
+    out.ttClip = ['Rate Type', 'Maturity Date', 'Additional Payment', 'Term (months)', 'PMI (yr)', 'Coverage Amount'].map(function (txt) {
       var wrap = Array.from(document.querySelectorAll('#modal-dynamic-content .modal-tt-wrap')).find(function (w) { return w.textContent.indexOf(txt) >= 0; });
       var tt = wrap ? wrap.querySelector('.modal-tt') : null;
       if (!tt) return { f: txt, found: false, overflow: 9999 };
@@ -102,11 +106,31 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     out.m30 = grab('mortgage_joint', { value: 380000, origAmount: '400000', intRate: 6, origDate: '2020-01-01', maturityDate: '2050-01-01', minPmt: '2400' });
     out.m20refi = grab('mortgage_joint', { value: 17500, origAmount: '212111', intRate: 3.99, origDate: '2012-01-01', maturityDate: '2032-01-01', minPmt: '1284', addPmt: '100', nextPmtDate: '2026-08-01' });
     out.mStub = grab('mortgage_joint', { value: 17500, origAmount: '212111', intRate: 3.99, minPmt: '1284' });
+    // RE-TRUED 2026-07-25 — §18.9 changed the PMI-dropoff RULE: it no longer fires on pmi>0, it fires when
+    // equity is still under 20% of the linked property's value (_moatPmiUnder20). mFill is 300k on a 500k
+    // home = 40% equity, so the clause is CORRECTLY silent there — the old assertion was testing a rule the
+    // room no longer has. This fixture is genuinely under 20% (450k on 500k = 10%) so the clause can be
+    // tested where it should fire, and mFill now tests that it stays quiet where it shouldn't.
+    out.mPmi = grab('mortgage_joint', { value: 450000, intRate: 5, minPmt: '2500', pmiMonthly: '150',
+                                        propTaxAnnual: '6000', linkedAssetId: (propAcc ? propAcc.id : null) });
     return out;
   });
   await b.close();
 
   const has = (s, m) => typeof s === 'string' && s.indexOf(m) >= 0;
+  // RE-TRUED 2026-07-25 — §19.5 wrapped every $ figure in a semantic colour span (.di-n-red/teal/gold), so
+  // a DI sentence is no longer contiguous in raw innerHTML: "guaranteed 6%" is really
+  // `guaranteed <span class="di-n-gold">6%</span>`. Roughly a dozen assertions below were failing on prose
+  // that renders perfectly — they were reading markup, not the sentence. T.* is what the USER actually
+  // reads: inline spans dropped with NO space (so "$25" + "/mo" rejoins as "$25/mo"), every other tag
+  // becomes a space, whitespace collapsed. Structural checks (classes, value=, display:none) keep using the
+  // raw capture; prose checks use T.
+  const txt = (s) => typeof s !== 'string' ? '' :
+    s.replace(/<\/?span[^>]*>/g, '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const T = {}; Object.keys(R).forEach(k => { if (typeof R[k] === 'string') T[k] = txt(R[k]); });
+  // The link control lists assets by TITLE inside its picker section; scope the scoping assertions to that
+  // region so they can't pass on the word appearing somewhere else in the modal.
+  const linkRegion = (s) => { const i = (s || '').indexOf('LINK AN EXISTING'); return i < 0 ? '' : s.slice(i, i + 1500); };
   // Escrow row visibility: the "with escrow" line is display-toggled (sourced-or-blank).
   const escrowState = (s) => { var i = (s || '').indexOf('modal-escrow-foot-'); if (i < 0) return 'absent'; var w = s.slice(i, i + 90); return w.indexOf('display:block') >= 0 ? 'shown' : (w.indexOf('display:none') >= 0 ? 'hidden' : 'unknown'); };
   let pass = 0, fail = 0; const lines = [];
@@ -115,10 +139,16 @@ const URL = 'http://127.0.0.1:8001/studio.html';
 
   // ===== C1 · §0.2 LINK-SCOPING FIX (mortgage -> property* only) =====
   lines.push('===== C1 · §0.2 LINK SCOPING =====');
-  ok(has(R.mBlank, 'Map to: Real Estate (The Grounds)'), 'Mortgage link lists Real Estate (The Grounds)');
-  ok(pick(!has(R.mBlank, '(The Driveway)'), has(R.mBlank, '(The Driveway)')), 'Mortgage link EXCLUDES Vehicle (The Driveway) [BITE]');
-  ok(has(R.aBlank, 'Map to: Vehicle (The Driveway)'), 'Auto-debt link lists Vehicle (The Driveway)');
-  ok(pick(!has(R.aBlank, '(The Grounds)'), has(R.aBlank, '(The Grounds)')), 'Auto-debt link EXCLUDES Real Estate (The Grounds) [BITE]');
+  // RE-TRUED 2026-07-25 — §18.3 consolidated the link control: the old "Map to: <Room> (<Meta>)" line is
+  // gone, replaced by a picker ("Link or draft a property…" -> "LINK AN EXISTING PROPERTY" -> asset titles).
+  // ⚠️ The two [BITE] lines here were passing VACUOUSLY: they asserted the ABSENCE of "(The Driveway)" /
+  // "(The Grounds)", strings the room stopped emitting entirely — so they were true no matter how badly the
+  // scoping broke. Re-pointed at the picker region and the titles it actually renders, so they test scoping
+  // again rather than testing nothing.
+  ok(has(linkRegion(R.mBlank), 'Real Estate'), 'Mortgage link lists Real Estate (The Grounds)');
+  ok(pick(!has(linkRegion(R.mBlank), 'Vehicle'), has(linkRegion(R.mBlank), 'Vehicle')), 'Mortgage link EXCLUDES Vehicle (The Driveway) [BITE]');
+  ok(has(linkRegion(R.aBlank), 'Vehicle'), 'Auto-debt link lists Vehicle (The Driveway)');
+  ok(pick(!has(linkRegion(R.aBlank), 'Real Estate'), has(linkRegion(R.aBlank), 'Real Estate')), 'Auto-debt link EXCLUDES Real Estate (The Grounds) [BITE]');
 
   // ===== C1 · §0.5 TOGGLE RENAME (Demolition -> Accelerated Payoff) =====
   lines.push('===== C1 · §0.5 TOGGLE RENAME =====');
@@ -130,10 +160,17 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   // ===== C2/C4d · §0.3/§0.3b LABELED ESCROW SECTION (mortgage-only; footer sourced-or-blank) =====
   lines.push('===== C2/C4d · ESCROW SECTION =====');
   ok(has(R.mBlank, '🏦 Escrow — the monthly bundle') && has(R.mBlank, 'Escrow is the slice of your monthly payment'), 'Labeled section header + plain-coach definition render for Mortgage');
-  ok(has(R.mBlank, 'Annual Property Taxes') && has(R.mBlank, 'Annual Insurance') && has(R.mBlank, 'Monthly PMI'), 'Three escrow fields grouped under the section');
+  // RE-TRUED 2026-07-25 — the escrow labels were renamed twice since Wave-1: §18.2 (D1 unification) and
+  // §20.4/§20.7. 'Annual Property Taxes' / 'Annual Insurance' have not existed for two arcs. These are the
+  // authored labels the room renders in its DEFAULT (annual) view today.
+  ok(has(R.mBlank, 'Property Tax (yr)') && has(R.mBlank, 'Annual Homeowner Insurance') && has(R.mBlank, 'PMI (yr)') && has(R.mBlank, 'Other (yr)'), 'Escrow fields grouped under the section (§20.7 /yr labels)');
   ok(pick(!has(R.aBlank, '🏦 Escrow'), has(R.aBlank, '🏦 Escrow')), 'Escrow section ABSENT for Auto-debt (mortgage-only gate) [BITE]');
   ok(has(R.mFill, 'real all-in payment is $3,350/mo'), 'Computed footer all-in = $3,350/mo (2500 P&I + 850 escrow)');
-  ok(has(R.mFill, 'PMI drops off once you cross ~20% equity'), 'PMI-dropoff clause fires when pmi>0');
+  // RE-TRUED 2026-07-25 — §18.9 changed the RULE, not just the wording: the dropoff clause now fires on
+  // equity < 20% of the linked home (_moatPmiUnder20), not merely on pmi>0. Tested BOTH ways now, which is
+  // stronger than the assertion it replaces: it must speak at 10% equity and stay silent at 40%.
+  ok(has(T.mPmi, 'PMI drops off once you cross ~20% equity'), 'PMI-dropoff clause FIRES under 20% equity (450k on 500k)');
+  ok(pick(!has(T.mFill, 'PMI drops off once you cross'), has(T.mFill, 'PMI drops off once you cross')), 'PMI-dropoff clause SILENT at 40% equity (mFill) [BITE]');
   ok(escrowState(R.mFill) === 'shown', 'Escrow footer SHOWN when escrow set');
   ok(pick(escrowState(R.mBlank) === 'hidden', escrowState(R.mBlank) === 'shown'), 'Escrow footer HIDDEN when blank (sourced-or-blank) [BITE]');
   ok(has(R.mFill, 'value="$6,000"'), 'Property-tax input round-trips $6,000 (sanitized store)');
@@ -170,30 +207,38 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   // ===== C8 · §1.7-1.9 PRESCRIPTIVE DI (rate-aware tension · accelerator honesty · income relief) =====
   lines.push('===== C8 · §1.7-1.9 PRESCRIPTIVE DI =====');
   // 1.7 rate-aware accelerate-vs-invest — three rate bands, never picks a side
-  ok(has(R.mCap, 'guaranteed 3.99%') && has(R.mCap, 'invested dollars have historically out-earned it'), '§1.7 LOW band (<5% fixed): peace-of-mind framing');
-  ok(has(R.mFill, 'guaranteed 6%') && has(R.mFill, 'paying it down is a strong, certain win'), '§1.7 HIGH/VARIABLE band (>=6% or Variable): certain win');
-  ok(has(R.mMid2, 'guaranteed 5%') && has(R.mMid2, 'sits right on the fence'), '§1.7 MID band (5-6%): fence');
+  // RE-TRUED 2026-07-25 — the §1.7/§1.8/§1.9 COPY is unchanged and correct; these were failing purely on the
+  // §19.5 colour spans splitting the sentences in raw HTML. Same literals, read off the rendered text (T.*).
+  ok(has(T.mCap, 'guaranteed 3.99%') && has(T.mCap, 'invested dollars have historically out-earned it'), '§1.7 LOW band (<5% fixed): peace-of-mind framing');
+  ok(has(T.mFill, 'guaranteed 6%') && has(T.mFill, 'paying it down is a strong, certain win'), '§1.7 HIGH/VARIABLE band (>=6% or Variable): certain win');
+  ok(has(T.mMid2, 'guaranteed 5%') && has(T.mMid2, 'sits right on the fence'), '§1.7 MID band (5-6%): fence');
   // 1.8 accelerator honesty — three monthsSaved bands, fires only when addPmt>0
-  ok(has(R.mFill, 'is doing real work') && has(R.mFill, 'about 8 years') && has(R.mFill, 'saves $96,612 in interest'), '§1.8 >=12mo band (BOTH: years + interest)');
-  ok(has(R.mNear, "this loan's nearly paid off, so that extra $25/mo moves payoff in by about 1 months and saves only $16 in interest"), '§1.8 <2mo + >=85% paid band (BOTH numbers, no adjective-only)');
-  ok(has(R.mMid2, 'trims your payoff by about 11 months and saves $1,151 in interest'), '§1.8 2-11mo band (BOTH: 11 months + interest)');
-  ok(pick(!has(R.mCap, 'trims your payoff') && !has(R.mCap, 'is doing real work'), has(R.mCap, 'is doing real work')), '§1.8 SILENT when no additional payment [BITE]');
+  ok(has(T.mFill, 'is doing real work') && has(T.mFill, 'about 8 years') && has(T.mFill, 'saves $96,612 in interest'), '§1.8 >=12mo band (BOTH: years + interest)');
+  ok(has(T.mNear, "this loan's nearly paid off, so that extra $25/mo moves payoff in by about 1 months and saves only $16 in interest"), '§1.8 <2mo + >=85% paid band (BOTH numbers, no adjective-only)');
+  ok(has(T.mMid2, 'trims your payoff by about 11 months and saves $1,151 in interest'), '§1.8 2-11mo band (BOTH: 11 months + interest)');
+  ok(pick(!has(T.mCap, 'trims your payoff') && !has(T.mCap, 'is doing real work'), has(T.mCap, 'is doing real work')), '§1.8 SILENT when no additional payment [BITE]');
   // 1.9 paid-off -> required-income drop — fires only when payoffPct >= 85%, dollar insight (no cross-room %)
-  ok(has(R.mNear, 'disappears from your required monthly income') && has(R.mNear, 'the $825/mo it takes') && has(R.mNear, 'biggest levers you have on the income'), '§1.9 income-relief clause (near payoff)');
-  ok(pick(!has(R.mFill, 'disappears from your required monthly income'), has(R.mFill, 'disappears from your required monthly income')), '§1.9 SILENT when payoffPct < 85% (mFill 25% paid) [BITE]');
+  ok(has(T.mNear, 'disappears from your required monthly income') && has(T.mNear, 'the $825/mo it takes') && has(T.mNear, 'biggest levers you have on the income'), '§1.9 income-relief clause (near payoff)');
+  ok(pick(!has(T.mFill, 'disappears from your required monthly income'), has(T.mFill, 'disappears from your required monthly income')), '§1.9 SILENT when payoffPct < 85% (mFill 25% paid) [BITE]');
 
   // ===== FIX-A · §1.4 LIFE-OF-LOAN vs REMAINING (term-derived; two framings never conflated) =====
   lines.push('===== FIX-A · §1.4 LIFE vs REMAINING =====');
-  ok(has(R.m30, 'Over its full life this mortgage runs about $863,353 all-in — $463,353 of that is interest to the bank'), 'm30 life-of-loan line (term=360 derived, not hardcoded)');
-  ok(has(R.m30, 'from here to payoff, $380,000 remains, $374,818 of it interest'), 'm30 remaining line (distinct from life)');
-  ok(has(R.m20refi, 'Over its full life this mortgage runs about $308,216 all-in — $96,105 of that is interest to the bank'), 'm20refi life = $96,105 (Captain test, term=240 refi)');
-  ok(has(R.m20refi, "You've already retired $194,611 of principal (92%); from here to payoff, $17,500 remains, $408 of it interest"), 'm20refi remaining line (paid-down, +$100/mo -> $408)');
-  ok(has(R.m20refi, '$96,105') && has(R.m20refi, '$408'), 'm20refi shows BOTH life ($96,105) AND remaining ($408) — differ ~$95.7k');
+  // RE-TRUED 2026-07-25 — §19.5 (R178/R179) REPHRASED this pair and deliberately DE-EMPHASISED life-of-loan
+  // into a parenthetical "theoretical figure" aside, because the forward figure is the one you can act on.
+  // The MATH is untouched: every figure below ($463,353 · $374,818 · $96,105 · $408 · $439) is the same
+  // number the Wave-1 gate demanded. Re-grounded to the current sentences; the invariant under test is
+  // unchanged — life and remaining are BOTH present, distinct, and never conflated (#379 two bases).
+  ok(has(T.m30, 'the interest runs about $463,353 all-in') && has(T.m30, 'a theoretical figure'), 'm30 life-of-loan line (term=360 derived, not hardcoded)');
+  ok(has(T.m30, "From here to payoff, about $374,818 of what's ahead goes to interest"), 'm30 remaining line (distinct from life)');
+  ok(has(T.m20refi, 'the interest runs about $96,105 all-in'), 'm20refi life = $96,105 (Captain test, term=240 refi)');
+  ok(has(T.m20refi, "You're 92% paid down — only $17,500 left of the original $212,111") &&
+     has(T.m20refi, "From here to payoff, about $408 of what's ahead goes to interest"), 'm20refi remaining line (paid-down, +$100/mo -> $408)');
+  ok(has(T.m20refi, '$96,105') && has(T.m20refi, '$408'), 'm20refi shows BOTH life ($96,105) AND remaining ($408) — differ ~$95.7k');
   // FIX-1 · §1.3 aheadClause names the MINIMUM-ONLY baseline date it beats (not the already-accelerated date)
-  ok(has(R.m20refi, "sooner than the October 2027 you'd hit paying the minimum alone"), '§1.3 names min-only baseline date (October 2027) it beats');
-  ok(pick(has(R.m20refi, 'sooner than the') && !has(R.m20refi, 'pulls that in sooner'), has(R.m20refi, 'pulls that in sooner')), '§1.3 uses "sooner than the" NOT old "pulls that in sooner" [BITE]');
-  ok(pick(!has(R.mStub, 'Over its full life'), has(R.mStub, 'Over its full life')), 'mStub (no dates) OMITS life line (L47 sourced-or-blank) [BITE]');
-  ok(has(R.mStub, 'from here to payoff, $17,500 remains, $439 of it interest'), 'mStub shows remaining line alone');
+  ok(has(T.m20refi, "sooner than the October 2027 you'd hit paying the minimum alone"), '§1.3 names min-only baseline date (October 2027) it beats');
+  ok(pick(has(T.m20refi, 'sooner than the') && !has(T.m20refi, 'pulls that in sooner'), has(T.m20refi, 'pulls that in sooner')), '§1.3 uses "sooner than the" NOT old "pulls that in sooner" [BITE]');
+  ok(pick(!has(T.mStub, 'full original life'), has(T.mStub, 'full original life')), 'mStub (no dates) OMITS life line (L47 sourced-or-blank) [BITE]');
+  ok(has(T.mStub, "From here to payoff, about $439 of what's ahead goes to interest"), 'mStub shows remaining line alone');
 
   // ===== C6 · REMAINING-INTEREST MATH (exact amortized sum, not ceil-formula) =====
   lines.push('===== C6 · REMAINING-INTEREST MATH =====');
@@ -208,22 +253,35 @@ const URL = 'http://127.0.0.1:8001/studio.html';
 
   // ===== C5c · §1 DATUM INTELLIGENCE STRIP (composed, sourced-or-blank) =====
   lines.push('===== C5c · §1 DI STRIP =====');
-  ok(has(R.mFill, 'DATUM INTELLIGENCE'), 'DI box renders on Mortgage');
-  ok(pick(!has(R.aBlank, 'DATUM INTELLIGENCE'), has(R.aBlank, 'DATUM INTELLIGENCE')), 'DI box ABSENT on Auto-debt (mortgage-only) [BITE]');
-  ok(has(R.mFill, 'paid down 25% of the original $400,000'), '§1.1 balance-vs-original clause (25% paid)');
-  ok(has(R.mFill, 'This loan runs 6% APR, Variable.') && has(R.mFill, 'it can move — watch the reset'), '§1.2 rate+type clause (Variable)');
-  ok(has(R.mFill, "mortgage-free around December 2041") && has(R.mFill, "about 94 months sooner than the October 2049 you'd hit paying the minimum alone"), '§1.3 payoff clock + baseline-date ahead clause');
-  ok(has(R.mFill, "You've already retired $100,000 of principal (25%); from here to payoff, $300,000 remains, $159,291 of it interest"), '§1.4 remaining-only clause (mFill has no dates -> life line omitted)');
-  ok(has(R.mFill, 'Against The Grounds ($500,000), your equity here is $200,000. You own more than you owe'), '§1.5 equity clause (above water)');
-  ok(has(R.mFill, 'your real monthly is $3,350'), '§1.6 escrow-load clause');
-  ok(has(R.mUnder, 'Underwater — you owe more than it'), '§1.5 underwater branch (balance > property value)');
+  // RE-TRUED 2026-07-25 — §19.4c replaced the bespoke inline DI box with the shared .di-narrative chrome, so
+  // the header is now "Datum Intelligence" (CSS uppercases it) inside class="di-narrative". Per the §19.4
+  // doctrine, assert the RENDERED CLASS, not just the heading text.
+  ok(has(R.mFill, 'class="di-narrative"') && has(T.mFill, 'Datum Intelligence'), 'DI box renders on Mortgage (.di-narrative chrome)');
+  ok(pick(!has(R.aBlank, 'modal-moat-di-'), has(R.aBlank, 'modal-moat-di-')), 'DI box ABSENT on Auto-debt (mortgage-only) [BITE]');
+  ok(has(T.mFill, "You're 25% paid down — only $300,000 left of the original $400,000"), '§1.1 balance-vs-original clause (25% paid)');
+  // ⚠️ §1.2 RETIRED, NOT RE-GROUNDED. §19.5 (R178) deliberately CUT "This loan runs X% APR" as redundant
+  // with the field above it. But the Variable half went with it — the DI no longer says a variable rate can
+  // MOVE. The §18.8 per-field cluster hovers and the §17 FRED sub-line carry rate context now, so nothing is
+  // unsaid on screen; still, this is a deliberate copy decision, so it is RAISED with the Architect rather
+  // than silently deleted. Restore an assertion here if a variable-rate beat is re-authored into the DI.
+  ok(has(T.mFill, 'mortgage-free around December 2041') && has(T.mFill, "about 94 months sooner than the October 2049 you'd hit paying the minimum alone"), '§1.3 payoff clock + baseline-date ahead clause');
+  ok(has(T.mFill, "From here to payoff, about $159,291 of what's ahead goes to interest"), '§1.4 remaining-only clause (mFill has no dates -> life line omitted)');
+  ok(has(T.mFill, 'Against The Grounds ($500,000), your equity here is $200,000. You own more than you owe'), '§1.5 equity clause (above water)');
+  ok(has(T.mFill, 'your real monthly is $3,350'), '§1.6 escrow-load clause');
+  ok(has(T.mUnder, 'Underwater — you owe more than it'), '§1.5 underwater branch (balance > property value)');
   ok(pick(has(R.mBlank, 'Datum reads it back'), !has(R.mBlank, 'Datum reads it back')), 'DI empty-state prompt when no inputs (sourced-or-blank) [BITE]');
 
   // ===== C5b · §2 PER-FIELD HOVERS (mortgage-only; variable-cluster hover universal) =====
   lines.push('===== C5b · §2 FIELD HOVERS =====');
   ok(has(R.mBlank, 'What you still owe') && has(R.mBlank, 'the biggest lever on lifetime cost'), '§2 Balance + APR hovers present');
   ok(has(R.mBlank, 'goes straight at principal') && has(R.mBlank, 'Usually escrowed into your monthly payment'), '§2 Additional-Payment + Property-Taxes hovers present');
-  ok(has(R.mFill, 'How a variable rate moves'), '§2 variable-cluster hover present (rateType=Variable)');
+  // RE-TRUED 2026-07-25 — §18.8 DE-GROUPED the one shared "How a variable rate moves" explainer into FIVE
+  // per-field hovers (Mortgage Copy Bank R142–147). That is the richer surface, so under L51
+  // (richest-hover-wins) the new winners are the five titles; the old single explainer is the loser.
+  ok(has(R.mFill, 'The benchmark you track') && has(R.mFill, 'The lender’s fixed add-on') &&
+     has(R.mFill, 'The most it can jump at once') && has(R.mFill, 'The ceiling over the whole loan') &&
+     has(R.mFill, 'When the rate can change next'), '§2 variable-cluster: five per-field hovers (§18.8 de-grouped)');
+  ok(pick(!has(R.mFill, 'How a variable rate moves'), has(R.mFill, 'How a variable rate moves')), '§2 old single variable explainer GONE (L51 loser) [BITE]');
   ok(pick(!has(R.aBlank, 'What you still owe'), has(R.aBlank, 'What you still owe')), '§2 field hovers ABSENT on Auto-debt (mortgage-only) [BITE]');
 
   // ===== C5a · §3a HEADER HOVER + §15 EDUCATION (mortgage-only, verbatim) =====
@@ -238,7 +296,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   const overall = fail === 0 ? 'GREEN' : 'RED';
   lines.push('MODE: ' + (RF ? 'RED-FIRST (winners flipped to losers — MUST be RED)' : 'NORMAL') + '   |   STAGE: C10 (+ §1.3 baseline-date + §15 high-rate) — WHOLE ROOM');
   lines.push('OVERALL: ' + overall + '   (' + pass + ' pass / ' + fail + ' fail)');
-  const caps = [R.mBlank, R.mFill, R.aBlank, R.mUnder, R.mCap, R.mNear, R.mMid2, R.m30, R.m20refi, R.mStub];
+  const caps = [R.mBlank, R.mFill, R.aBlank, R.mUnder, R.mCap, R.mNear, R.mMid2, R.m30, R.m20refi, R.mStub, R.mPmi];
   const guard = caps.every(s => !has(s, 'undefined') && !has(s, 'NaN') && !has(s, '__'));
   lines.push('render-guard (no undefined/NaN/__): ' + guard);
   if (!guard) fail++;

@@ -18,7 +18,7 @@ const checks = [];
 const need = (label, cond) => checks.push([label, !!cond]);
 
 const extract = (name) => { const m = s.match(new RegExp('    function ' + name + '\\([\\s\\S]*?\\n    }\\n')); return m ? m[0] : ''; };
-const NAMES = ['calculateTotalPmt','calculateEscrowMonthly','hasEscrow','_escrowFooter','_num','_linkedMortgageWith','_canonPropTax','_canonHomeIns','calcCarryTotal',
+const NAMES = ['calculateTotalPmt','calculateEscrowMonthly','hasEscrow','_escrowFooter','_moatPmiUnder20','_num','_linkedMortgageWith','_canonPropTax','_canonHomeIns','calcCarryTotal',
                '_groundsLinkedDebt','_groundsLiens','_groundsCLTV','_groundsCLTVBeat','_groundsEquityBarHTML',
                '_groundsLinkedPmts','_groundsAllIn','_groundsAllInBeat','_groundsAllInBreakdown','_groundsDI','_groundsDI9b','_groundsSignalsHTML'];
 const getBaseType = (baseId) => {
@@ -65,8 +65,13 @@ if (e) {
     /costs about \$2,800\/mo to hold — mortgage \$2,500, plus other costs\./.test(g2) && /\$300 other\./.test(g2));
 
   // FIELD wired.
-  need('(FIELD) Other input persists to mortgageOtherCost via updateAccField',
-    /updateAccField\('\$\{id\}', 'mortgageOtherCost', this\.value\)/.test(s));
+  // RE-TRUED 2026-07-25 — §20.7 moved the escrow inputs into the _MOAT_ESCROW_ROWS table and routes their
+  // oninput through _moatEscrowEdit(id, ROW, value), which converts the typed figure back to the field's
+  // canonical unit before storing. The field is still persisted to mortgageOtherCost; the WIRE changed, so
+  // assert the row declares that field AND that the renderer binds rows through the converting handler.
+  need('(FIELD) Other still persists to mortgageOtherCost (via the §20.7 row table)',
+    /\{ f: 'mortgageOtherCost', unit: 'yr'/.test(s) &&
+    /oninput="_moatEscrowEdit\(/.test(s));
   need('(FIELD) mortgageOtherCost clamped via enforceAmt (in the field list)',
     /field === 'mortgageOtherCost'/.test(s));
 }
