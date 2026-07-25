@@ -80,7 +80,7 @@ function render(accId, accounts) {
 function engine() {
   const names = ['_num', 'calculateTotalPmt', 'calculateEscrowMonthly', 'hasEscrow', '_escrowFooter', 'payoffMonths',
     '_payoffDateFrom', 'calculatePayoff', '_monthsBetween', 'lifeOfLoan', 'lifetimeInterest', 'acceleratedDelta',
-    '_moatNegAm', '_retireInfo', '_targetPayment', '_payoffYearOf', '_moatSanePayoff', '_debtDonutSVG',
+    '_moatNegAm', '_retireInfo', '_targetPayment', '_payoffYearOf', '_moatSanePayoff', '_moatRateMoves', '_debtDonutSVG',
     '_moatDebtPieHTML', '_debtPayoffDisplay', '_moatDI'];
   const deps = { getBaseType: () => BASES.mortgage_primary, state: { accounts: [] },
     _moatPmiUnder20: () => false, _moatLiveMktRate: () => null,

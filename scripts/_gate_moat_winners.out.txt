@@ -1,26 +1,26 @@
-[RUN] MOAT WINNER GATE — GREEN (81/81)
+[--redfirst] MOAT WINNER GATE — RED (53/84)
 ===== C1 · §0.2 LINK SCOPING =====
 PASS Mortgage link lists Real Estate (The Grounds)
-PASS Mortgage link EXCLUDES Vehicle (The Driveway) [BITE]
+FAIL Mortgage link EXCLUDES Vehicle (The Driveway) [BITE]
 PASS Auto-debt link lists Vehicle (The Driveway)
-PASS Auto-debt link EXCLUDES Real Estate (The Grounds) [BITE]
+FAIL Auto-debt link EXCLUDES Real Estate (The Grounds) [BITE]
 ===== C1 · §0.5 TOGGLE RENAME =====
-PASS Toggle tooltip = Accelerated Payoff (not Demolition) [BITE]
+FAIL Toggle tooltip = Accelerated Payoff (not Demolition) [BITE]
 PASS Old "Target For Demolition" string ABSENT
 PASS Header label "Target for Accelerated Payoff" LOCKED (stays)
 ===== C2/C4d · ESCROW SECTION =====
 PASS Labeled section header + plain-coach definition render for Mortgage
 PASS Escrow fields grouped under the section (§20.7 /yr labels)
-PASS Escrow section ABSENT for Auto-debt (mortgage-only gate) [BITE]
+FAIL Escrow section ABSENT for Auto-debt (mortgage-only gate) [BITE]
 PASS Computed footer all-in = $3,350/mo (2500 P&I + 850 escrow)
 PASS PMI-dropoff clause FIRES under 20% equity (450k on 500k)
-PASS PMI-dropoff clause SILENT at 40% equity (mFill) [BITE]
+FAIL PMI-dropoff clause SILENT at 40% equity (mFill) [BITE]
 PASS Escrow footer SHOWN when escrow set
-PASS Escrow footer HIDDEN when blank (sourced-or-blank) [BITE]
+FAIL Escrow footer HIDDEN when blank (sourced-or-blank) [BITE]
 PASS Property-tax input round-trips $6,000 (sanitized store)
 ===== C3 · §0.4 VARIABLE-RATE CLUSTER =====
 PASS Cluster REVEALED (all 5 fields) when rateType=Variable
-PASS Cluster HIDDEN on Fixed/blank [BITE]
+FAIL Cluster HIDDEN on Fixed/blank [BITE]
 PASS rateIndex persists+round-trips (SOFR)
 PASS rateMargin persists+round-trips (2.5)
 ===== C4a · PAYOFF INTELLIGENCE + AMORT =====
@@ -28,19 +28,19 @@ PASS Interest remaining = $159,291 (exact amortized, 2500/mo)
 PASS Remaining mortgage cost = $459,291 (balance + remaining interest) [§20.6 rename]
 PASS Accelerated interest saved = $96,612 (exact, vs minimum-only)
 PASS §5.4 tradeoff caption present (toggle ON)
-PASS Lifetime interest OMITTED when no payment (sourced-or-blank) [BITE]
+FAIL Lifetime interest OMITTED when no payment (sourced-or-blank) [BITE]
 PASS Amortization button present
 PASS Expected Payoff Date non-breaking (Dec 2041 at $2,500/mo)
 PASS Amort button CLICK renders brand table (filled)
 PASS Amort overlay is display:flex after click
-PASS Amort overlay z-index ABOVE account modal (10020 > 10005) [BUG-1 FIX/BITE]
-PASS Amort empty-guard when unpayable (blank) [BITE]
+FAIL Amort overlay z-index ABOVE account modal (10020 > 10005) [BUG-1 FIX/BITE]
+FAIL Amort empty-guard when unpayable (blank) [BITE]
 ===== C4b · §5.3 ACCEL SOURCE =====
 PASS Source dropdown present (priority ON) + lists liquid Savings
 PASS accelSourceId round-trips (Savings selected)
-PASS Source dropdown ABSENT when priority OFF [BITE]
+FAIL Source dropdown ABSENT when priority OFF [BITE]
 PASS Outflow diagnostic fires the priority clause
-PASS Outflow diagnostic NAMES the chosen source [BITE]
+FAIL Outflow diagnostic NAMES the chosen source [BITE]
 ===== C8 · §1.7-1.9 PRESCRIPTIVE DI =====
 PASS §1.7 LOW band (<5% fixed): peace-of-mind framing
 PASS §1.7 HIGH/VARIABLE band (>=6% or Variable): certain win
@@ -48,9 +48,9 @@ PASS §1.7 MID band (5-6%): fence
 PASS §1.8 >=12mo band (BOTH: years + interest)
 PASS §1.8 <2mo + >=85% paid band (BOTH numbers, no adjective-only)
 PASS §1.8 2-11mo band (BOTH: 11 months + interest)
-PASS §1.8 SILENT when no additional payment [BITE]
+FAIL §1.8 SILENT when no additional payment [BITE]
 PASS §1.9 income-relief clause (near payoff)
-PASS §1.9 SILENT when payoffPct < 85% (mFill 25% paid) [BITE]
+FAIL §1.9 SILENT when payoffPct < 85% (mFill 25% paid) [BITE]
 ===== FIX-A · §1.4 LIFE vs REMAINING =====
 PASS m30 life-of-loan line (term=360 derived, not hardcoded)
 PASS m30 remaining line (distinct from life)
@@ -58,42 +58,45 @@ PASS m20refi life = $96,105 (Captain test, term=240 refi)
 PASS m20refi remaining line (paid-down, +$100/mo -> $408)
 PASS m20refi shows BOTH life ($96,105) AND remaining ($408) — differ ~$95.7k
 PASS §1.3 names min-only baseline date (October 2027) it beats
-PASS §1.3 uses "sooner than the" NOT old "pulls that in sooner" [BITE]
-PASS mStub (no dates) OMITS life line (L47 sourced-or-blank) [BITE]
+FAIL §1.3 uses "sooner than the" NOT old "pulls that in sooner" [BITE]
+FAIL mStub (no dates) OMITS life line (L47 sourced-or-blank) [BITE]
 PASS mStub shows remaining line alone
 ===== C6 · REMAINING-INTEREST MATH =====
-PASS Test loan 17k/3.99%/850 -> interest remaining = $621 (exact) [BITE]
+FAIL Test loan 17k/3.99%/850 -> interest remaining = $621 (exact) [BITE]
 PASS Interest Remaining is NOT $850 (the old ceil-formula overstate = the payment)
 ===== C7 · TOOLTIP CLIP FIX =====
-PASS "Rate Type" tooltip within modal card (overflow -35px) [BITE]
-PASS "Maturity Date" tooltip within modal card (overflow -35px) [BITE]
-PASS "Additional Payment" tooltip within modal card (overflow -35px) [BITE]
-PASS "Term (months)" tooltip within modal card (overflow -35px) [BITE]
-PASS "PMI (yr)" tooltip within modal card (overflow -50px) [BITE]
-PASS "Coverage Amount" tooltip within modal card (overflow -50px) [BITE]
+FAIL "Rate Type" tooltip within modal card (overflow -35px) [BITE]
+FAIL "Maturity Date" tooltip within modal card (overflow -35px) [BITE]
+FAIL "Additional Payment" tooltip within modal card (overflow -35px) [BITE]
+FAIL "Term (months)" tooltip within modal card (overflow -35px) [BITE]
+FAIL "PMI (yr)" tooltip within modal card (overflow -50px) [BITE]
+FAIL "Coverage Amount" tooltip within modal card (overflow -50px) [BITE]
 ===== C5c · §1 DI STRIP =====
 PASS DI box renders on Mortgage (.di-narrative chrome)
-PASS DI box ABSENT on Auto-debt (mortgage-only) [BITE]
+FAIL DI box ABSENT on Auto-debt (mortgage-only) [BITE]
 PASS §1.1 balance-vs-original clause (25% paid)
+PASS §1.2 variable-rate move beat renders on a Variable mortgage
+FAIL §1.2 beat ABSENT when rateType is untouched (default-select trap) [BITE]
+PASS §19.5 ① stays cut — no APR restatement came back with it
 PASS §1.3 payoff clock + baseline-date ahead clause
 PASS §1.4 remaining-only clause (mFill has no dates -> life line omitted)
 PASS §1.5 equity clause (above water)
 PASS §1.6 escrow-load clause
 PASS §1.5 underwater branch (balance > property value)
-PASS DI empty-state prompt when no inputs (sourced-or-blank) [BITE]
+FAIL DI empty-state prompt when no inputs (sourced-or-blank) [BITE]
 ===== C5b · §2 FIELD HOVERS =====
 PASS §2 Balance + APR hovers present
 PASS §2 Additional-Payment + Property-Taxes hovers present
 PASS §2 variable-cluster: five per-field hovers (§18.8 de-grouped)
-PASS §2 old single variable explainer GONE (L51 loser) [BITE]
-PASS §2 field hovers ABSENT on Auto-debt (mortgage-only) [BITE]
+FAIL §2 old single variable explainer GONE (L51 loser) [BITE]
+FAIL §2 field hovers ABSENT on Auto-debt (mortgage-only) [BITE]
 ===== C5a · §3a HEADER + §15 EDUCATION =====
 PASS §3a header hover present on Mortgage title
-PASS §3a header hover ABSENT on Auto-debt (mortgage-only) [BITE]
+FAIL §3a header hover ABSENT on Auto-debt (mortgage-only) [BITE]
 PASS §15 education panel present (verbatim)
-PASS §15 symmetric high-8% clause present (Fix 2) [BITE]
-PASS §15 education ABSENT on Auto-debt [BITE]
+FAIL §15 symmetric high-8% clause present (Fix 2) [BITE]
+FAIL §15 education ABSENT on Auto-debt [BITE]
 -------------------------------------
-MODE: NORMAL   |   STAGE: C10 (+ §1.3 baseline-date + §15 high-rate) — WHOLE ROOM
-OVERALL: GREEN   (81 pass / 0 fail)
+MODE: RED-FIRST (winners flipped to losers — MUST be RED)   |   STAGE: C10 (+ §1.3 baseline-date + §15 high-rate) — WHOLE ROOM
+OVERALL: RED   (53 pass / 31 fail)
 render-guard (no undefined/NaN/__): true

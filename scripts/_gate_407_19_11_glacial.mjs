@@ -26,7 +26,7 @@ const need = (l, c) => checks.push([l, !!c]);
 
 // ── Surface 1: Mortgage DI + the "Expected Payoff Date" field ──
 {
-  const names = ['calculateTotalPmt', 'payoffMonths', '_payoffDateFrom', 'calculatePayoff', '_monthsBetween', 'lifeOfLoan', 'lifetimeInterest', '_moatNegAm', '_retireInfo', '_targetPayment', '_payoffYearOf', '_moatSanePayoff', '_debtDonutSVG', '_moatDebtPieHTML', '_debtPayoffDisplay', '_moatDI'];
+  const names = ['calculateTotalPmt', 'payoffMonths', '_payoffDateFrom', 'calculatePayoff', '_monthsBetween', 'lifeOfLoan', 'lifetimeInterest', '_moatNegAm', '_retireInfo', '_targetPayment', '_payoffYearOf', '_moatSanePayoff', '_moatRateMoves', '_debtDonutSVG', '_moatDebtPieHTML', '_debtPayoffDisplay', '_moatDI'];
   const deps = { acceleratedDelta: () => null, hasEscrow: () => false, calculateEscrowMonthly: () => 0, _moatPmiUnder20: () => false, _moatLiveMktRate: () => null, getBaseType: gbtM, state: { accounts: [] }, _retireOverride: R };
   const api = new Function(...Object.keys(deps), mut(names.map(n => ex(src, n)).join('\n')) + '\nreturn { _moatDI, calculatePayoff, _debtPayoffDisplay };')(...Object.values(deps));
   const di = api._moatDI(glMort).replace(/<[^>]+>/g, '');

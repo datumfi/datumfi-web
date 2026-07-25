@@ -259,11 +259,16 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   ok(has(R.mFill, 'class="di-narrative"') && has(T.mFill, 'Datum Intelligence'), 'DI box renders on Mortgage (.di-narrative chrome)');
   ok(pick(!has(R.aBlank, 'modal-moat-di-'), has(R.aBlank, 'modal-moat-di-')), 'DI box ABSENT on Auto-debt (mortgage-only) [BITE]');
   ok(has(T.mFill, "You're 25% paid down — only $300,000 left of the original $400,000"), '§1.1 balance-vs-original clause (25% paid)');
-  // ⚠️ §1.2 RETIRED, NOT RE-GROUNDED. §19.5 (R178) deliberately CUT "This loan runs X% APR" as redundant
-  // with the field above it. But the Variable half went with it — the DI no longer says a variable rate can
-  // MOVE. The §18.8 per-field cluster hovers and the §17 FRED sub-line carry rate context now, so nothing is
-  // unsaid on screen; still, this is a deliberate copy decision, so it is RAISED with the Architect rather
-  // than silently deleted. Restore an assertion here if a variable-rate beat is re-authored into the DI.
+  // §1.2 RE-GROUNDED 2026-07-25 (Architect ruling #429). §19.5 (R178) cut "This loan runs X% APR" as
+  // redundant with the field above it — that stays cut — but the Variable half went with it, so the DI had
+  // stopped saying a variable rate can MOVE. The Variable half only is restored (_moatRateMoves); the guard
+  // below no longer hunts a ghost. Deep coverage (Fixed / untouched-select / blank-rate) lives in
+  // scripts/_gate_407_1_2_variable_rate.mjs; here we hold the WHOLE-ROOM line.
+  ok(has(T.mFill, 'Heads up — this is a variable rate, so it can move at the next reset. Watch the reset date.'),
+     '§1.2 variable-rate move beat renders on a Variable mortgage');
+  ok(pick(!has(T.mCap, 'this is a variable rate'), has(T.mCap, 'this is a variable rate')),
+     '§1.2 beat ABSENT when rateType is untouched (default-select trap) [BITE]');
+  ok(!/This loan runs [\d.]+% APR/.test(T.mFill), '§19.5 ① stays cut — no APR restatement came back with it');
   ok(has(T.mFill, 'mortgage-free around December 2041') && has(T.mFill, "about 94 months sooner than the October 2049 you'd hit paying the minimum alone"), '§1.3 payoff clock + baseline-date ahead clause');
   ok(has(T.mFill, "From here to payoff, about $159,291 of what's ahead goes to interest"), '§1.4 remaining-only clause (mFill has no dates -> life line omitted)');
   ok(has(T.mFill, 'Against The Grounds ($500,000), your equity here is $200,000. You own more than you owe'), '§1.5 equity clause (above water)');

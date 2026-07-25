@@ -8560,6 +8560,16 @@
         d.setMonth(d.getMonth() + months);
         return d.getFullYear();
     }
+    // §1.2 — VARIABLE-RATE MOVE BEAT (Architect ruling, Prompt #429; Mortgage Copy Bank §19.11). §19.5 cut ①
+    // removed the old "This loan runs X% APR" restatement and that STAYS cut — it echoed the field directly
+    // above it. Only the VARIABLE half is restored: the DI must still say, in prose, that this rate can MOVE.
+    // Fixed → silent. Blank rate or untouched type → silent (L47 sourced-or-blank). Tested with === 'Variable'
+    // (never !== 'Fixed') so an untouched <select> — which reads undefined while DISPLAYING "Fixed" — stays
+    // silent instead of firing: the default-select trap. Named so the red-first gate can anchor on the
+    // function, not on a copy literal an ordinary edit would move. Display-only (LOCK-3).
+    function _moatRateMoves(acc) {
+        return (parseFloat(acc.intRate) || 0) > 0 && acc.rateType === 'Variable';
+    }
     // §1 MOAT DATUM INTELLIGENCE — composes the debt-native signal paragraph from LIVE signals only
     // (balance-vs-original · rate+type · payoff clock · lifetime interest · equity-vs-Grounds · escrow
     // load). Every clause sourced-or-blank: a clause appears only when its inputs are present (L47).
@@ -8584,6 +8594,11 @@
             stand.push('You\'re ' + TEAL(pct + '%') + ' paid down — only ' + TEAL($(bal)) + ' left of the original ' + TEAL($(orig)) + '.');
         }
         // §19.5 cut ①: the old §1.2 "This loan runs X% APR" line is GONE — it restated the §1.2 rate already on the card.
+        // §1.2 RESTORED (Architect ruling #429) — the VARIABLE half only. Informs, never advises: it states that
+        // the rate can move and where to look, and stops there. Verbatim copy-of-record; see _moatRateMoves.
+        if (_moatRateMoves(acc)) {
+            stand.push('Heads up — this is a variable rate, so it can move at the next reset. Watch the reset date.');
+        }
         // §17 FRED live market-rate color (Mortgage Copy Bank §17.2–17.4, verbatim; left uncolored — §17-authored,
         // out of §19.5 token scope). Non-Variable only. BANDS: well-below (< avg−1.0) · above (> avg+0.5) · at.
         // Display-only (LOCK-3) — context only, never changes the stored rate or any §4 math.

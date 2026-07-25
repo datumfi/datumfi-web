@@ -27,7 +27,7 @@ const NAMES = ['calculateTotalPmt','payoffMonths','_payoffDateFrom','calculatePa
                // RE-TRUED 2026-07-25 — _moatDI gained these callees across the §19 arc (neg-am notice,
                // the shared retirement-horizon engine, the debt donut). Hand-listed harnesses rot the day
                // the function under test gains a dependency; this list is why the gate was red.
-               '_num','_moatNegAm','_retireInfo','_targetPayment','_payoffYearOf','_moatSanePayoff',
+               '_num','_moatNegAm','_retireInfo','_targetPayment','_payoffYearOf','_moatSanePayoff','_moatRateMoves',
                '_debtDonutSVG','_moatDebtPieHTML','_moatPmiUnder20','_monthsBetween','_moatDI'];
 const getBaseType = (baseId) => String(baseId).indexOf('mortgage') === 0
   ? { id: baseId, title: 'Mortgage' } : { id: baseId, title: 'Other' };
