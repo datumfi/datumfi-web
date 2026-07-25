@@ -9,6 +9,7 @@
      (LOCK-3) neither path mutates acc.intRate.
    --redfirst strips the §17 clause block from _moatDI + blanks the sub-line -> the winners vanish (gate bites). */
 import { readFileSync } from 'node:fs';
+import { extractClosure } from './_gate_extract.mjs';
 const RED = process.argv.includes('--redfirst');
 let s = readFileSync('studio.html', 'utf8');
 
@@ -20,19 +21,15 @@ if (RED) {
 const checks = [];
 const need = (label, cond) => checks.push([label, !!cond]);
 
-const extract = (name) => { const m = s.match(new RegExp('    function ' + name + '\\([\\s\\S]*?\\n    }\\n')); return m ? m[0] : ''; };
-const NAMES = ['calculateTotalPmt','payoffMonths','_payoffDateFrom','calculatePayoff','lifetimeInterest','lifeOfLoan',
-               'acceleratedDelta','calculateEscrowMonthly','hasEscrow','_normalizeRatesResp','_liveRates','_fmtAsOf',
-               '_moatLiveMktRate','_moatLiveRateHTML',
-               // RE-TRUED 2026-07-25 — _moatDI gained these callees across the §19 arc (neg-am notice,
-               // the shared retirement-horizon engine, the debt donut). Hand-listed harnesses rot the day
-               // the function under test gains a dependency; this list is why the gate was red.
-               '_num','_moatNegAm','_retireInfo','_targetPayment','_payoffYearOf','_moatSanePayoff','_moatRateMoves',
-               '_debtDonutSVG','_moatDebtPieHTML','_moatPmiUnder20','_monthsBetween','_moatDI'];
+// (B) 2026-07-25 — this gate's hand-list is WHY it sat red for two arcs: _moatDI gained callees across §19
+// (neg-am notice, the retirement-horizon engine, the debt donut) and again in #429 (_moatRateMoves), and a
+// hand-listed harness rots the day the function under test gains a dependency. Roots only now; the closure is
+// walked out of studio.html, so the next callee is picked up for free. See scripts/_gate_extract.mjs.
+const ROOTS = ['_moatDI', '_moatLiveRateHTML', '_moatLiveMktRate'];
 const getBaseType = (baseId) => String(baseId).indexOf('mortgage') === 0
   ? { id: baseId, title: 'Mortgage' } : { id: baseId, title: 'Other' };
 function build(cacheLiteral) {
-  const body = 'var _livePrimeCache=' + cacheLiteral + ';\n' + NAMES.map(extract).join('\n') +
+  const body = 'var _livePrimeCache=' + cacheLiteral + ';\n' + extractClosure(s, ROOTS, { exclude: ['getBaseType'] }) +
     '\nreturn { di:_moatDI, sub:_moatLiveRateHTML, mkt:_moatLiveMktRate };';
   return new Function('state', 'getBaseType', body)({ accounts: [] }, getBaseType);
 }

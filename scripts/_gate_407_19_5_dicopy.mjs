@@ -7,6 +7,7 @@
    --redfirst neutralizes the semantic classes + the .di-p wrapping in the extracted source (the exact symptom:
    a rendered element that no longer carries the winner class) -> the render assertions fail. */
 import { readFileSync } from 'node:fs';
+import { extractClosure } from './_gate_extract.mjs';
 const RED = process.argv.includes('--redfirst');
 const src = readFileSync('studio.html', 'utf8');
 
@@ -21,7 +22,16 @@ function extractFn(s, name) {
   throw new Error('unbalanced braces: ' + name);
 }
 
-let body = ['_monthsBetween', 'lifeOfLoan', 'lifetimeInterest', '_moatNegAm', '_retireInfo', '_targetPayment', '_payoffYearOf', '_moatSanePayoff', '_moatRateMoves', '_moatDI'].map(n => extractFn(src, n)).join('\n');   // §19.9 _moatNegAm · §19.10 _retireInfo/_targetPayment/_payoffYearOf
+// (B) — ROOT ONLY. The callee closure is walked out of studio.html, so a new _moatDI callee cannot break this
+// gate the way _moatRateMoves broke six of them in #429. See scripts/_gate_extract.mjs.
+// This gate is about §19.5 COPY + colour, not the payoff engine, so it deliberately injects shaped stubs for the
+// payoff leaves (below) to make every governed beat fire. Those names are EXCLUDED from the walk — otherwise the
+// real functions would be declared inside the sandbox and shadow the injected stubs. lifetimeInterest/lifeOfLoan
+// stay REAL: ¶2 asserts a FIGURE, and a stubbed engine fn there would be green for the wrong reason.
+let body = extractClosure(src, ['_moatDI'], {
+  exclude: ['calculateTotalPmt', 'payoffMonths', 'calculatePayoff', '_payoffDateFrom',
+            'acceleratedDelta', 'hasEscrow', 'calculateEscrowMonthly', '_moatPmiUnder20', '_moatLiveMktRate']
+});
 if (RED) body = body.split('di-n-red').join('zz').split('di-n-teal').join('zz').split('di-n-gold').join('zz').split('di-p').join('zz');
 
 // Leaf-dep stubs shaped so every governed beat fires: ¶1 paid-down, payoff clock, ¶2 interest set, §1.7 lever, §1.9 income-drop.

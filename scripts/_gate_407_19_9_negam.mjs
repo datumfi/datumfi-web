@@ -9,6 +9,7 @@
    --redfirst forces _moatNegAm to never fire (the neg-am notice vanishes even under negative amortization) -> the
    neg-am assertions fail. */
 import { readFileSync } from 'node:fs';
+import { extractClosure } from './_gate_extract.mjs';
 const RED = process.argv.includes('--redfirst');
 const src = readFileSync('studio.html', 'utf8');
 
@@ -23,18 +24,15 @@ function extractFn(s, name) {
   throw new Error('unbalanced braces: ' + name);
 }
 
-const names = ['calculateTotalPmt', 'payoffMonths', '_payoffDateFrom', 'calculatePayoff', '_monthsBetween',
-               'lifeOfLoan', 'lifetimeInterest', '_moatNegAm', '_moatNegAmInlineHTML', '_debtDonutSVG',
-               '_moatDebtPieHTML', '_retireInfo', '_targetPayment', '_payoffYearOf', '_moatSanePayoff', '_moatRateMoves', '_moatDI'];   // §19.10 shared helpers
-let body = names.map(n => extractFn(src, n)).join('\n');
-if (RED) body = body.replace('if (payment <= 0 || payment >= monthlyInterest) return null;', 'if (true) return null;');   // force never-neg-am
-
 const deps = {
   acceleratedDelta: () => null, hasEscrow: () => false, calculateEscrowMonthly: () => 0,
   _moatPmiUnder20: () => false, _moatLiveMktRate: () => null,
   getBaseType: () => ({ id: 'mortgage_x', title: 'Mortgage' }),
   state: { accounts: [] },
 };
+// (B) — roots only; the closure is walked from studio.html so a new _moatDI callee can't break this gate.
+let body = extractClosure(src, ['_moatDI', '_moatNegAmInlineHTML', '_moatDebtPieHTML'], { exclude: Object.keys(deps) });
+if (RED) body = body.replace('if (payment <= 0 || payment >= monthlyInterest) return null;', 'if (true) return null;');   // force never-neg-am
 const api = new Function(...Object.keys(deps), body + '\nreturn { _moatNegAm, _moatNegAmInlineHTML, _moatDI, _moatDebtPieHTML };')(...Object.values(deps));
 
 const base = { baseId: 'mortgage_a', value: 150000, origAmount: 200000, intRate: 5.99, interestPaidToDate: 31000, origDate: '2012-01-01', maturityDate: '2032-01-01' };

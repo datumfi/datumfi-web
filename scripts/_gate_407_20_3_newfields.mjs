@@ -17,6 +17,7 @@
    --redfirst wires Coverage Amount into calculateEscrowMonthly + hasEscrow (the exact mistake this
    commit must never make) and drops the Mortgage gate on Term; the negative control must then bite. */
 import { readFileSync } from 'node:fs';
+import { extractClosure } from './_gate_extract.mjs';
 const RED = process.argv.includes('--redfirst');
 let src = readFileSync('studio.html', 'utf8');
 
@@ -78,14 +79,13 @@ function render(accId, accounts) {
 
 // the real engine, standalone — every figure the Moat can compute
 function engine() {
-  const names = ['_num', 'calculateTotalPmt', 'calculateEscrowMonthly', 'hasEscrow', '_escrowFooter', 'payoffMonths',
-    '_payoffDateFrom', 'calculatePayoff', '_monthsBetween', 'lifeOfLoan', 'lifetimeInterest', 'acceleratedDelta',
-    '_moatNegAm', '_retireInfo', '_targetPayment', '_payoffYearOf', '_moatSanePayoff', '_moatRateMoves', '_debtDonutSVG',
-    '_moatDebtPieHTML', '_debtPayoffDisplay', '_moatDI'];
   const deps = { getBaseType: () => BASES.mortgage_primary, state: { accounts: [] },
     _moatPmiUnder20: () => false, _moatLiveMktRate: () => null,
     _retireOverride: { retireYear: 2035, retireDate: new Date(2035, 2, 1), currentAge: 52 } };
-  return new Function(...Object.keys(deps), names.map(n => ex(src, n)).join('\n') +
+  // (B) — roots only. This gate asserts FIGURES, so everything it doesn't inject must stay REAL.
+  const body = extractClosure(src, ['_moatDI', '_escrowFooter', '_debtPayoffDisplay', '_moatDebtPieHTML',
+    'acceleratedDelta', 'lifeOfLoan'], { exclude: Object.keys(deps) });
+  return new Function(...Object.keys(deps), body +
     '\nreturn { calculateEscrowMonthly, hasEscrow, _escrowFooter, calculateTotalPmt, payoffMonths, calculatePayoff,' +
     ' lifetimeInterest, lifeOfLoan, acceleratedDelta, _moatDI, _moatDebtPieHTML, _debtPayoffDisplay };')(...Object.values(deps));
 }

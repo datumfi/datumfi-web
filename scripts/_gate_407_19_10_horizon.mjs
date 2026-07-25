@@ -6,12 +6,14 @@
      🔴 neg-am                      -> §19.9 echo (di-negam), no §19.10 horizon beat
    --redfirst lifts the +30 clamp so the 🟠 case names the absurd year again -> the clamp assertions fail. */
 import { readFileSync } from 'node:fs';
+import { extractClosure } from './_gate_extract.mjs';
 const RED = process.argv.includes('--redfirst');
 const src = readFileSync('studio.html', 'utf8');
-function ex(s,n){const st=s.indexOf('function '+n+'(');if(st<0)throw new Error('missing '+n);let d=0,b=false;for(let j=s.indexOf('{',st);j<s.length;j++){if(s[j]==='{'){d++;b=true;}else if(s[j]==='}'){d--;if(b&&d===0)return s.slice(st,j+1);}}}
-let body=['calculateTotalPmt','payoffMonths','_payoffDateFrom','calculatePayoff','_monthsBetween','lifeOfLoan','lifetimeInterest','_moatNegAm','_retireInfo','_targetPayment','_payoffYearOf','_moatSanePayoff','_moatRateMoves','_moatDI'].map(n=>ex(src,n)).join('\n');
-if(RED) body=body.replace('months > _SANE_PAYOFF_HORIZON_MONTHS','months > 9e99');   // lift the glacial guard → 🟠 case names the absurd year again
 const deps={acceleratedDelta:()=>null,hasEscrow:()=>false,calculateEscrowMonthly:()=>0,_moatPmiUnder20:()=>false,_moatLiveMktRate:()=>null,getBaseType:()=>({id:'mortgage_x',title:'Mortgage'}),state:{accounts:[]},_retireOverride:{retireYear:2035,retireDate:new Date(2035,2,1),currentAge:52}};
+// (B) — ROOT ONLY, closure walked from studio.html. Exclude exactly what this gate INJECTS, so the real
+// declarations can't shadow the stubs; everything else stays real (the payoff engine is asserted here).
+let body=extractClosure(src,['_moatDI'],{exclude:Object.keys(deps)});
+if(RED) body=body.replace('months > _SANE_PAYOFF_HORIZON_MONTHS','months > 9e99');   // lift the glacial guard → 🟠 case names the absurd year again
 const {_moatDI}=new Function(...Object.keys(deps),body+'\nreturn {_moatDI};')(...Object.values(deps));
 const di=(acc)=>_moatDI(acc).replace(/<[^>]+>/g,'');
 const green=di({baseId:'mortgage_a',origAmount:200000,value:40000,intRate:4,minPmt:1200,addPmt:0,nextPmtDate:'2026-08-01',maturityDate:'2040-01-01'});
