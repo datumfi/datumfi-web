@@ -33,7 +33,17 @@ let BUILDER = src.slice(st, en); BUILDER = BUILDER.slice(0, BUILDER.lastIndexOf(
 if (RED) BUILDER = BUILDER.replace(/\$\{base\.title === 'Mortgage' \? `<div>\$\{_dLbl\(base, 'Term \(months\)'/, "${true ? `<div>${_dLbl(base, 'Term (months)'");
 
 function ex(s, n) { const i = s.indexOf('function ' + n + '('); if (i < 0) throw new Error('missing ' + n); let d = 0, b = false; for (let j = s.indexOf('{', i); j < s.length; j++) { if (s[j] === '{') { d++; b = true; } else if (s[j] === '}') { d--; if (b && d === 0) return s.slice(i, j + 1); } } }
-const EXTRA = [ex(src, '_sumLbl'), ex(src, '_payoffIntelHTML')].join('\n');
+// §20.7 moved the escrow inputs into a data-driven renderer, so the REAL escrow functions must come with
+// it — auto-stubbed, every Coverage-Amount assertion below would be checking a marker string.
+const ESCROW = [
+  "var _moatEscrowView = 'yr';",
+  src.slice(src.indexOf('var _MOAT_ESCROW_ROWS = '), src.indexOf('// stored (canonical) -> displayed')),
+  src.slice(src.indexOf('window._moatEscrowEdit = function'), src.indexOf('// The control is the Living Ledger')),
+  src.slice(src.indexOf('window._setMoatEscrowView = function'), src.indexOf('function _moatEscrowToggleHTML'))
+].join('\n');
+const EXTRA = [ESCROW, ...['_num', 'formatCurrencyDisplay', '_dLbl', 'hasEscrow', 'calculateEscrowMonthly',
+  '_moatEscrowToView', '_moatEscrowToStore', '_moatEscrowToggleHTML', '_moatEscrowFieldsHTML',
+  '_sumLbl', '_payoffIntelHTML'].map(n => ex(src, n))].join('\n');
 
 const BASES = {
   mortgage_primary: { id: 'mortgage_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'Mortgage', meta: 'The Moat' },
@@ -108,7 +118,13 @@ need('#4b Coverage Amount renders', M.includes('Coverage Amount'));
 need('#4b sits BESIDE Annual Homeowner Insurance', before(M, 'Annual Homeowner Insurance', 'Coverage Amount') && before(M, 'Coverage Amount', 'Other (yr)'));
 need('#4b R215 subtitle verbatim', M.includes('What the policy would rebuild for'));
 need('#4b R215 hover verbatim', M.includes('It does not change any math; it lets you see cost and protection side by side.'));
-need('#4b bound to acc.insCoverageAmount', /updateAccField\('m1', 'insCoverageAmount'/.test(M));
+// §20.7: escrow rows are index-bound now (_moatEscrowEdit(id, ROW, …)). Resolve Coverage's row index from
+// the row table and assert its label renders on THAT row — a mis-bound field still fails.
+{
+  const idx = (ESCROW.match(/\{ f: '([a-zA-Z]+)'/g) || []).map(s => s.slice(6, -1)).indexOf('insCoverageAmount');
+  need('#4b bound to the insCoverageAmount row', idx >= 0 &&
+    new RegExp("Coverage Amount[\\s\\S]{0,900}?_moatEscrowEdit\\('m1', " + idx + ",").test(M));
+}
 need('#4b Other (yr) survives the reflow (own row, left column)', M.includes('Other (yr)'));
 
 // ── (2) LOCK-3 NEGATIVE CONTROL — the half that matters ──

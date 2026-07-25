@@ -76,8 +76,11 @@ if (e) {
 // §20.4 (#407 §20 Commit 2) RENAMED the Moat insurance label to 'Annual Homeowner Insurance' per the
 // authored Copy Bank R214. The Grounds mirror still carries the D1 phrasing, so the two surfaces now
 // DIVERGE for the same underlying figure — raised with the Architect; this gate tracks the Moat side.
-need("(LABEL) Moat property-tax label = 'Property Tax (yr)'", /_dLbl\(base, 'Property Tax \(yr\)'/.test(s));
-need("(LABEL) Moat insurance label = 'Annual Homeowner Insurance' (§20.4 rename)", /_dLbl\(base, 'Annual Homeowner Insurance'/.test(s));
+// §20.7 moved the escrow labels out of inline _dLbl(...) calls and into the _MOAT_ESCROW_ROWS table, which
+// declares BOTH unit states per row. Re-grounded to that table — the assertion is unchanged in substance:
+// the Moat's annual-view labels are still exactly these two strings.
+need("(LABEL) Moat property-tax label = 'Property Tax (yr)'", /lblYr: 'Property Tax \(yr\)'/.test(s));
+need("(LABEL) Moat insurance label = 'Annual Homeowner Insurance' (§20.4 rename)", /lblYr: 'Annual Homeowner Insurance'/.test(s));
 
 // ── (MIRROR · served bytes) Grounds tax/ins render through the mirror helper + the note text exists ──
 need('(MIRROR) Grounds tax field renders via _carryMirrorField(propTaxAnnual)', /_carryMirrorField\(id, acc, 'propTaxAnnual', 'propTaxYr'/.test(s));

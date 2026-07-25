@@ -220,6 +220,13 @@
   .ledger-period-toggle button { font-family:var(--font-mono); font-size:11px; letter-spacing:.04em; padding:5px 10px; border:none; background:transparent; color:var(--ink-soft); cursor:pointer; border-left:1px solid rgba(45,36,20,.16); }
   .ledger-period-toggle button:first-child { border-left:none; }
   .ledger-period-toggle button.active { background:rgba(45,36,20,.10); color:var(--ink); font-weight:700; }
+  /* §20.7 — the escrow /yr /mo switch. SAME control as .ledger-period-toggle above (same geometry, same
+     mono type, same active treatment); only the palette differs, because the ledger's is inked for the
+     light Sheet surface and this one sits on the dark modal. */
+  .moat-escrow-toggle { display:inline-flex; border:1px solid rgba(255,255,255,.18); border-radius:6px; overflow:hidden; }
+  .moat-escrow-toggle button { font-family:var(--font-mono); font-size:11px; letter-spacing:.04em; padding:4px 10px; border:none; background:transparent; color:rgba(255,255,255,.55); cursor:pointer; border-left:1px solid rgba(255,255,255,.12); }
+  .moat-escrow-toggle button:first-child { border-left:none; }
+  .moat-escrow-toggle button.active { background:rgba(255,255,255,.08); color:var(--teal-mid); font-weight:700; }
   .ledger-table { width:100%; border-collapse:collapse; font-family:var(--font-mono); font-size:12px; color:var(--ink); }
   .ledger-table th { text-align:left; font-size:10px; letter-spacing:.10em; text-transform:uppercase; color:var(--ink-soft); padding:6px 10px; border-bottom:1px solid rgba(45,36,20,.22); }
   .ledger-table th:nth-child(2), .ledger-table th:nth-child(3) { text-align:right; }
@@ -7517,17 +7524,7 @@
             <div style="margin-top:16px; padding:14px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:4px;">
                 <div style="color:var(--teal-mid); font-weight:bold; font-size:13px; margin-bottom:6px;">🏦 Escrow — the monthly bundle</div>
                 <div style="font-size:11px; color: rgba(255,255,255,0.6); line-height:1.45; margin-bottom:12px;">Escrow is the slice of your monthly payment that isn't principal or interest — your lender collects property taxes, homeowner's insurance, and (if you're under ~20% equity) PMI, then pays those bills for you. It's real money you owe every month, just not to the loan itself.</div>
-                <div class="field-row">
-                    <div>${_dLbl(base, 'Property Tax (yr)', 'The town\'s cut', 'What the county charges yearly on the home. Usually escrowed into your monthly payment. Part of the real cost of owning, not just borrowing.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.propTaxAnnual||'')}" oninput="updateAccField('${id}', 'propTaxAnnual', this.value)"></div>
-                    <div>${_dLbl(base, 'Monthly PMI', 'The lender\'s safety net', 'Private Mortgage Insurance — charged while your equity is under ~20%. It protects the lender, not you, and drops off once you cross the line. Worth targeting.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.pmiMonthly||'')}" oninput="updateAccField('${id}', 'pmiMonthly', this.value)"></div>
-                </div>
-                <div class="field-row">
-                    <div>${_dLbl(base, 'Annual Homeowner Insurance', 'Protecting the asset', 'What the policy on the home costs for a full year. We spread it across twelve months for the escrow view, so the monthly figure and the yearly figure always tell the same story.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.insAnnual||'')}" oninput="updateAccField('${id}', 'insAnnual', this.value)"></div>
-                    <div>${_dLbl(base, 'Coverage Amount', 'What the policy would rebuild for', 'The dollar figure your policy would pay to rebuild — held here for the record beside the premium. It does not change any math; it lets you see cost and protection side by side.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.insCoverageAmount||'')}" oninput="updateAccField('${id}', 'insCoverageAmount', this.value)"></div>
-                </div>
-                <div class="field-row">
-                    <div>${_dLbl(base, 'Other (yr)', 'Everything else escrowed', 'Anything else that rides with this mortgage each year — flood insurance, lender-placed coverage, an extra assessment. Enter it here and it joins your true all-in monthly. Leave it blank and it simply won\'t count.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.mortgageOtherCost||'')}" oninput="updateAccField('${id}', 'mortgageOtherCost', this.value)"></div>
-                </div>
+                <div id="modal-escrow-fields-${id}">${_moatEscrowFieldsHTML(id, acc, base)}</div>
                 <div id="modal-escrow-foot-${id}" style="display:${hasEscrow(acc)?'block':'none'}; font-size:11px; color: rgba(255,255,255,0.72); line-height:1.5; margin-top:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;">${_escrowFooter(acc)}</div>
             </div>`;
                 html += '<div id="modal-pmi-bar-' + id + '">' + _moatPmiBarHTML(id, acc) + '</div>';   // §18.9 — always-present container so the bar can appear / update / vanish live
@@ -8023,6 +8020,11 @@
                         escrowFoot.style.display = 'none';
                     }
                 }
+                // §20.7 escrow /yr /mo switch — appears the moment the first escrow figure lands (and goes
+                // when the last one is cleared). Its own container, so the inputs are NOT re-rendered and
+                // the cursor stays put mid-typing.
+                const escToggle = document.getElementById(`modal-escrow-toggle-${id}`);
+                if(escToggle) escToggle.innerHTML = _moatEscrowToggleHTML(id, acc);
                 // §20.6 escrow trio — appears / updates / vanishes live as any escrow field or the payment moves.
                 const realMo = document.getElementById(`modal-real-monthly-${id}`);
                 if(realMo) realMo.innerHTML = _moatRealMonthlyHTML(id, acc);
@@ -8777,6 +8779,92 @@
         if (!base || base.title !== 'Mortgage' || !body) return '<span class="input-label" style="' + st + '">' + text + '</span>';
         return '<span class="input-label modal-tt-wrap" style="' + st + ' width:auto; cursor:help;">' + text +
                '<div class="modal-tt" style="left:0; right:auto;"><strong>' + title + '</strong>' + body + '</div></span>';
+    }
+
+    // ═══ §20.7 — ESCROW DISPLAY PERIOD (annual ⇄ monthly). #5 of the §20 pass. ═══
+    // THE PROBLEM: the four escrow figures are stored in MIXED units — property tax, insurance and Other
+    // are yearly; PMI is monthly. So the block showed three annual numbers beside one monthly number and
+    // invited a false comparison. This re-expresses all four in ONE unit at a time.
+    //
+    // LOCK-3: this is a VIEW multiplier applied on the way to the DOM and nowhere else. The stored fields
+    // keep their own canonical units, calculateEscrowMonthly stays the single source of the monthly figure,
+    // and every downstream total (Total Monthly Escrow, Real Monthly Payment, the escrow footer, the pie)
+    // is computed from storage — so it is byte-identical whichever way the toggle sits.
+    //
+    // EPHEMERAL, exactly like the Living Ledger's period (§16.8 "store one way, compute one way, display
+    // many ways"): a module-level flag, reset to annual on every load, NEVER written to the account and
+    // NEVER persisted. Deliberately NOT window._displayPeriod — that global is the Living Ledger's
+    // five-way authority and its setter re-renders the ledger sheet; binding the modal to it would couple
+    // two unrelated surfaces (Captain Flag-3 ruling).
+    var _moatEscrowView = 'yr';   // 'yr' | 'mo' — view only, never stored
+
+    // Each row declares its OWN canonical unit and BOTH authored labels (§20.7 A222). A field shows its
+    // native label when the view matches its unit, and its converted label otherwise — so no label can
+    // ever contradict the figure beside it, in either state.
+    var _MOAT_ESCROW_ROWS = [
+        { f: 'propTaxAnnual', unit: 'yr', lblYr: 'Property Tax (yr)', lblMo: 'Property Tax (mo)',
+          sub: 'The town\'s cut', hov: 'What the county charges yearly on the home. Usually escrowed into your monthly payment. Part of the real cost of owning, not just borrowing.' },
+        { f: 'pmiMonthly', unit: 'mo', lblYr: 'PMI (yr)', lblMo: 'Monthly PMI', align: 'right',
+          sub: 'The lender\'s safety net', hov: 'Private Mortgage Insurance — charged while your equity is under ~20%. It protects the lender, not you, and drops off once you cross the line. Worth targeting.' },
+        { f: 'insAnnual', unit: 'yr', lblYr: 'Annual Homeowner Insurance', lblMo: 'Homeowner Insurance (mo)',
+          sub: 'Protecting the asset', hov: 'What the policy on the home costs for a full year. We spread it across twelve months for the escrow view, so the monthly figure and the yearly figure always tell the same story.' },
+        // COVERAGE AMOUNT is NOT a periodic figure — it is a one-time rebuild value that happens to sit
+        // beside the premium. It must never convert and never relabel: a blanket x12 would print $450,000
+        // of cover as $5,400,000/yr. `fixed:true` keeps the multiplier off it in BOTH directions.
+        { f: 'insCoverageAmount', unit: 'fixed', fixed: true, lblYr: 'Coverage Amount', lblMo: 'Coverage Amount', align: 'right',
+          sub: 'What the policy would rebuild for', hov: 'The dollar figure your policy would pay to rebuild — held here for the record beside the premium. It does not change any math; it lets you see cost and protection side by side.' },
+        { f: 'mortgageOtherCost', unit: 'yr', lblYr: 'Other (yr)', lblMo: 'Other (mo)',
+          sub: 'Everything else escrowed', hov: 'Anything else that rides with this mortgage each year — flood insurance, lender-placed coverage, an extra assessment. Enter it here and it joins your true all-in monthly. Leave it blank and it simply won\'t count.' }
+    ];
+    // stored (canonical) -> displayed, and back. The ONLY two places the x12 / ÷12 lives.
+    function _moatEscrowToView(row, v) { if (row.fixed || row.unit === _moatEscrowView || v === '' || v == null) return v; var n = parseFloat(v); if (!isFinite(n)) return v; return row.unit === 'yr' ? n / 12 : n * 12; }
+    function _moatEscrowToStore(row, v) { if (row.fixed || row.unit === _moatEscrowView || v === '' || v == null) return v; var n = parseFloat(v); if (!isFinite(n)) return v; return row.unit === 'yr' ? n * 12 : n / 12; }
+    // A user editing a field while the view is flipped is typing in the DISPLAYED unit — convert back to
+    // the field's canonical unit before storing, or the toggle would silently corrupt the figure (a typed
+    // $500/mo tax must persist as $6,000/yr, not as $500/yr).
+    window._moatEscrowEdit = function (id, fieldIdx, value) {
+        var row = _MOAT_ESCROW_ROWS[fieldIdx];
+        var raw = window.enforceAmt(value);                       // decimal-safe digits, non-negative
+        updateAccField(id, row.f, String(_moatEscrowToStore(row, raw)));
+    };
+    // The control is the Living Ledger's /yr /mo switch (studio.html ~3363) — same in-house vocabulary, no
+    // new prose (Captain ruling). Its own class only because the ledger's is inked for the light Sheet
+    // surface; these are the modal's colours on the same geometry.
+    window._setMoatEscrowView = function (id, v) {
+        if (v !== 'yr' && v !== 'mo') return;
+        _moatEscrowView = v;
+        var acc = state.accounts.find(function (a) { return a.id === id; });
+        if (!acc) return;
+        var host = document.getElementById('modal-escrow-fields-' + id);
+        if (host) host.innerHTML = _moatEscrowFieldsHTML(id, acc, getBaseType(acc.baseId) || {});
+    };
+    // hasEscrow governs the CONTROL: with nothing sourced there is nothing to convert, so the switch does
+    // not render (the FIELDS still do — they are how escrow gets entered in the first place).
+    function _moatEscrowToggleHTML(id, acc) {
+        if (!hasEscrow(acc)) return '';
+        return '<div style="display:flex; justify-content:flex-end; margin-bottom:10px;">' +
+               '<div class="moat-escrow-toggle" role="group" aria-label="Escrow display period">' +
+               ['yr', 'mo'].map(function (p) {
+                   return '<button type="button"' + (_moatEscrowView === p ? ' class="active"' : '') +
+                          ' onclick="_setMoatEscrowView(\'' + id + '\', \'' + p + '\')">/' + p + '</button>';
+               }).join('') + '</div></div>';
+    }
+    function _moatEscrowFieldsHTML(id, acc, base) {
+        // The control lives in its OWN container so it can appear the moment the first escrow figure is
+        // entered, without re-rendering the inputs underneath the user's cursor (the same "no re-render,
+        // keeps input focus" rule the payoff block follows).
+        var out = '<div id="modal-escrow-toggle-' + id + '">' + _moatEscrowToggleHTML(id, acc) + '</div>';
+        _MOAT_ESCROW_ROWS.forEach(function (row, i) {
+            if (i % 2 === 0) out += '<div class="field-row">';
+            var shown = _moatEscrowToView(row, acc[row.f] || '');
+            var lbl = _moatEscrowView === 'mo' ? row.lblMo : row.lblYr;   // fixed rows carry the same string in both
+            out += '<div>' + _dLbl(base, lbl, row.sub, row.hov, '', row.align || '') +
+                   '<input type="text" class="small-field curr-format" placeholder="$0" value="' +
+                   formatCurrencyDisplay(shown === '' ? '' : shown) +
+                   '" oninput="_moatEscrowEdit(\'' + id + '\', ' + i + ', this.value)"></div>';
+            if (i % 2 === 1 || i === _MOAT_ESCROW_ROWS.length - 1) out += '</div>';
+        });
+        return out;
     }
 
     // §20.6 — THE ESCROW TRIO: Total Monthly Escrow + Real Monthly Payment + the honesty beat, as ONE
