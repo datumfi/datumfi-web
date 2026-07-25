@@ -1120,8 +1120,12 @@
   /* §19.9 — negative-amortization alerts (total P&I payment < monthly interest). Warning-tinted, in-voice. */
   .moat-negam-inline, .heloc-draw-inline { margin: 2px 0 12px; padding: 9px 12px; background: rgba(226,75,74,0.10); border: 1px solid rgba(226,75,74,0.32); border-left: 3px solid var(--danger-red); border-radius: 5px; font-size: 11.5px; line-height: 1.5; color: rgba(255,255,255,0.86); }
   .di-negam { border-left: 3px solid var(--danger-red); background: rgba(226,75,74,0.09); padding: 9px 13px; border-radius: 5px; }
-  /* §19.9b — blank-Original-Amount nudge in the amort modal where the pie would be (info, not alarm). */
+  /* §19.9b — blank-Original-Amount nudge where the pie would be (info, not alarm). */
   .moat-pie-nudge { margin-bottom: 16px; padding: 14px 18px; background: linear-gradient(155deg, rgba(255,255,255,0.04), rgba(9,18,33,0.14)); border: 1px solid rgba(255,255,255,0.08); border-radius: 9px; font-size: 12px; color: rgba(255,255,255,0.72); line-height: 1.55; }
+  /* §19.12 — honest note in the summary slot the suppressed Interest-Remaining / Remaining-Cost rows vacate.
+     Deliberately NOT warning-tinted: .moat-negam-inline already shouts the numbers under the payment field,
+     so a second red block would double-shout the same fact. Slim, informational, sits in the row list. */
+  .moat-summary-note { margin-top: 8px; padding: 8px 11px; border-top: 1px dashed rgba(255,255,255,0.1); font-size: 11.5px; line-height: 1.5; color: rgba(255,255,255,0.66); }
   .holding-input { width: 100%; min-width: 0; box-sizing: border-box; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: var(--white); font-family: var(--font-mono); font-size: 11px; padding: 4px; border-radius: 2px; }
   .holding-input:focus { border-color: var(--teal-mid); outline: none; }
   /* kill number spinners so 2-decimal values never clip in narrow columns */
@@ -10173,6 +10177,18 @@
                    (r[2] ? _sumLbl(_base, r[0], r[1], r[2], r[4]) : '<span class="input-label" style="color:' + r[4] + ';">' + r[0] + '</span>') +
                    '<span style="font-family: var(--font-mono); color: ' + r[4] + '; font-weight:bold;">$' + r[3].toLocaleString('en-US') + '</span></div>';
         });
+        // §19.12 — NEGAM HONEST NOTE (Architect ruling #430; Mortgage Copy Bank §19.12). The li !== null gate
+        // is RIGHT to withhold the two "from here" figures: under negative amortization the balance never
+        // falls, so there is no finite Interest Remaining or Remaining Cost, and printing one would fabricate
+        // a figure (L47). But a bare blank reads as broken — it fooled the Captain on his own smoke walk. So
+        // the slot those rows vacate carries a note instead of nothing. NEGAM ONLY: PAID / NOPMT / GLACIAL
+        // keep their own existing states (GLACIAL speaks through the §19.10 🟠 beat, NOPMT through the payoff
+        // field), and doubling up would give one loan two voices for the same fact. Sourced-or-blank still
+        // holds above the state itself: no rate or no balance → nothing at all.
+        if (li === null && payoffMonths(acc).code === 'NEGAM'
+            && (parseFloat(acc.intRate) || 0) > 0 && (parseFloat(acc.value) || 0) > 0) {
+            out += '<div class="moat-summary-note">At this payment, the balance isn\'t shrinking — so there\'s no payoff figure to show yet. Nudge the payment above the monthly interest and these fill in.</div>';
+        }
         // §4.3/§5.4 accelerated delta — toggle-gated. NOTE: Expected Payoff Date already reflects the
         // additional payment (calculateTotalPmt = min+add), so the accelerated DATE equals it; we surface
         // the non-redundant value — interest saved vs paying only the minimum — plus the §5.4 caption.
@@ -10188,6 +10204,13 @@
                 <div style="font-size:11px; color: rgba(255,255,255,0.55); margin-top:6px; line-height:1.45;">That's ${isv} kept out of the bank's pocket — money that could instead compound in a retirement account. Your call: a sure thing today vs. a bigger maybe tomorrow.</div>`;
             }
         }
+        // §3b (Captain ruling #430) — the POSITION pie renders here, directly above the schedule button and just
+        // below the Remaining-Mortgage-Cost area, instead of inside the amortization modal. It is a snapshot of
+        // where the loan stands, not a property of the schedule, so it does not depend on a drawable payoff:
+        // it renders identically under OK / NEGAM / NOPMT / GLACIAL. Wrapped only when it has something to say,
+        // so a blank pie leaves no empty chrome behind (L47).
+        var _pieBlock = _moatPieBlockHTML(acc);
+        if (_pieBlock) out += '<div style="margin-top:14px;">' + _pieBlock + '</div>';
         out += `
                 <div style="text-align:center; margin-top:14px;">
                     <button class="add-space-btn" style="width:auto; padding: 4px 8px; border: none; background: transparent; border-bottom: 1px dashed var(--teal-mid); color: var(--teal-mid);" onclick="openAmortizationModal('${id}')">📊 VIEW AMORTIZATION SCHEDULE</button>
@@ -10259,6 +10282,20 @@
             { label: 'Escrow',            val: escrow,        color: 'rgba(165,175,188,0.75)' }
         ], paidPct, 'PAID DOWN', 'WHERE THIS LOAN STANDS');
     }
+    // §19.9b + §3b — the pie BLOCK: the donut, or (when it cannot draw for the ONE recoverable reason — a
+    // mortgage carrying a real balance but no Original Amount) the plain-coach nudge in its place. ONE composer
+    // so the pie and its gap-filler can never drift apart (L48). RELOCATED out of the amortization modal by
+    // Captain's ruling #430: this is the strongest visual in the room, so it is seen by default rather than
+    // earned by opening the schedule. Display-only (LOCK-3) — reads acc, computes nothing new, and stays
+    // sourced-or-blank: a mortgage with neither figure returns '' and NOTHING is emitted (no empty chrome).
+    function _moatPieBlockHTML(acc) {
+        var pie = _moatDebtPieHTML(acc);
+        if (!pie && (parseFloat(acc.origAmount) || 0) <= 0 && (parseFloat(acc.value) || 0) > 0
+            && String((getBaseType(acc.baseId) || {}).id).indexOf('mortgage') === 0) {
+            return '<div class="moat-pie-nudge">Add this loan\'s Original Amount to see how much you\'ve paid down — the payoff pie needs it to split principal from interest.</div>';
+        }
+        return pie;
+    }
     // §19.7 — YARD all-liens debt pie. The Yard composes the property + EVERY lien secured against it, so a HELOC
     // drafted under the mortgage is no longer invisible in the debt view. HONESTY (R187): a HELOC's origAmount is a
     // credit LINE, not a borrowed lump — no honest principalPaid, no sourced interest split — so it contributes ONE
@@ -10309,16 +10346,10 @@
             document.body.appendChild(ov);
         }
         var m = payoffMonths(acc);
-        // §19.9 Part A — the debt pie is a POSITION snapshot (balance / paid / interest / escrow), honestly
-        // computable whenever its inputs are sourced. It renders ABOVE the schedule regardless of whether a valid
-        // payoff schedule exists — the schedule's "can't draw" state is a separate note below, never a blanket.
-        var pie = _moatDebtPieHTML(acc);
-        // §19.9b — when the pie blanks specifically because Original Amount is missing (a mortgage with a real
-        // balance but no opening figure), fill the gap with a plain-coach nudge instead of leaving it silent.
-        if (!pie && (parseFloat(acc.origAmount) || 0) <= 0 && (parseFloat(acc.value) || 0) > 0
-            && String((getBaseType(acc.baseId) || {}).id).indexOf('mortgage') === 0) {
-            pie = '<div class="moat-pie-nudge">Add this loan\'s Original Amount to see how much you\'ve paid down — the payoff pie needs it to split principal from interest.</div>';
-        }
+        // §3b (Captain ruling #430) — the debt pie and its §19.9b blank-Original nudge NO LONGER LIVE HERE.
+        // Both moved into _moatPieBlockHTML, rendered by _payoffIntelHTML on the modal body above the schedule
+        // button: the pie is a POSITION snapshot, not a property of the schedule, so it should not be a reward
+        // for opening this overlay. This modal is now the schedule and nothing else.
         var schedule;
         if (m.code !== 'OK') {
             var why = (m.code === 'NEGAM')
@@ -10347,7 +10378,7 @@
                     <thead><tr style="position:sticky; top:0; background: var(--bg-navy);"><th style="padding:5px 8px; text-align:left; opacity:0.55;">#</th><th style="padding:5px 8px; text-align:left; opacity:0.55;">Date</th><th style="padding:5px 8px; text-align:right; opacity:0.55;">Payment</th><th style="padding:5px 8px; text-align:right; color:var(--teal-mid);">Principal</th><th style="padding:5px 8px; text-align:right; color:var(--danger);">Interest</th><th style="padding:5px 8px; text-align:right; opacity:0.55;">Balance</th></tr></thead>
                     <tbody>${rows}</tbody></table></div>`;
         }
-        var body = pie + schedule;
+        var body = schedule;
         ov.innerHTML = `<div style="background: var(--bg-navy, #0a1628); border:1px solid rgba(255,255,255,0.12); border-radius:8px; max-width:560px; width:92vw; max-height:82vh; overflow:hidden; padding:24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
                 <div class="hud-title" style="color:var(--white); font-size:15px;">Amortization Schedule — ${(acc.name || 'Loan')}</div>

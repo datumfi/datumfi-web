@@ -45,9 +45,16 @@ const noApr = { baseId: 'mortgage_a', value: 150000, origAmount: 200000, minPmt:
 const checks = [];
 const need = (label, cond) => checks.push([label, !!cond]);
 
-// ── Part A structure: the amort-modal pie is computed OUTSIDE the schedule gate ──
-need('Part A: pie computed before the schedule branch (var pie = _moatDebtPieHTML)', src.includes('var pie = _moatDebtPieHTML(acc);'));
-need('Part A: modal body = pie + schedule (pie no longer inside the else)', src.includes('var body = pie + schedule;') && !src.includes('body = `${_moatDebtPieHTML(acc)}'));
+// ── Part A structure, RE-POINTED 2026-07-25 (§3b, Captain ruling #430) ──
+// The invariant Part A established — position truth is NOT gated on a drawable schedule — is unchanged and
+// now stated more strongly: the pie no longer lives in the amortization overlay at all. It renders on the
+// modal body via _moatPieBlockHTML, so there is no schedule branch left for it to be trapped inside.
+// The old assertions ('var pie = ...' / 'var body = pie + schedule;') described the overlay and would have
+// gone vacuous here — the overlay now emits no pie under ANY state, so "no pie when blank" would pass for
+// the wrong reason. Both re-pointed at the new home, asserted from both ends.
+need('Part A: the pie composer owns pie + §19.9b nudge in ONE place', src.includes('function _moatPieBlockHTML(acc) {'));
+need('Part A: overlay body is the schedule ALONE (pie relocated out)',
+  src.includes('var body = schedule;') && !src.includes('var body = pie + schedule;'));
 
 // ── #380 — EXECUTE the real openAmortizationModal against a captured overlay and assert the SVG element actually
 //    lands in the rendered modal body (not just that the pie function or source structure exists). ──
@@ -70,9 +77,20 @@ function renderModal(acc) {
   return captured;
 }
 const modNeg = renderModal({ id: 'x', ...negam });
-need('#380: amort modal renders the pie SVG under neg-am (orig sourced)', modNeg.includes('<svg') && modNeg.includes('balance never reaches zero'));
-const modBlank = renderModal({ id: 'x', baseId: 'mortgage_a', value: 150000, minPmt: 500, addPmt: 50 });   // no origAmount / no APR
-need('#380: sourced-or-blank — no pie SVG when Original Amount is blank', !modBlank.includes('<svg'));
+need('#380: amort overlay still speaks its neg-am "cannot draw" state', modNeg.includes('balance never reaches zero'));
+need('#380 §3b: the overlay no longer carries the pie', !modNeg.includes('<svg') && !modNeg.includes('WHERE THIS LOAN STANDS'));
+
+// ── #380 §3b — the pie's real home is now the modal BODY. Assert the SVG lands in the RENDERED body, and that
+//    sourced-or-blank still holds THERE (in the overlay that check is now vacuous — no pie exists under any state). ──
+const intelBody = ['_num', 'calculateTotalPmt', 'payoffMonths', '_payoffDateFrom', 'calculatePayoff', '_monthsBetween',
+                   'lifeOfLoan', 'lifetimeInterest', '_sumLbl', '_debtDonutSVG', '_moatDebtPieHTML',
+                   '_moatPieBlockHTML', '_payoffIntelHTML'].map(n => extractFn(src, n)).join('\n');
+const intel = new Function('getBaseType', 'acceleratedDelta', 'hasEscrow', 'calculateEscrowMonthly',
+  intelBody + '\nreturn _payoffIntelHTML;')(() => ({ id: 'mortgage_x', title: 'Mortgage' }), () => null, () => false, () => 0);
+need('#380 §3b: modal body renders the pie SVG under neg-am (position, schedule-independent)',
+  intel('x', negam).includes('<svg') && intel('x', negam).includes('WHERE THIS LOAN STANDS'));
+need('#380 §3b: sourced-or-blank on the BODY — no pie SVG when Original Amount is blank',
+  !intel('x', { baseId: 'mortgage_a', value: 150000, intRate: 5.99, minPmt: 500, addPmt: 50 }).includes('<svg'));
 
 // ── NEG-AM ──
 {

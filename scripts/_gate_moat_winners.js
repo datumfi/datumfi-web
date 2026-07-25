@@ -195,6 +195,11 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   ok(R.amortDisp === 'flex', 'Amort overlay is display:flex after click');
   ok(pick(R.amortZ > R.acctZ, R.amortZ < R.acctZ), 'Amort overlay z-index ABOVE account modal (' + R.amortZ + ' > ' + R.acctZ + ') [BUG-1 FIX/BITE]');
   ok(pick(has(R.amortBlank, 'Add a balance, rate, and payment'), !has(R.amortBlank, 'Add a balance, rate, and payment')), 'Amort empty-guard when unpayable (blank) [BITE]');
+  // §3b (Captain ruling #430) — the position pie moved OUT of the overlay onto the modal body, above the
+  // schedule button. Held at whole-room level from BOTH ends so a future tidy-up cannot quietly send it back.
+  ok(has(R.mFill, 'WHERE THIS LOAN STANDS') && has(R.mFill, '<svg'), '§3b debt pie renders on the modal BODY by default');
+  ok(R.mFill.indexOf('WHERE THIS LOAN STANDS') < R.mFill.indexOf('VIEW AMORTIZATION SCHEDULE'), '§3b pie sits ABOVE the schedule button');
+  ok(pick(!has(R.amortFill, 'WHERE THIS LOAN STANDS'), has(R.amortFill, 'WHERE THIS LOAN STANDS')), '§3b pie NO LONGER in the amortization overlay [BITE]');
 
   // ===== C4b · §5.3 ACCEL-SOURCE DROPDOWN + OUTFLOW READ =====
   lines.push('===== C4b · §5.3 ACCEL SOURCE =====');
