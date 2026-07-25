@@ -10290,9 +10290,23 @@
     // sourced-or-blank: a mortgage with neither figure returns '' and NOTHING is emitted (no empty chrome).
     function _moatPieBlockHTML(acc) {
         var pie = _moatDebtPieHTML(acc);
-        if (!pie && (parseFloat(acc.origAmount) || 0) <= 0 && (parseFloat(acc.value) || 0) > 0
-            && String((getBaseType(acc.baseId) || {}).id).indexOf('mortgage') === 0) {
+        var _orig = parseFloat(acc.origAmount) || 0, _bal = parseFloat(acc.value) || 0;
+        var _isMortgage = String((getBaseType(acc.baseId) || {}).id).indexOf('mortgage') === 0;
+        if (!pie && _orig <= 0 && _bal > 0 && _isMortgage) {
             return '<div class="moat-pie-nudge">Add this loan\'s Original Amount to see how much you\'ve paid down — the payoff pie needs it to split principal from interest.</div>';
+        }
+        // §19.9c (Architect ruling #431) — the OTHER honest blank. When the balance has climbed past the original
+        // amount, _moatDebtPieHTML's guard withholds the arc and it is RIGHT to: "Principal Paid" would be
+        // negative and there is no honest slice to draw (L47). That guard stays exactly as it is. But the same
+        // doctrine as §19.12 applies to its silence — a correct suppression must not read as broken. Gated PURELY
+        // on the data condition, never on the payoff state: the pie is state-blind (byte-identical under OK /
+        // NEGAM / NOPMT / GLACIAL), so tying this to neg-am would be mistaking a correlation for a cause — a
+        // neg-am loan is merely the common way a balance ends up above its original. Mortgage-scoped like §19.9b:
+        // a HELOC's origAmount is a credit LINE, so its pie is excluded for a different reason (§17.2) and this
+        // note would misdescribe it. Mutually exclusive with the nudge above (_orig <= 0 vs _orig > 0) — the two
+        // can never both speak. Not red: this is information, not alarm. Display-only (LOCK-3).
+        if (!pie && _orig > 0 && _bal > _orig && _isMortgage) {
+            return '<div class="moat-pie-nudge">You\'ve borrowed more than the original loan, so there\'s no "paid-down" slice to chart yet. Once the balance drops back under the starting amount, the picture fills in.</div>';
         }
         return pie;
     }

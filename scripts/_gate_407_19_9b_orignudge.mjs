@@ -27,10 +27,13 @@ let body = ['_num', 'calculateTotalPmt', 'payoffMonths', '_payoffDateFrom', 'cal
             'lifeOfLoan', 'lifetimeInterest', 'acceleratedDelta', '_sumLbl', '_debtDonutSVG',
             '_moatDebtPieHTML', '_moatPieBlockHTML', '_payoffIntelHTML'].map(n => extractFn(src, n)).join('\n');
 
-// Anchored on the nudge's own guard inside the composer that now owns it.
-const ANCHOR = 'if (!pie && (parseFloat(acc.origAmount) || 0) <= 0';
+// Anchored on the nudge's own DATA CONDITION inside the composer that now owns it — not on the parse
+// expression it used to be written with. §19.9c hoisted _orig/_bal/_isMortgage into locals, which moved the
+// old literal out from under this mutation: it THREW instead of biting. A red-first that throws is a failure,
+// so anchor on the condition's meaning (blank original + a real balance), which survives that kind of tidy-up.
+const ANCHOR = '_orig <= 0 && _bal > 0';
 if (!body.includes(ANCHOR)) throw new Error('red-first anchor missing — the §19.9b nudge guard moved');
-if (RED) body = body.replace(ANCHOR, 'if (false && (parseFloat(acc.origAmount) || 0) <= 0');
+if (RED) body = body.replace(ANCHOR, 'false && _orig <= 0 && _bal > 0');
 
 const deps = { getBaseType: () => ({ id: 'mortgage_x', title: 'Mortgage' }), hasEscrow: () => false, calculateEscrowMonthly: () => 0 };
 const intel = new Function(...Object.keys(deps), body + '\nreturn _payoffIntelHTML;')(...Object.values(deps));
