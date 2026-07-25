@@ -8792,13 +8792,12 @@
         var core = calculateTotalPmt(acc);
         var $ = function (v) { return '$' + Math.round(v).toLocaleString('en-US'); };
         return '<div style="display:flex; justify-content: space-between; margin-bottom: 8px;">' +
-                 // C217 authored a hover BODY but no title — label-as-title, the in-house precedent, until one is authored.
-                 _sumLbl(base, 'Total Monthly Escrow', 'Total Monthly Escrow', 'Property tax, homeowner insurance, PMI, and anything else escrowed — added up and split into a monthly slice. It is not paid to the lender as principal; it is money the lender collects and holds to pay these bills on your behalf. Sourced-or-blank: shows only when the underlying fields are filled.', 'var(--white)') +
+                 _sumLbl(base, 'Total Monthly Escrow', 'Held, not paid to the loan', 'Property tax, homeowner insurance, PMI, and anything else escrowed — added up and split into a monthly slice. It is not paid to the lender as principal; it is money the lender collects and holds to pay these bills on your behalf. Sourced-or-blank: shows only when the underlying fields are filled.', 'var(--white)') +
                  '<span style="font-family: var(--font-mono); color: var(--danger); font-weight:bold;">' + $(escrowMo) + '</span>' +
                '</div>' +
                '<div style="display:flex; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 8px;">' +
-                 // C218 authored NO hover — only the beat below. A plain label is the verbatim wiring; nothing invented.
-                 _sumLbl(base, 'Real Monthly Payment', '', '', 'var(--white)') +
+                 // C218 carries BOTH a label hover AND the DI beat below — they are different registers, not a duplicate.
+                 _sumLbl(base, 'Real Monthly Payment', 'What actually leaves your account', 'Principal and interest plus everything escrowed — the full amount that clears your bank each month. Shown only when there is escrow to add; with none, your real monthly is simply the core payment above.', 'var(--white)') +
                  '<span style="font-family: var(--font-mono); color: var(--danger); font-weight:bold; font-size:14px;">' + $(core + escrowMo) + '</span>' +
                '</div>' +
                '<div style="font-size:11px; color: rgba(255,255,255,0.55); margin-top:-2px; margin-bottom:8px; line-height:1.45;">Beyond principal and interest, taxes and insurance add about ' + $(escrowMo) + '/mo — so your real monthly is around ' + $(core + escrowMo) + '. That is the number that actually leaves your account.</div>';

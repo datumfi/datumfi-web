@@ -86,6 +86,11 @@ need('C220 label no longer echoes itself as the title', !/<strong>Remaining Mort
 need('C217 Total Monthly Escrow renders', M.includes('Total Monthly Escrow'));
 need('C217 figure = $900/mo (6000/12 + 2400/12 + 150 + 600/12)', M.includes('>$900<'));
 need('C217 hover body verbatim', M.includes('It is not paid to the lender as principal; it is money the lender collects and holds to pay these bills on your behalf.'));
+need('C217 authored hover TITLE "Held, not paid to the loan" wired', /<strong>Held, not paid to the loan<\/strong>/.test(M));
+need('C217 no longer echoes its label as the title', !/<strong>Total Monthly Escrow<\/strong>/.test(M));
+need('C218 authored hover TITLE "What actually leaves your account" wired', /<strong>What actually leaves your account<\/strong>/.test(M));
+need('C218 authored hover BODY verbatim', M.includes('Principal and interest plus everything escrowed — the full amount that clears your bank each month. Shown only when there is escrow to add; with none, your real monthly is simply the core payment above.'));
+need('C218 keeps BOTH registers — the label hover AND the DI beat', /<strong>What actually leaves your account<\/strong>/.test(M) && M.includes('Beyond principal and interest, taxes and insurance add about'));
 need('C218 Real Monthly Payment renders', M.includes('Real Monthly Payment'));
 need('C218 figure = $3,650 (core $2,750 + escrow $900)', M.includes('>$3,650<'));
 need('C218 beat verbatim, tokens resolved', M.includes('Beyond principal and interest, taxes and insurance add about $900/mo — so your real monthly is around $3,650. That is the number that actually leaves your account.'));
