@@ -7487,8 +7487,9 @@
                 <div>${_dLbl(base, 'Origination Date', 'The day it started', 'When the loan was funded. Sets the amortization clock we use to estimate your payoff date.')}<input type="date" class="small-field" value="${acc.origDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'origDate', this.value)"></div>
                 <div>${_dLbl(base, 'Maturity Date', 'The finish line', 'The contractual payoff date if you only ever pay the minimum. Extra payments beat this date; we\'ll show how much sooner.', '', 'right')}<input type="date" class="small-field" value="${acc.maturityDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'maturityDate', this.value)"></div>
             </div>
-            <div class="field-row" style="grid-template-columns: 1fr;">
+            <div class="field-row"${base.title === 'Mortgage' ? '' : ' style="grid-template-columns: 1fr;"'}>
                 <div>${_dLbl(base, 'Next Payment Date', 'The clock\'s start', 'We count the payoff timeline from here. Setting it keeps the estimated payoff date honest.')}<input type="date" class="small-field" value="${acc.nextPmtDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'nextPmtDate', this.value)"></div>
+                ${base.title === 'Mortgage' ? `<div>${_dLbl(base, 'Term (months)', 'The full length of the loan', 'How many months the loan runs in total — 360 for a 30-year, 240 for a 20, 180 for a 15. We use it to place today on the loan\'s timeline and to draw the complete schedule from the day it began.', '', 'right')}<input type="number" min="0" class="small-field" placeholder="0" value="${acc.termMonths||''}" oninput="updateAccField('${id}', 'termMonths', this.value)"></div>` : ''}
             </div>
             <div class="field-row">
                 <div>${_dLbl(base, 'Minimum Payment', 'The required amount', 'Your contractual principal + interest each month. Escrow (taxes/insurance) may be collected on top — see the escrow fields.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.minPmt||'')}" oninput="updateAccField('${id}', 'minPmt', this.value)"></div>
@@ -7522,7 +7523,10 @@
                 </div>
                 <div class="field-row">
                     <div>${_dLbl(base, 'Annual Homeowner Insurance', 'Protecting the asset', 'What the policy on the home costs for a full year. We spread it across twelve months for the escrow view, so the monthly figure and the yearly figure always tell the same story.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.insAnnual||'')}" oninput="updateAccField('${id}', 'insAnnual', this.value)"></div>
-                    <div>${_dLbl(base, 'Other (yr)', 'Everything else escrowed', 'Anything else that rides with this mortgage each year — flood insurance, lender-placed coverage, an extra assessment. Enter it here and it joins your true all-in monthly. Leave it blank and it simply won\'t count.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.mortgageOtherCost||'')}" oninput="updateAccField('${id}', 'mortgageOtherCost', this.value)"></div>
+                    <div>${_dLbl(base, 'Coverage Amount', 'What the policy would rebuild for', 'The dollar figure your policy would pay to rebuild — held here for the record beside the premium. It does not change any math; it lets you see cost and protection side by side.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.insCoverageAmount||'')}" oninput="updateAccField('${id}', 'insCoverageAmount', this.value)"></div>
+                </div>
+                <div class="field-row">
+                    <div>${_dLbl(base, 'Other (yr)', 'Everything else escrowed', 'Anything else that rides with this mortgage each year — flood insurance, lender-placed coverage, an extra assessment. Enter it here and it joins your true all-in monthly. Leave it blank and it simply won\'t count.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.mortgageOtherCost||'')}" oninput="updateAccField('${id}', 'mortgageOtherCost', this.value)"></div>
                 </div>
                 <div id="modal-escrow-foot-${id}" style="display:${hasEscrow(acc)?'block':'none'}; font-size:11px; color: rgba(255,255,255,0.72); line-height:1.5; margin-top:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;">${_escrowFooter(acc)}</div>
             </div>`;
@@ -7944,7 +7948,10 @@
     window.updateAccField = function(id, field, value) {
         const acc = state.accounts.find(a => a.id === id);
         if(acc) {
-            if(field === 'origAmount' || field === 'minPmt' || field === 'addPmt' || field === 'propTaxAnnual' || field === 'insAnnual' || field === 'pmiMonthly' || field === 'propTaxYr' || field === 'homeInsYr' || field === 'maintYr' || field === 'hoaYr' || field === 'utilYr' || field === 'helocCreditLimit' || field === 'cltvCapPct' || field === 'mortgageOtherCost' || field === 'interestPaidToDate') {
+            // §20.4 insCoverageAmount joins this list for STORE hygiene only (decimal-safe, non-negative,
+            // $100B ceiling) — it is a display-only field (LOCK-3) and is read by NO total: not
+            // calculateEscrowMonthly, not hasEscrow, not the DI, not the payoff math.
+            if(field === 'origAmount' || field === 'minPmt' || field === 'addPmt' || field === 'propTaxAnnual' || field === 'insAnnual' || field === 'pmiMonthly' || field === 'propTaxYr' || field === 'homeInsYr' || field === 'maintYr' || field === 'hoaYr' || field === 'utilYr' || field === 'helocCreditLimit' || field === 'cltvCapPct' || field === 'mortgageOtherCost' || field === 'interestPaidToDate' || field === 'insCoverageAmount') {
                 acc[field] = window.enforceAmt(value);   // #393 non-negative + $100B ceiling
             } else if (field === 'intRate' || field === 'cola') {
                 acc[field] = parseFloat(value) || 0;
