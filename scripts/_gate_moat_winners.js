@@ -148,7 +148,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   // ===== C4a · §4.2/§4.3/§4.4/§7 PAYOFF INTELLIGENCE + AMORTIZATION =====
   lines.push('===== C4a · PAYOFF INTELLIGENCE + AMORT =====');
   ok(has(R.mFill, 'Interest Remaining') && has(R.mFill, '$159,291'), 'Interest remaining = $159,291 (exact amortized, 2500/mo)');
-  ok(has(R.mFill, 'Remaining Cost') && has(R.mFill, '$459,291'), 'Remaining cost = $459,291 (balance + remaining interest)');
+  ok(has(R.mFill, 'Remaining Mortgage Cost') && has(R.mFill, '$459,291'), 'Remaining mortgage cost = $459,291 (balance + remaining interest) [§20.6 rename]');
   ok(has(R.mFill, 'Interest Saved') && has(R.mFill, '$96,612'), 'Accelerated interest saved = $96,612 (exact, vs minimum-only)');
   ok(has(R.mFill, "kept out of the bank's pocket"), '§5.4 tradeoff caption present (toggle ON)');
   ok(pick(!has(R.mBlank, 'Lifetime Interest'), has(R.mBlank, 'Lifetime Interest')), 'Lifetime interest OMITTED when no payment (sourced-or-blank) [BITE]');

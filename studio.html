@@ -7487,15 +7487,26 @@
                 <div>${_dLbl(base, 'Origination Date', 'The day it started', 'When the loan was funded. Sets the amortization clock we use to estimate your payoff date.')}<input type="date" class="small-field" value="${acc.origDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'origDate', this.value)"></div>
                 <div>${_dLbl(base, 'Maturity Date', 'The finish line', 'The contractual payoff date if you only ever pay the minimum. Extra payments beat this date; we\'ll show how much sooner.', '', 'right')}<input type="date" class="small-field" value="${acc.maturityDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'maturityDate', this.value)"></div>
             </div>
+            <div class="field-row" style="grid-template-columns: 1fr;">
+                <div>${_dLbl(base, 'Next Payment Date', 'The clock\'s start', 'We count the payoff timeline from here. Setting it keeps the estimated payoff date honest.')}<input type="date" class="small-field" value="${acc.nextPmtDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'nextPmtDate', this.value)"></div>
+            </div>
             <div class="field-row">
                 <div>${_dLbl(base, 'Minimum Payment', 'The required amount', 'Your contractual principal + interest each month. Escrow (taxes/insurance) may be collected on top — see the escrow fields.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.minPmt||'')}" oninput="updateAccField('${id}', 'minPmt', this.value)"></div>
                 <div>${_dLbl(base, 'Additional Payment', 'Your accelerator', 'Anything you add on top of the minimum goes straight at principal — it shrinks both the payoff clock and the lifetime interest. Even a little compounds.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.addPmt||'')}" oninput="updateAccField('${id}', 'addPmt', this.value)"></div>
             </div>
             ${String(base.id).indexOf('mortgage') === 0 ? `<div id="modal-moat-negam-${id}">${_moatNegAmInlineHTML(acc)}</div>` : ''}
-            ${base.title === 'HELOC' ? `<div id="modal-heloc-draw-${id}">${_helocDrawInlineHTML(acc)}</div>` : ''}
-            <div class="field-row" style="grid-template-columns: 1fr;">
-                <div>${_dLbl(base, 'Next Payment Date', 'The clock\'s start', 'We count the payoff timeline from here. Setting it keeps the estimated payoff date honest.')}<input type="date" class="small-field" value="${acc.nextPmtDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'nextPmtDate', this.value)"></div>
-            </div>`;
+            ${base.title === 'HELOC' ? `<div id="modal-heloc-draw-${id}">${_helocDrawInlineHTML(acc)}</div>` : ''}`;
+
+            // §20 #8 — the pay-down-vs-invest panel moves UP to sit directly under the payment fields, where
+            // the decision is actually made (the Additional Payment box is the lever the panel argues about).
+            // It used to close the modal, hundreds of pixels below the field it speaks to. §20.1's "what would
+            // extra do?" calculator lands between them in Commit 6. Verbatim §15 copy (Mortgage Copy Bank R70)
+            // — RELOCATION ONLY, not one character of the panel changed (LOCK-3). Reuses _diWhyPanel (L48).
+            if (base.title === 'Mortgage') {
+                html += _diWhyPanel('Should you pay it down, or invest the difference?', [
+                    ['The mortgage-vs-invest tension', 'A mortgage is the cheapest large loan most people ever get, and it\'s secured by an asset that can grow. That creates the classic tension: a guaranteed return equal to your rate (pay it down) versus an uncertain, historically-higher return (invest the difference). At a low fixed 3%, the math often favors investing — that cheap, locked-in rate is hard to pass up, and your dollars have historically earned more in the market than they\'d save against the loan. At a high 8% (or a variable rate that could climb), the reverse is usually true: paying it down is a guaranteed 8% return with zero risk — very hard to beat reliably anywhere else, so accelerating the payoff often wins. And closer to retirement, a paid-off house lowers the income you must generate every month for the rest of your life. There\'s also the part no spreadsheet captures: for some people, owning the home free and clear is worth more than the last dollar of return. Datum shows you both numbers and both truths. The choice is yours.']
+                ]);
+            }
 
             // §0.3/§0.3b/§4.1 ESCROW — mortgage-only, one labeled section: header + plain-coach definition
             // + the three grouped fields (always visible so escrow is discoverable/enterable) + a computed
@@ -7507,10 +7518,10 @@
                 <div style="font-size:11px; color: rgba(255,255,255,0.6); line-height:1.45; margin-bottom:12px;">Escrow is the slice of your monthly payment that isn't principal or interest — your lender collects property taxes, homeowner's insurance, and (if you're under ~20% equity) PMI, then pays those bills for you. It's real money you owe every month, just not to the loan itself.</div>
                 <div class="field-row">
                     <div>${_dLbl(base, 'Property Tax (yr)', 'The town\'s cut', 'What the county charges yearly on the home. Usually escrowed into your monthly payment. Part of the real cost of owning, not just borrowing.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.propTaxAnnual||'')}" oninput="updateAccField('${id}', 'propTaxAnnual', this.value)"></div>
-                    <div>${_dLbl(base, 'Homeowners / Hazard Insurance (yr)', 'Protecting the asset', 'Homeowner\'s/hazard insurance, billed yearly, usually escrowed. Required by the lender while there\'s a balance.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.insAnnual||'')}" oninput="updateAccField('${id}', 'insAnnual', this.value)"></div>
+                    <div>${_dLbl(base, 'Monthly PMI', 'The lender\'s safety net', 'Private Mortgage Insurance — charged while your equity is under ~20%. It protects the lender, not you, and drops off once you cross the line. Worth targeting.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.pmiMonthly||'')}" oninput="updateAccField('${id}', 'pmiMonthly', this.value)"></div>
                 </div>
                 <div class="field-row">
-                    <div>${_dLbl(base, 'Monthly PMI', 'The lender\'s safety net', 'Private Mortgage Insurance — charged while your equity is under ~20%. It protects the lender, not you, and drops off once you cross the line. Worth targeting.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.pmiMonthly||'')}" oninput="updateAccField('${id}', 'pmiMonthly', this.value)"></div>
+                    <div>${_dLbl(base, 'Annual Homeowner Insurance', 'Protecting the asset', 'What the policy on the home costs for a full year. We spread it across twelve months for the escrow view, so the monthly figure and the yearly figure always tell the same story.')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.insAnnual||'')}" oninput="updateAccField('${id}', 'insAnnual', this.value)"></div>
                     <div>${_dLbl(base, 'Other (yr)', 'Everything else escrowed', 'Anything else that rides with this mortgage each year — flood insurance, lender-placed coverage, an extra assessment. Enter it here and it joins your true all-in monthly. Leave it blank and it simply won\'t count.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.mortgageOtherCost||'')}" oninput="updateAccField('${id}', 'mortgageOtherCost', this.value)"></div>
                 </div>
                 <div id="modal-escrow-foot-${id}" style="display:${hasEscrow(acc)?'block':'none'}; font-size:11px; color: rgba(255,255,255,0.72); line-height:1.5; margin-top:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;">${_escrowFooter(acc)}</div>
@@ -7536,7 +7547,7 @@
 
             html += `
                 <div style="display:flex; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 8px;">
-                    <span class="input-label" style="color:var(--white);">Total Monthly Payment</span>
+                    ${_sumLbl(base, base.title === 'Mortgage' ? 'Total Monthly Mortgage Payment' : 'Total Monthly Payment', 'Principal and interest only — the core of what you owe the lender each month, before taxes and insurance.', 'var(--white)')}
                     <span id="modal-calc-pmt-${id}" style="font-family: var(--font-mono); color: var(--danger); font-weight:bold;">$${calculateTotalPmt(acc).toLocaleString('en-US')}</span>
                 </div>
                 <div style="display:flex; justify-content: space-between;">
@@ -7546,15 +7557,10 @@
                 <div id="modal-payoff-intel-${id}">${_payoffIntelHTML(id, acc)}</div>
             </div>
             `;
-            // §15 education panel (Mortgage Copy Bank §15 R70, verbatim) — pay-down-vs-invest tension.
-            // Reuses the shared _diWhyPanel renderer (L48). §3b doctrine is embodied across the wired
+            // §15 education panel (Mortgage Copy Bank §15 R70) RELOCATED by §20 #8 — it now renders directly
+            // under the payment fields, above the escrow section. §3b doctrine is embodied across the wired
             // surfaces (equity · fixed-vs-variable · all-in monthly · accelerate-vs-invest), not printed
             // as meta-text — flagged for Captain.
-            if (base.title === 'Mortgage') {
-                html += _diWhyPanel('Should you pay it down, or invest the difference?', [
-                    ['The mortgage-vs-invest tension', 'A mortgage is the cheapest large loan most people ever get, and it\'s secured by an asset that can grow. That creates the classic tension: a guaranteed return equal to your rate (pay it down) versus an uncertain, historically-higher return (invest the difference). At a low fixed 3%, the math often favors investing — that cheap, locked-in rate is hard to pass up, and your dollars have historically earned more in the market than they\'d save against the loan. At a high 8% (or a variable rate that could climb), the reverse is usually true: paying it down is a guaranteed 8% return with zero risk — very hard to beat reliably anywhere else, so accelerating the payoff often wins. And closer to retirement, a paid-off house lowers the income you must generate every month for the rest of your life. There\'s also the part no spreadsheet captures: for some people, owning the home free and clear is worth more than the last dollar of return. Datum shows you both numbers and both truths. The choice is yours.']
-                ]);
-            }
         } else if (base.taxCode === 'physical' && !base.id.includes('collectibles')) {
             html += _linkControlHTML(id, acc, base);   // §18.3 (consolidated) — link/draft control + prominent 🔗 status
 
@@ -8745,6 +8751,18 @@
         }
         if (base.title !== 'Mortgage' || !body) return `<div class="input-label" style="${st}">${text}</div>`;
         return `<span class="input-label modal-tt-wrap" style="cursor:help;${st}">${text}<div class="modal-tt" style="${ttPos}"><strong>${title}</strong>${body}</div></span>`;
+    }
+
+    // §20.6 — summary-ROW label with the house .modal-tt hover (the _dLbl sibling: _dLbl labels an input,
+    // this labels a computed read-out). Two differences that matter: the summary rows are flex containers
+    // (label left, figure right), so the wrapper needs width:auto — .modal-tt-wrap's width:100% would squeeze
+    // the figure; and the rows carry their own colour, so it's passed in. Mortgage-only, exactly like _dLbl:
+    // every other debt room keeps its plain, unhovered label. Display-only (LOCK-3).
+    function _sumLbl(base, text, body, color) {
+        var st = 'color:' + color + ';';
+        if (!base || base.title !== 'Mortgage' || !body) return '<span class="input-label" style="' + st + '">' + text + '</span>';
+        return '<span class="input-label modal-tt-wrap" style="' + st + ' width:auto; cursor:help;">' + text +
+               '<div class="modal-tt" style="left:0; right:auto;"><strong>' + text + '</strong>' + body + '</div></span>';
     }
 
     // ── §0.4 THE CELLAR (HELOC) — revolving mechanics: credit limit, utilization, available headroom.
@@ -9984,6 +10002,7 @@
     // gated), and the amortization button. Every line sourced-or-blank. Shared across all secured debts.
     function _payoffIntelHTML(id, acc) {
         var out = '';
+        var _base = getBaseType(acc.baseId) || {};   // §20.6 — the renamed labels + hovers are Mortgage-only
         var li = lifetimeInterest(acc);   // REMAINING interest from today (exact)
         if (li !== null) {
             var _bal = parseFloat(acc.value) || 0;
@@ -9997,7 +10016,7 @@
                     <span style="font-family: var(--font-mono); color: var(--danger); font-weight:bold;">$${Math.round(li).toLocaleString('en-US')}</span>
                 </div>
                 <div style="display:flex; justify-content: space-between; margin-top:4px;">
-                    <span class="input-label" style="color:var(--white);">Remaining Cost</span>
+                    ${_sumLbl(_base, _base.title === 'Mortgage' ? 'Remaining Mortgage Cost' : 'Remaining Cost', 'Everything still ahead of you on the loan — the balance you still owe plus every dollar of interest left to pay. Pay it off today and this is the number you would make disappear.', 'var(--white)')}
                     <span style="font-family: var(--font-mono); color: var(--white); font-weight:bold;">$${Math.round(_bal + li).toLocaleString('en-US')}</span>
                 </div>`;
             if (_lol) {
