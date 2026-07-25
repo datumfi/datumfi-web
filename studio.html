@@ -7646,7 +7646,7 @@
                     <div id="modal-avm-addrpreview-${id}" style="font-family:var(--font-mono); font-size:11px; color:rgba(255,255,255,0.6); margin-top:4px;">${_addrComplete ? _joinAddr.replace(/</g,'&lt;') : '— enter street, city, state &amp; ZIP above —'}</div>
                     <div style="text-align:right; margin-top:8px;"><button id="avm-getbtn-${id}" class="add-space-btn" style="width:auto; padding:4px 10px; border:none; background:transparent; border-bottom:1px dashed var(--teal-mid); color:var(--teal-mid);" onclick="groundsVerifyAndEstimate('${id}')">Get estimate</button></div>
                     <div id="modal-avm-verify-${id}"></div>
-                    <div id="modal-avm-result-${id}">${acc._avmLast ? _groundsAvmResultHTML(id, acc._avmLast) : ''}</div>
+                    <div id="modal-avm-result-${id}">${(function(){ var _p = _groundsAvmFor(acc); return _p ? _groundsAvmResultHTML(id, _p) : ''; })()}</div>
                 </div>`;
                 }
                 html += `
@@ -7654,7 +7654,7 @@
             <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
                 <span class="toggle-label" style="color:var(--teal-mid);">Show carrying costs</span>
                 <label class="switch"><input type="checkbox" ${showCarry ? 'checked' : ''} onchange="updateAccToggle('${id}', 'showCarryCosts', this.checked)"><span class="slider"></span></label>
-                <div class="modal-tt"><strong>Carrying costs</strong>Everything it costs to simply keep this — taxes, insurance, upkeep, and the small recurring bills — separate from any loan payment.</div>
+                <div class="modal-tt"><strong>Carrying costs</strong>Everything it costs simply to keep this property — taxes, insurance, upkeep, and the small recurring bills — separate from any loan payment.</div>
             </div>`;
                 // §15 education panel — moved ABOVE the carrying-cost fields (item 4): read the why, THEN enter numbers.
                 html += _diWhyPanel('What is home equity — and why owning isn\'t free', [
@@ -9843,7 +9843,7 @@
         if (debt > 0) out += row('Linked Debt', $(debt), '<strong>Linked Debt</strong>The loans tied to this home — usually your mortgage. Link a debt up top and it shows here automatically; nothing linked, nothing owed.');
         if (val > 0) out += row('Net Equity', $(val - debt), '<strong>Net Equity</strong>What you’d keep if you sold today — the home’s value minus everything linked against it. For most homes this grows over time as you pay down the loan and the value climbs.');
         if (val > 0 && debt > 0) out += row('Loan-to-Value', Math.round(debt / val * 100) + '%', '<strong>Loan-to-Value</strong>How much of the home you still owe, as a share of its value. Lower is more cushion; it falls as you pay the loan down or the home appreciates.');
-        if (carry > 0) out += row('Annual Carrying Cost', $(carry) + '/yr', '<strong>Carrying cost</strong>Everything it costs to simply keep this — taxes, insurance, upkeep, and the small recurring bills — separate from any loan payment.');
+        if (carry > 0) out += row('Annual Carrying Cost', $(carry) + '/yr', '<strong>Carrying cost</strong>Everything it costs simply to keep this property — taxes, insurance, upkeep, and the small recurring bills — separate from any loan payment.');
         if (carry > 0 && val > 0) out += row('Cost-to-Value', (Math.round(carry / val * 1000) / 10) + '%', '<strong>Cost-to-Value</strong>What it costs each year just to hold this home, as a share of its value — a quick read on how expensive it is to simply keep, separate from any loan.');
         return out;
     }
@@ -9894,6 +9894,27 @@
 
     // ── GROUNDS VALUATION (§6/§6b activation) — address-driven AVM via the Datum Worker. Toggle OFF by
     // default; a returned est. NEVER overwrites the user's own figure without an explicit confirm (R76/R77).
+    // §6b.5 / R72–R73 — THE CACHE KEY. An estimate belongs to ONE address, and until now it was stored with no
+    // record of which: `acc._avmLast` was written on every fetch and rendered unconditionally, so editing the
+    // address (FL → CO) and re-running showed the PREVIOUS home's estimate. Worse, a confirmed not-found
+    // returns early, leaving the old estimate untouched and on screen next to a different address.
+    // Fix: normalize the address to a key, store it WITH the estimate, and render only on an exact key match.
+    // Normalizing (case + punctuation + whitespace folded) is what keeps the contract in R153 D honest —
+    // "same canonical address hits the de-dupe cache (~$0)" — so re-typing "St." as "st" still costs nothing,
+    // while a genuinely different address misses and makes exactly one real call.
+    function _avmAddrKey(s) { return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
+    function _groundsJoinedAddr(acc) {
+        var parts = [acc.propStreet, acc.propCity, acc.propState, acc.propZip].map(function (s) { return String(s || '').trim(); }).filter(Boolean);
+        return parts.length === 4 ? parts.join(', ') : '';
+    }
+    // The ONLY reader of a stored estimate. Returns it only when its key matches the address on screen RIGHT
+    // NOW; otherwise null, so a stale result can never be presented as belonging to a different home.
+    function _groundsAvmFor(acc) {
+        if (!acc || !acc._avmLast) return null;
+        var now = _avmAddrKey(acc.propAddress || _groundsJoinedAddr(acc));
+        if (!now) return null;
+        return (acc._avmLastKey && acc._avmLastKey === now) ? acc._avmLast : null;
+    }
     function _avmDate(iso) { var d = iso ? new Date(iso) : new Date(); if (isNaN(d)) d = new Date(); return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }); }
     function _avmNote(t) { return '<div style="font-size:11px; color: rgba(255,255,255,0.5); margin-top:8px;">' + t + '</div>'; }
     // One comp row — sourced-or-blank per field (address · price · beds/baths/sqft · distance · sale date).
@@ -9967,6 +9988,11 @@
         if (!acc || !el) return;
         var parts = [acc.propStreet, acc.propCity, acc.propState, acc.propZip].map(function (s) { return String(s || '').trim(); }).filter(Boolean);
         el.textContent = (parts.length === 4) ? parts.join(', ') : '— enter street, city, state & ZIP above —';
+        // Ask 1 — invalidate ON EDIT, not just on reopen. The valuation section is rendered once on open, so
+        // without this the previous home's estimate sits on screen under a freshly-typed address until the
+        // modal is closed. Silence is the honest state between an address change and a new lookup.
+        var res = document.getElementById('modal-avm-result-' + id);
+        if (res && res.innerHTML && !_groundsAvmFor(acc)) res.innerHTML = '';
     };
     // §A135 — verify-then-estimate. Join the structured address, free US-Census confirm-exists, and ONLY a
     // verified address feeds RentCast; a not-found result BLOCKS the paid call and shows R149.
@@ -9983,6 +10009,10 @@
         var v = await _AssetIntel.verifyAddress(joined);
         if (v && v.status === 'not-found') {
             // R149 — Census CONFIRMED no such address: BLOCK the paid call (this is a typo). Nothing paid fires.
+            // AND DROP THE PREVIOUS ESTIMATE. This early return is how the stale figure survived: the old
+            // estimate stayed on acc and re-rendered beside an address it never described. A failed lookup must
+            // leave nothing behind — better an empty section than a confident number for the wrong home.
+            acc._avmLast = null; acc._avmLastKey = '';
             if (vEl) vEl.innerHTML = '<div style="font-size:12px; color: rgba(240,200,120,0.92); margin-top:8px; line-height:1.5;">Hmm — we couldn’t confirm that address. Check the street, city, state, and ZIP for a typo, or enter it the way it appears on your mail. We only look up real, findable homes — no guesses, no wasted lookups.</div>';
             return;
         }
@@ -9995,6 +10025,9 @@
         var r = await _AssetIntel.fetchEstimate(acc.propAddress);
         acc._avmLast = r;   // #260 — persist the last estimate so range + comps survive the accept re-render
                             // and modal close/reopen; only a FRESH Get-estimate replaces it.
+        // …and STAMP IT WITH THE ADDRESS IT DESCRIBES (Ask 1). Without this the estimate is unkeyed and
+        // outlives the address that produced it. Keyed off the canonical form actually sent to the Worker.
+        acc._avmLastKey = _avmAddrKey(acc.propAddress);
         var rEl2 = document.getElementById('modal-avm-result-' + id);   // re-check (modal may have closed)
         if (rEl2) rEl2.innerHTML = _groundsAvmResultHTML(id, r);
     };
@@ -10882,7 +10915,7 @@
         var secA = '<div class="yard-sec">' + secHead('🏡', prop.id, 'The Property', 'Home value, net equity, and the carrying costs of simply keeping the home.') +
             row('Home value', _num(prop.value) > 0 ? $(_num(prop.value)) : '—') +
             row(hov('Net Equity', 'What you’d keep if you sold today — the home’s value minus everything linked against it (all mortgages and lines). For most homes this grows over time as you pay down the loans and the value climbs.'), netEq != null ? $(netEq) : '—', (netEq != null && netEq < 0) ? 'var(--danger)' : 'var(--teal-mid)') +
-            row(hov('Annual carrying cost', 'Everything it costs to simply keep this home — taxes, insurance, upkeep, and the small recurring bills — separate from any loan payment.'), carryAnnual > 0 ? $(carryAnnual) + '/yr' : '—') + '</div>';
+            row(hov('Annual carrying cost', 'Everything it costs simply to keep this property — taxes, insurance, upkeep, and the small recurring bills — separate from any loan payment.'), carryAnnual > 0 ? $(carryAnnual) + '/yr' : '—') + '</div>';
         // Section B — 🏰 The Mortgage (reuse Mortgage §0.3b) — only when a mortgage links
         var secB = m ? ('<div class="yard-sec">' + secHead('🏰', m.id, 'The Mortgage', 'The debt that guards the house — its balance, its rate, the principal-and-interest you pay each month, and the escrow bundle riding alongside it.') +
             row('Balance', $(_num(m.value))) + row('APR', (parseFloat(m.intRate) || 0) > 0 ? (parseFloat(m.intRate) + '%') : '—') +
