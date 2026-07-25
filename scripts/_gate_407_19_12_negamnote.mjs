@@ -82,7 +82,9 @@ function buildAmort(body) {
 }
 
 const txt = (h) => String(h).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
-const NOTE = "At this payment, the balance isn't shrinking — so there's no payoff figure to show yet. Nudge the payment above the monthly interest and these fill in.";
+// VERBATIM against the copy of record, Mortgage Copy Bank C230 — typographic apostrophes (U+2019) included.
+// Normalized #432: the live strings now match the bank character-for-character, so this constant must too.
+const NOTE = "At this payment, the balance isn’t shrinking — so there’s no payoff figure to show yet. Nudge the payment above the monthly interest and these fill in.";
 
 // One fully-sourced mortgage. $400k orig / $300k balance / 6% => interest is $1,500/mo, so the payment alone
 // decides the state: 500 = NEGAM, 3000 = OK. Every other field is held constant.

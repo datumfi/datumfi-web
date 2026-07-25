@@ -62,7 +62,8 @@ function build(body) {
   )(gbt, () => null, () => false, () => 0);
 }
 
-const NOTE  = 'no "paid-down" slice to chart yet';
+// VERBATIM against Mortgage Copy Bank C231 — typographic quotes (U+201C/U+201D) included, normalized #432.
+const NOTE  = 'no “paid-down” slice to chart yet';
 const NUDGE = 'the payoff pie needs it to split principal from interest';
 const LEVER = 'Once the balance drops back under the starting amount, the picture fills in.';
 

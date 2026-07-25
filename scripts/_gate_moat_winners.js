@@ -190,6 +190,10 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   ok(has(R.mFill, "kept out of the bank's pocket"), '§5.4 tradeoff caption present (toggle ON)');
   ok(pick(!has(R.mBlank, 'Lifetime Interest'), has(R.mBlank, 'Lifetime Interest')), 'Lifetime interest OMITTED when no payment (sourced-or-blank) [BITE]');
   ok(has(R.mFill, '📊 VIEW AMORTIZATION SCHEDULE'), 'Amortization button present');
+  // §20.1 (Commit 6) — the lump what-if panel, held at whole-room level in a REAL browser.
+  ok(has(R.mFill, 'What would extra do?') && has(R.mFill, 'One-time extra payment'), '§20.1 lump panel + input render on the Mortgage modal');
+  ok(has(T.mFill, 'Drop in a one-time lump'), '§20.1 EPHEMERAL: a freshly opened modal shows the empty state (nothing persisted)');
+  ok(pick(!has(R.aBlank, 'What would extra do?'), has(R.aBlank, 'What would extra do?')), '§20.1 lump panel ABSENT on Auto-debt (mortgage-only) [BITE]');
   ok(has(R.mFill, 'December 2041'), 'Expected Payoff Date non-breaking (Dec 2041 at $2,500/mo)');
   ok(R.amortBtnFound && has(R.amortFill, 'Amortization Schedule') && has(R.amortFill, 'Principal') && has(R.amortFill, 'Interest'), 'Amort button CLICK renders brand table (filled)');
   ok(R.amortDisp === 'flex', 'Amort overlay is display:flex after click');

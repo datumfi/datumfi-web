@@ -1126,6 +1126,13 @@
      Deliberately NOT warning-tinted: .moat-negam-inline already shouts the numbers under the payment field,
      so a second red block would double-shout the same fact. Slim, informational, sits in the row list. */
   .moat-summary-note { margin-top: 8px; padding: 8px 11px; border-top: 1px dashed rgba(255,255,255,0.1); font-size: 11.5px; line-height: 1.5; color: rgba(255,255,255,0.66); }
+  /* §20.1 — the "what would extra do?" what-if panel. Its own chrome so it reads as a TOOL you drive, distinct
+     from the sourced fields above it; the result is teal (a gain), the empty state and the §20.1a note are quiet. */
+  .moat-lump-panel { margin-top: 16px; padding: 14px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 4px; }
+  .moat-lump-head { color: var(--teal-mid); font-weight: bold; font-size: 13px; margin-bottom: 10px; }
+  .moat-lump-empty { font-size: 11.5px; line-height: 1.5; color: rgba(255,255,255,0.55); margin-top: 4px; }
+  .moat-lump-result { font-size: 11.5px; line-height: 1.55; color: var(--teal-mid); margin-top: 8px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px; }
+  .moat-lump-bridge { color: rgba(255,255,255,0.66); }
   .holding-input { width: 100%; min-width: 0; box-sizing: border-box; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: var(--white); font-family: var(--font-mono); font-size: 11px; padding: 4px; border-radius: 2px; }
   .holding-input:focus { border-color: var(--teal-mid); outline: none; }
   /* kill number spinners so 2-decimal values never clip in narrow columns */
@@ -6670,6 +6677,9 @@
         activeModalId = id;
         const acc = state.accounts.find(a => a.id === id);
         if(!acc) return;
+        // §20.1 — the lump what-if is EPHEMERAL (ruling #432). Cleared on every open so it can never carry
+        // between accounts or survive a close: it is a question the user asked, not a fact about the loan.
+        _moatLumpWhatIf = '';
         const base = getBaseType(acc.baseId);
         
         _diSetTitle(acc, base);   // §2 title hover for bank rooms; plain title otherwise
@@ -7509,10 +7519,14 @@
             ${String(base.id).indexOf('mortgage') === 0 ? `<div id="modal-moat-negam-${id}">${_moatNegAmInlineHTML(acc)}</div>` : ''}
             ${base.title === 'HELOC' ? `<div id="modal-heloc-draw-${id}">${_helocDrawInlineHTML(acc)}</div>` : ''}`;
 
+            // §20.1 (Commit 6) — the "what would extra do?" calculator lands HERE, between the payment fields
+            // above and the pay-down-vs-invest panel below: you ask the what-if right under the lever, and the
+            // panel that argues the tradeoff reads immediately after the number it is arguing about.
+            if (base.title === 'Mortgage') html += _moatLumpBlockHTML(id, acc);
+
             // §20 #8 — the pay-down-vs-invest panel moves UP to sit directly under the payment fields, where
             // the decision is actually made (the Additional Payment box is the lever the panel argues about).
-            // It used to close the modal, hundreds of pixels below the field it speaks to. §20.1's "what would
-            // extra do?" calculator lands between them in Commit 6. Verbatim §15 copy (Mortgage Copy Bank R70)
+            // It used to close the modal, hundreds of pixels below the field it speaks to. Verbatim §15 copy (Mortgage Copy Bank R70)
             // — RELOCATION ONLY, not one character of the panel changed (LOCK-3). Reuses _diWhyPanel (L48).
             if (base.title === 'Mortgage') {
                 html += _diWhyPanel('Should you pay it down, or invest the difference?', [
@@ -10143,6 +10157,83 @@
         return { date: _payoffDateFrom(acc, accM.months), monthsSaved: baseM.months - accM.months, interestSaved: Math.max(0, baseLI - accLI) };
     }
 
+    // ═══ §20.1 "WHAT WOULD EXTRA DO?" — ONE-TIME LUMP PROJECTION (Commit 6, Architect rulings #431/#432) ═══
+    // EPHEMERAL BY RULING: a what-if is NOT a record that a payment was made. Persisting it would silently imply
+    // the loan changed and would fight sourced-or-blank (L47), so this lives in module state, is reset every time
+    // a modal opens, and writes NOTHING to the account JSON. Same shape as _moatEscrowView (L48) except that one
+    // deliberately persists across opens — a view preference may; a what-if figure may not.
+    var _moatLumpWhatIf = '';
+    // THE ACC-CLONE RULE (L48, the whole reason this is ~10 lines and not a second amortizer): project by handing
+    // the EXISTING engine a copy of the account with the balance reduced. It therefore inherits PAID / NOPMT /
+    // NEGAM / GLACIAL suppression for free — a forked amortizer would have to re-implement every one of those and
+    // would drift from the room the first time one changed.
+    // #379 — the baseline and the clone must BOTH be OK before anything is subtracted. Under NEGAM the baseline
+    // payoff is INFINITE, so a lump big enough to flip the clone to OK would be a finite number minus an infinite
+    // one: not a smaller figure, an undefined one. Never subtract across bases; return null and let §20.1a speak.
+    function _moatLumpProjection(acc, lump) {
+        var amt = parseFloat(lump) || 0;
+        var bal = parseFloat(acc.value) || 0;
+        if (amt <= 0 || bal <= 0) return null;                       // sourced-or-blank: no input, no block
+        var base = payoffMonths(acc);
+        if (base.code !== 'OK') return null;                          // no finite baseline to measure against
+        var clone = Object.assign({}, acc, { value: Math.max(0, bal - amt) });
+        var after = payoffMonths(clone);
+        if (after.code !== 'OK' && after.code !== 'PAID') return null;
+        var baseLI = lifetimeInterest(acc), afterLI = (after.code === 'PAID') ? 0 : lifetimeInterest(clone);
+        if (baseLI === null || afterLI === null) return null;
+        return { lump: amt, paysOff: after.code === 'PAID',
+                 monthsSaved: base.months - (after.code === 'PAID' ? 0 : after.months),
+                 interestSaved: Math.max(0, baseLI - afterLI) };
+    }
+    // §20.1 result block. Copy VERBATIM from Mortgage Copy Bank C210 (header + empty state), C212 (result + the
+    // pay-down-vs-invest bridge) and C232 (§20.1a). C211's extra-MONTHLY string is AUTHORED-NOT-WIRED by ruling
+    // #432: §1.8 already speaks the recurring "extra $X/mo" fact, and wiring C211 here would restate it verbatim.
+    // This tool speaks a DIFFERENT fact — a one-time principal reduction. Mortgage-only. Display-only (LOCK-3).
+    function _moatLumpBodyHTML(acc) {
+        var p = _moatLumpProjection(acc, _moatLumpWhatIf);
+        var body;
+        if (p) {
+            var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
+            var rate = parseFloat(acc.intRate) || 0;
+            var lead = p.paysOff
+                ? 'A one-time ' + $(p.lump) + ' today clears the loan outright — about ' + p.monthsSaved + ' months sooner, and around ' + $(p.interestSaved) + ' in interest you never pay.'
+                : 'A one-time ' + $(p.lump) + ' today clears the loan about ' + p.monthsSaved + ' months sooner and saves around ' + $(p.interestSaved) + ' in interest — money that otherwise leaves your pocket as interest.';
+            body = '<div class="moat-lump-result">' + lead +
+                   // BRIDGE is sourced-or-blank on its own token: no rate, no rate sentence (C221).
+                   (rate > 0 ? ' <span class="moat-lump-bridge">Guaranteed, tax-free, equal to your ' + rate + '% rate — that is what paying down returns. Compare it to what the same dollars might earn invested, and let the gap (not a rule of thumb) decide.</span>' : '') +
+                   '</div>';
+        } else if ((parseFloat(_moatLumpWhatIf) || 0) > 0 && payoffMonths(acc).code === 'NEGAM') {
+            // §20.1a — NEGAM ONLY. The figure is correctly withheld (no finite baseline), but the same doctrine as
+            // §19.12 / §19.9c applies to the silence. PAID / NOPMT / GLACIAL keep their own voices: they fall
+            // through to the empty state rather than double-voicing a fact another surface already owns.
+            body = '<div class="moat-summary-note">Right now the balance is still growing, so there’s no steady payoff date to move yet — which means we can’t put a months-or-dollars number on a one-time payment. Get the payment above the point where the balance starts falling, and this projection comes to life.</div>';
+        } else {
+            body = '<div class="moat-lump-empty">Drop in a one-time lump, or an extra bit each month, and see exactly what it buys you — in months off the loan and dollars of interest you never pay.</div>';
+        }
+        return body;
+    }
+    function _moatLumpBlockHTML(id, acc) {
+        if ((getBaseType(acc.baseId) || {}).title !== 'Mortgage') return '';
+        return '<div class="moat-lump-panel">' +
+               '<div class="moat-lump-head">What would extra do?</div>' +
+               '<div class="field-row" style="grid-template-columns: 1fr;"><div>' +
+               _dLbl(getBaseType(acc.baseId) || {}, 'One-time extra payment', 'A what-if, not a payment',
+                     'A single lump you could put toward the loan today. This is a what-if — we show what it would buy you and change nothing on your account.') +
+               '<input type="text" class="small-field curr-format" placeholder="$0" value="' +
+               formatCurrencyDisplay(_moatLumpWhatIf === '' ? '' : _moatLumpWhatIf) +
+               '" oninput="_moatLumpEdit(\'' + id + '\', this.value)"></div></div>' +
+               '<div id="modal-moat-lump-out-' + id + '">' + _moatLumpBodyHTML(acc) + '</div></div>';
+    }
+    // The RESULT lives in its own container so typing re-renders the projection WITHOUT re-rendering the input
+    // under the user's cursor (the §20.7 "no re-render, keeps input focus" rule, L48).
+    window._moatLumpEdit = function (id, value) {
+        _moatLumpWhatIf = window.enforceAmt(value);   // decimal-safe digits, non-negative — same parse as every amount field
+        var acc = state.accounts.find(function (a) { return a.id === id; });
+        if (!acc) return;
+        var host = document.getElementById('modal-moat-lump-out-' + id);
+        if (host) host.innerHTML = _moatLumpBodyHTML(acc);
+    };
+
     // §4.2/§4.3/§7 payoff-intelligence block — lifetime interest, all-in cost, accelerated delta (toggle-
     // gated), and the amortization button. Every line sourced-or-blank. Shared across all secured debts.
     function _payoffIntelHTML(id, acc) {
@@ -10187,7 +10278,7 @@
         // holds above the state itself: no rate or no balance → nothing at all.
         if (li === null && payoffMonths(acc).code === 'NEGAM'
             && (parseFloat(acc.intRate) || 0) > 0 && (parseFloat(acc.value) || 0) > 0) {
-            out += '<div class="moat-summary-note">At this payment, the balance isn\'t shrinking — so there\'s no payoff figure to show yet. Nudge the payment above the monthly interest and these fill in.</div>';
+            out += '<div class="moat-summary-note">At this payment, the balance isn’t shrinking — so there’s no payoff figure to show yet. Nudge the payment above the monthly interest and these fill in.</div>';
         }
         // §4.3/§5.4 accelerated delta — toggle-gated. NOTE: Expected Payoff Date already reflects the
         // additional payment (calculateTotalPmt = min+add), so the accelerated DATE equals it; we surface
@@ -10313,7 +10404,7 @@
         // note would misdescribe it. Mutually exclusive with the nudge above (_orig <= 0 vs _orig > 0) — the two
         // can never both speak. Not red: this is information, not alarm. Display-only (LOCK-3).
         if (!pie && _orig > 0 && _bal > _orig && _isMortgage) {
-            return '<div class="moat-pie-nudge">You\'ve borrowed more than the original loan, so there\'s no "paid-down" slice to chart yet. Once the balance drops back under the starting amount, the picture fills in.</div>';
+            return '<div class="moat-pie-nudge">You’ve borrowed more than the original loan, so there’s no “paid-down” slice to chart yet. Once the balance drops back under the starting amount, the picture fills in.</div>';
         }
         return pie;
     }
