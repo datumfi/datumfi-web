@@ -7460,6 +7460,7 @@
             <div class="di-narrative">
                 <div class="di-narr-head">Datum Intelligence</div>
                 <div class="di-narr-body" id="modal-moat-di-${id}">${_diTxt || 'Add this loan\'s balance, rate, and payment and Datum reads it back — the payoff clock, the lifetime interest, and the equity behind it.'}</div>
+                <div id="modal-moat-intel-${id}" class="di-narr-body" style="margin-top:8px;">${_diIntelligence(acc)}</div>
             </div>`;
             }
 
@@ -7553,6 +7554,9 @@
                 <div id="modal-escrow-foot-${id}" style="display:${hasEscrow(acc)?'block':'none'}; font-size:11px; color: rgba(255,255,255,0.72); line-height:1.5; margin-top:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;">${_escrowFooter(acc)}</div>
             </div>`;
                 html += '<div id="modal-pmi-bar-' + id + '">' + _moatPmiBarHTML(id, acc) + '</div>';   // §18.9 — always-present container so the bar can appear / update / vanish live
+                // §21.4 — the two deductibility inputs sit directly under escrow, where the other tax-flavoured
+                // figures (property tax, insurance) already live, so the whole tax picture reads in one place.
+                html += _moatTaxFieldsHTML(id, acc);
             }
 
             html += `
@@ -7976,7 +7980,7 @@
             // §20.4 insCoverageAmount joins this list for STORE hygiene only (decimal-safe, non-negative,
             // $100B ceiling) — it is a display-only field (LOCK-3) and is read by NO total: not
             // calculateEscrowMonthly, not hasEscrow, not the DI, not the payoff math.
-            if(field === 'origAmount' || field === 'minPmt' || field === 'addPmt' || field === 'propTaxAnnual' || field === 'insAnnual' || field === 'pmiMonthly' || field === 'propTaxYr' || field === 'homeInsYr' || field === 'maintYr' || field === 'hoaYr' || field === 'utilYr' || field === 'helocCreditLimit' || field === 'cltvCapPct' || field === 'mortgageOtherCost' || field === 'interestPaidToDate' || field === 'insCoverageAmount') {
+            if(field === 'origAmount' || field === 'minPmt' || field === 'addPmt' || field === 'propTaxAnnual' || field === 'insAnnual' || field === 'pmiMonthly' || field === 'propTaxYr' || field === 'homeInsYr' || field === 'maintYr' || field === 'hoaYr' || field === 'utilYr' || field === 'helocCreditLimit' || field === 'cltvCapPct' || field === 'mortgageOtherCost' || field === 'interestPaidToDate' || field === 'insCoverageAmount' || field === 'mortgageInterestPaidYr') {
                 acc[field] = window.enforceAmt(value);   // #393 non-negative + $100B ceiling
             } else if (field === 'intRate' || field === 'cola') {
                 acc[field] = parseFloat(value) || 0;
@@ -8063,6 +8067,9 @@
                 // §1 Moat DI — live recompose (sourced-or-blank).
                 const diEl = document.getElementById(`modal-moat-di-${id}`);
                 if(diEl) diEl.innerHTML = _moatDI(acc) || 'Add this loan\'s balance, rate, and payment and Datum reads it back — the payoff clock, the lifetime interest, and the equity behind it.';
+                // §21 — Moat intelligence layer (deductibility), live as the two tax inputs move.
+                const mintEl = document.getElementById(`modal-moat-intel-${id}`);
+                if(mintEl) mintEl.innerHTML = _diIntelligence(acc);
                 // §19.9 — inline neg-am notice under the Minimum Payment field, live as the payment/balance/rate move.
                 const negEl = document.getElementById(`modal-moat-negam-${id}`);
                 if(negEl) negEl.innerHTML = _moatNegAmInlineHTML(acc);
@@ -8185,6 +8192,10 @@
                 // §1 Moat DI — live recompose on balance change (equity + payoff shift).
                 const diEl2 = document.getElementById(`modal-moat-di-${id}`);
                 if(diEl2) diEl2.innerHTML = _moatDI(acc) || 'Add this loan\'s balance, rate, and payment and Datum reads it back — the payoff clock, the lifetime interest, and the equity behind it.';
+                // §21 — Moat intelligence layer refresh on the balance path too (D18 bilateral hydration: both
+                // refresh sites must carry the same set, or the beat updates on one path and goes stale on the other).
+                const mintEl2 = document.getElementById(`modal-moat-intel-${id}`);
+                if(mintEl2) mintEl2.innerHTML = _diIntelligence(acc);
                 // §19.9 — inline neg-am notice refresh on balance change (balance moves the interest line too).
                 const negEl2 = document.getElementById(`modal-moat-negam-${id}`);
                 if(negEl2) negEl2.innerHTML = _moatNegAmInlineHTML(acc);
@@ -9013,6 +9024,28 @@
             </div>`;
     }
 
+    // §21.4 — the two SOURCED inputs the deductibility beat needs. Neither existed: the Dossier carries filing
+    // status but nothing anywhere records whether the household ITEMIZES, and the mortgage's live
+    // interestPaidToDate is cumulative SINCE INCEPTION (§19.2b) — a different figure from LAST YEAR's interest,
+    // so reusing it for §21.3 would misstate the number. Both are optional/progressive in the §19.2 Use-of-Funds
+    // shape (L48): blank leaves §21 dark rather than nagging for tax paperwork. Display-only (LOCK-3) — neither
+    // feeds a total, an engine figure, or taxCode. Historical-sourced, never computed (#379).
+    function _moatTaxFieldsHTML(id, acc) {
+        if ((getBaseType(acc.baseId) || {}).title !== 'Mortgage') return '';
+        var it = acc.mortgageItemizes || '';
+        return `
+            <div class="field-row">
+                <div>${_dLbl(getBaseType(acc.baseId), 'Deductions', 'How you file', 'Whether your household itemizes deductions or takes the standard deduction. It decides whether mortgage interest changes your tax bill at all — most households take the standard deduction, and then it does not. Optional; leave it blank and Datum stays quiet on tax.')}
+                    <select class="small-field" style="background: var(--bg-navy);" onchange="updateAccField('${id}', 'mortgageItemizes', this.value)">
+                        <option value="">Select… (optional)</option>
+                        <option value="Itemize" ${it === 'Itemize' ? 'selected' : ''}>We itemize</option>
+                        <option value="Standard" ${it === 'Standard' ? 'selected' : ''}>We take the standard deduction</option>
+                    </select>
+                </div>
+                <div>${_dLbl(getBaseType(acc.baseId), 'Mortgage Interest Paid (last yr)', 'From your 1098', 'The mortgage interest your lender reported for last year — Box 1 of the Form 1098 they send you. Sourced straight off that form, never estimated, because only the statement knows the real figure. It is used solely to describe your deduction; it changes no other number here.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.mortgageInterestPaidYr||'')}" oninput="updateAccField('${id}', 'mortgageInterestPaidYr', this.value)"></div>
+            </div>`;
+    }
+
     // §1 THE CELLAR (HELOC) — Datum Intelligence signal strip. Composed part-by-part like _moatDI (L48),
     // every clause SOURCED-OR-BLANK (L47 — an unset field's clause simply never pushes; no $0/NaN/undefined).
     // Signals verbatim from bank §1: 1.1 balance+limit · 1.2 secured-by-home (ALWAYS) · 1.3 utilization ·
@@ -9299,9 +9332,47 @@
     }
     // §16.7 shared intelligence renderer — a VISUALLY DISTINCT sub-block under the §1 summary (top rule +
     // 'What this means for you' subhead + a ▸ per composed beat). Per-room beat tables plug in; '' if none fire.
+    // ═══ §21 MORTGAGE-INTEREST DEDUCTIBILITY (Captain GO via Architect #439; bank rows 223–228) ═══
+    // THE LIABILITY BEAT: over-precision here is a real risk, so every clause hedges ("may be" / "depends on" /
+    // "worth confirming with your tax advisor") and NO dollar of tax saving is ever stated as fact.
+    //
+    // ON L48 — what is and is not reusable, stated plainly because the bank's wiring note assumed a helper:
+    // there is no shared deductibility helper to consume. HELOC §19.2 is an inline branch on helocUsePurpose,
+    // and the two rooms answer DIFFERENT tax questions — a HELOC's deductibility turns on USE OF FUNDS (TCJA
+    // buy/build/improve), a mortgage's turns on ITEMIZE-vs-STANDARD. One mechanism cannot answer both without
+    // lying about one of them. What IS reused: the §16.7 renderer (_diIntelligence, which exists precisely so
+    // per-room beat tables plug in), the sourced-select → verbatim-beat SHAPE, and the advisor-deferring voice.
+    function _moatDeductBeats(acc) {
+        var beats = [];
+        var itemizes = acc.mortgageItemizes || '';                 // '' | 'Itemize' | 'Standard'
+        var paidYr = parseFloat(acc.mortgageInterestPaidYr) || 0;   // SOURCED off Form 1098 — never computed (#379)
+        // §21.4 GATE: nothing sourced → §21 is FULLY SILENT. No beat, and deliberately no nudge-to-figure: a
+        // prompt to go find tax paperwork is exactly the form fatigue §19.2 was designed to avoid (L47).
+        if (!itemizes && paidYr <= 0) return beats;
+        // §21.1 — the general truth. Renders whenever anything is sourced; carries the honesty on its own.
+        beats.push('Mortgage interest may be deductible — but only the part of it that, together with your other itemized deductions, rises above the standard deduction. Below that line it doesn\'t change your tax; above it, each dollar of mortgage interest starts to count. Whether you clear that line depends on your filing status and your other deductions — worth confirming with your tax advisor.');
+        // §21.2 — the honest crossover. SOURCED-OR-BLANK: silent unless the itemize posture is sourced, because
+        // this is the "your interest may buy you nothing at tax time" half and it must not be guessed at.
+        // The SALT cap is named as a plain phrase, never a number — the figure changes by law year.
+        if (itemizes) {
+            beats.push('Most homeowners take the standard deduction, in which case mortgage interest doesn\'t lower their taxes at all. It only helps once your itemized deductions — mortgage interest, state and local taxes (capped), charitable gifts — add up to more than the standard deduction for your filing status.');
+        }
+        // §21.3 — the affirming line. ONLY when the user actually itemizes AND the interest figure is sourced.
+        // Benefit is expressed as "that interest times your tax rate", never as a dollar saving (liability).
+        if (itemizes === 'Itemize' && paidYr > 0) {
+            beats.push('Because you itemize, the interest on this mortgage — about $' + Math.round(paidYr).toLocaleString('en-US') + ' last year — is likely working as a deduction for you. Your actual benefit is that interest times your tax rate, not the full amount. Your tax advisor can confirm the exact figure.');
+        }
+        return beats;
+    }
+    // The Moat's beat table for the §16.7 renderer. §21 is its first entry; future Moat cross-beats append here
+    // rather than forking a second renderer.
+    function _moatIntelBeats(acc) {
+        return _moatDeductBeats(acc);
+    }
     function _diIntelligence(acc) {
         var base = getBaseType(acc.baseId);
-        var beats = (base && base.title === 'HELOC') ? _helocIntelBeats(acc) : [];
+        var beats = (base && base.title === 'HELOC') ? _helocIntelBeats(acc)
+                  : (base && base.title === 'Mortgage') ? _moatIntelBeats(acc) : [];
         if (!beats.length) return '';
         var rows = beats.map(function (b) {
             return '<div style="display:flex; gap:8px; margin-top:8px; line-height:1.5;"><span style="color:var(--teal-mid); flex:0 0 auto;">▸</span><span>' + b + '</span></div>';

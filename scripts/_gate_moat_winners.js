@@ -122,6 +122,12 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     // Created AFTER mDated is resolved so it cannot steal the ordinary from-inception assertions above.
     out.mPastTerm = grab('mortgage_joint', { value: 17500, origAmount: '212111', intRate: 3.99,
       origDate: '2000-01-01', maturityDate: '2020-01-01', minPmt: '1284', interestPaidToDate: '31684.35' });
+    // §21 deductibility — the two sourced postures. interestPaidToDate is present on BOTH so the whole-room
+    // gate also proves §21.3 reads the LAST-YEAR field and not the since-inception one.
+    out.mItemize = grab('mortgage_joint', { value: 300000, origAmount: '400000', intRate: 6, minPmt: '2500',
+      interestPaidToDate: '31684.35', mortgageItemizes: 'Itemize', mortgageInterestPaidYr: '9800' });
+    out.mStandard = grab('mortgage_joint', { value: 300000, origAmount: '400000', intRate: 6, minPmt: '2500',
+      interestPaidToDate: '31684.35', mortgageItemizes: 'Standard', mortgageInterestPaidYr: '9800' });
     var mPast = window.state.accounts.filter(function (x) { return x.baseId === 'mortgage_joint' && x.origDate === '2000-01-01'; }).pop();
     out.amortPastTerm = mPast ? clickAmort(mPast, 'VIEW COMPLETE').html : '';
     out.amortPastTermRemaining = mPast ? clickAmort(mPast, 'VIEW REMAINING').html : '';
@@ -228,6 +234,22 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   ok(pick(!has(T.amortPastTermRemaining, 'come and gone'), has(T.amortPastTermRemaining, 'come and gone')),
      '§20.2b ABSENT in REMAINING mode (backward fact, forward number) [BITE]');
   ok(has(R.amortPastTerm, 'Contract total — what the level schedule implies'), '§20.2b does not displace the §20.2a totals label');
+  // ===== §21 MORTGAGE-INTEREST DEDUCTIBILITY (the Moat's last gap) =====
+  lines.push('===== §21 DEDUCTIBILITY =====');
+  ok(has(R.mFill, 'Mortgage Interest Paid (last yr)') && has(R.mFill, 'We take the standard deduction'), '§21.4 both sourced inputs render on the Mortgage modal');
+  ok(has(T.mItemize, 'Mortgage interest may be deductible') && has(T.mItemize, "mortgage interest doesn't lower their taxes at all"),
+     '§21.1 + §21.2 render when the posture is sourced');
+  ok(has(T.mItemize, 'Because you itemize, the interest on this mortgage — about $9,800 last year'), '§21.3 affirming line uses the SOURCED last-year figure');
+  // SCOPED to the §21.3 SENTENCE: $31,684 legitimately appears elsewhere on this modal as the §20.6
+  // "Total Interest Paid" row (interestPaidToDate is a real wired field). A whole-modal check would fail
+  // on a correct room — the claim under test is only that §21.3 reads the LAST-YEAR figure.
+  ok((function () {
+    var m = /Because you itemize[\s\S]*?confirm the exact figure\./.exec(T.mItemize);
+    return !!m && m[0].indexOf('9,800') >= 0 && m[0].indexOf('31,684') === -1;
+  })(), '§21.3 sentence reads the last-year figure, NOT interestPaidToDate');
+  ok(pick(!has(T.mStandard, 'Because you itemize'), has(T.mStandard, 'Because you itemize')), '§21.3 ABSENT for a standard-deduction filer [BITE]');
+  ok(pick(!has(T.mFill, 'Mortgage interest may be deductible'), has(T.mFill, 'Mortgage interest may be deductible')), '§21 SILENT when nothing is sourced (L47) [BITE]');
+  ok(has(T.mItemize, 'worth confirming with your tax advisor') && !/deduct this|you should itemize/i.test(T.mItemize), '§21 liability voice: hedged, never instructing');
   // §20.1 (Commit 6) — the lump what-if panel, held at whole-room level in a REAL browser.
   ok(has(R.mFill, 'What would extra do?') && has(R.mFill, 'One-time extra payment'), '§20.1 lump panel + input render on the Mortgage modal');
   ok(has(T.mFill, 'Drop in a one-time lump'), '§20.1 EPHEMERAL: a freshly opened modal shows the empty state (nothing persisted)');
