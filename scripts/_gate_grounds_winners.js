@@ -266,7 +266,9 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   // ===== G1 · §4 CARRYING-COST FIELDS + §5 TOGGLES =====
   lines.push('===== G1 · §4 CARRYING COSTS + §5 TOGGLES =====');
   ok(has(R.gFill, 'Show carrying costs') && has(R.gFill, 'Include in Datum Builder'), '§5 toggles (Show carrying costs · Include in Datum Builder)');
-  ok(has(R.gFill, 'Property Tax (yr)') && has(R.gFill, 'Homeowners / Hazard Insurance (yr)') && has(R.gFill, 'Est. Maintenance / Repairs (yr)') && has(R.gFill, 'HOA / Condo Fees (yr)') && has(R.gFill, 'Utilities — electric / gas / water (yr)'), '§4.1-4.5 all carrying-cost fields render');
+  // §20.4 SYNC: the Grounds insurance label now matches the Moat's ('Annual Homeowner Insurance') — same
+  // mirrored figure, same label on both surfaces (Property Copy Bank A26 / §18.2 D1 unification).
+  ok(has(R.gFill, 'Property Tax (yr)') && has(R.gFill, 'Annual Homeowner Insurance') && has(R.gFill, 'Est. Maintenance / Repairs (yr)') && has(R.gFill, 'HOA / Condo Fees (yr)') && has(R.gFill, 'Utilities — electric / gas / water (yr)'), '§4.1-4.5 all carrying-cost fields render');
   ok(has(R.gFill, 'Total Annual Carrying Cost') && has(R.gFill, '$16,800'), '§4.16 TOTAL = $16,800 (6000+2000+4000+1200+3600)');
   ok(has(R.gFill, "about 1% of the home's value is a common rule of thumb"), '§4.3 maintenance est. (~1%) hover (updated copy)');
   ok(pick(!has(R.gAuto, 'Annual Carrying Cost'), has(R.gAuto, 'Annual Carrying Cost')), 'Carrying-cost block ABSENT on Driveway (Grounds-only, this wave) [BITE]');

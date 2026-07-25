@@ -7551,9 +7551,10 @@
 
             html += `
                 <div style="display:flex; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 8px;">
-                    ${_sumLbl(base, base.title === 'Mortgage' ? 'Total Monthly Mortgage Payment' : 'Total Monthly Payment', 'Principal and interest only — the core of what you owe the lender each month, before taxes and insurance.', 'var(--white)')}
+                    ${_sumLbl(base, base.title === 'Mortgage' ? 'Total Monthly Mortgage Payment' : 'Total Monthly Payment', 'The core payment', 'Principal and interest only — the core of what you owe the lender each month, before taxes and insurance.', 'var(--white)')}
                     <span id="modal-calc-pmt-${id}" style="font-family: var(--font-mono); color: var(--danger); font-weight:bold;">$${calculateTotalPmt(acc).toLocaleString('en-US')}</span>
                 </div>
+                <div id="modal-real-monthly-${id}">${_moatRealMonthlyHTML(id, acc)}</div>
                 <div style="display:flex; justify-content: space-between;">
                     <span class="input-label" style="color:var(--teal-mid);">Expected Payoff Date</span>
                     <span id="modal-calc-payoff-${id}" style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold; font-size:14px;">${_debtPayoffDisplay(acc)}</span>
@@ -7639,7 +7640,9 @@
                 <div style="color:var(--teal-mid); font-weight:bold; font-size:13px; margin-bottom:10px;">🧾 Annual Carrying Cost</div>
                 <div class="field-row">
                     ${_carryMirrorField(id, acc, 'propTaxAnnual', 'propTaxYr', 'Property Tax (yr)', 'Property tax', 'Your yearly property tax, set by your local assessor. Enter your bill amount — it can change each year as assessments and rates do.', 'left')}
-                    ${_carryMirrorField(id, acc, 'insAnnual', 'homeInsYr', 'Homeowners / Hazard Insurance (yr)', 'Homeowners insurance', 'What you pay each year to insure the home itself against damage — separate from the mortgage. Enter your policy\'s annual premium.', 'right')}
+                    ${/* §20.4 SYNC (Property Copy Bank A26) — matches the Moat-side rename so the MIRRORED figure
+                          carries the SAME label on both surfaces; §18.2's D1 unification stays honest. Label only. */''}
+                    ${_carryMirrorField(id, acc, 'insAnnual', 'homeInsYr', 'Annual Homeowner Insurance', 'Homeowners insurance', 'What you pay each year to insure the home itself against damage — separate from the mortgage. Enter your policy\'s annual premium.', 'right')}
                 </div>
                 <div class="field-row">
                     <div><span class="input-label modal-tt-wrap" style="cursor:help;">Est. Maintenance / Repairs (yr)<div class="modal-tt" style="left:0; right:auto;"><strong>est. · ~1% of value</strong>A rough estimate — about 1% of the home's value is a common rule of thumb. It's only a starting point; your own number always wins.</div></span><input type="text" class="small-field curr-format" placeholder="${maintPH>0 ? 'est. $'+maintPH.toLocaleString('en-US') : '$0'}" value="${formatCurrencyDisplay(acc.maintYr||'')}" oninput="updateAccField('${id}', 'maintYr', this.value)"></div>
@@ -8020,6 +8023,9 @@
                         escrowFoot.style.display = 'none';
                     }
                 }
+                // §20.6 escrow trio — appears / updates / vanishes live as any escrow field or the payment moves.
+                const realMo = document.getElementById(`modal-real-monthly-${id}`);
+                if(realMo) realMo.innerHTML = _moatRealMonthlyHTML(id, acc);
                 // §18.9 PMI drop-off bar — appears / updates / vanishes live (PMI + balance + equity all move it).
                 const pmiBar = document.getElementById(`modal-pmi-bar-${id}`);
                 if(pmiBar) pmiBar.innerHTML = _moatPmiBarHTML(id, acc);
@@ -8765,11 +8771,37 @@
     // (label left, figure right), so the wrapper needs width:auto — .modal-tt-wrap's width:100% would squeeze
     // the figure; and the rows carry their own colour, so it's passed in. Mortgage-only, exactly like _dLbl:
     // every other debt room keeps its plain, unhovered label. Display-only (LOCK-3).
-    function _sumLbl(base, text, body, color) {
+    // Arg order mirrors _dLbl(base, text, title, body, …) so the two read the same at every call site (L48).
+    function _sumLbl(base, text, title, body, color) {
         var st = 'color:' + color + ';';
         if (!base || base.title !== 'Mortgage' || !body) return '<span class="input-label" style="' + st + '">' + text + '</span>';
         return '<span class="input-label modal-tt-wrap" style="' + st + ' width:auto; cursor:help;">' + text +
-               '<div class="modal-tt" style="left:0; right:auto;"><strong>' + text + '</strong>' + body + '</div></span>';
+               '<div class="modal-tt" style="left:0; right:auto;"><strong>' + title + '</strong>' + body + '</div></span>';
+    }
+
+    // §20.6 — THE ESCROW TRIO: Total Monthly Escrow + Real Monthly Payment + the honesty beat, as ONE
+    // block behind ONE hasEscrow gate. All three are meaningless without sourced escrow: the escrow line
+    // would read $0, "Real Monthly" would merely restate the core payment one line below itself, and the
+    // beat would have nothing to add — so the whole trio is suppressed rather than printed empty (L47).
+    // Mortgage-only. Sums the SAME calculateEscrowMonthly the escrow footer uses, so the two figures can
+    // never disagree (L48). Display-only (LOCK-3): reads acc, writes nothing, feeds no total.
+    function _moatRealMonthlyHTML(id, acc) {
+        var base = getBaseType(acc.baseId) || {};
+        if (base.title !== 'Mortgage' || !hasEscrow(acc)) return '';
+        var escrowMo = calculateEscrowMonthly(acc);
+        var core = calculateTotalPmt(acc);
+        var $ = function (v) { return '$' + Math.round(v).toLocaleString('en-US'); };
+        return '<div style="display:flex; justify-content: space-between; margin-bottom: 8px;">' +
+                 // C217 authored a hover BODY but no title — label-as-title, the in-house precedent, until one is authored.
+                 _sumLbl(base, 'Total Monthly Escrow', 'Total Monthly Escrow', 'Property tax, homeowner insurance, PMI, and anything else escrowed — added up and split into a monthly slice. It is not paid to the lender as principal; it is money the lender collects and holds to pay these bills on your behalf. Sourced-or-blank: shows only when the underlying fields are filled.', 'var(--white)') +
+                 '<span style="font-family: var(--font-mono); color: var(--danger); font-weight:bold;">' + $(escrowMo) + '</span>' +
+               '</div>' +
+               '<div style="display:flex; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 8px;">' +
+                 // C218 authored NO hover — only the beat below. A plain label is the verbatim wiring; nothing invented.
+                 _sumLbl(base, 'Real Monthly Payment', '', '', 'var(--white)') +
+                 '<span style="font-family: var(--font-mono); color: var(--danger); font-weight:bold; font-size:14px;">' + $(core + escrowMo) + '</span>' +
+               '</div>' +
+               '<div style="font-size:11px; color: rgba(255,255,255,0.55); margin-top:-2px; margin-bottom:8px; line-height:1.45;">Beyond principal and interest, taxes and insurance add about ' + $(escrowMo) + '/mo — so your real monthly is around ' + $(core + escrowMo) + '. That is the number that actually leaves your account.</div>';
     }
 
     // ── §0.4 THE CELLAR (HELOC) — revolving mechanics: credit limit, utilization, available headroom.
@@ -10011,29 +10043,34 @@
         var out = '';
         var _base = getBaseType(acc.baseId) || {};   // §20.6 — the renamed labels + hovers are Mortgage-only
         var li = lifetimeInterest(acc);   // REMAINING interest from today (exact)
+        // §17.2 — for a HELOC, origAmount is the credit-LINE size (not a borrowed lump), so amortizing it
+        // over the term yields a meaningless figure that reads as a contradiction beside Interest Remaining.
+        // Drop it for HELOC (unsourced provenance); Mortgage keeps its life-of-loan line unchanged (Moat as-is).
+        var _lol = (_base.title === 'HELOC') ? null : lifeOfLoan(acc);
+        // §20.6 TOTAL INTEREST PAID — SOURCED, never computed. This is the figure §19.2 retired as
+        // unknowable without the statement (it turns on payment TIMING, which only the lender knows), so it
+        // reads acc.interestPaidToDate — the §19.2b input — and renders NOTHING when that is blank. It is
+        // never derived from life-of-loan minus remaining: those are two different bases (#379).
+        var _paid = parseFloat(acc.interestPaidToDate) || 0;
+        // §19.9 Part A — life-of-loan and paid-to-date are POSITION facts: they survive when the forward
+        // walk (lifetimeInterest) is null under negative amortization or a glacial payoff. Only the two
+        // "from here" lines sit behind the li !== null gate.
+        // §20.6 GLANCE ORDER: total due → total paid → remaining.
+        var _rows = [];
+        if (_lol) _rows.push(['Life-of-Loan Interest', '', '', Math.round(_lol.intLife), 'rgba(255,255,255,0.6)']);
+        if (_paid > 0) _rows.push(['Total Interest Paid', 'Total Interest Paid', 'Interest you have already handed the lender since the loan began — the cost of borrowing, to date. Sits just after the full life-of-loan figure so you can see paid-so-far against paid-in-total at a glance.', Math.round(_paid), 'var(--danger)']);
         if (li !== null) {
             var _bal = parseFloat(acc.value) || 0;
-            // §17.2 — for a HELOC, origAmount is the credit-LINE size (not a borrowed lump), so amortizing it
-            // over the term yields a meaningless figure that reads as a contradiction beside Interest Remaining.
-            // Drop it for HELOC (unsourced provenance); Mortgage keeps its life-of-loan line unchanged (Moat as-is).
-            var _lol = ((getBaseType(acc.baseId) || {}).title === 'HELOC') ? null : lifeOfLoan(acc);
-            out += `
-                <div style="display:flex; justify-content: space-between; margin-top:8px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px;">
-                    <span class="input-label" style="color:var(--white);">Interest Remaining</span>
-                    <span style="font-family: var(--font-mono); color: var(--danger); font-weight:bold;">$${Math.round(li).toLocaleString('en-US')}</span>
-                </div>
-                <div style="display:flex; justify-content: space-between; margin-top:4px;">
-                    ${_sumLbl(_base, _base.title === 'Mortgage' ? 'Remaining Mortgage Cost' : 'Remaining Cost', 'Everything still ahead of you on the loan — the balance you still owe plus every dollar of interest left to pay. Pay it off today and this is the number you would make disappear.', 'var(--white)')}
-                    <span style="font-family: var(--font-mono); color: var(--white); font-weight:bold;">$${Math.round(_bal + li).toLocaleString('en-US')}</span>
-                </div>`;
-            if (_lol) {
-                out += `
-                <div style="display:flex; justify-content: space-between; margin-top:4px;">
-                    <span class="input-label" style="color:rgba(255,255,255,0.6);">Life-of-Loan Interest</span>
-                    <span style="font-family: var(--font-mono); color: rgba(255,255,255,0.6); font-weight:bold;">$${Math.round(_lol.intLife).toLocaleString('en-US')}</span>
-                </div>`;
-            }
+            _rows.push(['Interest Remaining', '', '', Math.round(li), 'var(--danger)']);
+            _rows.push([_base.title === 'Mortgage' ? 'Remaining Mortgage Cost' : 'Remaining Cost', "What's still ahead", 'Everything still ahead of you on the loan — the balance you still owe plus every dollar of interest left to pay. Pay it off today and this is the number you would make disappear.', Math.round(_bal + li), 'var(--white)']);
         }
+        _rows.forEach(function (r, i) {
+            // the FIRST surviving row carries the divider, whichever one it turns out to be
+            var lead = i === 0 ? 'margin-top:8px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px;' : 'margin-top:4px;';
+            out += '<div style="display:flex; justify-content: space-between; ' + lead + '">' +
+                   (r[2] ? _sumLbl(_base, r[0], r[1], r[2], r[4]) : '<span class="input-label" style="color:' + r[4] + ';">' + r[0] + '</span>') +
+                   '<span style="font-family: var(--font-mono); color: ' + r[4] + '; font-weight:bold;">$' + r[3].toLocaleString('en-US') + '</span></div>';
+        });
         // §4.3/§5.4 accelerated delta — toggle-gated. NOTE: Expected Payoff Date already reflects the
         // additional payment (calculateTotalPmt = min+add), so the accelerated DATE equals it; we surface
         // the non-redundant value — interest saved vs paying only the minimum — plus the §5.4 caption.
