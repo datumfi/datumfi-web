@@ -117,6 +117,14 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     var mDated = window.state.accounts.filter(function (x) { return x.baseId === 'mortgage_joint' && x.origDate && x.maturityDate; }).pop();
     var acc7 = mDated ? clickAmort(mDated, 'VIEW COMPLETE') : { found: false, html: '' };
     out.amortComplete = acc7.html; out.amortCompleteFound = acc7.found;
+    // §20.2b — a loan whose 20-yr term ended in 2020 while a balance remains. Carries a SOURCED paid-to-date
+    // too, so this fixture also proves the mutual exclusion at whole-room level: §20.2b speaks, §20.2 yields.
+    // Created AFTER mDated is resolved so it cannot steal the ordinary from-inception assertions above.
+    out.mPastTerm = grab('mortgage_joint', { value: 17500, origAmount: '212111', intRate: 3.99,
+      origDate: '2000-01-01', maturityDate: '2020-01-01', minPmt: '1284', interestPaidToDate: '31684.35' });
+    var mPast = window.state.accounts.filter(function (x) { return x.baseId === 'mortgage_joint' && x.origDate === '2000-01-01'; }).pop();
+    out.amortPastTerm = mPast ? clickAmort(mPast, 'VIEW COMPLETE').html : '';
+    out.amortPastTermRemaining = mPast ? clickAmort(mPast, 'VIEW REMAINING').html : '';
     // RE-TRUED 2026-07-25 — §18.9 changed the PMI-dropoff RULE: it no longer fires on pmi>0, it fires when
     // equity is still under 20% of the linked property's value (_moatPmiUnder20). mFill is 300k on a 500k
     // home = 40% equity, so the clause is CORRECTLY silent there — the old assertion was testing a rule the
@@ -212,6 +220,14 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   ok(pick(has(T.amortCompleteUndated, 'Add the Origination Date') && !has(R.amortCompleteUndated, '<table'),
           has(R.amortCompleteUndated, '<table')),
      '§20.2 undated loan → the overlay NAMES the missing field instead of an empty table [BITE]');
+  // §20.2b (Commit 8) — past-term beat, held at whole-room level in a real browser.
+  ok(has(T.amortPastTerm, 'your loan’s term has already come and gone') &&
+     has(T.amortPastTerm, 'knows the real finish line'), '§20.2b past-term beat renders on a past-term loan');
+  ok(!has(T.amortPastTerm, 'Heads up — this schedule puts about'), '§20.2b WINS the note slot — §20.2 divergence yields (mutual exclusion)');
+  ok((R.amortPastTerm.match(/class="amort-diverge"/g) || []).length === 1, '§20.2b exactly ONE note occupies the slot, never two');
+  ok(pick(!has(T.amortPastTermRemaining, 'come and gone'), has(T.amortPastTermRemaining, 'come and gone')),
+     '§20.2b ABSENT in REMAINING mode (backward fact, forward number) [BITE]');
+  ok(has(R.amortPastTerm, 'Contract total — what the level schedule implies'), '§20.2b does not displace the §20.2a totals label');
   // §20.1 (Commit 6) — the lump what-if panel, held at whole-room level in a REAL browser.
   ok(has(R.mFill, 'What would extra do?') && has(R.mFill, 'One-time extra payment'), '§20.1 lump panel + input render on the Mortgage modal');
   ok(has(T.mFill, 'Drop in a one-time lump'), '§20.1 EPHEMERAL: a freshly opened modal shows the empty state (nothing persisted)');

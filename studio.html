@@ -10300,6 +10300,21 @@
     // speaks is noise. The 2% scales with the figure so the floor can never suppress-by-rounding a real gap.
     // Returns BOTH figures and NO delta — a subtracted difference is a cross-base quantity, and on screen it
     // reads as a correctable error rather than two honest numbers measuring different things (R180/#379).
+    // §20.2b PAST-TERM (Architect ruling #436) — the contract's clock has fully run out while a balance remains.
+    // STRICTLY past: at elapsed === term a clean level schedule ENDS on time and nothing has overrun, so this is
+    // silent there and the ordinary §20.2 divergence note governs. A loan that finished ON its schedule is the
+    // happy path, not an overshoot — hence the balance guard. Both halves are in the CONDITION, not just the
+    // gate, so no caller can opt out of them.
+    function _moatPastTerm(acc, sched) {
+        if (!sched) return null;
+        if (!(sched.elapsedRaw > sched.term)) return null;        // strict — the exact-term month is on time
+        if ((parseFloat(acc.value) || 0) <= 0) return null;       // cleanly finished, nothing to overshoot
+        return { term: sched.term, elapsed: sched.elapsedRaw };
+    }
+    function _moatPastTermHTML(acc, sched) {
+        if (!_moatPastTerm(acc, sched)) return '';
+        return '<div class="amort-diverge">On this level schedule, your loan’s term has already come and gone — so a from-inception illustration runs out of road here. If there’s still a balance, real life added time the contract’s straight-line math never planned for: a stretch of smaller-than-scheduled payments, a pause, or a reset. Your lender’s statement is the one that knows the real finish line. This table only ever showed the contract’s tidy version of the trip.</div>';
+    }
     function _moatScheduleDivergence(acc, sched) {
         if (!sched || sched.elapsed <= 0) return null;
         var sourced = parseFloat(acc.interestPaidToDate) || 0;
@@ -10573,10 +10588,17 @@
         var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
         var caption = '<div class="amort-caption"><strong>The whole loan, from day one</strong>' +
             'This is what your loan’s terms describe — the original amount, the rate, and the term, laid out as a level schedule: the same payment every month, start to finish, every one landing on time. It’s an illustration of the contract, not a record of what happened. Your lender’s statement is the record. Real payments come early, late, or larger than the minimum, and a level schedule can’t see any of that.</div>';
-        var dv = _moatScheduleDivergence(acc, sched);
-        var note = dv ? '<div class="amort-diverge">Heads up — this schedule puts about ' + $(dv.computed) +
+        // §20.2b vs §20.2 — HARD MUTUAL EXCLUSION (ruling #436), expressed as if/else so "both at once" is
+        // structurally impossible rather than merely unlikely. ONE note occupies this slot. Once the term has
+        // fully elapsed, "by today" and "over the full term" have collapsed onto the same horizon, so the
+        // divergence note's hook stops being the live fact — the live fact is that the schedule ran out of
+        // runway. §20.2b wins; the divergence note yields.
+        var pastTerm = _moatPastTermHTML(acc, sched);
+        var dv = pastTerm ? null : _moatScheduleDivergence(acc, sched);
+        var note = pastTerm;
+        if (!note && dv) note = '<div class="amort-diverge">Heads up — this schedule puts about ' + $(dv.computed) +
             ' of interest behind you by today, while your statement says ' + $(dv.sourced) +
-            '. Both can be true at once: the schedule assumes every payment arrived on time and in the same amount, and your real payments carry timing it can’t see. The statement is the record of what happened; this table is what the contract implies.</div>' : '';
+            '. Both can be true at once: the schedule assumes every payment arrived on time and in the same amount, and your real payments carry timing it can’t see. The statement is the record of what happened; this table is what the contract implies.</div>';
         var rows = sched.rows.map(function (r) { return _amortRow(r.n, r.date, r.pmt, r.principal, r.interest, r.bal); }).join('');
         return caption + note + _amortTableHTML(rows, sched.orig, sched.totalInterest, sched.term,
             'Contract total — what the level schedule implies over the full term, not a paid-to-date.');
