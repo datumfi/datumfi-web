@@ -10232,7 +10232,14 @@
     // all-liens pie ("ALL DEBT ON THE GROUNDS"). slices = [{label,val,color}]; zero-value slices are hidden (L47);
     // returns '' if nothing survives. The card assembly (donut + legend + title) lives HERE, in one place only.
     // Display-only (LOCK-3). centerPct = big center number · centerSub = its caption · title = card heading.
-    function _debtDonutSVG(slices, centerPct, centerSub, title) {
+    // holeId — the SVG gradient's DOM id, supplied by the CALLER and unique per composer. An HTML id must be
+    // unique in the document, but `url(#id)` resolves against the FIRST match in document order: with a single
+    // hard-coded id, a Moat pie and a Yard pie co-resident in the DOM meant one donut painted its centre from
+    // the OTHER donut's gradient. One pie on screen hid it; the §3b move (pie renders by default now) plus the
+    // Yard twin makes co-residency ordinary. Per-composer ids keep the output DETERMINISTIC, which the frozen
+    // byte-compare fixture in _gate_407_19_7a_drawer.mjs depends on — a per-call counter would not.
+    function _debtDonutSVG(slices, centerPct, centerSub, title, holeId) {
+        holeId = holeId || 'debtPieHole';   // neutral fallback: never emit id="undefined"
         slices = (slices || []).filter(function (s) { return s.val > 0; });
         var total = slices.reduce(function (a, s) { return a + s.val; }, 0);
         if (total <= 0) return '';
@@ -10255,11 +10262,11 @@
         return '<div style="display:flex; align-items:center; gap:20px; margin-bottom:16px; padding:16px 18px; '
              + 'background:linear-gradient(155deg, rgba(255,255,255,0.055), rgba(9,18,33,0.18)); border:1px solid rgba(255,255,255,0.09); border-radius:9px; box-shadow:0 8px 24px rgba(9,18,33,0.35);">'
              + '<svg viewBox="0 0 42 42" width="128" height="128" style="flex:none; filter:drop-shadow(0 6px 14px rgba(0,0,0,0.5));">'
-             + '<defs><radialGradient id="moatPieHole" cx="50%" cy="50%" r="50%">'
+             + '<defs><radialGradient id="' + holeId + '" cx="50%" cy="50%" r="50%">'
              + '<stop offset="55%" stop-color="rgba(0,0,0,0)"/><stop offset="100%" stop-color="rgba(0,0,0,0.38)"/></radialGradient></defs>'
              + '<circle cx="21" cy="21" r="15.91549" fill="transparent" stroke="#ffffff" stroke-width="5.4" opacity="0.85"/>'
              + arcs
-             + '<circle cx="21" cy="21" r="13.35" fill="url(#moatPieHole)"/>'
+             + '<circle cx="21" cy="21" r="13.35" fill="url(#' + holeId + ')"/>'
              + '<text x="21" y="20.2" text-anchor="middle" fill="var(--white)" style="font-size:6.6px; font-weight:700; font-family:var(--font-mono);">' + centerPct + '%</text>'
              + '<text x="21" y="24.4" text-anchor="middle" fill="rgba(255,255,255,0.6)" style="font-size:2.6px; letter-spacing:0.4px;">' + centerSub + '</text>'
              + '</svg>'
@@ -10280,7 +10287,7 @@
             { label: 'Principal Paid',    val: principalPaid, color: 'var(--teal-mid)' },
             { label: 'Interest Paid',     val: interestPaid,  color: 'var(--gold)' },
             { label: 'Escrow',            val: escrow,        color: 'rgba(165,175,188,0.75)' }
-        ], paidPct, 'PAID DOWN', 'WHERE THIS LOAN STANDS');
+        ], paidPct, 'PAID DOWN', 'WHERE THIS LOAN STANDS', 'moatPieHole');   // id UNCHANGED — keeps the §19.7 frozen fixture byte-identical
     }
     // §19.9b + §3b — the pie BLOCK: the donut, or (when it cannot draw for the ONE recoverable reason — a
     // mortgage carrying a real balance but no Original Amount) the plain-coach nudge in its place. ONE composer
@@ -10345,7 +10352,7 @@
         // Title by lien count: 0 liens = the home is fully owned (the reward, 100% equity circle); 2+ = all-liens; 1 = single-lien.
         var title = lienCount === 0 ? 'THIS PROPERTY IS FULLY YOURS'
                   : (lienCount > 1 ? 'ALL DEBT ON THE GROUNDS' : 'WHERE THIS LOAN STANDS');
-        return _debtDonutSVG(slices, eqPct, 'EQUITY', title);
+        return _debtDonutSVG(slices, eqPct, 'EQUITY', title, 'yardPieHole');   // distinct from the Moat's — the two can co-reside
     }
 
     window.openAmortizationModal = function(id) {
