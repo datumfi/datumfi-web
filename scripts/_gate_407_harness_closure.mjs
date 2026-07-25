@@ -66,6 +66,29 @@ const need = (l, c) => checks.push([l, !!c]);
     names.includes('_moatDebtPieHTML') && names.includes('_debtDonutSVG'));
 }
 
+// ── 3b. the #434 case: `window.X = function` definitions must be walkable too ──
+{
+  const names = closureNames(src, ['openAmortizationModal']);
+  need('closure resolves a `window.X = function` root (openAmortizationModal)', names.includes('openAmortizationModal'));
+  need('and walks ITS callees — §20.2 added _amortRow / _amortTableHTML',
+    names.includes('_amortRow') && names.includes('_amortTableHTML') && names.includes('_amortCompleteBodyHTML'));
+  need('reaching the from-inception engine transitively (_moatInceptionSchedule, _moatTermMonths)',
+    names.includes('_moatInceptionSchedule') && names.includes('_moatTermMonths'));
+  const body = build(src, ['openAmortizationModal'], { exclude: ['getBaseType', 'state'] });
+  let cap = '', ok = false;
+  try {
+    const el = () => ({ style: {}, appendChild() {}, onclick: null, id: '', set innerHTML(v) { cap = v; }, get innerHTML() { return cap; } });
+    const doc = { getElementById: () => null, createElement: () => el(), body: { appendChild() {} } };
+    const win = {};
+    new Function('window', 'document', 'state', 'getBaseType', body)(win, doc,
+      { accounts: [{ id: 'g', baseId: 'mortgage_a', value: 300000, origAmount: 400000, intRate: 6, minPmt: 2500, origDate: '2019-01-01', maturityDate: '2049-01-01' }] },
+      () => ({ id: 'mortgage_a', title: 'Mortgage' }));
+    win.openAmortizationModal('g', 'complete');
+    ok = cap.includes('<table') && cap.includes('The whole loan, from day one');
+  } catch (e) { ok = false; }
+  need('the overlay EXECUTES from that root alone (no hand-listed callees)', ok);
+}
+
 // ── 4. contract guarantees, so downstream gates can rely on them ──
 {
   const body = extractClosure(src, ['_moatPieBlockHTML']);

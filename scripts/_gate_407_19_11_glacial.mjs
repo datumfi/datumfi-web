@@ -38,13 +38,14 @@ const need = (l, c) => checks.push([l, !!c]);
 }
 // ── Surface 2: the amortization-modal schedule ──
 {
-  const names = ['calculateTotalPmt', 'payoffMonths', '_debtDonutSVG', '_moatDebtPieHTML'].map(n => ex(src, n)).join('\n');
-  const amort = at(src, 'window.openAmortizationModal = function');
+  // (B) — roots only; the walker now resolves `window.X = function` definitions too, so §20.2's new
+  // _amortRow/_amortTableHTML callees are picked up instead of breaking a hand-list.
+  const amort = extractClosure(src, ['openAmortizationModal'], { exclude: ['getBaseType', 'state'] });
   let cap = '';
   const el = () => ({ style: {}, appendChild() {}, onclick: null, id: '', set innerHTML(v) { cap = v; }, get innerHTML() { return cap; } });
   const doc = { getElementById: () => null, createElement: () => el(), body: { appendChild() {} } };
   const win = {};
-  new Function('window', 'document', 'state', 'getBaseType', mut(names) + '\n' + amort)(win, doc, { accounts: [glMort] }, gbtM);
+  new Function('window', 'document', 'state', 'getBaseType', mut(amort))(win, doc, { accounts: [glMort] }, gbtM);
   win.openAmortizationModal('gm');
   need('Amort modal: no century figure', !century(cap.replace(/<[^>]+>/g, '')));
   need('Amort modal: honest glacial note (not "Add a balance")', cap.includes('runs for generations') && !cap.includes('Add a balance, rate, and payment'));

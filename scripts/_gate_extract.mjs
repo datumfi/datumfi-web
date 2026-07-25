@@ -17,9 +17,25 @@
    Everything else — DOM, state, injected deps, built-ins — is left alone for the gate to stub or inject, so
    this changes nothing about the "inject the REAL fn whenever you assert a figure" discipline. */
 
-/** Slice one `function NAME(...) { ... }` out of src by brace-matching. Throws if absent. */
+// studio.html defines functions TWO ways, and both must be walkable or the rot just moves down a level:
+//   1. `function NAME(...) {...}`            — most helpers
+//   2. `window.NAME = function(...) {...}`   — the modal entry points (openAccountModal, openAmortizationModal,
+//                                              _moatLumpEdit, _setMoatEscrowView …)
+// Missing form 2 is exactly how #434 still broke two gates AFTER the closure walker landed: they sliced
+// openAmortizationModal by marker and hand-listed ITS callees, so a new _amortRow/_amortTableHTML killed them.
+function fnStart(src, name) {
+  const a = src.indexOf('function ' + name + '(');
+  if (a >= 0) return a;
+  const b = src.indexOf('window.' + name + ' = function');
+  return b;   // -1 when absent
+}
+/** True when studio.html defines `name` as a function in EITHER form. */
+export function definesFn(src, name) {
+  return fnStart(src, name) >= 0;
+}
+/** Slice one function out of src by brace-matching, in either definition form. Throws if absent. */
 export function extractFn(src, name) {
-  const start = src.indexOf('function ' + name + '(');
+  const start = fnStart(src, name);
   if (start < 0) throw new Error('extractFn: not found in studio.html: ' + name);
   let depth = 0, began = false;
   for (let j = src.indexOf('{', start); j < src.length; j++) {
@@ -50,7 +66,7 @@ export function extractClosure(src, roots, opts) {
     for (const m of body.matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g)) {
       const cand = m[1];
       if (out.has(cand) || exclude.has(cand) || cand === name) continue;
-      if (src.indexOf('function ' + cand + '(') >= 0) stack.push(cand);
+      if (definesFn(src, cand)) stack.push(cand);
     }
   }
   return Array.from(out.values()).join('\n');
@@ -68,7 +84,7 @@ export function closureNames(src, roots, opts) {
     for (const m of extractFn(src, name).matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g)) {
       const cand = m[1];
       if (seen.has(cand) || exclude.has(cand)) continue;
-      if (src.indexOf('function ' + cand + '(') >= 0) stack.push(cand);
+      if (definesFn(src, cand)) stack.push(cand);
     }
   }
   return Array.from(seen);

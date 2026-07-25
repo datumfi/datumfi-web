@@ -34,7 +34,7 @@ need('§4.3 accelerated delta defined + wired',
   /function acceleratedDelta\(acc\)/.test(s) && /acceleratedDelta\(acc\)/.test(s));
 // ── §4.4 amortization modal ──
 need('§4.4 amortization modal live (openAmortizationModal + button)',
-  /openAmortizationModal = function/.test(s) && s.includes('VIEW AMORTIZATION SCHEDULE'));
+  /openAmortizationModal = function/.test(s) && s.includes('VIEW REMAINING SCHEDULE') && s.includes('VIEW COMPLETE SCHEDULE'));
 
 // ── §0.4 functional: the cluster actually renders the five fields for a Variable mortgage ──
 const extract = (name) => { const m = s.match(new RegExp('    function ' + name + '\\([\\s\\S]*?\\n    }\\n')); return m ? m[0] : ''; };

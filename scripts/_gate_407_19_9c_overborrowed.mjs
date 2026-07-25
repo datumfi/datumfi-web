@@ -107,7 +107,7 @@ function run(api) {
   // the note reaches the real modal body, above the schedule button
   const body = api._payoffIntelHTML('x', OVER);
   need('§19.9c note reaches the modal body above the schedule button',
-    body.includes(NOTE) && body.indexOf(NOTE) < body.indexOf('VIEW AMORTIZATION SCHEDULE'));
+    body.includes(NOTE) && body.indexOf(NOTE) < body.indexOf('VIEW COMPLETE SCHEDULE'));   // §20.2 renamed/split the button
   need('voice: informs, never advises (no instruction, no target number)',
     !/\byou should\b|\byou must\b|\bwe recommend\b|\bpay \$/i.test(over));
   return c;

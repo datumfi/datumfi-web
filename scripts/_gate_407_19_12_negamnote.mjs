@@ -15,6 +15,7 @@
      (c) pie block returns ''                 : the relocated pie vanishes from the modal body
    Any mutation that leaves the suite green means that assertion cannot go red -> gate fails. */
 import { readFileSync } from 'node:fs';
+import { extractClosure } from './_gate_extract.mjs';
 const RED = process.argv.includes('--redfirst');
 const src = readFileSync('studio.html', 'utf8');
 
@@ -43,7 +44,10 @@ const FNS = ['_num', 'calculateTotalPmt', 'payoffMonths', '_payoffDateFrom', 'ca
              'lifeOfLoan', 'lifetimeInterest', 'acceleratedDelta', '_sumLbl', '_debtDonutSVG',
              '_moatDebtPieHTML', '_moatPieBlockHTML', '_payoffIntelHTML'];
 const BASE = FNS.map(n => ex(src, n)).join('\n');
-const AMORT = exAt(src, 'window.openAmortizationModal = function');
+// (B) 2026-07-25 — the overlay is a `window.X = function` definition, which the closure walker now resolves
+// too. Roots only: a new callee inside openAmortizationModal (§20.2 added _amortRow / _amortTableHTML) can no
+// longer break this gate the way a hand-list did.
+const AMORT = extractClosure(src, ['openAmortizationModal'], { exclude: ['getBaseType', 'state'] });
 
 // ── red-first anchors: a state literal and two function signatures, none of them copy text ──
 const A_NEGAM = "payoffMonths(acc).code === 'NEGAM'";
@@ -133,7 +137,8 @@ function run(intel, amort) {
   need('§3b pie renders on the body under NEGAM too (position ≠ schedule)',
     bodyNegam.includes('<svg') && bodyNegam.includes('WHERE THIS LOAN STANDS'));
   need('§3b pie sits ABOVE the schedule button',
-    bodyOk.indexOf('WHERE THIS LOAN STANDS') < bodyOk.indexOf('VIEW AMORTIZATION SCHEDULE'));
+    // §20.2 renamed the single button into COMPLETE + REMAINING; the pie must sit above the FIRST of them.
+    bodyOk.indexOf('WHERE THIS LOAN STANDS') < bodyOk.indexOf('VIEW COMPLETE SCHEDULE'));
   need('§3b pie is GONE from the amortization overlay', !amort(F.ok).includes('WHERE THIS LOAN STANDS'));
   need('§3b amort overlay still renders its schedule table', amort(F.ok).includes('Principal') && amort(F.ok).includes('Interest'));
   // §19.9b nudge travelled WITH the pie — it must not have been left behind in the overlay

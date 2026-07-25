@@ -58,9 +58,11 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     // §4.4/§7 amortization modal — CLICK the real button (not a direct call) to catch binding AND the
     // z-index/visibility bug (Captain smoke: button did nothing = overlay behind the account modal).
     const morts = window.state.accounts.filter(x => x.baseId === 'mortgage_joint');
-    const clickAmort = (acc) => {
+    // §20.2 split the single button into COMPLETE (from inception) + REMAINING (from today). Click by label so
+    // BOTH schedules are exercised through the real DOM, not just the composer.
+    const clickAmort = (acc, label) => {
       window.openAccountModal(acc.id);
-      var btn = Array.from(document.querySelectorAll('#modal-dynamic-content button')).find(x => x.textContent.indexOf('VIEW AMORTIZATION') >= 0);
+      var btn = Array.from(document.querySelectorAll('#modal-dynamic-content button')).find(x => x.textContent.indexOf(label || 'VIEW REMAINING') >= 0);
       if (!btn) return { found: false, html: '', z: 0, disp: 'none' };
       btn.click();
       var ov = document.getElementById('amort-modal-overlay');
@@ -69,6 +71,9 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     };
     var af = clickAmort(morts[morts.length - 1]);
     out.amortFill = af.html; out.amortBtnFound = af.found; out.amortZ = af.z; out.amortDisp = af.disp;
+    // §20.2 — the undated fixture must show the field-naming nudge, not an empty overlay (§19.9b precedent).
+    // mFill deliberately carries no origDate/maturityDate; that is what makes it the remaining-only fixture.
+    out.amortCompleteUndated = clickAmort(morts[morts.length - 1], 'VIEW COMPLETE').html;
     var acctOv = document.getElementById('account-modal-overlay');
     out.acctZ = acctOv ? (parseInt(getComputedStyle(acctOv).zIndex, 10) || 0) : 0;
     out.amortBlank = clickAmort(morts[0]).html;
@@ -106,6 +111,12 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     out.m30 = grab('mortgage_joint', { value: 380000, origAmount: '400000', intRate: 6, origDate: '2020-01-01', maturityDate: '2050-01-01', minPmt: '2400' });
     out.m20refi = grab('mortgage_joint', { value: 17500, origAmount: '212111', intRate: 3.99, origDate: '2012-01-01', maturityDate: '2032-01-01', minPmt: '1284', addPmt: '100', nextPmtDate: '2026-08-01' });
     out.mStub = grab('mortgage_joint', { value: 17500, origAmount: '212111', intRate: 3.99, minPmt: '1284' });
+    // §20.2 (Commit 7) — the from-inception schedule, opened by its OWN button in the real DOM. Deliberately
+    // placed HERE, after the dated fixtures exist: reconstructing from inception needs origDate + a term, and
+    // the earlier click block runs before m30/m20refi are created.
+    var mDated = window.state.accounts.filter(function (x) { return x.baseId === 'mortgage_joint' && x.origDate && x.maturityDate; }).pop();
+    var acc7 = mDated ? clickAmort(mDated, 'VIEW COMPLETE') : { found: false, html: '' };
+    out.amortComplete = acc7.html; out.amortCompleteFound = acc7.found;
     // RE-TRUED 2026-07-25 — §18.9 changed the PMI-dropoff RULE: it no longer fires on pmi>0, it fires when
     // equity is still under 20% of the linked property's value (_moatPmiUnder20). mFill is 300k on a 500k
     // home = 40% equity, so the clause is CORRECTLY silent there — the old assertion was testing a rule the
@@ -189,20 +200,31 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   ok(has(R.mFill, 'Interest Saved') && has(R.mFill, '$96,612'), 'Accelerated interest saved = $96,612 (exact, vs minimum-only)');
   ok(has(R.mFill, "kept out of the bank's pocket"), '§5.4 tradeoff caption present (toggle ON)');
   ok(pick(!has(R.mBlank, 'Lifetime Interest'), has(R.mBlank, 'Lifetime Interest')), 'Lifetime interest OMITTED when no payment (sourced-or-blank) [BITE]');
-  ok(has(R.mFill, '📊 VIEW AMORTIZATION SCHEDULE'), 'Amortization button present');
+  ok(has(R.mFill, '📊 VIEW REMAINING SCHEDULE') && has(R.mFill, '📊 VIEW COMPLETE SCHEDULE'), '§20.2 BOTH schedule buttons present (complete + remaining)');
+  ok(R.mFill.indexOf('VIEW COMPLETE SCHEDULE') < R.mFill.indexOf('VIEW REMAINING SCHEDULE'), '§20.2 COMPLETE sits to the LEFT of REMAINING');
+  ok(pick(!has(R.aBlank, 'VIEW COMPLETE SCHEDULE'), has(R.aBlank, 'VIEW COMPLETE SCHEDULE')), '§20.2 complete button ABSENT on Auto-debt (mortgage-only) [BITE]');
+  ok(R.amortCompleteFound && has(T.amortComplete, 'The whole loan, from day one') &&
+     has(T.amortComplete, 'an illustration of the contract, not a record of what happened'),
+     '§20.2 COMPLETE button CLICK renders the from-inception table under its caption');
+  ok(has(T.amortComplete, 'Contract total — what the level schedule implies over the full term, not a paid-to-date'),
+     '§20.2a totals label renders in the real overlay');
+  ok(has(R.amortFill, 'Totals ·') && has(R.amortComplete, 'Totals ·'), '§20.2 BOTH tables end in a totals row');
+  ok(pick(has(T.amortCompleteUndated, 'Add the Origination Date') && !has(R.amortCompleteUndated, '<table'),
+          has(R.amortCompleteUndated, '<table')),
+     '§20.2 undated loan → the overlay NAMES the missing field instead of an empty table [BITE]');
   // §20.1 (Commit 6) — the lump what-if panel, held at whole-room level in a REAL browser.
   ok(has(R.mFill, 'What would extra do?') && has(R.mFill, 'One-time extra payment'), '§20.1 lump panel + input render on the Mortgage modal');
   ok(has(T.mFill, 'Drop in a one-time lump'), '§20.1 EPHEMERAL: a freshly opened modal shows the empty state (nothing persisted)');
   ok(pick(!has(R.aBlank, 'What would extra do?'), has(R.aBlank, 'What would extra do?')), '§20.1 lump panel ABSENT on Auto-debt (mortgage-only) [BITE]');
   ok(has(R.mFill, 'December 2041'), 'Expected Payoff Date non-breaking (Dec 2041 at $2,500/mo)');
-  ok(R.amortBtnFound && has(R.amortFill, 'Amortization Schedule') && has(R.amortFill, 'Principal') && has(R.amortFill, 'Interest'), 'Amort button CLICK renders brand table (filled)');
+  ok(R.amortBtnFound && has(R.amortFill, 'Remaining Schedule') && has(R.amortFill, 'Principal') && has(R.amortFill, 'Interest'), 'Amort button CLICK renders brand table (filled) [§20.2 title renamed]');
   ok(R.amortDisp === 'flex', 'Amort overlay is display:flex after click');
   ok(pick(R.amortZ > R.acctZ, R.amortZ < R.acctZ), 'Amort overlay z-index ABOVE account modal (' + R.amortZ + ' > ' + R.acctZ + ') [BUG-1 FIX/BITE]');
   ok(pick(has(R.amortBlank, 'Add a balance, rate, and payment'), !has(R.amortBlank, 'Add a balance, rate, and payment')), 'Amort empty-guard when unpayable (blank) [BITE]');
   // §3b (Captain ruling #430) — the position pie moved OUT of the overlay onto the modal body, above the
   // schedule button. Held at whole-room level from BOTH ends so a future tidy-up cannot quietly send it back.
   ok(has(R.mFill, 'WHERE THIS LOAN STANDS') && has(R.mFill, '<svg'), '§3b debt pie renders on the modal BODY by default');
-  ok(R.mFill.indexOf('WHERE THIS LOAN STANDS') < R.mFill.indexOf('VIEW AMORTIZATION SCHEDULE'), '§3b pie sits ABOVE the schedule button');
+  ok(R.mFill.indexOf('WHERE THIS LOAN STANDS') < R.mFill.indexOf('VIEW COMPLETE SCHEDULE'), '§3b pie sits ABOVE the schedule buttons');
   ok(pick(!has(R.amortFill, 'WHERE THIS LOAN STANDS'), has(R.amortFill, 'WHERE THIS LOAN STANDS')), '§3b pie NO LONGER in the amortization overlay [BITE]');
 
   // ===== C4b · §5.3 ACCEL-SOURCE DROPDOWN + OUTFLOW READ =====

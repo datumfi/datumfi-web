@@ -52,7 +52,7 @@ need('filled Original: pie SVG renders', filled.includes('<svg'));
 need('filled Original: nudge is gone', !filled.includes(NUDGE));
 // §3b — the nudge lives on the modal BODY now, so it must sit above the schedule button like the pie does.
 need('nudge renders above the schedule button (new home)',
-  blank.indexOf(NUDGE) < blank.indexOf('VIEW AMORTIZATION SCHEDULE'));
+  blank.indexOf(NUDGE) < blank.indexOf('VIEW COMPLETE SCHEDULE'));   // §20.2 renamed/split the button
 
 let pass = 0;
 for (const [label, ok] of checks) { console.log((ok ? '✅' : '⛔') + ' ' + label); if (ok) pass++; }

@@ -1133,6 +1133,13 @@
   .moat-lump-empty { font-size: 11.5px; line-height: 1.5; color: rgba(255,255,255,0.55); margin-top: 4px; }
   .moat-lump-result { font-size: 11.5px; line-height: 1.55; color: var(--teal-mid); margin-top: 8px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px; }
   .moat-lump-bridge { color: rgba(255,255,255,0.66); }
+  /* §20.2 — the from-inception schedule's frame. The caption sets "illustration of the contract, not a record
+     of what happened" ABOVE the table; the divergence note names both figures when they part; the totals tag
+     marks the computed lifetime total so a bold number can't be mistaken for a paid-to-date. None are red. */
+  .amort-caption { font-size: 12px; line-height: 1.5; color: rgba(255,255,255,0.7); margin-bottom: 12px; }
+  .amort-caption strong { display: block; color: var(--white); font-size: 13px; margin-bottom: 5px; }
+  .amort-diverge { font-size: 11.5px; line-height: 1.5; color: rgba(255,255,255,0.72); margin-bottom: 12px; padding: 9px 12px; background: rgba(255,255,255,0.03); border-left: 3px solid var(--teal-mid); border-radius: 4px; }
+  .amort-totals-label { padding: 4px 8px 0; font-size: 10.5px; line-height: 1.45; color: rgba(255,255,255,0.5); font-family: var(--font-sans, inherit); font-weight: normal; text-align: left; }
   .holding-input { width: 100%; min-width: 0; box-sizing: border-box; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: var(--white); font-family: var(--font-mono); font-size: 11px; padding: 4px; border-radius: 2px; }
   .holding-input:focus { border-color: var(--teal-mid); outline: none; }
   /* kill number spinners so 2-decimal values never clip in narrow columns */
@@ -10234,6 +10241,74 @@
         if (host) host.innerHTML = _moatLumpBodyHTML(acc);
     };
 
+    // ═══ §20.2 FROM-INCEPTION SCHEDULE (Commit 7) — AN ILLUSTRATION OF THE CONTRACT ═══
+    // This reconstructs the loan from day one out of {origAmount, rate, term}. It is NOT a record of what
+    // happened, and it will disagree with a real lender statement — §19.2 proved that at cost: a smooth
+    // reconstruction said $44,202 where Daniel's statement said $31,684.35, because payment TIMING is the one
+    // ingredient only the statement holds. The §20.2 caption states that frame ABOVE the table, and the §20.2
+    // divergence note names both figures when we can actually detect the gap. Neither ever CORRECTS the
+    // schedule: #379 — forward/reconstructed is COMPUTED, paid-to-date is SOURCED, never subtract across them.
+    //
+    // TERM RULE: acc.termMonths WINS when set, else derive from the dates. Term NEVER writes back to
+    // maturityDate — the two are independent sourced fields and a silent write-back would fabricate a date.
+    function _moatTermMonths(acc) {
+        var t = parseFloat(acc.termMonths) || 0;
+        if (t > 0) return Math.round(t);
+        if (!acc.origDate || !acc.maturityDate) return 0;
+        return _monthsBetween(acc.origDate, acc.maturityDate);
+    }
+    // Which single field is missing — so the empty state can NAME it rather than shrug (§19.9b precedent).
+    function _moatInceptionMissing(acc) {
+        if ((parseFloat(acc.origAmount) || 0) <= 0) return 'the loan’s Original Amount';
+        if ((parseFloat(acc.intRate) || 0) <= 0) return 'this loan’s interest rate';
+        if (!acc.origDate) return 'the Origination Date';
+        if (_moatTermMonths(acc) <= 0) return 'either the Term (months) or a Maturity Date';
+        return '';
+    }
+    function _moatInceptionSchedule(acc) {
+        if (_moatInceptionMissing(acc)) return null;                  // sourced-or-blank (L47)
+        var orig = parseFloat(acc.origAmount) || 0;
+        var rate = parseFloat(acc.intRate) || 0;
+        var term = _moatTermMonths(acc);
+        var r = rate / 100 / 12;
+        var pmt = (r === 0) ? orig / term : orig * r / (1 - Math.pow(1 + r, -term));
+        // ELAPSED IS CAPPED AT TERM (ruling #434 (b)): past its contractual term the reconstruction would run
+        // off the end. A loan past term still carrying a balance is contract and reality visibly parted, and
+        // that earns its OWN beat (§20.2b, HELD) rather than being folded into the divergence note — one fact,
+        // one voice. For this pass we cap, and the standard note speaks.
+        var elapsedRaw = acc.origDate ? _monthsBetween(acc.origDate, new Date().toISOString().slice(0, 10)) : 0;
+        var elapsed = Math.max(0, Math.min(elapsedRaw, term));
+        var bal = orig, rows = [], totalInterest = 0, interestToDate = 0;
+        var d = new Date(acc.origDate + 'T00:00:00');
+        if (isNaN(d)) d = new Date();
+        for (var i = 1; i <= term; i++) {
+            var interest = bal * r;
+            var principal = Math.min(pmt - interest, bal);
+            bal = Math.max(0, bal - principal);
+            totalInterest += interest;
+            if (i <= elapsed) interestToDate += interest;
+            rows.push({ n: i, date: d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+                        pmt: pmt, principal: principal, interest: interest, bal: bal });
+            d = new Date(d); d.setMonth(d.getMonth() + 1);
+            if (bal <= 0 && i < term) break;
+        }
+        return { term: term, pmt: pmt, rows: rows, orig: orig, totalInterest: totalInterest,
+                 elapsed: elapsed, elapsedRaw: elapsedRaw, interestToDate: interestToDate };
+    }
+    // §20.2 DIVERGENCE — computed-to-date vs the SOURCED statement figure. The MAX(2%, $250) floor is a NOISE
+    // gate, never a truth gate: rounding alone guarantees a few dollars of difference, and a note that always
+    // speaks is noise. The 2% scales with the figure so the floor can never suppress-by-rounding a real gap.
+    // Returns BOTH figures and NO delta — a subtracted difference is a cross-base quantity, and on screen it
+    // reads as a correctable error rather than two honest numbers measuring different things (R180/#379).
+    function _moatScheduleDivergence(acc, sched) {
+        if (!sched || sched.elapsed <= 0) return null;
+        var sourced = parseFloat(acc.interestPaidToDate) || 0;
+        if (sourced <= 0) return null;                                 // no baseline to compare (L47)
+        var floor = Math.max(sourced * 0.02, 250);
+        if (Math.abs(sched.interestToDate - sourced) <= floor) return null;
+        return { computed: sched.interestToDate, sourced: sourced };
+    }
+
     // §4.2/§4.3/§7 payoff-intelligence block — lifetime interest, all-in cost, accelerated delta (toggle-
     // gated), and the amortization button. Every line sourced-or-blank. Shared across all secured debts.
     function _payoffIntelHTML(id, acc) {
@@ -10302,10 +10377,17 @@
         // so a blank pie leaves no empty chrome behind (L47).
         var _pieBlock = _moatPieBlockHTML(acc);
         if (_pieBlock) out += '<div style="margin-top:14px;">' + _pieBlock + '</div>';
-        out += `
-                <div style="text-align:center; margin-top:14px;">
-                    <button class="add-space-btn" style="width:auto; padding: 4px 8px; border: none; background: transparent; border-bottom: 1px dashed var(--teal-mid); color: var(--teal-mid);" onclick="openAmortizationModal('${id}')">📊 VIEW AMORTIZATION SCHEDULE</button>
-                </div>`;
+        // §20.2 (Commit 7) — TWO schedules now. COMPLETE (from inception) sits to the LEFT of REMAINING (from
+        // today). The complete button is Mortgage-only: it reconstructs from origAmount/term, and a HELOC's
+        // origAmount is a credit LINE, not a borrowed lump (§17.2), so there is nothing honest to reconstruct.
+        // It renders even when the inputs are missing — the modal then opens to a nudge NAMING the field
+        // (§19.9b precedent), which teaches more than a hidden button ever could.
+        var _btn = 'class="add-space-btn" style="width:auto; padding: 4px 8px; border: none; background: transparent; border-bottom: 1px dashed var(--teal-mid); color: var(--teal-mid);"';
+        out += '<div style="text-align:center; margin-top:14px; display:flex; gap:14px; justify-content:center; flex-wrap:wrap;">' +
+               (_base.title === 'Mortgage'
+                 ? '<button ' + _btn + ' onclick="openAmortizationModal(\'' + id + '\', \'complete\')">📊 VIEW COMPLETE SCHEDULE</button>' : '') +
+               '<button ' + _btn + ' onclick="openAmortizationModal(\'' + id + '\', \'remaining\')">📊 VIEW REMAINING SCHEDULE</button>' +
+               '</div>';
         return out;
     }
 
@@ -10446,7 +10528,60 @@
         return _debtDonutSVG(slices, eqPct, 'EQUITY', title, 'yardPieHole');   // distinct from the Moat's — the two can co-reside
     }
 
-    window.openAmortizationModal = function(id) {
+    // §20.2 — shared table chrome for BOTH schedules (L48: one <table>, two row sets). `totalsLabel` is the
+    // §20.2a tag; it is passed only by the from-inception table, because only THAT total is a contract-implied
+    // lifetime figure sitting near a sourced paid-to-date. Display-only (LOCK-3).
+    function _amortTableHTML(rows, totPrincipal, totInterest, months, totalsLabel) {
+        var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
+        var yrs = Math.round(months / 12 * 10) / 10;
+        return '<div style="max-height:50vh; overflow-y:auto;"><table style="width:100%; border-collapse:collapse; font-family: var(--font-mono); font-size:11px; color: var(--white);">' +
+            '<thead><tr style="position:sticky; top:0; background: var(--bg-navy);">' +
+            '<th style="padding:5px 8px; text-align:left; opacity:0.55;">#</th>' +
+            '<th style="padding:5px 8px; text-align:left; opacity:0.55;">Date</th>' +
+            '<th style="padding:5px 8px; text-align:right; opacity:0.55;">Payment</th>' +
+            '<th style="padding:5px 8px; text-align:right; color:var(--teal-mid);">Principal</th>' +
+            '<th style="padding:5px 8px; text-align:right; color:var(--danger);">Interest</th>' +
+            '<th style="padding:5px 8px; text-align:right; opacity:0.55;">Balance</th></tr></thead>' +
+            '<tbody>' + rows + '</tbody>' +
+            '<tfoot><tr style="border-top:1px solid rgba(255,255,255,0.18); font-weight:bold; background: var(--bg-navy);">' +
+            '<td style="padding:6px 8px; opacity:0.75;" colspan="2">Totals · ' + yrs + ' yrs</td>' +
+            '<td style="padding:6px 8px;"></td>' +
+            '<td style="padding:6px 8px; text-align:right; color:var(--teal-mid);">' + $(totPrincipal) + '</td>' +
+            '<td style="padding:6px 8px; text-align:right; color:var(--danger);">' + $(totInterest) + '</td>' +
+            '<td style="padding:6px 8px;"></td></tr>' +
+            (totalsLabel ? '<tr><td colspan="6" class="amort-totals-label">' + totalsLabel + '</td></tr>' : '') +
+            '</tfoot></table></div>';
+    }
+    function _amortRow(i, dateStr, pmt, principal, interest, bal) {
+        var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
+        return '<tr><td style="padding:3px 8px; opacity:0.55;">' + i + '</td>' +
+               '<td style="padding:3px 8px;">' + dateStr + '</td>' +
+               '<td style="padding:3px 8px; text-align:right;">' + $(pmt) + '</td>' +
+               '<td style="padding:3px 8px; text-align:right; color:var(--teal-mid);">' + $(principal) + '</td>' +
+               '<td style="padding:3px 8px; text-align:right; color:var(--danger);">' + $(interest) + '</td>' +
+               '<td style="padding:3px 8px; text-align:right;">' + $(bal) + '</td></tr>';
+    }
+    // §20.2 COMPLETE (from-inception) body. The caption renders ABOVE the table ALWAYS — never a footnote — so
+    // the frame is read before the numbers. The divergence note follows the caption when the floor is cleared.
+    // NEITHER may alter a figure: they are prose around an untouched table (#379 asserted red-first).
+    function _amortCompleteBodyHTML(acc) {
+        var sched = _moatInceptionSchedule(acc);
+        if (!sched) {
+            return '<div class="moat-pie-nudge">Add ' + _moatInceptionMissing(acc) +
+                   ' and we can lay out the whole loan from day one — every payment the contract describes, start to finish.</div>';
+        }
+        var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
+        var caption = '<div class="amort-caption"><strong>The whole loan, from day one</strong>' +
+            'This is what your loan’s terms describe — the original amount, the rate, and the term, laid out as a level schedule: the same payment every month, start to finish, every one landing on time. It’s an illustration of the contract, not a record of what happened. Your lender’s statement is the record. Real payments come early, late, or larger than the minimum, and a level schedule can’t see any of that.</div>';
+        var dv = _moatScheduleDivergence(acc, sched);
+        var note = dv ? '<div class="amort-diverge">Heads up — this schedule puts about ' + $(dv.computed) +
+            ' of interest behind you by today, while your statement says ' + $(dv.sourced) +
+            '. Both can be true at once: the schedule assumes every payment arrived on time and in the same amount, and your real payments carry timing it can’t see. The statement is the record of what happened; this table is what the contract implies.</div>' : '';
+        var rows = sched.rows.map(function (r) { return _amortRow(r.n, r.date, r.pmt, r.principal, r.interest, r.bal); }).join('');
+        return caption + note + _amortTableHTML(rows, sched.orig, sched.totalInterest, sched.term,
+            'Contract total — what the level schedule implies over the full term, not a paid-to-date.');
+    }
+    window.openAmortizationModal = function(id, mode) {
         var acc = state.accounts.find(a => a.id === id);
         if (!acc) return;
         var ov = document.getElementById('amort-modal-overlay');
@@ -10463,7 +10598,13 @@
         // button: the pie is a POSITION snapshot, not a property of the schedule, so it should not be a reward
         // for opening this overlay. This modal is now the schedule and nothing else.
         var schedule;
-        if (m.code !== 'OK') {
+        // §20.2 (Commit 7) — COMPLETE mode reconstructs from inception and is INDEPENDENT of payoffMonths: the
+        // contract's schedule exists even when today's payment cannot amortize (a NEGAM loan still HAS terms).
+        // That is why this branch sits ABOVE the m.code gate rather than inside it.
+        var _complete = (mode === 'complete');
+        if (_complete) {
+            schedule = _amortCompleteBodyHTML(acc);
+        } else if (m.code !== 'OK') {
             var why = (m.code === 'NEGAM')
                 ? 'This payment doesn\'t cover the monthly interest, so the balance never reaches zero — there\'s no payoff schedule to draw. The numbers are in the notice under your payment.'
                 : (m.code === 'GLACIAL')
@@ -10476,24 +10617,26 @@
             var pmt = calculateTotalPmt(acc);
             var d = acc.nextPmtDate ? new Date(acc.nextPmtDate + 'T00:00:00') : new Date();
             if (isNaN(d)) d = new Date();
-            var rows = '', n = Math.min(m.months, 600);
+            var rows = '', n = Math.min(m.months, 600), totP = 0, totI = 0, shown = 0;
             for (var i = 1; i <= n; i++) {
                 var interest = bal * r;
                 var principal = Math.min(pmt - interest, bal);
                 bal = Math.max(0, bal - principal);
-                rows += `<tr><td style="padding:3px 8px; opacity:0.55;">${i}</td><td style="padding:3px 8px;">${d.toLocaleDateString('en-US',{month:'short',year:'numeric'})}</td><td style="padding:3px 8px; text-align:right;">$${Math.round(pmt).toLocaleString('en-US')}</td><td style="padding:3px 8px; text-align:right; color:var(--teal-mid);">$${Math.round(principal).toLocaleString('en-US')}</td><td style="padding:3px 8px; text-align:right; color:var(--danger);">$${Math.round(interest).toLocaleString('en-US')}</td><td style="padding:3px 8px; text-align:right;">$${Math.round(bal).toLocaleString('en-US')}</td></tr>`;
+                totP += principal; totI += interest; shown = i;
+                rows += _amortRow(i, d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }), pmt, principal, interest, bal);
                 d = new Date(d); d.setMonth(d.getMonth() + 1);
                 if (bal <= 0) break;
             }
-            schedule = `<div style="color: rgba(255,255,255,0.7); font-size:12px; margin-bottom:12px; line-height:1.5;">Here's every payment from now to payoff — how much goes to the house (principal) versus the bank (interest), month by month. Early on, interest dominates; over time principal takes over. Adding to your payment flips that sooner.</div>
-                <div style="max-height:50vh; overflow-y:auto;"><table style="width:100%; border-collapse:collapse; font-family: var(--font-mono); font-size:11px; color: var(--white);">
-                    <thead><tr style="position:sticky; top:0; background: var(--bg-navy);"><th style="padding:5px 8px; text-align:left; opacity:0.55;">#</th><th style="padding:5px 8px; text-align:left; opacity:0.55;">Date</th><th style="padding:5px 8px; text-align:right; opacity:0.55;">Payment</th><th style="padding:5px 8px; text-align:right; color:var(--teal-mid);">Principal</th><th style="padding:5px 8px; text-align:right; color:var(--danger);">Interest</th><th style="padding:5px 8px; text-align:right; opacity:0.55;">Balance</th></tr></thead>
-                    <tbody>${rows}</tbody></table></div>`;
+            // §20.2 — BOTH tables end in a totals row now. This one carries NO §20.2a tag: it is a forward
+            // projection from today, not a contract-implied lifetime figure sitting beside a sourced
+            // paid-to-date, so the tag would misdescribe it.
+            schedule = `<div style="color: rgba(255,255,255,0.7); font-size:12px; margin-bottom:12px; line-height:1.5;">Here's every payment from now to payoff — how much goes to the house (principal) versus the bank (interest), month by month. Early on, interest dominates; over time principal takes over. Adding to your payment flips that sooner.</div>`
+                + _amortTableHTML(rows, totP, totI, shown, '');
         }
         var body = schedule;
         ov.innerHTML = `<div style="background: var(--bg-navy, #0a1628); border:1px solid rgba(255,255,255,0.12); border-radius:8px; max-width:560px; width:92vw; max-height:82vh; overflow:hidden; padding:24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-                <div class="hud-title" style="color:var(--white); font-size:15px;">Amortization Schedule — ${(acc.name || 'Loan')}</div>
+                <div class="hud-title" style="color:var(--white); font-size:15px;">${_complete ? 'Complete Schedule' : 'Remaining Schedule'} — ${(acc.name || 'Loan')}</div>
                 <button onclick="document.getElementById('amort-modal-overlay').style.display='none';" style="background:transparent; border:none; color:var(--white); font-size:22px; cursor:pointer; line-height:1;">&times;</button>
             </div>${body}</div>`;
         ov.style.display = 'flex';
