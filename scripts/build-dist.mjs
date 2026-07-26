@@ -23,8 +23,8 @@ const DROP_RE = [/^\.claude\//, /^\.wrangler\//, /^workers\//, /^functions\//, /
 
 // SACRED HOSTS — must ship byte-identical (LF + content). Build ABORTS on drift.
 const SACRED = {
-  'studio.html': 'b6d74d6b8c967cfaeee30ac50d204eb6',
-  'sketch.html': '592f8efb06834bd5f4936b3b8bde5672',
+  'studio.html': 'e4e86129b3fb0ceaa5e7c0f5dd3970b3',
+  'sketch.html': '7026545c696a743152719f8ec0e12aa0',
   'scripts/studio-blueprint.js': '62286adc73ffc44e85b0ce7f294528fa',
   // MISS-5 pre-work guard (2026-07-25). nav.js is a Sacred Host in CLAUDE.md but was absent from THIS map,
   // so a bad edit failed no build. It owns the centralized cross-device restore every page depends on
@@ -32,7 +32,7 @@ const SACRED = {
   // and 4 all land in it — pin it BEFORE the arc that leans on it, not after.
   // NOTE: CLAUDE.md lists this host as 'scripts/nav.js'. That path does not exist; the real, page-referenced
   // file is /nav.js at the repo root (every page loads <script src="/nav.js">). Pinned at its true path.
-  'nav.js': '958195881602f74636c082a15d4cf28f',
+  'nav.js': 'ea031b807239b40188949c9e328ef24e',
 };
 const md5 = (p) => createHash('md5').update(readFileSync(p)).digest('hex');
 

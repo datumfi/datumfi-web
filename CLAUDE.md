@@ -108,6 +108,27 @@ Google Cloud Console. Captain executes all dashboard changes manually.
  · privacy.html · canonical legal
  · terms.html · canonical legal
 
+## Publish Proof By Host Type (measured 2026-07-26 — settles a recurring question)
+
+Served-HTML MD5 is **NEVER** a publish proof, even for a SACRED host. Cloudflare's
+edge rewrites HTML non-deterministically: three consecutive fetches of one
+already-published `studio.html` returned three DIFFERENT hashes at the SAME byte
+length, diverging where the edge rewrote the `<head>` resource hints. (It is not
+the analytics beacon — no `cloudflareinsights` script was present.) A hash that
+changes per request cannot prove anything.
+
+ · The `SACRED{}` pin governs **BUILD** bytes only — it enforces `dist == source`,
+   which `npm run build` checks. It says nothing about served bytes.
+ · **JS / CSS** assets → `served-md5 == pin` IS valid proof (the edge serves these
+   byte-identical). This is why `nav.js` verifies cleanly.
+ · **EVERY HTML host**, SACRED or not → **marker-grep + behavior ONLY**. Never chase
+   a served-HTML MD5. Local before/after MD5 on an HTML host is a source-side
+   sanity check, not a publish proof.
+
+A stale/unexpected served result is still a signal to INVESTIGATE (is the commit on
+origin? is `npm ci` clean? does it match HEAD~1's hash = not-yet-published, or a
+third value = look closer?) — never an assumption of lag.
+
 ## Doctrine Quick-Reference (D1-D33 · partial · see Engineering Playbook)
 
  D1  · window.load NOT clerkScript.load for Clerk session detection

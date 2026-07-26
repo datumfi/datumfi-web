@@ -1620,9 +1620,12 @@ function _stashForOpen(bp) {
 }
 function _loadArchiveFromLS() {
   safeLoadArchive();
-  const list = [];
-  for (let i = 1; i <= 4; i++) { const bp = BlueprintArchive['slot' + i]; if (bp) { list.push(bp); _stashForOpen(bp); } }
-  ARCH.list = list;
+  // The LS slots were filled by nav.js's RETENTION order (freshest-written first, deliberately). That is
+  // the right rule for what to KEEP offline and the wrong one for what to SHOW, so the degraded/offline
+  // archive re-sorts by saved_at here rather than inheriting the cache's ordering.
+  const entries = [];
+  for (let i = 1; i <= 4; i++) { const bp = BlueprintArchive['slot' + i]; if (bp) { entries.push({ rec: bp, updatedAt: '' }); _stashForOpen(bp); } }
+  ARCH.list = (window.DatumOrder ? window.DatumOrder.newestSavedFirst(entries) : entries).map(function (e) { return e.rec; });
 }
 function loadArchive() {
   return new Promise(function (resolve) {
@@ -1632,11 +1635,18 @@ function loadArchive() {
       // LS/Clerk net (that fallback resurrected deleted blueprints). Fallback lives ONLY in .catch below,
       // which now fires only when listDocs REJECTS (genuinely unreachable), never on a true empty.
       if (!docs || !docs.length) { ARCH.list = []; resolve(); return; }
-      docs.sort(function (a, b) { return String(b.updated_at || '').localeCompare(String(a.updated_at || '')); });
+      // DISPLAY ORDER is decided AFTER the payloads land — saved_at lives in the payload, not on the
+      // list row, and sorting the rows by updated_at is what made a rename jump its card to the top.
+      // The fetch order itself is irrelevant: Promise.all preserves index alignment with docs[].
       Promise.all(docs.map(function (d) { return window.DatumD1.getDoc('blueprint', d.doc_key); })).then(function (full) {
-        const list = [];
-        full.forEach(function (f) { if (f && f.payload) { try { const bp = JSON.parse(f.payload); list.push(bp); _stashForOpen(bp); } catch (e) {} } });
-        ARCH.list = list; resolve();
+        const entries = [];
+        full.forEach(function (f, i) {
+          if (f && f.payload) {
+            try { const bp = JSON.parse(f.payload); entries.push({ rec: bp, updatedAt: docs[i].updated_at }); _stashForOpen(bp); } catch (e) {}
+          }
+        });
+        ARCH.list = (window.DatumOrder ? window.DatumOrder.newestSavedFirst(entries) : entries).map(function (e) { return e.rec; });
+        resolve();
       }).catch(function () { _loadArchiveFromLS(); resolve(); });
     }).catch(function () { _loadArchiveFromLS(); resolve(); });
   });

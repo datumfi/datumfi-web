@@ -32,6 +32,7 @@ const RF = process.argv.includes('--redfirst');
 const NOCAS = process.argv.includes('--nocas');
 const DB = process.argv.includes('--debounce');
 const CARDFORK = process.argv.includes('--cardfork');
+const RESORT = process.argv.includes('--resort');
 let pass = 0, fail = 0; const lines = [];
 const ok = (c, m) => { if (c) pass++; else fail++; lines.push((c ? 'PASS ' : 'FAIL ') + m); };
 
@@ -65,6 +66,11 @@ function mutateNav(src) {
 const A_CARD = "            ? window.DatumSavedName.resolve(bp, { noun: 'Blueprint', ownerName: prof.primary_name }).name";
 const CARD_FORK = "            ? (prof.primary_name ? (prof.primary_name + \"'s Blueprint\") : 'Studio Blueprint')";
 
+// THE RE-SORT FINDING (Captain's smoke of a535a60). Restores ordering by the D1 row's updated_at, which
+// putDoc stamps on every write — so a renamed sheet climbs to position 1 instead of staying put.
+const A_SORT = "        ARCH.list = (window.DatumOrder ? window.DatumOrder.newestSavedFirst(entries) : entries).map(function (e) { return e.rec; });";
+const SORT_OLD = "        ARCH.list = entries.sort(function (a, b) { return String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')); }).map(function (e) { return e.rec; });";
+
 let navServedDiffers = false, bpServedDiffers = false;
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/Blueprint.html';
@@ -77,11 +83,19 @@ const server = http.createServer((req, res) => {
     navServedDiffers = (out !== orig);
     body = Buffer.from(out, 'utf8');
   }
-  if (p === '/Blueprint.html' && CARDFORK) {
+  if (p === '/Blueprint.html' && (CARDFORK || RESORT)) {
     const orig = body.toString('utf8');
-    const n = orig.split(A_CARD).length - 1;
-    if (n !== 1) throw new Error(`anchor card: expected exactly 1 occurrence, found ${n}`);
-    const out = orig.replace(A_CARD, CARD_FORK);
+    let out = orig;
+    if (CARDFORK) {
+      const n = out.split(A_CARD).length - 1;
+      if (n !== 1) throw new Error(`anchor card: expected exactly 1 occurrence, found ${n}`);
+      out = out.replace(A_CARD, CARD_FORK);
+    }
+    if (RESORT) {
+      const n = out.split(A_SORT).length - 1;
+      if (n !== 1) throw new Error(`anchor sort: expected exactly 1 occurrence, found ${n}`);
+      out = out.replace(A_SORT, SORT_OLD);
+    }
     bpServedDiffers = (out !== orig);
     body = Buffer.from(out, 'utf8');
   }
@@ -89,6 +103,10 @@ const server = http.createServer((req, res) => {
   res.end(body);
 });
 const PORT = 8207; const base = 'http://127.0.0.1:' + PORT;
+
+const BASE_TS = '2026-07-25T12:00:00Z';
+let _tsSeq = 0;
+const nextTs = () => '2026-08-0' + (1 + (_tsSeq++ % 9)) + 'T00:00:00Z';   // strictly LATER than any saved_at fixture
 
 const BP_ID = 'bp-rename-1';
 const DOCID = 'blueprint/' + BP_ID;
@@ -128,7 +146,7 @@ function freshBlueprint() {
 
       if (q.get('list') === '1') {
         const docs = Object.keys(d1.rows).filter((k) => k.indexOf(type + '/') === 0)
-          .map((k) => ({ doc_key: k.slice(type.length + 1), revision: d1.rows[k].revision, updated_at: '2026-07-25T12:00:00Z' }));
+          .map((k) => ({ doc_key: k.slice(type.length + 1), revision: d1.rows[k].revision, updated_at: d1.rows[k].updated_at || BASE_TS }));
         return J({ documents: docs });
       }
       if (req.method() === 'PUT') {
@@ -146,10 +164,12 @@ function freshBlueprint() {
         }
         const expected = (ifRev !== null && ifRev !== 0) ? ifRev : cur;
         if (expected !== cur) return J({ error: 'conflict', server_revision: cur }, 409);
-        d1.rows[id] = { payload: body.payload, revision: cur + 1 };
+        // Mirror the real API: EVERY successful write stamps updated_at = now. This is the row metadata
+        // that made a rename jump its card to position 1 — the fake must reproduce it or --resort is inert.
+        d1.rows[id] = { payload: body.payload, revision: cur + 1, updated_at: nextTs() };
         return J({ revision: cur + 1 });
       }
-      if (d1.rows[id]) return J({ payload: JSON.stringify(d1.rows[id].payload), revision: d1.rows[id].revision, updated_at: '2026-07-25T12:00:00Z' });
+      if (d1.rows[id]) return J({ payload: JSON.stringify(d1.rows[id].payload), revision: d1.rows[id].revision, updated_at: d1.rows[id].updated_at || BASE_TS });
       return J({}, 404);
     }
     if (u.startsWith('http://127.0.0.1') || u.startsWith('data:') || u.startsWith('blob:')) return route.continue();
@@ -353,13 +373,61 @@ function freshBlueprint() {
   ok(afterEsc === 'Coast at 55', 'Esc cancels the edit and restores the committed name');
   ok(d1.rows[DOCID].payload.display_name === 'Coast at 55', 'Esc wrote NOTHING to D1');
 
-  ok(CARDFORK ? bpServedDiffers : !bpServedDiffers,
-    CARDFORK ? 'the --cardfork mutation CHANGED the served Blueprint.html bytes' : 'clean run: Blueprint.html served unmutated');
+  // ═══ 10 · A RENAME MUST NOT MOVE THE CARD (the Captain's smoke finding on a535a60) ══════════════
+  // Three sheets with distinct saved_at. Rename the MIDDLE one — the position that can move in either
+  // direction, unlike the first (which can only stay) or the last. Every rename PUT stamps a NEW
+  // updated_at, so ordering by the row column drags the renamed sheet to the front.
+  const OLD = 'bp-old', MID = 'bp-mid', NEW = 'bp-new';
+  // SETTLE FIRST — same reason as scenario 9. Under --debounce the previous section's writes are still
+  // parked on the ~1.5s timer; if they fire after this reset they RE-CREATE blueprint/bp-rename-1 and a
+  // fourth card appears in the order assertions. That made the combined run report 15 failures once and
+  // 16 the next — a flaky gate is worse than a wrong one, because it teaches you to ignore it.
+  await page.waitForTimeout(1800);
+  d1.rows = {};
+  [[OLD, '2026-07-01T10:00:00Z'], [MID, '2026-07-10T10:00:00Z'], [NEW, '2026-07-20T10:00:00Z']].forEach(([id, savedAt]) => {
+    const bp = freshBlueprint();
+    bp.blueprint_id = id; bp.saved_at = savedAt;
+    d1.rows['blueprint/' + id] = { payload: bp, revision: 1, updated_at: BASE_TS };
+  });
+  await page.goto(base + '/Blueprint.html', { waitUntil: 'load' });
+  await page.waitForTimeout(1400);
+
+  // Read only the THREE fixture sheets. The claim under test is their RELATIVE order; a row left over
+  // from an earlier section by a late debounced write is harness noise, and letting it into the
+  // assertion is what made this section flap between 15 and 16 failures on identical input.
+  const readOrder = () => page.evaluate((ids) =>
+    Array.from(document.querySelectorAll('.blueprint-slot .blueprint-name[data-rename-id]'))
+      .map((n) => n.getAttribute('data-rename-id'))
+      .filter((id) => ids.indexOf(id) >= 0), [OLD, MID, NEW]);
+
+  const before = await readOrder();
+  ok(JSON.stringify(before) === JSON.stringify([NEW, MID, OLD]),
+    'the archive lists newest-SAVED first (got ' + JSON.stringify(before) + ')');
+
+  await page.click('.rename-action[data-rename-id="' + MID + '"]');
+  await page.waitForTimeout(150);
+  await page.fill('.rename-input', 'Renamed In Place');
+  await page.press('.rename-input', 'Enter');
+  await page.waitForTimeout(1000);
+
+  const after = await readOrder();
+  ok(JSON.stringify(after) === JSON.stringify([NEW, MID, OLD]),
+    'RENAME DOES NOT MOVE THE CARD — order is unchanged, the renamed sheet stays 2nd (got ' + JSON.stringify(after) + ') [BITE resort]');
+  const midName = await page.evaluate((id) => {
+    const n = document.querySelector('.blueprint-name[data-rename-id="' + id + '"]');
+    return n ? n.textContent.trim() : null;
+  }, MID);
+  ok(midName === 'Renamed In Place', 'and it really was renamed (the order held because of the sort key, not a no-op)');
+  ok(d1.rows['blueprint/' + MID].updated_at !== BASE_TS,
+    'the row\'s updated_at WAS bumped by the write — so the old ordering really would have moved it [BITE resort]');
+
+  ok((CARDFORK || RESORT) ? bpServedDiffers : !bpServedDiffers,
+    (CARDFORK || RESORT) ? 'the Blueprint.html mutation CHANGED the served bytes' : 'clean run: Blueprint.html served unmutated');
 
   ok(pageErrors.length === 0, 'no uncaught page errors on the real Blueprint.html (' + pageErrors.join(' | ') + ')');
 
   await browser.close(); server.close();
-  const mode = [RF && 'redfirst', NOCAS && 'nocas', DB && 'debounce', CARDFORK && 'cardfork'].filter(Boolean).join('+') || 'CLEAN';
+  const mode = [RF && 'redfirst', NOCAS && 'nocas', DB && 'debounce', CARDFORK && 'cardfork', RESORT && 'resort'].filter(Boolean).join('+') || 'CLEAN';
   console.log('MODE: ' + mode + '   |   RENAME store persistence (real Blueprint.html, PUT-only D1)');
   lines.forEach((l) => console.log('  ' + l));
   console.log(`\n  ${pass} passed, ${fail} failed`);

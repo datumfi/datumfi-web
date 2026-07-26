@@ -521,5 +521,39 @@
     }
   };
 
+  // ── DISPLAY ORDER for saved sheets / sketches — newest SAVED first (L48: one rule, four surfaces) ──
+  // A rename is a NAME edit and must not move a card. The four DISPLAY lists used to sort on the D1
+  // row's `updated_at`, which putDoc stamps on EVERY successful write — so a rename legitimately
+  // freshened the row and the card jumped to position 1. Nothing was mutating the payload; the ordering
+  // simply never derived from the field that means "when the user saved this".
+  //
+  // The honest key for "in what order do I SHOW saved sheets?" is the payload's saved_at, which a rename
+  // provably does not touch. updated_at stays the FALLBACK for legacy rows saved before saved_at was
+  // stamped — bpToCard already renders an em dash for those, so the field really can be absent, and we
+  // sort by what exists rather than inventing a date (L47).
+  //
+  // ⚠ RETENTION IS A DIFFERENT QUESTION AND KEEPS ITS OWN ORDER. The two legs in THIS file that rebuild
+  //   the LS offline cache (_commitBlueprintArch, _restoreSketchbookFromD1) deliberately STAY on
+  //   updated_at: "which rows do I keep offline?" is best answered by freshest-WRITTEN, and a rename is
+  //   a real write that freshened that row — keeping it cached is correct, not a bug. Same-looking
+  //   comparator, different intent. Do NOT unify them; that is two intents that merely resemble each other.
+  window.DatumOrder = {
+    savedKey: function (rec, fallbackUpdatedAt) {
+      var s = rec && rec.saved_at;
+      return (typeof s === 'string' && s) ? s : (fallbackUpdatedAt || '');
+    },
+    // entries: [{ rec, updatedAt, ... }] -> the SAME entries, newest-saved first. Returns entries (not
+    // recs) so each caller maps to whatever shape it renders. Stable: equal keys keep their input order.
+    newestSavedFirst: function (entries) {
+      var self = window.DatumOrder;
+      return (entries || []).map(function (e, i) { return { e: e, i: i }; }).sort(function (x, y) {
+        var kx = self.savedKey(x.e && x.e.rec, x.e && x.e.updatedAt);
+        var ky = self.savedKey(y.e && y.e.rec, y.e && y.e.updatedAt);
+        var c = String(ky).localeCompare(String(kx));
+        return c !== 0 ? c : (x.i - y.i);
+      }).map(function (w) { return w.e; });
+    }
+  };
+
   window.addEventListener('load', function() { window._datumRestoreFromClerk(); });
 })();

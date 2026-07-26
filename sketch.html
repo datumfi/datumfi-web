@@ -9190,10 +9190,12 @@ Studio is built for exactly this. See If This Shape Holds →`;
           if (!(D1 && D1.CUTOVER !== false && D1.signedIn && D1.signedIn())) { resolve(_skListFromLS()); return; }
           D1.listDocs('sketchbook').then(function (docs) {
             if (!docs || !docs.length) { resolve(_skListFromLS()); return; }
-            docs.sort(function (a, b) { return String(b.updated_at || '').localeCompare(String(a.updated_at || '')); });
+            // DISPLAY order after the payloads land — saved_at (payload) not updated_at (row), so this
+            // picker agrees with the sketchbook archive and a future rename cannot reshuffle it.
             Promise.all(docs.map(function (d) { return D1.getDoc('sketchbook', d.doc_key); })).then(function (full) {
-              var out = [];
-              full.forEach(function (f, i) { if (f && f.payload) { try { out.push(_skMeta(JSON.parse(f.payload), docs[i].doc_key)); } catch (e) {} } });
+              var entries = [];
+              full.forEach(function (f, i) { if (f && f.payload) { try { entries.push({ rec: JSON.parse(f.payload), updatedAt: docs[i].updated_at, key: docs[i].doc_key }); } catch (e) {} } });
+              var out = (window.DatumOrder ? window.DatumOrder.newestSavedFirst(entries) : entries).map(function (e) { return _skMeta(e.rec, e.key); });
               resolve(out.length ? out : _skListFromLS());
             }).catch(function () { resolve(_skListFromLS()); });
           }).catch(function () { resolve(_skListFromLS()); });

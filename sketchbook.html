@@ -3365,11 +3365,14 @@
     try {
       window.DatumD1.listDocs('sketchbook').then(function (docs) {
         docs = docs || [];
-        docs.sort(function (a, b) { return String(b.updated_at || '').localeCompare(String(a.updated_at || '')); });
         if (!docs.length) { _applySketchBook([]); return; }   // L51 reachable-empty -> render empty (no resurrect)
+        // DISPLAY order after the payloads land — saved_at (payload) not updated_at (row). Preventive
+        // here: sketches cannot be renamed until the Sketchbook surface ships, and every write today IS
+        // a save, so the two keys agree. Wiring it now means that surface inherits the correct order.
         Promise.all(docs.map(function (d) { return window.DatumD1.getDoc('sketchbook', d.doc_key); })).then(function (full) {
-          var contracts = [];
-          full.forEach(function (f) { if (f && f.payload) { try { contracts.push(JSON.parse(f.payload)); } catch (e) {} } });
+          var entries = [];
+          full.forEach(function (f, i) { if (f && f.payload) { try { entries.push({ rec: JSON.parse(f.payload), updatedAt: docs[i].updated_at }); } catch (e) {} } });
+          var contracts = (window.DatumOrder ? window.DatumOrder.newestSavedFirst(entries) : entries).map(function (e) { return e.rec; });
           if (contracts.length) _applySketchBook(contracts); else _sketchbookRestoreFromClerk();
         }).catch(function () { _sketchbookRestoreFromClerk(); });   // unreachable mid-fetch -> net fallback
       }).catch(function () { _sketchbookRestoreFromClerk(); });      // L51 reject = unreachable -> net fallback

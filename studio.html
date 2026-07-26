@@ -15937,10 +15937,13 @@
         if (!(D1 && D1.CUTOVER !== false && D1.signedIn && D1.signedIn())) { resolve(listFromLS()); return; }
         D1.listDocs('blueprint').then(function (docs) {
           if (!docs || !docs.length) { resolve(listFromLS()); return; }
-          docs.sort(function (a, b) { return String(b.updated_at || '').localeCompare(String(a.updated_at || '')); });
+          // DISPLAY order after the payloads land (saved_at is in the payload, not on the row) — the
+          // picker must agree with the archive, and a rename must not reshuffle either.
           Promise.all(docs.map(function (d) { return D1.getDoc('blueprint', d.doc_key); })).then(function (full) {
-            var out = [];
-            full.forEach(function (f, i) { if (f && f.payload) { try { var bp = JSON.parse(f.payload); out.push(bpMeta(bp, docs[i].doc_key)); } catch (e) {} } });
+            var entries = [];
+            full.forEach(function (f, i) { if (f && f.payload) { try { entries.push({ rec: JSON.parse(f.payload), updatedAt: docs[i].updated_at, key: docs[i].doc_key }); } catch (e) {} } });
+            var ordered = window.DatumOrder ? window.DatumOrder.newestSavedFirst(entries) : entries;
+            var out = ordered.map(function (e) { return bpMeta(e.rec, e.key); });
             resolve(out.length ? out : listFromLS());
           }).catch(function () { resolve(listFromLS()); });
         }).catch(function () { resolve(listFromLS()); });
