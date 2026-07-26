@@ -10,6 +10,7 @@
    --redfirst makes _moatPmiUnder20 ignore the equity threshold (return true) -> the >=20% guard + the direct
    threshold check bite. */
 import { readFileSync } from 'node:fs';
+import { extractClosure } from './_gate_extract.mjs';
 const RED = process.argv.includes('--redfirst');
 let s = readFileSync('studio.html', 'utf8');
 
@@ -20,8 +21,11 @@ if (RED) {
 const checks = [];
 const need = (label, cond) => checks.push([label, !!cond]);
 
-const extract = (name) => { const m = s.match(new RegExp('    function ' + name + '\\([\\s\\S]*?\\n    }\\n')); return m ? m[0] : ''; };
-const NAMES = ['_num', '_groundsEquityBarHTML', '_moatPmiUnder20', '_moatPmiBarHTML'];
+// ROOTS, not a hand-list. A hand-typed callee list rots the moment a function gains a new callee:
+// every gate slicing its caller then dies with "ReferenceError: <fn> is not defined" — a red that
+// says nothing about the room. That is exactly what killed the eight HELOC gates. extractClosure
+// walks the real callees out of studio.html, so a new one is picked up automatically.
+const ROOTS = ['_moatPmiBarHTML', '_moatPmiUnder20'];
 const getBaseType = (baseId) => {
   const id = String(baseId);
   if (id.indexOf('property') === 0) return { id, title: 'Real Estate' };
@@ -30,7 +34,7 @@ const getBaseType = (baseId) => {
   return { id, title: 'Other' };
 };
 function build(accounts) {
-  const body = NAMES.map(extract).join('\n') + '\nreturn { pmi:_moatPmiBarHTML, under20:_moatPmiUnder20 };';
+  const body = extractClosure(s, ROOTS) + '\nreturn { pmi:_moatPmiBarHTML, under20:_moatPmiUnder20 };';
   return new Function('state', 'getBaseType', body)({ accounts }, getBaseType);
 }
 let err = '', ok = null;

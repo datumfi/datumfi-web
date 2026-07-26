@@ -10,6 +10,7 @@
    --redfirst (1) re-adds tax/ins to the escrow term (naive double-count) and (2) reverts routing to
    openAccountModal -> the de-dupe check + the routing check bite. */
 import { readFileSync } from 'node:fs';
+import { extractClosure } from './_gate_extract.mjs';
 const RED = process.argv.includes('--redfirst');
 let sStudio = readFileSync('studio.html', 'utf8');
 let sEstate = readFileSync('scripts/datum-estate.js', 'utf8');
@@ -24,8 +25,11 @@ if (RED) {
 const checks = [];
 const need = (label, cond) => checks.push([label, !!cond]);
 
-const extract = (name) => { const m = sStudio.match(new RegExp('    function ' + name + '\\([\\s\\S]*?\\n    \\}\\n')); return m ? m[0] : ''; };
-const NAMES = ['_num', '_linkedMortgageWith', '_canonPropTax', '_canonHomeIns', 'calcCarryTotal', 'calculateTotalPmt', '_yardLiens', '_yardMortgage', '_yardHeloc', '_yardRealMonthly'];
+// ROOTS, not a hand-list. A hand-typed callee list rots the moment a function gains a new callee:
+// every gate slicing its caller then dies with "ReferenceError: <fn> is not defined" — a red that
+// says nothing about the room. That is exactly what killed the eight HELOC gates. extractClosure
+// walks the real callees out of studio.html, so a new one is picked up automatically.
+const ROOTS = ['_yardRealMonthly'];
 const getBaseType = (baseId) => {
   const id = String(baseId);
   if (id.indexOf('property') === 0) return { id, taxCode: 'physical' };
@@ -34,7 +38,7 @@ const getBaseType = (baseId) => {
   return { id, taxCode: 'other' };
 };
 function build(accounts) {
-  const body = NAMES.map(extract).join('\n') + '\nreturn { real:_yardRealMonthly };';
+  const body = extractClosure(sStudio, ROOTS) + '\nreturn { real:_yardRealMonthly };';
   return new Function('state', 'getBaseType', body)({ accounts }, getBaseType);
 }
 let err = '', e = null;

@@ -8,6 +8,7 @@
      (CHIP)       the 🔗 link chip is rendered on the merged Grounds tile and the per-room merge, with the notice.
    --redfirst reverts _lienSum to first-lien-only -> the all-liens net-equity check bites. */
 import { readFileSync } from 'node:fs';
+import { extractClosure } from './_gate_extract.mjs';
 const RED = process.argv.includes('--redfirst');
 let s = readFileSync('scripts/datum-estate.js', 'utf8');
 
@@ -20,13 +21,11 @@ if (RED) {
 const checks = [];
 const need = (label, cond) => checks.push([label, !!cond]);
 
-const extract = (name) => {
-  let m = s.match(new RegExp('    function ' + name + '\\([^\\n]*\\}'));                 // one-liner
-  if (m) return m[0];
-  m = s.match(new RegExp('    function ' + name + '\\([\\s\\S]*?\\n    \\}'));            // multi-line
-  return m ? m[0] : '';
-};
-const NAMES = ['_lienSum', '_netEquityOf', '_lienMetaSuffix', '_lienMirrorNotice'];
+// ROOTS, not a hand-list. A hand-typed callee list rots the moment a function gains a new callee:
+// every gate slicing its caller then dies with "ReferenceError: <fn> is not defined" — a red that
+// says nothing about the room. That is exactly what killed the eight HELOC gates. extractClosure
+// walks the real callees out of studio.html, so a new one is picked up automatically.
+const ROOTS = ['_lienSum', '_netEquityOf', '_lienMetaSuffix', '_lienMirrorNotice'];
 const getBaseType = (baseId) => {
   const id = String(baseId);
   if (id.indexOf('mortgage') === 0) return { id, meta: 'The Moat' };
@@ -34,7 +33,7 @@ const getBaseType = (baseId) => {
   return { id, meta: 'Other' };
 };
 function build() {
-  const body = NAMES.map(extract).join('\n') + '\nreturn { sum:_lienSum, eq:_netEquityOf, suffix:_lienMetaSuffix, notice:_lienMirrorNotice };';
+  const body = extractClosure(s, ROOTS) + '\nreturn { sum:_lienSum, eq:_netEquityOf, suffix:_lienMetaSuffix, notice:_lienMirrorNotice };';
   return new Function('getBaseType', body)(getBaseType);
 }
 let err = '', e = null;

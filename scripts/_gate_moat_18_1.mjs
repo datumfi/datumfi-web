@@ -6,6 +6,7 @@
      (FIELD) the 'Other (yr)' input persists to mortgageOtherCost via updateAccField, clamped via enforceAmt.
    --redfirst strips the two Other feeds -> the Other contribution vanishes from both all-ins (gate bites). */
 import { readFileSync } from 'node:fs';
+import { extractClosure } from './_gate_extract.mjs';
 const RED = process.argv.includes('--redfirst');
 let s = readFileSync('studio.html', 'utf8');
 
@@ -17,10 +18,11 @@ if (RED) {
 const checks = [];
 const need = (label, cond) => checks.push([label, !!cond]);
 
-const extract = (name) => { const m = s.match(new RegExp('    function ' + name + '\\([\\s\\S]*?\\n    }\\n')); return m ? m[0] : ''; };
-const NAMES = ['calculateTotalPmt','calculateEscrowMonthly','hasEscrow','_escrowFooter','_moatPmiUnder20','_num','_linkedMortgageWith','_canonPropTax','_canonHomeIns','calcCarryTotal',
-               '_groundsLinkedDebt','_groundsLiens','_groundsCLTV','_groundsCLTVBeat','_groundsEquityBarHTML',
-               '_groundsLinkedPmts','_groundsAllIn','_groundsAllInBeat','_groundsAllInBreakdown','_groundsDI','_groundsDI9b','_groundsSignalsHTML'];
+// ROOTS, not a hand-list. A hand-typed callee list rots the moment a function gains a new callee:
+// every gate slicing its caller then dies with "ReferenceError: <fn> is not defined" — a red that
+// says nothing about the room. That is exactly what killed the eight HELOC gates. extractClosure
+// walks the real callees out of studio.html, so a new one is picked up automatically.
+const ROOTS = ['calculateEscrowMonthly', '_escrowFooter', 'hasEscrow', '_groundsAllIn', '_groundsSignalsHTML'];
 const getBaseType = (baseId) => {
   const id = String(baseId);
   if (id.indexOf('property') === 0) return { id, title: 'Real Estate' };
@@ -29,7 +31,7 @@ const getBaseType = (baseId) => {
   return { id, title: 'Other' };
 };
 function build(accounts) {
-  const body = 'var GROUNDS_COST_TO_VALUE_HI=4;\nvar GROUNDS_LTV_HI=80;\n' + NAMES.map(extract).join('\n') +
+  const body = 'var GROUNDS_COST_TO_VALUE_HI=4;\nvar GROUNDS_LTV_HI=80;\n' + extractClosure(s, ROOTS) +
     '\nreturn { esc:calculateEscrowMonthly, foot:_escrowFooter, has:hasEscrow, allIn:_groundsAllIn, sig:_groundsSignalsHTML };';
   return new Function('state', 'getBaseType', body)({ accounts }, getBaseType);
 }

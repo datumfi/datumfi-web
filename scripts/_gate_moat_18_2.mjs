@@ -10,6 +10,7 @@
    --redfirst neuters the resolver (falls back to the raw Grounds field) -> the Moat-supplied tax vanishes from
    all-in and the stale value is no longer ignored -> the functional checks bite. */
 import { readFileSync } from 'node:fs';
+import { extractClosure } from './_gate_extract.mjs';
 const RED = process.argv.includes('--redfirst');
 let s = readFileSync('studio.html', 'utf8');
 
@@ -24,9 +25,11 @@ if (RED) {
 const checks = [];
 const need = (label, cond) => checks.push([label, !!cond]);
 
-const extract = (name) => { const m = s.match(new RegExp('    function ' + name + '\\([\\s\\S]*?\\n    }\\n')); return m ? m[0] : ''; };
-const NAMES = ['_num', '_linkedMortgageWith', '_canonPropTax', '_canonHomeIns', 'calcCarryTotal',
-               '_groundsLinkedPmts', '_groundsAllIn', '_groundsAllInBeat', '_groundsAllInBreakdown'];
+// ROOTS, not a hand-list. A hand-typed callee list rots the moment a function gains a new callee:
+// every gate slicing its caller then dies with "ReferenceError: <fn> is not defined" — a red that
+// says nothing about the room. That is exactly what killed the eight HELOC gates. extractClosure
+// walks the real callees out of studio.html, so a new one is picked up automatically.
+const ROOTS = ['_canonPropTax', '_canonHomeIns', 'calcCarryTotal', '_groundsAllIn', '_groundsAllInBeat'];
 const getBaseType = (baseId) => {
   const id = String(baseId);
   if (id.indexOf('property') === 0) return { id, title: 'Real Estate' };
@@ -35,7 +38,7 @@ const getBaseType = (baseId) => {
   return { id, title: 'Other' };
 };
 function build(accounts) {
-  const body = NAMES.map(extract).join('\n') +
+  const body = extractClosure(s, ROOTS) +
     '\nreturn { canonTax:_canonPropTax, canonIns:_canonHomeIns, carry:calcCarryTotal, allIn:_groundsAllIn, beat:_groundsAllInBeat };';
   return new Function('state', 'getBaseType', body)({ accounts }, getBaseType);
 }
