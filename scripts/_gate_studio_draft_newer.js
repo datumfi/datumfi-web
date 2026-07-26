@@ -268,6 +268,26 @@ ok((HTML.split('window._studioClearDraft()').length - 1) >= 3,
 ok(/_clearCarriedDesign|_scratchReset/.test(HTML) && /localStorage\.removeItem\(k\)/.test(HTML) && /sessionStorage\.removeItem\(k\)/.test(HTML),
   '_scratchReset still sweeps BOTH stores (it was already correct — confirm, do not duplicate it)');
 
+// ═══ 10 · AUTHORED COPY, VERBATIM (L47) ════════════════════════════════════════════════════════
+// The Architect authors these lines; the Wirer installs them unchanged. Asserting the exact strings
+// means a well-meaning re-word shows up as a RED instead of drifting in unnoticed.
+const COPY = {
+  'restore title':   'Pick up where you left off?',
+  'restore body':    'You have an unsaved draft of ',
+  // anchored past the escaped apostrophe (the source carries hasn\'t) so the check tests the copy,
+  // not the escaping
+  'restore body 2':  't been saved to your account yet &mdash; want to bring it back, or start fresh from your last saved version?',
+  'restore primary': 'Restore my draft',
+  'restore second':  'Start from last saved',
+  'unnamed fallback': '\'your plan\'',
+  'quota notice':    'We’ve stopped saving your changes on this device — it’s out of room. Your work is still on screen. Sign in and save to your account to keep it safe.',
+  'sibling notice':  'Another Studio tab has newer unsaved work, so we’ve paused saving here to avoid overwriting it. Switch to that tab to keep going, or reload this one to pick up where it left off.'
+};
+Object.keys(COPY).forEach((k) => ok(HTML.indexOf(COPY[k]) >= 0, 'COPY verbatim in studio.html — ' + k));
+// The fallback drops the guillemets (a generic noun is not a title); a NAMED draft keeps them.
+ok(/&laquo;' \+ _draftEsc\(r\.name\) \+ '&raquo;/.test(HTML),
+  'COPY: guillemets are applied to the NAME only, never to the "your plan" fallback');
+
 console.log('MODE: ' + (UNCOND ? '--unconditional' : SESSIONONLY ? '--sessiononly' : NOHELPER ? '--nohelper' : 'CLEAN') +
             '   |   Studio unsaved-edit survival + tab-close + 14-day window');
 lines.forEach((l) => console.log('  ' + l));

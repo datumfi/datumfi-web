@@ -15817,6 +15817,48 @@
     } catch (e) {}
     window.location.href = url;
   };
+  /* ── DRAFT-PERSISTENCE NOTICES ───────────────────────────────────────────────────────────
+   * Two conditions where the Studio has STOPPED keeping the local draft. Both were previously
+   * silent, and a silence here is the original data-loss injury wearing a new hat: the user keeps
+   * typing into work that is no longer being kept.
+   *
+   * ONE component, two authored messages (L48) — not two banners. Both are persistent, because
+   * both describe an ongoing state rather than an event; the quota one clears itself if writing
+   * recovers. Copy is Captain-authored, wired VERBATIM (L47).
+   *
+   * SCOPE FENCE: these are DISTINCT surfaces from the load()-time restore/discard prompt and from
+   * the _navDrain leave-guard. Different trigger, different copy. Do not conflate. */
+  var _DRAFT_NOTICE_COPY = {
+    quota:   'We’ve stopped saving your changes on this device — it’s out of room. Your work is still on screen. Sign in and save to your account to keep it safe.',
+    sibling: 'Another Studio tab has newer unsaved work, so we’ve paused saving here to avoid overwriting it. Switch to that tab to keep going, or reload this one to pick up where it left off.'
+  };
+  function _draftNotice(kind, show) {
+    var id = 'draft-notice-' + kind;
+    var run = function () {
+      var el = document.getElementById(id);
+      if (!show) { if (el && el.parentNode) el.parentNode.removeChild(el); return; }
+      if (el) return;
+      el = document.createElement('div');
+      el.id = id;
+      el.setAttribute('role', 'status');
+      el.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:10015;' +
+        'max-width:min(680px,92vw);background:rgba(229,142,38,0.12);border:1px solid rgba(229,142,38,0.42);' +
+        'color:#e9c48a;font-family:var(--font-mono);font-size:11px;letter-spacing:0.05em;line-height:1.7;' +
+        'padding:10px 18px;border-radius:4px;text-align:center;box-shadow:0 18px 42px rgba(0,0,0,0.45);';
+      el.textContent = _DRAFT_NOTICE_COPY[kind];
+      document.body.appendChild(el);
+    };
+    if (document.body) run();
+    else document.addEventListener('DOMContentLoaded', run);
+  }
+  // Registered at parse time: the debounced autosave can fire either event before DOMContentLoaded.
+  window.addEventListener('datum:draft-write-state', function (e) {
+    _draftNotice('quota', !!(e && e.detail && e.detail.ok === false));
+  });
+  window.addEventListener('datum:draft-sibling-hold', function () {
+    _draftNotice('sibling', true);
+  });
+
   /* ── OUTSIDE-WINDOW DRAFT RESTORE OFFER (autosave Commit 2) ──────────────────────────────
    * Fires ONLY when load() parked a draft that is NEWER than the saved row but older than the
    * 14-day window. Inside the window nothing is asked — the draft hydrates silently and the
@@ -15848,10 +15890,12 @@
     // did, we stay silent rather than print an age we cannot source.
     var when = _draftWhen(draft._draftAt);
     if (!when) return;
-    var fileName = 'your plan';
+    // Guillemets quote a NAME. With no user-given name there is no title to quote, so the fallback
+    // drops them rather than dressing a generic noun up as one (Captain-ruled).
+    var subject = 'your plan';
     try {
       var r = window.DatumSavedName && window.DatumSavedName.resolve(draft, { noun: 'Blueprint' });
-      if (r && r.source === 'user' && r.name) fileName = r.name;
+      if (r && r.source === 'user' && r.name) subject = '&laquo;' + _draftEsc(r.name) + '&raquo;';
     } catch (_e) {}
     if (document.getElementById('draft-restore-overlay')) return;
     var ov = document.createElement('div');
@@ -15863,7 +15907,7 @@
       '<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="draft-restore-title" style="max-width:560px;">' +
         '<div class="hud-title" id="draft-restore-title" style="color:var(--white); font-size:19px; margin-bottom:14px; text-transform:none; font-family:var(--font-serif); font-style:italic; font-weight:300;">Pick up where you left off?</div>' +
         '<p style="color:rgba(255,255,255,0.66); font-size:14px; line-height:1.62; margin:0 0 22px;">' +
-          'You have an unsaved draft of &laquo;' + _draftEsc(fileName) + '&raquo; from ' + _draftEsc(when) + '. ' +
+          'You have an unsaved draft of ' + subject + ' from ' + _draftEsc(when) + '. ' +
           'It hasn\'t been saved to your account yet &mdash; want to bring it back, or start fresh from your last saved version?' +
         '</p>' +
         '<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">' +

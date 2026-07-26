@@ -101,7 +101,15 @@ because its battery is dead. This is the systemic fix for the whole class — st
 the right question, and make gates fail loud when they cannot do their job. Audit every
 `scripts/_gate_*` / `_p*` for the same shape.
 
-### E · Deferred by ruling (not defects)
+### E · KNOWN AND INTENDED — signed-out / no-saved-row hydrate (Captain-ruled, do not "fix")
+
+The out-of-window **restore prompt fires only when a saved D1 row exists.** Signed out, or signed in
+with no saved row, a draft hydrates **regardless of age** and the user is not asked. This is
+deliberate: "Start from last saved" needs a target, and with no saved row the draft is the only work
+that exists — prompting would offer a choice between the user's work and nothing. Silently hydrating
+is the safe outcome. Logged so we own it on purpose rather than by accident.
+
+### F · Deferred by ruling (not defects)
 
 - **"Newer wins" conflict-loss** — Device A holds a minutes-old unsaved draft; Device B saves; A
   hydrates D1 and A's typing vanishes. A *conflict*, not staleness; the 14-day window does not cover
