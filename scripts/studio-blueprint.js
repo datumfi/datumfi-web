@@ -326,7 +326,28 @@
     catch (_e) { return null; }
   }
   function writeSessionDraft(bp) {
-    try { sessionStorage.setItem(SESSION_DRAFT_KEY, JSON.stringify(bp)); } catch (_e) {}
+    // _draftAt is the ONLY discriminator boot has between a newer unsaved edit and the last SAVED doc:
+    // bp.saved_at is written by save() ALONE, so an edited draft and the D1 doc carry the SAME saved_at
+    // and any "prefer the newer" test would tie on every edit. Stamped on a COPY so the live bp is not
+    // mutated, and underscore-prefixed so toD1Document strips it — this local edit clock never reaches
+    // D1 and never becomes part of a saved payload. sessionStorage only; no new D1 write site.
+    try { sessionStorage.setItem(SESSION_DRAFT_KEY, JSON.stringify(Object.assign({}, bp, { _draftAt: new Date().toISOString() }))); } catch (_e) {}
+  }
+
+  /* DATA-LOSS FIX — is the local session draft genuinely NEWER than the D1 studio doc?
+   * D1 side uses the ROW's updated_at (when it was actually written), which getDoc already returns.
+   * L47: never fabricate a stamp. A missing/unparseable stamp on either side is NOT treated as old —
+   * it falls to the tiebreak: prefer whichever source actually HAS rooms, and if that does not separate
+   * them, keep today's behaviour and let D1 win. Never silently drop accounts. */
+  function _draftIsNewer(draft, d1Doc) {
+    var dt = Date.parse(draft && draft._draftAt);
+    var st = Date.parse(d1Doc && d1Doc.updated_at);
+    if (!isNaN(dt) && !isNaN(st)) return dt > st;
+    var draftHasRooms = !!(draft && draft.accounts && draft.accounts.length);
+    var d1HasRooms = false;
+    try { var p = JSON.parse(d1Doc && d1Doc.payload); d1HasRooms = !!(p && p.accounts && p.accounts.length); } catch (_e) {}
+    if (draftHasRooms !== d1HasRooms) return draftHasRooms;
+    return false;
   }
 
   /* Clerk mirror — P3 SOURCE OF TRUTH: compact+compress the WHOLE 4-slot archive
@@ -676,12 +697,31 @@
     // P3 — D1-FIRST: if the caller handed us a D1 studio doc, hydrate from it (full fidelity) and
     // adopt its revision for optimistic CAS. Any absence/error falls through to the existing
     // LS(session-draft)->Clerk path below, unchanged (silent + lossless fallback).
+    // DATA-LOSS FIX — this early return used to be UNCONDITIONAL. With a D1 doc in hand,
+    // readSessionDraft() below was unreachable, so a newer UNSAVED edit was silently replaced by the
+    // last SAVED doc: edit -> leave -> return -> work gone. That early return WAS the loss.
+    //
+    // READ-SIDE ONLY. Nothing about WHEN writes happen changes: ordinary editing still ends at
+    // writeSessionDraft (sessionStorage), and save() remains the ONLY D1 writer. Explicit save keeps its
+    // full meaning — this merely decides which of two ALREADY-EXISTING sources to hydrate from.
+    //
+    // SCOPE, HONESTLY: the draft lives in sessionStorage, so this closes the SAME-TAB case (in-app nav).
+    // A closed tab takes the draft with it and no boot-time choice can recover it; moving the draft to
+    // localStorage is a separate, deliberate commit with its own staleness/privacy questions.
     if (opts.d1Doc && opts.d1Doc.payload) {
-      try {
-        Object.assign(bp, JSON.parse(opts.d1Doc.payload));
-        if (global.DatumD1 && typeof opts.d1Doc.revision === 'number') global.DatumD1.setRevision('studio', 'active', opts.d1Doc.revision);
-        return finishLoad(bp, 'd1');
-      } catch (_e) {}
+      var _sd = opts.ignoreDraft ? null : readSessionDraft();
+      if (!(_sd && _draftIsNewer(_sd, opts.d1Doc))) {
+        try {
+          Object.assign(bp, JSON.parse(opts.d1Doc.payload));
+          if (global.DatumD1 && typeof opts.d1Doc.revision === 'number') global.DatumD1.setRevision('studio', 'active', opts.d1Doc.revision);
+          return finishLoad(bp, 'd1');
+        } catch (_e) {}
+      } else if (global.DatumD1 && typeof opts.d1Doc.revision === 'number') {
+        // Hydrating from the draft, but STILL adopt the server revision we just read. Without this the
+        // next save would PUT with no known revision and the API's expected=current fallback would make
+        // it a silent last-write-wins — the same CAS hole the rename write had to close.
+        try { global.DatumD1.setRevision('studio', 'active', opts.d1Doc.revision); } catch (_e) {}
+      }
     }
 
     var draft = readSessionDraft();
