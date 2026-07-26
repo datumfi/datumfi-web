@@ -156,7 +156,12 @@ async function clickAndGetUrl(page, btnId) {
   // Seed lingering carried state, then reload so the overlay re-shows over it.
   await pIn.evaluate(() => {
     var draft = { version: 'old', blueprint_id: 'lingering', portfolio_total: 2000000, datum: { net_datum_v1: 120000 } };
+    // Seed the draft into BOTH stores. The live draft moved sessionStorage ->
+    // localStorage (autosave Commit 2); seeding both keeps this privacy check
+    // honest on EITHER side of that move instead of silently missing the store
+    // the app actually uses.
     localStorage.setItem('datumfi_blueprint_draft_v1', JSON.stringify(draft));
+    sessionStorage.setItem('datumfi_blueprint_draft_v1', JSON.stringify(draft));
     sessionStorage.setItem('datumfi_blueprint_current_snapshot', JSON.stringify(draft));
     localStorage.setItem('datum_blueprint_state_pending', JSON.stringify(draft));
     sessionStorage.setItem('datum_designed_ceil', '999999');
@@ -177,10 +182,16 @@ async function clickAndGetUrl(page, btnId) {
     // The draft may legitimately be re-written at DEFAULTS by the engine's
     // debounced commit after the clean reload — what matters is it no longer
     // carries the LINGERING plan (privacy). Inspect its content, not its presence.
-    var draftRaw = sessionStorage.getItem('datumfi_blueprint_draft_v1');
-    var draft = null; try { draft = JSON.parse(draftRaw || 'null'); } catch (e) {}
+    // Read the draft from BOTH stores — a lingering plan left behind in EITHER
+    // one is the same privacy leak, and which store is live changes with the
+    // autosave storage move.
+    var _lingers = function (raw) {
+      var d = null; try { d = JSON.parse(raw || 'null'); } catch (e) { return false; }
+      return !!(d && (d.blueprint_id === 'lingering' || (d.datum && d.datum.net_datum_v1 === 120000)));
+    };
     return {
-      draftCarriesLingering: !!(draft && (draft.blueprint_id === 'lingering' || (draft.datum && draft.datum.net_datum_v1 === 120000))),
+      draftCarriesLingering: _lingers(localStorage.getItem('datumfi_blueprint_draft_v1')) ||
+                             _lingers(sessionStorage.getItem('datumfi_blueprint_draft_v1')),
       snapshot: ss('datumfi_blueprint_current_snapshot'),
       pending: localStorage.getItem('datum_blueprint_state_pending') != null,
       carriedCeil: ss('datum_designed_ceil'),

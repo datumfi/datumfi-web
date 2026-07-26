@@ -64,6 +64,13 @@ const readAges = (page) => page.evaluate(() => { const tt = document.getElementB
 
   // Enter shape mode for Items 2 + 3.
   const rectOf = () => page.evaluate(() => { const r = document.getElementById('shape-subtoggle').getBoundingClientRect(); return r.width ? Math.round(r.x + r.width / 2) : null; });
+  // The Studio may already be IN shape mode on load — a blind click would then
+  // toggle it OFF and every later #shape-*-tab click times out. Settle to Estate
+  // FIRST so the click below is always a real Estate->Shape transition (Item 2's
+  // anti-flash sampling is only meaningful across a genuine transition).
+  const subShown = () => page.evaluate(() => { const el = document.getElementById('shape-subtoggle'); return !!el && getComputedStyle(el).display !== 'none'; });
+  if (await subShown()) { await page.click('#shape-mode-toggle'); await page.waitForTimeout(900); }
+  check('Item2: Studio settled to Estate mode before the transition', !(await subShown()));
   await page.click('#shape-mode-toggle');
   // Item 2 anti-flash: sample the subtoggle center-x DURING the Estate->Shape transition
   // (not just at rest) — it must be anchored from first paint, no swoop.
@@ -119,13 +126,33 @@ const readAges = (page) => page.evaluate(() => { const tt = document.getElementB
   check('Item3: Have frame recolors on state change', i3b.color && i3b.color !== i3.color, i3.color + ' -> ' + i3b.color);
 
   // Item 5 — Studio reopen + soft-dismiss preserves draft.
-  await page.evaluate(() => localStorage.setItem('datumfi_blueprint_draft_v1', JSON.stringify({ marker: 'KEEPME' })));
+  // Seed BOTH stores: the live draft moved sessionStorage -> localStorage (autosave
+  // Commit 2), so a single-store probe would silently stop watching the store the app
+  // actually uses. ALSO seed a carried-design sentinel — _scratchReset() clears it
+  // (studio.html _clearCarriedDesign) while the engine's debounced draft commit never
+  // writes it, so it still proves "no scratch-reset ran" even if the draft is
+  // legitimately re-written at defaults post-flip.
+  await page.evaluate(() => {
+    const d = JSON.stringify({ marker: 'KEEPME' });
+    localStorage.setItem('datumfi_blueprint_draft_v1', d);
+    sessionStorage.setItem('datumfi_blueprint_draft_v1', d);
+    sessionStorage.setItem('datum_designed_ceil', 'KEEPME-CEIL');
+  });
   check('Item5: _studioOverlayOpen exposed', await page.evaluate(() => typeof window._studioOverlayOpen === 'function'));
   await page.click('.return-home'); await page.waitForTimeout(400);
   check('Item5: Return-to-Overview re-opens Studio overlay', await visible(page, 'studioOverlayWrap'));
   await page.click('#studioCloseIntro'); await page.waitForTimeout(700);
   check('Item5: re-opened X soft-dismisses', !(await visible(page, 'studioOverlayWrap')));
-  check('Item5: in-progress Blueprint preserved (no scratch-reset)', await page.evaluate(() => { const v = localStorage.getItem('datumfi_blueprint_draft_v1'); return !!v && v.indexOf('KEEPME') > -1; }));
+  // Assert PRESENCE in BOTH stores, not marker content: a scratch-reset REMOVES the
+  // key (fails), while the engine's debounced commit merely REWRITES it (must not
+  // fail). Requiring both stores keeps this honest whichever one is live.
+  const i5 = await page.evaluate(() => ({
+    inLocal:   localStorage.getItem('datumfi_blueprint_draft_v1') != null,
+    inSession: sessionStorage.getItem('datumfi_blueprint_draft_v1') != null,
+    sentinelKept: sessionStorage.getItem('datum_designed_ceil') === 'KEEPME-CEIL'
+  }));
+  check('Item5: in-progress Blueprint preserved (no scratch-reset)', i5.inLocal && i5.inSession, JSON.stringify(i5));
+  check('Item5: soft-dismiss did NOT run scratch-reset (carried-design intact)', i5.sentinelKept, JSON.stringify(i5));
   await ctx.close();
 
   // ── Studio signed-in + seen: overlay auto-hides, reopen still works ──
