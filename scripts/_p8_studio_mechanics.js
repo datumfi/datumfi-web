@@ -55,6 +55,8 @@ const blockClerk = (ctx) => ctx.route('**/*', (route) => { const u = route.reque
  *   --collapsed              never opens #sec-sketch -> the editor is 0x0 again. The reachability
  *                            check goes RED and the run aborts loudly: ONE honest red where ten
  *                            confusing ones used to be. Measured: 24 pass / 2 fail.
+ *   --clip                   widens the Have frame past the panel's right edge -> the un-clipped
+ *                            geometry check goes RED for its OWN reason, not via a 0x0 box.
  *   --synthetic --collapsed  the true historical state — old synthetic click+blur driver against a
  *                            hidden target. Reproduces the original TEN Item-4 reds exactly.
  *                            Measured: 36 pass / 12 fail.
@@ -65,6 +67,7 @@ const blockClerk = (ctx) => ctx.route('**/*', (route) => { const u = route.reque
  * section. Pair the flags to reproduce history; use --collapsed alone to prove the guard. */
 const COLLAPSED = process.argv.includes('--collapsed');
 const SYNTHETIC = process.argv.includes('--synthetic');
+const CLIP = process.argv.includes('--clip');
 const openSketchSection = async (page) => {
   if (COLLAPSED) return;
   await page.evaluate(() => {
@@ -152,6 +155,20 @@ const readAges = (page) => page.evaluate(() => { const tt = document.getElementB
   // Item 3 (P8.1) — box gone; frame scoped to 01->05 (excludes methodology); Profile intact
   // outside; Have frame border on all 4 sides, un-clipped, colored by state.
   const _b4 = (s) => { const p = String(s).split(','); const v = parseFloat(p[0]); return p.length === 4 && v > 0 && p.every((x) => parseFloat(x) === v); };
+  // The frame lives inside #sec-sketch, a COLLAPSED accordion — the same section that produced the
+  // ten Item-4 false reds. Collapsed, it measures 0x0, and a GEOMETRY assertion on a degenerate rect
+  // is meaningless: the style-based checks below still pass (computed styles resolve on hidden
+  // elements), so the failure looked like a clipping bug in the layout rather than a control that
+  // was never rendered. Open it, then measure something real.
+  await openSketchSection(page);
+  // --clip widens the frame past the panel's right edge. Without this, `rightInside` would only ever
+  // be seen to fail via a 0x0 box — which is the `rendered` check's job, not its own. A control that
+  // can only fail for someone else's reason is not a control.
+  if (CLIP) await page.evaluate(() => {
+    const f = document.getElementById('shape-input-frame-have');
+    const p = document.querySelector('.drafting-panel');
+    if (f && p) f.style.width = (p.getBoundingClientRect().width + 60) + 'px';
+  });
   const i3 = await page.evaluate(() => {
     const f = document.getElementById('shape-input-frame-have');
     const b = document.getElementById('timeline-state-badge');
@@ -163,7 +180,9 @@ const readAges = (page) => page.evaluate(() => { const tt = document.getElementB
       excludesMethod: !!(f && !f.querySelector('#methodology-btn')),
       profileOutside: !!(document.getElementById('sec-profile') && f && !f.contains(document.getElementById('sec-profile'))),
       sides: cs ? [cs.borderTopWidth, cs.borderRightWidth, cs.borderBottomWidth, cs.borderLeftWidth].join(',') : '',
-      rightInside: !!(r && r.right <= pr.right + 0.5 && r.right > pr.left),
+      rendered: !!(r && r.width > 0 && r.height > 0),
+      rightInside: !!(r && r.width > 0 && r.right <= pr.right + 0.5 && r.right > pr.left),
+      geom: r && pr ? { fR: +r.right.toFixed(1), pR: +pr.right.toFixed(1), clear: +(pr.right - r.right).toFixed(1) } : null,
       color: cs ? cs.borderTopColor : ''
     };
   });
@@ -172,7 +191,10 @@ const readAges = (page) => page.evaluate(() => { const tt = document.getElementB
   check('Item3: frame wraps 01->05, excludes methodology', i3.wraps && i3.excludesMethod);
   check('Item3: Profile section intact + outside frame', i3.profileOutside);
   check('Item3: Have frame border on all 4 sides', _b4(i3.sides), i3.sides);
-  check('Item3: Have frame right edge un-clipped (inside panel)', i3.rightInside);
+  // Rendered FIRST, then geometry. If the frame is ever 0x0 again, say "not rendered" plainly
+  // instead of reporting a clipping bug that does not exist.
+  check('Item3: Have frame is actually rendered (non-zero box)', i3.rendered, JSON.stringify(i3.geom));
+  check('Item3: Have frame right edge un-clipped (inside panel)', i3.rightInside, JSON.stringify(i3.geom));
   check('Item3: Have frame colored by state', i3.color !== 'rgba(0, 0, 0, 0)', i3.color);
 
   // Item 2 — toggle position fixed across Have -> Want -> Have.
