@@ -717,6 +717,20 @@ h1{text-shadow:0 0 34px rgba(93,202,165,.052),0 16px 34px rgba(0,0,0,.18)}
     }).catch(function () { cb(_clerk); });         // unreachable / timeout -> Clerk fallback
   }
 
+  // MISS-5 PREFS RETIRE — ONE place decides WHERE the workspace name lands. D1 whenever it can take the
+  // write; the Clerk mirror ONLY in the states where it cannot (no client / rolled back / signed out) —
+  // the exact complement of writePreferences' own guard, so the name always lands in exactly one store and
+  // never in none. Both the first-time migration and the rename-on-blur route through it.
+  function _persistWorkspaceName(n) {
+    try {
+      if (!window.DatumD1 || window.DatumD1.prefsMirrorNeeded()) {
+        var m = Object.assign({}, Clerk.user.unsafeMetadata || {}, { workspaceName: n });
+        Clerk.user.update({ unsafeMetadata: m }).catch(function () {});
+      }
+      if (window.DatumD1) window.DatumD1.writePreferences({ workspaceName: n });
+    } catch (e) {}
+  }
+
   window.addEventListener('load', function () {
     if (!window.Clerk) return;
     Clerk.load().then(function () {
@@ -735,10 +749,7 @@ h1{text-shadow:0 0 34px rgba(93,202,165,.052),0 16px 34px rgba(0,0,0,.18)}
           }
         } else {
           var localName = localStorage.getItem(NAME_KEY) || '';
-          if (localName) {
-            var migMeta = Object.assign({}, meta, { workspaceName: localName });
-            Clerk.user.update({ unsafeMetadata: migMeta }).catch(function () {});
-          }
+          if (localName) { _persistWorkspaceName(localName); }
         }
       });
 
@@ -747,13 +758,7 @@ h1{text-shadow:0 0 34px rgba(93,202,165,.052),0 16px 34px rgba(0,0,0,.18)}
         nameEl.addEventListener('blur', function () {
           var n = (nameEl.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 32);
           if (!n) return;
-          try {
-            var updMeta = Object.assign({}, Clerk.user.unsafeMetadata || {}, { workspaceName: n });
-            Clerk.user.update({ unsafeMetadata: updMeta }).catch(function () {});
-            // P5c — ADDITIVE: mirror the workspaceName to D1 (its own preferences row). The Clerk
-            // mirror above stays the net; no-op when D1 absent / signed out / rolled back.
-            if (window.DatumD1) window.DatumD1.writePreferences({ workspaceName: n });
-          } catch (e) {}
+          _persistWorkspaceName(n);
         });
       }
     }).catch(function () {});

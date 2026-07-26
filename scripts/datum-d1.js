@@ -278,6 +278,20 @@
     } catch (e) {}
   }
 
+  // MISS-5 — THE PREFS CLERK MIRROR IS RETIRED UNDER CUTOVER. It is no longer an UNCONDITIONAL write: it
+  // fires ONLY in the states where writePreferences above does NOT — rolled back (CUTOVER === false) or
+  // signed out of D1. The two are EXACT COMPLEMENTS, so a preference always lands in exactly one store and
+  // never in none.
+  //
+  // Why keep the mirror alive for those states instead of deleting the write outright: CUTOVER=false is the
+  // one-flip escape route, and under rollback writePreferences no-ops. Delete the Clerk write and a
+  // rollback would silently stop persisting preferences anywhere — the escape route would look intact and
+  // quietly lose data. Retiring the write means making it CONDITIONAL, not making it absent.
+  //
+  // Callers must also treat a MISSING DatumD1 as "mirror needed" (see the !window.DatumD1 || … guards):
+  // if the client never loaded, no D1 write can happen at all.
+  function prefsMirrorNeeded() { return API.CUTOVER === false || !signedIn(); }
+
   var API = {
     // P4 CUTOVER flag (default ON): D1 is the sole truth for Studio + the Clerk studio-slim mirror is
     // OFF. ONE-FLIP ROLLBACK: set DatumD1.CUTOVER = false -> Clerk mirror fires again + LS-authority
@@ -289,6 +303,7 @@
     getDoc: getDoc, putDoc: putDoc, listDocs: listDocs, deleteDoc: deleteDoc, scheduleWrite: scheduleWrite, writeNow: writeNow,
     drain: drain, onState: function (cb) { if (typeof cb === 'function') _stateSubs.push(cb); return _state; }, getState: function () { return _state; },
     setRevision: setRevision, knownRevision: knownRevision, signedIn: signedIn, writePreferences: writePreferences,
+    prefsMirrorNeeded: prefsMirrorNeeded,
     _fetch: null
   };
   global.DatumD1 = API;

@@ -3714,14 +3714,17 @@ input:focus,select:focus{
     try {
       if (window.Clerk && window.Clerk.user) {
         var wn = localStorage.getItem('datum_workspace_name') || '';
-        var meta = Object.assign({}, window.Clerk.user.unsafeMetadata || {}, {
-          dossier: p,
-          workspaceName: wn || undefined
-        });
-        window.Clerk.user.update({ unsafeMetadata: meta }).catch(function () {});
-        // P5c — ADDITIVE preferences dual-write to D1 (one row per key: dossier + workspaceName). The
-        // Clerk unsafeMetadata mirror above STAYS the net; this is written ALONGSIDE it. No-op when D1
-        // absent / signed out / rolled back (CUTOVER===false) inside writePreferences = escape route.
+        // MISS-5 PREFS RETIRE — D1 is now the store for preferences; the Clerk mirror is no longer written
+        // unconditionally. It fires ONLY where the D1 write cannot: no D1 client, rolled back
+        // (CUTOVER===false), or signed out of D1 — the exact complement of writePreferences' own guard, so
+        // a save always lands in exactly one store and never in none.
+        if (!window.DatumD1 || window.DatumD1.prefsMirrorNeeded()) {
+          var meta = Object.assign({}, window.Clerk.user.unsafeMetadata || {}, {
+            dossier: p,
+            workspaceName: wn || undefined
+          });
+          window.Clerk.user.update({ unsafeMetadata: meta }).catch(function () {});
+        }
         if (window.DatumD1) window.DatumD1.writePreferences({ dossier: p, workspaceName: wn });
       }
     } catch (e) {}
@@ -3773,25 +3776,33 @@ input:focus,select:focus{
           cb(dos || _clerk);                         // D1 wins when present; else the Clerk mirror
         }).catch(function () { cb(_clerk); });         // unreachable / timeout -> Clerk fallback
       }
-      _resolveDossier(function (clerkDossier) {
+      // MISS-5 PREFS RETIRE — ONE place decides WHERE a preference lands, so the newest-wins push and the
+      // first-time migration below can never drift from hybridSave's rule. D1 whenever it can take the
+      // write; the Clerk mirror ONLY in the states where it cannot (no client / rolled back / signed out).
+      function _persistPrefs(dossier, workspaceName) {
+        if (!window.DatumD1 || window.DatumD1.prefsMirrorNeeded()) {
+          var m = Object.assign({}, meta, { dossier: dossier });
+          if (workspaceName) m.workspaceName = workspaceName;
+          Clerk.user.update({ unsafeMetadata: m }).catch(function () {});
+        }
+        if (window.DatumD1) window.DatumD1.writePreferences({ dossier: dossier, workspaceName: workspaceName || undefined });
+      }
+      // NOTE: `serverDossier` is whatever _resolveDossier returned — the D1 row when present, the Clerk
+      // mirror only as its silent fallback. It has not been "the Clerk dossier" since the MISS-6 read-cutover.
+      _resolveDossier(function (serverDossier) {
         var localData = readLocal();
-        if (clerkDossier) {
-          var clerkTime = new Date(clerkDossier.savedAt || 0).getTime();
+        if (serverDossier) {
+          var serverTime = new Date(serverDossier.savedAt || 0).getTime();
           var localTime = new Date((localData && localData.savedAt) || 0).getTime();
-          if (localTime > clerkTime) {
-            var pushMeta = Object.assign({}, meta, { dossier: localData });
-            Clerk.user.update({ unsafeMetadata: pushMeta }).catch(function () {});
+          if (localTime > serverTime) {
+            _persistPrefs(localData);
             pinFromPayload(localData);
           } else {
-            reloadFromPayload(clerkDossier);
+            reloadFromPayload(serverDossier);
           }
         } else {
           if (localData) {
-            var migMeta = Object.assign({}, meta, {
-              dossier: localData,
-              workspaceName: localStorage.getItem('datum_workspace_name') || undefined
-            });
-            Clerk.user.update({ unsafeMetadata: migMeta }).catch(function () {});
+            _persistPrefs(localData, localStorage.getItem('datum_workspace_name') || '');
           }
         }
       });

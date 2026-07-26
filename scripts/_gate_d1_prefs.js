@@ -82,7 +82,14 @@ const PORT = 8197; const base = 'http://127.0.0.1:' + PORT;
   ok(pick(!!wsPut, !wsPut), 'WORKSPACE: hybridSave dual-writes a D1 row (PUT type=preferences key=workspaceName) [BITE]');
   ok(pick(!!wsPut && wsPut.payload && wsPut.payload.workspaceName === 'Gate Workspace', !(wsPut && wsPut.payload)),
      'WORKSPACE: the workspaceName value rides to D1 intact [BITE]');
-  ok(pick(clerkDossierMirrored, !clerkDossierMirrored), 'ADDITIVE: the Clerk unsafeMetadata dossier mirror STILL fires (net on) [BITE]');
+  // DELIBERATELY INVERTED BY THE MISS-5 PREFS RETIRE. This gate was written for Phase-5c, when the D1
+  // preferences write was ADDITIVE and the Clerk mirror was the unconditional net — so it asserted the
+  // mirror STILL fires. The Captain's cross-device smoke passed and prefs was retired: D1 is now the store,
+  // and the mirror fires ONLY where the D1 write cannot (rolled back / signed out / no client). Under this
+  // harness (cutover ON, signed in) the correct answer is therefore the OPPOSITE. Inverted rather than
+  // deleted so the reversal stays on the record; the complement property itself is proved exhaustively in
+  // _gate_miss5_prefs_retire.mjs, which enumerates all eight states for "exactly one store, never none".
+  ok(pick(!clerkDossierMirrored, clerkDossierMirrored), 'MISS-5 RETIRED: under cutover the Clerk dossier mirror does NOT fire (D1 is the store) [BITE]');
   ok(pick(!!lsDossier && !!dossierPut && lsDossier.primary && dossierPut.payload.primary && lsDossier.primary.name === dossierPut.payload.primary.name && lsDossier.schema === dossierPut.payload.schema,
           !(lsDossier && dossierPut)),
      'PARITY: the LS dossier and the D1 dossier row agree (schema + primary.name) [BITE]');
