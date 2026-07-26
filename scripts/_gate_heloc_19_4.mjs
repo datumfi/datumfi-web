@@ -11,6 +11,7 @@
      (VOICE) A names a use / weighs a cost — never a command.
    --redfirst strips the §19.4 block -> both winners vanish (proves the gate bites). */
 import { readFileSync } from 'node:fs';
+import { extractClosure } from './_gate_extract.mjs';
 const RED = process.argv.includes('--redfirst');
 let s = readFileSync('studio.html', 'utf8');
 
@@ -23,18 +24,18 @@ if (RED) {
 const checks = [];
 const need = (label, cond) => checks.push([label, !!cond]);
 
-const extract = (name) => { const m = s.match(new RegExp('    function ' + name + '\\([\\s\\S]*?\\n    }\\n')); return m ? m[0] : ''; };
-const NAMES = ['calculateTotalPmt','payoffMonths','_payoffDateFrom','calculatePayoff','lifetimeInterest',
-               'acceleratedDelta','_helocLimit','_helocUtilPct','_helocHeadroom','_payoffVsMaturity','_helocDrawEndShock',
-               '_debtPayoffDisplay','_helocCeilingBand','_groundsLinkedDebt','_num','_normalizeRatesResp','_livePrime','_liveRates','_liveIndex','_fmtAsOf','_helocLiveRateHTML',
-               '_helocIntelBeats'];
+// ROOTS, not a hand-list. The hand-listed NAMES array rotted the moment _helocIntelBeats gained
+// _helocInterestOnlyDraw (§22 draw-period work): every gate slicing it died with
+// "ReferenceError: _helocInterestOnlyDraw is not defined" — a red that says nothing about the room.
+// extractClosure walks the real callees out of studio.html, so a new one is picked up automatically.
+const ROOTS = ['_helocIntelBeats'];
 const getBaseType = (baseId) => String(baseId).indexOf('property') === 0
   ? { id: baseId, title: 'Real Estate' } : { id: 'heloc_primary', title: 'HELOC' };
 // ageOverride: a JS-literal string injected as _helocAgeOverride (mirrors the _livePrimeCache injection). null
 // => horizon unknown (the production DOM path is inert under node, so B stays silent unless we inject an age).
 function build(accounts, ageOverride) {
   const body = 'var _livePrimeCache=null;\nvar _helocAgeOverride=' + (ageOverride || 'null') + ';\n' +
-    NAMES.map(extract).join('\n') + '\nreturn { b:_helocIntelBeats };';
+    extractClosure(s, ROOTS) + '\nreturn { b:_helocIntelBeats };';
   return new Function('state', 'getBaseType', body)({ accounts }, getBaseType);
 }
 const J = (arr) => arr.join(' || ');

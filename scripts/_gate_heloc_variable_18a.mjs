@@ -10,6 +10,7 @@
          worth watching' (L51 richest-hover-wins: the §18.A2 layer owns the date).
    --redfirst strips the §18.A block AND restores the old summary reset clause → asserts fail (proves bite). */
 import { readFileSync } from 'node:fs';
+import { extractClosure } from './_gate_extract.mjs';
 const RED = process.argv.includes('--redfirst');
 let s = readFileSync('studio.html', 'utf8');
 
@@ -31,13 +32,14 @@ need('(C) de-dup: §1.5 summary drops the reset-date sentence', cellarSrc && !/Y
 need('(C) de-dup: §1.5 summary keeps the plain variable-rate fact', /This rate is variable — tied to an index, so your payment can rise if rates do\./.test(cellarSrc));
 
 // Extract + evaluate the engine (same harness as _gate_heloc_di_intelligence.mjs).
-const extract = (name) => { const m = s.match(new RegExp('    function ' + name + '\\([\\s\\S]*?\\n    }\\n')); return m ? m[0] : ''; };
-const NAMES = ['calculateTotalPmt','payoffMonths','_payoffDateFrom','calculatePayoff','lifetimeInterest',
-               'acceleratedDelta','_helocLimit','_helocUtilPct','_helocHeadroom','_payoffVsMaturity','_helocDrawEndShock',
-               '_debtPayoffDisplay','_helocCeilingBand','_groundsLinkedDebt','_num','_livePrime','_liveRates','_liveIndex','_fmtAsOf','_helocIntelBeats','_diIntelligence'];
+// ROOTS, not a hand-list. The hand-listed NAMES array rotted the moment _helocIntelBeats gained
+// _helocInterestOnlyDraw (§22 draw-period work): every gate slicing it died with
+// "ReferenceError: _helocInterestOnlyDraw is not defined" — a red that says nothing about the room.
+// extractClosure walks the real callees out of studio.html, so a new one is picked up automatically.
+const ROOTS = ['_helocIntelBeats'];
 let api = null, extractErr = '';
 try {
-  const body = NAMES.map(extract).join('\n') + '\nreturn {b:_helocIntelBeats};';
+  const body = extractClosure(s, ROOTS) + '\nreturn {b:_helocIntelBeats};';
   api = new Function('state', 'getBaseType', body)({ accounts: [] }, () => ({ id: 'heloc_primary', title: 'HELOC' }));
 } catch (e) { extractErr = e.message; }
 need('engine functions extracted + evaluate' + (extractErr ? ' (' + extractErr + ')' : ''), !!api);

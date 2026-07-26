@@ -8,6 +8,7 @@
      §17.2 life-of-loan figure dropped for HELOC.
    --redfirst strips the §16/§17 additions → extraction/asserts fail (proves bite). */
 import { readFileSync } from 'node:fs';
+import { extractClosure } from './_gate_extract.mjs';
 const RED = process.argv.includes('--redfirst');
 let s = readFileSync('studio.html', 'utf8');
 
@@ -33,13 +34,14 @@ need("intel sub-block separately marked ('What this means for you' + top rule)",
 need('§17.2 life-of-loan figure dropped for HELOC', /title === 'HELOC'\) \? null : lifeOfLoan\(acc\)/.test(s));
 
 // Extract the pure engine functions and run them.
-const extract = (name) => { const m = s.match(new RegExp('    function ' + name + '\\([\\s\\S]*?\\n    }\\n')); return m ? m[0] : ''; };
-const NAMES = ['calculateTotalPmt','payoffMonths','_payoffDateFrom','calculatePayoff','lifetimeInterest',
-               'acceleratedDelta','_helocLimit','_helocUtilPct','_helocHeadroom','_payoffVsMaturity','_helocDrawEndShock',
-               '_debtPayoffDisplay','_helocCeilingBand','_groundsLinkedDebt','_num','_livePrime','_liveRates','_liveIndex','_fmtAsOf','_helocIntelBeats','_diIntelligence'];
+// ROOTS, not a hand-list. The hand-listed NAMES array rotted the moment _helocIntelBeats gained
+// _helocInterestOnlyDraw (§22 draw-period work): every gate slicing it died with
+// "ReferenceError: _helocInterestOnlyDraw is not defined" — a red that says nothing about the room.
+// extractClosure walks the real callees out of studio.html, so a new one is picked up automatically.
+const ROOTS = ['_helocIntelBeats', '_diIntelligence', '_payoffVsMaturity', '_debtPayoffDisplay'];
 let api = null, extractErr = '';
 try {
-  const body = NAMES.map(extract).join('\n') +
+  const body = extractClosure(s, ROOTS) +
     '\nreturn {b:_helocIntelBeats,intel:_diIntelligence,pv:_payoffVsMaturity,pay:_debtPayoffDisplay};';
   api = new Function('state', 'getBaseType', body)(
     { accounts: [] },

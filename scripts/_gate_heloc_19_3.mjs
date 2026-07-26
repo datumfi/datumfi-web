@@ -8,6 +8,7 @@
      (FIELD) the Draw-Period-Ends date input is wired (label + updateAccField('…','drawPeriodEndDate',…)).
    --redfirst strips the §19.3 beat block -> the winner vanishes (proves the gate bites). */
 import { readFileSync } from 'node:fs';
+import { extractClosure } from './_gate_extract.mjs';
 const RED = process.argv.includes('--redfirst');
 let s = readFileSync('studio.html', 'utf8');
 
@@ -18,13 +19,13 @@ if (RED) {
 const checks = [];
 const need = (label, cond) => checks.push([label, !!cond]);
 
-const extract = (name) => { const m = s.match(new RegExp('    function ' + name + '\\([\\s\\S]*?\\n    }\\n')); return m ? m[0] : ''; };
-const NAMES = ['calculateTotalPmt','payoffMonths','_payoffDateFrom','calculatePayoff','lifetimeInterest',
-               'acceleratedDelta','_helocLimit','_helocUtilPct','_helocHeadroom','_payoffVsMaturity','_helocDrawEndShock',
-               '_debtPayoffDisplay','_helocCeilingBand','_groundsLinkedDebt','_num','_normalizeRatesResp','_livePrime','_liveRates','_liveIndex','_fmtAsOf','_helocLiveRateHTML',
-               '_helocIntelBeats'];
+// ROOTS, not a hand-list. The hand-listed NAMES array rotted the moment _helocIntelBeats gained
+// _helocInterestOnlyDraw (§22 draw-period work): every gate slicing it died with
+// "ReferenceError: _helocInterestOnlyDraw is not defined" — a red that says nothing about the room.
+// extractClosure walks the real callees out of studio.html, so a new one is picked up automatically.
+const ROOTS = ['_helocIntelBeats', '_helocDrawEndShock'];
 function build() {
-  const body = 'var _livePrimeCache=null;\n' + NAMES.map(extract).join('\n') + '\nreturn { b:_helocIntelBeats, shock:_helocDrawEndShock };';
+  const body = 'var _livePrimeCache=null;\n' + extractClosure(s, ROOTS) + '\nreturn { b:_helocIntelBeats, shock:_helocDrawEndShock };';
   return new Function('state', 'getBaseType', body)({ accounts: [] }, () => ({ id: 'heloc_primary', title: 'HELOC' }));
 }
 let eng = null, err = '';
