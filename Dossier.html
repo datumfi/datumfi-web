@@ -3725,7 +3725,10 @@ input:focus,select:focus{
           });
           window.Clerk.user.update({ unsafeMetadata: meta }).catch(function () {});
         }
-        if (window.DatumD1) window.DatumD1.writePreferences({ dossier: p, workspaceName: wn });
+        // now:true — hybridSave is an EXPLICIT save, not autosave. Since the prefs retire D1 is the sole
+        // writer, so a debounced write abandoned by a fast navigation is simply lost (no Clerk mirror
+        // behind it any more).
+        if (window.DatumD1) window.DatumD1.writePreferences({ dossier: p, workspaceName: wn }, { now: true });
       }
     } catch (e) {}
     if (typeof els !== 'undefined' && els && els.summaryStatus) {

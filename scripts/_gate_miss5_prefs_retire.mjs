@@ -105,8 +105,8 @@ ok('my-account.html guards its Clerk prefs write [BITE a]', account.includes(GUA
 ok('every Clerk prefs write in Dossier.html is behind the guard — none left unconditional [BITE a]',
   (dossier.match(/unsafeMetadata: (meta|m|pushMeta|migMeta)\b/g) || []).length ===
   (dossier.match(new RegExp(GUARD.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length);
-ok('the D1 write still happens on save (nothing lost in the retire)',
-  dossier.includes('window.DatumD1.writePreferences({ dossier: p, workspaceName: wn })'));
+ok('the D1 write still happens on save, and immediately — hybridSave is an explicit save, not autosave',
+  dossier.includes('window.DatumD1.writePreferences({ dossier: p, workspaceName: wn }, { now: true })'));
 ok('one persist seam in Dossier.html — push + migration cannot drift from save (L48)',
   dossier.includes('function _persistPrefs(dossier, workspaceName)') &&
   (dossier.match(/_persistPrefs\(/g) || []).length >= 3);
@@ -119,8 +119,16 @@ ok('the predicate is EXPORTED so both pages use the same one (no paraphrase)',
 /* ═══ 4 · READS UNCHANGED — D1-first with the mirror as silent fallback ═══════════════════════════ */
 ok('Dossier.html still reads D1-first with the Clerk mirror as fallback',
   dossier.includes("D1.getDoc('preferences', 'dossier')") && dossier.includes('cb(dos || _clerk);'));
-ok('my-account.html still reads D1-first with the Clerk mirror as fallback',
-  account.includes("D1.getDoc('preferences', 'workspaceName')") && account.includes('cb(wn || _clerk);'));
+// The resolver now reports its SOURCE as well as its value, because after the retire the Clerk mirror is
+// FROZEN and is no longer interchangeable with a live D1 answer — it may seed a nameless device but must
+// never overwrite a newer local rename. Assert the D1-first ORDER plus that the source is carried.
+ok('my-account.html still reads D1-first, and reports whether the value came from D1 or the frozen mirror',
+  account.includes("D1.getDoc('preferences', 'workspaceName')") &&
+  account.includes("cb(wn, 'd1'); else cb(_clerk, 'clerk');") &&
+  account.includes("if (source !== 'd1' && localName) return;"));
+ok('a DELIBERATE rename writes immediately (writeNow), not on the ~1.5s debounce that a fast nav abandons',
+  account.includes('writePreferences({ workspaceName: n }, { now: true })') &&
+  d1Src.includes("var send = (opts && opts.now) ? writeNow : scheduleWrite;"));
 ok('nav.js _datumSeedDossier still resolves D1-first (the third reader, shipped 9a1280e)',
   readFileSync('nav.js', 'utf8').includes("D1.getDoc('preferences', 'dossier')"));
 

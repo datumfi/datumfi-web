@@ -705,16 +705,29 @@ h1{text-shadow:0 0 34px rgba(93,202,165,.052),0 16px 34px rgba(0,0,0,.18)}
   // the Clerk unsafeMetadata.workspaceName stays a SILENT FALLBACK (D1 absent / unreachable / signed
   // out / CUTOVER=false / no D1 row yet). Nothing retired — the blur handler below still dual-writes
   // to BOTH Clerk and D1, so the mirror is intact and a CUTOVER=false rollback is an instant no-op.
+  // Reports the SOURCE alongside the value, because since the prefs retire the two are no longer
+  // interchangeable: D1 is the live store, while the Clerk mirror is FROZEN at whatever it held on retire
+  // day. A frozen value may SEED a device that has no name yet; it must never overwrite a newer local one.
   function _resolveWorkspaceName(meta, cb) {
     var _clerk = (meta && meta.workspaceName) || '';
     var D1 = window.DatumD1;
     var _live = D1 && D1.CUTOVER !== false && typeof D1.signedIn === 'function' && D1.signedIn() && typeof D1.getDoc === 'function';
-    if (!_live) { cb(_clerk); return; }
+    if (!_live) { cb(_clerk, 'clerk'); return; }
     D1.getDoc('preferences', 'workspaceName').then(function (d) {
       var wn = '';
       try { if (d && d.payload) wn = (JSON.parse(d.payload).workspaceName || ''); } catch (e) {}
-      cb(wn || _clerk);                          // D1 wins when present; else the Clerk mirror
-    }).catch(function () { cb(_clerk); });         // unreachable / timeout -> Clerk fallback
+      if (wn) cb(wn, 'd1'); else cb(_clerk, 'clerk');   // D1 wins when present; else the frozen mirror
+    }).catch(function () { cb(_clerk, 'clerk'); });      // unreachable / timeout -> frozen mirror
+  }
+
+  // Paint every surface that shows the workspace name. The rename-on-blur used to update only the heading
+  // the user was typing in, so the profile card kept the OLD name until a full reload — the Captain saw
+  // "Sweety" still sitting above the plan/region block after renaming to "Sweety & Peachy".
+  function _paintWorkspaceName(n) {
+    var h = document.getElementById('workspaceName');
+    if (h && h.textContent !== n) h.textContent = n;
+    var p = document.getElementById('acct-profile-name');
+    if (p) p.textContent = n;
   }
 
   // MISS-5 PREFS RETIRE — ONE place decides WHERE the workspace name lands. D1 whenever it can take the
@@ -727,7 +740,11 @@ h1{text-shadow:0 0 34px rgba(93,202,165,.052),0 16px 34px rgba(0,0,0,.18)}
         var m = Object.assign({}, Clerk.user.unsafeMetadata || {}, { workspaceName: n });
         Clerk.user.update({ unsafeMetadata: m }).catch(function () {});
       }
-      if (window.DatumD1) window.DatumD1.writePreferences({ workspaceName: n });
+      // now:true — a rename committed on blur is a DELIBERATE save. D1 is the sole writer for preferences
+      // since the retire, and its default write is debounced ~1.5s; navigating away inside that window
+      // abandoned it, and nothing else was persisting the name any more. This is the write that actually
+      // has to land.
+      if (window.DatumD1) window.DatumD1.writePreferences({ workspaceName: n }, { now: true });
     } catch (e) {}
   }
 
@@ -737,19 +754,20 @@ h1{text-shadow:0 0 34px rgba(93,202,165,.052),0 16px 34px rgba(0,0,0,.18)}
       if (!Clerk.user) return;
       var meta = Clerk.user.unsafeMetadata || {};
 
-      _resolveWorkspaceName(meta, function (resolvedName) {
+      _resolveWorkspaceName(meta, function (resolvedName, source) {
+        var localName = localStorage.getItem(NAME_KEY) || '';
         if (resolvedName) {
-          var localName = localStorage.getItem(NAME_KEY) || '';
-          if (resolvedName !== localName) {
-            localStorage.setItem(NAME_KEY, resolvedName);
-            var nameEl = document.getElementById('workspaceName');
-            if (nameEl) nameEl.textContent = resolvedName;
-            var profileEl = document.getElementById('acct-profile-name');
-            if (profileEl) profileEl.textContent = resolvedName;
-          }
-        } else {
-          var localName = localStorage.getItem(NAME_KEY) || '';
-          if (localName) { _persistWorkspaceName(localName); }
+          if (resolvedName === localName) return;
+          // D1 is the live store, so it is authoritative and wins — that is what makes a rename on one
+          // device reach the other. The Clerk mirror is FROZEN since the prefs retire, so it may only SEED
+          // a device that has no name yet. Letting it overwrite a newer local name is exactly what reverted
+          // "Sweety & Peachy" back to "Sweety": the D1 row had not landed, the read fell through to the
+          // stale mirror, and the old value was written over the new one in BOTH localStorage and the DOM.
+          if (source !== 'd1' && localName) return;
+          localStorage.setItem(NAME_KEY, resolvedName);
+          _paintWorkspaceName(resolvedName);
+        } else if (localName) {
+          _persistWorkspaceName(localName);
         }
       });
 
@@ -758,6 +776,7 @@ h1{text-shadow:0 0 34px rgba(93,202,165,.052),0 16px 34px rgba(0,0,0,.18)}
         nameEl.addEventListener('blur', function () {
           var n = (nameEl.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 32);
           if (!n) return;
+          _paintWorkspaceName(n);          // the profile card, not just the heading being edited
           _persistWorkspaceName(n);
         });
       }

@@ -114,7 +114,11 @@ const PORT = 8197; const base = 'http://127.0.0.1:' + PORT;
   const d1c = fs.readFileSync(path.join(ROOT, 'scripts', 'datum-d1.js'), 'utf8');
   const dos = fs.readFileSync(path.join(ROOT, 'Dossier.html'), 'utf8');
   const acct = fs.readFileSync(path.join(ROOT, 'my-account.html'), 'utf8');
-  ok(d1c.includes('function writePreferences') && d1c.includes("scheduleWrite('preferences'"), 'datum-d1: writePreferences() writes type=preferences per key');
+  // The literal moved: writePreferences now dispatches through `send`, which is writeNow for a DELIBERATE
+  // save (opts.now) and scheduleWrite otherwise. Assert the ROW SHAPE (type=preferences, one row per key)
+  // rather than the transport, which is what this check was ever about.
+  ok(d1c.includes('function writePreferences') && d1c.includes("send('preferences', 'dossier'") && d1c.includes("send('preferences', 'workspaceName'"),
+     'datum-d1: writePreferences() writes type=preferences per key');
   ok(d1c.includes('CUTOVER === false') && d1c.includes('!signedIn()'), 'datum-d1: writePreferences guarded (escape route)');
   ok(dos.includes('/scripts/datum-d1.js') && dos.includes('writePreferences'), 'Dossier.html includes datum-d1.js + calls writePreferences (both keys)');
   ok(acct.includes('/scripts/datum-d1.js') && acct.includes('writePreferences'), 'my-account.html includes datum-d1.js + calls writePreferences (workspaceName)');

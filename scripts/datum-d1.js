@@ -263,17 +263,23 @@
   // the dossier row: type='preferences', key='dossier' | 'workspaceName'. Pass ONLY the prefs you are
   // changing (undefined/null skips that key). No-op when D1 absent / signed out / rolled back
   // (CUTOVER === false) = escape route. Coarse-debounced + optimistic-CAS via scheduleWrite, like the rest.
-  function writePreferences(prefs) {
+  // opts.now — bypass the ~1.5s debounce via writeNow, for a DELIBERATE save (a rename committed on blur,
+  // an explicit "Save" click) as opposed to continuous autosave. This matters more since the prefs retire:
+  // D1 is now the SOLE writer for preferences, so a debounced write abandoned by a fast navigation is no
+  // longer covered by an immediate Clerk mirror write — it is simply lost. Same reasoning, same helper, as
+  // the blueprint save-lag fix (#2) that writeNow was built for.
+  function writePreferences(prefs, opts) {
     try {
       if (API.CUTOVER === false || !signedIn()) return;
       prefs = prefs || {};
+      var send = (opts && opts.now) ? writeNow : scheduleWrite;
       if (prefs.dossier != null) {
         var d = prefs.dossier;
-        scheduleWrite('preferences', 'dossier', function () { return d; }, function () { console.warn('[d1] preferences/dossier changed in another tab — reloaded the server revision (no merge)'); });
+        send('preferences', 'dossier', function () { return d; }, function () { console.warn('[d1] preferences/dossier changed in another tab — reloaded the server revision (no merge)'); });
       }
       if (prefs.workspaceName != null) {
         var wn = prefs.workspaceName;
-        scheduleWrite('preferences', 'workspaceName', function () { return { workspaceName: wn }; }, function () { console.warn('[d1] preferences/workspaceName changed in another tab — reloaded the server revision (no merge)'); });
+        send('preferences', 'workspaceName', function () { return { workspaceName: wn }; }, function () { console.warn('[d1] preferences/workspaceName changed in another tab — reloaded the server revision (no merge)'); });
       }
     } catch (e) {}
   }
