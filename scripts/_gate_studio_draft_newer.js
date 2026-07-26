@@ -40,16 +40,12 @@ const ok = (c, m) => { if (c) pass++; else fail++; lines.push((c ? 'PASS ' : 'FA
 const DAY = 24 * 60 * 60 * 1000;
 const iso = (ms) => new Date(ms).toISOString();
 
-// Anchored on the DECLARATIONS inside load(), not on copy or attribute text.
-const A_GUARD = `      var _sd = opts.ignoreDraft ? null : readSessionDraft();
-      var _sdNewer = !!(_sd && _draftIsNewer(_sd, opts.d1Doc));
-      var _sdStale = _sdNewer && _draftIsStale(_sd);
-      if (_sdStale) _pendingStaleDraft = _sd;
-      if (!(_sdNewer && !_sdStale)) {`;
-const UNCOND_SRC = `      var _sd = null;
-      var _sdNewer = false;
-      var _sdStale = false;
-      if (true) {`;
+// Anchored on ONE stable DECLARATION inside load(), not on a multi-line block: neighbouring lines
+// change as the surrounding logic grows, and an anchor that stops matching turns a negative control
+// into a silent no-op. Forcing _sdNewer false makes the D1 early return unconditional again, which
+// IS the original injury — the draft can never win.
+const A_GUARD    = `      var _sdNewer = !!(_sd && _draftIsNewer(_sd, opts.d1Doc));`;
+const UNCOND_SRC = `      var _sdNewer = false;`;
 
 const A_READ  = `      var raw = localStorage.getItem(SESSION_DRAFT_KEY);`;
 const A_WRITE = `    try { localStorage.setItem(SESSION_DRAFT_KEY, JSON.stringify(obj)); _draftWriteState(true, null); return true; }`;

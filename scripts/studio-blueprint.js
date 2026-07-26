@@ -373,13 +373,71 @@
     try { localStorage.setItem(SESSION_DRAFT_KEY, JSON.stringify(obj)); _draftWriteState(true, null); return true; }
     catch (_e) { _draftWriteState(false, _e); return false; }
   }
-  function writeSessionDraft(bp) {
+  /* ── CROSS-TAB GUARD ────────────────────────────────────────────────────────────────────────
+   * localStorage is shared across tabs; sessionStorage gave per-tab isolation for free. Moving the
+   * draft to survive tab-close therefore introduced a clobber nobody asked for: two Studio tabs
+   * write the SAME key and the last one wins, destroying the other's work.
+   *
+   * This does NOT build cross-tab sync. It only stops the CLOBBER: a tab refuses to overwrite a
+   * draft that a DIFFERENT tab wrote AFTER this tab last agreed with the stored state.
+   *
+   * TAB_ID lives in sessionStorage on purpose — per-tab by definition, and it survives a reload, so
+   * a tab keeps its identity across F5 and does not mistake itself for a sibling.
+   *
+   * _seenAt is the stamp of the draft state this tab is in agreement with: set when load() hydrates
+   * a draft, and after each successful write. A sibling stamp NEWER than _seenAt means work arrived
+   * that this tab has never seen — overwriting it would erase it. null means this tab has never
+   * agreed with any stored draft, so ANY sibling draft counts as unseen. */
+  var TAB_ID = (function () {
+    try {
+      var k = 'datumfi_studio_tab_v1', v = sessionStorage.getItem(k);
+      if (!v) { v = 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); sessionStorage.setItem(k, v); }
+      return v;
+    } catch (_e) { return 't-nostore'; }
+  }());
+  var _seenAt = null;
+  var _siblingHold = null;    // the sibling draft we refused to overwrite, for the host to act on
+  function _siblingIsUnseen(inc) {
+    if (!inc || !inc._tabId || inc._tabId === TAB_ID) return false;
+    var it = Date.parse(inc._draftAt);
+    if (isNaN(it)) return false;                       // L47 — an unknown stamp is not evidence
+    var st = Date.parse(_seenAt);
+    return isNaN(st) ? true : it > st;
+  }
+  function siblingHold() { return _siblingHold; }
+
+  /* opts.echo — a LOAD re-persisting what it just hydrated. That is not an edit: it must not take
+   * ownership of the draft and must not advance the edit clock, or simply OPENING a second tab
+   * would re-attribute the draft and make the ACTIVE tab refuse to save its own typing (worse than
+   * the clobber this guard exists to stop). An echo therefore keeps the incumbent's _tabId and
+   * _draftAt, and never triggers the guard — the content it writes is what it just read. */
+  function writeSessionDraft(bp, opts) {
     // _draftAt is the ONLY discriminator boot has between a newer unsaved edit and the last SAVED doc:
     // bp.saved_at is written by save() ALONE, so an edited draft and the D1 doc carry the SAME saved_at
     // and any "prefer the newer" test would tie on every edit. Stamped on a COPY so the live bp is not
     // mutated, and underscore-prefixed so toD1Document strips it — this local edit clock never reaches
     // D1 and never becomes part of a saved payload. Local draft only; no new D1 write site.
-    _persistDraft(Object.assign({}, bp, { _draftAt: new Date().toISOString() }));
+    var echo = !!(opts && opts.echo);
+    var incumbent = readSessionDraft();
+    if (!echo && _siblingIsUnseen(incumbent)) {
+      // Another tab wrote work this tab has never seen. Overwriting it would destroy it, so we do
+      // not. The sibling draft is held for the host to surface — this must NOT stay a silent stop.
+      _siblingHold = incumbent;
+      try { console.warn('[studio draft] another Studio tab has newer unsaved work — not overwriting it.'); } catch (_e) {}
+      try {
+        if (typeof global.CustomEvent === 'function' && typeof global.dispatchEvent === 'function') {
+          global.dispatchEvent(new global.CustomEvent('datum:draft-sibling-hold', { detail: { at: incumbent._draftAt } }));
+        }
+      } catch (_e) {}
+      return;
+    }
+    var keep = echo && incumbent;
+    var at    = keep && incumbent._draftAt ? incumbent._draftAt : new Date().toISOString();
+    var owner = keep && incumbent._tabId   ? incumbent._tabId   : TAB_ID;
+    if (_persistDraft(Object.assign({}, bp, { _draftAt: at, _tabId: owner }))) {
+      _seenAt = at;               // this tab is now in agreement with what is stored
+      _siblingHold = null;
+    }
   }
 
   /* THE ONE PLACE A DRAFT IS DISCARDED. Every caller routes here so the storage decision can
@@ -390,6 +448,8 @@
     try { localStorage.removeItem(SESSION_DRAFT_KEY); } catch (_e) {}
     try { sessionStorage.removeItem(SESSION_DRAFT_KEY); } catch (_e) {}
     _pendingStaleDraft = null;
+    _seenAt = null;            // nothing stored, so nothing to be out of agreement with
+    _siblingHold = null;
   }
 
   /* DATA-LOSS FIX — is the local session draft genuinely NEWER than the D1 studio doc?
@@ -435,7 +495,9 @@
     var d = _pendingStaleDraft;
     if (!d) return null;
     d._draftAcceptedAt = new Date().toISOString();
+    d._tabId = TAB_ID;
     _persistDraft(d);
+    _seenAt = d._draftAt;
     _pendingStaleDraft = null;
     return d;
   }
@@ -752,7 +814,7 @@
     // draft slot would destroy the very thing the prompt is about, and "Restore my draft" would then
     // hand back the saved doc. The write resumes as soon as the question is answered (acceptStaleDraft
     // re-persists it, clearDraft discards it) — and until then a reload simply asks again.
-    if (!_pendingStaleDraft) writeSessionDraft(bp);
+    if (!_pendingStaleDraft) writeSessionDraft(bp, { echo: true });
     return bp;
   }
 
@@ -814,6 +876,9 @@
       var _sdNewer = !!(_sd && _draftIsNewer(_sd, opts.d1Doc));
       var _sdStale = _sdNewer && _draftIsStale(_sd);
       if (_sdStale) _pendingStaleDraft = _sd;
+      // Hydrating FROM the draft puts this tab in agreement with it, so its own later writes are
+      // not mistaken for a clobber of a sibling.
+      if (_sdNewer && !_sdStale) _seenAt = _sd._draftAt;
       if (!(_sdNewer && !_sdStale)) {
         try {
           Object.assign(bp, JSON.parse(opts.d1Doc.payload));
@@ -830,6 +895,7 @@
 
     var draft = readSessionDraft();
     if (draft && !opts.ignoreDraft) {
+      _seenAt = draft._draftAt;      // agreement, as above
       Object.assign(bp, draft);
       // v1.0.1 migration: pre-1.0.1 drafts round-tripped the old hard defaults
       // (datum 120000 / tax 0.22) through captureDOM and re-poisoned the
@@ -1145,6 +1211,8 @@
       pendingStaleDraft: pendingStaleDraft,
       acceptStaleDraft:  acceptStaleDraft,
       draftWriteOk:      function () { return _draftWriteOk; },
+      siblingHold:       siblingHold,
+      tabId:             function () { return TAB_ID; },
       DRAFT_STALE_MS:    DRAFT_STALE_MS
     }
   };
