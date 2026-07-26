@@ -3,9 +3,17 @@
      6 via _HELOC_HOVERS map (Original Amount, Rate Type, Origination Date, Maturity Date,
      Minimum Payment, Next Payment Date) + the R84 cluster hover in _variableRateClusterHTML (HELOC-only).
    Also asserts the Mortgage cluster path stays byte-present (Moat leave-as-is).
-   --redfirst strips the §2c additions, proves the gate BITES. */
+   --redfirst strips the §2c additions, proves the gate BITES.
+   --forkhlf  duplicates the shared _hlF renderer -> the anti-fork structural check bites.
+   --dropmtg  deletes the Mortgage branch after the HELOC gate -> the presence + routing checks bite. */
 import { readFileSync } from 'node:fs';
+import { extractFn } from './_gate_extract.mjs';
 const RED = process.argv.includes('--redfirst');
+/* Negative controls for the STRUCTURAL mortgage-path claims. --redfirst strips the §2c HELOC
+ * additions and says nothing about the Mortgage path, so these need their own mutations or they
+ * would be assertions no control ever exercises. */
+const FORKHLF = process.argv.includes('--forkhlf');   // duplicate _hlF -> the anti-fork check bites
+const DROPMTG = process.argv.includes('--dropmtg');   // delete the Mortgage tail -> presence + routing bite
 let s = readFileSync('studio.html', 'utf8');
 if (RED) {
   // Drop the 6 map completion-set lines + the whole HELOC cluster branch.
@@ -50,8 +58,39 @@ for (const key of ['Original Amount', 'Rate Type', 'Origination Date', 'Maturity
 // R84 cluster is HELOC-gated; Mortgage cluster markup still present (byte-identical anchor).
 need('R84 cluster HELOC-gated in _variableRateClusterHTML',
   /if \(\(getBaseType\(acc\.baseId\) \|\| \{\}\)\.title === 'HELOC'\) \{/.test(s));
-need('Mortgage cluster path preserved (Moat leave-as-is)',
-  s.includes('<strong>How a variable rate moves</strong>Your rate = the index (like SOFR or Prime) + a fixed margin'));
+/* STRUCTURE ONLY — BINDING BOUNDARY (Captain-ruled 2026-07-26).
+ * _gate_moat_18_8 owns the mortgage cluster COPY contract. THIS gate owns exactly one claim:
+ * HELOC work did not DELETE or FORK the Mortgage path. Never assert mortgage hover copy here.
+ *
+ * WHY. The line this replaces asserted the grouped "How a variable rate moves" hover — which
+ * #412 / §18.8 (440053e, 2026-07-22) deliberately RETIRED when it de-grouped the Mortgage cluster
+ * into five per-field hovers. _gate_moat_18_8:45 asserts that same string must be ABSENT. So two
+ * gates demanded opposite things about one string: a permanent red by construction, and this gate
+ * sat red for four days holding a contract that had been authorized out of existence.
+ * Anchoring on copy is what rotted. Anchor on structure. */
+let _vc = extractFn(s, '_variableRateClusterHTML');
+if (FORKHLF) {                       // a second renderer = the fork this check exists to forbid
+  _vc = _vc.replace('var _hlF = function', 'var _hlF = function (a,b,c,d) { return ""; };\n        var _hlF = function');
+}
+if (DROPMTG) {                       // amputate everything after the HELOC branch
+  const g0 = _vc.indexOf("=== 'HELOC'");
+  let o0 = _vc.indexOf('{', g0), d0 = 0, c0 = -1;
+  for (let j = o0; j < _vc.length; j++) { if (_vc[j] === '{') d0++; else if (_vc[j] === '}') { d0--; if (!d0) { c0 = j; break; } } }
+  if (c0 > 0) _vc = _vc.slice(0, c0 + 1);
+}
+const _g = _vc.indexOf("=== 'HELOC'");
+let _open = _vc.indexOf('{', _g), _depth = 0, _close = -1;
+for (let j = _open; j >= 0 && j < _vc.length; j++) {
+  if (_vc[j] === '{') _depth++;
+  else if (_vc[j] === '}') { _depth--; if (_depth === 0) { _close = j; break; } }
+}
+const _mortgageTail = _close > 0 ? _vc.slice(_close + 1) : '';
+need('shared _hlF renderer defined exactly ONCE (HELOC did not fork it)',
+  (_vc.match(/var _hlF\s*=\s*function/g) || []).length === 1);
+need('Mortgage branch still present after the HELOC gate (not deleted)',
+  _close > 0 && _mortgageTail.length > 500);
+need('Mortgage branch still routes through the shared _hlF',
+  /_hlF\(/.test(_mortgageTail));
 
 let pass = 0;
 for (const [label, ok] of checks) { console.log((ok ? '✅' : '⛔') + ' ' + label); if (ok) pass++; }
