@@ -33,7 +33,76 @@ const setSlider = (page, id, val) => page.evaluate(([i, v]) => { const el = docu
 const blockClerk = (ctx) => ctx.route('**/*', (route) => { const u = route.request().url(); if (!/127\.0\.0\.1/.test(u) && /clerk|cloudflareinsights|posthog/i.test(u)) return route.abort(); return route.continue(); });
 // Item 4 — drive the inline edit: click the value span, set its sibling edit-input, run the
 // live filter, then blur to commit.
-const editField = (page, valId, text) => page.evaluate(([id, t]) => { const val = document.getElementById(id); val.click(); const inp = val.parentNode.querySelector('.ctrl-edit-input'); inp.value = t; inp.dispatchEvent(new Event('input', { bubbles: true })); const shown = inp.value; inp.blur(); return shown; }, [valId, text]);
+/* REAL-PATH inline edit — replaces a synthetic driver that produced TEN false reds.
+ *
+ * WHAT WAS WRONG. #sec-sketch (the section holding val-age / val-activation / val-plan-through) is a
+ * COLLAPSED accordion, display:none. The old driver called a synthetic val.click() on that 0x0
+ * hidden span, so the edit input never took focus (measured: focusedAfterClick === false), the
+ * following inp.blur() therefore fired NO blur event, and the COMMIT never ran. The failure
+ * fingerprint said so plainly: every check that merely read inp.value passed, while every check
+ * needing a commit failed with the defaults still sitting there (RA=65, age 40, no toast).
+ *
+ * The controls were healthy the whole time — driving them by hand (expand, click, type 081982,
+ * Enter) yields age 43 / "43 yrs" / "08 / 1982", exactly what these checks demand.
+ *
+ * WHY IT MATTERED. A false red is not harmless noise; it is coverage-destroying. A gate that cries
+ * wolf trains everyone to ignore it, which is precisely how a REAL red later slips past.
+ *
+ * So drive it the way a person does: open the section, real click (real focus), real keystrokes,
+ * commit with Enter. Digits only — the auto-slash formatter is exactly what a user leans on.
+ *
+ * MUTATIONS (L52 negative controls):
+ *   --collapsed              never opens #sec-sketch -> the editor is 0x0 again. The reachability
+ *                            check goes RED and the run aborts loudly: ONE honest red where ten
+ *                            confusing ones used to be. Measured: 24 pass / 2 fail.
+ *   --synthetic --collapsed  the true historical state — old synthetic click+blur driver against a
+ *                            hidden target. Reproduces the original TEN Item-4 reds exactly.
+ *                            Measured: 36 pass / 12 fail.
+ *
+ * --synthetic ALONE is deliberately a no-op (measured: identical to clean, 47/1), and that null
+ * result is the sharpest statement of root cause we have: the synthetic driver commits perfectly
+ * well when the control is VISIBLE. It was never the synthetic events — it was the collapsed
+ * section. Pair the flags to reproduce history; use --collapsed alone to prove the guard. */
+const COLLAPSED = process.argv.includes('--collapsed');
+const SYNTHETIC = process.argv.includes('--synthetic');
+const openSketchSection = async (page) => {
+  if (COLLAPSED) return;
+  await page.evaluate(() => {
+    const sc = document.getElementById('sec-sketch');
+    if (!sc || getComputedStyle(sc).display !== 'none') return;
+    const sec = sc.closest('.studio-section');
+    const hdr = sec && sec.querySelector('.section-header, h2, h3, [onclick]');
+    if (hdr) hdr.click();
+  });
+  await page.waitForTimeout(450);
+};
+/** Is the inline editor genuinely on screen? A 0x0 target is the whole bug above — assert it. */
+const editorReachable = (page, valId) => page.evaluate((id) => {
+  const e = document.getElementById(id); if (!e) return false;
+  const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0;
+}, valId);
+const editFieldSynthetic = (page, valId, text) => page.evaluate(([id, t]) => {
+  const val = document.getElementById(id); val.click();
+  const inp = val.parentNode.querySelector('.ctrl-edit-input');
+  inp.value = t; inp.dispatchEvent(new Event('input', { bubbles: true }));
+  const shown = inp.value; inp.blur(); return shown;
+}, [valId, text]);
+const editField = async (page, valId, text) => {
+  await openSketchSection(page);
+  if (SYNTHETIC) return editFieldSynthetic(page, valId, text);
+  await page.click('#' + valId);                                   // real click -> real focus
+  await page.waitForTimeout(120);
+  await page.keyboard.press('Control+A');
+  await page.keyboard.type(String(text).replace(/\D/g, ''), { delay: 12 });
+  const shown = await page.evaluate((id) => {
+    const val = document.getElementById(id);
+    const inp = val && val.parentNode.querySelector('.ctrl-edit-input');
+    return inp ? inp.value : null;
+  }, valId);
+  await page.keyboard.press('Enter');                              // real commit
+  await page.waitForTimeout(180);
+  return shown;
+};
 const readAges = (page) => page.evaluate(() => { const tt = document.getElementById('studioOverlayToast'); return { age: parseInt(document.getElementById('slider-age').value, 10), ret: parseInt(document.getElementById('slider-activation').value, 10), plan: parseInt(document.getElementById('sl-plan-through').value, 10), dob: (document.getElementById('pri-dob') || {}).value, tret: (document.getElementById('target-ret') || {}).value, valAge: (document.getElementById('val-age') || {}).textContent, toast: tt ? tt.textContent : '', toastShown: !!(tt && tt.classList.contains('show')) }; });
 
 (async () => {
@@ -177,6 +246,11 @@ const readAges = (page) => page.evaluate(() => { const tt = document.getElementB
   await page.waitForTimeout(1500);
   await page.evaluate(() => { const b = document.getElementById('studioStartScratch'); if (b) b.click(); }).catch(() => {});
   await page.waitForTimeout(700);
+  // REACHABILITY FIRST. Ten reds once came from driving a control inside a collapsed section. If the
+  // editor is ever off-screen again, say THAT once — plainly — instead of emitting ten confusing
+  // commit failures that look like product bugs.
+  await openSketchSection(page);
+  check('Item4: S1 inline editors are on screen (sec-sketch expanded)', await editorReachable(page, 'val-age'));
   // 4b strict — auto-slash, valid date collapses to age, month round-trips (not 06/...).
   const shown = await editField(page, 'val-age', '081982'); await page.waitForTimeout(200);
   check('Item4: auto-slash formats to MM / YYYY', /^08\s*\/\s*1982$/.test(shown), shown);
