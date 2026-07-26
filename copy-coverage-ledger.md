@@ -53,6 +53,94 @@ it surfaces the key finding for the whole effort (see ⚠️ at the end).
 
 ---
 
+## 🧭 PARTING OBSERVATIONS — 2026-07-26 handoff · NEXT = AUTOSAVE **COMMIT 2** (draft → localStorage)
+
+**Repo state at handoff: clean at `86137d8`.** RENAME arc complete and live (`03f4c6d` store →
+`a535a60` Blueprint → `001509f` re-sort fix → `fc4e362` Sketchbook). Autosave Commit 1 live
+(`86137d8`) — same-tab unsaved-edit loss is CLOSED. Commit 2 has a **GO** and every ruling settled;
+it is simply not started. Execute the block below directly — do not re-litigate any of it.
+
+### ⛔ HARD FENCE — THE HALF-DONE STATE IS DANGEROUS. READ FIRST.
+
+The localStorage **storage move** and the **three `removeItem` call-site reroutes** MUST land in the
+SAME commit. If storage flips to localStorage while `studio.html` still calls
+`sessionStorage.removeItem('datumfi_blueprint_draft_v1')`, those calls go **inert** — "discard" stops
+discarding, and the abandoned draft **RESURRECTS** on the next load through the very comparator
+`86137d8` shipped. Never sequence these apart. This is why the previous session stopped rather than
+starting: a partially-wired repo here is strictly worse than an unstarted one.
+
+### Execution order
+
+1. **`scripts/studio-blueprint.js`** (SACRED) — `readSessionDraft`/`writeSessionDraft`:
+   `sessionStorage` → **`localStorage`**. The comparator is UNTOUCHED (`_draftAt` vs `updated_at`,
+   same `_draftIsNewer`, no second code path). You are widening WHERE the draft lives — not WHEN
+   anything saves, not WHICH source wins.
+2. **ADD `clearDraft()`**, exposed on `DatumBlueprint._internal`, so the storage decision lives in ONE
+   place and can never fan out again (L48).
+3. **`studio.html`** (SACRED) — reroute the three literal removes through `clearDraft()`.
+   ⚠️ **RE-VERIFY BY CONTENT, NOT BY LINE NUMBER.** They were at `:11726 / :12400 / :12513` in a grep
+   taken 2026-07-26, and these numbers **drifted twice during that same arc**. Search for the literal
+   `sessionStorage.removeItem('datumfi_blueprint_draft_v1')` and fix every hit.
+   ⚠️ **`studio.html:15531`** is a key-list sweep — **CONFIRM it clears BOTH stores BEFORE touching it.**
+4. Staleness prompt (below).
+5. Gate extensions, BOTH pins, build, push.
+
+### Ruling 1 — sign-out: a NEGATIVE instruction
+
+`DatumPurge.signOutWipe()` (`scripts/datum-archive-purge.js`) **already** sweeps `BP_DRAFT`
+(`datumfi_blueprint_draft_v1`) from **both** localStorage and sessionStorage, because it is registered
+in `_localCarriedKeys()`. **ADD THE POST-SIGN-OUT KEY-GONE ASSERTION ONLY — never add clearing code.**
+A second clear path is a second door to one operation (L48) and a known landmine class here. Someone
+built that fence before it was needed; honour it, don't duplicate it.
+
+### Ruling 2 — freshness window = **14 days** (ruled, not a suggestion)
+
+- Newer than the saved row **and within 14 days** → hydrate silently (Commit-1 behaviour, no prompt).
+- Newer than the saved row **but older than 14 days** → **PROMPT**. Never auto-hydrate, never drop.
+- `_draftAt` missing/unparseable → **NO prompt**; fall to the existing tiebreak. Never name an age you
+  don't know (L47). Consequence: `{when}` is ALWAYS resolvable whenever the prompt renders.
+
+### AUTHORED COPY — ship VERBATIM (fires at `load()`)
+
+- **TITLE:** `Pick up where you left off?`
+- **BODY:** `You have an unsaved draft of «{fileName}» from {when}. It hasn't been saved to your account yet — want to bring it back, or start fresh from your last saved version?`
+- **PRIMARY:** `Restore my draft` — **SECONDARY:** `Start from last saved`
+- `{fileName}` unresolved → `your plan` (never literal `undefined`); resolve via `DatumSavedName.resolve`.
+- `{when}` → human relative age from `_draftAt` (e.g. `9 days ago`).
+- **`Start from last saved` MUST call `clearDraft()`** — if it doesn't actually discard, it is a lie.
+
+🚧 **SCOPE FENCE:** this restore-offer at `load()` is a **DIFFERENT SURFACE** from the two
+unsaved-changes leave-guard branches (authored, still NOT wired, destined for `_navDrain`). Different
+trigger, different copy, different commit. **Do not conflate them.**
+
+### Gate — extend `scripts/_gate_studio_draft_newer.js`
+
+- `--sessiononly` → restores sessionStorage; tab-close clears it, edit lost (the remaining injury).
+- `--nohelper` → restores the three literal removes; assert "discard" actually discards.
+- Negatives that MUST stay green: sign-out leaves the key gone from BOTH stores · inside-window
+  hydrates silently · outside-window prompts (not auto-hydrate, not drop) · unparseable stamp → no
+  prompt → tiebreak · **Commit 1's four scenarios**. Run them; never assume them.
+
+### Pins + proof
+
+BOTH bump in the SAME commit, recomputed at commit time (L49, LF EOL, or the build aborts):
+`studio.html` and `scripts/studio-blueprint.js`.
+**Proof by host type:** `studio-blueprint.js` is a JS asset → **served-md5 == pin** is valid — and
+**POLL, don't assume**: the first read is routinely HEAD~1's hash (= not-yet-published; a *third*
+value = published-wrong, investigate). `studio.html` is HTML → **marker-grep + behaviour ONLY**;
+served-HTML md5 is NEVER proof (the edge rewrites HTML non-deterministically — see CLAUDE.md
+"Publish Proof By Host Type").
+
+### Fences still standing
+
+`blueprint_z` / `sketchbook_z` mirror writes both at 1 · **Finding 2 still gates `blueprint_z`** ·
+unsaved-changes dialog copy AUTHORED-not-WIRED · nothing retired.
+Queue after Commit 2 (no chaining, report + HOLD at each): Playwright click-level follow-up
+(non-blocking) → "Save progress" → unsaved-changes dialog → Finding 2 fix → retire `blueprint_z` →
+soak → `sketchbook_z` LAST.
+
+---
+
 ## 🧭 PARTING OBSERVATIONS — for the next Claude (2026-07-03 handoff, next = TAXABLE → IRA)
 
 Things that will bite you or save you time, from wiring the 401(k) end-to-end:
