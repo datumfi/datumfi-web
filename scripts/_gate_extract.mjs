@@ -23,11 +23,16 @@
 //                                              _moatLumpEdit, _setMoatEscrowView …)
 // Missing form 2 is exactly how #434 still broke two gates AFTER the closure walker landed: they sliced
 // openAmortizationModal by marker and hand-listed ITS callees, so a new _amortRow/_amortTableHTML killed them.
+//   3. `window.NAME = async function(...)`  — the async modal/network entry points
+//      (groundsVerifyAndEstimate, …). Missing form 3 is why a gate slicing the verify-then-estimate path
+//      threw "not found" against code that was plainly there: form 2's literal has no room for `async`.
+//      Additive — this only runs when the first two forms miss, so no existing gate changes behaviour.
 function fnStart(src, name) {
   const a = src.indexOf('function ' + name + '(');
   if (a >= 0) return a;
   const b = src.indexOf('window.' + name + ' = function');
-  return b;   // -1 when absent
+  if (b >= 0) return b;
+  return src.indexOf('window.' + name + ' = async function');   // -1 when absent
 }
 /** True when studio.html defines `name` as a function in EITHER form. */
 export function definesFn(src, name) {

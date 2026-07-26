@@ -9962,6 +9962,31 @@
             pulledAt: Date.now()
         };
     }
+    // §A135b — CENSUS SILENTLY CORRECTS. The geocoder is tolerant: given "26537 Castleview Way, Wesley
+    // Chapel, CO, 33544" — a real street and ZIP with the WRONG STATE — it does NOT answer not-found. It
+    // answers status:'verified' with canonical "…, WESLEY CHAPEL, FL, 33544", quietly putting the state back.
+    // (Measured against the live Worker on 2026-07-25, both spellings, same canonical.) So the not-found
+    // block at §A135 never fires, we estimate the FL home, and the FL number renders under the CO address the
+    // user is looking at — the Captain's repro, and a paid call spent on a home they did not ask about.
+    // Pull the state + ZIP back out of the canonical so the caller can compare them with what was TYPED.
+    // Returns blanks when the shape is unfamiliar, and a blank never blocks (fail-open is preserved).
+    function _avmCanonStateZip(canon) {
+        var m = String(canon == null ? '' : canon).match(/\b([A-Za-z]{2})\b[\s,]+(\d{5})(?:-\d{4})?\s*$/);
+        return m ? { state: m[1].toUpperCase(), zip: m[2] } : { state: '', zip: '' };
+    }
+    // TRUE when Census handed back a materially DIFFERENT address than the one typed. Only state and ZIP are
+    // compared: they are the two fields the user picks explicitly and the two Census rewrites silently, while
+    // street/city differ cosmetically on almost every successful lookup ("Way"→"WAY") and comparing those
+    // would block real addresses. Sourced-or-blank (L47): if either side is missing we do NOT claim a
+    // mismatch — an unparseable canonical falls through to today's behaviour rather than inventing a block.
+    function _avmCanonMismatch(acc, canon) {
+        var c = _avmCanonStateZip(canon);
+        var st = String(acc.propState || '').trim().toUpperCase();
+        var zp = String(acc.propZip || '').trim().replace(/[^0-9]/g, '').slice(0, 5);
+        if (c.state && st && c.state !== st) return true;
+        if (c.zip && zp && c.zip !== zp) return true;
+        return false;
+    }
     function _avmDate(iso) { var d = iso ? new Date(iso) : new Date(); if (isNaN(d)) d = new Date(); return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }); }
     function _avmNote(t) { return '<div style="font-size:11px; color: rgba(255,255,255,0.5); margin-top:8px;">' + t + '</div>'; }
     // One comp row — sourced-or-blank per field (address · price · beds/baths/sqft · distance · sale date).
@@ -10021,21 +10046,14 @@
         '</div>' +
         _groundsCompsHTML(r);
     }
-    window.groundsGetEstimate = async function (id) {
-        var acc = state.accounts.find(function (a) { return a.id === id; });
-        var el = document.getElementById('modal-avm-result-' + id);
-        if (!acc || !el) return;
-        var addr = String(acc.propAddress || '').trim();
-        if (!addr) return;
-        el.innerHTML = '<div style="font-size:11px; color: rgba(255,255,255,0.5); margin-top:8px;">Fetching estimate…</div>';
-        var r = await _AssetIntel.fetchEstimate(addr);
-        // Legacy no-verify entry point (no live call sites — the button routes through groundsVerifyAndEstimate).
-        // Kept on the ONE snapshot shape so it can never render a raw response the renderer no longer speaks.
-        var snap = _groundsAvmSnapshot(r, addr, addr);
-        if (snap) acc.assetAvmSnapshot = snap;
-        var el2 = document.getElementById('modal-avm-result-' + id);   // re-check (modal may have closed)
-        if (el2) el2.innerHTML = _groundsAvmStatusHTML(r) + (snap ? _groundsAvmResultHTML(id, snap) : '');
-    };
+    // §A135b — groundsGetEstimate DELETED (2026-07-25). It was a SECOND estimate door that called
+    // _AssetIntel.fetchEstimate DIRECTLY, with no Census verify in front of it — so the R149 not-found block
+    // and the §A135b canonical-mismatch block could never fire on that path, and a paid call could be spent
+    // on an unconfirmed address. It had ZERO call sites (the button has always routed through
+    // groundsVerifyAndEstimate; confirmed in SERVED bytes, not just the repo), so nothing observable changes
+    // — but a dormant unverified door is exactly the fork L48 exists to prevent, and leaving it meant the
+    // next person to wire "refresh" could reintroduce the bug this section documents. ONE door: verify, then
+    // estimate. If a no-verify fetch is ever genuinely wanted, it comes back as a flag on the one path.
     // Live preview of the joined address as the structured fields are typed (the valuation section is
     // rendered once on open and updateAccField does not re-render it — so keep this in sync by hand).
     window._groundsSyncAvmAddr = function (id) {
@@ -10075,15 +10093,18 @@
         }
         if (vEl) vEl.innerHTML = _avmNote('Checking the address…');
         var v = await _AssetIntel.verifyAddress(joined);
-        if (v && v.status === 'not-found') {
-            // R149 — Census CONFIRMED no such address: BLOCK the paid call (this is a typo). Nothing paid fires.
-            // AND DROP THE PREVIOUS ESTIMATE. This early return is how the stale figure survived: the old
-            // estimate stayed on acc and re-rendered beside an address it never described. A failed lookup must
-            // leave nothing behind — better an empty section than a confident number for the wrong home.
+        // R149 — THE ADDRESS COULD NOT BE CONFIRMED AS TYPED. Two ways that happens, ONE response (L48 — one
+        // block, one copy string, so the two can never answer differently):
+        //   · Census CONFIRMED no such address — an outright typo; or
+        //   · Census "verified" a DIFFERENT address, having silently corrected the state or ZIP (§A135b).
+        // Both BLOCK the paid call and DROP the previous estimate. Nothing paid fires, and a failed lookup
+        // leaves nothing behind — an empty section is honest; a confident number for the wrong home is not.
+        var _blockUnconfirmed = function () {
             acc.assetAvmSnapshot = null;
             if (vEl) vEl.innerHTML = '<div style="font-size:12px; color: rgba(240,200,120,0.92); margin-top:8px; line-height:1.5;">Hmm — we couldn’t confirm that address. Check the street, city, state, and ZIP for a typo, or enter it the way it appears on your mail. We only look up real, findable homes — no guesses, no wasted lookups.</div>';
-            return;
-        }
+        };
+        if (v && v.status === 'not-found') { _blockUnconfirmed(); return; }
+        if (v && v.status === 'verified' && v.canonical && _avmCanonMismatch(acc, v.canonical)) { _blockUnconfirmed(); return; }
         // 'verified' -> use the canonical form. Census unreachable/'error' -> FAIL-OPEN with the entered
         // address (Census throttles Worker egress IPs; don't block a real user for a verify outage — the
         // 50/mo cap + de-dupe still protect spend). Only a CONFIRMED not-found blocks.
