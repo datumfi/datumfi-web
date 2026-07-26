@@ -274,6 +274,62 @@
     return !!(window.DatumD1 && window.DatumD1.CUTOVER !== false && window.DatumD1.signedIn && window.DatumD1.signedIn());
   }
 
+  // ── MISS-5 pre-work item 3 — THE SKETCHBOOK'S D1 RESTORE LEG ────────────────────────────────────
+  // nav.js is the CENTRALISED, every-page cross-device restore, and it had a D1 leg for the blueprint
+  // (_restoreBlueprintFromD1) but NONE for the sketchbook: _restoreSketchbook read only meta.sketchbook_z.
+  // sketchbook.html has had its own D1 restore all along (_sketchbookRestoreFromD1), but that only runs when
+  // the user happens to land on THAT page. Retiring sketchbook_z with the gap open would mean a fresh device
+  // recovers the sketchbook only if it visits sketchbook.html first — silent, path-dependent data loss.
+  // So this is a HOIST of the restore that already exists, not a new mechanism (L48, same as items 1 and 2).
+  //
+  // SEAM: nav.js rebuilds the STORE (the LS book every page reads); sketchbook.html keeps rebuilding its own
+  // UI (pager, per-id open stash, title field). Sharing the store is right; sharing the UI would not be.
+  function _sketchbookD1Live() {
+    return !!(window.DatumD1 && window.DatumD1.CUTOVER !== false && window.DatumD1.signedIn && window.DatumD1.signedIn());
+  }
+  // Newest-first contracts -> the LS book. The 4 slots are a NET, not a cap: D1 holds ALL N by uuid and the
+  // sketchbook pages through them; these slots exist so a signed-out/offline device still has something.
+  function _commitSketchBook(contracts, done) {
+    var book = { sketchbook_title: '', slot_1: null, slot_2: null, slot_3: null, slot_4: null };
+    try { var ex = JSON.parse(localStorage.getItem(_BOOK_KEY) || '{}'); if (ex && ex.sketchbook_title) book.sketchbook_title = ex.sketchbook_title; } catch (_e) {}
+    for (var n = 1; n <= 4; n++) book['slot_' + n] = contracts[n - 1] || null;
+    try { localStorage.setItem(_BOOK_KEY, JSON.stringify(book)); } catch (_e) {}
+    if (typeof _sketchbookRestoreFromClerk === 'function') _sketchbookRestoreFromClerk();
+    done();
+  }
+  function _restoreSketchbookFromD1(meta, Codec, done) {
+    if (typeof done !== 'function') done = function () {};
+    if (_hasBook()) { done(); return; }                              // local cache wins
+    function fallback() { _restoreSketchbook(meta, Codec); done(); }
+    try {
+      window.DatumD1.listDocs('sketchbook').then(function (list) {
+        // THE INVARIANT (the sketchbook twin of the blueprint rule above). A REACHABLE-EMPTY D1 list is
+        // AUTHORITATIVE: the sketchbook IS empty, so render empty and do NOT reseed from the lagging
+        // sketchbook_z / LS-4 net. Without this, a user who DELETES a sketch gets it back on the next page
+        // load, because the mirror still carries it. The net survives ONLY on the .catch below — a genuine
+        // REJECT, meaning D1 was unreachable and we never learned the truth. "Empty because empty" and
+        // "empty because unreachable" are different answers and must not share a branch.
+        if (!list || !list.length) { done(); return; }
+        list.sort(function (a, b) { return String(b.updated_at || '').localeCompare(String(a.updated_at || '')); });
+        // Index-assign rather than push: getDoc settles in arbitrary order and the book is NEWEST-FIRST.
+        var contracts = new Array(list.length), pending = list.length;
+        function settle() {
+          if (--pending) return;
+          var got = [];
+          for (var i = 0; i < contracts.length; i++) if (contracts[i]) got.push(contracts[i]);
+          // Listed rows but recovered NOTHING = a fetch failure, not an empty sketchbook. Take the net.
+          if (got.length) _commitSketchBook(got, done); else fallback();
+        }
+        list.forEach(function (item, i) {
+          window.DatumD1.getDoc('sketchbook', item.doc_key).then(function (d) {
+            if (d && d.payload) { try { contracts[i] = JSON.parse(d.payload); } catch (_e) {} }
+            settle();
+          }).catch(settle);
+        });
+      }).catch(fallback);                                            // reject = unreachable -> the net
+    } catch (_e) { fallback(); }
+  }
+
   window._datumRestoreFromClerk = function(done) {
     if (typeof done !== 'function') done = function() {};
     try {
@@ -303,10 +359,16 @@
         // the codec is still needed for the sketchbook_z leg (and the blueprint_z ESCAPE ROUTE when
         // rolled back / D1 absent).
         var _bpD1 = _blueprintD1Live();
+        var _sbD1 = _sketchbookD1Live();
+        // The sketchbook clause deliberately keeps NO _sbD1 term: the codec must be loaded even when D1 is
+        // live, because the unreachable-fallback below decodes sketchbook_z and a null codec would make that
+        // net silently do nothing. (The blueprint clause DOES gate on _bpD1 and therefore has that gap under
+        // D1-live + unreachable — pre-existing, flagged, not changed here.)
         var wantCodec = (!_hasBook() && meta.sketchbook_z) || (!_bpD1 && !_hasArch() && meta.blueprint_z);
         function go() {
           var C = window.DatumArchiveCodec || null;
-          _restoreSketchbook(meta, C);
+          if (_sbD1) _restoreSketchbookFromD1(meta, C);        // D1 preferred; the net ONLY on genuine-unreachable
+          else _restoreSketchbook(meta, C);                    // signed-out / rolled back -> the sketchbook_z net
           if (_bpD1) { _restoreBlueprintFromD1(meta, C, done); } // D1 preferred, blueprint_z fallback
           else { _restoreBlueprint(meta, C); done(); }          // rollback / D1 absent -> blueprint_z
         }
