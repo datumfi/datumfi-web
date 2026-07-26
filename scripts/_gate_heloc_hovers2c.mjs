@@ -17,8 +17,23 @@ const DROPMTG = process.argv.includes('--dropmtg');   // delete the Mortgage tai
 let s = readFileSync('studio.html', 'utf8');
 if (RED) {
   // Drop the 6 map completion-set lines + the whole HELOC cluster branch.
-  s = s.replace(/        \/\/ §2c completion set[\s\S]*?'Next Payment Date': \[[^\]]*\]\n/, '');
-  s = s.replace(/        if \(\(getBaseType\(acc\.baseId\) \|\| \{\}\)\.title === 'HELOC'\) \{[\s\S]*?\n        }\n        return `/, '        return `');
+  //
+  // RE-GROUNDED 2026-07-26. BOTH of these anchors had gone dead — they matched zero times, so
+  // --redfirst mutated NOTHING while still reporting "RED-FIRST OK", because the gate was red
+  // anyway from a stale contract line. A dead control certified by an unrelated failure.
+  // Both breakages trace to the SAME commit, 440053e (#412 / §18.8):
+  //   · the map entry ends "]," not "]"        -> tolerate an optional trailing comma
+  //   · §18.8 inserted three COMMENT lines between the HELOC branch's "}" and "return `"
+  //                                            -> allow comment lines in between
+  // Anchored on what does not vary; the parts that legitimately move are matched loosely.
+  const _before = s;
+  s = s.replace(/        \/\/ §2c completion set[\s\S]*?'Next Payment Date': \[[^\]]*\],?\n/, '');
+  s = s.replace(/        if \(\(getBaseType\(acc\.baseId\) \|\| \{\}\)\.title === 'HELOC'\) \{[\s\S]*?\n        }\n(?:        \/\/[^\n]*\n)*        return `/, '        return `');
+  // A no-op strip is the very failure this gate just taught us about — refuse to run blind.
+  if (s === _before) {
+    console.error('❌ --redfirst STRIP MATCHED NOTHING — the mutation anchors are dead again. Re-ground them.');
+    process.exit(1);
+  }
 }
 const sN = s.replace(/\\/g, '');
 
