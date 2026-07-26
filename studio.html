@@ -7640,13 +7640,17 @@
                 if (acc.useValueApi === true) {
                     var _joinAddr = [acc.propStreet, acc.propCity, acc.propState, acc.propZip].map(function(s){return String(s||'').trim();}).filter(Boolean).join(', ');
                     var _addrComplete = ['propStreet','propCity','propState','propZip'].every(function(k){return String(acc[k]||'').trim();});
+                    // Ask 2 — the persisted snapshot for THIS address, if we already own one. Its presence is
+                    // what turns the control from "Get estimate" (R-default) into R153 "Refresh estimate": the
+                    // free result is already on screen, so the only thing left to offer is a deliberate re-pull.
+                    var _avmSnap = _groundsAvmFor(acc);
                     html += `
                 <div style="margin-top:12px; padding-top:12px; border-top:1px dashed rgba(255,255,255,0.08);">
                     <span class="input-label modal-tt-wrap" style="cursor:help;">Property Address<div class="modal-tt" style="left:0; right:auto;"><strong>Property Address</strong>Add the property address to pull an automated value estimate — a starting point, not an appraisal. Your own number always wins.</div></span>
                     <div id="modal-avm-addrpreview-${id}" style="font-family:var(--font-mono); font-size:11px; color:rgba(255,255,255,0.6); margin-top:4px;">${_addrComplete ? _joinAddr.replace(/</g,'&lt;') : '— enter street, city, state &amp; ZIP above —'}</div>
-                    <div style="text-align:right; margin-top:8px;"><button id="avm-getbtn-${id}" class="add-space-btn" style="width:auto; padding:4px 10px; border:none; background:transparent; border-bottom:1px dashed var(--teal-mid); color:var(--teal-mid);" onclick="groundsVerifyAndEstimate('${id}')">Get estimate</button></div>
+                    <div style="text-align:right; margin-top:8px;"><button id="avm-getbtn-${id}" class="add-space-btn" style="width:auto; padding:4px 10px; border:none; background:transparent; border-bottom:1px dashed var(--teal-mid); color:var(--teal-mid);" onclick="groundsVerifyAndEstimate('${id}'${_avmSnap ? ', true' : ''})">${_avmSnap ? 'Refresh estimate' : 'Get estimate'}</button></div>
                     <div id="modal-avm-verify-${id}"></div>
-                    <div id="modal-avm-result-${id}">${(function(){ var _p = _groundsAvmFor(acc); return _p ? _groundsAvmResultHTML(id, _p) : ''; })()}</div>
+                    <div id="modal-avm-result-${id}">${_avmSnap ? _groundsAvmResultHTML(id, _avmSnap) : ''}</div>
                 </div>`;
                 }
                 html += `
@@ -9867,6 +9871,10 @@
         return {
             MONTHLY_CAP: CAP,
             WORKER_URL: WORKER_URL,
+            // Ask 2 ③ — the de-dupe window is ALREADY defined here (30d, §6b.5). Export it rather than
+            // redeclare "30 days" at the Grounds call site: two copies of one window drift, and the day
+            // they disagree the cheaper one silently spends a call the other thinks it saved (L48).
+            REFRESH_MS: REFRESH_MS,
             _monthKey: monthKey, _count: count, _cacheSet: cacheSet, _cacheClear: cacheClear, hasByoKey: hasByoKey,
             // Client-side advisory decision (the Worker's KV cap is authoritative; this is defense-in-depth UX).
             request: function (acc, assetKey) {
@@ -9907,13 +9915,52 @@
         var parts = [acc.propStreet, acc.propCity, acc.propState, acc.propZip].map(function (s) { return String(s || '').trim(); }).filter(Boolean);
         return parts.length === 4 ? parts.join(', ') : '';
     }
-    // The ONLY reader of a stored estimate. Returns it only when its key matches the address on screen RIGHT
-    // NOW; otherwise null, so a stale result can never be presented as belonging to a different home.
+    // ASK 2 — THE ADDRESS ON SCREEN RIGHT NOW. `acc.propAddress` holds the last VERIFIED canonical address and
+    // updateAccField never clears it, so it goes STALE the moment the user edits a structured field: keying off
+    // it alone re-matched a FL snapshot against a freshly-typed CO address (measured, not assumed). The four
+    // structured fields are the live truth whenever they're complete; propAddress is the fallback for legacy
+    // accounts that only ever had the joined form.
+    function _groundsLiveAddr(acc) { return _groundsJoinedAddr(acc) || String(acc.propAddress || ''); }
+    // The ONLY reader of a stored estimate. Returns the persisted snapshot only when its address matches the
+    // one on screen RIGHT NOW; otherwise null, so a stale result can never be presented as belonging to a
+    // different home. Two keys, because the snapshot is stamped from the CANONICAL address Census returned
+    // while the live address is what the user TYPED — same home, two spellings. Matching either keeps a
+    // reopened snapshot rendering (and free); a real field edit misses BOTH and costs its one honest call.
     function _groundsAvmFor(acc) {
-        if (!acc || !acc._avmLast) return null;
-        var now = _avmAddrKey(acc.propAddress || _groundsJoinedAddr(acc));
+        var s = acc && acc.assetAvmSnapshot;
+        if (!s || s.estimate == null) return null;
+        var now = _avmAddrKey(_groundsLiveAddr(acc));
         if (!now) return null;
-        return (acc._avmLastKey && acc._avmLastKey === now) ? acc._avmLast : null;
+        return (now === s.key || now === s.keyTyped) ? s : null;
+    }
+    // ASK 2 — the ONE writer-shape. Builds the PERSISTED snapshot from a raw Worker response, and returns null
+    // unless the fetch genuinely succeeded with a usable range: a capped / errored / half-formed response
+    // persists NOTHING (L47 — better an empty section than a stored number nobody sourced). The comps are
+    // re-mapped to the R147 fields only, so a provider adding chatter can't quietly fatten what we store.
+    function _groundsAvmSnapshot(r, canonicalAddr, typedAddr) {
+        if (!r || (r.status !== 'ok' && r.status !== 'cached')) return null;
+        if (r.value == null || r.low == null || r.high == null) return null;
+        var comps = (Array.isArray(r.comps) ? r.comps : [])
+            .filter(function (c) { return c && (c.address || c.price != null); })
+            .map(function (c) {
+                return { address: c.address, price: c.price, beds: c.beds, baths: c.baths,
+                         sqft: c.sqft, distance: c.distance, saleDate: c.saleDate };
+            });
+        return {
+            address:  canonicalAddr,
+            key:      _avmAddrKey(canonicalAddr),
+            keyTyped: _avmAddrKey(typedAddr || canonicalAddr),
+            estimate: r.value,
+            range:    { low: r.low, high: r.high },
+            comps:    comps,
+            // R61 provenance FROZEN AT PULL TIME. _avmDate falls back to TODAY when `updated` is absent, so a
+            // recomputed stamp would let a July lookup reopen in October claiming "· Oct 2026" — a freshness
+            // it does not have. Stored once, rendered verbatim thereafter.
+            stamp:    'est. · via RentCast · ' + _avmDate(r.updated),
+            // Machine-precision companion to `stamp` (which is month-precision display copy and cannot drive
+            // arithmetic). This is what the 30-day de-dupe window actually measures against.
+            pulledAt: Date.now()
+        };
     }
     function _avmDate(iso) { var d = iso ? new Date(iso) : new Date(); if (isNaN(d)) d = new Date(); return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }); }
     function _avmNote(t) { return '<div style="font-size:11px; color: rgba(255,255,255,0.5); margin-top:8px;">' + t + '</div>'; }
@@ -9942,12 +9989,17 @@
             '<span class="input-label modal-tt-wrap" style="cursor:help;">Comparable sales<div class="modal-tt" style="left:0; right:auto;"><strong>Comparable sales</strong>Recent nearby sales the estimate leans on. These are real homes that sold close by — your home’s ‘est.’ value is a read of this neighborhood, not a guess. Seeing the comps is how you sanity-check whether the number feels right for your plan.</div></span>' +
             comps.map(_groundsCompRow).join('') + '</div>';
     }
+    // Non-success statuses render as a NOTE beside whatever snapshot we already hold — they are a report on
+    // THIS fetch, never a reason to discard a good stored one (L47 clears on not-found only, see §A135).
+    function _groundsAvmStatusHTML(r) {
+        if (r && r.status === 'capped') return '<div style="font-size:11px; color: rgba(255,255,255,0.6); margin-top:8px;">' + (r.message || 'Monthly estimate limit reached — enter your own value.') + '</div>';
+        return '';   // no-key / error → blank (L47)
+    }
+    // Renders the PERSISTED SNAPSHOT SHAPE (never a raw Worker response) — one shape, one renderer, so a
+    // reopened snapshot and a just-fetched one are byte-identical on screen.
     function _groundsAvmResultHTML(id, r) {
         var $ = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
-        if (!r) return '';
-        if (r.status === 'capped') return '<div style="font-size:11px; color: rgba(255,255,255,0.6); margin-top:8px;">' + (r.message || 'Monthly estimate limit reached — enter your own value.') + '</div>';
-        if (r.status !== 'ok' && r.status !== 'cached') return '';   // no-key / error → blank (L47)
-        if (r.value == null || r.low == null || r.high == null) return '';
+        if (!r || r.estimate == null || !r.range || r.range.low == null || r.range.high == null) return '';
         // #262 W1 — premium low–mid–high BAND (middle emphasized). R154 headline hover + R158 pick-comfort
         // hover (VERBATIM). Three per-range accepts (R155/R156/R157). "Estimated" dropped — est. lives once
         // in the provenance footer (§1.4). Attribution stays.
@@ -9963,9 +10015,9 @@
         };
         return '<div style="margin-top:12px; padding:14px; background:rgba(93,202,165,0.06); border:1px solid rgba(93,202,165,0.22); border-radius:6px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 10px rgba(0,0,0,0.28);">' +
             '<div class="modal-tt-wrap" style="cursor:help; justify-content:flex-start; margin-bottom:10px;"><span style="font-size:11px; text-transform:uppercase; letter-spacing:0.1em; color:var(--teal-mid); font-weight:600;">Market Range</span><div class="modal-tt" style="left:0; right:auto;"><strong>Market Range</strong>' + HOVER_HEAD + '</div></div>' +
-            '<div style="display:flex; align-items:flex-end; gap:8px;">' + wing(r.low, 'Use the low end', false) + wing(r.value, 'Use the middle', true) + wing(r.high, 'Use the high end', false) + '</div>' +
+            '<div style="display:flex; align-items:flex-end; gap:8px;">' + wing(r.range.low, 'Use the low end', false) + wing(r.estimate, 'Use the middle', true) + wing(r.range.high, 'Use the high end', false) + '</div>' +
             '<div class="modal-tt-wrap" style="cursor:help; justify-content:center; margin-top:10px;"><span style="font-size:10px; color:rgba(255,255,255,0.42); border-bottom:1px dotted rgba(255,255,255,0.25);">Which number should I use?</span><div class="modal-tt"><strong>Pick your comfort level</strong>' + HOVER_PICK + '</div></div>' +
-            '<div style="text-align:center; font-size:10px; color:rgba(255,255,255,0.38); margin-top:8px;">est. · via RentCast · ' + _avmDate(r.updated) + '</div>' +
+            '<div style="text-align:center; font-size:10px; color:rgba(255,255,255,0.38); margin-top:8px;">' + r.stamp + '</div>' +
         '</div>' +
         _groundsCompsHTML(r);
     }
@@ -9977,8 +10029,12 @@
         if (!addr) return;
         el.innerHTML = '<div style="font-size:11px; color: rgba(255,255,255,0.5); margin-top:8px;">Fetching estimate…</div>';
         var r = await _AssetIntel.fetchEstimate(addr);
+        // Legacy no-verify entry point (no live call sites — the button routes through groundsVerifyAndEstimate).
+        // Kept on the ONE snapshot shape so it can never render a raw response the renderer no longer speaks.
+        var snap = _groundsAvmSnapshot(r, addr, addr);
+        if (snap) acc.assetAvmSnapshot = snap;
         var el2 = document.getElementById('modal-avm-result-' + id);   // re-check (modal may have closed)
-        if (el2) el2.innerHTML = _groundsAvmResultHTML(id, r);
+        if (el2) el2.innerHTML = _groundsAvmStatusHTML(r) + (snap ? _groundsAvmResultHTML(id, snap) : '');
     };
     // Live preview of the joined address as the structured fields are typed (the valuation section is
     // rendered once on open and updateAccField does not re-render it — so keep this in sync by hand).
@@ -9996,7 +10052,7 @@
     };
     // §A135 — verify-then-estimate. Join the structured address, free US-Census confirm-exists, and ONLY a
     // verified address feeds RentCast; a not-found result BLOCKS the paid call and shows R149.
-    window.groundsVerifyAndEstimate = async function (id) {
+    window.groundsVerifyAndEstimate = async function (id, force) {
         var acc = state.accounts.find(function (a) { return a.id === id; });
         if (!acc) return;
         var parts = [acc.propStreet, acc.propCity, acc.propState, acc.propZip].map(function (s) { return String(s || '').trim(); }).filter(Boolean);
@@ -10005,6 +10061,18 @@
         if (rEl) rEl.innerHTML = '';
         if (parts.length < 4) { if (vEl) vEl.innerHTML = _avmNote('Add the full street, city, state, and ZIP above first.'); return; }
         var joined = parts.join(', ');
+        // ASK 2 ③ — DE-DUPE. Same address, snapshot still inside the 30-day window: render what we already own
+        // and spend NOTHING — not the paid RentCast call, not even the free Census round-trip. This is the whole
+        // point of persisting: 50 free lookups a month should never be spent re-reading a home we already read.
+        // `force` is the R153 Refresh path — the one place a NEW paid call is allowed on an UNCHANGED address,
+        // and it is only ever set by a deliberate click.
+        if (!force) {
+            var have = _groundsAvmFor(acc);
+            if (have && (Date.now() - (have.pulledAt || 0)) < _AssetIntel.REFRESH_MS) {
+                if (rEl) rEl.innerHTML = _groundsAvmResultHTML(id, have);
+                return;
+            }
+        }
         if (vEl) vEl.innerHTML = _avmNote('Checking the address…');
         var v = await _AssetIntel.verifyAddress(joined);
         if (v && v.status === 'not-found') {
@@ -10012,7 +10080,7 @@
             // AND DROP THE PREVIOUS ESTIMATE. This early return is how the stale figure survived: the old
             // estimate stayed on acc and re-rendered beside an address it never described. A failed lookup must
             // leave nothing behind — better an empty section than a confident number for the wrong home.
-            acc._avmLast = null; acc._avmLastKey = '';
+            acc.assetAvmSnapshot = null;
             if (vEl) vEl.innerHTML = '<div style="font-size:12px; color: rgba(240,200,120,0.92); margin-top:8px; line-height:1.5;">Hmm — we couldn’t confirm that address. Check the street, city, state, and ZIP for a typo, or enter it the way it appears on your mail. We only look up real, findable homes — no guesses, no wasted lookups.</div>';
             return;
         }
@@ -10023,13 +10091,18 @@
         acc.propAddress = (v && v.status === 'verified' && v.canonical) ? v.canonical : joined;
         if (rEl) rEl.innerHTML = _avmNote('Fetching estimate…');
         var r = await _AssetIntel.fetchEstimate(acc.propAddress);
-        acc._avmLast = r;   // #260 — persist the last estimate so range + comps survive the accept re-render
-                            // and modal close/reopen; only a FRESH Get-estimate replaces it.
-        // …and STAMP IT WITH THE ADDRESS IT DESCRIBES (Ask 1). Without this the estimate is unkeyed and
-        // outlives the address that produced it. Keyed off the canonical form actually sent to the Worker.
-        acc._avmLastKey = _avmAddrKey(acc.propAddress);
+        // ASK 2 — WRITE-ON-SUCCESS ONLY, under a NON-underscore key so it survives the trip to D1
+        // (studio-blueprint.js:399 strips every _-prefixed key; that one line is why the comps used to die at
+        // logout). Stamped with BOTH the canonical address the Worker answered and the typed form on screen,
+        // so the snapshot can never outlive the address that produced it (Ask 1).
+        // A capped / errored refresh returns null here and we KEEP what we had — a failed re-pull must not
+        // destroy a good stored estimate; it just reports itself and leaves the frozen stamp telling the truth
+        // about when the numbers we ARE showing were pulled.
+        var snap = _groundsAvmSnapshot(r, acc.propAddress, joined);
+        if (snap) acc.assetAvmSnapshot = snap;
+        var shown = snap || _groundsAvmFor(acc);
         var rEl2 = document.getElementById('modal-avm-result-' + id);   // re-check (modal may have closed)
-        if (rEl2) rEl2.innerHTML = _groundsAvmResultHTML(id, r);
+        if (rEl2) rEl2.innerHTML = _groundsAvmStatusHTML(r) + (shown ? _groundsAvmResultHTML(id, shown) : '');
     };
     window.groundsUseEstimate = function (id, value) {
         var acc = state.accounts.find(function (a) { return a.id === id; });
