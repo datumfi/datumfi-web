@@ -15913,7 +15913,13 @@
     // the archive agree on what exists.
     function bpMeta(bp, id) {
       var prof = (bp && bp.profile) || {};
-      var name = prof.primary_name ? (prof.primary_name + "'s Blueprint") : 'Studio Blueprint';
+      // RENAME — same shared resolver the archive card uses (nav.js, L48). This row is the fault-3
+      // repaint trap in a new hat: rename on the archive, then open this picker, and a forked
+      // expression here would still show the old derived label. listBlueprints() re-reads D1 on every
+      // open, so binding to the resolver is all the repaint this surface needs.
+      var name = (window.DatumSavedName
+                   ? window.DatumSavedName.resolve(bp, { noun: 'Blueprint', ownerName: prof.primary_name }).name
+                   : (prof.primary_name ? (prof.primary_name + "'s Blueprint") : 'Studio Blueprint'));
       var rooms = ((bp && bp.accounts) || []).length;
       var when = bp && bp.saved_at ? new Date(bp.saved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
       return { id: id, name: name, rooms: rooms, when: when };

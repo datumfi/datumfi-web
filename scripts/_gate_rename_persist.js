@@ -31,6 +31,7 @@ const ROOT = path.resolve(__dirname, '..');
 const RF = process.argv.includes('--redfirst');
 const NOCAS = process.argv.includes('--nocas');
 const DB = process.argv.includes('--debounce');
+const CARDFORK = process.argv.includes('--cardfork');
 let pass = 0, fail = 0; const lines = [];
 const ok = (c, m) => { if (c) pass++; else fail++; lines.push((c ? 'PASS ' : 'FAIL ') + m); };
 
@@ -59,7 +60,12 @@ function mutateNav(src) {
   return s;
 }
 
-let navServedDiffers = false;
+// COMMIT 2 — the CARD binding. Restores the pre-resolver forked expression in Blueprint.html's mapper,
+// so a renamed card renders its DERIVED label again. Syntax stays valid; only the source of the name moves.
+const A_CARD = "            ? window.DatumSavedName.resolve(bp, { noun: 'Blueprint', ownerName: prof.primary_name }).name";
+const CARD_FORK = "            ? (prof.primary_name ? (prof.primary_name + \"'s Blueprint\") : 'Studio Blueprint')";
+
+let navServedDiffers = false, bpServedDiffers = false;
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/Blueprint.html';
   const fp = path.join(ROOT, p);
@@ -69,6 +75,14 @@ const server = http.createServer((req, res) => {
     const orig = body.toString('utf8');
     const out = mutateNav(orig);
     navServedDiffers = (out !== orig);
+    body = Buffer.from(out, 'utf8');
+  }
+  if (p === '/Blueprint.html' && CARDFORK) {
+    const orig = body.toString('utf8');
+    const n = orig.split(A_CARD).length - 1;
+    if (n !== 1) throw new Error(`anchor card: expected exactly 1 occurrence, found ${n}`);
+    const out = orig.replace(A_CARD, CARD_FORK);
+    bpServedDiffers = (out !== orig);
     body = Buffer.from(out, 'utf8');
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
@@ -261,10 +275,91 @@ function freshBlueprint() {
   ok(casPut && typeof casPut.ifRev === 'number',
     'the rename PUT carries an explicit revision (ifRevision), so the API can detect the conflict [BITE nocas]');
 
+  // ═══ 9 · THE CARD ITSELF (Commit 2) — the rendered element, not the bytes ════════════════════════
+  // #380: assert the SERVED, RENDERED card actually CARRIES the hook. A gate that greps the file for
+  // "data-rename-id" passes even when no element ever wears it — that shipped an invisible feature once.
+  // SETTLE BEFORE RESETTING THE FIXTURE. Under --debounce the earlier writes are still parked on the
+  // ~1.5s timer; without this wait they fire AFTER the reset and repopulate the row, so the card would
+  // show a renamed name and two assertions below would go red for a HARNESS reason rather than a
+  // product one. Let them land, THEN reset, THEN navigate (navigation discards any remaining timers).
+  await page.waitForTimeout(1800);
+  d1.rows[DOCID] = { payload: freshBlueprint(), revision: 1 };
+  await page.goto(base + '/Blueprint.html', { waitUntil: 'load' });
+  await page.waitForTimeout(1400);
+
+  const card = await page.evaluate(() => {
+    const h3 = document.querySelector('#blueprint-content-1 .blueprint-name');
+    const btn = document.querySelector('#blueprint-content-1 .rename-action');
+    const foot = document.querySelector('#blueprint-content-1 .saved-time');
+    const pill = document.querySelector('#blueprint-content-1 .status-pill');
+    const sheet = document.querySelector('#blueprint-content-1 .sheet-id');
+    return {
+      name: h3 ? h3.textContent.trim() : null,
+      nameHook: h3 ? h3.getAttribute('data-rename-id') : null,
+      btnHook: btn ? btn.getAttribute('data-rename-id') : null,
+      btnLabel: btn ? btn.textContent.trim() : null,
+      btnTitle: btn ? btn.getAttribute('title') : null,
+      foot: foot ? foot.textContent.trim() : null,
+      pill: pill ? pill.textContent.trim() : null,
+      sheet: sheet ? sheet.textContent.trim() : null
+    };
+  });
+  ok(card.nameHook === BP_ID && card.btnHook === BP_ID,
+    'RENDERED card carries data-rename-id on BOTH the name element and the Rename control (#380)');
+  ok(card.btnLabel === 'Rename' && card.btnTitle === 'Rename this blueprint',
+    'the Rename control renders the authored label and hover verbatim');
+  ok(card.name === "Primary Architect's Blueprint",
+    'before any rename the card shows the DERIVED name (the string users are asking to replace)');
+  ok(card.foot === '07/25/26',
+    'footer leads with the 2-digit date ALONE — the status token is gone (it duplicated the pill)');
+  ok(card.pill === 'Drafted', 'the status still renders — at card-top, in the pill, exactly once');
+  ok(card.sheet === 'Sheet A-01', 'the ID chip reads "Sheet A-01"');
+
+  // Inline edit through the REAL control: click Rename, type, Enter.
+  await page.click('#blueprint-content-1 .rename-action');
+  await page.waitForTimeout(150);
+  const editorUp = await page.evaluate(() => {
+    const i = document.querySelector('#blueprint-content-1 .rename-input');
+    return i ? { placeholder: i.placeholder, value: i.value } : null;
+  });
+  ok(!!editorUp && editorUp.value === '',
+    'the editor opens EMPTY — a derived label is never pre-filled, so Enter cannot promote a guess into stored data');
+  ok(!!editorUp && editorUp.placeholder === "Primary Architect's Blueprint",
+    'the derived name shows as the placeholder — visible context without becoming the value');
+
+  await page.fill('#blueprint-content-1 .rename-input', 'Coast at 55');
+  await page.press('#blueprint-content-1 .rename-input', 'Enter');
+  await page.waitForTimeout(900);
+
+  const afterUi = await page.evaluate(() => {
+    const h3 = document.querySelector('#blueprint-content-1 .blueprint-name');
+    return h3 ? h3.textContent.trim() : null;
+  });
+  ok(afterUi === 'Coast at 55',
+    'after renaming through the real control the CARD repaints to the new name [BITE cardfork]');
+  ok(d1.rows[DOCID].payload.display_name === 'Coast at 55',
+    'and the D1 row holds it — the UI path lands in the store, not just on screen');
+
+  // Esc must abandon cleanly, leaving the committed name intact.
+  await page.click('#blueprint-content-1 .rename-action');
+  await page.waitForTimeout(150);
+  await page.fill('#blueprint-content-1 .rename-input', 'THROWN AWAY');
+  await page.press('#blueprint-content-1 .rename-input', 'Escape');
+  await page.waitForTimeout(400);
+  const afterEsc = await page.evaluate(() => {
+    const h3 = document.querySelector('#blueprint-content-1 .blueprint-name');
+    return h3 ? h3.textContent.trim() : null;
+  });
+  ok(afterEsc === 'Coast at 55', 'Esc cancels the edit and restores the committed name');
+  ok(d1.rows[DOCID].payload.display_name === 'Coast at 55', 'Esc wrote NOTHING to D1');
+
+  ok(CARDFORK ? bpServedDiffers : !bpServedDiffers,
+    CARDFORK ? 'the --cardfork mutation CHANGED the served Blueprint.html bytes' : 'clean run: Blueprint.html served unmutated');
+
   ok(pageErrors.length === 0, 'no uncaught page errors on the real Blueprint.html (' + pageErrors.join(' | ') + ')');
 
   await browser.close(); server.close();
-  const mode = [RF && 'redfirst', NOCAS && 'nocas', DB && 'debounce'].filter(Boolean).join('+') || 'CLEAN';
+  const mode = [RF && 'redfirst', NOCAS && 'nocas', DB && 'debounce', CARDFORK && 'cardfork'].filter(Boolean).join('+') || 'CLEAN';
   console.log('MODE: ' + mode + '   |   RENAME store persistence (real Blueprint.html, PUT-only D1)');
   lines.forEach((l) => console.log('  ' + l));
   console.log(`\n  ${pass} passed, ${fail} failed`);

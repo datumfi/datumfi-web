@@ -930,6 +930,38 @@ button {
   color: rgba(93,202,165,.95);
 }
 
+/* RENAME — same footer-action chrome as Open/Erase (L48: reuse the shape, don't invent a third). */
+.rename-action {
+  position: relative;
+  z-index: 500;
+  pointer-events: auto;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 7.4px;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+  color: rgba(32,36,43,.44);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.rename-action:hover {
+  color: rgba(201,168,76,.95);
+}
+
+/* The inline editor inherits .blueprint-name so the card does not reflow when the h3 is swapped out. */
+.rename-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(201,168,76,.07);
+  border: 0;
+  border-bottom: 1px solid rgba(201,168,76,.55);
+  border-radius: 2px 2px 0 0;
+  padding: 0 2px;
+  outline: none;
+}
+
 .archive-actions {
   display: flex;
   align-items: center;
@@ -1495,12 +1527,19 @@ function bpToCard(bp) {
   let stamp = '—';
   if (bp.saved_at) {
     const d = new Date(bp.saved_at);
-    if (!isNaN(d)) stamp = d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+    // 2-digit year: the footer now leads with the date, so it stays a compact stamp (07/25/26), not a
+    // sentence. dateStamp() at the top of this file is UNTOUCHED — that one stamps STORED data.
+    if (!isNaN(d)) stamp = d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' });
   }
 
   return {
     id: bp.blueprint_id || ('bp-' + (bp.saved_at || Date.now())),
-    name: prof.primary_name ? (prof.primary_name + "'s Blueprint") : 'Studio Blueprint',
+    // RENAME — the per-card name comes from the ONE shared resolver in nav.js (L48). A user-set
+    // display_name wins; otherwise this derives exactly what it always did. `source` is carried so a
+    // caller can tell a real name from a derived label without re-deriving the rule.
+    name: (window.DatumSavedName
+            ? window.DatumSavedName.resolve(bp, { noun: 'Blueprint', ownerName: prof.primary_name }).name
+            : (prof.primary_name ? (prof.primary_name + "'s Blueprint") : 'Studio Blueprint')),
     // A (#288) — Net Worth = assets − debts, the honest headline. Stamped at save time by the studio host
     // hook (bp.datum.net_worth); null for pre-A saves (card shows '—' until re-saved). netEstate stays the
     // investableTotal (LOCK-3) and is relabeled "Amount Invested" below — two distinct money lines.
@@ -1543,7 +1582,7 @@ function renderBlueprintSlot(label, bpId, data) {
       <div class="status-pill">${data.status}</div>
     </div>
 
-    <h3 class="blueprint-name">${data.name}</h3>
+    <h3 class="blueprint-name" data-rename-id="${bpId}">${data.name}</h3>
 
     <div class="blueprint-mini">${blueprintSvg(data, label)}</div>
 
@@ -1556,8 +1595,9 @@ function renderBlueprintSlot(label, bpId, data) {
     </div>
 
     <div class="card-bottom">
-      <span class="saved-time">${data.status} · ${data.dateStamped}</span>
+      <span class="saved-time">${data.dateStamped}</span>
       <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+        <button type="button" class="rename-action" data-rename-id="${bpId}" aria-label="Rename this blueprint" title="Rename this blueprint">Rename</button>
         <button type="button" class="open-blueprint-action" data-open-id="${bpId}" aria-label="Open Blueprint in Studio">Open</button>
         <button type="button" class="erase-action" data-purge-id="${bpId}" aria-label="Erase blueprint ${label}">Erase</button>
       </div>
@@ -1786,7 +1826,10 @@ function openCompareModal() {
 /* Slot click (delegated on the grid — survives per-page re-render): select a filled sheet as
    active, or route an empty sheet to Studio to save. Open/Erase buttons handle themselves below. */
 document.getElementById('blueprint-grid').addEventListener('click', function (e) {
-  if ((e.target.closest && (e.target.closest('.erase-action') || e.target.closest('.open-blueprint-action')))) return;
+  // .rename-action and .rename-input MUST be excluded: this handler calls renderArchivePage(), which
+  // rewrites content.innerHTML — clicking into an open rename editor would otherwise destroy it mid-edit.
+  if ((e.target.closest && (e.target.closest('.erase-action') || e.target.closest('.open-blueprint-action')
+      || e.target.closest('.rename-action') || e.target.closest('.rename-input')))) return;
   const tile = e.target.closest && e.target.closest('.blueprint-slot');
   if (!tile) return;
   const bpId = tile.dataset.bpId;
@@ -1824,6 +1867,66 @@ document.addEventListener('click', function(event) {
   }
 }, true);
 /* ── END OPEN BLUEPRINT HYDRATION HANDSHAKE ── */
+
+/* ── RENAME (per-card display_name) — inline edit ──────────────────────────────────────────────────
+   Mirrors the archive-title interaction already in this file (L48): the name element becomes an input,
+   commits on blur/Enter, Esc cancels. No prompt().
+
+   D1 is the sole store. DatumSavedName.rename (nav.js) does the 409-safe re-read -> setRevision ->
+   writeNow — a rename is a DELIBERATE act and must never ride the ~1.5s autosave debounce.
+
+   Clearing the field DELETES display_name, so the card falls back to its DERIVED name rather than
+   storing a confident blank — same reset the archive title already has.
+
+   REPAINT: on commit the whole archive is reloaded, so every surface fed by bpToCard repaints at once
+   — the card AND the compare table. The Studio overwrite-picker row (site 2) rebuilds from
+   listBlueprints(), which re-reads D1 on every open, so it self-heals with no wiring here. */
+let _renaming = null;
+function _beginRename(bpId) {
+  if (_renaming || !bpId) return;
+  const h3 = document.querySelector('.blueprint-name[data-rename-id="' + bpId + '"]');
+  if (!h3 || !window.DatumSavedName) return;
+  const rec = ARCH.list.find(function (b) { return (b.blueprint_id || '') === bpId; }) || null;
+  // Seed with the USER name only. A derived label is not the user's text, so pre-filling it would
+  // silently promote a guess into stored data the moment they pressed Enter.
+  const current = (rec && typeof rec.display_name === 'string') ? rec.display_name : '';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'blueprint-name rename-input';
+  input.value = current;
+  input.maxLength = window.DatumSavedName.MAX || 60;
+  input.placeholder = h3.textContent.trim();
+  input.setAttribute('aria-label', 'Rename this blueprint');
+  _renaming = bpId;
+  h3.replaceWith(input);
+  input.focus(); input.select();
+  let settled = false;
+  function finish(commit) {
+    if (settled) return; settled = true;
+    const v = input.value;
+    _renaming = null;
+    if (!commit) { input.replaceWith(h3); return; }
+    window.DatumSavedName.rename('blueprint', bpId, v)
+      .then(function () { return loadArchive(); })
+      .then(function () { renderArchivePage(); })
+      .catch(function (err) {
+        console.warn('[rename] not saved —', (err && err.message) || err);
+        if (input.isConnected) input.replaceWith(h3);   // keep the old name visible; never a blank card
+      });
+  }
+  input.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Enter') { ev.preventDefault(); finish(true); }
+    else if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
+  });
+  input.addEventListener('blur', function () { finish(true); });
+}
+document.addEventListener('click', function (event) {
+  const renameBtn = event.target.closest && event.target.closest('.rename-action');
+  if (!renameBtn) return;
+  event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation();
+  _beginRename(renameBtn.dataset.renameId);
+}, true);
+/* ── END RENAME ── */
 
 document.getElementById('bp-turn-next').addEventListener('click', function () { turnPage(ARCH.page + 1); });
 document.getElementById('bp-turn-prev').addEventListener('click', function () { turnPage(ARCH.page - 1); });
