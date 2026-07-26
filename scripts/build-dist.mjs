@@ -24,7 +24,7 @@ const DROP_RE = [/^\.claude\//, /^\.wrangler\//, /^workers\//, /^functions\//, /
 // SACRED HOSTS — must ship byte-identical (LF + content). Build ABORTS on drift.
 const SACRED = {
   'studio.html': 'b97088f3cfa685d5396d1c219ce52bba',
-  'sketch.html': 'a72918de67177f403659a65059d5f5ee',
+  'sketch.html': '592f8efb06834bd5f4936b3b8bde5672',
   'scripts/studio-blueprint.js': '62286adc73ffc44e85b0ce7f294528fa',
   // MISS-5 pre-work guard (2026-07-25). nav.js is a Sacred Host in CLAUDE.md but was absent from THIS map,
   // so a bad edit failed no build. It owns the centralized cross-device restore every page depends on

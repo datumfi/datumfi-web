@@ -168,6 +168,30 @@ ok('studio.html keeps the 1500ms safety net (belt AND suspenders)', studio.inclu
 ok('FENCE: no Clerk mirror WRITE was retired or altered by this commit (MISS-5 still frozen)',
   navSrc.includes('window.Clerk.user.update({ unsafeMetadata: res.merged })'));
 
+/* ═══ 4 · THE SECOND HOUSE — sketch.html on the SAME seam (pre-work item 2) ═══════════════════════ */
+const sketch = readFileSync('sketch.html', 'utf8');
+const sketchCode = sketch.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
+// Scope this to the DOSSIER read, not to unsafeMetadata wholesale: sketch.html legitimately still WRITES
+// the sketchbook_z mirror (9116/9122), and that write must survive — sketchbook_z is the LAST key retired,
+// and only after _restoreSketchbookFromD1 exists. A blanket ban would have forbidden the safety net we are
+// deliberately keeping, so the gate would have been demanding a regression.
+ok('sketch.html no longer reads the Clerk dossier directly (live code)',
+  !/_meta\.dossier/.test(sketchCode) && !/\.dossier\b/.test(sketchCode));
+ok('FENCE: sketch.html STILL writes the sketchbook_z mirror (retired last, not here)',
+  sketch.includes('window.Clerk.user.update({ unsafeMetadata: _res.merged })'));
+ok('sketch.html resolves through the SAME shared helper studio.html uses (L48, one seam)',
+  sketch.includes('window._datumSeedDossier(function(_cd)'));
+ok('sketch.html keeps its OWN apply guards — only resolution is shared',
+  sketchCode.includes('if (!window._v15WasAbsent) return;') &&
+  sketchCode.includes("sessionStorage.getItem('datumfi_hydrate_from_slot')") &&
+  sketchCode.includes('if (window._userTouchedSlider) return;'));
+ok('sketch.html applies SLIDERS (its own shape), not the Studio blueprint seed',
+  sketchCode.includes('window._applyDossierSliders(_cd);') && !sketchCode.includes('seedFromBlueprint()'));
+ok('the LS cache write is no longer duplicated in sketch.html (it lives in the resolver)',
+  !sketchCode.includes("localStorage.setItem('datumfi.accountDossier.v15'"));
+ok('BOTH houses are converted — zero live Clerk dossier reads remain in either',
+  !/\.dossier\b/.test(studioCode) && !/\.dossier\b/.test(sketchCode));
+
 /* ── report ───────────────────────────────────────────────────────────────────────────────────────── */
 const pass = checks.filter((c) => c[1]).length;
 const label = MODE === 'a' ? 'RED-FIRST a (Clerk-first, D1 ignored)'

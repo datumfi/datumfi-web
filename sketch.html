@@ -2964,21 +2964,25 @@
     window.addEventListener('load', function() {
         if (!window._v15WasAbsent) return;
         if (sessionStorage.getItem('datumfi_hydrate_from_slot') || new URLSearchParams(window.location.search).get('id')) return;
-        try {
-            if (!window.Clerk) return;
-            window.Clerk.load().then(function() {
-                try {
-                    if (!window.Clerk.user) return;
-                    var _meta = window.Clerk.user.unsafeMetadata || {};
-                    var _cd = _meta.dossier;
-                    if (!_cd || typeof _cd !== 'object') return;
-                    try { localStorage.setItem('datumfi.accountDossier.v15', JSON.stringify(_cd)); } catch(e2) {}
-                    if (window._userTouchedSlider) return;
-                    window._applyDossierSliders(_cd);
-                    try { scheduleUpdate(); } catch(e3) {}
-                } catch(e) {}
-            }).catch(function() {});
-        } catch(e) {}
+        // MISS-5 pre-work item 2 — the Clerk read moves behind the SHARED resolver in nav.js, the same one
+        // studio.html uses (shipped 9a1280e): the D1 preferences/dossier row first, Clerk
+        // unsafeMetadata.dossier as the silent fallback. This was the SECOND house running structurally
+        // identical Clerk-only seed code; both now resolve through one seam, so they cannot drift apart and
+        // the prefs mirror can retire without stranding either page (L48).
+        // Only the RESOLUTION is shared. The guards above and the apply below stay this page's own — The
+        // Sketch seeds SLIDERS, the Studio seeds a whole blueprint. The resolver also caches to LS, which is
+        // why that write is gone from here; it still happens BEFORE the _userTouchedSlider check, exactly as
+        // it did when it lived inline, so a user who has already moved a slider keeps their view while the
+        // dossier is still cached for the next visit.
+        if (typeof window._datumSeedDossier !== 'function') return;
+        window._datumSeedDossier(function(_cd) {
+            try {
+                if (!_cd) return;
+                if (window._userTouchedSlider) return;
+                window._applyDossierSliders(_cd);
+                try { scheduleUpdate(); } catch(e3) {}
+            } catch(e) {}
+        });
     });
 
     function readPort()    { var x = slPort.dataset.exactVal;    return (x !== undefined && x !== '') ? parseFloat(x) : portPosToVal(parseInt(slPort.value))     * 1000000; }
