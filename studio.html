@@ -13822,31 +13822,31 @@
           // reveal on resolve OR a timeout safety net so the stage can never stay hidden.
           _seedGateOn();
           window.addEventListener('load', function () {
-            try {
-              if (!window.Clerk) { _seedGateOff(); return; }
-              window.Clerk.load().then(function () {
-                try {
-                  if (!window.Clerk.user) { _seedGateOff(); return; }
-                  var _meta = window.Clerk.user.unsafeMetadata || {};
-                  var _cd = _meta.dossier;
-                  if (!_cd || typeof _cd !== 'object') { _seedGateOff(); return; }
-                  try { localStorage.setItem('datumfi.accountDossier.v15', JSON.stringify(_cd)); } catch(e2) {}
-                  // Re-seed through the SAME blueprint path the synchronous load uses, so the
-                  // Clerk-hydrated dossier gets identical month-survival (plan-through date, carried
-                  // ages, target-ret) — not a partial re-apply that drops the plan-through month.
-                  // Clear the empty fresh+dossier draft first (writeSessionDraft(null)) so load()
-                  // reads the now-populated LS dossier, not the stale draft, then run the same seed.
-                  try { if (window.DatumBlueprint && DatumBlueprint._internal) DatumBlueprint._internal.writeSessionDraft(null); } catch(e3) {}
-                  seedFromBlueprint();
-                  applyDossierProfile(_cd);
-                  syncSpendFromDatumSlider();
-                  syncFromProfileDates();
-                  _reassertCarriedAges();
-                  refreshAllLabels(); fireUpdate();
-                } catch(e) {}
-                _seedGateOff();
-              }).catch(function () { _seedGateOff(); });
-            } catch(e) { _seedGateOff(); }
+            // MISS-5 pre-work item 1 — the Clerk read moved behind the SHARED resolver in nav.js
+            // (_datumSeedDossier): D1 preferences/dossier first, Clerk unsafeMetadata.dossier as the silent
+            // fallback. sketch.html folds onto this same helper, so the two houses can never drift apart.
+            // The resolver ALWAYS calls back, so _seedGateOff() runs on every path — the stage cannot stay
+            // hidden. The 1500ms safety net below stays as the belt to that suspenders.
+            if (typeof window._datumSeedDossier !== 'function') { _seedGateOff(); return; }
+            window._datumSeedDossier(function (_cd) {
+              try {
+                if (!_cd) { _seedGateOff(); return; }
+                // (The resolver already cached it to LS — both callers did that identically.)
+                // Re-seed through the SAME blueprint path the synchronous load uses, so the
+                // hydrated dossier gets identical month-survival (plan-through date, carried
+                // ages, target-ret) — not a partial re-apply that drops the plan-through month.
+                // Clear the empty fresh+dossier draft first (writeSessionDraft(null)) so load()
+                // reads the now-populated LS dossier, not the stale draft, then run the same seed.
+                try { if (window.DatumBlueprint && DatumBlueprint._internal) DatumBlueprint._internal.writeSessionDraft(null); } catch(e3) {}
+                seedFromBlueprint();
+                applyDossierProfile(_cd);
+                syncSpendFromDatumSlider();
+                syncFromProfileDates();
+                _reassertCarriedAges();
+                refreshAllLabels(); fireUpdate();
+              } catch(e) {}
+              _seedGateOff();
+            });
           });
           // Safety net: never leave the stage gated if Clerk is slow/absent or 'load' already fired.
           setTimeout(_seedGateOff, 1500);

@@ -23,7 +23,7 @@ const DROP_RE = [/^\.claude\//, /^\.wrangler\//, /^workers\//, /^functions\//, /
 
 // SACRED HOSTS — must ship byte-identical (LF + content). Build ABORTS on drift.
 const SACRED = {
-  'studio.html': 'f3051cba391743d53f1f3cdba4605079',
+  'studio.html': 'a45b358a6efcd081b64429c9100d03db',
   'sketch.html': 'a72918de67177f403659a65059d5f5ee',
   'scripts/studio-blueprint.js': '62286adc73ffc44e85b0ce7f294528fa',
   // MISS-5 pre-work guard (2026-07-25). nav.js is a Sacred Host in CLAUDE.md but was absent from THIS map,
@@ -32,7 +32,7 @@ const SACRED = {
   // and 4 all land in it — pin it BEFORE the arc that leans on it, not after.
   // NOTE: CLAUDE.md lists this host as 'scripts/nav.js'. That path does not exist; the real, page-referenced
   // file is /nav.js at the repo root (every page loads <script src="/nav.js">). Pinned at its true path.
-  'nav.js': '2c358f3fb1a81d2602bea60950f531a9',
+  'nav.js': '7531e146653b197faccbb9783db70f32',
 };
 const md5 = (p) => createHash('md5').update(readFileSync(p)).digest('hex');
 

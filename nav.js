@@ -343,5 +343,53 @@
       }).catch(function() {});
     } catch (_me) {}
   };
+  // ── MISS-5 pre-work (items 1+2) — THE ONE CROSS-DEVICE DOSSIER RESOLVER ──────────────────────────
+  // studio.html and sketch.html each seeded a fresh device straight from Clerk unsafeMetadata.dossier,
+  // with structurally identical code in two houses. Retiring the Clerk prefs mirror means converting BOTH,
+  // and two copies of one rule drift — the day they disagree, one page seeds from a different source than
+  // the other and nobody can tell which is right. One resolver, two callers (L48).
+  //
+  // Resolution order mirrors Dossier.html and my-account.html EXACTLY (the MISS-6 read-cutover rule; this is
+  // its third consumer, not a fourth mechanism): the D1 preferences/dossier row WINS, and Clerk
+  // unsafeMetadata.dossier stays a SILENT FALLBACK for D1 absent / unreachable / signed out / CUTOVER=false
+  // / no row yet. NOTHING IS RETIRED HERE — this moves the READ so the write can retire later.
+  //
+  // IT RESOLVES *AND* CACHES — a single seam, exactly-once guarded. Both callers wrote the resolved dossier
+  // to LS immediately before applying it, so that write is the shared half and hoisting it here is the point
+  // of de-forking (L48). The side effect is named rather than hidden; the exactly-once contract below is what
+  // makes it safe (a double-fire would double-apply the seed).
+  //
+  // done(dossier|null) IS CALLED EXACTLY ONCE ON EVERY PATH — no Clerk, no user, a thrown Clerk.load(), a
+  // rejected getDoc, all of them. studio.html reveals its GATED drafting stage inside that callback, so a
+  // path that silently never called back would leave a signed-in user staring at hidden numbers. That
+  // once-and-always guarantee is the load-bearing part of this helper, not the D1 preference.
+  window._datumSeedDossier = function (done) {
+    var fired = false;
+    function finish(d) { if (fired) return; fired = true; try { done(d || null); } catch (_e) {} }
+    // Both callers wrote the resolved dossier to LS before applying it — keep that in ONE place too.
+    function cache(d) {
+      if (d && typeof d === 'object') { try { localStorage.setItem('datumfi.accountDossier.v15', JSON.stringify(d)); } catch (_e) {} }
+      return d || null;
+    }
+    try {
+      if (!window.Clerk) { finish(null); return; }
+      window.Clerk.load().then(function () {
+        try {
+          if (!window.Clerk.user) { finish(null); return; }
+          var meta = window.Clerk.user.unsafeMetadata || {};
+          var net = (meta && meta.dossier && typeof meta.dossier === 'object') ? meta.dossier : null;
+          var D1 = window.DatumD1;
+          var live = !!(D1 && D1.CUTOVER !== false && typeof D1.signedIn === 'function' && D1.signedIn() && typeof D1.getDoc === 'function');
+          if (!live) { finish(cache(net)); return; }
+          D1.getDoc('preferences', 'dossier').then(function (row) {
+            var dos = null;
+            try { if (row && row.payload) dos = JSON.parse(row.payload); } catch (_e) {}
+            finish(cache(dos || net));                                  // D1 wins when present; else the net
+          }).catch(function () { finish(cache(net)); });                // unreachable / timeout -> the net
+        } catch (_e) { finish(null); }
+      }).catch(function () { finish(null); });
+    } catch (_e) { finish(null); }
+  };
+
   window.addEventListener('load', function() { window._datumRestoreFromClerk(); });
 })();
