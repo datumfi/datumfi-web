@@ -360,11 +360,15 @@
         // rolled back / D1 absent).
         var _bpD1 = _blueprintD1Live();
         var _sbD1 = _sketchbookD1Live();
-        // The sketchbook clause deliberately keeps NO _sbD1 term: the codec must be loaded even when D1 is
-        // live, because the unreachable-fallback below decodes sketchbook_z and a null codec would make that
-        // net silently do nothing. (The blueprint clause DOES gate on _bpD1 and therefore has that gap under
-        // D1-live + unreachable — pre-existing, flagged, not changed here.)
-        var wantCodec = (!_hasBook() && meta.sketchbook_z) || (!_bpD1 && !_hasArch() && meta.blueprint_z);
+        // NEITHER clause may gate the codec on D1 being live. Both restore legs fall back to their Clerk
+        // blob when listDocs REJECTS (a genuine outage) — and a fallback that runs with a NULL codec
+        // silently decodes nothing, so the escape route is dead in exactly the situation it exists for.
+        // The blueprint clause used to carry `!_bpD1` and had precisely that hole: under cutover the archive
+        // codec was never loaded, so a D1 outage restored NO blueprints from blueprint_z. Reproduced on a
+        // real page by _gate_miss5_blueprint_persist.js, which stays RED until this term is gone. Loading
+        // the codec costs one small script on a device with no local copy yet; NOT loading it costs the user
+        // their whole archive on the one day D1 is unreachable.
+        var wantCodec = (!_hasBook() && meta.sketchbook_z) || (!_hasArch() && meta.blueprint_z);
         function go() {
           var C = window.DatumArchiveCodec || null;
           if (_sbD1) _restoreSketchbookFromD1(meta, C);        // D1 preferred; the net ONLY on genuine-unreachable
