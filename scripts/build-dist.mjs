@@ -32,7 +32,7 @@ const SACRED = {
   // and 4 all land in it — pin it BEFORE the arc that leans on it, not after.
   // NOTE: CLAUDE.md lists this host as 'scripts/nav.js'. That path does not exist; the real, page-referenced
   // file is /nav.js at the repo root (every page loads <script src="/nav.js">). Pinned at its true path.
-  'nav.js': '8f2b32352ef5e846ccf3eec58aa7bf9c',
+  'nav.js': '958195881602f74636c082a15d4cf28f',
 };
 const md5 = (p) => createHash('md5').update(readFileSync(p)).digest('hex');
 

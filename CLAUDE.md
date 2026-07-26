@@ -103,7 +103,7 @@ Google Cloud Console. Captain executes all dashboard changes manually.
  · studio.html · Studio drafting + canvas
  · Blueprint.html · Blueprint Archive
  · Dossier.html · Accounts dossier
- · scripts/nav.js · session-bound nav Pattern B
+ · nav.js · session-bound nav Pattern B (repo ROOT — every page loads `<script src="/nav.js">`)
  · scripts/account-topbar.js · 7-tab account topbar
  · privacy.html · canonical legal
  · terms.html · canonical legal

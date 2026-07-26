@@ -457,5 +457,69 @@
     } catch (_e) { finish(null); }
   };
 
+  // ── RENAME · per-card display_name — ONE resolver, ALL surfaces (L48) ────────────────────────────
+  // D1 is the SOLE source of truth for a saved item's NAME. `source` is load-bearing, not decoration:
+  // it is what lets a caller trust a D1 'user' name and REFUSE to let a frozen Clerk mirror / LS copy
+  // overwrite it — the same seed-only shape _datumMirrorTitle above already uses for the per-COLLECTION
+  // archive title (seed a device that has no value; never overwrite one that does).
+  //
+  // WHY IT LIVES HERE. nav.js is the ONLY script Blueprint.html, studio.html, sketch.html AND
+  // sketchbook.html all load — scripts/studio-blueprint.js is absent from both sketch hosts (measured
+  // across every root *.html). Housing the resolver there would have forced a second copy on the sketch
+  // side, and two copies of one naming rule drift exactly like the dossier seed did.
+  //
+  // TWO VOCABULARIES, DELIBERATELY SEPARATE: per-CARD name = display_name (this resolver, the RENAME
+  // feature). per-COLLECTION name = the archive title (bp_title/sb_title via _datumMirrorTitle). They
+  // are different features; do not conflate them.
+  //
+  // resolve() is PURE — no localStorage, no Clerk, no DOM. Callers pass ownerName, so a gate can drive
+  // it directly and a sketch (whose record carries no profile) can supply the workspace name itself.
+  // display_name is deliberately NON-underscore: toD1Document strips every _-prefixed key, so an
+  // _-named field would vanish on logout.
+  //
+  // ⚠ The DERIVED default reads the ARCHITECT'S name, which is shared by every saved item. A rename
+  //   writes display_name and MUST NEVER write back to it — that would rename the person, and because
+  //   the label is derived, every card at once. _gate_rename_persist.js asserts that negative.
+  window.DatumSavedName = {
+    MAX: 60,
+    resolve: function (rec, opts) {
+      var o = opts || {}, noun = o.noun || 'Blueprint';
+      var dn = rec && rec.display_name;
+      if (typeof dn === 'string' && dn.trim()) return { name: dn.trim(), source: 'user' };
+      var owner = (typeof o.ownerName === 'string') ? o.ownerName.trim() : '';
+      // Fallbacks name the thing HONESTLY: a blueprint genuinely is born in the Studio; a sketch is not,
+      // and the truth about an unnamed sketch is simply that it has no name yet.
+      var generic = (noun === 'Sketch') ? 'Untitled Sketch' : ('Studio ' + noun);
+      return { name: owner ? (owner + "'s " + noun) : generic, source: 'derived' };
+    },
+    // Rename the FROZEN saved snapshot's name ONLY.
+    //
+    // NEVER route this through d1WriteBlueprint(liveBp): that snapshots the LIVE studio doc, so a rename
+    // would silently replace a saved sheet's contents while claiming to change only its label.
+    //
+    // 409-SAFE, and the setRevision is load-bearing: getDoc records NO revision (only _doPut does), and
+    // the API treats ifRevision == null as expected = current, i.e. SILENT LAST-WRITE-WINS. Without the
+    // adopt below, a rename racing another device's save would overwrite it with no conflict raised.
+    // A rename is a DELIBERATE act => writeNow, never the ~1.5s debounce (the prefs-rename bug verbatim).
+    rename: function (type, id, newName) {
+      var D1 = window.DatumD1;
+      if (!(D1 && D1.CUTOVER !== false && D1.signedIn && D1.signedIn()))
+        return Promise.reject(new Error('rename:d1-unavailable'));
+      if (!type || !id) return Promise.reject(new Error('rename:bad-target'));
+      var nm = String(newName == null ? '' : newName).trim().slice(0, window.DatumSavedName.MAX);
+      return D1.getDoc(type, id).then(function (doc) {
+        if (!doc || !doc.payload) throw new Error('rename:not-found');
+        var rec = JSON.parse(doc.payload);
+        if (typeof doc.revision === 'number' && typeof D1.setRevision === 'function') D1.setRevision(type, id, doc.revision);
+        // Cleared -> DELETE the key so the resolver falls back to derived. An empty string stored would
+        // be a confident blank; absence is the honest one, and it matches the archive title's reset.
+        if (nm) rec.display_name = nm; else delete rec.display_name;
+        return D1.writeNow(type, id, function () { return rec; }, function () {
+          console.warn('[rename] ' + type + ' ' + id + ' changed in another tab — server revision reloaded (no merge)');
+        }).then(function () { return rec; });
+      });
+    }
+  };
+
   window.addEventListener('load', function() { window._datumRestoreFromClerk(); });
 })();
