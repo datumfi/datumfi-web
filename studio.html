@@ -11722,8 +11722,22 @@
       document.body.appendChild(b);
       setTimeout(function() { b.style.transition = 'opacity 0.5s'; b.style.opacity = '0'; setTimeout(function() { if (b.parentNode) b.remove(); }, 500); }, 9000);
     }
+    // THE ONLY host-side route to discarding the draft. The draft moved sessionStorage ->
+    // localStorage (autosave Commit 2); three literal removeItem calls used to hard-code the store,
+    // and had they been left behind the flip would have made every "discard" INERT — the abandoned
+    // draft would then RESURRECT through the boot comparator. One route, and it complains out loud
+    // rather than failing quietly if the module is missing (a silent no-op here is the whole bug).
+    window._studioClearDraft = function() {
+      try {
+        if (window.DatumBlueprint && DatumBlueprint._internal && DatumBlueprint._internal.clearDraft) {
+          DatumBlueprint._internal.clearDraft(); return true;
+        }
+        console.error('[studio draft] clearDraft unavailable — draft NOT discarded.');
+      } catch (e) { console.error('[studio draft] clearDraft threw — draft NOT discarded.', e); }
+      return false;
+    };
     window.clearDraftAndRefresh = function() {
-      sessionStorage.removeItem('datumfi_blueprint_draft_v1'); window._studioBp = null; // G1 hub draft
+      window._studioClearDraft(); window._studioBp = null; // G1 hub draft
       // SS Matrix cache + state keys
       sessionStorage.removeItem('ss_matrix_result');
       sessionStorage.removeItem('ss_matrix_job_id');
@@ -11779,6 +11793,14 @@
       var bp = null;
       try { bp = DatumBlueprint._internal.readSessionDraft(); } catch (_e) { bp = null; }
       if (!bp) return;
+      // A draft OUTSIDE the 14-day window is not painted here. This parse-time path restores the
+      // draft straight to the DOM, ahead of load() — so painting a stale draft would make the
+      // restore question a lie: the old numbers would already be on screen behind the dialog, and
+      // "Start from last saved" would have nothing to undo. load() parks it; the Studio asks first.
+      try {
+        var _st = DatumBlueprint._internal.isDraftStale;
+        if (typeof _st === 'function' && _st(bp)) return;
+      } catch (_e) {}
       window._studioBp = bp; // keep the live bp in agreement with what was restored
       // G2 inverse — always restore the Estate rooms (a carried Sketch must NOT purge them).
       window._hydrateRooms(bp);
@@ -12397,7 +12419,7 @@
             announce('Datum locked. Your Range is ready.');
             if (window.dfTrack) dfTrack('studio_reveal_completed', { api_success: !!apiResult, reduced_motion: true });
             await new Promise(function(r) { setTimeout(r, 500); });
-            sessionStorage.removeItem('datumfi_blueprint_draft_v1'); window._studioBp = null; // G1 hub draft
+            window._studioClearDraft(); window._studioBp = null; // G1 hub draft
             window._navDrain('/range.html');
             return;
           }
@@ -12510,7 +12532,7 @@
           if (window.dfTrack) dfTrack('studio_reveal_completed', { api_success: !!apiResult });
 
           await new Promise(function(r) { setTimeout(r, 2000); });
-          sessionStorage.removeItem('datumfi_blueprint_draft_v1'); window._studioBp = null; // G1 hub draft
+          window._studioClearDraft(); window._studioBp = null; // G1 hub draft
           window._navDrain('/range.html');
         });
       }
@@ -15795,6 +15817,77 @@
     } catch (e) {}
     window.location.href = url;
   };
+  /* ── OUTSIDE-WINDOW DRAFT RESTORE OFFER (autosave Commit 2) ──────────────────────────────
+   * Fires ONLY when load() parked a draft that is NEWER than the saved row but older than the
+   * 14-day window. Inside the window nothing is asked — the draft hydrates silently and the
+   * existing "Restored from your last session" banner covers it.
+   *
+   * SCOPE FENCE: this is the load()-time restore offer. It is a DIFFERENT SURFACE from the
+   * _navDrain leave-the-page guard (different trigger, different copy, still authored-not-wired).
+   * Do not merge them.
+   *
+   * Copy is Captain-authored and wired VERBATIM (L47) — do not re-word it here. */
+  function _draftWhen(iso) {
+    var t = Date.parse(iso); if (isNaN(t)) return null;
+    var s = Math.max(0, Math.floor((Date.now() - t) / 1000));
+    var d = Math.floor(s / 86400); if (d >= 1) return d === 1 ? '1 day ago' : d + ' days ago';
+    var h = Math.floor(s / 3600);  if (h >= 1) return h === 1 ? '1 hour ago' : h + ' hours ago';
+    var m = Math.floor(s / 60);    if (m >= 1) return m === 1 ? '1 minute ago' : m + ' minutes ago';
+    return 'moments ago';
+  }
+  function _draftEsc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function _studioOfferDraftRestore() {
+    var INT = window.DatumBlueprint && window.DatumBlueprint._internal;
+    if (!INT || typeof INT.pendingStaleDraft !== 'function') return;
+    var draft = INT.pendingStaleDraft();
+    if (!draft) return;
+    // L47 — the prompt names an age, so it may only render when that age is REAL. A draft with no
+    // parseable stamp never reaches here (load() treats unknown as not-stale), but if it somehow
+    // did, we stay silent rather than print an age we cannot source.
+    var when = _draftWhen(draft._draftAt);
+    if (!when) return;
+    var fileName = 'your plan';
+    try {
+      var r = window.DatumSavedName && window.DatumSavedName.resolve(draft, { noun: 'Blueprint' });
+      if (r && r.source === 'user' && r.name) fileName = r.name;
+    } catch (_e) {}
+    if (document.getElementById('draft-restore-overlay')) return;
+    var ov = document.createElement('div');
+    ov.id = 'draft-restore-overlay';
+    ov.className = 'modal-overlay';
+    ov.style.display = 'flex';
+    ov.style.zIndex = '10020';
+    ov.innerHTML =
+      '<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="draft-restore-title" style="max-width:560px;">' +
+        '<div class="hud-title" id="draft-restore-title" style="color:var(--white); font-size:19px; margin-bottom:14px; text-transform:none; font-family:var(--font-serif); font-style:italic; font-weight:300;">Pick up where you left off?</div>' +
+        '<p style="color:rgba(255,255,255,0.66); font-size:14px; line-height:1.62; margin:0 0 22px;">' +
+          'You have an unsaved draft of &laquo;' + _draftEsc(fileName) + '&raquo; from ' + _draftEsc(when) + '. ' +
+          'It hasn\'t been saved to your account yet &mdash; want to bring it back, or start fresh from your last saved version?' +
+        '</p>' +
+        '<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">' +
+          '<button type="button" id="draft-restore-yes" class="so-choice so-primary" style="min-height:0; padding:14px 16px; text-align:center; font-size:13px;">Restore my draft</button>' +
+          '<button type="button" id="draft-restore-no" class="so-choice" style="min-height:0; padding:14px 16px; text-align:center; font-size:13px;">Start from last saved</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(ov);
+    var close = function () { if (ov.parentNode) ov.parentNode.removeChild(ov); };
+    var yes = document.getElementById('draft-restore-yes');
+    var no  = document.getElementById('draft-restore-no');
+    if (yes) yes.addEventListener('click', function () {
+      // Record the user's answer on the draft, then re-enter through the app's OWN load path so
+      // the restore uses one hydration route rather than a second bespoke one (L48).
+      try { INT.acceptStaleDraft(); } catch (_e) {}
+      close();
+      location.reload();
+    });
+    // "Start from last saved" MUST genuinely discard. A no-op here would be a lie: the draft would
+    // still be newer than the saved row and would come straight back on the next load.
+    if (no) no.addEventListener('click', function () { window._studioClearDraft(); close(); });
+    if (yes) yes.focus();
+  }
+
   // Blueprint v1 wiring — prefill the two new header fields from the loaded
   // contract, then bind for auto-commit. defer attribute on studio-blueprint.js
   // guarantees DatumBlueprint exists by DOMContentLoaded.
@@ -15838,6 +15931,9 @@
       // S1 LANDING — default to Shape mode (no estate exists yet at S1). ONE-LINE FLIP: false = Estate default.
       var S1_DEFAULT_SHAPE = true;
       if (S1_DEFAULT_SHAPE && !document.getElementById('studio-layout').classList.contains('mode-shape') && window.toggleShapeMode) window.toggleShapeMode();
+      // The saved doc is now painted. If load() parked an out-of-window draft, ask — never
+      // auto-hydrate it, never drop it.
+      _studioOfferDraftRestore();
     } catch (e) { console.warn('[blueprint] init failed', e); }
     // FIX #1 — the gate OPENS here, and ONLY here: after boot() has attempted hydration (from the D1 doc
     // OR the LS/session-draft fallback). Every disarm is therefore preceded by a hydration attempt.

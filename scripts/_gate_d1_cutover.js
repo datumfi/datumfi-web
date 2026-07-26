@@ -17,9 +17,22 @@ function ok(c, m) { if (c) pass++; else fail++; lines.push((c ? 'PASS ' : 'FAIL 
 function tick() { return new Promise(function (r) { setTimeout(r, 15); }); }
 
 // ---- mock the globals studio-blueprint reads (all resolve off module.exports in node) ----
-var lsStore = {};
-M.localStorage = { getItem: function (k) { return k in lsStore ? lsStore[k] : null; },
-  setItem: function (k, v) { lsStore[k] = String(v); }, removeItem: function (k) { delete lsStore[k]; } };
+// studio-blueprint.js reaches the Web Storage APIs by BARE identifier, which in Node resolves to
+// globalThis — not to this module's exports. Assigning the mock only onto M therefore never bound it:
+// the module was quietly using Node's OWN globals. That was survivable while the draft lived in
+// sessionStorage (Node ships a working in-memory one), but Node's localStorage is a stub whose
+// setItem is NOT a function unless --localstorage-file is given, so the draft write silently failed
+// the moment the draft moved stores. Define the mocks where the module actually looks.
+var lsStore = {}, ssStore = {};
+function mkMockStore(bag) {
+  return { getItem: function (k) { return k in bag ? bag[k] : null; },
+           setItem: function (k, v) { bag[k] = String(v); },
+           removeItem: function (k) { delete bag[k]; },
+           clear: function () { for (var k in bag) delete bag[k]; } };
+}
+M.localStorage = mkMockStore(lsStore);
+Object.defineProperty(globalThis, 'localStorage',   { value: M.localStorage, writable: true, configurable: true });
+Object.defineProperty(globalThis, 'sessionStorage', { value: mkMockStore(ssStore), writable: true, configurable: true });
 M.location = { search: '' };
 M.DatumArchiveCodec = Codec;
 var clerkUpdates = [];

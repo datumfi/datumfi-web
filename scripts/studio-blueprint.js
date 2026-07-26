@@ -3,7 +3,7 @@
  * Responsibilities:
  *   1. Define the serializable Blueprint object (single source of truth across
  *      the 5 Studio pages: Draft, Remodel, Tension, Uncertainty, Measurement).
- *   2. Three-tier persistence: sessionStorage draft + localStorage archive +
+ *   2. Three-tier persistence: localStorage draft + localStorage archive +
  *      Clerk unsafeMetadata slim mirror (Object.assign-merged with dossier/sketchbook).
  *   3. Prefill ladder: URL hydrate params -> session draft -> sketch contract ->
  *      Dossier defaults -> hard defaults.
@@ -24,6 +24,20 @@
   var VERSION = '1.0.1';
 
   var SESSION_DRAFT_KEY = 'datumfi_blueprint_draft_v1';
+
+  /* AUTOSAVE COMMIT 2 — the working draft now lives in localStorage so it survives TAB CLOSE.
+   * sessionStorage died with the tab, which was the remaining half of the data-loss injury
+   * (Commit 1 closed the same-tab, in-app-navigation half).
+   *
+   * THE KEY NAME IS DELIBERATELY UNCHANGED. DatumPurge.signOutWipe() and studio.html's
+   * _scratchReset() already sweep this literal key from BOTH stores, so sign-out and
+   * start-from-scratch keep working with NO second clearing path bolted on (L48).
+   *
+   * DURABILITY, HONESTLY: localStorage is not a guarantee. Safari/iOS evicts unused origin
+   * storage after roughly 7 days, so on those browsers a draft can disappear before the
+   * 14-day window below is ever reached. The window is a CEILING on how long we will silently
+   * trust a draft — never a promise to the user that it will still be waiting. */
+  var DRAFT_STALE_MS = 14 * 24 * 60 * 60 * 1000;   // Captain-ruled 14 days
   var ARCHIVE_KEY       = 'datumfi_blueprint_archive_v1';
   var PER_SLOT_PREFIX   = 'datum_blueprint_state_';
   var DOSSIER_KEY       = 'datumfi.accountDossier.v15';
@@ -322,16 +336,60 @@
     writeArchive(arch);
   }
   function readSessionDraft() {
-    try { var raw = sessionStorage.getItem(SESSION_DRAFT_KEY); return raw ? JSON.parse(raw) : null; }
+    try {
+      var raw = localStorage.getItem(SESSION_DRAFT_KEY);
+      // ONE-DEPLOY MIGRATION: a user who was mid-edit when this shipped still holds their draft in
+      // the OLD store. Reading it here means the storage move itself cannot destroy the very work
+      // this commit exists to protect. READ-side only — no second write path, no second clear path.
+      if (raw == null) raw = sessionStorage.getItem(SESSION_DRAFT_KEY);
+      return raw ? JSON.parse(raw) : null;
+    }
     catch (_e) { return null; }
+  }
+
+  /* Draft persistence failure state. A write that fails must NEVER pass silently: a swallowed
+   * QuotaExceededError means the user keeps typing into a draft that stopped persisting — the
+   * original data-loss injury wearing a new hat. */
+  var _draftWriteOk = true;
+  function _draftWriteState(okNow, err) {
+    if (okNow === _draftWriteOk) return;                 // edge-triggered: report changes, not every write
+    _draftWriteOk = okNow;
+    if (!okNow) {
+      try { console.error('[studio draft] LOCAL DRAFT WRITE FAILED — edits are no longer being kept on this device.', (err && (err.name || err.message)) || err); } catch (_e) {}
+    } else {
+      try { console.warn('[studio draft] local draft write recovered — edits are being kept again.'); } catch (_e) {}
+    }
+    try {
+      if (typeof global.CustomEvent === 'function' && typeof global.dispatchEvent === 'function') {
+        global.dispatchEvent(new global.CustomEvent('datum:draft-write-state', {
+          detail: { ok: okNow, error: (err && (err.name || String(err))) || null }
+        }));
+      }
+    } catch (_e) {}
+  }
+  /* The single low-level draft write. Both the debounced editing path and the stale-draft
+   * acceptance path go through here so quota handling can never diverge between them. */
+  function _persistDraft(obj) {
+    try { localStorage.setItem(SESSION_DRAFT_KEY, JSON.stringify(obj)); _draftWriteState(true, null); return true; }
+    catch (_e) { _draftWriteState(false, _e); return false; }
   }
   function writeSessionDraft(bp) {
     // _draftAt is the ONLY discriminator boot has between a newer unsaved edit and the last SAVED doc:
     // bp.saved_at is written by save() ALONE, so an edited draft and the D1 doc carry the SAME saved_at
     // and any "prefer the newer" test would tie on every edit. Stamped on a COPY so the live bp is not
     // mutated, and underscore-prefixed so toD1Document strips it — this local edit clock never reaches
-    // D1 and never becomes part of a saved payload. sessionStorage only; no new D1 write site.
-    try { sessionStorage.setItem(SESSION_DRAFT_KEY, JSON.stringify(Object.assign({}, bp, { _draftAt: new Date().toISOString() }))); } catch (_e) {}
+    // D1 and never becomes part of a saved payload. Local draft only; no new D1 write site.
+    _persistDraft(Object.assign({}, bp, { _draftAt: new Date().toISOString() }));
+  }
+
+  /* THE ONE PLACE A DRAFT IS DISCARDED. Every caller routes here so the storage decision can
+   * never fan back out across the app the way three literal removeItem calls once did (L48).
+   * Clears BOTH stores: the live localStorage draft AND any legacy sessionStorage draft left by
+   * a pre-Commit-2 tab — otherwise "discard" would quietly stop discarding. */
+  function clearDraft() {
+    try { localStorage.removeItem(SESSION_DRAFT_KEY); } catch (_e) {}
+    try { sessionStorage.removeItem(SESSION_DRAFT_KEY); } catch (_e) {}
+    _pendingStaleDraft = null;
   }
 
   /* DATA-LOSS FIX — is the local session draft genuinely NEWER than the D1 studio doc?
@@ -348,6 +406,38 @@
     try { var p = JSON.parse(d1Doc && d1Doc.payload); d1HasRooms = !!(p && p.accounts && p.accounts.length); } catch (_e) {}
     if (draftHasRooms !== d1HasRooms) return draftHasRooms;
     return false;
+  }
+
+  /* Is this draft older than the window we will silently trust?
+   *
+   * L47 — a missing or unparseable _draftAt is NOT "old", it is UNKNOWN, and we never name an age
+   * we do not know. Unknown returns false: no prompt, fall through to the existing tiebreak. The
+   * consequence is load-bearing for the copy — whenever the prompt DOES render, {when} is always
+   * resolvable, so it can never print "undefined ago".
+   *
+   * _draftAcceptedAt records when the USER answered the prompt with "Restore my draft". It is NOT a
+   * re-stamp of _draftAt: forging the edit clock would lie about when the work was done. It only
+   * says "the owner has already been asked about this draft and said keep it", so we stop asking. */
+  function _draftIsStale(draft, nowMs) {
+    var now = (typeof nowMs === 'number') ? nowMs : Date.now();
+    var acc = Date.parse(draft && draft._draftAcceptedAt);
+    if (!isNaN(acc) && (now - acc) <= DRAFT_STALE_MS) return false;
+    var dt = Date.parse(draft && draft._draftAt);
+    if (isNaN(dt)) return false;
+    return (now - dt) > DRAFT_STALE_MS;
+  }
+
+  /* A draft that is NEWER than the saved row but OUTSIDE the window: never auto-hydrated, never
+   * dropped. load() parks it here, hydrates the SAVED doc, and the host offers the choice. */
+  var _pendingStaleDraft = null;
+  function pendingStaleDraft() { return _pendingStaleDraft; }
+  function acceptStaleDraft() {
+    var d = _pendingStaleDraft;
+    if (!d) return null;
+    d._draftAcceptedAt = new Date().toISOString();
+    _persistDraft(d);
+    _pendingStaleDraft = null;
+    return d;
   }
 
   /* Clerk mirror — P3 SOURCE OF TRUTH: compact+compress the WHOLE 4-slot archive
@@ -657,7 +747,12 @@
     var gf = computeGrossFunding(bp);
     bp.datum.gross_funding_need      = gf.gross;
     bp.datum.gross_funding_breakdown = gf.breakdown;
-    writeSessionDraft(bp);
+    // A PARKED stale draft is the user's unanswered work — do NOT write over it here. This load
+    // deliberately hydrated the SAVED doc so the Studio can ask; persisting that saved doc into the
+    // draft slot would destroy the very thing the prompt is about, and "Restore my draft" would then
+    // hand back the saved doc. The write resumes as soon as the question is answered (acceptStaleDraft
+    // re-persists it, clearDraft discards it) — and until then a reload simply asks again.
+    if (!_pendingStaleDraft) writeSessionDraft(bp);
     return bp;
   }
 
@@ -705,12 +800,21 @@
     // writeSessionDraft (sessionStorage), and save() remains the ONLY D1 writer. Explicit save keeps its
     // full meaning — this merely decides which of two ALREADY-EXISTING sources to hydrate from.
     //
-    // SCOPE, HONESTLY: the draft lives in sessionStorage, so this closes the SAME-TAB case (in-app nav).
-    // A closed tab takes the draft with it and no boot-time choice can recover it; moving the draft to
-    // localStorage is a separate, deliberate commit with its own staleness/privacy questions.
+    // SCOPE (Commit 2): the draft now lives in localStorage, so this covers the CLOSED-TAB case too.
+    // What a boot-time choice can decide is still only WHICH of two already-existing sources to
+    // hydrate — nothing here changes when a write happens, and save() remains the ONLY D1 writer.
+    //
+    // FRESHNESS: inside the 14-day window a newer draft hydrates silently (Commit-1 behaviour,
+    // unchanged). Outside it we do neither of the two tempting things — we do not auto-hydrate work
+    // the user may have forgotten, and we do not drop it. The saved doc paints, the draft is parked,
+    // and the host asks.
+    _pendingStaleDraft = null;
     if (opts.d1Doc && opts.d1Doc.payload) {
       var _sd = opts.ignoreDraft ? null : readSessionDraft();
-      if (!(_sd && _draftIsNewer(_sd, opts.d1Doc))) {
+      var _sdNewer = !!(_sd && _draftIsNewer(_sd, opts.d1Doc));
+      var _sdStale = _sdNewer && _draftIsStale(_sd);
+      if (_sdStale) _pendingStaleDraft = _sd;
+      if (!(_sdNewer && !_sdStale)) {
         try {
           Object.assign(bp, JSON.parse(opts.d1Doc.payload));
           if (global.DatumD1 && typeof opts.d1Doc.revision === 'number') global.DatumD1.setRevision('studio', 'active', opts.d1Doc.revision);
@@ -1035,7 +1139,13 @@
       readSlot:       readSlot,
       writeSlot:      writeSlot,
       writeSessionDraft: writeSessionDraft,
-      readSessionDraft:  readSessionDraft
+      readSessionDraft:  readSessionDraft,
+      clearDraft:        clearDraft,
+      isDraftStale:      _draftIsStale,
+      pendingStaleDraft: pendingStaleDraft,
+      acceptStaleDraft:  acceptStaleDraft,
+      draftWriteOk:      function () { return _draftWriteOk; },
+      DRAFT_STALE_MS:    DRAFT_STALE_MS
     }
   };
 }(typeof window !== 'undefined' ? window : this));

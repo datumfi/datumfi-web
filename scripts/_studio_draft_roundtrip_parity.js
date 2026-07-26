@@ -51,7 +51,9 @@ const PORT = 8175;
   await page.waitForTimeout(900); // let the 400ms debounce flush
 
   out.preReload = await page.evaluate(() => {
-    var bp = null; try { bp = JSON.parse(sessionStorage.getItem('datumfi_blueprint_draft_v1')); } catch (e) {}
+    // The hub draft moved sessionStorage -> localStorage (autosave Commit 2, so it survives tab
+    // close). Read whichever store holds it rather than hard-coding one and silently seeing null.
+    var bp = null; try { bp = JSON.parse(localStorage.getItem('datumfi_blueprint_draft_v1') || sessionStorage.getItem('datumfi_blueprint_draft_v1')); } catch (e) {}
     return {
       legacyWritten: window.__legacyDraftWritten,
       hubDraft: !!bp, legacyDraft: !!sessionStorage.getItem('datum_studio_draft'),
