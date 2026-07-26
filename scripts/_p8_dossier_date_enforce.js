@@ -245,4 +245,18 @@ const coOn = (page) => page.evaluate(() => { const t = document.getElementById('
   results.forEach((r) => console.log('  ' + r));
   console.log(fails === 0 ? '\nP8.1 DOSSIER AGE-BOX PORT: GREEN' : '\nP8.1 DOSSIER AGE-BOX PORT: ' + fails + ' FAILURE(S)');
   process.exit(fails === 0 ? 0 : 1);
-})().catch((e) => { console.error('GATE FAIL', e); server.close(); process.exit(1); });
+})().catch((e) => {
+  // TRAP-AND-REPORT-PARTIAL. A mid-run throw used to discard every check that had ALREADY run: the
+  // exit code was honestly 1, but with no output a real failure was indistinguishable from a flaky
+  // environment error. That is precisely how 11 real reds stayed invisible in _p8_studio_mechanics
+  // — the gate looked like a timeout, not a coverage gap.
+  //
+  // So flush what we DO know, and then say plainly that the run did not finish. The INCOMPLETE line
+  // is the load-bearing half: a flushed partial with no marker reads as a COMPLETE pass, which is a
+  // worse trap than printing nothing at all.
+  results.forEach((r) => console.log('  ' + r));
+  console.log('\nINCOMPLETE — aborted after ' + results.length + ' checks (' + fails + ' failing so far). NOT a pass.');
+  console.error('GATE FAIL', e);
+  try { server.close(); } catch (_e) {}
+  process.exit(1);
+});
