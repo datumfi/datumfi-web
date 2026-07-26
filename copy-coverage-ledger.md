@@ -53,6 +53,68 @@ it surfaces the key finding for the whole effort (see ⚠️ at the end).
 
 ---
 
+## 📋 QUEUED — NOT WIRED (logged 2026-07-26, autosave Commit 2/3 session)
+
+Recorded so the next session inherits them rather than re-discovering them. **None of these are
+fixed.** All were found while landing autosave Commits 2 and 3; none is caused by them.
+
+### A · `_p8_studio_mechanics.js` — 11 pre-existing reds, invisible until the gate was unblocked
+
+The gate aborted at `:104` and only printed results at the end, so a mid-run throw discarded every
+accumulated check — Items 1–5 produced **zero signal while reading green**. Fixing the drift
+(`91dfa52`) lit these up. `studio.html` was at baseline MD5 when they were measured; they are not
+new. Their own arc, after this one.
+
+| # | Check | Observed |
+|---|---|---|
+| 1 | Item 3: Have frame right edge un-clipped (inside panel) | frame right edge clipped |
+| 2 | Item 4: valid date collapses to age | `40 yrs` |
+| 3 | Item 4: month round-trips to Profile (not 06) | empty |
+| 4 | Item 4: 2-digits-alone rejected with toast | no toast |
+| 5 | Item 4: age<18 rejected with 18-85 toast | no toast |
+| 6 | Item 4: month 13 rejected with toast | no toast |
+| 7 | Item 4: RA below CA+1 rejected (not clamped) | `RA=65` |
+| 8 | Item 4: nonsensical RA year (3052) rejected | `RA=65` |
+| 9 | Item 4: valid RA date commits | `RA=65` |
+| 10 | Item 4: nonsensical PTA year (9855) rejected | `PTA=93` |
+| 11 | Item 4: DOB-absent fallback resolves retirement date | `RA=65` |
+
+Ten of the eleven are one surface — the **MM/YYYY date inputs** (rejection toasts, RA/PTA clamping,
+DOB round-trip). Likely one root cause, not ten.
+
+### B · `_p6_archive_parity.js` — 5 pre-existing reds (Sketchbook)
+
+Byte-identical at baseline, stash-verified. `SK: all 4 slots openable (0)` · `SK erase: matching
+snapshot cleared` · `SK erase: Clerk sketchbook_z written (codec ensured)` · `SK erase: Clerk
+sketchbook_z kept slot3` · `bare-open: SK snapshot empty after matched erase`.
+
+### C · `_p7_studio_overlay_parity.js` — 1 pre-existing red
+
+`(c)/(b) signed-in Studio: no page errors (DatumEstate is not defined)`.
+
+### D · STANDING ITEM — test-gate self-audit (Captain-ruled, own beat)
+
+Every standing gate must **FAIL LOUD on a mid-run throw** and never swallow accumulated checks —
+print-as-you-go, or trap-and-report. `_p8` accumulated into an array and printed only at the end, so
+one timeout silently discarded five Items' worth of signal: a smoke detector reporting all-clear
+because its battery is dead. This is the systemic fix for the whole class — stop relying on asking
+the right question, and make gates fail loud when they cannot do their job. Audit every
+`scripts/_gate_*` / `_p*` for the same shape.
+
+### E · Deferred by ruling (not defects)
+
+- **"Newer wins" conflict-loss** — Device A holds a minutes-old unsaved draft; Device B saves; A
+  hydrates D1 and A's typing vanishes. A *conflict*, not staleness; the 14-day window does not cover
+  it. Needs a third prompt branch + authored copy. Deliberately NOT solved inside Commit 2.
+- **Clerk-expired save audit** — does an explicit save with a dead Clerk session fail VISIBLY, or
+  silently no-op? Audit only, no code. A silent no-op would undercut "Save progress".
+- **Quota surface copy** — Commit 2 detects and announces a failed draft write
+  (`datum:draft-write-state`, console.error) but ships NO user-visible line. Architect authors it.
+- **Cross-tab sibling-hold copy** — Commit 3 refuses to clobber and announces
+  (`datum:draft-sibling-hold`) but ships NO user-visible line. Architect authors it.
+
+---
+
 ## 🧭 PARTING OBSERVATIONS — 2026-07-26 handoff · NEXT = AUTOSAVE **COMMIT 2** (draft → localStorage)
 
 **Repo state at handoff: clean at `86137d8`.** RENAME arc complete and live (`03f4c6d` store →
