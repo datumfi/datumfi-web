@@ -278,4 +278,18 @@ const readAges = (page) => page.evaluate(() => { const tt = document.getElementB
   results.forEach((r) => console.log('  ' + r));
   console.log(fails === 0 ? '\nP8 STUDIO MECHANICS: GREEN' : '\nP8 STUDIO MECHANICS: ' + fails + ' FAILURE(S)');
   process.exit(fails === 0 ? 0 : 1);
-})().catch((e) => { console.error('GATE FAIL', e); server.close(); process.exit(1); });
+})().catch((e) => {
+  // TRAP-AND-REPORT-PARTIAL. THIS gate is the reason the law exists. It aborted on a #shape-want-tab
+  // click and printed only at the end, so every check it had already run was discarded — and ELEVEN
+  // real reds sat invisible behind what looked like a flaky timeout. The exit code was honestly 1
+  // the whole time; what was missing was the signal.
+  //
+  // Flush what we DO know, then say plainly that the run did not finish. The INCOMPLETE line is the
+  // load-bearing half: a flushed partial with no marker reads as a COMPLETE pass, which is a worse
+  // trap than printing nothing at all.
+  results.forEach((r) => console.log('  ' + r));
+  console.log('\nINCOMPLETE — aborted after ' + results.length + ' checks (' + fails + ' failing so far). NOT a pass.');
+  console.error('GATE FAIL', e);
+  try { server.close(); } catch (_e) {}
+  process.exit(1);
+});
