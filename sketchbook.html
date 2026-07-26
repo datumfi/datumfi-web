@@ -189,6 +189,30 @@
     letter-spacing: 0.1em; color: rgba(32,36,43,.86); text-transform: uppercase;
   }
 
+  /* RENAME — the per-card name sits ABOVE the state title, matching the Blueprint card's position for
+     its name. The colored state title below is KEPT: it is real information the Blueprint card has no
+     equivalent for, so the card grows by one row rather than trading one readout for the other. */
+  .slot-name-line {
+    font-family: var(--font-serif, Georgia, serif); font-style: italic; font-weight: 300;
+    font-size: 15px; line-height: 1.1; color: rgba(20,24,31,.90);
+    margin-bottom: 6px; word-break: break-word;
+  }
+  .slot-rename-action {
+    position: relative; z-index: 500; pointer-events: auto;
+    background: transparent; border: 0; padding: 0;
+    font-family: var(--font-mono); font-size: 7px; letter-spacing: .08em;
+    text-transform: uppercase; color: rgba(32,36,43,.44);
+    cursor: pointer; touch-action: manipulation;
+  }
+  .slot-rename-action:hover { color: rgba(201,168,76,.95); }
+  /* The editor inherits .slot-name-line so the card does not reflow when the name is swapped out. */
+  .slot-rename-input {
+    width: 100%; box-sizing: border-box;
+    background: rgba(201,168,76,.07); border: 0;
+    border-bottom: 1px solid rgba(201,168,76,.55); border-radius: 2px 2px 0 0;
+    padding: 0 2px; outline: none;
+  }
+
   .slot-state-title {
     font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
     text-transform: uppercase; margin-bottom: 8px;
@@ -3090,6 +3114,18 @@
   function _skPageIdx() { var p = _skInitPager(); return p ? p.page : 0; }
   function _skGlobalBase() { return _skPageIdx() * 4; }
   function _skLabel(gi) { return 'A-' + String(gi + 1).padStart(2, '0'); }
+  // A sketch record has no `profile` (the contract is flat), so the possessive default is derived from
+  // the workspace name — the same source Blueprint.html's _bpComputedName already uses for its title.
+  function _skOwnerName() { try { return localStorage.getItem('datum_workspace_name') || ''; } catch (e) { return ''; } }
+  // date_stamped is a STORED string, so its format is frozen at save time. Normalise to the 2-digit
+  // footer shape; anything that does not parse is shown EXACTLY as stored rather than guessed at (L47).
+  function _sk2Digit(s) {
+    if (!s) return '';
+    var m = String(s).match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+    if (!m) return String(s);
+    var y = m[3].length === 4 ? m[3].slice(2) : m[3];
+    return ('0' + m[1]).slice(-2) + '/' + ('0' + m[2]).slice(-2) + '/' + y;
+  }
   function _skTierCap() { try { return (window.DatumTier ? window.DatumTier.savedCap() : Infinity); } catch (e) { return Infinity; } }
   function _skLocked(gi) { try { return !(window.DatumTier ? window.DatumTier.isUnlimited() : true) && gi >= _skTierCap(); } catch (e) { return false; } }
   // Per-id stash so OPEN can hydrate ANY saved sketch by sketch_id (mirror Blueprint _stashForOpen), NOT by a
@@ -3189,6 +3225,13 @@
     var mapped   = STATE_BRAND_MAP[c.resolved_state]    || STATE_BRAND_MAP.EXPANSIVE;
     var s1Mapped = STATE_BRAND_MAP[c.s1_resolved_state] || mapped;
     return {
+      // RENAME — resolved through the ONE shared resolver in nav.js (L48). A sketch record carries no
+      // `profile`, so the owner name comes from the workspace name the way the archive title already
+      // derives it; with none, the honest fallback is 'Untitled Sketch' (a sketch is not born in the
+      // Studio, and the truth about an unnamed one is simply that it has no name yet).
+      displayName: (window.DatumSavedName
+                     ? window.DatumSavedName.resolve(c, { noun: 'Sketch', ownerName: _skOwnerName() }).name
+                     : ''),
       sketchId:    c.sketch_id || '',   // #1 (#298) — carry the D1 doc_key onto the rendered slot so the
                                         // erase can resolve it synchronously on ANY render path (no dep on datum_sketch_state).
       age:         c.age,
@@ -3595,9 +3638,10 @@
     const gi = _skGlobalBase() + (idx - 1);
     return `
       <div class="slot-meta-eyebrow-container" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-        <div class="slot-meta-eyebrow">${_skLabel(gi)}</div>
-        <div class="slot-status-pill" style="font-family:var(--font-mono,monospace);font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:2px 7px;border-radius:3px;white-space:nowrap;${(data.status === 'Modeled') ? 'color:#0f7a52;border:1px solid rgba(29,158,117,0.55);background:rgba(29,158,117,0.12);' : 'color:rgba(32,36,43,0.62);border:1px solid rgba(32,36,43,0.28);background:rgba(32,36,43,0.05);'}">${data.status || 'Drafted'}</div>
+        <div class="slot-meta-eyebrow">Sheet ${_skLabel(gi)}</div>
+        <div class="slot-status-pill" style="font-family:var(--font-mono,monospace);font-size:7.5px;font-weight:700;letter-spacing:0.10em;text-transform:uppercase;padding:3px 7px;border-radius:999px;white-space:nowrap;${(data.status === 'Modeled') ? 'color:#0f7a52;border:1px solid rgba(29,158,117,0.55);background:rgba(29,158,117,0.12);' : 'color:rgba(32,36,43,0.62);border:1px solid rgba(32,36,43,0.28);background:rgba(32,36,43,0.05);'}">${data.status || 'Drafted'}</div>
       </div>
+      <div class="slot-name-line" data-rename-id="${data.sketchId || ''}">${data.displayName}</div>
       <div class="slot-state-title" style="color: ${data.s1StateColor || data.stateColor};">${data.s1StateName || data.stateName}</div>
       <div class="slot-metrics-table">
         <div class="sm-row"><span class="sm-key">Timeline</span><span class="sm-val">${data.age} &rarr; ${data.retire}${data.plan_end ? ' &rarr; ' + data.plan_end : ''}</span></div>
@@ -3609,7 +3653,10 @@
         ? '<svg width="100%" height="100%" viewBox="' + (data.s1ViewBox) + '" preserveAspectRatio="xMidYMid meet"><path d="' + data.s1ConePath + '" fill="rgba(93,202,165,0.15)"/><path d="' + data.s1CeilPath + '" stroke="#C9A84C" stroke-width="3" fill="none" stroke-linecap="round"/><path d="' + data.s1FloorPath + '" stroke="#e24b4a" stroke-width="2" fill="none" stroke-linecap="round"/><path d="' + data.s1DatumPath + '" stroke="#5DCAA5" stroke-width="3" fill="none" stroke-linecap="round"/></svg>'
         : miniShapeSVG({ ceil: data.s1Ceil || data.ceil, datum: data.s1Datum || data.datum, floor: data.s1Floor || data.floor, stateName: data.s1StateName || data.stateName })}</div>
       <div class="saved-bottom">
-        <span class="saved-time">Sketched Saved · ${data.dateStamped}</span>
+        <div class="saved-nameline" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;">
+          <span class="saved-time">${_sk2Digit(data.dateStamped)}</span>
+          <button type="button" class="slot-rename-action" data-rename-id="${data.sketchId || ''}" aria-label="Rename this sketch" title="Rename this sketch">Rename</button>
+        </div>
         <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
           <button type="button" class="slot-open-action" data-open-slot="${data.sketchId || idx}" aria-label="Open this Sketch" title="Open in Sketch">Open Sketch</button>
           <button type="button" class="slot-studio-action" data-studio-slot="${data.sketchId || idx}" aria-label="Open this Sketch in Studio" title="Open in Studio">Open Studio</button>
@@ -3748,7 +3795,10 @@
 
   // Initialize Tile Action Interceptors
   document.querySelectorAll('.page-slot-tile').forEach(tile => {
-    tile.addEventListener('click', function() {
+    tile.addEventListener('click', function(e) {
+      // RENAME — the rename control and its open editor must not be read as a slot selection: this
+      // handler re-renders the tile, which would destroy an in-progress edit on the first keystroke.
+      if (e && e.target && e.target.closest && (e.target.closest('.slot-rename-action') || e.target.closest('.slot-rename-input'))) return;
       const activeSlotId = parseInt(this.dataset.slotId, 10);
       const isLocked = _skLocked(_skGlobalBase() + (activeSlotId - 1));   // tier-gated (unlimited now -> never locks)
 
@@ -3777,6 +3827,58 @@
   });
 
   // Action Triggers Navigation Core Interceptors Linkages
+  /* ── RENAME (per-card display_name) — inline edit ──────────────────────────────────────────────────
+     The sketch twin of the Blueprint archive's rename. Same STORE (DatumSavedName in nav.js), its own
+     UI — the two archives are similar, not mirrors (L48: share the store, not the surface).
+     Commits on blur/Enter, cancels on Esc, no prompt(). Clearing DELETES display_name so the card falls
+     back to its derived name rather than storing a confident blank. */
+  let _skRenaming = null;
+  function _skBeginRename(sketchId) {
+    if (_skRenaming || !sketchId || !window.DatumSavedName) return;
+    const line = document.querySelector('.slot-name-line[data-rename-id="' + sketchId + '"]');
+    if (!line) return;
+    let current = '';
+    try {
+      const raw = localStorage.getItem('datum_sketch_byid_' + sketchId);
+      if (raw) { const c = JSON.parse(raw); if (c && typeof c.display_name === 'string') current = c.display_name; }
+    } catch (e) {}
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'slot-name-line slot-rename-input';
+    input.value = current;                      // USER name only — a derived label is not the user's text
+    input.maxLength = window.DatumSavedName.MAX || 60;
+    input.placeholder = line.textContent.trim();
+    input.setAttribute('aria-label', 'Rename this sketch');
+    _skRenaming = sketchId;
+    line.replaceWith(input);
+    input.focus(); input.select();
+    let settled = false;
+    function finish(commit) {
+      if (settled) return; settled = true;
+      const v = input.value;
+      _skRenaming = null;
+      if (!commit) { input.replaceWith(line); return; }
+      window.DatumSavedName.rename('sketchbook', sketchId, v)
+        .then(function () { _sketchbookRestoreFromD1(); })
+        .catch(function (err) {
+          console.warn('[rename] not saved —', (err && err.message) || err);
+          if (input.isConnected) input.replaceWith(line);   // keep the old name visible; never a blank card
+        });
+    }
+    input.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); finish(true); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
+    });
+    input.addEventListener('blur', function () { finish(true); });
+  }
+  document.addEventListener('click', function (event) {
+    const btn = event.target.closest && event.target.closest('.slot-rename-action');
+    if (!btn) return;
+    event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation();
+    _skBeginRename(btn.dataset.renameId);
+  }, true);
+  /* ── END RENAME ── */
+
   document.getElementById('action-dismiss-modal').addEventListener('click', () => {
      document.getElementById('premium-gate-modal').classList.remove('open');
   });

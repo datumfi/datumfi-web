@@ -9176,8 +9176,17 @@ Studio is built for exactly this. See If This Shape Holds →`;
         var st = (c && (c.s1_resolved_state || c.resolved_state)) || '';
         var status = (c && c.status) || '';
         var when = (c && c.date_stamped) || '';
-        var sub = [status, when].filter(function (x) { return x; }).join('  ·  ');
-        return { id: id, name: st || 'Sketch', sub: sub };
+        // RENAME repaint (site 5). This row used to label a sketch by its resolved STATE, so a rename on
+        // the sketchbook would not have shown through here — the fault-3 repaint trap in a third hat. The
+        // name now comes from the shared resolver; the state moves into the sub-line, where it is still
+        // visible but no longer impersonating a name.
+        var owner = '';
+        try { owner = localStorage.getItem('datum_workspace_name') || ''; } catch (e) {}
+        var nm = window.DatumSavedName
+          ? window.DatumSavedName.resolve(c, { noun: 'Sketch', ownerName: owner }).name
+          : (st || 'Sketch');
+        var sub = [st, status, when].filter(function (x) { return x; }).join('  ·  ');
+        return { id: id, name: nm, sub: sub };
       }
       function _skListFromLS() {
         var out = [], b = _readBook();

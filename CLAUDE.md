@@ -13,6 +13,16 @@ Three failure modes documented 2026-06-03 session:
  2. Bash heredoc cat <<'EOF' syntax · PowerShell does not parse bash heredoc
  3. Multi-line @" "@ PowerShell here-string exceeding 965 bytes
 
+### NEVER round-trip a source file through PS 5.1 Get-Content/Set-Content
+
+`(Get-Content f -Raw) -replace ... | Set-Content f -Encoding utf8` **CORRUPTS UTF-8**.
+PS 5.1 reads as ANSI/cp1252 then re-encodes to UTF-8, double-encoding every
+non-ASCII byte (em dash → `â€"`, `·` → `Â·`) and adding a BOM. Did this to
+`scripts/_gate_rename_persist.js` on 2026-07-26 — 49 mojibake markers in one
+command. Use the Edit tool for in-place edits, or node (`fs.readFileSync`/
+`writeFileSync`) when scripting. Repair, if it happens:
+`Buffer.from(fs.readFileSync(f,'utf8'),'latin1').toString('utf8')` + strip BOM.
+
 ### Commit Message Pattern (canonical · temp-file approach)
 
 ```powershell
