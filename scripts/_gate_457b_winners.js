@@ -191,7 +191,8 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   if (!guard) fail++;
 
   const summary = '[' + LABEL + '] 457(b) WHOLE-ROOM WINNER GATE — ' + overall + ' (' + pass + '/' + (pass + fail) + ')\n' + lines.join('\n') + '\n';
-  fs.writeFileSync('scripts/_gate_457b_winners.out.txt', summary, 'utf8');
+  fs.mkdirSync(__dirname + '/.gate-out', { recursive: true });
+  fs.writeFileSync(__dirname + '/.gate-out/_gate_457b_winners.out.txt', summary, 'utf8');
   console.log(summary);
   process.exit(fail === 0 ? 0 : 1);
 })();

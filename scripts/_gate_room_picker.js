@@ -163,6 +163,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     '\n\nstyle=' + JSON.stringify(st) + '  btnFirst=' + JSON.stringify(R.btnFirst) + '  btnMore=' + JSON.stringify(R.btnMore) +
     '\n\n=== SOLO (folded, no wing banner) ===\n' + strip(Hs) +
     '\n\n=== CO · JOINT WING ===\n' + strip(jointSlice) + '\n';
-  fs.writeFileSync('scripts/_gate_room_picker.out.txt', summary, 'utf8');
+  fs.mkdirSync(__dirname + '/.gate-out', { recursive: true });
+  fs.writeFileSync(__dirname + '/.gate-out/_gate_room_picker.out.txt', summary, 'utf8');
   process.exit(pass === checks.length ? 0 : 1);
 })();

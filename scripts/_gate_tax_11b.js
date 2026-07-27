@@ -77,7 +77,8 @@ const LABEL = process.argv[2] || 'RUN';
   ];
   let pass = 0;
   const lines = checks.map(([n, ok]) => { if (ok) pass++; return (ok ? 'PASS ' : 'FAIL ') + n; });
-  fs.writeFileSync('scripts/_gate_tax_11b.out.txt',
+  fs.mkdirSync(__dirname + '/.gate-out', { recursive: true });
+  fs.writeFileSync(__dirname + '/.gate-out/_gate_tax_11b.out.txt',
     `[${LABEL}] ${pass}/${checks.length} GREEN\n` + lines.join('\n') +
     `\n\nvals: eq=${R.eq.val} bd=${R.bd.val} cash=${R.cash.val}\n`, 'utf8');
   process.exit(pass === checks.length ? 0 : 1);

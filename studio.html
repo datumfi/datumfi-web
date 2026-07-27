@@ -11079,6 +11079,24 @@
     var _svgDebounceTimer = null;
     var _svgRAFHandle = null;
     var _updateSVGsCore = null; // set after original function defined below
+    // S2.5 — scripts/datum-estate.js is DEFERRED (see the <script defer> at the foot of this file).
+    // A render can therefore run BEFORE the module lands. Guarding alone would leave the estate
+    // silently blank on a slow load, so we wait for the module and re-render once it arrives.
+    var _estateAwaitHandle = null;
+    function _estateAwaitModule() {
+      if (_estateAwaitHandle) return;   // already waiting — never stack timers
+      var waited = 0;
+      _estateAwaitHandle = setInterval(function () {
+        waited += 50;
+        if (window.DatumEstate && window.DatumEstate.renderEstate) {
+          clearInterval(_estateAwaitHandle); _estateAwaitHandle = null;
+          updateSVGs();                 // the renderer exists now — paint the estate
+        } else if (waited >= 10000) {
+          clearInterval(_estateAwaitHandle); _estateAwaitHandle = null;
+          console.error('datum-estate.js did not load — the estate cannot render.');
+        }
+      }, 50);
+    }
     function updateSVGs() {
       if (_svgDebounceTimer) clearTimeout(_svgDebounceTimer);
       _svgDebounceTimer = setTimeout(function() {
@@ -11169,7 +11187,13 @@
       // READS only. Captured descriptor array fans to the energize timeline (§16.2-iii).
       var accountWeights = (window.DatumBlueprint && DatumBlueprint.accountWeights)
         ? DatumBlueprint.accountWeights({ accounts: state.accounts }) : {};
-      var _estateRooms = DatumEstate.renderEstate({
+      // S2.5 — guarded like every sibling module call in this block (DatumBlueprint above,
+      // DatumEnergize/renderWantBox below). Referenced as window.DatumEstate, never bare: a bare
+      // identifier throws ReferenceError instead of reading undefined. If the deferred module has
+      // not landed yet we do NOT silently skip — _estateAwaitModule() re-renders when it arrives.
+      var _estateRooms = null;
+      if (window.DatumEstate && window.DatumEstate.renderEstate) {
+        _estateRooms = window.DatumEstate.renderEstate({
         svgContainer: svgContainer,
         accounts: state.accounts,
         getBaseType: getBaseType,
@@ -11181,8 +11205,11 @@
         cols: cols, propertyAccount: propertyAccount,
         trustAccounts: trustAccounts, grandTotal: grandTotal,
         accountWeights: accountWeights
-      });
-      if (window.DatumEnergize) DatumEnergize.run(_estateRooms);
+        });
+      } else {
+        _estateAwaitModule();
+      }
+      if (window.DatumEnergize) DatumEnergize.run(_estateRooms);   // null-safe: run() resets and returns
       if (window.renderWantBox) renderWantBox();   // B2 — outflow readout (display-only; Routing-gated inside)
       // G5 — Estate→Shape reconcile. When real rooms exist with a positive investable total,
       // the itemized estate is AUTHORITATIVE for the deterministic Shape's portfolio: write

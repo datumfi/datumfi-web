@@ -3,6 +3,13 @@ node_modules/
 .env
 *.log
 
+# Gate receipts. 16 gates dump UTF-8 output to a file because the Windows console mangles
+# unicode (— ⓘ ▸ curly quotes). Nothing reads them back — they are write-only receipts, never
+# golden files. They used to land on tracked scripts/*.out.txt, so ANY suite run dirtied the
+# tree and a clean-tree baseline was impossible by construction (_gate_ticker_ui embedded
+# TODAY's date and re-drifted daily). Redirected here 2026-07-27.
+scripts/.gate-out/
+
 # ── Security hardening 2026-06-24 ───────────────────────────────────────────────
 # A runaway PostToolUse hook in .claude/settings.local.json had been auto-running
 # `wrangler pages deploy .` — publishing the ENTIRE working folder (uncommitted +

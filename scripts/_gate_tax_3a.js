@@ -124,6 +124,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     R.income.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 900) + '\n\n=== COMP ===\n' +
     R.comp.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 1100) + '\n\n=== NONE ===\n' +
     R.none.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 700) + '\n';
-  fs.writeFileSync('scripts/_gate_tax_3a.out.txt', summary, 'utf8');
+  fs.mkdirSync(__dirname + '/.gate-out', { recursive: true });
+  fs.writeFileSync(__dirname + '/.gate-out/_gate_tax_3a.out.txt', summary, 'utf8');
   process.exit(pass === checks.length ? 0 : 1);
 })();

@@ -103,8 +103,9 @@ const ACQ_SEL = 'input[onchange*="acquisitionDate"], input[oninput*="acquisition
   dump += 'acq: type=' + tax.acqType + ' max=' + tax.acqMax + ' min=' + tax.acqMin + ' minWidth=' + tax.acqMinWidth + ' colW=' + tax.acqColW + '\n';
   dump += 'acqPersist=' + acqPersist + '  acqReopen=' + acqReopen + '\n';
   dump += 'taxable priceCell=' + tax.priceCell.replace(/\n/g, ' ').slice(0, 240) + '\n';
-  fs.writeFileSync('scripts/_gate_ticker_ui.out.txt', dump, 'utf8');
-  console.log('WROTE scripts/_gate_ticker_ui.out.txt — ' + pass + '/' + total);
+  fs.mkdirSync(__dirname + '/.gate-out', { recursive: true });
+  fs.writeFileSync(__dirname + '/.gate-out/_gate_ticker_ui.out.txt', dump, 'utf8');
+  console.log('WROTE scripts/.gate-out/_gate_ticker_ui.out.txt — ' + pass + '/' + total);
   await b.close();
   process.exit(pass === total ? 0 : 1);
 })();

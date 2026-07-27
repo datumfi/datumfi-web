@@ -142,6 +142,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     '\n\ninv: base=' + R.invBase + ' +primary=' + R.invPlusPrimary + ' prop=' + R.invProp + ' oa=' + R.invOA + ' warns=' + warns.length +
     '\n\n=== PRIMARY WING (variants) ===\n' + strip(R.priSlice) +
     '\n\n=== CO WING (variants) ===\n' + strip(R.coSlice) + '\n';
-  fs.writeFileSync('scripts/_gate_a5_ownership.out.txt', summary, 'utf8');
+  fs.mkdirSync(__dirname + '/.gate-out', { recursive: true });
+  fs.writeFileSync(__dirname + '/.gate-out/_gate_a5_ownership.out.txt', summary, 'utf8');
   process.exit(pass === checks.length ? 0 : 1);
 })();

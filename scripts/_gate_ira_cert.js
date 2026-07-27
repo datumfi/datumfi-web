@@ -211,6 +211,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     '\n\n=== tMulti (Library) ===\n' + strip(R.tMulti) +
     '\n\n=== rNone (spine fallthrough) ===\n' + strip(R.rNone) +
     '\n\n=== rDiv (B2 no-arch) ===\n' + strip(R.rDiv) + '\n';
-  fs.writeFileSync('scripts/_gate_ira_cert.out.txt', summary, 'utf8');
+  fs.mkdirSync(__dirname + '/.gate-out', { recursive: true });
+  fs.writeFileSync(__dirname + '/.gate-out/_gate_ira_cert.out.txt', summary, 'utf8');
   process.exit(pass === checks.length ? 0 : 1);
 })();

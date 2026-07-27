@@ -78,5 +78,6 @@ const summary = `[${LABEL}] ${pass}/${checks.length} GREEN | bundle keys: ${Obje
   '\n=== BTC/USD ===\n' + JSON.stringify(btc) +
   '\n=== CIT ===\n' + JSON.stringify(cit) +
   '\n=== VTI ===\n' + JSON.stringify(vti) + '\n';
-fs.writeFileSync('scripts/_gate_stepC_bundle.out.txt', summary, 'utf8');
+fs.mkdirSync(__dirname + '/.gate-out', { recursive: true });
+fs.writeFileSync(__dirname + '/.gate-out/_gate_stepC_bundle.out.txt', summary, 'utf8');
 process.exit(pass === checks.length ? 0 : 1);

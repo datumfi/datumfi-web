@@ -44,7 +44,8 @@ const URL = 'http://127.0.0.1:8001/studio.html';
              domValue: el ? el.value : '__noel__' };
   }, id);
 
-  fs.writeFileSync('scripts/_repro_acqdate2.out.txt', JSON.stringify(out, null, 2), 'utf8');
-  console.log('WROTE scripts/_repro_acqdate2.out.txt');
+  fs.mkdirSync(__dirname + '/.gate-out', { recursive: true });
+  fs.writeFileSync(__dirname + '/.gate-out/_repro_acqdate2.out.txt', JSON.stringify(out, null, 2), 'utf8');
+  console.log('WROTE scripts/.gate-out/_repro_acqdate2.out.txt');
   await b.close();
 })();

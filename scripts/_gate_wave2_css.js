@@ -42,7 +42,8 @@ function get(url) {
   lines.push('MODE: ' + (RF ? 'RED-FIRST (pre-change values — MUST be RED)' : 'NORMAL'));
   lines.push('OVERALL: ' + overall + '   (' + pass + ' pass / ' + fail + ' fail)');
   const summary = '[' + LABEL + '] WAVE-2 CSS GATE — ' + overall + ' (' + pass + '/' + (pass + fail) + ')\n' + lines.join('\n') + '\n';
-  fs.writeFileSync('scripts/_gate_wave2_css.out.txt', summary, 'utf8');
+  fs.mkdirSync(__dirname + '/.gate-out', { recursive: true });
+  fs.writeFileSync(__dirname + '/.gate-out/_gate_wave2_css.out.txt', summary, 'utf8');
   console.log(summary);
   process.exit(fail === 0 ? 0 : 1);
 })();

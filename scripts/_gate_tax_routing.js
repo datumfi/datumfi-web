@@ -152,6 +152,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     '\n\n=== OTHER ASSETS title hover (R396) ===\n' + strip(oaT) +
     '\n\n=== GROUNDS title (must stay plain, no ⓘ) ===\n' + strip(propT) +
     '\n\n=== PICKER ===\n' + strip(R.pickerHtml) + '\n';
-  fs.writeFileSync('scripts/_gate_tax_routing.out.txt', summary, 'utf8');
+  fs.mkdirSync(__dirname + '/.gate-out', { recursive: true });
+  fs.writeFileSync(__dirname + '/.gate-out/_gate_tax_routing.out.txt', summary, 'utf8');
   process.exit(pass === checks.length ? 0 : 1);
 })();

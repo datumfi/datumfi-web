@@ -78,6 +78,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   const summary = `[${LABEL}] ${pass}/${checks.length} GREEN\n` + lines.join('\n') +
     '\n\n=== TAXABLE header row ===\n' + hdr(R.taxable) +
     '\n\n=== ROTH401K header row ===\n' + hdr(R.roth401k) + '\n';
-  fs.writeFileSync('scripts/_gate_stepA_headers.out.txt', summary, 'utf8');
+  fs.mkdirSync(__dirname + '/.gate-out', { recursive: true });
+  fs.writeFileSync(__dirname + '/.gate-out/_gate_stepA_headers.out.txt', summary, 'utf8');
   process.exit(pass === checks.length ? 0 : 1);
 })();

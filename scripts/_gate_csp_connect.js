@@ -61,7 +61,8 @@ function get(url) {
   lines.push('OVERALL: ' + overall + '   (' + pass + ' pass / ' + fail + ' fail)');
 
   const summary = '[' + LABEL + '] CSP connect-src GATE — ' + overall + ' (' + pass + '/' + (pass + fail) + ')\n' + lines.join('\n') + '\n';
-  fs.writeFileSync('scripts/_gate_csp_connect.out.txt', summary, 'utf8');
+  fs.mkdirSync(__dirname + '/.gate-out', { recursive: true });
+  fs.writeFileSync(__dirname + '/.gate-out/_gate_csp_connect.out.txt', summary, 'utf8');
   console.log(summary);
   process.exit(fail === 0 ? 0 : 1);
 })();
