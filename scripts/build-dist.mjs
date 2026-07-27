@@ -38,7 +38,7 @@ const SACRED = {
   // no guard at all. Pinned at its true content. NOTE the map is still INCOMPLETE — vault.html,
   // my-account.html, Blueprint.html, Dossier.html, privacy.html, terms.html and
   // scripts/account-topbar.js are all Sacred in CLAUDE.md and remain unpinned here.
-  'sketchbook.html': '14411b89053873a62b5c7a7a1fa8e0b8',
+  'sketchbook.html': 'cb3dfa94fced03cf3835b67449620846',   // Option-2 _skFull hydration guard (2026-07-27)
 };
 const md5 = (p) => createHash('md5').update(readFileSync(p)).digest('hex');
 

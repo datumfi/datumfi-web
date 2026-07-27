@@ -3328,6 +3328,23 @@
       // Never swallow this: a missing helper means the erase is silently incomplete.
       console.error('[sketchbook erase] DatumPurge.sketch unavailable — snapshot/mirror NOT scrubbed');
     }
+    // OPTION-2 GUARD (2026-07-27) — the SAVE path and the ERASE path trust DIFFERENT stores.
+    // _autoConsumeSketch (the reachable signed-out vault-hop carry) writes the LS book, the per-slot
+    // key, the Clerk mirror and SketchbookDatabase — but never registers the sketch in _skFull, the
+    // list this file calls the UNLIMITED truth. The rebuild below is authoritative, so running it
+    // against an empty _skFull WIPES a populated book: measured 3 saved -> erase 1 -> 0 left.
+    // sketchbook.html:3467 is a second door into the same mismatch, and two known doors means
+    // "there is exactly one" is not a safe assumption — so guard HERE, where the damage happens.
+    // Runs AFTER DatumPurge.sketch, so the erased slot is already null in the book and cannot be
+    // resurrected by this hydration. Guarded hard: ONLY when _skFull is empty AND the book actually
+    // has slots — a legitimately-empty book must stay empty (L51, reachable-empty is authoritative).
+    if (_skFull.length === 0) {
+      var _lsB = null; try { _lsB = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch (_eh) {}
+      var _rec = [];
+      if (_lsB) { for (var _h = 1; _h <= 4; _h++) { if (_lsB['slot_' + _h]) _rec.push(_lsB['slot_' + _h]); } }
+      if (_rec.length) _skFull = _rec;   // never when the book is genuinely empty
+    }
+    // END _skFull hydration guard
     if (_sid) _skFull = _skFull.filter(function (c) { return !(c && c.sketch_id === _sid); });
     var _pp = _skInitPager(); if (_pp && _pp.page > _pp.pageCount() - 1) _pp.page = _pp.pageCount() - 1;
     _applySketchBook(_skFull);                       // LAST — authoritative rebuild has the final word
