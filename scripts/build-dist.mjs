@@ -33,6 +33,12 @@ const SACRED = {
   // NOTE: CLAUDE.md lists this host as 'scripts/nav.js'. That path does not exist; the real, page-referenced
   // file is /nav.js at the repo root (every page loads <script src="/nav.js">). Pinned at its true path.
   'nav.js': 'ea031b807239b40188949c9e328ef24e',
+  // Same gap as nav.js above, found 2026-07-27 while wiring the erase fix: sketchbook.html is a
+  // Sacred Host in CLAUDE.md but was ABSENT from this map, so the erase edit passed the build with
+  // no guard at all. Pinned at its true content. NOTE the map is still INCOMPLETE — vault.html,
+  // my-account.html, Blueprint.html, Dossier.html, privacy.html, terms.html and
+  // scripts/account-topbar.js are all Sacred in CLAUDE.md and remain unpinned here.
+  'sketchbook.html': '14411b89053873a62b5c7a7a1fa8e0b8',
 };
 const md5 = (p) => createHash('md5').update(readFileSync(p)).digest('hex');
 

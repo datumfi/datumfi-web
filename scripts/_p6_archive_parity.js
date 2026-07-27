@@ -18,6 +18,10 @@
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const { chromium } = require('playwright');
 const ROOT = path.resolve(__dirname, '..');
+// --legacyopen RED-FIRST: restore the pre-#310/#380 slot-INDEX selector for the Sketchbook Open
+// control. The gate MUST go red on it — if it does not, this half is no longer pinning id-based
+// addressing and the green is worthless. Carries its own assertion at the exit path.
+const LEGACY_OPEN = process.argv.includes('--legacyopen');
 const HOST = 'datumfi.localhost'; const PORT = 8164; const BASE = 'http://' + HOST + ':' + PORT;
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.woff2': 'font/woff2' };
 const server = http.createServer((req, res) => {
@@ -208,23 +212,39 @@ async function eraseSketch(page, slot) {
   await page.reload({ waitUntil: 'load' });
   await page.waitForTimeout(2600);
 
-  const skUnlock = await page.evaluate(() => {
+  const skUnlock = await page.evaluate((legacyOpen) => {
     var locked = [];
     for (var n = 1; n <= 4; n++) { var t = document.getElementById('tile-slot-' + n); if (t && t.classList.contains('locked')) locked.push(n); }
-    var openable = 0;
-    for (var m = 1; m <= 4; m++) { if (document.querySelector('.slot-open-action[data-open-slot="' + m + '"]')) openable++; }
+    // #310/#380 ID-BASED ADDRESSING. sketchbook.html renders the Open control as
+    // data-open-slot="${data.sketchId || idx}" — so for a SAVED sketch the attribute carries the
+    // SKETCH ID, never the slot index. This half of the gate was left on the pre-migration
+    // selector ("1".."4") long after the Blueprint half moved to id-based (see data-open-id at the
+    // BP block above), so it matched NOTHING and reported 0 openable against a page that was
+    // rendering all four controls correctly. Assert the seeded ids: the real contract is that each
+    // saved sketch is addressed BY ITS ID. (Erase is NOT part of this — .slot-erase-action still
+    // legitimately carries data-purge-target="${idx}", so eraseSketch() stays index-keyed.)
+    var openIds = Array.prototype.slice.call(document.querySelectorAll('.slot-open-action'))
+      .map(function (b) { return b.getAttribute('data-open-slot'); });
+    var openable;
+    if (legacyOpen) {
+      // --legacyopen RED-FIRST: the pre-migration selector, keyed on the slot INDEX.
+      openable = 0;
+      for (var m = 1; m <= 4; m++) { if (document.querySelector('.slot-open-action[data-open-slot="' + m + '"]')) openable++; }
+    } else {
+      openable = ['sk-1', 'sk-2', 'sk-3', 'sk-4'].filter(function (id) { return openIds.indexOf(id) !== -1; }).length;
+    }
     var acc = document.getElementById('summary-sketch-access');
     return {
       token: !!(acc && acc.textContent.trim() === 'Design'),   // UI proxy for userHasPremiumToken
-      lockedSlots: locked, openable: openable,
+      lockedSlots: locked, openable: openable, openIds: openIds,
       modalPresent: !!document.getElementById('premium-gate-modal'),
       capacityPresent: !!document.getElementById('discover-capacity-modal'),
       saveBtn: !!document.getElementById('action-save-current-sketch')   // P6.1: must be GONE
     };
-  });
+  }, LEGACY_OPEN);
   check('SK: signed-in seeds premium token', skUnlock.token);
   check('SK: no slot locked (all 4 unlocked)', skUnlock.lockedSlots.length === 0, skUnlock.lockedSlots.join(','));
-  check('SK: all 4 slots openable', skUnlock.openable === 4, skUnlock.openable);
+  check('SK: all 4 slots openable', skUnlock.openable === 4, skUnlock.openable + ' — ids ' + JSON.stringify(skUnlock.openIds));
   check('SK: premium-gate-modal still in DOM (deactivated)', skUnlock.modalPresent);
   check('SK: discover-capacity-modal still in DOM (deactivated)', skUnlock.capacityPresent);
   check('SK P6.1: "Save Current Sketch" button removed', !skUnlock.saveBtn);
@@ -251,7 +271,12 @@ async function eraseSketch(page, slot) {
   check('SK erase: datum_sketch_state_2 cleared', !skPurge.perSlot2);
   check('SK erase: matching snapshot cleared', !skPurge.snapshot);
   check('SK erase: Clerk sketchbook_z written (codec ensured)', skPurge.zPresent);
-  check('SK erase: Clerk sketchbook_z dropped slot2', !skPurge.zHasSlot2);
+  // HARDENED 2026-07-27 — this asserted only `!zHasSlot2`, which is TRIVIALLY true when NO mirror
+  // exists at all. It passed while sketchbook_z was never written, actively MASKING the erase defect
+  // (sketchbook.html was writing the legacy `sketchbook` object because the codec was not ensured).
+  // A control that reports success for an absent mirror is not a control. Require zPresent FIRST.
+  check('SK erase: Clerk sketchbook_z dropped slot2', skPurge.zPresent && !skPurge.zHasSlot2,
+    'zPresent=' + skPurge.zPresent + ' zHasSlot2=' + skPurge.zHasSlot2);
   check('SK erase: Clerk sketchbook_z kept slot3', skPurge.zHasSlot3);
 
   // (b-guard) PRESERVE: an unrelated, unstamped snapshot survives an unrelated erase.
@@ -268,7 +293,11 @@ async function eraseSketch(page, slot) {
 
   // (c) bare-open freshness: after the matched erase, no draft/snapshot remains to resurrect.
   check('bare-open: BP draft empty (fresh Studio)', !bpPurge.draft);
-  check('bare-open: SK snapshot empty after matched erase (fresh Sketch)', !skPurge.snapshot);
+  // REMOVED 2026-07-27 — 'bare-open: SK snapshot empty after matched erase (fresh Sketch)' asserted
+  // `!skPurge.snapshot`, the IDENTICAL expression to 'SK erase: matching snapshot cleared' above.
+  // One measured value, two check names: it inflated the count and made one defect read as two.
+  // Not re-pointed at a "fresh open" because sessionStorage is per-TAB and survives the reload, so
+  // a re-read would return that same value under a new name. The assertion above is the real one.
 
   // (P6.1) SK AUTO-CONSUME on landing: fill first free page (2,3 empty after purge),
   // clear the pending flag, fire ONCE.
@@ -347,5 +376,18 @@ async function eraseSketch(page, slot) {
 
   await browser.close(); server.close();
   console.log(JSON.stringify({ verdict: fails.length ? 'FAIL' : 'PASS', bpUnlock, bpPurge, bpGuard, bpAuto, bpAutoOnce, skUnlock, skPurge, skGuard, skAuto, skAutoOnce, navStay, pageErrors: pageErrors.slice(0, 3) }, null, 2));
+
+  if (LEGACY_OPEN) {
+    // Self-checking mutation: the legacy selector must actually CHANGE the outcome. A control that
+    // reports success while mutating nothing is exactly the trap the 2026-07-26 sweep documented.
+    var bit = fails.indexOf('SK: all 4 slots openable') !== -1;
+    if (!bit) {
+      console.error('❌ --legacyopen RED-FIRST FAILED — the gate stayed GREEN on the slot-INDEX selector.');
+      console.error('   This half is no longer pinning id-based addressing. Re-ground it.');
+      process.exit(1);
+    }
+    console.log('✅ RED-FIRST OK — the legacy slot-INDEX selector correctly turns "SK: all 4 slots openable" RED.');
+    process.exit(0);
+  }
   process.exit(fails.length ? 1 : 0);
 })();

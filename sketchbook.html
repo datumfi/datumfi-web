@@ -3300,10 +3300,37 @@
     if (!_sid) { try { var _bk = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); var _bs = _bk && _bk['slot_' + idx]; if (_bs && _bs.sketch_id) _sid = _bs.sketch_id; } catch (_e2) {} }
     try { if (_sbD1Live() && _sid) window.DatumD1.deleteDoc('sketchbook', _sid); } catch (_e) {}   // durable D1 delete (keepalive)
     try { if (_sid) localStorage.removeItem('datum_sketch_byid_' + _sid); } catch (_e) {}
+    // P6 single-source erase — ACTUALLY WIRED (2026-07-27). The header above declared DatumPurge
+    // ownership, but DatumPurge.sketch() was never called: the "fallback" hand-rolled path was the
+    // ONLY path. Two things were therefore never done — the _skBelongs-guarded snapshot was never
+    // scrubbed (so an erased sketch could resurrect), and the re-mirror ran with NO codec guarantee,
+    // silently taking _mirrorSketchbookToClerk's legacy branch and writing `sketchbook` instead of
+    // `sketchbook_z`. nav.js:196-200 predicted this failure by name.
+    // ORDER (ruled): DatumPurge.sketch FIRST — it alone owns the snapshot guard and the codec-ensured
+    // remirror, neither of which _applySketchBook touches — then trim, then the authoritative rebuild
+    // LAST so the erased slot cannot come back.
+    if (window.DatumPurge && typeof window.DatumPurge.sketch === 'function') {
+      try {
+        window.DatumPurge.sketch({
+          slotId: idx,
+          // Read the book at CALL time, not now: _withCodec DEFERS this whenever the codec has to be
+          // fetched — which is exactly the broken case — so by then the rebuild below has already run
+          // and the mirror encodes the final state rather than a half-erased one.
+          remirror: function () {
+            try { _mirrorSketchbookToClerk(JSON.parse(localStorage.getItem(LS_KEY) || 'null')); }
+            catch (_e) { console.error('[sketchbook erase] re-mirror failed', _e); }
+          }
+        });
+      } catch (_e) {
+        console.error('[sketchbook erase] DatumPurge.sketch threw — snapshot/mirror NOT scrubbed', _e);
+      }
+    } else {
+      // Never swallow this: a missing helper means the erase is silently incomplete.
+      console.error('[sketchbook erase] DatumPurge.sketch unavailable — snapshot/mirror NOT scrubbed');
+    }
     if (_sid) _skFull = _skFull.filter(function (c) { return !(c && c.sketch_id === _sid); });
     var _pp = _skInitPager(); if (_pp && _pp.page > _pp.pageCount() - 1) _pp.page = _pp.pageCount() - 1;
-    _applySketchBook(_skFull);                       // rebuild the newest-4 LS net from the trimmed list + re-render page
-    try { _mirrorSketchbookToClerk(JSON.parse(localStorage.getItem(LS_KEY) || 'null')); } catch (_e) {}
+    _applySketchBook(_skFull);                       // LAST — authoritative rebuild has the final word
   }
 
   function _slimOne(s) {
