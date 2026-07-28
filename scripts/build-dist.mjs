@@ -35,10 +35,23 @@ const SACRED = {
   'nav.js': 'ea031b807239b40188949c9e328ef24e',
   // Same gap as nav.js above, found 2026-07-27 while wiring the erase fix: sketchbook.html is a
   // Sacred Host in CLAUDE.md but was ABSENT from this map, so the erase edit passed the build with
-  // no guard at all. Pinned at its true content. NOTE the map is still INCOMPLETE — vault.html,
-  // my-account.html, Blueprint.html, Dossier.html, privacy.html, terms.html and
-  // scripts/account-topbar.js are all Sacred in CLAUDE.md and remain unpinned here.
+  // no guard at all. Pinned at its true content.
   'sketchbook.html': 'cb3dfa94fced03cf3835b67449620846',   // Option-2 _skFull hydration guard (2026-07-27)
+
+  // ── MAP CLOSED 2026-07-27 ────────────────────────────────────────────────────────────────────
+  // The seven below were declared Sacred in CLAUDE.md and pinned NOWHERE, so any edit to them
+  // shipped with zero byte-contract. That is how the sketchbook.html erase edit got through, and
+  // how nav.js got through before it — the map was being patched one file at a time, only at the
+  // moment someone happened to edit that file. Reconciled all at once instead. Hashes recomputed
+  // fresh from source, never pasted. THE RULE FROM HERE: every host declared Sacred in CLAUDE.md is
+  // pinned here, and every host pinned here is declared there — the two lists match exactly.
+  'vault.html': 'c7a7a9c101a6743c6a6a2d4c9f8453e1',
+  'my-account.html': 'aee2279c79d212917686ab2e36f1591a',
+  'Blueprint.html': '032ec4b1bc6e9b77d05ca6fcd8f88522',
+  'Dossier.html': '5cceff124fd6d158557fa5d58defb1bd',
+  'privacy.html': 'e8ad09c3b1881fd53b47b5be9ae0ded4',
+  'terms.html': 'f075b5b3a3a919ee586b962aa17bf200',
+  'scripts/account-topbar.js': '4a21517d832498e1d771b710e2628a82',
 };
 const md5 = (p) => createHash('md5').update(readFileSync(p)).digest('hex');
 

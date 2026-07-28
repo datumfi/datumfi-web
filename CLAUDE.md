@@ -117,6 +117,15 @@ Google Cloud Console. Captain executes all dashboard changes manually.
  · scripts/account-topbar.js · 7-tab account topbar
  · privacy.html · canonical legal
  · terms.html · canonical legal
+ · scripts/studio-blueprint.js · Blueprint LS/D1 contract (was PINNED in the build but never
+   declared here — the mismatch ran in BOTH directions until 2026-07-27)
+
+THIS LIST AND `SACRED{}` IN `scripts/build-dist.mjs` MUST MATCH EXACTLY — every host declared here
+is pinned there, every host pinned there is declared here. They disagreed in both directions until
+2026-07-27: seven hosts above were declared but pinned NOWHERE (so edits to them shipped with zero
+byte-contract — that is how the `sketchbook.html` erase edit and the `nav.js` edit before it got
+through), while `scripts/studio-blueprint.js` was pinned but undeclared. Adding a Sacred host means
+BOTH edits, in one commit.
 
 ## Publish Proof By Host Type (measured 2026-07-26 — settles a recurring question)
 
