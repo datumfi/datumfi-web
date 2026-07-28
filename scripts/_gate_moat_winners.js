@@ -379,5 +379,6 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   fs.mkdirSync(__dirname + '/.gate-out', { recursive: true });
   fs.writeFileSync(__dirname + '/.gate-out/_gate_moat_winners.out.txt', summary, 'utf8');
   console.log(summary);
+  if (RF && fail === 0) { console.error('\u274c RED-FIRST INERT (inverted-dead) \u2014 winners were flipped and the gate still passed ' + pass + '/0. This control proves nothing; re-ground its pick() winners.'); process.exit(1); }
   process.exit(fail === 0 ? 0 : 1);
 })();

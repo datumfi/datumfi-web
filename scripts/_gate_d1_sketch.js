@@ -143,5 +143,6 @@ const PORT = 8193; const base = 'http://127.0.0.1:' + PORT;
   lines.push('MODE: ' + (RF ? 'RED-FIRST (winners flipped — MUST be RED)' : 'NORMAL') + '   |   D1 Phase-5b sketchbook dual-write gate');
   lines.push('OVERALL: ' + overall + '   (' + pass + ' pass / ' + fail + ' fail)');
   console.log('[' + (process.argv[2] && process.argv[2] !== '--redfirst' ? process.argv[2] : 'RUN') + '] G-SKETCH-D1 — ' + overall + '\n' + lines.join('\n'));
+  if (RF && fail === 0) { console.error('\u274c RED-FIRST INERT (inverted-dead) \u2014 winners were flipped and the gate still passed ' + pass + '/0. This control proves nothing; re-ground its pick() winners.'); process.exit(1); }
   process.exit(fail === 0 ? 0 : 1);
 })();

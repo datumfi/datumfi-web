@@ -150,5 +150,6 @@ function freshStore() { const s = {}; for (let i = 1; i <= 6; i++) s['bp-' + i] 
   lines.push('MODE: ' + (RF ? 'RED-FIRST' : 'NORMAL') + '   |   D1 L2 archive render harness   |   screenshots -> _eyeson/');
   lines.push('OVERALL: ' + overall + '   (' + pass + ' pass / ' + fail + ' fail)');
   console.log('[' + (process.argv[2] && process.argv[2] !== '--redfirst' ? process.argv[2] : 'RUN') + '] D1 L2 RENDER — ' + overall + '\n' + lines.join('\n'));
+  if (RF && fail === 0) { console.error('\u274c RED-FIRST INERT (inverted-dead) \u2014 winners were flipped and the gate still passed ' + pass + '/0. This control proves nothing; re-ground its pick() winners.'); process.exit(1); }
   process.exit(fail === 0 ? 0 : 1);
 })();
