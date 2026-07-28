@@ -55,6 +55,93 @@ const SACRED = {
 };
 const md5 = (p) => createHash('md5').update(readFileSync(p)).digest('hex');
 
+/* ── SACRED MAP AGREEMENT (CLAUDE.md <-> SACRED{}) ────────────────────────────────────────────────
+   Fence [B] added the RULE — every host declared Sacred in CLAUDE.md is pinned above, and every host
+   pinned above is declared there. This is the ENFORCER, so the rule cannot quietly reopen the way it
+   did twice already (nav.js 07-25, sketchbook.html 07-27): both times the map was patched one file
+   at a time, only when someone happened to edit that file.
+
+   It lives in the BUILD, not in a gate script, because only the build actually blocks — a standalone
+   check rots via the dead-anchor tell (the suite is run by hand). Doctrine #34 is the precedent: the
+   check that mattered was the one Cloudflare ran, not the one we meant to run.
+
+   ⚠️ UNPARSEABLE IS NOT AGREEMENT. A parser that silently mis-scopes or returns nothing would report
+   "0 mismatches" and PASS — a vacuous control of the exact class this arc keeps finding. Measured:
+   a naive whole-file scan of CLAUDE.md matches 24 ` · host` lines; only 12 are the real list. Hence
+   the explicit markers, the non-empty floor, and the anchor check — and a DISTINCT failure message,
+   so a doc reformat reads as "I could not check", never as "all clear". */
+const SACRED_ANCHOR = 'studio.html';   // must appear in any correctly-parsed declared list
+
+function parseDeclaredHosts(mdText) {
+  const start = mdText.indexOf('<!-- SACRED-LIST-START -->');
+  const end = mdText.indexOf('<!-- SACRED-LIST-END -->');
+  if (start === -1 || end === -1 || end < start) return null;   // null = UNPARSEABLE, never []
+  const block = mdText.slice(start, end);
+  return [...block.matchAll(/^ · ([^ ·\s]+)/gm)].map((m) => m[1]);
+}
+
+function compareSacred(declared, pinned) {
+  if (declared === null) return { unparseable: 'markers missing or out of order' };
+  if (declared.length === 0) return { unparseable: 'parsed 0 entries between the markers' };
+  if (!declared.includes(SACRED_ANCHOR)) return { unparseable: `anchor "${SACRED_ANCHOR}" absent — the parse is not trustworthy` };
+  return {
+    declaredNotPinned: declared.filter((h) => !pinned.includes(h)),
+    pinnedNotDeclared: pinned.filter((h) => !declared.includes(h)),
+  };
+}
+
+/* Self-check: the comparator proves itself on every run, in memory. A comparator that cannot detect
+   drift must never be able to report agreement. No repo mutation, nothing to restore, cannot be
+   skipped. If any fixture misbehaves we abort and print NO verdict. */
+(function selfCheckSacredComparator() {
+  const A = 'studio.html';
+  const cases = [
+    ['detects declared-not-pinned', compareSacred([A, 'b.html'], [A]), (r) => r.declaredNotPinned && r.declaredNotPinned.includes('b.html')],
+    ['detects pinned-not-declared', compareSacred([A], [A, 'b.html']), (r) => r.pinnedNotDeclared && r.pinnedNotDeclared.includes('b.html')],
+    ['empty parse is UNPARSEABLE, not agreement', compareSacred([], [A]), (r) => !!r.unparseable],
+    ['null parse is UNPARSEABLE, not agreement', compareSacred(null, [A]), (r) => !!r.unparseable],
+    ['missing anchor is UNPARSEABLE', compareSacred(['b.html'], ['b.html']), (r) => !!r.unparseable],
+    ['agreement is reported when lists match', compareSacred([A], [A]), (r) => !r.unparseable && r.declaredNotPinned.length === 0 && r.pinnedNotDeclared.length === 0],
+  ];
+  const bad = cases.filter(([, got, ok]) => !ok(got));
+  if (bad.length) {
+    console.error('SACRED MAP SELF-CHECK FAILED — the comparator cannot prove it detects drift:');
+    for (const [name] of bad) console.error('  - ' + name);
+    console.error('  Refusing to report a SACRED map verdict from an unproven comparator.');
+    process.exit(1);
+  }
+})();
+
+{
+  const declared = existsSync('CLAUDE.md') ? parseDeclaredHosts(readFileSync('CLAUDE.md', 'utf8')) : null;
+  const pinned = Object.keys(SACRED);
+  const r = compareSacred(declared, pinned);
+  if (r.unparseable) {
+    console.error('SACRED MAP UNREADABLE — could not parse the declared list from CLAUDE.md');
+    console.error(`  (${r.unparseable})`);
+    console.error('  -> This is NOT an agreement result. Refusing to report a pass.');
+    process.exit(1);
+  }
+  if (r.declaredNotPinned.length) {
+    console.error('SACRED MAP DRIFT — declared in CLAUDE.md but NOT pinned in build-dist.mjs:');
+    console.error('  ' + r.declaredNotPinned.join(', '));
+    console.error('  -> These files ship with NO byte-contract. Pin them or undeclare them.');
+    process.exit(1);
+  }
+  if (r.pinnedNotDeclared.length) {
+    console.error('SACRED MAP DRIFT — pinned in build-dist.mjs but NOT declared in CLAUDE.md:');
+    console.error('  ' + r.pinnedNotDeclared.join(', '));
+    console.error('  -> Guarded but undocumented. Add them to the Sacred Hosts list.');
+    process.exit(1);
+  }
+  // `npm run check:sacred` — the same comparator without a full build. CONVENIENCE ONLY; the build
+  // step above is the enforcement point, because it is the one that runs whether anyone remembers.
+  if (process.argv.includes('--sacred-only')) {
+    console.log(`SACRED MAP OK — ${declared.length} hosts, declared and pinned agree in both directions.`);
+    process.exit(0);
+  }
+}
+
 // -z = NUL-delimited: correctly preserves em-dash names ("Datum FI — The Range.html").
 const tracked = execFileSync('git', ['ls-files', '-z']).toString('utf8').split('\0').filter(Boolean);
 

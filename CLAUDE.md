@@ -106,6 +106,12 @@ Google Cloud Console. Captain executes all dashboard changes manually.
 
 ## Sacred Hosts (MD5 verify before/after every commit)
 
+The markers below are a CONTRACT, not decoration: `scripts/build-dist.mjs` parses between them to
+check this list against its `SACRED{}` pin map, in both directions, on every build. Move or delete
+them and the build stops with `SACRED MAP UNREADABLE` — which is the point. Never "fix" that by
+loosening the parser.
+
+<!-- SACRED-LIST-START -->
  · vault.html · sign-in page
  · my-account.html · Welcome panel
  · sketch.html · Framing D math
@@ -119,6 +125,7 @@ Google Cloud Console. Captain executes all dashboard changes manually.
  · terms.html · canonical legal
  · scripts/studio-blueprint.js · Blueprint LS/D1 contract (was PINNED in the build but never
    declared here — the mismatch ran in BOTH directions until 2026-07-27)
+<!-- SACRED-LIST-END -->
 
 THIS LIST AND `SACRED{}` IN `scripts/build-dist.mjs` MUST MATCH EXACTLY — every host declared here
 is pinned there, every host pinned there is declared here. They disagreed in both directions until
