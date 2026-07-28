@@ -1,4 +1,17 @@
 'use strict';
+/* =====================================================================================
+ * QUARANTINED 2026-07-28 - DO NOT TRUST THIS GATE VERDICT (green OR red).
+ *
+ * it reports GREEN only because its fixture date rotted. Measured 2026-07-28: with the
+ * hardcoded updated_at it is GREEN 6/0; with a CURRENT stamp it is RED 1/5. It was authored
+ * as a red-first and went green by the calendar, never by a fix. Its pass means nothing.
+ *
+ * Kept for its intent, NOT its result. Retired from decision-making by Captain ruling at
+ * the close of the gate-integrity arc. Do not "fix the date" - that converts a false pass
+ * into a red nobody has agreed to investigate. Re-premise it against confirmed live
+ * behaviour, or delete it. Requires a fresh GO from Daniel before either.
+ * ===================================================================================== */
+console.log('[QUARANTINED] verdict NOT trustworthy - see file header. Retired 2026-07-28.');
 /* BUG C GATE (#288) — the fresh-open design flip. Drives the REAL studio.html with a POPULATED D1 active
  * doc AND a populated session draft (both carry rooms), then opens three ways:
  *   G-SKETCH-FRESH    — ?id=1&hydrate=sketch  -> section 02 (Estate) EMPTY (state.accounts=0); the sketch

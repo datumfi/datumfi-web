@@ -1,4 +1,17 @@
 'use strict';
+/* =====================================================================================
+ * QUARANTINED 2026-07-28 - DO NOT TRUST THIS GATE VERDICT (green OR red).
+ *
+ * its premise is CONTRADICTED by the live product. It asserts that a bare cold /studio.html
+ * hydrates the D1 active doc into rooms. The Captain confirmed on datumfi.com that a cold
+ * Studio with nothing opened correctly shows EMPTY. The harness measured 0 and was RIGHT.
+ *
+ * Kept for its intent, NOT its result. Retired from decision-making by Captain ruling at
+ * the close of the gate-integrity arc. Do not "fix the date" - that converts a false pass
+ * into a red nobody has agreed to investigate. Re-premise it against confirmed live
+ * behaviour, or delete it. Requires a fresh GO from Daniel before either.
+ * ===================================================================================== */
+console.log('[QUARANTINED] verdict NOT trustworthy - see file header. Retired 2026-07-28.');
 /* D1 SOAK-FIX GATE (#284) — write-capture + blueprint-open, headless mocked-auth against the REAL
  * studio.html. Reproduces the EXACT soak symptoms (negative-control doctrine): the studio D1 'active'
  * row that autosaves n_rooms:0 even though the loaded doc HAD rooms (RC-A), and opening a saved
