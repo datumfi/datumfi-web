@@ -1,26 +1,50 @@
 'use strict';
-// P5 Step-3 LIVE GATE — the Sketch NAV "Save Current Sketch" 4-slot picker (Studio parity).
+// P5 LIVE GATE — the Sketch NAV "Save Current Sketch" picker, POST-#310 UNLIMITED MODEL.
+// RE-SCOPED 2026-07-27. This gate used to model a 4-SLOT CHOOSER; #310 killed the 4-cap and the
+// picker became SAVE-AS-NEW + an OVERWRITE list. The old premise did not just mis-select — it was
+// RETIRED, so the gate crashed reaching button[1] of a list with one button, and that crash blinded
+// every check below it. Re-pointing the click would have produced a GREEN gate asserting a chooser
+// the product does not have. DISCARDED as obsolete: "renders 4 slot buttons", "fresh slots all
+// Empty", "write lands in slot N". (Sheets DO exist — but in the Sketchbook/Archive, which pages
+// saves 4-at-a-time; the PICKER has no sheet, just a scrollable list the saves collect into.)
 // Asserts REAL signed-in/browser behavior (no source greps):
-//  (a) picker renders 4 real slots from datumfi_sketchbook_v1 (all "Empty" on a fresh book).
-//  (b) SHARED SOURCE: one nav save -> EXACTLY one entry in BOTH the LS book AND the Sketchbook
-//      tiles (no phantom double-count); the picker write does NOT re-trigger the legacy
-//      pending-snapshot consume (pending_save cleared, no second slot auto-populated).
-//  (c) MID-STREAM: a partial-S1 save (no s2_design) round-trips through ?id=N with no crash
-//      AND the saved slot carries no s2_design (partial), sliders rehydrate to saved values.
-//  (d) OVERWRITE confirm fires on a FILLED slot (no silent overwrite; saved_at unchanged).
+//  (a) fresh book -> head "Save this sketch", ONLY the save-as-new button, ZERO overwrite rows;
+//      picker on-screen, incl. the hidden-anchor regression (signed-in topbar "does nothing" bug).
+//  (b) save-as-new mints a uuid, lands in exactly ONE slot, STAYS on the Sketch (P6.1 Item-3),
+//      clears pending_save, and a SECOND save-as-new mints a DISTINCT id — the unlimited contract.
+//  (c) MID-STREAM: a partial-S1 save (no s2_design) round-trips through ?id=N with no crash.
+//  (d) OVERWRITE confirm fires on an existing save (no silent overwrite; saved_at unchanged).
 //  (e) DRAFTED (nav picker) vs MODELED (Phase-V CTA) badge by entry path.
-//  (f) chosen-slot write lands in slot N (not always slot_1) and the resulting 4-slot
-//      sketchbook_z fits safeMerge (real measured bytes reported).
+//  (f) the resulting sketchbook_z fits safeMerge (real measured bytes reported).
+// Usage: node scripts/_p5_sketch_picker_parity.js [--reuseid]
+// PORTABILITY: self-hosts on 8184 and does require('./datum-archive-codec.js') — an instrumented
+// copy MUST pin BOTH the ROOT (path.resolve, never forward-slash) and that relative require.
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const { chromium } = require('playwright');
 const Codec = require('./datum-archive-codec.js');
 const ROOT = path.resolve(__dirname, '..');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.woff2': 'font/woff2' };
+// --reuseid RED-FIRST: break the unlimited contract at its source — make save-as-new REUSE one
+// fixed id instead of keeping its freshly-minted uuid. Two save-as-new writes then collide, and the
+// "each save-as-new mints a DISTINCT id" assertion MUST go red. Self-checking: a strip that matches
+// nothing aborts rather than reporting a red-first it never performed (2026-07-26 masking rule).
+const REUSEID = process.argv.includes('--reuseid');
+function mutateSketch(src) {
+  const before = src;
+  const out = src.replace('if (forceNew) return payload.sketch_id;', "if (forceNew) return 'REUSED-FIXED-ID';");
+  if (out === before) {
+    console.error('❌ --reuseid STRIP MATCHED NOTHING — the mutation anchor is dead. Re-ground it.');
+    console.error('   Refusing to report a red-first that mutated nothing.');
+    process.exit(1);
+  }
+  return out;
+}
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/index.html';
   const fp = path.join(ROOT, p);
   if (!fp.startsWith(ROOT) || !fs.existsSync(fp) || fs.statSync(fp).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
+  if (REUSEID && /sketch\.html$/.test(p)) { res.end(mutateSketch(fs.readFileSync(fp, 'utf8'))); return; }
   fs.createReadStream(fp).pipe(res);
 });
 const PORT = 8184;
@@ -73,7 +97,7 @@ const armS1 = async (page, age) => page.evaluate((a) => {
     var head = (pop.querySelector('div') || {}).textContent || '';
     var labels = Array.prototype.map.call(pop.querySelectorAll('button'), function (b) { return b.textContent; });
     var r = pop.getBoundingClientRect();
-    return { exists: true, head: head, labels: labels, rect: { left: Math.round(r.left), right: Math.round(r.right), top: Math.round(r.top), width: Math.round(r.width), vw: window.innerWidth } };
+    return { exists: true, head: head, labels: labels, rows: pop.querySelectorAll('.sk-ovrow').length, rect: { left: Math.round(r.left), right: Math.round(r.right), top: Math.round(r.top), width: Math.round(r.width), vw: window.innerWidth } };
   });
 
   // ── (a-regression) signed-in topbar anchor is the hidden #sketch-save-btn case: opening
@@ -101,20 +125,39 @@ const armS1 = async (page, age) => page.evaluate((a) => {
   //    assert the write landed in localStorage + did NOT navigate. The DRAFTED-pill
   //    visibility (white-on-white guard) moves to the Phase-V Sketchbook render below,
   //    where slot_2 is still Drafted and the tile is actually painted.
-  await page.evaluate(() => { document.querySelectorAll('#sketch-save-sb-pop button')[1].click(); }); // index 1 = A-02
+  // RE-SCOPED 2026-07-27 — index [1] was the SECOND of four slot buttons. That chooser no longer
+  // exists: #310 killed the 4-cap and the picker became SAVE-AS-NEW (button[0], "＋ Save as a new
+  // sketch") + an OVERWRITE list of existing sketches (.sk-ovrow). Reaching [1] on a fresh book
+  // threw on undefined, and the crash blinded every check below it.
+  await page.evaluate(() => { document.querySelectorAll('#sketch-save-sb-pop button')[0].click(); });   // save-as-new
   await page.waitForTimeout(1500);
   out.afterNavSave = await page.evaluate(() => {
     var b = null; try { b = JSON.parse(localStorage.getItem('datumfi_sketchbook_v1')); } catch (e) {}
-    var filled = 0; for (var n = 1; n <= 4; n++) { if (b && b['slot_' + n]) filled++; }
+    var filled = 0, landed = 0;
+    for (var n = 1; n <= 4; n++) { if (b && b['slot_' + n]) { filled++; if (!landed) landed = n; } }
+    var s = landed ? b['slot_' + landed] : null;
     return {
       url: location.pathname,
       stayedOnSketch: location.pathname.indexOf('sketch.html') >= 0,
-      slot1: !!(b && b.slot_1), slot2: !!(b && b.slot_2), slot3: !!(b && b.slot_3), slot4: !!(b && b.slot_4),
-      slot2status: b && b.slot_2 && b.slot_2.status, slot2age: b && b.slot_2 && b.slot_2.age,
-      slot2hasS2: !!(b && b.slot_2 && b.slot_2.s2_design),
+      landedSlot: landed,
+      sketchId: s && s.sketch_id,
+      status: s && s.status, age: s && s.age,
+      hasS2: !!(s && s.s2_design),
       filledSlots: filled,
       pendingCleared: !sessionStorage.getItem('datumfi_pending_save')
     };
+  });
+  // THE UNLIMITED CONTRACT — a SECOND save-as-new must mint a DISTINCT id (its own D1 row), never
+  // reuse the first. This is what --reuseid inverts, and it is the assertion that makes this gate
+  // worth having under the post-#310 model.
+  await page.evaluate(() => { if (!document.getElementById('sketch-save-sb-pop')) window.sketchSaveCurrent(); });
+  await page.waitForTimeout(200);
+  await page.evaluate(() => { document.querySelectorAll('#sketch-save-sb-pop button')[0].click(); });
+  await page.waitForTimeout(1500);
+  out.secondNew = await page.evaluate(() => {
+    var b = null; try { b = JSON.parse(localStorage.getItem('datumfi_sketchbook_v1')); } catch (e) {}
+    var ids = []; for (var n = 1; n <= 4; n++) { if (b && b['slot_' + n]) ids.push(b['slot_' + n].sketch_id); }
+    return { ids: ids, distinct: new Set(ids).size, count: ids.length };
   });
 
   // ── (c) mid-stream partial-S1 round-trips through ?id=2 with no crash ────────────────
@@ -147,7 +190,7 @@ const armS1 = async (page, age) => page.evaluate((a) => {
   // cancel -> back to slot list (no write)
   await page.evaluate(() => { var p = document.getElementById('sketch-save-sb-pop'); if (p) p.querySelectorAll('button')[1].click(); });
   await page.waitForTimeout(100);
-  out.overwrite.backToList = await page.evaluate(() => { var p = document.getElementById('sketch-save-sb-pop'); return !!(p && /Save to which sheet/.test(p.textContent)); });
+  out.overwrite.backToList = await page.evaluate(() => { var p = document.getElementById('sketch-save-sb-pop'); return !!(p && /Save this sketch/.test(p.textContent)); });
 
   // ── (e MODELED) — Phase-V CTA direct save to first-empty (slot 1) -> MODELED ─────────
   await page.evaluate(() => { var p = document.getElementById('sketch-save-sb-pop'); if (p) p.remove(); });
@@ -191,11 +234,15 @@ const armS1 = async (page, age) => page.evaluate((a) => {
 
   // ── verdict ──
   const a = out.pickerOpen, nv = out.afterNavSave, ov = out.overwrite, pv = out.phaseV;
-  // (a)
+  // (a) RE-SCOPED to the post-#310 unlimited model. The old assertions — "renders 4 slot buttons",
+  // "fresh book slots all Empty", head "Save to which sheet" — described a 4-slot chooser that the
+  // unlimited-saves change RETIRED. They are not re-pointed, they are DISCARDED: asserting them
+  // against today's product would be a gate reading green on a fiction.
   F(a.exists, 'a: picker popup did not open');
-  F(a.exists && /Save to which sheet/.test(a.head), 'a: picker head wrong (' + (a && a.head) + ')');
-  F(a.exists && a.labels && a.labels.length === 4, 'a: picker did not render 4 slot buttons (' + (a.labels && a.labels.length) + ')');
-  F(a.exists && a.labels && a.labels.every((l) => /Empty/.test(l)), 'a: fresh book slots not all Empty (' + JSON.stringify(a.labels) + ')');
+  F(a.exists && /Save this sketch/.test(a.head), 'a: picker head wrong (' + (a && a.head) + ')');
+  F(a.exists && a.labels && a.labels.length === 1, 'a: fresh book should offer ONLY save-as-new, got ' + JSON.stringify(a.labels));
+  F(a.exists && a.labels && /Save as a new sketch/.test(a.labels[0] || ''), 'a: save-as-new button missing (' + JSON.stringify(a.labels) + ')');
+  F(a.exists && a.rows === 0, 'a: fresh book must show ZERO overwrite rows, got ' + a.rows);
   F(a.exists && a.rect && a.rect.width > 0 && a.rect.left >= -1 && a.rect.right <= a.rect.vw + 1, 'a: picker rendered off-screen (' + JSON.stringify(a.rect) + ')');
   // (a-regression) hidden-anchor open must stay on-screen
   const ha = out.hiddenAnchor;
@@ -203,32 +250,47 @@ const armS1 = async (page, age) => page.evaluate((a) => {
   F(ha && ha.exists && ha.width > 0 && ha.left >= -1 && ha.right <= ha.vw + 1 && ha.top >= -1, 'a: hidden-anchor picker rendered OFF-SCREEN — the signed-in "does nothing" bug (' + JSON.stringify(ha) + ')');
   // (b) + (f slot N)
   F(nv.stayedOnSketch, 'b: P6.1 Item-3 — nav-picker save must STAY on the Sketch, instead navigated to (' + nv.url + ')');
-  F(nv.slot2 && !nv.slot1 && !nv.slot3 && !nv.slot4, 'f/b: write did not land in slot 2 ONLY (s1=' + nv.slot1 + ' s2=' + nv.slot2 + ' s3=' + nv.slot3 + ' s4=' + nv.slot4 + ')');
   F(nv.filledSlots === 1, 'b: shared-source double-count — expected 1 filled slot, got ' + nv.filledSlots);
   F(nv.pendingCleared, 'b: pending_save not cleared after picker save (re-consume risk)');
+  // UNLIMITED MODEL (replaces the retired "write lands in slot N"): save-as-new mints a real uuid
+  // and each subsequent save-as-new mints a DISTINCT one — its own D1 row, never a reuse.
+  F(!!nv.sketchId && /^[0-9a-f-]{16,}$/i.test(nv.sketchId), 'b: save-as-new did not mint a uuid sketch_id (' + nv.sketchId + ')');
+  const sn = out.secondNew;
+  F(sn && sn.count === 2, 'b: a SECOND save-as-new did not create a second sketch (count=' + (sn && sn.count) + ')');
+  F(sn && sn.distinct === sn.count, 'b: save-as-new REUSED an id — the unlimited contract is broken (' + JSON.stringify(sn && sn.ids) + ')');
   // (c)
   F(out.reopenErrs === 0, 'c: page errors during partial-S1 reopen (' + out.reopenErrs + ')');
-  F(!nv.slot2hasS2, 'c: partial save unexpectedly carried s2_design (not a mid-stream partial)');
+  F(!nv.hasS2, 'c: partial save unexpectedly carried s2_design (not a mid-stream partial)');
   F(out.reopen.age === '52', 'c: reopened slider-age did not rehydrate to 52 (' + out.reopen.age + ')');
   // (d)
-  F(/Overwrite A-02/.test(ov.txt), 'd: overwrite confirm did not fire on filled slot 2 (' + ov.txt.slice(0, 60) + ')');
+  F(/Overwrite/.test(ov.txt), 'd: overwrite confirm did not fire on filled slot 2 (' + ov.txt.slice(0, 60) + ')');
   F(ov.btns.indexOf('Overwrite') >= 0 && ov.btns.indexOf('Cancel') >= 0, 'd: overwrite/cancel buttons missing (' + JSON.stringify(ov.btns) + ')');
   F(ov.stillOnSketch, 'd: silent overwrite — navigated away instead of confirming');
   F(ov.savedAtUnchanged, 'd: filled slot was written WITHOUT confirm (saved_at changed)');
-  F(ov.backToList, 'd: Cancel did not return to the slot list');
+  F(ov.backToList, 'd: Cancel did not return to the save list');
   // (e)
-  F(nv.slot2status === 'Drafted', 'e: nav picker save status != Drafted (' + nv.slot2status + ')');
+  F(nv.status === 'Drafted', 'e: nav picker save status != Drafted (' + nv.status + ')');
   F(/Drafted/i.test(pv.pill2), 'e: tile A-02 pill not Drafted (' + pv.pill2 + ')');
   F(pv.pill2RgbSum < 300, 'e: DRAFTED pill is too light to read on the light card — white-on-white regression (' + pv.pill2Color + ')');
   F(pv.slot1status === 'Modeled', 'e: Phase-V CTA save status != Modeled (' + pv.slot1status + ')');
   F(/Modeled/i.test(pv.pill1), 'e: tile A-01 pill not Modeled (' + pv.pill1 + ')');
   F(pv.slot2status === 'Drafted', 'e: prior Drafted slot mutated by Phase-V save (' + pv.slot2status + ')');
-  F(pv.tilesSaved === 2, 'b: after two distinct saves expected 2 tiles, got ' + pv.tilesSaved + ' (phantom?)');
+  // THREE saves now run: save-as-new x2 (the unlimited-contract leg) + the Phase-V CTA save.
+  F(pv.tilesSaved === 3, 'b: after three distinct saves expected 3 tiles, got ' + pv.tilesSaved + ' (phantom?)');
   // (f)
   F(out.bytes.ok === true, 'f: 4-slot sketchbook_z over safeMerge cap (' + out.bytes.mergedTotal + ')');
   F(out.bytes.sketchbook_z > 0, 'f: sketchbook_z empty');
 
   out.verdict = (out.findings.length === 0 && out.pageErrors.length === 0) ? 'PASS' : 'FAIL';
+  if (REUSEID) {
+    // Masking-proof: assert the SPECIFIC unlimited-contract finding fired, not merely that the gate
+    // went red — this gate has many checks and a bare  would be certified by any of them.
+    var bit = out.findings.some(function (m) { return /REUSED an id/.test(m); });
+    if (!bit) { console.error('❌ --reuseid RED-FIRST FAILED — id reuse did not trip the unlimited-contract check.'); process.exit(1); }
+    console.log('✅ RED-FIRST OK — reusing the save-as-new id correctly turns the unlimited contract RED.');
+    console.log(JSON.stringify({ findings: out.findings }, null, 1));
+    server.close(); browser.close(); process.exit(0);
+  }
   console.log(JSON.stringify(out, null, 2));
   await browser.close(); server.close();
   process.exit(out.verdict === 'PASS' ? 0 : 1);
