@@ -6,6 +6,17 @@
  * hardcoded updated_at it is GREEN 6/0; with a CURRENT stamp it is RED 1/5. It was authored
  * as a red-first and went green by the calendar, never by a fix. Its pass means nothing.
  *
+  * PLAIN LANGUAGE: this test was written to FAIL on purpose until a fix landed. It now
+ * says PASS - but only because the date baked into its test data (2026-07-16) has aged
+ * past relevance. Given today date it fails immediately. THEREFORE IT IS UNKNOWN WHETHER
+ * THE FIX IT WAS GUARDING EVER LANDED. That was never investigated. Recorded deliberately.
+  *
+ * TELL #8 - TIME-BOMB FIXTURE: a hardcoded date sitting inside freshness/expiry logic. It
+ * passes the day it is written and rots one day at a time after, invisible to code review
+ * because the code never changes - only the calendar does. A third suspect,
+ * _gate_grounds_avm_persist.mjs, was TESTED for this and CLEARED (33/33 with either date):
+ * the census that named the suspects was one-third wrong, so test, never infer.
+ *
  * Kept for its intent, NOT its result. Retired from decision-making by Captain ruling at
  * the close of the gate-integrity arc. Do not "fix the date" - that converts a false pass
  * into a red nobody has agreed to investigate. Re-premise it against confirmed live

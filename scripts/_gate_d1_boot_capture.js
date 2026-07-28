@@ -6,6 +6,17 @@
  * hydrates the D1 active doc into rooms. The Captain confirmed on datumfi.com that a cold
  * Studio with nothing opened correctly shows EMPTY. The harness measured 0 and was RIGHT.
  *
+  * PLAIN LANGUAGE: this test expects a freshly-opened Studio to show your saved rooms.
+ * The product owner confirmed on the live site that the Studio is DESIGNED to open empty
+ * until you open a file. So the test expects the wrong thing. The premise is wrong, not
+ * the date - do not repair it by changing the date.
+  *
+ * TELL #8 - TIME-BOMB FIXTURE: a hardcoded date sitting inside freshness/expiry logic. It
+ * passes the day it is written and rots one day at a time after, invisible to code review
+ * because the code never changes - only the calendar does. A third suspect,
+ * _gate_grounds_avm_persist.mjs, was TESTED for this and CLEARED (33/33 with either date):
+ * the census that named the suspects was one-third wrong, so test, never infer.
+ *
  * Kept for its intent, NOT its result. Retired from decision-making by Captain ruling at
  * the close of the gate-integrity arc. Do not "fix the date" - that converts a false pass
  * into a red nobody has agreed to investigate. Re-premise it against confirmed live
