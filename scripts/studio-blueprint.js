@@ -849,7 +849,9 @@
         applyDossier(bp, readDossier());
         return finishLoad(bp, 'sketch-contract:' + id);
       }
-    } catch (_e) {}
+    } catch (_e) {
+      console.warn('[blueprint] We could not load your saved work (nothing was deleted) — opening an empty Studio instead.', _e);
+    }
 
     // P3 — D1-FIRST: if the caller handed us a D1 studio doc, hydrate from it (full fidelity) and
     // adopt its revision for optimistic CAS. Any absence/error falls through to the existing
@@ -884,12 +886,16 @@
           Object.assign(bp, JSON.parse(opts.d1Doc.payload));
           if (global.DatumD1 && typeof opts.d1Doc.revision === 'number') global.DatumD1.setRevision('studio', 'active', opts.d1Doc.revision);
           return finishLoad(bp, 'd1');
-        } catch (_e) {}
+        } catch (_e) {
+          console.warn('[d1] We could not load your saved work (nothing was deleted) — opening an empty Studio instead.', _e);
+        }
       } else if (global.DatumD1 && typeof opts.d1Doc.revision === 'number') {
         // Hydrating from the draft, but STILL adopt the server revision we just read. Without this the
         // next save would PUT with no known revision and the API's expected=current fallback would make
         // it a silent last-write-wins — the same CAS hole the rename write had to close.
-        try { global.DatumD1.setRevision('studio', 'active', opts.d1Doc.revision); } catch (_e) {}
+        try { global.DatumD1.setRevision('studio', 'active', opts.d1Doc.revision); } catch (_e) {
+          console.warn('[d1] The revision stamp did not update — a later save may overwrite a newer copy.', _e);
+        }
       }
     }
 

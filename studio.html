@@ -16026,7 +16026,7 @@
       var _wedge = setTimeout(function () { _bootOnce(null); }, 5000);   // anti-wedge: hung-read only; > getDoc's 1.2s cap
       window.DatumD1.getDoc('studio', 'active')
         .then(function (doc) { clearTimeout(_wedge); _bootOnce(doc); })      // P4 — D1 sole truth
-        .catch(function () { clearTimeout(_wedge); _bootOnce(null); });
+        .catch(function (e) { clearTimeout(_wedge); console.warn('[studio boot] blueprint load gave up — booting empty. If the Studio was already up, this changed nothing.', e); _bootOnce(null); });
     } else { _bootOnce(null); }   // rollback (DatumD1.CUTOVER=false) or signed-out -> today's LS->Clerk path
   });
   </script>
