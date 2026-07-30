@@ -16050,6 +16050,23 @@
       document.body.appendChild(t);
       setTimeout(function () { if (t.parentNode) t.remove(); }, 2300);
     }
+    /* THE CONFIRMATION MUST BE DOWNSTREAM OF THE WRITE OUTCOME (L53).
+       Every save here used to toast "Saved" the instant DatumBlueprint.save() RETURNED — and save() is
+       synchronous while the D1 write is fire-and-forget, so the message was emitted without ever reading a
+       result. Measured with a dead session: the user was told "Saved to <name>" in all three failure shapes.
+       Now the store reports back and the toast says what actually happened. Failure copy is Captain-authored
+       and wired verbatim (L47/L8); the success strings are each caller's existing wording, unchanged. */
+    function saveOutcomeToast(okMsg) {
+      return function (res) {
+        if (res && res.ok) { toast(okMsg); return; }
+        // 'pending' is NOT a failure — ten seconds have passed and the write has not come back yet. Saying
+        // it did not save would assert an outcome nobody has read, which is the same error in the other
+        // direction (L53/L54). It reports only what is known, and the real result still speaks if it lands.
+        if (res && res.reason === 'pending') { toast('Still trying to save. Your work is safe on this device.'); return; }
+        if (res && res.reason === 'no-session') { toast('Not saved — you may be signed out. Your work is safe on this device.'); return; }
+        toast('Not saved to your account. Your work is safe on this device.');
+      };
+    }
     function liveBp() {
       var bp = window._studioBp || window._studioBlueprint;
       if (!bp) bp = window._studioBp = DatumBlueprint['new']();
@@ -16140,9 +16157,9 @@
         // blueprint carrying the FIRST one's title — two files, one name, which is the same L47 collision the
         // rest of this change exists to prevent, introduced by the fix itself.
         applyChosenName(bp, null);
-        DatumBlueprint.save(bp, { newBlueprint: true });   // mint a fresh id -> its OWN unlimited D1 row
+        // mint a fresh id -> its OWN unlimited D1 row
+        DatumBlueprint.save(bp, { newBlueprint: true, onResult: saveOutcomeToast('Saved as a new blueprint.') });
         window._studioBp = bp;
-        toast('Saved as a new blueprint.');
       } catch (e) { toast('Save failed.'); }
       close();
     }
@@ -16151,9 +16168,9 @@
         var bp = liveBp();
         DatumBlueprint.captureDOM(bp);
         applyChosenName(bp, meta.dn);                      // carry the TARGET sheet's name — see chosenName
-        DatumBlueprint.save(bp, { blueprint_id: meta.id }); // reuse that sheet's id -> SAME D1 row, bumped revision
+        // reuse that sheet's id -> SAME D1 row, bumped revision
+        DatumBlueprint.save(bp, { blueprint_id: meta.id, onResult: saveOutcomeToast('Overwrote ' + (meta.name || 'the blueprint') + '.') });
         window._studioBp = bp;
-        toast('Overwrote ' + (meta.name || 'the blueprint') + '.');
       } catch (e) { toast('Save failed.'); }
       close();
     }
@@ -16202,9 +16219,8 @@
         var bp = activeDoc();
         DatumBlueprint.captureDOM(bp);
         applyChosenName(bp, meta.dn);                      // same one rule as saveOver — see chosenName
-        DatumBlueprint.save(bp, { blueprint_id: meta.id });
+        DatumBlueprint.save(bp, { blueprint_id: meta.id, onResult: saveOutcomeToast(meta.name ? 'Saved to ' + meta.name : 'Saved.') });
         window._studioBp = bp;
-        toast(meta.name ? 'Saved to ' + meta.name : 'Saved.');
       } catch (e) { toast('Save failed.'); }
       close();
     }

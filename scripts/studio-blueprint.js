@@ -644,18 +644,63 @@
   // signed out / rolled back (CUTOVER=false) — the Clerk mirror + LS remain the truth in those states.
   function d1WriteBlueprint(bp) {
     try {
-      if (!global.DatumD1 || global.DatumD1.CUTOVER === false || !global.DatumD1.signedIn()) return;
-      if (!bp || !bp.blueprint_id) return;
+      // GUARDS UNCHANGED — same conditions, same immediate return. They now return null instead of
+      // undefined so the caller can tell "no write was attempted" from "a write is under way" (L53).
+      if (!global.DatumD1 || global.DatumD1.CUTOVER === false || !global.DatumD1.signedIn()) return null;
+      if (!bp || !bp.blueprint_id) return null;
       var id = bp.blueprint_id;
       var snap = toD1Document(bp);   // snapshot NOW — independent deep copy, not the live-mutating bp
       // #2 (save-lag fix) — a saved blueprint is a DISCRETE, deliberate act: write it IMMEDIATELY (writeNow),
       // not on the ~1.5s autosave debounce, so navigating to the archive right after "Save" can't abandon it
       // in the debounce window. Falls back to scheduleWrite on hosts/gates without writeNow.
       var _write = global.DatumD1.writeNow || global.DatumD1.scheduleWrite;
-      _write.call(global.DatumD1, 'blueprint', id, function () { return snap; }, function () {
+      // RETURNED, not discarded — writeNow resolves with { ok } and that outcome is what any "Saved"
+      // confirmation must be downstream of (L53). The write itself is unchanged.
+      return _write.call(global.DatumD1, 'blueprint', id, function () { return snap; }, function () {
         console.warn('[d1] blueprint ' + id + ' changed in another tab — reloaded the server revision (no merge)');
       });
-    } catch (e) {}
+    } catch (e) { return null; }
+  }
+
+  /* LESSON 53 — A CONFIRMATION THAT CANNOT FAIL IS NOT A CONFIRMATION.
+   * save() is synchronous and the D1 writes are fire-and-forget, so every caller that toasted "Saved" did
+   * so without ever reading an outcome. Measured: with a dead session the user was told "Saved to <name>"
+   * in ALL THREE failure shapes, and in the shape where Clerk has dropped the user the save pill ALSO read
+   * "Saved" — an affirmative lie with nothing anywhere to contradict it.
+   * opts.onResult is how a caller hears what actually happened. It reports exactly three outcomes:
+   *   { ok: true }                       the archive row was written and the server acknowledged it
+   *   { ok: false, reason: 'no-session' } NO write was attempted — there is no usable session
+   *   { ok: false, reason: 'failed' }     a write was attempted and did not land (no token, 401, 5xx, network)
+   *   { ok: false, reason: 'pending' }    ten seconds elapsed and the write has STILL not settled
+   * The reason is read from the EXISTING signedIn() predicate rather than by re-stating the guard
+   * conditions here, so the two can never drift apart (L48) — the same one-path-writes-A-while-another-
+   * trusts-B shape that produced three separate defects this week, pre-empted here.
+   * Callers without onResult are unaffected.
+   *
+   * L54 — MAKING A CONFIRMATION TRUTHFUL MEANS MAKING IT WAIT, AND ANYTHING THAT WAITS CAN WAIT FOREVER.
+   * putDoc puts no timeout on a PUT (only the GET has one), so a stalled network would leave the caller
+   * with nothing to say and the user staring at a button that did nothing. 'pending' exists so that silence
+   * cannot happen. It deliberately does NOT claim failure: at ten seconds the promise has not settled and we
+   * have not READ an outcome, so asserting one — even the pessimistic one — would be the very error this
+   * whole change exists to remove. It reports the only two things we actually know.
+   * If the write settles LATER, the real outcome is still reported: 'pending' claimed nothing, so the
+   * result that follows resolves it rather than contradicting it. The settle is reported at most once. */
+  var _SAVE_PENDING_MS = 10000;
+  function _reportSaveOutcome(opts, write) {
+    var cb = opts && opts.onResult;
+    if (typeof cb !== 'function') return;
+    var say = function (o) { try { cb(o); } catch (_e) {} };
+    if (!write || typeof write.then !== 'function') {
+      var signed = false;
+      try { signed = !!(global.DatumD1 && global.DatumD1.signedIn && global.DatumD1.signedIn()); } catch (_e) {}
+      say({ ok: false, reason: signed ? 'failed' : 'no-session' });
+      return;
+    }
+    var settled = false, timer = null;
+    try { timer = setTimeout(function () { if (!settled) say({ ok: false, reason: 'pending' }); }, _SAVE_PENDING_MS); } catch (_e) {}
+    var settle = function (o) { if (settled) return; settled = true; if (timer) { try { clearTimeout(timer); } catch (_e) {} } say(o); };
+    write.then(function (res) { settle({ ok: !!(res && res.ok), reason: (res && res.ok) ? null : 'failed' }); },
+               function () { settle({ ok: false, reason: 'failed' }); });
   }
 
   // P5a — is `id` already the stable identity of a DIFFERENT saved slot? Guards fresh saves so the
@@ -1012,7 +1057,9 @@
     writeSessionDraft(bp, { at: bp.saved_at });
     mirrorToClerk(bp, opts.done);      // Clerk blueprint_z mirror — newest-4 rolling; STILL ON (retires in the LAST L2 slice)
     d1WriteStudio(bp);                 // P3 — active studio doc (key='active'), full fidelity
-    d1WriteBlueprint(bp);              // P5a Layer-1 — this saved blueprint as its OWN unlimited D1 row (key=blueprint_id)
+    // P5a Layer-1 — this saved blueprint as its OWN unlimited D1 row (key=blueprint_id). Its outcome is the
+    // one a "Saved" confirmation must wait on: it IS the archive record the user just named (L53).
+    _reportSaveOutcome(opts, d1WriteBlueprint(bp));
     return bp;
   }
 
