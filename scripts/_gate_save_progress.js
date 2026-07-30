@@ -446,13 +446,13 @@ function fixtureSketch() {
         // run for a reason that had nothing to do with the product. Ask the RENDERED CONTROLS instead.
         copyOnControls: Array.prototype.some.call(document.querySelectorAll('button, a, [role="button"]'), function (el) { return (el.textContent || '').indexOf('Save progress') >= 0; }),
         demoted: lbls.some((t) => t === 'Save as new / overwrite another'),
-        legacy: lbls.some((t) => t === 'or overwrite an existing sheet')
+        legacy: lbls.some((t) => t === 'or overwrite an existing blueprint')
       };
     });
     ok(!fresh.q, 'STUDIO 3a: NEGATIVE — no "Save progress" row on fresh work');
     ok(!fresh.copyOnControls, 'STUDIO 3b: NEGATIVE — no rendered control anywhere carries the copy "Save progress"');
     ok(!fresh.demoted, 'STUDIO 3c: NEGATIVE — the demoted heading does not appear either');
-    ok(fresh.legacy, 'STUDIO 3d: today flow untouched — the existing "or overwrite an existing sheet" label still reads as it did');
+    ok(fresh.legacy, 'STUDIO 3d: today flow untouched — the existing "or overwrite an existing blueprint" label still reads as it did');
     await ctx.close();
     d1.rows['studio/active'] = saveStudio; d1.rows['blueprint/' + BP_ID] = savedBp;
   }
@@ -580,7 +580,7 @@ function fixtureSketch() {
 
   /* ═══ THE NAME DEFECT — ALL THREE CALL SITES ══════════════════════════════════════════════════════
      A SAVE MUST NEVER REMOVE A NAME THE USER CHOSE. Quick-save is only one of three routes into the same
-     stores; the other two are the pre-existing "overwrite an existing sheet/sketch" confirms, which destroy
+     stores; the other two are the pre-existing "overwrite an existing blueprint/sketch" confirms, which destroy
      the name identically and have done since rename shipped. Covering only quick-save is how RED-FIRST 4
      printed green through a live defect. The name is carried FORWARD from the target record — never
      re-derived, never substituted — and an unnamed file keeps its key ABSENT (L47). */

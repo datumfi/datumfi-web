@@ -23,8 +23,8 @@ const DROP_RE = [/^\.claude\//, /^\.wrangler\//, /^workers\//, /^functions\//, /
 
 // SACRED HOSTS — must ship byte-identical (LF + content). Build ABORTS on drift.
 const SACRED = {
-  'studio.html': '0246f848fd4acde2860895be1fd99262',   // name carried forward on all 4 save routes (2026-07-30)
-  'sketch.html': '47ab4faed2b50953043c46cff6dff608',   // name carried forward at the _doSave writer (2026-07-30)
+  'studio.html': '4cda6ac3f612d11002a5364468ce54b8',   // save-control copy: Save / Save to Archive (2026-07-30)
+  'sketch.html': '13999611566f0c0da94d4aee70e7cb97',   // save-control copy: Save / Save to Sketchbook (2026-07-30)
   'scripts/studio-blueprint.js': 'f1a5129c83056f79cc68435c4a9443bb',   // save() refreshes the open-by-id stash (2026-07-30)
   // MISS-5 pre-work guard (2026-07-25). nav.js is a Sacred Host in CLAUDE.md but was absent from THIS map,
   // so a bad edit failed no build. It owns the centralized cross-device restore every page depends on
@@ -51,7 +51,7 @@ const SACRED = {
   'Dossier.html': '5cceff124fd6d158557fa5d58defb1bd',
   'privacy.html': 'e8ad09c3b1881fd53b47b5be9ae0ded4',
   'terms.html': 'f075b5b3a3a919ee586b962aa17bf200',
-  'scripts/account-topbar.js': '4a21517d832498e1d771b710e2628a82',
+  'scripts/account-topbar.js': '3ca6f7f1f3aaf269e84fc65ada99d7e7',   // save button label + title copy only (2026-07-30)
 };
 const md5 = (p) => createHash('md5').update(readFileSync(p)).digest('hex');
 

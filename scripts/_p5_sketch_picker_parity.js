@@ -8,7 +8,7 @@
 // Empty", "write lands in slot N". (Sheets DO exist — but in the Sketchbook/Archive, which pages
 // saves 4-at-a-time; the PICKER has no sheet, just a scrollable list the saves collect into.)
 // Asserts REAL signed-in/browser behavior (no source greps):
-//  (a) fresh book -> head "Save this sketch", ONLY the save-as-new button, ZERO overwrite rows;
+//  (a) fresh book -> head "Save to Sketchbook", ONLY the save-as-new button, ZERO overwrite rows;
 //      picker on-screen, incl. the hidden-anchor regression (signed-in topbar "does nothing" bug).
 //  (b) save-as-new mints a uuid, lands in exactly ONE slot, STAYS on the Sketch (P6.1 Item-3),
 //      clears pending_save, and a SECOND save-as-new mints a DISTINCT id — the unlimited contract.
@@ -190,7 +190,7 @@ const armS1 = async (page, age) => page.evaluate((a) => {
   // cancel -> back to slot list (no write)
   await page.evaluate(() => { var p = document.getElementById('sketch-save-sb-pop'); if (p) p.querySelectorAll('button')[1].click(); });
   await page.waitForTimeout(100);
-  out.overwrite.backToList = await page.evaluate(() => { var p = document.getElementById('sketch-save-sb-pop'); return !!(p && /Save this sketch/.test(p.textContent)); });
+  out.overwrite.backToList = await page.evaluate(() => { var p = document.getElementById('sketch-save-sb-pop'); return !!(p && /Save to Sketchbook/.test(p.textContent)); });
 
   // ── (e MODELED) — Phase-V CTA direct save to first-empty (slot 1) -> MODELED ─────────
   await page.evaluate(() => { var p = document.getElementById('sketch-save-sb-pop'); if (p) p.remove(); });
@@ -239,7 +239,7 @@ const armS1 = async (page, age) => page.evaluate((a) => {
   // unlimited-saves change RETIRED. They are not re-pointed, they are DISCARDED: asserting them
   // against today's product would be a gate reading green on a fiction.
   F(a.exists, 'a: picker popup did not open');
-  F(a.exists && /Save this sketch/.test(a.head), 'a: picker head wrong (' + (a && a.head) + ')');
+  F(a.exists && /Save to Sketchbook/.test(a.head), 'a: picker head wrong (' + (a && a.head) + ')');
   F(a.exists && a.labels && a.labels.length === 1, 'a: fresh book should offer ONLY save-as-new, got ' + JSON.stringify(a.labels));
   F(a.exists && a.labels && /Save as a new sketch/.test(a.labels[0] || ''), 'a: save-as-new button missing (' + JSON.stringify(a.labels) + ')');
   F(a.exists && a.rows === 0, 'a: fresh book must show ZERO overwrite rows, got ' + a.rows);

@@ -125,8 +125,8 @@
   /* Origin-aware Save — appears ONLY on its own editor page (studio -> Blueprint,
      sketch -> Sketch) and sits beside its archive tab (My Blueprints / My Sketches). */
   function saveAction(active) {
-    if (active === 'studio') return '<button type="button" class="acct-action-btn acct-save" data-acct-action="save-current" title="Save your current Blueprint">⤓ Save Current Blueprint</button>';
-    if (active === 'sketch') return '<button type="button" class="acct-action-btn acct-save" data-acct-action="save-current" title="Save your current Sketch">⤓ Save Current Sketch</button>';
+    if (active === 'studio') return '<button type="button" class="acct-action-btn acct-save" data-acct-action="save-current" title="Save to your Archive">⤓ Save</button>';
+    if (active === 'sketch') return '<button type="button" class="acct-action-btn acct-save" data-acct-action="save-current" title="Save to your Sketchbook">⤓ Save</button>';
     return '';
   }
 

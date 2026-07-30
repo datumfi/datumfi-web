@@ -72,7 +72,7 @@ function check(name, cond, detail) {
     });
     console.log('[1] signed-OUT Studio');
     check('1.app-nav visible', r.navVisible);
-    check('1.save renamed -> "⤓ Save Current Blueprint"', r.saveText === '⤓ Save Current Blueprint', r.saveText);
+    check('1.save label -> "⤓ Save"', r.saveText === '⤓ Save', r.saveText);
     check('1.Upgrade present', r.hasUpgrade);
     check('1.Sign In present', r.hasSignIn);
     check('1.seam toggles present (3)', r.toggleCount === 3, r.toggleCount);
@@ -107,7 +107,7 @@ function check(name, cond, detail) {
     console.log('[2] signed-IN Studio');
     check('2.account-topbar injected', r.topbar);
     check('2.#app-nav hidden', r.appNavHidden);
-    check('2.Save Current Blueprint present', r.saveText === '⤓ Save Current Blueprint', r.saveText);
+    check('2.Save label present', r.saveText === '⤓ Save', r.saveText);
     check('2.Save sits after My Blueprints', r.saveAfterMyBp);
     check('2.Upgrade present', r.hasUpgrade);
     check('2.Sign Out present', r.hasSignOut);
@@ -136,7 +136,7 @@ function check(name, cond, detail) {
     });
     console.log('[3] signed-OUT Sketch');
     check('3.app-nav visible', r.navVisible);
-    check('3.Save Current Sketch present', r.saveText === '⤓ Save Current Sketch', r.saveText);
+    check('3.Save label present', r.saveText === '⤓ Save', r.saveText);
     check('3.Save sits after Sketch link', r.saveAfterSketch);
     check('3.Upgrade present', r.hasUpgrade);
     check('3.Sign In present', r.hasSignIn);
@@ -164,7 +164,7 @@ function check(name, cond, detail) {
     });
     console.log('[4] signed-IN Sketch');
     check('4.account-topbar injected', r.topbar);
-    check('4.Save Current Sketch present', r.saveText === '⤓ Save Current Sketch', r.saveText);
+    check('4.Save label present', r.saveText === '⤓ Save', r.saveText);
     check('4.Save sits after My Sketches', r.saveAfterMySk);
     check('4.Upgrade present', r.hasUpgrade);
     check('4.Sign Out present', r.hasSignOut);
