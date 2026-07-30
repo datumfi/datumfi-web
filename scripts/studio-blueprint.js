@@ -335,6 +335,29 @@
     arch.activeBlueprintSlot = slotId;
     writeArchive(arch);
   }
+  /* THE OPEN-BY-ID COPY — the third store, and the one a save never used to refresh.
+   *
+   * writeSlot above writes `datum_blueprint_state_<1..4>`, the NUMBER key from _placeInNet. But load()'s
+   * EXPLICIT-OPEN branch reads `datum_blueprint_state_<blueprint_id>` — the UUID key — because that is how
+   * Open-from-the-Archive addresses a sheet. Only Blueprint.html ever wrote the UUID key, and only when the
+   * ARCHIVE PAGE LOADS. So: open a blueprint from the archive, edit it, save it, reload — and because the
+   * reload keeps ?id=&hydrate=blueprint in the URL, the explicit-open branch handed back the ARCHIVE-TIME
+   * SNAPSHOT. Not a dropped field, not a blank: A WHOLE EARLIER COPY OF THE FILE. Measured on the live site
+   * as 1,500,000 coming back after 150,000 was saved, while the record itself held 150,000 correctly.
+   *
+   * The sketch surface never had this fault because _doSave rewrites `datum_sketch_byid_<sketch_id>` on
+   * EVERY save — it refreshes the very stash its own open path reads. This is that same discipline, applied
+   * to the surface that was missing it.
+   *
+   * Keyed off bp.blueprint_id AFTER save()'s id resolution, so overwriting sheet B while working in sheet A
+   * refreshes B's copy with what was actually written to B — never A's content under B's key.
+   * Silent on quota, matching writeSlot/writeArchive beside it: an LS write that cannot land must not take
+   * the save down with it, and D1 remains the record either way. */
+  function writeIdStash(bp) {
+    try {
+      if (bp && bp.blueprint_id) localStorage.setItem(PER_SLOT_PREFIX + bp.blueprint_id, JSON.stringify(bp));
+    } catch (_e) {}
+  }
   function readSessionDraft() {
     try {
       var raw = localStorage.getItem(SESSION_DRAFT_KEY);
@@ -963,6 +986,10 @@
     // Legacy callers pin an exact slot; the picker branches roll the newest-4 LS-net window.
     var slotId = opts.slot || _placeInNet(bp);
     writeSlot(slotId, bp);
+    writeIdStash(bp);                  // refresh the OPEN-BY-ID copy too — see writeIdStash. Here at the
+                                       // single writer so EVERY save route inherits it: quick-save, the
+                                       // pre-existing overwrite confirm, save-as-new, and the legacy
+                                       // exact-slot callers all reach this line.
     writeSessionDraft(bp);
     mirrorToClerk(bp, opts.done);      // Clerk blueprint_z mirror — newest-4 rolling; STILL ON (retires in the LAST L2 slice)
     d1WriteStudio(bp);                 // P3 — active studio doc (key='active'), full fidelity
