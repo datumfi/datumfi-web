@@ -16078,6 +16078,19 @@
     // Enumerate saved blueprints for the overwrite list — D1 (ALL N, newest-first) with an LS 4-slot
     // fallback when signed-out / D1 unreachable. Mirrors Blueprint.html loadArchive so the picker and
     // the archive agree on what exists.
+    /* A SAVE MUST NEVER REMOVE A NAME THE USER CHOSE.
+       Every save here replaces the whole record, and the chosen name is doc metadata that captureDOM cannot
+       rebuild — so any save that does not carry it forward DESTROYS it on disk (not just in the display) and
+       the card falls back to a derived label. The name is taken from the TARGET record the picker already
+       read, never re-derived and never substituted: overwriting sheet B while working in sheet A must write
+       B's name, not A's. Absent stays ABSENT — the honest state for a file that was never named (L47). */
+    function chosenName(rec) {
+      var d = rec && rec.display_name;
+      return (typeof d === 'string' && d.trim()) ? d.trim() : null;
+    }
+    function applyChosenName(bp, dn) {
+      if (dn) bp.display_name = dn; else delete bp.display_name;
+    }
     function bpMeta(bp, id) {
       var prof = (bp && bp.profile) || {};
       // RENAME — same shared resolver the archive card uses (nav.js, L48). This row is the fault-3
@@ -16089,7 +16102,9 @@
                    : (prof.primary_name ? (prof.primary_name + "'s Blueprint") : 'Studio Blueprint'));
       var rooms = ((bp && bp.accounts) || []).length;
       var when = bp && bp.saved_at ? new Date(bp.saved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
-      return { id: id, name: name, rooms: rooms, when: when };
+      // dn is the RAW stored name, kept separate from `name` on purpose: `name` is the resolved label and is
+      // derived when none was chosen, so writing `name` back would stamp a generated title onto the record.
+      return { id: id, name: name, rooms: rooms, when: when, dn: chosenName(bp) };
     }
     function listFromLS() {
       var rows = [];
@@ -16120,19 +16135,25 @@
       try {
         var bp = liveBp();
         DatumBlueprint.captureDOM(bp);
+        // A NEW file is UNNAMED until its owner names it. Measured: without this, quick-save leaves the named
+        // doc on window._studioBp, liveBp() hands it straight back here, and "save as new" mints a SECOND
+        // blueprint carrying the FIRST one's title — two files, one name, which is the same L47 collision the
+        // rest of this change exists to prevent, introduced by the fix itself.
+        applyChosenName(bp, null);
         DatumBlueprint.save(bp, { newBlueprint: true });   // mint a fresh id -> its OWN unlimited D1 row
         window._studioBp = bp;
         toast('Saved as a new blueprint.');
       } catch (e) { toast('Save failed.'); }
       close();
     }
-    function saveOver(id, name) {
+    function saveOver(meta) {
       try {
         var bp = liveBp();
         DatumBlueprint.captureDOM(bp);
-        DatumBlueprint.save(bp, { blueprint_id: id });     // reuse that sheet's id -> SAME D1 row, bumped revision
+        applyChosenName(bp, meta.dn);                      // carry the TARGET sheet's name — see chosenName
+        DatumBlueprint.save(bp, { blueprint_id: meta.id }); // reuse that sheet's id -> SAME D1 row, bumped revision
         window._studioBp = bp;
-        toast('Overwrote ' + (name || 'the blueprint') + '.');
+        toast('Overwrote ' + (meta.name || 'the blueprint') + '.');
       } catch (e) { toast('Save failed.'); }
       close();
     }
@@ -16180,6 +16201,7 @@
       try {
         var bp = activeDoc();
         DatumBlueprint.captureDOM(bp);
+        applyChosenName(bp, meta.dn);                      // same one rule as saveOver — see chosenName
         DatumBlueprint.save(bp, { blueprint_id: meta.id });
         window._studioBp = bp;
         toast(meta.name ? 'Saved to ' + meta.name : 'Saved.');
@@ -16219,7 +16241,7 @@
       var ov = document.createElement('button');
       ov.type = 'button'; ov.textContent = 'Overwrite';
       ov.style.cssText = 'flex:1;background:rgba(201,168,76,0.15);border:1px solid var(--gold,#c9a84c);color:var(--gold,#c9a84c);font-family:var(--font-mono);font-size:11px;padding:8px 10px;border-radius:4px;cursor:pointer;';
-      ov.addEventListener('click', function (e) { e.stopPropagation(); saveOver(meta.id, meta.name); });
+      ov.addEventListener('click', function (e) { e.stopPropagation(); saveOver(meta); });
       var ca = document.createElement('button');
       ca.type = 'button'; ca.textContent = 'Cancel';
       ca.style.cssText = 'flex:1;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.12);color:var(--white,#fff);font-family:var(--font-mono);font-size:11px;padding:8px 10px;border-radius:4px;cursor:pointer;';

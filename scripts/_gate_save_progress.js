@@ -21,7 +21,21 @@
  *   --confirm   the row routes through confirmOverwrite instead of saving -> 2 bites (the warning is back).
  *   --noclear   drops the _skActiveId clear in resetSketch -> 5 bites. THE DATA-LOSS GUARD: a stale id
  *               surviving into fresh work means quick-save overwrites a file the user has left.
+ *   --noname    drops the name carry-forward on BOTH surfaces -> 4e, 7a, 7b bite. THE NAME DEFECT: a save
+ *               that does not carry the chosen name forward DESTROYS it on the stored record.
+ *   --fabricate writes the RESOLVED label instead of the raw stored name -> 7c bites alone, showing a
+ *               derived title ("<owner>'s Sketch") stamped onto a file nobody named. The L47 injury.
+ *   --inherit   drops saveNew's unname -> 7d bites alone: a NEW blueprint saved right after a quick-save
+ *               inherits the open file's title and the archive shows TWO files with ONE name. 7d needs its
+ *               OWN mutation because --noname happens to leave the in-memory doc unnamed by an earlier step,
+ *               so 7d passed there for the wrong reason — a check that passes for the wrong reason is not a
+ *               check either, which is the same lesson as 5d in a second hat.
  * Run them COMBINED too — two defects can mask each other.
+ *
+ * WHY 4e / 7a / 7b EXIST AT ALL: red-first 4 shipped asserting the name on the Studio quick-save path only,
+ * and printed GREEN while the SAME defect was live on the other three routes — one of which the Captain then
+ * hit on datumfi.com. A check that cannot fail is not a check, so the name is now asserted on every route
+ * that writes, and each was proven RED against the code as it stood at ba63aec before anything was fixed.
  */
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const { chromium } = require('playwright');
@@ -32,7 +46,10 @@ const NOGUARD = process.argv.includes('--noguard');
 const NEWROW  = process.argv.includes('--newrow');
 const CONFIRM = process.argv.includes('--confirm');
 const NOCLEAR = process.argv.includes('--noclear');
-const ANY_MUT = RF || NOGUARD || NEWROW || CONFIRM || NOCLEAR;
+const NONAME  = process.argv.includes('--noname');
+const FABRIC  = process.argv.includes('--fabricate');
+const INHERIT = process.argv.includes('--inherit');
+const ANY_MUT = RF || NOGUARD || NEWROW || CONFIRM || NOCLEAR || NONAME || FABRIC || INHERIT;
 
 let pass = 0, fail = 0; const lines = [];
 const ok = (c, m) => { if (c) pass++; else fail++; lines.push((c ? 'PASS ' : 'FAIL ') + m); };
@@ -49,6 +66,14 @@ const M_ST_SAVE   = "        DatumBlueprint.save(bp, { newBlueprint: true });\n"
 const A_ST_CLICK  = "      b.addEventListener('click', function (e) { e.stopPropagation(); saveProgress(meta); });";
 const M_ST_CLICK  = "      b.addEventListener('click', function (e) { e.stopPropagation(); confirmOverwrite(meta); });";
 const A_SK_CLEAR  = "        window._skActiveId = null;\n";
+// THE NAME DEFECT. --noname drops the carry-forward on BOTH surfaces (one anchor each, because each surface
+// funnels its routes through a single line). --fabricate is the OTHER direction: it writes the RESOLVED
+// label instead of the raw stored name, which quietly stamps a derived title onto a file nobody named.
+const A_ST_NAME   = "      if (dn) bp.display_name = dn; else delete bp.display_name;\n";
+const A_SK_NAME   = "        if (_keepName) payload.display_name = _keepName; else delete payload.display_name;\n";
+const A_ST_INHERIT = "        applyChosenName(bp, null);\n";   // saveNew's unname — 7d's own break-test
+const A_SK_FAB    = "        _doSave(1, 'nav', false, m.id, m.name ? 'Saved to ' + m.name : null, m.dn);";
+const M_SK_FAB    = "        _doSave(1, 'nav', false, m.id, m.name ? 'Saved to ' + m.name : null, m.name);";
 
 /* The save hook is registered at DOMContentLoaded and only AFTER the deferred hub has landed, so a fixed
    sleep races it. Measured: the hook is reliably present, but not within the ~1.5s the first draft of this
@@ -56,10 +81,12 @@ const A_SK_CLEAR  = "        window._skActiveId = null;\n";
    Wait for the thing itself. */
 async function waitHook(page, name) {
   try {
-    // NOTE the argument positions: waitForFunction(fn, ARG, OPTIONS). Passing options in slot 2 silently
-    // makes them the function ARGUMENT and leaves the default timeout in place — a rig bug I shipped once
-    // in this very file and it made a real 30s wait look like a deliberate 25s one.
-    await page.waitForFunction(`typeof window.${name} === 'function'`, null, { timeout: 25000 });
+    // A FUNCTION predicate, never a string. These pages ship a CSP without 'unsafe-eval', and a string
+    // predicate is evaluated as JavaScript in the page — it throws EvalError there. It never fired here
+    // because the condition was already true on the first poll, which is exactly what latent means.
+    // NOTE the argument positions too: waitForFunction(fn, ARG, OPTIONS). Options in slot 2 silently become
+    // the function ARGUMENT and leave the default timeout in place — a rig bug I shipped once in this file.
+    await page.waitForFunction((n) => typeof window[n] === 'function', name, { timeout: 25000 });
   } catch (e) {
     const diag = await page.evaluate(() => ({
       hub: typeof window.DatumBlueprint, d1: typeof window.DatumD1,
@@ -103,6 +130,27 @@ async function clickRow(page, sel) {
   await page.waitForSelector(sel, { timeout: 8000 });
   await page.$eval(sel, (el) => el.click());
 }
+/* Report the name as one of three DISTINCT states, never as a bare value. "absent" and "present but empty"
+   and "present with a name" are three different outcomes here and collapsing them would hide the negative:
+   an unnamed file must come back with the KEY ABSENT, not with a fabricated stand-in. */
+function nameState(rec) {
+  if (!rec) return 'NO RECORD';
+  if (!Object.prototype.hasOwnProperty.call(rec, 'display_name')) return 'KEY ABSENT';
+  return JSON.stringify(rec.display_name);
+}
+/* Drive the PRE-EXISTING overwrite route the way a user did before quick-save existed: pick the row for a
+   specific id out of the list, then confirm. rowSel/popSel differ per surface; everything else is shared. */
+async function overwriteExisting(page, popSel, rowSel, id) {
+  await page.waitForSelector(rowSel, { timeout: 10000 });
+  await page.$eval(`${rowSel}[data-overwrite-id="${id}"]`, (el) => el.click());
+  await page.waitForTimeout(600);
+  const clicked = await page.evaluate((sel) => {
+    const b = Array.prototype.find.call(document.querySelectorAll(sel + ' button'), (x) => x.textContent.trim() === 'Overwrite');
+    if (b) { b.click(); return true; }
+    return false;
+  }, popSel);
+  if (!clicked) throw new Error('overwrite confirm button not found in ' + popSel);
+}
 function need(hay, needle, label) {
   const n = hay.split(needle).length - 1;
   if (n !== 1) throw new Error(`anchor ${label}: expected exactly 1 occurrence, found ${n}`);
@@ -113,12 +161,16 @@ function mutateStudio(src) {
   if (NOGUARD) { need(s, A_ST_GUARD, 'st-guard');  s = s.replace(A_ST_GUARD, M_ST_GUARD); }
   if (NEWROW)  { need(s, A_ST_SAVE, 'st-save');    s = s.replace(A_ST_SAVE, M_ST_SAVE); }
   if (CONFIRM) { need(s, A_ST_CLICK, 'st-click');  s = s.replace(A_ST_CLICK, M_ST_CLICK); }
+  if (NONAME)  { need(s, A_ST_NAME, 'st-name');    s = s.replace(A_ST_NAME, ''); }
+  if (INHERIT) { need(s, A_ST_INHERIT, 'st-inherit'); s = s.replace(A_ST_INHERIT, ''); }
   return s;
 }
 function mutateSketch(src) {
   let s = src;
   if (RF)      { need(s, A_SK_INSERT, 'sk-insert'); s = s.replace(A_SK_INSERT, ''); }
   if (NOCLEAR) { need(s, A_SK_CLEAR, 'sk-clear');   s = s.replace(A_SK_CLEAR, ''); }
+  if (NONAME)  { need(s, A_SK_NAME, 'sk-name');     s = s.replace(A_SK_NAME, ''); }
+  if (FABRIC)  { need(s, A_SK_FAB, 'sk-fab');       s = s.replace(A_SK_FAB, M_SK_FAB); }
   return s;
 }
 
@@ -475,6 +527,11 @@ function fixtureSketch() {
     const skPuts = puts.slice(putsBefore).filter((p) => p.id.indexOf('sketchbook/') === 0);
     ok(skPuts.length > 0 && skPuts.every((p) => p.id === 'sketchbook/' + SK_ID), `SKETCH 6e: wrote the SAME id (${skPuts.map((p) => p.id).join(',') || 'none'})`);
     ok(archiveRows('sketchbook').length === skRowsBefore, `SKETCH 6f: minted NO new archive row (${skRowsBefore} -> ${archiveRows('sketchbook').length})`);
+    // RED-FIRST 4, SKETCH HALF. This is the check that printed GREEN through a live defect because it only
+    // ever looked at Studio. A save must never REMOVE a name the user chose.
+    const skStored = d1.rows['sketchbook/' + SK_ID] && d1.rows['sketchbook/' + SK_ID].payload;
+    ok(!!skStored && skStored.display_name === 'The Long Weekend',
+      `SKETCH 4e: quick-save PRESERVED the chosen name on the stored row (got ${nameState(skStored)})`);
     const skSeen = await page.evaluate(() => window.__confirmSeen.slice());
     ok(skSeen.length === 0, `SKETCH 6g: NO overwrite-confirm appeared (saw: ${JSON.stringify(skSeen)})`);
     const skAfter = await page.evaluate(() => ({ url: location.pathname, popGone: !document.getElementById('sketch-save-sb-pop') }));
@@ -521,6 +578,99 @@ function fixtureSketch() {
     await ctx.close();
   }
 
+  /* ═══ THE NAME DEFECT — ALL THREE CALL SITES ══════════════════════════════════════════════════════
+     A SAVE MUST NEVER REMOVE A NAME THE USER CHOSE. Quick-save is only one of three routes into the same
+     stores; the other two are the pre-existing "overwrite an existing sheet/sketch" confirms, which destroy
+     the name identically and have done since rename shipped. Covering only quick-save is how RED-FIRST 4
+     printed green through a live defect. The name is carried FORWARD from the target record — never
+     re-derived, never substituted — and an unnamed file keeps its key ABSENT (L47). */
+  {
+    // (i) STUDIO, pre-existing overwrite route.
+    seedRows();
+    const { ctx, page, failed } = await newSurface();
+    await page.addInitScript(initScript(SK_ID, fixtureSketch()));
+    await go(page, base + '/studio.html', failed);
+    await waitHook(page, 'studioSaveCurrent');
+    await page.waitForTimeout(1500);
+    await openStudioPicker(page);
+    await page.waitForTimeout(1200);
+    await overwriteExisting(page, '#studio-save-bp-pop', '.bp-ovrow', BP_ID);
+    await page.waitForTimeout(2600);
+    const bpRec = d1.rows['blueprint/' + BP_ID] && d1.rows['blueprint/' + BP_ID].payload;
+    ok(!!bpRec && bpRec.display_name === 'The Harbour Plan',
+      `NAME 7a: STUDIO overwrite PRESERVED the chosen name (got ${nameState(bpRec)})`);
+
+    /* 7d — THE OTHER DIRECTION, and it was introduced by this very fix. quick-save leaves the NAMED doc on
+       window._studioBp; liveBp() hands it back to "save as a new blueprint"; the new row then carries the old
+       row's title and the archive shows TWO files with ONE name. A new file is unnamed until its owner names
+       it, so the key must be ABSENT here. Measured before it was fixed: the new row read "The Harbour Plan". */
+    const rowsBeforeNew = archiveRows('blueprint').length;
+    await openStudioPicker(page);
+    await page.waitForTimeout(1300);
+    const quick = await page.evaluate(() => !!document.getElementById('studio-bp-quicksave'));
+    if (quick) { await clickRow(page, '#studio-bp-quicksave'); await page.waitForTimeout(2600); }
+    await openStudioPicker(page);
+    await page.waitForTimeout(1300);
+    await page.evaluate(() => {
+      const b = Array.prototype.find.call(document.querySelectorAll('#studio-save-bp-pop button'), (x) => x.textContent.indexOf('Save as a new blueprint') >= 0);
+      if (b) b.click();
+    });
+    await page.waitForTimeout(2600);
+    const minted = archiveRows('blueprint').filter((k) => k !== 'blueprint/' + BP_ID);
+    ok(minted.length === archiveRows('blueprint').length - rowsBeforeNew && minted.length > 0,
+      `NAME 7d-pre: save-as-new minted exactly one new blueprint row (${rowsBeforeNew} -> ${archiveRows('blueprint').length})`);
+    const mintedRec = minted.length ? d1.rows[minted[0]].payload : null;
+    ok(!!mintedRec && !Object.prototype.hasOwnProperty.call(mintedRec, 'display_name'),
+      `NAME 7d: NEGATIVE — a NEW blueprint saved right after quick-save is UNNAMED, it does not inherit the open file's title (got ${nameState(mintedRec)})`);
+    await ctx.close();
+  }
+  {
+    // (ii) SKETCH, pre-existing overwrite route.
+    seedRows();
+    const { ctx, page, failed } = await newSurface();
+    await page.addInitScript(initScript(SK_ID, fixtureSketch()));
+    await go(page, base + '/sketch.html', failed);
+    await waitHook(page, 'sketchSaveCurrent');
+    await page.waitForTimeout(2200);
+    await page.evaluate(() => window.sketchSaveCurrent());
+    await page.waitForTimeout(1400);
+    await overwriteExisting(page, '#sketch-save-sb-pop', '.sk-ovrow', SK_ID);
+    await page.waitForTimeout(2600);
+    const skRec = d1.rows['sketchbook/' + SK_ID] && d1.rows['sketchbook/' + SK_ID].payload;
+    ok(!!skRec && skRec.display_name === 'The Long Weekend',
+      `NAME 7b: SKETCH overwrite PRESERVED the chosen name (got ${nameState(skRec)})`);
+    await ctx.close();
+  }
+  {
+    /* (iii) THE NEGATIVE. A sketch that was NEVER named must come back with the key ABSENT. The fix carries a
+       name forward; it must not INVENT one, and it must not let a derived display label ("Sweety and
+       Peachy's Sketch") get written into the record as if the user had chosen it. That derived string is the
+       L47 injury in full: it looks exactly like a real title and every unnamed file of one user gets the
+       SAME one, so three files silently share a name. */
+    seedRows();
+    const unnamed = fixtureSketch(); delete unnamed.display_name;
+    d1.rows['sketchbook/' + SK_ID] = { payload: unnamed, revision: 1, updated_at: SAVED_TS };
+    const { ctx, page, failed } = await newSurface();
+    await page.addInitScript(initScript(SK_ID, unnamed));
+    await page.addInitScript(`(() => { try {
+      sessionStorage.setItem('datumfi_hydrate_from_slot', '1');
+      sessionStorage.setItem('datumfi_hydrate_sketch_id', '${SK_ID}');
+    } catch (e) {} })();`);
+    await go(page, base + '/sketch.html', failed);
+    await waitHook(page, 'sketchSaveCurrent');
+    await page.waitForTimeout(2200);
+    await page.evaluate(() => window.sketchSaveCurrent());
+    await page.waitForTimeout(1400);
+    // Assert the row is there, then click it — never click blind. --redfirst removes the row entirely, and an
+    // unconditional click there CRASHED the whole run, which reports nothing at all instead of a clean RED.
+    const unRow = await page.evaluate(() => !!document.getElementById('sketch-sb-quicksave'));
+    ok(unRow, 'NAME 7c-pre: the quick-save row is present on an unnamed saved sketch (it has an id, just no name)');
+    if (unRow) { await clickRow(page, '#sketch-sb-quicksave'); await page.waitForTimeout(2600); }
+    const unRec = d1.rows['sketchbook/' + SK_ID] && d1.rows['sketchbook/' + SK_ID].payload;
+    ok(!!unRec && !Object.prototype.hasOwnProperty.call(unRec, 'display_name'),
+      `NAME 7c: NEGATIVE — a never-named sketch keeps the key ABSENT, no fabricated name (got ${nameState(unRec)})`);
+  }
+
   await browser.close();
   await new Promise((r) => server.close(r));
 
@@ -533,7 +683,7 @@ function fixtureSketch() {
   }
 
   console.log('\n' + lines.join('\n'));
-  const mode = ANY_MUT ? `MUTATED[${[RF && 'redfirst', NOGUARD && 'noguard', NEWROW && 'newrow', CONFIRM && 'confirm', NOCLEAR && 'noclear'].filter(Boolean).join(',')}]` : 'CLEAN';
+  const mode = ANY_MUT ? `MUTATED[${[RF && 'redfirst', NOGUARD && 'noguard', NEWROW && 'newrow', CONFIRM && 'confirm', NOCLEAR && 'noclear', NONAME && 'noname', FABRIC && 'fabricate', INHERIT && 'inherit'].filter(Boolean).join(',')}]` : 'CLEAN';
   console.log(`\n${mode}  GREEN ${pass} / RED ${fail}`);
   if (ANY_MUT) {
     console.log(fail > 0 ? 'RED-FIRST OK — the mutation BIT.' : 'RED-FIRST FAILED — mutation applied but every check still passed. The gate is blind here.');

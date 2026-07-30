@@ -9054,15 +9054,52 @@ Studio is built for exactly this. See If This Shape Holds →`;
 
       // P5 Step-3: write the CHOSEN slot (1..4), preserving the other slots. source:'nav'
       // (picker, any phase) -> DRAFTED; source:'phaseV' (full-experience CTA) -> MODELED.
+      /* A SAVE MUST NEVER REMOVE A NAME THE USER CHOSE.
+         serializeSketchState() has never carried display_name, and _doSave is the SINGLE writer for every
+         sketch save route, so every one of them replaced the stored record with one that had the key gone.
+         The chosen title was destroyed ON DISK — not misdisplayed — and the archive then fell back to a
+         derived label. Fixed here, at the writer, so the two picker routes cannot drift apart (L48). */
+      function _skChosenName(rec) {
+        var d = rec && rec.display_name;
+        return (typeof d === 'string' && d.trim()) ? d.trim() : null;
+      }
+      /* LOCAL-ONLY fallback for the name currently stored against an id, used when the caller could not hand
+         one over. Deliberately never a network read: a save must not depend on a fetch that can fail, or the
+         failure path strips the name and we are back to the same injury through a different door. Order is
+         freshest-first — the per-id stash is rewritten on every open and every save, the 4-slot book second.
+         NAMED RESIDUAL: if D1 is unreachable AND every local copy is stale (e.g. the name was set on another
+         device and this one has not seen it), the name cannot be known here and the save proceeds without it,
+         exactly as today. That case is not silently assumed away; it is the one gap this cannot close without
+         a read, and callers avoid it by passing the name from the record the picker actually listed. */
+      function _skStoredName(id) {
+        if (!id) return null;
+        try {
+          var s = JSON.parse(localStorage.getItem('datum_sketch_byid_' + id) || 'null');
+          var n = _skChosenName(s); if (n) return n;
+        } catch (e) {}
+        try {
+          var b = _readBook();
+          if (b) { for (var i = 1; i <= 4; i++) { var r = b['slot_' + i]; if (r && r.sketch_id === id) { var n2 = _skChosenName(r); if (n2) return n2; } } }
+        } catch (e) {}
+        return null;
+      }
       // toastMsg (5th arg) — a CALLER-SUPPLIED confirm string. Added so quick-save can say "Saved to
       // <name>" without forking this function for one label (L48 reuse-do-not-fork). Falsy = today's
       // wording, unchanged for every existing caller.
-      function _doSave(slotN, source, forceNew, overwriteId, toastMsg) {
+      // keepName (6th arg) — the chosen name read off the record the caller is targeting. Falsy falls back
+      // to _skStoredName; still nothing found means the file was never named and the key stays ABSENT.
+      function _doSave(slotN, source, forceNew, overwriteId, toastMsg, keepName) {
         var _slot = (slotN >= 1 && slotN <= 4) ? slotN : 1;
         var prev = null;
         try { prev = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch(ex) {}
         var payload = serializeSketchState();
         payload.sketch_id = overwriteId ? overwriteId : _stableSketchId(_slot, payload, forceNew);   // overwriteId -> that exact D1 row; forceNew mints a NEW row
+        // Carry the TARGET record's chosen name forward. Never re-derive it, never substitute a default: the
+        // derived label ("<owner>'s Sketch") is the SAME string for every unnamed sketch one person owns, so
+        // writing it back would give several files one identical title that looks exactly like a real one —
+        // the L47 injury in full. A save-as-new has a brand-new id, finds nothing, and stays unnamed.
+        var _keepName = keepName || _skStoredName(payload.sketch_id);
+        if (_keepName) payload.display_name = _keepName; else delete payload.display_name;
         payload.status = (source === 'phaseV') ? 'Modeled' : 'Drafted';
         var now = new Date();
         var mm  = String(now.getMonth() + 1).padStart(2, '0');
@@ -9202,7 +9239,9 @@ Studio is built for exactly this. See If This Shape Holds →`;
           ? window.DatumSavedName.resolve(c, { noun: 'Sketch', ownerName: owner }).name
           : (st || 'Sketch');
         var sub = [st, status, when].filter(function (x) { return x; }).join('  ·  ');
-        return { id: id, name: nm, sub: sub };
+        // dn is the RAW stored name, kept apart from `nm` on purpose: `nm` is the resolved label and is
+        // DERIVED when none was chosen, so writing `nm` back would stamp a generated title onto the record.
+        return { id: id, name: nm, sub: sub, dn: _skChosenName(c) };
       }
       function _skListFromLS() {
         var out = [], b = _readBook();
@@ -9235,7 +9274,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
         var row = document.createElement('div'); row.style.cssText = 'display:flex;gap:6px;';
         var ov = document.createElement('button'); ov.type = 'button'; ov.textContent = 'Overwrite';
         ov.style.cssText = 'flex:1;background:rgba(201,168,76,0.15);border:1px solid var(--gold,#c9a84c);color:var(--gold,#c9a84c);font-family:var(--font-mono);font-size:11px;padding:8px 10px;border-radius:4px;cursor:pointer;';
-        ov.addEventListener('click', function (e) { e.stopPropagation(); _skClose(); _doSave(1, 'nav', false, m.id); });
+        ov.addEventListener('click', function (e) { e.stopPropagation(); _skClose(); _doSave(1, 'nav', false, m.id, null, m.dn); });
         var ca = document.createElement('button'); ca.type = 'button'; ca.textContent = 'Cancel';
         ca.style.cssText = 'flex:1;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.12);color:var(--white,#fff);font-family:var(--font-mono);font-size:11px;padding:8px 10px;border-radius:4px;cursor:pointer;';
         ca.addEventListener('click', function (e) { e.stopPropagation(); _skRenderSlots(); });
@@ -9259,7 +9298,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
          falls through to the existing plain confirm instead of an invented one (L47). */
       function _skSaveProgress(m) {
         _skClose();
-        _doSave(1, 'nav', false, m.id, m.name ? 'Saved to ' + m.name : null);
+        _doSave(1, 'nav', false, m.id, m.name ? 'Saved to ' + m.name : null, m.dn);
       }
       // Row zero — teal, so it reads as distinct from the gold "save as new" and the grey overwrite rows.
       function _skQuickSaveRow(m) {
