@@ -508,7 +508,10 @@
       if (!type || !id) return Promise.reject(new Error('rename:bad-target'));
       var nm = String(newName == null ? '' : newName).trim().slice(0, window.DatumSavedName.MAX);
       return D1.getDoc(type, id).then(function (doc) {
-        if (!doc || !doc.payload) throw new Error('rename:not-found');
+        // NOT 'not-found'. getDoc resolves null for a network failure, a 5xx, a timeout and an expired
+        // token exactly as it does for a genuinely absent row, so this branch cannot know the file is gone
+        // — and asserting it was the lie. Say only what is true: nothing was renamed.
+        if (!doc || !doc.payload) throw new Error('We could not reach your saved work just now. Nothing was renamed. Reload the page and try again.');
         var rec = JSON.parse(doc.payload);
         if (typeof doc.revision === 'number' && typeof D1.setRevision === 'function') D1.setRevision(type, id, doc.revision);
         // Cleared -> DELETE the key so the resolver falls back to derived. An empty string stored would

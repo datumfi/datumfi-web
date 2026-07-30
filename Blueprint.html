@@ -1575,6 +1575,26 @@ function renderEmptySlot(label) {
   `;
 }
 
+// A blueprint the LIST reported but whose PAYLOAD never arrived (getDoc resolved null, or its JSON would
+// not parse). The row EXISTS, so rendering renderEmptySlot here was the bug: an empty sheet reads as
+// "deleted" and its ＋ invites a save straight over the sheet we just failed to read. This tile states the
+// fact and offers nothing. NO CAUSE IS NAMED anywhere in this copy — the client cannot tell a network
+// problem from a server problem from a bad payload, and getDoc discards the difference before we see it.
+function _isUnloaded(bp) { return !!(bp && bp._unloaded); }
+function renderCannotLoadSlot(label) {
+  return `
+    <div class="empty-state">
+      <div>
+        <div class="sheet-id">Sheet ${label}</div>
+        <p class="empty-label">
+          Could not load
+          <span>This blueprint did not load. It has not been deleted. Reload the page to try again.</span>
+        </p>
+      </div>
+    </div>
+  `;
+}
+
 function renderBlueprintSlot(label, bpId, data) {
   return `
     <div class="card-top">
@@ -1642,8 +1662,12 @@ function loadArchive() {
         const entries = [];
         full.forEach(function (f, i) {
           if (f && f.payload) {
-            try { const bp = JSON.parse(f.payload); entries.push({ rec: bp, updatedAt: docs[i].updated_at }); _stashForOpen(bp); } catch (e) {}
+            try { const bp = JSON.parse(f.payload); entries.push({ rec: bp, updatedAt: docs[i].updated_at }); _stashForOpen(bp); return; } catch (e) {}
           }
+          // Listed but not loaded. KEEP IT IN THE LIST — dropping it here is what made a saved blueprint
+          // present as a free save slot and made the counter under-report. It sorts on the list row's
+          // updated_at (the only date we have) so it holds its rightful sheet position.
+          entries.push({ rec: { _unloaded: true }, updatedAt: docs[i].updated_at });
         });
         ARCH.list = (window.DatumOrder ? window.DatumOrder.newestSavedFirst(entries) : entries).map(function (e) { return e.rec; });
         resolve();
@@ -1668,8 +1692,14 @@ function renderArchivePage() {
     const content = document.getElementById('blueprint-content-' + (i + 1));
     if (!tile || !content) continue;
     tile.className = 'blueprint-slot';
-    tile.classList.toggle('has-blueprint', !!bp);
-    if (bp) {
+    tile.classList.toggle('has-blueprint', !!bp && !_isUnloaded(bp));
+    if (_isUnloaded(bp)) {
+      // No bpId: not selectable, not openable, not eraseable, and the grid click handler refuses it as a
+      // save target on the .cannot-load class. A warning beside a live overwrite would not be a fix.
+      tile.dataset.bpId = '';
+      tile.classList.add('cannot-load');
+      content.innerHTML = renderCannotLoadSlot(_label(gi));
+    } else if (bp) {
       const bpId = bp.blueprint_id || ('bp-' + gi);
       tile.dataset.bpId = bpId;
       tile.classList.toggle('active-blueprint', AppSessionState.activeBlueprintId === bpId);
@@ -1806,7 +1836,11 @@ function goToStudioToSave() {
  * + per-id Open key + LS 4-slot + Clerk blueprint_z mirror via DatumPurge). */
 
 function openCompareModal() {
-  const rows = ARCH.list.map((bp, gi) => ({ label: _label(gi), data: bpToCard(bp) }));
+  // Labels are taken BEFORE the filter so Compare agrees with the archive's sheet numbering. A sheet that
+  // did not load has no figures to compare; bpToCard on it would invent a row of zeros.
+  const rows = ARCH.list.map((bp, gi) => ({ label: _label(gi), bp: bp }))
+    .filter(function (r) { return !_isUnloaded(r.bp); })
+    .map(function (r) { return { label: r.label, data: bpToCard(r.bp) }; });
   const wrap = document.getElementById('compare-table-wrap');
   if (!rows.length) {
     wrap.innerHTML = '<p>No saved Blueprints to compare yet.</p>';
@@ -1842,6 +1876,9 @@ document.getElementById('blueprint-grid').addEventListener('click', function (e)
       || e.target.closest('.rename-action') || e.target.closest('.rename-input')))) return;
   const tile = e.target.closest && e.target.closest('.blueprint-slot');
   if (!tile) return;
+  // A sheet that failed to load is NOT an empty sheet: it must never fall through to the fresh-Studio
+  // branch below, which is this page's save affordance.
+  if (tile.classList.contains('cannot-load')) return;
   const bpId = tile.dataset.bpId;
   if (bpId) {
     AppSessionState.activeBlueprintId = bpId;
@@ -2011,7 +2048,9 @@ archiveTitle.addEventListener('blur', function() {
 var _bpAuthHint = false; try { _bpAuthHint = sessionStorage.getItem('datum_auth_hint') === '1'; } catch (e) {}
 if (_bpAuthHint) {
   renderArchivePage();                                                                 // neutral empty sheets; D1 pass fills them
-  setTimeout(function () { if (!ARCH.list.length) loadArchive().then(renderArchivePage); }, 4000);   // outage safety net
+  // Outage safety net. Counts LOADED sheets only: with cannot-load placeholders now held in the list, a
+  // bare .length would be non-zero on a total read failure and would silently retire this retry.
+  setTimeout(function () { if (!ARCH.list.filter(function (b) { return !_isUnloaded(b); }).length) loadArchive().then(renderArchivePage); }, 4000);
 } else {
   loadArchive().then(renderArchivePage);                                               // signed-out / never-authed: LS immediately
 }

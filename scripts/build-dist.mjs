@@ -32,7 +32,7 @@ const SACRED = {
   // and 4 all land in it — pin it BEFORE the arc that leans on it, not after.
   // NOTE: CLAUDE.md lists this host as 'scripts/nav.js'. That path does not exist; the real, page-referenced
   // file is /nav.js at the repo root (every page loads <script src="/nav.js">). Pinned at its true path.
-  'nav.js': 'ea031b807239b40188949c9e328ef24e',
+  'nav.js': 'df93828a01829d520daf8e1280794675',   // rename no longer asserts not-found (2026-07-29)
   // Same gap as nav.js above, found 2026-07-27 while wiring the erase fix: sketchbook.html is a
   // Sacred Host in CLAUDE.md but was ABSENT from this map, so the erase edit passed the build with
   // no guard at all. Pinned at its true content.
@@ -47,7 +47,7 @@ const SACRED = {
   // pinned here, and every host pinned here is declared there — the two lists match exactly.
   'vault.html': 'c7a7a9c101a6743c6a6a2d4c9f8453e1',
   'my-account.html': 'aee2279c79d212917686ab2e36f1591a',
-  'Blueprint.html': '032ec4b1bc6e9b77d05ca6fcd8f88522',
+  'Blueprint.html': 'd704336e5659bffaebf372062f09f46f',   // cannot-load tile + true counter (2026-07-29)
   'Dossier.html': '5cceff124fd6d158557fa5d58defb1bd',
   'privacy.html': 'e8ad09c3b1881fd53b47b5be9ae0ded4',
   'terms.html': 'f075b5b3a3a919ee586b962aa17bf200',
