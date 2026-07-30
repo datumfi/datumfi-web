@@ -4616,6 +4616,15 @@
         document.getElementById('tax-20').checked = true;
         slTax.value = 20;
 
+        // ACTIVE SAVED SKETCH — CLEAR POINT. This is FRESH WORK, so we are no longer inside the sketch we
+        // opened. If a stale id survived a reset, Save progress would silently overwrite a file the user
+        // has walked away from — the one data-loss shape this feature has, so it is cleared here rather
+        // than anywhere downstream. This is the ONLY in-page route to new work (resetSketch has a single
+        // caller, #btn-reset-sketch); every other route to new work is a page load, and the holder lives
+        // on window, so it starts empty there by construction. NOTE the deliberate non-clear: #btn-reset-
+        // design resets the S2 design back to the discovered S1 shape WITHOUT leaving the file, so it must
+        // keep the id — that is still the same saved sketch.
+        window._skActiveId = null;
         touched = { timeline: false, capital: false, spending: false, refined: false };
         hasInteracted = false;
         _shapeArmed = false;
@@ -9045,7 +9054,10 @@ Studio is built for exactly this. See If This Shape Holds →`;
 
       // P5 Step-3: write the CHOSEN slot (1..4), preserving the other slots. source:'nav'
       // (picker, any phase) -> DRAFTED; source:'phaseV' (full-experience CTA) -> MODELED.
-      function _doSave(slotN, source, forceNew, overwriteId) {
+      // toastMsg (5th arg) — a CALLER-SUPPLIED confirm string. Added so quick-save can say "Saved to
+      // <name>" without forking this function for one label (L48 reuse-do-not-fork). Falsy = today's
+      // wording, unchanged for every existing caller.
+      function _doSave(slotN, source, forceNew, overwriteId, toastMsg) {
         var _slot = (slotN >= 1 && slotN <= 4) ? slotN : 1;
         var prev = null;
         try { prev = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch(ex) {}
@@ -9081,6 +9093,10 @@ Studio is built for exactly this. See If This Shape Holds →`;
         if (_stateSlot) { try { localStorage.setItem('datum_sketch_state_' + _stateSlot, JSON.stringify(payload)); } catch(ex) {} }
         try { localStorage.setItem('datum_sketch_byid_' + payload.sketch_id, JSON.stringify(payload)); } catch(ex) {}   // per-id stash -> open ANY sketch by id (mirror sketchbook _stashSketchForOpen)
         _d1WriteSketch(payload);   // P5b Layer-1 — ADDITIVE: this saved sketch as its OWN D1 row (key=sketch_id)
+        // ACTIVE SAVED SKETCH — SET POINT 3 of 3. Every successful save makes THIS the file we are in, so
+        // a save-as-new correctly becomes the new active file and the next quick-save targets it, not the
+        // one it was branched from.
+        window._skActiveId = payload.sketch_id;
         sessionStorage.setItem('datumfi_just_saved', '1');
         sessionStorage.setItem('datumfi_sketch_return_screen', window.location.hash || '#screen-5-build');
         sessionStorage.setItem('datumfi_sketch_current_snapshot', JSON.stringify(payload));
@@ -9091,7 +9107,7 @@ Studio is built for exactly this. See If This Shape Holds →`;
         // P6.1 Item-3: the NAV picker save STAYS on the Sketch (Studio parity — save
         // + keep working, no forced reopen). Only the Phase-V completion CTA hands off
         // to the Sketchbook. Origin-relative so the hop stays on the current host.
-        var _toastMsg = overwriteId ? 'Sketch updated' : (forceNew ? 'Saved as a new sketch' : ('Saved to A-0' + _slot));
+        var _toastMsg = toastMsg || (overwriteId ? 'Sketch updated' : (forceNew ? 'Saved as a new sketch' : ('Saved to A-0' + _slot)));
         function _finish() {
           if (source === 'phaseV') { window._navDrain(new URL('sketchbook.html', window.location.href).href); return; }
           var _t = document.getElementById('sketchOverlayToast');
@@ -9225,6 +9241,39 @@ Studio is built for exactly this. See If This Shape Holds →`;
         ca.addEventListener('click', function (e) { e.stopPropagation(); _skRenderSlots(); });
         row.appendChild(ov); row.appendChild(ca); _pop.appendChild(row);
       }
+      /* SAVE PROGRESS (quick-save) — Studio parity. The active test is TWO-PART for the same reason it is
+         on Studio: window._skActiveId alone is not enough, it must still resolve to a LIVE row, or a held
+         id whose sketch was erased would silently recreate the file the user deleted. Held-but-dead reads
+         as NO active file: no row, today's flow untouched. */
+      function _skActiveMeta(items) {
+        var id = window._skActiveId;
+        if (!id || !items) return null;
+        for (var i = 0; i < items.length; i++) { if (items[i].id === id) return items[i]; }
+        return null;
+      }
+      /* One tap = the by-id save on the CURRENT sketch. _doSave already reaches that exact D1 row through
+         overwriteId, refreshes its slot in place when it sits in the newest-4 net, and never rolls or
+         evicts the net on an overwrite — so this is the SAME id, no new row, no overwrite-confirm, and
+         source 'nav' keeps the user on the page. The confirm string is passed IN rather than forking
+         _doSave (L48); m.name is the resolved archive name and is never fabricated, and a missing name
+         falls through to the existing plain confirm instead of an invented one (L47). */
+      function _skSaveProgress(m) {
+        _skClose();
+        _doSave(1, 'nav', false, m.id, m.name ? 'Saved to ' + m.name : null);
+      }
+      // Row zero — teal, so it reads as distinct from the gold "save as new" and the grey overwrite rows.
+      function _skQuickSaveRow(m) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.id = 'sketch-sb-quicksave';
+        b.style.cssText = 'text-align:left;background:linear-gradient(180deg,rgba(29,158,117,0.30),rgba(29,158,117,0.10));border:1px solid var(--teal,#1d9e75);color:var(--white,#fff);font-family:var(--font-mono);font-size:11.5px;font-weight:600;letter-spacing:0.03em;padding:10px 12px;border-radius:5px;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,0.16),0 2px 8px rgba(0,0,0,0.4);';
+        var t = document.createElement('span'); t.textContent = 'Save progress'; b.appendChild(t);
+        var s = document.createElement('span');
+        s.style.cssText = 'display:block;margin-top:3px;font-size:9px;font-weight:400;letter-spacing:0.04em;color:rgba(255,255,255,0.62);';
+        s.textContent = 'Save your changes to this sketch';
+        b.appendChild(s);
+        b.addEventListener('click', function (e) { e.stopPropagation(); _skSaveProgress(m); });
+        return b;
+      }
       function _skRenderSlots() {
         if (!_pop) return;
         _skEnsurePickStyle();
@@ -9247,6 +9296,11 @@ Studio is built for exactly this. See If This Shape Holds →`;
         _list.appendChild(_loading); _pop.appendChild(_list);
         _skListSketches().then(function (items) {
           if (!_pop || !_list.isConnected) return;
+          // Row zero and the demoted heading appear TOGETHER, and only once the archive has confirmed the
+          // held id is still live. Nothing renders in the meantime — no placeholder that could read as a
+          // real sketch name (L47). With no active file neither line renders and this is today's picker.
+          var _am = _skActiveMeta(items);
+          if (_am) { _pop.insertBefore(_skQuickSaveRow(_am), head.nextSibling); _lbl.textContent = 'Save as new / overwrite another'; }
           _list.innerHTML = '';
           if (!items.length) {
             var _none = document.createElement('div'); _none.textContent = 'No saved sketches yet — save your first above.';
@@ -9335,6 +9389,12 @@ Studio is built for exactly this. See If This Shape Holds →`;
       // Legacy no-id path only (older opens that never carried a sketch_id): fall back to the clicked slot.
       if (!_contract && !_hid) { _contract = _lsData && (_lsData['slot_' + _hydrateSlot] || _lsData.slot_1); }
       if (!_contract) return;
+      // ACTIVE SAVED SKETCH — SET POINT 1 of 3 (Sketchbook -> Open). Studio gets this free from
+      // _studioBp.blueprint_id; the sketch had nowhere to hold it (the hydrate id is read and dropped
+      // above), so this window holder is the parity answer to "which saved sketch am I in". Set only
+      // AFTER hydration has actually succeeded — if we did not paint the sketch we are not in it. Reads
+      // off _contract so the legacy no-id path is covered too: either way it is the record we opened.
+      if (_contract.sketch_id) window._skActiveId = _contract.sketch_id;
 
       var _slAge     = document.getElementById('slider-age');
       var _slAct     = document.getElementById('slider-activation');
@@ -9416,6 +9476,12 @@ Studio is built for exactly this. See If This Shape Holds →`;
         _contract = (_blob && (_blob['slot_' + _id] || _blob.slot_1)) || null;
       }
       if (!_contract) return;
+      // ACTIVE SAVED SKETCH — SET POINT 2 of 3 (?id= URL open). A SECOND open route the quick-save spec
+      // did not name; without this, a sketch opened by link would show no Save progress even though a
+      // saved file is plainly open. Prefer the record's own id over the URL param — the last fallback
+      // above can land on slot_1, i.e. a DIFFERENT sketch than ?id asked for, and holding the requested
+      // id there would point quick-save at a file we never painted.
+      if (_contract.sketch_id) window._skActiveId = _contract.sketch_id;
 
       var _slAge     = document.getElementById('slider-age');
       var _slAct     = document.getElementById('slider-activation');

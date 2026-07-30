@@ -16136,6 +16136,69 @@
       } catch (e) { toast('Save failed.'); }
       close();
     }
+    /* ── SAVE PROGRESS (quick-save) — row zero of this picker whenever a saved sheet is ACTIVE ──────────
+       WHICH DOC ARE WE IN. Measured, not assumed: the Studio keeps the live doc in TWO places and they can
+       disagree. On a saved open, _studioBlueprint carries the hydrated doc (_loadSource 'd1', with its id
+       and its rooms) while _studioBp can simultaneously hold a SEPARATE EMPTY doc (_loadSource
+       'fresh+dossier'). Reading _studioBp first — the precedence liveBp() uses — therefore finds a null id,
+       and the control would never appear on exactly the file it exists for. So prefer whichever holder
+       actually carries the identity. That choice also protects the RENAME: the empty holder has no
+       display_name, and captureDOM only restores DOM-derived fields, so saving it wrote a payload with the
+       user's name MISSING (the gate caught precisely that). Falling back to liveBp() when neither has an id
+       keeps today's precedence for the case where there is nothing to preserve. */
+    function activeDoc() {
+      var a = window._studioBp, b = window._studioBlueprint;
+      if (a && a.blueprint_id) return a;
+      if (b && b.blueprint_id) return b;
+      return liveBp();
+    }
+    function activeId() {
+      var d = activeDoc();
+      return (d && d.blueprint_id) || null;
+    }
+    /* IS IT STILL REAL. The active test is deliberately TWO-PART: a held id is NOT enough, it must still
+       resolve to a LIVE archive row. The autosave draft carries blueprint_id forward, so after a
+       save-then-erase the id points at a row that no longer exists and save() would silently RECREATE the
+       sheet the user deleted. Held-but-dead therefore reads as NO active file: no row, today's flow
+       untouched. */
+    function activeMeta(items) {
+      var id = activeId();
+      if (!id || !items) return null;
+      for (var i = 0; i < items.length; i++) { if (items[i].id === id) return items[i]; }
+      return null;
+    }
+    /* One tap = the store save on the CURRENT doc, targeted at the id the archive just confirmed. Same store
+       call the picker already uses for an overwrite (L48 reuse — no new store path, no new mechanism): save()
+       adopts opts.blueprint_id and _placeInNet then updates THAT id's slot in place, so this is the SAME D1
+       row — no new archive row, no overwrite-confirm, no navigation, working doc left alone, and idempotent.
+       WHY THE ID IS PASSED rather than left implicit: save(bp) with no options keeps whatever id bp happens
+       to carry, and the two live-doc holders can disagree (see activeId above), so an implicit save could
+       write to a doc with no id at all and mint a row. Passing the confirmed id removes that dependency
+       entirely. meta.name is the resolved archive name (DatumSavedName via bpMeta), never fabricated; with no
+       name we fall back to the plain confirm rather than inventing one (L47). */
+    function saveProgress(meta) {
+      try {
+        var bp = activeDoc();
+        DatumBlueprint.captureDOM(bp);
+        DatumBlueprint.save(bp, { blueprint_id: meta.id });
+        window._studioBp = bp;
+        toast(meta.name ? 'Saved to ' + meta.name : 'Saved.');
+      } catch (e) { toast('Save failed.'); }
+      close();
+    }
+    // Row zero — teal, so it reads as distinct from the gold "save as new" and the grey overwrite rows.
+    function quickSaveRow(meta) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.id = 'studio-bp-quicksave';
+      b.style.cssText = 'text-align:left;background:linear-gradient(180deg,rgba(29,158,117,0.30),rgba(29,158,117,0.10));border:1px solid var(--teal,#1d9e75);color:var(--white,#fff);font-family:var(--font-mono);font-size:11.5px;font-weight:600;letter-spacing:0.03em;padding:10px 12px;border-radius:5px;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,0.16),0 2px 8px rgba(0,0,0,0.4);';
+      var t = document.createElement('span'); t.textContent = 'Save progress'; b.appendChild(t);
+      var s = document.createElement('span');
+      s.style.cssText = 'display:block;margin-top:3px;font-size:9px;font-weight:400;letter-spacing:0.04em;color:rgba(255,255,255,0.62);';
+      s.textContent = 'Save your changes to this blueprint';
+      b.appendChild(s);
+      b.addEventListener('click', function (e) { e.stopPropagation(); saveProgress(meta); });
+      return b;
+    }
     function close() { if (pop) { if (pop.parentNode) pop.remove(); pop = null; document.removeEventListener('click', onDoc, true); } }
     function onDoc(e) { if (pop && !pop.contains(e.target) && e.target !== btn) close(); }
     /* Gated picker: an EMPTY slot saves immediately; a FILLED slot must confirm the
@@ -16193,6 +16256,12 @@
       pop.appendChild(list);
       listBlueprints().then(function (items) {
         if (!pop || !list.isConnected) return;
+        // Row zero and the demoted heading appear TOGETHER, and only once the archive has confirmed this
+        // doc is still live. Nothing is rendered in the meantime — no placeholder that could read as a
+        // real sheet name (L47). When no sheet is active neither line renders and this picker is byte-
+        // for-byte today's picker.
+        var am = activeMeta(items);
+        if (am) { pop.insertBefore(quickSaveRow(am), head.nextSibling); lbl.textContent = 'Save as new / overwrite another'; }
         list.innerHTML = '';
         if (!items.length) {
           var none = document.createElement('div');
