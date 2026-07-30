@@ -51,7 +51,7 @@ const SACRED = {
   'Dossier.html': '5cceff124fd6d158557fa5d58defb1bd',
   'privacy.html': 'e8ad09c3b1881fd53b47b5be9ae0ded4',
   'terms.html': 'f075b5b3a3a919ee586b962aa17bf200',
-  'scripts/account-topbar.js': '3ca6f7f1f3aaf269e84fc65ada99d7e7',   // save button label + title copy only (2026-07-30)
+  'scripts/account-topbar.js': '29a4b5609ba83461c14c2269da2be7d9',   // tab hops routed through the page chokepoint, fail-open (2026-07-30)
 };
 const md5 = (p) => createHash('md5').update(readFileSync(p)).digest('hex');
 

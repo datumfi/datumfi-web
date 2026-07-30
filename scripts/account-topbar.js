@@ -164,15 +164,35 @@
       + '</header>';
   }
 
+  /* THE TOPBAR IS THE NAVIGATION FOR A SIGNED-IN USER, so every tab hop is routed through the page's own
+   * _navDrain chokepoint where one exists. Today that means a topbar hop AWAITS the D1 drain instead of
+   * abandoning an in-flight save mid-write; it is also the seam the unsaved-work guard will sit behind, so
+   * the guard covers the tab bar rather than missing the most common exit in the product.
+   *
+   * L60 — A GUARD PLACED IN FRONT OF SOMETHING THE PLATFORM ALREADY GUARANTEES MUST FAIL OPEN.
+   * A plain location.href always navigates. Routing it through our own code makes navigation depend on our
+   * JavaScript completing, and a link that silently does nothing strands the user on a page with a dead tab
+   * bar, with no error, on every signed-in surface at once. So: _navDrain absent -> navigate. _navDrain
+   * throws -> navigate. The default is always the behaviour the user would have got without us.
+   * WHAT THIS CANNOT GUARD, stated rather than assumed: a _navDrain that neither throws nor navigates —
+   * one that simply hangs — cannot be rescued from here, because the only correct escape would be to
+   * navigate anyway, and that would override a human who has deliberately chosen to stay. That case belongs
+   * to the design of whatever sits inside _navDrain, and it is a constraint on that design, not a gap here. */
+  function _leave(url) {
+    try {
+      if (typeof window._navDrain === 'function') { window._navDrain(url); return; }
+    } catch (e) {}
+    window.location.href = url;
+  }
   function handleTabClick(tabId) {
     switch (tabId) {
-      case 'welcome':      window.location.href = '/my-account.html';  break;
-      case 'profile':      window.location.href = '/Dossier.html';     break;
-      case 'sketches':     window.location.href = '/sketchbook.html';  break;
-      case 'myblueprints': window.location.href = '/Blueprint.html';   break;
-      case 'sketch':       window.location.href = '/sketch.html';      break;
-      case 'studio':       window.location.href = '/studio.html';      break;
-      case 'shape':        window.location.href = '/why-a-range.html'; break;
+      case 'welcome':      _leave('/my-account.html');  break;
+      case 'profile':      _leave('/Dossier.html');     break;
+      case 'sketches':     _leave('/sketchbook.html');  break;
+      case 'myblueprints': _leave('/Blueprint.html');   break;
+      case 'sketch':       _leave('/sketch.html');      break;
+      case 'studio':       _leave('/studio.html');      break;
+      case 'shape':        _leave('/why-a-range.html'); break;
     }
   }
 
