@@ -9170,7 +9170,13 @@ Studio is built for exactly this. See If This Shape Holds →`;
           if (source === 'phaseV') { window._navDrain(new URL('sketchbook.html', window.location.href).href); return; }
           if (window.DatumD1 && typeof window.DatumD1.reportOutcome === 'function') {
             window.DatumD1.reportOutcome(_d1Write, function (res) {
-              if (res && res.ok) { _skToast(_toastMsg); return; }
+              /* A SUCCESSFUL SAVE CLEARS THE DIRTY FLAG — and it is hooked HERE, on the confirmed outcome,
+                 not on the click and not optimistically. Excluding the save control from the listener is
+                 not enough on its own: the flag would still be set from the edits the user just saved, and
+                 they would be warned on the way out about work that is already safe.
+                 A FAILED SAVE DELIBERATELY LEAVES THE FLAG SET, because the work genuinely is still not in
+                 their account — which is exactly what the honest toast beside it now says. */
+              if (res && res.ok) { window._skDirty = false; _skToast(_toastMsg); return; }
               if (res && res.reason === 'pending') { _skToast('Still trying to save. Your work is safe on this device.'); return; }
               if (res && res.reason === 'no-session') { _skToast('Not saved — you may be signed out. Your work is safe on this device.'); return; }
               _skToast('Not saved to your account. Your work is safe on this device.');
@@ -9435,6 +9441,57 @@ Studio is built for exactly this. See If This Shape Holds →`;
       });
     })();
     // ── END PHASE A: SKETCHBOOK SAVE ─────────────────────────────────────
+
+    /* ── THE SKETCH DIRTY SIGNAL ──────────────────────────────────────────────────────────────────────
+     * THE QUESTION IT ANSWERS: has a human physically touched anything in the sketch since the last
+     * SUCCESSFUL save. Nothing more. It is read by nothing yet; it exists so an unsaved-work guard can
+     * later ask honestly instead of guessing.
+     *
+     * WHY IT LISTENS FOR POINTER AND KEY RATHER THAN input/change — this is the whole design and it must
+     * not be "tidied" back. MEASURED: every Sketch load dispatches ~58 SYNTHETIC input events on
+     * slider-datum from the opening showcase sweep (_runTutorialSweep). Anything listening on input/change
+     * would therefore mark every sketch dirty at boot, before the user has touched anything — which is the
+     * bug 44b6245 already cost us once. A script can forge an input event; A SCRIPT CANNOT FORGE A TRUSTED
+     * pointerdown OR keydown. The browser stamps isTrusted only for a real finger, mouse or key. So the
+     * sweeps are not merely filtered out here, THEY ARE STRUCTURALLY INCAPABLE OF REACHING THIS.
+     * MEASURED on a cold load with nothing touched: zero trusted AND zero synthetic pointer/key events of
+     * any kind, while a real mouse press, a real ArrowRight and a real touch tap each registered.
+     *
+     * WE ENUMERATE WHAT TO IGNORE, NOT WHAT TO CATCH. A forgotten exclusion costs an unnecessary prompt; a
+     * forgotten inclusion costs somebody their hand-typed work. Chrome is small and stable; the edit
+     * controls are the part that grows, and a control added next year is covered by default because a human
+     * has to touch it. That is why this attaches at DOCUMENT and subtracts, rather than attaching to the
+     * five section roots and adding.
+     *
+     * IT CANNOT DISTINGUISH TOUCHED FROM CHANGED, AND THAT IS A DECISION, NOT A DEFECT. Poke a slider and
+     * put it back and you are dirty. That is the FALSE-DIRTY direction, chosen deliberately: a false dirty
+     * asks a question nobody needed, a false clean silently loses work that took twenty minutes to type.
+     * DO NOT "FIX" THIS INTO A FALSE CLEAN. Precision can be bought back later with evidence; lost work
+     * cannot be bought back at all. */
+    (function () {
+      // Chrome, the exit, and the save control. Everything else in the document counts as the sketch.
+      var IGNORE = ['#app-nav', '#nav-mobile-menu', '#acct-topbar', 'footer', '#sketchOverlayWrap',
+                    '#sketch-overwrite-modal', '#sketch-save-sb-pop', '.return-home', '#btn-save-shape'];
+      function _ignored(el) {
+        for (var i = 0; i < IGNORE.length; i++) {
+          try { if (el.closest(IGNORE[i])) return true; } catch (_e) {}
+        }
+        return false;
+      }
+      function _markDirty(e) {
+        if (!e.isTrusted) return;                       // the whole guard, in one line
+        var t = e.target;
+        if (!t || typeof t.closest !== 'function') return;
+        if (_ignored(t)) return;
+        window._skDirty = true;
+      }
+      // Capture phase so a handler that stops propagation cannot hide a real touch from us.
+      ['pointerdown', 'keydown', 'touchstart'].forEach(function (type) {
+        document.addEventListener(type, _markDirty, true);
+      });
+      window._skDirty = false;
+      window._skIsDirty = function () { return !!window._skDirty; };
+    }());
 
     // ── PHASE A: OPEN SKETCH HYDRATION ───────────────────────────────────
     (function() {
