@@ -25,7 +25,7 @@ const DROP_RE = [/^\.claude\//, /^\.wrangler\//, /^workers\//, /^functions\//, /
 const SACRED = {
   'studio.html': '4cda6ac3f612d11002a5364468ce54b8',   // save-control copy: Save / Save to Archive (2026-07-30)
   'sketch.html': '13999611566f0c0da94d4aee70e7cb97',   // save-control copy: Save / Save to Sketchbook (2026-07-30)
-  'scripts/studio-blueprint.js': 'f1a5129c83056f79cc68435c4a9443bb',   // save() refreshes the open-by-id stash (2026-07-30)
+  'scripts/studio-blueprint.js': 'e78be46ec125a657cb5f41cabf3050b0',   // the edit clock advances only on a real edit (2026-07-30)
   // MISS-5 pre-work guard (2026-07-25). nav.js is a Sacred Host in CLAUDE.md but was absent from THIS map,
   // so a bad edit failed no build. It owns the centralized cross-device restore every page depends on
   // (_datumRestoreFromClerk / _restoreBlueprintFromD1 / the title mirror), and MISS-5 pre-work items 1, 2

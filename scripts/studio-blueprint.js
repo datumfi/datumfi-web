@@ -454,8 +454,24 @@
       } catch (_e) {}
       return;
     }
-    var keep = echo && incumbent;
-    var at    = keep && incumbent._draftAt ? incumbent._draftAt : new Date().toISOString();
+    /* THE EDIT CLOCK ADVANCES ONLY ON AN ACTUAL EDIT.
+     * _draftAt answers "when did the user last change something", and it is the discriminator any
+     * unsaved-work check has to lean on. But two NON-EDIT writers were advancing it:
+     *   save()      — stamped `now` a millisecond AFTER bp.saved_at, so a doc read DIRTY the instant it
+     *                 was successfully saved. Measured: _draftAt 18:21:07.871 vs saved_at 18:21:07.870.
+     *   finishLoad  — with no incumbent draft, stamped `now` while saved_at sat in the past, so simply
+     *                 OPENING a saved file read DIRTY before the user touched anything. Measured on a
+     *                 zero-interaction load: one advance, authored by finishLoad, and dirty came back true.
+     * opts.at lets a non-edit writer say "stamp this at the document's own saved_at" instead of now.
+     * Real input is untouched and still stamps now — bind()'s debounced commit and the host's saveDraft
+     * are the only writers that SHOULD move this clock.
+     * ECHO IS A DIFFERENT GUARD and is deliberately left in front: when an incumbent exists its stamp wins,
+     * because a genuinely dirty draft from an earlier session must stay dirty. echo protects the
+     * sibling-tab guard; it never protected against this, which is why opts.at exists rather than echo
+     * being bent to a job it was not built for. */
+    var keep  = echo && incumbent;
+    var stamp = (opts && typeof opts.at === 'string' && opts.at) ? opts.at : null;
+    var at    = keep && incumbent._draftAt ? incumbent._draftAt : (stamp || new Date().toISOString());
     var owner = keep && incumbent._tabId   ? incumbent._tabId   : TAB_ID;
     if (_persistDraft(Object.assign({}, bp, { _draftAt: at, _tabId: owner }))) {
       _seenAt = at;               // this tab is now in agreement with what is stored
@@ -837,7 +853,8 @@
     // draft slot would destroy the very thing the prompt is about, and "Restore my draft" would then
     // hand back the saved doc. The write resumes as soon as the question is answered (acceptStaleDraft
     // re-persists it, clearDraft discards it) — and until then a reload simply asks again.
-    if (!_pendingStaleDraft) writeSessionDraft(bp, { echo: true });
+    // A LOAD IS NOT AN EDIT — stamp the clock at the doc's own saved_at, not at now (see writeSessionDraft).
+    if (!_pendingStaleDraft) writeSessionDraft(bp, { echo: true, at: bp.saved_at });
     return bp;
   }
 
@@ -990,7 +1007,9 @@
                                        // single writer so EVERY save route inherits it: quick-save, the
                                        // pre-existing overwrite confirm, save-as-new, and the legacy
                                        // exact-slot callers all reach this line.
-    writeSessionDraft(bp);
+    // A SAVE IS NOT AN EDIT — it is the moment the doc becomes CLEAN. Stamp the clock at the saved_at this
+    // save just wrote, so the two are EQUAL and only a later real edit can move it (see writeSessionDraft).
+    writeSessionDraft(bp, { at: bp.saved_at });
     mirrorToClerk(bp, opts.done);      // Clerk blueprint_z mirror — newest-4 rolling; STILL ON (retires in the LAST L2 slice)
     d1WriteStudio(bp);                 // P3 — active studio doc (key='active'), full fidelity
     d1WriteBlueprint(bp);              // P5a Layer-1 — this saved blueprint as its OWN unlimited D1 row (key=blueprint_id)
