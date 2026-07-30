@@ -677,30 +677,18 @@
    * trusts-B shape that produced three separate defects this week, pre-empted here.
    * Callers without onResult are unaffected.
    *
-   * L54 — MAKING A CONFIRMATION TRUTHFUL MEANS MAKING IT WAIT, AND ANYTHING THAT WAITS CAN WAIT FOREVER.
-   * putDoc puts no timeout on a PUT (only the GET has one), so a stalled network would leave the caller
-   * with nothing to say and the user staring at a button that did nothing. 'pending' exists so that silence
-   * cannot happen. It deliberately does NOT claim failure: at ten seconds the promise has not settled and we
-   * have not READ an outcome, so asserting one — even the pessimistic one — would be the very error this
-   * whole change exists to remove. It reports the only two things we actually know.
-   * If the write settles LATER, the real outcome is still reported: 'pending' claimed nothing, so the
-   * result that follows resolves it rather than contradicting it. The settle is reported at most once. */
-  var _SAVE_PENDING_MS = 10000;
+   * THE IMPLEMENTATION MOVED TO datum-d1.js — DatumD1.reportOutcome — because sketch.html carried the
+   * IDENTICAL defect and does not load this file, while BOTH surfaces load datum-d1.js and that is where
+   * writeNow already lives. The defect existed twice for exactly one reason: the behaviour was written
+   * twice. This is now a thin delegation so the two surfaces cannot drift apart (L48). Strings, timing and
+   * the four outcomes are unchanged — see the contract on DatumD1.reportOutcome. */
   function _reportSaveOutcome(opts, write) {
     var cb = opts && opts.onResult;
     if (typeof cb !== 'function') return;
-    var say = function (o) { try { cb(o); } catch (_e) {} };
-    if (!write || typeof write.then !== 'function') {
-      var signed = false;
-      try { signed = !!(global.DatumD1 && global.DatumD1.signedIn && global.DatumD1.signedIn()); } catch (_e) {}
-      say({ ok: false, reason: signed ? 'failed' : 'no-session' });
-      return;
-    }
-    var settled = false, timer = null;
-    try { timer = setTimeout(function () { if (!settled) say({ ok: false, reason: 'pending' }); }, _SAVE_PENDING_MS); } catch (_e) {}
-    var settle = function (o) { if (settled) return; settled = true; if (timer) { try { clearTimeout(timer); } catch (_e) {} } say(o); };
-    write.then(function (res) { settle({ ok: !!(res && res.ok), reason: (res && res.ok) ? null : 'failed' }); },
-               function () { settle({ ok: false, reason: 'failed' }); });
+    if (global.DatumD1 && typeof global.DatumD1.reportOutcome === 'function') { global.DatumD1.reportOutcome(write, cb); return; }
+    // D1 absent entirely (rolled back, or the module never loaded). No write was attempted and there is no
+    // shared reporter to ask, so say the one thing that is true rather than saying nothing.
+    try { cb({ ok: false, reason: 'no-session' }); } catch (_e) {}
   }
 
   // P5a — is `id` already the stable identity of a DIFFERENT saved slot? Guards fresh saves so the

@@ -255,6 +255,48 @@
       document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') { try { _flushKeepaliveTail(); } catch (e) {} } });
     }
   }
+  /* ---- SAVE OUTCOME REPORTING — ONE MOUTH FOR EVERY SURFACE (L53/L54) -----------------------------
+   * A CONFIRMATION THAT CANNOT FAIL IS NOT A CONFIRMATION. Both save surfaces used to announce "Saved"
+   * the instant their synchronous save() RETURNED, while the D1 write was still fire-and-forget — so with
+   * a dead session the user was told "Saved to <name>" in every failure shape, and in the shape where
+   * Clerk has dropped the user the save pill ALSO read "Saved". An affirmative lie with nothing to
+   * contradict it.
+   * THIS LIVES HERE, NOT IN EITHER SURFACE, BECAUSE THE DEFECT EXISTED TWICE FOR EXACTLY ONE REASON: the
+   * same behaviour was written twice. sketch.html does not load studio-blueprint.js, but BOTH load this
+   * file, and this is where writeNow already lives — so this is the only place the two surfaces can share
+   * one mouth. A second, subtly different implementation is how they drift apart in three months (L48).
+   *
+   * Reports exactly four outcomes:
+   *   { ok: true }                        the write landed and the server acknowledged it
+   *   { ok: false, reason: 'no-session' } NO write was attempted — there is no usable session
+   *   { ok: false, reason: 'failed' }     attempted and did not land (no token, 401, 5xx, network)
+   *   { ok: false, reason: 'pending' }    ten seconds elapsed and it has STILL not settled
+   *
+   * WHY 'pending' DOES NOT SAY FAILED. Making a confirmation truthful means making it WAIT, and anything
+   * that waits can wait forever — putDoc puts no timeout on a PUT, only on the GET. Without this the user
+   * would tap Save and get nothing at all. But at ten seconds the promise has not settled and NOBODY HAS
+   * READ AN OUTCOME, so asserting one — even the pessimistic one — would be the same error in the other
+   * direction. It reports only the two things actually known: it has not come back, and the work is not
+   * gone. And because 'pending' claims NOTHING, a later result RESOLVES it rather than contradicting it.
+   * The settle is reported at most once, so an event is never announced twice. */
+  var SAVE_PENDING_MS = 10000;
+  function reportOutcome(write, cb) {
+    if (typeof cb !== 'function') return;
+    var say = function (o) { try { cb(o); } catch (e) {} };
+    if (!write || typeof write.then !== 'function') {
+      // No write was attempted. Ask the EXISTING predicate why rather than re-stating any caller's guard,
+      // so the two can never drift apart — the one-path-writes-A-while-another-trusts-B shape.
+      var signed = false; try { signed = signedIn(); } catch (e) {}
+      say({ ok: false, reason: signed ? 'failed' : 'no-session' });
+      return;
+    }
+    var settled = false, timer = null;
+    try { timer = setTimeout(function () { if (!settled) say({ ok: false, reason: 'pending' }); }, SAVE_PENDING_MS); } catch (e) {}
+    var settle = function (o) { if (settled) return; settled = true; if (timer) { try { clearTimeout(timer); } catch (e) {} } say(o); };
+    write.then(function (res) { settle({ ok: !!(res && res.ok), reason: (res && res.ok) ? null : 'failed' }); },
+               function () { settle({ ok: false, reason: 'failed' }); });
+  }
+
   function setRevision(type, key, rev) { if (typeof rev === 'number') _rev[idOf(type, key)] = rev; }
   function knownRevision(type, key) { return _rev[idOf(type, key)]; }
 
@@ -309,6 +351,7 @@
     getDoc: getDoc, putDoc: putDoc, listDocs: listDocs, deleteDoc: deleteDoc, scheduleWrite: scheduleWrite, writeNow: writeNow,
     drain: drain, onState: function (cb) { if (typeof cb === 'function') _stateSubs.push(cb); return _state; }, getState: function () { return _state; },
     setRevision: setRevision, knownRevision: knownRevision, signedIn: signedIn, writePreferences: writePreferences,
+    reportOutcome: reportOutcome,   // L53 — the shared save-outcome mouth for every surface
     prefsMirrorNeeded: prefsMirrorNeeded,
     _fetch: null
   };

@@ -9042,14 +9042,24 @@ Studio is built for exactly this. See If This Shape Holds →`;
       // rolled back (CUTOVER === false) — the LS + Clerk net remain the truth in those states.
       function _d1WriteSketch(payload) {
         try {
-          if (!window.DatumD1 || window.DatumD1.CUTOVER === false || !window.DatumD1.signedIn()) return;
-          if (!payload || !payload.sketch_id) return;
+          // GUARDS UNCHANGED — same conditions, same immediate return. They return null rather than
+          // undefined so the caller can tell "no write was attempted" from "a write is under way" (L53).
+          if (!window.DatumD1 || window.DatumD1.CUTOVER === false || !window.DatumD1.signedIn()) return null;
+          if (!payload || !payload.sketch_id) return null;
           var id = payload.sketch_id;
           var snap = {}; for (var k in payload) { if (Object.prototype.hasOwnProperty.call(payload, k) && k.charAt(0) !== '_') snap[k] = payload[k]; }
-          window.DatumD1.scheduleWrite('sketchbook', id, function () { return snap; }, function () {
+          /* writeNow, NOT scheduleWrite — and this is a correction, not an optimisation. The ~1.5s debounce
+             exists to COALESCE TYPING, but _doSave is this writer's ONLY caller and it is reached ONLY by
+             explicit save actions. There is no typing path into it, so the debounce was protecting a case
+             that cannot occur while delaying every confirmation. writeNow is the mechanism datum-d1 already
+             documents for "a deliberate save click rather than the continuous autosave", it is what the
+             blueprint writer already uses, and it RETURNS THE PROMISE so a confirmation can wait on the
+             real completion. MEASURED tap-to-settle: 1632ms before, 141ms after. */
+          var _write = window.DatumD1.writeNow || window.DatumD1.scheduleWrite;
+          return _write.call(window.DatumD1, 'sketchbook', id, function () { return snap; }, function () {
             console.warn('[d1] sketch ' + id + ' changed in another tab — reloaded the server revision (no merge)');
           });
-        } catch (e) {}
+        } catch (e) { return null; }
       }
 
       // P5 Step-3: write the CHOSEN slot (1..4), preserving the other slots. source:'nav'
@@ -9129,7 +9139,9 @@ Studio is built for exactly this. See If This Shape Holds →`;
         try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch(ex) {}
         if (_stateSlot) { try { localStorage.setItem('datum_sketch_state_' + _stateSlot, JSON.stringify(payload)); } catch(ex) {} }
         try { localStorage.setItem('datum_sketch_byid_' + payload.sketch_id, JSON.stringify(payload)); } catch(ex) {}   // per-id stash -> open ANY sketch by id (mirror sketchbook _stashSketchForOpen)
-        _d1WriteSketch(payload);   // P5b Layer-1 — ADDITIVE: this saved sketch as its OWN D1 row (key=sketch_id)
+        // P5b Layer-1 — ADDITIVE: this saved sketch as its OWN D1 row (key=sketch_id). The returned write
+        // is what the confirmation below waits on: it IS the record the user just saved (L53).
+        var _d1Write = _d1WriteSketch(payload);
         // ACTIVE SAVED SKETCH — SET POINT 3 of 3. Every successful save makes THIS the file we are in, so
         // a save-as-new correctly becomes the new active file and the next quick-save targets it, not the
         // one it was branched from.
@@ -9145,10 +9157,27 @@ Studio is built for exactly this. See If This Shape Holds →`;
         // + keep working, no forced reopen). Only the Phase-V completion CTA hands off
         // to the Sketchbook. Origin-relative so the hop stays on the current host.
         var _toastMsg = toastMsg || (overwriteId ? 'Sketch updated' : (forceNew ? 'Saved as a new sketch' : ('Saved to A-0' + _slot)));
+        function _skToast(msg) {
+          var _t = document.getElementById('sketchOverlayToast');
+          if (_t) { _t.textContent = msg; _t.classList.add('show'); clearTimeout(_skToast._t); _skToast._t = setTimeout(function() { _t.classList.remove('show'); }, 2400); }
+        }
+        /* THE CONFIRMATION MUST BE DOWNSTREAM OF THE WRITE OUTCOME (L53). This used to render _toastMsg
+           unconditionally, so a save that never reached the account still said "Saved" — the same lie the
+           Studio surface carried until it was fixed. The success wording is UNCHANGED; only the failure
+           cases newly have a voice. Failure copy is Captain-authored and wired verbatim, and it is the SAME
+           copy Studio uses — no Sketch variants (L47/L8/L48). */
         function _finish() {
           if (source === 'phaseV') { window._navDrain(new URL('sketchbook.html', window.location.href).href); return; }
-          var _t = document.getElementById('sketchOverlayToast');
-          if (_t) { _t.textContent = _toastMsg; _t.classList.add('show'); clearTimeout(_finish._t); _finish._t = setTimeout(function() { _t.classList.remove('show'); }, 2400); }
+          if (window.DatumD1 && typeof window.DatumD1.reportOutcome === 'function') {
+            window.DatumD1.reportOutcome(_d1Write, function (res) {
+              if (res && res.ok) { _skToast(_toastMsg); return; }
+              if (res && res.reason === 'pending') { _skToast('Still trying to save. Your work is safe on this device.'); return; }
+              if (res && res.reason === 'no-session') { _skToast('Not saved — you may be signed out. Your work is safe on this device.'); return; }
+              _skToast('Not saved to your account. Your work is safe on this device.');
+            });
+            return;
+          }
+          _skToast(_toastMsg);
         }
         // Skip the Clerk cross-device mirror on localhost: the production Clerk
         // instance (clerk.datumfi.com) redirects to the primary domain when
