@@ -175,4 +175,69 @@ for (const bad of ['.claude', 'package.json', 'package-lock.json']) {
   if (existsSync(join(OUT, bad))) { console.error(`LEAK GUARD HIT — ${bad} present in ${OUT}/`); process.exit(1); }
 }
 
-console.log(`OK — ${web} web assets + ${cfg} config files -> ${OUT}/  (sacred hosts byte-identical, leak-guards clean)`);
+/* ── DANGLING-ASSET GUARD ─────────────────────────────────────────────────────────────────────────────
+ * A LIVE-SITE LANDMINE, NOT A FOOTNOTE. The copy loop above publishes `git ls-files` ONLY, so a new file
+ * that is written but never staged is silently skipped WHILE THIS BUILD REPORTS SUCCESS. Measured
+ * 2026-07-31: scripts/datum-leave-prompt.js existed on disk, the build said OK, and the file was simply
+ * absent from dist/. Nothing anywhere would have said so. The moment a page carries
+ * <script src="/scripts/datum-leave-prompt.js"> that page ships pointing at a 404 — green build, broken
+ * site, and the failure surfaces as a feature that silently does nothing.
+ *
+ * So it becomes an assert rather than something anyone has to remember — same instinct as replacing the
+ * hand-list of bookkeeping fields with a rule.
+ *
+ * SCOPE IS DELIBERATELY NARROW: <script src> and <link href> only, which is the exact class that bites.
+ * Navigation links are NOT checked — a wrong <a href> is a different problem with different false
+ * positives, and a guard that cries wolf on the Captain's deploy is worse than no guard (L60). External,
+ * protocol-relative, data:, and fragment references are skipped because they are not ours to resolve. */
+function assetRefs(html) {
+  const out = [];
+  const re = /<(?:script[^>]+src|link[^>]+href)\s*=\s*["']([^"']+)["']/gi;
+  let m;
+  while ((m = re.exec(html))) out.push(m[1]);
+  return out;
+}
+function checkDanglingAssets(extraRef) {
+  const misses = [];
+  const pages = tracked.filter((f) => extname(f).toLowerCase() === '.html' && existsSync(join(OUT, f)));
+  for (const page of pages) {
+    const refs = assetRefs(readFileSync(join(OUT, page), 'utf8'));
+    if (extraRef && page === pages[0]) refs.push(extraRef);          // self-test injection only
+    for (const ref of refs) {
+      if (/^(?:[a-z]+:)?\/\//i.test(ref) || /^(?:data:|mailto:|tel:|#)/i.test(ref)) continue;
+      /* /cdn-cgi/ is CLOUDFLARE'S OWN NAMESPACE, served by the edge and never present in this repo —
+       * sketchv2.html carries an injected email-decode script. Real at runtime, absent from dist by
+       * definition, so excluding it is correctness rather than a carve-out. Found by this guard on its
+       * first run, which is the guard doing its job before it ever reached the Captain's deploy. */
+      if (/^\/cdn-cgi\//i.test(ref)) continue;
+      const clean = ref.split('?')[0].split('#')[0];
+      if (!clean) continue;
+      const target = clean.startsWith('/') ? join(OUT, clean) : join(OUT, dirname(page), clean);
+      if (!existsSync(target)) misses.push(`${page} -> ${ref}`);
+    }
+  }
+  return misses;
+}
+/* RED-FIRST, SHIPPED WITH THE CHECK (ratified): every self-check carries its own proof that it can fail.
+ * `node scripts/build-dist.mjs --selftest-assets` injects one reference to a file that cannot exist and
+ * requires the guard to catch exactly it. A guard that cannot bite is a measurement of the guard. */
+if (process.argv.includes('--selftest-assets')) {
+  const PHANTOM = '/scripts/__phantom_asset_that_cannot_exist.js';
+  const caught = checkDanglingAssets(PHANTOM).filter((s) => s.endsWith(PHANTOM));
+  const clean  = checkDanglingAssets();
+  console.log(`SELF-TEST dangling-asset guard: injected=1 caught=${caught.length} baseline_misses=${clean.length}`);
+  if (caught.length !== 1) { console.error('RED-FIRST FAILED — the guard did not catch an asset that cannot exist.'); process.exit(1); }
+  if (clean.length !== 0)  { console.error(`RED-FIRST INCONCLUSIVE — baseline is already dirty: ${clean.join(', ')}`); process.exit(1); }
+  console.log('RED-FIRST OK — the guard BITES, and is silent on the real tree.');
+  process.exit(0);
+}
+const dangling = checkDanglingAssets();
+if (dangling.length) {
+  console.error('DANGLING ASSET — a page references a file that is NOT in the publish output:');
+  dangling.forEach((d) => console.error('  ' + d));
+  console.error('  -> Almost always an unstaged new file: the copy step publishes `git ls-files` only.');
+  console.error('  -> git add the file, or fix the reference. A green build must not ship a 404.');
+  process.exit(1);
+}
+
+console.log(`OK — ${web} web assets + ${cfg} config files -> ${OUT}/  (sacred hosts byte-identical, leak-guards clean, no dangling assets)`);
