@@ -47,9 +47,9 @@
       /* {fileName} IS DROPPED, NOT FABRICATED, when no name resolves — the Architect's explicit rule. */
       bodyNamed: "You have made edits to {fileName} since your last save. Leave now and those edits will not be here when you come back.",
       bodyPlain: "You have made edits since your last save. Leave now and those edits will not be here when you come back.",
-      primary:   "Save and continue.",
-      secondary: "Leave without saving.",
-      tertiary:  "Stay on this page."
+      primary:   "Save and continue",
+      secondary: "Leave without saving",
+      tertiary:  "Stay on this page"
     },
     /* BRANCH B — UNAUTHENTICATED. THE CONVERSION MOMENT. An invitation, never a warning.
      * TONE FENCE: this must NEVER read as a variant of you-have-unsaved-changes. It reads as
@@ -58,22 +58,30 @@
       title: "Keep what you just built.",
       body: ["You have sketched real work here. Right now it only lives in this browser tab. Close it and it is gone. A free Datum account saves it, so you can pick it back up on any device, anytime."],
       subtext: "Discover is free and includes one saved plan. Ready for more? Design unlocks unlimited saves and deeper live data.",
-      primary:   "Create a free account.",
-      secondary: "I already have one. Sign in.",
-      tertiary:  "Leave without saving."
+      primary:   "Create a free account",
+      secondary: "I already have one. Sign in",
+      tertiary:  "Leave without saving"
     },
     /* BRANCH C — AUTHENTICATED, NEVER SAVED. Urgent but easy.
      * TWO DELIBERATE CHOICES from the Architect: no "create an account" ask, because they have one and that
      * ask insults them; and the buttons are not a discard-framed fork, because nothing existing is at risk
-     * of being overwritten. */
+     * of being overwritten.
+     * THE STAY BUTTON WAS ADDED AFTER REVIEW, and the reasoning is worth keeping: the first draft had only
+     * the two leaving buttons, on the grounds that this should not read as a discard-framed fork. But "do
+     * not frame it as a fork" and "hide the exit" are different things. Escape and the backdrop always
+     * worked; nothing on screen SAID so, and the person who simply wants to keep working should never have
+     * to guess. Every branch now offers a visible way to stay. */
     C: {
       title: "You haven't saved this yet",
       body: ["You've built something here, but it only lives in this tab. Leave now and it's gone — closing the page, a refresh, anything.",
              "Saving takes a second and it's already part of your account."],
       primary:   "Save and continue",
-      secondary: "Leave without saving"
+      secondary: "Leave without saving",
+      tertiary:  "Stay on this page"
     }
   };
+  /* BUTTONS ARE LABELS, NOT SENTENCES — no trailing periods, on any branch. The internal break in
+   * "I already have one. Sign in" is two clauses and stays; the trailing period is what goes. */
 
   /* PURE. No DOM, no storage, no side effects — so it can be exhaustively table-tested. */
   function decide(state) {

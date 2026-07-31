@@ -71,15 +71,15 @@ const EXPECT = {
   A: { title: 'You have changes that are not saved yet.',
        named: 'You have made edits to Blueprint 7 since your last save. Leave now and those edits will not be here when you come back.',
        plain: 'You have made edits since your last save. Leave now and those edits will not be here when you come back.',
-       btns:  ['Save and continue.', 'Leave without saving.', 'Stay on this page.'] },
+       btns:  ['Save and continue', 'Leave without saving', 'Stay on this page'] },
   B: { title: 'Keep what you just built.',
        body:  'You have sketched real work here. Right now it only lives in this browser tab. Close it and it is gone. A free Datum account saves it, so you can pick it back up on any device, anytime.',
        sub:   'Discover is free and includes one saved plan. Ready for more? Design unlocks unlimited saves and deeper live data.',
-       btns:  ['Create a free account.', 'I already have one. Sign in.', 'Leave without saving.'] },
+       btns:  ['Create a free account', 'I already have one. Sign in', 'Leave without saving'] },
   C: { title: "You haven't saved this yet",
        p1:    "You've built something here, but it only lives in this tab. Leave now and it's gone — closing the page, a refresh, anything.",
        p2:    "Saving takes a second and it's already part of your account.",
-       btns:  ['Save and continue', 'Leave without saving'] }
+       btns:  ['Save and continue', 'Leave without saving', 'Stay on this page'] }
 };
 
 (async () => {
@@ -173,9 +173,36 @@ const EXPECT = {
   ok(!!rC && rC.text.indexOf(EXPECT.C.title) >= 0 && rC.text.indexOf(EXPECT.C.p1) >= 0 && rC.text.indexOf(EXPECT.C.p2) >= 0,
     'RENDER C: headline and BOTH body paragraphs render verbatim, em dash and apostrophes intact');
   ok(!!rC && JSON.stringify(rC.btns) === JSON.stringify(EXPECT.C.btns),
-    `RENDER C2: exactly two buttons, no account ask (got ${JSON.stringify(rC && rC.btns)})`);
+    `RENDER C2: three buttons, no account ask (got ${JSON.stringify(rC && rC.btns)})`);
   ok(!!rC && rC.text.join(' ').toLowerCase().indexOf('account') >= 0 && rC.btns.join(' ').toLowerCase().indexOf('create') < 0,
     'RENDER C3: Branch C never asks somebody who HAS an account to create one');
+
+  /* A VISIBLE WAY TO STAY. Escape and the backdrop always worked; the defect was that nothing on screen
+   * SAID so, and somebody who simply wants to keep working should not have to guess.
+   * "Leave without saving" IS NOT A STAY and must never be counted as one — an earlier version of this
+   * assertion accepted it and would have passed a branch with no way to stay at all.
+   * SCOPE, DECLARED: the Architect has ruled on A and C, and both are asserted. BRANCH B IS A KNOWN GAP,
+   * RAISED AND NOT YET RULED — all three of its buttons leave (create an account, sign in, leave without
+   * saving), so a signed-out visitor who just wants to keep sketching has to guess exactly as C's did.
+   * It is REPORTED here rather than asserted, because the fix is copy and copy is not Claude's to write.
+   * The moment B gains a stay label it is covered by the same rule. */
+  const stayAll = [];
+  for (const b of ['A', 'B', 'C']) {
+    const r = await render(b, b === 'A' ? { fileName: 'Blueprint 7' } : {});
+    stayAll.push({ b, stay: !!(r && r.btns.some((t) => /^stay on this page$/i.test(t))) });
+  }
+  lines.push(`      [stay-button census] ${JSON.stringify(stayAll)}   <- B is a RAISED, UNRULED copy gap`);
+  ok(stayAll.filter((x) => x.b !== 'B').every((x) => x.stay),
+    `RENDER 4 RULE: every RULED branch (A, C) renders a visible way to stay, and "Leave without saving" is not counted as one (${JSON.stringify(stayAll)})`);
+
+  /* BUTTONS ARE LABELS, NOT SENTENCES. Asserted as a rule over every button on every branch. */
+  const punct = [];
+  for (const b of ['A', 'B', 'C']) {
+    const r = await render(b, b === 'A' ? { fileName: 'Blueprint 7' } : {});
+    (r ? r.btns : []).forEach((t) => { if (/\.$/.test(t)) punct.push(b + ':' + t); });
+  }
+  ok(punct.length === 0,
+    `RENDER 5 RULE: no button label on any branch ends in a period (offenders ${JSON.stringify(punct)})`);
 
   // ── DISMISS NEVER NAVIGATES ────────────────────────────────────────────────────────────────────────
   const startUrl = page.url();
