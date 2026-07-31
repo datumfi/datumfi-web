@@ -491,6 +491,75 @@
     _siblingHold = null;
   }
 
+  /* ── WORK STATE ───────────────────────────────────────────────────────────────────────────────────
+   * READ-ONLY. Reports facts about the local draft; decides NOTHING and changes NOTHING. It exists so a
+   * leave-prompt can ask honestly instead of guessing, and it is deliberately split into separate facts
+   * rather than one "dirty" boolean, because THE TWO PEOPLE WE ARE PROTECTING ARE NOT THE SAME PERSON
+   * and a single flag would force one of them to be answered wrongly:
+   *   A SIGNED-IN ARCHITECT WITH A SAVED BLUEPRINT is at risk of losing EDITS MADE SINCE THAT SAVE.
+   *     Their question is unsavedEdits. hasContent is useless for them — a saved blueprint always has
+   *     content, so it would fire forever, on every visit, saved or not.
+   *   A VISITOR WITH NO ACCOUNT cannot have saved anything, so they have no "last save" to be newer
+   *     than. MEASURED: for a never-saved blueprint saved_at is null, so the newer-than test is not
+   *     merely wrong for them, IT IS UNDEFINED — and they are the entire conversion audience.
+   *     Their question is hasContent: is there something here worth keeping.
+   *
+   * WHY hasContent COMPARES AGAINST A PRISTINE BLUEPRINT INSTEAD OF ASKING WHETHER A DRAFT EXISTS.
+   * MEASURED, and this is the trap: Studio writes a draft on a COLD LOAD with zero interaction — a
+   * signed-out cold boot produced a draft stamped at load time with accounts 0 and saved_at null. So
+   * "a draft exists" and "_draftAt is set" are both TRUE FOR EVERY VISITOR AT BOOT. Either one as a
+   * dirty test marks the whole world dirty before anybody touches anything, which is exactly the bug
+   * 44b6245 already cost us once. Comparing against newBlueprint() asks a question boot cannot forge:
+   * is what is on screen different from blank.
+   *
+   * WE ENUMERATE WHAT TO IGNORE, NOT WHAT TO COMPARE — same law as the Sketch signal and the nav guard,
+   * and for the same reason. A field added next year is compared BY DEFAULT: if it is user-authored we
+   * are correct for free, and if it is bookkeeping the cost is one unnecessary prompt. A whitelist would
+   * fail the other way and silently stop noticing somebody's work.
+   * IGNORED, AS A RULE RATHER THAN A LIST: every _-prefixed key. That is not a convenience — it is this
+   * module's OWN existing convention, the one toD1Document leans on when it strips _-prefixed keys so
+   * local bookkeeping never reaches a saved payload (see writeSessionDraft). User content therefore
+   * CANNOT be _-prefixed by construction, which makes the rule safe in the direction that matters, and
+   * it absorbs the next bookkeeping key without anybody having to notice. MEASURED on a cold load, the
+   * boot draft carried three of them — _draftAt, _tabId and _loadSource; the hand list caught two and
+   * _loadSource alone was enough to report the whole world dirty.
+   * IGNORED BY NAME, the bookkeeping that is not _-prefixed: saved_at and blueprint_id (written by save),
+   * the schema/version stamps, and datum — which holds ONLY values recomputed from the fields above it,
+   * so a real change always shows up in its own source field first.
+   *
+   * THIS IS NOT THE FENCED NEWEST-WINS COMPARATOR AND MUST NEVER BE MERGED WITH IT. _draftIsNewer below
+   * asks "draft versus the D1 SERVER DOC" to decide which one to hydrate. unsavedEdits asks "draft versus
+   * ITS OWN saved_at" to decide whether to ask a question. Different inputs, different consequence — one
+   * chooses data, this one only chooses words. Nothing here reads, writes or influences that comparator. */
+  var _WORK_IGNORE = { saved_at: 1, blueprint_id: 1, schema: 1, version: 1, datum: 1 };
+  function _hasContent(draft) {
+    var pristine = newBlueprint();
+    var seen = {}, k;
+    for (k in pristine) if (Object.prototype.hasOwnProperty.call(pristine, k)) seen[k] = 1;
+    for (k in draft)    if (Object.prototype.hasOwnProperty.call(draft, k))    seen[k] = 1;
+    for (k in seen) {
+      if (!Object.prototype.hasOwnProperty.call(seen, k)) continue;
+      if (k.charAt(0) === '_' || _WORK_IGNORE[k]) continue;
+      try { if (JSON.stringify(draft[k]) !== JSON.stringify(pristine[k])) return true; }
+      catch (_e) { return true; }   // unstringifiable means something is in there — fail toward asking
+    }
+    return false;
+  }
+  function workState() {
+    var d = null;
+    try { d = readSessionDraft(); } catch (_e) { d = null; }
+    if (!d) return { present: false, hasContent: false, everSaved: false, unsavedEdits: false };
+    var everSaved = !!(typeof d.saved_at === 'string' && d.saved_at);
+    var dt = Date.parse(d._draftAt), st = everSaved ? Date.parse(d.saved_at) : NaN;
+    return {
+      present:      true,
+      hasContent:   _hasContent(d),
+      everSaved:    everSaved,
+      // Only ever true when BOTH stamps parse. A missing stamp is not evidence of an edit (L47).
+      unsavedEdits: !!(everSaved && !isNaN(dt) && !isNaN(st) && dt > st)
+    };
+  }
+
   /* DATA-LOSS FIX — is the local session draft genuinely NEWER than the D1 studio doc?
    * D1 side uses the ROW's updated_at (when it was actually written), which getDoc already returns.
    * L47: never fabricate a stamp. A missing/unparseable stamp on either side is NOT treated as old —
@@ -1286,6 +1355,7 @@
     captureDOM:       captureDOM,
     mmYYYY:           mmYYYY,
     retDateFromAge:   retDateFromAge,
+    workState:        workState,
     _internal: {
       readDossier:    readDossier,
       readSketchSlot: readSketchSlot,
