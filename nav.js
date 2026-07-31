@@ -126,6 +126,76 @@
   });
 })();
 
+/* ── IN-SITE LINK GUARD ──────────────────────────────────────────────────────────────────────────────
+ * ONE RULE, ONE PLACE: on a page that publishes a _navDrain chokepoint, a plain click on a plain link to
+ * another page on this site goes THROUGH that chokepoint instead of around it.
+ *
+ * WHY IT LIVES HERE AND NOT ON THE PAGES. 4974f74 routed the seven account-topbar tabs — the navigation a
+ * SIGNED-IN user actually uses. But a SIGNED-OUT visitor never sees that topbar: nav.js injects it only on
+ * the auth hint (:123) and hides #app-nav (:115), so a signed-out visitor navigates by #app-nav's plain
+ * <a href> entries — Sketch, Studio, Shape, Sign In, Upgrade — and every one of those exits went AROUND
+ * the chokepoint. That visitor is precisely the person a conversion prompt exists for, so the half of the
+ * product the guard could not see was the half that mattered. Enumerating those anchors page by page would
+ * leave the next one somebody adds uncovered; one delegated rule in the file EVERY page already loads
+ * covers them all, and covers next year's for free.
+ *
+ * BLAST RADIUS IS EXACTLY TWO PAGES, MEASURED, NOT ASSUMED: sketch.html:2890 and studio.html:15838 are the
+ * only two definitions of _navDrain in the repo. On every other page this listener finds no chokepoint and
+ * does nothing whatsoever — the link behaves exactly as it does today.
+ *
+ * L60 — FAIL OPEN. A plain <a href> is a browser GUARANTEE. Putting our JavaScript in front of it makes it
+ * conditional on our code completing, and a link that silently does nothing is a worse defect than the loss
+ * it prevents — no error, no workaround, on the two surfaces where people build things. So the two phases
+ * below fail in two different safe directions, deliberately:
+ *   DECIDE  — anything at all goes wrong while working out whether to intervene: return, having touched
+ *             nothing. The browser default is still in force and the link works.
+ *   ACT     — we have already taken the default away, so a chokepoint that throws is caught and the
+ *             navigation is completed BY HAND rather than dropped.
+ * WHAT THIS CANNOT COVER, stated rather than assumed: a chokepoint that neither throws nor navigates — one
+ * that simply hangs, or that returns without doing anything — cannot be rescued from here, because the only
+ * escape would be to navigate anyway and that would override a human who has deliberately chosen to stay.
+ * Same constraint and same reason as the topbar helper; it belongs to the design of whatever sits inside
+ * _navDrain, and it is not a gap here.
+ *
+ * WHAT IT DELIBERATELY IGNORES — each of these would be a BUG to catch, not a win: modified clicks and
+ * non-primary buttons (the user asked for a new tab; they are not leaving this page), target=_blank (same),
+ * download links, non-http schemes such as mailto: and tel:, links to another origin, a pure in-page
+ * #anchor (no page is being left), and any click another handler has already claimed via preventDefault.
+ *
+ * KNOWN AND INTENDED WIDENING: this also routes the account topbar's brand and Upgrade anchors, which
+ * 4974f74 deliberately left alone when its fence was narrower. They are exits like any other and covering
+ * them is the whole point of a rule rather than a list. Stated here rather than slipped in. */
+(function () {
+  document.addEventListener('click', function (e) {
+    var url;
+    /* DECIDE — fails toward LET THE LINK WORK. Nothing in this block may prevent the default. */
+    try {
+      if (e.defaultPrevented) return;
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      var t = e.target;
+      if (!t || typeof t.closest !== 'function') return;
+      var a = t.closest('a');
+      if (!a || !a.getAttribute('href')) return;
+      if (a.hasAttribute('download')) return;
+      var tgt = a.getAttribute('target');
+      if (tgt && tgt !== '_self') return;
+      url = new URL(a.href, window.location.href);
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+      if (url.origin !== window.location.origin) return;
+      if (url.pathname === window.location.pathname && url.search === window.location.search && url.hash) return;
+      if (typeof window._navDrain !== 'function') return;
+    } catch (_decide) { return; }
+    /* ACT — the default is now ours to honour, so a throw here must still land the user somewhere. */
+    e.preventDefault();
+    try {
+      window._navDrain(url.href);
+    } catch (err) {
+      try { console.warn('[nav link guard] the page chokepoint threw — navigating anyway so nobody is stranded.', err); } catch (_w) {}
+      window.location.href = url.href;
+    }
+  });
+})();
+
 // Analytics — PostHog EU hosting (Priority 4)
 (function() {
   // ds_session_id (per-visit UUID, sessionStorage)
