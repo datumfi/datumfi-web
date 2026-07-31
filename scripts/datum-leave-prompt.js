@@ -47,20 +47,24 @@
       /* {fileName} IS DROPPED, NOT FABRICATED, when no name resolves — the Architect's explicit rule. */
       bodyNamed: "You have made edits to {fileName} since your last save. Leave now and those edits will not be here when you come back.",
       bodyPlain: "You have made edits since your last save. Leave now and those edits will not be here when you come back.",
-      primary:   "Save and continue",
-      secondary: "Leave without saving",
-      tertiary:  "Stay on this page"
+      buttons: [{ label: "Save and continue",   role: 'save'  },
+                { label: "Leave without saving", role: 'leave' },
+                { label: "Stay on this page",    role: 'stay'  }]
     },
     /* BRANCH B — UNAUTHENTICATED. THE CONVERSION MOMENT. An invitation, never a warning.
      * TONE FENCE: this must NEVER read as a variant of you-have-unsaved-changes. It reads as
      * you made something good, here is how to keep it. Value stated, never pressured. */
     B: {
-      title: "Keep what you just built.",
-      body: ["You have sketched real work here. Right now it only lives in this browser tab. Close it and it is gone. A free Datum account saves it, so you can pick it back up on any device, anytime."],
-      subtext: "Discover is free and includes one saved plan. Ready for more? Design unlocks unlimited saves and deeper live data.",
-      primary:   "Create a free account",
-      secondary: "I already have one. Sign in",
-      tertiary:  "Leave without saving"
+      title: "You have sketched real work here",
+      body: ["This drafting board is temporary. Without an account, everything you have built disappears the moment you leave.",
+             "Create one free and it will be waiting for you next time."],
+      /* B's stay label is "Keep sketching", NOT "Stay on this page", and the difference is deliberate:
+       * C's user is PROTECTING something they made; B's user is still MAKING it. The verb matches what
+       * they are actually doing. Do not harmonise these two labels. */
+      buttons: [{ label: "Save my work",         role: 'create' },
+                { label: "Sign in",              role: 'signin' },
+                { label: "Leave without saving", role: 'leave'  },
+                { label: "Keep sketching",       role: 'stay'   }]
     },
     /* BRANCH C — AUTHENTICATED, NEVER SAVED. Urgent but easy.
      * TWO DELIBERATE CHOICES from the Architect: no "create an account" ask, because they have one and that
@@ -75,11 +79,17 @@
       title: "You haven't saved this yet",
       body: ["You've built something here, but it only lives in this tab. Leave now and it's gone — closing the page, a refresh, anything.",
              "Saving takes a second and it's already part of your account."],
-      primary:   "Save and continue",
-      secondary: "Leave without saving",
-      tertiary:  "Stay on this page"
+      buttons: [{ label: "Save and continue",    role: 'save'  },
+                { label: "Leave without saving", role: 'leave' },
+                { label: "Stay on this page",    role: 'stay'  }]
     }
   };
+  /* ROLE -> HANDLER, one map for every branch. Positional primary/secondary/tertiary was replaced when B
+   * grew a fourth button: position is not meaning, and a fourth slot would have made every branch's
+   * wiring depend on counting. A role says what the button DOES, so a branch can carry three buttons or
+   * five and the host wires the same five names (L48 — reuse the primitive, not the code path). */
+  var ROLE_HANDLER = { save: 'onSave', create: 'onCreateAccount', signin: 'onSignIn', leave: 'onLeave', stay: 'onStay' };
+  var STAY_ROLE = 'stay';
   /* BUTTONS ARE LABELS, NOT SENTENCES — no trailing periods, on any branch. The internal break in
    * "I already have one. Sign in" is two clauses and stays; the trailing period is what goes. */
 
@@ -138,20 +148,28 @@
     }
 
     var row = _el('div', 'display:flex;flex-wrap:wrap;gap:10px;margin-top:20px;align-items:center');
-    function add(label, css, fn) {
-      if (!label) return null;
-      var b = _el('button', BTN + ';' + css, label);
+    var SKIN = {
+      save:   'background:#e58e26;border:1px solid #e58e26;color:#12161a;font-weight:600',
+      create: 'background:#e58e26;border:1px solid #e58e26;color:#12161a;font-weight:600',
+      signin: 'background:transparent;border:1px solid rgba(233,196,138,0.35);color:#e9c48a',
+      leave:  'background:transparent;border:1px solid rgba(233,196,138,0.35);color:#e9c48a',
+      /* THE STAY BUTTON IS PUSHED RIGHT, away from the leaving buttons, so the non-destructive choice is
+       * never adjacent to the destructive one and cannot be hit by momentum. */
+      stay:   'background:transparent;border:1px solid transparent;color:#8b959d;margin-left:auto'
+    };
+    var primary = null;
+    (c.buttons || []).forEach(function (spec) {
+      if (!spec || !spec.label) return;
+      var b = _el('button', BTN + ';' + (SKIN[spec.role] || SKIN.leave), spec.label);
       b.type = 'button';
-      b.addEventListener('click', function () { close(); try { if (fn) fn(); } catch (_e) {} });
+      b.setAttribute('data-leave-role', spec.role);
+      b.addEventListener('click', function () {
+        close();
+        try { var fn = h[ROLE_HANDLER[spec.role]]; if (fn) fn(); } catch (_e) {}
+      });
       row.appendChild(b);
-      return b;
-    }
-    var primary = add(c.primary, 'background:#e58e26;border:1px solid #e58e26;color:#12161a;font-weight:600',
-      branch === 'B' ? h.onCreateAccount : h.onSave);
-    add(c.secondary, 'background:transparent;border:1px solid rgba(233,196,138,0.35);color:#e9c48a',
-      branch === 'B' ? h.onSignIn : h.onLeave);
-    add(c.tertiary, 'background:transparent;border:1px solid transparent;color:#8b959d;margin-left:auto',
-      branch === 'B' ? h.onLeave : h.onStay);
+      if (!primary) primary = b;
+    });
     card.appendChild(row);
     wrap.appendChild(card);
 

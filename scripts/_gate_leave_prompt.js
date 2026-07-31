@@ -72,10 +72,10 @@ const EXPECT = {
        named: 'You have made edits to Blueprint 7 since your last save. Leave now and those edits will not be here when you come back.',
        plain: 'You have made edits since your last save. Leave now and those edits will not be here when you come back.',
        btns:  ['Save and continue', 'Leave without saving', 'Stay on this page'] },
-  B: { title: 'Keep what you just built.',
-       body:  'You have sketched real work here. Right now it only lives in this browser tab. Close it and it is gone. A free Datum account saves it, so you can pick it back up on any device, anytime.',
-       sub:   'Discover is free and includes one saved plan. Ready for more? Design unlocks unlimited saves and deeper live data.',
-       btns:  ['Create a free account', 'I already have one. Sign in', 'Leave without saving'] },
+  B: { title: 'You have sketched real work here',
+       p1:    'This drafting board is temporary. Without an account, everything you have built disappears the moment you leave.',
+       p2:    'Create one free and it will be waiting for you next time.',
+       btns:  ['Save my work', 'Sign in', 'Leave without saving', 'Keep sketching'] },
   C: { title: "You haven't saved this yet",
        p1:    "You've built something here, but it only lives in this tab. Leave now and it's gone — closing the page, a refresh, anything.",
        p2:    "Saving takes a second and it's already part of your account.",
@@ -142,9 +142,13 @@ const EXPECT = {
       window.DatumLeavePrompt.show(a.branch, h);
       const w = document.querySelector('[data-leave-prompt]');
       if (!w) return null;
+      const bs = Array.from(w.querySelectorAll('button'));
+      const stayBtn = bs.find((b) => b.getAttribute('data-leave-role') === 'stay');
       return {
         text: Array.from(w.querySelectorAll('div')).map((d) => d.childElementCount === 0 ? d.textContent : '').filter(Boolean),
-        btns: Array.from(w.querySelectorAll('button')).map((b) => b.textContent)
+        btns: bs.map((b) => b.textContent),
+        roles: bs.map((b) => b.getAttribute('data-leave-role')),
+        stayLabel: stayBtn ? stayBtn.textContent : null
       };
     }, Object.assign({ branch }, handlers || {}));
   }
@@ -162,12 +166,14 @@ const EXPECT = {
     'RENDER A4: and the raw {fileName} placeholder never reaches a human');
 
   const rB = await render('B');
-  ok(!!rB && rB.text.indexOf(EXPECT.B.title) >= 0 && rB.text.indexOf(EXPECT.B.body) >= 0 && rB.text.indexOf(EXPECT.B.sub) >= 0,
-    'RENDER B: title, body and the tier subtext all render verbatim');
+  ok(!!rB && rB.text.indexOf(EXPECT.B.title) >= 0 && rB.text.indexOf(EXPECT.B.p1) >= 0 && rB.text.indexOf(EXPECT.B.p2) >= 0,
+    'RENDER B: headline and BOTH body paragraphs render verbatim');
   ok(!!rB && JSON.stringify(rB.btns) === JSON.stringify(EXPECT.B.btns),
-    `RENDER B2: buttons verbatim and in order (got ${JSON.stringify(rB && rB.btns)})`);
+    `RENDER B2: all FOUR buttons verbatim and in order (got ${JSON.stringify(rB && rB.btns)})`);
   ok(!!rB && rB.text.join(' ').toLowerCase().indexOf('unsaved') < 0 && rB.text.join(' ').toLowerCase().indexOf('not saved') < 0,
     'RENDER B3 TONE FENCE: Branch B never reads as a variant of you-have-unsaved-changes');
+  ok(!!rB && rB.btns.indexOf('Keep sketching') >= 0 && rB.btns.indexOf('Stay on this page') < 0,
+    'RENDER B4: B stays with "Keep sketching", not "Stay on this page" — B\'s user is still MAKING it, C\'s is protecting it');
 
   const rC = await render('C');
   ok(!!rC && rC.text.indexOf(EXPECT.C.title) >= 0 && rC.text.indexOf(EXPECT.C.p1) >= 0 && rC.text.indexOf(EXPECT.C.p2) >= 0,
@@ -181,19 +187,17 @@ const EXPECT = {
    * SAID so, and somebody who simply wants to keep working should not have to guess.
    * "Leave without saving" IS NOT A STAY and must never be counted as one — an earlier version of this
    * assertion accepted it and would have passed a branch with no way to stay at all.
-   * SCOPE, DECLARED: the Architect has ruled on A and C, and both are asserted. BRANCH B IS A KNOWN GAP,
-   * RAISED AND NOT YET RULED — all three of its buttons leave (create an account, sign in, leave without
-   * saving), so a signed-out visitor who just wants to keep sketching has to guess exactly as C's did.
-   * It is REPORTED here rather than asserted, because the fix is copy and copy is not Claude's to write.
-   * The moment B gains a stay label it is covered by the same rule. */
+   * ALL THREE BRANCHES ARE NOW RULED AND ALL THREE ARE ASSERTED. The census is read from the button's
+   * ROLE rather than its label, because B stays with "Keep sketching" and C with "Stay on this page" —
+   * asserting the label would force those two to harmonise, and the difference between them is the point. */
   const stayAll = [];
   for (const b of ['A', 'B', 'C']) {
     const r = await render(b, b === 'A' ? { fileName: 'Blueprint 7' } : {});
-    stayAll.push({ b, stay: !!(r && r.btns.some((t) => /^stay on this page$/i.test(t))) });
+    stayAll.push({ b, stay: !!(r && r.roles.indexOf('stay') >= 0), label: (r && r.stayLabel) || null });
   }
-  lines.push(`      [stay-button census] ${JSON.stringify(stayAll)}   <- B is a RAISED, UNRULED copy gap`);
-  ok(stayAll.filter((x) => x.b !== 'B').every((x) => x.stay),
-    `RENDER 4 RULE: every RULED branch (A, C) renders a visible way to stay, and "Leave without saving" is not counted as one (${JSON.stringify(stayAll)})`);
+  lines.push(`      [stay-button census] ${JSON.stringify(stayAll)}`);
+  ok(stayAll.every((x) => x.stay),
+    `RENDER 4 RULE: EVERY branch renders a visible way to stay, and "Leave without saving" is not counted as one (${JSON.stringify(stayAll)})`);
 
   /* BUTTONS ARE LABELS, NOT SENTENCES. Asserted as a rule over every button on every branch. */
   const punct = [];

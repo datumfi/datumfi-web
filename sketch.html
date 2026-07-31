@@ -2887,14 +2887,64 @@
     // abandoned mid-flight. Same helper studio.html uses; rides the ONE shared DatumD1 tracker (no fork).
     // drain() is self-capped so the nav ALWAYS proceeds; falls straight through when D1 is absent / rolled
     // back. (Hard reload / tab-close is covered separately by datum-d1's beforeunload guard.)
-    window._navDrain = function (url) {
+    /* THE LEAVE PROMPT SITS IN FRONT OF THE DRAIN, and only in front of it — the drain itself is
+     * untouched below. If the prompt takes the click, NOTHING proceeds until a human answers; every
+     * other path falls straight through to exactly today's behaviour.
+     *
+     * L60 — FAILS OPEN AT EVERY STEP. Component missing, signal missing, anything throwing: return false
+     * and the navigation happens as it always did. A guard in front of a link that silently eats the link
+     * is a worse defect than the loss it prevents.
+     *
+     * BRANCH SELECTION IS NOT DECIDED HERE. This hands facts to DatumLeavePrompt.decide and does as it is
+     * told, so the routing table lives in ONE place for both surfaces (L48).
+     * everSaved comes from _skOpenedSaved (opened from a saved sketch), and editedSinceSave is that AND
+     * hasBuilt — for a reopened sketch, having built something IS having edited it since its save. */
+    function _skLeaveGuard(url, proceed) {
       try {
-        if (window.DatumD1 && typeof window.DatumD1.drain === 'function') {
-          window.DatumD1.drain().then(function () { window.location.href = url; });
-          return;
-        }
-      } catch (e) {}
-      window.location.href = url;
+        var LP = window.DatumLeavePrompt;
+        if (!LP || typeof LP.maybeShow !== 'function') return false;
+        if (typeof window._skHasBuilt !== 'function') return false;
+        var built = !!window._skHasBuilt();
+        if (!built) return false;
+        var signedIn = false;
+        try { signedIn = !!sessionStorage.getItem('datum_auth_hint'); } catch (_e) {}
+        var saved = !!window._skOpenedSaved;
+        var toVault = '/vault.html?returnTo=' + encodeURIComponent(window.location.pathname + window.location.search);
+        var shown = LP.maybeShow(
+          { hasBuilt: true, signedIn: signedIn, everSaved: saved, editedSinceSave: saved },
+          {
+            /* SAVE AND CONTINUE MEANS BOTH. The destination is parked and the real save control is
+             * clicked; the continue happens ONLY from the confirmed-success path further down this file,
+             * the same place that clears the dirty flag. A save that fails leaves the user here, with
+             * their work and the honest toast — never navigated away from work that did not save. */
+            onSave: function () {
+              window._skPendingLeave = url;
+              var b = document.getElementById('btn-save-shape');
+              if (b) { b.click(); return; }
+              window._skPendingLeave = null;      // no save control -> do not strand them mid-promise
+              proceed();
+            },
+            onCreateAccount: function () { window.location.href = toVault; },
+            onSignIn:        function () { window.location.href = toVault; },
+            onLeave:         function () { proceed(); },
+            onStay:          function () { }      // dismiss returns them EXACTLY here, with no nav
+          }
+        );
+        return !!shown;
+      } catch (_e) { return false; }
+    }
+    window._navDrain = function (url) {
+      function _proceed() {
+        try {
+          if (window.DatumD1 && typeof window.DatumD1.drain === 'function') {
+            window.DatumD1.drain().then(function () { window.location.href = url; });
+            return;
+          }
+        } catch (e) {}
+        window.location.href = url;
+      }
+      if (_skLeaveGuard(url, _proceed)) return;
+      _proceed();
     };
     const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
 
@@ -9176,7 +9226,23 @@ Studio is built for exactly this. See If This Shape Holds →`;
                  they would be warned on the way out about work that is already safe.
                  A FAILED SAVE DELIBERATELY LEAVES THE FLAG SET, because the work genuinely is still not in
                  their account — which is exactly what the honest toast beside it now says. */
-              if (res && res.ok) { window._skDirty = false; _skToast(_toastMsg); return; }
+              if (res && res.ok) {
+                window._skDirty = false;
+                _skToast(_toastMsg);
+                /* THE "AND CONTINUE" HALF OF "SAVE AND CONTINUE", and it is hooked HERE for the same
+                 * reason the dirty flag is cleared here: this is the ONE place that knows the save
+                 * actually succeeded. A failed or pending save falls through to the honest toasts below
+                 * and the user stays put, holding their work — nobody is ever navigated away from a save
+                 * that did not happen. The short beat lets the confirmation register before the page
+                 * changes; the destination was parked when they pressed the button, so nothing is
+                 * recomputed here and there is no second decision to get wrong. */
+                if (window._skPendingLeave) {
+                  var _dest = window._skPendingLeave;
+                  window._skPendingLeave = null;
+                  setTimeout(function () { window.location.href = _dest; }, 1100);
+                }
+                return;
+              }
               if (res && res.reason === 'pending') { _skToast('Still trying to save. Your work is safe on this device.'); return; }
               if (res && res.reason === 'no-session') { _skToast('Not saved — you may be signed out. Your work is safe on this device.'); return; }
               _skToast('Not saved to your account. Your work is safe on this device.');
@@ -9491,6 +9557,61 @@ Studio is built for exactly this. See If This Shape Holds →`;
       });
       window._skDirty = false;
       window._skIsDirty = function () { return !!window._skDirty; };
+
+      /* ── HAS THIS PERSON BUILT SOMETHING ──────────────────────────────────────────────────────────
+       * The leave prompt's copy asserts the person MADE something — "You have sketched real work here".
+       * _skDirty alone cannot honestly feed that sentence: it answers "did a human touch anything", so
+       * one nudge of one slider that was then put back would produce a dialog claiming real work. The
+       * component says so in its own contract and names _skDirty as an unacceptable source for hasBuilt.
+       *
+       * SO IT IS BOTH CONDITIONS, ANDed, AND EACH CLOSES THE OTHER'S HOLE:
+       *   TOUCHED         — window._skDirty, set ONLY from e.isTrusted on pointerdown / keydown /
+       *                     touchstart. isTrusted IS THE BROWSER'S OWN STAMP: the user agent sets it,
+       *                     page script cannot set or fake it, and a dispatched event is always false.
+       *                     It is NOT a project-side flag and nothing in this repo can forge it.
+       *   CONTENT-DIFFERS — a control's live value against its OWN authored HTML attribute
+       *                     (defaultValue / defaultChecked), which is what the page shipped with.
+       *
+       * WHY defaultValue AND NOT A BASELINE CAPTURED AT BOOT — MEASURED, and it killed the obvious design.
+       * On an untouched cold load serializeSketchState() produced EIGHT distinct values and never came
+       * back to its earliest, because the opening showcase sweep drives slider-datum and everything
+       * derived from it (datum_spend, designed_datum, s1_datum, the two path strings, resolved_state,
+       * state_color). Any baseline captured at a moment is a baseline captured at the WRONG moment. The
+       * authored attribute is immune: the sweep sets .value and never touches the attribute, and on a
+       * settled untouched load 0 of 36 controls differ from it.
+       * THE REMAINING HOLE, and this is exactly what the AND is for: DURING the ~2.6s sweep slider-datum
+       * transiently differs from its attribute, so content alone would read as built for a visitor who
+       * left inside that window. The sweep cannot produce a trusted pointerdown, so the touch condition
+       * closes it. Neither condition is acceptable alone.
+       *
+       * REUSES THE SAME IGNORE LIST as the touch listener rather than restating it (L48) — chrome, the
+       * exit and the save control are not the sketch on either question. */
+      function _contentDiffers() {
+        var els = document.querySelectorAll('input, select, textarea');
+        for (var i = 0; i < els.length; i++) {
+          var el = els[i];
+          try {
+            if (_ignored(el)) continue;
+            if (el.type === 'checkbox' || el.type === 'radio') { if (el.checked !== el.defaultChecked) return true; }
+            else if (typeof el.defaultValue === 'string' && el.value !== el.defaultValue) return true;
+          } catch (_e) {}
+        }
+        return false;
+      }
+      window._skContentDiffers = _contentDiffers;
+      window._skHasBuilt = function () { return !!window._skDirty && _contentDiffers(); };
+
+      /* WAS THIS PAGE OPENED FROM AN ALREADY-SAVED SKETCH? Captured HERE, at parse time, because the
+       * hydration block below CONSUMES datumfi_hydrate_from_slot (removeItem) — read it later and it is
+       * always gone. Same expression the page already uses for _isReopenSketch (:2594), not a new rule.
+       * It is what separates Branch A from Branch C: edits to a saved sketch versus something never
+       * saved at all. Getting it wrong does not break anything, it makes the dialog say a false thing. */
+      var _openedSaved = false;
+      try {
+        _openedSaved = !!sessionStorage.getItem('datumfi_hydrate_from_slot') ||
+                       !!new URLSearchParams(window.location.search).get('id');
+      } catch (_e) {}
+      window._skOpenedSaved = _openedSaved;
     }());
 
     // ── PHASE A: OPEN SKETCH HYDRATION ───────────────────────────────────
@@ -9910,6 +10031,7 @@ window.addEventListener('load', function() {
   src="https://clerk.datumfi.com/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
   type="text/javascript"
 ></script>
+<script src="/scripts/datum-leave-prompt.js"></script>
 <script src="/nav.js"></script>
 </body>
 </html>
