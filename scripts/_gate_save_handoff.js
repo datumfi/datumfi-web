@@ -391,6 +391,20 @@ const CLERK = `window.Clerk = { load: function(){ return Promise.resolve(); },
       'HANDOFF 22: and its tooltip states the negative explicitly, because it sits beside the real Save and proximity is what does the damage');
     ok(served.indexOf("saveBtn.textContent = 'Save Shape'") < 0,
       'HANDOFF 23: the post-click restore carries the NEW label - otherwise the rename undoes itself two seconds after the first use');
+    ok(served.indexOf("saveBtn.textContent = '\u2713 Exported'") >= 0 && served.indexOf("'\u2713 Saved'") < 0,
+      'HANDOFF 24: the transient confirmation reads "Exported", not "Saved" - a FALSE CONFIRMATION at the moment of action is worse than a standing mislabel, because it tells the user the thing they most want to be true');
+    /* HANDOFF 25 IS THE STRUCTURAL FIX, not another string check. This defect existed because the LABEL
+       and its CONFIRMATION were two independent strings with no rule binding them - rename one and the
+       other silently keeps telling the old story. So the confirmation must CONTAIN THE LABEL'S VERB,
+       both read out of the source rather than hardcoded here. Rename the button to anything and this
+       goes red until the confirmation follows it. */
+    const labelMatch = /id="btn-save-shape"[\s\S]{0,300}?>([^<]+)</.exec(served);
+    const label = labelMatch ? labelMatch[1].trim() : null;
+    const confMatch = /saveBtn\.textContent = '\u2713 ([^']+)'/.exec(served);
+    const conf = confMatch ? confMatch[1].trim() : null;
+    const verb = label ? label.split(/\s+/)[0].replace(/e$/i, '') : null;   // Export -> Export, Save -> Sav
+    ok(!!label && !!conf && verb && conf.toLowerCase().indexOf(verb.toLowerCase()) === 0,
+      `HANDOFF 25 STRUCTURAL: the confirmation is bound to the label - label "${label}", confirmation "\u2713 ${conf}". Two independent strings with no rule between them is WHY this defect could exist; renaming one must now break the gate until the other follows`);
   }
 
   await browser.close();

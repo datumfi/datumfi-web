@@ -4688,7 +4688,14 @@
         // Button feedback
         const saveBtn = document.getElementById('btn-save-shape');
         if (saveBtn) {
-            saveBtn.textContent = '✓ Saved';
+            /* "✓ Exported", NOT "✓ Saved" — and this transient was WORSE than the mislabel it sat under.
+               A standing mislabel is something a user can learn to distrust. This fires at the moment of
+               the action, in the affirmative, and tells them the thing they most want to be true: that
+               their work is safe. It is a FALSE CONFIRMATION, which is the precise failure this whole arc
+               exists to eliminate. It mirrors the button's verb so control and confirmation tell one
+               story, and it keeps "Saved" reserved: on this surface that word now means, and only means,
+               work that persists to the user's account. */
+            saveBtn.textContent = '✓ Exported';
             saveBtn.style.color = 'var(--gold)';
             // Restores the LABEL, so it must carry the renamed one — otherwise the rename silently
             // undoes itself two seconds after the first use and "Save Shape" is back on the screen.
