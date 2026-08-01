@@ -213,7 +213,21 @@ for (const bad of ['.claude', 'package.json', 'package-lock.json']) {
  * a USER-ORIGIN source: the live serializer, or the carried vault-hop snapshot.
  * WHAT THIS DELIBERATELY DOES NOT CATCH, stated rather than discovered later: user content that reaches
  * LS through some future origin named in neither list. The origins are few, central and stable, but they
- * are the one hand-maintained part of this rule and the place to look first if it ever misses something. */
+ * are the one hand-maintained part of this rule and the place to look first if it ever misses something.
+ *
+ * ── THE BLIND SPOT. READ THIS BEFORE TRUSTING A GREEN RUN. ───────────────────────────────────────────
+ * THIS RULE GUARDS AGAINST WRITING TO THE MIRROR ALONE. IT DOES NOT GUARD AGAINST WRITING NOWHERE.
+ * A function that persists NOTHING AT ALL writes no localStorage, so it never matches, and it is silent,
+ * green and wrong. FOUND BY EXAMPLE, not by theory: sketchbook.html's "PIN CURRENT SCENARIO" path calls
+ * executeSavePayloadToSlot with no payload, which sets an in-memory object and shows a toast — no LS, no
+ * D1, nothing durable — and this rule cannot see it. A save-labelled control that persists nothing is the
+ * same species of defect as one that persists only to the mirror; the user performs the gesture and owns
+ * nothing either way.
+ * SO A GREEN RUN HERE MEANS "no write reached the mirror alone". IT DOES NOT MEAN "every save saves".
+ * Closing it would require asserting that a control labelled save eventually persists something, which is
+ * a claim about intent and reachability rather than about bytes — and the thirteen-site first draft of
+ * this very rule is the standing evidence for what happens when an invariant reaches past what it can
+ * actually see. Recorded rather than closed, deliberately. */
 const D1_SURFACES = {
   sketch: {
     files: ['sketch.html', 'sketchbook.html'],
