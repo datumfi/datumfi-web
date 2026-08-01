@@ -420,6 +420,41 @@ const CLERK = `window.Clerk = { load: function(){ return Promise.resolve(); },
       `HANDOFF 25 STRUCTURAL: the confirmation is bound to the label - label "${label}", confirmation "\u2713 ${conf}". Two independent strings with no rule between them is WHY this defect could exist; renaming one must now break the gate until the other follows`);
   }
 
+  /* == THE TWO EMPTY-TILE LABELS - both said SAVE/PIN and both open a BLANK surface =============
+     Captain-authorised 2026-08-01. Asserted in BOTH directions on purpose: the new wording present
+     AND every save-promise string absent. Present-only would pass with the old lie sitting beside
+     the new truth, which is precisely how the shape button kept its "Save Shape" restore through a
+     rename. The forbidden list is transcribed from the OLD SOURCE, not read out of the new one. */
+  {
+    const sb = await (await fetch(base + '/sketchbook.html')).text();
+    const bp = await (await fetch(base + '/Blueprint.html')).text();
+    /* SCOPED TO THE RETURNED TEMPLATE, NOT THE FUNCTION BODY. The first draft of this gate read the
+       whole function including its comment block and went RED on the comments EXPLAINING the rename,
+       because they quote the strings being retired. That is a real fault, not a nuisance: an assertion
+       that fires on a comment is one somebody silences. What renders is the template literal, so that
+       is what is asserted - and a comment above it is free to say whatever a reader needs. */
+    const tmpl = function (src) {
+      const i = src.indexOf('function renderEmptySlot'); if (i < 0) return '';
+      const r = src.indexOf('return `', i); if (r < 0) return '';
+      const e = src.indexOf('`;', r + 8); return e < 0 ? '' : src.slice(r + 8, e);
+    };
+    const sbChunk = tmpl(sb);
+    const bpChunk = tmpl(bp);
+    ok(sbChunk.length > 0 && bpChunk.length > 0,
+      `HANDOFF 26b RIG: both empty-tile templates were located (sketchbook ${sbChunk.length} chars, blueprint ${bpChunk.length} chars) - a zero here would make every assertion below pass on an empty string`);
+    ok(sbChunk.indexOf('Start a New Sketch') >= 0 && sbChunk.indexOf('Opens a new, blank Sketch.') >= 0,
+      'HANDOFF 27: the sketchbook empty tile reads "Start a New Sketch" and its hover reads "Opens a new, blank Sketch."');
+    ok(bpChunk.indexOf('Start a New Blueprint') >= 0 && bpChunk.indexOf('Opens a blank Studio') >= 0,
+      'HANDOFF 28: the blueprint empty card reads "Start a New Blueprint" / "Opens a blank Studio"');
+    /* THE HALF THAT ACTUALLY BITES. A tile that OPENS A BLANK SURFACE must not claim to save or pin. */
+    const FORBIDDEN_SB = ['Pin Current Scenario', 'Click to save your current Sketch here'];
+    const FORBIDDEN_BP = ['Save Studio Blueprint', 'Pin current Studio plan'];
+    const liveSb = FORBIDDEN_SB.filter(function (s) { return sbChunk.indexOf(s) >= 0; });
+    const liveBp = FORBIDDEN_BP.filter(function (s) { return bpChunk.indexOf(s) >= 0; });
+    ok(liveSb.length === 0 && liveBp.length === 0,
+      `HANDOFF 29 LOAD-BEARING: no save-or-pin promise survives on either empty tile (found ${JSON.stringify(liveSb.concat(liveBp))}). Both tiles open a BLANK surface and persist nothing; on this product "Save" means work that reaches the user's account`);
+  }
+
   await browser.close();
   await new Promise((r) => server.close(r));
 

@@ -36,7 +36,7 @@ const SACRED = {
   // Same gap as nav.js above, found 2026-07-27 while wiring the erase fix: sketchbook.html is a
   // Sacred Host in CLAUDE.md but was ABSENT from this map, so the erase edit passed the build with
   // no guard at all. Pinned at its true content.
-  'sketchbook.html': '6f51f33e0a12fcd60fd2206597c5898a',   // dead pin-to-slot scaffolding deleted (2026-08-01)
+  'sketchbook.html': '77a1068c98489fca0bc660dcda481416',   // empty tile: "Start a New Sketch" (2026-08-01)
 
   // ── MAP CLOSED 2026-07-27 ────────────────────────────────────────────────────────────────────
   // The seven below were declared Sacred in CLAUDE.md and pinned NOWHERE, so any edit to them
@@ -47,7 +47,7 @@ const SACRED = {
   // pinned here, and every host pinned here is declared there — the two lists match exactly.
   'vault.html': 'c7a7a9c101a6743c6a6a2d4c9f8453e1',
   'my-account.html': 'aee2279c79d212917686ab2e36f1591a',
-  'Blueprint.html': 'd704336e5659bffaebf372062f09f46f',   // cannot-load tile + true counter (2026-07-29)
+  'Blueprint.html': 'e4b22bfbfcc2d955dd755a141906f39e',   // empty card: "Start a New Blueprint" (2026-08-01)
   'Dossier.html': '5cceff124fd6d158557fa5d58defb1bd',
   'privacy.html': 'e8ad09c3b1881fd53b47b5be9ae0ded4',
   'terms.html': 'f075b5b3a3a919ee586b962aa17bf200',

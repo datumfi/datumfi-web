@@ -1562,13 +1562,22 @@ function netWorthMoney(nw) {
 
 function renderEmptySlot(label) {
   // Premium is dormant (full "paid mode") — no lock chrome; every sheet is an open save target.
+  /* SAYS WHAT IT DOES. This card navigates to /studio.html?fresh=1 — a BLANK Studio. It saves
+     nothing and pins nothing, and ?fresh=1 REPLACES any in-progress Studio draft (MEASURED
+     2026-08-01: a seeded draft is gone at load, while a plain /studio.html load keeps it, same
+     seed). That discard is INTENDED — the Captain ruled it. But the old label told the user the
+     opposite of what the click does, and "Save" is reserved for work that reaches their account.
+     Kept out of the template on purpose: an HTML comment here ships into every empty card.
+     ⚠️ FOR THE STUDIO LEAVE-PROMPT: this destroys the draft AT LOAD, and the person clicking is on
+     THIS page, not in the Studio — so a Studio-side departure guard cannot cover it. Needs its own
+     guard at this click. Captain-authorised 2026-08-01. */
   return `
     <div class="empty-state">
       <div>
         <div class="empty-glyph">＋</div>
         <p class="empty-label">
-          Save Studio Blueprint
-          <span>Sheet ${label} · Pin current Studio plan</span>
+          Start a New Blueprint
+          <span>Sheet ${label} · Opens a blank Studio</span>
         </p>
       </div>
     </div>

@@ -3652,9 +3652,15 @@
   function renderEmptySlot(idx) {
     const gi = _skGlobalBase() + (idx - 1);
     const locked = _skLocked(gi);   // tier-gated (unlimited now -> never locks); was idx>1 && !premium
+    /* SAYS WHAT IT DOES. This tile OPENS A BLANK SKETCH — it pins nothing and saves nothing. Both of
+       the strings it used to carry described a feature removed in P6.1, and the hover title was the
+       worse of the two: it promised a save at the moment of the click. On this product "Save" means
+       work that persists to the user's account, and nothing else. Captain-authorised 2026-08-01.
+       KEPT OUT OF THE TEMPLATE DELIBERATELY — an HTML comment here would ship into every empty tile,
+       and quoting the retired strings in shipped markup is exactly what HANDOFF 29 exists to catch. */
     return `
-      <div class="slot-empty-glyph" title="Click to save your current Sketch here">＋</div>
-      <p class="slot-empty-label">Pin Current Scenario<br><span style="font-size:11px; opacity:0.6;">(${_skLabel(gi)} Scenario)</span></p>
+      <div class="slot-empty-glyph" title="Opens a new, blank Sketch.">＋</div>
+      <p class="slot-empty-label">Start a New Sketch<br><span style="font-size:11px; opacity:0.6;">(${_skLabel(gi)} Scenario)</span></p>
       ${locked ? '<span class="slot-lock-indicator">[ Locked ]</span>' : ''}
     `;
   }
