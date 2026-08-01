@@ -47,7 +47,7 @@ const SACRED = {
   // pinned here, and every host pinned here is declared there — the two lists match exactly.
   'vault.html': 'c7a7a9c101a6743c6a6a2d4c9f8453e1',
   'my-account.html': 'aee2279c79d212917686ab2e36f1591a',
-  'Blueprint.html': '73298bc0447424746fb8c2545e21ee7f',   // 5b: ask before clearing the board, both doors (2026-08-01)
+  'Blueprint.html': '4fc171191a966e27cc8d7de91b3abfa7',   // carried save: no claim before the write is observed (2026-08-01)
   'Dossier.html': '5cceff124fd6d158557fa5d58defb1bd',
   'privacy.html': 'e8ad09c3b1881fd53b47b5be9ae0ded4',
   'terms.html': 'f075b5b3a3a919ee586b962aa17bf200',

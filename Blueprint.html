@@ -1169,6 +1169,28 @@ button {
   transform: translateX(-50%) translateY(0);
 }
 
+/* A FAILURE MUST NOT WEAR THE SUCCESS COLOUR. Same shape, different border/text, so the difference
+   is visible before a word is read. The action sits inline; the toast is uppercased by .toast
+   above, which is why every authored string here is written in sentence case. */
+.toast-error {
+  border-color: rgba(226,75,74,.55);
+  color: #f0a9a5;
+}
+.toast-action {
+  margin-left: 10px;
+  background: transparent;
+  border: 1px solid currentColor;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  padding: 3px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.toast-action:hover { opacity: .78; }
+
 @media (max-width: 980px) {
   .account-shell { padding: 90px 18px 42px; }
   .nav { display: none; }
@@ -1482,12 +1504,36 @@ function timeStamp() {
   return new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
-function showToast(message) {
+/* ONE TOAST, TWO MODES. The 1-argument call is unchanged for every existing caller.
+ * opts.persist — the toast does NOT fade. A SUCCESS may fade; A FAILURE THE USER DID NOT SEE IS
+ *   THE SAME DEFECT WE ARE CLOSING (Architect ruling). So failures stay until they are acted on.
+ * opts.action  — { label, onClick }: a visible way to act on a failure rather than a dead end.
+ * Copy is ALWAYS passed in, never composed here — this function decides nothing about wording. */
+function showToast(message, opts) {
+  opts = opts || {};
   const toast = document.getElementById('toast');
-  toast.textContent = message;
-  toast.classList.add('show');
+  if (!toast) return;
   clearTimeout(showToast._timer);
-  showToast._timer = setTimeout(() => toast.classList.remove('show'), 2300);
+  toast.textContent = '';
+  toast.classList.toggle('toast-error', !!opts.error);
+  // role flips so a failure INTERRUPTS a screen reader instead of waiting its turn politely.
+  toast.setAttribute('role', opts.error ? 'alert' : 'status');
+  const span = document.createElement('span');
+  span.textContent = message;
+  toast.appendChild(span);
+  if (opts.action && opts.action.label) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'toast-action';
+    b.textContent = opts.action.label;
+    b.addEventListener('click', function () {
+      toast.classList.remove('show');
+      try { if (typeof opts.action.onClick === 'function') opts.action.onClick(); } catch (e) {}
+    });
+    toast.appendChild(b);
+  }
+  toast.classList.add('show');
+  if (!opts.persist) showToast._timer = setTimeout(() => toast.classList.remove('show'), 2300);
 }
 
 function blueprintSvg(data, slotId) {
@@ -1835,15 +1881,78 @@ function saveCarriedSnapshot() {
    * mechanism, and it also fires on the 10s 'pending' path so a stalled write still repaints.
    * THE IMMEDIATE RE-READ IS REPLACED, NOT SUPPLEMENTED: painting a stale empty archive and then
    * repainting it a moment later is the two-source flash #301 already removed from this page. */
+  /* NOTHING CLAIMS A SAVE UNTIL THE WRITE IS OBSERVED. This used to toast "Blueprint saved."
+   * UNCONDITIONALLY, on the line after save() returned, while the D1 write was still in flight —
+   * so every failure shape told the user their work was safe. Third instance of a class already
+   * fixed in the Studio and the Sketch; routed through the SAME shared reporter (L48), not a third
+   * mechanism. onResult IS DatumD1.reportOutcome's callback — the reporter is what decides.
+   * NOUN: the destination is THE ARCHIVE, matching the picker's own title. "Blueprint saved" named
+   * the object rather than the outcome, and it is the string that lied. */
+  var _report = function (res) {
+    loadArchive().then(renderArchivePage);        // repaint on EVERY outcome, including a stall
+    if (res && res.ok) {
+      var nm = _carriedName(bp);
+      showToast(nm ? '✓ Saved to ' + nm : '✓ Saved to your Archive');
+      return;
+    }
+    /* 'pending' IS NOT A FAILURE. Ten seconds have passed and the write has NOT come back — nobody
+       has read an outcome, so asserting one, even the pessimistic one, is the same error in the
+       other direction. It says only the two things known: it has not returned, and nothing is lost. */
+    if (res && res.reason === 'pending') {
+      showToast('Still saving. Do not close this tab.', { persist: true });
+      return;
+    }
+    if (res && res.reason === 'no-session') {
+      showToast('Not saved. Your session ended. Sign in and try again.', {
+        persist: true, error: true,
+        action: { label: 'Sign in', onClick: function () {
+          window.location.href = '/vault.html?returnTo=' + encodeURIComponent('/Blueprint.html');
+        } }
+      });
+      return;
+    }
+    /* THE HONEST DEFAULT, NOT A GUESS. The reporter collapses 401 / 5xx / network / no-token into a
+       single 'failed', so this code CANNOT know whether the cause was the server or the session.
+       Naming one would be inventing a cause we cannot see. Every failure states the work is still
+       here, because it is — save() wrote the local draft before D1 was ever called. */
+    showToast('Not saved. Your work is still on this page.', {
+      persist: true, error: true,
+      action: { label: 'Try again', onClick: function () { _retryCarriedSave(bp); } }
+    });
+  };
   try {
-    DatumBlueprint.save(bp, { newBlueprint: true, onResult: function () {
-      loadArchive().then(renderArchivePage);
-    } });
-  } catch (e) { showToast('Save failed.'); return; }
+    DatumBlueprint.save(bp, { newBlueprint: true, onResult: _report });
+  } catch (e) {
+    showToast('Not saved. Your work is still on this page.', {
+      persist: true, error: true,
+      action: { label: 'Try again', onClick: function () { _retryCarriedSave(bp); } }
+    });
+    return;
+  }
   try { sessionStorage.removeItem('datumfi_pending_save'); } catch (e) {}
   try { sessionStorage.removeItem('datumfi_blueprint_current_snapshot'); } catch (e) {}
   AppSessionState.activeBlueprintId = bp.blueprint_id || null;
-  showToast('Blueprint saved.');
+  /* NO TOAST HERE. This is where the lie lived. The only thing that speaks now is _report, and it
+     speaks when the reporter has an answer. */
+  window._saveCarriedReport = _report;            // gate seam: lets a test drive each outcome
+}
+
+/* RETRY REUSES THE ID THE FIRST ATTEMPT ALREADY MINTED. {newBlueprint:true} mints a fresh one every
+   call, so retrying with it would leave a duplicate D1 row behind each failure. */
+function _retryCarriedSave(bp) {
+  try {
+    DatumBlueprint.save(bp, { blueprint_id: bp.blueprint_id, onResult: window._saveCarriedReport });
+  } catch (e) {}
+}
+/* The saved sheet's own name, or nothing. NEVER fabricated — if no name resolves the clause is
+   dropped and the toast says "your Archive", the same rule the leave prompt follows for {fileName}. */
+function _carriedName(bp) {
+  try {
+    var n = bp && (bp.display_name || bp.blueprint_name);
+    if (!n && window.DatumSavedName && bp && bp.blueprint_id && DatumSavedName.get) n = DatumSavedName.get(bp.blueprint_id);
+    n = (n == null) ? '' : String(n).trim();
+    return n || null;
+  } catch (e) { return null; }
 }
 
 // Erase -> remove the D1 row (no cross-device resurrect) + the per-id Open key + the LS/Clerk mirrors
