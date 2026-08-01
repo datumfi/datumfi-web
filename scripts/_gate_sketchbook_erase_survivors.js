@@ -10,10 +10,11 @@
    `sketchbook.html:3467` (an early return that exits _sketchbookRestoreFromClerk without assigning
    _skFull) is a SECOND door into the same mismatch — which is why the fix guards at the erase site.
 
-   ⚠️ SEED VIA THE REACHABLE ROUTE ONLY. `saveCurrentSketchToFirstAvailableSlot()` also reproduces the
-   wipe, but it has NO CALLERS since P6.1 removed the "Save Current Sketch" button, and it writes only
-   SketchbookDatabase (never LS). Classifying on it would be classifying on dead code. Use
-   _autoConsumeSketch.
+   ⚠️ SEED VIA THE REACHABLE ROUTE ONLY — `_autoConsumeSketch`. The other function that reproduced this
+   wipe, `saveCurrentSketchToFirstAvailableSlot()`, was DELETED on 2026-08-01: it had no callers since
+   P6.1 removed the "Save Current Sketch" button and it wrote only SketchbookDatabase, never LS, so
+   classifying on it was classifying on dead code. Kept in this note because the reasoning still applies
+   to the next seeding shortcut somebody is tempted by.
 
    THE BOUNDARY THIS ALSO PINS: the hydration must NEVER resurrect. A genuinely-empty book must stay
    empty through an erase — reachable-empty is authoritative (L51). Asserted here as a first-class

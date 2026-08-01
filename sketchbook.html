@@ -3562,25 +3562,6 @@
     if (accessEl) accessEl.textContent = AppSessionState.userHasPremiumToken ? 'Design' : 'Discover';
   }
 
-  function saveCurrentSketchToFirstAvailableSlot() {
-    for (let idx = 1; idx <= 4; idx++) {
-      const isLocked = idx > 1 && !AppSessionState.userHasPremiumToken;
-      const isEmpty = !SketchbookDatabase['slot' + idx];
-
-      if (isEmpty && isLocked) {
-        document.getElementById('premium-gate-modal').classList.add('open');
-        return;
-      }
-
-      if (isEmpty) {
-        executeSavePayloadToSlot(idx);
-        return;
-      }
-    }
-
-    showSketchToast('All available sketch pages are already filled.');
-  }
-
   function openSketchCompareModal() {
     const rows = [1, 2, 3, 4]
       .map(idx => ({ idx, data: SketchbookDatabase['slot' + idx] }))

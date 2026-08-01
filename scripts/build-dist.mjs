@@ -36,7 +36,7 @@ const SACRED = {
   // Same gap as nav.js above, found 2026-07-27 while wiring the erase fix: sketchbook.html is a
   // Sacred Host in CLAUDE.md but was ABSENT from this map, so the erase edit passed the build with
   // no guard at all. Pinned at its true content.
-  'sketchbook.html': '7ce87d8d71d550f63190e941958826cf',   // carried sketch reaches D1; Clerk-era 4-slot ceiling removed (2026-07-31)
+  'sketchbook.html': '6f51f33e0a12fcd60fd2206597c5898a',   // dead pin-to-slot scaffolding deleted (2026-08-01)
 
   // ── MAP CLOSED 2026-07-27 ────────────────────────────────────────────────────────────────────
   // The seven below were declared Sacred in CLAUDE.md and pinned NOWHERE, so any edit to them
@@ -218,11 +218,14 @@ for (const bad of ['.claude', 'package.json', 'package-lock.json']) {
  * ── THE BLIND SPOT. READ THIS BEFORE TRUSTING A GREEN RUN. ───────────────────────────────────────────
  * THIS RULE GUARDS AGAINST WRITING TO THE MIRROR ALONE. IT DOES NOT GUARD AGAINST WRITING NOWHERE.
  * A function that persists NOTHING AT ALL writes no localStorage, so it never matches, and it is silent,
- * green and wrong. FOUND BY EXAMPLE, not by theory: sketchbook.html's "PIN CURRENT SCENARIO" path calls
- * executeSavePayloadToSlot with no payload, which sets an in-memory object and shows a toast — no LS, no
- * D1, nothing durable — and this rule cannot see it. A save-labelled control that persists nothing is the
- * same species of defect as one that persists only to the mirror; the user performs the gesture and owns
- * nothing either way.
+ * green and wrong. FOUND BY EXAMPLE, not by theory: sketchbook.html's "PIN CURRENT SCENARIO" path called
+ * executeSavePayloadToSlot with no payload, which set an in-memory object and showed a toast — no LS, no
+ * D1, nothing durable — and this rule could not see it. A save-labelled control that persists nothing is
+ * the same species of defect as one that persists only to the mirror; the user performs the gesture and
+ * owns nothing either way.
+ * ⚠️ THAT EXAMPLE WAS DELETED ON 2026-08-01 (it was dead scaffolding, no callers since P6.1) AND THE
+ * BLIND SPOT IS UNCHANGED. Recorded deliberately: the specimen is gone, the gap it demonstrated is not,
+ * and a future reader who cannot find the example must not conclude the hole was closed.
  * SO A GREEN RUN HERE MEANS "no write reached the mirror alone". IT DOES NOT MEAN "every save saves".
  * Closing it would require asserting that a control labelled save eventually persists something, which is
  * a claim about intent and reachability rather than about bytes — and the thirteen-site first draft of

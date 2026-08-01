@@ -197,11 +197,14 @@ const CLERK = `window.Clerk = { load: function(){ return Promise.resolve(); },
     const consumerBody = _cs >= 0 ? served.slice(_cs, _cs + 3000) : '';
     ok(consumerBody.length > 0 && consumerBody.indexOf('All available sketch pages are already filled') < 0,
       'HANDOFF 5c: the Clerk-era refusal is GONE from the carry consumer — a ceiling that refuses a save the driver accepts cannot be reached if it does not exist');
-    /* SCOPED TO THE CONSUMER ON PURPOSE. A SECOND refusal site survives at sketchbook.html:3581, in the
-       page's own "PIN CURRENT SCENARIO" path — a different function, out of this commit's ordered scope,
-       and REPORTED rather than silently swept in or silently left unmentioned. It is worse than a stale
-       ceiling: that path calls executeSavePayloadToSlot with no payload, which writes the in-memory
-       SketchbookDatabase and a toast and NOTHING durable — no LS, no D1. Raised, not fixed here. */
+    /* THE SECOND REFUSAL SITE IS GONE. It lived in saveCurrentSketchToFirstAvailableSlot — the page's own
+       "PIN CURRENT SCENARIO" path, which called executeSavePayloadToSlot with NO PAYLOAD and so wrote the
+       in-memory SketchbookDatabase and a toast and nothing durable. It turned out to be DEAD SCAFFOLDING
+       (no callers since P6.1 replaced pin-a-snapshot with open-a-fresh-Sketch) and was deleted whole on
+       2026-08-01 rather than repaired. HANDOFF 26 keeps it deleted. */
+    ok(served.indexOf('saveCurrentSketchToFirstAvailableSlot') < 0 &&
+       served.indexOf('All available sketch pages are already filled') < 0,
+      'HANDOFF 26: the dead pin-to-slot path stays deleted — it wrote nothing durable, and a save-labelled path that persists nothing is the same defect as one that persists only to the mirror');
   }
 
   // ── THE TWO DOORS DIFFER, AND ONLY IN THE DOOR ────────────────────────────────────────────────────
