@@ -32,6 +32,12 @@ const { chromium } = require('playwright');
 const ROOT = path.resolve(__dirname, '..');
 const HOST = 'datumfi.localhost'; const PORT = 8261; const BASE = 'http://' + HOST + ':' + PORT;
 const NOLATCH = process.argv.includes('--nolatch');
+/* --nodossierbase restores the PRISTINE baseline in _hasContent, so the user's own dossier counts as
+ * work they did and the prompt cries wolf on an untouched boot. This is the Captain's 2026-08-01
+ * symptom and the single likeliest regression here, because the dossier line looks like a redundancy. */
+const NODOSSBASE = process.argv.includes('--nodossierbase');
+const A_DOSS = "    try { applyDossier(pristine, readDossier()); } catch (_e) {}";
+const M_DOSS = "    try { } catch (_e) {}";
 
 const A_LATCH = "      if (window._stuLeaveAnswered === true) return false;";
 const M_LATCH = "      if (false) return false;";
@@ -45,6 +51,14 @@ const server = http.createServer((req, res) => {
   const fp = path.join(ROOT, p);
   if (!fp.startsWith(ROOT) || !fs.existsSync(fp) || fs.statSync(fp).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
   let body = fs.readFileSync(fp);
+  if (NODOSSBASE && /studio-blueprint.js$/.test(p)) {
+    const src = body.toString('utf8');
+    const n = src.split(A_DOSS).length - 1;
+    if (n !== 1) { console.error(`anchor nodossierbase: expected exactly 1, found ${n}`); process.exit(1); }
+    const out = src.replace(A_DOSS, M_DOSS);
+    jsDiffers = jsDiffers || (out !== src);
+    body = Buffer.from(out, 'utf8');
+  }
   if (NOLATCH && /studio\.html$/.test(p)) {
     const src = body.toString('utf8');
     const n = src.split(A_LATCH).length - 1;
@@ -75,16 +89,18 @@ const dirtyDraft = (everSaved) => ({
   household: {}
 });
 
-async function boot(browser, { signedIn, draft }) {
+async function boot(browser, { signedIn, draft, dossier }) {
   const ctx = await browser.newContext({ viewport: { width: 1500, height: 950 } });
   const page = await ctx.newPage();
   await page.route('**/*', (r) => /clerk\.|cloudflareinsights|posthog|beacon/i.test(r.request().url()) ? r.abort() : r.continue());
-  await page.addInitScript(({ signedIn, draft }) => {
+  await page.addInitScript(({ signedIn, draft, dossier }) => {
     try { sessionStorage.setItem('datumfi_skip_entry_overlay', '1'); } catch (e) {}
     if (signedIn) { try { sessionStorage.setItem('datum_auth_hint', '1'); } catch (e) {} }
     if (draft) { try { localStorage.setItem('datumfi_blueprint_draft_v1', JSON.stringify(draft)); } catch (e) {} }
     else { try { localStorage.removeItem('datumfi_blueprint_draft_v1'); } catch (e) {} }
-  }, { signedIn, draft });
+    if (dossier) { try { localStorage.setItem('datumfi.accountDossier.v15', JSON.stringify(dossier)); } catch (e) {} }
+    else { try { localStorage.removeItem('datumfi.accountDossier.v15'); } catch (e) {} }
+  }, { signedIn, draft, dossier });
   await page.goto(BASE + '/studio.html', { waitUntil: 'load' });
   await page.waitForTimeout(2500);
   return { ctx, page };
@@ -124,15 +140,27 @@ const panelState = (page) => page.evaluate(() => {
     await ctx.close();
   }
 
-  /* ── SILENT WHEN THERE IS NOTHING TO KEEP. A prompt on every exit is the cry-wolf failure. ───── */
-  {
-    const { ctx, page } = await boot(browser, { signedIn: false, draft: null });
-    await page.evaluate(() => window._navDrain('/sketchbook.html'));
-    await page.waitForTimeout(700);
-    const p = await panelState(page);
-    ok(p.up === false,
-      `STUDIO 4: with NOTHING built the departure is silent (up=${p.up}) — a dialog that fires on every exit is dismissed within a day`);
-    await ctx.close();
+  /* ── SILENT WHEN THERE IS NOTHING TO KEEP. A prompt on every exit is the cry-wolf failure. ─────
+   * ⚠️ THE ZERO STATE MUST BE A REAL ONE. The first version of this seeded NO draft at all and
+   * passed while the product was crying wolf on the live site, because NO REAL USER HAS AN EMPTY
+   * ZERO STATE: a real boot writes a draft, and a real account seeds a DOSSIER into it. The
+   * Captain caught what this gate declared silent. Both are asserted now — the empty case AND the
+   * one every actual visitor has. An untouched boot is the state the product is in most often and
+   * it was the one state nobody tested. */
+  for (const [label, dossier] of [['no dossier', null],
+                                  ['WITH a real dossier (every account has one)',
+                                   { primary: { fullName: 'Daniel', dateOfBirth: '1974-06', targetRetirementAge: 62 },
+                                     household: {}, defaults: {}, accounts: {} }]]) {
+    for (const signedIn of [false, true]) {
+      const { ctx, page } = await boot(browser, { signedIn, draft: null, dossier });
+      const w = await page.evaluate(() => window.DatumBlueprint.workState());
+      await page.evaluate(() => window._navDrain('/sketchbook.html'));
+      await page.waitForTimeout(700);
+      const p = await panelState(page);
+      ok(p.up === false && w.hasContent === false,
+        `STUDIO 4 [${label}, signedIn=${signedIn}]: an UNTOUCHED boot leaves silently (up=${p.up}, hasContent=${w.hasContent}) — seeding the user's own dossier into the blueprint is NOT work they did, and a dialog that fires on every exit is dismissed within a day`);
+      await ctx.close();
+    }
   }
 
   /* ── BRANCH BY BASELINE when signed in: never-saved -> C, saved-and-edited -> A. ─────────────── */
@@ -283,13 +311,16 @@ const panelState = (page) => page.evaluate(() => {
   await browser.close();
   await new Promise((r) => server.close(r));
 
-  if (NOLATCH) {
+  if (NOLATCH || NODOSSBASE) {
     console.log(`\nPOISON LANDED? ${jsDiffers ? 'YES' : 'NO'}   (studio.html bytes changed: ${jsDiffers})`);
     if (!jsDiffers) { console.log('MUTATION DID NOT APPLY — this run proves nothing. Fix the anchor.'); process.exit(2); }
   }
   console.log('\n' + lines.join('\n'));
-  console.log(`\n${NOLATCH ? 'MUTATED[nolatch]' : 'CLEAN'}  GREEN ${pass} / RED ${fail}`);
-  if (NOLATCH) {
+  /* THE TAG MUST NAME THE MUTATION. A poisoned run that labels itself CLEAN is a misleading
+     diagnostic, which is the thing this project keeps hunting — --nodossierbase printed "CLEAN"
+     over 2 REDs until this line listed it. */
+  console.log(`\n${NOLATCH ? 'MUTATED[nolatch]' : NODOSSBASE ? 'MUTATED[nodossierbase]' : 'CLEAN'}  GREEN ${pass} / RED ${fail}`);
+  if (NOLATCH || NODOSSBASE) {
     console.log(fail > 0 ? 'RED-FIRST OK — the mutation BIT.' : 'RED-FIRST FAILED — the poison landed and nothing noticed.');
     process.exit(fail > 0 ? 0 : 1);
   }

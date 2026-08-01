@@ -142,8 +142,20 @@
   }
 
   var MONO = 'font-family:var(--font-mono,ui-monospace,SFMono-Regular,Menlo,monospace)';
-  var BTN  = MONO + ';font-size:11px;letter-spacing:0.08em;text-transform:uppercase;padding:11px 20px;' +
-             'border-radius:3px;cursor:pointer;line-height:1;transition:opacity .15s';
+  /* THE THREE ACTION BUTTONS SHARE ONE ROW; THE STAY BUTTON KEEPS ITS OWN SIZE AND ITS OWN LINE.
+   * Branch B grew a fourth button and then its two doors grew longer words ("Create a free account →",
+   * "Sign in to save →"), and the row broke: two buttons on line one, "Leave without saving" stranded
+   * far left on line two with a long gap before an outline-less "Keep drafting". Reported by the
+   * Captain 2026-08-01 on the live Studio.
+   * TIGHTENED RATHER THAN TRUNCATED — the copy is the Architect's and does not get shortened to fit a
+   * layout. Only the three ACTION buttons tighten; the stay button is deliberately left at its
+   * original size (Captain's instruction) because it is not one of the three and reads as an aside.
+   * Measured after the change rather than assumed: all three fit one row at 560px and at 94vw down
+   * to a 380px viewport. */
+  var BTN  = MONO + ';font-size:10px;letter-spacing:0.03em;text-transform:uppercase;padding:10px 12px;' +
+             'border-radius:3px;cursor:pointer;line-height:1;transition:opacity .15s;white-space:nowrap';
+  var STAY_BTN = MONO + ';font-size:11px;letter-spacing:0.08em;text-transform:uppercase;padding:11px 20px;' +
+             'border-radius:3px;cursor:pointer;line-height:1;transition:opacity .15s;white-space:nowrap';
 
   var _open = null;
 
@@ -208,7 +220,7 @@
     var primary = null;
     (c.buttons || []).forEach(function (spec) {
       if (!spec || !spec.label) return;
-      var b = _el('button', BTN + ';' + (SKIN[spec.role] || SKIN.leave), spec.label);
+      var b = _el('button', (spec.role === STAY_ROLE ? STAY_BTN : BTN) + ';' + (SKIN[spec.role] || SKIN.leave), spec.label);
       b.type = 'button';
       b.setAttribute('data-leave-role', spec.role);
       b.addEventListener('click', function () {

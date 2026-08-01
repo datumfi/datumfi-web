@@ -532,8 +532,22 @@
    * ITS OWN saved_at" to decide whether to ask a question. Different inputs, different consequence — one
    * chooses data, this one only chooses words. Nothing here reads, writes or influences that comparator. */
   var _WORK_IGNORE = { saved_at: 1, blueprint_id: 1, schema: 1, version: 1, datum: 1 };
+  /* THE BASELINE IS AN UNTOUCHED BOOT, NOT A PRISTINE OBJECT. This compared the draft to
+   * newBlueprint() and so counted THE USER'S OWN DOSSIER as work they had done: applyDossier copies
+   * their name, DOB and retirement date into bp.profile on EVERY load, so anybody with an account
+   * profile was "building something" the instant the Studio opened.
+   * MEASURED 2026-08-01, the Captain's report: land on the Studio, touch nothing, and the leave
+   * prompt fires — Branch C signed in, Branch B signed out. With no dossier it stayed correctly
+   * silent, which is exactly why the first version of the gate missed it: its zero state was an
+   * EMPTY one, and no real user has an empty one.
+   * PROFILE IS NOT BLANKET-IGNORED, deliberately. Adding it to _WORK_IGNORE would have been one
+   * word and would have thrown away real signal — the profile dates ARE editable in the Studio, so
+   * somebody who types a retirement date and leaves must still be asked. Seeding it from the
+   * dossier is what does not count; changing it does. Comparing against what an untouched boot
+   * WOULD have produced draws that line exactly, and needs no list to be kept up to date. */
   function _hasContent(draft) {
     var pristine = newBlueprint();
+    try { applyDossier(pristine, readDossier()); } catch (_e) {}
     var seen = {}, k;
     for (k in pristine) if (Object.prototype.hasOwnProperty.call(pristine, k)) seen[k] = 1;
     for (k in draft)    if (Object.prototype.hasOwnProperty.call(draft, k))    seen[k] = 1;

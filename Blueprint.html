@@ -1803,11 +1803,24 @@ function saveCarriedSnapshot() {
   if (!snapRaw) return;
   let bp = null; try { bp = JSON.parse(snapRaw); } catch (e) {}
   if (!bp) return;
-  try { DatumBlueprint.save(bp, { newBlueprint: true }); } catch (e) { showToast('Save failed.'); return; }
+  /* RE-READ THE DRIVER ONLY ONCE THE WRITE HAS LANDED. This used to call loadArchive() on the very
+   * next line after save(), but the D1 blueprint write is ASYNCHRONOUS — so the list came back
+   * WITHOUT the row just written, and because a reachable list is AUTHORITATIVE (L51) the archive
+   * rendered four empty sheets while the toast said "Blueprint saved". It WAS saved; a reload showed
+   * it. Reported by the Captain 2026-08-01 on the live conversion path, for BOTH doors.
+   * This is the same defect, and the same fix, as the carried SKETCH consumer: waiting on the write
+   * means we re-read a list that CONTAINS it. onResult is the existing hook for exactly this — no new
+   * mechanism, and it also fires on the 10s 'pending' path so a stalled write still repaints.
+   * THE IMMEDIATE RE-READ IS REPLACED, NOT SUPPLEMENTED: painting a stale empty archive and then
+   * repainting it a moment later is the two-source flash #301 already removed from this page. */
+  try {
+    DatumBlueprint.save(bp, { newBlueprint: true, onResult: function () {
+      loadArchive().then(renderArchivePage);
+    } });
+  } catch (e) { showToast('Save failed.'); return; }
   try { sessionStorage.removeItem('datumfi_pending_save'); } catch (e) {}
   try { sessionStorage.removeItem('datumfi_blueprint_current_snapshot'); } catch (e) {}
   AppSessionState.activeBlueprintId = bp.blueprint_id || null;
-  loadArchive().then(renderArchivePage);
   showToast('Blueprint saved.');
 }
 

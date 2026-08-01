@@ -25,7 +25,7 @@ const DROP_RE = [/^\.claude\//, /^\.wrangler\//, /^workers\//, /^functions\//, /
 const SACRED = {
   'studio.html': 'f0a68849ca94457b390440ae912f78c8',   // the Studio leave prompt (Commit 5) (2026-08-01)
   'sketch.html': '28258a76686008aebe839d59af39500f',   // shape button reverted to the Captain's "Save Shape" / "✓ Saved" (2026-08-01)
-  'scripts/studio-blueprint.js': 'd03f586676d13864564c3a733488cd1b',   // workState: read-only content + unsaved-edits facts (2026-07-31)
+  'scripts/studio-blueprint.js': 'f39a724294c09cbebd29e1d2107b4fef',   // hasContent baseline = untouched boot, not pristine (2026-08-01)
   // MISS-5 pre-work guard (2026-07-25). nav.js is a Sacred Host in CLAUDE.md but was absent from THIS map,
   // so a bad edit failed no build. It owns the centralized cross-device restore every page depends on
   // (_datumRestoreFromClerk / _restoreBlueprintFromD1 / the title mirror), and MISS-5 pre-work items 1, 2
@@ -47,7 +47,7 @@ const SACRED = {
   // pinned here, and every host pinned here is declared there — the two lists match exactly.
   'vault.html': 'c7a7a9c101a6743c6a6a2d4c9f8453e1',
   'my-account.html': 'aee2279c79d212917686ab2e36f1591a',
-  'Blueprint.html': 'e4b22bfbfcc2d955dd755a141906f39e',   // empty card: "Start a New Blueprint" (2026-08-01)
+  'Blueprint.html': 'd00d3e0219534f85be9ffe5511c3b0f9',   // carried save re-reads the driver after the write lands (2026-08-01)
   'Dossier.html': '5cceff124fd6d158557fa5d58defb1bd',
   'privacy.html': 'e8ad09c3b1881fd53b47b5be9ae0ded4',
   'terms.html': 'f075b5b3a3a919ee586b962aa17bf200',
