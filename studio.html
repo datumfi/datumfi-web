@@ -15829,20 +15829,146 @@
   <script src="/scripts/datum-archive-codec.js" defer></script>
   <script src="/scripts/datum-d1.js" defer></script>
   <script src="/scripts/studio-blueprint.js" defer></script>
+  <script src="/scripts/datum-leave-prompt.js" defer></script>
   <script>
   // #310 Part 2 — hold an in-app navigation until DatumD1.drain() settles (flush any debounced autosave +
   // await in-flight non-keepalive writes) so a big save the user clicks away from is not abandoned mid-flight.
   // drain() is self-capped so the nav ALWAYS proceeds; falls straight through when D1 is absent / rolled back.
   // Small saves stay keepalive and survive unload on their own. On window so all three studio script blocks
   // reach it at click time. (Hard reload / tab-close is covered separately by datum-d1's beforeunload guard.)
-  window._navDrain = function (url) {
+  /* ── THE STUDIO LEAVE GUARD (Commit 5) — the Sketch guard's twin, trap for trap ──────────────
+   * SITS IN FRONT OF THE DRAIN, and only in front of it. The drain below is untouched: if the prompt
+   * takes the click nothing proceeds until a human answers, and every other path falls straight
+   * through to exactly today's behaviour.
+   *
+   * L60 — FAILS OPEN AT EVERY STEP. Component missing, DatumBlueprint missing, anything throwing:
+   * return false and the navigation happens as it always did. A guard in front of a link that
+   * silently eats the link is a worse defect than the loss it prevents.
+   *
+   * BRANCH SELECTION IS NOT DECIDED HERE. This hands FACTS to DatumLeavePrompt.decide and does as it
+   * is told, so the routing table lives in ONE place for both surfaces (L48). surface:'studio' picks
+   * B's Studio words — the user here has DRAFTED, not sketched.
+   *
+   * THE FACTS COME FROM workState(), NOT FROM A SECOND OPINION. studio-blueprint.js already owns
+   * "is there a draft, does it have content, was it ever saved, is it edited since" — re-deriving any
+   * of that here is how the two drift apart in three months. */
+  function _stuLeaveGuard(url, proceed) {
     try {
-      if (window.DatumD1 && typeof window.DatumD1.drain === 'function') {
-        window.DatumD1.drain().then(function () { window.location.href = url; });
-        return;
-      }
-    } catch (e) {}
-    window.location.href = url;
+      var LP = window.DatumLeavePrompt;
+      if (!LP || typeof LP.maybeShow !== 'function') return false;
+      if (!window.DatumBlueprint || typeof window.DatumBlueprint.workState !== 'function') return false;
+      /* TRAP 1 — THE HUMAN HAS ALREADY ANSWERED THIS DEPARTURE, SO LET IT THROUGH.
+       * studioSaveCurrent, signed OUT, calls window._navDrain itself. Without this latch the guard
+       * would rebuild the panel a millisecond after its own save button closed it — the guard eating
+       * the navigation it asked for. That is the exact defect that killed BOTH Branch B doors on the
+       * Sketch, and it is reproduced here by construction rather than discovered later.
+       * SCOPED TO THIS DEPARTURE, NOT THE SESSION: set only by an answer that LEAVES, cleared by the
+       * next real edit (see the datum:draft-write-state listener below), so somebody who answers,
+       * stays and keeps working is asked again on their next exit.
+       * FAILS CLOSED, AND THE TEST IS `=== true` ON PURPOSE — anything other than an explicit current
+       * answer shows the panel. An unnecessary panel is an annoyance; a swallowed one is lost work.
+       * DO NOT "SIMPLIFY" THIS TO A TRUTHY CHECK — undefined must ask. */
+      if (window._stuLeaveAnswered === true) return false;
+      var w = window.DatumBlueprint.workState();
+      if (!w || !w.present || !w.hasContent) return false;      // nothing built -> say nothing
+      var signedIn = false;
+      try { signedIn = !!sessionStorage.getItem('datum_auth_hint'); } catch (_e) {}
+      var shown = LP.maybeShow(
+        { hasBuilt: true, signedIn: signedIn, everSaved: !!w.everSaved,
+          editedSinceSave: !!w.unsavedEdits, surface: 'studio' },
+        {
+          /* SAVE AND CONTINUE GOES THROUGH THE PAGE'S OWN SAVE ENTRY POINT, which already branches on
+             auth and already carries the whole guarantee. One entry point, never a third implementation. */
+          onSave: function () {
+            window._stuLeaveAnswered = true;
+            window._stuPendingLeave = url;
+            if (typeof window.studioSaveCurrent === 'function') { window.studioSaveCurrent(_stuLiveSaveAnchor()); return; }
+            window._stuPendingLeave = null;    // no save entry -> do not strand them mid-promise
+            proceed();
+          },
+          /* TRAP 3 — TWO DOORS, ONE GUARANTEE. Both stash identically and both land on the Blueprint
+             archive; only the Clerk screen differs. The page's own signed-out path had ONE url with no
+             mode, so "Create a free account" and "Sign in to save" would have opened the same screen —
+             which is why the authored variant needs both strings AND both destinations. */
+          onCreateAccount: function () { window._stuLeaveAnswered = true; _stuHopToVaultSave('sign-up'); },
+          onSignIn:        function () { window._stuLeaveAnswered = true; _stuHopToVaultSave('sign-in'); },
+          onLeave:         function () { window._stuLeaveAnswered = true; proceed(); },
+          /* STAY DELIBERATELY DOES NOT LATCH — staying is not a departure, and the next one must
+             still be asked about. Dismiss returns the user exactly where they were, with NO nav. */
+          onStay:          function () {}
+        }
+      );
+      return !!shown;
+    } catch (_e) { return false; }             // fail open: never eat a navigation on our own bug
+  }
+
+  /* TRAP 2 — RESOLVE THE LIVE SAVE CONTROL, NEVER NAME ONE. Signed out the header button is visible;
+   * signed in, account-topbar.js injects its own Save and the header one can be present at 0x0. A
+   * hardcoded id is a claim that a piece of the page will never move, and this piece already moved
+   * once on the Sketch and put the picker at the screen edge. Returns undefined when nothing resolves,
+   * which studioSaveCurrent already handles by falling back to its own default anchor — FAILS TOWARD
+   * THE SAVE: an unanchored picker is cosmetic, one that refuses to open is a save that never happens.
+   *
+   * MEASURED, NOT GUESSED: the account-topbar Save carries NO id at all — it is
+   * `#acct-topbar .acct-save` with data-acct-action="save-current" — and the header button is
+   * `#studio-save-bp-btn`, not the `#studio-save-bp` a reasonable person would assume. Both were
+   * checked against the source rather than inferred, because an anchor that resolves to nothing is
+   * exactly how the Sketch picker ended up at the screen edge. */
+  function _stuLiveSaveAnchor() {
+    var sels = ['#acct-topbar .acct-save', '#studio-save-bp-btn', '#studio-save-bp-mob'];
+    for (var i = 0; i < sels.length; i++) {
+      var el = null;
+      try { el = document.querySelector(sels[i]); } catch (_e) { el = null; }
+      if (el) { var r = el.getBoundingClientRect(); if (r.width > 0 && r.height > 0) return el; }
+    }
+    return undefined;                          // studioSaveCurrent falls back to its own default anchor
+  }
+
+  /* Signed-out save: delegates to the ONE stash-and-hop that lives beside liveBp()/captureDOM, which
+   * is the only scope that can reach them (L48). An earlier draft of this reimplemented the capture
+   * HERE and silently carried NOTHING — `liveBp` is declared far below this block, so `typeof liveBp`
+   * quietly reads 'undefined' rather than throwing, and both conversion doors would have hopped to
+   * Clerk with an empty stash. That is the precise failure this arc exists to prevent, introduced by
+   * the fix for it. Fails toward the hop: if the helper is missing the user still reaches the door. */
+  function _stuHopToVaultSave(mode) {
+    if (typeof window._stuStashAndHop === 'function') { window._stuStashAndHop(mode); return; }
+    var _m = (mode === 'sign-up') ? 'mode=sign-up&' : '';
+    window._navDrain('/vault.html?' + _m + 'returnTo=' + encodeURIComponent('/Blueprint.html'));
+  }
+
+  /* THE LATCH RESETS ON A REAL EDIT, not on a timer. Somebody who answers, stays, and then changes
+   * something has started new unsaved work, and must be asked again on their next departure. A latch
+   * that never resets is a leave-prompt that protects you once and then never again — which is WORSE
+   * than none, because the protection is believed.
+   *
+   * NOT `datum:draft-write-state`, WHICH WAS THE FIRST ATTEMPT AND WAS WRONG. That event is
+   * EDGE-TRIGGERED (studio-blueprint.js:378 returns early unless the ok/fail state CHANGES), so it
+   * fires when draft-writing breaks or recovers and at no other time — the latch would have reset
+   * essentially never, giving exactly the protects-once-then-never behaviour the paragraph above
+   * forbids. Found by reading what the event actually does instead of what its name suggests.
+   *
+   * RIDES ON isTrusted, so seeding, animation and any synthetic input cannot clear the latch — only a
+   * real human touching a real control. Capture phase so a handler that stops propagation cannot hide
+   * the edit from us. */
+  ['input', 'change'].forEach(function (evt) {
+    document.addEventListener(evt, function (e) {
+      if (!e || e.isTrusted !== true) return;
+      window._stuLeaveAnswered = false;
+    }, true);
+  });
+
+  window._navDrain = function (url) {
+    function _proceed() {
+      try {
+        if (window.DatumD1 && typeof window.DatumD1.drain === 'function') {
+          window.DatumD1.drain().then(function () { window.location.href = url; });
+          return;
+        }
+      } catch (e) {}
+      window.location.href = url;
+    }
+    if (_stuLeaveGuard(url, _proceed)) return;   // a human is answering; nothing proceeds until they do
+    _proceed();
   };
   /* ── DRAFT-PERSISTENCE NOTICES ───────────────────────────────────────────────────────────
    * Two conditions where the Studio has STOPPED keeping the local draft. Both were previously
@@ -16338,6 +16464,23 @@
     // signed-IN account-topbar Save button. We gate the ACTION, not the page —
     // a signed-OUT Save forces sign-in and lands on the Blueprint archive. There is
     // NO anonymous-local save path: the picker (open) is reached only when signed in.
+    /* THE ONE STASH-AND-HOP, published because the leave guard cannot reach liveBp()/captureDOM from
+     * its own script block (they are declared in here). Written once and used by THREE callers — this
+     * function's own signed-out branch below, and the leave prompt's two conversion doors — so no
+     * caller grows its own opinion about what gets carried (L48).
+     * mode 'sign-up' and 'sign-in' are TWO DOORS, ONE GUARANTEE: both stash identically and both land
+     * on the Blueprint archive; only the Clerk screen differs. Before this, the signed-out path built
+     * one url with no mode, so "Create a free account" and "Sign in to save" would have opened the
+     * same screen — the labels would have been a distinction the product did not make. */
+    window._stuStashAndHop = function (mode) {
+      try {
+        var _bp = liveBp(); DatumBlueprint.captureDOM(_bp);
+        sessionStorage.setItem('datumfi_blueprint_current_snapshot', JSON.stringify(_bp));
+        sessionStorage.setItem('datumfi_pending_save', 'blueprint');
+      } catch (e) {}
+      var _m = (mode === 'sign-up') ? 'mode=sign-up&' : '';
+      window._navDrain('/vault.html?' + _m + 'returnTo=' + encodeURIComponent('/Blueprint.html'));
+    };
     window.studioSaveCurrent = function (anchor) {
       if (!sessionStorage.getItem('datum_auth_hint')) {
         // P5 Step-1: the live Studio DOM exists only here. Capture the full bp and
@@ -16345,12 +16488,10 @@
         // so the Blueprint archive can reconstruct + DatumBlueprint.save() on landing
         // — Option B: we set a pending-intent flag but DO NOT auto-fire; the user
         // clicks "Save Current Blueprint →" on the archive to consume it.
-        try {
-          var _bp = liveBp(); DatumBlueprint.captureDOM(_bp);
-          sessionStorage.setItem('datumfi_blueprint_current_snapshot', JSON.stringify(_bp));
-          sessionStorage.setItem('datumfi_pending_save', 'blueprint');
-        } catch (e) {}
-        window._navDrain('/vault.html?returnTo=' + encodeURIComponent('/Blueprint.html'));
+        // THE CAPTURE + HOP MOVED UP into _stuStashAndHop and is CALLED here rather than repeated:
+        // the leave prompt's two doors need the identical behaviour, and a second copy of it is how
+        // the two drift apart in three months. No mode = the plain sign-in door, exactly as before.
+        window._stuStashAndHop();
         return;
       }
       if (pop) close(); else open(anchor || btn);

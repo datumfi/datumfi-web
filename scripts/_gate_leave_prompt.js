@@ -38,8 +38,19 @@ const M_SILENT  = "    if (false) return null;";
 /* --wirebank RESURRECTS the parked Discover subtext into live copy, which is the exact accident the bank
  * exists to prevent. BANK 3 must go red. Without this the bank assertion is untested decoration. */
 const WIREBANK  = process.argv.includes('--wirebank');
-const A_BANK    = "                { label: \"Keep sketching\",       role: 'stay'   }]";
-const M_BANK    = "                { label: \"Keep sketching\",       role: 'stay'   }],\n      subtext: \"Discover is free and includes one saved plan.\"";
+/* --nofork COLLAPSES THE SURFACE FORK so the Studio falls back to the Sketch words. This is the
+ * failure the fork exists to prevent — "sketched" shown to somebody who drafted — and it is the
+ * likeliest future regression, because a tidy-up that "simplifies" copyFor looks harmless. */
+const NOFORK    = process.argv.includes('--nofork');
+const A_FORK    = "    if (branch === 'B' && surface === 'studio') return COPY.Bstudio;";
+const M_FORK    = "    if (false) return COPY.Bstudio;";
+/* ⚠️ THESE ARE BYTE ANCHORS INTO THE COMPONENT, INCLUDING ITS WHITESPACE. Re-aligning B's button
+   block on 2026-08-01 (the labels got longer) moved the padding and this anchor stopped matching —
+   the CLEAN run stayed 29 GREEN and said nothing, because apply() only runs under --wirebank. The
+   anchor's own "expected exactly 1 occurrence" check is what caught it, loudly, which is why that
+   check exists. If you re-indent the component, re-copy these two strings from the source. */
+const A_BANK    = "                { label: \"Keep sketching\",          role: 'stay'   }]";
+const M_BANK    = "                { label: \"Keep sketching\",          role: 'stay'   }],\n      subtext: \"Discover is free and includes one saved plan.\"";
 let jsDiffers = false;
 
 let pass = 0, fail = 0; const lines = [];
@@ -54,7 +65,7 @@ const server = http.createServer((req, res) => {
   const fp = path.join(ROOT, p);
   if (!fp.startsWith(ROOT) || !fs.existsSync(fp) || fs.statSync(fp).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
   let body = fs.readFileSync(fp);
-  if (p === '/scripts/datum-leave-prompt.js' && (FLATTEN || NOSILENT || WIREBANK)) {
+  if (p === '/scripts/datum-leave-prompt.js' && (FLATTEN || NOSILENT || WIREBANK || NOFORK)) {
     let src = body.toString('utf8'); const orig = src;
     const apply = (a, m, label) => {
       const n = src.split(a).length - 1;
@@ -64,6 +75,7 @@ const server = http.createServer((req, res) => {
     if (FLATTEN)  apply(A_FLATTEN,  M_FLATTEN,  'flatten');
     if (NOSILENT) apply(A_SILENT,   M_SILENT,   'silent');
     if (WIREBANK) apply(A_BANK,     M_BANK,     'wirebank');
+    if (NOFORK)   apply(A_FORK,     M_FORK,     'nofork');
     jsDiffers = jsDiffers || (src !== orig);
     body = Buffer.from(src, 'utf8');
   }
@@ -81,7 +93,12 @@ const EXPECT = {
   B: { title: 'You have sketched real work here',
        p1:    'This drafting board is temporary. Without an account, everything you have built disappears the moment you leave.',
        p2:    'Create one free and it will be waiting for you next time.',
-       btns:  ['Save my work', 'Sign in', 'Leave without saving', 'Keep sketching'] },
+       btns:  ['Create a free account →', 'Sign in to save →', 'Leave without saving', 'Keep sketching'] },
+  /* B FORKS BY SURFACE AND A/C DO NOT — transcribed separately from the Architect's message so the two
+     variants sit between two independent transcriptions rather than being compared to each other. */
+  Bstudio: { title: 'You have drafted real work here',
+       p1:    'This blueprint lives only in this browser. Create a free account and it stays with you, on this device and the next one.',
+       btns:  ['Create a free account →', 'Sign in to save →', 'Leave without saving', 'Keep drafting'] },
   C: { title: "You haven't saved this yet",
        p1:    "You've built something here, but it only lives in this tab. Leave now and it's gone — closing the page, a refresh, anything.",
        p2:    "Saving takes a second and it's already part of your account.",
@@ -139,24 +156,26 @@ const EXPECT = {
     'DECIDE 9 LOAD-BEARING: a signed-in architect with NO last save is NEVER handed Branch B — auth picks the words, the baseline picks the risk');
 
   // ── RENDER — read back what the DOM actually shows ──────────────────────────────────────────────────
-  async function render(branch, handlers) {
+  async function render(branch, handlers, surface) {
     return page.evaluate((a) => {
       window.DatumLeavePrompt.close();
       window.__acts = [];
       const h = { fileName: a.fileName };
       ['onSave', 'onCreateAccount', 'onSignIn', 'onLeave', 'onStay'].forEach((k) => { h[k] = () => window.__acts.push(k); });
-      window.DatumLeavePrompt.show(a.branch, h);
+      window.DatumLeavePrompt.show(a.branch, h, a.surface);
       const w = document.querySelector('[data-leave-prompt]');
       if (!w) return null;
+      w.__surface = w.getAttribute('data-leave-surface');
       const bs = Array.from(w.querySelectorAll('button'));
       const stayBtn = bs.find((b) => b.getAttribute('data-leave-role') === 'stay');
       return {
         text: Array.from(w.querySelectorAll('div')).map((d) => d.childElementCount === 0 ? d.textContent : '').filter(Boolean),
         btns: bs.map((b) => b.textContent),
         roles: bs.map((b) => b.getAttribute('data-leave-role')),
-        stayLabel: stayBtn ? stayBtn.textContent : null
+        stayLabel: stayBtn ? stayBtn.textContent : null,
+        surface: w.getAttribute('data-leave-surface')
       };
-    }, Object.assign({ branch }, handlers || {}));
+    }, Object.assign({ branch, surface }, handlers || {}));
   }
 
   const rA = await render('A', { fileName: 'Blueprint 7' });
@@ -180,6 +199,28 @@ const EXPECT = {
     'RENDER B3 TONE FENCE: Branch B never reads as a variant of you-have-unsaved-changes');
   ok(!!rB && rB.btns.indexOf('Keep sketching') >= 0 && rB.btns.indexOf('Stay on this page') < 0,
     'RENDER B4: B stays with "Keep sketching", not "Stay on this page" — B\'s user is still MAKING it, C\'s is protecting it');
+
+  /* ── BRANCH B FORKS BY SURFACE — the Studio's user DRAFTED, they did not SKETCH ──────────────── */
+  const rBs = await render('B', {}, 'studio');
+  ok(!!rBs && rBs.text.indexOf(EXPECT.Bstudio.title) >= 0 && rBs.text.indexOf(EXPECT.Bstudio.p1) >= 0,
+    'RENDER B-STUDIO: the Studio variant renders its own headline and body verbatim');
+  ok(!!rBs && JSON.stringify(rBs.btns) === JSON.stringify(EXPECT.Bstudio.btns),
+    `RENDER B-STUDIO 2: four buttons verbatim, stay reads "Keep drafting" (got ${JSON.stringify(rBs && rBs.btns)})`);
+  /* THE HALF THAT BITES. Present-only checks would pass if BOTH surfaces rendered the Studio words,
+     or both the Sketch words — the whole point of forking is that the surface-specific nouns DIFFER.
+     Asserted as a mutual exclusion in both directions, not as two independent presence checks. */
+  ok(!!rBs && !!rB && rBs.text.join(' ').indexOf('sketched') < 0 && rBs.btns.indexOf('Keep sketching') < 0,
+    'RENDER B-STUDIO 3 LOAD-BEARING: no Sketch vocabulary survives on the Studio variant — "sketched" names a surface, it is not a generic verb');
+  ok(!!rB && rB.text.join(' ').indexOf('drafted real work') < 0 && rB.btns.indexOf('Keep drafting') < 0,
+    'RENDER B-STUDIO 4 LOAD-BEARING: and no Studio vocabulary leaks back onto the Sketch — the fork must cut both ways');
+  ok(!!rBs && rBs.surface === 'studio' && !!rB && rB.surface === 'sketch',
+    `RENDER B-STUDIO 5: the rendered panel DECLARES which words it used (studio="${rBs && rBs.surface}", sketch="${rB && rB.surface}") so a host cannot silently get the wrong surface`);
+  /* A/C DO NOT FORK, AND THAT IS A DECISION, NOT AN OMISSION: they describe a save state, which is the
+     same fact on either surface. Asserted so a future "harmonise the surfaces" pass cannot fork them. */
+  const rAs = await render('A', { fileName: 'Blueprint 7' }, 'studio');
+  const rCs = await render('C', {}, 'studio');
+  ok(!!rAs && !!rCs && rAs.text.indexOf(EXPECT.A.title) >= 0 && rCs.text.indexOf(EXPECT.C.title) >= 0,
+    'RENDER SHARED: A and C are IDENTICAL on both surfaces — they describe a save state, which is the same fact wherever you are');
 
   const rC = await render('C');
   ok(!!rC && rC.text.indexOf(EXPECT.C.title) >= 0 && rC.text.indexOf(EXPECT.C.p1) >= 0 && rC.text.indexOf(EXPECT.C.p2) >= 0,
@@ -260,13 +301,13 @@ const EXPECT = {
   await browser.close();
   await new Promise((r) => server.close(r));
 
-  const MUTATED = FLATTEN || NOSILENT || WIREBANK;
+  const MUTATED = FLATTEN || NOSILENT || WIREBANK || NOFORK;
   if (MUTATED) {
     console.log(`\nPOISON LANDED? ${jsDiffers ? 'YES' : 'NO'}   (datum-leave-prompt.js bytes changed: ${jsDiffers})`);
     if (!jsDiffers) { console.log('MUTATION DID NOT APPLY — this run proves nothing. Fix the anchor.'); process.exit(2); }
   }
   console.log('\n' + lines.join('\n'));
-  const _tag = FLATTEN ? 'MUTATED[flatten]' : NOSILENT ? 'MUTATED[nosilent]' : WIREBANK ? 'MUTATED[wirebank]' : 'CLEAN';
+  const _tag = FLATTEN ? 'MUTATED[flatten]' : NOSILENT ? 'MUTATED[nosilent]' : WIREBANK ? 'MUTATED[wirebank]' : NOFORK ? 'MUTATED[nofork]' : 'CLEAN';
   console.log(`\n${_tag}  GREEN ${pass} / RED ${fail}`);
   if (MUTATED) {
     console.log(fail > 0 ? 'RED-FIRST OK — the mutation BIT.' : 'RED-FIRST FAILED — the poison landed and nothing noticed.');

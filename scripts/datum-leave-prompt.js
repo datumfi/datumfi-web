@@ -61,10 +61,14 @@
       /* B's stay label is "Keep sketching", NOT "Stay on this page", and the difference is deliberate:
        * C's user is PROTECTING something they made; B's user is still MAKING it. The verb matches what
        * they are actually doing. Do not harmonise these two labels. */
-      buttons: [{ label: "Save my work",         role: 'create' },
-                { label: "Sign in",              role: 'signin' },
-                { label: "Leave without saving", role: 'leave'  },
-                { label: "Keep sketching",       role: 'stay'   }]
+      /* THE TWO DOORS SAY WHAT THEY DO. "Save my work" / "Sign in" became "Create a free account" /
+       * "Sign in to save": the second door used to name the mechanism (signing in) rather than the
+       * outcome (the work being kept), so the person who already had an account could read it as
+       * unrelated to their sketch. Both doors now end in the same promise. Architect, 2026-08-01. */
+      buttons: [{ label: "Create a free account →", role: 'create' },
+                { label: "Sign in to save →",       role: 'signin' },
+                { label: "Leave without saving",    role: 'leave'  },
+                { label: "Keep sketching",          role: 'stay'   }]
       /* DORMANT — Branch B subtext. Parked 2026-07-31 by Architect ruling.
          Do not wire until a Discover tier exists AND the Architect re-confirms
          the claim is accurate. Bank the words, not the promise.
@@ -77,6 +81,22 @@
          they render on no branch, so the bank is tamper-evident without being live.
          subtext: "Discover is free and includes one saved plan."
       */
+    },
+    /* BRANCH B — STUDIO. THE ONLY BRANCH THAT FORKS BY SURFACE, and only its surface-specific words.
+     * "Sketched" is not a generic verb — it NAMES A SURFACE. On the Studio the user has DRAFTED, which
+     * is the Studio's own word (Estate Drafting, Drafting Focus). Reusing the Sketch noun here is the
+     * vocabulary drift the language system exists to prevent, so B forks and A and C deliberately do
+     * not: A and C describe a save state, which is the same fact on either surface.
+     * Architect-authored 2026-08-01, wired VERBATIM (L47). */
+    Bstudio: {
+      title: "You have drafted real work here",
+      body: ["This blueprint lives only in this browser. Create a free account and it stays with you, on this device and the next one."],
+      /* "Keep drafting", not "Keep sketching" — same reasoning as B's, and the same rule that keeps
+       * C on "Stay on this page": the verb matches what this person is actually doing. */
+      buttons: [{ label: "Create a free account →", role: 'create' },
+                { label: "Sign in to save →",       role: 'signin' },
+                { label: "Leave without saving",    role: 'leave'  },
+                { label: "Keep drafting",           role: 'stay'   }]
     },
     /* BRANCH C — AUTHENTICATED, NEVER SAVED. Urgent but easy.
      * TWO DELIBERATE CHOICES from the Architect: no "create an account" ask, because they have one and that
@@ -129,15 +149,31 @@
 
   /* handlers: onSave, onCreateAccount, onSignIn, onLeave, onStay. Every one is optional and every one is
    * called inside a try — a throwing host must not wedge the dialog open with no way out. */
-  function show(branch, handlers) {
-    var c = COPY[branch];
+  /* SURFACE PICKS THE WORDS; decide() STILL PICKS THE BRANCH. The routing table stays in exactly one
+   * place (L48) — surface is a fact about the caller, not a fifth branch, so it never reaches decide().
+   *
+   * FAILS TOWARD SHOWING THE DIALOG, NOT TOWARD SILENCE. An unknown/absent surface falls back to the
+   * Sketch words. That is a COPY defect and it is the lesser one: the wrong noun in front of a person
+   * who then keeps their work is recoverable, a dialog that renders nothing because it could not
+   * resolve a surface is the data loss this whole component exists to prevent. The gate asserts the
+   * Studio actually passes 'studio', so the fallback stays a safety net and never becomes the path. */
+  function copyFor(branch, surface) {
+    if (branch === 'B' && surface === 'studio') return COPY.Bstudio;
+    return COPY[branch];
+  }
+
+  function show(branch, handlers, surface) {
+    var c = copyFor(branch, surface);
     if (!c || _open) return null;
     var h = handlers || {};
     var doc = global.document;
 
     var wrap = _el('div', 'position:fixed;inset:0;z-index:100200;display:flex;align-items:center;' +
       'justify-content:center;background:rgba(6,8,10,0.72);backdrop-filter:blur(2px);padding:24px');
+    /* BRANCH stays the letter so every existing host and gate keying on it is untouched; SURFACE is a
+     * separate attribute so a gate can prove WHICH WORDS rendered, not merely which branch was chosen. */
     wrap.setAttribute('data-leave-prompt', branch);
+    wrap.setAttribute('data-leave-surface', (branch === 'B' && surface === 'studio') ? 'studio' : 'sketch');
 
     var card = _el('div', 'max-width:min(560px,94vw);width:100%;background:#0e1114;' +
       'border:1px solid rgba(229,142,38,0.42);border-radius:6px;padding:26px 26px 22px;' +
@@ -207,7 +243,7 @@
   function maybeShow(state, handlers) {
     var b = decide(state);
     if (!b) return null;
-    show(b, handlers);
+    show(b, handlers, state && state.surface);   // surface is a FACT, so it travels in state
     return b;
   }
 
