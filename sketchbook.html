@@ -3766,22 +3766,62 @@
   // exactly ONCE: it consumes the pending flag + snapshot (a second landing finds
   // none). All four pages full -> the existing "all pages filled" guard. The caller
   // (onSessionConfirmed) gates on the pending flag so an ordinary visit does nothing.
+  /* THE DRIVER WRITE FOR A CARRIED SKETCH. Deliberately mirrors sketch.html's _d1WriteSketch rather than
+     calling it: that one is private to an IIFE on another page and is not reachable from here. Same
+     contract — type 'sketchbook', key = sketch_id, underscore-prefixed locals stripped, writeNow (this is
+     a deliberate save, not typing) so the caller can wait on the real completion. */
+  function _d1WriteCarriedSketch(payload) {
+    try {
+      if (!_sbD1Live()) return null;
+      if (!payload || !payload.sketch_id) return null;
+      var id = payload.sketch_id;
+      var snap = {}; for (var k in payload) { if (Object.prototype.hasOwnProperty.call(payload, k) && k.charAt(0) !== '_') snap[k] = payload[k]; }
+      var _write = window.DatumD1.writeNow || window.DatumD1.scheduleWrite;
+      return _write.call(window.DatumD1, 'sketchbook', id, function () { return snap; }, function () {
+        console.warn('[d1] carried sketch ' + id + ' changed in another tab — reloaded the server revision (no merge)');
+      });
+    } catch (e) { return null; }
+  }
   function _autoConsumeSketch() {
     var _snap = null;
     try { _snap = JSON.parse(sessionStorage.getItem('datumfi_sketch_current_snapshot') || 'null'); } catch(ex) {}
     if (!_snap) return;
+    /* D1 FIRST, BECAUSE D1 IS WHAT THIS PAGE READS. This function used to write the mirror and NOTHING
+       else — no D1 row of any kind — while the sketchbook renders from D1 and treats a reachable-empty
+       list as AUTHORITATIVE. MEASURED on the real new-signup condition (D1 live and empty, carrying a
+       stashed sketch): zero PUTs, zero filled slots, "Saved 0" on landing AND on the next load. A visitor
+       accepted our offer to save their work and it was destroyed by the act of accepting. That is the
+       whole reason this line exists. */
+    var _d1 = _d1WriteCarriedSketch(_snap);
     var book = {};
     try { book = JSON.parse(localStorage.getItem(LS_KEY) || '{}') || {}; } catch(ex) { book = {}; }
     var slot = null;
     for (var n = 1; n <= 4; n++) { if (!book['slot_' + n]) { slot = n; break; } }
-    if (!slot) { showSketchToast('All available sketch pages are already filled.'); return; }
+    if (!slot) {
+      /* THE 4-SLOT CEILING IS GONE, NOT HANDLED. It was a Clerk-era limit refusing a save the driver
+         accepts happily: D1 mints one row per sketch_id with no cap. Refusing here would have destroyed
+         a fifth sketch to protect a constraint that no longer exists. Roll the newest-4 net exactly as
+         sketch.html's save-as-new does (L48) — the net is a degraded-offline cache, and a sketch falling
+         out of it is NOT a delete: it still lives in its D1 row and in the per-id stash. */
+      book.slot_4 = book.slot_3 || null;
+      book.slot_3 = book.slot_2 || null;
+      book.slot_2 = book.slot_1 || null;
+      slot = 1;
+    }
     book['slot_' + slot] = _snap;
     try { localStorage.setItem(LS_KEY, JSON.stringify(book)); } catch(ex) {}
     try { localStorage.setItem('datum_sketch_state_' + slot, JSON.stringify(_snap)); } catch(ex) {}
+    try { if (_snap.sketch_id) localStorage.setItem('datum_sketch_byid_' + _snap.sketch_id, JSON.stringify(_snap)); } catch(ex) {}
     _mirrorSketchbookToClerk(book);
     executeSavePayloadToSlot(slot, _contractToSlot(_snap));   // updates UI + save-confirm toast
     try { sessionStorage.removeItem('datumfi_pending_save'); } catch(ex) {}
     try { sessionStorage.removeItem('datumfi_sketch_current_snapshot'); } catch(ex) {}
+    /* RE-READ FROM THE DRIVER ONCE THE ROW LANDS. The D1 list for this page was already fetched — and for
+       a brand-new account it came back legitimately empty — so without this the user's own sketch would
+       not appear until they reloaded. Waiting on the write means we re-read a list that CONTAINS it. */
+    try {
+      if (_d1 && typeof _d1.then === 'function') _d1.then(function () { _sketchbookRestoreFromD1(); }).catch(function () {});
+    } catch (_e) {}
   }
 
 

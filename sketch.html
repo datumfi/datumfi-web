@@ -2917,15 +2917,27 @@
              * clicked; the continue happens ONLY from the confirmed-success path further down this file,
              * the same place that clears the dirty flag. A save that fails leaves the user here, with
              * their work and the honest toast — never navigated away from work that did not save. */
+            /* THE SAVE ROLE GOES THROUGH THE PAGE'S OWN SAVE ENTRY POINT, which already branches on auth
+               and already carries the whole guarantee: signed out it stashes and hops, signed in it opens
+               the 4-slot picker with its overwrite-confirm. One entry point, not a third implementation.
+               THE PREVIOUS WIRING CLICKED #btn-save-shape, which is "Save Shape" — an SVG EXPORT that
+               downloads a picture of the chart. It saved nothing. The handler ran, threw nothing, and the
+               file download was a deliberate export this code asked for. Read "save" and assumed. */
             onSave: function () {
               window._skPendingLeave = url;
-              var b = document.getElementById('btn-save-shape');
-              if (b) { b.click(); return; }
-              window._skPendingLeave = null;      // no save control -> do not strand them mid-promise
+              if (typeof window._skGatedNavSave === 'function') { window._skGatedNavSave(); return; }
+              window._skPendingLeave = null;      // no save entry -> do not strand them mid-promise
               proceed();
             },
-            onCreateAccount: function () { window.location.href = toVault; },
-            onSignIn:        function () { window.location.href = toVault; },
+            /* BOTH DOORS STASH IDENTICALLY. Only the Clerk screen differs. */
+            onCreateAccount: function () {
+              if (typeof window._skHopToVaultSave === 'function') { window._skHopToVaultSave('sign-up'); return; }
+              window.location.href = toVault;
+            },
+            onSignIn: function () {
+              if (typeof window._skHopToVaultSave === 'function') { window._skHopToVaultSave('sign-in'); return; }
+              window.location.href = toVault;
+            },
             onLeave:         function () { proceed(); },
             onStay:          function () { }      // dismiss returns them EXACTLY here, with no nav
           }
@@ -9287,13 +9299,21 @@ Studio is built for exactly this. See If This Shape Holds →`;
       // "Save Current Sketch →" on the Sketchbook to consume it (single legacy slot_1 path).
       var _navSaveBtn = document.getElementById('sketch-save-btn');
       var _ovSlot = 1, _ovSource = 'phaseV', _pop = null, _skAnchor = null;
-      function _hopToVaultSave() {
+      /* TWO DOORS, ONE GUARANTEE. mode picks WHICH Clerk screen opens; it changes nothing about the
+         stash, the destination or the promise. 'sign-up' is the conversion path for somebody with no
+         account; 'sign-in' is for the person who HAS one and did not realise they were signed out —
+         without that door they are pushed into creating a SECOND account, which is a worse outcome than
+         the one we are preventing. vault.html:27 already routes both. Default stays sign-in so every
+         existing caller behaves exactly as it did. */
+      function _hopToVaultSave(mode) {
         try {
           sessionStorage.setItem('datumfi_sketch_current_snapshot', JSON.stringify(serializeSketchState()));
           sessionStorage.setItem('datumfi_pending_save', 'sketch');
         } catch (e) {}
-        window._navDrain('/vault.html?returnTo=' + encodeURIComponent('/sketchbook.html'));
+        var _m = (mode === 'sign-up') ? 'mode=sign-up&' : '';
+        window._navDrain('/vault.html?' + _m + 'returnTo=' + encodeURIComponent('/sketchbook.html'));
       }
+      window._skHopToVaultSave = _hopToVaultSave;   // the leave prompt's save-role doors
       function _readBook() { try { return JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch(ex) { return null; } }
       function _skIsFilled(n) { var b = _readBook(); return !!(b && b['slot_' + n]); }
       function _skSlotLabel(n) {
@@ -9479,6 +9499,9 @@ Studio is built for exactly this. See If This Shape Holds →`;
         if (!sessionStorage.getItem('datum_auth_hint')) { _hopToVaultSave(); return; }
         if (_pop) _skClose(); else _skOpen(anchor || _navSaveBtn);
       }
+      // The leave prompt lives up at _navDrain (:2891) and cannot see inside this IIFE. Exposed so the
+      // save role routes through THE PAGE'S OWN save entry rather than reimplementing any part of it.
+      window._skGatedNavSave = function () { _gatedNavSave(_navSaveBtn); };
       // Phase-V CTA "Save to Sketchbook" → DIRECT save to first-empty slot (source:'phaseV'
       // → MODELED). All four filled → overwrite-confirm fallback (overwrites A-01), never a
       // silent clobber (2c). Captain decision 2026-06-18.

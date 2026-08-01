@@ -4,7 +4,7 @@
 //
 // Usage:  node scripts/build-dist.mjs   ->   ./dist  (deploy that, never ".")
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, copyFileSync, rmSync, existsSync, readFileSync } from 'node:fs';
+import { mkdirSync, copyFileSync, rmSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, extname } from 'node:path';
 import { createHash } from 'node:crypto';
 
@@ -24,7 +24,7 @@ const DROP_RE = [/^\.claude\//, /^\.wrangler\//, /^workers\//, /^functions\//, /
 // SACRED HOSTS — must ship byte-identical (LF + content). Build ABORTS on drift.
 const SACRED = {
   'studio.html': '6d1562fa8c558018fe8984955e5f527d',   // save confirmation is downstream of the write (2026-07-30)
-  'sketch.html': 'c8b2621cb4f85dcba831d2921aa0008b',   // leave prompt wired: hasBuilt = touched AND content-differs (2026-07-31)
+  'sketch.html': 'c88d291b6723acb88f016feababdb81f',   // save role routes to the real save entry; two vault doors (2026-07-31)
   'scripts/studio-blueprint.js': 'd03f586676d13864564c3a733488cd1b',   // workState: read-only content + unsaved-edits facts (2026-07-31)
   // MISS-5 pre-work guard (2026-07-25). nav.js is a Sacred Host in CLAUDE.md but was absent from THIS map,
   // so a bad edit failed no build. It owns the centralized cross-device restore every page depends on
@@ -36,7 +36,7 @@ const SACRED = {
   // Same gap as nav.js above, found 2026-07-27 while wiring the erase fix: sketchbook.html is a
   // Sacred Host in CLAUDE.md but was ABSENT from this map, so the erase edit passed the build with
   // no guard at all. Pinned at its true content.
-  'sketchbook.html': 'cb3dfa94fced03cf3835b67449620846',   // Option-2 _skFull hydration guard (2026-07-27)
+  'sketchbook.html': '7ce87d8d71d550f63190e941958826cf',   // carried sketch reaches D1; Clerk-era 4-slot ceiling removed (2026-07-31)
 
   // ── MAP CLOSED 2026-07-27 ────────────────────────────────────────────────────────────────────
   // The seven below were declared Sacred in CLAUDE.md and pinned NOWHERE, so any edit to them
@@ -173,6 +173,193 @@ for (const [f, want] of Object.entries(SACRED)) {
 // Leak guard — abort if any forbidden artifact slipped into the publish root.
 for (const bad of ['.claude', 'package.json', 'package-lock.json']) {
   if (existsSync(join(OUT, bad))) { console.error(`LEAK GUARD HIT — ${bad} present in ${OUT}/`); process.exit(1); }
+}
+
+/* ── D1 CUTOVER INVARIANT ─────────────────────────────────────────────────────────────────────────────
+ * D1 IS THE DRIVER. THE 4-SLOT CLERK/LS BOOK IS A SOAK-PERIOD MIRROR. A WRITE MAY ACCOMPANY IT.
+ * A WRITE MAY NEVER SUBSTITUTE FOR IT.
+ *
+ * WHY THIS IS A BUILD STEP AND NOT A COMMENT. The code already said this, clearly, in capitals, in two
+ * places — sketch.html's "DEGRADED-OFFLINE CACHE ONLY ... the net must never re-cap D1 truth" and
+ * sketchbook.html's "READ-CUTOVER ... a reachable-empty D1 list is AUTHORITATIVE". Those comments are
+ * exemplary and they still did not stop _autoConsumeSketch from writing ZERO D1 rows, which destroyed a
+ * new user's first sketch on the conversion path. A COMMENT CANNOT FAIL A BUILD. It is a request to a
+ * future reader who may be tired, mid-arc, or a fresh session with no memory of any of this. Apply the
+ * amputation test to a comment and it fails instantly: delete it and nothing goes red, which means it was
+ * never what was holding the line.
+ *
+ * THE RULE IS A POSITIVE INVARIANT ABOUT THE DRIVER, NOT A BLOCKLIST OF FORBIDDEN CALLS: any function
+ * that persists a user's saved sketch/blueprint into localStorage must ALSO reach D1 in that same
+ * function. It catches code by WHAT IT TOUCHES, not by what it is called, so a new writer with a spelling
+ * nobody predicted is caught anyway — the same reason a defaultValue comparison beat a hand-listed set of
+ * bookkeeping fields.
+ *
+ * IT ENCODES THE SOAK RATHER THAN ENDING IT. LS + D1 passes. LS alone fails. We are not deleting the
+ * mirror today and this rule does not ask anyone to.
+ * DRAFT KEYS ARE DELIBERATELY ABSENT from the governed list: a draft is not a save, and
+ * writeSessionDraft writing local-only is correct behaviour, not a violation.
+ *
+ * ── ORIGIN IS PART OF THE RULE, AND LEAVING IT OUT MADE THE RULE UNTRUE ──────────────────────────────
+ * First formulation was "any function writing a governed LS key must reach D1". MEASURED: it fired on 13
+ * sites of which ONE was the defect. It flagged _applySketchBook, which populates LS *from the D1 list* —
+ * the exact opposite of the bug — plus the declared Clerk fallback restore, a slot DELETE, and three
+ * Studio helpers whose caller save() reaches D1 a few lines away. Twelve exemptions would have been
+ * needed, and an exemption list twelve entries deep IS the ignorable comment this rule exists to replace.
+ * A rule that must be silenced to be adopted was never an invariant.
+ * THE DISTINGUISHING PROPERTY IS PROVENANCE, NOT THE KEY. The defect is user work that exists ONLY in the
+ * mirror. Content flowing D1 -> LS is a cache being filled and is correct; content flowing USER -> LS
+ * without reaching D1 is work the sketchbook will never render, because it renders from D1 and treats a
+ * reachable-empty list as authoritative. So a write is governed only when the same function also touches
+ * a USER-ORIGIN source: the live serializer, or the carried vault-hop snapshot.
+ * WHAT THIS DELIBERATELY DOES NOT CATCH, stated rather than discovered later: user content that reaches
+ * LS through some future origin named in neither list. The origins are few, central and stable, but they
+ * are the one hand-maintained part of this rule and the place to look first if it ever misses something. */
+const D1_SURFACES = {
+  sketch: {
+    files: ['sketch.html', 'sketchbook.html'],
+    lsKeys: ['datumfi_sketchbook_v1', 'datum_sketch_state_', 'datum_sketch_byid_', 'LS_KEY'],
+    d1Reach: ['_d1WriteSketch', 'putDoc', 'scheduleWrite', 'writeNow'],
+    // USER-ORIGIN sources: the live serializer, and the snapshot carried across the vault hop.
+    origins: ['serializeSketchState', 'datumfi_sketch_current_snapshot'],
+    driver: 'D1 (type=sketchbook, one row per sketch_id, unlimited)',
+    mirror: 'the 4-slot Clerk/LS book (datumfi_sketchbook_v1)'
+  },
+  studio: {
+    files: ['studio.html', 'scripts/studio-blueprint.js'],
+    lsKeys: ['datum_blueprint_state_', 'datumfi_blueprint_archive_v1', 'PER_SLOT_PREFIX', 'ARCHIVE_KEY'],
+    d1Reach: ['d1WriteBlueprint', 'd1WriteStudio', 'putDoc', 'scheduleWrite', 'writeNow'],
+    origins: ['captureDOM', 'serializeSketchState'],
+    driver: 'D1 (type=blueprint / studio)',
+    mirror: 'the per-slot LS blueprint archive'
+  }
+};
+/* THE EXEMPTION LIST IS A PLACE TO WRITE A COMMENT THE GATE AGREES TO IGNORE — which is the exact species
+ * this rule exists to kill. So it is expensive on purpose, and it is EMPTY. Three conditions, all enforced
+ * below, none of them optional:
+ *   1 · a named reason AND a date. An exemption with no stated reason fails the build like a violation.
+ *   2 · PROVEN, NOT ASSERTED. `delegatesTo` names the helper, and the gate verifies THE HELPER reaches D1.
+ *       An exemption may RELOCATE the obligation. It may never DISCHARGE it.
+ *   3 · a STALE exemption is a build failure — if the function no longer writes LS, or no longer exists,
+ *       the entry must be removed. Exemption lists rot silently and a rotted list is decoration.
+ * If that makes an exemption expensive: good. It should be cheaper to reach D1 than to explain why you did not. */
+const D1_EXEMPT = {
+  // 'file::functionName': { reason: '...', date: 'YYYY-MM-DD', delegatesTo: 'helperFnName' }
+  'sketchbook.html::_autoConsumeSketch': {
+    reason: 'The driver write is the FIRST thing it does, delegated to _d1WriteCarriedSketch — the page-local ' +
+            'mirror of sketch.html _d1WriteSketch, which is private to an IIFE on another page and not reachable ' +
+            'from here. The obligation is RELOCATED to that helper, and verified there, not discharged.',
+    date: '2026-07-31',
+    delegatesTo: '_d1WriteCarriedSketch'
+  }
+};
+
+/* Enclosing-function walk. NOT a fork of scripts/_gate_extract.mjs — that extracts a function BY NAME;
+ * this asks the opposite question, "which function contains this index", which no existing helper answers. */
+function enclosingFn(src, idx) {
+  let from = src.lastIndexOf('function', idx);
+  while (from >= 0) {
+    const open = src.indexOf('{', from);
+    if (open >= 0) {
+      let depth = 0;
+      for (let j = open; j < src.length; j++) {
+        if (src[j] === '{') depth++;
+        else if (src[j] === '}') {
+          depth--;
+          if (depth === 0) {
+            if (j > idx) {
+              const sig = src.slice(from, open);
+              const m = /function\s+([A-Za-z0-9_$]+)/.exec(sig);
+              return { name: m ? m[1] : '<anonymous>', body: src.slice(from, j + 1), start: from };
+            }
+            break;
+          }
+        }
+      }
+    }
+    from = src.lastIndexOf('function', from - 1);
+  }
+  return null;
+}
+function d1Violations() {
+  const bad = [];
+  const seenExempt = new Set();
+  for (const [surface, cfg] of Object.entries(D1_SURFACES)) {
+    for (const f of cfg.files) {
+      if (!existsSync(f)) continue;
+      const src = readFileSync(f, 'utf8');
+      const re = /localStorage\s*\.\s*setItem\s*\(\s*([A-Za-z0-9_$'".+ ]+?)\s*,/g;
+      let m;
+      while ((m = re.exec(src))) {
+        const keyExpr = m[1];
+        if (!cfg.lsKeys.some((k) => keyExpr.indexOf(k) >= 0)) continue;   // not a governed key
+        const fn = enclosingFn(src, m.index);
+        if (!fn) continue;
+        // PROVENANCE: only USER-ORIGIN content is governed. A cache filled FROM D1 is correct behaviour.
+        if (!cfg.origins.some((o) => fn.body.indexOf(o) >= 0)) continue;
+        const tag = `${f}::${fn.name}`;
+        const reaches = cfg.d1Reach.some((d) => fn.body.indexOf(d) >= 0);
+        const ex = D1_EXEMPT[tag];
+        if (ex) {
+          seenExempt.add(tag);
+          if (!ex.reason || !ex.date) { bad.push({ tag, surface, cfg, why: 'EXEMPTION WITHOUT A NAMED REASON AND DATE' }); continue; }
+          if (!ex.delegatesTo) { bad.push({ tag, surface, cfg, why: 'EXEMPTION DOES NOT NAME THE HELPER IT DELEGATES TO' }); continue; }
+          const helper = enclosingFn(src, src.indexOf('function ' + ex.delegatesTo) + 10);
+          const helperReaches = helper && cfg.d1Reach.some((d) => helper.body.indexOf(d) >= 0);
+          if (!helperReaches) bad.push({ tag, surface, cfg, why: `EXEMPTION UNPROVEN — ${ex.delegatesTo} does not reach D1 either` });
+          continue;
+        }
+        if (!reaches) bad.push({ tag, surface, cfg, why: 'writes the mirror and never reaches the driver', line: src.slice(0, m.index).split('\n').length });
+      }
+    }
+  }
+  for (const tag of Object.keys(D1_EXEMPT)) {
+    if (!seenExempt.has(tag)) bad.push({ tag, why: 'STALE EXEMPTION — this function no longer writes a governed key (or no longer exists). Remove the entry.' });
+  }
+  return bad;
+}
+if (process.argv.includes('--selftest-d1invariant')) {
+  /* AMPUTATION TEST. Strip the D1 call out of a known-good writer and require THAT function to be named —
+   * not merely require some failure. An invariant that has never been made to fail is decoration. */
+  const TARGET = 'sketch.html', VICTIM = '_doSave';
+  const orig = readFileSync(TARGET, 'utf8');
+  const baseline = d1Violations();
+  const hurt = orig.replace('var _d1Write = _d1WriteSketch(payload);', 'var _d1Write = null;  /* SELFTEST */');
+  if (hurt === orig) { console.error('SELFTEST could not apply its poison — the anchor moved.'); process.exit(1); }
+  writeFileSync(TARGET, hurt);
+  let caught;
+  try { caught = d1Violations().filter((b) => b.tag === `${TARGET}::${VICTIM}`); }
+  finally { writeFileSync(TARGET, orig); }
+  console.log(`SELF-TEST d1 invariant: baseline_violations=${baseline.length} poisoned_caught=${caught.length} (${VICTIM})`);
+  // One violation is reported per GOVERNED WRITE, and _doSave makes three, so the floor is 1 not exactly 1.
+  if (baseline.length !== 0) { console.error(`RED-FIRST INCONCLUSIVE — the clean tree already has ${baseline.length} violation(s); fix those before trusting this.`); process.exit(1); }
+  if (caught.length < 1) { console.error(`RED-FIRST FAILED — stripping D1 from ${VICTIM} was not reported.`); process.exit(1); }
+  console.log('RED-FIRST OK — the invariant BITES, and names the exact function.');
+  process.exit(0);
+}
+const d1Bad = d1Violations();
+if (d1Bad.length) {
+  console.error('');
+  console.error('  D1 CUTOVER INVARIANT VIOLATED');
+  console.error('  ─────────────────────────────');
+  d1Bad.forEach((b) => {
+    console.error(`  ${b.tag}${b.line ? ':' + b.line : ''}`);
+    console.error(`      ${b.why}`);
+    if (b.cfg) {
+      console.error(`      driver : ${b.cfg.driver}`);
+      console.error(`      mirror : ${b.cfg.mirror}`);
+    }
+  });
+  console.error('');
+  console.error('  D1 IS THE DRIVER; THE 4-SLOT CLERK/LS BOOK IS A SOAK-PERIOD MIRROR.');
+  console.error('  A WRITE MAY ACCOMPANY IT. A WRITE MAY NEVER SUBSTITUTE FOR IT.');
+  console.error('');
+  console.error('  A function that persists a saved sketch or blueprint into localStorage must also reach');
+  console.error('  D1 in that same function. The sketchbook RENDERS FROM D1 and treats a reachable-empty');
+  console.error('  list as authoritative — so a write that lands only in the mirror is not merely untidy,');
+  console.error('  it is invisible to the page, and the user is shown an empty sketchbook.');
+  console.error('  Reach D1 here, or add a proven exemption (reason + date + delegatesTo) in build-dist.mjs.');
+  console.error('');
+  process.exit(1);
 }
 
 /* ── DANGLING-ASSET GUARD ─────────────────────────────────────────────────────────────────────────────
