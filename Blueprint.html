@@ -1313,6 +1313,28 @@ button {
     </div>
   </div>
 
+  <!-- 5b — ASK BEFORE CLEARING THE BOARD. Both routes to a blank Studio (an empty card, and
+       "Open Studio" with nothing selected) go to /studio.html?fresh=1, which REPLACES any
+       in-progress Studio draft at load. That discard is INTENDED (Captain's ruling) and is not
+       changed here; this only asks first, and only when there is something to lose.
+       WHY IT EXISTS: this card used to read "Save Studio Blueprint" and now reads "Start a New
+       Blueprint" — more honest, and more inviting to click. That widened the road to a one-click,
+       no-confirm discard of unsaved work. The confirmation completes that change rather than
+       being a new feature.
+       NO THIRD OPTION, DELIBERATELY: a "save it first" door would have to branch on auth state,
+       which is the leave prompt's job. This asks one question and gets out of the way.
+       Architect-authored copy, wired VERBATIM (L47). Mirrors the erase modal's structure. -->
+  <div class="modal" id="fresh-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="fresh-title">
+    <div class="modal-card">
+      <h2 id="fresh-title">Start a new blueprint?</h2>
+      <p>The blueprint open now has changes that have not been saved. Starting a new one clears the board, and those changes are gone.</p>
+      <div class="modal-actions">
+        <button class="modal-primary danger" id="action-confirm-fresh" type="button">Start new anyway</button>
+        <button class="modal-secondary" id="action-cancel-fresh" type="button">Keep this blueprint</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal" id="compare-modal" role="dialog" aria-modal="true" aria-labelledby="compare-title">
     <div class="modal-card wide">
       <h2 id="compare-title">Compare Saved Blueprints</h2>
@@ -1889,6 +1911,48 @@ function openCompareModal() {
   document.getElementById('compare-modal').classList.add('open');
 }
 
+/* ── 5b · ONE GUARD, BOTH DOORS TO A BLANK STUDIO ──────────────────────────────────────────────
+ * There are TWO routes to /studio.html?fresh=1 — an empty card, and "Open Studio" with nothing
+ * selected — and BOTH discard an in-progress Studio draft at load. Guarding only the card would
+ * leave a user believing they are protected while half the routes are not, and a believed
+ * half-guard is worse than none. So the confirmation lives in ONE function that both call.
+ *
+ * FAILS OPEN AT EVERY STEP. DatumBlueprint missing, workState missing, the modal absent, anything
+ * throwing — go. A guard in front of a navigation that silently eats the navigation is a worse
+ * defect than the loss it prevents; the user can always start a new blueprint. */
+function _goFreshStudio() {
+  try { sessionStorage.setItem('datumfi_skip_entry_overlay', '1'); } catch (e) {}
+  window.location.href = '/studio.html?fresh=1';
+}
+/* AT RISK = there is content AND it is not already safely saved. A blueprint that was saved and has
+ * not been touched since loses NOTHING when the board is cleared, so asking would be crying wolf —
+ * and this dialog gets exactly one chance to be believed.
+ * NOT DatumLeavePrompt.decide(), deliberately, even though it is the tested predicate next door: it
+ * answers "what do we SAY", which folds in auth state, and signed-out it returns a branch for
+ * saved-and-untouched work too. Here auth is irrelevant — the work is at risk or it is not. */
+function _freshStudioAtRisk() {
+  try {
+    var B = window.DatumBlueprint;
+    if (!B || typeof B.workState !== 'function') return false;
+    var w = B.workState();
+    if (!w || !w.present || !w.hasContent) return false;
+    return !w.everSaved || !!w.unsavedEdits;
+  } catch (e) { return false; }
+}
+function _confirmFreshStudio() {
+  if (!_freshStudioAtRisk()) { _goFreshStudio(); return; }      // silent when there is nothing to lose
+  var m = document.getElementById('fresh-confirm-modal');
+  if (!m) { _goFreshStudio(); return; }
+  m.classList.add('open');
+  /* THE SAFE CHOICE TAKES FOCUS. The destructive button is never what a stray Enter lands on, and
+     the gate asserts document.activeElement rather than trusting that this call did anything —
+     focus() is silently DROPPED on a hidden element, succeeding and throwing nothing. (A
+     requestAnimationFrame wrapper was tried here first, on a wrong diagnosis, and MEASURED to be
+     unnecessary: the same-tick call works. Removed rather than kept as insurance, because
+     defensive code carrying a false explanation is worse than no defence.) */
+  try { var c = document.getElementById('action-cancel-fresh'); if (c) c.focus(); } catch (e) {}
+}
+
 /* Slot click (delegated on the grid — survives per-page re-render): select a filled sheet as
    active, or route an empty sheet to Studio to save. Open/Erase buttons handle themselves below. */
 document.getElementById('blueprint-grid').addEventListener('click', function (e) {
@@ -1908,8 +1972,8 @@ document.getElementById('blueprint-grid').addEventListener('click', function (e)
     renderArchivePage();   // selection shown by the tile's active state; no toast
   } else {
     // C (#288) — clicking an EMPTY card opens a FRESH studio (seed, no rooms), never the last session.
-    try { sessionStorage.setItem('datumfi_skip_entry_overlay', '1'); } catch (x) {}
-    window.location.href = '/studio.html?fresh=1';
+    // 5b — routed through the shared confirm: silent unless there is unsaved Studio work to lose.
+    _confirmFreshStudio();
   }
 });
 
@@ -2009,8 +2073,9 @@ document.getElementById('action-open-studio').addEventListener('click', () => {
     window.location.href = '/studio.html?id=' + encodeURIComponent(id) + '&hydrate=blueprint';
   } else {
     // C (#288) — "Open Studio" with NOTHING selected opens a FRESH studio (seed, no rooms), not a resume.
-    try { sessionStorage.setItem('datumfi_skip_entry_overlay', '1'); } catch(e) {}
-    window.location.href = '/studio.html?fresh=1';
+    // 5b — THE SECOND DOOR. Same discard, same guard. Guarding only the empty card would have left
+    // this one wide open while the protection was believed to cover both.
+    _confirmFreshStudio();
   }
 });
 
@@ -2040,6 +2105,17 @@ document.getElementById('action-confirm-erase').addEventListener('click', () => 
   const id = AppSessionState.activeTargetPurgeId;
   AppSessionState.activeTargetPurgeId = null;
   eraseBlueprint(id);
+});
+
+/* 5b — the two answers. CANCEL simply closes: dismiss means STAY, and it navigates NOWHERE (the
+   generic backdrop-click handler below inherits the same behaviour, so every way out of this
+   dialog that is not the destructive button keeps the blueprint). */
+document.getElementById('action-cancel-fresh').addEventListener('click', () => {
+  document.getElementById('fresh-confirm-modal').classList.remove('open');
+});
+document.getElementById('action-confirm-fresh').addEventListener('click', () => {
+  document.getElementById('fresh-confirm-modal').classList.remove('open');
+  _goFreshStudio();
 });
 
 document.getElementById('action-close-compare').addEventListener('click', () => {
