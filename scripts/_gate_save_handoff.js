@@ -380,28 +380,38 @@ const CLERK = `window.Clerk = { load: function(){ return Promise.resolve(); },
     await ctx.close();
   }
 
-  /* == THE EXPORT RENAME - user-facing copy, gated like all the rest ============================ */
+  /* == THE SHAPE BUTTON'S COPY - the Captain's ruling, gated like all user-facing copy ========== */
   {
     const served = await (await fetch(base + '/sketch.html')).text();
     const btnIdx = served.indexOf('id="btn-save-shape"');
     const btnChunk = btnIdx >= 0 ? served.slice(btnIdx, btnIdx + 300) : '';
-    ok(btnChunk.indexOf('>Export SVG<') >= 0,
-      'HANDOFF 21: the SVG export button reads "Export SVG" - Export means it LEAVES the product, Save is reserved for work that persists to an account');
-    ok(served.indexOf('Downloads this shape as an SVG file. It does not save to your sketchbook.') >= 0,
-      'HANDOFF 22: and its tooltip states the negative explicitly, because it sits beside the real Save and proximity is what does the damage');
-    ok(served.indexOf("saveBtn.textContent = 'Save Shape'") < 0,
-      'HANDOFF 23: the post-click restore carries the NEW label - otherwise the rename undoes itself two seconds after the first use');
-    ok(served.indexOf("saveBtn.textContent = '\u2713 Exported'") >= 0 && served.indexOf("'\u2713 Saved'") < 0,
-      'HANDOFF 24: the transient confirmation reads "Exported", not "Saved" - a FALSE CONFIRMATION at the moment of action is worse than a standing mislabel, because it tells the user the thing they most want to be true');
+    /* "Save Shape", not "Export SVG". Ruled by the Captain 2026-08-01, reverting a rename he did not
+       ask for. Transcribed here from his words rather than copied out of the page, so this assertion
+       sits between two independent transcriptions instead of comparing the source to itself. */
+    ok(btnChunk.indexOf('>Save Shape<') >= 0,
+      'HANDOFF 21: the shape button reads "Save Shape" - the Captain\'s wording for his own control');
+    /* 22 WAS THE TOOLTIP ASSERTION. Retired with the tooltip it guarded; the number is left as a hole
+       rather than reused, so a reader of an old log is never handed a different assertion under it. */
+    /* THREE STRINGS DESCRIBE ONE BUTTON: the label, the label the handler RESTORES two seconds after a
+       click, and the confirmation flashed in between. All three are read out of the source below and
+       bound to each other, so no rename can move one and leave the others telling the old story. */
+    const labelMatch = /id="btn-save-shape"[\s\S]{0,300}?>([^<]+)</.exec(served);
+    const label = labelMatch ? labelMatch[1].trim() : null;
+    const confMatch = /saveBtn\.textContent = '\u2713 ([^']+)'/.exec(served);
+    const conf = confMatch ? confMatch[1].trim() : null;
+    const restMatch = /setTimeout\([\s\S]{0,80}?saveBtn\.textContent = '([^'\u2713]+)'/.exec(served);
+    const rest = restMatch ? restMatch[1].trim() : null;
+    ok(!!label && !!rest && rest === label,
+      `HANDOFF 23 STRUCTURAL: the post-click restore carries the SAME label the button carries - label "${label}", restored "${rest}". A rename that misses the restore undoes itself two seconds after the first use`);
+    const hIdx = served.indexOf("const saveBtn = document.getElementById('btn-save-shape')");
+    const hChunk = hIdx >= 0 ? served.slice(hIdx, hIdx + 500) : '';
+    ok(conf === 'Saved' && hChunk.indexOf('Export') < 0 && btnChunk.indexOf('Export') < 0,
+      `HANDOFF 24: the transient confirmation reads "\u2713 Saved" (got "\u2713 ${conf}") and no "Export" wording survives on the button or in its handler`);
     /* HANDOFF 25 IS THE STRUCTURAL FIX, not another string check. This defect existed because the LABEL
        and its CONFIRMATION were two independent strings with no rule binding them - rename one and the
        other silently keeps telling the old story. So the confirmation must CONTAIN THE LABEL'S VERB,
        both read out of the source rather than hardcoded here. Rename the button to anything and this
        goes red until the confirmation follows it. */
-    const labelMatch = /id="btn-save-shape"[\s\S]{0,300}?>([^<]+)</.exec(served);
-    const label = labelMatch ? labelMatch[1].trim() : null;
-    const confMatch = /saveBtn\.textContent = '\u2713 ([^']+)'/.exec(served);
-    const conf = confMatch ? confMatch[1].trim() : null;
     const verb = label ? label.split(/\s+/)[0].replace(/e$/i, '') : null;   // Export -> Export, Save -> Sav
     ok(!!label && !!conf && verb && conf.toLowerCase().indexOf(verb.toLowerCase()) === 0,
       `HANDOFF 25 STRUCTURAL: the confirmation is bound to the label - label "${label}", confirmation "\u2713 ${conf}". Two independent strings with no rule between them is WHY this defect could exist; renaming one must now break the gate until the other follows`);

@@ -1701,14 +1701,7 @@
                             </div>
                         </div>
                         <div class="canvas-actions">
-                            <!-- EXPORT, NOT SAVE. "Export" tells the user the thing LEAVES the product; "Save" is
-                                 reserved for work that persists to their account, and the two must never be
-                                 interchangeable on this surface again. The title states the negative explicitly
-                                 because this button sits beside the real Save and PROXIMITY is what does the damage.
-                                 Its cost is measured, not theoretical: the old label did not merely confuse users, it
-                                 confused the engineer wiring the save feature into clicking it as the save path. -->
-                            <button type="button" class="canvas-btn" id="btn-save-shape"
-                                    title="Downloads this shape as an SVG file. It does not save to your sketchbook.">Export SVG</button>
+                            <button type="button" class="canvas-btn" id="btn-save-shape">Save Shape</button>
                             <button type="button" class="canvas-btn" id="btn-motion">Motion: ON</button>
                         </div>
                     </div>
@@ -4688,18 +4681,9 @@
         // Button feedback
         const saveBtn = document.getElementById('btn-save-shape');
         if (saveBtn) {
-            /* "✓ Exported", NOT "✓ Saved" — and this transient was WORSE than the mislabel it sat under.
-               A standing mislabel is something a user can learn to distrust. This fires at the moment of
-               the action, in the affirmative, and tells them the thing they most want to be true: that
-               their work is safe. It is a FALSE CONFIRMATION, which is the precise failure this whole arc
-               exists to eliminate. It mirrors the button's verb so control and confirmation tell one
-               story, and it keeps "Saved" reserved: on this surface that word now means, and only means,
-               work that persists to the user's account. */
-            saveBtn.textContent = '✓ Exported';
+            saveBtn.textContent = '✓ Saved';
             saveBtn.style.color = 'var(--gold)';
-            // Restores the LABEL, so it must carry the renamed one — otherwise the rename silently
-            // undoes itself two seconds after the first use and "Save Shape" is back on the screen.
-            setTimeout(() => { saveBtn.textContent = 'Export SVG'; saveBtn.style.color = ''; }, 2000);
+            setTimeout(() => { saveBtn.textContent = 'Save Shape'; saveBtn.style.color = ''; }, 2000);
         }
     }
 
