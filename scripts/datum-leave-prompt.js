@@ -65,6 +65,18 @@
                 { label: "Sign in",              role: 'signin' },
                 { label: "Leave without saving", role: 'leave'  },
                 { label: "Keep sketching",       role: 'stay'   }]
+      /* DORMANT — Branch B subtext. Parked 2026-07-31 by Architect ruling.
+         Do not wire until a Discover tier exists AND the Architect re-confirms
+         the claim is accurate. Bank the words, not the promise.
+         Held as a COMMENT and not as a parked object on purpose: a parked object
+         satisfies "nothing reads it" but not "nothing CAN" — one assignment and it
+         ships a tier claim that is false on the live site today. A comment is not
+         code; no expression reaches it. Convention reused from
+         scripts/datum-shape-copy.js:1254 (L48).
+         _gate_leave_prompt asserts these characters are present verbatim AND that
+         they render on no branch, so the bank is tamper-evident without being live.
+         subtext: "Discover is free and includes one saved plan."
+      */
     },
     /* BRANCH C — AUTHENTICATED, NEVER SAVED. Urgent but easy.
      * TWO DELIBERATE CHOICES from the Architect: no "create an account" ask, because they have one and that

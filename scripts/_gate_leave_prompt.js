@@ -35,6 +35,11 @@ const A_FLATTEN = "    if (!s.signedIn) return 'B';                        // AU
 const M_FLATTEN = "    if (!s.everSaved) return 'B';";
 const A_SILENT  = "    if (!s.hasBuilt) return null;                       // nothing to keep -> say nothing";
 const M_SILENT  = "    if (false) return null;";
+/* --wirebank RESURRECTS the parked Discover subtext into live copy, which is the exact accident the bank
+ * exists to prevent. BANK 3 must go red. Without this the bank assertion is untested decoration. */
+const WIREBANK  = process.argv.includes('--wirebank');
+const A_BANK    = "                { label: \"Keep sketching\",       role: 'stay'   }]";
+const M_BANK    = "                { label: \"Keep sketching\",       role: 'stay'   }],\n      subtext: \"Discover is free and includes one saved plan.\"";
 let jsDiffers = false;
 
 let pass = 0, fail = 0; const lines = [];
@@ -49,7 +54,7 @@ const server = http.createServer((req, res) => {
   const fp = path.join(ROOT, p);
   if (!fp.startsWith(ROOT) || !fs.existsSync(fp) || fs.statSync(fp).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
   let body = fs.readFileSync(fp);
-  if (p === '/scripts/datum-leave-prompt.js' && (FLATTEN || NOSILENT)) {
+  if (p === '/scripts/datum-leave-prompt.js' && (FLATTEN || NOSILENT || WIREBANK)) {
     let src = body.toString('utf8'); const orig = src;
     const apply = (a, m, label) => {
       const n = src.split(a).length - 1;
@@ -58,6 +63,7 @@ const server = http.createServer((req, res) => {
     };
     if (FLATTEN)  apply(A_FLATTEN,  M_FLATTEN,  'flatten');
     if (NOSILENT) apply(A_SILENT,   M_SILENT,   'silent');
+    if (WIREBANK) apply(A_BANK,     M_BANK,     'wirebank');
     jsDiffers = jsDiffers || (src !== orig);
     body = Buffer.from(src, 'utf8');
   }
@@ -208,6 +214,29 @@ const EXPECT = {
   ok(punct.length === 0,
     `RENDER 5 RULE: no button label on any branch ends in a period (offenders ${JSON.stringify(punct)})`);
 
+  /* ── THE DORMANT BANK ──────────────────────────────────────────────────────────────────────────────
+   * Branch B's tier subtext is PARKED as a comment, because the Discover/Design product does not exist
+   * and the claim would be false on the live site today. A comment cannot be reached by any expression,
+   * which is the strongest form of "cannot render by accident" available — but it is also invisible to
+   * every other assertion in this file, so the banked words can rot silently: a mangled em dash, a
+   * dropped word, and nobody finds out until resurrection day.
+   * SO THE BANK IS ASSERTED FROM THE RAW FILE TEXT, character for character, AND asserted to render
+   * nowhere. Tamper-evident without being live. Both halves are required: the first alone would let a
+   * future edit wire it silently, the second alone would let the words decay. */
+  const rawSrc = fs.readFileSync(path.join(ROOT, 'scripts', 'datum-leave-prompt.js'), 'utf8');
+  const BANKED = 'Discover is free and includes one saved plan.';
+  ok(rawSrc.indexOf(BANKED) >= 0,
+    `BANK 1: the parked Discover subtext is present in the source verbatim, character for character`);
+  ok(/DORMANT — Branch B subtext\. Parked 2026-07-31 by Architect ruling\./.test(rawSrc),
+    'BANK 2: and it carries its parking note — why it is parked and what must be true before it returns');
+  const renderedAnywhere = [];
+  for (const b of ['A', 'B', 'C']) {
+    const r = await render(b, b === 'A' ? { fileName: 'Blueprint 7' } : {});
+    if (r && (r.text.join(' ') + r.btns.join(' ')).indexOf('Discover is free') >= 0) renderedAnywhere.push(b);
+  }
+  ok(renderedAnywhere.length === 0,
+    `BANK 3 LOAD-BEARING: the banked line renders on NO branch (${JSON.stringify(renderedAnywhere)}) — parked means unreachable, not merely unused`);
+
   // ── DISMISS NEVER NAVIGATES ────────────────────────────────────────────────────────────────────────
   const startUrl = page.url();
   await render('C');
@@ -231,13 +260,13 @@ const EXPECT = {
   await browser.close();
   await new Promise((r) => server.close(r));
 
-  const MUTATED = FLATTEN || NOSILENT;
+  const MUTATED = FLATTEN || NOSILENT || WIREBANK;
   if (MUTATED) {
     console.log(`\nPOISON LANDED? ${jsDiffers ? 'YES' : 'NO'}   (datum-leave-prompt.js bytes changed: ${jsDiffers})`);
     if (!jsDiffers) { console.log('MUTATION DID NOT APPLY — this run proves nothing. Fix the anchor.'); process.exit(2); }
   }
   console.log('\n' + lines.join('\n'));
-  const _tag = FLATTEN ? 'MUTATED[flatten]' : NOSILENT ? 'MUTATED[nosilent]' : 'CLEAN';
+  const _tag = FLATTEN ? 'MUTATED[flatten]' : NOSILENT ? 'MUTATED[nosilent]' : WIREBANK ? 'MUTATED[wirebank]' : 'CLEAN';
   console.log(`\n${_tag}  GREEN ${pass} / RED ${fail}`);
   if (MUTATED) {
     console.log(fail > 0 ? 'RED-FIRST OK — the mutation BIT.' : 'RED-FIRST FAILED — the poison landed and nothing noticed.');
