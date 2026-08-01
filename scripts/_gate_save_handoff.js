@@ -26,6 +26,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const NOD1 = process.argv.includes('--nod1consume');
 // --nocaproll   restores the Clerk-era ceiling: a 5th sketch is REFUSED instead of rolling the net.
 const NOCAP = process.argv.includes('--nocaproll');
+/* --noanswered removes the answered-this-departure check, restoring the re-entrant guard the Captain
+ * smoked: the save-role buttons go dead and the panel rebuilds itself. HANDOFF 13/14 must go red. */
+const NOANS = process.argv.includes('--noanswered');
+const A_ANS = '        if (window._skLeaveAnswered === true) return false;';
+const M_ANS = '        if (false) return false;';
 const A_D1  = '    var _d1 = _d1WriteCarriedSketch(_snap);';
 const M_D1  = '    var _d1 = null;';
 const A_CAP = '      book.slot_4 = book.slot_3 || null;';
@@ -40,6 +45,14 @@ const server = http.createServer((req, res) => {
   const fp = path.join(ROOT, p);
   if (!fp.startsWith(ROOT) || !fs.existsSync(fp) || fs.statSync(fp).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
   let body = fs.readFileSync(fp);
+  if (p === '/sketch.html' && NOANS) {
+    let src = body.toString('utf8'); const orig = src;
+    const n = src.split(A_ANS).length - 1;
+    if (n !== 1) throw new Error(`anchor noanswered: expected exactly 1 occurrence, found ${n}`);
+    src = src.replace(A_ANS, M_ANS);
+    jsDiffers = jsDiffers || (src !== orig);
+    body = Buffer.from(src, 'utf8');
+  }
   if (p === '/sketchbook.html' && (NOD1 || NOCAP)) {
     let src = body.toString('utf8'); const orig = src;
     const apply = (a, m, label) => {
@@ -263,16 +276,133 @@ const CLERK = `window.Clerk = { load: function(){ return Promise.resolve(); },
       'HANDOFF 12: the destination is parked so a confirmed save can continue the journey');
   }
 
+  /* == THE RE-ENTRANT GUARD - the Captain's dead buttons ======================================== */
+  {
+    const { ctx } = await ctxWith({});
+    const page = await ctx.newPage();
+    await page.addInitScript(`(() => { try{sessionStorage.setItem('datumfi_skip_entry_overlay','1');localStorage.setItem('datum-discover-v1','done');}catch(e){} })();`);
+    await page.goto(base + '/sketch.html', { waitUntil: 'commit' });
+    await page.waitForSelector('#slider-datum', { timeout: 30000 });
+    await sleep(6500);
+    const sl = await page.$('#slider-datum');
+    await sl.hover(); await page.mouse.down(); await page.mouse.up();
+    await page.evaluate(() => { const s = document.getElementById('slider-datum'); s.value = String(Math.round(parseFloat(s.value) * 1.18)); s.dispatchEvent(new Event('input', { bubbles: true })); });
+    await sleep(600);
+    await page.evaluate(() => { window.__navs = []; const rd = window._navDrain; window._navDrain = function (u) { window.__navs.push(u); return rd.apply(this, arguments); }; });
+    await page.evaluate(() => document.getElementById('nav-link-studio').click());
+    await sleep(2000);
+    const up = await page.evaluate(() => !!document.querySelector('[data-leave-prompt]'));
+    await page.evaluate(() => { const b = Array.from(document.querySelectorAll('[data-leave-prompt] button')).find((x) => x.getAttribute('data-leave-role') === 'create'); if (b) b.click(); });
+    await sleep(3000);
+    /* READ IT IN A WAY THAT SURVIVES SUCCESS. The first version read window.__navs after the click and
+       CRASHED - because the page had genuinely navigated and taken the injected variable with it. The
+       crash was the fix working. url is read from Playwright, which outlives the document. */
+    const st = await page.evaluate(() => ({ panel: !!document.querySelector('[data-leave-prompt]') })).catch(() => ({ panel: false }));
+    const landedOn = page.url().replace(base, '');
+    lines.push(`      [re-entrant guard] panelFirst=${up} panelStillUp=${st.panel} landedOn=${landedOn}`);
+    ok(st.panel === false,
+      `HANDOFF 13 LOAD-BEARING: after pressing "Save my work" the panel does NOT rebuild itself (still up: ${st.panel}) - the guard no longer eats the navigation it asked for`);
+    /* ASSERT IT LEFT, NOT WHERE IT ARRIVED. vault.html's whole body is a location.replace to
+       accounts.datumfi.com, which this harness aborts as off-origin - so a SUCCESSFUL hop lands on a
+       browser error page, and asserting "landed on vault.html" would fail on the product working. What
+       is provable here is that the sketch was departed; where Clerk takes them is Clerk's business. */
+    ok(landedOn.indexOf('sketch.html') < 0,
+      `HANDOFF 14: and the door actually opens - the page LEAVES the sketch (landed ${landedOn}; vault.html immediately replaces off-origin, which this harness aborts)`);
+    await ctx.close();
+  }
+
+  /* == ANSWERED IS SCOPED TO ONE DEPARTURE ===================================================== */
+  {
+    const { ctx } = await ctxWith({});
+    const page = await ctx.newPage();
+    await page.addInitScript(`(() => { try{sessionStorage.setItem('datumfi_skip_entry_overlay','1');localStorage.setItem('datum-discover-v1','done');}catch(e){} })();`);
+    await page.goto(base + '/sketch.html', { waitUntil: 'commit' });
+    await page.waitForSelector('#slider-datum', { timeout: 30000 });
+    await sleep(6500);
+    const sl = await page.$('#slider-datum');
+    await sl.hover(); await page.mouse.down(); await page.mouse.up();
+    await page.evaluate(() => { const s = document.getElementById('slider-datum'); s.value = String(Math.round(parseFloat(s.value) * 1.18)); s.dispatchEvent(new Event('input', { bubbles: true })); });
+    await sleep(600);
+    /* THE PRECONDITION IS INJECTED, AND THAT IS DECLARED. Driving a real leaving answer here would
+       NAVIGATE - it did, and detached the page mid-test - so the answered state is set directly and what
+       is measured is the half that cannot be proven any other way: THE RESET. That a real leaving answer
+       SETS the flag is proven separately and behaviourally by HANDOFF 13/14, where the navigation only
+       succeeds if it was set. Split this way, both halves are proven and neither is asserted. */
+    await page.evaluate(() => { const b = Array.from(document.querySelectorAll('[data-leave-prompt] button')).find((x) => x.getAttribute('data-leave-role') === 'stay'); if (b) b.click(); });
+    await sleep(500);
+    const stayLatched = await page.evaluate(() => window._skLeaveAnswered === true);
+    await page.evaluate(() => { window._skLeaveAnswered = true; });
+    const answered = await page.evaluate(() => window._skLeaveAnswered === true);
+    await sl.hover(); await page.mouse.down(); await page.mouse.up();
+    await sleep(400);
+    const afterTouch = await page.evaluate(() => window._skLeaveAnswered === true);
+    await page.evaluate(() => document.getElementById('nav-link-studio').click());
+    await sleep(1800);
+    const promptedAgain = await page.evaluate(() => !!document.querySelector('[data-leave-prompt]'));
+    lines.push(`      [departure scope] answeredAfterLeave=${answered} afterTouch=${afterTouch} promptedAgain=${promptedAgain}`);
+    ok(stayLatched === false,
+      `HANDOFF 15: choosing STAY does NOT latch (${stayLatched}) - staying is not a departure, so the next one must still be asked about`);
+    ok(answered === true, 'HANDOFF 15b: precondition set (injected, see note above)');
+    ok(afterTouch === false,
+      `HANDOFF 16 LOAD-BEARING: one trusted touch of the sketch CLEARS it (${afterTouch}) - the latch is scoped to a departure, never to the session`);
+    ok(promptedAgain === true,
+      `HANDOFF 17: so a LATER departure is asked about again (prompted: ${promptedAgain}) - a guard that protects you once and never again is worse than none`);
+    await ctx.close();
+  }
+
+  /* == B - THE PICKER ANCHORS TO THE CONTROL A HUMAN CAN SEE ==================================== */
+  {
+    const { ctx } = await ctxWith({});
+    const page = await ctx.newPage();
+    await page.addInitScript(`(() => { try{sessionStorage.setItem('datumfi_skip_entry_overlay','1');localStorage.setItem('datum-discover-v1','done');sessionStorage.setItem('datum_auth_hint','1');}catch(e){} ${CLERK} })();`);
+    await page.goto(base + '/sketch.html', { waitUntil: 'commit' });
+    await page.waitForSelector('#slider-datum', { timeout: 30000 });
+    await sleep(7000);
+    const topbarBtn = await page.evaluate(() => { const b = document.querySelector('#acct-topbar [data-acct-action="save-current"]'); if (!b) return null; const r = b.getBoundingClientRect(); return { x: Math.round(r.x), w: Math.round(r.width) }; });
+    await page.evaluate(() => { if (window._skGatedNavSave) window._skGatedNavSave(); });
+    await sleep(1500);
+    const pick = await page.evaluate(() => { const p = document.getElementById('sketch-save-sb-pop'); if (!p) return null; const r = p.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y) }; });
+    lines.push(`      [anchor] topbarSave=${JSON.stringify(topbarBtn)} pickerAt=${JSON.stringify(pick)}`);
+    ok(!!pick, 'HANDOFF 18: the picker OPENS from the leave panel');
+    ok(!!pick && !!topbarBtn && Math.abs(pick.x - topbarBtn.x) < 260,
+      `HANDOFF 19 LOAD-BEARING: and it lands NEAR THE VISIBLE SAVE CONTROL, not at the screen edge (picker x=${pick && pick.x}, save button x=${topbarBtn && topbarBtn.x})`);
+    /* CLOSE IT THROUGH THE MODULE, NOT BEHIND ITS BACK. Removing the element directly left the module's
+       own _pop handle non-null, so the next call TOGGLED CLOSED instead of opening and the assertion
+       failed on a rig artefact rather than on the product. */
+    await page.evaluate(() => { if (window._skGatedNavSave) window._skGatedNavSave(); });   // toggle closed
+    await sleep(400);
+    await page.evaluate(() => { document.querySelectorAll('[data-acct-action="save-current"]').forEach((b) => { b.style.display = 'none'; }); });
+    await page.evaluate(() => { if (window._skGatedNavSave) window._skGatedNavSave(); });   // and open again
+    await sleep(1200);
+    const stillOpens = await page.evaluate(() => !!document.getElementById('sketch-save-sb-pop'));
+    ok(stillOpens === true,
+      `HANDOFF 20 FAIL-OPEN: with NO save control visible the picker still opens (${stillOpens}) - an unanchored picker is cosmetic, one that refuses to open is a save that does not happen`);
+    await ctx.close();
+  }
+
+  /* == THE EXPORT RENAME - user-facing copy, gated like all the rest ============================ */
+  {
+    const served = await (await fetch(base + '/sketch.html')).text();
+    const btnIdx = served.indexOf('id="btn-save-shape"');
+    const btnChunk = btnIdx >= 0 ? served.slice(btnIdx, btnIdx + 300) : '';
+    ok(btnChunk.indexOf('>Export SVG<') >= 0,
+      'HANDOFF 21: the SVG export button reads "Export SVG" - Export means it LEAVES the product, Save is reserved for work that persists to an account');
+    ok(served.indexOf('Downloads this shape as an SVG file. It does not save to your sketchbook.') >= 0,
+      'HANDOFF 22: and its tooltip states the negative explicitly, because it sits beside the real Save and proximity is what does the damage');
+    ok(served.indexOf("saveBtn.textContent = 'Save Shape'") < 0,
+      'HANDOFF 23: the post-click restore carries the NEW label - otherwise the rename undoes itself two seconds after the first use');
+  }
+
   await browser.close();
   await new Promise((r) => server.close(r));
 
-  const MUTATED = NOD1 || NOCAP;
+  const MUTATED = NOD1 || NOCAP || NOANS;
   if (MUTATED) {
-    console.log(`\nPOISON LANDED? ${jsDiffers ? 'YES' : 'NO'}   (sketchbook.html bytes changed: ${jsDiffers})`);
+    console.log(`\nPOISON LANDED? ${jsDiffers ? 'YES' : 'NO'}   (page bytes changed: ${jsDiffers})`);
     if (!jsDiffers) { console.log('MUTATION DID NOT APPLY — this run proves nothing. Fix the anchor.'); process.exit(2); }
   }
   console.log('\n' + lines.join('\n'));
-  const _tag = NOD1 ? 'MUTATED[nod1consume]' : NOCAP ? 'MUTATED[nocaproll]' : 'CLEAN';
+  const _tag = NOD1 ? 'MUTATED[nod1consume]' : NOCAP ? 'MUTATED[nocaproll]' : NOANS ? 'MUTATED[noanswered]' : 'CLEAN';
   console.log(`\n${_tag}  GREEN ${pass} / RED ${fail}`);
   if (MUTATED) {
     console.log(fail > 0 ? 'RED-FIRST OK — the mutation BIT.' : 'RED-FIRST FAILED — the poison landed and nothing noticed.');

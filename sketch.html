@@ -1701,7 +1701,14 @@
                             </div>
                         </div>
                         <div class="canvas-actions">
-                            <button type="button" class="canvas-btn" id="btn-save-shape">Save Shape</button>
+                            <!-- EXPORT, NOT SAVE. "Export" tells the user the thing LEAVES the product; "Save" is
+                                 reserved for work that persists to their account, and the two must never be
+                                 interchangeable on this surface again. The title states the negative explicitly
+                                 because this button sits beside the real Save and PROXIMITY is what does the damage.
+                                 Its cost is measured, not theoretical: the old label did not merely confuse users, it
+                                 confused the engineer wiring the save feature into clicking it as the save path. -->
+                            <button type="button" class="canvas-btn" id="btn-save-shape"
+                                    title="Downloads this shape as an SVG file. It does not save to your sketchbook.">Export SVG</button>
                             <button type="button" class="canvas-btn" id="btn-motion">Motion: ON</button>
                         </div>
                     </div>
@@ -2904,6 +2911,23 @@
         var LP = window.DatumLeavePrompt;
         if (!LP || typeof LP.maybeShow !== 'function') return false;
         if (typeof window._skHasBuilt !== 'function') return false;
+        /* THE HUMAN HAS ALREADY ANSWERED THIS DEPARTURE — LET IT THROUGH.
+         * Without this the guard eats the very navigations it asked for: every save-role button leaves
+         * through _navDrain, _navDrain calls this guard, the work is still unsaved so _skHasBuilt() is
+         * still true, and the panel is rebuilt a millisecond after the click closed it. MEASURED: handler
+         * entered, correct url built, stash written, nothing thrown, navigated=false, panel still up. To
+         * the user the button simply does nothing. Both Branch B doors died exactly this way.
+         *
+         * SCOPED TO THIS DEPARTURE, NOT TO THE SESSION. It is set only by an answer that LEAVES, and it is
+         * cleared by the next TRUSTED touch of the sketch (see the dirty-signal listener). So somebody who
+         * answers, stays, and keeps working is asked again on their next departure. A latch that never
+         * resets is a leave-prompt that protects you once and then never again, which is worse than none
+         * at all because the protection is believed.
+         *
+         * FAILS CLOSED, AND THE TRADE-OFF IS THE WHOLE REASON THE TEST IS `=== true`: anything other than
+         * an explicit, current answer shows the panel. An unnecessary panel is an annoyance. A swallowed
+         * one is somebody's lost work. DO NOT "SIMPLIFY" THIS TO A TRUTHY CHECK — undefined must ask. */
+        if (window._skLeaveAnswered === true) return false;
         var built = !!window._skHasBuilt();
         if (!built) return false;
         var signedIn = false;
@@ -2923,7 +2947,11 @@
                THE PREVIOUS WIRING CLICKED #btn-save-shape, which is "Save Shape" — an SVG EXPORT that
                downloads a picture of the chart. It saved nothing. The handler ran, threw nothing, and the
                file download was a deliberate export this code asked for. Read "save" and assumed. */
+            /* EVERY ANSWER THAT LEAVES marks this departure answered, so the navigation it triggers is not
+               swallowed by the guard that asked the question. STAY deliberately does NOT — staying is not
+               a departure, and the next one must still be asked about. */
             onSave: function () {
+              window._skLeaveAnswered = true;
               window._skPendingLeave = url;
               if (typeof window._skGatedNavSave === 'function') { window._skGatedNavSave(); return; }
               window._skPendingLeave = null;      // no save entry -> do not strand them mid-promise
@@ -2931,14 +2959,16 @@
             },
             /* BOTH DOORS STASH IDENTICALLY. Only the Clerk screen differs. */
             onCreateAccount: function () {
+              window._skLeaveAnswered = true;
               if (typeof window._skHopToVaultSave === 'function') { window._skHopToVaultSave('sign-up'); return; }
               window.location.href = toVault;
             },
             onSignIn: function () {
+              window._skLeaveAnswered = true;
               if (typeof window._skHopToVaultSave === 'function') { window._skHopToVaultSave('sign-in'); return; }
               window.location.href = toVault;
             },
-            onLeave:         function () { proceed(); },
+            onLeave:         function () { window._skLeaveAnswered = true; proceed(); },
             onStay:          function () { }      // dismiss returns them EXACTLY here, with no nav
           }
         );
@@ -4660,7 +4690,9 @@
         if (saveBtn) {
             saveBtn.textContent = '✓ Saved';
             saveBtn.style.color = 'var(--gold)';
-            setTimeout(() => { saveBtn.textContent = 'Save Shape'; saveBtn.style.color = ''; }, 2000);
+            // Restores the LABEL, so it must carry the renamed one — otherwise the rename silently
+            // undoes itself two seconds after the first use and "Save Shape" is back on the screen.
+            setTimeout(() => { saveBtn.textContent = 'Export SVG'; saveBtn.style.color = ''; }, 2000);
         }
     }
 
@@ -9495,13 +9527,36 @@ Studio is built for exactly this. See If This Shape Holds →`;
       }
       // NAV "Save Current Sketch" → 4-slot picker (source:'nav' → DRAFTED). Signed-out
       // forces sign-in first; the picker is reached only when signed in (Studio parity).
+      /* WHICH SAVE CONTROL IS LIVE RIGHT NOW. Resolved, never named, because this piece of the page has
+         ALREADY MOVED ONCE: signed out the control is #sketch-save-btn inside #app-nav; signed in, nav.js
+         hides #app-nav and account-topbar.js:129 injects its own origin-aware Save, which calls
+         sketchSaveCurrent(itself). A hardcoded id is a claim that the chrome will never change again, and
+         the chrome changes with auth state. MEASURED: signed in, #sketch-save-btn is still in the DOM at
+         0x0, so anchoring to it put the picker at the right edge of the screen — B's whole defect.
+         WRITTEN ONCE AND USED BY BOTH PATHS (L48): the topbar hands in its own button and skips this; the
+         leave panel hands in nothing and gets it. Neither grows its own opinion about where Save lives.
+         FAILS TOWARD THE SAVE. If nothing resolves it returns document.body, so the picker OPENS in a
+         plain default position. An unanchored picker is cosmetic; a picker that refuses to open because it
+         could not find a button is a save that does not happen. */
+      function _skLiveSaveAnchor() {
+        var cands = [document.querySelector('#acct-topbar [data-acct-action="save-current"]'),
+                     document.querySelector('[data-acct-action="save-current"]'),
+                     _navSaveBtn];
+        for (var i = 0; i < cands.length; i++) {
+          var el = cands[i];
+          if (!el) continue;
+          try { var r = el.getBoundingClientRect(); if (r.width > 0 && r.height > 0) return el; } catch (_e) {}
+        }
+        return document.body;
+      }
       function _gatedNavSave(anchor) {
         if (!sessionStorage.getItem('datum_auth_hint')) { _hopToVaultSave(); return; }
-        if (_pop) _skClose(); else _skOpen(anchor || _navSaveBtn);
+        if (_pop) _skClose(); else _skOpen(anchor || _skLiveSaveAnchor());
       }
       // The leave prompt lives up at _navDrain (:2891) and cannot see inside this IIFE. Exposed so the
       // save role routes through THE PAGE'S OWN save entry rather than reimplementing any part of it.
-      window._skGatedNavSave = function () { _gatedNavSave(_navSaveBtn); };
+      // Deliberately passes NO anchor so the resolution above runs — that is the fix for B.
+      window._skGatedNavSave = function () { _gatedNavSave(); };
       // Phase-V CTA "Save to Sketchbook" → DIRECT save to first-empty slot (source:'phaseV'
       // → MODELED). All four filled → overwrite-confirm fallback (overwrites A-01), never a
       // silent clobber (2c). Captain decision 2026-06-18.
@@ -9573,6 +9628,12 @@ Studio is built for exactly this. See If This Shape Holds →`;
         if (!t || typeof t.closest !== 'function') return;
         if (_ignored(t)) return;
         window._skDirty = true;
+        /* AND THIS TOUCH BEGINS A NEW DEPARTURE. _skLeaveAnswered says "the human already answered the
+           panel for the trip they are on"; the moment they touch the sketch again they are working, not
+           leaving, and their next exit is a fresh question. Clearing it HERE rather than on a timer is
+           what keeps the answered-state scoped to one departure instead of to the session — and it rides
+           on the trusted-touch stamp, so the boot animation cannot clear it either. */
+        window._skLeaveAnswered = false;
       }
       // Capture phase so a handler that stops propagation cannot hide a real touch from us.
       ['pointerdown', 'keydown', 'touchstart'].forEach(function (type) {
