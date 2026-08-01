@@ -129,7 +129,15 @@ function runOne(file, name, timeoutMs = TIMEOUT_MS) {
     });
     child.on('close', (code) => {
       if (done) return; done = true; clearTimeout(timer);
-      resolve({ name, status: code === 0 ? 'GREEN' : 'RED', code, ms: Date.now() - t0, out, err });
+      /* QUARANTINED IS A THIRD CLASS, NOT A SHADE OF GREEN OR RED. Marking a gate quarantined in its
+       * own file did NOTHING to this runner until this line existed — classification was purely on
+       * exit code, so the two gates quarantined on 2026-07-28 went on inflating the RED count for
+       * five weeks. That is the permanently-red-gate problem the quarantine was meant to solve.
+       * IT IS DELIBERATELY NOT `exit 0`. Making a quarantined gate exit 0 would count it GREEN — the
+       * exact false-pass shape already found in _gate_d1_sketch_parity.mjs's bare process.exit(0).
+       * A gate whose verdict is not trusted must be counted as neither, and SEEN to be neither. */
+      const quarantined = out.indexOf('[QUARANTINED]') >= 0;
+      resolve({ name, status: quarantined ? 'QUARANTINED' : (code === 0 ? 'GREEN' : 'RED'), code, ms: Date.now() - t0, out, err });
     });
   });
 }
@@ -143,6 +151,12 @@ async function selfCheck() {
     fail: "console.log('sentinel: failing'); process.exit(1);\n",
     throw: "console.log('sentinel: throwing'); throw new Error('boom');\n",
     hang: "console.log('sentinel: hanging'); setInterval(()=>{},1000);\n",
+    /* TWO quarantine sentinels, not one, and the second is the load-bearing one. A single
+     * exit-1 sentinel would pass even if QUARANTINED were implemented as "suppress the red" —
+     * the exit-0 case is what proves it is a THIRD CLASS and not a way to hide a failure or
+     * to manufacture a pass. Both must land on QUARANTINED regardless of exit code. */
+    quarRed: "console.log('[QUARANTINED] sentinel'); process.exit(1);\n",
+    quarGreen: "console.log('[QUARANTINED] sentinel'); process.exit(0);\n",
   };
   /* --sabotage=<k> deliberately breaks ONE sentinel so it behaves like the others. The guard must
      catch it and abort. This is the red-first: it proves the guard can still fail. */
@@ -159,6 +173,8 @@ async function selfCheck() {
   r.fail = await runOne(files.fail, 'sentinel_fail');
   r.throw = await runOne(files.throw, 'sentinel_throw');
   r.hang = await runOne(files.hang, 'sentinel_hang', 4000);
+  r.quarRed = await runOne(files.quarRed, 'sentinel_quar_red');
+  r.quarGreen = await runOne(files.quarGreen, 'sentinel_quar_green');
   fs.rmSync(dir, { recursive: true, force: true });
 
   const checks = [
@@ -168,6 +184,8 @@ async function selfCheck() {
     ['stdout captured (harness not dark)', /sentinel: passing/.test(r.pass.out), /sentinel: passing/.test(r.pass.out) ? 'captured' : 'LOST'],
     ['stderr captured on throw', /boom/.test(r.throw.err), /boom/.test(r.throw.err) ? 'captured' : 'LOST'],
     ['a HANG is TIMEOUT, never GREEN', r.hang.status === 'TIMEOUT', r.hang.status],
+    ['[QUARANTINED] + exit 1 is QUARANTINED, not RED', r.quarRed.status === 'QUARANTINED', r.quarRed.status],
+    ['[QUARANTINED] + exit 0 is QUARANTINED, not GREEN', r.quarGreen.status === 'QUARANTINED', r.quarGreen.status],
   ];
   console.log('----- self-check (harness proves itself before it reports) -----');
   let all = true;
@@ -237,16 +255,21 @@ async function runPool(list, conc, label) {
 
   const by = (s) => results.filter((r) => r.status === s);
   const green = by('GREEN'), red = by('RED'), to = by('TIMEOUT'), se = by('SPAWN_ERROR');
+  const quar = by('QUARANTINED');
 
   console.log('\n===== BASELINE RESULT =====');
   console.log(`GREEN   ${green.length}`);
   console.log(`RED     ${red.length}`);
+  // PRINTED EVEN AT ZERO, unlike the buckets below. A quarantine that stops being visible is a
+  // quarantine nobody reviews, and these are gates somebody decided not to trust — the count
+  // should be uncomfortable to look at, not something the report can quietly drop.
+  console.log(`QUARANT ${quar.length}   (verdict not trusted — counted as NEITHER green nor red)`);
   console.log(`TIMEOUT ${to.length}`);
   console.log(`SPAWN   ${se.length}`);
   console.log(`TOTAL   ${results.length}   wall ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 
   const line = (r) => `  ${r.status.padEnd(8)} ${r.name}  (exit ${r.code}, ${(r.ms / 1000).toFixed(1)}s)`;
-  for (const [t, set] of [['RED', red], ['TIMEOUT', to], ['SPAWN_ERROR', se]]) {
+  for (const [t, set] of [['RED', red], ['TIMEOUT', to], ['SPAWN_ERROR', se], ['QUARANTINED', quar]]) {
     if (set.length) { console.log(`\n--- ${t} ---`); set.slice().sort((a, b) => a.name.localeCompare(b.name)).forEach((r) => console.log(line(r))); }
   }
 

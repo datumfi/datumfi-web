@@ -1,3 +1,16 @@
+/* =====================================================================================
+ * QUARANTINED 2026-08-01 - DO NOT TRUST THIS GATE VERDICT (green OR red).
+ * REASON: its 3 SK-erase checks are permanently RED and DIRECTLY CONTRADICT
+ * _gate_sketchbook_erase_survivors, which calls the same erase 6/6 GREEN. One of the two
+ * instruments is wrong and neither has been believed; a permanently-red gate teaches people
+ * to dismiss the suite, which is worse than no gate.
+ * Verified pre-existing at 6208ae2 (reverted files reproduce it identically) — NOT caused by
+ * the 2026-08-01 copy work. Do not repair, do not delete, do not investigate.
+ * OUT OF QUARANTINE only if it ever agrees with a defect the Captain sees on his own screen,
+ * and on that day, not before. Architect ruling 2026-08-01.
+ * ===================================================================================== */
+console.log('[QUARANTINED] verdict NOT trustworthy - see file header. Quarantined 2026-08-01.');
+
 /* _p6_archive_parity.js — STANDING GATE for P6 Blueprint↔Sketchbook save-parity.
  *
  * Proves, in a REAL signed-in browser (persistent mock Clerk, real codec via nav.js):

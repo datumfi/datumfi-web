@@ -1,4 +1,17 @@
 'use strict';
+/* =====================================================================================
+ * QUARANTINED 2026-08-01 - DO NOT TRUST THIS GATE VERDICT (green OR red).
+ * REASON: its findings contradict the evidence it prints in the same breath — it reports
+ * "card Rooms not 3" while the card text it dumps literally reads "Rooms Built3", so the
+ * matchers, not the product, are what moved. A permanently-red gate teaches people to
+ * dismiss the suite, which is worse than no gate.
+ * Verified pre-existing at 6208ae2 (reverted files reproduce all 3 findings identically) —
+ * NOT caused by the 2026-08-01 copy work. Do not repair, do not delete, do not investigate.
+ * OUT OF QUARANTINE only if it ever agrees with a defect the Captain sees on his own screen,
+ * and on that day, not before. Architect ruling 2026-08-01.
+ * ===================================================================================== */
+console.log('[QUARANTINED] verdict NOT trustworthy - see file header. Quarantined 2026-08-01.');
+
 // G3 LIVE GATE — Studio-originated slot save -> real Blueprint cards -> Open round-trip.
 // (1) In Studio: set profile dates + a non-default climate + spend + investable rooms (plus a
 //     physical room that must NOT count toward Net Estate), then use the persistent header
