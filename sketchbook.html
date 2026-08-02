@@ -3003,8 +3003,6 @@
           <button class="sketch-secondary-action" id="action-open-sketch" type="button" title="Reopen selected Sketch and continue designing">Open Sketch</button>
         </div>
 
-        <div class="charcoal-pencil-instrument" aria-hidden="true"></div>
-
         <footer class="sheet-footnote-disclaimer">
           Datum FI &middot; Sketchbook &middot; Three-path envelope &middot; Studio runs the engine
         </footer>
@@ -3012,6 +3010,15 @@
       </div>
       <div class="leaf-base" aria-hidden="true"><div class="back"></div></div>
       <div class="leaf" id="sk-leaf"><div class="face front" id="sk-leaf-front"></div><div class="face back"></div></div>
+      <!-- THE PENCIL LIVES OUT HERE, and has to. It is drawn at bottom:-12px to rest ACROSS the
+           bottom edge of the book, but it used to sit inside .sketchbook-sheet, which is
+           overflow:hidden — so every pixel of it was clipped and NO ONE HAS EVER SEEN IT. Measured
+           2026-08-01: 64px of sheet overflow, all of it this element. Moved up one level to
+           .sheet-stack, which is position:relative and the SAME box as the sheet (both 717px, same
+           top, measured), so its position and angle are unchanged — it is simply no longer erased.
+           It stays above the turning leaf on purpose: a pencil resting on the book does not turn
+           with the page. pointer-events:none, so it can never intercept a click. -->
+      <div class="charcoal-pencil-instrument" aria-hidden="true"></div>
       </div>
     </div>
 
@@ -3074,6 +3081,193 @@
 .sketchbook-wrapper.past-cover .spiral::before{ opacity:0; }
 .sheet-stack.folded .leaf .front::after{ opacity:1; }
 @media(prefers-reduced-motion:reduce){ .leaf{ transition:none; } }
+
+/* ══════════════════════════════════════════════════════════════════════════════════════════════
+   PREMIUM FINISH PASS — 2026-08-01. Room 2 of 2; the Archive got the same treatment.
+
+   WHY THIS IS ONE BLOCK AT THE END RATHER THAN EDITS IN PLACE. This file declares .page-slot-tile
+   eight separate times and .slot-erase-action seven, each a later "amp it up" layer overriding the
+   one before. Editing an early copy changes NOTHING and the change looks applied in the diff — the
+   worst kind of silent failure. Everything below is therefore a single final layer, in document
+   order after all of them, at plain single-class specificity. The only media queries in this file
+   are <=980px and <=560px, so nothing here is fighting a breakpoint.
+
+   MEASURED BEFORE (filled tile, 1920x1080, rendered through the page's own renderSavedSlot):
+     tile                     228 x 294
+     Rename / Open Sketch / Open Studio / Erase Slot   26x8, 52x8, 52x8, 47x8  at 7px
+   EIGHT pixels tall, no border, no fill, no padding — smaller even than the Archive's were.
+
+   THE FOUR BUTTONS CANNOT SHARE ONE ROW, and that is arithmetic, not taste: at a legible 9px with
+   padding, "Open Sketch" + "Open Studio" + "Erase Slot" need ~265px and the card can offer 186px.
+   Labels are the Architect's and were NOT shortened to make them fit. So the footer runs two rows
+   of two, each pair splitting the full card width.
+   ══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── The tile, ~20% taller. Width is fixed by the book, exactly as in the Archive. ───────────── */
+.page-slot-tile { min-height: 340px; }
+.portfolio-grid { min-height: 340px; }
+
+/* ── Card interior, scaled with the tile. ───────────────────────────────────────────────────── */
+.slot-meta-eyebrow { font-size: 11.5px; }
+.slot-name-line    { font-size: 17px; }
+.slot-state-title  { font-size: 11.5px; }
+.sm-key            { font-size: 10px; }
+.sm-val            { font-size: 13px; }
+.slot-metrics-table { gap: 4px; }
+.mini-shape        { height: 66px; }
+.saved-time        { font-size: 8.6px; letter-spacing: .08em; color: rgba(32,36,43,.46); }
+
+/* ── The footer: timestamp on its own line, then two rows of two full-width actions. ─────────── */
+.saved-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+}
+.sk-card-actions { display: flex; align-items: stretch; gap: 6px; }
+.sk-card-actions > button { flex: 1 1 0; min-width: 0; }
+
+/* ── THE FOUR ACTIONS. One shared shape, four tints (L48: reuse the shape, do not invent four).
+      The shape is the status pill's — border + interior fill + padding + full round — because the
+      pill is legible at 7.5px while these were invisible at 7px, and the ONLY difference was the
+      chrome. That is what the Captain pointed at. ────────────────────────────────────────────── */
+.slot-open-action,
+.slot-studio-action,
+.slot-rename-action,
+.slot-erase-action {
+  position: relative;
+  z-index: 500;
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 6px;
+  border-radius: 999px;
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  touch-action: manipulation;
+  white-space: nowrap;
+  transition: background .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.slot-open-action:hover,
+.slot-studio-action:hover,
+.slot-rename-action:hover,
+.slot-erase-action:hover { transform: translateY(-1px); }
+.slot-open-action:active,
+.slot-studio-action:active,
+.slot-rename-action:active,
+.slot-erase-action:active { transform: translateY(0); }
+.slot-open-action:focus-visible,
+.slot-studio-action:focus-visible,
+.slot-rename-action:focus-visible,
+.slot-erase-action:focus-visible { outline: 2px solid rgba(29,158,117,.55); outline-offset: 2px; }
+
+/* OPEN SKETCH — this room's primary action, brand teal at full strength. */
+.slot-open-action {
+  border: 1px solid rgba(29,158,117,.46);
+  color: #12674b;
+  background: linear-gradient(180deg, rgba(255,255,255,.40), rgba(255,255,255,0)), rgba(29,158,117,.13);
+  box-shadow: inset 0 1px rgba(255,255,255,.52), 0 2px 5px rgba(9,18,33,.055);
+}
+.slot-open-action:hover {
+  border-color: rgba(29,158,117,.72);
+  background: linear-gradient(180deg, rgba(255,255,255,.50), rgba(255,255,255,0)), rgba(29,158,117,.22);
+  box-shadow: inset 0 1px rgba(255,255,255,.60), 0 6px 14px rgba(29,158,117,.20);
+}
+
+/* OPEN STUDIO — the hand-off to the other room, so it carries the Studio's gold. */
+.slot-studio-action {
+  border: 1px solid rgba(184,149,47,.48);
+  color: #7a5f18;
+  background: linear-gradient(180deg, rgba(255,255,255,.40), rgba(255,255,255,0)), rgba(201,168,76,.14);
+  box-shadow: inset 0 1px rgba(255,255,255,.52), 0 2px 5px rgba(9,18,33,.055);
+}
+.slot-studio-action:hover {
+  border-color: rgba(184,149,47,.76);
+  background: linear-gradient(180deg, rgba(255,255,255,.50), rgba(255,255,255,0)), rgba(201,168,76,.25);
+  box-shadow: inset 0 1px rgba(255,255,255,.60), 0 6px 14px rgba(201,168,76,.22);
+}
+
+/* RENAME — neutral ink: present, findable, and quieter than either Open. */
+.slot-rename-action {
+  border: 1px solid rgba(32,36,43,.26);
+  color: rgba(32,36,43,.66);
+  background: linear-gradient(180deg, rgba(255,255,255,.40), rgba(255,255,255,0)), rgba(32,36,43,.055);
+  box-shadow: inset 0 1px rgba(255,255,255,.48), 0 2px 5px rgba(9,18,33,.045);
+}
+.slot-rename-action:hover {
+  border-color: rgba(184,149,47,.68);
+  color: #7a5f18;
+  background: linear-gradient(180deg, rgba(255,255,255,.46), rgba(255,255,255,0)), rgba(201,168,76,.16);
+  box-shadow: inset 0 1px rgba(255,255,255,.56), 0 6px 14px rgba(201,168,76,.18);
+}
+
+/* ERASE SLOT — the only one of the four that destroys something. Neutral at rest so it is easy to
+   READ and never easy to hit by accident; red only on approach. Same rule as the Archive's Erase. */
+.slot-erase-action {
+  border: 1px solid rgba(32,36,43,.26);
+  color: rgba(32,36,43,.62);
+  background: linear-gradient(180deg, rgba(255,255,255,.40), rgba(255,255,255,0)), rgba(32,36,43,.055);
+  box-shadow: inset 0 1px rgba(255,255,255,.48), 0 2px 5px rgba(9,18,33,.045);
+}
+.slot-erase-action:hover {
+  border-color: rgba(226,75,74,.62);
+  color: var(--danger-red, #e24b4a);
+  background: linear-gradient(180deg, rgba(255,255,255,.46), rgba(255,255,255,0)), rgba(226,75,74,.12);
+  box-shadow: inset 0 1px rgba(255,255,255,.56), 0 6px 14px rgba(226,75,74,.18);
+}
+
+/* ── Compare / Open Sketch. These had cursor:default and transition:all — they did not even show
+      a pointer. Same gold finish the Archive's pair now carries. ───────────────────────────────── */
+.sketch-secondary-action {
+  cursor: pointer;
+  touch-action: manipulation;
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.30), rgba(255,255,255,0) 42%),
+    linear-gradient(180deg, #dcb745, #c39a2b);
+  color: #15120a;
+  box-shadow:
+    0 16px 30px rgba(201,168,76,.20),
+    inset 0 1px rgba(255,255,255,.42),
+    inset 0 -1px rgba(97,72,10,.30),
+    inset 0 0 0 1px rgba(122,92,18,.20);
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease, filter .18s ease;
+}
+.sketch-secondary-action:hover {
+  transform: translateY(-1px);
+  filter: saturate(1.06);
+  box-shadow:
+    0 22px 40px rgba(201,168,76,.30),
+    0 0 26px rgba(201,168,76,.16),
+    inset 0 1px rgba(255,255,255,.52),
+    inset 0 -1px rgba(97,72,10,.32),
+    inset 0 0 0 1px rgba(122,92,18,.24);
+}
+.sketch-secondary-action:active {
+  transform: translateY(0);
+  box-shadow: 0 8px 16px rgba(201,168,76,.20), inset 0 2px 5px rgba(97,72,10,.30), inset 0 0 0 1px rgba(122,92,18,.26);
+}
+.sketch-secondary-action:focus-visible { outline: 2px solid rgba(29,158,117,.62); outline-offset: 3px; }
+
+/* ── Turn Page / Previous — only reachable at 5+ saved sketches. Matches the Archive's pair. ─── */
+.turn-btn {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.34), rgba(255,255,255,0) 46%),
+    linear-gradient(180deg, rgba(216,177,62,.26), rgba(201,161,47,.14));
+  box-shadow: inset 0 1px rgba(255,255,255,.50), 0 2px 5px rgba(9,18,33,.055);
+}
+.turn-btn:focus-visible { outline: 2px solid rgba(29,158,117,.55); outline-offset: 2px; }
+.turn-btn:active:not(:disabled) { transform: translateY(0); box-shadow: inset 0 2px 4px rgba(97,72,10,.24); }
+.turn-btn.ghost { background: transparent; box-shadow: none; }
+
+/* ── Paying for the extra card height out of dead space, so the PAGE does not grow. ──────────── */
+.sketchbook-sheet { padding-bottom: 34px; }
+.page-foot { margin-top: 13px; padding-top: 11px; }
 </style>
 <script defer src="/scripts/datum-tier.js"></script>
 <script defer src="/scripts/datum-archive-paging.js"></script>
@@ -3670,7 +3864,7 @@
     return `
       <div class="slot-meta-eyebrow-container" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
         <div class="slot-meta-eyebrow">Sheet ${_skLabel(gi)}</div>
-        <div class="slot-status-pill" style="font-family:var(--font-mono,monospace);font-size:7.5px;font-weight:700;letter-spacing:0.10em;text-transform:uppercase;padding:3px 7px;border-radius:999px;white-space:nowrap;${(data.status === 'Modeled') ? 'color:#0f7a52;border:1px solid rgba(29,158,117,0.55);background:rgba(29,158,117,0.12);' : 'color:rgba(32,36,43,0.62);border:1px solid rgba(32,36,43,0.28);background:rgba(32,36,43,0.05);'}">${data.status || 'Drafted'}</div>
+        <div class="slot-status-pill" style="font-family:var(--font-mono,monospace);font-size:9px;font-weight:700;letter-spacing:0.10em;text-transform:uppercase;padding:4px 9px;border-radius:999px;white-space:nowrap;${(data.status === 'Modeled') ? 'color:#0f7a52;border:1px solid rgba(29,158,117,0.55);background:rgba(29,158,117,0.12);' : 'color:rgba(32,36,43,0.62);border:1px solid rgba(32,36,43,0.28);background:rgba(32,36,43,0.05);'}">${data.status || 'Drafted'}</div>
       </div>
       <div class="slot-name-line" data-rename-id="${data.sketchId || ''}">${data.displayName}</div>
       <div class="slot-state-title" style="color: ${data.s1StateColor || data.stateColor};">${data.s1StateName || data.stateName}</div>
@@ -3684,13 +3878,13 @@
         ? '<svg width="100%" height="100%" viewBox="' + (data.s1ViewBox) + '" preserveAspectRatio="xMidYMid meet"><path d="' + data.s1ConePath + '" fill="rgba(93,202,165,0.15)"/><path d="' + data.s1CeilPath + '" stroke="#C9A84C" stroke-width="3" fill="none" stroke-linecap="round"/><path d="' + data.s1FloorPath + '" stroke="#e24b4a" stroke-width="2" fill="none" stroke-linecap="round"/><path d="' + data.s1DatumPath + '" stroke="#5DCAA5" stroke-width="3" fill="none" stroke-linecap="round"/></svg>'
         : miniShapeSVG({ ceil: data.s1Ceil || data.ceil, datum: data.s1Datum || data.datum, floor: data.s1Floor || data.floor, stateName: data.s1StateName || data.stateName })}</div>
       <div class="saved-bottom">
-        <div class="saved-nameline" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;">
-          <span class="saved-time">${_sk2Digit(data.dateStamped)}</span>
-          <button type="button" class="slot-rename-action" data-rename-id="${data.sketchId || ''}" aria-label="Rename this sketch" title="Rename this sketch">Rename</button>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+        <span class="saved-time">${_sk2Digit(data.dateStamped)}</span>
+        <div class="sk-card-actions">
           <button type="button" class="slot-open-action" data-open-slot="${data.sketchId || idx}" aria-label="Open this Sketch" title="Open in Sketch">Open Sketch</button>
           <button type="button" class="slot-studio-action" data-studio-slot="${data.sketchId || idx}" aria-label="Open this Sketch in Studio" title="Open in Studio">Open Studio</button>
+        </div>
+        <div class="sk-card-actions">
+          <button type="button" class="slot-rename-action" data-rename-id="${data.sketchId || ''}" aria-label="Rename this sketch" title="Rename this sketch">Rename</button>
           <button type="button" class="slot-erase-action" data-purge-target="${idx}" aria-label="Erase ${_skLabel(gi)}" title="Erase this saved Sketch">Erase Slot</button>
         </div>
       </div>

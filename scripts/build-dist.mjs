@@ -36,7 +36,7 @@ const SACRED = {
   // Same gap as nav.js above, found 2026-07-27 while wiring the erase fix: sketchbook.html is a
   // Sacred Host in CLAUDE.md but was ABSENT from this map, so the erase edit passed the build with
   // no guard at all. Pinned at its true content.
-  'sketchbook.html': '77a1068c98489fca0bc660dcda481416',   // empty tile: "Start a New Sketch" (2026-08-01)
+  'sketchbook.html': '2ee23cede6204c03809b2cbdc07b3c85',   // tiles +33%; four card buttons get real chrome; pencil unclipped (2026-08-01)
 
   // ── MAP CLOSED 2026-07-27 ────────────────────────────────────────────────────────────────────
   // The seven below were declared Sacred in CLAUDE.md and pinned NOWHERE, so any edit to them

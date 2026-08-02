@@ -331,6 +331,10 @@ function freshBlueprint() {
       btnTitle: btn ? btn.getAttribute('title') : null,
       foot: foot ? foot.textContent.trim() : null,
       pill: pill ? pill.textContent.trim() : null,
+      /* Captured so the sketch pill can be compared against the REAL Blueprint pill rather than
+         against a literal. See the parity assertion further down. */
+      pillRadius: pill ? getComputedStyle(pill).borderRadius : null,
+      pillSize: pill ? getComputedStyle(pill).fontSize : null,
       sheet: sheet ? sheet.textContent.trim() : null
     };
   });
@@ -487,8 +491,17 @@ function freshBlueprint() {
   ok(sk.state === 'EXPANSIVE' && !!sk.stateColor,
     'the colored STATE TITLE is KEPT below the name � never folded into the pill or demoted');
   ok(sk.pillText === 'Drafted', 'the pill still says Drafted � its WORD is unchanged');
-  ok(sk.pillRadius === '999px' && sk.pillSize === '7.5px',
-    'the pill FRAME adopts the Blueprint chrome (radius ' + sk.pillRadius + ', size ' + sk.pillSize + ')');
+  /* THIS ASSERTION SAYS "ADOPTS THE BLUEPRINT CHROME", SO IT NOW MEASURES THE BLUEPRINT CHROME.
+     It used to hard-code radius 999px / size 7.5px, which made it a PIN on two literals wearing
+     the language of a parity check — and it went red on 2026-08-01 when both pills were scaled to
+     9px together, i.e. while parity was perfectly intact. A hard-coded number cannot tell "the two
+     rooms drifted apart" from "both moved in step", which is the only thing this line cares about.
+     Compared against the Blueprint pill captured on the real Blueprint page above. */
+  ok(sk.pillRadius === card.pillRadius && sk.pillSize === card.pillSize,
+    'the pill FRAME matches the Blueprint pill (sketch ' + sk.pillRadius + '/' + sk.pillSize
+      + ' vs blueprint ' + card.pillRadius + '/' + card.pillSize + ')');
+  ok(sk.pillRadius === '999px' && parseFloat(sk.pillSize) >= 8,
+    'and that shared frame is still a legible round pill (radius ' + sk.pillRadius + ', size ' + sk.pillSize + ')');
   ok(/32,\s*36,\s*43/.test(sk.pillColor || ''),
     'the pill keeps its DRAFTED grey � state colour was NOT flattened to the Blueprint teal (' + sk.pillColor + ')');
   ok(sk.time === '07/25/26', 'the sketch footer shows the normalised 2-digit date');
