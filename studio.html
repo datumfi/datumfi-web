@@ -13782,10 +13782,29 @@
       });
     }
 
+    /* THE PROFILE-DATE REPAINT, CALLABLE WITHOUT PRETENDING TO BE A USER.
+     * The +600ms sketch hydration used to fake this by dispatching a synthetic `change` on #pri-dob
+     * and #target-ret. That event is indistinguishable from typing to everything downstream, and the
+     * document-delegated autosave below (:11875) filed the whole DOM — on-screen defaults included —
+     * as the user's unsaved draft, so opening a saved sketch and touching NOTHING produced "You
+     * haven't saved this yet." Fixed once at the draft writer (53df27f); this removes the LIE ITSELF
+     * rather than filtering it, which is the only thing that closes the remaining hole: a real click
+     * inside the first second used to end the boot window early and let the fake write through.
+     * EXPOSED ON window BECAUSE THE HYDRATION LIVES IN A DIFFERENT <script> BLOCK (:15642) and these
+     * functions are block-scoped — measured, not assumed.
+     * THE LISTENER CALLS IT TOO, so there is ONE sequence and no second copy to drift (L48). */
+    window._studioApplyProfileDates = function () {
+      syncFromProfileDates(); refreshAllLabels(); fireUpdate();
+      /* The synthetic `change` also bubbled to document, where updateRangeReadiness (:12342) was
+         listening. Removing the dispatch removes that too, so it is called explicitly — the exact
+         silent-landmine this project names: correct code whose covering layer is being taken away. */
+      if (typeof window.updateRangeReadiness === 'function') window.updateRangeReadiness();
+    };
+
     function wireProfileBindings() {
       ['pri-dob', 'target-ret', 'plan-end-age'].forEach(function (id) {
         var el = $(id); if (!el) return;
-        el.addEventListener('change', function () { syncFromProfileDates(); refreshAllLabels(); fireUpdate(); });
+        el.addEventListener('change', function () { window._studioApplyProfileDates(); });
       });
       var taxProfEl = $('eff-tax-rate');
       if (taxProfEl) taxProfEl.addEventListener('change', function () {
@@ -15737,8 +15756,16 @@
         // Text-only seeding left the sliders reading the blueprint's age; the guarded reasserts
         // above no longer repaint over this. _dobEl/_retEl are var-declared earlier in this
         // callback (undefined if that field was skipped — the if-guard covers it).
-        if (_dobEl) _dobEl.dispatchEvent(new Event('change', { bubbles: true }));
-        if (_retEl) _retEl.dispatchEvent(new Event('change', { bubbles: true }));
+        /* CALLED, NOT FAKED. This dispatched a synthetic `change` on both fields so the wired path
+           would repaint. A dispatched event carries isTrusted:false but is otherwise identical to
+           typing, and the document-delegated autosave (:11875) duly filed the page's own blank
+           slider defaults (750000 / 25000) as the user's work. The repaint was always the INTENT;
+           impersonating the user was only the mechanism, so the mechanism goes and the intent stays.
+           Runs ONCE rather than twice: syncFromProfileDates reads BOTH fields on every call, so the
+           second dispatch never did anything the first had not already done. */
+        if (_dobEl || _retEl) {
+          if (typeof window._studioApplyProfileDates === 'function') window._studioApplyProfileDates();
+        }
         if (typeof updateSVGs === 'function') updateSVGs();
         // Entry toast suppressed (Captain): the prefill above is silent — no
         // "Sketch outline loaded" pop on hydration.

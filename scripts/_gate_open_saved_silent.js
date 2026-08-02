@@ -34,6 +34,7 @@
  *   --nofix2  restores the dossier-only baseline    -> only the SKETCH-CARRY silence reds
  *   --naive   applies the TEMPTING fix instead      -> both silences go GREEN and KEEP-DIRTY REDS
  *   --recapture re-photographs the draft on EVERY load -> the reports go GREEN and KEEP-DIRTY REDS
+ *   --refake  puts the synthetic change dispatch BACK  -> everything stays GREEN except OS 6
  */
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const { chromium } = require('playwright');
@@ -43,6 +44,7 @@ const NOFIX1 = process.argv.includes('--nofix1');
 const NOFIX2 = process.argv.includes('--nofix2');
 const NAIVE  = process.argv.includes('--naive');
 const ORDER  = process.argv.includes('--recapture');
+const REFAKE = process.argv.includes('--refake');
 
 const A_ECHO = "var _isEcho = source === 'session-draft';";
 const M_ECHO = 'var _isEcho = true;';   // the pre-fix behaviour: EVERY load claimed to be an echo
@@ -75,6 +77,21 @@ const server = http.createServer((req, res) => {
   const fp = path.join(ROOT, p);
   if (!fp.startsWith(ROOT) || !fs.existsSync(fp) || fs.statSync(fp).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
   let body = fs.readFileSync(fp);
+  /* --refake — PUT THE LIE BACK. Restores the synthetic `change` dispatch the sketch hydration used
+     to fire, so the page impersonates the user again. With the captured-boot fix in place the plain
+     reports STAY GREEN — which is exactly why this mutation is needed: only OS 6 (a real click
+     mid-hydration) can tell that the fake write is still there waiting to be misread. Mutates
+     studio.html, the only mutation in this gate that does. */
+  if (REFAKE && /studio\.html$/.test(p)) {
+    let src = body.toString('utf8'); const orig = src;
+    const A = '        if (_dobEl || _retEl) {\n          if (typeof window._studioApplyProfileDates === \'function\') window._studioApplyProfileDates();\n        }';
+    const M = "        if (_dobEl) _dobEl.dispatchEvent(new Event('change', { bubbles: true }));\n        if (_retEl) _retEl.dispatchEvent(new Event('change', { bubbles: true }));";
+    const n = src.split(A).length - 1;
+    if (n !== 1) { console.error(`anchor A_REFAKE: expected exactly 1 occurrence, found ${n} — re-ground it.`); process.exit(1); }
+    src = src.replace(A, M);
+    jsDiffers = jsDiffers || (src !== orig);
+    body = Buffer.from(src, 'utf8');
+  }
   if ((NOFIX1 || NOFIX2 || NAIVE || ORDER) && /studio-blueprint\.js$/.test(p)) {
     let src = body.toString('utf8'); const orig = src;
     const apply = (a, m, label) => {
@@ -148,7 +165,16 @@ async function open(url, seed) {
       localStorage.removeItem('datumfi_blueprint_draft_v1');
       if (s.dossier) localStorage.setItem('datumfi.accountDossier.v15', JSON.stringify(s.dossier));
       if (s.stash)     localStorage.setItem('datum_blueprint_state_' + s.stashId, JSON.stringify(s.stash));
-      if (s.sketch)    localStorage.setItem('datum_sketch_state_' + s.sketchId, JSON.stringify(s.sketch));
+      /* BOTH SKETCH KEYS, AND THE SECOND ONE IS THE WHOLE DEFECT. load()'s readSketchSlot reads
+         datum_sketch_state_<id>, but studio.html's +600ms HYDRATION HANDSHAKE (:15665) reads
+         datum_sketch_byid_<id> — and the hydration is the half that writes into the live controls.
+         Seeding only the first meant the hydration NEVER RAN here, so OS 3 was passing on a page
+         where the code under test was inert: a SILENT PASS, green for the wrong reason. Recorded as
+         the "wrong key" fixture fault on 2026-08-02 and still live in this gate until now. */
+      if (s.sketch) {
+        localStorage.setItem('datum_sketch_state_' + s.sketchId, JSON.stringify(s.sketch));
+        localStorage.setItem('datum_sketch_byid_' + s.sketchId, JSON.stringify(s.sketch));
+      }
       if (s.incumbent) localStorage.setItem('datumfi_blueprint_draft_v1', JSON.stringify(s.incumbent));
     } catch (e) {}
   }, seed || {});
@@ -156,8 +182,19 @@ async function open(url, seed) {
     window.Clerk = { load:function(){return Promise.resolve();}, session:{getToken:function(){return Promise.resolve('tok');}},
       user:{ id:'u', firstName:'Daniel', primaryEmailAddress:{emailAddress:'q@q.co'}, unsafeMetadata:{}, update:function(){return Promise.resolve();} } };
   })();`);
-  await page.goto(BASE + url, { waitUntil: 'load' });
-  await page.waitForTimeout(3000);
+  if (seed && seed.clickAtMs) {
+    /* TIMED, so the click lands INSIDE the +600ms hydration window. 'commit' rather than 'load'
+       because the hydration timer starts at parse and 'load' can already be past it on a cold
+       harness — waiting for 'load' first would silently turn this into an after-the-fact click,
+       which is the "sampled a moment, not a timeline" fault this whole arc was built on. */
+    await page.goto(BASE + url, { waitUntil: 'commit' });
+    await page.waitForTimeout(seed.clickAtMs);
+    await page.mouse.click(8, 8);                 // real + browser-stamped, and lands on nothing
+    await page.waitForTimeout(3500);
+  } else {
+    await page.goto(BASE + url, { waitUntil: 'load' });
+    await page.waitForTimeout(3000);
+  }
   return { ctx, page };
 }
 
@@ -171,7 +208,8 @@ const verdict = (page) => page.evaluate(() => {
     everSaved: !!(w && w.everSaved), editedSinceSave: !!(w && w.unsavedEdits), surface: 'studio'
   });
   let d = null; try { d = JSON.parse(localStorage.getItem('datumfi_blueprint_draft_v1') || 'null'); } catch (e) {}
-  return { branch: branch, w: w, draftAt: d && d._draftAt, savedAt: d && d.saved_at, src: d && d._loadSource };
+  return { branch: branch, w: w, draftAt: d && d._draftAt, savedAt: d && d.saved_at, src: d && d._loadSource,
+           port: d && d.portfolio_total };
 });
 
 /* A REAL edit, driven through the product's own draft writer — the same function bind()'s
@@ -264,6 +302,26 @@ const edit = async (page) => { await page.keyboard.press('Shift'); return page.e
     await ctx.close();
   }
 
+  /* ── OS 6 — A REAL CLICK DURING HYDRATION. THE ONE ASSERTION --refake CAN FAIL. ──────────────
+   * The captured-boot fix (53df27f) closed the boot window on the first TRUSTED event, which left a
+   * named residue: click anything — even something inert — before the +600ms hydration lands, and
+   * the synthetic write arriving after it counted as an edit, so the false prompt came back. The
+   * only honest closure was for the page to STOP FIRING FAKE EVENTS, which is what this asserts.
+   * MEASURED both ways: with the dispatch restored this reds at portfolio 750000 / branch C; with it
+   * retired the draft never receives the fake write at all and there is nothing left to misread.
+   * ⚠️ THE CLICK IS DELIBERATELY AT 700ms AND AT (8,8) — INSIDE the hydration window, and on nothing.
+   * A click after the page settles proves nothing, and a click that hits a control would be a real
+   * edit. This is a TIMED, NEGATIVE assertion: the page must NOT claim work at a moment when the only
+   * thing that has happened is the page talking to itself. */
+  {
+    const { ctx, page } = await open(`/studio.html?id=${SK_ID}&hydrate=sketch`,
+      { sketchId: SK_ID, sketch: SKETCH, dossier: DOSSIER, clickAtMs: 700 });
+    const v = await verdict(page);
+    ok(v.branch === null,
+      `OS 6 LOAD-BEARING: a REAL click at 700ms (mid-hydration, on nothing) then leave is SILENT (branch ${v.branch}, draft portfolio=${v.port}) — the page must not fire fake user events for its own repaint`);
+    await ctx.close();
+  }
+
   /* ── THE FEATURE STILL WORKS. Silence that cannot become speech is a deleted feature. ────── */
   {
     const { ctx, page } = await open(`/studio.html?id=${SK_ID}&hydrate=sketch`, { sketchId: SK_ID, sketch: SKETCH, dossier: DOSSIER });
@@ -290,13 +348,13 @@ const edit = async (page) => { await page.keyboard.press('Shift'); return page.e
   await browser.close();
   await new Promise((r) => server.close(r));
 
-  const MUTATED = NOFIX1 || NOFIX2 || NAIVE || ORDER;
+  const MUTATED = NOFIX1 || NOFIX2 || NAIVE || ORDER || REFAKE;
   if (MUTATED) {
     console.log(`\nPOISON LANDED? ${jsDiffers ? 'YES' : 'NO'}   (studio-blueprint.js bytes changed: ${jsDiffers})`);
     if (!jsDiffers) { console.log('MUTATION DID NOT APPLY — this run proves nothing. Fix the anchor.'); process.exit(2); }
   }
   console.log('\n' + lines.join('\n'));
-  console.log(`\n${NOFIX1 ? 'MUTATED[nofix1]' : NOFIX2 ? 'MUTATED[nofix2]' : NAIVE ? 'MUTATED[naive]' : ORDER ? 'MUTATED[recapture]' : 'CLEAN'}  GREEN ${pass} / RED ${fail}`);
+  console.log(`\n${NOFIX1 ? 'MUTATED[nofix1]' : NOFIX2 ? 'MUTATED[nofix2]' : NAIVE ? 'MUTATED[naive]' : ORDER ? 'MUTATED[recapture]' : REFAKE ? 'MUTATED[refake]' : 'CLEAN'}  GREEN ${pass} / RED ${fail}`);
   if (MUTATED) {
     console.log(fail > 0 ? 'RED-FIRST OK — the mutation BIT.' : 'RED-FIRST FAILED — the poison landed and nothing noticed.');
     process.exit(fail > 0 ? 0 : 1);
