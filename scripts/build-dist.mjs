@@ -47,7 +47,7 @@ const SACRED = {
   // pinned here, and every host pinned here is declared there — the two lists match exactly.
   'vault.html': 'c7a7a9c101a6743c6a6a2d4c9f8453e1',
   'my-account.html': 'b6c0cade10a7d77fc948e891e58cecde',   // intro names the rooms, not their positions (2026-08-01)
-  'Blueprint.html': '53f19fe4c8be29d35bd8e1e134cde1fa',   // the room is renamed "The Archive" (2026-08-01)
+  'Blueprint.html': '2129066cbd16c0a30e95278a4f7355f4',   // cards +29% area; card buttons get real chrome (2026-08-01)
   'Dossier.html': '5cceff124fd6d158557fa5d58defb1bd',
   'privacy.html': 'e8ad09c3b1881fd53b47b5be9ae0ded4',
   'terms.html': 'f075b5b3a3a919ee586b962aa17bf200',

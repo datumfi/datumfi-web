@@ -419,7 +419,11 @@ button {
   min-height: 602px;
   margin-left: 38px;
   border-radius: 18px 32px 32px 18px;
-  padding: 58px 76px 66px 88px;
+  /* Side padding trimmed 76->58 / 88->70 to give the four cards +36px of shared width — the only
+     width available without widening the binder. Bottom padding 66->34 pays for part of the cards'
+     new height so the PAGE does not get taller; measured, the Archive already fills a 1920x1080
+     window exactly and already scrolls on every laptop size below it. */
+  padding: 58px 58px 34px 70px;
   overflow: hidden;
   color: var(--ink);
   background:
@@ -624,7 +628,7 @@ button {
 .sheet-divider {
   width: 100%;
   height: 1px;
-  margin: 0 0 18px;
+  margin: 0 0 12px;
   background:
     linear-gradient(90deg,
       rgba(32,36,43,.19),
@@ -636,16 +640,22 @@ button {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 20px;
-  min-height: 246px;
+  min-height: 295px;
 }
 
 /* ─────────────────────────────────────────────────────────────
    BLUEPRINT CARDS
    ───────────────────────────────────────────────────────────── */
 
+/* CARD SIZE, 2026-08-01. Measured before changing: a FILLED card was 217x306 and the three footer
+   buttons were 29x9, 32x11 and 25x9 px — nine pixels tall, with no border, no fill and no padding,
+   which is why they read as faint and are awkward to hit. The empty slot measured 246px and is NOT
+   the state to design against; no real user has an empty archive for long.
+   Height grows ~20%; width grows ~4% by trimming the sheet's side padding, which is the only width
+   available without widening the binder itself (Captain's call, 2026-08-01). */
 .blueprint-slot {
   position: relative;
-  min-height: 246px;
+  min-height: 295px;
   border-radius: 11px;
   border: 1px solid rgba(32,36,43,.155);
   background:
@@ -691,8 +701,8 @@ button {
   position: relative;
   z-index: 40;
   height: 100%;
-  min-height: 244px;
-  padding: 19px 17px 16px;
+  min-height: 293px;
+  padding: 20px 20px 16px;
   display: flex;
   flex-direction: column;
   pointer-events: auto;
@@ -789,42 +799,48 @@ button {
   justify-content: space-between;
   align-items: baseline;
   gap: 10px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .sheet-id {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: .12em;
   text-transform: uppercase;
   color: rgba(23,27,34,.78);
 }
 
+/* THE REFERENCE CHROME. The Captain pointed at this pill and asked for the three card buttons to
+   take its treatment with a real interior fill — it is legible because it has a border, a fill and
+   padding, NOT because it is bigger. It was 7.5px, the same size as the buttons that vanish. */
 .status-pill {
-  border: 1px solid rgba(29,158,117,.33);
+  border: 1px solid rgba(29,158,117,.38);
   color: var(--teal-brand);
-  background: rgba(29,158,117,.06);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.34), rgba(255,255,255,0)),
+    rgba(29,158,117,.085);
   border-radius: 999px;
-  padding: 3px 7px;
+  padding: 4px 9px;
   font-family: var(--font-mono);
-  font-size: 7.5px;
+  font-size: 9px;
   letter-spacing: .10em;
   text-transform: uppercase;
+  box-shadow: inset 0 1px rgba(255,255,255,.42);
 }
 
 .blueprint-name {
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 20px;
+  font-size: 23px;
   line-height: 1.05;
   font-weight: 300;
   color: rgba(20,24,31,.90);
 }
 
 .blueprint-mini {
-  height: 70px;
+  height: 74px;
   border-radius: 5px;
   overflow: hidden;
   border: 1px solid rgba(9,18,33,.28);
@@ -837,13 +853,13 @@ button {
     inset 0 0 0 1px rgba(255,255,255,.04),
     inset 0 0 20px rgba(0,0,0,.18),
     0 7px 16px rgba(9,18,33,.135);
-  margin-bottom: 11px;
+  margin-bottom: 13px;
 }
 
 .blueprint-metrics {
   display: grid;
   gap: 4px;
-  margin-bottom: 12px;
+  margin-bottom: 13px;
 }
 
 .metric-row {
@@ -856,7 +872,7 @@ button {
 
 .metric-row span {
   font-family: var(--font-mono);
-  font-size: 8.4px;
+  font-size: 10px;
   letter-spacing: .04em;
   text-transform: uppercase;
   color: rgba(32,36,43,.58);
@@ -864,90 +880,128 @@ button {
 
 .metric-row strong {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 12.5px;
   color: rgba(32,36,43,.86);
 }
 
 /* A (#288) — Net Worth is the card headline: heavier, larger, its own baseline rule. */
-.metric-row.metric-headline { border-bottom: 1px solid rgba(23,27,34,.16); padding-bottom: 4px; }
+.metric-row.metric-headline { border-bottom: 1px solid rgba(23,27,34,.16); padding-bottom: 5px; }
 .metric-row.metric-headline span { color: rgba(32,36,43,.72); }
-.metric-row.metric-headline strong { font-size: 13.5px; font-weight: 700; }
+.metric-row.metric-headline strong { font-size: 16px; font-weight: 700; }
 
+/* THE FOOTER STACKS, and it has to. Measured at the old size: the three buttons occupied 102px of
+   181px of card width alongside the timestamp. At a legible size they need ~150px, which does not
+   fit on one line beside it at any card width the binder can give. So the timestamp takes its own
+   line and the three actions share the full width beneath it — which also lets each button be a
+   real target instead of a 9px-tall word. */
 .card-bottom {
   margin-top: auto;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
   position: relative;
   z-index: 400;
   pointer-events: auto;
 }
 
+.card-actions {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.card-actions > button { flex: 1 1 0; min-width: 0; }
+
 .saved-time {
   font-family: var(--font-mono);
-  font-size: 7.3px;
+  font-size: 8.6px;
   letter-spacing: .08em;
   text-transform: uppercase;
-  color: rgba(32,36,43,.42);
+  color: rgba(32,36,43,.46);
 }
 
-.erase-action {
+/* ── THE THREE CARD ACTIONS ────────────────────────────────────────────────────────────────────
+   ONE shared shape, three tints (L48: reuse the shape, do not invent a third). The shape is the
+   status pill's — border + interior fill + padding + full round — because that is demonstrably
+   what makes the pill findable at the same type size the old buttons used.
+   Before: 7.4px text, border 0, background transparent, padding 0 → 29x9, 32x11, 25x9 px.
+   After: 9px text in a filled pill, ~26px tall, sharing the card's full width three ways. */
+.card-actions > button {
   position: relative;
   z-index: 500;
   pointer-events: auto;
-  background: transparent;
-  border: 0;
-  padding: 0;
-  color: rgba(32,36,43,.44);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 8px;
+  border-radius: 999px;
   font-family: var(--font-mono);
-  font-size: 7.4px;
-  letter-spacing: .12em;
+  font-size: 9px;
+  letter-spacing: .10em;
   text-transform: uppercase;
   cursor: pointer;
   touch-action: manipulation;
+  white-space: nowrap;
+  transition: background .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease, transform .18s ease;
 }
 
-.erase-action:hover {
-  color: var(--danger-red);
-}
+.card-actions > button:hover { transform: translateY(-1px); }
+.card-actions > button:active { transform: translateY(0); }
+.card-actions > button:focus-visible { outline: 2px solid rgba(29,158,117,.55); outline-offset: 2px; }
 
+/* OPEN — the primary of the three, so it carries the brand teal at full strength. */
 .open-blueprint-action {
-  position: relative;
-  z-index: 500;
-  pointer-events: auto;
-  background: transparent;
-  border: 0;
-  font-family: var(--font-mono);
-  font-size: 7.4px;
-  letter-spacing: .11em;
-  text-transform: uppercase;
-  color: rgba(29,158,117,.72);
-  cursor: pointer;
-  touch-action: manipulation;
+  border: 1px solid rgba(29,158,117,.46);
+  color: #12674b;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.40), rgba(255,255,255,0)),
+    rgba(29,158,117,.13);
+  box-shadow: inset 0 1px rgba(255,255,255,.52), 0 2px 5px rgba(9,18,33,.055);
 }
 .open-blueprint-action:hover {
-  color: rgba(93,202,165,.95);
+  border-color: rgba(29,158,117,.72);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.50), rgba(255,255,255,0)),
+    rgba(29,158,117,.22);
+  box-shadow: inset 0 1px rgba(255,255,255,.60), 0 6px 14px rgba(29,158,117,.20);
 }
 
-/* RENAME — same footer-action chrome as Open/Erase (L48: reuse the shape, don't invent a third). */
+/* RENAME — secondary, gold: present but quieter than Open. */
 .rename-action {
-  position: relative;
-  z-index: 500;
-  pointer-events: auto;
-  background: transparent;
-  border: 0;
-  padding: 0;
-  font-family: var(--font-mono);
-  font-size: 7.4px;
-  letter-spacing: .11em;
-  text-transform: uppercase;
-  color: rgba(32,36,43,.44);
-  cursor: pointer;
-  touch-action: manipulation;
+  border: 1px solid rgba(184,149,47,.44);
+  color: #7a5f18;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.40), rgba(255,255,255,0)),
+    rgba(201,168,76,.13);
+  box-shadow: inset 0 1px rgba(255,255,255,.52), 0 2px 5px rgba(9,18,33,.055);
 }
 .rename-action:hover {
-  color: rgba(201,168,76,.95);
+  border-color: rgba(184,149,47,.72);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.50), rgba(255,255,255,0)),
+    rgba(201,168,76,.24);
+  box-shadow: inset 0 1px rgba(255,255,255,.60), 0 6px 14px rgba(201,168,76,.22);
+}
+
+/* ERASE — legible, but deliberately the quietest of the three until hovered. It is the only one
+   of the three that destroys something, so it should be easy to READ and never easy to hit by
+   accident: neutral ink at rest, red only on approach. */
+.erase-action {
+  border: 1px solid rgba(32,36,43,.26);
+  color: rgba(32,36,43,.62);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.40), rgba(255,255,255,0)),
+    rgba(32,36,43,.055);
+  box-shadow: inset 0 1px rgba(255,255,255,.48), 0 2px 5px rgba(9,18,33,.045);
+}
+.erase-action:hover {
+  border-color: rgba(226,75,74,.62);
+  color: var(--danger-red);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.46), rgba(255,255,255,0)),
+    rgba(226,75,74,.12);
+  box-shadow: inset 0 1px rgba(255,255,255,.56), 0 6px 14px rgba(226,75,74,.18);
 }
 
 /* The inline editor inherits .blueprint-name so the card does not reflow when the h3 is swapped out. */
@@ -967,8 +1021,8 @@ button {
   align-items: center;
   justify-content: center;
   gap: 18px;
-  margin-top: 27px;
-  padding-top: 22px;
+  margin-top: 18px;
+  padding-top: 16px;
   border-top: 1px solid rgba(32,36,43,.11);
 }
 
@@ -992,21 +1046,55 @@ button {
 /* P6.1 — the obsolete "Save Current Blueprint" primary button is gone; its gold
    identity transfers to the two remaining actions (Compare + Open Studio), centered
    by .archive-actions (justify-content:center). */
+/* FINISH PASS 2026-08-01. These carried no cursor, no hover, no transition and no focus ring —
+   a gold button that did not react to the mouse at all. The gold identity is unchanged; what is
+   added is the response: a lit top edge, a seated bottom edge, and a lift on approach. */
 .secondary-action {
   height: 48px;
   min-width: 200px;
   border: 0;
-  border-radius: 3px;
-  background: linear-gradient(180deg, #d8b13e, #c9a12f);
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.30), rgba(255,255,255,0) 42%),
+    linear-gradient(180deg, #dcb745, #c39a2b);
   color: #15120a;
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: .16em;
   text-transform: uppercase;
+  cursor: pointer;
+  touch-action: manipulation;
   box-shadow:
     0 16px 30px rgba(201,168,76,.20),
-    inset 0 1px rgba(255,255,255,.28);
+    inset 0 1px rgba(255,255,255,.42),
+    inset 0 -1px rgba(97,72,10,.30),
+    inset 0 0 0 1px rgba(122,92,18,.20);
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease, filter .18s ease;
+}
+
+.secondary-action:hover {
+  transform: translateY(-1px);
+  filter: saturate(1.06);
+  box-shadow:
+    0 22px 40px rgba(201,168,76,.30),
+    0 0 26px rgba(201,168,76,.16),
+    inset 0 1px rgba(255,255,255,.52),
+    inset 0 -1px rgba(97,72,10,.32),
+    inset 0 0 0 1px rgba(122,92,18,.24);
+}
+
+.secondary-action:active {
+  transform: translateY(0);
+  box-shadow:
+    0 8px 16px rgba(201,168,76,.20),
+    inset 0 2px 5px rgba(97,72,10,.30),
+    inset 0 0 0 1px rgba(122,92,18,.26);
+}
+
+.secondary-action:focus-visible {
+  outline: 2px solid rgba(29,158,117,.62);
+  outline-offset: 3px;
 }
 
 .footer-note {
@@ -1392,12 +1480,18 @@ button {
 .blueprint-slot:hover::after{ opacity:1; }
 .blueprint-slot.active-blueprint:hover::after{ background:radial-gradient(120% 80% at 50% -10%, rgba(201,168,76,.2), transparent 60%); }
 /* page foot / turn control */
-.page-foot{ display:flex; align-items:center; justify-content:space-between; margin-top:20px; padding-top:16px; border-top:1px solid rgba(32,36,43,.11); }
+.page-foot{ display:flex; align-items:center; justify-content:space-between; margin-top:13px; padding-top:11px; border-top:1px solid rgba(32,36,43,.11); }
 .page-count{ font-family:var(--font-mono); font-size:9.5px; letter-spacing:.18em; text-transform:uppercase; color:rgba(32,36,43,.52); }
 .page-nav{ display:flex; gap:10px; }
+/* Turn Page / Previous — only reachable at 5+ saved blueprints. Same gold family as the actions
+   below them, one step quieter, with the same lit-top / seated-bottom edge treatment. */
 .turn-btn{ font-family:var(--font-mono); font-size:9.5px; font-weight:700; letter-spacing:.16em; text-transform:uppercase;
-  border:1px solid rgba(184,149,47,.5); color:#7a5f18; background:linear-gradient(180deg,rgba(216,177,62,.22),rgba(201,161,47,.12));
-  border-radius:4px; padding:9px 15px; cursor:pointer; transition:transform .12s ease,box-shadow .18s ease,background .18s ease; }
+  border:1px solid rgba(184,149,47,.5); color:#7a5f18;
+  background:linear-gradient(180deg,rgba(255,255,255,.34),rgba(255,255,255,0) 46%),linear-gradient(180deg,rgba(216,177,62,.26),rgba(201,161,47,.14));
+  box-shadow:inset 0 1px rgba(255,255,255,.50), 0 2px 5px rgba(9,18,33,.055);
+  border-radius:4px; padding:9px 15px; cursor:pointer; transition:transform .12s ease,box-shadow .18s ease,background .18s ease,border-color .18s ease; }
+.turn-btn:focus-visible{ outline:2px solid rgba(29,158,117,.55); outline-offset:2px; }
+.turn-btn:active:not(:disabled){ transform:translateY(0); box-shadow:inset 0 2px 4px rgba(97,72,10,.24); }
 .turn-btn:hover:not(:disabled){ transform:translateY(-1px); box-shadow:0 8px 18px rgba(201,168,76,.22); background:linear-gradient(180deg,rgba(216,177,62,.34),rgba(201,161,47,.2)); }
 .turn-btn:disabled{ opacity:.34; cursor:default; }
 .turn-btn.ghost{ border-color:rgba(32,36,43,.2); color:rgba(32,36,43,.5); background:transparent; }
@@ -1693,7 +1787,7 @@ function renderBlueprintSlot(label, bpId, data) {
 
     <div class="card-bottom">
       <span class="saved-time">${data.dateStamped}</span>
-      <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+      <div class="card-actions">
         <button type="button" class="rename-action" data-rename-id="${bpId}" aria-label="Rename this blueprint" title="Rename this blueprint">Rename</button>
         <button type="button" class="open-blueprint-action" data-open-id="${bpId}" aria-label="Open Blueprint in Studio">Open</button>
         <button type="button" class="erase-action" data-purge-id="${bpId}" aria-label="Erase blueprint ${label}">Erase</button>
