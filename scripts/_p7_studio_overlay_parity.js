@@ -245,29 +245,57 @@ async function clickAndGetUrl(page, btnId) {
   check('(b) signOutWipe: Clerk blueprint_z UNTOUCHED (cloud survives)', wipe.bpZ === 'BPZ');
   check('(b) signOutWipe: Clerk sketchbook_z UNTOUCHED (cloud survives)', wipe.skZ === 'SKZ');
 
-  // b-button: the REAL account-topbar sign-out button must run the wipe. Re-seed,
-  // click it (Clerk.signOut never resolves -> no redirect), assert keys swept.
-  await pBp.evaluate(() => {
+  /* THE BUTTON MOVED TO HOME (Captain, 2026-08-01) — so this coverage moved with it rather than
+     being deleted. Deleting it would have been the easy read of a red test: the assertion that
+     the ONLY sign-out control actually wipes the previous user's local plan is a privacy control
+     on a shared machine, and it is worth more than the page it happened to be written against. */
+  check('(b) sign-out button is NOT on Blueprint any more (Home-only)',
+    await pBp.evaluate(() => !document.querySelector('[data-acct-action="signout"]')));
+  check('(b) Blueprint page: no page errors', bpErrors.length === 0, bpErrors.slice(0, 3).join(' | '));
+  await ctxBp.close();
+
+  // ════════ (b-button) SIGN-OUT WIPE, on my-account.html — the page that now owns the button ════
+  const ctxHome = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
+  const pHome = await ctxHome.newPage();
+  const homeErrors = [];
+  pHome.on('pageerror', (e) => homeErrors.push(e.message));
+  await pHome.route('**/*', (route) => /clerk\.|cloudflareinsights|posthog|beacon/i.test(route.request().url()) ? route.abort() : route.continue());
+  await pHome.addInitScript(() => {
+    try { sessionStorage.setItem('datumfi_skip_entry_overlay', '1'); } catch (e) {}
+    try { sessionStorage.setItem('datum_auth_hint', '1'); } catch (e) {}
+    try { localStorage.setItem('datum-discover-v1', 'done'); } catch (e) {}
+  });
+  await pHome.addInitScript(installSignedIn);
+  await pHome.goto(BASE + '/my-account.html', { waitUntil: 'commit' });
+  try { await pHome.waitForSelector('[data-acct-action="signout"]', { timeout: 30000 }); } catch (e) {}
+
+  /* LOAD-BEARING, and the reason my-account.html now preloads the purge module. The handler can
+     inject it on demand, but that path races a fetch and gives up after 1.5s WITHOUT wiping --
+     it fails open, by design, so sign-out is never blocked. On the one page that owns the button
+     the module must already be there, or the wipe is a probability rather than a guarantee. */
+  check('(b) DatumPurge is ALREADY loaded on Home, not fetched at click time',
+    await pHome.evaluate(() => !!(window.DatumPurge && typeof window.DatumPurge.signOutWipe === 'function')));
+
+  await pHome.evaluate(() => {
     window.DatumPurge._localCarriedKeys().forEach(function (k) { localStorage.setItem(k, 'LOCAL'); sessionStorage.setItem(k, 'SESS'); });
     sessionStorage.setItem('__mockclerk_meta', JSON.stringify({ blueprint_z: 'BPZ', sketchbook_z: 'SKZ' }));
   });
-  const btnPresent = await pBp.evaluate(() => {
+  const btnPresent = await pHome.evaluate(() => {
     var b = document.querySelector('[data-acct-action="signout"]');
     if (b) b.click();
     return !!b;
   });
-  await pBp.waitForTimeout(900);
-  const btnWipe = await pBp.evaluate(() => {
+  await pHome.waitForTimeout(900);
+  const btnWipe = await pHome.evaluate(() => {
     var keys = window.DatumPurge._localCarriedKeys();
     var survivors = keys.filter(function (k) { return localStorage.getItem(k) != null || sessionStorage.getItem(k) != null; });
     var meta = {}; try { meta = JSON.parse(sessionStorage.getItem('__mockclerk_meta') || '{}'); } catch (e) {}
     return { survivors: survivors, bpZ: meta.blueprint_z, skZ: meta.sketchbook_z };
   });
-  check('(b) sign-out BUTTON present in topbar', btnPresent);
+  check('(b) sign-out BUTTON present in topbar on Home', btnPresent);
   check('(b) sign-out BUTTON ran the wipe (no carried key survives)', btnWipe.survivors.length === 0, btnWipe.survivors.join(','));
   check('(b) sign-out BUTTON left cloud blob intact', btnWipe.bpZ === 'BPZ' && btnWipe.skZ === 'SKZ');
-  check('(b) Blueprint page: no page errors', bpErrors.length === 0, bpErrors.slice(0, 3).join(' | '));
-  await ctxBp.close();
+  await ctxHome.close();
 
   // ════════ (d) CSP — static.cloudflareinsights.com whitelisted + no CSP errors ════════
   const studioSrc = fs.readFileSync(path.join(ROOT, 'studio.html'), 'utf8');

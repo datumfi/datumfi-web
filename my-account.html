@@ -30,6 +30,16 @@
 <!-- Account topbar — loads deferred so it mounts after DOM parse -->
 <script defer src="/scripts/account-topbar.js"></script>
 
+<!-- Local carried-plan wipe, preloaded BECAUSE the Sign Out button now lives only here
+     (2026-08-01). Sign-out clears this browser's copy of the previous user's plan so the next
+     person on a shared machine cannot see it. The topbar handler will inject this module itself
+     if it is missing, but that path depends on a fetch completing at click time and gives up
+     after 1.5s so sign-out is never blocked -- i.e. it fails OPEN, signing the user out with the
+     wipe silently skipped. Blueprint.html and sketchbook.html have always preloaded it and used
+     to carry the button; Home did not, so moving the button here would have quietly downgraded
+     that guarantee to a race. Preloaded to keep it a guarantee. -->
+<script src="/scripts/datum-archive-purge.js"></script>
+
 <!-- Auth gate + hash router -->
 <!-- Fires on window.load so Clerk has time to complete afterSignInUrl
      handshake exchange before session is checked. Uses Clerk.user

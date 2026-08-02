@@ -130,6 +130,19 @@
     return '';
   }
 
+  /* HOME-ONLY SIGN OUT (Captain, 2026-08-01). The bar is the ONLY sign-out control in the whole
+     product — measured, no page carries its own — so this is not a duplicate being tidied away,
+     it is the single door being moved to one room. Leaving from anywhere else is now: Home, then
+     Sign Out. Deliberate; the Home tab is present on every page that renders this bar, so the
+     door is always two clicks away and never zero.
+     The click handler that owns sign-out is already null-guarded (`if (_signOutBtn)`), so the
+     button's absence is a no-op rather than a thrown error on every other page. */
+  function signOutAction(active) {
+    if (active !== 'welcome') return '';
+    return '<button type="button" class="acct-action-btn acct-signout"'
+      + ' data-acct-action="signout" aria-label="Sign out of Datum FI">Sign Out</button>';
+  }
+
   function buildHTML(active) {
     return '<header id="acct-topbar" role="banner">'
       + '<a href="/index.html" class="acct-brand" aria-label="Datum FI — Home">'
@@ -139,8 +152,12 @@
       + studioToggles(active)
       + '<nav class="acct-topbar-nav" aria-label="Account navigation">'
       +   '<div class="acct-cluster">'
+      /* The Dossier lost its permanent tab (Captain, 2026-08-01) — it is reached from its Home
+         tile instead. getActiveTab() still RETURNS 'profile' on Dossier.html and handleTabClick
+         still routes it: the id remains part of the system for active-state and routing, it just
+         no longer has a permanent seat in the bar. Consequence, stated rather than discovered:
+         on the Dossier page no tab highlights, because the tab it would highlight is not there. */
       +     makeTab('welcome',      'Home',         active)
-      +     makeTab('profile',      'My Profile',   active)
       +   '</div>'
       +   '<div class="acct-divider" aria-hidden="true"></div>'
       +   '<div class="acct-cluster">'
@@ -157,8 +174,7 @@
       +   '</div>'
       + '</nav>'
       + '<div class="acct-topbar-right">'
-      +   '<button type="button" class="acct-action-btn acct-signout"'
-      +   ' data-acct-action="signout" aria-label="Sign out of Datum FI">Sign Out</button>'
+      +   signOutAction(active)
       +   '<a href="/pricing.html" class="acct-action-btn acct-upgrade">Upgrade</a>'
       + '</div>'
       + '</header>';

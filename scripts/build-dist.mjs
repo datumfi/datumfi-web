@@ -46,12 +46,12 @@ const SACRED = {
   // fresh from source, never pasted. THE RULE FROM HERE: every host declared Sacred in CLAUDE.md is
   // pinned here, and every host pinned here is declared there — the two lists match exactly.
   'vault.html': 'c7a7a9c101a6743c6a6a2d4c9f8453e1',
-  'my-account.html': '7edee05a4e47c686819e353b0e738ed2',   // Home tiles reordered: saved rooms first (2026-08-01)
+  'my-account.html': 'd3ed6f7a4b307387dcfbc84a86136e2a',   // preloads the purge module: Home now owns Sign Out (2026-08-01)
   'Blueprint.html': '53f19fe4c8be29d35bd8e1e134cde1fa',   // the room is renamed "The Archive" (2026-08-01)
   'Dossier.html': '5cceff124fd6d158557fa5d58defb1bd',
   'privacy.html': 'e8ad09c3b1881fd53b47b5be9ae0ded4',
   'terms.html': 'f075b5b3a3a919ee586b962aa17bf200',
-  'scripts/account-topbar.js': '7f59b2affbae67dabaa9b6e03871e78c',   // tabs renamed The Sketchbook / The Archive (2026-08-01)
+  'scripts/account-topbar.js': '12fb359c789211f27fdfa0f30e431ccf',   // Dossier tab retired; Sign Out is Home-only (2026-08-01)
 };
 const md5 = (p) => createHash('md5').update(readFileSync(p)).digest('hex');
 
