@@ -3142,11 +3142,17 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 5px 6px;
+  /* PADDING AND TRACKING ARE SIZED TO THE LONGEST LABEL, measured, not guessed. "Open in Sketch"
+     and "Open in Studio" are both 14 characters and this is a MONOSPACE face, so they are exactly
+     the same width and they are the binding constraint. At 6px padding and .06em tracking the text
+     measured 76.8px inside 76.8px of space — zero slack, i.e. one font-fallback away from spilling,
+     with white-space:nowrap meaning it would spill rather than wrap. Trimmed to leave real room.
+     If a longer label is ever authored here, re-measure; do not assume it fits. */
+  padding: 5px 4px;
   border-radius: 999px;
   font-family: var(--font-mono, monospace);
   font-size: 9px;
-  letter-spacing: .06em;
+  letter-spacing: .02em;
   text-transform: uppercase;
   cursor: pointer;
   touch-action: manipulation;
@@ -3880,8 +3886,8 @@
       <div class="saved-bottom">
         <span class="saved-time">${_sk2Digit(data.dateStamped)}</span>
         <div class="sk-card-actions">
-          <button type="button" class="slot-open-action" data-open-slot="${data.sketchId || idx}" aria-label="Open this Sketch" title="Open in Sketch">Open Sketch</button>
-          <button type="button" class="slot-studio-action" data-studio-slot="${data.sketchId || idx}" aria-label="Open this Sketch in Studio" title="Open in Studio">Open Studio</button>
+          <button type="button" class="slot-open-action" data-open-slot="${data.sketchId || idx}" aria-label="Open this Sketch" title="Open in Sketch">Open in Sketch</button>
+          <button type="button" class="slot-studio-action" data-studio-slot="${data.sketchId || idx}" aria-label="Open this Sketch in Studio" title="Open in Studio">Open in Studio</button>
         </div>
         <div class="sk-card-actions">
           <button type="button" class="slot-rename-action" data-rename-id="${data.sketchId || ''}" aria-label="Rename this sketch" title="Rename this sketch">Rename</button>
