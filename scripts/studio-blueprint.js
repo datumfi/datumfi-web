@@ -551,28 +551,46 @@
    * somebody who types a retirement date and leaves must still be asked. Seeding it from the
    * dossier is what does not count; changing it does. Comparing against what an untouched boot
    * WOULD have produced draws that line exactly, and needs no list to be kept up to date. */
-  /* THE BASELINE MUST INCLUDE EVERYTHING THE LOAD SEEDED, NOT JUST THE DOSSIER. Exactly the same
-   * law that already put applyDossier in this baseline, applied to the other thing a load pours in
-   * without the user doing anything: a SKETCH CARRY. applySketchContract copies a saved sketch's
-   * values into the blueprint on load, so anybody arriving via the Sketchbook's "Open in Studio"
-   * was "building something" the instant the Studio opened — Captain-reported 2026-08-01, and his
-   * ruling: "an already saved file that has not had a change yet should NOT get this message."
-   * The sketch is safe in the Sketchbook, so nothing is at risk until they change something.
-   * WHICH seed to replay is read off the draft's OWN _loadSource, which finishLoad already stamps
-   * — no new bookkeeping, and no second list to keep in step with load().
-   * FAILS TOWARD ASKING, deliberately: if the sketch can no longer be read (erased since), the
-   * baseline stays dossier-only, the carry looks like content, and the user gets asked. */
-  function _applyLoadSeed(pristine, draft) {
+  /* THE BASELINE MUST REPLAY EVERYTHING THE LOAD SEEDED, IN THE LOAD'S OWN ORDER. Same law that
+   * already put applyDossier in this baseline, applied to the other thing a load pours in for free:
+   * a SKETCH CARRY. applySketchContract copies a saved sketch's values in on load, so anybody
+   * arriving via the Sketchbook's "Open in Studio" was "building something" the instant the Studio
+   * opened. Captain-reported 2026-08-01; his ruling: "an already saved file that has not had a
+   * change yet should NOT get this message." The sketch is safe in the Sketchbook — nothing is at
+   * risk until something changes.
+   *
+   * ⚠️ ORDER IS LOAD-BEARING, AND GETTING IT WRONG IS INVISIBLE WITHOUT A DOSSIER. applySketchContract
+   * is order-dependent BY CONSTRUCTION (`if (s.age && !bp.profile.primary_dob)`), and both seeders
+   * write plan_end_age, the tax rate, portfolio_total and contributions_total. The load runs
+   * SKETCH then DOSSIER, so the dossier wins those; a baseline running dossier-then-sketch lets the
+   * SKETCH win them and disagrees with the draft on four fields. My first attempt did exactly that
+   * and passed its own gate, because the gate's fixture had NO DOSSIER — with no dossier the order
+   * cannot matter. The Captain has one, so he still saw the prompt. Same empty-zero-state trap this
+   * project has now been bitten by three times.
+   *
+   * SO THERE IS ONE SEQUENCE AND TWO CALLERS, not two copies. _seedSketchCarry is what load() runs
+   * and what the baseline replays; they cannot drift because there is nothing to keep in step.
+   * NOTE the other sketch entry, load()'s `opts.from === 'sketch'`, is deliberately NOT routed
+   * through here: studio.html:13306 records that it has no live caller, and changing its source
+   * string would alter finishLoad's Estate back-fill with nothing exercising it. */
+  function _seedSketchCarry(bp, id) {
+    applySketchContract(bp, readSketchSlot(id));
+    applyDossier(bp, readDossier());
+  }
+  /* FAILS TOWARD ASKING: if the sketch can no longer be read (erased since), the baseline falls
+     back to dossier-only, the carry looks like content, and the user is asked. */
+  function _pristineFor(draft) {
     var src = draft && typeof draft._loadSource === 'string' ? draft._loadSource : '';
-    if (src.indexOf('sketch-contract:') !== 0) return;
-    var id = src.slice('sketch-contract:'.length);
-    var s = readSketchSlot(id);
-    if (s) applySketchContract(pristine, s);
+    var p = newBlueprint();
+    if (src.indexOf('sketch-contract:') === 0) {
+      try { _seedSketchCarry(p, src.slice('sketch-contract:'.length)); return p; }
+      catch (_e) { p = newBlueprint(); }
+    }
+    try { applyDossier(p, readDossier()); } catch (_e) {}
+    return p;
   }
   function _hasContent(draft) {
-    var pristine = newBlueprint();
-    try { applyDossier(pristine, readDossier()); } catch (_e) {}
-    try { _applyLoadSeed(pristine, draft); } catch (_e) {}
+    var pristine = _pristineFor(draft);
     var seen = {}, k;
     for (k in pristine) if (Object.prototype.hasOwnProperty.call(pristine, k)) seen[k] = 1;
     for (k in draft)    if (Object.prototype.hasOwnProperty.call(draft, k))    seen[k] = 1;
@@ -1041,8 +1059,8 @@
         if (slot) { Object.assign(bp, slot); return finishLoad(bp, 'blueprint-slot:' + id); }
       }
       if (id && mode === 'sketch') {
-        applySketchContract(bp, readSketchSlot(id));
-        applyDossier(bp, readDossier());
+        // ONE sequence, shared with the unsaved-work baseline — see _seedSketchCarry.
+        _seedSketchCarry(bp, id);
         return finishLoad(bp, 'sketch-contract:' + id);
       }
     } catch (_e) {

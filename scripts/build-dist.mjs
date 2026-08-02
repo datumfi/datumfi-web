@@ -25,7 +25,7 @@ const DROP_RE = [/^\.claude\//, /^\.wrangler\//, /^workers\//, /^functions\//, /
 const SACRED = {
   'studio.html': 'a687775d1cf53631023fe1025c94da16',   // overlay says "your Archive", not "Blueprint Archive" (2026-08-01)
   'sketch.html': '28258a76686008aebe839d59af39500f',   // shape button reverted to the Captain's "Save Shape" / "✓ Saved" (2026-08-01)
-  'scripts/studio-blueprint.js': '6443933e9434a7bce443794c048e1c9a',   // opening saved work is not an edit: echo/load split + load-seed baseline (2026-08-01)
+  'scripts/studio-blueprint.js': '0fc42aadd27bca8d3add71243905d841',   // sketch-carry baseline replays the load's OWN seed order (2026-08-01)
   // MISS-5 pre-work guard (2026-07-25). nav.js is a Sacred Host in CLAUDE.md but was absent from THIS map,
   // so a bad edit failed no build. It owns the centralized cross-device restore every page depends on
   // (_datumRestoreFromClerk / _restoreBlueprintFromD1 / the title mirror), and MISS-5 pre-work items 1, 2

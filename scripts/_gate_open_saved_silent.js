@@ -41,13 +41,18 @@ const PORT = 8301; const BASE = 'http://127.0.0.1:' + PORT;
 const NOFIX1 = process.argv.includes('--nofix1');
 const NOFIX2 = process.argv.includes('--nofix2');
 const NAIVE  = process.argv.includes('--naive');
+const ORDER  = process.argv.includes('--wrongorder');
 
 const A_ECHO = "var _isEcho = source === 'session-draft';";
 const M_ECHO = 'var _isEcho = true;';   // the pre-fix behaviour: EVERY load claimed to be an echo
 const A_AT = 'var at    = keep && incumbent._draftAt ? incumbent._draftAt : (stamp || new Date().toISOString());';
 const M_NAIVE_AT = 'var at    = stamp || (keep && incumbent._draftAt) || new Date().toISOString();';
-const A_BASE = '    try { _applyLoadSeed(pristine, draft); } catch (_e) {}';
-const M_BASE = '    try { void _applyLoadSeed; } catch (_e) {}';
+const A_BASE = "    if (src.indexOf('sketch-contract:') === 0) {";
+const M_BASE = '    if (false) {';
+/* Reproduces the wirer's OWN first fix, which passed a dossier-less gate and still shipped the bug:
+   the baseline seeds DOSSIER-then-SKETCH while the load seeds SKETCH-then-DOSSIER. */
+const A_ORDER = "      try { _seedSketchCarry(p, src.slice('sketch-contract:'.length)); return p; }";
+const M_ORDER = "      try { applyDossier(p, readDossier()); applySketchContract(p, readSketchSlot(src.slice('sketch-contract:'.length))); return p; }";
 let jsDiffers = false;
 
 const MIME = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.svg':'image/svg+xml',
@@ -58,7 +63,7 @@ const server = http.createServer((req, res) => {
   const fp = path.join(ROOT, p);
   if (!fp.startsWith(ROOT) || !fs.existsSync(fp) || fs.statSync(fp).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
   let body = fs.readFileSync(fp);
-  if ((NOFIX1 || NOFIX2 || NAIVE) && /studio-blueprint\.js$/.test(p)) {
+  if ((NOFIX1 || NOFIX2 || NAIVE || ORDER) && /studio-blueprint\.js$/.test(p)) {
     let src = body.toString('utf8'); const orig = src;
     const apply = (a, m, label) => {
       const n = src.split(a).length - 1;
@@ -70,6 +75,7 @@ const server = http.createServer((req, res) => {
     /* The TEMPTING fix: restore the old blanket echo AND let the load's stamp win. It makes both
        silence cases green, which is exactly why it is dangerous — only OS 5 notices. */
     if (NAIVE)  { apply(A_ECHO, M_ECHO, 'A_ECHO'); apply(A_AT, M_NAIVE_AT, 'A_AT'); }
+    if (ORDER)  apply(A_ORDER, M_ORDER, 'A_ORDER');
     jsDiffers = jsDiffers || (src !== orig);
     body = Buffer.from(src, 'utf8');
   }
@@ -90,7 +96,27 @@ const SAVED_BP = {
   accounts: [{ id: 'a1', account_type: '401k', display_name: 'ROOM ONE', value: 250000 }],
   datum: { net_datum_v1: 137731 }, profile: {}, household: {}
 };
-const SKETCH = { age: 42, retire: 65, port: 1250000, contrib: 32000, datum: 118000 };
+/* A sketch in the SHAPE applySketchContract actually reads (age / retire_age / datum_spend /
+   portfolio_mass / contributions / plan_end_age / tax_rate), not an invented one. A fixture in the
+   wrong shape is indistinguishable from the defect it invents. */
+const SKETCH = {
+  age: 42, retire_age: 65, datum_spend: 118000, portfolio_mass: 1250000,
+  contributions: 32000, plan_end_age: 92, tax_rate: 24,
+  market_outlook: 'steady', inflation_mode: 'normal'
+};
+
+/* ⚠️ THE DOSSIER IS THE WHOLE POINT OF THIS FIXTURE, AND ITS ABSENCE IS WHY THE FIRST FIX SHIPPED
+   BROKEN. applySketchContract and applyDossier BOTH write plan_end_age, the tax rate,
+   portfolio_total and contributions_total, and applySketchContract is order-dependent by
+   construction. With no dossier the order cannot matter and any ordering passes. Every real
+   account has one. The values below deliberately DISAGREE with the sketch on all four contested
+   fields, so a baseline that replays them in the wrong order cannot pass. */
+const DOSSIER = {
+  primary: { fullName: 'Daniel Merced', dateOfBirth: '1984-03-11', targetRetirementDate: '2049-03-01' },
+  household: { filing: 'married', location: 'FL' },
+  defaults: { planThroughAge: 105, taxRate: '20%', defaultDatum: 100000, planThroughDate: '2069-03-01' },
+  accounts: { currentPortfolioBalance: 980000, annualContributions: 24000 }
+};
 
 let browser;
 async function open(url, seed) {
@@ -108,6 +134,7 @@ async function open(url, seed) {
       sessionStorage.setItem('datum_auth_hint', '1');
       localStorage.setItem('datum-discover-v1', 'done');
       localStorage.removeItem('datumfi_blueprint_draft_v1');
+      if (s.dossier) localStorage.setItem('datumfi.accountDossier.v15', JSON.stringify(s.dossier));
       if (s.stash)     localStorage.setItem('datum_blueprint_state_' + s.stashId, JSON.stringify(s.stash));
       if (s.sketch)    localStorage.setItem('datum_sketch_state_' + s.sketchId, JSON.stringify(s.sketch));
       if (s.incumbent) localStorage.setItem('datumfi_blueprint_draft_v1', JSON.stringify(s.incumbent));
@@ -153,7 +180,7 @@ const edit = (page) => page.evaluate(() => {
 
   /* ── POSITIVE CONTROL. Every "silent" below is worthless if this page never speaks. ─────── */
   {
-    const { ctx, page } = await open(`/studio.html?id=${BP_ID}&hydrate=blueprint`, { stashId: BP_ID, stash: SAVED_BP });
+    const { ctx, page } = await open(`/studio.html?id=${BP_ID}&hydrate=blueprint`, { stashId: BP_ID, stash: SAVED_BP, dossier: DOSSIER });
     const e = await edit(page);
     const v = await verdict(page);
     ok(e.moved === true, `OS 0 RIG: a real edit through the product's own writer moved the edit clock (${e.moved})`);
@@ -161,10 +188,34 @@ const edit = (page) => page.evaluate(() => {
     await ctx.close();
   }
 
+  /* ── FIXTURE PRECONDITION, ASSERTED RATHER THAN ASSUMED. The dossier must be present AND must
+        DISAGREE with the sketch on the fields both seeders write, or the ordering this gate exists
+        to police cannot be observed and every ordering passes. That is precisely how the first fix
+        shipped broken. Preconditions are first-class assertions, not setup. ─────────────────── */
+  {
+    const { ctx, page } = await open(`/studio.html?id=${SK_ID}&hydrate=sketch`, { sketchId: SK_ID, sketch: SKETCH, dossier: DOSSIER });
+    const f = await page.evaluate(() => {
+      let d = null; try { d = JSON.parse(localStorage.getItem('datumfi.accountDossier.v15') || 'null'); } catch (e) {}
+      let s = null; try { s = JSON.parse(localStorage.getItem('datum_sketch_state_sk-open-test') || 'null'); } catch (e) {}
+      if (!d || !s) return { landed: false };
+      return {
+        landed: true,
+        planEnd:   d.defaults.planThroughAge !== s.plan_end_age,
+        taxRate:   parseFloat(d.defaults.taxRate) !== s.tax_rate,
+        portfolio: d.accounts.currentPortfolioBalance !== s.portfolio_mass,
+        contrib:   d.accounts.annualContributions !== s.contributions
+      };
+    });
+    ok(f.landed === true, `OS 0c RIG: the dossier AND the sketch both landed in storage (${f.landed})`);
+    ok(f.landed && f.planEnd && f.taxRate && f.portfolio && f.contrib,
+      `OS 0d RIG, LOAD-BEARING: the dossier DISAGREES with the sketch on every field both seeders write (planEnd=${f.planEnd} tax=${f.taxRate} portfolio=${f.portfolio} contrib=${f.contrib}) — if they agreed, seeding order could not be observed and this gate would pass on a wrong-order baseline, which is exactly how the first fix shipped`);
+    await ctx.close();
+  }
+
   /* ── DEFECT 1 — open a saved blueprint, touch nothing. ───────────────────────────────────── */
   {
     const { ctx, page } = await open(`/studio.html?id=${BP_ID}&hydrate=blueprint`, {
-      stashId: BP_ID, stash: SAVED_BP,
+      stashId: BP_ID, stash: SAVED_BP, dossier: DOSSIER,
       incumbent: Object.assign({}, SAVED_BP, { _draftAt: EARLIER, _tabId: 'earlier-visit' })
     });
     const v = await verdict(page);
@@ -173,7 +224,7 @@ const edit = (page) => page.evaluate(() => {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(`/studio.html?id=${BP_ID}&hydrate=blueprint`, { stashId: BP_ID, stash: SAVED_BP });
+    const { ctx, page } = await open(`/studio.html?id=${BP_ID}&hydrate=blueprint`, { stashId: BP_ID, stash: SAVED_BP, dossier: DOSSIER });
     const v = await verdict(page);
     ok(v.branch === null,
       `OS 2: the same open with NO leftover draft is also silent (branch ${v.branch}) — it always was, and the fix must not disturb it`);
@@ -183,7 +234,7 @@ const edit = (page) => page.evaluate(() => {
   /* ── DEFECT 2 — carry a saved sketch into the Studio, touch nothing. ─────────────────────── */
   {
     const { ctx, page } = await open(`/studio.html?id=${SK_ID}&hydrate=sketch`, {
-      sketchId: SK_ID, sketch: SKETCH,
+      sketchId: SK_ID, sketch: SKETCH, dossier: DOSSIER,
       incumbent: Object.assign({}, SAVED_BP, { _draftAt: EARLIER, _tabId: 'earlier-visit' })
     });
     const v = await verdict(page);
@@ -194,7 +245,7 @@ const edit = (page) => page.evaluate(() => {
 
   /* ── THE FEATURE STILL WORKS. Silence that cannot become speech is a deleted feature. ────── */
   {
-    const { ctx, page } = await open(`/studio.html?id=${SK_ID}&hydrate=sketch`, { sketchId: SK_ID, sketch: SKETCH });
+    const { ctx, page } = await open(`/studio.html?id=${SK_ID}&hydrate=sketch`, { sketchId: SK_ID, sketch: SKETCH, dossier: DOSSIER });
     await edit(page);
     const v = await verdict(page);
     ok(v.branch === 'C',
@@ -208,7 +259,7 @@ const edit = (page) => page.evaluate(() => {
       accounts: SAVED_BP.accounts.concat([{ id: 'unsaved', account_type: 'taxable', display_name: 'UNSAVED WORK', value: 9999 }]),
       _draftAt: EARLIER, _tabId: 'earlier-visit'
     });
-    const { ctx, page } = await open('/studio.html', { incumbent: dirty });
+    const { ctx, page } = await open('/studio.html', { incumbent: dirty, dossier: DOSSIER });
     const v = await verdict(page);
     ok(v.branch === 'A',
       `OS 5 LOAD-BEARING: a genuinely DIRTY draft still asks after a plain reload (branch ${v.branch}, _draftAt=${v.draftAt} vs saved_at=${v.savedAt}) — the tempting fix (let the load's stamp always win) makes this go silent and quietly deletes the protection this whole feature exists for`);
@@ -218,13 +269,13 @@ const edit = (page) => page.evaluate(() => {
   await browser.close();
   await new Promise((r) => server.close(r));
 
-  const MUTATED = NOFIX1 || NOFIX2 || NAIVE;
+  const MUTATED = NOFIX1 || NOFIX2 || NAIVE || ORDER;
   if (MUTATED) {
     console.log(`\nPOISON LANDED? ${jsDiffers ? 'YES' : 'NO'}   (studio-blueprint.js bytes changed: ${jsDiffers})`);
     if (!jsDiffers) { console.log('MUTATION DID NOT APPLY — this run proves nothing. Fix the anchor.'); process.exit(2); }
   }
   console.log('\n' + lines.join('\n'));
-  console.log(`\n${NOFIX1 ? 'MUTATED[nofix1]' : NOFIX2 ? 'MUTATED[nofix2]' : NAIVE ? 'MUTATED[naive]' : 'CLEAN'}  GREEN ${pass} / RED ${fail}`);
+  console.log(`\n${NOFIX1 ? 'MUTATED[nofix1]' : NOFIX2 ? 'MUTATED[nofix2]' : NAIVE ? 'MUTATED[naive]' : ORDER ? 'MUTATED[wrongorder]' : 'CLEAN'}  GREEN ${pass} / RED ${fail}`);
   if (MUTATED) {
     console.log(fail > 0 ? 'RED-FIRST OK — the mutation BIT.' : 'RED-FIRST FAILED — the poison landed and nothing noticed.');
     process.exit(fail > 0 ? 0 : 1);
