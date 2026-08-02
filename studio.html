@@ -4005,6 +4005,21 @@
     const isPropertyBase = (base) => !!(base && PROPERTY_BASE_IDS[base.id]);
     window._isPropertyBase = isPropertyBase;   // read-only, for gates: rDataList/getBaseType are block-scoped
 
+    /* THE HOME YOU LIVE IN OWNS THE GROUND. Explicit "Primary residence" first; otherwise the first
+     * property with NO purpose set, which is the predates-the-rule protection (see the caller for why
+     * blank means primary, and for the one place I widened the Architect's wording).
+     * Returns null when every property carries an explicit NON-primary purpose — a portfolio of
+     * rentals and land genuinely has no residence, and the ground is then THE PLOT. That is a real
+     * state, not a failure. */
+    const PRIMARY_PURPOSE = 'Primary residence';
+    function _pickGroundOwner(rooms) {
+      if (!rooms || !rooms.length) return null;
+      for (var i = 0; i < rooms.length; i++) if (rooms[i].propPurpose === PRIMARY_PURPOSE) return rooms[i];
+      for (var j = 0; j < rooms.length; j++) if (!rooms[j].propPurpose) return rooms[j];
+      return null;
+    }
+    window._pickGroundOwner = _pickGroundOwner;   // read-only, for gates
+
     function renderInputs() {
       const scrollTop = roomsContainer.scrollTop;
       // Captain #4: first-account button is two-state, keyed to account count (strings verbatim, em-dash kept).
@@ -8025,6 +8040,39 @@
                 acc[field] = value;
             }
 
+            /* ── PRIMARY RESIDENCE IS A RADIO, NOT A CHECKBOX ────────────────────────────────────
+             * A person has ONE primary residence, so marking this property primary DEMOTES the
+             * previous one. That is the honest model, and it makes a two-primaries tiebreak
+             * unreachable BY CONSTRUCTION rather than by a rule somebody has to remember — silently
+             * picking a winner between two claimants is exactly how the ground bug happened.
+             *
+             * ONLY AN EXPLICIT PREVIOUS PRIMARY IS REWRITTEN. A property left blank is primary only
+             * BY PRECEDENCE (see _pickGroundOwner), so it loses the ground here without its stored
+             * data being touched — we do not put words in a user's file that they never chose.
+             * Demoted to "Second home" because it must land on a REAL non-primary purpose: blank
+             * would make it primary again on the next render, which is the opposite of a demotion.
+             *
+             * THE NOTICE FIRES ON THE GROUND CHANGING, not on the rewrite, so the blank case is
+             * announced too — that user's home moves off the ground and must be told, or they go
+             * looking for it. Copy is Architect-authored and wired VERBATIM (L47). */
+            if (field === 'propPurpose') {
+                var _before = (typeof _pickGroundOwner === 'function')
+                  ? _pickGroundOwner(state.accounts.filter(function (a) { return !a.exclude && isPropertyBase(getBaseType(a.baseId)); })) : null;
+                if (value === PRIMARY_PURPOSE) {
+                    state.accounts.forEach(function (o) {
+                        if (o === acc || o.propPurpose !== PRIMARY_PURPOSE) return;
+                        if (!isPropertyBase(getBaseType(o.baseId))) return;
+                        o.propPurpose = 'Second home';
+                    });
+                }
+                var _after = (typeof _pickGroundOwner === 'function')
+                  ? _pickGroundOwner(state.accounts.filter(function (a) { return !a.exclude && isPropertyBase(getBaseType(a.baseId)); })) : null;
+                if (_before && _after && _before !== _after) {
+                    var _nm = function (a) { return (a && a.name) || ((getBaseType(a && a.baseId) || {}).title) || 'this property'; };
+                    var _say = _nm(_after) + ' is now your primary residence. ' + _nm(_before) + ' moves to its own block.';
+                    try { if (typeof window.toast === 'function') window.toast(_say); } catch (_e) {}
+                }
+            }
             if(field === 'linkedAssetId') { openAccountModal(id); if(value) _onSecuredLinkFormed(id, value, id); }   // §18.2 reconcile shared escrow (returns to this room)
             if(field === 'rateType') openAccountModal(id);   // §0.4/§5.1 — reveal/hide the Variable-rate cluster
             if(field === 'linkedToAccount' || field === 'rollFlavor') openAccountModal(id);   // The Conduit — refresh count-once flag (§7.5) + Layer-E tax fork (§9) live
@@ -11146,6 +11194,7 @@
 
       let cols = { primary: [], joint: [], coarch: [] };
       let propertyAccount = null;
+      let propertyRooms = [];
       let newRoomToTrace = null;
       let trustAccounts = [];
       
@@ -11173,13 +11222,14 @@
             else totalInterestIn += earnedAnnual;
         }
 
-        // A property in ANY ownership wing is the property. See PROPERTY_BASE_IDS.
-        // ⚠️ STILL LAST-ONE-WINS with several properties, and one of them is then drawn NOWHERE while
-        // its value keeps counting in the estate total. Measured, pre-existing, and NOT widened here:
-        // that is the multiple-property commit. The gate carries it as a QUARANTINED assertion so it
-        // is visible instead of forgotten.
+        // A property in ANY ownership wing is the property (PROPERTY_BASE_IDS). WHICH one owns the
+        // ground is decided AFTER this pass, by PURPOSE — see _pickGroundOwner below. Collected here
+        // rather than assigned, because the old `propertyAccount = acc` was LAST-ONE-WINS: a second
+        // property silently took the ground and the first was drawn NOWHERE while its value kept
+        // counting in the estate total. Measured 2026-08-02: a $600k residence + a $250k rental drew
+        // only the rental.
         if (isPropertyBase(base)) {
-            propertyAccount = acc;
+            propertyRooms.push(acc);
         } else if (base.taxCode === 'trust') {
             trustAccounts.push(acc);
         } else {
@@ -11187,6 +11237,42 @@
             else if (base.type === 'coarch' && isCo) cols.coarch.push(acc);
             else cols.joint.push(acc);
         }
+      });
+
+      /* ── WHICH HOME OWNS THE GROUND — PURPOSE DECIDES, NOT OWNERSHIP ──────────────────────────
+       * The estate stands on ONE piece of ground, and the home that owns it is the one you LIVE IN.
+       * That is a fact about the property, not about whose name is on it, so `propPurpose`
+       * (studio.html:7614 — Primary residence / Second home / Rental property / Land / Other)
+       * decides it. Ownership wing decides nothing here; it was the previous bug.
+       *
+       * 🔑 BLANK MEANS PRIMARY, AND THIS IS THE MIGRATION RULE, NOT A CONVENIENCE. propPurpose has
+       * always defaulted to blank and NO SAVED FILE HAS EVER SET IT. Requiring an explicit
+       * "Primary residence" would strip the ground — and with it The Yard — from every blueprint
+       * saved before today. ADDING A RULE MUST NEVER PUNISH A FILE FOR PREDATING IT.
+       *
+       * ⚠️ I EXTENDED THE ARCHITECT'S WORDING AND AM FLAGGING IT RATHER THAN BURYING IT. His ruling
+       * says "a LONE property with no purpose set IS the primary residence". Taken literally, a
+       * legacy file with TWO blank properties would have no primary at all and would lose its
+       * ground on open — the exact punishment the rule exists to prevent. So blank falls back to the
+       * FIRST blank property, which is identical to his wording whenever there is only one. Reverting
+       * to the literal reading is a one-line change if he prefers it.
+       *
+       * EVERY OTHER PROPERTY IS STILL DRAWN, as an ordinary room block, because a room whose money is
+       * in the estate total but whose tile is on no canvas is the silent class of defect this arc
+       * exists to close. Placement, satellite blocks and stacking are the next commit; VISIBILITY is
+       * not deferred, on the Architect's own instruction that every property must be drawn somewhere
+       * and the drawn set must reconcile to the total.
+       *
+       * NO TIEBREAK FOR TWO EXPLICIT PRIMARIES — it is unreachable by construction. Marking a
+       * property Primary residence DEMOTES the previous one (see updateAccField), so at most one
+       * explicit primary can exist. Silently picking a winner is how the last bug happened. */
+      propertyAccount = _pickGroundOwner(propertyRooms);
+      propertyRooms.forEach(function (acc) {
+        if (acc === propertyAccount) return;
+        var pb = getBaseType(acc.baseId) || {};
+        if (pb.type === 'primary') cols.primary.push(acc);
+        else if (pb.type === 'coarch' && isCo) cols.coarch.push(acc);
+        else cols.joint.push(acc);
       });
 
       let totalAnnualInflow = totalContrib + totalInterestIn;
@@ -16233,6 +16319,9 @@
     if (!btn) return;
     if (!window.DatumBlueprint) { btn.style.display = 'none'; return; }
     var pop = null;
+    /* EXPOSED so updateAccField (a different <script> block, :8014) can announce the primary-residence
+       demotion through the SAME notice everything else uses, rather than growing a second toast (L48). */
+    window.toast = function (m) { toast(m); };
     function toast(msg) {
       if (typeof _showToast === 'function') { try { _showToast(msg); return; } catch (e) {} }
       var t = document.createElement('div');

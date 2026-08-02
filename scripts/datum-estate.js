@@ -398,12 +398,30 @@
           <text x="${gX + gW/2}" y="${gY + gH - 26}" class="grounds-title" style="fill: ${_grLine}; opacity:0.85;">${_grLabel}</text>
           <text x="${gX + gW/2}" y="${gY + gH - 6}" class="grounds-title" style="fill: ${_grValColor}; font-size:14px;">Net Equity: ${_eqFig}</text>
       `;
-      } else {
+      } else if (propertyAccount) {
+          /* THE GROUNDS — a primary residence has taken the ground, but carries no lien yet. */
           gSVG.innerHTML = `
           <title>Physical asset footprint.</title>
           <rect x="${gX}" y="${gY}" width="${gW}" height="${gH}" class="grounds-rect" style="stroke:none; fill:none; pointer-events:none;" />
           <text x="${gX + gW/2}" y="${gY + gH - 30}" class="grounds-title">THE GROUNDS</text>
           <text x="${gX + gW/2}" y="${gY + gH - 10}" class="grounds-title" style="fill: var(--gold); font-size:16px;">${pValStr}</text>
+      `;
+      } else {
+          /* ── THE PLOT — EMPTY GROUND, NO PROPERTY YET ────────────────────────────────────────────
+           * ONE OBJECT, THREE STATES: THE PLOT (empty) -> THE GROUNDS (a home stands on it) -> THE
+           * YARD (that home carries a lien). Architect-ratified 2026-08-02, the Captain's word.
+           * This used to read "THE GROUNDS" on a brand-new Studio with a value line that was blank,
+           * so an empty estate announced grounds nobody owned and it read as a room — the Captain
+           * reported it as a phantom room, and he was right that it was confusing rather than wrong.
+           * A LABEL THAT CHANGES WHEN THE THING CHANGES CANNOT BE MISTAKEN FOR A STATIC ROOM, which
+           * is precisely why the state model dissolves the objection to a land-word.
+           * NO VALUE LINE — there is nothing to value. NO <title> — the old tooltip ("Physical asset
+           * footprint") is a claim about a property that does not exist, and inventing replacement
+           * copy is not mine to do; if empty ground should say something on hover, the Architect
+           * authors it. NON-CLICKABLE CHROME, as ruled: pointer-events stay off. */
+          gSVG.innerHTML = `
+          <rect x="${gX}" y="${gY}" width="${gW}" height="${gH}" class="grounds-rect" style="stroke:none; fill:none; pointer-events:none;" />
+          <text x="${gX + gW/2}" y="${gY + gH - 30}" class="grounds-title">THE PLOT</text>
       `;
       }
       svgContainer.appendChild(gSVG);
