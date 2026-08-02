@@ -123,7 +123,7 @@
   }
 
   /* Origin-aware Save — appears ONLY on its own editor page (studio -> Blueprint,
-     sketch -> Sketch) and sits beside its archive tab (My Blueprints / My Sketches). */
+     sketch -> Sketch) and sits beside its archive tab (The Archive / The Sketchbook). */
   function saveAction(active) {
     if (active === 'studio') return '<button type="button" class="acct-action-btn acct-save" data-acct-action="save-current" title="Save to your Archive">⤓ Save</button>';
     if (active === 'sketch') return '<button type="button" class="acct-action-btn acct-save" data-acct-action="save-current" title="Save to your Sketchbook">⤓ Save</button>';
@@ -144,9 +144,9 @@
       +   '</div>'
       +   '<div class="acct-divider" aria-hidden="true"></div>'
       +   '<div class="acct-cluster">'
-      +     makeTab('sketches',     'My Sketches',  active)
+      +     makeTab('sketches',     'The Sketchbook',  active)
       +     (active === 'sketch' ? saveAction(active) : '')
-      +     makeTab('myblueprints', 'My Blueprints', active)
+      +     makeTab('myblueprints', 'The Archive', active)
       +     (active === 'studio' ? saveAction(active) : '')
       +   '</div>'
       +   '<div class="acct-divider" aria-hidden="true"></div>'

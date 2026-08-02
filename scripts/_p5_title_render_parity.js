@@ -68,13 +68,13 @@ async function clearField(pg, sel) { await pg.evaluate((s) => { var el = documen
   // (1) CLEAN + (2) POISON — delayed stub, no server meta
   const bpClean = await readClean(await browser.newContext(), '/Blueprint.html', '#archive-title');
   const sbClean = await readClean(await browser.newContext(), '/sketchbook.html', '#editable-notebook-title');
-  F(bpClean.title === "Sweety's Blueprint Archive", '(1) BLUEPRINT clean: "' + bpClean.title + '"');
+  F(bpClean.title === "Sweety's Archive", '(1) BLUEPRINT clean: "' + bpClean.title + '"');
   F(bpClean.ov === null, '(1) BLUEPRINT wrote override on passive render (' + bpClean.ov + ')');
   F(sbClean.title === "Sweety's Sketchbook", '(1) SKETCHBOOK clean: "' + sbClean.title + '"');
   F(sbClean.ov === null, '(1) SKETCHBOOK wrote override on passive render (' + sbClean.ov + ')');
-  const bpPo = await readClean(await browser.newContext(), '/Blueprint.html', '#archive-title', 'datum_blueprint_archive_title', "Architect's Blueprint Archive");
+  const bpPo = await readClean(await browser.newContext(), '/Blueprint.html', '#archive-title', 'datum_blueprint_archive_title', "Architect's Archive");
   const sbPo = await readClean(await browser.newContext(), '/sketchbook.html', '#editable-notebook-title', 'datum_sketchbook_title', "Architect's Sketchbook");
-  F(bpPo.gone === true && bpPo.title === "Sweety's Blueprint Archive", '(2) BLUEPRINT poison heal failed: gone=' + bpPo.gone + ' title="' + bpPo.title + '"');
+  F(bpPo.gone === true && bpPo.title === "Sweety's Archive", '(2) BLUEPRINT poison heal failed: gone=' + bpPo.gone + ' title="' + bpPo.title + '"');
   F(sbPo.gone === true && sbPo.title === "Sweety's Sketchbook", '(2) SKETCHBOOK poison heal failed: gone=' + sbPo.gone + ' title="' + sbPo.title + '"');
 
   // (3) CROSS-DEVICE — stateful server-backed stub
@@ -113,7 +113,7 @@ async function clearField(pg, sel) { await pg.evaluate((s) => { var el = documen
   await typeBlur(pg, '#editable-notebook-title', "Sweety's Sketchbook");   // reset to personalized default
   await pg.close();
   pg = await newPage(dev3, STATEFUL); await pg.goto(base + '/Blueprint.html', { waitUntil: 'load' }); await pg.waitForTimeout(500);
-  await typeBlur(pg, '#archive-title', "Sweety's Blueprint Archive"); await pg.close();
+  await typeBlur(pg, '#archive-title', "Sweety's Archive"); await pg.close();   // reset to personalized default
   await dev3.close();
   out.metaAfterReset = await (await fetch(base + '/__clerkmeta').then((r) => r.json()).catch(() => ({})));
   F(!out.metaAfterReset.sb_title, '(4) reset did NOT clear sb_title mirror (' + out.metaAfterReset.sb_title + ')');
@@ -133,7 +133,7 @@ async function clearField(pg, sel) { await pg.evaluate((s) => { var el = documen
   await clearField(pg, '#archive-title'); out.bpCleared = await titleOf(pg, '#archive-title'); await pg.close();
   await dev5.close();
   F(out.sbCleared === "Sweety's Sketchbook", '(5) SKETCHBOOK clear-to-empty gave "' + out.sbCleared + '" (expected the personalized default, NOT a generic My-prefixed one)');
-  F(out.bpCleared === "Sweety's Blueprint Archive", '(5) BLUEPRINT clear-to-empty gave "' + out.bpCleared + '" (expected the personalized default, NOT a generic My-prefixed one)');
+  F(out.bpCleared === "Sweety's Archive", '(5) BLUEPRINT clear-to-empty gave "' + out.bpCleared + '" (expected the personalized default, NOT a generic My-prefixed one)');
 
   out.mirrorLogLines = Object.keys(out.mirrorBytes);
   out.verdict = (out.findings.length === 0 && out.pageErrors.length === 0) ? 'PASS' : 'FAIL';

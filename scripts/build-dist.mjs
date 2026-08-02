@@ -23,7 +23,7 @@ const DROP_RE = [/^\.claude\//, /^\.wrangler\//, /^workers\//, /^functions\//, /
 
 // SACRED HOSTS — must ship byte-identical (LF + content). Build ABORTS on drift.
 const SACRED = {
-  'studio.html': 'f0a68849ca94457b390440ae912f78c8',   // the Studio leave prompt (Commit 5) (2026-08-01)
+  'studio.html': 'a687775d1cf53631023fe1025c94da16',   // overlay says "your Archive", not "Blueprint Archive" (2026-08-01)
   'sketch.html': '28258a76686008aebe839d59af39500f',   // shape button reverted to the Captain's "Save Shape" / "✓ Saved" (2026-08-01)
   'scripts/studio-blueprint.js': 'f39a724294c09cbebd29e1d2107b4fef',   // hasContent baseline = untouched boot, not pristine (2026-08-01)
   // MISS-5 pre-work guard (2026-07-25). nav.js is a Sacred Host in CLAUDE.md but was absent from THIS map,
@@ -46,12 +46,12 @@ const SACRED = {
   // fresh from source, never pasted. THE RULE FROM HERE: every host declared Sacred in CLAUDE.md is
   // pinned here, and every host pinned here is declared there — the two lists match exactly.
   'vault.html': 'c7a7a9c101a6743c6a6a2d4c9f8453e1',
-  'my-account.html': 'aee2279c79d212917686ab2e36f1591a',
-  'Blueprint.html': '9b32a92e5c9e2071388b584941fcbc2a',   // hero drops "Sketchbook is for rough possibilities." (2026-08-01)
+  'my-account.html': 'fa19d70e182f1284a8428a7439a4fd45',   // Home tile renamed "The Archive" (2026-08-01)
+  'Blueprint.html': '53f19fe4c8be29d35bd8e1e134cde1fa',   // the room is renamed "The Archive" (2026-08-01)
   'Dossier.html': '5cceff124fd6d158557fa5d58defb1bd',
   'privacy.html': 'e8ad09c3b1881fd53b47b5be9ae0ded4',
   'terms.html': 'f075b5b3a3a919ee586b962aa17bf200',
-  'scripts/account-topbar.js': '29a4b5609ba83461c14c2269da2be7d9',   // tab hops routed through the page chokepoint, fail-open (2026-07-30)
+  'scripts/account-topbar.js': '7f59b2affbae67dabaa9b6e03871e78c',   // tabs renamed The Sketchbook / The Archive (2026-08-01)
 };
 const md5 = (p) => createHash('md5').update(readFileSync(p)).digest('hex');
 

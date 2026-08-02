@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Datum FI — Blueprint Archive</title>
+<title>Datum FI — The Archive</title>
 <meta name="theme-color" content="#091221">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1237,14 +1237,14 @@ button {
   <section class="account-shell">
     <section class="hero" aria-labelledby="page-title">
       <p class="hero-eyebrow">My Account · Studio Output</p>
-      <h1 id="page-title">Blueprint Archive</h1>
+      <h1 id="page-title">The Archive</h1>
       <p>
-        <strong>Blueprint Archive</strong> is for Studio plans you have modeled,
+        <strong>The Archive</strong> is for Studio blueprints you have modeled,
         named, saved, and may want to reopen, compare, or promote into your working retirement plan.
       </p>
     </section>
 
-    <section class="archive-wrapper" aria-label="Saved Studio Blueprint Archive">
+    <section class="archive-wrapper" aria-label="The Archive — saved Studio blueprints">
       <div class="archive-shadow" aria-hidden="true"></div>
       <div class="archive-cover" aria-hidden="true"></div>
       <div class="archive-rail" aria-hidden="true"></div>
@@ -1256,7 +1256,7 @@ button {
         <div class="sheet-content">
           <header class="sheet-header">
             <div class="title-area">
-              <input id="archive-title" value="My Blueprint Archive" aria-label="Blueprint archive title" autocomplete="off" />
+              <input id="archive-title" value="My Archive" aria-label="Archive title" autocomplete="off" />
               <div class="title-rule"></div>
               <p class="sheet-subtitle">Saved Studio Blueprints — Modeled Estate Plans — Range Candidates</p>
             </div>
@@ -1318,7 +1318,7 @@ button {
       <h2 id="premium-title">Unlock Blueprint Capacity</h2>
       <p>Discover saves one working Blueprint. Upgrade to keep multiple Studio plans, compare modeled outcomes, and maintain parallel retirement designs.</p>
       <div class="modal-actions">
-        <button class="modal-primary gold" id="action-upgrade" type="button">Unlock Blueprint Archive →</button>
+        <button class="modal-primary gold" id="action-upgrade" type="button">Unlock The Archive →</button>
         <button class="modal-secondary" id="action-dismiss-modal" type="button">Keep One Blueprint</button>
       </div>
     </div>
@@ -2197,7 +2197,7 @@ document.getElementById('action-upgrade').addEventListener('click', () => {
   AppSessionState.userHasPremiumToken = true;
   document.getElementById('premium-gate-modal').classList.remove('open');
   renderArchivePage();
-  showToast('Blueprint Archive capacity unlocked for this demo.');
+  showToast('Archive capacity unlocked for this demo.');
 });
 
 document.getElementById('action-dismiss-modal').addEventListener('click', () => {
@@ -2239,10 +2239,10 @@ document.querySelectorAll('.modal').forEach(modal => {
 
 const archiveTitle = document.getElementById('archive-title');
 archiveTitle.addEventListener('click', function() {
-  if (this.value === 'My Blueprint Archive') this.select();
+  if (_bpIsGenericTitle(this.value)) this.select();
 });
 archiveTitle.addEventListener('blur', function() {
-  if (this.value.trim() === '') this.value = (typeof _bpDefaultTitle === 'function') ? _bpDefaultTitle() : 'My Blueprint Archive';
+  if (this.value.trim() === '') this.value = (typeof _bpDefaultTitle === 'function') ? _bpDefaultTitle() : 'My Archive';
 });
 
 // #4 (#301) — SINGLE AUTHORITATIVE D1-GATED PAINT. The old cold-start painted the stale LS 4-slot
@@ -2267,7 +2267,16 @@ if (_bpAuthHint) {
 // the real name with ZERO lag — no dependency on a prior my-account visit. The override
 // key is honored ONLY for a deliberate rename; the 'Architect' fallback is never frozen.
 var BP_TITLE_KEY = 'datum_blueprint_archive_title';
-var BP_TITLE_SUFFIX = "'s Blueprint Archive";
+var BP_TITLE_SUFFIX = "'s Archive";
+var BP_TITLE_GENERIC = 'My Archive';
+/* LEGACY WORDING, retired 2026-08-01 when the room was renamed from "Blueprint Archive" to
+   "The Archive". Both strings below were only ever AUTO-GENERATED defaults — no user ever chose
+   them — so they must keep being recognised AS defaults. Drop them and the next blur mistakes an
+   old auto-title for a deliberate rename and freezes the retired wording on that account forever.
+   Recognised in ONE place (_bpIsDefaultTitle) that every caller goes through, rather than at each
+   call site: a rule that has to be remembered at three call sites gets forgotten at one of them. */
+var BP_TITLE_SUFFIX_LEGACY = "'s Blueprint Archive";
+var BP_TITLE_GENERIC_LEGACY = 'My Blueprint Archive';
 function _bpComputedName() {
   var name = localStorage.getItem('datum_workspace_name');
   if (!name) {
@@ -2283,14 +2292,26 @@ function _bpComputedName() {
 // ONE source of truth for the default: personalized when a name exists, generic "My …"
 // ONLY as a last resort (signed-out / name truly absent). Used by BOTH the post-Clerk
 // render AND the empty-field blur, so clearing the title === the re-login default (no morph).
-function _bpDefaultTitle() { var n = _bpComputedName(); return n ? (n + BP_TITLE_SUFFIX) : 'My Blueprint Archive'; }
+function _bpDefaultTitle() { var n = _bpComputedName(); return n ? (n + BP_TITLE_SUFFIX) : BP_TITLE_GENERIC; }
+/* THE single "is this still an auto-title?" test. Empty, either generic, or either personalized
+   suffix against the current computed name. Anything else is a name the user typed on purpose.
+   The generic test is its own function because the click-to-select handler needs exactly that
+   question and nothing more — sharing the function is what keeps the retired wording in ONE place
+   instead of two that drift. */
+function _bpIsGenericTitle(v) { return v === BP_TITLE_GENERIC || v === BP_TITLE_GENERIC_LEGACY; }
+function _bpIsDefaultTitle(v) {
+  if (!v) return true;
+  if (_bpIsGenericTitle(v)) return true;
+  var n = _bpComputedName();
+  return !!n && (v === (n + BP_TITLE_SUFFIX) || v === (n + BP_TITLE_SUFFIX_LEGACY));
+}
 window.renderArchiveTitle = function () {
   var titleEl = document.getElementById('archive-title');
   if (!titleEl) return;
   var override = localStorage.getItem(BP_TITLE_KEY);
   // Architect-only heal: drop a literal fallback frozen by an earlier pre-Clerk blur so
   // the computed name can win (never clobbers a name the user deliberately typed).
-  if (override === 'Architect' + BP_TITLE_SUFFIX) { try { localStorage.removeItem(BP_TITLE_KEY); } catch (e) {} override = null; }
+  if (override === 'Architect' + BP_TITLE_SUFFIX || override === 'Architect' + BP_TITLE_SUFFIX_LEGACY) { try { localStorage.removeItem(BP_TITLE_KEY); } catch (e) {} override = null; }
   if (override) { titleEl.value = override; return; }
   titleEl.value = _bpDefaultTitle();
 };
@@ -2300,7 +2321,7 @@ archiveTitle.addEventListener('blur', function () {
   // Empty / placeholder / personalized default -> reset: drop the override AND its Clerk
   // mirror. Anything else is a deliberate rename: store the FULL verbatim string AND mirror
   // it cross-device (the noun is lost on a fresh device without this).
-  if (!v || v === 'My Blueprint Archive' || v === _bpDefaultTitle()) {
+  if (_bpIsDefaultTitle(v)) {
     try { localStorage.removeItem(BP_TITLE_KEY); } catch (e) {}
     if (typeof window._datumMirrorTitle === 'function') window._datumMirrorTitle('bp_title', null);
   } else {
