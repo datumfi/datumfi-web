@@ -441,8 +441,14 @@
     // mutated, and underscore-prefixed so toD1Document strips it — this local edit clock never reaches
     // D1 and never becomes part of a saved payload. Local draft only; no new D1 write site.
     var echo = !!(opts && opts.echo);
+    /* opts.load — a LOAD writing freshly hydrated content. It needs echo's SIBLING BYPASS (the
+     * content is authoritative and must land) but must NOT inherit the incumbent's edit clock,
+     * because the content it writes is NOT what the incumbent held. Splitting the two is the fix
+     * for the Captain's 2026-08-01 report; see finishLoad for the full account. The comment above
+     * already flagged that echo was carrying a job it was not built for — this is that job. */
+    var isLoad = !!(opts && opts.load);
     var incumbent = readSessionDraft();
-    if (!echo && _siblingIsUnseen(incumbent)) {
+    if (!echo && !isLoad && _siblingIsUnseen(incumbent)) {
       // Another tab wrote work this tab has never seen. Overwriting it would destroy it, so we do
       // not. The sibling draft is held for the host to surface — this must NOT stay a silent stop.
       _siblingHold = incumbent;
@@ -545,9 +551,28 @@
    * somebody who types a retirement date and leaves must still be asked. Seeding it from the
    * dossier is what does not count; changing it does. Comparing against what an untouched boot
    * WOULD have produced draws that line exactly, and needs no list to be kept up to date. */
+  /* THE BASELINE MUST INCLUDE EVERYTHING THE LOAD SEEDED, NOT JUST THE DOSSIER. Exactly the same
+   * law that already put applyDossier in this baseline, applied to the other thing a load pours in
+   * without the user doing anything: a SKETCH CARRY. applySketchContract copies a saved sketch's
+   * values into the blueprint on load, so anybody arriving via the Sketchbook's "Open in Studio"
+   * was "building something" the instant the Studio opened — Captain-reported 2026-08-01, and his
+   * ruling: "an already saved file that has not had a change yet should NOT get this message."
+   * The sketch is safe in the Sketchbook, so nothing is at risk until they change something.
+   * WHICH seed to replay is read off the draft's OWN _loadSource, which finishLoad already stamps
+   * — no new bookkeeping, and no second list to keep in step with load().
+   * FAILS TOWARD ASKING, deliberately: if the sketch can no longer be read (erased since), the
+   * baseline stays dossier-only, the carry looks like content, and the user gets asked. */
+  function _applyLoadSeed(pristine, draft) {
+    var src = draft && typeof draft._loadSource === 'string' ? draft._loadSource : '';
+    if (src.indexOf('sketch-contract:') !== 0) return;
+    var id = src.slice('sketch-contract:'.length);
+    var s = readSketchSlot(id);
+    if (s) applySketchContract(pristine, s);
+  }
   function _hasContent(draft) {
     var pristine = newBlueprint();
     try { applyDossier(pristine, readDossier()); } catch (_e) {}
+    try { _applyLoadSeed(pristine, draft); } catch (_e) {}
     var seen = {}, k;
     for (k in pristine) if (Object.prototype.hasOwnProperty.call(pristine, k)) seen[k] = 1;
     for (k in draft)    if (Object.prototype.hasOwnProperty.call(draft, k))    seen[k] = 1;
@@ -969,8 +994,23 @@
     // draft slot would destroy the very thing the prompt is about, and "Restore my draft" would then
     // hand back the saved doc. The write resumes as soon as the question is answered (acceptStaleDraft
     // re-persists it, clearDraft discards it) — and until then a reload simply asks again.
-    // A LOAD IS NOT AN EDIT — stamp the clock at the doc's own saved_at, not at now (see writeSessionDraft).
-    if (!_pendingStaleDraft) writeSessionDraft(bp, { echo: true, at: bp.saved_at });
+    /* A LOAD IS NOT AN EDIT — stamp the clock at the doc's own saved_at, not at now.
+     * ⚠️ ONLY A 'session-draft' LOAD IS A TRUE ECHO. Captain-reported 2026-08-01: open a SAVED
+     * blueprint from the Archive, touch nothing, leave -> "You have changes that are not saved
+     * yet." Cause: this passed echo:true for EVERY source, and echo keeps the INCUMBENT draft's
+     * _draftAt. So a load that hydrated the SAVED blueprint still inherited the edit clock of
+     * whatever draft happened to be lying around from an earlier visit, and _draftAt > saved_at
+     * read as "edited" with zero edits. An echo is defined as re-persisting WHAT IT JUST READ —
+     * true only when the draft is what we loaded from. Every other source (blueprint-slot, sketch
+     * contract, d1, fresh) is a NEW document, so its clock is the document's own saved_at.
+     * They still pass load:true, which keeps echo's sibling-tab bypass — that half was always
+     * correct and is deliberately preserved.
+     * ⚠️ DO NOT "SIMPLIFY" THIS BY LETTING `at` WIN INSIDE writeSessionDraft. That fixes the report
+     * and deletes the feature: a plain reload passes at=saved_at, so a genuinely dirty draft would
+     * be re-stamped clean on every page load. _gate_open_saved_silent --naive reproduces exactly
+     * that, and OS 5 is the assertion that catches it. */
+    var _isEcho = source === 'session-draft';
+    if (!_pendingStaleDraft) writeSessionDraft(bp, { echo: _isEcho, load: true, at: bp.saved_at });
     return bp;
   }
 
