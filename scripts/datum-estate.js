@@ -594,7 +594,12 @@
                   }
 
                   const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-                  g.setAttribute('class', `room-grp visible ${isDebt ? 'debt-room' : ''}`);
+                  /* A REVOCABLE trust is drawn INSIDE the estate (it is still legally yours) but must
+                     still READ as a trust, so it keeps the purple the Trust Wing uses. Same class and
+                     same colour token as the outside wing — one visual language for one legal thing,
+                     placed by what the trust IS rather than by where the renderer happened to put it. */
+                  const _isTrustRoom = base.taxCode === 'trust';
+                  g.setAttribute('class', `room-grp visible ${isDebt ? 'debt-room' : ''}${_isTrustRoom ? ' trust-room' : ''}`);
                   g.setAttribute('onclick', `openAccountModal('${acc.id}')`);
                   g.style.cursor = 'pointer';
                   
@@ -645,7 +650,7 @@
                     <rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" class="room-rect active ${animClass} ${frictionClass} ${priorityClass} ${taxClass}" style="stroke:none" />
                     ${fillHTML}
                     ${_mergeChip}
-                    <text x="${d.cx}" y="${_titleY}" class="bp-title">${_roomTitle}</text>
+                    <text x="${d.cx}" y="${_titleY}" class="bp-title"${_isTrustRoom ? ' style="fill:var(--shield)"' : ''}>${_roomTitle}</text>
                     ${_valBlock}
                   `;
                   svgContainer.appendChild(g);

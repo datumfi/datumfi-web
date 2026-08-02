@@ -11230,7 +11230,22 @@
         // only the rental.
         if (isPropertyBase(base)) {
             propertyRooms.push(acc);
-        } else if (base.taxCode === 'trust') {
+        /* ── A TRUST SITS INSIDE OR OUTSIDE THE ESTATE BY WHAT IT LEGALLY IS ──────────────────────
+         * The Entity Status field (:6971) has always offered Irrevocable (Decoupled) / Revocable
+         * (Living) with the authored tooltip "permanently decoupled from the primary Estate
+         * (Irrevocable) or remains a revocable living structure" — and was wired to NOTHING. Same
+         * discovery as propPurpose: a field authored with real meaning that decided nothing.
+         *   REVOCABLE   still legally yours, still in your taxable estate -> DRAWN INSIDE, purple.
+         *   IRREVOCABLE decoupled by definition                          -> STAYS OUTSIDE.
+         * ITS OUTSIDENESS IS THE WHOLE POINT: it is what decoupled LOOKS like. So the canvas stops
+         * being decoration and TEACHES — what is inside the boundary is what your estate still holds.
+         *
+         * 🔑 BLANK FOLLOWS THE ROOM DEFAULT, WHICH IS IRREVOCABLE, so it stays outside: rDataList
+         * titles this room "Irrevocable Trust" with meta "The Reliquary". Same predates-the-rule
+         * protection as blank-means-primary — no existing file has ever set trustType, and every one
+         * of them keeps exactly the placement it has today. The test is `!== 'Revocable'` rather than
+         * `=== 'Irrevocable'` precisely so blank cannot drift inside on a typo or a future option. */
+        } else if (base.taxCode === 'trust' && acc.trustType !== 'Revocable') {
             trustAccounts.push(acc);
         } else {
             if (base.type === 'primary') cols.primary.push(acc);
