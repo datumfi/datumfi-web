@@ -3972,6 +3972,39 @@
       { l1:'WORKPLACE PLANS', l2:'Thrift Savings Plan', leaf:'The Depot', reg:null },
     ];
 
+    /* ── THE PROPERTY FAMILY — ONE ROOM, THREE OWNERSHIP VERSIONS ─────────────────────────────────
+     * A HOME IS A HOME WHETHER IT IS YOURS, THEIRS OR BOTH. The estate renderer used to ask
+     * `base.id === 'property'`, which is the JOINT version alone, so a Real Estate room added under
+     * the Primary or Co-Architect wing was never recognised as the property this estate stands on.
+     * MEASURED, identical rooms and identical links, only the wing differing:
+     *     JOINT   -> The Yard forms, one "Grounds" on screen, clickable
+     *     PRIMARY -> no Yard ever, TWO things labelled Grounds, nothing clickable
+     * The second "Grounds" was the boundary label with no property attached, standing next to the
+     * user's actual home drawn as an ordinary room. Captain-reported 2026-08-02 on the live site.
+     *
+     * DERIVED FROM ROOM_TAXONOMY, NOT HAND-LISTED, and that is the point (L48): this table already
+     * declares that the three ids ARE one room in three wings, so a fourth wing is covered for free
+     * and a hand list cannot drift from the registry it is supposed to mirror.
+     * ANCHORED ON reg.joint === 'property' rather than on the leaf STRING, because the leaf label is
+     * about to become state-dependent (The Plot / The Grounds / The Yard) and a rename must not
+     * silently empty this set.
+     * FAILS TOWARD TODAY'S BEHAVIOUR: if the row cannot be read we keep the joint id alone, which is
+     * exactly what shipped before — a registry we cannot parse must not make every home vanish.
+     *
+     * ⚠️ SCOPE: this decides WHAT COUNTS AS A PROPERTY. It deliberately does NOT decide WHICH property
+     * owns the ground — purpose does that, and it is the next commit. */
+    const PROPERTY_BASE_IDS = (function () {
+      var out = {};
+      try {
+        var row = ROOM_TAXONOMY.filter(function (t) { return t.reg && t.reg.joint === 'property'; })[0];
+        if (row) Object.keys(row.reg).forEach(function (w) { if (row.reg[w]) out[row.reg[w]] = 1; });
+      } catch (_e) {}
+      if (!out.property) out.property = 1;
+      return out;
+    }());
+    const isPropertyBase = (base) => !!(base && PROPERTY_BASE_IDS[base.id]);
+    window._isPropertyBase = isPropertyBase;   // read-only, for gates: rDataList/getBaseType are block-scoped
+
     function renderInputs() {
       const scrollTop = roomsContainer.scrollTop;
       // Captain #4: first-account button is two-state, keyed to account count (strings verbatim, em-dash kept).
@@ -11140,8 +11173,13 @@
             else totalInterestIn += earnedAnnual;
         }
 
-        if (base.id === 'property') {
-            propertyAccount = acc; 
+        // A property in ANY ownership wing is the property. See PROPERTY_BASE_IDS.
+        // ⚠️ STILL LAST-ONE-WINS with several properties, and one of them is then drawn NOWHERE while
+        // its value keeps counting in the estate total. Measured, pre-existing, and NOT widened here:
+        // that is the multiple-property commit. The gate carries it as a QUARANTINED assertion so it
+        // is visible instead of forgotten.
+        if (isPropertyBase(base)) {
+            propertyAccount = acc;
         } else if (base.taxCode === 'trust') {
             trustAccounts.push(acc);
         } else {
