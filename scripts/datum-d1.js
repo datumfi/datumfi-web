@@ -22,20 +22,56 @@
   // Injectable fetch (browser: global.fetch; gate overrides API._fetch to hit the real server logic).
   function doFetch() { return (API._fetch || global.fetch).apply(null, arguments); }
 
+  /* ── WHY A DOC CAME BACK EMPTY — CONSOLE ONLY, NEVER THE UI ───────────────────────────────────
+   * getDoc RESOLVES null for FOUR different reasons — not signed in, nothing saved (404), the server
+   * answered badly, or we never reached it (network / timeout). Every call site therefore sees ONE
+   * answer, and a real outage is indistinguishable from an empty account at every one of them. The
+   * .catch on studio.html's D1 read is unreachable for exactly this reason: getDoc never rejects.
+   *
+   * THE QUIET UI IS A DELIBERATE CAPTAIN FENCE AND IT STAYS QUIET. Nothing here renders, throws or
+   * changes a return value — the fallback to LS/Clerk is byte-for-byte what it was. This is
+   * OBSERVABILITY ONLY, so that the day it matters we are not debugging silence.
+   *
+   * LEVELS ARE THE DIAGNOSTIC. An OUTAGE warns; everything ordinary goes to console.debug, which
+   * browsers hide unless Verbose is on. So at default verbosity the rule a human needs is one line:
+   *   A WARNING MEANS WE COULD NOT REACH YOUR SAVED WORK. NO WARNING MEANS THERE GENUINELY IS NONE.
+   * Turn Verbose on and each read states which of the four it was.
+   * (listDocs already separates these — L51 makes it REJECT when unreachable and resolve [] only
+   * when D1 actually answered. getDoc is the one that could not, and now says so.) */
+  function _readOutcome(type, key, outcome, detail) {
+    try {
+      var m = '[d1] ' + type + ':' + (key || 'active') + ' read -> ' + outcome + (detail ? ' (' + detail + ')' : '');
+      if (outcome === 'UNREACHABLE') {
+        console.warn(m + ' — this is an OUTAGE, not an empty account. Saved work is not lost; this device could not reach it, so the local copy is being used.');
+      } else { console.debug(m); }
+    } catch (e) {}
+  }
+
   // GET -> { payload, revision, updated_at } | null (miss/error/timeout/no-auth -> caller falls back).
   function getDoc(type, key) {
     key = key || 'active';
     return getToken().then(function (tok) {
-      if (!tok) return null;
+      /* No token is NOT an outage when nobody is signed in — that is the ordinary signed-out path.
+         It IS one when Clerk says there is a user but no token came back. */
+      if (!tok) { _readOutcome(type, key, signedIn() ? 'UNREACHABLE' : 'signed-out', signedIn() ? 'no token for a signed-in user' : ''); return null; }
       var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
       var to = ctrl ? setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, API.LOAD_TIMEOUT_MS) : null;
       return doFetch(BASE + '?type=' + encodeURIComponent(type) + '&key=' + encodeURIComponent(key), {
         method: 'GET', headers: { Authorization: 'Bearer ' + tok }, signal: ctrl ? ctrl.signal : undefined
       }).then(function (r) {
         if (to) clearTimeout(to);
-        return (r && r.status === 200) ? r.json() : null;
-      }).catch(function () { if (to) clearTimeout(to); return null; });
-    }).catch(function () { return null; });
+        if (r && r.status === 200) { _readOutcome(type, key, 'found'); return r.json(); }
+        /* 404 is the ONLY status that honestly means "there is nothing saved here". Every other
+           status is the server failing to answer, which is an outage wearing an empty account's face. */
+        _readOutcome(type, key, (r && r.status === 404) ? 'empty' : 'UNREACHABLE', 'HTTP ' + (r && r.status));
+        return null;
+      }).catch(function (e) {
+        if (to) clearTimeout(to);
+        // Network failure or our own AbortController firing at LOAD_TIMEOUT_MS. Never "empty".
+        _readOutcome(type, key, 'UNREACHABLE', (e && e.name === 'AbortError') ? 'timed out after ' + API.LOAD_TIMEOUT_MS + 'ms' : 'network error');
+        return null;
+      });
+    }).catch(function (e) { _readOutcome(type, key, 'UNREACHABLE', 'token lookup failed'); return null; });
   }
 
   // LIST -> [{ doc_key, revision, updated_at }] (ids+revisions only, NEVER payloads).
