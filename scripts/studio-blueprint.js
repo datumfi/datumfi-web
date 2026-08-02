@@ -429,6 +429,61 @@
   }
   function siblingHold() { return _siblingHold; }
 
+  /* ── HAS A HUMAN DONE ANYTHING IN THIS TAB YET ────────────────────────────────────────────────
+   * ONE FACT, DECIDED ONCE, AT THE SINGLE WRITER. Two pages in this product fire FAKE user events
+   * while they load, so anything that must tell "the user did this" from "the page did this" hits
+   * the same wall, and a third local workaround would be a refusal to decide it:
+   *   studio.html:15740 — the sketch hydration dispatches a synthetic `change` on #pri-dob and
+   *                       #target-ret so the sliders repaint.
+   *   sketch.html       — the tutorial sweep fires 58 synthetic `input` events per load.
+   * Both bubble to the document-delegated autosave (studio.html:11875), which captures the whole
+   * DOM and files it as the user's draft.
+   *
+   * MEASURED on the Captain's exact steps — open a saved sketch in the Studio, TOUCH NOTHING, WAIT:
+   * silent at 546ms, then at ~1380ms (600ms hydration + 400ms autosave debounce) the draft carries
+   * portfolio 750000 / contributions 25000 and the leave prompt fires Branch C. THOSE FIGURES ARE
+   * NEITHER THE USER'S WORK NOR THE SKETCH's 1250000 / 32000 — they are this page's blank slider
+   * defaults, mirrored into the text fields at boot (studio.html:16109) and never refreshed by the
+   * hydration, which seeds the SLIDERS. The draft was the empty page, misfiled as somebody's work.
+   *
+   * isTrusted IS THE BROWSER'S OWN STAMP: the user agent sets it, page script cannot forge it, and a
+   * dispatched event is ALWAYS false. Not a new primitive — sketch.html leans on it for _skDirty and
+   * studio.html for _stuLeaveAnswered (L48, reuse).
+   *
+   * ONE-WAY, AND CAPTURE-PHASE. One-way because "the boot is over" never becomes false again.
+   * Capture-phase on document so nothing downstream can stopPropagation its way past the latch —
+   * sketchbook.html's own handlers already call stopImmediatePropagation on their clicks.
+   *
+   * ⚠️ THE HOLE THIS DOES NOT CLOSE, STATED RATHER THAN HIDDEN: a real click on ANYTHING, even
+   * something inert, inside the first second ends the boot window early, and a synthetic write
+   * landing after it is then counted as an edit. It needs a click BEFORE the page finishes
+   * hydrating, it is strictly better than today's 100% reproduction, and the honest closure is for
+   * the two hydrations to stop dispatching fake events at all — a separate change, on both
+   * surfaces, deliberately NOT smuggled in here.
+   *
+   * ── THE SECOND CLOSER, AND IT IS NOT OPTIONAL ────────────────────────────────────────────────
+   * A TRUSTED EVENT IS NOT THE ONLY THING THAT ENDS A BOOT. A load that HYDRATED THE STORED DRAFT
+   * is resuming a document that already has a baseline and already carries the user's unsaved work
+   * — re-photographing it would adopt that work as "what the page put there" and make it vanish
+   * from the prompt. CAUGHT BY _gate_open_saved_silent OS 5 against the first cut of this fix, which
+   * closed the window on trusted input alone: a genuinely dirty draft went SILENT after a plain
+   * reload, which is the exact protection-deleting failure --naive exists to forbid. The echo fact
+   * already told us this and is reused rather than re-derived (L48): finishLoad knows whether this
+   * load is a CONTINUATION of the stored draft or a NEW document, and only a new document gets a
+   * new photograph. */
+  var _bootWindowOpen = true;
+  function closeBootWindow() { _bootWindowOpen = false; }
+  (function () {
+    try {
+      var d = global.document;
+      if (!d || typeof d.addEventListener !== 'function') return;   // node gates have no document
+      var flip = function (e) { if (e && e.isTrusted === true) closeBootWindow(); };
+      ['pointerdown', 'keydown', 'input', 'change', 'click'].forEach(function (t) {
+        d.addEventListener(t, flip, true);
+      });
+    } catch (_e) {}
+  }());
+
   /* opts.echo — a LOAD re-persisting what it just hydrated. That is not an edit: it must not take
    * ownership of the draft and must not advance the edit clock, or simply OPENING a second tab
    * would re-attribute the draft and make the ACTIVE tab refuse to save its own typing (worse than
@@ -479,7 +534,18 @@
     var stamp = (opts && typeof opts.at === 'string' && opts.at) ? opts.at : null;
     var at    = keep && incumbent._draftAt ? incumbent._draftAt : (stamp || new Date().toISOString());
     var owner = keep && incumbent._tabId   ? incumbent._tabId   : TAB_ID;
-    if (_persistDraft(Object.assign({}, bp, { _draftAt: at, _tabId: owner }))) {
+    var out   = Object.assign({}, bp, { _draftAt: at, _tabId: owner });
+    /* THE BOOT BASELINE IS CAPTURED HERE AND TRAVELS INSIDE THE DRAFT — see _hasContent for why it is
+     * captured rather than reconstructed. Until a human has acted, EVERY write is the page describing
+     * itself (the load, the dossier seed, the sketch hydration and the synthetic events it fires), so
+     * the baseline moves along with it and "when is the boot settled" needs no timer: THE BOOT IS OVER
+     * WHEN THE USER ACTS. From that instant the baseline freezes and everything after it is their work.
+     * DELETED FIRST, then set from the INCUMBENT: load() does Object.assign(bp, draft), so the live
+     * model can be carrying a stale copy, and the live model must never be the authority on this. */
+    delete out._boot;
+    if (_bootWindowOpen) { out._boot = _contentOf(out); }
+    else if (incumbent && incumbent._boot) { out._boot = incumbent._boot; }
+    if (_persistDraft(out)) {
       _seenAt = at;               // this tab is now in agreement with what is stored
       _siblingHold = null;
     }
@@ -510,13 +576,13 @@
    *     merely wrong for them, IT IS UNDEFINED — and they are the entire conversion audience.
    *     Their question is hasContent: is there something here worth keeping.
    *
-   * WHY hasContent COMPARES AGAINST A PRISTINE BLUEPRINT INSTEAD OF ASKING WHETHER A DRAFT EXISTS.
+   * WHY hasContent COMPARES AGAINST A CAPTURED BOOT INSTEAD OF ASKING WHETHER A DRAFT EXISTS.
    * MEASURED, and this is the trap: Studio writes a draft on a COLD LOAD with zero interaction — a
    * signed-out cold boot produced a draft stamped at load time with accounts 0 and saved_at null. So
    * "a draft exists" and "_draftAt is set" are both TRUE FOR EVERY VISITOR AT BOOT. Either one as a
    * dirty test marks the whole world dirty before anybody touches anything, which is exactly the bug
-   * 44b6245 already cost us once. Comparing against newBlueprint() asks a question boot cannot forge:
-   * is what is on screen different from blank.
+   * 44b6245 already cost us once. Comparing against the boot asks a question boot cannot forge:
+   * is what is on screen different from what the page put there by itself.
    *
    * WE ENUMERATE WHAT TO IGNORE, NOT WHAT TO COMPARE — same law as the Sketch signal and the nav guard,
    * and for the same reason. A field added next year is compared BY DEFAULT: if it is user-authored we
@@ -538,59 +604,65 @@
    * ITS OWN saved_at" to decide whether to ask a question. Different inputs, different consequence — one
    * chooses data, this one only chooses words. Nothing here reads, writes or influences that comparator. */
   var _WORK_IGNORE = { saved_at: 1, blueprint_id: 1, schema: 1, version: 1, datum: 1 };
-  /* THE BASELINE IS AN UNTOUCHED BOOT, NOT A PRISTINE OBJECT. This compared the draft to
-   * newBlueprint() and so counted THE USER'S OWN DOSSIER as work they had done: applyDossier copies
-   * their name, DOB and retirement date into bp.profile on EVERY load, so anybody with an account
-   * profile was "building something" the instant the Studio opened.
-   * MEASURED 2026-08-01, the Captain's report: land on the Studio, touch nothing, and the leave
-   * prompt fires — Branch C signed in, Branch B signed out. With no dossier it stayed correctly
-   * silent, which is exactly why the first version of the gate missed it: its zero state was an
-   * EMPTY one, and no real user has an empty one.
-   * PROFILE IS NOT BLANKET-IGNORED, deliberately. Adding it to _WORK_IGNORE would have been one
-   * word and would have thrown away real signal — the profile dates ARE editable in the Studio, so
-   * somebody who types a retirement date and leaves must still be asked. Seeding it from the
-   * dossier is what does not count; changing it does. Comparing against what an untouched boot
-   * WOULD have produced draws that line exactly, and needs no list to be kept up to date. */
-  /* THE BASELINE MUST REPLAY EVERYTHING THE LOAD SEEDED, IN THE LOAD'S OWN ORDER. Same law that
-   * already put applyDossier in this baseline, applied to the other thing a load pours in for free:
-   * a SKETCH CARRY. applySketchContract copies a saved sketch's values in on load, so anybody
-   * arriving via the Sketchbook's "Open in Studio" was "building something" the instant the Studio
-   * opened. Captain-reported 2026-08-01; his ruling: "an already saved file that has not had a
-   * change yet should NOT get this message." The sketch is safe in the Sketchbook — nothing is at
-   * risk until something changes.
-   *
-   * ⚠️ ORDER IS LOAD-BEARING, AND GETTING IT WRONG IS INVISIBLE WITHOUT A DOSSIER. applySketchContract
-   * is order-dependent BY CONSTRUCTION (`if (s.age && !bp.profile.primary_dob)`), and both seeders
-   * write plan_end_age, the tax rate, portfolio_total and contributions_total. The load runs
-   * SKETCH then DOSSIER, so the dossier wins those; a baseline running dossier-then-sketch lets the
-   * SKETCH win them and disagrees with the draft on four fields. My first attempt did exactly that
-   * and passed its own gate, because the gate's fixture had NO DOSSIER — with no dossier the order
-   * cannot matter. The Captain has one, so he still saw the prompt. Same empty-zero-state trap this
-   * project has now been bitten by three times.
-   *
-   * SO THERE IS ONE SEQUENCE AND TWO CALLERS, not two copies. _seedSketchCarry is what load() runs
-   * and what the baseline replays; they cannot drift because there is nothing to keep in step.
-   * NOTE the other sketch entry, load()'s `opts.from === 'sketch'`, is deliberately NOT routed
-   * through here: studio.html:13306 records that it has no live caller, and changing its source
-   * string would alter finishLoad's Estate back-fill with nothing exercising it. */
+  /* THE BASELINE IS AN UNTOUCHED BOOT, AND IT IS CAPTURED, NEVER RECONSTRUCTED.
+   * WHY THE DISTINCTION IS THE WHOLE FIX. This used to build a second blueprint and replay onto it
+   * everything a load pours in for free — a dossier, then a sketch carry, IN THE LOAD'S OWN ORDER —
+   * and compare the draft against that. It is the right INTENT and an unwinnable IMPLEMENTATION: it
+   * is a prediction of what the page did to itself, and it was wrong twice for two different reasons
+   * before it was wrong a third time in a way no reconstruction could ever have caught. What the
+   * draft actually contained on the Captain's steps was portfolio 750000 / contributions 25000 —
+   * ON-SCREEN DEFAULTS that exist only in the DOM, that no seeding function writes, and that nothing
+   * built from newBlueprint() + seeders will ever reproduce. A reconstruction cannot predict a
+   * default it never authored.
+   * SO WE STOP PREDICTING AND TAKE A PHOTOGRAPH. writeSessionDraft stores the boot state on the
+   * draft as _boot while the page is still describing itself, and this compares against THAT.
+   * Three things fall out of it that the reconstruction had to earn separately:
+   *   · the dossier seed is in the baseline because it is in the boot, not because we replayed it;
+   *   · so is the sketch carry, and the ORDER hazard disappears with the replay that created it;
+   *   · so is anything a future load decides to seed, with nobody having to remember to add it.
+   * PROFILE IS STILL NOT BLANKET-IGNORED, deliberately. Adding it to _WORK_IGNORE would have been
+   * one word and would have thrown away real signal — the profile dates ARE editable in the Studio,
+   * so somebody who types a retirement date and leaves must still be asked. Seeding it does not
+   * count; changing it does. A captured boot draws that line exactly, and keeps no list.
+   * IT TRAVELS INSIDE THE DRAFT, and that is load-bearing rather than convenient: Blueprint.html
+   * asks this same question from ANOTHER PAGE (_freshStudioAtRisk, Blueprint.html:2140), where the
+   * Studio's DOM and this module's boot latch do not exist. A baseline held in module state, or read
+   * off the live controls, answers that page wrongly and silently switches off the fresh-Studio
+   * confirm. _-prefixed so toD1Document strips it before D1 and the _-rule below ignores it. */
+  /* load()'s sketch-carry seeding sequence, and now its ONLY caller — the unsaved-work baseline used
+   * to replay it and no longer does. ORDER IS STILL LOAD-BEARING FOR THE LOAD ITSELF: applySketchContract
+   * is order-dependent by construction (`if (s.age && !bp.profile.primary_dob)`) and both seeders write
+   * plan_end_age, the tax rate, portfolio_total and contributions_total — the dossier is meant to win
+   * those, so it runs second. What is GONE is the second copy of that order living in a baseline, where
+   * getting it wrong was invisible to any fixture that had no dossier. */
   function _seedSketchCarry(bp, id) {
     applySketchContract(bp, readSketchSlot(id));
     applyDossier(bp, readDossier());
   }
-  /* FAILS TOWARD ASKING: if the sketch can no longer be read (erased since), the baseline falls
-     back to dossier-only, the carry looks like content, and the user is asked. */
-  function _pristineFor(draft) {
-    var src = draft && typeof draft._loadSource === 'string' ? draft._loadSource : '';
-    var p = newBlueprint();
-    if (src.indexOf('sketch-contract:') === 0) {
-      try { _seedSketchCarry(p, src.slice('sketch-contract:'.length)); return p; }
-      catch (_e) { p = newBlueprint(); }
+  /* THE COMPARED CONTENT OF A DRAFT — exactly the keys _hasContent compares and nothing else, so a
+   * stored baseline can never disagree with the comparison that reads it. ONE list, two callers. */
+  function _contentOf(o) {
+    var out = {}, k;
+    for (k in o) {
+      if (!Object.prototype.hasOwnProperty.call(o, k)) continue;
+      if (k.charAt(0) === '_' || _WORK_IGNORE[k]) continue;
+      out[k] = o[k];
     }
+    return out;
+  }
+  /* DEGRADED MODE, AND ONLY THAT: a draft written before the captured baseline shipped, or one the
+   * stale-draft path parked without rewriting. Blank + dossier is what an untouched boot looks like
+   * for somebody with an account. It deliberately does NOT replay a sketch carry — it cannot see one
+   * honestly, and pretending it can is precisely what made the old reconstruction wrong. It fails
+   * toward ASKING, which is the safe direction, and the very next load replaces it with a real
+   * capture. */
+  function _fallbackBaseline() {
+    var p = newBlueprint();
     try { applyDossier(p, readDossier()); } catch (_e) {}
     return p;
   }
   function _hasContent(draft) {
-    var pristine = _pristineFor(draft);
+    var pristine = (draft && draft._boot) || _fallbackBaseline();
     var seen = {}, k;
     for (k in pristine) if (Object.prototype.hasOwnProperty.call(pristine, k)) seen[k] = 1;
     for (k in draft)    if (Object.prototype.hasOwnProperty.call(draft, k))    seen[k] = 1;
@@ -1028,6 +1100,10 @@
      * be re-stamped clean on every page load. _gate_open_saved_silent --naive reproduces exactly
      * that, and OS 5 is the assertion that catches it. */
     var _isEcho = source === 'session-draft';
+    /* AN ECHO IS A CONTINUATION, SO THE BOOT IS ALREADY OVER — its baseline was taken when this
+     * document was first opened, and the unsaved work sitting on top of it must stay visible. Only a
+     * NEW document is photographed. See the boot-window latch above; OS 5 is the assertion. */
+    if (_isEcho) closeBootWindow();
     if (!_pendingStaleDraft) writeSessionDraft(bp, { echo: _isEcho, load: true, at: bp.saved_at });
     return bp;
   }
@@ -1059,7 +1135,6 @@
         if (slot) { Object.assign(bp, slot); return finishLoad(bp, 'blueprint-slot:' + id); }
       }
       if (id && mode === 'sketch') {
-        // ONE sequence, shared with the unsaved-work baseline — see _seedSketchCarry.
         _seedSketchCarry(bp, id);
         return finishLoad(bp, 'sketch-contract:' + id);
       }
@@ -1441,6 +1516,9 @@
       acceptStaleDraft:  acceptStaleDraft,
       draftWriteOk:      function () { return _draftWriteOk; },
       siblingHold:       siblingHold,
+      /* READ-ONLY, for diagnosis: is the boot window still open in this tab. Exported so a gate can
+       * prove WHY a write was classified the way it was instead of inferring it from the result. */
+      bootWindowOpen:    function () { return _bootWindowOpen; },
       tabId:             function () { return TAB_ID; },
       DRAFT_STALE_MS:    DRAFT_STALE_MS
     }

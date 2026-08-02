@@ -33,6 +33,7 @@
  *   --nofix1  restores the un-scoped echo keep      -> only the BLUEPRINT-OPEN silence reds
  *   --nofix2  restores the dossier-only baseline    -> only the SKETCH-CARRY silence reds
  *   --naive   applies the TEMPTING fix instead      -> both silences go GREEN and KEEP-DIRTY REDS
+ *   --recapture re-photographs the draft on EVERY load -> the reports go GREEN and KEEP-DIRTY REDS
  */
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const { chromium } = require('playwright');
@@ -41,18 +42,29 @@ const PORT = 8301; const BASE = 'http://127.0.0.1:' + PORT;
 const NOFIX1 = process.argv.includes('--nofix1');
 const NOFIX2 = process.argv.includes('--nofix2');
 const NAIVE  = process.argv.includes('--naive');
-const ORDER  = process.argv.includes('--wrongorder');
+const ORDER  = process.argv.includes('--recapture');
 
 const A_ECHO = "var _isEcho = source === 'session-draft';";
 const M_ECHO = 'var _isEcho = true;';   // the pre-fix behaviour: EVERY load claimed to be an echo
 const A_AT = 'var at    = keep && incumbent._draftAt ? incumbent._draftAt : (stamp || new Date().toISOString());';
 const M_NAIVE_AT = 'var at    = stamp || (keep && incumbent._draftAt) || new Date().toISOString();';
-const A_BASE = "    if (src.indexOf('sketch-contract:') === 0) {";
-const M_BASE = '    if (false) {';
-/* Reproduces the wirer's OWN first fix, which passed a dossier-less gate and still shipped the bug:
-   the baseline seeds DOSSIER-then-SKETCH while the load seeds SKETCH-then-DOSSIER. */
-const A_ORDER = "      try { _seedSketchCarry(p, src.slice('sketch-contract:'.length)); return p; }";
-const M_ORDER = "      try { applyDossier(p, readDossier()); applySketchContract(p, readSketchSlot(src.slice('sketch-contract:'.length))); return p; }";
+/* --nofix2 — DISABLE THE BOOT CAPTURE. Every draft then falls back to the blank+dossier baseline,
+   which is the dossier-only baseline this flag has always reproduced: the sketch carry looks like
+   content and the untouched open cries wolf. Re-grounded 2026-08-02 when the captured boot replaced
+   the reconstructed one; the old anchor (`if (src.indexOf('sketch-contract:') === 0) {`) named code
+   that no longer exists, and the gate correctly REFUSED TO RUN rather than score a mutation it could
+   not prove it had applied. */
+const A_BASE = '    if (_bootWindowOpen) { out._boot = _contentOf(out); }';
+const M_BASE = '    if (false) { out._boot = _contentOf(out); }';
+/* --recapture — THE NEW TEMPTING-AND-WRONG FIX, banked here so it can never ship quietly. It is the
+   first cut of the captured-boot fix: close the boot window on trusted input ALONE and let every
+   load re-photograph the draft. The Captain's report goes green, OS 3 goes green, everything LOOKS
+   fixed — and a genuinely dirty draft is silently adopted as "what the page put there" on the next
+   reload, so the work this whole feature protects stops being protected. OS 5 is the assertion that
+   notices, and it is the ONLY one. (It replaces --wrongorder, whose defect — a baseline replaying
+   the load's seeders in the wrong order — cannot exist now that nothing replays anything.) */
+const A_ORDER = '    if (_isEcho) closeBootWindow();';
+const M_ORDER = '    if (false) closeBootWindow();';
 let jsDiffers = false;
 
 const MIME = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.svg':'image/svg+xml',
@@ -163,16 +175,25 @@ const verdict = (page) => page.evaluate(() => {
 });
 
 /* A REAL edit, driven through the product's own draft writer — the same function bind()'s
-   debounced commit calls. No opts, so it stamps NOW, exactly as typing does. */
-const edit = (page) => page.evaluate(() => {
+   debounced commit calls. No opts, so it stamps NOW, exactly as typing does.
+   ⚠️ THE TRUSTED KEYPRESS IN FRONT IS PART OF THE FIXTURE, NOT SETUP NOISE, AND IT IS WHAT MAKES
+   THIS THE STATE A REAL USER IS IN. The draft writer now classifies a write that lands while the
+   page is still booting as the PAGE describing itself (see the boot-window latch in
+   studio-blueprint.js) — because studio.html's sketch hydration fires SYNTHETIC change events that
+   were being filed as the user's work. A human cannot commit an edit without first touching
+   something, so a fixture that calls the writer with no event at all is testing a path no user can
+   reach, and it went red here for exactly that reason. Shift is chosen because it is trusted,
+   reaches the document, and changes nothing on the page. */
+const edit = async (page) => { await page.keyboard.press('Shift'); return page.evaluate(() => {
   const I = window.DatumBlueprint._internal;
   const d = I.readSessionDraft() || {};
   const next = JSON.parse(JSON.stringify(d));
   next.accounts = (next.accounts || []).concat([{ id: 'typed', account_type: 'taxable', display_name: 'TYPED BY HAND', value: 4242 }]);
   I.writeSessionDraft(next);
   const after = I.readSessionDraft();
-  return { moved: after && after._draftAt !== d._draftAt, at: after && after._draftAt };
-});
+  return { moved: after && after._draftAt !== d._draftAt, at: after && after._draftAt,
+           bootOpen: I.bootWindowOpen && I.bootWindowOpen() };
+}); };
 
 (async () => {
   await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
@@ -275,7 +296,7 @@ const edit = (page) => page.evaluate(() => {
     if (!jsDiffers) { console.log('MUTATION DID NOT APPLY — this run proves nothing. Fix the anchor.'); process.exit(2); }
   }
   console.log('\n' + lines.join('\n'));
-  console.log(`\n${NOFIX1 ? 'MUTATED[nofix1]' : NOFIX2 ? 'MUTATED[nofix2]' : NAIVE ? 'MUTATED[naive]' : ORDER ? 'MUTATED[wrongorder]' : 'CLEAN'}  GREEN ${pass} / RED ${fail}`);
+  console.log(`\n${NOFIX1 ? 'MUTATED[nofix1]' : NOFIX2 ? 'MUTATED[nofix2]' : NAIVE ? 'MUTATED[naive]' : ORDER ? 'MUTATED[recapture]' : 'CLEAN'}  GREEN ${pass} / RED ${fail}`);
   if (MUTATED) {
     console.log(fail > 0 ? 'RED-FIRST OK — the mutation BIT.' : 'RED-FIRST FAILED — the poison landed and nothing noticed.');
     process.exit(fail > 0 ? 0 : 1);
