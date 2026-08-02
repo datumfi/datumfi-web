@@ -40,6 +40,16 @@ const PORT = 8298; const BASE = 'http://127.0.0.1:' + PORT;
 const OLDLABELS = process.argv.includes('--oldlabels');
 const SWAP = process.argv.includes('--swap');
 const OLDORDER = process.argv.includes('--oldorder');
+const OLDINTRO = process.argv.includes('--oldintro');
+
+/* The Home intro paragraph, TRANSCRIBED BY HAND from the Architect-approved option rather than
+   read out of the page, so the assertion sits between two transcriptions instead of comparing the
+   source to itself. */
+const HOME_INTRO = 'Your Dossier, Sketchbook, and Archive hold what you have already set down. Sketch, Studio, and Shape are where new work happens. The assumptions travel with you between them.';
+const HOME_INTRO_OLD = 'Saved work lives on the left side of the desk. Live experiences start new motion. Your Dossier carries the assumptions between them.';
+/* Room names that have been retired. Copy naming a room that no longer exists is the exact defect
+   this paragraph was rewritten to stop repeating. */
+const RETIRED_ROOM_NAMES = ['Blueprint Archive', 'My Sketches', 'My Blueprints'];
 
 const TILE_ORDER = ['profile', 'sketchbook', 'archive', 'sketch', 'studio', 'shape'];
 const TILE_ORDER_OLD = ['sketch', 'studio', 'shape', 'sketchbook', 'archive', 'profile'];
@@ -99,6 +109,14 @@ const server = http.createServer((req, res) => {
     if (SWAP) apply(A_ROUTE, M_ROUTE, 'A_ROUTE');
     jsDiffers = jsDiffers || (src !== orig);
     body = Buffer.from(src, 'utf8');
+  }
+  if (OLDINTRO && /my-account\.html$/.test(p)) {
+    const src = body.toString('utf8');
+    const n = src.split(HOME_INTRO).length - 1;
+    if (n !== 1) { console.error(`anchor HOME_INTRO: expected exactly 1 occurrence, found ${n} — re-ground it.`); process.exit(1); }
+    const out = src.replace(HOME_INTRO, HOME_INTRO_OLD);
+    jsDiffers = jsDiffers || (out !== src);
+    body = Buffer.from(out, 'utf8');
   }
   if (OLDORDER && /my-account\.html$/.test(p)) {
     const src = body.toString('utf8');
@@ -242,19 +260,45 @@ const readTab = (page, id) => page.evaluate((t) => {
     });
     ok(gold && gold.primary === true && gold.distinct === true,
       `LBL 12: the Studio tile kept its gold treatment after moving rows (primary-card=${gold && gold.primary}, its button still renders differently from a plain tile=${gold && gold.distinct})`);
+
+    /* ── THE INTRO PARAGRAPH. It answers "Where do you want to work?", so it has to describe the
+          rooms that are actually there. ─────────────────────────────────────────────────────── */
+    const intro = await p2.evaluate(() => {
+      const h2 = document.getElementById('workspace-title');
+      if (!h2) return { found: false };
+      const p = h2.parentElement.querySelector('p:not(.eyebrow)');
+      const heads = Array.from(document.querySelectorAll('.cards > .card h3')).map((el) => (el.textContent || '').trim());
+      return { found: !!p, text: p ? (p.textContent || '').replace(/\s+/g, ' ').trim() : '', visible: p ? getComputedStyle(p).visibility : null, heads };
+    });
+    ok(intro.found === true && intro.text.length > 40 && intro.visible === 'visible',
+      `LBL 13 POSITIVE CONTROL: the Home intro paragraph was located and is visible (${intro.found ? intro.text.length + ' chars' : 'not found'})`);
+    ok(intro.text === HOME_INTRO,
+      `LBL 14 LOAD-BEARING: the intro reads EXACTLY as authored — got "${intro.text}"`);
+
+    /* INDEPENDENT OF THE VERBATIM CHECK, and the reason it is worth having: this one is derived
+       from the TILES THAT EXIST, so it survives a legitimate future rewrite and still catches the
+       failure that produced this paragraph — copy describing rooms that are no longer there.
+       Word boundaries matter: "Sketchbook" must not satisfy a search for "Sketch". */
+    const nouns = intro.heads.map((h) => h.replace(/^(The|Account)\s+/, '').trim());
+    const missing = nouns.filter((n) => !new RegExp('\\b' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(intro.text));
+    ok(nouns.length === 6 && missing.length === 0,
+      `LBL 15 LOAD-BEARING: every room that has a tile is NAMED in the intro (${nouns.length} tiles${missing.length ? ', missing: ' + missing.join(', ') : ''}) — cross-checked against the live tiles, not against a hard-coded list`);
+    const stale = RETIRED_ROOM_NAMES.filter((r) => intro.text.includes(r));
+    ok(stale.length === 0,
+      `LBL 16: the intro names no RETIRED room (${stale.length ? stale.join(', ') : 'none found'})`);
     await c2.close();
   }
 
   await browser.close();
   await new Promise((r) => server.close(r));
 
-  const MUTATED = OLDLABELS || SWAP || OLDORDER;
+  const MUTATED = OLDLABELS || SWAP || OLDORDER || OLDINTRO;
   if (MUTATED) {
     console.log(`\nPOISON LANDED? ${jsDiffers ? 'YES' : 'NO'}   (served bytes changed: ${jsDiffers})`);
     if (!jsDiffers) { console.log('MUTATION DID NOT APPLY — this run proves nothing. Fix the anchor.'); process.exit(2); }
   }
   console.log('\n' + lines.join('\n'));
-  console.log(`\n${OLDLABELS ? 'MUTATED[oldlabels]' : SWAP ? 'MUTATED[swap]' : OLDORDER ? 'MUTATED[oldorder]' : 'CLEAN'}  GREEN ${pass} / RED ${fail}`);
+  console.log(`\n${OLDLABELS ? 'MUTATED[oldlabels]' : SWAP ? 'MUTATED[swap]' : OLDORDER ? 'MUTATED[oldorder]' : OLDINTRO ? 'MUTATED[oldintro]' : 'CLEAN'}  GREEN ${pass} / RED ${fail}`);
   if (MUTATED) {
     console.log(fail > 0 ? 'RED-FIRST OK — the mutation BIT.' : 'RED-FIRST FAILED — the poison landed and nothing noticed.');
     process.exit(fail > 0 ? 0 : 1);
