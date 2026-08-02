@@ -11,13 +11,34 @@
    fold-outs under Joint ▸ INVESTMENTS ▸ More Taxable/Other still route to the Living Room engine; Joint drops
    non-jointable rooms; renames crypto→Cold Storage / trust→The Reliquary live; NET-NEW greyed "Coming soon".
    RED-FIRST: the pre-#223 flat builder has no wings/fold/collapse/gold/fonts/two-state button.
-   Usage: serve repo root on :8001, then node scripts/_gate_room_picker.js [LABEL]. Writes a UTF-8 dump. */
+   Usage: node scripts/_gate_room_picker.js [LABEL]. Writes a UTF-8 dump AND prints its result.
+
+   ⚠️ SERVES ITSELF SINCE 2026-08-02, AND THAT IS THE WHOLE OF ITS "RED". It used to require the
+   operator to `serve repo root on :8001` by hand; run without one it threw ERR_CONNECTION_REFUSED
+   before reaching a single assertion, and the suite recorded it as a RED GATE for days. It was 42/42
+   GREEN the moment it was given a server. It also printed NOTHING to stdout — the result lived only
+   in .gate-out — so its "failure" was invisible twice over. A gate that cannot run itself is a gate
+   nobody runs; a gate that says nothing is a gate nobody believes. Both fixed here, no assertion
+   touched. */
+const http = require('http'); const path = require('path');
 const { chromium } = require('playwright');
 const fs = require('fs');
 const LABEL = process.argv[2] || 'RUN';
-const URL = 'http://127.0.0.1:8001/studio.html';
+const ROOT = path.resolve(__dirname, '..');
+const PORT = 8001;
+const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml',
+  '.json': 'application/json', '.png': 'image/png', '.woff2': 'font/woff2', '.ico': 'image/x-icon' };
+const server = http.createServer((req, res) => {
+  let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/studio.html';
+  const fp = path.join(ROOT, p);
+  if (!fp.startsWith(ROOT) || !fs.existsSync(fp) || fs.statSync(fp).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
+  res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
+  fs.createReadStream(fp).pipe(res);
+});
 
 (async () => {
+  await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
   const b = await chromium.launch();
   const p = await b.newPage();
   await p.goto(URL, { waitUntil: 'networkidle' });
@@ -165,5 +186,10 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     '\n\n=== CO · JOINT WING ===\n' + strip(jointSlice) + '\n';
   fs.mkdirSync(__dirname + '/.gate-out', { recursive: true });
   fs.writeFileSync(__dirname + '/.gate-out/_gate_room_picker.out.txt', summary, 'utf8');
+  /* SPEAKS ON STDOUT, not only into .gate-out — the failing lines and the verdict, where a person
+     running the suite will actually see them. The dump keeps the full DOM slices. */
+  lines.filter((l) => l.indexOf('FAIL ') === 0).forEach((l) => console.log(l));
+  console.log(`[${LABEL}] ROOM PICKER — ${pass === checks.length ? 'GREEN' : 'RED'}   (${pass} pass / ${checks.length - pass} fail)`);
+  try { server.close(); } catch (e) {}
   process.exit(pass === checks.length ? 0 : 1);
 })();

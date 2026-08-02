@@ -82,21 +82,45 @@ const PORT = 8193; const base = 'http://127.0.0.1:' + PORT;
   for (let i = 0; i < 20; i++) { const rv = await page.evaluate(() => { const s = document.getElementById('screen-2-design'); return !!(s && s.classList.contains('revealed')); }); if (rv) break; await page.waitForTimeout(400); }
   await page.waitForTimeout(700);
 
-  // ── NAV-PICKER SAVE to A-01 (source:'nav' stays on the page -> the debounced D1 write fires) ──
-  async function saveToSlot(n) {
+  /* ── NAV-PICKER SAVE (source:'nav' stays on the page -> the D1 write fires) ────────────────────
+   * ⚠️ RE-GROUNDED 2026-08-02. This drove `A-0<n>` sheet buttons and clicked NOTHING, so the save
+   * never happened and SIX behaviour assertions went red together off ONE broken precondition —
+   * they were reported as a product defect for two days. MEASURED, the picker offers:
+   *   empty sketchbook  -> ["＋ Save as a new sketch"]                      (one door, and only one)
+   *   filled sketchbook -> ["Save progress …", "＋ Save as a new sketch", "<Name>EXPANSIVE · …"]
+   * There is NO "A-01" ANYWHERE IN THIS PICKER — a saved sketch is named, not slot-coded. (The
+   * `Sheet A-01` label recorded elsewhere is a different surface. Verify the label on the surface
+   * you are driving.) The fixture's zero state was the trap AGAIN: it assumed a filled sketchbook
+   * and booted an empty one, which is the state EVERY new user is in.
+   * PRECONDITIONS ARE RETURNED, NOT ASSUMED, so a missing door reds ITSELF instead of reding six
+   * assertions about D1 that never got the chance to be true. */
+  async function openPicker() {
     await page.evaluate(() => { try { sessionStorage.setItem('datum_auth_hint', '1'); } catch (e) {} if (typeof window.sketchSaveCurrent === 'function') window.sketchSaveCurrent(); });
-    await page.waitForTimeout(150);
-    await page.evaluate((slot) => {
-      var pop = document.getElementById('sketch-save-sb-pop'); if (!pop) return;
-      var b = Array.prototype.slice.call(pop.querySelectorAll('button')).find((x) => new RegExp('A-0' + slot).test(x.textContent));
-      if (b) b.click();   // empty slot saves immediately; a filled slot shows Overwrite (handled below)
-    }, n);
-    await page.waitForTimeout(200);
-    // if an overwrite-confirm popped (filled slot), click Overwrite
-    await page.evaluate(() => { var pop = document.getElementById('sketch-save-sb-pop'); if (!pop) return; var b = Array.prototype.slice.call(pop.querySelectorAll('button')).find((x) => /^Overwrite$/.test(x.textContent.trim())); if (b) b.click(); });
-    await page.waitForTimeout(600);   // let the debounced sketch D1 write land
+    await page.waitForTimeout(400);
+    return page.evaluate(() => {
+      var pop = document.getElementById('sketch-save-sb-pop');
+      return pop ? Array.prototype.slice.call(pop.querySelectorAll('button')).map((b) => b.textContent.trim().replace(/\s+/g, ' ')) : null;
+    });
   }
-  await saveToSlot(1);
+  // Clicks the door whose LABEL matches, and reports whether it actually found one.
+  async function clickDoor(re) {
+    const hit = await page.evaluate((src) => {
+      var pop = document.getElementById('sketch-save-sb-pop'); if (!pop) return false;
+      var rx = new RegExp(src, 'i');
+      var b = Array.prototype.slice.call(pop.querySelectorAll('button')).find((x) => rx.test(x.textContent));
+      if (!b) return false; b.click(); return true;
+    }, re.source);
+    await page.waitForTimeout(200);
+    // a filled-slot route can raise an Overwrite confirm; harmless when absent
+    await page.evaluate(() => { var pop = document.getElementById('sketch-save-sb-pop'); if (!pop) return; var b = Array.prototype.slice.call(pop.querySelectorAll('button')).find((x) => /^Overwrite$/.test(x.textContent.trim())); if (b) b.click(); });
+    await page.waitForTimeout(900);   // let the sketch D1 write land
+    return hit;
+  }
+
+  const doors1 = await openPicker();
+  ok(!!doors1 && doors1.length > 0, `PRECONDITION: the save picker opened and offered a door (${JSON.stringify(doors1)})`);
+  const savedNew = await clickDoor(/new sketch/);
+  ok(savedNew, 'PRECONDITION: the FIRST save door ("＋ Save as a new sketch") was found and clicked — an empty sketchbook offers no sheet to overwrite');
 
   const sketchPuts1 = puts.filter((p) => p.type === 'sketchbook');
   const firstPut = sketchPuts1[0];
@@ -121,7 +145,11 @@ const PORT = 8193; const base = 'http://127.0.0.1:' + PORT;
 
   // ── STABLE ID on OVERWRITE: re-save slot 1 -> SAME doc_key (updates the row, no new one) ──
   const beforeKeys = new Set(puts.filter((p) => p.type === 'sketchbook').map((p) => p.key));
-  await saveToSlot(1);
+  const doors2 = await openPicker();
+  ok(!!doors2 && doors2.some((d) => /Save progress/i.test(d)),
+     `PRECONDITION: after one save the picker offers the OVERWRITE-IN-PLACE door ("Save progress") (${JSON.stringify(doors2)})`);
+  const savedAgain = await clickDoor(/Save progress/);
+  ok(savedAgain, 'PRECONDITION: the overwrite door was found and clicked');
   const sketchPuts2 = puts.filter((p) => p.type === 'sketchbook');
   const lastPut = sketchPuts2[sketchPuts2.length - 1];
   ok(pick(!!lastPut && beforeKeys.has(lastPut.key) && lastPut.key === firstPut.key,
@@ -131,7 +159,11 @@ const PORT = 8193; const base = 'http://127.0.0.1:' + PORT;
   // ── WIRING markers (served bytes) ──
   const sk = fs.readFileSync(path.join(ROOT, 'sketch.html'), 'utf8');
   ok(sk.includes('/scripts/datum-d1.js'), 'sketch.html includes datum-d1.js');
-  ok(sk.includes("scheduleWrite('sketchbook'"), 'sketch.html: _doSave schedules a per-sketch D1 write (type sketchbook)');
+  /* RE-GROUNDED 2026-08-02: this named `scheduleWrite('sketchbook'` and went red on a DELIBERATE
+     product correction — sketch.html:9143 resolves `_write = DatumD1.writeNow || scheduleWrite` so a
+     save confirmation is not gated on the ~1.5s debounce. Anchored on the CALL now, which is true of
+     either mechanism, instead of on the name of one of them. */
+  ok(sk.includes("_write.call(window.DatumD1, 'sketchbook'"), "sketch.html: _doSave issues a per-sketch D1 write (type sketchbook) via writeNow-or-scheduleWrite");
   ok(sk.includes('CUTOVER === false') && sk.includes('signedIn()'), 'sketch.html: D1 write no-op escape route (signed-out / rolled back / D1 absent)');
   ok(sk.includes('_stableSketchId'), 'sketch.html: stable-id resolution — overwrite reuses the slot sketch_id (_stableSketchId)');
 
