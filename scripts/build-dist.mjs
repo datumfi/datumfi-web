@@ -46,7 +46,7 @@ const SACRED = {
   // fresh from source, never pasted. THE RULE FROM HERE: every host declared Sacred in CLAUDE.md is
   // pinned here, and every host pinned here is declared there — the two lists match exactly.
   'vault.html': 'c7a7a9c101a6743c6a6a2d4c9f8453e1',
-  'my-account.html': 'fa19d70e182f1284a8428a7439a4fd45',   // Home tile renamed "The Archive" (2026-08-01)
+  'my-account.html': '7edee05a4e47c686819e353b0e738ed2',   // Home tiles reordered: saved rooms first (2026-08-01)
   'Blueprint.html': '53f19fe4c8be29d35bd8e1e134cde1fa',   // the room is renamed "The Archive" (2026-08-01)
   'Dossier.html': '5cceff124fd6d158557fa5d58defb1bd',
   'privacy.html': 'e8ad09c3b1881fd53b47b5be9ae0ded4',
