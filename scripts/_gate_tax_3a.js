@@ -126,5 +126,12 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     R.none.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 700) + '\n';
   fs.mkdirSync(__dirname + '/.gate-out', { recursive: true });
   fs.writeFileSync(__dirname + '/.gate-out/_gate_tax_3a.out.txt', summary, 'utf8');
-  process.exit(pass === checks.length ? 0 : 1);
+  // A SILENT GATE IS INDISTINGUISHABLE FROM A GATE THAT DID NOT RUN. This gate writes a UTF-8 dump
+// and deliberately printed nothing, to dodge Windows console unicode mangling. The intent was sound;
+// the side effect was that diffing its stdout compares two EMPTY strings and reports agreement --
+// which is exactly how a triage read 'identical' from two runs that had produced nothing (2026-08-03).
+// One ASCII-only line: the verdict, the counts, and where the real dump lives.
+console.log('[_gate_tax_3a] ' + (pass === checks.length ? 'GREEN' : 'RED') + '  ' + pass + '/' + checks.length +
+  '  -- full dump: scripts/.gate-out/_gate_tax_3a.out.txt');
+process.exit(pass === checks.length ? 0 : 1);
 })();

@@ -39,7 +39,7 @@
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const { chromium } = require('playwright');
 const ROOT = path.resolve(__dirname, '..');
-const PORT = 8301; const BASE = 'http://127.0.0.1:' + PORT;
+const PORT = 8360; const BASE = 'http://127.0.0.1:' + PORT;
 const NOFIX1 = process.argv.includes('--nofix1');
 const NOFIX2 = process.argv.includes('--nofix2');
 const NAIVE  = process.argv.includes('--naive');

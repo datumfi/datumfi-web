@@ -81,5 +81,12 @@ const LABEL = process.argv[2] || 'RUN';
   fs.writeFileSync(__dirname + '/.gate-out/_gate_tax_11b.out.txt',
     `[${LABEL}] ${pass}/${checks.length} GREEN\n` + lines.join('\n') +
     `\n\nvals: eq=${R.eq.val} bd=${R.bd.val} cash=${R.cash.val}\n`, 'utf8');
-  process.exit(pass === checks.length ? 0 : 1);
+  // A SILENT GATE IS INDISTINGUISHABLE FROM A GATE THAT DID NOT RUN. This gate writes a UTF-8 dump
+// and deliberately printed nothing, to dodge Windows console unicode mangling. The intent was sound;
+// the side effect was that diffing its stdout compares two EMPTY strings and reports agreement --
+// which is exactly how a triage read 'identical' from two runs that had produced nothing (2026-08-03).
+// One ASCII-only line: the verdict, the counts, and where the real dump lives.
+console.log('[_gate_tax_11b] ' + (pass === checks.length ? 'GREEN' : 'RED') + '  ' + pass + '/' + checks.length +
+  '  -- full dump: scripts/.gate-out/_gate_tax_11b.out.txt');
+process.exit(pass === checks.length ? 0 : 1);
 })();

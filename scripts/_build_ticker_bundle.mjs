@@ -32,7 +32,15 @@ const CACHE = join(__dirname, '_ticker-src');
 const EMIT = process.argv.includes('--emit');
 const REFRESH = process.argv.includes('--refresh');
 const BUILT = new Date().toISOString().slice(0, 10);
-const SCRATCH = 'C:/Users/tmnte/AppData/Local/Temp/claude/C--Users-tmnte-datumfi-web/480d12c8-7995-47f1-a683-6716b79c8a9c/scratchpad/ticker-bundle.candidate.js';
+/* ⚠️ WAS AN ABSOLUTE PATH INTO A DEAD CLAUDE-SESSION SCRATCHPAD (…/480d12c8-…/), which stopped
+   existing when that session ended. The review path (no --emit) has been writing into the void ever
+   since, and its reader _gate_stage2.mjs reported a permanent RED for a file that could never appear.
+   🔑 NO SCRIPT MAY REFERENCE AN ABSOLUTE PATH OUTSIDE THE REPO (house rule, 2026-08-03). Re-pointed
+   at scripts/_ticker-src/, which is already gitignored (.gitignore:35) and is where every other
+   on-machine cache for this tool already lives — reusing the established location, not inventing one.
+   This file is LIVE, not a fossil: scripts/ticker-bundle.js names it as its generator and
+   workers/ticker-refresh/ticker-refresh.mjs names it as the on-machine refresh path. */
+const SCRATCH = join(CACHE, 'ticker-bundle.candidate.js');   // CACHE (:31) is that same dir — reuse, don't repeat
 const OUT = EMIT ? join(__dirname, 'ticker-bundle.js') : SCRATCH;
 
 const SOURCES = {

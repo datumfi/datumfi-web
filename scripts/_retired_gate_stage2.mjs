@@ -1,3 +1,26 @@
+/* ══ RETIRED 2026-08-03 — FORWARDING ADDRESS ═══════════════════════════════════════════════════
+   WAS: scripts/_gate_stage2.mjs
+   COVERED: the ticker-bundle stage-2 audit — the black-or-white law (a field is sourced or BLANK,
+     never fabricated), per-field source precedence, and the Tier-2 {field}Src/{field}AsOf guards.
+     Its red-first poisoned a copy of the bundle and required the exact violations to be flagged.
+   WHY RETIRED: it reads the bundle CANDIDATE, which only exists immediately after an on-machine
+     regeneration (node scripts/_build_ticker_bundle.mjs --refresh, monthly, pulls SEC + Yahoo + SSGA).
+     In an ordinary suite run that file is absent, so the gate died on ENOENT before a single
+     assertion and the suite recorded a permanent RED it could never have earned. Worse, its default
+     path pointed into a DEAD CLAUDE-SESSION SCRATCHPAD (…/480d12c8-…/) that stopped existing when
+     that session ended — a gate depending on a machine-specific path is a fossil, not an instrument.
+     A GATE THAT CANNOT RUN IS NOT A RED.
+   RENAMED, NOT DELETED: the suite collects /^(_gate_|_pd)/, so this name leaves the population and
+     stops reporting. The assertions below are INTACT and still correct.
+   WHAT WOULD JUSTIFY REBUILDING IT: run it by hand straight after a bundle regen —
+       node scripts/_build_ticker_bundle.mjs --refresh
+       node scripts/_retired_gate_stage2.mjs scripts/_ticker-src/ticker-bundle.candidate.js
+     (its generator's candidate path is now repo-relative, fixed in the same commit). If the ticker
+     data-quality arc resumes and the bundle is regenerated on a schedule rather than by hand, this
+     becomes a real gate again and should be renamed back.
+   🔑 A RETIRED GATE MUST LEAVE A FORWARDING ADDRESS — a gate that vanishes takes its coverage
+     question with it, and nobody can tell later whether the law was dropped or merely unwatched.
+   ══════════════════════════════════════════════════════════════════════════════════════════════ */
 /* DEV-ONLY. Stage-2 gate — audits the generated bundle for the black-or-white + precedence + Tier-2
    guard laws. RED-first: runs the audit on the REAL bundle (expect 0 violations = GREEN) AND on a
    deliberately poisoned copy (expect the exact violations flagged = proves the gate really bites). */

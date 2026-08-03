@@ -55,6 +55,28 @@ const CONC_NODE = parseInt(arg('--concnode', '6'), 10);
 const CONC_BROWSER = parseInt(arg('--concbrowser', '1'), 10);   // 1 = canonical. >1 is speed only.
 
 /* Helper modules: they export, they do not run. Running one would exit 0 and be counted a false GREEN. */
+/* ══ PORT DISCIPLINE — READ BEFORE YOU CLAIM A PORT ═══════════════════════════════════════════════
+   There was NO discipline here until 2026-08-03: no registry, no range convention, nothing. 54
+   self-hosting gates had picked ports ad hoc between 8074 and 8360, and it had already cost us twice.
+
+   ⛔ 8001 IS THIS RUNNER'S SHARED SERVER. 66 browser gates depend on it and it is bound below.
+      NEVER self-host on 8001. _gate_room_picker did, and died on EADDRINUSE in 0.3s inside every
+      suite run for seven commits while being GREEN 42/0 when run alone. THE REPAIR CAUSED THE FAULT:
+      the commit that made it self-hosting was fixing "it needs a hand-started server on :8001" and
+      reached for the number that instruction put in front of it.
+
+   ⚠️ FOUR MORE PAIRS WERE DOUBLE-BOOKED (8193, 8197, 8251, 8301) — harmless in the canonical serial
+      run, latent the moment anyone uses --concbrowser>1 for speed. Reassigned 2026-08-03.
+
+   🔑 THE RULE: CLAIM THE NEXT FREE PORT ABOVE THE CURRENT HIGH-WATER MARK, AND CHECK FIRST.
+        node -e "const{execSync}=require('child_process');console.log(execSync(String.raw`grep -rhoE \"PORT *= *8[0-9]{3}\" scripts/_gate_* scripts/_p*`).toString().match(/8\d{3}/g).sort().pop())"
+      or simply:  grep -rhoE "PORT *= *8[0-9]{3}" scripts/_gate_* scripts/_p* | grep -oE "8[0-9]{3}" | sort -n | uniq -d
+      (the second prints DUPLICATES — it must print nothing).
+      HIGH-WATER MARK AS OF 2026-08-03: 8360. Two self-hosting non-gate helpers also exist at 8141
+      and 8142 (_p8_studio_mechanics, _p8_profile_date_enforce).
+      This block is deliberately a CHECK YOU CAN RUN, not a hand-maintained list — a hand-maintained
+      list of 54 entries rots, and a rotted registry is worse than none because it is believed.
+   ═════════════════════════════════════════════════════════════════════════════════════════════════ */
 const HELPERS = new Set(['_gate_extract.mjs']);
 
 /* ---------------- population ---------------- */

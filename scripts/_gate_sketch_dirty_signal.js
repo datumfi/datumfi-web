@@ -66,7 +66,7 @@ const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
   res.end(body);
 });
-const PORT = 8251; const base = 'http://127.0.0.1:' + PORT;
+const PORT = 8359; const base = 'http://127.0.0.1:' + PORT;
 
 const SK_ID = 'sk-dirty-1';
 const FUTURE = new Date(Date.now() + 30 * 60 * 1000).toISOString();
