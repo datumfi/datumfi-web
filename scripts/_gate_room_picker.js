@@ -19,13 +19,23 @@
    GREEN the moment it was given a server. It also printed NOTHING to stdout — the result lived only
    in .gate-out — so its "failure" was invisible twice over. A gate that cannot run itself is a gate
    nobody runs; a gate that says nothing is a gate nobody believes. Both fixed here, no assertion
-   touched. */
+   touched.
+
+   ⚠️ AND THAT REPAIR CAUSED THE NEXT FAULT — 2026-08-03. It self-hosted on :8001, which is the very
+   port `_suite_baseline.mjs` binds for the 66 browser gates that SHARE a server. Run alone it is
+   GREEN 42/0; run inside the suite it died on EADDRINUSE in 0.3s, before a single assertion, and the
+   suite recorded it as a RED GATE for the 7 commits since. Same gate, same week, same shape of fault,
+   introduced BY the fix for the previous one. Moved to a private port, as _p8_studio_mechanics (8141)
+   and _p8_profile_date_enforce (8142) already do.
+   🔑 A SELF-HOSTING GATE MUST NOT BIND THE SUITE'S SHARED PORT. Picking 8001 is exactly what "serve
+   the repo root on :8001" trains you to reach for, which is why this was easy to get wrong twice.
+   Choose a port no other gate and no runner uses, and check before you take it. */
 const http = require('http'); const path = require('path');
 const { chromium } = require('playwright');
 const fs = require('fs');
 const LABEL = process.argv[2] || 'RUN';
 const ROOT = path.resolve(__dirname, '..');
-const PORT = 8001;
+const PORT = 8306;   // PRIVATE — never 8001, that is the suite runner's shared server (see header)
 const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml',
   '.json': 'application/json', '.png': 'image/png', '.woff2': 'font/woff2', '.ico': 'image/x-icon' };
