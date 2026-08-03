@@ -32,6 +32,9 @@
      --nosat       renderer half: the satellite band never renders -> satellites counted, drawn nowhere.
      --nohandoff   host half: studio.html hands over an empty satellite list -> same silence, other file.
      --nocollapse  the overflow collapse tile is dropped -> the properties past capacity go uncounted.
+     --miscount    the overflow tile still appears but under-reports by one -> the COUNT assertions
+                   must bite. An overflow tile that lies is worse than no tile; --nocollapse alone
+                   only proves the tile exists.
      --staleJS     simulates the 4-hour JS cache: the renderer advertises NO satellite support, as a
                    stale cached copy would. This one is EXPECTED GREEN on the invariant — it proves
                    the host's fallback really draws every property the old way. A red-first that
@@ -47,7 +50,8 @@ const NOSAT      = process.argv.includes('--nosat');
 const NOHANDOFF  = process.argv.includes('--nohandoff');
 const NOCOLLAPSE = process.argv.includes('--nocollapse');
 const STALEJS    = process.argv.includes('--staleJS');
-const MUT = NOSAT || NOHANDOFF || NOCOLLAPSE || STALEJS;
+const MISCOUNT   = process.argv.includes('--miscount');
+const MUT = NOSAT || NOHANDOFF || NOCOLLAPSE || STALEJS || MISCOUNT;
 const PORT = 8341;
 const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
 const { chromium } = require(ROOT + '/node_modules/playwright');
@@ -58,6 +62,12 @@ const A_COL = '          if (sHidden > 0) {';
 const M_COL = '          if (false) {   /* collapse tile removed by --nocollapse */';
 const A_HAN = '        satelliteProperties: satelliteProperties,';
 const M_HAN = '        satelliteProperties: [],   /* handoff removed by --nohandoff */';
+/* --miscount — the tile still APPEARS, it just under-reports by one. --nocollapse only proves the
+   tile EXISTS; a gate that stops there would pass a tile that lies, which is worse than no tile
+   because it is believed. This mutates the count at its source so the attribute AND the visible text
+   move together — mutating only the attribute would test the gate's reader, not the user's screen. */
+const A_MIS = 'sHidden = satellites.length - sShown.length;';
+const M_MIS = 'sHidden = satellites.length - sShown.length - 1;   /* under-reports by one: --miscount */';
 const A_STALE = 'renderEstate: renderEstate, supportsSatellites: true,';
 const M_STALE = 'renderEstate: renderEstate, /* supportsSatellites withheld by --staleJS */';
 
@@ -77,6 +87,7 @@ const server = http.createServer((req, res) => {
     if (NOSAT)      src = mutate(src, A_SAT, M_SAT, 'A_SAT');
     if (NOCOLLAPSE) src = mutate(src, A_COL, M_COL, 'A_COL');
     if (STALEJS)    src = mutate(src, A_STALE, M_STALE, 'A_STALE');
+    if (MISCOUNT)   src = mutate(src, A_MIS,   M_MIS,   'A_MIS');
     body = Buffer.from(src, 'utf8');
   }
   if (NOHANDOFF && /studio\.html$/.test(rp)) {
@@ -164,6 +175,7 @@ function ok(cond, msg)  { if (cond) { pass++; console.log('PASS ' + msg); } else
              satelliteTiles: svg.querySelectorAll('g.satellite-room:not(.satellite-collapse)').length,
              collapsed: collapsed, missing: missing, offscreen: offscreen,
              roomGrps: svg.querySelectorAll('g.room-grp').length,
+             footage: (document.getElementById('gross-estate-val') || {}).textContent || '',
              svgChildren: svg.children.length };
   }, spec);
 
@@ -237,6 +249,35 @@ function ok(cond, msg)  { if (cond) { pass++; console.log('PASS ' + msg); } else
        'F2 [INVARIANT] the collapse tile accounts for every property it hides (' + F2.missing.length + ' undrawn vs ' + F2.collapsed + ' counted)');
   }
   ok(F2.offscreen.length === 0, 'F2 [INVARIANT] every drawn block is ON SCREEN');
+
+
+  /* ── F3 — THE OVERFLOW TILE MUST NOT LIE ────────────────────────────────────────────────────────
+   * FIXTURE STATE: the user owns a primary residence plus NINE more properties — three more than the
+   * band can draw — each with a distinct value.
+   * Architect-ruled 2026-08-03: THE PICTURE MAY SUMMARIZE; IT MAY NEVER SILENTLY OMIT, AND IT MAY
+   * NEVER MISCOUNT WHAT IT ADMITS TO HIDING. An overflow tile that lies is worse than no tile,
+   * because it is believed. F2 already proves the collapse ACCOUNTS for the undrawn set; this proves
+   * the ARITHMETIC is exact and that the money still reconciles to the headline total.
+   * DRAW_CAP is asserted, not assumed — if the band geometry ever changes, the count moves with it
+   * and this gate must say so rather than quietly re-baselining. */
+  const DRAW_CAP = 6, SAT_N = 9;
+  const f3spec = [{ baseId: 'property', kind: 'prop', ov: { value: 400000, propPurpose: 'Primary residence' } }];
+  for (let i = 0; i < SAT_N; i++) f3spec.push({ baseId: 'property_primary', kind: 'prop', ov: { value: 111000 + i * 1000, propPurpose: 'Rental property' } });
+  const F3 = await probe(f3spec);
+  const f3Sum = f3spec.reduce((t, x) => t + x.ov.value, 0);
+  const f3Footage = parseInt(String(F3.footage).replace(/[^0-9]/g, ''), 10);
+  console.log('  F3 ' + JSON.stringify({ tiles: F3.satelliteTiles, collapsed: F3.collapsed, footage: F3.footage, sum: f3Sum, missing: F3.missing.length }));
+  ok(F3.roomGrps > 0,           'F3 [PRESENCE] the canvas drew something');
+  ok(F3.satelliteTiles > 0,     'F3 [PRESENCE] the satellite band rendered tiles to overflow FROM');
+  ok(F3.satelliteTiles === DRAW_CAP,
+     'F3 [COUNT] exactly ' + DRAW_CAP + ' satellites are DRAWN (got ' + F3.satelliteTiles + ') — if the band geometry changed, restate DRAW_CAP');
+  ok(F3.collapsed === SAT_N - DRAW_CAP,
+     'F3 [COUNT] the tile reads exactly N-' + DRAW_CAP + ' = ' + (SAT_N - DRAW_CAP) + ' (got ' + F3.collapsed + ') — the tile must not miscount what it hides');
+  ok(F3.satelliteTiles + F3.collapsed === SAT_N,
+     'F3 [COUNT] drawn + hidden accounts for every satellite (' + F3.satelliteTiles + ' + ' + F3.collapsed + ' vs ' + SAT_N + ')');
+  ok(isFinite(f3Footage) && f3Footage > 0, 'F3 [PRESENCE] the footage readout produced a number (' + F3.footage + ')');
+  ok(f3Footage === f3Sum,
+     'F3 [RECONCILE] estate footage equals the sum of ALL ' + (SAT_N + 1) + ' properties, drawn and hidden alike — want ' + f3Sum + ', got ' + f3Footage);
 
   console.log('-------------------------------------');
   console.log('OVERALL: ' + (fail === 0 ? 'GREEN' : 'RED') + '   (' + pass + ' pass / ' + fail + ' fail)');
