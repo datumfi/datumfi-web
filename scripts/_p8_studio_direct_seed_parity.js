@@ -46,6 +46,15 @@ const norm = (s) => String(s == null ? '' : s).replace(/\s/g, '');
    gate can no longer rot by sitting still. */
 const FIXTURE_AUTHORED = '2025-08';   // ← update only when the payload itself is re-authored
 const DOB_MO = 8, DOB_YR = 1982;
+// PROVENANCE: #599 Part 3 (2026-08-03) retired the date-as-input model — THE AGE IS CANONICAL AND
+// THE DATE IS A DERIVED CACHE, recomputed from it and never read as an input. The old literal
+// '03/2068' was the dossier's STORED date; asserting it made the stored date authoritative, which
+// is the model that ruling removed. Derived, not literal, so this cannot rot like a frozen fixture.
+const PTA_AGE = 85;
+const _p2 = (n) => (n < 10 ? '0' + n : String(n));
+function expectedPlanEnd() {   // DOB-month anchored: mo === dobMo, so year = dobYr + age
+  return _p2(DOB_MO) + '/' + (DOB_YR + PTA_AGE);
+}
 function expectedAge() {
   const n = new Date();
   let a = n.getFullYear() - DOB_YR;
@@ -130,9 +139,11 @@ const blockClerk = (ctx) => ctx.route('**/*', (route) => { const u = route.reque
   check('direct load: NOT the hardcoded 40/65/93', !(r.sliderAge === 40 && r.sliderRet === 65 && r.sliderPlan === 93), r.sliderAge + '/' + r.sliderRet + '/' + r.sliderPlan);
   check('direct load: DOB seeds 08/1982', norm(r.dob) === '08/1982', r.dob);
   check('direct load: target-ret shows 03/2035', norm(r.targetRet) === '03/2035', r.targetRet);
-  check('direct load: plan-end-age shows 03/2068', norm(r.planEnd) === '03/2068', r.planEnd);
+  // PROVENANCE: #599 Part 3 (2026-08-03) — date derived from the canonical age, not the stored date.
+  check('direct load: plan-end-age is DERIVED from age ' + PTA_AGE + ' on the DOB month = ' + expectedPlanEnd(), norm(r.planEnd) === expectedPlanEnd(), r.planEnd);
   check('direct load: retire focus 03/2035', norm(r.focusRet) === '03/2035', r.focusRet);
-  check('direct load: PTA focus 03/2068', norm(r.focusPta) === '03/2068', r.focusPta);
+  // PROVENANCE: #599 Part 3 (2026-08-03) — same derivation on the focus round-trip.
+  check('direct load: PTA focus is DERIVED = ' + expectedPlanEnd(), norm(r.focusPta) === expectedPlanEnd(), r.focusPta);
 
   // 3. REVEAL — the stage is shown once the seed has landed.
   check('reveal: layout visible after seed', r.gated === false && r.visibility === 'visible', 'gated=' + r.gated + ' vis=' + r.visibility);

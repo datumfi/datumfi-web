@@ -61,6 +61,15 @@ const norm = (s) => String(s == null ? '' : s).replace(/\s/g, '');
    DERIVED FROM A DOB, NEVER FROZEN BESIDE IT. */
 const FIXTURE_AUTHORED = '2025-08';   // ← update only when the payload itself is re-authored
 const DOB_MO = 8, DOB_YR = 1982;
+// PROVENANCE: #599 Part 3 (2026-08-03) retired the date-as-input model — THE AGE IS CANONICAL AND
+// THE DATE IS A DERIVED CACHE, recomputed from it and never read as an input. The old literal
+// '03/2068' was the dossier's STORED date; asserting it made the stored date authoritative, which
+// is the model that ruling removed. Derived, not literal, so this cannot rot like a frozen fixture.
+const PTA_AGE = 85;
+const _p2 = (n) => (n < 10 ? '0' + n : String(n));
+function expectedPlanEnd() {   // DOB-month anchored: mo === dobMo, so year = dobYr + age
+  return _p2(DOB_MO) + '/' + (DOB_YR + PTA_AGE);
+}
 function expectedAge() { const n = new Date(); let a = n.getFullYear() - DOB_YR; if (n.getMonth() + 1 < DOB_MO) a--; return a; }
 // Authoritative profile — the values the user TYPED. Lives ONLY in Clerk metadata (no LS draft).
 const DOSSIER = {
@@ -152,7 +161,8 @@ async function capture(page) {
   // ── Baseline truth (the typed values) ──
   check('baseline DOB = 08/1982', norm(baseline.dob) === '08/1982', baseline.dob);
   check('baseline Retire = 03/2035', norm(baseline.targetRet) === '03/2035', baseline.targetRet);
-  check('baseline PTA date = 03/2068', norm(baseline.planEnd) === '03/2068', baseline.planEnd);
+  // PROVENANCE: #599 Part 3 (2026-08-03) — date derived from the canonical age, not the stored date.
+  check('baseline PTA date is DERIVED from age ' + PTA_AGE + ' on the DOB month = ' + expectedPlanEnd(), norm(baseline.planEnd) === expectedPlanEnd(), baseline.planEnd);
   check('baseline sliders ' + expectedAge() + ' / 52 / 85 (age DERIVED from DOB, never frozen)', baseline.sliderAge === expectedAge() && baseline.sliderRet === 52 && baseline.sliderPlan === 85, baseline.sliderAge + '/' + baseline.sliderRet + '/' + baseline.sliderPlan + ' fixture authored ' + FIXTURE_AUTHORED);
 
   // ── PTA age PROVEN (not assumed to fall out of the cascade) — every hop ──

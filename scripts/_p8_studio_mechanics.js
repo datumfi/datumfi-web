@@ -329,7 +329,12 @@ const readAges = (page) => page.evaluate(() => { const tt = document.getElementB
   // ── 2A — Profile "Plan Through" field is a MM/YYYY mirror of the sl-plan-through slider
   // (single PTA-age source); typed date writes the slider; payload plan_end_age stays integer.
   let pe = await page.evaluate(() => ({ type: document.getElementById('plan-end-age').type, val: document.getElementById('plan-end-age').value }));
-  check('2A: plan-end-age is a text MM/YYYY mirror', pe.type === 'text' && /^\d{2}\s*\/\s*\d{4}$/.test(pe.val), pe.val);
+  /* PROVENANCE: #599 / #600 (2026-08-03) — NOTHING MAY WRITE TO A USER-VISIBLE FIELD FROM A
+     FALLBACK IDENTITY (L47 sourced-or-blank). This assertion CLEARED pri-dob above and then demanded
+     plan-end still show a date — so it was GUARDING THE FABRICATED VALUE, converting the defect into
+     a requirement and punishing whoever fixed it. With no sourced DOB the only honest render is
+     BLANK. Inverted, not deleted: the field must still be a text mirror, it must simply be empty. */
+  check('2A: plan-end-age is a text mirror and is BLANK with no sourced DOB', pe.type === 'text' && String(pe.val || '').trim() === '', JSON.stringify(pe.val));
   await page.evaluate(() => { const el = document.getElementById('sl-plan-through'); el.value = '100'; el.dispatchEvent(new Event('input', { bubbles: true })); });
   await page.waitForTimeout(150);
   pe = await page.evaluate(() => document.getElementById('plan-end-age').value);
