@@ -3,14 +3,72 @@
    winner literal in the SERVED bytes via the real openAccountModal path, plus the §6/§6b valuation
    GUARDRAIL (hard-cap 50/mo, BYO-key only paid path, de-dupe cache) — key OFF/stubbed.
    RED-FIRST: `--redfirst` flips winners to pre-wire losers -> ABSENT -> gate BITES (RED). Normal -> GREEN.
-   Usage: serve repo root on :8001, then node scripts/_gate_grounds_winners.js [LABEL] [--redfirst]. */
+
+   2026-08-02 RE-ANCHOR (§0.2 block only). This gate hunted for a native <select> containing
+   "Select a liability to link". That string has not existed since the §18.3 Moat consolidation
+   replaced the dropdown with a <details> disclosure of link rows — `_gate_moat_18_3.mjs` ASSERTS the
+   old chrome is gone. Two assertions read RED for it, and a third — the [BITE] exclusion claim — read
+   GREEN, because a list of ["__NO_SELECT__"] contains neither "Auto Loan" nor "Personal Loan". The
+   control was missing and the gate called the safety property proven. That was the 9th false green.
+
+   🔑 HOUSE LAW (2026-08-02) — AN EXCLUSION ASSERTION MUST BE PRECEDED BY A PRESENCE ASSERTION.
+   You may not prove a thing is absent from a control without first proving the control EXISTS, and
+   that it offers at least one row to be absent FROM. A vanished control must RED, never green.
+   The presence checks are deliberately NOT wrapped in pick() — a precondition that inverts under
+   --redfirst would let an inverted run pass by doing nothing, which is how a red-first goes
+   inverted-dead. Preconditions hold in BOTH modes or the run is void.
+
+   SELF-HOSTING (was: "serve repo root on :8001 first"). A gate that cannot run itself reads as a red
+   it did not earn, and it is also the only way to serve the mutations below.
+   Usage: node scripts/_gate_grounds_winners.js [LABEL] [--redfirst] [--noheloc] [--nocontrol]
+     --noheloc    drops heloc from _assetReverseScope -> a HELOC stops being offered on a property.
+     --nocontrol  removes the link disclosure entirely -> the PRESENCE assertion must RED. This is
+                  the mutation that reproduces the exact false green above. */
 const { chromium } = require('playwright');
 const fs = require('fs');
+const http = require('http');
+const path = require('path');
 const LABEL = process.argv[2] || 'RUN';
 const RF = process.argv.includes('--redfirst');
-const URL = 'http://127.0.0.1:8001/studio.html';
+const NOHELOC  = process.argv.includes('--noheloc');
+const NOCTRL   = process.argv.includes('--nocontrol');
+const MUT = NOHELOC || NOCTRL;
+const ROOT = path.resolve(__dirname, '..');
+const PORT = 8305;
+const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
+
+/* --noheloc — half the rule under test. The fixture below now adds a REAL heloc_joint; before this
+   re-anchor it never did, so "Mortgage/HELOC ONLY" only ever proved the Mortgage half. */
+const A_HELOC = "            return function(dB) { return String(dB.id).indexOf('mortgage') === 0 || String(dB.id).indexOf('heloc') === 0; };";
+const M_HELOC = "            return function(dB) { return String(dB.id).indexOf('mortgage') === 0; };";
+/* --nocontrol — delete the disclosure that holds the link rows. Everything downstream still renders;
+   only the control vanishes. Under the OLD assertions this run was 1 red + 1 FALSE GREEN. */
+const A_CTRL = '        if (canManage) {';
+const M_CTRL = '        if (false) {   /* link control removed by --nocontrol */';
+
+const MIME = { '.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.json':'application/json','.png':'image/png','.woff2':'font/woff2','.ico':'image/x-icon' };
+const server = http.createServer((req, res) => {
+  let rp = decodeURIComponent(req.url.split('?')[0]); if (rp === '/') rp = '/studio.html';
+  const fp = path.join(ROOT, rp);
+  if (!fp.startsWith(ROOT) || !fs.existsSync(fp) || fs.statSync(fp).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
+  let body = fs.readFileSync(fp);
+  if (MUT && /studio\.html$/.test(rp)) {
+    let src = body.toString('utf8');
+    const apply = (a, m, label) => {
+      const n = src.split(a).length - 1;
+      if (n !== 1) { console.error(`anchor ${label}: expected exactly 1 occurrence, found ${n} — re-ground it.`); process.exit(1); }
+      src = src.replace(a, m);
+    };
+    if (NOHELOC) apply(A_HELOC, M_HELOC, 'A_HELOC');
+    if (NOCTRL)  apply(A_CTRL,  M_CTRL,  'A_CTRL');
+    body = Buffer.from(src, 'utf8');
+  }
+  res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
+  res.end(body);
+});
 
 (async () => {
+  await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
   const b = await chromium.launch();
   const p = await b.newPage();
   await p.goto(URL, { waitUntil: 'networkidle' });
@@ -73,18 +131,38 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     const gnud = window.state.accounts.filter(x => x.baseId === 'property').pop();
     gnud.propTaxYr = '6000'; gnud.utilYr = '3000';   // value left unset (0)
     window.openAccountModal(gnud.id); out.gNudge = cap();
-    // #245 §0.2 — a property's "Map Existing Liability" dropdown must offer ONLY Mortgage/HELOC.
+    // #245 §0.2 — FIXTURE STATE: a $400k property whose room is open, with FOUR unlinked debts sitting
+    // in the plan — a mortgage, a HELOC, an auto loan and a personal loan. The property's link control
+    // must offer the first two and refuse the last two.
     addInstance('property');
     const grev = window.state.accounts.filter(x => x.baseId === 'property').pop();
     grev.value = 400000;
     addInstance('mortgage_joint');      window.state.accounts.filter(x => x.baseId === 'mortgage_joint').pop().value = 200000;
+    // heloc_joint is NEW to this fixture (2026-08-02). "Mortgage/HELOC ONLY" had never once been run
+    // with a HELOC present, so the HELOC half of the rule was asserted and never exercised.
+    addInstance('heloc_joint');         window.state.accounts.filter(x => x.baseId === 'heloc_joint').pop().value = 30000;
     addInstance('auto_debt_joint');     window.state.accounts.filter(x => x.baseId === 'auto_debt_joint').pop().value = 15000;
     addInstance('personal_loan_joint'); window.state.accounts.filter(x => x.baseId === 'personal_loan_joint').pop().value = 5000;
     window.openAccountModal(grev.id);
-    out.gRevOpts = (function () {
-      var sel = Array.from(document.querySelectorAll('#modal-dynamic-content select')).find(function (s) { return /Select a liability to link/.test(s.innerHTML); });
-      if (!sel) return ['__NO_SELECT__'];
-      return Array.from(sel.options).map(function (o) { return o.textContent; }).filter(function (t) { return t && !/Select a liability/.test(t); });
+    // Reads the LIVE control (§18.3 <details> disclosure), not the retired native <select>. Returns a
+    // SHAPE, never a bare list, so "the control was missing" is a distinguishable state instead of an
+    // empty array that every exclusion assertion would sail straight through.
+    out.gRev = (function () {
+      var root = document.getElementById('modal-dynamic-content');
+      if (!root) return { control: false, why: 'NO_MODAL_CONTENT', opts: [] };
+      var det = Array.from(root.querySelectorAll('details')).find(function (d) {
+        var s = d.querySelector('summary');
+        return s && /Link or draft a liability/.test(s.textContent);
+      });
+      if (!det) return { control: false, why: 'NO_LIABILITY_DISCLOSURE', opts: [] };
+      var rows = Array.from(det.querySelectorAll('div[onclick^="linkDebtToAsset"]'));
+      return {
+        control: true,
+        why: '',
+        emptyState: /Nothing available to link/.test(det.innerHTML),
+        draftRow: /Draft New Liability/.test(det.innerHTML),
+        opts: rows.map(function (r) { return r.textContent.replace(/link\s*$/, '').trim(); })
+      };
     })();
     // OPEN-1 (#244) — the slim Clerk mirror must PRESERVE the 5 carrying-cost fields across a round-trip.
     out.slimCarry = (function () {
@@ -250,6 +328,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     return out;
   });
   await b.close();
+  server.close();
 
   const has = (s, m) => typeof s === 'string' && s.indexOf(m) >= 0;
   let pass = 0, fail = 0; const lines = [];
@@ -383,9 +462,17 @@ const URL = 'http://127.0.0.1:8001/studio.html';
 
   // ===== #245 §0.2 · ASSET-SIDE REVERSE-SCOPE (property accepts ONLY Mortgage/HELOC) =====
   lines.push('===== #245 §0.2 · REVERSE-SCOPE =====');
-  const revOpts = R.gRevOpts || [];
+  const rev = R.gRev || { control: false, why: 'NO_RESULT', opts: [] };
+  const revOpts = rev.opts || [];
   const optHas = (frag) => revOpts.some((t) => t.indexOf(frag) >= 0);
-  ok(optHas('Mortgage'), 'DO-NOT-BREAK: Mortgage IS offered on a property target list');
+  /* PRESENCE BEFORE EXCLUSION (house law 2026-08-02). These two are NOT pick()-wrapped: a
+     precondition that inverts under --redfirst passes by doing nothing, and an inverted run that
+     passes by doing nothing is void. They must hold in BOTH modes. */
+  ok(rev.control === true, 'PRESENCE: the liability link control RENDERS on a property (why=' + (rev.why || 'ok') + ')');
+  ok(rev.control === true && revOpts.length >= 1 && !rev.emptyState,
+     'PRESENCE: the control offers at least one linkable debt — the exclusion below is not vacuous (' + revOpts.length + ' rows)');
+  ok(optHas('Mortgage') || optHas('The Moat'), 'DO-NOT-BREAK: Mortgage IS offered on a property target list');
+  ok(pick(optHas('HELOC') || optHas('The Cellar'), !(optHas('HELOC') || optHas('The Cellar'))), 'HELOC IS offered on a property target list (the half never exercised until 2026-08-02) [BITE]');
   ok(pick(!optHas('Auto Loan') && !optHas('Personal Loan'), optHas('Auto Loan') || optHas('Personal Loan')), 'non-mortgage debts (Auto Loan / Personal Loan) EXCLUDED from property target list [BITE]');
   ok(revOpts.length >= 1 && revOpts.every((t) => /Mortgage|HELOC|The Moat|The Cellar/.test(t)), 'property target list = Mortgage/HELOC ONLY (' + revOpts.length + ' opts); ' + JSON.stringify(revOpts));
 
@@ -435,7 +522,10 @@ const URL = 'http://127.0.0.1:8001/studio.html';
 
   lines.push('-------------------------------------');
   const overall = fail === 0 ? 'GREEN' : 'RED';
-  lines.push('MODE: ' + (RF ? 'RED-FIRST (winners flipped to losers — MUST be RED)' : 'NORMAL') + '   |   STAGE: G10 (+ #250 fixes) — WHOLE ROOM');
+  /* A POISONED RUN MUST NAME ITS MUTATION — a run that prints CLEAN over a mutated file is the
+     shape that lets a dead control read as a live one. */
+  const TAG = NOHELOC ? 'MUTATED[noheloc]' : NOCTRL ? 'MUTATED[nocontrol]' : RF ? 'RED-FIRST' : 'CLEAN';
+  lines.push('MODE: ' + (RF ? 'RED-FIRST (winners flipped to losers — MUST be RED)' : 'NORMAL') + '   |   FILE: ' + TAG + '   |   STAGE: G10 (+ #250 fixes) — WHOLE ROOM');
   lines.push('OVERALL: ' + overall + '   (' + pass + ' pass / ' + fail + ' fail)');
   const caps = [R.gBlank, R.gFill, R.gAuto, R.mLinked, R.g9bAll, R.gNone, R.gStr, R.gNudge, R.gApiUI, R.gApiResult];
   const guard = caps.every(s => !has(s, 'undefined') && !has(s, 'NaN') && !has(s, '__'));
@@ -447,5 +537,19 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   fs.writeFileSync(__dirname + '/.gate-out/_gate_grounds_winners.out.txt', summary, 'utf8');
   console.log(summary);
   if (RF && fail === 0) { console.error('\u274c RED-FIRST INERT (inverted-dead) \u2014 winners were flipped and the gate still passed ' + pass + '/0. This control proves nothing; re-ground its pick() winners.'); process.exit(1); }
+  if (MUT) {
+    console.log(fail > 0
+      ? 'RED-FIRST OK \u2014 the mutation BIT (' + fail + ' red).'
+      : 'RED-FIRST FAILED \u2014 the poison landed and nothing noticed.');
+    if (NOCTRL) {
+      /* The whole point of --nocontrol: the PRESENCE assertions must be among the reds. If the
+         control is gone and presence still reads green, the house law is not actually wired. */
+      const presenceRed = lines.some((l) => l.indexOf('FAIL PRESENCE:') === 0);
+      console.log(presenceRed
+        ? 'PRESENCE LAW OK \u2014 a vanished control RED itself.'
+        : '\u274c PRESENCE LAW DEAD \u2014 the control was removed and PRESENCE still passed.');
+      if (!presenceRed) process.exit(1);
+    }
+  }
   process.exit(fail === 0 ? 0 : 1);
 })();
