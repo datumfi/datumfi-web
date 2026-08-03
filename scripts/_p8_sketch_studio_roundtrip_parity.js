@@ -54,10 +54,18 @@ const PORT = 8149;
 const HOPS = 6; // 6 Sketch->Studio hops after the clean baseline (>=5 required)
 const norm = (s) => String(s == null ? '' : s).replace(/\s/g, '');
 
+/* FIXTURE AUTHORED 2025-08 (asserted `age: 43` against DOB 08/1982). It went RED on 2026-08-03 with
+   no code change — that person turned 44 — while `savedAt: new Date().toISOString()` kept the payload
+   looking freshly saved. The fixture disguised its own provenance.
+   🔑 RULE (2026-08-03): A FIXTURE CARRIES ITS OWN AUTHORED DATE IN THE FILE, AND AN AGE ASSERTION IS
+   DERIVED FROM A DOB, NEVER FROZEN BESIDE IT. */
+const FIXTURE_AUTHORED = '2025-08';   // ← update only when the payload itself is re-authored
+const DOB_MO = 8, DOB_YR = 1982;
+function expectedAge() { const n = new Date(); let a = n.getFullYear() - DOB_YR; if (n.getMonth() + 1 < DOB_MO) a--; return a; }
 // Authoritative profile — the values the user TYPED. Lives ONLY in Clerk metadata (no LS draft).
 const DOSSIER = {
   schema: 'DatumFIAccountDossierV15', savedAt: new Date().toISOString(),
-  primary: { name: '', dateOfBirth: '08/1982', age: 43, grossIncome: 100000, targetRetirementAge: 52, targetRetirementDate: '03/2035' },
+  primary: { name: '', dateOfBirth: '08/1982', age: expectedAge(), grossIncome: 100000, targetRetirementAge: 52, targetRetirementDate: '03/2035' },
   defaults: { targetRetirementAge: 52, targetRetirementDate: '03/2035', planThroughAge: 85, planThroughDate: '03/2068', effectiveTaxRate: 0.22, defaultDatum: 90000, accessMode: 'Discover' },
   household: { profileType: 'Single', coArchitect: null },
   accounts: { currentPortfolioBalance: 500000, annualContributions: 20000 }
@@ -145,7 +153,7 @@ async function capture(page) {
   check('baseline DOB = 08/1982', norm(baseline.dob) === '08/1982', baseline.dob);
   check('baseline Retire = 03/2035', norm(baseline.targetRet) === '03/2035', baseline.targetRet);
   check('baseline PTA date = 03/2068', norm(baseline.planEnd) === '03/2068', baseline.planEnd);
-  check('baseline sliders 43 / 52 / 85', baseline.sliderAge === 43 && baseline.sliderRet === 52 && baseline.sliderPlan === 85, baseline.sliderAge + '/' + baseline.sliderRet + '/' + baseline.sliderPlan);
+  check('baseline sliders ' + expectedAge() + ' / 52 / 85 (age DERIVED from DOB, never frozen)', baseline.sliderAge === expectedAge() && baseline.sliderRet === 52 && baseline.sliderPlan === 85, baseline.sliderAge + '/' + baseline.sliderRet + '/' + baseline.sliderPlan + ' fixture authored ' + FIXTURE_AUTHORED);
 
   // ── PTA age PROVEN (not assumed to fall out of the cascade) — every hop ──
   // (a) the slider/label box, and (b) the date->age recompute against the LIVE DOB — the latter

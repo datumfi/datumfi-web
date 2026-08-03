@@ -78,9 +78,18 @@ const read = (page) => page.evaluate(() => ({
     return mine.ok === direct.ok && mine.age === direct.age;
   }));
 
-  // Seed a known-good DOB + Target Retirement so last-known-good exists.
-  const goodDob = '06 / ' + (Y - 45);          // age ~45
+  /* Seed a known-good DOB + Target Retirement so last-known-good exists.
+     ⚠️ SEASONAL TIME BOMB, FOUND 2026-08-03 BY THE DISGUISED-AGE SWEEP — this gate was GREEN when
+     found and would have gone RED on its own every January through May. The DOB is anchored to month
+     06 while the assertion froze `age === 45`; the product computes age live, so from January to May
+     the person has not had their birthday yet and is 44. Green Jun-Dec, red Jan-May, every year, with
+     no code change to blame. Worse than the two fixtures that had already aged out, because nothing
+     was failing to draw attention to it.
+     🔑 AN AGE ASSERTION IS DERIVED FROM A DOB, NEVER FROZEN BESIDE IT. */
+  const goodDob = '06 / ' + (Y - 45);          // DOB in month 06
   const goodRet = '06 / ' + (Y - 45 + 65);     // retire ~65
+  // the product's own rule: whole years since DOB, minus one if this month precedes the birth month
+  const expectedAge = (new Date().getMonth() + 1 < 6) ? 44 : 45;
   editProfile(page, 'pri-dob', goodDob); await page.waitForTimeout(150);
   editProfile(page, 'target-ret', goodRet); await page.waitForTimeout(150);
   let r = await read(page);

@@ -36,10 +36,26 @@ function check(label, cond, detail) { const ok = !!cond; if (!ok) fails++; resul
 const PORT = 8148;
 const norm = (s) => String(s == null ? '' : s).replace(/\s/g, '');
 
+/* FIXTURE AUTHORED 2025-08 (asserted `age: 43` against DOB 08/1982). It went RED on 2026-08-03 with
+   no code change at all — that person turned 44. `savedAt: new Date().toISOString()` regenerated on
+   every run, so the payload LOOKED freshly saved forever while the age beside it was frozen: the
+   fixture actively disguised its own provenance.
+   🔑 RULE (2026-08-03): A FIXTURE CARRIES ITS OWN AUTHORED DATE IN THE FILE, AND AN AGE ASSERTION IS
+   DERIVED FROM A DOB, NEVER FROZEN BESIDE IT. `savedAt` stays live because the product reads it as a
+   save timestamp; the AGE is now computed with the product's own rule (studio.html:13618), so this
+   gate can no longer rot by sitting still. */
+const FIXTURE_AUTHORED = '2025-08';   // ← update only when the payload itself is re-authored
+const DOB_MO = 8, DOB_YR = 1982;
+function expectedAge() {
+  const n = new Date();
+  let a = n.getFullYear() - DOB_YR;
+  if (n.getMonth() + 1 < DOB_MO) a--;
+  return a;
+}
 // Same canonical payload as the sync gate — but it lives ONLY in Clerk metadata here, never in LS.
 const DOSSIER = {
   schema: 'DatumFIAccountDossierV15', savedAt: new Date().toISOString(),
-  primary: { name: '', dateOfBirth: '08/1982', age: 43, grossIncome: 100000, targetRetirementAge: 52, targetRetirementDate: '03/2035' },
+  primary: { name: '', dateOfBirth: '08/1982', age: expectedAge(), grossIncome: 100000, targetRetirementAge: 52, targetRetirementDate: '03/2035' },
   defaults: { targetRetirementAge: 52, targetRetirementDate: '03/2035', planThroughAge: 85, planThroughDate: '03/2068', effectiveTaxRate: 0.22, defaultDatum: 90000, accessMode: 'Discover' },
   household: { profileType: 'Single', coArchitect: null },
   accounts: { currentPortfolioBalance: 500000, annualContributions: 20000 }
@@ -110,7 +126,7 @@ const blockClerk = (ctx) => ctx.route('**/*', (route) => { const u = route.reque
   // 2. ASYNC SEED — direct load lands the typed values, NOT the hardcoded defaults.
   check('direct load: retire RESTS on 52 (NOT 65 default)', r.sliderRet === 52, 'slider-activation=' + r.sliderRet);
   check('direct load: PTA RESTS on 85 (NOT 93 default)', r.sliderPlan === 85, 'sl-plan-through=' + r.sliderPlan);
-  check('direct load: current age 43 (NOT 40 default)', r.sliderAge === 43, 'slider-age=' + r.sliderAge);
+  check('direct load: current age DERIVED from DOB ' + DOB_MO + '/' + DOB_YR + ' = ' + expectedAge() + ' (NOT the 40 default)', r.sliderAge === expectedAge() && r.sliderAge !== 40, 'slider-age=' + r.sliderAge + ' fixture authored ' + FIXTURE_AUTHORED);
   check('direct load: NOT the hardcoded 40/65/93', !(r.sliderAge === 40 && r.sliderRet === 65 && r.sliderPlan === 93), r.sliderAge + '/' + r.sliderRet + '/' + r.sliderPlan);
   check('direct load: DOB seeds 08/1982', norm(r.dob) === '08/1982', r.dob);
   check('direct load: target-ret shows 03/2035', norm(r.targetRet) === '03/2035', r.targetRet);
