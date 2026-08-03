@@ -33,6 +33,13 @@ const server = http.createServer((req, res) => {
 let fails = 0; const results = [];
 function check(label, cond, detail) { const ok = !!cond; if (!ok) fails++; results.push((ok ? 'PASS  ' : 'FAIL  ') + label + (detail !== undefined ? ' (' + detail + ')' : '')); }
 const PORT = 8143;
+/* CALENDAR SWEEP 2026-08-03 — CHECKED AND CALENDAR-SAFE; do not re-derive this.
+   It LOOKS like the seasonal bomb that _p8_profile_date_enforce turned out to be (a DOB anchored to
+   month 06 / 05 beside literal ages), but it is not. Every age here is a DIFFERENCE between two dates
+   that shift together with Y — dob '06/(Y-45)' vs retire '06/(Y-45+65)' is 65 in every month — and the
+   two non-DOB-month cases ((iii) and (par)) use FULLY ABSOLUTE dates (08/1982, 03/2035), which cannot
+   move at all. Verified by evaluating the product's ageAtDate rule for all twelve months: 65/60/52/52
+   constant throughout. A FIX VERIFIED ONLY IN THE CURRENT MONTH IS THE SAME DEFECT WEARING A REPAIR. */
 const Y = new Date().getFullYear();
 
 function initScript(fixture) {

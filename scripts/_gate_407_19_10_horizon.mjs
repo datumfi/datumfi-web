@@ -1,3 +1,8 @@
+/* CALENDAR SWEEP 2026-08-03 — EXPIRY ~2040. The 2040/2055 horizon dates here are long-dated
+   fixture inputs, left as literals deliberately; re-date or make relative as 2040 approaches.
+   A GATE MUST PRODUCE THE SAME VERDICT ON EVERY DAY OF THE YEAR. Correct shapes to copy:
+   _p8_studio_mechanics.js:280 (age derived with the month rule), _gate_heloc_variable_18a.mjs:49
+   (dates relative to now). */
 /* DEV-ONLY red-first gate — #407 §19.10/§19.11 Mortgage retire-before-you-do horizon states.
    Executes the real _moatDI (retirement injected via _retireOverride) and asserts the RENDERED beat (#380):
      🟢 payoff ≤ retire            -> "before you retire"

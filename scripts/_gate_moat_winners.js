@@ -47,9 +47,15 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     out.mBlank = grab('mortgage_joint');
     out.mFill = grab('mortgage_joint', {
       value: 300000, origAmount: '400000', intRate: 6, rateType: 'Variable',
-      minPmt: '2000', addPmt: '500', nextPmtDate: '2026-08-01',
+      // CALENDAR SWEEP 2026-08-03 — these two were FROZEN ('2026-08-01' was already 2 days past,
+      // '2027-01-01' under 5 months out). studio.html:9351 renders the reset beat only while
+      // rateResetDate > new Date(), so a frozen date silently stops exercising that branch and the
+      // fixture tests less than it did while still passing. Relative now — the shape
+      // _gate_heloc_variable_18a.mjs:49 already uses. A GATE MUST PRODUCE THE SAME VERDICT ON
+      // EVERY DAY OF THE YEAR.
+      minPmt: '2000', addPmt: '500', nextPmtDate: new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10),
       propTaxAnnual: '6000', insAnnual: '2400', pmiMonthly: '150',
-      rateIndex: 'SOFR', rateMargin: 2.5, rateResetDate: '2027-01-01', capPeriodic: 2, capLifetime: 5,
+      rateIndex: 'SOFR', rateMargin: 2.5, rateResetDate: new Date(Date.now() + 400 * 864e5).toISOString().slice(0, 10), capPeriodic: 2, capLifetime: 5,
       isPriority: true, linkedAssetId: (propAcc ? propAcc.id : null), accelSourceId: (savAcc ? savAcc.id : null)
     });
     // A non-mortgage secured debt (auto) to confirm the scope seam is per-family, not global.

@@ -141,6 +141,10 @@ const SKETCH = {
    account has one. The values below deliberately DISAGREE with the sketch on all four contested
    fields, so a baseline that replays them in the wrong order cannot pass. */
 const DOSSIER = {
+  /* CALENDAR SWEEP 2026-08-03 — EXPIRY 2049. Far-future save stamps, chosen so "newer than" comparisons never flip. These are long-dated and were left
+     as literals deliberately; when 2049 approaches, re-date them or make them relative. A GATE MUST
+     PRODUCE THE SAME VERDICT ON EVERY DAY OF THE YEAR. Correct shape to copy: _p8_studio_mechanics.js:280
+     (age derived with the month rule) and _gate_heloc_variable_18a.mjs:49 (dates relative to now). */
   primary: { fullName: 'Daniel Merced', dateOfBirth: '1984-03-11', targetRetirementDate: '2049-03-01' },
   household: { filing: 'married', location: 'FL' },
   defaults: { planThroughAge: 105, taxRate: '20%', defaultDatum: 100000, planThroughDate: '2069-03-01' },

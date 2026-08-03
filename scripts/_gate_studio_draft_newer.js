@@ -1,3 +1,6 @@
+/* CALENDAR SWEEP 2026-08-03 — EXPIRY 2099. The 2099 stamp is a deliberate far-future sentinel so
+   a 'newer than' comparison can never flip; left as a literal. A GATE MUST PRODUCE THE SAME VERDICT
+   ON EVERY DAY OF THE YEAR. Correct shapes: _p8_studio_mechanics.js:280, _gate_heloc_variable_18a.mjs:49. */
 'use strict';
 /* DATA-LOSS GATE (red-first) — an unsaved Studio edit must survive leave-and-return, AND tab-close.
  *
