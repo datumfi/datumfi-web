@@ -11282,9 +11282,27 @@
        * property Primary residence DEMOTES the previous one (see updateAccField), so at most one
        * explicit primary can exist. Silently picking a winner is how the last bug happened. */
       propertyAccount = _pickGroundOwner(propertyRooms);
+      /* STEP 3b — every property that is not the ground owner leaves the estate and becomes a
+       * SATELLITE, drawn in the left band (datum-estate.js). Step 2 parked these in an ownership
+       * column INSIDE the estate, which bought visibility at the cost of drawing a second home as a
+       * room of the first; that was always stated as temporary and this is where it ends.
+       * ⚠️ THIS HANDOFF AND THE RENDERER ARE ONE CHANGE. Ship this without the satellite band and
+       * every non-primary property is counted in grandTotal and drawn NOWHERE — the exact defect the
+       * arc opened on. _gate_estate_all_counted_is_drawn pins both halves.
+       *
+       * 🔑 AND THE TWO HALVES DO NOT LAND TOGETHER IN A BROWSER. JS is cached FOUR HOURS here, HTML
+       * is not, so this file goes live while datum-estate.js can still be served STALE. A new host
+       * talking to an old renderer would hand off satellites nobody draws — the defect above, on
+       * every returning user, until the cache turns over. So we BRANCH ON THE RENDERER'S CAPABILITY
+       * rather than assume it: no flag means the old renderer, and these properties go back into the
+       * ownership columns exactly as they do today. Degrading to the behaviour already shipped is
+       * always safe; drawing nothing never is. */
+      var _estateDrawsSatellites = !!(window.DatumEstate && window.DatumEstate.supportsSatellites);
+      var satelliteProperties = [];
       propertyRooms.forEach(function (acc) {
         if (acc === propertyAccount) return;
-        var pb = getBaseType(acc.baseId) || {};
+        if (_estateDrawsSatellites) { satelliteProperties.push(acc); return; }
+        var pb = getBaseType(acc.baseId) || {};   // FALLBACK — stale cached renderer: step-2 placement
         if (pb.type === 'primary') cols.primary.push(acc);
         else if (pb.type === 'coarch' && isCo) cols.coarch.push(acc);
         else cols.joint.push(acc);
@@ -11342,6 +11360,7 @@
         machineEl: document.getElementById('ch-machine'),
         spendInputEl: document.getElementById('spend-input'),
         cols: cols, propertyAccount: propertyAccount,
+        satelliteProperties: satelliteProperties,
         trustAccounts: trustAccounts, grandTotal: grandTotal,
         accountWeights: accountWeights
         });

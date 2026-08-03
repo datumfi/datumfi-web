@@ -501,6 +501,107 @@
           });
       }
 
+      /* ── SATELLITE PROPERTY BLOCKS — STEP 3b ────────────────────────────────────────────────────
+       * Every property that is NOT the ground owner is drawn OUTSIDE the estate, on its own ground.
+       * Before step 2 a second property was drawn NOWHERE while its money still counted in the total;
+       * step 2 bought VISIBILITY by parking it in an ownership column INSIDE the estate, which was
+       * always stated as temporary. This is the step that ends it.
+       *
+       * WHY THE LEFT BAND, MEASURED 2026-08-03 — and it is the whole reason this commit needs no
+       * canvas resize. Inside the viewBox the free space is: LEFT x[0,200) 200x850, empty in every
+       * state; RIGHT x[1200,1400) 200 wide but the Trust Wing already claims 1260-1540 whenever a
+       * trust exists; BELOW y[1010,1100) just 90 units against a 75-unit minimum room height. So the
+       * left band is the ONLY uncontended space, and it is uncontended at EVERY viewport.
+       *
+       * 🔑 INSIDE THE viewBox IS THE WHOLE POINT. Content outside it still PAINTS (.blueprint-svg is
+       * overflow:visible) but survives only on slack that fitToScreen happens to leave — measured at
+       * 406 user units on one screen and 0 on another, on the same machine, by window width alone.
+       * A satellite placed out there would be drawn or not drawn depending on the user's window,
+       * which re-creates the exact defect this arc exists to close. Inside the viewBox is GUARANTEED
+       * on screen, because fitToScreen fits the whole box by construction. Never place a room that
+       * carries money outside it.
+       *
+       * ⚠️ THE SINGLE-BAND STACK IS A GEOMETRY CONSTRAINT, NOT THE DESIGN — DEFERRED, NOT ABANDONED.
+       * The wing split below is the correct end state and becomes cheap once the canvas is
+       * re-proportioned. Do not read this code as the intent.
+       *
+       * ⚠️ I NARROWED THE ARCHITECT'S RULING 5 AND AM FLAGGING IT RATHER THAN BURYING IT. He ruled
+       * wing decides WHERE: Primary-owned left, Co-owned right, Joint-owned centered below. Measured,
+       * two of those three bands do not exist yet — right collides with the Trust Wing, below is 90
+       * units. So ALL satellites stack in the left band in creation order for now. Restoring the full
+       * three-band split is a small change once the canvas is re-proportioned (the sequenced step
+       * after the drafting-panel divider), which is when the space actually appears.
+       *
+       * A LIEN LINKED TO A SATELLITE IS ALREADY SUPPRESSED from the columns by _suppressedDebt above,
+       * independent of placement. So the tile MUST carry net equity — otherwise moving the property
+       * out here would silently delete its mortgage from the picture. Same failure class, one level
+       * down. */
+      var satellites = (ctx.satelliteProperties || []).filter(function (a) { return !!getBaseType(a.baseId); });
+      if (satellites.length > 0) {
+          var sX = 15, sW = 170;                 // left band x[15,185]: 15 to the canvas edge, 15 to the grounds
+          var sTop = gY + 20, sBot = gY + gH;    // aligned with the room stack inside the estate
+          var sH = 95, sGap = 15, sPitch = sH + sGap;
+          var sCap = Math.max(1, Math.floor((sBot - sTop + sGap) / sPitch));
+          var sShown = satellites, sHidden = 0;
+          if (satellites.length > sCap) {        // RULING 5 — a band that would overflow COLLAPSES to one
+              sShown = satellites.slice(0, sCap - 1);   // counted tile. A tile too small to read is worse
+              sHidden = satellites.length - sShown.length;   // than an honest count.
+          }
+          var sY = sTop;
+          sShown.forEach(function (acc) {
+              var base = getBaseType(acc.baseId);
+              var d = { x: sX, y: sY, w: sW, h: sH, cx: sX + sW / 2, cy: sY + sH / 2 };
+              if (acc.isNew) newRoomToTrace = d;
+
+              var sDebts = _mergeDebtsByAsset[acc.id] || [];
+              var sEq = sDebts.length ? _netEquityOf(acc.value, sDebts) : null;
+              var sNeg = (sEq !== null && sEq < 0);
+              // L47 sourced-or-blank: no value -> a named tile with no figure, never a guessed one.
+              var sVal = (parseFloat(acc.value) || 0) > 0 ? (sEq !== null ? _eqStr(sEq) : _eqStr(acc.value)) : '';
+              var sTip = sDebts.length ? _lienMirrorNotice(sDebts, 'home') : (base.desc || '');
+
+              var g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+              g.setAttribute('class', 'room-grp visible satellite-room');
+              g.setAttribute('onclick', "openAccountModal('" + acc.id + "')");
+              g.style.cursor = 'pointer';
+
+              var weight = accountWeights[acc.id] || 0;   // S2.4 — READ from the hub, never recomputed (LOCK-3)
+              var fp = fillPct(acc.value || 0);
+              var fillH = d.h * fp / 100, fillY = d.y + d.h - fillH;
+              g.style.setProperty('--weight', weight);
+              var fillHTML = fp > 0 ? '<rect x="' + d.x + '" y="' + fillY + '" width="' + d.w + '" height="' + fillH +
+                  '" class="room-fill" fill="url(#' + (sNeg ? 'fillGradDebt' : 'fillGradAsset') + ')" />' : '';
+              // 11px title, not the estate's 14px: these are secondary blocks, and at 14px the §19 name
+              // "THE VACATION HOME" (17 chars x ~10.5 units) overruns a 170-unit tile. Sized now so the
+              // authored §19 map lands without a re-layout.
+              g.innerHTML =
+                  '<title>' + String(sTip).replace(/</g, '&lt;') + '</title>' +
+                  '<rect x="' + d.x + '" y="' + d.y + '" width="' + d.w + '" height="' + d.h + '" class="room-rect active ' +
+                      (isThermal ? 'tax-' + base.taxCode : '') + (acc.isNew ? ' animate-draw' : '') + '" />' +
+                  fillHTML +
+                  '<text x="' + d.cx + '" y="' + (d.cy - 6) + '" class="bp-title" style="font-size:11px;">' + base.meta.toUpperCase() + '</text>' +
+                  '<text x="' + d.cx + '" y="' + (d.cy + 24) + '" class="bp-val" style="font-size:22px; fill:' + (sNeg ? 'var(--danger)' : 'var(--white)') + ';">' + sVal + '</text>';
+              svgContainer.appendChild(g);
+              descriptors.push({ id: acc.id, el: g, rect: g.querySelector('.room-rect'), d: d, value: acc.value || 0,
+                                 fillPct: fp, weight: weight, isNew: !!acc.isNew, taxCode: base.taxCode,
+                                 isDebt: false, isInvestment: !!base.isInvestment, isPriority: !!acc.isPriority });
+              sY += sPitch;
+          });
+          if (sHidden > 0) {
+              // COLLAPSED IS STILL DRAWN. The count is what keeps the picture reconciled to the total.
+              var cd = { x: sX, y: sY, w: sW, h: sH };
+              var cg = document.createElementNS("http://www.w3.org/2000/svg", "g");
+              cg.setAttribute('class', 'room-grp visible satellite-room satellite-collapse');
+              cg.setAttribute('data-collapsed-count', String(sHidden));
+              cg.innerHTML =
+                  '<rect x="' + cd.x + '" y="' + cd.y + '" width="' + cd.w + '" height="' + cd.h +
+                      '" class="room-rect active" style="stroke-dasharray:4 4;" />' +
+                  '<text x="' + (cd.x + cd.w / 2) + '" y="' + (cd.y + cd.h / 2 + 4) + '" class="bp-title" style="font-size:11px;">' +
+                      sHidden + ' more properties</text>';
+              svgContainer.appendChild(cg);
+          }
+      }
+
       // IDEA-1 — render each column WITHOUT its suppressed (linked-debt) boxes, so no phantom column
       // gap opens and a column that held only a linked debt drops out entirely.
       let _viz = { primary: _visibleCol(cols.primary), joint: _visibleCol(cols.joint), coarch: _visibleCol(cols.coarch) };
@@ -859,7 +960,16 @@
       ctx.accounts.forEach(a => a.isNew = false);
       return descriptors;   // S2.4 — §16.2-iii single hook surface; consumers tween off this
   }
-  window.DatumEstate = { renderEstate: renderEstate, SHELL_TUNE: SHELL_TUNE, A1_TUNE: A1_TUNE };
+  /* supportsSatellites — A CAPABILITY FLAG THE HOST BRANCHES ON, NOT DECORATION. Measured on this
+     project: JS assets are cached FOUR HOURS at the edge, HTML is not. So a deploy updates
+     studio.html instantly while this file can serve STALE from cache for hours. In that window a new
+     host would hand satellites to an old renderer that ignores them, and every non-primary property
+     would be counted in the estate total and drawn NOWHERE — the exact defect this commit closes,
+     re-introduced on every returning user until the cache turns over. The host reads this flag and
+     falls back to the previous in-estate placement when it is absent, so the worst case is the
+     behaviour we already ship, never a missing room. Do not remove it when the soak period ends
+     without also removing the host's fallback branch. */
+  window.DatumEstate = { renderEstate: renderEstate, supportsSatellites: true, SHELL_TUNE: SHELL_TUNE, A1_TUNE: A1_TUNE };
   window.DatumEstateTune = SHELL_TUNE;     // Phase A geometry — openness/envWeight/partWeight (LOCKED)
   window.DatumEstateA1Tune = A1_TUNE;      // Phase A.1 eyes-on dial; edit then updateSVGs()
 })();
