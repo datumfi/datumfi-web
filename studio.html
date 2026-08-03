@@ -11952,6 +11952,9 @@
       // C (#288) DESIGN FLIP — a FRESH (?fresh=1) or SKETCH (?hydrate=sketch) open must NOT resume the last
       // draft's rooms/profile; it starts from seed / sketch inputs. Skip the whole draft restore (this runs
       // at parse time, BEFORE boot, so it is the earliest room-leak path — guard it here too, not just load()).
+      // WHY (Architect-ruled 2026-08-02): a Sketch is a STARTING SETUP carried in — but the moment rooms are
+      // drafted the Estate SUPERSEDES it, because $500k moved on a slider is a coarse claim while a 401(k) at
+      // $250k plus an IRA at $25k is a precise one, and THE NUANCED STATEMENT WINS OVER THE COARSE ONE.
       try { var _q = new URLSearchParams(location.search); if (_q.get('fresh') === '1' || _q.get('hydrate') === 'sketch') return; } catch (_e) {}
       // G1 — single source of truth: restore from the hub session draft (the bp), not the
       // retired flat datum_studio_draft. Map bp -> DOM symmetrically to captureDOM.
@@ -11968,9 +11971,10 @@
         if (typeof _st === 'function' && _st(bp)) return;
       } catch (_e) {}
       window._studioBp = bp; // keep the live bp in agreement with what was restored
-      // G2 inverse — always restore the Estate rooms (a carried Sketch must NOT purge them).
       window._hydrateRooms(bp);
-      // G5 — on a Sketch carry, prefillFromSketch owns the sliders/profile; rooms above kept.
+      // A PRIOR Sketch carry in this tab left its ages/spend in sessionStorage, and ?hydrate=sketch is
+      // ONE-SHOT (stripped from the URL at load), so on a plain reload those carried values still own the
+      // profile — do not repaint it from the draft underneath them.
       if (sessionStorage.getItem('datum_currentAge') || sessionStorage.getItem('datum_targetSpend')) return;
       try {
         var prof = bp.profile || {};
