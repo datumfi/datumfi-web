@@ -84,6 +84,14 @@
 
   // Inverse of ageAtDate: the DOB-anchored MM/YYYY for a given age (month follows DOB).
   // Single rounding source shared by Studio + Dossier so identical inputs agree.
+  // ⚠️ CONTRACT — dobMo IS THE BIRTH MONTH, NOT A DISPLAY MONTH. It is used TWICE: as the output
+  // month AND as the year anchor. Pass any other month and the year is computed as though the person
+  // had been born in it — dateFromAge(85, 3, 1982) returns 03/2067, which ageAtDate('03/2067', 8,
+  // 1982) reads back as 84. A silent off-by-one in a user-facing horizon. studio.html's
+  // _mirrorPlanEnd did exactly this (fixed 2026-08-03, 0305d0e). To keep a display month OTHER than
+  // the birth month, anchor the year yourself: dobYr + age + (mo < dobMo ? 1 : 0).
+  // The signature accepts any month, so this note is the only thing between the next reader and the
+  // same bug — do not delete it while the parameter stays permissive.
   function dateFromAge(age, dobMo, dobYr) {
     if (age == null || !isFinite(age) || !dobYr) return '';
     return pad2(dobMo) + '/' + (dobYr + Number(age));
