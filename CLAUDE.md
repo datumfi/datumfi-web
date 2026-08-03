@@ -137,11 +137,29 @@ BOTH edits, in one commit.
 ## Publish Proof By Host Type (measured 2026-07-26 — settles a recurring question)
 
 Served-HTML MD5 is **NEVER** a publish proof, even for a SACRED host. Cloudflare's
-edge rewrites HTML non-deterministically: three consecutive fetches of one
-already-published `studio.html` returned three DIFFERENT hashes at the SAME byte
-length, diverging where the edge rewrote the `<head>` resource hints. (It is not
-the analytics beacon — no `cloudflareinsights` script was present.) A hash that
-changes per request cannot prove anything.
+edge rewrites HTML non-deterministically: four consecutive fetches of one
+already-published `studio.html` returned four DIFFERENT hashes at the SAME byte
+length (1389783). A hash that changes per request cannot prove anything.
+
+**THE MECHANISM — MEASURED 2026-08-03, replacing the 2026-07-26 guess.** ~~*"diverging
+where the edge rewrote the `<head>` resource hints. (It is not the analytics beacon —
+no `cloudflareinsights` script was present.)"*~~ That was inferred, never verified, and
+it is **wrong on both counts** — the divergence is not in `<head>` and the cause is not a
+beacon. Two per-request injections do it, and both are **fixed-width**, which is exactly
+why the byte length never moves and the change reads as noise rather than injection:
+
+ 1. **Email Obfuscation** rewrites every address to `/cdn-cgi/l/email-protection#<hex>`
+    plus `data-cfemail="<hex>"`. The hex is XOR'd with **a fresh random key per response**,
+    so identical source yields different ciphertext on every fetch.
+ 2. **Bot-management JSD** injects `window.__CF$cv$params={r:'<ray id>',t:'<base64 time>'}`
+    — a per-request ray ID and timestamp.
+
+Together they also explain the length delta vs local (served 1389783 vs source 1388544).
+Both are Cloudflare **dashboard** settings, which only the Captain may change — so this is a
+**PERMANENT, NAMED EVIDENCE GAP**, not an oversight. Every publish proof states it in one
+line: `studio.html — marker-grep only; served hash unchaseable (CF email-obfuscation + JSD,
+per-request)`. 🔑 **A recorded guess that has since been measured must be REPLACED by the
+measurement, with the guess struck rather than deleted, so nobody re-derives it.**
 
  · The `SACRED{}` pin governs **BUILD** bytes only — it enforces `dist == source`,
    which `npm run build` checks. It says nothing about served bytes.
