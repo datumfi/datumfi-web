@@ -13276,6 +13276,22 @@
       try { var _navP = performance.getEntriesByType('navigation')[0]; if (_navP && new URL(_navP.name).searchParams.get('hydrate') === 'sketch') return; } catch (e) {}
       if (sessionStorage.getItem('datum_currentAge') || sessionStorage.getItem('datum_targetSpend')) return;
       var bp = window._studioBp; if (!bp) return;
+      /* ── ONLY RE-ASSERT A PROFILE THAT WAS ACTUALLY RESTORED ──────────────────────────────────
+       * This function's whole warrant is in its name: a RESTORED slot outranks the init syncs (G3).
+       * But it never checked that anything WAS restored. window._studioBp is minted in memory on a
+       * cold open too, and it captures the schema DEFAULTS before any async dossier arrives — so on
+       * a direct load after a fresh sign-in it replayed plan_end_age = 93 over the 85 the user had
+       * actually chosen. Measured 2026-08-03: blueprint created ~425ms holding the default 93, Clerk
+       * dossier seeds 85 at ~817ms, this function replays 93 at ~1329ms and wins by running last.
+       * 🔑 A DEFAULT CAPTURED BEFORE THE REAL DATA ARRIVED IS INDISTINGUISHABLE FROM A USER CHOICE.
+       * _loadSource is the same flag seedFromBlueprint (:13601) already uses to tell an explicit
+       * restore from an incidental one — reused here rather than forked (L48). No restore, nothing to
+       * re-assert; the init syncs and the dossier seed already hold the floor.
+       * ⚠️ NOT done by re-capturing the DOM after the seed: that was tried first and broke
+       * _p8_sketch_studio_roundtrip_parity's byte-identity across six hops, because captureDOM
+       * rewrites far more than the four profile keys this function reads. Narrower is correcter. */
+      var _lsrc = String(bp._loadSource || '');
+      if (!(_lsrc.indexOf('blueprint-slot') === 0 || _lsrc.indexOf('sketch-contract') === 0)) return;
       var prof = bp.profile || {};
       if (prof.primary_dob)            { var d = $('pri-dob');    if (d) d.value = prof.primary_dob; }
       if (prof.target_retirement_date) { var r = $('target-ret'); if (r) r.value = prof.target_retirement_date; }
@@ -13416,7 +13432,17 @@
       var pm = String(pEl.value || '').match(_ageDateRe);
       if (DB && pm && DB.ageAtDate(pEl.value, dob.mo, dob.yr) === pta) return;   // consistent — keep verbatim
       var mo = pm ? parseInt(pm[1], 10) : dob.mo;
-      pEl.value = DB ? _fmtDateStr(DB.dateFromAge(pta, mo, dob.yr)) : (_pad2(mo) + ' / ' + (dob.yr + pta));
+      /* DB.dateFromAge's 2nd argument IS THE DOB MONTH by contract — "the DOB-anchored MM/YYYY for a
+       * given age (month follows DOB)" — and it uses that argument BOTH as the output month AND as the
+       * year anchor (dobYr + age). Passing the DISPLAY month there computed the year as though the
+       * person had been born in that month: age 85 on an 08/1982 DOB rendered 03/2067, which
+       * ageAtDate then reads back as 84. The month-survival feature and the derived year disagreed
+       * by a year whenever the surviving month fell before the birth month.
+       * Anchor on the real DOB month and keep the display month: a month EARLIER in the year than the
+       * birth month lands in the following calendar year. Now dateFromAge and ageAtDate round-trip for
+       * every month, which is what makes the date an honest derivation of the canonical age. */
+      var _yr = dob.yr + pta + (mo < dob.mo ? 1 : 0);
+      pEl.value = _fmtDateStr(_pad2(mo) + '/' + _yr);
     }
     window._mirrorPlanEnd = _mirrorPlanEnd;
     window._studioDateForField = _dateForField;   // gate hook: the MM/YYYY a toggle box shows on focus
@@ -14082,14 +14108,37 @@
             window._datumSeedDossier(function (_cd) {
               try {
                 if (!_cd) { _seedGateOff(); return; }
-                // (The resolver already cached it to LS — both callers did that identically.)
-                // Re-seed through the SAME blueprint path the synchronous load uses, so the
-                // hydrated dossier gets identical month-survival (plan-through date, carried
-                // ages, target-ret) — not a partial re-apply that drops the plan-through month.
-                // Clear the empty fresh+dossier draft first (writeSessionDraft(null)) so load()
-                // reads the now-populated LS dossier, not the stale draft, then run the same seed.
+                /* ── THERE IS ONE SEEDING PATH ─────────────────────────────────────────────────
+                 * ⚠️ THE COMMENT THAT USED TO SIT HERE CLAIMED THIS ALREADY HAPPENED. It read
+                 * "re-seed through the SAME blueprint path the synchronous load uses ... not a
+                 * partial re-apply that drops the plan-through month" — and a partial re-apply that
+                 * drops the plan-through age is EXACTLY what this was. The comment asserted the
+                 * property that was broken, which is why nobody looked. Deleted, not softened.
+                 *
+                 * WHAT WAS WRONG. The synchronous rung (:14068) seeds the sliders with
+                 * applyDossierSliders. This route did not call it at all: it filled the profile DATE
+                 * fields and let syncFromProfileDates derive ages back out of them. That converts the
+                 * retirement date to an age but has no equivalent step for plan-through, so
+                 * sl-plan-through kept the schema default 93. Then _mirrorPlanEnd found the seeded
+                 * date (03/2068, implying ~85) disagreeing with the unseeded slider (93) and
+                 * OVERWROTE THE CORRECT DATE with one derived from the default. A person who planned
+                 * through 85 saw 93 — seven years they never chose, with the ceiling, the floor and
+                 * the whole Shape computed against it.
+                 *
+                 * 🔑 THE FIX IS CONVERGENCE, NOT A CONVERSION. Adding a date-to-age step would have
+                 * left two routes that must be kept in sync by memory; the next slider would have
+                 * broken the same way. Both routes now call the SAME routine, in the SAME precedence
+                 * order (a real blueprint outranks the dossier — mirrors :14061-14068 exactly), so a
+                 * slider added to applyDossierSliders is seeded on BOTH routes or neither.
+                 * L48 reuse-do-not-fork, applied to control flow. Pinned by
+                 * _gate_dossier_seed_one_path, which asserts the ASYNC route actually ran before it
+                 * compares a single value.
+                 *
+                 * Clear the empty fresh+dossier draft first (writeSessionDraft(null)) so load()
+                 * reads the now-populated LS dossier, not the stale draft, then run the same seed. */
                 try { if (window.DatumBlueprint && DatumBlueprint._internal) DatumBlueprint._internal.writeSessionDraft(null); } catch(e3) {}
-                seedFromBlueprint();
+                var _bp2 = seedFromBlueprint();
+                if (!_bp2) applyDossierSliders(_cd);
                 applyDossierProfile(_cd);
                 syncSpendFromDatumSlider();
                 syncFromProfileDates();
