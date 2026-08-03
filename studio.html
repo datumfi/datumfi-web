@@ -13421,6 +13421,20 @@
     function _mirrorPlanEnd() {
       var pEl = $('plan-end-age');
       if (!pEl) return;
+      /* ── L47 SOURCED-OR-BLANK: NEVER WRITE A DATE BUILT FROM A FALLBACK IDENTITY ───────────────
+       * _readDobMoYr() has a documented DOB-absent fallback — { mo: 1, yr: thisYear - ageSlider }.
+       * That is fine for an internal estimate and WRONG for a user-visible field. Measured
+       * 2026-08-03 on a direct load: at t=560ms seedFromBlueprint called this with dob="",
+       * ageSlider=40 and pta=93 — EVERY INPUT A PLACEHOLDER — and it wrote "01 / 2079" into the
+       * Profile. The 01 is the fallback's hard-coded birth month. At t=1064ms the real dossier
+       * arrived (dob 08/1982, pta 85) and month-survival PRESERVED that 01, because it cannot tell
+       * a month the user typed from a month this function invented. The user's 03/2068 became
+       * 01/2068 and no code ever knew it had guessed.
+       * 🔑 MONTH-SURVIVAL MAY ONLY PRESERVE A MONTH IT CAN PROVE WAS TYPED. Provenance is not
+       * tracked, so the only honest rule is: with no sourced DOB there is nothing to derive from —
+       * leave the field alone. It is filled the moment a real DOB lands, by the same call. */
+      var _dobEl = $('pri-dob');
+      if (!_dobEl || !/\d{1,2}\s*\/\s*\d{4}/.test(String(_dobEl.value || ''))) return;
       // Month-survival: if the field already holds a date that IMPLIES the slider's current PTA
       // age, keep it VERBATIM (the typed/seeded 03/2068 must not be rebuilt to a DOB-month date).
       // Only recompute — preserving the typed month, year from the shared rounding source — when

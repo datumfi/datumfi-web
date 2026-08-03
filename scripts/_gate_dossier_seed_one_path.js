@@ -39,7 +39,15 @@ const ROOT = path.resolve(__dirname, '..');
 const { chromium } = require(ROOT + '/node_modules/playwright');
 const LABEL = process.argv[2] && process.argv[2].charAt(0) !== '-' ? process.argv[2] : 'RUN';
 const NOCONV = process.argv.includes('--noconverge');
+const NOSRC  = process.argv.includes('--nosourceguard');
 const PORT = 8354;
+/* --nosourceguard — remove the L47 guard so _mirrorPlanEnd writes from the DOB-absent fallback again. */
+/* Anchored on the declaration, NOT on the regex line: a regex inside a double-quoted JS string loses
+   its backslashes (\d -> d), so the first attempt matched 0 occurrences and the mutation could not
+   run at all. Defeat the guard by handing it a DOB that always looks sourced — _readDobMoYr still
+   reads the real (empty) pri-dob, so the fallback identity resumes writing, reproducing the defect. */
+const A_SRC = "      var _dobEl = $('pri-dob');";
+const M_SRC = "      var _dobEl = { value: '01/1900' };   /* guard defeated by --nosourceguard */";
 const MIME = { '.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.json':'application/json','.png':'image/png','.woff2':'font/woff2','.ico':'image/x-icon' };
 
 /* --noconverge — remove the ONE shared-routine call that makes the async route seed the sliders.
@@ -53,11 +61,16 @@ const server = http.createServer((req, res) => {
   const fp = path.join(ROOT, p);
   if (!fp.startsWith(ROOT) || !fs.existsSync(fp) || fs.statSync(fp).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
   let body = fs.readFileSync(fp);
-  if (NOCONV && /studio\.html$/.test(p)) {
-    const src = body.toString('utf8');
-    const n = src.split(A_CONV).length - 1;
-    if (n !== 1) { console.error('anchor A_CONV: expected exactly 1 occurrence, found ' + n + ' — re-ground it.'); process.exit(1); }
-    body = Buffer.from(src.replace(A_CONV, M_CONV), 'utf8');
+  if ((NOCONV || NOSRC) && /studio\.html$/.test(p)) {
+    let src = body.toString('utf8');
+    const apply = (a, m, label) => {
+      const n = src.split(a).length - 1;
+      if (n !== 1) { console.error('anchor ' + label + ': expected exactly 1 occurrence, found ' + n + ' — re-ground it.'); process.exit(1); }
+      src = src.replace(a, m);
+    };
+    if (NOCONV) apply(A_CONV, M_CONV, 'A_CONV');
+    if (NOSRC)  apply(A_SRC,  M_SRC,  'A_SRC');
+    body = Buffer.from(src, 'utf8');
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
   res.end(body);
@@ -67,6 +80,7 @@ const server = http.createServer((req, res) => {
 // retirement age of 52 and a plan-through age of 85 — their dossier lives only in Clerk, never in
 // this browser's localStorage.
 const DOB_MO = 8, DOB_YR = 1982;
+const _pad2 = (n) => (n < 10 ? '0' + n : String(n));
 const DOSSIER = {
   schema: 'DatumFIAccountDossierV15', savedAt: new Date().toISOString(),
   primary: { name: '', dateOfBirth: '08/1982', grossIncome: 100000, targetRetirementAge: 52, targetRetirementDate: '03/2035' },
@@ -162,6 +176,19 @@ const ok = (c, m) => { if (c) { pass++; console.log('PASS ' + m); } else { fail+
    * see the commit message; shipping the guard alone regressed _p8_studio_seed_parity. */
   ok(r.impliedAge !== null, 'S6 [PRESENCE] the plan-end date is parseable (an unreadable field cannot be judged consistent)');
   ok(r.impliedAge === 85, 'S7 the plan-end date implies the canonical plan-through age 85 — got ' + r.impliedAge + ' from ' + r.planEnd);
+  /* S8 — L47 SOURCED-OR-BLANK, THE MONTH. Measured 2026-08-03: seedFromBlueprint called
+     _mirrorPlanEnd at t=560ms with dob="" and it wrote 01/2079 into a user-visible field — the 01 is
+     _readDobMoYr's hard-coded DOB-absent fallback month. Month-survival then preserved that invented
+     01 forever. The month must come from a SOURCED identity, which after the Part 3 ruling means the
+     DOB month (08), the date being a cache recomputed from the canonical age and never read as an
+     input. It must NEVER be the fallback 01.
+     ⚠️ I first wrote this asserting the dossier's stored 03/2068 and that was MY error, not the
+     code's: asserting the stored date wins is the date-as-input model Part 3 retired.
+     Asserting the WHOLE date, not just the implied age — the age was already correct while the month
+     was still fabricated, so an age-only assertion passes happily on a laundered guess. */
+  const WANT_END = _pad2(DOB_MO) + '/' + (DOB_YR + 85);   // DOB-anchored: month 08, age 85 -> 08/2067
+  ok(r.planEnd === WANT_END, 'S8 plan-end month is SOURCED from the DOB, never the fallback 01 — want ' + WANT_END + ', got ' + r.planEnd);
+  ok(r.planEnd.indexOf('01/') !== 0, 'S8b plan-end does not carry the DOB-absent fallback month 01 — got ' + r.planEnd);
 
   console.log('-------------------------------------');
   console.log('OVERALL: ' + (fail === 0 ? 'GREEN' : 'RED') + '   (' + pass + ' pass / ' + fail + ' fail)');
