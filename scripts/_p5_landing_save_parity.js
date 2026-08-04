@@ -161,7 +161,18 @@ const F = (cond, msg) => { if (!cond) out.findings.push(msg); };
   F(c.schema === 'DatumFIBlueprintV1', 'C: saved slot1 is not the carried bp (schema=' + c.schema + ')');
   F(c.accounts === 1, 'C: saved slot1 lost the rooms (accounts=' + c.accounts + ')');
   F(c.archSlot1, 'C: archive slot1 not written');
-  F(/Blueprint saved\./.test(c.toast), 'C: success toast wrong (' + c.toast + ')');
+  /* #602 PROVENANCE — EXPECTATION UPDATED, NOT SILENCED. Prompt #607/#608, 2026-08-04.
+   * Was: /Blueprint saved\./ . That string was RETIRED deliberately, and the ruling PREDATES this
+   * failure: Blueprint.html:1978-1984 records that "Blueprint saved." was toasted UNCONDITIONALLY
+   * while the D1 write was still in flight, so every failure shape told the user their work was
+   * safe — "it is the string that lied". The replacement names the OUTCOME and the DESTINATION
+   * ("the destination is THE ARCHIVE, matching the picker's own title") and is spoken only by
+   * _report, on an OBSERVED write result. So the expectation was superseded, never wrong.
+   * NOT WEAKENED. The ^ anchor still excludes every failure the reporter can emit — "Not saved.
+   * Your session ended…", "Not saved. Your work is still on this page." and "Still saving. Do not
+   * close this tab." all fail this test, as does an absent/empty toast. It additionally pins the
+   * success MARK (✓) that the old assertion never checked. */
+  F(/^✓ Saved to /.test(c.toast), 'C: success toast wrong (' + c.toast + ')');
   F(c.pendingCleared, 'E: pending_save not cleared after save (double-save risk)');
   F(c.snapCleared, 'E: snapshot not cleared after save (double-save risk)');
   // D — SAVE-AS-NEW / NO-CLOBBER / D1 DUAL-WRITE (#278 (b))
