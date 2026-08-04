@@ -28,10 +28,17 @@ function mutate(a, b, label) {
   if (n !== 1) { console.error('anchor ' + label + ' matched ' + n + ', expected 1 — re-ground it. A mutation that cannot run proves nothing.'); process.exit(1); }
   src = src.replace(a, b); console.log('[' + label + '] applied');
 }
-if (PRIMFALL) mutate('                   : null;                             // Land, and every future value: SILENT',
-                     '                   : _RULE_F_COPY.occupied;            /* residence fallback restored by --primaryfallback */');
-if (NOLAND)   mutate("        var _fCopy = _fPurpose === ''                  ? _RULE_F_COPY.occupied",
-                     "        if (_fPurpose === 'Land') _fPurpose = '';   /* land suppression removed by --nolandsuppress */\n        var _fCopy = _fPurpose === ''                  ? _RULE_F_COPY.occupied");
+/* RE-GROUNDED 2026-08-04 (prompt #608). Both anchors quoted the ternary chain that §13.16 replaced
+   with the RULE_F_VOICE table lookup, and both went dead the moment studio.html changed. The gate
+   stayed GREEN on its clean run and mutate() correctly REFUSED to certify either red-first —
+   "a mutation that cannot run proves nothing" — which is the only reason this was caught rather than
+   shipped as a gate with no negative control. Re-grounded on the new resolution site. */
+if (PRIMFALL) mutate('        var _fCopy = _fSlot ? _RULE_F_COPY[_fSlot] : null;',
+                     '        var _fCopy = _fSlot ? _RULE_F_COPY[_fSlot] : _RULE_F_COPY.occupied;   /* residence fallback restored by --primaryfallback */',
+                     '--primaryfallback');
+if (NOLAND)   mutate('        var _fSlot = _ruleFSlot(_fPurpose);',
+                     "        if (_fPurpose === 'Land') _fPurpose = '';   /* land suppression removed by --nolandsuppress */\n        var _fSlot = _ruleFSlot(_fPurpose);",
+                     '--nolandsuppress');
 
 function ex(s, n) {
   const st = s.indexOf('function ' + n + '(');

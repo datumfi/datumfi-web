@@ -11036,6 +11036,52 @@
         if (s === 'OWNER_OCCUPIED') return _propOccupied(prop);
         return true;   // ANY and PURPOSE_VARIANT both FIRE; a variant differs in wording, not in whether.
     }
+    /* ── §13.16 · EVERY SILENCE MUST DECLARE WHY IT IS SILENT ─────────────────────────────────────
+     * RULE_SCOPE says WHO a rule is for. These two say, for the one PURPOSE_VARIANT rule, which
+     * purpose gets which voice — and which purposes are silent ON PURPOSE.
+     *
+     * 🔑 AN ABSENT SLOT IS TWO DIFFERENT FACTS. Silent BY DESIGN (Land: §11.6 suppresses E and F
+     * outright) and silent BY OMISSION (a purpose someone adds to the picker before anyone authors
+     * its voice) render IDENTICALLY — nothing. That is correct behaviour and it is also how a gap
+     * hides. So the deliberate ones are NAMED, and _gate_yard_13_16_f_silence.mjs asserts, in BOTH
+     * directions, that the picker's purpose list equals RULE_F_VOICE ∪ RULE_F_SILENT. A purpose
+     * added without either REDS AT BUILD TIME instead of going quiet on a user's screen.
+     *
+     * FALL SILENT, NEVER FALL BACK is unchanged — an unlisted purpose is still silent, because the
+     * residence string ASSERTS OCCUPANCY and a default leaning to it leans generous about who lives
+     * there. It is now silent AND FLAGGED, rather than silent and unnoticed.
+     *
+     * These are SLOT NAMES, not copy: the strings the user reads live in _RULE_F_COPY inside
+     * _yardIntelligence, because they interpolate live figures. The reason strings below are
+     * ENGINEERING NOTES that NEVER RENDER — they are not product voice and are not authored as such.
+     * LOAD-BEARING, not decorative: _ruleFSlot() is the only path to Rule F's copy, so deleting a
+     * mapping SILENCES that purpose in the product, exactly as deleting a RULE_SCOPE key kills a
+     * rule. The gate's --dropvoice red-first proves it.
+     *
+     * ⚠️ DECLARED AS A FUNCTION, NOT A `var`, AND THAT IS DELIBERATE. RULE_SCOPE is a var, and the
+     * seven gates that extract this closure each hardcode their own `var RULE_SCOPE = {…};` regex to
+     * lift it, because the extractor keys on `function X(`. Adding a second var here broke all seven
+     * at once — measured, not predicted. A table reached through a function is pulled by every
+     * existing resolver automatically. (The seven hardcoded lifts are themselves a hand-maintained
+     * list and are reported separately; this constant does not wait on that.) */
+    function _ruleFTables() {
+        return {
+            voice:  { '': 'occupied', 'Primary residence': 'occupied', 'Other': 'occupied',
+                      'Rental property': 'rental', 'Second home': 'second' },
+            silent: { 'Land': '§11.6 — E and F are both suppressed on Land; raw land has no housing burden to stress-test' }
+        };
+    }
+    function _ruleFSlot(purpose) {
+        var v = _ruleFTables().voice, p = purpose || '';
+        return Object.prototype.hasOwnProperty.call(v, p) ? v[p] : null;
+    }
+    /* Is this purpose ACCOUNTED FOR — either given a voice, or declared deliberately silent? The gate
+       asserts this over the live picker list; nothing in the render path branches on it, because a
+       user must never be told which of the two kinds of silence they are looking at. */
+    function _ruleFDeclared(purpose) {
+        var p = purpose || '';
+        return _ruleFSlot(p) !== null || Object.prototype.hasOwnProperty.call(_ruleFTables().silent, p);
+    }
     function _yardIntelligence(propId) {
         var prop = (state.accounts || []).find(function (a) { return a.id === propId; });
         if (!prop) return '';
@@ -11136,13 +11182,15 @@
             second: 'This second place takes ' + _fM(_fRealMo) + ' a month, and none of it is offset by anything — it is a want, funded from the same income as the primary home and the plan behind it. That is a legitimate thing to spend money on and this room will not argue with it. The one thing worth carrying forward: it does not get cheaper in retirement, it becomes a bigger share of a smaller income. If it is meant to survive the transition, the working years are when you shrink its balance or decide it is the thing you sell.'
             // Land — NO SLOT. §11.6 suppresses E and F entirely; land has no housing burden to stress.
         };
+        /* §13.16 — the purpose→voice mapping is RULE_F_VOICE, up beside RULE_SCOPE, not a ternary
+           chain here. A chain is a MAINTAINED DOCUMENT that only the render site can read; a constant
+           can also be read by the gate, which is what lets an undeclared purpose red at build time
+           instead of going quiet on screen. Behaviour is unchanged: blank / Primary residence / Other
+           take `occupied`, Rental and Second home take their own, and Land — plus every future value
+           — resolves to null and FALLS SILENT rather than falling back to the residence string. */
         var _fPurpose = (prop && prop.propPurpose) || '';
-        var _fCopy = _fPurpose === ''                  ? _RULE_F_COPY.occupied
-                   : _fPurpose === 'Primary residence' ? _RULE_F_COPY.occupied
-                   : _fPurpose === 'Other'             ? _RULE_F_COPY.occupied   // Other behaves as blank across this bank
-                   : _fPurpose === 'Rental property'   ? _RULE_F_COPY.rental
-                   : _fPurpose === 'Second home'       ? _RULE_F_COPY.second
-                   : null;                             // Land, and every future value: SILENT
+        var _fSlot = _ruleFSlot(_fPurpose);
+        var _fCopy = _fSlot ? _RULE_F_COPY[_fSlot] : null;
         /* A RENTAL WITH NO SOURCED RENT SAYS NOTHING — it does not borrow the residence string.
            AN UNSOURCED RENT IS NOT A RENT OF ZERO (L47). And a rental that covers itself has no
            affordability stress to report — Rule I already speaks to coverage — so F needs a POSITIVE
