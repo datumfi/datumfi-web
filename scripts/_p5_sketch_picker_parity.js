@@ -57,6 +57,45 @@ const armS1 = async (page, age) => page.evaluate((a) => {
   set('slider-age', a); set('slider-activation', 66); set('slider-datum', 60);
 }, age);
 
+/* ── PRESENCE LAW, APPLIED TO THE DOM (repaired 2026-08-04, prompts #607/#608) ────────────────────
+ * #sketch-save-sb-pop composes ASYNCHRONOUSLY: _skRenderSlots paints a "Loading…" placeholder, then
+ * _skListSketches().then(...) fills the overwrite list AND — only there, once the archive confirms
+ * the held id is still live — inserts the "Save progress" quick-save row at index 0. A gate that
+ * selects before that callback lands is choosing from a popover that has not finished composing,
+ * and neither its pass nor its fail proves anything. Settle first, every time. */
+const pickerSettled = (page) => page.waitForFunction(() => {
+  var pop = document.getElementById('sketch-save-sb-pop');
+  if (!pop) return false;
+  var list = pop.querySelector('.sk-ovlist');
+  if (!list || /Loading…/.test(list.textContent)) return false;
+  return list.querySelectorAll('.sk-ovrow').length > 0 || /No saved sketches yet/.test(list.textContent);
+}, null, { timeout: 8000 });
+
+/* ── SELECT BY LABEL, NEVER BY POSITION ───────────────────────────────────────────────────────────
+ * The popover's COMPOSITION changes with state, so an index means different things at different
+ * moments. buttons[0] was "＋ Save as a new sketch" on a fresh book and "Save progress" the instant
+ * one sketch existed; buttons[1] meant "the second of four slots" in a chooser #310 retired, and on
+ * a one-sketch book it is simply the first listed sketch. Both of those mis-addressings were live in
+ * this gate. A miss is pushed as a FINDING, not swallowed: a click that did not land must red, and
+ * an AMBIGUOUS match must red too — two buttons answering one description is not a selection. */
+const clickByLabel = async (page, rx, what) => {
+  const r = await page.evaluate((srcRx) => {
+    var re = new RegExp(srcRx);
+    var pop = document.getElementById('sketch-save-sb-pop');
+    if (!pop) return { ok: false, why: 'popover absent', labels: [] };
+    var btns = Array.prototype.slice.call(pop.querySelectorAll('button'));
+    var labels = btns.map(function (b) { return b.textContent; });
+    var hit = btns.filter(function (b) { return re.test(b.textContent); });
+    if (hit.length !== 1) return { ok: false, why: hit.length ? 'AMBIGUOUS — ' + hit.length + ' buttons matched' : 'no button matched', labels: labels };
+    hit[0].click();
+    return { ok: true, labels: labels };
+  }, rx.source);
+  if (!r.ok) out.findings.push('SELECTOR: could not click ' + what + ' — ' + r.why + ' (buttons: ' + JSON.stringify(r.labels) + ')');
+  return r;
+};
+/* saved_at of a sketch addressed by its OWN id, not by the slot it happens to occupy. */
+const savedAtOf = (book, id) => { if (!book || !id) return null; for (var n = 1; n <= 4; n++) { var s = book['slot_' + n]; if (s && s.sketch_id === id) return s.saved_at; } return null; };
+
 (async () => {
   await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
   const browser = await chromium.launch();
@@ -129,7 +168,8 @@ const armS1 = async (page, age) => page.evaluate((a) => {
   // exists: #310 killed the 4-cap and the picker became SAVE-AS-NEW (button[0], "＋ Save as a new
   // sketch") + an OVERWRITE list of existing sketches (.sk-ovrow). Reaching [1] on a fresh book
   // threw on undefined, and the crash blinded every check below it.
-  await page.evaluate(() => { document.querySelectorAll('#sketch-save-sb-pop button')[0].click(); });   // save-as-new
+  await pickerSettled(page);
+  await clickByLabel(page, /Save as a new sketch/, 'save-as-new (first save)');
   await page.waitForTimeout(1500);
   out.afterNavSave = await page.evaluate(() => {
     var b = null; try { b = JSON.parse(localStorage.getItem('datumfi_sketchbook_v1')); } catch (e) {}
@@ -151,8 +191,11 @@ const armS1 = async (page, age) => page.evaluate((a) => {
   // reuse the first. This is what --reuseid inverts, and it is the assertion that makes this gate
   // worth having under the post-#310 model.
   await page.evaluate(() => { if (!document.getElementById('sketch-save-sb-pop')) window.sketchSaveCurrent(); });
-  await page.waitForTimeout(200);
-  await page.evaluate(() => { document.querySelectorAll('#sketch-save-sb-pop button')[0].click(); });
+  /* THE SELECTOR THAT WAS WRONG. One sketch now exists, so _skQuickSaveRow has inserted "Save
+     progress" ahead of it and buttons[0] is no longer save-as-new — the old index clicked quick-save,
+     overwrote the FIRST sketch, and the "distinct id" assertion then read a book of one. */
+  await pickerSettled(page);
+  await clickByLabel(page, /Save as a new sketch/, 'save-as-new (second save)');
   await page.waitForTimeout(1500);
   out.secondNew = await page.evaluate(() => {
     var b = null; try { b = JSON.parse(localStorage.getItem('datumfi_sketchbook_v1')); } catch (e) {}
@@ -171,12 +214,25 @@ const armS1 = async (page, age) => page.evaluate((a) => {
   await page.goto(base + '/sketch.html', { waitUntil: 'load' });
   await page.waitForTimeout(2500);
   const bookBefore = await readBook(page);
-  const savedAtBefore = bookBefore && bookBefore.slot_2 && bookBefore.slot_2.saved_at;
   await armS1(page, 47);
   await page.waitForTimeout(300);
   await page.evaluate(() => window.sketchSaveCurrent());
-  await page.waitForTimeout(120);
-  await page.evaluate(() => { document.querySelectorAll('#sketch-save-sb-pop button')[1].click(); }); // filled slot 2 -> confirm view
+  await pickerSettled(page);
+  /* ADDRESS THE ROW BY ITS OWN IDENTITY. The old leg read slot_2.saved_at while clicking whatever sat
+     at buttons[1]. On a one-sketch book slot_2 is undefined, so `savedAtBefore && …` was FALSE
+     VACUOUSLY — the assertion could not have failed for the right reason, and could not have passed
+     for it either. Take the id the row itself points at, prove that sketch exists in the book BEFORE
+     comparing (an exclusion assertion must be preceded by a presence assertion), then compare THAT
+     sketch's saved_at rather than a slot's. */
+  const target = await page.evaluate(() => {
+    var r = document.querySelector('#sketch-save-sb-pop .sk-ovrow');
+    return r ? { id: r.getAttribute('data-overwrite-id'), label: r.textContent } : null;
+  });
+  out.overwriteTarget = target;
+  F(!!(target && target.id), 'd: PRESENCE — the picker offered NO overwrite row to click (nothing to confirm against)');
+  const savedAtBefore = savedAtOf(bookBefore, target && target.id);
+  F(!!savedAtBefore, 'd: PRESENCE — the row\'s sketch (' + (target && target.id) + ') is not in the book before the click; the no-write check would be vacuous');
+  await page.evaluate((id) => { var r = document.querySelector('#sketch-save-sb-pop .sk-ovrow[data-overwrite-id="' + id + '"]'); if (r) r.click(); }, target && target.id);
   await page.waitForTimeout(120);
   out.overwrite = await page.evaluate(() => {
     var pop = document.getElementById('sketch-save-sb-pop');
@@ -185,10 +241,13 @@ const armS1 = async (page, age) => page.evaluate((a) => {
     return { txt: txt, btns: btns };
   });
   const bookAfterConfirm = await readBook(page);
-  out.overwrite.savedAtUnchanged = !!(savedAtBefore && bookAfterConfirm && bookAfterConfirm.slot_2 && bookAfterConfirm.slot_2.saved_at === savedAtBefore);
+  out.overwrite.savedAtBefore = savedAtBefore;
+  out.overwrite.savedAtAfter = savedAtOf(bookAfterConfirm, target && target.id);
+  out.overwrite.savedAtUnchanged = !!(savedAtBefore && out.overwrite.savedAtAfter === savedAtBefore);
   out.overwrite.stillOnSketch = await page.evaluate(() => location.pathname.indexOf('sketch.html') >= 0);
-  // cancel -> back to slot list (no write)
-  await page.evaluate(() => { var p = document.getElementById('sketch-save-sb-pop'); if (p) p.querySelectorAll('button')[1].click(); });
+  // cancel -> back to the save list (no write). By LABEL: the confirm view is [Overwrite, Cancel],
+  // and clicking index 1 was right only by luck — it is the destructive button that sits at index 0.
+  await clickByLabel(page, /^Cancel$/, 'Cancel (overwrite confirm)');
   await page.waitForTimeout(100);
   out.overwrite.backToList = await page.evaluate(() => { var p = document.getElementById('sketch-save-sb-pop'); return !!(p && /Save to Sketchbook/.test(p.textContent)); });
 
