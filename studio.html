@@ -10987,6 +10987,16 @@
     }
     // §3.5 — the retirement-lens intelligence engine. Trait-keyed, composed (emit every rule that fires), zero
     // hard-coded figures; silence is nuance → the calm line (Z) when nothing lights up. Verbatim R70-R77.
+    /* EVERY PIECE OF ADVICE MUST DECLARE WHO IT IS FOR (house law, 2026-08-03). Advice with no stated
+       audience is advice aimed at everyone, and this product has users it must not aim at. This is the
+       audience test for the OWNER-OCCUPANCY class: true only where the user actually lives.
+       Blank is occupied by ruling — #591 / Property §19.2 treat blank as primary for math and
+       placement, and only the NAME diverges. Written as "not one of the away purposes" rather than
+       "=== Primary residence" so a future purpose value cannot silently inherit occupancy. */
+    function _ruleEOccupies(prop) {
+        var p = prop && prop.propPurpose;
+        return !p || p === 'Primary residence';
+    }
     function _yardIntelligence(propId) {
         var prop = (state.accounts || []).find(function (a) { return a.id === propId; });
         if (!prop) return '';
@@ -11022,8 +11032,20 @@
         if (h && (helocDrawn || helocAvail)) {
             beats.push('A home-equity line (a HELOC) against the house is a tool with two very different edges. Used to reinvest IN the home — a kitchen, a roof, an addition that raises the property’s value — it can lift the asset side of your estate while the balance stays modest. Used to fund everyday spending, it quietly converts home equity into a monthly bill that follows you toward retirement. The same home-equity line, opposite effects. If you’re weighing a remodel, this is the cheaper-than-most way to fund it; if you’re eyeing retirement, an undrawn home-equity line is a standby safety valve you never have to use.');
         }
-        // RULE E — equity as a retirement asset
-        if (equityPct != null && equityPct >= 0.5 && yTR != null && yTR <= 15) {
+        /* RULE E — equity as a retirement asset · OWNER-OCCUPANCY ONLY (Yard §13.1, ruled 2026-08-03)
+         * Rule E offers a REVERSE MORTGAGE, which requires the owner to LIVE THERE, and calls the
+         * property "a place to live". Until today it fired on equityPct >= 0.5 && yTR <= 15 and nothing
+         * else — propPurpose was consulted ZERO times anywhere in A-H — and _yardIntelligence runs for
+         * ANY property, so a rental or second home clearing those two numeric bars was offered a
+         * product it cannot have. A NUMBER SHOWN TO SOMEONE WHO CANNOT HAVE IT.
+         * SILENT on Second home / Rental / Land / Other — NOT reworded, NOT softened, NOT degraded to a
+         * downsizing-only variant: there is no honest version of this beat for a home the owner does
+         * not occupy. The "place to live" phrasing is a second defect in the same string and is guarded
+         * by the SAME condition rather than split out, so half of it cannot keep firing on a rental.
+         * BLANK counts as occupied: #591 and Property §19.2 both treat blank as primary for math and
+         * placement. The NAME diverges (THE GROUNDS); the BEHAVIOUR does not.
+         * Pinned by _gate_yard_13_5_ruleE_scope.mjs (LEG2 is the red-first). */
+        if (_ruleEOccupies(prop) && equityPct != null && equityPct >= 0.5 && yTR != null && yTR <= 15) {
             beats.push('You’re now more than halfway to owning this outright, and that equity is quietly becoming a retirement asset in its own right. Down the road it can be tapped without selling stocks in a down market — by downsizing, or with a reverse mortgage as a last-resort income floor. You don’t have to plan that today; just know the house is doing double duty — a place to live AND a reserve that isn’t tied to the market’s mood.');
         }
         // RULE F — affordability into retirement
