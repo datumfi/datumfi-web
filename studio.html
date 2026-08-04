@@ -11114,19 +11114,40 @@
          * renders as NOTHING — inventing wording is not the wirer's to do. So F is currently silent on
          * Second home / Rental / Land and fires unchanged on Primary / blank / Other.
          * This is why F stays declared PURPOSE_VARIANT rather than OWNER_OCCUPIED: the variant is
-         * AUTHORED-PENDING, not ruled out. Fill _RULE_F_COPY below when the Architect supplies it and
-         * F starts firing on those purposes with no other change. */
+         * PURPOSE_VARIANT IS ENFORCEABLE, NOT DECLARATIVE (Yard §13.9, authored 2026-08-05). Every
+         * purpose that speaks has its OWN string; none reuses the residence voice.
+         * 🔑 SILENT IS THE DEFAULT, NEVER THE RESIDENCE STRING. A purpose with no slot makes F fall
+         * silent — it does not fall back to `occupied`. The primary string ASSERTS OCCUPANCY, so a
+         * default leaning toward the residence voice is a default leaning generous about who lives
+         * there. Same instinct as _propOccupied being a whitelist of the excluded: a purpose value
+         * added tomorrow is silent until someone authors for it, never wrongly chatty.
+         * realMonthly and $() belong to the modal renderer further down, NOT to this function —
+         * realAnnual is in scope here, so derive from it and format locally. */
+        var _fRealMo = realAnnual / 12;
+        var _fM = function (v) { return '$' + Math.round(v || 0).toLocaleString('en-US'); };
+        var _fRent = _yardRentMonthly(prop);
+        var _fShortfallMo = Math.max(0, _fRealMo - (_fRent.sourced ? _fRent.monthly : 0));
         var _RULE_F_COPY = {
+            // Primary residence · blank · Other — today's string, unchanged.
             occupied: 'Housing is taking a meaningful slice of today’s income — and today’s income is the high-water mark. The question worth sitting with: when the salary becomes a withdrawal, does this same real monthly still fit? If the answer’s tight, the working years are the time to either shrink the balance or plan the downsize — options that get harder to exercise once the paychecks stop.',
-            rental: null,      // AUTHORED-PENDING — Yard §13.7a. Must not say "housing" or "today's income".
-            second: null,      // AUTHORED-PENDING — Yard §13.7a.
-            land: null         // SUPPRESSED by §11.6, deliberately never authored.
+            // Rental — the burden is the SHORTFALL, never the full carry (§11.6 / §13.9).
+            rental: 'After the rent comes in, this property still takes ' + _fM(_fShortfallMo) + ' a month out of your own income — and today’s income is the high-water mark. The question worth sitting with: when the salary becomes a withdrawal, does that gap still fit? A shortfall a paycheck absorbs quietly is a very different thing once a portfolio is paying it, because the portfolio has to cover it in the down years too. The working years are when the options are widest — raise the rent, shrink the balance, or decide this is a property you sell before you retire rather than one you carry into it.',
+            // Second home — nothing offsets it by definition; the beat is duplication, not shortfall.
+            second: 'This second place takes ' + _fM(_fRealMo) + ' a month, and none of it is offset by anything — it is a want, funded from the same income as the primary home and the plan behind it. That is a legitimate thing to spend money on and this room will not argue with it. The one thing worth carrying forward: it does not get cheaper in retirement, it becomes a bigger share of a smaller income. If it is meant to survive the transition, the working years are when you shrink its balance or decide it is the thing you sell.'
+            // Land — NO SLOT. §11.6 suppresses E and F entirely; land has no housing burden to stress.
         };
         var _fPurpose = (prop && prop.propPurpose) || '';
-        var _fCopy = _fPurpose === 'Rental property' ? _RULE_F_COPY.rental
-                   : _fPurpose === 'Second home'     ? _RULE_F_COPY.second
-                   : _fPurpose === 'Land'            ? _RULE_F_COPY.land
-                   : _RULE_F_COPY.occupied;          // Primary residence, blank and Other keep today's string
+        var _fCopy = _fPurpose === ''                  ? _RULE_F_COPY.occupied
+                   : _fPurpose === 'Primary residence' ? _RULE_F_COPY.occupied
+                   : _fPurpose === 'Other'             ? _RULE_F_COPY.occupied   // Other behaves as blank across this bank
+                   : _fPurpose === 'Rental property'   ? _RULE_F_COPY.rental
+                   : _fPurpose === 'Second home'       ? _RULE_F_COPY.second
+                   : null;                             // Land, and every future value: SILENT
+        /* A RENTAL WITH NO SOURCED RENT SAYS NOTHING — it does not borrow the residence string.
+           AN UNSOURCED RENT IS NOT A RENT OF ZERO (L47). And a rental that covers itself has no
+           affordability stress to report — Rule I already speaks to coverage — so F needs a POSITIVE
+           shortfall before it fires. */
+        if (_fPurpose === 'Rental property' && (!_fRent.sourced || _fShortfallMo <= 0)) _fCopy = null;
         if (_ruleInScope('F', prop) && _fCopy && burden != null && burden > 0.28) {
             beats.push(_fCopy);   // the table above is the source; a copy table nothing reads is decoration
         }
