@@ -10952,6 +10952,20 @@
     function _yardLiens(propId) { return (state.accounts || []).filter(function (a) { var b = getBaseType(a.baseId); return a.linkedAssetId === propId && b && b.taxCode === 'debt'; }); }
     function _yardMortgage(propId) { var L = _yardLiens(propId); for (var i = 0; i < L.length; i++) if (String((getBaseType(L[i].baseId) || {}).id).indexOf('mortgage') === 0) return L[i]; return null; }
     function _yardHeloc(propId) { var L = _yardLiens(propId); for (var i = 0; i < L.length; i++) if (String((getBaseType(L[i].baseId) || {}).id).indexOf('heloc') === 0) return L[i]; return null; }
+    /* ── A NAMED ABSENT FIELD, NOT AN ASSUMED ZERO (Yard §13.7b, ruled 2026-08-04) ────────────────
+     * rentMonthly is AUTHORED in Property §18 and NOT YET WIRED. Rule F's burden test is correct today
+     * only because the field does not exist — the day 592a lands it, F overstates a landlord's housing
+     * burden by the entire rent, and nobody will have touched Rule F.
+     * 🔑 A RULE THAT IS CORRECT ONLY BECAUSE A FIELD DOES NOT EXIST YET IS A DEFECT WITH A START DATE.
+     * So the absence is NAMED rather than assumed: this returns {monthly, sourced} and every consumer
+     * branches on `sourced`. A named absence can be grepped for and gated on; an inlined `|| 0` cannot.
+     * _gate_yard_13_8_rentforward.mjs arms itself off this seam and PRINTS that it ran unarmed. */
+    function _yardRentMonthly(prop) {
+        var raw = prop ? prop.rentMonthly : null;                 // Property §18 field — not yet authored into the UI
+        if (raw === undefined || raw === null || String(raw).trim() === '') return { monthly: 0, sourced: false };
+        var n = _num(raw);
+        return isFinite(n) && n > 0 ? { monthly: n, sourced: true } : { monthly: 0, sourced: false };
+    }
     function _yardRealMonthly(propId) {
         var prop = (state.accounts || []).find(function (a) { return a.id === propId; });
         if (!prop) return 0;
@@ -11032,7 +11046,15 @@
         var mBal = m ? _num(m.value) : 0, helocDrawn = !!(h && _num(h.value) > 0);
         var helocAvail = !!(h && (_num(h.helocCreditLimit) - _num(h.value)) > 0);
         var income = _yardHouseholdIncome(), realAnnual = _yardRealMonthly(propId) * 12;
-        var burden = income > 0 ? (realAnnual / income) : null;
+        /* §11.6 / §13.7b — ON A RENTAL THE BURDEN TEST RUNS ON THE SHORTFALL, NOT THE FULL CARRY, or
+         * it overstates the pressure. Rent is subtracted the moment it is SOURCED; while the field is
+         * absent the offset is an explicit, named zero and the arithmetic is byte-identical to today.
+         * This is the whole fix for the start-dated defect: F already consumes rent, so the day 592a
+         * authors rentMonthly nothing here has to change and nothing can be forgotten. */
+        var _rent = _yardRentMonthly(prop);
+        var _rentAnnualOffset = _rent.sourced ? _rent.monthly * 12 : 0;
+        var _burdenAnnual = Math.max(0, realAnnual - _rentAnnualOffset);
+        var burden = income > 0 ? (_burdenAnnual / income) : null;
         var mAPR = m ? parseFloat(m.intRate) : NaN, mVar = !!(m && m.rateType === 'Variable'), helocVar = !!(h && h.rateType === 'Variable' && helocDrawn);
         // RULE A — the mortgage IS a negative bond (any mortgage linked)
         if (m) {
@@ -11077,9 +11099,36 @@
         if (_ruleInScope('E', prop) && equityPct != null && equityPct >= 0.5 && yTR != null && yTR <= 15) {
             beats.push('You’re now more than halfway to owning this outright, and that equity is quietly becoming a retirement asset in its own right. Down the road it can be tapped without selling stocks in a down market — by downsizing, or with a reverse mortgage as a last-resort income floor. You don’t have to plan that today; just know the house is doing double duty — a place to live AND a reserve that isn’t tied to the market’s mood.');
         }
-        // RULE F — affordability into retirement
-        if (burden != null && burden > 0.28) {
-            beats.push('Housing is taking a meaningful slice of today’s income — and today’s income is the high-water mark. The question worth sitting with: when the salary becomes a withdrawal, does this same real monthly still fit? If the answer’s tight, the working years are the time to either shrink the balance or plan the downsize — options that get harder to exercise once the paychecks stop.');
+        // RULE F — affordability into retirement  [RULE_SCOPE: PURPOSE_VARIANT]
+        /* The one-line marker above is the census anchor _gate_yard_rule_scope_keys enumerates — the
+         * SECOND time this arc that wrapping a rule header in a block comment hid it from the audit.
+         * Keep the `// RULE X —` form.
+         * §11.6 SUPPRESSES F ENTIRELY ON LAND ("SUPPRESS on Land: Rules E and F entirely") — land has
+         * no housing burden to stress-test.
+         * §13.7a: on a property the user does not live in, F must not say "Housing is taking a
+         * meaningful slice of today's income". The shipped string is occupancy-flavoured throughout —
+         * "housing", "today's income", "plan the downsize" — so there is no clause to split out, and
+         * per the Rule E precedent (§13.2) the string is not split so half can keep firing.
+         * ⚠️ NO RENTAL / SECOND-HOME VARIANT STRING IS AUTHORED. Yard §11.6 and §13.7a both state the
+         * CONSTRAINT and neither supplies replacement copy. L47 SOURCED-OR-BLANK: an unauthored string
+         * renders as NOTHING — inventing wording is not the wirer's to do. So F is currently silent on
+         * Second home / Rental / Land and fires unchanged on Primary / blank / Other.
+         * This is why F stays declared PURPOSE_VARIANT rather than OWNER_OCCUPIED: the variant is
+         * AUTHORED-PENDING, not ruled out. Fill _RULE_F_COPY below when the Architect supplies it and
+         * F starts firing on those purposes with no other change. */
+        var _RULE_F_COPY = {
+            occupied: 'Housing is taking a meaningful slice of today’s income — and today’s income is the high-water mark. The question worth sitting with: when the salary becomes a withdrawal, does this same real monthly still fit? If the answer’s tight, the working years are the time to either shrink the balance or plan the downsize — options that get harder to exercise once the paychecks stop.',
+            rental: null,      // AUTHORED-PENDING — Yard §13.7a. Must not say "housing" or "today's income".
+            second: null,      // AUTHORED-PENDING — Yard §13.7a.
+            land: null         // SUPPRESSED by §11.6, deliberately never authored.
+        };
+        var _fPurpose = (prop && prop.propPurpose) || '';
+        var _fCopy = _fPurpose === 'Rental property' ? _RULE_F_COPY.rental
+                   : _fPurpose === 'Second home'     ? _RULE_F_COPY.second
+                   : _fPurpose === 'Land'            ? _RULE_F_COPY.land
+                   : _RULE_F_COPY.occupied;          // Primary residence, blank and Other keep today's string
+        if (_ruleInScope('F', prop) && _fCopy && burden != null && burden > 0.28) {
+            beats.push(_fCopy);   // the table above is the source; a copy table nothing reads is decoration
         }
         // RULE G — all-in leverage (BOTH mortgage AND heloc drawn)
         if (m && mBal > 0 && helocDrawn) {
