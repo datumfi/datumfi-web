@@ -40,12 +40,29 @@ if(out===null){ console.error('❌ AUTO-RESOLVER EXHAUSTED after 40 passes — l
   console.error('   THE GATE ASSERTED NOTHING. THIS IS AN ABSENT GATE, NOT A RED ONE.'); process.exit(1); }
 if(_auto.length) console.log('[auto-resolved from studio.html] '+_auto.join(', '));
 const ruleG=[...out.matchAll(/<div[^>]*>([\s\S]*?)<\/div>/g)].map(x=>x[1]).find(t=>t.includes('Two liens ride on this house')) || '';
-const checks=[]; const need=(l,c)=>checks.push([l,!!c]);
+/* The third slot is the MUTATION TAG: which red-first this assertion is the target of. It is DECLARED
+   here, at the assertion, never inferred from the label's prose downstream — a text predicate over
+   labels can be satisfied by accident (measured: a throwaway leg named "...nothing to do with jargon"
+   matched /jargon/ and certified a masked red). Declare the audience, do not guess it from wording. */
+const checks=[]; const need=(l,c,tag)=>checks.push([l,!!c,tag||null]);
 need('Rule G beat renders (both liens drawn)', ruleG.includes('Two liens ride on this house'));
-need('Rule G teaches "your mortgage and your home-equity line (a HELOC)"', ruleG.includes('your mortgage and your home-equity line (a HELOC) move'));
-need('Rule G "(usually the home-equity line)"', ruleG.includes('(usually the home-equity line)'));
-need('Rule G: NO bare "the line" jargon', !ruleG.includes('the line'));
+need('Rule G teaches "your mortgage and your home-equity line (a HELOC)"', ruleG.includes('your mortgage and your home-equity line (a HELOC) move'), 'dejargon');
+need('Rule G "(usually the home-equity line)"', ruleG.includes('(usually the home-equity line)'), 'dejargon');
+need('Rule G: NO bare "the line" jargon', !ruleG.includes('the line'), 'dejargon');
 let pass=0; for(const[l,ok]of checks){console.log((ok?'✅':'⛔')+' '+l); if(ok)pass++;}
 const allGreen=pass===checks.length; console.log('\n'+pass+'/'+checks.length+' green'+(RED?'  [--redfirst]':''));
-if(RED){ if(allGreen){console.error('❌ RED-FIRST FAILED'); process.exit(1);} console.log('✅ RED-FIRST OK'); process.exit(0);}
+/* §13.17 — A RED-FIRST PROVES NOTHING UNLESS IT PROVES WHICH ASSERTION FAILED.
+   The inversion guard alone (allGreen -> exit 1) catches a mutation that matched nothing ONLY while
+   every other leg is green. The moment any unrelated leg reds, allGreen is false and the red-first
+   certifies itself on somebody else's failure -- a green wearing a red badge, and the same disguise
+   as the three absent gates this suite just recovered. So name the legs the mutation TARGETS and
+   require THOSE to be the ones that fell. Same shape as _p5_sketch_picker_parity's /REUSED an id/. */
+if(RED){
+  const red=checks.filter(([,ok])=>!ok).map(([l])=>l);
+  const onTarget=checks.filter(([,ok,tag])=>!ok&&tag==='dejargon').map(([l])=>l);
+  if(allGreen){console.error('❌ RED-FIRST FAILED — the de-jargon mutation left every assertion green. Its anchor is dead.'); process.exit(1);}
+  if(!onTarget.length){console.error('❌ RED-FIRST MASKED — the gate went red, but NOT on a de-jargon assertion.');
+    console.error('   The mutation may never have landed; this red belongs to something else.');
+    console.error('   red legs: '+red.join(' | ')); process.exit(1);}
+  console.log('✅ RED-FIRST OK — bit on '+onTarget.length+' de-jargon assertion(s): '+onTarget.join(' | ')); process.exit(0);}
 if(!allGreen){console.error('❌ GATE FAILED'); process.exit(1);} console.log('✅ GATE GREEN');
