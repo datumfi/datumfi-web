@@ -64,7 +64,7 @@ const need = (l, c) => checks.push([l, !!c]);
 // ── Surface 4: the Yard engine (Rule B suppressed, no "273 years") ──
 {
   const names = ['_num', '_groundsLinkedDebt', '_yardLiens', '_yardMortgage', '_yardHeloc', '_yardRealMonthly', '_yardNetEquity', '_yardHouseholdIncome', '_yardYearsToRetire', 'calculateTotalPmt', 'payoffMonths', '_retireInfo', '_targetPayment', '_payoffYearOf', '_yardIntelligence'];
-  const gbtY = (b) => { const s = String(b); return s.indexOf('heloc') === 0 ? { id: 'heloc_x', taxCode: 'debt', title: 'HELOC' } : s.indexOf('mortgage') === 0 ? { id: 'mortgage_x', taxCode: 'debt', title: 'Mortgage' } : { id: 'property_x', taxCode: 'realEstate', title: 'Real Estate' }; };
+  const gbtY = (b) => { const s = String(b); return s.indexOf('heloc') === 0 ? { id: 'heloc_x', taxCode: 'debt', title: 'HELOC' } : s.indexOf('mortgage') === 0 ? { id: 'mortgage_x', taxCode: 'debt', title: 'Mortgage' } : { id: 'property_x', taxCode: 'physical', title: 'Real Estate' }; };
   const doc = { getElementById: (id) => id === 'pri-dob' ? { value: '01/01/1974' } : id === 'target-ret' ? { value: '03 / 2035' } : { value: '', checked: false } };
   const acct = [{ id: 'p', baseId: 'property_a', value: 200000 }, { ...glMort, id: 'm', linkedAssetId: 'p' }];
   /* RULE_SCOPE is a `var`, not a function, so ex() cannot reach it — and _ruleInScope reads it. Lift the

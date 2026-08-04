@@ -14,7 +14,7 @@ const _scopeLine=(src.match(/var RULE_SCOPE = \{[^}]*\};/)||[])[0];
 if(!_scopeLine){ console.error('RULE_SCOPE not found in studio.html — cannot run.'); process.exit(1); }
 let body=_scopeLine+'\n'+names.map(n=>ex(src,n)).join('\n');
 if(RED) body=body.replace('your mortgage and your home-equity line (a HELOC) move', 'the mortgage and the line move').replace('(usually the home-equity line)', '(usually the line)');
-const getBaseType=(baseId)=>{const s=String(baseId); if(s.indexOf('heloc')===0)return{id:'heloc_x',taxCode:'debt',title:'HELOC'}; if(s.indexOf('mortgage')===0)return{id:'mortgage_x',taxCode:'debt',title:'Mortgage'}; return{id:'property_x',taxCode:'realEstate',title:'Real Estate'};};
+const getBaseType=(baseId)=>{const s=String(baseId); if(s.indexOf('heloc')===0)return{id:'heloc_x',taxCode:'debt',title:'HELOC'}; if(s.indexOf('mortgage')===0)return{id:'mortgage_x',taxCode:'debt',title:'Mortgage'}; return{id:'property_x',taxCode:'physical',title:'Real Estate'};};
 const doc={getElementById:()=>({value:'',checked:false})};
 const ACCTS=[
   {id:'p',baseId:'property_a',value:500000},

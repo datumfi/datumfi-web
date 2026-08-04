@@ -35,7 +35,7 @@ const gbt = (baseId) => {
   const id = String(baseId);
   if (id.indexOf('heloc') === 0) return { id: 'heloc_x', taxCode: 'debt', title: 'HELOC' };
   if (id.indexOf('mortgage') === 0) return { id: 'mortgage_x', taxCode: 'debt', title: 'Mortgage' };
-  return { id: 'property_x', taxCode: 'realEstate', title: 'Real Estate' };
+  return { id: 'property_x', taxCode: 'physical', title: 'Real Estate' };
 };
 const build = (state) => new Function('getBaseType', 'state', body + '\nreturn _yardDebtPieHTML;')(gbt, state);
 

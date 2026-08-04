@@ -14,7 +14,7 @@ const _scopeLine=(src.match(/var RULE_SCOPE = \{[^}]*\};/)||[])[0];
 if(!_scopeLine){ console.error('RULE_SCOPE not found in studio.html — cannot run.'); process.exit(1); }
 let body=_scopeLine+'\n'+names.map(n=>ex(src,n)).join('\n');
 if(RED) body=body.replace('A home-equity line (a HELOC) against','A line against').replace('The same home-equity line','The same line').replace('an undrawn home-equity line','an undrawn line');
-const getBaseType=(baseId)=>{const s=String(baseId);if(s.indexOf('heloc')===0)return{id:'heloc_x',taxCode:'debt',title:'HELOC'};if(s.indexOf('mortgage')===0)return{id:'mortgage_x',taxCode:'debt',title:'Mortgage'};return{id:'property_x',taxCode:'realEstate',title:'Real Estate'};};
+const getBaseType=(baseId)=>{const s=String(baseId);if(s.indexOf('heloc')===0)return{id:'heloc_x',taxCode:'debt',title:'HELOC'};if(s.indexOf('mortgage')===0)return{id:'mortgage_x',taxCode:'debt',title:'Mortgage'};return{id:'property_x',taxCode:'physical',title:'Real Estate'};};
 const ACCTS=[{id:'p',baseId:'property_a',value:500000},{id:'h',baseId:'heloc_a',linkedAssetId:'p',value:20000,intRate:7,helocCreditLimit:50000,helocPhase:'Draw',minPmt:120}];
 const mk=()=>new Function('getBaseType','document','window','state','_retireOverride','calcCarryTotal',body+'\nreturn _yardIntelligence;')(getBaseType,{getElementById:()=>({value:'',checked:false})},{parseAgeFromDob:()=>null},{accounts:ACCTS},null,()=>6000);
 /* AUTO-RESOLVE — the hand-listed callee list above ROTTED the moment studio.html gained

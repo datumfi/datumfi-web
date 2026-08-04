@@ -28,7 +28,7 @@ let body=_scopeLine+'\n'+names.map(n=>ex(src,n)).join('\n');
    BELOW the fixtures and renders a real property. */
 const _auto=[];
 if(RED) body=body.replace('if ((_mLate || _hLate) && _liensH >= 1) {','if (false && (_mLate || _hLate) && _liensH >= 1) {');
-const getBaseType=(baseId)=>{const s=String(baseId); if(s.indexOf('heloc')===0)return{id:'heloc_x',taxCode:'debt',title:'HELOC'}; if(s.indexOf('mortgage')===0)return{id:'mortgage_x',taxCode:'debt',title:'Mortgage'}; return{id:'property_x',taxCode:'realEstate',title:'Real Estate'};};
+const getBaseType=(baseId)=>{const s=String(baseId); if(s.indexOf('heloc')===0)return{id:'heloc_x',taxCode:'debt',title:'HELOC'}; if(s.indexOf('mortgage')===0)return{id:'mortgage_x',taxCode:'debt',title:'Mortgage'}; return{id:'property_x',taxCode:'physical',title:'Real Estate'};};
 const doc={getElementById:(id)=> id==='pri-salary'?{value:'200000'}:(id==='co-arch-toggle'?{checked:false}:{value:''})};
 const win={parseAgeFromDob:()=>null};
 const P={id:'p',baseId:'property_a',value:500000};
