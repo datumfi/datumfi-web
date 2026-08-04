@@ -38,10 +38,10 @@ if (RED) {
      DECLARATION, and replacing that yields `function true {` and a SyntaxError. It appeared to work
      only because the extractor skips that name on failure and the stripped call never needs it: a
      mutation passing for the wrong reason. */
-  const A = 'if (_ruleEOccupies(prop) && ';
+  const A = "if (_ruleInScope('E', prop) && ";
   const n = src.split(A).length - 1;
   if (n !== 1) { console.error('--redfirst anchor matched ' + n + ' times, expected 1 — re-ground it. A mutation that cannot run proves nothing.'); process.exit(1); }
-  src = src.split(A).join('if (true && ');
+  src = src.split(A).join("if (true && ");
   console.log('[redfirst] purpose guard stripped (' + n + ' site' + (n === 1 ? '' : 's') + ')');
 }
 
@@ -57,10 +57,15 @@ function ex(s, n) {
 }
 const names = ['_num', '_groundsLinkedDebt', '_yardLiens', '_yardMortgage', '_yardHeloc', '_yardRealMonthly',
   '_yardNetEquity', '_yardHouseholdIncome', '_yardYearsToRetire', '_retireInfo', 'calculateTotalPmt', 'payoffMonths',
-  '_ruleEOccupies', '_yardIntelligence'];
-let body = '';
-const pulled = [];
-for (const n of names) { try { body += ex(src, n) + '\n'; pulled.push(n); } catch (e) { if (n === '_ruleEOccupies') continue; throw e; } }
+  '_propOccupied', '_ruleInScope', '_yardIntelligence'];
+/* RULE_SCOPE is a `var`, not a function, so ex() cannot reach it — and _ruleInScope reads it.
+   Lift the declaration VERBATIM from studio.html rather than restating it here: a second copy of the
+   scope table in the gate would be exactly the maintained document the constant exists to replace. */
+const _scopeLine = (src.match(/var RULE_SCOPE = \{[^}]*\};/) || [])[0];
+if (!_scopeLine) { console.error('RULE_SCOPE declaration not found in studio.html — cannot run.'); process.exit(1); }
+let body = _scopeLine + '\n';
+const pulled = ['RULE_SCOPE(var)'];
+for (const n of names) { try { body += ex(src, n) + '\n'; pulled.push(n); } catch (e) { if (n === '_propOccupied' || n === '_ruleInScope') continue; throw e; } }
 
 const getBaseType = (baseId) => {
   const s = String(baseId);
@@ -173,10 +178,10 @@ for (const p of PURPOSES.filter((x) => x.key !== 'PRIMARY')) {
    biting while no assertion ran at all. Same false-signal family as a mutation that cannot run —
    caught here only because the exit code was right for the wrong reason. Under RED the comparison
    body IS the running body, so the byte-identity legs are trivially true and still meaningful. */
-const _CALL = 'if (_ruleEOccupies(prop) && ';
+const _CALL = "if (_ruleInScope('E', prop) && ";
 const _nCall = body.split(_CALL).length - 1;
 if (!RED && _nCall !== 1) { console.error('LEG5 anchor not found exactly once (' + _nCall + ') — cannot build the comparison render.'); process.exit(1); }
-const bodyUnguarded = RED ? body : body.split(_CALL).join('if (true && ');
+const bodyUnguarded = RED ? body : body.split(_CALL).join("if (true && ");
 function renderWith(b, p) {
   const prop = { id: 'p', baseId: 'property_a', value: 500000 };
   if (p.purpose !== undefined) prop.propPurpose = p.purpose;

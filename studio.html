@@ -10987,15 +10987,40 @@
     }
     // §3.5 — the retirement-lens intelligence engine. Trait-keyed, composed (emit every rule that fires), zero
     // hard-coded figures; silence is nuance → the calm line (Z) when nothing lights up. Verbatim R70-R77.
-    /* EVERY PIECE OF ADVICE MUST DECLARE WHO IT IS FOR (house law, 2026-08-03). Advice with no stated
-       audience is advice aimed at everyone, and this product has users it must not aim at. This is the
-       audience test for the OWNER-OCCUPANCY class: true only where the user actually lives.
-       Blank is occupied by ruling — #591 / Property §19.2 treat blank as primary for math and
-       placement, and only the NAME diverges. Written as "not one of the away purposes" rather than
-       "=== Primary residence" so a future purpose value cannot silently inherit occupancy. */
-    function _ruleEOccupies(prop) {
+    /* ── RULE_SCOPE — EVERY PIECE OF ADVICE DECLARES WHO IT IS FOR ────────────────────────────────
+     * House law 2026-08-03: advice with no stated audience is advice aimed at everyone, and this
+     * product has users it must not aim at. Rule E offered a reverse mortgage — which requires owner
+     * occupancy — to rentals and second homes, because propPurpose was consulted NOWHERE in A-H.
+     *
+     * 🔑 THIS IS A CONSTANT THE ENGINE READS, NOT A COMMENT. A prose note describing scope is a
+     * MAINTAINED DOCUMENT and documents rot; the first thing to drift is the one nobody executes.
+     * _ruleInScope() below is the only gate any rule passes through, and
+     * _gate_yard_rule_scope_keys.mjs asserts these keys are exactly the rules the engine emits — add a
+     * rule without an entry and it REDS; retitle one and it REDS. PREFER AN EXECUTABLE INVARIANT TO A
+     * MAINTAINED DOCUMENT, ALWAYS.
+     *
+     *   ANY              fires for every property; the advice is occupancy-neutral.
+     *   OWNER_OCCUPIED   fires ONLY where the user lives. Blank counts as occupied (#591 / §19.2:
+     *                    blank behaves as primary for math and placement; only the NAME diverges).
+     *   PURPOSE_VARIANT  fires for every property but its WORDING varies by purpose. */
+    var RULE_SCOPE = { A: 'ANY', B: 'ANY', C: 'ANY', D: 'ANY', E: 'OWNER_OCCUPIED', F: 'PURPOSE_VARIANT', G: 'ANY', H: 'ANY' };
+
+    /* A WHITELIST OF THE EXCLUDED, NOT OF THE PERMITTED. `!p || p === 'Primary residence'` means a
+       purpose value added later cannot silently inherit occupancy — it lands outside the permitted set
+       by default. The inverse construction (`p !== 'Rental property'`) would quietly admit every new
+       value. Architect-ruled: keep this shape anywhere purpose gets gated. */
+    function _propOccupied(prop) {
         var p = prop && prop.propPurpose;
         return !p || p === 'Primary residence';
+    }
+    /* FAILS CLOSED. A rule with no RULE_SCOPE entry cannot fire at all — an undeclared audience is not
+       "everyone", it is a bug. That is the difference between this and a comment: the constant has
+       teeth even before the gate runs. */
+    function _ruleInScope(letter, prop) {
+        var s = RULE_SCOPE[letter];
+        if (s === undefined) return false;
+        if (s === 'OWNER_OCCUPIED') return _propOccupied(prop);
+        return true;   // ANY and PURPOSE_VARIANT both FIRE; a variant differs in wording, not in whether.
     }
     function _yardIntelligence(propId) {
         var prop = (state.accounts || []).find(function (a) { return a.id === propId; });
@@ -11032,7 +11057,11 @@
         if (h && (helocDrawn || helocAvail)) {
             beats.push('A home-equity line (a HELOC) against the house is a tool with two very different edges. Used to reinvest IN the home — a kitchen, a roof, an addition that raises the property’s value — it can lift the asset side of your estate while the balance stays modest. Used to fund everyday spending, it quietly converts home equity into a monthly bill that follows you toward retirement. The same home-equity line, opposite effects. If you’re weighing a remodel, this is the cheaper-than-most way to fund it; if you’re eyeing retirement, an undrawn home-equity line is a standby safety valve you never have to use.');
         }
-        /* RULE E — equity as a retirement asset · OWNER-OCCUPANCY ONLY (Yard §13.1, ruled 2026-08-03)
+        // RULE E — equity as a retirement asset  [RULE_SCOPE: OWNER_OCCUPIED]
+        /* Yard §13.1, ruled 2026-08-03. The `// RULE E —` line above is not decoration: it is the
+         * marker _gate_yard_rule_scope_keys.mjs enumerates to prove every emitted rule has a declared
+         * audience. Rewriting it as a block comment hid Rule E from that census — caught by the gate on
+         * its first run, and it made --dropkey pass for the wrong reason. Keep the one-line form.
          * Rule E offers a REVERSE MORTGAGE, which requires the owner to LIVE THERE, and calls the
          * property "a place to live". Until today it fired on equityPct >= 0.5 && yTR <= 15 and nothing
          * else — propPurpose was consulted ZERO times anywhere in A-H — and _yardIntelligence runs for
@@ -11045,7 +11074,7 @@
          * BLANK counts as occupied: #591 and Property §19.2 both treat blank as primary for math and
          * placement. The NAME diverges (THE GROUNDS); the BEHAVIOUR does not.
          * Pinned by _gate_yard_13_5_ruleE_scope.mjs (LEG2 is the red-first). */
-        if (_ruleEOccupies(prop) && equityPct != null && equityPct >= 0.5 && yTR != null && yTR <= 15) {
+        if (_ruleInScope('E', prop) && equityPct != null && equityPct >= 0.5 && yTR != null && yTR <= 15) {
             beats.push('You’re now more than halfway to owning this outright, and that equity is quietly becoming a retirement asset in its own right. Down the road it can be tapped without selling stocks in a down market — by downsizing, or with a reverse mortgage as a last-resort income floor. You don’t have to plan that today; just know the house is doing double duty — a place to live AND a reserve that isn’t tied to the market’s mood.');
         }
         // RULE F — affordability into retirement
