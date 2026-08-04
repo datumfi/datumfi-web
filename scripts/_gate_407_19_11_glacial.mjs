@@ -67,8 +67,31 @@ const need = (l, c) => checks.push([l, !!c]);
   const gbtY = (b) => { const s = String(b); return s.indexOf('heloc') === 0 ? { id: 'heloc_x', taxCode: 'debt', title: 'HELOC' } : s.indexOf('mortgage') === 0 ? { id: 'mortgage_x', taxCode: 'debt', title: 'Mortgage' } : { id: 'property_x', taxCode: 'realEstate', title: 'Real Estate' }; };
   const doc = { getElementById: (id) => id === 'pri-dob' ? { value: '01/01/1974' } : id === 'target-ret' ? { value: '03 / 2035' } : { value: '', checked: false } };
   const acct = [{ id: 'p', baseId: 'property_a', value: 200000 }, { ...glMort, id: 'm', linkedAssetId: 'p' }];
-  const fn = new Function('getBaseType', 'document', 'window', 'state', '_retireOverride', 'calcCarryTotal', mut(names.map(n => ex(src, n)).join('\n')) + '\nreturn _yardIntelligence;')(gbtY, doc, { parseAgeFromDob: () => 52 }, { accounts: acct }, R, () => 6000);
-  const yard = fn('p').replace(/<[^>]+>/g, '');
+  /* RULE_SCOPE is a `var`, not a function, so ex() cannot reach it — and _ruleInScope reads it. Lift the
+     declaration VERBATIM rather than restating the table here: a second copy in a gate would be exactly
+     the maintained document the constant exists to replace. */
+  const _scopeLine = (src.match(/var RULE_SCOPE = \{[^}]*\};/) || [])[0];
+  if (!_scopeLine) { console.error('RULE_SCOPE not found in studio.html — cannot run.'); process.exit(1); }
+  let body = _scopeLine + '\n' + mut(names.map(n => ex(src, n)).join('\n'));
+  const mk = () => new Function('getBaseType', 'document', 'window', 'state', '_retireOverride', 'calcCarryTotal', body + '\nreturn _yardIntelligence;')(gbtY, doc, { parseAgeFromDob: () => 52 }, { accounts: acct }, R, () => 6000);
+  /* AUTO-RESOLVE — the hand-listed callee list above ROTTED the moment studio.html gained
+     _yardRentMonthly (cff1030, Rule F's named-absent rent seam). This gate then died on a ReferenceError
+     having asserted NOTHING — including the three surfaces above it, which never got to report.
+     ⚖️ A GATE THAT DIES BEFORE ITS FIRST ASSERTION IS NOT A FAILING GATE, IT IS AN ABSENT GATE (§13.15).
+     Same resolver as _gate_407_38_yardruleH.mjs (L48 reuse, do not fork). IT MUST INVOKE, NOT MERELY
+     COMPILE — a missing name inside _yardIntelligence only surfaces when the function is CALLED.
+     Resolved chunks are passed through mut() too, so the sandbox is mutated whole under --redfirst. */
+  const _auto = []; let rendered = null;
+  for (let i = 0; i < 40; i++) {
+    try { rendered = mk()('p'); break; }
+    catch (e) { const m = /(\w+) is not defined/.exec(String(e && e.message)); if (!m) throw e; body += mut(ex(src, m[1])) + '\n'; _auto.push(m[1]); }
+  }
+  if (rendered === null) {
+    console.error('❌ AUTO-RESOLVER EXHAUSTED after 40 passes — last pulled: ' + (_auto.join(', ') || '(none)') + '.');
+    console.error('   THE GATE ASSERTED NOTHING. THIS IS AN ABSENT GATE, NOT A RED ONE.'); process.exit(1);
+  }
+  if (_auto.length) console.log('[auto-resolved from studio.html] ' + _auto.join(', '));
+  const yard = rendered.replace(/<[^>]+>/g, '');
   need('Yard engine: no century figure (Rule B "273 years" suppressed)', !century(yard));
 }
 
