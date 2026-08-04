@@ -28,6 +28,7 @@
  *   --dropvoice    remove the Rental voice mapping                       -> load-bearing leg must RED
  */
 import { readFileSync } from 'node:fs';
+import { lift } from './_gate_extract.mjs';
 
 const MUT = { newpurpose: '--newpurpose', undeclare: '--undeclare', ghost: '--ghost', dropvoice: '--dropvoice' };
 const on = (k) => process.argv.includes(MUT[k]);
@@ -62,16 +63,9 @@ try { PICKER = JSON.parse(listM[1].replace(/'/g, '"')); }
 catch (e) { console.error('❌ PRESENCE — the propPurpose option list did not parse: ' + listM[1]); process.exit(1); }
 PICKER = [''].concat(PICKER);   // the picker's own blank option is a real, selectable value
 
-function ex(s, n) {
-  const st = s.indexOf('function ' + n + '(');
-  if (st < 0) throw new Error('missing ' + n);
-  let d = 0, b = false;
-  for (let j = s.indexOf('{', st); j < s.length; j++) {
-    if (s[j] === '{') { d++; b = true; }
-    else if (s[j] === '}') { d--; if (b && d === 0) return s.slice(st, j + 1); }
-  }
-  throw new Error('unbalanced ' + n);
-}
+/* §13.21 — ONE SHARED EXTRACTOR (_gate_extract.mjs), replacing a private copy that could only see
+   `function NAME(` and the hand-written `var RULE_SCOPE` regex that existed because of it. */
+const ex = (s, n) => lift(s, n);
 let TABLES, slotOf, declared;
 try {
   const body = ex(src, '_ruleFTables') + '\n' + ex(src, '_ruleFSlot') + '\n' + ex(src, '_ruleFDeclared');
@@ -113,8 +107,7 @@ need('Land resolves to NO slot', slotOf('Land') === null);
 /* ── LOAD-BEARING: the table is the only path to the copy. Render Rule F for a rental in shortfall
       and require the rental voice to be PRESENT — --dropvoice removes the mapping and must silence
       it. Fixture shape reused from _gate_yard_13_9_rulef_variant.mjs (L48). ── */
-const scopeLine = (src.match(/var RULE_SCOPE = \{[^}]*\};/) || [])[0] || '';
-let body = scopeLine + '\n';
+let body = '';
 for (const n of ['_num', '_groundsLinkedDebt', '_yardLiens', '_yardMortgage', '_yardHeloc', '_yardRentMonthly',
                  '_yardRealMonthly', '_yardNetEquity', '_yardHouseholdIncome', '_yardYearsToRetire', '_retireInfo',
                  'calculateTotalPmt', 'payoffMonths', '_propOccupied', '_ruleInScope', '_yardIntelligence']) body += ex(src, n) + '\n';

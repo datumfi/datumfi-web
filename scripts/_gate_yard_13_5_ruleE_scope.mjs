@@ -28,6 +28,7 @@
    Usage: node scripts/_gate_yard_13_5_ruleE_scope.mjs [--redfirst]
 */
 import { readFileSync } from 'node:fs';
+import { lift } from './_gate_extract.mjs';
 const RED = process.argv.includes('--redfirst');
 let src = readFileSync('studio.html', 'utf8');
 
@@ -45,25 +46,17 @@ if (RED) {
   console.log('[redfirst] purpose guard stripped (' + n + ' site' + (n === 1 ? '' : 's') + ')');
 }
 
-function ex(s, n) {
-  const st = s.indexOf('function ' + n + '(');
-  if (st < 0) throw new Error('missing ' + n);
-  let d = 0, b = false;
-  for (let j = s.indexOf('{', st); j < s.length; j++) {
-    if (s[j] === '{') { d++; b = true; }
-    else if (s[j] === '}') { d--; if (b && d === 0) return s.slice(st, j + 1); }
-  }
-  throw new Error('unbalanced ' + n);
-}
+/* §13.21 — ONE SHARED EXTRACTOR (_gate_extract.mjs). Was a private copy here, and because a private
+   copy could only see `function NAME(`, this gate also hand-lifted `var RULE_SCOPE` with its own
+   regex. lift() handles both forms, so that regex is deleted rather than upgraded. */
+const ex = (s, n) => lift(s, n);
 const names = ['_num', '_groundsLinkedDebt', '_yardLiens', '_yardMortgage', '_yardHeloc', '_yardRealMonthly',
   '_yardNetEquity', '_yardHouseholdIncome', '_yardYearsToRetire', '_retireInfo', 'calculateTotalPmt', 'payoffMonths',
   '_propOccupied', '_ruleInScope', '_yardIntelligence'];
 /* RULE_SCOPE is a `var`, not a function, so ex() cannot reach it — and _ruleInScope reads it.
    Lift the declaration VERBATIM from studio.html rather than restating it here: a second copy of the
    scope table in the gate would be exactly the maintained document the constant exists to replace. */
-const _scopeLine = (src.match(/var RULE_SCOPE = \{[^}]*\};/) || [])[0];
-if (!_scopeLine) { console.error('RULE_SCOPE declaration not found in studio.html — cannot run.'); process.exit(1); }
-let body = _scopeLine + '\n';
+let body = '';
 const pulled = ['RULE_SCOPE(var)'];
 for (const n of names) { try { body += ex(src, n) + '\n'; pulled.push(n); } catch (e) { if (n === '_propOccupied' || n === '_ruleInScope') continue; throw e; } }
 

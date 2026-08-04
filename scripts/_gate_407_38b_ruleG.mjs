@@ -3,16 +3,16 @@
    beat (#380): it teaches "your home-equity line (a HELOC)" on first mention and carries no bare "the line".
    --redfirst reintroduces the old jargon in the Rule G string -> the no-bare-"the line" assertion fails. */
 import { readFileSync } from 'node:fs';
+import { lift } from './_gate_extract.mjs';
 const RED = process.argv.includes('--redfirst');
 const src = readFileSync('studio.html', 'utf8');
-function ex(s, n){ const st=s.indexOf('function '+n+'('); if(st<0) throw new Error('missing '+n); let d=0,b=false; for(let j=s.indexOf('{',st);j<s.length;j++){ if(s[j]==='{'){d++;b=true;} else if(s[j]==='}'){d--; if(b&&d===0) return s.slice(st,j+1);} } }
+/* §13.21 — ONE SHARED EXTRACTOR. `ex` used to be a private copy in each of eight gates, and because a
+   local copy could only see `function NAME(`, each ALSO hand-lifted `var RULE_SCOPE` with its own
+   regex: eight copies of one fact. lift() handles both forms, so that regex is DELETED rather than
+   upgraded — the resolver below pulls RULE_SCOPE by itself the moment _ruleInScope references it. */
+const ex = (s, n) => lift(s, n);
 const names=['_num','_groundsLinkedDebt','_yardLiens','_yardMortgage','_yardHeloc','_yardRealMonthly','_yardNetEquity','_yardHouseholdIncome','_yardYearsToRetire','calculateTotalPmt','payoffMonths','_retireInfo','_targetPayment','_payoffYearOf','_yardIntelligence'];
-/* RULE_SCOPE is a `var`, not a function, so ex() cannot reach it — and _ruleInScope reads it. Lift the
-   declaration VERBATIM rather than restating the table here: a second copy in a gate would be exactly
-   the maintained document the constant exists to replace. */
-const _scopeLine=(src.match(/var RULE_SCOPE = \{[^}]*\};/)||[])[0];
-if(!_scopeLine){ console.error('RULE_SCOPE not found in studio.html — cannot run.'); process.exit(1); }
-let body=_scopeLine+'\n'+names.map(n=>ex(src,n)).join('\n');
+let body=names.map(n=>ex(src,n)).join('\n');
 if(RED) body=body.replace('your mortgage and your home-equity line (a HELOC) move', 'the mortgage and the line move').replace('(usually the home-equity line)', '(usually the line)');
 const getBaseType=(baseId)=>{const s=String(baseId); if(s.indexOf('heloc')===0)return{id:'heloc_x',taxCode:'debt',title:'HELOC'}; if(s.indexOf('mortgage')===0)return{id:'mortgage_x',taxCode:'debt',title:'Mortgage'}; return{id:'property_x',taxCode:'physical',title:'Real Estate'};};
 const doc={getElementById:()=>({value:'',checked:false})};

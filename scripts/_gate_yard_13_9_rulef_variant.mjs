@@ -20,6 +20,7 @@
  * Usage: node scripts/_gate_yard_13_9_rulef_variant.mjs [--primaryfallback] [--nolandsuppress]
  */
 import { readFileSync } from 'node:fs';
+import { lift } from './_gate_extract.mjs';
 const PRIMFALL = process.argv.includes('--primaryfallback');
 const NOLAND   = process.argv.includes('--nolandsuppress');
 let src = readFileSync('studio.html', 'utf8');
@@ -40,18 +41,10 @@ if (NOLAND)   mutate('        var _fSlot = _ruleFSlot(_fPurpose);',
                      "        if (_fPurpose === 'Land') _fPurpose = '';   /* land suppression removed by --nolandsuppress */\n        var _fSlot = _ruleFSlot(_fPurpose);",
                      '--nolandsuppress');
 
-function ex(s, n) {
-  const st = s.indexOf('function ' + n + '(');
-  if (st < 0) throw new Error('missing ' + n);
-  let d = 0, b = false;
-  for (let j = s.indexOf('{', st); j < s.length; j++) {
-    if (s[j] === '{') { d++; b = true; }
-    else if (s[j] === '}') { d--; if (b && d === 0) return s.slice(st, j + 1); }
-  }
-  throw new Error('unbalanced ' + n);
-}
-const scopeLine = (src.match(/var RULE_SCOPE = \{[^}]*\};/) || [])[0] || '';
-let body = scopeLine + '\n';
+/* §13.21 — ONE SHARED EXTRACTOR (_gate_extract.mjs), replacing a private copy that could only see
+   `function NAME(` and the hand-written `var RULE_SCOPE` regex that existed because of it. */
+const ex = (s, n) => lift(s, n);
+let body = '';
 for (const n of ['_num', '_groundsLinkedDebt', '_yardLiens', '_yardMortgage', '_yardHeloc', '_yardRentMonthly',
                  '_yardRealMonthly', '_yardNetEquity', '_yardHouseholdIncome', '_yardYearsToRetire', '_retireInfo',
                  'calculateTotalPmt', 'payoffMonths', '_propOccupied', '_ruleInScope', '_yardIntelligence']) body += ex(src, n) + '\n';

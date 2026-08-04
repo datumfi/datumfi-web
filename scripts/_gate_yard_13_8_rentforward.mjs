@@ -28,6 +28,7 @@
  *   --noconsume   strip the rent offset out of the burden -> S2 and the simulated legs must RED.
  */
 import { readFileSync } from 'node:fs';
+import { lift } from './_gate_extract.mjs';
 const SIMULATE = process.argv.includes('--simulate');
 const NOCONSUME = process.argv.includes('--noconsume');
 let src = readFileSync('studio.html', 'utf8');
@@ -40,18 +41,10 @@ if (NOCONSUME) {
   console.log('[noconsume] rent offset stripped from the burden');
 }
 
-function ex(s, n) {
-  const st = s.indexOf('function ' + n + '(');
-  if (st < 0) throw new Error('missing ' + n);
-  let d = 0, b = false;
-  for (let j = s.indexOf('{', st); j < s.length; j++) {
-    if (s[j] === '{') { d++; b = true; }
-    else if (s[j] === '}') { d--; if (b && d === 0) return s.slice(st, j + 1); }
-  }
-  throw new Error('unbalanced ' + n);
-}
-const scopeLine = (src.match(/var RULE_SCOPE = \{[^}]*\};/) || [])[0] || '';
-let body = scopeLine + '\n';
+/* §13.21 — ONE SHARED EXTRACTOR (_gate_extract.mjs), replacing a private copy that could only see
+   `function NAME(` and the hand-written `var RULE_SCOPE` regex that existed because of it. */
+const ex = (s, n) => lift(s, n);
+let body = '';
 const pulled = [];
 for (const n of ['_num', '_groundsLinkedDebt', '_yardLiens', '_yardMortgage', '_yardHeloc', '_yardRentMonthly',
                  '_yardRealMonthly', '_yardNetEquity', '_yardHouseholdIncome', '_yardYearsToRetire', '_retireInfo',

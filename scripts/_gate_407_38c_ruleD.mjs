@@ -3,16 +3,15 @@
    Rule D beat (#380): teaches "a home-equity line (a HELOC)" on first mention, no bare "A line"/"the same line"/
    "undrawn line". --redfirst reverts the de-jargon -> the old bare-"line" phrases return -> assertions fail. */
 import { readFileSync } from 'node:fs';
+import { lift } from './_gate_extract.mjs';
 const RED = process.argv.includes('--redfirst');
 const src = readFileSync('studio.html', 'utf8');
-function ex(s,n){const st=s.indexOf('function '+n+'(');if(st<0)throw new Error('missing '+n);let d=0,b=false;for(let j=s.indexOf('{',st);j<s.length;j++){if(s[j]==='{'){d++;b=true;}else if(s[j]==='}'){d--;if(b&&d===0)return s.slice(st,j+1);}}}
+/* §13.21 — ONE SHARED EXTRACTOR (see _gate_extract.mjs). Replaces a private copy of ex() that could
+   only see `function NAME(`, and with it the hand-written `var RULE_SCOPE` regex this gate used to
+   carry. lift() handles both forms; the resolver below pulls RULE_SCOPE on its own. */
+const ex = (s, n) => lift(s, n);
 const names=['_num','_groundsLinkedDebt','_yardLiens','_yardMortgage','_yardHeloc','_yardRealMonthly','_yardNetEquity','_yardHouseholdIncome','_yardYearsToRetire','calculateTotalPmt','payoffMonths','_retireInfo','_targetPayment','_payoffYearOf','_yardIntelligence'];
-/* RULE_SCOPE is a `var`, not a function, so ex() cannot reach it — and _ruleInScope reads it. Lift the
-   declaration VERBATIM rather than restating the table here: a second copy in a gate would be exactly
-   the maintained document the constant exists to replace. */
-const _scopeLine=(src.match(/var RULE_SCOPE = \{[^}]*\};/)||[])[0];
-if(!_scopeLine){ console.error('RULE_SCOPE not found in studio.html — cannot run.'); process.exit(1); }
-let body=_scopeLine+'\n'+names.map(n=>ex(src,n)).join('\n');
+let body=names.map(n=>ex(src,n)).join('\n');
 if(RED) body=body.replace('A home-equity line (a HELOC) against','A line against').replace('The same home-equity line','The same line').replace('an undrawn home-equity line','an undrawn line');
 const getBaseType=(baseId)=>{const s=String(baseId);if(s.indexOf('heloc')===0)return{id:'heloc_x',taxCode:'debt',title:'HELOC'};if(s.indexOf('mortgage')===0)return{id:'mortgage_x',taxCode:'debt',title:'Mortgage'};return{id:'property_x',taxCode:'physical',title:'Real Estate'};};
 const ACCTS=[{id:'p',baseId:'property_a',value:500000},{id:'h',baseId:'heloc_a',linkedAssetId:'p',value:20000,intRate:7,helocCreditLimit:50000,helocPhase:'Draw',minPmt:120}];

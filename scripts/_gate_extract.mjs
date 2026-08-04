@@ -50,6 +50,65 @@ export function extractFn(src, name) {
   throw new Error('extractFn: unbalanced braces: ' + name);
 }
 
+/* ── BINDINGS, NOT ONLY FUNCTIONS (§13.21, 2026-08-04) ───────────────────────────────────────────
+ * studio.html declares load-bearing state as a BINDING too: `var RULE_SCOPE = {…}` is what
+ * _ruleInScope reads to decide whether a rule may fire at all. fnStart() cannot see a binding, so
+ * every gate that sliced _yardIntelligence hand-wrote its OWN `var RULE_SCOPE = \{[^}]*\};` regex —
+ * EIGHT copies of one fact: a hand-maintained list wearing a different hat. Adding a SECOND binding
+ * to that closure broke all eight in a single commit (measured, not predicted).
+ *
+ * ⚠️ WHY THE MATCH IS LINE-ANCHORED, and it is not fussiness. The naive regex those eight gates used
+ * matches TWICE in today's studio.html: the real declaration at 11020, and a COMMENT at 11062 that
+ * quotes the declaration while explaining it. It is harmless only because String.match without /g
+ * returns the first — so the day that comment moves above the declaration, or the declaration is
+ * renamed, all eight silently lift `var RULE_SCOPE = {…};` and slice a syntax error into the sandbox.
+ * A real declaration begins its line; a mention inside a comment does not.
+ *
+ * ⚠️ AND AMBIGUITY IS LOUD. Two declarations answering one name is not a thing to resolve by taking
+ * the first — it is a finding. Same rule as selecting a button by label. */
+const IDENT = (n) => String(n).replace(/[$]/g, '\\$');
+const bindingRe = (name) => new RegExp('^[ \\t]*(?:var|let|const)[ \\t]+' + IDENT(name) + '[ \\t]*=', 'gm');
+
+/** True when src declares `name` as a top-of-line var/let/const binding. */
+export function definesBinding(src, name) {
+  return [...src.matchAll(bindingRe(name))].length === 1;
+}
+
+/** Slice `var|let|const NAME = <initializer>;` out of src — brace, bracket and quote aware. */
+export function extractBinding(src, name) {
+  const hits = [...src.matchAll(bindingRe(name))];
+  if (!hits.length) throw new Error('extractBinding: no binding declaration for ' + name);
+  if (hits.length > 1) {
+    throw new Error('extractBinding: AMBIGUOUS — ' + hits.length + ' declarations of ' + name +
+      ' at lines ' + hits.map((h) => src.slice(0, h.index).split('\n').length).join(', ') +
+      '. Refusing to guess which one the product uses.');
+  }
+  const start = hits[0].index + hits[0][0].length - hits[0][0].replace(/^[ \t]*/, '').length;
+  let depth = 0, quote = null;
+  for (let j = start; j < src.length; j++) {
+    const c = src[j];
+    if (quote) { if (c === '\\') { j++; continue; } if (c === quote) quote = null; continue; }
+    if (c === '"' || c === "'" || c === '`') { quote = c; continue; }
+    if (c === '{' || c === '[' || c === '(') depth++;
+    else if (c === '}' || c === ']' || c === ')') depth--;
+    else if (c === ';' && depth === 0) return src.slice(start, j + 1);
+  }
+  throw new Error('extractBinding: no terminating ; at depth 0 for ' + name);
+}
+
+/**
+ * THE ONE ENTRY POINT. Lift a named declaration out of src whatever form it takes: a function
+ * (all three forms fnStart knows) or a var/let/const binding. Gates call this and stop caring.
+ * Throws — loudly and by name — when src declares neither, because a resolver that silently
+ * returned '' would inject nothing and fail later somewhere less legible.
+ */
+export function lift(src, name) {
+  if (definesFn(src, name)) return extractFn(src, name);
+  if (definesBinding(src, name)) return extractBinding(src, name);
+  if ([...src.matchAll(bindingRe(name))].length > 1) return extractBinding(src, name);   // throws the AMBIGUOUS message
+  throw new Error('lift: source declares no function or binding named ' + name);
+}
+
 /**
  * Transitive closure of `roots` over the functions studio.html defines.
  * @param {string} src      studio.html
