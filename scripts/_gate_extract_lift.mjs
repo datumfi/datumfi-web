@@ -93,8 +93,19 @@ const rs = tryLift(studio, 'RULE_SCOPE');
 need('[PRESENCE] RULE_SCOPE lifts out of the real studio.html', rs.ok && rs.out.length > 0, 'real');
 let evaluated = null;
 if (rs.ok) { try { evaluated = new Function(rs.out + '\nreturn RULE_SCOPE;')(); } catch (e) { /* stays null */ } }
-need('the lifted RULE_SCOPE evaluates to the live 8-rule table',
-     !!evaluated && Object.keys(evaluated).length === 8 && evaluated.E === 'OWNER_OCCUPIED' && evaluated.F === 'PURPOSE_VARIANT', 'real');
+/* SELF-CONSISTENT, NOT A MAGIC NUMBER. This asserted `length === 8` and went red the moment Rule I
+   shipped — a gate that has to be edited every time the thing it watches legitimately grows is a
+   maintained document, and it would have trained someone to bump the number without reading why.
+   What actually needs proving is that lift() -> evaluate ROUND-TRIPS FAITHFULLY: the object carries
+   exactly the keys its own declaration text carries. That holds at eight rules, at nine, and at any
+   number after. PRESENCE first — zero declared keys is a dead scrape, not an empty table. */
+const declaredKeys = rs.ok ? [...rs.out.matchAll(/([A-Z])\s*:\s*'[A-Z_]+'/g)].map((m) => m[1]) : [];
+need('[PRESENCE] the lifted declaration text carries keys to compare against', declaredKeys.length > 0, 'real');
+need('the lifted RULE_SCOPE evaluates to exactly the table it declares',
+     !!evaluated && declaredKeys.length > 0
+     && Object.keys(evaluated).length === declaredKeys.length
+     && declaredKeys.every((k) => Object.prototype.hasOwnProperty.call(evaluated, k))
+     && evaluated.E === 'OWNER_OCCUPIED', 'real');
 need('_ruleFTables (a function) still lifts from the real studio.html',
      /function _ruleFTables/.test(tryLift(studio, '_ruleFTables').out || ''), 'real');
 

@@ -7701,6 +7701,7 @@
                     <div id="modal-avm-result-${id}">${_avmSnap ? _groundsAvmResultHTML(id, _avmSnap) : ''}</div>
                 </div>`;
                 }
+                html += _propRentalFieldsHTML(id, acc);   // §18.1 — '' on every purpose but Rental property
                 html += `
             </div>
             <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
@@ -8075,6 +8076,7 @@
             }
             if(field === 'linkedAssetId') { openAccountModal(id); if(value) _onSecuredLinkFormed(id, value, id); }   // §18.2 reconcile shared escrow (returns to this room)
             if(field === 'rateType') openAccountModal(id);   // §0.4/§5.1 — reveal/hide the Variable-rate cluster
+            if(field === 'propPurpose') openAccountModal(id);   // §18.1 — reveal/hide the rental cluster, same shape as rateType
             if(field === 'linkedToAccount' || field === 'rollFlavor') openAccountModal(id);   // The Conduit — refresh count-once flag (§7.5) + Layer-E tax fork (§9) live
 
             // Live DOM update for limits calculation — same §402(g)-class test as the modal (401k/403b/457b)
@@ -9095,6 +9097,32 @@
     // blank purpose leaves the §19.2 tax-deductibility beat dark (sourced-or-blank, L47), protecting against
     // form fatigue. 'Home improvement' vs 'Other' selects which verbatim beat variant fires. Hover from
     // _HELOC_HOVERS (single source, L48). No caption row — the beat carries the meaning.
+    /* ── §18.1 · RENTAL FIELDS — revealed ONLY on propPurpose = Rental property ──────────────────
+     * Four optional fields, all sourced-or-blank. Modelled on the HELOC Use-of-Funds branch just
+     * below (§18 doctrine: reuse that branch shape, do not fork a new one — L48). Returns '' on
+     * every other purpose, so a file that predates this section renders exactly as it did today.
+     * That is the §18 migration guarantee in code: a rule must never punish a file for predating it.
+     *
+     * 🔑 NOTHING HERE DEFAULTS TO ZERO. A blank rent is not a rent of zero, and a blank vacancy is
+     * not a vacancy of zero (§13.26 / §13.35). Unset fields render EMPTY — no placeholder number,
+     * no 0 — and every consumer branches on `sourced`, never on the bare figure.
+     * Copy is Architect-authored (§18.4) and wired VERBATIM. */
+    function _propRentalFieldsHTML(id, acc) {
+        if (!acc || acc.propPurpose !== 'Rental property') return '';
+        var v = function (x) { return String(x === undefined || x === null ? '' : x).replace(/"/g, '&quot;'); };
+        var ir = acc.isRented || '';
+        var opt = function (o) { return '<option ' + (ir === o ? 'selected' : '') + '>' + o + '</option>'; };
+        return `
+                <div class="field-row">
+                    <div><span class="input-label modal-tt-wrap" style="cursor:help;">Monthly rent collected<div class="modal-tt" style="left:0; right:auto;"><strong>Monthly rent collected</strong>What the tenant actually pays you each month, before anything is taken out of it. Use the rent you are collecting today, not the rent you hope to get. If the place is empty right now, leave this blank — we would rather show you nothing than show you a number you are not receiving.</div></span><input type="text" class="small-field" placeholder="—" inputmode="numeric" value="${v(acc.rentMonthly)}" oninput="updateAccField('${id}', 'rentMonthly', this.value)"></div>
+                    <div><span class="input-label modal-tt-wrap" style="cursor:help;">Currently rented?<div class="modal-tt" style="right:0; left:auto;"><strong>Currently rented?</strong>A rental with no tenant is a second home with a mortgage. This one field is the difference between income that offsets the carry and a carry that lands entirely on you, so it changes what this room tells you more than almost any other.</div></span><select class="small-field" style="background: var(--bg-navy); color:white;" onchange="updateAccField('${id}', 'isRented', this.value)"><option value="">Select… (optional)</option>${opt('Yes')}${opt('No')}${opt('Between tenants')}</select></div>
+                </div>
+                <div class="field-row">
+                    <div><span class="input-label modal-tt-wrap" style="cursor:help;">Vacancy allowance (%)<div class="modal-tt" style="left:0; right:auto;"><strong>Vacancy allowance</strong>The share of the year you expect the place to sit empty between tenants. Nobody rents twelve months out of twelve forever. Leaving this blank is honest; setting it makes the income read more conservative, which is usually the more useful read.</div></span><input type="text" class="small-field" placeholder="—" inputmode="decimal" value="${v(acc.vacancyPct)}" oninput="updateAccField('${id}', 'vacancyPct', this.value)"></div>
+                    <div><span class="input-label modal-tt-wrap" style="cursor:help;">Property management fee (%)<div class="modal-tt" style="right:0; left:auto;"><strong>Property management fee</strong>What you pay someone else to run the property, usually a slice of the rent. If you manage it yourself this is zero in cash and real in hours — we count only the cash.</div></span><input type="text" class="small-field" placeholder="—" inputmode="decimal" value="${v(acc.mgmtPct)}" oninput="updateAccField('${id}', 'mgmtPct', this.value)"></div>
+                </div>`;
+    }
+
     function _helocUsePurposeFieldHTML(id, acc) {
         var p = acc.helocUsePurpose;
         return `
@@ -10966,6 +10994,27 @@
         var n = _num(raw);
         return isFinite(n) && n > 0 ? { monthly: n, sourced: true } : { monthly: 0, sourced: false };
     }
+    /* ── §11.1 / §13.35(2) / §13.38 — THE RENT, NET, EXPRESSED ONCE ─────────────────────────────
+     * yardRent is rentMonthly NET of vacancyPct and mgmtPct WHERE THOSE ARE SET. Where they are not
+     * set they are ABSENT, not zero — no deduction is applied, and the figure returned is GROSS.
+     * Net-of-absent and net-not-gross are ONE rule seen from two ends, so they are ONE function:
+     * a caller asks for the rent and is told what it got. `netted` false means nothing was deducted,
+     * which is an honest gross figure and must never be shown as though vacancy were accounted for.
+     *
+     * 🔑 AN UNSOURCED RENT IS NOT A RENT OF ZERO, and an unsourced vacancy is not a vacancy of zero.
+     * Both percentages apply to GROSS rent rather than compounding management onto post-vacancy
+     * rent. The bank does not say which, and the two differ; this is the LARGER deduction, so the
+     * smaller net, so the LARGER shortfall — §13.38, where two readings are defensible take the one
+     * that flatters the user less. */
+    function _yardRentNet(prop) {
+        var raw = _yardRentMonthly(prop);
+        if (!raw.sourced) return { monthly: 0, sourced: false, gross: 0, netted: false };
+        var gross = raw.monthly, out = gross, netted = false;
+        var has = function (x) { return !(x === undefined || x === null || String(x).trim() === '') && isFinite(_num(x)) && _num(x) > 0; };
+        if (has(prop.vacancyPct)) { out -= gross * (_num(prop.vacancyPct) / 100); netted = true; }
+        if (has(prop.mgmtPct))    { out -= gross * (_num(prop.mgmtPct) / 100);    netted = true; }
+        return { monthly: Math.max(0, out), sourced: true, gross: gross, netted: netted };
+    }
     function _yardRealMonthly(propId) {
         var prop = (state.accounts || []).find(function (a) { return a.id === propId; });
         if (!prop) return 0;
@@ -11016,8 +11065,15 @@
      *   ANY              fires for every property; the advice is occupancy-neutral.
      *   OWNER_OCCUPIED   fires ONLY where the user lives. Blank counts as occupied (#591 / §19.2:
      *                    blank behaves as primary for math and placement; only the NAME diverges).
-     *   PURPOSE_VARIANT  fires for every property but its WORDING varies by purpose. */
-    var RULE_SCOPE = { A: 'ANY', B: 'ANY', C: 'ANY', D: 'ANY', E: 'OWNER_OCCUPIED', F: 'PURPOSE_VARIANT', G: 'ANY', H: 'ANY' };
+     *   PURPOSE_VARIANT  fires for every property but its WORDING varies by purpose.
+     *   RENTAL_ONLY      fires ONLY on Rental property. §13.37: A SCOPE THAT GRANTS IS AN INCLUSION
+     *                    LIST, A SCOPE THAT PROTECTS IS AN EXCLUSION LIST. OWNER_OCCUPIED is a
+     *                    whitelist of the EXCLUDED so a purpose invented tomorrow cannot inherit
+     *                    occupancy and start offering a reverse mortgage on a warehouse. This one is
+     *                    the mirror image and must stay that way: an explicit INCLUSION, so a purpose
+     *                    invented tomorrow gets NOTHING until somebody decides otherwise. The default
+     *                    for a value nobody has thought about yet is silence in both directions. */
+    var RULE_SCOPE = { A: 'ANY', B: 'ANY', C: 'ANY', D: 'ANY', E: 'OWNER_OCCUPIED', F: 'PURPOSE_VARIANT', G: 'ANY', H: 'ANY', I: 'RENTAL_ONLY' };
 
     /* A WHITELIST OF THE EXCLUDED, NOT OF THE PERMITTED. `!p || p === 'Primary residence'` means a
        purpose value added later cannot silently inherit occupancy — it lands outside the permitted set
@@ -11034,7 +11090,16 @@
         var s = RULE_SCOPE[letter];
         if (s === undefined) return false;
         if (s === 'OWNER_OCCUPIED') return _propOccupied(prop);
-        return true;   // ANY and PURPOSE_VARIANT both FIRE; a variant differs in wording, not in whether.
+        if (s === 'RENTAL_ONLY') return !!(prop && prop.propPurpose === 'Rental property');   // INCLUSION, never inferred
+        if (s === 'ANY' || s === 'PURPOSE_VARIANT') return true;   // both FIRE; a variant differs in wording, not in whether
+        /* AND AN UNRECOGNISED SCOPE VALUE FAILS CLOSED TOO. This used to `return true`, so a rule
+           declared 'RENTAL_0NLY' — or any typo, or a value someone adds to the table without
+           teaching the engine — silently fired for EVERY property. That is the exact inversion of
+           the rule above it: an undeclared audience is not "everyone", and neither is a misspelt
+           one. Found while adding the fourth value, which would have widened the blast radius.
+           Every value the engine honours is now named on a branch, so the census gate can DERIVE
+           the vocabulary from this function instead of hand-listing it. */
+        return false;
     }
     /* ── §13.16 · EVERY SILENCE MUST DECLARE WHY IT IS SILENT ─────────────────────────────────────
      * RULE_SCOPE says WHO a rule is for. These two say, for the one PURPOSE_VARIANT rule, which
@@ -11097,7 +11162,7 @@
          * absent the offset is an explicit, named zero and the arithmetic is byte-identical to today.
          * This is the whole fix for the start-dated defect: F already consumes rent, so the day 592a
          * authors rentMonthly nothing here has to change and nothing can be forgotten. */
-        var _rent = _yardRentMonthly(prop);
+        var _rent = _yardRentNet(prop);   // §13.38 — the burden offset reads NET rent, not gross
         var _rentAnnualOffset = _rent.sourced ? _rent.monthly * 12 : 0;
         var _burdenAnnual = Math.max(0, realAnnual - _rentAnnualOffset);
         var burden = income > 0 ? (_burdenAnnual / income) : null;
@@ -11171,7 +11236,7 @@
          * realAnnual is in scope here, so derive from it and format locally. */
         var _fRealMo = realAnnual / 12;
         var _fM = function (v) { return '$' + Math.round(v || 0).toLocaleString('en-US'); };
-        var _fRent = _yardRentMonthly(prop);
+        var _fRent = _yardRentNet(prop);   // §13.38 — Rule F's shortfall reads NET rent, not gross
         var _fShortfallMo = Math.max(0, _fRealMo - (_fRent.sourced ? _fRent.monthly : 0));
         var _RULE_F_COPY = {
             // Primary residence · blank · Other — today's string, unchanged.
@@ -11236,6 +11301,36 @@
                     _hText += ' That combined housing payment is also the single biggest fixed cost that follows you in — and under a 4% draw, every ' + $H(_realAnnualDebt) + '/yr of it is like needing roughly ' + $H(_realAnnualDebt * 25) + ' more in the portfolio to safely cover it for life. Clearing even one lien before retirement shrinks that number.';
                 }
                 beats.push(_hText);
+            }
+        }
+        // RULE I — does this rental carry itself  [RULE_SCOPE: RENTAL_ONLY]
+        /* Yard §12.3 / §12.3b, Architect-ruled 2026-08-04 (#613).
+         * ⛔ §11.2 (COVERED / THIN / UNDERWATER at 1.15 / 1.0) is SUPERSEDED and must NOT be wired.
+         * The live verdict is CARRIES ITSELF / CLOSE / SUBSIDISED at 1.15 / 0.95. The two banks
+         * DISAGREE at coverage 0.97 — retired says "does not carry itself", live says "finely
+         * balanced" — which is exactly the case the boundary red-first pins.
+         * The `// RULE I —` one-line marker above is the census anchor _gate_yard_rule_scope_keys
+         * enumerates; wrapping it in a block comment hides the rule from the audit.
+         * §12.3b fires INSTEAD of §12.3, never alongside — no tenant OVERRIDES any rent figure.
+         * An unsourced rent leaves BOTH silent: the room does not guess a rent from the value, and
+         * an unsourced rent is not a rent of zero (§13.26).
+         * _rent is the NET rent (§13.38) — the same figure §12.3 calls yardRent.
+         * Formatter and monthly are LOCAL on purpose: Rule F's _fM/_fRealMo sit above this block and
+         * borrowing them would make Rule I break silently if Rule F were ever made conditional. */
+        var _iRealMo = realAnnual / 12;
+        var _iM = function (v) { return '$' + Math.round(v || 0).toLocaleString('en-US'); };
+        if (_ruleInScope('I', prop)) {
+            if (prop.isRented === 'No' || prop.isRented === 'Between tenants') {
+                beats.push('With nobody in it, this property is not producing anything — it is a full ' + _iM(_iRealMo) + ' a month of carry landing on you, with the same loan, the same taxes and the same upkeep as any other month. Rent stops. The costs do not.');
+            } else if (_rent.sourced && _iRealMo > 0) {
+                var _iCov = _rent.monthly / _iRealMo;
+                if (_iCov >= 1.15) {
+                    beats.push('This one pays its own way. Rent of ' + _iM(_rent.monthly) + ' a month covers the ' + _iM(_iRealMo) + ' it costs to hold, and about ' + _iM(_rent.monthly - _iRealMo) + ' a month is left over after the loan, the taxes, the insurance and the upkeep.');
+                } else if (_iCov >= 0.95) {
+                    beats.push('Rent of ' + _iM(_rent.monthly) + ' a month lands almost exactly on the ' + _iM(_iRealMo) + ' it costs to hold. A property this finely balanced is one vacancy or one roof away from costing you money.');
+                } else {
+                    beats.push('Rent of ' + _iM(_rent.monthly) + ' a month does not cover the ' + _iM(_iRealMo) + ' it costs to hold. You are paying about ' + _iM(_iRealMo - _rent.monthly) + ' a month for the privilege of owning it — that is a real cost, and it belongs in the plan next to every other bill.');
+                }
             }
         }
         // §3.5-Z — the calm line (nothing fired)

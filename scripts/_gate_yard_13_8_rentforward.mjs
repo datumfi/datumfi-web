@@ -106,8 +106,23 @@ need('S1b and reports a SOURCED field as {sourced:true} with the value',
   present && present.sourced === true && present.monthly === 2000, JSON.stringify(present));
 need('S2 Rule F\'s burden SUBTRACTS a rent offset — the consumption path is wired, not pending',
   /_burdenAnnual = Math\.max\(0, realAnnual - _rentAnnualOffset\)/.test(src), 'burden reads the offset');
-need('S2b the offset comes from the NAMED absent-field helper, not an inline `|| 0`',
-  /var _rent = _yardRentMonthly\(prop\);/.test(src), 'named seam present');
+/* #602 PROVENANCE — EXPECTATION RE-ADDRESSED, NOT SILENCED. Prompt #615, 2026-08-04.
+ * Was: /var _rent = _yardRentMonthly\(prop\);/ — a pin on one literal line. §13.38 (ruled in #614,
+ * so the ruling PREDATES this failure) made Rule F's shortfall read NET rent, which introduced
+ * _yardRentNet as a wrapper around _yardRentMonthly. The named seam is still there, one layer
+ * deeper; only the address moved. The expectation was never wrong.
+ * NOT WEAKENED — STRICTLY STRONGER. The old form checked a spelling. This checks the CONTRACT:
+ * the offset comes from a named _yardRent* helper, the consumer branches on `.sourced` rather than
+ * on a bare number, and no `rentMonthly || 0` exists anywhere in the file. That last clause is a new
+ * assertion the literal-line pin never made, and it is the actual thing being guarded against.
+ * PRESENCE before the exclusion: the captured helper name proves the seam exists before we assert
+ * what is absent from it. */
+const _seamHelper = (src.match(/var _rent = (_yardRent\w*)\(prop\);/) || [])[1];
+need('S2b the offset comes from a NAMED absent-field helper, not an inline `|| 0`',
+  !!_seamHelper
+    && /_rent\.sourced \? _rent\.monthly \* 12 : 0/.test(src)
+    && !/rentMonthly\s*\|\|\s*0/.test(src),
+  'named seam: ' + (_seamHelper || 'NONE'));
 const realMo = api.real('p');
 need('S3 [PRESENCE] the fixture actually clears Rule F\'s 28% bar (or every leg below is vacuous)',
   (realMo * 12) / 120000 > 0.28, 'burden=' + ((realMo * 12) / 120000).toFixed(3));

@@ -31,9 +31,27 @@ function mutate(a, b, label) {
   console.log('[' + label + '] applied');
 }
 if (DROPKEY) mutate("E: 'OWNER_OCCUPIED', ", '', 'dropkey');
-if (ADDRULE) mutate('        // RULE F —', '        // RULE I — undeclared newcomer (--addrule)\n        // RULE F —', 'addrule');
+/* THE INJECTED LETTER IS RESOLVED, NOT TYPED. This mutation used to hard-code RULE I, which was a
+   free letter when it was written and STOPPED BEING ONE the moment Rule I shipped — injecting a
+   duplicate marker for a rule that now genuinely exists and IS declared left the gate GREEN, so the
+   red-first quietly stopped proving anything. Not a retired expectation ("an undeclared rule must
+   red" is still exactly right) — a MIS-ADDRESSED one, the same shape as selecting a button by index.
+   Take a letter the census does not already claim, and abort rather than inject a colliding one. */
+const _takenLetters = new Set([...src.matchAll(/^\s*\/\/ RULE ([A-Z]) —/gm)].map((m) => m[1]));
+const _freeLetter = 'ZYXWVUTS'.split('').find((c) => !_takenLetters.has(c));
+if (ADDRULE && !_freeLetter) { console.error('❌ --addrule: every candidate letter is already a real rule. Re-ground the mutation.'); process.exit(1); }
+if (ADDRULE) mutate('        // RULE F —', '        // RULE ' + _freeLetter + ' — undeclared newcomer (--addrule)\n        // RULE F —', 'addrule');
 
-const VALID_SCOPES = ['ANY', 'OWNER_OCCUPIED', 'PURPOSE_VARIANT'];
+/* DERIVED FROM THE ENGINE, NOT HAND-LISTED. This was `['ANY','OWNER_OCCUPIED','PURPOSE_VARIANT']`
+   typed into the gate while the label claimed "is a value _ruleInScope implements" — so it measured
+   what I had typed, not what the engine honours, and it went red on a value the engine DOES
+   implement the moment a fourth was added. Same hand-maintained-list rot as the eight RULE_SCOPE
+   regexes (§13.21), one level up. Every scope the engine honours is now named on its own branch, so
+   the vocabulary is read off the function itself. PRESENCE: if the scrape finds nothing, that is a
+   dead extractor, not an empty vocabulary — abort rather than pass every scope vacuously. */
+const _scopeFn = (src.match(/function _ruleInScope\([\s\S]*?\n    \}/) || [])[0] || '';
+const VALID_SCOPES = [...new Set([..._scopeFn.matchAll(/s === '([A-Z_]+)'/g)].map((m) => m[1]))];
+if (!VALID_SCOPES.length) { console.error('❌ PRESENCE — no scope values found in _ruleInScope. The extractor is dead; refusing to validate every scope against an empty list.'); process.exit(1); }
 const checks = [];
 const need = (l, c, d) => checks.push([l, !!c, d]);
 
