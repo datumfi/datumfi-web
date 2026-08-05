@@ -11007,6 +11007,17 @@
      * smaller net, so the LARGER shortfall — §13.38, where two readings are defensible take the one
      * that flatters the user less. */
     function _yardRentNet(prop) {
+        /* ⛔ RENT IS ONLY RENT ON A RENTAL, AND THIS GATE IS THE WHOLE POINT OF THE FUNCTION.
+         * The §18.1 fields are HIDDEN when purpose leaves Rental property, but the VALUE persists on
+         * the account — so without this line a user who sets a rent and then switches the purpose to
+         * Primary residence keeps a phantom rent offsetting their housing burden, and Rule F falls
+         * SILENT on a home they actually live in. Measured 2026-08-04, reachable in three clicks,
+         * and silent in the GENEROUS direction: it removes a warning rather than adding one.
+         * Same inclusion list as Rule I (RENTAL_ONLY, §13.37) — the rent offset and the rent-based
+         * rule answer to one audience, so they cannot drift apart.
+         * _yardRentMonthly stays purpose-blind on purpose: it reports the FIELD, this reports the
+         * OFFSET, and only the offset is a claim about what the property earns. */
+        if (!prop || prop.propPurpose !== 'Rental property') return { monthly: 0, sourced: false, gross: 0, netted: false };
         var raw = _yardRentMonthly(prop);
         if (!raw.sourced) return { monthly: 0, sourced: false, gross: 0, netted: false };
         var gross = raw.monthly, out = gross, netted = false;

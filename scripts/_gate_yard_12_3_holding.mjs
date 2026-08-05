@@ -17,6 +17,7 @@
  *   --oldboundary  restore the retired 0.95 -> 1.0 lower bound  -> the 0.97 leg must RED
  *   --noscope      let Rule I fire on any purpose               -> the isolation leg must RED
  *   --novacant     drop the §12.3b override                     -> the vacancy leg must RED
+ *   --stalerent    drop _yardRentNet's purpose gate             -> the stale-rent legs must RED
  */
 import { readFileSync } from 'node:fs';
 import { lift } from './_gate_extract.mjs';
@@ -25,7 +26,8 @@ const argv = process.argv.slice(2);
 const OLDB = argv.includes('--oldboundary');
 const NOSCOPE = argv.includes('--noscope');
 const NOVACANT = argv.includes('--novacant');
-const ANY_MUT = OLDB || NOSCOPE || NOVACANT;
+const STALERENT = argv.includes('--stalerent');
+const ANY_MUT = OLDB || NOSCOPE || NOVACANT || STALERENT;
 let src = readFileSync('studio.html', 'utf8');
 
 function mutate(a, b, label) {
@@ -36,6 +38,7 @@ function mutate(a, b, label) {
 if (OLDB)    mutate('} else if (_iCov >= 0.95) {', '} else if (_iCov >= 1.0) {   /* retired §11.2 boundary restored by --oldboundary */', '--oldboundary');
 if (NOSCOPE) mutate("if (s === 'RENTAL_ONLY') return !!(prop && prop.propPurpose === 'Rental property');", "if (s === 'RENTAL_ONLY') return true;   /* scope removed by --noscope */", '--noscope');
 if (NOVACANT) mutate("if (prop.isRented === 'No' || prop.isRented === 'Between tenants') {", 'if (false) {   /* §12.3b override removed by --novacant */', '--novacant');
+if (STALERENT) mutate("        if (!prop || prop.propPurpose !== 'Rental property') return { monthly: 0, sourced: false, gross: 0, netted: false };\n", '', '--stalerent');
 
 const ex = (s, n) => lift(s, n);
 let body = '';
@@ -132,10 +135,18 @@ need('rent unsourced but VACANT -> the vacant beat still speaks (it needs no ren
      bare(build({ isRented: 'No' }).yard('p')).includes(VACANT), 'unsourced');
 
 /* ── RENTAL_ONLY IS AN INCLUSION: every other purpose gets nothing ── */
+/* BOTH BRANCHES, OR THE SCOPE IS NOT PROVEN. _yardRentNet is now ALSO purpose-gated (the stale-rent
+   fix), so a non-rental has no sourced rent and the COVERAGE branch cannot fire even with RULE_SCOPE
+   removed — defence in depth, but it means the coverage legs alone stopped proving the scope is
+   load-bearing, and --noscope silently went inert. The VACANT branch needs no rent, so it is the leg
+   that still bites. Measured: without this, --noscope left every assertion green. */
 for (const p of ['Primary residence', 'Second home', 'Land', 'Other', 'Houseboat']) {
   const t = bare(build({ propPurpose: p, rentMonthly: rentFor(1.30) }).yard('p'));
   need('purpose "' + p + '" -> Rule I is ABSENT (inclusion list, never inferred)',
        states(t).length === 0 && !t.includes(VACANT), 'isolation');
+  const tv = bare(build({ propPurpose: p, isRented: 'No' }).yard('p'));
+  need('purpose "' + p + '" + isRented=No -> the VACANT beat is ABSENT too (scope, not rent, is the gate)',
+       !tv.includes(VACANT), 'isolation');
 }
 {
   const t = bare(build({ propPurpose: '', rentMonthly: rentFor(1.30) }).yard('p'));
@@ -151,6 +162,27 @@ need('vacancy + management pull the SAME rent below the top band — net is what
 need('blank vacancy and management deduct NOTHING — net-of-absent is gross, unchanged',
      render(1.20, { vacancyPct: '', mgmtPct: '' }).includes(CARRIES), 'net');
 
+/* ── ⛔ THE STALE-RENT LEG. A LIVE DEFECT, FOUND AFTER THE PUSH AND FIXED THE SAME EVENING ──────
+ * The §18.1 fields are hidden when purpose leaves Rental property, but the VALUE persists on the
+ * account. Without the purpose gate in _yardRentNet, that orphaned rent kept offsetting the housing
+ * burden and Rule F fell SILENT on a home the owner lives in — reachable in three clicks, and
+ * silent in the GENEROUS direction, which is the failure class this whole arc exists to catch.
+ * Rule F must SPEAK on a non-rental regardless of what rentMonthly still holds. */
+const RULE_F_PRIMARY = 'Housing is taking a meaningful slice';
+const staleRentProp = (purpose) => bare(build({ propPurpose: purpose, rentMonthly: rentFor(1.30) }).yard('p'));
+need('[PRESENCE] Rule F speaks on a primary residence with NO rent (else every leg below is vacuous)',
+     bare(build({ propPurpose: 'Primary residence' }).yard('p')).includes(RULE_F_PRIMARY), 'stalerent');
+for (const p of ['Primary residence', 'Other']) {
+  need('a STALE rent on "' + p + '" does NOT silence Rule F', staleRentProp(p).includes(RULE_F_PRIMARY), 'stalerent');
+}
+/* propPurpose MUST be passed explicitly — build() defaults it to Rental property, so omitting it
+   tests a rental, not a blank. The first cut of this leg did exactly that and failed for the right
+   reason on the wrong fixture: a rental at 1.30 coverage silences Rule F correctly (no shortfall). */
+need('a STALE rent on blank purpose does NOT silence Rule F',
+     bare(build({ propPurpose: '', rentMonthly: rentFor(1.30) }).yard('p')).includes(RULE_F_PRIMARY), 'stalerent');
+need('a STALE rent on "Second home" does NOT silence its own Rule F voice',
+     bare(build({ propPurpose: 'Second home', rentMonthly: rentFor(1.30) }).yard('p')).includes('This second place takes'), 'stalerent');
+
 let pass = 0;
 for (const [l, ok] of checks) { console.log((ok ? '✅' : '⛔') + ' ' + l); if (ok) pass++; }
 const allGreen = pass === checks.length;
@@ -158,7 +190,7 @@ console.log('\n' + pass + '/' + checks.length + ' green' + (ANY_MUT ? '  [mutate
 
 /* §13.17 — prove WHICH assertion failed. */
 if (ANY_MUT) {
-  const want = OLDB ? 'boundary' : NOSCOPE ? 'isolation' : 'vacancy';
+  const want = OLDB ? 'boundary' : NOSCOPE ? 'isolation' : STALERENT ? 'stalerent' : 'vacancy';
   const red = checks.filter(([, ok]) => !ok).map(([l]) => l);
   const onTarget = checks.filter(([, ok, tag]) => !ok && tag === want).map(([l]) => l);
   if (allGreen) { console.error('❌ RED-FIRST FAILED — the mutation left every assertion green. Its anchor is dead.'); process.exit(1); }

@@ -145,19 +145,28 @@ if (!ARMED) {
   console.log('  ############################################################################');
   console.log('');
 } else {
-  /* Rule F is currently SILENT on a Rental (its variant copy is authored-pending, §13.7a), so the
-     rental render is empty with or without rent and cannot show consumption. Observe the burden where
-     Rule F still SPEAKS — a purpose that keeps today's string — so "does F consume rent" is answerable
-     rather than masked by the copy gate. The consumption path is shared; only the copy differs. */
-  const bare   = mkPurpose(undefined, undefined).yard('p');
-  const offset = mkPurpose(undefined, '1500').yard('p');
-  need('F1 [PRESENCE] the no-rent render actually contains Rule F (else the comparison is vacuous)',
-    bare.includes('Housing is taking'), bare.includes('Housing is taking') ? 'Rule F present' : 'RULE F ABSENT — fixture never armed it');
-  need('F1 a sourced rent CHANGES Rule F\'s outcome (the burden is computed on the shortfall)',
-    bare !== offset, bare === offset ? 'IDENTICAL — rent was ignored' : 'rent consumed');
-  const covered = mkPurpose(undefined, '9999').yard('p');
-  need('F2 a rent that covers the carry drives the burden to zero, never negative — Rule F falls silent',
-    !covered.includes('Housing is taking'), 'fully-covered property');
+  /* ⛔ THESE TWO LEGS USED A BLANK-PURPOSE FIXTURE AND THAT WAS THE DEFECT, NOT THE TEST SETUP.
+     Written while Rule F's rental voice was unauthored (§13.7a), they observed the burden on a
+     purpose that "keeps today's string" — i.e. they asserted that a rent REDUCES THE BURDEN ON A
+     NON-RENTAL. When the field shipped on 2026-08-04 these legs armed and immediately certified a
+     live bug: a rent left behind after switching purpose away from Rental silenced Rule F on a home
+     the owner lives in. A GATE THAT PROTECTS A DEFECT IS WORSE THAN A MISSING GATE.
+     §13.9a is authored now, so consumption is observable where it actually belongs — on a RENTAL,
+     through the rental voice, on the SHORTFALL. Two different rents must yield two different
+     shortfall figures: that is what proves the rent is consumed rather than merely present. */
+  const rentLow  = mk('300').yard('p');
+  const rentHigh = mk('600').yard('p');
+  const RENTAL_F = 'After the rent comes in';
+  need('F1 [PRESENCE] a rental in shortfall renders Rule F\'s RENTAL voice (else the comparison is vacuous)',
+    rentLow.includes(RENTAL_F), rentLow.includes(RENTAL_F) ? 'rental Rule F present' : 'RULE F ABSENT — fixture never armed it');
+  need('F1 a HIGHER rent changes the figure — the burden is computed on the SHORTFALL, not the full carry',
+    rentHigh.includes(RENTAL_F) && rentLow !== rentHigh, rentLow === rentHigh ? 'IDENTICAL — rent was ignored' : 'rent consumed');
+  const covered = mk('9999').yard('p');
+  need('F2 a rent that covers the carry drives the shortfall to zero, never negative — Rule F falls silent',
+    !covered.includes(RENTAL_F) && !covered.includes('Housing is taking'), 'fully-covered property');
+  /* AND THE MIRROR OF THE DEFECT: the offset must NOT reach a property that is not a rental. */
+  need('F3 a rent on a NON-rental does not touch Rule F — the offset is rental-only',
+    mkPurpose('Primary residence', '9999').yard('p').includes('Housing is taking'), 'stale-rent guard');
 }
 
 let bad = 0;

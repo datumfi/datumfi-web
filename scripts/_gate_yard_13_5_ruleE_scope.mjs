@@ -121,10 +121,17 @@ function render(p) {
   return fn('p');
 }
 
+/* RESOLVE AROUND EVERY FIXTURE, NOT JUST THE FIRST. A resolver proves only the code path it
+   actually walked, and DIFFERENT FIXTURES WALK DIFFERENT PATHS: once _yardRentNet gained its
+   rental-only early return (2026-08-04), the non-rental fixtures stopped reaching
+   _yardRentMonthly, so resolving against PURPOSES[0] alone left it undefined and the RENTAL
+   fixture later died on a ReferenceError — a gate that had already printed a confident
+   dependency list. "It must invoke, not merely compile" was not enough; it must invoke EVERY
+   path the gate will exercise. Re-entering resolveDeps per fixture is a no-op once resolved. */
 resolveDeps(() => render(PURPOSES[0]));
-console.log('extracted from studio.html (* = auto-resolved): ' + pulled.join(', '));
 const OUT = {};
-for (const p of PURPOSES) OUT[p.key] = render(p);
+for (const p of PURPOSES) resolveDeps(() => { OUT[p.key] = render(p); });
+console.log('extracted from studio.html (* = auto-resolved): ' + pulled.join(', '));
 
 const REVERSE = 'reverse mortgage';
 const PLACE   = 'a place to live';
