@@ -3891,10 +3891,11 @@
                  <input type="text" class="editable-room-name" value="${acc.name}" maxlength="20" onchange="updateName('${acc.id}', this.value)">
                  <span class="room-owner">${ownerTag}</span>
               </div>
-              <span class="room-meta">${base.meta}</span>
+              <span class="room-meta">${_propRoomName(acc, base)}</span>
             </div>
             <input type="text" id="room-val-inp-${acc.id}" class="room-input curr-format" placeholder="$0" value="${valStr}" onfocus="this.select()" oninput="onFrontValueEdit('${acc.id}', this)" style="color: ${base.taxCode==='debt' ? 'var(--danger)' : 'var(--white)'};">
             ${extraRows}
+            ${_propCollisionNudge(acc, base) ? `<div style="margin-top:6px; font-size:11px; color:var(--gold); line-height:1.45;">${_propCollisionNudge(acc, base)}</div>` : ''}
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
                <div class="room-desc" style="margin-top:0;">${base.desc}${_exIcon}</div>
                <button class="details-btn" type="button" onclick="openAccountModal('${acc.id}')">⚙️ DETAILS</button>
@@ -9093,6 +9094,114 @@
             </div>`;
     }
 
+    /* ══ §19.1 / §12.1 · THE TWO ROOM-NAME MAPS — ONE SOURCE OF TRUTH, READ AND NEVER RE-DERIVED ═══
+     * Property Copy Bank §19.1 names the SINGLE room. Yard Copy Bank §12.1 names the COMBINED tile
+     * once a lien attaches. §12.12 binds them: neither may be re-derived at a render site, so every
+     * surface calls the resolvers below and nobody spells a room name twice.
+     *
+     * 🔑 BOTH MAPS FAIL CLOSED. An unrecognised purpose is ABSENT from the map, never defaulted into
+     * it, so it falls through to the name already SHIPPED — the same whitelist-of-the-permitted shape
+     * as _ruleInScope (§13.37). A purpose invented six months from now inherits NOTHING and lands on
+     * THE GROUNDS / THE YARD until somebody decides otherwise. Silence over invention.
+     *
+     * ⛔ blank and 'Other' are DELIBERATELY ABSENT rather than mapped to their own fallback, so the
+     * fallback has exactly one expression. §19.2: blank behaves as PRIMARY for placement and math but
+     * keeps the LEGACY NAME. Silently renaming a room under a user who never chose a purpose is the
+     * same sin as punishing a file for predating a rule. THE DIVERGENCE IS DELIBERATE — do not
+     * harmonise it, and do not "complete" these tables. */
+    /* ⚠️ STORED IN TITLE CASE, EXACTLY AS base.meta IS ('The Grounds'), because the two are
+     * interchangeable at every call site and one of them is the other's fallback. The canvas
+     * uppercases (it already did that to .meta); the left account list does NOT — `.room-meta` (:797)
+     * carries no text-transform, so it renders these literally. Storing the bank's UPPERCASE spelling
+     * here would have silently shouted every non-property room's name in the list the moment the
+     * fallback fired. Measured before wiring, not after. */
+    var PROP_ROOM_NAME = {                          // §19.1 — the single room
+        'Primary residence': 'The Residence',
+        'Second home':       'The Vacation Home',
+        'Rental property':   'The Rental',
+        'Land':              'The Acreage'
+    };
+    var PROP_COMBINED_NAME = {                      // §12.1 — the combined tile, once a lien attaches
+        'Second home':       'The Retreat',
+        'Rental property':   'The Holding',
+        'Land':              'The Reserve'
+    };
+    /* §19.1 resolver. `base` is the taxonomy entry and its .meta is the shipped name, so .meta IS the
+     * fallback — this never reaches into ROOM_TAXONOMY to rewrite anything (§19.4: label map, and
+     * nothing else). Case is the CALLER's business, exactly as it already was for .meta. */
+    function _propRoomName(acc, base) {
+        var shipped = String((base && base.meta) || 'The Grounds');
+        /* The room-TYPE gate lives HERE and not at the call sites, so every surface is safe by
+           construction and §12.12 holds — a render site must never re-derive who may be renamed.
+           INCLUSION, never inferred: only a property room can take a §19 name, so a debt or a
+           brokerage that ever grows a field spelled propPurpose inherits nothing. */
+        if (!acc || !isPropertyBase(base)) return shipped;
+        return PROP_ROOM_NAME[acc.propPurpose] || shipped;
+    }
+    /* §12.1 resolver. The shipped fallback is the literal The Yard. §19.3: the Yard voice is the cost
+     * of owning the home you LIVE IN, so the word stays with the primary residence and with blank; a
+     * rental with a mortgage is a business with a loan on it, and it gets its own roof. */
+    function _propCombinedName(acc) {
+        return (acc && PROP_COMBINED_NAME[acc.propPurpose]) || 'The Yard';
+    }
+    /* §12.11 · HEADER HOVERS — one per combined room, Architect-authored, wired VERBATIM. Keyed by the
+     * SAME propPurpose as PROP_COMBINED_NAME and kept adjacent to it deliberately: a room whose name
+     * and whose hover are decided in two different places is a room that will eventually be called one
+     * thing and described as another. The Yard's own hover is UNCHANGED (§5 R33) and is the fallback,
+     * so blank / Primary residence / Other keep today's words byte-for-byte. */
+    var PROP_COMBINED_HOVER = {
+        'Second home':     'Your second home and its loans seen as one — the full cost of a place you own but do not live in.',
+        'Rental property': 'Your rental and its loans seen as one — what it is worth, what you owe against it, what it costs to hold, and what is actually left after all of it.',
+        'Land':            'Your land and anything owed against it seen as one — what it is worth, what it costs to simply keep, and what it does for you before it is sold.'
+    };
+    function _propCombinedHover(acc) {
+        return (acc && PROP_COMBINED_HOVER[acc.propPurpose]) ||
+               'The Yard is your home and its loans seen as one — what the place is worth, what you owe against it, and what it truly costs to keep. Not just the mortgage: the whole cost of ownership in one view.';
+    }
+    /* ══ §19.8 · A PURPOSE NAME IS A TYPE, NOT AN IDENTITY (Architect ruling 2026-08-05) ════════════
+     * V1 allows more than one property, so the §19.1 map ALONE would draw two unnamed rentals as two
+     * tiles both reading THE RENTAL — the 593c collision one level down, and harder to see because
+     * each tile is individually correct.
+     *   NAMED                 → the user's name is the headline, the §19 name is the room line under
+     *                           it. The user's name always wins; never overwritten, never decorated.
+     *   UNNAMED, no collision → the §19 name IS the headline, exactly as §19.1 authored it. Nothing
+     *                           changes for the single-property user, who is most users.
+     *   UNNAMED, collision    → both keep the name; the SECOND and later carry an inline nudge, once.
+     * ⛔ NEVER AUTO-NUMBER. THE RENTAL 2 is an identity we invented rather than asked for, and it
+     * renumbers itself when a property is deleted, so the name a user learned changes underneath them.
+     * 🔑 THE COLLISION IS TESTED ON THE RENDERED NAME, NOT ON propPurpose — so two purposes that ever
+     * resolve to one name are caught by this same test without anybody remembering to add them. */
+    function _propIsNamed(acc) { return !!(acc && String(acc.name || '').trim()); }
+    function _propNameCollision(acc, base) {
+        if (!acc || _propIsNamed(acc)) return false;   // a named property has an identity and cannot collide
+        var mine = _propRoomName(acc, base), seen = 0, list = (state.accounts || []);
+        for (var i = 0; i < list.length; i++) {
+            var o = list[i];
+            if (o.exclude || !isPropertyBase(getBaseType(o.baseId)) || _propIsNamed(o)) continue;
+            if (_propRoomName(o, getBaseType(o.baseId)) !== mine) continue;
+            seen++;
+            if (o.id === acc.id) return seen > 1;      // the FIRST tile stays clean; the second and later nudge
+        }
+        return false;
+    }
+    /* Architect-authored §19.8, wired VERBATIM for the case he authored: with mine = 'THE RENTAL' this
+     * renders "Two rooms are both called the rental." byte-for-byte as written at Property A254. The
+     * lowercased-rendered-name generalisation is MINE, not his — flagged in the ship report for
+     * ratification, because the authored example cannot cover a VACATION HOME collision on its own. */
+    function _propCollisionNudge(acc, base) {
+        if (!_propNameCollision(acc, base)) return '';
+        return 'Two rooms are both called ' + _propRoomName(acc, base).toLowerCase() +
+               '. Give this one a name so you can tell them apart.';
+    }
+    /* §13.55 — A MAP THAT TWO FILES READ LIVES IN THE FILE THAT CANNOT GO STALE. studio.html is HTML
+     * and uncached; scripts/datum-estate.js is JS and caches FOUR HOURS. So the maps live HERE and the
+     * renderer READS them, behind a capability check on its side. A stale renderer simply never calls
+     * these and draws the shipped names — degrading to behaviour already proven safe, which is the
+     * only acceptable failure mode. Read-only surface; the renderer never writes back. */
+    window.DatumRoomNames = {
+        roomName: _propRoomName, combinedName: _propCombinedName, collisionNudge: _propCollisionNudge
+    };
+
     // §19.2 Use-of-Funds select (HELOC-only; injected into the shared debt modal). OPTIONAL/PROGRESSIVE — a
     // blank purpose leaves the §19.2 tax-deductibility beat dark (sourced-or-blank, L47), protecting against
     // form fatigue. 'Home improvement' vs 'Other' selects which verbatim beat variant fires. Hover from
@@ -10981,15 +11090,19 @@
     function _yardMortgage(propId) { var L = _yardLiens(propId); for (var i = 0; i < L.length; i++) if (String((getBaseType(L[i].baseId) || {}).id).indexOf('mortgage') === 0) return L[i]; return null; }
     function _yardHeloc(propId) { var L = _yardLiens(propId); for (var i = 0; i < L.length; i++) if (String((getBaseType(L[i].baseId) || {}).id).indexOf('heloc') === 0) return L[i]; return null; }
     /* ── A NAMED ABSENT FIELD, NOT AN ASSUMED ZERO (Yard §13.7b, ruled 2026-08-04) ────────────────
-     * rentMonthly is AUTHORED in Property §18 and NOT YET WIRED. Rule F's burden test is correct today
-     * only because the field does not exist — the day 592a lands it, F overstates a landlord's housing
-     * burden by the entire rent, and nobody will have touched Rule F.
-     * 🔑 A RULE THAT IS CORRECT ONLY BECAUSE A FIELD DOES NOT EXIST YET IS A DEFECT WITH A START DATE.
-     * So the absence is NAMED rather than assumed: this returns {monthly, sourced} and every consumer
-     * branches on `sourced`. A named absence can be grepped for and gated on; an inlined `|| 0` cannot.
-     * _gate_yard_13_8_rentforward.mjs arms itself off this seam and PRINTS that it ran unarmed. */
+     * ✅ rentMonthly IS WIRED — Property §18.1 shipped it at `6463bb4` (2026-08-04) and it is rendered
+     * by _propRentalFieldsHTML. This block used to say "AUTHORED and NOT YET WIRED", which stayed true
+     * for exactly one day and then quietly became false; corrected in 593d.
+     * 🔑 A RULE THAT IS CORRECT ONLY BECAUSE A FIELD DOES NOT EXIST YET IS A DEFECT WITH A START DATE
+     * — and this one's start date ARRIVED. The named-absence design is what made that survivable: this
+     * returns {monthly, sourced} and every consumer branches on `sourced`, so the day the field landed
+     * nothing had to be remembered. A named absence can be grepped for and gated on; an inlined `|| 0`
+     * cannot. _gate_yard_13_8_rentforward.mjs armed itself off this seam the day it shipped.
+     * ⚠️ AND ARMING IS NOT VINDICATION: that gate armed and CERTIFIED a live defect in the same run,
+     * because its fixtures were built on a blank-purpose account back when the rental voice was
+     * unauthored (§13.46). Re-read a waiting gate's fixtures when its field finally lands. */
     function _yardRentMonthly(prop) {
-        var raw = prop ? prop.rentMonthly : null;                 // Property §18 field — not yet authored into the UI
+        var raw = prop ? prop.rentMonthly : null;                 // Property §18.1 field — live since 6463bb4
         if (raw === undefined || raw === null || String(raw).trim() === '') return { monthly: 0, sourced: false };
         var n = _num(raw);
         return isFinite(n) && n > 0 ? { monthly: n, sourced: true } : { monthly: 0, sourced: false };
@@ -11400,7 +11513,10 @@
         if (!ov) { ov = document.createElement('div'); ov.id = 'yard-modal-overlay'; ov.style.cssText = 'display:none; position:fixed; inset:0; background:rgba(0,0,0,0.72); z-index:10020; align-items:center; justify-content:center;'; ov.onclick = function (e) { if (e.target === ov) ov.style.display = 'none'; }; document.body.appendChild(ov); }
         ov.innerHTML = '<style>.yard-sec{background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:14px 16px; margin-bottom:12px;} .yard-h{font-weight:bold; font-size:13px; color:var(--teal-mid); margin-bottom:10px;}</style>' +
             '<div style="background:var(--bg-navy,#0a1628); border:1px solid rgba(255,255,255,0.14); border-radius:10px; max-width:600px; width:94vw; max-height:88vh; overflow-y:auto; padding:24px;">' +
-            '<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;"><div class="hud-title modal-tt-wrap" style="color:var(--white); font-size:18px; cursor:help;">🌳 The Yard<div class="modal-tt" style="left:0; right:auto; top:100%; bottom:auto;"><strong>The Yard</strong>The Yard is your home and its loans seen as one — what the place is worth, what you owe against it, and what it truly costs to keep. Not just the mortgage: the whole cost of ownership in one view.</div></div>' +
+            /* §12.1 + §12.11 — the combined room names ITSELF and describes itself from one pair of
+               maps. Blank / Primary residence / Other resolve to The Yard and today's §5 R33 words,
+               so an existing file is byte-identical here. */
+            '<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;"><div class="hud-title modal-tt-wrap" style="color:var(--white); font-size:18px; cursor:help;">🌳 ' + _propCombinedName(prop) + '<div class="modal-tt" style="left:0; right:auto; top:100%; bottom:auto;"><strong>' + _propCombinedName(prop) + '</strong>' + _propCombinedHover(prop) + '</div></div>' +
             '<button onclick="document.getElementById(\'yard-modal-overlay\').style.display=\'none\';" style="background:transparent; border:none; color:var(--white); font-size:24px; cursor:pointer; line-height:1;">&times;</button></div>' +
             '<div style="font-size:11px; color:rgba(255,255,255,0.45); margin-bottom:16px;">The whole cost of ownership, in one view. Open each account on its own — from the left list, or by clicking a section below.</div>' +
             secA + secB + _yardDebtPieHTML(propId) + secH + secC + secD + diBlock + '</div>';   // §19.7 — all-liens (mortgage + HELOC) vs equity

@@ -15,6 +15,27 @@
   // descriptor surface are unchanged.
   function fillPct(v) { return v > 0 ? 100 : 0; }
 
+  /* ── §19.1 / §12.1 ROOM NAMES · THE CAPABILITY CHECK POINTS THE OTHER WAY ────────────────────────
+     §13.55 — A MAP THAT TWO FILES READ LIVES IN THE FILE THAT CANNOT GO STALE. The maps live in
+     studio.html, which is HTML and uncached; THIS file is JS and caches FOUR HOURS at the edge. So the
+     staleness is on OUR side of the seam, and the check runs here rather than in the host: the host
+     has nothing to branch on, because its own surfaces (the account list, the modals) are correct
+     whether or not this renderer is current. Adding a `supportsRoomNames` flag to the export would be
+     a flag nobody reads — decoration, which the note at the foot of this file explicitly forbids. Same
+     SHAPE as supportsSatellites (named export, guarded read, documented fallback), opposite DIRECTION.
+
+     The fallback is the whole safety argument: an old cached copy of this file simply never calls
+     these, and every tile draws base.meta exactly as it drew yesterday. Degrading to the behaviour
+     already shipped is safe; drawing a half-applied rename never is. */
+  function _roomNameOf(acc, base) {
+    var M = window.DatumRoomNames;
+    return (M && typeof M.roomName === 'function') ? M.roomName(acc, base) : String((base && base.meta) || '');
+  }
+  function _combinedNameOf(acc) {
+    var M = window.DatumRoomNames;
+    return (M && typeof M.combinedName === 'function') ? M.combinedName(acc) : 'The Yard';
+  }
+
   // ── Architecture pass · Step 1 — REAL doorways on shared walls ───────────────────────────────
   // The faux arch-marks are gone. A doorway = the existing navy wall-cutout (a true opening) PLUS a
   // proper floor-plan door symbol (a swing arc + leaf). Position varies deterministically per room
@@ -388,13 +409,16 @@
       let gSVG = document.createElementNS("http://www.w3.org/2000/svg", "g");
       if (_moatDebts.length) {
           // §1.5 THE YARD — 3-line stack applied to the EXISTING merged tile (Correction B: reuse this tile, no new art).
-          let _grLabel = getBaseType(propertyAccount.baseId).meta.toUpperCase() + _lienMetaSuffix(_moatDebts);   // brand sub-line (decision 1), all liens named
+          // §12.12 — line 2's FIRST token follows the Property §19.1 room map; the lien tokens after it
+          // are unchanged on every purpose. Line 1 (below) follows the Yard §12.1 combined map. Two maps,
+          // one source of truth each, neither re-derived here.
+          let _grLabel = _roomNameOf(propertyAccount, getBaseType(propertyAccount.baseId)).toUpperCase() + _lienMetaSuffix(_moatDebts);
           let _eqFig = (parseFloat(propertyAccount.value) || 0) > 0 ? _eqStr(_moatEq) : '';                      // sourced-or-blank: no home value → label with no figure (L47, R86)
           gSVG.innerHTML = `
-          <title>The Yard — this home and its linked debts, combined. Click for the true cost of ownership.</title>
+          <title>${_combinedNameOf(propertyAccount)} — this home and its linked debts, combined. Click for the true cost of ownership.</title>
           ${_linkChipSVG(gX + gW/2 - 13, gY + gH - 82, _lienMirrorNotice(_moatDebts, 'home'))}
           <rect x="${gX}" y="${gY}" width="${gW}" height="${gH}" class="grounds-rect" style="stroke:none; fill:none; pointer-events:none;" />
-          <text x="${gX + gW/2}" y="${gY + gH - 48}" class="grounds-title" style="fill: ${_grLine}; font-size:20px; letter-spacing:0.16em;">THE YARD</text>
+          <text x="${gX + gW/2}" y="${gY + gH - 48}" class="grounds-title" style="fill: ${_grLine}; font-size:20px; letter-spacing:0.16em;">${_combinedNameOf(propertyAccount).toUpperCase()}</text>
           <text x="${gX + gW/2}" y="${gY + gH - 26}" class="grounds-title" style="fill: ${_grLine}; opacity:0.85;">${_grLabel}</text>
           <text x="${gX + gW/2}" y="${gY + gH - 6}" class="grounds-title" style="fill: ${_grValColor}; font-size:14px;">Net Equity: ${_eqFig}</text>
       `;
@@ -492,7 +516,7 @@
                   <title>${base.desc}</title>
                   <rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" class="room-rect active ${taxClass} ${animClass}" />
                   ${fillHTML}
-                  <text x="${d.cx}" y="${d.cy - 10}" class="bp-title" style="fill:var(--shield)">${base.meta.toUpperCase()}</text>
+                  <text x="${d.cx}" y="${d.cy - 10}" class="bp-title" style="fill:var(--shield)">${_roomNameOf(acc, base).toUpperCase()}</text>
                   <text x="${d.cx}" y="${d.cy + 30}" class="bp-val" style="fill:var(--white)">${valStr}</text>
               `;
               svgContainer.appendChild(g);
@@ -579,7 +603,7 @@
                   '<rect x="' + d.x + '" y="' + d.y + '" width="' + d.w + '" height="' + d.h + '" class="room-rect active ' +
                       (isThermal ? 'tax-' + base.taxCode : '') + (acc.isNew ? ' animate-draw' : '') + '" />' +
                   fillHTML +
-                  '<text x="' + d.cx + '" y="' + (d.cy - 6) + '" class="bp-title" style="font-size:11px;">' + base.meta.toUpperCase() + '</text>' +
+                  '<text x="' + d.cx + '" y="' + (d.cy - 6) + '" class="bp-title" style="font-size:11px;">' + _roomNameOf(acc, base).toUpperCase() + '</text>' +
                   '<text x="' + d.cx + '" y="' + (d.cy + 24) + '" class="bp-val" style="font-size:22px; fill:' + (sNeg ? 'var(--danger)' : 'var(--white)') + ';">' + sVal + '</text>';
               svgContainer.appendChild(g);
               descriptors.push({ id: acc.id, el: g, rect: g.querySelector('.room-rect'), d: d, value: acc.value || 0,
@@ -728,7 +752,9 @@
                   let _mergeDebts = (!isDebt) ? (_mergeDebtsByAsset[acc.id] || []) : [];   // §18.6 — ALL liens
                   let _mergeEq = _mergeDebts.length ? _netEquityOf(acc.value, _mergeDebts) : null;
                   let _mergeNeg = (_mergeEq !== null && _mergeEq < 0);
-                  let _roomTitle = _mergeDebts.length ? (base.meta.toUpperCase() + _lienMetaSuffix(_mergeDebts)) : base.meta.toUpperCase();
+                  // §12.12 — the room token follows §19.1; the lien tokens are UNCHANGED (THE MOAT and
+                  // THE CELLAR are the same words on every purpose), so _lienMetaSuffix is untouched.
+                  let _roomTitle = _roomNameOf(acc, base).toUpperCase() + (_mergeDebts.length ? _lienMetaSuffix(_mergeDebts) : '');
                   let _titleY = _mergeDebts.length ? (d.cy - 20) : (d.cy - 10);
                   let _mergeChip = _mergeDebts.length ? _linkChipSVG(d.x + 6, d.y + 6, _lienMirrorNotice(_mergeDebts, 'asset')) : '';
                   let _valBlock = _mergeDebts.length
