@@ -34,7 +34,7 @@
      node scripts/_suite_baseline.mjs --sabotage=hang     RED-FIRST: break a sentinel, expect exit 1
      node scripts/_suite_baseline.mjs --explain           print the population accounting, run nothing
 */
-import { spawn } from 'node:child_process';
+import { spawn, execSync } from 'node:child_process';
 import http from 'node:http';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -128,6 +128,27 @@ function startServer(port) {
     server.on('error', reject);
     server.listen(port, '127.0.0.1', () => resolve(server));
   });
+}
+
+/* Best-effort "who is on this port", for the abort message only. NEVER throws and never blocks the
+   abort: an identification step that can itself fail must degrade to saying nothing, or the guard
+   becomes the new outage. Returns a printable string, or '' when it cannot tell. */
+function whoHolds(port) {
+  try {
+    const run = (c) => execSync(c, { stdio: ['ignore', 'pipe', 'ignore'], timeout: 4000 }).toString().trim();
+    if (process.platform === 'win32') {
+      const pid = run(`powershell -NoProfile -Command "(Get-NetTCPConnection -LocalPort ${port} -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1).OwningProcess"`);
+      if (!pid) return '';
+      let name = '';
+      try { name = run(`powershell -NoProfile -Command "(Get-Process -Id ${pid}).ProcessName"`); } catch { /* name is a nicety */ }
+      return `PID ${pid}${name ? ' (' + name + ')' : ''}`;
+    }
+    const pid = run(`lsof -nP -iTCP:${port} -sTCP:LISTEN -t`).split('\n')[0];
+    if (!pid) return '';
+    let name = '';
+    try { name = run(`ps -p ${pid} -o comm=`); } catch { /* name is a nicety */ }
+    return `PID ${pid}${name ? ' (' + name + ')' : ''}`;
+  } catch { return ''; }
 }
 
 /* ---------------- run one gate ---------------- */
@@ -294,9 +315,19 @@ async function runPool(list, conc, label) {
     catch (e) {
       console.log('\n⛔ ABORT — static server could not bind 127.0.0.1:8001: ' + e.message);
       console.log('   ' + browserGates.length + ' browser gates need this port and something else is already holding it.');
-      console.log('   That process is NOT this runner and its document root is UNKNOWN, so any score');
-      console.log('   produced against it would be unverifiable. NO SCORE IS PRINTED.');
-      console.log('   Identify the holder, stop it, and re-run:');
+      const held = whoHolds(8001);
+      if (held) console.log('   HOLDER: ' + held);
+      /* §13.57 — NAME THE LIKELIEST CAUSE, NOT THE SCARIEST ONE. Measured 2026-08-05: the process that
+         held this port for two days was the Captain's OWN forgotten local preview server, serving the
+         same repo root. That is the MOST FLATTERING version of this failure and precisely why it ran
+         undetected for weeks — it produced correct results. A developer's forgotten dev server is not
+         an exotic edge case, it is THE common one, and a remedy line that implies mystery or malice
+         will not be read. Lead with the boring explanation that is usually true. */
+      console.log('   This is almost always a preview/dev server you left open on this machine.');
+      console.log('   It may even be serving this same repo — that is exactly why this is dangerous:');
+      console.log('   it would produce a CONFIDENT, PLAUSIBLE score that nobody could verify. A server');
+      console.log('   this runner did not start has an UNKNOWN document root, so NO SCORE IS PRINTED.');
+      console.log('   Close it (or stop the PID above) and re-run. To find it yourself:');
       console.log('     Windows  ->  Get-NetTCPConnection -LocalPort 8001 -State Listen');
       console.log('     POSIX    ->  lsof -nP -iTCP:8001 -sTCP:LISTEN');
       console.log('   To score the node-only half meanwhile: node scripts/_suite_baseline.mjs --only=node\n');
@@ -338,7 +369,6 @@ async function runPool(list, conc, label) {
   /* Repeatability check. 16 gates write scripts/*.out.txt receipts into the tree by design, so a
      suite run can leave the working tree dirty. This REPORTS that; it does not clean it. */
   try {
-    const { execSync } = await import('node:child_process');
     /* §13.18 FIX (593d) — THIS READ THE UNTRACKED LIST AND CALLED IT THE MODIFIED LIST. `--porcelain=v1`
        emits `??` rows for untracked files, and every one was counted as "tracked file(s) modified".
        This repo permanently carries FOUR untracked reference files, so the warning fired on EVERY run,
