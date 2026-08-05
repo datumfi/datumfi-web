@@ -53,11 +53,13 @@ const ex = (s, n) => lift(s, n);
 const names = ['_num', '_groundsLinkedDebt', '_yardLiens', '_yardMortgage', '_yardHeloc', '_yardRealMonthly',
   '_yardNetEquity', '_yardHouseholdIncome', '_yardYearsToRetire', '_retireInfo', 'calculateTotalPmt', 'payoffMonths',
   '_propOccupied', '_ruleInScope', '_yardIntelligence'];
-/* RULE_SCOPE is a `var`, not a function, so ex() cannot reach it — and _ruleInScope reads it.
-   Lift the declaration VERBATIM from studio.html rather than restating it here: a second copy of the
-   scope table in the gate would be exactly the maintained document the constant exists to replace. */
+/* RULE_SCOPE is a `var`, and ex() now reaches it: lift() (§13.21) handles function AND binding forms,
+   so nothing here pre-lifts it. The resolver below pulls it the moment _ruleInScope references it,
+   and `pulled` records what was ACTUALLY taken. It used to be seeded with 'RULE_SCOPE(var)' — a
+   claim about a lift that no longer happens at that point, i.e. an instrument reporting a step it
+   did not perform. Small, and exactly the class of thing this arc keeps removing. */
 let body = '';
-const pulled = ['RULE_SCOPE(var)'];
+const pulled = [];
 for (const n of names) { try { body += ex(src, n) + '\n'; pulled.push(n); } catch (e) { if (n === '_propOccupied' || n === '_ruleInScope') continue; throw e; } }
 
 const getBaseType = (baseId) => {

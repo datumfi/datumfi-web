@@ -20,6 +20,7 @@
  *   --addrule  introduces an undeclared RULE I -> a new rule ships with no audience.
  */
 import { readFileSync } from 'node:fs';
+import { lift } from './_gate_extract.mjs';
 const DROPKEY = process.argv.includes('--dropkey');
 const ADDRULE = process.argv.includes('--addrule');
 let src = readFileSync('studio.html', 'utf8');
@@ -56,8 +57,24 @@ const checks = [];
 const need = (l, c, d) => checks.push([l, !!c, d]);
 
 // ── the two sets ──────────────────────────────────────────────────────────────────────────────────
-const scopeDecl = (src.match(/var RULE_SCOPE = \{([^}]*)\};/) || [])[1];
-const scopeKeys = scopeDecl ? [...scopeDecl.matchAll(/([A-Z])\s*:\s*'([A-Z_]+)'/g)].map((m) => ({ k: m[1], v: m[2] })) : [];
+/* §13.21 — THE NINTH CALLER. This was the last hand-written `var RULE_SCOPE = \{[^}]*\};` regex in
+   the tree, and it carried the §13.31 landmine: that pattern matches TWICE in studio.html — the real
+   declaration, and a comment that quotes it while explaining it — so it worked only because
+   String.match without /g returns the first. Move the comment above the declaration and this gate
+   would have read its key list out of prose.
+   It is the odd one out because it wants the KEYS, not the source, so lift() alone did not serve it.
+   EVALUATING the lifted declaration is strictly better than regex-parsing the inner text: it inherits
+   lift()'s line-anchoring and its refusal to resolve an ambiguous name, and it reads the table the
+   ENGINE would see rather than a second interpretation of the same characters. */
+let scopeKeys = [];
+try {
+  const _tbl = new Function(lift(src, 'RULE_SCOPE') + '\nreturn RULE_SCOPE;')();
+  scopeKeys = Object.keys(_tbl).map((k) => ({ k: k, v: _tbl[k] }));
+} catch (e) {
+  console.error('❌ PRESENCE — could not lift and evaluate RULE_SCOPE: ' + e.message);
+  console.error('   Refusing to compare two sets when one of them could not be read.');
+  process.exit(1);
+}
 const emitted = [...src.matchAll(/^\s*\/\/ RULE ([A-Z]) —/gm)].map((m) => m[1]);
 
 // ── PRESENCE FIRST — two empty sets agree perfectly, which is the false green this law exists to stop.
