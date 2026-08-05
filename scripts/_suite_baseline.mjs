@@ -267,8 +267,41 @@ async function runPool(list, conc, label) {
 
   let server = null;
   if (browserGates.length) {
+    /* ⛔ BIND-OR-ABORT — A PRECONDITION THAT PRINTS A WARNING AND CONTINUES IS NOT A PRECONDITION,
+       IT IS A COMMENT. This used to catch the bind failure, log "(browser gates will red)", and then
+       run all 92 browser gates ANYWAY against whatever was already answering on 8001.
+
+       Measured 2026-08-05: a node process nobody in the session started had held this port since
+       2026-08-03 19:55. It happened to serve the same repo root from disk, so 90 of 92 browser gates
+       went GREEN and the prediction above was FALSIFIED — the tell nobody was reading. The recorded
+       baselines were right BY LUCK. A squatter pointed at a stale checkout, a dist/, or another
+       worktree produces the same confident 190 GREEN, and this file's own header (lines 4-8) already
+       says why that must never print: A BASELINE YOU CANNOT TRUST MUST NEVER BE PRINTABLE. The law was
+       simply never extended past the four sentinels to the precondition underneath them.
+
+       🔑 WHEN A FAILURE PREDICTS A CONSEQUENCE AND THE CONSEQUENCE DOES NOT ARRIVE, THAT IS THE TELL:
+       either the precondition never mattered, or something silently substituted for it. Find out which.
+
+       ⚠️ AND THE SAME PORT HAS BITTEN IN MIRROR — see the port-discipline block above: _gate_room_picker
+       self-hosted on 8001 and died EADDRINUSE inside every suite run for SEVEN COMMITS while scoring
+       42/0 alone. That block was written for the gate side and never turned around on the runner.
+       A LAW APPLIED IN ONE DIRECTION IS HALF A LAW.
+
+       The remedy is deliberately the operator's, not ours: identify what holds the port and stop it.
+       We do NOT kill the process — an unidentified long-lived process is not ours to reap, and a
+       runner that reaches for pkill is a worse instrument than one that stops and says why. */
     try { server = await startServer(8001); console.log('static server: 127.0.0.1:8001 -> repo root  UP'); }
-    catch (e) { console.log('static server: FAILED to bind 8001 — ' + e.message + '  (browser gates will red)'); }
+    catch (e) {
+      console.log('\n⛔ ABORT — static server could not bind 127.0.0.1:8001: ' + e.message);
+      console.log('   ' + browserGates.length + ' browser gates need this port and something else is already holding it.');
+      console.log('   That process is NOT this runner and its document root is UNKNOWN, so any score');
+      console.log('   produced against it would be unverifiable. NO SCORE IS PRINTED.');
+      console.log('   Identify the holder, stop it, and re-run:');
+      console.log('     Windows  ->  Get-NetTCPConnection -LocalPort 8001 -State Listen');
+      console.log('     POSIX    ->  lsof -nP -iTCP:8001 -sTCP:LISTEN');
+      console.log('   To score the node-only half meanwhile: node scripts/_suite_baseline.mjs --only=node\n');
+      process.exit(1);
+    }
   }
 
   const t0 = Date.now();
@@ -306,15 +339,25 @@ async function runPool(list, conc, label) {
      suite run can leave the working tree dirty. This REPORTS that; it does not clean it. */
   try {
     const { execSync } = await import('node:child_process');
-    const dirty = execSync('git status --porcelain=v1', { cwd: REPO }).toString().trim();
-    if (dirty) {
-      const n = dirty.split('\n').length;
-      console.log(`\n⚠️  REPEATABILITY: this run left ${n} tracked file(s) modified (gate-written receipts).`);
+    /* §13.18 FIX (593d) — THIS READ THE UNTRACKED LIST AND CALLED IT THE MODIFIED LIST. `--porcelain=v1`
+       emits `??` rows for untracked files, and every one was counted as "tracked file(s) modified".
+       This repo permanently carries FOUR untracked reference files, so the warning fired on EVERY run,
+       naming files no gate had written — a repeatability alarm that was always on, which is the same
+       as no alarm. Partitioned now: `??` is untracked and is NOT a repeatability signal. */
+    const rows = execSync('git status --porcelain=v1', { cwd: REPO }).toString().trim();
+    const lines = rows ? rows.split('\n') : [];
+    const modified = lines.filter((l) => !l.startsWith('??'));
+    const untracked = lines.filter((l) => l.startsWith('??'));
+    if (modified.length) {
+      console.log(`\n⚠️  REPEATABILITY: this run left ${modified.length} tracked file(s) modified (gate-written receipts).`);
       console.log('   The suite is not side-effect-free — a clean-tree run does not finish clean-tree.');
-      dirty.split('\n').slice(0, 20).forEach((l) => console.log('   ' + l));
+      modified.slice(0, 20).forEach((l) => console.log('   ' + l));
     } else {
-      console.log('\n✅ REPEATABILITY: working tree clean after the run.');
+      console.log('\n✅ REPEATABILITY: no tracked file was modified by this run.');
     }
+    /* Reported, never counted. §13.18 stays DEGRADED-NOT-DEAD on purpose: it caught a missing file
+       while parked, so the untracked list is still printed — just no longer mistaken for the alarm. */
+    if (untracked.length) console.log(`   (${untracked.length} untracked file(s) present, not written by this run — not a repeatability signal)`);
   } catch { /* not a git checkout — skip */ }
 
   process.exit(red.length + to.length + se.length === 0 ? 0 : 1);
