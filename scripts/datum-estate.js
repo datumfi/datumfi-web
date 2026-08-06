@@ -415,8 +415,8 @@
           let _grLabel = _roomNameOf(propertyAccount, getBaseType(propertyAccount.baseId)).toUpperCase() + _lienMetaSuffix(_moatDebts);
           let _eqFig = (parseFloat(propertyAccount.value) || 0) > 0 ? _eqStr(_moatEq) : '';                      // sourced-or-blank: no home value → label with no figure (L47, R86)
           gSVG.innerHTML = `
-          <title>${_combinedNameOf(propertyAccount)} — this home and its linked debts, combined. Click for the true cost of ownership.</title>
-          ${_linkChipSVG(gX + gW/2 - 13, gY + gH - 82, _lienMirrorNotice(_moatDebts, 'home'))}
+          <title>${_combinedNameOf(propertyAccount)} — this property and its linked debts, combined. Click for the true cost of ownership.</title>
+          ${_linkChipSVG(gX + gW/2 - 13, gY + gH - 82, _lienMirrorNotice(_moatDebts, 'property'))}
           <rect x="${gX}" y="${gY}" width="${gW}" height="${gH}" class="grounds-rect" style="stroke:none; fill:none; pointer-events:none;" />
           <text x="${gX + gW/2}" y="${gY + gH - 48}" class="grounds-title" style="fill: ${_grLine}; font-size:20px; letter-spacing:0.16em;">${_combinedNameOf(propertyAccount).toUpperCase()}</text>
           <text x="${gX + gW/2}" y="${gY + gH - 26}" class="grounds-title" style="fill: ${_grLine}; opacity:0.85;">${_grLabel}</text>
@@ -582,7 +582,11 @@
               var sNeg = (sEq !== null && sEq < 0);
               // L47 sourced-or-blank: no value -> a named tile with no figure, never a guessed one.
               var sVal = (parseFloat(acc.value) || 0) > 0 ? (sEq !== null ? _eqStr(sEq) : _eqStr(acc.value)) : '';
-              var sTip = sDebts.length ? _lienMirrorNotice(sDebts, 'home') : (base.desc || '');
+              // §19.11a — 'property', not 'home'. This tooltip and the link chip 48 lines below are on
+              // THE SAME TILE and said different nouns; a room that cannot agree with itself about what
+              // it is looking at is worse than either noun being wrong. Type-first (§19.5) and true on
+              // all six purposes — "this home's value" is simply false on The Acreage and The Holding.
+              var sTip = sDebts.length ? _lienMirrorNotice(sDebts, 'property') : (base.desc || '');
 
               /* ── §19.13 / RULING (A) · A LIEN IS A LIEN, WHEREVER THE PROPERTY DRAWS ──────────────
                  THE RULE WE THOUGHT WE IMPLEMENTED: a property merges with its debts.
@@ -787,6 +791,12 @@
                   // THE CELLAR are the same words on every purpose), so _lienMetaSuffix is untouched.
                   let _roomTitle = _roomNameOf(acc, base).toUpperCase() + (_mergeDebts.length ? _lienMetaSuffix(_mergeDebts) : '');
                   let _titleY = _mergeDebts.length ? (d.cy - 20) : (d.cy - 10);
+                  // §19.11a — 'asset' STAYS, and this is a DELIBERATE DIFFERENCE, not drift. The other
+                  // three call sites became 'property' because they only ever draw real estate. This one
+                  // is the GENERIC merge chip on the ordinary room loop (!isDebt, any asset carrying a
+                  // lien — the comment above names auto-loan -> vehicle). Forcing 'property' here would
+                  // print "this property's value" on a car to fix a sentence on a house. Checked
+                  // 2026-08-06: callers are cross-room, so the noun stays the widest true one.
                   let _mergeChip = _mergeDebts.length ? _linkChipSVG(d.x + 6, d.y + 6, _lienMirrorNotice(_mergeDebts, 'asset')) : '';
                   let _valBlock = _mergeDebts.length
                     ? `

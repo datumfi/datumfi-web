@@ -4021,6 +4021,35 @@
     }
     window._pickGroundOwner = _pickGroundOwner;   // read-only, for gates
 
+    /* ══ §19.15 · THE FIRST PROPERTY IS BORN A PRIMARY RESIDENCE ═══════════════════════════════════
+     * Captain: "that has got to be 90% of what a user means when they first build a space." The room
+     * should get the common case right with zero clicks. A second property stays blank until chosen.
+     *
+     * ⛔ A DEFAULT IS A PRE-FILLED INPUT, NEVER A RETROACTIVE TRUTH. This runs at CREATION ONLY and
+     * is computed BEFORE the push, so it can only ever decide what a brand-new record is born with.
+     * NOTHING HERE EVER WRITES TO A RECORD THAT ALREADY EXISTS. Backfilling Primary residence onto
+     * existing blanks would fabricate a sourced value (L47) and destroy the §19.2 restore path that
+     * protects every file written before purpose existed. BLANK MUST KEEP MEANING BLANK FOREVER.
+     *
+     * FIRST PROPERTY ONLY, and that is load-bearing twice over: it is the Captain's rule, and it also
+     * means the §19.18 radio-demotion (setting Primary rewrites an existing explicit primary to Second
+     * home) CAN NEVER FIRE FROM THIS PATH — there is by definition no other property to demote.
+     *
+     * PURE, and takes `rooms` rather than reaching for state, so a gate can drive it directly and the
+     * "is this the first one" question is answered by the caller's own list (same shape as
+     * _pickGroundOwner above). Returns null when it must not fire — callers assign only on a truthy
+     * result, so a property that is not the first is born with NO propPurpose key at all, byte-identical
+     * to every property drafted before today. */
+    function _birthPropPurpose(baseId, rooms) {
+      if (!isPropertyBase({ id: baseId })) return null;              // not a property — never fires
+      var list = rooms || [];
+      for (var i = 0; i < list.length; i++) {                        // ANY existing property => not the first
+        if (isPropertyBase({ id: list[i].baseId })) return null;
+      }
+      return PRIMARY_PURPOSE;
+    }
+    window._birthPropPurpose = _birthPropPurpose;   // read-only, for gates
+
     function renderInputs() {
       const scrollTop = roomsContainer.scrollTop;
       // Captain #4: first-account button is two-state, keyed to account count (strings verbatim, em-dash kept).
@@ -6410,9 +6439,15 @@
     }
     function _diSetTitle(acc, base) {
       var el = document.getElementById('modal-acc-title'); if (!el) return;
-      // other_assets is a value-only tile (NOT a bank-DI room) but gets a room-intro ⓘ via the SHARED wrapper
-      // below (L48 reuse — the same title-ⓘ surface, aimed at one more id). Scoped to other_assets ONLY: the
-      // other value-only tiles (property/collectibles) stay plain — they have no authored hover copy (L47).
+      // Value-only tiles (NOT bank-DI rooms) can still carry a room-intro ⓘ via the SHARED wrapper below
+      // (L48 reuse — the same title-ⓘ surface, aimed at one more id). TWO qualify today: other_assets and
+      // The Grounds, which carries the §3b room-level intro (Property Copy Bank §3c ruling, 2026-08-05).
+      // ⏸ Vehicle (R117) and Collectibles (R118) stay PLAIN — authored to the same shape but deliberately
+      // HELD for the §3c.1 pass, not overlooked. Their copy exists; the wrapper has simply not been aimed
+      // at them yet. This clause is a HOLD, not an absence — do not "tidy" it away as stale (L47).
+      // ⚠ THIS COMMENT WAS ITSELF STALE until 2026-08-06: it claimed property stayed plain, which stopped
+      // being true when §3b shipped. The distinction that keeps the ⓘ legal (§3c): a TITLE ⓘ explains THE
+      // ROOM; a FIELD ⓘ explains A NUMBER. The day one starts explaining a figure, that is the violation.
       // Mortgage rooms (The Moat) are debt, not a bank-DI room, but carry a §3a header hover — let them past.
       var _isMortgageRoom = (base.title === 'Mortgage');
       // HELOC (The Cellar) — debt, not a bank-DI room, but carries a §3a header hover (HELOC Copy Bank R31).
@@ -8403,7 +8438,11 @@
 
         let newBase = getBaseType(newBaseId);
         let newId = 'inst_' + Math.random().toString(36).substr(2, 9);
+        // §19.15 — the SAME helper, not a second copy of the rule. This site creates the counterpart
+        // asset for a debt (mortgage -> property), so it can absolutely be a user's first property.
+        var _bornPurpose = _birthPropPurpose(newBaseId, state.accounts);   // BEFORE the push
         state.accounts.push({ id: newId, baseId: newBaseId, name: newBase.title, value: 0, inflow: 0, freq: 12, intRate: 0, exclude: false, notes: '', cola: 0, linkedAssetId: null, useRule55: false, isNew: true, isFriction: false, isPriority: false, holdings: [], trustType: 'Irrevocable', disbursement: 'Discretionary' });
+        if (_bornPurpose) state.accounts[state.accounts.length - 1].propPurpose = _bornPurpose;   // debt-counterpart site
         
         debt.linkedAssetId = newId;
         // §18.3 (consolidated) — AUTO-LINK the counterpart + STAY in this room (no teleport into the new asset).
@@ -11953,7 +11992,11 @@
       const newId = 'inst_' + Math.random().toString(36).substr(2, 9);
       var wasEmpty = !(state.accounts && state.accounts.length);   // §22 one-shot 0->1 detect (before push)
       var frictionDefault = base.taxCode === 'hsa' || base.id === '529plan';   // HSA/529: "earmarked" set-aside defaults ON (Copy Banks §5)
+      var _bornPurpose = _birthPropPurpose(baseId, state.accounts);   // §19.15 — BEFORE the push, or it counts itself
       state.accounts.push({ id: newId, baseId: baseId, name: base.title, value: 0, inflow: 0, freq: 12, intRate: 0, term: null, exclude: false, notes: '', cola: 0, linkedAssetId: null, useRule55: false, isNew: true, isFriction: frictionDefault, isPriority: false, holdings: [], trustType: 'Irrevocable', disbursement: 'Discretionary' });
+      // Assigned only when truthy, so a non-first property is born with NO propPurpose key — identical
+      // to every property drafted before §19.15 existed. A blank is an absence, not a stored empty.
+      if (_bornPurpose) state.accounts[state.accounts.length - 1].propPurpose = _bornPurpose;   // room-picker site
       renderInputs();
       updateSVGs();
       updateAnalysisText();
