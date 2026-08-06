@@ -1,4 +1,8 @@
 'use strict';
+/* @gate-pool: browser
+ * ^ §13.69 — DECLARED, not inferred. This launches a real Chromium via
+ *   require(ROOT + '/node_modules/playwright'), which the runner's old bare-specifier sniff could
+ *   not see, so it ran 6-wide in the NODE pool instead of serially in the browser pool. */
 /* ROUTE GATE — §18.1 RENTAL FIELDS + §19 ROOM NAMES MUST SURVIVE A SAVE AND A RELOAD.
  *
  * WHY THIS GATE EXISTS. §18.1 (the rental field cluster) and §19 (the purpose-aware room name) are

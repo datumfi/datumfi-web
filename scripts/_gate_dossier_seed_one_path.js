@@ -1,4 +1,6 @@
 'use strict';
+/* @gate-pool: browser
+ * ^ §13.69 — DECLARED, not inferred. Path-resolved playwright require, previously mis-sorted to node. */
 /* THERE IS ONE SEEDING PATH — Architect-ruled 2026-08-03 (#599 Part 1).
  *
  * THE DEFECT THIS PINS. The dossier reaches the Studio by two independent routes:

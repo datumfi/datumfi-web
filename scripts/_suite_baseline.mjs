@@ -80,16 +80,51 @@ const CONC_BROWSER = parseInt(arg('--concbrowser', '1'), 10);   // 1 = canonical
 const HELPERS = new Set(['_gate_extract.mjs']);
 
 /* ---------------- population ---------------- */
+/* ══ §13.69 · CLASSIFY BY BEHAVIOUR, NOT BY SPELLING ═══════════════════════════════════════════════
+   THIS USED TO DECIDE A GATE'S POOL BY TEXT-MATCHING require('playwright'). THREE GATES RESOLVE THE
+   MODULE BY ABSOLUTE PATH — require(ROOT + '/node_modules/playwright') — so the regex never saw them
+   and they ran in the NODE pool while launching a real Chromium. Two of the three are load-bearing:
+   _gate_estate_all_counted_is_drawn (the §19 purpose walk) and _gate_property_roundtrip.
+
+   THE DAMAGE IS NOT "IT PASSED ANYWAY". Pools bind concurrency: node runs 6-wide, the browser pool is
+   deliberately SERIAL because _gate_rename_persist flakes above 1. Browser gates in the node pool make
+   the suite's parallelism assumptions quietly wrong, and the failure mode is TIMEOUTS AND FLAKE UNDER
+   LOAD — a gate going RED for a reason that has nothing to do with the product. That is §13.68 RULE A
+   in a different costume: a resource crash arriving dressed as a disagreement. It collected its first
+   bill the same day it was written: _p5_title_render_parity went red in a full suite and never
+   standalone, because a slower run let an async mirror write lose a race.
+
+   🔑 A DECLARED POOL IS A SOURCE. A REGEX OVER SOURCE TEXT IS A GUESS THAT HAPPENS TO BE RIGHT MOST OF
+   THE TIME — which is L47 wearing a different hat, and a runner that reads source text for MEANING
+   will eventually read it wrong. It already did so TWICE in one day: this, and the '[QUARANTINED]'
+   substring scan below.
+
+   THE CONTRACT: a gate declares its own pool and status in a header marker.
+       @gate-pool: browser        (or: node)
+       @gate-status: quarantined  (optional; omit for a normal gate)
+   Inference REMAINS as a fallback so nothing breaks on day one — but it WARNS, loudly and by name.
+   An undeclared gate is not an error; an undeclared gate nobody is told about is. */
+const POOL_RE   = /@gate-pool:\s*(browser|node)\b/;
+const STATUS_RE = /@gate-status:\s*([a-z-]+)\b/;
+
 function census() {
   const globbed = fs.readdirSync(SCRIPTS).filter((f) => /^(_gate_|_p\d)/.test(f));
   const executable = globbed.filter((f) => /\.(js|mjs)$/.test(f));
   const runnable = executable.filter((f) => !HELPERS.has(f));
+  const undeclared = [], mismatched = [];
   const gates = runnable.sort().map((f) => {
     const src = fs.readFileSync(path.join(SCRIPTS, f), 'utf8');
-    const browser = /require\(['"](playwright|puppeteer)['"]\)|from ['"](playwright|puppeteer)['"]/.test(src);
-    return { name: f, file: path.join(SCRIPTS, f), browser };
+    /* Inference kept BROAD on purpose: any require/import of playwright or puppeteer, however the
+       specifier is spelled — bare, path-resolved, or concatenated. The old form only caught bare. */
+    const inferred = /(?:require\(|from\s+)[^)\n;]*['"`][^'"`\n]*(?:playwright|puppeteer)['"`]/.test(src)
+                  || /require\([^)]*(?:playwright|puppeteer)[^)]*\)/.test(src);
+    const declared = (src.match(POOL_RE) || [])[1] || null;
+    const status = (src.match(STATUS_RE) || [])[1] || null;
+    if (!declared) undeclared.push(f);
+    else if ((declared === 'browser') !== inferred) mismatched.push(`${f} declares ${declared}, source looks ${inferred ? 'browser' : 'node'}`);
+    return { name: f, file: path.join(SCRIPTS, f), browser: declared ? declared === 'browser' : inferred, declared, status };
   });
-  return { globbed, executable, runnable, gates };
+  return { globbed, executable, runnable, gates, undeclared, mismatched };
 }
 
 function explain() {
@@ -103,7 +138,17 @@ function explain() {
   console.log(`  = RUNNABLE                         ${c.runnable.length}`);
   console.log(`      browser-driven                 ${c.gates.filter((g) => g.browser).length}`);
   console.log(`      node-only                      ${c.gates.filter((g) => !g.browser).length}`);
-  console.log('\nbrowser = imports playwright/puppeteer AND launches it; the two definitions coincide.');
+  console.log(`      declared '@gate-pool:'         ${c.gates.filter((g) => g.declared).length}`);
+  console.log(`      classified by inference        ${c.undeclared.length}   (a guess, not a source)`);
+  if (c.mismatched.length) { console.log('\n⚠️  POOL MISMATCH:'); c.mismatched.forEach((m) => console.log('     ' + m)); }
+  /* ⚠️ THIS FOOTER USED TO READ: "browser = imports playwright/puppeteer AND launches it; the two
+     definitions coincide." THEY DO NOT COINCIDE, and that sentence is exactly why nobody looked —
+     a comment asserting an invariant that the code beside it did not enforce. Three gates resolved
+     playwright by absolute path, launched a real browser, and were filed as node. Corrected rather
+     than deleted, because the false claim is the whole lesson (§13.69). */
+  console.log('\nbrowser = what the gate DECLARES via @gate-pool:, else a broadened sniff for any');
+  console.log('playwright/puppeteer require however the specifier is spelled — bare OR path-resolved.');
+  console.log('The sniff is a FALLBACK and it warns; a declaration is a source, inference is a guess.');
 }
 
 /* ---------------- static server ---------------- */
@@ -152,7 +197,7 @@ function whoHolds(port) {
 }
 
 /* ---------------- run one gate ---------------- */
-function runOne(file, name, timeoutMs = TIMEOUT_MS) {
+function runOne(file, name, timeoutMs = TIMEOUT_MS, declaredStatus = null) {
   return new Promise((resolve) => {
     const t0 = Date.now();
     const child = spawn(process.execPath, [file], { cwd: REPO, env: process.env });
@@ -179,7 +224,15 @@ function runOne(file, name, timeoutMs = TIMEOUT_MS) {
        * IT IS DELIBERATELY NOT `exit 0`. Making a quarantined gate exit 0 would count it GREEN — the
        * exact false-pass shape already found in _gate_d1_sketch_parity.mjs's bare process.exit(0).
        * A gate whose verdict is not trusted must be counted as neither, and SEEN to be neither. */
-      const quarantined = out.indexOf('[QUARANTINED]') >= 0;
+      /* §13.69 — A DECLARATION OUTRANKS A GREP. `@gate-status: quarantined` in the gate's header is
+       * the SOURCE; the stdout substring scan is the legacy fallback and is now the second-choice
+       * signal, not the only one. Reading source text for MEANING is what mis-sorted three gates
+       * into the wrong pool, and this scan is the same shape one layer over: it also meant a gate
+       * could re-quarantine ITSELF by merely PRINTING the token — which nearly undid the
+       * _gate_d1_boot_capture and _p6 leg-splits, where per-leg hold notes had to be spelled HELD
+       * to avoid tripping it. A file should say what it IS, not have its status inferred from what
+       * it happens to emit. */
+      const quarantined = declaredStatus === 'quarantined' || out.indexOf('[QUARANTINED]') >= 0;
       resolve({ name, status: quarantined ? 'QUARANTINED' : (code === 0 ? 'GREEN' : 'RED'), code, ms: Date.now() - t0, out, err });
     });
   });
@@ -251,7 +304,7 @@ async function runPool(list, conc, label) {
       while (active < conc && i < list.length) {
         const g = list[i++];
         active++;
-        runOne(g.file, g.name).then((r) => {
+        runOne(g.file, g.name, TIMEOUT_MS, g.status).then((r) => {
           results.push({ ...r, browser: g.browser });
           active--; finished++;
           const tag = r.status === 'GREEN' ? '  ok' : (r.status === 'RED' ? ' RED' : ' ' + r.status);
@@ -280,6 +333,21 @@ async function runPool(list, conc, label) {
   const browserGates = all.filter((g) => g.browser);
 
   console.log(`population: ${all.length} runnable gates  (${nodeGates.length} node, ${browserGates.length} browser)`);
+  /* §13.69 — INFERENCE IS ALLOWED, SILENCE IS NOT. Undeclared gates still run, classified by the
+     broadened sniff, but they are NAMED so the list shrinks instead of quietly persisting. A
+     MISMATCH is louder than an omission: it means a gate says one thing and reads as another, which
+     is the only case where the declaration could actively mislead. */
+  const _c = census();
+  if (_c.mismatched.length) {
+    console.log(`⚠️  POOL MISMATCH (${_c.mismatched.length}) — a gate declares one pool and its source reads as the other:`);
+    _c.mismatched.forEach((m) => console.log('     ' + m));
+  }
+  if (_c.undeclared.length) {
+    console.log(`⚠️  ${_c.undeclared.length} gate(s) do NOT declare '@gate-pool:' — classified by inference, which is a guess:`);
+    console.log('     ' + _c.undeclared.slice(0, 6).join(', ') + (_c.undeclared.length > 6 ? `, +${_c.undeclared.length - 6} more` : ''));
+  } else {
+    console.log('✅ every gate declares its pool — no inference used.');
+  }
   console.log(`timeout/gate: ${TIMEOUT_MS / 1000}s   conc: node=${CONC_NODE} browser=${CONC_BROWSER}`);
   console.log('mode: CLEAN (no mutation flags) — measurement only, nothing is repaired');
   console.log(CONC_BROWSER === 1

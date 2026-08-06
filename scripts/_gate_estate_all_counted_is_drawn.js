@@ -1,3 +1,6 @@
+/* @gate-pool: browser
+ * ^ §13.69 — DECLARED, not inferred. Path-resolved playwright require; this gate had been running
+ *   6-wide in the NODE pool for its whole life, carrying the §19 purpose walk and the §19.15 guard. */
 /* STANDING INVARIANT GATE — EVERYTHING COUNTED IN THE ESTATE TOTAL MUST BE DRAWN SOMEWHERE.
    Architect-ruled 2026-08-03. This is not a 593c one-off; it is permanent, and every future placement
    change answers to it.

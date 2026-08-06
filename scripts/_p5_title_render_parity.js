@@ -31,7 +31,7 @@ const server = http.createServer((req, res) => {
 });
 const PORT = 8182;
 const base = 'http://127.0.0.1:' + PORT;
-const out = { findings: [], pageErrors: [], mirrorBytes: {} };
+const out = { findings: [], pageErrors: [], mirrorBytes: {}, mirrorWaits: [] };
 const F = (cond, msg) => { if (!cond) out.findings.push(msg); };
 
 const DELAYED = `(function(){ window.Clerk={ user:null, load:function(){var s=this;return new Promise(function(r){setTimeout(function(){ s.user={firstName:'Sweety',primaryEmailAddress:{emailAddress:'sweety@example.com'},unsafeMetadata:{},update:function(){return Promise.resolve();}}; r(); },60);});} }; try{sessionStorage.setItem('datumfi_skip_entry_overlay','1');}catch(e){} })();`;
@@ -81,16 +81,53 @@ async function clearField(pg, sel) { await pg.evaluate((s) => { var el = documen
   await fetch(base + '/__resetmeta').catch(() => {});
   const SB_CUSTOM = "Sweety's Sketches", BP_CUSTOM = "Sweety's Blueprints";
   const dev1 = await browser.newContext();
+  /* Poll the SERVER-SIDE mirror (the simulated Clerk store this gate already owns) until `key`
+     reaches the wanted presence, or the deadline expires. Bounded, and LOUD on expiry — an expiry
+     records a finding, so "the write never landed" reds instead of quietly becoming a wrong noun
+     further down. Polling the ARTEFACT is the whole point: a fixed sleep would only move the race. */
+  const awaitMirror = async (key, wantPresent, whatFor) => {
+    const DEADLINE_MS = 8000, t0 = Date.now();
+    let meta = null;
+    while (Date.now() - t0 < DEADLINE_MS) {
+      meta = await fetch(base + '/__clerkmeta').then((r) => r.json()).catch(() => ({}));
+      if (!!meta[key] === wantPresent) {
+        out.mirrorWaits.push(key + ' ' + (wantPresent ? 'landed' : 'cleared') + ' in ' + (Date.now() - t0) + 'ms');
+        return meta;
+      }
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    out.mirrorWaits.push('EXPIRED ' + key + ' wantPresent=' + wantPresent + ' after ' + DEADLINE_MS + 'ms (' + whatFor + ')');
+    return meta;
+  };
+
   // device 1: set custom titles on both stores, verify same-session + reload + nav-away
   let pg = await newPage(dev1, STATEFUL); await pg.goto(base + '/sketchbook.html', { waitUntil: 'load' }); await pg.waitForTimeout(500);
   await typeBlur(pg, '#editable-notebook-title', SB_CUSTOM);
   out.sbSameSession = await titleOf(pg, '#editable-notebook-title');
+  /* Same wait on the sketchbook side. It has never lost this race — but only by ACCIDENT of the two
+     navigations that follow, and an invariant that holds by accident is one refactor from holding
+     never. Waiting here makes the reload/nav-back reads below mean what they claim to mean. */
+  await awaitMirror('sb_title', true, 'Sketchbook title mirror write after typeBlur');
   await pg.reload({ waitUntil: 'load' }); await pg.waitForTimeout(500); out.sbReload = await titleOf(pg, '#editable-notebook-title');
   await pg.goto(base + '/studio.html', { waitUntil: 'load' }).catch(() => {}); await pg.waitForTimeout(300);
   await pg.goto(base + '/sketchbook.html', { waitUntil: 'load' }); await pg.waitForTimeout(500); out.sbNavBack = await titleOf(pg, '#editable-notebook-title');
   await pg.close();
   pg = await newPage(dev1, STATEFUL); await pg.goto(base + '/Blueprint.html', { waitUntil: 'load' }); await pg.waitForTimeout(500);
-  await typeBlur(pg, '#archive-title', BP_CUSTOM); out.bpSameSession = await titleOf(pg, '#archive-title'); await pg.close();
+  await typeBlur(pg, '#archive-title', BP_CUSTOM); out.bpSameSession = await titleOf(pg, '#archive-title');
+  /* ⛔ WAIT ON THE ARTEFACT, NEVER ON A CLOCK — and never close the page before the write lands.
+     THE RACE THIS FIXES (measured 2026-08-06): typeBlur fires an ASYNC Clerk mirror write, and this
+     page used to be closed on the very next statement. Under load the context died before the write
+     reached /__clerkmeta, bp_title was ABSENT ENTIRELY (not wrong — absent), and the fresh-device
+     read below fell back to the personalized default: "Sweety's Archive" where "Sweety's Blueprints"
+     belongs. It went red once in a full suite and NEVER standalone.
+     🔑 WHY ONLY BLUEPRINT LOST: the sketchbook leg above happens to navigate twice more after its own
+     typeBlur, which incidentally gave sb_title time to land. The asymmetry was in THIS GATE'S
+     SEQUENCING, not in the product — one leg accidentally waited and the other accidentally did not.
+     NOT A SLEEP (that is a slower race), NOT A RETRY of the assertion (that turns a real regression
+     into a silent pass), and the expected noun is UNRELAXED. If the write never lands, that IS a red
+     and it stays one — awaitMirror records a finding on expiry rather than shrugging. */
+  await awaitMirror('bp_title', true, 'Blueprint title mirror write after typeBlur');
+  await pg.close();
   await dev1.close();
 
   // device 2: FRESH context (empty storage), SAME account (server meta persists) — noun must survive
@@ -99,6 +136,12 @@ async function clearField(pg, sel) { await pg.evaluate((s) => { var el = documen
   pg = await newPage(dev2, STATEFUL); await pg.goto(base + '/Blueprint.html', { waitUntil: 'load' }); await pg.waitForTimeout(600); out.bpFresh = await titleOf(pg, '#archive-title'); await pg.close();
   await dev2.close();
 
+  /* A WAIT THAT CAN EXPIRE SILENTLY IS A SLEEP WITH BETTER MANNERS. If a mirror write never landed
+     inside its budget, that is a red in its own right and it must NOT be diagnosed only via the
+     downstream wrong-noun symptom — that symptom is what sent this gate's failure to the wrong
+     suspect in the first place. */
+  F(!out.mirrorWaits.some((w) => w.startsWith('EXPIRED')),
+    '(0) a title mirror write never landed inside its budget: ' + JSON.stringify(out.mirrorWaits));
   F(out.sbSameSession === SB_CUSTOM, '(3) SKETCHBOOK same-session: "' + out.sbSameSession + '"');
   F(out.sbReload === SB_CUSTOM, '(3) SKETCHBOOK reload: "' + out.sbReload + '"');
   F(out.sbNavBack === SB_CUSTOM, '(3) SKETCHBOOK nav-back: "' + out.sbNavBack + '"');
@@ -111,9 +154,14 @@ async function clearField(pg, sel) { await pg.evaluate((s) => { var el = documen
   const dev3 = await browser.newContext();
   pg = await newPage(dev3, STATEFUL); await pg.goto(base + '/sketchbook.html', { waitUntil: 'load' }); await pg.waitForTimeout(500);
   await typeBlur(pg, '#editable-notebook-title', "Sweety's Sketchbook");   // reset to personalized default
+  /* THE SAME RACE, ONE STEP LATER — and it only became visible once the first one was fixed. A reset
+     is ALSO an async mirror write; here we wait for the key to DISAPPEAR. wantPresent=false. */
+  await awaitMirror('sb_title', false, 'Sketchbook title mirror CLEAR after reset');
   await pg.close();
   pg = await newPage(dev3, STATEFUL); await pg.goto(base + '/Blueprint.html', { waitUntil: 'load' }); await pg.waitForTimeout(500);
-  await typeBlur(pg, '#archive-title', "Sweety's Archive"); await pg.close();   // reset to personalized default
+  await typeBlur(pg, '#archive-title', "Sweety's Archive");                     // reset to personalized default
+  await awaitMirror('bp_title', false, 'Blueprint title mirror CLEAR after reset');
+  await pg.close();
   await dev3.close();
   out.metaAfterReset = await (await fetch(base + '/__clerkmeta').then((r) => r.json()).catch(() => ({})));
   F(!out.metaAfterReset.sb_title, '(4) reset did NOT clear sb_title mirror (' + out.metaAfterReset.sb_title + ')');
