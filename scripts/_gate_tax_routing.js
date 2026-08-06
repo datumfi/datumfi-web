@@ -128,8 +128,19 @@ const URL = 'http://127.0.0.1:8001/studio.html';
     // Other Assets room-intro hover (R396) — now wired to the shared title-ⓘ surface, other_assets ONLY
     ['Other Assets title hover = R396 room-intro', has(oaT, OA_MARK)],
     ['Other Assets title now HAS the ⓘ wrapper', has(oaT, 'modal-tt')],
-    ['Grounds (property) still NO ⓘ (no surface inherit)', !has(propT, 'modal-tt')],
-    ['Arcade (collectibles) still NO ⓘ (no surface inherit)', !has(collT, 'modal-tt')],
+    /* §3c (ruled 2026-08-05, wired 2026-08-06) — THIS ASSERTION WAS INVERTED AND STALE, AND IT WAS THE
+       STALE ONE, NOT THE PRODUCT. Three declarations answered one name and disagreed: the bank authored
+       a room-level intro ⓘ for The Grounds (§3b R116), studio.html wires that copy verbatim, and this
+       line still described the world BEFORE §3b, in which value-only tiles had no authored hover and so
+       correctly had none. The bank and the product agreed; the gate and one source comment were the two
+       out of step. R119 had already authored the intent out loud — "extend the title-ⓘ wrapper to all
+       value-only tiles" — so this is the wrapper doing what was asked, not a field ornament that leaked
+       onto a name. WHAT KEEPS IT LEGAL: a TITLE ⓘ explains THE ROOM; a FIELD ⓘ explains A NUMBER. If the
+       ⓘ on a title ever starts explaining a figure, THAT is the violation and this is the line to flip. */
+    ['Grounds (property) HAS the ⓘ wrapper — §3b room-intro (title explains the ROOM, not a number)', has(propT, 'modal-tt')],
+    /* Collectibles stays plain — R118 is authored but deliberately HELD for the §3c.1 pass. This is a
+       HOLD, not an absence: when §3c.1 ships, this line flips too and its twin above is the precedent. */
+    ['Arcade (collectibles) still NO ⓘ — R118 authored but HELD for §3c.1', !has(collT, 'modal-tt')],
     // picker expander nesting
     ['picker nests fold-outs under "More Taxable / Other" L2 (per-wing taxonomy #223)', has(R.pickerHtml, 'l2-lbl">More Taxable / Other')],
     ['picker lists Corporate / Business Taxable', has(R.pickerHtml, 'Corporate / Business Taxable')],

@@ -56,6 +56,10 @@ const MISCOUNT   = process.argv.includes('--miscount');
    from its initial state is tested at ONE EDGE — walk it, or it will walk itself. */
 const NOREPAINT  = process.argv.includes('--norepaint');    // §19.12 — drop the list invalidation
 const NOSATMERGE = process.argv.includes('--nosatmerge');   // §19.13 — satellites stop merging again
+/* §19.15 · TWO MUTATIONS, ONE PER HALF OF THE RULE. The default and the no-backfill guard fail in
+   completely different ways and a single mutation would only ever prove one of them. */
+const EVERYPROP  = process.argv.includes('--everyprop');    // drop the first-only test  -> F5 [SECOND] reds
+const BACKFILL   = process.argv.includes('--backfill');     // stamp existing blanks     -> F5 [NO-BACKFILL] reds
 const MUT = NOSAT || NOHANDOFF || NOCOLLAPSE || STALEJS || MISCOUNT || NOSATMERGE;
 const PORT = 8341;
 const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
@@ -77,6 +81,18 @@ const A_STALE = 'renderEstate: renderEstate, supportsSatellites: true,';
 const M_STALE = 'renderEstate: renderEstate, /* supportsSatellites withheld by --staleJS */';
 const A_REPAINT = "if(field === 'propPurpose') { renderInputs(); openAccountModal(id); }";
 const M_REPAINT = "if(field === 'propPurpose') { openAccountModal(id); }   /* list invalidation removed by --norepaint */";
+/* --everyprop removes the "is there already a property?" test, so EVERY property is born Primary. */
+const A_EVERY = 'if (isPropertyBase({ id: list[i].baseId })) return null;';
+const M_EVERY = 'if (false) return null;   /* first-only test removed by --everyprop */';
+/* --backfill stamps the default onto EXISTING blanks — the exact harm §19.15's guard forbids. */
+/* Anchored on the room-picker site's OWN trailing comment. The two creation sites assign with a
+   byte-identical statement, so the bare statement matched TWICE and mutate()'s exactly-one rule
+   correctly refused it — the guard doing its job, not an obstacle. The sites are genuinely different
+   (room picker vs debt-counterpart) and now say so, which is better source regardless of the anchor. */
+const A_BACK = 'propPurpose = _bornPurpose;   // room-picker site';
+const M_BACK = 'propPurpose = _bornPurpose;'
+             + ' state.accounts.forEach(function (a) { if (isPropertyBase({ id: a.baseId }) && !a.propPurpose)'
+             + ' a.propPurpose = "Primary residence"; });   /* retroactive stamp by --backfill */';
 const A_SATMERGE = '              var sMerged = sDebts.length > 0;';
 const M_SATMERGE = '              var sMerged = false;   /* satellite merge removed by --nosatmerge */';
 
@@ -100,10 +116,12 @@ const server = http.createServer((req, res) => {
     if (NOSATMERGE) src = mutate(src, A_SATMERGE, M_SATMERGE, 'A_SATMERGE');
     body = Buffer.from(src, 'utf8');
   }
-  if ((NOHANDOFF || NOREPAINT) && /studio\.html$/.test(rp)) {
+  if ((NOHANDOFF || NOREPAINT || EVERYPROP || BACKFILL) && /studio\.html$/.test(rp)) {
     let src = body.toString('utf8');
     if (NOHANDOFF) src = mutate(src, A_HAN, M_HAN, 'A_HAN');
     if (NOREPAINT) src = mutate(src, A_REPAINT, M_REPAINT, 'A_REPAINT');
+    if (EVERYPROP) src = mutate(src, A_EVERY, M_EVERY, 'A_EVERY');
+    if (BACKFILL)  src = mutate(src, A_BACK,  M_BACK,  'A_BACK');
     body = Buffer.from(src, 'utf8');
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
@@ -344,7 +362,9 @@ function ok(cond, msg)  { if (cond) { pass++; console.log('PASS ' + msg); } else
       const titles = svg ? Array.prototype.map.call(svg.querySelectorAll('.grounds-title, .bp-title'), e => e.textContent.trim()) : [];
       const owner = window._pickGroundOwner
         ? window._pickGroundOwner(window.state.accounts.filter(a => !a.exclude && window._isPropertyBase({ id: a.baseId }))) : null;
-      return { list, titles, ground: owner ? owner.id : null, door: !!(svg && svg.querySelector("[onclick*='openYardModal']")) };
+      // §19.11a — every rendered tooltip on the canvas, so the NOUN can be asserted on every purpose.
+      const tips = svg ? Array.prototype.map.call(svg.querySelectorAll('title'), e => e.textContent) : [];
+      return { list, titles, tips, ground: owner ? owner.id : null, door: !!(svg && svg.querySelector("[onclick*='openYardModal']")) };
     }, [ids.prop, v]);
     return { ids, step };
   };
@@ -369,7 +389,85 @@ function ok(cond, msg)  { if (cond) { pass++; console.log('PASS ' + msg); } else
     ok(r.titles.indexOf(wantCombined) !== -1,
        tag + ' [CANVAS] the merged tile names itself ' + wantCombined + ' (got ' + JSON.stringify(r.titles) + ') — §12.1');
     ok(r.door, tag + ' [DOOR] a lien is a lien: the combined room is reachable from the canvas on EVERY purpose — §19.13');
+    /* §19.11a · THE NOUN — a PRESENCE/ABSENCE PAIR, asserted on all six purposes in one leg because
+       the walk crosses BOTH render paths: Primary and blank draw the GROUND tile (datum-estate:418/419),
+       every explicit non-primary purpose drops to the SATELLITE tile (:585). Those two paths disagreed —
+       :585 said "home" while its own link chip 48 lines later said "property", on the SAME tile.
+       "this home's value" is simply false on The Acreage and on The Holding (§19.5, type-first).
+       ⛔ ABSENCE IS HALF THE TEST (L50): asserting only that "property" appears would still pass if a
+       stray "home" survived somewhere else on the canvas. The retired noun must be GONE, not outvoted. */
+    const tipsJoined = (r.tips || []).join(' | ');
+    ok(!/this home\b/.test(tipsJoined),
+       tag + ' [NOUN] no canvas tooltip says "this home" — retired literal ABSENT (got ' + JSON.stringify(r.tips) + ')');
+    ok(/this property\b/.test(tipsJoined),
+       tag + ' [NOUN] a canvas tooltip says "this property" — type-first noun PRESENT on this purpose');
   }
+
+  /* ══ F5 · §19.15 — THE FIRST PROPERTY IS BORN A PRIMARY RESIDENCE ═══════════════════════════════
+     The Captain's rule: the room should get the common case right with zero clicks, and a second
+     property stays blank until chosen. Two halves, and THE SECOND IS THE LOAD-BEARING ONE:
+       (a) a NEW FIRST property is born Primary residence -> The Residence.
+       (b) ⛔ NOTHING IS EVER BACKFILLED. A default is a PRE-FILLED INPUT, never a retroactive truth.
+           Stamping Primary onto a record that predates the map would fabricate a sourced value (L47)
+           and destroy the §19.2 restore path. BLANK MUST KEEP MEANING BLANK FOREVER.
+     (b) is tested against a property deliberately left blank BEFORE the new one is created — i.e. a
+     legacy record — because that is the only shape in which a backfill can actually do harm.
+     NOT SCOPED OUT of any mutation: this is a question about the MODEL, not about the satellite band,
+     so unlike F4 it runs in every mode. */
+  console.log('-------------------------------------');
+  const born = await p.evaluate(async () => {
+    const nameOf = (id) => {
+      const inp = document.getElementById('room-val-inp-' + id);
+      if (inp) for (let n = inp.parentElement, i = 0; n && i < 4; n = n.parentElement, i++) {
+        const m = n.querySelector && n.querySelector('.room-meta'); if (m) return m.textContent.trim();
+      }
+      return '(no card)';
+    };
+    window.state.accounts.length = 0;
+    renderInputs();
+    addInstance('property_primary');                       // ── the FIRST property
+    const first = window.state.accounts[window.state.accounts.length - 1];
+    const firstPurpose = String(first.propPurpose ?? '');
+    const firstHasKey = 'propPurpose' in first;
+    addInstance('mortgage_joint');                         // a NON-property must never be touched
+                                                           // (a base this gate already exercises above —
+                                                           //  an invented baseId throws inside addInstance)
+    const nonProp = window.state.accounts[window.state.accounts.length - 1];
+    addInstance('property_primary');                       // ── the SECOND property
+    const second = window.state.accounts[window.state.accounts.length - 1];
+    await new Promise((r) => setTimeout(r, 700));
+    return {
+      firstPurpose, firstHasKey, firstName: nameOf(first.id),
+      secondPurpose: String(second.propPurpose ?? ''), secondHasKey: 'propPurpose' in second,
+      secondName: nameOf(second.id),
+      nonPropHasKey: 'propPurpose' in nonProp,
+      // (b) the FIRST property was blank-by-legacy in no world here, so re-run the harm case cleanly:
+      // blank the first, add a third, and prove the blank SURVIVED the creation of the third.
+      legacy: (() => {
+        delete window.state.accounts[0].propPurpose;       // a record that predates the map
+        addInstance('property_primary');
+        return { stillBlank: !window.state.accounts[0].propPurpose,
+                 thirdBlank: !window.state.accounts[window.state.accounts.length - 1].propPurpose };
+      })(),
+    };
+  });
+  console.log('  F5 ' + JSON.stringify(born));
+  ok(born.firstPurpose === 'Primary residence',
+     'F5 [FIRST] a new FIRST property is born "Primary residence" (got "' + born.firstPurpose + '") — §19.15');
+  ok(born.firstName === 'The Residence',
+     'F5 [FIRST-NAME] and its left card therefore reads "The Residence" (got "' + born.firstName + '") — §19.1');
+  ok(born.secondPurpose === '' && !born.secondHasKey,
+     'F5 [SECOND] a SECOND property is born with NO propPurpose key at all (purpose="' + born.secondPurpose +
+     '", keyPresent=' + born.secondHasKey + ') — blank is an absence, not a stored empty');
+  ok(born.secondName === 'The Grounds',
+     'F5 [SECOND-NAME] so the second card falls back to "The Grounds" (got "' + born.secondName + '") — §19.2');
+  ok(!born.nonPropHasKey,
+     'F5 [SCOPE] a NON-property room is never given a propPurpose (keyPresent=' + born.nonPropHasKey + ')');
+  ok(born.legacy.stillBlank,
+     'F5 [NO-BACKFILL] ⛔ a property left BLANK before the new one was created is STILL blank afterwards — ' +
+     'a default is a pre-filled input, never a retroactive truth (L47 / §19.2)');
+  ok(born.legacy.thirdBlank,
+     'F5 [NO-BACKFILL] and the third property is itself born blank — the default fires on the FIRST only');
 
   console.log('-------------------------------------');
   console.log('OVERALL: ' + (fail === 0 ? 'GREEN' : 'RED') + '   (' + pass + ' pass / ' + fail + ' fail)');
