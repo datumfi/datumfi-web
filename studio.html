@@ -6637,7 +6637,21 @@
             // too. propId = the linked property (the asset on a debt; this room itself on the property side).
             var _yardProp = isDebt ? (linkedNow[0] || null) : { id: id, baseId: base.id };
             if (_yardProp && String((getBaseType(_yardProp.baseId) || {}).id).indexOf('property') === 0) {
-                out += '<div onclick="if(typeof closeAccountModal===\'function\')closeAccountModal(); if(typeof openYardModal===\'function\')openYardModal(\'' + _yardProp.id + '\');" style="cursor:pointer; margin:-6px 0 16px; font-size:11px; color:var(--gold); display:inline-block; border-bottom:1px dotted var(--gold);" title="See this home and everything linked against it as one combined room">🌳 Open The Yard — the combined view</div>';
+                /* §19.14 — THE DOOR NAMES THE ROOM IT OPENS. This read "Open The Yard" on every
+                   purpose, so a landlord clicked a control named THE YARD and arrived in THE HOLDING.
+                   Correct history, stale product: Yard §9.5 authored it when THE YARD was the only
+                   combined room that existed. Tokenised on the SAME §12.1 map the room itself uses.
+                   ⛔ THE FALLBACK IS TYPE-FIRST, NEVER A BRAND NOUN. If the name will not resolve we
+                   say "the combined view" — we never name a room the user is not standing in, which
+                   is the exact defect being fixed here. */
+                /* ⚠️ _yardProp is a SYNTHETIC {id, baseId} literal on the property side (see just above)
+                   — it carries no propPurpose, so naming the door off it would resolve to the §12.1
+                   fallback and print "Open The Yard" on every purpose: the exact defect, re-shipped
+                   inside its own fix. Resolve the REAL account before asking it anything. */
+                var _yardAcc = (state.accounts || []).find(function (a) { return a.id === _yardProp.id; }) || null;
+                var _yardDoorName = (typeof _propCombinedName === 'function') ? _propCombinedName(_yardAcc) : '';
+                var _yardDoorCopy = _yardDoorName ? ('Open ' + _yardDoorName + ' — the combined view') : 'Open the combined view';
+                out += '<div onclick="if(typeof closeAccountModal===\'function\')closeAccountModal(); if(typeof openYardModal===\'function\')openYardModal(\'' + _yardProp.id + '\');" style="cursor:pointer; margin:-6px 0 16px; font-size:11px; color:var(--gold); display:inline-block; border-bottom:1px dotted var(--gold);" title="See this property and everything linked against it as one combined room">🌳 ' + _yardDoorCopy + '</div>';
             }
         }
         // the disclosure: link an existing + draft a new (hidden on a single-link debt that's already linked)
@@ -8077,7 +8091,18 @@
             }
             if(field === 'linkedAssetId') { openAccountModal(id); if(value) _onSecuredLinkFormed(id, value, id); }   // §18.2 reconcile shared escrow (returns to this room)
             if(field === 'rateType') openAccountModal(id);   // §0.4/§5.1 — reveal/hide the Variable-rate cluster
-            if(field === 'propPurpose') openAccountModal(id);   // §18.1 — reveal/hide the rental cluster, same shape as rateType
+            /* §19.12 — THE INVALIDATION. The room NAME is derived at render from the §19.1 map, so
+               there is exactly ONE source of truth and it was always correct — but the LEFT ACCOUNT
+               LIST was never repainted on a purpose change, so it showed whatever renderInputs() last
+               produced. The canvas repaints (updateSVGs, below) and the modal repaints
+               (openAccountModal, here); the list did neither, and drifted.
+               ⚖️ TWO SURFACES DISAGREEING ABOUT ONE FACT DOES NOT PROVE TWO SOURCES OF TRUTH — IT
+               PROVES ONE OF THEM IS STALE. Measured 2026-08-05: the card read "The Rental" while the
+               canvas read THE RESIDENCE / THE MOAT in the same screenshot.
+               renderInputs() has 14 call sites and this was not one of them; reload, save and
+               draft-restore all are, which is why a mid-session repaint could freeze the card on one
+               purpose and nothing afterwards could move it. */
+            if(field === 'propPurpose') { renderInputs(); openAccountModal(id); }   // §18.1 reveal/hide the rental cluster + §19.12 repaint the list
             if(field === 'linkedToAccount' || field === 'rollFlavor') openAccountModal(id);   // The Conduit — refresh count-once flag (§7.5) + Layer-E tax fork (§9) live
 
             // Live DOM update for limits calculation — same §402(g)-class test as the modal (401k/403b/457b)

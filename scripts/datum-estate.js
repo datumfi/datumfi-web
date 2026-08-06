@@ -584,9 +584,30 @@
               var sVal = (parseFloat(acc.value) || 0) > 0 ? (sEq !== null ? _eqStr(sEq) : _eqStr(acc.value)) : '';
               var sTip = sDebts.length ? _lienMirrorNotice(sDebts, 'home') : (base.desc || '');
 
+              /* ── §19.13 / RULING (A) · A LIEN IS A LIEN, WHEREVER THE PROPERTY DRAWS ──────────────
+                 THE RULE WE THOUGHT WE IMPLEMENTED: a property merges with its debts.
+                 THE RULE WE ACTUALLY IMPLEMENTED: the property that OWNS THE GROUND merges with its
+                 debts. Identical for a primary residence, which always owns the ground — and divergent
+                 the instant a rental exists, because _pickGroundOwner takes Primary, else the first
+                 BLANK, else null. A rental is neither, so it was never failing to merge: it was
+                 STRUCTURALLY INELIGIBLE TO ASK. The blueprint was real, just welded to one axle.
+
+                 NO SECOND MERGE IMPLEMENTATION EXISTS HERE, and that was the Architect's condition.
+                 This block ALREADY resolved its liens six lines up — _mergeDebtsByAsset, _netEquityOf
+                 and _lienMirrorNotice are the same shared helpers the grounds tile calls, and the
+                 satellite has always drawn net equity off them. What was missing was never the merge:
+                 it was the LABEL and the DOOR. So this changes what the tile SAYS and where it CLICKS,
+                 and nothing about how a merge is decided or computed (L48 / §13.55).
+
+                 A room is not missing on a rental today — it is DOORLESS. The combined room already
+                 opens from inside Real Estate and already calls itself THE HOLDING once you are in it;
+                 the canvas simply offered no way in. This is that door. */
+              var sMerged = sDebts.length > 0;
               var g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-              g.setAttribute('class', 'room-grp visible satellite-room');
-              g.setAttribute('onclick', "openAccountModal('" + acc.id + "')");
+              g.setAttribute('class', 'room-grp visible satellite-room' + (sMerged ? ' satellite-merged' : ''));
+              g.setAttribute('onclick', sMerged
+                  ? "openYardModal('" + acc.id + "')"      // §1.2 — the merged tile opens the combined room
+                  : "openAccountModal('" + acc.id + "')");
               g.style.cursor = 'pointer';
 
               var weight = accountWeights[acc.id] || 0;   // S2.4 — READ from the hub, never recomputed (LOCK-3)
@@ -598,13 +619,23 @@
               // 11px title, not the estate's 14px: these are secondary blocks, and at 14px the §19 name
               // "THE VACATION HOME" (17 chars x ~10.5 units) overruns a 170-unit tile. Sized now so the
               // authored §19 map lands without a re-layout.
+              /* THE SAME THREE-LINE STACK AS THE GROUNDS TILE (Yard §1.5), at satellite scale.
+                 Line 2 is 8px, not the 11px of line 1: "THE VACATION HOME / THE MOAT" is ~28 chars and
+                 overruns a 170-unit tile at 11px. Sizing here is fitting authored copy into the tile we
+                 already ship — §22 (the tile-size redesign) is deliberately NOT in this commit, so that
+                 a shifted tile can never be blamed on a rename. */
+              var sLabel = _roomNameOf(acc, base).toUpperCase() + (sMerged ? _lienMetaSuffix(sDebts) : '');
               g.innerHTML =
                   '<title>' + String(sTip).replace(/</g, '&lt;') + '</title>' +
                   '<rect x="' + d.x + '" y="' + d.y + '" width="' + d.w + '" height="' + d.h + '" class="room-rect active ' +
                       (isThermal ? 'tax-' + base.taxCode : '') + (acc.isNew ? ' animate-draw' : '') + '" />' +
                   fillHTML +
-                  '<text x="' + d.cx + '" y="' + (d.cy - 6) + '" class="bp-title" style="font-size:11px;">' + _roomNameOf(acc, base).toUpperCase() + '</text>' +
-                  '<text x="' + d.cx + '" y="' + (d.cy + 24) + '" class="bp-val" style="font-size:22px; fill:' + (sNeg ? 'var(--danger)' : 'var(--white)') + ';">' + sVal + '</text>';
+                  (sMerged ? _linkChipSVG(d.x + 6, d.y + 6, _lienMirrorNotice(sDebts, 'property')) : '') +
+                  (sMerged
+                    ? '<text x="' + d.cx + '" y="' + (d.cy - 22) + '" class="bp-title" style="font-size:11px; letter-spacing:0.12em;">' + _combinedNameOf(acc).toUpperCase() + '</text>' +
+                      '<text x="' + d.cx + '" y="' + (d.cy - 8) + '" class="bp-title" style="font-size:8px; opacity:0.85;">' + sLabel + '</text>'
+                    : '<text x="' + d.cx + '" y="' + (d.cy - 6) + '" class="bp-title" style="font-size:11px;">' + sLabel + '</text>') +
+                  '<text x="' + d.cx + '" y="' + (d.cy + (sMerged ? 20 : 24)) + '" class="bp-val" style="font-size:' + (sMerged ? 17 : 22) + 'px; fill:' + (sNeg ? 'var(--danger)' : 'var(--white)') + ';">' + sVal + '</text>';
               svgContainer.appendChild(g);
               descriptors.push({ id: acc.id, el: g, rect: g.querySelector('.room-rect'), d: d, value: acc.value || 0,
                                  fillPct: fp, weight: weight, isNew: !!acc.isNew, taxCode: base.taxCode,
