@@ -51,7 +51,12 @@ const NOHANDOFF  = process.argv.includes('--nohandoff');
 const NOCOLLAPSE = process.argv.includes('--nocollapse');
 const STALEJS    = process.argv.includes('--staleJS');
 const MISCOUNT   = process.argv.includes('--miscount');
-const MUT = NOSAT || NOHANDOFF || NOCOLLAPSE || STALEJS || MISCOUNT;
+/* 593d-fix · TWO MUTATIONS AIMED AT THE TRANSITION, NOT THE INITIAL STATE. Both defects shipped
+   green because every gate tested purpose->name from a FRESH fixture. A state machine tested only
+   from its initial state is tested at ONE EDGE — walk it, or it will walk itself. */
+const NOREPAINT  = process.argv.includes('--norepaint');    // §19.12 — drop the list invalidation
+const NOSATMERGE = process.argv.includes('--nosatmerge');   // §19.13 — satellites stop merging again
+const MUT = NOSAT || NOHANDOFF || NOCOLLAPSE || STALEJS || MISCOUNT || NOSATMERGE;
 const PORT = 8341;
 const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
 const { chromium } = require(ROOT + '/node_modules/playwright');
@@ -70,6 +75,10 @@ const A_MIS = 'sHidden = satellites.length - sShown.length;';
 const M_MIS = 'sHidden = satellites.length - sShown.length - 1;   /* under-reports by one: --miscount */';
 const A_STALE = 'renderEstate: renderEstate, supportsSatellites: true,';
 const M_STALE = 'renderEstate: renderEstate, /* supportsSatellites withheld by --staleJS */';
+const A_REPAINT = "if(field === 'propPurpose') { renderInputs(); openAccountModal(id); }";
+const M_REPAINT = "if(field === 'propPurpose') { openAccountModal(id); }   /* list invalidation removed by --norepaint */";
+const A_SATMERGE = '              var sMerged = sDebts.length > 0;';
+const M_SATMERGE = '              var sMerged = false;   /* satellite merge removed by --nosatmerge */';
 
 const MIME = { '.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.json':'application/json','.png':'image/png','.woff2':'font/woff2','.ico':'image/x-icon' };
 function mutate(src, a, m, label) {
@@ -88,10 +97,14 @@ const server = http.createServer((req, res) => {
     if (NOCOLLAPSE) src = mutate(src, A_COL, M_COL, 'A_COL');
     if (STALEJS)    src = mutate(src, A_STALE, M_STALE, 'A_STALE');
     if (MISCOUNT)   src = mutate(src, A_MIS,   M_MIS,   'A_MIS');
+    if (NOSATMERGE) src = mutate(src, A_SATMERGE, M_SATMERGE, 'A_SATMERGE');
     body = Buffer.from(src, 'utf8');
   }
-  if (NOHANDOFF && /studio\.html$/.test(rp)) {
-    body = Buffer.from(mutate(body.toString('utf8'), A_HAN, M_HAN, 'A_HAN'), 'utf8');
+  if ((NOHANDOFF || NOREPAINT) && /studio\.html$/.test(rp)) {
+    let src = body.toString('utf8');
+    if (NOHANDOFF) src = mutate(src, A_HAN, M_HAN, 'A_HAN');
+    if (NOREPAINT) src = mutate(src, A_REPAINT, M_REPAINT, 'A_REPAINT');
+    body = Buffer.from(src, 'utf8');
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
   res.end(body);
@@ -278,6 +291,85 @@ function ok(cond, msg)  { if (cond) { pass++; console.log('PASS ' + msg); } else
   ok(isFinite(f3Footage) && f3Footage > 0, 'F3 [PRESENCE] the footage readout produced a number (' + F3.footage + ')');
   ok(f3Footage === f3Sum,
      'F3 [RECONCILE] estate footage equals the sum of ALL ' + (SAT_N + 1) + ' properties, drawn and hidden alike — want ' + f3Sum + ', got ' + f3Footage);
+
+  /* ══ F4 · THE PURPOSE WALK — §19.12 / §19.13 / §13.63 ═══════════════════════════════════════════
+     THE LESSON THIS FIXTURE ENCODES: every gate that existed tested purpose->name from a FRESH
+     account, and both shipped defects lived in the TRANSITION. The name stuck because nothing
+     repainted the left list; the merge vanished because a non-primary purpose forfeits the ground.
+     Neither is reachable from an initial state, so neither was ever tested.
+     ⛔ IT DRIVES THE MODAL <select>, not updateAccField() — the first cut of the probe behind this
+     gate drove the bare function, which is a real code path but NOT the user's, and it reported the
+     list frozen in every direction (§13.64: prove you walked the user's route before you report).
+     THREE COLUMNS AT EVERY STEP: the left card, the canvas, and WHO HOLDS THE GROUND — the third is
+     what turns "the symptom again" into the cause. */
+  /* ⛔ F4 IS SCOPED TO A RENDERER THAT HAS A SATELLITE BAND. --nosat, --nohandoff and --staleJS all
+     remove that band by design: the first two delete it, and --staleJS simulates the 4-hour-cached
+     OLD renderer that never had it, where non-primary properties fall back into the ownership columns.
+     §19.13 is a NEW renderer capability, so a stale renderer CANNOT satisfy it and asserting it there
+     would be asserting the wrong contract — --staleJS is documented EXPECTED GREEN precisely because
+     it proves the fallback still DRAWS everything, not that it draws it the new way.
+     🔑 THIS IS A SCOPE DECISION, SO IT IS COUNTED OUT LOUD rather than silently skipped: the line
+     below prints what was not run and why. A leg that vanishes without saying so is an absent gate. */
+  console.log('-------------------------------------');
+  const F4_SKIP = NOSAT || NOHANDOFF || STALEJS;
+  if (F4_SKIP) {
+    console.log('  F4 SKIPPED — this mutation removes the satellite band itself, so the §19.13 merge');
+    console.log('               contract does not apply. 24 legs not run (clean + --norepaint + --nosatmerge cover them).');
+  }
+  const walk = async () => {
+    const ids = await p.evaluate(async () => {
+      window.state.accounts.length = 0;
+      addInstance('property_primary');
+      const prop = window.state.accounts[window.state.accounts.length - 1];
+      prop.value = 500000; prop.propTaxYr = 6000; prop.homeInsYr = 1800;
+      addInstance('mortgage_joint');
+      const mort = window.state.accounts[window.state.accounts.length - 1];
+      mort.value = 200000; mort.minPmt = 1400; mort.linkedAssetId = prop.id;
+      renderInputs(); updateSVGs();
+      await new Promise(r => setTimeout(r, 900));
+      return { prop: prop.id };
+    });
+    const step = async (v) => p.evaluate(async ([id, val]) => {
+      if (typeof openAccountModal === 'function') openAccountModal(id);
+      const sel = document.querySelector('select[onchange*="propPurpose"]');
+      if (sel) { sel.value = val; sel.dispatchEvent(new Event('change', { bubbles: true })); }
+      else { updateAccField(id, 'propPurpose', val); }
+      await new Promise(r => setTimeout(r, 800));
+      const svg = document.getElementById('bp-svg');
+      const inp = document.getElementById('room-val-inp-' + id);
+      let list = '(no card)';
+      if (inp) for (let n = inp.parentElement, i = 0; n && i < 4; n = n.parentElement, i++) {
+        const m = n.querySelector && n.querySelector('.room-meta'); if (m) { list = m.textContent.trim(); break; }
+      }
+      const titles = svg ? Array.prototype.map.call(svg.querySelectorAll('.grounds-title, .bp-title'), e => e.textContent.trim()) : [];
+      const owner = window._pickGroundOwner
+        ? window._pickGroundOwner(window.state.accounts.filter(a => !a.exclude && window._isPropertyBase({ id: a.baseId }))) : null;
+      return { list, titles, ground: owner ? owner.id : null, door: !!(svg && svg.querySelector("[onclick*='openYardModal']")) };
+    }, [ids.prop, v]);
+    return { ids, step };
+  };
+  const W = F4_SKIP ? null : await walk();
+  // purpose -> [expected card name, expected COMBINED name once a lien is linked]
+  const LEGS = [
+    ['Rental property',   'The Rental',        'THE HOLDING'],
+    ['Primary residence', 'The Residence',     'THE YARD'],
+    ['Second home',       'The Vacation Home', 'THE RETREAT'],
+    ['Land',              'The Acreage',       'THE RESERVE'],
+    ['',                  'The Grounds',       'THE YARD'],
+    ['Rental property',   'The Rental',        'THE HOLDING'],
+  ];
+  for (const [purpose, wantCard, wantCombined] of (F4_SKIP ? [] : LEGS)) {
+    const r = await W.step(purpose);
+    const tag = 'F4 [' + (purpose || 'blank') + ']';
+    console.log('  ' + tag + ' ' + JSON.stringify({ list: r.list, ground: r.ground ? 'held' : 'PLOT', door: r.door, titles: r.titles }));
+    // PRESENCE FIRST — a walk that rendered nothing passes every negative leg beneath it.
+    ok(r.titles.length > 0, tag + ' [PRESENCE] the canvas drew labelled tiles');
+    ok(r.list === wantCard,
+       tag + ' [LIST] the left card repaints to "' + wantCard + '" (got "' + r.list + '") — §19.12, the transition');
+    ok(r.titles.indexOf(wantCombined) !== -1,
+       tag + ' [CANVAS] the merged tile names itself ' + wantCombined + ' (got ' + JSON.stringify(r.titles) + ') — §12.1');
+    ok(r.door, tag + ' [DOOR] a lien is a lien: the combined room is reachable from the canvas on EVERY purpose — §19.13');
+  }
 
   console.log('-------------------------------------');
   console.log('OVERALL: ' + (fail === 0 ? 'GREEN' : 'RED') + '   (' + pass + ' pass / ' + fail + ' fail)');

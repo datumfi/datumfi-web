@@ -79,7 +79,22 @@ need('(DI) calm line Z present', sStudio.includes('sit in quiet balance'));
 need('(SECTIONS) all four sections rendered', sStudio.includes("'The Property'") && sStudio.includes("'The Mortgage'") && sStudio.includes('The Real Cost of Ownership') && sStudio.includes('Share of income'));
 need('(CLICKABLE) property/mortgage/HELOC headers open their own room via secHead', sStudio.includes('var secHead = function') && sStudio.includes("openAccountModal(\\'") && sStudio.includes("secHead('🏰', m.id") && sStudio.includes("secHead('🍷', h.id"));
 need('(TOOLTIP) Yard hovers open downward (top:100%), not off the top', /var hov = function[\s\S]*?top:100%; bottom:auto;/.test(sStudio));
-need('(ROOM→YARD) a linked single room offers "Open The Yard" (property-gated)', sStudio.includes('🌳 Open The Yard — the combined view') && /indexOf\('property'\) === 0[\s\S]*?openYardModal\(/.test(sStudio));
+/* (ROOM→YARD) — RE-GROUNDED in the 593d fix, for the SECOND time this arc and the same reason
+   (§13.56). It quoted the literal '🌳 Open The Yard — the combined view', which §19.14 replaced with
+   the §12.1 token because a landlord was clicking a door named THE YARD to enter THE HOLDING. The
+   literal is gone by design, so the leg had to move to the meaning: tokenised, type-first fallback,
+   still property-gated, and — the one that would have caught my own near-miss — resolving the REAL
+   account rather than the synthetic {id, baseId} literal that carries no propPurpose. */
+need('(ROOM→YARD) the door is TOKENISED on the §12.1 map, not a hard-coded room name',
+  /_yardDoorCopy = _yardDoorName \? \('Open ' \+ _yardDoorName \+ ' — the combined view'\)/.test(sStudio));
+need('(ROOM→YARD) the fallback is TYPE-FIRST — never a brand noun for a room you are not standing in',
+  sStudio.includes("'Open the combined view'"));
+need('(ROOM→YARD) the door resolves the REAL account, not the synthetic {id,baseId} literal',
+  /_yardAcc = \(state\.accounts \|\| \[\]\)\.find/.test(sStudio) && /_propCombinedName\(_yardAcc\)/.test(sStudio));
+need('(ROOM→YARD) still property-gated and still routes to openYardModal',
+  /indexOf\('property'\) === 0[\s\S]*?openYardModal\(/.test(sStudio));
+need('(ROOM→YARD) the retired literal is GONE — presence/absence pair with the token above',
+  !sStudio.includes('🌳 Open The Yard — the combined view'));
 
 // ── served bytes — datum-estate.js (routing + label restack) ──
 need('(ROUTING) merged tile opens The Yard', /if \(_moatDebts\.length\) gf\.setAttribute\('onclick', "openYardModal\('/.test(sEstate));
