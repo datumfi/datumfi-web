@@ -1,28 +1,48 @@
 'use strict';
 /* =====================================================================================
- * QUARANTINED 2026-07-28 - DO NOT TRUST THIS GATE VERDICT (green OR red).
+ * ✂️ SPLIT 2026-08-06 (Architect ruling, PROMPT #625). THIS FILE'S VERDICT NOW COUNTS —
+ *    for THREE legs. FIVE legs are HELD and excluded from it, each saying so on its face.
  *
- * its premise is CONTRADICTED by the live product. It asserts that a bare cold /studio.html
- * hydrates the D1 active doc into rooms. The Captain confirmed on datumfi.com that a cold
- * Studio with nothing opened correctly shows EMPTY. The harness measured 0 and was RIGHT.
+ * THE QUARANTINE WAS THE WRONG SHAPE: FILE-SHAPED, FOR A LEG-SHAPED PROBLEM. One refuted
+ * premise took the whole file down with it, and G-BP-OPEN — a live, correct assertion
+ * passing 5/5 — sat for weeks inside a file nobody was permitted to believe. A quarantine
+ * that is coarser than the defect destroys working instruments as collateral.
  *
-  * PLAIN LANGUAGE: this test expects a freshly-opened Studio to show your saved rooms.
- * The product owner confirmed on the live site that the Studio is DESIGNED to open empty
- * until you open a file. So the test expects the wrong thing. The premise is wrong, not
- * the date - do not repair it by changing the date.
-  *
- * TELL #8 - TIME-BOMB FIXTURE: a hardcoded date sitting inside freshness/expiry logic. It
- * passes the day it is written and rots one day at a time after, invisible to code review
- * because the code never changes - only the calendar does. A third suspect,
- * _gate_grounds_avm_persist.mjs, was TESTED for this and CLEARED (33/33 with either date):
- * the census that named the suspects was one-third wrong, so test, never infer.
+ * ✅ LIVE (these three decide the exit code):
+ *   G-BP-OPEN            ?id=<UUID>&hydrate=blueprint with a stashed blueprint + an EMPTY
+ *                        active doc renders the BLUEPRINT's rooms. Premise CONFIRMED live:
+ *                        a cold Studio opens empty, but a SAVED BLUEPRINT opens with its
+ *                        rooms. This is the RC-B short-circuit guard and it is worth having.
+ *   G-BOOT-SLOW-TIMEOUT  a read that times out must NOT let an empty PUT clobber the UNREAD
+ *                        D1 doc. Premise intact — the UNREAD case is precisely the one
+ *                        studio-blueprint.js:827 genuinely does guard.
+ *   the autosave-fired presence check (a fixture that drove nothing must not read as proof).
  *
- * Kept for its intent, NOT its result. Retired from decision-making by Captain ruling at
- * the close of the gate-integrity arc. Do not "fix the date" - that converts a false pass
- * into a red nobody has agreed to investigate. Re-premise it against confirmed live
- * behaviour, or delete it. Requires a fresh GO from Daniel before either.
- * ===================================================================================== */
-console.log('[QUARANTINED] verdict NOT trustworthy - see file header. Retired 2026-07-28.');
+ * ⏸ HELD (run, printed, NOT counted) — TWO different reasons, deliberately not merged:
+ *   (a) REFUTED PREMISE. Four legs assert that a bare cold /studio.html HYDRATES the D1
+ *       active doc into rooms. The Captain confirmed on datumfi.com that a cold Studio with
+ *       nothing opened correctly shows EMPTY. The harness measured 0 and WAS RIGHT. Do not
+ *       repair these by changing the date — the premise is wrong, not the fixture.
+ *   (b) ⬜ AWAITING A PRODUCT RULING, NOT A CODE FIX. "NO empty studio PUT escaped" is the
+ *       open Ruling C question (Property §19.25): studio-blueprint.js:827 refuses an empty
+ *       write ONLY when the revision is UNKNOWN, resting on its own stated assumption that
+ *       "a genuine delete-all-rooms always has a known revision". That holds only if a doc
+ *       that was READ is always DISPLAYED. Provisional ruling: a cold, empty boot must never
+ *       overwrite a populated D1 active doc. UNTIL THAT LANDS THIS LEG HAS NO AGREED ANSWER,
+ *       so counting it either way would be inventing one.
+ *
+ * ── SUPERSEDED 2026-07-28 QUARANTINE, KEPT VERBATIM ──────────────────────────────────
+ * | QUARANTINED 2026-07-28 - DO NOT TRUST THIS GATE VERDICT (green OR red).
+ * | its premise is CONTRADICTED by the live product. It asserts that a bare cold
+ * | /studio.html hydrates the D1 active doc into rooms. The Captain confirmed on
+ * | datumfi.com that a cold Studio with nothing opened correctly shows EMPTY. The harness
+ * | measured 0 and was RIGHT.
+ * | Kept for its intent, NOT its result. Retired from decision-making by Captain ruling at
+ * | the close of the gate-integrity arc. Re-premise it against confirmed live behaviour,
+ * | or delete it. Requires a fresh GO from Daniel before either.
+ * |   [<- that GO arrived 2026-08-06: re-premised leg-by-leg rather than deleted, because
+ * |       one of the legs was never wrong in the first place.]
+ * ───────────────────────────────────────────────────────────────────────────────────── */
 /* D1 SOAK-FIX GATE (#284) — write-capture + blueprint-open, headless mocked-auth against the REAL
  * studio.html. Reproduces the EXACT soak symptoms (negative-control doctrine): the studio D1 'active'
  * row that autosaves n_rooms:0 even though the loaded doc HAD rooms (RC-A), and opening a saved
@@ -41,8 +61,17 @@ console.log('[QUARANTINED] verdict NOT trustworthy - see file header. Retired 20
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const { chromium } = require('playwright');
 const ROOT = path.resolve(__dirname, '..');
-let pass = 0, fail = 0; const lines = [];
+let pass = 0, fail = 0, held = 0; const lines = [];
 const ok = (c, m) => { if (c) pass++; else fail++; lines.push((c ? 'PASS ' : 'FAIL ') + m); };
+/* HELD — the leg RUNS and its observation is PRINTED, but it does not touch the verdict.
+   This is how the quarantine gets the right SHAPE: the untrusted premise is leg-scoped, so the
+   file stops being one nobody may believe and becomes one with three live assertions and five
+   documented holds. The evidence stays visible — a hold that hides its measurement is just a
+   deletion with extra steps.
+   ⛔ THE TOKEN IS 'HELD', NEVER '[QUARANTINED]'. _suite_baseline.mjs classifies by substring
+   (`out.indexOf('[QUARANTINED]') >= 0`), so printing that literal ANYWHERE re-quarantines the
+   WHOLE FILE and this split would look done while changing nothing. */
+const hold = (c, m) => { held++; lines.push('HELD ' + (c ? '(would pass) ' : '(would fail) ') + m); };
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.woff2': 'font/woff2', '.woff': 'font/woff' };
 const server = http.createServer((req, res) => {
@@ -123,14 +152,17 @@ const fireSpend = (page, v) => page.evaluate((val) => { var e = document.getElem
     await page.goto(base + '/studio.html', { waitUntil: 'load' });
     await page.waitForTimeout(2200);                       // boot + LOAD_TIMEOUT(1.2s) settle
     const sLen = await stateLen(page);
-    ok(sLen === 3, 'G-BOOT-CAPTURE: boot hydrated window.state.accounts from the D1 doc (got ' + sLen + ', want 3)');
+    hold(sLen === 3, 'G-BOOT-CAPTURE: boot hydrated window.state.accounts from the D1 doc (got ' + sLen + ', want 3)' +
+      '  [reason (a): THE REFUTED PREMISE ITSELF — a cold Studio opens EMPTY by design; the harness measured 0 and was RIGHT]');
     await fireSpend(page, '$130,000');                     // force a d1WriteStudio autosave
     await page.waitForTimeout(2200);                       // commit(350ms)+WRITE_DEBOUNCE(1.5s) settle
     const emptyEscaped = puts.some((p) => p.n === 0 || p.n === -1);
     const lastN = puts.length ? puts[puts.length - 1].n : -99;
     ok(puts.length > 0, 'G-BOOT-CAPTURE: an autosave studio PUT fired (' + puts.length + ')');
-    ok(!emptyEscaped, 'G-BOOT-CAPTURE: NO empty studio PUT escaped ' + JSON.stringify(puts));
-    ok(lastN === 3, 'G-BOOT-CAPTURE: the persisted studio doc carries the 3 rooms (last PUT n=' + lastN + ')');
+    hold(!emptyEscaped, 'G-BOOT-CAPTURE: NO empty studio PUT escaped ' + JSON.stringify(puts) +
+      '  [reason (b): Ruling C is OPEN — a cold empty boot overwriting a populated D1 active doc has no agreed answer yet]');
+    hold(lastN === 3, 'G-BOOT-CAPTURE: the persisted studio doc carries the 3 rooms (last PUT n=' + lastN + ')' +
+      '  [reason (a): downstream of the refuted cold-boot-hydration premise]');
     if (errs.length) lines.push('  [boot-capture pageerrors] ' + errs.slice(0, 3).join(' | '));
     await ctx.close();
   }
@@ -160,9 +192,11 @@ const fireSpend = (page, v) => page.evaluate((val) => { var e = document.getElem
     const sLen = await stateLen(page);
     await fireSpend(page, '$114,000');
     await page.waitForTimeout(2200);
-    ok(sLen === 4, 'G-BOOT-SLOW-WITHIN: a slow-but-in-time D1 read hydrates the rooms (got ' + sLen + ', want 4)');
-    ok(!puts.some((p) => p.n === 0 || p.n === -1) && puts.some((p) => p.n === 4),
-       'G-BOOT-SLOW-WITHIN: the autosave PUT carries the rooms, none empty ' + JSON.stringify(puts));
+    hold(sLen === 4, 'G-BOOT-SLOW-WITHIN: a slow-but-in-time D1 read hydrates the rooms (got ' + sLen + ', want 4)' +
+      '  [reason (a): same refuted cold-boot-hydration premise, just with a slower read]');
+    hold(!puts.some((p) => p.n === 0 || p.n === -1) && puts.some((p) => p.n === 4),
+       'G-BOOT-SLOW-WITHIN: the autosave PUT carries the rooms, none empty ' + JSON.stringify(puts) +
+       '  [reason (a)+(b): downstream of the refuted premise AND of the open Ruling C question]');
     if (errs.length) lines.push('  [slow-within pageerrors] ' + errs.slice(0, 3).join(' | '));
     await ctx.close();
   }
@@ -185,7 +219,12 @@ const fireSpend = (page, v) => page.evaluate((val) => { var e = document.getElem
   const overall = fail === 0 ? 'GREEN' : 'RED';
   lines.push('-------------------------------------');
   lines.push('D1 SOAK-FIX GATE (#284) — write-capture + blueprint-open');
-  lines.push('OVERALL: ' + overall + '   (' + pass + ' pass / ' + fail + ' fail)');
+  /* PRINTED EVEN AT ZERO. A hold that stops being visible is a hold nobody revisits, and these are
+     assertions somebody decided not to trust — the count should be uncomfortable to look at. Same
+     reasoning the runner applies to its QUARANT line. */
+  lines.push('OVERALL: ' + overall + '   (' + pass + ' pass / ' + fail + ' fail / ' + held + ' HELD, not counted)');
+  if (held) lines.push('  HELD legs are printed above with their reason: (a) refuted cold-boot-hydration' +
+                       ' premise, (b) awaiting the open Ruling C product decision. Neither is a code defect.');
   console.log('[' + (process.argv[2] || 'RUN') + '] D1 BOOT-CAPTURE — ' + overall + '\n' + lines.join('\n'));
   process.exit(fail === 0 ? 0 : 1);
 })();

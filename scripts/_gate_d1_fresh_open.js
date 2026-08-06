@@ -1,28 +1,46 @@
 'use strict';
 /* =====================================================================================
- * QUARANTINED 2026-07-28 - DO NOT TRUST THIS GATE VERDICT (green OR red).
+ * ✅ UN-QUARANTINED 2026-08-06 (Architect ruling, PROMPT #625). THIS GATE'S VERDICT COUNTS.
  *
- * it reports GREEN only because its fixture date rotted. Measured 2026-07-28: with the
- * hardcoded updated_at it is GREEN 6/0; with a CURRENT stamp it is RED 1/5. It was authored
- * as a red-first and went green by the calendar, never by a fix. Its pass means nothing.
+ * THE QUARANTINE REASON DID NOT REPRODUCE. It is preserved verbatim below rather than
+ * deleted, because a ruling that quietly vanishes is how a file ends up arguing with its
+ * own history — the same failure this arc keeps paying for. SUPERSEDED, NOT DROPPED.
  *
-  * PLAIN LANGUAGE: this test was written to FAIL on purpose until a fix landed. It now
- * says PASS - but only because the date baked into its test data (2026-07-16) has aged
- * past relevance. Given today date it fails immediately. THEREFORE IT IS UNKNOWN WHETHER
- * THE FIX IT WAS GUARDING EVER LANDED. That was never investigated. Recorded deliberately.
-  *
- * TELL #8 - TIME-BOMB FIXTURE: a hardcoded date sitting inside freshness/expiry logic. It
- * passes the day it is written and rots one day at a time after, invisible to code review
- * because the code never changes - only the calendar does. A third suspect,
- * _gate_grounds_avm_persist.mjs, was TESTED for this and CLEARED (33/33 with either date):
- * the census that named the suspects was one-third wrong, so test, never infer.
+ * WHAT WAS MEASURED, 2026-08-06, at HEAD. The old header says this gate is green only
+ * because its fixture date rotted, and that a CURRENT stamp makes it RED 1/5. Tested at
+ * THREE stamps by rewriting `updated_at` on ACTIVE_DOC:
+ *     old     the shipped literal 2026-07-16   -> GREEN 6/0
+ *     now     new Date()                       -> GREEN 6/0
+ *     future  now + 1h                         -> GREEN 6/0
+ * ⚠️ THE FIRST ATTEMPT PROVED NOTHING AND IS RECORDED SO NOBODY REPEATS IT: it used
+ * now-60s, which is still OLDER than the session draft's runtime `_draftAt`, so the
+ * newer-wins comparator resolved exactly as it always had. A POISON RIG MUST PROVE ITS
+ * POISON LANDED. The `future` stamp is the one that genuinely inverts the comparison.
  *
- * Kept for its intent, NOT its result. Retired from decision-making by Captain ruling at
- * the close of the gate-integrity arc. Do not "fix the date" - that converts a false pass
- * into a red nobody has agreed to investigate. Re-premise it against confirmed live
- * behaviour, or delete it. Requires a fresh GO from Daniel before either.
- * ===================================================================================== */
-console.log('[QUARANTINED] verdict NOT trustworthy - see file header. Retired 2026-07-28.');
+ * WHY ALL THREE AGREE, which is the actual finding: NONE of the six legs is stamp-
+ * sensitive by design. They test ?hydrate=sketch, ?fresh=1 and blueprint-open-by-id —
+ * every one of which BYPASSES the newer-wins comparator the date feeds. So the TELL #8
+ * time-bomb classification, correct as a general suspicion, was MISAPPLIED to this file:
+ * the date is inert here. That is testable in one command and nobody had run it.
+ *
+ * 🔑 THE HONEST LIMIT, stated because the old header's claim cannot be disproved either:
+ * I CAN MEASURE TODAY, I CANNOT RE-MEASURE 2026-07-28. Whether the fix this gate guarded
+ * landed between then and now, or whether the 07-28 measurement was itself wrong, is not
+ * knowable from here. What IS known: the stated reason for distrusting it is false at HEAD.
+ *
+ * ── SUPERSEDED 2026-07-28 QUARANTINE, KEPT VERBATIM ──────────────────────────────────
+ * | QUARANTINED 2026-07-28 - DO NOT TRUST THIS GATE VERDICT (green OR red).
+ * | it reports GREEN only because its fixture date rotted. Measured 2026-07-28: with the
+ * | hardcoded updated_at it is GREEN 6/0; with a CURRENT stamp it is RED 1/5. It was
+ * | authored as a red-first and went green by the calendar, never by a fix.
+ * | PLAIN LANGUAGE: this test was written to FAIL on purpose until a fix landed. It now
+ * | says PASS - but only because the date baked into its test data (2026-07-16) has aged
+ * | past relevance. THEREFORE IT IS UNKNOWN WHETHER THE FIX IT WAS GUARDING EVER LANDED.
+ * | TELL #8 - TIME-BOMB FIXTURE: a hardcoded date sitting inside freshness/expiry logic.
+ * | A third suspect, _gate_grounds_avm_persist.mjs, was TESTED for this and CLEARED
+ * | (33/33 with either date): the census that named the suspects was one-third wrong, so
+ * | test, never infer.  [<- that instruction is exactly what un-quarantined this file]
+ * ───────────────────────────────────────────────────────────────────────────────────── */
 /* BUG C GATE (#288) — the fresh-open design flip. Drives the REAL studio.html with a POPULATED D1 active
  * doc AND a populated session draft (both carry rooms), then opens three ways:
  *   G-SKETCH-FRESH    — ?id=1&hydrate=sketch  -> section 02 (Estate) EMPTY (state.accounts=0); the sketch
