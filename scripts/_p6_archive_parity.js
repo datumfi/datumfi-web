@@ -8,8 +8,41 @@
  * the 2026-08-01 copy work. Do not repair, do not delete, do not investigate.
  * OUT OF QUARANTINE only if it ever agrees with a defect the Captain sees on his own screen,
  * and on that day, not before. Architect ruling 2026-08-01.
+ *   [<- SUPERSEDED 2026-08-06, PROMPT #626/#627. Kept verbatim above, never silently dropped.
+ *       The quarantine was the CHEAP CORRECT ANSWER on 08-01, when this was one untrusted gate
+ *       among many. It stopped being correct once the disagreement was measured and turned out
+ *       not to be a disagreement at all. See the split note below.]
+ *
+ * ✂️ SPLIT 2026-08-06 — THIS GATE'S VERDICT COUNTS AGAIN. Three legs are HELD on a named,
+ *    measured reason; every other leg is LIVE and decides the exit code.
+ *
+ * THE QUARANTINE RESTED ON A CONTRADICTION THAT DOES NOT EXIST. Measured 2026-08-06: this gate
+ * and _gate_sketchbook_erase_survivors call the BYTE-IDENTICAL door (same .slot-erase-action,
+ * same #action-confirm-erase) and NEITHER IS WRONG. They encode DIFFERENT CONTRACTS:
+ *   survivors asks  "is the erased ID gone and are two left?"  -> TRUE  under compaction
+ *   this gate asks  "is the slot_2 KEY empty?"                 -> FALSE under compaction
+ *
+ * THE MEASUREMENT THAT SETTLED IT (id-probe, this same fixture): seed sk-1..sk-4, erase slot 2,
+ * book reads ["sk-1","sk-3","sk-4",null]. sk-2 is GONE from the book AND from the Clerk mirror.
+ * ⛔ THE ERASE IS NOT LOSING OR RETAINING DATA. An earlier reading of these reds as "the sketch
+ * is delisted but copies survive underneath" was WRONG, and is corrected here so nobody
+ * re-derives it: slot_2 is occupied because the list PACKED UP behind the deletion.
+ *
+ * WHAT IS REAL, AND WHY THE LEGS STAY: Sketchbook COMPACTS (sketchbook.html:3435 fills
+ * positionally, so no gap can survive by construction); Blueprint leaves a GAP; and BOTH
+ * _gate_d1_sketch_parity.mjs:5 and sketchbook.html:3104 assert the two rooms behave THE SAME.
+ * One room is the drifter. That is the open #510 parity arc — Captain's directional ruling is
+ * "LIST/COMPACT is the intended shared shape, Blueprint presumed the drifter", explicitly open
+ * to being flipped, evidence (a)(b)(c) still owed. THESE THREE LEGS ARE THE ONLY INSTRUMENT
+ * WATCHING THAT BREAK. Held, never deleted: they return to check() the day the shared shape is
+ * ruled and wired, and they are the red-first for that work.
+ *
+ * ⚠️ INSTRUMENTATION GAP CLOSED IN THE SAME COMMIT: this gate listened only for 'pageerror', so
+ * sketchbook.html's own erase failure logs — console.error "[sketchbook erase] DatumPurge.sketch
+ * unavailable / threw — snapshot/mirror NOT scrubbed" — were INVISIBLE to it. The product was
+ * willing to say why it failed and the instrument was not listening. Captured now. Measured:
+ * neither fires, so the purge genuinely RUNS — part of how compaction was confirmed, not assumed.
  * ===================================================================================== */
-console.log('[QUARANTINED] verdict NOT trustworthy - see file header. Quarantined 2026-08-01.');
 
 /* _p6_archive_parity.js — STANDING GATE for P6 Blueprint↔Sketchbook save-parity.
  *
@@ -47,6 +80,14 @@ const server = http.createServer((req, res) => {
 
 const fails = [];
 const check = (name, cond, detail) => { console.log((cond ? '  PASS  ' : '  FAIL  ') + name + (detail != null ? ' (' + detail + ')' : '')); if (!cond) fails.push(name); };
+/* HELD — runs, prints its real measurement, does NOT touch the verdict. Same shape as the
+   _gate_d1_boot_capture split: the untrusted premise is LEG-scoped, so the file stops being one
+   nobody may believe. A HOLD THAT HIDES ITS EVIDENCE IS A DELETION WITH EXTRA STEPS.
+   ⛔ TOKEN IS 'HELD', NEVER '[QUARANTINED]' — _suite_baseline.mjs classifies by substring, so
+   printing that literal anywhere would re-quarantine the WHOLE FILE and this split would look
+   done while changing nothing. */
+let heldN = 0;
+const hold = (name, cond, detail) => { heldN++; console.log('  HELD  ' + (cond ? '(would pass) ' : '(would fail) ') + name + (detail != null ? ' (' + detail + ')' : '')); };
 
 async function eraseBlueprint(page, slot) {
   // Slice-1 Blueprint.html is id-based (render-N): the Erase button carries data-purge-id="<bpId>",
@@ -76,6 +117,12 @@ async function eraseSketch(page, slot) {
   const page = await ctx.newPage();
   const pageErrors = [];
   page.on('pageerror', (e) => pageErrors.push(e.message));
+  /* The erase path reports its OWN failures via console.error, not by throwing — so listening only
+     for 'pageerror' made "[sketchbook erase] DatumPurge.sketch unavailable/threw" invisible to this
+     gate. Collected, and surfaced in the dump so a future red arrives WITH the product's own
+     explanation attached instead of leaving the next reader to re-derive it. */
+  const eraseLogs = [];
+  page.on('console', (m) => { const t = m.text(); if (/\[sketchbook erase\]|DatumPurge/i.test(t)) eraseLogs.push(m.type() + ': ' + t); });
   await page.route('**/*', (route) => /clerk|cloudflareinsights|posthog|beacon/i.test(route.request().url()) ? route.abort() : route.continue());
   await page.addInitScript(() => {
     try { sessionStorage.setItem('datumfi_skip_entry_overlay', '1'); } catch (e) {}
@@ -277,19 +324,45 @@ async function eraseSketch(page, slot) {
       bookSlot2: !!(book && book.slot_2),
       perSlot2: localStorage.getItem('datum_sketch_state_2') != null,
       snapshot: sessionStorage.getItem('datumfi_sketch_current_snapshot') != null,
-      zHasSlot2: !!(dec && dec.slot_2), zHasSlot3: !!(dec && dec.slot_3)
+      zHasSlot2: !!(dec && dec.slot_2), zHasSlot3: !!(dec && dec.slot_3),
+      /* THE EVIDENCE THE HELD LEGS STAND ON, captured in the gate rather than in a throwaway probe:
+         which sketch_id actually sits in each slot after the erase. ["sk-1","sk-3","sk-4",null] is
+         COMPACTION (sk-2 deleted, list packed up); ["sk-1",null,"sk-3","sk-4"] would be a GAP;
+         an unchanged ["sk-1","sk-2","sk-3","sk-4"] would be the retention defect this was once
+         mistaken for. One line, and it discriminates all three. */
+      bookIds: [1, 2, 3, 4].map(function (n) { var s = book && book['slot_' + n]; return s ? (s.sketch_id || '?') : null; })
     };
   });
-  check('SK erase: book slot_2 cleared', !skPurge.bookSlot2);
-  check('SK erase: datum_sketch_state_2 cleared', !skPurge.perSlot2);
+  /* ⏸ HELD 2026-08-06 — THESE THREE ASSERT *GAP* SEMANTICS AGAINST A ROOM THAT *COMPACTS*.
+     MEASURED (id-probe, this fixture, 2026-08-06): seed sk-1..sk-4, erase slot 2, and the book reads
+     ["sk-1","sk-3","sk-4",null]. sk-2 is GONE from the book AND from the Clerk mirror. THE ERASE
+     DELETES CORRECTLY. slot_2 is non-empty only because the list PACKED UP behind the deletion
+     (sketchbook.html:3435 `var c = contracts[n - 1] || null;` fills positionally, so no gap can
+     survive by construction). !bookSlot2 / !perSlot2 / !zHasSlot2 are true ONLY under gap semantics.
+     ⚖️ AND THERE IS NO CONTRADICTION WITH _gate_sketchbook_erase_survivors, which was the stated
+     reason for the 2026-08-01 quarantine. That gate asks "is the erased ID gone and are two left?"
+     -> TRUE under compaction. This one asks "is the slot_2 KEY empty?" -> FALSE under compaction.
+     BOTH INSTRUMENTS ARE CORRECT; THEY ENCODE DIFFERENT CONTRACTS. The dispute was never whether
+     the erase works.
+     WHAT IS REAL, AND WHY THESE STAY IN THE FILE: Sketchbook compacts, Blueprint leaves a gap, and
+     BOTH _gate_d1_sketch_parity.mjs:5 and sketchbook.html:3104 assert the two rooms behave the SAME.
+     One room is the drifter. That is the open #510 parity arc with evidence (a)(b)(c) still owed, and
+     these three legs are the only instrument watching it. Held, not deleted — they go back to check()
+     the day the shared shape is ruled and wired, and they are the red-first for that work. */
+  hold('SK erase: book slot_2 cleared', !skPurge.bookSlot2,
+    'COMPACTION not retention: book=' + JSON.stringify(skPurge.bookIds) +
+    ' -- sk-2 GONE, the list packed up. Blocked on the #510 parity arc, not on a defect here.');
+  hold('SK erase: datum_sketch_state_2 cleared', !skPurge.perSlot2,
+    'slot 2 is legitimately re-occupied by the next sketch after the list packs up');
   check('SK erase: matching snapshot cleared', !skPurge.snapshot);
   check('SK erase: Clerk sketchbook_z written (codec ensured)', skPurge.zPresent);
   // HARDENED 2026-07-27 — this asserted only `!zHasSlot2`, which is TRIVIALLY true when NO mirror
   // exists at all. It passed while sketchbook_z was never written, actively MASKING the erase defect
   // (sketchbook.html was writing the legacy `sketchbook` object because the codec was not ensured).
   // A control that reports success for an absent mirror is not a control. Require zPresent FIRST.
-  check('SK erase: Clerk sketchbook_z dropped slot2', skPurge.zPresent && !skPurge.zHasSlot2,
-    'zPresent=' + skPurge.zPresent + ' zHasSlot2=' + skPurge.zHasSlot2);
+  hold('SK erase: Clerk sketchbook_z dropped slot2', skPurge.zPresent && !skPurge.zHasSlot2,
+    'zPresent=' + skPurge.zPresent + ' zHasSlot2=' + skPurge.zHasSlot2 +
+    ' -- the mirror encodes the COMPACTED book, so slot_2 holding the shifted sketch is correct here');
   check('SK erase: Clerk sketchbook_z kept slot3', skPurge.zHasSlot3);
 
   // (b-guard) PRESERVE: an unrelated, unstamped snapshot survives an unrelated erase.
@@ -388,7 +461,9 @@ async function eraseSketch(page, slot) {
   check('no page errors', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
 
   await browser.close(); server.close();
-  console.log(JSON.stringify({ verdict: fails.length ? 'FAIL' : 'PASS', bpUnlock, bpPurge, bpGuard, bpAuto, bpAutoOnce, skUnlock, skPurge, skGuard, skAuto, skAutoOnce, navStay, pageErrors: pageErrors.slice(0, 3) }, null, 2));
+  /* heldN printed EVEN AT ZERO — a hold that stops being visible is a hold nobody revisits. */
+  console.log('  ---- ' + (fails.length ? 'FAIL' : 'PASS') + '   (' + heldN + ' HELD, not counted -- see header: #510 compaction-vs-gap)');
+  console.log(JSON.stringify({ verdict: fails.length ? 'FAIL' : 'PASS', heldNotCounted: heldN, bpUnlock, bpPurge, bpGuard, bpAuto, bpAutoOnce, skUnlock, skPurge, skGuard, skAuto, skAutoOnce, navStay, eraseLogs, pageErrors: pageErrors.slice(0, 3) }, null, 2));
 
   if (LEGACY_OPEN) {
     // Self-checking mutation: the legacy selector must actually CHANGE the outcome. A control that
