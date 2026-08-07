@@ -8154,6 +8154,21 @@
             }
             if(field === 'linkedAssetId') { openAccountModal(id); if(value) _onSecuredLinkFormed(id, value, id); }   // §18.2 reconcile shared escrow (returns to this room)
             if(field === 'rateType') openAccountModal(id);   // §0.4/§5.1 — reveal/hide the Variable-rate cluster
+            /* §17.2/§17.3 — MEASURED DEAD ON A REAL CLICK, 2026-08-07. Both of these drive a
+               CONDITIONAL: choosing a homeowner policy type must collapse the HO-1…HO-8 teach panel
+               (bank row 183), and choosing Townhouse must reveal the who-owns-the-walls line (row
+               192). Both stored their value correctly and NEITHER repainted — the panel sat there,
+               the townhome line never came — because this whitelist is the only thing that repaints
+               a room mid-session and neither field was on it. Both are <select>s, so re-rendering
+               costs no caret: this is the same one-line treatment `rateType` above already gets for
+               the same job, which is why it is not a new mechanism (L48).
+               ⭐ §13.72 — A TEST THAT SETS STATE AND THEN RE-RENDERS PROVES THE RENDERER, NEVER THE
+               HANDLER. 196 gates were green over this because every one of them assigned the field
+               and opened the modal FRESH, which is the one thing that hides it. The gate legs that
+               guard this line throw the real control and deliberately refuse to reopen the view.
+               ⚠️ ANY future conditional driven by updateAccField must be added HERE and gated the
+               same way, or it will store perfectly and never appear. */
+            if(field === 'hoType' || field === 'propType') openAccountModal(id);   // §17.2 teach-panel collapse + townhome branch
             /* §19.12 — THE INVALIDATION. The room NAME is derived at render from the §19.1 map, so
                there is exactly ONE source of truth and it was always correct — but the LEFT ACCOUNT
                LIST was never repainted on a purpose change, so it showed whatever renderInputs() last
