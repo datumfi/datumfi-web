@@ -133,10 +133,15 @@ const M_EDUC = "    function _propInsEducationHTML(acc) {\n        if (true) ret
    drift apart. */
 const A_NOENDORSE = "        var anyOn = _PROP_ENDORSEMENTS.some(function (e) { return !!acc[e[0]]; });";
 const M_NOENDORSE = "        return '';   /* §17.4 block removed by --noendorse */";
-const A_EAGER = "            var lim = on";
-const M_EAGER = "            var lim = true   /* --eagerfields: reveal regardless of the switch */";
-const A_DEAF  = "            var on = !!acc[key];";
-const M_DEAF  = "            var on = !!acc[key + 'X'];   /* --deafswitch: render reads a key nothing writes */";
+/* RE-GROUNDED after §26.4/§26.5 rewrote the endorsement block. Both anchors moved and BOTH controls
+   ABORTED rather than mutating — correct, and the second one matters: `var on = !!acc[key];` now
+   appears TWICE (the hazard-coverage control reuses the same shape), so a plain replace would have
+   silently poisoned the WRONG block and the control would have "worked" while testing something
+   else entirely. The exactly-one-occurrence check is what turned that into a stop. */
+const A_EAGER = "            var fields = on";
+const M_EAGER = "            var fields = true   /* --eagerfields: reveal regardless of the switch */";
+const A_DEAF  = "            var key = e[0], label = e[1], whatsThis = e[2], doIHave = e[3];\n            var on = !!acc[key];";
+const M_DEAF  = "            var key = e[0], label = e[1], whatsThis = e[2], doIHave = e[3];\n            var on = !!acc[key + 'X'];   /* --deafswitch: render reads a key nothing writes */";
 const A_DEAFSEL = "            if(field === 'hoType' || field === 'propType') openAccountModal(id);   // §17.2 teach-panel collapse + townhome branch";
 const M_DEAFSEL = "            /* --deafselect: the pre-fix state — both fields store, neither repaints */";
 const A_NOHAZ = "        var hz = snap && snap.hazard;";
@@ -305,18 +310,34 @@ const server = http.createServer((req, res) => {
     const eNone = window.state.accounts.filter(x => x.baseId === 'property').pop();
     eNone.value = 400000;
     out.gEndNone = endShape(eNone.id);
+    /* RE-PREMISED (§26.4/§26.5/§26.7). The carried fixture was Earthquake — which is no longer IN
+       this list, having been superseded by the three-field coverage control. Replacement Cost is the
+       endorsement §26.4 added and now leads the list, so it is the carried case. TWO fields now, not
+       one: Coverage limit + Annual premium. */
     addInstance('property');
     const eOne = window.state.accounts.filter(x => x.baseId === 'property').pop();
-    Object.assign(eOne, { value: 400000, endorseQuake: true, endorseQuakeLimit: '$50,000' });
+    Object.assign(eOne, { value: 400000, endorseReplCost: true, endorseReplCostLimit: '$50,000', endorseReplCostPremium: '$120' });
     out.gEndOne = endShape(eOne.id);
+    /* §26.7 DE-DUPLICATION FIXTURE — both hazard coverages carried, so the earthquake control's
+       three fields and the flood control's three can be counted and named. */
+    addInstance('property');
+    const eHaz = window.state.accounts.filter(x => x.baseId === 'property').pop();
+    Object.assign(eHaz, { value: 400000, coverFlood: true, endorseQuake: true, endorseQuakeLimit: '$300,000', quakeDeductible: '10% of Coverage A', quakePremium: '$900', floodCovBuilding: '$250,000', floodCovContents: '$100,000', floodPremium: '$1,400' });
+    window.openAccountModal(eHaz.id);
+    out.gHazCover = (function () { var r = document.getElementById('modal-dynamic-content'); return r ? r.innerHTML : ''; })();
+    addInstance('property');
+    const eHazOff = window.state.accounts.filter(x => x.baseId === 'property').pop();
+    eHazOff.value = 400000;
+    window.openAccountModal(eHazOff.id);
+    out.gHazOff = (function () { var r = document.getElementById('modal-dynamic-content'); return r ? r.innerHTML : ''; })();
     out.gEndClick = (function () {
       addInstance('property');
       const ec = window.state.accounts.filter(x => x.baseId === 'property').pop();
       ec.value = 400000;
       const before = endShape(ec.id);
       const rows = Array.from(document.querySelectorAll('#modal-dynamic-content .toggle-row'));
-      const row = rows.filter(function (x) { const l = x.querySelector('.toggle-label'); return l && l.textContent === 'Earthquake'; })[0];
-      if (!row) return { before: before, after: null, why: 'NO_EARTHQUAKE_SWITCH', stored: null };
+      const row = rows.filter(function (x) { const l = x.querySelector('.toggle-label'); return l && l.textContent === 'Replacement Cost on Personal Property'; })[0];
+      if (!row) return { before: before, after: null, why: 'NO_REPLCOST_SWITCH', stored: null };
       const cb = row.querySelector('input[type=checkbox]');
       if (!cb) return { before: before, after: null, why: 'NO_CHECKBOX', stored: null };
       cb.checked = true;
@@ -331,7 +352,7 @@ const server = http.createServer((req, res) => {
         before: before,
         after: det ? { open: det.hasAttribute('open'), limits: Array.from(det.querySelectorAll('input[type=text]')).length, labels: Array.from(det.querySelectorAll('.toggle-label')).map(function (x) { return x.textContent; }) } : null,
         why: det ? '' : 'DISCLOSURE_GONE_AFTER_TOGGLE',
-        stored: !!ec.endorseQuake
+        stored: !!ec.endorseReplCost
       };
     })();
     // §9b — g9bAll fires ALL four rules: value 200k, linked debt 180k (LTV 90%), carry 10k (cost-to-value 5%),
@@ -808,12 +829,24 @@ const server = http.createServer((req, res) => {
   lines.push('===== §17.4 · ENDORSEMENT COVERAGES (conditional reveal) =====');
   ok(R.gEndNone.control === true, '§17.4 PRECONDITION — the endorsement disclosure EXISTS on a property (why: ' + (R.gEndNone.why || 'ok') + ')');
   ok(R.gEndOne.control === true,  '§17.4 PRECONDITION — it exists on the carried fixture too (why: ' + (R.gEndOne.why || 'ok') + ')');
-  const END6 = ['Earthquake', 'ID Theft', 'Increased Business Property', 'Scheduled Personal Property', 'Special Computer Coverage', 'Special Personal Property'];
+  /* RE-PREMISED (§26.4 + §26.7). Replacement Cost joins and LEADS; Earthquake LEAVES, superseded by
+     the three-field coverage control. Still six. The absence of Earthquake here is the de-duplication
+     claim and it is asserted in the same leg as the presence of the other six, so it cannot pass on
+     an empty list. */
+  const END6 = ['Replacement Cost on Personal Property', 'ID Theft', 'Increased Business Property', 'Scheduled Personal Property', 'Special Computer Coverage', 'Special Personal Property'];
   ok(JSON.stringify(R.gEndNone.labels) === JSON.stringify(END6),
-     '§17.4 all six endorsements render in AUTHORED ORDER (rows 207→212) — got ' + JSON.stringify(R.gEndNone.labels));
+     '§26.4/§26.7 six endorsements in authored order — Replacement Cost leads, Earthquake is GONE (de-duped) — got ' + JSON.stringify(R.gEndNone.labels));
   /* Six hovers, verbatim. Asserted on gEndNone — i.e. on the fixture where NOTHING is carried —
      because the education must be readable BEFORE you decide, not only after you have said yes. */
-  ok(has(R.gEndNone.html, 'Standard policies EXCLUDE earthquake; this endorsement (or a separate policy) adds it.'), '§17.4 Earthquake hover verbatim (row 207)');
+  ok(has(R.gEndNone.html, 'Pays what it costs to BUY YOUR THINGS AGAIN TODAY, rather than what they were worth second-hand. Without it, a ten-year-old sofa is paid out as a ten-year-old sofa. It is one of the most commonly added upgrades and often one of the cheapest.')
+     && has(R.gEndNone.html, 'This one is usually a yes-or-no on the policy rather than a dollar amount. If your policy says actual cash value on contents, this is the upgrade that changes that.'),
+     '§26.4 Replacement Cost — BOTH authored hovers verbatim (the seventh the Captain listed and the bank had omitted)');
+  /* ⛔ THE DE-DUPLICATION CLAIM, ASSERTED AS AN ABSENCE PAIRED WITH A PRESENCE. Row 207's endorsement
+     string must be gone from the endorsement block, AND the fuller coverage control must exist to
+     have replaced it — otherwise "it is not there" passes on a room that simply dropped earthquake. */
+  ok(!has(R.gEndNone.html, 'Standard policies EXCLUDE earthquake; this endorsement (or a separate policy) adds it.')
+     && has(R.gHazOff, 'Earthquake coverage'),
+     '§26.7 DE-DUPE — row 207\'s endorsement string is GONE and the fuller Earthquake coverage control stands in its place (never both)');
   ok(has(R.gEndNone.html, 'Helps with the cost and legwork of restoring your identity after theft.'), '§17.4 ID Theft hover verbatim (row 208)');
   ok(has(R.gEndNone.html, 'Raises the low default limit on business equipment kept at home.'), '§17.4 Increased Business Property hover verbatim (row 209)');
   ok(has(R.gEndNone.html, 'Itemized high-value pieces — rings, art, instruments — insured for their appraised value above normal limits.'), '§17.4 Scheduled Personal Property hover verbatim (row 210)');
@@ -822,16 +855,20 @@ const server = http.createServer((req, res) => {
   /* ⛔ ROW 213, THE GUARD. Both halves in one leg each, so neither can pass on a blank room. */
   ok(R.gEndNone.open === false && R.gEndOne.open === true,
      '§17.4 GUARD (row 213) — silent and CLOSED when nothing is carried, OPEN the moment something is (both halves: ' + R.gEndNone.open + ' / ' + R.gEndOne.open + ')');
-  ok(R.gEndNone.limits === 0 && R.gEndOne.limits === 1,
-     '§17.4 GUARD (row 213) — ZERO fields when nothing is carried, EXACTLY ONE when one is (' + R.gEndNone.limits + ' / ' + R.gEndOne.limits + ')');
+  /* RE-PREMISED (§26.5): TWO fields per carried endorsement now — Coverage limit AND Annual premium.
+     The Captain asked for "coverage amounts, premiums, etc." and got one box; that is closed. */
+  ok(R.gEndNone.limits === 0 && R.gEndOne.limits === 2,
+     '§26.5 GUARD (row 213) — ZERO fields when nothing is carried, EXACTLY TWO when one is: limit + premium (' + R.gEndNone.limits + ' / ' + R.gEndOne.limits + ')');
+  ok(has(R.gEndOne.html, 'Coverage limit') && has(R.gEndOne.html, 'Annual premium'),
+     '§26.5 both authored field labels render on a carried endorsement');
   ok(JSON.stringify(R.gEndOne.labels) === JSON.stringify(END6),
      '§17.4 carrying ONE endorsement hides none of the other five — the reveal is scoped, not a re-render into a stub');
   /* Row 205's blank-until-entered guard reads on §17.4 too: on an insurance figure, a blank limit and
      a limit of zero are opposite facts. Absence of "$0" is paired with presence of the em dash. */
-  ok(R.gEndOne.placeholders.every(function (p) { return p === '—'; }) && R.gEndOne.placeholders.length === 1,
-     '§17.4 GUARD — the revealed limit ships an em-dash placeholder, never "$0" (' + JSON.stringify(R.gEndOne.placeholders) + ')');
-  ok(R.gEndOne.values[0] === '$50,000',
-     '§17.4 a recorded limit round-trips into the field verbatim — text, so "10% of Coverage A" survives too');
+  ok(R.gEndOne.placeholders.every(function (p) { return p === '—'; }) && R.gEndOne.placeholders.length === 2,
+     '§26.5 GUARD — BOTH revealed fields ship an em-dash placeholder, never "$0" (' + JSON.stringify(R.gEndOne.placeholders) + ')');
+  ok(R.gEndOne.values[0] === '$50,000' && R.gEndOne.values[1] === '$120',
+     '§26.5 a recorded limit AND premium both round-trip into their own fields (' + JSON.stringify(R.gEndOne.values) + ')');
   /* 🔑 THE CLICK LEG. Measured this session: the §17.2 teach panel and the townhome branch are both
      correct on this gate's state-injection path and both DEAD on the user's path, because
      updateAccField re-renders the modal for a whitelist of fields and neither hoType nor propType is
@@ -840,7 +877,7 @@ const server = http.createServer((req, res) => {
   ok(R.gEndClick.why === '' && R.gEndClick.after !== null,
      '§17.4 PRECONDITION — the Earthquake switch exists and survives being thrown (why: ' + (R.gEndClick.why || 'ok') + ')');
   ok(R.gEndClick.stored === true, '§17.4 throwing the switch STORES the endorsement');
-  ok(R.gEndClick.before.limits === 0 && R.gEndClick.after && R.gEndClick.after.limits === 1 && R.gEndClick.after.open === true,
+  ok(R.gEndClick.before.limits === 0 && R.gEndClick.after && R.gEndClick.after.limits === 2 && R.gEndClick.after.open === true,   /* §26.5: two fields per endorsement now */
      '§17.4 THE GESTURE REACHES THE RENDER — the field appears on the click itself, with NO modal re-open');
   ok(pick(!has(R.gAuto, 'Specialized / endorsement coverages'), has(R.gAuto, 'Specialized / endorsement coverages')),
      '§17.4 endorsement block ABSENT on Driveway (Grounds-only) [BITE]');
@@ -854,6 +891,35 @@ const server = http.createServer((req, res) => {
      ⛔ AND GUARD 3: sdc is refused BY MEASUREMENT, not preference — Austin returns "A", Los Angeles
      returns null, so the letter is absent precisely where the hazard is highest. That is an INVERTED
      SIGNAL, worse than blank. The Worker still returns it; nothing here may store or show it. */
+  /* ══ §26.6 NFIP PANEL + §26.7 FLOOD/EARTHQUAKE AS CARRIED COVERAGES ════════════════════════════
+     The lookup describes THE GROUND; these describe THE POLICY. Two layers, both shipped. */
+  lines.push('===== §26.6 NFIP + §26.7 CARRIED COVERAGES =====');
+  ok(has(R.gHazOff, 'Flood cover — how it works and where it comes from'),
+     '§26.6 NFIP education panel present');
+  ok(has(R.gHazOff, 'up to $250,000 on the building and $100,000 on contents for a residence'),
+     '§26.6 NFIP program limits verbatim — CONFIRMED CURRENT 2026-08-07 against FEMA/floodsmart, so they ship rather than being stripped');
+  ok(has(R.gHazOff, 'THIRTY-DAY WAITING PERIOD') && has(R.gHazOff, 'roughly a quarter of flood claims come from OUTSIDE high-risk zones'),
+     '§26.6 the three surprises verbatim');
+  ok(has(R.gHazOff, 'Flood is excluded from essentially every standard home policy') && has(R.gHazOff, 'Switch this on to record what you carry.'),
+     '§26.7 flood coverage toggle hover verbatim');
+  ok(has(R.gHazOff, 'its deductible is usually a PERCENTAGE of the dwelling limit rather than a flat dollar figure'),
+     '§26.7 earthquake coverage toggle hover verbatim — the deductible sentence the retired endorsement never carried');
+  /* Absence paired with presence, both halves in one leg: nothing revealed when neither is carried,
+     all six fields when both are. */
+  ok(!has(R.gHazOff, 'Flood coverage — building') && !has(R.gHazOff, 'Earthquake coverage limit')
+     && has(R.gHazCover, 'Flood coverage — building') && has(R.gHazCover, 'Flood coverage — contents')
+     && has(R.gHazCover, 'Annual flood premium') && has(R.gHazCover, 'Earthquake coverage limit')
+     && has(R.gHazCover, 'Earthquake deductible') && has(R.gHazCover, 'Annual earthquake premium'),
+     '§26.7 conditional reveal — nothing when neither is carried, all SIX fields when both are');
+  ok(has(R.gHazCover, 'value="10% of Coverage A"'),
+     '§26.7 the earthquake deductible accepts TEXT — a percentage of the dwelling limit survives, which a money field would silently discard');
+  /* ⛔ §26.5 PREMIUM DOUBLE-COUNT GUARD. The endorsement/flood/quake premiums are NOT whole-policy
+     premiums and must never be summed into the carrying total. gFill carries the five carry fields
+     and no premiums, so its total is the control; this asserts the total is still exactly those five.
+     A leg here is worth more than a comment: silently inflating a retirement number is the quietest
+     way this section could do harm. */
+  ok(has(R.gFill, '$16,800') && has(R.gFill, 'Total Annual Carrying Cost'),
+     '§26.5 GUARD — the carrying total is still the SAME five fields ($16,800); endorsement premiums are displayed, never summed');
   lines.push('===== §17.5 · FLOOD (FEMA) + SHAKING (USGS) =====');
   ok(!R.g175.err, '§17.5 PRECONDITION — the fixture ran without throwing (err: ' + (R.g175.err || 'none') + ')');
   /* §13.72 — absent before the gesture, present after it, WITHOUT a modal re-open. */
