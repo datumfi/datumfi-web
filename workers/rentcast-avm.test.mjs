@@ -9,7 +9,7 @@
    RED-FIRST: `--redfirst` flips the #51 assertion (assert fetch WAS called at cap) -> RED on correct code.
    Usage: node scripts/_gate_rentcast_cap.mjs [LABEL] [--redfirst] */
 import { readFileSync } from 'node:fs';
-import { handle, decideCall, MONTHLY_CAP, monthKey, trimComps, parseCensus } from './rentcast-avm.mjs';
+import { handle, decideCall, MONTHLY_CAP, monthKey, trimComps, parseCensus, pickCoords } from './rentcast-avm.mjs';
 
 const RF = process.argv.includes('--redfirst');
 const LABEL = process.argv[2] && process.argv[2] !== '--redfirst' ? process.argv[2] : 'RUN';
@@ -30,7 +30,14 @@ const req = (addr) => ({ method: 'GET', url: 'https://w.example/?address=' + enc
 
 let fetchCalls = 0;
 function installFetch(impl) { fetchCalls = 0; globalThis.fetch = async (...a) => { fetchCalls++; return impl ? impl(...a) : { ok: false, status: 500, json: async () => ({}) }; }; }
+/* ⚠️ THIS FIXTURE IS A MOCK WE WROTE. It is NOT evidence about the provider's real schema and must
+   never be cited as such — a previous session nearly did. The field NAMES it uses are grounded in
+   developers.rentcast.io (Value Estimate), read 2026-08-07; the VALUES are invented.
+   subjectProperty deliberately carries the property/sale detail the real one does, so the §17.5
+   scope fence below is tested against a payload shaped like the thing it has to refuse. */
 const okProvider = async () => ({ ok: true, json: async () => ({ price: 500000, priceRangeLow: 480000, priceRangeHigh: 520000,
+  subjectProperty: { latitude: 30.2672, longitude: -97.7431, bedrooms: 3, bathrooms: 2, squareFootage: 1800,
+                     yearBuilt: 1998, lotSize: 7000, lastSalePrice: 410000, lastSaleDate: '2019-06-01', ownerName: 'PII' },
   comparables: [
     { formattedAddress: '10 A St, Austin, TX', price: 505000, bedrooms: 3, bathrooms: 2,   squareFootage: 1800, distance: 0.4, removedDate: '2026-05-01', id: 'X1', correlation: 0.98, listingType: 'Standard' },
     { formattedAddress: '12 B St, Austin, TX', price: 495000, bedrooms: 3, bathrooms: 2.5, squareFootage: 1750, distance: 0.6, lastSeenDate: '2026-04-15' }
@@ -51,6 +58,25 @@ const okProvider = async () => ({ ok: true, json: async () => ({ price: 500000, 
   const _tc = trimComps([{ formattedAddress: 'X', price: 9, bedrooms: 3, bathrooms: 2, squareFootage: 1000, distance: 0.5, removedDate: '2026-01-01', id: 'SECRET', correlation: 0.9, ownerName: 'PII' }])[0];
   ok(_tc.address === 'X' && _tc.price === 9 && _tc.beds === 3 && _tc.baths === 2 && _tc.sqft === 1000 && _tc.distance === 0.5 && _tc.saleDate === '2026-01-01', 'trimComps keeps the 7 R147 fields');
   ok(pick(!('id' in _tc) && !('correlation' in _tc) && !('ownerName' in _tc), ('ownerName' in _tc)), 'trimComps DROPS raw/PII fields (id/correlation/ownerName) [BITE]');
+
+  /* ---- §17.5 pickCoords (PURE) — two numbers out, and only ever two ----
+     REFUSING IS THE PRIMARY BEHAVIOUR HERE, not the edge case. §17.5's guard (row 218) says a failed
+     lookup renders BLANK and never guesses a zone, so every shape that is not a trustworthy pair
+     must come back null: a WRONG flood zone is far worse than an absent one, and a string "30.2"
+     or an off-globe number would sail into FEMA and come back with a confident answer about
+     somewhere else. Each refusal is paired with the accept case, so "it returns null" cannot pass
+     on a function that returns null for everything. */
+  const _pc = pickCoords({ latitude: 30.2672, longitude: -97.7431, ownerName: 'PII', lastSalePrice: 410000, bedrooms: 3 });
+  ok(_pc && _pc.lat === 30.2672 && _pc.lon === -97.7431, 'pickCoords keeps the coordinate pair');
+  ok(pick(_pc && Object.keys(_pc).length === 2 && !('ownerName' in _pc) && !('lastSalePrice' in _pc) && !('bedrooms' in _pc),
+          !!(_pc && 'ownerName' in _pc)),
+     'pickCoords DROPS every other subjectProperty field — sale price, owner, beds (#259 scope fence) [BITE]');
+  ok(pickCoords(null) === null && pickCoords(undefined) === null && pickCoords('x') === null, 'pickCoords(junk) -> null (safe)');
+  ok(pickCoords({ latitude: 30.2672 }) === null && pickCoords({ longitude: -97.7431 }) === null, 'pickCoords -> null on a HALF pair (never half a location)');
+  ok(pickCoords({ latitude: '30.2672', longitude: '-97.7431' }) === null, 'pickCoords -> null on numeric STRINGS (a string is not a measurement)');
+  ok(pickCoords({ latitude: NaN, longitude: 0 }) === null && pickCoords({ latitude: 0, longitude: Infinity }) === null, 'pickCoords -> null on NaN / Infinity');
+  ok(pickCoords({ latitude: 91, longitude: 0 }) === null && pickCoords({ latitude: 0, longitude: -181 }) === null, 'pickCoords -> null off the globe (|lat|>90, |lon|>180)');
+  ok(pickCoords({ latitude: 0, longitude: 0 }) !== null, 'pickCoords ACCEPTS 0,0 — a real coordinate, and null-vs-zero is exactly the §17 blank-is-not-zero distinction');
 
   // ---- T3 parseCensus (PURE) — verified / not-found mapping ----
   ok(parseCensus({ result: { addressMatches: [{ matchedAddress: 'CANON' }] } }).status === 'verified', 'parseCensus(match) -> verified');
@@ -76,6 +102,13 @@ const okProvider = async () => ({ ok: true, json: async () => ({ price: 500000, 
   ok((kv._m.get(mk)) === '50', 'counter reserved to 50 (slot taken before the call)');
   ok(Array.isArray(body.comps) && body.comps.length === 2 && body.comps[0].address === '10 A St, Austin, TX' && body.comps[0].price === 505000, 'AVM out carries trimmed comps (rides the SAME /avm/value call)');
   ok(pick(!('id' in (body.comps[0] || {})) && !('correlation' in (body.comps[0] || {})), ('id' in (body.comps[0] || {}))), 'served comps carry NO raw RentCast fields (PII/scope) [BITE]');
+  /* §17.5 END-TO-END through the real handler: the coordinates ride the SAME call that was already
+     made and paid for. fetchCalls is asserted at 1 two legs above, and it is unchanged by this —
+     that IS the "$0, no extra call, no cap increment" claim, executed rather than asserted in prose. */
+  ok(body.coords && body.coords.lat === 30.2672 && body.coords.lon === -97.7431, '§17.5 AVM out carries coords off the SAME /avm/value call (no extra call, no cap increment)');
+  ok(pick(!('subjectProperty' in body) && !('ownerName' in (body.coords || {})) && Object.keys(body.coords || {}).length === 2,
+          ('subjectProperty' in body)),
+     '§17.5 the raw subjectProperty NEVER leaves the worker — two numbers, nothing else [BITE]');
 
   // ---- de-dupe: cached asset returns with zero calls ----
   installFetch(okProvider);

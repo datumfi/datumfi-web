@@ -54,6 +54,32 @@ export function trimComps(arr) {
   });
 }
 
+/* §17.5 PREREQ — CAPTURE THE SUBJECT PROPERTY'S COORDINATES, AND NOTHING ELSE.
+   FEMA NFHL and USGS Seismic Design both key off LAT/LONG, not an address string. RentCast returns
+   them on the response we ALREADY pay for, so this rides the SAME /avm/value call: $0, no extra
+   call, no cap increment — the trimComps precedent exactly. NO GEOCODE PROVIDER IS NEEDED.
+   ⛔ SOURCED, NOT INHERITED (L51). The claim "RentCast returns subjectProperty.latitude/longitude"
+   arrived as a prior session's assertion with NO evidence held anywhere in this repo or the
+   workbook. Confirmed 2026-08-07 against the provider's PUBLISHED SCHEMA (developers.rentcast.io,
+   Value Estimate) — documentation only, never the API: probing it live costs real money and
+   playground calls count against the same 50/month. Cross-checked: the four field names the block
+   below already reads (price / priceRangeLow / priceRangeHigh / comparables) match that schema
+   exactly, and they are known to work in production.
+   NARROW ON PURPOSE. subjectProperty ALSO carries bedrooms, bathrooms, square footage, lot size,
+   year built and LAST SALE detail. Forwarding it wholesale would leak precisely what the #259 fence
+   stops us doing with comparables[]. Two numbers leave this worker; nothing else does.
+   RETURNS null WHENEVER THE PAIR IS NOT FULLY TRUSTWORTHY — missing, non-numeric, or off the globe.
+   A null is a FINISHED state, not a failure: §17.5's guard (bank row 218) renders blank rather than
+   guessing a flood zone, and a wrong zone is far worse than an absent one. */
+export function pickCoords(sp) {
+  if (!sp || typeof sp !== 'object') return null;
+  const lat = sp.latitude, lon = sp.longitude;
+  if (typeof lat !== 'number' || typeof lon !== 'number') return null;
+  if (!isFinite(lat) || !isFinite(lon)) return null;
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+  return { lat: lat, lon: lon };
+}
+
 // PURE parse of the Census onelineaddress payload (no I/O) so the gate can prove verified/not-found
 // mapping without any network call.
 export function parseCensus(d) {
@@ -121,7 +147,13 @@ export async function handle(request, env) {
       value: d && d.price != null ? d.price : null,
       low: d && d.priceRangeLow != null ? d.priceRangeLow : null,
       high: d && d.priceRangeHigh != null ? d.priceRangeHigh : null,
-      comps: trimComps(d && d.comparables)
+      comps: trimComps(d && d.comparables),
+      /* §17.5 — additive and INERT until the studio side ships. An older studio.html simply ignores
+         an unknown key, so this worker can deploy first and alone, which is the whole point: the two
+         halves publish through DIFFERENT mechanisms (wrangler vs Pages) with different cache
+         behaviour, and every cross-file split has bitten us. Worker first, studio second, and the
+         in-between state renders §17.5 blank — degrading to shipped behaviour, never drawing wrong. */
+      coords: pickCoords(d && d.subjectProperty)
     };
     if (kv && out.value != null) { try { await kv.put(ck, JSON.stringify(out), { expirationTtl: CACHE_TTL }); } catch (e) {} }
     return json(out);
