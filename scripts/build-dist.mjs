@@ -23,7 +23,7 @@ const DROP_RE = [/^\.claude\//, /^\.wrangler\//, /^workers\//, /^functions\//, /
 
 // SACRED HOSTS — must ship byte-identical (LF + content). Build ABORTS on drift.
 const SACRED = {
-  'studio.html': '265fd25d17554b94d2ca2c1394687f50',   // §17.1 carrying costs regrouped into three labelled groups (2026-08-06)
+  'studio.html': 'f73d02f3475a52e2c617101b8144c717',   // §17.2 HO-1..HO-8 education block + townhome branch (2026-08-06)
   'sketch.html': '28258a76686008aebe839d59af39500f',   // shape button reverted to the Captain's "Save Shape" / "✓ Saved" (2026-08-01)
   'scripts/studio-blueprint.js': '3c60d3ec3ece8e28694c07fe2faf15b5',   // the unsaved-work baseline is CAPTURED at boot, not reconstructed (2026-08-02)
   // MISS-5 pre-work guard (2026-07-25). nav.js is a Sacred Host in CLAUDE.md but was absent from THIS map,

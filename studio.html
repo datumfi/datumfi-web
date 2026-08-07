@@ -7794,6 +7794,8 @@
                 <div class="field-row">
                     ${_carryMirrorField(id, acc, 'insAnnual', 'homeInsYr', 'Annual Homeowner Insurance', 'Homeowners insurance', 'What you pay each year to insure the home itself against damage — separate from the mortgage. Enter your policy\'s annual premium.', 'left')}
                 </div>
+                ${/* §17.2 lands INSIDE Group B — this is why §17.1 put Insurance above Operating. */''}
+                ${_propInsEducationHTML(acc)}
                 <div class="carry-group-label" style="color:var(--muted); font-size:11px; letter-spacing:0.03em; margin:16px 0 8px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.05);">Operating Costs — what it takes to run the home day to day.</div>
                 <div class="field-row">
                     <div><span class="input-label modal-tt-wrap" style="cursor:help;">Est. Maintenance / Repairs (yr)<div class="modal-tt" style="left:0; right:auto;"><strong>est. · ~1% of value</strong>A rough estimate — about 1% of the home's value is a common rule of thumb. It's only a starting point; your own number always wins.</div></span><input type="text" class="small-field curr-format" placeholder="${maintPH>0 ? 'est. $'+maintPH.toLocaleString('en-US') : '$0'}" value="${formatCurrencyDisplay(acc.maintYr||'')}" oninput="updateAccField('${id}', 'maintYr', this.value)"></div>
@@ -9313,6 +9315,51 @@
                     <div><span class="input-label modal-tt-wrap" style="cursor:help;">Vacancy allowance (%)<div class="modal-tt" style="left:0; right:auto;"><strong>Vacancy allowance</strong>The share of the year you expect the place to sit empty between tenants. Nobody rents twelve months out of twelve forever. Leaving this blank is honest; setting it makes the income read more conservative, which is usually the more useful read.</div></span><input type="text" class="small-field" placeholder="—" inputmode="decimal" value="${v(acc.vacancyPct)}" oninput="updateAccField('${id}', 'vacancyPct', this.value)"></div>
                     <div><span class="input-label modal-tt-wrap" style="cursor:help;">Property management fee (%)<div class="modal-tt" style="right:0; left:auto;"><strong>Property management fee</strong>What you pay someone else to run the property, usually a slice of the rent. If you manage it yourself this is zero in cash and real in hours — we count only the cash.</div></span><input type="text" class="small-field" placeholder="—" inputmode="decimal" value="${v(acc.mgmtPct)}" oninput="updateAccField('${id}', 'mgmtPct', this.value)"></div>
                 </div>`;
+    }
+
+    /* ── §17.2 · INSURANCE EDUCATION BLOCK — HO-1…HO-8 + the townhome branch ─────────────────────
+     * Authored 2026-07-25 (Property Copy Bank rows 183-193, read in-session 2026-08-06 per L51).
+     * Every education line below is wired VERBATIM. Display-only: this panel reads fields, writes
+     * none, and moves no number.
+     *
+     * ⛔ §17.2 GUARD (row 193) — EDUCATION, NEVER ADVICE. It is labelled general education on its
+     * face, and it NEVER auto-selects a policy type for the user. HO-3 is tagged as the common case
+     * because the bank says to (row 186, "Tag as the common default") — that is a fact about what
+     * most people hold, not a recommendation about what this user should buy.
+     *
+     * THE COLLAPSE (row 183: "collapses when a policy type is chosen") READS A FIELD §17.3 HAS NOT
+     * WIRED YET. acc.hoType is the HO-type dropdown at bank row 195, which lands with §17.3 — the
+     * NEXT subsection. Today it is always undefined, so the teach box always shows, which is exactly
+     * the authored empty-state behaviour. The instant §17.3 wires that dropdown the collapse starts
+     * working with no edit here. Sequenced this way on purpose: §17.6 sets the wire order as
+     * §17.1 -> §17.2 -> §17.3, so §17.2 necessarily ships before its own collapse trigger exists.
+     * ⚠️ §17.3 MUST NAME THAT FIELD `hoType` or this collapse silently never fires. */
+    function _propInsEducationHTML(acc) {
+        if (!acc) return '';
+        if (acc.hoType) return '';                       // §17.3 lands this field; collapse on choice
+        var lines = [
+            ['HO-1 — Basic Form',            'HO-1 (Basic) — bare-bones, named-perils only. Rare today; most lenders won\'t accept it.'],
+            ['HO-2 — Broad Form',            'HO-2 (Broad) — named-perils on both home and belongings. A step up from HO-1, still limited.'],
+            ['HO-3 — Special Form',          'HO-3 (Special) — the standard homeowner policy. Open-perils on the house, named-perils on belongings. If you own a house, this is usually you.', true],
+            ['HO-4 — Renters',               'HO-4 (Renters) — covers YOUR belongings and liability inside a place you rent. The building is the landlord\'s policy, not yours.'],
+            ['HO-5 — Comprehensive',         'HO-5 (Comprehensive) — open-perils on both the home AND your belongings. The broadest common policy; costs more, claims are easier.'],
+            ['HO-6 — Condo/Co-op',           'HO-6 (Condo) — covers your unit\'s interior, belongings, and liability. The association\'s master policy covers the building shell.'],
+            ['HO-7 — Mobile/Manufactured',   'HO-7 — an HO-3-style policy written for a mobile or manufactured home.'],
+            ['HO-8 — Older/Historic Home',   'HO-8 (Older Home) — for homes whose rebuild cost exceeds market value; pays repair cost rather than full replacement. Common for historic houses.']
+        ];
+        /* §17.2 TOWNHOME BRANCH (row 192) — CONDITIONAL on the propType field that ALREADY EXISTS
+           (studio.html ~7713, options include 'Townhouse'), so nothing new is invented to drive it.
+           ⚠️ THE ONE PLACE I RESOLVED A TOKEN RATHER THAN READING IT: the bank writes
+           "{branchLine}", which implies a value resolved from data. There is NO "who owns the walls"
+           field anywhere in this room, and inventing one would be fabricating a sourced value (L47).
+           So the three authored routes are RENDERED FOR THE USER TO SELF-IDENTIFY, in the bank's own
+           routing order. That keeps the GUARD intact — it teaches, it does not choose. */
+        if (String(acc.propType || '') === 'Townhouse') {
+            lines.push(['Townhome — who owns the walls?',
+                'Townhome? It depends who owns the walls — if you own the structure, look at HO-3 or HO-5; if you rent, HO-4; if a condo association owns the shell, HO-6.']);
+        }
+        return _diWhyPanel('Homeowner policy types — HO-1 through HO-8', lines)
+             + '<div class="input-label" style="color:var(--muted); font-size:10px; margin-top:6px;">General education, not a coverage recommendation. Your policy and your agent decide what you actually carry.</div>';
     }
 
     function _helocUsePurposeFieldHTML(id, acc) {
