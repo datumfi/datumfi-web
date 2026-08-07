@@ -9,7 +9,7 @@
    RED-FIRST: `--redfirst` flips the #51 assertion (assert fetch WAS called at cap) -> RED on correct code.
    Usage: node scripts/_gate_rentcast_cap.mjs [LABEL] [--redfirst] */
 import { readFileSync } from 'node:fs';
-import { handle, decideCall, MONTHLY_CAP, monthKey, trimComps, parseCensus, pickCoords } from './rentcast-avm.mjs';
+import { handle, decideCall, MONTHLY_CAP, monthKey, trimComps, parseCensus, pickCoords, parseFloodZone, parseSeismic } from './rentcast-avm.mjs';
 
 const RF = process.argv.includes('--redfirst');
 const LABEL = process.argv[2] && process.argv[2] !== '--redfirst' ? process.argv[2] : 'RUN';
@@ -78,6 +78,34 @@ const okProvider = async () => ({ ok: true, json: async () => ({ price: 500000, 
   ok(pickCoords({ latitude: 91, longitude: 0 }) === null && pickCoords({ latitude: 0, longitude: -181 }) === null, 'pickCoords -> null off the globe (|lat|>90, |lon|>180)');
   ok(pickCoords({ latitude: 0, longitude: 0 }) !== null, 'pickCoords ACCEPTS 0,0 — a real coordinate, and null-vs-zero is exactly the §17 blank-is-not-zero distinction');
 
+  /* ---- §17.5 parseFloodZone (PURE) — the three outcomes are THREE facts, not two ----
+     Fixtures are the REAL shapes returned by FEMA on 2026-08-07 (probed live; free/keyless).
+     'none' vs 'error' is the load-bearing distinction: FEMA answering "no mapped zone here" and
+     FEMA being unreachable both render blank under row 218, but they are OPPOSITE facts, and a
+     parser that collapsed them would leave a debugger unable to tell unmapped from broken. */
+  const _fVE = parseFloodZone({ features: [{ attributes: { FLD_ZONE: 'VE', ZONE_SUBTY: 'COASTAL FLOODPLAIN' } }] });
+  ok(_fVE.status === 'ok' && _fVE.zone === 'VE' && _fVE.subtype === 'COASTAL FLOODPLAIN', 'parseFloodZone reads a REAL coastal response (VE) — the letter row 215 already explains');
+  const _fX = parseFloodZone({ features: [{ attributes: { FLD_ZONE: 'X', ZONE_SUBTY: 'AREA OF MINIMAL FLOOD HAZARD' } }] });
+  ok(_fX.status === 'ok' && _fX.zone === 'X', 'parseFloodZone reads a REAL inland response (X)');
+  ok(parseFloodZone({ features: [] }).status === 'none', 'parseFloodZone: empty features -> "none" (FEMA ANSWERED — no mapped zone)');
+  ok(pick(parseFloodZone({}).status === 'error' && parseFloodZone(null).status === 'error',
+          parseFloodZone(null).status === 'none'),
+     'parseFloodZone: no features array -> "error", NEVER "none" — unreachable is not the same fact as unmapped [BITE]');
+  ok(parseFloodZone({ features: [{ attributes: { FLD_ZONE: '   ' } }] }).status === 'none', 'parseFloodZone: blank zone string -> "none" (never a whitespace zone)');
+
+  /* ---- §17.5 parseSeismic (PURE) — ss is required, sdc is optional ON PURPOSE ----
+     Measured 2026-08-07: sdc came back "D" for siteClass C and NULL for siteClass D and D-default —
+     null under exactly the default a residential lookup must assume. So a parser that required sdc
+     would report 'error' on a perfectly good reading. ss was identical (1.888) across all three. */
+  const _sOK = parseSeismic({ response: { data: { ss: 1.888, s1: 0.669, sds: 1.51, sdc: 'D' } } });
+  ok(_sOK.status === 'ok' && _sOK.ss === 1.888 && _sOK.sdc === 'D', 'parseSeismic reads a REAL response (ss + sdc)');
+  ok(_sOK.riskCategory === 'II' && _sOK.siteClass === 'D-default', 'parseSeismic LABELS the assumptions it was computed under (never a bare number)');
+  const _sNull = parseSeismic({ response: { data: { ss: 1.888, sdc: null } } });
+  ok(_sNull.status === 'ok' && _sNull.ss === 1.888 && _sNull.sdc === null, 'parseSeismic: a NULL sdc is still a good reading — ss carries it (measured: sdc is null at siteClass D-default)');
+  ok(pick(parseSeismic({ response: { data: {} } }).status === 'error' && parseSeismic(null).status === 'error',
+          parseSeismic(null).status === 'ok'),
+     'parseSeismic: no ss -> "error" (ss is the one value with no assumption in it) [BITE]');
+
   // ---- T3 parseCensus (PURE) — verified / not-found mapping ----
   ok(parseCensus({ result: { addressMatches: [{ matchedAddress: 'CANON' }] } }).status === 'verified', 'parseCensus(match) -> verified');
   ok(parseCensus({ result: { addressMatches: [{ matchedAddress: 'CANON' }] } }).canonical === 'CANON', 'parseCensus -> canonical address');
@@ -125,6 +153,40 @@ const okProvider = async () => ({ ok: true, json: async () => ({ price: 500000, 
   body = await r.json();
   ok(body.status === 'verified' && body.canonical === 'CANON ADDR', '/verify -> verified + canonical (Census proxy, server-side)');
   ok(pick((kv._m.get(mk)) === '7', (kv._m.get(mk)) !== '7'), '/verify does NOT touch the RentCast cap counter [BITE]');
+
+  /* ---- §17.5 /flood + /quake routes: proxied, and they MUST NOT touch the RentCast cap ----
+     THE CAP LEG IS THE ONE THAT MATTERS. These providers are free and keyless, so the entire risk of
+     adding them is that a lookup quietly spends a RENTCAST call — 50/month with a card behind it.
+     Both routes are asserted to return BEFORE any KV read, on a counter parked at a recognisable 7,
+     and the assertion is a [BITE] so an inverted run cannot pass by doing nothing. */
+  globalThis.fetch = async () => { fetchCalls++; return { ok: true, json: async () => ({ features: [{ attributes: { FLD_ZONE: 'AE', ZONE_SUBTY: 'FLOODWAY' } }] }) }; };
+  fetchCalls = 0;
+  kv = mockKV({ [mk]: '7' });
+  r = await handle({ method: 'GET', url: 'https://w.example/flood?lat=27.9775&lon=-82.8290' }, { RENTCAST_KV: kv, RENTCAST_API_KEY: 'dummy' });
+  body = await r.json();
+  ok(body.status === 'ok' && body.zone === 'AE' && body.source === 'FEMA NFHL', '/flood -> zone + source tag (looked-up, row 218)');
+  ok(pick((kv._m.get(mk)) === '7', (kv._m.get(mk)) !== '7'), '/flood does NOT touch the RentCast cap counter [BITE]');
+
+  globalThis.fetch = async () => { fetchCalls++; return { ok: true, json: async () => ({ response: { data: { ss: 0.431, s1: 0.13, sdc: null } } }) }; };
+  fetchCalls = 0;
+  kv = mockKV({ [mk]: '7' });
+  r = await handle({ method: 'GET', url: 'https://w.example/quake?lat=30.2672&lon=-97.7431' }, { RENTCAST_KV: kv, RENTCAST_API_KEY: 'dummy' });
+  body = await r.json();
+  ok(body.status === 'ok' && body.ss === 0.431 && body.source === 'USGS ASCE 7-16', '/quake -> ss + source tag');
+  ok(pick((kv._m.get(mk)) === '7', (kv._m.get(mk)) !== '7'), '/quake does NOT touch the RentCast cap counter [BITE]');
+
+  /* Both routes refuse a location they cannot trust, through the SAME pickCoords gate as the AVM
+     capture — one definition of a usable coordinate, never two (L48). A refusal must also cost
+     NOTHING: no provider call goes out, because a half-known point sent to FEMA comes back with a
+     confident answer about somewhere else. */
+  fetchCalls = 0;
+  r = await handle({ method: 'GET', url: 'https://w.example/flood?lat=27.9775' }, { RENTCAST_KV: mockKV({}), RENTCAST_API_KEY: 'dummy' });
+  body = await r.json();
+  ok(body.status === 'error' && fetchCalls === 0, '/flood on a HALF pair -> error and NO provider call (never half a location)');
+  fetchCalls = 0;
+  r = await handle({ method: 'GET', url: 'https://w.example/quake?lat=91&lon=0' }, { RENTCAST_KV: mockKV({}), RENTCAST_API_KEY: 'dummy' });
+  body = await r.json();
+  ok(body.status === 'error' && fetchCalls === 0, '/quake off the globe -> error and NO provider call');
 
   // ---- T3 /verify retry: a transient Census failure on attempt 1 -> success on attempt 2 ----
   let vAttempts = 0;

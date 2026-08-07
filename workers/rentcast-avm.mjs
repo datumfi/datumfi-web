@@ -105,12 +105,104 @@ async function handleVerify(addr) {
   return json({ status: 'error', error: 'verify unavailable' });
 }
 
+/* ── §17.5 · FLOOD (FEMA NFHL) + SEISMIC (USGS) — BOTH PROXIED, NEITHER TOUCHES THE CAP ──────────
+   Routed through this Worker rather than called from the browser, on the Valuation API sheet §5
+   ruling (rows 119-124) and L48: studio.html calls OUR endpoint, the Worker calls the provider and
+   returns only the shape we need. FEMA and USGS are free/keyless, so no secret is involved and
+   nothing here reads or writes KV — these can NEVER move the RentCast counter, exactly as
+   handleVerify cannot. The reason to proxy anyway is not keys: it keeps two outside agencies out of
+   the page's trust boundary, takes no bet on either keeping CORS open to browsers, and leaves ONE
+   pattern for an outside read instead of two.
+   ENDPOINTS PINNED AGAINST REAL RESPONSES 2026-08-07, not guessed. A wrong URL fails silently and
+   renders blank — which is indistinguishable from row 218's honest guard, the worst failure shape
+   there is. So both were probed live (free/keyless, unlike RentCast) and both are recorded here:
+     FEMA  layer 28 = Flood Hazard Zones; point-intersect returns FLD_ZONE + ZONE_SUBTY.
+           Clearwater Beach FL -> VE / COASTAL FLOODPLAIN · Austin TX -> X / AREA OF MINIMAL FLOOD
+           HAZARD · unmapped -> features: [].  Those letters are exactly what row 215's hover
+           already explains ("AE/VE = high-risk, X = lower"), so the flood half needs no new copy.
+     USGS  ⚠️ /ws/designmaps HAS MOVED — it 301s to /ws/building-codes. The bank names the old
+           service (row 216, authored 2026-07-25). The old path still answers THROUGH THE REDIRECT;
+           we use the canonical new URL rather than depend on a redirect staying alive. */
+export function parseFloodZone(d) {
+  const f = d && Array.isArray(d.features) ? d.features : null;
+  if (!f) return { status: 'error' };
+  /* AN EMPTY FEATURE LIST IS AN ANSWER, NOT A FAILURE — FEMA replied and there is no mapped zone at
+     that point. Kept DISTINCT from 'error' (we could not reach them) even though row 218 renders
+     both blank: they are opposite facts, and collapsing them would leave a future debugger unable
+     to tell "unmapped" from "broken". Same distinction §17 draws between a blank limit and zero. */
+  if (!f.length) return { status: 'none' };
+  const a = (f[0] && f[0].attributes) || {};
+  const zone = typeof a.FLD_ZONE === 'string' && a.FLD_ZONE.trim() ? a.FLD_ZONE.trim() : null;
+  if (!zone) return { status: 'none' };
+  const sub = typeof a.ZONE_SUBTY === 'string' && a.ZONE_SUBTY.trim() ? a.ZONE_SUBTY.trim() : null;
+  return { status: 'ok', zone: zone, subtype: sub };
+}
+
+/* ⛔ WHY THIS RETURNS `ss` AND TREATS `sdc` AS OPTIONAL — MEASURED, NOT ASSUMED.
+   `ss` (mapped short-period spectral acceleration) is the ONLY value here that carries no assumption
+   of ours: probed at one location across siteClass C / D / D-default it was IDENTICAL (1.888) every
+   time. Site class moves the DERIVED numbers, never the mapped one.
+   `sdc` (Seismic Design Category, the legible A-F letter) looked like the seismic twin of FEMA's
+   zone letter — and it is NOT dependable: it came back "D" for siteClass C and **null** for both
+   siteClass D and D-default, i.e. null under exactly the default a residential lookup must assume
+   when the soil is unknown. So it is carried when present and never required.
+   riskCategory II is a FACT about what a house is under ASCE 7, not a judgement we are making. */
+export function parseSeismic(d) {
+  const data = d && d.response && d.response.data;
+  if (!data || typeof data !== 'object') return { status: 'error' };
+  const ss = typeof data.ss === 'number' && isFinite(data.ss) ? data.ss : null;
+  if (ss === null) return { status: 'error' };
+  const sdc = typeof data.sdc === 'string' && data.sdc.trim() ? data.sdc.trim() : null;
+  return { status: 'ok', ss: ss, sdc: sdc, riskCategory: 'II', siteClass: 'D-default' };
+}
+
+// Reads lat/lon off the querystring under the SAME refusal rules as pickCoords — one gate for what
+// counts as a usable location, never two (L48).
+function coordsFromQuery(url) {
+  return pickCoords({ latitude: parseFloat(url.searchParams.get('lat')), longitude: parseFloat(url.searchParams.get('lon')) });
+}
+
+async function handleFlood(c) {
+  if (!c) return json({ status: 'error', error: 'lat/lon required' }, 400);
+  const u = 'https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer/28/query'
+          + '?geometry=' + encodeURIComponent(c.lon + ',' + c.lat)
+          + '&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects'
+          + '&outFields=FLD_ZONE,ZONE_SUBTY&returnGeometry=false&f=json';
+  try {
+    const r = await fetch(u, { headers: { 'Accept': 'application/json' } });
+    if (!r.ok) return json({ status: 'error', error: 'provider ' + r.status });
+    const out = parseFloodZone(await r.json());
+    return json(Object.assign({ source: 'FEMA NFHL', updated: new Date().toISOString() }, out));
+  } catch (e) {
+    return json({ status: 'error', error: 'flood lookup unavailable' });
+  }
+}
+
+async function handleQuake(c) {
+  if (!c) return json({ status: 'error', error: 'lat/lon required' }, 400);
+  const u = 'https://earthquake.usgs.gov/ws/building-codes/asce7-16/calculate'
+          + '?latitude=' + encodeURIComponent(c.lat) + '&longitude=' + encodeURIComponent(c.lon)
+          + '&riskCategory=II&siteClass=D-default&title=datumfi';
+  try {
+    const r = await fetch(u, { headers: { 'Accept': 'application/json' } });
+    if (!r.ok) return json({ status: 'error', error: 'provider ' + r.status });
+    const out = parseSeismic(await r.json());
+    return json(Object.assign({ source: 'USGS ASCE 7-16', updated: new Date().toISOString() }, out));
+  } catch (e) {
+    return json({ status: 'error', error: 'seismic lookup unavailable' });
+  }
+}
+
 export async function handle(request, env) {
   if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
   let url; try { url = new URL(request.url); } catch (e) { return json({ status: 'error', error: 'bad url' }, 400); }
   const addr = (url.searchParams.get('address') || '').trim();
   // /verify — free Census confirm-exists proxy; NEVER touches the RentCast cap (no KV, no RentCast call).
   if (url.pathname === '/verify' || url.pathname.endsWith('/verify')) return handleVerify(addr);
+  /* §17.5 — routed BEFORE the address guard below, because these key off lat/lon and never take an
+     address at all. Both return before any KV read, so neither can move the RentCast counter. */
+  if (url.pathname === '/flood' || url.pathname.endsWith('/flood')) return handleFlood(coordsFromQuery(url));
+  if (url.pathname === '/quake' || url.pathname.endsWith('/quake')) return handleQuake(coordsFromQuery(url));
   if (!addr) return json({ status: 'error', error: 'address required' }, 400);
 
   const kv = env && env.RENTCAST_KV;   // binding MUST match wrangler.toml + the Captain's KV (RENTCAST_KV)
