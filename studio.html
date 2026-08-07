@@ -7794,8 +7794,11 @@
                 <div class="field-row">
                     ${_carryMirrorField(id, acc, 'insAnnual', 'homeInsYr', 'Annual Homeowner Insurance', 'Homeowners insurance', 'What you pay each year to insure the home itself against damage — separate from the mortgage. Enter your policy\'s annual premium.', 'left')}
                 </div>
-                ${/* §17.2 lands INSIDE Group B — this is why §17.1 put Insurance above Operating. */''}
+                ${/* §17.2 and §17.3 land INSIDE Group B — this is why §17.1 put Insurance above
+                      Operating. Education FIRST, then the fields it explains: the teach box is the
+                      empty state, and it steps aside (row 183) the moment the dropdown below is used. */''}
                 ${_propInsEducationHTML(acc)}
+                ${_propCoverageHTML(id, acc)}
                 <div class="carry-group-label" style="color:var(--muted); font-size:11px; letter-spacing:0.03em; margin:16px 0 8px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.05);">Operating Costs — what it takes to run the home day to day.</div>
                 <div class="field-row">
                     <div><span class="input-label modal-tt-wrap" style="cursor:help;">Est. Maintenance / Repairs (yr)<div class="modal-tt" style="left:0; right:auto;"><strong>est. · ~1% of value</strong>A rough estimate — about 1% of the home's value is a common rule of thumb. It's only a starting point; your own number always wins.</div></span><input type="text" class="small-field curr-format" placeholder="${maintPH>0 ? 'est. $'+maintPH.toLocaleString('en-US') : '$0'}" value="${formatCurrencyDisplay(acc.maintYr||'')}" oninput="updateAccField('${id}', 'maintYr', this.value)"></div>
@@ -9360,6 +9363,83 @@
         }
         return _diWhyPanel('Homeowner policy types — HO-1 through HO-8', lines)
              + '<div class="input-label" style="color:var(--muted); font-size:10px; margin-top:6px;">General education, not a coverage recommendation. Your policy and your agent decide what you actually carry.</div>';
+    }
+
+    /* ── §17.3 · COVERAGE A–F LIMITS + DEDUCTIBLES + THE HO-TYPE DROPDOWN ────────────────────────
+     * Authored 2026-07-25 (Property Copy Bank rows 194-205, read in-session 2026-08-06 per L51).
+     * Every 'What's this?' and 'Do I have enough?' string below is wired VERBATIM.
+     *
+     * ⛔ §17.3 GUARD (row 205) — ALL LIMITS BLANK UNTIL ENTERED. No defaults, no placeholder
+     * amounts, no "typical" figures, and NEVER an auto-filled limit. Placeholders are an em dash,
+     * not "$0": a blank limit and a limit of zero are opposite facts, and on an insurance figure
+     * that difference is the difference between "not recorded" and "not covered".
+     *
+     * TWO AUTHORED HOVERS, ONE TOOLTIP SURFACE. Row 194 requires both strings on every limit; it
+     * does not say they must be two separate hover targets. The house pattern is one .modal-tt per
+     * field, so both land there under their own labels — bank silence on LAYOUT means match the
+     * house pattern. Both strings ship verbatim, which is what the row actually asks for.
+     *
+     * WHY B/C/D ARE PLAIN MONEY FIELDS THOUGH THE BANK SAYS "manual $ / % of A": a %-of-A input
+     * mode would have to COMPUTE the limit, and row 205 forbids auto-filling a limit in the same
+     * breath. The guard settles it — the ~10% / ~50-70% / ~20% rules of thumb live in the authored
+     * hovers, where they inform without filling anything in. This is not a gap; it is the guard
+     * resolving an ambiguity in its own favour.
+     *
+     * WHY THE TWO STORM DEDUCTIBLES ACCEPT TEXT: rows 203/204 are "manual $ or %", and there the
+     * percentage IS the authored point — a 2% hurricane deductible on a large Coverage A is a very
+     * different number from $2,000, which is exactly what the hover warns about. Nothing consumes
+     * these numerically (calcCarryTotal is untouched by §17), so they RECORD what the policy says
+     * rather than compute anything. Forcing them into a money field would silently discard the
+     * percentage the bank went out of its way to author apart. */
+    function _propCovFieldHTML(id, acc, key, label, whatsThis, doIHave, align, kind) {
+        var side = align === 'right' ? 'right:0; left:auto;' : 'left:0; right:auto;';
+        var raw = acc[key];
+        var val = (kind === 'money') ? formatCurrencyDisplay(raw || '') : String(raw === undefined || raw === null ? '' : raw).replace(/"/g, '&quot;');
+        var cls = (kind === 'money') ? 'small-field curr-format' : 'small-field';
+        return '<div><span class="input-label modal-tt-wrap" style="cursor:help;">' + label +
+               '<div class="modal-tt" style="' + side + '"><strong>What\'s this?</strong>' + whatsThis +
+               '<br><br><strong>Do I have enough?</strong>' + doIHave + '</div></span>' +
+               '<input type="text" class="' + cls + '" placeholder="—" value="' + val +
+               '" oninput="updateAccField(\'' + id + '\', \'' + key + '\', this.value)"></div>';
+    }
+
+    function _propCoverageHTML(id, acc) {
+        if (!acc) return '';
+        var F = function (key, label, w, d, align, kind) { return _propCovFieldHTML(id, acc, key, label, w, d, align, kind || 'money'); };
+        /* THE HO-TYPE DROPDOWN (row 195) — the hinge of §17. It switches OFF the §17.2 teach box
+           (which was wired against this exact field name in the previous commit) and row 195 also
+           says it decides "which fields show".
+           ⚠️ "WHICH FIELDS SHOW" IS NOT AUTHORED ANYWHERE — no row states which coverages appear
+           for which HO type, and I am NOT inventing that mapping. Deciding that an HO-4 renter has
+           no Coverage A is an insurance judgement, and hiding a field is a way of telling the user
+           they do not need it, which row 205 forbids ("not advice"). So EVERY field renders on
+           EVERY type until the mapping is authored. Flagged, not silently resolved. */
+        var opts = ['HO-1','HO-2','HO-3','HO-4','HO-5','HO-6','HO-7','HO-8'].map(function (o) {
+            return '<option ' + (acc.hoType === o ? 'selected' : '') + '>' + o + '</option>';
+        }).join('');
+        return `
+                <div class="field-row" style="grid-template-columns:1fr;">
+                    <div><span class="input-label modal-tt-wrap" style="cursor:help;">Homeowner policy type<div class="modal-tt" style="left:0; right:auto;"><strong>Homeowner policy type</strong>Which HO form your policy is written on. The panel above explains each one. We never pick this for you — read it off your declarations page.</div></span><select class="small-field" style="background: var(--bg-navy); color:white;" onchange="updateAccField('${id}', 'hoType', this.value)"><option value="">Select policy type…</option>${opts}</select></div>
+                </div>
+                <div class="field-row">
+                    ${F('covA', 'Coverage A — Dwelling', 'The cost to rebuild your home\'s structure.', 'Should roughly equal REBUILD cost — not market price and not your mortgage.', 'left')}
+                    ${F('covB', 'Coverage B — Other Structures', 'Detached structures — fence, shed, detached garage.', 'Often defaults to ~10% of Coverage A; raise it if you have a big detached structure.', 'right')}
+                </div>
+                <div class="field-row">
+                    ${F('covC', 'Coverage C — Personal Property', 'Your belongings — furniture, clothes, electronics.', 'Often ~50–70% of Coverage A. Do a rough room-by-room tally to sanity-check.', 'left')}
+                    ${F('covD', 'Coverage D — Loss of Use', 'Pays living costs if you can\'t stay home during a covered repair.', 'Often ~20% of Coverage A; think months of rent + meals.', 'right')}
+                </div>
+                <div class="field-row">
+                    ${F('covE', 'Coverage E — Personal Liability', 'Covers you if someone is hurt or their property is damaged and you\'re liable.', 'Common floors are $300k–$500k; a pool, dog, or trampoline argues for more (or an umbrella policy).', 'left')}
+                    ${F('covF', 'Coverage F — Medical Payments', 'Small no-fault medical bills for a guest hurt on your property.', 'Usually $1k–$5k; goodwill coverage, not the big liability line.', 'right')}
+                </div>
+                <div class="field-row">
+                    ${F('dedOther', 'Deductible — Other Perils (standard)', 'What you pay out of pocket before a normal claim (fire, theft) pays.', 'Higher deductible = lower premium; pick what you could cover on short notice.', 'left')}
+                    ${F('dedHurricane', 'Deductible — Hurricane', 'A separate, often PERCENTAGE deductible that applies to named-storm damage.', 'A % deductible on a big Coverage A can be a large dollar figure — do the math for a real storm.', 'right', 'text')}
+                </div>
+                <div class="field-row" style="grid-template-columns:1fr;">
+                    ${F('dedWindHail', 'Deductible — Wind/Hail', 'A separate deductible for wind or hail damage, common in storm-prone regions.', 'Like the hurricane line — a % here can be a big number; know it before a claim.', 'left', 'text')}
+                </div>`;
     }
 
     function _helocUsePurposeFieldHTML(id, acc) {
