@@ -121,8 +121,13 @@ const A_WRONGFLD = "onchange=\"updateAccField('${id}', 'hoType', this.value)\"";
 const M_WRONGFLD = "onchange=\"updateAccField('${id}', 'hoForm', this.value)\"";
 const A_ZEROPLACE = "placeholder=\"—\" value=\"' + val +";
 const M_ZEROPLACE = "placeholder=\"$0\" value=\"' + val +";
-const A_EDUC = "        if (acc.hoType) return '';                       // §17.3 lands this field; collapse on choice";
-const M_EDUC = "        if (true) return '';   /* §17.2 education panel removed by --noeducation */";
+/* RE-GROUNDED 2026-08-07. The old anchor was the `if (acc.hoType) return ''` collapse line, which
+   the Captain's smoke DELETED — the panel no longer vanishes on a chosen type. A control whose
+   anchor no longer exists aborts the run rather than mutating anything, which is the correct loud
+   failure and is exactly what it did. Re-anchored on the function's own opening, which is the thing
+   the control actually needs: make the panel render nothing at all. */
+const A_EDUC = "    function _propInsEducationHTML(acc) {\n        if (!acc) return '';";
+const M_EDUC = "    function _propInsEducationHTML(acc) {\n        if (true) return '';   /* §17.2 education panel removed by --noeducation */";
 /* §17.4 anchors. Each is a line the feature genuinely depends on, so a reword breaks the anchor and
    apply() aborts loudly rather than silently mutating nothing — the gate and its controls cannot
    drift apart. */
@@ -226,7 +231,8 @@ const server = http.createServer((req, res) => {
     // gAuto — a Driveway (auto) room to prove Grounds-only gating (Driveway wired in a later wave).
     out.gAuto = grab('auto');
     /* §17.2 — two one-field fixtures, each isolating ONE conditional so a failure names its own cause.
-       gHoType: a policy type IS chosen -> the teach box must collapse (row 183). The field is the
+       gHoType: a policy type IS chosen -> the teach box must SURVIVE (row 183 = collapsed, not
+                deleted; re-premised on the Captain's smoke 2026-08-07). The field is the
                 §17.3 dropdown, not yet wired, so it is set directly here; that is the whole point —
                 this leg proves the collapse works BEFORE the control that will drive it exists.
        gTown:   propType = Townhouse -> the townhome branch appears (row 192). Uses the propType
@@ -536,8 +542,10 @@ const server = http.createServer((req, res) => {
         Object.assign(a, { value: 400000, useValueApi: true, propStreet: '1 Beach Rd', propCity: 'Clearwater', propState: 'FL', propZip: '33767' });
         return a;
       };
-      const stub = (coords, flood, quake) => {
-        window._AssetIntel.verifyAddress = async () => ({ status: 'verified', canonical: '1 BEACH RD, CLEARWATER, FL, 33767' });
+      /* `censusCoords` defaults to null so every EXISTING leg below still proves the RentCast path.
+         The Captain's smoke case is the opposite pairing and gets its own fixture. */
+      const stub = (coords, flood, quake, censusCoords) => {
+        window._AssetIntel.verifyAddress = async () => ({ status: 'verified', canonical: '1 BEACH RD, CLEARWATER, FL, 33767', coords: censusCoords || null });
         window._AssetIntel.fetchEstimate = async () => ({ status: 'ok', value: 500000, low: 480000, high: 520000, updated: '2026-08-07T00:00:00Z', comps: [], coords: coords });
         window._AssetIntel.fetchFlood = async () => flood;
         window._AssetIntel.fetchQuake = async () => quake;
@@ -583,6 +591,17 @@ const server = http.createServer((req, res) => {
         window.openAccountModal(d.id);
         await window.groundsVerifyAndEstimate(d.id);
         o.floodNone = cap();
+        /* ⭐ THE CAPTAIN'S SMOKE CASE, 2026-08-07 — THE ONE THAT SHIPPED BROKEN.
+           The AVM answer is KV-CACHED FOR 60 DAYS and every cached entry predates the coordinate
+           capture, so a recently-valued address returns `status:'cached'` with NO coords and §17.5
+           stayed silent no matter how many times he refreshed. Census runs on every estimate, is
+           never cached, and already carries the coordinates — so this fixture is the real live
+           shape: NOTHING from the valuation, EVERYTHING from Census. It must still render. */
+        const cch = mk();
+        stub(null, { status: 'ok', zone: 'AE', subtype: 'FLOODWAY' }, { status: 'ok', ss: 0.31 }, { lat: 27.9775, lon: -82.8290 });
+        window.openAccountModal(cch.id);
+        await window.groundsVerifyAndEstimate(cch.id);
+        o.censusOnly = cap();
         // NO COORDINATES — a snapshot from before the Worker captured them. Silent, and NO call fires.
         let calls = 0;
         const e = mk();
@@ -685,10 +704,22 @@ const server = http.createServer((req, res) => {
   /* THE COLLAPSE, BOTH DIRECTIONS. Presence alone would pass on a panel that can never close, and
      "it disappears" alone would pass on a panel that never appeared (§ exclusion needs presence). */
   ok(has(R.gFill, 'Homeowner policy types — HO-1 through HO-8'), '§17.2 teach box PRESENT while no policy type is chosen');
-  ok(!has(R.gHoType, 'Homeowner policy types — HO-1 through HO-8') && !has(R.gHoType, 'HO-3 (Special)'),
-     '§17.2 teach box COLLAPSES once acc.hoType is set (row 183) — the §17.3 dropdown will drive this');
-  ok(has(R.gHoType, 'Annual Homeowner Insurance'),
-     '§17.2 collapse hides ONLY the teach box — Group B and its field survive (proves the collapse is scoped, not a blank room)');
+  /* ⭐ RE-PREMISED ON THE CAPTAIN'S SMOKE, 2026-08-07. This leg used to assert the teach box was
+     GONE once a policy type was chosen. That was the shipped behaviour and it was wrong: picking
+     HO-3 deleted the eight explanations the user was reading, with no way back short of clearing
+     the field. Row 183 says the panel "COLLAPSES" — and `_diWhyPanel` already renders CLOSED, so
+     rendering it always IS the collapsed state. We read a word about presentation as a word about
+     existence, and the gate then FROZE that misreading in place.
+     🔑 A GATE CAN LOCK IN A DEFECT AS FIRMLY AS IT LOCKS IN A FEATURE. This one was green for a
+     day over behaviour a human called wrong within ten minutes of seeing it. The leg is INVERTED,
+     not deleted, so the new contract is asserted just as hard as the old one was.
+     Both halves in one leg: the panel SURVIVES a chosen type AND the room around it still renders,
+     or "it is still there" would pass on a room that ignored the selection entirely. */
+  ok(has(R.gHoType, 'Homeowner policy types — HO-1 through HO-8') && has(R.gHoType, 'HO-3 (Special)')
+     && has(R.gHoType, 'Annual Homeowner Insurance'),
+     '§17.2 the teach panel SURVIVES a chosen policy type (row 183 = collapsed, NOT deleted) — all eight explanations stay readable, and Group B renders around it');
+  ok(has(R.gFill, 'ira-why-body" style="display:none;'),
+     '§17.2 the panel renders CLOSED — it is a disclosure the user opens, which is what "collapses" actually means');
   /* TOWNHOME BRANCH — conditional on the EXISTING propType field, so it must be ABSENT by default. */
   ok(!has(R.gFill, 'It depends who owns the walls'), '§17.2 townhome branch ABSENT on a non-townhouse (conditional teach)');
   ok(has(R.gTown, 'Townhome? It depends who owns the walls — if you own the structure, look at HO-3 or HO-5; if you rent, HO-4; if a condo association owns the shell, HO-6.'),
@@ -754,12 +785,21 @@ const server = http.createServer((req, res) => {
   ok(R.gClickPropType.control === true, '§13.72 PRECONDITION — the Property-type <select> exists to be driven (why: ' + (R.gClickPropType.why || 'ok') + ')');
   ok(R.gClickHoTypeStored === 'HO-3' && R.gClickPropTypeStored === 'Townhouse',
      '§13.72 both gestures STORE their value (the half that was never broken)');
-  /* hoType: the teach box must be there BEFORE and gone AFTER — and Group B's own field must SURVIVE,
-     or "it collapsed" would also pass on a room that re-rendered into a stub. */
-  ok(has(R.gClickHoType.before, 'Homeowner policy types — HO-1 through HO-8')
-     && !has(R.gClickHoType.after, 'Homeowner policy types — HO-1 through HO-8')
+  /* ⭐ RE-PREMISED 2026-08-07. This asserted the teach panel VANISHED on the gesture. The Captain
+     ruled that deletion wrong, so the visible consequence of choosing a policy type is now the
+     REPAINT ITSELF: the room re-renders and the <select> comes back carrying the chosen value.
+     ⚠️ STATED PLAINLY BECAUSE IT WEAKENS A CLAIM I MADE EARLIER TODAY: with the panel no longer
+     keyed to `hoType`, NOTHING VISIBLE NOW DEPENDS ON IT. Its place in updateAccField's re-render
+     whitelist is kept deliberately, aimed FORWARD at bank row 195's unauthored "which fields show"
+     map — the same aim-at-a-commit-that-does-not-exist-yet pattern §17.2 used. `propType` below is
+     the half that is load-bearing TODAY, and it is the one that was actually broken.
+     Both halves in the leg: unselected before, selected after, so it cannot pass on a dead room. */
+  ok(!has(R.gClickHoType.before, '<option selected="">HO-3</option>'   /* the browser normalises `<option selected>` on parse — assert the SERVED shape, not the authored one */)
+     && has(R.gClickHoType.after, '<option selected="">HO-3</option>'   /* the browser normalises `<option selected>` on parse — assert the SERVED shape, not the authored one */)
      && has(R.gClickHoType.after, 'Coverage A — Dwelling'),
-     '§13.72 picking a policy type COLLAPSES the teach panel ON THE GESTURE — and the coverage fields survive (row 183)');
+     '§13.72 picking a policy type REPAINTS the room on the gesture — the select comes back carrying the choice, coverage fields intact');
+  ok(has(R.gClickHoType.after, 'Homeowner policy types — HO-1 through HO-8'),
+     '§13.72 …and the teach panel SURVIVES that repaint (the Captain\'s smoke: collapsed, never deleted)');
   /* propType: absent before, present and VERBATIM after. The presence half is what makes the
      absence half mean anything. */
   ok(!has(R.gClickPropType.before, 'It depends who owns the walls')
@@ -854,6 +894,16 @@ const server = http.createServer((req, res) => {
   ok(!has(R.g175.floodNone, 'Flood zone (FEMA NFHL)')
      && has(R.g175.floodNone, '0.053g <span style="opacity:0.6;">— very low shaking'),
      '§17.5 row 218 — an unmapped point renders NO flood line, and the shaking read survives');
+  /* ⭐ THE REGRESSION LEG FOR THE DEFECT THE CAPTAIN FOUND BY CLICKING. §17.5 shipped keyed to the
+     valuation's coordinates — and that response is KV-cached for 60 days, so on every address he
+     had already valued it came back with none and the section stayed silent through any number of
+     refreshes. Census carries the coordinates, runs on every estimate, and is never cached.
+     This fixture is the real live shape: the valuation supplies NOTHING, Census supplies everything.
+     🔑 A FEATURE THAT ONLY WORKS ON ADDRESSES NOBODY HAS LOOKED UP BEFORE IS A FEATURE THAT WORKS
+     FOR NOBODY — the users most likely to have a saved property are the ones it failed for. */
+  ok(has(R.g175.censusOnly, 'Flood zone (FEMA NFHL)') && has(R.g175.censusOnly, '>AE')
+     && has(R.g175.censusOnly, '0.31g <span style="opacity:0.6;">— low shaking'),
+     '§17.5 CENSUS-ONLY COORDINATES — a KV-cached valuation carrying none still renders both readings (the Captain\'s smoke defect)');
   /* Absence PAIRED inside the leg: the same run must show the block DOES appear when coordinates
      exist, or "silent without coordinates" passes perfectly on a §17.5 that was never built. */
   ok(!has(R.g175.noCoords, 'Flood zone (FEMA NFHL)') && !has(R.g175.noCoords, 'Earthquake shaking (USGS)')
