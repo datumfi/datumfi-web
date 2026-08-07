@@ -82,10 +82,25 @@ export function pickCoords(sp) {
 
 // PURE parse of the Census onelineaddress payload (no I/O) so the gate can prove verified/not-found
 // mapping without any network call.
+/* §17.5 FIX (Captain's smoke, 2026-08-07) — CENSUS IS THE GEOCODER, NOT RENTCAST.
+   Coordinates were being taken off the /avm/value response. That response is CACHED IN KV FOR 60
+   DAYS, and every cached entry was written BEFORE the capture shipped — so any address valued in the
+   last two months returned a payload with no coordinates and §17.5 stayed silent forever. "Refresh
+   estimate" does not help: `force` only skips the BROWSER's de-dupe; the Worker still serves KV.
+   Busting that cache would have meant spending real RentCast calls to fetch a free number.
+   Census already returns the coordinates, on a call we ALREADY make on every single estimate:
+   `addressMatches[].coordinates` = {x: LONGITUDE, y: LATITUDE}. Free, keyless, US-only, and
+   handleVerify touches NO KV — so it is never cached and never counts against the 50/mo cap.
+   ⚠️ x IS LONGITUDE AND y IS LATITUDE. Transposing them is silent and catastrophic: the point still
+   lands somewhere, FEMA still answers, and the zone is confidently about the wrong hemisphere.
+   Validated through the SAME pickCoords gate as everything else (L48, one definition of a usable
+   location). RentCast's coords remain a fallback where they exist — this is additive, not a swap. */
 export function parseCensus(d) {
   const m = d && d.result && Array.isArray(d.result.addressMatches) ? d.result.addressMatches : [];
   if (!m.length) return { status: 'not-found' };
-  return { status: 'verified', canonical: m[0].matchedAddress || null };
+  const c = m[0].coordinates;
+  const coords = c ? pickCoords({ latitude: c.y, longitude: c.x }) : null;
+  return { status: 'verified', canonical: m[0].matchedAddress || null, coords: coords };
 }
 
 // Free US Census 'onelineaddress' confirm-exists proxy. Server-side (the browser is CORS-blocked by

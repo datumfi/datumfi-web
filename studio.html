@@ -9354,16 +9354,21 @@
      * because the bank says to (row 186, "Tag as the common default") — that is a fact about what
      * most people hold, not a recommendation about what this user should buy.
      *
-     * THE COLLAPSE (row 183: "collapses when a policy type is chosen") READS A FIELD §17.3 HAS NOT
-     * WIRED YET. acc.hoType is the HO-type dropdown at bank row 195, which lands with §17.3 — the
-     * NEXT subsection. Today it is always undefined, so the teach box always shows, which is exactly
-     * the authored empty-state behaviour. The instant §17.3 wires that dropdown the collapse starts
-     * working with no edit here. Sequenced this way on purpose: §17.6 sets the wire order as
-     * §17.1 -> §17.2 -> §17.3, so §17.2 necessarily ships before its own collapse trigger exists.
-     * ⚠️ §17.3 MUST NAME THAT FIELD `hoType` or this collapse silently never fires. */
+     * ⭐ CAPTAIN'S SMOKE, 2026-08-07 — "COLLAPSE" IS NOT "DELETE", AND WE SHIPPED DELETE.
+     * Row 183 says the panel "collapses when a policy type is chosen". This returned '' on a chosen
+     * type, which REMOVED it from the room entirely: pick HO-3 and the eight explanations you were
+     * reading vanish, with no way back short of clearing the field. The Captain's words: "id like it
+     * to stay so users can read the various policies (or read about the one they selected)."
+     * He is right and SO IS THE BANK — `_diWhyPanel` is already a click-to-open disclosure that
+     * renders CLOSED. Rendering it always IS the authored collapsed state. Deleting it was never
+     * what row 183 asked for; we read a word about presentation as a word about existence.
+     * 🔑 A SECTION THAT DISAPPEARS THE MOMENT YOU ACT ON IT PUNISHES THE USER FOR DECIDING. The
+     * education is most useful right after a choice, not least.
+     * ⚠️ CONSEQUENCE, DELIBERATE: nothing about this panel now depends on `hoType`. The §17.2↔§17.3
+     * handshake that `--wrongfield` guards is NOT retired — the dropdown must still write `hoType`
+     * or the chosen policy stops persisting — but it is no longer this panel's trigger. */
     function _propInsEducationHTML(acc) {
         if (!acc) return '';
-        if (acc.hoType) return '';                       // §17.3 lands this field; collapse on choice
         var lines = [
             ['HO-1 — Basic Form',            'HO-1 (Basic) — bare-bones, named-perils only. Rare today; most lenders won\'t accept it.'],
             ['HO-2 — Broad Form',            'HO-2 (Broad) — named-perils on both home and belongings. A step up from HO-1, still limited.'],
@@ -10757,15 +10762,27 @@
            good shaking read. Written onto the SNAPSHOT so it inherits the address invalidation, then
            repainted through openAccountModal — Group B is nowhere near the AVM result container, so an
            innerHTML poke would leave the room stale (§13.72: the gesture has to reach the screen). */
-        if (snap && snap.coords) {
+        /* ⭐ COORDINATES COME FROM CENSUS FIRST (Captain's smoke, 2026-08-07). The AVM response is
+           KV-CACHED FOR 60 DAYS and every cached entry predates the coordinate capture, so on any
+           recently-valued address `snap.coords` is null and §17.5 stayed silent no matter how many
+           times you refreshed. Census runs on EVERY estimate, is never cached, and costs nothing —
+           so it is the reliable source and RentCast is the fallback, not the other way round.
+           This is also what retires the "§17.5 will not show on properties you already saved"
+           limitation: a refresh now always produces a location. */
+        var _coords = (v && v.coords) || (shown && shown.coords) || null;
+        // `shown` is the snapshot actually on screen (this pull, or the kept one when a refresh was
+        // capped/errored). It is BOTH the fallback coordinate source and the only place the hazard
+        // can be stored — with no snapshot there is no address key to bind the reading to, and an
+        // unbound flood zone is exactly the "confident about the wrong home" failure row 218 forbids.
+        if (_coords && shown) {
             var _hz = {};
-            var _fl = await _AssetIntel.fetchFlood(snap.coords);
+            var _fl = await _AssetIntel.fetchFlood(_coords);
             if (_fl && _fl.status === 'ok') _hz.flood = { status: 'ok', zone: _fl.zone, subtype: _fl.subtype };
-            var _qk = await _AssetIntel.fetchQuake(snap.coords);
+            var _qk = await _AssetIntel.fetchQuake(_coords);
             if (_qk && _qk.status === 'ok' && typeof _qk.ss === 'number') _hz.quake = { status: 'ok', ss: _qk.ss };
             if (_hz.flood || _hz.quake) {
                 var _cur = state.accounts.find(function (a) { return a.id === id; });
-                if (_cur && _cur.assetAvmSnapshot && _cur.assetAvmSnapshot.key === snap.key) {
+                if (_cur && _cur.assetAvmSnapshot && _cur.assetAvmSnapshot.key === shown.key) {
                     _cur.assetAvmSnapshot.hazard = _hz;
                     if (activeModalId === id) openAccountModal(id);
                 }
