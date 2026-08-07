@@ -55,7 +55,25 @@ const NOEDUC = process.argv.includes('--noeducation');
 const NOCOV     = process.argv.includes('--nocoverage');
 const WRONGFLD  = process.argv.includes('--wrongfield');
 const ZEROPLACE = process.argv.includes('--zeroplace');
-const MUT = NOHELOC || NOCTRL || FLATCARRY || NOEDUC || NOCOV || WRONGFLD || ZEROPLACE;
+/* §17.4 — THREE controls again, one per separable claim. A NEGATIVE CONTROL MUST FAIL IN THE SHAPE
+   OF THE CLAIM, and §17.4's three claims fail in three completely different shapes:
+     --noendorse   the whole disclosure is gone      -> the broad "it shipped" claim. Reddens the
+                   presence legs; the row-213 ABSENCE legs stay GREEN, honestly, because a room with
+                   no endorsement block satisfies "nothing is carried" perfectly. That asymmetry is
+                   the whole reason every absence leg below is PAIRED with a presence twin.
+     --eagerfields the Limit field renders whether or not the switch is on -> the row-213 guard
+                   ("hidden until toggled on"). Nothing else moves: all six labels, all six hovers
+                   and the disclosure itself still render, so only the guard legs may bite.
+     --deafswitch  the render reads `endorseQuakeX` while the switch still writes `endorseQuake`
+                   -> the TOGGLE↔RENDER handshake. This is the §17.4 analogue of --wrongfield and
+                   the failure it models is the quietest one in the section: every label renders,
+                   every hover is correct, the switch animates, the value is stored — and the
+                   coverage simply never appears. Nobody would notice for months. */
+const NOENDORSE   = process.argv.includes('--noendorse');
+const EAGERFIELDS = process.argv.includes('--eagerfields');
+const DEAFSWITCH  = process.argv.includes('--deafswitch');
+const MUT = NOHELOC || NOCTRL || FLATCARRY || NOEDUC || NOCOV || WRONGFLD || ZEROPLACE
+         || NOENDORSE || EAGERFIELDS || DEAFSWITCH;
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8305;
 const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
@@ -81,6 +99,15 @@ const A_ZEROPLACE = "placeholder=\"—\" value=\"' + val +";
 const M_ZEROPLACE = "placeholder=\"$0\" value=\"' + val +";
 const A_EDUC = "        if (acc.hoType) return '';                       // §17.3 lands this field; collapse on choice";
 const M_EDUC = "        if (true) return '';   /* §17.2 education panel removed by --noeducation */";
+/* §17.4 anchors. Each is a line the feature genuinely depends on, so a reword breaks the anchor and
+   apply() aborts loudly rather than silently mutating nothing — the gate and its controls cannot
+   drift apart. */
+const A_NOENDORSE = "        var anyOn = _PROP_ENDORSEMENTS.some(function (e) { return !!acc[e[0]]; });";
+const M_NOENDORSE = "        return '';   /* §17.4 block removed by --noendorse */";
+const A_EAGER = "            var lim = on";
+const M_EAGER = "            var lim = true   /* --eagerfields: reveal regardless of the switch */";
+const A_DEAF  = "            var on = !!acc[key];";
+const M_DEAF  = "            var on = !!acc[key + 'X'];   /* --deafswitch: render reads a key nothing writes */";
 const G17_A = 'Carrying Costs — what you owe to keep the home.';
 const G17_B = 'Property Insurance — what protects the home and you.';
 const G17_C = 'Operating Costs — what it takes to run the home day to day.';
@@ -109,6 +136,9 @@ const server = http.createServer((req, res) => {
     if (NOCOV)     apply(A_NOCOV,     M_NOCOV,     'A_NOCOV');
     if (WRONGFLD)  apply(A_WRONGFLD,  M_WRONGFLD,  'A_WRONGFLD');
     if (ZEROPLACE) apply(A_ZEROPLACE, M_ZEROPLACE, 'A_ZEROPLACE');
+    if (NOENDORSE)   apply(A_NOENDORSE, M_NOENDORSE, 'A_NOENDORSE');
+    if (EAGERFIELDS) apply(A_EAGER,     M_EAGER,     'A_EAGER');
+    if (DEAFSWITCH)  apply(A_DEAF,      M_DEAF,      'A_DEAF');
     body = Buffer.from(src, 'utf8');
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
@@ -163,6 +193,71 @@ const server = http.createServer((req, res) => {
                 field that ALREADY ships, so the branch needed no new input invented for it. */
     out.gHoType = grab('property', { hoType: 'HO-3' });
     out.gTown   = grab('property', { propType: 'Townhouse' });
+    /* §17.4 — THREE fixtures, because one fixture can only ever show one side of a conditional and
+       row 213's guard is a claim about BOTH sides. Each returns a SHAPE read off the real DOM, not a
+       regex over the modal soup, so "the disclosure was never rendered" is a distinguishable state
+       instead of an empty string that every absence leg would sail straight through.
+         gEndNone  nothing carried      -> the resting state row 213 describes
+         gEndOne   Earthquake carried   -> the presence twin for every absence leg
+         gEndClick THE SWITCH IS ACTUALLY THROWN. Measured 2026-08-07: setting a field and opening
+                   the modal fresh proves only that the RENDER is right given state — it cannot see a
+                   conditional whose gesture never reaches the render, which is a live defect this
+                   very room already carries on hoType/propType. So this leg follows the click. */
+    const endShape = (accId) => {
+      window.openAccountModal(accId);
+      const root = document.getElementById('modal-dynamic-content');
+      const det = root ? Array.from(root.querySelectorAll('details')).filter(function (d) {
+        const s = d.querySelector('summary');
+        return s && /Specialized \/ endorsement coverages/.test(s.textContent);
+      })[0] : null;
+      /* THE NOT-FOUND SHAPE MUST BE TOTAL — every key the assertions read, present and empty. A
+         partial shape here does not make the gate red, it makes it CRASH, and §13.68 RULE A is that
+         a crash is not a red: it exits before the leg list is printed, so nobody learns WHICH claim
+         failed. Caught by --noendorse on its first run, which is what the control is for. */
+      if (!det) return { control: false, why: root ? 'NO_ENDORSEMENT_DISCLOSURE' : 'NO_MODAL_CONTENT', html: '', open: false, limits: 0, placeholders: [], values: [], labels: [] };
+      return {
+        control: true, why: '',
+        html: det.innerHTML,
+        open: det.hasAttribute('open'),
+        limits: Array.from(det.querySelectorAll('input[type=text]')).length,
+        placeholders: Array.from(det.querySelectorAll('input[type=text]')).map(function (i) { return i.getAttribute('placeholder'); }),
+        values: Array.from(det.querySelectorAll('input[type=text]')).map(function (i) { return i.value; }),
+        labels: Array.from(det.querySelectorAll('.toggle-label')).map(function (x) { return x.textContent; })
+      };
+    };
+    addInstance('property');
+    const eNone = window.state.accounts.filter(x => x.baseId === 'property').pop();
+    eNone.value = 400000;
+    out.gEndNone = endShape(eNone.id);
+    addInstance('property');
+    const eOne = window.state.accounts.filter(x => x.baseId === 'property').pop();
+    Object.assign(eOne, { value: 400000, endorseQuake: true, endorseQuakeLimit: '$50,000' });
+    out.gEndOne = endShape(eOne.id);
+    out.gEndClick = (function () {
+      addInstance('property');
+      const ec = window.state.accounts.filter(x => x.baseId === 'property').pop();
+      ec.value = 400000;
+      const before = endShape(ec.id);
+      const rows = Array.from(document.querySelectorAll('#modal-dynamic-content .toggle-row'));
+      const row = rows.filter(function (x) { const l = x.querySelector('.toggle-label'); return l && l.textContent === 'Earthquake'; })[0];
+      if (!row) return { before: before, after: null, why: 'NO_EARTHQUAKE_SWITCH', stored: null };
+      const cb = row.querySelector('input[type=checkbox]');
+      if (!cb) return { before: before, after: null, why: 'NO_CHECKBOX', stored: null };
+      cb.checked = true;
+      cb.dispatchEvent(new Event('change', { bubbles: true }));   // the real gesture, not a state poke
+      /* Deliberately does NOT re-open the modal — re-opening is exactly what would hide the bug. */
+      const root = document.getElementById('modal-dynamic-content');
+      const det = root ? Array.from(root.querySelectorAll('details')).filter(function (d) {
+        const s = d.querySelector('summary');
+        return s && /Specialized \/ endorsement coverages/.test(s.textContent);
+      })[0] : null;
+      return {
+        before: before,
+        after: det ? { open: det.hasAttribute('open'), limits: Array.from(det.querySelectorAll('input[type=text]')).length, labels: Array.from(det.querySelectorAll('.toggle-label')).map(function (x) { return x.textContent; }) } : null,
+        why: det ? '' : 'DISCLOSURE_GONE_AFTER_TOGGLE',
+        stored: !!ec.endorseQuake
+      };
+    })();
     // §9b — g9bAll fires ALL four rules: value 200k, linked debt 180k (LTV 90%), carry 10k (cost-to-value 5%),
     // manual utilities. gNone fires none (value only — no carry/debt/util) → §9b prints nothing.
     addInstance('property');
@@ -489,6 +584,54 @@ const server = http.createServer((req, res) => {
      box never steps aside and nobody finds out. Asserted on the real control, not on the fixture. */
   ok(has(R.gFill, "updateAccField('" + R.gId + "', 'hoType', this.value)"),
      '§17.3 ↔ §17.2 HANDSHAKE — the dropdown writes `hoType`, the exact field §17.2 collapses on');
+  /* ══ §17.4 · SPECIALIZED / ENDORSEMENT COVERAGES — CONDITIONAL REVEAL ══════════════════════════
+     Authored 2026-07-25 (rows 206-213), wired 2026-08-07. Row 213 is a claim about BOTH sides of a
+     conditional, so EVERY absence leg below is paired with a presence twin on a fixture where the
+     thing SHOULD appear — an it-is-not-there test on its own passes just as happily on a room that
+     rendered nothing at all, which is precisely how --noeducation went 129/12 with three §17.2 legs
+     honestly green.
+     PRECONDITION FIRST, AND NOT WRAPPED IN pick(). You may not prove a thing is absent from a
+     control without first proving the control EXISTS — a vanished disclosure must RED, never green.
+     A precondition that inverts under --redfirst lets an inverted run pass by doing nothing. */
+  lines.push('===== §17.4 · ENDORSEMENT COVERAGES (conditional reveal) =====');
+  ok(R.gEndNone.control === true, '§17.4 PRECONDITION — the endorsement disclosure EXISTS on a property (why: ' + (R.gEndNone.why || 'ok') + ')');
+  ok(R.gEndOne.control === true,  '§17.4 PRECONDITION — it exists on the carried fixture too (why: ' + (R.gEndOne.why || 'ok') + ')');
+  const END6 = ['Earthquake', 'ID Theft', 'Increased Business Property', 'Scheduled Personal Property', 'Special Computer Coverage', 'Special Personal Property'];
+  ok(JSON.stringify(R.gEndNone.labels) === JSON.stringify(END6),
+     '§17.4 all six endorsements render in AUTHORED ORDER (rows 207→212) — got ' + JSON.stringify(R.gEndNone.labels));
+  /* Six hovers, verbatim. Asserted on gEndNone — i.e. on the fixture where NOTHING is carried —
+     because the education must be readable BEFORE you decide, not only after you have said yes. */
+  ok(has(R.gEndNone.html, 'Standard policies EXCLUDE earthquake; this endorsement (or a separate policy) adds it.'), '§17.4 Earthquake hover verbatim (row 207)');
+  ok(has(R.gEndNone.html, 'Helps with the cost and legwork of restoring your identity after theft.'), '§17.4 ID Theft hover verbatim (row 208)');
+  ok(has(R.gEndNone.html, 'Raises the low default limit on business equipment kept at home.'), '§17.4 Increased Business Property hover verbatim (row 209)');
+  ok(has(R.gEndNone.html, 'Itemized high-value pieces — rings, art, instruments — insured for their appraised value above normal limits.'), '§17.4 Scheduled Personal Property hover verbatim (row 210)');
+  ok(has(R.gEndNone.html, 'Broader protection for computers/electronics beyond the base personal-property limit.'), '§17.4 Special Computer Coverage hover verbatim (row 211)');
+  ok(has(R.gEndNone.html, 'Upgrades belongings from named-perils to open-perils (HO-5-style breadth) via endorsement.'), '§17.4 Special Personal Property hover verbatim (row 212)');
+  /* ⛔ ROW 213, THE GUARD. Both halves in one leg each, so neither can pass on a blank room. */
+  ok(R.gEndNone.open === false && R.gEndOne.open === true,
+     '§17.4 GUARD (row 213) — silent and CLOSED when nothing is carried, OPEN the moment something is (both halves: ' + R.gEndNone.open + ' / ' + R.gEndOne.open + ')');
+  ok(R.gEndNone.limits === 0 && R.gEndOne.limits === 1,
+     '§17.4 GUARD (row 213) — ZERO fields when nothing is carried, EXACTLY ONE when one is (' + R.gEndNone.limits + ' / ' + R.gEndOne.limits + ')');
+  ok(JSON.stringify(R.gEndOne.labels) === JSON.stringify(END6),
+     '§17.4 carrying ONE endorsement hides none of the other five — the reveal is scoped, not a re-render into a stub');
+  /* Row 205's blank-until-entered guard reads on §17.4 too: on an insurance figure, a blank limit and
+     a limit of zero are opposite facts. Absence of "$0" is paired with presence of the em dash. */
+  ok(R.gEndOne.placeholders.every(function (p) { return p === '—'; }) && R.gEndOne.placeholders.length === 1,
+     '§17.4 GUARD — the revealed limit ships an em-dash placeholder, never "$0" (' + JSON.stringify(R.gEndOne.placeholders) + ')');
+  ok(R.gEndOne.values[0] === '$50,000',
+     '§17.4 a recorded limit round-trips into the field verbatim — text, so "10% of Coverage A" survives too');
+  /* 🔑 THE CLICK LEG. Measured this session: the §17.2 teach panel and the townhome branch are both
+     correct on this gate's state-injection path and both DEAD on the user's path, because
+     updateAccField re-renders the modal for a whitelist of fields and neither hoType nor propType is
+     on it. WHEN A GATE LOOKS IS AS LOAD-BEARING AS WHAT IT ASSERTS. §17.4 rides updateAccToggle,
+     which does re-render — and this leg is what proves that, rather than assuming it. */
+  ok(R.gEndClick.why === '' && R.gEndClick.after !== null,
+     '§17.4 PRECONDITION — the Earthquake switch exists and survives being thrown (why: ' + (R.gEndClick.why || 'ok') + ')');
+  ok(R.gEndClick.stored === true, '§17.4 throwing the switch STORES the endorsement');
+  ok(R.gEndClick.before.limits === 0 && R.gEndClick.after && R.gEndClick.after.limits === 1 && R.gEndClick.after.open === true,
+     '§17.4 THE GESTURE REACHES THE RENDER — the field appears on the click itself, with NO modal re-open');
+  ok(pick(!has(R.gAuto, 'Specialized / endorsement coverages'), has(R.gAuto, 'Specialized / endorsement coverages')),
+     '§17.4 endorsement block ABSENT on Driveway (Grounds-only) [BITE]');
   ok(pick(!has(R.gAuto, 'Annual Carrying Cost'), has(R.gAuto, 'Annual Carrying Cost')), 'Carrying-cost block ABSENT on Driveway (Grounds-only, this wave) [BITE]');
   ok(Array.isArray(R.dbFeed) && R.dbFeed.some(function (x) { return x.annualCarry === 16800; }), 'Datum Builder feed hook emits annualCarry 16800');
 
