@@ -7803,6 +7803,11 @@
                       because an endorsement is by definition an addition to that policy. Closed and
                       silent until something is carried (row 213). */''}
                 ${_propEndorsementsHTML(id, acc)}
+                ${/* §17.5 lands LAST in Group B, below the endorsements — the earthquake reading's own
+                      authored hover points UP at the endorsement above it ("the field worth a
+                      conversation with your agent"), so the thing it names must already have been read.
+                      Silent until a valuation has actually produced coordinates (row 218). */''}
+                ${_propHazardHTML(acc)}
                 <div class="carry-group-label" style="color:var(--muted); font-size:11px; letter-spacing:0.03em; margin:16px 0 8px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.05);">Operating Costs — what it takes to run the home day to day.</div>
                 <div class="field-row">
                     <div><span class="input-label modal-tt-wrap" style="cursor:help;">Est. Maintenance / Repairs (yr)<div class="modal-tt" style="left:0; right:auto;"><strong>est. · ~1% of value</strong>A rough estimate — about 1% of the home's value is a common rule of thumb. It's only a starting point; your own number always wins.</div></span><input type="text" class="small-field curr-format" placeholder="${maintPH>0 ? 'est. $'+maintPH.toLocaleString('en-US') : '$0'}" value="${formatCurrencyDisplay(acc.maintYr||'')}" oninput="updateAccField('${id}', 'maintYr', this.value)"></div>
@@ -9541,6 +9546,71 @@
                rows + '</div></details>';
     }
 
+    /* ── §17.5 · FLOOD ZONE (FEMA) + EARTHQUAKE SHAKING (USGS), BY ADDRESS ───────────────────────
+     * Bank rows 214-218 + §17.5a (A324, authored 2026-08-07 after sdc was refused by measurement).
+     * Display-only: reads the snapshot, writes nothing, moves no number.
+     *
+     * ⛔ ROW 218 — NEVER GUESS A ZONE. Every branch below renders BLANK rather than approximate.
+     * No coordinates, no lookup yet, a failed lookup, or FEMA reporting no mapped zone at that point
+     * all render nothing. An absent line is honest; a confident one about the wrong ground is not.
+     * The whole block disappears when neither half has something real to say — same silence rule
+     * §17.4 follows, and the reason the two sit next to each other.
+     *
+     * ⛔ WHY `sdc` IS NEVER RENDERED AND NEVER USED AS A FALLBACK (§17.5a guard 3). The Seismic
+     * Design Category is the legible A-F letter and it looked like the seismic twin of FEMA's zone.
+     * MEASURED LIVE: Austin returns "A"; LOS ANGELES RETURNS null. It is missing exactly where the
+     * hazard is highest — it would tell the person who most needs to know nothing at all, and hand a
+     * reassuring "A" to the person who needs it least. That is not missing data, it is an INVERTED
+     * SIGNAL, and it is worse than blank. The Worker still returns it; this file must not read it.
+     *
+     * ⛔ THE BAND WORD NEVER APPEARS WITHOUT THE NUMBER (§17.5a guard 2). `ss` is the sourced fact —
+     * a mapped USGS figure — and the word is OUR plain-language read of it. USGS publishes the
+     * number and does NOT publish these words, so rendering "moderate shaking" alone would dress our
+     * judgement as a government category. If ss is missing the WHOLE field is blank: no word, no
+     * partial render, no "unknown" label. This is the guard a future refactor is most likely to
+     * break, because a word on its own still looks perfectly fine on screen — hence its own gate leg
+     * and its own negative control. */
+    function _quakeBand(ss) {
+        if (typeof ss !== 'number' || !isFinite(ss)) return null;
+        if (ss < 0.25) return 'very low';
+        if (ss < 0.50) return 'low';
+        if (ss < 1.00) return 'moderate';
+        if (ss < 1.50) return 'high';
+        return 'very high';
+    }
+
+    function _propHazardHTML(acc) {
+        if (!acc) return '';
+        var snap = _groundsAvmFor(acc);                 // null once the address stops matching
+        var hz = snap && snap.hazard;
+        if (!hz) return '';
+        var rows = '';
+        // FLOOD (row 215) — the authored hover already explains the letters, so the zone code ships bare.
+        // 'none' (FEMA answered, nothing mapped here) renders NOTHING, exactly like a failure would.
+        if (hz.flood && hz.flood.status === 'ok' && hz.flood.zone) {
+            var sub = hz.flood.subtype ? ' <span style="opacity:0.6;">· ' + String(hz.flood.subtype).replace(/</g, '&lt;').toLowerCase() + '</span>' : '';
+            rows += '<div style="display:flex; justify-content:space-between; align-items:baseline; padding:4px 0;">' +
+                    '<span class="input-label modal-tt-wrap" style="cursor:help;">Flood zone (FEMA NFHL)' +
+                    '<div class="modal-tt" style="left:0; right:auto;"><strong>What\'s this?</strong>Your FEMA flood zone (e.g., AE/VE = high-risk, X = lower). Standard home policies EXCLUDE flood; NFIP or private flood is separate.</div></span>' +
+                    '<span style="font-family:var(--font-mono); color:var(--white);">' + String(hz.flood.zone).replace(/</g, '&lt;') + sub + '</span></div>';
+        }
+        // EARTHQUAKE (§17.5a) — number and word together or not at all.
+        var ss = hz.quake && hz.quake.status === 'ok' ? hz.quake.ss : null;
+        var band = _quakeBand(ss);
+        if (band) {
+            rows += '<div style="display:flex; justify-content:space-between; align-items:baseline; padding:4px 0;">' +
+                    '<span class="input-label modal-tt-wrap" style="cursor:help;">Earthquake shaking (USGS)' +
+                    '<div class="modal-tt" style="left:0; right:auto;"><strong>What\'s this?</strong>How hard the ground is expected to shake here in a rare, severe earthquake — a mapped USGS figure for your location, not a prediction of when. The plain-language rating is ours, not an official category. Standard home policies exclude earthquake damage; cover for it is a separate endorsement.' +
+                    '<br><br><strong>Do I have enough?</strong>There is no right answer to compare this to — it describes your ground, not your policy. If it reads moderate or higher, the earthquake endorsement above is the field worth a conversation with your agent.</div></span>' +
+                    '<span style="font-family:var(--font-mono); color:var(--white);">' + ss + 'g <span style="opacity:0.6;">— ' + band + ' shaking</span></span></div>';
+        }
+        if (!rows) return '';
+        // Row 218 — tagged as looked-up, the same way the RentCast figure is. These are reference
+        // readings about the ground, never a purchase recommendation.
+        return '<div style="margin-top:12px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.08);">' + rows +
+               '<div class="input-label" style="color:var(--muted); font-size:10px; margin-top:6px;">Looked up from your address — reference figures about the location, not a recommendation about your cover.</div></div>';
+    }
+
     function _helocUsePurposeFieldHTML(id, acc) {
         var p = acc.helocUsePurpose;
         return `
@@ -10423,6 +10493,22 @@
             verifyAddress: async function (address) {
                 try { var r = await fetch(WORKER_URL + '/verify?address=' + encodeURIComponent(address)); return await r.json(); }
                 catch (e) { return { status: 'error' }; }
+            },
+            /* §17.5 — FEMA flood + USGS shaking. SAME Worker ORIGIN as everything above, so no CSP change
+               was needed and no outside agency is reachable from this page (Valuation API §5, L48). Both
+               are free and keyless and the Worker returns before it touches the RentCast counter, so
+               neither of these can EVER spend one of the 50 paid lookups.
+               They take lat/lon, not an address: FEMA and USGS both key off coordinates, and the
+               coordinates ride the /avm/value response we already paid for. */
+            fetchFlood: async function (c) {
+                if (!c || c.lat == null || c.lon == null) return { status: 'error' };
+                try { var r = await fetch(WORKER_URL + '/flood?lat=' + encodeURIComponent(c.lat) + '&lon=' + encodeURIComponent(c.lon)); return await r.json(); }
+                catch (e) { return { status: 'error' }; }
+            },
+            fetchQuake: async function (c) {
+                if (!c || c.lat == null || c.lon == null) return { status: 'error' };
+                try { var r = await fetch(WORKER_URL + '/quake?lat=' + encodeURIComponent(c.lat) + '&lon=' + encodeURIComponent(c.lon)); return await r.json(); }
+                catch (e) { return { status: 'error' }; }
             }
         };
     })();
@@ -10473,6 +10559,16 @@
                 return { address: c.address, price: c.price, beds: c.beds, baths: c.baths,
                          sqft: c.sqft, distance: c.distance, saleDate: c.saleDate };
             });
+        /* §17.5 — the coordinates ride the SAME response. Stored on the snapshot rather than loose on the
+           account so they inherit its address invalidation for free: _groundsAvmFor already returns null
+           the moment the typed address stops matching, so a moved property can never keep the old home's
+           coordinates and hand them to FEMA. Validated to the SAME rule as the Worker's pickCoords — a
+           half pair or an off-globe number is not a location (L48, one definition, never two). */
+        var _c = r && r.coords;
+        var _coords = (_c && typeof _c.lat === 'number' && typeof _c.lon === 'number'
+                       && isFinite(_c.lat) && isFinite(_c.lon)
+                       && _c.lat >= -90 && _c.lat <= 90 && _c.lon >= -180 && _c.lon <= 180)
+                    ? { lat: _c.lat, lon: _c.lon } : null;
         return {
             address:  canonicalAddr,
             key:      _avmAddrKey(canonicalAddr),
@@ -10480,6 +10576,7 @@
             estimate: r.value,
             range:    { low: r.low, high: r.high },
             comps:    comps,
+            coords:   _coords,
             // R61 provenance FROZEN AT PULL TIME. _avmDate falls back to TODAY when `updated` is absent, so a
             // recomputed stamp would let a July lookup reopen in October claiming "· Oct 2026" — a freshness
             // it does not have. Stored once, rendered verbatim thereafter.
@@ -10651,6 +10748,29 @@
         var shown = snap || _groundsAvmFor(acc);
         var rEl2 = document.getElementById('modal-avm-result-' + id);   // re-check (modal may have closed)
         if (rEl2) rEl2.innerHTML = _groundsAvmStatusHTML(r) + (shown ? _groundsAvmResultHTML(id, shown) : '');
+        /* §17.5 — the two hazard reads RIDE THIS GESTURE. The user already asked for a lookup and the
+           coordinates arrived on the response we just paid for, so both keyless calls go out here rather
+           than at render time: rendering must stay pure, or every modal open would fire network.
+           GATED ON COORDINATES EXISTING. A snapshot from before the Worker captured them has none, so
+           nothing fires and §17.5 stays blank — honest, and NOT a backfill (row 218).
+           STORED ONLY ON A REAL ANSWER, and each half independently: a flood outage must not discard a
+           good shaking read. Written onto the SNAPSHOT so it inherits the address invalidation, then
+           repainted through openAccountModal — Group B is nowhere near the AVM result container, so an
+           innerHTML poke would leave the room stale (§13.72: the gesture has to reach the screen). */
+        if (snap && snap.coords) {
+            var _hz = {};
+            var _fl = await _AssetIntel.fetchFlood(snap.coords);
+            if (_fl && _fl.status === 'ok') _hz.flood = { status: 'ok', zone: _fl.zone, subtype: _fl.subtype };
+            var _qk = await _AssetIntel.fetchQuake(snap.coords);
+            if (_qk && _qk.status === 'ok' && typeof _qk.ss === 'number') _hz.quake = { status: 'ok', ss: _qk.ss };
+            if (_hz.flood || _hz.quake) {
+                var _cur = state.accounts.find(function (a) { return a.id === id; });
+                if (_cur && _cur.assetAvmSnapshot && _cur.assetAvmSnapshot.key === snap.key) {
+                    _cur.assetAvmSnapshot.hazard = _hz;
+                    if (activeModalId === id) openAccountModal(id);
+                }
+            }
+        }
     };
     window.groundsUseEstimate = function (id, value) {
         var acc = state.accounts.find(function (a) { return a.id === id; });
