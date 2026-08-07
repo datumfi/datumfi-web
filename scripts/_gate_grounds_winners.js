@@ -32,7 +32,14 @@ const LABEL = process.argv[2] || 'RUN';
 const RF = process.argv.includes('--redfirst');
 const NOHELOC  = process.argv.includes('--noheloc');
 const NOCTRL   = process.argv.includes('--nocontrol');
-const MUT = NOHELOC || NOCTRL;
+/* §17.1 — the negative control for a REGROUP has to be shaped like the regroup. --flatcarry deletes
+   the three authored group headers and NOTHING else, restoring the pre-§17.1 flat list. The three
+   §17.1 legs must go RED while the field-render and TOTAL legs stay GREEN — that split is the proof
+   that the regroup is presentational and the arithmetic is untouched, which is the entire claim
+   §17.1 makes ("pure regroup + section headers, no math change"). A control that reddened everything
+   would prove only that I broke the page. */
+const FLATCARRY = process.argv.includes('--flatcarry');
+const MUT = NOHELOC || NOCTRL || FLATCARRY;
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8305;
 const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
@@ -45,6 +52,14 @@ const M_HELOC = "            return function(dB) { return String(dB.id).indexOf(
    only the control vanishes. Under the OLD assertions this run was 1 red + 1 FALSE GREEN. */
 const A_CTRL = '        if (canManage) {';
 const M_CTRL = '        if (false) {   /* link control removed by --nocontrol */';
+/* §17.1 group headers, VERBATIM as authored 2026-07-25 (Property Copy Bank rows 180/181/182, read
+   in-session 2026-08-06 per L51). These same three literals are the winners asserted below AND the
+   anchors --flatcarry deletes, so the gate and its own negative control cannot drift apart: if the
+   copy is reworded, the anchor stops matching and apply() aborts with "expected exactly 1 occurrence"
+   rather than silently testing nothing. */
+const G17_A = 'Carrying Costs — what you owe to keep the home.';
+const G17_B = 'Property Insurance — what protects the home and you.';
+const G17_C = 'Operating Costs — what it takes to run the home day to day.';
 
 const MIME = { '.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.json':'application/json','.png':'image/png','.woff2':'font/woff2','.ico':'image/x-icon' };
 const server = http.createServer((req, res) => {
@@ -61,6 +76,11 @@ const server = http.createServer((req, res) => {
     };
     if (NOHELOC) apply(A_HELOC, M_HELOC, 'A_HELOC');
     if (NOCTRL)  apply(A_CTRL,  M_CTRL,  'A_CTRL');
+    if (FLATCARRY) {
+      apply(G17_A, '', 'G17_A');
+      apply(G17_B, '', 'G17_B');
+      apply(G17_C, '', 'G17_C');
+    }
     body = Buffer.from(src, 'utf8');
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
@@ -350,6 +370,23 @@ const server = http.createServer((req, res) => {
   ok(has(R.gFill, 'Property Tax (yr)') && has(R.gFill, 'Annual Homeowner Insurance') && has(R.gFill, 'Est. Maintenance / Repairs (yr)') && has(R.gFill, 'HOA / Condo Fees (yr)') && has(R.gFill, 'Utilities — electric / gas / water (yr)'), '§4.1-4.5 all carrying-cost fields render');
   ok(has(R.gFill, 'Total Annual Carrying Cost') && has(R.gFill, '$16,800'), '§4.16 TOTAL = $16,800 (6000+2000+4000+1200+3600)');
   ok(has(R.gFill, "about 1% of the home's value is a common rule of thumb"), '§4.3 maintenance est. (~1%) hover (updated copy)');
+  /* ══ §17.1 · THE THREE GROUP HEADERS, IN THE SERVED BYTES ══════════════════════════════════════
+     Authored 2026-07-25, wired 2026-08-06 — the first §17 subsection to ship. Asserted as WHOLE
+     authored sentences, which is why the markup keeps each one as a single unbroken text node: a
+     header split across two styled spans renders identically and is ungreppable, so this leg would
+     be asserting a string the page never contains in one piece.
+     ORDER IS PART OF THE CONTRACT, not decoration — B must precede C because Group B is the anchor
+     §17.2-§17.5 land inside; asserting mere presence would pass on a page that buried Insurance
+     under the utility bill. indexOf comparison is the cheapest honest way to pin sequence.
+     ⛔ THESE DO NOT REPLACE THE MATH LEGS ABOVE. §4.1-4.5 (all five fields render) and §4.16 (TOTAL
+     = $16,800) are the regression guard for "no math change", and they were already here — the
+     regroup had to leave them both untouched, and it did. */
+  ok(has(R.gFill, G17_A), '§17.1 GROUP A header — "Carrying Costs — what you owe to keep the home."');
+  ok(has(R.gFill, G17_B), '§17.1 GROUP B header — "Property Insurance — what protects the home and you."');
+  ok(has(R.gFill, G17_C), '§17.1 GROUP C header — "Operating Costs — what it takes to run the home day to day."');
+  ok(has(R.gFill, G17_A) && has(R.gFill, G17_B) && has(R.gFill, G17_C)
+     && R.gFill.indexOf(G17_A) < R.gFill.indexOf(G17_B) && R.gFill.indexOf(G17_B) < R.gFill.indexOf(G17_C),
+     '§17.1 ORDER — Carrying → Insurance → Operating (Insurance ABOVE Operating: it is where §17.2-§17.5 land)');
   ok(pick(!has(R.gAuto, 'Annual Carrying Cost'), has(R.gAuto, 'Annual Carrying Cost')), 'Carrying-cost block ABSENT on Driveway (Grounds-only, this wave) [BITE]');
   ok(Array.isArray(R.dbFeed) && R.dbFeed.some(function (x) { return x.annualCarry === 16800; }), 'Datum Builder feed hook emits annualCarry 16800');
 
