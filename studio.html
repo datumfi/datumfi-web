@@ -7799,6 +7799,10 @@
                       empty state, and it steps aside (row 183) the moment the dropdown below is used. */''}
                 ${_propInsEducationHTML(acc)}
                 ${_propCoverageHTML(id, acc)}
+                ${/* §17.4 endorsements land LAST inside Group B — after the base policy's own limits,
+                      because an endorsement is by definition an addition to that policy. Closed and
+                      silent until something is carried (row 213). */''}
+                ${_propEndorsementsHTML(id, acc)}
                 <div class="carry-group-label" style="color:var(--muted); font-size:11px; letter-spacing:0.03em; margin:16px 0 8px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.05);">Operating Costs — what it takes to run the home day to day.</div>
                 <div class="field-row">
                     <div><span class="input-label modal-tt-wrap" style="cursor:help;">Est. Maintenance / Repairs (yr)<div class="modal-tt" style="left:0; right:auto;"><strong>est. · ~1% of value</strong>A rough estimate — about 1% of the home's value is a common rule of thumb. It's only a starting point; your own number always wins.</div></span><input type="text" class="small-field curr-format" placeholder="${maintPH>0 ? 'est. $'+maintPH.toLocaleString('en-US') : '$0'}" value="${formatCurrencyDisplay(acc.maintYr||'')}" oninput="updateAccField('${id}', 'maintYr', this.value)"></div>
@@ -9440,6 +9444,86 @@
                 <div class="field-row" style="grid-template-columns:1fr;">
                     ${F('dedWindHail', 'Deductible — Wind/Hail', 'A separate deductible for wind or hail damage, common in storm-prone regions.', 'Like the hurricane line — a % here can be a big number; know it before a claim.', 'left', 'text')}
                 </div>`;
+    }
+
+    /* ── §17.4 · SPECIALIZED / ENDORSEMENT COVERAGES — CONDITIONAL REVEAL ────────────────────────
+     * Authored 2026-07-25 (Property Copy Bank rows 206-213, read in-session 2026-08-07 per L51).
+     * Every "What's this?" string below is wired VERBATIM. Display-only: reads acc, writes only the
+     * user's own toggles and limits, and moves NO number — calcCarryTotal is untouched, as it is for
+     * all of §17.
+     *
+     * ⛔ §17.4 GUARD (row 213) — HIDDEN UNTIL TOGGLED ON. IF NONE ARE SELECTED, RENDER NOTHING.
+     * SILENCE IS SIGNAL: a person who carries no endorsements must not be shown six things they do
+     * not have. That is why there is no group header, no "none carried" line, and no list of empty
+     * rows in the resting state — only a closed disclosure, which is the entry point and nothing
+     * more. Six unchecked switches sitting on the page IS the implication row 213 forbids.
+     *
+     * WHY A <details> DISCLOSURE. Row 206 says "they render only when the user toggles them on",
+     * which needs something to do the toggling — the guard cannot mean "no way in exists". The
+     * house already owns this exact shape: §18.3's link rows are a <details>/<summary> for the same
+     * job (a quiet opener over a list of optional things). BANK SILENCE ON LAYOUT = MATCH THE HOUSE
+     * PATTERN, so this forks nothing (L48).
+     * It opens BY ITSELF the moment anything is carried, so a recorded endorsement is never buried
+     * behind a closed panel — and it falls shut again when the last one is switched off, which is
+     * row 213's "silence = not carried" executed rather than described.
+     *
+     * ⚠️ TWO STRINGS HERE ARE MINE, NOT THE BANK'S — FLAGGED, NOT SILENTLY RESOLVED:
+     *   1. The opener label "Specialized / endorsement coverages" is row 206's own section title with
+     *      the "§17.4 ·" and "(req #5)" bookkeeping stripped. Closest thing to sourced that exists.
+     *   2. The revealed input's label "Limit". Rows 207-212 say "conditional field + hover" and — unlike
+     *      every §17.3 row, which types its field explicitly ("manual $", "manual $ or %") — they NEVER
+     *      say what the field holds. That silence is load-bearing in a bank that is otherwise precise
+     *      about it, so it is reported, not papered over.
+     * Bank silence on a LABEL = flattest accurate string + MANDATORY FLAG. Both are flagged.
+     *
+     * WHY THE LIMIT IS TEXT AND NOT MONEY, AND WHY ALL SIX ARE TREATED ALIKE: deciding that
+     * Scheduled Personal Property takes one dollar figure while Special Personal Property takes none
+     * is an INSURANCE JUDGEMENT — the same class of call refused at row 195, and refused here for the
+     * same reason. So every endorsement gets the same field, and it is text, on the dedHurricane /
+     * dedWindHail precedent: nothing consumes these numerically, so the field RECORDS what the policy
+     * says ("open perils", "$5k per item / $25k total") instead of coercing it into a number and
+     * silently dropping the rest. Blank until entered, em dash never "$0" — row 205's guard reads on
+     * §17.4 too: a blank limit and a limit of zero are opposite facts.
+     *
+     * 🔗 THE §17.5 SEAM (row 207) — Earthquake cross-refers to the USGS seismic read that §17.5 will
+     * add. The LOOKUP IS NOT WIRED HERE and must not be: §17.5 is the next subsection, it needs
+     * lat/long off the RentCast call, and it ships through a SEPARATE wrangler deploy. This row's
+     * authored hover is complete on its own and says nothing the lookup has to supply. */
+    var _PROP_ENDORSEMENTS = [
+        ['endorseQuake',     'Earthquake',                  'Standard policies EXCLUDE earthquake; this endorsement (or a separate policy) adds it.'],
+        ['endorseIdTheft',   'ID Theft',                    'Helps with the cost and legwork of restoring your identity after theft.'],
+        ['endorseBizProp',   'Increased Business Property', 'Raises the low default limit on business equipment kept at home.'],
+        ['endorseSchedPP',   'Scheduled Personal Property', 'Itemized high-value pieces — rings, art, instruments — insured for their appraised value above normal limits.'],
+        ['endorseComputer',  'Special Computer Coverage',   'Broader protection for computers/electronics beyond the base personal-property limit.'],
+        ['endorseSpecialPP', 'Special Personal Property',   'Upgrades belongings from named-perils to open-perils (HO-5-style breadth) via endorsement.']
+    ];
+
+    function _propEndorsementsHTML(id, acc) {
+        if (!acc) return '';
+        var anyOn = _PROP_ENDORSEMENTS.some(function (e) { return !!acc[e[0]]; });
+        var rows = _PROP_ENDORSEMENTS.map(function (e) {
+            var key = e[0], label = e[1], whatsThis = e[2];
+            var on = !!acc[key];
+            /* THE CONDITIONAL FIELD (row 206 "show only if selected"). It is emitted ONLY on the ON
+               branch — not rendered-then-hidden — so an endorsement the user does not carry leaves no
+               trace in the served bytes for a gate (or a reader) to mistake for a carried one. */
+            var lim = on
+                ? '<div style="padding:2px 0 10px 0;"><span class="input-label" style="color:var(--muted);">Limit</span>' +
+                  '<input type="text" class="small-field" placeholder="—" value="' +
+                  String(acc[key + 'Limit'] === undefined || acc[key + 'Limit'] === null ? '' : acc[key + 'Limit']).replace(/"/g, '&quot;') +
+                  '" oninput="updateAccField(\'' + id + '\', \'' + key + 'Limit\', this.value)"></div>'
+                : '';
+            return '<div class="toggle-row modal-tt-wrap" style="padding:8px 0 6px;">' +
+                   '<span class="toggle-label" style="color:var(--white);">' + label + '</span>' +
+                   '<label class="switch"><input type="checkbox" ' + (on ? 'checked' : '') +
+                   ' onchange="updateAccToggle(\'' + id + '\', \'' + key + '\', this.checked)"><span class="slider"></span></label>' +
+                   '<div class="modal-tt" style="left:0; right:auto;"><strong>What\'s this?</strong>' + whatsThis + '</div>' +
+                   '</div>' + lim;
+        }).join('');
+        return '<details ' + (anyOn ? 'open' : '') + ' style="margin:12px 0 4px;">' +
+               '<summary style="list-style:none; cursor:pointer; padding:8px 12px; background:var(--bg-navy); border:1px solid rgba(255,255,255,0.14); border-radius:4px; color:rgba(255,255,255,0.75); font-size:12px;">Specialized / endorsement coverages  ▾</summary>' +
+               '<div style="border:1px solid rgba(255,255,255,0.10); border-top:none; border-radius:0 0 4px 4px; padding:4px 12px 8px; background:rgba(255,255,255,0.02);">' +
+               rows + '</div></details>';
     }
 
     function _helocUsePurposeFieldHTML(id, acc) {
