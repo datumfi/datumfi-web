@@ -80,8 +80,24 @@ const DEAFSWITCH  = process.argv.includes('--deafswitch');
    THE BLAST RADIUS OF A CONTROL IS ITSELF A CLAIM: two red is the correct size here, and a control
    that reddened the §17.2 render legs too would be proving something this fix does not claim. */
 const DEAFSELECT  = process.argv.includes('--deafselect');
+/* §17.5 — three controls, one per guard, each sized to its own claim.
+     --nohazard  the whole block is gone           -> the broad "it shipped" claim.
+     --wordonly  the band word renders WITHOUT the ss number -> §17.5a GUARD 2, and the Architect
+                 asked for exactly this shape. It is the failure nobody would ever notice, because
+                 "moderate shaking" alone looks completely fine on screen — it just silently promotes
+                 OUR plain-language read into something that reads like a USGS category. It must
+                 redden the pairing legs and LEAVE the flood legs, the hovers and the guard-3 legs
+                 green, or the control is proving something wider than the guard.
+     --sdcfallback  keeps sdc in the store AND falls back to it when ss is missing -> §17.5a GUARD 3.
+                 Two anchors, one control, because that IS the shape of the mistake: somebody decides
+                 the A-F letter is useful, keeps it, and reaches for it when the number is absent.
+                 The result is the inverted signal — confident in Austin, silent in Los Angeles. */
+const NOHAZARD    = process.argv.includes('--nohazard');
+const WORDONLY    = process.argv.includes('--wordonly');
+const SDCFALLBACK = process.argv.includes('--sdcfallback');
 const MUT = NOHELOC || NOCTRL || FLATCARRY || NOEDUC || NOCOV || WRONGFLD || ZEROPLACE
-         || NOENDORSE || EAGERFIELDS || DEAFSWITCH || DEAFSELECT;
+         || NOENDORSE || EAGERFIELDS || DEAFSWITCH || DEAFSELECT
+         || NOHAZARD || WORDONLY || SDCFALLBACK;
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8305;
 const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
@@ -118,6 +134,16 @@ const A_DEAF  = "            var on = !!acc[key];";
 const M_DEAF  = "            var on = !!acc[key + 'X'];   /* --deafswitch: render reads a key nothing writes */";
 const A_DEAFSEL = "            if(field === 'hoType' || field === 'propType') openAccountModal(id);   // §17.2 teach-panel collapse + townhome branch";
 const M_DEAFSEL = "            /* --deafselect: the pre-fix state — both fields store, neither repaints */";
+const A_NOHAZ = "        var hz = snap && snap.hazard;";
+const M_NOHAZ = "        var hz = null;   /* §17.5 block removed by --nohazard */";
+const A_WORDONLY = "' + ss + 'g <span style=\"opacity:0.6;\">— ' + band + ' shaking</span>";
+const M_WORDONLY = "' + '<span style=\"opacity:0.6;\">' + band + ' shaking</span>";
+/* --sdcfallback needs BOTH edits because the guard is enforced in two places: sdc cannot reach the
+   screen if it was never stored. Modelling only one would leave the control unable to bite. */
+const A_SDC_STORE = "if (_qk && _qk.status === 'ok' && typeof _qk.ss === 'number') _hz.quake = { status: 'ok', ss: _qk.ss };";
+const M_SDC_STORE = "if (_qk && _qk.status === 'ok') _hz.quake = { status: 'ok', ss: _qk.ss, sdc: _qk.sdc };   /* --sdcfallback */";
+const A_SDC_READ = "        var band = _quakeBand(ss);";
+const M_SDC_READ = "        var band = _quakeBand(ss); if (!band && hz.quake && hz.quake.sdc) { band = 'category ' + hz.quake.sdc; ss = hz.quake.sdc; }   /* --sdcfallback */";
 const G17_A = 'Carrying Costs — what you owe to keep the home.';
 const G17_B = 'Property Insurance — what protects the home and you.';
 const G17_C = 'Operating Costs — what it takes to run the home day to day.';
@@ -150,6 +176,9 @@ const server = http.createServer((req, res) => {
     if (EAGERFIELDS) apply(A_EAGER,     M_EAGER,     'A_EAGER');
     if (DEAFSWITCH)  apply(A_DEAF,      M_DEAF,      'A_DEAF');
     if (DEAFSELECT)  apply(A_DEAFSEL,   M_DEAFSEL,   'A_DEAFSEL');
+    if (NOHAZARD)    apply(A_NOHAZ,     M_NOHAZ,     'A_NOHAZ');
+    if (WORDONLY)    apply(A_WORDONLY,  M_WORDONLY,  'A_WORDONLY');
+    if (SDCFALLBACK) { apply(A_SDC_STORE, M_SDC_STORE, 'A_SDC_STORE'); apply(A_SDC_READ, M_SDC_READ, 'A_SDC_READ'); }
     body = Buffer.from(src, 'utf8');
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
@@ -492,6 +521,82 @@ const server = http.createServer((req, res) => {
         return cap();
       } catch (e) { return String(e.message); }
     })();
+    /* ══ §17.5 · FLOOD + SHAKING — DRIVEN THROUGH THE REAL GESTURE, PROVIDERS STUBBED ══════════════
+       Stubs the three Worker seams and then calls groundsVerifyAndEstimate, i.e. the same function
+       the "Get estimate" button calls. NOT a state poke: §17.5 only ever populates as a consequence
+       of that gesture, so a fixture that assigned the snapshot directly would prove the renderer and
+       skip the wiring under test (§13.72). Deliberately does NOT re-open the modal afterwards.
+       Five fixtures because row 218 and §17.5a's guards are claims about DIFFERENT branches, and one
+       fixture can only ever exercise one of them. */
+    out.g175 = await (async function () {
+      const cap = () => document.getElementById('modal-dynamic-content').innerHTML;
+      const mk = () => {
+        addInstance('property');
+        const a = window.state.accounts.filter(x => x.baseId === 'property').pop();
+        Object.assign(a, { value: 400000, useValueApi: true, propStreet: '1 Beach Rd', propCity: 'Clearwater', propState: 'FL', propZip: '33767' });
+        return a;
+      };
+      const stub = (coords, flood, quake) => {
+        window._AssetIntel.verifyAddress = async () => ({ status: 'verified', canonical: '1 BEACH RD, CLEARWATER, FL, 33767' });
+        window._AssetIntel.fetchEstimate = async () => ({ status: 'ok', value: 500000, low: 480000, high: 520000, updated: '2026-08-07T00:00:00Z', comps: [], coords: coords });
+        window._AssetIntel.fetchFlood = async () => flood;
+        window._AssetIntel.fetchQuake = async () => quake;
+      };
+      const o = {};
+      try {
+        // BOTH — the presence twin every absence leg below is measured against.
+        const a = mk();
+        stub({ lat: 27.9775, lon: -82.8290 }, { status: 'ok', zone: 'VE', subtype: 'COASTAL FLOODPLAIN' }, { status: 'ok', ss: 1.888, sdc: 'D' });
+        window.openAccountModal(a.id);
+        o.before = cap();
+        await window.groundsVerifyAndEstimate(a.id);
+        o.both = cap();
+        o.storedHazard = JSON.stringify((a.assetAvmSnapshot || {}).hazard || null);
+        // BAND BOUNDARIES — the exact edges §17.5a authored, each rendered through the real path.
+        o.bands = {};
+        for (const pair of [[0.10, 'very low'], [0.25, 'low'], [0.49, 'low'], [0.50, 'moderate'], [0.99, 'moderate'], [1.00, 'high'], [1.49, 'high'], [1.50, 'very high']]) {
+          const b = mk();
+          stub({ lat: 34, lon: -118 }, { status: 'error' }, { status: 'ok', ss: pair[0] });
+          window.openAccountModal(b.id);
+          await window.groundsVerifyAndEstimate(b.id);
+          o.bands[pair[0]] = cap().indexOf(pair[0] + 'g <span style="opacity:0.6;">— ' + pair[1] + ' shaking') >= 0;
+        }
+        // QUAKE FAILS — guard 2. No number means NO word, and the flood half must survive.
+        const c = mk();
+        stub({ lat: 27.9775, lon: -82.8290 }, { status: 'ok', zone: 'AE', subtype: 'FLOODWAY' }, { status: 'error' });
+        window.openAccountModal(c.id);
+        await window.groundsVerifyAndEstimate(c.id);
+        o.noQuake = cap();
+        /* ss MISSING BUT sdc PRESENT — the ONLY fixture in which guard 3's render half can be
+           exercised at all. Without it, "sdc never reaches the screen" is asserted only against
+           fixtures where sdc could never have appeared anyway, which is an it-is-not-there test
+           that proves nothing. This is the state a fallback would fire on. */
+        const s0 = mk();
+        stub({ lat: 34, lon: -118 }, { status: 'ok', zone: 'X', subtype: 'AREA OF MINIMAL FLOOD HAZARD' }, { status: 'ok', ss: null, sdc: 'B' });
+        window.openAccountModal(s0.id);
+        await window.groundsVerifyAndEstimate(s0.id);
+        o.ssNullSdc = cap();
+        o.ssNullSdcStored = JSON.stringify((s0.assetAvmSnapshot || {}).hazard || null);
+        // FEMA ANSWERED 'none' — nothing mapped here. Flood line goes, shaking stays.
+        const d = mk();
+        stub({ lat: 30, lon: -40 }, { status: 'none' }, { status: 'ok', ss: 0.053 });
+        window.openAccountModal(d.id);
+        await window.groundsVerifyAndEstimate(d.id);
+        o.floodNone = cap();
+        // NO COORDINATES — a snapshot from before the Worker captured them. Silent, and NO call fires.
+        let calls = 0;
+        const e = mk();
+        window._AssetIntel.verifyAddress = async () => ({ status: 'verified', canonical: 'X ADDR' });
+        window._AssetIntel.fetchEstimate = async () => ({ status: 'ok', value: 500000, low: 480000, high: 520000, comps: [] });
+        window._AssetIntel.fetchFlood = async () => { calls++; return { status: 'ok', zone: 'VE' }; };
+        window._AssetIntel.fetchQuake = async () => { calls++; return { status: 'ok', ss: 1 }; };
+        window.openAccountModal(e.id);
+        await window.groundsVerifyAndEstimate(e.id);
+        o.noCoords = cap();
+        o.callsWithoutCoords = calls;
+      } catch (err) { o.err = String(err && err.message); }
+      return o;
+    })();
     // Datum Builder feed hook — the named emitter the future Datum Builder consumes (stub today).
     out.dbFeed = (typeof window.datumBuilderCarryingFeed === 'function') ? window.datumBuilderCarryingFeed() : null;
     // valuation guardrail probe (§6/§6b) — pure JS decision layer, no network. Populated in G3.
@@ -699,6 +804,64 @@ const server = http.createServer((req, res) => {
      '§17.4 THE GESTURE REACHES THE RENDER — the field appears on the click itself, with NO modal re-open');
   ok(pick(!has(R.gAuto, 'Specialized / endorsement coverages'), has(R.gAuto, 'Specialized / endorsement coverages')),
      '§17.4 endorsement block ABSENT on Driveway (Grounds-only) [BITE]');
+
+  /* ══ §17.5 · FLOOD ZONE + EARTHQUAKE SHAKING ═══════════════════════════════════════════════════
+     Bank rows 214-218 + §17.5a (A324). Every leg reads a fixture driven through the REAL gesture.
+     ⛔ THE GUARD-2 LEGS ARE THE POINT OF THIS BLOCK. "The band word never appears without the
+     number" is the one a refactor is most likely to break, because a word on its own still looks
+     perfectly fine on screen — it is the failure that would never be noticed. It gets its own
+     control (--wordonly) sized to exactly that claim.
+     ⛔ AND GUARD 3: sdc is refused BY MEASUREMENT, not preference — Austin returns "A", Los Angeles
+     returns null, so the letter is absent precisely where the hazard is highest. That is an INVERTED
+     SIGNAL, worse than blank. The Worker still returns it; nothing here may store or show it. */
+  lines.push('===== §17.5 · FLOOD (FEMA) + SHAKING (USGS) =====');
+  ok(!R.g175.err, '§17.5 PRECONDITION — the fixture ran without throwing (err: ' + (R.g175.err || 'none') + ')');
+  /* §13.72 — absent before the gesture, present after it, WITHOUT a modal re-open. */
+  ok(!has(R.g175.before, 'Earthquake shaking (USGS)') && !has(R.g175.before, 'Flood zone (FEMA NFHL)')
+     && has(R.g175.both, 'Earthquake shaking (USGS)') && has(R.g175.both, 'Flood zone (FEMA NFHL)'),
+     '§17.5 THE GESTURE REACHES THE RENDER — silent before "Get estimate", both lines after, no re-open');
+  ok(has(R.g175.both, 'Your FEMA flood zone (e.g., AE/VE = high-risk, X = lower). Standard home policies EXCLUDE flood; NFIP or private flood is separate.'),
+     '§17.5 flood hover verbatim (row 215)');
+  ok(has(R.g175.both, 'How hard the ground is expected to shake here in a rare, severe earthquake — a mapped USGS figure for your location, not a prediction of when. The plain-language rating is ours, not an official category. Standard home policies exclude earthquake damage; cover for it is a separate endorsement.'),
+     '§17.5a "What\'s this?" verbatim — including "the plain-language rating is ours, not an official category"');
+  ok(has(R.g175.both, 'There is no right answer to compare this to — it describes your ground, not your policy. If it reads moderate or higher, the earthquake endorsement above is the field worth a conversation with your agent.'),
+     '§17.5a "Do I have enough?" verbatim — "worth a conversation with your agent", never "buy it" (guard 1)');
+  ok(has(R.g175.both, '1.888g <span style="opacity:0.6;">— very high shaking'),
+     '§17.5a RENDER SHAPE — {ss}g — {band} shaking, the number and the word together');
+  /* ⛔ GUARD 3, BOTH ENFORCEMENT POINTS. The storage fence is the stronger of the two: sdc cannot
+     reach the screen if it was never kept. Each absence is paired with the presence of ss. */
+  ok(has(R.g175.storedHazard, '"ss":1.888') && !has(R.g175.storedHazard, 'sdc'),
+     '§17.5a GUARD 3 — the stored hazard keeps ss and DROPS sdc entirely (' + R.g175.storedHazard + ')');
+  ok(has(R.g175.both, '1.888g') && !has(R.g175.both, 'sdc') && !has(R.g175.both, 'Seismic Design'),
+     '§17.5a GUARD 3 — sdc never reaches the screen, while ss does');
+  /* ⛔ THE ONE FIXTURE WHERE A FALLBACK COULD ACTUALLY FIRE: ss missing, sdc present. Without this,
+     every other guard-3 leg is asserting the absence of something that had no way to appear. The
+     flood half is asserted PRESENT in the same breath so this cannot pass on an empty block. */
+  ok(!has(R.g175.ssNullSdc, 'Earthquake shaking (USGS)') && !has(R.g175.ssNullSdc, 'category B')
+     && !has(R.g175.ssNullSdcStored, 'sdc')
+     && has(R.g175.ssNullSdc, 'Flood zone (FEMA NFHL)'),
+     '§17.5a GUARD 3 — ss MISSING + sdc PRESENT renders NO shaking field and never falls back to the letter, while the flood line still renders');
+  const B175 = R.g175.bands || {};
+  ok(Object.keys(B175).length === 8 && Object.keys(B175).every(function (k) { return B175[k]; }),
+     '§17.5a all EIGHT authored band edges render exactly (0.10/0.25/0.49/0.50/0.99/1.00/1.49/1.50) — ' + JSON.stringify(B175));
+  /* ⛔ GUARD 2 — the whole field goes when the number does. Paired with the flood half SURVIVING, or
+     "no band word" would pass just as happily on a room that rendered nothing at all. */
+  ok(!has(R.g175.noQuake, 'shaking') && !has(R.g175.noQuake, 'Earthquake shaking (USGS)')
+     && has(R.g175.noQuake, 'Flood zone (FEMA NFHL)') && has(R.g175.noQuake, '>AE'),
+     '§17.5a GUARD 2 — no ss means NO band word and NO field, while the flood half survives intact');
+  /* Row 218 on live data: FEMA answering "nothing mapped here" renders nothing, and is not allowed
+     to take the shaking read down with it. */
+  ok(!has(R.g175.floodNone, 'Flood zone (FEMA NFHL)')
+     && has(R.g175.floodNone, '0.053g <span style="opacity:0.6;">— very low shaking'),
+     '§17.5 row 218 — an unmapped point renders NO flood line, and the shaking read survives');
+  /* Absence PAIRED inside the leg: the same run must show the block DOES appear when coordinates
+     exist, or "silent without coordinates" passes perfectly on a §17.5 that was never built. */
+  ok(!has(R.g175.noCoords, 'Flood zone (FEMA NFHL)') && !has(R.g175.noCoords, 'Earthquake shaking (USGS)')
+     && R.g175.callsWithoutCoords === 0
+     && has(R.g175.both, 'Flood zone (FEMA NFHL)'),
+     '§17.5 no coordinates -> the block is SILENT and NOT ONE lookup fires — while a fixture WITH coordinates renders (pre-Worker snapshots, not a backfill)');
+  ok(pick(!has(R.gAuto, 'Earthquake shaking (USGS)'), has(R.gAuto, 'Earthquake shaking (USGS)')),
+     '§17.5 hazard block ABSENT on Driveway (Grounds-only) [BITE]');
   ok(pick(!has(R.gAuto, 'Annual Carrying Cost'), has(R.gAuto, 'Annual Carrying Cost')), 'Carrying-cost block ABSENT on Driveway (Grounds-only, this wave) [BITE]');
   ok(Array.isArray(R.dbFeed) && R.dbFeed.some(function (x) { return x.annualCarry === 16800; }), 'Datum Builder feed hook emits annualCarry 16800');
 
