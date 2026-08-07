@@ -175,6 +175,25 @@ const okProvider = async () => ({ ok: true, json: async () => ({ price: 500000, 
   ok(body.status === 'ok' && body.ss === 0.431 && body.source === 'USGS ASCE 7-16', '/quake -> ss + source tag');
   ok(pick((kv._m.get(mk)) === '7', (kv._m.get(mk)) !== '7'), '/quake does NOT touch the RentCast cap counter [BITE]');
 
+  /* ⛔ THE OUTBOUND User-Agent — this leg exists because production had none and FEMA 403'd.
+     Cloudflare Workers send no User-Agent; FEMA rejects that outright (measured: absent -> 403, any
+     non-empty value -> 200). Every local check passed because curl and node's fetch both send one,
+     so the failure could only ever appear in production. This asserts the HEADER WE SEND, not the
+     reply we get: the reply is the provider's to change, the header is ours to guarantee.
+     [BITE] so an inverted run cannot pass by asserting nothing. */
+  let sentHeaders = null;
+  globalThis.fetch = async (u, init) => { sentHeaders = (init && init.headers) || {}; return { ok: true, json: async () => ({ features: [] }) }; };
+  await handle({ method: 'GET', url: 'https://w.example/flood?lat=27.9775&lon=-82.8290' }, { RENTCAST_KV: mockKV({}), RENTCAST_API_KEY: 'dummy' });
+  ok(pick(!!(sentHeaders && sentHeaders['User-Agent'] && String(sentHeaders['User-Agent']).trim().length > 0),
+          !(sentHeaders && sentHeaders['User-Agent'])),
+     '/flood sends a NON-EMPTY User-Agent — FEMA 403s without one and the Worker runtime sends none [BITE]');
+  sentHeaders = null;
+  globalThis.fetch = async (u, init) => { sentHeaders = (init && init.headers) || {}; return { ok: true, json: async () => ({ response: { data: { ss: 1 } } }) }; };
+  await handle({ method: 'GET', url: 'https://w.example/quake?lat=34&lon=-118' }, { RENTCAST_KV: mockKV({}), RENTCAST_API_KEY: 'dummy' });
+  ok(pick(!!(sentHeaders && sentHeaders['User-Agent'] && String(sentHeaders['User-Agent']).trim().length > 0),
+          !(sentHeaders && sentHeaders['User-Agent'])),
+     '/quake sends a NON-EMPTY User-Agent (USGS tolerates its absence today — we do not rely on that) [BITE]');
+
   /* Both routes refuse a location they cannot trust, through the SAME pickCoords gate as the AVM
      capture — one definition of a usable coordinate, never two (L48). A refusal must also cost
      NOTHING: no provider call goes out, because a half-known point sent to FEMA comes back with a

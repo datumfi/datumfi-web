@@ -105,6 +105,22 @@ async function handleVerify(addr) {
   return json({ status: 'error', error: 'verify unavailable' });
 }
 
+/* ⛔ CLOUDFLARE WORKERS SEND NO User-Agent, AND FEMA REJECTS THAT WITH A 403.
+   Measured 2026-08-07 against the live service, after the first deploy came back "provider 403":
+     no User-Agent -> 403 · curl's default -> 200 · "node" -> 200 · "Cloudflare-Workers" -> 200
+   ANY non-empty UA is accepted; the ABSENCE is the whole trigger.
+   🔑 WHY EVERY LOCAL CHECK PASSED. curl sends a User-Agent. node's fetch sends a User-Agent. The
+   Worker runtime does not. So the end-to-end run against the REAL providers before shipping was
+   right about the URLs and blind to this, because it differed from production in exactly the way
+   that mattered. Same family as §13.72: a real measurement taken in the wrong ENVIRONMENT.
+   🔑 A LIVE CALL IS NOT A PRODUCTION CALL UNLESS IT LEAVES FROM WHERE PRODUCTION LEAVES.
+   USGS and Census both answer fine WITHOUT a UA (200 either way) — which is exactly why /verify has
+   proxied Census for weeks and nobody found this. FEMA is the odd one out.
+   Sent on the two §17.5 calls only: RentCast is key-authenticated and Census is measured fine, so
+   they are left alone (minimal diff on working paths, D5). The constant is shared so the next
+   provider added inherits it instead of rediscovering this. */
+const PROVIDER_UA = 'DatumFI/1.0 (+https://datumfi.com)';
+
 /* ── §17.5 · FLOOD (FEMA NFHL) + SEISMIC (USGS) — BOTH PROXIED, NEITHER TOUCHES THE CAP ──────────
    Routed through this Worker rather than called from the browser, on the Valuation API sheet §5
    ruling (rows 119-124) and L48: studio.html calls OUR endpoint, the Worker calls the provider and
@@ -169,7 +185,7 @@ async function handleFlood(c) {
           + '&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects'
           + '&outFields=FLD_ZONE,ZONE_SUBTY&returnGeometry=false&f=json';
   try {
-    const r = await fetch(u, { headers: { 'Accept': 'application/json' } });
+    const r = await fetch(u, { headers: { 'Accept': 'application/json', 'User-Agent': PROVIDER_UA } });
     if (!r.ok) return json({ status: 'error', error: 'provider ' + r.status });
     const out = parseFloodZone(await r.json());
     return json(Object.assign({ source: 'FEMA NFHL', updated: new Date().toISOString() }, out));
@@ -184,7 +200,7 @@ async function handleQuake(c) {
           + '?latitude=' + encodeURIComponent(c.lat) + '&longitude=' + encodeURIComponent(c.lon)
           + '&riskCategory=II&siteClass=D-default&title=datumfi';
   try {
-    const r = await fetch(u, { headers: { 'Accept': 'application/json' } });
+    const r = await fetch(u, { headers: { 'Accept': 'application/json', 'User-Agent': PROVIDER_UA } });
     if (!r.ok) return json({ status: 'error', error: 'provider ' + r.status });
     const out = parseSeismic(await r.json());
     return json(Object.assign({ source: 'USGS ASCE 7-16', updated: new Date().toISOString() }, out));
