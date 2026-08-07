@@ -7703,6 +7703,14 @@
                 <div class="di-narr-head">Datum Intelligence</div>
                 <div id="modal-grounds-di-${id}">${_groundsSignalsHTML(id, acc) || _GROUNDS_DI_EMPTY}</div>
             </div>
+            ${/* §26.1 — THE EQUITY PANEL MOVES HERE (Captain item 1, ruled at bank A328). It sat below
+                  the carrying-cost toggle, which put the vocabulary AFTER the work was already done.
+                  Authored order is INSIGHT → VOCABULARY → INPUT: the DI block above speaks about THIS
+                  property's numbers, this panel explains the concepts behind them, and Property
+                  details below is where the user then types. Placement only — not one word changed. */''}
+            ${_diWhyPanel('What is home equity — and why owning isn\'t free', [
+                ['Home equity + carrying cost', 'Home equity is your value minus what you owe. But owning isn\'t free — taxes, insurance, and upkeep run every year whether or not you have a mortgage. Planning for those is what keeps a paid-off home affordable.']
+            ])}
             <div style="margin-bottom:16px; padding:14px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:4px;">
                 <div style="color:var(--teal-mid); font-weight:bold; font-size:13px; margin-bottom:10px;">🏠 Property details</div>
                 <div class="field-row" style="grid-template-columns:1fr;">
@@ -7759,10 +7767,8 @@
                 <label class="switch"><input type="checkbox" ${showCarry ? 'checked' : ''} onchange="updateAccToggle('${id}', 'showCarryCosts', this.checked)"><span class="slider"></span></label>
                 <div class="modal-tt"><strong>Carrying costs</strong>Everything it costs simply to keep this property — taxes, insurance, upkeep, and the small recurring bills — separate from any loan payment.</div>
             </div>`;
-                // §15 education panel — moved ABOVE the carrying-cost fields (item 4): read the why, THEN enter numbers.
-                html += _diWhyPanel('What is home equity — and why owning isn\'t free', [
-                    ['Home equity + carrying cost', 'Home equity is your value minus what you owe. But owning isn\'t free — taxes, insurance, and upkeep run every year whether or not you have a mortgage. Planning for those is what keeps a paid-off home affordable.']
-                ]);
+                // §15 education panel — MOVED UP to sit between the DI block and Property details
+                // (§26.1, Captain item 1). The old call site was here; it renders ONCE, higher up.
                 if (showCarry) {
                     html += `
             <div style="margin-top:14px; padding:14px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:4px;">
@@ -7803,6 +7809,11 @@
                       because an endorsement is by definition an addition to that policy. Closed and
                       silent until something is carried (row 213). */''}
                 ${_propEndorsementsHTML(id, acc)}
+                ${/* §26b's authored order, items 9-11: NFIP education → the two coverages the user
+                      CARRIES → then the read-only lookups. Everything describing THE POLICY comes
+                      before anything describing THE GROUND. */''}
+                ${_propNfipPanelHTML()}
+                ${_propHazardCoverageHTML(id, acc)}
                 ${/* §17.5 lands LAST in Group B, below the endorsements — the earthquake reading's own
                       authored hover points UP at the endorsement above it ("the field worth a
                       conversation with your agent"), so the thing it names must already have been read.
@@ -9514,8 +9525,19 @@
      * add. The LOOKUP IS NOT WIRED HERE and must not be: §17.5 is the next subsection, it needs
      * lat/long off the RentCast call, and it ships through a SEPARATE wrangler deploy. This row's
      * authored hover is complete on its own and says nothing the lookup has to supply. */
+    /* §26.4 adds Replacement Cost (the seventh the Captain listed and the bank omitted); §26.7
+       REMOVES Earthquake from this list — it is superseded by the fuller three-field control below,
+       and shipping both would be two switches for one coverage (L48). Net six.
+       ⚠️ BANK INTERNAL CONFLICT, FLAGGED NOT RESOLVED SILENTLY: §26b's order list (item 8) says this
+       block is "now SEVEN", but §26b's own de-duplication instruction one row earlier removes
+       Earthquake from it. Six is the count that satisfies the explicit instruction; the "seven"
+       reads as a count taken before the de-dupe was applied. Architect to confirm.
+       ORDER: Replacement Cost leads because the Captain's own list led with it and the bank calls it
+       the commonest upgrade; the remaining five keep their authored row order (208→212). */
     var _PROP_ENDORSEMENTS = [
-        ['endorseQuake',     'Earthquake',                  'Standard policies EXCLUDE earthquake; this endorsement (or a separate policy) adds it.'],
+        ['endorseReplCost',  'Replacement Cost on Personal Property',
+         'Pays what it costs to BUY YOUR THINGS AGAIN TODAY, rather than what they were worth second-hand. Without it, a ten-year-old sofa is paid out as a ten-year-old sofa. It is one of the most commonly added upgrades and often one of the cheapest.',
+         'This one is usually a yes-or-no on the policy rather than a dollar amount. If your policy says actual cash value on contents, this is the upgrade that changes that.'],
         ['endorseIdTheft',   'ID Theft',                    'Helps with the cost and legwork of restoring your identity after theft.'],
         ['endorseBizProp',   'Increased Business Property', 'Raises the low default limit on business equipment kept at home.'],
         ['endorseSchedPP',   'Scheduled Personal Property', 'Itemized high-value pieces — rings, art, instruments — insured for their appraised value above normal limits.'],
@@ -9523,32 +9545,113 @@
         ['endorseSpecialPP', 'Special Personal Property',   'Upgrades belongings from named-perils to open-perils (HO-5-style breadth) via endorsement.']
     ];
 
+    /* §26.5 — TWO money fields per revealed endorsement, closing the silence §17.4 flagged. The
+       Captain asked for "coverage amounts, premiums, etc." and got one box labelled `Limit`; that was
+       the right call with no spec and is now superseded. Both blank until entered, em dash never $0.
+       ⛔ PREMIUM DOUBLE-COUNT GUARD (§26.5). These are ENDORSEMENT premiums. The §4.2 Annual
+       Homeowner Insurance figure is normally the WHOLE-POLICY premium, and it is the one that feeds
+       calcCarryTotal. Adding these to it would silently double-count the same dollars and quietly
+       inflate the carrying total. DISPLAY, DO NOT SUM. A true all-in insurance number is a new
+       ruling, not an assumption a wirer gets to make. */
+    function _propEndorseFieldHTML(id, acc, key, suffix, label) {
+        var k = key + suffix;
+        return '<div style="flex:1;"><span class="input-label" style="color:var(--muted);">' + label + '</span>' +
+               '<input type="text" class="small-field curr-format" placeholder="—" value="' +
+               formatCurrencyDisplay((acc && acc[k]) || '') +
+               '" oninput="updateAccField(\'' + id + '\', \'' + k + '\', this.value)"></div>';
+    }
+
     function _propEndorsementsHTML(id, acc) {
         if (!acc) return '';
         var anyOn = _PROP_ENDORSEMENTS.some(function (e) { return !!acc[e[0]]; });
         var rows = _PROP_ENDORSEMENTS.map(function (e) {
-            var key = e[0], label = e[1], whatsThis = e[2];
+            var key = e[0], label = e[1], whatsThis = e[2], doIHave = e[3];
             var on = !!acc[key];
-            /* THE CONDITIONAL FIELD (row 206 "show only if selected"). It is emitted ONLY on the ON
+            /* THE CONDITIONAL FIELDS (row 206 "show only if selected"). Emitted ONLY on the ON
                branch — not rendered-then-hidden — so an endorsement the user does not carry leaves no
                trace in the served bytes for a gate (or a reader) to mistake for a carried one. */
-            var lim = on
-                ? '<div style="padding:2px 0 10px 0;"><span class="input-label" style="color:var(--muted);">Limit</span>' +
-                  '<input type="text" class="small-field" placeholder="—" value="' +
-                  String(acc[key + 'Limit'] === undefined || acc[key + 'Limit'] === null ? '' : acc[key + 'Limit']).replace(/"/g, '&quot;') +
-                  '" oninput="updateAccField(\'' + id + '\', \'' + key + 'Limit\', this.value)"></div>'
+            var fields = on
+                ? '<div style="display:flex; gap:12px; padding:2px 0 10px 0;">' +
+                  _propEndorseFieldHTML(id, acc, key, 'Limit', 'Coverage limit') +
+                  _propEndorseFieldHTML(id, acc, key, 'Premium', 'Annual premium') +
+                  '</div>'
                 : '';
+            /* Replacement Cost is the only one of the six the bank gave a second hover to, so it is
+               the only one that renders one — the others keep the single authored string rather than
+               getting a fabricated companion (L47). */
+            var tt = '<div class="modal-tt" style="left:0; right:auto;"><strong>What\'s this?</strong>' + whatsThis +
+                     (doIHave ? '<br><br><strong>Do I have enough?</strong>' + doIHave : '') + '</div>';
             return '<div class="toggle-row modal-tt-wrap" style="padding:8px 0 6px;">' +
                    '<span class="toggle-label" style="color:var(--white);">' + label + '</span>' +
                    '<label class="switch"><input type="checkbox" ' + (on ? 'checked' : '') +
                    ' onchange="updateAccToggle(\'' + id + '\', \'' + key + '\', this.checked)"><span class="slider"></span></label>' +
-                   '<div class="modal-tt" style="left:0; right:auto;"><strong>What\'s this?</strong>' + whatsThis + '</div>' +
-                   '</div>' + lim;
+                   tt + '</div>' + fields;
         }).join('');
         return '<details ' + (anyOn ? 'open' : '') + ' style="margin:12px 0 4px;">' +
                '<summary style="list-style:none; cursor:pointer; padding:8px 12px; background:var(--bg-navy); border:1px solid rgba(255,255,255,0.14); border-radius:4px; color:rgba(255,255,255,0.75); font-size:12px;">Specialized / endorsement coverages  ▾</summary>' +
                '<div style="border:1px solid rgba(255,255,255,0.10); border-top:none; border-radius:0 0 4px 4px; padding:4px 12px 8px; background:rgba(255,255,255,0.02);">' +
                rows + '</div></details>';
+    }
+
+    /* ── §26.6 + §26.7 · FLOOD AND EARTHQUAKE AS COVERAGES THE USER CARRIES ──────────────────────
+     * Bank §26b, authored 2026-08-07. ⭐ THE STRUCTURAL POINT: §17.5 built flood and quake as things
+     * we TELL the user about their location. The Captain asked for them as things he can SAY HE
+     * CARRIES. Both are right and they are DIFFERENT LAYERS — the lookup describes THE GROUND, these
+     * describe THE POLICY. Both ship; the lookup is untouched and renders last.
+     * ⚠️ EARTHQUAKE IS DE-DUPLICATED (§26b). Row 207's endorsement and this control are the same
+     * coverage, so only this one ships — it carries the deductible field the endorsement never had.
+     * The KEYS ARE DELIBERATELY UNCHANGED (`endorseQuake` / `endorseQuakeLimit`) so anything already
+     * recorded against the retired endorsement carries straight over instead of being stranded in a
+     * field with no surface — a retained value no surface can display is indistinguishable from a
+     * destroyed one, and this arc is two hours old, which is exactly when that is cheap to get right.
+     * The earthquake deductible accepts TEXT on the dedHurricane precedent: the bank says "money or
+     * percent" and a percentage of the dwelling limit IS the usual form, which a money field would
+     * silently discard. Nothing consumes it numerically. */
+    function _propHazardCoverageHTML(id, acc) {
+        if (!acc) return '';
+        var money = function (key, label) {
+            return '<div style="flex:1;"><span class="input-label" style="color:var(--muted);">' + label + '</span>' +
+                   '<input type="text" class="small-field curr-format" placeholder="—" value="' + formatCurrencyDisplay(acc[key] || '') +
+                   '" oninput="updateAccField(\'' + id + '\', \'' + key + '\', this.value)"></div>';
+        };
+        var text = function (key, label) {
+            return '<div style="flex:1;"><span class="input-label" style="color:var(--muted);">' + label + '</span>' +
+                   '<input type="text" class="small-field" placeholder="—" value="' +
+                   String(acc[key] === undefined || acc[key] === null ? '' : acc[key]).replace(/"/g, '&quot;') +
+                   '" oninput="updateAccField(\'' + id + '\', \'' + key + '\', this.value)"></div>';
+        };
+        var row = function (key, label, whatsThis, fields) {
+            var on = !!acc[key];
+            return '<div class="toggle-row modal-tt-wrap" style="padding:8px 0 6px;">' +
+                   '<span class="toggle-label" style="color:var(--white);">' + label + '</span>' +
+                   '<label class="switch"><input type="checkbox" ' + (on ? 'checked' : '') +
+                   ' onchange="updateAccToggle(\'' + id + '\', \'' + key + '\', this.checked)"><span class="slider"></span></label>' +
+                   '<div class="modal-tt" style="left:0; right:auto;"><strong>What\'s this?</strong>' + whatsThis + '</div></div>' +
+                   (on ? '<div style="display:flex; gap:12px; padding:2px 0 10px 0;">' + fields() + '</div>' : '');
+        };
+        return row('coverFlood', 'Flood insurance (NFIP or private)',
+                   'Flood is excluded from essentially every standard home policy — it is bought separately, most often through the National Flood Insurance Program (NFIP) or a private flood insurer. Switch this on to record what you carry.',
+                   function () { return money('floodCovBuilding', 'Flood coverage — building') + money('floodCovContents', 'Flood coverage — contents') + money('floodPremium', 'Annual flood premium'); })
+             + row('endorseQuake', 'Earthquake coverage',
+                   'Earthquake damage is excluded from standard home policies almost everywhere. It is added as an endorsement or bought as a separate policy, and its deductible is usually a PERCENTAGE of the dwelling limit rather than a flat dollar figure. Switch this on to record what you carry.',
+                   function () { return money('endorseQuakeLimit', 'Earthquake coverage limit') + text('quakeDeductible', 'Earthquake deductible') + money('quakePremium', 'Annual earthquake premium'); });
+    }
+
+    /* §26.6 — THE NFIP EDUCATION PANEL. Same click-to-open disclosure as the HO-1…HO-8 panel (L48).
+     * ⚠️ THE DOLLAR FIGURES ARE A DATED FACT AND THE BANK SAID SO: render the paragraph WITHOUT them
+     * rather than with stale ones. CONFIRMED CURRENT 2026-08-07 against FEMA/floodsmart — $250,000
+     * building and $100,000 contents for a residence, unchanged, with increases proposed but not
+     * enacted. Sourced, so they ship. If a future wirer cannot re-confirm them, strip the figures and
+     * keep the sentence — the program limits are the one part of this panel that can go wrong
+     * silently, and a wrong limit here reads as advice about how much to buy. */
+    function _propNfipPanelHTML() {
+        return _diWhyPanel('Flood cover — how it works and where it comes from', [
+            ['Why it is separate', 'Flood is the biggest gap in ordinary home insurance, and it is a gap by design rather than by accident — standard policies exclude it almost universally. Cover comes from two places.'],
+            ['The National Flood Insurance Program (NFIP)', 'The NFIP is run by FEMA and sold through ordinary insurance agents. Its limits are set nationally rather than by your home\'s value: up to $250,000 on the building and $100,000 on contents for a residence. If your home would cost more than that to rebuild, the NFIP alone will not cover it.'],
+            ['Private flood insurers', 'Private flood insurers write above those limits and sometimes price better outside the highest-risk zones. Availability varies by state and by insurer.'],
+            ['Three things that surprise people', 'There is usually a THIRTY-DAY WAITING PERIOD before a new flood policy takes effect, so it cannot be bought when the forecast turns; building and contents are SEPARATE coverages and buying one does not include the other; and roughly a quarter of flood claims come from OUTSIDE high-risk zones, which is why a low-risk zone is a reason to check the price rather than a reason to skip it.', true],
+            ['What your zone does not tell you', 'Your flood zone above is a mapped FEMA reference for your location. What it does not tell you is what a policy would cost — only an agent or the NFIP can price that.']
+        ]);
     }
 
     /* ── §17.5 · FLOOD ZONE (FEMA) + EARTHQUAKE SHAKING (USGS), BY ADDRESS ───────────────────────
