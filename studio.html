@@ -7767,18 +7767,37 @@
                     html += `
             <div style="margin-top:14px; padding:14px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:4px;">
                 <div style="color:var(--teal-mid); font-weight:bold; font-size:13px; margin-bottom:10px;">🧾 Annual Carrying Cost</div>
+                ${/* ══ §17.1 · THE FLAT CARRYING-COST LIST BECOMES THREE LABELLED GROUPS ══════════════════
+                      Authored 2026-07-25, wired 2026-08-06. A PURE REGROUP: no math change, no field added
+                      or removed, and calcCarryTotal (studio.html ~9867) still sums the SAME five fields
+                      exactly once each — propTax, homeIns, maint, hoa, util. If this edit ever changes the
+                      TOTAL, it has gone wrong; the total line below is unmoved and unmodified on purpose.
+                      ORDER IS AUTHORED, NOT ARBITRARY: A Carrying -> B Insurance -> C Operating. Insurance
+                      sits ABOVE Operating because Group B is the anchor the rest of §17 hangs off — §17.2
+                      education, §17.3 Coverage A-F, §17.4 endorsements and §17.5 flood/quake all land
+                      inside it. Putting it last would bury the section under the utility bill.
+                      WHY THE GROUP HEADERS ARE ONE UNBROKEN TEXT NODE: the §17 winner-gate asserts these
+                      authored strings in the ACTUALLY-SERVED BYTES. Splitting "Carrying Costs" from its
+                      "— what you owe..." clause across two styled spans would render identically and make
+                      the literal ungreppable, so the gate would be asserting a string the page never
+                      contains as one piece. Style the line, never fracture the sentence. */''}
+                <div class="carry-group-label" style="color:var(--muted); font-size:11px; letter-spacing:0.03em; margin:2px 0 8px;">Carrying Costs — what you owe to keep the home.</div>
                 <div class="field-row">
                     ${_carryMirrorField(id, acc, 'propTaxAnnual', 'propTaxYr', 'Property Tax (yr)', 'Property tax', 'Your yearly property tax, set by your local assessor. Enter your bill amount — it can change each year as assessments and rates do.', 'left')}
-                    ${/* §20.4 SYNC (Property Copy Bank A26) — matches the Moat-side rename so the MIRRORED figure
-                          carries the SAME label on both surfaces; §18.2's D1 unification stays honest. Label only. */''}
-                    ${_carryMirrorField(id, acc, 'insAnnual', 'homeInsYr', 'Annual Homeowner Insurance', 'Homeowners insurance', 'What you pay each year to insure the home itself against damage — separate from the mortgage. Enter your policy\'s annual premium.', 'right')}
-                </div>
-                <div class="field-row">
-                    <div><span class="input-label modal-tt-wrap" style="cursor:help;">Est. Maintenance / Repairs (yr)<div class="modal-tt" style="left:0; right:auto;"><strong>est. · ~1% of value</strong>A rough estimate — about 1% of the home's value is a common rule of thumb. It's only a starting point; your own number always wins.</div></span><input type="text" class="small-field curr-format" placeholder="${maintPH>0 ? 'est. $'+maintPH.toLocaleString('en-US') : '$0'}" value="${formatCurrencyDisplay(acc.maintYr||'')}" oninput="updateAccField('${id}', 'maintYr', this.value)"></div>
                     <div><span class="input-label modal-tt-wrap" style="cursor:help;">HOA / Condo Fees (yr)<div class="modal-tt" style="right:0; left:auto;"><strong>HOA / condo dues</strong>Yearly dues for a homeowners or condo association, where you have one. Leave it blank if this home has none.</div></span><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.hoaYr||'')}" oninput="updateAccField('${id}', 'hoaYr', this.value)"></div>
                 </div>
-                <div class="field-row" style="grid-template-columns: 1fr;">
-                    <div><span class="input-label modal-tt-wrap" style="cursor:help;">Utilities — electric / gas / water (yr)<div class="modal-tt" style="left:0; right:auto;"><strong>Link or enter</strong>The recurring bills to keep the lights on and water running — electric, gas, water. Link an account to keep it current, or enter your own yearly figure.</div></span><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.utilYr||'')}" oninput="updateAccField('${id}', 'utilYr', this.value)"></div>
+                ${/* §20.4 SYNC (Property Copy Bank A26) — the Moat-side rename is mirrored here so the
+                      MIRRORED figure carries the SAME label on both surfaces; §18.2's D1 unification stays
+                      honest. Label only. Homeowner Insurance MOVES under Group B (§17.1) — its tooltip
+                      alignment flips right -> left because it is no longer the right-hand column. */''}
+                <div class="carry-group-label" style="color:var(--muted); font-size:11px; letter-spacing:0.03em; margin:16px 0 8px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.05);">Property Insurance — what protects the home and you.</div>
+                <div class="field-row">
+                    ${_carryMirrorField(id, acc, 'insAnnual', 'homeInsYr', 'Annual Homeowner Insurance', 'Homeowners insurance', 'What you pay each year to insure the home itself against damage — separate from the mortgage. Enter your policy\'s annual premium.', 'left')}
+                </div>
+                <div class="carry-group-label" style="color:var(--muted); font-size:11px; letter-spacing:0.03em; margin:16px 0 8px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.05);">Operating Costs — what it takes to run the home day to day.</div>
+                <div class="field-row">
+                    <div><span class="input-label modal-tt-wrap" style="cursor:help;">Est. Maintenance / Repairs (yr)<div class="modal-tt" style="left:0; right:auto;"><strong>est. · ~1% of value</strong>A rough estimate — about 1% of the home's value is a common rule of thumb. It's only a starting point; your own number always wins.</div></span><input type="text" class="small-field curr-format" placeholder="${maintPH>0 ? 'est. $'+maintPH.toLocaleString('en-US') : '$0'}" value="${formatCurrencyDisplay(acc.maintYr||'')}" oninput="updateAccField('${id}', 'maintYr', this.value)"></div>
+                    <div><span class="input-label modal-tt-wrap" style="cursor:help;">Utilities — electric / gas / water (yr)<div class="modal-tt" style="right:0; left:auto;"><strong>Link or enter</strong>The recurring bills to keep the lights on and water running — electric, gas, water. Link an account to keep it current, or enter your own yearly figure.</div></span><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.utilYr||'')}" oninput="updateAccField('${id}', 'utilYr', this.value)"></div>
                 </div>
                 <div style="display:flex; justify-content: space-between; margin-top:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;">
                     <span class="input-label" style="color:var(--white);">Total Annual Carrying Cost</span>
