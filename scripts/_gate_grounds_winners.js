@@ -39,7 +39,13 @@ const NOCTRL   = process.argv.includes('--nocontrol');
    §17.1 makes ("pure regroup + section headers, no math change"). A control that reddened everything
    would prove only that I broke the page. */
 const FLATCARRY = process.argv.includes('--flatcarry');
-const MUT = NOHELOC || NOCTRL || FLATCARRY;
+/* §17.2 — --noeducation makes the teach panel return '' unconditionally, i.e. the pre-§17.2 room.
+   The presence legs must RED; the ABSENCE legs (collapse-on-hoType, townhome-absent-by-default)
+   must STAY GREEN, because an empty panel satisfies them honestly. That asymmetry is deliberate and
+   worth reading: it is the reminder that an absence assertion proves nothing on its own, which is
+   why each one here is paired with a presence leg on a fixture where the thing SHOULD appear. */
+const NOEDUC = process.argv.includes('--noeducation');
+const MUT = NOHELOC || NOCTRL || FLATCARRY || NOEDUC;
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8305;
 const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
@@ -57,6 +63,8 @@ const M_CTRL = '        if (false) {   /* link control removed by --nocontrol */
    anchors --flatcarry deletes, so the gate and its own negative control cannot drift apart: if the
    copy is reworded, the anchor stops matching and apply() aborts with "expected exactly 1 occurrence"
    rather than silently testing nothing. */
+const A_EDUC = "        if (acc.hoType) return '';                       // §17.3 lands this field; collapse on choice";
+const M_EDUC = "        if (true) return '';   /* §17.2 education panel removed by --noeducation */";
 const G17_A = 'Carrying Costs — what you owe to keep the home.';
 const G17_B = 'Property Insurance — what protects the home and you.';
 const G17_C = 'Operating Costs — what it takes to run the home day to day.';
@@ -81,6 +89,7 @@ const server = http.createServer((req, res) => {
       apply(G17_B, '', 'G17_B');
       apply(G17_C, '', 'G17_C');
     }
+    if (NOEDUC) apply(A_EDUC, M_EDUC, 'A_EDUC');
     body = Buffer.from(src, 'utf8');
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
@@ -126,6 +135,14 @@ const server = http.createServer((req, res) => {
     out.gFill = cap();
     // gAuto — a Driveway (auto) room to prove Grounds-only gating (Driveway wired in a later wave).
     out.gAuto = grab('auto');
+    /* §17.2 — two one-field fixtures, each isolating ONE conditional so a failure names its own cause.
+       gHoType: a policy type IS chosen -> the teach box must collapse (row 183). The field is the
+                §17.3 dropdown, not yet wired, so it is set directly here; that is the whole point —
+                this leg proves the collapse works BEFORE the control that will drive it exists.
+       gTown:   propType = Townhouse -> the townhome branch appears (row 192). Uses the propType
+                field that ALREADY ships, so the branch needed no new input invented for it. */
+    out.gHoType = grab('property', { hoType: 'HO-3' });
+    out.gTown   = grab('property', { propType: 'Townhouse' });
     // §9b — g9bAll fires ALL four rules: value 200k, linked debt 180k (LTV 90%), carry 10k (cost-to-value 5%),
     // manual utilities. gNone fires none (value only — no carry/debt/util) → §9b prints nothing.
     addInstance('property');
@@ -387,6 +404,34 @@ const server = http.createServer((req, res) => {
   ok(has(R.gFill, G17_A) && has(R.gFill, G17_B) && has(R.gFill, G17_C)
      && R.gFill.indexOf(G17_A) < R.gFill.indexOf(G17_B) && R.gFill.indexOf(G17_B) < R.gFill.indexOf(G17_C),
      '§17.1 ORDER — Carrying → Insurance → Operating (Insurance ABOVE Operating: it is where §17.2-§17.5 land)');
+
+  /* ══ §17.2 · THE HO-1…HO-8 EDUCATION BLOCK, IN THE SERVED BYTES ════════════════════════════════
+     All eight authored lines asserted whole. Cheap to write, and the reason to write all eight
+     rather than spot-check two: this is EDUCATION COPY about insurance a user may act on, so a
+     silently-dropped line is a silently-missing explanation, not a cosmetic gap. */
+  ok(has(R.gFill, "HO-1 (Basic) — bare-bones, named-perils only. Rare today; most lenders won't accept it."), '§17.2 HO-1 line verbatim');
+  ok(has(R.gFill, 'HO-2 (Broad) — named-perils on both home and belongings. A step up from HO-1, still limited.'), '§17.2 HO-2 line verbatim');
+  ok(has(R.gFill, 'HO-3 (Special) — the standard homeowner policy. Open-perils on the house, named-perils on belongings. If you own a house, this is usually you.'), '§17.2 HO-3 line verbatim');
+  ok(has(R.gFill, "HO-4 (Renters) — covers YOUR belongings and liability inside a place you rent. The building is the landlord's policy, not yours."), '§17.2 HO-4 line verbatim');
+  ok(has(R.gFill, 'HO-5 (Comprehensive) — open-perils on both the home AND your belongings. The broadest common policy; costs more, claims are easier.'), '§17.2 HO-5 line verbatim');
+  ok(has(R.gFill, "HO-6 (Condo) — covers your unit's interior, belongings, and liability. The association's master policy covers the building shell."), '§17.2 HO-6 line verbatim');
+  ok(has(R.gFill, 'HO-7 — an HO-3-style policy written for a mobile or manufactured home.'), '§17.2 HO-7 line verbatim');
+  ok(has(R.gFill, 'HO-8 (Older Home) — for homes whose rebuild cost exceeds market value; pays repair cost rather than full replacement. Common for historic houses.'), '§17.2 HO-8 line verbatim');
+  ok(has(R.gFill, 'ira-why-sec hot') && R.gFill.indexOf('ira-why-sec hot') < R.gFill.indexOf('HO-4 (Renters)'),
+     '§17.2 HO-3 carries the common-default highlight (row 186) and it is the ONLY one — a tag on every line tags nothing');
+  ok(has(R.gFill, 'General education, not a coverage recommendation.'),
+     '§17.2 GUARD (row 193) — labelled education on its face, never advice');
+  /* THE COLLAPSE, BOTH DIRECTIONS. Presence alone would pass on a panel that can never close, and
+     "it disappears" alone would pass on a panel that never appeared (§ exclusion needs presence). */
+  ok(has(R.gFill, 'Homeowner policy types — HO-1 through HO-8'), '§17.2 teach box PRESENT while no policy type is chosen');
+  ok(!has(R.gHoType, 'Homeowner policy types — HO-1 through HO-8') && !has(R.gHoType, 'HO-3 (Special)'),
+     '§17.2 teach box COLLAPSES once acc.hoType is set (row 183) — the §17.3 dropdown will drive this');
+  ok(has(R.gHoType, 'Annual Homeowner Insurance'),
+     '§17.2 collapse hides ONLY the teach box — Group B and its field survive (proves the collapse is scoped, not a blank room)');
+  /* TOWNHOME BRANCH — conditional on the EXISTING propType field, so it must be ABSENT by default. */
+  ok(!has(R.gFill, 'It depends who owns the walls'), '§17.2 townhome branch ABSENT on a non-townhouse (conditional teach)');
+  ok(has(R.gTown, 'Townhome? It depends who owns the walls — if you own the structure, look at HO-3 or HO-5; if you rent, HO-4; if a condo association owns the shell, HO-6.'),
+     '§17.2 townhome branch PRESENT and verbatim when propType = Townhouse (row 192)');
   ok(pick(!has(R.gAuto, 'Annual Carrying Cost'), has(R.gAuto, 'Annual Carrying Cost')), 'Carrying-cost block ABSENT on Driveway (Grounds-only, this wave) [BITE]');
   ok(Array.isArray(R.dbFeed) && R.dbFeed.some(function (x) { return x.annualCarry === 16800; }), 'Datum Builder feed hook emits annualCarry 16800');
 
