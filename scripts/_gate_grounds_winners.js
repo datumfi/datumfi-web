@@ -72,8 +72,16 @@ const ZEROPLACE = process.argv.includes('--zeroplace');
 const NOENDORSE   = process.argv.includes('--noendorse');
 const EAGERFIELDS = process.argv.includes('--eagerfields');
 const DEAFSWITCH  = process.argv.includes('--deafswitch');
+/* §13.72 — --deafselect removes `hoType`/`propType` from updateAccField's re-render whitelist, i.e.
+   restores the exact state measured live on 2026-08-07: both dropdowns STORE their value perfectly
+   and NEITHER repaints, so the teach panel never collapses and the townhome line never appears.
+   It must redden the two CLICK legs and NOTHING ELSE — every state-injection leg in this file stays
+   green under it, honestly, which is the whole point and the reason the bug survived 196 gates.
+   THE BLAST RADIUS OF A CONTROL IS ITSELF A CLAIM: two red is the correct size here, and a control
+   that reddened the §17.2 render legs too would be proving something this fix does not claim. */
+const DEAFSELECT  = process.argv.includes('--deafselect');
 const MUT = NOHELOC || NOCTRL || FLATCARRY || NOEDUC || NOCOV || WRONGFLD || ZEROPLACE
-         || NOENDORSE || EAGERFIELDS || DEAFSWITCH;
+         || NOENDORSE || EAGERFIELDS || DEAFSWITCH || DEAFSELECT;
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8305;
 const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
@@ -108,6 +116,8 @@ const A_EAGER = "            var lim = on";
 const M_EAGER = "            var lim = true   /* --eagerfields: reveal regardless of the switch */";
 const A_DEAF  = "            var on = !!acc[key];";
 const M_DEAF  = "            var on = !!acc[key + 'X'];   /* --deafswitch: render reads a key nothing writes */";
+const A_DEAFSEL = "            if(field === 'hoType' || field === 'propType') openAccountModal(id);   // §17.2 teach-panel collapse + townhome branch";
+const M_DEAFSEL = "            /* --deafselect: the pre-fix state — both fields store, neither repaints */";
 const G17_A = 'Carrying Costs — what you owe to keep the home.';
 const G17_B = 'Property Insurance — what protects the home and you.';
 const G17_C = 'Operating Costs — what it takes to run the home day to day.';
@@ -139,6 +149,7 @@ const server = http.createServer((req, res) => {
     if (NOENDORSE)   apply(A_NOENDORSE, M_NOENDORSE, 'A_NOENDORSE');
     if (EAGERFIELDS) apply(A_EAGER,     M_EAGER,     'A_EAGER');
     if (DEAFSWITCH)  apply(A_DEAF,      M_DEAF,      'A_DEAF');
+    if (DEAFSELECT)  apply(A_DEAFSEL,   M_DEAFSEL,   'A_DEAFSEL');
     body = Buffer.from(src, 'utf8');
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
@@ -225,6 +236,36 @@ const server = http.createServer((req, res) => {
         labels: Array.from(det.querySelectorAll('.toggle-label')).map(function (x) { return x.textContent; })
       };
     };
+    /* ⭐ §13.72 — THE TWO SELECT GESTURES, DRIVEN FOR REAL. The two fixtures above (gHoType, gTown)
+       assign the field and open the modal FRESH; they prove the room DRAWS correctly and they were
+       green through the entire live defect. These two make the actual gesture on the actual <select>
+       and then DELIBERATELY DO NOT REOPEN THE MODAL, because reopening is the one thing that hides
+       it. Each returns BOTH sides — what was on screen before the gesture and after — so neither leg
+       can pass on a room that simply rendered nothing. */
+    const selectGesture = (accId, matchOptionText, value) => {
+      window.openAccountModal(accId);
+      const root = document.getElementById('modal-dynamic-content');
+      if (!root) return { control: false, why: 'NO_MODAL_CONTENT', before: '', after: '', stored: null };
+      const sel = Array.from(root.querySelectorAll('select')).filter(function (s) {
+        return s.innerHTML.indexOf(matchOptionText) >= 0;
+      })[0];
+      if (!sel) return { control: false, why: 'NO_SELECT_MATCHING_' + matchOptionText, before: root.innerHTML, after: '', stored: null };
+      const before = root.innerHTML;
+      sel.value = value;
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      const root2 = document.getElementById('modal-dynamic-content');
+      return { control: true, why: '', before: before, after: root2 ? root2.innerHTML : '' };
+    };
+    addInstance('property');
+    const gSelHo = window.state.accounts.filter(x => x.baseId === 'property').pop();
+    gSelHo.value = 400000;
+    out.gClickHoType = selectGesture(gSelHo.id, 'Select policy type…', 'HO-3');
+    out.gClickHoTypeStored = gSelHo.hoType;
+    addInstance('property');
+    const gSelTown = window.state.accounts.filter(x => x.baseId === 'property').pop();
+    gSelTown.value = 400000;
+    out.gClickPropType = selectGesture(gSelTown.id, 'Select type…', 'Townhouse');
+    out.gClickPropTypeStored = gSelTown.propType;
     addInstance('property');
     const eNone = window.state.accounts.filter(x => x.baseId === 'property').pop();
     eNone.value = 400000;
@@ -593,6 +634,32 @@ const server = http.createServer((req, res) => {
      PRECONDITION FIRST, AND NOT WRAPPED IN pick(). You may not prove a thing is absent from a
      control without first proving the control EXISTS — a vanished disclosure must RED, never green.
      A precondition that inverts under --redfirst lets an inverted run pass by doing nothing. */
+  /* ══ ⭐ §13.72 · THE GESTURE MUST REACH THE SCREEN, NOT ONLY THE STORE ═══════════════════════════
+     Measured live 2026-08-07: both of these dropdowns stored their value perfectly and NEITHER
+     repainted, so the §17.2 teach panel never collapsed and the townhome line never appeared. The
+     Captain's own smoke steps #4 and #5. Every gate in this file was green over it, honestly,
+     because every one of them assigns the field and opens the modal FRESH.
+     🔑 A TEST THAT SETS STATE AND THEN RE-RENDERS PROVES THE RENDERER, NEVER THE HANDLER. "The value
+     saves" and "the user sees it work" are two claims on two layers, and a suite can be green on the
+     first while the second is dead. These legs drive the real <select> and refuse to reopen.
+     Each carries BOTH halves — what was on screen before the gesture AND after — because "the panel
+     is gone" passes just as happily on a room that rendered nothing at all. */
+  lines.push('===== ⭐ §13.72 · SELECT GESTURES REACH THE SCREEN (no reopen) =====');
+  ok(R.gClickHoType.control === true, '§13.72 PRECONDITION — the HO-type <select> exists to be driven (why: ' + (R.gClickHoType.why || 'ok') + ')');
+  ok(R.gClickPropType.control === true, '§13.72 PRECONDITION — the Property-type <select> exists to be driven (why: ' + (R.gClickPropType.why || 'ok') + ')');
+  ok(R.gClickHoTypeStored === 'HO-3' && R.gClickPropTypeStored === 'Townhouse',
+     '§13.72 both gestures STORE their value (the half that was never broken)');
+  /* hoType: the teach box must be there BEFORE and gone AFTER — and Group B's own field must SURVIVE,
+     or "it collapsed" would also pass on a room that re-rendered into a stub. */
+  ok(has(R.gClickHoType.before, 'Homeowner policy types — HO-1 through HO-8')
+     && !has(R.gClickHoType.after, 'Homeowner policy types — HO-1 through HO-8')
+     && has(R.gClickHoType.after, 'Coverage A — Dwelling'),
+     '§13.72 picking a policy type COLLAPSES the teach panel ON THE GESTURE — and the coverage fields survive (row 183)');
+  /* propType: absent before, present and VERBATIM after. The presence half is what makes the
+     absence half mean anything. */
+  ok(!has(R.gClickPropType.before, 'It depends who owns the walls')
+     && has(R.gClickPropType.after, 'Townhome? It depends who owns the walls — if you own the structure, look at HO-3 or HO-5; if you rent, HO-4; if a condo association owns the shell, HO-6.'),
+     '§13.72 choosing Townhouse REVEALS the townhome line ON THE GESTURE, verbatim (row 192)');
   lines.push('===== §17.4 · ENDORSEMENT COVERAGES (conditional reveal) =====');
   ok(R.gEndNone.control === true, '§17.4 PRECONDITION — the endorsement disclosure EXISTS on a property (why: ' + (R.gEndNone.why || 'ok') + ')');
   ok(R.gEndOne.control === true,  '§17.4 PRECONDITION — it exists on the carried fixture too (why: ' + (R.gEndOne.why || 'ok') + ')');
