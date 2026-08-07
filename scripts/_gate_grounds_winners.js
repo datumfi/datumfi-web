@@ -45,7 +45,17 @@ const FLATCARRY = process.argv.includes('--flatcarry');
    worth reading: it is the reminder that an absence assertion proves nothing on its own, which is
    why each one here is paired with a presence leg on a fixture where the thing SHOULD appear. */
 const NOEDUC = process.argv.includes('--noeducation');
-const MUT = NOHELOC || NOCTRL || FLATCARRY || NOEDUC;
+/* §17.3 — THREE controls, because §17.3 makes three separable claims and a single blunt mutation
+   would prove only the first. A NEGATIVE CONTROL MUST FAIL IN THE SHAPE OF THE CLAIM.
+     --nocoverage  the whole block is gone            -> the broad "it shipped" claim
+     --wrongfield  the dropdown writes 'hoForm'       -> the §17.2 HANDSHAKE claim. This is the
+                   exact silent failure §17.2 flagged forward: the teach box would simply never
+                   collapse and nothing else would look wrong. It must be LOUD, and this proves it.
+     --zeroplace   limits ship a "$0" placeholder     -> the row-205 blank-until-entered guard */
+const NOCOV     = process.argv.includes('--nocoverage');
+const WRONGFLD  = process.argv.includes('--wrongfield');
+const ZEROPLACE = process.argv.includes('--zeroplace');
+const MUT = NOHELOC || NOCTRL || FLATCARRY || NOEDUC || NOCOV || WRONGFLD || ZEROPLACE;
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8305;
 const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
@@ -63,6 +73,12 @@ const M_CTRL = '        if (false) {   /* link control removed by --nocontrol */
    anchors --flatcarry deletes, so the gate and its own negative control cannot drift apart: if the
    copy is reworded, the anchor stops matching and apply() aborts with "expected exactly 1 occurrence"
    rather than silently testing nothing. */
+const A_NOCOV = "        var F = function (key, label, w, d, align, kind) { return _propCovFieldHTML(id, acc, key, label, w, d, align, kind || 'money'); };";
+const M_NOCOV = "        return '';   /* §17.3 block removed by --nocoverage */";
+const A_WRONGFLD = "onchange=\"updateAccField('${id}', 'hoType', this.value)\"";
+const M_WRONGFLD = "onchange=\"updateAccField('${id}', 'hoForm', this.value)\"";
+const A_ZEROPLACE = "placeholder=\"—\" value=\"' + val +";
+const M_ZEROPLACE = "placeholder=\"$0\" value=\"' + val +";
 const A_EDUC = "        if (acc.hoType) return '';                       // §17.3 lands this field; collapse on choice";
 const M_EDUC = "        if (true) return '';   /* §17.2 education panel removed by --noeducation */";
 const G17_A = 'Carrying Costs — what you owe to keep the home.';
@@ -90,6 +106,9 @@ const server = http.createServer((req, res) => {
       apply(G17_C, '', 'G17_C');
     }
     if (NOEDUC) apply(A_EDUC, M_EDUC, 'A_EDUC');
+    if (NOCOV)     apply(A_NOCOV,     M_NOCOV,     'A_NOCOV');
+    if (WRONGFLD)  apply(A_WRONGFLD,  M_WRONGFLD,  'A_WRONGFLD');
+    if (ZEROPLACE) apply(A_ZEROPLACE, M_ZEROPLACE, 'A_ZEROPLACE');
     body = Buffer.from(src, 'utf8');
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
@@ -133,6 +152,7 @@ const server = http.createServer((req, res) => {
     out.mLinked = cap();
     window.openAccountModal(gAcc.id);
     out.gFill = cap();
+    out.gId = gAcc.id;   // §17.3↔§17.2 handshake leg asserts the REAL control's field name, not a fixture's
     // gAuto — a Driveway (auto) room to prove Grounds-only gating (Driveway wired in a later wave).
     out.gAuto = grab('auto');
     /* §17.2 — two one-field fixtures, each isolating ONE conditional so a failure names its own cause.
@@ -432,6 +452,43 @@ const server = http.createServer((req, res) => {
   ok(!has(R.gFill, 'It depends who owns the walls'), '§17.2 townhome branch ABSENT on a non-townhouse (conditional teach)');
   ok(has(R.gTown, 'Townhome? It depends who owns the walls — if you own the structure, look at HO-3 or HO-5; if you rent, HO-4; if a condo association owns the shell, HO-6.'),
      '§17.2 townhome branch PRESENT and verbatim when propType = Townhouse (row 192)');
+
+  /* ══ §17.3 · COVERAGE A–F + DEDUCTIBLES + THE HO-TYPE DROPDOWN ═════════════════════════════════
+     Both authored hovers asserted on every limit — 'What's this?' AND 'Do I have enough?' — because
+     row 194 requires both and the second is the one that would be quietly dropped: it is the longer
+     string, it is the one that reads like advice, and losing it leaves a bare number with no sense
+     of scale. Nine fields, eighteen strings, all verbatim. */
+  ok(has(R.gFill, 'Homeowner policy type') && has(R.gFill, 'Select policy type…')
+     && has(R.gFill, '>HO-1<') && has(R.gFill, '>HO-8<'),
+     '§17.3 HO-type dropdown renders HO-1…HO-8, blank until chosen (row 195)');
+  ok(has(R.gFill, "The cost to rebuild your home's structure.") && has(R.gFill, 'Should roughly equal REBUILD cost — not market price and not your mortgage.'), '§17.3 Coverage A — both hovers verbatim');
+  ok(has(R.gFill, 'Detached structures — fence, shed, detached garage.') && has(R.gFill, 'Often defaults to ~10% of Coverage A; raise it if you have a big detached structure.'), '§17.3 Coverage B — both hovers verbatim');
+  ok(has(R.gFill, 'Your belongings — furniture, clothes, electronics.') && has(R.gFill, 'Often ~50–70% of Coverage A. Do a rough room-by-room tally to sanity-check.'), '§17.3 Coverage C — both hovers verbatim');
+  ok(has(R.gFill, "Pays living costs if you can't stay home during a covered repair.") && has(R.gFill, 'Often ~20% of Coverage A; think months of rent + meals.'), '§17.3 Coverage D — both hovers verbatim');
+  ok(has(R.gFill, "Covers you if someone is hurt or their property is damaged and you're liable.") && has(R.gFill, 'Common floors are $300k–$500k; a pool, dog, or trampoline argues for more (or an umbrella policy).'), '§17.3 Coverage E — both hovers verbatim');
+  ok(has(R.gFill, 'Small no-fault medical bills for a guest hurt on your property.') && has(R.gFill, 'Usually $1k–$5k; goodwill coverage, not the big liability line.'), '§17.3 Coverage F — both hovers verbatim');
+  ok(has(R.gFill, 'What you pay out of pocket before a normal claim (fire, theft) pays.') && has(R.gFill, 'Higher deductible = lower premium; pick what you could cover on short notice.'), '§17.3 Deductible Other Perils — both hovers verbatim');
+  /* THE TWO STORM DEDUCTIBLES ARE ASSERTED SEPARATELY AND BY NAME. Collapsing them into one control
+     was the specific mistake to avoid — they are distinct policy lines, often percentage-based, and
+     a single "storm deductible" field would silently merge two different numbers a coastal owner
+     actually carries. Order pinned: Hurricane before Wind/Hail, as authored (rows 203 then 204). */
+  ok(has(R.gFill, 'Deductible — Hurricane') && has(R.gFill, 'A separate, often PERCENTAGE deductible that applies to named-storm damage.') && has(R.gFill, 'A % deductible on a big Coverage A can be a large dollar figure — do the math for a real storm.'), '§17.3 Deductible Hurricane — present + both hovers verbatim');
+  ok(has(R.gFill, 'Deductible — Wind/Hail') && has(R.gFill, 'A separate deductible for wind or hail damage, common in storm-prone regions.') && has(R.gFill, 'Like the hurricane line — a % here can be a big number; know it before a claim.'), '§17.3 Deductible Wind/Hail — present + both hovers verbatim');
+  ok(R.gFill.indexOf('Deductible — Hurricane') < R.gFill.indexOf('Deductible — Wind/Hail')
+     && R.gFill.indexOf('Deductible — Other Perils (standard)') < R.gFill.indexOf('Deductible — Hurricane'),
+     '§17.3 the three deductibles are THREE separate controls in authored order (standard → hurricane → wind/hail)');
+  /* ⛔ ROW 205, THE GUARD THAT MATTERS MOST. A blank limit and a limit of zero are opposite facts,
+     and on an insurance figure that is the difference between "not recorded" and "not covered". */
+  ok(!/placeholder="\$0"[^>]*oninput="updateAccField\('[^']+', 'cov[A-F]'/.test(R.gFill)
+     && !/value="\$0"[^>]*oninput="updateAccField\('[^']+', 'cov[A-F]'/.test(R.gFill),
+     '§17.3 GUARD (row 205) — no Coverage limit ships a $0 placeholder or a pre-filled value');
+  ok((R.gFill.match(/placeholder="—"/g) || []).length >= 9,
+     '§17.3 GUARD — all nine §17.3 inputs render an em-dash placeholder, never a "typical" amount');
+  /* THE FORWARD DEPENDENCY, NOW CLOSED. §17.2 wired its collapse against a field that did not exist
+     yet and this is the handshake: the dropdown §17.3 ships must be the SAME `hoType`, or the teach
+     box never steps aside and nobody finds out. Asserted on the real control, not on the fixture. */
+  ok(has(R.gFill, "updateAccField('" + R.gId + "', 'hoType', this.value)"),
+     '§17.3 ↔ §17.2 HANDSHAKE — the dropdown writes `hoType`, the exact field §17.2 collapses on');
   ok(pick(!has(R.gAuto, 'Annual Carrying Cost'), has(R.gAuto, 'Annual Carrying Cost')), 'Carrying-cost block ABSENT on Driveway (Grounds-only, this wave) [BITE]');
   ok(Array.isArray(R.dbFeed) && R.dbFeed.some(function (x) { return x.annualCarry === 16800; }), 'Datum Builder feed hook emits annualCarry 16800');
 
