@@ -101,11 +101,20 @@ const SDCFALLBACK = process.argv.includes('--sdcfallback');
                     mistake §26c forbids ("do not map it to the nearest block"). It must redden the
                     SILENCE legs and nothing else: a wrong-but-plausible paragraph about somebody
                     else's building is worse than none, and it is the failure nobody would report. */
+/* §17.3a — the two controls the bank asked for by name.
+     --ho3note   forces a note onto HO-3, where the bank authored SILENCE. That silence is the thing
+                 a future reader is most likely to "fix" by completing the set, and a note there is
+                 invisible as a defect because it looks like thoroughness.
+     --hidefield lets hoType HIDE a coverage field (HO-4 loses Coverage A) -> guard 1. This is the
+                 one a tidy-up refactor breaks, because hiding a field that "does not apply" always
+                 feels like an improvement. AN INVISIBLE FIELD IS AN UNLABELLED RECOMMENDATION. */
+const HO3NOTE   = process.argv.includes('--ho3note');
+const HIDEFIELD = process.argv.includes('--hidefield');
 const NOTYPEDI     = process.argv.includes('--notypedi');
 const TYPEFALLBACK = process.argv.includes('--typefallback');
 const MUT = NOHELOC || NOCTRL || FLATCARRY || NOEDUC || NOCOV || WRONGFLD || ZEROPLACE
          || NOENDORSE || EAGERFIELDS || DEAFSWITCH || DEAFSELECT
-         || NOHAZARD || WORDONLY || SDCFALLBACK || NOTYPEDI || TYPEFALLBACK;
+         || NOHAZARD || WORDONLY || SDCFALLBACK || NOTYPEDI || TYPEFALLBACK || HO3NOTE || HIDEFIELD;
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8305;
 const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
@@ -165,6 +174,10 @@ const A_SDC_STORE = "if (_qk && _qk.status === 'ok' && typeof _qk.ss === 'number
 const M_SDC_STORE = "if (_qk && _qk.status === 'ok') _hz.quake = { status: 'ok', ss: _qk.ss, sdc: _qk.sdc, source: _qk.source, updated: _qk.updated };   /* --sdcfallback */";
 const A_SDC_READ = "        var band = _quakeBand(ss);";
 const M_SDC_READ = "        var band = _quakeBand(ss); if (!band && hz.quake && hz.quake.sdc) { band = 'category ' + hz.quake.sdc; ss = hz.quake.sdc; }   /* --sdcfallback */";
+const A_HO3 = "        var n = acc && _HO_NOTES[String(acc.hoType || '')];   // HO-3, blank and unlisted all fall through";
+const M_HO3 = "        var n = (acc && _HO_NOTES[String(acc.hoType || '')]) || (acc && acc.hoType === 'HO-3' ? 'The standard form.' : null);   /* --ho3note */";
+const A_HIDEFLD = "        var F = function (key, label, w, d, align, kind) { return _propCovFieldHTML(id, acc, key, label, w, d, align, kind || 'money'); };";
+const M_HIDEFLD = "        var F = function (key, label, w, d, align, kind) { if (acc.hoType === 'HO-4' && key === 'covA') return ''; return _propCovFieldHTML(id, acc, key, label, w, d, align, kind || 'money'); };   /* --hidefield */";
 const A_TYPEDI = "        if (!txt) return '';";
 const M_TYPEDI = "        if (true) return '';   /* §26.3 block removed by --notypedi */";
 const A_TYPEFB = "            : _PROP_TYPE_DI[String(acc.propType || '')];      // undefined on blank or unlisted -> silent";
@@ -214,6 +227,8 @@ const server = http.createServer((req, res) => {
     if (SDCFALLBACK) { apply(A_SDC_STORE, M_SDC_STORE, 'A_SDC_STORE'); apply(A_SDC_READ, M_SDC_READ, 'A_SDC_READ'); }
     if (NOTYPEDI)     apply(A_TYPEDI,   M_TYPEDI,   'A_TYPEDI');
     if (TYPEFALLBACK) apply(A_TYPEFB,   M_TYPEFB,   'A_TYPEFB');
+    if (HO3NOTE)   apply(A_HO3,      M_HO3,      'A_HO3');
+    if (HIDEFIELD) apply(A_HIDEFLD,  M_HIDEFLD,  'A_HIDEFLD');
     body = Buffer.from(src, 'utf8');
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
@@ -353,6 +368,37 @@ const server = http.createServer((req, res) => {
         landVsSf: mk({ propPurpose: 'Land', propType: 'Single-family' }),
         purpOnly: mk({ propPurpose: 'Primary residence' })
       };
+    })();
+    /* §17.3a — every hoType the bank authored, plus blank and an unlisted one. The FIELD LIST is
+       captured per fixture because guard 1 is the claim: no field is ever hidden by a policy type. */
+    out.gHoNotes = (function () {
+      /* ⛔ THE FIELD CHECK READS THE INPUT BINDING, NOT THE LABEL — and the first version did read
+         the label, which made it VACUOUS. `--hidefield` deleted Coverage A on HO-4 and guard 1 stayed
+         GREEN, because the HO-4 NOTE contains the words "Coverage A — Dwelling usually reads zero".
+         The assertion was satisfied by the prose describing the field it was meant to find.
+         🔑 WHAT WOULD HAVE TO BE TRUE FOR THIS TO PASS WITHOUT THE THING IT CLAIMS BEING TRUE? Here:
+         a sentence mentioning the field by name. Its own control caught it. A binding cannot be
+         faked by copy — only an actual rendered input carries it. */
+      const FIELDS = ["'covA', this.value)", "'covB', this.value)", "'covC', this.value)",
+                      "'covD', this.value)", "'covE', this.value)", "'covF', this.value)",
+                      "'dedOther', this.value)", "'dedHurricane', this.value)", "'dedWindHail', this.value)"];
+      /* A LITERAL SUBSTRING, NOT A REGEX. The first version of this line was a regex written through
+         a shell heredoc; the backslashes were eaten and `var(--teal-mid)` silently became a capture
+         group, so it could never match and two legs failed in NORMAL mode. The product was right and
+         the assertion was wrong. WHEN THE NEEDLE IS A LITERAL, USE indexOf — a regex here buys
+         nothing and adds an escaping surface that fails silently. */
+      const NOTE_MARK = 'border-left:2px solid var(--teal-mid); border-radius:2px; font-size:11.5px';
+      const o = {};
+      for (const ho of ['', 'HO-1', 'HO-2', 'HO-3', 'HO-4', 'HO-5', 'HO-6', 'HO-7', 'HO-8', 'HO-99']) {
+        addInstance('property');
+        const a = window.state.accounts.filter(x => x.baseId === 'property').pop();
+        a.value = 400000; if (ho) a.hoType = ho;
+        window.openAccountModal(a.id);
+        const h = cap();
+        o[ho || 'BLANK'] = { note: h.indexOf(NOTE_MARK) >= 0, allFields: FIELDS.every(function (f) { return h.indexOf(f) >= 0; }),
+                             html: h, zeroWritten: /value="0"/.test(h) };
+      }
+      return o;
     })();
     addInstance('property');
     const eNone = window.state.accounts.filter(x => x.baseId === 'property').pop();
@@ -986,6 +1032,34 @@ const server = http.createServer((req, res) => {
   /* ══ §26.3 · THE PER-PROPERTY-TYPE DI BLOCKS ═══════════════════════════════════════════════════
      Bank §26a + §26c. The largest of the seven items the Captain asked for and the bank omitted —
      only the townhome line had ever been authored. Seven blocks, two trigger fields. */
+  /* ══ §17.3a · THE POLICY TYPE ANNOTATES, IT DOES NOT SUPPRESS ══════════════════════════════════
+     The row-195 map, authored at last, and the answer is that nothing is ever hidden. */
+  lines.push('===== §17.3a · PER-FORM NOTES (annotation, not suppression) =====');
+  const HN = R.gHoNotes;
+  /* ⛔ GUARD 1 IS THE WHOLE SECTION AND IT IS ASSERTED ACROSS EVERY TYPE AT ONCE. Nine fields, ten
+     hoType values including blank and an unlisted one — every field renders every time. A per-type
+     leg could pass while one type quietly dropped a field; this cannot. */
+  ok(Object.keys(HN).every(function (k) { return HN[k].allFields; }),
+     '§17.3a GUARD 1 — all nine coverage fields render on EVERY policy type, blank and unlisted included (nothing is ever hidden)');
+  ok(HN['HO-1'].note && has(HN['HO-1'].html, 'These cover a NAMED LIST of causes rather than everything not excluded')
+     && HN['HO-2'].note, '§17.3a HO-1 / HO-2 note verbatim, on both');
+  ok(has(HN['HO-4'].html, 'Renters cover: the building is your landlord’s to insure, so Coverage A — Dwelling usually reads zero or is absent on your policy.'), '§17.3a HO-4 note verbatim');
+  ok(has(HN['HO-5'].html, 'so Coverage C often behaves better than the same number on an HO-3.'), '§17.3a HO-5 note verbatim');
+  ok(has(HN['HO-6'].html, 'What the master policy stops covering is exactly where yours starts.'), '§17.3a HO-6 note verbatim');
+  ok(has(HN['HO-7'].html, 'to what it would cost to REPLACE the home or to what it is currently WORTH'), '§17.3a HO-7 note verbatim');
+  ok(has(HN['HO-8'].html, 'It generally pays ACTUAL CASH VALUE rather than replacement cost'), '§17.3a HO-8 note verbatim');
+  /* ⛔ HO-3'S SILENCE IS AUTHORED, NOT AN OMISSION — paired with a type that DOES speak, so "silent"
+     cannot pass on a build where the note never renders at all. */
+  ok(HN['HO-3'].note === false && HN['HO-5'].note === true,
+     '§17.3a HO-3 is SILENT BY DESIGN while other forms speak — the commonest case needs no caveat');
+  ok(HN['BLANK'].note === false && HN['HO-99'].note === false,
+     '§17.3a blank and UNLISTED policy types are silent — an unauthored form is never mapped to a nearest match');
+  /* ⛔ GUARD 2: the HO-4 note SAYS Coverage A usually reads zero. It must never WRITE zero. */
+  ok(HN['HO-4'].zeroWritten === false && has(HN['HO-4'].html, 'usually reads zero'),
+     '§17.3a GUARD 2 — the HO-4 note says zero and NEVER writes it (row 205: a blank limit is a correct limit)');
+  /* Guard 5: the note is a companion to the hovers, not a replacement. Both render together. */
+  ok(has(HN['HO-4'].html, 'Should roughly equal REBUILD cost — not market price and not your mortgage.'),
+     '§17.3a GUARD 5 — the §17.3 field hovers survive alongside the form note (the hover explains the FIELD, the note the FORM)');
   lines.push('===== §26.3 · PER-PROPERTY-TYPE DI BLOCKS =====');
   const T = R.gTypeDI;
   ok(has(T.sf, 'a single-family home — the case nearly every homeowners policy is written around'), '§26a Single-family block verbatim');
@@ -1116,6 +1190,22 @@ const server = http.createServer((req, res) => {
      '§17.5b an unplaceable X claims NO tier, while the flood cell itself still renders');
   ok(has(R.g175.both, 'High-risk with wave action. Flood insurance is required with a federally-backed mortgage.'),
      '§17.5b tier note verbatim on the carried fixture');
+  /* ══ §17.5c · THE FLOOD MAP ══════════════════════════════════════════════════════════════════
+     Served from OUR Worker, never FEMA — the page must not learn a third-party host. */
+  /* Asserted in two parts because innerHTML escapes `&` to `&amp;` inside an attribute — assert the
+     SERVED shape, not the authored one (the same lesson as `<option selected="">`). */
+  ok(has(R.g175.both, '/floodmap?lat=27.9775') && has(R.g175.both, 'lon=-82.829')
+     && has(R.g175.both, 'rentcast-avm.dmerced1.workers.dev/floodmap')
+     && !has(R.g175.both, 'hazards.fema.gov'),
+     '§17.5c the map is requested from OUR Worker with the reading\'s own coordinates — hazards.fema.gov never appears in the page');
+  /* ⛔ IT MUST FAIL SILENTLY. The studio half ships BEFORE the Worker route is deployed, so every one
+     of these 404s until then; a broken-image icon in a retirement plan reads as a broken product. */
+  ok(has(R.g175.both, "onerror=\"this.parentNode.style.display='none';\""),
+     '§17.5c GUARD — a failed map REMOVES itself (the route is not deployed yet; degrading to shipped behaviour is safe)');
+  /* Absence paired with presence: no coordinates means no map request at all, because a map without
+     them could only ever be about somewhere else. */
+  ok(!has(R.g175.noCoords, '/floodmap') && has(R.g175.both, '/floodmap'),
+     '§17.5c no coordinates -> NO map request, while a fixture with them makes one');
   ok(has(R.g175.both, 'Read from FEMA’s National Flood Hazard Layer and the USGS seismic design maps for this address in August 2026.')
      && has(R.g175.both, 'These describe the ground your home sits on — not your policy, and not a recommendation.'),
      '§17.5b the authored citation, with the month the data was READ');
