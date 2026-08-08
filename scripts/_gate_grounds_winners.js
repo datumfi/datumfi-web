@@ -170,7 +170,11 @@ const M_TYPEDI = "        if (true) return '';   /* §26.3 block removed by --no
 const A_TYPEFB = "            : _PROP_TYPE_DI[String(acc.propType || '')];      // undefined on blank or unlisted -> silent";
 const M_TYPEFB = "            : (_PROP_TYPE_DI[String(acc.propType || '')] || _PROP_TYPE_DI['Single-family']);   /* --typefallback */";
 const G17_A = 'Carrying Costs — what you owe to keep the home.';
+/* G17_B is the RETIRED Group-B label. It is kept because a leg now asserts it is ABSENT — the proof
+   that §26.2's promotion actually happened rather than being duplicated. G17_B_NOW is the section
+   subhead that took its place, and it is what --flatcarry deletes. */
 const G17_B = 'Property Insurance — what protects the home and you.';
+const G17_B_NOW = 'What protects the home and you — separate from what it costs to keep.';
 const G17_C = 'Operating Costs — what it takes to run the home day to day.';
 
 const MIME = { '.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.json':'application/json','.png':'image/png','.woff2':'font/woff2','.ico':'image/x-icon' };
@@ -190,7 +194,11 @@ const server = http.createServer((req, res) => {
     if (NOCTRL)  apply(A_CTRL,  M_CTRL,  'A_CTRL');
     if (FLATCARRY) {
       apply(G17_A, '', 'G17_A');
-      apply(G17_B, '', 'G17_B');
+      /* RE-GROUNDED (§26.2). G17_B was the Group-B LABEL inside the carrying block; that group was
+         promoted out to its own section and the label no longer exists, so this aborted rather than
+         mutating — correct. The control's claim is unchanged (strip the section labelling, leave the
+         arithmetic alone), so it now deletes the SECTION SUBHEAD that replaced it. */
+      apply(G17_B_NOW, '', 'G17_B_NOW');
       apply(G17_C, '', 'G17_C');
     }
     if (NOEDUC) apply(A_EDUC, M_EDUC, 'A_EDUC');
@@ -615,7 +623,7 @@ const server = http.createServer((req, res) => {
       try {
         // BOTH — the presence twin every absence leg below is measured against.
         const a = mk();
-        stub({ lat: 27.9775, lon: -82.8290 }, { status: 'ok', zone: 'VE', subtype: 'COASTAL FLOODPLAIN' }, { status: 'ok', ss: 1.888, sdc: 'D' });
+        stub({ lat: 27.9775, lon: -82.8290 }, { status: 'ok', zone: 'VE', subtype: 'COASTAL FLOODPLAIN', source: 'FEMA NFHL', updated: '2026-08-07T22:00:00.000Z' }, { status: 'ok', ss: 1.888, sdc: 'D', source: 'USGS ASCE 7-16', updated: '2026-08-07T22:00:00.000Z' });
         window.openAccountModal(a.id);
         o.before = cap();
         await window.groundsVerifyAndEstimate(a.id);
@@ -649,6 +657,27 @@ const server = http.createServer((req, res) => {
         await window.groundsVerifyAndEstimate(s0.id);
         o.ssNullSdc = cap();
         o.ssNullSdcStored = JSON.stringify((s0.assetAvmSnapshot || {}).hazard || null);
+        /* §17.5b FLOOD KEY — one fixture per tier boundary that matters, plus the X we cannot place.
+           The X split is the only judgement in the key (FEMA returns 'X' for both the 0.2%-chance
+           zone and the minimal one; the distinction lives in ZONE_SUBTY), so both sides of it and
+           the unplaceable case are all exercised. */
+        o.tiers = {};
+        for (const t of [['VE', 'COASTAL FLOODPLAIN'], ['AE', 'FLOODWAY'], ['X', '0.2 PCT ANNUAL CHANCE FLOOD HAZARD'],
+                         ['X', 'AREA OF MINIMAL FLOOD HAZARD'], ['D', 'UNDETERMINED RISK AREA'], ['X', 'SOMETHING ELSE']]) {
+          const ft = mk();
+          stub({ lat: 27.9775, lon: -82.8290 }, { status: 'ok', zone: t[0], subtype: t[1] }, { status: 'ok', ss: 0.056 });
+          window.openAccountModal(ft.id);
+          await window.groundsVerifyAndEstimate(ft.id);
+          const h = cap();
+          o.tiers[t[0] + '|' + t[1]] = ((h.match(/rgba\(93,202,165,0\.18\)[^]{0,160}?>([^<]+)</) || [])[1] || '(none)');
+        }
+        /* NO PROVENANCE STAMP — the citation must render WITHOUT its date clause rather than with
+           today's. A provenance stamp records when the DATA WAS READ, never when the page was drawn. */
+        const nst = mk();
+        stub({ lat: 27.9775, lon: -82.8290 }, { status: 'ok', zone: 'AE', subtype: 'FLOODWAY', source: 'FEMA NFHL' }, { status: 'error' });
+        window.openAccountModal(nst.id);
+        await window.groundsVerifyAndEstimate(nst.id);
+        o.noStamp = cap();
         // FEMA ANSWERED 'none' — nothing mapped here. Flood line goes, shaking stays.
         const d = mk();
         stub({ lat: 30, lon: -40 }, { status: 'none' }, { status: 'ok', ss: 0.053 });
@@ -743,11 +772,29 @@ const server = http.createServer((req, res) => {
      = $16,800) are the regression guard for "no math change", and they were already here — the
      regroup had to leave them both untouched, and it did. */
   ok(has(R.gFill, G17_A), '§17.1 GROUP A header — "Carrying Costs — what you owe to keep the home."');
-  ok(has(R.gFill, G17_B), '§17.1 GROUP B header — "Property Insurance — what protects the home and you."');
+  /* RE-PREMISED (§26.2). Group B no longer exists as a label inside the carrying block — the
+     Captain asked for a SECTION and the bank had authored a group; his design won. The old string is
+     asserted GONE and the new section header + subhead asserted PRESENT, in one leg, so "the group
+     label is missing" can never pass on a room that simply lost the insurance layer. */
+  ok(!has(R.gFill, G17_B)
+     && has(R.gFill, 'Show insurance details')
+     && has(R.gFill, '>Property Insurance</div>')
+     && has(R.gFill, 'What protects the home and you — separate from what it costs to keep.'),
+     '§26.2 Property Insurance is its OWN toggled section — the old Group-B label is gone, header + subhead render');
   ok(has(R.gFill, G17_C), '§17.1 GROUP C header — "Operating Costs — what it takes to run the home day to day."');
-  ok(has(R.gFill, G17_A) && has(R.gFill, G17_B) && has(R.gFill, G17_C)
-     && R.gFill.indexOf(G17_A) < R.gFill.indexOf(G17_B) && R.gFill.indexOf(G17_B) < R.gFill.indexOf(G17_C),
-     '§17.1 ORDER — Carrying → Insurance → Operating (Insurance ABOVE Operating: it is where §17.2-§17.5 land)');
+  /* ORDER, RE-PREMISED: the insurance SECTION now sits ABOVE the Annual Carrying Cost block, and
+     Groups A and C keep their places INSIDE it. Both facts in one leg — the split is only correct if
+     the promoted section went up AND the two remaining groups stayed put. */
+  ok(has(R.gFill, G17_A) && has(R.gFill, G17_C)
+     && R.gFill.indexOf('Show insurance details') < R.gFill.indexOf('🧾 Annual Carrying Cost')
+     && R.gFill.indexOf(G17_A) < R.gFill.indexOf(G17_C),
+     '§26.2 ORDER — the insurance section precedes Annual Carrying Cost, and Groups A → C are undisturbed inside it');
+  /* ⛔ THE ONE THAT MATTERS. The insurance FIELD moved surfaces; it did NOT leave the sum. The total
+     is still the same five fields, and the reconciling line is present so the figure can be added up
+     from what is on screen — a total that exceeds its visible parts is the same family of harm as a
+     silently inflated one. */
+  ok(has(R.gFill, '$16,800') && has(R.gFill, 'recorded above under Property Insurance') && has(R.gFill, '$2,000'),
+     '§26.2 GUARD — the total is UNCHANGED at $16,800 and the moved insurance figure is shown here, so the sum reconciles on screen');
 
   /* ══ §17.2 · THE HO-1…HO-8 EDUCATION BLOCK, IN THE SERVED BYTES ════════════════════════════════
      All eight authored lines asserted whole. Cheap to write, and the reason to write all eight
@@ -1050,6 +1097,34 @@ const server = http.createServer((req, res) => {
      && R.g175.callsWithoutCoords === 0
      && has(R.g175.both, 'FLOOD ZONE'),
      '§17.5 no coordinates -> the block is SILENT and NOT ONE lookup fires — while a fixture WITH coordinates renders (pre-Worker snapshots, not a backfill)');
+  /* ══ §17.5b · THE FLOOD KEY — IT GROUPS, IT DOES NOT RANK ══════════════════════════════════════
+     FEMA's zones differ by flood TYPE, not severity, so a ranked list would invent a hierarchy FEMA
+     does not publish. What is published is whether a zone is a Special Flood Hazard Area. */
+  const TIER = R.g175.tiers || {};
+  ok(TIER['VE|COASTAL FLOODPLAIN'] === 'High risk — coastal', '§17.5b VE → High risk — coastal (' + TIER['VE|COASTAL FLOODPLAIN'] + ')');
+  ok(TIER['AE|FLOODWAY'] === 'High risk', '§17.5b AE → High risk (' + TIER['AE|FLOODWAY'] + ')');
+  /* ⛔ THE X SPLIT, BOTH SIDES. FEMA returns 'X' for two different tiers and only ZONE_SUBTY tells
+     them apart — so this is the one place the key could quietly mis-file a home. */
+  ok(TIER['X|0.2 PCT ANNUAL CHANCE FLOOD HAZARD'] === 'Moderate to low' && TIER['X|AREA OF MINIMAL FLOOD HAZARD'] === 'Minimal',
+     '§17.5b the X SPLIT reads FEMA\'s own subtype — shaded X is Moderate-to-low, unshaded is Minimal (' + TIER['X|0.2 PCT ANNUAL CHANCE FLOOD HAZARD'] + ' / ' + TIER['X|AREA OF MINIMAL FLOOD HAZARD'] + ')');
+  /* ⛔ NOT-MAPPED IS ITS OWN TIER AND MUST NEVER READ AS LOW. Zone D means FEMA has not studied the
+     area; rendering that as reassurance is the flood version of the sdc inverted signal. */
+  ok(TIER['D|UNDETERMINED RISK AREA'] === 'Not mapped', '§17.5b GUARD — D is NOT MAPPED, never "Minimal" (' + TIER['D|UNDETERMINED RISK AREA'] + ')');
+  /* An X we cannot place claims NO tier — paired with the letter still rendering, so "no tier" can
+     never pass on a room that dropped the flood cell entirely. */
+  ok(TIER['X|SOMETHING ELSE'] === '(none)' && has(R.g175.both, 'FLOOD ZONE'),
+     '§17.5b an unplaceable X claims NO tier, while the flood cell itself still renders');
+  ok(has(R.g175.both, 'High-risk with wave action. Flood insurance is required with a federally-backed mortgage.'),
+     '§17.5b tier note verbatim on the carried fixture');
+  ok(has(R.g175.both, 'Read from FEMA’s National Flood Hazard Layer and the USGS seismic design maps for this address in August 2026.')
+     && has(R.g175.both, 'These describe the ground your home sits on — not your policy, and not a recommendation.'),
+     '§17.5b the authored citation, with the month the data was READ');
+  /* ⛔ NO STAMP = NO DATE CLAIMED, gated. Absence paired with presence in one leg: the same run must
+     show the dated form appearing elsewhere, or "no date" would pass on a citation that never renders. */
+  ok(has(R.g175.noStamp, 'seismic design maps for this address. These describe the ground')
+     && !/for this address in [A-Z][a-z]+ d{4}/.test(R.g175.noStamp)
+     && has(R.g175.both, 'for this address in August 2026.'),
+     '§17.5b GUARD — with no stamp the date clause is DROPPED, never filled with today (a stamp records when the DATA was read)');
   ok(pick(!has(R.gAuto, 'EARTHQUAKE SHAKING'), has(R.gAuto, 'EARTHQUAKE SHAKING')),
      '§17.5 hazard block ABSENT on Driveway (Grounds-only) [BITE]');
   ok(pick(!has(R.gAuto, 'Annual Carrying Cost'), has(R.gAuto, 'Annual Carrying Cost')), 'Carrying-cost block ABSENT on Driveway (Grounds-only, this wave) [BITE]');
