@@ -9901,21 +9901,40 @@
         var fTier = (hz.flood && hz.flood.status === 'ok' && hz.flood.zone) ? _floodTier(hz.flood.zone, hz.flood.subtype) : null;
         var fKey = '';
         if (fTier) {
+            /* ⛔ ORDER REVERSED ON THE CAPTAIN'S SMOKE — BEST ON THE LEFT, WORST ON THE RIGHT, so it
+               reads the same direction as the shaking scale beside it. Two scales in one panel
+               running opposite ways is a misreading waiting to happen: the eye learns "left is
+               better" from the first one and carries it to the second.
+               ⚠️ "NOT MAPPED" IS DELIBERATELY SET APART AT THE END, NOT PLACED IN THE SEQUENCE. It is
+               not a severity, and either extreme lies about it: on the left it reads as the safest
+               thing on the row, on the right as worse than a coastal V zone. It is the flood twin of
+               the sdc inverted signal — silence about an unknown hazard must never read as an answer.
+               The gap and the muted border are what say "this one is not on the scale". */
             var TIERS = [
-                ['coastal', 'High risk — coastal', 'V, VE'],
-                ['high',    'High risk',           'A, AE, AO, AH'],
-                ['modlow',  'Moderate to low',     'B, X shaded'],
                 ['minimal', 'Minimal',             'C, X'],
-                ['unmapped','Not mapped',          'D']
+                ['modlow',  'Moderate to low',     'B, X shaded'],
+                ['high',    'High risk',           'A, AE, AO, AH'],
+                ['coastal', 'High risk — coastal', 'V, VE']
             ];
-            fKey = '<div style="display:flex; gap:3px; margin-top:10px;">' + TIERS.map(function (t) {
+            /* THE HOVERS ARE THE AUTHORED TIER NOTES (§17.5b), not new copy: each box explains itself
+               with the same sentence the bank wrote for that tier. */
+            var tierNote = function (k) {
+                var t = _floodTier(k === 'unmapped' ? 'D' : (k === 'coastal' ? 'VE' : (k === 'high' ? 'AE' : (k === 'modlow' ? 'B' : 'C'))), '');
+                return t ? t.note : '';
+            };
+            var box = function (t, apart) {
                 var mine = t[0] === fTier.key;
-                return '<div style="flex:1; text-align:center; padding:4px 2px; border-radius:2px; background:' + (mine ? 'rgba(93,202,165,0.18)' : 'rgba(255,255,255,0.03)') +
-                       '; border:1px solid ' + (mine ? 'var(--teal-mid)' : 'rgba(255,255,255,0.06)') + ';">' +
+                return '<div class="modal-tt-wrap" style="flex:1; cursor:help; text-align:center; padding:4px 2px; border-radius:2px;' + (apart ? ' margin-left:10px;' : '') +
+                       ' background:' + (mine ? 'rgba(93,202,165,0.18)' : 'rgba(255,255,255,0.03)') +
+                       '; border:1px ' + (apart ? 'dashed' : 'solid') + ' ' + (mine ? 'var(--teal-mid)' : 'rgba(255,255,255,0.06)') + ';">' +
                        '<div style="font-size:9.5px; letter-spacing:0.03em; color:' + (mine ? 'var(--teal-mid)' : 'rgba(255,255,255,0.5)') + '; text-transform:uppercase;">' + t[1] + '</div>' +
-                       '<div style="font-family:var(--font-mono); font-size:9px; color:rgba(255,255,255,0.35); margin-top:1px;">' + t[2] + '</div></div>';
-            }).join('') + '</div>' +
-            '<div style="font-size:11px; color:rgba(255,255,255,0.62); margin-top:6px; line-height:1.5;">' + fTier.note + '</div>';
+                       '<div style="font-family:var(--font-mono); font-size:9px; color:rgba(255,255,255,0.35); margin-top:1px;">' + t[2] + '</div>' +
+                       '<div class="modal-tt" style="left:0; right:auto; text-transform:none;"><strong>' + t[1] + ' (' + t[2] + ')</strong>' + tierNote(t[0]) + '</div></div>';
+            };
+            fKey = '<div style="display:flex; gap:3px; margin-top:10px; align-items:stretch;">' +
+                   TIERS.map(function (t) { return box(t, false); }).join('') +
+                   box(['unmapped', 'Not mapped', 'D'], true) + '</div>' +
+                   '<div style="font-size:11px; color:rgba(255,255,255,0.62); margin-top:6px; line-height:1.5;">' + fTier.note + '</div>';
         }
         /* §17.5c — THE FLOOD MAP. Sits with the flood half, under its key, because that is what it
            shows. Served from OUR Worker (Captain's ruling: proxy, one door) — the page never talks to
@@ -11134,6 +11153,16 @@
                 var _cur = state.accounts.find(function (a) { return a.id === id; });
                 if (_cur && _cur.assetAvmSnapshot && _cur.assetAvmSnapshot.key === shown.key) {
                     _cur.assetAvmSnapshot.hazard = _hz;
+                    /* ⛔ THE RESOLVED COORDINATE IS WRITTEN BACK, AND THIS LINE IS THE WHOLE FIX FOR A
+                       DEFECT I SHIPPED TWICE. `coords` was only ever set from the RentCast response,
+                       which is KV-cached for 60 days and carries none on any recently-valued address.
+                       The READINGS were moved to Census-first this morning; THE MAP WAS NOT, so it
+                       kept asking a field nothing had filled and rendered nothing — invisible to
+                       exactly the users the Census fix existed for.
+                       🔑 FIXING ONE CONSUMER OF A VALUE IS NOT FIXING THE VALUE. Both surfaces now
+                       read the SAME resolved coordinate, because it is stored once, here, next to the
+                       reading it produced — not derived twice from different sources. */
+                    if (!_cur.assetAvmSnapshot.coords) _cur.assetAvmSnapshot.coords = _coords;
                     if (activeModalId === id) openAccountModal(id);
                 }
             }
