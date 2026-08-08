@@ -754,7 +754,32 @@
   .small-field { width: 100%; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.12); padding: 10px; color: white; font-family: var(--font-mono); font-size: 15px; border-radius: 4px; transition: 0.3s; }
   .small-field:hover { border-color: rgba(255,255,255,0.22); }
   .small-field:focus { border-color: var(--teal-mid); outline: none; }
-  
+
+  /* §27.2 — THE PROPERTY VALUE FIELD. Deliberately NOT a .small-field: this is the one number the
+     whole room is about (equity, LTV, carrying-cost cover and the RentCast estimate all read it), and
+     a field that important should not look like the seven around it. Gold, because gold is already
+     this file's colour for a figure that carries weight; mono and tabular so digits line up as they
+     are typed; right-aligned like every other currency in the product.
+     Restraint on purpose — a tint, a hairline and a size step. No glow, no shadow, no animation.
+     It has to read as PREMIUM, which here means quieter than the noise around it, not louder. */
+  /* ⚠️ COMPOUND SELECTOR, AND IT IS LOAD-BEARING. .modal-tt-wrap is `display:flex; width:100%`, so
+     borrowing it for the hover made the label and the input flex SIBLINGS in a row — the label sat
+     beside the box, the box ate half the header, and "Property details" wrapped onto two lines. A
+     single .propval-wrap cannot win: .modal-tt-wrap is declared LATER at the same specificity. The
+     same squeeze is already recorded at ~:9126 for the escrow row, which is how I recognised it.
+     🔑 A DOM ASSERTION CANNOT SEE THIS. Every leg was green while it rendered wrong; the screenshot
+     found it. */
+  .propval-wrap.modal-tt-wrap { display: block; width: 210px; flex: 0 0 auto; }
+  .propval-label { display:block; text-align:right; font-family: var(--font-mono); font-size: 9px;
+                   letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+  .propval-field { width: 100%; background: linear-gradient(180deg, rgba(201,168,76,0.10), rgba(201,168,76,0.035));
+                   border: 1px solid rgba(201,168,76,0.38); border-radius: 5px; padding: 9px 12px;
+                   color: var(--gold); font-family: var(--font-mono); font-size: 17px; font-weight: 500;
+                   text-align: right; font-variant-numeric: tabular-nums; transition: 0.3s; }
+  .propval-field::placeholder { color: rgba(201,168,76,0.34); font-weight: 400; }
+  .propval-field:hover { border-color: rgba(201,168,76,0.62); }
+  .propval-field:focus { border-color: var(--gold); outline: none; background: linear-gradient(180deg, rgba(201,168,76,0.16), rgba(201,168,76,0.06)); }
+
   .salary-tooltip { position: absolute; bottom: 105%; left: 0; background: #060b14; border: 1px solid rgba(255,255,255,0.1); padding: 10px; border-radius: 4px; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 60; width: max-content; box-shadow: 0 10px 30px rgba(0,0,0,0.8);}
   .salary-container:hover .salary-tooltip { opacity: 1; pointer-events: auto; }
   .sal-tt-row { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 9px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; gap: 15px;}
@@ -7718,7 +7743,29 @@
                 ['Home equity + carrying cost', 'Home equity is your value minus what you owe. But owning isn\'t free — taxes, insurance, and upkeep run every year whether or not you have a mortgage. Planning for those is what keeps a paid-off home affordable.']
             ])}
             <div style="margin-bottom:16px; padding:14px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:4px;">
-                <div style="color:var(--teal-mid); font-weight:bold; font-size:13px; margin-bottom:10px;">🏠 Property details</div>
+                ${/* §27.2 (bank A342) — THE VALUE GETS ITS OWN WINDOW, AT THE TOP, ALWAYS VISIBLE.
+                      ⚠️ MOVED HERE 2026-08-08 ON THE CAPTAIN'S SECOND LOOK. It was first wired to his
+                      verbatim placement — "right of the Property Address copy, above the
+                      refresh/get-estimate button" — which sits inside `if (acc.useValueApi === true)`.
+                      That block only renders once the estimate toggle is ON, so for anyone who never
+                      turns it on the value was STILL only on the left card, which is the exact
+                      complaint §27.2 exists to answer. A field that answers "where do I set this?"
+                      cannot be behind a switch the user has to find first.
+                      ⛔ ONE NUMBER, TWO SURFACES — a second WINDOW onto acc.value, NOT a second field,
+                      so it can never double-count. Reuses the card's exact seams (L48, no fork):
+                      `curr-format` IS §21.3's letter refusal (delegated listener — keystroke, paste
+                      AND read), formatCurrencyDisplay for the mark, and onFrontValueEdit so both
+                      windows share ONE write path and ONE guard.
+                      BLANK, NEVER $0, when nothing is recorded — the card renders it the same way and
+                      §27.1's buttons turn on the very same distinction. */''}
+                <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:10px;">
+                    <div style="color:var(--teal-mid); font-weight:bold; font-size:13px; white-space:nowrap;">🏠 Property details</div>
+                    <div class="propval-wrap modal-tt-wrap" style="cursor:help; position:relative;">
+                        <span class="propval-label">Property value</span>
+                        <input type="text" id="modal-propval-${id}" class="propval-field curr-format" placeholder="$0" value="${acc.value ? formatCurrencyDisplay(acc.value) : ''}" onfocus="this.select()" oninput="onFrontValueEdit('${id}', this)">
+                        <div class="modal-tt" style="left:auto; right:0;"><strong>Property value</strong>What you believe this property is worth today. This is the same figure shown on your property card — change it in either place and both update. If you accept an automated estimate, it replaces this number.</div>
+                    </div>
+                </div>
                 <div class="field-row" style="grid-template-columns:1fr;">
                     <div><span class="input-label modal-tt-wrap" style="cursor:help;">Property name<div class="modal-tt" style="left:0; right:auto;"><strong>Property name</strong>A nickname just for you — ‘My Pad’, ‘Lake cabin’, ‘Rental #1’. It only labels this card; it changes no math. Handy once you hold more than one place heading into retirement.</div></span><input type="text" class="small-field" placeholder="e.g. My Pad" value="${String(acc.propName||'').replace(/"/g,'&quot;')}" oninput="updateAccField('${id}', 'propName', this.value)"></div>
                 </div>
@@ -8355,6 +8402,12 @@
             ov.innerHTML = '<div style="background:var(--bg-navy); border:1px solid var(--teal-mid); border-radius:8px; padding:24px 28px; max-width:440px; box-shadow:0 24px 64px rgba(0,0,0,0.85);">'
                 + '<div id="bc-title" style="font-family:var(--font-mono); color:var(--gold); font-size:11px; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;"></div>'
                 + '<div id="bc-msg" style="font-family:var(--font-serif); color:rgba(255,255,255,0.85); font-size:14px; line-height:1.55; margin-bottom:22px;"></div>'
+                /* §27.1 — an OPTIONAL supporting line UNDER the prompt, for a caller that has to say
+                   something about the user's CURRENT STATE without touching the prompt itself. Added
+                   here rather than forked into a second dialog (L48); #bc-msg is textContent, so a
+                   caller cannot smuggle a second line in through the message. Every existing caller
+                   passes no note and renders nothing, so nothing about them changes. */
+                + '<div id="bc-note" style="font-family:var(--font-serif); color:rgba(255,255,255,0.6); font-size:12.5px; line-height:1.5; margin:-14px 0 22px; display:none;"></div>'
                 + '<div style="display:flex; justify-content:flex-end; gap:10px;">'
                 + '<button id="bc-cancel" type="button" style="background:transparent; border:1px solid rgba(255,255,255,0.25); color:var(--white); font-family:var(--font-mono); font-size:11px; text-transform:uppercase; letter-spacing:0.08em; padding:9px 16px; border-radius:4px; cursor:pointer;"></button>'
                 + '<button id="bc-ok" type="button" style="background:rgba(226,75,74,0.15); border:1px solid var(--danger); color:var(--danger); font-family:var(--font-mono); font-size:11px; text-transform:uppercase; letter-spacing:0.08em; padding:9px 16px; border-radius:4px; cursor:pointer;"></button>'
@@ -8363,6 +8416,11 @@
         }
         ov.querySelector('#bc-title').textContent = opts.title || 'Confirm';
         ov.querySelector('#bc-msg').textContent = opts.message || '';
+        /* The overlay is built once and REUSED, so the note must be reset on every call — a stale
+           note left over from a previous dialog would be a sentence about the wrong thing. */
+        const noteEl = ov.querySelector('#bc-note');
+        noteEl.textContent = opts.note || '';
+        noteEl.style.display = opts.note ? 'block' : 'none';
         const okBtn = ov.querySelector('#bc-ok'), cancelBtn = ov.querySelector('#bc-cancel');
         okBtn.textContent = opts.confirmText || 'Continue';
         cancelBtn.textContent = opts.cancelText || 'Cancel';
@@ -8399,6 +8457,13 @@
             //  the live curr-format listener already keeps the focused field as-typed).
             let frontInp = document.getElementById('room-val-inp-' + id);
             if(frontInp && document.activeElement !== frontInp) frontInp.value = formatCurrencyDisplay(acc.value);
+            /* §27.2 — ONE NUMBER, TWO SURFACES. The modal field is a second WINDOW onto acc.value, so
+               it mirrors on exactly the same terms as the card input: refreshed unless it is the one
+               being typed in. Without this the hover's promise — "change it in either place and both
+               update" — would be true in one direction only, and a hover that overstates what the
+               product does is worse than no hover. */
+            let modalInp = document.getElementById('modal-propval-' + id);
+            if(modalInp && document.activeElement !== modalInp) modalInp.value = acc.value ? formatCurrencyDisplay(acc.value) : '';
             
             updateSVGs();
             updateAnalysisText();
@@ -11197,12 +11262,29 @@
         var acc = state.accounts.find(function (a) { return a.id === id; });
         if (!acc) return;
         var apply = function () { updateValueWithoutRender(id, String(value)); openAccountModal(id); };
-        if (_num(acc.value) > 0) {
-            // Overwrite-warn — R134 title · R20 body (verbatim) · R133 buttons (primary templated to the live
-            // mid; DEFAULT = Keep my value). R76/R77: never write the API value over the user's own figure.
-            showBrandConfirm({ title: 'Use the estimate?', message: 'An automated estimate from recent nearby sales — a starting point, not an appraisal. Your own number always wins.', confirmText: 'Use $' + Math.round(value).toLocaleString('en-US'), cancelText: 'Keep my value', onConfirm: apply });
-            var _kb = document.getElementById('bc-cancel'); if (_kb) _kb.focus();   // R133 default/focused = Keep my value
-        } else { apply(); }
+        /* §27.1 (bank A342) — THE CHOICE NAMES HIS OWN NUMBER, AND BLANK IS A STATE, NOT A ZERO.
+           ⚠️ THE DIALOG NOW SHOWS IN BOTH CASES. It used to be SKIPPED ENTIRELY when no value was
+           recorded — the estimate simply landed, and an estimate that arrives without a confirmation
+           cannot be declined. Captain ruling 2026-08-08: the box's job is to show him what he has
+           BEFORE it is overwritten, and "nothing recorded" is something he has.
+           L47 AT THE BUTTON LEVEL: with no value there is nothing to keep, so the button must not
+           offer to keep one and must never invent "$0" to keep. */
+        var _own = _num(acc.value);
+        var _has = _own > 0;
+        // R134 title · R20 body VERBATIM and UNCHANGED in both states — "your own number always wins"
+        // describes the RULE, not this instance (bank §27.1 guard). R76/R77: never write the API
+        // value over the user's own figure.
+        showBrandConfirm({
+            title: 'Use the estimate?',
+            message: 'An automated estimate from recent nearby sales — a starting point, not an appraisal. Your own number always wins.',
+            note: _has ? '' : 'You have not recorded a value for this property yet.',
+            confirmText: 'Use $' + Math.round(value).toLocaleString('en-US'),
+            cancelText: _has ? 'Keep my $' + Math.round(_own).toLocaleString('en-US') : 'Leave it blank',
+            onConfirm: apply
+        });
+        /* R133 default/focused = the NON-DESTRUCTIVE choice, in BOTH states. Consistency beats a
+           per-state guess: the key that does nothing should be the same key every time. */
+        var _kb = document.getElementById('bc-cancel'); if (_kb) _kb.focus();
     };
 
     // §0.4 VARIABLE-RATE CLUSTER (L48 shared seam — The Moat / The Garage / The Cellar import this).

@@ -112,9 +112,22 @@ const HO3NOTE   = process.argv.includes('--ho3note');
 const HIDEFIELD = process.argv.includes('--hidefield');
 const NOTYPEDI     = process.argv.includes('--notypedi');
 const TYPEFALLBACK = process.argv.includes('--typefallback');
+/* §27 — two controls, each shaped like its own risk rather than like the fix.
+     --skipblank  restores the PRE-§27.1 behaviour exactly: with no recorded value the estimate is
+                  applied silently and NO dialog is constructed. --redfirst cannot reproduce this —
+                  it flips winner strings, and a dialog that never opens has no strings to flip, so
+                  every blank-case leg would fail for the wrong reason and the PRESENCE leg would be
+                  the only honest signal. This is the defect §27.1 exists to fix, so it gets a control
+                  that occupies the state the bug occupied (§13.73).
+     --forkvalue  makes the modal field write its OWN key instead of the shared acc.value. That is
+                  the ONE failure §27.2 must never have: a second FIELD wearing the shape of a second
+                  WINDOW, which is how a number starts double-counting. The mirror legs must RED. */
+const SKIPBLANK = process.argv.includes('--skipblank');
+const FORKVALUE = process.argv.includes('--forkvalue');
 const MUT = NOHELOC || NOCTRL || FLATCARRY || NOEDUC || NOCOV || WRONGFLD || ZEROPLACE
          || NOENDORSE || EAGERFIELDS || DEAFSWITCH || DEAFSELECT
-         || NOHAZARD || WORDONLY || SDCFALLBACK || NOTYPEDI || TYPEFALLBACK || HO3NOTE || HIDEFIELD;
+         || NOHAZARD || WORDONLY || SDCFALLBACK || NOTYPEDI || TYPEFALLBACK || HO3NOTE || HIDEFIELD
+         || SKIPBLANK || FORKVALUE;
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8305;
 const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
@@ -161,6 +174,12 @@ const A_DEAF  = "            var key = e[0], label = e[1], whatsThis = e[2], doI
 const M_DEAF  = "            var key = e[0], label = e[1], whatsThis = e[2], doIHave = e[3];\n            var on = !!acc[key + 'X'];   /* --deafswitch: render reads a key nothing writes */";
 const A_DEAFSEL = "            if(field === 'hoType' || field === 'propType') openAccountModal(id);   // §17.2 teach-panel collapse + townhome branch";
 const M_DEAFSEL = "            /* --deafselect: the pre-fix state — both fields store, neither repaints */";
+/* §27 anchors. Both are single literals from the §27 wiring, so a re-grounding shows up as an
+   aborted mutation rather than a control that quietly stopped biting. */
+const A_SKIPBLANK = "        var _own = _num(acc.value);";
+const M_SKIPBLANK = "        var _own = _num(acc.value);\n        if (_own <= 0) { apply(); return; }   /* --skipblank: the pre-§27.1 silent apply */";
+const A_FORKVAL = "oninput=\"onFrontValueEdit('${id}', this)\">";
+const M_FORKVAL = "oninput=\"updateAccField('${id}', 'propValueForked', this.value)\">   <!-- --forkvalue: a second FIELD, not a second window -->";
 const A_NOHAZ = "        var hz = snap && snap.hazard;";
 const M_NOHAZ = "        var hz = null;   /* §17.5 block removed by --nohazard */";
 const A_WORDONLY = "ss + 'g', band + ' shaking'";
@@ -229,6 +248,8 @@ const server = http.createServer((req, res) => {
     if (TYPEFALLBACK) apply(A_TYPEFB,   M_TYPEFB,   'A_TYPEFB');
     if (HO3NOTE)   apply(A_HO3,      M_HO3,      'A_HO3');
     if (HIDEFIELD) apply(A_HIDEFLD,  M_HIDEFLD,  'A_HIDEFLD');
+    if (SKIPBLANK) apply(A_SKIPBLANK, M_SKIPBLANK, 'A_SKIPBLANK');
+    if (FORKVALUE) apply(A_FORKVAL,   M_FORKVAL,   'A_FORKVAL');
     body = Buffer.from(src, 'utf8');
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
@@ -781,6 +802,79 @@ const server = http.createServer((req, res) => {
       var browserKey = /rentcast[_-]?key|rc_[A-Za-z0-9]{12,}|apiKey\s*[:=]\s*['"][A-Za-z0-9]{16,}/i.test(docHtml);
       return { present: true, disabled: disabled, permitted: last, call51: call51, countAtCap: countAtCap, byo: byo, dedupe: dedupe, browserKey: browserKey };
     })();
+    /* ══ §27 (bank A342) — THE CAPTAIN'S TWO SMOKE-DRIVEN REQUESTS ════════════════════════════════
+       §27.1 DRIVES THE REAL groundsUseEstimate IN BOTH VALUE STATES. It has to: the defect being
+       fixed is that in the blank case the dialog NEVER OPENED — the estimate simply landed. A test
+       that set state and re-rendered would prove the renderer and sail straight past a dialog that
+       is never constructed (§13.72). Both captures return a TOTAL shape so a missing overlay reads
+       as a named failure instead of crashing the run before the leg list prints (§13.68 RULE A).
+       §27.2 asserts the second WINDOW onto acc.value — including blank-not-$0, and the two-way
+       mirror the hover promises out loud. */
+    out.p27 = (function () {
+      const dlg = function () {
+        const ov = document.getElementById('brand-confirm-overlay');
+        if (!ov) return { shown: false, why: 'NO_OVERLAY', msg: '', note: '', noteShown: false, ok: '', cancel: '', focused: '' };
+        const n = ov.querySelector('#bc-note'), m = ov.querySelector('#bc-msg');
+        const b = ov.querySelector('#bc-ok'), c = ov.querySelector('#bc-cancel');
+        return {
+          shown: ov.style.display !== 'none', why: '',
+          msg: m ? m.textContent : '', note: n ? n.textContent : '',
+          noteShown: !!n && n.style.display !== 'none',
+          ok: b ? b.textContent : '', cancel: c ? c.textContent : '',
+          focused: document.activeElement ? document.activeElement.id : ''
+        };
+      };
+      const close = function () { const c = document.getElementById('bc-cancel'); if (c) c.click(); };
+
+      /* ⭐ useValueApi IS DELIBERATELY LEFT OFF IN BOTH FIXTURES, AND THAT IS THE POINT.
+         The field was first wired inside the valuation block, which renders only when the estimate
+         toggle is ON — so for anyone who never turned it on the value was still card-only, i.e. the
+         complaint §27.2 exists to answer, unanswered. Leaving the toggle OFF here means these legs
+         fail if it is ever moved back behind that switch. The fixture encodes the RULING, not the
+         first attempt at it. */
+      // ── fixture A · a property that HAS a recorded value ──
+      addInstance('property');
+      const wv = window.state.accounts.filter(function (x) { return x.baseId === 'property'; }).pop();
+      window.updateValueWithoutRender(wv.id, '300000');
+      window.openAccountModal(wv.id);
+      const miA = document.getElementById('modal-propval-' + wv.id);
+      const fieldWith = { present: !!miA, value: miA ? miA.value : '__ABSENT__', cls: miA ? miA.className : '' };
+      window.groundsUseEstimate(wv.id, 341000);
+      const dWith = dlg();
+      close();
+
+      /* ── fixture B · a property with NO value. THE PRESENCE TWIN for every §27.1 blank-case leg:
+            without it, "the dialog says Leave it blank" could pass on a dialog that never opens. ── */
+      addInstance('property');
+      const nv = window.state.accounts.filter(function (x) { return x.baseId === 'property'; }).pop();
+      window.openAccountModal(nv.id);
+      const miB = document.getElementById('modal-propval-' + nv.id);
+      const fieldNone = { present: !!miB, value: miB ? miB.value : '__ABSENT__' };
+      window.groundsUseEstimate(nv.id, 341000);
+      const dNone = dlg();
+      close();
+
+      /* ── the MIRROR, driven through both real handlers rather than asserted from the markup. A
+            hover that promises "change it in either place and both update" is a claim about
+            behaviour, and only a gesture can check it. ── */
+      window.openAccountModal(wv.id);
+      const mi = document.getElementById('modal-propval-' + wv.id);
+      let mirror = { control: false, why: 'NO_MODAL_INPUT' };
+      if (mi) {
+        mi.value = '$450,000';
+        mi.dispatchEvent(new Event('input', { bubbles: true }));
+        const card = document.getElementById('room-val-inp-' + wv.id);
+        const cardAfter = card ? card.value : '__NO_CARD__';
+        const storedAfterModal = (window.state.accounts.find(function (a) { return a.id === wv.id; }) || {}).value;
+        window.updateValueWithoutRender(wv.id, '525000');            // the card's own write path
+        const mi2 = document.getElementById('modal-propval-' + wv.id);
+        mirror = { control: true, why: '', storedAfterModal: storedAfterModal, cardAfter: cardAfter,
+                   modalAfter: mi2 ? mi2.value : '__ABSENT__' };
+      }
+      const root = document.getElementById('modal-dynamic-content');
+      return { fieldWith: fieldWith, fieldNone: fieldNone, dWith: dWith, dNone: dNone,
+               mirror: mirror, html: root ? root.innerHTML : '' };
+    })();
     return out;
   });
   await b.close();
@@ -1306,7 +1400,17 @@ const server = http.createServer((req, res) => {
   ok(R.gFill.indexOf('Home equity is your value minus what you owe') >= 0 && R.gFill.indexOf('Home equity is your value minus what you owe') < R.gFill.indexOf('🧾 Annual Carrying Cost'), '#263 item 4 — equity explainer ABOVE the carrying-cost fields');
   ok(has(R.gApiConfirm.msg, 'a starting point, not an appraisal. Your own number always wins'), 'overwrite-warn BODY = R20 copy verbatim (never auto-overwrite)');
   ok(R.gApiConfirm.title === 'Use the estimate?', '#250 FIX2 · confirm TITLE = R134 "Use the estimate?"');
-  ok(pick(R.gApiConfirm.cancel === 'Keep my value', R.gApiConfirm.cancel !== 'Keep my value'), '#250 FIX2 · default button = R133 "Keep my value" [BITE]');
+  /* ⭐ INVERTED 2026-08-08, NOT DELETED (§13.74). This asserted the literal "Keep my value", which was
+     correct until §27.1 ruled that the button must NAME the user's own number so he does not have to
+     remember it. From that ruling onward this leg was guarding a defect: the generic wording is now
+     the thing we must never ship. The claim it makes is the SAME claim — R133's cancel button is the
+     non-destructive choice and says so — but the winner has moved, so the leg follows the winner
+     instead of being retired. A gate written to guard a rule must be inverted the day the rule is
+     deliberately changed, or yesterday's correct guard becomes today's blocker.
+     The §27.1 legs below carry the positive form; this one holds the LOSER out. */
+  ok(pick(R.gApiConfirm.cancel !== 'Keep my value', R.gApiConfirm.cancel === 'Keep my value'),
+     '#250 FIX2 · default button is NO LONGER the generic "Keep my value" (§27.1 inverted this) [BITE]');
+  ok(/^Keep my \$[\d,]+$/.test(R.gApiConfirm.cancel || ''), '#250 FIX2 · ...it names a real recorded figure ("Keep my $<value>")');
   ok(R.gApiConfirm.ok === 'Use $291,000', '#250 FIX2 · primary button = R133 "Use $<mid>" (live mid $291,000)');
   ok(pick(!has(R.gFill, 'Property Address') && !has(R.gFill, 'Get estimate'), has(R.gFill, 'Get estimate')), 'valuation UI ABSENT when API toggle OFF (opt-in) [BITE]');
   ok(pick(has(R.gFill, "Estimate this home's value") && !has(R.gFill, 'Use value estimate (API)') && !has(R.gFill, 'OFF until key present'), has(R.gFill, 'Use value estimate (API)')), '#257.1 · toggle label = "Estimate this home\'s value" (old "(API)" + stale suffix GONE) [BITE]');
@@ -1416,11 +1520,85 @@ const server = http.createServer((req, res) => {
   ok(pick(R.ai && R.ai.browserKey === false, !(R.ai && R.ai.browserKey === false)), 'NO API key literal in browser bytes (key = Worker secret) [BITE]');
   ok(has(R.gFill, "Estimate this home's value"), '§5 value-estimate toggle rendered (R135 label)');
 
+  /* ══ §27 · THE CAPTAIN'S SMOKE-DRIVEN REQUESTS (bank A342) ═══════════════════════════════════
+     PRESENCE BEFORE EXCLUSION, in both value states — every "the button says X" leg below is void
+     unless the dialog actually OPENED, and the blank case is the one where it used to not. These
+     two are deliberately NOT wrapped in pick(): a precondition that inverts under --redfirst would
+     let an inverted run pass by doing nothing. */
+  ok(R.p27 && R.p27.dWith && R.p27.dWith.shown === true, '§27.1 [PRESENCE] the estimate dialog opens when a value EXISTS');
+  ok(R.p27 && R.p27.dNone && R.p27.dNone.shown === true, '§27.1 [PRESENCE] the estimate dialog opens when NO value exists (it used to be skipped entirely)');
+
+  // §27.1a — the choice names his own number, so he does not have to remember it.
+  ok(pick(R.p27 && R.p27.dWith.cancel === 'Keep my $300,000', !(R.p27 && R.p27.dWith.cancel === 'Keep my $300,000')),
+     '§27.1 the keep button NAMES the recorded value ("Keep my $300,000") [BITE]');
+  ok(R.p27 && R.p27.dWith.ok === 'Use $341,000', '§27.1 the other button still names the estimate (unchanged)');
+
+  /* §27.1b — L47 AT THE BUTTON LEVEL. The two absence legs are the point of the request: with no
+     value there is nothing to keep, and "$0" would be an invented number. Paired with the presence
+     leg above so neither can pass on a dialog that never opened. */
+  ok(pick(R.p27 && R.p27.dNone.cancel === 'Leave it blank', !(R.p27 && R.p27.dNone.cancel === 'Leave it blank')),
+     '§27.1 with NO value the button reads "Leave it blank" [BITE]');
+  ok(R.p27 && R.p27.dNone.cancel.indexOf('Keep my') < 0, '§27.1 and it never offers to KEEP a value that does not exist');
+  ok(R.p27 && R.p27.dNone.cancel.indexOf('$0') < 0, '§27.1 and it never invents "$0" (an empty field is a state, not a zero)');
+
+  // §27.1c — the supporting line, and its silence when a value exists.
+  ok(pick(R.p27 && R.p27.dNone.note === 'You have not recorded a value for this property yet.' && R.p27.dNone.noteShown === true,
+          !(R.p27 && R.p27.dNone.noteShown === true)),
+     '§27.1 the blank case carries its supporting line, VISIBLE [BITE]');
+  ok(R.p27 && R.p27.dWith.noteShown === false, '§27.1 and the line is SILENT when a value exists (the button already says it)');
+
+  /* §27.1d — THE GUARD. The R20 prompt describes the RULE, not this instance, so it is byte-identical
+     in both states. A request to change the buttons is not a licence to reword the sentence above them. */
+  const R20 = 'An automated estimate from recent nearby sales — a starting point, not an appraisal. Your own number always wins.';
+  ok(R.p27 && R.p27.dWith.msg === R20 && R.p27.dNone.msg === R20, '§27.1 the R20 prompt is UNCHANGED and identical in both states');
+  ok(R.p27 && R.p27.dNone.focused === 'bc-cancel', '§27.1 focus rests on the non-destructive button in the blank case too');
+
+  // ── §27.2 · the modal window onto acc.value ──
+  /* ⭐ THE LEG THAT ENCODES THE CAPTAIN'S SECOND LOOK. Both fixtures leave useValueApi OFF, so this
+     is not merely "the field exists" — it is "the field exists WITHOUT the estimate toggle", which
+     is the difference between answering §27.2 and appearing to. If anyone ever moves it back inside
+     the valuation block, this is the leg that says so. */
+  ok(R.p27 && R.p27.fieldWith.present === true, '§27.2 [PRESENCE] the modal carries a Property value field with the estimate toggle OFF');
+  ok(R.p27 && R.p27.fieldNone.present === true, '§27.2 [PRESENCE] ...on a property with no value recorded, too');
+  ok(pick(/propval-field/.test((R.p27 && R.p27.fieldWith.cls) || ''), !/propval-field/.test((R.p27 && R.p27.fieldWith.cls) || '')),
+     '§27.2 it carries its own emphasis styling, not the generic field face [BITE]');
+  ok(pick(R.p27 && R.p27.fieldWith.value === '$300,000', !(R.p27 && R.p27.fieldWith.value === '$300,000')),
+     '§27.2 it shows the recorded value, currency-marked [BITE]');
+  ok(R.p27 && /curr-format/.test(R.p27.fieldWith.cls), '§27.2 it reuses curr-format (§21.3 letter refusal), not a fork');
+  ok(has(R.p27 && R.p27.html, 'Property value'), '§27.2 the authored label renders');
+  ok(pick(has(R.p27 && R.p27.html, 'change it in either place and both update'),
+          !has(R.p27 && R.p27.html, 'change it in either place and both update')),
+     '§27.2 the hover carries the two-way sentence the bank authored [BITE]');
+
+  /* §27.2b — BLANK, NEVER $0. Same distinction §27.1 turns on: a field with nothing in it is not a
+     field with zero in it, and a currency mark over an unrecorded value is a fabricated figure. */
+  ok(pick(R.p27 && R.p27.fieldNone.value === '', !(R.p27 && R.p27.fieldNone.value === '')),
+     '§27.2 with no value the field is BLANK, not "$0" [BITE]');
+
+  /* §27.2c — THE MIRROR, BOTH DIRECTIONS. The hover makes a promise about behaviour; these legs are
+     the only thing that can hold it to it. One direction passing is not the claim. */
+  ok(R.p27 && R.p27.mirror.control === true, '§27.2 [PRESENCE] the mirror fixture found the modal input to drive');
+  ok(pick(R.p27 && R.p27.mirror.storedAfterModal === 450000, !(R.p27 && R.p27.mirror.storedAfterModal === 450000)),
+     '§27.2 typing in the MODAL writes the one shared value [BITE]');
+  ok(pick(R.p27 && R.p27.mirror.cardAfter === '$450,000', !(R.p27 && R.p27.mirror.cardAfter === '$450,000')),
+     '§27.2 ...and the CARD window updates to match [BITE]');
+  ok(pick(R.p27 && R.p27.mirror.modalAfter === '$525,000', !(R.p27 && R.p27.mirror.modalAfter === '$525,000')),
+     '§27.2 ...and a write from the card side updates the MODAL window [BITE]');
+
   lines.push('-------------------------------------');
   const overall = fail === 0 ? 'GREEN' : 'RED';
   /* A POISONED RUN MUST NAME ITS MUTATION — a run that prints CLEAN over a mutated file is the
      shape that lets a dead control read as a live one. */
-  const TAG = NOHELOC ? 'MUTATED[noheloc]' : NOCTRL ? 'MUTATED[nocontrol]' : RF ? 'RED-FIRST' : 'CLEAN';
+  /* ⚠️ THIS NAMED ONLY TWO OF THE SIXTEEN MUTATIONS. Every other control ran and printed "CLEAN",
+     which is precisely the shape this comment warns about — a poisoned run that reads unpoisoned.
+     Built from the flags themselves now, so a new control cannot be added without being named. */
+  const MUTS = [[NOHELOC,'noheloc'],[NOCTRL,'nocontrol'],[FLATCARRY,'flatcarry'],[NOEDUC,'noeduc'],
+    [NOCOV,'nocov'],[WRONGFLD,'wrongfld'],[ZEROPLACE,'zeroplace'],[NOENDORSE,'noendorse'],
+    [EAGERFIELDS,'eagerfields'],[DEAFSWITCH,'deafswitch'],[DEAFSELECT,'deafselect'],[NOHAZARD,'nohazard'],
+    [WORDONLY,'wordonly'],[SDCFALLBACK,'sdcfallback'],[NOTYPEDI,'notypedi'],[TYPEFALLBACK,'typefallback'],
+    [HO3NOTE,'ho3note'],[HIDEFIELD,'hidefield'],[SKIPBLANK,'skipblank'],[FORKVALUE,'forkvalue']]
+    .filter(function (m) { return m[0]; }).map(function (m) { return m[1]; });
+  const TAG = MUTS.length ? 'MUTATED[' + MUTS.join('+') + ']' : (RF ? 'RED-FIRST' : 'CLEAN');
   lines.push('MODE: ' + (RF ? 'RED-FIRST (winners flipped to losers — MUST be RED)' : 'NORMAL') + '   |   FILE: ' + TAG + '   |   STAGE: G10 (+ #250 fixes) — WHOLE ROOM');
   lines.push('OVERALL: ' + overall + '   (' + pass + ' pass / ' + fail + ' fail)');
   const caps = [R.gBlank, R.gFill, R.gAuto, R.mLinked, R.g9bAll, R.gNone, R.gStr, R.gNudge, R.gApiUI, R.gApiResult];
