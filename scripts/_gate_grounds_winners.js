@@ -1214,6 +1214,18 @@ const server = http.createServer((req, res) => {
      cached valuation carrying nothing, Census carrying everything. The map must render from it. */
   ok(has(R.g175.censusOnly, '/floodmap?lat=27.9775'),
      '§17.5c THE MAP RENDERS FROM CENSUS COORDINATES — the cached-valuation case, where it was invisible');
+  /* ⭐ THE CROSSHAIR IS EXACT BY CONSTRUCTION: the Worker builds the bbox as the point ± a fixed
+     delta, so 50%/50% IS the address, not an estimate of it. Asserted with the marker's pointer
+     transparency, because a marker that swallows clicks is worse than none. */
+  ok(has(R.g175.both, 'left:50%; top:50%; width:26px') && has(R.g175.both, 'pointer-events:none'),
+     '§17.5c the address is MARKED at the exact centre of the map, and the marker takes no clicks');
+  /* ⛔ THE LINE THAT ANSWERS "MY ZONE SAYS X BUT THE MAP SHOWS AE". Unshaded Zone X is white and
+     UNLABELLED by FEMA's own convention, so a reading that looks like it contradicts its own map
+     will be read as a bug unless we say so. The units and datum were read off FEMA's own records
+     for the panel in the Captain's screenshot, never inferred. */
+  ok(has(R.g175.both, 'the white space is Zone X, which FEMA leaves unlabelled')
+     && has(R.g175.both, 'in feet above the NAVD88 vertical datum'),
+     '§17.5c the map note explains the unlabelled white AND what an EL figure is (feet, NAVD88 — sourced from FEMA)');
   /* §17.5b legend ORDER: best on the left, matching the shaking scale beside it. Two scales in one
      panel running opposite ways is a misreading waiting to happen. */
   ok(R.g175.both.indexOf('>Minimal<') < R.g175.both.indexOf('>High risk — coastal<')
