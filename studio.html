@@ -9946,12 +9946,37 @@
            SAFE — this is the split-deploy law applied to an image.
            Only rendered when there is a flood reading AND coordinates: no reading means no map, and
            without coordinates the request could only be about somewhere else. */
+        /* ⭐ THE CROSSHAIR IS EXACT, NOT APPROXIMATE — and that is why it is honest to draw. The
+           Worker builds the bounding box as the point ± a fixed delta, so THE ADDRESS IS THE
+           GEOMETRIC CENTRE OF THE IMAGE BY CONSTRUCTION. Marking 50%/50% is not an estimate of where
+           the home is; it is the definition of how the tile was requested. The Captain could not
+           tell where he was on the map and assumed he was centred — he was right, and a reader
+           should never have to assume it. `pointer-events:none` so it cannot swallow a click. */
         var fMap = '';
         if (fTier && snap && snap.coords) {
-            fMap = '<div style="margin-top:10px; border:1px solid rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; line-height:0;">' +
+            fMap = '<div style="margin-top:10px; border:1px solid rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; line-height:0; position:relative;">' +
                    '<img src="' + _AssetIntel.WORKER_URL + '/floodmap?lat=' + encodeURIComponent(snap.coords.lat) + '&lon=' + encodeURIComponent(snap.coords.lon) + '"' +
-                   ' alt="FEMA flood hazard map for this address" loading="lazy" style="display:block; width:100%; height:auto;"' +
-                   ' onerror="this.parentNode.style.display=\'none\';"></div>';
+                   ' alt="FEMA flood hazard map centred on this address" loading="lazy" style="display:block; width:100%; height:auto;"' +
+                   ' onerror="this.parentNode.style.display=\'none\';">' +
+                   '<div style="position:absolute; left:50%; top:50%; width:26px; height:26px; margin:-13px 0 0 -13px; pointer-events:none;">' +
+                     '<div style="position:absolute; left:50%; top:0; width:2px; height:26px; margin-left:-1px; background:rgba(0,0,0,0.55);"></div>' +
+                     '<div style="position:absolute; top:50%; left:0; height:2px; width:26px; margin-top:-1px; background:rgba(0,0,0,0.55);"></div>' +
+                     '<div style="position:absolute; left:50%; top:50%; width:10px; height:10px; margin:-5px 0 0 -5px; border-radius:50%; background:var(--gold); border:2px solid rgba(0,0,0,0.6);"></div>' +
+                   '</div></div>' +
+                   /* ⚠️ THIS PARAGRAPH IS MINE AND IS FLAGGED FOR THE ARCHITECT TO VOICE. Every FACT
+                      in it is sourced, not remembered:
+                        · Unshaded Zone X is WHITE AND UNLABELLED on a FIRM — FEMA's own convention
+                          (fema.gov "Zone C or X (Unshaded)"). THIS IS THE ANSWER to the Captain's
+                          "my zone says X but the map shows AE everywhere": the white IS his zone, and
+                          FEMA does not print a letter on it. A reading that appears to contradict its
+                          own map will be read as a bug every time, so it has to be said out loud.
+                        · EL figures are Base Flood Elevations. Queried FEMA's OWN records for the
+                          panel in his screenshot (DFIRM_ID 12101C, layer 16): LEN_UNIT = "Feet",
+                          V_DATUM = "NAVD88" on every row. Not assumed from the number's shape.
+                      Bank silence on a label = flattest accurate string + MANDATORY FLAG. */
+                   '<div style="font-size:11px; color:rgba(255,255,255,0.62); margin-top:8px; line-height:1.55;">' +
+                   'The marker is your address — the map is drawn centred on it. Blue areas are mapped flood zones; the white space is Zone X, which FEMA leaves unlabelled, so your own zone shows as absence rather than a letter. “EL” figures are base flood elevations — how high the 1-in-100-year flood is expected to reach at that spot, in feet above the NAVD88 vertical datum.' +
+                   '</div>';
         }
         var scale = '';
         if (band) {
