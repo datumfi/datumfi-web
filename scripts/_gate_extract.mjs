@@ -27,12 +27,76 @@
 //      (groundsVerifyAndEstimate, …). Missing form 3 is why a gate slicing the verify-then-estimate path
 //      threw "not found" against code that was plainly there: form 2's literal has no room for `async`.
 //      Additive — this only runs when the first two forms miss, so no existing gate changes behaviour.
+/* ⚠️ LINE-ANCHORED, FOR EXACTLY THE REASON THE BINDING PATH BELOW IS — and it took an outage to
+ * finish the job. definesBinding was anchored on 2026-08-04 because a COMMENT that quotes a
+ * declaration while explaining it is not a declaration. fnStart was left on a bare indexOf, so the
+ * identical hole stayed open on the FUNCTION side, and on 2026-08-08 it cost two gates:
+ *
+ *   · studio.html:12102 — a comment warning future sessions that "the extractor keys on `function X(`"
+ *   · studio.html:9969  — a comment added later quoting FEMA's «Zone C or X (Unshaded)»
+ *
+ * The walker read `X (` in the second as a callee, asked definesFn('X'), and the FIRST comment
+ * answered YES. extractFn then sliced a phantom function out of prose and handed it to new Function,
+ * which died on the backtick inside it. Neither comment is code; neither file was wrong. Two gates
+ * guarding the RentCast spend cap stopped running — and because a crash is not a red (§13.68) they
+ * reported no failing leg at all, only a SyntaxError.
+ *
+ * 🔑 A RESOLVER THAT READS COMMENTS AS CODE WILL EVENTUALLY SYNTHESISE A FUNCTION NOBODY WROTE OUT
+ * OF TWO SENTENCES NOBODY CONNECTED. A definition begins its line; a mention inside prose does not.
+ *
+ * MEASURED BEFORE SHIPPING, over all 596 names studio.html + studio-blueprint.js define: 595 resolve
+ * to the BYTE-IDENTICAL index they did under indexOf; exactly 1 changes — the phantom X, which now
+ * resolves to nothing. ZERO definitions lost. Two details were measured, not reasoned:
+ *   · `\(?` IS LOAD-BEARING. `(function restoreSession() {` and `(function prefillFromSketch() {`
+ *     are real named IIFEs at statement position. Without the optional paren this fix LOSES them.
+ *   · The index returned is the KEYWORD's, never the match start. Pointing at a leading `(` would
+ *     make extractFn slice an unbalanced paren.
+ *     ~~*"pointing at `async` would silently turn three sliced helpers async — a behaviour change
+ *     nobody asked for."*~~ That was the call when this landed, and the CAPTAIN REVERSED IT the same
+ *     day: dropping `async` is not neutral, it is a latent SyntaxError waiting for the first gate to
+ *     lift one of those three. The index now starts at `async` when present. Struck rather than
+ *     deleted so nobody re-derives the discarded reasoning.
+ *
+ * INDEXED ONCE PER SOURCE, NOT SCANNED PER LOOKUP. definesFn runs once per `ident(` per body —
+ * thousands of times per gate. A per-name regex over 1.5MB measured 7x SLOWER than indexOf (1714ms
+ * vs 240ms across 1500 lookups); one pass into a Map makes every lookup O(1), so this lands faster
+ * than the thing it replaces rather than taxing 33 gates for a correctness fix. */
+const FN_DEF_RE  = /^[ \t]*\(?[ \t]*(?:async[ \t]+)?function[ \t]+([A-Za-z_$][\w$]*)[ \t]*\(/gm;
+const WIN_DEF_RE = /^[ \t]*window\.([A-Za-z_$][\w$]*)[ \t]*=[ \t]*(?:async[ \t]+)?function/gm;
+const _defCache = new Map();
+
+/* FIRST declaration wins, preserving indexOf's precedence exactly: form 1 beats forms 2/3, and an
+   earlier hit beats a later one. This is deliberately NOT the binding path's "ambiguity is a
+   finding" rule — making duplicate function names fatal is a wider change than the one authorised
+   here, and it would red gates that are green today. If that is ever wanted it is its own commit. */
+function defIndex(src) {
+  let idx = _defCache.get(src);
+  if (idx) return idx;
+  idx = { fn: new Map(), win: new Map() };
+  for (const m of src.matchAll(FN_DEF_RE)) {
+    if (idx.fn.has(m[1])) continue;
+    /* START AT `async` WHEN IT IS THERE. The pre-2026-08-08 fnStart pointed at `function`, so an
+       `async function NAME()` sliced WITHOUT its async and any `await` inside it became a
+       SyntaxError. Three helpers are declared that way (startMatrixJob, _doStartJob, pollMatrixJob);
+       no gate lifted one, so it stayed invisible — a loaded gun rather than a wound.
+       ⚠️ THE GUARD IS NOT PARANOIA: a bare indexOf('async') would match the NAME in
+       `function asyncFoo(` and return a position AFTER the keyword, slicing from the middle of the
+       declaration. Only an `async` that precedes `function` is the keyword. */
+    const fIdx = m[0].indexOf('function');
+    const aIdx = m[0].indexOf('async');
+    idx.fn.set(m[1], m.index + (aIdx >= 0 && aIdx < fIdx ? aIdx : fIdx));
+  }
+  for (const m of src.matchAll(WIN_DEF_RE)) if (!idx.win.has(m[1])) idx.win.set(m[1], m.index + m[0].indexOf('window'));
+  _defCache.set(src, idx);
+  return idx;
+}
+
 function fnStart(src, name) {
-  const a = src.indexOf('function ' + name + '(');
-  if (a >= 0) return a;
-  const b = src.indexOf('window.' + name + ' = function');
-  if (b >= 0) return b;
-  return src.indexOf('window.' + name + ' = async function');   // -1 when absent
+  const idx = defIndex(src);
+  const a = idx.fn.get(name);
+  if (a !== undefined) return a;
+  const b = idx.win.get(name);
+  return b === undefined ? -1 : b;                              // -1 when absent
 }
 /** True when studio.html defines `name` as a function in EITHER form. */
 export function definesFn(src, name) {
