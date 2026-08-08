@@ -1884,8 +1884,26 @@ const server = http.createServer((req, res) => {
      promise the whole mirror pattern rests on, and it must hold in every mode. */
   ok(has(R.gUpkNone, '$16,800'), '§28 [BYTE-FOR-BYTE] no upkeep lines -> the carrying total is UNMOVED at $16,800');
   ok(has(R.gUpkNone, 'Nothing tracked yet.'), '§28 ...and the section shows its authored empty state');
-  ok(has(R.gUpkNone, 'maintYr') && has(R.gUpkNone, 'utilYr'),
+  ok(has(R.gUpkNone, "updateAccField('" ) && has(R.gUpkNone, 'utilYr'),
      '§28 ...and Maintenance/Utilities are still the EDITABLE fields, not read-only mirrors');
+
+  /* ⭐ THE PRESENCE TWIN THIS GATE WAS MISSING, AND THE CAPTAIN'S SMOKE FOUND IT.
+     The leg above asserts the fields stay editable when there are NO lines. Nothing asserted what
+     they do WITH lines — an absence leg with no presence twin, the one shape this gate's own house
+     law exists to forbid. The consequence shipped: calcCarryTotal resolved through the ledger while
+     the FIELD still rendered acc.utilYr, so $12,000 of tracked electricity sat in the total while
+     the box read the old typed $2,100. Two numbers on screen, the total matching neither, and the
+     stale box still typeable.
+     🔑 A LEG THAT ONLY EVER RUNS AGAINST THE EMPTY CASE IS HALF A CLAIM. */
+  ok(pick(has(R.gUpk, 'tracked in Operating Upkeep — click to open'), !has(R.gUpk, 'tracked in Operating Upkeep — click to open')),
+     '§28 with lines, the Utilities field becomes a MIRROR carrying its source note [BITE]');
+  ok(pick(has(R.gUpk, 'value="$1,800" readonly'), !has(R.gUpk, 'value="$1,800" readonly')),
+     '§28 ...showing the LEDGER sum ($1,800), not the typed $3,600, and READ-ONLY [BITE]');
+  ok(!has(R.gUpk, 'value="$3,600"'),
+     '§28 ...and the superseded typed figure is not left on screen beside a total that ignores it');
+  ok(pick(!/value="\$3,600"[^>]*oninput="updateAccField\('[^']*', 'utilYr'/.test(R.gUpk || ''),
+          /value="\$3,600"[^>]*oninput="updateAccField\('[^']*', 'utilYr'/.test(R.gUpk || '')),
+     '§28 ...and it is no longer TYPEABLE — a field that silently does nothing is worse than none [BITE]');
 
   /* ⭐ LEG TWO — EXACTLY ONCE. The typed utilYr is $3,600 and the ledger says $1,800. If both are
      counted the total reads $18,600 and the Yard's headline silently overstates the true cost of

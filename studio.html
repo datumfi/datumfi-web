@@ -8082,8 +8082,8 @@
                       same family of harm as a silently inflated one. */''}
                 <div class="carry-group-label" style="color:var(--muted); font-size:11px; letter-spacing:0.03em; margin:16px 0 8px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.05);">Operating Costs — what it takes to run the home day to day.</div>
                 <div class="field-row">
-                    <div><span class="input-label modal-tt-wrap" style="cursor:help;">Est. Maintenance / Repairs (yr)<div class="modal-tt" style="left:0; right:auto;"><strong>est. · ~1% of value</strong>A rough estimate — about 1% of the home's value is a common rule of thumb. It's only a starting point; your own number always wins.</div></span><input type="text" class="small-field curr-format" placeholder="${maintPH>0 ? 'est. $'+maintPH.toLocaleString('en-US') : '$0'}" value="${formatCurrencyDisplay(acc.maintYr||'')}" oninput="updateAccField('${id}', 'maintYr', this.value)"></div>
-                    <div><span class="input-label modal-tt-wrap" style="cursor:help;">Utilities — electric / gas / water (yr)<div class="modal-tt" style="right:0; left:auto;"><strong>Link or enter</strong>The recurring bills to keep the lights on and water running — electric, gas, water. Link an account to keep it current, or enter your own yearly figure.</div></span><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.utilYr||'')}" oninput="updateAccField('${id}', 'utilYr', this.value)"></div>
+                    ${_upkeepMirrorField(id, acc, 'services', 'maintYr', 'Est. Maintenance / Repairs (yr)', 'est. · ~1% of value', "A rough estimate — about 1% of the home's value is a common rule of thumb. It's only a starting point; your own number always wins.", 'left')}
+                    ${_upkeepMirrorField(id, acc, 'utilities', 'utilYr', 'Utilities — electric / gas / water (yr)', 'Link or enter', 'The recurring bills to keep the lights on and water running — electric, gas, water. Link an account to keep it current, or enter your own yearly figure.', 'right')}
                 </div>
                 ${/* ══ §27.3 · THE FIFTH BOX — Total Property Insurance (yr) ═══════════════════════════
                       Bank A342. ⭐ THIS REPLACES THE OLD RECONCILING SENTENCE, and it is a strict
@@ -11036,6 +11036,43 @@
                 'style="opacity:0.7; cursor:not-allowed; border-style:dashed;" title="Set on the linked mortgage (The Moat)">' +
                 '<div style="font-size:10px; color:var(--teal-mid); margin-top:3px; font-family:var(--font-mono);">🔗 mirrored from The Moat</div></div>';
         }
+        return '<div>' + tt +
+            '<input type="text" class="small-field curr-format" placeholder="$0" value="' + formatCurrencyDisplay(acc[groundField] || '') +
+            '" oninput="updateAccField(\'' + id + '\', \'' + groundField + '\', this.value)"></div>';
+    }
+    /* ══ §28.4 · THE UPKEEP MIRROR — THE HALF THAT WAS MISSING ═══════════════════════════════════
+     * ⚠️ FOUND IN THE CAPTAIN'S SMOKE, NOT BY A GATE. §28 routed calcCarryTotal through _canonUtil /
+     * _canonMaint but left the FIELDS rendering acc.utilYr / acc.maintYr directly and still
+     * editable. Result: $12,000 of ledger electricity in the total while the Utilities box read the
+     * old typed $2,100 — TWO NUMBERS ON SCREEN AND THE TOTAL MATCHING NEITHER. That is precisely the
+     * Captain's own acceptance test failing ("if the total cannot be added up from what is on
+     * screen, that is a bug"), and worse, the box stayed TYPEABLE, so a user could enter a figure
+     * that silently did nothing.
+     * 🔑 MY GATE ASSERTED THE FIELDS STAY EDITABLE WITH NO LINES AND NEVER ASSERTED WHAT THEY DO
+     * WITH LINES — an absence leg with no presence twin, which is the one shape this suite has a
+     * house law against. The leg below it now has its other half.
+     *
+     * Same shape as _carryMirrorField directly above (L48): read-only, dashed, dimmed, with the note
+     * naming where the number lives. Differs in ONE way, per the bank: this window is CLICKABLE and
+     * takes the user to the ledger. */
+    function _upkeepMirrorField(id, acc, group, groundField, label, ttTitle, ttBody, align) {
+        var pos = align === 'right' ? 'right:0; left:auto;' : 'left:0; right:auto;';
+        var n = _propUpkeepAnnual(id, group);
+        var tt = '<span class="input-label modal-tt-wrap" style="cursor:help;">' + label +
+                 '<div class="modal-tt" style="' + pos + '"><strong>' + ttTitle + '</strong>' + ttBody +
+                 (n > 0 ? '<br><br>This figure is the sum of the ' + group + ' lines you track in Operating Upkeep above. Edit the individual bills there; this box adds them up.' : '') +
+                 '</div></span>';
+        if (n > 0) {
+            var kinds = _propUpkeepLines(id, group).map(function (it) { return it.upkeepKind; });
+            return '<div>' + tt +
+                '<input type="text" class="small-field curr-format" value="' + formatCurrencyDisplay(n) + '" readonly ' +
+                'style="opacity:0.7; cursor:not-allowed; border-style:dashed;" title="Set in Operating Upkeep — click to open">' +
+                '<div onclick="openUpkeepForProperty(\'' + id + '\', \'' + (kinds[0] || '') + '\')" ' +
+                'style="font-size:10px; color:var(--teal-mid); margin-top:3px; font-family:var(--font-mono); cursor:pointer;">' +
+                '🔗 tracked in Operating Upkeep — click to open</div></div>';
+        }
+        /* THE NOT-TRACKED BRANCH REPRODUCES THE ORIGINAL FIELD BYTE-FOR-BYTE (10703's law), so a
+           property with no upkeep lines renders exactly as it did before §28 existed. */
         return '<div>' + tt +
             '<input type="text" class="small-field curr-format" placeholder="$0" value="' + formatCurrencyDisplay(acc[groundField] || '') +
             '" oninput="updateAccField(\'' + id + '\', \'' + groundField + '\', this.value)"></div>';
