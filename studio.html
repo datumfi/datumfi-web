@@ -3408,6 +3408,100 @@
       { id: 'upk_2', name: 'Groceries / Provisions', amount: 800, freq: 'monthly', category: 'essential', endDate: '', endsAtRet: false, tag: 'autopay', note: '' }
     ];
     let charityItems = [];
+
+    /* ══ §28a · THE PROPERTY-SCOPED UPKEEP CATALOGUE (bank A346, hovers VERBATIM) ══════════════════
+     * Twelve options under two heads. Curated from the Captain's own Budget Example sheet — a real
+     * book, not an invented list, which is why security and connectivity are in it: people pay ADT
+     * and Spectrum on a house, and most tools omit both.
+     *
+     * ⚠️ THE FULL LIFE CATALOGUE (groceries, fuel, medical, gym) BELONGS TO §03 AND IS NOT HERE.
+     * This dropdown answers one question: what does it cost to keep THIS PROPERTY running. A grocery
+     * line in a property room is a category error.
+     *
+     * ⭐ DECLARED AS A FUNCTION, NOT A `var`. Learned the expensive way hours ago: calcCarryTotal
+     * reads this table, five gates slice calcCarryTotal, and the closure walker pulls FUNCTIONS —
+     * a var is invisible to it and every one of those gates dies with a ReferenceError.
+     *
+     * ⭐ `kind` IS THE STABLE KEY AND IT DOES THREE JOBS, WHICH IS WHY IT EXISTS AT ALL:
+     *   1. GROUPING — utilYr resolves from `utilities` lines, maintYr from `services` (§28.4).
+     *      It CANNOT be derived from the line's NAME: names are freely editable in §03
+     *      (studio.html ~3534), so renaming "Electricity" to "Power bill" would silently drop the
+     *      line out of the carrying total. A silent UNDER-count is the same family of harm as the
+     *      over-count §27.3's toggle gate prevents, pointing the other way.
+     *   2. THE VISUAL LAYER (Captain's arc, after this leg) — `electricity` draws poles and room
+     *      halos, `water` draws the hydrant and the perimeter line. A group tag could never answer
+     *      "which thing do I draw"; the kind can.
+     *   3. CLICK-THROUGH IDENTITY — resolve a drawn element back to its bill by
+     *      (propertyId, kind), which SURVIVES A RELOAD. The line's own id does not: it is
+     *      regenerated as 'upk_' + Math.random() on every blueprint load.
+     * A renamed line therefore keeps counting AND keeps glowing. */
+    function _propUpkeepCatalogue() { return [
+      { kind: 'electricity', group: 'utilities', label: 'Electricity',
+        hover: 'Your power bill for this property. If it swings hard by season, an average across twelve months is closer to the truth than this month’s figure.' },
+      { kind: 'water', group: 'utilities', label: 'Water & Sewer',
+        hover: 'Water, and the sewer or septic service that goes with it. Often billed together; sometimes the sewer line is the larger half.' },
+      { kind: 'gas', group: 'utilities', label: 'Natural gas / Propane',
+        hover: 'Gas for heat, hot water or cooking. In a propane household this can be a delivery a few times a year rather than a monthly bill — record it however you actually pay it.' },
+      { kind: 'waste', group: 'utilities', label: 'Waste & Recycling',
+        hover: 'Refuse collection, where it is billed separately rather than bundled into a municipal tax or an association fee.' },
+      { kind: 'internet', group: 'utilities', label: 'Internet',
+        hover: 'Home internet for this property. If it is bundled with television or phone, record the bundle and note the split — the total is what leaves your account.' },
+      { kind: 'landline', group: 'utilities', label: 'Landline phone',
+        hover: 'A phone line tied to the property rather than to a person. Increasingly rare, and easy to keep paying for long after it is used.' },
+      { kind: 'lawn', group: 'services', label: 'Lawn & Landscaping',
+        hover: 'Mowing, beds, irrigation, seasonal clean-ups. A cost that scales with the lot rather than the house.' },
+      { kind: 'pest', group: 'services', label: 'Pest control',
+        hover: 'Routine treatment or inspection. Often quarterly, and worth recording annually rather than guessing a month.' },
+      { kind: 'pool', group: 'services', label: 'Pool / Spa service',
+        hover: 'Service, chemicals and upkeep for a pool or spa. One of the costs most often left out of what a home really runs.' },
+      { kind: 'security', group: 'services', label: 'Home security & monitoring',
+        hover: 'An alarm or monitoring contract on the property. Small monthly, long contract — it belongs in the true cost.' },
+      { kind: 'cleaning', group: 'services', label: 'Cleaning service',
+        hover: 'Recurring housekeeping. Include it if it is a standing arrangement rather than an occasional one.' },
+      /* ⚠️ THIS HOVER MUST STAY CONSISTENT WITH §4.3 (row 27), which already carries the 1% rule of
+         thumb. SAME FIGURE, SAME FRAMING — two surfaces must not state the rule differently. */
+      { kind: 'maintenance', group: 'services', label: 'Routine maintenance & repairs',
+        hover: 'The ongoing upkeep a house asks for — filters, servicing, small repairs. A common rule of thumb is about 1% of the home’s value a year; your own number always wins.' }
+    ]; }
+    function _propUpkeepKind(kind) {
+      var hit = _propUpkeepCatalogue().filter(function (c) { return c.kind === kind; })[0];
+      return hit || null;
+    }
+    /* ⚠️ THE LEDGER IS REACHED THROUGH A FUNCTION, AND `typeof` IS LOAD-BEARING.
+     * calcCarryTotal now resolves through here, and five property gates SLICE calcCarryTotal into a
+     * sandbox. `upkeepItems` is a `let` — a binding, invisible to the closure walker — so touching
+     * it directly threw "upkeepItems is not defined" and reddened the canary within seconds of this
+     * function being written. Same class as the _PROP_ENDORSEMENTS break earlier today; this time
+     * the feedback was 0.1s instead of a 21-minute suite.
+     * It CANNOT be solved the same way: that was a constant table and became a function returning a
+     * literal. This is MUTABLE LIVE STATE and must stay a `let`.
+     * 🔑 `typeof x` ON AN UNDECLARED IDENTIFIER RETURNS 'undefined' RATHER THAN THROWING — the one
+     * safe way to ask "does this exist?". In a sliced sandbox the ledger simply is not there, so this
+     * returns [] and the canonical readers fall back to the room's own fields. That is not a
+     * workaround: an empty ledger IS the not-linked branch, which is exactly the state a property
+     * gate slicing calcCarryTotal expects to be in. The try/catch also covers the `let` temporal
+     * dead zone, where `typeof` does throw. */
+    function _upkeepLedger() {
+      try { return (typeof upkeepItems !== 'undefined' && upkeepItems) ? upkeepItems : []; }
+      catch (e) { return []; }
+    }
+    /* Every upkeep line belonging to this property, in catalogue order so the window reads the same
+       way every time regardless of the order they were added. */
+    function _propUpkeepLines(accId, group) {
+      var order = _propUpkeepCatalogue().map(function (c) { return c.kind; });
+      return _upkeepLedger().filter(function (it) {
+        if (it.propertyId !== accId || !it.upkeepKind) return false;
+        if (!group) return true;
+        var c = _propUpkeepKind(it.upkeepKind);
+        return !!c && c.group === group;
+      }).sort(function (a, b) { return order.indexOf(a.upkeepKind) - order.indexOf(b.upkeepKind); });
+    }
+    /* ⛔ ANNUALISED THROUGH THE ONE PRODUCER. studio 3396: "NO second definition of the monthly
+       math." DatumBlueprint.upkeepMonthly owns freq handling; this multiplies its result by 12 and
+       does nothing else. Forking that math is how two surfaces start disagreeing about one bill. */
+    function _propUpkeepAnnual(accId, group) {
+      return _propUpkeepLines(accId, group).reduce(function (s, it) { return s + _upkMo(it) * 12; }, 0);
+    }
     // U2 — single-source accessors. _upkMo: null-safe per-item monthly via the hub producer
     // (returns 0 pre-hub at parse-time; DOMContentLoaded re-render sets the real total — the
     // deferred-hub pattern from U1). NO second definition of the monthly math. _getUpkeepModel:
@@ -3530,7 +3624,7 @@
         upkeepItems.forEach((item, index) => {
             total += _upkMo(item);
             list.innerHTML += `
-              <div class="plumbing-row">
+              <div class="plumbing-row" id="upk-row-${item.id}">
                  <input type="text" class="small-field plumbing-name" value="${item.name}" placeholder="Expense Name" oninput="updateUpkeepItem('${item.id}', 'name', this.value, false)">
                  <input type="text" class="small-field plumbing-cost curr-format" value="$${(item.amount||0).toLocaleString('en-US')}" placeholder="$0" oninput="updateUpkeepItem('${item.id}', 'amount', this.value, false)">
                  <select class="small-field plumbing-freq" onchange="updateUpkeepItem('${item.id}', 'freq', this.value, false)">
@@ -3584,7 +3678,13 @@
             return { id: 'upk_' + Math.random().toString(36).substr(2, 9), name: it.name || '',
               amount: (it.amount != null ? it.amount : it.cost) || 0, freq: it.freq || 'monthly',
               category: it.category || 'essential', endDate: it.endDate || '', endsAtRet: !!it.endsAtRet,
-              tag: it.tag || 'autopay', note: it.note || '' };
+              tag: it.tag || 'autopay', note: it.note || '',
+              /* §28 — THE PARENT PROPERTY AND THE CATALOGUE KIND. This rebuild is a WHITELIST: any
+                 field not named here is dropped on every blueprint load. Omit these two and the
+                 property link works perfectly in-session and vanishes on reload — the worst failure
+                 shape there is, because it tests green and dies quietly. They must be carried in
+                 BOTH directions (see _serUpk in studio-blueprint.js) or not at all. */
+              propertyId: it.propertyId || '', upkeepKind: it.upkeepKind || '' };
           });
         }
         if (Array.isArray(bp.upkeep.charity) && bp.upkeep.charity.length) {
@@ -7811,6 +7911,12 @@
                    knew existed. `!== false` reads a missing key as ON, so nothing recorded before
                    tonight goes quiet. Same shape the carrying toggle already uses (L48). */
                 var showIns = acc.showInsurance !== false;
+                /* §28.1 — the upkeep section's own toggle. `!== false` DELIBERATELY, matching the two
+                   above exactly. There is no schema-version story in this file: every one of these
+                   flags works by the habit that a missing key reads as ON. The day someone writes
+                   `=== false` instead, every blueprint predating that field changes behaviour
+                   silently. If you add a flag here, MATCH THE HABIT — do not improve it alone. */
+                var showUpkeep = acc.showUpkeep !== false;
                 var inDB = acc.includeDatumBuilder !== false;    // §5.3 default ON
                 var maintPH = _groundsMaintDefault(acc);
                 html += `
@@ -7930,6 +8036,10 @@
                 ${_propHazardHTML(acc)}
             </div>`;
                 }
+                /* §28.1 — OPERATING UPKEEP sits BELOW Property Insurance and ABOVE Annual Carrying
+                   Cost (bank A344/A346), which is the order the Captain asked for and also the order
+                   the arithmetic reads in: record the bills, then see them land in the total. */
+                html += _propUpkeepSectionHTML(id, acc, showUpkeep);
                 html += `
             <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
                 <span class="toggle-label" style="color:var(--teal-mid);">Show carrying costs</span>
@@ -8724,6 +8834,52 @@
         // §18.3 (consolidated) — AUTO-LINK the counterpart + STAY in this room (no teleport into the new debt).
         renderInputs(); updateSVGs(); updateAnalysisText(); openAccountModal(assetId);
     }
+
+    /* ══ §28.3 · CREATE-AND-STAY FOR AN UPKEEP LINE ═══════════════════════════════════════════════
+     * The same mechanic as createLinkedLiability directly above (L48): make the counterpart, then
+     * REOPEN THIS ROOM. No teleport. The user picks "Electricity", the line appears in the property's
+     * own window, and they type the amount without ever leaving the property.
+     * The line is born at amount 0 — a created line is not a claim about what anything costs, and a
+     * fabricated figure inside a total the Captain reads as fact is the thing L47 exists to stop.
+     * ⛔ REFUSES TO CREATE A LINE IT CANNOT PARENT. "A line with no resolvable parent is NEVER
+     * silently attached to property #1" (bank A346), so a missing account or an unknown catalogue
+     * kind returns without writing anything rather than guessing an owner. */
+    window.createPropertyUpkeep = function (assetId, kind) {
+        var acc = state.accounts.find(function (a) { return a.id === assetId; });
+        var cat = _propUpkeepKind(kind);
+        if (!acc || !cat) return;
+        // One line per kind per property: picking Electricity twice reopens the one that exists
+        // rather than quietly creating a second bill for the same meter.
+        if (_propUpkeepLines(assetId).some(function (it) { return it.upkeepKind === kind; })) { openAccountModal(assetId); return; }
+        upkeepItems.push({ id: 'upk_' + Math.random().toString(36).substr(2, 9), name: cat.label,
+            amount: 0, freq: 'monthly', category: 'essential', endDate: '', endsAtRet: false,
+            tag: 'autopay', note: '', propertyId: assetId, upkeepKind: kind });
+        if (typeof renderUpkeep === 'function') renderUpkeep();
+        if (typeof calculateUpkeepLoad === 'function') calculateUpkeepLoad();
+        renderInputs(); updateSVGs(); updateAnalysisText(); openAccountModal(assetId);
+    };
+
+    /* §28.3 click-through — the Captain's ask: the window is CLICKABLE and takes you to the ledger.
+       Closes the property modal and opens §03 with the line focused, mirroring the Yard's clickable
+       section headers (#415). Resolved by (propertyId, kind) rather than by the line's id, because
+       upkeep ids are regenerated on every blueprint load and a stored id would go dead on reload. */
+    window.openUpkeepForProperty = function (assetId, kind) {
+        /* ⚠️ EVERY NAME HERE WAS VERIFIED AGAINST THE LIVE FILE, NOT REMEMBERED. The first draft
+           called closeModal() (the function is closeAccountModal, 8379) and scrolled to
+           #upkeep-section (the ledger is #upkeep-ledger, 2111). Neither existed, and both would have
+           failed SILENTLY — a dead click that looks like a click that did nothing. The Yard door at
+           ~6880 is the shipped precedent for leaving this modal and is what this mirrors. */
+        var line = _propUpkeepLines(assetId).filter(function (it) { return it.upkeepKind === kind; })[0];
+        if (typeof closeAccountModal === 'function') closeAccountModal();
+        var sec = document.getElementById('upkeep-ledger');
+        if (sec && sec.scrollIntoView) sec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (!line) return;
+        var el = document.getElementById('upk-row-' + line.id);
+        if (el) {
+            var inp = el.querySelector('input.plumbing-cost');
+            if (inp && inp.focus) { inp.focus(); inp.select && inp.select(); }
+        }
+    };
 
     window.toggleHoldings = function(id) {
         let acc = state.accounts.find(a=>a.id===id);
@@ -9886,6 +10042,61 @@
                'font-family:var(--font-serif); font-size:12px; line-height:1.5; color:rgba(255,255,255,0.72);">' + body + '</div>';
     }
 
+    /* ══ §28.1/§28.2/§28.3 · THE OPERATING UPKEEP WINDOW (bank A344/A346, copy VERBATIM) ══════════
+     * ⭐ THE LEDGER OWNS THE DOLLAR; THIS IS A WINDOW ONTO IT — and unlike the mortgage-escrow
+     * mirror, THIS WINDOW IS CLICKABLE and takes the user to §03. Every amount shown here is read
+     * from the ledger and rendered READ-ONLY: a second editable input bound to the same line would
+     * go stale the moment the first was typed into (§13.72), and worse, would invite two surfaces to
+     * disagree about one bill.
+     * ⭐ ADDITIVE. A property with no lines shows the empty state and changes nothing else about the
+     * room — the byte-for-byte promise the escrow mirror already makes (10703). */
+    function _propUpkeepSectionHTML(id, acc, show) {
+        var lines = _propUpkeepLines(id);
+        var opts = ['<option value="">+ Add an upkeep cost…</option>'];
+        [['utilities', 'UTILITIES'], ['services', 'PROPERTY SERVICES']].forEach(function (g) {
+            opts.push('<optgroup label="' + g[1] + '">');
+            _propUpkeepCatalogue().filter(function (c) { return c.group === g[0]; }).forEach(function (c) {
+                /* Already-added kinds are disabled rather than hidden: a user who cannot find
+                   "Electricity" would reasonably conclude it is missing. Annotation over
+                   suppression, the row-195 ruling applied to a dropdown. */
+                var had = lines.some(function (it) { return it.upkeepKind === c.kind; });
+                opts.push('<option value="' + c.kind + '"' + (had ? ' disabled' : '') + '>' + c.label + (had ? ' — added' : '') + '</option>');
+            });
+            opts.push('</optgroup>');
+        });
+        var rows = lines.map(function (it) {
+            var c = _propUpkeepKind(it.upkeepKind) || { label: it.name, hover: '' };
+            var mo = _upkMo(it);
+            var amt = mo > 0 ? '$' + Math.round(mo * 12).toLocaleString('en-US') + '/yr' : '—';
+            return '<div onclick="openUpkeepForProperty(\'' + id + '\', \'' + it.upkeepKind + '\')" ' +
+                   'title="Set in Operating Upkeep — click to open" ' +
+                   'style="display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:7px 0; ' +
+                   'border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer;">' +
+                   '<span class="modal-tt-wrap" style="font-size:12.5px; color:rgba(255,255,255,0.82);">' + c.label +
+                   (c.hover ? '<div class="modal-tt" style="left:0; right:auto;"><strong>' + c.label + '</strong>' + c.hover + '</div>' : '') +
+                   '</span>' +
+                   '<span style="font-family:var(--font-mono); font-size:12.5px; color:' + (mo > 0 ? 'rgba(255,255,255,0.75)' : 'var(--muted)') + ';">' + amt + '</span>' +
+                   '</div>';
+        }).join('');
+        var body = lines.length
+            ? rows + '<div style="margin-top:8px; font-size:11px; color:var(--muted);">🔗 tracked in Operating Upkeep — click to open</div>'
+            : '<div style="font-size:12px; color:var(--muted); line-height:1.5; padding:4px 0 8px;">Nothing tracked yet. Add the bills you actually pay for this property — each one becomes a line in your Operating Upkeep ledger.</div>';
+        return `
+            <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
+                <span class="toggle-label" style="color:var(--teal-mid);">Show upkeep costs</span>
+                <label class="switch"><input type="checkbox" ${show ? 'checked' : ''} onchange="updateAccToggle('${id}', 'showUpkeep', this.checked)"><span class="slider"></span></label>
+                <div class="modal-tt"><strong>Show upkeep costs</strong>The recurring bills that keep this property running — power, water, waste, connectivity, the yard. Add the ones you pay and they are tracked in your Operating Upkeep ledger, then counted here in the true cost of keeping the place.</div>
+            </div>` + (show ? `
+            <div style="margin-top:14px; padding:14px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:4px;">
+                <div style="color:var(--teal-mid); font-weight:bold; font-size:13px;">🧰 Operating Upkeep</div>
+                <div style="font-size:11.5px; color:var(--muted); margin:2px 0 10px;">What it takes to run the place, month to month.</div>
+                ${body}
+                <div style="margin-top:12px;">
+                    <select class="small-field" style="background: var(--bg-navy); color:white;" onchange="if(this.value){ createPropertyUpkeep('${id}', this.value); }">${opts.join('')}</select>
+                </div>
+            </div>` : '');
+    }
+
     function _propEndorsementsHTML(id, acc) {
         if (!acc) return '';
         var anyOn = _propEndorsements().some(function (e) { return !!acc[e[0]]; });
@@ -10786,6 +10997,31 @@
         var m = _linkedMortgageWith(acc.id, 'insAnnual');
         return m ? m.insAnnual : acc.homeInsYr;
     }
+    /* ══ §28.4 · UTILITIES AND MAINTENANCE RESOLVE THROUGH THE LEDGER ════════════════════════════
+     * Bank A344/A346. THE SAME SHAPE AS THE TWO ABOVE, deliberately — ask "is there an owner for
+     * this figure?", return the owner's value if so, the room's own field if not.
+     *
+     * ⛔ A HOUSING EXPENSE EXISTS ONCE, IN THE UPKEEP LEDGER. This is the third surface for the same
+     * dollars: the Yard's realMonthly already had to be de-duped when tax and insurance were counted
+     * in BOTH escrow and carry (Yard §3.7), and §27.3 just added an insurance total. §4.16 AND the
+     * Yard's realMonthly both read calcCarryTotal, so a line counted twice here silently overstates
+     * the true cost of owning the home — the $3,400-not-$4,600 bug, third time asking.
+     * The resolver is what makes it once: if lines exist they ARE the value and the room's own field
+     * becomes a read-only mirror, so there is no path on which both are summed.
+     *
+     * ⭐ ADDITIVE, AND THE BYTE-FOR-BYTE PROMISE IS THE PRIMARY EVIDENCE (10703's law). With no
+     * lines, both return the raw field exactly as before — a property with no upkeep renders
+     * EXACTLY as today. That is the leg I trust most on this change, because turning a field into a
+     * resolver is precisely the class of move that preserves every path you test and changes the
+     * contract underneath (§13.77, learned today at some cost). */
+    function _canonUtil(acc) {
+        var n = _propUpkeepAnnual(acc.id, 'utilities');
+        return n > 0 ? n : acc.utilYr;
+    }
+    function _canonMaint(acc) {
+        var n = _propUpkeepAnnual(acc.id, 'services');
+        return n > 0 ? n : acc.maintYr;
+    }
     // §18.2 render ONE shared escrow carry field (property-tax / insurance). Normally an editable Grounds input;
     // but a READ-ONLY MIRROR of the linked mortgage's escrow figure the moment one exists (Option B). The
     // not-linked branch reproduces the original field byte-for-byte, so nothing changes for an unlinked home.
@@ -10844,8 +11080,12 @@
     function _propInsuranceTotal(acc) {
         return _num(_canonHomeIns(acc)) + _propInsuranceExtras(acc);
     }
+    /* ⭐ §28.4/§28.5 — THE TOTAL BECOMES TRUE WITHOUT THE TOTAL'S MATH CHANGING. Still five terms
+       plus §27.3's insurance extras; only what maint and util RESOLVE TO has moved, from raw fields
+       to canonical readers. calcCarryTotal is deliberately NOT restructured — every consumer (§4.16,
+       the Yard's realMonthly, the Moat) keeps reading the same shape it always did. */
     function calcCarryTotal(acc) {
-        return _num(_canonPropTax(acc)) + _num(_canonHomeIns(acc)) + _num(acc.maintYr) + _num(acc.hoaYr) + _num(acc.utilYr)
+        return _num(_canonPropTax(acc)) + _num(_canonHomeIns(acc)) + _num(_canonMaint(acc)) + _num(acc.hoaYr) + _num(_canonUtil(acc))
              + _propInsuranceExtras(acc);
     }
     function _groundsLinkedDebt(id) {   // §1.2 sum of linked liabilities (mortgage / HELOC etc.)

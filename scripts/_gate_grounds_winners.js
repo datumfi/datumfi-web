@@ -137,10 +137,15 @@ const VALUEFIRST = process.argv.includes('--valuefirst');
    stored value survives the toggle, and the user reads a carrying total higher than anything he can
    see. --redfirst cannot reproduce it — it flips winner strings, and this is an arithmetic fault. */
 const UNGATEDPREM = process.argv.includes('--ungatedprem');
+/* --dblcount makes the ledger ADD to the typed utilYr instead of REPLACING it — the exact
+   $3,400-not-$4,600 bug, reproduced on its third surface. The total reads $18,600 and the Yard's
+   headline silently overstates the cost of owning the home. This is the failure 28 exists to
+   prevent, so it gets a control shaped like it rather than relying on --redfirst string flips. */
+const DBLCOUNT = process.argv.includes('--dblcount');
 const MUT = NOHELOC || NOCTRL || FLATCARRY || NOEDUC || NOCOV || WRONGFLD || ZEROPLACE
          || NOENDORSE || EAGERFIELDS || DEAFSWITCH || DEAFSELECT
          || NOHAZARD || WORDONLY || SDCFALLBACK || NOTYPEDI || TYPEFALLBACK || HO3NOTE || HIDEFIELD
-         || SKIPBLANK || FORKVALUE || PLAINTEXTDED || VALUEFIRST || UNGATEDPREM;
+         || SKIPBLANK || FORKVALUE || PLAINTEXTDED || VALUEFIRST || UNGATEDPREM || DBLCOUNT;
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8305;
 const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
@@ -189,6 +194,8 @@ const A_DEAFSEL = "            if(field === 'hoType' || field === 'propType') op
 const M_DEAFSEL = "            /* --deafselect: the pre-fix state — both fields store, neither repaints */";
 /* §27 anchors. Both are single literals from the §27 wiring, so a re-grounding shows up as an
    aborted mutation rather than a control that quietly stopped biting. */
+const A_DBLCOUNT = "        return n > 0 ? n : acc.utilYr;";
+const M_DBLCOUNT = "        return n > 0 ? (n + _num(acc.utilYr)) : acc.utilYr;   /* --dblcount */";
 const A_UNGATED = "        _propEndorsements().forEach(function (e) { if (acc[e[0]]) sum += _num(acc[e[0] + 'Premium']); });";
 const M_UNGATED = "        _propEndorsements().forEach(function (e) { sum += _num(acc[e[0] + 'Premium']); });   /* --ungatedprem */";
 const A_VALFIRST = "      const cl = e.target.classList;";
@@ -272,6 +279,7 @@ const server = http.createServer((req, res) => {
     if (PLAINTEXTDED) apply(A_PLAINDED, M_PLAINDED, 'A_PLAINDED');
     if (VALUEFIRST) apply(A_VALFIRST, M_VALFIRST, 'A_VALFIRST');
     if (UNGATEDPREM) apply(A_UNGATED, M_UNGATED, 'A_UNGATED');
+    if (DBLCOUNT) apply(A_DBLCOUNT, M_DBLCOUNT, 'A_DBLCOUNT');
     body = Buffer.from(src, 'utf8');
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
@@ -341,6 +349,56 @@ const server = http.createServer((req, res) => {
     const dAcc = window.state.accounts.filter(x => x.baseId === 'property').pop();
     window.openAccountModal(dAcc.id);
     out.gInsDash = cap();
+    /* ══ §28 · OPERATING UPKEEP — THE WINDOW, AND THE TWO LEGS THE BANK CALLS NON-NEGOTIABLE ══════
+       gUpkNone is the BYTE-FOR-BYTE control: identical carry fields to gFill and NO upkeep lines.
+       Its total must still be $16,800 and its Maintenance/Utilities inputs must still be EDITABLE —
+       "the not-linked branch reproduces the original field byte-for-byte" (10703). Turning a field
+       into a resolver preserves every path you test and changes the contract underneath (§13.77),
+       so this is the leg I trust most on this change.
+       gUpk carries the SAME typed utilYr ($3,600) AND two utilities lines ($100 + $50 monthly =
+       $1,800/yr). ⛔ THE LEDGER WINS AND THE TYPED FIGURE IS NOT ALSO ADDED: the total must read
+       $15,000 (6,000 + 2,000 + 4,000 + 1,200 + 1,800), never $18,600. §4.16 and the Yard's
+       realMonthly both read calcCarryTotal — this is the $3,400-not-$4,600 bug's third surface. */
+    addInstance('property');
+    const uNone = window.state.accounts.filter(x => x.baseId === 'property').pop();
+    Object.assign(uNone, { value: 500000, propTaxYr: '6000', homeInsYr: '2000', maintYr: '4000', hoaYr: '1200', utilYr: '3600' });
+    window.openAccountModal(uNone.id);
+    out.gUpkNone = cap();
+
+    addInstance('property');
+    const uAcc = window.state.accounts.filter(x => x.baseId === 'property').pop();
+    Object.assign(uAcc, { value: 500000, propTaxYr: '6000', homeInsYr: '2000', maintYr: '4000', hoaYr: '1200', utilYr: '3600' });
+    /* Created through the REAL create-and-stay entry point, not by pushing objects into the array.
+       The claim is about what the product does when the user picks from the dropdown (§13.72). */
+    window.openAccountModal(uAcc.id);
+    window.createPropertyUpkeep(uAcc.id, 'electricity');
+    /* CREATE-AND-STAY captured WITHOUT REOPENING ANYTHING. Reopening first would prove the renderer
+       and miss a teleport entirely (§13.72) — the whole claim is about where the user is LEFT.
+       activeModalId is module-scope (studio 3928), not a window global, so the DOM is the witness. */
+    const _stayHtml = (document.getElementById('modal-dynamic-content') || {}).innerHTML || '';
+    window.createPropertyUpkeep(uAcc.id, 'water');
+    const _ul = window._getUpkeepModel().items.filter(function (i) { return i.propertyId === uAcc.id; });
+    _ul.forEach(function (it) { it.amount = it.upkeepKind === 'electricity' ? 100 : 50; });
+    window.openAccountModal(uAcc.id);
+    out.gUpk = cap();
+    out.gUpkModel = {
+      count: _ul.length,
+      kinds: _ul.map(function (i) { return i.upkeepKind; }),
+      parented: _ul.every(function (i) { return i.propertyId === uAcc.id; }),
+      names: _ul.map(function (i) { return i.name; }),
+      /* CREATE-AND-STAY: the modal left on screen after the create call must still be THIS
+         property's room. A teleport into the ledger is the failure the mechanic exists to avoid. */
+      stayed: _stayHtml.indexOf('Operating Upkeep') >= 0 && _stayHtml.indexOf('Property details') >= 0,
+      /* Picking the same kind twice must not create a second bill for one meter. */
+      dupeBlocked: (function () { window.createPropertyUpkeep(uAcc.id, 'electricity');
+        return window._getUpkeepModel().items.filter(function (i) { return i.propertyId === uAcc.id && i.upkeepKind === 'electricity'; }).length; })(),
+      /* A kind that is not in the catalogue must write NOTHING — never silently parented to
+         property #1, never a line with an unresolvable kind. */
+      junkRejected: (function () { const before = window._getUpkeepModel().items.length;
+        window.createPropertyUpkeep(uAcc.id, 'not_a_real_kind');
+        return window._getUpkeepModel().items.length === before; })()
+    };
+
     /* §27.4 VARIANT B — premiums carried but NO homeowner figure recorded, so the note has no number
        to name. Its own property, because gPrem deliberately HAS one. */
     addInstance('property');
@@ -1820,6 +1878,46 @@ const server = http.createServer((req, res) => {
   ok(R.p27ded && R.p27ded.linkSafe.threw === '',
      'the blur normalizer does not throw on an element with no .value (threw: ' + ((R.p27ded && R.p27ded.linkSafe.threw) || 'nothing') + ')');
 
+  /* ══ §28 · OPERATING UPKEEP ═══════════════════════════════════════════════════════════════════
+     ⭐ LEG ONE OF TWO THE BANK CALLS NON-NEGOTIABLE — BYTE-FOR-BYTE. A property with no upkeep
+     lines must render EXACTLY as before this feature existed. Not wrapped in pick(): this is the
+     promise the whole mirror pattern rests on, and it must hold in every mode. */
+  ok(has(R.gUpkNone, '$16,800'), '§28 [BYTE-FOR-BYTE] no upkeep lines -> the carrying total is UNMOVED at $16,800');
+  ok(has(R.gUpkNone, 'Nothing tracked yet.'), '§28 ...and the section shows its authored empty state');
+  ok(has(R.gUpkNone, 'maintYr') && has(R.gUpkNone, 'utilYr'),
+     '§28 ...and Maintenance/Utilities are still the EDITABLE fields, not read-only mirrors');
+
+  /* ⭐ LEG TWO — EXACTLY ONCE. The typed utilYr is $3,600 and the ledger says $1,800. If both are
+     counted the total reads $18,600 and the Yard's headline silently overstates the true cost of
+     owning the home. This is the $3,400-not-$4,600 bug's third surface, and the resolver is what
+     makes it once: lines exist, so the lines ARE the value. */
+  ok(pick(has(R.gUpk, '$15,000'), !has(R.gUpk, '$15,000')),
+     '§28 [EXACTLY ONCE] ledger utilities REPLACE the typed figure ($1,800, not $3,600) -> total $15,000 [BITE]');
+  ok(pick(!has(R.gUpk, '$18,600'), has(R.gUpk, '$18,600')),
+     '§28 ...and the typed figure is NOT also added ($18,600 would be the double-count) [BITE]');
+
+  // The window itself, and the create-and-stay mechanic driven for real.
+  ok(R.gUpkModel && R.gUpkModel.count === 2, '§28 [PRESENCE] two lines were created through the real entry point');
+  ok(pick(R.gUpkModel && R.gUpkModel.parented === true, !(R.gUpkModel && R.gUpkModel.parented === true)),
+     '§28 every created line carries its PARENT PROPERTY [BITE]');
+  ok(pick(R.gUpkModel && R.gUpkModel.kinds.indexOf('electricity') >= 0 && R.gUpkModel.kinds.indexOf('water') >= 0,
+          !(R.gUpkModel && R.gUpkModel.kinds.indexOf('electricity') >= 0)),
+     '§28 ...and its stable catalogue KIND, which survives a rename [BITE]');
+  ok(R.gUpkModel && R.gUpkModel.names.indexOf('Electricity') >= 0, '§28 the line is named from the authored catalogue');
+  ok(pick(R.gUpkModel && R.gUpkModel.stayed === true, !(R.gUpkModel && R.gUpkModel.stayed === true)),
+     '§28 CREATE-AND-STAY — the property modal is still the open one, no teleport [BITE]');
+  ok(R.gUpkModel && R.gUpkModel.dupeBlocked === 1, '§28 picking one kind twice does not create a second bill for the same meter');
+  /* ⛔ "A line with no resolvable parent is NEVER silently attached to property #1" (bank A346).
+     An unknown kind must write nothing at all rather than create an unattributable line. */
+  ok(pick(R.gUpkModel && R.gUpkModel.junkRejected === true, !(R.gUpkModel && R.gUpkModel.junkRejected === true)),
+     '§28 an unknown catalogue kind creates NOTHING — it is never silently parented [BITE]');
+  ok(has(R.gUpk, '🔗 tracked in Operating Upkeep — click to open'), '§28 the clickable affordance copy renders verbatim');
+  ok(has(R.gUpk, 'What it takes to run the place, month to month.'), '§28 the authored subhead renders');
+  ok(has(R.gUpk, 'Routine maintenance &amp; repairs') || has(R.gUpk, 'Routine maintenance & repairs'),
+     '§28 the property-scoped catalogue is offered');
+  /* ⚠️ THE FULL LIFE CATALOGUE BELONGS TO §03. A grocery line in a property room is a category error. */
+  ok(!has(R.gUpk, 'Groceries') && !has(R.gUpk, 'Gym'), '§28 the full life catalogue does NOT leak into the property dropdown');
+
   lines.push('-------------------------------------');
   const overall = fail === 0 ? 'GREEN' : 'RED';
   /* A POISONED RUN MUST NAME ITS MUTATION — a run that prints CLEAN over a mutated file is the
@@ -1831,7 +1929,7 @@ const server = http.createServer((req, res) => {
     [NOCOV,'nocov'],[WRONGFLD,'wrongfld'],[ZEROPLACE,'zeroplace'],[NOENDORSE,'noendorse'],
     [EAGERFIELDS,'eagerfields'],[DEAFSWITCH,'deafswitch'],[DEAFSELECT,'deafselect'],[NOHAZARD,'nohazard'],
     [WORDONLY,'wordonly'],[SDCFALLBACK,'sdcfallback'],[NOTYPEDI,'notypedi'],[TYPEFALLBACK,'typefallback'],
-    [HO3NOTE,'ho3note'],[HIDEFIELD,'hidefield'],[SKIPBLANK,'skipblank'],[FORKVALUE,'forkvalue'],[PLAINTEXTDED,'plaintextded'],[VALUEFIRST,'valuefirst'],[UNGATEDPREM,'ungatedprem']]
+    [HO3NOTE,'ho3note'],[HIDEFIELD,'hidefield'],[SKIPBLANK,'skipblank'],[FORKVALUE,'forkvalue'],[PLAINTEXTDED,'plaintextded'],[VALUEFIRST,'valuefirst'],[UNGATEDPREM,'ungatedprem'],[DBLCOUNT,'dblcount']]
     .filter(function (m) { return m[0]; }).map(function (m) { return m[1]; });
   const TAG = MUTS.length ? 'MUTATED[' + MUTS.join('+') + ']' : (RF ? 'RED-FIRST' : 'CLEAN');
   lines.push('MODE: ' + (RF ? 'RED-FIRST (winners flipped to losers — MUST be RED)' : 'NORMAL') + '   |   FILE: ' + TAG + '   |   STAGE: G10 (+ #250 fixes) — WHOLE ROOM');

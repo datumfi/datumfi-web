@@ -1461,7 +1461,14 @@
     function _serUpk(it) {
       return { name: it.name || '', amount: (it.amount != null ? it.amount : it.cost) || 0,
         freq: it.freq || 'monthly', category: it.category || 'essential', endDate: it.endDate || '',
-        endsAtRet: !!it.endsAtRet, tag: it.tag || 'autopay', note: it.note || '' };
+        endsAtRet: !!it.endsAtRet, tag: it.tag || 'autopay', note: it.note || '',
+        /* §28 — THE OUTBOUND HALF OF THE SAME FENCE. This is a WHITELIST too, and it runs BEFORE
+           toD1Document (which is generic and keeps whatever it is handed). Drop these here and the
+           parent link never reaches D1 at all, no matter how correct the inbound reader is.
+           ⚠️ upkeepKind IS NOT DERIVABLE FROM name: upkeep names are freely editable in §03, so a
+           renamed line would lose its grouping (silently leaving the carrying total) and its visual
+           identity. It is stored because it must survive the user renaming the thing. */
+        propertyId: it.propertyId || '', upkeepKind: it.upkeepKind || '' };
     }
     if (global._getUpkeepModel) {
       var _um = global._getUpkeepModel();
