@@ -9735,36 +9735,96 @@
         return 'very high';
     }
 
+    /* §17.5 PANEL — REDESIGNED ON THE CAPTAIN'S SMOKE, 2026-08-07. Three things he asked for and one
+     * he did not have to: the readings were two loose rows, the two values did not line up (measured:
+     * the labels are 414px and 446px wide with no column structure, so nothing could line up), and
+     * the provenance read as an aside rather than as a citation.
+     * IT IS NOW A FRAMED READING, TWO EQUAL CELLS, VALUES ON A SHARED BASELINE. Same dark card idiom
+     * as the estimate block above it, so it reads as part of the room rather than a footnote.
+     * ⛔ THE SCALE IS BUILT FROM THE AUTHORED BANDS AND NOTHING ELSE. Five words, five thresholds,
+     * all from §17.5a — the ranking is arithmetic on numbers the Architect set, not a judgement I
+     * made. The user's own band is marked; the rest are shown so the reading has a context to sit in,
+     * which is what "worst to best" asks for.
+     * ⚠️ THERE IS NO FLOOD SCALE AND ITS ABSENCE IS DELIBERATE. A ranked key of FEMA zones (A, AE,
+     * AH, AO, AR, A99, V, VE, X, D…) is not authored anywhere — row 215 carries a two-tier
+     * statement ("AE/VE = high-risk, X = lower") and nothing more. Inventing the order and the words
+     * would be a hazard judgement of exactly the row-195 class. FLAGGED, and the flood cell shows the
+     * authored subtype instead, which is FEMA's own description of the zone.
+     * ⚠️ THE PROVENANCE LINE IS THE FLATTEST FACTUAL STRING I CAN WRITE AND IS FLAGGED: it names the
+     * two agencies and the month the reading was pulled. The Captain asked for it to read as a real
+     * citation; the wording of that sentence is brand voice and belongs to the Architect. */
+    function _hazMonth(iso) {
+        var d = new Date(iso);
+        if (!iso || isNaN(d.getTime())) return '';      // no stamp -> no date claimed (L47)
+        return ['January','February','March','April','May','June','July','August','September','October','November','December'][d.getUTCMonth()] + ' ' + d.getUTCFullYear();
+    }
+
     function _propHazardHTML(acc) {
         if (!acc) return '';
         var snap = _groundsAvmFor(acc);                 // null once the address stops matching
         var hz = snap && snap.hazard;
         if (!hz) return '';
-        var rows = '';
-        // FLOOD (row 215) — the authored hover already explains the letters, so the zone code ships bare.
-        // 'none' (FEMA answered, nothing mapped here) renders NOTHING, exactly like a failure would.
+        var cells = '', srcs = [], stamps = [];
+        /* Each reading is a CELL: label, then the figure on its own line in mono at a fixed size, then
+           the descriptor. Two cells of equal width in a grid, so the two figures share a baseline and
+           a left edge no matter how long the labels are — which is what the old space-between rows
+           could never do. A missing reading drops its cell and the survivor spans the row. */
+        var cell = function (label, tip, figure, descriptor, accent) {
+            return '<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-left:2px solid ' + accent + '; border-radius:3px; padding:10px 12px;">' +
+                   '<span class="input-label modal-tt-wrap" style="cursor:help; color:var(--muted); font-size:10px; letter-spacing:0.04em;">' + label + tip + '</span>' +
+                   '<div style="font-family:var(--font-mono); font-size:20px; line-height:1.25; color:' + accent + '; margin-top:5px;">' + figure + '</div>' +
+                   '<div style="font-size:11px; color:rgba(255,255,255,0.62); margin-top:2px;">' + descriptor + '</div></div>';
+        };
+        // FLOOD (row 215). 'none' (FEMA answered, nothing mapped here) renders NOTHING, like a failure.
         if (hz.flood && hz.flood.status === 'ok' && hz.flood.zone) {
-            var sub = hz.flood.subtype ? ' <span style="opacity:0.6;">· ' + String(hz.flood.subtype).replace(/</g, '&lt;').toLowerCase() + '</span>' : '';
-            rows += '<div style="display:flex; justify-content:space-between; align-items:baseline; padding:4px 0;">' +
-                    '<span class="input-label modal-tt-wrap" style="cursor:help;">Flood zone (FEMA NFHL)' +
-                    '<div class="modal-tt" style="left:0; right:auto;"><strong>What\'s this?</strong>Your FEMA flood zone (e.g., AE/VE = high-risk, X = lower). Standard home policies EXCLUDE flood; NFIP or private flood is separate.</div></span>' +
-                    '<span style="font-family:var(--font-mono); color:var(--white);">' + String(hz.flood.zone).replace(/</g, '&lt;') + sub + '</span></div>';
+            cells += cell('FLOOD ZONE',
+                '<div class="modal-tt" style="left:0; right:auto;"><strong>What\'s this?</strong>Your FEMA flood zone (e.g., AE/VE = high-risk, X = lower). Standard home policies EXCLUDE flood; NFIP or private flood is separate.</div>',
+                String(hz.flood.zone).replace(/</g, '&lt;'),
+                hz.flood.subtype ? String(hz.flood.subtype).replace(/</g, '&lt;').toLowerCase() : '&nbsp;',
+                'var(--teal-mid)');
+            if (hz.flood.source) srcs.push(String(hz.flood.source).replace(/</g, '&lt;'));
+            if (hz.flood.updated) stamps.push(hz.flood.updated);
         }
         // EARTHQUAKE (§17.5a) — number and word together or not at all.
         var ss = hz.quake && hz.quake.status === 'ok' ? hz.quake.ss : null;
         var band = _quakeBand(ss);
         if (band) {
-            rows += '<div style="display:flex; justify-content:space-between; align-items:baseline; padding:4px 0;">' +
-                    '<span class="input-label modal-tt-wrap" style="cursor:help;">Earthquake shaking (USGS)' +
-                    '<div class="modal-tt" style="left:0; right:auto;"><strong>What\'s this?</strong>How hard the ground is expected to shake here in a rare, severe earthquake — a mapped USGS figure for your location, not a prediction of when. The plain-language rating is ours, not an official category. Standard home policies exclude earthquake damage; cover for it is a separate endorsement.' +
-                    '<br><br><strong>Do I have enough?</strong>There is no right answer to compare this to — it describes your ground, not your policy. If it reads moderate or higher, the earthquake endorsement above is the field worth a conversation with your agent.</div></span>' +
-                    '<span style="font-family:var(--font-mono); color:var(--white);">' + ss + 'g <span style="opacity:0.6;">— ' + band + ' shaking</span></span></div>';
+            cells += cell('EARTHQUAKE SHAKING',
+                '<div class="modal-tt" style="left:0; right:auto;"><strong>What\'s this?</strong>How hard the ground is expected to shake here in a rare, severe earthquake — a mapped USGS figure for your location, not a prediction of when. The plain-language rating is ours, not an official category. Standard home policies exclude earthquake damage; cover for it is a separate endorsement.' +
+                '<br><br><strong>Do I have enough?</strong>There is no right answer to compare this to — it describes your ground, not your policy. If it reads moderate or higher, the earthquake endorsement above is the field worth a conversation with your agent.</div>',
+                ss + 'g', band + ' shaking', 'var(--gold)');
+            if (hz.quake.source) srcs.push(String(hz.quake.source).replace(/</g, '&lt;'));
+            if (hz.quake.updated) stamps.push(hz.quake.updated);
         }
-        if (!rows) return '';
-        // Row 218 — tagged as looked-up, the same way the RentCast figure is. These are reference
-        // readings about the ground, never a purchase recommendation.
-        return '<div style="margin-top:12px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.08);">' + rows +
-               '<div class="input-label" style="color:var(--muted); font-size:10px; margin-top:6px;">Looked up from your address — reference figures about the location, not a recommendation about your cover.</div></div>';
+        if (!cells) return '';
+        /* THE SCALE — five authored bands in order, the user's own marked. Rendered ONLY beside a real
+           reading, so it can never stand in for one. The thresholds are §17.5a's, printed so the
+           number has somewhere to sit rather than floating alone. */
+        var scale = '';
+        if (band) {
+            var BANDS = [['very low', 'under 0.25g'], ['low', '0.25–0.50g'], ['moderate', '0.50–1.00g'], ['high', '1.00–1.50g'], ['very high', '1.50g +']];
+            scale = '<div style="display:flex; gap:3px; margin-top:10px;">' + BANDS.map(function (b) {
+                var mine = b[0] === band;
+                return '<div style="flex:1; text-align:center; padding:4px 2px; border-radius:2px; background:' + (mine ? 'rgba(212,175,110,0.18)' : 'rgba(255,255,255,0.03)') +
+                       '; border:1px solid ' + (mine ? 'var(--gold)' : 'rgba(255,255,255,0.06)') + ';">' +
+                       '<div style="font-size:9.5px; letter-spacing:0.03em; color:' + (mine ? 'var(--gold)' : 'rgba(255,255,255,0.5)') + '; text-transform:uppercase;">' + b[0] + '</div>' +
+                       '<div style="font-family:var(--font-mono); font-size:9px; color:rgba(255,255,255,0.35); margin-top:1px;">' + b[1] + '</div></div>';
+            }).join('') + '</div>';
+        }
+        var month = _hazMonth(stamps[0]);
+        // Row 218 — tagged as looked-up. Names the agencies and the month rather than gesturing at
+        // "your address"; a reference figure with no source and no date is just a number on a screen.
+        var prov = 'Read from ' + (srcs.length ? srcs.join(' and ') : 'public hazard data') +
+                   ' for this address' + (month ? ', ' + month : '') +
+                   '. Reference figures about the location — not a recommendation about your cover.';
+        return '<div style="margin-top:14px; padding:12px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:4px;">' +
+               '<div style="color:var(--teal-mid); font-weight:bold; font-size:13px; margin-bottom:9px;">🌊 The ground under the house</div>' +
+               '<div style="display:grid; grid-template-columns:repeat(' + (cells.match(/border-left:2px/g) || []).length + ',1fr); gap:10px;">' + cells + '</div>' +
+               scale +
+               /* text-transform:none — .input-label uppercases, and a citation set in caps reads as
+                  shouting rather than as a source line. Caught in a screenshot, not in the DOM
+                  assertions: every structural check passed while it looked wrong. */
+               '<div class="input-label" style="color:var(--muted); font-size:10px; margin-top:9px; line-height:1.5; text-transform:none;">' + prov + '</div></div>';
     }
 
     function _helocUsePurposeFieldHTML(id, acc) {
@@ -10928,9 +10988,13 @@
         if (_coords && shown) {
             var _hz = {};
             var _fl = await _AssetIntel.fetchFlood(_coords);
-            if (_fl && _fl.status === 'ok') _hz.flood = { status: 'ok', zone: _fl.zone, subtype: _fl.subtype };
+            /* SOURCE AND PULL DATE ARE CAPTURED, NOT DISCARDED. The Worker returns both and the first
+               cut dropped them, which left the reading with no provenance at all — the Captain asked
+               for exactly that on sight. Frozen at pull time like the RentCast stamp (R61): a
+               recomputed date would let a lookup from August reopen in December claiming December. */
+            if (_fl && _fl.status === 'ok') _hz.flood = { status: 'ok', zone: _fl.zone, subtype: _fl.subtype, source: _fl.source, updated: _fl.updated };
             var _qk = await _AssetIntel.fetchQuake(_coords);
-            if (_qk && _qk.status === 'ok' && typeof _qk.ss === 'number') _hz.quake = { status: 'ok', ss: _qk.ss };
+            if (_qk && _qk.status === 'ok' && typeof _qk.ss === 'number') _hz.quake = { status: 'ok', ss: _qk.ss, source: _qk.source, updated: _qk.updated };
             if (_hz.flood || _hz.quake) {
                 var _cur = state.accounts.find(function (a) { return a.id === id; });
                 if (_cur && _cur.assetAvmSnapshot && _cur.assetAvmSnapshot.key === shown.key) {
