@@ -95,9 +95,17 @@ const DEAFSELECT  = process.argv.includes('--deafselect');
 const NOHAZARD    = process.argv.includes('--nohazard');
 const WORDONLY    = process.argv.includes('--wordonly');
 const SDCFALLBACK = process.argv.includes('--sdcfallback');
+/* §26.3 — two controls.
+     --notypedi     the block never renders           -> the broad "it shipped" claim.
+     --typefallback an unlisted/blank type falls back to the Single-family block -> the exact
+                    mistake §26c forbids ("do not map it to the nearest block"). It must redden the
+                    SILENCE legs and nothing else: a wrong-but-plausible paragraph about somebody
+                    else's building is worse than none, and it is the failure nobody would report. */
+const NOTYPEDI     = process.argv.includes('--notypedi');
+const TYPEFALLBACK = process.argv.includes('--typefallback');
 const MUT = NOHELOC || NOCTRL || FLATCARRY || NOEDUC || NOCOV || WRONGFLD || ZEROPLACE
          || NOENDORSE || EAGERFIELDS || DEAFSWITCH || DEAFSELECT
-         || NOHAZARD || WORDONLY || SDCFALLBACK;
+         || NOHAZARD || WORDONLY || SDCFALLBACK || NOTYPEDI || TYPEFALLBACK;
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8305;
 const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
@@ -154,6 +162,10 @@ const A_SDC_STORE = "if (_qk && _qk.status === 'ok' && typeof _qk.ss === 'number
 const M_SDC_STORE = "if (_qk && _qk.status === 'ok') _hz.quake = { status: 'ok', ss: _qk.ss, sdc: _qk.sdc };   /* --sdcfallback */";
 const A_SDC_READ = "        var band = _quakeBand(ss);";
 const M_SDC_READ = "        var band = _quakeBand(ss); if (!band && hz.quake && hz.quake.sdc) { band = 'category ' + hz.quake.sdc; ss = hz.quake.sdc; }   /* --sdcfallback */";
+const A_TYPEDI = "        if (!txt) return '';";
+const M_TYPEDI = "        if (true) return '';   /* §26.3 block removed by --notypedi */";
+const A_TYPEFB = "            : _PROP_TYPE_DI[String(acc.propType || '')];      // undefined on blank or unlisted -> silent";
+const M_TYPEFB = "            : (_PROP_TYPE_DI[String(acc.propType || '')] || _PROP_TYPE_DI['Single-family']);   /* --typefallback */";
 const G17_A = 'Carrying Costs — what you owe to keep the home.';
 const G17_B = 'Property Insurance — what protects the home and you.';
 const G17_C = 'Operating Costs — what it takes to run the home day to day.';
@@ -189,6 +201,8 @@ const server = http.createServer((req, res) => {
     if (NOHAZARD)    apply(A_NOHAZ,     M_NOHAZ,     'A_NOHAZ');
     if (WORDONLY)    apply(A_WORDONLY,  M_WORDONLY,  'A_WORDONLY');
     if (SDCFALLBACK) { apply(A_SDC_STORE, M_SDC_STORE, 'A_SDC_STORE'); apply(A_SDC_READ, M_SDC_READ, 'A_SDC_READ'); }
+    if (NOTYPEDI)     apply(A_TYPEDI,   M_TYPEDI,   'A_TYPEDI');
+    if (TYPEFALLBACK) apply(A_TYPEFB,   M_TYPEFB,   'A_TYPEFB');
     body = Buffer.from(src, 'utf8');
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
@@ -306,6 +320,29 @@ const server = http.createServer((req, res) => {
     gSelTown.value = 400000;
     out.gClickPropType = selectGesture(gSelTown.id, 'Select type…', 'Townhouse');
     out.gClickPropTypeStored = gSelTown.propType;
+    /* §26.3 — every trigger on the live dropdowns, plus BOTH silences and the precedence rule.
+       One fixture per branch because a single fixture can only ever show one of them. */
+    out.gTypeDI = (function () {
+      const mk = function (ov) {
+        addInstance('property');
+        const a = window.state.accounts.filter(x => x.baseId === 'property').pop();
+        Object.assign(a, { value: 400000 }, ov || {});
+        window.openAccountModal(a.id);
+        return cap();
+      };
+      return {
+        blank:    mk({}),
+        sf:       mk({ propType: 'Single-family' }),
+        condo:    mk({ propType: 'Condo' }),
+        town:     mk({ propType: 'Townhouse' }),
+        multi:    mk({ propType: 'Multi-family' }),
+        manu:     mk({ propType: 'Manufactured' }),
+        other:    mk({ propType: 'Other' }),
+        land:     mk({ propPurpose: 'Land' }),
+        landVsSf: mk({ propPurpose: 'Land', propType: 'Single-family' }),
+        purpOnly: mk({ propPurpose: 'Primary residence' })
+      };
+    })();
     addInstance('property');
     const eNone = window.state.accounts.filter(x => x.baseId === 'property').pop();
     eNone.value = 400000;
@@ -893,6 +930,37 @@ const server = http.createServer((req, res) => {
      SIGNAL, worse than blank. The Worker still returns it; nothing here may store or show it. */
   /* ══ §26.6 NFIP PANEL + §26.7 FLOOD/EARTHQUAKE AS CARRIED COVERAGES ════════════════════════════
      The lookup describes THE GROUND; these describe THE POLICY. Two layers, both shipped. */
+  /* ══ §26.3 · THE PER-PROPERTY-TYPE DI BLOCKS ═══════════════════════════════════════════════════
+     Bank §26a + §26c. The largest of the seven items the Captain asked for and the bank omitted —
+     only the townhome line had ever been authored. Seven blocks, two trigger fields. */
+  lines.push('===== §26.3 · PER-PROPERTY-TYPE DI BLOCKS =====');
+  const T = R.gTypeDI;
+  ok(has(T.sf, 'a single-family home — the case nearly every homeowners policy is written around'), '§26a Single-family block verbatim');
+  /* ⛔ THE CONDO TAIL IS ASSERTED ON PURPOSE. The extractor that built these truncated this one
+     block mid-word at "your unit", because U+2019 is both the closing quote and the apostrophe in
+     "unit’s" — six looked perfect and one would have shipped as a sentence fragment. Asserting the
+     LAST clause, not just the first, is what makes a truncation impossible to ship quietly. */
+  ok(has(T.condo, 'Your property is a condo') && has(T.condo, 'worth reading once, and worth asking your agent to read with you.'),
+     '§26a Condo block verbatim INCLUDING its final clause (guards the truncation class)');
+  ok(has(T.town, 'there is no such thing as townhouse insurance — what you need depends on who owns the walls'), '§26a Townhouse block verbatim');
+  ok(has(T.multi, 'a multi-family building') && has(T.multi, 'a policy written for the wrong occupancy can be the one that does not pay.'), '§26a Multi-family block verbatim, first clause to last');
+  ok(has(T.manu, 'a manufactured or mobile home, and it has its own policy form: HO-7'), '§26a Manufactured/Mobile block verbatim');
+  ok(has(T.other, 'Your property is recorded as Other') && has(T.other, 'flood and earthquake are excluded almost everywhere, whatever the building is.'),
+     '§26c Other block verbatim — a REAL authored block, never a dumping ground');
+  ok(has(T.land, 'land is the one case where a homeowners policy does not apply at all'), '§26a Land block verbatim');
+  /* ⛔ THE TRIGGER CORRECTION, GATED. The bank first filed Land under Property type, where it could
+     never have fired — Land lives on propPurpose. This leg is the reason that mistake cannot return. */
+  ok(!has(T.blank, 'Your property is') && has(T.sf, 'Your property is'),
+     '§26a GUARD — both fields blank renders NOTHING, while a set type renders (L47, paired)');
+  ok(!has(T.purpOnly, 'Your property is'),
+     '§26a GUARD — a purpose that is not Land does not summon a block on its own');
+  ok(has(T.landVsSf, 'land is the one case') && !has(T.landVsSf, 'a single-family home'),
+     '§26c PURPOSE OUTRANKS TYPE — a vacant lot with Single-family left in the dropdown is still a vacant lot');
+  ok([T.sf, T.condo, T.town, T.multi, T.manu, T.other, T.land, T.landVsSf]
+       .every(function (h) { return (h.match(/Your property is/g) || []).length === 1; }),
+     '§26a GUARD — exactly ONE block renders at a time, never two');
+  ok(!/hoType', 'HO-/.test(T.sf) && !/hoType', 'HO-/.test(T.condo),
+     '§26a GUARD 2 — a firing block WRITES NOTHING: it never auto-selects an HO type');
   lines.push('===== §26.6 NFIP + §26.7 CARRIED COVERAGES =====');
   ok(has(R.gHazOff, 'Flood cover — how it works and where it comes from'),
      '§26.6 NFIP education panel present');
