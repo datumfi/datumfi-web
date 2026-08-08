@@ -1206,6 +1206,23 @@ const server = http.createServer((req, res) => {
      them could only ever be about somewhere else. */
   ok(!has(R.g175.noCoords, '/floodmap') && has(R.g175.both, '/floodmap'),
      '§17.5c no coordinates -> NO map request, while a fixture with them makes one');
+  /* ⛔ THE REGRESSION LEG FOR A DEFECT SHIPPED TWICE. The map read `snap.coords`, which only ever
+     came from the RentCast response — KV-cached 60 days and empty on any recently-valued address.
+     The READINGS were moved to Census-first and THE MAP WAS NOT, so on the Captain's own screen the
+     flood zone and shaking rendered and the map did not.
+     🔑 FIXING ONE CONSUMER OF A VALUE IS NOT FIXING THE VALUE. censusOnly is exactly that shape: a
+     cached valuation carrying nothing, Census carrying everything. The map must render from it. */
+  ok(has(R.g175.censusOnly, '/floodmap?lat=27.9775'),
+     '§17.5c THE MAP RENDERS FROM CENSUS COORDINATES — the cached-valuation case, where it was invisible');
+  /* §17.5b legend ORDER: best on the left, matching the shaking scale beside it. Two scales in one
+     panel running opposite ways is a misreading waiting to happen. */
+  ok(R.g175.both.indexOf('>Minimal<') < R.g175.both.indexOf('>High risk — coastal<')
+     && R.g175.both.indexOf('>High risk — coastal<') < R.g175.both.indexOf('>Not mapped<'),
+     '§17.5b legend reads BEST → WORST left to right, the same direction as the shaking scale');
+  /* ⛔ "Not mapped" is OUTSIDE the sequence, not at either end of it: on the left it would read as
+     the safest thing on the row, on the right as worse than a coastal V zone. */
+  ok(/margin-left:10px;[^]{0,400}Not mapped/.test(R.g175.both),
+     '§17.5b GUARD — "Not mapped" is set APART from the scale, never given a severity position');
   ok(has(R.g175.both, 'Read from FEMA’s National Flood Hazard Layer and the USGS seismic design maps for this address in August 2026.')
      && has(R.g175.both, 'These describe the ground your home sits on — not your policy, and not a recommendation.'),
      '§17.5b the authored citation, with the month the data was READ');
