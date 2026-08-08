@@ -8,7 +8,7 @@
   html,body{background-color:#091221!important}
 </style>
 <meta name="theme-color" content="#091221">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://eu.i.posthog.com https://static.cloudflareinsights.com https://clerk.datumfi.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.datumfi.com https://eu.i.posthog.com https://api.stripe.com https://clerk.datumfi.com https://rentcast-avm.dmerced1.workers.dev; worker-src 'self' blob: https://clerk.datumfi.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://eu.i.posthog.com https://static.cloudflareinsights.com https://clerk.datumfi.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://rentcast-avm.dmerced1.workers.dev; connect-src 'self' https://api.datumfi.com https://eu.i.posthog.com https://api.stripe.com https://clerk.datumfi.com https://rentcast-avm.dmerced1.workers.dev; worker-src 'self' blob: https://clerk.datumfi.com;">
 <title>Datum FI — The Studio</title>
 <meta name="description" content="Build your retirement estate. Map every asset, liability, and income stream. Reveal your Range.">
 <link rel="manifest" href="/manifest.json">
@@ -9917,6 +9917,23 @@
             }).join('') + '</div>' +
             '<div style="font-size:11px; color:rgba(255,255,255,0.62); margin-top:6px; line-height:1.5;">' + fTier.note + '</div>';
         }
+        /* §17.5c — THE FLOOD MAP. Sits with the flood half, under its key, because that is what it
+           shows. Served from OUR Worker (Captain's ruling: proxy, one door) — the page never talks to
+           FEMA, and img-src was widened to the Worker origin only, never to hazards.fema.gov.
+           ⛔ IT FAILS SILENTLY AND THAT IS LOAD-BEARING, NOT TIDINESS. The studio half ships BEFORE
+           the Worker route is deployed, so until that deploy every one of these requests 404s. A
+           broken-image icon in a retirement plan reads as a broken product; onerror removes the
+           element so the panel simply renders as it did yesterday. DEGRADING TO SHIPPED BEHAVIOUR IS
+           SAFE — this is the split-deploy law applied to an image.
+           Only rendered when there is a flood reading AND coordinates: no reading means no map, and
+           without coordinates the request could only be about somewhere else. */
+        var fMap = '';
+        if (fTier && snap && snap.coords) {
+            fMap = '<div style="margin-top:10px; border:1px solid rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; line-height:0;">' +
+                   '<img src="' + _AssetIntel.WORKER_URL + '/floodmap?lat=' + encodeURIComponent(snap.coords.lat) + '&lon=' + encodeURIComponent(snap.coords.lon) + '"' +
+                   ' alt="FEMA flood hazard map for this address" loading="lazy" style="display:block; width:100%; height:auto;"' +
+                   ' onerror="this.parentNode.style.display=\'none\';"></div>';
+        }
         var scale = '';
         if (band) {
             var BANDS = [['very low', 'under 0.25g'], ['low', '0.25–0.50g'], ['moderate', '0.50–1.00g'], ['high', '1.00–1.50g'], ['very high', '1.50g +']];
@@ -9938,7 +9955,7 @@
         return '<div style="margin-top:14px; padding:12px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:4px;">' +
                '<div style="color:var(--teal-mid); font-weight:bold; font-size:13px; margin-bottom:9px;">🌊 The ground under the house</div>' +
                '<div style="display:grid; grid-template-columns:repeat(' + (cells.match(/border-left:2px/g) || []).length + ',1fr); gap:10px;">' + cells + '</div>' +
-               fKey + scale +
+               fKey + fMap + scale +
                /* text-transform:none — .input-label uppercases, and a citation set in caps reads as
                   shouting rather than as a source line. Caught in a screenshot, not in the DOM
                   assertions: every structural check passed while it looked wrong. */

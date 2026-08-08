@@ -209,6 +209,40 @@ async function handleFlood(c) {
   }
 }
 
+/* §17.5c — THE FLOOD MAP IMAGE, PROXIED. Captain's ruling: option 1, through our own Worker, for the
+   same reason FEMA's data goes through it — one door, no outside host inside the page's trust
+   boundary, one pattern for an outside read instead of two.
+   ⛔ THE ENDPOINT WAS CONFIRMED PUBLISHED BEFORE ANY OF THIS WAS DESIGNED, not assumed. The NFHL
+   MapServer DECLARES `capabilities: Map` and lists PNG among supportedImageFormatTypes — that is the
+   service publishing its own contract. Three identical calls returned identical bytes.
+   A REDIRECT IS SOMEONE ELSE'S PROMISE; so is an endpoint nobody checked was public.
+   Returns the PNG bytes with a long cache header: a flood map for a fixed point does not change
+   between page loads, and this is the only image we serve from a third party.
+   ⛔ NO KV, so it can never touch the RentCast counter — same fence as /flood and /quake.
+   ⛔ SIZE IS FIXED HERE, NOT TAKEN FROM THE CALLER. An attacker-controlled size turns our Worker into
+   a free image-rendering proxy for arbitrary requests against a government service. */
+async function handleFloodMap(c) {
+  if (!c) return json({ status: 'error', error: 'lat/lon required' }, 400);
+  // ~0.012° box ≈ a few streets around the point — close enough to recognise the neighbourhood.
+  const d = 0.006;
+  const bbox = (c.lon - d) + ',' + (c.lat - d) + ',' + (c.lon + d) + ',' + (c.lat + d);
+  const u = 'https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer/export'
+          + '?bbox=' + encodeURIComponent(bbox)
+          + '&bboxSR=4326&size=560,300&format=png32&transparent=false&f=image';
+  try {
+    const r = await fetch(u, { headers: { 'Accept': 'image/png', 'User-Agent': PROVIDER_UA } });
+    if (!r.ok) return json({ status: 'error', error: 'provider ' + r.status });
+    const buf = await r.arrayBuffer();
+    return new Response(buf, { status: 200, headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Content-Type': 'image/png',
+      'Cache-Control': 'public, max-age=2592000'
+    } });
+  } catch (e) {
+    return json({ status: 'error', error: 'flood map unavailable' });
+  }
+}
+
 async function handleQuake(c) {
   if (!c) return json({ status: 'error', error: 'lat/lon required' }, 400);
   const u = 'https://earthquake.usgs.gov/ws/building-codes/asce7-16/calculate'
@@ -234,6 +268,7 @@ export async function handle(request, env) {
      address at all. Both return before any KV read, so neither can move the RentCast counter. */
   if (url.pathname === '/flood' || url.pathname.endsWith('/flood')) return handleFlood(coordsFromQuery(url));
   if (url.pathname === '/quake' || url.pathname.endsWith('/quake')) return handleQuake(coordsFromQuery(url));
+  if (url.pathname === '/floodmap' || url.pathname.endsWith('/floodmap')) return handleFloodMap(coordsFromQuery(url));
   if (!addr) return json({ status: 'error', error: 'address required' }, 400);
 
   const kv = env && env.RENTCAST_KV;   // binding MUST match wrangler.toml + the Captain's KV (RENTCAST_KV)
