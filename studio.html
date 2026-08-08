@@ -9520,6 +9520,39 @@
                '" oninput="updateAccField(\'' + id + '\', \'' + key + '\', this.value)"></div>';
     }
 
+    /* ── §17.3a · THE ROW-195 MAP — AND THE ANSWER IS THAT NOTHING IS EVER HIDDEN ────────────────
+     * Authored 2026-08-07 (bank A338), read in-session per L51. Row 195 said the dropdown decides
+     * "which fields show". That verb was wrong, and it blocked two wirers across two sessions — both
+     * refused to guess it for the same reason: hiding a field quietly tells someone they do not need
+     * it, which row 205 forbids. AN INVISIBLE FIELD IS AN UNLABELLED RECOMMENDATION.
+     * ⭐ THE RULING: the policy type ANNOTATES, it does not SUPPRESS. Every Coverage field and all
+     * three deductibles render on every type, always enterable; the dropdown adds ONE plain-language
+     * note explaining how that form behaves differently. Nothing is taken away; something is
+     * explained. WHEN A CHOICE WOULD CHANGE WHAT A USER SEES, PREFER ANNOTATION OVER SUPPRESSION —
+     * a visible field with a note is honest and reversible; a hidden field is a silent verdict the
+     * user cannot argue with.
+     * ⛔ HO-3'S SILENCE IS AUTHORED, NOT AN OMISSION. It is the standard form these fields were
+     * designed around and a note would be noise. Do NOT let a future reader "complete the set" —
+     * saying nothing is the correct output for the commonest case.
+     * ⛔ THE HO-4 NOTE SAYS Coverage A usually reads zero. IT MUST NEVER WRITE ZERO. Row 205 stands:
+     * a blank limit is a correct limit and only the user enters one. This function returns a STRING
+     * and touches no field — the guard is structural, not remembered.
+     * ⚠️ AN hoType NOT IN THIS MAP RENDERS NOTHING and is a stop-and-flag, never a nearest match. */
+    var _HO_NOTES = {
+        'HO-1': 'Older, narrower forms. These cover a NAMED LIST of causes rather than everything not excluded, so what is and is not on that list matters more here than the limits themselves. Your declarations page lists the perils.',
+        'HO-2': 'Older, narrower forms. These cover a NAMED LIST of causes rather than everything not excluded, so what is and is not on that list matters more here than the limits themselves. Your declarations page lists the perils.',
+        'HO-4': 'Renters cover: the building is your landlord’s to insure, so Coverage A — Dwelling usually reads zero or is absent on your policy. Coverage C (your belongings) and E (liability) are the lines doing the work here.',
+        'HO-5': 'The broadest common form. It treats your BELONGINGS the same open way it treats the building, so Coverage C often behaves better than the same number on an HO-3.',
+        'HO-6': 'Condo cover: your association’s master policy insures the building, so Coverage A here is usually a smaller figure covering your unit’s interior and any improvements — not the whole structure. What the master policy stops covering is exactly where yours starts.',
+        'HO-7': 'Written for a factory-built home. The figure to check is whether Coverage A is set to what it would cost to REPLACE the home or to what it is currently WORTH — the two can differ sharply, and the difference only appears at claim time.',
+        'HO-8': 'Written for homes that would cost far more to rebuild than they would sell for. It generally pays ACTUAL CASH VALUE rather than replacement cost, so Coverage A here is not a rebuild estimate — it is a different promise.'
+    };
+    function _hoTypeNoteHTML(acc) {
+        var n = acc && _HO_NOTES[String(acc.hoType || '')];   // HO-3, blank and unlisted all fall through
+        if (!n) return '';
+        return '<div style="margin-top:10px; padding:8px 10px; background:rgba(255,255,255,0.03); border-left:2px solid var(--teal-mid); border-radius:2px; font-size:11.5px; line-height:1.55; color:rgba(255,255,255,0.7);">' + n + '</div>';
+    }
+
     function _propCoverageHTML(id, acc) {
         if (!acc) return '';
         var F = function (key, label, w, d, align, kind) { return _propCovFieldHTML(id, acc, key, label, w, d, align, kind || 'money'); };
@@ -9556,7 +9589,10 @@
                 </div>
                 <div class="field-row" style="grid-template-columns:1fr;">
                     ${F('dedWindHail', 'Deductible — Wind/Hail', 'A separate deductible for wind or hail damage, common in storm-prone regions.', 'Like the hurricane line — a % here can be a big number; know it before a claim.', 'left', 'text')}
-                </div>`;
+                </div>
+                ${/* §17.3a — the per-form note sits UNDER the fields it describes, not above them:
+                      the hovers explain the FIELD, this explains the FORM, and both render. */''}
+                ${_hoTypeNoteHTML(acc)}`;
     }
 
     /* ── §17.4 · SPECIALIZED / ENDORSEMENT COVERAGES — CONDITIONAL REVEAL ────────────────────────
