@@ -7975,19 +7975,33 @@
                     <div><span class="input-label modal-tt-wrap" style="cursor:help;">Est. Maintenance / Repairs (yr)<div class="modal-tt" style="left:0; right:auto;"><strong>est. · ~1% of value</strong>A rough estimate — about 1% of the home's value is a common rule of thumb. It's only a starting point; your own number always wins.</div></span><input type="text" class="small-field curr-format" placeholder="${maintPH>0 ? 'est. $'+maintPH.toLocaleString('en-US') : '$0'}" value="${formatCurrencyDisplay(acc.maintYr||'')}" oninput="updateAccField('${id}', 'maintYr', this.value)"></div>
                     <div><span class="input-label modal-tt-wrap" style="cursor:help;">Utilities — electric / gas / water (yr)<div class="modal-tt" style="right:0; left:auto;"><strong>Link or enter</strong>The recurring bills to keep the lights on and water running — electric, gas, water. Link an account to keep it current, or enter your own yearly figure.</div></span><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.utilYr||'')}" oninput="updateAccField('${id}', 'utilYr', this.value)"></div>
                 </div>
-                ${/* ⛔ THE RECONCILING LINE. §26.2 moved the insurance FIELD out of this section but
-                      NOT out of the sum — so without this, the Total below would be $2,000 larger
-                      than anything visible here and no user could add it up. Read-only on purpose:
-                      the editable field lives once, in the Property Insurance section, and a second
-                      input bound to the same key would go stale the moment the first was typed into
-                      (§13.72). It renders ONLY when a figure exists — a $0 line for a home with no
-                      insurance recorded would be a number nobody entered.
-                      ⚠️ THE LABEL IS THE AUTHORED FIELD NAME, REUSED VERBATIM rather than invented;
-                      the trailing pointer is mine and is FLAGGED. */''}
-                ${_num(acc.homeInsYr) > 0 ? `<div style="display:flex; justify-content:space-between; align-items:baseline; margin-top:14px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05);">
-                    <span class="input-label" style="color:var(--muted); text-transform:none;">Annual Homeowner Insurance <span style="opacity:0.65;">— recorded above under Property Insurance</span></span>
-                    <span style="font-family:var(--font-mono); color:rgba(255,255,255,0.75);">$${Math.round(_num(acc.homeInsYr)).toLocaleString('en-US')}</span>
-                </div>` : ''}
+                ${/* ══ §27.3 · THE FIFTH BOX — Total Property Insurance (yr) ═══════════════════════════
+                      Bank A342. ⭐ THIS REPLACES THE OLD RECONCILING SENTENCE, and it is a strict
+                      improvement on it for a reason worth recording: that line read `acc.homeInsYr`
+                      DIRECTLY while calcCarryTotal has always used `_canonHomeIns`. On a home whose
+                      linked mortgage carries insurance in escrow, homeInsYr is blank — so the line
+                      HID ITSELF while the total still included the escrow figure. Money in the total
+                      that appeared on no screen: precisely the bug this section exists to prevent,
+                      living inside the sentence written to prevent it.
+                      STYLED AS THE FIFTH BOX, not a footnote, because the Captain's acceptance test
+                      is arithmetic he can do with his eyes: Property Tax + HOA + Maintenance +
+                      Utilities + THIS = the total, exactly.
+                      ⛔ READ-ONLY AND COMPUTED. The user edits the parts; a second input bound to
+                      these keys would go stale the moment the first was typed into (§13.72).
+                      ⛔ A DASH WHEN NOTHING IS RECORDED, NEVER $0 (row 205) — a blank policy and a
+                      policy costing zero are opposite facts. Partial entries still total, blanks
+                      contributing nothing, exactly as §4.16 treats them. */''}
+                ${/* ⚠️ THE SEPARATOR IS NOT DECORATION. Without it this box renders directly beneath
+                      the "Operating Costs — what it takes to run the home day to day" subhead and
+                      reads as a MEMBER of Group C. Insurance is not an operating cost — §17.1
+                      authored three groups (A Carrying / B Insurance / C Operating) specifically to
+                      keep those apart, and §26.2 then promoted Insurance out to its own section.
+                      This box is a RECONCILING ROW for the whole block, the same role the sentence
+                      it replaced played, so it carries the same rule the sentence did.
+                      Caught by looking at a screenshot; every DOM assertion was green. */''}
+                <div class="field-row" style="grid-template-columns:1fr; margin-top:16px; padding-top:14px; border-top:1px solid rgba(255,255,255,0.13);">
+                    <div><span class="input-label modal-tt-wrap" style="cursor:help;">Total Property Insurance (yr)<div class="modal-tt" style="left:0; right:auto;"><strong>Total Property Insurance (yr)</strong>Everything you pay each year to insure this property — your homeowner policy plus any endorsements, flood or earthquake cover you have recorded above. Edit the individual figures under Property Insurance; this box adds them up.</div></span><input type="text" class="small-field" readonly value="${_propInsuranceTotal(acc) > 0 ? '$' + Math.round(_propInsuranceTotal(acc)).toLocaleString('en-US') : '—'}" style="color:${_propInsuranceTotal(acc) > 0 ? 'rgba(255,255,255,0.75)' : 'var(--muted)'}; cursor:default;"></div>
+                </div>
                 <div style="display:flex; justify-content: space-between; margin-top:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;">
                     <span class="input-label" style="color:var(--white);">Total Annual Carrying Cost</span>
                     <span id="modal-carry-total-${id}" style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold;">$${Math.round(calcCarryTotal(acc)).toLocaleString('en-US')}</span>
@@ -9803,7 +9817,18 @@
        reads as a count taken before the de-dupe was applied. Architect to confirm.
        ORDER: Replacement Cost leads because the Captain's own list led with it and the bank calls it
        the commonest upgrade; the remaining five keep their authored row order (208→212). */
-    var _PROP_ENDORSEMENTS = [
+    /* ⚠️ A FUNCTION, NOT A `var`, AND THAT IS DELIBERATE — THE SAME RULING AS _ruleFTables (§13.16),
+       arrived at the same way: by breaking things. §27.3 made calcCarryTotal read this table, and
+       FIVE gates that slice calcCarryTotal went RED at once with "ReferenceError:
+       _PROP_ENDORSEMENTS is not defined" — _gate_grounds_16_1, _gate_grounds_16_5, _gate_moat_18_1,
+       _gate_moat_18_2, _gate_moat_yard. The closure walker pulls FUNCTIONS; a `var` is invisible to
+       it, so every gate reaching this table would have to hand-lift its own `var … = […]` regex —
+       a hand-maintained list wearing a different hat, and the exact thing that broke eight gates in
+       one commit before.
+       🔑 A TABLE REACHED THROUGH A FUNCTION IS PULLED BY EVERY EXISTING RESOLVER AUTOMATICALLY. The
+       fix was already written down in this file at the Rule-F table; I re-derived it the expensive
+       way. If you add a table that anything summable reads, DECLARE IT AS A FUNCTION. */
+    function _propEndorsements() { return [
         ['endorseReplCost',  'Replacement Cost on Personal Property',
          'Pays what it costs to BUY YOUR THINGS AGAIN TODAY, rather than what they were worth second-hand. Without it, a ten-year-old sofa is paid out as a ten-year-old sofa. It is one of the most commonly added upgrades and often one of the cheapest.',
          'This one is usually a yes-or-no on the policy rather than a dollar amount. If your policy says actual cash value on contents, this is the upgrade that changes that.'],
@@ -9812,7 +9837,7 @@
         ['endorseSchedPP',   'Scheduled Personal Property', 'Itemized high-value pieces — rings, art, instruments — insured for their appraised value above normal limits.'],
         ['endorseComputer',  'Special Computer Coverage',   'Broader protection for computers/electronics beyond the base personal-property limit.'],
         ['endorseSpecialPP', 'Special Personal Property',   'Upgrades belongings from named-perils to open-perils (HO-5-style breadth) via endorsement.']
-    ];
+    ]; }
 
     /* §26.5 — TWO money fields per revealed endorsement, closing the silence §17.4 flagged. The
        Captain asked for "coverage amounts, premiums, etc." and got one box labelled `Limit`; that was
@@ -9830,10 +9855,41 @@
                '" oninput="updateAccField(\'' + id + '\', \'' + k + '\', this.value)"></div>';
     }
 
+    /* ══ §27.4 · THE DOUBLE-COUNT INSTRUCTION (bank A348, authored — wired VERBATIM) ═══════════════
+     * §26.5's guard was reversed so premiums could reach the total; its REASON survives and this is
+     * the answer to it. Endorsements are riders ON the homeowner policy, so a declarations page
+     * reading $1,283 with $25 itemised for identity theft, both entered, overstates the carrying
+     * total by $25. The user is the only one who knows which of the two shapes he has.
+     *
+     * ⭐ VISIBLE TEXT, NOT A HOVER — ruled, and banked as doctrine (§13.77). A HOVER EXPLAINS A
+     * FIELD; VISIBLE TEXT PREVENTS AN ERROR. If missing it corrupts a number, it is not a hover.
+     * Hovers are mouse-only and this room's accessibility debt is already flagged; burying the one
+     * instruction that stops a user inflating his own retirement number would be the worst possible
+     * place to spend that debt. A WARNING NOBODY TRIGGERS IS NOT THERE.
+     *
+     * ⚠️ {homeIns} IS _canonHomeIns, NEVER acc.homeInsYr — THE SAME FIGURE THE BOX SUMS. On an
+     * escrow-linked home those two disagree, and an instruction that names a different number from
+     * the one the total actually uses is itself a lie. That inconsistency was live at the old
+     * reconciling line; it must not be reintroduced inside the warning written to prevent it.
+     *
+     * ⚠️ THE HONEST LIMIT, BANKED: this cannot stop a user who enters both. It reduces the risk, it
+     * does not remove it. The real fix is a per-endorsement "included / billed separately" toggle —
+     * recorded as a product option, NOT authorised, NOT built. */
+    function _propPremiumNote(acc) {
+        var hi = _num(_canonHomeIns(acc));
+        var body = hi > 0
+            ? 'Already counted? If this premium is part of your Annual Homeowner Insurance of $' +
+              Math.round(hi).toLocaleString('en-US') +
+              ', leave it blank — it is already in your total. Enter it here only if it is a separate policy or a rider billed on its own.'
+            : 'Already counted? If a premium is part of a homeowner policy you have not recorded yet, leave it blank rather than entering it twice. Enter it here only if it is a separate policy or a rider billed on its own.';
+        return '<div style="margin:6px 0 10px; padding:8px 10px; border-left:2px solid rgba(201,168,76,0.5); background:rgba(201,168,76,0.06); ' +
+               'font-family:var(--font-serif); font-size:12px; line-height:1.5; color:rgba(255,255,255,0.72);">' + body + '</div>';
+    }
+
     function _propEndorsementsHTML(id, acc) {
         if (!acc) return '';
-        var anyOn = _PROP_ENDORSEMENTS.some(function (e) { return !!acc[e[0]]; });
-        var rows = _PROP_ENDORSEMENTS.map(function (e) {
+        var anyOn = _propEndorsements().some(function (e) { return !!acc[e[0]]; });
+        var rows = _propEndorsements().map(function (e) {
             var key = e[0], label = e[1], whatsThis = e[2], doIHave = e[3];
             var on = !!acc[key];
             /* THE CONDITIONAL FIELDS (row 206 "show only if selected"). Emitted ONLY on the ON
@@ -9859,7 +9915,9 @@
         return '<details ' + (anyOn ? 'open' : '') + ' style="margin:12px 0 4px;">' +
                '<summary style="list-style:none; cursor:pointer; padding:8px 12px; background:var(--bg-navy); border:1px solid rgba(255,255,255,0.14); border-radius:4px; color:rgba(255,255,255,0.75); font-size:12px;">Specialized / endorsement coverages  ▾</summary>' +
                '<div style="border:1px solid rgba(255,255,255,0.10); border-top:none; border-radius:0 0 4px 4px; padding:4px 12px 8px; background:rgba(255,255,255,0.02);">' +
-               rows + '</div></details>';
+               /* ONE instance for the whole group (authored placement) — not repeated per row, which
+                  would turn an instruction into wallpaper and stop being read. */
+               _propPremiumNote(acc) + rows + '</div></details>';
     }
 
     /* ── §26.6 + §26.7 · FLOOD AND EARTHQUAKE AS COVERAGES THE USER CARRIES ──────────────────────
@@ -9906,14 +9964,25 @@
                    '<label class="switch"><input type="checkbox" ' + (on ? 'checked' : '') +
                    ' onchange="updateAccToggle(\'' + id + '\', \'' + key + '\', this.checked)"><span class="slider"></span></label>' +
                    '<div class="modal-tt" style="left:0; right:auto;"><strong>What\'s this?</strong>' + whatsThis + '</div></div>' +
-                   (on ? '<div style="display:flex; gap:12px; padding:2px 0 10px 0;">' + fields() + '</div>' : '');
+                   /* flex-WRAP so §27.4's full-width note forces its own line instead of being
+                      squeezed into a column beside the money fields. The flood row has three fields
+                      that already fit on one line, so nothing about it moves. */
+                   (on ? '<div style="display:flex; flex-wrap:wrap; gap:12px; padding:2px 0 10px 0;">' + fields() + '</div>' : '');
         };
         return row('coverFlood', 'Flood insurance (NFIP or private)',
                    'Flood is excluded from essentially every standard home policy — it is bought separately, most often through the National Flood Insurance Program (NFIP) or a private flood insurer. Switch this on to record what you carry.',
                    function () { return money('floodCovBuilding', 'Flood coverage — building') + money('floodCovContents', 'Flood coverage — contents') + money('floodPremium', 'Annual flood premium'); })
              + row('endorseQuake', 'Earthquake coverage',
                    'Earthquake damage is excluded from standard home policies almost everywhere. It is added as an endorsement or bought as a separate policy, and its deductible is usually a PERCENTAGE of the dwelling limit rather than a flat dollar figure. Switch this on to record what you carry.',
-                   function () { return money('endorseQuakeLimit', 'Earthquake coverage limit') + moneypct('quakeDeductible', 'Earthquake deductible') + money('quakePremium', 'Annual earthquake premium'); });
+                   /* §27.4 — the earthquake block gets its OWN instance: the group note above is not
+                      adjacent to it, and earthquake carries the identical ambiguity because the bank's
+                      own hover says it is "added as an endorsement OR bought as a separate policy".
+                      Flood is deliberately EXCLUDED — it is genuinely always separate, so a warning
+                      there would be noise, and noise is how real warnings get ignored. */
+                   function () { return '<div style="width:100%;">' + _propPremiumNote(acc) + '</div>' +
+                          '<div style="display:flex; gap:12px; width:100%;">' +
+                          money('endorseQuakeLimit', 'Earthquake coverage limit') + moneypct('quakeDeductible', 'Earthquake deductible') + money('quakePremium', 'Annual earthquake premium') +
+                          '</div>'; });
     }
 
     /* §26.6 — THE NFIP EDUCATION PANEL. Same click-to-open disclosure as the HO-1…HO-8 panel (L48).
@@ -10739,8 +10808,45 @@
     // placeholder suggestion, not auto-summed, so nothing is invented into the Datum Builder feed. §18.2: tax &
     // insurance resolve through the canonical escrow resolver, so a mirrored (linked-mortgage) figure is counted
     // here exactly ONCE and the total stays honest whether the number was entered on the Moat or the Grounds.
+    /* ══ §27.3 · THE INSURANCE THE HOMEOWNER PREMIUM DOES NOT COVER ══════════════════════════════
+     * Bank A342. §26.5 held "display, do not add" as a RESERVED DECISION; the Captain has now taken
+     * it, so endorsement / flood / earthquake premiums reach the carrying total. The half of §26.5
+     * that SURVIVES is honoured absolutely: none of this is written into §4.2 itself, because the
+     * Moat mirrors that figure (§20.4) and corrupting it would be wrong on two surfaces at once.
+     *
+     * ⛔ EVERY TERM IS GATED ON ITS OWN TOGGLE, AND THAT IS NOT TIDINESS. The premium input only
+     * RENDERS while its endorsement is switched on, but the stored value survives the toggle going
+     * off: enter $25 on Identity Theft, switch it off, and `endorseIdTheftPremium` is still 25. An
+     * ungated sum would add money that is NOWHERE ON SCREEN — which breaks the Captain's own
+     * acceptance test ("if the total cannot be added up from what is on screen, that is a bug") and
+     * re-runs the retained-value-no-surface-can-show trap. The value is kept, deliberately, so
+     * toggling back on restores what he typed; it simply must not COUNT while hidden.
+     *
+     * ⚠️ NOTHING HERE IS DERIVED. Every term is a field the user typed, read straight off `acc`.
+     * A computed premium inside a total he reads as fact would be a fabricated number (L47). */
+    /* Same ruling as the table above: a FUNCTION, so the closure walker pulls it. */
+    function _propPremiumPairs() { return [
+        ['coverFlood',   'floodPremium'],
+        ['endorseQuake', 'quakePremium']
+    ]; }
+    function _propInsuranceExtras(acc) {
+        if (!acc) return 0;
+        var sum = 0;
+        _propEndorsements().forEach(function (e) { if (acc[e[0]]) sum += _num(acc[e[0] + 'Premium']); });
+        _propPremiumPairs().forEach(function (p) { if (acc[p[0]]) sum += _num(acc[p[1]]); });
+        return sum;
+    }
+    /* The whole-policy figure PLUS everything billed outside it. Uses _canonHomeIns, NOT
+       acc.homeInsYr — when a mortgage carries insurance in escrow the canonical figure comes from
+       the mortgage, and calcCarryTotal has always used the canonical one. The old reconciling line
+       read acc.homeInsYr directly, so on an escrow-linked home it hid while the total still carried
+       the figure: money in the total that was on no screen. This box replaces that line and closes it. */
+    function _propInsuranceTotal(acc) {
+        return _num(_canonHomeIns(acc)) + _propInsuranceExtras(acc);
+    }
     function calcCarryTotal(acc) {
-        return _num(_canonPropTax(acc)) + _num(_canonHomeIns(acc)) + _num(acc.maintYr) + _num(acc.hoaYr) + _num(acc.utilYr);
+        return _num(_canonPropTax(acc)) + _num(_canonHomeIns(acc)) + _num(acc.maintYr) + _num(acc.hoaYr) + _num(acc.utilYr)
+             + _propInsuranceExtras(acc);
     }
     function _groundsLinkedDebt(id) {   // §1.2 sum of linked liabilities (mortgage / HELOC etc.)
         return (state.accounts || []).filter(function (a) { return a.linkedAssetId === id; }).reduce(function (s, a) { return s + _num(a.value); }, 0);

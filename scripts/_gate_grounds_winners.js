@@ -132,10 +132,15 @@ const PLAINTEXTDED = process.argv.includes('--plaintextded');
 /* --valuefirst restores the guard ordering that threw: read .value before testing the class, so an
    element with no .value (an <a>) blows up in the blur normalizer. Proves the link-safety leg. */
 const VALUEFIRST = process.argv.includes('--valuefirst');
+/* --ungatedprem drops the toggle gate from the §27.3 sum, so a premium whose endorsement is switched
+   OFF is counted anyway. That is THE failure mode of this feature: the field is not on screen, the
+   stored value survives the toggle, and the user reads a carrying total higher than anything he can
+   see. --redfirst cannot reproduce it — it flips winner strings, and this is an arithmetic fault. */
+const UNGATEDPREM = process.argv.includes('--ungatedprem');
 const MUT = NOHELOC || NOCTRL || FLATCARRY || NOEDUC || NOCOV || WRONGFLD || ZEROPLACE
          || NOENDORSE || EAGERFIELDS || DEAFSWITCH || DEAFSELECT
          || NOHAZARD || WORDONLY || SDCFALLBACK || NOTYPEDI || TYPEFALLBACK || HO3NOTE || HIDEFIELD
-         || SKIPBLANK || FORKVALUE || PLAINTEXTDED || VALUEFIRST;
+         || SKIPBLANK || FORKVALUE || PLAINTEXTDED || VALUEFIRST || UNGATEDPREM;
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8305;
 const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
@@ -169,7 +174,7 @@ const M_EDUC = "    function _propInsEducationHTML(acc) {\n        if (true) ret
 /* §17.4 anchors. Each is a line the feature genuinely depends on, so a reword breaks the anchor and
    apply() aborts loudly rather than silently mutating nothing — the gate and its controls cannot
    drift apart. */
-const A_NOENDORSE = "        var anyOn = _PROP_ENDORSEMENTS.some(function (e) { return !!acc[e[0]]; });";
+const A_NOENDORSE = "        var anyOn = _propEndorsements().some(function (e) { return !!acc[e[0]]; });";
 const M_NOENDORSE = "        return '';   /* §17.4 block removed by --noendorse */";
 /* RE-GROUNDED after §26.4/§26.5 rewrote the endorsement block. Both anchors moved and BOTH controls
    ABORTED rather than mutating — correct, and the second one matters: `var on = !!acc[key];` now
@@ -184,6 +189,8 @@ const A_DEAFSEL = "            if(field === 'hoType' || field === 'propType') op
 const M_DEAFSEL = "            /* --deafselect: the pre-fix state — both fields store, neither repaints */";
 /* §27 anchors. Both are single literals from the §27 wiring, so a re-grounding shows up as an
    aborted mutation rather than a control that quietly stopped biting. */
+const A_UNGATED = "        _propEndorsements().forEach(function (e) { if (acc[e[0]]) sum += _num(acc[e[0] + 'Premium']); });";
+const M_UNGATED = "        _propEndorsements().forEach(function (e) { sum += _num(acc[e[0] + 'Premium']); });   /* --ungatedprem */";
 const A_VALFIRST = "      const cl = e.target.classList;";
 const M_VALFIRST = "      if (e.target.value.trim() === '') return;   /* --valuefirst */\n      const cl = e.target.classList;";
 const A_PLAINDED = "      const _isPct = e.target.classList.contains('moneypct-format');";
@@ -264,6 +271,7 @@ const server = http.createServer((req, res) => {
     if (FORKVALUE) apply(A_FORKVAL,   M_FORKVAL,   'A_FORKVAL');
     if (PLAINTEXTDED) apply(A_PLAINDED, M_PLAINDED, 'A_PLAINDED');
     if (VALUEFIRST) apply(A_VALFIRST, M_VALFIRST, 'A_VALFIRST');
+    if (UNGATEDPREM) apply(A_UNGATED, M_UNGATED, 'A_UNGATED');
     body = Buffer.from(src, 'utf8');
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
@@ -307,6 +315,53 @@ const server = http.createServer((req, res) => {
     out.mLinked = cap();
     window.openAccountModal(gAcc.id);
     out.gFill = cap();
+    /* ══ §27.3 · A FIXTURE THAT CAN ACTUALLY REACH THE NEW STATE ═══════════════════════════════════
+       gFill carries NO premiums, so after §27.3 the old §26.5 leg would still have read $16,800 and
+       passed — GREEN while proving nothing, because its fixture cannot occupy the state the claim is
+       about (§13.73). An inverted leg on a fixture that cannot reach the new behaviour is theatre.
+       Same five carry fields as gFill (16,800 base) so the delta is attributable to premiums alone:
+         id-theft ON      25   counted
+         flood    ON     600   counted
+         quake    ON     400   counted
+         biz-prop OFF    999   ⛔ MUST NOT COUNT — the toggle is off, the field is not on screen, and
+                               the stored value survives the toggle. This is the whole trap.
+       extras = 1,025 · total = 17,825 · insurance box = 2,000 + 1,025 = 3,025 */
+    addInstance('property');
+    const pAcc = window.state.accounts.filter(x => x.baseId === 'property').pop();
+    Object.assign(pAcc, { value: 500000, propTaxYr: '6000', homeInsYr: '2000', maintYr: '4000', hoaYr: '1200', utilYr: '3600',
+      endorseIdTheft: true,  endorseIdTheftPremium: '25',
+      endorseBizProp: false, endorseBizPropPremium: '999',
+      coverFlood: true,      floodPremium: '600',
+      endorseQuake: true,    quakePremium: '400' });
+    window.openAccountModal(pAcc.id);
+    out.gPrem = cap();
+    /* The dash case, on its own property: nothing recorded anywhere. Row 205 — a blank policy and a
+       policy costing zero are opposite facts, and "$0" would be a number nobody entered. */
+    addInstance('property');
+    const dAcc = window.state.accounts.filter(x => x.baseId === 'property').pop();
+    window.openAccountModal(dAcc.id);
+    out.gInsDash = cap();
+    /* §27.4 VARIANT B — premiums carried but NO homeowner figure recorded, so the note has no number
+       to name. Its own property, because gPrem deliberately HAS one. */
+    addInstance('property');
+    const nAcc = window.state.accounts.filter(x => x.baseId === 'property').pop();
+    Object.assign(nAcc, { endorseIdTheft: true, endorseIdTheftPremium: '25', endorseQuake: true, quakePremium: '400' });
+    window.openAccountModal(nAcc.id);
+    out.gPremNoIns = cap();
+    /* ⭐ §27.4 STRUCTURAL — "visible text, not a hover" is a claim a substring check CANNOT make.
+       The note could sit inside a .modal-tt and every string assertion would still pass while the
+       ruling was defeated. So the DOM is asked directly: find the note by its opening words, and
+       prove no ancestor is a tooltip. Counted too — the authored placement is exactly two. */
+    window.openAccountModal(pAcc.id);
+    out.p274 = (function () {
+      const root = document.getElementById('modal-dynamic-content');
+      if (!root) return { instances: 0, outsideTooltip: false, why: 'NO_MODAL_CONTENT' };
+      const all = Array.from(root.querySelectorAll('div')).filter(function (d) {
+        return d.children.length === 0 && d.textContent.indexOf('Already counted?') === 0;
+      });
+      const inTip = all.some(function (d) { return !!d.closest('.modal-tt'); });
+      return { instances: all.length, outsideTooltip: all.length > 0 && !inTip, why: '' };
+    })();
     out.gId = gAcc.id;   // §17.3↔§17.2 handshake leg asserts the REAL control's field name, not a fixture's
     // gAuto — a Driveway (auto) room to prove Grounds-only gating (Driveway wired in a later wave).
     out.gAuto = grab('auto');
@@ -1007,8 +1062,16 @@ const server = http.createServer((req, res) => {
      is still the same five fields, and the reconciling line is present so the figure can be added up
      from what is on screen — a total that exceeds its visible parts is the same family of harm as a
      silently inflated one. */
-  ok(has(R.gFill, '$16,800') && has(R.gFill, 'recorded above under Property Insurance') && has(R.gFill, '$2,000'),
-     '§26.2 GUARD — the total is UNCHANGED at $16,800 and the moved insurance figure is shown here, so the sum reconciles on screen');
+  /* ⭐ RE-GROUNDED 2026-08-08 (§13.74) — THE CLAIM IS UNCHANGED, ITS SURFACE MOVED. This asserted the
+     reconciling SENTENCE ("recorded above under Property Insurance"). §27.3 replaced that sentence
+     with the fifth carrying-cost box, which serves the identical claim STRICTLY BETTER: the sentence
+     read acc.homeInsYr directly while calcCarryTotal used _canonHomeIns, so on an escrow-linked home
+     it hid itself while the total still carried the figure. The box reads the canonical value.
+     The claim being defended is the same one either way — A TOTAL THAT EXCEEDS ITS VISIBLE PARTS IS
+     THE SAME FAMILY OF HARM AS A SILENTLY INFLATED ONE — so the leg follows the surface rather than
+     being retired. gFill carries no premiums, so its total is still exactly the five fields. */
+  ok(has(R.gFill, '$16,800') && has(R.gFill, 'Total Property Insurance (yr)') && has(R.gFill, '$2,000'),
+     '§26.2 GUARD — the total is UNCHANGED at $16,800 and the insurance figure is visible in the fifth box, so the sum reconciles on screen');
 
   /* ══ §17.2 · THE HO-1…HO-8 EDUCATION BLOCK, IN THE SERVED BYTES ════════════════════════════════
      All eight authored lines asserted whole. Cheap to write, and the reason to write all eight
@@ -1289,8 +1352,51 @@ const server = http.createServer((req, res) => {
      and no premiums, so its total is the control; this asserts the total is still exactly those five.
      A leg here is worth more than a comment: silently inflating a retirement number is the quietest
      way this section could do harm. */
+  /* ⭐ INVERTED 2026-08-08 (§13.74) — AND DELIBERATELY RE-FIXTURED, WHICH IS THE HARDER HALF.
+     This asserted the carrying total NEVER moves on a premium. §27.3 makes it move ON PURPOSE, so
+     from that ruling the old leg was guarding a defect. But flipping the expectation on gFill would
+     have been theatre: gFill carries no premiums, so it would have passed either way. The claim now
+     runs against gPrem, which occupies the state the ruling created.
+     BOTH HALVES ASSERTED — the total MOVES by exactly the premiums, and §4.2 itself DOES NOT, which
+     is the half of §26.5 that survives untouched (the Moat mirrors that figure, §20.4). */
   ok(has(R.gFill, '$16,800') && has(R.gFill, 'Total Annual Carrying Cost'),
-     '§26.5 GUARD — the carrying total is still the SAME five fields ($16,800); endorsement premiums are displayed, never summed');
+     '§26.5 CONTROL — a property with NO premiums still totals exactly the five carry fields ($16,800)');
+  ok(pick(has(R.gPrem, '$17,825'), !has(R.gPrem, '$17,825')),
+     '§27.3 the carrying total MOVES by exactly the counted premiums ($16,800 + $1,025 = $17,825) [BITE]');
+  ok(pick(has(R.gPrem, '$3,025'), !has(R.gPrem, '$3,025')),
+     '§27.3 the fifth box totals homeowner + endorsements + flood + quake ($2,000 + $1,025 = $3,025) [BITE]');
+  ok(has(R.gPrem, 'Total Property Insurance (yr)'), '§27.3 the fifth box carries its authored label');
+  /* ⛔ THE TOGGLED-OFF TRAP. endorseBizPropPremium is 999 and its toggle is OFF, so the field is not
+     on screen and the money must not count. A leg that only checked "the total includes premiums"
+     would pass on the naive sum that adds it — and the user would be reading a carrying total $999
+     higher than anything he can see, which is the Captain's own definition of a bug. */
+  ok(pick(!has(R.gPrem, '$18,824') && !has(R.gPrem, '$4,024'), has(R.gPrem, '$18,824') || has(R.gPrem, '$4,024')),
+     '§27.3 a premium whose endorsement is switched OFF is NOT counted — no $999 from a hidden field [BITE]');
+  /* §4.2 UNTOUCHED — the surviving half of the §26.5 guard. The Moat mirrors this figure; summing
+     into it would corrupt a number on two surfaces at once. */
+  ok(has(R.gPrem, 'value="$2,000"'), '§27.3 §4.2 Annual Homeowner Insurance is UNCHANGED at $2,000 (the Moat mirrors it)');
+  /* Row 205 — a dash, never $0. A blank policy and a policy costing zero are opposite facts. */
+  ok(pick(has(R.gInsDash, 'value="—"'), !has(R.gInsDash, 'value="—"')),
+     '§27.3 nothing recorded -> the box shows a DASH, never $0 [BITE]');
+  /* ══ §27.4 · THE DOUBLE-COUNT INSTRUCTION (bank A348) ══════════════════════════════════════════
+     VISIBLE TEXT, NOT A HOVER — so the leg must prove it renders OUTSIDE a .modal-tt. A note that
+     technically appears in the bytes but only inside a tooltip would satisfy a naive substring check
+     while failing the entire point of the ruling: a warning nobody triggers is not there. */
+  ok(pick(has(R.gPrem, 'Already counted? If this premium is part of your Annual Homeowner Insurance of $2,000'),
+          !has(R.gPrem, 'Already counted? If this premium is part of your Annual Homeowner Insurance of $2,000')),
+     '§27.4 VARIANT A names the SAME figure the box sums ($2,000, from _canonHomeIns) [BITE]');
+  ok(has(R.gPrem, 'Enter it here only if it is a separate policy or a rider billed on its own.'),
+     '§27.4 ...and carries the authored second sentence verbatim');
+  ok(pick(R.p274 && R.p274.outsideTooltip === true, !(R.p274 && R.p274.outsideTooltip === true)),
+     '§27.4 the note renders as VISIBLE TEXT, not inside a hover (§13.77) [BITE]');
+  ok(R.p274 && R.p274.instances === 2,
+     '§27.4 exactly TWO instances — one for the endorsement group, one on the earthquake block (' + ((R.p274 && R.p274.instances) + '') + ')');
+  /* VARIANT B — the blank case names no figure, because there is none. The §27.1 lesson one section
+     over: an unrecorded value is a real state, and "$0" would be a number nobody entered. */
+  ok(pick(has(R.gPremNoIns, 'If a premium is part of a homeowner policy you have not recorded yet'),
+          !has(R.gPremNoIns, 'If a premium is part of a homeowner policy you have not recorded yet')),
+     '§27.4 VARIANT B renders when no homeowner figure exists [BITE]');
+  ok(!has(R.gPremNoIns, 'Annual Homeowner Insurance of $0'), '§27.4 ...and never names "$0" as the figure');
   lines.push('===== §17.5 · FLOOD (FEMA) + SHAKING (USGS) =====');
   ok(!R.g175.err, '§17.5 PRECONDITION — the fixture ran without throwing (err: ' + (R.g175.err || 'none') + ')');
   /* §13.72 — absent before the gesture, present after it, WITHOUT a modal re-open. */
@@ -1725,7 +1831,7 @@ const server = http.createServer((req, res) => {
     [NOCOV,'nocov'],[WRONGFLD,'wrongfld'],[ZEROPLACE,'zeroplace'],[NOENDORSE,'noendorse'],
     [EAGERFIELDS,'eagerfields'],[DEAFSWITCH,'deafswitch'],[DEAFSELECT,'deafselect'],[NOHAZARD,'nohazard'],
     [WORDONLY,'wordonly'],[SDCFALLBACK,'sdcfallback'],[NOTYPEDI,'notypedi'],[TYPEFALLBACK,'typefallback'],
-    [HO3NOTE,'ho3note'],[HIDEFIELD,'hidefield'],[SKIPBLANK,'skipblank'],[FORKVALUE,'forkvalue'],[PLAINTEXTDED,'plaintextded'],[VALUEFIRST,'valuefirst']]
+    [HO3NOTE,'ho3note'],[HIDEFIELD,'hidefield'],[SKIPBLANK,'skipblank'],[FORKVALUE,'forkvalue'],[PLAINTEXTDED,'plaintextded'],[VALUEFIRST,'valuefirst'],[UNGATEDPREM,'ungatedprem']]
     .filter(function (m) { return m[0]; }).map(function (m) { return m[1]; });
   const TAG = MUTS.length ? 'MUTATED[' + MUTS.join('+') + ']' : (RF ? 'RED-FIRST' : 'CLEAN');
   lines.push('MODE: ' + (RF ? 'RED-FIRST (winners flipped to losers — MUST be RED)' : 'NORMAL') + '   |   FILE: ' + TAG + '   |   STAGE: G10 (+ #250 fixes) — WHOLE ROOM');

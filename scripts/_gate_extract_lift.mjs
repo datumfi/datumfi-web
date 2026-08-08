@@ -222,6 +222,44 @@ need('every name the resolver CLAIMS slices to source that PARSES, never to pros
      (unparseable.length ? ': ' + unparseable.slice(0, 5).join(', ') : '') + ')',
      unparseable.length === 0, 'fn-anchoring');
 
+/* ⭐ THE SUMMABLE-CLOSURE CANARY (added 2026-08-08, the expensive way).
+   §27.3 made calcCarryTotal read a `var` table, and FIVE unrelated gates went RED at once with
+   "ReferenceError: _PROP_ENDORSEMENTS is not defined" — because the walker pulls FUNCTIONS and a
+   `var` is invisible to it. Every one of those gates was right, and the feedback loop was a
+   TWENTY-ONE MINUTE SUITE RUN. This leg reproduces the same break in 0.1s.
+   🔑 IT IS NOT A TEST OF calcCarryTotal'S ARITHMETIC — the room gates own that. It asks one
+   question: DOES THE MONEY FUNCTION EVERY PROPERTY GATE SLICES STILL SURVIVE BEING SLICED? A
+   ReferenceError here means someone added a binding to that closure, and the fix is always the same
+   one already written down in this codebase: DECLARE THE TABLE AS A FUNCTION. */
+const carry = (function () {
+  try {
+    const body = M.extractClosure(studio, ['calcCarryTotal'], {});
+    const fn = new Function('var state = { accounts: [] };\n' + body + '\nreturn calcCarryTotal;')();
+    const n = fn({ propTaxYr: '6000', homeInsYr: '2000', maintYr: '4000', hoaYr: '1200', utilYr: '3600' });
+    return { ok: true, err: '', n: n };
+  } catch (e) { return { ok: false, err: String((e && e.message) || e), n: null }; }
+})();
+need('[CANARY] calcCarryTotal still survives being sliced and run (' + (carry.ok ? 'ok' : carry.err) + ')',
+     carry.ok, 'real');
+need('[CANARY] ...and returns a real number, so the slice is not silently inert (' + carry.n + ')',
+     carry.ok && typeof carry.n === 'number' && carry.n === 16800, 'real');
+/* THE CANARY'S OWN PREMISE, PROVEN ON A FIXTURE rather than assumed: a `var` inside a walked closure
+   really is invisible to the resolver, and really does throw at call time. Without this, "the canary
+   is green" could mean "the canary cannot fail". A control on studio.html itself is not available
+   here — this gate reads the real file rather than mutating it — so the MECHANISM is what gets the
+   control. The live incident (five gates RED on _PROP_ENDORSEMENTS) is the other half of the proof. */
+const varTrap = (function () {
+  const src = "    var TBL = [['a'], ['b']];\n    function totalsIt(acc) { return TBL.length; }\n";
+  try {
+    const body = M.extractClosure(src, ['totalsIt'], {});
+    if (/var TBL/.test(body)) return { threw: false, why: 'walker UNEXPECTEDLY pulled the var' };
+    new Function(body + '\nreturn totalsIt;')()({});
+    return { threw: false, why: 'call did not throw' };
+  } catch (e) { return { threw: /TBL is not defined/.test(String(e && e.message)), why: String(e && e.message) }; }
+})();
+need('[CANARY CONTROL] a `var` in a walked closure is invisible and throws at call time (' + varTrap.why + ')',
+     varTrap.threw, 'real');
+
 let pass = 0;
 for (const [l, ok] of checks) { console.log((ok ? '✅' : '⛔') + ' ' + l); if (ok) pass++; }
 const allGreen = pass === checks.length;
