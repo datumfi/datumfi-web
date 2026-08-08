@@ -3093,11 +3093,83 @@
       return (neg ? '-' : '') + '$' + body;
     }
 
+    /* ══ A DEDUCTIBLE IS A DOLLAR AMOUNT **OR** A PERCENTAGE ═════════════════════════════════════
+     * Captain smoke, 2026-08-08: "Deductible — Hurricane" and "— Wind/Hail" carried no $ and accepted
+     * LETTERS, while "— Other Perils" was correctly gated. He asked for them to be made currency-only.
+     * ⚠️ THEY WERE PLAIN TEXT ON PURPOSE, AND CURRENCY-ONLY WOULD HAVE BROKEN THEM. Named-storm and
+     * wind/hail deductibles are commonly written as a PERCENTAGE of Coverage A, and the authored
+     * hovers on those very fields say so — "a separate, often PERCENTAGE deductible", "a % here can be
+     * a big number". Gating them to digits-and-$ would have made the field refuse the thing its own
+     * hover tells the user to expect. Raised rather than executed; the Captain ruled MONEY-OR-PERCENT
+     * ("in real life I have a $1000 deductible... if % is another common way, we need that too. But in
+     * either case, no text should be allowed").
+     * 🔑 THE COMPLAINT WAS RIGHT AND THE PROPOSED FIX WAS WRONG. Both halves had to be said out loud.
+     *
+     * A '%' anywhere in what the user typed means they are naming a percentage; otherwise it is money
+     * and formatCurrency owns it (L48 — one currency formatter, not two). Letters never survive
+     * either branch. Digits inside garbage ARE kept, exactly as every other currency field in this
+     * product behaves — a stricter rule for three fields would be a surprise, not a safeguard.
+     * Third field included: quakeDeductible is the same case (its own hover says the earthquake
+     * deductible "is usually a PERCENTAGE of the dwelling limit"). The Captain named two; the family
+     * is three, and shipping two of three would be the §26 mistake again.
+     * ⛔ NOT the endorsement LIMIT fields — those are text so a policy can say "open perils" or
+     * "$5k per item / $25k total". Deliberate, authored, and left alone. */
+    /* ⭐ THE QUALIFIER AFTER THE '%' SURVIVES — Captain, second pass 2026-08-08. The first cut pinned
+       the number and threw the words away, so "10% of Coverage A" collapsed to "10%". He wants all
+       THREE: a flat $1,000, a percentage that can still say what it is a percentage OF, and no
+       gibberish. THE RULE THAT GETS ALL THREE IS "IT MUST BEGIN WITH A NUMBER": before the '%' only
+       digits survive, so "abc%" is still refused; AFTER the '%' a short qualifier is allowed, because
+       by then the number is pinned in front of it and the field can no longer be gibberish.
+       🔑 AND IT MAKES THE §16 SEAM EASIER, NOT HARDER. The parked worry was that these fields would
+       be unparseable the day something consumes an insurance number. Whatever trails it, the value
+       now BEGINS with "<number>%" or "$<number>" — more parseable than the free text it replaces.
+       The qualifier is capped and character-limited: letters, digits, spaces and light punctuation
+       only, so nothing that reaches innerHTML can carry markup. */
+    const _QUAL_STRIP = /[^A-Za-z0-9 ,.\/()\-]/g;
+    function _pctParts(s) {
+      const cut = s.indexOf('%');
+      const num = s.slice(0, cut).replace(/[^0-9.]/g, '');
+      if (num.replace(/\./g, '') === '') return null;      // a '%' with no number in front names nothing
+      const dot = num.indexOf('.');
+      const intStr = dot === -1 ? num : num.slice(0, dot);
+      const frac = dot === -1 ? '' : num.slice(dot + 1).replace(/\./g, '').slice(0, 2);
+      let intNum = parseInt(intStr, 10);
+      if (isNaN(intNum)) intNum = 0;
+      return { head: intNum + (dot === -1 ? '' : '.' + frac) + '%',
+               tail: s.slice(cut + 1).replace(_QUAL_STRIP, '').slice(0, 40) };
+    }
+    function formatMoneyOrPct(val) {
+      if (val === null || val === undefined) return '';
+      const s = String(val);
+      if (s.indexOf('%') < 0) return formatCurrency(s);
+      const p = _pctParts(s);
+      return p ? p.head + p.tail : '';
+    }
+    /* Settle-on-blur twin. Money settles through formatCurrencyDisplay so cents pad to 2 places; a
+       percentage keeps its qualifier but loses a TRAILING space — which must survive the LIVE pass,
+       or "10% of" could never be typed: the space would vanish the moment it was pressed. */
+    function formatMoneyOrPctDisplay(val) {
+      if (val === null || val === undefined) return '';
+      const s = String(val);
+      if (s.indexOf('%') < 0) return formatCurrencyDisplay(s);
+      const p = _pctParts(s);
+      return p ? p.head + p.tail.replace(/\s+$/, '') : '';
+    }
+
     document.addEventListener('input', function (e) {
-      if (e.target.classList.contains('curr-format')) {
+      const _isCur = e.target.classList.contains('curr-format');
+      const _isPct = e.target.classList.contains('moneypct-format');
+      if (_isCur || _isPct) {
         let originalLen = e.target.value.length;
         let caretPos = e.target.selectionStart;
-        e.target.value = formatCurrency(e.target.value);
+        /* ⚠️ NOT A TERNARY, DELIBERATELY. _gate_407_19_1c_display anchors on the literal
+           `e.target.value = formatCurrency(e.target.value)` to prove the LIVE listener never reaches
+           for the padding formatter (which would pad "$20,000.5" out from under the keystrokes).
+           Collapsing these two lines into a ternary broke that anchor while the behaviour stayed
+           correct — a gate reading RED for a shape change, not a defect. The claim it makes is worth
+           keeping, and the product can simply keep the shape, so the branch stays written out. */
+        if (_isPct) e.target.value = formatMoneyOrPct(e.target.value);
+        else e.target.value = formatCurrency(e.target.value);
         let newLen = e.target.value.length;
         e.target.setSelectionRange(caretPos + (newLen - originalLen), caretPos + (newLen - originalLen));
       }
@@ -3107,9 +3179,21 @@
     // '.' is dropped AND a fractional entry is padded to 2 decimals ("$1,234." -> "$1,234", "$20,000.5" ->
     // "$20,000.50"). Purely cosmetic — same number — so no need to re-fire downstream handlers.
     document.addEventListener('focusout', function (e) {
-      if (e.target.classList && e.target.classList.contains('curr-format') && e.target.value.trim() !== '') {
-        e.target.value = formatCurrencyDisplay(e.target.value);
-      }
+      /* ⚠️ CLASS FIRST, VALUE SECOND — AND THAT ORDER IS LOAD-BEARING. My first cut read
+         `e.target.value.trim()` before checking the class, but focusout bubbles from ANY focusable
+         element, and an <a> has no `.value` at all: tabbing off a link would have thrown a
+         TypeError on undefined. The original code was safe only because the class test
+         short-circuited first, and reordering the guard quietly removed that protection.
+         🔑 NO GATE CAUGHT THIS — nothing in the suite tabs through a link. Found by reading the
+         diff after a DIFFERENT gate went red. A refactor that preserves behaviour on the paths you
+         tested can still delete a guard on a path you did not. */
+      const cl = e.target.classList;
+      if (!cl) return;
+      const isPct = cl.contains('moneypct-format');
+      if (!isPct && !cl.contains('curr-format')) return;
+      if (String(e.target.value == null ? '' : e.target.value).trim() === '') return;
+      if (isPct) e.target.value = formatMoneyOrPctDisplay(e.target.value);
+      else e.target.value = formatCurrencyDisplay(e.target.value);
     });
 
     // --- DOM DATE INTERCEPTOR ---
@@ -9576,8 +9660,15 @@
     function _propCovFieldHTML(id, acc, key, label, whatsThis, doIHave, align, kind) {
         var side = align === 'right' ? 'right:0; left:auto;' : 'left:0; right:auto;';
         var raw = acc[key];
-        var val = (kind === 'money') ? formatCurrencyDisplay(raw || '') : String(raw === undefined || raw === null ? '' : raw).replace(/"/g, '&quot;');
-        var cls = (kind === 'money') ? 'small-field curr-format' : 'small-field';
+        /* three kinds now: 'money' (digits + $), 'moneypct' (digits + $ OR a percentage — the three
+           deductibles), and 'text' (free prose, e.g. an endorsement limit that reads "open perils"). */
+        var val = kind === 'money'    ? formatCurrencyDisplay(raw || '')
+                : kind === 'moneypct' ? formatMoneyOrPctDisplay(raw || '')
+                : String(raw === undefined || raw === null ? '' : raw).replace(/"/g, '&quot;');
+        if (kind === 'moneypct') val = String(val).replace(/"/g, '&quot;');
+        var cls = kind === 'money'    ? 'small-field curr-format'
+                : kind === 'moneypct' ? 'small-field moneypct-format'
+                : 'small-field';
         return '<div><span class="input-label modal-tt-wrap" style="cursor:help;">' + label +
                '<div class="modal-tt" style="' + side + '"><strong>What\'s this?</strong>' + whatsThis +
                '<br><br><strong>Do I have enough?</strong>' + doIHave + '</div></span>' +
@@ -9650,10 +9741,10 @@
                 </div>
                 <div class="field-row">
                     ${F('dedOther', 'Deductible — Other Perils (standard)', 'What you pay out of pocket before a normal claim (fire, theft) pays.', 'Higher deductible = lower premium; pick what you could cover on short notice.', 'left')}
-                    ${F('dedHurricane', 'Deductible — Hurricane', 'A separate, often PERCENTAGE deductible that applies to named-storm damage.', 'A % deductible on a big Coverage A can be a large dollar figure — do the math for a real storm.', 'right', 'text')}
+                    ${F('dedHurricane', 'Deductible — Hurricane', 'A separate, often PERCENTAGE deductible that applies to named-storm damage.', 'A % deductible on a big Coverage A can be a large dollar figure — do the math for a real storm.', 'right', 'moneypct')}
                 </div>
                 <div class="field-row" style="grid-template-columns:1fr;">
-                    ${F('dedWindHail', 'Deductible — Wind/Hail', 'A separate deductible for wind or hail damage, common in storm-prone regions.', 'Like the hurricane line — a % here can be a big number; know it before a claim.', 'left', 'text')}
+                    ${F('dedWindHail', 'Deductible — Wind/Hail', 'A separate deductible for wind or hail damage, common in storm-prone regions.', 'Like the hurricane line — a % here can be a big number; know it before a claim.', 'left', 'moneypct')}
                 </div>
                 ${/* §17.3a — the per-form note sits UNDER the fields it describes, not above them:
                       the hovers explain the FIELD, this explains the FORM, and both render. */''}
@@ -9798,6 +9889,16 @@
                    String(acc[key] === undefined || acc[key] === null ? '' : acc[key]).replace(/"/g, '&quot;') +
                    '" oninput="updateAccField(\'' + id + '\', \'' + key + '\', this.value)"></div>';
         };
+        /* A deductible that may be money OR a percentage. Same seam as money() — only the formatter
+           and the class differ — so the three deductibles are gated identically wherever they live
+           (two in the coverage grid, this one in the earthquake row). The endorsement LIMIT fields
+           keep text(): "open perils" is a real answer there and must stay typeable. */
+        var moneypct = function (key, label) {
+            return '<div style="flex:1;"><span class="input-label" style="color:var(--muted);">' + label + '</span>' +
+                   '<input type="text" class="small-field moneypct-format" placeholder="—" value="' +
+                   String(formatMoneyOrPctDisplay(acc[key] || '')).replace(/"/g, '&quot;') +
+                   '" oninput="updateAccField(\'' + id + '\', \'' + key + '\', this.value)"></div>';
+        };
         var row = function (key, label, whatsThis, fields) {
             var on = !!acc[key];
             return '<div class="toggle-row modal-tt-wrap" style="padding:8px 0 6px;">' +
@@ -9812,7 +9913,7 @@
                    function () { return money('floodCovBuilding', 'Flood coverage — building') + money('floodCovContents', 'Flood coverage — contents') + money('floodPremium', 'Annual flood premium'); })
              + row('endorseQuake', 'Earthquake coverage',
                    'Earthquake damage is excluded from standard home policies almost everywhere. It is added as an endorsement or bought as a separate policy, and its deductible is usually a PERCENTAGE of the dwelling limit rather than a flat dollar figure. Switch this on to record what you carry.',
-                   function () { return money('endorseQuakeLimit', 'Earthquake coverage limit') + text('quakeDeductible', 'Earthquake deductible') + money('quakePremium', 'Annual earthquake premium'); });
+                   function () { return money('endorseQuakeLimit', 'Earthquake coverage limit') + moneypct('quakeDeductible', 'Earthquake deductible') + money('quakePremium', 'Annual earthquake premium'); });
     }
 
     /* §26.6 — THE NFIP EDUCATION PANEL. Same click-to-open disclosure as the HO-1…HO-8 panel (L48).

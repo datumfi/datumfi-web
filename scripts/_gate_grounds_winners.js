@@ -124,10 +124,18 @@ const TYPEFALLBACK = process.argv.includes('--typefallback');
                   WINDOW, which is how a number starts double-counting. The mirror legs must RED. */
 const SKIPBLANK = process.argv.includes('--skipblank');
 const FORKVALUE = process.argv.includes('--forkvalue');
+/* --plaintextded reproduces the SYMPTOM THE CAPTAIN SAW, not a paraphrase of it: it switches the
+   live listener blind to the gating class, so all three deductibles go back to accepting whatever
+   is typed, with no $. One anchor reaches all three because they share one listener — which is the
+   argument for having gated them in one place rather than three. */
+const PLAINTEXTDED = process.argv.includes('--plaintextded');
+/* --valuefirst restores the guard ordering that threw: read .value before testing the class, so an
+   element with no .value (an <a>) blows up in the blur normalizer. Proves the link-safety leg. */
+const VALUEFIRST = process.argv.includes('--valuefirst');
 const MUT = NOHELOC || NOCTRL || FLATCARRY || NOEDUC || NOCOV || WRONGFLD || ZEROPLACE
          || NOENDORSE || EAGERFIELDS || DEAFSWITCH || DEAFSELECT
          || NOHAZARD || WORDONLY || SDCFALLBACK || NOTYPEDI || TYPEFALLBACK || HO3NOTE || HIDEFIELD
-         || SKIPBLANK || FORKVALUE;
+         || SKIPBLANK || FORKVALUE || PLAINTEXTDED || VALUEFIRST;
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8305;
 const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
@@ -176,6 +184,10 @@ const A_DEAFSEL = "            if(field === 'hoType' || field === 'propType') op
 const M_DEAFSEL = "            /* --deafselect: the pre-fix state — both fields store, neither repaints */";
 /* §27 anchors. Both are single literals from the §27 wiring, so a re-grounding shows up as an
    aborted mutation rather than a control that quietly stopped biting. */
+const A_VALFIRST = "      const cl = e.target.classList;";
+const M_VALFIRST = "      if (e.target.value.trim() === '') return;   /* --valuefirst */\n      const cl = e.target.classList;";
+const A_PLAINDED = "      const _isPct = e.target.classList.contains('moneypct-format');";
+const M_PLAINDED = "      const _isPct = false;   /* --plaintextded: the pre-fix ungated deductible */";
 const A_SKIPBLANK = "        var _own = _num(acc.value);";
 const M_SKIPBLANK = "        var _own = _num(acc.value);\n        if (_own <= 0) { apply(); return; }   /* --skipblank: the pre-§27.1 silent apply */";
 const A_FORKVAL = "oninput=\"onFrontValueEdit('${id}', this)\">";
@@ -250,6 +262,8 @@ const server = http.createServer((req, res) => {
     if (HIDEFIELD) apply(A_HIDEFLD,  M_HIDEFLD,  'A_HIDEFLD');
     if (SKIPBLANK) apply(A_SKIPBLANK, M_SKIPBLANK, 'A_SKIPBLANK');
     if (FORKVALUE) apply(A_FORKVAL,   M_FORKVAL,   'A_FORKVAL');
+    if (PLAINTEXTDED) apply(A_PLAINDED, M_PLAINDED, 'A_PLAINDED');
+    if (VALUEFIRST) apply(A_VALFIRST, M_VALFIRST, 'A_VALFIRST');
     body = Buffer.from(src, 'utf8');
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
@@ -875,6 +889,66 @@ const server = http.createServer((req, res) => {
       return { fieldWith: fieldWith, fieldNone: fieldNone, dWith: dWith, dNone: dNone,
                mirror: mirror, html: root ? root.innerHTML : '' };
     })();
+    /* ══ THE THREE DEDUCTIBLES — MONEY **OR** PERCENT, NEVER LETTERS (Captain smoke 2026-08-08) ═══
+       Driven through the REAL delegated listener with REAL input events. The complaint was "you can
+       add letters", which is a claim about what happens WHILE TYPING — so both the LIVE value (after
+       'input') and the SETTLED value (after 'focusout') are captured. A test that assigned a value
+       and re-read it would prove assignment works and nothing else (§13.72).
+       Every field is probed on all four cases, because the percentage is the thing that had to
+       SURVIVE this fix: a gate that only checked "letters refused" would go green on a currency-only
+       field that silently ate the 2% the hover promises. */
+    out.p27ded = (function () {
+      addInstance('property');
+      const a = window.state.accounts.filter(function (x) { return x.baseId === 'property'; }).pop();
+      a.endorseQuake = true;               // the quake row must be OPEN for its deductible to exist
+      window.openAccountModal(a.id);
+      const find = function (labelText) {
+        const root = document.getElementById('modal-dynamic-content');
+        if (!root) return null;
+        const lab = Array.from(root.querySelectorAll('.input-label')).filter(function (s) {
+          return s.textContent.indexOf(labelText) >= 0;
+        })[0];
+        return lab && lab.parentElement ? lab.parentElement.querySelector('input[type=text]') : null;
+      };
+      const type = function (el, s) {
+        el.focus();
+        el.value = s;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        const live = el.value;
+        el.dispatchEvent(new Event('focusout', { bubbles: true }));
+        return { live: live, settled: el.value };
+      };
+      const probe = function (labelText) {
+        const el = find(labelText);
+        if (!el) return { present: false, why: 'NO_FIELD', cls: '', money: {}, pct: {}, letters: {}, garbage: {} };
+        return { present: true, why: '', cls: el.className,
+                 money: type(el, '1000'), pct: type(el, '2%'),
+                 qual: type(el, '10% of Coverage A'), preletters: type(el, 'abc%'),
+                 letters: type(el, 'abc'), garbage: type(el, '$56gsj7fj340') };
+      };
+      /* ⚠️ THE GUARD NO GATE HAD. focusout bubbles from ANY focusable element and an <a> has no
+         `.value`; a guard that read `.value` before testing the class threw a TypeError on undefined
+         the moment anyone tabbed off a link. A STRUCTURAL CHECK CANNOT SEE THIS — it is a runtime
+         shape, so the element is built and the event really dispatched. An exception inside a
+         listener during dispatchEvent does not propagate to the dispatcher, it goes to window.onerror,
+         which is why the capture is a listener and not a try/catch. */
+      const linkSafe = (function () {
+        let threw = '';
+        const onErr = function (ev) { threw = String((ev && (ev.message || ev.error)) || 'error'); };
+        window.addEventListener('error', onErr);
+        const a = document.createElement('a');
+        a.href = '#'; a.textContent = 'x'; a.tabIndex = 0;
+        document.body.appendChild(a);
+        try { a.dispatchEvent(new FocusEvent('focusout', { bubbles: true })); }
+        catch (e) { threw = String((e && e.message) || e); }
+        a.remove();
+        window.removeEventListener('error', onErr);
+        return { threw: threw };
+      })();
+      return { hurricane: probe('Deductible — Hurricane'), windhail: probe('Deductible — Wind/Hail'),
+               quake: probe('Earthquake deductible'), other: probe('Deductible — Other Perils'),
+               linkSafe: linkSafe };
+    })();
     return out;
   });
   await b.close();
@@ -1200,8 +1274,16 @@ const server = http.createServer((req, res) => {
      && has(R.gHazCover, 'Annual flood premium') && has(R.gHazCover, 'Earthquake coverage limit')
      && has(R.gHazCover, 'Earthquake deductible') && has(R.gHazCover, 'Annual earthquake premium'),
      '§26.7 conditional reveal — nothing when neither is carried, all SIX fields when both are');
-  ok(has(R.gHazCover, 'value="10% of Coverage A"'),
-     '§26.7 the earthquake deductible accepts TEXT — a percentage of the dwelling limit survives, which a money field would silently discard');
+  /* ⭐ THIS LEG WAS BRIEFLY RE-GROUNDED AND IS NOW BACK TO ITS ORIGINAL CLAIM, WHICH IS WORTH
+     RECORDING. The first cut of the money-or-percent gate pinned the number but discarded the
+     qualifier, so "10% of Coverage A" rendered as "10%" — and this leg went RED, correctly, because
+     it was defending something real: a percentage that cannot say what it is a percentage OF is a
+     worse answer. The Captain saw the flagged loss and ruled that all three must be possible.
+     🔑 THE GATE CAUGHT A REGRESSION THE RULING HAD NOT INTENDED. "No text allowed" was aimed at
+     gibberish, not at "of Coverage A", and this leg is what forced the distinction into the open
+     instead of letting it ship as a silent narrowing. */
+  ok(pick(has(R.gHazCover, 'value="10% of Coverage A"'), !has(R.gHazCover, 'value="10% of Coverage A"')),
+     '§26.7 the earthquake deductible keeps its percentage AND its qualifier — a money field would discard both [BITE]');
   /* ⛔ §26.5 PREMIUM DOUBLE-COUNT GUARD. The endorsement/flood/quake premiums are NOT whole-policy
      premiums and must never be summed into the carrying total. gFill carries the five carry fields
      and no premiums, so its total is the control; this asserts the total is still exactly those five.
@@ -1585,6 +1667,53 @@ const server = http.createServer((req, res) => {
   ok(pick(R.p27 && R.p27.mirror.modalAfter === '$525,000', !(R.p27 && R.p27.mirror.modalAfter === '$525,000')),
      '§27.2 ...and a write from the card side updates the MODAL window [BITE]');
 
+  /* ══ THE THREE DEDUCTIBLES ════════════════════════════════════════════════════════════════════
+     PRESENCE FIRST — every "refuses letters" leg below is an ABSENCE claim, and an absence claim
+     against a field that does not exist passes for free. That is the exact false green this gate's
+     house law was written for. Not wrapped in pick(): a precondition that inverts is a precondition
+     that can be satisfied by doing nothing. */
+  const DED = [['hurricane', 'Hurricane'], ['windhail', 'Wind/Hail'], ['quake', 'Earthquake']];
+  DED.forEach(function (d) {
+    ok(R.p27ded && R.p27ded[d[0]].present === true, '[PRESENCE] the ' + d[1] + ' deductible field exists to drive');
+  });
+  DED.forEach(function (d) {
+    const f = (R.p27ded && R.p27ded[d[0]]) || {};
+    /* THE CAPTAIN'S OWN CASE. He has a $1,000 flat deductible and the field would not take one. */
+    ok(pick(f.money && f.money.live === '$1,000', !(f.money && f.money.live === '$1,000')),
+       d[1] + ': typing 1000 gives $1,000, live [BITE]');
+    /* THE THING THAT HAD TO SURVIVE. Currency-only would have eaten this, and the field's own hover
+       tells the user to expect it. */
+    ok(pick(f.pct && f.pct.live === '2%', !(f.pct && f.pct.live === '2%')),
+       d[1] + ': typing 2% SURVIVES as 2% [BITE]');
+    ok(f.pct && f.pct.settled === '2%', d[1] + ': ...and still 2% after blur');
+    /* ⭐ THE QUALIFIER. A percentage that cannot say what it is a percentage OF is a worse answer,
+       and the first cut of this fix silently dropped it. */
+    ok(pick(f.qual && f.qual.settled === '10% of Coverage A', !(f.qual && f.qual.settled === '10% of Coverage A')),
+       d[1] + ': "10% of Coverage A" keeps its qualifier [BITE]');
+    /* ...and the qualifier is not a back door. Letters BEFORE the % must still be refused, or
+       "abc%" would smuggle in exactly the gibberish this whole fix exists to stop. */
+    ok(pick(f.preletters && f.preletters.live === '', !(f.preletters && f.preletters.live === '')),
+       d[1] + ': "abc%" is still refused — the qualifier is not a back door [BITE]');
+    /* THE COMPLAINT ITSELF — refused AT THE KEYSTROKE, not merely cleaned up on blur. "You can add
+       letters" was about what he watched appear as he typed. */
+    ok(pick(f.letters && f.letters.live === '', !(f.letters && f.letters.live === '')),
+       d[1] + ': letters are refused AS TYPED, not tidied later [BITE]');
+    ok(f.garbage && f.garbage.live === '$567,340', d[1] + ': garbage keeps its digits, same as every other currency field');
+    ok(/moneypct-format/.test(f.cls || ''), d[1] + ': carries the gating class, not a bare text field');
+  });
+  /* REGRESSION TWIN — Other Perils was already correct and must STAY currency-only. If the new kind
+     ever leaks onto it, a percentage would silently become enterable on a field where it is wrong. */
+  ok(R.p27ded && R.p27ded.other.present === true, '[PRESENCE] Other Perils (the already-correct control field) exists');
+  ok(R.p27ded && R.p27ded.other.money.live === '$1,000', 'Other Perils still takes money');
+  ok(pick(R.p27ded && R.p27ded.other.pct.live === '$2', !(R.p27ded && R.p27ded.other.pct.live === '$2')),
+     'Other Perils is UNCHANGED — still currency-only, a % there is not a percentage [BITE]');
+  ok(!/moneypct-format/.test((R.p27ded && R.p27ded.other.cls) || ''), 'Other Perils did not inherit the new kind');
+  /* The blur normalizer must survive an element that HAS NO VALUE. Introduced and caught in the same
+     session: reordering the guard to read `.value` before the class test removed a short-circuit the
+     original relied on, and nothing in 197 gates tabs through a link. */
+  ok(R.p27ded && R.p27ded.linkSafe.threw === '',
+     'the blur normalizer does not throw on an element with no .value (threw: ' + ((R.p27ded && R.p27ded.linkSafe.threw) || 'nothing') + ')');
+
   lines.push('-------------------------------------');
   const overall = fail === 0 ? 'GREEN' : 'RED';
   /* A POISONED RUN MUST NAME ITS MUTATION — a run that prints CLEAN over a mutated file is the
@@ -1596,7 +1725,7 @@ const server = http.createServer((req, res) => {
     [NOCOV,'nocov'],[WRONGFLD,'wrongfld'],[ZEROPLACE,'zeroplace'],[NOENDORSE,'noendorse'],
     [EAGERFIELDS,'eagerfields'],[DEAFSWITCH,'deafswitch'],[DEAFSELECT,'deafselect'],[NOHAZARD,'nohazard'],
     [WORDONLY,'wordonly'],[SDCFALLBACK,'sdcfallback'],[NOTYPEDI,'notypedi'],[TYPEFALLBACK,'typefallback'],
-    [HO3NOTE,'ho3note'],[HIDEFIELD,'hidefield'],[SKIPBLANK,'skipblank'],[FORKVALUE,'forkvalue']]
+    [HO3NOTE,'ho3note'],[HIDEFIELD,'hidefield'],[SKIPBLANK,'skipblank'],[FORKVALUE,'forkvalue'],[PLAINTEXTDED,'plaintextded'],[VALUEFIRST,'valuefirst']]
     .filter(function (m) { return m[0]; }).map(function (m) { return m[1]; });
   const TAG = MUTS.length ? 'MUTATED[' + MUTS.join('+') + ']' : (RF ? 'RED-FIRST' : 'CLEAN');
   lines.push('MODE: ' + (RF ? 'RED-FIRST (winners flipped to losers — MUST be RED)' : 'NORMAL') + '   |   FILE: ' + TAG + '   |   STAGE: G10 (+ #250 fixes) — WHOLE ROOM');
