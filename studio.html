@@ -7696,6 +7696,12 @@
             // ── THE GROUNDS (Real Estate) — §1 DI/signals + §5 toggles + §4 carrying-cost block (Grounds).
             if (_isGrounds(base)) {
                 var showCarry = acc.showCarryCosts !== false;   // §5.1 default ON
+                /* §26.2 — the insurance section's own toggle. DEFAULT ON, matching showCarryCosts:
+                   a file that predates this section has no `showInsurance` key, and defaulting OFF
+                   would hide nine live fields a user had already filled in behind a switch they never
+                   knew existed. `!== false` reads a missing key as ON, so nothing recorded before
+                   tonight goes quiet. Same shape the carrying toggle already uses (L48). */
+                var showIns = acc.showInsurance !== false;
                 var inDB = acc.includeDatumBuilder !== false;    // §5.3 default ON
                 var maintPH = _groundsMaintDefault(acc);
                 html += `
@@ -7762,6 +7768,38 @@
                 html += _propRentalFieldsHTML(id, acc);   // §18.1 — '' on every purpose but Rental property
                 html += `
             </div>
+            ${/* ══ §26.2 · PROPERTY INSURANCE IS ITS OWN SECTION, BEFORE ANNUAL CARRYING COST ══════
+                  Captain items 2 + 2a, ruled at bank A328. ⚠️ THIS SUPERSEDES §17.1's Group B: he
+                  asked for a SECTION WITH ITS OWN TOGGLE and the bank authored it as a labelled group
+                  inside carrying costs. Groups A (Carrying) and C (Operating) stay exactly where they
+                  are — only the insurance group is promoted out.
+                  ⛔ THE ARITHMETIC MUST NOT MOVE. calcCarryTotal still sums the SAME five fields,
+                  homeInsYr among them, so the total is unchanged at $16,800 on the fixture. The field
+                  moved surfaces; it did not leave the sum. That is asserted, not commented. */''}
+            <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
+                <span class="toggle-label" style="color:var(--teal-mid);">Show insurance details</span>
+                <label class="switch"${''} ><input type="checkbox" ${showIns ? 'checked' : ''} onchange="updateAccToggle('${id}', 'showInsurance', this.checked)"><span class="slider"></span></label>
+                <div class="modal-tt"><strong>Show insurance details</strong>Your policy type, coverage limits and deductibles, kept in one place. Open it when you want to record what you are actually covered for — leave it closed and nothing here is required.</div>
+            </div>`;
+                if (showIns) {
+                    html += `
+            <div style="margin-top:14px; padding:14px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:4px;">
+                <div style="color:var(--teal-mid); font-weight:bold; font-size:13px; margin-bottom:2px;">Property Insurance</div>
+                <div class="input-label" style="color:var(--muted); font-size:11px; margin-bottom:10px; text-transform:none;">What protects the home and you — separate from what it costs to keep.</div>
+                ${/* §26b authored order, items 3-11. */''}
+                ${_propTypeInsuranceDI(acc)}
+                ${_propInsEducationHTML(acc)}
+                <div class="field-row">
+                    ${_carryMirrorField(id, acc, 'insAnnual', 'homeInsYr', 'Annual Homeowner Insurance', 'Homeowners insurance', 'What you pay each year to insure the home itself against damage — separate from the mortgage. Enter your policy\'s annual premium.', 'left')}
+                </div>
+                ${_propCoverageHTML(id, acc)}
+                ${_propEndorsementsHTML(id, acc)}
+                ${_propNfipPanelHTML()}
+                ${_propHazardCoverageHTML(id, acc)}
+                ${_propHazardHTML(acc)}
+            </div>`;
+                }
+                html += `
             <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
                 <span class="toggle-label" style="color:var(--teal-mid);">Show carrying costs</span>
                 <label class="switch"><input type="checkbox" ${showCarry ? 'checked' : ''} onchange="updateAccToggle('${id}', 'showCarryCosts', this.checked)"><span class="slider"></span></label>
@@ -7792,42 +7830,33 @@
                     ${_carryMirrorField(id, acc, 'propTaxAnnual', 'propTaxYr', 'Property Tax (yr)', 'Property tax', 'Your yearly property tax, set by your local assessor. Enter your bill amount — it can change each year as assessments and rates do.', 'left')}
                     <div><span class="input-label modal-tt-wrap" style="cursor:help;">HOA / Condo Fees (yr)<div class="modal-tt" style="right:0; left:auto;"><strong>HOA / condo dues</strong>Yearly dues for a homeowners or condo association, where you have one. Leave it blank if this home has none.</div></span><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.hoaYr||'')}" oninput="updateAccField('${id}', 'hoaYr', this.value)"></div>
                 </div>
-                ${/* §20.4 SYNC (Property Copy Bank A26) — the Moat-side rename is mirrored here so the
-                      MIRRORED figure carries the SAME label on both surfaces; §18.2's D1 unification stays
-                      honest. Label only. Homeowner Insurance MOVES under Group B (§17.1) — its tooltip
-                      alignment flips right -> left because it is no longer the right-hand column. */''}
-                <div class="carry-group-label" style="color:var(--muted); font-size:11px; letter-spacing:0.03em; margin:16px 0 8px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.05);">Property Insurance — what protects the home and you.</div>
-                <div class="field-row">
-                    ${_carryMirrorField(id, acc, 'insAnnual', 'homeInsYr', 'Annual Homeowner Insurance', 'Homeowners insurance', 'What you pay each year to insure the home itself against damage — separate from the mortgage. Enter your policy\'s annual premium.', 'left')}
-                </div>
-                ${/* §17.2 and §17.3 land INSIDE Group B — this is why §17.1 put Insurance above
-                      Operating. Education FIRST, then the fields it explains: the teach box is the
-                      empty state, and it steps aside (row 183) the moment the dropdown below is used. */''}
-                ${/* §26b authored order, item 3: the per-type DI block reads BEFORE the general
-                      HO-1…HO-8 panel — what applies to THIS structure, then the vocabulary behind
-                      it. Silent unless a property type (or purpose = Land) is set. */''}
-                ${_propTypeInsuranceDI(acc)}
-                ${_propInsEducationHTML(acc)}
-                ${_propCoverageHTML(id, acc)}
-                ${/* §17.4 endorsements land LAST inside Group B — after the base policy's own limits,
-                      because an endorsement is by definition an addition to that policy. Closed and
-                      silent until something is carried (row 213). */''}
-                ${_propEndorsementsHTML(id, acc)}
-                ${/* §26b's authored order, items 9-11: NFIP education → the two coverages the user
-                      CARRIES → then the read-only lookups. Everything describing THE POLICY comes
-                      before anything describing THE GROUND. */''}
-                ${_propNfipPanelHTML()}
-                ${_propHazardCoverageHTML(id, acc)}
-                ${/* §17.5 lands LAST in Group B, below the endorsements — the earthquake reading's own
-                      authored hover points UP at the endorsement above it ("the field worth a
-                      conversation with your agent"), so the thing it names must already have been read.
-                      Silent until a valuation has actually produced coordinates (row 218). */''}
-                ${_propHazardHTML(acc)}
+                ${/* §26.2 — THE INSURANCE GROUP HAS BEEN PROMOTED OUT to its own toggled section
+                      ABOVE this one. Everything that used to sit here between Group A and Group C now
+                      lives there; Groups A and C are untouched, as the bank required.
+                      ⛔ THE ANNUAL HOMEOWNER INSURANCE FIGURE HAS NOT LEFT THE TOTAL. calcCarryTotal
+                      still sums homeInsYr, so the Total below is unchanged. The read-only line
+                      immediately under Operating Costs is what keeps that honest: without it the
+                      total would exceed the numbers visible in this section and nobody could
+                      reconcile it. A total that cannot be added up from what is on screen is the
+                      same family of harm as a silently inflated one. */''}
                 <div class="carry-group-label" style="color:var(--muted); font-size:11px; letter-spacing:0.03em; margin:16px 0 8px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.05);">Operating Costs — what it takes to run the home day to day.</div>
                 <div class="field-row">
                     <div><span class="input-label modal-tt-wrap" style="cursor:help;">Est. Maintenance / Repairs (yr)<div class="modal-tt" style="left:0; right:auto;"><strong>est. · ~1% of value</strong>A rough estimate — about 1% of the home's value is a common rule of thumb. It's only a starting point; your own number always wins.</div></span><input type="text" class="small-field curr-format" placeholder="${maintPH>0 ? 'est. $'+maintPH.toLocaleString('en-US') : '$0'}" value="${formatCurrencyDisplay(acc.maintYr||'')}" oninput="updateAccField('${id}', 'maintYr', this.value)"></div>
                     <div><span class="input-label modal-tt-wrap" style="cursor:help;">Utilities — electric / gas / water (yr)<div class="modal-tt" style="right:0; left:auto;"><strong>Link or enter</strong>The recurring bills to keep the lights on and water running — electric, gas, water. Link an account to keep it current, or enter your own yearly figure.</div></span><input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.utilYr||'')}" oninput="updateAccField('${id}', 'utilYr', this.value)"></div>
                 </div>
+                ${/* ⛔ THE RECONCILING LINE. §26.2 moved the insurance FIELD out of this section but
+                      NOT out of the sum — so without this, the Total below would be $2,000 larger
+                      than anything visible here and no user could add it up. Read-only on purpose:
+                      the editable field lives once, in the Property Insurance section, and a second
+                      input bound to the same key would go stale the moment the first was typed into
+                      (§13.72). It renders ONLY when a figure exists — a $0 line for a home with no
+                      insurance recorded would be a number nobody entered.
+                      ⚠️ THE LABEL IS THE AUTHORED FIELD NAME, REUSED VERBATIM rather than invented;
+                      the trailing pointer is mine and is FLAGGED. */''}
+                ${_num(acc.homeInsYr) > 0 ? `<div style="display:flex; justify-content:space-between; align-items:baseline; margin-top:14px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05);">
+                    <span class="input-label" style="color:var(--muted); text-transform:none;">Annual Homeowner Insurance <span style="opacity:0.65;">— recorded above under Property Insurance</span></span>
+                    <span style="font-family:var(--font-mono); color:rgba(255,255,255,0.75);">$${Math.round(_num(acc.homeInsYr)).toLocaleString('en-US')}</span>
+                </div>` : ''}
                 <div style="display:flex; justify-content: space-between; margin-top:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;">
                     <span class="input-label" style="color:var(--white);">Total Annual Carrying Cost</span>
                     <span id="modal-carry-total-${id}" style="font-family: var(--font-mono); color: var(--teal-mid); font-weight:bold;">$${Math.round(calcCarryTotal(acc)).toLocaleString('en-US')}</span>
@@ -9753,6 +9782,36 @@
      * ⚠️ THE PROVENANCE LINE IS THE FLATTEST FACTUAL STRING I CAN WRITE AND IS FLAGGED: it names the
      * two agencies and the month the reading was pulled. The Captain asked for it to read as a real
      * citation; the wording of that sentence is brand voice and belongs to the Architect. */
+    /* §17.5b — THE FLOOD KEY. FOUR TIERS PLUS AN UNMAPPED CASE, authored 2026-08-07 (bank A336).
+     * ⛔ IT GROUPS, IT DOES NOT RANK, AND THAT IS THE WHOLE POINT. FEMA's zones differ by FLOOD TYPE
+     * — sheet flow, ponding, riverine, coastal — not by severity, so a ranked list would invent a
+     * hierarchy FEMA does not publish. What FEMA DOES publish is whether a zone is a Special Flood
+     * Hazard Area: high-risk, where a federally-backed mortgage requires flood insurance. Published,
+     * factual, binary — not our opinion.
+     * ⛔ NOT-MAPPED IS ITS OWN TIER AND MUST NEVER READ AS "LOW". Zone D means FEMA has not studied
+     * the area; rendering that as reassurance is the flood version of the sdc inverted signal, where
+     * silence about an unknown hazard becomes a comforting answer.
+     * ⚠️ THE X SPLIT IS THE ONE JUDGEMENT HERE AND IT IS FLAGGED. The bank says "B, X shaded" vs
+     * "C, X unshaded", but FEMA returns 'X' for both and the distinction lives in ZONE_SUBTY —
+     * shaded X is the 0.2%-annual-chance zone. So the subtype is read, which is FEMA's own data
+     * rather than an invention. IF THE SUBTYPE DOES NOT SAY, NO TIER IS SHOWN: the zone letter and
+     * FEMA's description still render, and we simply do not claim a grouping we cannot support. */
+    function _floodTier(zone, subtype) {
+        var z = String(zone || '').trim().toUpperCase();
+        var sub = String(subtype || '').toUpperCase();
+        if (!z || z === 'D') return { key: 'unmapped', label: 'Not mapped / undetermined', note: 'FEMA has not studied this area, so there is no rating either way. Absence of a rating is not the same as low risk.' };
+        if (/^V/.test(z))  return { key: 'coastal', label: 'High risk — coastal', note: 'High-risk with wave action. Flood insurance is required with a federally-backed mortgage.' };
+        if (/^A/.test(z))  return { key: 'high',    label: 'High risk',           note: 'High-risk. Flood insurance is required with a federally-backed mortgage.' };
+        if (z === 'B')     return { key: 'modlow',  label: 'Moderate to low risk', note: 'Outside the high-risk area. Insurance is not required, and is usually cheaper here.' };
+        if (z === 'C')     return { key: 'minimal', label: 'Minimal risk',         note: 'Lowest mapped risk. Not required — but roughly a quarter of flood claims come from outside high-risk areas.' };
+        if (z === 'X') {
+            if (/0\.2 PCT|SHADED/.test(sub)) return { key: 'modlow',  label: 'Moderate to low risk', note: 'Outside the high-risk area. Insurance is not required, and is usually cheaper here.' };
+            if (/MINIMAL/.test(sub))         return { key: 'minimal', label: 'Minimal risk',         note: 'Lowest mapped risk. Not required — but roughly a quarter of flood claims come from outside high-risk areas.' };
+            return null;    // an X we cannot place — show the letter and FEMA's words, claim no tier
+        }
+        return null;        // an unrecognised zone is a STOP, never a guess
+    }
+
     function _hazMonth(iso) {
         var d = new Date(iso);
         if (!iso || isNaN(d.getTime())) return '';      // no stamp -> no date claimed (L47)
@@ -9800,6 +9859,28 @@
         /* THE SCALE — five authored bands in order, the user's own marked. Rendered ONLY beside a real
            reading, so it can never stand in for one. The thresholds are §17.5a's, printed so the
            number has somewhere to sit rather than floating alone. */
+        /* THE FLOOD KEY — worst to best, the user's tier marked. Rendered only beside a real reading,
+           and only when the tier could be established: the letter and FEMA's own description always
+           show (that is the sourced fact), the tier is our grouping and is allowed to be absent. */
+        var fTier = (hz.flood && hz.flood.status === 'ok' && hz.flood.zone) ? _floodTier(hz.flood.zone, hz.flood.subtype) : null;
+        var fKey = '';
+        if (fTier) {
+            var TIERS = [
+                ['coastal', 'High risk — coastal', 'V, VE'],
+                ['high',    'High risk',           'A, AE, AO, AH'],
+                ['modlow',  'Moderate to low',     'B, X shaded'],
+                ['minimal', 'Minimal',             'C, X'],
+                ['unmapped','Not mapped',          'D']
+            ];
+            fKey = '<div style="display:flex; gap:3px; margin-top:10px;">' + TIERS.map(function (t) {
+                var mine = t[0] === fTier.key;
+                return '<div style="flex:1; text-align:center; padding:4px 2px; border-radius:2px; background:' + (mine ? 'rgba(93,202,165,0.18)' : 'rgba(255,255,255,0.03)') +
+                       '; border:1px solid ' + (mine ? 'var(--teal-mid)' : 'rgba(255,255,255,0.06)') + ';">' +
+                       '<div style="font-size:9.5px; letter-spacing:0.03em; color:' + (mine ? 'var(--teal-mid)' : 'rgba(255,255,255,0.5)') + '; text-transform:uppercase;">' + t[1] + '</div>' +
+                       '<div style="font-family:var(--font-mono); font-size:9px; color:rgba(255,255,255,0.35); margin-top:1px;">' + t[2] + '</div></div>';
+            }).join('') + '</div>' +
+            '<div style="font-size:11px; color:rgba(255,255,255,0.62); margin-top:6px; line-height:1.5;">' + fTier.note + '</div>';
+        }
         var scale = '';
         if (band) {
             var BANDS = [['very low', 'under 0.25g'], ['low', '0.25–0.50g'], ['moderate', '0.50–1.00g'], ['high', '1.00–1.50g'], ['very high', '1.50g +']];
@@ -9811,16 +9892,17 @@
                        '<div style="font-family:var(--font-mono); font-size:9px; color:rgba(255,255,255,0.35); margin-top:1px;">' + b[1] + '</div></div>';
             }).join('') + '</div>';
         }
+        /* THE CITATION, AUTHORED (§17.5b). My flat version is superseded.
+           ⛔ NO STAMP = NO DATE CLAIMED. The date clause is DROPPED rather than filled with today's:
+           a provenance stamp records when the DATA WAS READ, never when the page was drawn. */
         var month = _hazMonth(stamps[0]);
-        // Row 218 — tagged as looked-up. Names the agencies and the month rather than gesturing at
-        // "your address"; a reference figure with no source and no date is just a number on a screen.
-        var prov = 'Read from ' + (srcs.length ? srcs.join(' and ') : 'public hazard data') +
-                   ' for this address' + (month ? ', ' + month : '') +
-                   '. Reference figures about the location — not a recommendation about your cover.';
+        var prov = month
+            ? 'Read from FEMA’s National Flood Hazard Layer and the USGS seismic design maps for this address in ' + month + '. These describe the ground your home sits on — not your policy, and not a recommendation.'
+            : 'Read from FEMA’s National Flood Hazard Layer and the USGS seismic design maps for this address. These describe the ground your home sits on — not your policy, and not a recommendation.';
         return '<div style="margin-top:14px; padding:12px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:4px;">' +
                '<div style="color:var(--teal-mid); font-weight:bold; font-size:13px; margin-bottom:9px;">🌊 The ground under the house</div>' +
                '<div style="display:grid; grid-template-columns:repeat(' + (cells.match(/border-left:2px/g) || []).length + ',1fr); gap:10px;">' + cells + '</div>' +
-               scale +
+               fKey + scale +
                /* text-transform:none — .input-label uppercases, and a citation set in caps reads as
                   shouting rather than as a source line. Caught in a screenshot, not in the DOM
                   assertions: every structural check passed while it looked wrong. */
