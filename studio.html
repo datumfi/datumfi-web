@@ -7803,6 +7803,10 @@
                 ${/* §17.2 and §17.3 land INSIDE Group B — this is why §17.1 put Insurance above
                       Operating. Education FIRST, then the fields it explains: the teach box is the
                       empty state, and it steps aside (row 183) the moment the dropdown below is used. */''}
+                ${/* §26b authored order, item 3: the per-type DI block reads BEFORE the general
+                      HO-1…HO-8 panel — what applies to THIS structure, then the vocabulary behind
+                      it. Silent unless a property type (or purpose = Land) is set. */''}
+                ${_propTypeInsuranceDI(acc)}
                 ${_propInsEducationHTML(acc)}
                 ${_propCoverageHTML(id, acc)}
                 ${/* §17.4 endorsements land LAST inside Group B — after the base policy's own limits,
@@ -9353,6 +9357,50 @@
                     <div><span class="input-label modal-tt-wrap" style="cursor:help;">Vacancy allowance (%)<div class="modal-tt" style="left:0; right:auto;"><strong>Vacancy allowance</strong>The share of the year you expect the place to sit empty between tenants. Nobody rents twelve months out of twelve forever. Leaving this blank is honest; setting it makes the income read more conservative, which is usually the more useful read.</div></span><input type="text" class="small-field" placeholder="—" inputmode="decimal" value="${v(acc.vacancyPct)}" oninput="updateAccField('${id}', 'vacancyPct', this.value)"></div>
                     <div><span class="input-label modal-tt-wrap" style="cursor:help;">Property management fee (%)<div class="modal-tt" style="right:0; left:auto;"><strong>Property management fee</strong>What you pay someone else to run the property, usually a slice of the rent. If you manage it yourself this is zero in cash and real in hours — we count only the cash.</div></span><input type="text" class="small-field" placeholder="—" inputmode="decimal" value="${v(acc.mgmtPct)}" oninput="updateAccField('${id}', 'mgmtPct', this.value)"></div>
                 </div>`;
+    }
+
+    /* ── §26.3 · A DATUM-INTELLIGENCE BLOCK PER PROPERTY TYPE ────────────────────────────────────
+     * Bank §26a (A330) + §26c (A334), read in-session per L51. The Captain asked for this in his
+     * ORIGINAL request; only the townhome line was ever authored, and the other six were the largest
+     * of the seven items that never entered the bank at all.
+     * Every paragraph below was EXTRACTED FROM THE WORKBOOK PROGRAMMATICALLY, not retyped — a first
+     * pass truncated the Condo block mid-word at "your unit" because U+2019 is both the closing
+     * quote and the apostrophe in "unit's". Six looked perfect and one would have shipped as a
+     * sentence fragment, which is exactly the shape that survives review.
+     *
+     * ⛔ PURPOSE OUTRANKS TYPE (§26c). propPurpose = Land wins even when a Property type is still
+     * set: a vacant lot with 'Single-family' left in a dropdown is still a vacant lot. Land is a
+     * PURPOSE, not a type — the bank first filed it under Property type and it could never have
+     * fired there. Consistent with §18.3, where Land suppresses the insurance layer: this block
+     * EXPLAINS WHY the dwelling fields are absent instead of leaving the user with silence.
+     * ⛔ BOTH BLANK = ALL SILENT (L47). No default block, no generic paragraph.
+     * ⛔ ONE AT A TIME, and it WRITES NOTHING — a block firing must never touch the hoType dropdown
+     * (§26a guard 2). Education, never advice: every paragraph ends by pointing at the user's own
+     * agent, which is the honest end of a plain-coach passage about a purchase we are not qualified
+     * to make for them.
+     * ⚠️ AN UNLISTED PROPERTY TYPE STAYS SILENT AND MUST BE FLAGGED — 'Other' is a REAL authored
+     * block here, not a dumping ground for types the bank has not covered (§26c).
+     * ⚠️ THE HEADING IS MINE AND IS FLAGGED: the bank names no header for this block. It renders in
+     * the house DI shell WITHOUT repeating the "Datum Intelligence" label, because that label is
+     * already on the Grounds DI higher up the same modal and two identical heads in one room reads
+     * as a bug. Bank silence on a label = flattest accurate string + mandatory flag. */
+    var _PROP_TYPE_DI = {
+        'Single-family': 'Your property is a single-family home — the case nearly every homeowners policy is written around. HO-3 is what most single-family owners carry: it covers the structure against anything not specifically excluded, and your belongings against a named list of causes. HO-5 is the broader version — it treats your belongings the same open way it treats the building, which matters most if you own things that are hard to replace. HO-8 exists for older homes where rebuilding would cost far more than the house is worth on the market, and it pays on what things are worth rather than what they cost to replace. Whichever you carry, two things are excluded almost everywhere and are worth knowing about: flood and earthquake. Your own agent can tell you which form your policy actually is — it is written on the first page of your declarations.',
+        'Condo': 'Your property is a condo, and that changes the question from what to insure to WHERE YOUR RESPONSIBILITY STARTS. The association carries a master policy on the building, the roof and the shared spaces. HO-6 is the form written for what is left: your unit’s interior, your belongings, and any improvements you have made inside the walls. The gap that catches people is that master policies differ — some cover the original fixtures, some stop at the bare studs, and the difference can be tens of thousands of dollars in a kitchen. Your association’s master policy declarations will say which. It is worth reading once, and worth asking your agent to read with you.',
+        'Townhouse': 'Your property is a townhouse, and there is no such thing as townhouse insurance — what you need depends on who owns the walls. If you own the structure, you are in ordinary homeowners territory: HO-3 most often, or HO-5 for broader coverage on your belongings. If a condo-style association owns the shell and you own the inside, HO-6 is the form written for that. If you rent, HO-4 covers your belongings and your liability while the owner insures the building. The distinction is not about the shape of the building — it is entirely about the deed. If you are not certain which applies, your closing documents or your association will say, and your agent can confirm it in a phone call.',
+        'Multi-family': 'Your property is a multi-family building, and that puts it in a different insurance family than a single home. If you live in one unit and rent the others, many insurers will still write a homeowners-style policy on it, but the rented portion is a business activity and the policy has to know that. If you live elsewhere and rent all the units, you are in landlord territory — a DP-3 or dwelling-fire policy rather than HO-3. Two things matter here that never come up on an owner-occupied home: LOSS OF RENT, which pays you while the building is unliveable after a covered loss, and LIABILITY, which is broader when tenants and their guests are on your property. Both are worth raising with your agent by name, because a policy written for the wrong occupancy can be the one that does not pay.',
+        'Manufactured': 'Your property is a manufactured or mobile home, and it has its own policy form: HO-7. It works much like the standard homeowners form, but it is written for a structure that was built in a factory and moved to its site — which changes how the building is valued and, in many policies, how it is covered while being transported. Two things are worth checking specifically: whether your home is insured for what it would cost to replace or for what it is currently worth, and whether the policy covers wind separately, which is common in coastal and tornado regions. Your agent can tell you which basis your policy uses — the difference shows up only when you claim.',
+        'Other': 'Your property is recorded as Other, which means the usual policy forms may or may not fit. Homeowners insurance is written around a short list of familiar structures, and anything outside that list — a barn, a converted building, a tiny home, a property held in an unusual way — is usually handled by a specialty or surplus-lines insurer rather than a standard carrier. There is no shortcut here worth taking: the honest step is to describe the structure plainly to an agent and ask which form they would write it on. What stays true regardless is that flood and earthquake are excluded almost everywhere, whatever the building is.'
+    };
+    var _PROP_LAND_DI = 'Your property is land, and land is the one case where a homeowners policy does not apply at all — there is no dwelling to insure. What owners of vacant land usually carry instead is LIABILITY cover: protection if someone is injured on the property. It is typically inexpensive, and it is often available as an endorsement on a policy you already hold rather than as a separate purchase. Property tax is generally the whole of the carrying cost here. If you are holding the land to build on later, tell your agent that too — cover changes the moment construction starts.';
+
+    function _propTypeInsuranceDI(acc) {
+        if (!acc) return '';
+        var txt = (String(acc.propPurpose || '') === 'Land')
+            ? _PROP_LAND_DI                                   // purpose outranks type (§26c)
+            : _PROP_TYPE_DI[String(acc.propType || '')];      // undefined on blank or unlisted -> silent
+        if (!txt) return '';
+        return '<div class="di-narrative" style="margin:10px 0 14px;">' + txt + '</div>';
     }
 
     /* ── §17.2 · INSURANCE EDUCATION BLOCK — HO-1…HO-8 + the townhome branch ─────────────────────
