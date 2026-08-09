@@ -3,3 +3,37 @@
   X-Frame-Options: SAMEORIGIN
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(), microphone=(), camera=()
+
+# ── PROPERTY §31 · A MODULE MAY NEVER BE OLDER THAN THE PAGE THAT CALLS IT ─────────────────────
+# MEASURED 2026-08-08, not assumed. Cloudflare Pages' DEFAULT for static assets is
+#   Cache-Control: public, max-age=14400, must-revalidate   (14400s = FOUR HOURS)
+# while every HTML page answers with NO Cache-Control at all (cf-cache-status: DYNAMIC).
+# That asymmetry IS the split-deploy hazard: HTML is always fresh, JS can be four hours old, so a
+# returning user runs NEW markup against an OLD renderer. studio.html warns about exactly this in
+# its own comments at :13150 and :9672 — "a new host talking to an old renderer would hand off
+# satellites nobody draws". must-revalidate does NOT prevent it: it only forces revalidation AFTER
+# max-age expires, so it is silent for the whole four hours that matter.
+#
+# WHY THIS AND NOT A ?v= CACHE-BUSTER. The standing law said "versioned ?v= URLs fix it and
+# forgetting to bump one is silent" — but there were never any versioned URLs, so the law guarded a
+# mechanism that was never built. Adding them now would mean a token in 90 script tags across 29
+# HTML files, which is the hand-maintained-list rot this project has been bitten by repeatedly; and
+# a BUILD-TIME rewrite is impossible here, because the build verifies dist == source byte-for-byte
+# for twelve SACRED hosts and nine of them carry script tags. Rewriting them in dist would trip
+# SACRED DRIFT and abort the build.
+# 🔑 THE STALENESS IS A HEADER FACT, SO IT GETS A HEADER FIX. A URL trick is what you reach for when
+# you do not control the headers. We do.
+#
+# THE COST, MEASURED RATHER THAN FEARED: these assets already carry an ETag, and a conditional
+# request returns "HTTP 304, bytes=0". So revalidation costs a ROUND TRIP, never a download — the
+# body is re-sent only when the file genuinely changed, which is exactly when it must be.
+# ⚠️ A HEADER RULE THAT CLOUDFLARE SILENTLY IGNORES LOOKS EXACTLY LIKE ONE THAT WORKS.
+# _gate_asset_freshness.mjs therefore asserts the SERVED header, not this file's contents.
+/scripts/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/nav.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/feedback.js
+  Cache-Control: public, max-age=0, must-revalidate
