@@ -36,6 +36,59 @@
     return (M && typeof M.combinedName === 'function') ? M.combinedName(acc) : 'The Yard';
   }
 
+  /* ── §22 · _bandLayout — ONE SUBDIVISION ALGORITHM FOR EVERY VERTICAL BAND ───────────────────
+   * Stacks n tiles down a band, weighted by value, so that the stack fills the band EXACTLY: the
+   * first tile alone spans it, two split it, three subdivide again. Both wings call this and there
+   * is no second implementation (L48).
+   *
+   * ⛔ WHY THIS EXISTS RATHER THAN A COPY OF THE TRUST WING. §22 was scoped as "reuse the Trust
+   * wing's algorithm, do not invent one." Measured 2026-08-09, THE TRUST WING'S ALGORITHM IS
+   * BROKEN and copying it would have propagated the break:
+   *     let availH = (gH - 100);  h = 75 + availH * share      <- the old trust wing
+   * It distributes the WHOLE pool as remainder while ALSO granting every tile a 75-unit floor, so
+   * the stack sums to 75n + pool instead of pool. It fits at n=1 by luck and escapes thereafter.
+   * MEASURED, band y[180,1010]:  2 trusts overran the band by 82 units · 3 trusts ended at y=1179,
+   * which is 79 units OUTSIDE THE 1400x1100 viewBox. That is not cosmetic: the satellite block
+   * below documents that content outside the viewBox survives only on slack fitToScreen happens to
+   * leave (406 user units on one screen, 0 on another, same machine, window width alone), so a
+   * third trust was drawn or not drawn depending on how wide the user's window was.
+   *
+   * ✅ THE CORRECT FORM WAS ALREADY IN THIS FILE, in the ownership-column code:
+   *     availH = (gH - 100) - (accounts.length * minH)         <- reserve the floors FIRST
+   * One missing term. This helper is that form, generalized, so both wings share it.
+   *
+   * THE POOL IS THE TRUE BAND, NOT (gH - 100). Both wings run y[gY+20, gY+gH] = 830 units, but the
+   * old constant said 750 — 80 short. Using the real band is what makes the two wings MATCH rather
+   * than merely resemble each other: one trust and one satellite now both compute to exactly 830.
+   * The Captain asked for "the size of the Trust" in his own words, and a match is the ask.
+   *
+   * ⚠️ NEVER RETURNS A STACK THAT LEAVES THE BAND. If the floors alone cannot fit (too many tiles),
+   * the floor is COMPRESSED to pool/n rather than allowed to overrun. Thin tiles are a readability
+   * problem; tiles outside the viewBox are an is-it-drawn-at-all problem, and only one of those can
+   * silently delete money from the picture. Callers that care about readability cap the COUNT
+   * before calling (the satellite wing collapses to a counted tile — see sCap below).
+   *
+   * gap is applied BETWEEN tiles only: n tiles consume (n-1) gaps, never a trailing one. */
+  function _bandLayout(top, bottom, gap, minH, weights) {
+    var n = weights.length;
+    if (n < 1) return [];
+    var pool = (bottom - top) - (n - 1) * gap;   // space the TILES may occupy, gaps already removed
+    if (pool <= 0) return [];
+    var floor = minH;
+    if (pool < n * floor) floor = pool / n;      // compress rather than overrun — see note above
+    var avail = Math.max(0, pool - n * floor);   // remainder to distribute AFTER every floor is paid
+    var tot = 0;
+    for (var i = 0; i < n; i++) tot += (weights[i] > 0 ? weights[i] : 0);
+    var out = [], y = top;
+    for (var j = 0; j < n; j++) {
+      var share = tot > 0 ? (weights[j] > 0 ? weights[j] : 0) / tot : 1 / n;
+      var h = floor + avail * share;
+      out.push({ y: y, h: h });
+      y += h + gap;
+    }
+    return out;
+  }
+
   // ── Architecture pass · Step 1 — REAL doorways on shared walls ───────────────────────────────
   // The faux arch-marks are gone. A doorway = the existing navy wall-cutout (a true opening) PLUS a
   // proper floor-plan door symbol (a swing arc + leaf). Position varies deterministically per room
@@ -484,13 +537,18 @@
               tTotals+=v;
           });
           
-          let availH = (gH - 100); 
-          let cY = gY + 20;
-          
-          trustAccounts.forEach(acc => {
+          /* §22 — the wing now subdivides through the SHARED _bandLayout instead of its own math.
+             The old form (availH = gH - 100; h = 75 + availH*share) paid every tile a 75-unit floor
+             AND handed out the entire pool as remainder, so the stack summed to 75n + pool: correct
+             at one trust, 82 units past the band at two, and 79 units outside the viewBox at three.
+             Same band as the satellite wing by construction — y[gY+20, gY+gH] — which is what makes
+             one trust and one property come out at the identical height instead of merely similar. */
+          var tRows = _bandLayout(gY + 20, gY + gH, 12, 75, trustAccounts.map(function (a) { return a._renderVal; }));
+
+          trustAccounts.forEach((acc, tI) => {
               let base = getBaseType(acc.baseId);
-              let h = 75; 
-              if(tTotals>0) h += availH * (acc._renderVal / tTotals);
+              let h = tRows[tI].h;
+              let cY = tRows[tI].y;
               let d = { x: tX + 20, y: cY, w: tW - 40, h: h, cx: tX+20+(tW-40)/2, cy: cY+h/2 };
               if(acc.isNew) newRoomToTrace = d;
               
@@ -521,7 +579,8 @@
               `;
               svgContainer.appendChild(g);
               descriptors.push({ id: acc.id, el: g, rect: g.querySelector('.room-rect'), d: d, value: acc.value || 0, fillPct: fp, weight: weight, isNew: !!acc.isNew, taxCode: base.taxCode, isDebt: false, isInvestment: !!base.isInvestment, isPriority: !!acc.isPriority });
-              cY += h + 12;
+              // no cursor advance — _bandLayout already owns every y. Advancing here as well is how
+              // two positioning authorities drift apart.
           });
       }
 
@@ -571,10 +630,51 @@
               sShown = satellites.slice(0, sCap - 1);   // counted tile. A tile too small to read is worse
               sHidden = satellites.length - sShown.length;   // than an honest count.
           }
-          var sY = sTop;
-          sShown.forEach(function (acc) {
+
+          /* ── §22 · THE TILE STOPS BEING A POSTAGE STAMP ───────────────────────────────────────
+           * Every satellite used to render at a HARD-CODED 95x170 no matter how many existed, so a
+           * second property was born at six-up size while it was the only one — 8.2% of the Trust
+           * tile's area, measured. The band now subdivides through the SAME _bandLayout the Trust
+           * wing calls, over the SAME y[gY+20, gY+gH]: one property spans the band, two split it,
+           * three subdivide again, and the six-up grid is where you ARRIVE, not where you start.
+           * One property and one trust both compute to 830 — a match, not a resemblance.
+           * sCap is unchanged and still governs: it is the READABILITY cap (7 tiles), and it is
+           * what keeps _bandLayout out of its compress-the-floor branch.
+           * The collapsed tile takes a real slot, weighted by the properties it stands for, so the
+           * stack still fills the band exactly when one exists. */
+          var _sW = sShown.map(function (a) { return Math.max(Math.abs(a.value || 0), 1000); });
+          if (sHidden > 0) {
+              var _hidTot = 0;
+              satellites.slice(sShown.length).forEach(function (a) { _hidTot += Math.max(Math.abs(a.value || 0), 1000); });
+              _sW.push(_hidTot);
+          }
+          var sRows = _bandLayout(sTop, sBot, sGap, sH, _sW);
+
+          /* ── §22.1 · THE TYPE SCALES WITH THE TILE, ON ONE RATIO ──────────────────────────────
+           * A full-size tile carrying postage-stamp type satisfies the letter of §22 and looks
+           * worse than the defect it fixes. The authored rule: scale by the HEIGHT ratio (newH/95
+           * — not area, not width, since width is fixed at 170), ceiling at the Trust tile's own
+           * title size, which is MEASURED at 14px (.bp-title's class default; the Trust sets only
+           * `fill` inline). A satellite shouting louder than the Trust would invert the hierarchy.
+           *
+           * 🔑 ONE EFFECTIVE RATIO FOR THE WHOLE STACK, NOT A CLAMP ON THE TYPE ALONE. The offsets
+           * are a text STACK: the authored note warns that if type grows and the stack does not,
+           * the lines collide — and the reverse breaks just as hard. The ceiling binds at h=121
+           * (11px reaches 14px at ratio 1.27), which is only 15% of the way to a full-size tile, so
+           * on essentially EVERY tile §22 produces the type is clamped. Scaling the offsets by the
+           * raw ratio while the type is clamped would push two 14px lines 122 units apart inside an
+           * 830-tall tile. So the clamp is applied ONCE, to the ratio, and everything downstream —
+           * both title sizes, the value, and every y offset — rides that single number and stays in
+           * proportion. The value line tops out at 28px, still under the Trust's own 32px .bp-val.
+           * ⚠️ ARCHITECT: this is the open item flagged before build. See the note in the commit. */
+          var _sRatio = function (h) { return Math.min(h / sH, 14 / 11); };
+
+          sShown.forEach(function (acc, sI) {
               var base = getBaseType(acc.baseId);
-              var d = { x: sX, y: sY, w: sW, h: sH, cx: sX + sW / 2, cy: sY + sH / 2 };
+              var sYr = sRows[sI].y, sHr = sRows[sI].h;
+              var r = _sRatio(sHr);
+              var px = function (n) { return Math.round(n * r * 10) / 10; };
+              var d = { x: sX, y: sYr, w: sW, h: sHr, cx: sX + sW / 2, cy: sYr + sHr / 2 };
               if (acc.isNew) newRoomToTrace = d;
 
               var sDebts = _mergeDebtsByAsset[acc.id] || [];
@@ -636,27 +736,30 @@
                   fillHTML +
                   (sMerged ? _linkChipSVG(d.x + 6, d.y + 6, _lienMirrorNotice(sDebts, 'property')) : '') +
                   (sMerged
-                    ? '<text x="' + d.cx + '" y="' + (d.cy - 22) + '" class="bp-title" style="font-size:11px; letter-spacing:0.12em;">' + _combinedNameOf(acc).toUpperCase() + '</text>' +
-                      '<text x="' + d.cx + '" y="' + (d.cy - 8) + '" class="bp-title" style="font-size:8px; opacity:0.85;">' + sLabel + '</text>'
-                    : '<text x="' + d.cx + '" y="' + (d.cy - 6) + '" class="bp-title" style="font-size:11px;">' + sLabel + '</text>') +
-                  '<text x="' + d.cx + '" y="' + (d.cy + (sMerged ? 20 : 24)) + '" class="bp-val" style="font-size:' + (sMerged ? 17 : 22) + 'px; fill:' + (sNeg ? 'var(--danger)' : 'var(--white)') + ';">' + sVal + '</text>';
+                    ? '<text x="' + d.cx + '" y="' + (d.cy - px(22)) + '" class="bp-title" style="font-size:' + px(11) + 'px; letter-spacing:0.12em;">' + _combinedNameOf(acc).toUpperCase() + '</text>' +
+                      '<text x="' + d.cx + '" y="' + (d.cy - px(8)) + '" class="bp-title" style="font-size:' + px(8) + 'px; opacity:0.85;">' + sLabel + '</text>'
+                    : '<text x="' + d.cx + '" y="' + (d.cy - px(6)) + '" class="bp-title" style="font-size:' + px(11) + 'px;">' + sLabel + '</text>') +
+                  '<text x="' + d.cx + '" y="' + (d.cy + px(sMerged ? 20 : 24)) + '" class="bp-val" style="font-size:' + px(sMerged ? 17 : 22) + 'px; fill:' + (sNeg ? 'var(--danger)' : 'var(--white)') + ';">' + sVal + '</text>';
               svgContainer.appendChild(g);
               descriptors.push({ id: acc.id, el: g, rect: g.querySelector('.room-rect'), d: d, value: acc.value || 0,
                                  fillPct: fp, weight: weight, isNew: !!acc.isNew, taxCode: base.taxCode,
                                  isDebt: false, isInvestment: !!base.isInvestment, isPriority: !!acc.isPriority });
-              sY += sPitch;
+              // no cursor advance — sRows owns every y (see the trust wing's twin note).
           });
           if (sHidden > 0) {
               // COLLAPSED IS STILL DRAWN. The count is what keeps the picture reconciled to the total.
-              var cd = { x: sX, y: sY, w: sW, h: sH };
+              // It occupies the LAST slot of the same band layout, so the stack still ends on sBot.
+              var _cr = sRows[sRows.length - 1];
+              var cd = { x: sX, y: _cr.y, w: sW, h: _cr.h };
+              var cR = _sRatio(_cr.h);
               var cg = document.createElementNS("http://www.w3.org/2000/svg", "g");
               cg.setAttribute('class', 'room-grp visible satellite-room satellite-collapse');
               cg.setAttribute('data-collapsed-count', String(sHidden));
               cg.innerHTML =
                   '<rect x="' + cd.x + '" y="' + cd.y + '" width="' + cd.w + '" height="' + cd.h +
                       '" class="room-rect active" style="stroke-dasharray:4 4;" />' +
-                  '<text x="' + (cd.x + cd.w / 2) + '" y="' + (cd.y + cd.h / 2 + 4) + '" class="bp-title" style="font-size:11px;">' +
-                      sHidden + ' more properties</text>';
+                  '<text x="' + (cd.x + cd.w / 2) + '" y="' + (cd.y + cd.h / 2 + Math.round(4 * cR * 10) / 10) + '" class="bp-title" style="font-size:' +
+                      (Math.round(11 * cR * 10) / 10) + 'px;">' + sHidden + ' more properties</text>';
               svgContainer.appendChild(cg);
           }
       }
