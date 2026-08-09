@@ -9681,6 +9681,56 @@
     // blank purpose leaves the §19.2 tax-deductibility beat dark (sourced-or-blank, L47), protecting against
     // form fatigue. 'Home improvement' vs 'Other' selects which verbatim beat variant fires. Hover from
     // _HELOC_HOVERS (single source, L48). No caption row — the beat carries the meaning.
+    /* ── §18.10 · THE PURPOSE-SCOPED FIELD CONTRACT — THE DECLARATION TABLE ──────────────────────
+     * Bank A276 / A277 (Property Copy Bank), ruled 2026-08-08. A field is PURPOSE-SCOPED only when
+     * its visibility selector is MUTABLE BY THE USER. propPurpose is a dropdown, so the §18.1 rental
+     * set below qualifies. Escrow and HELOC-limit do NOT — they derive from the values themselves and
+     * so cannot orphan one. helocUsePurpose / phase / drawEnd do NOT — they gate on
+     * `base.title === 'HELOC'`, immutable per account. THE CENSUS DEFINED THIS CLASS, NOT A PREMISE:
+     * the Architect had asserted helocUsePurpose was the same shape and the census disproved it.
+     * EXACTLY ONE true instance exists today, and it is the four fields immediately below.
+     *
+     * WHY A TABLE AND NOT A COMMENT. The hazard is silent: these fields are HIDDEN when purpose
+     * leaves 'Rental property' but THE VALUES PERSIST, so a surface that draws MEANING from one
+     * without re-checking purpose tells a user that the home they live in earns rent — and it errs
+     * in the GENEROUS direction, removing a warning rather than adding one, which is the direction
+     * nobody reports. _yardRentNet carries that guard already and the comment above it explains why.
+     * THIS TABLE IS THAT REASONING MADE ENFORCEABLE: _gate_property_18_10.mjs READS this table (it
+     * never re-types it) and reds on any access site not declared here.
+     *
+     * TWO READER KINDS, AND THE DISTINCTION IS THE WHOLE CONTRACT (bank A276 D-column):
+     *   raw    — the surface that OWNS the field, plus any reader reporting THE FIELD ITSELF.
+     *            _propRentalFieldsHTML MUST re-render the persisted value into its own input or
+     *            switching purpose away and back looks like deletion. _yardRentMonthly is
+     *            purpose-BLIND deliberately: it reports the FIELD, not a conclusion drawn from it.
+     *   scoped — every surface that draws MEANING from the value (rollups, beats, ratios, Datum
+     *            Builder). MUST re-check purpose — directly, as _yardRentNet does, or through
+     *            _ruleInScope('I', prop), which does it for the whole of Rule I.
+     * ⚠️ A SCOPED READER NEED NOT TOUCH THE FIELD ITSELF. _yardRentNet reads _yardRentMonthly(prop)
+     * and gates the RESULT — that indirection IS the two-reader design, not an evasion of it, and
+     * the gate accepts both shapes rather than forcing the product to get worse to satisfy it.
+     *
+     * ⛔ FAIL-CLOSED, AND AN INCLUSION LIST. An UNDECLARED field behaves EXACTLY as it does today —
+     * this table grants nothing and polices only what it names. But it also cannot be silently
+     * SHRUNK: the gate DERIVES the census independently (a function that suppresses its own render on
+     * a propPurpose mismatch owns purpose-scoped fields) and compares BOTH DIRECTIONS. Deleting a row
+     * here does not stop the policing; it starts it. A LIST CHECKED AGAINST ITSELF IS A COMMENT WITH
+     * BRACES; A LIST CHECKED AGAINST AN INDEPENDENT DERIVATION IS AN INVARIANT.
+     * ⚠️ ADDING FIELD FIVE: declare it here IN THE SAME COMMIT that renders it — the gate reds until
+     * you do. §18.2 (weeksUsed, occasionalRent) and §18.7 (landlordIns) are callers two and three;
+     * the shared reader is NOT abstracted ahead of them (§18.10.1 — at N=1 the framework is
+     * premature, the invariant is not).
+     * ⚠️ NOTHING IN THE ENGINE READS THIS AT RUNTIME, DELIBERATELY. It is a STATIC contract about how
+     * source may be written, and no runtime table could enforce "no OTHER site reads this field".
+     * A welcome consequence: no lifted closure can ever die on it, so it cannot repeat the
+     * var-in-a-walked-closure break that cost five gates on 2026-08-08. */
+    var PURPOSE_SCOPED_FIELDS = {
+        rentMonthly: { purpose: 'Rental property', raw: ['_propRentalFieldsHTML', '_yardRentMonthly'], scoped: ['_yardRentNet'] },
+        isRented:    { purpose: 'Rental property', raw: ['_propRentalFieldsHTML'], scoped: ['_yardIntelligence'] },
+        vacancyPct:  { purpose: 'Rental property', raw: ['_propRentalFieldsHTML'], scoped: ['_yardRentNet'] },
+        mgmtPct:     { purpose: 'Rental property', raw: ['_propRentalFieldsHTML'], scoped: ['_yardRentNet'] }
+    };
+
     /* ── §18.1 · RENTAL FIELDS — revealed ONLY on propPurpose = Rental property ──────────────────
      * Four optional fields, all sourced-or-blank. Modelled on the HELOC Use-of-Funds branch just
      * below (§18 doctrine: reuse that branch shape, do not fork a new one — L48). Returns '' on
