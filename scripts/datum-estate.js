@@ -548,17 +548,48 @@
            * 🔑 A CONSTRAINT THAT IS ONLY TRUE OF THE NUMBER YOU HAPPENED TO PICK IS NOT A CONSTRAINT. */
           let tX = gX + gW + 5;     // 1205 — ring x[1205,1395], 5 units of air to the canvas edge
           let tW = 190;
-          /* THE CAPTION SPLITS AND DROPS BELOW THE RING (Captain-ruled 2026-08-10). One line measures
+          /* ── §22.3 · THE CAPTION MOVES INSIDE THE ROOM — BY GROWING THE ROOM, NOT SHRINKING THE BAND.
+           * The Captain smoked §22.2, passed it, and rejected one thing: "I do not like the copy
+           * 'generation trust wing' being outside of the room... just like we do when we have a Yard
+           * Mortgage going on — that copy manages to fit inside the boxes."
+           *
+           * ⛔ THE NAMED DONOR IS DEFECTIVE AND WAS NOT COPIED. MEASURED 2026-08-10, the Yard caption
+           * does NOT reserve space for itself: it is drawn at a FIXED y (966..1005) and the grounds
+           * room grid simply runs over it. Measured, one property plus N accounts:
+           *     n<=11 rooms end 930 (clear) · n=12 ends 1080 (over the caption)
+           *     n=14 ends 1230 · n=18 ends 1530 · n=24 ends 1980   <- 130/430/880 units OUTSIDE the viewBox
+           * So "it manages to fit inside the box" is true only below 12 accounts. Copying that
+           * mechanism would have given this wing the same latent bug. REPORTED SEPARATELY; the grounds
+           * overflow is a real user-facing defect and it is NOT fixed here (out of scope: fixing the
+           * Yard side was explicitly excluded).
+           *
+           * ✅ WHAT WAS DONE INSTEAD. The band is untouched, so §22.2's parity survives EXACTLY —
+           * satellite 830 == trust 830, which is the thing the Captain approved yesterday and which
+           * shortening the band to make caption room would have silently broken. Instead the wing's
+           * box GROWS DOWN by _tCapH into y[1010,1100], which is empty in every state, and closes
+           * around the caption where it already sits. The caption does not move; the room comes to it.
+           *     container y[160,1010] -> y[160,1068]   ·   band y[180,1010] UNCHANGED
+           *     caption   y[1021..1061] now inside     ·   viewBox floor 1100, 32 units clear
+           *
+           * ⚠️ THE 8px FLOOR WAS NOT THE BINDING CONSTRAINT AND THE FEAR WAS MISPLACED — measured:
+           * trust tiles do NOT scale their type at all. Title is 14px and value 32px at EVERY count
+           * (1 through 12), because §22.1's ratio is satellite-only. Nothing here can push trust type
+           * below 8px. (Pre-existing and untouched: at 12 trusts a 58-unit tile still carries a 32px
+           * value, so the value overflows its own tile. Reported, not fixed.) */
+          var _tCapH = 58;   // measured: caption block y[1021..1061] + 7 units of air
+
+          /* THE CAPTION SPLITS INTO TWO LINES. One line measures
              225.4 units at 14px — MEASURED, not estimated — so it cannot fit a 190-unit wing at ANY
              position; it could only ever have "fitted" by hanging off the canvas, which is what it did.
              Split: GENERATIONAL ~118u, TRUST WING ~98u, both comfortably inside. Copy is UNCHANGED and
              14px is UNCHANGED — this is a layout fix, not a copy edit (L47: the words are authored).
-             BELOW the band, not inside it: the single line sat at y[966,984] while the tiles run to
-             1010, so the caption already overlapped the bottom trust room, and two lines inside would
-             overlap worse. y[1010,1100] is empty in every state and inside the viewBox. */
+             BELOW THE TILE BAND, AND — as of §22.3 — INSIDE THE WING BOX, which now grows to enclose
+             it. The caption cannot sit level with the tiles: the single line used to sit at y[966,984]
+             while the tiles run to 1010, so it overlapped the bottom trust room, and two lines there
+             would overlap worse. y[1010,1100] is empty in every state and inside the viewBox. */
           let tSVG = document.createElementNS("http://www.w3.org/2000/svg", "g");
           tSVG.innerHTML = `
-              <rect x="${tX}" y="${gY}" width="${tW}" height="${gH}" class="grounds-rect" stroke-dasharray="6 6" stroke="var(--shield)" stroke-width="2" fill="rgba(138, 100, 255, 0.05)" onmouseenter="showTrustTooltip(event)" onmouseleave="hideTrustTooltip()"/>
+              <rect x="${tX}" y="${gY}" width="${tW}" height="${gH + _tCapH}" class="grounds-rect" stroke-dasharray="6 6" stroke="var(--shield)" stroke-width="2" fill="rgba(138, 100, 255, 0.05)" onmouseenter="showTrustTooltip(event)" onmouseleave="hideTrustTooltip()"/>
               <text x="${tX + tW/2}" y="${gY + gH + 25}" font-family="var(--font-mono)" font-size="14" fill="var(--shield)" text-anchor="middle" font-weight="bold" letter-spacing="0.1em">GENERATIONAL</text>
               <text x="${tX + tW/2}" y="${gY + gH + 47}" font-family="var(--font-mono)" font-size="14" fill="var(--shield)" text-anchor="middle" font-weight="bold" letter-spacing="0.1em">TRUST WING</text>
           `;

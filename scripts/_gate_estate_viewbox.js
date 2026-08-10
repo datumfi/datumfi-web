@@ -106,8 +106,29 @@ const scan = (p) => p.evaluate(([w, h, eps]) => {
         (el.textContent && el.textContent.trim() ? ' "' + el.textContent.trim().slice(0, 20) + '"' : '') + ' ' + out.join(', '));
     }
   });
+  /* §22.3 — THE WING CAPTION MUST BE INSIDE THE WING BOX IT NAMES. The Captain rejected a caption
+     floating below the box: "I do not like the copy 'generation trust wing' being outside of the
+     room." The failure mode worth gating is not "it is outside" — you can see that — it is a caption
+     that FITS AT 2 TRUSTS AND SILENTLY CLIPS AT 3, because a clipped label looks deliberate and is
+     wrong. Containment is therefore asserted per state, like everything else here. */
+  const wing = Array.from(svg.querySelectorAll('rect.grounds-rect'))
+    .map((r) => ({ x: +r.getAttribute('x'), y: +r.getAttribute('y'), w: +r.getAttribute('width'), h: +r.getAttribute('height') }))
+    .filter((r) => r.x >= 1200)[0] || null;
+  const caps = Array.from(svg.querySelectorAll('text'))
+    .filter((t) => /GENERATIONAL|TRUST WING/.test(t.textContent || ''))
+    .map((t) => { const b = t.getBBox(); return { t: b.y, b: b.y + b.height, l: b.x, r: b.x + b.width }; });
+  let capOut = null;
+  if (caps.length && wing) {
+    const t = Math.min(...caps.map((c) => c.t)), bo = Math.max(...caps.map((c) => c.b));
+    const l = Math.min(...caps.map((c) => c.l)), r = Math.max(...caps.map((c) => c.r));
+    const okIn = t >= wing.y - eps && bo <= wing.y + wing.h + eps && l >= wing.x - eps && r <= wing.x + wing.w + eps;
+    capOut = okIn ? null : `caption [${t.toFixed(0)}..${bo.toFixed(0)}]x[${l.toFixed(0)}..${r.toFixed(0)}] vs wing [${wing.y}..${wing.y + wing.h}]x[${wing.x}..${wing.x + wing.w}]`;
+  }
   return {
     offenders,
+    capOut,
+    nCap: caps.length,
+    hasWing: !!wing,
     nTrust: document.querySelectorAll('.trust-room').length,
     nSat: document.querySelectorAll('.satellite-room').length,
   };
@@ -165,6 +186,12 @@ const clipCheck = (p) => p.evaluate(() => {
     ck(`P· fixture REACHED ${label}`, built, `${r.nTrust} trust / ${r.nSat} satellite`);
     ck(`V· NOTHING leaves the viewBox — ${label}`, r.offenders.length === 0,
        r.offenders.length ? r.offenders.length + ' offender(s): ' + r.offenders.slice(0, 3).join(' | ') : 'clean');
+    if (want.trust > 0) {
+      // PRESENCE BEFORE CONTAINMENT: with no caption rendered at all, "not clipped" is vacuously true.
+      ck(`W· the wing caption RENDERS and sits INSIDE its box — ${label}`,
+         r.hasWing && r.nCap === 2 && r.capOut === null,
+         r.capOut || (!r.hasWing ? 'no wing box drawn' : r.nCap !== 2 ? `${r.nCap} caption line(s), expected 2` : 'inside'));
+    }
   }
 
   /* ── C · THE CLIP, AT A REAL VIEWPORT ───────────────────────────────────────────────────────── */
