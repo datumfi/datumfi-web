@@ -521,12 +521,46 @@
 
       // SURGICAL: GENERATIONAL TRUST WING RENDER (Purple Shield Styling)
       if (trustAccounts.length > 0) {
-          let tX = gX + gW + 60; 
-          let tW = 280;
+          /* ── §22.2 · THE WING COMES BACK ONTO THE CANVAS, AND THE TILES BECOME EQUALS ──────────
+           * MEASURED 2026-08-10 on the shipped build, in the real renderer: the wing ring sat at
+           * x[1260,1540] and its tiles at x[1280,1520] against a viewBox that ends at 1400 — 140 and
+           * 120 units OUTSIDE. Half of every trust tile was off the canvas.
+           *
+           * ⛔ IT WAS NOT "MAXED OUT", IT WAS CLIPPED, AND ONLY A WIDE WINDOW HID IT. `.canvas-wrapper`
+           * is `overflow-x:hidden` and NO horizontal scroll exists anywhere on the page
+           * (scrollWidth == clientWidth at every size), so the lost pixels are unrecoverable — not
+           * off-screen-but-scrollable. Measured across viewports, one trust + two properties:
+           *     2560x1440  261px to spare      1920x1080  CUT 43px      1680x1050  CUT 103px
+           *     1536x864   CUT 74px            1440x900   CUT 82px      1366x768   CUT 76px
+           *     1280x800   CUT 69px            1024x1366  CUT 47px
+           * Seven of eight, including the most common desktop size there is. A user at 125% zoom on a
+           * 1920 screen is the 1536 row — same monitor, loses the right edge of their trusts by
+           * zooming in. The Captain's own smoke screen is ~2560 wide: the one case with slack.
+           *
+           * THE FREE SPACE IS SYMMETRIC — left x[0,200), right x[1200,1400], 200 units each — so the
+           * trust tile now MIRRORS the satellite exactly: 15 units to the grounds, 170 wide, 15 to the
+           * canvas edge. The ring takes 10 of those 15 on each side.
+           *
+           * ⛔ THE OLD NOTE — ~~*"width parity is impossible (the grounds start at gX=200), and the
+           * asymmetry was explicitly accepted"*~~ — WAS WRONG, and it is STRUCK RATHER THAN DELETED so
+           * nobody re-derives it. Parity is impossible AT 240: nothing matches 240 on a 200-unit band.
+           * 170 was always available, and it is the SAME change that puts the wing back on the canvas.
+           * 🔑 A CONSTRAINT THAT IS ONLY TRUE OF THE NUMBER YOU HAPPENED TO PICK IS NOT A CONSTRAINT. */
+          let tX = gX + gW + 5;     // 1205 — ring x[1205,1395], 5 units of air to the canvas edge
+          let tW = 190;
+          /* THE CAPTION SPLITS AND DROPS BELOW THE RING (Captain-ruled 2026-08-10). One line measures
+             225.4 units at 14px — MEASURED, not estimated — so it cannot fit a 190-unit wing at ANY
+             position; it could only ever have "fitted" by hanging off the canvas, which is what it did.
+             Split: GENERATIONAL ~118u, TRUST WING ~98u, both comfortably inside. Copy is UNCHANGED and
+             14px is UNCHANGED — this is a layout fix, not a copy edit (L47: the words are authored).
+             BELOW the band, not inside it: the single line sat at y[966,984] while the tiles run to
+             1010, so the caption already overlapped the bottom trust room, and two lines inside would
+             overlap worse. y[1010,1100] is empty in every state and inside the viewBox. */
           let tSVG = document.createElementNS("http://www.w3.org/2000/svg", "g");
           tSVG.innerHTML = `
               <rect x="${tX}" y="${gY}" width="${tW}" height="${gH}" class="grounds-rect" stroke-dasharray="6 6" stroke="var(--shield)" stroke-width="2" fill="rgba(138, 100, 255, 0.05)" onmouseenter="showTrustTooltip(event)" onmouseleave="hideTrustTooltip()"/>
-              <text x="${tX + tW/2}" y="${gY + gH - 30}" font-family="var(--font-mono)" font-size="14" fill="var(--shield)" text-anchor="middle" font-weight="bold" letter-spacing="0.1em">GENERATIONAL TRUST WING</text>
+              <text x="${tX + tW/2}" y="${gY + gH + 25}" font-family="var(--font-mono)" font-size="14" fill="var(--shield)" text-anchor="middle" font-weight="bold" letter-spacing="0.1em">GENERATIONAL</text>
+              <text x="${tX + tW/2}" y="${gY + gH + 47}" font-family="var(--font-mono)" font-size="14" fill="var(--shield)" text-anchor="middle" font-weight="bold" letter-spacing="0.1em">TRUST WING</text>
           `;
           svgContainer.appendChild(tSVG);
           
@@ -549,7 +583,11 @@
               let base = getBaseType(acc.baseId);
               let h = tRows[tI].h;
               let cY = tRows[tI].y;
-              let d = { x: tX + 20, y: cY, w: tW - 40, h: h, cx: tX+20+(tW-40)/2, cy: cY+h/2 };
+              /* §22.2 — inset 10 (was 20), so the tile lands at x[1215,1385] w=170: an EXACT mirror of
+                 the satellite's x[15,185]. The centre moves 1400 -> 1300, which fixes a second thing
+                 found while measuring this: the title was centred ON the canvas edge, so 69 units of
+                 "THE RELIQUARY" sat outside the viewBox in EVERY state, at every trust count, always. */
+              let d = { x: tX + 10, y: cY, w: tW - 20, h: h, cx: tX+10+(tW-20)/2, cy: cY+h/2 };
               if(acc.isNew) newRoomToTrace = d;
               
               let valStr = acc.value >= 1000000 ? '$'+(acc.value/1000000).toFixed(2)+'M' : (acc.value >= 1000 ? '$'+(acc.value/1000).toFixed(0)+'k' : (acc.value > 0 ? '$'+acc.value : ''));

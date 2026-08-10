@@ -22,10 +22,22 @@
  * trust was drawn or not drawn according to the user's window width. Both wings now share
  * _bandLayout, so the T-legs below are as load-bearing as the S-legs.
  *
+ * ⭐ THIRD DEFECT — §22.2, 2026-08-10, THE OTHER AXIS OF THE SECOND ONE. The wing was fixed
+ * vertically above and left alone horizontally, and it had been sitting at x[1260,1540] with its
+ * tiles at x[1280,1520] against a viewBox that ends at 1400 since the day it was written: 140 and
+ * 120 units OUTSIDE. Invisible on a wide screen, CUT on seven of eight measured viewports including
+ * 1920x1080, because `.canvas-wrapper` is overflow-x:hidden with no horizontal scroll anywhere.
+ * The Captain found it by eye — he asked why the trust tile was bigger than the property tile, and
+ * the answer was that half of it was hanging off the canvas. Both tiles are now 170 wide and
+ * MIRRORED about the estate (T8/T9). 🔑 THE NOTE THAT SAID PARITY WAS IMPOSSIBLE WAS ITSELF THE
+ * OBSTACLE — see the struck comment at S3.
+ *
  * RED-FIRST, PROVEN BY SUBSTITUTION rather than by memory: `node _gate_estate_22_tile_sizing.js
  * --old` serves `git show HEAD:scripts/datum-estate.js` in place of the working file, leaving the
  * tree untouched, and every §22 leg fails in the SHAPE OF THE BUG (satellite pinned at 95; trust
- * stack past the band). Recorded on the fix commit: OLD 11/29 -> NEW 29/29.
+ * stack past the band). Recorded on the §22 fix commit: OLD 11/29 -> NEW 29/29.
+ * Recorded on the §22.2 commit: OLD 34/37 -> NEW 37/37, the three reds being T6 (observed 240),
+ * T8 (170 vs 240) and T9 (edge 15/-120 — the tile's own air to the canvas edge, NEGATIVE).
  *
  * Usage: node scripts/_gate_estate_22_tile_sizing.js [LABEL] [--old]
  * Self-hosts on 127.0.0.1:8021 — NOT :8001, which is the suite runner's shared server. */
@@ -43,6 +55,9 @@ const PORT = 8021;
 // GEOMETRY CONTRACT — mirrors datum-estate.js (gX/gY/gW/gH) and studio.html's viewBox. If the canvas
 // is ever re-proportioned these move WITH it; they are a mirror, never an independent opinion.
 const BAND_TOP = 180, BAND_BOT = 1010, VIEWBOX_H = 1100;
+// §22.2 — the horizontal half of the same contract. GROUNDS_L/R are gX and gX+gW; the two side bands
+// they leave are x[0,200) and x[1200,1400], which is WHY parity is reachable at 170 on both sides.
+const VIEWBOX_W = 1400, GROUNDS_L = 200, GROUNDS_R = 1200;
 const SIX_UP_H = 95, TRUST_TITLE_PX = 14, SAT_TITLE_PX = 11, SAT_LINE2_PX = 8;
 const EPS = 1.5;   // sub-pixel tolerance: heights are floats distributed by value share
 
@@ -125,12 +140,20 @@ const read = (p) => p.evaluate(() => {
   ck('S1 lone satellite is NOT pinned at the six-up height', s2.sat.length === 1 && s2.sat[0].h > SIX_UP_H + EPS, s2.sat.length ? s2.sat[0].h.toFixed(1) : 'n/a');
   ck('S2 lone satellite spans the whole band', s2.sat.length === 1 && Math.abs(s2.sat[0].h - (BAND_BOT - BAND_TOP)) < EPS, s2.sat.length ? s2.sat[0].h.toFixed(1) : 'n/a');
   // ⭐ THE CAPTAIN ASKED FOR "THE SIZE OF THE TRUST" IN HIS OWN WORDS. THAT IS A MATCH, NOT A
-  //    RESEMBLANCE — an equality leg, not a within-10% leg. Width parity is impossible (the grounds
-  //    start at gX=200) and was explicitly accepted; HEIGHT parity is the deliverable.
+  //    RESEMBLANCE — an equality leg, not a within-10% leg.
+  // ⛔ ~~*"Width parity is impossible (the grounds start at gX=200) and was explicitly accepted;
+  //    HEIGHT parity is the deliverable."*~~ STRUCK 2026-08-10, WRONG, AND KEPT SO NOBODY RE-DERIVES
+  //    IT. Parity was impossible only AT 240 — nothing matches 240 on a 200-unit band. The free space
+  //    is symmetric (left x[0,200), right x[1200,1400]), 170 was always available on both sides, and
+  //    taking it is the SAME change that pulled the wing back inside the viewBox. §22.2 ships BOTH
+  //    height and width parity. 🔑 A CONSTRAINT TRUE ONLY OF THE NUMBER YOU HAPPENED TO PICK IS NOT
+  //    A CONSTRAINT — and this one sat here as settled fact for a day, discouraging the fix.
   ck('S3 lone satellite HEIGHT EQUALS the lone Trust tile', s2.sat.length === 1 && s2.trust.length === 1 && Math.abs(s2.sat[0].h - s2.trust[0].h) < EPS,
      s2.sat.length && s2.trust.length ? s2.sat[0].h.toFixed(1) + ' vs ' + s2.trust[0].h.toFixed(1) : 'n/a');
   ck('S4 satellite stack ends exactly on the band bottom', s2.sat.length === 1 && Math.abs(bottomOf(s2.sat) - BAND_BOT) < EPS, bottomOf(s2.sat));
-  ck('S5 satellite width unchanged at 170 (width asymmetry is deliberate)', s2.sat.length === 1 && s2.sat[0].w === 170, s2.sat.length ? s2.sat[0].w : 'n/a');
+  // §22.2 — 170 is unchanged, but the REASON changed: it is no longer "the small side of a deliberate
+  // asymmetry", it is the width BOTH wings share. The number stayed still while its meaning moved.
+  ck('S5 satellite width is 170', s2.sat.length === 1 && s2.sat[0].w === 170, s2.sat.length ? s2.sat[0].w : 'n/a');
 
   const s3 = await scene(1, 3);
   ck('S6 fixture REACHED the 3-property state (2 satellites)', s3.sat.length === 2, s3.sat.length + ' satellites');
@@ -175,9 +198,35 @@ const read = (p) => p.evaluate(() => {
   ck('T4 THREE trusts stay inside the band', bottomOf(t3.trust) <= BAND_BOT + EPS, bottomOf(t3.trust));
   // ⭐ THE SEVERE FORM. Past the viewBox, whether a room is drawn at all depends on the user's window
   //    width — the one failure mode that can silently delete money from the picture.
-  ck('T5 three trusts never leave the viewBox', bottomOf(t3.trust) <= VIEWBOX_H, bottomOf(t3.trust));
-  ck('T6 trust tile width unchanged at 240', t1.trust.length === 1 && t1.trust[0].w === 240, t1.trust.length ? t1.trust[0].w : 'n/a');
+  /* ⛔ RENAMED 2026-08-10, AND THE OLD NAME IS THE LESSON. This leg was called "three trusts never
+     leave the viewBox" while only ever measuring bottomOf() — ONE EDGE of four. It was GREEN every
+     run while those same three tiles sat 120 units outside the viewBox on the X axis, because the
+     name claimed a box and the assertion checked a line. Nobody was lying; the leg simply outran
+     itself, and its confident wording is part of why the horizontal escape went a day unnoticed.
+     🔑 ASK WHAT WOULD PASS WITHOUT THE CLAIM BEING TRUE. The whole-box claim now lives in
+     _gate_estate_viewbox.js, which asserts the POPULATION on all four edges. */
+  ck('T5 three trusts stay above the viewBox FLOOR (vertical edge only — see _gate_estate_viewbox)',
+     bottomOf(t3.trust) <= VIEWBOX_H, bottomOf(t3.trust));
+  ck('T6 trust tile width is 170 — PARITY with the satellite, not the old 240',
+     t1.trust.length === 1 && t1.trust[0].w === 170, t1.trust.length ? t1.trust[0].w : 'n/a');
   ck('T7 trusts subdivide (3-up strictly under 1-up)', t3.trust.length === 3 && t1.trust.length === 1 && t3.trust[0].h < t1.trust[0].h, 'n/a');
+
+  /* ── §22.2 · PARITY AS A RELATIONSHIP, NOT AS TWO CONSTANTS ─────────────────────────────────────
+     T6 and S5 both pin 170, so they would BOTH have to be edited to break parity — but they are two
+     separate literals, and two literals that must agree are a hand-maintained list of length two.
+     These legs assert the two tiles against EACH OTHER, so a future re-proportioning that moves one
+     side reds here even if someone dutifully updates both constants. s2 is the 1-trust/2-property
+     scene: the only fixture that holds a satellite AND a trust at once. */
+  ck('T8 satellite and trust tiles are the SAME WIDTH (parity, measured against each other)',
+     s2.sat.length === 1 && s2.trust.length === 1 && s2.sat[0].w === s2.trust[0].w,
+     s2.sat.length && s2.trust.length ? s2.sat[0].w + ' vs ' + s2.trust[0].w : 'n/a');
+  ck('T9 the two wings are MIRRORED — equal air to the canvas edge, equal air to the grounds',
+     s2.sat.length === 1 && s2.trust.length === 1 &&
+     s2.sat[0].x === VIEWBOX_W - (s2.trust[0].x + s2.trust[0].w) &&
+     GROUNDS_L - (s2.sat[0].x + s2.sat[0].w) === s2.trust[0].x - GROUNDS_R,
+     s2.sat.length && s2.trust.length
+       ? `edge ${s2.sat[0].x}/${VIEWBOX_W - (s2.trust[0].x + s2.trust[0].w)} · grounds ${GROUNDS_L - (s2.sat[0].x + s2.sat[0].w)}/${s2.trust[0].x - GROUNDS_R}`
+       : 'n/a');
 
   /* ── R · REGRESSION — the seam, not the island ─────────────────────────────────────────────── */
   ck('R1 no page errors across every scenario', pageErrors.length === 0, pageErrors.slice(0, 2).join(' | ') || 'none');

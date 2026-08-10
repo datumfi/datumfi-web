@@ -234,22 +234,37 @@ function ok(cond, msg)  { if (cond) { pass++; console.log('PASS ' + msg); } else
   ok(F1.gState === 'THE YARD', 'F1 [PRESENCE] the ground owner holds the ground (THE YARD — a lien is linked)');
   // THE INVARIANT
   ok(F1.missing.length === 0, 'F1 [INVARIANT] every account counted in the total is drawn somewhere — missing: ' + JSON.stringify(F1.missing));
-  /* KNOWN-OPEN, NAMED AND DATED — THE TRUST WING OVERFLOWS THE viewBox AND IS CLIPPED AT THIS SIZE.
-     Found by this gate on its first clean run, 2026-08-03. It is PRE-EXISTING and untouched by 593c:
-     the wing is drawn at x=1260 w=280, so its right edge is 1540 against a 1400 viewBox, and at
-     1440x900 in split mode fitToScreen leaves ZERO slack. Roughly half the trust room, including its
-     label and its value, is off the user's screen. It CANNOT be fixed inside 593c — the wing does not
-     fit beside a 1000-wide grounds at x=200 by any placement, so closing it needs the canvas
-     re-proportioning that is already sequenced after the drafting-panel divider.
-     The exemption is asserted, not waived: if the count ever changes — because it got fixed, or
-     because something NEW went off screen — this gate REDS and someone has to come back and say which.
-     Do not silence it by widening the filter. */
-  const _exempt = (o) => /trust-room/.test(o.cls);
-  const f1Live = F1.offscreen.filter(o => !_exempt(o));
-  const f1Known = F1.offscreen.filter(_exempt);
-  console.log('  KNOWN-OPEN (printed every run, never silent): ' + f1Known.length + ' trust block(s) clipped by the viewBox — pre-existing, needs the canvas re-proportion.');
-  ok(f1Live.length === 0, 'F1 [INVARIANT] every drawn block outside the known trust overflow is ON SCREEN — offscreen: ' + JSON.stringify(f1Live));
-  ok(f1Known.length === 1, 'F1 [EXEMPTION PINNED] the known trust-wing clip is exactly 1 block (got ' + f1Known.length + ') — if this moved, retire or restate the exemption');
+  /* ✅ EXEMPTION RETIRED 2026-08-10 (§22.2). THE CLIP IS FIXED — AND WHY IT SURVIVED A WEEK IS THE
+     LESSON, SO THE OLD TEXT IS STRUCK IN PLACE RATHER THAN DELETED:
+     ~~*"KNOWN-OPEN, NAMED AND DATED — THE TRUST WING OVERFLOWS THE viewBox AND IS CLIPPED AT THIS
+     SIZE. Found by this gate on its first clean run, 2026-08-03... the wing is drawn at x=1260 w=280,
+     so its right edge is 1540 against a 1400 viewBox, and at 1440x900 in split mode fitToScreen
+     leaves ZERO slack. Roughly half the trust room, including its label and its value, is off the
+     user's screen. It CANNOT be fixed inside 593c — the wing does not fit beside a 1000-wide grounds
+     at x=200 BY ANY PLACEMENT, so closing it needs the canvas re-proportioning."*~~
+
+     THE DIAGNOSIS WAS EXACT. THE PROGNOSIS WAS WRONG. "By any placement" was reasoned about the
+     240-wide tile, where it is perfectly true — nothing 240 wide fits a 200-unit band. It was then
+     carried forward as "nothing fits". §22.2 puts the ring at x[1205,1395] and the tile at
+     x[1215,1385] w=170 — a mirror of the satellite band — with five units to spare and NO canvas
+     re-proportioning at all. Measured, not argued: 0 offenders in every state, and the 1440x900 clip
+     this gate runs at now has 10px of room.
+
+     ⛔ THE SAME FALSE "IMPOSSIBLE" WAS WRITTEN IN THREE INDEPENDENT PLACES — this exemption, the §22
+     gate's S3 comment, and the 08-09 baton. None of them was a lie, and none of the authors was
+     careless. Each restatement made the next more credible, and by the third telling it had a date,
+     a gate, and a sequenced remediation plan attached to it. The Captain found it by looking at the
+     screen and asking why one box was bigger than the other.
+     🔑 A DEFECT WITH A DATED EXEMPTION AND A REMEDIATION PLAN IS THE HARDEST KIND TO RE-EXAMINE:
+        IT LOOKS LIKE IT HAS ALREADY BEEN THOUGHT ABOUT.
+
+     The instruction left here was "if the count ever changes — because it got fixed, or because
+     something NEW went off screen — this gate REDS and someone has to come back and say which. Do
+     not silence it by widening the filter." It got fixed. This is saying which. The filter is
+     DELETED, not widened, and the invariant below is now UNCONDITIONAL — which makes it strictly
+     stronger than what it replaces: a trust block going off screen again reds it immediately. */
+  ok(F1.offscreen.length === 0,
+     'F1 [INVARIANT] every drawn block is ON SCREEN — no exemptions — offscreen: ' + JSON.stringify(F1.offscreen));
   // POSITIVE CONTROL — the two non-primary properties really did become satellites. Without this,
   // "missing === 0" would pass just as happily if they had silently stayed inside the estate.
   if (STALEJS) {
