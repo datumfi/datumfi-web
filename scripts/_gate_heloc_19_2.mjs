@@ -8,8 +8,9 @@
    --redfirst strips the §19.2 beat block -> both winners vanish (proves the gate bites). */
 import { readFileSync } from 'node:fs';
 import { extractClosure } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   s = s.replace(/        \/\/ §19\.2 tax-deductibility-by-use[\s\S]*?\n        }\n/, '');

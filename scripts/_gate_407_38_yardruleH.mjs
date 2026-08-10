@@ -7,8 +7,9 @@
    --redfirst disables the Rule H fire -> the both-late assertion fails. */
 import { readFileSync } from 'node:fs';
 import { lift } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-const src = readFileSync('studio.html', 'utf8');
+const src = studioSource();
 /* §13.21 — ONE SHARED EXTRACTOR. Replaces a private ex() that could only see `function NAME(`, and
    with it this gate's hand-written `var RULE_SCOPE` regex. lift() handles both forms. */
 const ex = (s, n) => lift(s, n);

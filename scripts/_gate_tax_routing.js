@@ -7,6 +7,7 @@
    [LABEL]. Writes a UTF-8 dump; never prints unicode to console. */
 const { chromium } = require('playwright');
 const fs = require('fs');
+const { studioSource } = require('./_studio_source.cjs');
 const LABEL = process.argv[2] || 'RUN';
 const URL = 'http://127.0.0.1:8001/studio.html';
 
@@ -78,7 +79,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   await b.close();
 
   // Static source guards for the 422-critical engine maps (const-scoped, not observable in-browser).
-  const src = fs.readFileSync('studio.html', 'utf8');
+  const src = studioSource();
   const mapCorp = /taxable_corp:\s*'taxable'/.test(src);
   const mapOther = /taxable_other:\s*'taxable'/.test(src);
   const filteredOA = /FILTERED_TYPES[\s\S]{0,600}'other_assets'/.test(src);

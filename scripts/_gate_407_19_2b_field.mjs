@@ -9,8 +9,9 @@
    --redfirst removes interestPaidToDate from the enforceAmt list -> the raw '$31,684.35' is stored, the pie's
    parseFloat yields NaN->0 and the gold slice vanishes (gate bites). */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   s = s.split(" || field === 'interestPaidToDate'").join('');

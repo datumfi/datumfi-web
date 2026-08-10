@@ -8,13 +8,14 @@
    --dropmtg  deletes the Mortgage branch after the HELOC gate -> the presence + routing checks bite. */
 import { readFileSync } from 'node:fs';
 import { extractFn } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
 /* Negative controls for the STRUCTURAL mortgage-path claims. --redfirst strips the §2c HELOC
  * additions and says nothing about the Mortgage path, so these need their own mutations or they
  * would be assertions no control ever exercises. */
 const FORKHLF = process.argv.includes('--forkhlf');   // duplicate _hlF -> the anti-fork check bites
 const DROPMTG = process.argv.includes('--dropmtg');   // delete the Mortgage tail -> presence + routing bite
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 if (RED) {
   // Drop the 6 map completion-set lines + the whole HELOC cluster branch.
   //

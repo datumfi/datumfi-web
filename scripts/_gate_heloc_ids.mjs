@@ -6,8 +6,9 @@
      4. NEGATIVE CONTROL: none of the 3 ids appear in ACCOUNT_TYPE_MAP block (debt must NOT map to an engine enum).
    --redfirst inverts: proves the gate BITES on the pre-wired (reg:null / no-ids) code. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   // Simulate the pre-§0.1 state: strip the 3 heloc registry lines + revert taxonomy reg + drop filtered ids.

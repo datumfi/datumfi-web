@@ -7,6 +7,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { dispatch } from '../functions/api/_lib/documents-core.js';
+import { studioSource } from './_studio_source.cjs';
 
 const RF = process.argv.includes('--redfirst');
 const pick = (win, lose) => (RF ? lose : win);
@@ -120,7 +121,7 @@ function makeBook() {
   // ===== WIRING MARKERS in the served bytes (studio.html / studio-blueprint.js / datum-d1.js) =====
   lines.push('===== WIRING (served bytes) =====');
   const sb = readFileSync(new URL('../scripts/studio-blueprint.js', import.meta.url), 'utf8');
-  const st = readFileSync(new URL('../studio.html', import.meta.url), 'utf8');
+  const st = studioSource();
   ok((sb.match(/d1WriteStudio\(bp\)/g) || []).length >= 2, 'studio-blueprint: d1WriteStudio wired in BOTH save() and the debounced commit');
   ok(sb.includes("k.charAt(0) !== '_'"), 'toD1Document strips only _-prefixed ephemerals (full fidelity)');
   ok(sb.includes('opts.d1Doc') && sb.includes("finishLoad(bp, 'd1')"), 'load() hydrates D1-FIRST from opts.d1Doc');

@@ -8,8 +8,9 @@
    --redfirst restores a fabricated fallback ($44,202 when the field is blank) -> a gold slice renders with
    no sourced figure (the exact bug the hotfix kills) and the "no slice when blank" check fails. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-const s = readFileSync('studio.html', 'utf8');
+const s = studioSource();
 
 const drawerSrc = s.match(/    function _debtDonutSVG\([\s\S]*?\n    \}\n/)[0];   // §19.7 — pie now delegates to the shared drawer
 let pieSrc = s.match(/    function _moatDebtPieHTML\(acc\)[\s\S]*?\n    \}\n/)[0];

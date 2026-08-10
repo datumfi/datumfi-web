@@ -23,6 +23,7 @@
  */
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const { chromium } = require('playwright');
+const { studioSource } = require('./_studio_source.cjs');
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8291; const BASE = 'http://127.0.0.1:' + PORT;
 const NOSTATUS = process.argv.includes('--nostatus');
@@ -64,7 +65,7 @@ const server = http.createServer((req, res) => {
   await page.waitForTimeout(3500);
 
   /* RIG: the trust room id must exist in the registry, or every finding below is void. */
-  const SRC = fs.readFileSync(path.join(ROOT, 'studio.html'), 'utf8');
+  const SRC = studioSource();
   ok(SRC.indexOf("{ id: 'trust',") !== -1, "RIG: the registry has a 'trust' room");
 
   /* ⚠️ updateSVGs IS DEBOUNCED — read the canvas in the same tick and you read the PREVIOUS render. */

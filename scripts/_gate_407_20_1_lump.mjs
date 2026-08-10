@@ -17,9 +17,10 @@
      (d) the §20.1a branch never fires             -> back to the bare blank */
 import { readFileSync } from 'node:fs';
 import { extractClosure } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 
 const RED = process.argv.includes('--redfirst');
-const src = readFileSync('studio.html', 'utf8');
+const src = studioSource();
 
 const A_EPHEM = "_moatLumpWhatIf = window.enforceAmt(value);";
 const A_NEGAM = "payoffMonths(acc).code === 'NEGAM'";

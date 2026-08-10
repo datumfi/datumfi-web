@@ -9,8 +9,9 @@
    --redfirst strips the §20.3 beat + blanks the §20.2 sub-line -> live winners vanish (proves bite). */
 import { readFileSync } from 'node:fs';
 import { extractClosure } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   s = s.replace(/            \/\/ §20\.3 FRED live-rate color[\s\S]*?\n            }\n/, '');

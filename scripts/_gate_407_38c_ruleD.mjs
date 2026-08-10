@@ -4,8 +4,9 @@
    "undrawn line". --redfirst reverts the de-jargon -> the old bare-"line" phrases return -> assertions fail. */
 import { readFileSync } from 'node:fs';
 import { lift } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-const src = readFileSync('studio.html', 'utf8');
+const src = studioSource();
 /* §13.21 — ONE SHARED EXTRACTOR (see _gate_extract.mjs). Replaces a private copy of ex() that could
    only see `function NAME(`, and with it the hand-written `var RULE_SCOPE` regex this gate used to
    carry. lift() handles both forms; the resolver below pulls RULE_SCOPE on its own. */

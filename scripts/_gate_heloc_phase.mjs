@@ -7,8 +7,9 @@
      5. live-refresh element modal-heloc-phase-${id} wired in updateAccField.
    --redfirst inverts: strips the §0.3 additions, proves the gate BITES. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   s = s.replace(/function _helocPhaseClause\(acc\)[\s\S]*?function _helocPhaseFieldHTML[\s\S]*?\n    }\n/, '');

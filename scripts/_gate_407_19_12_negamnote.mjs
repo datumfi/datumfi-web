@@ -16,8 +16,9 @@
    Any mutation that leaves the suite green means that assertion cannot go red -> gate fails. */
 import { readFileSync } from 'node:fs';
 import { extractClosure } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-const src = readFileSync('studio.html', 'utf8');
+const src = studioSource();
 
 function ex(s, n) {
   const st = s.indexOf('function ' + n + '(');

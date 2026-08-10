@@ -29,11 +29,12 @@
  */
 import { readFileSync } from 'node:fs';
 import { lift } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 
 const MUT = { newpurpose: '--newpurpose', undeclare: '--undeclare', ghost: '--ghost', dropvoice: '--dropvoice' };
 const on = (k) => process.argv.includes(MUT[k]);
 const ANY_MUT = Object.keys(MUT).some(on);
-let src = readFileSync('studio.html', 'utf8');
+let src = studioSource();
 
 /* A MUTATION THAT CANNOT RUN PROVES NOTHING — every anchor must match exactly once or we abort
    rather than report a red-first we never performed. */

@@ -14,8 +14,9 @@
    --redfirst strips the §16.1 render block from _groundsSignalsHTML -> the winner vanishes (gate bites). */
 import { readFileSync } from 'node:fs';
 import { extractClosure } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   s = s.replace(/        \/\/ §16\.1 CLTV \+ borrowing-capacity beat[\s\S]*?_groundsEquityBarHTML\(cltv\);\n        }\n/, '');

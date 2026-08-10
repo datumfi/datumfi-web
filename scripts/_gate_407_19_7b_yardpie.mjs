@@ -12,8 +12,9 @@
    --redfirst makes the drawn HELOC invisible as a slice while equity still nets it out -> arcs no longer sum to home,
    the equity arc drifts off the center %, and the HELOC/title checks fail. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-const src = readFileSync('studio.html', 'utf8');
+const src = studioSource();
 
 function extractFn(s, name) {
   const start = s.indexOf('function ' + name + '(');

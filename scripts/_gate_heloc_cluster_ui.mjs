@@ -7,8 +7,9 @@
      - enforceNumRange helper exists; the old post-cluster sub-line placement is removed.
    --redfirst reverts the distinct hovers + strips the clamps -> assertions fail (proves bite). */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   for (const t of ['The benchmark you track','The lender’s fixed add-on','The most it can jump at once','The ceiling over the whole loan','When the rate can change next'])

@@ -21,9 +21,10 @@
  */
 import { readFileSync } from 'node:fs';
 import { lift } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const PRIMFALL = process.argv.includes('--primaryfallback');
 const NOLAND   = process.argv.includes('--nolandsuppress');
-let src = readFileSync('studio.html', 'utf8');
+let src = studioSource();
 function mutate(a, b, label) {
   const n = src.split(a).length - 1;
   if (n !== 1) { console.error('anchor ' + label + ' matched ' + n + ', expected 1 — re-ground it. A mutation that cannot run proves nothing.'); process.exit(1); }

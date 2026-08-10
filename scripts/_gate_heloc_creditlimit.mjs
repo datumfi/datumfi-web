@@ -10,8 +10,9 @@
    Plus a self-contained MATH sanity check of the two formulas the source pins.
    --redfirst inverts: strips the §0.4 additions, proves the gate BITES. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   // Simulate pre-§0.4: remove the helper block, the injection, the strip-list entry, both refreshes.

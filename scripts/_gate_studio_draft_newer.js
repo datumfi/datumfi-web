@@ -33,6 +33,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { studioSource } = require('./_studio_source.cjs');
 const ROOT = path.resolve(__dirname, '..');
 const UNCOND      = process.argv.includes('--unconditional');
 const SESSIONONLY = process.argv.includes('--sessiononly');
@@ -262,7 +263,7 @@ ok(events.some((e) => e.type === 'datum:draft-write-state' && e.detail && e.deta
 // ═══ 9 · THE HARD FENCE, STATICALLY — studio.html must not hard-code the store ═════════════════
 // The storage move and the three reroutes have to land together. If studio.html still calls
 // sessionStorage.removeItem for the draft, discard is inert no matter how correct this module is.
-const HTML = fs.readFileSync(path.join(ROOT, 'studio.html'), 'utf8');
+const HTML = studioSource();
 const literalRemoves = HTML.split(`sessionStorage.removeItem('${DRAFT_KEY}')`).length - 1;
 ok(literalRemoves === 0,
   'studio.html holds ZERO literal sessionStorage.removeItem for the draft (found ' + literalRemoves + ')');

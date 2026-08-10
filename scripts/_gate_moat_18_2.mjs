@@ -11,8 +11,9 @@
    all-in and the stale value is no longer ignored -> the functional checks bite. */
 import { readFileSync } from 'node:fs';
 import { extractClosure } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   // Strip Option-B: the resolver falls back to the raw Grounds field only (pre-§18.2 behaviour).

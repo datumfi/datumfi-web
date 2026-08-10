@@ -7,8 +7,9 @@
    No double-fire: §19.4-B income-floor beat is suppressed in the interest-only case (§22-B owns it).
    --redfirst forces _helocInterestOnlyDraw to null -> §22-A inline + §22-B echo vanish on the draw fixture -> fail. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-const src = readFileSync('studio.html', 'utf8');
+const src = studioSource();
 
 function extractFn(s, name) {
   const start = s.indexOf('function ' + name + '(');

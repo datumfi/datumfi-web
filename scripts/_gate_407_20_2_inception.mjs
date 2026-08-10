@@ -15,9 +15,10 @@
    --redfirst runs FIVE mutations, each anchored on a signature or a guard, never on copy text. */
 import { readFileSync } from 'node:fs';
 import { extractClosure } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 
 const RED = process.argv.includes('--redfirst');
-const src = readFileSync('studio.html', 'utf8');
+const src = studioSource();
 
 const A_FLOOR = 'var floor = Math.max(sourced * 0.02, 250);';
 const A_CAP   = 'var elapsed = Math.max(0, Math.min(elapsedRaw, term));';

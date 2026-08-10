@@ -11,8 +11,9 @@
    --redfirst (a) drops the hasEscrow gate on the trio, (b) derives Total Interest Paid from
    lifeOfLoan − lifetimeInterest instead of the sourced field, (c) restores the pre-§20.6 glance order. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let src = readFileSync('studio.html', 'utf8');
+let src = studioSource();
 
 if (RED) {
   src = src.replace("if (base.title !== 'Mortgage' || !hasEscrow(acc)) return '';", "if (base.title !== 'Mortgage') return '';");

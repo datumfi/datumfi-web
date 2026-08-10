@@ -29,8 +29,9 @@
 */
 import { readFileSync } from 'node:fs';
 import { lift } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let src = readFileSync('studio.html', 'utf8');
+let src = studioSource();
 
 /* --redfirst — remove the purpose guard so Rule E is unscoped again. ASSERTS ITS ANCHOR MATCHED:
    a mutation that cannot run proves nothing (house law, 5th appearance). */

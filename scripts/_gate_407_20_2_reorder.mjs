@@ -13,8 +13,9 @@
    travel with the labels during the swap.
    --redfirst restores the pre-#20 layout/labels and every ordering + label assertion must bite. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-const src = readFileSync('studio.html', 'utf8');
+const src = studioSource();
 
 const st = src.indexOf('window.openAccountModal = function(id)');
 const en = src.indexOf('window.closeAccountModal');

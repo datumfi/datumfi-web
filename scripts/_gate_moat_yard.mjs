@@ -11,9 +11,10 @@
    openAccountModal -> the de-dupe check + the routing check bite. */
 import { readFileSync } from 'node:fs';
 import { extractClosure, lift } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
 const NOMAP = process.argv.includes('--nomap');   // 593d specific-finding mutation — see the NAMES block
-let sStudio = readFileSync('studio.html', 'utf8');
+let sStudio = studioSource();
 let sEstate = readFileSync('scripts/datum-estate.js', 'utf8');
 
 if (RED) {

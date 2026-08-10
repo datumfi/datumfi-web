@@ -6,8 +6,9 @@
    Also asserts the _dLbl HELOC branch renders ONLY mapped fields (no Mortgage-copy leakage).
    --redfirst inverts: strips the §2/§3a additions, proves the gate BITES. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   s = s.replace(/    var _HELOC_HOVERS = \{[\s\S]*?\n    \};\n/, '');

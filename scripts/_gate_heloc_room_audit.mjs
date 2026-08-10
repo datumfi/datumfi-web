@@ -4,8 +4,9 @@
    Per-section red-first bite was proven in _gate_heloc_{ids,creditlimit,phase,di,hovers}.mjs;
    this ledger is the consolidation. --redfirst strips the whole HELOC surface to show it bites. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 if (RED) {
   // Coarse strip: drop every line mentioning heloc / _cellarDI / _HELOC_HOVERS / _isHelocRoom / The Cellar.
   s = s.split('\n').filter(l => !/heloc|_cellarDI|_HELOC_HOVERS|_isHelocRoom|The Cellar|The Co-Cellar|A revolving line, backed by your home/i.test(l)).join('\n');

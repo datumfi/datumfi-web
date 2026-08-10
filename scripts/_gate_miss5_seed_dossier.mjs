@@ -19,10 +19,11 @@
                  bug. The callback-contract assertions go red.
 */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 
 const MODE = process.argv.includes('--redfirst') ? 'a' : process.argv.includes('--nocb') ? 'b' : null;
 const navSrc = readFileSync('nav.js', 'utf8');
-const studio = readFileSync('studio.html', 'utf8');
+const studio = studioSource();
 
 /* ── anchors ───────────────────────────────────────────────────────────────────────────────────────── */
 const A_D1FIRST = "finish(cache(dos || net));";

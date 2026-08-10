@@ -20,9 +20,10 @@
    --redfirst runs SIX mutations, each anchored on a guard or a signature, never on copy text. */
 import { readFileSync } from 'node:fs';
 import { extractClosure } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 
 const RED = process.argv.includes('--redfirst');
-const src = readFileSync('studio.html', 'utf8');
+const src = studioSource();
 
 const A_STRICT = 'if (!(sched.elapsedRaw > sched.term)) return null;';
 const A_BAL    = 'if ((parseFloat(acc.value) || 0) <= 0) return null;       // cleanly finished, nothing to overshoot';

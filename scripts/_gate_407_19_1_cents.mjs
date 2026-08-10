@@ -9,8 +9,9 @@
    Also asserts the on-blur normalizer strips a dangling trailing '.'.
    --redfirst reverts formatCurrency to the old parseInt body -> the decimal cases fail (gate bites). */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 const OLD_BODY = `      let isNeg = num.startsWith('-');
       num = num.replace(/-/g, '');

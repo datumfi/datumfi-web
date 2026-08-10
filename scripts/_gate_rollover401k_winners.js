@@ -7,7 +7,8 @@
    Asserts each winner literal in the shipped studio.html. Usage: node scripts/_gate_rollover401k_winners.js */
 const fs = require('fs');
 const path = require('path');
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'studio.html'), 'utf8');
+const { studioSource } = require('./_studio_source.cjs');
+const SRC = studioSource();
 
 const WINNERS = [
   ['Equity %',            '§1 signal (shared)',   'the tax-efficiency worry that shapes a taxable account simply'],

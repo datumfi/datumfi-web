@@ -42,6 +42,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { lift } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 
 const argv = process.argv.slice(2);
 const DROPDECL = argv.includes('--dropdecl');
@@ -52,7 +53,7 @@ const RAWBLIND = argv.includes('--rawblind');
 const CLEARSWITCH = argv.includes('--clearonswitch');
 const UNGATERULE = argv.includes('--ungaterule');
 const RAWBLINDSEL = argv.includes('--rawblindsel');
-let src = readFileSync('studio.html', 'utf8');
+let src = studioSource();
 
 function mutate(a, b, label) {
   const n = src.split(a).length - 1;

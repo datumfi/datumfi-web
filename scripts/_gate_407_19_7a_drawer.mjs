@@ -6,8 +6,9 @@
    invalid (early ''), and HELOC (''). --redfirst perturbs one drawer byte (stroke-width 5.4->5.5) to prove the
    gate actually catches drift; it must then FAIL the identity check. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-const src = readFileSync('studio.html', 'utf8');
+const src = studioSource();
 const baseline = JSON.parse(readFileSync('scripts/_gate_fixtures_moat_pie.json', 'utf8'));
 
 function extractFn(s, name) {

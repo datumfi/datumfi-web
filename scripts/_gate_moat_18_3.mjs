@@ -13,8 +13,9 @@
    --redfirst removes the single-link guard (canManage=true always) -> a LINKED debt wrongly shows the disclosure
    -> the one-link-of-record check bites. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   s = s.replace('canManage = !la;   // single-link: no link/draft while already linked (one-link-of-record)', 'canManage = true;');

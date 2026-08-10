@@ -14,8 +14,9 @@
    --redfirst restores the pre-#9 position (notes emitted at the top, before the taxCode branches). The
    gate must then bite on every room that has any content of its own — i.e. the exact live symptom. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-const src = readFileSync('studio.html', 'utf8');
+const src = studioSource();
 
 // ── slice the real builder (brace-counting would trip over the template literals; anchor on the neighbours)
 const st = src.indexOf('window.openAccountModal = function(id)');

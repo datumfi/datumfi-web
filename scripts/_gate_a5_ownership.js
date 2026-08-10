@@ -13,6 +13,7 @@
    Usage: serve repo root on :8001, then node scripts/_gate_a5_ownership.js [LABEL]. Writes a UTF-8 dump. */
 const { chromium } = require('playwright');
 const fs = require('fs');
+const { studioSource } = require('./_studio_source.cjs');
 const LABEL = process.argv[2] || 'RUN';
 const URL = 'http://127.0.0.1:8001/studio.html';
 
@@ -82,7 +83,7 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   await b.close();
 
   // (c)/(d) static source guards — the 422-critical maps are const-scoped (not observable in-browser)
-  const src = fs.readFileSync('studio.html', 'utf8');
+  const src = studioSource();
   const bp = fs.readFileSync('scripts/studio-blueprint.js', 'utf8');
   const mapHas = (id) => new RegExp(id + "\\s*:\\s*'taxable'").test(src);
   const filtHasBlock = /FILTERED_TYPES = new Set\(\[([\s\S]*?)\]\)/.exec(src);

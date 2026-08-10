@@ -9,8 +9,9 @@
    blank); the moment Original Amount is filled, the pie SVG renders and the nudge is gone.
    --redfirst disables the nudge branch -> the blank-Original case falls back to a silent gap -> the check fails. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-const src = readFileSync('studio.html', 'utf8');
+const src = studioSource();
 
 function extractFn(s, name) {
   const start = s.indexOf('function ' + name + '(');

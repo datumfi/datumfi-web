@@ -8,9 +8,10 @@
    the transitive cases fail, exactly as they did in #429 and #431. */
 import { readFileSync } from 'node:fs';
 import { extractClosure, closureNames, extractFn } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 
 const RED = process.argv.includes('--redfirst');
-const src = readFileSync('studio.html', 'utf8');
+const src = studioSource();
 
 // depth-1 stand-in for the old hand-listing behaviour
 function shallow(s, roots) {

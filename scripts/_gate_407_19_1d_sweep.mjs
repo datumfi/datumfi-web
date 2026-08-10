@@ -9,8 +9,9 @@
    STRUCTURAL: zero buggy read idioms remain; the 3 currency clean() fns keep the dot.
    --redfirst inverse-sweeps the served bytes back to parseInt-strip -> all of the above reproduce the bug. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 const undo = (str, a, b) => str.split(a).join(b);
 if (RED) {

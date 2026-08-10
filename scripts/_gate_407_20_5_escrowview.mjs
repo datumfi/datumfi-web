@@ -18,8 +18,9 @@
    alone — which is exactly how this feature goes wrong: Coverage Amount inflates x12 and the labels start
    lying. Every class of assertion above must bite. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let src = readFileSync('studio.html', 'utf8');
+let src = studioSource();
 
 if (RED) {
   // naive: no `fixed` escape (Coverage converts too) and labels never swap

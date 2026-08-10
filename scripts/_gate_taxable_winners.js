@@ -10,7 +10,8 @@
    Reads the local studio.html (== served bytes; dist copies it verbatim). Usage: node scripts/_gate_taxable_winners.js */
 const fs = require('fs');
 const path = require('path');
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'studio.html'), 'utf8');
+const { studioSource } = require('./_studio_source.cjs');
+const SRC = studioSource();
 
 // FIELD → { win: winner-section + distinctive literal that MUST be present ; lose: generic that must be ABSENT (optional) }
 const WINNERS = [

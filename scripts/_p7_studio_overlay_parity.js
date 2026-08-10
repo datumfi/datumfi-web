@@ -26,6 +26,7 @@
 'use strict';
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const { chromium } = require('playwright');
+const { studioSource } = require('./_studio_source.cjs');
 const ROOT = path.resolve(__dirname, '..');
 const HOST = 'datumfi.localhost'; const PORT = 8171; const BASE = 'http://' + HOST + ':' + PORT;
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.woff2': 'font/woff2' };
@@ -298,7 +299,7 @@ async function clickAndGetUrl(page, btnId) {
   await ctxHome.close();
 
   // ════════ (d) CSP — static.cloudflareinsights.com whitelisted + no CSP errors ════════
-  const studioSrc = fs.readFileSync(path.join(ROOT, 'studio.html'), 'utf8');
+  const studioSrc = studioSource();
   const cspMeta = (studioSrc.match(/<meta http-equiv="Content-Security-Policy"[^>]*>/i) || [''])[0];
   check('(d) Studio CSP whitelists static.cloudflareinsights.com', /script-src[^;]*static\.cloudflareinsights\.com/.test(cspMeta));
   check('(d) no CSP/beacon console errors on overlay opens', cspErrors.length === 0, cspErrors.slice(0, 3).join(' | '));

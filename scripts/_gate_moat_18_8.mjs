@@ -5,8 +5,9 @@
    with its sourced body, and the old grouped explainer is gone. --redfirst neuters the shared _hlF (bare label,
    no hover) AND restores the grouped-explainer marker -> the per-field checks + the "grouped gone" check bite. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   s = s.replace(

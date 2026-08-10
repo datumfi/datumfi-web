@@ -26,8 +26,9 @@
    at the regression that can actually happen: someone collapses the two guards and the over-borrowed position
    gets handed the "add your Original Amount" nudge, which would be flatly false — the amount IS there. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-const src = readFileSync('studio.html', 'utf8');
+const src = studioSource();
 
 function ex(s, n) {
   const st = s.indexOf('function ' + n + '(');

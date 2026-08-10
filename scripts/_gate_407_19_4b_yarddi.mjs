@@ -5,8 +5,9 @@
    Asserts the Yard diBlock uses .di-narrative, the old bespoke '🧠 Datum Intelligence' block is gone, and the
    §19.4 chrome exists for it to inherit. --redfirst restores the .yard-sec block -> the parity asserts fail. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 const NEW = `var diBlock = di ? '<div class="di-narrative"><div class="di-narr-head">Datum Intelligence</div><div class="di-narr-body">' + di + '</div></div>' : '';`;
 const OLD = `var diBlock = di ? '<div class="yard-sec" style="background:rgba(93,202,165,0.05); border-color:rgba(93,202,165,0.25);"><div class="yard-h" style="color:var(--teal-mid);">🧠 Datum Intelligence</div><div style="font-size:12px; color:rgba(255,255,255,0.8);">' + di + '</div></div>' : '';`;

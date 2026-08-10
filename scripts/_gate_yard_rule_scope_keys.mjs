@@ -21,9 +21,10 @@
  */
 import { readFileSync } from 'node:fs';
 import { lift } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const DROPKEY = process.argv.includes('--dropkey');
 const ADDRULE = process.argv.includes('--addrule');
-let src = readFileSync('studio.html', 'utf8');
+let src = studioSource();
 
 function mutate(a, b, label) {
   const n = src.split(a).length - 1;

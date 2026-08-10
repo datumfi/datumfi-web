@@ -4,8 +4,9 @@
    --redfirst reintroduces the old jargon in the Rule G string -> the no-bare-"the line" assertion fails. */
 import { readFileSync } from 'node:fs';
 import { lift } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-const src = readFileSync('studio.html', 'utf8');
+const src = studioSource();
 /* §13.21 — ONE SHARED EXTRACTOR. `ex` used to be a private copy in each of eight gates, and because a
    local copy could only see `function NAME(`, each ALSO hand-lifted `var RULE_SCOPE` with its own
    regex: eight copies of one fact. lift() handles both forms, so that regex is DELETED rather than

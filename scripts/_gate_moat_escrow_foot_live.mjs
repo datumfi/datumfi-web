@@ -4,8 +4,9 @@
    Asserts the balance path re-renders #modal-escrow-foot-<id>. --redfirst removes the refresh (reproduces the
    stale-footer-on-balance symptom) -> the check bites. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   s = s.replace('                if(escrowFoot2) {\n                    if(hasEscrow(acc)) { escrowFoot2.style.display = \'block\'; escrowFoot2.innerHTML = _escrowFooter(acc); }\n                    else { escrowFoot2.style.display = \'none\'; }\n                }', '                // (removed)');

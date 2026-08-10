@@ -4,8 +4,9 @@
    muted label, and still carries the clickable chip + ✕. --redfirst reverts to the old bare 10px/danger form
    -> the pill/size assertions bite. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   s = s.replace(

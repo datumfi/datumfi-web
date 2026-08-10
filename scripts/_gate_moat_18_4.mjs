@@ -12,8 +12,9 @@
    survive / no-delete / escrow-re-derived assertions BITE. */
 import { readFileSync } from 'node:fs';
 import { extractClosure } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   s = s.replace('        if (_num(debt.propTaxAnnual) > 0 && !(_num(asset.propTaxYr) > 0)) asset.propTaxYr = debt.propTaxAnnual;', '        ;');

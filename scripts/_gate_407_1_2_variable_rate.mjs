@@ -14,8 +14,9 @@
      (b) _moatRateMoves -> always false : the PRESENCE assertion must bite
    If either mutation leaves the suite green, the negative control is unexercised and the gate FAILS. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-const src = readFileSync('studio.html', 'utf8');
+const src = studioSource();
 
 function ex(s, n) {
   const st = s.indexOf('function ' + n + '(');

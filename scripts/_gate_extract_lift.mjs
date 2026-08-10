@@ -39,6 +39,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { studioSource } from './_studio_source.cjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..');
@@ -162,7 +163,7 @@ need('a function whose NAME contains "async" is not mistaken for an async declar
      asyName.ok && asyName.out.startsWith('function asyncFoo'), 'async');
 
 /* ── AND IT WORKS ON THE REAL PRODUCT, not only on fixtures. PRESENCE first. ── */
-const studio = readFileSync(path.join(REPO, 'studio.html'), 'utf8');
+const studio = studioSource();
 const rs = tryLift(studio, 'RULE_SCOPE');
 need('[PRESENCE] RULE_SCOPE lifts out of the real studio.html', rs.ok && rs.out.length > 0, 'real');
 let evaluated = null;

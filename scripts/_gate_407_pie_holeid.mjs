@@ -16,8 +16,9 @@
    reference resolves to the Moat's gradient. Anchored on the drawer's parameter list (stable structure). */
 import { readFileSync } from 'node:fs';
 import { extractClosure } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-const src = readFileSync('studio.html', 'utf8');
+const src = studioSource();
 
 // (B) — roots only. Writing this gate is what finally proved hand-listing untenable: _yardDebtPieHTML reaches
 // _yardNetEquity, which reaches _groundsLinkedDebt, and two successive hand-lists still missed one.

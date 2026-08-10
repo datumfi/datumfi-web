@@ -6,8 +6,9 @@
    AND that the CSS chrome exists to be inherited.
    --redfirst strips the class off the Mortgage DI body (the exact audit symptom) -> the render-site check fails. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   s = s.split('class="di-narr-body" id="modal-moat-di-${id}"').join('id="modal-moat-di-${id}"');

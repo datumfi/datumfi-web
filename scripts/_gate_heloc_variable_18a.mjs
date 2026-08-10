@@ -11,8 +11,9 @@
    --redfirst strips the §18.A block AND restores the old summary reset clause → asserts fail (proves bite). */
 import { readFileSync } from 'node:fs';
 import { extractClosure } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   // strip the whole §18.A beats block back out of _helocIntelBeats

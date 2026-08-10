@@ -8,8 +8,9 @@
    a rendered element that no longer carries the winner class) -> the render assertions fail. */
 import { readFileSync } from 'node:fs';
 import { extractClosure } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-const src = readFileSync('studio.html', 'utf8');
+const src = studioSource();
 
 function extractFn(s, name) {
   const start = s.indexOf('function ' + name + '(');

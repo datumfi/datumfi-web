@@ -21,6 +21,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { lift } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 
 const argv = process.argv.slice(2);
 const OLDB = argv.includes('--oldboundary');
@@ -28,7 +29,7 @@ const NOSCOPE = argv.includes('--noscope');
 const NOVACANT = argv.includes('--novacant');
 const STALERENT = argv.includes('--stalerent');
 const ANY_MUT = OLDB || NOSCOPE || NOVACANT || STALERENT;
-let src = readFileSync('studio.html', 'utf8');
+let src = studioSource();
 
 function mutate(a, b, label) {
   const n = src.split(a).length - 1;

@@ -12,8 +12,9 @@
    --redfirst lifts the +30 clamp so the 🟠 case names the absurd year again -> the clamp assertions fail. */
 import { readFileSync } from 'node:fs';
 import { extractClosure } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-const src = readFileSync('studio.html', 'utf8');
+const src = studioSource();
 const deps={acceleratedDelta:()=>null,hasEscrow:()=>false,calculateEscrowMonthly:()=>0,_moatPmiUnder20:()=>false,_moatLiveMktRate:()=>null,getBaseType:()=>({id:'mortgage_x',title:'Mortgage'}),state:{accounts:[]},_retireOverride:{retireYear:2035,retireDate:new Date(2035,2,1),currentAge:52}};
 // (B) — ROOT ONLY, closure walked from studio.html. Exclude exactly what this gate INJECTS, so the real
 // declarations can't shadow the stubs; everything else stays real (the payoff engine is asserted here).

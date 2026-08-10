@@ -10,8 +10,9 @@
    --redfirst strips the §17 clause block from _moatDI + blanks the sub-line -> the winners vanish (gate bites). */
 import { readFileSync } from 'node:fs';
 import { extractClosure } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   s = s.replace(/        \/\/ §17 FRED live market-rate color[\s\S]*?little to gain from refinancing at these rates\.'\);\n                }\n            }\n        }\n/, '');

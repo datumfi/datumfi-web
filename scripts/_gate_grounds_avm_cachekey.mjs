@@ -14,9 +14,10 @@
    pre-fix behaviour — and the stale-estimate assertions bite. */
 import { readFileSync } from 'node:fs';
 import { extractClosure, extractFn } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 
 const RED = process.argv.includes('--redfirst');
-const src = readFileSync('studio.html', 'utf8');
+const src = studioSource();
 
 /* RE-TRUED for Ask 2 (#443). The storage this gate guards moved from the ephemeral `acc._avmLast` /
    `_avmLastKey` pair to the PERSISTED `acc.assetAvmSnapshot` (non-underscore, so it survives D1). The

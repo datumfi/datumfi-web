@@ -4,8 +4,9 @@
    functional check (it renders the five fields), per the memo that §0.4 + §4.3 need served-byte proof, not a
    code-read. --redfirst strips two live markers (§0.4 wiring + §4.3 function) -> those audit rows bite. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   s = s.replace('${_variableRateClusterHTML(id, acc)}', '');       // pretend §0.4 was never wired

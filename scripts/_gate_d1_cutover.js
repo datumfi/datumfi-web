@@ -9,6 +9,7 @@
 'use strict';
 var M = require('./studio-blueprint.js');           // global inside === this module.exports (CJS)
 var Codec = require('./datum-archive-codec.js');
+const { studioSource } = require('./_studio_source.cjs');
 
 var RF = process.argv.includes('--redfirst');
 var pick = function (w, l) { return RF ? l : w; };
@@ -91,7 +92,7 @@ function mkBp(tag) {
   await tick();
   ok(d1Writes.length >= 1, 'flip back to cutover -> active D1 write ON again (one-flip works BOTH directions)');
   // load-side rollback lever lives in studio.html: boot is D1-first ONLY under cutover.
-  var st = require('fs').readFileSync(require('path').join(__dirname, '..', 'studio.html'), 'utf8');
+  var st = studioSource();
   ok(st.indexOf('window.DatumD1.CUTOVER !== false && window.DatumD1.signedIn') >= 0, 'load-side: boot is D1-first ONLY under cutover (rollback -> boot(null) = LS-authority)');
 
   // ===== C — D1 AS TRUTH over a differing stale LS draft =====

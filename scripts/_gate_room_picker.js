@@ -33,6 +33,7 @@
 const http = require('http'); const path = require('path');
 const { chromium } = require('playwright');
 const fs = require('fs');
+const { studioSource } = require('./_studio_source.cjs');
 const LABEL = process.argv[2] || 'RUN';
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8306;   // PRIVATE — never 8001, that is the suite runner's shared server (see header)
@@ -129,7 +130,7 @@ const server = http.createServer((req, res) => {
   const L1S = ['ASSETS', 'INCOME', 'INVESTMENTS', 'LIABILITIES', 'PROTECTION &amp; ESTATE', 'WORKPLACE PLANS'];
 
   // static source guards
-  const src = fs.readFileSync('studio.html', 'utf8');
+  const src = studioSource();
   const srcTaxonomy = /const ROOM_TAXONOMY\s*=\s*\[/.test(src);
   const srcNoOldFlat = !/>More taxable \/ other </.test(src) && !has(src, 'Generational Transfer') && !/dropdown-group-lbl">Additional Spaces/.test(src);
 

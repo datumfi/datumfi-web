@@ -29,9 +29,10 @@
  */
 import { readFileSync } from 'node:fs';
 import { lift } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const SIMULATE = process.argv.includes('--simulate');
 const NOCONSUME = process.argv.includes('--noconsume');
-let src = readFileSync('studio.html', 'utf8');
+let src = studioSource();
 
 if (NOCONSUME) {
   const A = 'var _burdenAnnual = Math.max(0, realAnnual - _rentAnnualOffset);';

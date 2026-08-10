@@ -26,6 +26,7 @@
  */
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const { chromium } = require('playwright');
+const { studioSource } = require('./_studio_source.cjs');
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 8288; const BASE = 'http://127.0.0.1:' + PORT;
 const NOFIX = process.argv.includes('--nofix');
@@ -90,7 +91,7 @@ const server = http.createServer((req, res) => {
      'heloc'; getBaseType returned null, the merge loop bailed, and the missing Yard looked exactly
      like a product defect. A fixture in the wrong shape is indistinguishable from the bug it invents.
      rDataList/getBaseType are block-scoped, so this is grounded against the source text. */
-  const SRC = fs.readFileSync(path.join(ROOT, 'studio.html'), 'utf8');
+  const SRC = studioSource();
   const known = (id) => SRC.indexOf("{ id: '" + id + "',") !== -1;
 
   /* ⚠️ updateSVGs IS DEBOUNCED. Reading the canvas in the same tick reads the PREVIOUS render and

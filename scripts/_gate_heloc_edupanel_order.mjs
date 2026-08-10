@@ -6,8 +6,9 @@
      3. it's a MOVE, not a re-author: the R58 body still appears exactly once (copy untouched).
    --redfirst puts the panel back at its old (bottom) spot → the order assertion FAILS (proves bite). */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   // Simulate pre-§2d: pull the panel from the top and re-insert at its old bottom spot (before the

@@ -7,8 +7,9 @@
    --redfirst strips the two Other feeds -> the Other contribution vanishes from both all-ins (gate bites). */
 import { readFileSync } from 'node:fs';
 import { extractClosure } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   s = s.replace('return pt / 12 + ins / 12 + pmi + other / 12;', 'return pt / 12 + ins / 12 + pmi;');

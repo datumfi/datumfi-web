@@ -11,8 +11,9 @@
    threshold check bite. */
 import { readFileSync } from 'node:fs';
 import { extractClosure } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   s = s.replace('        return (H - bal) / H * 100 < 20;                       // still under the 20%-equity PMI threshold', '        return true;');

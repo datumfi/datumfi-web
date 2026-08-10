@@ -10,8 +10,9 @@
    --redfirst strips the §18.A5 block -> the winner string vanishes (proves the gate bites). */
 import { readFileSync } from 'node:fs';
 import { extractClosure } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   s = s.replace(/            \/\/ §18\.A5 entered-margin vs implied-margin[\s\S]*?\n            }\n/, '');

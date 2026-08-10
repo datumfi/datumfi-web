@@ -13,8 +13,9 @@
    --redfirst reverts formatCurrencyDisplay to the old "just call formatCurrency" body -> 20000.5 renders
    '$20,000.5' and 1234.567 renders '$1,234.56' (gate bites). */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-const s = readFileSync('studio.html', 'utf8');
+const s = studioSource();
 
 const numSrc = (s.match(/function _num\(v\) \{[^\n]*\}/) || [''])[0];
 const fcSrc  = (s.match(/    function formatCurrency\(val\) \{[\s\S]*?\n    \}/) || [''])[0];

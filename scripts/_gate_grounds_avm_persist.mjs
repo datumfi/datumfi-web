@@ -30,9 +30,10 @@
 */
 import { readFileSync } from 'node:fs';
 import { extractClosure, extractFn } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 
 const MODE = process.argv.includes('--redfirst') ? 'a' : process.argv.includes('--stale') ? 'b' : null;
-const src = readFileSync('studio.html', 'utf8');
+const src = studioSource();
 const sb = readFileSync('scripts/studio-blueprint.js', 'utf8');
 
 /* ── anchors: if the structure moved, FAIL LOUD rather than silently testing nothing ───────────────── */

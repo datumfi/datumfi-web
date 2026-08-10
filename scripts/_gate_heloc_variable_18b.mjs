@@ -12,8 +12,9 @@
    --redfirst strips _helocCeilingBand + the §18.B beat block -> band/beat vanish (proves bite). */
 import { readFileSync } from 'node:fs';
 import { extractClosure } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   s = s.replace(/    function _helocCeilingBand\(acc\)[\s\S]*?\n    }\n/, '');

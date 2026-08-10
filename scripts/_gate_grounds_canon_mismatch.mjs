@@ -32,9 +32,10 @@
 */
 import { readFileSync } from 'node:fs';
 import { extractClosure } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 
 const MODE = process.argv.includes('--redfirst') ? 'a' : process.argv.includes('--strict') ? 'b' : null;
-const src = readFileSync('studio.html', 'utf8');
+const src = studioSource();
 
 const A_BLOCK = "if (v && v.status === 'verified' && v.canonical && _avmCanonMismatch(acc, v.canonical)) { _blockUnconfirmed(); return; }";
 const A_CMP = "if (c.state && st && c.state !== st) return true;";

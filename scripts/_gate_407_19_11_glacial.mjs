@@ -9,8 +9,9 @@
    surface formats the giant month-count into a century again — the gate must then bite on EVERY surface. */
 import { readFileSync } from 'node:fs';
 import { extractClosure, lift } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-const src = readFileSync('studio.html', 'utf8');
+const src = studioSource();
 /* §13.21 — ONE SHARED EXTRACTOR. Replaces a private ex() that could only see `function NAME(`, and
    with it the hand-written `var RULE_SCOPE` regex in surface 4. lift() handles both forms. */
 const ex = (s, n) => lift(s, n);

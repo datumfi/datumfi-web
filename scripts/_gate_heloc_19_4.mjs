@@ -12,8 +12,9 @@
    --redfirst strips the §19.4 block -> both winners vanish (proves the gate bites). */
 import { readFileSync } from 'node:fs';
 import { extractClosure } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   // Strip the whole §19.4 block (its internal _nearRet if/else has nested braces, so anchor the END on the

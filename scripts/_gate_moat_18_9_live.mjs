@@ -5,8 +5,9 @@
    --redfirst neuters both refresh assignments (reproduces the exact symptom: no live update) -> the refresh
    checks + the call-count bite. */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 if (RED) {
   s = s.replace('if(pmiBar) pmiBar.innerHTML = _moatPmiBarHTML(id, acc);', 'if(pmiBar) {}');

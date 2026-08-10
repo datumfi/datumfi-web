@@ -22,6 +22,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { dispatch } from '../functions/api/_lib/documents-core.js';
+import { studioSource } from './_studio_source.cjs';
 
 const RF = process.argv.includes('--redfirst');
 const pick = (win, lose) => (RF ? lose : win);
@@ -193,7 +194,7 @@ const newBE = () => ({ returnValue: undefined, defaultPrevented: false, preventD
 
   // ===== STUDIO.HTML WIRING (served bytes) — _navDrain defined + all 6 nav exits routed =====
   lines.push('===== STUDIO.HTML WIRING (served bytes) =====');
-  const stHtml = readFileSync(new URL('../studio.html', import.meta.url), 'utf8');
+  const stHtml = studioSource();
   ok(pick(stHtml.includes('window._navDrain = function'), !stHtml.includes('window._navDrain = function')), 'studio.html defines _navDrain (awaits DatumD1.drain before nav) [BITE]');
   const navCalls = (stHtml.match(/_navDrain\(/g) || []).length;
   ok(pick(navCalls >= 6, !(navCalls >= 6)), 'all 6 studio nav exits routed through _navDrain (' + navCalls + '/6) [BITE]');

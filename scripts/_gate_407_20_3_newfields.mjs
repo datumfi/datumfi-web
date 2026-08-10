@@ -18,8 +18,9 @@
    commit must never make) and drops the Mortgage gate on Term; the negative control must then bite. */
 import { readFileSync } from 'node:fs';
 import { extractClosure } from './_gate_extract.mjs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let src = readFileSync('studio.html', 'utf8');
+let src = studioSource();
 
 if (RED) {
   // the plausible wrong version: Coverage Amount treated as "just another escrow figure"

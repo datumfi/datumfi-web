@@ -9,8 +9,9 @@
    plus no-regression ('$1,000,000' -> 1000000, '$20,000' -> 20000).
    --redfirst reverts each RHS to the parseInt-strip body -> the cents cases return 2000050 (gate bites). */
 import { readFileSync } from 'node:fs';
+import { studioSource } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
-let s = readFileSync('studio.html', 'utf8');
+let s = studioSource();
 
 const BUG = "parseInt(valStr.replace(/[^0-9]/g, ''), 10) || 0";
 
