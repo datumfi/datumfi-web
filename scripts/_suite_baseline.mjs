@@ -15,11 +15,28 @@
    that only demonstrates stdout capture. This is the "a control that can only fail for someone
    else's reason is not a control" shape from the 2026-07-26 gate-health sweep. Do not bank it.
 
-   CANONICAL BASELINE IS SERIAL. --concbrowser defaults to 1 because _gate_rename_persist is a
-   known concurrency flake: GREEN 50/0 run alone 3/3, but under --concbrowser=3 it loses a fixture
-   row (sees ["bp-new","bp-old"], missing "bp-mid") and reds 2 ordering assertions. Parallel mode is
-   for SPEED ONLY and must never be the source of a recorded number. Say which concurrency produced
-   any figure you report.
+   ~~*"CANONICAL BASELINE IS SERIAL. --concbrowser defaults to 1 because _gate_rename_persist is a
+   known concurrency flake... Parallel mode is for SPEED ONLY and must never be the source of a
+   recorded number."*~~ SUPERSEDED 2026-08-10, AND STRUCK RATHER THAN DELETED. That default was
+   correct about the flake and wrong about the remedy: it made 96 well-behaved gates pay for one
+   broken fixture, forever, on every run.
+
+   THE DEFAULT IS NOW --concbrowser=3, AND IT WAS EARNED BY MEASUREMENT, NOT BY ARGUMENT:
+     serial          GREEN 200 · RED 1 · TOTAL 201 · wall 1317.2s
+     concbrowser=3   GREEN 202 · RED 0 · TOTAL 202 · wall  500.3s
+     per-gate verdict diff: ZERO unexplained differences (the two deltas were the retired trust-wing
+     exemption and one newly added gate). 2.6x faster; 816 seconds back per run.
+   The flake is contained by DECLARATION, not by a global default: _gate_rename_persist declares
+   `@gate-concurrency: solo` and runs first, alone. See SOLO_RE below.
+
+   ⚠️ TWO THINGS THE MEASUREMENT DOES NOT PROVE, SO DO NOT CLAIM THEM.
+   1. ONE agreeing run is not proof a race never fires — flake is probabilistic. THE RULE: if a gate
+      reds unexpectedly under concurrency, RE-RUN THAT GATE ALONE before believing it. Costs nothing
+      when green, and stops a phantom becoming an investigation.
+   2. The SUM of per-gate seconds went UP 5.8% (1328.6 -> 1405.3): gates are individually slower
+      under load and the entire win is overlap. Push concurrency high enough and the gates starve
+      each other and the win reverses. 3 is measured; 6 is not.
+   Say which concurrency produced any figure you report — that part always held.
 
    Population (see --explain): scripts/_gate_* + _p<digit>* filtered to .js/.mjs, minus helper
    modules. 66 of the browser gates need repo root served on 127.0.0.1:8001 — this starts it;
@@ -52,7 +69,9 @@ const EXPLAIN = argv.includes('--explain');
 const SABOTAGE = arg('--sabotage', '');
 const TIMEOUT_MS = parseInt(arg('--timeout', '180000'), 10);
 const CONC_NODE = parseInt(arg('--concnode', '6'), 10);
-const CONC_BROWSER = parseInt(arg('--concbrowser', '1'), 10);   // 1 = canonical. >1 is speed only.
+/* 3 is MEASURED (see header): identical per-gate verdicts vs serial, 2.6x faster. Pass
+   --concbrowser=1 to disambiguate a suspected concurrency flake, which is the one job serial keeps. */
+const CONC_BROWSER = parseInt(arg('--concbrowser', '3'), 10);
 
 /* Helper modules: they export, they do not run. Running one would exit 0 and be counted a false GREEN. */
 /* ══ PORT DISCIPLINE — READ BEFORE YOU CLAIM A PORT ═══════════════════════════════════════════════
@@ -106,6 +125,24 @@ const HELPERS = new Set(['_gate_extract.mjs']);
    An undeclared gate is not an error; an undeclared gate nobody is told about is. */
 const POOL_RE   = /@gate-pool:\s*(browser|node)\b/;
 const STATUS_RE = /@gate-status:\s*([a-z-]+)\b/;
+/* ══ §13.87 · A KNOWN FLAKE LEFT IN PLACE STOPS BEING A BUG AND BECOMES A TAX ══════════════════════
+   The browser pool ran SERIAL — 97 gates, 1315 seconds, 99% of every suite run — for ONE reason:
+   _gate_rename_persist loses a fixture row above concurrency 1. So 96 well-behaved gates paid a
+   ~15-minute tax per run to work around one unfixed fixture, and the tax was invisible because it
+   arrived as "the suite takes 22 minutes" rather than as a bug report. It nearly cost us the whole
+   instrument: the Captain was ready to abandon a 201-gate suite over it.
+
+   A GATE DECLARES ITS OWN CONCURRENCY, exactly as it declares its pool. This is deliberately NOT a
+   list of flaky gate names in the runner — that is the hand-maintained roster this file already
+   carries once (HELPERS, length 1) and which we have banned everywhere else. Solo gates run first,
+   alone; everything else runs at --concbrowser.
+
+   ⛔ PINNING IS A WORKAROUND, NOT A FIX, AND IT MUST NOT BECOME PERMANENT AND UNEXAMINED — that is
+   precisely how the serial default survived unquestioned. THE FIXTURE LOSS IS THE DEFECT: under
+   parallel load _gate_rename_persist sees ["bp-new","bp-old"] and misses "bp-mid", which is a race
+   in its own setup, not a property of concurrency. Whoever fixes that race DELETES the declaration
+   below and this comment with it. */
+const SOLO_RE   = /@gate-concurrency:\s*solo\b/;
 
 function census() {
   const globbed = fs.readdirSync(SCRIPTS).filter((f) => /^(_gate_|_p\d)/.test(f));
@@ -120,9 +157,10 @@ function census() {
                   || /require\([^)]*(?:playwright|puppeteer)[^)]*\)/.test(src);
     const declared = (src.match(POOL_RE) || [])[1] || null;
     const status = (src.match(STATUS_RE) || [])[1] || null;
+    const solo = SOLO_RE.test(src);
     if (!declared) undeclared.push(f);
     else if ((declared === 'browser') !== inferred) mismatched.push(`${f} declares ${declared}, source looks ${inferred ? 'browser' : 'node'}`);
-    return { name: f, file: path.join(SCRIPTS, f), browser: declared ? declared === 'browser' : inferred, declared, status };
+    return { name: f, file: path.join(SCRIPTS, f), browser: declared ? declared === 'browser' : inferred, declared, status, solo };
   });
   return { globbed, executable, runnable, gates, undeclared, mismatched };
 }
@@ -351,8 +389,8 @@ async function runPool(list, conc, label) {
   console.log(`timeout/gate: ${TIMEOUT_MS / 1000}s   conc: node=${CONC_NODE} browser=${CONC_BROWSER}`);
   console.log('mode: CLEAN (no mutation flags) — measurement only, nothing is repaired');
   console.log(CONC_BROWSER === 1
-    ? 'concurrency: SERIAL — this is the canonical baseline configuration.'
-    : `concurrency: PARALLEL (${CONC_BROWSER}) — SPEED ONLY. Not a recordable baseline: _gate_rename_persist flakes above 1.`);
+    ? 'concurrency: SERIAL — the disambiguation configuration. Use this to confirm a suspected concurrency flake.'
+    : `concurrency: PARALLEL (${CONC_BROWSER}) — the default. Verdict-identical to serial as of 2026-08-10; solo-pinned gates run alone first.`);
 
   let server = null;
   if (browserGates.length) {
@@ -404,7 +442,20 @@ async function runPool(list, conc, label) {
   }
 
   const t0 = Date.now();
-  const results = [...(await runPool(nodeGates, CONC_NODE, 'node')), ...(await runPool(browserGates, CONC_BROWSER, 'browser'))];
+  /* SOLO FIRST, ALONE, THEN THE REST. Solo gates go first so a flake cannot be blamed on load that
+     had already started, and so the run fails fast on the known-fragile one. At --concbrowser=1 this
+     split is a no-op by construction: both sub-pools run at 1 and the order is the same, which is
+     what makes the serial baseline still comparable. */
+  const browserSolo = browserGates.filter((g) => g.solo);
+  const browserRest = browserGates.filter((g) => !g.solo);
+  if (browserSolo.length && CONC_BROWSER > 1) {
+    console.log(`solo-pinned (run alone, before the parallel pool): ${browserSolo.map((g) => g.name).join(', ')}`);
+  }
+  const results = [
+    ...(await runPool(nodeGates, CONC_NODE, 'node')),
+    ...(await runPool(browserSolo, 1, 'browser-solo')),
+    ...(await runPool(browserRest, CONC_BROWSER, 'browser')),
+  ];
   if (server) server.close();
 
   const by = (s) => results.filter((r) => r.status === s);

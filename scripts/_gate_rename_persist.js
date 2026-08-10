@@ -1,4 +1,22 @@
 'use strict';
+/* @gate-pool: browser
+ * @gate-concurrency: solo
+ *
+ * ⛔ SOLO IS A WORKAROUND FOR A DEFECT IN THIS FILE, NOT A PROPERTY OF THE SUITE. DELETE IT WHEN FIXED.
+ * Measured: GREEN 50/0 run alone, 3/3. Under --concbrowser=3 this gate loses a fixture row — it sees
+ * ["bp-new","bp-old"] and misses "bp-mid" — and reds 2 ordering assertions. That is a race in THIS
+ * gate's own setup, not something concurrency is doing to it.
+ *
+ * WHAT THAT ONE UNFIXED RACE COST, MEASURED 2026-08-10: the runner defaulted the ENTIRE browser pool
+ * to serial because of it — 97 gates, 1315 seconds, 99% of every full-suite run. 96 well-behaved
+ * gates paid a ~15-minute tax per run, on every change this project has made since. Nobody filed it
+ * as a bug because it arrived as "the suite takes 22 minutes". It came within one conversation of
+ * costing us the whole 201-gate instrument, because a suite nobody can afford to run protects
+ * nothing.
+ * 🔑 A KNOWN FLAKE LEFT IN PLACE STOPS BEING A BUG AND BECOMES A TAX, AND A TAX IS INVISIBLE.
+ *
+ * Fixing the race retires this declaration. Until then it runs first and alone, which is honest
+ * about the cost instead of hiding it in a global default. */
 /* RENAME · STORE GATE (red-first) � per-card display_name must LAND, must SURVIVE, and must never
  * silently clobber. Drives the REAL Blueprint.html (which loads nav.js + datum-d1.js) against a D1
  * that only knows what was actually PUT to it.
