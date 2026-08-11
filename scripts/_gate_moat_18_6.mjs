@@ -59,7 +59,15 @@ if (e) {
 need('(WIRED) all-liens map _mergeDebtsByAsset (first-link-wins gone)', s.includes('_mergeDebtsByAsset') && !/_mergeDebtByAsset\b/.test(s));
 need('(WIRED) Grounds net equity via _netEquityOf(propertyAccount.value', s.includes('_netEquityOf(propertyAccount.value, _moatDebts)'));
 need('(CHIP) 🔗 link chip rendered on the Grounds tile', /_linkChipSVG\(gX \+ gW\/2 - 13/.test(s) && s.includes('class="link-chip"'));
-need('(CHIP) 🔗 link chip rendered on the per-room merge', /_mergeChip = _mergeDebts\.length \? _linkChipSVG/.test(s) && s.includes('${_mergeChip}'));
+/* ⚠️ RE-ANCHORED 2026-08-11 (§25.4). The per-room merge chip moved from an inline block in the column
+   loop into the shared _roomTileSVG emitter, so `_mergeChip` and the `${_mergeChip}` interpolation no
+   longer exist by those names. THE GATE WAS RIGHT TO GO RED — the text it pinned genuinely vanished —
+   and the behaviour was separately proven UNCHANGED by an old-vs-new render diff (the merged-lien
+   scene is byte-identical, chip included). ⛔ THE CLAIM IS UNCHANGED; ONLY THE ANCHOR MOVED.
+   🔑 IT NOW PINS THE CALL AND ITS ARGUMENTS RATHER THAN A VARIABLE NAME — the arguments are the
+   behaviour, the name is spelling, and pinning spelling is what made this leg brittle. */
+need('(CHIP) 🔗 link chip rendered on the per-room merge',
+  /_linkChipSVG\(d\.x \+ 6, d\.y \+ 6, _lienMirrorNotice\(mergeDebts, 'asset'\)\)/.test(s) && /\bchip\b/.test(s));
 
 let pass = 0;
 for (const [label, ok] of checks) { console.log((ok ? '✅' : '⛔') + ' ' + label); if (ok) pass++; }

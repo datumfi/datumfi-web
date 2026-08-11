@@ -105,11 +105,182 @@
     return '$' + Math.round(n);
   }
 
+  /* ── THE LIEN HELPERS · MOVED HERE FROM RENDER SCOPE FOR §25.4 ────────────────────────────────
+   * ⚠️ THIS MOVE IS WHY A CAUGHT BUG EXISTS TO REPORT. _roomTileSVG below is module-scope so the
+   * picker can call it, but these six lived INSIDE the render function — so the extracted emitter
+   * threw a ReferenceError the instant it hit a room carrying a lien. ⛔ AND ALL FOUR ESTATE GATES
+   * WERE GREEN WITH THAT BREAK IN PLACE: not one fixture builds a COLUMN room with a merged lien.
+   * It was caught by an old-vs-new render diff, not by the suite. 🔑 A REFACTOR'S BLAST RADIUS IS
+   * THE SET OF SCOPES IT CROSSES, AND SCOPE IS INVISIBLE IN A DIFF THAT ONLY SHOWS CHANGED LINES.
+   * All six are PURE (arguments + getBaseType), so this is a move, not a rewrite. */
+  function _lienSum(debts) { var s = 0; for (var i = 0; i < debts.length; i++) { var v = parseFloat(debts[i].value) || 0; if (v > 0) s += v; } return s; }
+  function _netEquityOf(assetVal, debts) { return (parseFloat(assetVal) || 0) - _lienSum(debts); }
+  function _lienMetaSuffix(debts) { var o = ''; for (var i = 0; i < debts.length; i++) { o += ' / ' + getBaseType(debts[i].baseId).meta.toUpperCase(); } return o; }
+  // §18.6 mirror notice — TYPE-first (decision 1: math-facing copy names the type, never the brand), sourced.
+  // The estate LABEL keeps its brand flavor; this hover, which explains the net-equity math, says "mortgage"/"HELOC".
+  function _lienMirrorNotice(debts, assetNoun) {
+    var hasM = false, hasH = false;
+    for (var i = 0; i < debts.length; i++) { var id = String((getBaseType(debts[i].baseId) || {}).id || ''); if (id.indexOf('mortgage') === 0) hasM = true; else if (id.indexOf('heloc') === 0) hasH = true; }
+    var lead = hasM ? 'Your mortgage is linked here' : (hasH ? 'Your HELOC is linked here' : 'A linked liability sits here');
+    var out = '🔗 ' + lead + ' — its balance is subtracted from this ' + (assetNoun || 'asset') + '’s value to show your true equity.';
+    if (hasM && hasH) out += ' Your HELOC is linked here too.';
+    return out;
+  }
+  function _linkChipSVG(x, y, notice) { return '<g class="link-chip" style="cursor:help;"><title>' + String(notice).replace(/</g, '&lt;') + '</title><rect x="' + x + '" y="' + y + '" width="26" height="20" rx="4" fill="rgba(93,202,165,0.12)" stroke="var(--teal-mid)" stroke-width="1"/><text x="' + (x + 13) + '" y="' + (y + 14) + '" text-anchor="middle" style="font-size:12px; fill:var(--teal-mid);">🔗</text></g>'; }
+  function _eqStr(v) {   // NET EQUITY display string (asset - debt); mirrors the room value format
+    var n = Math.abs(v);
+    var s = n >= 1000000 ? '$' + (n / 1000000).toFixed(2) + 'M' : (n >= 1000 ? '$' + (n / 1000).toFixed(0) + 'k' : '$' + Math.round(n));
+    return v < 0 ? '-' + s : s;
+  }
+
+  /* ── §25.4 · ONE ROOM-TILE EMITTER, SO THE SECOND FLOOR IS DRAWN BY THE FIRST FLOOR'S OWN CODE ──
+   * Captain: "it would be nice if it somewhat appeared to be a 2nd floor of this house ... how those
+   * two rooms would appear if they were the only rooms I had built on the first floor." A list of
+   * names is a DIRECTORY; a drawn floor is the PRODUCT. §13.92 says the canvas is the product, and
+   * the moment a room went upstairs it stopped being drawn and became a table row — we were asking
+   * the user to trust that upstairs rooms are real while rendering them as text.
+   *
+   * ⛔ EXTRACTED, NOT FORKED (L48). This was inline inside the column loop and nowhere else, so a
+   * second copy in the picker would have been the "four implementations that agree look like a
+   * convention" trap. It is now ONE function with TWO callers.
+   *
+   * ⭐⭐ THE NAMED RISK, AND IT IS DISARMED BY STRUCTURE RATHER THAN BY A FLAG. A picker tile that
+   * leaked into `roomRects` would put a WALL on the first floor for a room that is not there; one
+   * that leaked into `descriptors` would put a CORRIDOR. Both are the "a line pointing at nothing"
+   * class and both are WORSE THAN NO DRAWN FLOOR AT ALL. ⛔ So those pushes were deliberately left
+   * OUTSIDE this function, in the column loop that owns them. A picker tile cannot reach them — not
+   * because a flag says skip, but because the code that does it is not in here. A flag can be wrong;
+   * a function that does not contain the statement cannot execute it.
+   *
+   * ⚠️ MEASURED AND IT CHANGED THE DESIGN — `style="stroke:none"`. A first-floor column room draws
+   * NO OUTLINE OF ITS OWN. The green lines the user sees are the estate ENVELOPE, drawn once after
+   * the loop by the wall/door pass. So copying the tile verbatim into a modal yields a fill and some
+   * text floating in the dark — and the Captain's ask was literally "outlined in green". `ownStroke`
+   * restores the `.room-rect` CSS default (teal, 1px) for callers that have no envelope to lean on.
+   * 🔑 THE TILE WAS NEVER SELF-CONTAINED; IT ONLY LOOKED THAT WAY BECAUSE SOMETHING ELSE DREW ITS
+   *    WALLS. That is invisible until you take it out of the room it grew up in.
+   *
+   * Returns the FACTS as well as the html so the column loop stops computing them a second time —
+   * valStr and isDebt were derived here and again in the loop, which is the drift this arc keeps
+   * paying for. */
+  function _roomTileSVG(acc, base, d, o) {
+    o = o || {};
+    var isDebt = base.taxCode === 'debt';
+    var isTrust = base.taxCode === 'trust';
+    var isVolatile = base.isInvestment || base.taxCode === 'liquid';
+    var shockMult = (o.isShocked && isVolatile && !isDebt) ? 0.70 : 1;
+    var absSum = Math.abs((acc.value || 0) * shockMult);
+    var valStr = '';                                        // L47 sourced-or-blank — never "$0"
+    if (absSum >= 1000000) valStr = '$' + (absSum / 1000000).toFixed(2) + 'M';
+    else if (absSum >= 1000) valStr = '$' + (absSum / 1000).toFixed(0) + 'k';
+    else if (absSum > 0) valStr = '$' + Math.round(absSum);
+    if (isDebt && absSum > 0) valStr = '-' + valStr;
+
+    var tip = (base.taxCode === 'physical' || base.taxCode === 'debt' || base.hasInterest)
+        ? '<title>' + String(base.desc || '').replace(/</g, '&lt;') + '</title>' : '';
+    var shockColor = (o.isShocked && isVolatile && !isDebt) ? 'var(--danger)' : (isDebt ? 'var(--danger)' : 'var(--white)');
+    var taxClass = o.isThermal ? ('tax-' + base.taxCode) : '';
+    var animClass = (o.anim !== false && acc.isNew) ? 'animate-draw' : '';
+    var frictionClass = acc.isFriction ? 'liquidity-friction' : '';
+    var priorityClass = acc.isPriority ? 'structural-priority' : '';
+
+    var mergeDebts = (!isDebt) ? ((o.mergeByAsset || {})[acc.id] || []) : [];   // §18.6 — ALL liens
+    var mergeEq = mergeDebts.length ? _netEquityOf(acc.value, mergeDebts) : null;
+    var mergeNeg = (mergeEq !== null && mergeEq < 0);
+    var title = _roomNameOf(acc, base).toUpperCase() + (mergeDebts.length ? _lienMetaSuffix(mergeDebts) : '');
+    var titleY = mergeDebts.length ? (d.cy - 20) : (d.cy - 10);
+    var chip = mergeDebts.length ? _linkChipSVG(d.x + 6, d.y + 6, _lienMirrorNotice(mergeDebts, 'asset')) : '';
+    var valBlock = mergeDebts.length
+      ? '<text x="' + d.cx + '" y="' + (d.cy - 2) + '" class="bp-title" style="fill:' + (mergeNeg ? 'var(--danger)' : 'var(--teal-mid)') + '; opacity:0.75; font-size:11px; letter-spacing:0.12em;">NET EQUITY</text>' +
+        '<text x="' + d.cx + '" y="' + (d.cy + 24) + '" class="bp-val" style="fill:' + (mergeNeg ? 'var(--danger)' : 'var(--gold)') + '; font-size:18px;">' + _eqStr(mergeEq) + '</text>'
+      : '<text x="' + d.cx + '" y="' + (d.cy + 30) + '" class="bp-val" style="fill:' + shockColor + '; transition: 0.6s ease;">' + valStr + '</text>';
+
+    var fp = fillPct(acc.value || 0);
+    var fillH = d.h * fp / 100, fillY = d.y + d.h - fillH;
+    var debtFill = isDebt || mergeNeg;
+    var fill = fp > 0
+      ? '<rect x="' + d.x + '" y="' + fillY + '" width="' + d.w + '" height="' + fillH + '" class="room-fill' +
+        (debtFill ? ' fill-debt' : '') + '" fill="url(#' + (debtFill ? 'fillGradDebt' : 'fillGradAsset') + ')" />'
+      : '';
+
+    return {
+      isDebt: isDebt, isTrust: isTrust, valStr: valStr, fillPct: fp,
+      weight: (o.weights || {})[acc.id] || 0,
+      html: tip +
+        '<rect x="' + d.x + '" y="' + d.y + '" width="' + d.w + '" height="' + d.h + '" class="room-rect active ' +
+            animClass + ' ' + frictionClass + ' ' + priorityClass + ' ' + taxClass + '"' +
+            (o.ownStroke ? '' : ' style="stroke:none"') + ' />' +
+        fill + chip +
+        '<text x="' + d.cx + '" y="' + titleY + '" class="bp-title"' + (isTrust ? ' style="fill:var(--shield)"' : '') + '>' + title + '</text>' +
+        valBlock
+    };
+  }
+
   /* THE PICKER. Built here rather than in studio.html so this ships with ZERO sacred-host bytes.
      ⚠️ ACCESSIBILITY IS NOT A FOLLOW-UP ON THIS ONE. It is the canvas's first real interactive
      control, and it GATES ACCESS TO DATA — a control only a mouse can reach would make those rooms
      permanently unreachable for some users, which is strictly worse than the dead tile it replaces. */
-  function _openFoldPicker(folded, headline, subhead, mergedOf) {
+  /* ── §25.4 · THE SECOND FLOOR IS DRAWN AS A FLOOR ─────────────────────────────────────────────
+   * ⭐ THE TWO NUMBERS, DERIVED — NEITHER IS INHERITED AND NEITHER IS TASTE.
+   *   W = 404 — the picker box is max-width 440 with 18px padding each side, so 404 is its inner
+   *       width. Using it as the viewBox width puts the drawing at 1 unit = 1 px, which is the ONLY
+   *       way `.bp-title`'s 14px renders at the SAME SIZE it does on the first floor. Scale the
+   *       viewBox and you scale the type; the Captain asked for the rooms to look like his rooms.
+   *   H = max(315, 75n) — 315 is the first floor's OWN 750-unit column band scaled by the width we
+   *       actually have (404/960 = 0.4208 → 315.6). A single-column first floor is 960 wide, so 315
+   *       is literally "how these rooms would look if they were the only rooms downstairs", fitted
+   *       to this box. 75 is the first floor's own minH, reused not invented.
+   *
+   * ⛔ IT SCROLLS, IT NEVER CAPS. Above ~4 rooms H grows instead of the tiles shrinking. Capping
+   * here would hide rooms INSIDE THE PLACE WE BUILT TO SHOW HIDDEN ROOMS — the original sin of this
+   * entire arc, reproduced inside its own fix. 🔑 THE CHEAPEST ANSWER TO "WHAT HAPPENS ABOVE THE
+   * CAP" IS THAT THERE IS NO CAP. The box already carries max-height:70vh + overflow:auto.
+   *
+   * ⚠️ NOTE THE WEIGHTING FADES OUT, EXACTLY AS IT DOES DOWNSTAIRS. _bandLayout pays every tile its
+   * 75-unit floor FIRST and distributes only the remainder by value, so at 5+ rooms there is no
+   * remainder and every room is 75 tall. That is not a bug and it is not new — a first-floor column
+   * does the identical thing at 10 rooms (750/10). Same algorithm, same behaviour, one implementation.
+   *
+   * ⛔ pointer-events:all IS LOAD-BEARING HERE FOR THE SAME REASON IT WAS IN §24, AND THE TRAP IS
+   * LIVE: fillPct() returns 0 for a zero-value room, so such a room draws NO fill — and an unfilled
+   * SVG rect is hit-testable ONLY ON ITS STROKE. Without this, a room with no balance would be a
+   * rectangle with a hole in the middle. AN AFFORDANCE IS NOT PROVEN BY ITS ATTRIBUTES. */
+  function _foldFloorSVG(folded, tileFor, onOpen) {
+    var W = 404, INSET = 1;                       // 1-unit inset so the 1px stroke is not half-clipped
+    var H = Math.max(315, 75 * folded.length);
+    var rows = _bandLayout(0, H, 0, 75, folded.map(function (a) { return Math.max(Math.abs(a.value || 0), 1000); }));
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'datum-fold-floor');
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.setAttribute('style', 'width:100%;height:auto;display:block;overflow:visible;');
+    folded.forEach(function (acc, i) {
+      var r = rows[i] || { y: i * 75, h: 75 };
+      var d = { x: INSET, y: r.y + INSET, w: W - INSET * 2, h: Math.max(1, r.h - INSET * 2) };
+      d.cx = d.x + d.w / 2; d.cy = d.y + d.h / 2;
+      var t = tileFor(acc, d);
+      if (!t) return;
+      var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.setAttribute('class', 'room-grp visible datum-fold-room' + (t.isDebt ? ' debt-room' : '') + (t.isTrust ? ' trust-room' : ''));
+      g.setAttribute('role', 'button');
+      g.setAttribute('tabindex', '0');
+      /* ⚠️ NO AUTHORED PER-ROOM ACCESSIBLE NAME EXISTS, and I am not writing one. This is the room's
+         OWN name and its OWN figure — the same data the tile shows — not a sentence. The control
+         type is announced by the AT (§25.5). FLAGGED for the Architect. */
+      g.setAttribute('aria-label', String(_roomNameOf(acc, getBaseType(acc.baseId) || {}) || '').toUpperCase() +
+          (t.valStr ? ', ' + t.valStr : ''));
+      g.setAttribute('pointer-events', 'all');
+      g.style.cursor = 'pointer';
+      g.style.setProperty('--weight', t.weight);
+      g.innerHTML = t.html;
+      var go = function (e) { if (e) { e.preventDefault(); e.stopPropagation(); } onOpen(acc); };
+      g.addEventListener('click', go);
+      g.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') go(e); });
+      svg.appendChild(g);
+    });
+    return svg;
+  }
+
+  function _openFoldPicker(folded, headline, subhead, mergedOf, tileFor) {
     if (!folded || !folded.length) return;                 // no derivable set -> no dialog, ever
     var prev = document.activeElement;
     var back = document.createElement('div');
@@ -135,6 +306,23 @@
        knows n, so the call site says the sentence. */
     s.textContent = subhead;
     box.appendChild(h); box.appendChild(s);
+
+    /* §25.3's verb is unchanged and lives in ONE place, so the drawn floor and the row list cannot
+       disagree about what a pick does. */
+    var openRoom = function (acc) {
+      var fn = window[_roomModalFor(acc, mergedOf ? !!mergedOf(acc) : false)];
+      if (typeof fn === 'function') fn(acc.id);
+    };
+
+    /* §25.4 — a DRAWN floor where the surface can supply one; the row list otherwise. ⚠️ THE
+       SATELLITE SURFACE STILL LISTS, and that is scope, not an oversight: its tile is a DIFFERENT
+       emitter (3-line merged stack, its own scale ratio) which has not been extracted. Reported, not
+       hidden. The rows already carry name + balance, so nothing regresses there. */
+    if (tileFor) {
+      box.appendChild(_foldFloorSVG(folded, tileFor, openRoom));
+      mountPicker();
+      return;
+    }
 
     folded.forEach(function (acc) {
       var base = getBaseType(acc.baseId) || {};
@@ -183,22 +371,31 @@
       if (_roomModalOpen()) return;
       if (e.key === 'Escape') { e.preventDefault(); close(); return; }
       if (e.key !== 'Tab') return;
-      var f = box.querySelectorAll('button');
+      var f = focusables();
       if (!f.length) return;
       var first = f[0], last = f[f.length - 1];
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     }
-    back.addEventListener('click', function (e) { if (e.target === back) close(); });
-    document.addEventListener('keydown', onKey, true);
-    back.appendChild(box);
-    document.body.appendChild(back);
-    var f0 = box.querySelector('button');
-    if (f0) f0.focus();
+    /* ⚠️ THE TRAP USED TO SELECT `button` AND THAT WAS A BUG WAITING FOR §25.4. A drawn floor's rooms
+       are SVG <g role="button" tabindex="0"> — not <button> elements — so the old selector would have
+       found ZERO focusables and silently disabled the Tab trap AND the initial focus, on the exact
+       surface §24 built to guarantee keyboard reach. 🔑 A SELECTOR THAT NAMES A TAG IS A BET THAT THE
+       MARKUP WILL NEVER CHANGE SHAPE. Select on the CONTRACT (focusable) instead. */
+    function focusables() { return box.querySelectorAll('button, [tabindex="0"]'); }
+    function mountPicker() {
+      back.addEventListener('click', function (e) { if (e.target === back) close(); });
+      document.addEventListener('keydown', onKey, true);
+      back.appendChild(box);
+      document.body.appendChild(back);
+      var f0 = focusables()[0];
+      if (f0 && typeof f0.focus === 'function') f0.focus();
+    }
+    mountPicker();
   }
 
   /* One place that makes a collapse tile a real control, so surface #3 cannot be born dead. */
-  function _makeFoldDoor(g, folded, headline, subhead, aria, mergedOf) {
+  function _makeFoldDoor(g, folded, headline, subhead, aria, mergedOf, tileFor) {
     g.setAttribute('role', 'button');
     g.setAttribute('tabindex', '0');
     g.setAttribute('aria-label', aria);
@@ -210,7 +407,7 @@
        the frame. A gate that reads the DOM would have seen role, tabindex and a listener and called
        it done. 🔑 AN AFFORDANCE IS NOT PROVEN BY ITS ATTRIBUTES, ONLY BY BEING HIT. */
     g.setAttribute('pointer-events', 'all');
-    var open = function (e) { if (e) { e.preventDefault(); e.stopPropagation(); } _openFoldPicker(folded, headline, subhead, mergedOf); };
+    var open = function (e) { if (e) { e.preventDefault(); e.stopPropagation(); } _openFoldPicker(folded, headline, subhead, mergedOf, tileFor); };
     g.addEventListener('click', open);
     g.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') open(e); });
   }
@@ -597,26 +794,10 @@
     });
     function _lienRankE(a) { var id = String((getBaseType(a.baseId) || {}).id || ''); return id.indexOf('mortgage') === 0 ? 0 : (id.indexOf('heloc') === 0 ? 1 : 2); }
     Object.keys(_mergeDebtsByAsset).forEach(function (k) { _mergeDebtsByAsset[k].sort(function (x, y) { return _lienRankE(x) - _lienRankE(y); }); });
-    function _lienSum(debts) { var s = 0; for (var i = 0; i < debts.length; i++) { var v = parseFloat(debts[i].value) || 0; if (v > 0) s += v; } return s; }
-    function _netEquityOf(assetVal, debts) { return (parseFloat(assetVal) || 0) - _lienSum(debts); }
-    function _lienMetaSuffix(debts) { var o = ''; for (var i = 0; i < debts.length; i++) { o += ' / ' + getBaseType(debts[i].baseId).meta.toUpperCase(); } return o; }
-    // §18.6 mirror notice — TYPE-first (decision 1: math-facing copy names the type, never the brand), sourced.
-    // The estate LABEL keeps its brand flavor; this hover, which explains the net-equity math, says "mortgage"/"HELOC".
-    function _lienMirrorNotice(debts, assetNoun) {
-      var hasM = false, hasH = false;
-      for (var i = 0; i < debts.length; i++) { var id = String((getBaseType(debts[i].baseId) || {}).id || ''); if (id.indexOf('mortgage') === 0) hasM = true; else if (id.indexOf('heloc') === 0) hasH = true; }
-      var lead = hasM ? 'Your mortgage is linked here' : (hasH ? 'Your HELOC is linked here' : 'A linked liability sits here');
-      var out = '🔗 ' + lead + ' — its balance is subtracted from this ' + (assetNoun || 'asset') + '’s value to show your true equity.';
-      if (hasM && hasH) out += ' Your HELOC is linked here too.';
-      return out;
-    }
-    function _linkChipSVG(x, y, notice) { return '<g class="link-chip" style="cursor:help;"><title>' + String(notice).replace(/</g, '&lt;') + '</title><rect x="' + x + '" y="' + y + '" width="26" height="20" rx="4" fill="rgba(93,202,165,0.12)" stroke="var(--teal-mid)" stroke-width="1"/><text x="' + (x + 13) + '" y="' + (y + 14) + '" text-anchor="middle" style="font-size:12px; fill:var(--teal-mid);">🔗</text></g>'; }
+    /* ⬆️ THE SIX LIEN HELPERS MOVED TO MODULE SCOPE (see above _roomTileSVG). They are PURE —
+       arguments plus getBaseType, no render state — and the shared room-tile emitter needs them.
+       ⛔ _visibleCol STAYS HERE: it closes over _suppressedDebt, which is per-render. */
     function _visibleCol(list) { return list.filter(function (a) { return !_suppressedDebt[a.id]; }); }
-    function _eqStr(v) {   // NET EQUITY display string (asset - debt); mirrors the room value format
-      var n = Math.abs(v);
-      var s = n >= 1000000 ? '$' + (n / 1000000).toFixed(2) + 'M' : (n >= 1000 ? '$' + (n / 1000).toFixed(0) + 'k' : '$' + Math.round(n));
-      return v < 0 ? '-' + s : s;
-    }
 
     svgContainer.innerHTML = '';
       // DRAWING PHYSICS: PROPORTIONAL SQUARIFY RENDERING
@@ -1208,19 +1389,6 @@
 
               _colShown.forEach((acc, i) => {
                   let base = getBaseType(acc.baseId);
-                  let valStr = '';
-
-                  let isVolatile = base.isInvestment || base.taxCode === 'liquid';
-                  let shockMult = (isShocked && isVolatile && base.taxCode !== 'debt') ? 0.70 : 1;
-                  let effectiveValue = (acc.value || 0) * shockMult;
-                  let absSum = Math.abs(effectiveValue);
-
-                  if(absSum >= 1000000) valStr = '$' + (absSum / 1000000).toFixed(2) + 'M';
-                  else if (absSum >= 1000) valStr = '$' + (absSum / 1000).toFixed(0) + 'k';
-                  else if (absSum > 0) valStr = '$' + Math.round(absSum);
-
-                  let isDebt = base.taxCode === 'debt';
-                  if(isDebt && absSum > 0) valStr = '-' + valStr;
 
                   /* currentY is NOT recomputed from the row on purpose: the loop already advances
                      `currentY += h + gap` from `gY + 20`, which is byte-for-byte the recurrence
@@ -1231,7 +1399,16 @@
                   let d = { x: currentX, y: currentY, w: colW, h: h };
                   d.cx = d.x + d.w / 2;
                   d.cy = d.y + d.h / 2;
-                  
+
+                  /* §25.4 — THE FIRST FLOOR IS NOW THE FIRST CALLER of the shared emitter, which is
+                     what makes the second floor a REUSE rather than a lookalike. `ownStroke` stays
+                     off here because the envelope pass draws this room's walls after the loop. */
+                  const _t = _roomTileSVG(acc, base, d, {
+                      isShocked: isShocked, isThermal: isThermal,
+                      mergeByAsset: _mergeDebtsByAsset, weights: accountWeights
+                  });
+                  const isDebt = _t.isDebt;
+
                   drawnRooms.push({ id: acc.id, taxCode: base.taxCode, isDebt: isDebt, isPriority: acc.isPriority, cx: d.cx, cy: d.cy, col: colName, value: Math.abs(acc.value || 0) });
 
                   if(acc.isNew) newRoomToTrace = d; 
@@ -1241,17 +1418,12 @@
                   bounds.maxX = Math.max(bounds.maxX, currentX + colW);
                   bounds.maxY = Math.max(bounds.maxY, currentY + h);
 
-                  let tooltipHTML = '';
-                  if(base.taxCode === 'physical' || base.taxCode === 'debt' || base.hasInterest) {
-                      tooltipHTML = `<title>${base.desc}</title>`;
-                  }
-
                   const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
                   /* A REVOCABLE trust is drawn INSIDE the estate (it is still legally yours) but must
                      still READ as a trust, so it keeps the purple the Trust Wing uses. Same class and
                      same colour token as the outside wing — one visual language for one legal thing,
                      placed by what the trust IS rather than by where the renderer happened to put it. */
-                  const _isTrustRoom = base.taxCode === 'trust';
+                  const _isTrustRoom = _t.isTrust;
                   g.setAttribute('class', `room-grp visible ${isDebt ? 'debt-room' : ''}${_isTrustRoom ? ' trust-room' : ''}`);
                   g.setAttribute('onclick', `openAccountModal('${acc.id}')`);
                   g.style.cursor = 'pointer';
@@ -1264,58 +1436,11 @@
                                    last: (i === accounts.length - 1),
                                    weight: accountWeights[acc.id] || 0, meta: base.meta });   // A.1: load-bearing + role
 
-                  let animClass = acc.isNew ? 'animate-draw' : '';
-                  let frictionClass = acc.isFriction ? 'liquidity-friction' : '';
-                  let priorityClass = acc.isPriority ? 'structural-priority' : '';
-                  
-                  let shockColor = (isShocked && isVolatile && !isDebt) ? 'var(--danger)' : (isDebt ? 'var(--danger)' : 'var(--white)');
-                  
-                  let taxClass = '';
-                  if(isThermal) taxClass = `tax-${base.taxCode}`;
-
-                  // IDEA-1 — does a linked debt merge onto THIS asset (e.g. auto-loan -> vehicle)?
-                  // The room stays OPEN (no border, no seal); EQUITY drives the FILL color exactly like
-                  // every other block — teal when positive, the debt red gradient when underwater — so
-                  // pos/neg reads at a glance. Dual label + NET EQUITY (asset - debt) are DISPLAY-only.
-                  let _mergeDebts = (!isDebt) ? (_mergeDebtsByAsset[acc.id] || []) : [];   // §18.6 — ALL liens
-                  let _mergeEq = _mergeDebts.length ? _netEquityOf(acc.value, _mergeDebts) : null;
-                  let _mergeNeg = (_mergeEq !== null && _mergeEq < 0);
-                  // §12.12 — the room token follows §19.1; the lien tokens are UNCHANGED (THE MOAT and
-                  // THE CELLAR are the same words on every purpose), so _lienMetaSuffix is untouched.
-                  let _roomTitle = _roomNameOf(acc, base).toUpperCase() + (_mergeDebts.length ? _lienMetaSuffix(_mergeDebts) : '');
-                  let _titleY = _mergeDebts.length ? (d.cy - 20) : (d.cy - 10);
-                  // §19.11a — 'asset' STAYS, and this is a DELIBERATE DIFFERENCE, not drift. The other
-                  // three call sites became 'property' because they only ever draw real estate. This one
-                  // is the GENERIC merge chip on the ordinary room loop (!isDebt, any asset carrying a
-                  // lien — the comment above names auto-loan -> vehicle). Forcing 'property' here would
-                  // print "this property's value" on a car to fix a sentence on a house. Checked
-                  // 2026-08-06: callers are cross-room, so the noun stays the widest true one.
-                  let _mergeChip = _mergeDebts.length ? _linkChipSVG(d.x + 6, d.y + 6, _lienMirrorNotice(_mergeDebts, 'asset')) : '';
-                  let _valBlock = _mergeDebts.length
-                    ? `
-                    <text x="${d.cx}" y="${d.cy - 2}" class="bp-title" style="fill:${_mergeNeg ? 'var(--danger)' : 'var(--teal-mid)'}; opacity:0.75; font-size:11px; letter-spacing:0.12em;">NET EQUITY</text>
-                    <text x="${d.cx}" y="${d.cy + 24}" class="bp-val" style="fill:${_mergeNeg ? 'var(--danger)' : 'var(--gold)'}; font-size:18px;">${_eqStr(_mergeEq)}</text>`
-                    : `<text x="${d.cx}" y="${d.cy + 30}" class="bp-val" style="fill:${shockColor}; transition: 0.6s ease;">${valStr}</text>`;
-
-                  // S2.4 — load-bearing weight (read from hub) + concave fill on RAW value.
-                  let weight = accountWeights[acc.id] || 0;
-                  let fp = fillPct(acc.value || 0);
-                  let fillH = d.h * fp / 100, fillY = d.y + d.h - fillH;
-                  g.style.setProperty('--weight', weight);
-                  let _roomDebtFill = isDebt || _mergeNeg;   // underwater merge fills red like a debt
-                  let fillHTML = fp > 0 ? `
-                    <rect x="${d.x}" y="${fillY}" width="${d.w}" height="${fillH}" class="room-fill${_roomDebtFill ? ' fill-debt' : ''}" fill="url(#${_roomDebtFill ? 'fillGradDebt' : 'fillGradAsset'})" />` : '';
-
-                  g.innerHTML = `
-                    ${tooltipHTML}
-                    <rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" class="room-rect active ${animClass} ${frictionClass} ${priorityClass} ${taxClass}" style="stroke:none" />
-                    ${fillHTML}
-                    ${_mergeChip}
-                    <text x="${d.cx}" y="${_titleY}" class="bp-title"${_isTrustRoom ? ' style="fill:var(--shield)"' : ''}>${_roomTitle}</text>
-                    ${_valBlock}
-                  `;
+                  // S2.4 — load-bearing weight (read from hub, never recomputed) + concave fill.
+                  g.style.setProperty('--weight', _t.weight);
+                  g.innerHTML = _t.html;
                   svgContainer.appendChild(g);
-                  descriptors.push({ id: acc.id, el: g, rect: g.querySelector('.room-rect'), d: d, value: acc.value || 0, fillPct: fp, weight: weight, isNew: !!acc.isNew, taxCode: base.taxCode, isDebt: isDebt, isInvestment: !!base.isInvestment, isPriority: !!acc.isPriority });
+                  descriptors.push({ id: acc.id, el: g, rect: g.querySelector('.room-rect'), d: d, value: acc.value || 0, fillPct: _t.fillPct, weight: _t.weight, isNew: !!acc.isNew, taxCode: base.taxCode, isDebt: isDebt, isInvestment: !!base.isInvestment, isPriority: !!acc.isPriority });
 
                   currentY += h + gap;
               });
@@ -1414,9 +1539,24 @@
                      only a PROPERTY opens The Yard, and properties never sit in a column (they are
                      the grounds or they are satellites). The picker matches the tile by matching its
                      absence of a branch. */
+                  /* §25.4 — THE SECOND FLOOR IS DRAWN BY THE FIRST FLOOR'S OWN EMITTER. This closure
+                     is the whole bridge: it captures the SAME render inputs the column loop uses
+                     (shock, thermal, liens, hub weights) and calls the SAME _roomTileSVG, so an
+                     upstairs room cannot drift from how it would look downstairs.
+                     ⛔ `ownStroke` ON — there is no envelope pass in a modal to draw its walls.
+                     ⛔ `anim: false` — the draw-in animation is a birth event on the canvas; replaying
+                        it every time a door opens would animate a room the user built last week. */
+                  var _floorTile = function (acc, d) {
+                      var b = getBaseType(acc.baseId);
+                      if (!b) return null;
+                      return _roomTileSVG(acc, b, d, {
+                          isShocked: isShocked, isThermal: isThermal, ownStroke: true, anim: false,
+                          mergeByAsset: _mergeDebtsByAsset, weights: accountWeights
+                      });
+                  };
                   _makeFoldDoor(_cg, _colFolded, 'THE SECOND FLOOR',
                       _colHidden + (_colHidden === 1 ? ' room' : ' rooms') + ' up here. Pick one to enter it.',
-                      _cAria);
+                      _cAria, null, _floorTile);
                   svgContainer.appendChild(_cg);
                   bounds.minX = Math.min(bounds.minX, currentX);
                   bounds.maxX = Math.max(bounds.maxX, currentX + colW);

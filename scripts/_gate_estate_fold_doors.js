@@ -106,6 +106,12 @@ const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
        from the second floor and failed a correct product. A human label is prose; a branch key is
        data. 🔑 PROXIMITY IS NOT OWNERSHIP, and neither is a word appearing in a sentence. */
     { label: 'column tile (1 property + 14 accounts)', surface: 'floor', spec: [['property', 1], ['taxable', 14]] },
+    /* ⛔ §25.4 SCROLLS, NEVER CAPS — and the 14-account scene CANNOT PROVE IT. It folds 4 rooms, so
+       H sits on the 315 floor and the growth branch never executes. 26 accounts folds 16, which puts
+       H at 75n = 1200 and forces the box to scroll. 🔑 A FIXTURE THAT ONLY REACHES THE DEFAULT BRANCH
+       LEAVES THE OTHER BRANCH UNTESTED WEARING GREEN — the cap that isn't there must be shown absent
+       at a count where a cap would have bitten. */
+    { label: 'second floor at 16 rooms (must GROW, not cap)', surface: 'floor', spec: [['property', 1], ['taxable', 25]] },
     { label: 'satellite tile (9 properties)',          surface: 'props', spec: [['property', 9]] },
     /* §25.3 — the leg that would have caught tonight's trap. A folded property carrying a lien must
        open THE YARD, not the account modal, exactly as its tile does. */
@@ -141,11 +147,18 @@ const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
       dlg = await p.evaluate(() => {
         const d = document.querySelector('.datum-fold-picker [role="dialog"]');
         if (!d) return null;
+        const PICK = '.datum-fold-row, .datum-fold-room';
         return {
           modal: d.getAttribute('aria-modal'), labelled: !!d.getAttribute('aria-labelledby'),
-          rows: d.querySelectorAll('button.datum-fold-row').length,
-          focus: (document.activeElement.className || ''),
-          money: Array.from(d.querySelectorAll('button.datum-fold-row')).filter((r) => /\$/.test(r.innerText)).length,
+          /* §25.4 — the SECOND FLOOR is now DRAWN (svg room tiles); the other-properties surface is
+             still a row list. The population is whichever this surface emits. */
+          rows: d.querySelectorAll(PICK).length,
+          /* ⚠️ .className ON AN SVG ELEMENT IS AN SVGAnimatedString, NOT A STRING — it stringifies to
+             "[object Object]" and every match against it silently fails. §25.4 made the focused item
+             an SVG <g>, so this read had to stop assuming HTML. */
+          focus: (document.activeElement && document.activeElement.getAttribute
+                    ? (document.activeElement.getAttribute('class') || '') : ''),
+          money: Array.from(d.querySelectorAll(PICK)).filter((r) => /\$/.test(r.textContent || '')).length,
           text: (d.innerText || '').replace(/\s+/g, ' ').trim(),
         };
       });
@@ -159,7 +172,7 @@ const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
        the money must be visible — this is where "all counted in your totals" becomes checkable. */
     ck(`D· every row shows its balance — ${label}`, dlg.money === dlg.rows, `${dlg.money}/${dlg.rows} rows carry a figure`);
     ck(`D· the dialog is a real dialog (aria-modal + labelled + focus moved) — ${label}`,
-       dlg.modal === 'true' && dlg.labelled && /datum-fold-row/.test(dlg.focus), `modal=${dlg.modal} labelled=${dlg.labelled} focus=${dlg.focus}`);
+       dlg.modal === 'true' && dlg.labelled && /datum-fold-(row|room)/.test(dlg.focus), `modal=${dlg.modal} labelled=${dlg.labelled} focus=${dlg.focus}`);
 
     /* ══ §25.1 / §25.2 · THE RENDERER'S VOCABULARY MAY NOT REACH THE USER ═══════════════════════
        ⛔ A user has never once thought about a COLUMN, and nobody's house has FOLDED rooms. Those
@@ -191,6 +204,51 @@ const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
        ⭐ THREE LEGS, because "no click" alone is silent by construction — it passes on an empty
        label. The name must also SAY what it opens, and must still carry the counted-in-your-totals
        promise, which is the entire reason this tile may exist without a balance on its face. */
+    /* ══ §25.4 · THE SECOND FLOOR IS A FLOOR, NOT A DIRECTORY ═══════════════════════════════════
+       ⛔ EVERY LEG ABOVE WOULD PASS ON A ROW LIST. Green without these is untested wearing green —
+       they are the only assertions that can tell a DRAWN floor from a table of names.
+       Skipped on the other-properties surface, which still lists BY DESIGN (its tile is a different
+       emitter that has not been extracted) — asserted rather than assumed, one leg down. */
+    if (surface === 'floor') {
+      const floor = await p.evaluate(() => {
+        const svg = document.querySelector('.datum-fold-picker svg.datum-fold-floor');
+        if (!svg) return null;
+        const vb = (svg.getAttribute('viewBox') || '').split(/\s+/).map(Number);
+        const gs = Array.from(svg.querySelectorAll('g.datum-fold-room'));
+        return {
+          n: gs.length, vbW: vb[2], vbH: vb[3],
+          /* THE CAPTAIN'S ACTUAL ASK WAS "outlined in green". A first-floor column room carries
+             style="stroke:none" because the ENVELOPE draws its walls — so a verbatim copy into a
+             modal is invisible. ownStroke must have removed it. */
+          strokeless: gs.filter((g) => { const r = g.querySelector('rect.room-rect');
+            return !r || /stroke:\s*none/.test(r.getAttribute('style') || ''); }).length,
+          named: gs.filter((g) => (g.querySelector('text.bp-title') || {}).textContent).length,
+          valued: gs.filter((g) => /\$/.test((g.querySelector('text.bp-val') || {}).textContent || '')).length,
+          hittable: gs.filter((g) => g.getAttribute('pointer-events') === 'all').length,
+          keyable: gs.filter((g) => g.getAttribute('role') === 'button' && g.getAttribute('tabindex') === '0').length,
+          /* §22.6's lesson, one level down: nothing may be drawn outside the box that holds it. */
+          outside: gs.filter((g) => { const r = g.querySelector('rect.room-rect'); if (!r) return true;
+            return (+r.getAttribute('y')) < 0 || (+r.getAttribute('y')) + (+r.getAttribute('height')) > vb[3] + 0.5
+                || (+r.getAttribute('x')) < 0 || (+r.getAttribute('x')) + (+r.getAttribute('width')) > vb[2] + 0.5; }).length,
+        };
+      });
+      ck(`F· the second floor is DRAWN, not listed — ${label}`, !!floor, floor ? 'svg.datum-fold-floor present' : '*** no drawn floor — still a directory ***');
+      if (floor) {
+        ck(`F· it draws EVERY upstairs room (no cap, it scrolls) — ${label}`, floor.n === meta.n, `${floor.n} drawn vs ${meta.n} upstairs`);
+        ck(`F· every room is OUTLINED — stroke:none was removed — ${label}`, floor.strokeless === 0, `${floor.strokeless}/${floor.n} unoutlined`);
+        ck(`F· every room carries its NAME — ${label}`, floor.named === floor.n, `${floor.named}/${floor.n}`);
+        ck(`F· and its BALANCE — this is where "all counted" becomes checkable — ${label}`, floor.valued === floor.n, `${floor.valued}/${floor.n}`);
+        ck(`F· every room is hit-testable across its face, not just its stroke — ${label}`, floor.hittable === floor.n, `${floor.hittable}/${floor.n} pointer-events=all`);
+        ck(`F· and reachable by keyboard — ${label}`, floor.keyable === floor.n, `${floor.keyable}/${floor.n} role+tabindex`);
+        ck(`F· NO room is drawn outside the floor's own box — ${label}`, floor.outside === 0, `${floor.outside} outside viewBox ${floor.vbW}x${floor.vbH}`);
+        /* THE DERIVATION, ASSERTED. H = max(315, 75n): 315 is the first floor's 750-unit band scaled
+           by 404/960; 75 is its own minH. A number without its derivation rots — so pin the number. */
+        ck(`F· the floor's height is the DERIVED one, max(315, 75n) — ${label}`,
+           floor.vbW === 404 && Math.abs(floor.vbH - Math.max(315, 75 * meta.n)) < 0.5,
+           `viewBox ${floor.vbW}x${floor.vbH}, expected 404x${Math.max(315, 75 * meta.n)}`);
+      }
+    }
+
     const aria = meta.aria || '';
     ck(`N· the accessible name names no input device — ${label}`, !/\bclick|\btap|\bmouse/i.test(aria),
        /\bclick|\btap|\bmouse/i.test(aria) ? `*** "${aria.match(/\bclick|\btap|\bmouse/i)[0]}" in an accessible name ***` : 'device-neutral');
@@ -217,9 +275,17 @@ const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
        single-pick assertion could still have looked stable — the Captain only SAW the shuffle on the
        second open, because that is when the folded set came back different. One pick proves nothing
        an accident could not also produce. */
-    const fingerprint = () => p.evaluate(() =>
-      Array.from(document.querySelectorAll('g.room-grp'))
-        .map((g) => g.getAttribute('onclick') || g.getAttribute('class') || '?').join(' | '));
+    /* ⛔ SCOPED TO #bp-svg, AND §25.4 IS WHY. The drawn second floor emits g.room-grp elements INSIDE
+       THE MODAL, so a document-wide selector would fold the picker's own tiles into the "drawn set"
+       and this leg would quietly start measuring picker+canvas instead of canvas.
+       🔑 A SELECTOR THAT WAS UNAMBIGUOUS WHEN WRITTEN CAN BE MADE AMBIGUOUS BY A LATER FEATURE.
+       It also does double duty on the Architect's named risk: a picker tile that leaked into the
+       estate would show up here as the canvas changing. */
+    const fingerprint = () => p.evaluate(() => {
+      const svg = document.getElementById('bp-svg');
+      return svg ? Array.from(svg.querySelectorAll('g.room-grp'))
+        .map((g) => g.getAttribute('onclick') || g.getAttribute('class') || '?').join(' | ') : 'NO-SVG';
+    });
     const pickState = () => p.evaluate(() => {
       const vis = (id) => { const e = document.getElementById(id);
         return !!e && getComputedStyle(e).display !== 'none'; };
@@ -233,7 +299,7 @@ const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
     });
 
     const fp0 = await fingerprint();
-    await p.click('.datum-fold-picker button.datum-fold-row');
+    await p.click('.datum-fold-picker .datum-fold-row, .datum-fold-picker .datum-fold-room');
     await p.waitForTimeout(650);
     const fp1 = await fingerprint();
     const st1 = await pickState();
@@ -260,7 +326,7 @@ const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
        fold, and `link` mortgages the last), so one click proves both that the canvas held still and
        that the branch resolved correctly. */
     await closeRooms();
-    const rows = await p.$$('.datum-fold-picker button.datum-fold-row');
+    const rows = await p.$$('.datum-fold-picker .datum-fold-row, .datum-fold-picker .datum-fold-room');
     if (yardRow !== undefined) {
       ck(`Y· the fixture REACHED a mortgaged folded property — ${label}`, rows.length > yardRow,
          `${rows.length} folded row(s), needed index ${yardRow}`);
