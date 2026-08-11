@@ -36,6 +36,156 @@
     return (M && typeof M.combinedName === 'function') ? M.combinedName(acc) : 'The Yard';
   }
 
+  /* ══ §24 · A DOOR THAT DOES NOT OPEN IS A WALL WITH WRITING ON IT ═══════════════════════════════
+   * THE DEFECT THIS CLOSES, AND IT WAS TWO DEFECTS. The satellite "+N more properties" stack has been
+   * UNCLICKABLE SINCE THE DAY IT SHIPPED — not a broken handler, NO handler — and §22.7's column tile
+   * was born the same way this evening, because the spec said "a door" and never said "it opens".
+   * The Captain found both in ten seconds by clicking them. ⛔ NO GATE CLICKS ANYTHING, which is why
+   * a dead affordance is invisible to the entire suite: the instrument only ever reads the drawing.
+   * 🔑 COPY THAT DESCRIBES HIDDEN CONTENT IS A PROMISE OF AN AFFORDANCE. "+2 MORE ROOMS IN THIS
+   *    COLUMN" is a sentence that invites a click; shipping it without one is an advertisement for a
+   *    door that isn't there.
+   *
+   * WHY A NEW SURFACE RATHER THAN THE EXISTING PICKER (L48 measured, not assumed). studio.html's
+   * `room-picker` is the ADD-ACCOUNT flow: choosing an entry runs `state.accounts.push({...})`. It is
+   * a TYPE chooser that CREATES; §24 needs an INSTANCE chooser that REVEALS. Those are opposite
+   * operations sharing a word, and bending one into the other risks the worst possible mis-wire —
+   * adding an account when the user asked to look at one. Reported and refused rather than forced.
+   *
+   * ⛔ NO NEW acc.* FIELD. The revealed set is MODULE state keyed by surface, so this stays inside
+   * the proven-safe rollback envelope (a rollback across a schema change is not proven safe, and we
+   * have no schema-version story).
+   *
+   * DISPLACEMENT IS SWAP, NOT GROW, AND THE GEOMETRY DECIDED IT: growing to 11 rooms + 1 tile is 12
+   * slots at 750/12 = 62.5 units, which is EXACTLY the 62.5-unit text stack — the zero-margin
+   * boundary cap-11 exists to avoid. Captain ruled the LAST DRAWN SLOT is the one displaced. */
+  var _revealOrder = Object.create(null);          // surfaceKey -> [accId] , most recently revealed first
+
+  function _revealFold(key, id, cap) {
+    var l = _revealOrder[key] || (_revealOrder[key] = []);
+    var i = l.indexOf(id);
+    if (i >= 0) l.splice(i, 1);
+    l.unshift(id);
+    var room = Math.max(1, cap - 1);
+    if (l.length > room) l.length = room;           // can never pin more than the band can draw
+  }
+
+  /* Revealed rooms take the LAST drawn slots, so what they displace is the bottom of the stack and
+     the movement is visible rather than mysterious. Natural order is otherwise untouched. */
+  function _applyReveal(key, arr, cap) {
+    var l = _revealOrder[key];
+    if (!l || !l.length || arr.length <= cap) return arr;
+    var pinned = [], rest = [];
+    arr.forEach(function (a) { (l.indexOf(a.id) >= 0 ? pinned : rest).push(a); });
+    if (!pinned.length) return arr;
+    pinned.sort(function (a, b) { return l.indexOf(a.id) - l.indexOf(b.id); });
+    var shown = Math.max(1, cap - 1);
+    var headN = Math.max(0, shown - pinned.length);
+    return rest.slice(0, headN).concat(pinned, rest.slice(headN));
+  }
+
+  function _foldMoney(v) {
+    var n = Math.abs(parseFloat(v) || 0);
+    if (!n) return '';                                     // L47 sourced-or-blank — a blank is never $0
+    if (n >= 1000000) return '$' + (n / 1000000).toFixed(2) + 'M';
+    if (n >= 1000) return '$' + Math.round(n / 1000) + 'k';
+    return '$' + Math.round(n);
+  }
+
+  /* THE PICKER. Built here rather than in studio.html so this ships with ZERO sacred-host bytes.
+     ⚠️ ACCESSIBILITY IS NOT A FOLLOW-UP ON THIS ONE. It is the canvas's first real interactive
+     control, and it GATES ACCESS TO DATA — a control only a mouse can reach would make those rooms
+     permanently unreachable for some users, which is strictly worse than the dead tile it replaces. */
+  function _openFoldPicker(key, folded, cap, headline, subhead) {
+    if (!folded || !folded.length) return;                 // no derivable set -> no dialog, ever
+    var prev = document.activeElement;
+    var back = document.createElement('div');
+    back.className = 'datum-fold-picker';
+    back.setAttribute('style', 'position:fixed;inset:0;z-index:4000;background:rgba(2,6,14,0.72);' +
+        'display:flex;align-items:center;justify-content:center;padding:24px;');
+    var titleId = 'foldpick-' + Math.random().toString(36).slice(2, 8);
+    var box = document.createElement('div');
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-modal', 'true');
+    box.setAttribute('aria-labelledby', titleId);
+    box.setAttribute('style', 'background:#060b14;border:1px solid var(--shield, #8a64ff);border-radius:6px;' +
+        'min-width:320px;max-width:440px;width:100%;max-height:70vh;overflow:auto;' +
+        'box-shadow:0 24px 60px rgba(0,0,0,0.9);padding:18px 18px 12px;');
+    var h = document.createElement('div');
+    h.id = titleId;
+    h.setAttribute('style', 'font-family:var(--font-mono);font-size:12px;letter-spacing:0.16em;color:var(--shield,#8a64ff);font-weight:bold;');
+    h.textContent = headline;
+    var s = document.createElement('div');
+    s.setAttribute('style', 'font-family:var(--font-serif);font-size:12px;color:var(--muted,#8fa3b8);margin:6px 0 14px;');
+    s.textContent = folded.length + subhead;
+    box.appendChild(h); box.appendChild(s);
+
+    folded.forEach(function (acc) {
+      var base = getBaseType(acc.baseId) || {};
+      var row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'datum-fold-row';
+      row.setAttribute('style', 'display:flex;width:100%;justify-content:space-between;align-items:center;gap:12px;' +
+          'background:transparent;border:1px solid rgba(138,100,255,0.25);border-radius:4px;cursor:pointer;' +
+          'padding:10px 12px;margin-bottom:8px;text-align:left;color:inherit;font:inherit;');
+      var nm = document.createElement('span');
+      nm.setAttribute('style', 'font-family:var(--font-mono);font-size:11px;letter-spacing:0.1em;color:var(--teal-mid,#1d9e75);');
+      nm.textContent = String(_roomNameOf(acc, base) || base.meta || '').toUpperCase();
+      var vl = document.createElement('span');
+      vl.setAttribute('style', 'font-family:var(--font-serif);font-size:13px;color:#fff;');
+      /* ⭐ THE BALANCE IS THE POINT. The collapse tile is forbidden from quoting one because you
+         cannot open into it; the moment you CAN, the money must be visible — this is where "all
+         counted in your totals" stops being an assertion and becomes something the user can check. */
+      vl.textContent = _foldMoney(acc.value);
+      row.appendChild(nm); row.appendChild(vl);
+      row.addEventListener('click', function () {
+        _revealFold(key, acc.id, cap);
+        close();
+        if (typeof window.updateSVGs === 'function') window.updateSVGs();
+      });
+      box.appendChild(row);
+    });
+
+    function close() {
+      document.removeEventListener('keydown', onKey, true);
+      if (back.parentNode) back.parentNode.removeChild(back);
+      if (prev && typeof prev.focus === 'function') { try { prev.focus(); } catch (e) {} }
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+      if (e.key !== 'Tab') return;
+      var f = box.querySelectorAll('button');
+      if (!f.length) return;
+      var first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+    back.addEventListener('click', function (e) { if (e.target === back) close(); });
+    document.addEventListener('keydown', onKey, true);
+    back.appendChild(box);
+    document.body.appendChild(back);
+    var f0 = box.querySelector('button');
+    if (f0) f0.focus();
+  }
+
+  /* One place that makes a collapse tile a real control, so surface #3 cannot be born dead. */
+  function _makeFoldDoor(g, key, folded, cap, headline, subhead, aria) {
+    g.setAttribute('role', 'button');
+    g.setAttribute('tabindex', '0');
+    g.setAttribute('aria-label', aria);
+    g.style.cursor = 'pointer';
+    /* ⛔ pointer-events:all IS LOAD-BEARING, AND ONLY A REAL CLICK FOUND IT. An SVG rect with no
+       fill is HIT-TESTABLE ONLY ON ITS STROKE — so a collapse tile, which deliberately carries no
+       fill because it quotes no balance, was a 1px dashed outline of a click target with a hole in
+       the middle. Adding the handler alone would have produced a door that opens only if you hit
+       the frame. A gate that reads the DOM would have seen role, tabindex and a listener and called
+       it done. 🔑 AN AFFORDANCE IS NOT PROVEN BY ITS ATTRIBUTES, ONLY BY BEING HIT. */
+    g.setAttribute('pointer-events', 'all');
+    var open = function (e) { if (e) { e.preventDefault(); e.stopPropagation(); } _openFoldPicker(key, folded, cap, headline, subhead); };
+    g.addEventListener('click', open);
+    g.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') open(e); });
+  }
+
   /* ── §22 · _bandLayout — ONE SUBDIVISION ALGORITHM FOR EVERY VERTICAL BAND ───────────────────
    * Stacks n tiles down a band, weighted by value, so that the stack fills the band EXACTLY: the
    * first tile alone spans it, two split it, three subdivide again. Both wings call this and there
@@ -694,10 +844,12 @@
           var sTop = gY + 20, sBot = gY + gH;    // aligned with the room stack inside the estate
           var sH = 95, sGap = 15, sPitch = sH + sGap;
           var sCap = Math.max(1, Math.floor((sBot - sTop + sGap) / sPitch));
-          var sShown = satellites, sHidden = 0;
+          var sShown = satellites, sHidden = 0, sFolded = [];
           if (satellites.length > sCap) {        // RULING 5 — a band that would overflow COLLAPSES to one
+              satellites = _applyReveal('sat', satellites, sCap);   // §24 — revealed rooms take the last drawn slots
               sShown = satellites.slice(0, sCap - 1);   // counted tile. A tile too small to read is worse
               sHidden = satellites.length - sShown.length;   // than an honest count.
+              sFolded = satellites.slice(sShown.length);
           }
 
           /* ── §22 · THE TILE STOPS BEING A POSTAGE STAMP ───────────────────────────────────────
@@ -873,6 +1025,12 @@
                       '" class="room-rect active" style="stroke-dasharray:4 4;" />' +
                   '<text x="' + (cd.x + cd.w / 2) + '" y="' + (cd.y + cd.h / 2 + Math.round(4 * cR * 10) / 10) + '" class="bp-title" style="font-size:' +
                       (Math.round(11 * cR * 10) / 10) + 'px;">' + sHidden + ' more properties</text>';
+              /* §24 — THIS TILE HAS BEEN DEAD SINCE THE DAY IT SHIPPED. Not a regression introduced
+                 tonight: it never had a handler at all, and no gate could see that because no gate
+                 clicks anything. It opens now. */
+              _makeFoldDoor(cg, 'sat', sFolded, sCap, 'PROPERTIES IN THIS WING',
+                  ' folded. Pick one to bring it into view.',
+                  sHidden + ' more properties in this wing. Activate to pick one to bring into view.');
               svgContainer.appendChild(cg);
           }
       }
@@ -981,10 +1139,12 @@
                * not exist. Flagged as a real consequence, not hidden: a folded room shows no
                * corridor until it is unfolded. */
               var _COL_CAP = 11;
-              var _colShown = accounts, _colHidden = 0;
+              var _colShown = accounts, _colHidden = 0, _colFolded = [];
               if (accounts.length > _COL_CAP) {
+                  accounts = _applyReveal('col:' + colName, accounts, _COL_CAP);   // §24
                   _colShown = accounts.slice(0, _COL_CAP - 1);       // last slot belongs to the tile
                   _colHidden = accounts.length - _colShown.length;
+                  _colFolded = accounts.slice(_colShown.length);
               }
               /* The collapsed tile takes a REAL slot weighted by everything it stands for, so the
                  stack still fills the band exactly — same rule the satellite wing follows. */
@@ -1142,6 +1302,9 @@
                           '" class="bp-title" style="font-size:14px;">' + _l1 + '</text>' +
                       (_l2 ? '<text x="' + (currentX + colW / 2) + '" y="' + (_cRow.y + _cRow.h / 2 + 14) +
                           '" class="bp-title" style="font-size:9px; opacity:0.85;">' + _l2 + '</text>' : '');
+                  _makeFoldDoor(_cg, 'col:' + colName, _colFolded, _COL_CAP, 'ROOMS IN THIS COLUMN',
+                      ' folded. Pick one to bring it into view.',
+                      _colHidden + ' more rooms in this column. Activate to pick one to bring into view.');
                   svgContainer.appendChild(_cg);
                   bounds.minX = Math.min(bounds.minX, currentX);
                   bounds.maxX = Math.max(bounds.maxX, currentX + colW);
