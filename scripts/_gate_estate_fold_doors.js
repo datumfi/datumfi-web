@@ -64,13 +64,21 @@ const clearCovers = (p) => p.evaluate(() => {
   });
 });
 
-const build = (p, spec) => p.evaluate((s) => {
+/* `link` mortgages the LAST property added. That property is provably one of the FOLDED satellites
+   (9 properties -> 1 grounds owner + 8 satellites; sCap=7 so 6 draw and the last TWO fold), which is
+   what makes the Yard leg below reach the state it claims to test rather than wearing green. */
+const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
   try { localStorage.clear(); } catch (e) {}
   window.state.accounts = [];
   for (const [t, n] of s) for (let i = 0; i < n; i++) addInstance(t);
   window.state.accounts.forEach((a, i) => { a.value = 100000 + i * 1000; });
+  if (lk) {
+    const props = window.state.accounts.filter((a) => a.baseId === 'property');
+    const debt = window.state.accounts.find((a) => (getBaseType(a.baseId) || {}).taxCode === 'debt');
+    if (props.length && debt) debt.linkedAssetId = props[props.length - 1].id;
+  }
   updateSVGs();
-}, spec);
+}, { s: spec, lk: !!link });
 
 (async () => {
   await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
@@ -85,15 +93,24 @@ const build = (p, spec) => p.evaluate((s) => {
   const checks = [];
   const ck = (n, ok, obs) => checks.push([n, !!ok, obs === undefined ? '' : String(obs)]);
 
-  /* ⚠️ FIXTURES MUST REACH THE FOLDED STATE OR THIS IS UNTESTED WEARING GREEN (§13.93). 12+ in one
-     column and 7+ properties are the counts at which each surface actually folds. */
+  /* ⚠️ FIXTURES MUST REACH THE FOLDED STATE OR THIS IS UNTESTED WEARING GREEN (§13.93).
+     ⭐ THE COUNTS ARE DERIVED, AND THE OLD COMMENT HERE SAID "7+ properties", WHICH WAS WRONG.
+     Measured 2026-08-11 from the live geometry: sCap = floor((sBot-sTop+sGap)/sPitch)
+     = floor((1010-180+15)/110) = 7, and the stack appears only when satellites EXCEED it. The first
+     property becomes The Grounds (§19.15 — born a Primary residence), so it takes NINE property
+     rooms to fold the satellite stack, not seven. Column side: _COL_CAP = 11, so 12+ in one column.
+     🔑 A NUMBER WITHOUT ITS DERIVATION ROTS — this one had, silently, inside a fixture comment. */
   const SCENES = [
-    ['column tile (1 property + 14 accounts)', [['property', 1], ['taxable', 14]]],
-    ['satellite tile (9 properties)',          [['property', 9]]],
+    { label: 'column tile (1 property + 14 accounts)', spec: [['property', 1], ['taxable', 14]] },
+    { label: 'satellite tile (9 properties)',          spec: [['property', 9]] },
+    /* §25.3 — the leg that would have caught tonight's trap. A folded property carrying a lien must
+       open THE YARD, not the account modal, exactly as its tile does. */
+    { label: 'satellite tile, LAST property mortgaged', spec: [['property', 9], ['mortgage_joint', 1]],
+      link: true, yardRow: 1 },
   ];
 
-  for (const [label, spec] of SCENES) {
-    await build(p, spec); await p.waitForTimeout(650); await clearCovers(p);
+  for (const { label, spec, link, yardRow } of SCENES) {
+    await build(p, spec, link); await p.waitForTimeout(650); await clearCovers(p);
 
     const surfaces = await p.$$('[data-collapsed-count]');
     ck(`P· fixture REACHED a folded state — ${label}`, surfaces.length >= 1, surfaces.length + ' collapse surface(s)');
@@ -139,16 +156,87 @@ const build = (p, spec) => p.evaluate((s) => {
     ck(`D· the dialog is a real dialog (aria-modal + labelled + focus moved) — ${label}`,
        dlg.modal === 'true' && dlg.labelled && /datum-fold-row/.test(dlg.focus), `modal=${dlg.modal} labelled=${dlg.labelled} focus=${dlg.focus}`);
 
-    // Picking swaps: the fold COUNT is unchanged (one in, one out) and the total never moves.
-    const before = meta.n;
+    /* ══ §25.3 · THE DRAWN SET IS BYTE-IDENTICAL ACROSS A PICK ══════════════════════════════════
+       ⛔ THIS LEG IS AN INVERSION, NOT A NEW LEG. It used to read "picking a room SWAPS rather than
+       grows" and it PASSED — because it measured the exact behaviour that turned out to be the bug.
+       §24 made a pick swap the picked room into the drawn set and fold whatever it displaced, so the
+       folded pair was DIFFERENT on every open and the user could never learn his own house. A pick
+       is now a NO-OP on the drawing, which makes the correct assertion trivial: SAME LIST, SAME
+       ORDER. 🔑 A GATE THAT MEASURES THE BUG GOES GREEN ON THE BUG — invert it, never delete it.
+
+       ⭐ AND IT PICKS TWICE, WHICH IS THE WHOLE POINT. The old build reshuffled on every pick, but a
+       single-pick assertion could still have looked stable — the Captain only SAW the shuffle on the
+       second open, because that is when the folded set came back different. One pick proves nothing
+       an accident could not also produce. */
+    const fingerprint = () => p.evaluate(() =>
+      Array.from(document.querySelectorAll('g.room-grp'))
+        .map((g) => g.getAttribute('onclick') || g.getAttribute('class') || '?').join(' | '));
+    const pickState = () => p.evaluate(() => {
+      const vis = (id) => { const e = document.getElementById(id);
+        return !!e && getComputedStyle(e).display !== 'none'; };
+      return { mounted: !!document.querySelector('.datum-fold-picker'),
+               acct: vis('account-modal-overlay'), yard: vis('yard-modal-overlay') };
+    });
+    const closeRooms = () => p.evaluate(() => {
+      ['account-modal-overlay', 'yard-modal-overlay'].forEach((id) => {
+        const e = document.getElementById(id); if (e) e.style.display = 'none';
+      });
+    });
+
+    const fp0 = await fingerprint();
     await p.click('.datum-fold-picker button.datum-fold-row');
     await p.waitForTimeout(650);
-    const after = await p.evaluate(() => {
-      const e = document.querySelector('[data-collapsed-count]');
-      return { n: e ? +e.getAttribute('data-collapsed-count') : 0, closed: !document.querySelector('.datum-fold-picker') };
+    const fp1 = await fingerprint();
+    const st1 = await pickState();
+
+    ck(`S· A PICK OPENS A ROOM — ${label}`, st1.acct || st1.yard,
+       `account=${st1.acct} yard=${st1.yard}` + (st1.acct || st1.yard ? '' : ' *** picked nothing ***'));
+    ck(`S· the drawn set is UNCHANGED after one pick — ${label}`, fp1 === fp0,
+       fp1 === fp0 ? 'identical' : '*** THE CANVAS MOVED ***');
+    /* §25.3 AMENDED: the picker is visually REPLACED by the room, never destroyed. You go up, step
+       into a room, step back out onto the landing — the landing was not demolished while inside. */
+    ck(`S· and the second floor is STILL STANDING beneath it — ${label}`, st1.mounted,
+       st1.mounted ? 'picker mounted' : '*** picker destroyed — user lands on the canvas ***');
+
+    /* ⛔ THE ESCAPE GUARD. The picker's keydown is CAPTURE-phase on document and the account modal
+       has no Escape handler of its own, so an unguarded picker would close the floor out from under
+       an open room. This leg names that exact defect. */
+    await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+    const stEsc = await pickState();
+    ck(`S· Escape inside an open room does NOT close the floor beneath it — ${label}`, stEsc.mounted,
+       stEsc.mounted ? 'picker survived' : '*** Escape closed the second floor under the room ***');
+
+    /* THE SECOND PICK. On the mortgaged scene this same click doubles as the Yard leg — row 1 IS the
+       lien-carrying property (9 properties: 1 owns the ground, 8 satellite, 6 draw, the LAST TWO
+       fold, and `link` mortgages the last), so one click proves both that the canvas held still and
+       that the branch resolved correctly. */
+    await closeRooms();
+    const rows = await p.$$('.datum-fold-picker button.datum-fold-row');
+    if (yardRow !== undefined) {
+      ck(`Y· the fixture REACHED a mortgaged folded property — ${label}`, rows.length > yardRow,
+         `${rows.length} folded row(s), needed index ${yardRow}`);
+    }
+    const second = (yardRow !== undefined && rows.length > yardRow) ? yardRow : (rows.length > 1 ? 1 : 0);
+    if (rows.length) { await rows[second].click(); await p.waitForTimeout(650); }
+    const fp2 = await fingerprint();
+    const st2 = await pickState();
+    ck(`S· and the drawn set is STILL unchanged after a SECOND pick — ${label}`, fp2 === fp0,
+       fp2 === fp0 ? 'identical' : '*** the folded set differs on the second open ***');
+    if (yardRow !== undefined && rows.length > yardRow) {
+      ck(`Y· A MERGED SATELLITE OPENS THE YARD, NOT THE ACCOUNT MODAL — ${label}`,
+         st2.yard && !st2.acct, `yard=${st2.yard} account=${st2.acct}`);
+    }
+
+    /* Tear the floor down the way a user would, and assert the Escape guard RELEASES: with no room
+       above it, Escape must close the picker again. A guard that never lets go is its own bug. */
+    await closeRooms();
+    await p.keyboard.press('Escape'); await p.waitForTimeout(250);
+    const released = await p.evaluate(() => !document.querySelector('.datum-fold-picker'));
+    ck(`S· with no room above it, Escape closes the floor again (the guard RELEASES) — ${label}`,
+       released, released ? 'closed' : '*** picker stuck open ***');
+    if (!released) await p.evaluate(() => {
+      const d = document.querySelector('.datum-fold-picker'); if (d && d.parentNode) d.parentNode.removeChild(d);
     });
-    ck(`S· picking a room SWAPS rather than grows — ${label}`, after.n === before, `folded ${before} -> ${after.n}`);
-    ck(`S· and the dialog closes behind it — ${label}`, after.closed, after.closed ? 'closed' : 'still open');
 
     // KEYBOARD. A control that gates access to data may not be mouse-only.
     await p.focus('[data-collapsed-count]');

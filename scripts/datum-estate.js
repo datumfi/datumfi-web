@@ -52,36 +52,49 @@
    * operations sharing a word, and bending one into the other risks the worst possible mis-wire —
    * adding an account when the user asked to look at one. Reported and refused rather than forced.
    *
-   * ⛔ NO NEW acc.* FIELD. The revealed set is MODULE state keyed by surface, so this stays inside
-   * the proven-safe rollback envelope (a rollback across a schema change is not proven safe, and we
-   * have no schema-version story).
+   * ⛔ NO NEW acc.* FIELD anywhere in this arc, so we stay inside the proven-safe rollback envelope
+   * (a rollback across a schema change is not proven safe, and we have no schema-version story).
    *
-   * DISPLACEMENT IS SWAP, NOT GROW, AND THE GEOMETRY DECIDED IT: growing to 11 rooms + 1 tile is 12
-   * slots at 750/12 = 62.5 units, which is EXACTLY the 62.5-unit text stack — the zero-margin
-   * boundary cap-11 exists to avoid. Captain ruled the LAST DRAWN SLOT is the one displaced. */
-  var _revealOrder = Object.create(null);          // surfaceKey -> [accId] , most recently revealed first
+   * ══ §25.3 · THE DOOR OPENED ONTO THE WRONG SIDE — AND THE FIX IS A SUBTRACTION ═════════════════
+   * ~~"DISPLACEMENT IS SWAP, NOT GROW ... Captain ruled the LAST DRAWN SLOT is the one displaced."~~
+   * ⛔ STRUCK 2026-08-11, MEASURED BY A REAL CLICK. §24 shipped `_revealOrder` / `_revealFold` /
+   * `_applyReveal`: picking a room SWAPPED it into the drawn set and folded whatever it displaced.
+   * That was a faithful build of the spec and the spec was wrong, TWO ways:
+   *   A · THE VERB. A user who opens a door and picks a room expects to BE IN THAT ROOM. He was
+   *       instead returned to the canvas and asked to go find it.
+   *   B · WORSE — THE ESTATE BECAME NON-DETERMINISTIC. Because a pick swapped, the folded set was a
+   *       different pair on every open. A house whose rooms move when you look at them is not a
+   *       blueprint, it is a shuffle, and no user can build a mental model of it.
+   * 🔑 THE FIX DELETES THE QUESTIONS THE CODE WAS RAISING. No displaced room, so §24's "which slot
+   *    gets displaced" question does not need answering; the band arithmetic is never re-run, so
+   *    §22.6's no-overflow guarantee holds BY CONSTRUCTION rather than by care.
+   * ✅ AND IT IS REVERTIBLE WITHOUT CEREMONY: `_applyReveal` returned its input untouched whenever
+   *    `_revealOrder` was empty, which it ALWAYS is on load — so removing it is a provable no-op on
+   *    a cold paint. It only ever changed the picture AFTER a pick.
+   *
+   * ⭐ "THE SAME MODAL AS THE TILE" IS A PROMISE ABOUT A BRANCH, NOT ABOUT A FUNCTION NAME. A
+   * satellite carrying liens opens THE YARD (the combined room); everything else opens its account
+   * modal. A picker that always called openAccountModal would have opened the WRONG DOOR for exactly
+   * the properties most likely to be folded — the mortgaged ones — and it would have looked like it
+   * worked. So the branch lives HERE, in one function, and the tile and the picker both ask it.
+   * ⛔ NEVER re-derive this branch at a call site: two sites that must always agree are a
+   * hand-maintained list of two, which is the same rot as any other duplicated pair. */
+  function _roomModalFor(acc, merged) { return merged ? 'openYardModal' : 'openAccountModal'; }
 
-  function _revealFold(key, id, cap) {
-    var l = _revealOrder[key] || (_revealOrder[key] = []);
-    var i = l.indexOf(id);
-    if (i >= 0) l.splice(i, 1);
-    l.unshift(id);
-    var room = Math.max(1, cap - 1);
-    if (l.length > room) l.length = room;           // can never pin more than the band can draw
-  }
-
-  /* Revealed rooms take the LAST drawn slots, so what they displace is the bottom of the stack and
-     the movement is visible rather than mysterious. Natural order is otherwise untouched. */
-  function _applyReveal(key, arr, cap) {
-    var l = _revealOrder[key];
-    if (!l || !l.length || arr.length <= cap) return arr;
-    var pinned = [], rest = [];
-    arr.forEach(function (a) { (l.indexOf(a.id) >= 0 ? pinned : rest).push(a); });
-    if (!pinned.length) return arr;
-    pinned.sort(function (a, b) { return l.indexOf(a.id) - l.indexOf(b.id); });
-    var shown = Math.max(1, cap - 1);
-    var headN = Math.max(0, shown - pinned.length);
-    return rest.slice(0, headN).concat(pinned, rest.slice(headN));
+  /* Is a room modal currently stacked ABOVE the picker? The picker sits at z-index 4000; the account
+     modal is 10005 and The Yard is 10020, so a room visually REPLACES the picker without destroying
+     it — you go up, step into a room, step back out onto the landing. ⛔ THIS PREDICATE IS THE
+     ESCAPE FIX AND IT IS NOT OPTIONAL: the picker's keydown is registered in the CAPTURE phase and
+     the account modal has NO Escape handler of its own, so without this, Escape inside an open room
+     would close the second floor out from under it. Escape closes the topmost thing only. */
+  function _roomModalOpen() {
+    var ids = ['account-modal-overlay', 'yard-modal-overlay'];
+    for (var i = 0; i < ids.length; i++) {
+      var el = document.getElementById(ids[i]);
+      if (!el) continue;
+      try { if (window.getComputedStyle(el).display !== 'none') return true; } catch (e) {}
+    }
+    return false;
   }
 
   function _foldMoney(v) {
@@ -96,7 +109,7 @@
      ⚠️ ACCESSIBILITY IS NOT A FOLLOW-UP ON THIS ONE. It is the canvas's first real interactive
      control, and it GATES ACCESS TO DATA — a control only a mouse can reach would make those rooms
      permanently unreachable for some users, which is strictly worse than the dead tile it replaces. */
-  function _openFoldPicker(key, folded, cap, headline, subhead) {
+  function _openFoldPicker(folded, headline, subhead, mergedOf) {
     if (!folded || !folded.length) return;                 // no derivable set -> no dialog, ever
     var prev = document.activeElement;
     var back = document.createElement('div');
@@ -138,10 +151,17 @@
          counted in your totals" stops being an assertion and becomes something the user can check. */
       vl.textContent = _foldMoney(acc.value);
       row.appendChild(nm); row.appendChild(vl);
+      /* ⭐ §25.3 — THE PICKER IS A DOOR TO THE ROOM, NOT A CONTROL OVER THE DRAWING. Clicking a row
+         opens THAT ROOM'S OWN MODAL — the identical one the user gets by clicking its tile on the
+         first floor, resolved through the SAME branch the tile uses (_roomModalFor). ⛔ THE CANVAS
+         DOES NOT CHANGE: not during, not after. No updateSVGs, no re-layout, no reshuffle. */
       row.addEventListener('click', function () {
-        _revealFold(key, acc.id, cap);
-        close();
-        if (typeof window.updateSVGs === 'function') window.updateSVGs();
+        var fn = window[_roomModalFor(acc, mergedOf ? !!mergedOf(acc) : false)];
+        if (typeof fn === 'function') fn(acc.id);
+        /* ⛔ AND THE PICKER IS NOT DESTROYED. The room stacks above it (10005/10020 over 4000) with
+           an opaque backdrop, so it is visually REPLACED and the user never sees two dialogs — but
+           the landing is still standing when they close the room. Focus deliberately stays on this
+           row, so they step back out beside the room they just visited. */
       });
       box.appendChild(row);
     });
@@ -152,6 +172,12 @@
       if (prev && typeof prev.focus === 'function') { try { prev.focus(); } catch (e) {} }
     }
     function onKey(e) {
+      /* ⛔ STAND DOWN WHILE A ROOM IS OPEN ABOVE US. This handler is CAPTURE-phase on document, so
+         without this line Escape inside an open room would close the second floor beneath it and
+         leave the room hanging — a new bug shipped to fix an old one. Same for the Tab trap: focus
+         belongs to the topmost dialog. ⚠️ Escape from the PICKER ITSELF (nothing above it) still
+         closes it and still returns focus to the collapse tile — that behaviour is UNCHANGED. */
+      if (_roomModalOpen()) return;
       if (e.key === 'Escape') { e.preventDefault(); close(); return; }
       if (e.key !== 'Tab') return;
       var f = box.querySelectorAll('button');
@@ -169,7 +195,7 @@
   }
 
   /* One place that makes a collapse tile a real control, so surface #3 cannot be born dead. */
-  function _makeFoldDoor(g, key, folded, cap, headline, subhead, aria) {
+  function _makeFoldDoor(g, folded, headline, subhead, aria, mergedOf) {
     g.setAttribute('role', 'button');
     g.setAttribute('tabindex', '0');
     g.setAttribute('aria-label', aria);
@@ -181,7 +207,7 @@
        the frame. A gate that reads the DOM would have seen role, tabindex and a listener and called
        it done. 🔑 AN AFFORDANCE IS NOT PROVEN BY ITS ATTRIBUTES, ONLY BY BEING HIT. */
     g.setAttribute('pointer-events', 'all');
-    var open = function (e) { if (e) { e.preventDefault(); e.stopPropagation(); } _openFoldPicker(key, folded, cap, headline, subhead); };
+    var open = function (e) { if (e) { e.preventDefault(); e.stopPropagation(); } _openFoldPicker(folded, headline, subhead, mergedOf); };
     g.addEventListener('click', open);
     g.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') open(e); });
   }
@@ -846,7 +872,8 @@
           var sCap = Math.max(1, Math.floor((sBot - sTop + sGap) / sPitch));
           var sShown = satellites, sHidden = 0, sFolded = [];
           if (satellites.length > sCap) {        // RULING 5 — a band that would overflow COLLAPSES to one
-              satellites = _applyReveal('sat', satellites, sCap);   // §24 — revealed rooms take the last drawn slots
+              /* §25.3 — WHICH PROPERTIES DRAW AND WHICH GO UPSTAIRS IS DECIDED ONCE, BY BUILD ORDER,
+                 and opening the picker never changes it. (§24 re-ordered here; struck above.) */
               sShown = satellites.slice(0, sCap - 1);   // counted tile. A tile too small to read is worse
               sHidden = satellites.length - sShown.length;   // than an honest count.
               sFolded = satellites.slice(sShown.length);
@@ -970,9 +997,10 @@
               var sMerged = sDebts.length > 0;
               var g = document.createElementNS("http://www.w3.org/2000/svg", "g");
               g.setAttribute('class', 'room-grp visible satellite-room' + (sMerged ? ' satellite-merged' : ''));
-              g.setAttribute('onclick', sMerged
-                  ? "openYardModal('" + acc.id + "')"      // §1.2 — the merged tile opens the combined room
-                  : "openAccountModal('" + acc.id + "')");
+              /* §1.2 — the merged tile opens the combined room. §25.3 — THE BRANCH IS RESOLVED IN ONE
+                 PLACE so the second-floor picker asks the same question and cannot answer it
+                 differently. If this branch ever changes, the picker inherits it for free. */
+              g.setAttribute('onclick', _roomModalFor(acc, sMerged) + "('" + acc.id + "')");
               g.style.cursor = 'pointer';
 
               var weight = accountWeights[acc.id] || 0;   // S2.4 — READ from the hub, never recomputed (LOCK-3)
@@ -1028,9 +1056,14 @@
               /* §24 — THIS TILE HAS BEEN DEAD SINCE THE DAY IT SHIPPED. Not a regression introduced
                  tonight: it never had a handler at all, and no gate could see that because no gate
                  clicks anything. It opens now. */
-              _makeFoldDoor(cg, 'sat', sFolded, sCap, 'PROPERTIES IN THIS WING',
+              /* ⭐ mergedOf IS THE WHOLE POINT OF THE THIRD ARGUMENT. A folded property carrying a
+                 lien must open THE YARD from the picker, exactly as its tile would — and these are
+                 the mortgaged properties, the highest-stakes rooms in the set. Same predicate the
+                 tile reads six lines up (_mergeDebtsByAsset), never a second derivation. */
+              _makeFoldDoor(cg, sFolded, 'PROPERTIES IN THIS WING',
                   ' folded. Pick one to bring it into view.',
-                  sHidden + ' more properties in this wing. Activate to pick one to bring into view.');
+                  sHidden + ' more properties in this wing. Activate to pick one to bring into view.',
+                  function (a) { return (_mergeDebtsByAsset[a.id] || []).length > 0; });
               svgContainer.appendChild(cg);
           }
       }
@@ -1141,7 +1174,10 @@
               var _COL_CAP = 11;
               var _colShown = accounts, _colHidden = 0, _colFolded = [];
               if (accounts.length > _COL_CAP) {
-                  accounts = _applyReveal('col:' + colName, accounts, _COL_CAP);   // §24
+                  /* §25.3 — WHICH ROOMS DRAW AND WHICH GO UPSTAIRS IS DECIDED ONCE, BY BUILD ORDER.
+                     Opening the second floor and looking at it changes NOTHING here. (§24's
+                     _applyReveal removed — a state that changes because the user looked at it is not
+                     a view, it is a side effect.) */
                   _colShown = accounts.slice(0, _COL_CAP - 1);       // last slot belongs to the tile
                   _colHidden = accounts.length - _colShown.length;
                   _colFolded = accounts.slice(_colShown.length);
@@ -1302,7 +1338,13 @@
                           '" class="bp-title" style="font-size:14px;">' + _l1 + '</text>' +
                       (_l2 ? '<text x="' + (currentX + colW / 2) + '" y="' + (_cRow.y + _cRow.h / 2 + 14) +
                           '" class="bp-title" style="font-size:9px; opacity:0.85;">' + _l2 + '</text>' : '');
-                  _makeFoldDoor(_cg, 'col:' + colName, _colFolded, _COL_CAP, 'ROOMS IN THIS COLUMN',
+                  /* ⛔ NO mergedOf ON THE COLUMN SURFACE, AND THAT IS DELIBERATE, NOT AN OMISSION.
+                     The column tile at the room loop above is UNCONDITIONALLY openAccountModal — a
+                     car with an auto-loan merges its lien for DISPLAY but still opens its own room;
+                     only a PROPERTY opens The Yard, and properties never sit in a column (they are
+                     the grounds or they are satellites). The picker matches the tile by matching its
+                     absence of a branch. */
+                  _makeFoldDoor(_cg, _colFolded, 'ROOMS IN THIS COLUMN',
                       ' folded. Pick one to bring it into view.',
                       _colHidden + ' more rooms in this column. Activate to pick one to bring into view.');
                   svgContainer.appendChild(_cg);
