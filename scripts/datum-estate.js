@@ -955,11 +955,49 @@
                * ~31 units tall. The satellite wing caps its COUNT (sCap) and shows a collapsed
                * counted tile instead; the columns have no such cap. That is the right follow-up and
                * it needs authored copy for the collapsed tile, so it is flagged, not built here. */
-              var _colRows = _bandLayout(gY + 20, gY + gH - 80, gap, minH,
-                  accounts.map(function (a) { return a._renderVal; }));
+              /* ── §22.7 · THE COLLAPSED TILE — A DOOR, NOT A TRUNCATION ──────────────────────────
+               * §22.6 stopped rooms leaving the canvas by compressing them. That made the failure
+               * VISIBLE instead of invisible, which is progress, but at 24 accounts a tile is ~31
+               * units and the estate stops looking deliberate. This is the floor that keeps the
+               * crowded case honest until §23 makes it beautiful.
+               *
+               * ⛔ THE CAP IS DERIVED AND THE DERIVATION LIVES HERE SO IT CANNOT ROT INTO A MAGIC
+               * NUMBER. Column rooms do NOT scale their type — measured 14px title / 32px value at
+               * EVERY count, because §22.1's ratio is satellite-only — so their text stack is a
+               * CONSTANT 62.5 units. The largest count whose tile can still contain its own label is
+               * therefore floor(750 / 62.5) = 12 ... which is an EXACT fit with zero margin, and a
+               * constraint satisfied with zero margin is one the next unrelated rounding change
+               * breaks. Captain ruled 11: one room of headroom, deliberately spent.
+               * ⚠️ DO NOT "SIMPLIFY" THIS TO THE SATELLITE'S sCap OF 7. That number is
+               * floor((830+15)/110) and answers a DIFFERENT constraint — satellites scale their type
+               * and carry a 15-unit gap. Two caps that matched would look like a convention and be a
+               * coincidence.
+               *
+               * ⛔ DRAWN IS NOT COUNTED. Folded rooms stay in every total: colTotals and
+               * totalGlobalRender are computed above over ALL accounts, and the estate's money total
+               * never derives from what is drawn. What folding DOES change is routing — drawnRooms
+               * feeds the outflow corridors — so folded rooms are excluded from it BY NECESSITY, not
+               * by choice: leaving them in would draw corridors to the coordinates of tiles that do
+               * not exist. Flagged as a real consequence, not hidden: a folded room shows no
+               * corridor until it is unfolded. */
+              var _COL_CAP = 11;
+              var _colShown = accounts, _colHidden = 0;
+              if (accounts.length > _COL_CAP) {
+                  _colShown = accounts.slice(0, _COL_CAP - 1);       // last slot belongs to the tile
+                  _colHidden = accounts.length - _colShown.length;
+              }
+              /* The collapsed tile takes a REAL slot weighted by everything it stands for, so the
+                 stack still fills the band exactly — same rule the satellite wing follows. */
+              var _colWeights = _colShown.map(function (a) { return a._renderVal; });
+              if (_colHidden > 0) {
+                  var _colHidTot = 0;
+                  accounts.slice(_colShown.length).forEach(function (a) { _colHidTot += a._renderVal; });
+                  _colWeights.push(_colHidTot);
+              }
+              var _colRows = _bandLayout(gY + 20, gY + gH - 80, gap, minH, _colWeights);
               let currentY = gY + 20;
 
-              accounts.forEach((acc, i) => {
+              _colShown.forEach((acc, i) => {
                   let base = getBaseType(acc.baseId);
                   let valStr = '';
 
@@ -1072,6 +1110,45 @@
 
                   currentY += h + gap;
               });
+
+              /* §22.7 — THE COLLAPSED TILE. Copy is AUTHORED and installed verbatim (L47); the only
+                 decision here is WHICH RUNG, and that is FIT-DRIVEN AND MEASURED, never chosen.
+                 Mono is 0.75em per character (measured, §22.5), so the widest rung that fits is
+                 closed-form. ⛔ Never a dollar figure: a tile you cannot open into may not quote a
+                 balance. ⛔ Sourced-or-blank — no derivable count, no tile, never "+0" or "+?". */
+              if (_colHidden > 0 && _colRows.length === _colWeights.length) {
+                  var _cRow = _colRows[_colRows.length - 1];
+                  var _cFits = function (s, px) { return String(s).length * 0.75 * px <= (colW - 14); };
+                  var _l1 = '+' + _colHidden + ' MORE', _l2 = 'ROOMS IN THIS COLUMN';
+                  if (!(_cFits(_l1, 14) && _cFits(_l2, 9))) { _l2 = 'ROOMS'; }
+                  if (!(_cFits(_l1, 14) && _cFits(_l2, 9))) { _l1 = '+' + _colHidden; _l2 = ''; }
+                  /* ⛔ THE §22.1 FLOOR OUTRANKS THE LADDER. If even the minimum rung cannot fit at
+                     8px we do NOT shrink type to win a placement argument — we say so, loudly, and
+                     the tile still draws with the count, because a countable room the user can see
+                     beats a tidy tile that hides one. */
+                  if (!_cFits(_l1, 8)) {
+                      console.warn('[estate §22.7] collapsed tile cannot fit "' + _l1 + '" at the 8px floor in a ' +
+                          Math.round(colW) + '-unit column — drawing it anyway; STOP AND FLAG per §22.1.');
+                  }
+                  var _cTip = _colHidden + ' more rooms in this column. They are all counted in your totals.';
+                  var _cg = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                  _cg.setAttribute('class', 'room-grp visible column-collapse');
+                  _cg.setAttribute('data-collapsed-count', String(_colHidden));
+                  _cg.innerHTML =
+                      '<title>' + _cTip + '</title>' +
+                      '<rect x="' + currentX + '" y="' + _cRow.y + '" width="' + colW + '" height="' + _cRow.h +
+                          '" class="room-rect active" style="stroke-dasharray:4 4;" />' +
+                      '<text x="' + (currentX + colW / 2) + '" y="' + (_cRow.y + _cRow.h / 2 + (_l2 ? -2 : 5)) +
+                          '" class="bp-title" style="font-size:14px;">' + _l1 + '</text>' +
+                      (_l2 ? '<text x="' + (currentX + colW / 2) + '" y="' + (_cRow.y + _cRow.h / 2 + 14) +
+                          '" class="bp-title" style="font-size:9px; opacity:0.85;">' + _l2 + '</text>' : '');
+                  svgContainer.appendChild(_cg);
+                  bounds.minX = Math.min(bounds.minX, currentX);
+                  bounds.maxX = Math.max(bounds.maxX, currentX + colW);
+                  bounds.minY = Math.min(bounds.minY, _cRow.y);
+                  bounds.maxY = Math.max(bounds.maxY, _cRow.y + _cRow.h);
+                  currentY = _cRow.y + _cRow.h + gap;
+              }
 
               colInfo.push({ x: currentX, w: colW, top: gY + 20, bottom: currentY });   // Phase A — for the envelope
               currentX += colW + colGap;

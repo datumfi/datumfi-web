@@ -127,11 +127,22 @@ const scan = (p) => p.evaluate(([w, h, eps]) => {
     const okIn = t >= wing.y - eps && bo <= wing.y + wing.h + eps && l >= wing.x - eps && r <= wing.x + wing.w + eps;
     capOut = okIn ? null : `caption [${t.toFixed(0)}..${bo.toFixed(0)}]x[${l.toFixed(0)}..${r.toFixed(0)}] vs wing [${wing.y}..${wing.y + wing.h}]x[${wing.x}..${wing.x + wing.w}]`;
   }
+  /* §22.7 — COLLAPSED IS STILL DRAWN, ABSENT IS NOT. The column collapse tile folds rooms out of
+     the picture; the ONLY thing that makes that honest is that the count it reports is exact. A
+     tile that under-reports is worse than no tile, because it looks like an answer. */
+  const colRooms = Array.from(svg.querySelectorAll('.room-grp')).filter((g) => {
+    const r = g.querySelector('.room-rect'); if (!r) return false;
+    const x = +r.getAttribute('x'), w2 = +r.getAttribute('width');
+    return x >= 200 && x + w2 <= 1200 && !g.classList.contains('column-collapse');
+  }).length;
+  const colTiles = Array.from(svg.querySelectorAll('.column-collapse'));
+  const colFolded = colTiles.reduce((t, g) => t + (+g.getAttribute('data-collapsed-count') || 0), 0);
   return {
     offenders,
     capOut,
     nCap: caps.length,
     hasWing: !!wing,
+    colRooms, nColTiles: colTiles.length, colFolded,
     nTrust: document.querySelectorAll('.trust-room').length,
     nSat: document.querySelectorAll('.satellite-room').length,
   };
@@ -183,8 +194,9 @@ const clipCheck = (p) => p.evaluate(() => {
        outside the viewBox on the pre-fix build: drawn, counted in net worth, and clipped away by
        .canvas-wrapper. This gate could not see it because nothing here had ever built more than two
        ordinary accounts. 24 is the far end of the same failure. */
-    ['1 trust · 1 property + 18 taxable (a crowded column)',                1, 1, ['taxable', 18], { trust: 1 }],
-    ['1 trust · 1 property + 24 taxable (the far end)',                     1, 1, ['taxable', 24], { trust: 1 }],
+    ['1 trust · 1 property + 18 taxable (a crowded column)',                1, 1, ['taxable', 18], { trust: 1, col: 18 }],
+    ['1 trust · 1 property + 24 taxable (the far end)',                     1, 1, ['taxable', 24], { trust: 1, col: 24 }],
+    ['1 trust · 1 property + 50 taxable (the Captain\'s 50-room estate)',   1, 1, ['taxable', 50], { trust: 1, col: 50 }],
   ];
   for (const [label, nT, nP, extra, want] of SCENES) {
     await build(p, nT, nP, extra);
@@ -195,6 +207,17 @@ const clipCheck = (p) => p.evaluate(() => {
     ck(`P· fixture REACHED ${label}`, built, `${r.nTrust} trust / ${r.nSat} satellite`);
     ck(`V· NOTHING leaves the viewBox — ${label}`, r.offenders.length === 0,
        r.offenders.length ? r.offenders.length + ' offender(s): ' + r.offenders.slice(0, 3).join(' | ') : 'clean');
+    if (want.col) {
+      /* §22.7 — THE ACCOUNTING LEG. Not "a tile exists" (that is decoration) but "every account is
+         either DRAWN or COUNTED IN THE FOLD, and nothing is in neither". This is the leg that would
+         notice a tile that quietly under-reports, which is the one failure mode a collapse tile can
+         have that is worse than not existing. */
+      ck(`X· a collapse tile exists and its count is EXACT — ${label}`,
+         r.nColTiles === 1 && r.colRooms + r.colFolded === want.col,
+         `${r.colRooms} drawn + ${r.colFolded} folded = ${r.colRooms + r.colFolded}, expected ${want.col} (tiles: ${r.nColTiles})`);
+      ck(`X· the crowded column stops getting denser — ${label}`,
+         r.colRooms <= 11, r.colRooms + ' rooms drawn (cap 11)');
+    }
     if (want.trust > 0) {
       /* §22.4 — INVERTED, NOT DELETED. This leg used to assert the wing caption rendered and sat
          inside its box. The Captain then ruled the caption away entirely ("lets drop the wing for
