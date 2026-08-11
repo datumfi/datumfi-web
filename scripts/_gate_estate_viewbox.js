@@ -187,10 +187,16 @@ const clipCheck = (p) => p.evaluate(() => {
     ck(`V· NOTHING leaves the viewBox — ${label}`, r.offenders.length === 0,
        r.offenders.length ? r.offenders.length + ' offender(s): ' + r.offenders.slice(0, 3).join(' | ') : 'clean');
     if (want.trust > 0) {
-      // PRESENCE BEFORE CONTAINMENT: with no caption rendered at all, "not clipped" is vacuously true.
-      ck(`W· the wing caption RENDERS and sits INSIDE its box — ${label}`,
-         r.hasWing && r.nCap === 2 && r.capOut === null,
-         r.capOut || (!r.hasWing ? 'no wing box drawn' : r.nCap !== 2 ? `${r.nCap} caption line(s), expected 2` : 'inside'));
+      /* §22.4 — INVERTED, NOT DELETED. This leg used to assert the wing caption rendered and sat
+         inside its box. The Captain then ruled the caption away entirely ("lets drop the wing for
+         parity, not needed") on the argument that the LEFT wing has no caption either, so once every
+         room names itself a wing-level label is the odd one out.
+         The leg now guards the RULING instead of the layout: the wing box is still drawn, and no
+         wing-level caption comes back by accident. Deleting the leg would have left the decision
+         undefended; a re-added caption would simply reappear one day with nobody noticing. */
+      ck(`W· the wing box is drawn and carries NO wing-level caption — ${label}`,
+         r.hasWing && r.nCap === 0,
+         !r.hasWing ? 'no wing box drawn' : (r.nCap ? r.nCap + ' caption line(s) returned — §22.4 dropped them' : 'wing box present, no caption'));
     }
   }
 

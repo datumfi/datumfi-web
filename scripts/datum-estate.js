@@ -563,35 +563,35 @@
            * overflow is a real user-facing defect and it is NOT fixed here (out of scope: fixing the
            * Yard side was explicitly excluded).
            *
-           * ✅ WHAT WAS DONE INSTEAD. The band is untouched, so §22.2's parity survives EXACTLY —
-           * satellite 830 == trust 830, which is the thing the Captain approved yesterday and which
-           * shortening the band to make caption room would have silently broken. Instead the wing's
-           * box GROWS DOWN by _tCapH into y[1010,1100], which is empty in every state, and closes
-           * around the caption where it already sits. The caption does not move; the room comes to it.
-           *     container y[160,1010] -> y[160,1068]   ·   band y[180,1010] UNCHANGED
-           *     caption   y[1021..1061] now inside     ·   viewBox floor 1100, 32 units clear
+           * ✅ §22.4 — THE CAPTION IS GONE, AND THAT IS THE CAPTAIN'S RULING, NOT A LAYOUT DEFEAT.
+           * The chase went: caption outside the box -> caption inside the dashed box (§22.3) -> "the
+           * actual room is still the size it was; can it be inside the SOLID box?" The honest answer
+           * was that the satellite tile renders a two-line label INSIDE itself and the trust tile
+           * never had that ability — one side had a feature the other lacked. Given the choice
+           * between repeating a wing-level label inside every trust room, printing it in only one of
+           * them, or dropping it, the Captain ruled: DROP IT. "lets drop the wing for parity, not
+           * needed."
+           * 🔑 THE DECIDING ARGUMENT WAS SYMMETRY, AND IT CAME FROM THE CANVAS ITSELF: THE LEFT WING
+           *    HAS NO CAPTION. There is no "REAL ESTATE WING" label over the satellites. Once every
+           *    room names itself, a wing-level label is the odd one out — the caption was never
+           *    carrying information the rooms did not already carry.
+           * ⚠️ THIS REMOVES AUTHORED COPY ("GENERATIONAL TRUST WING"). Under the Copy Bank rules the
+           * Architect authors and the Captain holds the sole GO; the GO was given explicitly. Flagged
+           * here so the removal is visible in the code and not only in a commit message.
+           * The dashed shield boundary STAYS — he asked to drop the caption, not the wing.
            *
-           * ⚠️ THE 8px FLOOR WAS NOT THE BINDING CONSTRAINT AND THE FEAR WAS MISPLACED — measured:
-           * trust tiles do NOT scale their type at all. Title is 14px and value 32px at EVERY count
-           * (1 through 12), because §22.1's ratio is satellite-only. Nothing here can push trust type
-           * below 8px. (Pre-existing and untouched: at 12 trusts a 58-unit tile still carries a 32px
-           * value, so the value overflows its own tile. Reported, not fixed.) */
-          var _tCapH = 58;   // measured: caption block y[1021..1061] + 7 units of air
-
-          /* THE CAPTION SPLITS INTO TWO LINES. One line measures
-             225.4 units at 14px — MEASURED, not estimated — so it cannot fit a 190-unit wing at ANY
-             position; it could only ever have "fitted" by hanging off the canvas, which is what it did.
-             Split: GENERATIONAL ~118u, TRUST WING ~98u, both comfortably inside. Copy is UNCHANGED and
-             14px is UNCHANGED — this is a layout fix, not a copy edit (L47: the words are authored).
-             BELOW THE TILE BAND, AND — as of §22.3 — INSIDE THE WING BOX, which now grows to enclose
-             it. The caption cannot sit level with the tiles: the single line used to sit at y[966,984]
-             while the tiles run to 1010, so it overlapped the bottom trust room, and two lines there
-             would overlap worse. y[1010,1100] is empty in every state and inside the viewBox. */
+           * WHAT SURVIVES FROM §22.3, AND WHY IT IS NOT REVERTED-BY-ACCIDENT: the container returns to
+           * y[160,1010] because _tCapH existed ONLY to enclose the caption. The tile band was never
+           * touched by §22.3, so §22.2's parity is unaffected either way — satellite 830 == trust 830.
+           *
+           * ⚠️ MEASURED ALONG THE WAY, TRUE, AND UNFIXED: trust tiles do NOT scale their type at all.
+           * Title 14px and value 32px at EVERY count 1..12, because §22.1's ratio is satellite-only.
+           * At 12 trusts a 58-unit tile still carries a 32px value, so the value overflows its own
+           * tile. Reported, not fixed — it is the same family as the satellite line-2 overflow fixed
+           * in this commit, and it wants the same treatment on its own beat. */
           let tSVG = document.createElementNS("http://www.w3.org/2000/svg", "g");
           tSVG.innerHTML = `
-              <rect x="${tX}" y="${gY}" width="${tW}" height="${gH + _tCapH}" class="grounds-rect" stroke-dasharray="6 6" stroke="var(--shield)" stroke-width="2" fill="rgba(138, 100, 255, 0.05)" onmouseenter="showTrustTooltip(event)" onmouseleave="hideTrustTooltip()"/>
-              <text x="${tX + tW/2}" y="${gY + gH + 25}" font-family="var(--font-mono)" font-size="14" fill="var(--shield)" text-anchor="middle" font-weight="bold" letter-spacing="0.1em">GENERATIONAL</text>
-              <text x="${tX + tW/2}" y="${gY + gH + 47}" font-family="var(--font-mono)" font-size="14" fill="var(--shield)" text-anchor="middle" font-weight="bold" letter-spacing="0.1em">TRUST WING</text>
+              <rect x="${tX}" y="${gY}" width="${tW}" height="${gH}" class="grounds-rect" stroke-dasharray="6 6" stroke="var(--shield)" stroke-width="2" fill="rgba(138, 100, 255, 0.05)" onmouseenter="showTrustTooltip(event)" onmouseleave="hideTrustTooltip()"/>
           `;
           svgContainer.appendChild(tSVG);
           
@@ -738,6 +738,46 @@
            * ⚠️ ARCHITECT: this is the open item flagged before build. See the note in the commit. */
           var _sRatio = function (h) { return Math.min(h / sH, 14 / 11); };
 
+          /* ── §22.5 · A LABEL MAY NOT LEAVE ITS TILE — AND §22.1 IS WHAT BROKE THIS ───────────────
+           * CAPTAIN-SIGHTED 2026-08-10: "THE VACATION HOME / THE MOAT" bleeding past a satellite tile.
+           *
+           * THE CAUSE IS DIRECTLY ABOVE. Line 2 was authored at 8px FOR THIS EXACT REASON — the
+           * comment below says so in its own words: "'THE VACATION HOME / THE MOAT' is ~28 chars and
+           * overruns a 170-unit tile at 11px." §22.1 then made every line ride _sRatio, which is
+           * clamped at 14/11 = 1.2727, so 8px renders at 10.18px on any tile taller than 121 units —
+           * i.e. on essentially every tile §22 produces. IT RE-INTRODUCED THE OVERFLOW THE 8px WAS
+           * CHOSEN TO PREVENT. §22.1 was measured against the tile's HEIGHT and never against its
+           * WIDTH, and the width is the fixed dimension.
+           * 🔑 A SCALE FACTOR DERIVED FROM ONE AXIS WILL EVENTUALLY VIOLATE THE OTHER.
+           *
+           * MEASURED IN THE RENDERER, mono at exactly 0.75em per character including letter-spacing
+           * (22 chars -> 168.3u and 21 chars -> 160.7u, both 7.65u at 10.2px — identical per-char, so
+           * the font really is monospace and this arithmetic is exact, not an estimate):
+           *     "THE GROUNDS / THE MOAT"        22ch  168.3 / 170   fits by 1.7
+           *     "THE RENTAL / THE MOAT"         21ch  160.7 / 170   fits by 9.3
+           *     "THE VACATION HOME / THE MOAT"  28ch  ~214  / 170   OVERFLOWS BY ~44
+           * Every merged label was already within 1-9 units of the edge; the long one merely went
+           * first. This is a POPULATION problem that happened to surface on one string.
+           *
+           * THE FIX: cap the size so the text fits the tile it lives in. Because the font is
+           * monospace the required size is closed-form — no two-pass measure, no getComputedTextLength
+           * at render time. The authored 8px FLOOR still wins if the two ever disagree (§22.1's rule
+           * is stop-shrinking, not shrink-forever).
+           * ⚠️ AND THE HONEST LIMIT, FLAGGED NOT HIDDEN: past ~28 characters the 8px floor binds and
+           * the label will still overrun. Nothing here wraps text. If an authored name ever exceeds
+           * that, it needs the Captain's stacking idea and the Architect's copy — this clamp does not
+           * silently rescue it, it just stops the sizes that CAN fit from being blown up past fitting. */
+          var _fitPx = function (str, px, boxW) {
+            var per = 0.75;                                  // measured, mono + letter-spacing
+            /* PAD IS NOT DECORATION. Sizing to exactly boxW left the label 1.3 units over its edge,
+               because getComputedTextLength (what the 0.75 factor reproduces) is slightly NARROWER
+               than the painted bbox — the trailing letter-space and glyph overhang are real ink the
+               metric does not count. Fitting to the metric alone puts the label exactly ON the line
+               and the paint just past it. */
+            var maxPx = (boxW - 6) / (Math.max(1, String(str).length) * per);
+            return Math.max(8, Math.min(px, maxPx));
+          };
+
           sShown.forEach(function (acc, sI) {
               var base = getBaseType(acc.baseId);
               var sYr = sRows[sI].y, sHr = sRows[sI].h;
@@ -805,9 +845,13 @@
                   fillHTML +
                   (sMerged ? _linkChipSVG(d.x + 6, d.y + 6, _lienMirrorNotice(sDebts, 'property')) : '') +
                   (sMerged
-                    ? '<text x="' + d.cx + '" y="' + (d.cy - px(22)) + '" class="bp-title" style="font-size:' + px(11) + 'px; letter-spacing:0.12em;">' + _combinedNameOf(acc).toUpperCase() + '</text>' +
-                      '<text x="' + d.cx + '" y="' + (d.cy - px(8)) + '" class="bp-title" style="font-size:' + px(8) + 'px; opacity:0.85;">' + sLabel + '</text>'
-                    : '<text x="' + d.cx + '" y="' + (d.cy - px(6)) + '" class="bp-title" style="font-size:' + px(11) + 'px;">' + sLabel + '</text>') +
+                    /* §22.5 — every one of these three is width-clamped to its own tile. All three can
+                       overrun: line 2 was the one the Captain caught, but line 1 at a scaled 14px needs
+                       only a 17-character name to do the same thing. Clamp where the text is SIZED, so
+                       there is no second place to forget. */
+                    ? '<text x="' + d.cx + '" y="' + (d.cy - px(22)) + '" class="bp-title" style="font-size:' + _fitPx(_combinedNameOf(acc), px(11), d.w) + 'px; letter-spacing:0.12em;">' + _combinedNameOf(acc).toUpperCase() + '</text>' +
+                      '<text x="' + d.cx + '" y="' + (d.cy - px(8)) + '" class="bp-title" style="font-size:' + _fitPx(sLabel, px(8), d.w) + 'px; opacity:0.85;">' + sLabel + '</text>'
+                    : '<text x="' + d.cx + '" y="' + (d.cy - px(6)) + '" class="bp-title" style="font-size:' + _fitPx(sLabel, px(11), d.w) + 'px;">' + sLabel + '</text>') +
                   '<text x="' + d.cx + '" y="' + (d.cy + px(sMerged ? 20 : 24)) + '" class="bp-val" style="font-size:' + px(sMerged ? 17 : 22) + 'px; fill:' + (sNeg ? 'var(--danger)' : 'var(--white)') + ';">' + sVal + '</text>';
               svgContainer.appendChild(g);
               descriptors.push({ id: acc.id, el: g, rect: g.querySelector('.room-rect'), d: d, value: acc.value || 0,
