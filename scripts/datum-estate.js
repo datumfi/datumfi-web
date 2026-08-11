@@ -1069,9 +1069,13 @@
                  2026-08-11. ⛔ Authored copy, installed verbatim (L47).
                  ⚠️ NO SINGULAR IS AUTHORED HERE AND NONE IS REACHABLE: sShown is sCap-1 = 6 and the
                  stack only exists when satellites EXCEED sCap = 7, so sHidden is 2 at minimum. */
+              /* §25.5 — device-neutral accessible name, and it now carries the counted-in-your-totals
+                 promise that the satellite name was missing entirely (it used to be just the tile's
+                 own label, "+N more properties"). */
               _makeFoldDoor(cg, sFolded, 'THE OTHER PROPERTIES',
                   sHidden + ' more properties. Pick one to enter it.',
-                  '+' + sHidden + ' more properties',
+                  sHidden + ' more properties. They are all counted in your total square footage. ' +
+                      'Opens the other properties.',
                   function (a) { return (_mergeDebtsByAsset[a.id] || []).length > 0; });
               svgContainer.appendChild(cg);
           }
@@ -1378,14 +1382,21 @@
                   /* ⛔ AUTHORED COPY, VERBATIM (L47). Note "total square footage" — the tile may not
                      quote a balance because you cannot open into it, so the hover is where the
                      promise lives, and the picker's per-room figures are where it becomes checkable.
-                     ⚠️ THE ARIA LABEL IS THE SAME SENTENCE. §25.1 authored one hover and no separate
-                     "Activate to..." variant (the old copy had one). Rather than invent a keyboard
-                     phrasing nobody wrote, the accessible name IS the authored sentence — FLAGGED
-                     for the Architect, not silently decided. */
-                  var _cTip = _colHidden + ' more rooms on the 2nd floor. They are all counted in your ' +
-                      'total square footage. ' + (_upCorridor
-                        ? 'Connections to rooms upstairs are hidden until you go up.'
-                        : 'Click to go upstairs.');
+                     ── §25.5 · THE ACCESSIBLE NAME IS ITS OWN STRING ────────────────────────────
+                     ⛔ "CLICK" IS A WORD ABOUT A MOUSE, NOT ABOUT MEANING. §25.1 authored one hover
+                     ending "Click to go upstairs." and, used as the accessible name, it told a
+                     screen-reader user to do the one thing they are not doing. A CONTROL'S
+                     ACCESSIBLE NAME SAYS WHAT IT DOES, NEVER HOW TO OPERATE IT — the screen reader
+                     already announces the control type and the key; repeating "activate" is the
+                     software talking about itself again, which is the habit §25 exists to kill.
+                     ⭐ THE PROMISE STAYS IN BOTH: "all counted in your total square footage" is the
+                     entire reason this tile is allowed to exist without a balance on its face, so it
+                     may not be the clause that gets dropped for brevity. */
+                  var _cLead = _colHidden + (_colHidden === 1 ? ' more room' : ' more rooms') +
+                      ' on the 2nd floor. They are all counted in your total square footage.';
+                  var _cCorr = ' Connections to rooms upstairs are hidden until you go up.';
+                  var _cTip  = _cLead + (_upCorridor ? _cCorr : ' Click to go upstairs.');
+                  var _cAria = _cLead + (_upCorridor ? _cCorr : '') + ' Opens the second floor.';
                   var _cg = document.createElementNS('http://www.w3.org/2000/svg', 'g');
                   _cg.setAttribute('class', 'room-grp visible column-collapse');
                   _cg.setAttribute('data-collapsed-count', String(_colHidden));
@@ -1405,7 +1416,7 @@
                      absence of a branch. */
                   _makeFoldDoor(_cg, _colFolded, 'THE SECOND FLOOR',
                       _colHidden + (_colHidden === 1 ? ' room' : ' rooms') + ' up here. Pick one to enter it.',
-                      _cTip);
+                      _cAria);
                   svgContainer.appendChild(_cg);
                   bounds.minX = Math.min(bounds.minX, currentX);
                   bounds.maxX = Math.max(bounds.maxX, currentX + colW);

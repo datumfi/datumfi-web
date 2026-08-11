@@ -184,6 +184,27 @@ const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
     ck(`C· the collapse TILE and its accessible name are clean too — ${label}`, !tileBad,
        tileBad ? `*** leaked: "${tileBad[0]}" ***` : tileTxt.trim().slice(0, 60));
 
+    /* ══ §25.5 · THE ACCESSIBLE NAME IS DEVICE-NEUTRAL ══════════════════════════════════════════
+       ⛔ "CLICK" IS A WORD ABOUT A MOUSE, NOT ABOUT MEANING. §25.1's hover ends "Click to go
+       upstairs." and using it as the accessible name told a screen-reader user to do the one thing
+       they are not doing. A control's accessible name says what it DOES, never how to operate it.
+       ⭐ THREE LEGS, because "no click" alone is silent by construction — it passes on an empty
+       label. The name must also SAY what it opens, and must still carry the counted-in-your-totals
+       promise, which is the entire reason this tile may exist without a balance on its face. */
+    const aria = meta.aria || '';
+    ck(`N· the accessible name names no input device — ${label}`, !/\bclick|\btap|\bmouse/i.test(aria),
+       /\bclick|\btap|\bmouse/i.test(aria) ? `*** "${aria.match(/\bclick|\btap|\bmouse/i)[0]}" in an accessible name ***` : 'device-neutral');
+    ck(`N· and it says what the control DOES — ${label}`,
+       /Opens the (second floor|other properties)\.$/.test(aria.trim()), `ends "${aria.trim().slice(-28)}"`);
+    ck(`N· and it keeps the counted-in-your-totals promise — ${label}`,
+       aria.includes('counted in your total square footage'), aria.slice(0, 64));
+    /* The VISUAL hover is unchanged and still says "Click" when there is no corridor — a mouse word
+       is correct on a mouse surface. ⛔ ASSERT THE PAIR DIVERGED, or a future "cleanup" that unifies
+       them re-creates the defect in whichever direction it picks. */
+    const tipTxt = await el.evaluate((e) => (e.querySelector('title') || {}).textContent || '');
+    if (tipTxt) ck(`N· hover and accessible name are DIFFERENT strings — ${label}`, tipTxt.trim() !== aria.trim(),
+       tipTxt.trim() === aria.trim() ? '*** unified — one of them is now wrong ***' : 'diverged, as authored');
+
     /* ══ §25.3 · THE DRAWN SET IS BYTE-IDENTICAL ACROSS A PICK ══════════════════════════════════
        ⛔ THIS LEG IS AN INVERSION, NOT A NEW LEG. It used to read "picking a room SWAPS rather than
        grows" and it PASSED — because it measured the exact behaviour that turned out to be the bug.
