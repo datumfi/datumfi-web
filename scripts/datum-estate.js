@@ -130,7 +130,10 @@
     h.textContent = headline;
     var s = document.createElement('div');
     s.setAttribute('style', 'font-family:var(--font-serif);font-size:12px;color:var(--muted,#8fa3b8);margin:6px 0 14px;');
-    s.textContent = folded.length + subhead;
+    /* §25.1 — THE SUBHEAD ARRIVES FULLY BUILT. It used to be `folded.length + suffix`, which forced
+       every surface into one plural shape and left no room for an authored singular. The call site
+       knows n, so the call site says the sentence. */
+    s.textContent = subhead;
     box.appendChild(h); box.appendChild(s);
 
     folded.forEach(function (acc) {
@@ -1052,7 +1055,7 @@
                   '<rect x="' + cd.x + '" y="' + cd.y + '" width="' + cd.w + '" height="' + cd.h +
                       '" class="room-rect active" style="stroke-dasharray:4 4;" />' +
                   '<text x="' + (cd.x + cd.w / 2) + '" y="' + (cd.y + cd.h / 2 + Math.round(4 * cR * 10) / 10) + '" class="bp-title" style="font-size:' +
-                      (Math.round(11 * cR * 10) / 10) + 'px;">' + sHidden + ' more properties</text>';
+                      (Math.round(11 * cR * 10) / 10) + 'px;">+' + sHidden + ' more properties</text>';
               /* §24 — THIS TILE HAS BEEN DEAD SINCE THE DAY IT SHIPPED. Not a regression introduced
                  tonight: it never had a handler at all, and no gate could see that because no gate
                  clicks anything. It opens now. */
@@ -1060,9 +1063,15 @@
                  lien must open THE YARD from the picker, exactly as its tile would — and these are
                  the mortgaged properties, the highest-stakes rooms in the set. Same predicate the
                  tile reads six lines up (_mergeDebtsByAsset), never a second derivation. */
-              _makeFoldDoor(cg, sFolded, 'PROPERTIES IN THIS WING',
-                  ' folded. Pick one to bring it into view.',
-                  sHidden + ' more properties in this wing. Activate to pick one to bring into view.',
+              /* ⭐ §25.2 — "PROPERTIES IN THIS WING" IS RETIRED. A wing is part of one building and
+                 these are not: the satellites are the user's OTHER PROPERTIES, separate buildings,
+                 so they do NOT inherit the main house's "2nd floor". Captain's naming call,
+                 2026-08-11. ⛔ Authored copy, installed verbatim (L47).
+                 ⚠️ NO SINGULAR IS AUTHORED HERE AND NONE IS REACHABLE: sShown is sCap-1 = 6 and the
+                 stack only exists when satellites EXCEED sCap = 7, so sHidden is 2 at minimum. */
+              _makeFoldDoor(cg, sFolded, 'THE OTHER PROPERTIES',
+                  sHidden + ' more properties. Pick one to enter it.',
+                  '+' + sHidden + ' more properties',
                   function (a) { return (_mergeDebtsByAsset[a.id] || []).length > 0; });
               svgContainer.appendChild(cg);
           }
@@ -1315,9 +1324,35 @@
               if (_colHidden > 0 && _colRows.length === _colWeights.length) {
                   var _cRow = _colRows[_colRows.length - 1];
                   var _cFits = function (s, px) { return String(s).length * 0.75 * px <= (colW - 14); };
-                  var _l1 = '+' + _colHidden + ' MORE', _l2 = 'ROOMS IN THIS COLUMN';
-                  if (!(_cFits(_l1, 14) && _cFits(_l2, 9))) { _l2 = 'ROOMS'; }
-                  if (!(_cFits(_l1, 14) && _cFits(_l2, 9))) { _l1 = '+' + _colHidden; _l2 = ''; }
+                  /* ── §25.1 · THE SECOND FLOOR ─────────────────────────────────────────────────
+                   * ⛔ "COLUMN" AND "FOLDED" ARE RETIRED FROM USER-FACING COPY, FOREVER. A column is
+                   * a fact about our layout algorithm; a 2nd floor is a fact about the user's house.
+                   * Folded is what paper does — nobody's house has folded rooms. We leaked the
+                   * renderer's vocabulary into the product for three prompts, and the mechanism came
+                   * out wrong in the same direction as the words (see §25.3). 🔑 THE COPY IS AN
+                   * EARLY WARNING FOR THE ARCHITECTURE.
+                   *
+                   * ⭐ THE LINE BREAK IS AUTHORED, NOT CHOSEN, and it is authored because it was
+                   * MEASURED. "+{n} more rooms on the 2nd floor" is 31 chars = 325.5u at 14px, into
+                   * a narrowest column of 186u usable. That is not a near miss, it is a 75% overrun,
+                   * and the one-line alternative only fits by dropping to the 8px §22.1 floor with
+                   * ZERO margin. ⛔ A CONSTRAINT SATISFIED WITH ZERO MARGIN WILL BE VIOLATED BY THE
+                   * NEXT UNRELATED ROUNDING CHANGE — the 8px option is refused on purpose.
+                   *
+                   * ⚠️ THE LADDER BELOW IS A SAFETY NET, NOT A BEHAVIOUR, AND I MEASURED THAT TOO.
+                   * colW = minW + availW*share and minW is 200, so colW >= 200 ALWAYS; line 1 at its
+                   * widest realistic form ("+999 more rooms" = 157.5u) and line 2 ("on the 2nd
+                   * floor" = 108u) both clear 186u. Rung 1 is unreachable-to-fail today. It stays
+                   * because the caps and the widths are not laws, and it now DEGRADES BY TRUNCATING
+                   * THE AUTHORED COPY rather than substituting words nobody wrote — the old rung 2
+                   * ("ROOMS") belonged to a metaphor that no longer exists.
+                   * ⚠️ SINGULAR IS AUTHORED AND CURRENTLY UNREACHABLE: _colShown is _COL_CAP-1 = 10
+                   * and the tile only exists above _COL_CAP = 11, so _colHidden is 2 at minimum.
+                   * Wired anyway — the cap is a number, not a promise. */
+                  var _l1 = '+' + _colHidden + (_colHidden === 1 ? ' more room' : ' more rooms');
+                  var _l2 = 'on the 2nd floor';
+                  if (!(_cFits(_l1, 14) && _cFits(_l2, 9))) { _l2 = ''; }
+                  if (!_cFits(_l1, 14)) { _l1 = '+' + _colHidden; }
                   /* ⛔ THE §22.1 FLOOR OUTRANKS THE LADDER. If even the minimum rung cannot fit at
                      8px we do NOT shrink type to win a placement argument — we say so, loudly, and
                      the tile still draws with the count, because a countable room the user can see
@@ -1326,7 +1361,31 @@
                       console.warn('[estate §22.7] collapsed tile cannot fit "' + _l1 + '" at the 8px floor in a ' +
                           Math.round(colW) + '-unit column — drawing it anyway; STOP AND FLAG per §22.1.');
                   }
-                  var _cTip = _colHidden + ' more rooms in this column. They are all counted in your totals.';
+                  /* §22.7.1 — THE CORRIDOR VARIANT, AND THE CONDITION IS DERIVED RATHER THAN
+                     ASSUMED. A room upstairs shows no corridor until you go up, because drawnRooms
+                     feeds the outflow route and an upstairs room is not in it. That is a real
+                     consequence and the copy says so — but ONLY when it is true. Corridors are built
+                     at the routing block below from taxCode liquid/pretax/roth plus PRIORITY debts,
+                     and EVERY room in those buckets gets a node (not just the largest), so "does at
+                     least one upstairs room own a corridor" is exactly this test.
+                     ⛔ SOURCED-OR-BLANK: if the derivation is false we say the plain sentence. We
+                     never hedge with "may be". */
+                  var _upCorridor = isRouting && _colFolded.some(function (a) {
+                      var b = getBaseType(a.baseId) || {};
+                      return b.taxCode === 'liquid' || b.taxCode === 'pretax' || b.taxCode === 'roth' ||
+                             (b.taxCode === 'debt' && a.isPriority);
+                  });
+                  /* ⛔ AUTHORED COPY, VERBATIM (L47). Note "total square footage" — the tile may not
+                     quote a balance because you cannot open into it, so the hover is where the
+                     promise lives, and the picker's per-room figures are where it becomes checkable.
+                     ⚠️ THE ARIA LABEL IS THE SAME SENTENCE. §25.1 authored one hover and no separate
+                     "Activate to..." variant (the old copy had one). Rather than invent a keyboard
+                     phrasing nobody wrote, the accessible name IS the authored sentence — FLAGGED
+                     for the Architect, not silently decided. */
+                  var _cTip = _colHidden + ' more rooms on the 2nd floor. They are all counted in your ' +
+                      'total square footage. ' + (_upCorridor
+                        ? 'Connections to rooms upstairs are hidden until you go up.'
+                        : 'Click to go upstairs.');
                   var _cg = document.createElementNS('http://www.w3.org/2000/svg', 'g');
                   _cg.setAttribute('class', 'room-grp visible column-collapse');
                   _cg.setAttribute('data-collapsed-count', String(_colHidden));
@@ -1344,9 +1403,9 @@
                      only a PROPERTY opens The Yard, and properties never sit in a column (they are
                      the grounds or they are satellites). The picker matches the tile by matching its
                      absence of a branch. */
-                  _makeFoldDoor(_cg, _colFolded, 'ROOMS IN THIS COLUMN',
-                      ' folded. Pick one to bring it into view.',
-                      _colHidden + ' more rooms in this column. Activate to pick one to bring into view.');
+                  _makeFoldDoor(_cg, _colFolded, 'THE SECOND FLOOR',
+                      _colHidden + (_colHidden === 1 ? ' room' : ' rooms') + ' up here. Pick one to enter it.',
+                      _cTip);
                   svgContainer.appendChild(_cg);
                   bounds.minX = Math.min(bounds.minX, currentX);
                   bounds.maxX = Math.max(bounds.maxX, currentX + colW);

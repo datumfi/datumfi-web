@@ -101,15 +101,19 @@ const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
      rooms to fold the satellite stack, not seven. Column side: _COL_CAP = 11, so 12+ in one column.
      🔑 A NUMBER WITHOUT ITS DERIVATION ROTS — this one had, silently, inside a fixture comment. */
   const SCENES = [
-    { label: 'column tile (1 property + 14 accounts)', spec: [['property', 1], ['taxable', 14]] },
-    { label: 'satellite tile (9 properties)',          spec: [['property', 9]] },
+    /* ⛔ `surface` IS DECLARED, NEVER SNIFFED FROM THE LABEL. First cut tested /propert/i against the
+       label and the COLUMN scene reads "1 property + 14 accounts" — so it demanded the satellite copy
+       from the second floor and failed a correct product. A human label is prose; a branch key is
+       data. 🔑 PROXIMITY IS NOT OWNERSHIP, and neither is a word appearing in a sentence. */
+    { label: 'column tile (1 property + 14 accounts)', surface: 'floor', spec: [['property', 1], ['taxable', 14]] },
+    { label: 'satellite tile (9 properties)',          surface: 'props', spec: [['property', 9]] },
     /* §25.3 — the leg that would have caught tonight's trap. A folded property carrying a lien must
        open THE YARD, not the account modal, exactly as its tile does. */
-    { label: 'satellite tile, LAST property mortgaged', spec: [['property', 9], ['mortgage_joint', 1]],
-      link: true, yardRow: 1 },
+    { label: 'satellite tile, LAST property mortgaged', surface: 'props',
+      spec: [['property', 9], ['mortgage_joint', 1]], link: true, yardRow: 1 },
   ];
 
-  for (const { label, spec, link, yardRow } of SCENES) {
+  for (const { label, spec, link, yardRow, surface } of SCENES) {
     await build(p, spec, link); await p.waitForTimeout(650); await clearCovers(p);
 
     const surfaces = await p.$$('[data-collapsed-count]');
@@ -142,6 +146,7 @@ const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
           rows: d.querySelectorAll('button.datum-fold-row').length,
           focus: (document.activeElement.className || ''),
           money: Array.from(d.querySelectorAll('button.datum-fold-row')).filter((r) => /\$/.test(r.innerText)).length,
+          text: (d.innerText || '').replace(/\s+/g, ' ').trim(),
         };
       });
       opened = !!dlg;
@@ -155,6 +160,29 @@ const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
     ck(`D· every row shows its balance — ${label}`, dlg.money === dlg.rows, `${dlg.money}/${dlg.rows} rows carry a figure`);
     ck(`D· the dialog is a real dialog (aria-modal + labelled + focus moved) — ${label}`,
        dlg.modal === 'true' && dlg.labelled && /datum-fold-row/.test(dlg.focus), `modal=${dlg.modal} labelled=${dlg.labelled} focus=${dlg.focus}`);
+
+    /* ══ §25.1 / §25.2 · THE RENDERER'S VOCABULARY MAY NOT REACH THE USER ═══════════════════════
+       ⛔ A user has never once thought about a COLUMN, and nobody's house has FOLDED rooms. Those
+       are facts about our layout algorithm that leaked into the product for three prompts — and the
+       mechanism came out wrong in the same direction as the words. THE COPY IS AN EARLY WARNING FOR
+       THE ARCHITECTURE, so it gets an instrument.
+       ⭐ TWO LEGS, BOTH DIRECTIONS: the authored words are PRESENT, and the retired words are ABSENT.
+       An absence leg alone is silent by construction — it would pass on an empty dialog. */
+    const wantHead = surface === 'props' ? 'THE OTHER PROPERTIES' : 'THE SECOND FLOOR';
+    const wantSub  = surface === 'props'
+      ? `${meta.n} more properties. Pick one to enter it.`
+      : `${meta.n} rooms up here. Pick one to enter it.`;
+    ck(`C· the picker speaks the AUTHORED words — ${label}`,
+       dlg.text.includes(wantHead) && dlg.text.includes(wantSub),
+       `head="${wantHead}" sub="${wantSub}" in "${dlg.text.slice(0, 70)}"`);
+    const banned = dlg.text.match(/column|in this wing|folded|bring it into view/i);
+    ck(`C· and NOT the renderer's — ${label}`, !banned,
+       banned ? `*** leaked: "${banned[0]}" ***` : 'no column/wing/folded/bring-into-view');
+    /* The tile's own face and its accessible name carry the same retirement. */
+    const tileTxt = await el.evaluate((e) => ((e.textContent || '') + ' ' + (e.getAttribute('aria-label') || '')).replace(/\s+/g, ' '));
+    const tileBad = tileTxt.match(/column|in this wing|folded|bring into view/i);
+    ck(`C· the collapse TILE and its accessible name are clean too — ${label}`, !tileBad,
+       tileBad ? `*** leaked: "${tileBad[0]}" ***` : tileTxt.trim().slice(0, 60));
 
     /* ══ §25.3 · THE DRAWN SET IS BYTE-IDENTICAL ACROSS A PICK ══════════════════════════════════
        ⛔ THIS LEG IS AN INVERSION, NOT A NEW LEG. It used to read "picking a room SWAPS rather than
