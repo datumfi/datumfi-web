@@ -220,6 +220,36 @@
      ⚠️ ACCESSIBILITY IS NOT A FOLLOW-UP ON THIS ONE. It is the canvas's first real interactive
      control, and it GATES ACCESS TO DATA — a control only a mouse can reach would make those rooms
      permanently unreachable for some users, which is strictly worse than the dead tile it replaces. */
+  /* ── §25.6 · A STAIRCASE ON THE TILE THAT TAKES YOU UPSTAIRS ──────────────────────────────────
+   * Captain: "if in that rectangle there WAS a set of stairs ... this visually leans into our
+   * blueprint of estate grounds and makes sense located here considering we are going upstairs."
+   *
+   * ⭐ DRAWN IN PLAN, NOT IN ELEVATION, AND THAT IS THE WHOLE POINT. A side-view zigzag is how an
+   * ICON draws stairs; an architectural drawing shows a stair as a RUN OF TREADS seen from above
+   * with an arrow marking the direction of travel. This canvas is a blueprint, so it uses the
+   * blueprint's own symbol — the same reason we stopped saying "column" and started saying "floor".
+   * ⛔ Stroke only, no fill: the collapse tile quotes no balance and must not look occupied.
+   * ⚠️ It is a DECORATION and it is marked pointer-events:none, so it cannot steal the click from
+   * the door underneath it — an unfilled shape only intercepts on its stroke, and those strokes sit
+   * right where a thumb lands. That is the §24 hit-testing trap pointed the other way. */
+  function _stairsGlyphSVG(x, y, w, h, treads) {
+    var n = treads || 5, step = h / n, o = '';
+    o += '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="none" ' +
+         'stroke="var(--teal-mid)" stroke-width="1" opacity="0.85"/>';
+    for (var i = 1; i < n; i++) {                       // the treads
+      var ty = y + i * step;
+      o += '<line x1="' + x + '" y1="' + ty + '" x2="' + (x + w) + '" y2="' + ty +
+           '" stroke="var(--teal-mid)" stroke-width="0.75" opacity="0.7"/>';
+    }
+    var cx = x + w / 2, aTop = y + step * 0.45, aBot = y + h - step * 0.45, head = Math.min(4, w * 0.22);
+    o += '<line x1="' + cx + '" y1="' + aBot + '" x2="' + cx + '" y2="' + aTop +
+         '" stroke="var(--gold)" stroke-width="1" opacity="0.95"/>';
+    o += '<path d="M ' + (cx - head) + ' ' + (aTop + head) + ' L ' + cx + ' ' + aTop + ' L ' +
+         (cx + head) + ' ' + (aTop + head) + '" fill="none" stroke="var(--gold)" stroke-width="1" ' +
+         'stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>';
+    return '<g class="stair-glyph" pointer-events="none">' + o + '</g>';
+  }
+
   /* ── §25.4 · THE SECOND FLOOR IS DRAWN AS A FLOOR ─────────────────────────────────────────────
    * ⭐ THE TWO NUMBERS, DERIVED — NEITHER IS INHERITED AND NEITHER IS TASTE.
    *   W = 404 — the picker box is max-width 440 with 18px padding each side, so 404 is its inner
@@ -292,15 +322,23 @@
     box.setAttribute('role', 'dialog');
     box.setAttribute('aria-modal', 'true');
     box.setAttribute('aria-labelledby', titleId);
-    box.setAttribute('style', 'background:#060b14;border:1px solid var(--shield, #8a64ff);border-radius:6px;' +
+    /* ⭐ CAPTAIN 2026-08-11 — GOLD, NOT THE RELIQUARY PURPLE. --shield is the TRUST token: it means
+       "this is legally held apart", and borrowing it for a navigation surface was the renderer
+       reaching for a colour it had rather than the colour this means. The second floor is part of
+       the house, so it wears the house's accent. --gold (#C9A84C) is a standard token; --shield is
+       reserved for what it names. */
+    box.setAttribute('style', 'background:#060b14;border:1px solid var(--gold, #C9A84C);border-radius:6px;' +
         'min-width:320px;max-width:440px;width:100%;max-height:70vh;overflow:auto;' +
         'box-shadow:0 24px 60px rgba(0,0,0,0.9);padding:18px 18px 12px;');
     var h = document.createElement('div');
     h.id = titleId;
-    h.setAttribute('style', 'font-family:var(--font-mono);font-size:12px;letter-spacing:0.16em;color:var(--shield,#8a64ff);font-weight:bold;');
+    h.setAttribute('style', 'font-family:var(--font-mono);font-size:12px;letter-spacing:0.16em;color:var(--gold,#C9A84C);font-weight:bold;');
     h.textContent = headline;
     var s = document.createElement('div');
-    s.setAttribute('style', 'font-family:var(--font-serif);font-size:12px;color:var(--muted,#8fa3b8);margin:6px 0 14px;');
+    /* ⭐ CAPTAIN 2026-08-11 — the subhead was --muted, which resolves to rgba(255,255,255,0.3) in the
+       studio scope: 30% white on a near-black modal. It is the sentence that tells the user what this
+       place IS and how to use it, so it may not be the dimmest thing on screen. */
+    s.setAttribute('style', 'font-family:var(--font-serif);font-size:12px;color:rgba(255,255,255,0.85);margin:6px 0 14px;');
     /* §25.1 — THE SUBHEAD ARRIVES FULLY BUILT. It used to be `folded.length + suffix`, which forced
        every surface into one plural shape and left no room for an authored singular. The call site
        knows n, so the call site says the sentence. */
@@ -329,8 +367,9 @@
       var row = document.createElement('button');
       row.type = 'button';
       row.className = 'datum-fold-row';
+      /* Same gold retirement of the reliquary purple as the box chrome above. */
       row.setAttribute('style', 'display:flex;width:100%;justify-content:space-between;align-items:center;gap:12px;' +
-          'background:transparent;border:1px solid rgba(138,100,255,0.25);border-radius:4px;cursor:pointer;' +
+          'background:transparent;border:1px solid rgba(201,168,76,0.30);border-radius:4px;cursor:pointer;' +
           'padding:10px 12px;margin-bottom:8px;text-align:left;color:inherit;font:inherit;');
       var nm = document.createElement('span');
       nm.setAttribute('style', 'font-family:var(--font-mono);font-size:11px;letter-spacing:0.1em;color:var(--teal-mid,#1d9e75);');
@@ -1532,7 +1571,14 @@
                       '<text x="' + (currentX + colW / 2) + '" y="' + (_cRow.y + _cRow.h / 2 + (_l2 ? -2 : 5)) +
                           '" class="bp-title" style="font-size:14px;">' + _l1 + '</text>' +
                       (_l2 ? '<text x="' + (currentX + colW / 2) + '" y="' + (_cRow.y + _cRow.h / 2 + 14) +
-                          '" class="bp-title" style="font-size:9px; opacity:0.85;">' + _l2 + '</text>' : '');
+                          '" class="bp-title" style="font-size:9px; opacity:0.85;">' + _l2 + '</text>' : '') +
+                      /* §25.6 — the staircase, bottom-right, 8 units off both edges. ⛔ SUPPRESSED ON A
+                         SHORT TILE RATHER THAN SHRUNK: this tile takes the LAST band slot, so its
+                         height is whatever the stack left over and can be genuinely small. A glyph
+                         scaled down to fit would collide with the count, and the COUNT is the thing
+                         that keeps the picture reconciled to the total (§22.7). Decoration yields to
+                         the number, never the other way round. */
+                      (_cRow.h >= 56 ? _stairsGlyphSVG(currentX + colW - 8 - 17, _cRow.y + _cRow.h - 8 - 26, 17, 26) : '');
                   /* ⛔ NO mergedOf ON THE COLUMN SURFACE, AND THAT IS DELIBERATE, NOT AN OMISSION.
                      The column tile at the room loop above is UNCONDITIONALLY openAccountModal — a
                      car with an auto-loan merges its lien for DISPLAY but still opens its own room;

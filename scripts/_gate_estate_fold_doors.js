@@ -204,6 +204,54 @@ const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
        ⭐ THREE LEGS, because "no click" alone is silent by construction — it passes on an empty
        label. The name must also SAY what it opens, and must still carry the counted-in-your-totals
        promise, which is the entire reason this tile may exist without a balance on its face. */
+    /* ══ §25.6 · THE CAPTAIN'S VISUAL RULINGS, 2026-08-11 ═══════════════════════════════════════
+       ⛔ --shield IS THE TRUST TOKEN. It means "legally held apart"; the picker borrowed it because
+       it was a colour the renderer had, not the colour this means. Gold is the house accent.
+       ⭐ BOTH DIRECTIONS: gold is PRESENT and the reliquary purple is ABSENT. Asserting only the
+       first would pass on a picker that drew both. */
+    const chrome = await p.evaluate(() => {
+      const box = document.querySelector('.datum-fold-picker [role="dialog"]');
+      if (!box) return null;
+      const cs = getComputedStyle(box);
+      const head = box.firstElementChild, sub = head && head.nextElementSibling;
+      const alpha = (c) => { const m = /rgba?\(([^)]+)\)/.exec(c || ''); if (!m) return 1;
+        const p4 = m[1].split(',').map((v) => parseFloat(v)); return p4.length > 3 ? p4[3] : 1; };
+      return {
+        border: cs.borderTopColor,
+        headColor: head ? getComputedStyle(head).color : '',
+        subColor: sub ? getComputedStyle(sub).color : '',
+        subAlpha: sub ? alpha(getComputedStyle(sub).color) : 0,
+        purple: /8a64ff|138,\s*100,\s*255/i.test(box.getAttribute('style') || '') ||
+                Array.from(box.querySelectorAll('*')).some((e) => /8a64ff|138,\s*100,\s*255/i.test(e.getAttribute('style') || '')),
+      };
+    });
+    ck(`V· the picker wears GOLD, not the reliquary purple — ${label}`,
+       !!chrome && /201,\s*168,\s*76/.test(chrome.border) && /201,\s*168,\s*76/.test(chrome.headColor),
+       chrome ? `border=${chrome.border} head=${chrome.headColor}` : 'no dialog');
+    ck(`V· and no --shield purple survives anywhere in it — ${label}`, !!chrome && !chrome.purple,
+       chrome && chrome.purple ? '*** #8a64ff / rgba(138,100,255) still drawn ***' : 'none');
+    /* The subhead is the sentence that says what this place IS. It was --muted = 30% white on a
+       near-black modal — the dimmest thing on the surface it was there to explain. */
+    ck(`V· the subhead is legible, not --muted — ${label}`, !!chrome && chrome.subAlpha >= 0.7,
+       chrome ? `${chrome.subColor} (alpha ${chrome.subAlpha})` : 'no dialog');
+
+    /* §25.6 — THE STAIRCASE. Drawn in PLAN (treads + up-arrow), which is the blueprint's own symbol,
+       and suppressed rather than shrunk on a short tile so it can never crowd the count. */
+    const stair = await el.evaluate((e) => {
+      const r = e.querySelector('rect.room-rect'), g = e.querySelector('.stair-glyph');
+      return { h: r ? +r.getAttribute('height') : 0, has: !!g,
+               treads: g ? g.querySelectorAll('line').length : 0,
+               inert: g ? g.getAttribute('pointer-events') === 'none' : false };
+    });
+    if (surface === 'floor') {
+      ck(`V· the upstairs tile carries a STAIRCASE — ${label}`, stair.h < 56 || stair.has,
+         stair.has ? `drawn (tile h=${Math.round(stair.h)})` : (stair.h < 56 ? `suppressed, tile only ${Math.round(stair.h)} tall` : '*** missing ***'));
+      /* ⛔ IT MUST NOT EAT THE CLICK. An unfilled shape intercepts on its STROKE, and these strokes
+         sit exactly where a thumb lands — the §24 hit-testing trap pointed the other way. */
+      if (stair.has) ck(`V· and it is INERT — decoration cannot steal the door's click — ${label}`,
+         stair.inert, stair.inert ? 'pointer-events=none' : '*** the glyph can swallow the click ***');
+    }
+
     /* ══ §25.4 · THE SECOND FLOOR IS A FLOOR, NOT A DIRECTORY ═══════════════════════════════════
        ⛔ EVERY LEG ABOVE WOULD PASS ON A ROW LIST. Green without these is untested wearing green —
        they are the only assertions that can tell a DRAWN floor from a table of names.
