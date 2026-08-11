@@ -926,8 +926,37 @@
                   colW += availW * (colTotals[colName] / totalGlobalRender);
               }
 
-              let availH = (gH - 100) - (accounts.length * minH);
-              availH = Math.max(0, availH);
+              /* ── §22.6 · THE LAST PRE-_bandLayout MATH IN THE FILE ──────────────────────────────
+               * ⛔ THE DEFECT THIS REPLACES, MEASURED 2026-08-10 IN THE REAL RENDERER. The old form:
+               *       availH = Math.max(0, (gH - 100) - (n * minH));  h = minH + availH * share
+               * reserves the floors first — which is why _bandLayout's own header calls this code the
+               * place the correct form came from — but it has no answer for the case where the floors
+               * ALONE do not fit. Once n * minH exceeds the band, availH clamps to 0 and every further
+               * account adds a FULL minH below the band, forever. Stack height is
+               * 75n + max(0, 750 - 75n), which predicts, and matched, six for six:
+               *       n<=10 -> 930 (flat)   n=11 -> 1005   n=12 -> 1080
+               *       n=14  -> 1230         n=18 -> 1530   n=24 -> 1980
+               * The container ends at 1010 and the viewBox at 1100, and .canvas-wrapper is
+               * overflow-hidden with no scroll anywhere, so from THIRTEEN ACCOUNTS IN ONE OWNERSHIP
+               * COLUMN a user's rooms are drawn, counted in their net worth, and impossible to see.
+               * Thirteen is not an edge case: two 401(k)s, an IRA, a brokerage, some cash and a house.
+               * ⚠️ PER COLUMN, not per estate — accounts.length is this column's count, so the same
+               * thirteen split across Primary/Joint/Co-Arch never trips it. That is why it hid.
+               *
+               * _bandLayout answers exactly this, and has since §22: `if (pool < n*floor) floor =
+               * pool/n` — COMPRESS RATHER THAN OVERRUN. Both wings were converted then; the estate's
+               * own columns were the last caller still on the old math. The band is unchanged —
+               * y[gY+20, gY+gH-80] = y[180,930], the same 750 units `gH - 100` always meant — so
+               * nothing moves at the counts that already fit. Only the counts that used to walk off
+               * the canvas change, and they now fill the band exactly instead.
+               * 🔑 THIN TILES ARE A READABILITY PROBLEM; TILES OFF THE CANVAS ARE AN
+               *    IS-IT-DRAWN-AT-ALL PROBLEM, AND ONLY ONE OF THOSE CAN SILENTLY DELETE MONEY.
+               * ⚠️ READABILITY IS NOT SOLVED BY THIS, IT IS MADE HONEST: at 24 accounts the tiles are
+               * ~31 units tall. The satellite wing caps its COUNT (sCap) and shows a collapsed
+               * counted tile instead; the columns have no such cap. That is the right follow-up and
+               * it needs authored copy for the collapsed tile, so it is flagged, not built here. */
+              var _colRows = _bandLayout(gY + 20, gY + gH - 80, gap, minH,
+                  accounts.map(function (a) { return a._renderVal; }));
               let currentY = gY + 20;
 
               accounts.forEach((acc, i) => {
@@ -946,10 +975,11 @@
                   let isDebt = base.taxCode === 'debt';
                   if(isDebt && absSum > 0) valStr = '-' + valStr;
 
-                  let h = minH;
-                  if(colTotals[colName] > 0) {
-                      h += availH * (acc._renderVal / colTotals[colName]);
-                  }
+                  /* currentY is NOT recomputed from the row on purpose: the loop already advances
+                     `currentY += h + gap` from `gY + 20`, which is byte-for-byte the recurrence
+                     _bandLayout runs internally. Taking only the HEIGHT keeps this a one-concept
+                     change and leaves the cursor, bounds and colInfo untouched. */
+                  let h = _colRows[i] ? _colRows[i].h : minH;
 
                   let d = { x: currentX, y: currentY, w: colW, h: h };
                   d.cx = d.x + d.w / 2;

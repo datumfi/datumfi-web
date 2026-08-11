@@ -77,12 +77,15 @@ const server = http.createServer((q, r) => {
   r.end(fs.readFileSync(f));
 });
 
+/* `extra` is [type, count] so a scenario can reach a CROWDED COLUMN. It used to hard-code two, which
+   is exactly why the §22.6 defect hid here: the grounds column only walks off the canvas past ~12
+   accounts IN ONE OWNERSHIP COLUMN, and no fixture in this gate ever got near that. */
 const build = (p, nT, nP, extra) => p.evaluate(([t, n, x]) => {
   try { localStorage.clear(); } catch (e) {}
   window.state.accounts = [];
   for (let i = 0; i < t; i++) addInstance('trust');
   for (let i = 0; i < n; i++) addInstance('property');
-  if (x) { addInstance(x); addInstance(x); }
+  if (x) for (let i = 0; i < x[1]; i++) addInstance(x[0]);
   window.state.accounts.forEach((a) => { a.value = 500000; });
   updateSVGs();
 }, [nT, nP, extra]);
@@ -175,7 +178,13 @@ const clipCheck = (p) => p.evaluate(() => {
     ['3 trusts · 3 properties (the worst subdivision)',                     3, 3, null, { trust: 3, sat: 2 }],
     ['2 trusts · 8 properties (both wings crowded)',                        2, 8, null, { trust: 2, sat: 7 }],
     ['1 trust · 12 properties (the collapse slot is live)',                 1, 12, null, { trust: 1 }],
-    ['1 trust · 2 properties + 2 taxable (a mixed estate)',                 1, 2, 'taxable', { trust: 1, sat: 1 }],
+    ['1 trust · 2 properties + 2 taxable (a mixed estate)',                 1, 2, ['taxable', 2], { trust: 1, sat: 1 }],
+    /* §22.6 — THE CROWDED COLUMN. 18 accounts in one ownership column put the room stack 430 units
+       outside the viewBox on the pre-fix build: drawn, counted in net worth, and clipped away by
+       .canvas-wrapper. This gate could not see it because nothing here had ever built more than two
+       ordinary accounts. 24 is the far end of the same failure. */
+    ['1 trust · 1 property + 18 taxable (a crowded column)',                1, 1, ['taxable', 18], { trust: 1 }],
+    ['1 trust · 1 property + 24 taxable (the far end)',                     1, 1, ['taxable', 24], { trust: 1 }],
   ];
   for (const [label, nT, nP, extra, want] of SCENES) {
     await build(p, nT, nP, extra);
