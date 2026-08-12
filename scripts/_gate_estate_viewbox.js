@@ -197,6 +197,16 @@ const clipCheck = (p) => p.evaluate(() => {
     ['1 trust · 1 property + 18 taxable (a crowded column)',                1, 1, ['taxable', 18], { trust: 1, col: 18 }],
     ['1 trust · 1 property + 24 taxable (the far end)',                     1, 1, ['taxable', 24], { trust: 1, col: 24 }],
     ['1 trust · 1 property + 50 taxable (the Captain\'s 50-room estate)',   1, 1, ['taxable', 50], { trust: 1, col: 50 }],
+    /* ── §26 / CENSUS ITEM 2 · THE TRUST WING RAISED PAST THE THRESHOLD IT GUARDS ────────────────
+     * ⚠️ THE ASYMMETRY WAS THE TELL, AND IT IS WORTH NAMING RATHER THAN QUIETLY FIXING: this table
+     * reached FIFTY accounts in a column and THREE in the trust wing. A fixture grows where the work
+     * happened, not where the risk is — the column scenes were added the day a column escaped, and
+     * nothing ever went back for the other wing. Measured in the 2026-08-12 census.
+     * ⭐ NINE is the cap boundary (every trust drawn, the tightest unfolded wing). TWELVE is past it,
+     * so the wing FOLDS and draws 8 rooms + a door — a shape this gate had never once painted, and
+     * the door is a NEW element on the canvas that must answer to the viewBox like everything else. */
+    ['9 trusts (the cap boundary — tightest unfolded wing)',                9, 1, null, { trust: 9, sat: 0 }],
+    ['12 trusts (PAST the cap — the wing folds to 8 + a door)',            12, 1, null, { trust: 8, sat: 0 }],
   ];
   for (const [label, nT, nP, extra, want] of SCENES) {
     await build(p, nT, nP, extra);

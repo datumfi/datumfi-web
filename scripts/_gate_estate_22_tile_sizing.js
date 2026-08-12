@@ -50,6 +50,19 @@ const { chromium } = require('playwright');
 const ROOT = path.resolve(__dirname, '..');
 const LABEL = process.argv.slice(2).find((a) => !a.startsWith('--')) || 'RUN';
 const OLD = process.argv.includes('--old');
+/* ── §26 / CENSUS ITEM 2 · --pre26 — THE HISTORICAL REPLAY ────────────────────────────────────────
+ * ⛔ A REPAIRED FIXTURE THAT CANNOT FAIL ON THE DEFECT IT MISSED IS NOT REPAIRED. This gate OWNS tile
+ * sizing in both wings and its trust fixture stopped at THREE, while the wing began overflowing at
+ * TEN. That gap is why §22.4's overflow note sat unfixed for two weeks: nobody missed it — THE GATE
+ * THAT OWNED IT COULD NOT BUILD THE STATE THAT BREAKS IT.
+ * So the raised fixture is proved against the renderer that actually shipped the defect. 77c9f0b is
+ * the LAST BUILD BEFORE the trust wing got type scaling (980689e promoted the pair to this wing), and
+ * studio.html is byte-identical from 77c9f0b to HEAD, so serving that renderer against today's host
+ * is a faithful reconstruction rather than a hybrid.
+ * ⭐ THE SHA IS HARDCODED ON PURPOSE — it names a MOMENT IN HISTORY, not "the previous commit". A
+ * relative ref would silently stop pointing at the defect the day anything else lands. */
+const PRE26 = process.argv.includes('--pre26');
+const PRE26_REF = '77c9f0b';
 const PORT = 8021;
 
 // GEOMETRY CONTRACT — mirrors datum-estate.js (gX/gY/gW/gH) and studio.html's viewBox. If the canvas
@@ -63,6 +76,26 @@ const EPS = 1.5;   // sub-pixel tolerance: heights are floats distributed by val
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml' };
 let OLD_SRC = null;
+if (PRE26) {
+  // POISON MUST PROVE IT LANDED — same rule as --old below.
+  OLD_SRC = execFileSync('git', ['show', PRE26_REF + ':scripts/datum-estate.js'], { cwd: ROOT, encoding: 'utf8' });
+  const cur = fs.readFileSync(path.join(ROOT, 'scripts/datum-estate.js'), 'utf8');
+  if (!OLD_SRC || OLD_SRC.length < 1000) { console.log('[estate_22] ABORT — could not read ' + PRE26_REF + ':scripts/datum-estate.js'); process.exit(2); }
+  if (OLD_SRC === cur) { console.log('[estate_22] ABORT — --pre26 is identical to the working file; nothing would be proven'); process.exit(2); }
+  /* ⛔ AND PROVE IT IS THE RIGHT HISTORY, not merely OLD history — a mis-typed ref would serve some
+     other build and its red would be attributed to a defect it never had.
+     ⚠️ THE FIRST VERSION OF THIS GUARD WAS WRONG AND IT CAUGHT ME, WHICH IS THE POINT. It tested for
+     `_tileTypeScale`, reasoning that the pre-fix build could not contain the helper. But 77c9f0b IS
+     the commit that introduced that helper — for the COLUMN. The trust wing did not adopt it until
+     980689e. So the helper EXISTS at the pre-defect ref and is simply NOT USED here.
+     🔑 THE DEFECT WAS NEVER "THE HELPER IS ABSENT", IT WAS "THIS WING DOES NOT CALL IT" — and a guard
+     that tests for the wrong thing refuses correct history. Anchored now on the two things that are
+     genuinely absent from the trust wing at 77c9f0b: its scaled value size, and the cap. */
+  if (/_TRUST_CAP/.test(OLD_SRC) || /_tValPx/.test(OLD_SRC)) {
+    console.log('[estate_22] ABORT — ' + PRE26_REF + ' already carries the §26 trust-wing fix; it is not the pre-defect build');
+    process.exit(2);
+  }
+}
 if (OLD) {
   // POISON MUST PROVE IT LANDED — an empty or identical substitution would produce a confident
   // "red-first" that never actually served the old renderer.
@@ -75,7 +108,7 @@ if (OLD) {
 const server = http.createServer((q, r) => {
   let u = decodeURIComponent(q.url.split('?')[0]);
   if (u === '/') u = '/index.html';
-  if (OLD && u === '/scripts/datum-estate.js') {
+  if ((OLD || PRE26) && u === '/scripts/datum-estate.js') {
     r.writeHead(200, { 'Content-Type': 'text/javascript' });
     return r.end(OLD_SRC);
   }
@@ -100,14 +133,25 @@ const read = (p) => p.evaluate(() => {
   const grab = (sel) => Array.from(document.querySelectorAll(sel)).map((g) => {
     const r = g.querySelector('.room-rect');
     if (!r) return null;
-    const texts = Array.from(g.querySelectorAll('text')).map((t) => ({
-      cls: t.getAttribute('class') || '',
-      px: parseFloat(getComputedStyle(t).fontSize),
-      y: parseFloat(t.getAttribute('y'))
-    }));
+    const texts = Array.from(g.querySelectorAll('text')).map((t) => {
+      /* ⭐ §26 — THE PAINTED INK, NOT THE FONT SIZE. `px` and the baseline `y` describe what the
+         renderer ASKED for; getBBox() describes what the browser actually PAINTED, descenders and
+         all. The 62.5-vs-77.6 error existed precisely because a text stack was ADDED (14 + 32) and
+         the sum was called a measurement. 🔑 A DERIVATION IS ONLY AS MEASURED AS ITS WEAKEST
+         CONSTANT — so this leg measures rather than derives. */
+      let bb = null;
+      try { const x = t.getBBox(); bb = { top: x.y, bot: x.y + x.height }; } catch (e) {}
+      return {
+        cls: t.getAttribute('class') || '',
+        px: parseFloat(getComputedStyle(t).fontSize),
+        y: parseFloat(t.getAttribute('y')),
+        bb: bb
+      };
+    });
     return { x: +r.getAttribute('x'), y: +r.getAttribute('y'), w: +r.getAttribute('width'), h: +r.getAttribute('height'), texts };
   }).filter(Boolean);
-  return { trust: grab('.trust-room'), sat: grab('.satellite-room'), collapse: grab('.satellite-collapse') };
+  return { trust: grab('.trust-room'), sat: grab('.satellite-room'), collapse: grab('.satellite-collapse'),
+           trustCollapse: grab('.trust-collapse') };
 });
 
 (async () => {
@@ -210,6 +254,39 @@ const read = (p) => p.evaluate(() => {
   ck('T6 trust tile width is 170 — PARITY with the satellite, not the old 240',
      t1.trust.length === 1 && t1.trust[0].w === 170, t1.trust.length ? t1.trust[0].w : 'n/a');
   ck('T7 trusts subdivide (3-up strictly under 1-up)', t3.trust.length === 3 && t1.trust.length === 1 && t3.trust[0].h < t1.trust[0].h, 'n/a');
+
+  /* ── §26 / CENSUS ITEM 2 · THE TRUST FIXTURE RAISED PAST THE THRESHOLD IT GUARDS ────────────────
+   * ⛔ THIS GATE OWNED TILE SIZING IN BOTH WINGS AND ITS TRUST FIXTURE STOPPED AT THREE. The wing
+   * began overflowing at TEN. That is the whole census thesis demonstrated on our own history: §22.4
+   * did not sit unfixed for two weeks because anyone missed it — the gate that owned it could not
+   * construct the state that breaks it. T0-T7 above are unchanged and still measure the SUBDIVISION;
+   * these legs measure the two states the old fixture could not reach.
+   * ⭐ NINE is the cap boundary — the tightest UNFOLDED wing, every tile paid its full 75-unit floor.
+   * ⭐ TWELVE is past the cap, so the wing FOLDS: 8 drawn + 1 door. Both are asserted, because a cap
+   *   is two claims (it fires when it should, and not when it should not) and this is the sizing side
+   *   of both. Proved historically by --pre26, where TWELVE spills 9.7 units of ink. */
+  // How far painted ink escapes its own tile, in user units. <= 0 means contained.
+  const inkOverflow = (tiles) => tiles.reduce((worst, t) => {
+    const bots = t.texts.map((x) => (x.bb ? x.bb.bot : -Infinity)).filter((v) => v !== -Infinity);
+    return bots.length ? Math.max(worst, Math.max(...bots) - (t.y + t.h)) : worst;
+  }, -Infinity);
+  const t9 = await scene(9, 1), t12 = await scene(12, 1);
+  ck('TC0 fixture REACHES the cap boundary — 9 trusts, ALL drawn, NO door',
+     t9.trust.length === 9 && t9.trustCollapse.length === 0,
+     t9.trust.length + ' drawn / ' + t9.trustCollapse.length + ' door(s)');
+  ck('TC1 fixture REACHES PAST the cap — 12 trusts fold to 8 drawn + 1 door',
+     t12.trust.length === 8 && t12.trustCollapse.length === 1,
+     t12.trust.length + ' drawn / ' + t12.trustCollapse.length + ' door(s)');
+  ck('TC2 nine trusts still end exactly on the band bottom',
+     Math.abs(bottomOf(t9.trust) - BAND_BOT) < EPS, bottomOf(t9.trust));
+  ck('TC3 and the folded wing does too — the door takes a REAL slot',
+     Math.abs(Math.max(bottomOf(t12.trust), bottomOf(t12.trustCollapse)) - BAND_BOT) < EPS,
+     Math.max(bottomOf(t12.trust), bottomOf(t12.trustCollapse)));
+  /* ⭐⭐ THE LEG THAT WOULD HAVE CAUGHT §22.4 TWO WEEKS EARLY. Measured ink, not derived. */
+  ck('TC4 ⭐ the painted INK stays inside its tile at the cap boundary (9 trusts)',
+     inkOverflow(t9.trust) <= EPS, 'worst overflow ' + inkOverflow(t9.trust).toFixed(1) + 'u');
+  ck('TC5 ⭐ and past the cap too (12 trusts -> folded)',
+     inkOverflow(t12.trust) <= EPS, 'worst overflow ' + inkOverflow(t12.trust).toFixed(1) + 'u');
 
   /* ── §22.2 · PARITY AS A RELATIONSHIP, NOT AS TWO CONSTANTS ─────────────────────────────────────
      T6 and S5 both pin 170, so they would BOTH have to be edited to break parity — but they are two
