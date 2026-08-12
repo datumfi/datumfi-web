@@ -1117,15 +1117,68 @@
               tTotals+=v;
           });
           
+          /* ── §26 · THE TRUST CAP IS 9, AND 9 IS DERIVED — IT IS WHERE THIS BAND'S FLOOR RUNS OUT ──
+           * THE ARITHMETIC, IN FULL, SO IT CANNOT ROT INTO A PREFERENCE:
+           *   the band is y[gY+20, gY+gH] = 830 units, gap 12, floor 75 (the _bandLayout call below).
+           *   pool(n) = 830 - 12(n-1) = 842 - 12n           <- space the TILES may occupy
+           *   the 75-unit floor is affordable while  842 - 12n >= 75n  =>  842 >= 87n  =>  n <= 9.68
+           *   => 9. Browser measurement agrees exactly: last contained count 9, first overflow 10.
+           * 🔑 THE CAP IS NOT A POLICY — IT IS THE PLACE WHERE `_bandLayout` STOPS BEING ABLE TO PAY
+           *    ITS OWN FLOOR. The floor WAS the readability threshold all along; nobody had connected
+           *    the two, which is why 11 and 7 were both floated and both wrong for this wing.
+           *
+           * ⛔⛔ DO NOT READ THIS AS A LAW BOTH WINGS OBEY — IT IS NOT, AND THE DIFFERENCE IS
+           * DELIBERATE. The first floor's `_COL_CAP = 11` sits at 750/11 = 68.2 units per slot, which
+           * is ALREADY BELOW its own 75 floor: that column deliberately runs one room PAST the point
+           * this wing stops at. The Architect ruled it there on 2026-08-11 and the reason is a house
+           * law — A THIN ROOM YOU CAN SEE BEATS A MISSING ROOM YOU CANNOT. Anyone who "harmonises"
+           * these two numbers by lowering 11 to match 9 is undoing a ruling, not fixing an
+           * inconsistency. 🔑 A NUMBER WITHOUT ITS DERIVATION ROTS; A NUMBER WHOSE NEIGHBOUR HAS A
+           * DIFFERENT DERIVATION ROTS FASTER — so both derivations are written down, here, together.
+           *
+           * ⚠️ AND THIS CAP IS NOT AN OVERFLOW FIX. It was measured as one, but `77c9f0b`/`980689e`
+           * closed the overflow the other way (the type now scales with the tile) and the wing is
+           * contained at EVERY count 1..14 today. What is left is dignity, not containment: below the
+           * 75-unit floor a trust room is a sliver with shrunken type. The Captain ruled 9 on that
+           * basis, knowing 10 was defensible, on 2026-08-12. ⛔ Do not "restore" a lost room here
+           * believing you are fixing a spill — there is no spill.
+           *
+           * ⚠️⚠️ THE SELECTOR THIS CAP INHERITS, RECORDED BECAUSE IT IS NOT MINE. Membership of this
+           * wing is decided UPSTREAM, in studio.html's first pass:
+           *     } else if (base.taxCode === 'trust' && acc.trustType !== 'Revocable')
+           * That is THE RELIQUARY ONLY (`id:'trust'`). THE PARLOR — the revocable trust, authored in
+           * full in the Copy Bank and completely UNWIRED (`reg:null`, absent from `_LIVE_LEAVES`) — is
+           * specified as `id:'revtrust'`, `taxCode:'passthru'`, and would fail that test on the
+           * taxCode alone. It therefore CANNOT reach this wing, this cap, or the word "trusts" on the
+           * door below. ⛔ IF THE PARLOR IS EVER GIVEN `taxCode:'trust'`, THIS CAP AND THIS COPY
+           * INHERIT IT SILENTLY — and the two rooms route OPPOSITELY (The Reliquary renders outside
+           * the estate; The Parlor renders inside it at full value), so one door would be making one
+           * promise across two different totals. Re-derive both before widening that selector. */
+          var _TRUST_CAP = 9;
+          var _tShown = trustAccounts, _tHidden = 0, _tFolded = [];
+          if (trustAccounts.length > _TRUST_CAP) {
+              _tShown  = trustAccounts.slice(0, _TRUST_CAP - 1);   // the last slot belongs to the door
+              _tHidden = trustAccounts.length - _tShown.length;
+              _tFolded = trustAccounts.slice(_tShown.length);
+          }
+          /* The door takes a REAL band slot weighted by everything it stands for, so the stack still
+             fills the band exactly — the same rule both other collapse surfaces follow. */
+          var _tWeights = _tShown.map(function (a) { return a._renderVal; });
+          if (_tHidden > 0) {
+              var _tHidTot = 0;
+              _tFolded.forEach(function (a) { _tHidTot += a._renderVal; });
+              _tWeights.push(_tHidTot);
+          }
+
           /* §22 — the wing now subdivides through the SHARED _bandLayout instead of its own math.
              The old form (availH = gH - 100; h = 75 + availH*share) paid every tile a 75-unit floor
              AND handed out the entire pool as remainder, so the stack summed to 75n + pool: correct
              at one trust, 82 units past the band at two, and 79 units outside the viewBox at three.
              Same band as the satellite wing by construction — y[gY+20, gY+gH] — which is what makes
              one trust and one property come out at the identical height instead of merely similar. */
-          var tRows = _bandLayout(gY + 20, gY + gH, 12, 75, trustAccounts.map(function (a) { return a._renderVal; }));
+          var tRows = _bandLayout(gY + 20, gY + gH, 12, 75, _tWeights);
 
-          trustAccounts.forEach((acc, tI) => {
+          _tShown.forEach((acc, tI) => {
               let base = getBaseType(acc.baseId);
               let h = tRows[tI].h;
               let cY = tRows[tI].y;
@@ -1177,6 +1230,106 @@
               // no cursor advance — _bandLayout already owns every y. Advancing here as well is how
               // two positioning authorities drift apart.
           });
+
+          /* ── §26 · THE DOOR. ⛔ NEVER THE CAP ALONE ────────────────────────────────────────────
+           * A CAP WITHOUT A DOOR IS HOW THE COLLAPSE TILE WAS BORN DEAD — twice, in this file, and
+           * neither was noticed for months. This is collapse surface #3 and it ships WITH its verb.
+           *
+           * ⛔ NO STAIRCASE GLYPH, AND THAT IS THE NAMING RULING MADE VISUAL. A PLACE-WORD IS EARNED
+           * BY DISAPPEARANCE: the column rooms VANISH, so they get stairs and "the 2nd floor". The
+           * trusts are a wing the user is already looking at, so this door leads ACROSS, not UP.
+           * Drawing stairs here would say the one thing the Captain ruled against.
+           *
+           * PURPLE BY INLINE FILL, NOT BY THE `trust-room` CLASS — measured, and the class was the
+           * obvious wrong move. `.blueprint-svg.thermal-mode .room-grp.trust-room .room-rect` paints
+           * a FILL, so under the tax lens this door would have read as a room holding money. It holds
+           * none: it quotes no balance because you cannot open INTO it. The wing's own tiles already
+           * set `fill:var(--shield)` inline (see the title above), so this matches how the wing
+           * actually works rather than how its CSS happens to be keyed.
+           * ⛔ pointer-events:all VIA _makeFoldDoor IS LOAD-BEARING — an SVG rect with no fill is
+           * hit-testable ONLY ON ITS STROKE, which is precisely how surfaces #1 and #2 shipped as
+           * 1px outlines of a click target with a hole in the middle. */
+          if (_tHidden > 0 && tRows.length === _tWeights.length) {
+              var _tcRow = tRows[tRows.length - 1];
+              var _tcD = { x: tX + 10, y: _tcRow.y, w: tW - 20, h: _tcRow.h };
+              /* ⛔ AUTHORED COPY, VERBATIM (L47). ⚠️ SINGULAR IS AUTHORED AND UNREACHABLE BY
+                 CONSTRUCTION: _tShown is _TRUST_CAP - 1 = 8 and this door exists only above
+                 _TRUST_CAP = 9, so _tHidden is 2 AT MINIMUM and can never be 1. Wired regardless —
+                 A CAP IS A NUMBER, NOT A PROMISE, and the day the cap moves the string must already
+                 be right. ⛔ NEVER RECORD EITHER SINGULAR AS SMOKED; no fixture can reach them. */
+              var _tcL = '+' + _tHidden + (_tHidden === 1 ? ' more trust' : ' more trusts');
+              /* WIDTH ONLY, AND THE PAIR RULE IS NOT VIOLATED — IT IS INAPPLICABLE, WHICH IS A
+                 DIFFERENT THING AND WORTH SAYING. _tileTypeScale is the HEIGHT half of the §26 pair
+                 and it exists to stop a two-line name+value stack (77.6 units of ink) overrunning a
+                 short tile. This door carries ONE line and no value, and its slot is >= 75 units by
+                 the cap's own derivation, so there is no stack to compress. Fixed 14px, width-fitted
+                 — byte-for-byte the treatment the first floor's own collapse tile gets. */
+              var _tcPx = _fitPxShared(_tcL, 14, _tcD.w);
+              /* ⛔ THE §22.1 FLOOR OUTRANKS THE FIT. Unreachable TODAY (at tW-20 = 170 units even
+                 "+999999 more trusts" fits above 11px) — but §23b converts the width constants to
+                 expressions, which is exactly when a provably-safe assumption stops being one. */
+              if (_tcPx <= 8 && String(_tcL).length * 0.75 * 8 > (_tcD.w - 6)) {
+                  console.warn('[estate §26] trust collapse tile cannot fit "' + _tcL + '" at the 8px floor in a ' +
+                      Math.round(_tcD.w) + '-unit tile — drawing it anyway; STOP AND FLAG per §22.1.');
+              }
+              /* ⛔ AUTHORED VERBATIM. "total square footage" IS THE ESTATE TOTAL — grandTotal, which
+                 studio.html accumulates over every non-excluded account and which no trust setting
+                 can reduce. It is NOT the DatumShape spend total, from which trusts are excluded by a
+                 static investable-bucket rule (SHAPE_EXCLUSION_NOTE is display-only micro-copy — "No
+                 logic / no total" — not a user toggle). TWO DIFFERENT TOTALS, TWO DIFFERENT PROMISES;
+                 this sentence makes the one that is true. Guarded permanently by
+                 _gate_estate_all_counted_is_drawn's trust ESTATE-total leg.
+                 ── §25.5 · THE ACCESSIBLE NAME IS ITS OWN STRING. "Click" is a word about a mouse,
+                 not about meaning; a control's accessible name says what it DOES, never how to
+                 operate it. ⭐ The counted-in-your-total clause stays in BOTH — it is the entire
+                 reason this tile may exist without a balance on its face. */
+              var _tcLead = _tHidden + (_tHidden === 1 ? ' more trust' : ' more trusts') +
+                  '. They are all counted in your total square footage.';
+              var _tcTip  = _tcLead + ' Click to open them.';
+              var _tcAria = _tcLead + ' Opens the trusts.';
+              var _tcg = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+              /* ⭐ `data-collapsed-count` IS THE CONTRACT, NOT A DEBUG ATTRIBUTE. _gate_estate_fold_doors
+                 DERIVES its population from this attribute precisely so surface #3 cannot be born
+                 dead — carrying it is what enrolls this door in every door check that already exists. */
+              _tcg.setAttribute('class', 'room-grp visible trust-collapse');
+              _tcg.setAttribute('data-collapsed-count', String(_tHidden));
+              _tcg.innerHTML =
+                  '<title>' + _tcTip + '</title>' +
+                  '<rect x="' + _tcD.x + '" y="' + _tcD.y + '" width="' + _tcD.w + '" height="' + _tcD.h +
+                      '" class="room-rect active" style="stroke-dasharray:4 4; stroke:var(--shield);" />' +
+                  '<text x="' + (_tcD.x + _tcD.w / 2) + '" y="' + (_tcD.y + _tcD.h / 2 + 5) +
+                      '" class="bp-title" style="fill:var(--shield); font-size:' + _tcPx + 'px;">' + _tcL + '</text>';
+              /* §25.4 — THE TRUSTS ARE DRAWN, NOT LISTED. Same shared emitter the second floor uses,
+                 so a trust behind this door cannot drift from how it looks in the wing.
+                 ⚠️ TWO COSMETIC EDGE CASES, MEASURED AND PARKED BY THE ARCHITECT (2026-08-12), NOT
+                 OVERLOOKED: this emitter formats from Math.abs(value) while the wing's own template
+                 reads acc.value raw, so a trust below $1,000 (rounding) or negative (blank vs figure)
+                 would render its FIGURE slightly differently here. ⛔ THE SHOCK LENS IS **NOT** ONE OF
+                 THEM — checked, not assumed: `isVolatile` is `base.isInvestment || taxCode==='liquid'`
+                 and the trust base is neither, so shockMult is 1 on both paths at every count.
+                 ⛔ THE TRUST EMITTER STAYS ITS OWN TEMPLATE. Unifying it would move valStr on those
+                 same edges — flagged for its own beat, never smuggled into a cap commit.
+                 ⛔ mergedOf IS null DELIBERATELY: a trust carries no lien, and the wing tile is
+                 unconditionally openAccountModal, so the picker matches the tile by matching its
+                 absence of a branch. */
+              var _tcFloorTile = function (acc, d) {
+                  var b = getBaseType(acc.baseId);
+                  if (!b) return null;
+                  return _roomTileSVG(acc, b, d, {
+                      isShocked: isShocked, isThermal: isThermal, ownStroke: true, anim: false,
+                      mergeByAsset: _mergeDebtsByAsset, weights: accountWeights
+                  });
+              };
+              /* ⛔ THE FOLDED SET IS PASSED EAGERLY, AND THAT IS CORRECT HERE RATHER THAN AN
+                 OVERSIGHT. §25.7's second floor resolves LAZILY because a column's tile is built
+                 before the later columns have folded anything. This wing is ONE band, fully resolved
+                 above, and it does NOT report to `_upstairs` — the trusts are their own place, not
+                 part of the house's upstairs, which is the same ruling that denied them the stairs. */
+              _makeFoldDoor(_tcg, _tFolded, 'THE TRUSTS',
+                  function (n) { return n + (n === 1 ? ' trust' : ' trusts') + ' here. Pick one to enter it.'; },
+                  _tcAria, null, _tcFloorTile);
+              svgContainer.appendChild(_tcg);
+          }
       }
 
       /* ── SATELLITE PROPERTY BLOCKS — STEP 3b ────────────────────────────────────────────────────

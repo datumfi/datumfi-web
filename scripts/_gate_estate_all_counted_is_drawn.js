@@ -63,6 +63,7 @@ const NOSATMERGE = process.argv.includes('--nosatmerge');   // §19.13 — satel
    completely different ways and a single mutation would only ever prove one of them. */
 const EVERYPROP  = process.argv.includes('--everyprop');    // drop the first-only test  -> F5 [SECOND] reds
 const BACKFILL   = process.argv.includes('--backfill');     // stamp existing blanks     -> F5 [NO-BACKFILL] reds
+const TRUSTUNCOUNTED = process.argv.includes('--trustuncounted');   // §26 — see A_TRUSTCOUNT below
 const MUT = NOSAT || NOHANDOFF || NOCOLLAPSE || STALEJS || MISCOUNT || NOSATMERGE;
 const PORT = 8341;
 const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
@@ -98,6 +99,23 @@ const M_BACK = 'propPurpose = _bornPurpose;'
              + ' a.propPurpose = "Primary residence"; });   /* retroactive stamp by --backfill */';
 const A_SATMERGE = '              var sMerged = sDebts.length > 0;';
 const M_SATMERGE = '              var sMerged = false;   /* satellite merge removed by --nosatmerge */';
+/* ── §26 · --trustuncounted — THE NEGATIVE CONTROL FOR THE SQUARE-FOOTAGE PROMISE ────────────────
+ * ⛔ THE OBVIOUS CONTROL IS THE WRONG SHAPE AND WOULD HAVE SHIPPED A GREEN THAT PROVED NOTHING.
+ * "Exclude one trust upstream and the leg must red" does NOT bite: `acc.exclude` returns BEFORE both
+ * the grandTotal accumulation AND the trustAccounts push, so an excluded trust is neither counted
+ * nor drawn — the invariant stays honestly TRUE and the leg stays honestly GREEN. That is correct
+ * behaviour, not a failure. 🔑 A CONTROL MUST FAIL IN THE SHAPE OF THE CLAIM: the claim is "every
+ * trust the wing DRAWS is inside the square footage", so the poison must make the wing draw a trust
+ * the total does not carry — a disagreement between the picture and the number, which is this
+ * gate's whole reason to exist.
+ * ⛔ AND IT IS AIMED AT THE ESTATE TOTAL SPECIFICALLY (grandTotal -> #gross-estate-val), NOT the
+ * DatumShape spend total. Trusts are excluded from the Shape BY DESIGN and always have been; a leg
+ * pinned there would red on correct behaviour forever. MEASURED 2026-08-12: SHAPE_EXCLUSION_NOTE is
+ * a static baseId->string map whose own header reads "display-only ... No logic / no total", and its
+ * single consumer renders an ⓘ tooltip. There is no toggle, so there is nothing a user can do to
+ * make the hover's promise false. TWO TOTALS, TWO PROMISES; this mutation attacks the right one. */
+const A_TRUSTCOUNT = '        else grandTotal += effectiveValue || 0;';
+const M_TRUSTCOUNT = '        else if (base.taxCode !== \'trust\') grandTotal += effectiveValue || 0;   /* trusts drawn but uncounted: --trustuncounted */';
 
 const MIME = { '.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.json':'application/json','.png':'image/png','.woff2':'font/woff2','.ico':'image/x-icon' };
 function mutate(src, a, m, label) {
@@ -119,12 +137,13 @@ const server = http.createServer((req, res) => {
     if (NOSATMERGE) src = mutate(src, A_SATMERGE, M_SATMERGE, 'A_SATMERGE');
     body = Buffer.from(src, 'utf8');
   }
-  if ((NOHANDOFF || NOREPAINT || EVERYPROP || BACKFILL) && /studio\.html$/.test(rp)) {
+  if ((NOHANDOFF || NOREPAINT || EVERYPROP || BACKFILL || TRUSTUNCOUNTED) && /studio\.html$/.test(rp)) {
     let src = body.toString('utf8');
     if (NOHANDOFF) src = mutate(src, A_HAN, M_HAN, 'A_HAN');
     if (NOREPAINT) src = mutate(src, A_REPAINT, M_REPAINT, 'A_REPAINT');
     if (EVERYPROP) src = mutate(src, A_EVERY, M_EVERY, 'A_EVERY');
     if (BACKFILL)  src = mutate(src, A_BACK,  M_BACK,  'A_BACK');
+    if (TRUSTUNCOUNTED) src = mutate(src, A_TRUSTCOUNT, M_TRUSTCOUNT, 'A_TRUSTCOUNT');
     body = Buffer.from(src, 'utf8');
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
@@ -185,6 +204,12 @@ function ok(cond, msg)  { if (cond) { pass++; console.log('PASS ' + msg); } else
 
     const collapseEl = svg.querySelector('.satellite-collapse');
     const collapsed = collapseEl ? parseInt(collapseEl.getAttribute('data-collapsed-count'), 10) || 0 : 0;
+    /* §26 — SURFACE #3 IS READ BY ITS OWN CLASS, NOT BY A BARE [data-collapsed-count]. Three doors
+       now carry that attribute, so a generic selector would have made the satellite count above pick
+       up whichever door the renderer appended first — silently, and only in fixtures that build
+       both. Each surface is counted by the thing that identifies IT. */
+    const tCollapseEl = svg.querySelector('.trust-collapse');
+    const trustCollapsed = tCollapseEl ? parseInt(tCollapseEl.getAttribute('data-collapsed-count'), 10) || 0 : 0;
 
     // --- ON SCREEN? every drawn block must survive .canvas-wrapper's overflow:hidden ---
     const offscreen = [];
@@ -205,11 +230,23 @@ function ok(cond, msg)  { if (cond) { pass++; console.log('PASS ' + msg); } else
       missing.push(m.baseId + '/' + m.id + '/$' + m.value);
     });
 
+    /* §26 — THE SQUARE FOOTAGE AS A NUMBER, BECAUSE THE PROMISE IS ABOUT MONEY. `formattedTotal` is
+       full-precision comma-grouped ("$4,000,000"), never abbreviated, so this round-trips EXACTLY —
+       no tolerance, no magnitude bucket. ⛔ This is `#gross-estate-val` <- grandTotal: THE ESTATE
+       TOTAL. It is NOT the DatumShape spend total, which excludes trusts by design. */
+    const fTxt = (document.getElementById('gross-estate-val') || {}).textContent || '';
+    const fNum = Number(String(fTxt).replace(/[$,\s]/g, ''));
+    /* The wing's OWN trust set, straight off state — the denominator the promise is made about. */
+    const trustSum = window.state.accounts
+      .filter(a => !a.exclude && (getBaseType(a.baseId) || {}).taxCode === 'trust' && a.trustType !== 'Revocable')
+      .reduce((t, a) => t + (a.value || 0), 0);
     return { made: made.length, drawnCount: Object.keys(drawn).length, gState: gState,
              satelliteTiles: svg.querySelectorAll('g.satellite-room:not(.satellite-collapse)').length,
-             collapsed: collapsed, missing: missing, offscreen: offscreen,
+             collapsed: collapsed, trustCollapsed: trustCollapsed, missing: missing, offscreen: offscreen,
              roomGrps: svg.querySelectorAll('g.room-grp').length,
-             footage: (document.getElementById('gross-estate-val') || {}).textContent || '',
+             trustRooms: svg.querySelectorAll('g.trust-room').length,
+             trustSum: trustSum, footageNum: isFinite(fNum) ? fNum : null,
+             footage: fTxt,
              svgChildren: svg.children.length };
   }, spec);
 
@@ -486,6 +523,88 @@ function ok(cond, msg)  { if (cond) { pass++; console.log('PASS ' + msg); } else
      'a default is a pre-filled input, never a retroactive truth (L47 / §19.2)');
   ok(born.legacy.thirdBlank,
      'F5 [NO-BACKFILL] and the third property is itself born blank — the default fires on the FIRST only');
+
+  /* ── F6 · §26 THE TRUSTS — THE SQUARE-FOOTAGE PROMISE, AND WHICH TOTAL IT NAMES ─────────────────
+   * FIXTURE STATE: ten irrevocable trusts. _TRUST_CAP = 9 and the wing draws _TRUST_CAP - 1 = 8, so
+   * ten is the FIRST count that folds anything — eight drawn, two behind THE TRUSTS door.
+   * ⛔ THE FIXTURE MUST REACH 10 OR THE GREEN IS DECORATIVE. Nine builds the wing at its cap and
+   * produces NO door, which is a scene that proves nothing while looking thorough.
+   *
+   * ⭐ WHY THIS LEG EXISTS. The door's hover reads "They are all counted in your total square
+   * footage" — A PROMISE ABOUT MONEY, made by a tile that deliberately quotes no balance because you
+   * cannot open into it. A promise nothing can check is decoration. §26 wires the words; this is
+   * what keeps them true tomorrow.
+   *
+   * ⛔⛔ IT NAMES THE TOTAL, AND THE NAME IS THE LOAD-BEARING PART. "Square footage" is the ESTATE
+   * total — grandTotal, rendered into #gross-estate-val. It is NOT the DatumShape spend total, from
+   * which trusts are excluded BY DESIGN. A leg pinned to the Shape would red on correct behaviour
+   * forever; a leg that asserted only "counted", without saying COUNTED IN WHAT, would be a sentence
+   * rather than an instrument. ⭐ This also settles the `Room Taxonomy` row 109 coupling flagged
+   * 2026-08-11: "case-by-case" governs the SHAPE, not the square footage. Two totals, two promises.
+   *
+   * ⛔ FOLD-INVARIANCE IS DELIBERATELY *NOT* THE LEG — it would be a green that was never at risk.
+   * grandTotal is accumulated in studio.html's first pass, upstream of every placement decision, so
+   * "the total does not move when the wing folds" is true BY CONSTRUCTION and would pass just as
+   * happily on a renderer that drew nothing at all. The leg that can genuinely fail is the
+   * RECONCILIATION: the folded trusts must be inside the footage, and the door must admit to exactly
+   * how many it hides. 🔑 ASK WHAT WOULD PASS WITHOUT THE CLAIM BEING TRUE.
+   * ⭐ NEGATIVE CONTROL: --trustuncounted (see A_TRUSTCOUNT). It leaves the wing drawing all eight
+   * and removes trusts from grandTotal, so the picture and the number disagree — which is this
+   * gate's entire subject. It must RED here. It is aimed at F6 alone: the satellite mutations do not
+   * touch this fixture, and F6 does not touch theirs. */
+  const TRUST_N = 10, TRUST_DRAWN = 8;
+  const f6spec = [];
+  for (let i = 0; i < TRUST_N; i++) f6spec.push({ baseId: 'trust', kind: 'other', ov: { value: 400000 + i * 1000 } });
+  const F6 = await probe(f6spec);
+  console.log('  F6 ' + JSON.stringify({ made: F6.made, trustRooms: F6.trustRooms, trustCollapsed: F6.trustCollapsed,
+                                         missing: F6.missing.length, footage: F6.footage, trustSum: F6.trustSum }));
+  // PRESENCE FIRST — an exclusion assertion must be preceded by a presence assertion, or it passes
+  // perfectly on a render that produced nothing. Not inverted by any mutation.
+  ok(F6.svgChildren > 0, 'F6 [PRESENCE] the canvas rendered something at all');
+  ok(F6.trustRooms > 0,  'F6 [PRESENCE] the trust wing drew rooms to overflow FROM (got ' + F6.trustRooms + ')');
+  // CONTROL — the fixture REACHED the folded state. Without this the invariant below is vacuous.
+  ok(F6.trustCollapsed === TRUST_N - TRUST_DRAWN,
+     'F6 [CONTROL] the wing folded and THE TRUSTS door fired (hides ' + F6.trustCollapsed +
+     ', derived ' + (TRUST_N - TRUST_DRAWN) + ' from _TRUST_CAP=9)');
+  ok(F6.trustRooms === TRUST_DRAWN,
+     'F6 [CONTROL] exactly _TRUST_CAP-1 trusts are DRAWN (got ' + F6.trustRooms + ', want ' + TRUST_DRAWN + ')');
+  // COLLAPSED IS STILL DRAWN — the undrawn remainder is exactly what the door admits to hiding.
+  ok(F6.missing.length === F6.trustCollapsed,
+     'F6 [INVARIANT] the door accounts for every trust it hides (' + F6.missing.length +
+     ' undrawn vs ' + F6.trustCollapsed + ' counted)');
+  /* ⭐⭐ THE MONEY LEG. Full-precision, comma-grouped, never abbreviated — so this is an EXACT
+     equality with no tolerance and no magnitude bucket. If it ever drifts, the door's hover has
+     become a lie about money and this reds the same day. */
+  ok(F6.footageNum !== null && F6.footageNum === F6.trustSum,
+     'F6 [MONEY · ESTATE TOTAL] every trust the wing draws OR hides is inside the square footage — ' +
+     '#gross-estate-val=' + F6.footageNum + ' vs Σtrusts=' + F6.trustSum +
+     ' (this is grandTotal, NOT the DatumShape spend total)');
+  ok(F6.offscreen.length === 0,
+     'F6 [INVARIANT] every drawn block is ON SCREEN — offscreen: ' + JSON.stringify(F6.offscreen));
+
+  /* ── F7 · §26 THE BOUNDARY — THE CAP MUST NOT FIRE ONE ROOM EARLY ───────────────────────────────
+   * F6 proves the door appears at TEN. It cannot prove the door is ABSENT at NINE, and a cap that
+   * fires one room early is invisible without this: every F6 leg would still pass while a user with
+   * nine trusts silently lost one off the canvas behind a door they never asked for.
+   * 🔑 A CAP IS TWO CLAIMS — IT FIRES WHEN IT SHOULD, AND IT DOES NOT FIRE WHEN IT SHOULD NOT.
+   * Testing only the firing side is how an off-by-one ships wearing green.
+   * ⭐ NINE IS THE EXACT BOUNDARY, DERIVED: `if (trustAccounts.length > _TRUST_CAP)` with
+   * _TRUST_CAP = 9, so nine is the last count that draws every trust and folds nothing. This is also
+   * the regression the Captain cares about most — at or below the cap NOTHING may move. */
+  const f7spec = [];
+  for (let i = 0; i < 9; i++) f7spec.push({ baseId: 'trust', kind: 'other', ov: { value: 400000 + i * 1000 } });
+  const F7 = await probe(f7spec);
+  console.log('  F7 ' + JSON.stringify({ made: F7.made, trustRooms: F7.trustRooms, trustCollapsed: F7.trustCollapsed,
+                                         missing: F7.missing.length, footage: F7.footage }));
+  ok(F7.trustRooms === 9,
+     'F7 [BOUNDARY] at the cap exactly, ALL NINE trusts are still drawn (got ' + F7.trustRooms + ')');
+  ok(F7.trustCollapsed === 0,
+     'F7 [BOUNDARY] and NO door exists — the cap does not fire at 9 (collapsed=' + F7.trustCollapsed + ')');
+  ok(F7.missing.length === 0,
+     'F7 [INVARIANT] nothing is hidden, so nothing is missing — missing: ' + JSON.stringify(F7.missing));
+  ok(F7.footageNum !== null && F7.footageNum === F7.trustSum,
+     'F7 [MONEY · ESTATE TOTAL] the square footage still carries every trust — #gross-estate-val=' +
+     F7.footageNum + ' vs Σtrusts=' + F7.trustSum);
 
   console.log('-------------------------------------');
   console.log('OVERALL: ' + (fail === 0 ? 'GREEN' : 'RED') + '   (' + pass + ' pass / ' + fail + ' fail)');

@@ -99,7 +99,13 @@ const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
      = floor((1010-180+15)/110) = 7, and the stack appears only when satellites EXCEED it. The first
      property becomes The Grounds (§19.15 — born a Primary residence), so it takes NINE property
      rooms to fold the satellite stack, not seven. Column side: _COL_CAP = 11, so 12+ in one column.
-     🔑 A NUMBER WITHOUT ITS DERIVATION ROTS — this one had, silently, inside a fixture comment. */
+     Trust side (§26): _TRUST_CAP = 9, so 10+ trusts in the wing.
+     🔑 A NUMBER WITHOUT ITS DERIVATION ROTS — this one had, silently, inside a fixture comment.
+     ⚠️ AND THE THREE CAPS ARE NOT THE SAME KIND OF NUMBER, WHICH IS WHY NONE OF THEM MAY BE COPIED
+     FROM ANOTHER: sCap = 7 is floor((band+gap)/pitch) at a FIXED 95-unit tile; _TRUST_CAP = 9 is
+     where _bandLayout stops affording its 75-unit floor; _COL_CAP = 11 sits DELIBERATELY one room
+     PAST that same point (68.2 < 75), ruled 2026-08-11. Three derivations, three numbers, and any
+     two of them agreeing would be a coincidence wearing the look of a convention. */
   const SCENES = [
     /* ⛔ `surface` IS DECLARED, NEVER SNIFFED FROM THE LABEL. First cut tested /propert/i against the
        label and the COLUMN scene reads "1 property + 14 accounts" — so it demanded the satellite copy
@@ -118,6 +124,20 @@ const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
     { label: 'TWO wings upstairs (14 joint + 14 primary)', surface: 'floor', multiWing: true,
       spec: [['taxable', 14], ['checking_primary', 14]] },
     { label: 'satellite tile (9 properties)',          surface: 'props', spec: [['property', 9]] },
+    /* ── §26 · SURFACE #3, AND THE FIXTURE HOLE THIS GATE HAD ABOUT ITSELF ──────────────────────
+     * ⭐ THIS GATE'S HEADER PROMISES "surface #3 cannot be born dead" BECAUSE THE POPULATION IS
+     * DERIVED FROM data-collapsed-count. That was true of the ASSERTIONS and false of the FIXTURE:
+     * measured 2026-08-12, NOT ONE of the five scenes above built a single trust, so this gate's
+     * maximum reachable trust count was ZERO and the trust wing could have shipped a dead door
+     * under a green run. 🔑 A DERIVED POPULATION IS ONLY AS WIDE AS THE STATES THE FIXTURE REACHES
+     * — the assertion generalises, the scenario does not, and only the scenario touches the product.
+     *
+     * ⛔ 10 IS DERIVED, NOT PICKED. _TRUST_CAP = 9 and the wing draws _TRUST_CAP - 1 = 8, so the
+     * door exists only above 9 => TEN trusts is the first count that folds anything (hidden = 2).
+     * Nine would build the wing at its cap and produce NO door — a scene that proves nothing while
+     * looking thorough. `addInstance` sets trustType 'Irrevocable' by default, which is what routes
+     * these to the wing rather than into an ownership column (studio.html's first-pass selector). */
+    { label: 'trust wing (10 trusts)',                 surface: 'trusts', spec: [['trust', 10]] },
     /* §25.3 — the leg that would have caught tonight's trap. A folded property carrying a lien must
        open THE YARD, not the account modal, exactly as its tile does. */
     { label: 'satellite tile, LAST property mortgaged', surface: 'props',
@@ -195,13 +215,24 @@ const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
        THE ARCHITECTURE, so it gets an instrument.
        ⭐ TWO LEGS, BOTH DIRECTIONS: the authored words are PRESENT, and the retired words are ABSENT.
        An absence leg alone is silent by construction — it would pass on an empty dialog. */
-    const wantHead = surface === 'props' ? 'THE OTHER PROPERTIES' : 'THE SECOND FLOOR';
+    /* §26 — THREE SURFACES NOW, AND THE KEY IS STILL DECLARED RATHER THAN SNIFFED. The trust scene's
+       label contains "trust" and so does nothing else here, so a regex would have worked TODAY and
+       broken on the first scene that mentions a trust in passing. A HUMAN LABEL IS PROSE; A BRANCH
+       KEY IS DATA — the same trap this file already paid for once with /propert/i. */
+    const wantHead = surface === 'props' ? 'THE OTHER PROPERTIES'
+                   : surface === 'trusts' ? 'THE TRUSTS' : 'THE SECOND FLOOR';
     /* ⚠️ §25.7 — the subhead counts THE WHOLE UPSTAIRS, not the tile that was clicked. This leg built
        its expectation from meta.n and failed a CORRECT product the moment two wings overflowed: the
        tile said "+4", the picker honestly said "8 rooms up here". Second time this session a stale
        expectation accused a working feature — the first was the label-sniffing surface key. */
+    /* ⚠️ THE TRUST SUBHEAD IS THE WING'S OWN COUNT, NOT A CROSS-WING SUM — and that is a product
+       fact, not a shortcut. §25.7 made the SECOND FLOOR one floor for the whole house, so its
+       subhead sums every wing. The trusts are their OWN place: they do not report to `_upstairs`
+       and no other surface can spill into them, so expectUp (= meta.n here) is the whole truth. */
     const wantSub  = surface === 'props'
       ? `${expectUp} more properties. Pick one to enter it.`
+      : surface === 'trusts'
+      ? `${expectUp} trusts here. Pick one to enter it.`
       : `${expectUp} rooms up here. Pick one to enter it.`;
     ck(`C· the picker speaks the AUTHORED words — ${label}`,
        dlg.text.includes(wantHead) && dlg.text.includes(wantSub),
@@ -366,8 +397,18 @@ const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
     const aria = meta.aria || '';
     ck(`N· the accessible name names no input device — ${label}`, !/\bclick|\btap|\bmouse/i.test(aria),
        /\bclick|\btap|\bmouse/i.test(aria) ? `*** "${aria.match(/\bclick|\btap|\bmouse/i)[0]}" in an accessible name ***` : 'device-neutral');
+    /* ── §26 · EXACT PER SURFACE, NOT AN ALTERNATION ────────────────────────────────────────────
+       This was /Opens the (second floor|other properties)\.$/ — an any-of-these test, which a THIRD
+       surface can satisfy by naming the WRONG place. A trust door announcing "Opens the second
+       floor." would have passed it, and that is precisely the defect worth catching: the ending is
+       AUTHORED PER SURFACE, so it is asserted per surface, off the same declared key `wantHead`
+       uses. 🔑 A DOOR THAT OPENS ONTO THE WRONG PLACE IS WORSE THAN ONE THAT DOES NOT OPEN — IT
+       LOOKS FIXED. Adding surface #3 to the alternation would have widened the hole rather than
+       closed it; the leg is now strictly stronger than the one it replaces. */
+    const wantEnd = surface === 'props' ? 'Opens the other properties.'
+                  : surface === 'trusts' ? 'Opens the trusts.' : 'Opens the second floor.';
     ck(`N· and it says what the control DOES — ${label}`,
-       /Opens the (second floor|other properties)\.$/.test(aria.trim()), `ends "${aria.trim().slice(-28)}"`);
+       aria.trim().endsWith(wantEnd), `ends "${aria.trim().slice(-28)}" · want "${wantEnd}"`);
     ck(`N· and it keeps the counted-in-your-totals promise — ${label}`,
        aria.includes('counted in your total square footage'), aria.slice(0, 64));
     /* The VISUAL hover is unchanged and still says "Click" when there is no corridor — a mouse word
