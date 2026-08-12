@@ -293,6 +293,22 @@ const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
           hittable: gs.filter((g) => g.getAttribute('pointer-events') === 'all').length,
           keyable: gs.filter((g) => g.getAttribute('role') === 'button' && g.getAttribute('tabindex') === '0').length,
           /* §22.6's lesson, one level down: nothing may be drawn outside the box that holds it. */
+          /* ══ §26 · THE INK MUST STAY INSIDE ITS OWN TILE ═══════════════════════════════════
+             ⛔ THE DEFECT THIS NAMES WAS LIVE AND UNREPORTED. §22.7 recorded the text stack as 62.5
+             units by ADDING 14 + 32 and calling the sum a measurement; measured with getBBox() on
+             real ink it is 77.6, so crowded tiles have been spilling their dollar figure past their
+             own bottom edge since they shipped — including the second floor, on its first night.
+             🔑 THE EYE CANNOT SEE 4.7 UNITS. THE RULER CAN. Nobody reported it in either place.
+             ⛔ getBBox() — NEVER a font-size inference. Inferring ink from font size is the exact
+             move that produced 62.5. */
+          inkOut: gs.filter((g) => {
+            const r = g.querySelector('rect.room-rect'); if (!r) return true;
+            const top = +r.getAttribute('y'), bot = top + (+r.getAttribute('height'));
+            return Array.from(g.querySelectorAll('text')).some((t) => {
+              const bb = t.getBBox();
+              return bb.y < top - 0.5 || bb.y + bb.height > bot + 0.5;
+            });
+          }).length,
           outside: gs.filter((g) => { const r = g.querySelector('rect.room-rect'); if (!r) return true;
             return (+r.getAttribute('y')) < 0 || (+r.getAttribute('y')) + (+r.getAttribute('height')) > vb[3] + 0.5
                 || (+r.getAttribute('x')) < 0 || (+r.getAttribute('x')) + (+r.getAttribute('width')) > vb[2] + 0.5; }).length,
@@ -307,6 +323,8 @@ const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
         ck(`F· every room is hit-testable across its face, not just its stroke — ${label}`, floor.hittable === floor.n, `${floor.hittable}/${floor.n} pointer-events=all`);
         ck(`F· and reachable by keyboard — ${label}`, floor.keyable === floor.n, `${floor.keyable}/${floor.n} role+tabindex`);
         ck(`F· NO room is drawn outside the floor's own box — ${label}`, floor.outside === 0, `${floor.outside} outside viewBox ${floor.vbW}x${floor.vbH}`);
+        ck(`F· and every room's TEXT stays inside its own tile (§26) — ${label}`, floor.inkOut === 0,
+           floor.inkOut ? `*** ${floor.inkOut}/${floor.n} tiles spill their own ink ***` : `0/${floor.n} spill`);
         /* THE DERIVATION, ASSERTED. H = max(315, 75 × TALLEST WING): 315 is the first floor's
            750-unit band scaled by 404/960; 75 is its own minH. ⚠️ §25.7 changed the driver from the
            room COUNT to the TALLEST WING, because every wing's stack fills the same band exactly as

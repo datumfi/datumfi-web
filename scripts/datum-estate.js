@@ -139,6 +139,38 @@
     var maxPx = (boxW - 6) / (Math.max(1, String(str).length) * per);
     return Math.max(8, Math.min(px, maxPx));
   }
+  /* ── §26 · THE TYPE SCALES WITH THE TILE — HEIGHT **AND** WIDTH, TOGETHER OR NEITHER ──────────
+   * ⛔⛔ THE ARCHITECT'S CONDITION, ON THE FACE OF THE HELPER WHERE IT CANNOT BE MISSED:
+   *     A SCALING LAW THAT CONSULTS ONE DIMENSION IS NOT A SCALING LAW.
+   * §22's satellite donor was promoted ONLY as a pair (_sRatio height + _fitPx width) precisely
+   * because the version that consulted height alone shipped a defect. Anyone tempted to use one of
+   * these without the other is re-creating that bug with a different constant.
+   *
+   * ⭐ WHY THIS EXISTS AT ALL — IT IS A LIVE-DEFECT FIX, NOT POLISH. §22.7 recorded the text stack
+   * as 62.5 units by ADDING 14 + 32 and calling the sum a measurement. MEASURED with getBBox() on
+   * real ink it is 77.6, so `_COL_CAP = 11` (750/11 = 68.2 per slot) has been spilling its dollar
+   * figure ~4.7 units past the bottom edge of every room box SINCE IT SHIPPED, on the live canvas,
+   * unreported. The second floor shipped tonight does the same at 5+ rooms (73.0 available, 1.5
+   * over). 🔑 A GUESSED CONSTANT DOES NOT FAIL LOUDLY — IT FAILS BY 4.7 UNITS AND WAITS.
+   *
+   * ⛔ RULED BY THE ARCHITECT: SCALE THE TYPE, KEEP EVERY ROOM, THE CAP DOES NOT MOVE. Lowering the
+   * cap to cure an overflow would take two rooms off the first floor and hide them behind a door —
+   * curing a typographic problem by creating a data-access one, which is the exact trade §24/§25
+   * just spent four prompts undoing. A THIN ROOM YOU CAN SEE BEATS A MISSING ROOM YOU CANNOT.
+   *
+   * THE CONSTANTS, BOTH MEASURED, NEITHER ADDED:
+   *   77.6 — ink half-extent below tile centre is 38.8 (value baseline cy+30, 32px italic serif);
+   *          a CENTRED tile therefore needs 2 x 38.8. Confirmed on five independent (count,
+   *          overflow) pairs across two wings, agreeing to 0.05.
+   *      6 — the same pad _fitPxShared already applies on width, for the same reason: the painted
+   *          bbox is wider/taller than the metric, so fitting to the metric alone puts the ink just
+   *          past the line. ⛔ IT IS ALSO WHAT KEEPS THIS OFF A ZERO-MARGIN FIT — scaling to exactly
+   *          77.6 would land the ink precisely on the edge, and a constraint satisfied with zero
+   *          margin is one the next unrelated rounding change breaks.
+   * At scale 1 the output is byte-identical to today, so a tile with room to spare does not move. */
+  var _TEXT_STACK = 77.6, _TEXT_PAD = 6;
+  function _tileTypeScale(h) { return Math.min(1, Math.max(0.1, (h - _TEXT_PAD) / _TEXT_STACK)); }
+
   function _eqStr(v) {   // NET EQUITY display string (asset - debt); mirrors the room value format
     var n = Math.abs(v);
     var s = n >= 1000000 ? '$' + (n / 1000000).toFixed(2) + 'M' : (n >= 1000 ? '$' + (n / 1000).toFixed(0) + 'k' : '$' + Math.round(n));
@@ -200,12 +232,20 @@
     var mergeEq = mergeDebts.length ? _netEquityOf(acc.value, mergeDebts) : null;
     var mergeNeg = (mergeEq !== null && mergeEq < 0);
     var title = _roomNameOf(acc, base).toUpperCase() + (mergeDebts.length ? _lienMetaSuffix(mergeDebts) : '');
-    var titleY = mergeDebts.length ? (d.cy - 20) : (d.cy - 10);
+    /* §26 — THE PAIR, APPLIED. `S` is the HEIGHT half (how much of the stack this tile can hold);
+       _fitPxShared is the WIDTH half (how much of the name this tile can hold). Both, always.
+       ⛔ THE OFFSETS SCALE TOO, AND THAT IS THE PART THAT ACTUALLY FIXES THE OVERFLOW. Shrinking the
+       glyphs while leaving the value pinned at cy+30 would move the ink barely at all — the 38.8-unit
+       half-extent is 30 units of OFFSET plus 8.8 of descender, so both terms have to ride S or the
+       stack does not tighten. */
+    var S = _tileTypeScale(d.h);
+    var titleY = d.cy - (mergeDebts.length ? 20 : 10) * S;
+    var titlePx = _fitPxShared(title, 14 * S, d.w);
     var chip = mergeDebts.length ? _linkChipSVG(d.x + 6, d.y + 6, _lienMirrorNotice(mergeDebts, 'asset')) : '';
     var valBlock = mergeDebts.length
-      ? '<text x="' + d.cx + '" y="' + (d.cy - 2) + '" class="bp-title" style="fill:' + (mergeNeg ? 'var(--danger)' : 'var(--teal-mid)') + '; opacity:0.75; font-size:11px; letter-spacing:0.12em;">NET EQUITY</text>' +
-        '<text x="' + d.cx + '" y="' + (d.cy + 24) + '" class="bp-val" style="fill:' + (mergeNeg ? 'var(--danger)' : 'var(--gold)') + '; font-size:18px;">' + _eqStr(mergeEq) + '</text>'
-      : '<text x="' + d.cx + '" y="' + (d.cy + 30) + '" class="bp-val" style="fill:' + shockColor + '; transition: 0.6s ease;">' + valStr + '</text>';
+      ? '<text x="' + d.cx + '" y="' + (d.cy - 2 * S) + '" class="bp-title" style="fill:' + (mergeNeg ? 'var(--danger)' : 'var(--teal-mid)') + '; opacity:0.75; font-size:' + (Math.round(11 * S * 10) / 10) + 'px; letter-spacing:0.12em;">NET EQUITY</text>' +
+        '<text x="' + d.cx + '" y="' + (d.cy + 24 * S) + '" class="bp-val" style="fill:' + (mergeNeg ? 'var(--danger)' : 'var(--gold)') + '; font-size:' + (Math.round(18 * S * 10) / 10) + 'px;">' + _eqStr(mergeEq) + '</text>'
+      : '<text x="' + d.cx + '" y="' + (d.cy + 30 * S) + '" class="bp-val" style="fill:' + shockColor + '; font-size:' + (Math.round(32 * S * 10) / 10) + 'px; transition: 0.6s ease;">' + valStr + '</text>';
 
     var fp = fillPct(acc.value || 0);
     var fillH = d.h * fp / 100, fillY = d.y + d.h - fillH;
@@ -223,13 +263,14 @@
             animClass + ' ' + frictionClass + ' ' + priorityClass + ' ' + taxClass + '"' +
             (o.ownStroke ? '' : ' style="stroke:none"') + ' />' +
         fill + chip +
-        /* §25.7 — `fitW` clamps the room name to the tile it is in. The FIRST FLOOR never passes it,
-           because a column is >= 200 units wide and the 14px default always fits; the multi-column
-           second floor divides 404 units three ways, where it does not. ⛔ Same _fitPxShared the
-           satellite wing uses — one clamp, not a second one that happens to agree. */
-        '<text x="' + d.cx + '" y="' + titleY + '" class="bp-title"' +
-            (o.fitW ? ' style="font-size:' + _fitPxShared(title, 14, o.fitW) + 'px;' + (isTrust ? 'fill:var(--shield);' : '') + '"'
-                    : (isTrust ? ' style="fill:var(--shield)"' : '')) + '>' + title + '</text>' +
+        /* §26 — the WIDTH half is now UNCONDITIONAL. §25.7 applied it only where a caller opted in
+           (`o.fitW`), on the reasoning that a column is >= 200 units wide so 14px always fits. ⛔ THAT
+           REASONING WAS WRONG BY THE SAME KIND OF ARITHMETIC AS 62.5: a 20-character room name at
+           14px measures 20 x 0.75 x 14 = 210 units into a 194-unit usable column, so the FIRST FLOOR
+           could overrun horizontally too. The clamp reads d.w, which every caller already supplies —
+           there is nothing to opt into and nothing to forget. */
+        '<text x="' + d.cx + '" y="' + titleY + '" class="bp-title" style="font-size:' + titlePx + 'px;' +
+            (isTrust ? 'fill:var(--shield);' : '') + '">' + title + '</text>' +
         valBlock
     };
   }
@@ -339,7 +380,7 @@
       var r = rows[i] || { y: i * 75, h: 75 };
       var d = { x: colX + INSET, y: r.y + INSET, w: colW - INSET * 2, h: Math.max(1, r.h - INSET * 2) };
       d.cx = d.x + d.w / 2; d.cy = d.y + d.h / 2;
-      var t = tileFor(acc, d, d.w);
+      var t = tileFor(acc, d);
       if (!t) return;
       var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       g.setAttribute('class', 'room-grp visible datum-fold-room' + (t.isDebt ? ' debt-room' : '') + (t.isTrust ? ' trust-room' : ''));
@@ -1684,12 +1725,12 @@
                      ⛔ `ownStroke` ON — there is no envelope pass in a modal to draw its walls.
                      ⛔ `anim: false` — the draw-in animation is a birth event on the canvas; replaying
                         it every time a door opens would animate a room the user built last week. */
-                  var _floorTile = function (acc, d, fitW) {
+                  var _floorTile = function (acc, d) {
                       var b = getBaseType(acc.baseId);
                       if (!b) return null;
                       return _roomTileSVG(acc, b, d, {
                           isShocked: isShocked, isThermal: isThermal, ownStroke: true, anim: false,
-                          fitW: fitW, mergeByAsset: _mergeDebtsByAsset, weights: accountWeights
+                          mergeByAsset: _mergeDebtsByAsset, weights: accountWeights
                       });
                   };
                   /* §25.7 — the door opens the WHOLE upstairs, not just this wing's share. The groups
