@@ -119,9 +119,31 @@
   // §18.6 mirror notice — TYPE-first (decision 1: math-facing copy names the type, never the brand), sourced.
   // The estate LABEL keeps its brand flavor; this hover, which explains the net-equity math, says "mortgage"/"HELOC".
   function _lienMirrorNotice(debts, assetNoun) {
-    var hasM = false, hasH = false;
-    for (var i = 0; i < debts.length; i++) { var id = String((getBaseType(debts[i].baseId) || {}).id || ''); if (id.indexOf('mortgage') === 0) hasM = true; else if (id.indexOf('heloc') === 0) hasH = true; }
-    var lead = hasM ? 'Your mortgage is linked here' : (hasH ? 'Your HELOC is linked here' : 'A linked liability sits here');
+    /* ── §3c.1 · THE AUTO LOAN GETS ITS OWN LEAD — AND IT WAS FOUND BY RENDERING THE FALLBACK ──────
+     * The mortgage and the HELOC have always had named leads. The auto loan never did, and nobody
+     * noticed for one reason: EVERY FIXTURE IN THE REPO WAS A MORTGAGE OR A HELOC, so the generic
+     * branch below had NEVER ONCE BEEN PAINTED. `_gate_estate_lien_net_equity` rendered it for the
+     * first time on 2026-08-12 and the missing sentence became visible within hours.
+     * 🔑 AN UNRENDERED FALLBACK IS AN UNTESTED PROMISE — AND SOMETIMES IT IS A MISSING SENTENCE.
+     *
+     * ⛔ THE GENERIC LEAD STAYS, AND IT MUST STAY REACHABLE. It is the honest degrade for any future
+     * liability with no named lead — and it is reachable TODAY, not theoretically: `_securedLinkScope`
+     * gives personal loans and revolving debt the broad physical scope, so either linked to a Vehicle
+     * lands here. That path is now pinned by its own scene (A5) rather than left to be re-discovered.
+     * ⛔ DO NOT DELETE THIS BRANCH JUST BECAUSE THE AUTO CASE FINALLY HAS A NAME. */
+    var hasM = false, hasH = false, hasA = false;
+    for (var i = 0; i < debts.length; i++) {
+      var id = String((getBaseType(debts[i].baseId) || {}).id || '');
+      if (id.indexOf('mortgage') === 0) hasM = true;
+      else if (id.indexOf('heloc') === 0) hasH = true;
+      else if (id.indexOf('auto_debt') === 0) hasA = true;
+    }
+    /* AUTHORED VERBATIM (L47), `Auto Loan Copy Bank` §3c.1. Ranked below the two secured-property
+       leads for the same reason `_lienRankE` ranks them first: on a mixed asset the senior lien is
+       the one the sentence should name. */
+    var lead = hasM ? 'Your mortgage is linked here'
+             : (hasH ? 'Your HELOC is linked here'
+             : (hasA ? 'Your auto loan is linked here' : 'A linked liability sits here'));
     var out = '🔗 ' + lead + ' — its balance is subtracted from this ' + (assetNoun || 'asset') + '’s value to show your true equity.';
     if (hasM && hasH) out += ' Your HELOC is linked here too.';
     return out;

@@ -3812,7 +3812,7 @@
 
       { id: 'mortgage_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Mortgage', meta: 'The Moat', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'heloc_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'HELOC', meta: 'The Cellar', desc: 'Liability. Secured revolving line against home equity. Subtracts from Estate Sq Footage.' },
-      { id: 'auto_debt_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Auto Loan', meta: 'The Garage', desc: 'Liability. Subtracts from Estate Sq Footage.' },
+      { id: 'auto_debt_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Auto Loan', meta: 'The Lien', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'rev_debt_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Revolving Debt', meta: 'The Furnace', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'personal_loan_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Personal Loan', meta: 'The Ledger', desc: 'Liability. Subtracts from Estate Sq Footage.' },
 
@@ -3840,7 +3840,7 @@
       
       { id: 'mortgage_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'Mortgage', meta: 'The Moat', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'heloc_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'HELOC', meta: 'The Cellar', desc: 'Liability. Secured revolving line against home equity. Subtracts from Estate Sq Footage.' },
-      { id: 'auto_debt_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'Auto Loan', meta: 'The Garage', desc: 'Liability. Subtracts from Estate Sq Footage.' },
+      { id: 'auto_debt_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'Auto Loan', meta: 'The Lien', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'student_loan_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'Student Loan', meta: 'The Study', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'rev_debt_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'Revolving Debt', meta: 'The Furnace', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'personal_loan_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'Personal Loan', meta: 'The Ledger', desc: 'Liability. Subtracts from Estate Sq Footage.' },
@@ -3865,7 +3865,7 @@
       
       { id: 'mortgage_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'Mortgage', meta: 'Co-Moat', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'heloc_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'HELOC', meta: 'The Co-Cellar', desc: 'Liability. Secured revolving line against home equity. Subtracts from Estate Sq Footage.' },
-      { id: 'auto_debt_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'Auto Loan', meta: 'Co-Garage', desc: 'Liability. Subtracts from Estate Sq Footage.' },
+      { id: 'auto_debt_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'Auto Loan', meta: 'Co-Lien', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'student_loan_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'Student Loan', meta: 'Co-Study', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'rev_debt_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'Revolving Debt', meta: 'Co-Furnace', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'personal_loan_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'Personal Loan', meta: 'Co-Ledger', desc: 'Liability. Subtracts from Estate Sq Footage.' }
@@ -4153,7 +4153,7 @@
       { l1:'INVESTMENTS', l2:'Savings Bonds', leaf:'The Keystone', reg:null },
       { l1:'INVESTMENTS', l2:'Savings Bonds', leaf:'The Bulwark', reg:null },
       { l1:'LIABILITIES', l2:'Secured Debt', leaf:'The Moat', reg:{joint:'mortgage_joint',primary:'mortgage_primary',co:'mortgage_co'} },
-      { l1:'LIABILITIES', l2:'Secured Debt', leaf:'The Garage', reg:{joint:'auto_debt_joint',primary:'auto_debt_primary',co:'auto_debt_co'} },
+      { l1:'LIABILITIES', l2:'Secured Debt', leaf:'The Lien', reg:{joint:'auto_debt_joint',primary:'auto_debt_primary',co:'auto_debt_co'} },
       { l1:'LIABILITIES', l2:'Secured Debt', leaf:'The Cellar', reg:{joint:'heloc_joint',primary:'heloc_primary',co:'heloc_co'} },
       { l1:'LIABILITIES', l2:'Secured Debt', leaf:'The Lever', reg:null },
       { l1:'LIABILITIES', l2:'Unsecured Debt', leaf:'The Ledger', reg:{joint:'personal_loan_joint',primary:'personal_loan_primary',co:'personal_loan_co'} },
@@ -11821,7 +11821,10 @@
         var _kb = document.getElementById('bc-cancel'); if (_kb) _kb.focus();
     };
 
-    // §0.4 VARIABLE-RATE CLUSTER (L48 shared seam — The Moat / The Garage / The Cellar import this).
+    // §0.4 VARIABLE-RATE CLUSTER (L48 shared seam — The Moat / The Lien / The Cellar import this).
+    // ⛔ "The Garage" here meant the AUTO LOAN until 2026-08-12; it is now THE LIEN, and the name
+    //    The Garage is being REASSIGNED to the combined Vehicle+Lien view. A stale mention would not
+    //    merely be old — it would name a DIFFERENT room. Renamed for that reason, not for tidiness.
     // Revealed only when rateType==='Variable'; every field sourced-or-blank; Fixed hides the block.
     function _variableRateClusterHTML(id, acc) {
         if (acc.rateType !== 'Variable') return '';
@@ -12989,7 +12992,7 @@
         ov.style.display = 'flex';
     };
 
-    // SECURED-DEBT LINK SCOPE (§0.2 · L48 shared seam — The Moat / The Garage / The Cellar import this).
+    // SECURED-DEBT LINK SCOPE (§0.2 · L48 shared seam — The Moat / The Lien / The Cellar import this).
     // Maps a debt room to the physical-asset FAMILY it may legitimately secure against, closing the bug
     // where any debt could link to any physical asset (a Mortgage cross-linking to a Vehicle, etc.).
     function _securedLinkScope(debtBase) {

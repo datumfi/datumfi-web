@@ -105,13 +105,13 @@ const ok = (cond, msg) => { if (cond) { pass++; console.log('PASS ' + msg); } el
   const build = (pairs) => p.evaluate((prs) => {
     window.state.accounts.length = 0;
     const made = [];
-    prs.forEach(([av, dv]) => {
+    prs.forEach(([av, dv, dBase]) => {
       addInstance('auto');
       const asset = window.state.accounts[window.state.accounts.length - 1];
       asset.value = av;
       let debt = null;
       if (dv !== null) {
-        addInstance('auto_debt_joint');
+        addInstance(dBase || 'auto_debt_joint');
         debt = window.state.accounts[window.state.accounts.length - 1];
         debt.value = dv;
         debt.linkedAssetId = asset.id;      // the scoped, product-intended pairing
@@ -185,13 +185,17 @@ const ok = (cond, msg) => { if (cond) { pass++; console.log('PASS ' + msg); } el
        is the branch §25.4 documents as deliberately absent on the column surface. */
     ok(/openAccountModal\(/.test(t.onclick) && !/openYardModal\(/.test(t.onclick),
        'A1 [DOOR] the car opens its OWN room, never The Yard — ' + t.onclick.slice(0, 40));
-    /* THE BRANCH NO FIXTURE HAD EVER PAINTED. Mortgage and HELOC have named leads; everything else
-       falls back. An auto loan is the first thing in this repo's history to render it. */
+    /* ── §3c.1 · THE AUTHORED LEAD, AND THIS LEG'S OWN HISTORY IS THE LESSON ─────────────────────
+       ⭐ THIS LEG FIRST SHIPPED ASSERTING THE **GENERIC** LEAD ("A linked liability sits here"),
+       because that is what the renderer said — mortgage and HELOC had named leads and the auto loan
+       did not. Rendering that fallback for the first time in this repo's history EXPOSED IT AS A
+       MISSING SENTENCE, the Architect authored one within hours, and this expectation moved.
+       ⛔ THE RED WAS PREDICTED BEFORE IT FIRED, and it was a COPY CHANGE, never a defect. */
     const tip = t.titles.join(' | ');
-    ok(/A linked liability sits here/.test(tip),
-       'A1 [COPY] the generic lien lead is rendered (first fixture ever to reach it) — "' + tip.slice(0, 60) + '"');
-    ok(!/mortgage is linked here|HELOC is linked here/i.test(tip),
-       'A1 [COPY] and it does NOT claim a mortgage or a HELOC — the wrong lead would be a lie about the debt');
+    ok(/Your auto loan is linked here/.test(tip),
+       'A1 [COPY] the AUTHORED auto-loan lead is rendered (§3c.1) — "' + tip.slice(0, 70) + '"');
+    ok(!/mortgage is linked here|HELOC is linked here|A linked liability sits here/i.test(tip),
+       'A1 [COPY] and it names NEITHER a mortgage, a HELOC, nor the generic fallback — a wrong lead is a lie about the debt');
   }
 
   /* ── A2 · UNDERWATER — a $10k car carrying an $18k loan. Common, and the sign must survive. ───── */
@@ -242,6 +246,32 @@ const ok = (cond, msg) => { if (cond) { pass++; console.log('PASS ' + msg); } el
        'A4 [DISCRIMINATION] no lien -> NO net-equity label — the label is EARNED, not decoration');
     ok(t.valStr === '$40k',
        'A4 [MONEY] and it shows its plain value — got "' + t.valStr + '", want "$40k"');
+  }
+
+  /* ── A5 · THE GENERIC FALLBACK MUST STAY REACHABLE — ARCHITECT-RULED 2026-08-12 ────────────────
+   * ⛔ "The generic fallback STAYS. It is the honest degrade for any future liability with no named
+   * lead, and it must remain REACHABLE AND TESTED." Once the auto loan got its own sentence, the
+   * ONLY thing still reaching the generic branch is a debt family with no named lead — and
+   * `_securedLinkScope` gives personal loans and revolving debt the broad physical scope, so a
+   * Personal Loan (The Ledger) secured by a Vehicle lands there and is a state a user can build.
+   * ⭐⭐ THIS SCENE EXISTS BECAUSE OF WHAT JUST HAPPENED TO A1. The generic lead sat unrendered for
+   * the life of this repo and nobody knew it was a stub. Giving the auto case a name would have
+   * returned that branch to exactly the same invisibility — a fallback with no fixture is a promise
+   * nobody is keeping. 🔑 AN UNRENDERED FALLBACK IS AN UNTESTED PROMISE; DO NOT RE-CREATE ONE WHILE
+   * FIXING ONE. */
+  made = await build([[30000, 9000, 'personal_loan_joint']]);
+  await p.waitForTimeout(700);
+  t = await readTile(made[0].assetId);
+  const tip5 = t ? t.titles.join(' | ') : '';
+  console.log('  A5 ' + JSON.stringify({ val: t && t.valStr, tip: tip5.slice(0, 70) }));
+  ok(!!t, 'A5 [PRESENCE] a Vehicle secured by a Personal Loan is drawn');
+  if (t) {
+    ok(t.valStr === '$21k',
+       'A5 [MONEY] the merge is family-agnostic — got "' + t.valStr + '", want "$21k" ($30k car, $9k personal loan)');
+    ok(/A linked liability sits here/.test(tip5),
+       'A5 [COPY] the GENERIC fallback is still REACHABLE and still rendered — "' + tip5.slice(0, 60) + '"');
+    ok(!/auto loan is linked here/i.test(tip5),
+       'A5 [COPY] and it does NOT borrow the auto-loan lead — the named lead belongs to the named family');
   }
 
   ok(pageErrors.length === 0, 'R1 no page errors across every scenario' +
