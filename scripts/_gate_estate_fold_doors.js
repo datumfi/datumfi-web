@@ -112,6 +112,11 @@ const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
        LEAVES THE OTHER BRANCH UNTESTED WEARING GREEN — the cap that isn't there must be shown absent
        at a count where a cap would have bitten. */
     { label: 'second floor at 16 rooms (must GROW, not cap)', surface: 'floor', spec: [['property', 1], ['taxable', 25]] },
+    /* ⛔ §25.7 NEEDS TWO WINGS OVERFLOWING AT ONCE AND NOTHING ABOVE PRODUCES THAT. Every other floor
+       scene crowds a single column, so "the upstairs contains ALL wings" would pass on a picker that
+       still only ever showed one. 14 joint (taxable) + 14 primary (checking_primary) folds 4 in each. */
+    { label: 'TWO wings upstairs (14 joint + 14 primary)', surface: 'floor', multiWing: true,
+      spec: [['taxable', 14], ['checking_primary', 14]] },
     { label: 'satellite tile (9 properties)',          surface: 'props', spec: [['property', 9]] },
     /* §25.3 — the leg that would have caught tonight's trap. A folded property carrying a lien must
        open THE YARD, not the account modal, exactly as its tile does. */
@@ -119,7 +124,7 @@ const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
       spec: [['property', 9], ['mortgage_joint', 1]], link: true, yardRow: 1 },
   ];
 
-  for (const { label, spec, link, yardRow, surface } of SCENES) {
+  for (const { label, spec, link, yardRow, surface, multiWing } of SCENES) {
     await build(p, spec, link); await p.waitForTimeout(650); await clearCovers(p);
 
     const surfaces = await p.$$('[data-collapsed-count]');
@@ -167,7 +172,16 @@ const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
     ck(`D· A REAL CLICK OPENS THE DOOR — ${label}`, opened, opened ? 'dialog present' : '*** DEAD DOOR — click did nothing ***');
     if (!opened) continue;
 
-    ck(`D· the picker lists EXACTLY the folded set — ${label}`, dlg.rows === meta.n, `${dlg.rows} rows vs ${meta.n} folded`);
+    /* ⛔ §25.7 CHANGED WHAT "THE FOLDED SET" MEANS ON THE FLOOR SURFACE. The second floor is now ONE
+       floor for the whole house, so a wing's tile opens onto EVERY wing's overflow — the expected
+       count is the SUM across all column-collapse tiles, not the count on the tile that was clicked.
+       The other-properties surface is unchanged and still its own tile's count.
+       🔑 A LEG THAT STILL COMPARES AGAINST THE OLD MEANING IS WRONG EVEN WHEN IT IS GREEN. */
+    const expectUp = surface === 'floor'
+      ? await p.evaluate(() => Array.from(document.querySelectorAll('.column-collapse[data-collapsed-count]'))
+          .reduce((t, e) => t + (+e.getAttribute('data-collapsed-count') || 0), 0))
+      : meta.n;
+    ck(`D· the picker lists EXACTLY the upstairs set — ${label}`, dlg.rows === expectUp, `${dlg.rows} shown vs ${expectUp} upstairs`);
     /* The collapse tile may not quote a balance because you cannot open into it. The moment you can,
        the money must be visible — this is where "all counted in your totals" becomes checkable. */
     ck(`D· every row shows its balance — ${label}`, dlg.money === dlg.rows, `${dlg.money}/${dlg.rows} rows carry a figure`);
@@ -182,9 +196,13 @@ const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
        ⭐ TWO LEGS, BOTH DIRECTIONS: the authored words are PRESENT, and the retired words are ABSENT.
        An absence leg alone is silent by construction — it would pass on an empty dialog. */
     const wantHead = surface === 'props' ? 'THE OTHER PROPERTIES' : 'THE SECOND FLOOR';
+    /* ⚠️ §25.7 — the subhead counts THE WHOLE UPSTAIRS, not the tile that was clicked. This leg built
+       its expectation from meta.n and failed a CORRECT product the moment two wings overflowed: the
+       tile said "+4", the picker honestly said "8 rooms up here". Second time this session a stale
+       expectation accused a working feature — the first was the label-sniffing surface key. */
     const wantSub  = surface === 'props'
-      ? `${meta.n} more properties. Pick one to enter it.`
-      : `${meta.n} rooms up here. Pick one to enter it.`;
+      ? `${expectUp} more properties. Pick one to enter it.`
+      : `${expectUp} rooms up here. Pick one to enter it.`;
     ck(`C· the picker speaks the AUTHORED words — ${label}`,
        dlg.text.includes(wantHead) && dlg.text.includes(wantSub),
        `head="${wantHead}" sub="${wantSub}" in "${dlg.text.slice(0, 70)}"`);
@@ -282,18 +300,48 @@ const build = (p, spec, link) => p.evaluate(({ s, lk }) => {
       });
       ck(`F· the second floor is DRAWN, not listed — ${label}`, !!floor, floor ? 'svg.datum-fold-floor present' : '*** no drawn floor — still a directory ***');
       if (floor) {
-        ck(`F· it draws EVERY upstairs room (no cap, it scrolls) — ${label}`, floor.n === meta.n, `${floor.n} drawn vs ${meta.n} upstairs`);
+        ck(`F· it draws EVERY upstairs room (no cap, it scrolls) — ${label}`, floor.n === expectUp, `${floor.n} drawn vs ${expectUp} upstairs`);
         ck(`F· every room is OUTLINED — stroke:none was removed — ${label}`, floor.strokeless === 0, `${floor.strokeless}/${floor.n} unoutlined`);
         ck(`F· every room carries its NAME — ${label}`, floor.named === floor.n, `${floor.named}/${floor.n}`);
         ck(`F· and its BALANCE — this is where "all counted" becomes checkable — ${label}`, floor.valued === floor.n, `${floor.valued}/${floor.n}`);
         ck(`F· every room is hit-testable across its face, not just its stroke — ${label}`, floor.hittable === floor.n, `${floor.hittable}/${floor.n} pointer-events=all`);
         ck(`F· and reachable by keyboard — ${label}`, floor.keyable === floor.n, `${floor.keyable}/${floor.n} role+tabindex`);
         ck(`F· NO room is drawn outside the floor's own box — ${label}`, floor.outside === 0, `${floor.outside} outside viewBox ${floor.vbW}x${floor.vbH}`);
-        /* THE DERIVATION, ASSERTED. H = max(315, 75n): 315 is the first floor's 750-unit band scaled
-           by 404/960; 75 is its own minH. A number without its derivation rots — so pin the number. */
-        ck(`F· the floor's height is the DERIVED one, max(315, 75n) — ${label}`,
-           floor.vbW === 404 && Math.abs(floor.vbH - Math.max(315, 75 * meta.n)) < 0.5,
-           `viewBox ${floor.vbW}x${floor.vbH}, expected 404x${Math.max(315, 75 * meta.n)}`);
+        /* THE DERIVATION, ASSERTED. H = max(315, 75 × TALLEST WING): 315 is the first floor's
+           750-unit band scaled by 404/960; 75 is its own minH. ⚠️ §25.7 changed the driver from the
+           room COUNT to the TALLEST WING, because every wing's stack fills the same band exactly as
+           it does downstairs. A number without its derivation rots — so pin the number. */
+        const tallest = await p.evaluate(() => Math.max(0, ...Array.from(
+          document.querySelectorAll('.column-collapse[data-collapsed-count]'))
+          .map((e) => +e.getAttribute('data-collapsed-count') || 0)));
+        const wantH = Math.max(315, 75 * tallest);
+        ck(`F· the floor's height is the DERIVED one, max(315, 75 × tallest wing) — ${label}`,
+           floor.vbW === 404 && Math.abs(floor.vbH - wantH) < 0.5,
+           `viewBox ${floor.vbW}x${floor.vbH}, expected 404x${wantH} (tallest wing ${tallest})`);
+
+        /* ══ §25.7 · ONE UPSTAIRS FOR THE WHOLE HOUSE ═════════════════════════════════════════
+           ⛔ EVERY LEG ABOVE PASSES ON A PER-WING PICKER when only one wing overflows, which is
+           what every other fixture builds. These two need the multi-wing scene to mean anything. */
+        if (multiWing) {
+          const wings = await p.evaluate(() => {
+            const xs = Array.from(document.querySelectorAll('.datum-fold-floor g.datum-fold-room rect.room-rect'))
+              .map((r) => Math.round(+r.getAttribute('x')));
+            return [...new Set(xs)].sort((a, b) => a - b);
+          });
+          ck(`W· the upstairs is drawn in MULTIPLE wings, not one stack — ${label}`, wings.length >= 2,
+             `${wings.length} distinct column x: [${wings.join(', ')}]`);
+          /* THE ACTUAL ASK: open it from a DIFFERENT wing's staircase and you are on the same floor. */
+          await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+          const other = (await p.$$('.column-collapse[data-collapsed-count]'))[1];
+          if (other) {
+            await other.click({ timeout: 5000 }); await p.waitForTimeout(300);
+            const n2 = await p.evaluate(() => document.querySelectorAll('.datum-fold-picker .datum-fold-room').length);
+            ck(`W· the OTHER wing's stairs reach the SAME whole floor — ${label}`, n2 === expectUp,
+               `${n2} rooms from wing 2 vs ${expectUp} total` + (n2 === expectUp ? '' : ' *** two disconnected upstairs ***'));
+          } else {
+            ck(`W· the OTHER wing's stairs reach the SAME whole floor — ${label}`, false, '*** fixture built only ONE collapse tile ***');
+          }
+        }
       }
     }
 

@@ -127,6 +127,18 @@
     return out;
   }
   function _linkChipSVG(x, y, notice) { return '<g class="link-chip" style="cursor:help;"><title>' + String(notice).replace(/</g, '&lt;') + '</title><rect x="' + x + '" y="' + y + '" width="26" height="20" rx="4" fill="rgba(93,202,165,0.12)" stroke="var(--teal-mid)" stroke-width="1"/><text x="' + (x + 13) + '" y="' + (y + 14) + '" text-anchor="middle" style="font-size:12px; fill:var(--teal-mid);">🔗</text></g>'; }
+  /* §22.5's label clamp, hoisted for §25.7 (the multi-column second floor needs it too).
+     ⚠️ AND THE HONEST LIMIT, FLAGGED NOT HIDDEN: past ~28 characters the 8px floor binds and the
+     label will still overrun. Nothing here wraps text. This clamp does not silently rescue a name
+     that cannot fit — it stops the sizes that CAN fit from being blown up past fitting. */
+  function _fitPxShared(str, px, boxW) {
+    var per = 0.75;                                  // measured, mono + letter-spacing
+    /* PAD IS NOT DECORATION. Sizing to exactly boxW left the label 1.3 units over its edge, because
+       getComputedTextLength (what the 0.75 factor reproduces) is slightly NARROWER than the painted
+       bbox — the trailing letter-space and glyph overhang are real ink the metric does not count. */
+    var maxPx = (boxW - 6) / (Math.max(1, String(str).length) * per);
+    return Math.max(8, Math.min(px, maxPx));
+  }
   function _eqStr(v) {   // NET EQUITY display string (asset - debt); mirrors the room value format
     var n = Math.abs(v);
     var s = n >= 1000000 ? '$' + (n / 1000000).toFixed(2) + 'M' : (n >= 1000 ? '$' + (n / 1000).toFixed(0) + 'k' : '$' + Math.round(n));
@@ -211,7 +223,13 @@
             animClass + ' ' + frictionClass + ' ' + priorityClass + ' ' + taxClass + '"' +
             (o.ownStroke ? '' : ' style="stroke:none"') + ' />' +
         fill + chip +
-        '<text x="' + d.cx + '" y="' + titleY + '" class="bp-title"' + (isTrust ? ' style="fill:var(--shield)"' : '') + '>' + title + '</text>' +
+        /* §25.7 — `fitW` clamps the room name to the tile it is in. The FIRST FLOOR never passes it,
+           because a column is >= 200 units wide and the 14px default always fits; the multi-column
+           second floor divides 404 units three ways, where it does not. ⛔ Same _fitPxShared the
+           satellite wing uses — one clamp, not a second one that happens to agree. */
+        '<text x="' + d.cx + '" y="' + titleY + '" class="bp-title"' +
+            (o.fitW ? ' style="font-size:' + _fitPxShared(title, 14, o.fitW) + 'px;' + (isTrust ? 'fill:var(--shield);' : '') + '"'
+                    : (isTrust ? ' style="fill:var(--shield)"' : '')) + '>' + title + '</text>' +
         valBlock
     };
   }
@@ -275,19 +293,53 @@
    * LIVE: fillPct() returns 0 for a zero-value room, so such a room draws NO fill — and an unfilled
    * SVG rect is hit-testable ONLY ON ITS STROKE. Without this, a room with no balance would be a
    * rectangle with a hole in the middle. AN AFFORDANCE IS NOT PROVEN BY ITS ATTRIBUTES. */
-  function _foldFloorSVG(folded, tileFor, onOpen) {
-    var W = 404, INSET = 1;                       // 1-unit inset so the 1px stroke is not half-clipped
-    var H = Math.max(315, 75 * folded.length);
-    var rows = _bandLayout(0, H, 0, 75, folded.map(function (a) { return Math.max(Math.abs(a.value || 0), 1000); }));
+  /* ── §25.7 · THE SECOND FLOOR IS ONE FLOOR, NOT ONE PER WING ──────────────────────────────────
+   * Captain: "if the primary has the upper floor and the co (and/or joint) has the upper floor,
+   * these rooms are not connected ... would be nice if the upper floor truly CONTAINED ALL upper
+   * floor rooms." He is right and the old behaviour was a renderer fact leaking again: each column
+   * built its own picker over its own overflow, so a house with two crowded wings had TWO second
+   * floors that could not see each other. A house has ONE upstairs.
+   *
+   * ⭐ THE GROUPS ARE RESOLVED LAZILY, AT OPEN TIME, AND THAT IS WHAT MAKES THIS POSSIBLE AT ALL.
+   * A collapse tile is built DURING its column's pass, so the later columns' overflow does not
+   * exist yet. The door closes over a mutable per-render object and reads it on click — by then the
+   * render has long finished. ⛔ Resolving eagerly would have shown the primary wing an upstairs
+   * with the joint and co-owned wings missing, which is the bug wearing a fix.
+   *
+   * ⛔ POSITION CARRIES THE MEANING, EXACTLY AS DOWNSTAIRS: primary left, joint middle, co-owned
+   * right — the same order activeCols builds. NO COLUMN CAPTIONS: the first floor has none (checked,
+   * not assumed), so adding them here would be inventing copy nobody authored to explain a layout
+   * the user already reads by position.
+   *
+   * ⚠️ COLUMNS ARE EQUAL WIDTH UP HERE, AND THAT IS DELIBERATE RATHER THAN LAZY. Downstairs a
+   * column's WIDTH encodes how much total value that ownership bucket holds. Upstairs a column holds
+   * only that bucket's OVERFLOW, so a width proportion would encode "which wing happened to spill
+   * more", which means nothing. Value is still carried where it is honest — in room HEIGHT, by the
+   * same _bandLayout as downstairs. 🔑 DO NOT COPY AN ENCODING INTO A CONTEXT WHERE THE THING IT
+   * ENCODES NO LONGER EXISTS. */
+  function _foldFloorSVG(groups, tileFor, onOpen) {
+    var W = 404, INSET = 1, CGAP = 8;             // 1-unit inset so the 1px stroke is not half-clipped
+    var nC = Math.max(1, groups.length);
+    var colW = (W - (nC - 1) * CGAP) / nC;
+    var tallest = 0;
+    groups.forEach(function (gr) { tallest = Math.max(tallest, gr.rooms.length); });
+    var H = Math.max(315, 75 * tallest);
     var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('class', 'datum-fold-floor');
     svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
     svg.setAttribute('style', 'width:100%;height:auto;display:block;overflow:visible;');
-    folded.forEach(function (acc, i) {
+    groups.forEach(function (gr, ci) {
+      var colX = ci * (colW + CGAP);
+      /* Each wing's stack fills the WHOLE band, exactly as a first-floor column does — so one room
+         upstairs draws tall beside a wing with five, and the two floors read the same way. */
+      var rows = _bandLayout(0, H, 0, 75, gr.rooms.map(function (a) { return Math.max(Math.abs(a.value || 0), 1000); }));
+      gr.rooms.forEach(function (acc, i) { drawOne(acc, i, rows, colX, colW); });
+    });
+    function drawOne(acc, i, rows, colX, colW) {
       var r = rows[i] || { y: i * 75, h: 75 };
-      var d = { x: INSET, y: r.y + INSET, w: W - INSET * 2, h: Math.max(1, r.h - INSET * 2) };
+      var d = { x: colX + INSET, y: r.y + INSET, w: colW - INSET * 2, h: Math.max(1, r.h - INSET * 2) };
       d.cx = d.x + d.w / 2; d.cy = d.y + d.h / 2;
-      var t = tileFor(acc, d);
+      var t = tileFor(acc, d, d.w);
       if (!t) return;
       var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       g.setAttribute('class', 'room-grp visible datum-fold-room' + (t.isDebt ? ' debt-room' : '') + (t.isTrust ? ' trust-room' : ''));
@@ -306,12 +358,30 @@
       g.addEventListener('click', go);
       g.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') go(e); });
       svg.appendChild(g);
-    });
+    }
     return svg;
   }
 
-  function _openFoldPicker(folded, headline, subhead, mergedOf, tileFor) {
-    if (!folded || !folded.length) return;                 // no derivable set -> no dialog, ever
+  /* Normalises whatever a surface handed its door into `[{ rooms: [...] }, ...]`.
+     ⛔ A FUNCTION IS RESOLVED HERE, ON CLICK — that laziness is §25.7's whole mechanism (the later
+     wings' overflow does not exist when the first wing's tile is built). */
+  function _foldGroups(spec) {
+    var v = (typeof spec === 'function') ? spec() : spec;
+    if (!v) return [];
+    if (Array.isArray(v) && v.length && Array.isArray(v[0].rooms)) {
+      return v.filter(function (gr) { return gr.rooms && gr.rooms.length; });
+    }
+    return (Array.isArray(v) && v.length) ? [{ rooms: v }] : [];
+  }
+  function _foldTotal(groups) {
+    var n = 0; groups.forEach(function (gr) { n += gr.rooms.length; }); return n;
+  }
+
+  function _openFoldPicker(spec, headline, subhead, mergedOf, tileFor) {
+    var groups = _foldGroups(spec);
+    var folded = [];
+    groups.forEach(function (gr) { folded = folded.concat(gr.rooms); });
+    if (!folded.length) return;                            // no derivable set -> no dialog, ever
     var prev = document.activeElement;
     var back = document.createElement('div');
     back.className = 'datum-fold-picker';
@@ -339,10 +409,12 @@
        studio scope: 30% white on a near-black modal. It is the sentence that tells the user what this
        place IS and how to use it, so it may not be the dimmest thing on screen. */
     s.setAttribute('style', 'font-family:var(--font-serif);font-size:12px;color:rgba(255,255,255,0.85);margin:6px 0 14px;');
-    /* §25.1 — THE SUBHEAD ARRIVES FULLY BUILT. It used to be `folded.length + suffix`, which forced
-       every surface into one plural shape and left no room for an authored singular. The call site
-       knows n, so the call site says the sentence. */
-    s.textContent = subhead;
+    /* §25.1 — THE SUBHEAD ARRIVES FULLY BUILT (it used to be `folded.length + suffix`, which forced
+       every surface into one plural shape and left no room for an authored singular).
+       §25.7 — OR AS A FUNCTION OF n, because the second floor's count is no longer knowable when the
+       tile is built: it is every wing's overflow, resolved on click. The caller still authors the
+       sentence; the picker supplies the only honest number. */
+    s.textContent = (typeof subhead === 'function') ? subhead(folded.length) : subhead;
     box.appendChild(h); box.appendChild(s);
 
     /* §25.3's verb is unchanged and lives in ONE place, so the drawn floor and the row list cannot
@@ -357,7 +429,7 @@
        emitter (3-line merged stack, its own scale ratio) which has not been extracted. Reported, not
        hidden. The rows already carry name + balance, so nothing regresses there. */
     if (tileFor) {
-      box.appendChild(_foldFloorSVG(folded, tileFor, openRoom));
+      box.appendChild(_foldFloorSVG(groups, tileFor, openRoom));
       mountPicker();
       return;
     }
@@ -1169,16 +1241,9 @@
            * the label will still overrun. Nothing here wraps text. If an authored name ever exceeds
            * that, it needs the Captain's stacking idea and the Architect's copy — this clamp does not
            * silently rescue it, it just stops the sizes that CAN fit from being blown up past fitting. */
-          var _fitPx = function (str, px, boxW) {
-            var per = 0.75;                                  // measured, mono + letter-spacing
-            /* PAD IS NOT DECORATION. Sizing to exactly boxW left the label 1.3 units over its edge,
-               because getComputedTextLength (what the 0.75 factor reproduces) is slightly NARROWER
-               than the painted bbox — the trailing letter-space and glyph overhang are real ink the
-               metric does not count. Fitting to the metric alone puts the label exactly ON the line
-               and the paint just past it. */
-            var maxPx = (boxW - 6) / (Math.max(1, String(str).length) * per);
-            return Math.max(8, Math.min(px, maxPx));
-          };
+          /* ⬆️ MOVED TO MODULE SCOPE for §25.7 — the multi-column second floor needs the same clamp
+             and there may be only ONE of it (L48). Pure function; this is a move, not a rewrite. */
+          var _fitPx = _fitPxShared;
 
           sShown.forEach(function (acc, sI) {
               var base = getBaseType(acc.baseId);
@@ -1311,6 +1376,16 @@
       
       let numCols = activeCols.length;
       let drawnRooms = [];
+      /* §25.7 — ONE UPSTAIRS FOR THE WHOLE HOUSE. Every wing's overflow lands here during its own
+         pass; the collapse tiles close over this object and read it ON CLICK, by which time the
+         render has finished and all three wings have reported. ⛔ Keyed by wing and emitted in
+         activeCols order so the second floor reads primary-left / joint-middle / co-right, exactly
+         as the first floor does. It is per-render, so it cannot leak between paints. */
+      let _upstairs = { primary: [], joint: [], coarch: [] };
+      let _upstairsGroups = function () {
+          return activeCols.map(function (c) { return { col: c, rooms: _upstairs[c] || [] }; })
+                           .filter(function (gr) { return gr.rooms.length; });
+      };
 
       if(numCols > 0) {
           
@@ -1415,6 +1490,7 @@
                   _colHidden = accounts.length - _colShown.length;
                   _colFolded = accounts.slice(_colShown.length);
               }
+              _upstairs[colName] = _colFolded;   // §25.7 — this wing reports to the shared upstairs
               /* The collapsed tile takes a REAL slot weighted by everything it stands for, so the
                  stack still fills the band exactly — same rule the satellite wing follows. */
               var _colWeights = _colShown.map(function (a) { return a._renderVal; });
@@ -1592,16 +1668,25 @@
                      ⛔ `ownStroke` ON — there is no envelope pass in a modal to draw its walls.
                      ⛔ `anim: false` — the draw-in animation is a birth event on the canvas; replaying
                         it every time a door opens would animate a room the user built last week. */
-                  var _floorTile = function (acc, d) {
+                  var _floorTile = function (acc, d, fitW) {
                       var b = getBaseType(acc.baseId);
                       if (!b) return null;
                       return _roomTileSVG(acc, b, d, {
                           isShocked: isShocked, isThermal: isThermal, ownStroke: true, anim: false,
-                          mergeByAsset: _mergeDebtsByAsset, weights: accountWeights
+                          fitW: fitW, mergeByAsset: _mergeDebtsByAsset, weights: accountWeights
                       });
                   };
-                  _makeFoldDoor(_cg, _colFolded, 'THE SECOND FLOOR',
-                      _colHidden + (_colHidden === 1 ? ' room' : ' rooms') + ' up here. Pick one to enter it.',
+                  /* §25.7 — the door opens the WHOLE upstairs, not just this wing's share. The groups
+                     and the count are both LAZY: this tile is built mid-render, before the other wings
+                     have folded anything.
+                     ⚠️ THE TILE'S OWN FACE STILL COUNTS ONLY ITS OWN WING, AND THAT IS CORRECT — it
+                     marks where THIS column stopped drawing, so "+3" is true of this column. The
+                     subhead then says how many are up there in total. A house works this way: the
+                     stairs in one wing still lead to the whole second floor.
+                     ❓ FLAGGED FOR THE ARCHITECT: tile "+3" opening onto "7 rooms up here" is honest
+                     but may want a copy ruling. I did not change either authored string to paper it. */
+                  _makeFoldDoor(_cg, _upstairsGroups, 'THE SECOND FLOOR',
+                      function (n) { return n + (n === 1 ? ' room' : ' rooms') + ' up here. Pick one to enter it.'; },
                       _cAria, null, _floorTile);
                   svgContainer.appendChild(_cg);
                   bounds.minX = Math.min(bounds.minX, currentX);
