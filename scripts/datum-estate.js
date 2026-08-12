@@ -1462,11 +1462,27 @@
                *
                * ⛔ THE CAP IS DERIVED AND THE DERIVATION LIVES HERE SO IT CANNOT ROT INTO A MAGIC
                * NUMBER. Column rooms do NOT scale their type — measured 14px title / 32px value at
-               * EVERY count, because §22.1's ratio is satellite-only — so their text stack is a
-               * CONSTANT 62.5 units. The largest count whose tile can still contain its own label is
-               * therefore floor(750 / 62.5) = 12 ... which is an EXACT fit with zero margin, and a
-               * constraint satisfied with zero margin is one the next unrelated rounding change
-               * breaks. Captain ruled 11: one room of headroom, deliberately spent.
+               * EVERY count, because §22.1's ratio is satellite-only.
+               * ~~"so their text stack is a CONSTANT 62.5 units. The largest count whose tile can
+               * still contain its own label is therefore floor(750 / 62.5) = 12 ... an EXACT fit
+               * with zero margin. Captain ruled 11: one room of headroom, deliberately spent."~~
+               *
+               * ⛔⛔ STRUCK 2026-08-11 — 62.5 WAS ASSERTED, NEVER MEASURED, AND IT IS WRONG BY 15
+               * UNITS. Measured with getBBox() on the REAL painted ink, at counts 1..13, on BOTH the
+               * column and the trust wing: the value baseline sits at cy+30 carrying a 32px italic
+               * serif, so the ink reaches 38.8 units BELOW the tile centre. A centred tile therefore
+               * needs 2 x 38.8 = 77.6 UNITS, not 62.5. The same 38.8 fell out of FIVE independent
+               * (count, overflow) pairs across both wings, to within 0.05 — it is a property of the
+               * text stack, not of either wing.
+               * ⚠️ SO CAP 11 IS ALREADY OVERFLOWING, TODAY, ON THIS SURFACE: 750/11 = 68.2 units per
+               * slot and the value's ink overruns its own tile by 4.7 units. Containment needs
+               * 750/slots >= 77.6 -> slots <= 9. The "one room of headroom" was never headroom; it
+               * was two rooms of overflow measured against a number that was 15 units too small.
+               * ⛔ NOT CHANGED HERE. Dropping to 9 slots removes two DRAWN rooms from the canvas,
+               * and the better lever is promoting §22.1's _sRatio + _fitPx pair to this wing so the
+               * type scales instead of the count shrinking. Both are product calls: REPORTED, and
+               * awaiting the Architect + the Captain. 🔑 A NUMBER WITHOUT ITS DERIVATION ROTS — this
+               * one had a derivation, and the derivation itself was the guess.
                * ⚠️ DO NOT "SIMPLIFY" THIS TO THE SATELLITE'S sCap OF 7. That number is
                * floor((830+15)/110) and answers a DIFFERENT constraint — satellites scale their type
                * and carry a 15-unit gap. Two caps that matched would look like a convention and be a
