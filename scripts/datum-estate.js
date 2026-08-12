@@ -1096,11 +1096,14 @@
            * y[160,1010] because _tCapH existed ONLY to enclose the caption. The tile band was never
            * touched by §22.3, so §22.2's parity is unaffected either way — satellite 830 == trust 830.
            *
-           * ⚠️ MEASURED ALONG THE WAY, TRUE, AND UNFIXED: trust tiles do NOT scale their type at all.
-           * Title 14px and value 32px at EVERY count 1..12, because §22.1's ratio is satellite-only.
-           * At 12 trusts a 58-unit tile still carries a 32px value, so the value overflows its own
-           * tile. Reported, not fixed — it is the same family as the satellite line-2 overflow fixed
-           * in this commit, and it wants the same treatment on its own beat. */
+           * ~~"⚠️ MEASURED ALONG THE WAY, TRUE, AND UNFIXED: trust tiles do NOT scale their type at
+           * all ... at 12 trusts a 58-unit tile still carries a 32px value, so the value overflows
+           * its own tile. Reported, not fixed — it wants the same treatment on its own beat."~~
+           * ✅ THIS IS THAT BEAT — §26. The pair (_tileTypeScale for height, _fitPxShared for width)
+           * is promoted to this wing below. The overflow was real and the old note understated it:
+           * measured, the wing spills from TEN trusts, not twelve, because the ink needs 77.6 units
+           * and not the 62.5 §22.7 recorded. ⛔ HEIGHT AND WIDTH TOGETHER OR NEITHER — and "together"
+           * means UNDER THE SAME CONDITIONS, not merely in the same commit. */
           let tSVG = document.createElementNS("http://www.w3.org/2000/svg", "g");
           tSVG.innerHTML = `
               <rect x="${tX}" y="${gY}" width="${tW}" height="${gH}" class="grounds-rect" stroke-dasharray="6 6" stroke="var(--shield)" stroke-width="2" fill="rgba(138, 100, 255, 0.05)" onmouseenter="showTrustTooltip(event)" onmouseleave="hideTrustTooltip()"/>
@@ -1143,6 +1146,17 @@
               let taxClass = isThermal ? `tax-${base.taxCode}` : '';
               let animClass = acc.isNew ? 'animate-draw' : '';
 
+              /* §26 — THE PAIR, PROMOTED TO THIS WING. Height and width, under the SAME conditions.
+                 ⛔ NOT the emitter itself: this tile is still its own template, so the shared thing
+                 here is the SCALING LAW, which is the thing the pair rule governs. Unifying this
+                 emitter with _roomTileSVG is a real follow-up (the shapes already match) but it
+                 would also change valStr's formatting on the edges — raw vs shocked value, and
+                 '$'+v vs Math.round — so it is FLAGGED, not smuggled into a type-scaling commit. */
+              let _tS = _tileTypeScale(h);
+              let _tTitle = _roomNameOf(acc, base).toUpperCase();
+              let _tTitlePx = _fitPxShared(_tTitle, 14 * _tS, d.w);
+              let _tValPx = Math.round(32 * _tS * 10) / 10;
+
               // S2.4 — trusts HOLD capital (fill) but are non-investable (weight 0, not load-bearing).
               let weight = accountWeights[acc.id] || 0;
               let fp = fillPct(acc.value || 0);
@@ -1155,8 +1169,8 @@
                   <title>${base.desc}</title>
                   <rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" class="room-rect active ${taxClass} ${animClass}" />
                   ${fillHTML}
-                  <text x="${d.cx}" y="${d.cy - 10}" class="bp-title" style="fill:var(--shield)">${_roomNameOf(acc, base).toUpperCase()}</text>
-                  <text x="${d.cx}" y="${d.cy + 30}" class="bp-val" style="fill:var(--white)">${valStr}</text>
+                  <text x="${d.cx}" y="${d.cy - 10 * _tS}" class="bp-title" style="fill:var(--shield); font-size:${_tTitlePx}px">${_tTitle}</text>
+                  <text x="${d.cx}" y="${d.cy + 30 * _tS}" class="bp-val" style="fill:var(--white); font-size:${_tValPx}px">${valStr}</text>
               `;
               svgContainer.appendChild(g);
               descriptors.push({ id: acc.id, el: g, rect: g.querySelector('.room-rect'), d: d, value: acc.value || 0, fillPct: fp, weight: weight, isNew: !!acc.isNew, taxCode: base.taxCode, isDebt: false, isInvestment: !!base.isInvestment, isPriority: !!acc.isPriority });
