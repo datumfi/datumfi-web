@@ -83,9 +83,27 @@ const server = http.createServer((req, res) => {
       const room = svg ? svg.querySelector('.trust-room') : null;
       const title = room ? room.querySelector('.bp-title') : null;
       return {
-        /* THE OUTSIDE WING IS ONLY DRAWN WHEN SOMETHING IS OUTSIDE — its banner is the honest
-           observable for in-or-out, far better than guessing from coordinates. */
-        wing: /GENERATIONAL TRUST WING/.test(txt),
+        /* THE OUTSIDE WING IS ONLY DRAWN WHEN SOMETHING IS OUTSIDE, so its presence is the honest
+           observable for in-or-out — far better than guessing from coordinates.
+           ══ RE-ANCHORED 2026-08-11 ═══════════════════════════════════════════════════════════
+           ~~`wing: /GENERATIONAL TRUST WING/.test(txt)`~~  ⛔ THAT CAPTION WAS DELIBERATELY DELETED
+           by §22.4 (commit 1b5b53b, "the wing caption is dropped"), an AUTHORED change with an
+           explicit Captain GO. The wing itself — the dashed shield boundary — stayed; only its label
+           went. So this gate has been reporting a FALSE RED on a CORRECT product ever since, and it
+           accused the one thing it exists to protect.
+           🔑 AN INSTRUMENT ANCHORED ON DECORATION DIES WHEN THE DECORATION IS RETIRED — and it dies
+           LOUD, blaming the feature. Anchor on the thing itself, never on its caption.
+           Measured 2026-08-11: Revocable -> 0 wing rects · Irrevocable -> 1 · blank -> 1, which is
+           precisely the rule below. The product never broke.
+           The tooltip hook is the wing's OWN behaviour (not styling), so a restyle cannot silently
+           re-break this the way a caption did; the dashed shield stroke corroborates it. */
+        wing: (function () {
+          if (!svg) return false;
+          if (svg.querySelector('[onmouseenter*="showTrustTooltip"]')) return true;
+          return Array.from(svg.querySelectorAll('rect')).some(function (e) {
+            return /shield/.test(e.getAttribute('stroke') || '') && (e.getAttribute('stroke-dasharray') || '') !== '';
+          });
+        })(),
         trustRoomPresent: !!room,
         purple: !!(title && /--shield/.test(title.getAttribute('style') || '')),
         drawn: /400/.test(txt)
