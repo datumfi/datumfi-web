@@ -1,4 +1,6 @@
-/* CSP connect-src GATE — proves the Worker origin is on the studio.html CSP allow-list in the
+/* @gate-pool: node
+ *
+   CSP connect-src GATE — proves the Worker origin is on the studio.html CSP allow-list in the
    SERVED bytes (DoD part 3). Without it the browser refuses fetch() to the RentCast Worker
    PRE-flight -> graceful catch -> silent blank at studio.html:8295 (the #253 live bug).
 
@@ -6,29 +8,31 @@
    (~line 8265), so a doc-wide grep would go GREEN for the wrong reason. This gate scopes the
    assertion to the connect-src DIRECTIVE ONLY — the exact thing the browser enforces.
 
-   RED-FIRST: run against the CURRENT (pre-fix) served bytes -> genuine RED (Worker absent from
+   RED-FIRST: run against the CURRENT (pre-fix) bytes -> genuine RED (Worker absent from
    connect-src). Apply the one-line fix -> GREEN. `--redfirst` additionally strips the Worker
-   from the fetched directive in-memory to prove the assertion BITES even on correct bytes.
-   Usage: serve repo root on :8001, then  node scripts/_gate_csp_connect.js [LABEL] [--redfirst]. */
+   from the directive in-memory to prove the assertion BITES even on correct bytes.
+   Usage: node scripts/_gate_csp_connect.js [LABEL] [--redfirst]
+
+   ══ 2026-08-11 · THIS GATE READS THE FILE. IT USED TO FETCH http://127.0.0.1:8001/studio.html ══
+   ⛔ IT HAD BEEN CRASHING, NOT FAILING, FOR AS LONG AS ANYONE HAD RUN THE NODE TIER — ECONNREFUSED
+   is an uncaught throw, which the suite scores RED. A CRASH IS NOT A RED, and a permanently-red
+   alarm is where a real red hides: this session a genuine third red appeared and was only spotted
+   because the baseline was known to be exactly two. That is far too thin a margin.
+   🔑 AND THE HOP PROVED NOTHING IT COST. The documented setup was "serve REPO ROOT on :8001", so the
+   bytes fetched were byte-identical to the bytes on disk — an HTTP round trip to read a local file,
+   dressed as "SERVED bytes" verification. Real publish proof for an HTML host is marker-grep against
+   datumfi.com and never a local port (CF rewrites HTML per request; see CLAUDE.md).
+   ⭐ A PRECONDITION NOBODY CAN SATISFY IS NOT A PRECONDITION, IT IS AN OFF SWITCH. */
 const fs = require('fs');
-const http = require('http');
+const path = require('path');
 const LABEL = process.argv[2] || 'RUN';
 const RF = process.argv.includes('--redfirst');
 const WORKER = 'https://rentcast-avm.dmerced1.workers.dev';
-const URL = 'http://127.0.0.1:8001/studio.html';
-
-function get(url) {
-  return new Promise((resolve, reject) => {
-    http.get(url, (res) => {
-      let d = '';
-      res.on('data', (c) => { d += c; });
-      res.on('end', () => resolve(d));
-    }).on('error', reject);
-  });
-}
+const SRC = path.resolve(__dirname, '..', 'studio.html');
 
 (async () => {
-  const html = await get(URL);
+  if (!fs.existsSync(SRC)) { console.log('[csp_connect] ABORT — studio.html not found at ' + SRC); process.exit(2); }
+  const html = fs.readFileSync(SRC, 'utf8');
   const lines = [];
   let pass = 0, fail = 0;
   function ok(cond, label) { if (cond) pass++; else fail++; lines.push((cond ? 'PASS ' : 'FAIL ') + label); }

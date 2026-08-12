@@ -1,22 +1,25 @@
-/* #262 WAVE 2 CSS GATE — proves the app-wide typography + modal-width + white-hover + premium-toggle
+/* @gate-pool: node
+ *
+   #262 WAVE 2 CSS GATE — proves the app-wide typography + modal-width + white-hover + premium-toggle
    changes are in the SERVED CSS (studio.html). Visual regressions are the Captain's smoke; this locks
    the load-bearing CSS values so a future edit can't silently revert them.
    RED-FIRST: `--redfirst` checks the PRE-change values instead -> ABSENT -> RED. Normal -> GREEN.
-   Usage: serve repo root on :8001, then node scripts/_gate_wave2_css.js [LABEL] [--redfirst]. */
+   Usage: node scripts/_gate_wave2_css.js [LABEL] [--redfirst]
+
+   ══ 2026-08-11 · READS THE FILE; USED TO FETCH http://127.0.0.1:8001/studio.html ══════════════
+   ⛔ It had been CRASHING (ECONNREFUSED, uncaught -> scored RED), not failing, for as long as the
+   node tier had been run. A CRASH IS NOT A RED. The documented setup was "serve REPO ROOT on
+   :8001", so the fetch returned bytes identical to the file — an HTTP round trip to read a local
+   file. See the twin note in _gate_csp_connect.js. */
 const fs = require('fs');
-const http = require('http');
+const path = require('path');
 const LABEL = process.argv[2] || 'RUN';
 const RF = process.argv.includes('--redfirst');
-const URL = 'http://127.0.0.1:8001/studio.html';
-
-function get(url) {
-  return new Promise((resolve, reject) => {
-    http.get(url, (res) => { let d = ''; res.on('data', c => d += c); res.on('end', () => resolve(d)); }).on('error', reject);
-  });
-}
+const SRC = path.resolve(__dirname, '..', 'studio.html');
 
 (async () => {
-  const html = await get(URL);
+  if (!fs.existsSync(SRC)) { console.log('[wave2_css] ABORT — studio.html not found at ' + SRC); process.exit(2); }
+  const html = fs.readFileSync(SRC, 'utf8');
   const lines = []; let pass = 0, fail = 0;
   const ok = (c, m) => { if (c) pass++; else fail++; lines.push((c ? 'PASS ' : 'FAIL ') + m); };
   const has = (s) => html.indexOf(s) >= 0;
