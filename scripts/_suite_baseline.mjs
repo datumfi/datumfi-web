@@ -271,7 +271,32 @@ function runOne(file, name, timeoutMs = TIMEOUT_MS, declaredStatus = null) {
        * to avoid tripping it. A file should say what it IS, not have its status inferred from what
        * it happens to emit. */
       const quarantined = declaredStatus === 'quarantined' || out.indexOf('[QUARANTINED]') >= 0;
-      resolve({ name, status: quarantined ? 'QUARANTINED' : (code === 0 ? 'GREEN' : 'RED'), code, ms: Date.now() - t0, out, err });
+      /* ── CRASH IS A FOURTH CLASS · 2026-08-12 ────────────────────────────────────────────────
+       * A PROCESS THAT DIED DID NOT RENDER A VERDICT. Classification here was `code === 0 ? GREEN
+       * : RED` for this runner's whole life, so a gate killed by the OS was scored as though the
+       * PRODUCT had failed. Measured on the 2026-08-12 full run: `_gate_save_handoff` exited
+       * 3221226505 = 0xC0000409 STATUS_STACK_BUFFER_OVERRUN — a Windows process crash — and was
+       * reported as a RED alongside genuine failures. It passes CLEAN GREEN 33/0 standalone.
+       * f2d6573 met the same disease in the NODE tier and cured it the only way available at the
+       * time: by removing the two crash CAUSES. The CLASSIFICATION was never fixed, so the tier
+       * stayed one crash away from lying again — and the browser tier then did exactly that.
+       *
+       * ⛔ THE RULE IS DELIBERATELY NARROW, AND THE BOUNDARY IS THE WHOLE POINT: **AN EXIT CODE
+       * ABOVE 255 IS NOT A VERDICT, IT IS A DEATH.** No process on any platform exits 256+ to mean
+       * "I ran and I failed" — POSIX truncates to 8 bits and Windows reserves the high range for
+       * NTSTATUS. Verified on this platform: child.on('close') receives the full 32-bit value
+       * (3221226505, signal null), so the tell survives to here intact.
+       * ⛔ AND WHAT IT MUST *NOT* SWALLOW: exit 1 STAYS RED, always. An uncaught throw exits 1 and
+       * is byte-identical to an honest failure — measured, EADDRINUSE kills a gate with exit 1 —
+       * so exit 1 is NOT reclassifiable without reading the reason, which is a human's job. A
+       * classifier that guessed there would hide real defects, which is the opposite of the fix.
+       * 🔑 ONLY RECLASSIFY WHAT IS PROVABLY NOT A VERDICT. Everything else stays RED and gets read.
+       *
+       * COUNTED AS NEITHER GREEN NOR RED, and printed even at zero — same contract as QUARANTINED,
+       * for the same reason: a crash that stops being visible is a crash nobody investigates. */
+      const crashed = typeof code === 'number' && code > 255;
+      const status = quarantined ? 'QUARANTINED' : (crashed ? 'CRASH' : (code === 0 ? 'GREEN' : 'RED'));
+      resolve({ name, status, code, ms: Date.now() - t0, out, err });
     });
   });
 }
@@ -291,6 +316,12 @@ async function selfCheck() {
      * to manufacture a pass. Both must land on QUARANTINED regardless of exit code. */
     quarRed: "console.log('[QUARANTINED] sentinel'); process.exit(1);\n",
     quarGreen: "console.log('[QUARANTINED] sentinel'); process.exit(0);\n",
+    /* TWO crash sentinels, and the SECOND is the load-bearing one — the same shape the quarantine
+       pair uses. `crash` proves a death is detected; `nearMiss` proves the boundary did not swallow
+       an honest failure. A single 0xC0000409 sentinel would pass just as happily on a classifier
+       that called EVERY non-zero exit a crash, which would hide every real red in the suite. */
+    crash: "console.log('sentinel: crashing'); process.exit(3221226505);\n",
+    nearMiss: "console.log('sentinel: exit 255'); process.exit(255);\n",
   };
   /* --sabotage=<k> deliberately breaks ONE sentinel so it behaves like the others. The guard must
      catch it and abort. This is the red-first: it proves the guard can still fail. */
@@ -309,6 +340,8 @@ async function selfCheck() {
   r.hang = await runOne(files.hang, 'sentinel_hang', 4000);
   r.quarRed = await runOne(files.quarRed, 'sentinel_quar_red');
   r.quarGreen = await runOne(files.quarGreen, 'sentinel_quar_green');
+  r.crash = await runOne(files.crash, 'sentinel_crash');
+  r.nearMiss = await runOne(files.nearMiss, 'sentinel_near_miss');
   fs.rmSync(dir, { recursive: true, force: true });
 
   const checks = [
@@ -320,6 +353,10 @@ async function selfCheck() {
     ['a HANG is TIMEOUT, never GREEN', r.hang.status === 'TIMEOUT', r.hang.status],
     ['[QUARANTINED] + exit 1 is QUARANTINED, not RED', r.quarRed.status === 'QUARANTINED', r.quarRed.status],
     ['[QUARANTINED] + exit 0 is QUARANTINED, not GREEN', r.quarGreen.status === 'QUARANTINED', r.quarGreen.status],
+    /* THE PAIR. The first proves a death is SEEN; the second proves the boundary is a boundary and
+       not a net — exit 255 is the largest honest verdict there is, and it must stay RED. */
+    ['a DEATH (exit 0xC0000409) is CRASH, not RED', r.crash.status === 'CRASH', r.crash.status + ' code=' + r.crash.code],
+    ['exit 255 is still RED — the boundary is not a net', r.nearMiss.status === 'RED', r.nearMiss.status + ' code=' + r.nearMiss.code],
   ];
   console.log('----- self-check (harness proves itself before it reports) -----');
   let all = true;
@@ -460,7 +497,7 @@ async function runPool(list, conc, label) {
 
   const by = (s) => results.filter((r) => r.status === s);
   const green = by('GREEN'), red = by('RED'), to = by('TIMEOUT'), se = by('SPAWN_ERROR');
-  const quar = by('QUARANTINED');
+  const quar = by('QUARANTINED'), crash = by('CRASH');
 
   console.log('\n===== BASELINE RESULT =====');
   console.log(`GREEN   ${green.length}`);
@@ -469,16 +506,48 @@ async function runPool(list, conc, label) {
   // quarantine nobody reviews, and these are gates somebody decided not to trust — the count
   // should be uncomfortable to look at, not something the report can quietly drop.
   console.log(`QUARANT ${quar.length}   (verdict not trusted — counted as NEITHER green nor red)`);
+  // PRINTED EVEN AT ZERO, for the same reason QUARANT is: a crash that stops being visible is a
+  // crash nobody investigates, and the whole point of the class is that it must be uncomfortable.
+  console.log(`CRASH   ${crash.length}   (the process DIED — no verdict rendered; NEITHER green nor red)`);
   console.log(`TIMEOUT ${to.length}`);
   console.log(`SPAWN   ${se.length}`);
   console.log(`TOTAL   ${results.length}   wall ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 
   const line = (r) => `  ${r.status.padEnd(8)} ${r.name}  (exit ${r.code}, ${(r.ms / 1000).toFixed(1)}s)`;
-  for (const [t, set] of [['RED', red], ['TIMEOUT', to], ['SPAWN_ERROR', se], ['QUARANTINED', quar]]) {
-    if (set.length) { console.log(`\n--- ${t} ---`); set.slice().sort((a, b) => a.name.localeCompare(b.name)).forEach((r) => console.log(line(r))); }
+  /* ── A RED LIST IS NOT A RED REASON · 2026-08-12 ───────────────────────────────────────────────
+   * This runner printed a red COUNT, then earned a red LIST — and still never printed WHY. The
+   * reason existed only inside the results JSON, at ONE FIXED PATH that the very next run of ANY
+   * tier overwrote. Measured the hard way on 2026-08-12: a full run produced two reds, a follow-up
+   * `--only=node` run clobbered the receipt, and the evidence for both was gone before either could
+   * be read. A narrow run destroyed a wide run's only record.
+   * 🔑 A RED YOU CANNOT DIAGNOSE BEFORE THE NEXT RUN WILL BE RE-DISCOVERED, NOT FIXED — and a flake
+   *    is worst of all, because the re-run passes and the reason is gone forever.
+   * ⛔ SO THE REASON GOES IN THE RUN LOG ITSELF, where it survives independently of any file. */
+  const reason = (r) => {
+    const body = ((r.out || '') + '\n' + (r.err || '')).split('\n').map((s) => s.trimEnd()).filter(Boolean);
+    /* Prefer the lines that NAME the failure; fall back to the tail so a gate with an unfamiliar
+       vocabulary is never reported as silent. SOURCED-OR-BLANK: if there is genuinely no output we
+       say so, rather than printing an empty block that reads like "no reason given". */
+    const named = body.filter((l) => /\bFAIL\b|\bRED\b|Error|error:|EADDRINUSE|ECONNREFUSED|Timeout|✗|\bABORT\b/.test(l));
+    const pick = (named.length ? named : body).slice(-6);
+    return pick.length ? pick.map((l) => '           | ' + l.slice(0, 160)).join('\n') : '           | (no output captured)';
+  };
+  for (const [t, set] of [['RED', red], ['CRASH', crash], ['TIMEOUT', to], ['SPAWN_ERROR', se], ['QUARANTINED', quar]]) {
+    if (!set.length) continue;
+    console.log(`\n--- ${t} ---`);
+    set.slice().sort((a, b) => a.name.localeCompare(b.name)).forEach((r) => {
+      console.log(line(r));
+      // QUARANTINED is a decision already taken and reviewed; the other four need their reason here.
+      if (t !== 'QUARANTINED') console.log(reason(r));
+    });
   }
 
-  const outPath = path.join(os.tmpdir(), 'datum-baseline-results.json');
+  /* ⛔ THE RECEIPT IS SCOPED BY TIER, BECAUSE A NARROW RUN MUST NOT DESTROY A WIDE RUN'S EVIDENCE.
+     One fixed filename meant `--only=node` (6 seconds, run constantly) overwrote the record of a
+     full 8-minute run. That is exactly how the two 2026-08-12 browser reds lost their reasons. The
+     stable name is KEPT for the full run so nothing that reads the canonical path breaks. */
+  const tier = ONLY === 'node' ? '-node' : (ONLY === 'browser' ? '-browser' : '');
+  const outPath = path.join(os.tmpdir(), `datum-baseline-results${tier}.json`);
   fs.writeFileSync(outPath, JSON.stringify(results.map((r) => ({
     name: r.name, browser: r.browser, status: r.status, code: r.code, ms: r.ms,
     tail: (r.out || '').split('\n').slice(-25).join('\n'), err: (r.err || '').slice(-2000),
@@ -509,5 +578,14 @@ async function runPool(list, conc, label) {
     if (untracked.length) console.log(`   (${untracked.length} untracked file(s) present, not written by this run — not a repeatability signal)`);
   } catch { /* not a git checkout — skip */ }
 
-  process.exit(red.length + to.length + se.length === 0 ? 0 : 1);
+  /* ⛔ A CRASH FAILS THE RUN, EVEN THOUGH IT IS NOT A RED — AND THE TWO STATEMENTS ARE NOT IN
+   * TENSION. Not-red is a claim about THE PRODUCT: a dead process proved nothing about it, so
+   * counting it red is a lie. Failing the run is a claim about THE RUN: a gate you expected to
+   * execute did not, so the sweep is incomplete and must not present itself as clean.
+   * 🔑 NO SCORE = NO RESULT, AND NO RESULT IS NOT A PASS.
+   * ⛔ QUARANTINED is deliberately still excluded, and the difference is CONSENT: a quarantine is a
+   * decision a human took and reviews; a crash is an unplanned death nobody agreed to. Forgiving it
+   * silently would trade the permanently-red alarm for a permanently-invisible one, which is the
+   * same disease facing the other way. */
+  process.exit(red.length + to.length + se.length + crash.length === 0 ? 0 : 1);
 })();
