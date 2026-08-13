@@ -80,8 +80,21 @@ need('(ABSENCE) old "+ Draft New Structure" button gone', !s.includes('+ Draft N
 need('(WIRED) both rooms render the shared control', (s.match(/html \+= _linkControlHTML\(id, acc, base\);/g) || []).length >= 2);
 need('(NO-TELEPORT) createLinkedAsset stays in room (openAccountModal(debtId))', /debt\.linkedAssetId = newId;[\s\S]*?openAccountModal\(debtId\);/.test(s));
 need('(NO-TELEPORT) createLinkedLiability stays in room (openAccountModal(assetId))', /createLinkedLiability = function\(assetId, baseId\)[\s\S]*?openAccountModal\(assetId\);/.test(s));
+/* ⚠️ THE PROMPT IS NOW TYPE-AWARE, SO THIS LEG MOVED — AND GOT STRONGER (2026-08-13).
+   It pinned the literal 'What kind of debt is secured by this property?'. That sentence was
+   HARDCODED to "property" and shown on a VEHICLE too — the same wrong-noun defect fixed at the link
+   label (~6947), in a third place. The product change is the point here, so the gate follows it.
+   ⛔ NOTE THE DIFFERENCE FROM THE OTHER DIRECTION: when _gate_407_19_1c_display went red over the
+   blur formatter, the CLAIM was unchanged and only the shape had moved, so the PRODUCT kept its
+   shape and no gate was re-grounded. Here the claim itself is different — the prompt must now name
+   the room the user is standing in — so re-grounding is the honest move, not the convenient one.
+   🔑 A GATE FOLLOWS A DELIBERATE PRODUCT CHANGE; IT NEVER FOLLOWS AN ACCIDENTAL ONE.
+   The stem plus the branch is a tighter claim than the old literal: it proves the sentence exists
+   AND that it forks, where before it could only prove one hardcoded wording. */
 need('(CHOOSER) _draftLiabilityChooser sources types from reverse-scope × rDataList',
-  /_draftLiabilityChooser = function[\s\S]*?rDataList\.filter[\s\S]*?_assetReverseScope/.test(s) && s.includes('What kind of debt is secured by this property?'));
+  /_draftLiabilityChooser = function[\s\S]*?rDataList\.filter[\s\S]*?_assetReverseScope/.test(s)
+  && s.includes('What kind of debt is secured by this ')
+  && s.includes("? 'vehicle' : 'property'"));
 
 let pass = 0;
 for (const [label, ok] of checks) { console.log((ok ? '✅' : '⛔') + ' ' + label); if (ok) pass++; }

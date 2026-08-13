@@ -1719,7 +1719,12 @@ const server = http.createServer((req, res) => {
      'PRESENCE: the control offers at least one linkable debt — the exclusion below is not vacuous (' + revOpts.length + ' rows)');
   ok(optHas('Mortgage') || optHas('The Moat'), 'DO-NOT-BREAK: Mortgage IS offered on a property target list');
   ok(pick(optHas('HELOC') || optHas('The Cellar'), !(optHas('HELOC') || optHas('The Cellar'))), 'HELOC IS offered on a property target list (the half never exercised until 2026-08-02) [BITE]');
-  ok(pick(!optHas('Auto Loan') && !optHas('Personal Loan'), optHas('Auto Loan') || optHas('Personal Loan')), 'non-mortgage debts (Auto Loan / Personal Loan) EXCLUDED from property target list [BITE]');
+  /* ⚠️ 'Auto Loan' -> 'Vehicle Loan' (Captain naming ruling 2026-08-13). RENAMING A STRING A
+     NEGATIVE ASSERTION DEPENDS ON MAKES THAT ASSERTION VACUOUS — this leg would have kept passing
+     because the old title no longer exists ANYWHERE, which is this gate's own documented 9th false
+     green arriving by a new route. Re-pointed at the live title. The `every(/Mortgage|HELOC/)` leg
+     below is the shape-positive backstop that cannot rot the same way. */
+  ok(pick(!optHas('Vehicle Loan') && !optHas('Personal Loan'), optHas('Vehicle Loan') || optHas('Personal Loan')), 'non-mortgage debts (Vehicle Loan / Personal Loan) EXCLUDED from property target list [BITE]');
   ok(revOpts.length >= 1 && revOpts.every((t) => /Mortgage|HELOC|The Moat|The Cellar/.test(t)), 'property target list = Mortgage/HELOC ONLY (' + revOpts.length + ' opts); ' + JSON.stringify(revOpts));
 
   // ===== #244 OPEN-1 · SLIM MIRROR PRESERVES CARRYING COSTS (real-user data-loss) =====

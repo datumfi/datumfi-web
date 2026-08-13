@@ -3883,7 +3883,7 @@
 
       { id: 'mortgage_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Mortgage', meta: 'The Moat', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'heloc_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'HELOC', meta: 'The Cellar', desc: 'Liability. Secured revolving line against home equity. Subtracts from Estate Sq Footage.' },
-      { id: 'auto_debt_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Auto Loan', meta: 'The Lien', desc: 'Liability. Subtracts from Estate Sq Footage.' },
+      { id: 'auto_debt_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Vehicle Loan', meta: 'The Lien', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'rev_debt_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Revolving Debt', meta: 'The Furnace', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'personal_loan_joint', type: 'joint', taxCode: 'debt', hasInterest: true, title: 'Personal Loan', meta: 'The Ledger', desc: 'Liability. Subtracts from Estate Sq Footage.' },
 
@@ -3911,7 +3911,7 @@
       
       { id: 'mortgage_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'Mortgage', meta: 'The Moat', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'heloc_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'HELOC', meta: 'The Cellar', desc: 'Liability. Secured revolving line against home equity. Subtracts from Estate Sq Footage.' },
-      { id: 'auto_debt_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'Auto Loan', meta: 'The Lien', desc: 'Liability. Subtracts from Estate Sq Footage.' },
+      { id: 'auto_debt_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'Vehicle Loan', meta: 'The Lien', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'student_loan_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'Student Loan', meta: 'The Study', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'rev_debt_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'Revolving Debt', meta: 'The Furnace', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'personal_loan_primary', type: 'primary', taxCode: 'debt', hasInterest: true, title: 'Personal Loan', meta: 'The Ledger', desc: 'Liability. Subtracts from Estate Sq Footage.' },
@@ -3936,7 +3936,7 @@
       
       { id: 'mortgage_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'Mortgage', meta: 'Co-Moat', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'heloc_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'HELOC', meta: 'The Co-Cellar', desc: 'Liability. Secured revolving line against home equity. Subtracts from Estate Sq Footage.' },
-      { id: 'auto_debt_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'Auto Loan', meta: 'Co-Lien', desc: 'Liability. Subtracts from Estate Sq Footage.' },
+      { id: 'auto_debt_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'Vehicle Loan', meta: 'Co-Lien', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'student_loan_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'Student Loan', meta: 'Co-Study', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'rev_debt_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'Revolving Debt', meta: 'Co-Furnace', desc: 'Liability. Subtracts from Estate Sq Footage.' },
       { id: 'personal_loan_co', type: 'coarch', taxCode: 'debt', hasInterest: true, title: 'Personal Loan', meta: 'Co-Ledger', desc: 'Liability. Subtracts from Estate Sq Footage.' }
@@ -7026,10 +7026,26 @@
         var ov = document.getElementById('type-chooser-overlay');
         if (!ov) { ov = document.createElement('div'); ov.id = 'type-chooser-overlay'; ov.style.cssText = 'position:fixed; inset:0; background:rgba(2,6,14,0.72); display:none; align-items:center; justify-content:center; z-index:99999; backdrop-filter:blur(3px);'; document.body.appendChild(ov); }
         var btns = types.map(function (r) { return '<button type="button" data-base="' + r.id + '" style="background:rgba(93,202,165,0.12); border:1px solid var(--teal-mid); color:var(--teal-mid); font-family:var(--font-mono); font-size:12px; text-transform:uppercase; letter-spacing:0.06em; padding:10px 18px; border-radius:4px; cursor:pointer;">' + _returnNavLabel(r) + '</button>'; }).join('');
-        ov.innerHTML = '<div style="background:var(--bg-navy); border:1px solid var(--teal-mid); border-radius:8px; padding:24px 28px; max-width:440px; box-shadow:0 24px 64px rgba(0,0,0,0.85);">'
+        /* 440 -> 520: three uppercase mono type buttons need ~350px of run, and 440 minus 56px of
+           card padding left 384 — enough to fit but not enough to look deliberate. Widened with the
+           row split above rather than instead of it; the two together are what make three flow. */
+        ov.innerHTML = '<div style="background:var(--bg-navy); border:1px solid var(--teal-mid); border-radius:8px; padding:24px 28px; max-width:520px; width:92vw; box-shadow:0 24px 64px rgba(0,0,0,0.85);">'
             + '<div style="font-family:var(--font-mono); color:var(--gold); font-size:11px; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;">Draft a new liability</div>'
-            + '<div style="font-family:var(--font-serif); color:rgba(255,255,255,0.85); font-size:14px; line-height:1.55; margin-bottom:22px;">What kind of debt is secured by this property?</div>'
-            + '<div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; align-items:center;">' + btns
+            /* ⛔ THE NOUN AGAIN, IN A THIRD PLACE. This sentence was hardcoded to "property" and is
+               shown for a VEHICLE too — the same defect just fixed at the link label (~6947), which
+               is what a shared control written for one room always does. A one-word swap on an
+               EXISTING sentence to match the room the user is standing in, not new authoring. */
+            + '<div style="font-family:var(--font-serif); color:rgba(255,255,255,0.85); font-size:14px; line-height:1.55; margin-bottom:22px;">What kind of debt is secured by this '
+            + (/^auto(_primary|_co)?$/.test(String(assetBase.id)) ? 'vehicle' : 'property') + '?</div>'
+            /* ── LAYOUT: THE TYPES FLOW ON THEIR OWN ROW, CANCEL SITS BELOW ───────────────────────
+               Captain smoke 2026-08-13: with mortgage/HELOC removed the vehicle offers THREE types,
+               and at max-width 440px they wrapped against a right-aligned Cancel into a ragged
+               stack. The old layout only ever looked right because a property offers exactly TWO.
+               🔑 A LAYOUT TUNED TO THE COUNT IT HAPPENED TO HAVE IS NOT A LAYOUT. Types now flow
+               left-to-right in their own row and Cancel gets its own, so three fit side by side and
+               a fourth would wrap cleanly instead of interleaving with the dismiss control. */
+            + '<div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-start; align-items:center;">' + btns + '</div>'
+            + '<div style="display:flex; justify-content:flex-end; margin-top:18px;">'
             + '<button type="button" id="tc-cancel" style="background:transparent; border:1px solid rgba(255,255,255,0.25); color:var(--white); font-family:var(--font-mono); font-size:11px; text-transform:uppercase; letter-spacing:0.08em; padding:9px 16px; border-radius:4px; cursor:pointer;">Cancel</button>'
             + '</div></div>';
         var close = function () { ov.style.display = 'none'; };

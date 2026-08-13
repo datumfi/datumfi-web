@@ -45,7 +45,8 @@ const BLANKDRIFTS = process.argv.includes('--blankdrifts');
 const NOSTALE     = process.argv.includes('--nostaleguard');
 const BROADSCOPE  = process.argv.includes('--broadscope');
 const NOPERSIST   = process.argv.includes('--nopersist');
-const MUT = RENAMEALL || NOMAP || BLANKDRIFTS || NOSTALE || BROADSCOPE || NOPERSIST;
+const CRAMPED     = process.argv.includes('--crampedchooser');
+const MUT = RENAMEALL || NOMAP || BLANKDRIFTS || NOSTALE || BROADSCOPE || NOPERSIST || CRAMPED;
 
 const PORT = 8376;
 const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
@@ -59,6 +60,11 @@ const M_INVAL = "            /* §19.12 invalidation removed: --nostaleguard */"
 const A_SCOPE = "            if (d.indexOf('mortgage') === 0 || d.indexOf('heloc') === 0) return false;   // secured by real property, never by a vehicle";
 const M_SCOPE = "            /* mortgage/heloc exclusion removed: --broadscope */";
 const A_PERSIST = "        if (a.vehicleType)     out.vehicleType     = a.vehicleType;";
+/* --crampedchooser reproduces the Captain's sighting: the type row too narrow for three buttons, so
+   they wrap into a ragged stack. Reverting the row split alone would NOT bite (three fit inside 440
+   once Cancel leaves the row), so the control squeezes the row itself — the actual failure shape. */
+const A_ROW = "            + '<div style=\"display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-start; align-items:center;\">' + btns + '</div>'";
+const M_ROW = "            + '<div style=\"display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; align-items:center; max-width:240px;\">' + btns + '</div>'   /* --crampedchooser */";
 const M_PERSIST = "        /* vehicleType dropped from the save allowlist: --nopersist */";
 const A_BRANCH = "        if (acc && /^auto(_primary|_co)?$/.test(String(base && base.id))) return VEHICLE_ROOM_NAME[acc.vehicleType] || shipped;";
 const M_NOMAP  = "        /* §25.1 branch removed: --nomap */";
@@ -86,6 +92,7 @@ const server = http.createServer((req, res) => {
     if (BLANKDRIFTS) src = mutate(src, A_BRANCH, M_BLANK, 'A_BRANCH/blankdrifts');
     if (NOSTALE)     src = mutate(src, A_INVAL,  M_INVAL,  'A_INVAL');
     if (BROADSCOPE)  src = mutate(src, A_SCOPE,  M_SCOPE,  'A_SCOPE');
+    if (CRAMPED)     src = mutate(src, A_ROW,    M_ROW,    'A_ROW');
     body = Buffer.from(src, 'utf8');
   }
   if (NOPERSIST && /studio-blueprint\.js$/.test(rp)) {
@@ -110,11 +117,11 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
 
   console.log('=== ' + LABEL + ' === MODE: ' + (MUT
     ? [RENAMEALL ? 'renameall' : '', NOMAP ? 'nomap' : '', BLANKDRIFTS ? 'blankdrifts' : '',
-       NOSTALE ? 'nostaleguard' : '', BROADSCOPE ? 'broadscope' : '', NOPERSIST ? 'nopersist' : ''].filter(Boolean).join(' ')
+       NOSTALE ? 'nostaleguard' : '', BROADSCOPE ? 'broadscope' : '', NOPERSIST ? 'nopersist' : '', CRAMPED ? 'crampedchooser' : ''].filter(Boolean).join(' ')
     : 'NORMAL'));
 
   /* Builds ONE vehicle of the given type and reads the tile the user actually sees. `lien` attaches
-     a real Auto Loan so the merged form can be read from the same helper (scene M). */
+     a real Vehicle Loan so the merged form can be read from the same helper (scene M). */
   const probe = async (type, lien) => p.evaluate(async (o) => {
     window.state.accounts.length = 0;
     addInstance('auto');
@@ -275,8 +282,44 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
      'L1 [SCOPE] a MORTGAGE cannot be secured by a vehicle — absent from the vehicle link list');
   ok(!/HELOC/.test(picker),
      'L2 [SCOPE] nor a HELOC — it is drawn against HOME equity');
-  ok(/Auto Loan/.test(picker),
-     'L3 [CONTROL] and the Auto Loan IS still offered — a scope that excluded everything would pass L1/L2 while breaking the room');
+  ok(/Vehicle Loan/.test(picker),
+     'L3 [CONTROL] and the Vehicle Loan IS still offered — a scope that excluded everything would pass L1/L2 while breaking the room');
+
+  /* ══ SCENE T · THE DRAFT CHOOSER — THREE TYPES MUST FLOW ON ONE ROW ═════════════════════════════
+     ⛔ MEASURED GEOMETRY, NOT A CLASS NAME. "They flow side by side" is a claim about pixels, and a
+     flex container with `flex-wrap:wrap` satisfies every markup assertion while wrapping into a
+     ragged stack — which is exactly what the Captain saw. So this reads each button's rendered
+     top edge and requires them to share ONE row.
+     🔑 THE OLD LAYOUT ONLY EVER LOOKED RIGHT BECAUSE A PROPERTY OFFERS EXACTLY TWO TYPES. A layout
+     tuned to the count it happened to have is not a layout, so the vehicle's THREE is the fixture. */
+  const T = await p.evaluate(async () => {
+    const a = window.state.accounts.filter((x) => x.baseId === 'auto')[0];
+    window._draftLiabilityChooser(a.id);
+    await new Promise((r) => setTimeout(r, 350));
+    const ov = document.getElementById('type-chooser-overlay');
+    if (!ov || ov.style.display === 'none') return { err: 'chooser did not open' };
+    const btns = Array.prototype.slice.call(ov.querySelectorAll('button[data-base]'));
+    const tops = btns.map((b) => Math.round(b.getBoundingClientRect().top));
+    const cancel = ov.querySelector('#tc-cancel');
+    const prompt = (ov.textContent || '').replace(/\s+/g, ' ');
+    return {
+      count: btns.length,
+      labels: btns.map((b) => (b.textContent || '').trim()),
+      rows: Array.from(new Set(tops)).length,
+      cancelBelow: cancel ? Math.round(cancel.getBoundingClientRect().top) > Math.max.apply(null, tops) : null,
+      prompt: prompt,
+    };
+  });
+  console.log('  T ' + JSON.stringify(T));
+  ok(!T.err && T.count === 3,
+     'T0 [PRESENCE] the vehicle chooser offers exactly THREE types — ' + JSON.stringify(T.labels));
+  ok(T.rows === 1,
+     'T1 [LAYOUT] all three sit on ONE row — distinct top edges: ' + T.rows + ' (want 1)');
+  ok(T.cancelBelow === true,
+     'T2 [LAYOUT] Cancel sits BELOW them, not interleaved in the wrap');
+  /* The noun, in the third place it was hardcoded. */
+  ok(/secured by this vehicle\?/.test(T.prompt),
+     'T3 [COPY] the chooser asks about a VEHICLE, not a property — "' + T.prompt.slice(0, 90) + '"');
 
   /* ══ SCENE P · THE CLERK ARCHIVE MIRROR — AND MY FIRST DIAGNOSIS OF IT WAS WRONG ════════════════
      ⚠️ I REPORTED THIS AS "vehicleType IS NOT PERSISTED — SILENT DATA LOSS" AND THAT WAS FALSE FOR
