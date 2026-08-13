@@ -80,7 +80,15 @@ const PARTS = [
      out of studio.html so it can be consumed by the TENSION phase page after the split. The twelve
      sandbox gates that slice calcCarryTotal -> _canonUtil -> _propUpkeepAnnual resolve
      `_upkForScope` out of THIS concatenation — which is the entire reason the registry exists. */
-  'scripts/studio-upkeep.js'
+  'scripts/studio-upkeep.js',
+  /* ⭐ THE SECOND PART, REGISTERED 2026-08-13 — STEP 2a, THE PROVING MOVE. calculateTotalPmt,
+     calculateEscrowMonthly and hasEscrow: pure leaves (no callees, no DOM, no state) reached by
+     THREE room families, so 49 gate-references resolve out of THIS concatenation.
+     ⛔ AND THIS REGISTRATION IS EXACTLY WHAT scripts/_gate_parts_wired.mjs EXISTS TO DISTRUST:
+     registering a part makes every sandbox gate green whether or not any PAGE loads it. Registration
+     is not wiring. The <script src> in studio.html's head is the other half, and it is gated
+     separately and reported separately. */
+  'scripts/studio-debt-cost.js'
 ];
 
 const PART_OPEN  = (rel) => '/* ═════ studioSource PART BEGIN · ' + rel + ' ═════ */';

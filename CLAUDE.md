@@ -145,6 +145,15 @@ loosening the parser.
    ⚠️ A property with NO upkeep lines showed the SAME number either way — a one-fixture test would
    have seen nothing. A FIXTURE WITH NOTHING IN IT PROVES NOTHING ABOUT A DEFECT THAT ONLY TOUCHES
    SOMETHING. 🔑 A predicted hazard argues; a measured one settles.
+ · scripts/studio-debt-cost.js · the monthly carrying cost of a debt — the SECOND `studioSource`
+   part, extracted from `studio.html:9487-9504` as the Step-2a proving move (2026-08-13).
+   `calculateTotalPmt` · `calculateEscrowMonthly` · `hasEscrow`. SACRED on the same MEASURED rule as
+   the catalogue above, and it clears it in three room families at once: the Moat (mortgage), the
+   Cellar (HELOC) and the Yard all read the payment figures this file carries.
+   ⭐ NAMED FOR ITS CALLERS, NOT ITS ORIGIN ROOM. It was extracted from the mortgage code and
+   `studio-mortgage-cost.js` would have been a lie baked into a served path — `calculateTotalPmt` is
+   reached by `_helocIntelBeats`, `_helocCeilingBand`, `_helocInterestOnlyDraw`, `_yardRealMonthly`
+   and `_yardIntelligence`. THE ORIGIN ROOM IS AN ACCIDENT OF HISTORY; THE CALLER SET IS THE BOUNDARY.
 <!-- SACRED-LIST-END -->
 
 THIS LIST AND `SACRED{}` IN `scripts/build-dist.mjs` MUST MATCH EXACTLY — every host declared here

@@ -1631,6 +1631,12 @@
        page rather than one modal. It is a small, pure, dependency-free data module, which is what
        makes head-loading it cheap enough to be the right answer. -->
   <script src="/scripts/studio-upkeep.js"></script>
+  <!-- ⭐ STEP-2a · the monthly carrying cost of a debt (calculateTotalPmt / calculateEscrowMonthly /
+       hasEscrow). HEAD-LOADED AND NOT DEFERRED, for the same reason as the catalogue above: a
+       deferred part would not exist when the inline script below is parsed, and three room families
+       (Moat, Cellar, Yard) call these. ⛔ THIS TAG IS LOAD-BEARING AND ITS ABSENCE IS SILENT —
+       scripts/_gate_parts_wired.mjs exists because deleting it leaves every sandbox gate GREEN. -->
+  <script src="/scripts/studio-debt-cost.js"></script>
 </head>
 <body>
   <a href="#studio-layout" class="skip-link">Skip to main content</a>
@@ -9484,24 +9490,12 @@
         renderInputs();
     }
 
-    function calculateTotalPmt(acc) {
-        let min = parseFloat(acc.minPmt) || 0;
-        let add = parseFloat(acc.addPmt) || 0;
-        return min + add;
-    }
-
-    // §4.1 ESCROW — mortgage-only monthly escrow load (property tax + insurance are annual; PMI is monthly).
-    function calculateEscrowMonthly(acc) {
-        let pt = parseFloat(acc.propTaxAnnual) || 0;
-        let ins = parseFloat(acc.insAnnual) || 0;
-        let pmi = parseFloat(acc.pmiMonthly) || 0;
-        let other = parseFloat(acc.mortgageOtherCost) || 0;   // §18.1 'Other (yr)' — flood/assessments/etc.
-        return pt / 12 + ins / 12 + pmi + other / 12;
-    }
-    // Sourced-or-blank guard (L47): the escrow computed footer surfaces only when a real input exists.
-    function hasEscrow(acc) {
-        return (parseFloat(acc.propTaxAnnual) || 0) > 0 || (parseFloat(acc.insAnnual) || 0) > 0 || (parseFloat(acc.pmiMonthly) || 0) > 0 || (parseFloat(acc.mortgageOtherCost) || 0) > 0;
-    }
+    /* ⭐ calculateTotalPmt · calculateEscrowMonthly · hasEscrow MOVED OUT — they now live in
+       scripts/studio-debt-cost.js, loaded in the <head> above and registered as a studioSource PART.
+       Left as a signpost because three room families (Moat, Cellar, Yard) call them from this file
+       and the next reader will look for them HERE first. They are still plain globals; nothing about
+       the call sites changed. ⛔ IF YOU ARE ADDING A CALLER, THE <script src> IN THE HEAD IS WHAT
+       MAKES THEM EXIST — scripts/_gate_parts_wired.mjs enforces that and will red if it goes. */
     // §19.9 — negative-amortization detector (position truth, sourced-or-blank). Neg-am = the total P&I payment
     // (min + additional) doesn't cover the monthly interest (balance × APR ÷ 12), so the balance grows and the loan
     // never pays off. Returns the three figures or null (blank APR/balance/payment → null, never a guessed number).

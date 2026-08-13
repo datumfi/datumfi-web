@@ -128,6 +128,35 @@ const SCENARIOS = {
       res[name + '_hasEscrow'] = String(hasEscrow(a));
     }
     return res;
+  },
+
+  /* ⛔ THIS SCENARIO EXISTS BECAUSE THE CALLER MAP DISAGREED WITH THE NOMINATION. The Step-2a trio
+     was nominated as "what a mortgage costs per month" — then `calculateTotalPmt` turned out to be
+     reached by _helocIntelBeats, _helocCeilingBand, _helocInterestOnlyDraw (the Cellar) and by
+     _yardRealMonthly / _yardIntelligence (the Yard). A mortgage-only fixture would have proven the
+     move for ONE of the three room families that depend on it.
+     🔑 THE FIXTURE FOLLOWS THE CALLER MAP, NOT THE NOMINATION. */
+  heloc: async () => {
+    const res = {};
+    const shapes = {
+      drawn: { value: 40000, intRate: 8, minPmt: '400', addPmt: '100', creditLimit: '100000' },
+      interestOnly: { value: 60000, intRate: 7.5, minPmt: '375', addPmt: '0', creditLimit: '100000' }
+    };
+    for (const name of Object.keys(shapes)) {
+      window.state.accounts.length = 0;
+      /* 'heloc_joint', not 'heloc' — the base types are ownership-scoped (heloc_primary / _joint /
+         _co) and there is no bare 'heloc'. A wrong baseId threw on getBaseType(...).taxCode rather
+         than silently rendering an empty room, which is the honest failure. */
+      addInstance('heloc_joint');
+      const a = window.state.accounts[0];
+      Object.assign(a, shapes[name]);
+      renderInputs(); updateSVGs(); await new Promise(r => setTimeout(r, 600));
+      openAccountModal(a.id); await new Promise(r => setTimeout(r, 400));
+      res[name] = document.getElementById('modal-dynamic-content').innerHTML;
+      res[name + '_total'] = (document.getElementById('gross-estate-val') || {}).textContent;
+      res[name + '_pmt'] = String(calculateTotalPmt(a));
+    }
+    return res;
   }
 };
 
@@ -154,14 +183,26 @@ function fromRef(rel) {
   catch (e) { return null; }
 }
 
-function poison(src) {
-  const n = src.split(POISON_ANCHOR).length - 1;
-  if (n !== 1) {
-    console.error('--selfcheck: poison anchor ' + JSON.stringify(POISON_ANCHOR) + ' found ' + n + ' times, expected exactly 1.');
-    console.error('   RE-GROUND IT. A mutation that cannot be placed must never run as if it had been.');
-    process.exit(2);
-  }
-  return src.replace(POISON_ANCHOR, POISON_REPLACE);
+/* ⛔ THE POISON FOLLOWS THE FUNCTION, NOT THE FILENAME — AND IT LEARNED THAT THE HARD WAY.
+ * The first version pinned the mutation to studio.html. Step 2a moved calculateTotalPmt into
+ * scripts/studio-debt-cost.js and --selfcheck ABORTED with "anchor found 0 times" on the very first
+ * extraction it was built to guard. It failed LOUDLY and correctly — the anchor count is exactly the
+ * guard that caught it — but a self-check that has to be re-pointed by hand after every move is a
+ * self-check that will one day be re-pointed wrong, or quietly dropped.
+ * 🔑 SECOND SIGHTING IN ONE FILE OF "AN INSTRUMENT THAT STOPS BEING TRUE ON THE CHANGE IT WAS BUILT
+ *    FOR" — the ref-side parts bug was the first. Both had the same cause: the tool assumed the
+ *    monolith. So the poison is now applied to WHICHEVER SERVED FILE CONTAINS IT, and the run
+ *    asserts it landed exactly once across the whole served set. ~20 extractions remain; this must
+ *    survive all of them without being touched. */
+/* A SET OF PATHS, NOT A COUNTER. Each grab() loads the page twice (goto + reload after clearing
+   storage), so a naive counter reports "landed 2×" for ONE anchor in ONE file and invites the reader
+   to believe there are two sites. The number a self-check prints has to mean what it says. */
+const _poisoned = new Set();
+function maybePoison(rel, src) {
+  if (!SELFCHECK) return src;
+  if (src.indexOf(POISON_ANCHOR) < 0) return src;
+  _poisoned.add(rel);
+  return src.split(POISON_ANCHOR).join(POISON_REPLACE);
 }
 
 const M = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.woff2': 'font/woff2' };
@@ -179,7 +220,8 @@ function serve(port, useRef) {
       const f = path.join(ROOT, rel);
       if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { s.writeHead(404); s.end('nf'); return; }
       let body = fs.readFileSync(f);
-      if (SELFCHECK && /studio\.html$/.test(p)) body = Buffer.from(poison(body.toString('utf8')), 'utf8');
+      /* Poison any TEXT asset the tree serves — the function may live in the shell or in any part. */
+      if (SELFCHECK && /\.(html|js)$/.test(p)) body = Buffer.from(maybePoison(rel, body.toString('utf8')), 'utf8');
       s.writeHead(200, { 'Content-Type': M[path.extname(f)] || 'application/octet-stream' });
       s.end(body);
     }).listen(port, '127.0.0.1', function () { r(); });
@@ -262,7 +304,15 @@ function serve(port, useRef) {
      handed on a plate — "inverted-dead", the same shape _gate_moat_winners guards with its
      RED-FIRST INERT check. A differ that cannot fail is a green light wired to nothing. */
   if (SELFCHECK) {
-    if (bad) { console.log('✅ SELF-CHECK PASSED — the poison was SEEN (' + bad + ' surface(s) reported different). The comparator can say no.'); process.exit(0); }
+    /* ⛔ POISON MUST PROVE IT LANDED. Zero hits means the anchor no longer exists anywhere the tree
+       serves — the mutation never happened, and "no difference found" would be a verdict about
+       nothing. This is the leg that fired when Step 2a moved the function out of studio.html. */
+    if (_poisoned.size === 0) {
+      console.error('❌ SELF-CHECK ABORTED — the poison anchor ' + JSON.stringify(POISON_ANCHOR) + ' was not found in ANY served file.');
+      console.error('   The mutation never landed, so this run proves nothing. RE-GROUND THE ANCHOR.');
+      process.exit(2);
+    }
+    if (bad) { console.log('✅ SELF-CHECK PASSED — poison landed in ' + _poisoned.size + ' file(s) [' + [..._poisoned].join(', ') + '] and was SEEN (' + bad + ' surface(s) differ). The comparator can say no.'); process.exit(0); }
     console.error('❌ SELF-CHECK FAILED (inverted-dead) — calculateTotalPmt was poisoned and every surface still matched.');
     console.error('   This harness cannot detect a change. Every BYTE-IDENTICAL it has ever printed is unproven.');
     process.exit(1);
