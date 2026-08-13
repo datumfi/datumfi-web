@@ -188,8 +188,15 @@ if (REGISTERED.length === 0) {
 const other = readFileSync(path.join(REPO, 'sketch.html'), 'utf8');
 ck('I3 SELF-CHECK — the same comparison against a DIFFERENT file must fail',
    viaHelper !== other && md5(viaHelper) !== md5(other), 'comparator discriminates');
+/* ⚠️ I4 AND C1 COMPARED AGAINST `direct.length` — AN UNDECLARED DEPENDENCY ON BYTE-IDENTITY.
+   I1/I2 documented their expiry and branched cleanly when the first part registered. These two did
+   not: they quietly assumed the same fact and BROKE on the commit that registered it, for a reason
+   that has nothing to do with what either leg actually claims (memoisation stability; cwd
+   independence). 🔑 AN ASSUMPTION CAN OUTLIVE THE ASSERTION THAT STATED IT — documenting an expiry
+   on the leg that OWNS a fact does not find the other legs that merely LEAN on it.
+   Both now compare against the helper's own output, which is what they always meant. */
 ck('I4 repeated calls return the identical text (memoisation cannot drift)',
-   studioSource() === viaHelper && studioSource().length === direct.length, 'stable');
+   studioSource() === viaHelper && studioSource().length === viaHelper.length, 'stable');
 ck('I5 the helper resolves the real repo-root studio.html', STUDIO_PATH === path.join(REPO, 'studio.html'), STUDIO_PATH);
 
 /* ── R · THE PARTS REGISTRY (built 2026-08-13) ──────────────────────────────────────────────────
@@ -205,8 +212,16 @@ ck('I5 the helper resolves the real repo-root studio.html', STUDIO_PATH === path
    and extractability is the claim. Reuse the donor, do not re-implement it (L48). */
 const { lift } = await import(pathToFileURL(path.join(REPO, 'scripts/_gate_extract.mjs')).href);
 
-ck('R1 the registry is EMPTY, so this commit changes nothing for the 90 callers',
-   REGISTERED.length === 0, REGISTERED.length ? REGISTERED.join(', ') : 'empty — byte-identity legs above are the live branch');
+/* ⏳ FLIPPED DELIBERATELY 2026-08-13, NOT DELETED. R1 asserted the registry was EMPTY, which was the
+   safety argument for the commit that BUILT the mechanism and was true for exactly one commit. The
+   first part has now registered ON PURPOSE, so the leg follows the deliberate product change — the
+   same discipline the vehicle field pair's D2 and the name map's M2 document. ⛔ THE CLAIM THAT DOES
+   NOT EXPIRE IS R2's: compose() with no parts returns the shell untouched, BY CONSTRUCTION. That is
+   what actually protects the 90 callers, and it is now carrying the weight R1 used to share. */
+ck('R1 every registered part EXISTS and is non-empty (a registered ghost would be silent)',
+   REGISTERED.length > 0 && REGISTERED.every((rel) => {
+     try { return readFileSync(path.join(REPO, rel), 'utf8').length > 0; } catch { return false; }
+   }), REGISTERED.length + ' part(s): ' + REGISTERED.join(', '));
 ck('R2 compose() with NO parts returns the shell UNTOUCHED — byte-identical by construction',
    compose(direct, []) === direct && compose(direct, null) === direct, 'early return, not luck');
 
@@ -266,7 +281,7 @@ const runFrom = (code) => {
 };
 const viaHelperElsewhere = runFrom(`const {studioSource}=require(${JSON.stringify(path.join(REPO, HELPER_REL))});process.stdout.write(String(studioSource().length));`);
 ck('C1 the helper returns the full text when invoked from a FOREIGN cwd',
-   !viaHelperElsewhere.threw && Number(viaHelperElsewhere.out) === direct.length,
+   !viaHelperElsewhere.threw && Number(viaHelperElsewhere.out) === viaHelper.length,
    viaHelperElsewhere.threw ? 'threw: ' + viaHelperElsewhere.out : viaHelperElsewhere.out + ' bytes from ' + tmp);
 // Assembled for the same reason as the POISON fixture above: this is a code STRING handed to a child
 // process, not a read performed by this file, but written out in full it reads as one to the census.
