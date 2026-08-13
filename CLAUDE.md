@@ -128,9 +128,23 @@ loosening the parser.
  · scripts/studio-upkeep.js · the Operating Upkeep catalogue — the FIRST `studioSource` part
    (2026-08-13). Declared because A FILE WHOSE ABSENCE FAILS SILENTLY AND CHANGES MONEY ON SCREEN
    IS THE DEFINITION OF SACRED: the build's leak-guard already caught it referenced-but-untracked
-   once, and `_propUpkeepCatalogue`'s `typeof` guard would then have degraded EVERY property's
-   upkeep window to its pre-§28 shape without an error. More than one surface reads it (both the
-   Grounds and the Driveway), and it moves carrying totals.
+   once. More than one surface reads it (both the Grounds and the Driveway), and it moves carrying
+   totals.
+   ⭐⭐ NO LONGER A PREDICTION — MEASURED 2026-08-13. This entry used to say the `typeof` guard in
+   `_propUpkeepCatalogue` ~~"would then have degraded EVERY property's upkeep window to its pre-§28
+   shape without an error."~~ The tag was stripped from `studio.html` for real and the degradation
+   was measured: a property's carrying total read **$3,000/yr → $5,100/yr**, the DI sentence
+   confidently restated the wrong figure, and the upkeep dropdown rendered EMPTY.
+   ⛔ THE PAGE DID NOT CRASH. IT LIED — no throw, no blank screen, just $2,100/yr wrong about the
+   user's own money. A BROKEN PAGE TELLS THE USER TO COME BACK LATER; A LYING PAGE DOES NOT.
+   ⛔ AND THE INSTRUMENTS SPLIT ALONG THE PREDICTED LINE: five sandbox gates over `calcCarryTotal`
+   stayed GREEN (11 of the 14 gates over that math are sandbox-tier), and the GROSS ESTATE TOTAL
+   NEVER MOVED — so the estate gates would have stayed green too. That is §25.4's signature,
+   reproduced deliberately. Only `scripts/_gate_parts_wired.mjs` and `scripts/_render_diff.js`
+   caught it.
+   ⚠️ A property with NO upkeep lines showed the SAME number either way — a one-fixture test would
+   have seen nothing. A FIXTURE WITH NOTHING IN IT PROVES NOTHING ABOUT A DEFECT THAT ONLY TOUCHES
+   SOMETHING. 🔑 A predicted hazard argues; a measured one settles.
 <!-- SACRED-LIST-END -->
 
 THIS LIST AND `SACRED{}` IN `scripts/build-dist.mjs` MUST MATCH EXACTLY — every host declared here
