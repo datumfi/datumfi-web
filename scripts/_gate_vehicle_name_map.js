@@ -42,12 +42,24 @@ const LABEL = process.argv[2] && process.argv[2].charAt(0) !== '-' ? process.arg
 const RENAMEALL   = process.argv.includes('--renameall');
 const NOMAP       = process.argv.includes('--nomap');
 const BLANKDRIFTS = process.argv.includes('--blankdrifts');
-const MUT = RENAMEALL || NOMAP || BLANKDRIFTS;
+const NOSTALE     = process.argv.includes('--nostaleguard');
+const BROADSCOPE  = process.argv.includes('--broadscope');
+const NOPERSIST   = process.argv.includes('--nopersist');
+const MUT = RENAMEALL || NOMAP || BLANKDRIFTS || NOSTALE || BROADSCOPE || NOPERSIST;
 
 const PORT = 8376;
 const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
 const { chromium } = require(ROOT + '/node_modules/playwright');
 
+/* ── THE THREE CAPTAIN-SMOKE FIXES, EACH WITH ITS OWN CONTROL ────────────────────────────────────
+   All three shipped green under gates that never touched the failing path, so each mutation below
+   restores the EXACT pre-fix code and must red its own scene and no other. */
+const A_INVAL = "            if(field === 'vehicleType' || field === 'ownershipStatus') { renderInputs(); openAccountModal(id); }";
+const M_INVAL = "            /* §19.12 invalidation removed: --nostaleguard */";
+const A_SCOPE = "            if (d.indexOf('mortgage') === 0 || d.indexOf('heloc') === 0) return false;   // secured by real property, never by a vehicle";
+const M_SCOPE = "            /* mortgage/heloc exclusion removed: --broadscope */";
+const A_PERSIST = "        if (a.vehicleType)     out.vehicleType     = a.vehicleType;";
+const M_PERSIST = "        /* vehicleType dropped from the save allowlist: --nopersist */";
 const A_BRANCH = "        if (acc && /^auto(_primary|_co)?$/.test(String(base && base.id))) return VEHICLE_ROOM_NAME[acc.vehicleType] || shipped;";
 const M_NOMAP  = "        /* §25.1 branch removed: --nomap */";
 const M_ALL    = "        if (acc && /^auto(_primary|_co)?$/.test(String(base && base.id))) return 'The Slip';   /* every vehicle renamed: --renameall */";
@@ -72,7 +84,12 @@ const server = http.createServer((req, res) => {
     if (NOMAP)       src = mutate(src, A_BRANCH, M_NOMAP, 'A_BRANCH/nomap');
     if (RENAMEALL)   src = mutate(src, A_BRANCH, M_ALL,   'A_BRANCH/renameall');
     if (BLANKDRIFTS) src = mutate(src, A_BRANCH, M_BLANK, 'A_BRANCH/blankdrifts');
+    if (NOSTALE)     src = mutate(src, A_INVAL,  M_INVAL,  'A_INVAL');
+    if (BROADSCOPE)  src = mutate(src, A_SCOPE,  M_SCOPE,  'A_SCOPE');
     body = Buffer.from(src, 'utf8');
+  }
+  if (NOPERSIST && /studio-blueprint\.js$/.test(rp)) {
+    body = Buffer.from(mutate(body.toString('utf8'), A_PERSIST, M_PERSIST, 'A_PERSIST'), 'utf8');
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
   res.end(body);
@@ -92,7 +109,8 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
   await p.waitForTimeout(400);
 
   console.log('=== ' + LABEL + ' === MODE: ' + (MUT
-    ? [RENAMEALL ? 'renameall' : '', NOMAP ? 'nomap' : '', BLANKDRIFTS ? 'blankdrifts' : ''].filter(Boolean).join(' ')
+    ? [RENAMEALL ? 'renameall' : '', NOMAP ? 'nomap' : '', BLANKDRIFTS ? 'blankdrifts' : '',
+       NOSTALE ? 'nostaleguard' : '', BROADSCOPE ? 'broadscope' : '', NOPERSIST ? 'nopersist' : ''].filter(Boolean).join(' ')
     : 'NORMAL'));
 
   /* Builds ONE vehicle of the given type and reads the tile the user actually sees. `lien` attaches
@@ -178,6 +196,135 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
      'M1 [§25.1 · MERGED] a financed boat reads "THE SLIP / …" — the asset half applies inside the merged tile — ' + JSON.stringify(M.labels));
   ok(!M.labels.some((s) => /BOATHOUSE/.test(s)),
      'M2 [CHECKPOINT] THE BOATHOUSE is NOT rendered — the merged map rides the Garage combined view, which is unbuilt. Flip this leg when it lands.');
+
+  /* ══ SCENE H · THE HANDLER, NOT THE RENDERER — CAPTAIN-FOUND 2026-08-13 ═════════════════════════
+     ⛔⛔ EVERY LEG ABOVE ASSIGNS acc.vehicleType AND THEN CALLS renderInputs()/updateSVGs(). §13.72
+     names that exactly: A TEST THAT SETS STATE AND THEN RE-RENDERS PROVES THE RENDERER, NEVER THE
+     HANDLER. All fourteen were green while the LEFT CARD never repainted on a real dropdown change,
+     because a fresh render is the one thing that hides it. 196 gates were green over the identical
+     defect on propPurpose (§19.12); this file made it fifteen.
+     ⭐ SO THIS SCENE TOUCHES NOTHING BUT THE <select>. It opens the modal, changes the option, and
+     dispatches `change` — then reads BOTH surfaces after the debounce settles. No renderInputs, no
+     updateSVGs, no state poke. 🔑 THE ONLY HONEST TEST OF A HANDLER IS THE CONTROL ITSELF. */
+  const viaHandler = async (val) => p.evaluate(async (v) => {
+    const a = window.state.accounts[0];
+    openAccountModal(a.id);
+    await new Promise((r) => setTimeout(r, 300));
+    const sel = document.querySelector('#modal-dynamic-content select[onchange*="vehicleType"]');
+    if (!sel) return { err: 'no vehicleType select in the modal' };
+    sel.value = v;
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 1300));
+    const svg = document.getElementById('bp-svg');
+    const g = Array.prototype.slice.call(svg.querySelectorAll('g.room-grp'))
+      .filter((x) => (x.getAttribute('onclick') || '').indexOf("'" + a.id + "'") >= 0)[0];
+    const card = document.querySelector('.room-meta');
+    return {
+      stored: a.vehicleType || '(blank)',
+      leftCard: card ? card.textContent.trim() : null,
+      canvas: g ? Array.prototype.slice.call(g.querySelectorAll('text')).map((t) => t.textContent.trim()).filter((s) => /^THE /.test(s)) : [],
+    };
+  }, val);
+
+  await probe(null, false);   // reset to one blank vehicle
+  for (const [pick, want] of [['Boat', 'The Slip'], ['Car / Truck / SUV', 'The Driveway'], ['RV or Camper', 'The Pad']]) {
+    const H = await viaHandler(pick);
+    console.log('  H(' + pick + ') ' + JSON.stringify(H));
+    ok(!H.err && H.stored === pick, 'H [HANDLER] picking "' + pick + '" in the real dropdown stores it — ' + JSON.stringify(H.stored));
+    ok(H.canvas.indexOf(want.toUpperCase()) >= 0,
+       'H [HANDLER · CANVAS] the canvas shows ' + want.toUpperCase() + ' — ' + JSON.stringify(H.canvas));
+    /* ⭐⭐ THE LEG THE CAPTAIN FOUND. The left card is fed by the SAME _propRoomName, so a
+       disagreement here is staleness, never a second source of truth. */
+    ok(H.leftCard === want,
+       'H [HANDLER · LEFT CARD] and the room card agrees — got "' + H.leftCard + '", want "' + want + '"');
+  }
+
+  /* ══ SCENE L · THE LIABILITY SCOPE — WHAT MAY BE SECURED BY A VEHICLE ════════════════════════════
+     Captain smoke: a boat could take a MORTGAGE. Excluded as definitional (a mortgage is secured by
+     real property). Revolving/personal stay — A5 of _gate_estate_lien_net_equity gates the merge as
+     family-agnostic, and breaking an authored assertion to satisfy a preference is not a fix. */
+  const L = await p.evaluate(() => {
+    const veh = { id: 'auto', type: 'joint' };
+    const prop = { id: 'property', type: 'joint' };
+    const names = (base) => {
+      const rev = window._assetReverseScopeProbe ? window._assetReverseScopeProbe(base) : null;
+      return rev;
+    };
+    return { veh: names(veh), prop: names(prop) };
+  });
+  /* _assetReverseScope is module-scoped, so the scope is read through the RENDERED picker instead —
+     the surface the user actually meets. */
+  const picker = await p.evaluate(async () => {
+    window.state.accounts.length = 0;
+    addInstance('auto'); const a = window.state.accounts[0]; a.value = 32000;
+    addInstance('mortgage_joint');  window.state.accounts[1].value = 100;
+    addInstance('heloc_joint');     window.state.accounts[2].value = 100;
+    addInstance('auto_debt_joint'); window.state.accounts[3].value = 100;
+    addInstance('rev_debt_joint');  window.state.accounts[4].value = 100;
+    renderInputs(); updateSVGs();
+    await new Promise((r) => setTimeout(r, 800));
+    openAccountModal(a.id);
+    await new Promise((r) => setTimeout(r, 400));
+    const m = document.getElementById('modal-dynamic-content');
+    const rows = Array.prototype.slice.call(m.querySelectorAll('[onclick*="linkExistingLiability"],[onclick*="_linkExisting"],details div'))
+      .map((e) => (e.textContent || '').trim());
+    return rows.join(' | ');
+  });
+  console.log('  L ' + JSON.stringify(picker.slice(0, 220)));
+  ok(!/Mortgage/.test(picker),
+     'L1 [SCOPE] a MORTGAGE cannot be secured by a vehicle — absent from the vehicle link list');
+  ok(!/HELOC/.test(picker),
+     'L2 [SCOPE] nor a HELOC — it is drawn against HOME equity');
+  ok(/Auto Loan/.test(picker),
+     'L3 [CONTROL] and the Auto Loan IS still offered — a scope that excluded everything would pass L1/L2 while breaking the room');
+
+  /* ══ SCENE P · THE CLERK ARCHIVE MIRROR — AND MY FIRST DIAGNOSIS OF IT WAS WRONG ════════════════
+     ⚠️ I REPORTED THIS AS "vehicleType IS NOT PERSISTED — SILENT DATA LOSS" AND THAT WAS FALSE FOR
+     THE PATH THAT MATTERS MOST. There are THREE serializers and they do different jobs:
+       · captureDOM        — `bp.accounts = state.accounts.slice()`. Keeps EVERY field. No allowlist.
+       · toD1Document      — "FULL FIDELITY: strip only runtime _-prefixed ephemerals … the path that
+                             makes 'save persists everything' true." vehicleType ALWAYS survived D1.
+       · slimSlotForClerk  — the ARCHIVE MIRROR for slots 1-4, a deliberate <5KB budget that "drops
+                             anything regenerable". THIS one is an allowlist, and this one dropped it.
+     🔑 I FOUND AN ALLOWLIST, ASSUMED IT WAS *THE* SERIALIZER, AND CALLED IT DATA LOSS. The first
+     control I wrote (--nopersist) STAYED GREEN and that is what caught me: it was aimed at
+     captureDOM, which never had the gap. A CONTROL THAT DOES NOT BITE IS EVIDENCE — for the fourth
+     time in this session, and this time the thing it disproved was my own bug report.
+     ⭐ THE FIX IS STILL RIGHT, FOR A NARROWER REASON. vehicleType and ownershipStatus are USER
+     CHOICES THAT CHANGE ROOM IDENTITY — the same class as propPurpose and trustType, which are
+     already in this slim list for exactly that reason. They are not regenerable, so the budget does
+     not get to drop them. A blueprint restored from the CLERK MIRROR would otherwise come back as a
+     Driveway. This scene reads the REAL slimSlotForClerk output. */
+  const P2 = await p.evaluate(async () => {
+    window.state.accounts.length = 0;
+    addInstance('auto');
+    const a = window.state.accounts[0];
+    a.value = 32000; a.vehicleType = 'Boat'; a.ownershipStatus = 'Financed';
+    renderInputs(); updateSVGs();
+    await new Promise((r) => setTimeout(r, 700));
+    const DB = window.DatumBlueprint;
+    if (!DB || !DB.captureDOM || !DB.slimSlotForClerk) return { err: 'hub missing' };
+    const bp = DB['new']();
+    DB.captureDOM(bp);
+    const full = (bp.accounts || []).filter((x) => x.baseId === 'auto')[0] || null;
+    const slim = DB.slimSlotForClerk(bp);
+    const room = ((slim && slim.accounts) || []).filter((x) => x.baseId === 'auto')[0] || null;
+    return {
+      fullKeeps: !!(full && full.vehicleType === 'Boat'),
+      found: !!room,
+      vehicleType: room && room.vehicleType,
+      ownershipStatus: room && room.ownershipStatus,
+    };
+  });
+  console.log('  P ' + JSON.stringify(P2));
+  ok(!P2.err && P2.found, 'P0 [PRESENCE] the vehicle survives into the slim Clerk slot at all');
+  /* The CONTROL: the full-fidelity path was never the gap and must be seen to be fine, or a future
+     reader repeats my mistake and "fixes" a serializer that was already correct. */
+  ok(P2.fullKeeps, 'P0 [CONTROL] captureDOM keeps vehicleType with no allowlist — this path never lost it');
+  ok(P2.vehicleType === 'Boat',
+     'P1 [PERSIST · CLERK MIRROR] vehicleType survives the slim slot — got ' + JSON.stringify(P2.vehicleType) + ', want "Boat"');
+  ok(P2.ownershipStatus === 'Financed',
+     'P2 [PERSIST · CLERK MIRROR] ownershipStatus survives too — got ' + JSON.stringify(P2.ownershipStatus) + ', want "Financed"');
 
   console.log('-------------------------------------');
   console.log('OVERALL: ' + (fail === 0 ? 'GREEN' : 'RED') + '   (' + pass + ' pass / ' + fail + ' fail)');

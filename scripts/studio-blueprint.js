@@ -184,6 +184,19 @@
         if (a.propBaths)     out.propBaths     = a.propBaths;
         if (a.propSqft)      out.propSqft      = a.propSqft;
         if (a.propYear)      out.propYear      = a.propYear;
+        /* ⛔⛔ THE VEHICLE FIELD PAIR — AND WITHOUT THESE TWO LINES THE FIELDS WERE DATA LOSS.
+         * This capture is an ALLOWLIST: a key not named here is silently dropped on save. §33.1
+         * shipped `vehicleType` / `ownershipStatus` into the modal without adding them, so a user
+         * could pick Boat, watch the room become THE SLIP, save, reopen — and find a Driveway, with
+         * nothing on screen ever admitting the choice was discarded.
+         * 🔑 A RETAINED VALUE NO SURFACE CAN SHOW IS A DESTROYED ONE; a value the surface DID show
+         * and then silently dropped is worse, because the user has already been told it was kept.
+         * ⭐ The restore side is generic (toD1Document "keeps whatever it is handed"), so naming
+         * them here fixes BOTH directions. Unconditional-if, exactly like propPurpose above: a blank
+         * stays absent rather than storing an empty string, so a file that predates this commit is
+         * byte-identical after a round-trip. */
+        if (a.vehicleType)     out.vehicleType     = a.vehicleType;
+        if (a.ownershipStatus) out.ownershipStatus = a.ownershipStatus;
         if (a.trustType    && a.trustType    !== 'Irrevocable')   out.trustType    = a.trustType;
         if (a.disbursement && a.disbursement !== 'Discretionary') out.disbursement = a.disbursement;
         // STEP A (c) 2026-07-08 — persist holdings as COMPACT-ESSENTIALS (the 13 real-position fields

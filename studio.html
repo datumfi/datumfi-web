@@ -8619,6 +8619,22 @@
                draft-restore all are, which is why a mid-session repaint could freeze the card on one
                purpose and nothing afterwards could move it. */
             if(field === 'propPurpose') { renderInputs(); openAccountModal(id); }   // §18.1 reveal/hide the rental cluster + §19.12 repaint the list
+            /* §25.1/§33.1 — THE SAME INVALIDATION, AND THE COMMENT DIRECTLY ABOVE PREDICTED THIS
+             * WORD FOR WORD: "ANY future conditional driven by updateAccField must be added HERE and
+             * gated the same way, or it will store perfectly and never appear."
+             * ⛔ I SHIPPED §25.1 WITHOUT IT AND THE CAPTAIN FOUND IT IN SMOKE. The room name is
+             * derived at render from ONE source (_propRoomName), so the canvas tracked the dropdown
+             * correctly while the LEFT CARD froze on whatever renderInputs() last produced — the
+             * identical symptom §19.12 was written to close, on a different field, five days later.
+             * ⚖️ TWO SURFACES DISAGREEING ABOUT ONE FACT DOES NOT PROVE TWO SOURCES OF TRUTH — IT
+             * PROVES ONE OF THEM IS STALE. Measured 2026-08-13 through the real <select>: canvas
+             * Boat->THE SLIP, Car->THE DRIVEWAY, RV->THE PAD, left card stuck on "The Driveway"
+             * for all three.
+             * ⭐ ownershipStatus rides the same line NOW rather than when §39 needs it, because it is
+             * the other half of the same field pair and would fail identically the day it reveals a
+             * field. openAccountModal is included for the same reason propPurpose includes it: §33.2
+             * -.4 will reveal type-specific fields, and a reveal that never repaints is invisible. */
+            if(field === 'vehicleType' || field === 'ownershipStatus') { renderInputs(); openAccountModal(id); }
             if(field === 'linkedToAccount' || field === 'rollFlavor') openAccountModal(id);   // The Conduit — refresh count-once flag (§7.5) + Layer-E tax fork (§9) live
 
             // Live DOM update for limits calculation — same §402(g)-class test as the modal (401k/403b/457b)
@@ -13180,8 +13196,26 @@
         var id = String(assetBase && assetBase.id || '');
         if (id.indexOf('property') === 0)
             return function(dB) { return String(dB.id).indexOf('mortgage') === 0 || String(dB.id).indexOf('heloc') === 0; };
-        // Non-Grounds physical assets keep the prior broad scope (any non-student debt) until their wave.
-        return function(dB) { return dB.taxCode === 'debt' && !String(dB.id).includes('student_loan'); };
+        /* ── THE VEHICLE'S WAVE IS THIS ARC, SO THE PLACEHOLDER NARROWS — BUT ONLY BY WHAT IS
+         * DEFINITIONAL. This line read "any non-student debt … until their wave", which let a boat
+         * take a MORTGAGE or a HELOC. Captain smoke 2026-08-13: "I can create The Pad / The Furnace."
+         * ⛔ MORTGAGE AND HELOC ARE EXCLUDED AS A MATTER OF WHAT THEY ARE, NOT AS A JUDGEMENT CALL.
+         * A mortgage is a loan secured by REAL PROPERTY and a HELOC is drawn against HOME equity;
+         * neither can be secured by a vehicle. That is the same class of fact as "a lease is not a
+         * loan" (§39.6) — definitional, so it needs no ruling.
+         * ⚠️ REVOLVING DEBT AND PERSONAL LOAN ARE DELIBERATELY LEFT IN, AND THAT IS NOT AN OVERSIGHT.
+         * `_gate_estate_lien_net_equity` A5 asserts the merge is FAMILY-AGNOSTIC and gates a $30k car
+         * carrying a $9k PERSONAL LOAN as correct, authored behaviour. Narrowing to auto-only would
+         * break an authored assertion to satisfy a smoke observation, so the Captain's "The Pad /
+         * The Furnace" objection is REPORTED for a ruling rather than actioned here.
+         * 🔑 FIX WHAT IS DEFINITIONAL; ESCALATE WHAT IS A PREFERENCE. */
+        return function(dB) {
+            var d = String(dB.id);
+            if (dB.taxCode !== 'debt') return false;
+            if (d.includes('student_loan')) return false;
+            if (d.indexOf('mortgage') === 0 || d.indexOf('heloc') === 0) return false;   // secured by real property, never by a vehicle
+            return true;
+        };
     }
 
     // RAF + 100ms debounce wrapper (5E) — replaces direct calls
