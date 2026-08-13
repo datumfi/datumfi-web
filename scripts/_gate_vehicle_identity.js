@@ -65,6 +65,13 @@ const { chromium } = require(ROOT + '/node_modules/playwright');
    landed is indistinguishable from a product that never broke. */
 const A_IDLBL = "                var _vIdLabel = _vIsBoat ? 'HIN &mdash; hull identification number (optional)'\n                              : (_vType === 'Other' ? 'Identification number (optional)' : 'VIN (optional)');";
 const M_IDLBL = "                var _vIdLabel = 'VIN (optional)';   /* type-awareness removed: --vinonly */";
+/* ⛔ --vinonly FLATTENS *BOTH* LABELS, because "the labels stop being type-aware" is ONE defect and
+   §45.7 describes it as one: a car-native field set shipped to every owner. The first cut mutated
+   only the identifier, which left B2 (the usage label) WITH NO CONTROL AT ALL — a leg nothing could
+   red. Found by reading the control's own red list and noticing which legs never appeared in it.
+   🔑 A MUTATION SHOULD COVER ITS WHOLE CLAIM, OR THE CLAIM SHOULD BE SPLIT INTO TWO MUTATIONS. */
+const A_USELBL = "                var _vUseLabel = _vIsBoat ? 'Engine hours' : 'Current mileage';";
+const M_USELBL = "                var _vUseLabel = 'Current mileage';   /* type-awareness removed: --vinonly */";
 
 /* ⚠️ THE FIRST CUT OF THIS MUTATION WAS MALFORMED AND I ALMOST BANKED ITS RED AS A PASS. It wrote
    `_vIsBoat ? 'x' : 'y'` INSIDE the oninput attribute without `${}`, so the ternary was not
@@ -78,8 +85,8 @@ const M_IDLBL = "                var _vIdLabel = 'VIN (optional)';   /* type-awa
 const A_USE = "value=\"${String(acc.vehicleUsage||'').replace(/[^0-9]/g,'')}\" oninput=\"this.value=this.value.replace(/[^0-9]/g,''); updateAccField('${id}', 'vehicleUsage', this.value)\"";
 const M_USE = "value=\"${String((_vIsBoat ? acc.vehicleEngineHours : acc.vehicleUsage)||'').replace(/[^0-9]/g,'')}\" oninput=\"this.value=this.value.replace(/[^0-9]/g,''); updateAccField('${id}', '${_vIsBoat ? 'vehicleEngineHours' : 'vehicleUsage'}', this.value)\"";
 
-const A_DEC = '            <div class="field-row" style="grid-template-columns: 1fr;">\n                <div><div class="input-label">${_vIdLabel}</div>';
-const M_DEC = '            <div class="field-row" style="grid-template-columns: 1fr;">\n                <div><div class="input-label">${_vIdLabel}</div><div style="font-size:11px;">Enter your VIN and we&rsquo;ll fill in the rest.</div>';
+const A_DEC = '                    <input type="text" class="small-field" placeholder="&mdash;" value="${String(acc.vehicleIdNum||\'\').replace(/"/g,\'&quot;\')}"';
+const M_DEC = '                    <div style="font-size:11px;">Enter your VIN and we&rsquo;ll fill in the rest.</div><input type="text" class="small-field" placeholder="&mdash;" value="${String(acc.vehicleIdNum||\'\').replace(/"/g,\'&quot;\')}"';
 
 /* The slim-slot mutation lands in studio-blueprint.js, NOT studio.html — the server branches on
    path below. This reproduces §33.1's actual defect: the field renders, stores in memory, and is
@@ -109,7 +116,8 @@ const server = http.createServer((req, res) => {
   let body = fs.readFileSync(fp);
   if (MUT && /studio\.html$/.test(rp)) {
     let src = body.toString('utf8');
-    if (VINONLY)   src = mutate(src, A_IDLBL, M_IDLBL, 'A_IDLBL');
+    if (VINONLY) { src = mutate(src, A_IDLBL,  M_IDLBL,  'A_IDLBL');
+                   src = mutate(src, A_USELBL, M_USELBL, 'A_USELBL'); }
     if (DECODE)    src = mutate(src, A_DEC,   M_DEC,   'A_DEC');
     if (FORKUSAGE) src = mutate(src, A_USE,   M_USE,   'A_USE');
     if (LEAKGROUNDS) src = mutate(src, A_LEAK, M_LEAK, 'A_LEAK');
@@ -172,11 +180,24 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
     const modal = document.getElementById('modal-dynamic-content');
     const field = (n) => modal.querySelector('input[oninput*="\'' + n + '\'"]');
     const flat = modal ? (modal.textContent || '').replace(/\s+/g, ' ') : '';
+    /* ⛔ THE LABEL, WITH ITS TOOLTIP STRIPPED — AND THAT STRIPPING IS THE WHOLE POINT.
+       The hover markup nests INSIDE the label span, so span.textContent silently concatenates the
+       two. A leg reading that combined text cannot tell "the field is LABELLED HIN" from "the field
+       is labelled VIN and its HOVER mentions HIN". See the header note on B1. */
+    const labelOf = (n) => {
+      const inp = field(n); if (!inp) return null;
+      const lab = inp.parentElement && inp.parentElement.querySelector('.input-label');
+      if (!lab) return null;
+      const c = lab.cloneNode(true);
+      Array.prototype.slice.call(c.querySelectorAll('.modal-tt')).forEach((x) => x.remove());
+      return (c.textContent || '').replace(/\s+/g, ' ').trim();
+    };
     return {
       id: a.id,
       flat: flat,
       total: Number(String(txt).replace(/[$,\s]/g, '')),
       hasId: !!field('vehicleIdNum'), hasYmm: !!field('vehicleYmm'), hasUse: !!field('vehicleUsage'),
+      idLabel: labelOf('vehicleIdNum'), useLabel: labelOf('vehicleUsage'),
       idVal:  field('vehicleIdNum')  ? field('vehicleIdNum').value  : null,
       useVal: field('vehicleUsage')  ? field('vehicleUsage').value  : null,
     };
@@ -190,15 +211,26 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
   const A = await probe({ vehicleType: 'Car / Truck / SUV' });
   console.log('  A ' + JSON.stringify({ total: A.total, hasId: A.hasId, hasYmm: A.hasYmm, hasUse: A.hasUse }));
   ok(A.hasId && A.hasYmm && A.hasUse, 'A0 [PRESENCE] all three identity fields RENDER on a car');
-  ok(says(A, 'VIN (optional)'),   'A1 [INVARIANT · CAR] a car still asks for a VIN');
-  ok(says(A, 'Current mileage'),  'A2 [INVARIANT · CAR] a car still asks for Current mileage');
-  ok(!says(A, 'Engine hours'),    'A3 [INVARIANT · CAR] and a car is NOT asked for engine hours');
+  ok(A.idLabel === 'VIN (optional)',  'A1 [INVARIANT · CAR · LABEL] a car is still LABELLED "VIN (optional)" — got ' + JSON.stringify(A.idLabel));
+  ok(A.useLabel === 'Current mileage','A2 [INVARIANT · CAR · LABEL] a car is still LABELLED "Current mileage" — got ' + JSON.stringify(A.useLabel));
+  ok(!says(A, 'Engine hours'),        'A3 [INVARIANT · CAR] and the words "Engine hours" appear NOWHERE on a car');
 
   /* ══ SCENE B · THE BOAT — THE SCENE THIS FILE EXISTS FOR ═════════════════════════════════════════ */
   const B = await probe({ vehicleType: 'Boat' });
   console.log('  B ' + JSON.stringify({ total: B.total, hasId: B.hasId }));
-  ok(says(B, 'HIN'),          'B1 [§38.2 VERBATIM] a BOAT asks for a HIN');
-  ok(says(B, 'Engine hours'), 'B2 [§38.2 VERBATIM] a BOAT asks for Engine hours, not mileage');
+  /* ⚠️⚠️ B1/B2 READ THE LABEL, NOT THE MODAL TEXT, AND THAT CHANGE WAS FORCED BY A CONTROL THAT
+     STOPPED BITING. They were `says(B,'HIN')` against the flat modal text and passed for one commit.
+     Then §46.3's hovers landed — and the boat's HOVER contains the word HIN. --vinonly (which
+     flattens the LABEL to 'VIN (optional)' and leaves the hover alone) SILENTLY WENT FROM REDDING B1
+     TO PASSING IT. The product was fine; the leg had quietly stopped testing its own claim.
+     🔑 ADDING COPY CAN WEAKEN AN ASSERTION THAT NEVER CHANGED. Nothing about B1 was edited — a new
+     string simply drifted into its search space. ⛔ ONLY THE CONTROL SAW IT: a green B1 looked
+     identical before and after. This is why every leg gets a mutation, and why a control that stops
+     biting is investigated rather than re-tuned. */
+  ok(B.idLabel && B.idLabel.indexOf('HIN') === 0,
+     'B1 [§38.2 VERBATIM · LABEL] the BOAT field is LABELLED "HIN …" — got ' + JSON.stringify(B.idLabel));
+  ok(B.useLabel === 'Engine hours',
+     'B2 [§38.2 VERBATIM · LABEL] and LABELLED "Engine hours", not mileage — got ' + JSON.stringify(B.useLabel));
   /* ⛔⛔ THE TWO LEGS THAT CATCH THE MOST LIKELY REAL DEFECT — a room that shows BOTH labels passes
      B1 and B2 while being plainly broken. An additive "fix" is the default failure mode of a label
      branch, and only a negative leg sees it. */
@@ -210,7 +242,9 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
   ok(!/\bVIN\b/.test(B.flat),      'B3 [INVARIANT · BOAT] and the word VIN appears NOWHERE for a boat');
   ok(!says(B, 'Current mileage'),  'B4 [INVARIANT · BOAT] and the boat is NOT also asked for mileage');
   ok(says(B, 'A boat’s odometer'),
-     'B5 [§33.6 VERBATIM] the ONE authored hover renders — engine hours move resale more than model year');
+     'B5 [§33.6 VERBATIM] the boat usage hover renders — engine hours move resale more than model year');
+  ok(says(B, 'Your HIN — the hull number, usually on the transom.'),
+     'B7 [§46.3 VERBATIM] the BOAT identifier hover renders — the hull number, on the transom');
   ok(B.total === A.total, 'B6 [MONEY · UNCHANGED] the identity block moved NO money — ' + B.total + ' vs ' + A.total);
 
   /* ══ SCENE C · EVERY REMAINING TYPE, INCLUDING BLANK ═════════════════════════════════════════════
@@ -225,8 +259,11 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
   ];
   for (const [t, idl, usel, why] of cases) {
     const C = await probe(t ? { vehicleType: t } : {});
-    ok(says(C, idl) && says(C, usel) && C.total === A.total,
-       'C [' + why + '] renders "' + idl + '" + "' + usel + '", money unmoved');
+    /* LABELS, for the same reason as B1 — a hover mentioning the word must never satisfy a leg
+       whose claim is about what the field is CALLED. */
+    ok(C.idLabel === idl && C.useLabel === usel && C.total === A.total,
+       'C [' + why + '] LABELLED "' + idl + '" + "' + usel + '", money unmoved — got '
+       + JSON.stringify([C.idLabel, C.useLabel]));
   }
 
   /* ══ SCENE D · ⏳ NO DECODE AFFORDANCE — EXPIRING, SEE THE HEADER ════════════════════════════════ */
@@ -234,6 +271,26 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
      'D1 [⏳ NO BROKEN PROMISE · non-boat] nothing offers to fill the fields from a VIN — vPIC is NOT wired. INVERT when §2.1 lands.');
   ok(!says(B, 'fill in the rest') && !says(B, 'Auto-filled'),
      'D2 [⛔ NO BROKEN PROMISE · boat] and a boat never will — vPIC cannot decode a HIN. This leg NEVER expires.');
+
+  /* ══ SCENE H · §46.3 · EVERY FIELD HAS A HOVER, AND NO HOVER PROMISES A FEATURE WE HAVE NOT BUILT ═
+     §33.6: "a field without a hover is a question with no context." These shipped BARE for exactly
+     one commit — I flagged the gap rather than inventing three house-voiced lines, and the Architect
+     authored them. ⭐ H4 is the leg that matters most and it is the Architect's own rule made
+     testable: A HOVER THAT PROMISES A FEATURE WE HAVE NOT BUILT IS A LIE WITH A DELIVERY DATE. Each
+     identifier hover instead tells the user THEY CAN JUST TYPE IT, which is the true affordance. */
+  ok(says(A, 'Your VIN, if you have it handy.'),
+     'H1 [§46.3 VERBATIM] the car identifier hover renders');
+  ok(says(A, 'What it is. This is identity, not value'),
+     'H2 [§46.3 VERBATIM] Year/Make/Model says it is identity, NOT value — it does not move the estate');
+  ok(says(A, 'Roughly how many miles it has on it.'),
+     'H3 [§46.3 VERBATIM] the mileage hover renders');
+  const O = await probe({ vehicleType: 'Other' });
+  ok(says(O, 'An identification number, if this vehicle has one. Optional.'),
+     'H4 [§46.3 VERBATIM] and the OTHER branch has its own hover — three identifier variants, three hovers');
+  /* ⛔ THE NEGATIVE TWIN. H1-H4 prove the hovers EXIST; this proves none of them oversells. A hover
+     that said "we'll fill in the rest" would satisfy every positive leg above. */
+  ok([A, B, O].every((r) => !/fill in the rest|Auto-filled|we.ll look it up|automatically fill/i.test(r.flat)),
+     'H5 [⛔ NO OVERSELL] not one identifier hover promises auto-fill, on ANY type — vPIC is unwired');
 
   /* ══ SCENE F · §40.2 — ONE STORED FIELD, SWAPPED LABEL. A TYPE SWITCH MUST NOT EAT A VALUE ═══════
      "The stored key is the concept; the label is the costume." A forked field would make a typed

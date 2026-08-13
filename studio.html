@@ -8327,13 +8327,12 @@
                  * and blank is not Other — blank is "not set", which is the COMMON path. Matching the
                  * name map keeps one answer to "what is a typeless vehicle?" instead of two.
                  *
-                 * 🖊️ ⛔ THREE HOVERS ARE OWED AND I DID NOT INVENT THEM (L47). §33.6's own rule is
-                 * "EVERY NEW FIELD GETS A HOVER — a field without a hover is a question with no
-                 * context", and §33.6 authors exactly ONE of the three below (Engine hours, row 419).
-                 * The identifier and Year/Make/Model have NO authored hover, and Garage §3.1/§3.2's
-                 * leads cannot stand in for one because they describe the unwired decode. So they
-                 * ship bare and the debt is recorded HERE, at the site, where the next wirer will
-                 * see it. Same shape as "Ownership status" directly above, which is also bare. */
+                 * 🖊️ ✅ THE THREE MISSING HOVERS WERE AUTHORED AND ARE NOW WIRED (§46.3). They shipped
+                 * bare for exactly one commit: §33.6's rule is "EVERY NEW FIELD GETS A HOVER — a
+                 * field without a hover is a question with no context", and §33.6 authored only ONE
+                 * of the three (Engine hours, row 419). I flagged the gap rather than inventing three
+                 * house-voiced lines, and the Architect wrote them. ⛔ THE DEBT WAS RECORDED AT THE
+                 * SITE, WHICH IS WHY IT WAS PAID — a gap named in chat is a gap that evaporates. */
                 var _vIsBoat = _vType === 'Boat';
                 var _vIdLabel = _vIsBoat ? 'HIN &mdash; hull identification number (optional)'
                               : (_vType === 'Other' ? 'Identification number (optional)' : 'VIN (optional)');
@@ -8341,18 +8340,40 @@
                 /* The ONLY authored hover in this block (§33.6 row 419, VERBATIM). It renders for a
                    boat and for a boat only, because that is the single case it was written about —
                    it would be false on a car, which has no engine-hour meter. */
+                /* ⛔⛔ NOT ONE OF THESE HOVERS PROMISES AUTO-FILL, AND THAT IS THE POINT OF §46.3.
+                 * Garage §3.1's lead ("Enter your VIN and we'll fill in the rest") and §3.2's
+                 * ("Auto-filled from VIN, or typed") describe the vPIC decode, WHICH IS NOT WIRED —
+                 * so neither could stand in as a hover. The Architect authored these instead, and
+                 * banked the rule: A HOVER THAT PROMISES A FEATURE WE HAVE NOT BUILT IS A LIE WITH
+                 * A DELIVERY DATE. ⭐ Each one instead tells the user THEY CAN JUST TYPE IT, which
+                 * is the true affordance today.
+                 * ⚠️ THE TOOLTIP TITLES ARE MECHANICAL TRUNCATIONS OF THE AUTHORED LABELS, not new
+                 * copy — 'VIN (optional)' -> 'VIN'. The house convention is title === label, but the
+                 * boat's label is a full sentence and bolding "(optional)" reads as noise. No word
+                 * appears in a title that is not already in its label. */
+                var _vIdTT = _vIsBoat
+                    ? ['HIN', 'Your HIN &mdash; the hull number, usually on the transom. It&rsquo;s optional; you can type the year, make and model yourself instead.']
+                    : (_vType === 'Other'
+                        ? ['Identification number', 'An identification number, if this vehicle has one. Optional.']
+                        : ['VIN', 'Your VIN, if you have it handy. It&rsquo;s optional &mdash; you can type the year, make and model yourself instead.']);
+                /* §33.6 row 419 VERBATIM for the boat; §46.3 for every other type. Two authors, one
+                   field — which is exactly why the ENGINE HOURS string must not be touched here. */
                 var _vUseTT = _vIsBoat
-                    ? '<div class="modal-tt" style="right:0; left:auto;"><strong>Engine hours</strong>A boat&rsquo;s odometer. Hours on the engine move resale value more than the model year does.</div>'
-                    : '';
+                    ? ['Engine hours', 'A boat&rsquo;s odometer. Hours on the engine move resale value more than the model year does.']
+                    : ['Current mileage', 'Roughly how many miles it has on it. Useful context for what it&rsquo;s worth and what it costs to keep.'];
+                var _vTT = function (pair, align) {
+                    var pos = align === 'right' ? 'right:0; left:auto;' : 'left:0; right:auto;';
+                    return '<div class="modal-tt" style="' + pos + '"><strong>' + pair[0] + '</strong>' + pair[1] + '</div>';
+                };
                 html += `
             <div class="field-row" style="grid-template-columns: 1fr;">
-                <div><div class="input-label">${_vIdLabel}</div>
+                <div><span class="input-label modal-tt-wrap" style="cursor:help;">${_vIdLabel}${_vTT(_vIdTT, 'left')}</span>
                     <input type="text" class="small-field" placeholder="&mdash;" value="${String(acc.vehicleIdNum||'').replace(/"/g,'&quot;')}" oninput="updateAccField('${id}', 'vehicleIdNum', this.value)"></div>
             </div>
             <div class="field-row" style="grid-template-columns: 1fr 1fr;">
-                <div><div class="input-label">Year / Make / Model / Trim</div>
+                <div><span class="input-label modal-tt-wrap" style="cursor:help;">Year / Make / Model / Trim<div class="modal-tt" style="left:0; right:auto;"><strong>Year / Make / Model / Trim</strong>What it is. This is identity, not value &mdash; it doesn&rsquo;t change what the vehicle is worth in your estate.</div></span>
                     <input type="text" class="small-field" placeholder="&mdash;" value="${String(acc.vehicleYmm||'').replace(/"/g,'&quot;')}" oninput="updateAccField('${id}', 'vehicleYmm', this.value)"></div>
-                <div><span class="input-label${_vUseTT ? ' modal-tt-wrap' : ''}"${_vUseTT ? ' style="cursor:help;"' : ''}>${_vUseLabel}${_vUseTT}</span>
+                <div><span class="input-label modal-tt-wrap" style="cursor:help;">${_vUseLabel}${_vTT(_vUseTT, 'right')}</span>
                     <input type="text" class="small-field" placeholder="&mdash;" inputmode="numeric" value="${String(acc.vehicleUsage||'').replace(/[^0-9]/g,'')}" oninput="this.value=this.value.replace(/[^0-9]/g,''); updateAccField('${id}', 'vehicleUsage', this.value)"></div>
             </div>`;
             }

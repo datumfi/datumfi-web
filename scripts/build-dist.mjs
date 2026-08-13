@@ -23,7 +23,7 @@ const DROP_RE = [/^\.claude\//, /^\.wrangler\//, /^workers\//, /^functions\//, /
 
 // SACRED HOSTS — must ship byte-identical (LF + content). Build ABORTS on drift.
 const SACRED = {
-  'studio.html': '23851528bf2c795c179a5c15df6c6aad',   // the Driveway's identity block — VIN/HIN and mileage/engine-hours, type-aware from birth (2026-08-13)
+  'studio.html': '01378d711d69f937a26adfbe94f19aca',   // §46.3 — the three identity hovers, and not one of them promises a fill we cannot deliver (2026-08-13)
   'sketch.html': '28258a76686008aebe839d59af39500f',   // shape button reverted to the Captain's "Save Shape" / "✓ Saved" (2026-08-01)
   'scripts/studio-blueprint.js': '3ead48e1285f09b46405d6de2eb2a6a5',   // the identity block rides the slim Clerk allowlist in the same commit as the fields (2026-08-13)
   // MISS-5 pre-work guard (2026-07-25). nav.js is a Sacred Host in CLAUDE.md but was absent from THIS map,
