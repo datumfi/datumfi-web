@@ -84,6 +84,12 @@ const fs = require('fs');
 const http = require('http');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
+/* ⛔ THE STUDIO SOURCE COMES THROUGH THE ONE DOOR, NEVER OFF DISK. Phase 0 consolidated 90 gates'
+   private readFileSync('studio.html') into this helper precisely so the coming split does not turn
+   them all red at once, and `_gate_studio_source` P1 enforces "zero direct readers" as a standing
+   population invariant. My first draft read the file directly and P1 caught it on the very first
+   full-suite run — the instrument working exactly as built. */
+const { studioSource } = require('./_studio_source.cjs');
 const LABEL = process.argv[2] && process.argv[2].charAt(0) !== '-' ? process.argv[2] : 'RUN';
 
 function argVal(name, dflt) {
@@ -123,16 +129,24 @@ const A_ELSE = '        else grandTotal += effectiveValue || 0;';
 const M_DROP = "        else if (base.taxCode !== '" + DROPCODE + "') grandTotal += effectiveValue || 0;   /* --dropcode=" + DROPCODE + " */";
 const M_DBL  = "        else { grandTotal += effectiveValue || 0; if (base.taxCode === '" + DOUBLECOUNT + "') grandTotal += effectiveValue || 0; }   /* --doublecount=" + DOUBLECOUNT + " */";
 
+/* ⛔ FUNCTION REPLACER + LANDING CHECK. Discovered 2026-08-13 in _gate_amount_sign_clamp: a bare
+   `src.replace(a, m)` treats `m` as a REPLACEMENT PATTERN, so `$'`, `$&`, "$`" and `$1` expand
+   instead of landing literally — a mutation injecting `'$'` silently corrupts the fixture and the
+   control then looks DEAD rather than WRONG. This file's own mutations contain no '$' and were
+   never affected; hardened anyway, because the next mutation added here will not know that.
+   🔑 A RIG FAULT THAT CORRUPTS THE FIXTURE LOOKS EXACTLY LIKE A CONTROL THAT DOES NOT BITE. */
 function mutate(src, a, m, label) {
   const n = src.split(a).length - 1;
   if (n !== 1) { console.error('anchor ' + label + ': expected exactly 1 occurrence, found ' + n + ' — re-ground it.'); process.exit(1); }
-  return src.replace(a, m);
+  const out = src.replace(a, () => m);
+  if (out.indexOf(m) < 0) { console.error('mutation ' + label + ': replacement did not land verbatim — refusing to test a corrupted fixture.'); process.exit(1); }
+  return out;
 }
 
 /* ══ THE REGISTRY, PARSED OUT OF SOURCE ═══════════════════════════════════════════════════════════
    Strict by law (see header). The brace count and the parsed count must agree or this aborts. */
 function readRegistry() {
-  const src = fs.readFileSync(path.join(ROOT, 'studio.html'), 'utf8');
+  const src = studioSource();
   const st = src.indexOf('const rDataList = [');
   const en = src.indexOf('\n    ];', st);
   if (st < 0 || en < 0) { console.error('REGISTRY UNREADABLE — rDataList bounds not found in studio.html.'); process.exit(1); }

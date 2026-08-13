@@ -16,15 +16,34 @@ let s = studioSource();
 const BUG = "parseInt(valStr.replace(/[^0-9]/g, ''), 10) || 0";
 
 if (RED) {
-  // Reproduce the pre-§19.1b symptom at all three write sites.
-  s = s.replace(/Math\.min\(100000000000, Math\.round\(_num\(valStr\) \* 100\) \/ 100\)/g,
-                () => 'Math.min(100000000000, ' + BUG + ')');
+  /* Reproduce the pre-§19.1b symptom at all three write sites.
+     ⚠️ `_num\(` -> `_num\((?:window\.enforceAmt\()?` because the two acc.value sites now wrap the
+     raw string in the sign guard first (2026-08-13, a typed amount is a MAGNITUDE). Without this
+     the red-first silently matched NOTHING at those sites and would have reported a passing
+     red-first while proving only updateInflow. A red-first whose anchor has drifted is not a
+     red-first. */
+  const LIVE_RHS = 'Math.min(100000000000, Math.round(_num(window.enforceAmt(valStr)) * 100) / 100)';
+  const nLive = s.split(LIVE_RHS).length - 1;
+  if (nLive !== 2) {
+    console.error('⛔ red-first anchor drifted: expected 2 acc.value store sites, found ' + nLive + ' — re-ground it.');
+    process.exit(1);
+  }
+  s = s.split(LIVE_RHS).join('Math.min(100000000000, ' + BUG + ')');
   s = s.replace(/acc\.inflow = Math\.round\(_num\(valStr\) \* 100\) \/ 100;/,
                 () => 'acc.inflow = ' + BUG + ';');
 }
 
 const numSrc = (s.match(/function _num\(v\) \{[^\n]*\}/) || [''])[0];
 if (!numSrc) { console.error('⛔ could not locate _num in studio.html'); process.exit(1); }
+
+/* ⭐ enforceAmt IS EXTRACTED FROM SOURCE, NEVER STUBBED. The two acc.value sites now compose
+   `_num(window.enforceAmt(valStr))` (2026-08-13 sign clamp), so this sandbox must supply it — and a
+   hand-written stub would test a sanitiser this repo does not ship. Pulling the live function means
+   this gate now drives the COMPOSED pipeline: sign guard, then cents-safe parse. The cents claims
+   below are unchanged and still the point; enforceAmt keeps the '.' precisely so they hold. */
+const enforceSrc = (s.match(/window\.enforceAmt = function\(str\) \{[\s\S]*?\n    \};/) || [''])[0];
+if (!enforceSrc) { console.error('⛔ could not locate enforceAmt in studio.html'); process.exit(1); }
+const PREAMBLE = 'var window = {};\n' + enforceSrc + '\n' + numSrc + '\n';
 
 // Pull the RHS actually assigned at each write site, in that function's own scope.
 const grab = (fnHeader, lhs) => {
@@ -44,7 +63,7 @@ for (const [name, rhs] of Object.entries(sites)) {
   need(`site ${name}: RHS located`, rhs);
   if (!rhs) continue;
   let store = null, err = '';
-  try { store = new Function('valStr', numSrc + '\n return (' + rhs + ');'); } catch (e) { err = e.message; }
+  try { store = new Function('valStr', PREAMBLE + ' return (' + rhs + ');'); } catch (e) { err = e.message; }
   need(`site ${name}: builds${err ? ' (' + err + ')' : ''}`, store);
   if (!store) continue;
   if (name === 'updateInflow') {

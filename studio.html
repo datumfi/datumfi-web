@@ -3093,7 +3093,20 @@
       if (!val) return '';
       let num = val.replace(/[^0-9.-]/g, '');
       if (num === '') return '';
-      let isNeg = num.startsWith('-');
+      /* ⛔ THE SIGN IS REFUSED HERE — A USER TYPES A MAGNITUDE, THE ROOM'S TYPE SUPPLIES THE SIGN.
+       * A mortgage is a debt because it IS a mortgage, never because someone typed a minus.
+       * MEASURED DEFECT, 2026-08-13: typing "-50000" into a mortgage's balance beside a $500,000
+       * house made #gross-estate-val read $550,000 — THE DEBT ENLARGED THE ESTATE — while
+       * bp.datum.net_worth read 450000. Two screens, $100,000 apart, from one keystroke.
+       * ⭐ THIS IS THE RIGHT PLACE AND THE SEAM IS WHY. formatCurrency is the LIVE-INPUT formatter
+       * and has exactly ONE caller: the delegated `input` listener (~3206), which already covers
+       * keystroke AND paste for every `.curr-format` field in the product. So the guard lands once,
+       * on the existing discipline, with no second input guard forked (L48).
+       * ⛔⛔ AND IT MUST NOT MOVE INTO formatCurrencyDisplay, WHICH IS A DIFFERENT FUNCTION FOR A
+       * DIFFERENT JOB. That one renders STORED AND DERIVED values across 25 sites, and net equity,
+       * net worth and the underwater gap are LEGITIMATELY NEGATIVE — Garage §8.3 requires the sign
+       * be rendered honestly, and the underwater case is the entire reason THE LIEN is its own room.
+       * CLAMP WHAT IS TYPED; NEVER CLAMP WHAT IS DERIVED. _gate_amount_sign_clamp leg C pins that. */
       num = num.replace(/-/g, '');
       // #407 §19.1 — keep cents: parseInt truncated the fraction on every keystroke. Split on the first
       // decimal point, format the integer part with thousands separators, and preserve up to 2 typed
@@ -3108,7 +3121,7 @@
       }
       let out = intNum.toLocaleString('en-US');
       if (dot !== -1) out += '.' + fracStr;
-      return (isNeg ? '-' : '') + '$' + out;
+      return '$' + out;
     }
 
     // #407 §19.1c — settled-value display for a currency field: integers stay clean ($20,000), while a
@@ -8693,7 +8706,19 @@
     window.updateValueWithoutRender = function(id, valStr) {
         const acc = state.accounts.find(a => a.id === id);
         if(acc) {
-            acc.value = Math.min(100000000000, Math.round(_num(valStr) * 100) / 100);   // #393 $100B ceiling · #407 §19.1 cents-safe (_num keeps the decimal; parseInt-strip concatenated cents -> 100x)
+            /* ⛔ enforceAmt FIRST — THE GUARD ALREADY EXISTED AND WAS NEVER APPLIED TO THE FIELD THAT
+             * MATTERS MOST. enforceAmt (~3255) strips the sign and has guarded origAmount, minPmt,
+             * propTaxAnnual, insAnnual and a dozen other ancillary money fields for months; the
+             * PRIMARY BALANCE went through bare `_num`, which deliberately PRESERVES '-'. A guard
+             * that covers the ancillary fields and not the primary one learned the wrong lesson.
+             * ⭐ BELT AND BRACES ON PURPOSE — formatCurrency refuses the sign on the way IN, this
+             * refuses it on the way to STATE. The display guard alone is not enough: a field's own
+             * inline `oninput` fires in the TARGET phase, BEFORE the delegated listener on document
+             * sees the event, so the store would take the raw '-50000' and the display would be
+             * cleaned afterwards — state poisoned, screen innocent. That is worse than the bug.
+             * ⛔ The wrong number must never reach state at all: state is what gets SAVED, and we
+             * have no visibility into what a half-failed write does with it. */
+            acc.value = Math.min(100000000000, Math.round(_num(window.enforceAmt(valStr)) * 100) / 100);   // #393 $100B ceiling · #407 §19.1 cents-safe (_num keeps the decimal; parseInt-strip concatenated cents -> 100x)
             // Instantly sync the front input field if it exists — but NOT while the user is typing in it
             // (#407 §19.1c: reformatting a focused field would pad "$20,000.5" out from under the keystrokes;
             //  the live curr-format listener already keeps the focused field as-typed).
@@ -13490,7 +13515,13 @@
     window.updateValue = function(id, valStr) {
       const acc = state.accounts.find(a => a.id === id);
       if(acc) {
-        acc.value = Math.min(100000000000, Math.round(_num(valStr) * 100) / 100);   // #407 §19.1 cents-safe (was parseInt-strip -> dropped the '.' and concatenated cents)
+        /* Same clamp as updateValueWithoutRender (~8696) — see the reasoning there.
+           ⚠️ FLAGGED, NOT ACTIONED: `window.updateValue` has ZERO call sites in studio.html and none
+           in scripts/ — the live keystroke path is updateValueWithoutRender. It is still exported on
+           window, so it is reachable, and an exported store path that skips the guard is a landmine
+           whether or not anything calls it today. Guarded rather than deleted: removing an exported
+           function is a bigger change than this commit is scoped for. */
+        acc.value = Math.min(100000000000, Math.round(_num(window.enforceAmt(valStr)) * 100) / 100);   // #407 §19.1 cents-safe (was parseInt-strip -> dropped the '.' and concatenated cents)
         updateSVGs();
         updateAnalysisText();
         if(activeModalId === id) {
