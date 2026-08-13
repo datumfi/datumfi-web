@@ -23,9 +23,9 @@ const DROP_RE = [/^\.claude\//, /^\.wrangler\//, /^workers\//, /^functions\//, /
 
 // SACRED HOSTS — must ship byte-identical (LF + content). Build ABORTS on drift.
 const SACRED = {
-  'studio.html': '36aa938906003a628b77c737f8251c2a',   // the draft chooser fits its content; two options no longer pay for three (2026-08-13)
+  'studio.html': '23851528bf2c795c179a5c15df6c6aad',   // the Driveway's identity block — VIN/HIN and mileage/engine-hours, type-aware from birth (2026-08-13)
   'sketch.html': '28258a76686008aebe839d59af39500f',   // shape button reverted to the Captain's "Save Shape" / "✓ Saved" (2026-08-01)
-  'scripts/studio-blueprint.js': '606b4d62328164061f0f161a960a5785',   // the vehicle pair survives the slim Clerk mirror (2026-08-13)
+  'scripts/studio-blueprint.js': '3ead48e1285f09b46405d6de2eb2a6a5',   // the identity block rides the slim Clerk allowlist in the same commit as the fields (2026-08-13)
   // MISS-5 pre-work guard (2026-07-25). nav.js is a Sacred Host in CLAUDE.md but was absent from THIS map,
   // so a bad edit failed no build. It owns the centralized cross-device restore every page depends on
   // (_datumRestoreFromClerk / _restoreBlueprintFromD1 / the title mirror), and MISS-5 pre-work items 1, 2

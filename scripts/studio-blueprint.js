@@ -197,6 +197,14 @@
          * byte-identical after a round-trip. */
         if (a.vehicleType)     out.vehicleType     = a.vehicleType;
         if (a.ownershipStatus) out.ownershipStatus = a.ownershipStatus;
+        /* §45.7 / Garage §3.1-§3.3 — THE IDENTITY BLOCK RIDES THE SAME ALLOWLIST, IN THE SAME COMMIT
+         * AS THE FIELDS. The two lines directly above are here because §33.1 shipped its fields
+         * WITHOUT them and turned a working modal into silent data loss. That was one commit ago.
+         * ⛔ A VIN IS THE WORST POSSIBLE FIELD TO DROP: it is long, it is copied off a dashboard or a
+         * title document, and a user who types one and loses it will not notice until they need it. */
+        if (a.vehicleIdNum)    out.vehicleIdNum    = a.vehicleIdNum;
+        if (a.vehicleYmm)      out.vehicleYmm      = a.vehicleYmm;
+        if (a.vehicleUsage)    out.vehicleUsage    = a.vehicleUsage;
         if (a.trustType    && a.trustType    !== 'Irrevocable')   out.trustType    = a.trustType;
         if (a.disbursement && a.disbursement !== 'Discretionary') out.disbursement = a.disbursement;
         // STEP A (c) 2026-07-08 — persist holdings as COMPACT-ESSENTIALS (the 13 real-position fields

@@ -8291,6 +8291,70 @@
                 <div><div class="input-label">Ownership status</div>
                     <select class="small-field" style="background: var(--bg-navy); width:100%;" onchange="updateAccField('${id}', 'ownershipStatus', this.value)">${_opt(_vOwnOpts, _vOwn)}</select></div>
             </div>`;
+                /* ══ §45.7 / Garage §3.1-§3.3 · THE IDENTITY BLOCK — TYPE-AWARE FROM BIRTH ══════════
+                 * ⭐⭐ THE LABELS ARE §38.2 VERBATIM AND THEY SHIP *WITH* THE FIELDS, NOT AFTER THEM.
+                 * The Architect's own instruction (§45.7): "DO NOT SHIP A VIN-ONLY FIELD SET AND
+                 * RETROFIT THE BOAT LABELS IN 2c — that is precisely how the car-native surfaces got
+                 * built in the first place, and it is the whole failure this arc exists to correct."
+                 * A boat owner never sees the word VIN, not even for one release.
+                 *
+                 * ⛔⛔ NO VIN-DECODE AFFORDANCE IS RENDERED — FOR ANY TYPE, NOT JUST BOATS. §38.2
+                 * rules the decode must be HIDDEN on a boat because "vPIC cannot decode a HIN, and a
+                 * field that promises auto-fill and cannot deliver is a broken promise, not a blank."
+                 * ⭐ THAT LAW IS TYPE-BLIND TODAY: vPIC IS NOT WIRED AT ALL. Grepped 2026-08-13 —
+                 * the only occurrence of "vPIC" in this file is a COMMENT at ~11656 about a Worker
+                 * that fetches RentCast. There is no decode call, no endpoint, no Worker route.
+                 * So Garage §3.1's lead ("Enter your VIN and we'll fill in the rest") and §3.2's
+                 * ("Auto-filled from VIN, or typed") ARE NOT WIRABLE COPY YET — they describe an
+                 * engine that does not exist, and printing either would promise a fill that never
+                 * comes. Both are held for the commit that wires §2.1. These are HAND-TYPED RECORD
+                 * FIELDS and the room says nothing else about them.
+                 *
+                 * ⭐ ONE STORED FIELD PER CONCEPT, LABEL SWAPS BY TYPE — §40.2's law applied twice:
+                 * "the stored key is the concept; the label is the costume." A separate hinNumber
+                 * would make a typed VIN VANISH the moment someone corrected the type to Boat.
+                 * ⚠️ AND THE HONEST DIFFERENCE, FLAGGED NOT BURIED: §40.2's precedent swaps a label
+                 * over DOLLARS, which are the same unit either way. `vehicleUsage` swaps over MILES
+                 * vs ENGINE HOURS, which are NOT. A car at 45,000 miles switched to Boat reads
+                 * "Engine hours 45,000" — a real number wearing the wrong unit. I chose the shared
+                 * field because the value stays ON SCREEN and editable (the user can see and fix it),
+                 * whereas a fork hides it entirely — the retained-value-no-surface trap. ⛔ THIS IS A
+                 * DERIVED CALL FROM A PRECEDENT, NOT AN AUTHORED RULING. Architect may overrule.
+                 *
+                 * ⚠️ BLANK vehicleType TAKES THE CAR LABELS, and that is the shipped precedent, not a
+                 * new choice: `_propRoomName` (~9820) resolves blank through `VEHICLE_ROOM_NAME[...]
+                 * || shipped` to THE DRIVEWAY. §38.2 names "Other" explicitly but is SILENT on blank,
+                 * and blank is not Other — blank is "not set", which is the COMMON path. Matching the
+                 * name map keeps one answer to "what is a typeless vehicle?" instead of two.
+                 *
+                 * 🖊️ ⛔ THREE HOVERS ARE OWED AND I DID NOT INVENT THEM (L47). §33.6's own rule is
+                 * "EVERY NEW FIELD GETS A HOVER — a field without a hover is a question with no
+                 * context", and §33.6 authors exactly ONE of the three below (Engine hours, row 419).
+                 * The identifier and Year/Make/Model have NO authored hover, and Garage §3.1/§3.2's
+                 * leads cannot stand in for one because they describe the unwired decode. So they
+                 * ship bare and the debt is recorded HERE, at the site, where the next wirer will
+                 * see it. Same shape as "Ownership status" directly above, which is also bare. */
+                var _vIsBoat = _vType === 'Boat';
+                var _vIdLabel = _vIsBoat ? 'HIN &mdash; hull identification number (optional)'
+                              : (_vType === 'Other' ? 'Identification number (optional)' : 'VIN (optional)');
+                var _vUseLabel = _vIsBoat ? 'Engine hours' : 'Current mileage';
+                /* The ONLY authored hover in this block (§33.6 row 419, VERBATIM). It renders for a
+                   boat and for a boat only, because that is the single case it was written about —
+                   it would be false on a car, which has no engine-hour meter. */
+                var _vUseTT = _vIsBoat
+                    ? '<div class="modal-tt" style="right:0; left:auto;"><strong>Engine hours</strong>A boat&rsquo;s odometer. Hours on the engine move resale value more than the model year does.</div>'
+                    : '';
+                html += `
+            <div class="field-row" style="grid-template-columns: 1fr;">
+                <div><div class="input-label">${_vIdLabel}</div>
+                    <input type="text" class="small-field" placeholder="&mdash;" value="${String(acc.vehicleIdNum||'').replace(/"/g,'&quot;')}" oninput="updateAccField('${id}', 'vehicleIdNum', this.value)"></div>
+            </div>
+            <div class="field-row" style="grid-template-columns: 1fr 1fr;">
+                <div><div class="input-label">Year / Make / Model / Trim</div>
+                    <input type="text" class="small-field" placeholder="&mdash;" value="${String(acc.vehicleYmm||'').replace(/"/g,'&quot;')}" oninput="updateAccField('${id}', 'vehicleYmm', this.value)"></div>
+                <div><span class="input-label${_vUseTT ? ' modal-tt-wrap' : ''}"${_vUseTT ? ' style="cursor:help;"' : ''}>${_vUseLabel}${_vUseTT}</span>
+                    <input type="text" class="small-field" placeholder="&mdash;" inputmode="numeric" value="${String(acc.vehicleUsage||'').replace(/[^0-9]/g,'')}" oninput="this.value=this.value.replace(/[^0-9]/g,''); updateAccField('${id}', 'vehicleUsage', this.value)"></div>
+            </div>`;
             }
         }
 
