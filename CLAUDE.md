@@ -125,6 +125,12 @@ loosening the parser.
  · terms.html · canonical legal
  · scripts/studio-blueprint.js · Blueprint LS/D1 contract (was PINNED in the build but never
    declared here — the mismatch ran in BOTH directions until 2026-07-27)
+ · scripts/studio-upkeep.js · the Operating Upkeep catalogue — the FIRST `studioSource` part
+   (2026-08-13). Declared because A FILE WHOSE ABSENCE FAILS SILENTLY AND CHANGES MONEY ON SCREEN
+   IS THE DEFINITION OF SACRED: the build's leak-guard already caught it referenced-but-untracked
+   once, and `_propUpkeepCatalogue`'s `typeof` guard would then have degraded EVERY property's
+   upkeep window to its pre-§28 shape without an error. More than one surface reads it (both the
+   Grounds and the Driveway), and it moves carrying totals.
 <!-- SACRED-LIST-END -->
 
 THIS LIST AND `SACRED{}` IN `scripts/build-dist.mjs` MUST MATCH EXACTLY — every host declared here

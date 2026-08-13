@@ -25,6 +25,13 @@ const DROP_RE = [/^\.claude\//, /^\.wrangler\//, /^workers\//, /^functions\//, /
 const SACRED = {
   'studio.html': 'fdf2b2dc350b50a4e8100317074d5291',   // §45/§47 — the vehicle reaches the upkeep engine; catalogue leaves for a part; six hovers, two type-aware (2026-08-13)
   'sketch.html': '28258a76686008aebe839d59af39500f',   // shape button reverted to the Captain's "Save Shape" / "✓ Saved" (2026-08-01)
+  /* §47.3 — SACRED as of 2026-08-13, declared in CLAUDE.md IN THIS SAME COMMIT. The two lists are
+     reconciled by this build in BOTH directions, so a host added to one and not the other STOPS
+     THE BUILD — which is why the nav.js / sketchbook.html gaps could exist historically and cannot
+     now. ⛔ A FILE WHOSE ABSENCE FAILS SILENTLY AND CHANGES MONEY ON SCREEN IS THE DEFINITION OF
+     SACRED: the leak-guard already caught this one referenced-but-untracked, and the typeof guard
+     in _propUpkeepCatalogue would have degraded every property's upkeep window without an error. */
+  'scripts/studio-upkeep.js': 'b329c5a14ab1522a44980076f7718f85',   // the Operating Upkeep catalogue — one catalogue, two scopes (2026-08-13)
   'scripts/studio-blueprint.js': '3ead48e1285f09b46405d6de2eb2a6a5',   // the identity block rides the slim Clerk allowlist in the same commit as the fields (2026-08-13)
   // MISS-5 pre-work guard (2026-07-25). nav.js is a Sacred Host in CLAUDE.md but was absent from THIS map,
   // so a bad edit failed no build. It owns the centralized cross-device restore every page depends on
