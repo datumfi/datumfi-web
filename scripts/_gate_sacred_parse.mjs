@@ -59,7 +59,29 @@ let hosts = [];
   if (m) hosts = [...m[1].matchAll(/^\s*'([^']+)':\s*'[0-9a-f]{32}'/gm)].map((x) => x[1]);
 }
 need('[PRESENCE] the SACRED map is readable and non-empty', hosts.length > 0, 'coverage');
-need('[PRESENCE] all twelve Sacred hosts are present', hosts.length === 12, 'coverage');
+/* ⛔⛔ THIS LEG USED TO READ `hosts.length === 12`, AND IT WENT RED THE DAY A THIRTEENTH SACRED HOST
+   WAS LEGITIMATELY ADDED (scripts/studio-upkeep.js, 2026-08-13) — a gate failing on correct work.
+   🔑 A HARD-CODED COUNT IS A HAND-MAINTAINED LIST WEARING A NUMBER, and this file's own header three
+   lines up brags that "THE HOST LIST IS NOT HAND-MAINTAINED... the one nobody updates". The list was
+   derived; the COUNT was not, and the count is what rotted.
+
+   ⭐ THE CLAIM THE 12 WAS REACHING FOR is "my regex parsed the map COMPLETELY, not partially" — a
+   half-parsed map would silently shrink coverage while every remaining leg stayed green. That claim
+   is now made against an INDEPENDENT source: CLAUDE.md's declared Sacred list, a different file in a
+   different format, which the build separately reconciles against SACRED{} in both directions. If
+   this gate's parse drops an entry, the two sets disagree and this reds — and adding a host the
+   right way (both lists, one commit) keeps it green forever. */
+{
+  const md = readFileSync(path.join(REPO, 'CLAUDE.md'), 'utf8');
+  const a = md.indexOf('<!-- SACRED-LIST-START -->'), b = md.indexOf('<!-- SACRED-LIST-END -->');
+  const declared = (a >= 0 && b > a) ? [...md.slice(a, b).matchAll(/^ · ([^ ·\s]+)/gm)].map((x) => x[1]) : [];
+  const missing = declared.filter((h) => !hosts.includes(h));
+  const extra = hosts.filter((h) => !declared.includes(h));
+  need('[PRESENCE] the parsed SACRED map matches CLAUDE.md exactly — coverage is complete, not partial'
+       + (missing.length || extra.length ? '  [declared-not-parsed: ' + JSON.stringify(missing)
+          + ' · parsed-not-declared: ' + JSON.stringify(extra) + ']' : '  [' + hosts.length + ' hosts]'),
+       declared.length > 0 && missing.length === 0 && extra.length === 0, 'coverage');
+}
 
 /* ── extract the parseable units ── */
 const BLOCK_RE = BLIND ? /<script\b([^>]*)>(NEVER-MATCHES-ANYTHING)<\/script>/gi : /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;

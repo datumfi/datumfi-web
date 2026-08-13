@@ -202,6 +202,16 @@
          * WITHOUT them and turned a working modal into silent data loss. That was one commit ago.
          * ⛔ A VIN IS THE WORST POSSIBLE FIELD TO DROP: it is long, it is copied off a dashboard or a
          * title document, and a user who types one and loses it will not notice until they need it. */
+        /* §45.3 — THE SIX TYPED RUNNING COSTS. Same allowlist, same commit as the fields, for the
+         * same reason as the identity block: a key not named here is silently dropped on save.
+         * ⛔ THESE ARE THE FALLBACK LAYER — a user who types six figures and never opens the ledger
+         * has ALL of their data in exactly these six keys and nowhere else. */
+        if (a.vehInsYr)        out.vehInsYr        = a.vehInsYr;
+        if (a.vehRegYr)        out.vehRegYr        = a.vehRegYr;
+        if (a.vehFuelYr)       out.vehFuelYr       = a.vehFuelYr;
+        if (a.vehMaintYr)      out.vehMaintYr      = a.vehMaintYr;
+        if (a.vehTollsYr)      out.vehTollsYr      = a.vehTollsYr;
+        if (a.vehParkingYr)    out.vehParkingYr    = a.vehParkingYr;
         if (a.vehicleIdNum)    out.vehicleIdNum    = a.vehicleIdNum;
         if (a.vehicleYmm)      out.vehicleYmm      = a.vehicleYmm;
         if (a.vehicleUsage)    out.vehicleUsage    = a.vehicleUsage;

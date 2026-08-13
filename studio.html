@@ -3592,6 +3592,53 @@
     function _propUpkeepAnnual(accId, group) {
       return _propUpkeepLines(accId, group).reduce(function (s, it) { return s + _upkMo(it) * 12; }, 0);
     }
+    /* ══ §45.3 · THE VEHICLE'S TWO-LAYER SHAPE — PER *KIND*, NOT PER GROUP ═════════════════════════
+     * The Grounds resolves by GROUP: `utilYr` aggregates every `utilities` line, so field and rows
+     * sit at different granularities. A vehicle's six costs are 1:1 with six kinds, so the resolver
+     * is per-kind. ⭐ SAME RULE, FINER GRAIN: if a ledger row exists for this kind it IS the value
+     * and the typed field becomes a read-only mirror; if not, the typed field is the value. There is
+     * no path on which both are summed — which is the whole point (§28.4, the $3,400-not-$4,600
+     * discipline reaching the vehicle side).
+     *
+     * ⚠️ ONE HONEST DIFFERENCE FROM THE PROPERTY, RECORDED BECAUSE IT CHANGES NOTHING BUT SHOULD BE
+     * KNOWN: `utilYr`/`maintYr` exist because they PREDATE the ledger — the resolver was retrofitted
+     * so old files did not lose data. NO SAVED BLUEPRINT CARRIES ANY VEHICLE CARRYING COST, so these
+     * six fields solve no migration; they are here because typing six numbers is faster than creating
+     * six ledger rows, and because the Real Monthly needs a source when the ledger is empty.
+     * ⛔ THE FIELD KEYS ARE STORAGE, NOT CATALOGUE KEYS. §45.5 forbids `vehMaintenance` as a KIND;
+     * these are account-field names in the same namespace as `utilYr`, and the kind stays shared. */
+    /* ⛔⛔ A FUNCTION, NOT A `var`, AND THIS FILE HAS PAID FOR THAT LESSON TWICE ALREADY — once at
+       _PROP_ENDORSEMENTS and once at the upkeep catalogue itself, five gates red each time with
+       "X is not defined". THE CLOSURE WALKER PULLS FUNCTIONS; A `var` IS INVISIBLE TO IT. I wrote
+       this as a `var` first, which is exactly the mistake the comments at ~3492 and ~10332 exist to
+       prevent. Anything a sandbox-reachable function READS must be a function itself. */
+    function _vehCostField(kind) {   // catalogue kind -> account field holding the TYPED annual figure
+      return ({
+        insurance:    'vehInsYr',
+        registration: 'vehRegYr',
+        fuel:         'vehFuelYr',
+        maintenance:  'vehMaintYr',
+        tolls:        'vehTollsYr',
+        parking:      'vehParkingYr'
+      })[kind] || '';
+    }
+    /* Annual dollars for ONE kind on ONE account, from the ledger. Reuses _propUpkeepLines and the
+       ONE monthly producer — no second definition of the freq math (studio 3396). */
+    function _vehKindAnnual(accId, kind) {
+      return _propUpkeepLines(accId, null, 'vehicle')
+        .filter(function (it) { return it.upkeepKind === kind; })
+        .reduce(function (s, it) { return s + _upkMo(it) * 12; }, 0);
+    }
+    /* ⭐ THE CANONICAL READER — ROWS WIN, FIELD IS THE FALLBACK. Every surface that wants "what does
+       this vehicle pay for X" MUST come through here, exactly as calcCarryTotal comes through
+       _canonUtil. A second reader is how two surfaces start disagreeing about one bill. */
+    function _canonVehCost(acc, kind) {
+      if (!acc) return 0;
+      var n = _vehKindAnnual(acc.id, kind);
+      if (n > 0) return n;
+      var f = _vehCostField(kind);
+      return f ? _num(acc[f]) : 0;
+    }
     // U2 — single-source accessors. _upkMo: null-safe per-item monthly via the hub producer
     // (returns 0 pre-hub at parse-time; DOMContentLoaded re-render sets the real total — the
     // deferred-hub pattern from U1). NO second definition of the monthly math. _getUpkeepModel:
@@ -8409,6 +8456,19 @@
                  * Monthly must be a WINDOW onto dollars already counted and never an addition
                  * (§45.8 — the $3,400-not-$4,600 discipline, fourth asking). */
                 html += _propUpkeepSectionHTML(id, acc, acc.showUpkeep !== false, 'vehicle');
+                /* §45.3 — THE TYPED LAYER, INSIDE THE SAME TOGGLE. It sits under the ledger window
+                   deliberately: the window is where a cost becomes TRACKED, and these boxes are the
+                   quick way to record one that is not. A user who tracks a kind sees that box turn
+                   into a read-only mirror of the line they just made, which is the clearest possible
+                   statement that there is ONE dollar and not two. */
+                if (acc.showUpkeep !== false) {
+                    html += '<div style="margin-top:14px; padding:14px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:4px;">'
+                          + '<div style="color:var(--teal-mid); font-weight:bold; font-size:13px; margin-bottom:10px;">🧾 Annual running costs</div>'
+                          + _vehCostBlockHTML(id, acc) + '</div>';
+                    /* §11.2 — the all-in beat reads the SAME resolver the boxes above write into, so
+                       the number under the fields is always the number in the fields. Display-only. */
+                    html += _vehAllInHTML(id, acc);
+                }
             }
         }
 
@@ -10431,6 +10491,114 @@
      * disagree about one bill.
      * ⭐ ADDITIVE. A property with no lines shows the empty state and changes nothing else about the
      * room — the byte-for-byte promise the escrow mirror already makes (10703). */
+    /* ══ §45.3 · ONE TYPED COST FIELD, OR ITS READ-ONLY MIRROR ═════════════════════════════════════
+     * Same three-part shape as _upkeepMirrorField directly below (L48 — reuse, do not fork): tracked
+     * -> read-only, dashed, dimmed, with a clickable note naming where the number lives; not tracked
+     * -> a plain editable box. Differs only in GRAIN: this resolves ONE kind, not a whole group.
+     * ⛔ THE NOT-TRACKED BRANCH IS THE COMMON ONE and must stay a completely ordinary field — a user
+     * who never opens the ledger should not be able to tell this mechanism exists. */
+    function _vehCostFieldHTML(id, acc, c) {
+        var f = _vehCostField(c.kind);
+        var n = _vehKindAnnual(id, c.kind);
+        var tt = '<span class="input-label modal-tt-wrap" style="cursor:help;">' + c.label +
+                 (c.hover ? '<div class="modal-tt" style="left:0; right:auto;"><strong>' + c.label + '</strong>' + c.hover +
+                   (n > 0 ? '<br><br>This figure is the line you track in Operating Upkeep. Edit it there; this box shows it.' : '') +
+                   '</div>' : '') + '</span>';
+        if (n > 0) {
+            return '<div>' + tt +
+                '<input type="text" class="small-field curr-format" value="' + formatCurrencyDisplay(Math.round(n)) + '" readonly ' +
+                'style="opacity:0.7; cursor:not-allowed; border-style:dashed;" title="Set in Operating Upkeep — click to open">' +
+                '<div onclick="openUpkeepForProperty(\'' + id + '\', \'' + c.kind + '\')" ' +
+                'style="font-size:10px; color:var(--teal-mid); margin-top:3px; font-family:var(--font-mono); cursor:pointer;">' +
+                '🔗 Tracked in Operating Upkeep</div></div>';
+        }
+        return '<div>' + tt +
+            '<input type="text" class="small-field curr-format" placeholder="$0" value="' + formatCurrencyDisplay((f && acc[f]) || '') +
+            '" oninput="updateAccField(\'' + id + '\', \'' + f + '\', this.value)"></div>';
+    }
+    /* The six, in catalogue order, two to a row. ⛔ ORDER COMES FROM THE CATALOGUE, never a second
+       list here — a hand-listed order is one more thing to drift when a kind is added. */
+    function _vehCostBlockHTML(id, acc) {
+        var cat = (typeof _upkForScope === 'function') ? _upkForScope('vehicle', (acc && acc.vehicleType) || '') : [];
+        if (!cat.length) return '';
+        var cells = cat.map(function (c) { return _vehCostFieldHTML(id, acc, c); });
+        var rows = '';
+        for (var i = 0; i < cells.length; i += 2) {
+            rows += '<div class="field-row" style="grid-template-columns: 1fr 1fr;">' + cells[i] + (cells[i + 1] || '<div></div>') + '</div>';
+        }
+        return rows;
+    }
+
+    /* ══ §11.2/§11.3/§11.4 · THE DRIVEWAY'S OWN ALL-IN — vehicleAllInMonthly ════════════════════════
+     * ⭐ THE COST LIVES ON THE VEHICLE, NOT ON THE COMBINED VIEW (Captain-ruled, Garage §9.2/§11.5):
+     * "a paid-off car still costs money", so this fires with NO LOAN REQUIRED. §11.4 then reserves the
+     * addition for later — garageRealMonthly = vehicleAllInMonthly + lienPayment — and the Garage
+     * ADDS the lien to this figure, it NEVER recomputes the costs. One source, counted once.
+     *
+     * ⛔⛔ THIS IS A WINDOW, NOT AN ADDITION (§45.8, the fourth asking of the $3,400-not-$4,600
+     * discipline). Every tracked cost is ALREADY in §03's household total, and every typed cost is a
+     * field this function only READS. It writes nothing, sums into nothing, and must never be added
+     * to any estate or spend figure. LOCK-3: display-only.
+     *
+     * ⭐ EVERY COMPONENT RESOLVES THROUGH _canonVehCost, so a kind that is TRACKED contributes its
+     * ledger row and a kind that is TYPED contributes its field — never both. The no-double-count
+     * guarantee is inherited from the resolver rather than re-implemented here. */
+    function _vehAllInParts(acc) {
+        if (!acc) return [];
+        var cat = (typeof _upkForScope === 'function') ? _upkForScope('vehicle', acc.vehicleType || '') : [];
+        /* ⛔ SOURCED-ONLY, NEVER ZERO-FILLED (§11.2, L47). A blank cost is EXCLUDED from both the
+           headline and the breakdown — it does not contribute a $0 line that would imply the user
+           told us it was free. */
+        return cat.map(function (c) {
+            return { kind: c.kind, label: c.label, mo: _canonVehCost(acc, c.kind) / 12 };
+        }).filter(function (x) { return x.mo > 0; });
+    }
+    function _vehAllInMonthly(acc) {
+        return _vehAllInParts(acc).reduce(function (s, x) { return s + x.mo; }, 0);
+    }
+    /* ⚠️ §11.2's SENTENCE IS CAR-NATIVE IN A WAY NO AUTHORED TOKEN COVERS, SO IT IS SCOPED RATHER
+     * THAN GUESSED. Verbatim it reads "...costs about {vehicleAllInMonthly}/mo TO KEEP ON THE ROAD".
+     * §20.1 gives {vehicleNoun} and §20.2 gives {carryNounList}, and both are applied below — but
+     * "to keep on the road" has NO token and is plainly false of a boat. §20.6's own limit governs:
+     * "A ROOM THAT SPEAKS THE RIGHT LANGUAGE ABOUT THE WRONG NUMBER IS WORSE THAN ONE THAT STAYS
+     * QUIET", and its converse holds here — the right number in the wrong language is no better.
+     * ⛔ SO THE BEAT FALLS SILENT FOR BOAT AND RV until §11.2 gets its type-aware pass. Their cost
+     * FIELDS still work and still record; only this summary sentence waits. Blank/Car/Truck/SUV and
+     * Motorcycle take the car copy, which is the shipped precedent for blank (§19.5, and blank is
+     * the COMMON path — most users never open the dropdown). */
+    function _vehAllInSpeaks(acc) {
+        var t = (acc && acc.vehicleType) || '';
+        return t === '' || t === 'Car / Truck / SUV' || t === 'Motorcycle';
+    }
+    function _vehNoun(acc) {                       // §20.1 — the universal token, fallback 'vehicle'
+        return ({ 'Car / Truck / SUV': 'car', 'Boat': 'boat', 'RV or Camper': 'RV', 'Motorcycle': 'motorcycle' })[(acc && acc.vehicleType) || ''] || 'vehicle';
+    }
+    function _vehAllInHTML(id, acc) {
+        if (!_vehAllInSpeaks(acc)) return '';
+        var parts = _vehAllInParts(acc);
+        if (!parts.length) return '';              // FIRES-WHEN: at least one carrying cost sourced
+        var total = _vehAllInMonthly(acc);
+        var noun = _vehNoun(acc);
+        var mo = function (v) { return '$' + Math.round(v).toLocaleString('en-US'); };
+        /* ⭐⭐ THE BREAKDOWN IS BUILT FROM THE CATALOGUE, NOT FROM §11.3's HAND-LISTED FOUR, AND THAT
+           IS WHAT MAKES IT RECONCILE. §11.3 names insurance · registration · fuel · upkeep — it was
+           authored before §45.4 ruled the set is SIX, so wiring it literally would print four
+           components under a headline summing six. §11.3's own rule forbids exactly that: "THE PARTS
+           MUST SUM TO THE HEADLINE — a breakdown that doesn't reconcile is worse than none."
+           Every label here is the authored catalogue label, so nothing is invented; only the LIST is
+           derived, the same move that made the dropdown groups catalogue-driven. */
+        var items = parts.map(function (x) {
+            return mo(x.mo) + ' ' + x.label.toLowerCase() + (x.kind === 'maintenance' ? ' (estimated)' : '');
+        }).join(' &middot; ');
+        return '<div style="margin-top:14px; padding:14px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:4px;">' +
+            '<div style="color:var(--teal-mid); font-weight:bold; font-size:13px; margin-bottom:8px;">💰 True all-in cost</div>' +
+            '<div style="font-family:var(--font-serif); font-size:12.5px; line-height:1.6; color:rgba(255,255,255,0.82);">' +
+            'All in, this ' + noun + ' costs about <strong style="font-family:var(--font-mono);">' + mo(total) + '/mo</strong> to keep on the road &mdash; ' +
+            'insurance, registration, fuel and upkeep. In retirement, that&rsquo;s income you&rsquo;ll need to generate every month for as long as you keep a ' + noun + '.' +
+            '</div>' +
+            '<div style="margin-top:8px; font-size:11.5px; color:var(--muted); line-height:1.5;">Of that ' + mo(total) + ': ' + items + '.</div>' +
+            '</div>';
+    }
     function _propUpkeepSectionHTML(id, acc, show, scope) {
         var sc = scope || 'property';
         /* §47.1 — the vehicle TYPE is a third axis under scope: two rows (insurance, parking) swap

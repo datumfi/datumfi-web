@@ -1,0 +1,278 @@
+/* @gate-pool: browser */
+/* ══════════════════════════════════════════════════════════════════════════════════════════════════
+   §45.3 · THE VEHICLE'S TWO-LAYER COST SHAPE — ROWS WIN, THE TYPED FIELD IS THE FALLBACK.
+   Step 2b, the typed layer. Six annual fields on the Vehicle room, each the fallback for one
+   catalogue kind. Nothing sums them yet — the Real Monthly reads them next.
+
+   ⭐⭐ THE SEQUENCING REASON, BECAUSE IT EXPLAINS WHY THIS GATE EXISTS BEFORE THE REAL MONTHLY:
+   THE TYPED FIELDS *ARE* THE FALLBACK LAYER, AND THE FALLBACK IS THE LAYER MOST USERS WILL BE ON.
+   A Real Monthly built first would read only TRACKED rows and silently UNDERSTATE every user who
+   typed rather than tracked. The fallback is not an afterthought.
+
+   ── ⭐ THE LOAD-BEARING LEG IS M3, AND IT IS NOT THE OBVIOUS ONE ─────────────────────────────────
+   M1 (no row -> editable) and M2 (row -> read-only mirror) are the shape everyone would think to
+   test. M3 is the one that matters: DELETE THE TRACKED ROW AND THE TYPED VALUE MUST COME BACK.
+   A mirror that DESTROYED the typed figure the first time a user tracked a cost would be §40.2's
+   vanishing-$1,400 defect wearing a new coat — the user's number gone, with a plausible-looking
+   screen and nothing on it admitting the loss. --destroy reproduces exactly that.
+
+   ⛔ AND THE RETENTION IS DELIBERATE, NOT INCIDENTAL. While a row exists the typed value is retained
+   but NOT SHOWN — normally the retained-value-no-surface trap. It is acceptable here for the same
+   reason the property's endorsement premiums are: the surface shows the TRUTH (the row's figure),
+   the typed value is one deletion from being visible again, and no path sums both.
+
+   Usage: node scripts/_gate_vehicle_cost_fields.js [LABEL] [--nomirror] [--destroy] [--nodrop6] [--fieldwins]
+     --nomirror   the field stays EDITABLE while a row exists -> M2 red. Two boxes, one bill: the
+                  defect the Captain's own §28 smoke found on the property side.
+     --destroy    tracking a cost CLEARS the typed field -> M3 red. ⭐ THE §40.2 VANISHING DEFECT.
+     --nodrop6    the six keys leave the slim Clerk allowlist -> P red. The §33.1 data-loss class.
+     --fieldwins  the resolver prefers the typed field over the ledger -> R2 red (an edited ledger
+                  line would be ignored, and the room would show a stale number as fact).
+   ══════════════════════════════════════════════════════════════════════════════════════════════ */
+const fs = require('fs');
+const http = require('http');
+const path = require('path');
+const ROOT = path.resolve(__dirname, '..');
+const LABEL = process.argv[2] && process.argv[2].charAt(0) !== '-' ? process.argv[2] : 'RUN';
+const NOMIRROR  = process.argv.includes('--nomirror');
+const DESTROY   = process.argv.includes('--destroy');
+const NODROP6   = process.argv.includes('--nodrop6');
+const FIELDWINS = process.argv.includes('--fieldwins');
+const MUT = NOMIRROR || DESTROY || NODROP6 || FIELDWINS;
+
+const PORT = 8381;
+const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
+const { chromium } = require(ROOT + '/node_modules/playwright');
+
+const A_MIRROR = "    function _vehCostFieldHTML(id, acc, c) {\n        var f = _vehCostField(c.kind);\n        var n = _vehKindAnnual(id, c.kind);";
+const M_MIRROR = "    function _vehCostFieldHTML(id, acc, c) {\n        var f = _vehCostField(c.kind);\n        var n = 0;   /* mirror disabled: --nomirror */";
+
+const A_DESTROY = "        upkeepItems.push({ id: 'upk_' + Math.random().toString(36).substr(2, 9), name: cat.label,";
+const M_DESTROY = "        (function(){ var _f = (typeof _vehCostField === 'function') && _vehCostField(kind); if (_f && acc[_f]) acc[_f] = ''; })();   /* typed value destroyed: --destroy */\n        upkeepItems.push({ id: 'upk_' + Math.random().toString(36).substr(2, 9), name: cat.label,";
+
+const A_WINS = "      var n = _vehKindAnnual(acc.id, kind);\n      if (n > 0) return n;\n      var f = _vehCostField(kind);\n      return f ? _num(acc[f]) : 0;";
+const M_WINS = "      var f = _vehCostField(kind);\n      var typed = f ? _num(acc[f]) : 0;\n      if (typed > 0) return typed;   /* field beats rows: --fieldwins */\n      return _vehKindAnnual(acc.id, kind);";
+
+const A_SLIM6 = "        if (a.vehInsYr)        out.vehInsYr        = a.vehInsYr;";
+const M_SLIM6 = "        /* six typed costs dropped from the allowlist: --nodrop6 */\n        if (false)             out.vehInsYr        = a.vehInsYr;";
+
+function mutate(src, a, m, label) {
+  const n = src.split(a).length - 1;
+  if (n !== 1) { console.error('anchor ' + label + ': expected exactly 1 occurrence, found ' + n + ' — re-ground it.'); process.exit(1); }
+  const out = src.replace(a, () => m);
+  if (out.indexOf(m) < 0) { console.error('mutation ' + label + ': did not land verbatim.'); process.exit(1); }
+  return out;
+}
+
+const MIME = { '.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.json':'application/json','.png':'image/png','.woff2':'font/woff2','.ico':'image/x-icon' };
+const server = http.createServer((req, res) => {
+  let rp = decodeURIComponent(req.url.split('?')[0]); if (rp === '/') rp = '/studio.html';
+  const fp = path.join(ROOT, rp);
+  if (!fp.startsWith(ROOT) || !fs.existsSync(fp) || fs.statSync(fp).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
+  let body = fs.readFileSync(fp);
+  if (MUT && /studio\.html$/.test(rp)) {
+    let src = body.toString('utf8');
+    if (NOMIRROR)  src = mutate(src, A_MIRROR,  M_MIRROR,  'A_MIRROR');
+    if (DESTROY)   src = mutate(src, A_DESTROY, M_DESTROY, 'A_DESTROY');
+    if (FIELDWINS) src = mutate(src, A_WINS,    M_WINS,    'A_WINS');
+    body = Buffer.from(src, 'utf8');
+  }
+  if (NODROP6 && /studio-blueprint\.js$/.test(rp)) {
+    body = Buffer.from(mutate(body.toString('utf8'), A_SLIM6, M_SLIM6, 'A_SLIM6'), 'utf8');
+  }
+  res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
+  res.end(body);
+});
+
+let pass = 0, fail = 0;
+function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else { fail++; console.log('FAIL ' + msg); } }
+
+(async () => {
+  await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
+  const b = await chromium.launch();
+  const p = await b.newPage({ viewport: { width: 1440, height: 900 } });
+  await p.goto(URL, { waitUntil: 'networkidle' });
+  await p.evaluate(() => { try { localStorage.clear(); sessionStorage.clear(); } catch (e) {} });
+  await p.reload({ waitUntil: 'networkidle' });
+  await p.waitForSelector('#studio-layout', { timeout: 20000 });
+  await p.waitForTimeout(500);
+  console.log('=== ' + LABEL + ' === MODE: ' + (MUT
+    ? [NOMIRROR ? 'nomirror' : '', DESTROY ? 'destroy' : '', NODROP6 ? 'nodrop6' : '', FIELDWINS ? 'fieldwins' : ''].filter(Boolean).join(' ')
+    : 'NORMAL'));
+
+  /* ══ THE WHOLE ARC IN ONE FIXTURE — type, track, delete — because the CLAIM IS ABOUT TRANSITIONS.
+     Three separate fixtures each in one state would test three states and never the moves between
+     them, and M3 is precisely a move. */
+  const T = await p.evaluate(async () => {
+    const snap = (a) => {
+      const m = document.getElementById('modal-dynamic-content');
+      const f = (n) => m.querySelector('input[oninput*="\'' + n + '\'"]');
+      const ro = Array.prototype.slice.call(m.querySelectorAll('input.curr-format[readonly]')).map((x) => x.value);
+      return { insEditable: !!f('vehInsYr'), insShown: f('vehInsYr') ? f('vehInsYr').value : null,
+               readonly: ro, stored: a.vehInsYr, canonIns: _canonVehCost(a, 'insurance') };
+    };
+    const repaint = async (id) => { renderInputs(); await new Promise((r) => setTimeout(r, 250));
+      openAccountModal(id); await new Promise((r) => setTimeout(r, 350)); };
+
+    window.state.accounts.length = 0;
+    try { window._getUpkeepModel().items.length = 0; } catch (e) {}
+    addInstance('auto');
+    const a = window.state.accounts[0]; a.value = 32000;
+    renderInputs(); await new Promise((r) => setTimeout(r, 300));
+
+    // 1 — TYPED ONLY
+    updateAccField(a.id, 'vehInsYr', '1800');
+    updateAccField(a.id, 'vehFuelYr', '2400');
+    await repaint(a.id);
+    const typed = snap(a);
+    const fieldCount = (function () {
+      const m = document.getElementById('modal-dynamic-content');
+      return ['vehInsYr', 'vehRegYr', 'vehFuelYr', 'vehMaintYr', 'vehTollsYr', 'vehParkingYr']
+        .filter((k) => !!m.querySelector('input[oninput*="\'' + k + '\'"]')).length;
+    })();
+
+    // 2 — TRACKED (a ledger row for the same kind)
+    createPropertyUpkeep(a.id, 'insurance');
+    window._getUpkeepModel().items.forEach((i) => {
+      if (i.propertyId === a.id && i.upkeepKind === 'insurance') { i.amount = 2400; i.freq = 'annual'; }
+    });
+    await repaint(a.id);
+    const tracked = snap(a);
+
+    // 3 — THE ROW IS DELETED. The typed figure must COME BACK.
+    const row = window._getUpkeepModel().items.filter((i) => i.propertyId === a.id && i.upkeepKind === 'insurance')[0];
+    removeUpkeepItem(row.id, false);
+    await repaint(a.id);
+    const restored = snap(a);
+    return { fieldCount: fieldCount, typed: typed, tracked: tracked, restored: restored, id: a.id };
+  });
+  console.log('  T ' + JSON.stringify({ n: T.fieldCount, typed: T.typed, tracked: T.tracked, restored: T.restored }));
+
+  ok(T.fieldCount === 6, 'T1 [PRESENCE] all SIX typed cost fields render on a vehicle — got ' + T.fieldCount);
+
+  /* ── M · THE MIRROR, BOTH DIRECTIONS AND THE WAY BACK ────────────────────────────────────────── */
+  ok(T.typed.insEditable && T.typed.insShown === '$1,800',
+     'M1 [NO ROW] the typed field is EDITABLE and shows what was typed — ' + JSON.stringify(T.typed.insShown));
+  ok(!T.tracked.insEditable && T.tracked.readonly.indexOf('$2,400') >= 0,
+     'M2 [ROW EXISTS] the field becomes a READ-ONLY MIRROR of the row — ' + JSON.stringify(T.tracked.readonly));
+  /* ⭐ THE LOAD-BEARING LEG. */
+  ok(T.restored.insEditable && T.restored.insShown === '$1,800',
+     'M3 ⭐⭐ [ROW DELETED] the TYPED VALUE COMES BACK — a mirror must never destroy what it covers — ' + JSON.stringify(T.restored.insShown));
+  ok(T.tracked.stored === '1800',
+     'M4 [RETENTION] and it was retained on the account THROUGHOUT, not re-typed — ' + JSON.stringify(T.tracked.stored));
+
+  /* ── R · THE RESOLVER — ROWS WIN, FIELD IS FALLBACK ─────────────────────────────────────────── */
+  ok(T.typed.canonIns === 1800, 'R1 [FALLBACK] with no row, _canonVehCost returns the TYPED figure — ' + T.typed.canonIns);
+  ok(T.tracked.canonIns === 2400, 'R2 [ROWS WIN] with a row, it returns the ROW figure — ' + T.tracked.canonIns);
+  ok(T.restored.canonIns === 1800, 'R3 [BOTH WAYS] and falls back again once the row is gone — ' + T.restored.canonIns);
+  /* ⛔ THE SUM THAT MUST NOT EXIST. 1800 + 2400 = 4200 is the double-count this whole shape prevents;
+     naming the forbidden number makes the leg legible to someone reading a failure. */
+  ok(T.tracked.canonIns !== 4200,
+     'R4 ⛔ [NO DOUBLE-COUNT] it never returns typed+row (4200) — one dollar, one owner');
+
+  /* ── V · THE INVARIANT: a vehicle cost moves NO property total ───────────────────────────────── */
+  const V = await p.evaluate(async () => {
+    window.state.accounts.length = 0;
+    try { window._getUpkeepModel().items.length = 0; } catch (e) {}
+    addInstance('auto'); addInstance('property');
+    const car = window.state.accounts[0], house = window.state.accounts[1];
+    car.value = 32000; house.value = 500000; house.utilYr = 2100; house.maintYr = 3000;
+    renderInputs(); await new Promise((r) => setTimeout(r, 350));
+    const before = calcCarryTotal(house);
+    ['vehInsYr', 'vehRegYr', 'vehFuelYr', 'vehMaintYr', 'vehTollsYr', 'vehParkingYr']
+      .forEach((k) => updateAccField(car.id, k, '999'));
+    renderInputs(); await new Promise((r) => setTimeout(r, 350));
+    return { before: before, after: calcCarryTotal(house), houseHasVehKey: house.vehInsYr === undefined };
+  });
+  console.log('  V ' + JSON.stringify(V));
+  ok(V.before === V.after,
+     'V1 ⭐ six typed vehicle costs moved the PROPERTY carrying total by ZERO — ' + V.before + ' -> ' + V.after);
+  ok(V.houseHasVehKey, 'V2 [INVARIANT] and the house grew none of the vehicle keys');
+
+  /* ── G · THE PROPERTY ROOM DID NOT INHERIT THE BLOCK ─────────────────────────────────────────── */
+  const G = await p.evaluate(async () => {
+    window.state.accounts.length = 0;
+    addInstance('property');
+    const a = window.state.accounts[0]; a.value = 500000;
+    renderInputs(); await new Promise((r) => setTimeout(r, 350));
+    openAccountModal(a.id); await new Promise((r) => setTimeout(r, 350));
+    const m = document.getElementById('modal-dynamic-content');
+    return { any: ['vehInsYr', 'vehFuelYr', 'vehTollsYr'].some((k) => !!m.querySelector('input[oninput*="\'' + k + '\'"]')),
+             flat: (m.textContent || '').replace(/\s+/g, ' ') };
+  });
+  ok(!G.any, 'G1 [INVARIANT · GROUNDS] a PROPERTY room grew none of the six typed vehicle fields');
+  ok(G.flat.indexOf('Show upkeep costs') >= 0,
+     'G2 [PRESENCE CONTROL] and the property room really rendered — G1 is an absence in a room that exists');
+
+  /* ── P · PERSISTENCE — the §33.1 class, third time this arc ──────────────────────────────────── */
+  const P = await p.evaluate(async () => {
+    window.state.accounts.length = 0;
+    try { window._getUpkeepModel().items.length = 0; } catch (e) {}
+    addInstance('auto');
+    const a = window.state.accounts[0]; a.value = 32000;
+    a.vehInsYr = '1800'; a.vehRegYr = '210'; a.vehFuelYr = '2400';
+    a.vehMaintYr = '900'; a.vehTollsYr = '150'; a.vehParkingYr = '400';
+    renderInputs(); await new Promise((r) => setTimeout(r, 400));
+    const DB = window.DatumBlueprint; if (!DB) return { err: 'hub missing' };
+    const bp = DB['new'](); DB.captureDOM(bp);
+    const room = ((DB.slimSlotForClerk(bp) || {}).accounts || []).filter((x) => x.baseId === 'auto')[0] || null;
+    const keys = ['vehInsYr', 'vehRegYr', 'vehFuelYr', 'vehMaintYr', 'vehTollsYr', 'vehParkingYr'];
+    return { found: !!room, kept: room ? keys.filter((k) => room[k] !== undefined) : [], missing: room ? keys.filter((k) => room[k] === undefined) : keys };
+  });
+  console.log('  P ' + JSON.stringify(P));
+  ok(P.found && P.kept.length === 6,
+     'P1 ⛔ [ALLOWLIST] all SIX typed costs survive the slim Clerk mirror — missing: ' + JSON.stringify(P.missing));
+
+  /* ══ A · §11.2/§11.3 THE ALL-IN BEAT ═══════════════════════════════════════════════════════════
+     ⭐⭐ A3 IS THE LEG §11.3 DEMANDS BY NAME: "THE PARTS MUST SUM TO THE HEADLINE — a breakdown that
+     doesn't reconcile is worse than none." It is computed from the RENDERED TEXT, not from the
+     model, because a reconcile check that reads the same numbers the renderer read would agree with
+     itself by construction and prove nothing. */
+  const A = await p.evaluate(async () => {
+    const build = async (vt, costs) => {
+      window.state.accounts.length = 0;
+      try { window._getUpkeepModel().items.length = 0; } catch (e) {}
+      addInstance('auto');
+      const a = window.state.accounts[0]; a.value = 32000; if (vt) a.vehicleType = vt;
+      renderInputs(); await new Promise((r) => setTimeout(r, 250));
+      Object.keys(costs).forEach((k) => updateAccField(a.id, k, String(costs[k])));
+      renderInputs(); await new Promise((r) => setTimeout(r, 250));
+      openAccountModal(a.id); await new Promise((r) => setTimeout(r, 350));
+      const m = document.getElementById('modal-dynamic-content');
+      return { flat: (m.textContent || '').replace(/\s+/g, ' '), allIn: _vehAllInMonthly(a),
+               parts: _vehAllInParts(a).map((x) => [x.kind, Math.round(x.mo)]) };
+    };
+    return {
+      none:  await build('Car / Truck / SUV', {}),
+      car:   await build('Car / Truck / SUV', { vehInsYr: 1800, vehFuelYr: 2400, vehMaintYr: 1200 }),
+      boat:  await build('Boat',              { vehInsYr: 1800, vehFuelYr: 2400 }),
+    };
+  });
+  console.log('  A ' + JSON.stringify({ car: A.car.parts, allIn: A.car.allIn, boatSpoke: A.boat.flat.indexOf('All in, this') >= 0 }));
+
+  ok(A.none.flat.indexOf('All in, this') < 0,
+     'A1 [SOURCED-OR-BLANK] with NO cost sourced the beat is SILENT — never a $0 all-in');
+  ok(A.car.flat.indexOf('All in, this car costs about $450/mo to keep on the road') >= 0,
+     'A2 [§11.2 VERBATIM] the beat fires with the right noun and figure ((1800+2400+1200)/12 = 450)');
+  /* ⭐ THE RECONCILE, READ OFF THE SCREEN. */
+  const shown = (A.car.flat.match(/Of that \$([\d,]+): (.+?)\./) || []);
+  const head = Number(String(shown[1] || '').replace(/,/g, ''));
+  const sum = (String(shown[2] || '').match(/\$[\d,]+/g) || [])
+    .reduce((s, x) => s + Number(x.replace(/[$,]/g, '')), 0);
+  console.log('  A-reconcile headline=' + head + ' parts=' + sum + ' :: ' + JSON.stringify(shown[2]));
+  ok(head > 0 && head === sum,
+     'A3 ⭐⭐ [§11.3] THE BREAKDOWN PARTS SUM TO THE HEADLINE, read off the RENDERED text — ' + sum + ' vs ' + head);
+  ok(/upkeep \(estimated\)|repairs \(estimated\)/i.test(A.car.flat),
+     'A4 [§11.3/§11.4] the "(estimated)" tag STAYS on maintenance');
+  ok(A.car.flat.indexOf('$0') < 0 || A.car.parts.every((x) => x[1] > 0),
+     'A5 [L47] no zero-filled component reaches the breakdown — only sourced costs appear');
+  /* ⛔ THE TYPE GATE — and its presence twin, so A6 is not passing because the beat is broken. */
+  ok(A.boat.flat.indexOf('to keep on the road') < 0,
+     'A6 ⛔ [SCOPED COPY] a BOAT is never told its costs keep it ON THE ROAD — §11.2 has no boat variant yet');
+  ok(A.boat.allIn === 350 && A.car.allIn === 450,
+     'A7 [PRESENCE CONTROL] but the boat ARITHMETIC still works (350/mo) — only the SENTENCE waits, not the engine');
+
+  await b.close(); server.close();
+  console.log('SCORE ' + pass + '/' + (pass + fail) + (fail ? '  RED' : '  GREEN'));
+  process.exit(fail ? 1 : 0);
+})().catch((e) => { console.error('GATE ERROR:', e && e.message); try { server.close(); } catch (x) {} process.exit(1); });
