@@ -446,6 +446,65 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
   ok(!/deprecia/i.test(W.boat) && !/est\. range/i.test(W.boat),
      'W7 ⛔⛔ [§48.8 · SILENCE, SAME SCENE] and that SAME fluent boat shows NO depreciation figure — no marine curve is sourced. A fluent room is not a complete one.');
 
+  /* ══ Z · ⭐⭐ THE STANDING BRANCH GATE, SATISFIED AT LAST ════════════════════════════════════════
+     Every handover in this arc has carried the same requirement: "A REAL BOAT BUILT AND RENDERED;
+     THE BOAT CARRIES A SLIP FEE AND AN ASSERTION PROVES THE SLIP IS INSIDE THE REAL MONTHLY."
+     ⛔ IT WAS UNSATISFIABLE FOR MOST OF THIS ARC — there was no vehicle Real Monthly at all, and a
+     predecessor correctly refused to fake it. §38.6's own words: "IF THE SLIP IS NOT IN THE REAL
+     MONTHLY, THE REAL MONTHLY IS WRONG FOR EVERY BOAT — and the slip is usually the largest single
+     line the owner pays."
+
+     ⭐ AND IT IS MEASURED AS A DELTA, NOT AS A PRESENCE. Asserting "the headline is $X" would pass
+     for a dozen wrong reasons. Adding the slip and requiring the headline to rise by EXACTLY the
+     slip's monthly proves the slip is what moved it — the same discipline as scene M, which proved
+     §45.4 by reproducing the user's dollar rather than quoting the ruling. */
+  const Z = await p.evaluate(async () => {
+    window.state.accounts.length = 0;
+    try { window._getUpkeepModel().items.length = 0; } catch (e) {}
+    addInstance('auto');
+    const a = window.state.accounts[0]; a.value = 40000; a.vehicleType = 'Boat';
+    renderInputs(); await new Promise((r) => setTimeout(r, 250));
+    updateAccField(a.id, 'vehInsYr', '2400');            // a boat with insurance and nothing else
+    await new Promise((r) => setTimeout(r, 200));
+    const withoutSlip = _vehAllInMonthly(a);
+
+    /* THE SLIP AS A REAL LEDGER ROW — the `parking` kind wearing its boat coat, which is exactly
+       what §45.4 meant by "the only line that survives a type switch". */
+    createPropertyUpkeep(a.id, 'parking');
+    window._getUpkeepModel().items.forEach((i) => {
+      if (i.propertyId === a.id && i.upkeepKind === 'parking') { i.amount = 7200; i.freq = 'annual'; }
+    });
+    renderInputs(); await new Promise((r) => setTimeout(r, 250));
+    openAccountModal(a.id); await new Promise((r) => setTimeout(r, 350));
+    const m = document.getElementById('modal-dynamic-content');
+    return {
+      withoutSlip: withoutSlip,
+      withSlip: _vehAllInMonthly(a),
+      slipCanon: _canonVehCost(a, 'parking'),
+      rowName: (window._getUpkeepModel().items.filter((i) => i.propertyId === a.id && i.upkeepKind === 'parking')[0] || {}).name,
+      flat: (m.textContent || '').replace(/\s+/g, ' '),
+    };
+  });
+  console.log('  Z ' + JSON.stringify({ without: Z.withoutSlip, with: Z.withSlip, slip: Z.slipCanon, row: Z.rowName }));
+
+  ok(Z.slipCanon === 7200, 'Z1 [PRESENCE] the boat really carries a slip fee — $7,200/yr through the canonical reader');
+  ok(Z.rowName === 'Slip / storage fee',
+     'Z2 [§40.2] and its ledger row is NAMED for a boat, in §03 as well as in the room — ' + JSON.stringify(Z.rowName));
+  /* ⭐⭐ THE LEG THE WHOLE ARC WAS GATED ON. */
+  ok(Math.abs((Z.withSlip - Z.withoutSlip) - 600) < 0.01,
+     'Z3 ⭐⭐ [THE STANDING REQUIREMENT] THE SLIP IS INSIDE THE REAL MONTHLY — adding $7,200/yr raised the all-in by EXACTLY $600/mo ('
+     + Math.round(Z.withoutSlip) + ' -> ' + Math.round(Z.withSlip) + ')');
+  ok(/\$600 the slip/.test(Z.flat),
+     'Z4 [§48.5] and it appears in the breakdown AS THE SLIP, not as parking');
+  /* ⛔ AND THE HONEST GAP, ASSERTED SO IT CANNOT BE FORGOTTEN: the boat's SENTENCE names winterising
+     as something its owner pays, and there is NO winterisation cost row to record it in. §38.6 lists
+     it as a boat cost; the catalogue has six kinds and that is not one of them. A SENTENCE THAT NAMES
+     A CATEGORY THE ROOM CANNOT CAPTURE IS THE SAME SHAPE AS A HOVER PROMISING AN UNBUILT FEATURE.
+     ⏳ THIS LEG IS A CHECKPOINT: when a winterisation kind is authored and added, INVERT IT. */
+  ok(!/winterising/.test(Z.rowName || '') && (await p.evaluate(() => _upkForScope('vehicle', 'Boat').map((c) => c.kind)))
+       .indexOf('winterisation') < 0,
+     'Z5 ⏳ [KNOWN GAP, PINNED] there is NO winterisation cost kind — the boat sentence names it, the catalogue cannot record it. INVERT when §38.6 authors the row.');
+
   await b.close(); server.close();
   console.log('SCORE ' + pass + '/' + (pass + fail) + (fail ? '  RED' : '  GREEN'));
   process.exit(fail ? 1 : 0);
