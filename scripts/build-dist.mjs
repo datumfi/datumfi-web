@@ -23,7 +23,7 @@ const DROP_RE = [/^\.claude\//, /^\.wrangler\//, /^workers\//, /^functions\//, /
 
 // SACRED HOSTS — must ship byte-identical (LF + content). Build ABORTS on drift.
 const SACRED = {
-  'studio.html': '507f5c3701da0e4249eacc6ac9569020',   // the Captain's three: the all-in paints while typing · the breakdown reconciles under rounding · a boat's row is named for a boat (2026-08-13)
+  'studio.html': '81fd6e62c6517f5ad5b5580d8b4f540e',   // §48 — the all-in speaks every type: kept in the water, the slip, storage, and short nouns that scan (2026-08-13)
   'sketch.html': '28258a76686008aebe839d59af39500f',   // shape button reverted to the Captain's "Save Shape" / "✓ Saved" (2026-08-01)
   /* §47.3 — SACRED as of 2026-08-13, declared in CLAUDE.md IN THIS SAME COMMIT. The two lists are
      reconciled by this build in BOTH directions, so a host added to one and not the other STOPS

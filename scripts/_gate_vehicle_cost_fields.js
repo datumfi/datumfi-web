@@ -47,6 +47,8 @@
                   His $1,385 headline over $1,386 of parts, reproduced.
      --flatlabel  the created row's label ignores vehicleType -> L3/L4 red. A boat's ledger row
                   named 'Auto insurance premium'.
+     --carnative  {keepPhrase} reverts to the hard-coded 'on the road' -> A6/W2/W3 red. The state a
+                  boat owner briefly shipped in.
    ══════════════════════════════════════════════════════════════════════════════════════════════ */
 const fs = require('fs');
 const http = require('http');
@@ -60,7 +62,8 @@ const FIELDWINS = process.argv.includes('--fieldwins');
 const NOREPAINT = process.argv.includes('--norepaint');
 const ROUNDTOTAL = process.argv.includes('--roundtotal');
 const FLATLABEL = process.argv.includes('--flatlabel');
-const MUT = NOMIRROR || DESTROY || NODROP6 || FIELDWINS || NOREPAINT || ROUNDTOTAL || FLATLABEL;
+const CARNATIVE = process.argv.includes('--carnative');
+const MUT = NOMIRROR || DESTROY || NODROP6 || FIELDWINS || NOREPAINT || ROUNDTOTAL || FLATLABEL || CARNATIVE;
 
 const PORT = 8381;
 const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
@@ -87,6 +90,11 @@ const M_REPAINT = "            if (false && /^veh(Ins|Reg|Fuel|Maint|Tolls|Parki
 const A_ROUND = "        var shown = parts.map(function (x) { return { kind: x.kind, label: x.label, r: Math.round(x.mo) }; });\n        var total = shown.reduce(function (s, x) { return s + x.r; }, 0);";
 const M_ROUND = "        var shown = parts.map(function (x) { return { kind: x.kind, label: x.label, r: Math.round(x.mo) }; });\n        var total = Math.round(_vehAllInMonthly(acc));   /* rounded true total, not the sum of parts: --roundtotal */";
 
+/* --carnative: the pre-§48 sentence, hard-coded car-native. Reproduces exactly what shipped for one
+   commit — the state in which a boat owner was told their costs keep the boat ON THE ROAD. */
+const A_KEEP = "    function _vehKeepPhrase(acc) {\n        return ({ 'Car / Truck / SUV': 'on the road', 'RV or Camper': 'on the road',\n                  'Motorcycle': 'on the road', 'Boat': 'in the water' })[(acc && acc.vehicleType) || ''] || 'running';\n    }";
+const M_KEEP = "    function _vehKeepPhrase(acc) { return 'on the road'; }   /* car-native again: --carnative */";
+
 const A_LABEL = "        var cat = acc ? _propUpkeepKind(kind, _sc, _sc === 'vehicle' ? (acc.vehicleType || '') : '') : null;";
 const M_LABEL = "        var cat = acc ? _propUpkeepKind(kind, _sc) : null;   /* type dropped from the label lookup: --flatlabel */";
 
@@ -112,6 +120,7 @@ const server = http.createServer((req, res) => {
     if (NOREPAINT) src = mutate(src, A_REPAINT, M_REPAINT, 'A_REPAINT');
     if (ROUNDTOTAL) src = mutate(src, A_ROUND,  M_ROUND,   'A_ROUND');
     if (FLATLABEL) src = mutate(src, A_LABEL,  M_LABEL,   'A_LABEL');
+    if (CARNATIVE) src = mutate(src, A_KEEP,   M_KEEP,    'A_KEEP');
     body = Buffer.from(src, 'utf8');
   }
   if (NODROP6 && /studio-blueprint\.js$/.test(rp)) {
@@ -134,7 +143,7 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
   await p.waitForSelector('#studio-layout', { timeout: 20000 });
   await p.waitForTimeout(500);
   console.log('=== ' + LABEL + ' === MODE: ' + (MUT
-    ? [NOMIRROR ? 'nomirror' : '', DESTROY ? 'destroy' : '', NODROP6 ? 'nodrop6' : '', FIELDWINS ? 'fieldwins' : '', NOREPAINT ? 'norepaint' : '', ROUNDTOTAL ? 'roundtotal' : '', FLATLABEL ? 'flatlabel' : ''].filter(Boolean).join(' ')
+    ? [NOMIRROR ? 'nomirror' : '', DESTROY ? 'destroy' : '', NODROP6 ? 'nodrop6' : '', FIELDWINS ? 'fieldwins' : '', NOREPAINT ? 'norepaint' : '', ROUNDTOTAL ? 'roundtotal' : '', FLATLABEL ? 'flatlabel' : '', CARNATIVE ? 'carnative' : ''].filter(Boolean).join(' ')
     : 'NORMAL'));
 
   /* ══ THE WHOLE ARC IN ONE FIXTURE — type, track, delete — because the CLAIM IS ABOUT TRANSITIONS.
@@ -303,11 +312,17 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
      'A4 [§11.3/§11.4] the "(estimated)" tag STAYS on maintenance');
   ok(A.car.flat.indexOf('$0') < 0 || A.car.parts.every((x) => x[1] > 0),
      'A5 [L47] no zero-filled component reaches the breakdown — only sourced costs appear');
-  /* ⛔ THE TYPE GATE — and its presence twin, so A6 is not passing because the beat is broken. */
-  ok(A.boat.flat.indexOf('to keep on the road') < 0,
-     'A6 ⛔ [SCOPED COPY] a BOAT is never told its costs keep it ON THE ROAD — §11.2 has no boat variant yet');
+  /* ⏳ A6 INVERTED DELIBERATELY 2026-08-13 — §48 LANDED. It asserted a BOAT was never told its costs
+     keep it "on the road", which was correct for exactly one commit: §11.2 had no boat variant, so
+     the whole beat stayed silent rather than print a false place-phrase. §48.1 authored {keepPhrase}
+     and the boat now says "in the water". ⛔ FLIPPED, NOT DELETED — the claim changed, so the leg
+     follows the deliberate product change (the same discipline as the field pair's D2 and the name
+     map's M2). ⭐ THE HALF THAT DOES NOT EXPIRE IS A7: the boat's ARITHMETIC was always right, and
+     nothing §48 did was allowed to move it. */
+  ok(A.boat.flat.indexOf('to keep in the water') >= 0 && A.boat.flat.indexOf('on the road') < 0,
+     'A6 ⭐ [§48.1 LANDED] a BOAT is kept IN THE WATER, and is never told it is on the road');
   ok(A.boat.allIn === 350 && A.car.allIn === 450,
-     'A7 [PRESENCE CONTROL] but the boat ARITHMETIC still works (350/mo) — only the SENTENCE waits, not the engine');
+     'A7 [MONEY · UNCHANGED] and the arithmetic is exactly what it was before §48 — copy moved, numbers did not');
 
   /* ══ L · ⭐⭐ THE THREE DEFECTS THE CAPTAIN'S SMOKE FOUND THAT THIS GATE MISSED ═════════════════
      Every leg below exists because a green gate shipped a defect a human saw in thirty seconds.
@@ -374,6 +389,62 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
      'L3 ⭐ [CREATE LABEL] a BOAT creates ledger rows NAMED for a boat — ' + JSON.stringify(L.boatNames));
   ok(L.boatNames.indexOf('Auto insurance premium') < 0,
      'L4 ⛔ [INVARIANT] and the car name reaches §03 nowhere — the defect, asserted absent');
+
+  /* ══ W · §48 — EVERY TYPE SPEAKS ITS OWN LANGUAGE, AND THE BOAT'S FLUENCY SITS BESIDE ITS SILENCE
+     ⭐⭐ §48.8 IS THE REASON W5/W6 ARE IN THE SAME SCENE AND NOT TWO: "THE RISK §48 CREATES IS THAT A
+     FLUENT ROOM FEELS LIKE A COMPLETE ONE." A boat that now talks confidently about its slip could
+     easily be read as a boat whose VALUE we also model — and we do not, deliberately, because no
+     marine depreciation curve is sourced. Proving the sentence in one scene and the silence in
+     another would let a future commit break the second without ever disturbing the first. */
+  const W = await p.evaluate(async () => {
+    const one = async (vt) => {
+      window.state.accounts.length = 0;
+      try { window._getUpkeepModel().items.length = 0; } catch (e) {}
+      addInstance('auto');
+      const a = window.state.accounts[0]; a.value = 40000; if (vt) a.vehicleType = vt;
+      renderInputs(); await new Promise((r) => setTimeout(r, 200));
+      [['vehInsYr', 2000], ['vehRegYr', 5595], ['vehFuelYr', 530],
+       ['vehTollsYr', 5555], ['vehParkingYr', 550], ['vehMaintYr', 2000]]
+        .forEach(([k, v]) => updateAccField(a.id, k, String(v)));
+      await new Promise(r => setTimeout(r, 200));
+      openAccountModal(a.id); await new Promise((r) => setTimeout(r, 300));
+      const m = document.getElementById('modal-dynamic-content');
+      return (m.textContent || '').replace(/\s+/g, ' ');
+    };
+    return { car: await one('Car / Truck / SUV'), boat: await one('Boat'),
+             rv: await one('RV or Camper'), moto: await one('Motorcycle'), blank: await one('') };
+  });
+  const has = (s, t) => W[s].indexOf(t) >= 0;
+
+  /* §48.1 — and the split is NOT car-vs-rest: an RV and a motorcycle really are on the road. */
+  ok(has('car', 'to keep on the road') && has('rv', 'to keep on the road') && has('moto', 'to keep on the road'),
+     'W1 [§48.1] car, RV and motorcycle are all kept ON THE ROAD — the split is not car-vs-everything-else');
+  ok(has('boat', 'to keep in the water'), 'W2 [§48.1] only the BOAT is kept IN THE WATER');
+  ok(has('blank', 'to keep running') && !has('blank', 'on the road'),
+     'W3 [§48.1] a blank type falls back to RUNNING — a real clause, not silence, and true of all five');
+  /* §20.2 — the authored cost-noun list, per type. */
+  ok(has('boat', 'the slip, insurance, winterising and upkeep') && has('rv', 'storage, insurance, registration and upkeep'),
+     'W4 [§20.2] the sentence names the costs THAT owner actually pays');
+  /* §48.3 — the tail neither of us caught first time. */
+  ok(has('boat', 'for as long as you keep a boat') && !has('boat', 'keep a car'),
+     'W5a [§48.3] the TAIL says "a boat" too — the indefinite article was the point, the noun was wrong');
+  /* §48.5 — parking is the only type-aware short noun. */
+  ok(has('boat', 'the slip.') || has('boat', 'the slip &middot;') || /\$\d+ the slip/.test(W.boat),
+     'W5b [§48.5] the BREAKDOWN calls it the slip on a boat');
+  ok(/\$\d+ storage/.test(W.rv) && /\$\d+ parking/.test(W.car),
+     'W5c [§48.5] storage on an RV, parking on a car — one stored kind, three coats');
+  /* §48.4 — the short nouns replaced the long catalogue labels. */
+  ok(/\$\d+ upkeep \(estimated\)/.test(W.car) && W.car.indexOf('routine maintenance and repairs') < 0,
+     'W5d [§48.4] the breakdown scans short — "upkeep (estimated)", not the full field label');
+  /* §48.6 — the AUTHORED order, membership still derived. */
+  ok(W.car.indexOf('insurance') < W.car.indexOf('upkeep (estimated)'),
+     'W5e [§48.6] insurance precedes upkeep — the authored order, not catalogue order');
+
+  /* ⛔⛔ §48.8 — THE SILENCE, ASSERTED IN THE SAME SCENE AS THE FLUENCY. */
+  ok(has('boat', 'All in, this boat costs about'),
+     'W6 ⭐ [FLUENCY] the boat speaks boat — its all-in sentence renders');
+  ok(!/deprecia/i.test(W.boat) && !/est\. range/i.test(W.boat),
+     'W7 ⛔⛔ [§48.8 · SILENCE, SAME SCENE] and that SAME fluent boat shows NO depreciation figure — no marine curve is sourced. A fluent room is not a complete one.');
 
   await b.close(); server.close();
   console.log('SCORE ' + pass + '/' + (pass + fail) + (fail ? '  RED' : '  GREEN'));

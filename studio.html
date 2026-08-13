@@ -10600,13 +10600,59 @@
      * FIELDS still work and still record; only this summary sentence waits. Blank/Car/Truck/SUV and
      * Motorcycle take the car copy, which is the shipped precedent for blank (§19.5, and blank is
      * the COMMON path — most users never open the dropdown). */
-    function _vehAllInSpeaks(acc) {
-        var t = (acc && acc.vehicleType) || '';
-        return t === '' || t === 'Car / Truck / SUV' || t === 'Motorcycle';
-    }
+    /* ⭐ §48 LIFTED THIS GATE. It briefly returned false for Boat and RV because §11.2's "to keep on
+     * the road" had no authored variant, and a right number in the wrong language is no better than
+     * the reverse (§20.6). {keepPhrase} now exists for all five types, so EVERY TYPE SPEAKS and the
+     * function is kept only as the record of why it was ever needed.
+     * ⚠️ §48.8 — AND THE LIMIT IS NOT LIFTED WITH IT. The boat's SENTENCE now speaks boat; its
+     * DEPRECIATION still says nothing, deliberately (no marine curve is sourced — §20.6, Garage
+     * §6.4). ⛔ THE RISK §48 CREATES IS THAT A FLUENT ROOM FEELS LIKE A COMPLETE ONE, which is why
+     * the gate asserts the boat's all-in sentence renders IN THE SAME SCENE as its depreciation
+     * silence. Prove the fluency and the silence together, or the fluency will be read as coverage. */
+    function _vehAllInSpeaks(acc) { return true; }
     function _vehNoun(acc) {                       // §20.1 — the universal token, fallback 'vehicle'
         return ({ 'Car / Truck / SUV': 'car', 'Boat': 'boat', 'RV or Camper': 'RV', 'Motorcycle': 'motorcycle' })[(acc && acc.vehicleType) || ''] || 'vehicle';
     }
+    /* ══ §48 · THE FOUR AUTHORED TOKENS THAT MAKE §11.2/§11.3 SPEAK EVERY TYPE ═════════════════════
+     * ⭐⭐ §48.1 {keepPhrase} — AND THE SPLIT IS NOT CAR-vs-EVERYTHING-ELSE, WHICH IS THE WHOLE POINT.
+     * An RV and a motorcycle ARE genuinely on the road; ONLY THE BOAT BREAKS. Had I generalised
+     * "non-car ⇒ stay silent" I would have muted two types that never needed it — the reason the gap
+     * was worth asking about rather than inferring. ⛔ THE FALLBACK IS 'running', NOT SILENCE: an
+     * unknown-type vehicle still costs money to keep running, and that clause is true of all five. */
+    function _vehKeepPhrase(acc) {
+        return ({ 'Car / Truck / SUV': 'on the road', 'RV or Camper': 'on the road',
+                  'Motorcycle': 'on the road', 'Boat': 'in the water' })[(acc && acc.vehicleType) || ''] || 'running';
+    }
+    /* §20.2 {carryNounList} — AUTHORED PER TYPE, and deliberately NOT derived from which costs are
+       sourced. It names what an owner of this type actually pays; the BREAKDOWN below is the part
+       that reports what THIS user recorded. Two different jobs, and conflating them would make the
+       sentence lie about a boat that has not filled anything in yet. */
+    function _vehCarryNounList(acc) {
+        return ({ 'Car / Truck / SUV': 'insurance, registration, fuel, upkeep',
+                  'Boat': 'the slip, insurance, winterising and upkeep',
+                  'RV or Camper': 'storage, insurance, registration and upkeep',
+                  'Motorcycle': 'insurance, registration, fuel and upkeep'
+                })[(acc && acc.vehicleType) || ''] || 'insurance, registration, fuel, upkeep';
+    }
+    /* §48.4/§48.5 — THE BREAKDOWN'S SHORT NOUNS. ⭐ THE BREAKDOWN IS A SCAN LINE, NOT A SENTENCE:
+     * the user is checking that small numbers make one big one, and every extra word slows that
+     * check. "routine maintenance and repairs" beside "fuel" is a REGISTER mismatch, not merely a
+     * length one. THE HEADLINE CARRIES THE VOICE; THE BREAKDOWN CARRIES THE ARITHMETIC.
+     * ⛔ ONLY `parking` SWAPS BY TYPE (§48.5) — the other five nouns are TYPE-INVARIANT, and building
+     * a swap table for words that never swap would be inventing a mechanism to hold constants.
+     * ⛔ SAME STORED KIND, THREE COATS. No new kind key, ever (§45.4 × §40.2 on one row). */
+    function _vehShortNoun(kind, acc) {
+        if (kind === 'parking') {
+            return ({ 'Boat': 'the slip', 'RV or Camper': 'storage' })[(acc && acc.vehicleType) || ''] || 'parking';
+        }
+        return ({ insurance: 'insurance', registration: 'registration', fuel: 'fuel',
+                  maintenance: 'upkeep (estimated)', tolls: 'tolls' })[kind] || '';
+    }
+    /* §48.6 — THE AUTHORED ORDER. ⛔ ORDER AND LABELS ARE AUTHORED; MEMBERSHIP STAYS DERIVED FROM THE
+       CATALOGUE. A kind absent from this list sorts to the END rather than vanishing, so a seventh
+       cost grows the line WITHOUT an authoring round-trip — the mechanism the Architect asked me to
+       keep while he replaced its strings. */
+    function _vehBreakdownOrder() { return ['insurance', 'registration', 'fuel', 'maintenance', 'tolls', 'parking']; }
     function _vehAllInHTML(id, acc) {
         if (!_vehAllInSpeaks(acc)) return '';
         var parts = _vehAllInParts(acc);
@@ -10627,7 +10673,13 @@
          * ⭐ SUMMING THE DISPLAYED PARTS MAKES RECONCILIATION TRUE BY CONSTRUCTION rather than true
          * by luck. The headline can now differ from the exact monthly by a few cents' worth of
          * rounding — the deliberate trade, and the one §11.3 already chose. */
-        var shown = parts.map(function (x) { return { kind: x.kind, label: x.label, r: Math.round(x.mo) }; });
+        var ord = _vehBreakdownOrder();
+        var shown = parts.map(function (x) { return { kind: x.kind, label: x.label, r: Math.round(x.mo) }; })
+            .sort(function (a, c) {
+                /* §48.6 authored order; anything unknown sorts to the END rather than disappearing. */
+                var ia = ord.indexOf(a.kind), ic = ord.indexOf(c.kind);
+                return (ia < 0 ? 99 : ia) - (ic < 0 ? 99 : ic);
+            });
         var total = shown.reduce(function (s, x) { return s + x.r; }, 0);
         /* ⭐⭐ THE BREAKDOWN IS BUILT FROM THE CATALOGUE, NOT FROM §11.3's HAND-LISTED FOUR, AND THAT
            IS WHAT MAKES IT RECONCILE. §11.3 names insurance · registration · fuel · upkeep — it was
@@ -10636,14 +10688,24 @@
            MUST SUM TO THE HEADLINE — a breakdown that doesn't reconcile is worse than none."
            Every label here is the authored catalogue label, so nothing is invented; only the LIST is
            derived, the same move that made the dropdown groups catalogue-driven. */
+        /* §48.6 — the authored short noun, falling back to the catalogue label for any kind §48.4
+           has not named yet. ⛔ THE FALLBACK IS NOT DECORATION: it is what lets a seventh catalogue
+           kind appear in this line, correctly summed, before anyone authors a noun for it. */
         var items = shown.map(function (x) {
-            return mo(x.r) + ' ' + x.label.toLowerCase() + (x.kind === 'maintenance' ? ' (estimated)' : '');
+            var n = _vehShortNoun(x.kind, acc);
+            return mo(x.r) + ' ' + (n || x.label.toLowerCase() + (x.kind === 'maintenance' ? ' (estimated)' : ''));
         }).join(' &middot; ');
         return '<div style="margin-top:14px; padding:14px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:4px;">' +
             '<div style="color:var(--teal-mid); font-weight:bold; font-size:13px; margin-bottom:8px;">💰 True all-in cost</div>' +
             '<div style="font-family:var(--font-serif); font-size:12.5px; line-height:1.6; color:rgba(255,255,255,0.82);">' +
-            'All in, this ' + noun + ' costs about <strong style="font-family:var(--font-mono);">' + mo(total) + '/mo</strong> to keep on the road &mdash; ' +
-            'insurance, registration, fuel and upkeep. In retirement, that&rsquo;s income you&rsquo;ll need to generate every month for as long as you keep a ' + noun + '.' +
+            /* §48.2 VERBATIM. ⭐ §48.3 IS THE ONE NEITHER OF US CAUGHT FIRST TIME: THE TAIL SAID
+               "a car" TOO. I flagged "on the road" because it is VIVID; "a car" sat in plain sight
+               and read harmless — and §11.2's own note ("the tail: 'a car', not 'this car'") drew the
+               eye to that exact word while explaining it. 🔑 A NOTE EXPLAINING WHY A WORD IS
+               DELIBERATE MAKES IT INVISIBLE TO THE NEXT READER. The indefinite article was always
+               the point; only the NOUN was wrong. Both are {vehicleNoun} now. */
+            'All in, this ' + noun + ' costs about <strong style="font-family:var(--font-mono);">' + mo(total) + '/mo</strong> to keep ' + _vehKeepPhrase(acc) + ' &mdash; ' +
+            _vehCarryNounList(acc) + '. In retirement, that&rsquo;s income you&rsquo;ll need to generate every month for as long as you keep a ' + noun + '.' +
             '</div>' +
             '<div style="margin-top:8px; font-size:11.5px; color:var(--muted); line-height:1.5;">Of that ' + mo(total) + ': ' + items + '.</div>' +
             '</div>';
