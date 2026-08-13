@@ -988,7 +988,23 @@
   #want-readout .wr-note { font-family: var(--font-mono); font-size: 9px; color: var(--muted); line-height: 1.55; margin-top: 9px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); }
 
   /* SURGICAL: Restored Lens Array with proper spacing and exact tooltips */
-  .lens-controls { bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; padding: 15px 25px; border-radius: 40px; top: auto; width: max-content; }
+  /* ── THE LENS BAR MOVES TO THE TOP · 2026-08-12 ────────────────────────────────────────────────
+     IT WAS COVERING THE MONEY. At `bottom:40px` the bar sat at canvas y[993,1060] while THE YARD's
+     "Net Equity: $X" line runs y[990,1008] — a 15-unit overlap, measured. The one figure that says
+     what the home is actually worth was underneath a button bar.
+     ⛔ AND MOVING IT DOWN WAS NOT AN OPTION: the bottom strip y[1010,1100] is the only zone free in
+     every state, and the bar was the sole thing occupying it.
+     ⚠️ `top:0` IS NOT A TASTE, IT IS THE ONLY VALUE THAT CLEARS. Measured across the §22.2 eight
+     viewports: top:0 -> 5 units of clearance, top:4 -> 1, top:8 -> -3 (overlapping the entry-door
+     swing arcs, which are the highest ink on the canvas at y=72).
+     🔑 AND THE 5 IS SAFE BECAUSE OF A COUPLING, NOT BECAUSE IT IS 5. This element's offsetParent is
+     `.blueprint-container` — the SVG's OWN box — so the bar scales WITH the drawing and its position
+     in canvas units is CONSTANT at every window size. A constant-by-coupling 5 is a categorically
+     different object from a varies-by-viewport 5. THE COUPLING IS THE SAFETY.
+     ⛔ NOTHING IN THE CSS ENFORCES OR NAMES THAT COUPLING, so it can be broken by someone who has no
+     idea they are touching it. `_gate_lens_bar_clearance` asserts it directly — do not re-parent this
+     element, or change `.blueprint-container`'s positioning, without reading that gate first. */
+  .lens-controls { top: 0; bottom: auto; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; padding: 15px 25px; border-radius: 40px; width: max-content; }
   .lens-tt-wrap { position: relative; }
   .lens-btn { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: var(--muted); font-family: var(--font-mono); font-size: 9px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; padding: 10px 18px; border-radius: 20px; cursor: pointer; transition: 0.3s; white-space: nowrap;}
   .lens-btn:hover { border-color: var(--teal-mid); color: var(--white); }
