@@ -21,13 +21,32 @@
    reason the property's endorsement premiums are: the surface shows the TRUTH (the row's figure),
    the typed value is one deletion from being visible again, and no path sums both.
 
-   Usage: node scripts/_gate_vehicle_cost_fields.js [LABEL] [--nomirror] [--destroy] [--nodrop6] [--fieldwins]
+   ── ⛔⛔ THREE DEFECTS SHIPPED PAST THIS GATE AT 21/21 GREEN, AND THE CAPTAIN FOUND ALL THREE IN
+      ONE SMOKE. Scene L exists because of that, and each L leg names the thing it missed:
+        · THE PANEL NEVER APPEARED WHILE TYPING. The A-scene called renderInputs() and
+          openAccountModal() itself before asserting — THE TEST PERFORMED THE REPAINT THE PRODUCT
+          WAS MISSING. §13.72 exactly: state + re-render proves the RENDERER, never the HANDLER.
+        · THE BREAKDOWN DID NOT RECONCILE. The A-fixture used 1800/2400/1200 — ALL DIVISIBLE BY 12 —
+          so it never exercised rounding. His real figures showed $1,386 of parts under a $1,385
+          headline. A FIXTURE THAT CANNOT PRODUCE THE FAILING STATE IS NOT A CONTROL.
+        · A BOAT'S LEDGER ROW WAS NAMED "Auto insurance premium". The room resolved the label live
+          and looked right; §03 — the surface that owns the dollar — did not.
+      🔑 ALL THREE WERE VISIBLE IN THIRTY SECONDS OF USE AND INVISIBLE TO TWENTY-ONE GREEN LEGS.
+
+   Usage: node scripts/_gate_vehicle_cost_fields.js [LABEL] [--nomirror] [--destroy] [--nodrop6]
+                                                    [--fieldwins] [--norepaint] [--roundtotal] [--flatlabel]
      --nomirror   the field stays EDITABLE while a row exists -> M2 red. Two boxes, one bill: the
                   defect the Captain's own §28 smoke found on the property side.
      --destroy    tracking a cost CLEARS the typed field -> M3 red. ⭐ THE §40.2 VANISHING DEFECT.
      --nodrop6    the six keys leave the slim Clerk allowlist -> P red. The §33.1 data-loss class.
      --fieldwins  the resolver prefers the typed field over the ledger -> R2 red (an edited ledger
                   line would be ignored, and the room would show a stale number as fact).
+     --norepaint  the live all-in update is removed -> L1 red. THE CAPTAIN'S #1: the panel never
+                  appears while typing, only after some other action repaints the modal.
+     --roundtotal the headline rounds the true total instead of summing the shown parts -> L2 red.
+                  His $1,385 headline over $1,386 of parts, reproduced.
+     --flatlabel  the created row's label ignores vehicleType -> L3/L4 red. A boat's ledger row
+                  named 'Auto insurance premium'.
    ══════════════════════════════════════════════════════════════════════════════════════════════ */
 const fs = require('fs');
 const http = require('http');
@@ -38,7 +57,10 @@ const NOMIRROR  = process.argv.includes('--nomirror');
 const DESTROY   = process.argv.includes('--destroy');
 const NODROP6   = process.argv.includes('--nodrop6');
 const FIELDWINS = process.argv.includes('--fieldwins');
-const MUT = NOMIRROR || DESTROY || NODROP6 || FIELDWINS;
+const NOREPAINT = process.argv.includes('--norepaint');
+const ROUNDTOTAL = process.argv.includes('--roundtotal');
+const FLATLABEL = process.argv.includes('--flatlabel');
+const MUT = NOMIRROR || DESTROY || NODROP6 || FIELDWINS || NOREPAINT || ROUNDTOTAL || FLATLABEL;
 
 const PORT = 8381;
 const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
@@ -55,6 +77,18 @@ const M_WINS = "      var f = _vehCostField(kind);\n      var typed = f ? _num(a
 
 const A_SLIM6 = "        if (a.vehInsYr)        out.vehInsYr        = a.vehInsYr;";
 const M_SLIM6 = "        /* six typed costs dropped from the allowlist: --nodrop6 */\n        if (false)             out.vehInsYr        = a.vehInsYr;";
+
+/* ── THE THREE CONTROLS FOR THE THREE DEFECTS THE CAPTAIN FOUND ─────────────────────────────────
+   Each reproduces the SHIPPED behaviour he saw, so the leg that now catches it can be proven to
+   bite rather than merely to be present. */
+const A_REPAINT = "            if (/^veh(Ins|Reg|Fuel|Maint|Tolls|Parking)Yr$/.test(field)) {";
+const M_REPAINT = "            if (false && /^veh(Ins|Reg|Fuel|Maint|Tolls|Parking)Yr$/.test(field)) {   /* live update removed: --norepaint */";
+
+const A_ROUND = "        var shown = parts.map(function (x) { return { kind: x.kind, label: x.label, r: Math.round(x.mo) }; });\n        var total = shown.reduce(function (s, x) { return s + x.r; }, 0);";
+const M_ROUND = "        var shown = parts.map(function (x) { return { kind: x.kind, label: x.label, r: Math.round(x.mo) }; });\n        var total = Math.round(_vehAllInMonthly(acc));   /* rounded true total, not the sum of parts: --roundtotal */";
+
+const A_LABEL = "        var cat = acc ? _propUpkeepKind(kind, _sc, _sc === 'vehicle' ? (acc.vehicleType || '') : '') : null;";
+const M_LABEL = "        var cat = acc ? _propUpkeepKind(kind, _sc) : null;   /* type dropped from the label lookup: --flatlabel */";
 
 function mutate(src, a, m, label) {
   const n = src.split(a).length - 1;
@@ -75,6 +109,9 @@ const server = http.createServer((req, res) => {
     if (NOMIRROR)  src = mutate(src, A_MIRROR,  M_MIRROR,  'A_MIRROR');
     if (DESTROY)   src = mutate(src, A_DESTROY, M_DESTROY, 'A_DESTROY');
     if (FIELDWINS) src = mutate(src, A_WINS,    M_WINS,    'A_WINS');
+    if (NOREPAINT) src = mutate(src, A_REPAINT, M_REPAINT, 'A_REPAINT');
+    if (ROUNDTOTAL) src = mutate(src, A_ROUND,  M_ROUND,   'A_ROUND');
+    if (FLATLABEL) src = mutate(src, A_LABEL,  M_LABEL,   'A_LABEL');
     body = Buffer.from(src, 'utf8');
   }
   if (NODROP6 && /studio-blueprint\.js$/.test(rp)) {
@@ -97,7 +134,7 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
   await p.waitForSelector('#studio-layout', { timeout: 20000 });
   await p.waitForTimeout(500);
   console.log('=== ' + LABEL + ' === MODE: ' + (MUT
-    ? [NOMIRROR ? 'nomirror' : '', DESTROY ? 'destroy' : '', NODROP6 ? 'nodrop6' : '', FIELDWINS ? 'fieldwins' : ''].filter(Boolean).join(' ')
+    ? [NOMIRROR ? 'nomirror' : '', DESTROY ? 'destroy' : '', NODROP6 ? 'nodrop6' : '', FIELDWINS ? 'fieldwins' : '', NOREPAINT ? 'norepaint' : '', ROUNDTOTAL ? 'roundtotal' : '', FLATLABEL ? 'flatlabel' : ''].filter(Boolean).join(' ')
     : 'NORMAL'));
 
   /* ══ THE WHOLE ARC IN ONE FIXTURE — type, track, delete — because the CLAIM IS ABOUT TRANSITIONS.
@@ -271,6 +308,72 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
      'A6 ⛔ [SCOPED COPY] a BOAT is never told its costs keep it ON THE ROAD — §11.2 has no boat variant yet');
   ok(A.boat.allIn === 350 && A.car.allIn === 450,
      'A7 [PRESENCE CONTROL] but the boat ARITHMETIC still works (350/mo) — only the SENTENCE waits, not the engine');
+
+  /* ══ L · ⭐⭐ THE THREE DEFECTS THE CAPTAIN'S SMOKE FOUND THAT THIS GATE MISSED ═════════════════
+     Every leg below exists because a green gate shipped a defect a human saw in thirty seconds.
+
+     L1  THE PANEL MUST APPEAR WHILE TYPING. ⛔ THE ORIGINAL A-SCENE CALLED renderInputs() AND
+         openAccountModal() ITSELF BEFORE ASSERTING — SO THE TEST PERFORMED THE REPAINT THE PRODUCT
+         WAS MISSING. "State + re-render proves the RENDERER, never the HANDLER" (§13.72). This leg
+         opens the modal ONCE, then types, then reads the DOM WITHOUT re-opening anything.
+     L2  RECONCILIATION UNDER ROUNDING. The old fixture used 1800/2400/1200 — all divisible by 12 —
+         so it never exercised rounding at all. These figures deliberately do not divide evenly.
+     L3  THE CREATED LEDGER ROW MUST CARRY THE TYPE-AWARE NAME. Picking "Marine insurance" on a boat
+         created a row NAMED "Auto insurance premium" in §03. */
+  const L = await p.evaluate(async () => {
+    window.state.accounts.length = 0;
+    try { window._getUpkeepModel().items.length = 0; } catch (e) {}
+    addInstance('auto');
+    const a = window.state.accounts[0]; a.value = 32000; a.vehicleType = 'Car / Truck / SUV';
+    renderInputs(); await new Promise((r) => setTimeout(r, 300));
+    openAccountModal(a.id); await new Promise((r) => setTimeout(r, 350));
+    const panel = () => document.getElementById('modal-veh-allin-' + a.id);
+    const before = (panel() && panel().innerHTML.trim().length) || 0;
+
+    /* ⛔ TYPE THE WAY THE PRODUCT DOES — the field's own oninput — AND THEN TOUCH NOTHING ELSE.
+       No renderInputs(), no openAccountModal(). If the handler does not paint, this stays empty. */
+    const box = document.querySelector(`#modal-dynamic-content input[oninput*="'vehInsYr'"]`);
+    box.value = '2000';
+    box.dispatchEvent(new Event('input', { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 250));
+    const afterTyping = (panel() && panel().textContent) || '';
+
+    /* awkward annuals: 2000/12=166.67 · 5595/12=466.25 · 530/12=44.17 · 5555/12=462.92 · 550/12=45.83 */
+    [['vehRegYr', 5595], ['vehFuelYr', 530], ['vehTollsYr', 5555], ['vehParkingYr', 550], ['vehMaintYr', 2000]]
+      .forEach(([k, v]) => updateAccField(a.id, k, String(v)));
+    await new Promise((r) => setTimeout(r, 250));
+    const six = (panel() && panel().textContent || '').replace(/\s+/g, ' ');
+
+    // L3 — a BOAT, created from the dropdown
+    window.state.accounts.length = 0;
+    try { window._getUpkeepModel().items.length = 0; } catch (e) {}
+    addInstance('auto');
+    const bt = window.state.accounts[0]; bt.value = 40000; bt.vehicleType = 'Boat';
+    renderInputs(); await new Promise((r) => setTimeout(r, 250));
+    createPropertyUpkeep(bt.id, 'insurance');
+    createPropertyUpkeep(bt.id, 'parking');
+    await new Promise((r) => setTimeout(r, 250));
+    const names = window._getUpkeepModel().items.filter((i) => i.propertyId === bt.id).map((i) => i.name);
+    return { before: before, afterTyping: afterTyping, six: six, boatNames: names };
+  });
+  console.log('  L ' + JSON.stringify({ before: L.before, typed: L.afterTyping.slice(0, 60), boatNames: L.boatNames }));
+
+  ok(L.before === 0, 'L0 [BASELINE] with nothing sourced the all-in container is EMPTY');
+  ok(L.afterTyping.indexOf('All in, this car') >= 0,
+     'L1 ⭐⭐ [HANDLER] the panel APPEARS from TYPING ALONE — no repaint, no re-open. The defect the Captain found.');
+  /* L2 — reconcile under rounding, parsed off the RENDERED text. */
+  const m2 = L.six.match(/Of that \$([\d,]+): (.+?)\./) || [];
+  const head2 = Number(String(m2[1] || '').replace(/,/g, ''));
+  const sum2 = (String(m2[2] || '').match(/\$[\d,]+/g) || []).reduce((s, x) => s + Number(x.replace(/[$,]/g, '')), 0);
+  const headline = Number((L.six.match(/about \$([\d,]+)\/mo/) || [])[1]?.replace(/,/g, '') || 0);
+  console.log('  L2 headline=' + headline + ' ofThat=' + head2 + ' partsSum=' + sum2);
+  ok(head2 > 0 && head2 === sum2 && headline === sum2,
+     'L2 ⭐⭐ [§11.3 UNDER ROUNDING] six figures that do NOT divide by 12 still reconcile exactly — '
+     + headline + ' / ' + head2 + ' / ' + sum2);
+  ok(L.boatNames.indexOf('Marine insurance') >= 0 && L.boatNames.indexOf('Slip / storage fee') >= 0,
+     'L3 ⭐ [CREATE LABEL] a BOAT creates ledger rows NAMED for a boat — ' + JSON.stringify(L.boatNames));
+  ok(L.boatNames.indexOf('Auto insurance premium') < 0,
+     'L4 ⛔ [INVARIANT] and the car name reaches §03 nowhere — the defect, asserted absent');
 
   await b.close(); server.close();
   console.log('SCORE ' + pass + '/' + (pass + fail) + (fail ? '  RED' : '  GREEN'));

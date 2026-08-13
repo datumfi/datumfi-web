@@ -8467,7 +8467,11 @@
                           + _vehCostBlockHTML(id, acc) + '</div>';
                     /* §11.2 — the all-in beat reads the SAME resolver the boxes above write into, so
                        the number under the fields is always the number in the fields. Display-only. */
-                    html += _vehAllInHTML(id, acc);
+                            /* ⛔ A STABLE CONTAINER, ALWAYS RENDERED, EVEN WHEN EMPTY — the same shape as
+                       `modal-real-monthly-${id}` and `modal-payoff-intel-${id}` on the Moat. It is
+                       what lets the panel APPEAR and VANISH live while the user types, without
+                       repainting the modal and stealing focus mid-keystroke. */
+                    html += '<div id="modal-veh-allin-' + id + '">' + _vehAllInHTML(id, acc) + '</div>';
                 }
             }
         }
@@ -8837,6 +8841,25 @@
              * field. openAccountModal is included for the same reason propPurpose includes it: §33.2
              * -.4 will reveal type-specific fields, and a reveal that never repaints is invisible. */
             if(field === 'vehicleType' || field === 'ownershipStatus') { renderInputs(); openAccountModal(id); }
+            /* ⛔⛔ §19.12, AND I WALKED STRAIGHT INTO THE TRAP MY OWN HANDOVER NAMED. The note read:
+             * "ANY new conditional field MUST be added there or it stores perfectly and never
+             * appears." The six typed running costs are exactly that — the all-in panel RENDERS ONLY
+             * when at least one is sourced — so typing into them stored the value and the panel never
+             * came. The Captain found it: he could not make the box appear until he happened to add a
+             * ledger row, because THAT path calls openAccountModal and repaints.
+             *
+             * ⭐⭐ AND MY GATE PASSED, WHICH IS THE REAL LESSON. The fixture called renderInputs() and
+             * openAccountModal() itself before asserting — SO THE TEST PERFORMED THE REPAINT THE
+             * PRODUCT WAS MISSING. "State plus re-render proves the RENDERER, never the HANDLER"
+             * (§13.72), and this is that law collecting a second time on the same file.
+             *
+             * ⛔ A TARGETED innerHTML SWAP, NOT openAccountModal(). These are `oninput` on text
+             * fields: a full modal repaint on every keystroke would destroy focus and the caret
+             * mid-number. Same technique the carry-total live-update uses a few lines below. */
+            if (/^veh(Ins|Reg|Fuel|Maint|Tolls|Parking)Yr$/.test(field)) {
+                var _av = document.getElementById('modal-veh-allin-' + id);
+                if (_av) _av.innerHTML = _vehAllInHTML(id, acc);
+            }
             if(field === 'linkedToAccount' || field === 'rollFlavor') openAccountModal(id);   // The Conduit — refresh count-once flag (§7.5) + Layer-E tax fork (§9) live
 
             // Live DOM update for limits calculation — same §402(g)-class test as the modal (401k/403b/457b)
@@ -9215,7 +9238,18 @@
            house — the dropdown would never offer it, but the guard is the last line of defence and a
            guard that trusts the UI is not a guard. Same refusal shape as the existing one: an
            unknown kind returns WITHOUT WRITING ANYTHING rather than guessing an owner (bank A346). */
-        var cat = acc ? _propUpkeepKind(kind, _upkScopeFor(getBaseType(acc.baseId))) : null;
+        /* ⚠️ THE VEHICLE TYPE IS PASSED, AND LEAVING IT OUT WAS A LIVE DEFECT THE CAPTAIN FOUND:
+           picking "Marine insurance" on a BOAT created a ledger row NAMED "Auto insurance premium",
+           because the label resolved without the type override. The room looked right (it resolves
+           the label live) while §03's ledger — the surface that owns the dollar — said the wrong
+           thing. TWO SURFACES, ONE ROW, DIFFERENT WORDS.
+           ⚠️ AND THE HONEST LIMIT, RECORDED RATHER THAN HIDDEN: `name` is a SNAPSHOT taken here and
+           freely editable in §03 (which is why upkeepKind exists as the stable key at all). So a row
+           created as a car and later switched to a boat keeps its old NAME in §03, while the room
+           shows the correct one. Re-labelling stored rows on a type switch would overwrite names the
+           user may have edited themselves — a worse trade, and not one to make without a ruling. */
+        var _sc = acc ? _upkScopeFor(getBaseType(acc.baseId)) : 'property';
+        var cat = acc ? _propUpkeepKind(kind, _sc, _sc === 'vehicle' ? (acc.vehicleType || '') : '') : null;
         if (!acc || !cat) return;
         // One line per kind per property: picking Electricity twice reopens the one that exists
         // rather than quietly creating a second bill for the same meter.
@@ -10577,9 +10611,24 @@
         if (!_vehAllInSpeaks(acc)) return '';
         var parts = _vehAllInParts(acc);
         if (!parts.length) return '';              // FIRES-WHEN: at least one carrying cost sourced
-        var total = _vehAllInMonthly(acc);
         var noun = _vehNoun(acc);
         var mo = function (v) { return '$' + Math.round(v).toLocaleString('en-US'); };
+        /* ⛔⛔ THE HEADLINE IS THE SUM OF THE *DISPLAYED* PARTS, NOT THE ROUNDED TRUE TOTAL — AND THIS
+         * IS A DEFECT THE CAPTAIN CAUGHT BY ADDING UP HIS OWN SCREEN. Rounding each part and rounding
+         * the total independently do not agree: his six parts displayed 167+200+466+44+463+46 = 1386
+         * under a headline that read $1,385. ⭐ ONE DOLLAR IS ENOUGH — §11.3's rule is absolute ("THE
+         * PARTS MUST SUM TO THE HEADLINE — a breakdown that doesn't reconcile is worse than none"),
+         * because a user who checks our arithmetic and finds it off by a dollar has no way to know
+         * the error is cosmetic, and every other number on the screen just became suspect.
+         * ⚠️ MY GATE PASSED THIS. The fixture used 1800 / 2400 / 1200 — every one divisible by 12 —
+         * so the reconcile leg never once exercised rounding. A FIXTURE THAT CANNOT PRODUCE THE
+         * FAILING STATE IS NOT A CONTROL, and "the numbers I happened to choose" is exactly how a
+         * fixture avoids it. The gate now uses figures that do not divide evenly.
+         * ⭐ SUMMING THE DISPLAYED PARTS MAKES RECONCILIATION TRUE BY CONSTRUCTION rather than true
+         * by luck. The headline can now differ from the exact monthly by a few cents' worth of
+         * rounding — the deliberate trade, and the one §11.3 already chose. */
+        var shown = parts.map(function (x) { return { kind: x.kind, label: x.label, r: Math.round(x.mo) }; });
+        var total = shown.reduce(function (s, x) { return s + x.r; }, 0);
         /* ⭐⭐ THE BREAKDOWN IS BUILT FROM THE CATALOGUE, NOT FROM §11.3's HAND-LISTED FOUR, AND THAT
            IS WHAT MAKES IT RECONCILE. §11.3 names insurance · registration · fuel · upkeep — it was
            authored before §45.4 ruled the set is SIX, so wiring it literally would print four
@@ -10587,8 +10636,8 @@
            MUST SUM TO THE HEADLINE — a breakdown that doesn't reconcile is worse than none."
            Every label here is the authored catalogue label, so nothing is invented; only the LIST is
            derived, the same move that made the dropdown groups catalogue-driven. */
-        var items = parts.map(function (x) {
-            return mo(x.mo) + ' ' + x.label.toLowerCase() + (x.kind === 'maintenance' ? ' (estimated)' : '');
+        var items = shown.map(function (x) {
+            return mo(x.r) + ' ' + x.label.toLowerCase() + (x.kind === 'maintenance' ? ' (estimated)' : '');
         }).join(' &middot; ');
         return '<div style="margin-top:14px; padding:14px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:4px;">' +
             '<div style="color:var(--teal-mid); font-weight:bold; font-size:13px; margin-bottom:8px;">💰 True all-in cost</div>' +
