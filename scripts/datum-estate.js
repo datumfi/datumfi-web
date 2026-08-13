@@ -141,9 +141,18 @@
     /* AUTHORED VERBATIM (L47), `Auto Loan Copy Bank` §3c.1. Ranked below the two secured-property
        leads for the same reason `_lienRankE` ranks them first: on a mixed asset the senior lien is
        the one the sentence should name. */
+    /* ⚠️ 'auto loan' -> 'vehicle loan' ON THE CAPTAIN'S DIRECT RULING, 2026-08-13, AND FLAGGED FOR
+       BANK SYNC RATHER THAN DONE QUIETLY. The room this sentence names was renamed Auto Loan ->
+       Vehicle Loan in the same smoke; his words: "having the room say vehicle while the sentence
+       says auto loan no longer makes sense." He is sole GO on naming, so this is HIS NAME being
+       applied inside an authored sentence — the same swap already ratified for property -> vehicle
+       at the link label — NOT the Wirer rewriting voice.
+       ⛔ THE BANK IS NOW BEHIND THE PRODUCT ON THIS LINE. `Auto Loan Copy Bank` §3c.1 still reads
+       "Your auto loan is linked here". The Architect owns reconciling it; until then the bank and
+       the live string DISAGREE, and that is recorded here so nobody "restores" the bank version. */
     var lead = hasM ? 'Your mortgage is linked here'
              : (hasH ? 'Your HELOC is linked here'
-             : (hasA ? 'Your auto loan is linked here' : 'A linked liability sits here'));
+             : (hasA ? 'Your vehicle loan is linked here' : 'A linked liability sits here'));
     var out = '🔗 ' + lead + ' — its balance is subtracted from this ' + (assetNoun || 'asset') + '’s value to show your true equity.';
     if (hasM && hasH) out += ' Your HELOC is linked here too.';
     return out;

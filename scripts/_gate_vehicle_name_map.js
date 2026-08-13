@@ -46,7 +46,8 @@ const NOSTALE     = process.argv.includes('--nostaleguard');
 const BROADSCOPE  = process.argv.includes('--broadscope');
 const NOPERSIST   = process.argv.includes('--nopersist');
 const CRAMPED     = process.argv.includes('--crampedchooser');
-const MUT = RENAMEALL || NOMAP || BLANKDRIFTS || NOSTALE || BROADSCOPE || NOPERSIST || CRAMPED;
+const FIXEDWIDTH  = process.argv.includes('--fixedwidth');
+const MUT = RENAMEALL || NOMAP || BLANKDRIFTS || NOSTALE || BROADSCOPE || NOPERSIST || CRAMPED || FIXEDWIDTH;
 
 const PORT = 8376;
 const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
@@ -65,6 +66,10 @@ const A_PERSIST = "        if (a.vehicleType)     out.vehicleType     = a.vehicl
    once Cancel leaves the row), so the control squeezes the row itself — the actual failure shape. */
 const A_ROW = "            + '<div style=\"display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-start; align-items:center;\">' + btns + '</div>'";
 const M_ROW = "            + '<div style=\"display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; align-items:center; max-width:240px;\">' + btns + '</div>'   /* --crampedchooser */";
+/* --fixedwidth restores the exact regression the Captain saw: a hard width that makes the cap win
+   on every viewport, so a two-option chooser is as wide as a three-option one. */
+const A_CARDW = "max-width:min(520px, 92vw); box-shadow:0 24px 64px rgba(0,0,0,0.85);";
+const M_CARDW = "max-width:520px; width:92vw; box-shadow:0 24px 64px rgba(0,0,0,0.85);   /* --fixedwidth */";
 const M_PERSIST = "        /* vehicleType dropped from the save allowlist: --nopersist */";
 const A_BRANCH = "        if (acc && /^auto(_primary|_co)?$/.test(String(base && base.id))) return VEHICLE_ROOM_NAME[acc.vehicleType] || shipped;";
 const M_NOMAP  = "        /* §25.1 branch removed: --nomap */";
@@ -93,6 +98,7 @@ const server = http.createServer((req, res) => {
     if (NOSTALE)     src = mutate(src, A_INVAL,  M_INVAL,  'A_INVAL');
     if (BROADSCOPE)  src = mutate(src, A_SCOPE,  M_SCOPE,  'A_SCOPE');
     if (CRAMPED)     src = mutate(src, A_ROW,    M_ROW,    'A_ROW');
+    if (FIXEDWIDTH)  src = mutate(src, A_CARDW,  M_CARDW,  'A_CARDW');
     body = Buffer.from(src, 'utf8');
   }
   if (NOPERSIST && /studio-blueprint\.js$/.test(rp)) {
@@ -117,7 +123,7 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
 
   console.log('=== ' + LABEL + ' === MODE: ' + (MUT
     ? [RENAMEALL ? 'renameall' : '', NOMAP ? 'nomap' : '', BLANKDRIFTS ? 'blankdrifts' : '',
-       NOSTALE ? 'nostaleguard' : '', BROADSCOPE ? 'broadscope' : '', NOPERSIST ? 'nopersist' : '', CRAMPED ? 'crampedchooser' : ''].filter(Boolean).join(' ')
+       NOSTALE ? 'nostaleguard' : '', BROADSCOPE ? 'broadscope' : '', NOPERSIST ? 'nopersist' : '', CRAMPED ? 'crampedchooser' : '', FIXEDWIDTH ? 'fixedwidth' : ''].filter(Boolean).join(' ')
     : 'NORMAL'));
 
   /* Builds ONE vehicle of the given type and reads the tile the user actually sees. `lien` attaches
@@ -320,6 +326,40 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
   /* The noun, in the third place it was hardcoded. */
   ok(/secured by this vehicle\?/.test(T.prompt),
      'T3 [COPY] the chooser asks about a VEHICLE, not a property — "' + T.prompt.slice(0, 90) + '"');
+
+  /* ⭐ T4 · THE CARD SIZES TO ITS CONTENT — ASSERTED AS A COMPARISON, NEVER AS A NUMBER.
+     Captain smoke: the PROPERTY chooser "is much larger than it needs to be … I feel like it was
+     smaller a moment ago". He was right and it was mine: widening the cap to 520 for the vehicle's
+     three buttons, I also pinned `width:92vw`, so on any desktop the cap won and EVERY chooser
+     became exactly 520px.
+     ⛔ PINNING "the property card is 356px" WOULD BE THE SAME MISTAKE IN A GATE — a number nobody
+     can maintain, red on the first font tweak. So this asserts the RELATIONSHIP: two options must
+     render a NARROWER card than three. That is true of any content-fitting layout and false of
+     every fixed width, which is exactly the distinction that broke. */
+  const W = await p.evaluate(async () => {
+    const measure = async (baseId) => {
+      window.state.accounts.length = 0;
+      addInstance(baseId);
+      const a = window.state.accounts[0]; a.value = 100000;
+      renderInputs(); updateSVGs();
+      await new Promise((r) => setTimeout(r, 600));
+      window._draftLiabilityChooser(a.id);
+      await new Promise((r) => setTimeout(r, 300));
+      const ov = document.getElementById('type-chooser-overlay');
+      const card = ov && ov.firstElementChild;
+      const n = ov ? ov.querySelectorAll('button[data-base]').length : 0;
+      const w = card ? Math.round(card.getBoundingClientRect().width) : null;
+      if (ov) ov.style.display = 'none';
+      return { types: n, width: w };
+    };
+    return { prop: await measure('property'), veh: await measure('auto') };
+  });
+  console.log('  W ' + JSON.stringify(W));
+  ok(W.prop.types === 2 && W.veh.types === 3,
+     'T4 [CONTROL] the two rooms genuinely offer different counts (property ' + W.prop.types + ', vehicle ' + W.veh.types + ')');
+  ok(W.prop.width !== null && W.veh.width !== null && W.prop.width < W.veh.width,
+     'T4 [LAYOUT] the property card is NARROWER than the vehicle card — the chooser fits its content ' +
+     'rather than every case paying for the widest (property ' + W.prop.width + 'px vs vehicle ' + W.veh.width + 'px)');
 
   /* ══ SCENE P · THE CLERK ARCHIVE MIRROR — AND MY FIRST DIAGNOSIS OF IT WAS WRONG ════════════════
      ⚠️ I REPORTED THIS AS "vehicleType IS NOT PERSISTED — SILENT DATA LOSS" AND THAT WAS FALSE FOR

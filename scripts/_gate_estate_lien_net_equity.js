@@ -190,10 +190,13 @@ const ok = (cond, msg) => { if (cond) { pass++; console.log('PASS ' + msg); } el
        because that is what the renderer said — mortgage and HELOC had named leads and the auto loan
        did not. Rendering that fallback for the first time in this repo's history EXPOSED IT AS A
        MISSING SENTENCE, the Architect authored one within hours, and this expectation moved.
-       ⛔ THE RED WAS PREDICTED BEFORE IT FIRED, and it was a COPY CHANGE, never a defect. */
+       ⛔ THE RED WAS PREDICTED BEFORE IT FIRED, and it was a COPY CHANGE, never a defect.
+       ⭐ AND IT HAS MOVED A SECOND TIME, FOR THE SAME REASON: the Captain renamed the room Auto Loan
+       -> Vehicle Loan (2026-08-13) and ruled the sentence must follow it. Copy change, not a defect,
+       predicted again. ⚠️ THE BANK STILL SAYS "auto loan" — the Architect owes the sync. */
     const tip = t.titles.join(' | ');
-    ok(/Your auto loan is linked here/.test(tip),
-       'A1 [COPY] the AUTHORED auto-loan lead is rendered (§3c.1) — "' + tip.slice(0, 70) + '"');
+    ok(/Your vehicle loan is linked here/.test(tip),
+       'A1 [COPY] the AUTHORED vehicle-loan lead is rendered (§3c.1, Captain-renamed) — "' + tip.slice(0, 70) + '"');
     ok(!/mortgage is linked here|HELOC is linked here|A linked liability sits here/i.test(tip),
        'A1 [COPY] and it names NEITHER a mortgage, a HELOC, nor the generic fallback — a wrong lead is a lie about the debt');
   }
@@ -270,8 +273,13 @@ const ok = (cond, msg) => { if (cond) { pass++; console.log('PASS ' + msg); } el
        'A5 [MONEY] the merge is family-agnostic — got "' + t.valStr + '", want "$21k" ($30k car, $9k personal loan)');
     ok(/A linked liability sits here/.test(tip5),
        'A5 [COPY] the GENERIC fallback is still REACHABLE and still rendered — "' + tip5.slice(0, 60) + '"');
-    ok(!/auto loan is linked here/i.test(tip5),
-       'A5 [COPY] and it does NOT borrow the auto-loan lead — the named lead belongs to the named family');
+    /* ⚠️ RE-POINTED WITH THE RENAME. A NEGATIVE ASSERTION PINNED TO A STRING THAT NO LONGER EXISTS
+       PASSES BY VACUUM — the second time in two commits a rename threatened exactly that (see
+       _gate_grounds_winners:1722). The A5 leg directly above is the presence backstop that keeps
+       this one honest either way, but the leg must still name the string the product actually
+       renders or it is testing nothing. */
+    ok(!/vehicle loan is linked here/i.test(tip5),
+       'A5 [COPY] and it does NOT borrow the vehicle-loan lead — the named lead belongs to the named family');
   }
 
   ok(pageErrors.length === 0, 'R1 no page errors across every scenario' +
