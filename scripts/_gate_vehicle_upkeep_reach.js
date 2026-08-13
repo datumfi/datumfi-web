@@ -251,8 +251,13 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
   ok(BOAT.indexOf('What you pay to insure it, per year.') < 0 && BOAT.indexOf('Parking or storage, if you pay for it.') < 0,
      'H6 ⛔ [INVARIANT] and the CAR hovers are ABSENT on a boat — a coat swapped, not a coat added');
   const RV = await addAll('RV or Camper');
-  ok(RV.indexOf('Where the RV sits between trips') >= 0,
-     'H7 [§33.6 VERBATIM] an RV gets its own storage hover');
+  /* ⏳ SUPERSEDED BY §49.4, UPDATED DELIBERATELY. The RV storage hover was §33.6's "Where the RV sits
+     between trips…", which described the field without naming what an RV owner actually pays into
+     it. §49.4 names site fees and hook-ups outright, because A CORRECTLY-LABELLED FIELD WITH A
+     CAR-NATIVE HOVER IS STILL A FIELD THE RV OWNER SKIPS — and it is also where "RV site fees" live,
+     rather than in a seventh catalogue kind. */
+  ok(RV.indexOf('Site fees, seasonal storage and hook-ups') >= 0,
+     'H7 [§49.4 VERBATIM] an RV storage hover names site fees and hook-ups — the costs, not the field');
   ok(RV.indexOf('What you pay to insure it, per year.') >= 0,
      'H8 [INVARIANT] but an RV keeps the standard insurance hover — only the BOAT swaps that one');
 

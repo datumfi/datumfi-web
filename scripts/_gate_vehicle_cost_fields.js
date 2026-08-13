@@ -87,8 +87,8 @@ const M_SLIM6 = "        /* six typed costs dropped from the allowlist: --nodrop
 const A_REPAINT = "            if (/^veh(Ins|Reg|Fuel|Maint|Tolls|Parking)Yr$/.test(field)) {";
 const M_REPAINT = "            if (false && /^veh(Ins|Reg|Fuel|Maint|Tolls|Parking)Yr$/.test(field)) {   /* live update removed: --norepaint */";
 
-const A_ROUND = "        var shown = parts.map(function (x) { return { kind: x.kind, label: x.label, r: Math.round(x.mo) }; });\n        var total = shown.reduce(function (s, x) { return s + x.r; }, 0);";
-const M_ROUND = "        var shown = parts.map(function (x) { return { kind: x.kind, label: x.label, r: Math.round(x.mo) }; });\n        var total = Math.round(_vehAllInMonthly(acc));   /* rounded true total, not the sum of parts: --roundtotal */";
+const A_ROUND = "        var total = shown.reduce(function (s, x) { return s + x.r; }, 0);";
+const M_ROUND = "        var total = Math.round(_vehAllInMonthly(acc));   /* rounded true total, not the sum of parts: --roundtotal */";
 
 /* --carnative: the pre-§48 sentence, hard-coded car-native. Reproduces exactly what shipped for one
    commit — the state in which a boat owner was told their costs keep the boat ON THE ROAD. */
@@ -423,8 +423,22 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
   ok(has('blank', 'to keep running') && !has('blank', 'on the road'),
      'W3 [§48.1] a blank type falls back to RUNNING — a real clause, not silence, and true of all five');
   /* §20.2 — the authored cost-noun list, per type. */
-  ok(has('boat', 'the slip, insurance, winterising and upkeep') && has('rv', 'storage, insurance, registration and upkeep'),
-     'W4 [§20.2] the sentence names the costs THAT owner actually pays');
+  /* ⏳ SUPERSEDED BY §49.2, UPDATED DELIBERATELY. The boat entry read '...insurance, WINTERISING and
+     upkeep' — a noun with no line behind it. Winterising moved into the maintenance hover; the
+     sentence now names 'fuel', which is true of a boat AND recordable today, so the list lost
+     nothing. ⛔ THE RV ENTRY IS UNCHANGED AND MUST STAY SO — it was never wrong, and W4 asserts both
+     halves precisely so a future edit cannot "fix" the row that was already correct. */
+  /* ⚠️ THE FIRST CUT ASSERTED 'winterising' WAS ABSENT FROM THE WHOLE MODAL — AND IT RED, CORRECTLY.
+     §49 did not delete the word, it PROMOTED it: gone from the SENTENCE, present in the maintenance
+     HOVER. A whole-surface absence check could not tell those apart, exactly as `indexOf('VIN')`
+     could not tell a label from the word SAVINGS. ⭐ SO THE LEG NOW ASSERTS THE MOVE ITSELF —
+     absent from the cost list, PRESENT in the hover — which is a stronger claim than either half. */
+  ok(has('boat', 'the slip, insurance, fuel and upkeep') && !has('boat', 'winterising and upkeep'),
+     'W4a [§49.2] the boat cost SENTENCE names only costs it can record');
+  ok(has('boat', 'Haul-out, winterising, shrink-wrap'),
+     'W4b ⭐ [§49.3] and winterising was PROMOTED, not deleted — it is in the upkeep hover, where it tells you what goes in the box');
+  ok(has('rv', 'storage, insurance, registration and upkeep'),
+     'W4c ⛔ [INVARIANT] the RV row is UNTOUCHED — it was never wrong, and fixing a correct row is how a fix becomes a regression');
   /* §48.3 — the tail neither of us caught first time. */
   ok(has('boat', 'for as long as you keep a boat') && !has('boat', 'keep a car'),
      'W5a [§48.3] the TAIL says "a boat" too — the indefinite article was the point, the noun was wrong');
@@ -496,14 +510,40 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
      + Math.round(Z.withoutSlip) + ' -> ' + Math.round(Z.withSlip) + ')');
   ok(/\$600 the slip/.test(Z.flat),
      'Z4 [§48.5] and it appears in the breakdown AS THE SLIP, not as parking');
-  /* ⛔ AND THE HONEST GAP, ASSERTED SO IT CANNOT BE FORGOTTEN: the boat's SENTENCE names winterising
-     as something its owner pays, and there is NO winterisation cost row to record it in. §38.6 lists
-     it as a boat cost; the catalogue has six kinds and that is not one of them. A SENTENCE THAT NAMES
-     A CATEGORY THE ROOM CANNOT CAPTURE IS THE SAME SHAPE AS A HOVER PROMISING AN UNBUILT FEATURE.
-     ⏳ THIS LEG IS A CHECKPOINT: when a winterisation kind is authored and added, INVERT IT. */
-  ok(!/winterising/.test(Z.rowName || '') && (await p.evaluate(() => _upkForScope('vehicle', 'Boat').map((c) => c.kind)))
-       .indexOf('winterisation') < 0,
-     'Z5 ⏳ [KNOWN GAP, PINNED] there is NO winterisation cost kind — the boat sentence names it, the catalogue cannot record it. INVERT when §38.6 authors the row.');
+  /* ══ ⭐⭐ Z5 RETIRED INTO AN INVARIANT (§49.6) — THE BEST OUTCOME A CHECKPOINT CAN HAVE ══════════
+     Z5 asserted there was no `winterisation` kind, and pinned the gap that the boat's SENTENCE named
+     a cost the room could not record. It did NOT invert, because no row was authored: the Architect
+     ruled winterising IS maintenance wearing a season, and promoted it into the maintenance hover.
+     ⛔ SO THE CHECKPOINT IS REPLACED BY THE RULE IT WAS A SYMPTOM OF (§49.5):
+        EVERY NOUN IN AN AUTHORED COST LIST MUST RESOLVE TO A LINE THE USER CAN RECORD.
+     ⭐ Z5 WATCHED ONE WORD. THIS WATCHES THE RULE — and it would have caught "winterising" the day
+     it was written, on every type at once, without anyone knowing to look for it.
+     🔑 A PROSE COST LIST IS A PROMISE OF FIELDS WHETHER OR NOT IT WAS MEANT AS ONE, AND THE BETTER
+     IT IS WRITTEN THE MORE CONCRETELY IT PROMISES. */
+  const Z5 = await p.evaluate(() => {
+    const types = ['Car / Truck / SUV', 'Boat', 'RV or Camper', 'Motorcycle', ''];
+    const out = {};
+    types.forEach((t) => {
+      const acc = { vehicleType: t };
+      /* What the room can actually RECORD: the six kinds' own nouns for this type. `(estimated)` is
+         a qualifier on the upkeep line, not a separate line, so it is stripped before comparing. */
+      const recordable = _upkForScope('vehicle', t)
+        .map((c) => (_vehShortNoun(c.kind, acc) || c.label).replace(/ \(estimated\)$/, '').toLowerCase());
+      /* What the SENTENCE claims the owner pays. */
+      const claimed = _vehCarryNounList(acc)
+        .replace(/ and /g, ', ').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+      out[t || '(blank)'] = { claimed: claimed, unrecordable: claimed.filter((n) => recordable.indexOf(n) < 0) };
+    });
+    return out;
+  });
+  console.log('  Z5 ' + JSON.stringify(Z5));
+  const orphans = Object.keys(Z5).filter((t) => Z5[t].unrecordable.length > 0);
+  ok(orphans.length === 0,
+     'Z5 ⭐⭐ [§49.5 · THE RULE, NOT THE WORD] every noun in EVERY type\'s cost sentence resolves to a line the user can record — orphans: '
+     + JSON.stringify(orphans.map((t) => t + ':' + JSON.stringify(Z5[t].unrecordable))));
+  /* ⛔ AND THE PRESENCE TWIN: an empty claim list would satisfy an "no orphans" leg perfectly. */
+  ok(Object.keys(Z5).every((t) => Z5[t].claimed.length >= 4),
+     'Z6 [PRESENCE CONTROL] and every type actually names at least four costs — Z5 is not passing on an empty list');
 
   await b.close(); server.close();
   console.log('SCORE ' + pass + '/' + (pass + fail) + (fail ? '  RED' : '  GREEN'));

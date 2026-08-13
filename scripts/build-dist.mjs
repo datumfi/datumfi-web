@@ -23,7 +23,7 @@ const DROP_RE = [/^\.claude\//, /^\.wrangler\//, /^workers\//, /^functions\//, /
 
 // SACRED HOSTS — must ship byte-identical (LF + content). Build ABORTS on drift.
 const SACRED = {
-  'studio.html': '81fd6e62c6517f5ad5b5580d8b4f540e',   // §48 — the all-in speaks every type: kept in the water, the slip, storage, and short nouns that scan (2026-08-13)
+  'studio.html': '8d34322c2423bdcc037746d619261d30',   // §49 — every noun in a cost sentence resolves to a line the user can record (2026-08-13)
   'sketch.html': '28258a76686008aebe839d59af39500f',   // shape button reverted to the Captain's "Save Shape" / "✓ Saved" (2026-08-01)
   /* §47.3 — SACRED as of 2026-08-13, declared in CLAUDE.md IN THIS SAME COMMIT. The two lists are
      reconciled by this build in BOTH directions, so a host added to one and not the other STOPS
@@ -31,7 +31,7 @@ const SACRED = {
      now. ⛔ A FILE WHOSE ABSENCE FAILS SILENTLY AND CHANGES MONEY ON SCREEN IS THE DEFINITION OF
      SACRED: the leak-guard already caught this one referenced-but-untracked, and the typeof guard
      in _propUpkeepCatalogue would have degraded every property's upkeep window without an error. */
-  'scripts/studio-upkeep.js': 'b329c5a14ab1522a44980076f7718f85',   // the Operating Upkeep catalogue — one catalogue, two scopes (2026-08-13)
+  'scripts/studio-upkeep.js': '2b62363a46ee99f85965a698a5d2502f',   // §49.3/§49.4 — winterising promoted into the upkeep hover; RV site fees named in the storage hover (2026-08-13)
   'scripts/studio-blueprint.js': '5d26366432a57de46e927738fa072fbe',   // the six typed running costs ride the slim Clerk allowlist in the same commit as the fields (2026-08-13)
   // MISS-5 pre-work guard (2026-07-25). nav.js is a Sacred Host in CLAUDE.md but was absent from THIS map,
   // so a bad edit failed no build. It owns the centralized cross-device restore every page depends on

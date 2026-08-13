@@ -86,7 +86,13 @@ function _upkCatalogueRaw() { return [
        in the PROPERTY scope only, so the property row is untouched and the carrying total cannot
        move. The render diff is what proves that, not this comment. */
     byScope: { vehicle: { label: 'Routine maintenance and repairs', group: 'vehicle_running',
-      hover: 'Oil, tyres, brakes, and the things that break. An estimate is fine &mdash; most people underestimate this one.' } } },
+      hover: 'Oil, tyres, brakes, and the things that break. An estimate is fine &mdash; most people underestimate this one.' } },
+    /* ⭐⭐ §49.3 — WHERE WINTERISING WENT. It used to be a noun in the boat's cost SENTENCE, which
+       implied a field beside upkeep; it is upkeep, seasonal. Here it earns its place: the hover is
+       the surface that tells an owner WHAT BELONGS IN THE BOX, and a boat's off-season is exactly
+       the cost people forget. The "most people underestimate this one" beat is kept from §47.1 (4)
+       and re-pointed at the thing a boat owner actually underestimates. */
+    byType: { 'Boat': { hover: 'Haul-out, winterising, shrink-wrap, bottom paint and engine service. Most people underestimate this one &mdash; a boat&rsquo;s off-season costs money even when nobody is aboard.' } } },
 
   /* ── VEHICLE (§45.4 — the SIX, the union of Garage §4 and Property §4.6-4.10) ─────────────────── */
   /* ⭐ §47.1 HOVERS, VERBATIM. Two of the six are TYPE-AWARE INSIDE the vehicle scope — `byType` is a
@@ -124,8 +130,12 @@ function _upkCatalogueRaw() { return [
     byType: {
       'Boat': { label: 'Slip / storage fee',
         hover: 'What it costs to keep the boat where it lives &mdash; a marina slip, dry storage, or a yard. For most owners this is the single biggest yearly cost, and it runs whether you go out or not.' },
+      /* §49.4 — RV SITE FEES ARE THIS LINE, NOT A SEVENTH KIND. §45.4 chose `parking` for the six
+         precisely because it survives a type switch into a slip or a pad; the answer to "where do
+         site fees go?" was already inside that ruling. The hover now says so out loud, because
+         A CORRECTLY-LABELLED FIELD WITH A CAR-NATIVE HOVER IS STILL A FIELD THE RV OWNER SKIPS. */
       'RV or Camper': { label: 'Storage when not in use',
-        hover: 'Where the RV sits between trips, and what that costs. Storage runs all year even when the RV doesn&rsquo;t.' }
+        hover: 'Site fees, seasonal storage and hook-ups &mdash; the ground your RV sits on when you are not in it.' }
     } }
 ]; }
 

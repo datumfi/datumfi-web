@@ -10628,8 +10628,21 @@
        that reports what THIS user recorded. Two different jobs, and conflating them would make the
        sentence lie about a boat that has not filled anything in yet. */
     function _vehCarryNounList(acc) {
+        /* ⭐⭐ §49.2 — THE BOAT ENTRY WAS 'the slip, insurance, WINTERISING and upkeep'. Winterising is
+         * not a category beside upkeep; it IS upkeep, wearing a season — a haul-out, a shrink-wrap
+         * and an oil change are one budget line. Listing it separately implied a field that did not
+         * exist and never should. It is not deleted, it is PROMOTED into the maintenance hover
+         * (§49.3), where a noun stops announcing that a cost exists and starts telling you what to
+         * put in the box.
+         * ⛔ §49.5, THE LAW THIS PRODUCED: EVERY NOUN IN AN AUTHORED COST LIST MUST RESOLVE TO A LINE
+         * THE USER CAN RECORD. Anything finer than a line belongs in that line's HOVER, never in the
+         * sentence — a prose list is a promise of fields whether or not it was meant as one, and the
+         * MORE CONVINCING THE LIST, THE MORE CONCRETELY IT PROMISES. The gate now checks the rule
+         * rather than the one word: every noun here must map to one of the six kinds.
+         * ⛔ CAR / RV / MOTORCYCLE ARE UNTOUCHED — they were never wrong, and editing a row that is
+         * already correct is how a fix becomes a regression. */
         return ({ 'Car / Truck / SUV': 'insurance, registration, fuel, upkeep',
-                  'Boat': 'the slip, insurance, winterising and upkeep',
+                  'Boat': 'the slip, insurance, fuel and upkeep',
                   'RV or Camper': 'storage, insurance, registration and upkeep',
                   'Motorcycle': 'insurance, registration, fuel and upkeep'
                 })[(acc && acc.vehicleType) || ''] || 'insurance, registration, fuel, upkeep';
