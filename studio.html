@@ -1624,6 +1624,13 @@
   .swf-was { font-family:var(--font-mono); font-size:9px; color:rgba(255,255,255,0.34); letter-spacing:0.04em; margin-right:6px; white-space:nowrap; }
   .swf-was:empty { display:none; }
   </style>
+  <!-- ⛔ SYNCHRONOUS, IN <head>, AND NOT `defer` LIKE EVERY OTHER MODULE AT THE FOOT OF THIS FILE.
+       The Operating Upkeep catalogue (§45 engine reach) is reached from renderInputs(), which runs at
+       PARSE TIME inside the inline block at ~14229 — long before any deferred script has executed. A
+       deferred part would not exist yet, and the resulting ReferenceError would take down the whole
+       page rather than one modal. It is a small, pure, dependency-free data module, which is what
+       makes head-loading it cheap enough to be the right answer. -->
+  <script src="/scripts/studio-upkeep.js"></script>
 </head>
 <body>
   <a href="#studio-layout" class="skip-link">Skip to main content</a>
@@ -3506,36 +3513,42 @@
      *      (propertyId, kind), which SURVIVES A RELOAD. The line's own id does not: it is
      *      regenerated as 'upk_' + Math.random() on every blueprint load.
      * A renamed line therefore keeps counting AND keeps glowing. */
-    function _propUpkeepCatalogue() { return [
-      { kind: 'electricity', group: 'utilities', label: 'Electricity',
-        hover: 'Your power bill for this property. If it swings hard by season, an average across twelve months is closer to the truth than this month’s figure.' },
-      { kind: 'water', group: 'utilities', label: 'Water & Sewer',
-        hover: 'Water, and the sewer or septic service that goes with it. Often billed together; sometimes the sewer line is the larger half.' },
-      { kind: 'gas', group: 'utilities', label: 'Natural gas / Propane',
-        hover: 'Gas for heat, hot water or cooking. In a propane household this can be a delivery a few times a year rather than a monthly bill — record it however you actually pay it.' },
-      { kind: 'waste', group: 'utilities', label: 'Waste & Recycling',
-        hover: 'Refuse collection, where it is billed separately rather than bundled into a municipal tax or an association fee.' },
-      { kind: 'internet', group: 'utilities', label: 'Internet',
-        hover: 'Home internet for this property. If it is bundled with television or phone, record the bundle and note the split — the total is what leaves your account.' },
-      { kind: 'landline', group: 'utilities', label: 'Landline phone',
-        hover: 'A phone line tied to the property rather than to a person. Increasingly rare, and easy to keep paying for long after it is used.' },
-      { kind: 'lawn', group: 'services', label: 'Lawn & Landscaping',
-        hover: 'Mowing, beds, irrigation, seasonal clean-ups. A cost that scales with the lot rather than the house.' },
-      { kind: 'pest', group: 'services', label: 'Pest control',
-        hover: 'Routine treatment or inspection. Often quarterly, and worth recording annually rather than guessing a month.' },
-      { kind: 'pool', group: 'services', label: 'Pool / Spa service',
-        hover: 'Service, chemicals and upkeep for a pool or spa. One of the costs most often left out of what a home really runs.' },
-      { kind: 'security', group: 'services', label: 'Home security & monitoring',
-        hover: 'An alarm or monitoring contract on the property. Small monthly, long contract — it belongs in the true cost.' },
-      { kind: 'cleaning', group: 'services', label: 'Cleaning service',
-        hover: 'Recurring housekeeping. Include it if it is a standing arrangement rather than an occasional one.' },
-      /* ⚠️ THIS HOVER MUST STAY CONSISTENT WITH §4.3 (row 27), which already carries the 1% rule of
-         thumb. SAME FIGURE, SAME FRAMING — two surfaces must not state the rule differently. */
-      { kind: 'maintenance', group: 'services', label: 'Routine maintenance & repairs',
-        hover: 'The ongoing upkeep a house asks for — filters, servicing, small repairs. A common rule of thumb is about 1% of the home’s value a year; your own number always wins.' }
-    ]; }
-    function _propUpkeepKind(kind) {
-      var hit = _propUpkeepCatalogue().filter(function (c) { return c.kind === kind; })[0];
+    /* ⭐ MOVED TO scripts/studio-upkeep.js 2026-08-13 (§45 engine reach), and this shim is what keeps
+     * every existing caller and all twelve sandbox gates working unchanged. It returns the PROPERTY
+     * scope, which is exactly the twelve rows that used to be written out below — same kinds, same
+     * groups, same labels, same hovers, same order. A property room is byte-identical.
+     * ⛔ THE NAME STAYS `_propUpkeepCatalogue` DELIBERATELY. Renaming it to something scope-neutral
+     * would have been tidier and would have touched twelve gates that lift it by name, for zero
+     * behaviour — the refactor-blast-radius trade this arc has already paid for once. */
+    /* ⛔⛔ `typeof` IS LOAD-BEARING AND IT IS NOT DEFENSIVE PROGRAMMING — IT IS THE SPLIT-DEPLOY LAW.
+     * JS caches for 4h and HTML does not, and there are no versioned URLs to bump. If this page ever
+     * renders before /scripts/studio-upkeep.js has arrived, `_upkForScope` is simply not there.
+     * `typeof x` on an UNDECLARED identifier returns 'undefined' rather than throwing — the one safe
+     * way to ask "does this exist?" — so the room DEGRADES TO ITS PRE-§28 SHAPE (no ledger rows;
+     * _canonUtil falls back to the typed acc.utilYr) instead of dying. DEGRADE TO SHIPPED BEHAVIOUR,
+     * NEVER DRAW WRONG. Identical mechanism, and identical justification, to `_upkeepLedger` forty
+     * lines below — which documents the same trick for the sandbox case.
+     * ⚠️ AND THE STAKES ARE PARSE-TIME, NOT RENDER-TIME: renderInputs() runs at line ~14229 INSIDE
+     * this script block, so an unguarded ReferenceError here would take the WHOLE PAGE DOWN, not one
+     * modal. That is why the module is a synchronous <head> script and not `defer` like its
+     * neighbours — a deferred part would not exist yet when this line first runs. */
+    function _propUpkeepCatalogue() {
+      try { return (typeof _upkForScope === 'function') ? _upkForScope('property') : []; }
+      catch (e) { return []; }
+    }
+    /* ⭐ WHICH CATALOGUE SCOPE A ROOM ANSWERS TO. INCLUSION BY BASE ID, never inferred — exactly the
+       shape _propRoomName's vehicle branch uses (~9820). A room that is not a vehicle gets the
+       property catalogue, which is what every caller before §45 assumed and is why the default is
+       'property' rather than a throw. */
+    function _upkScopeFor(base) {
+      return /^auto(_primary|_co)?$/.test(String(base && base.id)) ? 'vehicle' : 'property';
+    }
+    /* ⚠️ SCOPE IS OPTIONAL AND DEFAULTS TO 'property' SO EVERY PRE-§45 CALLER IS UNCHANGED. The
+       twelve sandbox gates call this through _canonUtil with no scope argument and must keep seeing
+       exactly the twelve property rows. */
+    function _propUpkeepKind(kind, scope, vType) {
+      var list = (typeof _upkForScope === 'function') ? _upkForScope(scope || 'property', vType) : [];
+      var hit = list.filter(function (c) { return c.kind === kind; })[0];
       return hit || null;
     }
     /* ⚠️ THE LEDGER IS REACHED THROUGH A FUNCTION, AND `typeof` IS LOAD-BEARING.
@@ -3558,12 +3571,18 @@
     }
     /* Every upkeep line belonging to this property, in catalogue order so the window reads the same
        way every time regardless of the order they were added. */
-    function _propUpkeepLines(accId, group) {
-      var order = _propUpkeepCatalogue().map(function (c) { return c.kind; });
+    /* ⛔ `propertyId` IS A MISNOMER, NOT A CONSTRAINT — IT IS AN ACCOUNT-ID FOREIGN KEY AND ALWAYS
+       WAS. That single fact is why a vehicle can reach this engine at all: nothing here, in
+       createPropertyUpkeep, or in the serializer ever asserted the parent was a property. The name
+       is left alone deliberately — renaming a persisted key would break every saved blueprint, which
+       is a migration, not a tidy-up. */
+    function _propUpkeepLines(accId, group, scope) {
+      var sc = scope || 'property';
+      var order = ((typeof _upkForScope === 'function') ? _upkForScope(sc) : []).map(function (c) { return c.kind; });
       return _upkeepLedger().filter(function (it) {
         if (it.propertyId !== accId || !it.upkeepKind) return false;
         if (!group) return true;
-        var c = _propUpkeepKind(it.upkeepKind);
+        var c = _propUpkeepKind(it.upkeepKind, sc);
         return !!c && c.group === group;
       }).sort(function (a, b) { return order.indexOf(a.upkeepKind) - order.indexOf(b.upkeepKind); });
     }
@@ -8376,6 +8395,20 @@
                 <div><span class="input-label modal-tt-wrap" style="cursor:help;">${_vUseLabel}${_vTT(_vUseTT, 'right')}</span>
                     <input type="text" class="small-field" placeholder="&mdash;" inputmode="numeric" value="${String(acc.vehicleUsage||'').replace(/[^0-9]/g,'')}" oninput="this.value=this.value.replace(/[^0-9]/g,''); updateAccField('${id}', 'vehicleUsage', this.value)"></div>
             </div>`;
+                /* ══ §45 · THE VEHICLE REACHES THE OPERATING UPKEEP ENGINE ═════════════════════════
+                 * ⭐ THE SAME FUNCTION THE GROUNDS CALLS, WITH A SCOPE ARGUMENT. Not a vehicle copy of
+                 * it — §25.4 and Garage §4.0 both forbid a second cost system ("ONE CATALOGUE, NOT
+                 * TWO"; "adding a slip fee kind is a row, not a mechanism"), and a fork here would
+                 * double-count the moment §38.6's boat and RV rows land.
+                 * ⛔ `showUpkeep` IS SHARED WITH THE GROUNDS AND THAT IS DELIBERATE — it is one flag
+                 * meaning "show this room's running costs", and the `!== false` default matches the
+                 * habit every other flag in this file uses. A vehicle predating this commit has no
+                 * key, so it reads as ON, which is what a new section should be.
+                 * ⛔ NOTHING SUMS THIS YET. The vehicle Real Monthly is the NEXT commit; these rows
+                 * land in §03's household ledger exactly like a property's do, which is why the Real
+                 * Monthly must be a WINDOW onto dollars already counted and never an addition
+                 * (§45.8 — the $3,400-not-$4,600 discipline, fourth asking). */
+                html += _propUpkeepSectionHTML(id, acc, acc.showUpkeep !== false, 'vehicle');
             }
         }
 
@@ -9117,7 +9150,12 @@
      * kind returns without writing anything rather than guessing an owner. */
     window.createPropertyUpkeep = function (assetId, kind) {
         var acc = state.accounts.find(function (a) { return a.id === assetId; });
-        var cat = _propUpkeepKind(kind);
+        /* ⛔ THE KIND IS VALIDATED AGAINST *THIS ROOM'S* SCOPE, NOT AGAINST THE WHOLE CATALOGUE.
+           Unscoped, this guard would happily attach a 'pool' line to a car or a 'tolls' line to a
+           house — the dropdown would never offer it, but the guard is the last line of defence and a
+           guard that trusts the UI is not a guard. Same refusal shape as the existing one: an
+           unknown kind returns WITHOUT WRITING ANYTHING rather than guessing an owner (bank A346). */
+        var cat = acc ? _propUpkeepKind(kind, _upkScopeFor(getBaseType(acc.baseId))) : null;
         if (!acc || !cat) return;
         // One line per kind per property: picking Electricity twice reopens the one that exists
         // rather than quietly creating a second bill for the same meter.
@@ -10393,12 +10431,27 @@
      * disagree about one bill.
      * ⭐ ADDITIVE. A property with no lines shows the empty state and changes nothing else about the
      * room — the byte-for-byte promise the escrow mirror already makes (10703). */
-    function _propUpkeepSectionHTML(id, acc, show) {
-        var lines = _propUpkeepLines(id);
+    function _propUpkeepSectionHTML(id, acc, show, scope) {
+        var sc = scope || 'property';
+        /* §47.1 — the vehicle TYPE is a third axis under scope: two rows (insurance, parking) swap
+           their hover for a boat or an RV. Blank type falls through to the base row, which is the CAR
+           case and the COMMON path. ⛔ `undefined` for a property, deliberately: a house has no type
+           and must never resolve one. */
+        var vT = sc === 'vehicle' ? (acc && acc.vehicleType) || '' : '';
+        var cat = (typeof _upkForScope === 'function') ? _upkForScope(sc, vT) : [];
+        var lines = _propUpkeepLines(id, null, sc);
         var opts = ['<option value="">+ Add an upkeep cost…</option>'];
-        [['utilities', 'UTILITIES'], ['services', 'PROPERTY SERVICES']].forEach(function (g) {
+        /* ⛔⛔ THE GROUP LIST IS DERIVED FROM THE CATALOGUE, NOT HARD-CODED BESIDE IT, AND THAT IS A
+           MONEY FIX RATHER THAN A TIDY-UP. This loop used to read a literal
+           [['utilities','UTILITIES'],['services','PROPERTY SERVICES']]. A kind whose group was not
+           one of those two would have been INVISIBLE IN THE DROPDOWN WHILE STILL COUNTING IN THE
+           TOTAL — a dollar the user can neither see nor edit but is being charged. That is the same
+           family as the negative-balance defect: not a wrong word, a wrong number about the user's
+           own money. _upkGroupsForScope falls back to the group key upper-cased, so a future group
+           with no authored heading still RENDERS rather than going silent. */
+        ((typeof _upkGroupsForScope === 'function') ? _upkGroupsForScope(sc, vT) : []).forEach(function (g) {
             opts.push('<optgroup label="' + g[1] + '">');
-            _propUpkeepCatalogue().filter(function (c) { return c.group === g[0]; }).forEach(function (c) {
+            cat.filter(function (c) { return c.group === g[0]; }).forEach(function (c) {
                 /* Already-added kinds are disabled rather than hidden: a user who cannot find
                    "Electricity" would reasonably conclude it is missing. Annotation over
                    suppression, the row-195 ruling applied to a dropdown. */
@@ -10408,7 +10461,7 @@
             opts.push('</optgroup>');
         });
         var rows = lines.map(function (it) {
-            var c = _propUpkeepKind(it.upkeepKind) || { label: it.name, hover: '' };
+            var c = _propUpkeepKind(it.upkeepKind, sc, vT) || { label: it.name, hover: '' };
             var mo = _upkMo(it);
             var amt = mo > 0 ? '$' + Math.round(mo * 12).toLocaleString('en-US') + '/yr' : '—';
             return '<div onclick="openUpkeepForProperty(\'' + id + '\', \'' + it.upkeepKind + '\')" ' +
@@ -10421,18 +10474,47 @@
                    '<span style="font-family:var(--font-mono); font-size:12.5px; color:' + (mo > 0 ? 'rgba(255,255,255,0.75)' : 'var(--muted)') + ';">' + amt + '</span>' +
                    '</div>';
         }).join('');
+        /* ══ §45.6 · THE CHROME IS SCOPED, AND EVERY VEHICLE STRING IS AUTHORED ═══════════════════
+           The property strings below are UNCHANGED — a property room is byte-identical, which is the
+           evidence I trust most on this change (10703's law). The five vehicle strings are §45.6
+           VERBATIM; I flagged them as missing rather than writing five plausible house-voiced lines,
+           and the Architect authored them.
+           ⭐ THE TOGGLE HOVER IS THE LOAD-BEARING ONE AND IT EXISTS TO PREVENT A SPECIFIC MISREADING:
+           a user who meets COSTS inside an ASSET room may fear the costs reduce the asset's VALUE.
+           They do not. Costs and value are separate truths in the same room. */
+        var V = sc === 'vehicle';
+        var C = V ? {
+            toggle: 'Track running costs',
+            /* ⚠️ `&rsquo;` NOT AN ESCAPED APOSTROPHE, AND THIS COST ME A BROKEN PAGE. Written as
+               `doesn\'t` through a scripted edit, the backslash was eaten by two layers of string
+               escaping and shipped as `'It doesn'` + `t change…` — a SYNTAX ERROR that killed the
+               entire inline script block, so `state` and `addInstance` never existed and the Studio
+               rendered nothing at all. The entity has no escaping layer to lose and is what every
+               other authored string in this file already uses. ⛔ NEVER SCRIPT AN EDIT THAT PUTS A
+               RAW APOSTROPHE INSIDE A JS STRING LITERAL — use the entity, or the Edit tool. */
+            toggleTT: 'Turn this on to record what the vehicle actually costs you &mdash; insurance, fuel, upkeep and the rest. It doesn&rsquo;t change what the vehicle is worth.',
+            head: 'What this vehicle costs to run',
+            empty: 'Nothing recorded yet. Add what this vehicle costs you to run and it&rsquo;ll show up here.',
+            tracked: 'Tracked in Operating Upkeep'
+        } : {
+            toggle: 'Show upkeep costs',
+            toggleTT: 'The recurring bills that keep this property running — power, water, waste, connectivity, the yard. Add the ones you pay and they are tracked in your Operating Upkeep ledger, then counted here in the true cost of keeping the place.',
+            head: 'Operating Upkeep',
+            empty: 'Nothing tracked yet. Add the bills you actually pay for this property — each one becomes a line in your Operating Upkeep ledger.',
+            tracked: 'tracked in Operating Upkeep — click to open'
+        };
         var body = lines.length
-            ? rows + '<div style="margin-top:8px; font-size:11px; color:var(--muted);">🔗 tracked in Operating Upkeep — click to open</div>'
-            : '<div style="font-size:12px; color:var(--muted); line-height:1.5; padding:4px 0 8px;">Nothing tracked yet. Add the bills you actually pay for this property — each one becomes a line in your Operating Upkeep ledger.</div>';
+            ? rows + '<div style="margin-top:8px; font-size:11px; color:var(--muted);">🔗 ' + C.tracked + '</div>'
+            : '<div style="font-size:12px; color:var(--muted); line-height:1.5; padding:4px 0 8px;">' + C.empty + '</div>';
         return `
             <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
-                <span class="toggle-label" style="color:var(--teal-mid);">Show upkeep costs</span>
+                <span class="toggle-label" style="color:var(--teal-mid);">${C.toggle}</span>
                 <label class="switch"><input type="checkbox" ${show ? 'checked' : ''} onchange="updateAccToggle('${id}', 'showUpkeep', this.checked)"><span class="slider"></span></label>
-                <div class="modal-tt"><strong>Show upkeep costs</strong>The recurring bills that keep this property running — power, water, waste, connectivity, the yard. Add the ones you pay and they are tracked in your Operating Upkeep ledger, then counted here in the true cost of keeping the place.</div>
+                <div class="modal-tt"><strong>${C.toggle}</strong>${C.toggleTT}</div>
             </div>` + (show ? `
             <div style="margin-top:14px; padding:14px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:4px;">
-                <div style="color:var(--teal-mid); font-weight:bold; font-size:13px;">🧰 Operating Upkeep</div>
-                <div style="font-size:11.5px; color:var(--muted); margin:2px 0 10px;">What it takes to run the place, month to month.</div>
+                <div style="color:var(--teal-mid); font-weight:bold; font-size:13px;">🧰 ${C.head}</div>
+                ${V ? '' : '<div style="font-size:11.5px; color:var(--muted); margin:2px 0 10px;">What it takes to run the place, month to month.</div>'}
                 ${body}
                 <div style="margin-top:12px;">
                     <select class="small-field" style="background: var(--bg-navy); color:white;" onchange="if(this.value){ createPropertyUpkeep('${id}', this.value); }">${opts.join('')}</select>

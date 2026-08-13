@@ -76,7 +76,11 @@ const STUDIO_PATH = path.join(__dirname, '..', 'studio.html');
  * (or worse, green on an absence) for a reason nobody could trace back to here. A PRECONDITION THAT
  * WARNS AND CONTINUES IS A COMMENT. */
 const PARTS = [
-  /* 'scripts/studio-upkeep.js',   ← the first part will land here (§45 engine reach) */
+  /* ⭐ THE FIRST PART, REGISTERED 2026-08-13 (§45 engine reach). The Operating Upkeep catalogue moved
+     out of studio.html so it can be consumed by the TENSION phase page after the split. The twelve
+     sandbox gates that slice calcCarryTotal -> _canonUtil -> _propUpkeepAnnual resolve
+     `_upkForScope` out of THIS concatenation — which is the entire reason the registry exists. */
+  'scripts/studio-upkeep.js'
 ];
 
 const PART_OPEN  = (rel) => '/* ═════ studioSource PART BEGIN · ' + rel + ' ═════ */';
