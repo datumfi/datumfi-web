@@ -6944,7 +6944,27 @@
             ? (base.title === 'HELOC'
                 ? '<div class="input-label modal-tt-wrap" style="color:var(--teal-mid); cursor:help; margin-bottom:4px;">Linked collateral (calculates equity)<div class="modal-tt" style="left:0; right:auto;"><strong>Your collateral</strong>This line is secured by the linked property. Your equity is what backs it — and what\'s at risk if it goes unpaid.</div></div>'
                 : '<div class="input-label" style="color:var(--teal-mid); margin-bottom:4px;">Linked collateral (calculates equity)</div>')
-            : '<div class="input-label" style="color:var(--danger); margin-bottom:4px;">Liabilities secured by this property</div>';
+            /* ⛔ 'PROPERTY' WAS THE WRONG NOUN ON A VEHICLE, AND IT WAS UNCONDITIONAL. Flagged twice
+             * in the bank (§33.0, §33.6 R424) and confirmed live. Same family as the Yard's hardcoded
+             * "The Property" (§19.11): a label written when this control served one room only.
+             * ⭐ SCOPED BY MEASUREMENT, NOT BY ASSUMPTION. I first reported this as hitting vehicles
+             * AND collectibles because the label is unconditional INSIDE this function — but the
+             * function's CALL SITES are not: 7867 is debt-only (which takes the isDebt branch above)
+             * and 7974 is `physical && !collectibles`. COLLECTIBLES NEVER REACH THIS LINE, so there
+             * are exactly TWO rooms here and both have an authored noun. 🔑 "UNCONDITIONAL INSIDE A
+             * FUNCTION" IS A CLAIM ABOUT THE FUNCTION, NEVER ABOUT WHO CALLS IT.
+             * The hover is §33.6 R424 verbatim; it lands with the noun rather than in a later commit,
+             * so this line is edited once. */
+            /* ⚠️ THE HOVER IS VEHICLE-ONLY, AND THE ASYMMETRY IS L47, NOT AN OVERSIGHT. R424 authors
+             * the hover for a VEHICLE. There is NO authored hover for the property side of this
+             * control. My first cut wrote one "by analogy" — a mortgage-and-HELOC sentence shaped
+             * like R424 — and that is exactly the fabrication the standing law forbids: plausible,
+             * house-voiced, and sourced nowhere. The property label keeps today's plain form until
+             * the Architect authors one. FLAGGED, NOT INVENTED. */
+            : (/^auto(_primary|_co)?$/.test(base.id)
+                ? '<div class="input-label modal-tt-wrap" style="color:var(--danger); margin-bottom:4px; cursor:help;">Liabilities secured by this vehicle'
+                  + '<div class="modal-tt" style="left:0; right:auto;"><strong>Linked liabilities</strong>Loans tied to this vehicle &mdash; usually an auto or boat loan. Link one and it shows here automatically; nothing linked, nothing owed.</div></div>'
+                : '<div class="input-label" style="color:var(--danger); margin-bottom:4px;">Liabilities secured by this property</div>');
         // prominent 🔗 status line — clickable nav + inline ✕ unlink (Commit 2b), at the control, sourced-or-blank
         if (linkedNow.length) {
             out += _linkedJumpLine('🔗 ' + statusLabel + ':', linkedNow, statusColor, { selfId: id, selfIsDebt: isDebt });
@@ -8204,6 +8224,49 @@
                 <div><span class="input-label modal-tt-wrap" style="cursor:help;">Lender CLTV Cap (%)<div class="modal-tt" style="left:0; right:auto;"><strong>A typical assumption — set your own</strong>Most lenders cap total borrowing against a home near 80% of its value (some allow 85% or more). We use ~80% as a typical default to estimate your untapped borrowing power. Enter your lender's actual cap to make it exact, or leave it blank to keep the ~80% typical.</div></span><input type="number" min="0" max="100" step="1" class="small-field" placeholder="80 (typical)" value="${acc.cltvCapPct||''}" oninput="enforceNumRange(this, 0, 100); updateAccField('${id}', 'cltvCapPct', this.value)"></div>
             </div>`;
                 }
+            /* ══ §33.1 + Garage §3.6 · THE VEHICLE FIELD PAIR — THE AXIS EVERYTHING ELSE HANGS ON ══
+             * This `else` IS the Vehicle room. Until now the branch above claimed the whole
+             * `physical && !collectibles` arm for The Grounds, so a Vehicle fell straight through to
+             * the universal Interest/COLA/Notes tail — which is exactly the emptiness §33.0 describes:
+             * "two universal toggles, a liability link dropdown, and Purpose / Notes. THAT IS ALL."
+             *
+             * ⭐ THE MIGRATION GUARANTEE IS TRUE BY CONSTRUCTION HERE, NOT BY CAREFUL WIRING. Neither
+             * field existed in studio.html before this commit (Wirer-verified 2026-08-13: zero hits
+             * for vehicleType / ownershipStatus / Owned outright / Financed / Leased), so NO SAVED
+             * FILE CARRIES EITHER KEY. Blank is not a migration case to be handled — it is the only
+             * state any existing Driveway can be in. ⛔ And nothing reads these values yet: the §25.1
+             * name map, the type-specific fields and the beats are all later commits, deliberately,
+             * so this commit CANNOT change a single rendered pixel outside the modal.
+             * ⛔ NEVER AUTO-SELECT A TYPE FROM THE VEHICLE'S NAME OR VALUE (§33.1).
+             *
+             * ⛔⛔ 'LEASED' IS DELIBERATELY ABSENT FROM THE OWNERSHIP DROPDOWN, AND THAT IS §38.7'S
+             * OWN LAW APPLIED TO OURSELVES: "DO NOT SHIP A CHOOSABLE OPTION WITH NO ENGINE BEHIND
+             * IT." §39 authors what a lease must suppress — value, equity, depreciation, the
+             * underwater beat, the lien link, the Garage — and none of that lands until a later
+             * commit. Shipping the option now would let a user declare a lease and have it counted
+             * as an owned asset at full value in their net worth: THE EXACT FALSE NUMBER §39 EXISTS
+             * TO PREVENT, and the one §38.7 mistakenly believed was already live. The option arrives
+             * WITH its engine, in the same commit, or not at all. */
+            } else {
+                var _vType = acc.vehicleType || '';
+                var _vOwn  = acc.ownershipStatus || '';
+                /* Value === label, matching trustType and propPurpose — the stored string IS the
+                   authored word, so §25.1's name map stays readable against the bank (L48). */
+                var _vTypeOpts = ['Car / Truck / SUV', 'Boat', 'RV or Camper', 'Motorcycle', 'Other'];
+                var _vOwnOpts  = ['Owned outright', 'Financed'];   // 'Leased' rides §39 — see above
+                var _opt = function (list, cur) {
+                    return '<option value="" ' + (!cur ? 'selected' : '') + '>— not set —</option>' +
+                      list.map(function (o) {
+                        return '<option value="' + o + '" ' + (cur === o ? 'selected' : '') + '>' + o + '</option>';
+                      }).join('');
+                };
+                html += `
+            <div class="field-row" style="grid-template-columns: 1fr 1fr;">
+                <div><span class="input-label modal-tt-wrap" style="cursor:help;">Vehicle type<div class="modal-tt" style="left:0; right:auto;"><strong>Vehicle type</strong>What kind of vehicle this is. It changes what this room asks you about &mdash; a boat has a slip, an RV has storage, a car has neither.</div></span>
+                    <select class="small-field" style="background: var(--bg-navy); width:100%;" onchange="updateAccField('${id}', 'vehicleType', this.value)">${_opt(_vTypeOpts, _vType)}</select></div>
+                <div><div class="input-label">Ownership status</div>
+                    <select class="small-field" style="background: var(--bg-navy); width:100%;" onchange="updateAccField('${id}', 'ownershipStatus', this.value)">${_opt(_vOwnOpts, _vOwn)}</select></div>
+            </div>`;
             }
         }
 
