@@ -9742,6 +9742,23 @@
         'Rental property':   'The Rental',
         'Land':              'The Acreage'
     };
+    /* ── §25.1 · THE VEHICLE NAME MAP — THE ASSET HALF ────────────────────────────────────────────
+     * Captain-approved 2026-08-12: "if someone had a boat, perhaps it DOESN'T become the garage,
+     * it's maybe the Boathouse." THE GRAMMAR (§25.1): the ASSET room names the PLACE the thing
+     * sits. A slip is where a boat sits; a pad is where an RV parks.
+     * ⛔ ONLY THE TWO THAT MOVE ARE LISTED. Car / Truck / SUV, Motorcycle, Other and BLANK all keep
+     * `shipped` — The Driveway — so the §25.2 fallback is the map's DEFAULT rather than a fifth
+     * entry that could drift away from base.meta. Most users never open the dropdown, which makes
+     * the fallback the COMMON path, not the edge.
+     * ⚠️ THE MERGED HALF (THE BOATHOUSE / THE CARPORT) IS NOT HERE, AND THAT IS DELIBERATE. Today a
+     * financed vehicle renders `_roomNameOf(...) + _lienMetaSuffix(debts)` — "THE DRIVEWAY / THE
+     * LIEN". There is no combined Garage room to rename yet (§9's three Garage forms are authored,
+     * not built), so a merged-name map would have nothing to attach to. It rides the Garage
+     * combined view. A boat with a loan correctly reads "THE SLIP / THE LIEN" today. */
+    var VEHICLE_ROOM_NAME = {                       // §25.1 — asset name by vehicleType
+        'Boat':          'The Slip',
+        'RV or Camper':  'The Pad'
+    };
     var PROP_COMBINED_NAME = {                      // §12.1 — the combined tile, once a lien attaches
         'Second home':       'The Retreat',
         'Rental property':   'The Holding',
@@ -9756,6 +9773,11 @@
            construction and §12.12 holds — a render site must never re-derive who may be renamed.
            INCLUSION, never inferred: only a property room can take a §19 name, so a debt or a
            brokerage that ever grows a field spelled propPurpose inherits nothing. */
+        /* §25.1 — the vehicle branch sits BEFORE the property gate, because a Vehicle is not a
+           property base and would otherwise return `shipped` and never reach a map. INCLUSION by
+           base id, exactly like the property gate below: only a Vehicle room can take a §25.1 name,
+           so nothing else that ever grows a field spelled vehicleType inherits anything. */
+        if (acc && /^auto(_primary|_co)?$/.test(String(base && base.id))) return VEHICLE_ROOM_NAME[acc.vehicleType] || shipped;
         if (!acc || !isPropertyBase(base)) return shipped;
         return PROP_ROOM_NAME[acc.propPurpose] || shipped;
     }

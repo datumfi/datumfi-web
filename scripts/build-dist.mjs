@@ -23,7 +23,7 @@ const DROP_RE = [/^\.claude\//, /^\.wrangler\//, /^workers\//, /^functions\//, /
 
 // SACRED HOSTS — must ship byte-identical (LF + content). Build ABORTS on drift.
 const SACRED = {
-  'studio.html': 'c1b9a680f5e2270848f36cf1d60bf9dd',   // §33.1 — the vehicle field pair lands inert; the wrong noun is fixed (2026-08-13)
+  'studio.html': '9b308468abf88140840179cc9d6fff7e',   // §25.1 — a boat is THE SLIP, an RV is THE PAD (2026-08-13)
   'sketch.html': '28258a76686008aebe839d59af39500f',   // shape button reverted to the Captain's "Save Shape" / "✓ Saved" (2026-08-01)
   'scripts/studio-blueprint.js': '741713234831456ab4dd4563b8c95a60',   // §28 upkeep lines carry propertyId + upkeepKind through the serializer (2026-08-08)
   // MISS-5 pre-work guard (2026-07-25). nav.js is a Sacred Host in CLAUDE.md but was absent from THIS map,

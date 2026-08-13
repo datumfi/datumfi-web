@@ -172,14 +172,18 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
      "unchanged" claim below would be false. */
   const B = await probe({ vehicleType: 'Boat', ownershipStatus: 'Owned outright' });
   console.log('  B ' + JSON.stringify({ labels: B.labels, total: B.total, stored: B.stored }));
-  ok(B.labels.indexOf('THE DRIVEWAY') >= 0,
-     'B1 [UNCHANGED] a BOAT still draws THE DRIVEWAY — the §25.1 name map is a later commit — ' + JSON.stringify(B.labels));
-  ok(B.labels.indexOf('THE SLIP') < 0 && B.labels.indexOf('THE BOATHOUSE') < 0,
-     'B2 [UNCHANGED] and no §25.1 name has leaked in early — ' + JSON.stringify(B.labels));
+  /* ⭐ CHECKPOINT EXPIRED, FLIPPED DELIBERATELY — 2026-08-13, §25.1 landed.
+     B1/B2/B4 asserted that a Boat STILL drew THE DRIVEWAY and that no §25.1 name had leaked in
+     early. That was true and load-bearing for exactly one commit: it proved the field pair was an
+     inert axis. THE NAME MAP HAS NOW ARRIVED ON PURPOSE, so those legs are inverted here rather
+     than deleted — the same discipline D2 documents for 'Leased'. ⛔ THE MONEY CLAIM DOES NOT
+     EXPIRE and is what remains of the inertness thesis: naming a room must never move a dollar.
+     🔑 A TEMPORARY ASSERTION MUST DOCUMENT ITS OWN EXPIRY, AND THEN ACTUALLY BE FLIPPED WHEN IT
+     EXPIRES. The name legs now live in _gate_vehicle_name_map.js, which owns that subject. */
+  ok(B.labels.indexOf('THE SLIP') >= 0,
+     'B1 [§25.1 LANDED] a BOAT now draws THE SLIP — ' + JSON.stringify(B.labels));
   ok(B.total === A.total,
-     'B3 [MONEY · UNCHANGED] the estate total is identical to the blank room — ' + B.total + ' vs ' + A.total);
-  ok(JSON.stringify(B.labels) === JSON.stringify(A.labels),
-     'B4 [UNCHANGED] the ENTIRE drawn label set is byte-identical to blank — the axis moves nothing on the canvas');
+     'B3 [MONEY · UNCHANGED] naming a room moved NO money — ' + B.total + ' vs ' + A.total + ' (blank)');
 
   /* ══ SCENE C · EVERY OTHER TYPE IS EQUALLY INERT ═════════════════════════════════════════════════
      ⛔ ONE TYPE PROVES ONE TYPE. The fixture-reach census caught exactly this three times: a map
@@ -187,8 +191,8 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
   const types = ['Car / Truck / SUV', 'RV or Camper', 'Motorcycle', 'Other'];
   for (const t of types) {
     const C = await probe({ vehicleType: t });
-    ok(C.total === A.total && JSON.stringify(C.labels) === JSON.stringify(A.labels),
-       'C [UNCHANGED] "' + t + '" renders identically to blank (total ' + C.total + ', labels match)');
+    ok(C.total === A.total,
+       'C [MONEY · UNCHANGED] "' + t + '" moves no money (total ' + C.total + ')');
   }
 
   /* ══ SCENE D · THE CONTROLS THEMSELVES ══════════════════════════════════════════════════════════ */
