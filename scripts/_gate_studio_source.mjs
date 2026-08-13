@@ -147,7 +147,8 @@ ck('P5 SELF-CHECK — stripping comments does NOT hide a real read on a commente
    call sites used to read. That claim is machine-checked here rather than asserted in a commit
    message. */
 const helperUrl = pathToFileURL(path.join(REPO, HELPER_REL)).href;
-const { studioSource, STUDIO_PATH } = await import(helperUrl);
+const { studioSource, STUDIO_PATH, compose, PART_RELS, readParts } = await import(helperUrl);
+const REGISTERED = PART_RELS();
 /* ⚠️ THE ONE DELIBERATE DIRECT READ IN THE REPO, AND A JUDGEMENT CALL I AM FLAGGING RATHER THAN
    BURYING. This gate CANNOT prove byte-identity by asking the helper twice — it needs an INDEPENDENT
    read of the real file. So the population's own rule ("no source line names the studio file beside
@@ -163,10 +164,25 @@ const { studioSource, STUDIO_PATH } = await import(helperUrl);
 const direct = readFileSync(path.join(REPO, 'studio' + '.html'), 'utf8');
 const viaHelper = studioSource();
 
-ck('I1 studioSource() is BYTE-IDENTICAL to the read it replaced', viaHelper === direct,
-   viaHelper === direct ? 'identical' : `helper ${viaHelper.length} vs direct ${direct.length}`);
-ck('I2 same length and same md5', viaHelper.length === direct.length && md5(viaHelper) === md5(direct),
-   `${viaHelper.length} bytes · ${md5(viaHelper).slice(0, 12)}`);
+/* ⏳ I1/I2 ARE EXPIRING ASSERTIONS AND THEY SAY SO — THE PARTS REGISTRY IS WHY.
+   Byte-identity with a direct read is the whole safety argument for the 91-file diff, and it holds
+   EXACTLY WHILE THE REGISTRY IS EMPTY. The day the first part is registered, byte-identity is no
+   longer the claim we want — "contains the shell verbatim, plus the registered parts" is. ⛔ SO THIS
+   BRANCHES ON THE REGISTRY RATHER THAN BEING DELETED LATER BY SOMEONE WHO FINDS IT INCONVENIENT.
+   🔑 A TEMPORARY ASSERTION MUST DOCUMENT ITS OWN EXPIRY *AND* ITS SUCCESSOR. Both branches assert
+   something real; neither is a hole to walk through. */
+if (REGISTERED.length === 0) {
+  ck('I1 [⏳ empty registry] studioSource() is BYTE-IDENTICAL to the read it replaced', viaHelper === direct,
+     viaHelper === direct ? 'identical' : `helper ${viaHelper.length} vs direct ${direct.length}`);
+  ck('I2 [⏳ empty registry] same length and same md5', viaHelper.length === direct.length && md5(viaHelper) === md5(direct),
+     `${viaHelper.length} bytes · ${md5(viaHelper).slice(0, 12)}`);
+} else {
+  ck('I1 [parts registered] studioSource() still CONTAINS the shell verbatim', viaHelper.includes(direct),
+     REGISTERED.length + ' part(s): ' + REGISTERED.join(', '));
+  ck('I2 [parts registered] and every registered part\'s text is present too',
+     REGISTERED.every((rel) => viaHelper.includes(readFileSync(path.join(REPO, rel), 'utf8'))),
+     `${viaHelper.length} bytes · shell ${direct.length}`);
+}
 /* THE COMPARATOR MUST BE ABLE TO SAY NO. An equality check that has only ever seen equal things is
    not evidence — same shape as the build's SACRED comparator self-check. */
 const other = readFileSync(path.join(REPO, 'sketch.html'), 'utf8');
@@ -175,6 +191,64 @@ ck('I3 SELF-CHECK — the same comparison against a DIFFERENT file must fail',
 ck('I4 repeated calls return the identical text (memoisation cannot drift)',
    studioSource() === viaHelper && studioSource().length === direct.length, 'stable');
 ck('I5 the helper resolves the real repo-root studio.html', STUDIO_PATH === path.join(REPO, 'studio.html'), STUDIO_PATH);
+
+/* ── R · THE PARTS REGISTRY (built 2026-08-13) ──────────────────────────────────────────────────
+   ⭐⭐ THE POINT OF THESE LEGS: an EMPTY registry means the product never exercises the mechanism,
+   which is the "fixture that never builds the failing state" trap applied to our own instrument. A
+   commit that shipped compose() and asserted only "nothing changed" would have proven the mechanism
+   is HARMLESS and said nothing about whether it WORKS. So compose() is driven with synthetic parts
+   here, and — R4, the leg that actually matters — THE REAL EXTRACTOR IS RUN OVER THE COMPOSED TEXT.
+   That is the one thing the twelve sandbox gates will depend on the day a function moves out.
+
+   ⛔ R4 USES lift() FROM _gate_extract.mjs, THE SAME FUNCTION THE YARD AND MOAT GATES USE. A
+   hand-rolled "does the text contain it" check would prove substring presence, NOT extractability —
+   and extractability is the claim. Reuse the donor, do not re-implement it (L48). */
+const { lift } = await import(pathToFileURL(path.join(REPO, 'scripts/_gate_extract.mjs')).href);
+
+ck('R1 the registry is EMPTY, so this commit changes nothing for the 90 callers',
+   REGISTERED.length === 0, REGISTERED.length ? REGISTERED.join(', ') : 'empty — byte-identity legs above are the live branch');
+ck('R2 compose() with NO parts returns the shell UNTOUCHED — byte-identical by construction',
+   compose(direct, []) === direct && compose(direct, null) === direct, 'early return, not luck');
+
+const PART_FN = 'function _synthPartFn(a, b) {\n  return (a || 0) + (b || 0) + 41;\n}\n';
+const SYNTH = [{ rel: 'scripts/__synthetic_part.js', text: PART_FN }];
+const composed = compose(direct, SYNTH);
+ck('R3 compose() with a part APPENDS it — the shell is a verbatim PREFIX, so no existing offset moves',
+   composed.startsWith(direct) && composed.includes(PART_FN) && composed.length > direct.length,
+   `${direct.length} -> ${composed.length}`);
+/* ⭐ THE LEG THIS WHOLE COMMIT EXISTS FOR. */
+let lifted = null, liftErr = '';
+try { lifted = lift(composed, '_synthPartFn'); } catch (e) { liftErr = String(e && e.message).slice(0, 70); }
+ck('R4 ⭐ the REAL extractor (lift) pulls a function OUT OF A PART — this is what the 12 sandbox gates need',
+   !!lifted && /_synthPartFn/.test(lifted), lifted ? 'lifted ' + lifted.length + ' chars' : 'FAILED: ' + liftErr);
+/* And it must actually RUN, not merely be a string that mentions the name. "It must invoke, not
+   merely compile" — the lesson _gate_yard_13_5 records one directory over. */
+let ran = null;
+try { ran = new Function(lifted + '\nreturn _synthPartFn(1, 0);')(); } catch (e) { ran = 'threw: ' + e.message; }
+ck('R5 and the lifted function INVOKES correctly from the composed source', ran === 42, 'returned ' + ran);
+/* ⛔ THE COMPARATOR MUST BE ABLE TO SAY NO. Without R6, R4 could be passing because lift() returns
+   something for any name at all. Same shape as I3 above and the build's SACRED self-check. */
+let ghost = null;
+try { ghost = lift(direct, '_synthPartFn'); } catch (e) { ghost = null; }
+ck('R6 SELF-CHECK — lift() does NOT find that function in the shell alone (so R4 proves the PART)',
+   !ghost, ghost ? 'found it without the part — R4 is vacuous' : 'absent from the shell, as required');
+/* A registered-but-missing part must THROW, never be skipped. A silently-dropped part hands every
+   gate a string missing definitions they assert about. */
+/* ⚠️ THE FIRST CUT OF R7 GREPPED THIS HELPER'S OWN SOURCE FOR THE STRING "does not exist" — which
+   proves the SENTENCE is written, not that the CODE runs it. That is matching-on-prose, committed
+   inside the gate whose own header warns about matching on prose. readParts() now takes an optional
+   list purely so this leg can drive the REAL throw path. */
+let missingThrew = false, missingMsg = '';
+try { readParts(['scripts/__definitely_not_here.js']); }
+catch (e) { missingThrew = true; missingMsg = String(e.message).slice(0, 60); }
+ck('R7 a registered part that cannot be read THROWS from readParts() (precondition, not a comment)',
+   missingThrew, missingThrew ? missingMsg : 'it did NOT throw — a missing part would be silently skipped');
+/* PRESENCE TWIN: R7 must not be passing because readParts() throws on everything. */
+let realRead = null;
+try { realRead = readParts(['scripts/_studio_source.cjs']); } catch { realRead = null; }
+ck('R8 SELF-CHECK — and readParts() SUCCEEDS on a file that does exist (so R7 is not vacuous)',
+   !!realRead && realRead.length === 1 && realRead[0].text.length > 0,
+   realRead ? realRead[0].rel + ' read ' + realRead[0].text.length + ' chars' : 'failed on a real file');
 
 /* ── C · cwd INDEPENDENCE ───────────────────────────────────────────────────────────────────────
    78 of the 90 call sites read the bare relative path 'studio.html' and worked only because the
