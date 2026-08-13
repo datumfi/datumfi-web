@@ -54,6 +54,19 @@
                      only; the typing path is already covered by the display guard — see above).
      --overclamp     _eqStr stops emitting '-'      -> ⭐ THE OVER-EAGER FIX. Legs A and B stay
                      perfectly green and leg C reds alone. That asymmetry IS the demonstration.
+     --noblurclamp   the focusout strip is reverted -> E1 reds while E2 stays green (§41).
+
+   ── ⚠️ ONE THING THIS FILE CANNOT GATE TODAY, STATED RATHER THAN FAKED ───────────────────────────
+   "Never put the strip inside formatCurrencyDisplay" is the rule that keeps derived negatives alive,
+   and it is FORWARD-LOOKING, not backed by a current failure. Measured 2026-08-13: all 25 of its
+   call sites populate INPUT FIELDS with user-entered amounts. Every derived negative in the product
+   is emitted elsewhere — `_eqStr` and `formattedTotal`, both in datum-estate.js. So a mutation that
+   moved the strip into formatCurrencyDisplay WOULD RED NOTHING, and shipping such a control would
+   be shipping a mutation that cannot bite — the exact fault this gate found in itself twice.
+   ⛔ THE RISK IS REAL ANYWAY: the function is named "Display", which is precisely where a future
+   author would reach to render a computed figure. The day one does, --overclamp's sibling becomes
+   writable. Until then this is a comment, not a green.
+   🔑 AN UNGATEABLE RULE IS WRITTEN DOWN AS UNGATEABLE, NEVER DRESSED UP AS A PASSING LEG.
    ══════════════════════════════════════════════════════════════════════════════════════════════ */
 const fs = require('fs');
 const http = require('http');
@@ -63,7 +76,8 @@ const LABEL = process.argv[2] && process.argv[2].charAt(0) !== '-' ? process.arg
 const NOCLAMP    = process.argv.includes('--noclamp');
 const NOSTORE    = process.argv.includes('--nostoreclamp');
 const OVERCLAMP  = process.argv.includes('--overclamp');
-const MUT = NOCLAMP || NOSTORE || OVERCLAMP;
+const NOBLUR     = process.argv.includes('--noblurclamp');
+const MUT = NOCLAMP || NOSTORE || OVERCLAMP || NOBLUR;
 
 const PORT = 8374;
 const URL = 'http://127.0.0.1:' + PORT + '/studio.html';
@@ -77,6 +91,9 @@ const M_STORE = 'acc.value = Math.min(100000000000, Math.round(_num(valStr) * 10
    derived negative becomes the string a user reads. */
 const A_EQ = "    return v < 0 ? '-' + s : s;";
 const M_EQ = "    return s;   /* derived sign clamped too: --overclamp */";
+/* §41 — the BLUR leg. Reverting the strip restores the measured pre-fix behaviour exactly. */
+const A_BLUR = "      e.target.value = String(e.target.value).replace(/-/g, '');";
+const M_BLUR = "      e.target.value = String(e.target.value);   /* blur strip removed: --noblurclamp */";
 
 /* ⛔ THE REPLACER IS A FUNCTION, AND THAT IS NOT STYLE — IT IS A BUG FIX. `src.replace(a, m)` treats
    `m` as a REPLACEMENT PATTERN, so `$'`, `$&`, "$`" and `$1` inside it expand instead of landing
@@ -100,10 +117,11 @@ const server = http.createServer((req, res) => {
   const fp = path.join(ROOT, rp);
   if (!fp.startsWith(ROOT) || !fs.existsSync(fp) || fs.statSync(fp).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
   let body = fs.readFileSync(fp);
-  if ((NOCLAMP || NOSTORE) && /studio\.html$/.test(rp)) {
+  if ((NOCLAMP || NOSTORE || NOBLUR) && /studio\.html$/.test(rp)) {
     let src = body.toString('utf8');
     if (NOCLAMP) src = mutate(src, A_FMT, M_FMT, 'A_FMT');
     if (NOSTORE) src = mutate(src, A_STORE, M_STORE, 'A_STORE');
+    if (NOBLUR)  src = mutate(src, A_BLUR, M_BLUR, 'A_BLUR');
     body = Buffer.from(src, 'utf8');
   }
   if (OVERCLAMP && /datum-estate\.js$/.test(rp)) {
@@ -139,7 +157,7 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
   await clearCovers();
 
   console.log('=== ' + LABEL + ' === MODE: ' + (MUT
-    ? [NOCLAMP ? 'noclamp' : '', NOSTORE ? 'nostoreclamp' : '', OVERCLAMP ? 'overclamp' : ''].filter(Boolean).join(' ')
+    ? [NOCLAMP ? 'noclamp' : '', NOSTORE ? 'nostoreclamp' : '', OVERCLAMP ? 'overclamp' : '', NOBLUR ? 'noblurclamp' : ''].filter(Boolean).join(' ')
     : 'NORMAL'));
 
   /* ══ SCENE A · THE USER TYPES A MINUS SIGN ═══════════════════════════════════════════════════════
@@ -292,6 +310,55 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
   ok(D.total === 450000 && D.total === D.netWorth,
      'D2 [MONEY] and both totals agree in the right direction — #gross-estate-val=' + D.total +
      ', _computeNetWorth=' + D.netWorth + ', want 450000');
+
+  /* ══ SCENE E · THE BLUR — THE THIRD LEG OF THE DISCIPLINE (§40.5 / §41) ═════════════════════════
+     ⭐ THIS SCENE EXISTS BECAUSE THE CLAIM WAS RETRACTED BEFORE IT WAS BELIEVED. §40.5 ruled the
+     sign into the existing "keystroke, paste and blur" discipline; keystroke and paste were proven
+     in scene A, and BLUR WAS NOT — it routes through formatCurrencyDisplay, which preserves the
+     sign ON PURPOSE. Measured pre-fix: inject "-20000" with no `input` event, blur, and the field
+     settled at "-$20,000".
+     ⛔⛔ AND THE SAME SCENE ASSERTS THE OPPOSITE CLAIM, WHICH IS THE ONLY WAY THIS FIX IS SAFE. A
+     derived negative must survive a blur untouched. The two legs pull in opposite directions
+     through code that sits two lines apart, so they are asserted against ONE render: the underwater
+     vehicle is on screen WHILE the currency field is blurred. */
+  const E = await p.evaluate(async () => {
+    window.state.accounts.length = 0;
+    addInstance('auto');            const car  = window.state.accounts[0];
+    addInstance('auto_debt_joint'); const lien = window.state.accounts[1];
+    car.value = 20000; lien.value = 35000; lien.linkedAssetId = car.id;
+    renderInputs(); updateSVGs();
+    await new Promise((r) => setTimeout(r, 1100));
+
+    /* A SIGNED STRING ARRIVES WITH NO `input` EVENT — the shape §24's valuation-apply and §40.2's
+       insurance relabel will both take. Neither the keystroke guard nor the store guard sees this. */
+    const el = document.getElementById('room-val-inp-' + car.id);
+    el.value = '-20000';
+    el.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 500));
+
+    const svg = document.getElementById('bp-svg');
+    const g = Array.prototype.slice.call(svg.querySelectorAll('g.room-grp'))
+      .filter((x) => (x.getAttribute('onclick') || '').indexOf("'" + car.id + "'") >= 0)[0];
+    const val = g ? g.querySelector('.bp-val') : null;
+    return {
+      field: el.value,
+      stored: car.value,
+      equity: val ? (val.textContent || '').trim() : null,
+    };
+  });
+  console.log('  E ' + JSON.stringify(E));
+
+  ok(E.field !== null && E.field !== '', 'E0 [PRESENCE] the field settled to something after blur');
+  /* ⭐ THE BLUR LEG. */
+  ok(E.field.indexOf('-') < 0,
+     'E1 [DISPLAY · BLUR] a signed string injected with NO input event is refused at blur — field="' + E.field + '"');
+  ok(E.stored === 20000,
+     'E1 [STATE · BLUR] and state is still a positive magnitude — acc.value=' + E.stored + ', want 20000');
+  /* ⭐⭐ THE OPPOSITE LEG, ON THE SAME RENDER. If the blur strip ever migrates into
+     formatCurrencyDisplay, this is what notices. */
+  ok(E.equity === '-$15k',
+     'E2 [DERIVED · SURVIVES A BLUR] the underwater figure still renders its sign — got "' + E.equity +
+     '", want "-$15k". ⛔ The blur strip must live at the CALL SITE, never inside formatCurrencyDisplay.');
 
   console.log('-------------------------------------');
   console.log('OVERALL: ' + (fail === 0 ? 'GREEN' : 'RED') + '   (' + pass + ' pass / ' + fail + ' fail)');

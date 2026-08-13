@@ -3239,6 +3239,30 @@
       const isPct = cl.contains('moneypct-format');
       if (!isPct && !cl.contains('curr-format')) return;
       if (String(e.target.value == null ? '' : e.target.value).trim() === '') return;
+      /* ⛔ THE THIRD LEG OF THE SIGN DISCIPLINE (§40.5 / §41). Keystroke and paste both refuse '-'
+       * via formatCurrency in the `input` listener above; BLUR DID NOT, because it routes through
+       * formatCurrencyDisplay, which PRESERVES the sign ON PURPOSE — it is the same function that
+       * renders net equity and net worth, and those are legitimately negative.
+       * MEASURED 2026-08-13: inject "-50000" into a .curr-format field WITHOUT firing `input`, blur
+       * it, and the field settled at "-$50,000" while state held 50000.
+       * ⭐ WHY IT SHIPS NOW THOUGH IT WAS NOT USER-REACHABLE: nothing today writes a signed string
+       * into a currency field without an input event, so the gap was latent. THE VEHICLE ARC IS THE
+       * EVENT THAT MAKES IT REACHABLE — §24's valuation-apply and §40.2's insurance relabel both add
+       * programmatic writes into these very fields. 🔑 A LATENT DEFECT IS FIXED BEFORE THE FEATURE
+       * THAT REACHES IT, NEVER AFTER; "not reachable today" is a claim about today's code, and the
+       * next commit changes today's code.
+       * ⛔⛔ THE STRIP IS ON THE ARGUMENT AT THIS CALL SITE, NEVER INSIDE formatCurrencyDisplay.
+       * Moving it into the formatter would silently flatten every derived negative in the product —
+       * the underwater case the Garage exists to tell. CLAMP WHAT IS TYPED, NEVER WHAT IS DERIVED. */
+      /* ⚠️ STRIPPED IN PLACE, THEN FORMATTED — AND THE TWO-STATEMENT SHAPE IS DELIBERATE, for the
+         same reason the input listener above is not a ternary. `_gate_407_19_1c_display` and
+         `_gate_407_19_1_cents` both anchor on the literal `formatCurrencyDisplay(e.target.value)`
+         to prove the blur normalizer is wired through the padding formatter. Passing a renamed
+         local instead broke both anchors while the behaviour stayed correct — two gates RED for a
+         shape change, not a defect. The claims are worth keeping and the product can simply keep
+         the shape, so the sign is removed from the field FIRST and the formatter call is left
+         untouched. (Assigning to .value does not dispatch `input`, so this cannot re-enter.) */
+      e.target.value = String(e.target.value).replace(/-/g, '');
       if (isPct) e.target.value = formatMoneyOrPctDisplay(e.target.value);
       else e.target.value = formatCurrencyDisplay(e.target.value);
     });
