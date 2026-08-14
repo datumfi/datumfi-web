@@ -23,7 +23,7 @@ const DROP_RE = [/^\.claude\//, /^\.wrangler\//, /^workers\//, /^functions\//, /
 
 // SACRED HOSTS — must ship byte-identical (LF + content). Build ABORTS on drift.
 const SACRED = {
-  'studio.html': 'd877f043f1b5179e6691dfae0460a2bc',   // STEP 2a — the debt-cost trio extracted to scripts/studio-debt-cost.js (2026-08-13)
+  'studio.html': 'efd642d9fdd92e55e78f5b31212be3ea',   // STEP 1 — the landing: four movements, seven phases, ghost plan (2026-08-13)
   'sketch.html': '28258a76686008aebe839d59af39500f',   // shape button reverted to the Captain's "Save Shape" / "✓ Saved" (2026-08-01)
   /* §47.3 — SACRED as of 2026-08-13, declared in CLAUDE.md IN THIS SAME COMMIT. The two lists are
      reconciled by this build in BOTH directions, so a host added to one and not the other STOPS
@@ -36,6 +36,9 @@ const SACRED = {
      a file whose absence fails silently and changes money on screen. Three room families (Moat,
      Cellar, Yard) read the payment figures it carries. */
   'scripts/studio-debt-cost.js': 'df016d73c4a45117681577a5b064f9ed',   // the monthly carrying cost of a debt — extracted from studio.html:9487-9504 (2026-08-13)
+  /* STEP 1 — the landing. SACRED because it owns the completeness predicate: a wrong answer here
+     tells the user a phase of the method is finished when it is not, on the front door. */
+  'scripts/studio-landing.js': '561f193d9e36cfbaf42067f21fb58893',   // the four movements, seven phases, and the ghost plan (2026-08-13)
   'scripts/studio-blueprint.js': '5d26366432a57de46e927738fa072fbe',   // the six typed running costs ride the slim Clerk allowlist in the same commit as the fields (2026-08-13)
   // MISS-5 pre-work guard (2026-07-25). nav.js is a Sacred Host in CLAUDE.md but was absent from THIS map,
   // so a bad edit failed no build. It owns the centralized cross-device restore every page depends on

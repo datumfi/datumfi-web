@@ -711,6 +711,53 @@
   .timeline-state-badge { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); border: 1px solid currentColor; border-radius: 3px; padding: 2px 7px; line-height: 1; white-space: nowrap; }
   .timeline-state-badge:empty { display: none; }
 
+  /* ── STEP 1 · THE LANDING ─────────────────────────────────────────────────────────────────────
+     The formula as four movements. Restrained on purpose: this is the first thing a user sees and
+     it has to read as a METHOD, not a menu. Gold carries the structure (formula, movement labels),
+     white carries the phase names, and the dot is the only state indicator — no badges, no chips. */
+  .sl-line { font-family: var(--font-serif); font-size: 15px; font-style: italic; line-height: 1.55;
+             color: rgba(255,255,255,0.72); margin: 10px 0 26px; max-width: 42ch; }
+  .sl-formula { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em;
+                color: var(--gold); opacity: 0.55; margin-bottom: 22px; white-space: nowrap; }
+  .sl-movements { margin-bottom: 34px; }
+  .sl-movement { position: relative; padding-left: 14px; margin-bottom: 18px;
+                 border-left: 1px solid rgba(201,168,76,0.22); }
+  .sl-glyph { position: absolute; left: -7px; top: -13px; width: 14px; text-align: center;
+              font-family: var(--font-mono); font-size: 12px; color: var(--gold); opacity: 0.7;
+              background: var(--bg-navy); line-height: 1; }
+  .sl-mv-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+  .sl-mv-expr { font-family: var(--font-mono); font-size: 11px; color: var(--gold); opacity: 0.9; }
+  .sl-mv-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.14em;
+                 text-transform: uppercase; color: var(--muted); }
+  .sl-phase { display: grid; grid-template-columns: 14px 24px 1fr; align-items: baseline;
+              column-gap: 8px; width: 100%; text-align: left; background: none; border: none;
+              padding: 5px 6px 5px 0; margin: 0; cursor: pointer; border-radius: 3px;
+              transition: background 0.15s ease; }
+  .sl-phase:hover { background: rgba(255,255,255,0.04); }
+  .sl-phase:focus-visible { outline: 1px solid var(--teal-mid); outline-offset: 2px; }
+  .sl-dot { font-size: 9px; color: rgba(255,255,255,0.28); line-height: 1.6; }
+  .sl-phase.is-done .sl-dot { color: var(--teal-mid); }
+  .sl-numeral { font-family: var(--font-mono); font-size: 9px; color: var(--muted); letter-spacing: 0.06em; }
+  .sl-name { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.1em;
+             color: rgba(255,255,255,0.88); grid-column: 3; }
+  .sl-desc { grid-column: 3; font-family: var(--font-serif); font-style: italic; font-size: 12px;
+             color: rgba(255,255,255,0.42); margin-top: 2px; line-height: 1.45; }
+  .sl-phase.is-unbuilt .sl-name { color: rgba(255,255,255,0.5); }
+  .sl-phase.is-unbuilt .sl-desc { max-width: 40ch; }
+  .sl-align-body { font-family: var(--font-serif); font-size: 13px; font-style: italic; line-height: 1.6;
+                   color: rgba(255,255,255,0.62); border-left: 1px solid rgba(201,168,76,0.3);
+                   padding: 2px 0 2px 12px; margin: 0 0 26px; max-width: 46ch; }
+  /* The ghost plan. Faint at zero, inked as phases are answered. Pointer-events off — it is a
+     PROGRESS INSTRUMENT, never a control, and it must never compete with the canvas for clicks. */
+  #sl-ghost-plan { position: absolute; inset: 0; display: flex; flex-direction: column;
+                   align-items: center; justify-content: center; gap: 18px; pointer-events: none; z-index: 0; }
+  .sl-ghost-grid { display: grid; grid-template-columns: repeat(4, 54px); grid-auto-rows: 54px; gap: 10px; }
+  .sl-ghost-cell { border: 1px dashed rgba(255,255,255,0.10); border-radius: 2px; transition: 0.5s ease; }
+  .sl-ghost-cell.is-inked { border-style: solid; border-color: rgba(93,202,165,0.45);
+                            background: rgba(93,202,165,0.06); }
+  .sl-ghost-note { font-family: var(--font-serif); font-style: italic; font-size: 13px;
+                   color: rgba(255,255,255,0.30); max-width: 34ch; text-align: center; line-height: 1.5; }
+
   .return-home { display: inline-block; font-family: var(--font-mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; text-decoration: none; margin-bottom: 30px; transition: 0.2s; }
   .return-home:hover { color: var(--teal-mid); }
 
@@ -1637,6 +1684,10 @@
        (Moat, Cellar, Yard) call these. ⛔ THIS TAG IS LOAD-BEARING AND ITS ABSENCE IS SILENT —
        scripts/_gate_parts_wired.mjs exists because deleting it leaves every sandbox gate GREEN. -->
   <script src="/scripts/studio-debt-cost.js"></script>
+  <!-- ⭐ STEP 1 · the landing: four movements, seven phases, the completeness predicate and the
+       ghost plan. Head-loaded and not deferred, like its siblings — the inline script below and the
+       markup both reach these functions. -->
+  <script src="/scripts/studio-landing.js"></script>
 </head>
 <body>
   <a href="#studio-layout" class="skip-link">Skip to main content</a>
@@ -1701,14 +1752,21 @@
       
       <a href="#" class="return-home">← Return to Overview</a>
 
-      <!-- S1 left-header — parity with Sketch title-block (sketch.html:1460-1463), Sketch visual order.
-           "Reveal the Shape" = gold serif-italic descriptor (parallels Sketch "Discover Your Shape");
-           HEADER STRING ONLY — NOT wired to the MC "REVEAL YOUR RANGE" button. -->
+      <!-- ⭐ STEP 1 · THE LANDING. Replaces the old S1 title-block. THREE STRINGS WERE DELIBERATELY
+           REMOVED and must not come back: the old single-phase label, the gold serif descriptor, and
+           the subtitle about moving inputs — that last one describes the SKETCH, not the Studio;
+           moving inputs is a Sketch verb.
+           ⛔ THEY ARE DESCRIBED HERE, NEVER QUOTED. An HTML comment ships to the browser and lands in
+           innerHTML, so quoting a removed string verbatim defeats every absence-grep written to prove
+           it is gone — including a publish proof. (Measured: the first cut of this comment quoted all
+           three and made them look still-present.) The originals are in git history at 7d9e862.
+           The movements/phases are painted by scripts/studio-landing.js. ADDITIVE AND INERT: the
+           vertical sections below still work exactly as before, and no page is created. -->
       <div class="s1-header">
-        <div class="panel-sub" style="margin-bottom:12px;color:var(--gold);">PHASE I — DATA</div>
-        <div style="font-family:var(--font-serif); font-size:22px; font-style:italic; color:var(--gold); margin-bottom:12px;">Reveal the Shape</div>
         <h1>The Studio</h1>
-        <div class="panel-sub" style="color:rgba(255,255,255,0.6);">Move the inputs. Watch your retirement take shape.</div>
+        <div class="sl-line">Everything you have, everything that presses on it, and the range that survives both.</div>
+        <div id="sl-movements-host"></div>
+        <div id="sl-alignment-panel" style="display:none;"></div>
       </div>
       <!-- S2.0: PHASE II — ARCHITECTURE header. Hidden by default; shown only in view-s2.
            Same Sketch-parity structure as S1 (gold phase-label / gold serif descriptor /
@@ -2449,7 +2507,13 @@
     </div>
 
     <div class="canvas-wrapper" id="canvas-wrapper">
-      
+
+      <!-- ⭐ STEP 1 · THE GHOST PLAN. The landing's canvas is the weakest frame in the whole
+           experience, so it shows a faint plan that INKS IN as phases are answered — a progress
+           instrument, not a placeholder, which is what a methodology's home page should have.
+           ⛔ pointer-events:none and z-index:0 — the estate draws OVER it and keeps every click. -->
+      <div id="sl-ghost-plan"></div>
+
       <div id="trust-firewall-tooltip">
          <strong>LEGAL FIREWALL</strong>Capital housed within this wing is legally decoupled from the primary Estate. It is immune to core structural collapse, shielded from standard liability modeling, and designated exclusively for generational transfer.
       </div>

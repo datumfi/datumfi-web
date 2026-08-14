@@ -88,7 +88,11 @@ const PARTS = [
      registering a part makes every sandbox gate green whether or not any PAGE loads it. Registration
      is not wiring. The <script src> in studio.html's head is the other half, and it is gated
      separately and reported separately. */
-  'scripts/studio-debt-cost.js'
+  'scripts/studio-debt-cost.js',
+  /* ⭐ THE THIRD PART, REGISTERED 2026-08-13 — STEP 1, THE LANDING. Born as a part rather than as
+     more inline studio.html because the landing becomes its own surface at Step 3: written from day
+     one to be consumed by a page that is not studio.html. */
+  'scripts/studio-landing.js'
 ];
 
 const PART_OPEN  = (rel) => '/* ═════ studioSource PART BEGIN · ' + rel + ' ═════ */';

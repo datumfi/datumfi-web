@@ -154,6 +154,15 @@ loosening the parser.
    `studio-mortgage-cost.js` would have been a lie baked into a served path — `calculateTotalPmt` is
    reached by `_helocIntelBeats`, `_helocCeilingBand`, `_helocInterestOnlyDraw`, `_yardRealMonthly`
    and `_yardIntelligence`. THE ORIGIN ROOM IS AN ACCIDENT OF HISTORY; THE CALLER SET IS THE BOUNDARY.
+ · scripts/studio-landing.js · the Studio landing — the THIRD `studioSource` part (Step 1,
+   2026-08-13): the formula as four movements, the seven phase names, the completeness predicate and
+   the ghost plan. SACRED because it owns `_phaseComplete`, and a wrong answer there tells the user a
+   phase of the method is finished when it is not — on the front door, at first paint.
+   ⛔ ITS PREDICATE IS NEW CODE, NOT A REUSE, AND THAT WAS MEASURED: the old range-readiness bar lit
+   `Datum` and `Market Outlook` on a COLD, EMPTY Studio (a hard-coded `$100,000` in `#spend-input`
+   and a default-active climate option), which would have opened the front door with ENDURANCE
+   already answered — the one phase whose whole argument is that the Datum is DERIVED LAST.
+   🔑 REUSE-DON'T-FORK ASSUMES THE DONOR IS CORRECT. L48 IS NEVER A VERIFICATION EXEMPTION.
 <!-- SACRED-LIST-END -->
 
 THIS LIST AND `SACRED{}` IN `scripts/build-dist.mjs` MUST MATCH EXACTLY — every host declared here
