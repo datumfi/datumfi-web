@@ -39,13 +39,37 @@
     --hsa: #86e07a;   /* Infirmary wall — pure yellow-green, deliberately off the site teal (#5DCAA5) family */
   }
 
+  /* ⛔⛔ height, NOT min-height — AND THAT ONE WORD IS THE WHOLE FIX (measured 2026-08-14).
+     A flex COLUMN with height:auto sizes to its CONTENT, so `flex:1` on .studio-layout had no free
+     space to distribute and the row grew to its own content height (3,749px measured). The 85px
+     #disclosure-footer was then pushed past the fold — and `overflow:hidden` below means the wheel,
+     Home and PageUp are ALL DEAD, so that scroll was ONE-WAY. See .drafting-panel for the full chain.
+     🔑 flex-grow DIVIDES FREE SPACE; IT CANNOT CREATE A CONSTRAINT THE CONTAINER NEVER HAD. A
+     PERCENTAGE OR A flex:1 IS ONLY AS DEFINITE AS ITS PARENT'S MAIN SIZE.
+     ⚠️ The mobile block below RESTORES height:auto on purpose: under 900px the layout stacks, the
+     document is MEANT to scroll, and overflow:auto gives the wheel back. */
   body {
-    min-height: 100vh;
+    height: 100vh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
     padding-top: 56px;
   }
+  /* ⛔ RESERVE THE CONSENT BANNER'S HEIGHT — A CONSEQUENCE OF THE FIX ABOVE, NOT A TIDY-UP.
+     nav.js injects #privacy-banner as position:fixed at the viewport bottom (z-index 9999) on a
+     first visit. Every OTHER page survives that because every other page SCROLLS (index 7,335px,
+     privacy 2,479px) — whatever the banner covers can be scrolled out from under it. ⛔ THE STUDIO
+     NOW HAS A SCROLL BUDGET OF ZERO BY DESIGN, SO ANYTHING THE BANNER COVERS IS COVERED PERMANENTLY
+     FOR THAT SESSION — and what it landed on was #disclosure-footer's LEGAL LINKS. Shipping a
+     consent banner on top of the disclosure links, in the same change that set out to make those
+     links reachable, would have been self-defeating.
+     56px is MEASURED, not guessed: the banner is one line at every viewport from 960px to 2560px
+     (below 900px the mobile block restores a scrolling document, where this cannot arise). ⭐ AND IT
+     IS POLICED — _gate_exit_reachable.js W7 hit-tests every disclosure link at eight viewports, so
+     if the banner ever wraps to two lines this goes RED instead of quietly re-covering the links.
+     ⚠️ :has() DEGRADES SAFELY — where it is unsupported the rule drops and we are back to a
+     first-visit cosmetic overlap, never to the scroll trap. */
+  body:has(#privacy-banner) { padding-bottom: 56px; }
 
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: var(--bg-navy); }
@@ -62,7 +86,11 @@
 
   /* Mode: draft — hide canvas, drafting panel fills width */
   .studio-layout.mode-draft .canvas-wrapper { display: none !important; }
-  .studio-layout.mode-draft .drafting-panel { width: 100%; max-width: none; height: calc(100vh - 56px); }
+  /* ⛔ SAME RULE AS THE BASE .drafting-panel — 100% of the row, never calc(100vh - 56px). Sheet mode
+     hides the canvas and lets the panel fill the width; if it also claimed the full viewport height
+     it would re-create the 85px one-way scroll budget on THIS mode only, which is exactly the kind
+     of per-mode hole a single-mode gate walks past. */
+  .studio-layout.mode-draft .drafting-panel { width: 100%; max-width: none; min-height: 0; }
 
   /* Drafting Focus: rooms reflow to grid */
   .studio-layout.mode-draft #rooms-container {
@@ -688,7 +716,11 @@
   #shape-panel-svg #scrubber-group { pointer-events: none; opacity: 0; transition: opacity 0.2s; }
 
   /* --- STUDIO LAYOUT --- */
-  .studio-layout { display: flex; flex: 1; width: 100%; margin: 0 auto; }
+  /* ⛔ min-height:0 IS LOAD-BEARING, NOT TIDINESS. A flex item defaults to min-height:auto, so this
+     row could not shrink below the min-content height its own children demanded — and the 85px
+     #disclosure-footer below it was pushed OUT OF THE VIEWPORT, creating a scroll budget the wheel
+     could not undo (body{overflow:hidden}). See the .drafting-panel note below for the full chain. */
+  .studio-layout { display: flex; flex: 1; min-height: 0; width: 100%; margin: 0 auto; }
   /* Seed render-gate — hold the drafting numbers until the async Clerk dossier seed
      lands, so a direct load never flashes the schema defaults (40/65/93) before the
      authoritative dossier hydrates. visibility:hidden keeps layout (no reflow on reveal).
@@ -696,10 +728,33 @@
      can never stay hidden. */
   .studio-layout.seed-gated { visibility: hidden; }
 
-  /* LEFT: Drafting Column */
+  /* LEFT: Drafting Column
+     ⛔⛔ NO height DECLARATION AT ALL — THE ROW STRETCHES IT. *NOT* calc(100vh - 56px), and ⛔ NOT
+     height:100% either: this panel's parent has an INDEFINITE height, so a percentage silently
+     resolves to `auto` = CONTENT height. Measured 2026-08-14 — that mistake took the scroll budget
+     from 85px to 3,153px, i.e. it made the very defect it was meant to fix THIRTY-SEVEN TIMES WORSE
+     while looking like the obvious repair. The row is `display:flex`, so the default
+     `align-items:stretch` gives this item the row's height with no declaration; `min-height:0` is
+     what lets it shrink below its content so `overflow-y:auto` actually engages.
+     🔑 A PERCENTAGE HEIGHT IS A NO-OP AGAINST AN INDEFINITE PARENT, AND IT FAILS BY GROWING.
+     THE calc() WAS THE ROOT OF A NO-ESCAPE TRAP, and the chain took four harmless-looking parts:
+       1. body is a flex COLUMN holding .studio-layout AND the 85px #disclosure-footer
+       2. this panel claimed the FULL 100vh-minus-topbar, so the row could not shrink (min-height:auto)
+       3. ⇒ the footer was pushed past the fold: scrollHeight 985 vs clientHeight 900 = 85px of scroll
+       4. body{overflow:hidden} ⇒ the wheel, Home and PageUp are ALL DEAD — that scroll is ONE-WAY
+     Anything scrolling the document (three scrollIntoView sites do) then dragged #shape-mode-toggle,
+     which is position:absolute inside the normal-flow .canvas-wrapper, under the 56px FIXED nav.
+     elementFromPoint at its centre returned `a.nav-login-btn`. THE ONLY EXIT FROM ESTATE MODE WAS
+     COVERED AND THE ONLY ESCAPE WAS A RELOAD.
+     ⭐ THE FIX IS AT THE LEVEL ABOVE ALL THREE CALL SITES: with the budget at ZERO, scrollIntoView
+     HAS NOWHERE TO SCROLL THE DOCUMENT TO. The panel still scrolls — that was always the intent.
+     🔑 A PAGE WHOSE WHEEL IS DISABLED MUST NEVER BE SCROLLABLE AT ALL (§15.2). Patching the call
+     sites would fix three; removing the budget makes the whole CLASS impossible, including site #4.
+     ⚠️ DO NOT "restore" the calc() to make the canvas taller — it re-arms the trap, and
+     _gate_exit_reachable.js --defect mutates this exact declaration back to prove it. */
   .drafting-panel {
     width: 480px; padding: 30px 40px 40px 40px; border-right: 1px solid rgba(255,255,255,0.05);
-    height: calc(100vh - 56px); overflow-y: auto; background-color: var(--bg-navy); z-index: 50;
+    min-height: 0; overflow-y: auto; background-color: var(--bg-navy); z-index: 50;
   }
   /* Item 3 (P8.1) — shape-state outline scoped to the 01->05 input group on BOTH the Have
      (#shape-input-frame-have) and Want (#shape-input-frame-want) panels. Border (all 4 sides,
@@ -1268,7 +1323,11 @@
 
   /* --- MOBILE LAYOUT (H3) --- */
   @media (max-width: 900px) {
-    body { overflow: auto; padding-top: 73px; }
+    /* ⛔ height:auto is DELIBERATE and must not be "tidied" to match the desktop rule. Under 900px
+       the layout stacks vertically and the document is SUPPOSED to scroll — overflow:auto hands the
+       wheel back, so a one-way scroll is impossible here. The desktop trap needs BOTH halves
+       (a scroll budget AND a dead wheel); mobile has neither. */
+    body { height: auto; overflow: auto; padding-top: 73px; }
     .studio-layout { flex-direction: column; overflow: auto; }
     .drafting-panel { width: 100%; height: auto; max-height: none; overflow-y: visible; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.05); }
     .canvas-wrapper { width: 100%; min-height: 400px; flex: none; }
@@ -16972,8 +17031,17 @@
     </div>
   </div>
 
-  <div id="disclosure-footer" style="width:100%;background:rgba(9,18,33,0.97);border-top:1px solid rgba(255,255,255,0.05);padding:16px 40px 20px;text-align:center;margin-top:auto;">
-    <p style="font-family:var(--font-mono);font-size:10px;color:rgba(255,255,255,0.25);line-height:1.6;margin:0;">DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. Past performance does not guarantee future outcomes. &nbsp;|&nbsp; <a href="/privacy.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Privacy Policy</a> &nbsp;|&nbsp; <a href="/terms.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Terms of Service</a> &nbsp;|&nbsp; <a href="mailto:accessibility@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">Accessibility</a> &nbsp;|&nbsp; <a href="mailto:privacy@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">privacy@datumfi.com</a> &nbsp;|&nbsp; <a href="mailto:feedback@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">feedback@datumfi.com</a> &nbsp;|&nbsp; <span style="color:rgba(255,255,255,0.3);cursor:pointer;text-decoration:underline;" onclick="openDeleteDataModal()">Delete My Data</span> &nbsp;|&nbsp; <a href="/privacy-choices.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Do Not Sell My Information</a> &nbsp;|&nbsp; Build&nbsp;2026.04.19&nbsp;&bull;&nbsp;v1.0.0</p>
+  <!-- ⚠️ THE PADDING AND line-height HERE ARE LOAD-BEARING, NOT TASTE (2026-08-14). This footer is
+       now INSIDE the viewport (it never was before — see the body rule), so every pixel it takes
+       comes out of the canvas, the estate is CENTRED in that canvas, and the drawing therefore
+       drifts toward the nav as the footer grows. At 16px/20px padding and line-height 1.6 the footer
+       was 85px and _gate_lens_bar_clearance L4 went RED at 1366x768 — 7px of nav clearance against a
+       floor of 8. Tightening to 10px/12px and 1.45 gives the canvas ~17px back and restores it.
+       ⛔ NOT ONE WORD OF THIS DISCLOSURE CHANGED — the legal text is authored copy and is not the
+       Wirer's to reword. Only the box around it moved. ⭐ AND IT IS POLICED FROM BOTH SIDES: L4
+       catches the footer growing, W7 in _gate_exit_reachable catches its links being covered. -->
+  <div id="disclosure-footer" style="width:100%;background:rgba(9,18,33,0.97);border-top:1px solid rgba(255,255,255,0.05);padding:10px 40px 12px;text-align:center;margin-top:auto;">
+    <p style="font-family:var(--font-mono);font-size:10px;color:rgba(255,255,255,0.25);line-height:1.45;margin:0;">DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. Past performance does not guarantee future outcomes. &nbsp;|&nbsp; <a href="/privacy.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Privacy Policy</a> &nbsp;|&nbsp; <a href="/terms.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Terms of Service</a> &nbsp;|&nbsp; <a href="mailto:accessibility@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">Accessibility</a> &nbsp;|&nbsp; <a href="mailto:privacy@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">privacy@datumfi.com</a> &nbsp;|&nbsp; <a href="mailto:feedback@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">feedback@datumfi.com</a> &nbsp;|&nbsp; <span style="color:rgba(255,255,255,0.3);cursor:pointer;text-decoration:underline;" onclick="openDeleteDataModal()">Delete My Data</span> &nbsp;|&nbsp; <a href="/privacy-choices.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Do Not Sell My Information</a> &nbsp;|&nbsp; Build&nbsp;2026.04.19&nbsp;&bull;&nbsp;v1.0.0</p>
   </div>
 
   <!-- Scenario Memory Bank Modal -->
