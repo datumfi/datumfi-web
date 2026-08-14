@@ -140,7 +140,18 @@ const SCENARIOS = {
     const res = {};
     const shapes = {
       drawn: { value: 40000, intRate: 8, minPmt: '400', addPmt: '100', creditLimit: '100000' },
-      interestOnly: { value: 60000, intRate: 7.5, minPmt: '375', addPmt: '0', creditLimit: '100000' }
+      interestOnly: { value: 60000, intRate: 7.5, minPmt: '375', addPmt: '0', creditLimit: '100000' },
+      /* ⭐ THE CAPTAIN'S SMOKE SHAPE, 2026-08-13 — balance + payment and NOTHING ELSE. He reported
+         "no beat in the intelligence" and it is CORRECT BEHAVIOUR: every payment-naming beat in
+         _helocIntelBeats requires apr > 0 (16.2), or addPmt > 0 (16.3), or a maturity date (16.1).
+         With no rate the product REFUSES TO NAME A PAYMENT STORY rather than inventing a rate —
+         L47 sourced-or-blank. Only 16.4 (the dark-equity prompt) fires, which is what he saw.
+         ⛔ KEPT AS A FIXTURE SO THE SILENCE IS PINNED: a future change that starts talking here
+         would be inventing a number, and this shape is where that shows up. */
+      captainNoRate: { value: 20000, minPmt: '200', addPmt: '0' },
+      /* The same shape WITH a rate — proves the silence above is caused by the missing input and not
+         by a dead beat. An absence leg needs a presence leg beside it. */
+      captainWithRate: { value: 20000, intRate: 8, minPmt: '200', addPmt: '0' }
     };
     for (const name of Object.keys(shapes)) {
       window.state.accounts.length = 0;
