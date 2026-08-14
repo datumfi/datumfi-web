@@ -427,6 +427,46 @@
     transition: border-color 0.2s, color 0.2s, background 0.2s;
   }
   #shape-mode-toggle:hover { border-color: var(--teal-mid); background: rgba(29,158,117,0.1); }
+
+  /* ⌖ RECENTER — inherits the mode toggle's chrome so the two read as one control cluster.
+     top:52px clears the toggle (top 14 + 27 tall = 41) with an 11px gap; both are absolutely
+     positioned inside .canvas-wrapper, so they ride together and cannot separate.
+     ⚠️ Deliberately NOT bottom-anchored: the consent banner is position:fixed at the viewport
+     bottom, and once the disclosure footer moves into the panel the canvas will extend under it —
+     a bottom-right control would slide beneath the banner and become the next unreachable exit. */
+  /* ⭐ CAPTAIN-RULED 2026-08-14: IT APPEARS ONLY WHEN THE CANVAS IS OFF CENTRE, AND VANISHES THE
+     MOMENT IT IS BACK. A permanent control would be clutter on a surface whose whole job is to be
+     looked at — and a control that is present only when it has something to do explains itself
+     without a word of copy. The .is-off-centre class is driven by _syncRecenterBtn(), which hangs
+     off the three transform writers so it cannot miss a pan. */
+  #canvas-recenter { display: none; }
+  #canvas-recenter.is-off-centre { display: block; }
+  #canvas-recenter {
+    position: absolute;
+    top: 52px;
+    right: 14px;
+    z-index: 50;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--teal-mid);
+    background: rgba(9,18,33,0.85);
+    border: 1px solid rgba(29,158,117,0.4);
+    border-radius: 3px;
+    padding: 6px 12px;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+  }
+  #canvas-recenter:hover { border-color: var(--teal-mid); background: rgba(29,158,117,0.1); }
+  .studio-layout.mode-shape #canvas-recenter { color: var(--gold); border-color: rgba(201,168,76,0.5); }
+  .studio-layout.mode-shape #canvas-recenter:hover { border-color: var(--gold); background: rgba(201,168,76,0.08); }
+  /* Hidden wherever the mode toggle is hidden — in view-s2's empty-rooms lock there is no canvas
+     worth recentering, and a live control over a dead canvas is worse than no control.
+     ⚠️ Written against .is-off-centre so it OUT-SPECIFIES the show rule rather than needing
+     !important — the lock must win even while the canvas is genuinely off centre. */
+  .studio-layout.view-s2.s2-estate-locked #canvas-recenter.is-off-centre { display: none; }
   .studio-layout.mode-shape #shape-mode-toggle { color: var(--gold); border-color: rgba(201,168,76,0.5); }
   .studio-layout.mode-shape #shape-mode-toggle:hover { border-color: var(--gold); background: rgba(201,168,76,0.08); }
 
@@ -2579,6 +2619,20 @@
 
       <!-- Estate<->Shape flip toggle -->
       <button id="shape-mode-toggle" onclick="toggleShapeMode()" title="Switch between Estate rooms and deterministic Shape view">Shape Mode</button>
+
+      <!-- ⛔ THE WAY OUT OF A PANNED-AWAY CANVAS. Until 2026-08-14 there was none: the canvas
+           advertised panning (cursor:grab) and offered no way home, and the Captain lost his entire
+           estate off-screen WHILE DRAGGING TO HUNT FOR THE HIDDEN MODE BUTTON — one defect produced
+           the searching behaviour that sprang the other.
+           🔑 A CONTROL THAT CREATES A STATE MUST OFFER A WAY OUT OF IT.
+           ⭐ Label authored by the Captain (he owns naming). "RECENTER" describes what happens to the
+           VIEW — deliberately not "reset", which elsewhere in this product means Reset Design and
+           would read as "throw away my plan" on a control sitting over the user's own estate.
+           ⚠️ Stacked BELOW #shape-mode-toggle at a fixed offset rather than beside it: the mode
+           button's width changes with its label, so a side-by-side offset would need re-deriving
+           every time that copy moves. Vertical stacking cannot collide by construction. -->
+      <button id="canvas-recenter" type="button" onclick="recenterCanvas()"
+              title="Bring the canvas back to centre">&#8982; RECENTER</button>
 
       <!-- Item 2 (P8.1) — the Have/Want subtoggle is a DIRECT child of .canvas-wrapper, NOT
            inside #shape-panel: #shape-panel carries the reveal transform, and a position:fixed
@@ -14313,17 +14367,89 @@
     let isDragging = false;
     let startX, startY, currentX = 0, currentY = 0;
 
+    /* ⛔⛔ THIS FUNCTION LEFT THE PAN OFFSETS ALONE AND THAT MADE THE ESTATE UNRECOVERABLE.
+       MEASURED 2026-08-13, reproduced 2026-08-14: drag the estate to -4000/-3000, call fitToScreen(),
+       and the transform came back `translate(calc(-50% - 4000px), calc(-50% - 3000px))` — UNCHANGED.
+       window.resize is wired straight to this function, so not even resizing the window recovered it.
+       There was no recenter control anywhere in the UI, so the ONLY escape was typing
+       `currentX=0; currentY=0; fitToScreen()` into the browser console.
+       🔑 A FUNCTION CALLED "FIT TO SCREEN" THAT LEAVES ITS SUBJECT OFF SCREEN IS MISNAMED AS WELL AS
+          BROKEN — the name was the strongest evidence available and nobody read it as a claim.
+       ⭐ AND THE CLASS WAS CHECKED, NOT ASSUMED: fitShapeToScreen (~14355) and fitWantToScreen
+          (~14390) BOTH already zero their own offsets. This was the only one of the three that did
+          not — so this is the whole defect, and _gate_canvas_recenter.js now asserts all three so the
+          next one written cannot quietly omit it. */
     function fitToScreen() {
        const wrapperRect = canvasWrapper.getBoundingClientRect();
        const scaleX = wrapperRect.width / 1400;
        const scaleY = wrapperRect.height / 1100;
-       scale = Math.min(scaleX, scaleY, 0.95); 
+       scale = Math.min(scaleX, scaleY, 0.95);
+       currentX = 0; currentY = 0;
        updateTransform();
     }
+    /* The one door out of a panned-away canvas, exposed for the reset control and for the gate.
+       Kept as a named export rather than inlining fitToScreen() on the button, so the control and
+       the resize handler can never drift apart. */
+    window._recenterEstate = function () { fitToScreen(); };
     
     function updateTransform() {
         blueprintContainer.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px)) scale(${scale})`;
+        _syncRecenterBtn();
     }
+
+    /* ── ⌖ RECENTER — VISIBILITY AND ACTION, FOR ALL THREE CANVASES ────────────────────────────
+       ⭐ WHY IT HANGS OFF THE TRANSFORM WRITERS RATHER THAN THE DRAG HANDLERS: every pan, every fit,
+       every programmatic move goes through updateTransform / updateShapeTransform /
+       updateWantTransform. Hooking the three writers is a CHOKE POINT; hooking the drag handlers
+       would have been a LIST, and a list goes stale the day someone adds touch, keyboard or a
+       scripted move. THE CONTROL CANNOT FALL OUT OF SYNC WITH THE CANVAS BECAUSE IT IS DRIVEN BY THE
+       SAME LINE THAT MOVES IT.
+       ⚠️ PAN ONLY, NOT ZOOM — deliberately. The trap was translation: the estate could be dragged
+       off-screen and never recovered. Zoom has always been recoverable by zooming back, and showing
+       the control for a merely-zoomed canvas would leave it up almost permanently. */
+    function _activePanOffset() {
+      var l = document.getElementById('studio-layout');
+      if (l && l.classList.contains('mode-shape')) {
+        if (typeof wantActive === 'function' && wantActive()) return Math.abs(wantX) + Math.abs(wantY);
+        return Math.abs(shapeX) + Math.abs(shapeY);
+      }
+      return Math.abs(currentX) + Math.abs(currentY);
+    }
+    /* ⛔ try/catch IS NOT DEFENSIVE CLUTTER HERE — IT IS SCOPED TO A KNOWN, PAID-FOR FAILURE.
+       _activePanOffset reads shapeX/wantX, which are `let` bindings declared BELOW this point
+       (14443 / 14481). Today every fitToScreen() call site runs after them, so the order is safe —
+       but a `let` read in its temporal dead zone throws, `typeof` does NOT rescue a TDZ binding the
+       way it rescues an undeclared name, and an uncaught throw inside a transform writer would abort
+       THE ENTIRE INLINE SCRIPT BLOCK — every function below it silently never defined. That is the
+       recorded P0 shape: markup present, page dead, "deployed" looking true.
+       🔑 A DECORATIVE CONTROL MUST NEVER BE ABLE TO KILL THE PAGE IT DECORATES. Worst case here is a
+       button that fails to appear; the canvas still moves. */
+    function _syncRecenterBtn() {
+      try {
+        var b = document.getElementById('canvas-recenter');
+        if (!b) return;                                // D14 — null-guard; the control is optional markup
+        b.classList.toggle('is-off-centre', _activePanOffset() > 0);
+      } catch (e) { /* pan state not initialised yet — the next transform write will sync it */ }
+    }
+    /* ⛔ EXPORTED BECAUSE THE MODE TOGGLE MUST RE-SYNC, AND IT LIVES IN ANOTHER SCRIPT BLOCK.
+       FOUND BY THE GATE, 2026-08-14: the three transform writers cover every MOVE, but switching
+       Estate<->Shape changes WHICH CANVAS IS ACTIVE without moving anything. Leave the estate panned
+       away, flip to Shape, flip back — the estate is off screen and the control was not shown,
+       because nothing had written a transform since the mode changed.
+       🔑 A CHOKE POINT ON "WHAT MOVED" IS NOT A CHOKE POINT ON "WHAT AM I LOOKING AT". */
+    window._syncRecenterBtn = _syncRecenterBtn;
+    /* Recenters WHICHEVER canvas the user is looking at. ⛔ Not hard-wired to fitToScreen(): in Shape
+       mode that would silently recentre the estate behind the user's back and leave the thing they
+       are actually looking at exactly where it was. */
+    window.recenterCanvas = function () {
+      var l = document.getElementById('studio-layout');
+      if (l && l.classList.contains('mode-shape')) {
+        if (typeof wantActive === 'function' && wantActive()) { if (window._fitWantToScreen) window._fitWantToScreen(); return; }
+        if (window._fitShapeToScreen) window._fitShapeToScreen();
+        return;
+      }
+      fitToScreen();
+    };
 
     window.addEventListener('resize', fitToScreen);
 
@@ -14341,6 +14467,7 @@
     }
     function updateShapeTransform() {
       if (shapeZoomWrap) shapeZoomWrap.style.transform = `translate(${shapeX}px, ${shapeY}px) scale(${shapeScale})`;
+      _syncRecenterBtn();
     }
     // offsetWidth/Height are transform-independent -- safe to measure during
     // the mode-shape entry transition (gBCR would read mid-animation scale).
@@ -14376,6 +14503,7 @@
     }
     function updateWantTransform() {
       if (shapeWantZoomWrap) shapeWantZoomWrap.style.transform = `translate(${wantX}px, ${wantY}px) scale(${wantScale})`;
+      _syncRecenterBtn();
     }
     function fitWantToScreen() {
       if (!shapeWantZoomWrap) return;
@@ -15664,6 +15792,10 @@
       // Dispatch-A Task 2 — the ghost + read-only age context are mode-dependent now; re-evaluate
       // them for the side we just flipped to (idempotent on the mode-agnostic drafting flag).
       if (window.refreshDraftingState) window.refreshDraftingState();
+      // ⌖ RECENTER is per-canvas: the mode flip changes which pan state it reports on, without
+      // moving anything, so the transform writers never fire. Without this a user could return to a
+      // panned-away estate with no way home. See _syncRecenterBtn's export note.
+      if (window._syncRecenterBtn) window._syncRecenterBtn();
     };
 
     /* view-s2 task-view toggle — Step 1/2. Pure class flip on #studio-layout; the CSS

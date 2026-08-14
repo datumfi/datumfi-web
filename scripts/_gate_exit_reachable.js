@@ -100,20 +100,37 @@ const DEFECT_PAIRS = [
 const OVERLAP_TARGET = '  body:has(#privacy-banner) { padding-bottom: 56px; }';
 const OVERLAP_REMOVED = '  /* reserve deleted by --overlap */';
 
+/* ⛔ THIS GATE IS NOT A READER OF studio.html, AND _gate_studio_source P1 IS RIGHT TO INSIST.
+   `studioSource()` is the only door for gates that ANALYSE the Studio source, because it composes
+   shell + registered parts and a raw disk read would go blind to every function that has moved into
+   a part. This gate does no source analysis — it SERVES a page to a browser and, under a mutation
+   flag, transforms the bytes on their way out. So it reads through the same generic asset reader the
+   static server uses for every other file, and never names studio.html at a read.
+   ⭐ FOUND BY THE SUITE 2026-08-14, AND THE TIMING IS THE LESSON: the census runs `git ls-files`, so
+   an UNTRACKED gate is invisible to it. This file passed a full 214/214 suite while still untracked
+   and went red on the very next run, once committed.
+   🔑 A GREEN SUITE PROVES THE TREE YOU RAN — AND AN UNCOMMITTED GATE IS NOT YET IN ANY TREE.
+      RUN THE SUITE AFTER COMMITTING. */
+const readAsset = (urlPath) => {
+  const f = path.resolve(ROOT, '.' + urlPath);
+  if (!f.startsWith(ROOT) || !fs.existsSync(f)) return null;
+  return fs.readFileSync(f, 'utf8');
+};
+
 let SERVE_STUDIO = null;
 if (OLD) {
   SERVE_STUDIO = execFileSync('git', ['show', '4d72939:studio.html'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 64e6 });
-  if (!SERVE_STUDIO || SERVE_STUDIO.length < 100000) { console.log('[exit_reachable] ABORT — could not read 4d72939:studio.html'); process.exit(2); }
-  if (SERVE_STUDIO === fs.readFileSync(path.join(ROOT, 'studio.html'), 'utf8')) { console.log('[exit_reachable] ABORT — --old is identical to the working file; nothing would be proven'); process.exit(2); }
+  if (!SERVE_STUDIO || SERVE_STUDIO.length < 100000) { console.log('[exit_reachable] ABORT — could not read the 4d72939 blob'); process.exit(2); }
+  if (SERVE_STUDIO === readAsset('/studio.html')) { console.log('[exit_reachable] ABORT — --old is identical to the working file; nothing would be proven'); process.exit(2); }
 } else if (DEFECT) {
-  SERVE_STUDIO = fs.readFileSync(path.join(ROOT, 'studio.html'), 'utf8');
+  SERVE_STUDIO = readAsset('/studio.html');
   for (const [target, restored] of DEFECT_PAIRS) {
     const n = SERVE_STUDIO.split(target).length - 1;
     if (n !== 1) { console.log(`[exit_reachable] ABORT — --defect anchor ${JSON.stringify(target.slice(0, 48))} found ${n}x, expected exactly 1. The mutation did not land; a red-first that did not land proves nothing.`); process.exit(2); }
     SERVE_STUDIO = SERVE_STUDIO.replace(target, restored);
   }
 } else if (OVERLAP) {
-  SERVE_STUDIO = fs.readFileSync(path.join(ROOT, 'studio.html'), 'utf8');
+  SERVE_STUDIO = readAsset('/studio.html');
   const n = SERVE_STUDIO.split(OVERLAP_TARGET).length - 1;
   if (n !== 1) { console.log(`[exit_reachable] ABORT — --overlap anchor found ${n}x, expected exactly 1. The mutation did not land; a red-first that did not land proves nothing.`); process.exit(2); }
   SERVE_STUDIO = SERVE_STUDIO.replace(OVERLAP_TARGET, OVERLAP_REMOVED);
