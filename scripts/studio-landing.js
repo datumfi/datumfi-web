@@ -389,9 +389,20 @@ function _studioLandingBoot() {
  *      the landing derives from live state that studio.html's init populates and repainting is
  *      explicitly cheap and idempotent. Setting the attribute early and repainting late are two
  *      different jobs; only the first one was ever time-critical. */
+/* ⛔⛔ THE RULE IS STRUCTURAL, NOT A LIST OF SELECTORS, AND THAT IS THE SECOND LESSON HERE.
+ * The first version of this hid `.drafting-panel > .studio-section` — one instance of the pattern
+ * instead of the pattern. The Captain still saw a flash, and it was REVEAL YOUR RANGE. Enumerating
+ * the stylesheet found FOUR more rules that hide only once data-room EXISTS: .reveal-container,
+ * .see-tension-cta, and the group .swf-col-head / .s2-entry-row / .scenario-bank / .privacy-note.
+ * Mirroring those by name would be a hand-maintained list that silently stops covering the next
+ * rule somebody writes — the exact defect this project keeps paying for.
+ *   🔑 A PRE-PAINT RULE MUST MIRROR THE *PATTERN*, NOT THE MEMBERS. Hiding the CONTAINER covers
+ *      every [data-room]-gated child that exists today and every one added later, for free.
+ * visibility, not display: the panel keeps its box so nothing reflows when it appears, and the
+ * landing paints into it in the same tick that sets data-room. */
 if (typeof document !== 'undefined' && document.head && document.head.insertAdjacentHTML) {
   document.head.insertAdjacentHTML('beforeend',
-    '<style id="sl-preboot">.studio-layout:not([data-room]) .drafting-panel > .studio-section{display:none}</style>');
+    '<style id="sl-preboot">.studio-layout:not([data-room]) .drafting-panel{visibility:hidden}</style>');
 }
 
 if (typeof document !== 'undefined' && document.addEventListener) {

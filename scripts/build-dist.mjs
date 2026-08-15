@@ -42,7 +42,7 @@ const SACRED = {
   'scripts/studio-debt-cost.js': 'df016d73c4a45117681577a5b064f9ed',   // the monthly carrying cost of a debt — extracted from studio.html:9487-9504 (2026-08-13)
   /* STEP 1 — the landing. SACRED because it owns the completeness predicate: a wrong answer here
      tells the user a phase of the method is finished when it is not, on the front door. */
-  'scripts/studio-landing.js': '59a5288534d1cd011254aed77385247c',   // the cold-load flicker: the part ships its own pre-boot rule so the old stack never paints (2026-08-15)
+  'scripts/studio-landing.js': '5512c6859b7ba2836c3e9e1aa2d1d48a',   // the cold-load flicker: the part ships its own pre-boot rule so the old stack never paints (2026-08-15)
   'scripts/studio-blueprint.js': 'b87fc411ce76981c2e590bf8ee6f575f',   // Part 24/25 — readDossier() session-gated at the READ (4 callers) + the boot-draft invariant in _persistDraft (2026-08-15)
   // MISS-5 pre-work guard (2026-07-25). nav.js is a Sacred Host in CLAUDE.md but was absent from THIS map,
   // so a bad edit failed no build. It owns the centralized cross-device restore every page depends on
