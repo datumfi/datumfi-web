@@ -272,7 +272,21 @@ function _studioRoomNextHTML(phase) {
     return '<button type="button" class="sl-room-next" onclick="_studioExitRoom()">Back to The Studio →</button>';
   }
   var nxt = spine[i + 1];
-  return '<button type="button" class="sl-room-next" onclick="_studioEnterRoom(\'' + nxt.id + '\')">'
+  /* ⛔⛔ ARCHITECTURE'S FORWARD CONTROL ROUTES THROUGH resolveEstate() — CAPTAIN-FOUND 2026-08-14:
+     "two tension buttons, different designs interestingly: See the Tension → / Next: TENSION →".
+     #see-tension-cta was the first pass's forward control and it is NOT merely navigation — it marks
+     the estate complete (_estateResolved), releases the held verdict and morphs the Shape. Hiding it
+     as a duplicate would have dropped that behaviour SILENTLY, which is the regression shape this
+     arc keeps refusing (cf. the Reveal-Your-Range button, kept and re-homed rather than hidden).
+     ⭐ SO THE TWO CONTROLS BECOME ONE: the room's Next button performs the resolve and lands in
+     III·TENSION, because resolveEstate now ends by entering that room. ONE FORWARD CONTROL PER ROOM.
+     🔑 WHEN TWO CONTROLS SHARE A DESTINATION, DELETE THE DUPLICATE — BUT FIRST ASK WHICH OF THEM WAS
+        ALSO DOING SOMETHING ELSE. ⚠️ Side effect worth knowing: resolveEstate morphs the canvas to
+        the resolved Shape, so finishing Architecture reveals it. Flagged to the Captain. */
+  var go = (phase.id === 'architecture')
+    ? 'if(window.resolveEstate){resolveEstate();}else{_studioEnterRoom(\'' + nxt.id + '\');}'
+    : '_studioEnterRoom(\'' + nxt.id + '\')';
+  return '<button type="button" class="sl-room-next" onclick="' + go + '">'
        + 'Next: ' + nxt.name + ' →</button>';
 }
 

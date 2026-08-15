@@ -41,6 +41,13 @@
  *              build: Operating Upkeep leaking into the Architecture room. R2 MUST go RED, and it
  *              must name the section. A control that fails for a different reason than the original
  *              bug is not a control.
+ *   --twohead  restores view-s2's .s2-header rule, reproducing the DOUBLE PHASE HEADER the Captain
+ *              found in the Architecture room. R2's uniqueness leg MUST go RED.
+ *   --twofwd   restores the "See the Tension ->" CTA alongside the room's Next control, reproducing
+ *              the TWO FORWARD BUTTONS he found. R3's uniqueness leg MUST go RED.
+ *   ⛔ BOTH exist because the two uniqueness legs were added AFTER the defects were already fixed,
+ *   and a leg written after the fact has never seen the thing it claims to catch. THEY ARE THE ONLY
+ *   PROOF THOSE LEGS BITE.
  *
  * Usage: node scripts/_gate_phase_rooms.js [LABEL] [--noboot|--leak]
  * Self-hosts on 127.0.0.1:8384 — NOT :8001, the suite runner's shared server. */
@@ -53,6 +60,8 @@ const ROOT = path.resolve(__dirname, '..');
 const LABEL = process.argv.slice(2).find((a) => !a.startsWith('--')) || 'RUN';
 const NOBOOT = process.argv.includes('--noboot');
 const LEAK = process.argv.includes('--leak');
+const TWOHEAD = process.argv.includes('--twohead');
+const TWOFWD = process.argv.includes('--twofwd');
 const PORT = 8384;
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png' };
 
@@ -79,7 +88,19 @@ const NOBOOT_B = "  /* boot removed by --noboot */";
 const LEAK_T = '.studio-layout.view-s2:not([data-room]) .drafting-panel > .studio-section.s2-spotlight { display: block; }';
 const LEAK_B = '.studio-layout.view-s2 .drafting-panel > .studio-section.s2-spotlight { display: block; }';
 
+const TWOHEAD_T = '  .studio-layout[data-room].view-s2 .s2-header { display: none; }';
+const TWOHEAD_B = '  /* header suppression removed by --twohead */';
+const TWOFWD_T = '  .studio-layout[data-room] .see-tension-cta { display: none; }';
+const TWOFWD_B = '  /* CTA suppression removed by --twofwd */';
+
 let SERVE_HTML = null, SERVE_LANDING = null;
+for (const [on, t, b, name] of [[TWOHEAD, TWOHEAD_T, TWOHEAD_B, '--twohead'], [TWOFWD, TWOFWD_T, TWOFWD_B, '--twofwd']]) {
+  if (!on) continue;
+  SERVE_HTML = SERVE_HTML || readAsset('/studio.html');
+  const n = SERVE_HTML.split(t).length - 1;
+  if (n !== 1) { console.log(`[phase_rooms] ABORT — ${name} anchor found ${n}x, expected 1. A red-first that did not land proves nothing.`); process.exit(2); }
+  SERVE_HTML = SERVE_HTML.replace(t, b);
+}
 if (LEAK) {
   SERVE_HTML = readAsset('/studio.html');
   const n = SERVE_HTML.split(LEAK_T).length - 1;
@@ -104,11 +125,19 @@ const server = http.createServer((q, r) => {
   r.end(fs.readFileSync(f));
 });
 
-/* ⭐ THE ONE HELPER EVERY LEG USES — computed display, never a class. Returns the section LABELS a
-   human would actually read down the left panel. */
-const visibleSections = () => Array.from(document.querySelectorAll('.drafting-panel > .studio-section'))
-  .filter((e) => getComputedStyle(e).display !== 'none')
-  .map((e) => { const t = e.querySelector('.section-tag span'); return t ? t.textContent.trim() : '(unnamed)'; });
+/* ⛔⛔ VISIBILITY IS AN ANCESTOR QUESTION, AND getComputedStyle CANNOT ANSWER IT.
+   MEASURED 2026-08-14: this gate's own forward-control leg reported TWO controls in four rooms that
+   plainly showed one. `.s2-entry-row` was display:none and its BUTTON was not — a child of a hidden
+   parent keeps its own computed display, so the check said "visible" about something no user can see.
+   🔑 I WROTE A LEG WHOSE WHOLE CLAIM WAS "ASSERT WHAT THE USER SEES" AND IT ASSERTED A STYLE
+      PROPERTY INSTEAD. getClientRects() IS EMPTY WHENEVER THE ELEMENT OR ANY ANCESTOR IS DISPLAY:NONE
+      — that is the rendered truth, and it is the only thing that survives being nested.
+   ⚠️ visibility:hidden DOES produce rects, so it is checked separately: it is how the Clerk seed
+      gate hides the whole layout, and it fools hit-testing exactly like display:none. */
+const VIS_FN = `(e) => {
+  if (!e || e.getClientRects().length === 0) return false;
+  return getComputedStyle(e).visibility !== 'hidden';
+}`;
 
 const fails = [];
 const fail = (leg, msg) => fails.push(`${leg}: ${msg}`);
@@ -144,13 +173,13 @@ const eqSet = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
   }, null, { timeout: 9000 }).catch(() => fail('R0 PRECONDITION', 'the landing never finished painting in 9s (overlay still interactive, .seed-gated still set, _studioEnterRoom missing, or fewer than 7 phase rows) — every leg below would be measuring an unbuilt page'));
 
   // ── R1 · THE LANDING IS ONLY THE DATUMAE ──────────────────────────────────────────────────────
-  const landing = await page.evaluate(() => ({
+  const landing = await page.evaluate((VF) => { const _vis = eval(VF); return ({
     sections: (() => Array.from(document.querySelectorAll('.drafting-panel > .studio-section'))
-      .filter((e) => getComputedStyle(e).display !== 'none')
+      .filter(_vis)
       .map((e) => { const t = e.querySelector('.section-tag span'); return t ? t.textContent.trim() : '(unnamed)'; }))(),
-    formulaShown: (() => { const f = document.querySelector('.s1-header'); return !!f && getComputedStyle(f).display !== 'none'; })(),
+    formulaShown: (() => { const f = document.querySelector('.s1-header'); return _vis(f); })(),
     phaseRows: document.querySelectorAll('#sl-movements-host .sl-phase').length,
-  }));
+  }); }, VIS_FN);
   if (landing.sections.length) fail('R1 LANDING', `${landing.sections.length} section(s) still visible on the landing — ${JSON.stringify(landing.sections)}. It must be ONLY the Datumae.`);
   /* ⛔ THE PRESENCE HALF. "Zero sections visible" is also true of a page that failed to render, so
      the formula and its seven rows must be PROVEN PRESENT or R1 is vacuous. */
@@ -162,36 +191,92 @@ const eqSet = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
   for (const want of EXPECT) {
     await page.evaluate((id) => window._studioEnterRoom(id), want.id);
     await page.waitForTimeout(500);
-    const got = await page.evaluate(([expLabel]) => {
+    const got = await page.evaluate(([expLabel, VF]) => {
+      const _vis = eval(VF);
       const vis = Array.from(document.querySelectorAll('.drafting-panel > .studio-section'))
-        .filter((e) => getComputedStyle(e).display !== 'none')
+        .filter(_vis)
         .map((e) => { const t = e.querySelector('.section-tag span'); return t ? t.textContent.trim() : '(unnamed)'; });
+      /* ⛔ COUNT THE HEADERS THE USER CAN ACTUALLY SEE. The Captain found the Architecture room
+         rendering its phase header TWICE — the room's, then view-s2's legacy .s2-header underneath
+         it — and THIS GATE WAS GREEN THROUGHOUT, because it asserted that the room label SAYS the
+         right thing and never that it is the ONLY thing saying it.
+         🔑 ASSERTING A THING IS PRESENT AND CORRECT SAYS NOTHING ABOUT WHAT ELSE IS ON SCREEN.
+            Uniqueness is its own claim and needs its own count. */
+      const headerish = Array.from(document.querySelectorAll('.sl-room-label, .s2-header, .s1-header'))
+        .filter(_vis).length;
+      /* ⛔ AND COUNT THE FORWARD CONTROLS. The Captain found Architecture showing TWO — "See the
+         Tension →" and "Next: TENSION →", different designs, same destination — and this gate was
+         green, because it checked that the Next button SAYS the right thing and never that it is
+         the only way forward. 🔑 TWO EXITS ON ONE SCREEN DO NOT OFFER A CHOICE, THEY CREATE A DOUBT. */
+      const forwards = Array.from(document.querySelectorAll('.sl-room-next, .see-tension-cta, .s2-enter-btn'))
+        .filter(_vis).length;
       const lab = document.querySelector('.sl-room-label');
       const nxt = document.querySelector('.sl-room-next');
       const formula = document.querySelector('.s1-header');
       const empty = document.getElementById('sl-room-empty');
       return {
         vis,
-        label: lab && getComputedStyle(lab).display !== 'none' ? lab.textContent.trim() : null,
-        next: nxt && getComputedStyle(nxt).display !== 'none' ? nxt.textContent.trim() : null,
+        label: _vis(lab) ? lab.textContent.trim() : null,
+        next: _vis(nxt) ? nxt.textContent.trim() : null,
         nextDisabled: nxt ? !!nxt.disabled : null,
-        formulaShown: !!formula && getComputedStyle(formula).display !== 'none',
-        emptyShown: !!empty && getComputedStyle(empty).display !== 'none',
+        formulaShown: _vis(formula),
+        emptyShown: _vis(empty),
         emptyText: empty ? empty.textContent.trim().slice(0, 60) : null,
+        headerish,
+        forwards,
         scrollY: Math.round(window.scrollY),
         expLabel,
       };
-    }, [want.label]);
+    }, [want.label, VIS_FN]);
     seen.push({ id: want.id, vis: got.vis, next: got.next });
 
     if (!eqSet(got.vis, want.secs)) fail('R2 ROOM ' + want.id.toUpperCase(), `visible sections are ${JSON.stringify(got.vis)}, expected ${JSON.stringify(want.secs)}`);
     if (got.label !== want.label) fail('R2 ROOM ' + want.id.toUpperCase(), `header reads ${JSON.stringify(got.label)}, expected ${JSON.stringify(want.label)}`);
     if (got.formulaShown) fail('R2 ROOM ' + want.id.toUpperCase(), 'the landing Datumae is still visible inside a room — the room is additive, not a room');
+    if (got.headerish !== 1) fail('R2 ROOM ' + want.id.toUpperCase(), `${got.headerish} phase headers are visible at once, expected exactly 1 — a room that states its own name twice`);
+    if (got.forwards !== 1) fail('R3 WALK ' + want.id.toUpperCase(), `${got.forwards} forward controls are visible at once, expected exactly 1 — two exits on one screen create a doubt, not a choice`);
     if (!got.next || got.next.indexOf(want.next) !== 0) fail('R3 WALK ' + want.id.toUpperCase(), `continue control reads ${JSON.stringify(got.next)}, expected it to start ${JSON.stringify(want.next)}`);
     if (got.nextDisabled) fail('R3 WALK ' + want.id.toUpperCase(), 'the continue control is DISABLED — a greyed control at the end of a method reads as a missing feature, never a finished walk');
     if (got.scrollY !== 0) fail('R5 NO-SCROLL', `entering ${want.id} scrolled the document to ${got.scrollY} — the old build used scrollIntoView here and it was the trigger for the one-way scroll trap`);
     if (want.secs.length === 0 && !got.emptyShown) fail('R6 ALIGNMENT', 'the section-less room shows no waiting line — a blank panel reads as broken');
   }
+
+  /* ── R3b · THE FORWARD CONTROL IS STILL UNIQUE ONCE AN ESTATE EXISTS ─────────────────────────
+     ⛔ THE WALK ABOVE RUNS ON AN EMPTY STUDIO, AND THAT MADE R3's UNIQUENESS LEG VACUOUS FOR THE
+     REAL CASE. "See the Tension →" is shown by refreshDraftingState ONLY while an estate is being
+     drafted, so with zero accounts it is inline-hidden and could never have appeared beside the
+     room's Next button — the --twofwd control PASSED, proving the leg, not the product.
+     🔑 A FIXTURE THAT CANNOT REACH THE FAILING STATE TURNS A CONTROL INTO A REASSURANCE. The Captain
+        hit this because he HAS an estate; the gate has to have one too. */
+  /* ⚠️ AN INVESTABLE ACCOUNT, NOT A PROPERTY — MEASURED. _estateDrafting() requires
+     _investableNow() > 0, and DatumBlueprint.investableTotal does not count a house: a property is an
+     ASSET, not investable capital — and neither is 'checking', which BASE_TO_BUCKET omits on purpose.
+     The investable buckets are roth / taxable / traditional ONLY. Seeding either produced an estate
+     the product correctly
+     refused to call "drafting", and the fixture leg below said so instead of passing quietly.
+     🔑 SEEDING *SOMETHING* IS NOT SEEDING *THE PRECONDITION*. Assert the predicate, not the count. */
+  await page.evaluate(() => {
+    try { window.state.accounts = []; addInstance('taxable');
+      window.state.accounts.forEach((a) => { a.value = 400000; });
+      updateSVGs(); if (window.refreshDraftingState) window.refreshDraftingState(); } catch (e) {}
+  });
+  await page.waitForTimeout(700);
+  await page.evaluate(() => window._studioEnterRoom('architecture'));
+  await page.waitForTimeout(600);
+  const drafted = await page.evaluate((VF) => {
+    const _vis = eval(VF);
+    const cta = document.querySelector('.see-tension-cta');
+    return {
+      forwards: Array.from(document.querySelectorAll('.sl-room-next, .see-tension-cta, .s2-enter-btn')).filter(_vis).length,
+      ctaInlineDisplay: cta ? (cta.style.display === '' ? '(cleared — the drafting state IS live)' : cta.style.display) : '(absent)',
+      accounts: (window.state && window.state.accounts || []).length,
+      investable: (window.DatumBlueprint && window.state) ? DatumBlueprint.investableTotal({ accounts: window.state.accounts }) : 0,
+    };
+  }, VIS_FN);
+  if (!drafted.accounts) fail('R3b FIXTURE', 'no account was drafted — the drafting state never went live, so the uniqueness check below is vacuous');
+  else if (!drafted.investable) fail('R3b FIXTURE', `the seeded account is not INVESTABLE (investableTotal=${drafted.investable}) — _estateDrafting() stays false and the CTA can never appear`);
+  else if (drafted.ctaInlineDisplay === 'none') fail('R3b FIXTURE', 'the See-the-Tension CTA is still inline-hidden with an estate present — refreshDraftingState did not engage, so --twofwd could not bite');
+  else if (drafted.forwards !== 1) fail('R3b WALK ARCHITECTURE (drafted)', `${drafted.forwards} forward controls visible with an estate drafted, expected exactly 1`);
 
   // ── R4 · THE EXIT IS REACHABLE, AND CLICKING IT RETURNS TO THE LANDING ────────────────────────
   await page.evaluate(() => window._studioEnterRoom('data'));
@@ -211,10 +296,10 @@ const eqSet = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
   else {
     await page.click('.sl-room-back');
     await page.waitForTimeout(600);
-    const afterExit = await page.evaluate(() => ({
-      sections: Array.from(document.querySelectorAll('.drafting-panel > .studio-section')).filter((e) => getComputedStyle(e).display !== 'none').length,
-      formulaShown: (() => { const f = document.querySelector('.s1-header'); return !!f && getComputedStyle(f).display !== 'none'; })(),
-    }));
+    const afterExit = await page.evaluate((VF) => { const _vis = eval(VF); return ({
+      sections: Array.from(document.querySelectorAll('.drafting-panel > .studio-section')).filter(_vis).length,
+      formulaShown: (() => { const f = document.querySelector('.s1-header'); return _vis(f); })(),
+    }); }, VIS_FN);
     if (!afterExit.formulaShown) fail('R4 EXIT', 'clicking ← Dashboard did not restore the Datumae landing');
     if (afterExit.sections) fail('R4 EXIT', `${afterExit.sections} section(s) visible after returning to the landing`);
   }
@@ -224,7 +309,7 @@ const eqSet = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
   await browser.close();
   server.close();
 
-  const mode = NOBOOT ? ' [--noboot]' : LEAK ? ' [--leak]' : '';
+  const mode = NOBOOT ? ' [--noboot]' : LEAK ? ' [--leak]' : TWOHEAD ? ' [--twohead]' : TWOFWD ? ' [--twofwd]' : '';
   console.log('  landing    : sections=' + JSON.stringify(landing.sections) + ' formula=' + landing.formulaShown + ' rows=' + landing.phaseRows);
   seen.forEach((s) => console.log('  ' + s.id.padEnd(13) + JSON.stringify(s.vis) + '  ->  ' + JSON.stringify(s.next)));
   console.log('  ← Dashboard: ' + (back.present ? (back.reachable ? 'reachable "' + back.text + '"' : 'UNREACHABLE, hit=' + back.hit) : 'ABSENT'));

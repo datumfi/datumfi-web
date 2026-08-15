@@ -313,6 +313,20 @@
   .studio-layout[data-room="landing"] #sl-room-header { display: none; }
   .studio-layout[data-room]:not([data-room="landing"]) #sl-room-header { display: block; }
   .studio-layout[data-room]:not([data-room="landing"]) .s1-header { display: none; }
+  /* ⛔⛔ THE LEGACY .s2-header IS SUPPRESSED IN EVERY ROOM — CAPTAIN-FOUND 2026-08-14.
+     Architecture sets .view-s2 to REUSE its behavioural extras, and view-s2's own rule
+     (.studio-layout.view-s2 .s2-header { display:block }) came along with them, so the Architecture
+     room rendered its header TWICE: the room's, then the seam's, one above the other.
+     ⭐ HIS DIAGNOSIS WAS EXACTLY RIGHT — "perhaps since there was two ways of getting there before".
+     🔑 INHERITING A DONOR'S BEHAVIOUR INHERITS ITS CHROME TOO. Second time in two commits that
+        reusing view-s2 dragged in something the spine had already replaced (the first was Operating
+        Upkeep leaking into Architecture). THE ROOM HEADER IS THE SINGLE SOURCE NOW.
+     ⚠️ AND IT IS WRITTEN AS `[data-room].view-s2` FOR SPECIFICITY, NOT TIDINESS — MEASURED. The
+     plain `.studio-layout[data-room] .s2-header` ties view-s2's rule at 0,3,0, and because the room
+     block sits ABOVE the view-s2 block the loser was mine: the first fix changed nothing and the
+     gate said so on the next run. 🔑 WHEN TWO RULES TIE, SOURCE ORDER DECIDES — AND SOURCE ORDER IS
+     THE MOST FRAGILE THING IN A STYLESHEET. WIN ON SPECIFICITY, NOT ON POSITION. */
+  .studio-layout[data-room].view-s2 .s2-header { display: none; }
 
   /* ⛔ THESE ARE NOT .studio-section, SO THE SPOTLIGHT ABOVE DOES NOT CATCH THEM AND THEY LEAK INTO
      EVERY ROOM. Same trap view-s2 hit ("Dispatch-A Task 1"), same fix, now for all seven. */
@@ -325,6 +339,15 @@
      landing where it belongs. Two back-pointing controls in one room ("← Return to Overview" above
      "← Dashboard") is exactly the §13.2 confusion: the user cannot tell which one leaves what. */
   .studio-layout[data-room]:not([data-room="landing"]) .return-home { display: none; }
+  /* ⛔ AND THE FIRST PASS'S "See the Tension →" CTA — its behaviour moved INTO the Architecture
+     room's Next control (see _studioRoomNextHTML), so showing it too would be the same control
+     twice in two different designs, which is exactly what the Captain saw. Hidden, never orphaned:
+     resolveEstate() is still called, just from the one forward control the room already has.
+     ⚠️ NO !important, AND THAT WAS CHECKED RATHER THAN ASSUMED: refreshDraftingState sets
+     `cta.style.display = drafting ? '' : 'none'`, and '' CLEARS the inline value rather than setting
+     one — so the cascade decides and this rule already out-specifies `.see-tension-cta` (0,3,0 vs
+     0,1,0). AN !important ADDED "just in case" IS A GUESS THAT OUTLIVES EVERYONE WHO COULD CORRECT IT. */
+  .studio-layout[data-room] .see-tension-cta { display: none; }
   /* ⚠️ Reveal-Your-Range belongs to V · MEASUREMENT (Captain R31: "06 / Climate Control … as well
      as the Reveal your Range button"). It is hidden everywhere EXCEPT that room — never hidden
      outright, because making a shipped feature unreachable is a regression, not a tidy-up. */

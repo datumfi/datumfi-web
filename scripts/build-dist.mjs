@@ -23,7 +23,7 @@ const DROP_RE = [/^\.claude\//, /^\.wrangler\//, /^workers\//, /^functions\//, /
 
 // SACRED HOSTS — must ship byte-identical (LF + content). Build ABORTS on drift.
 const SACRED = {
-  'studio.html': '1e16b2fca587054e8eb6d2f2df70949c',   // §20 — room declutter: view-s3 retired, dots/glyphs/rules removed, back-control on top (2026-08-14)
+  'studio.html': 'e224693ee536661dd4030e7abff62260',   // §20.3 — one header and one forward control per room; the Tension first pass retired (2026-08-14)
   'sketch.html': '28258a76686008aebe839d59af39500f',   // shape button reverted to the Captain's "Save Shape" / "✓ Saved" (2026-08-01)
   /* §47.3 — SACRED as of 2026-08-13, declared in CLAUDE.md IN THIS SAME COMMIT. The two lists are
      reconciled by this build in BOTH directions, so a host added to one and not the other STOPS
@@ -38,7 +38,7 @@ const SACRED = {
   'scripts/studio-debt-cost.js': 'df016d73c4a45117681577a5b064f9ed',   // the monthly carrying cost of a debt — extracted from studio.html:9487-9504 (2026-08-13)
   /* STEP 1 — the landing. SACRED because it owns the completeness predicate: a wrong answer here
      tells the user a phase of the method is finished when it is not, on the front door. */
-  'scripts/studio-landing.js': 'ae3cd00ecc111ae9e6677331a35ae13e',   // landing declutter + ← Dashboard above the phase copy (2026-08-14)
+  'scripts/studio-landing.js': '10d9f41cf274705dfa2fca2e1ff41f19',   // landing declutter; ← Dashboard on top; Architecture's Next carries resolveEstate (2026-08-14)
   'scripts/studio-blueprint.js': '5d26366432a57de46e927738fa072fbe',   // the six typed running costs ride the slim Clerk allowlist in the same commit as the fields (2026-08-13)
   // MISS-5 pre-work guard (2026-07-25). nav.js is a Sacred Host in CLAUDE.md but was absent from THIS map,
   // so a bad edit failed no build. It owns the centralized cross-device restore every page depends on
