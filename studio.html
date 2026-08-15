@@ -55,21 +55,18 @@
     overflow: hidden;
     padding-top: 56px;
   }
-  /* ⛔ RESERVE THE CONSENT BANNER'S HEIGHT — A CONSEQUENCE OF THE FIX ABOVE, NOT A TIDY-UP.
-     nav.js injects #privacy-banner as position:fixed at the viewport bottom (z-index 9999) on a
-     first visit. Every OTHER page survives that because every other page SCROLLS (index 7,335px,
-     privacy 2,479px) — whatever the banner covers can be scrolled out from under it. ⛔ THE STUDIO
-     NOW HAS A SCROLL BUDGET OF ZERO BY DESIGN, SO ANYTHING THE BANNER COVERS IS COVERED PERMANENTLY
-     FOR THAT SESSION — and what it landed on was #disclosure-footer's LEGAL LINKS. Shipping a
-     consent banner on top of the disclosure links, in the same change that set out to make those
-     links reachable, would have been self-defeating.
-     56px is MEASURED, not guessed: the banner is one line at every viewport from 960px to 2560px
-     (below 900px the mobile block restores a scrolling document, where this cannot arise). ⭐ AND IT
-     IS POLICED — _gate_exit_reachable.js W7 hit-tests every disclosure link at eight viewports, so
-     if the banner ever wraps to two lines this goes RED instead of quietly re-covering the links.
-     ⚠️ :has() DEGRADES SAFELY — where it is unsupported the rule drops and we are back to a
-     first-visit cosmetic overlap, never to the scroll trap. */
-  body:has(#privacy-banner) { padding-bottom: 56px; }
+  /* ⛔ THE CONSENT-BANNER RESERVE IS GONE — AND ITS REMOVAL IS MEASURED, NOT ASSUMED.
+     It existed because the disclosure footer, then a band in the body flex column, landed under
+     nav.js's position:fixed #privacy-banner. §18.2 moved the footer INTO the panel's own scroll, so
+     that collision no longer exists — and the reserve was costing 56px of canvas forever to solve a
+     problem that had moved. Measured at three viewports with it stripped:
+         canvas 788 -> 844 · 656 -> 712 · 488 -> 544   (+56px everywhere)
+         footer under banner: 16px of PADDING, no text, first visit only
+         legal links covered: NONE, at any viewport
+     ⭐ THE CANVAS IS THE PRODUCT AND THE BANNER IS DISMISSED ONCE, FOREVER, IN ONE CLICK. Every
+     other page already lets it overlay content.
+     🔑 A GUARD WHOSE HAZARD HAS MOVED IS NOT FREE — IT KEEPS CHARGING RENT ON THE THING IT WAS
+        PROTECTING. Delete it WHEN THE HAZARD MOVES, not when someone notices the cost. */
 
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: var(--bg-navy); }
@@ -2716,6 +2713,26 @@
            "Back to The Studio →". ⛔ NEVER A DISABLED CONTROL AT THE END — a greyed Next reads as a
            missing feature, not a completed walk. -->
       <div id="sl-room-next-host"></div>
+
+      <!-- ⛔⛔ THE DISCLOSURE LIVES AT THE END OF THE PANEL'S OWN SCROLL — CAPTAIN-RULED (§18.2).
+           IT USED TO BE A DIRECT CHILD OF <body>, BELOW .studio-layout, which made it a permanent
+           85px band above the canvas: "in the Studio it sits there like a second nav bar", against
+           "I want as much literal real estate for my actual studio designing."
+           ⭐ MOVING IT HERE COSTS THE CANVAS NOTHING — the panel already scrolls internally, so the
+           legal text is reached exactly the way it is reached on the index: by scrolling to the
+           bottom. §15.3 is still satisfied — REACHABLE, NOT RESIDENT.
+           ⭐⭐ AND IT DISSOLVES THE 8px CLEARANCE DEBT RATHER THAN PAYING IT: the 85px returns to the
+           canvas, the estate re-centres in a taller box, and _gate_lens_bar_clearance L4 comes off
+           its floor instead of sitting exactly on it.
+           ⛔ margin-top:auto IS DROPPED DELIBERATELY. It existed to push the footer to the bottom of
+           the BODY flex column; inside a normal-flow scrolling panel it means nothing, and leaving a
+           dead declaration in place is how the next reader infers a constraint that is not there.
+           ⚠️ THE PAGE ITSELF STAYS UNSCROLLABLE — this moves the footer INTO an existing scroll
+           container, it does not give the document a scroll budget back. The trap fix is untouched
+           and _gate_exit_reachable W2 still asserts it. -->
+      <div id="disclosure-footer" style="width:100%;background:rgba(9,18,33,0.97);border-top:1px solid rgba(255,255,255,0.05);padding:10px 40px 12px;text-align:center;">
+        <p style="font-family:var(--font-mono);font-size:10px;color:rgba(255,255,255,0.25);line-height:1.45;margin:0;">DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. Past performance does not guarantee future outcomes. &nbsp;|&nbsp; <a href="/privacy.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Privacy Policy</a> &nbsp;|&nbsp; <a href="/terms.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Terms of Service</a> &nbsp;|&nbsp; <a href="mailto:accessibility@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">Accessibility</a> &nbsp;|&nbsp; <a href="mailto:privacy@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">privacy@datumfi.com</a> &nbsp;|&nbsp; <a href="mailto:feedback@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">feedback@datumfi.com</a> &nbsp;|&nbsp; <span style="color:rgba(255,255,255,0.3);cursor:pointer;text-decoration:underline;" onclick="openDeleteDataModal()">Delete My Data</span> &nbsp;|&nbsp; <a href="/privacy-choices.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Do Not Sell My Information</a> &nbsp;|&nbsp; Build&nbsp;2026.04.19&nbsp;&bull;&nbsp;v1.0.0</p>
+      </div>
 
     </div>
 
@@ -17270,9 +17287,6 @@
        ⛔ NOT ONE WORD OF THIS DISCLOSURE CHANGED — the legal text is authored copy and is not the
        Wirer's to reword. Only the box around it moved. ⭐ AND IT IS POLICED FROM BOTH SIDES: L4
        catches the footer growing, W7 in _gate_exit_reachable catches its links being covered. -->
-  <div id="disclosure-footer" style="width:100%;background:rgba(9,18,33,0.97);border-top:1px solid rgba(255,255,255,0.05);padding:10px 40px 12px;text-align:center;margin-top:auto;">
-    <p style="font-family:var(--font-mono);font-size:10px;color:rgba(255,255,255,0.25);line-height:1.45;margin:0;">DATUM FI is an educational tool and does not constitute financial, investment, or tax advice. Not a registered investment advisor. Consult a qualified financial professional before making financial decisions. All projections are hypothetical, based on mathematical models, and do not guarantee future results. Past performance does not guarantee future outcomes. &nbsp;|&nbsp; <a href="/privacy.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Privacy Policy</a> &nbsp;|&nbsp; <a href="/terms.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Terms of Service</a> &nbsp;|&nbsp; <a href="mailto:accessibility@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">Accessibility</a> &nbsp;|&nbsp; <a href="mailto:privacy@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">privacy@datumfi.com</a> &nbsp;|&nbsp; <a href="mailto:feedback@datumfi.com" style="color:rgba(255,255,255,0.3);text-decoration:none;">feedback@datumfi.com</a> &nbsp;|&nbsp; <span style="color:rgba(255,255,255,0.3);cursor:pointer;text-decoration:underline;" onclick="openDeleteDataModal()">Delete My Data</span> &nbsp;|&nbsp; <a href="/privacy-choices.html" style="color:rgba(255,255,255,0.3);text-decoration:none;">Do Not Sell My Information</a> &nbsp;|&nbsp; Build&nbsp;2026.04.19&nbsp;&bull;&nbsp;v1.0.0</p>
-  </div>
 
   <!-- Scenario Memory Bank Modal -->
   <div id="scenario-modal">

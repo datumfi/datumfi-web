@@ -63,7 +63,7 @@ const ROOT = path.resolve(__dirname, '..');
 const LABEL = process.argv.slice(2).find((a) => !a.startsWith('--')) || 'RUN';
 const DEFECT = process.argv.includes('--defect');
 const OLD = process.argv.includes('--old');
-const OVERLAP = process.argv.includes('--overlap');
+const OVERLAP = process.argv.includes('--overlap');   // legacy alias, same mutation
 const PORT = 8382;
 
 /* THE EXIT CONTROL UNDER AUDIT. A mirror of the product, never an independent opinion — if the
@@ -97,8 +97,18 @@ const DEFECT_PAIRS = [
    56px consent-banner reserve, which is the single failure W7 exists to police.
    🔑 A LEG THAT HAS ONLY EVER SEEN AGREEMENT IS NOT EVIDENCE, AND A LEG WHOSE ONLY CONTROL FAILS IT
       FOR A DIFFERENT REASON IS NOT EVIDENCE EITHER. */
-const OVERLAP_TARGET = '  body:has(#privacy-banner) { padding-bottom: 56px; }';
-const OVERLAP_REMOVED = '  /* reserve deleted by --overlap */';
+/* ⛔⛔ THIS CONTROL WAS REPOINTED 2026-08-14, BECAUSE IT SILENTLY STOPPED BITING.
+   It used to delete the consent-banner reserve, reproducing a collision between the banner and the
+   disclosure footer. §18.2 moved the footer into the panel's own scroll and that collision ceased to
+   exist — so the mutation ran, landed, and W7 PASSED. A CONTROL THAT CANNOT FAIL IS A REASSURANCE
+   WEARING A CONTROL'S NAME, and it had already earned a green I would have believed.
+   ⭐ IT NOW REPRODUCES THE ORIGINAL §15.3 FINDING INSTEAD, which is the thing W7 actually claims:
+   strip the panel's overflow-y so the disclosure CANNOT BE SCROLLED TO. That is exactly the defect
+   we shipped for months — privacy and terms present on the page and reachable by nobody.
+   🔑 WHEN A FIX MOVES A HAZARD, RE-DERIVE THE POISON. A red-first calibrated against the old
+      geometry is the first thing a successful fix breaks. */
+const OVERLAP_TARGET = '    min-height: 0; overflow-y: auto; background-color: var(--bg-navy); z-index: 50;';
+const OVERLAP_REMOVED = '    min-height: 0; overflow-y: hidden; background-color: var(--bg-navy); z-index: 50;';
 
 /* ⛔ THIS GATE IS NOT A READER OF studio.html, AND _gate_studio_source P1 IS RIGHT TO INSIST.
    `studioSource()` is the only door for gates that ANALYSE the Studio source, because it composes
@@ -239,9 +249,37 @@ const fail = (leg, vp, msg) => fails.push(`${leg} @ ${vp}: ${msg}`);
        ⚠️ AND IT GUARDS THE FIX'S OWN SIDE EFFECT: bringing the footer on screen put it under the
        first-visit consent banner. THIS LEG IS WHAT MAKES THE 56px RESERVE IN studio.html SAFE — a
        measured constant with an assertion behind it is a constant; one without is a guess. */
+    /* Scroll the panel THE WAY A USER DOES: a real wheel over the panel. If the panel's overflow
+       has been broken, this moves nothing and the links below have no box — which is the failure. */
+    const panelBox = await page.evaluate(() => {
+      const p = document.querySelector('.drafting-panel');
+      if (!p) return null;
+      const r = p.getBoundingClientRect();
+      return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+    });
+    if (panelBox) {
+      await page.mouse.move(panelBox.x, panelBox.y);
+      for (let i = 0; i < 12; i++) await page.mouse.wheel(0, 900);
+      await page.waitForTimeout(350);
+    }
     const links = await page.evaluate(() => {
       const foot = document.getElementById('disclosure-footer');
       if (!foot) return { missing: true };
+      /* ⛔ SCROLL THE PANEL FIRST — THE SETUP CHANGED, THE CLAIM DID NOT (2026-08-14, §18.2).
+         The disclosure used to be a permanent band above the canvas; the Captain ruled it out of the
+         canvas frame and into the END OF THE PANEL'S OWN SCROLL, so it is now reached exactly the way
+         it is reached on the index: by scrolling to the bottom. REACHABLE, NOT RESIDENT.
+         ⚠️ THIS IS panel.scrollTop, NEVER scrollIntoView — scrollIntoView scrolls every ancestor
+         INCLUDING the document, which is the trigger W2 exists to keep dead. The gate must not use
+         the very call the product was fixed to stop using.
+         🔑 THE LEG STILL ASSERTS THE SAME THING: after the scroll a real user can perform, every
+            legal link hit-tests to itself. Nothing was softened — only the journey was updated. */
+      /* ⛔⛔ NO panel.scrollTop HERE — THE GATE MUST NOT DO WHAT THE USER CANNOT.
+         overflow-y:hidden STILL PERMITS A PROGRAMMATIC scrollTop (that is precisely the mechanism
+         behind the body trap this gate was born from), so a scripted scroll reported the disclosure
+         REACHABLE on a panel whose wheel was dead. The --overlap control ran, landed, and W7 passed.
+         🔑 A GATE THAT REACHES A CONTROL BY MEANS THE USER DOES NOT HAVE IS MEASURING ITSELF.
+         The wheel is driven from Playwright before this runs — see the mouse.wheel loop above. */
       const d = (e) => (e ? e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (e.className && typeof e.className === 'string' && e.className.trim() ? '.' + e.className.trim().split(/\s+/)[0] : '') : 'NULL(off-viewport)');
       const as = Array.from(foot.querySelectorAll('a'));
       const bad = [];
@@ -254,8 +292,16 @@ const fail = (leg, vp, msg) => fails.push(`${leg} @ ${vp}: ${msg}`);
            the first one always has real text in it.
            🔑 A BOUNDING BOX IS NOT A SHAPE. For anything inline, the union rect describes a region
               the element may not actually occupy. */
+        /* ⛔ A LINK WITH NO BOX IS A FAILURE, NOT A SKIP. The first draft did `continue` here, and
+           that made the whole leg VACUOUS: with the panel's overflow stripped the links are clipped
+           to zero boxes, nothing is measurable, `bad` stays empty and W7 reports GREEN over a
+           disclosure NO USER CAN REACH — the exact §15.3 defect it exists to catch.
+           🔑 EXCLUSION NEEDS PRESENCE. "Nothing is covered" is trivially true of nothing. */
         const r = a.getClientRects()[0];
-        if (!r || !(r.width > 0 && r.height > 0)) continue;
+        if (!r || !(r.width > 0 && r.height > 0)) {
+          bad.push(`"${(a.textContent || '').trim().slice(0, 22)}" has NO BOX — clipped or unrenderable, so it cannot be reached at all`);
+          continue;
+        }
         const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
         if (!(hit === a || a.contains(hit))) bad.push(`"${(a.textContent || '').trim().slice(0, 22)}" covered by ${d(hit)}`);
       }
