@@ -17019,19 +17019,31 @@
 
       var _bpApplied = seedFromBlueprint();
       if (!_bpApplied) {
-        var _v15Raw = null;
-        try { _v15Raw = localStorage.getItem('datumfi.accountDossier.v15'); } catch(e) {}
+        /* ⛔ THE SYNCHRONOUS localStorage SHORTCUT IS GONE. It read the cached dossier and drove
+         * the sliders — current age, retirement age, plan-through, portfolio, contributions, Datum
+         * — with NO auth check whatsoever, so a signed-out visitor's Shape was computed from the
+         * previous user's money. Same asymmetry as the profile block below: the Clerk route was
+         * gated and always had been; the instant route was never asked. Part 24/25.
+         *
+         * ⚠️ THE CACHE IS NOT DELETED, IT IS MOVED BEHIND THE SESSION. A signed-in device that is
+         * offline, or whose account has no D1 preferences row yet, still gets its own numbers — see
+         * the cache fallback inside the resolver below. Deleting the cache outright would have
+         * bought the privacy fix with a silent prefill regression for exactly the returning user
+         * the cache exists for.
+         *
+         * ⚠️ AND THE SEED GATE IS NOW CONDITIONAL, DELIBERATELY. `_seedGateOn()` hides the whole
+         * drafting stage while the seed is awaited. Running it unconditionally would hide the
+         * Studio for up to 1500ms from every SIGNED-OUT visitor — on the public funnel page, to
+         * prevent a flash of numbers that for them are the final answer. `datum_auth_hint` decides
+         * only WHETHER TO HIDE, never whether to apply data: a false negative (new window, live
+         * session) costs a beat of late fill, and a false positive (expired session in an old tab)
+         * costs an unnecessary 1500ms of hidden stage. Neither can leak. That is the ONLY safe use
+         * of the hint and it is why it may appear here and nowhere else in this fix. */
         var _v15Applied = false;
-        if (_v15Raw) {
-          var _v15 = null;
-          try { _v15 = JSON.parse(_v15Raw); } catch(e) {}
-          if (_v15) { applyDossierSliders(_v15); _v15Applied = true; }
-        }
         if (!_v15Applied) {
-          // No synchronous dossier in LS — the authoritative one is in Clerk (async). Gate the
-          // drafting numbers so the schema defaults never flash before the seed lands, then
-          // reveal on resolve OR a timeout safety net so the stage can never stay hidden.
-          _seedGateOn();
+          var _likelySignedIn = false;
+          try { _likelySignedIn = sessionStorage.getItem('datum_auth_hint') === '1'; } catch (e) {}
+          if (_likelySignedIn) _seedGateOn();
           window.addEventListener('load', function () {
             // MISS-5 pre-work item 1 — the Clerk read moved behind the SHARED resolver in nav.js
             // (_datumSeedDossier): D1 preferences/dossier first, Clerk unsafeMetadata.dossier as the silent
@@ -17041,7 +17053,32 @@
             if (typeof window._datumSeedDossier !== 'function') { _seedGateOff(); return; }
             window._datumSeedDossier(function (_cd) {
               try {
-                if (!_cd) { _seedGateOff(); return; }
+                /* THE CACHE FALLBACK — the second half of moving the shortcut behind the session
+                 * rather than deleting it. _datumSeedDossier resolves null for BOTH "no session"
+                 * and "session, but D1 unreachable and no Clerk mirror" — two different answers
+                 * that must not share a branch (L51, same rule as a reachable-empty D1 list). So
+                 * ask DatumSession which one it was: only a CONFIRMED session may fall back to the
+                 * local cache, because only then is the cache this account's own copy.
+                 * Signed out, this branch reads nothing and paints nothing. */
+                if (!_cd) {
+                  if (!window.DatumSession || typeof DatumSession.resolved !== 'function') { _seedGateOff(); return; }   // fail CLOSED
+                  DatumSession.resolved(function (signedIn) {
+                    if (signedIn) {
+                      try {
+                        var _cRaw = localStorage.getItem('datumfi.accountDossier.v15');
+                        var _cD = _cRaw ? JSON.parse(_cRaw) : null;
+                        if (_cD) {
+                          if (!seedFromBlueprint()) applyDossierSliders(_cD);
+                          applyDossierProfile(_cD);
+                          syncSpendFromDatumSlider(); syncFromProfileDates();
+                          _reassertCarriedAges(); refreshAllLabels(); fireUpdate();
+                        }
+                      } catch (e4) {}
+                    }
+                    _seedGateOff();
+                  });
+                  return;
+                }
                 /* ── THERE IS ONE SEEDING PATH ─────────────────────────────────────────────────
                  * ⚠️ THE COMMENT THAT USED TO SIT HERE CLAIMED THIS ALREADY HAPPENED. It read
                  * "re-seed through the SAME blueprint path the synchronous load uses ... not a
@@ -17086,12 +17123,52 @@
           setTimeout(_seedGateOff, 1500);
         }
       }
-      // Dossier -> Architect Profile prefill runs regardless of which rung of
-      // the slider ladder applied (Blueprint draft vs v15 vs Clerk-deferred).
-      try {
-        var _profRaw = localStorage.getItem('datumfi.accountDossier.v15');
-        if (_profRaw) applyDossierProfile(JSON.parse(_profRaw));
-      } catch(e) {}
+      /* ⛔⛔ THIS BLOCK'S OWN COMMENT NAMED THE DEFECT AND NOBODY READ IT AS ONE. It said the
+       * prefill "runs regardless of which rung of the slider ladder applied" — INCLUDING THE RUNG
+       * WHERE NOBODY IS SIGNED IN. It did exactly what it claimed, and what it claimed was a leak:
+       * a signed-out visitor got the previous user's date of birth, gross income, co-architect's
+       * date of birth and co-architect's income painted into the Architect Profile, beside an
+       * honest SIGN IN button. Confirmed in production on the real journey (sign in -> enter data
+       * -> sign out -> open the Studio), Part 24/25.
+       *
+       * THE ASYMMETRY THAT HID IT: the Clerk/D1 route below is auth-gated and always was. This
+       * route is a SYNCHRONOUS localStorage read, and the guard went on the path that needed a
+       * .then() while the path that returns instantly was never asked. Two persistence paths, one
+       * auth check, on the wrong one.
+       *
+       * The cache stays — it is this account's own data and it is what makes a returning device
+       * fast — it simply may no longer be read by a session that has not proved it owns it.
+       * DatumSession fails CLOSED (nav.js), so no Clerk, a thrown load, or a Clerk that never
+       * settles all resolve to "no session" and nothing personal is painted.
+       *
+       * ⚠️ WHY THE SYNCS ARE REPEATED INSIDE THE CALLBACK. init() runs them immediately below,
+       * which is now BEFORE this apply rather than after it. Without re-running them the profile
+       * dates would land but nothing would derive the ages from them — the exact partial-reapply
+       * shape the async seed route was fixed for at :17045. Re-run, do not re-implement.
+       * Gated by _gate_signed_out_privacy L1c / L3f / L5d / L6b / L6c. */
+      (function () {
+        function _applyCachedProfile() {
+          try {
+            var _profRaw = localStorage.getItem('datumfi.accountDossier.v15');
+            if (_profRaw) applyDossierProfile(JSON.parse(_profRaw));
+          } catch (e) {}
+        }
+        if (!window.DatumSession || typeof DatumSession.resolved !== 'function') return;  // fail CLOSED
+        DatumSession.resolved(function (signedIn) {
+          if (!signedIn) return;
+          /* ⚠️ THIS BLOCK MUST NOT RE-RUN seedFromBlueprint(), AND THAT WAS MEASURED, NOT REASONED.
+           * The obvious repair for the _p8_studio_seed_parity regression was "land the blueprint
+           * first so the typed Plan-Through month is in the field before _mirrorPlanEnd derives
+           * one". It did not work, because the blueprint is not where the loss happens — see the
+           * draft clear in the resolver below. Re-seeding HERE would also be actively unsafe: this
+           * callback runs on every rung, INCLUDING the one where a real blueprint was already
+           * applied, and the only way to make a re-seed see the dossier is to clear the session
+           * draft first — which on that rung is the user's actual unsaved work.
+           * 🔑 A REPAIR THAT IS SAFE ON ONE RUNG OF A LADDER IS NOT THEREBY SAFE ON THE LADDER. */
+          _applyCachedProfile();
+          try { syncFromProfileDates(); _reassertCarriedAges(); _reassertRestoredProfile(); refreshAllLabels(); } catch (e) {}
+        });
+      })();
       // 04/ Datum mirror field agrees with slider-datum from the first paint.
       syncSpendFromDatumSlider();
       syncFromProfileDates();

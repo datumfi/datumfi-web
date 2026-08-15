@@ -423,7 +423,61 @@
   }
   /* The single low-level draft write. Both the debounced editing path and the stale-draft
    * acceptance path go through here so quota handling can never diverge between them. */
+  /* ── THE BOOT-DRAFT INVARIANT ─────────────────────────────────────────────────────────────────
+   *      A BOOT WITH AN UNRESOLVED SESSION MUST NOT PERSIST A DRAFT.
+   *
+   * A draft is a record of THE USER'S STATE. During the window before Clerk has answered, the page
+   * does not yet know whose state it is looking at — readDossier() returns null on purpose — so
+   * anything it writes down in that window is a record of its own ignorance, not of the user.
+   *
+   * ⛔⛔ WHY THIS IS NOT COSMETIC, MEASURED 2026-08-15. Without it: init builds a blueprint with
+   * plan_end_date "", finishLoad persists it, and every later load() SHORT-CIRCUITS ON THAT DRAFT
+   * and never reaches applyDossier again. A user who typed 03/2068 gets a DOB-month rebuild
+   * (08/2067) PERMANENTLY, surviving reloads. A boot-time unknown became the user's saved answer.
+   *   🔑 MOVING A READ LATER CAN CHANGE WHAT GETS WRITTEN, AND A WRITE OUTLIVES THE PAGE.
+   *
+   * ⚠️ IT BLOCKS ONLY *UNRESOLVED*, NEVER *SIGNED OUT*. A signed-out visitor is a first-class user
+   * of the Studio and their work must autosave exactly as before — `known() === false` is a real
+   * answer and writes proceed. Only `null`, "we have not been told yet", is refused. That is the
+   * same rule DatumSession itself enforces: not-yet-known and known-to-be-absent are different
+   * answers and must not share a branch (L51).
+   *
+   * ⚠️ IT CANNOT WEDGE. DatumSession settles within 4s on EVERY path — no Clerk, a throw, a reject,
+   * or a promise that never returns all land on `false` via its own net. So this refuses writes for
+   * a bounded window at boot and never after. And if DatumSession is absent entirely (a page that
+   * does not load nav.js), `known` is unavailable and we FAIL OPEN here, deliberately: on such a
+   * page there is no session concept to be unresolved about, and silently disabling autosave would
+   * be a far worse defect than the one this guards.
+   *
+   * Gated by _gate_boot_draft_invariant.js (I1 the invariant, I2 the paired presence that stops
+   * "never write a draft" from passing, I3 the consequence). `--defect` amputates this line. */
+  function _draftWriteAllowed() {
+    var S = global.DatumSession;
+    if (!S || typeof S.known !== 'function') return true;   // no session concept here — fail OPEN
+    if (S.known() !== null) return true;                    // a real answer, either way: proceed
+    /* ⛔ SELF-START, AND IT MUST LIVE HERE RATHER THAN IN nav.js. `known()` is null until a
+     * resolution has actually RUN, so a consumer that only READS it waits forever on a page where
+     * nobody else happens to ask — measured: this guard blocked autosave PERMANENTLY and
+     * _gate_studio_work_state WORK 2 caught it (one real edit, page reports no content).
+     * ⚠️ Kicking it from nav.js instead resolves the session BEFORE studio's init, which makes
+     * readDossier() succeed during init and silently skips the load-time correction of a cached
+     * dossier belonging to a DIFFERENT user (privacy L5c/L6c back to red, _p7 scratch to $100,001).
+     *   🔑 THE SELF-START BELONGS TO THE CONSUMER THAT NEEDS IT, AT THE MOMENT IT NEEDS IT — not to
+     *      the module that defines the predicate. Same answer, different clock, and the clock is
+     *      the part that is load-bearing. */
+    try { S.resolved(function () {}); } catch (_e) {}
+    /* RE-READ, DO NOT ASSUME THE KICK WAS ASYNC. With no Clerk on the page, resolved() settles
+     * SYNCHRONOUSLY inside the call above — so returning false here would drop a write that is
+     * already legitimate. That matters because bind()'s commit is DEBOUNCED and fires ONCE per
+     * edit: a dropped write is not retried, it is the user's edit gone. Measured — this is what
+     * _gate_studio_work_state WORK 2 was still catching after the self-start moved here.
+     *   🔑 A KICK THAT CAN COMPLETE SYNCHRONOUSLY MUST BE FOLLOWED BY A RE-READ, NOT A RETURN.
+     * When it genuinely is async, this still returns false and the 4s net guarantees the next
+     * write is allowed — the boot window is the only thing that closes on a dropped write. */
+    return S.known() !== null;
+  }
   function _persistDraft(obj) {
+    if (!_draftWriteAllowed()) return false;
     try { localStorage.setItem(SESSION_DRAFT_KEY, JSON.stringify(obj)); _draftWriteState(true, null); return true; }
     catch (_e) { _draftWriteState(false, _e); return false; }
   }
@@ -689,7 +743,10 @@
    * capture. */
   function _fallbackBaseline() {
     var p = newBlueprint();
-    try { applyDossier(p, readDossier()); } catch (_e) {}
+    /* _readDossierRaw, NOT readDossier — the named exception documented at the read. This baseline
+       is compared against a draft and never painted or saved; it must describe the same world the
+       draft was written in, or a signed-in user's own draft reads as dirty. */
+    try { applyDossier(p, _readDossierRaw()); } catch (_e) {}
     return p;
   }
   function _hasContent(draft) {
@@ -936,9 +993,43 @@
 
   /* ---- Prefill ladder ---- */
 
-  function readDossier() {
+  /* ── THE DOSSIER READ IS SESSION-GATED — AND THE GUARD IS ON THE READ, NOT ON THE CALLERS ──────
+   * The Account Dossier carries a real person's date of birth, gross income, home location, email,
+   * phone, and their spouse's name and income. applyDossier() folds it into a blueprint, which
+   * Studio then paints and captureDOM then SAVES. A session that has not proved it owns this
+   * account may not have any of it.
+   *
+   * ⛔⛔ WHY HERE AND NOT AT seedFromBlueprint(). The arc's finding list named FOUR ungated reads and
+   * this was not one of them — because a grep for the localStorage key finds studio.html and
+   * sketch.html, while THIS read hides one file further down, behind a caller. Gating the caller in
+   * studio.html would have gone green on the plain-reload path and left THREE doors open:
+   * _seedSketchCarry (the sketch->studio carry), the ?fresh=1 open, and the fresh+dossier open.
+   *   🔑 THE READ IS NOT WHERE THE CALLER IS. Gate the sentence that touches the data, and the
+   *      caller set stops being a list somebody has to keep correct.
+   *
+   * FAILS CLOSED, via DatumSession.known() (nav.js): `null` means NOT YET RESOLVED and `false`
+   * means NO SESSION, and BOTH must read as no. Studio's init calls this before Clerk has answered,
+   * gets null, and paints nothing; the load-time resolver then re-runs seedFromBlueprint() once the
+   * answer is in, and a signed-in user's own dossier lands there. That re-run already existed —
+   * it is what makes gating at the read safe rather than a prefill regression.
+   *
+   * ⚠️ ONE DELIBERATE EXCEPTION, NAMED RATHER THAN HIDDEN: _fallbackBaseline() keeps the UNGATED
+   * read below. Its output never reaches the screen and is never saved — it is the pristine
+   * blueprint that _hasContent() compares a draft AGAINST, so it must describe the same world the
+   * draft was written in. Gating it would make a signed-in user's draft differ from its own
+   * baseline and read as dirty, reintroducing the false-dirty leave-prompt this project already
+   * fixed once. THE RULE IS "MUST NOT RENDER PERSONAL DATA", NOT "MUST NOT READ THE FILE"; a read
+   * that feeds only an internal equality check discloses nothing.
+   * ⛔ _readDossierRaw MUST NEVER be called from a path that paints, saves, or mirrors. If you need
+   *    it somewhere new, you almost certainly need readDossier(). */
+  function _readDossierRaw() {
     try { var raw = localStorage.getItem(DOSSIER_KEY); return raw ? JSON.parse(raw) : null; }
     catch (_e) { return null; }
+  }
+  function readDossier() {
+    var S = global.DatumSession;
+    if (!S || typeof S.known !== 'function' || S.known() !== true) return null;   // fail CLOSED
+    return _readDossierRaw();
   }
   function readSketchSlot(id) {
     if (!id) id = 1;

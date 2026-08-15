@@ -3015,15 +3015,22 @@
             if (_sC) { _sC.value = contribValToPos(Math.round(_contrib)); _sC.dataset.exactVal = String(Math.round(_contrib)); }
         }
     };
-    (function() {
-        var _raw = null;
-        try { _raw = localStorage.getItem('datumfi.accountDossier.v15'); } catch(e) {}
-        if (!_raw) { window._v15WasAbsent = true; return; }
-        var _p = null;
-        try { _p = JSON.parse(_raw); } catch(e) {}
-        if (!_p) { window._v15WasAbsent = true; return; }
-        window._applyDossierSliders(_p);
-    })();
+    /* ⛔ THE PARSE-TIME localStorage SEED IS GONE. It read the cached Account Dossier and drove the
+     * Sketch sliders — age, activation age, plan-through, portfolio, contributions, Datum — before a
+     * single other script had run, with no auth check of any kind. A signed-out visitor's Sketch was
+     * therefore drawn from the previous user of this browser. Part 24/25.
+     *
+     * ⚠️ IT COULD NOT SIMPLY BE WRAPPED IN A GUARD, AND THAT IS A LOAD-ORDER FACT, NOT A PREFERENCE.
+     * This IIFE runs at PARSE TIME, at sketch.html:~3018; nav.js — where DatumSession lives — is not
+     * loaded until :10092. There is no session answer available at this point in the document, and
+     * inventing a synchronous one (reading datum_auth_hint, sniffing a Clerk cookie) would be a
+     * guess wearing a guard's clothes. So the seed MOVES to the one place that can answer honestly:
+     * the load-time resolver immediately below, which was already auth-gated and already existed.
+     *
+     * `_v15WasAbsent` is now unconditionally true: it no longer means "no dossier in localStorage",
+     * it means "nothing has been seeded yet, so the resolver still has work to do". Renaming it
+     * would touch every reader for no behavioural gain; saying so here is the cheaper honesty. */
+    window._v15WasAbsent = true;
     const slPort = document.getElementById('slider-portfolio');
     const slContrib = document.getElementById('slider-contrib');
     const slDatum = document.getElementById('slider-datum');
@@ -3044,7 +3051,24 @@
         if (typeof window._datumSeedDossier !== 'function') return;
         window._datumSeedDossier(function(_cd) {
             try {
-                if (!_cd) return;
+                /* THE CACHE FALLBACK — the twin of studio.html's, and for the same reason: moving
+                 * the parse-time seed behind the session must not cost a signed-in device its own
+                 * numbers when D1 is unreachable and Clerk carries no mirror. _datumSeedDossier
+                 * resolves null for BOTH "no session" and "session but nothing resolved", so ask
+                 * DatumSession which it was — only a CONFIRMED session may read the local cache,
+                 * because only then is the cache this account's own copy. Signed out: nothing. */
+                if (!_cd) {
+                    if (!window.DatumSession || typeof DatumSession.resolved !== 'function') return;   // fail CLOSED
+                    DatumSession.resolved(function (signedIn) {
+                        if (!signedIn || window._userTouchedSlider) return;
+                        try {
+                            var _cRaw = localStorage.getItem('datumfi.accountDossier.v15');
+                            var _cD = _cRaw ? JSON.parse(_cRaw) : null;
+                            if (_cD) { window._applyDossierSliders(_cD); try { scheduleUpdate(); } catch(e4) {} }
+                        } catch(e5) {}
+                    });
+                    return;
+                }
                 if (window._userTouchedSlider) return;
                 window._applyDossierSliders(_cd);
                 try { scheduleUpdate(); } catch(e3) {}

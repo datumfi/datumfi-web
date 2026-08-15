@@ -58,19 +58,31 @@
  *   --sparse     : dossier carrying ONLY primary.name. Armed today. A fixture with nothing in it
  *                  proves nothing about a defect that only touches something.
  *   --nowipe     : neuter signOutWipe's key list -> L3/L4 red, L1/L2/L7 unmoved. Armed today.
- *   --nogate     : strip the signed-out read guard -> L1/L2/L3 red, L7 green. ARMS IN STEP 2.
+ *   --nogate     : ARMED (step 2). Makes DatumSession answer "signed in" to everyone — amputating
+ *                  the PREDICATE, not the four call sites, because a poison that had to enumerate
+ *                  them would be the same hand-maintained list this arc is about. MEASURED: the
+ *                  full 9-red baseline returns and L7 stays GREEN.
  *   --cachewins  : restore local-cache-wins       -> L5/L6 red, L1/L2 unmoved. ARMS IN STEP 4.
- *   ⛔ --nogate and --cachewins EXIT 1 with a named message until their anchors exist. A control
- *      that silently does nothing is a comment; this file refuses to ship one.
+ *   ⛔ --cachewins EXITS 1 with a named message until its anchor exists. A control that silently
+ *      does nothing is a comment; this file refuses to ship one.
  *
  * ⚠️ THIS GATE SHIPS RED, DELIBERATELY, AND IT IS NOT QUARANTINED. Quarantine is for a gate nobody
  * trusts; this one is trusted and the product is wrong. Its red-leg COUNT is the arc's progress
- * meter and is meant to be read every run:
- *      today (4c5bec8)      9 RED — L1c L2c L3f L4a L4b L5c L5d L6b L6c
- *      after step 2 (guard) L1c L2c L3f L5d L6b L6c should go green
- *      after step 3 (sweep) L4a should go green
- *      after step 4 (owner) L4b L5c should go green  -> GREEN, and it stays a standing gate
- * ⛔ If a leg goes green in a step that was not supposed to move it, that is a finding, not a bonus.
+ * meter and is meant to be read every run. ⭐ THE TABLE BELOW IS MEASURED, NOT PREDICTED — the
+ * prediction it replaced was wrong in BOTH directions and both errors were informative:
+ *      step 1 (4c5bec8)  9 RED — L1c L2c L3f L4a L4b L5c L5d L6b L6c
+ *      step 2 (guard)    4 RED — L1c L2c L3f went green as predicted, and:
+ *          ⭐ L5c + L6c ALSO went green, UNPREDICTED. Removing the synchronous cache read lets
+ *             _datumSeedDossier resolve first, and its cache() write CORRECTS the stored dossier to
+ *             the signed-in user's own. The ownership bug is narrower than it looked.
+ *          ⛔ L5d + L6b did NOT move, though the prediction said they would. They are the
+ *             WRONG-OWNER case, not the NO-SESSION case: the profile block asks "is there a
+ *             session?" and gets yes for Bob, then reads a cache that is still Alice's. An auth
+ *             check is not an ownership check, and this gate now proves they are different claims.
+ *      step 3 (sweep)    L4a expected to go green (datumfi.accountDossier.v15 is its sole offender)
+ *      step 4 (owner)    L4b + L5d + L6b expected to go green -> GREEN, and it stays standing
+ * ⛔ If a leg goes green in a step that was not supposed to move it, that is a finding, not a bonus
+ *    — and the two above were run down to a mechanism before they were accepted.
  *
  * @gate-pool: browser
  *
@@ -144,6 +156,21 @@ const BOB_RENDER = ['1992', '88888', '88,888', '2059', '222222', '222,222', '333
 const A_WIPE = 'function signOutWipe() {\n    var keys = _localCarriedKeys();';
 const M_WIPE = 'function signOutWipe() {\n    var keys = [];';
 
+/* --nogate · ARMED IN STEP 2. It amputates the SESSION PREDICATE rather than the four individual
+ * guards, and that is the right cut: the guards are four call sites in three files, and a poison
+ * that had to enumerate them would be the same hand-maintained list this whole arc is about. Making
+ * DatumSession answer "signed in" to everyone removes the effect of every guard at once, which is
+ * exactly the shape of the claim under test — "a session that has not proved it owns this account
+ * must not render its data". L7 must stay GREEN: a real signed-in user is unaffected by the poison,
+ * so a control that reds L7 too would be proving the page is broken, not that the guard bites.
+ * ⚠️ Per-read attribution does NOT come from this control — it came from re-running the gate after
+ * each read was gated, and that evidence is recorded in the step-2 commit message. A control proves
+ * the guard is load-bearing; the incremental runs prove which read owns which leg. */
+const A_KNOWN  = '    known: function () { return _sessState; },';
+const M_KNOWN  = '    known: function () { return true; },';
+const A_RESOLV = '      var net = setTimeout(function () { settle(false); }, 4000);';
+const M_RESOLV = '      settle(true); return; var net = setTimeout(function () { settle(false); }, 4000);';
+
 function armAnchor(src, anchor, replacement, label) {
   const n = src.split(anchor).length - 1;
   if (n !== 1) {
@@ -159,6 +186,12 @@ const server = http.createServer((req, res) => {
   if (!fp.startsWith(ROOT) || !fs.existsSync(fp) || fs.statSync(fp).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
   if (NOWIPE && /datum-archive-purge\.js$/.test(p)) {
     const src = armAnchor(fs.readFileSync(fp, 'utf8'), A_WIPE, M_WIPE, '--nowipe');
+    res.writeHead(200, { 'Content-Type': 'text/javascript' }); res.end(src); return;
+  }
+  if (NOGATE && /(^|\/)nav\.js$/.test(p)) {
+    let src = fs.readFileSync(fp, 'utf8');
+    src = armAnchor(src, A_KNOWN,  M_KNOWN,  '--nogate/known');
+    src = armAnchor(src, A_RESOLV, M_RESOLV, '--nogate/resolved');
     res.writeHead(200, { 'Content-Type': 'text/javascript' }); res.end(src); return;
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
@@ -307,11 +340,6 @@ function dump(label, r) {
 
 /* ════════════════════════════════════════════════════════════════════════════════════════ */
 (async () => {
-  if (NOGATE) {
-    console.error('CONTROL --nogate: the signed-out read guard does not exist yet (step 2 of the arc).');
-    console.error('  This control arms when studio.html/sketch.html carry the guard. Refusing to run a no-op control.');
-    process.exit(1);
-  }
   if (CACHEWINS) {
     console.error('CONTROL --cachewins: the cache-ownership fix does not exist yet (step 4 of the arc).');
     console.error('  This control arms when the restore paths carry an owner check. Refusing to run a no-op control.');
@@ -320,7 +348,7 @@ function dump(label, r) {
 
   await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
   const browser = await chromium.launch();
-  const mode = [SPARSE && '--sparse', NOWIPE && '--nowipe'].filter(Boolean).join(' ') || 'baseline';
+  const mode = [SPARSE && '--sparse', NOWIPE && '--nowipe', NOGATE && '--nogate'].filter(Boolean).join(' ') || 'baseline';
   console.log('\n_gate_signed_out_privacy — ' + mode + '\n');
 
   /* ══ L1 · signed-OUT /studio.html ═══════════════════════════════════════════════════════ */

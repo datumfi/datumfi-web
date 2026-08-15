@@ -400,6 +400,71 @@
     } catch (_e) { fallback(); }
   }
 
+  /* ── THE SESSION PREDICATE — ONE ANSWER, ONE PLACE (L48) ─────────────────────────────────────
+   * "Is there a signed-in user?" is now asked by every surface that renders personal data. It gets
+   * ONE implementation, here, because four copies of an auth check drift exactly like the fifteen
+   * footers did — and the day two of them disagree, one page renders a stranger's date of birth.
+   *
+   * ⛔⛔ IT FAILS CLOSED, AND THAT IS THE OPPOSITE OF THE LINK GUARD ABOVE ON PURPOSE. L60 makes the
+   * in-site link guard fail OPEN because a dead link is worse than the loss it prevents. Here the
+   * asymmetry runs the other way: a blank profile is a mild disappointment, and a profile showing
+   * the previous user of this browser is a privacy breach that cannot be apologised for. So EVERY
+   * failure — no Clerk, a load() that throws, a load() that rejects, a load() that never settles at
+   * all — resolves to NO SESSION. Named, not incidental.
+   *
+   * ⚠️ IT IS DELIBERATELY NOT `datum_auth_hint`, and the hint must never be substituted for it.
+   * The hint is sessionStorage, so a NEW WINDOW with a perfectly live session has none (a false
+   * negative — safe, merely a slower prefill), and it OUTLIVES AN EXPIRED SESSION in a tab that
+   * never clicked sign-out (a false POSITIVE — the leak, reopened). privacy.html and nav.js:107
+   * both already say it is a UI hint and not a security gate. This is the security gate.
+   *
+   * done(boolean) IS CALLED EXACTLY ONCE ON EVERY PATH, including a Clerk that hangs — the 4s net
+   * below exists because a caller that never hears back leaves a signed-in user staring at fields
+   * that will never fill, which is the failure mode _datumSeedDossier's once-and-always contract
+   * was written to prevent. Same guarantee, same reason.
+   *
+   * known() RETURNS null UNTIL RESOLVED. Never read it as false. "Not yet known" and "known to be
+   * absent" are different answers and must not share a branch — the same rule L51 enforces for a
+   * reachable-empty D1 list versus an unreachable one. */
+  var _sessState = null;              // null = not yet resolved · true/false = the answer
+  var _sessWaiting = [];
+  window.DatumSession = {
+    known: function () { return _sessState; },
+    resolved: function (done) {
+      if (typeof done !== 'function') done = function () {};
+      if (_sessState !== null) { done(_sessState); return; }
+      _sessWaiting.push(done);
+      if (_sessWaiting.length > 1) return;                 // a resolution is already in flight
+      function settle(v) {
+        if (_sessState !== null) return;                   // exactly once, whichever path wins
+        _sessState = !!v;
+        var ws = _sessWaiting; _sessWaiting = [];
+        ws.forEach(function (f) { try { f(_sessState); } catch (_e) {} });
+      }
+      var net = setTimeout(function () { settle(false); }, 4000);
+      try {
+        if (!window.Clerk) { clearTimeout(net); settle(false); return; }
+        window.Clerk.load().then(function () {
+          clearTimeout(net); settle(!!window.Clerk.user);
+        }).catch(function () { clearTimeout(net); settle(false); });
+      } catch (_e) { clearTimeout(net); settle(false); }
+    }
+  };
+
+  /* ⛔⛔ DO NOT KICK DatumSession.resolved() FROM HERE. It looks like the obvious place to make the
+   * predicate self-starting, and it MEASURABLY BREAKS THREE THINGS (2026-08-15).
+   * nav.js parses BEFORE studio.html's init, so resolving here means readDossier() SUCCEEDS during
+   * init — which is precisely the condition the boot path is built to avoid. seedFromBlueprint()
+   * then reports applied, `_bpApplied` goes true, and the load-time resolver that corrects the
+   * cached dossier to the SIGNED-IN user's own never runs. Measured consequences: the privacy
+   * gate's L5c/L6c flipped BACK to red (Bob sees Alice's stored dossier again) and _p7's
+   * start-from-scratch drifted to $100,001.
+   *   🔑 A PREDICATE RESOLVING EARLIER IS NOT AUTOMATICALLY BETTER. The boot sequence depends on
+   *      "not yet known" being the answer during init; making it known sooner is a behaviour change
+   *      wearing the costume of an optimisation.
+   * The self-start lives in the ONE consumer that needs it, at the moment it needs it — see
+   * _draftWriteAllowed() in scripts/studio-blueprint.js. */
+
   window._datumRestoreFromClerk = function(done) {
     if (typeof done !== 'function') done = function() {};
     try {
