@@ -18,7 +18,18 @@
     modal.style.cssText = 'display:none;position:fixed;inset:0;z-index:10000;background:rgba(5,10,20,0.92);align-items:center;justify-content:center;';
     modal.innerHTML = '<div style="background:#0d1a2e;border:1px solid rgba(93,202,165,0.2);border-radius:8px;padding:40px;max-width:480px;width:90%;font-family:\'DM Mono\',monospace;">'
       + '<div style="font-size:13px;text-transform:uppercase;letter-spacing:0.2em;color:rgba(255,255,255,0.8);margin-bottom:20px;">Delete My Data</div>'
-      + '<p style="font-size:12px;color:rgba(255,255,255,0.5);line-height:1.6;margin-bottom:24px;">This clears all locally stored session data from this browser — inputs, session token, and preferences. DATUM FI stores nothing server-side. Download a copy first, or delete directly.</p>'
+      /* ⛔⛔ THIS PARAGRAPH IS A RETENTION STATEMENT INSIDE A GDPR/CCPA ART. 17 TOOL, ON FIFTEEN
+         PAGES. Its previous text claimed "DATUM FI stores nothing server-side", which was FALSE:
+         blueprints and sketches are written to Cloudflare D1 (/api/documents, verified HTTP 401 =
+         deployed) and mirrored into Clerk unsafeMetadata, gated only by signedIn() — no tier, no
+         flag, no allowlist. It also carried the dead brand name.
+         🔑 A MISSTATEMENT ABOUT RETENTION, MADE TO SOMEONE IN THE ACT OF EXERCISING A DELETION
+            RIGHT, IS THE ONE STRING THAT CAN CAUSE A USER TO *NOT* PROTECT THEMSELVES.
+         ⚠️ "If you have an account" is deliberate and is NOT signedIn(). The sentence describes
+         WHERE DATA LIVES, not what triggers a write: a user with an account who is signed out
+         still has server-side copies from every prior session. Code asks what is true right now;
+         retention copy must answer what exists about me. Architect-authored, verbatim. */
+      + '<p style="font-size:12px;color:rgba(255,255,255,0.5);line-height:1.6;margin-bottom:24px;">DATUMAE keeps your plan in this browser. If you have an account, your saved blueprints and sketches are also stored on our servers so they follow you between devices. This tool clears everything held in this browser.</p>'
       + '<div style="display:flex;gap:12px;flex-wrap:wrap;">'
       + '<button onclick="downloadAndDelete()" style="background:transparent;border:1px solid rgba(93,202,165,0.4);color:rgba(93,202,165,0.8);font-family:\'DM Mono\',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.15em;padding:10px 20px;border-radius:4px;cursor:pointer;">Download &amp; Delete</button>'
       + '<button onclick="deleteDataOnly()" style="background:transparent;border:1px solid rgba(226,75,74,0.4);color:rgba(226,75,74,0.8);font-family:\'DM Mono\',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.15em;padding:10px 20px;border-radius:4px;cursor:pointer;">Delete Only</button>'
@@ -47,7 +58,13 @@
   };
 
   window.deleteDataOnly = function() {
-    if (!confirm('Delete all locally stored data from this browser?\n\nThis will remove your saved Sketches and cannot be undone.')) return;
+    /* The old text said "cannot be undone" — WRONG IN THE REASSURING DIRECTION. localStorage.clear()
+       wipes the local copy, then _datumRestoreFromClerk (below, every page load) rebuilds sketches
+       and blueprints from D1/Clerk on the next sign-in. The user was warned about a loss that does
+       not happen.
+       🔑 AN OVERSTATED WARNING IS NOT A SAFE ERROR — IT SPENDS CREDIBILITY THAT A LATER, TRUE
+          WARNING WILL NEED. Architect-authored, verbatim. */
+    if (!confirm('This clears your saved Sketches and Blueprints from this browser. If you have an account, signing in again will restore them from your account.')) return;
     localStorage.clear(); sessionStorage.clear();
     var m = document.getElementById('delete-data-modal');
     if (m) m.innerHTML = '<div style="background:#0d1a2e;border:1px solid rgba(93,202,165,0.2);border-radius:8px;padding:40px;max-width:480px;width:90%;font-family:\'DM Mono\',monospace;text-align:center;">'
