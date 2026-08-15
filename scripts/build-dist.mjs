@@ -23,8 +23,12 @@ const DROP_RE = [/^\.claude\//, /^\.wrangler\//, /^workers\//, /^functions\//, /
 
 // SACRED HOSTS — must ship byte-identical (LF + content). Build ABORTS on drift.
 const SACRED = {
-  'studio.html': 'b7e75cbe3e6efd99cbede8a6ad0f5b40',   // §18.2 — the disclosure leaves the canvas frame for the panel's own scroll; banner reserve retired (2026-08-14)
-  'sketch.html': '28258a76686008aebe839d59af39500f',   // shape button reverted to the Captain's "Save Shape" / "✓ Saved" (2026-08-01)
+  /* THE CANONICAL DISCLOSURE FOOTER — legal copy for FIFTEEN pages from ONE file. Declared in
+     CLAUDE.md in this same commit. Sacred on a stricter rule than the rest: its absence removes a
+     regulatory disclosure from every page at once. */
+  'scripts/datum-footer.js': 'b5087e9f70e49bcd3ae0ea87570f2a4d',   // replaced 15 divergent copies (2026-08-14)
+  'studio.html': 'c68ce8337f1bc08be5d3fea810a81abe',   // §18.2 — the disclosure leaves the canvas frame for the panel's own scroll; banner reserve retired (2026-08-14)
+  'sketch.html': 'fc51c4473e66013d3a563a3e24287822',   // canonical disclosure footer via /scripts/datum-footer.js (2026-08-14)
   /* §47.3 — SACRED as of 2026-08-13, declared in CLAUDE.md IN THIS SAME COMMIT. The two lists are
      reconciled by this build in BOTH directions, so a host added to one and not the other STOPS
      THE BUILD — which is why the nav.js / sketchbook.html gaps could exist historically and cannot
@@ -63,8 +67,8 @@ const SACRED = {
   'my-account.html': 'b6c0cade10a7d77fc948e891e58cecde',   // intro names the rooms, not their positions (2026-08-01)
   'Blueprint.html': '2129066cbd16c0a30e95278a4f7355f4',   // cards +29% area; card buttons get real chrome (2026-08-01)
   'Dossier.html': '5cceff124fd6d158557fa5d58defb1bd',
-  'privacy.html': 'e8ad09c3b1881fd53b47b5be9ae0ded4',
-  'terms.html': 'f075b5b3a3a919ee586b962aa17bf200',
+  'privacy.html': '7f7f867eb7acbfef3f6475dbc5b973b2',
+  'terms.html': '6857a4a3767eb02d2baa233b7f43278c',
   'scripts/account-topbar.js': '12fb359c789211f27fdfa0f30e431ccf',   // Dossier tab retired; Sign Out is Home-only (2026-08-01)
 };
 const md5 = (p) => createHash('md5').update(readFileSync(p)).digest('hex');

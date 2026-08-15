@@ -163,6 +163,21 @@ loosening the parser.
    and a default-active climate option), which would have opened the front door with ENDURANCE
    already answered — the one phase whose whole argument is that the Datum is DERIVED LAST.
    🔑 REUSE-DON'T-FORK ASSUMES THE DONOR IS CORRECT. L48 IS NEVER A VERIFICATION EXEMPTION.
+ · scripts/datum-footer.js · THE CANONICAL DISCLOSURE FOOTER — the legal text, the two rights links
+   and the version string, for the WHOLE SITE (2026-08-14). ⭐ THE FIRST SACRED HOST THAT IS NOT
+   STUDIO WORK, AND THE MOST WIDELY LOADED: fifteen pages render from it.
+   ⛔ SACRED ON A STRICTER RULE THAN THE OTHERS. The upkeep catalogue is Sacred because its absence
+   changes money on screen; THIS one is Sacred because its absence removes a REGULATORY DISCLOSURE
+   from every page at once, and because an edit here is an edit to legal copy fifteen times over.
+   ⛔⛔ IT REPLACED FIFTEEN DIVERGENT COPIES, MEASURED 2026-08-14 BEFORE A BYTE MOVED: SIX version
+   strings live simultaneously (sketch.html claimed v3.2.4, HIGHER than index.html's v2.3.5), FOUR
+   different disclaimer texts, and `Do Not Sell My Information` — the CCPA/CPRA link — ABSENT FROM
+   EIGHT OF FIFTEEN FOOTERS INCLUDING THE HOMEPAGE.
+   🔑 THE VERSION NUMBER WAS NEVER THE DEFECT; IT WAS THE ONLY PART OF THE DIVERGENCE THAT HAPPENED
+   TO BE LEGIBLE. Nobody diffs a paragraph of boilerplate across fifteen files — which is precisely
+   why hand-editing fifteen files to match would have recreated the conditions that produced it.
+   ⚠️ THE HOST PAGES KEEP AN EMPTY `<div id="disclosure-footer"></div>`. If this file fails to load
+   the footer is MISSING, never WRONG — no stale contradictory copy can survive behind it.
 <!-- SACRED-LIST-END -->
 
 THIS LIST AND `SACRED{}` IN `scripts/build-dist.mjs` MUST MATCH EXACTLY — every host declared here
