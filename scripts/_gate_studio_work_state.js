@@ -84,7 +84,24 @@ const KEY = 'datumfi_blueprint_draft_v1';
     try { localStorage.setItem('datum-discover-v1','done'); } catch(e){}
   })();`);
   await page.goto(base + '/studio.html', { waitUntil: 'commit' });
-  await page.waitForSelector('#primary-name', { timeout: 30000 });
+  /* ⛔⛔ `state: 'attached'`, NOT the default 'visible', AND THAT IS A CORRECTION TO THIS GATE
+   * RATHER THAN A CONCESSION TO THE PRODUCT. #primary-name lives inside
+   * <div data-phase="data" class="studio-section">, and studio.html:300 hides every section while
+   * #studio-layout carries a data-room — which the landing always does. So on a cold Studio this
+   * element is ATTACHED and correctly NOT VISIBLE.
+   * This gate used to pass anyway, and the reason is the finding: until 2026-08-15 the landing set
+   * data-room 300ms after DOMContentLoaded, so the old vertical stack painted for ~330ms on every
+   * cold load (Captain-reported flicker, measured: 16 sampled frames, 7 sections visible, t+295ms
+   * to t+626ms). waitForSelector polls — it was resolving inside that window. Closing the flicker
+   * removed the route and the gate timed out.
+   *   🔑 A GATE THAT REACHES A CONTROL BY MEANS THE USER DOES NOT HAVE IS MEASURING ITSELF — and
+   *      this one was reaching it by means the user only had BECAUSE OF A DEFECT. A green that
+   *      depends on a bug turns red when you fix the bug, which is the most confusing possible
+   *      signal and the reason this comment is longer than the change.
+   * This gate is about DRAFT AND WORK-STATE bookkeeping, never about visibility, so 'attached' is
+   * what it always meant to ask. If a future leg genuinely needs the field on screen, it must OPEN
+   * THE DATA ROOM first, the way a user does — not wait for a paint that should not happen. */
+  await page.waitForSelector('#primary-name', { state: 'attached', timeout: 30000 });
   await sleep(6000);
 
   const loaded = await page.evaluate(() => !!(window.DatumBlueprint && typeof window.DatumBlueprint.workState === 'function'));

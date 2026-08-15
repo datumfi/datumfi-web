@@ -2039,8 +2039,9 @@
                 <div class="input-label">Effective Tax Rate</div>
                 <!-- Dossier-exact dropdown (Dossier.html #taxRate, verbatim options) -->
                 <select id="eff-tax-rate" class="small-field" tabindex="14" style="background: var(--bg-navy); color: white;" onchange="updateAnalysisText()">
+                   <option value="" selected>Select tax rate</option>
                    <option value="12%">12% bracket</option>
-                   <option value="22%" selected>22% blended estimate</option>
+                   <option value="22%">22% blended estimate</option>
                    <option value="24%">24% bracket</option>
                    <option value="32%">32% bracket</option>
                    <option value="35%">35% bracket</option>
@@ -2052,8 +2053,9 @@
               <div>
                 <div class="input-label">Filing Status</div>
                 <select id="filing-status" class="small-field" tabindex="15" style="background: var(--bg-navy); color: white;">
+                   <option value="" selected>Select filing status</option>
                    <option>Single / Individual</option>
-                   <option selected>Married Filing Jointly</option>
+                   <option>Married Filing Jointly</option>
                    <option>Married Filing Separately</option>
                    <option>Head of Household</option>
                 </select>
@@ -14322,7 +14324,22 @@
         // Cash Flow Physics Module
         let priSal = parseInt(document.getElementById('pri-salary').value.replace(/[^0-9.]/g, ''), 10) || 0;
         let coSal = document.getElementById('co-arch-toggle').checked ? (parseInt(document.getElementById('co-salary').value.replace(/[^0-9.]/g, ''), 10) || 0) : 0;
-        let effTax = parseFloat(document.getElementById('eff-tax-rate').value) || 0;
+        /* ⛔ THE UNSET RATE IS 22, NOT 0, AND THE `|| 0` IS WHY THIS LINE HAD TO MOVE WITH THE
+         * DROPDOWN. #eff-tax-rate now opens on "Select tax rate" (value="") so a cold visitor is no
+         * longer shown a bracket they never chose. `parseFloat('') || 0` is 0, which would make
+         * netAnnual = gross × 1.0 and OVERSTATE monthly net income for every cold visitor — a
+         * bigger lie than the one the placeholder removes.
+         *   🔑 CLAMP-TO-ZERO IS NOT A SAFE DEFAULT FOR A RATE THAT REDUCES A NUMBER. An absent tax
+         *      rate is unknown, not free.
+         * ⚠️ STOPGAP, AND NAMED AS ONE: the field now SAYS unset while the maths still ASSUMES 22 —
+         * a hidden default, which is exactly the species the cold-start arc (§14.2/§21.2) exists to
+         * kill. The honest end state is to suppress the derived figure until the user states a rate,
+         * and that needs authored empty-state copy which the Architect owes. This keeps every number
+         * on screen identical to what shipped while removing the false claim that the user picked
+         * 22% — it does not pretend to be the finished answer. */
+        var _TAX_WHEN_UNSET = 22;
+        let effTax = parseFloat(document.getElementById('eff-tax-rate').value);
+        if (!isFinite(effTax)) effTax = _TAX_WHEN_UNSET;
         
         let grossAnnual = priSal + coSal;
         let netAnnual = grossAnnual * (1 - (effTax / 100));

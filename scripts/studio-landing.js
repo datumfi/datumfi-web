@@ -362,8 +362,43 @@ function _studioLandingBoot() {
   _renderStudioLanding();
 }
 
+/* ⛔⛔ THE COLD-LOAD FLICKER — the Studio used to open on the OLD vertical stack for a beat, then
+ * have the Datumae drop over it. Captain-reported, and it had been true since the landing shipped.
+ *
+ * THE MECHANISM, and it is entirely in the two lines below. studio.html:300 reads
+ *     .studio-layout[data-room] .drafting-panel > .studio-section { display: none; }
+ * so the attribute's PRESENCE hides the stack and its ABSENCE shows everything. The attribute was
+ * set at DOMContentLoaded + 300ms — so from first paint until then, the browser painted the whole
+ * pre-landing Studio, Architect Profile first. What looked like the landing arriving late was the
+ * OLD PAGE being shown on purpose by a CSS rule that only knows two states and defaults to the
+ * wrong one during boot.
+ *   🔑 AN ATTRIBUTE THAT GATES A LAYOUT HAS A THIRD STATE — "not set yet" — AND THE STYLESHEET HAD
+ *      NO RULE FOR IT. A default that is correct at rest can still be wrong for the first 300ms,
+ *      and first paint is exactly when a user forms their impression of the page.
+ *
+ * TWO CHANGES, AND THE FIRST ONE IS WHY THIS LIVES HERE RATHER THAN IN studio.html's stylesheet:
+ *  (1) The part injects its own rule for the not-yet-set state, AT PARSE TIME. This file is loaded
+ *      at studio.html:1896 and #studio-layout does not exist until :1955, so the attribute itself
+ *      cannot be set synchronously — but a STYLE can be, and CSS applies to elements that do not
+ *      exist yet. Putting the rule in studio.html instead would hide the stack even when THIS FILE
+ *      FAILS TO LOAD, leaving a blank panel — the split-deploy law's exact failure mode. Shipped
+ *      from the part, a missing part means a missing rule and the page degrades to the shipped
+ *      single-page Studio, which is what that law asks for. DEGRADE TO SHIPPED BEHAVIOUR, NEVER
+ *      DRAW WRONG.
+ *  (2) The boot no longer waits 300ms to set the attribute. The 300ms is KEPT as a REPAINT, because
+ *      the landing derives from live state that studio.html's init populates and repainting is
+ *      explicitly cheap and idempotent. Setting the attribute early and repainting late are two
+ *      different jobs; only the first one was ever time-critical. */
+if (typeof document !== 'undefined' && document.head && document.head.insertAdjacentHTML) {
+  document.head.insertAdjacentHTML('beforeend',
+    '<style id="sl-preboot">.studio-layout:not([data-room]) .drafting-panel > .studio-section{display:none}</style>');
+}
+
 if (typeof document !== 'undefined' && document.addEventListener) {
   document.addEventListener('input', _renderStudioLanding);
   document.addEventListener('change', _renderStudioLanding);
-  document.addEventListener('DOMContentLoaded', function () { setTimeout(_studioLandingBoot, 300); });
+  document.addEventListener('DOMContentLoaded', function () {
+    _studioLandingBoot();                            // attribute + first paint, immediately
+    setTimeout(_renderStudioLanding, 300);           // repaint once init has populated live state
+  });
 }

@@ -27,7 +27,7 @@ const SACRED = {
      CLAUDE.md in this same commit. Sacred on a stricter rule than the rest: its absence removes a
      regulatory disclosure from every page at once. */
   'scripts/datum-footer.js': '38645d6a25942d1c27f91b1cae5ecd76',   // the module carries its own presentation — 10px muted, not the page default (2026-08-14)
-  'studio.html': 'd1f87fde8fb24fe3921717af5c368321',   // Part 24/25 — the dossier reads move behind DatumSession; a signed-out Studio paints no personal data (2026-08-15)
+  'studio.html': '642c967b426c364481e5ce82567c794c',   // tax rate + filing status open UNSET for a cold visitor; the unset rate is 22, not 0 (2026-08-15)
   'sketch.html': 'fe6bb185f93653e14a82a509fae6d4a1',   // Part 24/25 — the PARSE-TIME dossier seed is retired; it moves to the auth-gated load-time resolver (2026-08-15)
   /* §47.3 — SACRED as of 2026-08-13, declared in CLAUDE.md IN THIS SAME COMMIT. The two lists are
      reconciled by this build in BOTH directions, so a host added to one and not the other STOPS
@@ -42,7 +42,7 @@ const SACRED = {
   'scripts/studio-debt-cost.js': 'df016d73c4a45117681577a5b064f9ed',   // the monthly carrying cost of a debt — extracted from studio.html:9487-9504 (2026-08-13)
   /* STEP 1 — the landing. SACRED because it owns the completeness predicate: a wrong answer here
      tells the user a phase of the method is finished when it is not, on the front door. */
-  'scripts/studio-landing.js': '10d9f41cf274705dfa2fca2e1ff41f19',   // landing declutter; ← Dashboard on top; Architecture's Next carries resolveEstate (2026-08-14)
+  'scripts/studio-landing.js': '59a5288534d1cd011254aed77385247c',   // the cold-load flicker: the part ships its own pre-boot rule so the old stack never paints (2026-08-15)
   'scripts/studio-blueprint.js': 'b87fc411ce76981c2e590bf8ee6f575f',   // Part 24/25 — readDossier() session-gated at the READ (4 callers) + the boot-draft invariant in _persistDraft (2026-08-15)
   // MISS-5 pre-work guard (2026-07-25). nav.js is a Sacred Host in CLAUDE.md but was absent from THIS map,
   // so a bad edit failed no build. It owns the centralized cross-device restore every page depends on
