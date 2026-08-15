@@ -47,9 +47,34 @@
    byte, which is only a meaningful claim because there is exactly one place to change it. */
 var DATUM_FOOTER_LINK_STYLE = 'color:rgba(255,255,255,0.3);text-decoration:none;';
 
+/* ⛔⛔ THE MODULE CARRIES ITS OWN PRESENTATION, AND THAT IS A DEFECT PAID FOR IN PUBLIC.
+   The first cut rendered a BARE <p> and relied on each page having a `#disclosure-footer p` CSS
+   rule. ONLY TWO OF THE FIFTEEN DID (methodology.html, method.html). Everywhere else — including
+   studio.html and the HOMEPAGE — the paragraph inherited the page default and shipped as LARGE,
+   BRIGHT WHITE TEXT: on the Studio it was among the biggest type on the screen. The Captain caught
+   it within minutes of the push.
+   ⚠️ AND MY OWN GATE COULD NOT SEE IT. _gate_canonical_footer asserts the MARKUP is identical on all
+   fifteen pages — and it WAS. Identical markup rendered wildly differently, because the styling
+   lived somewhere the module did not own.
+   🔑 A SHARED MODULE THAT DEPENDS ON ITS HOST FOR PRESENTATION IS NOT SHARED — IT IS FIFTEEN
+      DIFFERENT RESULTS FROM ONE STRING. "Same bytes" is not "same rendering", and a gate that only
+      compares bytes will say yes to both.
+   ⭐ Values are the pre-existing canonical ones, restored verbatim: 10px mono at 25% white. The
+      var() carries a literal fallback because --font-mono is not defined on every page. */
+/* ⛔ SINGLE QUOTES INSIDE THE FONT STACK. The first version used "DM Mono" — and this string is
+   interpolated into style="…", so the inner DOUBLE QUOTE TERMINATED THE ATTRIBUTE and every
+   declaration after font-family was discarded. The paragraph kept rendering at the inherited 16px
+   and the fix looked like it had done nothing.
+   🔑 A STRING THAT LANDS INSIDE AN HTML ATTRIBUTE MUST NOT CONTAIN THAT ATTRIBUTE'S DELIMITER —
+      the same quote hazard that killed this page twice before, wearing a font stack this time. */
+var DATUM_FOOTER_P_STYLE = "font-family:var(--font-mono,'DM Mono',monospace);font-size:10px;"
+  + 'color:rgba(255,255,255,0.25);line-height:1.6;margin:0;';
+var DATUM_FOOTER_BOX_STYLE = 'width:100%;background:rgba(9,18,33,0.97);'
+  + 'border-top:1px solid rgba(255,255,255,0.05);padding:10px 40px 12px;text-align:center;';
+
 function _datumFooterHTML() {
   var L = DATUM_FOOTER_LINK_STYLE;
-  return '<p>DATUMAE is an educational tool and does not constitute financial, investment, or tax '
+  return '<p style="' + DATUM_FOOTER_P_STYLE + '">DATUMAE is an educational tool and does not constitute financial, investment, or tax '
     + 'advice. Not a registered investment advisor. Consult a qualified financial professional before '
     + 'making financial decisions. All projections are hypothetical, based on mathematical models, and '
     + 'do not guarantee future results. Past performance does not guarantee future outcomes. '
@@ -78,6 +103,11 @@ function _datumFooterHTML() {
 function _renderDatumFooter() {
   var host = document.getElementById('disclosure-footer');
   if (!host) return false;
+  /* The BOX is styled here too, for the same reason as the paragraph: studio.html and most other
+     hosts carried these as INLINE styles that the conversion removed, and only two pages had a CSS
+     rule to fall back on. Setting it on the host keeps the module the single source of both the
+     words AND the way they look. */
+  host.setAttribute('style', DATUM_FOOTER_BOX_STYLE);
   host.innerHTML = _datumFooterHTML();
   return true;
 }

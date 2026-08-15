@@ -26,7 +26,7 @@ const SACRED = {
   /* THE CANONICAL DISCLOSURE FOOTER — legal copy for FIFTEEN pages from ONE file. Declared in
      CLAUDE.md in this same commit. Sacred on a stricter rule than the rest: its absence removes a
      regulatory disclosure from every page at once. */
-  'scripts/datum-footer.js': 'b5087e9f70e49bcd3ae0ea87570f2a4d',   // replaced 15 divergent copies (2026-08-14)
+  'scripts/datum-footer.js': '38645d6a25942d1c27f91b1cae5ecd76',   // the module carries its own presentation — 10px muted, not the page default (2026-08-14)
   'studio.html': 'c68ce8337f1bc08be5d3fea810a81abe',   // §18.2 — the disclosure leaves the canvas frame for the panel's own scroll; banner reserve retired (2026-08-14)
   'sketch.html': 'fc51c4473e66013d3a563a3e24287822',   // canonical disclosure footer via /scripts/datum-footer.js (2026-08-14)
   /* §47.3 — SACRED as of 2026-08-13, declared in CLAUDE.md IN THIS SAME COMMIT. The two lists are
