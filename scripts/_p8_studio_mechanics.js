@@ -336,7 +336,16 @@ const readAges = (page) => page.evaluate(() => { const tt = document.getElementB
   let bPlan = (await readAges(page)).plan;
   await editField(page, 'val-plan-through', '01 / 9855'); await page.waitForTimeout(150);
   a = await readAges(page);
-  check('Item4: nonsensical PTA year (9855) rejected', a.plan === bPlan && /Plan-through age must be/.test(a.toast), 'PTA=' + a.plan);
+  /* The message CHANGED on 2026-08-15 and this assertion is STRENGTHENED rather than relaxed.
+     "Plan-through age must be between X and Y" became state-aware copy, because the old string
+     could emit "between 105 and 105" — an instruction the user could not follow, on a field they
+     could no longer edit. The normal-state message now states the RULE and the RANGE, so this
+     asserts both: a message that merely restates a bound is a complaint; one that names the rule is
+     an instrument. The rejection itself (a.plan === bPlan) is unchanged and still the load-bearing
+     half — it is what proves the absurd year did not take. */
+  check('Item4: nonsensical PTA year (9855) rejected, and the message states the rule AND the range',
+    a.plan === bPlan && /at least \d+ years after you retire/.test(a.toast) && /between \d+ and \d+/.test(a.toast),
+    'PTA=' + a.plan + ' toast=' + JSON.stringify(String(a.toast || '').slice(0, 90)));
   // DOB-absent fallback (birthYear = today - current-age slider).
   await page.evaluate(() => { const d = document.getElementById('pri-dob'); if (d) d.value = ''; });
   await editField(page, 'val-age', '01 / ' + (Y - 40)); await page.waitForTimeout(150);

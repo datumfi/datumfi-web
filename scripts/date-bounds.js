@@ -15,6 +15,28 @@
   var AGE_MIN = 18, AGE_MAX = 85;   // current age (DOB)
   var RA_MIN_FLOOR = 45, RA_MAX = 90;
   var PTA_MIN_FLOOR = 75, PTA_MAX = 105;
+  /* NAMED because it appears in a user-facing sentence. It was an inline `+ 20`, which meant the
+     rule existed in the arithmetic and nowhere a reader could find it. */
+  var PTA_GAP = 20;
+
+  /* THE PLAN-THROUGH WINDOW FOR A GIVEN RETIREMENT AGE — one function, so the UI, the validator and
+     any gate all ask the SAME question and cannot disagree about the answer.
+     `floor` is CLAMPED to the ceiling so no caller can be handed an inverted range; `rawFloor`
+     keeps the uncapped value because the crossed-state message has to report what the rule actually
+     demanded ("would need a plan-through age of 110"), not the clamped fiction.
+       🔑 CLAMPING THE VALUE WITHOUT KEEPING THE TRUTH WOULD HIDE THE DEFECT INSTEAD OF EXPLAINING IT.
+     `raMaxValid` is COMPUTED (PTA_MAX - PTA_GAP), never typed.
+     ⚠️ FLAGGED FOR THE ARCHITECT: at exactly raMaxValid the window is COLLAPSED, not open — so the
+     crossed message points at a retirement age that yields a single plan-through value rather than
+     a range. The formula is the one that was ruled (105 - 20); the nuance is named here rather than
+     silently changed to raMaxValid - 1. */
+  function planWindow(ra) {
+    var rawFloor = Math.max(PTA_MIN_FLOOR, (ra | 0) + PTA_GAP);
+    var floor = Math.min(rawFloor, PTA_MAX);
+    var state = rawFloor > PTA_MAX ? 'crossed' : (rawFloor === PTA_MAX ? 'collapsed' : 'open');
+    return { floor: floor, ceiling: PTA_MAX, rawFloor: rawFloor, state: state,
+             raMaxValid: PTA_MAX - PTA_GAP };
+  }
 
   // "MM / YYYY" or "MM/YYYY" (also accepts ISO "YYYY-MM") -> { mo, yr } or null. Month must be 1-12.
   function parseMoYr(s) {
@@ -74,8 +96,32 @@
       var rlo = Math.max(RA_MIN_FLOOR, (ca | 0) + 1);
       if (a < rlo || a > RA_MAX) return { ok: false, age: a, err: 'Retirement age must be between ' + rlo + ' and ' + RA_MAX + '.' };
     } else {
-      var plo = Math.max(PTA_MIN_FLOOR, (ra | 0) + 20);
-      if (a < plo || a > PTA_MAX) return { ok: false, age: a, err: 'Plan-through age must be between ' + plo + ' and ' + PTA_MAX + '.' };
+      /* ⛔⛔ THE WINDOW CAN COLLAPSE OR CROSS, AND THE OLD MESSAGE HID IT. `plo` is derived from the
+       * RETIREMENT age while the ceiling is a fixed constant — TWO BOUNDS SET BY DIFFERENT RULES
+       * WITH NOTHING STOPPING THEM CROSSING. MEASURED across the retire field's own permitted range
+       * (45..90): ra 85 gives floor 105 == ceiling 105, and ra 86..90 give floor 106..110 against a
+       * ceiling of 105. SIX OF FORTY-SIX PERMITTED RETIREMENT AGES LEAVE NO USABLE WINDOW.
+       * The Captain hit ra 85 and was told "must be between 105 and 105" — an instruction he could
+       * not follow, on a field he could no longer edit, with no hint of why.
+       *   🔑 A VALIDATOR THAT CAN PRODUCE AN EMPTY RANGE IS NOT VALIDATING — IT IS LOCKING THE FIELD
+       *      AND BLAMING THE USER.
+       *   🔑 A VALIDATION MESSAGE MUST NAME THE FIELD THAT CAN MOVE. The old one named the field
+       *      that cannot. AN ERROR THAT RESTATES A CONSTRAINT IS A COMPLAINT; AN ERROR THAT NAMES
+       *      THE MOVE IS AN INSTRUMENT.
+       * Three states, three DIFFERENT FACTS — not one string with branches. Copy Architect-authored,
+       * verbatim, and every number is interpolated from the constants above: A LIMIT TYPED INTO A
+       * SENTENCE IS A HAND-MAINTAINED LIST WEARING A MESSAGE, AND IT SURVIVES THE DAY THE LIMIT
+       * CHANGES. */
+      var w = planWindow(ra);
+      if (w.state === 'crossed') {
+        return { ok: false, age: a, state: w.state, err: 'Retiring at ' + (ra | 0) + ' would need a plan-through age of ' + w.rawFloor + ', past the ' + PTA_MAX + ' limit. Move your retirement age to ' + w.raMaxValid + ' or earlier and this opens up.' };
+      }
+      if (w.state === 'collapsed' && (a < w.floor || a > w.ceiling)) {
+        return { ok: false, age: a, state: w.state, err: 'Retiring at ' + (ra | 0) + ' leaves only one plan-through age: ' + PTA_MAX + '. To plan through anything earlier, move your retirement age back.' };
+      }
+      if (a < w.floor || a > w.ceiling) {
+        return { ok: false, age: a, state: w.state, err: 'Plan-through has to be at least ' + PTA_GAP + ' years after you retire — so between ' + w.floor + ' and ' + PTA_MAX + '.' };
+      }
     }
     return { ok: true, age: a };
   }
@@ -108,6 +154,7 @@
   }
 
   global.DatumDateBounds = {
+    planWindow: planWindow, PTA_GAP: PTA_GAP,
     AGE_MIN: AGE_MIN, AGE_MAX: AGE_MAX, RA_MIN_FLOOR: RA_MIN_FLOOR, RA_MAX: RA_MAX,
     PTA_MIN_FLOOR: PTA_MIN_FLOOR, PTA_MAX: PTA_MAX,
     parseMoYr: parseMoYr, ageFromDob: ageFromDob, ageAtDate: ageAtDate,

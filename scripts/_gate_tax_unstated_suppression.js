@@ -49,8 +49,14 @@
  *
  * Run: node scripts/_gate_tax_unstated_suppression.js        (exit 0 = GREEN)
  */
-const fs = require('fs');
 const path = require('path');
+/* ⛔ studioSource(), NEVER fs.readFileSync('studio.html'). _gate_studio_source enforces that this
+   is the ONLY door to the Studio's source, and the first version of this gate read the file
+   directly — caught on its first suite run, by a gate that exists precisely to catch it.
+   ⭐ AND IT IS NOT MERE COMPLIANCE: studioSource() composes studio.html WITH its extracted parts,
+   so this gate keeps measuring the right bytes on the day the split moves this code into a part.
+   A gate pinned to a FILE stops being true when the code moves; one pinned to the SOURCE does not. */
+const { studioSource } = require('./_studio_source.cjs');
 const ROOT = path.resolve(__dirname, '..');
 
 const AUTHORED = 'Set a tax rate above and your monthly net appears here. Until then, this figure would be a guess.';
@@ -64,7 +70,7 @@ function check(name, cond, detail) {
 console.log('\n_gate_tax_unstated_suppression — source tier\n');
 
 let src = '';
-try { src = fs.readFileSync(path.join(ROOT, 'studio.html'), 'utf8'); } catch (e) {
+try { src = studioSource(); } catch (e) {
   console.error('SOURCE UNAVAILABLE — ' + e.message + '. A gate that cannot read its subject is not a pass.');
   process.exit(1);
 }
