@@ -29,7 +29,7 @@
          WHERE DATA LIVES, not what triggers a write: a user with an account who is signed out
          still has server-side copies from every prior session. Code asks what is true right now;
          retention copy must answer what exists about me. Architect-authored, verbatim. */
-      + '<p style="font-size:12px;color:rgba(255,255,255,0.5);line-height:1.6;margin-bottom:24px;">DATUMAE keeps your plan in this browser. If you have an account, your saved blueprints and sketches are also stored on our servers so they follow you between devices. This tool clears everything held in this browser.</p>'
+      + '<p style="font-size:12px;color:rgba(255,255,255,0.5);line-height:1.6;margin-bottom:24px;">DATUMAE keeps your plan in this browser, and on our servers if you have an account. This tool deletes both — every blueprint, every sketch, and your saved profile. Signing in again will not bring them back.</p>'
       + '<div style="display:flex;gap:12px;flex-wrap:wrap;">'
       + '<button onclick="downloadAndDelete()" style="background:transparent;border:1px solid rgba(93,202,165,0.4);color:rgba(93,202,165,0.8);font-family:\'DM Mono\',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.15em;padding:10px 20px;border-radius:4px;cursor:pointer;">Download &amp; Delete</button>'
       + '<button onclick="deleteDataOnly()" style="background:transparent;border:1px solid rgba(226,75,74,0.4);color:rgba(226,75,74,0.8);font-family:\'DM Mono\',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.15em;padding:10px 20px;border-radius:4px;cursor:pointer;">Delete Only</button>'
@@ -64,12 +64,61 @@
        not happen.
        🔑 AN OVERSTATED WARNING IS NOT A SAFE ERROR — IT SPENDS CREDIBILITY THAT A LATER, TRUE
           WARNING WILL NEED. Architect-authored, verbatim. */
-    if (!confirm('This clears your saved Sketches and Blueprints from this browser. If you have an account, signing in again will restore them from your account.')) return;
-    localStorage.clear(); sessionStorage.clear();
+    if (!confirm('This permanently deletes your Sketches, Blueprints and profile — from this browser and from your account. There is no copy left to restore. This cannot be undone.')) return;
+    _datumEraseEverywhere(function () { _datumDeleteDone(); });
+  };
+
+  /* ⛔⛔ THE DELETE NOW REACHES THE SERVER. It used to be `localStorage.clear()` and nothing else,
+     after which _datumRestoreFromClerk rebuilt the archive from D1/Clerk on the very next page load
+     — a GDPR/CCPA Article 17 control that UNDID ITSELF in front of the person who had just asked
+     for deletion.
+       🔑 A PERFECT LOCAL SWEEP IS UNDONE BY THE NEXT PAGE LOAD. Proved on the boot draft this
+          morning; this is the same mechanism where the consequence is regulatory, not cosmetic.
+     DatumPurge.eraseEverywhere deletes the D1 rows and empties Clerk unsafeMetadata FIRST — a local
+     clear beforehand would destroy the token those deletes authenticate with, and they would fail
+     silently against a user already told their data was gone — then clears both browser stores.
+     ⚠️ The module is fetched ON DEMAND (it is not loaded on all fifteen pages) and the callback
+     fires on EVERY path including a load failure or a timeout, because A DELETION TOOL THAT HANGS
+     IS WORSE THAN ONE THAT REPORTS FAILURE: the user cannot tell hanging from working.
+     ⚠️⚠️ COPY DEBT — FLAGGED, NOT WRITTEN. The modal paragraph and the confirm above still describe
+     a browser-only tool ("clears everything held in this browser"). That is now UNDERSTATED: it
+     deletes the server copies too. Those strings are the Architect's to re-author. */
+  function _datumEraseEverywhere(done) {
+    function run() {
+      if (window.DatumPurge && typeof window.DatumPurge.eraseEverywhere === 'function') {
+        window.DatumPurge.eraseEverywhere(function (rep) {
+          try { console.log('[erase]', JSON.stringify(rep)); } catch (_e) {}
+          done();
+        });
+        return;
+      }
+      /* Degrade to the shipped behaviour rather than doing nothing — the local clear is still the
+         part the user can see, and refusing to act would be the worst of both. */
+      try { localStorage.clear(); sessionStorage.clear(); } catch (_e) {}
+      done();
+    }
+    if (window.DatumPurge && typeof window.DatumPurge.eraseEverywhere === 'function') { run(); return; }
+    var ps = document.createElement('script');
+    ps.src = '/scripts/datum-archive-purge.js';
+    var once = false;
+    function go() { if (once) return; once = true; run(); }
+    ps.onload = go; ps.onerror = go;
+    setTimeout(go, 2000);
+    document.head.appendChild(ps);
+  }
+
+  function _datumDeleteDone() {
     var m = document.getElementById('delete-data-modal');
     if (m) m.innerHTML = '<div style="background:#0d1a2e;border:1px solid rgba(93,202,165,0.2);border-radius:8px;padding:40px;max-width:480px;width:90%;font-family:\'DM Mono\',monospace;text-align:center;">'
-      + '<div style="color:rgba(93,202,165,0.8);font-size:13px;text-transform:uppercase;letter-spacing:0.2em;margin-bottom:16px;">Data cleared.</div>'
-      + '<p style="font-size:11px;color:rgba(255,255,255,0.4);line-height:1.6;margin-bottom:24px;">All local session data has been removed from this browser.</p>'
+      /* ⛔ THE RECEIPT, AND IT IS THE STRING NOBODY AUDITS. "Data cleared / All local session data
+         has been removed from this browser" was written from the DEVELOPER's side of the action —
+         it described what the code did, not what happened to the user — and it stayed false through
+         two copy passes because a string audit scoped to "what the action SAYS" never reaches the
+         string that reports what the action DID. The Captain surfaced it by pasting his screen.
+         🔑 A BEHAVIOUR CHANGE AUDITS ITS PROMISE, ITS WARNING, AND ITS RECEIPT — THREE SURFACES,
+            EVERY TIME. The receipt is the one that gets missed. */
+      + '<div style="color:rgba(93,202,165,0.8);font-size:13px;text-transform:uppercase;letter-spacing:0.2em;margin-bottom:16px;">Your data is deleted.</div>'
+      + '<p style="font-size:11px;color:rgba(255,255,255,0.4);line-height:1.6;margin-bottom:24px;">Every blueprint, sketch and profile detail has been removed from this browser and from our servers.</p>'
       + '<a href="/" style="color:rgba(93,202,165,0.7);font-family:\'DM Mono\',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.15em;text-decoration:none;">Return to Origin →</a></div>';
   };
 })();

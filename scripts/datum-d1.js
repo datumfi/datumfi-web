@@ -381,6 +381,15 @@
     // OFF. ONE-FLIP ROLLBACK: set DatumD1.CUTOVER = false -> Clerk mirror fires again + LS-authority
     // load restored = today's exact behavior, instantly, no redeploy (the metadata code stays intact).
     CUTOVER: true,
+    /* ⛔ THE COMPLETE DOCUMENT VOCABULARY, DECLARED ONCE. Erasure has to iterate every type a user's
+       data can live under, and listDocs() requires a type — there is no "list everything" call — so
+       something must name them. Naming them HERE, beside the API that uses them, makes the list
+       reviewable in one place instead of copied into whatever needs to sweep.
+       ⚠️ THE ERASURE PATH IS ONLY AS COMPLETE AS THIS ARRAY. A new document type added without
+       adding it here is a type the Delete My Data tool silently will not delete — which is an
+       Article 17 gap, not a TODO. `_gate_erasure_reaches_server.js` asserts this list covers every
+       type any call site actually uses, so the omission fails loudly instead of quietly. */
+    TYPES: ['blueprint', 'sketchbook', 'preferences', 'studio'],
     WRITE_DEBOUNCE_MS: 1500,   // coarse network write (vs 350ms local commit)
     LOAD_TIMEOUT_MS: 1200,     // D1-first load falls back to LS/Clerk after this
     DRAIN_MAX_MS: 3000,        // #310 P2 — cap on how long an in-app nav is held for drain (nav always proceeds)

@@ -34,8 +34,36 @@ const { studioSource } = require('./_studio_source.cjs');
 const ROOT = path.resolve(__dirname, '..');
 const HOST = 'datumfi.localhost'; const PORT = 8171; const BASE = 'http://' + HOST + ':' + PORT;
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.woff2': 'font/woff2' };
+/* ⛔⛔ THE MOCK CLERK CLOUD LIVES ON THE SERVER, NOT IN sessionStorage — CORRECTED 2026-08-15.
+   It used to be `sessionStorage.__mockclerk_meta`, and leg (b) asserted "the Clerk *_z mirrors
+   SURVIVE the sign-out wipe" against it. That held only while the wipe was a hand-written REMOVE
+   LIST that happened not to name it. When the sweep became derived-by-exclusion (remove everything
+   except a tiny keep-list), the simulated cloud was swept and this gate reported CLOUD DATA LOSS.
+   The product does not have that defect: Clerk's unsafeMetadata lives on Clerk's servers, and the
+   sweep only touches browser storage.
+     🔑 A FIXTURE DESCRIBING A STATE NO REAL USER CAN BE IN IS NOT A FIXTURE. No user's cloud blob
+        sits in their own sessionStorage, so a "cloud" stored there is not modelling the cloud — it
+        is modelling a local key that nobody sweeps, which is a different claim entirely.
+   ⚠️ THE ROUTE IS `/__mockmeta` AND MUST NOT CONTAIN THE WORD "clerk": this gate blocks every
+      request matching /clerk|cloudflareinsights|posthog|beacon/i, so the first name I gave it
+      (`/__mockclerkmeta`) WAS ABORTED BY THE GATE'S OWN NETWORK FILTER and the seed never landed.
+      🔑 A FIXTURE ENDPOINT NAMED AFTER THE THING THE TEST BLOCKS WILL BE BLOCKED.
+   ⚠️ AND THE FIX IS NOT TO ADD THE KEY TO THE PRODUCT'S KEEP-LIST. That would protect a TEST key in
+      shipped code and quietly re-create the "list that happens not to name it" property this gate
+      exists to disprove. Moving the mock to where the real thing lives keeps the assertion honest
+      AND survives the navigation the sign-out button performs. Same pattern as
+      _p5_title_render_parity's /__clerkmeta and _gate_erasure_reaches_server. */
+let MOCK_META = {};
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/studio.html';
+  if (p === '/__mockmeta') {
+    if (req.method === 'POST') {
+      let b = ''; req.on('data', (c) => { b += c; });
+      req.on('end', () => { try { MOCK_META = JSON.parse(b || '{}'); } catch (e) {} res.writeHead(200); res.end('{}'); });
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(MOCK_META || {})); return;
+  }
   const fp = path.join(ROOT, p);
   if (!fp.startsWith(ROOT) || !fs.existsSync(fp) || fs.statSync(fp).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
@@ -56,8 +84,8 @@ function installSignedIn() {
     // fire — lets the gate observe the wipe it ran first.
     signOut: function () { return new Promise(function () {}); },
     user: {
-      get unsafeMetadata() { try { return JSON.parse(sessionStorage.getItem('__mockclerk_meta') || '{}'); } catch (e) { return {}; } },
-      update: function (o) { try { sessionStorage.setItem('__mockclerk_meta', JSON.stringify((o && o.unsafeMetadata) || {})); } catch (e) {} return Promise.resolve(); },
+      get unsafeMetadata() { try { var x=new XMLHttpRequest(); x.open('GET','/__mockmeta',false); x.send(); return JSON.parse(x.responseText||'{}'); } catch (e) { return {}; } },
+      update: function (o) { try { var x=new XMLHttpRequest(); x.open('POST','/__mockmeta',false); x.send(JSON.stringify((o && o.unsafeMetadata) || {})); } catch (e) {} return Promise.resolve(); },
       firstName: 'Tester', primaryEmailAddress: { emailAddress: 't@t.co' }
     }
   };
@@ -239,10 +267,10 @@ async function clickAndGetUrl(page, btnId) {
   const wipe = await pBp.evaluate(() => {
     var keys = window.DatumPurge._localCarriedKeys();
     keys.forEach(function (k) { localStorage.setItem(k, 'LOCAL'); sessionStorage.setItem(k, 'SESS'); });
-    sessionStorage.setItem('__mockclerk_meta', JSON.stringify({ blueprint_z: 'BPZ', sketchbook_z: 'SKZ' }));
+    try { var _x=new XMLHttpRequest(); _x.open('POST','/__mockmeta',false); _x.send(JSON.stringify({ blueprint_z: 'BPZ', sketchbook_z: 'SKZ' })); } catch (e) {}
     window.DatumPurge.signOutWipe();
     var survivors = keys.filter(function (k) { return localStorage.getItem(k) != null || sessionStorage.getItem(k) != null; });
-    var meta = {}; try { meta = JSON.parse(sessionStorage.getItem('__mockclerk_meta') || '{}'); } catch (e) {}
+    var meta = {}; try { var _y=new XMLHttpRequest(); _y.open('GET','/__mockmeta',false); _y.send(); meta = JSON.parse(_y.responseText||'{}'); } catch (e) {}
     return { total: keys.length, survivors: survivors, bpZ: meta.blueprint_z, skZ: meta.sketchbook_z };
   });
   /* ⛔⛔ THIS LEG ONCE CLAIMED COMPLETENESS AND COULD NOT POSSIBLY MEASURE IT. Read the evaluate()
@@ -304,7 +332,7 @@ async function clickAndGetUrl(page, btnId) {
 
   await pHome.evaluate(() => {
     window.DatumPurge._localCarriedKeys().forEach(function (k) { localStorage.setItem(k, 'LOCAL'); sessionStorage.setItem(k, 'SESS'); });
-    sessionStorage.setItem('__mockclerk_meta', JSON.stringify({ blueprint_z: 'BPZ', sketchbook_z: 'SKZ' }));
+    try { var _x=new XMLHttpRequest(); _x.open('POST','/__mockmeta',false); _x.send(JSON.stringify({ blueprint_z: 'BPZ', sketchbook_z: 'SKZ' })); } catch (e) {}
   });
   const btnPresent = await pHome.evaluate(() => {
     var b = document.querySelector('[data-acct-action="signout"]');
@@ -315,7 +343,7 @@ async function clickAndGetUrl(page, btnId) {
   const btnWipe = await pHome.evaluate(() => {
     var keys = window.DatumPurge._localCarriedKeys();
     var survivors = keys.filter(function (k) { return localStorage.getItem(k) != null || sessionStorage.getItem(k) != null; });
-    var meta = {}; try { meta = JSON.parse(sessionStorage.getItem('__mockclerk_meta') || '{}'); } catch (e) {}
+    var meta = {}; try { var _y=new XMLHttpRequest(); _y.open('GET','/__mockmeta',false); _y.send(); meta = JSON.parse(_y.responseText||'{}'); } catch (e) {}
     return { survivors: survivors, bpZ: meta.blueprint_z, skZ: meta.sketchbook_z };
   });
   check('(b) sign-out BUTTON present in topbar on Home', btnPresent);
