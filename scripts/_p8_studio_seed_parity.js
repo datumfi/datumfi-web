@@ -36,8 +36,13 @@ const DOSSIER = {
   accounts: { currentPortfolioBalance: 500000, annualContributions: 20000 }
 };
 const initScript = `(function(){
-  window.Clerk = { load:function(){return Promise.resolve();}, user:{ unsafeMetadata:{}, update:function(){return Promise.resolve();} }, addListener:function(){} };
-  try{ var s=JSON.stringify(${JSON.stringify(DOSSIER)}); localStorage.setItem('datumfi.accountDossier.v15', s); localStorage.setItem('datumfi.accountDossier.v14', s); }catch(e){}
+  /* ⚠️ id + OWNER STAMP: both are what a REAL returning device carries, and this fixture had
+     neither. It went red when the dossier cache became owner-checked (2026-08-15) — the instrument
+     correctly reporting that its fixture described a state no user can be in. A real Clerk user
+     always has .id; a real signed-in device always has a stamped cache. */
+  var UID = 'user_p8seed';
+  window.Clerk = { load:function(){return Promise.resolve();}, user:{ id: UID, unsafeMetadata:{}, update:function(){return Promise.resolve();} }, addListener:function(){} };
+  try{ var s=JSON.stringify(${JSON.stringify(DOSSIER)}); localStorage.setItem('datumfi.accountDossier.v15', s); localStorage.setItem('datumfi.accountDossier.v14', s);  localStorage.setItem('datumfi.accountDossier.owner', UID); }catch(e){}
 })();`;
 const blockClerk = (ctx) => ctx.route('**/*', (route) => { const u = route.request().url(); if (!/127\.0\.0\.1/.test(u) && /clerk|cloudflareinsights|posthog|beacon/i.test(u)) return route.abort(); return route.continue(); });
 

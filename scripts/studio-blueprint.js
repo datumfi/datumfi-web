@@ -1028,8 +1028,13 @@
   }
   function readDossier() {
     var S = global.DatumSession;
-    if (!S || typeof S.known !== 'function' || S.known() !== true) return null;   // fail CLOSED
-    return _readDossierRaw();
+    if (!S || typeof S.cachedDossier !== 'function') return null;                 // fail CLOSED
+    /* OWNERSHIP, not merely authentication. `known() === true` was the step-2 guard and it answers
+       "is ANYBODY signed in?" — which is YES for the second person to use this browser, whose
+       Architect Profile then filled with the first person's data and whose Save wrote three of
+       those fields into their own blueprint. cachedDossier() answers "is this MINE?" instead.
+       🔑 AN AUTH CHECK IS NOT AN OWNERSHIP CHECK. */
+    return S.cachedDossier();
   }
   function readSketchSlot(id) {
     if (!id) id = 1;

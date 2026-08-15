@@ -98,12 +98,20 @@ const DOSSIER = {
 };
 
 const INIT = `(function(){
+  /* ⚠️ THE STUB USER CARRIES AN id, AND THE CACHE CARRIES AN OWNER STAMP. Both are what a REAL
+     returning device looks like, and this fixture had neither — it went red when the dossier cache
+     became owner-checked, which was the instrument correctly reporting that its fixture no longer
+     resembled reality. A real Clerk user always has .id, and after a signed-in load the dossier
+     cache is always stamped. Faking it any other way would make this gate pass over a state no
+     user can actually be in. */
+  var UID = 'user_bootdraft';
   window.Clerk = { load:function(){return Promise.resolve();},
-                   user:{ unsafeMetadata:{}, update:function(){return Promise.resolve();} },
+                   user:{ id: UID, unsafeMetadata:{}, update:function(){return Promise.resolve();} },
                    addListener:function(){} };
   try { var s = JSON.stringify(${JSON.stringify(DOSSIER)});
         localStorage.setItem('datumfi.accountDossier.v15', s);
-        localStorage.setItem('datumfi.accountDossier.v14', s); } catch(e) {}
+        localStorage.setItem('datumfi.accountDossier.v14', s);
+        localStorage.setItem('datumfi.accountDossier.owner', UID); } catch(e) {}
   var KEY = 'datumfi_blueprint_draft_v1';
   window.__writes = [];
   var t0 = Date.now();

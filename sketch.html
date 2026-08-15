@@ -3062,8 +3062,8 @@
                     DatumSession.resolved(function (signedIn) {
                         if (!signedIn || window._userTouchedSlider) return;
                         try {
-                            var _cRaw = localStorage.getItem('datumfi.accountDossier.v15');
-                            var _cD = _cRaw ? JSON.parse(_cRaw) : null;
+                            var _cD = (typeof DatumSession.cachedDossier === 'function')
+                                      ? DatumSession.cachedDossier() : null;   // owner-checked, not raw
                             if (_cD) { window._applyDossierSliders(_cD); try { scheduleUpdate(); } catch(e4) {} }
                         } catch(e5) {}
                     });

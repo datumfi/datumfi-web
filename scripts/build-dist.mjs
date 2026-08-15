@@ -27,8 +27,8 @@ const SACRED = {
      CLAUDE.md in this same commit. Sacred on a stricter rule than the rest: its absence removes a
      regulatory disclosure from every page at once. */
   'scripts/datum-footer.js': '38645d6a25942d1c27f91b1cae5ecd76',   // the module carries its own presentation — 10px muted, not the page default (2026-08-14)
-  'studio.html': 'a8a8bcb41f72bb3bbf40d6d0eb51b71a',   // tax rate + filing status open UNSET for a cold visitor; the unset rate is 22, not 0 (2026-08-15)
-  'sketch.html': 'e75484c224f430b7f50e088c7c65290c',   // Part 24/25 — the PARSE-TIME dossier seed is retired; it moves to the auth-gated load-time resolver (2026-08-15)
+  'studio.html': '202727ce1541eadb51387cda257c66de',   // tax rate + filing status open UNSET for a cold visitor; the unset rate is 22, not 0 (2026-08-15)
+  'sketch.html': '952b0284765849d45f15c9ea7f9b45f2',   // Part 24/25 — the PARSE-TIME dossier seed is retired; it moves to the auth-gated load-time resolver (2026-08-15)
   /* §47.3 — SACRED as of 2026-08-13, declared in CLAUDE.md IN THIS SAME COMMIT. The two lists are
      reconciled by this build in BOTH directions, so a host added to one and not the other STOPS
      THE BUILD — which is why the nav.js / sketchbook.html gaps could exist historically and cannot
@@ -43,14 +43,14 @@ const SACRED = {
   /* STEP 1 — the landing. SACRED because it owns the completeness predicate: a wrong answer here
      tells the user a phase of the method is finished when it is not, on the front door. */
   'scripts/studio-landing.js': '5512c6859b7ba2836c3e9e1aa2d1d48a',   // the cold-load flicker: the part ships its own pre-boot rule so the old stack never paints (2026-08-15)
-  'scripts/studio-blueprint.js': 'b87fc411ce76981c2e590bf8ee6f575f',   // Part 24/25 — readDossier() session-gated at the READ (4 callers) + the boot-draft invariant in _persistDraft (2026-08-15)
+  'scripts/studio-blueprint.js': 'ff6f3cddc2dc687dcda8aa05657c135f',   // Part 24/25 — readDossier() session-gated at the READ (4 callers) + the boot-draft invariant in _persistDraft (2026-08-15)
   // MISS-5 pre-work guard (2026-07-25). nav.js is a Sacred Host in CLAUDE.md but was absent from THIS map,
   // so a bad edit failed no build. It owns the centralized cross-device restore every page depends on
   // (_datumRestoreFromClerk / _restoreBlueprintFromD1 / the title mirror), and MISS-5 pre-work items 1, 2
   // and 4 all land in it — pin it BEFORE the arc that leans on it, not after.
   // NOTE: CLAUDE.md lists this host as 'scripts/nav.js'. That path does not exist; the real, page-referenced
   // file is /nav.js at the repo root (every page loads <script src="/nav.js">). Pinned at its true path.
-  'nav.js': 'cc11e59e605758fca662b3777ed2416b',   // Part 24/25 — DatumSession: the one session predicate, fails CLOSED and STARTS ITSELF (2026-08-15)
+  'nav.js': 'cc43306e030d8866a02e4b100adf3b9e',   // Part 24/25 — DatumSession: the one session predicate, fails CLOSED and STARTS ITSELF (2026-08-15)
   // Same gap as nav.js above, found 2026-07-27 while wiring the erase fix: sketchbook.html is a
   // Sacred Host in CLAUDE.md but was ABSENT from this map, so the erase edit passed the build with
   // no guard at all. Pinned at its true content.

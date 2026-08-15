@@ -58,8 +58,34 @@ function buildResolver(mode) {
 /* a minimal window/localStorage sandbox — the resolver only touches Clerk, DatumD1 and localStorage */
 function makeEnv({ clerk, d1 }) {
   const store = {};
+  /* ⛔ THE ENV NOW CARRIES A DatumSession, BECAUSE THE CACHE CONTRACT CHANGED AND THIS GATE IS
+     WHAT NOTICED. `_datumSeedDossier`'s cache() no longer writes localStorage directly — it routes
+     through DatumSession.cacheDossier, which refuses to persist a dossier it cannot attribute to a
+     user, and stamps an OWNER alongside it. That is the ownership fix: an auth check is not an
+     ownership check, and a cache with no recorded owner is the thing the next person to sign in on
+     this browser inherits.
+     ⭐ THIS RED WAS INFORMATION, NOT NOISE — it is the instrument correctly reporting that the
+     contract it pins had moved. The stub below is the MINIMUM DatumSession that behaves like the
+     real one; faking cacheDossier as a plain setItem would have restored the green while removing
+     the very property the gate should now be asserting. */
+  const SESSION_USER = 'user_miss5';
+  const session = {
+    known: () => true,
+    userId: () => SESSION_USER,
+    cacheDossier: (d) => {
+      if (!d || typeof d !== 'object') return false;
+      store['datumfi.accountDossier.v15'] = JSON.stringify(d);
+      store['datumfi.accountDossier.owner'] = SESSION_USER;
+      return true;
+    },
+    cachedDossier: () => {
+      if (store['datumfi.accountDossier.owner'] !== SESSION_USER) return null;
+      const raw = store['datumfi.accountDossier.v15'];
+      return raw ? JSON.parse(raw) : null;
+    }
+  };
   const win = {
-    Clerk: clerk, DatumD1: d1,
+    Clerk: clerk, DatumD1: d1, DatumSession: session,
     localStorage: { setItem: (k, v) => { store[k] = v; }, getItem: (k) => (k in store ? store[k] : null) }
   };
   win.window = win;
@@ -87,6 +113,10 @@ const ok = (label, cond) => checks.push([label, !!cond]);
   ok('D1 preferences/dossier WINS over the Clerk mirror [BITE a]', got && got.source === 'D1');
   ok('the resolved dossier is cached to LS (both callers did this identically)',
     env.store['datumfi.accountDossier.v15'] === JSON.stringify(D1_DOS));
+  /* The cache is only half the contract now: an unstamped cache is one the next user of this
+     browser would read as their own, so "it was written" without "whose it is" is not a pass. */
+  ok('...and it is STAMPED with the owner, so the next user cannot inherit it',
+    env.store['datumfi.accountDossier.owner'] === 'user_miss5');
 }
 { // D1 live but the row does not exist yet -> fall back, do not blank the user
   const env = makeEnv({ clerk: clerkWith({ dossier: CLERK_DOS }), d1: d1With(null) });

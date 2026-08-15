@@ -445,26 +445,86 @@
    * reachable-empty D1 list versus an unreachable one. */
   var _sessState = null;              // null = not yet resolved · true/false = the answer
   var _sessWaiting = [];
+  var _sessUser = null;               // the resolved Clerk user id, or null
+  /* ── THE DOSSIER CACHE IS OWNED, AND OWNERSHIP IS CHECKED AT THE READ ────────────────────────
+   * ⛔⛔ AN AUTH CHECK IS NOT AN OWNERSHIP CHECK. The signed-out leak was closed by asking "is
+   * ANYBODY signed in?" — and that question returns YES for the second person to use this browser.
+   * Measured: Alice's cached dossier on the device, Bob signs in, and every field on his Architect
+   * Profile is HERS. Then Save captures the screen, so `primary_dob`, `target_retirement_date` and
+   * `plan_end_age` — three of HER fields — are written into HIS blueprint.
+   *   🔑 DISCLOSURE AND CORRUPTION ARE DIFFERENT DEFECTS. The first shows one person another's
+   *      data; the second writes it into their account, where it outlives the browser that leaked
+   *      it. Only the second one follows them to a new device.
+   *
+   * THE OWNER STAMP IS A SEPARATE KEY, NOT A FIELD ON THE DOSSIER, and that is deliberate: the
+   * dossier object is written verbatim to D1 and mirrored into Clerk, so a field added here would
+   * travel into the stored payload and become schema. The stamp is local bookkeeping about a local
+   * cache and it stays local.
+   *
+   * ⚠️ AN ABSENT STAMP IS NOT MINE. Every dossier cached before this shipped is unstamped, so on
+   * the first load after this commit the cache is rejected and the resolver re-caches it, stamped —
+   * one wasted read, self-healing, invisible. The alternative (treat unstamped as mine) is the leak
+   * with extra steps, because Alice's cache is exactly the unstamped one Bob would claim. FAIL
+   * CLOSED, same direction as `known()`.
+   *
+   * ⚠️ AND IT REFUSES TO ANSWER BEFORE THE SESSION IS KNOWN. `known() !== true` returns null rather
+   * than falling back to "no owner recorded, must be fine" — not-yet-known and known-to-be-absent
+   * are different answers (L51), and this is the read where confusing them costs the most. */
+  var _DOSSIER_KEY   = 'datumfi.accountDossier.v15';
+  var _DOSSIER_OWNER = 'datumfi.accountDossier.owner';
   window.DatumSession = {
     known: function () { return _sessState; },
+    /* The resolved Clerk user id, or null. null means BOTH "signed out" and "not resolved yet" —
+       callers must gate on known() first, exactly as cachedDossier() does below. */
+    userId: function () { return _sessUser; },
+    /* The cached dossier, but ONLY if this session provably owns it. Every consumer goes through
+       here so the rule cannot drift across the five read sites it replaces (L48). */
+    cachedDossier: function () {
+      if (_sessState !== true || !_sessUser) return null;
+      var owner = null;
+      try { owner = localStorage.getItem(_DOSSIER_OWNER); } catch (_e) { return null; }
+      if (owner !== _sessUser) return null;                 // absent, or somebody else's
+      try {
+        var raw = localStorage.getItem(_DOSSIER_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch (_e) { return null; }
+    },
+    /* Cache a dossier AND record who it belongs to, in that order, so a crash between the two
+       leaves a stamp pointing at data that is not there (rejected on read) rather than data with
+       no stamp (also rejected). Both failure shapes are safe; only one of them is reachable. */
+    cacheDossier: function (d) {
+      if (_sessState !== true || !_sessUser) return false;
+      if (!d || typeof d !== 'object') return false;
+      try {
+        localStorage.setItem(_DOSSIER_KEY, JSON.stringify(d));
+        localStorage.setItem(_DOSSIER_OWNER, _sessUser);
+        return true;
+      } catch (_e) { return false; }
+    },
     resolved: function (done) {
       if (typeof done !== 'function') done = function () {};
       if (_sessState !== null) { done(_sessState); return; }
       _sessWaiting.push(done);
       if (_sessWaiting.length > 1) return;                 // a resolution is already in flight
-      function settle(v) {
+      /* The id is captured HERE, in the same statement that decides the boolean, so there is no
+         reachable state where known() is true and userId() is null. cachedDossier() requires both,
+         and splitting them across two assignments is how that invariant would quietly stop holding. */
+      function settle(v, id) {
         if (_sessState !== null) return;                   // exactly once, whichever path wins
         _sessState = !!v;
+        _sessUser = (v && typeof id === 'string' && id) ? id : null;
         var ws = _sessWaiting; _sessWaiting = [];
         ws.forEach(function (f) { try { f(_sessState); } catch (_e) {} });
       }
-      var net = setTimeout(function () { settle(false); }, 4000);
+      var net = setTimeout(function () { settle(false, null); }, 4000);
       try {
-        if (!window.Clerk) { clearTimeout(net); settle(false); return; }
+        if (!window.Clerk) { clearTimeout(net); settle(false, null); return; }
         window.Clerk.load().then(function () {
-          clearTimeout(net); settle(!!window.Clerk.user);
-        }).catch(function () { clearTimeout(net); settle(false); });
-      } catch (_e) { clearTimeout(net); settle(false); }
+          clearTimeout(net);
+          var u = window.Clerk.user;
+          settle(!!u, u && u.id);
+        }).catch(function () { clearTimeout(net); settle(false, null); });
+      } catch (_e) { clearTimeout(net); settle(false, null); }
     }
   };
 
@@ -585,8 +645,20 @@
     var fired = false;
     function finish(d) { if (fired) return; fired = true; try { done(d || null); } catch (_e) {} }
     // Both callers wrote the resolved dossier to LS before applying it — keep that in ONE place too.
+    /* ⛔ THE CACHE WRITE NOW STAMPS AN OWNER. It used to write the dossier with no record of whose
+       it was, which is what let the next person to sign in on this browser read it as their own.
+       Routed through DatumSession.cacheDossier so the stamp cannot be forgotten by a future caller
+       — the write and the stamp are one operation or neither happens.
+       ⚠️ It NO-OPS when the session is not resolved or has no user id. That is correct and not a
+       silent failure: a dossier resolved without a known owner is precisely the thing we must not
+       leave on the disk for somebody else to inherit. The value still reaches the caller via the
+       return below, so THIS page still renders it — only the persistence is withheld. */
     function cache(d) {
-      if (d && typeof d === 'object') { try { localStorage.setItem('datumfi.accountDossier.v15', JSON.stringify(d)); } catch (_e) {} }
+      try {
+        if (window.DatumSession && typeof window.DatumSession.cacheDossier === 'function') {
+          window.DatumSession.cacheDossier(d);
+        }
+      } catch (_e) {}
       return d || null;
     }
     try {

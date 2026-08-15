@@ -166,6 +166,14 @@ const M_WIPE = 'function signOutWipe() {\n    var keys = [];';
  * ⚠️ Per-read attribution does NOT come from this control — it came from re-running the gate after
  * each read was gated, and that evidence is recorded in the step-2 commit message. A control proves
  * the guard is load-bearing; the incremental runs prove which read owns which leg. */
+/* --cachewins - ARMED IN STEP 4. It restores LOCAL-CACHE-WINS by removing the owner comparison
+ * from DatumSession.cachedDossier - the one line that separates "somebody is signed in" from "this
+ * cache is MINE". Amputating the COMPARISON rather than the whole accessor is deliberate: a poison
+ * that made cachedDossier return null would red L5d/L6b for the wrong reason (no prefill at all)
+ * and would red L7 with them. This poison must leave a WORKING prefill that serves the WRONG
+ * PERSON, because that is the shape of the defect. */
+const A_OWNER  = "      if (owner !== _sessUser) return null;                 // absent, or somebody else's";
+const M_OWNER  = "      if (false) return null;";
 const A_KNOWN  = '    known: function () { return _sessState; },';
 const M_KNOWN  = '    known: function () { return true; },';
 const A_RESOLV = '      var net = setTimeout(function () { settle(false); }, 4000);';
@@ -186,6 +194,10 @@ const server = http.createServer((req, res) => {
   if (!fp.startsWith(ROOT) || !fs.existsSync(fp) || fs.statSync(fp).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
   if (NOWIPE && /datum-archive-purge\.js$/.test(p)) {
     const src = armAnchor(fs.readFileSync(fp, 'utf8'), A_WIPE, M_WIPE, '--nowipe');
+    res.writeHead(200, { 'Content-Type': 'text/javascript' }); res.end(src); return;
+  }
+  if (CACHEWINS && /(^|\/)nav\.js$/.test(p)) {
+    const src = armAnchor(fs.readFileSync(fp, 'utf8'), A_OWNER, M_OWNER, '--cachewins');
     res.writeHead(200, { 'Content-Type': 'text/javascript' }); res.end(src); return;
   }
   if (NOGATE && /(^|\/)nav\.js$/.test(p)) {
@@ -340,15 +352,10 @@ function dump(label, r) {
 
 /* ════════════════════════════════════════════════════════════════════════════════════════ */
 (async () => {
-  if (CACHEWINS) {
-    console.error('CONTROL --cachewins: the cache-ownership fix does not exist yet (step 4 of the arc).');
-    console.error('  This control arms when the restore paths carry an owner check. Refusing to run a no-op control.');
-    process.exit(1);
-  }
 
   await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
   const browser = await chromium.launch();
-  const mode = [SPARSE && '--sparse', NOWIPE && '--nowipe', NOGATE && '--nogate'].filter(Boolean).join(' ') || 'baseline';
+  const mode = [SPARSE && '--sparse', NOWIPE && '--nowipe', NOGATE && '--nogate', CACHEWINS && '--cachewins'].filter(Boolean).join(' ') || 'baseline';
   console.log('\n_gate_signed_out_privacy — ' + mode + '\n');
 
   /* ══ L1 · signed-OUT /studio.html ═══════════════════════════════════════════════════════ */
@@ -511,6 +518,19 @@ function dump(label, r) {
       !!stored && stored.title === 'BOB DOSSIER', stored ? stored.title : 'null');
     const rr = Object.assign({}, r); delete rr._booted; delete rr._signInVisible; delete rr._topbar;
     checkClean('L5d · NO rendered field carries Alice\'s data while Bob is signed in', rr, ALICE_RENDER);
+
+    /* L5e — THE MECHANISM, NOT THE SYMPTOM. L5c/L5d would both pass if the cache were simply never
+       written, or written unstamped and re-fetched on every load. This asserts the thing that makes
+       ownership DECIDABLE: a stamp naming the owner, matching the signed-in user. Without it the fix
+       would be indistinguishable from "the cache stopped working" — which passes today and silently
+       costs the offline prefill tomorrow. */
+    const owner = await page.evaluate(() => {
+      let o = null; try { o = localStorage.getItem('datumfi.accountDossier.owner'); } catch (e) {}
+      return { stamp: o, uid: (window.DatumSession && window.DatumSession.userId) ? window.DatumSession.userId() : null };
+    });
+    check('L5e · the cache carries an OWNER stamp, and it names the signed-in user',
+      !!owner.stamp && owner.stamp === owner.uid && owner.stamp === 'user_bob',
+      'stamp=' + JSON.stringify(owner.stamp) + ' userId=' + JSON.stringify(owner.uid));
 
     /* L6 — the WRITE-BACK negative, through the exact routine the save path runs. It prints the
        whole captured profile rather than probing one field: which fields captureDOM reads is a

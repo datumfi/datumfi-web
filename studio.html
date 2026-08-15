@@ -17082,8 +17082,8 @@
                   DatumSession.resolved(function (signedIn) {
                     if (signedIn) {
                       try {
-                        var _cRaw = localStorage.getItem('datumfi.accountDossier.v15');
-                        var _cD = _cRaw ? JSON.parse(_cRaw) : null;
+                        var _cD = (typeof DatumSession.cachedDossier === 'function')
+                                  ? DatumSession.cachedDossier() : null;   // owner-checked, not raw
                         if (_cD) {
                           if (!seedFromBlueprint()) applyDossierSliders(_cD);
                           applyDossierProfile(_cD);
@@ -17165,9 +17165,13 @@
        * Gated by _gate_signed_out_privacy L1c / L3f / L5d / L6b / L6c. */
       (function () {
         function _applyCachedProfile() {
+          /* DatumSession.cachedDossier(), never a raw localStorage read: it returns the cache ONLY
+             when this session provably owns it. Reading the key directly is what put Alice's date
+             of birth on Bob's screen — he WAS signed in, so every auth check said yes. */
           try {
-            var _profRaw = localStorage.getItem('datumfi.accountDossier.v15');
-            if (_profRaw) applyDossierProfile(JSON.parse(_profRaw));
+            var _prof = (window.DatumSession && typeof DatumSession.cachedDossier === 'function')
+                        ? DatumSession.cachedDossier() : null;
+            if (_prof) applyDossierProfile(_prof);
           } catch (e) {}
         }
         if (!window.DatumSession || typeof DatumSession.resolved !== 'function') return;  // fail CLOSED
