@@ -27,7 +27,7 @@ const SACRED = {
      CLAUDE.md in this same commit. Sacred on a stricter rule than the rest: its absence removes a
      regulatory disclosure from every page at once. */
   'scripts/datum-footer.js': '38645d6a25942d1c27f91b1cae5ecd76',   // the module carries its own presentation — 10px muted, not the page default (2026-08-14)
-  'studio.html': '202727ce1541eadb51387cda257c66de',   // tax rate + filing status open UNSET for a cold visitor; the unset rate is 22, not 0 (2026-08-15)
+  'studio.html': 'f1c163bc3c707982a9ff431df1a9561c',   // an unstated tax rate suppresses the derived monthly net instead of assuming 22 (2026-08-15)
   'sketch.html': '952b0284765849d45f15c9ea7f9b45f2',   // Part 24/25 — the PARSE-TIME dossier seed is retired; it moves to the auth-gated load-time resolver (2026-08-15)
   /* §47.3 — SACRED as of 2026-08-13, declared in CLAUDE.md IN THIS SAME COMMIT. The two lists are
      reconciled by this build in BOTH directions, so a host added to one and not the other STOPS

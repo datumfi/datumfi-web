@@ -100,7 +100,15 @@ const URL = 'http://127.0.0.1:8001/studio.html';
       return { f: txt, found: true, overflow: Math.round(r.right - _cardRight) };
     });
     // §5.3 Outflow read — set a salary, run the REAL diagnostic (#measure-btn), capture its text.
-    try { document.getElementById('pri-salary').value = '$500,000'; document.getElementById('measure-btn').click(); } catch (e) {}
+    /* THE TAX RATE IS STATED, AND IT HAS TO BE. The outflow diagnostic derives from freeCashFlow,
+       which derives from the effective tax rate; as of 2026-08-15 an UNSTATED rate suppresses that
+       whole section rather than silently assuming 22% (a hidden default is a fabricated answer that
+       hides where it came from). This fixture never stated one, so it was relying on that hidden
+       default — a fixture describing a user who never chose a bracket yet receives advice computed
+       from one. Fixture strengthened; the assertions are untouched. */
+    try { document.getElementById('pri-salary').value = '$500,000';
+          var _tx = document.getElementById('eff-tax-rate'); if (_tx) _tx.value = '22%';
+          document.getElementById('measure-btn').click(); } catch (e) {}
     var _tb = document.getElementById('analysis-text-body');
     out.diag = _tb ? _tb.innerHTML : '';
     // §1 DI underwater branch — a mortgage whose balance exceeds its linked property value. Added LAST so

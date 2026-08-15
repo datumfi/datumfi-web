@@ -14337,9 +14337,18 @@
          * and that needs authored empty-state copy which the Architect owes. This keeps every number
          * on screen identical to what shipped while removing the false claim that the user picked
          * 22% — it does not pretend to be the finished answer. */
-        var _TAX_WHEN_UNSET = 22;
-        let effTax = parseFloat(document.getElementById('eff-tax-rate').value);
-        if (!isFinite(effTax)) effTax = _TAX_WHEN_UNSET;
+        /* ⭐ THE STOPGAP IS RETIRED. da229d4 made #eff-tax-rate open on "Select tax rate" so a cold
+         * visitor is no longer shown a bracket they never chose — but the maths still ASSUMED 22
+         * when unset (_TAX_WHEN_UNSET), so the field said unset while this section quietly computed
+         * as though it were 22%.
+         *   🔑 A HIDDEN DEFAULT IS THE SAME DEFECT AS A FABRICATED ONE, ONE LAYER DOWN: the
+         *      fabricated value invents an answer; the hidden default invents it AND hides where it
+         *      came from. Same family as Dossier.html's 1984-05, and the reason that one reached the
+         *      server is that nothing stopped an invented value being treated as data.
+         * Now: no stated rate, no derived figure — and the panel SAYS SO rather than going quiet,
+         * because an honest blank still reads as broken. */
+        let _taxStated = isFinite(parseFloat(document.getElementById('eff-tax-rate').value));
+        let effTax = _taxStated ? parseFloat(document.getElementById('eff-tax-rate').value) : 0;
         
         let grossAnnual = priSal + coSal;
         let netAnnual = grossAnnual * (1 - (effTax / 100));
@@ -14348,7 +14357,15 @@
         let totalCharity = charityItems.reduce((sum, i) => sum + _upkMo(i), 0);
         let freeCashFlow = monthlyNetIncome - totalUpkeep - totalCharity;
 
-        if (grossAnnual > 0) {
+        if (grossAnnual > 0 && !_taxStated) {
+            /* ⛔ THE WHOLE SECTION GOES, NOT JUST THE NUMBER. monthlyNetIncome feeds freeCashFlow,
+             * which feeds the debt-acceleration advice below. Suppressing only the printed figure
+             * would leave a RECOMMENDATION derived from a rate nobody stated — a number removed and
+             * the advice built on it kept, which is worse than either alone.
+             * The heading stays: the section still exists, it just has nothing honest to report yet.
+             * Copy is Architect-authored, verbatim. */
+            report += `<br><br><strong style="color:var(--gold);">CASH FLOW DIAGNOSTICS:</strong><br>Set a tax rate above and your monthly net appears here. Until then, this figure would be a guess.`;
+        } else if (grossAnnual > 0) {
             report += `<br><br><strong style="color:var(--gold);">CASH FLOW DIAGNOSTICS:</strong><br>Your combined net monthly income is estimated at $${monthlyNetIncome.toLocaleString('en-US')}. After deducting Operating Overhead and Philanthropic Allocations, you possess <span style="color:var(--teal-mid); font-weight:bold;">$${freeCashFlow.toLocaleString('en-US')} in Free Cash Flow</span> every month. `;
             
             if (freeCashFlow > 0) {
