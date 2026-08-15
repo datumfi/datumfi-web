@@ -67,10 +67,32 @@ var DATUM_FOOTER_LINK_STYLE = 'color:rgba(255,255,255,0.3);text-decoration:none;
    and the fix looked like it had done nothing.
    🔑 A STRING THAT LANDS INSIDE AN HTML ATTRIBUTE MUST NOT CONTAIN THAT ATTRIBUTE'S DELIMITER —
       the same quote hazard that killed this page twice before, wearing a font stack this time. */
+/* ⛔ THE COLUMN IS NOT THE SAME WIDTH ON EVERY HOST, AND THAT WAS MEASURED (2026-08-15).
+   Fourteen of the fifteen pages render this footer full-bleed: box 1680, text column 1600, TWO
+   lines. studio.html renders it inside the DRAFTING PANEL's scroll container (it was moved there to
+   fix the exit-reachable trap), so its box is 399px — and it stays 399px at every viewport, because
+   the panel is a fixed column, not a fraction of the window.
+   🔑 THAT IS WHY THE PADDING IS A PERCENTAGE AND NOT A MEDIA QUERY. @media keys on the VIEWPORT,
+      and this footer is narrow at a WIDE viewport — the one case a breakpoint cannot see. A % pad
+      resolves against the BOX, so it is narrow-aware by construction. clamp keeps the wide pages at
+      their original 40px and gives the Studio ~16px instead.
+   ⚠️ HONEST ABOUT WHAT THIS BUYS: 319px -> 367px of measure, which is ELEVEN LINES TO TEN. The
+      399px panel is the real constraint and no padding trim gets past it. Widening the panel (§23)
+      or giving the footer full width below the canvas is the only change that would matter, and
+      neither is this edit. */
+/* justify + text-align-last:center — the block fills its measure while the closing line (which
+   carries the rights links) stays centred. Centred alignment leaves BOTH edges ragged on EVERY
+   line, which on a ten-line block reads as wasted space around the text; that appearance, not the
+   line count, was the complaint. Measured cost to the wide pages: worst unused width 22px -> 4px,
+   i.e. effectively nothing, which is the check that mattered — ONE STRING SERVES FIFTEEN PAGES AND
+   A FIX FOR THE NARROWEST MUST NOT DAMAGE THE OTHER FOURTEEN.
+   ⛔ NOT ONE WORD OF THE LEGAL TEXT MOVED. This is presentation only; the copy is untouched. */
 var DATUM_FOOTER_P_STYLE = "font-family:var(--font-mono,'DM Mono',monospace);font-size:10px;"
-  + 'color:rgba(255,255,255,0.25);line-height:1.6;margin:0;';
+  + 'color:rgba(255,255,255,0.25);line-height:1.6;margin:0;'
+  + 'text-align:justify;text-align-last:center;';
 var DATUM_FOOTER_BOX_STYLE = 'width:100%;background:rgba(9,18,33,0.97);'
-  + 'border-top:1px solid rgba(255,255,255,0.05);padding:10px 40px 12px;text-align:center;';
+  + 'border-top:1px solid rgba(255,255,255,0.05);'
+  + 'padding:10px clamp(14px, 4%, 40px) 12px;text-align:center;';
 
 function _datumFooterHTML() {
   var L = DATUM_FOOTER_LINK_STYLE;
