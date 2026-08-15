@@ -61,7 +61,7 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
 const EXPECT = [
   { id: 'data',         label: 'PHASE I — DATA',           secs: ['00 / Architect Profile', '01 / Sketch Inputs'], next: 'Next: ARCHITECTURE' },
   { id: 'architecture', label: 'PHASE II — ARCHITECTURE',  secs: ['02 / Estate Drafting — Accounts & Assets'],     next: 'Next: TENSION' },
-  { id: 'tension',      label: 'PHASE III — TENSION',      secs: ['03 / Operating Upkeep — Living Expenses', 'T / Tension'], next: 'Next: UNCERTAINTY' },
+  { id: 'tension',      label: 'PHASE III — TENSION',      secs: ['03 / Operating Upkeep — Living Expenses'], next: 'Next: UNCERTAINTY' },
   { id: 'uncertainty',  label: 'PHASE IV — UNCERTAINTY',   secs: ['05 / Income Timing — Social Security & Pensions'], next: 'Next: MEASUREMENT' },
   { id: 'measurement',  label: 'PHASE V — MEASUREMENT',    secs: ['06 / Climate Control — Market Outlook'],        next: 'Next: ALIGNMENT' },
   { id: 'alignment',    label: 'PHASE VI — ALIGNMENT',     secs: [],                                              next: 'Next: ENDURANCE' },

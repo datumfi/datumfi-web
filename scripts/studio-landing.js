@@ -149,12 +149,14 @@ function _phaseAriaLabel(phase, done) {
 function _studioPhaseRowHTML(phase) {
   var done = _phaseComplete(phase.id);
   var unbuilt = (phase.id === 'alignment');
-  var dot = done ? '●' : '○';
   var sub = unbuilt ? _studioAlignmentSubline() : phase.desc;
+  /* ⭐ NO ● / ○ DOT — Captain-ruled 2026-08-14, removed as visual noise.
+     ⚠️ _phaseComplete STILL RUNS and `is-done` still lands on the row, because the ANSWERED /
+     NOT YET state is still spoken through the authored aria-label (§12.5) and the predicate is the
+     signal the spine will gate on later. 🔑 THE DOT WAS A RENDERING OF THE STATE, NOT THE STATE. */
   return '<button type="button" class="sl-phase' + (done ? ' is-done' : '') + (unbuilt ? ' is-unbuilt' : '') + '"'
        + ' data-phase="' + phase.id + '" onclick="_studioPhaseGo(\'' + phase.id + '\')"'
        + ' aria-label="' + _phaseAriaLabel(phase, done) + '">'
-       + '<span class="sl-dot" aria-hidden="true">' + dot + '</span>'
        + '<span class="sl-numeral" aria-hidden="true">' + phase.numeral + '</span>'
        + '<span class="sl-name">' + phase.name + '</span>'
        + '<span class="sl-desc">' + sub + '</span>'
@@ -168,8 +170,12 @@ function _studioLandingHTML() {
   var out = '<div class="sl-formula" aria-hidden="true">(D + A) &times; (T + U) = M &rarr; (A + E)</div>';
   out += '<div class="sl-movements">';
   _studioMovements().forEach(function (mv) {
+    /* ⭐ NO OPERATOR GLYPH — Captain-ruled 2026-08-14 along with the bracket rules. The formula is
+       printed in full one line above, so the × + = → restated it a second time in a weaker form.
+       mv.glyph is left in _studioMovements() rather than deleted: it is the movement's own identity
+       in the data, and the day a Datum Dashboard renders the formula graphically it is what that
+       will read. NOTHING IS BEING HIDDEN — the labels carry the grouping in words. */
     out += '<div class="sl-movement">'
-         + (mv.glyph ? '<div class="sl-glyph" aria-hidden="true">' + mv.glyph + '</div>' : '')
          + '<div class="sl-mv-head"><span class="sl-mv-expr">' + mv.expr + '</span>'
          + '<span class="sl-mv-label">' + mv.label + '</span></div>'
          + mv.phases.map(function (pid) { return _studioPhaseRowHTML(byId[pid]); }).join('')
@@ -242,14 +248,17 @@ function _studioRoomIntro(id) {
 }
 
 function _studioRoomHeaderHTML(phase) {
-  return '<div class="sl-room-label">PHASE ' + phase.numeral + ' — ' + phase.name + '</div>'
+  /* 🖊️ '← Dashboard' — CAPTAIN-RULED 2026-08-14, overruling the Architect's '← The Studio'. His
+     reason: a return control named after the place you are already IN tells the user they have left
+     it. A phase room is inside the Studio; the old label denied that.
+     ⭐ AND IT SITS FIRST, ABOVE THE PHASE COPY — Captain-ruled the same day. The way out belongs at
+     the top left where a back control is looked for, not below the title it returns from. That also
+     makes it the first thing keyboard focus reaches inside a room, which is what an exit should be. */
+  return '<button type="button" class="sl-room-back" onclick="_studioExitRoom()">← Dashboard</button>'
+       + '<div class="sl-room-label">PHASE ' + phase.numeral + ' — ' + phase.name + '</div>'
        + '<div class="sl-room-desc">' + phase.desc + '</div>'
        + '<h1>The Studio</h1>'
-       + '<div class="sl-room-intro">' + _studioRoomIntro(phase.id) + '</div>'
-       /* 🖊️ '← Dashboard' — CAPTAIN-RULED 2026-08-14, overruling the Architect's '← The Studio'.
-          His reason: a return control named after the place you are already IN tells the user they
-          have left it. A phase room is inside the Studio; the old label denied that. */
-       + '<button type="button" class="sl-room-back" onclick="_studioExitRoom()">← Dashboard</button>';
+       + '<div class="sl-room-intro">' + _studioRoomIntro(phase.id) + '</div>';
 }
 
 /* 🖊️ AUTHORED (§14.3) — "Next: {PHASE NAME} →", and on the final phase "Back to The Studio →".

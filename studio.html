@@ -431,25 +431,6 @@
   }
   .s2-enter-btn:hover, .s2-exit-btn:hover { border-color: var(--teal-mid); background: rgba(29,158,117,0.14); }
 
-  /* ── view-s3: Phase-III "Tension" task-view (SEAM ONLY · additive · reversible) ──
-     Sibling to view-s2. Spotlights the Tension section (.s3-spotlight); the section is
-     base-HIDDEN everywhere else (incl. plain S1) so the empty seam never leaks into the S1
-     scroll. SS-timing 11-scenario matrix / Pension / Remodel cards are NOT built (gated on
-     S2 maturity) — this is the bare destination for the "See the Tension →" handoff.
-     Dropping .view-s3 restores S1; entering from S2 swaps view-s2 -> view-s3. Explicit
-     class, not :has() (durability, matches view-s2). */
-  .studio-layout .drafting-panel > .studio-section.s3-spotlight { display: none; }
-  .studio-layout.view-s3 .drafting-panel > .studio-section { display: none; }
-  .studio-layout.view-s3 .drafting-panel > .studio-section.s3-spotlight { display: block; }
-  .studio-layout.view-s3 .drafting-panel > .swf-col-head { display: none; }
-  .studio-layout.view-s3 .s2-entry-row { display: none; }
-  .s3-back-btn {
-    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em;
-    color: var(--teal); background: rgba(29,158,117,0.08);
-    border: 1px solid rgba(29,158,117,0.4); border-radius: 4px;
-    padding: 7px 14px; cursor: pointer;
-  }
-  .s3-back-btn:hover { border-color: var(--teal-mid); background: rgba(29,158,117,0.14); }
 
   /* ── mode-shape: 4th canvas mode, co-exists with panel layout modes ──
      Toggle independently of Draft/Split/Blueprint; setViewMode unchanged. */
@@ -889,10 +870,12 @@
                   color: var(--gold); margin-bottom: 12px; }
   .sl-room-intro { font-family: var(--font-serif); font-size: 14px; font-style: italic;
                    line-height: 1.6; color: rgba(255,255,255,0.66); margin: 10px 0 20px; max-width: 46ch; }
+  /* Sits ABOVE the phase copy (Captain-ruled) — margin moved to the BOTTOM edge accordingly, so it
+     separates itself from the label it now precedes rather than from the title above it. */
   .sl-room-back { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em;
                   text-transform: uppercase; color: rgba(255,255,255,0.55); background: transparent;
                   border: 1px solid rgba(255,255,255,0.18); border-radius: 3px; padding: 6px 12px;
-                  cursor: pointer; margin-bottom: 22px; transition: color .2s, border-color .2s; }
+                  cursor: pointer; margin: 0 0 20px; transition: color .2s, border-color .2s; }
   .sl-room-back:hover { color: var(--teal-mid); border-color: var(--teal-mid); }
   /* The continue control sits AFTER the room's sections, so it is the last thing in the room —
      you reach it by finishing the phase, which is the point. */
@@ -913,27 +896,33 @@
   .sl-formula { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em;
                 color: var(--gold); opacity: 0.55; margin-bottom: 22px; white-space: nowrap; }
   .sl-movements { margin-bottom: 34px; }
-  .sl-movement { position: relative; padding-left: 14px; margin-bottom: 18px;
-                 border-left: 1px solid rgba(201,168,76,0.22); }
-  .sl-glyph { position: absolute; left: -7px; top: -13px; width: 14px; text-align: center;
-              font-family: var(--font-mono); font-size: 12px; color: var(--gold); opacity: 0.7;
-              background: var(--bg-navy); line-height: 1; }
+  /* ⭐ CAPTAIN-RULED 2026-08-14 — THE BRACKET RULES AND THEIR × + = → GLYPHS ARE GONE.
+     His words: "adds a bit of visual confusion." He is right, and the reason is worth keeping: the
+     formula is ALREADY printed in full one line above, so the glyphs re-stated the operators a
+     second time in a weaker, more cryptic form. ⛔ DECORATION THAT RESTATES THE ARGUMENT DILUTES IT.
+     The movement LABELS ("WHAT YOU HAVE", "WHAT PRESSES ON IT") carry the grouping on their own —
+     they say in words what the rules were drawing in lines. */
+  .sl-movement { position: relative; margin-bottom: 18px; }
   .sl-mv-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
   .sl-mv-expr { font-family: var(--font-mono); font-size: 11px; color: var(--gold); opacity: 0.9; }
   .sl-mv-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.14em;
                  text-transform: uppercase; color: var(--muted); }
-  .sl-phase { display: grid; grid-template-columns: 14px 24px 1fr; align-items: baseline;
+  /* ⭐ CAPTAIN-RULED 2026-08-14 — THE ● / ○ COMPLETENESS DOTS ARE GONE, and the grid drops from
+     three columns to two with them.
+     ⚠️ THE PREDICATE ITSELF IS NOT REMOVED, ONLY ITS DOT. _phaseComplete still runs, and the
+     ANSWERED / NOT YET state still reaches assistive technology through the row's authored
+     aria-label (§12.5). 🔑 REMOVING A VISUAL IS NOT REMOVING THE INFORMATION — deleting the
+     predicate would have thrown away the gating signal the spine needs later, to save two glyphs. */
+  .sl-phase { display: grid; grid-template-columns: 24px 1fr; align-items: baseline;
               column-gap: 8px; width: 100%; text-align: left; background: none; border: none;
               padding: 5px 6px 5px 0; margin: 0; cursor: pointer; border-radius: 3px;
               transition: background 0.15s ease; }
   .sl-phase:hover { background: rgba(255,255,255,0.04); }
   .sl-phase:focus-visible { outline: 1px solid var(--teal-mid); outline-offset: 2px; }
-  .sl-dot { font-size: 9px; color: rgba(255,255,255,0.28); line-height: 1.6; }
-  .sl-phase.is-done .sl-dot { color: var(--teal-mid); }
   .sl-numeral { font-family: var(--font-mono); font-size: 9px; color: var(--muted); letter-spacing: 0.06em; }
   .sl-name { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.1em;
-             color: rgba(255,255,255,0.88); grid-column: 3; }
-  .sl-desc { grid-column: 3; font-family: var(--font-serif); font-style: italic; font-size: 12px;
+             color: rgba(255,255,255,0.88); grid-column: 2; }
+  .sl-desc { grid-column: 2; font-family: var(--font-serif); font-style: italic; font-size: 12px;
              color: rgba(255,255,255,0.42); margin-top: 2px; line-height: 1.45; }
   .sl-phase.is-unbuilt .sl-name { color: rgba(255,255,255,0.5); }
   .sl-phase.is-unbuilt .sl-desc { max-width: 40ch; }
@@ -2422,23 +2411,14 @@
         </div>
       </div>
 
-      <!-- Phase-III "Tension" task-view panel (S3 SEAM · additive · reversible). Real, permanent
-           section node; CONTENT (SS-timing matrix · Pension · Remodel cards) deliberately NOT
-           built — gated on S2 itemization/Upkeep maturing. Spotlighted in .view-s3 via
-           .s3-spotlight; base-hidden elsewhere. No throwaway copy/art — only the real section
-           label + functional back-nav. Label uses the DATUM letter "T" (not a number) to avoid
-           colliding with the existing "04 / DEFINE YOUR DATUM" section. -->
-      <div data-phase="tension" class="studio-section s3-spotlight">
-        <div class="section-header-wrapper">
-            <button class="section-tag" onclick="toggleSection('sec-tension', this)" style="border:none; margin:0; padding:0; flex:1;">
-                <span>T / Tension</span> <span class="toggle-icon">−</span>
-            </button>
-            <button class="pin-btn" onclick="togglePin('sec-tension', this)" title="Pin section open">📌</button>
-        </div>
-        <div id="sec-tension" class="section-content" style="display: block;">
-          <button type="button" class="s3-back-btn" onclick="exitS3View()">← Back to Estate Drafting</button>
-        </div>
-      </div>
+      <!-- ⛔ THE "T / Tension" SECTION AND ITS "← Back to Estate Drafting" BUTTON WERE REMOVED
+           2026-08-14, ON THE CAPTAIN'S RULING: "that T was the original first pass of what you just
+           did for me." It was the view-s3 SEAM — a section node holding no content at all, only a
+           label and a back-nav, waiting for the Tension page that the spine rooms now provide.
+           ⭐ ITS REPLACEMENT IS III · TENSION, which owns 03 / Operating Upkeep and will receive
+           Liabilities per R27. THE FIRST PASS IS NOT DELETED WORK — IT IS SUPERSEDED WORK, AND
+           LEAVING IT ON SCREEN NEXT TO ITS OWN SUCCESSOR IS HOW A PRODUCT ACCUMULATES TWO ANSWERS
+           TO ONE QUESTION. The view-s3 CSS and the enterS3View/exitS3View seam went with it. -->
 
       <div data-phase="endurance" class="studio-section">
         <div class="section-header-wrapper">
@@ -16043,7 +16023,9 @@
       var l = document.getElementById('studio-layout');
       if (l && !l.classList.contains('mode-shape') && window.toggleShapeMode) window.toggleShapeMode(); // morph reveal
       if (window.updateShapePanel) updateShapePanel();   // re-fire onShapeStateChange -> real verdict returns
-      if (window.enterS3View) window.enterS3View();       // S3 seam: hand off into the Tension task-view
+      /* ⭐ THE CTA NOW LANDS IN THE REAL ROOM. It used to hand off into the view-s3 seam, which
+         was a labelled empty section. "See the Tension →" finally shows the user Tension. */
+      if (window._studioEnterRoom) window._studioEnterRoom('tension');
     };
 
     window.enterS2View = function () {
@@ -16070,24 +16052,6 @@
       refreshDraftingState();   // clears .estate-drafting outside S2; S1 canvas default untouched
     };
 
-    /* ── Phase-III "Tension" task-view (S3 SEAM) — sibling to view-s2. enterS3View swaps
-       view-s2 -> view-s3 (the "See the Tension →" destination); exitS3View returns to Estate
-       Drafting. CONTENT gated on S2 maturity; this is the bare reversible seam. Null-guarded
-       per D14; reuses refreshEstateGate/refreshDraftingState (DRY, no new state). */
-    window.enterS3View = function () {
-      var l = document.getElementById('studio-layout'); if (!l) return;
-      l.classList.remove('view-s2');
-      l.classList.add('view-s3');
-      refreshEstateGate();
-      refreshDraftingState();
-    };
-    window.exitS3View = function () {
-      var l = document.getElementById('studio-layout'); if (!l) return;
-      l.classList.remove('view-s3');
-      l.classList.add('view-s2');   // back to the prior task-view (Estate Drafting)
-      refreshEstateGate();
-      refreshDraftingState();
-    };
 
   </script>
 
