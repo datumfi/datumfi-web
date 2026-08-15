@@ -28,7 +28,7 @@ const SACRED = {
      regulatory disclosure from every page at once. */
   'scripts/datum-footer.js': '38645d6a25942d1c27f91b1cae5ecd76',   // the module carries its own presentation — 10px muted, not the page default (2026-08-14)
   'studio.html': 'c68ce8337f1bc08be5d3fea810a81abe',   // §18.2 — the disclosure leaves the canvas frame for the panel's own scroll; banner reserve retired (2026-08-14)
-  'sketch.html': 'fc51c4473e66013d3a563a3e24287822',   // canonical disclosure footer via /scripts/datum-footer.js (2026-08-14)
+  'sketch.html': '0051db6568a7b8461ceb51b048f8d11b',   // orphaned footer rows removed (2026-08-14)
   /* §47.3 — SACRED as of 2026-08-13, declared in CLAUDE.md IN THIS SAME COMMIT. The two lists are
      reconciled by this build in BOTH directions, so a host added to one and not the other STOPS
      THE BUILD — which is why the nav.js / sketchbook.html gaps could exist historically and cannot
