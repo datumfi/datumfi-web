@@ -214,32 +214,109 @@ function _studioGhostPlanHTML() {
   return '<div class="sl-ghost-grid" aria-hidden="true">' + cells + '</div>' + note;
 }
 
-/* A phase name opens the section that already exists and scrolls to it.
-   ⛔ toggleSection(id, btn) DEREFERENCES btn UNGUARDED, so the real section button is looked up with
-   the SAME selector toggleSection itself uses — that keeps the +/- icon in step instead of forking a
-   second open/close path. And an ALREADY-OPEN section is only scrolled to, never toggled: this is
-   navigation, and a nav control that closes the thing you asked for is a bug. */
-function _studioPhaseGo(id) {
-  var phase = _studioPhaseSpine().filter(function (p) { return p.id === id; })[0];
-  if (!phase) return;
-  if (!phase.sec) { _studioShowAlignmentPanel(); return; }
-  var el = document.getElementById(phase.sec);
-  if (!el) return;
-  if (el.style.display === 'none') {
-    var btn = document.querySelector('[onclick="toggleSection(\'' + phase.sec + '\', this)"]');
-    if (btn && typeof toggleSection === 'function') toggleSection(phase.sec, btn);
-    else el.style.display = 'block';
-  }
-  try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { el.scrollIntoView(); }
+/* ══ THE PHASE ROOMS ═══════════════════════════════════════════════════════════════════════════
+   ⛔⛔ THIS REPLACED A SCROLL, AND THE SCROLL WAS THE WRONG BUILD FROM THE START.
+   `Captain Datumae` R23: "Clicking the first one D — DATA will take you to a NEW PAGE." The Step-1
+   spec said "additive, lands inert"; the previous session built precisely that, and the Captain got
+   a nav strip that scrolled him down a page he wanted to leave. ⭐ The old scrollIntoView here was
+   also the TRIGGER for the one-way scroll trap (see studio.html's .drafting-panel note) — removing
+   it retires a defect and a mis-build in the same edit.
+
+   ⭐⭐ view-s2 GENERALISED, NOT FORKED. The CSS does the work off two attributes:
+        #studio-layout[data-room="<phase>"]  x  .studio-section[data-phase="<phase>"]
+   This file only sets the room and paints the header; membership lives in the markup so there is no
+   second opinion to drift. Architecture ALSO keeps .view-s2 so its bespoke behaviour (read-only
+   Portfolio boxes, the §20 estate gate) is reused rather than reimplemented. */
+
+/* 🖊️ AUTHORED — Part 4 intro lines, one per phase, wired VERBATIM. ⛔ No Wirer prose lives here. */
+function _studioRoomIntro(id) {
+  return {
+    data: 'Before anything can be measured, it has to be described. This is you, and the ground you’re building on.',
+    architecture: 'Now the structure itself. Every account, every asset — the mass your retirement is built from.',
+    tension: 'Every dollar that goes to today can’t go to tomorrow. This is where that pressure gets counted — honestly, without judgement.',
+    uncertainty: 'Two of the biggest numbers in your retirement depend on a decision, not a market: when you claim, and when you start.',
+    measurement: 'Everything is in. Now we run it — thousands of times — and see which futures your structure survives.',
+    alignment: 'You have the range. Now the order — which account to draw from, and when, so the structure lasts.',
+    endurance: 'At last, the real question: what can you actually spend? Not a guess — a number your own structure supports.'
+  }[id] || '';
 }
 
-function _studioShowAlignmentPanel() {
-  var host = document.getElementById('sl-alignment-panel');
-  if (!host) return;
-  host.innerHTML = '<div class="sl-align-body">' + _studioAlignmentBody() + '</div>';
-  host.style.display = 'block';
-  try { host.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
+function _studioRoomHeaderHTML(phase) {
+  return '<div class="sl-room-label">PHASE ' + phase.numeral + ' — ' + phase.name + '</div>'
+       + '<div class="sl-room-desc">' + phase.desc + '</div>'
+       + '<h1>The Studio</h1>'
+       + '<div class="sl-room-intro">' + _studioRoomIntro(phase.id) + '</div>'
+       /* 🖊️ '← Dashboard' — CAPTAIN-RULED 2026-08-14, overruling the Architect's '← The Studio'.
+          His reason: a return control named after the place you are already IN tells the user they
+          have left it. A phase room is inside the Studio; the old label denied that. */
+       + '<button type="button" class="sl-room-back" onclick="_studioExitRoom()">← Dashboard</button>';
 }
+
+/* 🖊️ AUTHORED (§14.3) — "Next: {PHASE NAME} →", and on the final phase "Back to The Studio →".
+   ⛔ NEVER A DISABLED CONTROL AT THE END: a greyed Next reads as a missing feature, not a finished
+   walk. The last phase returns to the landing instead of dead-ending. */
+function _studioRoomNextHTML(phase) {
+  var spine = _studioPhaseSpine();
+  var i = spine.map(function (p) { return p.id; }).indexOf(phase.id);
+  if (i < 0) return '';
+  if (i === spine.length - 1) {
+    return '<button type="button" class="sl-room-next" onclick="_studioExitRoom()">Back to The Studio →</button>';
+  }
+  var nxt = spine[i + 1];
+  return '<button type="button" class="sl-room-next" onclick="_studioEnterRoom(\'' + nxt.id + '\')">'
+       + 'Next: ' + nxt.name + ' →</button>';
+}
+
+function _studioEnterRoom(id) {
+  var phase = _studioPhaseSpine().filter(function (p) { return p.id === id; })[0];
+  if (!phase) return;
+  var l = document.getElementById('studio-layout');
+  if (!l) return;
+  l.setAttribute('data-room', id);
+  /* Architecture reuses view-s2's behavioural extras verbatim. Every other room drops the class, so
+     a user walking the spine never carries Architecture's read-only Portfolio boxes into Tension. */
+  if (id === 'architecture') { if (window.enterS2View) window.enterS2View(); }
+  else if (l.classList.contains('view-s2') && window.exitS2View) window.exitS2View();
+  /* exitS2View clears data-room on its way out (it restores the full hub), so the room is re-set
+     AFTER it runs rather than before. Order is load-bearing. */
+  l.setAttribute('data-room', id);
+
+  var head = document.getElementById('sl-room-header');
+  if (head) head.innerHTML = _studioRoomHeaderHTML(phase);
+  var next = document.getElementById('sl-room-next-host');
+  if (next) next.innerHTML = _studioRoomNextHTML(phase);
+
+  /* VI · ALIGNMENT owns no section — the only phase that is entirely net-new. Its authored waiting
+     line (§12.4) goes in the header rather than leaving a blank panel, which would read as broken. */
+  var empty = document.getElementById('sl-room-empty');
+  if (empty) empty.parentNode.removeChild(empty);
+  if (!document.querySelector('.drafting-panel > .studio-section[data-phase="' + id + '"]') && head) {
+    head.insertAdjacentHTML('beforeend',
+      '<div id="sl-room-empty" class="sl-room-empty">' + _studioAlignmentBody() + '</div>');
+  }
+  /* ⛔ The panel is its own scroll container and keeps its offset across a room change, so entering
+     a room could land you mid-panel with the header off screen. scrollTop, never scrollIntoView —
+     scrollIntoView scrolls EVERY ancestor including the document, which is exactly the trap. */
+  var panel = document.querySelector('.drafting-panel');
+  if (panel) panel.scrollTop = 0;
+}
+
+function _studioExitRoom() {
+  var l = document.getElementById('studio-layout');
+  if (!l) return;
+  if (l.classList.contains('view-s2') && window.exitS2View) window.exitS2View();
+  l.setAttribute('data-room', 'landing');
+  var head = document.getElementById('sl-room-header');
+  if (head) head.innerHTML = '';
+  var next = document.getElementById('sl-room-next-host');
+  if (next) next.innerHTML = '';
+  var panel = document.querySelector('.drafting-panel');
+  if (panel) panel.scrollTop = 0;
+  _renderStudioLanding();
+}
+
+/* The landing's phase rows call this. Kept as the entry point so the markup contract does not move. */
+function _studioPhaseGo(id) { _studioEnterRoom(id); }
 
 /* Repaint. Cheap and idempotent — the landing is derived entirely from live state, so it is safe to
    call on every input/change without tracking what actually moved. */
@@ -250,8 +327,20 @@ function _renderStudioLanding() {
   if (ghost) ghost.innerHTML = _studioGhostPlanHTML();
 }
 
+/* ⛔ THE STUDIO OPENS ON THE LANDING, AND THE LANDING IS ONLY THE DATUMAE.
+   Setting data-room="landing" is what hides the vertical stack of sections — without it the CSS
+   spotlight never engages and the page renders exactly as it did before. It is set here, in the
+   part that owns the landing, rather than as a hard-coded attribute in the markup, so that a page
+   which does NOT load this part degrades to the shipped single-page Studio rather than to a blank
+   panel. 🔑 SPLIT-DEPLOY LAW — DEGRADE TO SHIPPED BEHAVIOUR, NEVER DRAW WRONG. */
+function _studioLandingBoot() {
+  var l = document.getElementById('studio-layout');
+  if (l && !l.getAttribute('data-room')) l.setAttribute('data-room', 'landing');
+  _renderStudioLanding();
+}
+
 if (typeof document !== 'undefined' && document.addEventListener) {
   document.addEventListener('input', _renderStudioLanding);
   document.addEventListener('change', _renderStudioLanding);
-  document.addEventListener('DOMContentLoaded', function () { setTimeout(_renderStudioLanding, 300); });
+  document.addEventListener('DOMContentLoaded', function () { setTimeout(_studioLandingBoot, 300); });
 }

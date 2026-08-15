@@ -273,6 +273,64 @@
   .ledger-foot { display:flex; align-items:center; gap:16px; margin-top:16px; }
   .ledger-fork-hook { margin-left:auto; font-family:var(--font-mono); font-size:10px; color:var(--ink-soft); opacity:.6; border:1px dashed rgba(45,36,20,.3); border-radius:4px; padding:4px 10px; }
 
+  /* ══ THE SPINE ROOMS — view-s2 GENERALISED FROM ONE HARD-CODED PHASE TO SEVEN ═══════════════
+     THE CAPTAIN ASKED FOR THIS IN HIS ORIGINAL BRIEF AND WE BUILT THE WRONG THING TWICE.
+     `Captain Datumae` R23, verbatim: "Clicking the first one D — DATA will take you to a NEW PAGE."
+     The Architect's Step-1 spec said "additive, lands inert", the previous session built exactly
+     that — a nav strip that SCROLLS you down — and the Captain's actual request was a ROOM.
+     🔑 THE FAILURE WAS NEVER THE EXPLANATION; IT WAS THE TRANSLATION INTO THE SPEC.
+
+     ⭐⭐ THIS IS view-s2 GENERALISED, NOT FORKED (L48). view-s2 proved the pattern — a class on
+     #studio-layout, a CSS spotlight over the live panel, a header swap, no DOM moves, fully
+     reversible — and the Captain found it himself and said "this is what I envisioned". The ONLY
+     thing wrong with it was that the phase was baked in. So the phase becomes DATA:
+         #studio-layout[data-room="<phase>"]   +   .studio-section[data-phase="<phase>"]
+     ⛔ MEMBERSHIP IS DECLARED IN THE MARKUP, NEVER IN A JS LIST. A list would be a second opinion
+     about which sections belong to which phase, and it would drift the day a section moves.
+     ⚠️ view-s2's BEHAVIOURAL extras (read-only Portfolio boxes, the §20 estate gate) are
+     Architecture-specific and stay wired to .view-s2, which the Architecture room still sets —
+     reuse, not reimplementation. Only the SPOTLIGHT is generalised.
+
+     ⛔ SEVEN ROOMS IN ONE COMMIT, DELIBERATELY, AGAINST "one phase per commit" — AND THE REASON IS
+     REACHABILITY, NOT CONVENIENCE. The landing hides every section, so wiring ONE room would leave
+     the other six phases with no way in at all: the user could not add an account. The rooms are a
+     single CSS mechanism over sections that already exist, so the incremental risk per phase is a
+     data-phase attribute. THE CONTENT MOVES BETWEEN PHASES REMAIN ONE PER COMMIT.
+     ══════════════════════════════════════════════════════════════════════════════════════════ */
+  /* In ANY room (landing included) the vertical stack of sections is gone — this is the whole
+     point. The landing is the Datumae and nothing else; a room is its own sections and nothing
+     else. Both halves of that sentence are this one rule plus the seven below it. */
+  .studio-layout[data-room] .drafting-panel > .studio-section { display: none; }
+  .studio-layout[data-room="data"]         .drafting-panel > .studio-section[data-phase="data"],
+  .studio-layout[data-room="architecture"] .drafting-panel > .studio-section[data-phase="architecture"],
+  .studio-layout[data-room="tension"]      .drafting-panel > .studio-section[data-phase="tension"],
+  .studio-layout[data-room="uncertainty"]  .drafting-panel > .studio-section[data-phase="uncertainty"],
+  .studio-layout[data-room="measurement"]  .drafting-panel > .studio-section[data-phase="measurement"],
+  .studio-layout[data-room="endurance"]    .drafting-panel > .studio-section[data-phase="endurance"] { display: block; }
+
+  /* The landing shows the Datumae; a room hides it and shows the room header instead. */
+  #sl-room-header { display: none; }
+  .studio-layout[data-room="landing"] #sl-room-header { display: none; }
+  .studio-layout[data-room]:not([data-room="landing"]) #sl-room-header { display: block; }
+  .studio-layout[data-room]:not([data-room="landing"]) .s1-header { display: none; }
+
+  /* ⛔ THESE ARE NOT .studio-section, SO THE SPOTLIGHT ABOVE DOES NOT CATCH THEM AND THEY LEAK INTO
+     EVERY ROOM. Same trap view-s2 hit ("Dispatch-A Task 1"), same fix, now for all seven. */
+  .studio-layout[data-room] .swf-col-head,
+  .studio-layout[data-room] .s2-entry-row,
+  .studio-layout[data-room] .scenario-bank,
+  .studio-layout[data-room] .privacy-note { display: none; }
+  /* ⚠️ .return-home ("← Return to Overview") re-opens the intro overlay and is gated by
+     _p8_studio_mechanics Item 5, so it is HIDDEN INSIDE ROOMS, never removed — it stays on the
+     landing where it belongs. Two back-pointing controls in one room ("← Return to Overview" above
+     "← Dashboard") is exactly the §13.2 confusion: the user cannot tell which one leaves what. */
+  .studio-layout[data-room]:not([data-room="landing"]) .return-home { display: none; }
+  /* ⚠️ Reveal-Your-Range belongs to V · MEASUREMENT (Captain R31: "06 / Climate Control … as well
+     as the Reveal your Range button"). It is hidden everywhere EXCEPT that room — never hidden
+     outright, because making a shipped feature unreachable is a regression, not a tidy-up. */
+  .studio-layout[data-room] .reveal-container { display: none; }
+  .studio-layout[data-room="measurement"] .reveal-container { display: block; }
+
   /* ── view-s2: Phase-II "Estate Drafting" task-view (Step 1 · additive · reversible) ──
      Spotlights 02 Estate Drafting (#sec-drafting) + 03 Operating Upkeep (#sec-upkeep)
      via the explicit .s2-spotlight class on their wrapper nodes, and hides the other
@@ -281,7 +339,15 @@
      that's Step 2). Dropping .view-s2 restores full S1 untouched. Keyed off an explicit
      class (not > :has()) so it survives any future section reorg/nesting. */
   .studio-layout.view-s2 .drafting-panel > .studio-section { display: none; }
-  .studio-layout.view-s2 .drafting-panel > .studio-section.s2-spotlight { display: block; }
+  /* ⛔ :not([data-room]) — THE ROOM WINS WHEN A ROOM IS OPEN, AND THIS IS A REAL DEFECT CAUGHT BY
+     MEASUREMENT 2026-08-14, NOT A PRECAUTION. view-s2 spotlights BOTH its .s2-spotlight sections
+     (Estate Drafting AND Operating Upkeep), because when it was written those two were one task.
+     The spine splits them: Upkeep belongs to III · TENSION (Captain R27). Architecture sets
+     .view-s2 to reuse its read-only-boxes behaviour, and without this guard that legacy rule
+     dragged Operating Upkeep into the Architecture room — which R25 defines as Estate Drafting
+     ONLY. 🔑 REUSING A DONOR MEANS INHERITING ITS ASSUMPTIONS TOO; SCOPE THE ONES THAT NO LONGER
+     HOLD. Standalone view-s2 (the old Estate Drafting button) is untouched. */
+  .studio-layout.view-s2:not([data-room]) .drafting-panel > .studio-section.s2-spotlight { display: block; }
   .studio-layout.view-s2 .drafting-panel > .swf-col-head { display: none; }
   /* S2.0 — header swap: PHASE I header on S1, PHASE II header in view-s2. */
   .s2-header { display: none; }
@@ -812,6 +878,38 @@
      white carries the phase names, and the dot is the only state indicator — no badges, no chips. */
   .sl-line { font-family: var(--font-serif); font-size: 15px; font-style: italic; line-height: 1.55;
              color: rgba(255,255,255,0.72); margin: 10px 0 26px; max-width: 42ch; }
+  /* ── THE ROOM HEADER + ITS TWO NAV CONTROLS ─────────────────────────────────────────────────
+     Mirrors .s2-header's proportions, which is the treatment the Captain approved on sight.
+     ⚠️ The two controls are deliberately NOT the same weight: ← Dashboard is a quiet return, the
+     Next control is the forward motion of the walk. Part 1's "the order is not a menu, it is a
+     dependency chain" expressed in the interface instead of asserted in a spec. */
+  .sl-room-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em;
+                   text-transform: uppercase; color: var(--gold); margin-bottom: 12px; }
+  .sl-room-desc { font-family: var(--font-serif); font-size: 22px; font-style: italic;
+                  color: var(--gold); margin-bottom: 12px; }
+  .sl-room-intro { font-family: var(--font-serif); font-size: 14px; font-style: italic;
+                   line-height: 1.6; color: rgba(255,255,255,0.66); margin: 10px 0 20px; max-width: 46ch; }
+  .sl-room-back { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em;
+                  text-transform: uppercase; color: rgba(255,255,255,0.55); background: transparent;
+                  border: 1px solid rgba(255,255,255,0.18); border-radius: 3px; padding: 6px 12px;
+                  cursor: pointer; margin-bottom: 22px; transition: color .2s, border-color .2s; }
+  .sl-room-back:hover { color: var(--teal-mid); border-color: var(--teal-mid); }
+  /* The continue control sits AFTER the room's sections, so it is the last thing in the room —
+     you reach it by finishing the phase, which is the point. */
+  .sl-room-next { display: block; width: 100%; margin: 26px 0 40px; font-family: var(--font-mono);
+                  font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+                  color: var(--gold); background: rgba(201,168,76,0.06);
+                  border: 1px solid rgba(201,168,76,0.4); border-radius: 3px; padding: 12px 16px;
+                  cursor: pointer; text-align: center; transition: background .2s, border-color .2s; }
+  .sl-room-next:hover { background: rgba(201,168,76,0.13); border-color: var(--gold); }
+  #sl-room-next-host { display: none; }
+  .studio-layout[data-room]:not([data-room="landing"]) #sl-room-next-host { display: block; }
+  /* VI · ALIGNMENT has no sections at all — it is the one phase that is entirely net-new. Its room
+     shows its authored waiting line rather than an empty panel, which would read as broken. */
+  .sl-room-empty { font-family: var(--font-serif); font-size: 13px; font-style: italic;
+                   line-height: 1.6; color: rgba(255,255,255,0.55); max-width: 44ch;
+                   padding: 18px 0 4px; border-top: 1px solid rgba(255,255,255,0.07); }
+
   .sl-formula { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em;
                 color: var(--gold); opacity: 0.55; margin-bottom: 22px; white-space: nowrap; }
   .sl-movements { margin-bottom: 34px; }
@@ -1867,6 +1965,12 @@
         <div id="sl-movements-host"></div>
         <div id="sl-alignment-panel" style="display:none;"></div>
       </div>
+
+      <!-- ⭐ THE ROOM HEADER — one host, seven rooms, painted by scripts/studio-landing.js.
+           Structure mirrors .s2-header (gold phase label / gold serif descriptor / white "The
+           Studio" / muted sub) because that is the shape the Captain approved on sight in his own
+           screenshot. Empty and display:none until a room is entered. -->
+      <div id="sl-room-header"></div>
       <!-- S2.0: PHASE II — ARCHITECTURE header. Hidden by default; shown only in view-s2.
            Same Sketch-parity structure as S1 (gold phase-label / gold serif descriptor /
            white "The Studio" title / 60%-white subtitle). h1 constant across phases. -->
@@ -1886,7 +1990,7 @@
 
       <div class="swf-col-head have" aria-hidden="true">Shape You Have</div>
 
-      <div class="studio-section">
+      <div data-phase="data" class="studio-section">
         <div class="section-header-wrapper">
             <button class="section-tag" onclick="toggleSection('sec-profile', this)" style="border:none; margin:0; padding:0; flex:1;">
                 <span>00 / Architect Profile</span> <span class="toggle-icon">−</span>
@@ -2007,7 +2111,7 @@
            Seeded from Blueprint draft -> saved Sketch -> Dossier -> defaults.
            Bidirectionally bound to Profile (pri-dob / target-ret / plan-end-age / eff-tax-rate)
            on a last-touched-wins basis. -->
-      <div class="studio-section">
+      <div data-phase="data" class="studio-section">
         <div class="section-header-wrapper">
             <button class="section-tag" onclick="toggleSection('sec-sketch', this)" style="border:none; margin:0; padding:0; flex:1;">
                 <span>01 / Sketch Inputs</span> <span class="toggle-icon">+</span>
@@ -2212,7 +2316,7 @@
         </div>
       </div>
 
-      <div class="studio-section s2-spotlight">
+      <div data-phase="architecture" class="studio-section s2-spotlight">
         <div class="section-header-wrapper">
             <button class="section-tag" onclick="toggleSection('sec-drafting', this)" style="border:none; margin:0; padding:0; flex:1;">
                 <span>02 / Estate Drafting — Accounts & Assets</span> <span class="toggle-icon">−</span>
@@ -2273,7 +2377,7 @@
         </div>
       </div>
 
-      <div class="studio-section s2-spotlight sheet-host">
+      <div data-phase="tension" class="studio-section s2-spotlight sheet-host">
         <div class="section-header-wrapper">
             <button class="section-tag" onclick="toggleSection('sec-upkeep', this)" style="border:none; margin:0; padding:0; flex:1;">
                 <span>03 / Operating Upkeep — Living Expenses</span> <span class="toggle-icon">−</span>
@@ -2324,7 +2428,7 @@
            .s3-spotlight; base-hidden elsewhere. No throwaway copy/art — only the real section
            label + functional back-nav. Label uses the DATUM letter "T" (not a number) to avoid
            colliding with the existing "04 / DEFINE YOUR DATUM" section. -->
-      <div class="studio-section s3-spotlight">
+      <div data-phase="tension" class="studio-section s3-spotlight">
         <div class="section-header-wrapper">
             <button class="section-tag" onclick="toggleSection('sec-tension', this)" style="border:none; margin:0; padding:0; flex:1;">
                 <span>T / Tension</span> <span class="toggle-icon">−</span>
@@ -2336,7 +2440,7 @@
         </div>
       </div>
 
-      <div class="studio-section">
+      <div data-phase="endurance" class="studio-section">
         <div class="section-header-wrapper">
             <button class="section-tag" onclick="toggleSection('sec-datum', this)" style="border:none; margin:0; padding:0; flex:1;">
                 <span>04 / DEFINE YOUR DATUM</span> <span class="toggle-icon">−</span>
@@ -2352,7 +2456,7 @@
         </div>
       </div>
 
-      <div class="studio-section">
+      <div data-phase="uncertainty" class="studio-section">
         <div class="section-header-wrapper">
             <button class="section-tag" onclick="toggleSection('sec-income-layer', this)" style="border:none; margin:0; padding:0; flex:1;">
                 <span>05 / Income Timing — Social Security &amp; Pensions</span> <span class="toggle-icon">−</span>
@@ -2482,7 +2586,7 @@
         </div>
       </div>
 
-      <div class="studio-section">
+      <div data-phase="measurement" class="studio-section">
         <div class="section-header-wrapper">
             <button class="section-tag" onclick="toggleSection('sec-climate', this)" style="border:none; margin:0; padding:0; flex:1;">
                 <span>06 / Climate Control — Market Outlook</span> <span class="toggle-icon">−</span>
@@ -2602,7 +2706,14 @@
       <div class="privacy-note">
         We see your inputs only long enough to compute your plan. We store nothing. We sell nothing.
       </div>
-      
+
+      <!-- ⭐ THE CONTINUE CONTROL — LAST THING IN THE PANEL, so inside a room you reach it by
+           finishing the phase. Painted by scripts/studio-landing.js; empty on the landing.
+           Copy is AUTHORED (§14.3): "Next: {PHASE NAME} →", and on the final phase
+           "Back to The Studio →". ⛔ NEVER A DISABLED CONTROL AT THE END — a greyed Next reads as a
+           missing feature, not a completed walk. -->
+      <div id="sl-room-next-host"></div>
+
     </div>
 
     <div class="canvas-wrapper" id="canvas-wrapper">

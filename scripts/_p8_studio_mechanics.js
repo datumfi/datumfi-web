@@ -121,6 +121,15 @@ const readAges = (page) => page.evaluate(() => { const tt = document.getElementB
   await page.waitForTimeout(1500);
   await page.evaluate(() => { const b = document.getElementById('studioStartScratch'); if (b) b.click(); }).catch(() => {});
   await page.waitForTimeout(700);
+  /* ⛔ ENTER THE ROOM THE CONTROLS NOW LIVE IN (2026-08-14, the spine-rooms commit).
+     The Studio opens on the LANDING — the Datumae and nothing else — so #sec-profile and #sec-sketch
+     are display:none until I·DATA is opened, exactly as a user opens it. ⚠️ IT GOES *AFTER* THE
+     SCRATCH CLICK: _startScratchFlow calls _navDrain('/studio.html'), which RELOADS, and a room
+     entered before that reload is simply gone. THE SETUP CHANGED, NOT ONE CLAIM BELOW.
+     🔑 A FIXTURE THAT BUILDS THE OLD ENTRY STATE IS TESTING A SCREEN NO USER CAN REACH. */
+  await page.waitForFunction(() => typeof window._studioEnterRoom === 'function', null, { timeout: 9000 });
+  await page.evaluate(() => window._studioEnterRoom('data'));
+  await page.waitForTimeout(400);
 
   // Item 1 — clamps via live input events.
   await setSlider(page, 'slider-age', 50);
@@ -230,6 +239,12 @@ const readAges = (page) => page.evaluate(() => { const tt = document.getElementB
     sessionStorage.setItem('datum_designed_ceil', 'KEEPME-CEIL');
   });
   check('Item5: _studioOverlayOpen exposed', await page.evaluate(() => typeof window._studioOverlayOpen === 'function'));
+  /* ⛔ BACK TO THE DASHBOARD FIRST — '← Return to Overview' is a LANDING control and is hidden
+     inside a phase room by design: two back-pointing controls on one screen ('← Return to
+     Overview' above '← Dashboard') is the §13.2 confusion, where the user cannot tell which one
+     leaves what. This mirrors the real journey rather than reaching past the design. */
+  await page.evaluate(() => { if (window._studioExitRoom) window._studioExitRoom(); });
+  await page.waitForTimeout(400);
   await page.click('.return-home'); await page.waitForTimeout(400);
   check('Item5: Return-to-Overview re-opens Studio overlay', await visible(page, 'studioOverlayWrap'));
   await page.click('#studioCloseIntro'); await page.waitForTimeout(700);
@@ -268,6 +283,15 @@ const readAges = (page) => page.evaluate(() => { const tt = document.getElementB
   await page.waitForTimeout(1500);
   await page.evaluate(() => { const b = document.getElementById('studioStartScratch'); if (b) b.click(); }).catch(() => {});
   await page.waitForTimeout(700);
+  /* ⛔ ENTER THE ROOM THE CONTROLS NOW LIVE IN (2026-08-14, the spine-rooms commit).
+     The Studio opens on the LANDING — the Datumae and nothing else — so #sec-profile and #sec-sketch
+     are display:none until I·DATA is opened, exactly as a user opens it. ⚠️ IT GOES *AFTER* THE
+     SCRATCH CLICK: _startScratchFlow calls _navDrain('/studio.html'), which RELOADS, and a room
+     entered before that reload is simply gone. THE SETUP CHANGED, NOT ONE CLAIM BELOW.
+     🔑 A FIXTURE THAT BUILDS THE OLD ENTRY STATE IS TESTING A SCREEN NO USER CAN REACH. */
+  await page.waitForFunction(() => typeof window._studioEnterRoom === 'function', null, { timeout: 9000 });
+  await page.evaluate(() => window._studioEnterRoom('data'));
+  await page.waitForTimeout(400);
   // REACHABILITY FIRST. Ten reds once came from driving a control inside a collapsed section. If the
   // editor is ever off-screen again, say THAT once — plainly — instead of emitting ten confusing
   // commit failures that look like product bugs.

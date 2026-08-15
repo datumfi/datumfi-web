@@ -143,6 +143,16 @@ function ok(cond, msg) { if (cond) { pass++; console.log('PASS ' + msg); } else 
   await p.reload({ waitUntil: 'networkidle' });
   await p.waitForSelector('#studio-layout', { timeout: 15000 });
   await p.waitForTimeout(400);
+  /* ⛔ ENTER THE ROOM THE FIELDS NOW LIVE IN (2026-08-14, the spine-rooms commit).
+     The Studio opens on the LANDING — the Datumae and nothing else — so every drafting section is
+     display:none until a phase is opened. This gate drives controls inside a section, and a real
+     user reaches them by clicking that phase. THE SETUP CHANGED, NOT THE CLAIM: not one assertion
+     below is touched, and the gate still fails for every reason it failed before.
+     🔑 WHEN A PRODUCT'S ENTRY STATE MOVES, A FIXTURE THAT STILL BUILDS THE OLD ENTRY STATE IS
+        TESTING A SCREEN NO USER CAN REACH. */
+  await p.waitForFunction(() => typeof window._studioEnterRoom === 'function', null, { timeout: 9000 });
+  await p.evaluate(() => window._studioEnterRoom('architecture'));
+  await p.waitForTimeout(400);
 
   /* The first-impression overlay, the shape panel and the privacy banner cover the canvas. They are
      HIDDEN, never clicked through — scene A types into a real field via a real click, and a click

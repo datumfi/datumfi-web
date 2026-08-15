@@ -50,6 +50,16 @@ const blockClerk = (ctx) => ctx.route('**/*', (route) => { const u = route.reque
 
   // Dismiss the first-impression overlay (start from scratch).
   try { if (await page.locator('#studioStartScratch').isVisible({ timeout: 1500 })) { await page.click('#studioStartScratch'); await page.waitForTimeout(500); } } catch (_e) {}
+  /* ⛔ ENTER THE ROOM THE FIELDS NOW LIVE IN (2026-08-14, the spine-rooms commit).
+     The Studio opens on the LANDING — the Datumae and nothing else — so every drafting section is
+     display:none until a phase is opened. This gate drives controls inside a section, and a real
+     user reaches them by clicking that phase. THE SETUP CHANGED, NOT THE CLAIM: not one assertion
+     below is touched, and the gate still fails for every reason it failed before.
+     🔑 WHEN A PRODUCT'S ENTRY STATE MOVES, A FIXTURE THAT STILL BUILDS THE OLD ENTRY STATE IS
+        TESTING A SCREEN NO USER CAN REACH. */
+  await page.waitForFunction(() => typeof window._studioEnterRoom === 'function', null, { timeout: 9000 });
+  await page.evaluate(() => window._studioEnterRoom('data'));
+  await page.waitForTimeout(400);
 
   // Fill PRIMARY profile so _buildStudioRequest() returns a non-null body, then
   // SETTLE: dispatch 'change' so syncFromProfileDates() pushes the primary dates onto

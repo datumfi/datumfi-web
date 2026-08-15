@@ -67,6 +67,16 @@ const read = (page) => page.evaluate(() => ({
   await page.waitForTimeout(700);
   // Reveal the Architect Profile (the date boxes live in 01/ Timeline).
   await page.evaluate(() => { const s = document.getElementById('sec-profile'); if (s) s.scrollIntoView(); });
+  /* ⛔ ENTER THE ROOM THE FIELDS NOW LIVE IN (2026-08-14, the spine-rooms commit).
+     The Studio opens on the LANDING — the Datumae and nothing else — so every drafting section is
+     display:none until a phase is opened. This gate drives controls inside a section, and a real
+     user reaches them by clicking that phase. THE SETUP CHANGED, NOT THE CLAIM: not one assertion
+     below is touched, and the gate still fails for every reason it failed before.
+     🔑 WHEN A PRODUCT'S ENTRY STATE MOVES, A FIXTURE THAT STILL BUILDS THE OLD ENTRY STATE IS
+        TESTING A SCREEN NO USER CAN REACH. */
+  await page.waitForFunction(() => typeof window._studioEnterRoom === 'function', null, { timeout: 9000 });
+  await page.evaluate(() => window._studioEnterRoom('data'));
+  await page.waitForTimeout(400);
 
   // (g) — the Profile validators are wired to the shared module.
   check('(g) DatumDateBounds present (shared single source)', await page.evaluate(() => typeof (window.DatumDateBounds || {}).validateDob === 'function'));
