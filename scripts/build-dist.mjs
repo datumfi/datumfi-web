@@ -27,8 +27,8 @@ const SACRED = {
      CLAUDE.md in this same commit. Sacred on a stricter rule than the rest: its absence removes a
      regulatory disclosure from every page at once. */
   'scripts/datum-footer.js': '38645d6a25942d1c27f91b1cae5ecd76',   // the module carries its own presentation — 10px muted, not the page default (2026-08-14)
-  'studio.html': '642c967b426c364481e5ce82567c794c',   // tax rate + filing status open UNSET for a cold visitor; the unset rate is 22, not 0 (2026-08-15)
-  'sketch.html': 'fe6bb185f93653e14a82a509fae6d4a1',   // Part 24/25 — the PARSE-TIME dossier seed is retired; it moves to the auth-gated load-time resolver (2026-08-15)
+  'studio.html': 'a8a8bcb41f72bb3bbf40d6d0eb51b71a',   // tax rate + filing status open UNSET for a cold visitor; the unset rate is 22, not 0 (2026-08-15)
+  'sketch.html': 'e75484c224f430b7f50e088c7c65290c',   // Part 24/25 — the PARSE-TIME dossier seed is retired; it moves to the auth-gated load-time resolver (2026-08-15)
   /* §47.3 — SACRED as of 2026-08-13, declared in CLAUDE.md IN THIS SAME COMMIT. The two lists are
      reconciled by this build in BOTH directions, so a host added to one and not the other STOPS
      THE BUILD — which is why the nav.js / sketchbook.html gaps could exist historically and cannot
@@ -54,7 +54,7 @@ const SACRED = {
   // Same gap as nav.js above, found 2026-07-27 while wiring the erase fix: sketchbook.html is a
   // Sacred Host in CLAUDE.md but was ABSENT from this map, so the erase edit passed the build with
   // no guard at all. Pinned at its true content.
-  'sketchbook.html': '572a851bb53a978697bc81da6e44a178',   // card buttons read "Open in Sketch" / "Open in Studio" (2026-08-01)
+  'sketchbook.html': 'c631411f2434e7edeb64d9ae1f398a1d',   // card buttons read "Open in Sketch" / "Open in Studio" (2026-08-01)
 
   // ── MAP CLOSED 2026-07-27 ────────────────────────────────────────────────────────────────────
   // The seven below were declared Sacred in CLAUDE.md and pinned NOWHERE, so any edit to them
@@ -64,9 +64,9 @@ const SACRED = {
   // fresh from source, never pasted. THE RULE FROM HERE: every host declared Sacred in CLAUDE.md is
   // pinned here, and every host pinned here is declared there — the two lists match exactly.
   'vault.html': 'c7a7a9c101a6743c6a6a2d4c9f8453e1',
-  'my-account.html': 'b6c0cade10a7d77fc948e891e58cecde',   // intro names the rooms, not their positions (2026-08-01)
-  'Blueprint.html': '2129066cbd16c0a30e95278a4f7355f4',   // cards +29% area; card buttons get real chrome (2026-08-01)
-  'Dossier.html': '5cceff124fd6d158557fa5d58defb1bd',
+  'my-account.html': '5dc7df75ea963abe7cc46568e532a9ee',   // intro names the rooms, not their positions (2026-08-01)
+  'Blueprint.html': '8e4c46f956c7ce0ef05f244b339f5ab6',   // cards +29% area; card buttons get real chrome (2026-08-01)
+  'Dossier.html': '7540ff28b7b01255630733de5ff4a1c7',
   'privacy.html': '7f7f867eb7acbfef3f6475dbc5b973b2',
   'terms.html': '6857a4a3767eb02d2baa233b7f43278c',
   'scripts/account-topbar.js': '12fb359c789211f27fdfa0f30e431ccf',   // Dossier tab retired; Sign Out is Home-only (2026-08-01)

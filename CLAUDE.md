@@ -230,7 +230,13 @@ third value = look closer?) — never an assumption of lag.
 
  D1  · window.load NOT clerkScript.load for Clerk session detection
  D2  · Symmetric auth detection across coordinating pages
- D3  · SDK version verify · Clerk runtime is v4.73.14
+ D3  · SDK version verify · Clerk runtime is v4.73.14 — ⭐ NOW A PINNED FACT, NOT A SNAPSHOT
+       (2026-08-15). It used to be a note about what somebody last observed, while all six pages
+       loaded `@clerk/clerk-js@latest`: an UNPINNED DEPENDENCY IS A DEPLOY YOU DID NOT SCHEDULE,
+       PERFORMED BY A STRANGER, ON A DATE THEY CHOOSE — on the one script that decides whether
+       anyone can sign in. Now pinned in all six, and `scripts/_gate_clerk_sdk_pinned.js` enforces
+       it over a `git ls-files` population, so a NEW page pasting `@latest` back in goes red.
+       ⚠️ Changing the version means editing the six hosts AND their SACRED pins in one commit.
  D4  · Live smoke target discipline · fresh morning post-ship
  D5  · Minimal diff with MD5 verification on sacred hosts
  D6  · Test reveal mechanisms in isolation
