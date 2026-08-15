@@ -44,8 +44,13 @@ const Y = new Date().getFullYear();
 
 function initScript(fixture) {
   return `(function(){
-    window.Clerk = { load:function(){return Promise.resolve();}, user:{ unsafeMetadata:{}, update:function(){return Promise.resolve();} }, addListener:function(){} };
-    ${fixture ? `try{ var s=JSON.stringify(${JSON.stringify(fixture)}); localStorage.setItem('datumfi.accountDossier.v15', s); localStorage.setItem('datumfi.accountDossier.v14', s); }catch(e){}` : `try{ localStorage.clear(); }catch(e){}`}
+    /* id + OWNER STAMP: what a REAL signed-in device carries. Dossier.html's readLocal() became
+       owner-checked on 2026-08-15 (a test account was overwriting the real account's server-side
+       profile), so a fixture with neither describes a state no user can be in and the seeded
+       dossier is correctly rejected. Fixture strengthened, assertions untouched. */
+    var UID = 'user_p8date';
+    window.Clerk = { load:function(){return Promise.resolve();}, user:{ id: UID, unsafeMetadata:{}, update:function(){return Promise.resolve();} }, addListener:function(){} };
+    ${fixture ? `try{ var s=JSON.stringify(${JSON.stringify(fixture)}); localStorage.setItem('datumfi.accountDossier.v15', s); localStorage.setItem('datumfi.accountDossier.v14', s);  localStorage.setItem('datumfi.accountDossier.owner', UID); }catch(e){}` : `try{ localStorage.clear(); }catch(e){}`}
   })();`;
 }
 const blockClerk = (ctx) => ctx.route('**/*', (route) => { const u = route.request().url(); if (!/127\.0\.0\.1/.test(u) && /clerk|cloudflareinsights|posthog|beacon/i.test(u)) return route.abort(); return route.continue(); });
@@ -235,7 +240,7 @@ const coOn = (page) => page.evaluate(() => { const t = document.getElementById('
     const dossier = await openDossier(browser, null);
     const dProbe = await dossier.page.evaluate(() => { const B = window.DatumDateBounds; return { b: { AGE_MIN: B.AGE_MIN, AGE_MAX: B.AGE_MAX, RA_MIN_FLOOR: B.RA_MIN_FLOOR, RA_MAX: B.RA_MAX, PTA_MIN_FLOOR: B.PTA_MIN_FLOOR, PTA_MAX: B.PTA_MAX }, age: B.ageAtDate('03/2035', 8, 1982), date: B.dateFromAge(52, 8, 1982) }; });
     const sctx = await browser.newContext();
-    await sctx.addInitScript('window.Clerk={load:function(){return Promise.resolve();},user:{unsafeMetadata:{}}};');
+    await sctx.addInitScript('window.Clerk={load:function(){return Promise.resolve();},user:{id:"user_p8date",unsafeMetadata:{}}};');
     await blockClerk(sctx);
     const spage = await sctx.newPage();
     await spage.goto('http://127.0.0.1:' + PORT + '/studio.html', { waitUntil: 'load' });
