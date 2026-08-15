@@ -3743,7 +3743,71 @@ input:focus,select:focus{
     pinFromPayload(p);
   }
 
+  /* ── THE DOSSIER CANNOT BE SAVED BEFORE IT KNOWS WHAT IT HOLDS ───────────────────────────────
+   * ⛔⛔ THE GAP. This page reveals <body> as soon as CLERK confirms a session, and wires Save at
+   * parse time — but the dossier itself arrives later, from the D1 preferences row via
+   * _resolveDossier. Between those two moments the form is VISIBLE, INTERACTIVE and EMPTY.
+   * MEASURED: a Save in that window posted a form of BLANKS to the server, and because the blank
+   * carries savedAt = now it then WON the newest-wins reconciliation at :3832 — so the real profile
+   * never loaded afterwards either. The write path is faithful; it stored exactly what it was shown.
+   *   🔑 THE READY SIGNAL AND THE RESOLVED SIGNAL ARE NOT THE SAME SIGNAL. Ready means the page can
+   *      be looked at; resolved means the page knows what it holds. Fourth member of that family.
+   *   🔑 A FORM THAT POSTS EVERY FIELD IT RENDERS IS ASSERTING THINGS IT WAS NEVER TOLD. The
+   *      fabricated defaults invented a VALUE; a premature save invents an ABSENCE — and an absence
+   *      overwrites.
+   * BLOCKED, NOT PATCHED, and that is the smaller change: a control that fires and then repairs
+   * itself is A SECOND WRITE NOBODY ASKED FOR. A DISABLED CONTROL IS AN HONEST STATE.
+   * ⚠️ THE FLAG IS SET ON EVERY EXIT OF THE RESOLVE PATH — resolved, no row, Clerk absent, Clerk
+   * threw. A guard that can stay closed forever is worse than the defect it prevents: it would make
+   * the page permanently unsaveable for anyone whose network hiccuped.
+   * ⚠️⚠️ COPY DEBT, FLAGGED NOT WRITTEN: the button is disabled with no explanation, and AN HONEST
+   * BLANK STILL READS AS BROKEN. The disabled-state wording is the Architect's and is owed. */
+  var _dossierResolved = false;
+  var _RESOLVING_NOTE_ID = 'dossier-resolving-note';
+  /* ⭐ A SHORT LINE NEAR THE ACTIONS, NOT A BUTTON RELABEL — ruled, and the reason is that a button
+     which renames itself mid-load is a SECOND MOVING PART on a surface that has just proved it has
+     too many. The button keeps its name and its disabled state; this line explains it and leaves.
+     It NAMES THE STATE, THE CONSEQUENCE AND THE REASON, and the reason is PROTECTIVE rather than
+     apologetic — "please wait" would treat a one-second guard as an inconvenience instead of the
+     product doing its job.
+     ⚠️ IT IS INSERTED BY THE SAME CODE THAT DISABLES, AND REMOVED BY THE SAME CODE THAT ENABLES, so
+     the explanation cannot outlive the state it explains, and a page whose JS never runs gets
+     NEITHER the disabled button NOR an orphaned note — it degrades to the shipped behaviour rather
+     than to a lie. A MESSAGE THAT OUTLIVES ITS CONDITION IS NOISE.
+     Architect-authored, verbatim. Double-quoted deliberately: the sentence contains an apostrophe,
+     and this file has been broken three times by a quote inside a string literal. */
+  function _resolvingNote(show) {
+    var existing = document.getElementById(_RESOLVING_NOTE_ID);
+    if (!show) { if (existing && existing.parentNode) existing.parentNode.removeChild(existing); return; }
+    if (existing) return;
+    var host = byId('saveProfile');
+    host = host && host.parentNode;
+    if (!host) return;
+    var p = document.createElement('p');
+    p.id = _RESOLVING_NOTE_ID;
+    p.setAttribute('role', 'status');
+    p.style.cssText = 'flex-basis:100%;margin:10px 0 0;font-family:var(--font-mono);font-size:11px;line-height:1.5;color:rgba(32,36,43,.62)';
+    p.textContent = "Loading your dossier — saving is off for a moment so nothing overwrites what's already there.";
+    host.appendChild(p);
+  }
+  function _setSaveEnabled(on) {
+    ['saveProfile', 'useStudio'].forEach(function (id) {
+      var b = byId(id); if (!b) return;
+      b.disabled = !on;
+      b.setAttribute('aria-disabled', on ? 'false' : 'true');
+    });
+    _resolvingNote(!on);
+  }
+  function _markDossierResolved() {
+    if (_dossierResolved) return;
+    _dossierResolved = true;
+    _setSaveEnabled(true);
+  }
+  window._datumDossierResolved = function () { return _dossierResolved; };
+
   function hybridSave() {
+    /* Refuses rather than writing a blank. Returns false so no caller reports success. */
+    if (!_dossierResolved) return false;
     if (typeof payload !== 'function') return false;
     var p = payload();
     p.schema = 'DatumFIAccountDossierV15';
@@ -3790,14 +3854,18 @@ input:focus,select:focus{
         }
       });
     });
+    /* Disabled from the moment the control exists. Enabling later is safe; enabling by default and
+       hoping the resolver wins is exactly the race this guard removes. */
+    _setSaveEnabled(false);
   }());
 
   pinFromPayload(readLocal());
 
   window.addEventListener('load', function () {
-    if (!window.Clerk) return;
+    /* Clerk absent entirely: nothing will ever resolve, so the guard must not stay closed. */
+    if (!window.Clerk) { _markDossierResolved(); return; }
     Clerk.load().then(function () {
-      if (!Clerk.user) return;
+      if (!Clerk.user) { _markDossierResolved(); return; }
       var meta = Clerk.user.unsafeMetadata || {};
       // MISS-6 sub #2 — dossier prefs READ-cutover (additive, lossless): prefer the D1
       // preferences/dossier row; the Clerk unsafeMetadata.dossier stays a SILENT FALLBACK (D1
@@ -3830,6 +3898,9 @@ input:focus,select:focus{
       // NOTE: `serverDossier` is whatever _resolveDossier returned — the D1 row when present, the Clerk
       // mirror only as its silent fallback. It has not been "the Clerk dossier" since the MISS-6 read-cutover.
       _resolveDossier(function (serverDossier) {
+        /* Resolved means WE HAVE OUR ANSWER — including "there is no row". Both are knowledge; only
+           "not yet asked" is not. */
+        _markDossierResolved();
         var localData = readLocal();
         if (serverDossier) {
           var serverTime = new Date(serverDossier.savedAt || 0).getTime();
@@ -3846,7 +3917,7 @@ input:focus,select:focus{
           }
         }
       });
-    }).catch(function () {});
+    }).catch(function () { _markDossierResolved(); });   // Clerk threw: unblock rather than strand
   });
 
 }());

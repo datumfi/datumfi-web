@@ -66,7 +66,7 @@ const SACRED = {
   'vault.html': 'c7a7a9c101a6743c6a6a2d4c9f8453e1',
   'my-account.html': '5dc7df75ea963abe7cc46568e532a9ee',   // intro names the rooms, not their positions (2026-08-01)
   'Blueprint.html': '8e4c46f956c7ce0ef05f244b339f5ab6',   // cards +29% area; card buttons get real chrome (2026-08-01)
-  'Dossier.html': '222769068d0e17209be89299a4bc27d0',
+  'Dossier.html': '04934b64b0c0a447ec9d36cf03968823',
   'privacy.html': '7f7f867eb7acbfef3f6475dbc5b973b2',
   'terms.html': '6857a4a3767eb02d2baa233b7f43278c',
   'scripts/account-topbar.js': '12fb359c789211f27fdfa0f30e431ccf',   // Dossier tab retired; Sign Out is Home-only (2026-08-01)
