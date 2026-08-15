@@ -43,11 +43,11 @@
    `sec` is the section this phase opens TODAY; null means the phase has no markup yet. */
 function _studioPhaseSpine() {
   return [
-    { id: 'data',         numeral: 'I',   letter: 'D', name: 'DATA',         desc: 'Reveal the Ground.',      sec: 'sec-profile' },
+    { id: 'data',         numeral: 'I',   letter: 'D', name: 'DATA',         desc: 'Set the Ground.',         sec: 'sec-profile' },
     { id: 'architecture', numeral: 'II',  letter: 'A', name: 'ARCHITECTURE', desc: 'Define the Mass.',        sec: 'sec-drafting' },
     { id: 'tension',      numeral: 'III', letter: 'T', name: 'TENSION',      desc: 'Apply the Pressure.',     sec: 'sec-upkeep' },
     { id: 'uncertainty',  numeral: 'IV',  letter: 'U', name: 'UNCERTAINTY',  desc: 'Structure the Noise.',    sec: 'sec-income-layer' },
-    { id: 'measurement',  numeral: 'V',   letter: 'M', name: 'MEASUREMENT',  desc: 'Resolve the Structure.',  sec: 'sec-climate' },
+    { id: 'measurement',  numeral: 'V',   letter: 'M', name: 'MEASUREMENT',  desc: 'Reveal the Range.',       sec: 'sec-climate' },
     { id: 'alignment',    numeral: 'VI',  letter: 'A', name: 'ALIGNMENT',    desc: 'Order the Estate.',       sec: null },
     { id: 'endurance',    numeral: 'VII', letter: 'E', name: 'ENDURANCE',    desc: 'Carry the Horizon.',      sec: 'sec-datum' }
   ];
@@ -58,10 +58,16 @@ function _studioPhaseSpine() {
    SCALES it. The equals sign is earned, and the arrow is a consequence rather than an equality. */
 function _studioMovements() {
   return [
-    { numeral: 'I',   glyph: '',  expr: '(D + A)', label: 'WHAT YOU HAVE',        phases: ['data', 'architecture'] },
-    { numeral: 'II',  glyph: '×', expr: '(T + U)', label: 'WHAT PRESSES ON IT',   phases: ['tension', 'uncertainty'] },
-    { numeral: 'III', glyph: '=', expr: 'M',       label: 'THE RESULT',           phases: ['measurement'] },
-    { numeral: 'IV',  glyph: '→', expr: '(A + E)', label: 'WHAT YOU DO ABOUT IT', phases: ['alignment', 'endurance'] }
+    /* 🖊️ CAPTAIN-AUTHORED 2026-08-15, replacing labels that named the CONTENT of each movement.
+       ⭐ BUILD IT · TEST IT · KNOW IT · LIVE IT is the method in four words a user can repeat, and
+       it names the USER'S ACT rather than the section's subject. The parenthesised expression is
+       untouched: THE GROUPING IS THE ARGUMENT, THE VERBS ARE THE WAYFINDING.
+       ⚠️ All four are caps for consistency — he wrote "Live it" in sentence case, and it is all four
+       or none, never mixed. Flagged for him to overrule. */
+    { numeral: 'I',   glyph: '',  expr: '(D + A)', label: 'BUILD IT', phases: ['data', 'architecture'] },
+    { numeral: 'II',  glyph: '×', expr: '(T + U)', label: 'TEST IT',  phases: ['tension', 'uncertainty'] },
+    { numeral: 'III', glyph: '=', expr: 'M',       label: 'KNOW IT',  phases: ['measurement'] },
+    { numeral: 'IV',  glyph: '→', expr: '(A + E)', label: 'LIVE IT',  phases: ['alignment', 'endurance'] }
   ];
 }
 
@@ -148,13 +154,19 @@ function _phaseAriaLabel(phase, done) {
 
 function _studioPhaseRowHTML(phase) {
   var done = _phaseComplete(phase.id);
-  var unbuilt = (phase.id === 'alignment');
-  var sub = unbuilt ? _studioAlignmentSubline() : phase.desc;
+  /* ⛔ THE "Not built yet" SUB-LINE IS GONE (§12.4 struck, Captain-ruled 2026-08-15) and ALIGNMENT
+     now renders exactly like the other six — same descriptor, same weight, same colour.
+     🔑 A PHASE THAT APOLOGISES FOR ITSELF ON THE FRONT DOOR IS NOT A PHASE, IT IS A FOOTNOTE. The
+     method has seven movements and the landing is the place that promises them; whether one of
+     them is finished is a fact for the room, not for the map.
+     ⚠️ THE ALIGNMENT PANEL BODY IS UNCHANGED and still carries its authored waiting copy — only the
+     landing apology goes. _studioAlignmentSubline() is left in place because that panel uses it. */
+  var sub = phase.desc;
   /* ⭐ NO ● / ○ DOT — Captain-ruled 2026-08-14, removed as visual noise.
      ⚠️ _phaseComplete STILL RUNS and `is-done` still lands on the row, because the ANSWERED /
      NOT YET state is still spoken through the authored aria-label (§12.5) and the predicate is the
      signal the spine will gate on later. 🔑 THE DOT WAS A RENDERING OF THE STATE, NOT THE STATE. */
-  return '<button type="button" class="sl-phase' + (done ? ' is-done' : '') + (unbuilt ? ' is-unbuilt' : '') + '"'
+  return '<button type="button" class="sl-phase' + (done ? ' is-done' : '') + '"'
        + ' data-phase="' + phase.id + '" onclick="_studioPhaseGo(\'' + phase.id + '\')"'
        + ' aria-label="' + _phaseAriaLabel(phase, done) + '">'
        + '<span class="sl-numeral" aria-hidden="true">' + phase.numeral + '</span>'
@@ -257,7 +269,13 @@ function _studioRoomHeaderHTML(phase) {
   return '<button type="button" class="sl-room-back" onclick="_studioExitRoom()">← Dashboard</button>'
        + '<div class="sl-room-label">PHASE ' + phase.numeral + ' — ' + phase.name + '</div>'
        + '<div class="sl-room-desc">' + phase.desc + '</div>'
-       + '<h1>The Studio</h1>'
+       /* ⛔ THE <h1>The Studio</h1> IS GONE (Captain-ruled 2026-08-15). It was a THIRD title
+          competing with the phase label and the descriptor above it, and it read the same on all
+          seven rooms — it carried no information at the point it appeared.
+          ⚠️ MEASURED BEFORE REMOVING, because the Architect flagged the risk that it might BE the
+          way out: it is not. The exit is the .sl-room-back button emitted FIRST above, named
+          "← Dashboard" since 2026-08-14. The <h1> was a bare heading with no handler. No room
+          loses its way back. */
        + '<div class="sl-room-intro">' + _studioRoomIntro(phase.id) + '</div>';
 }
 

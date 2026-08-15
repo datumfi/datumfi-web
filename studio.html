@@ -536,6 +536,19 @@
   .studio-layout.view-s2.s2-estate-locked #canvas-recenter.is-off-centre { display: none; }
   .studio-layout.mode-shape #shape-mode-toggle { color: var(--gold); border-color: rgba(201,168,76,0.5); }
   .studio-layout.mode-shape #shape-mode-toggle:hover { border-color: var(--gold); background: rgba(201,168,76,0.08); }
+  /* §28 — WITH ZERO ROOMS THE READOUT AND THE LENSES ARE DEAD CONTROLS. Same argument as the
+     recenter lock above, one surface out: a $0 square-footage box states a measurement nobody made,
+     and four lens buttons that re-colour an empty canvas are a tool that does not work. An empty
+     canvas with nothing on it is an invitation; an empty canvas ringed by dead controls is a
+     broken tool.
+     ⚠️ WRITTEN AS A HIDE-WHEN-EMPTY RULE, NEVER A SHOW-WHEN-FILLED ONE, AND THAT DIRECTION IS
+     LOAD-BEARING. The markup ships these panels VISIBLE; only refreshEstateGate() adds
+     .estate-empty. The two spellings fail in OPPOSITE directions when the signal goes missing:
+     this one falls back to the box being SHOWN (last week's cosmetic defect), while a
+     default-hidden rule would fall back to a POPULATED estate rendering with no square footage at
+     all. Never invert it. Held by _gate_empty_estate_no_dead_controls E4. */
+  .studio-layout.estate-empty .hud-overview,
+  .studio-layout.estate-empty .lens-controls { display: none; }
 
   /* shape panel: sibling to blueprint-container inside canvas-wrapper */
   #shape-panel {
@@ -888,8 +901,12 @@
                    text-transform: uppercase; color: var(--gold); margin-bottom: 12px; }
   .sl-room-desc { font-family: var(--font-serif); font-size: 22px; font-style: italic;
                   color: var(--gold); margin-bottom: 12px; }
+  /* ⭐ WHITE, not 66% — Captain-ruled 2026-08-15. With the decorative <h1> removed the room opens on
+     label → descriptor → THIS, so the intro is now the first thing that speaks in sentences rather
+     than the third line of a stack. A muted paragraph reads as a caption on the copy above it; this
+     one is the room introducing itself. */
   .sl-room-intro { font-family: var(--font-serif); font-size: 14px; font-style: italic;
-                   line-height: 1.6; color: rgba(255,255,255,0.66); margin: 10px 0 20px; max-width: 46ch; }
+                   line-height: 1.6; color: #fff; margin: 10px 0 20px; max-width: 46ch; }
   /* Sits ABOVE the phase copy (Captain-ruled) — margin moved to the BOTTOM edge accordingly, so it
      separates itself from the label it now precedes rather than from the title above it. */
   .sl-room-back { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em;
@@ -1970,7 +1987,12 @@
            vertical sections below still work exactly as before, and no page is created. -->
       <div class="s1-header">
         <h1>The Studio</h1>
-        <div class="sl-line">Everything you have, everything that presses on it, and the range that survives both.</div>
+        <!-- 🖊️ CAPTAIN-AUTHORED 2026-08-15, replacing the Architect's line (§20 struck in place).
+             ⭐ THE OLD LINE DESCRIBED THE FORMULA; THIS ONE MAKES THE ARGUMENT. It is the product's
+             whole thesis in nine words, and it earns the seven phases printed underneath it — a
+             structure is something you build, which is why the movement labels below are verbs.
+             The formula line above it is unchanged. -->
+        <div class="sl-line">Your retirement is not a number. It&rsquo;s a structure.</div>
         <div id="sl-movements-host"></div>
         <div id="sl-alignment-panel" style="display:none;"></div>
       </div>
@@ -14036,6 +14058,12 @@
       }, 100);
     }
     function _updateSVGsCoreImpl() {
+      /* §28 — re-assert the empty/filled class on EVERY recompute. The add/remove sites already
+         call refreshEstateGate(), but a blueprint arriving from D1 populates state.accounts without
+         passing through them, and a class that is only written on one path is a class that goes
+         STALE on the others. This is the recompute every state change already funnels through, so
+         hanging it here is the difference between a rule that holds and a rule that usually holds. */
+      if (window.refreshEstateGate) window.refreshEstateGate();
       const isCo = coToggle.checked;
       let grandTotal = 0;
       let totalContrib = 0;
@@ -15973,9 +16001,20 @@
        moment a room exists the lock clears and free toggling resumes (§22). */
     function refreshEstateGate() {
       var l = document.getElementById('studio-layout'); if (!l) return;
-      l.classList.toggle('s2-estate-locked', l.classList.contains('view-s2') && !_hasEstate());
+      var empty = !_hasEstate();
+      l.classList.toggle('s2-estate-locked', l.classList.contains('view-s2') && empty);
+      /* §28 — the square-footage readout + the four lens buttons, hidden until a room exists.
+         ⛔ DELIBERATELY NOT GATED ON view-s2, unlike the lock above. The dead-controls problem is a
+         property of an EMPTY ESTATE, not of a view: the $0 box reads the same lie on the landing as
+         it does in S2. Reuses _hasEstate() — the same predicate the lock has always used, not a
+         second notion of "empty" that could drift away from it. */
+      l.classList.toggle('estate-empty', empty);
     }
     window.refreshEstateGate = refreshEstateGate;
+    /* Land the class BEFORE first paint. Without this the cold landing shows the $0 box for the
+       ~150ms until the first debounced recompute, which is the flicker this arc just spent a
+       commit removing from the drafting panel. */
+    refreshEstateGate();
 
     /* ── Step 5 — estimate→itemized transition state (window-scoped so the cross-block account
        funnels + onShapeStateChange can reach it) ────────────────────────────────────────────
@@ -19419,8 +19458,21 @@
       window.DatumBlueprint.bind({ blueprint: bp });
       window._studioBlueprint = bp;
       if (typeof updateShapePanel === 'function') updateShapePanel();
-      // S1 LANDING — default to Shape mode (no estate exists yet at S1). ONE-LINE FLIP: false = Estate default.
-      var S1_DEFAULT_SHAPE = true;
+      /* 🖊️ CAPTAIN-RULED 2026-08-15 — THE STUDIO LANDS ON THE ESTATE, NOT THE SHAPE.
+       * The old default reasoned "no estate exists yet at S1, so show the Shape". That is backwards:
+       * THE SHAPE IS AN OUTPUT AND THE STUDIO IS WHERE YOU BUILD THE INPUT. Opening on a derived
+       * result before any structure exists is the $100,000 pre-fill again — THE PRODUCT ANSWERING
+       * BEFORE IT WAS ASKED — and it is the same defect family as the fabricated dossier defaults
+       * and the hidden 22% tax rate, both closed today.
+       *   🔑 THE SKETCH SHOWS YOU A SHAPE; THE STUDIO ASKS YOU TO BUILD ONE. THE DEFAULT MUST BE THE
+       *      VERB, NOT THE RESULT.
+       * ⚠️ A DEFAULT, NOT A REMOVAL: the Shape Mode button and the flip are untouched, and one click
+       * still gets there. Nothing is taken away — only the thing shown first has changed.
+       * MEASURED BEFORE AND AFTER, because reading the code was not enough: a grep found only ONE
+       * `classList.add('mode-shape')` (inside the user toggle) and I nearly concluded the Studio
+       * already defaulted to Estate. A cold load reported `mode-split mode-shape`, rooms 0, with the
+       * toggle reading "Estate Mode" — i.e. offering the way out of where it had put you. */
+      var S1_DEFAULT_SHAPE = false;
       if (S1_DEFAULT_SHAPE && !document.getElementById('studio-layout').classList.contains('mode-shape') && window.toggleShapeMode) window.toggleShapeMode();
       // The saved doc is now painted. If load() parked an out-of-window draft, ask — never
       // auto-hydrate it, never drop it.
