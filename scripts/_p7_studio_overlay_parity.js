@@ -7,8 +7,12 @@
  *   (a) SIGNED-OUT — the overlay behaves signed-out: both "Start from Sketch" and
  *       "Start from Blueprint" are actionable but route to Clerk sign-in FIRST
  *       (vault?returnTo=<archive>), never acting as if a session exists (Issue 1a).
- *   (b) SIGN-OUT WIPE — DatumPurge.signOutWipe() clears EVERY carried key (full
- *       sweep derived from DatumPurge._localCarriedKeys(), not a spot-check) from
+ *   (b) SIGN-OUT WIPE — ⚠️ SCOPE CORRECTED 2026-08-15, read the leg comments before trusting this
+ *       line. This proves the MECHANISM only: DatumPurge.signOutWipe() runs, the real button is
+ *       wired to it, and it clears the keys ~~*"EVERY carried key (full sweep derived from
+ *       DatumPurge._localCarriedKeys(), not a spot-check)"*~~ **IT NAMES** — its fixture is seeded
+ *       from that same list, so it cannot see a key the list omits and it never could. COMPLETENESS
+ *       LIVES IN `_gate_signed_out_privacy.js` L4. from
  *       BOTH local + session storage, while the Clerk *_z cloud blob is UNTOUCHED
  *       (sign back in -> plans return). Also driven via the real account-topbar
  *       sign-out button (Issue 1b). And Start-from-Scratch hard-resets Studio to
@@ -241,8 +245,29 @@ async function clickAndGetUrl(page, btnId) {
     var meta = {}; try { meta = JSON.parse(sessionStorage.getItem('__mockclerk_meta') || '{}'); } catch (e) {}
     return { total: keys.length, survivors: survivors, bpZ: meta.blueprint_z, skZ: meta.sketchbook_z };
   });
-  check('(b) signOutWipe: FULL sweep, no carried key survives', wipe.survivors.length === 0, wipe.survivors.join(','));
-  check('(b) signOutWipe: swept the whole source list', wipe.total >= 14, wipe.total);
+  /* ⛔⛔ THIS LEG ONCE CLAIMED COMPLETENESS AND COULD NOT POSSIBLY MEASURE IT. Read the evaluate()
+     above: the fixture is seeded FROM `DatumPurge._localCarriedKeys()` — the wipe's own source list
+     — and then asserted against that same list. It asked "does the wipe sweep what the wipe
+     sweeps?", which has exactly one answer. Its old name, "FULL sweep, no carried key survives",
+     was read as coverage for five weeks while `datumfi.accountDossier.v15` — the key carrying a
+     real user's date of birth, gross income, home location, email, phone, and his spouse's name and
+     income — leaked past sign-out on every page load, INVISIBLE TO THIS GATE BY CONSTRUCTION.
+     The Captain found it by accident in a browser.
+       🔑 A GATE WHOSE FIXTURE IS SEEDED FROM THE THING IT TESTS IS NOT A WEAK GATE — IT IS A GREEN
+          LIGHT WIRED TO ITSELF. And this file's header called that property a virtue ("full sweep
+          derived from the source list, not a spot-check"). A HARD-CODED SPOT-CHECK WOULD AT LEAST
+          HAVE BEEN CAPABLE OF GOING RED; the "better" design is the one that cannot see.
+     WHAT IS KEPT AND WHY. The MECHANISM half was always real and is worth keeping: the wipe runs,
+     it does clear the keys it names, and it does not touch the cloud blob. So the leg is renamed to
+     claim only that, and the COMPLETENESS claim moves to the one instrument that can carry it —
+     `_gate_signed_out_privacy.js` L4, whose population is a census of what the PRODUCT wrote, never
+     a list either side maintains.
+     ⛔ NEVER re-widen this name. If you want completeness, add a leg there, not a word here.
+     ALSO DELETED: `check('swept the whole source list', wipe.total >= 14)` — a hard-coded count over
+     a hand-maintained list wearing a number, inside the instrument meant to enforce that law. It
+     could only ever detect the list SHRINKING, which is not the failure that happened. */
+  check('(b) signOutWipe: executes and clears the keys IT NAMES (completeness = _gate_signed_out_privacy L4)',
+    wipe.survivors.length === 0, wipe.survivors.join(','));
   check('(b) signOutWipe: Clerk blueprint_z UNTOUCHED (cloud survives)', wipe.bpZ === 'BPZ');
   check('(b) signOutWipe: Clerk sketchbook_z UNTOUCHED (cloud survives)', wipe.skZ === 'SKZ');
 
@@ -294,7 +319,13 @@ async function clickAndGetUrl(page, btnId) {
     return { survivors: survivors, bpZ: meta.blueprint_z, skZ: meta.sketchbook_z };
   });
   check('(b) sign-out BUTTON present in topbar on Home', btnPresent);
-  check('(b) sign-out BUTTON ran the wipe (no carried key survives)', btnWipe.survivors.length === 0, btnWipe.survivors.join(','));
+  /* Same circularity, same correction as the b-core leg above: this seeds from _localCarriedKeys()
+     too. What it genuinely proves — and the reason it stays — is that the real BUTTON is wired to
+     the wipe at all. That is a mechanism claim and this fixture can carry it. It is NOT a proof
+     that nothing personal survives sign-out; `_gate_signed_out_privacy.js` L4a/L4b own that, and
+     they drive this same button on a census the product wrote. */
+  check('(b) sign-out BUTTON is wired to the wipe (keys IT NAMES are cleared; completeness = _gate_signed_out_privacy L4)',
+    btnWipe.survivors.length === 0, btnWipe.survivors.join(','));
   check('(b) sign-out BUTTON left cloud blob intact', btnWipe.bpZ === 'BPZ' && btnWipe.skZ === 'SKZ');
   await ctxHome.close();
 
