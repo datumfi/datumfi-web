@@ -187,8 +187,13 @@ function _studioLandingHTML() {
        mv.glyph is left in _studioMovements() rather than deleted: it is the movement's own identity
        in the data, and the day a Datum Dashboard renders the formula graphically it is what that
        will read. NOTHING IS BEING HIDDEN — the labels carry the grouping in words. */
+    /* ⭐⭐ AND NO EXPRESSION EITHER — Captain-ruled 2026-08-15, the SAME ruling one step further.
+       `(D + A)` beside BUILD IT printed the formula a second time, fragment by fragment, directly
+       under the line that already prints it whole. THE FORMULA IS STATED ONCE, AT THE TOP.
+       mv.expr stays in the data for exactly the reason mv.glyph did — the movement's identity lives
+       in the table, not in this markup, and the labels carry the grouping in words. */
     out += '<div class="sl-movement">'
-         + '<div class="sl-mv-head"><span class="sl-mv-expr">' + mv.expr + '</span>'
+         + '<div class="sl-mv-head">'
          + '<span class="sl-mv-label">' + mv.label + '</span></div>'
          + mv.phases.map(function (pid) { return _studioPhaseRowHTML(byId[pid]); }).join('')
          + '</div>';

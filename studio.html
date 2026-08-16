@@ -409,10 +409,18 @@
      CTA is deliberately NOT gated here — it stays reachable on both sides, per Captain ruling.) */
   .studio-layout.view-s2:not(.mode-shape) .s2-deepening-note { display: none; }
 
-  /* §20 account-gate (Step 2) — hide the Estate-mode toggle while in S2 with zero rooms
+  /* §20 account-gate (Step 2) — ~~hide the Estate-mode toggle while in S2 with zero rooms
      (refreshEstateGate adds .s2-estate-locked) so the user can't toggle to an empty-rooms
-     dead-end. Cleared the moment the first room is drafted, restoring free toggling per §22. */
-  .studio-layout.view-s2.s2-estate-locked #shape-mode-toggle { display: none; }
+     dead-end.~~ ⛔ STRUCK 2026-08-15, AND IT HAD TO GO IN THE SAME COMMIT AS §28's ESTATE-SIDE
+     DEFAULT. This rule existed to keep the user AWAY from the empty Estate. §28 makes the empty
+     Estate the view a room OPENS on — so the identical rule, unchanged, flipped from a guard into
+     a cage: MEASURED with the default changed and the rule still in place, an empty ARCHITECTURE
+     room rendered with shapeToggleVisible:false and NO route to the Shape side at all.
+     🔑 A GUARD IS DEFINED BY WHAT IT STANDS BETWEEN. Move what is on either side of it and the
+     same line becomes the opposite thing — it does not need editing to become wrong.
+     ⚠️ .s2-estate-locked ITSELF STAYS. It still governs #canvas-recenter (there is genuinely
+     nothing to recentre on an empty canvas) and refreshEstateGate still writes it. Only the toggle
+     suppression goes. */
 
   /* ── Step 5 — verdict-soften (guardrail A: SUPPRESS the red, don't dim) ──────────────────
      While drafting a partial estate (.estate-drafting on #studio-layout), kill the module-applied
@@ -977,7 +985,20 @@
      ANSWERED / NOT YET state still reaches assistive technology through the row's authored
      aria-label (§12.5). 🔑 REMOVING A VISUAL IS NOT REMOVING THE INFORMATION — deleting the
      predicate would have thrown away the gating signal the spine needs later, to save two glyphs. */
-  .sl-phase { display: grid; grid-template-columns: 24px 1fr; align-items: baseline;
+  /* §28 — THE DESCRIPTOR SITS BESIDE THE PHASE NAME, NOT UNDER IT (Captain-ruled 2026-08-15).
+     Three columns now: numeral, name, descriptor. align-items:baseline was already here and is what
+     makes the mono name and the serif italic descriptor sit on one line rather than merely near
+     each other.
+     ⛔ THE NAME COLUMN IS FIXED, AND IT HAS TO BE. Every .sl-phase is its OWN grid — one button per
+     phase — so `auto` or `max-content` would size the name column PER ROW and the seven descriptors
+     would start at seven different x positions. A shared fixed width is the only thing that lines
+     them up.
+     ⭐ DERIVED, NOT GUESSED: 12ch is ARCHITECTURE, the longest of the seven names, and 1.2em is that
+     name's own letter-spacing (12 chars x 0.1em). Measured intrinsic width 100.8px; calc gives
+     100.8px. It is written as the derivation rather than the number so it survives a font-size
+     change — and so the next reader can see WHICH name set it. Longest descriptor measured 112px
+     against 367px of available column, so nothing wraps. */
+  .sl-phase { display: grid; grid-template-columns: 24px calc(12ch + 1.2em) 1fr; align-items: baseline;
               column-gap: 8px; width: 100%; text-align: left; background: none; border: none;
               padding: 5px 6px 5px 0; margin: 0; cursor: pointer; border-radius: 3px;
               transition: background 0.15s ease; }
@@ -986,8 +1007,8 @@
   .sl-numeral { font-family: var(--font-mono); font-size: 9px; color: var(--muted); letter-spacing: 0.06em; }
   .sl-name { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.1em;
              color: rgba(255,255,255,0.88); grid-column: 2; }
-  .sl-desc { grid-column: 2; font-family: var(--font-serif); font-style: italic; font-size: 12px;
-             color: rgba(255,255,255,0.42); margin-top: 2px; line-height: 1.45; }
+  .sl-desc { grid-column: 3; font-family: var(--font-serif); font-style: italic; font-size: 12px;
+             color: rgba(255,255,255,0.42); margin-top: 0; line-height: 1.45; }
   .sl-phase.is-unbuilt .sl-name { color: rgba(255,255,255,0.5); }
   .sl-phase.is-unbuilt .sl-desc { max-width: 40ch; }
   .sl-align-body { font-family: var(--font-serif); font-size: 13px; font-style: italic; line-height: 1.6;
@@ -16181,10 +16202,22 @@
       }
       refreshEstateGate();
       refreshDraftingState();
-      // §22: at zero accounts the carried Sketch shape IS the landing view — force Shape mode
-      // (Estate rooms would be the §20 empty dead-end). With rooms already drafted, leave the
-      // canvas untouched so a returning user keeps their view. Reuses toggleShapeMode (DRY).
-      if (!_hasEstate() && !l.classList.contains('mode-shape') && window.toggleShapeMode) window.toggleShapeMode();
+      /* §28 — A ROOM OPENS ON THE ESTATE SIDE. FULL STOP. (Captain-ruled 2026-08-15.)
+         ⛔ THE FORCE-TO-SHAPE IS GONE. §22 used to read: "at zero accounts the carried Sketch shape
+         IS the landing view — force Shape mode (Estate rooms would be the §20 empty dead-end)."
+         THAT PREMISE NO LONGER HOLDS. The empty Estate was a dead end because it rendered a $0
+         square-footage readout over four live lens buttons on a canvas with nothing on it; §28 now
+         hides both, so what is left is the Plot alone — an invitation, which is exactly what the
+         landing shows.
+         ⭐⭐ AND THIS ONE LINE WAS ALSO THE WHOLE OF THE "five read-only fields" SIGHTING. The
+         editable Portfolio/Contributions pair and the CCA/RA/PTA age trio are hidden by
+         `.view-s2 .s2-hide-boxes` and DELIBERATELY RESTORED by `.view-s2.mode-shape .s2-hide-boxes`
+         (line ~387) — they belong to the Shape side, where the slider<->shape writeback is live.
+         They were on screen ONLY because the room forced itself into mode-shape. TWO REPORTED
+         DEFECTS, ONE CAUSE.
+         🔑 DELETING THAT MARKUP WOULD HAVE BEEN A REAL REGRESSION: the same pair is the critical
+         estimate entry on S1, and it is the same DOM. The fix for "I can see it where I should not"
+         was never "remove it" — it was "stop standing on the wrong side of the room". */
     };
     window.exitS2View = function () {
       var l = document.getElementById('studio-layout'); if (!l) return;
