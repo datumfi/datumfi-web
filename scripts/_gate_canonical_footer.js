@@ -119,7 +119,7 @@ async function readPixel(page, png) {
 }
 
 const trackedHtml = () => execFileSync('git', ['ls-files', '-z', '--', '*.html'], { cwd: ROOT, encoding: 'utf8' })
-  .split(' ').filter((f) => f.trim() && fs.existsSync(path.join(ROOT, f)));
+  .split('\0').filter((f) => f.trim() && fs.existsSync(path.join(ROOT, f)));
 
 const footerPages = trackedHtml().filter((f) => fs.readFileSync(path.join(ROOT, f), 'utf8').includes(HOST_ID));
 
