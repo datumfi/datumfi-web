@@ -39,18 +39,28 @@
  *   exports      = every :root that sits inside a <script>.
  *
  * LEGS
- *   L1  exactly ONE file under styles/ declares the shared tokens          [BITE twosource]
+ *   L1  no shared token has TWO sources under styles/                      [BITE twosource]
  *   L2  no live page re-declares a shared token in its own page CSS        [BITE reshadow]
- *   L3  poison the canonical token -> EVERY live page follows              [BITE reshadow]
+ *   L3  poison the ROOT of the token chain -> EVERY live page follows      [BITE reshadow]
  *   L4  every export surface is SELF-SUFFICIENT: each var(--x) it uses is
  *       declared by its own :root                                          [BITE strip]
+ *   L5  no CRAFT surface reads a palette token (page field excepted,
+ *       and that exception is DERIVED, not listed)                         [BITE craftpaint]
+ *   L3a/L4a/L5a  blindness assertions — the rig must prove it served pages, found an
+ *       export to judge, and found craft rules to judge. AN INSTRUMENT THAT MEASURES
+ *       NOTHING AGREES WITH ITSELF PERFECTLY.
  *
- * CONTROLS
- *   --twosource  a second styles file declares a shared token -> L1 RED
- *   --reshadow   one live page regains a local :root shadow    -> L2 + L3 RED
- *   --strip      one declaration removed from an export :root  -> L4 RED (the 7d69d83 defect)
+ * CONTROLS — each names the leg it must move AND the legs it must NOT
+ *   --twosource  a second styles file declares a shared token -> L1 RED alone
+ *   --reshadow   one live page regains a local :root shadow    -> L2 + L3 RED, L4 green
+ *   --strip      one declaration removed from an export :root  -> L4 RED alone (the 7d69d83 defect)
+ *   --craftpaint a craft rule starts reading the palette       -> L5 RED alone
  *
- * Usage: node scripts/_gate_token_authority.js [--twosource|--reshadow|--strip]
+ * ⭐ L4 AND L5 SHARE A SHAPE, AND IT IS THE SHAPE THIS REPO KEEPS PAYING FOR: TWO EXPECTATIONS,
+ * ONE INPUT. Poison the palette and every live page MUST move; the export and the craft register
+ * MUST NOT. A gate that only checked the first would bless the very defects these legs exist for.
+ *
+ * Usage: node scripts/_gate_token_authority.js [--twosource|--reshadow|--strip|--craftpaint]
  */
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const { execSync } = require('child_process');
@@ -61,7 +71,8 @@ process.chdir(ROOT);
 const TWOSOURCE = process.argv.includes('--twosource');
 const RESHADOW = process.argv.includes('--reshadow');
 const STRIP = process.argv.includes('--strip');
-const MUT = TWOSOURCE || RESHADOW || STRIP;
+const CRAFTPAINT = process.argv.includes('--craftpaint');
+const MUT = TWOSOURCE || RESHADOW || STRIP || CRAFTPAINT;
 
 let pass = 0, fail = 0; const lines = [];
 const ok = (c, m) => { if (c) pass++; else fail++; lines.push((c ? 'PASS ' : 'FAIL ') + m); };
@@ -242,6 +253,74 @@ leg('L4a', exportSurfaces > 0, `at least one export surface exists to judge — 
 leg('L4', exportFindings.length === 0,
   `every export surface is SELF-SUFFICIENT — got ${exportFindings.length}${exportFindings.length ? ': ' + exportFindings.slice(0, 4).join(' | ') : ''} [BITE strip]`);
 
+/* ── L5 · THE CRAFT REGISTER IS UNREACHABLE FROM THE PALETTE ──────────────────────────────────
+ * The site has TWO vocabularies on purpose. The INSTRUMENT register (paint/role/legacy) is for
+ * what must AGREE; the CRAFT register — the cream paper, the brass rail, the punch rings, the desk
+ * shadow, the fibre textures — is for what must BE ITSELF.
+ *   A TOKEN IS FOR WHAT MUST AGREE. A LITERAL IS FOR WHAT MUST BE ITSELF. CRAFT IS NOT DRIFT.
+ *
+ * MEASURED 2026-08-16 across the three craft hosts: 504 literal colour stops in craft rules and 31
+ * var() reads, of which only five touch a shared token — four of those are fonts. The rail is a
+ * NINE-STOP LITERAL gradient (#020304 -> #5c4213 -> #b98e34 -> #ffe9a3 -> #fffdda -> #a87a22 ->
+ * #030405) and the paper runs on its own names (--vellum-warm, --v11-paper-*, --paper-tan).
+ *
+ * ⛔ THE DANGER RUNS THE OPPOSITE WAY TO THE OBVIOUS ONE: tokenising the brass would DESTROY it.
+ * The shine is the non-linear jump from #5c4213 to #ffe9a3; the same gradient rebuilt from one
+ * paint at nine alphas reads as a flat tint. Without this leg, a future wirer "tidying those
+ * literals into tokens" would pass every other gate we own while deleting the most distinctive
+ * thing on the site — in good faith.
+ *
+ * ⭐ WHY STATIC AND NOT A SCREENSHOT. The first version of this proof tried to photograph the
+ * rails and ABORTED: they only render with saved content, so it captured nothing. THE CLAIM IS
+ * REACHABILITY, NOT ONE RENDERING — and reachability is provable statically and COMPLETELY, for
+ * every state, which a screenshot never is. MATCH THE INSTRUMENT TO THE CLAIM, NOT TO THE HABIT.
+ *
+ * ⚠️ THE ONE ALLOWANCE IS DERIVED, NOT LISTED. A craft surface SITS ON the page field, so reading
+ * the field is correct — studio.html's two --bg-navy reads are the DESK, and its own rule says so:
+ * "SHEET = the DESK: navy field that holds the notebook". That is why the lit navy can land in the
+ * skin arc and leave the cream paper alone. The allowance is computed by resolving each token to
+ * its root paint and permitting exactly those that resolve to the FIELD paint — so it follows a
+ * rename or a re-point by itself. AN EXEMPTION IS A HAND-MAINTAINED LIST WEARING A NUMBER. */
+const CRAFT_SEL = /paper|rail|punch|desk|sheet|folder|binder|spine|fibre|fiber|texture|shadow|grain/i;
+const rootPaintOf = (t) => {
+  const seen = new Set();
+  let cur = t;
+  for (;;) {
+    if (seen.has(cur)) return cur;
+    seen.add(cur);
+    const v = valueOf(cur);
+    const m = v && v.match(/^var\(\s*(--[A-Za-z0-9_-]+)/);
+    if (!m || !valueOf(m[1])) return cur;
+    cur = m[1];
+  }
+};
+const FIELD_PAINT = rootPaintOf('--bg');
+const craftFindings = [];
+let craftRules = 0;
+for (const f of [...PAGES].sort()) {
+  const s = fs.readFileSync(f, 'utf8');
+  const styles = (s.match(/<style[\s\S]*?<\/style>/gi) || []).join('\n');
+  for (const r of styles.match(/[^{}]+\{[^{}]*\}/g) || []) {
+    const i = r.indexOf('{');
+    const sel = r.slice(0, i);
+    if (!CRAFT_SEL.test(sel)) continue;
+    craftRules++;
+    /* --craftpaint: a craft rule starts reading the palette — the "tidy the literals into
+       tokens" regression, injected into the exact text the detector scans. */
+    const injected = (CRAFTPAINT && craftRules === 1) ? ' color: var(--gold);' : '';
+    for (const m of (r.slice(i + 1, -1) + injected).matchAll(/var\(\s*(--[A-Za-z0-9_-]+)/g)) {
+      const t = m[1];
+      if (!SHARED.has(t)) continue;              // a craft-private token — not our business
+      if (/font/.test(t)) continue;              // type is shared on purpose; it is not pigment
+      if (rootPaintOf(t) === FIELD_PAINT) continue;   // the desk: a craft surface may sit on the field
+      craftFindings.push(`${f}: ${sel.trim().replace(/\s+/g, ' ').slice(0, 44)} -> ${t}`);
+    }
+  }
+}
+leg('L5a', craftRules > 0, `craft rules exist to judge — found ${craftRules}`);
+leg('L5', craftFindings.length === 0,
+  `no craft surface reads a palette token (field excepted, derived) — got ${craftFindings.length}${craftFindings.length ? ': ' + craftFindings.slice(0, 3).join(' | ') : ''} [BITE craftpaint]`);
+
 // ── L3 · POISON THE CANONICAL TOKEN, COUNT WHO FOLLOWS ───────────────────────────────────────
 const POISON = '#FF00FF';   // POISON_TOKEN is declared above, where CANON is derived from it
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
@@ -318,6 +397,7 @@ const server = http.createServer((req, res) => {
   const mode = TWOSOURCE ? 'RED-FIRST (--twosource: a second token source — L1 MUST be RED)'
              : RESHADOW ? 'RED-FIRST (--reshadow: a live page regains a shadow — L2+L3 MUST be RED)'
              : STRIP ? 'RED-FIRST (--strip: an export loses a declaration — L4 MUST be RED)'
+             : CRAFTPAINT ? 'RED-FIRST (--craftpaint: a craft rule reads the palette — L5 MUST be RED)'
              : 'NORMAL';
   console.log(lines.join('\n'));
   console.log('-------------------------------------');
@@ -335,6 +415,10 @@ const server = http.createServer((req, res) => {
   }
   if (STRIP && !(legs.L4 === false && legs.L2 === true && legs.L3 === true)) {
     console.log(`!! --strip must red L4 ALONE — the export is a surface the page legs never visit — got L2=${legs.L2} L3=${legs.L3} L4=${legs.L4}`);
+    process.exit(2);
+  }
+  if (CRAFTPAINT && !(legs.L5 === false && legs.L2 === true && legs.L3 === true && legs.L4 === true)) {
+    console.log(`!! --craftpaint must red L5 ALONE — the craft register is a surface the palette legs never judge — got L2=${legs.L2} L3=${legs.L3} L4=${legs.L4} L5=${legs.L5}`);
     process.exit(2);
   }
   if (!MUT && fail > 0) process.exit(1);
