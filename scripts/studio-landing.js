@@ -43,8 +43,19 @@
    `sec` is the section this phase opens TODAY; null means the phase has no markup yet. */
 function _studioPhaseSpine() {
   return [
-    { id: 'data',         numeral: 'I',   letter: 'D', name: 'DATA',         desc: 'Set the Ground.',         sec: 'sec-profile' },
-    { id: 'architecture', numeral: 'II',  letter: 'A', name: 'ARCHITECTURE', desc: 'Define the Mass.',        sec: 'sec-drafting' },
+    /* ⭐ `canvas` — WHICH SIDE THE ROOM OPENS ON, Captain-ruled 2026-08-15, and the rule is about
+       WHAT THE ROOM'S CONTROLS DRIVE, not about the room's position in the spine. DATA's inputs are
+       the timeline and spend sliders, which move the SHAPE, so the canvas should be showing the
+       thing the user's hands are on. ARCHITECTURE's inputs are rooms, which are capital-authority
+       for the ESTATE. A control whose effect is drawn on the other canvas is a control acting at a
+       distance.
+       ⚠️ ONLY THESE TWO ARE RULED. The remaining five are NOT guesses dressed as decisions — they
+       carry no `canvas` key and fall through to the estate default set in _studioEnterRoom, which is
+       the behaviour shipped in 8024786. Flagged for a ruling rather than inferred, because the
+       inference (upkeep/income/climate/datum all drive the Shape) is plausible and unverified, and
+       a plausible unverified default is how this file got its last three defects. */
+    { id: 'data',         numeral: 'I',   letter: 'D', name: 'DATA',         desc: 'Set the Ground.',         sec: 'sec-profile',  canvas: 'shape' },
+    { id: 'architecture', numeral: 'II',  letter: 'A', name: 'ARCHITECTURE', desc: 'Define the Mass.',        sec: 'sec-drafting', canvas: 'estate' },
     { id: 'tension',      numeral: 'III', letter: 'T', name: 'TENSION',      desc: 'Apply the Pressure.',     sec: 'sec-upkeep' },
     { id: 'uncertainty',  numeral: 'IV',  letter: 'U', name: 'UNCERTAINTY',  desc: 'Structure the Noise.',    sec: 'sec-income-layer' },
     { id: 'measurement',  numeral: 'V',   letter: 'M', name: 'MEASUREMENT',  desc: 'Reveal the Range.',       sec: 'sec-climate' },
@@ -224,7 +235,23 @@ function _studioCanvasIsEmpty() {
   return true;
 }
 
+/* ⛔⛔ RETIRED 2026-08-15 — Captain-ruled, on sight, during a smoke: "That is not supposed to be
+   there at all, it's been retired, or I thought it was."
+   IT WAS NEVER RETIRED, IT WAS ONLY UNREACHABLE — and those are different things. The note above
+   says it "effectively never shows", and that was true of a settled canvas. It is NOT true of a
+   canvas mid-transition: _studioCanvasIsEmpty() asks whether the shape panel has an offsetParent and
+   whether a canvas svg has height, and BOTH read false while the canvas is between modes. Walking
+   Data -> Sheet -> Dashboard -> Split lands on the landing in exactly that window, and the ghost
+   painted "Nothing here yet" over a Studio that had things in it.
+   🔑 "EMPTY" AND "NOT LAID OUT YET" ARE THE SAME ANSWER TO getBoundingClientRect AND OPPOSITE
+      ANSWERS TO THE USER. That conflation is the whole defect, and it is the fourth member of the
+      ready-vs-resolved family this project has met.
+   ⭐ ONE LINE TO BRING IT BACK, deliberately: the mechanism is proven and the Architect may still
+      rule on where a zero-state plan should live. Flip this to true — do not rebuild it. */
+var STUDIO_GHOST_PLAN_ENABLED = false;
+
 function _studioGhostPlanHTML() {
+  if (!STUDIO_GHOST_PLAN_ENABLED) return '';
   if (!_studioCanvasIsEmpty()) return '';
   var answered = _studioPhaseSpine().filter(function (p) { return _phaseComplete(p.id); }).length;
   var note = (answered === 0)
@@ -340,11 +367,31 @@ function _studioEnterRoom(id) {
     head.insertAdjacentHTML('beforeend',
       '<div id="sl-room-empty" class="sl-room-empty">' + _studioAlignmentBody() + '</div>');
   }
+  /* §28.2 — the canvas follows the room's OWN controls (see the `canvas` note on the spine).
+     ⛔ SET AFTER enterS2View/exitS2View, NEVER BEFORE. Those functions touch the mode themselves,
+     so a side chosen first is a side immediately overwritten — the same ordering trap the data-room
+     re-set above already documents. Order is load-bearing twice in this function. */
+  _setCanvasSide(phase.canvas || 'estate');
+
   /* ⛔ The panel is its own scroll container and keeps its offset across a room change, so entering
      a room could land you mid-panel with the header off screen. scrollTop, never scrollIntoView —
      scrollIntoView scrolls EVERY ancestor including the document, which is exactly the trap. */
   var panel = document.querySelector('.drafting-panel');
   if (panel) panel.scrollTop = 0;
+}
+
+/* Put the canvas on a NAMED side. toggleShapeMode only ever flips, so every caller that wanted a
+   specific side had to read the class and decide for itself — and the copy of that logic which used
+   to live in enterS2View is exactly the line that forced every room onto the Shape side.
+   🔑 A TOGGLE IS NOT A SETTER. Asking for "shape" and getting "the other one" depends entirely on
+      where you started, which is why this is written once, here, and reads the state before acting. */
+function _setCanvasSide(want) {
+  var l = document.getElementById('studio-layout');
+  if (!l || typeof window === 'undefined' || !window.toggleShapeMode) return false;
+  var isShape = l.classList.contains('mode-shape');
+  if ((want === 'shape') === isShape) return false;   // already there — never toggle for its own sake
+  window.toggleShapeMode();
+  return true;
 }
 
 function _studioExitRoom() {

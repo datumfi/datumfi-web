@@ -27,7 +27,7 @@ const SACRED = {
      CLAUDE.md in this same commit. Sacred on a stricter rule than the rest: its absence removes a
      regulatory disclosure from every page at once. */
   'scripts/datum-footer.js': 'bb0567d5088c20cde1a744c52263825b',   // the disclosure split: method-limit sentences collapse behind a real button; text to a measured 4.51:1 (2026-08-15)
-  'studio.html': 'c8cacd0fc81eb0989584e31f2a912870',   // §28 Sheet mode is the sheet alone — the landing no longer paints above it (2026-08-15)
+  'studio.html': 'fa66abbc8a834fe5956b5bebdf459d2f',   // §28.2 the Precision motto is retired from the Architect profile (2026-08-15)
   'sketch.html': '952b0284765849d45f15c9ea7f9b45f2',   // Part 24/25 — the PARSE-TIME dossier seed is retired; it moves to the auth-gated load-time resolver (2026-08-15)
   /* §47.3 — SACRED as of 2026-08-13, declared in CLAUDE.md IN THIS SAME COMMIT. The two lists are
      reconciled by this build in BOTH directions, so a host added to one and not the other STOPS
@@ -42,7 +42,7 @@ const SACRED = {
   'scripts/studio-debt-cost.js': 'df016d73c4a45117681577a5b064f9ed',   // the monthly carrying cost of a debt — extracted from studio.html:9487-9504 (2026-08-13)
   /* STEP 1 — the landing. SACRED because it owns the completeness predicate: a wrong answer here
      tells the user a phase of the method is finished when it is not, on the front door. */
-  'scripts/studio-landing.js': 'fd0f8406183ae1fe6283512d4639e91b',   // §28 the movement expressions leave the render; the formula is stated once (2026-08-15)
+  'scripts/studio-landing.js': '235950924c0f12908df94c9bb769f5b9',   // §28.2 the canvas follows the room's own controls; the ghost plan is retired (2026-08-15)
   'scripts/studio-blueprint.js': 'ff6f3cddc2dc687dcda8aa05657c135f',   // Part 24/25 — readDossier() session-gated at the READ (4 callers) + the boot-draft invariant in _persistDraft (2026-08-15)
   // MISS-5 pre-work guard (2026-07-25). nav.js is a Sacred Host in CLAUDE.md but was absent from THIS map,
   // so a bad edit failed no build. It owns the centralized cross-device restore every page depends on
