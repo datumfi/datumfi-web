@@ -158,6 +158,18 @@
   /* --panel-pad-x restated with THIS mode's value so the footer's breakout cancels 28px here, not
      the split view's 40px. Declaring the variable and the padding from one token is the whole point. */
   .studio-layout.mode-draft .drafting-panel{ --panel-pad-x: 28px; background: var(--bg-navy); box-shadow: none; margin: 0; padding: 36px var(--panel-pad-x) 56px; overflow: auto; }
+  /* §28 — AND THE LANDING IS A SPLIT-MODE SURFACE. Sheet is the sheet, alone.
+     ⛔ MEASURED 2026-08-15: in Sheet mode with data-room="landing" the page painted the landing AND
+     the sheet, stacked (landing y141-593, tension section y627+ — not an overlay, a pile).
+     THE SPOTLIGHT WAS OUT-SPECIFIED, NOT BROKEN. `.studio-layout[data-room] .drafting-panel >
+     .studio-section` is 0,4,0 and hides every section on the landing; the sheet-host rule below is
+     0,5,0 and re-showed one. The stronger selector won and the landing had nothing to say about it.
+     🔑 A SPOTLIGHT THAT HIDES BY DEFAULT IS ONLY AS STRONG AS THE WEAKEST RULE THAT RE-SHOWS.
+     ⚠️ SCOPED TO mode-draft ON PURPOSE. The phase system is wired for Split today and reaches Sheet
+     and Structure later (Captain-ruled 2026-08-15); until then the landing does not belong here.
+     The nav's view-toggle is always present, so hiding it strands nobody — the way back is the same
+     control that got them here. */
+  .studio-layout.mode-draft .s1-header { display: none; }
   /* DE-CLUTTER — Sheet shows ONLY the upkeep ledger. Others are HIDDEN (not removed); the full
      numbers (accounts/datum/options/charts) return to Sheet as projections after Split is complete. */
   .studio-layout.mode-draft .drafting-panel > .studio-section { display: none; }
