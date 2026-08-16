@@ -27,8 +27,8 @@ const SACRED = {
      CLAUDE.md in this same commit. Sacred on a stricter rule than the rest: its absence removes a
      regulatory disclosure from every page at once. */
   'scripts/datum-footer.js': 'bb0567d5088c20cde1a744c52263825b',   // the disclosure split: method-limit sentences collapse behind a real button; text to a measured 4.51:1 (2026-08-15)
-  'studio.html': '2516c9fd204714ff7e8364cc636bde3a',   // (0a) token authority — the `?v=2` cache-buster is retired; no :root shadow here to remove (2026-08-16)
-  'sketch.html': 'c369f1531c6a72a2ff057b90095e8b8c',   // (0a) token authority — 8 identical :root shadows deleted; styles/typography.css now governs (2026-08-16)
+  'studio.html': 'd58f6b090e929c3ca309fda9a58b8040',   // (0b) --muted 0.3 -> the shared 0.4; the dimmest value on the site is retired from the flagship surface (2026-08-16)
+  'sketch.html': 'eec601cd1a972f2759e50e86cc1317d9',   // (0b) the last --font-serif shadow deleted; Georgia is promoted into styles/typography.css instead (2026-08-16)
   /* §47.3 — SACRED as of 2026-08-13, declared in CLAUDE.md IN THIS SAME COMMIT. The two lists are
      reconciled by this build in BOTH directions, so a host added to one and not the other STOPS
      THE BUILD — which is why the nav.js / sketchbook.html gaps could exist historically and cannot
