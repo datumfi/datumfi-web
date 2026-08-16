@@ -45,7 +45,17 @@
 
 /* ⚠️ ONE SOURCE, AND IT IS THIS CONSTANT. A gate asserts the rendered footer matches it byte for
    byte, which is only a meaningful claim because there is exactly one place to change it. */
-var DATUM_FOOTER_LINK_STYLE = 'color:rgba(255,255,255,0.3);text-decoration:none;';
+/* ⛔ THE CONTROLS ARE NEVER DIMMER THAN THE PROSE. At the shipped values the links were 0.3 against
+   a 0.25 paragraph — near-identical, and once the paragraph moved to its measured 0.45 floor the
+   links would have become THE LEAST READABLE THING IN THE FOOTER. That inverts the entire ruling:
+   these six are the CONTROLS, including the CCPA/CPRA opt-out and the deletion right, and a
+   mechanism rendered fainter than the sentence explaining it is not conspicuous in any sense a
+   regulator or a person would accept.
+   ⭐ 0.55 is ABOVE the paragraph on purpose, so brightness itself distinguishes control from prose.
+   ⚠️ FLAGGED, NOT FIXED — these carry text-decoration:none and no colour of their own, so they have
+   NO remaining affordance marking them as links beyond being slightly brighter. That predates this
+   commit. An underline (or a distinct hue) is the honest fix and it is a design ruling, not mine. */
+var DATUM_FOOTER_LINK_STYLE = 'color:rgba(255,255,255,0.55);text-decoration:none;';
 
 /* ⛔⛔ THE MODULE CARRIES ITS OWN PRESENTATION, AND THAT IS A DEFECT PAID FOR IN PUBLIC.
    The first cut rendered a BARE <p> and relied on each page having a `#disclosure-footer p` CSS
@@ -87,19 +97,89 @@ var DATUM_FOOTER_LINK_STYLE = 'color:rgba(255,255,255,0.3);text-decoration:none;
    i.e. effectively nothing, which is the check that mattered — ONE STRING SERVES FIFTEEN PAGES AND
    A FIX FOR THE NARROWEST MUST NOT DAMAGE THE OTHER FOURTEEN.
    ⛔ NOT ONE WORD OF THE LEGAL TEXT MOVED. This is presentation only; the copy is untouched. */
+/* ⛔⛔ 0.45 IS A MEASURED FLOOR, NOT A TASTE. DO NOT LOWER IT.
+   At the shipped 0.25 the disclosure rendered rgb(71,77,89) on rgb(9,18,33) = 2.21:1 at 10px —
+   failing WCAG AA for normal text (4.5:1) and failing even the 3:1 large-text floor. 0.45 gives
+   4.51:1. "CLEAR AND CONSPICUOUS" IS NOT SATISFIED BY TEXT THAT IS TECHNICALLY PRESENT AND
+   PRACTICALLY UNREADABLE: at 2.21:1 this paragraph was visible to the DOM and invisible to a person,
+   and it carries the rights links.
+   ⚠️⚠️ THE MARGIN IS 0.01 AND THAT IS DELIBERATE, NOT LUCKY. 4.51 against a 4.50 requirement will
+   NOT survive a casual theme edit — darken the text, lighten nothing, and this silently drops below
+   AA with no error anywhere. Anyone touching this value or the footer background must RE-MEASURE the
+   ratio, not eyeball it. The background it was computed against is rgb(9,18,33). */
 var DATUM_FOOTER_P_STYLE = "font-family:var(--font-mono,'DM Mono',monospace);font-size:10px;"
-  + 'color:rgba(255,255,255,0.25);line-height:1.6;margin:0;'
+  + 'color:rgba(255,255,255,0.45);line-height:1.6;margin:0;'
   + 'text-align:justify;text-align-last:center;';
 var DATUM_FOOTER_BOX_STYLE = 'width:100%;background:rgba(9,18,33,0.97);'
   + 'border-top:1px solid rgba(255,255,255,0.05);'
   + 'padding:10px clamp(14px, 4%, 40px) 12px;text-align:center;';
 
+/* ⚖️ THE DISCLOSURE SPLIT — Architect-ruled 2026-08-15, and the LAW it banks is the reason this
+   file is shaped the way it is: YOU MAY COLLAPSE A STATEMENT. YOU MAY NOT COLLAPSE A CONTROL.
+   Hiding a mechanism behind a disclosure makes the right harder to exercise, which is the precise
+   harm "clear and conspicuous" exists to prevent.
+     ALWAYS VISIBLE · Privacy Policy · Terms of Service · Do Not Sell My Information ·
+                      Delete My Data · Accessibility — every one of them a CONTROL, not a statement
+                      — AND THREE SENTENCES: who we are not, what this is not, what to do instead.
+     COLLAPSIBLE     · the hypothetical-projections sentence and the past-performance sentence.
+                      Both are statements about METHOD LIMITS, which is what a disclosure section is
+                      for, and neither is something a user needs before they understand what they
+                      are looking at.
+   ⭐ WHY THE ADVISER SENTENCE STAYS OUT OF THE COLLAPSE, in the Architect's words: a user who never
+      opens the toggle must still know they are not being advised. That is the brand position —
+      measurement, not advice — not merely a legal line.
+   ⛔⛔ AND WHY THE EDUCATIONAL-TOOL SENTENCE STAYS OUT TOO — the Architect OVERRULED THEMSELVES here,
+      and the reason is the sharpest thing in this file: A STATEMENT ABOUT WHO WE ARE IS NOT A
+      STATEMENT ABOUT WHAT THIS IS. "Not a registered investment advisor" is a fact about the
+      COMPANY; "does not constitute financial, investment, or tax advice" is a fact about the OUTPUT
+      ON SCREEN — and the output is what the user is about to act on. The first draft collapsed the
+      only sentence that says so in those words, which failed the very test that had been written
+      one paragraph earlier.
+   ⭐ AND THE "consult a qualified financial professional" SENTENCE IS VISIBLE BY THE SAME LOGIC: a
+      disclaimer that only says what we are NOT leaves the user nowhere to go. NAMING THE LIMIT
+      WITHOUT NAMING THE ALTERNATIVE IS HALF AN HONEST SENTENCE.
+   ⚠️ NEITHER AUTHOR IS A LAWYER. This is a CONSERVATIVE arrangement judgement: every mechanism
+      stays visible, the adviser disclaimer stays visible, only explanatory prose moves. */
+
+/* ⛔ ONE LINE TO UNDO. If counsel wants the whole paragraph visible we flip this to true and the
+   footer ships expanded — we do NOT rebuild. A reversible decision without counsel is acceptable;
+   an irreversible one is not. */
+var DATUM_FOOTER_START_OPEN = false;
+
+/* 🖊️ AUTHORED VERBATIM, Architect 2026-08-15. NOT MINE TO REWORD.
+   "More info" was REJECTED because it describes nothing — the same law that killed "Dashboard":
+   name a thing after what it is, not after what is convenient. These say what is inside and use the
+   word a regulator would use. */
+var DATUM_FOOTER_TOGGLE_CLOSED = 'Important disclosures';
+var DATUM_FOOTER_TOGGLE_OPEN = 'Hide disclosures';
+
+var DATUM_FOOTER_TOGGLE_STYLE = "font-family:var(--font-mono,'DM Mono',monospace);font-size:10px;"
+  + 'color:rgba(255,255,255,0.55);background:none;border:none;padding:2px 4px;margin:2px 0 0;'
+  + 'text-decoration:underline;cursor:pointer;letter-spacing:0.04em;';
+
+/* ⛔ THE CANONICAL SENTENCES, SPLIT BUT NEVER REWORDED — AND NEVER REORDERED.
+   _DF_KEPT + _DF_MORE reproduces the shipped paragraph CHARACTER FOR CHARACTER, so EXPANDED the
+   footer reads exactly as it always has. The collapsible half is hidden IN PLACE rather than moved,
+   which is what keeps this ARRANGEMENT rather than AUTHORING — and it is also why the gate can
+   still assert the canonical text: a hidden span stays in textContent, so "this page carries the
+   canonical disclosure" is provable whether or not anyone opened the toggle.
+   ⚠️ A TOGGLE MUST NOT MAKE THE CANONICAL TEXT UNPROVABLE. Met by CONSTRUCTION here, not by a gate
+      remembering to allow for it.
+   ⭐ THE FINAL SPLIT IS CONTIGUOUS. The first cut interleaved — visible, hidden, visible — because
+      the educational-tool sentence was going to be collapsed out of the middle. Promoting it made
+      the two halves fall into their original order with nothing interleaved, so ONE span does the
+      whole job. THE CORRECT COPY RULING MADE THE CODE SIMPLER, WHICH IS USUALLY THE TELL. */
+var _DF_KEPT = 'DATUMAE is an educational tool and does not constitute financial, investment, or tax '
+  + 'advice. Not a registered investment advisor. Consult a qualified financial professional before '
+  + 'making financial decisions. ';
+var _DF_MORE = 'All projections are hypothetical, based on mathematical models, and '
+  + 'do not guarantee future results. Past performance does not guarantee future outcomes. ';
+
 function _datumFooterHTML() {
   var L = DATUM_FOOTER_LINK_STYLE;
-  return '<p style="' + DATUM_FOOTER_P_STYLE + '">DATUMAE is an educational tool and does not constitute financial, investment, or tax '
-    + 'advice. Not a registered investment advisor. Consult a qualified financial professional before '
-    + 'making financial decisions. All projections are hypothetical, based on mathematical models, and '
-    + 'do not guarantee future results. Past performance does not guarantee future outcomes. '
+  var hid = DATUM_FOOTER_START_OPEN ? '' : ' hidden';
+  return '<p id="datum-footer-text" style="' + DATUM_FOOTER_P_STYLE + '">' + _DF_KEPT
+    + '<span id="datum-disclosure-more"' + hid + '>' + _DF_MORE + '</span>'
     + '&nbsp;|&nbsp; <a href="/privacy.html" style="' + L + '">Privacy Policy</a>'
     + ' &nbsp;|&nbsp; <a href="/terms.html" style="' + L + '">Terms of Service</a>'
     + ' &nbsp;|&nbsp; <a href="mailto:accessibility@datumfi.com" style="' + L + '">Accessibility</a>'
@@ -111,12 +191,36 @@ function _datumFooterHTML() {
        ⚠️ THE FALLBACK DESTINATION IS A ROUTING CHOICE AND IT IS FLAGGED, NOT ASSUMED: /dsar.html is
        the existing Data Subject Request page, already linked from privacy.html. If the Captain wants
        a different destination it is a one-line change. A RIGHTS MECHANISM MUST ALWAYS HAVE A DOOR. */
-    + ' &nbsp;|&nbsp; <span style="color:rgba(255,255,255,0.3);cursor:pointer;text-decoration:underline;"'
+    + ' &nbsp;|&nbsp; <span style="color:rgba(255,255,255,0.55);cursor:pointer;text-decoration:underline;"'
     + ' onclick="if(window.openDeleteDataModal){openDeleteDataModal();}else{location.href=\'/dsar.html\';}">Delete My Data</span>'
     + ' &nbsp;|&nbsp; <a href="/privacy-choices.html" style="' + L + '">Do Not Sell My Information</a>'
     + ' &nbsp;|&nbsp; <a href="/philosophy.html" style="' + L + '">Philosophy</a>'
     + ' &nbsp;|&nbsp; <a href="/methodology.html" style="' + L + '">Methodology</a>'
-    + ' &nbsp;|&nbsp; Build&nbsp;2026.05.16&nbsp;&bull;&nbsp;v1.0.0</p>';
+    + ' &nbsp;|&nbsp; Build&nbsp;2026.05.16&nbsp;&bull;&nbsp;v1.0.0</p>'
+    /* ⚠️ A REAL <button> WITH aria-expanded, NEVER A STYLED <div> — Architect-ruled, and the reason
+       is the whole point of the exercise: A DISCLOSURE A SCREEN READER CANNOT OPEN IS NOT
+       CONSPICUOUS TO EVERY USER. type="button" is explicit so it can never submit a host page's
+       form. aria-controls names the region so the relationship survives without sighted layout. */
+    + '<button type="button" id="datum-disclosure-toggle" aria-expanded="'
+    + (DATUM_FOOTER_START_OPEN ? 'true' : 'false') + '" aria-controls="datum-disclosure-more"'
+    + ' style="' + DATUM_FOOTER_TOGGLE_STYLE + '">'
+    + (DATUM_FOOTER_START_OPEN ? DATUM_FOOTER_TOGGLE_OPEN : DATUM_FOOTER_TOGGLE_CLOSED)
+    + '</button>';
+}
+
+/* The toggle's whole behaviour. Bound by _renderDatumFooter, which is idempotent, so re-rendering
+   never stacks listeners — the markup is replaced and this runs once against the fresh node. */
+function _wireDatumDisclosure() {
+  var btn = document.getElementById('datum-disclosure-toggle');
+  var more = document.getElementById('datum-disclosure-more');
+  if (!btn || !more) return false;                       // D14 — null-guard, never assume the DOM
+  btn.addEventListener('click', function () {
+    var open = more.hasAttribute('hidden');              // about to become open
+    if (open) more.removeAttribute('hidden'); else more.setAttribute('hidden', '');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    btn.textContent = open ? DATUM_FOOTER_TOGGLE_OPEN : DATUM_FOOTER_TOGGLE_CLOSED;
+  });
+  return true;
 }
 
 /* Idempotent: re-running paints the same bytes. The host element is NOT created if absent — a page
@@ -131,6 +235,7 @@ function _renderDatumFooter() {
      words AND the way they look. */
   host.setAttribute('style', DATUM_FOOTER_BOX_STYLE);
   host.innerHTML = _datumFooterHTML();
+  _wireDatumDisclosure();
   return true;
 }
 
