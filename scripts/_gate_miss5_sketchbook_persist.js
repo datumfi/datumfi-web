@@ -27,6 +27,14 @@
  *   --nocodec   the sketchbook codec is gated on D1 being live (the shape the BLUEPRINT clause still has)
  *               -> on a genuine D1 outage the frozen net decodes nothing and the book comes back EMPTY.
  *               This is the blueprint-codec gap, demonstrated on the sketchbook to show what it costs.
+ *   --clobber   the D1 restore runs over a populated local book -> sk-local, a row D1 has NEVER HEARD OF,
+ *               is discarded. The control for leg (i).
+ *   --union     the D1 rows are folded in AND the local book is kept -> sk-local SURVIVES. (i) stays
+ *               GREEN, only (ii) reds. The DISCRIMINATING control; see the leg-4 note below.
+ *
+ * SCENARIO 4 WAS ONE ASSERTION UNTIL 2026-08-16 AND IS NOW TWO — see the note at the leg itself. The
+ * short version: `slots(book).join() === 'sk-local'` bundled a RULED claim (no data loss) with an
+ * UNRULED one (nothing else may appear), and the bundle lent the second the authority of the first.
  */
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const { chromium } = require('playwright');
@@ -40,9 +48,27 @@ const NC = process.argv.includes('--nocodec');
 // because "local cache wins", the stale book then suppresses the D1 restore on the next capable page.
 // Kept as an opt-in mode rather than a standing red so the suite stays honest while the gap is open.
 const HZ = process.argv.includes('--hazard');
+const CLOBBER = process.argv.includes('--clobber');
+const UNION = process.argv.includes('--union');
 const HOST = HZ ? '/philosophy.html' : '/Blueprint.html';   // Blueprint.html loads nav.js AND datum-d1.js
 let pass = 0, fail = 0; const lines = [];
 const ok = (c, m) => { if (c) pass++; else fail++; lines.push((c ? 'PASS ' : 'FAIL ') + m); };
+// Named results for the two halves of leg 4, so the mutation-bite checks can assert WHICH leg moved
+// rather than reading `fail > 0` and calling it proof. A red somewhere else is not this red.
+let legI = null, legII = null;
+
+/* EXACTLY ONE MATCH, ENFORCED — the ambiguity check this file paid for. The header at A_EMPTY records
+ * an anchor that existed TWICE in nav.js: String.replace took the first, the mutation landed in the
+ * BLUEPRINT leg, "did not bite", and the gate reported a false green about code it had never touched.
+ * A MISSING anchor and an AMBIGUOUS one are the same defect — the mutation did not go where it was
+ * aimed — so both throw here instead of only the first being noticed. */
+function mutate(src, anchor, repl, label) {
+  let n = 0, i = 0;
+  while ((i = src.indexOf(anchor, i)) >= 0) { n++; i++; }
+  if (n === 0) throw new Error('anchor MISSING for ' + label + ' — nav.js moved under this gate');
+  if (n > 1) throw new Error('anchor AMBIGUOUS (' + n + ' matches) for ' + label + ' — replace would take the first, not the intended one');
+  return src.replace(anchor, repl);
+}
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.woff2': 'font/woff2' };
 // ANCHOR MUST BE UNIQUE. This exact line exists TWICE in nav.js — once in _restoreBlueprintFromD1 (261)
@@ -60,6 +86,29 @@ const A_EMPTY_MUT = [
 ].join('\n');
 const A_CODEC = 'var wantCodec = (!_hasBook() && meta.sketchbook_z)';
 
+// ── THE TWO LEG-4 CONTROLS ───────────────────────────────────────────────────────────────────────
+// Verified unique in nav.js before use (mutate() re-checks on every run). The naive blueprint-side
+// equivalent of A_COMMIT is NOT unique, which is why that one is anchored on two lines, not one.
+const A_LOCALWINS = 'if (_hasBook()) { done(); return; }';
+// --clobber is the §51.3 shape: delete `local cache wins` so the D1 restore runs over a populated book.
+const M_CLOBBER = '/* [mutated: local cache wins removed — the D1 restore runs over a populated book] */';
+// --union keeps the local book AND folds the D1 rows in beside it. The row the server has never heard
+// of survives, so leg (i) holds while leg (ii) fails. THAT ASYMMETRY IS THE POINT OF THE SPLIT: it
+// exhibits a mechanism that satisfies the ruled claim and violates only the unruled one. Without this
+// control the two legs could be one assertion wearing two labels.
+const M_UNION_STASH = "if (_hasBook()) { try { window.__unionStash = JSON.parse(localStorage.getItem(_BOOK_KEY) || 'null'); } catch (_e) {} }";
+const A_COMMIT = "for (var n = 1; n <= 4; n++) book['slot_' + n] = contracts[n - 1] || null;";
+const M_COMMIT_UNION = A_COMMIT + '\n' + [
+  '    var _u = window.__unionStash;',
+  '    if (_u) { for (var _j = 1; _j <= 4; _j++) {',
+  "      var _o = _u['slot_' + _j]; if (!_o) continue;",
+  '      var _dup = false;',
+  "      for (var _k = 1; _k <= 4; _k++) { var _b = book['slot_' + _k]; if (_b && _b.sketch_id === _o.sketch_id) _dup = true; }",
+  '      if (_dup) continue;',
+  "      for (var _m = 1; _m <= 4; _m++) { if (!book['slot_' + _m]) { book['slot_' + _m] = _o; break; } }",
+  '    } }'
+].join('\n');
+
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/Blueprint.html';
   const fp = path.join(ROOT, p);
@@ -67,13 +116,12 @@ const server = http.createServer((req, res) => {
   let body = fs.readFileSync(fp);
   if (p === '/nav.js') {
     let s = body.toString('utf8');
-    if (RF) {
-      if (!s.includes(A_EMPTY)) throw new Error('red-first anchor missing (reachable-empty)');
-      s = s.replace(A_EMPTY, A_EMPTY_MUT);
-    }
-    if (NC) {
-      if (!s.includes(A_CODEC)) throw new Error('red-first anchor missing (wantCodec)');
-      s = s.replace(A_CODEC, 'var wantCodec = (!_sbD1 && !_hasBook() && meta.sketchbook_z)');
+    if (RF) s = mutate(s, A_EMPTY, A_EMPTY_MUT, '--redfirst (reachable-empty)');
+    if (NC) s = mutate(s, A_CODEC, 'var wantCodec = (!_sbD1 && !_hasBook() && meta.sketchbook_z)', '--nocodec (wantCodec)');
+    if (CLOBBER) s = mutate(s, A_LOCALWINS, M_CLOBBER, '--clobber (local cache wins)');
+    if (UNION) {
+      s = mutate(s, A_LOCALWINS, M_UNION_STASH, '--union (stash the local book)');
+      s = mutate(s, A_COMMIT, M_COMMIT_UNION, '--union (fold the local book back in)');
     }
     body = Buffer.from(s, 'utf8');
   }
@@ -193,22 +241,62 @@ const FRESH_B = { sketch_id: 'sk-new-B', label: 'B' };
       'D1 UNREACHABLE -> the sketchbook_z net DOES restore, codec and all [BITE nocodec]');
   }
 
-  // ═══ 4 · A POPULATED LOCAL BOOK WINS — no needless clobber ═══
+  // ═══ 4 · A POPULATED LOCAL BOOK — ONE ASSERTION UNTIL 2026-08-16, NOW TWO ═══
+  //
+  // It used to read `ok(slots(book).join() === 'sk-local', 'a populated local book is left alone
+  // (local cache wins)')`. That `===` bundled two claims of very different standing, and the bundle
+  // was then cited as a deliberate ruling that a local copy beats a NEWER server row.
+  // ⛔ IT IS NOT ONE, AND THIS FIXTURE CANNOT SUPPORT THE READING. Measured 2026-08-16: there is no
+  //    timestamp comparison here at all. The local book below carries NO timestamp field of any kind,
+  //    and the '2026-07-20' the argument rested on sits on the D1 LIST ROW's `updated_at` — which
+  //    nav.js:858-862 rules is the RETENTION key, deliberately a different intent from precedence
+  //    ("Same-looking comparator, different intent. Do NOT unify them."). The value is inherited from
+  //    leg 1, which needs it for newest-first ordering.
+  // ⭐ AND THE FACT THAT DECIDES IT: `sk-local` APPEARS IN NO D1 LIST HERE. It is not a stale version
+  //    of a server row — it is a row the server has NEVER HEARD OF. That is SET MEMBERSHIP, not
+  //    precedence, and no whole-store precedence rule (local-wins, server-wins, newest-wins) can
+  //    express it: each one discards the loser's rows rather than superseding them.
+  // 🔑 AN ASSERTION THAT BUNDLES A RULED CLAIM WITH AN UNRULED ONE LENDS THE SECOND THE AUTHORITY OF
+  //    THE FIRST. Split, named, and each given its own control.
   {
     const local = { sketchbook_title: 'Mine', slot_1: { sketch_id: 'sk-local' }, slot_2: null, slot_3: null, slot_4: null };
     const { book } = await device({ rows: { 'sk-new-A': { updated_at: '2026-07-20', payload: FRESH_A } }, seedLocalBook: local });
-    ok(slots(book).join() === 'sk-local', 'a populated local book is left alone (local cache wins)');
+    const got = slots(book);
+    // (i) RULED AND ABSOLUTE — no mechanism may discard a row the user created and the server has
+    //     never seen. This must hold under any precedence rule anyone ever adopts. --clobber is its
+    //     control; --union must leave it GREEN, which is what makes it a claim and not a restatement
+    //     of (ii).
+    legI = got.indexOf('sk-local') >= 0;
+    ok(legI, '(i) NO DATA LOSS — a local row D1 has never seen SURVIVES the restore [BITE clobber] — got ' + JSON.stringify(got));
+    // (ii) NEVER RULED — an artifact of the original `===`. It claims the store is not merely
+    //      preserved but UNTOUCHED. Kept as a real assertion so that changing it is visible and
+    //      deliberate, and named so it can never again be mistaken for (i).
+    legII = got.join() === 'sk-local';
+    ok(legII, '(ii) NO CHANGE AT ALL — nothing from D1 is folded in beside it (NEVER RULED) [BITE clobber, union] — got ' + JSON.stringify(got));
   }
 
   await browser.close(); server.close();
 
   const mode = RF ? 'RED-FIRST (reachable-empty falls to the mirror — MUST be RED)'
              : NC ? 'RED-FIRST (codec gated on D1-live — MUST be RED)'
+             : CLOBBER ? 'RED-FIRST (--clobber: local cache wins removed — leg (i) MUST be RED)'
+             : UNION ? 'RED-FIRST (--union: D1 folded in, local row kept — (i) GREEN, (ii) RED)'
              : 'NORMAL';
+  const MUT = RF || NC || CLOBBER || UNION;
   console.log(lines.join('\n'));
   console.log('-------------------------------------');
   console.log('MODE: ' + mode + '   |   sketchbook_z mirror-OFF persistence (real page)');
   console.log('OVERALL: ' + (fail === 0 ? 'GREEN' : 'RED') + '   (' + pass + ' pass / ' + fail + ' fail)');
-  if (!RF && !NC && fail > 0) process.exit(1);
-  if ((RF || NC) && fail === 0) { console.log('!! MUTATION DID NOT BITE — this gate proves nothing'); process.exit(2); }
+  if (!MUT && fail > 0) process.exit(1);
+  if (MUT && fail === 0) { console.log('!! MUTATION DID NOT BITE — this gate proves nothing'); process.exit(2); }
+  // A COUNT IS NOT A LIST: `fail > 0` would be satisfied by a red anywhere in the file, including one
+  // the mutation caused by accident. Each control names the leg it must move.
+  if (CLOBBER && legI !== false) {
+    console.log('!! --clobber did not red leg (i) — the DATA-LOSS claim is unproven'); process.exit(2);
+  }
+  if (UNION && !(legI === true && legII === false)) {
+    console.log('!! --union must leave (i) GREEN and red (ii) ALONE — got (i)=' + legI + ' (ii)=' + legII);
+    console.log('!! without that asymmetry the two legs are one assertion wearing two labels');
+    process.exit(2);
+  }
 })().catch((e) => { console.error(e); process.exit(1); });
