@@ -385,6 +385,18 @@
   }
   function _restoreBlueprintFromD1(meta, Codec, done) {
     if (typeof done !== 'function') done = function() {};
+    /* ⚠️⚠️ §51.3 CACHE PRECEDENCE ATTEMPTED HERE 2026-08-15 AND BACKED OUT THE SAME NIGHT — IT IS AN
+       OPEN CONFLICT, NOT A CLOSED QUESTION. See the note in _restoreSketchbookFromD1's twin.
+       Removing this `local cache wins` return made D1 authoritative, as ruled. It also turned
+       _gate_miss5_blueprint_persist and _gate_miss5_sketchbook_persist RED — both assert that a
+       POPULATED LOCAL COPY IS LEFT ALONE even when D1 holds a NEWER row ("no needless clobber").
+       Those are the MISS-5 DATA-LOSS gates. Loosening them to fit the change would have deleted the
+       protection rather than satisfied it, so the change was reverted and the conflict escalated.
+       🔑 BOTH POSITIONS ARE DEFENSIBLE AND THAT IS WHY IT IS NOT THE WIRER'S CALL: "prefer the
+          server" protects against a stale/foreign local copy; "leave the local copy alone" protects
+          a user whose last save never reached D1. The likely resolution is NEITHER blanket rule but
+          NEWEST-WINS on a real timestamp — which is a design decision with a data-loss failure mode
+          on both sides. */
     if (_hasArch()) { done(); return; }                               // local cache wins
     // D1 is PREFERRED, blueprint_z is the fallback (dual-write window): if D1 lists nothing OR is
     // unreachable, rebuild from the Clerk blueprint_z mirror so cross-device never goes empty.
@@ -435,6 +447,13 @@
   }
   function _restoreSketchbookFromD1(meta, Codec, done) {
     if (typeof done !== 'function') done = function () {};
+    /* ⚠️⚠️ §51.3 ATTEMPTED AND BACKED OUT — twin of the note in _restoreBlueprintFromD1.
+       MEASURED BEFORE THE REVERT, so tomorrow starts from fact: with this return removed, D1 DID
+       beat a stale local copy (999999 over 111111) AND an unreachable D1 did NOT wipe the local copy
+       — the change worked exactly as ruled. It was still backed out, because working is not the same
+       as agreed: _gate_miss5_sketchbook_persist leg 4 asserts the OPPOSITE with a NEWER D1 row in
+       play, and that gate exists to prevent DATA LOSS.
+       ⛔ THE GATE WAS NOT EDITED. A check that contradicts a change is evidence, not an obstacle. */
     if (_hasBook()) { done(); return; }                              // local cache wins
     function fallback() { _restoreSketchbook(meta, Codec); done(); }
     try {
@@ -608,6 +627,34 @@
             if (_nm) localStorage.setItem('datum_workspace_name', _nm);
           }
         } catch (_se) {}
+        /* ⛔⛔ FINDING 2, CLOSED BY DELETION — 2026-08-15. A PAGE THAT DOES NOT RENDER ESTATE DATA
+           HAS NO BUSINESS RESTORING IT.
+           Ruled 2026-08-13, MEASURED 2026-08-15: 22 tracked pages load this file and never load
+           datum-d1.js. On those, _blueprintD1Live()/_sketchbookD1Live() are false because
+           window.DatumD1 is undefined, so both legs fell through to the Clerk MIRROR and seeded
+           localStorage from it — while making ZERO D1 calls, because they cannot reach D1 at all.
+           Then `local cache wins` made the NEXT capable page skip its D1 restore entirely. Measured
+           end-to-end with a control: a hop through privacy.html turned a sketchbook that restored
+           `999999 FRESH` from D1 into `111111 STALE` from the frozen mirror, on BOTH keys.
+           ⭐⭐ AND THE MIRROR WAS NEVER MISBEHAVING — IT WAS BEING CALLED SOMEWHERE IT WAS NEVER
+           NEEDED. Classified by wrapping Storage.prototype.getItem and attributing every read of a
+           blueprint/sketchbook key to the script that made it, with nav.js SUBTRACTED (it reads them
+           on every page by definition — it is the call under judgement). Result: 18 pages where
+           NOTHING but this file touched the stores, and 4 where studio-blueprint.js did. Those 4
+           were unreachable orphans, DELETED in this same commit — so the bucket of pages that need
+           the data and cannot reach D1 is EMPTY.
+           🔑 THEREFORE NO GUARD WAS WRITTEN. The fix is this early return: on a page with no D1 the
+           restore does not run. That DELETES mirror reads instead of repairing them, and it is one
+           fewer call site to unpick when the mirror is retired — the test being: will this code still
+           exist the day the mirror is gone? This return goes WITH it. Teaching a component to behave
+           better when the plan is to remove it is investment in a scheduled death.
+           ⚠️ DELIBERATELY BELOW THE WORKSPACE-NAME SEED ABOVE. That is a DISPLAY NAME, not estate
+           data, and every page's nav renders it — gating the whole function would have blanked the
+           signed-in name site-wide to fix a data-restore problem.
+           ⚠️ AND IT ALSO GATES THE bp_title / sb_title RESTORE BELOW, ON PURPOSE. Those have NO D1
+           leg at all (§10.5), so they are pure mirror reads; a page that cannot reach D1 has no more
+           business restoring an archive TITLE than an archive. */
+        if (!window.DatumD1) { done(); return; }
         var meta = window.Clerk.user.unsafeMetadata || {};
         // P5 Step-2b: carry the per-store CUSTOM archive title (full verbatim string, incl.
         // the user's noun) cross-device. The override is localStorage-only; without this a

@@ -50,7 +50,7 @@ const SACRED = {
   // and 4 all land in it — pin it BEFORE the arc that leans on it, not after.
   // NOTE: CLAUDE.md lists this host as 'scripts/nav.js'. That path does not exist; the real, page-referenced
   // file is /nav.js at the repo root (every page loads <script src="/nav.js">). Pinned at its true path.
-  'nav.js': '24c8e3add984318f6b11d380d71b7e25',   // Part 24/25 — DatumSession: the one session predicate, fails CLOSED and STARTS ITSELF (2026-08-15)
+  'nav.js': '478c1c6e280d35ee46db6f4d73708822',   // Finding 2 closed by DELETION: no estate restore on a page with no D1 (2026-08-15)
   // Same gap as nav.js above, found 2026-07-27 while wiring the erase fix: sketchbook.html is a
   // Sacred Host in CLAUDE.md but was ABSENT from this map, so the erase edit passed the build with
   // no guard at all. Pinned at its true content.
@@ -427,10 +427,13 @@ function checkDanglingAssets(extraRef) {
     if (extraRef && page === pages[0]) refs.push(extraRef);          // self-test injection only
     for (const ref of refs) {
       if (/^(?:[a-z]+:)?\/\//i.test(ref) || /^(?:data:|mailto:|tel:|#)/i.test(ref)) continue;
-      /* /cdn-cgi/ is CLOUDFLARE'S OWN NAMESPACE, served by the edge and never present in this repo —
-       * sketchv2.html carries an injected email-decode script. Real at runtime, absent from dist by
-       * definition, so excluding it is correctness rather than a carve-out. Found by this guard on its
-       * first run, which is the guard doing its job before it ever reached the Captain's deploy. */
+      /* /cdn-cgi/ is CLOUDFLARE'S OWN NAMESPACE, served by the edge and never present in this repo:
+       * the edge injects an email-decode script into pages carrying an address. Real at runtime,
+       * absent from dist by definition, so excluding it is correctness rather than a carve-out.
+       * Found by this guard on its first run — the guard doing its job before it reached a deploy.
+       * ⚠️ The page that first triggered it (sketchv2.html) was DELETED 2026-08-15 with the Finding-2
+       * orphans. The exclusion stays because the EDGE behaviour is general, not because that page
+       * was special — a rule kept alive only by one example is a rule nobody can re-derive. */
       if (/^\/cdn-cgi\//i.test(ref)) continue;
       const clean = ref.split('?')[0].split('#')[0];
       if (!clean) continue;
