@@ -280,11 +280,24 @@ const server = http.createServer((req, res) => {
   const page = await ctx.newPage();
 
   const linkers = [...LIVE].sort().filter((f) => new RegExp(`<link[^>]+href="/${CANON}`).test(pageSource(f)));
-  const followed = [], stuck = [];
+  const followed = [], stuck = [], redirected = [];
   for (const f of linkers) {
     await page.goto(`http://127.0.0.1:${PORT}/${encodeURIComponent(f)}`, { waitUntil: 'domcontentloaded', timeout: 20000 });
-    const got = (await page.evaluate((t) => getComputedStyle(document.documentElement).getPropertyValue(t).trim(), MEASURE_TOKEN)) || '';
-    (got.toLowerCase() === POISON.toLowerCase() ? followed : stuck).push(`${f}=${got || '(empty)'}`);
+    /* ⛔ "EMPTY BECAUSE EMPTY" AND "EMPTY BECAUSE THE DOCUMENT IS GONE" ARE DIFFERENT ANSWERS AND
+     * MUST NOT SHARE A BRANCH. vault.html is a REDIRECT SHIM — a parse-time
+     * window.location.replace() bounces it to hosted sign-in before the rest of the document is
+     * parsed, so the DOM under measurement is not this page at all and its --gold reads empty.
+     * Scoring that as "did not follow" would be a lie about a page with no rendering surface.
+     * ⭐ DERIVED, NEVER EXEMPTED: the test is whether the CANON link is present in the LIVE DOM.
+     *    Source says it links; the live document says otherwise; therefore the document was
+     *    replaced. AN EXEMPTION IS A HAND-MAINTAINED LIST WEARING A NUMBER — this is a
+     *    measurement, so a page that stops redirecting rejoins the population by itself. */
+    const probe = await page.evaluate((t) => ({
+      linkInDom: !!document.querySelector('link[rel="stylesheet"][href*="/styles/"]'),
+      value: (getComputedStyle(document.documentElement).getPropertyValue(t) || '').trim(),
+    }), MEASURE_TOKEN);
+    if (!probe.linkInDom) { redirected.push(f); continue; }
+    (probe.value.toLowerCase() === POISON.toLowerCase() ? followed : stuck).push(`${f}=${probe.value || '(empty)'}`);
   }
   await browser.close(); server.close();
 
@@ -294,8 +307,13 @@ const server = http.createServer((req, res) => {
    *   AN INSTRUMENT THAT MEASURES NOTHING AGREES WITH ITSELF PERFECTLY. */
   leg('L3a', linkers.length > 0 && served > linkers.length,
     `the rig actually served pages — ${linkers.length} linkers, ${served} requests`);
+  /* The denominator EXCLUDES documents that replaced themselves, and NAMES them — a page counted
+   * in neither column must still be visible, exactly as QUARANTINED and CRASH are in the suite. */
+  const measurable = linkers.length - redirected.length;
   leg('L3', stuck.length === 0,
-    `poisoning ${POISON_TOKEN} in ${CANON} moves EVERY live page (measured at ${MEASURE_TOKEN}) — ${followed.length}/${linkers.length} followed${stuck.length ? ', STUCK: ' + stuck.slice(0, 4).join(', ') : ''} [BITE reshadow]`);
+    `poisoning ${POISON_TOKEN} in ${CANON} moves EVERY live page (measured at ${MEASURE_TOKEN}) — ${followed.length}/${measurable} followed`
+    + (redirected.length ? `; ${redirected.length} not measurable (document replaced at parse time): ${redirected.join(', ')}` : '')
+    + (stuck.length ? ', STUCK: ' + stuck.slice(0, 4).join(', ') : '') + ' [BITE reshadow]');
 
   const mode = TWOSOURCE ? 'RED-FIRST (--twosource: a second token source — L1 MUST be RED)'
              : RESHADOW ? 'RED-FIRST (--reshadow: a live page regains a shadow — L2+L3 MUST be RED)'

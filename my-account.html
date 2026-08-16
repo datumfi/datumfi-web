@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#091221">
 <meta name="robots" content="noindex, nofollow">
 <!-- Flash prevention: body stays hidden until Clerk confirms session -->
+<link rel="stylesheet" href="/styles/tokens.css">
 <style>body { visibility: hidden; }</style>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://clerk.datumfi.com https://eu.i.posthog.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://img.clerk.com; connect-src 'self' https://api.datumfi.com https://clerk.datumfi.com https://api.clerk.com https://eu.i.posthog.com; frame-src https://accounts.datumfi.com https://accounts.google.com https://appleid.apple.com; worker-src 'self' blob:;">
 <title>Datum FI — My Account</title>
@@ -166,14 +167,11 @@
 
 <!-- ── Welcome Code V1 base styles ── -->
 <style>
-:root{
-  --bg:#091221;--deep:#050b14;--teal:#5DCAA5;--brand:#1D9E75;--gold:#C9A84C;
+:root{  --deep:#050b14;--brand:#1D9E75;
   --red:#e24b4a;--purple:#6B7BC4;--blue:#4da8da;--ink:#20242b;
-  --paper:#fbf6ea;--muted:rgba(255,255,255,.52);
+  --paper:#fbf6ea;
   /* Legacy aliases for account-topbar.js + nav.js */
-  --bg-navy:#091221;--teal-mid:#5DCAA5;
-  --font-serif:'Fraunces',Georgia,serif;
-  --font-mono:'DM Mono',monospace;
+  
   --font-sans:'DM Sans',system-ui,sans-serif;
 }
 *{box-sizing:border-box}html{scroll-behavior:smooth}
@@ -207,9 +205,9 @@ h1{margin:0;font-family:var(--font-serif);font-size:clamp(44px,6vw,72px);font-st
 .surface-head h2{margin:0;font-family:var(--font-serif);font-size:36px;font-style:italic;font-weight:300;line-height:1}
 .surface-head p{margin:8px 0 0;color:rgba(255,255,255,.46);font-size:13px;line-height:1.55}
 .mode-pill{flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(93,202,165,.22);border-radius:999px;background:rgba(93,202,165,.065);color:rgba(255,255,255,.66);padding:9px 12px;font-family:var(--font-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;box-shadow:inset 0 1px rgba(255,255,255,.06),0 8px 18px rgba(0,0,0,.16)}
-.mode-dot{width:7px;height:7px;border-radius:50%;background:var(--teal);box-shadow:0 0 12px rgba(93,202,165,.62)}
+.mode-dot{width:7px;height:7px;border-radius:50%;background:var(--teal-mid);box-shadow:0 0 12px rgba(93,202,165,.62)}
 .cards{position:relative;z-index:2;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
-.card{--accent:var(--teal);position:relative;min-height:314px;display:flex;flex-direction:column;justify-content:space-between;border-radius:22px;padding:23px 23px 21px;border:1px solid rgba(255,255,255,.098);background:radial-gradient(circle at 18% 8%,rgba(255,255,255,.105),transparent 36%),radial-gradient(circle at 92% 94%,color-mix(in srgb,var(--accent) 18%,transparent),transparent 38%),linear-gradient(180deg,rgba(255,255,255,.058),rgba(255,255,255,.024));box-shadow:inset 0 1px rgba(255,255,255,.085),inset 0 0 0 1px rgba(255,255,255,.025),0 22px 48px rgba(0,0,0,.27);overflow:hidden;transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease,filter .22s ease}
+.card{--accent:var(--teal-mid);position:relative;min-height:314px;display:flex;flex-direction:column;justify-content:space-between;border-radius:22px;padding:23px 23px 21px;border:1px solid rgba(255,255,255,.098);background:radial-gradient(circle at 18% 8%,rgba(255,255,255,.105),transparent 36%),radial-gradient(circle at 92% 94%,color-mix(in srgb,var(--accent) 18%,transparent),transparent 38%),linear-gradient(180deg,rgba(255,255,255,.058),rgba(255,255,255,.024));box-shadow:inset 0 1px rgba(255,255,255,.085),inset 0 0 0 1px rgba(255,255,255,.025),0 22px 48px rgba(0,0,0,.27);overflow:hidden;transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease,filter .22s ease}
 .card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,var(--accent),rgba(201,168,76,.82));box-shadow:0 0 20px color-mix(in srgb,var(--accent) 22%,transparent)}
 .card:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(118deg,transparent 0%,rgba(255,255,255,.15) 42%,transparent 58%),radial-gradient(circle at 13% 0%,rgba(255,255,255,.12),transparent 30%);transform:translateX(-78%);opacity:.60;transition:transform .70s ease}
 .card:hover{transform:translateY(-5px);border-color:color-mix(in srgb,var(--accent) 38%,rgba(255,255,255,.14));box-shadow:inset 0 1px rgba(255,255,255,.11),inset 0 0 0 1px rgba(255,255,255,.030),0 30px 62px rgba(0,0,0,.36),0 0 28px color-mix(in srgb,var(--accent) 10%,transparent)}
@@ -229,7 +227,7 @@ h1{margin:0;font-family:var(--font-serif);font-size:clamp(44px,6vw,72px);font-st
 .card:hover .cta{background:radial-gradient(circle at 20% 0%,rgba(255,255,255,.18),transparent 36%),color-mix(in srgb,var(--accent) 19%,rgba(255,255,255,.034));color:#fff}
 .card.primary-card{min-height:342px;border-color:rgba(201,168,76,.20);background:radial-gradient(circle at 18% 8%,rgba(201,168,76,.13),transparent 36%),radial-gradient(circle at 92% 94%,rgba(93,202,165,.08),transparent 38%),linear-gradient(180deg,rgba(255,255,255,.066),rgba(255,255,255,.025))}
 .card.primary-card .cta{color:#171205;border:0;background:radial-gradient(circle at 18% 10%,rgba(255,255,255,.75),transparent 31%),linear-gradient(180deg,#f0d783,#c9a84c);box-shadow:0 18px 36px rgba(201,168,76,.22),0 0 26px rgba(201,168,76,.12),inset 0 1px rgba(255,255,255,.38)}
-.card.sketchbook{--accent:var(--purple)}.card.archive{--accent:var(--gold)}.card.studio{--accent:var(--teal)}.card.sketch{--accent:var(--blue)}.card.shape{--accent:var(--brand)}.card.profile{--accent:var(--gold)}
+.card.sketchbook{--accent:var(--purple)}.card.archive{--accent:var(--gold)}.card.studio{--accent:var(--teal-mid)}.card.sketch{--accent:var(--blue)}.card.shape{--accent:var(--brand)}.card.profile{--accent:var(--gold)}
 .card.coming-soon-card{opacity:.50;cursor:default;pointer-events:none}
 .card.coming-soon-card.allow-click{pointer-events:auto}
 .card.coming-soon-card:hover{transform:none;box-shadow:inset 0 1px rgba(255,255,255,.085),inset 0 0 0 1px rgba(255,255,255,.025),0 22px 48px rgba(0,0,0,.27)}
@@ -284,7 +282,7 @@ h1{margin:0;font-family:var(--font-serif);font-size:clamp(44px,6vw,72px);font-st
 .reference-card{min-height:298px;background:radial-gradient(circle at 18% 8%,rgba(255,255,255,.095),transparent 36%),radial-gradient(circle at 92% 94%,color-mix(in srgb,var(--accent) 15%,transparent),transparent 38%),linear-gradient(180deg,rgba(255,255,255,.050),rgba(255,255,255,.020))}
 .reference-card.methodology{--accent:var(--purple)}
 .reference-card.philosophy{--accent:var(--gold)}
-.reference-card.how{--accent:var(--teal)}
+.reference-card.how{--accent:var(--teal-mid)}
 .reference-card h3{font-size:29px}
 .reference-card p{font-size:13px}
 .reference-card .card-icon{width:54px;height:54px;border-radius:17px}

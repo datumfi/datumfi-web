@@ -54,7 +54,7 @@ const SACRED = {
   // Same gap as nav.js above, found 2026-07-27 while wiring the erase fix: sketchbook.html is a
   // Sacred Host in CLAUDE.md but was ABSENT from this map, so the erase edit passed the build with
   // no guard at all. Pinned at its true content.
-  'sketchbook.html': 'c631411f2434e7edeb64d9ae1f398a1d',   // card buttons read "Open in Sketch" / "Open in Studio" (2026-08-01)
+  'sketchbook.html': '1598b2c95c5e0d5a2df2cf5e8fc2504d',   // (0c) links styles/tokens.css; page-local shadows of shared names removed (2026-08-16)
 
   // ── MAP CLOSED 2026-07-27 ────────────────────────────────────────────────────────────────────
   // The seven below were declared Sacred in CLAUDE.md and pinned NOWHERE, so any edit to them
@@ -63,10 +63,10 @@ const SACRED = {
   // moment someone happened to edit that file. Reconciled all at once instead. Hashes recomputed
   // fresh from source, never pasted. THE RULE FROM HERE: every host declared Sacred in CLAUDE.md is
   // pinned here, and every host pinned here is declared there — the two lists match exactly.
-  'vault.html': 'c7a7a9c101a6743c6a6a2d4c9f8453e1',
-  'my-account.html': '5dc7df75ea963abe7cc46568e532a9ee',   // intro names the rooms, not their positions (2026-08-01)
-  'Blueprint.html': '8e4c46f956c7ce0ef05f244b339f5ab6',   // cards +29% area; card buttons get real chrome (2026-08-01)
-  'Dossier.html': '04934b64b0c0a447ec9d36cf03968823',
+  'vault.html': '892664c7474679faca20c2642d0a94fd',   // (0c) links styles/tokens.css; page-local shadows of shared names removed (2026-08-16) — a redirect shim; L3 cannot measure it
+  'my-account.html': 'd3de43bc1bb2fa8d3ff7e672df2c420b',   // (0c) links styles/tokens.css; page-local shadows of shared names removed (2026-08-16); 4 var(--teal) reads rewritten to var(--teal-mid)
+  'Blueprint.html': 'b208336da661e11beeee39b301915c0d',   // (0c) links styles/tokens.css; page-local shadows of shared names removed (2026-08-16)
+  'Dossier.html': '80839874eaf6d2e911fd52dae94793df',   // (0c) links styles/tokens.css; page-local shadows of shared names removed (2026-08-16); 6 var(--teal) reads rewritten to var(--teal-mid)
   'privacy.html': 'a3023bb685a042b55aaf7784aaafdb8e',   // (0a) token authority — 8 identical :root shadows deleted (2026-08-16)
   'terms.html': '8b41d3737b731ae4af84ca75b9b01278',   // (0a) token authority — 8 identical :root shadows deleted (2026-08-16)
   'scripts/account-topbar.js': '12fb359c789211f27fdfa0f30e431ccf',   // Dossier tab retired; Sign Out is Home-only (2026-08-01)
