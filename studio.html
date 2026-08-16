@@ -155,7 +155,9 @@
   .studio-nb-sheet .panel-sub { color: var(--ink); }
 
   /* SHEET = the DESK: navy field that holds the notebook (paper now lives on .studio-nb-sheet) */
-  .studio-layout.mode-draft .drafting-panel{ background: var(--bg-navy); box-shadow: none; margin: 0; padding: 36px 28px 56px; overflow: auto; }
+  /* --panel-pad-x restated with THIS mode's value so the footer's breakout cancels 28px here, not
+     the split view's 40px. Declaring the variable and the padding from one token is the whole point. */
+  .studio-layout.mode-draft .drafting-panel{ --panel-pad-x: 28px; background: var(--bg-navy); box-shadow: none; margin: 0; padding: 36px var(--panel-pad-x) 56px; overflow: auto; }
   /* DE-CLUTTER — Sheet shows ONLY the upkeep ledger. Others are HIDDEN (not removed); the full
      numbers (accounts/datum/options/charts) return to Sheet as projections after Split is complete. */
   .studio-layout.mode-draft .drafting-panel > .studio-section { display: none; }
@@ -872,9 +874,34 @@
      sites would fix three; removing the budget makes the whole CLASS impossible, including site #4.
      ⚠️ DO NOT "restore" the calc() to make the canvas taller — it re-arms the trap, and
      _gate_exit_reachable.js --defect mutates this exact declaration back to prove it. */
+  /* --panel-pad-x is the panel's SIDE padding, named so the disclosure footer can cancel it out
+     without restating the number. Sheet mode overrides it to 28px; a hardcoded -40px breakout
+     would overhang by 12px a side there, which is precisely the coupling this variable removes. */
   .drafting-panel {
-    width: 480px; padding: 30px 40px 40px 40px; border-right: 1px solid rgba(255,255,255,0.05);
+    --panel-pad-x: 40px;
+    width: 480px; padding: 30px var(--panel-pad-x) 40px; border-right: 1px solid rgba(255,255,255,0.05);
     min-height: 0; overflow-y: auto; background-color: var(--bg-navy); z-index: 50;
+  }
+  /* §28 — THE DISCLOSURE SPANS THE PANEL, NOT THE PANEL'S TEXT COLUMN. Measured 2026-08-15: the
+     panel is 480px but the footer box was 399px, because it sat inside the panel's 40px side
+     padding and then applied its own on top. Two nested insets left a 367px measure inside a 480px
+     column and the legal text floating in the middle of it.
+     The module keeps its own (now percentage) padding for breathing room; this only cancels the
+     HOST's, which is a studio.html fact and belongs in studio.html rather than in a string shared
+     by fifteen pages.
+     ⛔ NOT A DIRECT-CHILD SELECTOR ON PURPOSE — the footer's exact depth in the panel has already
+     moved once (21f882a moved it into the panel's scroll to fix the exit trap) and pinning the fix
+     to a depth would silently stop applying the next time it moves.
+     ⚠️ !important ON WIDTH ONLY, AND IT IS EARNED. datum-footer.js applies its box style with
+     setAttribute('style', …) — an INLINE declaration carrying width:100%, which a stylesheet rule
+     cannot outrank. Without the flag the negative margins landed and the width did not, so the box
+     shifted left and stayed 399px wide. Measured: boxW unchanged at 399 on the first attempt.
+     The alternative was deleting width:100% from the shared module, which would have altered the
+     box model on the other fourteen pages to fix one — the wrong blast radius for a cosmetic ask. */
+  .drafting-panel #disclosure-footer {
+    margin-left: calc(-1 * var(--panel-pad-x));
+    margin-right: calc(-1 * var(--panel-pad-x));
+    width: calc(100% + 2 * var(--panel-pad-x)) !important;
   }
   /* Item 3 (P8.1) — shape-state outline scoped to the 01->05 input group on BOTH the Have
      (#shape-input-frame-have) and Want (#shape-input-frame-want) panels. Border (all 4 sides,

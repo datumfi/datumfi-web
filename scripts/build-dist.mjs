@@ -27,7 +27,7 @@ const SACRED = {
      CLAUDE.md in this same commit. Sacred on a stricter rule than the rest: its absence removes a
      regulatory disclosure from every page at once. */
   'scripts/datum-footer.js': '0927f14e186a523ac238eb95f6ac4a41',   // % padding + justify so the 399px Studio column fills; legal text untouched (2026-08-15)
-  'studio.html': '2a62e8651e7a204b390e1f6b096cc06c',   // §28 an empty estate hides the $0 readout + the four lenses; landing opens in split, not shape (2026-08-15)
+  'studio.html': '37d46a5b857de08eb920b221551f8119',   // §28 the disclosure spans the drafting panel instead of nesting inside its padding (2026-08-15)
   'sketch.html': '952b0284765849d45f15c9ea7f9b45f2',   // Part 24/25 — the PARSE-TIME dossier seed is retired; it moves to the auth-gated load-time resolver (2026-08-15)
   /* §47.3 — SACRED as of 2026-08-13, declared in CLAUDE.md IN THIS SAME COMMIT. The two lists are
      reconciled by this build in BOTH directions, so a host added to one and not the other STOPS
