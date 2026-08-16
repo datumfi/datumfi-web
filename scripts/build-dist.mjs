@@ -27,8 +27,8 @@ const SACRED = {
      CLAUDE.md in this same commit. Sacred on a stricter rule than the rest: its absence removes a
      regulatory disclosure from every page at once. */
   'scripts/datum-footer.js': 'bb0567d5088c20cde1a744c52263825b',   // the disclosure split: method-limit sentences collapse behind a real button; text to a measured 4.51:1 (2026-08-15)
-  'studio.html': 'd58f6b090e929c3ca309fda9a58b8040',   // (0b) --muted 0.3 -> the shared 0.4; the dimmest value on the site is retired from the flagship surface (2026-08-16)
-  'sketch.html': 'eec601cd1a972f2759e50e86cc1317d9',   // (0b) the last --font-serif shadow deleted; Georgia is promoted into styles/typography.css instead (2026-08-16)
+  'studio.html': '31b4a7153f2c06aa68baf3120bf88e81',   // (0b) --muted 0.3 -> the shared 0.4; the dimmest value on the site is retired from the flagship surface (2026-08-16)
+  'sketch.html': '68e2951ad895b64abca5ff0fa1e6353b',   // (0b) the last --font-serif shadow deleted; Georgia is promoted into styles/typography.css instead (2026-08-16)
   /* §47.3 — SACRED as of 2026-08-13, declared in CLAUDE.md IN THIS SAME COMMIT. The two lists are
      reconciled by this build in BOTH directions, so a host added to one and not the other STOPS
      THE BUILD — which is why the nav.js / sketchbook.html gaps could exist historically and cannot
@@ -67,8 +67,8 @@ const SACRED = {
   'my-account.html': '5dc7df75ea963abe7cc46568e532a9ee',   // intro names the rooms, not their positions (2026-08-01)
   'Blueprint.html': '8e4c46f956c7ce0ef05f244b339f5ab6',   // cards +29% area; card buttons get real chrome (2026-08-01)
   'Dossier.html': '04934b64b0c0a447ec9d36cf03968823',
-  'privacy.html': '74caa5d9ac2c36152842828a86f4d4d9',   // (0a) token authority — 8 identical :root shadows deleted (2026-08-16)
-  'terms.html': 'f5cd4221b4152dbcdce2685807407cb5',   // (0a) token authority — 8 identical :root shadows deleted (2026-08-16)
+  'privacy.html': 'a3023bb685a042b55aaf7784aaafdb8e',   // (0a) token authority — 8 identical :root shadows deleted (2026-08-16)
+  'terms.html': '8b41d3737b731ae4af84ca75b9b01278',   // (0a) token authority — 8 identical :root shadows deleted (2026-08-16)
   'scripts/account-topbar.js': '12fb359c789211f27fdfa0f30e431ccf',   // Dossier tab retired; Sign Out is Home-only (2026-08-01)
 };
 const md5 = (p) => createHash('md5').update(readFileSync(p)).digest('hex');

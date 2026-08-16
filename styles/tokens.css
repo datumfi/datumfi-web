@@ -1,0 +1,99 @@
+/* ═══ DATUM FI · TOKENS ════════════════════════════════════════════════════════════════════════
+ * THE ONE PLACE THE PALETTE LIVES. Every page links this file; nothing else declares these names.
+ *
+ * WHY IT IS SPLIT IN THREE. The old names encoded A PIGMENT in the identifier — --teal-mid,
+ * --gold, --bg-navy, --danger-red. The moment the accent stops being teal, `--teal-mid: #d5ad63`
+ * is a lie in a variable name, read 1,334 times across 43 files. A straight rename to a prettier
+ * pigment would be the same mistake in better taste: `var(--verdigris)` still does not tell you
+ * whether it is an accent, a border or a background.
+ *   🔑 PAINT is WHAT THE COLOUR IS. ROLE is WHAT IT IS FOR. Pages read ROLE (or, for now, LEGACY).
+ *      Recolouring the site becomes editing the PAINT block, and not one identifier anywhere
+ *      becomes a lie.
+ *
+ * ⛔ THE RULE THAT KEEPS THIS HONEST: A TOKEN FILE MAY ONLY CONTAIN VALUES THAT ALREADY EXIST.
+ *    A NAME WITH NO SOURCE IS A DESIGN DECISION SMUGGLED IN AS PLUMBING. Two paints and four
+ *    roles from the original scheme are DELIBERATELY ABSENT below — see the omissions note.
+ * ═════════════════════════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── 🎨 PAINT · WHAT THE COLOUR IS ──────────────────────────────────────────────────────────
+   * THE ONLY PLACE A HEX EVER APPEARS. To recolour the site, edit this block and nothing else. */
+  --paint-verdigris:      #5DCAA5;                    /* the workhorse accent */
+  --paint-verdigris-deep: #1D9E75;
+  --paint-brass:          #C9A84C;
+  --paint-brass-deep:     #B8952F;
+  --paint-chalk:          #ffffff;                    /* what a draughtsman marks with on a dark ground */
+  --paint-red-lead:       #e24b4a;
+  --paint-cyanotype:      rgba(100, 180, 255, 0.05);  /* blueprint blue — the ruling of the paper */
+  --paint-inkwell:        #091221;                    /* the page field behind everything */
+
+  /* ── ⚙️ ROLE · WHAT THE COLOUR IS FOR ───────────────────────────────────────────────────────
+   * NEVER A BARE HEX. A role holds either a PAINT, or a stated derivation of EXACTLY ONE paint
+   * (an alpha or a color-mix) — never a derivation of two, which would hide a blend nobody ruled.
+   * 🔑 THE TEST: change one paint and every role deriving from it moves with it. */
+  --accent:      var(--paint-verdigris);
+  --accent-deep: var(--paint-verdigris-deep);
+  --bg:          var(--paint-inkwell);
+  --text:        var(--paint-chalk);
+  /* A DERIVATION, NOT A PIGMENT: muted text is chalk at 40%, so it must follow chalk. Written as
+   * a hard-coded rgba() this role would silently keep its old colour on the day chalk changes —
+   * which is precisely the class of lie this file exists to end.
+   * ⚠️ THE LITERAL BELOW IS THE FALLBACK, NOT A SECOND SOURCE OF TRUTH: it is the same value the
+   * derivation produces, spelled for an older reader. The upgrade lives in the @supports block at
+   * the foot of this file — see the note there for why it CANNOT be written as two declarations. */
+  --text-muted:  rgba(255, 255, 255, 0.4);
+  --label:       var(--paint-brass);                  /* headings + mono kickers read this today */
+  --debt:        var(--paint-red-lead);
+  --grid-line:   var(--paint-cyanotype);
+
+  /* ── ✍️ TYPE ────────────────────────────────────────────────────────────────────────────────
+   * RELOCATED, NOT INVENTED. These two shared tokens moved here with the :root block they lived
+   * in; styles/typography.css still reads --font-serif for `body`, so leaving them behind would
+   * have broken it. Georgia is in the stack deliberately — it degrades gracefully where a bare
+   * `serif` falls to the browser default. */
+  --font-serif: 'Fraunces', Georgia, serif;
+  --font-mono:  'DM Mono', monospace;
+
+  /* LEGACY NAMES — read-only compatibility. New code uses the ROLE tokens above. Retired page-by-page; see MASTER SPEC §67. */
+  --teal:       var(--accent-deep);
+  --teal-mid:   var(--accent);
+  --gold:       var(--label);
+  --gold-dark:  var(--paint-brass-deep);
+  --danger-red: var(--debt);
+  --bg-navy:    var(--bg);
+  --white:      var(--text);
+  --muted:      var(--text-muted);
+}
+
+/* ── THE DERIVATION UPGRADE, GUARDED ──────────────────────────────────────────────────────────
+ * Where color-mix() is understood, --text-muted becomes a real derivation of the chalk paint, so
+ * it moves when chalk moves. Where it is not, the literal above stands and the page renders
+ * exactly what it renders today.
+ *
+ * ⛔⛔ THIS CANNOT BE WRITTEN AS TWO DECLARATIONS, AND THE MEASUREMENT IS WHY. For a normal
+ * property the cascade drops a declaration the parser cannot understand and the earlier one
+ * survives. A CUSTOM PROPERTY ACCEPTS ALMOST ANY TOKEN SEQUENCE AS VALID AT PARSE TIME, so the
+ * LATER declaration wins even when the function inside it is unknown, and the failure surfaces
+ * later at substitution as "invalid at computed-value time" — which falls back to inherited or
+ * initial, NEVER to the earlier declaration.
+ *   MEASURED, with an unknown function standing in for an unsupported one:
+ *     two declarations -> painted rgba(0, 0, 0, 0)          — TRANSPARENT. Muted text INVISIBLE.
+ *     @supports guard  -> painted rgba(255, 255, 255, 0.4)  — exactly today's rendering.
+ * 🔑 THE FALLBACK IDIOM EVERY CSS AUTHOR KNOWS IS INERT ON CUSTOM PROPERTIES, AND IT FAILS WORSE
+ *    THAN THE THING IT WAS MEANT TO PREVENT. @supports is evaluated at PARSE time, so an
+ *    unsupporting browser never enters the block at all.
+ * ⚠️ And the proof that missed this first time round was byte-identical PNGs — painted in a
+ *    browser that HAS color-mix. A PROOF INHERITS THE CAPABILITIES OF THE THING THAT RAN IT. */
+@supports (color: color-mix(in srgb, white 40%, transparent)) {
+  :root { --text-muted: color-mix(in srgb, var(--paint-chalk) 40%, transparent); }
+}
+
+/* ── OMITTED ON PURPOSE — NO SOURCE EXISTS YET ────────────────────────────────────────────────
+ * --paint-verdigris-light   the hover tone
+ * --paint-graphite-blue     the drafting grid
+ * --accent-hover  --surface  --border  --info
+ * These are roles the NEW design needs — translucent surfaces, inset hairlines, a hover state —
+ * and they do not exist because that design does not exist yet. Inventing values here would be a
+ * guess wearing a token's clothes.
+ * ⭐ AN EMPTY SLOT IN A NAMING SCHEME IS AN HONEST BLANK, AND ALSO A WORK ITEM THAT CANNOT BE
+ *    LOST: the surface arc literally cannot proceed without filling them. */
