@@ -27,8 +27,8 @@ const SACRED = {
      CLAUDE.md in this same commit. Sacred on a stricter rule than the rest: its absence removes a
      regulatory disclosure from every page at once. */
   'scripts/datum-footer.js': 'bb0567d5088c20cde1a744c52263825b',   // the disclosure split: method-limit sentences collapse behind a real button; text to a measured 4.51:1 (2026-08-15)
-  'studio.html': 'fa66abbc8a834fe5956b5bebdf459d2f',   // §28.2 the Precision motto is retired from the Architect profile (2026-08-15)
-  'sketch.html': '952b0284765849d45f15c9ea7f9b45f2',   // Part 24/25 — the PARSE-TIME dossier seed is retired; it moves to the auth-gated load-time resolver (2026-08-15)
+  'studio.html': '2516c9fd204714ff7e8364cc636bde3a',   // (0a) token authority — the `?v=2` cache-buster is retired; no :root shadow here to remove (2026-08-16)
+  'sketch.html': 'c369f1531c6a72a2ff057b90095e8b8c',   // (0a) token authority — 8 identical :root shadows deleted; styles/typography.css now governs (2026-08-16)
   /* §47.3 — SACRED as of 2026-08-13, declared in CLAUDE.md IN THIS SAME COMMIT. The two lists are
      reconciled by this build in BOTH directions, so a host added to one and not the other STOPS
      THE BUILD — which is why the nav.js / sketchbook.html gaps could exist historically and cannot
@@ -67,8 +67,8 @@ const SACRED = {
   'my-account.html': '5dc7df75ea963abe7cc46568e532a9ee',   // intro names the rooms, not their positions (2026-08-01)
   'Blueprint.html': '8e4c46f956c7ce0ef05f244b339f5ab6',   // cards +29% area; card buttons get real chrome (2026-08-01)
   'Dossier.html': '04934b64b0c0a447ec9d36cf03968823',
-  'privacy.html': '7f7f867eb7acbfef3f6475dbc5b973b2',
-  'terms.html': '6857a4a3767eb02d2baa233b7f43278c',
+  'privacy.html': '74caa5d9ac2c36152842828a86f4d4d9',   // (0a) token authority — 8 identical :root shadows deleted (2026-08-16)
+  'terms.html': 'f5cd4221b4152dbcdce2685807407cb5',   // (0a) token authority — 8 identical :root shadows deleted (2026-08-16)
   'scripts/account-topbar.js': '12fb359c789211f27fdfa0f30e431ccf',   // Dossier tab retired; Sign Out is Home-only (2026-08-01)
 };
 const md5 = (p) => createHash('md5').update(readFileSync(p)).digest('hex');
