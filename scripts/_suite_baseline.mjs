@@ -234,6 +234,64 @@ function whoHolds(port) {
   } catch { return ''; }
 }
 
+/* ══ §13.90 · THE VERDICT/EXIT RECONCILIATION · 2026-08-16 ═════════════════════════════════════════
+   THE ASK WAS "make the exit code incapable of disagreeing with its own score block". IT ALREADY WAS.
+   `status` derives from the exit code, the score block prints from `status`, and the final exit
+   derives from the same arrays — three honest derivations, all agreeing, all downstream of ONE input.
+
+   ⛔ THE DISAGREEMENT IS A LEVEL DOWN, AND IT IS BETWEEN THE GATE AND ITSELF. `status` never read the
+   gate's OWN PRINTED VERDICT. A gate that prints `OVERALL: RED` and then exits 0 was classified GREEN,
+   counted GREEN, and this runner honestly exited 0 over it. Nothing here was broken; the input was.
+   🔑 A CHAIN OF HONEST DERIVATIONS FROM A WRONG INPUT IS STILL WRONG. "INTERNALLY CONSISTENT" IS NOT
+      "CORRECT" — and hardening the links would have shipped a green guard over a live defect.
+
+   THE RULE IS DELIBERATELY ONE-DIRECTIONAL, and the asymmetry is the point. Only `says RED, exits 0`
+   is reclassified, because that is the direction that MANUFACTURES A FALSE PASS and because a printed
+   RED verdict provably cannot mean GREEN. The inverse — says GREEN, exits non-zero — STAYS RED and
+   gets read by a human: the process may have died after rendering its verdict, and that is exactly the
+   kind of ambiguity §13.68 forbids a classifier from guessing at.
+     🔑 ONLY RECLASSIFY WHAT IS PROVABLY NOT A VERDICT. (Same rule the CRASH boundary obeys.)
+
+   ⛔ PRECISION BEATS RECALL HERE, BECAUSE OF WHAT A FALSE POSITIVE COSTS. A reconciliation guard that
+   manufactures disagreements teaches everyone to ignore the one signal it exists to make trustworthy.
+   Every red-first control in this repo PRINTS the word RED by design ("MODE: RED-FIRST … MUST be RED"),
+   so a naive scan for "RED" would red the whole suite on gates that are working perfectly. VERDICT_NOISE
+   drops those lines before any pattern is tried, and the `redWord` sentinel holds that boundary open.
+
+   COVERAGE IS REPORTED, NEVER ASSUMED. The vocabulary here is genuinely heterogeneous — measured over
+   the runner's own receipt, only 60 of 227 gates print an `OVERALL:` line; the rest say `GATE GREEN`,
+   `CLEAN GREEN n / RED n`, `GREEN — n failing`, `n passed, n failed`, `SCORE n/n GREEN`. A gate whose
+   verdict cannot be parsed is NOT covered and NOT silently called covered: the score block prints the
+   uncovered count so the guard's reach is visible and can shrink on purpose.
+   ⚠️ AND THE LIMIT THAT CANNOT BE MEASURED FROM A GREEN RUN: a passing suite only teaches the
+   vocabulary of SUCCESS. The RED forms below are the failure shapes of the same six dialects, proven
+   by sentinel rather than by observation, because no green population can exhibit them. */
+const VERDICT = [
+  // [name, regex, declares-a-FAILURE?]
+  ['overall',       /^\s*OVERALL:\s*(GREEN|RED)\b/,                    (m) => m[1] === 'RED'],
+  ['gate',          /^\s*(?:✅|❌|⛔)?\s*GATE\s+(GREEN|RED)\b/,          (m) => m[1] === 'RED'],
+  ['clean-count',   /^\s*CLEAN\s+GREEN\s+\d+\s*\/\s*RED\s+(\d+)\b/,    (m) => Number(m[1]) > 0],
+  ['failing-count', /\bGREEN\s*[—-]\s*(\d+)\s+failing\b/,              (m) => Number(m[1]) > 0],
+  ['passed-failed', /^\s*(\d+)\s+passed,\s*(\d+)\s+failed\b/,          (m) => Number(m[2]) > 0],
+  ['score',         /^\s*SCORE\s+\d+\s*\/\s*\d+\s+(GREEN|RED)\b/,      (m) => m[1] === 'RED'],
+];
+/* Lines that TALK ABOUT a red instead of DECLARING one. Dropped before any pattern is tried. */
+const VERDICT_NOISE = /RED-?FIRST|redfirst|--red|MODE:|\[BITE|MUST be RED|would be RED|goes RED|stays RED/i;
+
+function readVerdict(text) {
+  let seen = false, failed = null;
+  for (const line of String(text || '').split('\n')) {
+    if (VERDICT_NOISE.test(line)) continue;
+    for (const [pattern, re, isFail] of VERDICT) {
+      const m = re.exec(line);
+      if (!m) continue;
+      seen = true;
+      if (!failed && isFail(m)) failed = { pattern, line: line.trim().slice(0, 160) };
+    }
+  }
+  return { seen, failed };
+}
+
 /* ---------------- run one gate ---------------- */
 function runOne(file, name, timeoutMs = TIMEOUT_MS, declaredStatus = null) {
   return new Promise((resolve) => {
@@ -295,8 +353,17 @@ function runOne(file, name, timeoutMs = TIMEOUT_MS, declaredStatus = null) {
        * COUNTED AS NEITHER GREEN NOR RED, and printed even at zero — same contract as QUARANTINED,
        * for the same reason: a crash that stops being visible is a crash nobody investigates. */
       const crashed = typeof code === 'number' && code > 255;
-      const status = quarantined ? 'QUARANTINED' : (crashed ? 'CRASH' : (code === 0 ? 'GREEN' : 'RED'));
-      resolve({ name, status, code, ms: Date.now() - t0, out, err });
+      /* ── §13.90 · THE GATE IS ASKED WHAT IT THINKS IT DID ────────────────────────────────────
+       * Read ONLY on exit 0: that is the only direction that can manufacture a false pass, and it
+       * is the only one where the printed verdict provably contradicts the code. QUARANTINED still
+       * wins — a verdict nobody trusts is not worth reconciling — and CRASH cannot collide with it
+       * (code > 255 is not 0). See the header block above for why the rule is one-directional. */
+      const verdict = readVerdict(out + '\n' + err);
+      const incoherent = code === 0 && !quarantined && !!verdict.failed;
+      const status = quarantined ? 'QUARANTINED'
+                   : (crashed ? 'CRASH'
+                   : (code === 0 ? (incoherent ? 'INCOHERENT' : 'GREEN') : 'RED'));
+      resolve({ name, status, code, ms: Date.now() - t0, out, err, verdict });
     });
   });
 }
@@ -322,6 +389,19 @@ async function selfCheck() {
        that called EVERY non-zero exit a crash, which would hide every real red in the suite. */
     crash: "console.log('sentinel: crashing'); process.exit(3221226505);\n",
     nearMiss: "console.log('sentinel: exit 255'); process.exit(255);\n",
+    /* THREE reconciliation sentinels, and the second and third are the load-bearing ones — the same
+       shape the quarantine and crash PAIRS use, for the same reason.
+         incoherent  the defect itself: the gate says RED and exits 0. Must NOT be GREEN.
+         honestRed   says RED and exits 1. Must stay RED. Proves the class is NARROW and did not
+                     quietly swallow ordinary failures into a new bucket nobody reads.
+         redWord     prints 'MODE: RED-FIRST … MUST be RED' and then an HONEST GREEN verdict, exiting
+                     0 — the exact shape of every passing red-first control in this repo. Must stay
+                     GREEN. A single `incoherent` sentinel would pass just as happily on a parser that
+                     flagged any line containing the word RED, and THAT parser would red the whole
+                     suite — teaching everyone to ignore the one class we built to be trusted. */
+    incoherent: "console.log('OVERALL: RED   (6 pass / 2 fail)'); process.exit(0);\n",
+    honestRed: "console.log('OVERALL: RED   (6 pass / 2 fail)'); process.exit(1);\n",
+    redWord: "console.log('MODE: RED-FIRST (mutation MUST be RED)');\nconsole.log('PASS a leg [BITE clobber]');\nconsole.log('OVERALL: GREEN   (8 pass / 0 fail)');\nprocess.exit(0);\n",
   };
   /* --sabotage=<k> deliberately breaks ONE sentinel so it behaves like the others. The guard must
      catch it and abort. This is the red-first: it proves the guard can still fail. */
@@ -342,6 +422,9 @@ async function selfCheck() {
   r.quarGreen = await runOne(files.quarGreen, 'sentinel_quar_green');
   r.crash = await runOne(files.crash, 'sentinel_crash');
   r.nearMiss = await runOne(files.nearMiss, 'sentinel_near_miss');
+  r.incoherent = await runOne(files.incoherent, 'sentinel_incoherent');
+  r.honestRed = await runOne(files.honestRed, 'sentinel_honest_red');
+  r.redWord = await runOne(files.redWord, 'sentinel_red_word');
   fs.rmSync(dir, { recursive: true, force: true });
 
   const checks = [
@@ -357,6 +440,11 @@ async function selfCheck() {
        not a net — exit 255 is the largest honest verdict there is, and it must stay RED. */
     ['a DEATH (exit 0xC0000409) is CRASH, not RED', r.crash.status === 'CRASH', r.crash.status + ' code=' + r.crash.code],
     ['exit 255 is still RED — the boundary is not a net', r.nearMiss.status === 'RED', r.nearMiss.status + ' code=' + r.nearMiss.code],
+    /* THE RECONCILIATION TRIO. The first is the defect; the other two are the boundaries that keep
+       the class narrow and keep it from crying wolf. All three must hold or the class is worthless. */
+    ['says RED + exit 0 is INCOHERENT, not GREEN', r.incoherent.status === 'INCOHERENT', r.incoherent.status + ' code=' + r.incoherent.code],
+    ['says RED + exit 1 stays RED (class is narrow)', r.honestRed.status === 'RED', r.honestRed.status + ' code=' + r.honestRed.code],
+    ['"RED-FIRST" in a MODE line is not a verdict', r.redWord.status === 'GREEN', r.redWord.status + ' code=' + r.redWord.code],
   ];
   console.log('----- self-check (harness proves itself before it reports) -----');
   let all = true;
@@ -497,11 +585,14 @@ async function runPool(list, conc, label) {
 
   const by = (s) => results.filter((r) => r.status === s);
   const green = by('GREEN'), red = by('RED'), to = by('TIMEOUT'), se = by('SPAWN_ERROR');
-  const quar = by('QUARANTINED'), crash = by('CRASH');
+  const quar = by('QUARANTINED'), crash = by('CRASH'), inco = by('INCOHERENT');
 
   console.log('\n===== BASELINE RESULT =====');
   console.log(`GREEN   ${green.length}`);
   console.log(`RED     ${red.length}`);
+  // PRINTED EVEN AT ZERO, same contract as QUARANT and CRASH. This is the class that used to be
+  // scored GREEN, so a run where it silently stops being reported is the run that lies again.
+  console.log(`INCOHER ${inco.length}   (the gate PRINTED a red verdict and exited 0 — a false pass)`);
   // PRINTED EVEN AT ZERO, unlike the buckets below. A quarantine that stops being visible is a
   // quarantine nobody reviews, and these are gates somebody decided not to trust — the count
   // should be uncomfortable to look at, not something the report can quietly drop.
@@ -512,6 +603,16 @@ async function runPool(list, conc, label) {
   console.log(`TIMEOUT ${to.length}`);
   console.log(`SPAWN   ${se.length}`);
   console.log(`TOTAL   ${results.length}   wall ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+  /* §13.90 COVERAGE — REPORTED, NEVER ASSUMED. The reconciliation can only catch a gate whose own
+     verdict it can READ. Printing the uncovered count keeps the guard's reach honest and shrinkable;
+     leaving it out would let "the runner checks for false passes" quietly mean "for some of them".
+     🔑 A GUARD PROVES THE GATES IT CAN READ, NOT THE ONES IT IS NAMED AFTER. */
+  {
+    const readable = results.filter((r) => r.verdict && r.verdict.seen);
+    const mute = results.filter((r) => !(r.verdict && r.verdict.seen));
+    console.log(`VERDICT ${readable.length}/${results.length} gates print a verdict this runner can read` +
+      ` (${mute.length} unreadable — NOT covered by the exit/verdict reconciliation)`);
+  }
 
   const line = (r) => `  ${r.status.padEnd(8)} ${r.name}  (exit ${r.code}, ${(r.ms / 1000).toFixed(1)}s)`;
   /* ── A RED LIST IS NOT A RED REASON · 2026-08-12 ───────────────────────────────────────────────
@@ -532,7 +633,7 @@ async function runPool(list, conc, label) {
     const pick = (named.length ? named : body).slice(-6);
     return pick.length ? pick.map((l) => '           | ' + l.slice(0, 160)).join('\n') : '           | (no output captured)';
   };
-  for (const [t, set] of [['RED', red], ['CRASH', crash], ['TIMEOUT', to], ['SPAWN_ERROR', se], ['QUARANTINED', quar]]) {
+  for (const [t, set] of [['RED', red], ['INCOHERENT', inco], ['CRASH', crash], ['TIMEOUT', to], ['SPAWN_ERROR', se], ['QUARANTINED', quar]]) {
     if (!set.length) continue;
     console.log(`\n--- ${t} ---`);
     set.slice().sort((a, b) => a.name.localeCompare(b.name)).forEach((r) => {
@@ -550,6 +651,9 @@ async function runPool(list, conc, label) {
   const outPath = path.join(os.tmpdir(), `datum-baseline-results${tier}.json`);
   fs.writeFileSync(outPath, JSON.stringify(results.map((r) => ({
     name: r.name, browser: r.browser, status: r.status, code: r.code, ms: r.ms,
+    // §13.90 — carried into the receipt so a later reader can audit the reconciliation's REACH
+    // without re-running the suite (which is how the 2026-08-12 red reasons were lost).
+    verdictSeen: !!(r.verdict && r.verdict.seen), verdictFailed: (r.verdict && r.verdict.failed) || null,
     tail: (r.out || '').split('\n').slice(-25).join('\n'), err: (r.err || '').slice(-2000),
   })), null, 1));
   console.log(`\nfull results -> ${outPath}`);
@@ -587,5 +691,9 @@ async function runPool(list, conc, label) {
    * decision a human took and reviews; a crash is an unplanned death nobody agreed to. Forgiving it
    * silently would trade the permanently-red alarm for a permanently-invisible one, which is the
    * same disease facing the other way. */
-  process.exit(red.length + to.length + se.length + crash.length === 0 ? 0 : 1);
+  /* ⛔ INCOHERENT FAILS THE RUN, AND IT IS THE LEAST FORGIVABLE OF THE FOUR. A crash at least
+   * announced itself by dying; an incoherent gate asserted a PASS while its own output said
+   * otherwise, and every consumer downstream — this score block, the exit code, a reader skimming
+   * for reds — was entitled to believe it. It is the one class that was previously counted GREEN. */
+  process.exit(red.length + to.length + se.length + crash.length + inco.length === 0 ? 0 : 1);
 })();
