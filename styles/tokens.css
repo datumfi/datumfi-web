@@ -54,7 +54,19 @@
    * ⚠️ THE LITERAL BELOW IS THE FALLBACK, NOT A SECOND SOURCE OF TRUTH: it is the same value the
    * derivation produces, spelled for an older reader. The upgrade lives in the @supports block at
    * the foot of this file — see the note there for why it CANNOT be written as two declarations. */
-  --text-muted:  rgba(255, 255, 255, 0.4);
+  /* ⬆️ RAISED 0.40 -> 0.55 (2026-08-16, MASTER SPEC ruling on the census). At 0.40 this role
+   * measured 3.80:1 against the inkwell field — THE ROLE ITSELF WAS BELOW THE 4.5 FLOOR, on 709
+   * read sites, and the lit surfaces of (C3) put a LIGHTER ground under it. 0.55 measures ~6.16:1
+   * on the page field.
+   * ⭐ THE TARGET IS 5.0:1, NOT 4.5:1 — A ROLE SPECIFIED *AT* ITS FLOOR IS A DEFECT WITH A DATE ON
+   *    IT. Two sessions were spent on a paragraph sitting at 4.51 against a 4.5 floor.
+   * ⚠️ CHOSEN FROM THE DISTRIBUTION, NOT FROM THE WORST CASE. Solving for the single darkest-text
+   *    outlier demanded 0.79, which is not "muted" any more. Measured over 1098 muted runs on the
+   *    lit ground: p50 0.49 · p90 0.50 · p95 0.51. At 0.55, 1092 of 1098 clear 4.5:1 and 1084 clear
+   *    5.0:1; the six that do not are LOCAL surfaces carrying their own light or grey backgrounds
+   *    (a brass card tier, two grey buttons, two step numerals) and are their own findings.
+   *    🔑 A GLOBAL ROLE SET BY ITS WORST LOCAL CONSUMER STOPS BEING A ROLE. */
+  --text-muted:  rgba(255, 255, 255, 0.55);
   --label:       var(--paint-brass);                  /* headings + mono kickers read this today */
   --debt:        var(--paint-red-lead);
 
@@ -120,7 +132,7 @@
  *    browser that HAS color-mix. A PROOF INHERITS THE CAPABILITIES OF THE THING THAT RAN IT. */
 @supports (color: color-mix(in srgb, white 40%, transparent)) {
   :root {
-    --text-muted: color-mix(in srgb, var(--paint-chalk) 40%, transparent);
+    --text-muted: color-mix(in srgb, var(--paint-chalk) 55%, transparent);
     /* THE SAME GUARD COVERS ALL FIVE — one feature, one test. Re-measured 2026-08-16 with an
      * unknown function standing in for an unsupported color-mix(), because we cannot install a
      * pre-2023 browser:

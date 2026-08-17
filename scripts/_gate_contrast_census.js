@@ -75,7 +75,12 @@ const PORT = 8249;
  *    NO REASON GETS IGNORED — which costs more than the 4 counts of slack it was protecting. The
  *    regression this exists to catch (lit surfaces dropping text below the floor) moves the number
  *    by tens, not by twos. */
-const PIN = 373;   // MEASURED 2026-08-16 · 19 live pages · ~2040 text runs · SIGNED-OUT state only
+/* ⬇️ 373 -> 313 when C1 raised --text-muted (2026-08-16). THE PIN ONLY EVER FALLS.
+ *    Post-C1 readings on an idle machine: 309 · 308. The pin is that ceiling (309) PLUS THE
+ *    4-COUNT CONTENTION BAND MEASURED PRE-C1 (369 -> 373) — derived from the instrument's own
+ *    jitter, NOT picked to make a run pass. Pinning at 309 would red on a loaded machine, and
+ *    A CONTENDED RUN THAT REDS FOR NO REASON IS THE FAILURE MODE THAT KILLS INSTRUMENTS. */
+const PIN = 313;   // MEASURED 2026-08-16 · 19 live pages · ~2040 text runs · SIGNED-OUT state only
 
 let PASS = 0, FAIL = 0;
 const leg = (id, ok, msg) => { ok ? PASS++ : FAIL++; console.log(`${ok ? 'PASS' : 'FAIL'} ${id} ${msg}`); };
