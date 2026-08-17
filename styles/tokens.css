@@ -20,11 +20,20 @@
    * THE ONLY PLACE A HEX EVER APPEARS. To recolour the site, edit this block and nothing else. */
   --paint-verdigris:      #5DCAA5;                    /* the workhorse accent */
   --paint-verdigris-deep: #1D9E75;
+  /* PROVENANCE, NOT IMPLEMENTATION: verdigris mixed 30% toward chalk. Shipped as a HEX because
+   * paints hold hex — recomputed and checked against the derivation before landing (141.6/217.9/192).
+   * ⚠️ DERIVED FROM *OUR* VERDIGRIS, NOT LIFTED FROM proto's #a3efe0, which is relative to proto's
+   *    accent and would have drifted us off our own family. (MASTER SPEC §76.1) */
+  --paint-verdigris-light: #8EDAC0;
   --paint-brass:          #C9A84C;
   --paint-brass-deep:     #B8952F;
   --paint-chalk:          #ffffff;                    /* what a draughtsman marks with on a dark ground */
   --paint-red-lead:       #e24b4a;
   --paint-cyanotype:      rgba(100, 180, 255, 0.05);  /* blueprint blue — the ruling of the paper */
+  /* proto's drafting-grid major with THE ALPHA STRIPPED OUT. 🔑 A PAINT IS A PIGMENT; TRANSPARENCY
+   * IS HOW A SURFACE *USES* IT. Storing rgba(42,78,104,.16) here would have made every future
+   * opacity tweak a recolour. (MASTER SPEC §76.1) */
+  --paint-graphite-blue: #2A4E68;
   --paint-inkwell:        #091221;                    /* the page field behind everything */
 
   /* ── ⚙️ ROLE · WHAT THE COLOUR IS FOR ───────────────────────────────────────────────────────
@@ -33,6 +42,10 @@
    * 🔑 THE TEST: change one paint and every role deriving from it moves with it. */
   --accent:      var(--paint-verdigris);
   --accent-deep: var(--paint-verdigris-deep);
+  /* A STRAIGHT PAINT READ — NO DERIVATION, SO NO @supports GUARD. var() is universally supported;
+   * wrapping this one would mean it CEASES TO EXIST on a browser lacking color-mix(), which is the
+   * opposite of what the guard is for. The four roles below are the derivations. */
+  --accent-hover: var(--paint-verdigris-light);
   --bg:          var(--paint-inkwell);
   --text:        var(--paint-chalk);
   /* A DERIVATION, NOT A PIGMENT: muted text is chalk at 40%, so it must follow chalk. Written as
@@ -44,7 +57,28 @@
   --text-muted:  rgba(255, 255, 255, 0.4);
   --label:       var(--paint-brass);                  /* headings + mono kickers read this today */
   --debt:        var(--paint-red-lead);
-  --grid-line:   var(--paint-cyanotype);
+
+  /* ── THE FOUR DERIVED ROLES ─────────────────────────────────────────────────────────────────
+   * Each is EXACTLY ONE paint at an alpha. The literal here is the FALLBACK — the same value the
+   * derivation produces, spelled for a reader without color-mix(); the derivation itself lives in
+   * the @supports block at the foot of this file.
+   * ⛔ THEY ARE *NOT* WRITTEN AS TWO ADJACENT DECLARATIONS, AND THAT IS MEASURED, NOT STYLISTIC —
+   *    see the block at the foot. MASTER SPEC §69.4 / §76.2 / §76.3 authored the adjacent-pair
+   *    form; it was STRUCK 2026-08-16 after measurement. THE CASCADE PROTECTS A DECLARATION THAT
+   *    IS *INVALID*; IT CANNOT PROTECT ONE THAT IS *VALID UNTIL SUBSTITUTION*. */
+
+  /* THE PANEL IS THE PAGE FIELD MADE TRANSLUCENT, so the body's light shows through it.
+   * ⭐ THE LIFT COMES FROM THE LIGHT BENEATH, NOT FROM A LIGHTER PAINT. (§60.1 / §76.2) */
+  --surface:     rgba(9, 18, 33, 0.88);      /* inkwell at 88% */
+  --border:      rgba(93, 202, 165, 0.18);   /* verdigris at 18% — the panel's own edge */
+  /* A DIFFERENT VALUE FROM --border ON PURPOSE (6% vs 18%): this is the inset top highlight,
+   * `box-shadow: inset 0 1px 0 var(--hairline)`. Reusing --border here loses the effect. (§76.3) */
+  --hairline:    rgba(93, 202, 165, 0.06);   /* verdigris at 6% */
+
+  /* THE TWO GRID FREQUENCIES. 🔑 THE 4:1 RATIO IS WHAT READS AS DRAFTING PAPER, NOT THE HUE —
+   * so the minor stays CYANOTYPE (our blueprint blue) rather than taking proto's accent. */
+  --grid-line:   var(--paint-cyanotype);     /* the 19px MINOR — live, sourced, unchanged */
+  --grid-major:  rgba(42, 78, 104, 0.16);    /* graphite blue at 16% — the 76px MAJOR */
 
   /* ── ✍️ TYPE ────────────────────────────────────────────────────────────────────────────────
    * RELOCATED, NOT INVENTED. These two shared tokens moved here with the :root block they lived
@@ -85,15 +119,31 @@
  * ⚠️ And the proof that missed this first time round was byte-identical PNGs — painted in a
  *    browser that HAS color-mix. A PROOF INHERITS THE CAPABILITIES OF THE THING THAT RAN IT. */
 @supports (color: color-mix(in srgb, white 40%, transparent)) {
-  :root { --text-muted: color-mix(in srgb, var(--paint-chalk) 40%, transparent); }
+  :root {
+    --text-muted: color-mix(in srgb, var(--paint-chalk) 40%, transparent);
+    /* THE SAME GUARD COVERS ALL FIVE — one feature, one test. Re-measured 2026-08-16 with an
+     * unknown function standing in for an unsupported color-mix(), because we cannot install a
+     * pre-2023 browser:
+     *     two adjacent declarations -> painted rgba(0, 0, 0, 0)      TRANSPARENT
+     *     @supports guard           -> painted rgba(9, 18, 33, 0.88) today's pixel
+     * ⛔ ON THE ADJACENT-PAIR FORM THE DRAFTING PANEL WOULD HAVE BEEN *INVISIBLE*, NOT merely
+     *    mis-tinted — a silent failure strictly worse than the bug the fallback was meant to stop. */
+    --surface:    color-mix(in srgb, var(--paint-inkwell) 88%, transparent);
+    --border:     color-mix(in srgb, var(--paint-verdigris) 18%, transparent);
+    --hairline:   color-mix(in srgb, var(--paint-verdigris) 6%, transparent);
+    --grid-major: color-mix(in srgb, var(--paint-graphite-blue) 16%, transparent);
+  }
 }
 
-/* ── OMITTED ON PURPOSE — NO SOURCE EXISTS YET ────────────────────────────────────────────────
- * --paint-verdigris-light   the hover tone
- * --paint-graphite-blue     the drafting grid
- * --accent-hover  --surface  --border  --info
- * These are roles the NEW design needs — translucent surfaces, inset hairlines, a hover state —
- * and they do not exist because that design does not exist yet. Inventing values here would be a
- * guess wearing a token's clothes.
- * ⭐ AN EMPTY SLOT IN A NAMING SCHEME IS AN HONEST BLANK, AND ALSO A WORK ITEM THAT CANNOT BE
- *    LOST: the surface arc literally cannot proceed without filling them. */
+/* ── OMITTED ON PURPOSE — NO CONSUMER EXISTS ──────────────────────────────────────────────────
+ * --info
+ * ⛔ A ROLE WITH NO CONSUMER IS A NAME WAITING TO BECOME A LIE. No surface needs an informational
+ *    tone: cyanotype already has a job via --grid-line. (MASTER SPEC §76.3)
+ *
+ * ✅ THE FIVE HONEST BLANKS ARE CLOSED. --paint-verdigris-light · --paint-graphite-blue ·
+ *    --accent-hover · --surface · --border were absent from 2026-08-16 until the design existed;
+ *    they were AUTHORED in MASTER SPEC Part 76 and landed here with their derivations stated.
+ *    --hairline joined them for the reason recorded at its declaration.
+ * ⭐ THE RULE THAT HELD THE LINE, AND IT WORKED: A TOKEN FILE MAY ONLY CONTAIN VALUES THAT ALREADY
+ *    EXIST. AN EMPTY SLOT IS AN HONEST BLANK *AND* A WORK ITEM THAT CANNOT BE LOST — the arc could
+ *    not proceed until somebody ruled them, which is exactly what an honest blank is for. */
