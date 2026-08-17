@@ -231,7 +231,24 @@ async function readPoints(page, png, pts) {
   }, ['data:image/png;base64,' + png.toString('base64'), pts, BLINDSAMPLER]);
 }
 
-const px = (s) => { const m = (s || '').match(/[\d.]+/g); return m ? { r: +m[0], g: +m[1], b: +m[2], a: m.length > 3 ? +m[3] : 1 } : null; };
+/* ⛔⛔ `color(srgb 1 1 1 / 0.4)` IS NOT `rgb(1, 1, 1)`. Its components are 0-1, not 0-255, so a
+ * naive number-scrape reads WHITE AS NEAR-BLACK and reports ~1.05:1 for text that is really ~4.06:1.
+ * ⭐ AND THIS IS EXACTLY THE SERIALISATION `color-mix()` PRODUCES — which is what --text-muted uses
+ *    today and what every role added in (1a) will use the moment a surface reads it. Left unfixed,
+ *    the census would have been systematically wrong on PRECISELY THE TOKENS THIS ARC INTRODUCES,
+ *    and wrong in the direction that manufactures findings.
+ * 🔑 A PARSER THAT ACCEPTS EVERY NOTATION AND UNDERSTANDS ONE IS NOT A PARSER; IT IS A NUMBER
+ *    GENERATOR. Measured: 72 of 369 failing runs carried this form. */
+const px = (s) => {
+  const t = (s || '').trim();
+  const m = t.match(/[\d.]+/g);
+  if (!m) return null;
+  if (/^color\(\s*srgb\b/i.test(t)) {
+    return { r: +m[0] * 255, g: +m[1] * 255, b: +m[2] * 255, a: m.length > 3 ? +m[3] : 1 };
+  }
+  if (/^(oklab|oklch|lab|lch|color)\(/i.test(t)) return { unparsed: t };   // named, counted, never guessed
+  return { r: +m[0], g: +m[1], b: +m[2], a: m.length > 3 ? +m[3] : 1 };
+};
 const over = (f, b) => ({ r: f.a * f.r + (1 - f.a) * b.r, g: f.a * f.g + (1 - f.a) * b.g, b: f.a * f.b + (1 - f.a) * b.b });
 const lin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
 const lum = (x) => 0.2126 * lin(x.r) + 0.7152 * lin(x.g) + 0.0722 * lin(x.b);
@@ -246,7 +263,8 @@ const floorFor = (size, weight) => (size >= 24 || (size >= 18.66 && weight >= 70
     return (u.startsWith('http://127.0.0.1') || u.startsWith('data:')) ? r.continue() : r.abort();
   });
 
-  let measured = 0, below = 0, unreadable = 0, pagesSeen = 0, paintServer = 0, moving = 0;
+  let measured = 0, below = 0, unreadable = 0, pagesSeen = 0, paintServer = 0, moving = 0, unparsedFg = 0;
+  const unparsedKinds = new Set();
   const unsettled = [], failures = [], errors = [];
 
   for (const f of POP) {
@@ -348,7 +366,12 @@ const floorFor = (size, weight) => (size >= 24 || (size >= 18.66 && weight >= 70
           const r = runs[visible[k]], bgp = grounds[k];
           if (!bgp || !(bgp.a > 0)) { unreadable++; continue; }
           const bg = { r: bgp.r, g: bgp.g, b: bgp.b };
-          const fc = px(r.color) || { r: 255, g: 255, b: 255, a: 1 };
+          /* ⛔ NO DEFAULT-TO-WHITE. The old fallback `|| {255,255,255,1}` was a GUESS that scores —
+             it would have silently invented a foreground for any notation the parser did not know
+             and then reported a confident ratio for it. An unparseable colour is COUNTED and NAMED,
+             never scored. EVERY ERROR A DEFAULT MAKES LEANS TOWARD "ALL CLEAR". */
+          const fc = px(r.color);
+          if (!fc || fc.unparsed) { unparsedFg++; unparsedKinds.add((r.color || '').split('(')[0] + '()'); continue; }
           const fg = over({ ...fc, a: fc.a * r.opacity }, bg);
           const l1 = lum(fg), l2 = lum(bg);
           const ratio = Math.round(((Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)) * 100) / 100;
@@ -368,7 +391,7 @@ const floorFor = (size, weight) => (size >= 24 || (size >= 18.66 && weight >= 70
   await browser.close(); server.close();
 
   console.log('-------------------------------------');
-  console.log(`pages ${pagesSeen}/${POP.length}   text runs measured ${measured}   below floor ${below}   unreadable ground ${unreadable}   unscoreable paint-server ${paintServer}   still moving ${moving}`);
+  console.log(`pages ${pagesSeen}/${POP.length}   text runs measured ${measured}   below floor ${below}   unreadable ground ${unreadable}   unscoreable paint-server ${paintServer}   still moving ${moving}   unparseable fg ${unparsedFg}${unparsedFg ? ' (' + [...unparsedKinds].join(', ') + ')' : ''}`);
   if (unsettled.length) console.log(`unsettled (measured anyway, named not hidden): ${unsettled.join(', ')}`);
   if (errors.length) console.log(`page errors: ${errors.join(' | ')}`);
   /* THE BREAKDOWN IS ALWAYS PRINTED, NEVER ONLY UNDER --verbose. A bare total is a number nobody
@@ -394,6 +417,9 @@ const floorFor = (size, weight) => (size >= 24 || (size >= 18.66 && weight >= 70
   leg('C0b', pagesSeen === POP.length && errors.length === 0, `every live page rendered — ${pagesSeen}/${POP.length}, ${errors.length} error(s)`);
   leg('C0c', measured > 0, `text runs were found and photographed — ${measured}`);
   leg('C0d', unreadable === 0, `every sampled ground had a real pixel — ${unreadable} unreadable`);
+  /* A notation the parser cannot read is a COVERAGE HOLE, and it must be loud rather than absorbed:
+     72 runs were being mis-scored by exactly this before `color(srgb ...)` was handled. */
+  leg('C0e', unparsedFg === 0, `every foreground colour was parseable — ${unparsedFg} unparseable${unparsedFg ? ': ' + [...unparsedKinds].join(', ') : ''}`);
 
   // ── THE CENSUS ─────────────────────────────────────────────────────────────────────────────
   console.log(`CONTRAST ${below}/${measured} text runs below the WCAG AA floor (4.5:1 normal, 3:1 large)`);
