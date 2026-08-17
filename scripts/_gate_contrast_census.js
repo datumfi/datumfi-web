@@ -80,7 +80,11 @@ const PORT = 8249;
  *    4-COUNT CONTENTION BAND MEASURED PRE-C1 (369 -> 373) — derived from the instrument's own
  *    jitter, NOT picked to make a run pass. Pinning at 309 would red on a loaded machine, and
  *    A CONTENDED RUN THAT REDS FOR NO REASON IS THE FAILURE MODE THAT KILLS INSTRUMENTS. */
-const PIN = 313;   // MEASURED 2026-08-16 · 19 live pages · ~2040 text runs · SIGNED-OUT state only
+/* ⬇️ 313 -> 139 after C2 (dim chrome) and the footer. Measured 135; +4 contention band, as above.
+ *    ⚠️ A RATCHET THAT LAGS ITS MEASUREMENT IS SLACK, NOT SAFETY: left at 313 against a census of
+ *    135, a regression of up to 178 failing runs would have passed silently. Drop it every time it
+ *    falls, in the commit that made it fall. */
+const PIN = 139;   // MEASURED 2026-08-16 · 19 live pages · ~2035 text runs · SIGNED-OUT state only
 
 let PASS = 0, FAIL = 0;
 const leg = (id, ok, msg) => { ok ? PASS++ : FAIL++; console.log(`${ok ? 'PASS' : 'FAIL'} ${id} ${msg}`); };
