@@ -35,14 +35,27 @@
   display: flex; align-items: center; gap: 4px;
 }
 
+/* ── DIM CHROME READS A ROLE, NOT A LITERAL (C2, 2026-08-16) ──────────────────────────────────
+ * `rgba(255,255,255,0.35)` at 10px measured 3.19:1 against the nav ground — below the 4.5 floor
+ * that applies at this size (3:1 is for LARGE text only, and 10px is not large). It appeared 105
+ * times in the contrast census, ON EVERY PAGE, because this is shared chrome: ONE DECLARATION WAS
+ * 28% OF THE ENTIRE CENSUS.
+ * ⭐ FOUR RULES IN THIS FILE CARRIED THE IDENTICAL LITERAL FOR THE IDENTICAL PURPOSE — nav-link,
+ *    nav-mobile-feedback, nav-feedback-btn and view-btn. All four move together: WHEN AN INCIDENT
+ *    REVEALS A CLASS, SWEEP THE CLASS. Fixing only the selector the census happened to name loudest
+ *    would have left three copies of the same defect behind, at the same value, in the same file.
+ * ⚠️ THE HOVER MOVES TOO, AND NOT FOR CONTRAST — 0.7 already cleared. Raising rest 0.35 -> 0.55
+ *    while leaving hover at 0.7 would cut the affordance delta from 2.0x to 1.27x, so the fix for
+ *    a contrast defect would have quietly introduced a DISCOVERABILITY one. Hover goes to full
+ *    --text, restoring a 1.8x jump. A FIX THAT DEGRADES THE THING NEXT TO IT IS HALF A FIX. */
 #app-nav .nav-link {
   font-family: var(--font-mono); font-size: 10px; text-transform: uppercase;
-  letter-spacing: 0.12em; color: rgba(255,255,255,0.35);
+  letter-spacing: 0.12em; color: var(--text-muted);
   background: none; border: none; cursor: pointer;
   padding: 6px 12px; border-radius: 4px; transition: color 0.2s; position: relative;
   text-decoration: none; display: inline-block;
 }
-#app-nav .nav-link:hover { color: rgba(255,255,255,0.7); }
+#app-nav .nav-link:hover { color: var(--text); }
 #app-nav .nav-link.active { color: var(--teal-mid); }
 #app-nav .nav-link.active::after {
   content: ''; position: absolute; bottom: -1px; left: 12px; right: 12px;
@@ -78,7 +91,7 @@
 
 .nav-mobile-feedback {
   font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
-  letter-spacing: 0.12em; color: rgba(255,255,255,0.35);
+  letter-spacing: 0.12em; color: var(--text-muted);
   background: none; border: 1px solid rgba(255,255,255,0.12);
   border-radius: 3px; cursor: pointer; padding: 11px 4px;
   text-align: left; transition: all 0.2s; display: block; width: 100%;
@@ -107,7 +120,7 @@
 /* Nav feedback button */
 .nav-feedback-btn {
   font-family: var(--font-mono); font-size: 9px; text-transform: uppercase;
-  letter-spacing: 0.1em; color: rgba(255,255,255,0.35);
+  letter-spacing: 0.1em; color: var(--text-muted);
   background: none; border: 1px solid rgba(255,255,255,0.12);
   border-radius: 3px; cursor: pointer; padding: 5px 10px;
   transition: all 0.2s; margin-left: 8px; white-space: nowrap;
@@ -118,10 +131,10 @@
 .view-toggle { display: flex; gap: 3px; align-items: center; margin-left: 16px; }
 .view-btn {
   font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em;
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.35);
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: var(--text-muted);
   padding: 5px 10px; border-radius: 3px; cursor: pointer; transition: 0.2s; white-space: nowrap;
 }
-.view-btn:hover { border-color: rgba(93,202,165,0.4); color: rgba(255,255,255,0.7); }
+.view-btn:hover { border-color: rgba(93,202,165,0.4); color: var(--text); }
 .view-btn.active { background: rgba(29,158,117,0.12); border-color: var(--teal-mid); color: var(--teal-mid); }
 
 /* Option A — seam-pinned Studio toggles (signed-out #app-nav): left edge sits on the
