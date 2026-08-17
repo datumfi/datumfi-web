@@ -140,7 +140,16 @@ const UNTAG_T = '<script src="/scripts/datum-footer.js"></script>';
    number in a file: if the composite maths were wrong in the safe direction it would return a
    comfortable ratio forever and report all-clear on an illegible footer. THE ONE THING THIS GATE
    EXISTS TO CATCH IS A FOOTER NOBODY CAN READ. */
-const DIM_FROM = 'color:rgba(255,255,255,0.45);line-height:1.6';
+/* ⚠️ THE ANCHOR MOVED WITH THE DECLARATION IT POISONS, 2026-08-16. The paragraph stopped
+   hard-coding rgba(255,255,255,0.45) and now reads --text-muted, so the old anchor matched 0x and
+   the gate ABORTED rather than reporting a green it had not earned.
+   ⭐ THAT ABORT IS THE FEATURE. A POISON THAT DOES NOT LAND MUST FAIL LOUDLY — had this control
+      merely "found nothing and carried on", F7's contrast leg would have gone permanently untested
+      on the exact commit that changed the colour it measures.
+   🔑 A CONTROL ANCHORED TO A LITERAL IS COUPLED TO THAT LITERAL. When the product stops spelling
+      something the old way, the control breaks BEFORE the assertion does — which is the right order
+      for that to happen in. */
+const DIM_FROM = 'color:var(--text-muted,rgba(255,255,255,0.55));line-height:1.6';
 const DIM_TO = 'color:rgba(255,255,255,0.25);line-height:1.6';
 
 const mutated = {};
@@ -364,17 +373,46 @@ const fail = (leg, msg) => fails.push(`${leg}: ${msg}`);
       fail('F7 RENDERED-STYLE', `${rel} — could not SAMPLE the footer's rendered background (${sampleErr || 'transparent pixel'}). F7 refuses to score a contrast it cannot see.`);
       if (r.pFont) r.pFont.unmeasurable = true;   // ONE finding per fault, never two
     } else if (r.pFont) {
-      const px = (s) => { const m = (s || '').match(/[\d.]+/g); return m ? { r: +m[0], g: +m[1], b: +m[2], a: m.length > 3 ? +m[3] : 1 } : null; };
+      /* ⛔⛔ NOTATION-AWARE, AND IT HAD TO BE. `color(srgb 1 1 1 / 0.55)` has 0-1 COMPONENTS, NOT
+         0-255 — a bare number-scrape reads WHITE AS NEAR-BLACK. The moment the footer paragraph
+         stopped hard-coding rgba() and started reading --text-muted, F7 went RED ON ALL 15 PAGES
+         AT 1.06:1 for text that actually measures ~6.2:1.
+         ⭐ THE PRODUCT WAS FINE AND THE INSTRUMENT WAS WRONG — and this is the SECOND instrument
+            with the identical defect: _gate_contrast_census.js carried it too, where it mis-scored
+            72 of 369 runs. That one was found first and NOT SWEPT, so this one bit.
+         🔑 WHEN AN INCIDENT REVEALS A CLASS, SWEEP THE CLASS *BEFORE* THE NEXT COMMIT. A defect
+            found and fixed in one instrument is a defect you now know is in the others.
+         ⚠️ AND NOTE WHICH DIRECTION IT FAILS: it UNDER-reports contrast, so it manufactures
+            findings rather than hiding them. Had it leaned the other way this would have shipped. */
+      const px = (s) => {
+        const t = (s || '').trim();
+        const m = t.match(/[\d.]+/g);
+        if (!m) return null;
+        if (/^color\(\s*srgb\b/i.test(t)) return { r: +m[0] * 255, g: +m[1] * 255, b: +m[2] * 255, a: m.length > 3 ? +m[3] : 1 };
+        if (/^(oklab|oklch|lab|lch|color)\(/i.test(t)) return null;   // unknown notation: never guessed
+        return { r: +m[0], g: +m[1], b: +m[2], a: m.length > 3 ? +m[3] : 1 };
+      };
       const over = (f, b) => ({ r: f.a * f.r + (1 - f.a) * b.r, g: f.a * f.g + (1 - f.a) * b.g, b: f.a * f.b + (1 - f.a) * b.b });
       const lin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
       const lum = (x) => 0.2126 * lin(x.r) + 0.7152 * lin(x.g) + 0.0722 * lin(x.b);
       const bg = { r: sampled.r, g: sampled.g, b: sampled.b };
-      const fg = over(px(r.pFont.color) || { r: 255, g: 255, b: 255, a: 1 }, bg);
+      /* ⛔ NO DEFAULT-TO-WHITE. `|| {255,255,255,1}` was A GUESS THAT SCORES: it would invent a
+         foreground for any notation px() does not know and then report a confident ratio for it.
+         An unreadable colour makes the paragraph UNMEASURABLE — the same treatment an unsamplable
+         background already gets — because F7 REFUSES TO SCORE A CONTRAST IT CANNOT SEE.
+         🔑 A GUESS THAT SCORES IS WORSE THAN A GAP THAT ABORTS. */
+      const fgc = px(r.pFont.color);
+      if (!fgc) {
+        fail('F7 RENDERED-STYLE', `${rel} — footer text colour "${r.pFont.color}" is in a notation this gate cannot read, so its contrast is unknown. F7 refuses to score a colour it cannot parse.`);
+        r.pFont.unmeasurable = true;
+      } else {
+      const fg = over(fgc, bg);
       const l1 = lum(fg), l2 = lum(bg);
       r.pFont.sampledBg = `rgb(${bg.r}, ${bg.g}, ${bg.b})`;
       r.pFont.contrast = Math.round(((Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)) * 100) / 100;
       if (GRADIENT || process.env.F7_VERBOSE) {
         console.log(`   [F7] ${rel}  sampled bg ${r.pFont.sampledBg} (a=${sampled.a}) -> ${r.pFont.contrast}:1   |   old DOM-walk said ${r.pFont.legacyContrast}:1`);
+      }
       }
     }
 

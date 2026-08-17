@@ -55,7 +55,18 @@
    ⚠️ FLAGGED, NOT FIXED — these carry text-decoration:none and no colour of their own, so they have
    NO remaining affordance marking them as links beyond being slightly brighter. That predates this
    commit. An underline (or a distinct hue) is the honest fix and it is a design ruling, not mine. */
-var DATUM_FOOTER_LINK_STYLE = 'color:rgba(255,255,255,0.55);text-decoration:none;';
+/* ⬆️ RESOLVED 2026-08-16 — AND THE ASYMMETRY WAS THE ARGUMENT. In the SAME SENTENCE, the two
+   JS-driven controls ("Important disclosures" button, "Delete My Data" span) BOTH carry
+   text-decoration:underline, while the three real <a> links carried NONE — including
+   "Do Not Sell My Information", the CCPA/CPRA link.
+   ⛔ THE THINGS THAT LOOKED LIKE LINKS WERE NOT LINKS, AND THE ACTUAL LINKS DID NOT LOOK LIKE ONES.
+   So this is a CONSISTENCY fix, not a new design: the anchors match the controls beside them.
+   ⭐ AND IT IS WHAT MAKES THE CONTRAST FIX SAFE. The paragraph rises 0.45 -> 0.55 to clear AA, which
+      would otherwise have DESTROYED the links' only remaining affordance — the file itself said it
+      was "slightly brighter" and nothing else. An UNDERLINE is a non-colour affordance, so the two
+      can now hold the same tone without the links disappearing into the prose.
+   🔑 A CONTRAST FIX THAT ERASES A LINK IS NOT AN ACCESSIBILITY WIN. */
+var DATUM_FOOTER_LINK_STYLE = 'color:var(--text-muted,rgba(255,255,255,0.55));text-decoration:underline;';
 
 /* ⛔⛔ THE MODULE CARRIES ITS OWN PRESENTATION, AND THAT IS A DEFECT PAID FOR IN PUBLIC.
    The first cut rendered a BARE <p> and relied on each page having a `#disclosure-footer p` CSS
@@ -103,12 +114,23 @@ var DATUM_FOOTER_LINK_STYLE = 'color:rgba(255,255,255,0.55);text-decoration:none
    4.51:1. "CLEAR AND CONSPICUOUS" IS NOT SATISFIED BY TEXT THAT IS TECHNICALLY PRESENT AND
    PRACTICALLY UNREADABLE: at 2.21:1 this paragraph was visible to the DOM and invisible to a person,
    and it carries the rights links.
-   ⚠️⚠️ THE MARGIN IS 0.01 AND THAT IS DELIBERATE, NOT LUCKY. 4.51 against a 4.50 requirement will
-   NOT survive a casual theme edit — darken the text, lighten nothing, and this silently drops below
-   AA with no error anywhere. Anyone touching this value or the footer background must RE-MEASURE the
-   ratio, not eyeball it. The background it was computed against is rgb(9,18,33). */
+   ~~⚠️⚠️ THE MARGIN IS 0.01 AND THAT IS DELIBERATE, NOT LUCKY. 4.51 against a 4.50 requirement will
+   NOT survive a casual theme edit... Anyone touching this value or the footer background must
+   RE-MEASURE the ratio, not eyeball it.~~
+   ⭐⭐ SUPERSEDED 2026-08-16 — STRUCK, NOT DELETED, BECAUSE THE WARNING WAS RIGHT AND THE OUTCOME
+   PROVED IT. That 0.01 was spent almost immediately: the contrast census, sampling the RENDERED
+   ground at a different scroll position, measured THIS SAME PARAGRAPH at 4.48:1 while F7 measured
+   4.51:1. Both instruments were correct — the headroom was simply zero, so which side of the floor
+   it landed on depended on where you stood.
+   🔑 A VALUE SPECIFIED *AT* ITS FLOOR IS NOT COMPLIANT; IT IS ONE ROUNDING AWAY FROM NON-COMPLIANT,
+      AND WHICH SIDE IT LANDS ON IS DECIDED BY THE MEASURER RATHER THAN BY THE DESIGN.
+   ✅ SO THE VALUE IS NO LONGER A LITERAL AND NO LONGER AT THE FLOOR: it reads --text-muted (chalk at
+      55%), which measures ~6.2:1 on this footer's ground. SPECIFY MARGIN, NOT COMPLIANCE.
+   ⚠️ AND IT IS NOW A TOKEN READ, SO IT FOLLOWS THE PALETTE — this paragraph was one of the surfaces
+      that hard-coded its colour and therefore did NOT move when the muted role was raised. The
+      literal that remains is the var() FALLBACK only. Background computed against rgb(9,18,33). */
 var DATUM_FOOTER_P_STYLE = "font-family:var(--font-mono,'DM Mono',monospace);font-size:10px;"
-  + 'color:rgba(255,255,255,0.45);line-height:1.6;margin:0;'
+  + 'color:var(--text-muted,rgba(255,255,255,0.55));line-height:1.6;margin:0;'
   + 'text-align:justify;text-align-last:center;';
 var DATUM_FOOTER_BOX_STYLE = 'width:100%;background:rgba(9,18,33,0.97);'
   + 'border-top:1px solid rgba(255,255,255,0.05);'
@@ -154,7 +176,7 @@ var DATUM_FOOTER_TOGGLE_CLOSED = 'Important disclosures';
 var DATUM_FOOTER_TOGGLE_OPEN = 'Hide disclosures';
 
 var DATUM_FOOTER_TOGGLE_STYLE = "font-family:var(--font-mono,'DM Mono',monospace);font-size:10px;"
-  + 'color:rgba(255,255,255,0.55);background:none;border:none;padding:2px 4px;margin:2px 0 0;'
+  + 'color:var(--text-muted,rgba(255,255,255,0.55));background:none;border:none;padding:2px 4px;margin:2px 0 0;'
   + 'text-decoration:underline;cursor:pointer;letter-spacing:0.04em;';
 
 /* ⛔ THE CANONICAL SENTENCES, SPLIT BUT NEVER REWORDED — AND NEVER REORDERED.
@@ -191,7 +213,7 @@ function _datumFooterHTML() {
        ⚠️ THE FALLBACK DESTINATION IS A ROUTING CHOICE AND IT IS FLAGGED, NOT ASSUMED: /dsar.html is
        the existing Data Subject Request page, already linked from privacy.html. If the Captain wants
        a different destination it is a one-line change. A RIGHTS MECHANISM MUST ALWAYS HAVE A DOOR. */
-    + ' &nbsp;|&nbsp; <span style="color:rgba(255,255,255,0.55);cursor:pointer;text-decoration:underline;"'
+    + ' &nbsp;|&nbsp; <span style="color:var(--text-muted,rgba(255,255,255,0.55));cursor:pointer;text-decoration:underline;"'
     + ' onclick="if(window.openDeleteDataModal){openDeleteDataModal();}else{location.href=\'/dsar.html\';}">Delete My Data</span>'
     + ' &nbsp;|&nbsp; <a href="/privacy-choices.html" style="' + L + '">Do Not Sell My Information</a>'
     + ' &nbsp;|&nbsp; <a href="/philosophy.html" style="' + L + '">Philosophy</a>'
