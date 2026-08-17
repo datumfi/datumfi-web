@@ -84,7 +84,12 @@ const PORT = 8249;
  *    ⚠️ A RATCHET THAT LAGS ITS MEASUREMENT IS SLACK, NOT SAFETY: left at 313 against a census of
  *    135, a regression of up to 178 failing runs would have passed silently. Drop it every time it
  *    falls, in the commit that made it fall. */
-const PIN = 139;   // MEASURED 2026-08-16 · 19 live pages · ~2035 text runs · SIGNED-OUT state only
+/* ⬇️ 139 -> 105 when the occlusion test was actually implemented. ⛔⛔ THIS DROP IS NOT A PRODUCT
+ *    IMPROVEMENT AND MUST NOT BE READ AS ONE — the site did not get better, the INSTRUMENT got
+ *    honest. 467 runs were being scored against a ground belonging to a DIFFERENT element, and 34
+ *    of the previous failures were phantoms of that. Distinguishing "we fixed something" from "we
+ *    were measuring wrong" is the whole reason this note exists. */
+const PIN = 105;   // MEASURED 2026-08-16 · 19 live pages · ~1580 text runs · SIGNED-OUT state only
 
 let PASS = 0, FAIL = 0;
 const leg = (id, ok, msg) => { ok ? PASS++ : FAIL++; console.log(`${ok ? 'PASS' : 'FAIL'} ${id} ${msg}`); };
@@ -198,6 +203,36 @@ const COLLECT = `(async () => {
       op *= parseFloat(cs.fillOpacity || '1');
       if (op <= 0.01) continue;
     }
+    /* ⛔⛔ THE OCCLUSION TEST, WHICH USED TO BE A COMMENT RATHER THAN A CHECK. The caller tested only
+       'if (!top) return -1' — "is ANYTHING here", never "is the RIGHT thing here" — while the note
+       beside it claimed unoccluded runs were being selected. A COMMENT STATES INTENT, NEVER
+       BEHAVIOUR.
+       ⭐ IT MANUFACTURED A FINDING THAT REACHED THE ARCHITECT AND GOT RULED ON: pricing.html's
+          .featured-badge is position:absolute at top:-12px with a GOLD fill, sitting directly over
+          the .card-tier text. The sampler photographed THE BADGE's brass and reported the tier text
+          at 1.42:1 on rgb(201,168,76) — "white on brass, no alpha can fix it". Nothing paints that
+          card brass. THE GROUND BELONGED TO A DIFFERENT ELEMENT.
+       🔑 A NUMBER THAT LOOKS LIKE A FINDING IS THE MOST EXPENSIVE KIND OF RIG FAULT — this one cost
+          an Architect ruling on a defect that did not exist.
+       ⚠️ elementFromPoint is a PROXY for visual occlusion and not a perfect one: it ignores
+          pointer-events:none, so a decorative overlay can still cover text it cannot report. Stated
+          rather than papered over. */
+    const _cx = b.x + b.width / 2, _cy = b.y + b.height / 2;
+    const _stack = document.elementsFromPoint(_cx, _cy);
+    const _top = _stack[0];
+    if (!_top) continue;                                   // outside the viewport: not occluded, just not here
+    /* ⚠️ THE FIRST CUT OF THIS TEST OVER-EXCLUDED 477 RUNS, and the cause is worth keeping: an
+       element with pointer-events:none IS VISIBLE BUT INVISIBLE TO HIT-TESTING, so elementFromPoint
+       returns whatever is BEHIND it and the run looks occluded by its own background. Decorative and
+       label text is full of it.
+       ⭐ SO SEPARATE "I CAN SEE IT IS COVERED" FROM "I CANNOT TELL": if el is not in the hit stack at
+          all, the test is INAPPLICABLE and the run is measured anyway, counted as untestable. Only a
+          run that IS in the stack with something unrelated ON TOP is scored as occluded.
+       🔑 AN INSTRUMENT MAY EXCLUDE WHAT IT HAS PROVEN IRRELEVANT. IT MAY NOT EXCLUDE WHAT IT MERELY
+          FAILED TO RESOLVE — that is a coverage hole wearing a filter's clothes. */
+    if (_stack.indexOf(el) >= 0 && _top !== el && !el.contains(_top) && !_top.contains(el)) {
+      out.push({ skip: 'occluded' }); nodes.push(null); continue;
+    }
     nodes.push(el);
     out.push({
       text: s.slice(0, 48), tag,
@@ -272,7 +307,7 @@ const floorFor = (size, weight) => (size >= 24 || (size >= 18.66 && weight >= 70
     return (u.startsWith('http://127.0.0.1') || u.startsWith('data:')) ? r.continue() : r.abort();
   });
 
-  let measured = 0, below = 0, unreadable = 0, pagesSeen = 0, paintServer = 0, moving = 0, unparsedFg = 0;
+  let measured = 0, below = 0, unreadable = 0, pagesSeen = 0, paintServer = 0, moving = 0, unparsedFg = 0, occluded = 0;
   const unparsedKinds = new Set();
   const unsettled = [], failures = [], errors = [];
 
@@ -337,7 +372,8 @@ const floorFor = (size, weight) => (size >= 24 || (size >= 18.66 && weight >= 70
         /* A paint-server fill (a gradient or pattern) has no single colour to score. It is COUNTED
            and surfaced, never dropped in silence — an unscoreable run is a coverage fact, not a
            tidy-up. */
-        paintServer += collected.filter((r) => r.skip).length;
+        paintServer += collected.filter((r) => r.skip === 'paint-server').length;
+        occluded   += collected.filter((r) => r.skip === 'occluded').length;
         const stableRuns = collected.filter((r) => !r.skip);
         moving += stableRuns.filter((r) => !r.stable).length;
         const runs = stableRuns.filter((r) => r.stable);
@@ -400,7 +436,7 @@ const floorFor = (size, weight) => (size >= 24 || (size >= 18.66 && weight >= 70
   await browser.close(); server.close();
 
   console.log('-------------------------------------');
-  console.log(`pages ${pagesSeen}/${POP.length}   text runs measured ${measured}   below floor ${below}   unreadable ground ${unreadable}   unscoreable paint-server ${paintServer}   still moving ${moving}   unparseable fg ${unparsedFg}${unparsedFg ? ' (' + [...unparsedKinds].join(', ') + ')' : ''}`);
+  console.log(`pages ${pagesSeen}/${POP.length}   text runs measured ${measured}   below floor ${below}   unreadable ground ${unreadable}   unscoreable paint-server ${paintServer}   still moving ${moving}   occluded ${occluded}   unparseable fg ${unparsedFg}${unparsedFg ? ' (' + [...unparsedKinds].join(', ') + ')' : ''}`);
   if (unsettled.length) console.log(`unsettled (measured anyway, named not hidden): ${unsettled.join(', ')}`);
   if (errors.length) console.log(`page errors: ${errors.join(' | ')}`);
   /* THE BREAKDOWN IS ALWAYS PRINTED, NEVER ONLY UNDER --verbose. A bare total is a number nobody
