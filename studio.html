@@ -1263,7 +1263,28 @@
   .delta-neg { color:var(--danger); }
 
   /* RIGHT: Drawing Canvas (With Panning & Zooming) */
-  .canvas-wrapper { flex: 1; position: relative; background-color: var(--bg-navy); background-image: linear-gradient(rgba(100, 180, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(100, 180, 255, 0.05) 1px, transparent 1px); background-size: 40px 40px; overflow: hidden; cursor: grab; }
+  /* ⛔ C3 GROUND COMMIT — THE CANVAS STOPS BLOCKING THE LIGHT (2026-08-19). §60.1's mechanism is
+   * "the lift comes from the light beneath", which is a WHOLE-STACK property: a translucent panel
+   * can only sample what is actually behind it. MEASURED, the chain from a .hud-panel to <body>:
+   *     .hud-panel a=0.85  ->  #blueprint-container a=0  ->  #canvas-wrapper a=1  STOPS THE LIGHT
+   *  -> #studio-layout a=0  ->  BODY
+   * SEVEN translucent surfaces sampled this fill instead of the page field: #shape-mode-toggle ·
+   * #shape-hud · #d2s-hud-dash · #d2-tension-hud · #requirements-panel · #estate-analysis ·
+   * #want-readout. Light-blocked count 8 -> 1 with this one declaration.
+   * ⭐ THIS INVENTS NO DESIGN VALUE, AND THAT IS WHY IT COULD SHIP BEFORE THE ARCHITECT AUTHORS
+   *    ONE. Measured: body and .canvas-wrapper BOTH computed rgb(9,18,33) — this fill was a
+   *    DUPLICATE OF THE FIELD BEHIND IT, so removing it is a DELETION, not a decision. L47.
+   * ⚠️ IF A DISTINCT STAGE TONE IS EVER WANTED (proto's .blueprint-stage is a 0.86->0.92 gradient,
+   *    deliberately darker than its body) THAT IS AN AUTHORED VALUE FOR ITS OWN COMMIT. It is not
+   *    smuggled in here. The MASTER SPEC authors no canvas value: "translucent" appears in it zero
+   *    times.
+   * ✅ ACCEPTANCE: viewport screenshot BYTE-IDENTICAL before/after at 1440x900, cold Studio, clean
+   *    profile. THE GROUND MOVES, THE PICTURE DOES NOT — which is the whole point of shipping this
+   *    apart from the panels. No mode rule overrides this declaration; .mode-shape touches only
+   *    background-size (:496).
+   * ⚠️ STILL BLOCKED, AND NOT A C3 SURFACE: #disclosure-footer, stopped by the opaque
+   *    .drafting-panel it sits inside. Named so it is not rediscovered as a finding. */
+  .canvas-wrapper { flex: 1; position: relative; background-color: transparent; background-image: linear-gradient(rgba(100, 180, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(100, 180, 255, 0.05) 1px, transparent 1px); background-size: 40px 40px; overflow: hidden; cursor: grab; }
   .canvas-wrapper:active { cursor: grabbing; }
   
   /* UNIFIED HUD STYLING */

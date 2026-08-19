@@ -27,7 +27,7 @@ const SACRED = {
      CLAUDE.md in this same commit. Sacred on a stricter rule than the rest: its absence removes a
      regulatory disclosure from every page at once. */
   'scripts/datum-footer.js': 'df30b3bd8562fb963d976ea892f94815',   // the paragraph + the three rights links read --text-muted; the 4.51:1 floor-margin is retired and the anchors get the underline the two controls beside them already had (2026-08-16)
-  'studio.html': '31b4a7153f2c06aa68baf3120bf88e81',   // (0b) --muted 0.3 -> the shared 0.4; the dimmest value on the site is retired from the flagship surface (2026-08-16)
+  'studio.html': '206166ef9ea4f640509d8482c172430d',   // C3 GROUND: .canvas-wrapper:1266 stops blocking the body light — one declaration, light-blocked 8 -> 1, screenshot byte-identical (2026-08-19)
   'sketch.html': '68e2951ad895b64abca5ff0fa1e6353b',   // (0b) the last --font-serif shadow deleted; Georgia is promoted into styles/typography.css instead (2026-08-16)
   /* §47.3 — SACRED as of 2026-08-13, declared in CLAUDE.md IN THIS SAME COMMIT. The two lists are
      reconciled by this build in BOTH directions, so a host added to one and not the other STOPS
