@@ -86,12 +86,27 @@ function check(name, cond, detail) {
   if (!cond) fails.push(name);
 }
 
-/* The dossier fixture is _p8_studio_seed_parity's payload verbatim — the same typed Plan-Through
-   month (03/2068) whose loss is what put this gate here. Reusing it deliberately: if the two gates
-   ever disagree about this scenario, that disagreement is itself the finding. */
+/* The dossier fixture is _p8_studio_seed_parity's payload — the same typed Plan-Through month
+   (03/2068) whose loss is what put this gate here. Reusing it deliberately: if the two gates ever
+   disagree about this scenario, that disagreement is itself the finding.
+   ⛔ IT SAID "VERBATIM" AND IT WAS NOT, AND THAT MATTERS BECAUSE OF THE SENTENCE ABOVE IT
+   (corrected 2026-08-19). ONE FIELD DIVERGES ON PURPOSE: `savedAt` is FROZEN here and LIVE there.
+   That is deliberate on both sides — this gate compares draft staleness against a fixed instant,
+   while the product reads `savedAt` as a real save timestamp, which is why the other copy keeps it
+   live. Every other field is identical and MUST STAY identical.
+   🔑 A COMMENT STATES INTENT, NEVER BEHAVIOUR — and a claim of sameness that is not true is worse
+      than no claim at all when the whole point is that a difference would be a finding. */
+const DOB_MO = 8, DOB_YR = 1982;
+function expectedAge() { const n = new Date(); let a = n.getFullYear() - DOB_YR; if (n.getMonth() + 1 < DOB_MO) a--; return a; }
+/* ⚠️ HYGIENE, NOT A REPAIR. `age` was FROZEN at 43 beside a DOB that derives 44 from August 2026.
+ * ⛔ NOT the bomb that fired in _p8_studio_direct_seed_parity, where the frozen 43 was an ASSERTION.
+ *    Here it is an UNREAD INPUT — no leg asserts an age, and the product derives the age slider from
+ *    the DOB (studio.html:16309 and :16726), never from `primary.age`. MEASURED, not assumed.
+ *    SO THIS CANNOT BE RED-FIRST: green before, green after. It is a fixture describing a person who
+ *    cannot exist — a trap with a delay, not a defect with a date. Fixture authored 2025-08. */
 const DOSSIER = {
   schema: 'DatumFIAccountDossierV15', savedAt: '2026-08-15T00:00:00.000Z',
-  primary: { name: '', dateOfBirth: '08/1982', age: 43, grossIncome: 100000, targetRetirementAge: 52, targetRetirementDate: '03/2035' },
+  primary: { name: '', dateOfBirth: '08/1982', age: expectedAge(), grossIncome: 100000, targetRetirementAge: 52, targetRetirementDate: '03/2035' },
   defaults: { targetRetirementAge: 52, targetRetirementDate: '03/2035', planThroughAge: 85, planThroughDate: '03/2068', effectiveTaxRate: 0.22, defaultDatum: 90000, accessMode: 'Discover' },
   household: { profileType: 'Single', coArchitect: null },
   accounts: { currentPortfolioBalance: 500000, annualContributions: 20000 }

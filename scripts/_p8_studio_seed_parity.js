@@ -28,9 +28,23 @@ const PORT = 8147;
 const norm = (s) => String(s == null ? '' : s).replace(/\s/g, '');
 
 // A real Dossier v15 payload (post age-box port): canonical integer ages + the typed date strings.
+/* ⚠️ HYGIENE, NOT A REPAIR — AND THE DIFFERENCE IS THE WHOLE POINT (2026-08-19). This payload
+ * carried a FROZEN `age: 43` beside `dateOfBirth: '08/1982'`, which derives 44 from August 2026.
+ * ⛔ IT IS NOT THE BOMB THAT FIRED IN _p8_studio_direct_seed_parity. There the frozen 43 was an
+ *    ASSERTION (`r.sliderAge === expectedAge()`), so it went red the week that person turned 44.
+ *    HERE IT IS AN UNREAD INPUT: no leg in this gate asserts an age, and the product derives the
+ *    age slider from the DOB (studio.html:16309 and :16726), never from `primary.age`. MEASURED,
+ *    not assumed. So THIS CHANGE CANNOT BE RED-FIRST — the gate is green before it and green after,
+ *    and a green commit claiming to have defused something that was never armed is a lie in the
+ *    ledger.
+ * 🔑 WHAT IT IS: a fixture describing a person who cannot exist. That is a trap with a delay, not a
+ *    defect with a date — an unread input is one refactor away from a read one. Fixture authored
+ *    2025-08; derived now, with the product's own rule, so it cannot rot by sitting still. */
+const DOB_MO = 8, DOB_YR = 1982;
+function expectedAge() { const n = new Date(); let a = n.getFullYear() - DOB_YR; if (n.getMonth() + 1 < DOB_MO) a--; return a; }
 const DOSSIER = {
   schema: 'DatumFIAccountDossierV15', savedAt: new Date().toISOString(),
-  primary: { name: '', dateOfBirth: '08/1982', age: 43, grossIncome: 100000, targetRetirementAge: 52, targetRetirementDate: '03/2035' },
+  primary: { name: '', dateOfBirth: '08/1982', age: expectedAge(), grossIncome: 100000, targetRetirementAge: 52, targetRetirementDate: '03/2035' },
   defaults: { targetRetirementAge: 52, targetRetirementDate: '03/2035', planThroughAge: 85, planThroughDate: '03/2068', effectiveTaxRate: 0.22, defaultDatum: 90000, accessMode: 'Discover' },
   household: { profileType: 'Single', coArchitect: null },
   accounts: { currentPortfolioBalance: 500000, annualContributions: 20000 }
