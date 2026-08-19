@@ -506,7 +506,8 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--teal-mid);
-    background: rgba(9,18,33,0.85);
+    /* --surface · group ① of the C3 delta table. See .hud-panel for the argument. */
+    background: var(--surface);
     border: 1px solid rgba(29,158,117,0.4);
     border-radius: 3px;
     padding: 6px 12px;
@@ -539,7 +540,8 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--teal-mid);
-    background: rgba(9,18,33,0.85);
+    /* --surface · group ① of the C3 delta table. See .hud-panel for the argument. */
+    background: var(--surface);
     border: 1px solid rgba(29,158,117,0.4);
     border-radius: 3px;
     padding: 6px 12px;
@@ -608,7 +610,8 @@
     flex-shrink: 0;
     margin-bottom: 12px;
     z-index: 50;
-    background: rgba(9,18,33,0.85);
+    /* --surface · group ① of the C3 delta table. See .hud-panel for the argument. */
+    background: var(--surface);
     border: 1px solid rgba(255,255,255,0.05);
     border-radius: 8px;
     padding: 14px 18px;
@@ -699,7 +702,8 @@
   .methodology-panel.open { display: block; animation: fade-in 0.3s ease; }
   .sketch-trust-copy { font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.3); line-height: 1.6; margin-top: 12px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05); }
   /* DATUM INTELLIGENCE HUD */
-  #shape-hud .telemetry-card { background: rgba(9, 18, 33, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1); border-left: 2px solid var(--teal-mid); border-radius: 4px; padding: 8px 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); transition: background-color 0.3s ease, border-color 0.3s ease, border-left-color 0.3s ease, box-shadow 0.3s ease; display: flex; flex-direction: row; align-items: center; position: relative; }
+  /* --surface · group ① of the C3 delta table. See .hud-panel for the argument. */
+  #shape-hud .telemetry-card { background: var(--surface); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1); border-left: 2px solid var(--teal-mid); border-radius: 4px; padding: 8px 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); transition: background-color 0.3s ease, border-color 0.3s ease, border-left-color 0.3s ease, box-shadow 0.3s ease; display: flex; flex-direction: row; align-items: center; position: relative; }
   #shape-hud #hud-main { min-height: 200px; }
   .hud-split { display: flex; gap: 16px; width: 100%; align-items: center; }
   .hud-metrics { display: flex; flex-direction: column; gap: 6px; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 16px; justify-content: center; min-width: 190px; }
@@ -1289,7 +1293,32 @@
   
   /* UNIFIED HUD STYLING */
   /* SURGICAL: z-index elevated to 30 to beat the SVG layer */
-  .hud-panel { background: rgba(9, 18, 33, 0.85); border: 1px solid rgba(255,255,255,0.05); padding: 20px 30px; border-radius: 8px; backdrop-filter: blur(8px); box-shadow: 0 10px 30px rgba(0,0,0,0.8); pointer-events: auto; z-index: 30; position: absolute; transition: border-color 0.3s ease;}
+  /* ⚙️ --surface · THE FIRST CONSUMER OF THE ROLE (2026-08-19). §76.2: "THE PANEL IS THE PAGE
+   * FIELD MADE TRANSLUCENT, so the body's light shows through it." These five declarations are
+   * GROUP ① of the delta table: one family already sitting at one value (0.85), converting to
+   * inkwell-at-0.88. #shape-mode-toggle · #canvas-recenter · #shape-hud ·
+   * #shape-hud .telemetry-card · .hud-panel.
+   * ⭐ MEASURED DELTA: ZERO TODAY. Inkwell at ANY alpha over an inkwell page field composites to
+   *   #091221, so this conversion moves no pixel until the radials land beneath it. At the
+   *   brightest point of the authored lights it is d=1.4 (key) / d=1.0 (fill) on a 255 scale —
+   *   the largest it will ever be, and still imperceptible.
+   * ⛔ EXPRESSED AS rgba()/color-mix() INSIDE background, NEVER AS ELEMENT `opacity` (§61.2).
+   *   opacity carries 106 rules and 4 !important and is the axis _gate_exit_reachable,
+   *   _gate_empty_estate_no_dead_controls, _gate_canvas_recenter and _gate_phase_rooms all read.
+   *   A PURELY VISUAL CHOICE THAT LANDS ON A CONTROL AXIS IS NOT A VISUAL CHOICE.
+   * ⛔⛔ THE THREE GROUPS THAT DELIBERATELY DID **NOT** CONVERT — recorded so no future reader
+   *   mistakes them for oversights:
+   *   ② THE DENSE PANELS (0.92-0.98): .shape-info-tooltip · .requirements-panel ·
+   *     #d2-tension-hud · #d2s-hud-dash. Converting makes them MORE transparent. They sit over
+   *     live canvas content and their density is doing LEGIBILITY work, not skin work.
+   *     LOWERING THEM TO 0.88 IS A READABILITY CHANGE WEARING A TOKEN.
+   *   ③ THE GRADIENT STOPS (.di-narrative 0.45/0.80 · .moat-pie-nudge 0.14 · two JS-built pie
+   *     nudges): A ROLE HOLDS ONE VALUE; A STOP IS HALF A RAMP. A role may never be a gradient
+   *     stop. If a ramp needs tokens it needs TWO, authored as a pair, as a ramp.
+   *   ④ .ira-why-panel (0.70): HELD, NOT DECLINED. It is a READING surface — a narrative
+   *     explainer, not chrome — and 0.70 -> 0.88 is the largest densification of any true panel
+   *     (d=7.8 lit). Ruled after the light exists, against a measured ground, not a computed one. */
+  .hud-panel { background: var(--surface); border: 1px solid rgba(255,255,255,0.05); padding: 20px 30px; border-radius: 8px; backdrop-filter: blur(8px); box-shadow: 0 10px 30px rgba(0,0,0,0.8); pointer-events: auto; z-index: 30; position: absolute; transition: border-color 0.3s ease;}
   .hud-title { font-family: var(--font-mono); font-size: 10px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; }
   
   /* TOP LEFT: OVERVIEW DASHBOARD */
