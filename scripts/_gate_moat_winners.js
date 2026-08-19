@@ -6,16 +6,48 @@
    Doctrine (Captain #237-#240): richest LIVE hover wins (L51); assert the winner literal in
    the SERVED bytes via the real openAccountModal path. RED-FIRST: `--redfirst` flips winners
    to their pre-wire losers -> those strings are ABSENT -> gate BITES (RED). Normal -> GREEN.
-   Usage: serve repo root on :8001, then node scripts/_gate_moat_winners.js [LABEL] [--redfirst]. */
+   Usage: serve repo root on :8001, then
+     node scripts/_gate_moat_winners.js [LABEL] [--redfirst] [--clock=YYYY-MM-DD]
+
+   ⏱️ --clock PINS THE BROWSER'S WALL CLOCK, AND IT EXISTS BECAUSE THIS GATE SHIPPED A CALENDAR
+   BOMB ONCE. dac1610 (2026-08-03) made nextPmtDate RELATIVE and left two expectations spelled
+   ABSOLUTELY ('December 2041' / 'October 2049'). They agreed BY LUCK for fifteen days and both
+   rolled a month on 2026-08-18 — RED 106/108, with the GAP BETWEEN THEM UNMOVED, which is the
+   signature of a relative claim asserted in absolute spelling.
+   🔑 A FIX THAT MAKES AN INPUT RELATIVE MUST MAKE EVERY ASSERTION THAT READS THAT INPUT RELATIVE,
+      IN THE SAME COMMIT. The sweep swept the inputs and not the assertions.
+   ⛔ AND DO NOT "FIX" THE NEXT ONE BY FREEZING THE ANCHOR — that undoes what dac1610 deliberately
+      thawed and stops exercising the rateResetDate branch. Re-pinning a later month is the same
+      bomb with a longer fuse.
+
+   ⛔⛔ A REPAIR THAT WAS ITSELF A BOMB, STRUCK ON MEASUREMENT AND LEFT HERE RATHER THAN DELETED
+   (Architect-authored, Wirer-measured, Architect-struck 2026-08-19). The first specified repair was
+   ~~"assert the payoff as a constant offset from the anchor month"~~ and its fallback was
+   ~~"assert the two printed dates are exactly N months apart"~~. BOTH ARE BOMBS. _payoffDateFrom
+   (studio.html:12962) advances the anchor with setMonth, which DAY-OVERFLOWS. Measured over ten
+   years of today+14d anchors, every day: THE OFFSET FORM WOULD RED ON 58 DAYS A DECADE AND THE GAP
+   FORM ON 56. 🔑 A TOLERANCE NOBODY RULED IS A DEFECT WITH PERMISSION — so the anchor was made
+   overflow-proof instead (see the fixture below) and the legs assert EXACTLY.
+   ⭐ A GUARD THAT MAKES A CLASS UNREACHABLE BEATS A TOLERANCE THAT DESCRIBES IT.
+
+   ⭐ THE MATRIX THAT ACCEPTED THIS REPAIR — RUN IT BEFORE TOUCHING ANY §1.3 LEG:
+        --clock=2026-08-17 (last green day) · --clock=2026-08-18 (the day it broke)
+        --clock=2026-12-17 (anchor on a 31st) · --clock=2027-06-15
+      each GREEN on every leg, and each RED under --redfirst. */
 const { chromium } = require('playwright');
 const fs = require('fs');
-const LABEL = process.argv[2] || 'RUN';
+const LABEL = (process.argv[2] && process.argv[2].charAt(0) !== '-') ? process.argv[2] : 'RUN';
 const RF = process.argv.includes('--redfirst');
+const CLOCK = (process.argv.find((a) => a.startsWith('--clock=')) || '').split('=')[1] || '';
 const URL = 'http://127.0.0.1:8001/studio.html';
 
 (async () => {
   const b = await chromium.launch();
-  const p = await b.newPage();
+  const _ctx = await b.newContext();
+  /* setFixedTime, NOT clock.install() — install() also fakes TIMERS, and the Studio's settle path
+     depends on them. This moves the calendar and nothing else. */
+  if (CLOCK) await _ctx.clock.setFixedTime(new Date(CLOCK + 'T12:00:00'));
+  const p = await _ctx.newPage();
   await p.goto(URL, { waitUntil: 'networkidle' });
   await p.evaluate(() => { try { localStorage.clear(); sessionStorage.clear(); } catch (e) {} });
   await p.reload({ waitUntil: 'networkidle' });
@@ -53,7 +85,35 @@ const URL = 'http://127.0.0.1:8001/studio.html';
       // fixture tests less than it did while still passing. Relative now — the shape
       // _gate_heloc_variable_18a.mjs:49 already uses. A GATE MUST PRODUCE THE SAME VERDICT ON
       // EVERY DAY OF THE YEAR.
-      minPmt: '2000', addPmt: '500', nextPmtDate: new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10),
+      //
+      // ⏱️ STILL RELATIVE, BUT PINNED TO THE FIRST OF THE FOLLOWING MONTH RATHER THAN today+14d,
+      // AND THAT IS A MEASUREMENT, NOT A TIDY-UP. _payoffDateFrom (studio.html:12962) advances the
+      // anchor with setMonth, which DAY-OVERFLOWS: an anchor on the 31st pushed into a 30-day month
+      // rolls into the next one. Measured, ten years of today+14d anchors, every day:
+      //     payoff offset from anchor month   184 on 3595 days ·  185 on 58
+      //     baseline offset                   278 on 3615 days ·  279 on 38
+      //     gap between the two printed dates  94 on 3597 days ·   93 on 38 · 95 on 18
+      // Twenty years of first-of-month anchors: 184 / 278 / 94 on all 7305 days, ZERO deviation —
+      // overflow is IMPOSSIBLE BY CONSTRUCTION, because every month has a first day.
+      // 🔑 THAT IS WHY THE §1.3 LEGS ASSERT EXACTLY AND CARRY NO TOLERANCE. A TOLERANCE NOBODY
+      //    RULED IS A DEFECT WITH PERMISSION.
+      // ⚠️ BLAST RADIUS, MEASURED BY DIFFING THE RENDER (not the verdicts) at 2026-08-10,
+      //    2026-12-17, 2027-06-15: 46 modal + 738 schedule $ amounts IDENTICAL · 20 percentages
+      //    IDENTICAL · exactly ONE value="" attribute moves (this field itself, studio.html:8409) ·
+      //    the schedule's row LABELS shift one month, which no leg asserts. NOT ONE DOLLAR MOVES.
+      //    ⛔ A VERDICT DIFF IS NOT A BLAST RADIUS — the verdicts moved on 2 legs and the render
+      //       moved on 187 spans. Only the render diff could say "not one dollar".
+      // ⚠️ WHAT IT COSTS, RECORDED SO NOBODY REDISCOVERS IT AS A BUG: this fixture no longer
+      //    exercises the day-overflow path. It never asserted it. AND THE PRODUCT REALLY DOES DO
+      //    THIS: on 76 days a decade the room prints "about 94 months sooner than <date>" with the
+      //    two dates 93 or 95 apart. Hedged by "about", one month on an eight-year claim —
+      //    LOGGED, NOT CHASED, AND DELIBERATELY NOT ABSORBED INTO A TOLERANCE HERE. A defect that
+      //    is legitimately not worth fixing must still be LEGIBLE, or the next wirer finds it cold
+      //    and opens an investigation into working arithmetic.
+      minPmt: '2000', addPmt: '500',
+      nextPmtDate: (function () { var n = new Date(), d = new Date(n.getFullYear(), n.getMonth() + 1, 1),
+        p2 = function (x) { return x < 10 ? '0' + x : '' + x; };
+        return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); })(),
       propTaxAnnual: '6000', insAnnual: '2400', pmiMonthly: '150',
       rateIndex: 'SOFR', rateMargin: 2.5, rateResetDate: new Date(Date.now() + 400 * 864e5).toISOString().slice(0, 10), capPeriodic: 2, capLifetime: 5,
       isPriority: true, linkedAssetId: (propAcc ? propAcc.id : null), accelSourceId: (savAcc ? savAcc.id : null)
@@ -167,6 +227,16 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   const txt = (s) => typeof s !== 'string' ? '' :
     s.replace(/<\/?span[^>]*>/g, '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
   const T = {}; Object.keys(R).forEach(k => { if (typeof R[k] === 'string') T[k] = txt(R[k]); });
+  /* ── §1.3 · THE PAYOFF CLOCK, READ OUT OF THE CAPTURE ────────────────────────────────────────
+   * Both dates are rendered from ONE anchor (the fixture's nextPmtDate), so they are calendar-bound
+   * BY CONSTRUCTION and must never be asserted as literals. See the header. */
+  const MY = '([A-Z][a-z]+ [12][0-9]{3})';
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const monthIdx = (s) => { if (!s) return null; const q = s.split(' '); const i = MONTHS.indexOf(q[0]);
+                            return i < 0 ? null : parseInt(q[1], 10) * 12 + i; };
+  const payoffField = (new RegExp('id="modal-calc-payoff-[^"]*"[^>]*>\\s*' + MY + '\\s*<').exec(R.mFill) || [])[1] || null;
+  const diPayoff    = (new RegExp('mortgage-free around ' + MY).exec(T.mFill) || [])[1] || null;
+  const ahead       = new RegExp('about (\\d+) months sooner than the ' + MY + " you'd hit paying the minimum alone").exec(T.mFill);
   // The link control lists assets by TITLE inside its picker section; scope the scoping assertions to that
   // region so they can't pass on the word appearing somewhere else in the modal.
   const linkRegion = (s) => { const i = (s || '').indexOf('LINK AN EXISTING'); return i < 0 ? '' : s.slice(i, i + 1500); };
@@ -268,7 +338,13 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   ok(has(R.mFill, 'What would extra do?') && has(R.mFill, 'One-time extra payment'), '§20.1 lump panel + input render on the Mortgage modal');
   ok(has(T.mFill, 'Drop in a one-time lump'), '§20.1 EPHEMERAL: a freshly opened modal shows the empty state (nothing persisted)');
   ok(pick(!has(R.aBlank, 'What would extra do?'), has(R.aBlank, 'What would extra do?')), '§20.1 lump panel ABSENT on Auto-debt (mortgage-only) [BITE]');
-  ok(has(R.mFill, 'December 2041'), 'Expected Payoff Date non-breaking (Dec 2041 at $2,500/mo)');
+  ok(!!payoffField, 'Expected Payoff Date field renders a Month-Year (got "' + payoffField + '")');
+  /* ⚠️ A WIRING PROOF, NOT A CROSS-CHECK, AND THE DIFFERENCE IS STATED SO NOBODY BANKS THE WRONG
+   * ONE: for a mortgage _debtPayoffDisplay (studio.html:13036) is `return calculatePayoff(acc)` —
+   * the HELOC maturity clamp is its only other branch and this fixture carries no maturityDate.
+   * This leg proves THE FIELD IS WIRED AND RENDERING, never that two computations agree. */
+  ok(!!payoffField && payoffField === diPayoff,
+     'Expected Payoff Date field shows the same date as the DI sentence ("' + payoffField + '" / "' + diPayoff + '")');
   ok(R.amortBtnFound && has(R.amortFill, 'Remaining Schedule') && has(R.amortFill, 'Principal') && has(R.amortFill, 'Interest'), 'Amort button CLICK renders brand table (filled) [§20.2 title renamed]');
   ok(R.amortDisp === 'flex', 'Amort overlay is display:flex after click');
   ok(pick(R.amortZ > R.acctZ, R.amortZ < R.acctZ), 'Amort overlay z-index ABOVE account modal (' + R.amortZ + ' > ' + R.acctZ + ') [BUG-1 FIX/BITE]');
@@ -352,7 +428,14 @@ const URL = 'http://127.0.0.1:8001/studio.html';
   ok(pick(!has(T.mCap, 'this is a variable rate'), has(T.mCap, 'this is a variable rate')),
      '§1.2 beat ABSENT when rateType is untouched (default-select trap) [BITE]');
   ok(!/This loan runs [\d.]+% APR/.test(T.mFill), '§19.5 ① stays cut — no APR restatement came back with it');
-  ok(has(T.mFill, 'mortgage-free around December 2041') && has(T.mFill, "about 94 months sooner than the October 2049 you'd hit paying the minimum alone"), '§1.3 payoff clock + baseline-date ahead clause');
+  ok(!!diPayoff, '§1.3 payoff clock renders "mortgage-free around <Month Year>" (got "' + diPayoff + '")');
+  ok(!!ahead, '§1.3 ahead clause renders "<N> months sooner than the <Month Year> you\'d hit paying the minimum alone"');
+  /* THE ACCELERATION INVARIANT. payoffMonths (studio.html:12944) READS NO CLOCK — it is
+   * -log(1 - rB/p)/log(1+r) over balance, rate and payment — so 94 is a pure function of THIS
+   * FIXTURE and is the same on every day of the year. It is what the two struck literals pinned. */
+  ok(!!ahead && parseInt(ahead[1], 10) === 94, '§1.3 ACCELERATION INVARIANT — 94 months (got ' + (ahead ? ahead[1] : 'none') + ')');
+  ok(!!ahead && !!diPayoff && (monthIdx(ahead[2]) - monthIdx(diPayoff)) === parseInt(ahead[1], 10),
+     '§1.3 the two printed dates are exactly the printed N months apart ("' + diPayoff + '" -> "' + (ahead ? ahead[2] : '?') + '")');
   ok(has(T.mFill, "From here to payoff, about $159,291 of what's ahead goes to interest"), '§1.4 remaining-only clause (mFill has no dates -> life line omitted)');
   ok(has(T.mFill, 'Against The Grounds ($500,000), your equity here is $200,000. You own more than you owe'), '§1.5 equity clause (above water)');
   ok(has(T.mFill, 'your real monthly is $3,350'), '§1.6 escrow-load clause');
