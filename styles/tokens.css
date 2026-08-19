@@ -29,7 +29,17 @@
   --paint-brass-deep:     #B8952F;
   --paint-chalk:          #ffffff;                    /* what a draughtsman marks with on a dark ground */
   --paint-red-lead:       #e24b4a;
-  --paint-cyanotype:      rgba(100, 180, 255, 0.05);  /* blueprint blue — the ruling of the paper */
+  /* ⛔⛔ OPAQUE SINCE 2026-08-19, AND THE LAW IT NOW OBEYS WAS ALREADY WRITTEN THREE LINES BELOW.
+   * It held rgba(100,180,255,0.05) — a PAINT carrying an alpha — which is precisely what
+   * --paint-graphite-blue's comment forbids: "A PAINT IS A PIGMENT; TRANSPARENCY IS HOW A SURFACE
+   * *USES* IT." One paint was exempt from a rule the file already stated, and nothing caught it
+   * because its only consumer wanted exactly that alpha.
+   * ⛔ IT STOPPED BEING HARMLESS THE MOMENT A SECOND CONSUMER APPEARED. --light-fill derives 14%
+   *    from this paint; against a 5%-alpha pigment that COMPOUNDS to 0.00714 — MEASURED 20x TOO
+   *    FAINT (§80.4), a light source that would have been effectively invisible.
+   * 🔑 THE ALPHA DID NOT VANISH, IT MOVED TO WHERE IT ALWAYS BELONGED: --grid-line derives its own
+   *    5% below, so the ONE consumer that wanted a 5% blue still gets exactly that. */
+  --paint-cyanotype:      #64B4FF;                    /* blueprint blue — the ruling of the paper */
   /* proto's drafting-grid major with THE ALPHA STRIPPED OUT. 🔑 A PAINT IS A PIGMENT; TRANSPARENCY
    * IS HOW A SURFACE *USES* IT. Storing rgba(42,78,104,.16) here would have made every future
    * opacity tweak a recolour. (MASTER SPEC §76.1) */
@@ -89,8 +99,52 @@
 
   /* THE TWO GRID FREQUENCIES. 🔑 THE 4:1 RATIO IS WHAT READS AS DRAFTING PAPER, NOT THE HUE —
    * so the minor stays CYANOTYPE (our blueprint blue) rather than taking proto's accent. */
-  --grid-line:   var(--paint-cyanotype);     /* the 19px MINOR — live, sourced, unchanged */
+  /* ⚠️ NO LONGER `var(--paint-cyanotype)` BARE — the paint went opaque above, so the 5% that used
+   * to ride inside the pigment is now stated HERE, where the surface decides it. THE RESOLVED
+   * COLOUR IS UNCHANGED: #64B4FF is rgb(100,180,255), so this is the same rgba() it always was. */
+  --grid-line:   rgba(100, 180, 255, 0.05); /* cyanotype at 5% — the 19px MINOR, value unmoved */
   --grid-major:  rgba(42, 78, 104, 0.16);    /* graphite blue at 16% — the 76px MAJOR */
+
+  /* ── 💡 THE TWO LIGHTS OVER THE DRAFTING TABLE ─────────────────────────────────────────────────
+   * ⭐ NAMED FOR WHAT THEY DO, NOT WHAT COLOUR THEY ARE (§67.1). KEY and FILL are the actual
+   *    vocabulary for two lights over a table, and they SURVIVE A RECOLOUR — which a name like
+   *    --teal-glow would not.
+   * ⛔ NO NEW PAINT WAS CREATED. proto's raw teal rgba(60,145,131,.18) and blue rgba(73,110,180,.14)
+   *    are REJECTED (§79.3): each role is a derivation of exactly ONE paint we already own (§68.5).
+   * ⚠️ SO THESE ARE BRIGHTER AND MORE SATURATED THAN THE DONOR'S, DELIBERATELY AND MEASURABLY: our
+   *    verdigris is (93,202,165) against proto's (60,145,131), our cyanotype (100,180,255) against
+   *    its (73,110,180). At the same alpha the key lands ~(6,10,6) hotter and the fill ~(4,10,11).
+   *    THAT IS THE RULED SUBSTITUTION, NOT A DRIFT — recorded so nobody "fixes" it back toward proto.
+   * ⛔ THE GEOMETRY IS THE DONOR'S AND IS *NOT* INVENTED HERE. Position and extent live at the
+   *    consuming surface (studio.html body), taken from proto.html:48-49 — 70%/15% out to 24%, and
+   *    20%/80% out to 22%. §79.3 authored colour, alpha and position and was silent on extent;
+   *    THAT HOLE WAS CLOSED BY MEASURING THE DONOR, NOT BY PICKING A NUMBER (L47/L48).
+   * ⛔ proto's THIRD body layer — a linear-gradient field #040a12->#07101b->#091220 — IS NOT PORTED.
+   *    It is a distinct darker stage tone, it is the Architect's to author, and it gets its own
+   *    commit. It does not ride in behind a mechanism fix. (§81.7) */
+  --light-key:   rgba(93, 202, 165, 0.18);   /* verdigris at 18% — the warm key, upper right */
+
+  /* ⛔⛔ --light-fill IS AUTHORED AND DELIBERATELY ABSENT. THIS IS AN HONEST BLANK, NOT AN OVERSIGHT.
+   * §79.3 authored it — cyanotype at 14%, a cool fill at 20%/80% — and it is NOT DECLARED HERE
+   * because it was MEASURED AND IT ILLUMINATES NOTHING. On the entered Studio at 1440x900 its own
+   * centre reads d=(0,0,0). The stack at that point, innermost first:
+   *     #disclosure-footer  rgba(9,18,33,0.97)
+   *     .drafting-panel     rgb(9,18,33)      <- FULLY OPAQUE, and F1 already named it as still
+   *     #studio-layout      transparent          blocking the light after the ground commit
+   *     body                rgb(9,18,33)
+   * 🔑 THE AUTHORING FAULT, RECORDED BECAUSE IT GENERALISES: A POSITION IS NOT A VALUE — IT IS A
+   *    CLAIM ABOUT WHAT SITS AT THAT POSITION. 20%/80% came from proto, whose sidebar is
+   *    rgba(4,10,18,.96)->.92 and therefore leaks 4-8%. OURS IS rgb(). The coordinate was ported
+   *    and its premise was left behind.
+   * ⛔ AND IT IS NOT DECLARED-BUT-UNUSED ON PURPOSE: A ROLE WITH NO CONSUMER IS A NAME WAITING TO
+   *    BECOME A LIE (§76.3, the same rule that keeps --info out of this file). Shipping the token
+   *    while knowing it lights nothing would put a dead role in the palette.
+   * ⚖️ HELD, NOT KILLED. It returns when the Architect authors a POSITION against the measured lit
+   *    ground — not moved by a wirer picking a coordinate, which would be the same fault again.
+   * ⚠️ THE CYANOTYPE REPAIR ABOVE SHIPS ANYWAY AND ITS BENEFICIARY IS THIS HELD TOKEN: 14% derived
+   *    from a 5%-alpha paint compounds to 0.00714 (§80.4). The hazard is real and the repair is
+   *    correct whether or not the fill is placed today — but NOBODY SHOULD READ THE REPAIR AS
+   *    EVIDENCE THAT THE FILL IS LIVE. IT IS NOT. */
 
   /* ── ✍️ TYPE ────────────────────────────────────────────────────────────────────────────────
    * RELOCATED, NOT INVENTED. These two shared tokens moved here with the :root block they lived
@@ -144,6 +198,18 @@
     --border:     color-mix(in srgb, var(--paint-verdigris) 18%, transparent);
     --hairline:   color-mix(in srgb, var(--paint-verdigris) 6%, transparent);
     --grid-major: color-mix(in srgb, var(--paint-graphite-blue) 16%, transparent);
+    /* ⚠️ --grid-line JOINS THE DERIVATIONS AND IT IS NOT A PURE NO-OP — SAID PLAINLY BECAUSE
+     * "IMPERCEPTIBLE" IS A JUDGEMENT AND "NO-OP" IS A MEASUREMENT, AND THIS ARC KEEPS THEM APART.
+     * The RESOLVED COLOUR is unchanged: #64B4FF is exactly rgb(100,180,255), so this derivation and
+     * the rgba() literal above name the SAME colour. What moves is the COMPOSITING PATH — chromium
+     * resolves color-mix() to color(srgb ...) and rounds one unit differently on a 5%-alpha
+     * hairline: rgb(14,26,44) -> rgb(14,26,43), off-line pixels identical (§80.4, ratified).
+     * 🔑 TWO DIFFERENT MEASURANDS, BOTH TRUE: the VALUE is invariant, the PIXEL moves by 1/255 on
+     *    one channel. Anyone who states only one of those has stated it wrong. */
+    --grid-line:  color-mix(in srgb, var(--paint-cyanotype) 5%, transparent);
+    --light-key:  color-mix(in srgb, var(--paint-verdigris) 18%, transparent);
+    /* --light-fill is NOT derived here for the same reason it is not declared above — it has no
+       consumer. See the honest blank beside --light-key. */
   }
 }
 
