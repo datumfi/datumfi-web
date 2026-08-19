@@ -45,7 +45,7 @@
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 const { chromium } = require('playwright');
 
 const ROOT = path.resolve(__dirname, '..');
@@ -94,9 +94,19 @@ const PIN = 105;   // MEASURED 2026-08-16 · 19 live pages · ~1580 text runs ·
 let PASS = 0, FAIL = 0;
 const leg = (id, ok, msg) => { ok ? PASS++ : FAIL++; console.log(`${ok ? 'PASS' : 'FAIL'} ${id} ${msg}`); };
 
-// ── POPULATION · pages, derived exactly as scripts/_gate_token_authority.js derives them ──────
-const PAGES = new Set(execSync('git ls-files', { encoding: 'utf8' })
-  .split('\n').map((s) => s.trim()).filter((f) => f.endsWith('.html')));
+/* ── POPULATION · pages, derived exactly as scripts/_gate_token_authority.js derives them ──────
+ * ⛔ -z, AND IT IS THE SAME PAID-FOR BUG _gate_canonical_footer.js:106 ALREADY RECORDS. Git escapes
+ * any path holding NON-ASCII, a quote, a backslash or a control char — `Datum FI — First
+ * Principles.html` comes back as "Datum FI \342\200\224 First Principles.html" — so splitting the
+ * plain output on newlines SILENTLY DROPS those paths. This line dropped FIVE of thirty-nine
+ * tracked .html files, measured 2026-08-19 against the shipped source.
+ * ⚠️ A PLAIN SPACE DOES NOT TRIGGER QUOTING — `Datum Formula.jpg` comes back bare. Anyone
+ *    red-firsting this class with "a path with a space" lands no poison and ships on a false green.
+ * 🔑 ASK THE RUNNER FOR A POPULATION; NEVER GREP ONE — and then PARSE WHAT THE RUNNER ACTUALLY
+ *    HANDED YOU. The law was already written; this line is what it looks like when it is obeyed
+ *    halfway. */
+const PAGES = new Set(execFileSync('git', ['ls-files', '-z'], { maxBuffer: 1 << 28 }).toString('utf8')
+  .split('\0').filter(Boolean).filter((f) => f.endsWith('.html')));
 const seeds = new Set(['index.html']);
 if (fs.existsSync('_redirects')) {
   for (const line of fs.readFileSync('_redirects', 'utf8').split('\n')) {

@@ -77,8 +77,9 @@ const isReader = (src) =>
   stripComments(src).split('\n').find((l) => l.includes('studio.html') && READ_VERB.test(l));
 
 function census(atHead) {
-  const files = execSync('git ls-files scripts', { cwd: REPO, encoding: 'utf8' })
-    .split('\n').map((s) => s.trim()).filter((f) => /\.(js|mjs)$/.test(f));
+  /* ⛔ -z. See the note at `converted` below — same class, same repair, swept together. */
+  const files = execFileSync('git', ['ls-files', '-z', 'scripts'], { cwd: REPO, maxBuffer: 1 << 28 })
+    .toString('utf8').split('\0').filter(Boolean).filter((f) => /\.(js|mjs)$/.test(f));
   const readers = [];
   for (const rel of files) {
     let src;
@@ -299,8 +300,17 @@ ck('C2 PRESENCE — the OLD bare relative read DOES throw from that same cwd (so
    same defect family as proximity-is-not-ownership, one layer over. Only a real import/require
    STATEMENT binds the helper, so only that is counted. */
 const IMPORT_RE = /(?:^|\n)\s*(?:import\s*\{[^}]*\bstudioSource\b[^}]*\}\s*from\s*|(?:const|let|var)\s*\{[^}]*\bstudioSource\b[^}]*\}\s*=\s*require\s*\(\s*)['"][^'"]*_studio_source\.cjs['"]/g;
-const converted = execSync('git ls-files scripts', { cwd: REPO, encoding: 'utf8' })
-  .split('\n').map((s) => s.trim()).filter((f) => /\.(js|mjs)$/.test(f))
+/* ⛔ -z, SWEPT WITH THE WHOLE CLASS 2026-08-19. Git escapes any path holding NON-ASCII, a quote, a
+ * backslash or a control char, so splitting the plain output on newlines silently drops it.
+ * ⚠️ LATENT HERE, NOT INERT: `scripts/` holds no such path TODAY, so this site dropped nothing —
+ *    which is exactly why it survived. Proven with a staged fixture: 298 of 299. The census site
+ *    next door was dropping FIVE REAL FILES the whole time.
+ * ⚠️ AND A PLAIN SPACE DOES NOT TRIGGER QUOTING. Red-firsting this class with a space lands no
+ *    poison and ships on a false green.
+ * 🔑 FIXED IN EVERY INSTANCE AT ONCE, BECAUSE A CORRECTED PRIVATE COPY BESIDE UNCORRECTED PUBLISHED
+ *    ONES IS THE FORK L48 EXISTS TO PREVENT — that is how three instances become four. */
+const converted = execFileSync('git', ['ls-files', '-z', 'scripts'], { cwd: REPO, maxBuffer: 1 << 28 })
+  .toString('utf8').split('\0').filter(Boolean).filter((f) => /\.(js|mjs)$/.test(f))
   .filter((f) => IMPORT_RE.test(readFileSync(path.join(REPO, f), 'utf8')) && (IMPORT_RE.lastIndex = 0, true));
 const parseFails = [], importDupes = [];
 for (const rel of converted) {
