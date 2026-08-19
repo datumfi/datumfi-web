@@ -57,6 +57,33 @@
  *   node scripts/_c3_light_probe.mjs --mode=differential --revert=c3 --i-ran-null-first
  *   node scripts/_c3_light_probe.mjs --mode=absolute
  *   node scripts/_c3_light_probe.mjs --mode=selftest      (poison the tree, prove the diff BITES)
+ *   -- the ground/edge family, added 2026-08-19 for the stage-tone arc --
+ *   node scripts/_c3_light_probe.mjs --mode=profile --page=proto2.html
+ *   node scripts/_c3_light_probe.mjs --mode=profile --page=studio.html --enter --target=proto2
+ *   node scripts/_c3_light_probe.mjs --mode=area --revert=c3 --i-ran-null-first --enter
+ *   node scripts/_c3_light_probe.mjs --mode=edge --revert=c3 --i-ran-null-first --enter
+ *
+ * ── THE THREE GROUND MODES, AND THE FAILURE EACH ONE EXISTS FOR ─────────────────────────────────
+ *  profile — a VERTICAL COLUMN of the rendered ground. §82.6 is accepted ON THE PROFILE, NOT ON THE
+ *      DECLARATION, because proto2's rendered ground is DARKER than its own declared gradient: a
+ *      vignette and a 6px dot texture sit over it. Authoring the gradient alone gets the top right
+ *      and leaves the edges bright. ⭐ --target=proto2 makes the acceptance test EXECUTABLE, and it
+ *      read 0/4 RED before the stage tone existed — a real red-first, not a retrofit.
+ *  area — the WHOLE RECT, not its centre. The centre sampler reported FOUR zeros on the entered
+ *      Studio; TWO were real (#shape-mode-toggle, .drafting-panel at 0.0% moved) and TWO were
+ *      ARTEFACTS — #canvas-wrapper and #blueprint-container centres land on brass estate content,
+ *      so both read (0,0,0) while 22% of their area was actually moving. 🔑 ONE PIXEL CANNOT
+ *      REPRESENT A SURFACE THAT HAS ANYTHING DRAWN ON IT, and only an area sampler can tell a real
+ *      zero from an occluded one.
+ *  edge — the FALLOFF as a curve along a ray. The "it reads as a blob" complaint is an EDGE
+ *      question, and AN ALPHA CHANGE CANNOT FIX AN EDGE — it would make a faint blob instead of a
+ *      bright one. Measured on the clean left ray: +33 at the centre, then 29·25·20·16·11·7·3 and
+ *      ZERO by 320px. A light that terminates is visible as a boundary on a FLAT field; on a graded
+ *      one the ground keeps darkening and the eye reads it as continuous.
+ *
+ * ⭐ --page LETS ONE INSTRUMENT MEASURE BOTH THE DONOR AND US, so a difference between proto2 and
+ *    studio.html is a difference in the PAGES and never between two rigs. The proto2 target table
+ *    below was RE-DERIVED with this probe and reproduced the scratch script exactly.
  * EXIT 0 = the run produced a trustworthy report · 1 = an assertion failed · 2 = the harness broke.
  *
  * ⚠️ READ THE REPORT, NOT THE EXIT CODE. "DIFFERS" is not automatically a bug. On a deliberate skin
@@ -83,6 +110,28 @@ const NULL_FIRST = argv.includes('--i-ran-null-first');
 /* --enter dismisses the landing overlay so the DRAFTING SURFACE is what gets photographed.
    It is a DIFFERENT PROFILE, not a better one, and it carries its own null control. */
 const ENTER = argv.includes('--enter');
+/* ⭐ --page LETS THE SAME INSTRUMENT MEASURE THE DONOR AND US. proto2.html and studio.html are read
+ * by ONE probe, so a difference between them is a difference in the PAGES and never a difference
+ * between two measuring rigs. Comparing a donor measured one way against a target measured another
+ * is the oldest way to manufacture a delta. */
+const PAGE = arg('page', 'studio.html');
+/* Column(s) for --mode=profile. 1425 is the far right edge — the least content-covered column on
+ * studio.html cold. Override when a layout puts something there. */
+const COLS = arg('cols', '1425').split(',').map(Number);
+const TARGET = arg('target', '');
+const TOL = parseInt(arg('tol', '2'), 10);
+
+/* ⛔ THE ACCEPTANCE TARGET IS A MEASUREMENT, NOT A FEELING — it is proto2's OWN rendered profile,
+ * taken by THIS probe at 1440x900, and the Architect authored §82.6 against these numbers rather
+ * than against an intention. Re-derive it (`--mode=profile --page=proto2.html`) rather than trust
+ * this table if proto2 ever changes.
+ * ⚠️ THE ±2 TOLERANCE IS RULED, NOT ASSUMED (Architect, 2026-08-19). It exists because our stack
+ *    and proto2's stack are not the same set of layers, so an exact match is not achievable and
+ *    demanding one would be a defect with permission of the opposite kind. The tool ALWAYS prints
+ *    the real per-channel delta, so the tolerance can never hide a drift inside it. */
+const TARGETS = {
+  proto2: { 20: [4, 9, 18], 250: [4, 10, 18], 550: [5, 11, 20], 860: [7, 13, 23] },
+};
 
 const VW = 1440, VH = 900;
 const PORT_A = 8431;   /* shipped / working tree            */
@@ -221,7 +270,7 @@ function makeTransform(set) {
    ⛔ THE ORDER IN HERE IS A RULING, NOT A PREFERENCE (§81.18). The screenshot is taken BEFORE any
    geometry is read. A getBoundingClientRect pass ahead of the capture forced a layout and moved a
    measured count by 15 pixels — the same order of magnitude as the signal C3 is hunting. */
-async function capture(port, chromium) {
+async function capture(port, chromium, pageRel) {
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: VW, height: VH }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
@@ -233,7 +282,7 @@ async function capture(port, chromium) {
     if (u.startsWith('http://127.0.0.1:')) return route.continue();
     offOrigin++; return route.abort();
   });
-  await page.goto(`http://127.0.0.1:${port}/studio.html`, { waitUntil: 'load' });
+  await page.goto(`http://127.0.0.1:${port}/${pageRel || 'studio.html'}`, { waitUntil: 'load' });
   /* COLD STUDIO: clear storage, then reload so the page boots from the cold path, not from a
      mutated live one. §D10's rAF re-trigger shape — parse-time init must actually re-run. */
   await page.evaluate(() => { try { localStorage.clear(); sessionStorage.clear(); } catch (e) {} });
@@ -256,6 +305,8 @@ async function capture(port, chromium) {
    *    any --enter number. */
   if (ENTER) {
     const btn = await page.$('#studioStartScratch');
+    /* A donor page (proto2.html) has no landing overlay; --enter is a studio-only concept and
+       saying so beats silently skipping, which would make one capture differ from the other. */
     if (!btn) throw new Error('--enter: #studioStartScratch not found — the landing overlay changed shape');
     await btn.click();
     await page.waitForFunction(() => {
@@ -349,6 +400,73 @@ function sampleSites(a, b, rects, points) {
     const u = px(B, x, y), l = px(A, x, y);
     console.log(`   ${name.padEnd(30)} ${String(u.join(',')).padEnd(16)} ${String(l.join(',')).padEnd(16)} ${[l[0] - u[0], l[1] - u[1], l[2] - u[2]].join(',')}`);
   }
+}
+
+/* ══ AREA MODE — WHY THE CENTRE SAMPLE HAD TO GO ════════════════════════════════════════════════
+ * The first d LIT sampler read the pixel at each rect's CENTRE. On `#canvas-wrapper` and
+ * `#blueprint-container` that centre landed on brass estate content, so both reported 201,168,76
+ * lit AND unlit — a confident (0,0,0) that described a drawing, not the light. Reporting it as a
+ * zero would have been indistinguishable from "the light does not reach here".
+ * 🔑 ONE PIXEL CANNOT REPRESENT A SURFACE THAT HAS ANYTHING DRAWN ON IT.
+ * So: sample the WHOLE rect and report a distribution.
+ *   · meanDelta  — average per-channel change over every pixel in the rect (the honest d LIT)
+ *   · medianDelta— resists content: a chart or a label moves few pixels a lot, and the median
+ *                  ignores them while the mean does not
+ *   · pctMoved   — what fraction of the rect changed at all. ⭐ THIS IS THE LEG THAT DISTINGUISHES
+ *                  "a weak light over the whole panel" from "a strong light on one corner", which
+ *                  no single scalar can. */
+function areaStats(A, B, r) {
+  const x0 = Math.max(0, Math.round(r.x)), y0 = Math.max(0, Math.round(r.y));
+  const x1 = Math.min(A.w, Math.round(r.x + r.w)), y1 = Math.min(A.h, Math.round(r.y + r.h));
+  if (x1 <= x0 || y1 <= y0) return null;
+  const dr = [], sum = [0, 0, 0]; let moved = 0, n = 0, maxd = 0;
+  const litSum = [0, 0, 0], unlitSum = [0, 0, 0];
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+    const ia = (y * A.w + x) * A.chan, ib = (y * B.w + x) * B.chan;
+    const d = [A.data[ia] - B.data[ib], A.data[ia + 1] - B.data[ib + 1], A.data[ia + 2] - B.data[ib + 2]];
+    for (let k = 0; k < 3; k++) { sum[k] += d[k]; litSum[k] += A.data[ia + k]; unlitSum[k] += B.data[ib + k]; }
+    const m = Math.max(Math.abs(d[0]), Math.abs(d[1]), Math.abs(d[2]));
+    if (m > 0) moved++;
+    if (m > maxd) maxd = m;
+    dr.push(d[1]);   /* green: the channel carrying ~71% of luminance */
+    n++;
+  }
+  dr.sort((p, q) => p - q);
+  return {
+    n, pctMoved: 100 * moved / n, maxd,
+    mean: sum.map((v) => +(v / n).toFixed(2)),
+    medianG: dr[Math.floor(dr.length / 2)],
+    lit: litSum.map((v) => Math.round(v / n)),
+    unlit: unlitSum.map((v) => Math.round(v / n)),
+  };
+}
+
+/* ══ EDGE MODE — THE "BLOB" QUESTION, WHICH IS NOT A BRIGHTNESS QUESTION ════════════════════════
+ * A radial on a FLAT field shows its own falloff edge; on a graded field running the same direction
+ * the gradient camouflages it. That means the "it reads as a patch" complaint may be an EDGE
+ * problem an alpha change cannot fix. This walks a ray outward from the light's centre and reports
+ * the value profile, so the falloff can be SEEN as a curve instead of argued about. */
+function rayProfile(img, cx, cy, dx, dy, steps, stepPx) {
+  const out = [];
+  for (let i = 0; i <= steps; i++) {
+    const x = Math.round(cx + dx * i * stepPx), y = Math.round(cy + dy * i * stepPx);
+    if (x < 0 || y < 0 || x >= img.w || y >= img.h) break;
+    const k = (y * img.w + x) * img.chan;
+    out.push([i * stepPx, [img.data[k], img.data[k + 1], img.data[k + 2]]]);
+  }
+  return out;
+}
+
+/* ══ VERTICAL PROFILE — THE STAGE TONE'S ACCEPTANCE TEST ════════════════════════════════════════
+ * §82.6 is accepted ON THE PROFILE, NOT ON THE DECLARATION, and that distinction is the whole
+ * point: proto2's rendered ground is DARKER than its own declared gradient because a vignette and a
+ * 6px dot texture sit over it. Authoring the gradient alone gets the top right and leaves the edges
+ * bright. ⛔ SO THE DECLARATION IS NOT THE DELIVERABLE — THIS CURVE IS. */
+function columnProfile(img, x, ys) {
+  return ys.map((y) => {
+    const k = (Math.min(y, img.h - 1) * img.w + Math.min(x, img.w - 1)) * img.chan;
+    return [y, [img.data[k], img.data[k + 1], img.data[k + 2]]];
+  });
 }
 
 function report(title, res) {
@@ -447,7 +565,50 @@ function report(title, res) {
     process.exit(pass === legs.length ? 0 : 1);
   }
 
-  if (!['null', 'differential', 'selftest', 'dlit'].includes(MODE)) {
+  /* ══ PROFILE — ABSOLUTE, SINGLE CAPTURE, NO COMPARISON IN IT ═════════════════════════════════
+     ⛔ A NULL *PAIR* DOES NOT APPLY HERE — there is no second tree. But the principle does, so the
+     absolute analogue is used instead: CAPTURE TWICE AND REQUIRE THE TWO TO BE IDENTICAL. Proving
+     the instrument is stable before believing a small number is the same discipline either way. */
+  if (MODE === 'profile') {
+    const srv = await serve(PORT_A, null, []);
+    const c1 = await capture(PORT_A, chromium, PAGE);
+    const c2 = await capture(PORT_A, chromium, PAGE);
+    srv.close();
+    const A = decodePNG(c1.shot), A2 = decodePNG(c2.shot);
+    let drift = 0;
+    for (let i = 0; i < A.data.length; i++) if (A.data[i] !== A2.data[i]) drift++;
+    console.log(`\nSTABILITY (the absolute analogue of a null pair): ${drift} of ${A.data.length} subpixels differ between two captures of the SAME page`);
+    if (drift !== 0) {
+      console.log('⛔ THE PAGE DOES NOT RENDER DETERMINISTICALLY. Every number below is unreadable.');
+      console.log('SCORE 0/1 RED'); process.exit(1);
+    }
+    const ys = TARGET && TARGETS[TARGET] ? Object.keys(TARGETS[TARGET]).map(Number) : [20, 120, 250, 400, 550, 700, 860];
+    let fails = 0, legs = 0;
+    for (const x of COLS) {
+      console.log(`\n──── VERTICAL GROUND PROFILE — ${PAGE}, column x=${x} ────`);
+      for (const [y, rgb] of columnProfile(A, x, ys)) {
+        let line = `   y=${String(y).padStart(4)}  rgb(${rgb.join(',')})`;
+        if (TARGET && TARGETS[TARGET] && TARGETS[TARGET][y]) {
+          const t = TARGETS[TARGET][y];
+          const d = rgb.map((v, i) => v - t[i]);
+          const ok = d.every((v) => Math.abs(v) <= TOL);
+          legs++; if (!ok) fails++;
+          line += `   target ${TARGET} rgb(${t.join(',')})   d=(${d.join(',')})   ${ok ? 'within ±' + TOL : '⛔ OUTSIDE ±' + TOL}`;
+        }
+        console.log(line);
+      }
+    }
+    if (TARGET) {
+      console.log(`\n⚖️  ACCEPTANCE IS THE PROFILE, NOT THE DECLARATION (§82.6).`);
+      console.log(`SCORE ${legs - fails}/${legs} ${fails === 0 ? 'GREEN' : 'RED'}`);
+      process.exit(fails === 0 ? 0 : 1);
+    }
+    console.log('\n(no --target given — this printed a MEASUREMENT, not a verdict)');
+    console.log('SCORE 1/1 GREEN');
+    process.exit(0);
+  }
+
+  if (!['null', 'differential', 'selftest', 'dlit', 'area', 'edge'].includes(MODE)) {
     console.log(`SCORE 0/0 RED — unknown --mode=${MODE}`); process.exit(2);
   }
   /* dlit IS a differential measurement (lit vs unlit), so it inherits the null-control gate. */
@@ -500,6 +661,47 @@ function report(title, res) {
   console.log(`\noff-origin requests aborted: A=${A.offOrigin} B=${B.offOrigin}`);
   console.log(`rects measured AFTER capture: A=${A.rects.length} B=${B.rects.length}`);
 
+  if (MODE === 'area' || MODE === 'edge') {
+    const IA = decodePNG(A.shot), IB = decodePNG(B.shot);
+    if (MODE === 'area') {
+      /* ⛔ THE SITES ARE THE RENDERED POPULATION, NOT A HAND LIST: every rect that actually has a
+         box. Filtered to real surfaces so the report is readable, but nothing is EXCLUDED silently
+         — the count of skipped rects is printed. */
+      const want = ['#estate-analysis', '#want-readout', '#shape-hud', '#shape-mode-toggle',
+        '#canvas-wrapper', '#blueprint-container', '.hud-panel', '.drafting-panel', '.ira-why-panel'];
+      console.log('\n──── d LIT BY AREA — the whole rect, not one pixel ────');
+      console.log('   ' + 'site'.padEnd(24) + 'mean unlit'.padEnd(14) + 'mean lit'.padEnd(14) + 'mean d(r,g,b)'.padEnd(20) + 'medG'.padEnd(6) + '%moved'.padEnd(8) + 'maxd');
+      let missing = 0;
+      for (const sel of want) {
+        const r = A.rects.find((q) => q.sel === sel);
+        if (!r) { console.log('   ' + sel.padEnd(24) + '— no box. NO NUMBER REPORTED.'); missing++; continue; }
+        const st = areaStats(IA, IB, r);
+        if (!st) { console.log('   ' + sel.padEnd(24) + '— rect off-viewport. NO NUMBER REPORTED.'); missing++; continue; }
+        console.log('   ' + sel.padEnd(24) + ('rgb(' + st.unlit.join(',') + ')').padEnd(14) +
+          ('rgb(' + st.lit.join(',') + ')').padEnd(14) + ('(' + st.mean.join(',') + ')').padEnd(20) +
+          String(st.medianG).padEnd(6) + (st.pctMoved.toFixed(1) + '%').padEnd(8) + st.maxd);
+      }
+      console.log(`   (${missing} site(s) had no box and were reported as such, never as a zero)`);
+      console.log('\n🔑 %moved separates "a weak light over the whole panel" from "a strong light on one');
+      console.log('   corner". A single scalar cannot, and the centre sample could see neither.');
+    } else {
+      /* EDGE — walk outward from the light's authored centre and print the falloff as a curve. */
+      const cx = Math.round(VW * 0.70), cy = Math.round(VH * 0.15);
+      console.log(`\n──── FALLOFF ALONG A RAY FROM THE LIGHT CENTRE (${cx},${cy}) ────`);
+      console.log('   Answers the "is it a blob" question, which is an EDGE question and not a');
+      console.log('   brightness one — an alpha change cannot fix an edge.');
+      for (const [name, dx, dy] of [['down-left  ', -0.7071, 0.7071], ['straight down', 0, 1], ['left       ', -1, 0]]) {
+        const la = rayProfile(IA, cx, cy, dx, dy, 12, 40), lb = rayProfile(IB, cx, cy, dx, dy, 12, 40);
+        console.log('   ' + name + ' :  ' + la.map((p, i) => {
+          const d = p[1][1] - (lb[i] ? lb[i][1][1] : p[1][1]);
+          return `${p[0]}px:+${d}`;
+        }).join('  '));
+      }
+      console.log('   (each entry is DISTANCE:GREEN-CHANNEL LIFT over the unlit page)');
+    }
+    console.log('\nSCORE 1/1 GREEN   (a measurement, not a verdict)');
+    await (async () => {})();
+  }
   if (MODE === 'dlit') {
     sampleSites(A.shot, B.shot, A.rects, {
       sites: ['#estate-analysis', '#want-readout', '#shape-hud', '#shape-mode-toggle',
