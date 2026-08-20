@@ -299,7 +299,20 @@ const craftFindings = [];
 let craftRules = 0;
 for (const f of [...PAGES].sort()) {
   const s = fs.readFileSync(f, 'utf8');
-  const styles = (s.match(/<style[\s\S]*?<\/style>/gi) || []).join('\n');
+  /* ⛔⛔ COMMENTS ARE STRIPPED BEFORE RULE-SPLITTING, AND THIS IS A REPAIR, NOT A TIDY-UP.
+   * The splitter below is `/[^{}]+\{[^{}]*\}/g`, so "the selector" is EVERYTHING SINCE THE LAST `}`
+   * — including any comment block sitting above the rule. MEASURED 2026-08-20: two `.drafting-panel`
+   * rules produced selector blobs of 1,299 and 1,208 characters, and CRAFT_SEL matched the words
+   * "Sheet" and "paper" INSIDE THE PROSE. Neither selector is a craft surface; neither rule was a
+   * violation. L5 went RED on an explanatory comment.
+   * ⛔ AND THE FALSE-RED IS THE HARMLESS DIRECTION. THE OTHER ONE IS NOT: a comment containing a
+   *    BRACE splits the stream at the wrong place, so a GENUINE craft rule can be mis-associated or
+   *    skipped entirely — L5 would go green while the brass was being tokenised, which is the exact
+   *    regression this leg exists to prevent.
+   * 🔑 A DETECTOR THAT READS PROSE AS CODE IS WRONG IN BOTH DIRECTIONS; ONLY ONE OF THEM ANNOUNCES
+   *    ITSELF. (Same class as the single-line grep that missed a multi-line rule at §81.13.) */
+  const styles = (s.match(/<style[\s\S]*?<\/style>/gi) || []).join('\n')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ');
   for (const r of styles.match(/[^{}]+\{[^{}]*\}/g) || []) {
     const i = r.indexOf('{');
     const sel = r.slice(0, i);
