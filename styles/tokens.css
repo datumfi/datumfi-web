@@ -124,6 +124,35 @@
    *    commit. It does not ride in behind a mechanism fix. (§81.7) */
   --light-key:   rgba(93, 202, 165, 0.18);   /* verdigris at 18% — the warm key, upper right */
 
+  /* ── 🎭 THE STAGE — THE GROUND THE LIGHT IS JUDGED AGAINST (§82.7, 2026-08-19) ────────────────
+   * ⛔⛔ THESE TWO ARE AUTHORED AS A PAIR AND MUST STAY ONE. MEASURED: proto2's RENDERED ground is
+   *    DARKER than its own declared stops, because the vignette sits over them. Shipping the
+   *    gradient alone gets the top right and leaves the edges bright — a half-port that would look
+   *    like a failed match rather than a missing layer.
+   *    🔑 THE VIGNETTE IS PART OF THE GROUND, NOT DECORATION.
+   * ⚠️ WHY A WHOLE GRADIENT IS ALLOWED TO BE A TOKEN HERE, WHEN §81.8 FORBADE ROLES AS STOPS:
+   *    §81.8's rule is "A ROLE HOLDS ONE VALUE; A STOP IS HALF A RAMP" — it bans putting a role
+   *    INTO one stop of someone else's ramp. These hold a COMPLETE ramp, authored as a ramp, which
+   *    is precisely the remedy that rule prescribed. Nothing here is half of anything.
+   * ⛔ NOT SITE-WIDE. The Studio is the only consumer; every other page keeps the flat field. A
+   *    graded field on a 13-viewport page is lit for two screens and dark for twelve (F4).
+   * ⚖️ ACCEPTANCE IS THE PROFILE, NOT THE DECLARATION — `_c3_light_probe.mjs --mode=profile
+   *    --target=proto2` must land within ±2 per channel at y=20/250/550/860. The tolerance is RULED
+   *    (Architect), and the probe prints the real deltas even on green so nothing drifts inside it. */
+  --stage-field:    linear-gradient(180deg, #040a12 0%, #07101b 24%, #091220 100%);
+  --stage-vignette: radial-gradient(circle at 50% 50%, transparent 54%, rgba(2,8,15,0.10) 78%, rgba(2,8,15,0.28) 100%);
+  /* ⛔⛔ THE STAGE'S OWN BASE — AND IT IS NOT THE FIELD. THIS WAS THE MISSING LAYER (§82.8).
+   * MEASURED: proto2's stage darkness does NOT come from its field. `.app` carries the graded field
+   * (which `--stage-field` above ports), and `.right` — the blueprint stage — carries a SEPARATE
+   * translucent dark base ON TOP of it. We were looking through a transparent canvas down to the
+   * field; proto2 looks at a stack. Porting the field alone got us to d=(2,5,8); this closes it.
+   * ⛔ THIS DOES NOT REVERT `85e21bf`, AND THE DISTINCTION IS THE WHOLE POINT. That commit removed
+   *    `.canvas-wrapper`'s opaque fill because the fill was a DUPLICATE of the field behind it —
+   *    a deletion, correctly reasoned, and its message stays true. THIS ADDS A DIFFERENT THING AT
+   *    THE SAME ADDRESS: a distinct, darker, TRANSLUCENT layer the field does not provide.
+   *    🔑 REMOVING A DUPLICATE WAS A DELETION. ADDING A NON-DUPLICATE IS A DECISION. */
+  --stage-base:     linear-gradient(180deg, rgba(4,10,18,0.88), rgba(8,16,28,0.94));
+
   /* ⛔⛔ --light-fill IS AUTHORED AND DELIBERATELY ABSENT. THIS IS AN HONEST BLANK, NOT AN OVERSIGHT.
    * §79.3 authored it — cyanotype at 14%, a cool fill at 20%/80% — and it is NOT DECLARED HERE
    * because it was MEASURED AND IT ILLUMINATES NOTHING. On the entered Studio at 1440x900 its own

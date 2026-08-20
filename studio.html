@@ -89,8 +89,15 @@
     flex-direction: column;
     overflow: hidden;
     padding-top: 56px;
+    /* ⛔ THE VIGNETTE IS NOT HERE, AND THAT MOVE WAS RULED (§82.8). It first shipped in this stack
+     * as a background LAYER, which darkens the FIELD and leaves the estate drawing untouched.
+     * proto2 puts it on the STAGE as `::after` — an overlay above the content — and CONTENT IS THE
+     * POINT: the vignette's job is to pull the eye toward the centre of the drawing, which it
+     * cannot do from behind it. It now lives on `.canvas-wrapper::after`.
+     * ⛔ SO body CARRIES EXACTLY TWO LAYERS: the key light, and the graded field beneath it. */
     background-image:
-      radial-gradient(circle at 70% 15%, var(--light-key), transparent 24%);
+      radial-gradient(circle at 70% 15%, var(--light-key), transparent 24%),
+      var(--stage-field);
   }
   /* ⛔ THE CONSENT-BANNER RESERVE IS GONE — AND ITS REMOVAL IS MEASURED, NOT ASSUMED.
      It existed because the disclosure footer, then a band in the body flex column, landed under
@@ -941,7 +948,16 @@
   .drafting-panel {
     --panel-pad-x: 40px;
     width: 480px; padding: 30px var(--panel-pad-x) 40px; border-right: 1px solid rgba(255,255,255,0.05);
-    min-height: 0; overflow-y: auto; background-color: var(--bg-navy); z-index: 50;
+    min-height: 0; overflow-y: auto; z-index: 50;
+    /* 🎭 §82.7 — THE PANEL BECOMES TRANSLUCENT. Captain-ruled: "we do want that very light
+     * translucence." proto2's own pair, ported: rgba(4,10,18,.97) -> rgba(6,13,24,.94).
+     * ⛔ THIS REPLACES `background-color: var(--bg-navy)`, WHICH WAS FULLY OPAQUE rgb() — MEASURED
+     *    at 0.0% of its area moving under the key light, i.e. NOT dimly lit but UNLIT, everywhere.
+     *    That opacity is why --light-fill was killed at §81.20: the cool radial's focal point sits
+     *    at 20%/80%, inside this panel, and could never surface.
+     * ⭐ SO THIS COMMIT MAKES A FALSIFIABLE PREDICTION: that 0.0% must MOVE. If the area sampler
+     *    still reads 0.0% over this rect afterwards, the panel change did not do what it says. */
+    background: linear-gradient(180deg, rgba(4,10,18,0.97), rgba(6,13,24,0.94));
   }
   /* §28 — THE DISCLOSURE SPANS THE PANEL, NOT THE PANEL'S TEXT COLUMN. Measured 2026-08-15: the
      panel is 480px but the footer box was 399px, because it sat inside the panel's 40px side
@@ -1326,7 +1342,30 @@
    *    background-size (:496).
    * ⚠️ STILL BLOCKED, AND NOT A C3 SURFACE: #disclosure-footer, stopped by the opaque
    *    .drafting-panel it sits inside. Named so it is not rediscovered as a finding. */
-  .canvas-wrapper { flex: 1; position: relative; background-color: transparent; background-image: linear-gradient(rgba(100, 180, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(100, 180, 255, 0.05) 1px, transparent 1px); background-size: 40px 40px; overflow: hidden; cursor: grab; }
+  /* 🎭 §82.8 — THE STAGE GETS ITS OWN BASE, AND THE GRID NOW SITS OVER IT.
+   * ⛔ THIS IS NOT A REVERT OF `85e21bf`. That commit deleted an OPAQUE fill because the fill was a
+   *    DUPLICATE of the field behind it — correct then, correct now, and its message stands. This
+   *    adds a DIFFERENT thing at the same address: proto2's own translucent stage base, which the
+   *    field does not provide and which is where proto2's darkness actually comes from.
+   *    🔑 REMOVING A DUPLICATE WAS A DELETION. ADDING A NON-DUPLICATE IS A DECISION — and it was
+   *       the Architect's to make, which is why it was measured, reverted, and brought back ruled.
+   * ⛔ `background-color` STAYS `transparent`: the base arrives as the LAST background-image layer,
+   *    so the light path opened by `85e21bf` is still open and the field still shows through at
+   *    0.88-0.94. An opaque colour here would close it again.
+   * ⚠️ THE GRID IS UNTOUCHED — still the two hardcoded 40px cyanotype layers. Re-pitching to
+   *    76/19 and consuming `var(--grid-line)` is D (§77.6), NOT this commit. */
+  .canvas-wrapper { flex: 1; position: relative; background-color: transparent; background-image: linear-gradient(rgba(100, 180, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(100, 180, 255, 0.05) 1px, transparent 1px), var(--stage-base); background-size: 40px 40px, 40px 40px, auto; box-shadow: inset 0 50px 120px rgba(0,0,0,0.26); overflow: hidden; cursor: grab; }
+  /* 🎭 THE VIGNETTE, RELOCATED FROM `body` (§82.8). As `::after` it sits ABOVE the stage's content,
+   * which is the point — it pulls the eye toward the centre of the drawing rather than darkening a
+   * field nobody can see behind the estate. proto2's `.right::after`, ported whole.
+   * ⛔ `pointer-events: none` IS LOAD-BEARING, NOT TIDINESS: this covers the entire canvas, and the
+   *    canvas is the one surface in the product you drag, pan and click. Without it the overlay
+   *    would swallow every interaction on the drawing.
+   * ⚠️ IT SITS BELOW THE HUDs BY CONSTRUCTION — they carry z-index 30/50 and this creates no
+   *    stacking context of its own, so the readouts stay crisp while the drawing takes the falloff.
+   *    A faithful port would dim them too; keeping them clear is the better outcome and is STATED
+   *    rather than discovered later. */
+  .canvas-wrapper::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: var(--stage-vignette); }
   .canvas-wrapper:active { cursor: grabbing; }
   
   /* UNIFIED HUD STYLING */

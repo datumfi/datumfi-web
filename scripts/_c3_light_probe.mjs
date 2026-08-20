@@ -129,8 +129,22 @@ const TOL = parseInt(arg('tol', '2'), 10);
  *    and proto2's stack are not the same set of layers, so an exact match is not achievable and
  *    demanding one would be a defect with permission of the opposite kind. The tool ALWAYS prints
  *    the real per-channel delta, so the tolerance can never hide a drift inside it. */
+/* ⛔⛔ THE ACCEPTANCE HEIGHTS ARE VALIDATOR-DERIVED, AND TWO EARLIER ONES ARE REJECTED FOR CAUSE.
+ * 🔑 THE RULE (§82.8): AN ACCEPTANCE POINT MUST BE FIELD-VALID ON *BOTH* PAGES, OR IT IS NOT A
+ *    COMPARISON — IT IS TWO MEASUREMENTS OF DIFFERENT THINGS WEARING ONE ROW.
+ * REJECTED, WITH THE ELEMENT THAT BLOCKED THEM, SO NOBODY RE-PROPOSES THEM:
+ *   y=20   ours  NAV#app-nav        rgba(9,18,33,0.96)
+ *          proto2 HEADER (.topbar)  rgba(4,10,18,0.94)   <- and that nav is RULED OUT OF SCOPE (§61)
+ *   y=860  ours  DIV#privacy-banner rgba(9,18,33,0.97)
+ *          proto2 open stage                              <- so the row compared a cookie banner
+ *                                                            against a blueprint
+ * FIELD-VALID ON BOTH, MEASURED: 120 · 250 · 400 · 550 · 700.
+ * CHOSEN: 120 · 250 · 550 · 700 — deliberately SPREAD (one above 250, one below 550) so the profile
+ * still tests a GRADIENT rather than a band.
+ * ⚠️ TARGETS RE-DERIVED AT THE NEW HEIGHTS WITH THIS PROBE. A target from a different instrument is
+ *    an assumption wearing a number — AND SO IS A TARGET FROM A DIFFERENT HEIGHT. */
 const TARGETS = {
-  proto2: { 20: [4, 9, 18], 250: [4, 10, 18], 550: [5, 11, 20], 860: [7, 13, 23] },
+  proto2: { 120: [6, 10, 17], 250: [4, 10, 18], 550: [5, 11, 20], 700: [5, 12, 22] },
 };
 
 const VW = 1440, VH = 900;
@@ -152,14 +166,27 @@ const REVERTS = {
   c3: [
     {
       file: 'studio.html',
-      /* ONE radial, not two — the cool fill was measured at d=(0,0,0) and HELD, so it never
-         shipped. If a future commit places it, this find string moves with it or the control
-         silently stops landing and the guard below turns the run red. */
-      find: '    background-image:\n' +
-            '      radial-gradient(circle at 70% 15%, var(--light-key), transparent 24%);\n',
+      /* ⛔ ONE VARIABLE PER REVERT SET. This strips ONLY the key radial and leaves the stage field
+         and vignette in place, so `--mode=area` measures THE LIGHT and not the ground. When the
+         body block gained the stage layers this find string stopped matching — and the landing
+         guard turned the run RED rather than printing a number over an unpoisoned tree. That is
+         the guard doing its job, and the fix is to move the string, never to loosen the check.
+         🔑 A CONTROL THAT REVERTS TWO THINGS AT ONCE CANNOT ATTRIBUTE WHAT IT MEASURES. */
+      find: '      radial-gradient(circle at 70% 15%, var(--light-key), transparent 24%),\n',
       replace: '',
       count: 1,
     },
+  ],
+  /* stage — ISOLATES THE GROUND (§82.8), leaving the key light untouched, so the differential
+     attributes what THIS commit changed and nothing else. Neutralising the three tokens to `none`
+     is deliberate: `background-image: <grid>, none` and `background: none` are both VALID CSS, so
+     every consumer degrades to "layer absent" without the find-strings having to track four
+     separate consuming rules across two files. ⭐ ONE REVERT PER VARIABLE, AND THE VARIABLE HERE IS
+     "the stage layers exist". */
+  stage: [
+    { file: 'styles/tokens.css', find: '  --stage-field:    linear-gradient(180deg, #040a12 0%, #07101b 24%, #091220 100%);', replace: '  --stage-field: none;', count: 1 },
+    { file: 'styles/tokens.css', find: '  --stage-vignette: radial-gradient(circle at 50% 50%, transparent 54%, rgba(2,8,15,0.10) 78%, rgba(2,8,15,0.28) 100%);', replace: '  --stage-vignette: none;', count: 1 },
+    { file: 'styles/tokens.css', find: '  --stage-base:     linear-gradient(180deg, rgba(4,10,18,0.88), rgba(8,16,28,0.94));', replace: '  --stage-base: none;', count: 1 },
   ],
   /* SELFTEST — a deliberate, obvious poison used to prove the diff pipeline BITES. It changes the
      page field itself, so a working differ must report a very large number across many rects. If
@@ -270,7 +297,7 @@ function makeTransform(set) {
    ⛔ THE ORDER IN HERE IS A RULING, NOT A PREFERENCE (§81.18). The screenshot is taken BEFORE any
    geometry is read. A getBoundingClientRect pass ahead of the capture forced a layout and moved a
    measured count by 15 pixels — the same order of magnitude as the signal C3 is hunting. */
-async function capture(port, chromium, pageRel) {
+async function capture(port, chromium, pageRel, PROBE_POINTS) {
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: VW, height: VH }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
@@ -321,6 +348,32 @@ async function capture(port, chromium, pageRel) {
   }
   const shot = await page.screenshot({ type: 'png', clip: { x: 0, y: 0, width: VW, height: VH } });
   /* ── EVERYTHING BELOW THIS LINE HAPPENS AFTER THE CAPTURE. See the ruling above. ── */
+  /* ⛔⛔ SAMPLE-POINT VALIDATION — ADDED 2026-08-19 BECAUSE THE ACCEPTANCE TEST WAS MEASURING CHROME.
+   * The first stage-tone profile sampled y=20/250/550/860 at x=1425. TWO of those four points were
+   * not the field at all: y=20 hit `NAV#app-nav` (rgba(9,18,33,.96)) on ours and `HEADER.topbar`
+   * (rgba(4,10,18,.94)) on proto2 — so the "target" was proto2's NAV COLOUR, on a nav the Architect
+   * had already ruled OUT OF SCOPE — and y=860 compared our `#privacy-banner` against proto2's open
+   * stage. Only y=250 and y=550 were ground on both pages.
+   * 🔑 THE SAME LAW AS THE RECT-CENTRE FAILURE, ONE MODE OVER: A SAMPLE CAN BE STABLE, IT CAN LACK
+   *    SIGNAL, AND IT CAN BE MEASURING SOMETHING ELSE THAT HAPPENS TO SIT WHERE YOU LOOKED.
+   * ⛔ SO THE PROBE NOW VALIDATES ITS OWN SAMPLE POINTS AND REFUSES TO SCORE AN OCCLUDED ONE. A
+   *    point is FIELD only if every element from the hit-test target up to <body> has a fully
+   *    transparent background. Occluded points are PRINTED, never silently dropped and never
+   *    scored — an excluded point nobody sees is a population lie. */
+  const pointCheck = await page.evaluate((pts) => pts.map(([x, y]) => {
+    let el = document.elementFromPoint(x, y);
+    if (!el) return [x, y, 'NO ELEMENT', false];
+    const first = `${el.tagName}${el.id ? '#' + el.id : ''}`;
+    let node = el, blocker = null;
+    while (node && node !== document.documentElement) {
+      const bg = getComputedStyle(node).backgroundColor;
+      const m = bg.match(/rgba?\(([^)]+)\)/);
+      const a = m ? (m[1].split(',')[3] !== undefined ? parseFloat(m[1].split(',')[3]) : 1) : 0;
+      if (a > 0.01 && node !== document.body) { blocker = `${node.tagName}${node.id ? '#' + node.id : ''} bg=${bg}`; break; }
+      node = node.parentElement;
+    }
+    return [x, y, blocker || first, !blocker];
+  }), (PROBE_POINTS || []));
   const rects = await page.evaluate(() => {
     const out = [];
     document.querySelectorAll('*').forEach((el) => {
@@ -334,7 +387,7 @@ async function capture(port, chromium, pageRel) {
     return out;
   });
   await browser.close();
-  return { shot, rects, offOrigin };
+  return { shot, rects, offOrigin, pointCheck };
 }
 
 /* ══ RECT LOCALISATION ══════════════════════════════════════════════════════════════════════════
@@ -528,6 +581,9 @@ function report(title, res) {
         gridLine: resolve('var(--grid-line)'),
         surface: resolve('var(--surface)'),
         paintCyan: declared('--paint-cyanotype'),
+        canvasBgImage: (() => { const el = document.querySelector('.canvas-wrapper'); return el ? getComputedStyle(el).backgroundImage : ''; })(),
+        canvasShadow: (() => { const el = document.querySelector('.canvas-wrapper'); return el ? getComputedStyle(el).boxShadow : ''; })(),
+        afterBg: (() => { const el = document.querySelector('.canvas-wrapper'); return el ? getComputedStyle(el, '::after').backgroundImage : ''; })(),
       };
     });
     await browser.close(); srv.close();
@@ -559,6 +615,18 @@ function report(title, res) {
       facts.gridLine);
     ok('L7 the body field is still painted (the shorthand did not eat background-color)',
       /rgb\(\s*9,\s*18,\s*33\s*\)/.test(facts.bodyBgColor), facts.bodyBgColor);
+    /* ⛔ §11.4 — REGISTRATION AND WIRING ARE TWO PROOFS. The profile proves the ground LOOKS right;
+       these prove the layers are actually ATTACHED. A stage that hit the target for some other
+       reason would pass the profile and fail here. */
+    ok('L8 body carries the graded stage field beneath the light (2 layers, not 1)',
+      /linear-gradient/.test(facts.bodyBgImage) && (facts.bodyBgImage.match(/gradient/g) || []).length >= 2,
+      (facts.bodyBgImage.match(/gradient/g) || []).length + ' gradient layer(s)');
+    ok('L9 .canvas-wrapper consumes --stage-base AND keeps its inset shadow',
+      /linear-gradient/.test(facts.canvasBgImage) && /rgba\(0,\s*0,\s*0,\s*0?\.26\)|rgb\(0, 0, 0\)/.test(facts.canvasShadow) && facts.canvasShadow !== 'none',
+      'bgLayers=' + (facts.canvasBgImage.match(/gradient/g) || []).length + '  shadow=' + facts.canvasShadow.slice(0, 46));
+    ok('L10 the vignette is on the STAGE as ::after, not on body (§82.8 relocation)',
+      /gradient/.test(facts.afterBg) && !/radial-gradient\(circle at 50% 50%/.test(facts.bodyBgImage),
+      'after=' + facts.afterBg.slice(0, 42) + '  bodyHasVignette=' + /circle at 50% 50%/.test(facts.bodyBgImage));
     console.log('');
     for (const [n, c, saw] of legs) console.log(`  ${c ? 'PASS' : 'FAIL'}  ${n}\n          saw: ${saw}`);
     console.log(`\nSCORE ${pass}/${legs.length} ${pass === legs.length ? 'GREEN' : 'RED'}`);
@@ -571,8 +639,11 @@ function report(title, res) {
      the instrument is stable before believing a small number is the same discipline either way. */
   if (MODE === 'profile') {
     const srv = await serve(PORT_A, null, []);
-    const c1 = await capture(PORT_A, chromium, PAGE);
-    const c2 = await capture(PORT_A, chromium, PAGE);
+    const ysAll = TARGET && TARGETS[TARGET] ? Object.keys(TARGETS[TARGET]).map(Number) : [20, 120, 250, 400, 550, 700, 860];
+    const pts = [];
+    for (const x of COLS) for (const y of ysAll) pts.push([x, y]);
+    const c1 = await capture(PORT_A, chromium, PAGE, pts);
+    const c2 = await capture(PORT_A, chromium, PAGE, pts);
     srv.close();
     const A = decodePNG(c1.shot), A2 = decodePNG(c2.shot);
     let drift = 0;
@@ -582,12 +653,22 @@ function report(title, res) {
       console.log('⛔ THE PAGE DOES NOT RENDER DETERMINISTICALLY. Every number below is unreadable.');
       console.log('SCORE 0/1 RED'); process.exit(1);
     }
-    const ys = TARGET && TARGETS[TARGET] ? Object.keys(TARGETS[TARGET]).map(Number) : [20, 120, 250, 400, 550, 700, 860];
+    const okAt = new Map();
+    for (const [x, y, what, isField] of (c1.pointCheck || [])) okAt.set(x + ',' + y, [what, isField]);
+    const occluded = (c1.pointCheck || []).filter((p) => !p[3]);
+    if (occluded.length) {
+      console.log('\n⛔ OCCLUDED SAMPLE POINTS — NOT THE FIELD, NOT SCORED, NOT HIDDEN:');
+      for (const [x, y, what] of occluded) console.log(`   x=${x} y=${y}  blocked by ${what}`);
+      console.log('   A point that is not measuring the ground cannot judge the ground.');
+    }
+    const ys = ysAll;
     let fails = 0, legs = 0;
     for (const x of COLS) {
       console.log(`\n──── VERTICAL GROUND PROFILE — ${PAGE}, column x=${x} ────`);
       for (const [y, rgb] of columnProfile(A, x, ys)) {
         let line = `   y=${String(y).padStart(4)}  rgb(${rgb.join(',')})`;
+        const chk = okAt.get(x + ',' + y);
+        if (chk && !chk[1]) { console.log(line + '   ⛔ OCCLUDED (' + chk[0] + ') — NOT SCORED'); continue; }
         if (TARGET && TARGETS[TARGET] && TARGETS[TARGET][y]) {
           const t = TARGETS[TARGET][y];
           const d = rgb.map((v, i) => v - t[i]);
