@@ -149,6 +149,7 @@ const YFRAC = arg('yfrac', '');
 const CLOCK = arg('clock', '');
 const APPLY = arg('apply', '');
 const SAVE = arg('save', '');
+const SETTLE = parseInt(arg('settle', '1200'), 10);
 const CENTER_EL = arg('center-el', '');
 const CENTER_FRAC = arg('center-frac', '0.62,0.18');
 const TARGET = arg('target', '');
@@ -265,6 +266,16 @@ const REVERTS = {
      acceptance residual can be attributed to the vignette or exonerated of it. */
   novignette: [
     { file: 'styles/tokens.css', find: '  --stage-vignette: radial-gradient(circle at 50% 50%, transparent 54%, rgba(2,8,15,0.10) 78%, rgba(2,8,15,0.28) 100%);', replace: '  --stage-vignette: none;', count: 1 },
+  ],
+  /* ⭐ chromedark — A PREVIEW, NOT A PROPOSAL. Darkens the three site-wide chrome surfaces (nav,
+     cookie bar, disclosure footer) from inkwell to proto2's topbar value, so the Captain can SEE
+     what site-wide would look like before anyone edits a SACRED byte. Two of these three files are
+     SACRED hosts; trialling this on disk would cost two pin bumps and a full build PER LOOK. */
+  chromedark: [
+    { file: 'styles/header.css', find: 'height: 56px; background: rgba(9, 18, 33, 0.96);', replace: 'height: 56px; background: rgba(4, 10, 18, 0.94);', count: 1 },
+    { file: 'styles/header.css', find: 'background: rgba(9, 18, 33, 0.99);', replace: 'background: rgba(4, 10, 18, 0.99);', count: 1 },
+    { file: 'nav.js', find: 'background:rgba(9,18,33,0.97);border-top', replace: 'background:rgba(4,10,18,0.97);border-top', count: 1 },
+    { file: 'scripts/datum-footer.js', find: "'width:100%;background:rgba(9,18,33,0.97);'", replace: "'width:100%;background:rgba(4,10,18,0.97);'", count: 1 },
   ],
   proto2key: [
     { file: 'proto2.html', find: '    radial-gradient(circle at 62% 18%,rgba(121,222,199,.085),transparent 29%),\n', replace: '', count: 1 },
@@ -449,7 +460,13 @@ async function capture(port, chromium, pageRel, PROBE_POINTS) {
   await page.evaluate(() => { try { localStorage.clear(); sessionStorage.clear(); } catch (e) {} });
   await page.reload({ waitUntil: 'load' });
   await page.evaluate(() => document.fonts && document.fonts.ready);
-  await page.waitForTimeout(1200);
+  /* ⏳ --settle RAISES THIS. 1200ms is enough for the Studio, which has no entrance animation on the
+     surfaces we measure. It is NOT enough for marketing pages: index.html reads 9.3% of pixels
+     differing between two captures at 1200ms (.btn, .hero-lead, tooltips, SVG paths still fading).
+     ⛔ AT THAT POINT A BEFORE/AFTER PAIR IS MEASURING ANIMATION PHASE, NOT THE CHANGE — and the
+        picture looks completely convincing either way. The stability check is what catches it; this
+        flag is what fixes it. 🔑 A CAPTURE OF AN UNSETTLED PAGE IS A MEASUREMENT OF THE CLOCK. */
+  await page.waitForTimeout(SETTLE);
   /* ⛔⛔ --enter EXISTS BECAUSE THE COLD PROFILE CANNOT SEE THE SURFACE C3 IS ABOUT, AND THAT WAS
    * MEASURED, NOT ASSUMED (2026-08-19). On a cold Studio, `.so-overlay-wrap` (studio.html:18836) is
    * a FIXED, FULL-SCREEN, z-index 9000 landing overlay carrying
@@ -916,6 +933,20 @@ function report(title, res) {
     for (const x of COLS) for (const y of ysAll) pts.push([x, y]);
     const c1 = await capture(PORT_A, chromium, PAGE, pts);
     const c2 = await capture(PORT_A, chromium, PAGE, pts);
+    /* ⛔ THE LANDING REPORT — ADDED BECAUSE I SHIPPED --apply INTO THIS MODE WITHOUT IT AND ALMOST
+       HANDED OVER A BEFORE/AFTER PAIR I COULD NOT PROVE DIFFERED. An --apply that silently fails to
+       match renders a picture IDENTICAL to the baseline and captions it "AFTER".
+       🔑 LANDING IS NOT BITING — this proves the substitution happened; only pixels prove effect. */
+    if (APPLY) {
+      console.log(`
+──── --apply="${APPLY}" LANDING ────`);
+      for (const l of profLanded) console.log(`  ${l.file}: expected ${l.expected}, matched ${l.actual}${l.unstable ? '  ⛔ UNSTABLE' : ''}`);
+      const bad = profLanded.filter((l) => l.actual !== l.expected || l.unstable);
+      if (bad.length || profLanded.length === 0) {
+        console.log('⛔ THE APPLIED SET DID NOT LAND AS DECLARED. Any image or number from this run is void.');
+        console.log('SCORE 0/1 RED'); process.exit(1);
+      }
+    }
     /* LANDING PROOF, PRINTED BESIDE THE NUMBERS RATHER THAN ASSUMED. An unlanded --clock and a
        --clock that changed nothing are the same observation without this line. */
     console.log(`\nCLOCK: page sees ${c1.pageNow}${CLOCK ? `  (--clock=${CLOCK} requested)` : '  (real wall clock — no --clock given)'}`);
