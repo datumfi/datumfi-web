@@ -965,8 +965,20 @@
      would overhang by 12px a side there, which is precisely the coupling this variable removes. */
   .drafting-panel {
     --panel-pad-x: 40px;
-    width: 480px; padding: 30px var(--panel-pad-x) 40px; border-right: 1px solid rgba(255,255,255,0.05);
-    min-height: 0; overflow-y: auto; z-index: 50;
+    width: 480px; padding: 30px var(--panel-pad-x) 40px;
+    /* 🖊️ §82.16 — THE RIM IS THE DONOR'S, NOT A NEUTRAL LINE. proto2 `.left` divides itself from the
+       stage with rgba(121,222,199,.10) — a SEAFOAM edge, not the rgba(255,255,255,0.05) grey that
+       was here. On a graded dark ground a white hairline reads as a seam; a tinted one reads as an
+       edge lit by the same lights as the surfaces either side of it. */
+    border-right: 1px solid var(--panel-edge);
+    /* ⛔ `position: relative` IS REQUIRED BY THE ::before BELOW, NOT COSMETIC. Without it the
+       pseudo-element's `inset: 0` resolves against the nearest POSITIONED ancestor and the grid
+       lands somewhere else entirely — proto2 `.left:79` declares it for exactly this reason.
+       ⚠️ IT IS ALSO NOT A NO-OP FOR `z-index: 50`: that already applied because this is a FLEX ITEM
+       (flex items honour z-index while static), so the stacking order is UNCHANGED — said plainly
+       because "I added position and the z-index started working" is the kind of side effect that
+       gets discovered later as a mystery. */
+    position: relative; min-height: 0; overflow-y: auto; z-index: 50;
     /* 🎭 §82.7 — THE PANEL BECOMES TRANSLUCENT. Captain-ruled: "we do want that very light
      * translucence." proto2's own pair, ported: rgba(4,10,18,.97) -> rgba(6,13,24,.94).
      * ⛔ THIS REPLACES `background-color: var(--bg-navy)`, WHICH WAS FULLY OPAQUE rgb() — MEASURED
@@ -975,8 +987,44 @@
      *    at 20%/80%, inside this panel, and could never surface.
      * ⭐ SO THIS COMMIT MAKES A FALSIFIABLE PREDICTION: that 0.0% must MOVE. If the area sampler
      *    still reads 0.0% over this rect afterwards, the panel change did not do what it says. */
-    background: linear-gradient(180deg, rgba(4,10,18,0.97), rgba(6,13,24,0.94));
+    /* 🖊️ §82.16 — THE PANEL TAKES proto2 `.left`'s WHOLE STACK, same rule as the stage (§82.15).
+       ⭐ THE BASE BELOW WAS ALREADY OURS from §82.7; what was missing is that the donor LIGHTS THIS
+       SURFACE TOO. proto2 has no global light — `.app`, `.right` and `.left` each carry their own
+       pair, which is why nothing in it ever has to shine THROUGH anything.
+       ⛔ ORDER: first layer paints on top, so the two lights sit ABOVE the base, exactly as on the
+       stage. Three layers, no `background-size` needed (all `auto`) — so no positional-list hazard
+       here, unlike `.canvas-wrapper`. Geometry is the donor's: 12%/10% out to 22%, 28%/88% to 27%. */
+    background:
+      radial-gradient(circle at 12% 10%, var(--panel-key), transparent 22%),
+      radial-gradient(circle at 28% 88%, var(--panel-fill), transparent 27%),
+      var(--panel-base);
+    /* The donor shades the panel INTO the stage rather than ending it at a line. */
+    box-shadow: inset -30px 0 60px rgba(0,0,0,0.16);
   }
+  /* 🖊️ §82.16 — THE PANEL'S OWN DRAFTING GRID, MASKED. ⭐ THE MASK IS THE INTERESTING PART AND IT IS
+     THE DONOR'S: the grid is strong behind the title and fades to nothing by the lower third, so it
+     reads as drafting paper where there is room for it and never competes with the content below.
+     ⚠️ `opacity: .22` IS ON THE PSEUDO-ELEMENT, WHICH §61.2 NORMALLY FORBIDS (express translucency
+     in the colour, never as element opacity). IT IS KEPT HERE DELIBERATELY: this element exists
+     ONLY to carry the grid, it has no other content to dim, and the donor's .08 grid × .22 opacity
+     is a two-stage fade the mask depends on. ⛔ THE RULE'S REASON IS "do not dim a surface and its
+     content together" — there is no content on a `::before` with `inset: 0` and `pointer-events:
+     none`, so the hazard the rule guards against cannot arise. Stated so it is not read as a slip.
+     ⚠️ TWO LAYERS, ONE `background-size` PAIR — CORRECT HERE: a 1-value list against 2 layers
+     repeats to give BOTH layers 76px, which is what the donor means. The hazard is a list SHORTER
+     than the layer count where the values DIFFER; here they are meant to be identical. */
+  .drafting-panel::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0.22;
+    background-image:
+      linear-gradient(var(--panel-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--panel-grid) 1px, transparent 1px);
+    background-size: 76px 76px;
+    -webkit-mask-image: var(--panel-grid-mask);
+            mask-image: var(--panel-grid-mask);
+  }
+  /* The panel's own children must sit ABOVE its ::before, or the grid paints over the copy. The
+     donor does exactly this (`.left > *{position:relative;z-index:1}`) and it is not optional. */
+  .drafting-panel > * { position: relative; z-index: 1; }
   /* §28 — THE DISCLOSURE SPANS THE PANEL, NOT THE PANEL'S TEXT COLUMN. Measured 2026-08-15: the
      panel is 480px but the footer box was 399px, because it sat inside the panel's 40px side
      padding and then applied its own on top. Two nested insets left a 367px measure inside a 480px

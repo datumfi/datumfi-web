@@ -176,6 +176,28 @@
    * a bottom shade that give the stage its curvature. */
   --stage-sheen:    linear-gradient(180deg, rgba(255,255,255,0.01), transparent 16%, transparent 82%, rgba(0,0,0,0.14));
 
+  /* ── 🖊️ THE PANEL — proto2 `.left`, PORTED AS ONE OBJECT (§82.16, 2026-08-20) ──────────────────
+   * Same rule as the stage: the donor's values verbatim, our spelling, geometry at the surface.
+   * ⭐⭐ A MEASURED FINDING ABOUT THE DONOR, WORTH RECORDING: `.left` AND `.right` USE THE SAME TWO
+   *    LIGHT COLOURS AT THE SAME TWO ALPHAS — seafoam .055 and the cool blue .075 appear on BOTH
+   *    surfaces. proto2 has TWO lights and puts them on every surface that needs lighting, rather
+   *    than one global light seen through things. That is the same insight that fixed the stage,
+   *    visible from the other side.
+   * ⛔ THEY ARE STILL DECLARED SEPARATELY FROM THE --stage-* PAIR, ON PURPOSE. Identical VALUE is
+   *    not identical MEANING: EACH SURFACE OWNS ITS OWN STACK, so re-lighting the panel must not
+   *    silently re-light the stage. Collapsing them would re-create the coupling this whole arc
+   *    exists to remove — one name owning a position on two different elements. */
+  --panel-key:      rgba(121, 222, 199, 0.055);  /* seafoam 5.5% — panel key light, upper left     */
+  --panel-fill:     rgba(73, 110, 180, 0.075);   /* the cool counter-light, lower left (literal:   */
+                                                 /* no paint owns (73,110,180) — see --stage-fill) */
+  --panel-grid:     rgba(42, 78, 104, 0.08);     /* graphite blue 8% — the panel's own faint grid  */
+  --panel-edge:     rgba(121, 222, 199, 0.10);   /* seafoam 10% — the rim between panel and stage  */
+  --panel-base:     linear-gradient(180deg, rgba(4,10,18,0.97), rgba(6,13,24,0.94));
+  /* A COMPLETE RAMP (§81.8): the donor fades its panel grid out toward the bottom rather than
+     ruling the whole panel, so the grid reads as drafting paper near the title and disappears
+     behind the content. */
+  --panel-grid-mask: linear-gradient(180deg, rgba(0,0,0,0.72), rgba(0,0,0,0.24) 70%, transparent);
+
   /* ⛔ --grid-line IS DELIBERATELY *NOT* REPOINTED AT SEAFOAM, AND THIS IS A RULING COLLISION I AM
    * RESOLVING IN THE OPEN RATHER THAN SILENTLY. proto2's minor grid is teal at 4.5%; ours is
    * cyanotype at 5%, and §76 ruled that ON PURPOSE ("the 4:1 RATIO is what reads as drafting paper,
@@ -306,6 +328,11 @@
     --stage-glow:       color-mix(in srgb, var(--paint-seafoam) 5.5%, transparent);
     --stage-rim:        color-mix(in srgb, var(--paint-seafoam) 3.5%, transparent);
     --stage-grid-minor: color-mix(in srgb, var(--paint-seafoam) 4.5%, transparent);
+    /* 🖊️ THE PANEL'S THREE DERIVED LAYERS (§82.16). --panel-fill is absent for the same reason
+       --stage-fill is: no paint owns (73,110,180) and exactly one new paint was ruled. */
+    --panel-key:  color-mix(in srgb, var(--paint-seafoam) 5.5%, transparent);
+    --panel-edge: color-mix(in srgb, var(--paint-seafoam) 10%, transparent);
+    --panel-grid: color-mix(in srgb, var(--paint-graphite-blue) 8%, transparent);
     /* ⛔ --stage-fill IS ABSENT HERE ON PURPOSE — it has no paint to derive from (see its note
        above). A derivation of a paint we do not own would be a blend nobody ruled (§68.5). */
     /* --light-key is GONE, not merely underived — it lost its consumer when the key became the
