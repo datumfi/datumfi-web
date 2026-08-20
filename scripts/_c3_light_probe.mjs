@@ -277,6 +277,17 @@ const REVERTS = {
     { file: 'nav.js', find: 'background:rgba(9,18,33,0.97);border-top', replace: 'background:rgba(4,10,18,0.97);border-top', count: 1 },
     { file: 'scripts/datum-footer.js', find: "'width:100%;background:rgba(9,18,33,0.97);'", replace: "'width:100%;background:rgba(4,10,18,0.97);'", count: 1 },
   ],
+  /* ⭐ nolift — IS proto2:97 LOAD-BEARING ON *OUR* PANEL? Strips `.drafting-panel > *`'s lift so the
+     question is answered by PIXELS, not by reading the CSS. proto2's mechanism is THREE legs:
+     :79 anchors (position:relative), :88 overlays (::before), :97 LIFTS THE CONTENT ABOVE IT.
+     ⛔ A THREE-LINE MECHANISM PORTED AS TWO IS THE POSITIONAL-LIST TRAP IN A DIFFERENT ALPHABET.
+     READ THE RESULT BOTH WAYS: pixels moving on TEXT = the rule is load-bearing and working;
+     ZERO = either our own stacking already covers it (rule redundant but harmless) or the grid
+     never reaches the text — and those two are told apart by WHERE the pixels are, not by the
+     total. */
+  nolift: [
+    { file: 'studio.html', find: '  .drafting-panel > * { position: relative; z-index: 1; }', replace: '  .drafting-panel > * { }', count: 1 },
+  ],
   proto2key: [
     { file: 'proto2.html', find: '    radial-gradient(circle at 62% 18%,rgba(121,222,199,.085),transparent 29%),\n', replace: '', count: 1 },
   ],
