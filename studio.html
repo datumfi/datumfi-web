@@ -1022,8 +1022,19 @@
     -webkit-mask-image: var(--panel-grid-mask);
             mask-image: var(--panel-grid-mask);
   }
-  /* The panel's own children must sit ABOVE its ::before, or the grid paints over the copy. The
-     donor does exactly this (`.left > *{position:relative;z-index:1}`) and it is not optional. */
+  /* ⛔⛔ THE THIRD LEG OF A THREE-LEG MECHANISM, AND ITS COST IS TIED TO THE GRID'S ALPHA ABOVE.
+     proto2 does exactly this (`.left > *{position:relative;z-index:1}`): :79 ANCHORS,
+     ::before OVERLAYS, this LIFTS THE CONTENT BACK ABOVE THE OVERLAY.
+     ⭐ MEASURED 2026-08-20 (`--revert=nolift`, null 0/1,296,000 first): stripping it moves 89 px,
+        max 2/255, ALL OF IT ON TEXT — #datum-footer-text 38 · h1 16 · .return-home 14 · .sl-line 14
+        · a 7 · OUTSIDE EVERY RECT 0. So the mechanism is REAL and lands exactly where predicted.
+     🔑🔑 THE MAGNITUDE IS SMALL ONLY BECAUSE THE GRID IS FAINT: `--panel-grid` is graphite-blue at
+        0.08, and the `opacity: 0.22` above composites it to ~0.018 — SUB-UNIT ALMOST EVERYWHERE,
+        surfacing only where rounding crosses a boundary against text antialiasing.
+     ⚠️⚠️ SO THIS LINE IS INSURANCE THAT COSTS NOTHING TODAY AND BECOMES LOAD-BEARING THE MOMENT
+        ANYONE RAISES THAT 0.08 OR THAT 0.22. IF YOU ARE HERE TO STRENGTHEN THE GRID, YOU ARE THE
+        READER THIS NOTE WAS WRITTEN FOR: DO NOT DELETE THIS RULE AS REDUNDANT — RE-MEASURE IT.
+     ⇒ IT IS MECHANISM, NOT DECORATION, AND MECHANISM TRAVELS WITH THE STACK (§82.17). */
   .drafting-panel > * { position: relative; z-index: 1; }
   /* §28 — THE DISCLOSURE SPANS THE PANEL, NOT THE PANEL'S TEXT COLUMN. Measured 2026-08-15: the
      panel is 480px but the footer box was 399px, because it sat inside the panel's 40px side

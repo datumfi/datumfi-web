@@ -192,17 +192,30 @@ const PORT_B = 8432;   /* control  / reverted served bytes  */
    THE ARTEFACT." Each entry declares `count` — the number of times it MUST match. Mismatch aborts.
    ⛔ `count` IS NOT DOCUMENTATION. It is the guard that stops a silently-inert control reporting a
       clean 0. Set it from a measurement, never from an expectation. */
-/* ⛔ THE GROUND'S PAINTING TOKENS — ONE LIST, TWO CONSUMERS: the selftest poison aims at these, and
-   L15 in --mode=absolute asserts the page consumes NOTHING ELSE. Keeping them in one place is what
-   stops the two drifting apart, which is exactly how the poison went deaf on 2026-08-19. */
-const POISON_GROUND = ['--stage-field', '--stage-base', '--stage-vignette', '--stage-key',
+/* ⛔ THE PORTED SURFACES' PAINTING TOKENS — ONE LIST, TWO CONSUMERS: the selftest poison aims at
+   these, and L15 in --mode=absolute asserts the page consumes NOTHING ELSE. Keeping them in one
+   place is what stops the two drifting apart, which is exactly how the poison went deaf on
+   2026-08-19.
+   ⛔⛔ RENAMED FROM POISON_GROUND AND WIDENED TO THE PANEL, 2026-08-20. THE RENAME IS NOT COSMETIC:
+   the list now covers `.drafting-panel`, which IS NOT THE GROUND, so a name saying "ground" would
+   have become a leg whose NAME OVERSTATES ITS ASSERTION — the species this file has already caught
+   in itself once. WIDEN THE POPULATION AND THE NAME IN THE SAME EDIT, OR THE NAME BECOMES A LIE.
+   ⚖️ WHY NOW RATHER THAN AFTER THE PUSH (Architect-ruled): the panel was left in EXACTLY the state
+   the ground was in before the poison went deaf — new paint layers, no enumeration guard. The
+   site-wide arc adds layers to 23 more pages, so an unguarded enumeration there is this week's
+   defect with twenty-three times the reach. */
+const POISON_SURFACES = ['--stage-field', '--stage-base', '--stage-vignette', '--stage-key',
   '--stage-fill', '--stage-glow', '--stage-rim', '--stage-sheen', '--stage-grid-minor', '--grid-major',
   /* ⭐ FOUND BY THE GUARD ON ITS FIRST RUN, WHICH IS THE ONLY REASON IT IS HERE: typography.css:8
      paints `body { background-color: var(--bg-navy) !important }`, so it IS a ground token — and no
      poison list had ever mentioned it. Covered transitively (--paint-inkwell -> --bg -> --bg-navy),
      but "covered by accident" and "covered on purpose" are different states and only one is
      auditable. */
-  '--bg-navy'];
+  '--bg-navy',
+  /* 🖊️ THE PANEL (§82.16). --panel-key/-edge derive from --paint-seafoam and --panel-grid from
+     --paint-graphite-blue, so the PAINT poison already reaches them; the three below carry literals
+     and are poisoned where they are declared. */
+  '--panel-key', '--panel-fill', '--panel-grid', '--panel-edge', '--panel-base', '--panel-grid-mask'];
 /* HOW EACH IS POISONED — DIRECTLY, OR THROUGH ITS PAINT. ⭐ THE PALETTE MADE THE POISON SMALLER:
    --stage-key / --stage-glow / --stage-rim / --stage-grid-minor ALL derive from --paint-seafoam, so
    ONE paint poisons four layers. That is the same one-edit property the Captain asked for, showing
@@ -340,6 +353,9 @@ const REVERTS = {
     { file: 'styles/tokens.css', find: '  --stage-base:     linear-gradient(180deg, rgba(4,10,18,0.88), rgba(8,16,28,0.94));', replace: '  --stage-base:     linear-gradient(180deg, rgba(255,0,0,0.88), rgba(255,0,0,0.94));', count: 1 },
     { file: 'styles/tokens.css', find: '  --stage-vignette: radial-gradient(circle at 50% 50%, transparent 54%, rgba(2,8,15,0.10) 78%, rgba(2,8,15,0.28) 100%);', replace: '  --stage-vignette: radial-gradient(circle at 50% 50%, transparent 54%, rgba(255,0,0,0.10) 78%, rgba(255,0,0,0.28) 100%);', count: 1 },
     { file: 'styles/tokens.css', find: '  --stage-fill:     rgba(73, 110, 180, 0.075);', replace: '  --stage-fill:     rgba(255, 0, 0, 0.075);', count: 1 },
+    { file: 'styles/tokens.css', find: '  --panel-fill:     rgba(73, 110, 180, 0.075);', replace: '  --panel-fill:     rgba(255, 0, 0, 0.075);', count: 1 },
+    { file: 'styles/tokens.css', find: '  --panel-base:     linear-gradient(180deg, rgba(4,10,18,0.97), rgba(6,13,24,0.94));', replace: '  --panel-base:     linear-gradient(180deg, rgba(255,0,0,0.97), rgba(255,0,0,0.94));', count: 1 },
+    { file: 'styles/tokens.css', find: '  --panel-grid-mask: linear-gradient(180deg, rgba(0,0,0,0.72), rgba(0,0,0,0.24) 70%, transparent);', replace: '  --panel-grid-mask: linear-gradient(180deg, rgba(0,0,0,1), rgba(0,0,0,1) 70%, rgba(0,0,0,1));', count: 1 },
     { file: 'styles/tokens.css', find: '  --stage-sheen:    linear-gradient(180deg, rgba(255,255,255,0.01), transparent 16%, transparent 82%, rgba(0,0,0,0.14));', replace: '  --stage-sheen:    linear-gradient(180deg, rgba(255,0,0,0.9), transparent 16%, transparent 82%, rgba(255,0,0,0.9));', count: 1 },
   ],
 };
@@ -802,14 +818,25 @@ function report(title, res) {
         /* ⛔⛔ THE GROUND'S CONSUMED TOKENS, ASKED OF THE CSSOM RATHER THAN GREPPED (§10.6).
            Reads DECLARED rule text (rule.style), which still carries `var(--x)` — computed style
            has already substituted it away and cannot answer this question at all. */
-        groundVars: (() => {
+        surfaceVars: (() => {
           const out = new Set();
           for (const sheet of document.styleSheets) {
             let rules; try { rules = sheet.cssRules; } catch (e) { continue; }
             for (const r of rules) {
               if (!r.selectorText || !r.style) continue;
-              if (!/(^|[\s,])body([\s,{:]|$)|canvas-wrapper/.test(r.selectorText)) continue;
-              const txt = ['background', 'backgroundImage', 'backgroundColor', 'boxShadow']
+              if (!/(^|[\s,])body([\s,{:]|$)|canvas-wrapper|drafting-panel/.test(r.selectorText)) continue;
+              /* ⚠️ maskImage IS IN THIS LIST BECAUSE --panel-grid-mask LIVES THERE AND NOTHING ELSE
+                 WOULD HAVE SEEN IT. A property that shapes what is painted is a painting property;
+                 scanning only `background*` would have left one token permanently unguarded while
+                 the leg reported full coverage. */
+              /* ⚠️ AND THE BORDER PROPERTIES, FOUND THE SAME WAY maskImage WAS: --panel-edge is the
+                 stage/panel RIM and lives in `border-right`, so the first version of this scan
+                 listed it in POISON_SURFACES while reporting it as NOT CONSUMED. A rim is paint.
+                 🔑 THE TELL WAS A TOKEN PRESENT IN THE LIST AND ABSENT FROM THE POPULATION — an
+                 asymmetry worth checking every time this scan is widened, because it is silent. */
+              const txt = ['background', 'backgroundImage', 'backgroundColor', 'boxShadow',
+                           'maskImage', 'webkitMaskImage',
+                           'border', 'borderColor', 'borderRight', 'borderRightColor']
                 .map((k) => r.style[k] || '').join(' ');
               for (const m of txt.matchAll(/var\(\s*(--[a-z0-9-]+)/g)) out.add(m[1]);
             }
@@ -895,15 +922,15 @@ function report(title, res) {
           AN UNLISTED ONE ABORTS BY NAME. This is the GUARDED form; the fully DERIVED poison lands
           when the stack stops moving. A guard that fails loud is worth more than a list that rots
           quietly. ⚠️ ADDING A GROUND LAYER MEANS ADDING IT TO POISON_GROUND — that is the point. */
-    const consumed = facts.groundVars ? facts.groundVars.split(',').filter(Boolean) : [];
-    const unlisted = consumed.filter((v) => !POISON_GROUND.includes(v));
+    const consumed = facts.surfaceVars ? facts.surfaceVars.split(',').filter(Boolean) : [];
+    const unlisted = consumed.filter((v) => !POISON_SURFACES.includes(v));
     /* ⚠️ THE LEG NAME SAYS EXACTLY WHAT IT CHECKS — MEMBERSHIP OF POISON_GROUND — AND NOT "the
        poison bites every one of them", WHICH IT DOES NOT VERIFY. An earlier draft of this line
        claimed the stronger thing; that would have been a leg whose NAME overstated its ASSERTION,
        which is the species this arc keeps finding. The BITE proof is --mode=selftest, separately. */
-    ok('L15 every ground-painting token is ENUMERATED in POISON_GROUND (no unlisted layer)',
+    ok('L15 every token painting a PORTED SURFACE (ground + panel) is ENUMERATED (no unlisted layer)',
       consumed.length > 0 && unlisted.length === 0,
-      unlisted.length ? 'UNLISTED, ADD TO POISON_GROUND: ' + unlisted.join(' ') + '  |  on body/.canvas-wrapper'
+      unlisted.length ? 'UNLISTED, ADD TO POISON_SURFACES: ' + unlisted.join(' ') + '  |  on body/.canvas-wrapper/.drafting-panel'
                       : consumed.length + ' consumed, all covered: ' + consumed.join(' '));
     ok('L10 the vignette is on the STAGE as ::after, not on body (§82.8 relocation)',
       /gradient/.test(facts.afterBg) && !/radial-gradient\(circle at 50% 50%/.test(facts.bodyBgImage),
