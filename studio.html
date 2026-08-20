@@ -94,9 +94,14 @@
      * proto2 puts it on the STAGE as `::after` — an overlay above the content — and CONTENT IS THE
      * POINT: the vignette's job is to pull the eye toward the centre of the drawing, which it
      * cannot do from behind it. It now lives on `.canvas-wrapper::after`.
-     * ⛔ SO body CARRIES EXACTLY TWO LAYERS: the key light, and the graded field beneath it. */
+     * ⛔⛔ AND body NO LONGER CARRIES A LIGHT AT ALL (§82.15, 2026-08-20). It held the key radial
+     * until this commit; that was a GLOBAL light with surfaces stacked over it, and `.canvas-wrapper`
+     * sat on top at α 0.88 and let 12% through — measured d=(2,3,3) against an authored (15,33,24).
+     * proto2 has no global light: `.app` lights itself and `.right` lights ITSELF, each in its own
+     * background list where the order cannot be broken.
+     * 🔑 A LAYER ORDER SPLIT ACROSS TWO ELEMENTS IS NOT A LAYER ORDER; IT IS A HOPE.
+     * ⇒ body CARRIES EXACTLY ONE LAYER: the graded field. The stage's light is on the stage. */
     background-image:
-      radial-gradient(circle at 70% 15%, var(--light-key), transparent 24%),
       var(--stage-field);
   }
   /* ⛔ THE CONSENT-BANNER RESERVE IS GONE — AND ITS REMOVAL IS MEASURED, NOT ASSUMED.
@@ -538,7 +543,20 @@
     transition: opacity 0.3s ease;
   }
   .canvas-wrapper { transition: background-size 0.7s ease; }
-  .studio-layout.mode-shape .canvas-wrapper { background-size: 80px 80px; cursor: grab; }
+  /* ⛔⛔ RE-DERIVED FOR A SEVEN-LAYER STACK (§82.15). THIS WAS `background-size: 80px 80px` — ONE
+     pair — and against seven layers a short list REPEATS CYCLICALLY, so every layer including both
+     radials and the base would have been tiled into 80px squares THE MOMENT SHAPE MODE OPENED.
+     Silent, plausible-looking, and invisible to any test that never enters Shape mode.
+     ⭐ THE EXISTING RATIO IS PRESERVED ACROSS A LAYER-COUNT CHANGE — it is NOT "re-derived".
+     ⛔ THE WORD MATTERS AND AN EARLIER DRAFT GOT IT WRONG: "re-derived" implies returning to an
+     INTENT, and there is no intent on record to return to. The old rule doubled a 40px grid to
+     80px; the 2x is real as ARITHMETIC but NOTHING EVER RULED that Shape mode should double the
+     grid. It is INHERITED behaviour, not authored behaviour. 76/19 x2 = 152/38 keeps whatever that
+     behaviour was, unchanged; the radials and base take `auto` exactly as they do at rest.
+     🔑 PRESERVING IT IS THE RIGHT CALL PRECISELY BECAUSE NOBODY RULED IT — changing a zoom
+        behaviour inside a colour port would be move-and-tweak. Only the DESCRIPTION was wrong, and
+        a description is where a claim quietly becomes a fact. */
+  .studio-layout.mode-shape .canvas-wrapper { background-size: 152px 152px, 152px 152px, 38px 38px, 38px 38px, auto, auto, auto; cursor: grab; }
 
   /* shape mode toggle button */
   #shape-mode-toggle {
@@ -1340,8 +1358,13 @@
    *    profile. THE GROUND MOVES, THE PICTURE DOES NOT — which is the whole point of shipping this
    *    apart from the panels. No mode rule overrides this declaration; .mode-shape touches only
    *    background-size (:496).
-   * ⚠️ STILL BLOCKED, AND NOT A C3 SURFACE: #disclosure-footer, stopped by the opaque
-   *    .drafting-panel it sits inside. Named so it is not rediscovered as a finding. */
+   * ⚠️ STILL BLOCKED, AND NOT A C3 SURFACE: #disclosure-footer. ⛔ THE REASON IS AMENDED, THE
+   *    CONCLUSION IS NOT (§82.15): this said "stopped by the OPAQUE .drafting-panel it sits inside"
+   *    — but that panel became TRANSLUCENT at .97/.94 in `dffdecd`, so that sentence has been false
+   *    since the day after it was written. MEASURED: the footer is blocked by its OWN
+   *    rgba(9,18,33,0.97) background, which the sample-point validator now names directly.
+   *    🔑 A COMMENT STATES INTENT, NEVER BEHAVIOUR — and a RIGHT conclusion resting on a RETIRED
+   *    reason is the hardest kind to catch, because nobody re-checks a line they agree with. */
   /* 🎭 §82.8 — THE STAGE GETS ITS OWN BASE, AND THE GRID NOW SITS OVER IT.
    * ⛔ THIS IS NOT A REVERT OF `85e21bf`. That commit deleted an OPAQUE fill because the fill was a
    *    DUPLICATE of the field behind it — correct then, correct now, and its message stands. This
@@ -1354,7 +1377,41 @@
    *    0.88-0.94. An opaque colour here would close it again.
    * ⚠️ THE GRID IS UNTOUCHED — still the two hardcoded 40px cyanotype layers. Re-pitching to
    *    76/19 and consuming `var(--grid-line)` is D (§77.6), NOT this commit. */
-  .canvas-wrapper { flex: 1; position: relative; background-color: transparent; background-image: linear-gradient(rgba(100, 180, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(100, 180, 255, 0.05) 1px, transparent 1px), var(--stage-base); background-size: 40px 40px, 40px 40px, auto; box-shadow: inset 0 50px 120px rgba(0,0,0,0.26); overflow: hidden; cursor: grab; }
+  /* 🎭 §82.15 — THE STAGE IS proto2 `.right`, PORTED AS ONE OBJECT. SEVEN LAYERS, SEVEN SIZES.
+     ⛔⛔ THE SEVEN `background-size` VALUES ARE LOAD-BEARING, NOT TIDINESS. `background-size` is a
+        POSITIONAL list and a SHORT list REPEATS CYCLICALLY — it does not fail, it MISALIGNS AND
+        LOOKS PLAUSIBLE. A three-value list against seven layers would tile both radials and the
+        base into 40px squares. This was hit for real building the `keymove` trial, which is why it
+        is stated here rather than trusted to memory. ⚠️ ANY COMMIT THAT ADDS OR REMOVES A LAYER
+        HERE OWES THE MATCHING EDIT — AND SO DOES `.mode-shape` BELOW.
+     ⭐ ORDER IS THE DONOR'S: major grid, minor grid, KEY, FILL, base. FIRST LAYER PAINTS ON TOP, so
+        the lights sit ABOVE the dark base with nothing between them. That is the whole repair. */
+  .canvas-wrapper { flex: 1; position: relative; background-color: transparent;
+    background-image:
+      linear-gradient(var(--grid-major) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
+      linear-gradient(var(--stage-grid-minor) 1px, transparent 1px),
+      linear-gradient(90deg, var(--stage-grid-minor) 1px, transparent 1px),
+      radial-gradient(circle at 62% 18%, var(--stage-key), transparent 29%),
+      radial-gradient(circle at 18% 82%, var(--stage-fill), transparent 24%),
+      var(--stage-base);
+    background-size: 76px 76px, 76px 76px, 19px 19px, 19px 19px, auto, auto, auto;
+    /* BOTH INSETS, per the donor. The 1px ring is a rim-light, not a border — a border would
+       occupy layout; this does not. */
+    box-shadow: inset 0 0 0 1px var(--stage-rim), inset 0 50px 120px rgba(0,0,0,0.26);
+    overflow: hidden; cursor: grab; }
+  /* ⛔ THE LAYER WE SHIPPED SHORT. proto2's stage carries TWO overlays and §82.8 ported only the
+     vignette. This is the other one: a broad centre glow plus the sheen that gives the stage its
+     curvature. 🔑 A SURFACE'S STACK INCLUDES ITS PSEUDO-ELEMENTS — that is what "the whole object"
+     means, and calling a port wholesale while omitting one is how a layer goes missing quietly.
+     ⚠️ NO z-index, DELIBERATELY: at z-index auto this paints in the same band as ::after and BELOW
+     any positioned child with z-index >= 1 — our HUDs are 30/50, so the readouts stay crisp. The
+     donor agrees (its own .metric-row is z-index 20, above this). MEASURED, not assumed — see the
+     HUD legs in the commit's absolute proof. */
+  .canvas-wrapper::before { content: ''; position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(circle at 50% 48%, var(--stage-glow), transparent 52%),
+      var(--stage-sheen); }
   /* 🎭 THE VIGNETTE, RELOCATED FROM `body` (§82.8). As `::after` it sits ABOVE the stage's content,
    * which is the point — it pulls the eye toward the centre of the drawing rather than darkening a
    * field nobody can see behind the estate. proto2's `.right::after`, ported whole.

@@ -27,7 +27,7 @@ const SACRED = {
      CLAUDE.md in this same commit. Sacred on a stricter rule than the rest: its absence removes a
      regulatory disclosure from every page at once. */
   'scripts/datum-footer.js': 'df30b3bd8562fb963d976ea892f94815',   // the paragraph + the three rights links read --text-muted; the 4.51:1 floor-margin is retired and the anchors get the underline the two controls beside them already had (2026-08-16)
-  'studio.html': 'a87418d97f6be5009c96fb19896677ce',   // §82.8 THE STAGE: --stage-field on body, --stage-base + inset shadow on .canvas-wrapper, the vignette relocated to ::after, and the panel translucent. Profile 0/4 -> 4/4 vs proto2 (2026-08-19)
+  'studio.html': '811d5ba3efab911eeefcce4e50aa7c61',   // §82.15 THE SURFACE PORT: proto2 `.right` ported to .canvas-wrapper as ONE object — 7 layers, 7 background-sizes, both inset shadows, ::before AND ::after. The key light leaves `body` entirely: a global light with surfaces stacked over it was the defect (12% transmission, d=(2,3,3) vs an authored (15,33,24)). D's 76/19 grid lands inside this port because splitting a positional background-size list is the hazard, not the schedule (2026-08-20)
   'sketch.html': '68e2951ad895b64abca5ff0fa1e6353b',   // (0b) the last --font-serif shadow deleted; Georgia is promoted into styles/typography.css instead (2026-08-16)
   /* §47.3 — SACRED as of 2026-08-13, declared in CLAUDE.md IN THIS SAME COMMIT. The two lists are
      reconciled by this build in BOTH directions, so a host added to one and not the other STOPS

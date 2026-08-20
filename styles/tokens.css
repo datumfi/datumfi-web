@@ -44,6 +44,18 @@
    * IS HOW A SURFACE *USES* IT. Storing rgba(42,78,104,.16) here would have made every future
    * opacity tweak a recolour. (MASTER SPEC §76.1) */
   --paint-graphite-blue: #2A4E68;
+  /* 🆕 proto2's STAGE ACCENT, ADDED 2026-08-20 ON A CAPTAIN RULING. It is NOT our verdigris and it
+   * is not meant to be: #79DEC7 is (121,222,199) against verdigris's (93,202,165) — paler, cooler,
+   * and it is THE VALUE THE DONOR ACTUALLY USES on the surface we are porting.
+   * ⛔ §82.6 PRESCRIBED DERIVING A LIGHT FROM --paint-verdigris-deep TO CLOSE A BRIGHTNESS GAP.
+   *    THAT WAS WITHDRAWN (§82.15) ONCE THE GAP WAS MEASURED: donor +18 green lift, ours +33 — our
+   *    light was nearly TWICE the donor's. 🔑 THE GOAL WAS NEVER "A CORRECTLY DERIVED GREEN", IT WAS
+   *    "LOOKS LIKE proto2" — AND THE DONOR'S VALUE IS NOT AN APPROXIMATION OF THE TARGET, IT IS THE
+   *    TARGET. L48 in its purest form: copy the donor, do not re-derive it.
+   * ⭐ ADDED RATHER THAN MOVING --paint-verdigris, DELIBERATELY: verdigris has other consumers
+   *    (--accent, --border, --hairline) and repointing it would have recoloured surfaces nobody
+   *    ruled on. A NEW PAINT HAS A BLAST RADIUS OF EXACTLY ITS CONSUMERS. */
+  --paint-seafoam:        #79DEC7;                    /* proto2's stage accent — (121,222,199) */
   --paint-inkwell:        #091221;                    /* the page field behind everything */
 
   /* ── ⚙️ ROLE · WHAT THE COLOUR IS FOR ───────────────────────────────────────────────────────
@@ -122,9 +134,59 @@
    * ⛔ proto's THIRD body layer — a linear-gradient field #040a12->#07101b->#091220 — IS NOT PORTED.
    *    It is a distinct darker stage tone, it is the Architect's to author, and it gets its own
    *    commit. It does not ride in behind a mechanism fix. (§81.7) */
-  --light-key:   rgba(93, 202, 165, 0.18);   /* verdigris at 18% — the warm key, upper right */
+  /* ⛔⛔ --light-key IS RETIRED, NOT MOVED, AND THIS BLANK IS THE POINT (§82.15, 2026-08-20).
+   * IT WAS A *GLOBAL* LIGHT ON `body`, AND A GLOBAL LIGHT IS THE DEFECT THIS COMMIT REMOVES.
+   * MEASURED: with `--stage-base` on `.canvas-wrapper` above it, the key delivered d=(2,3,3) at its
+   * own centre against an authored (15,33,24) — 12% transmission. `dffdecd` smothered it and three
+   * separate proofs (profile 4/4, CSSOM 10/10, a 951,717px differential) were all blind, because
+   * every one was scoped to the STAGE's own variable and none to the LIGHT underneath it.
+   * 🔑🔑 A LAYER ORDER SPLIT ACROSS TWO ELEMENTS IS NOT A LAYER ORDER; IT IS A HOPE. proto2 keeps
+   *    light and base in ONE list on ONE element, so the order cannot be broken by anything.
+   * ⇒ THE STAGE NOW LIGHTS ITSELF (--stage-key below). A role with no consumer is a name waiting to
+   *    become a lie (§76.3), so this one is gone rather than left latent. */
 
-  /* ── 🎭 THE STAGE — THE GROUND THE LIGHT IS JUDGED AGAINST (§82.7, 2026-08-19) ────────────────
+  /* ── 🎭 THE STAGE — PORTED AS ONE OBJECT FROM proto2 `.right` (§82.15, 2026-08-20) ─────────────
+   * ⛔⛔ THE PORT UNIT IS THE SURFACE, NOT THE TOKEN. Five days were spent decomposing this donor
+   *    into tokens and re-attaching them to DIFFERENT elements — the light to `body`, the base to
+   *    `.canvas-wrapper` — which turned a declared order into a stacking accident and made every
+   *    subsequent problem a transmission problem. THE VALUES WERE NEVER MISSING; WE HAD TAKEN APART
+   *    THE FILE THAT CONTAINED THEM.
+   * ⭐ EVERY COLOUR BELOW IS proto2's, VERBATIM. Nothing is derived, nothing is authored by us.
+   *    GEOMETRY (position + extent) lives at the consuming surface in studio.html, as it already
+   *    did — these hold COLOUR only.
+   * ⭐⭐ AND THEY ARE SPELLED THROUGH THE PALETTE RATHER THAN AS proto2's LITERALS, ON A CAPTAIN
+   *    RULING, BECAUSE THE DONOR'S OWN SPELLING IS ITS ONE REAL FLAW: MEASURED, proto2 writes its
+   *    teal as a hard-coded triple 27 TIMES and reads `var(--teal)` only 9 — so changing --teal in
+   *    ITS :root would recolour a quarter of the page and leave the rest. Copying that would have
+   *    imported a slow re-skin into a 1.68MB SACRED file.
+   *    🔑 THE PIXELS ARE IDENTICAL EITHER WAY AND THAT IS PROVEN, NOT ASSUMED (literal-vs-token
+   *      differential, reported with this commit). THE VALUE IS THE DONOR'S; ONLY THE SPELLING IS
+   *      OURS. ⇒ ONE EDIT TO --paint-seafoam NOW MOVES FOUR LAYERS AT ONCE. */
+  --stage-key:      rgba(121, 222, 199, 0.085);  /* seafoam 8.5% — the stage's own key light      */
+  --stage-glow:     rgba(121, 222, 199, 0.055);  /* seafoam 5.5% — the broad centre glow (::before)*/
+  --stage-rim:      rgba(121, 222, 199, 0.035);  /* seafoam 3.5% — the 1px inset ring             */
+  --stage-grid-minor: rgba(121, 222, 199, 0.045); /* seafoam 4.5% — the 19px MINOR, stage only    */
+  /* ⛔ THE COOL FILL KEEPS A LITERAL AND I AM NAMING THAT RATHER THAN HIDING IT. (73,110,180) has
+   * no paint in our palette, and exactly ONE new paint was ruled (seafoam). Inventing a second
+   * would be authoring a palette entry nobody approved (L47). It follows the same precedent as
+   * --stage-base's literals below. ⚠️ CONSEQUENCE, STATED: changing the GREEN costs one edit;
+   * changing THIS BLUE still costs a literal edit. That is a known limit, not an oversight. */
+  --stage-fill:     rgba(73, 110, 180, 0.075);   /* proto2's cool counter-light, lower left        */
+  /* A COMPLETE RAMP, NOT A STOP (§81.8) — proto2 `.right::before`'s second layer: a top sheen and
+   * a bottom shade that give the stage its curvature. */
+  --stage-sheen:    linear-gradient(180deg, rgba(255,255,255,0.01), transparent 16%, transparent 82%, rgba(0,0,0,0.14));
+
+  /* ⛔ --grid-line IS DELIBERATELY *NOT* REPOINTED AT SEAFOAM, AND THIS IS A RULING COLLISION I AM
+   * RESOLVING IN THE OPEN RATHER THAN SILENTLY. proto2's minor grid is teal at 4.5%; ours is
+   * cyanotype at 5%, and §76 ruled that ON PURPOSE ("the 4:1 RATIO is what reads as drafting paper,
+   * NOT the hue"). --grid-line also has 22 consumer sites across 10 files — far beyond this stage.
+   * 🔑 "EACH SURFACE OWNS ITS OWN STACK" CUTS BOTH WAYS: the stage takes the donor's minor via
+   *    --stage-grid-minor, and every OTHER surface keeps the grid §76 ruled for it. A site-wide
+   *    recolour smuggled in behind a stage port would be exactly the blast radius this arc exists
+   *    to stop. ⭐ --grid-major needs no new token at all: it ALREADY resolves to rgba(42,78,104,
+   *    0.16), which is proto2's major to the digit. The donor and the palette already agreed. */
+
+  /* ── 🎭 THE STAGE GROUND (§82.7, 2026-08-19) ──────────────────────────────────────────────────
    * ⛔⛔ THESE TWO ARE AUTHORED AS A PAIR AND MUST STAY ONE. MEASURED: proto2's RENDERED ground is
    *    DARKER than its own declared stops, because the vignette sits over them. Shipping the
    *    gradient alone gets the top right and leaves the edges bright — a half-port that would look
@@ -236,9 +298,18 @@
      * 🔑 TWO DIFFERENT MEASURANDS, BOTH TRUE: the VALUE is invariant, the PIXEL moves by 1/255 on
      *    one channel. Anyone who states only one of those has stated it wrong. */
     --grid-line:  color-mix(in srgb, var(--paint-cyanotype) 5%, transparent);
-    --light-key:  color-mix(in srgb, var(--paint-verdigris) 18%, transparent);
-    /* --light-fill is NOT derived here for the same reason it is not declared above — it has no
-       consumer. See the honest blank beside --light-key. */
+    /* 🎭 THE STAGE'S FOUR SEAFOAM LAYERS. ⛔ THIS BLOCK IS WHAT MAKES THE PALETTE SPELLING REAL —
+       without it the :root literals above are just proto2's numbers wearing token names, and
+       --paint-seafoam would move NOTHING. 🔑 THE CAPTAIN'S REQUIREMENT ("the next green costs one
+       edit") IS SATISFIED HERE, NOT ABOVE. Registration is the declaration; WIRING is this. */
+    --stage-key:        color-mix(in srgb, var(--paint-seafoam) 8.5%, transparent);
+    --stage-glow:       color-mix(in srgb, var(--paint-seafoam) 5.5%, transparent);
+    --stage-rim:        color-mix(in srgb, var(--paint-seafoam) 3.5%, transparent);
+    --stage-grid-minor: color-mix(in srgb, var(--paint-seafoam) 4.5%, transparent);
+    /* ⛔ --stage-fill IS ABSENT HERE ON PURPOSE — it has no paint to derive from (see its note
+       above). A derivation of a paint we do not own would be a blend nobody ruled (§68.5). */
+    /* --light-key is GONE, not merely underived — it lost its consumer when the key became the
+       stage's own light. See the retirement note beside its old declaration. */
   }
 }
 

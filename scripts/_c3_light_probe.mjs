@@ -90,7 +90,10 @@
  * change a diff is the EXPECTED result and the rect breakdown is the review. THE TOOL REPORTS; IT
  * DOES NOT JUDGE. The one thing it does judge is its own trustworthiness.
  *
- * PROFILE — every number this file prints was taken at: 1440x900 · cold Studio (storage cleared) ·
+ * ⭐ --viewport=WxH (default 1440x900) AND --yfrac. See the block above `const [VW, VH]`. Until
+ *    2026-08-20 the viewport was a CONSTANT, so every number in this arc came from one screen.
+ *
+ * PROFILE — unless --viewport says otherwise, numbers are taken at: 1440x900 · cold Studio (cleared)·
  * signed-out · headless chromium · off-origin requests ABORTED (so no CDN font or beacon can move a
  * pixel between two runs). Any figure quoted from here carries that profile or it is quoted wrong.
  */
@@ -115,9 +118,39 @@ const ENTER = argv.includes('--enter');
  * between two measuring rigs. Comparing a donor measured one way against a target measured another
  * is the oldest way to manufacture a delta. */
 const PAGE = arg('page', 'studio.html');
-/* Column(s) for --mode=profile. 1425 is the far right edge — the least content-covered column on
- * studio.html cold. Override when a layout puts something there. */
-const COLS = arg('cols', '1425').split(',').map(Number);
+/* ══ VIEWPORT — A FLAG, NOT A CONSTANT (§82.12, 2026-08-20) ═════════════════════════════════════
+ * ⛔ THIS WAS `const VW = 1440, VH = 900` AND THE RULING THAT ORDERED THE SWEEP SAID "THE PROBE
+ *    ALREADY TAKES A VIEWPORT". IT DID NOT. Every number this arc has ever printed — the light's
+ *    d=(15,33,24), the 320px falloff, the whole stage profile, proto2's target table — was taken at
+ *    ONE SIZE because there was no way to ask for another.
+ * 🔑 AND THE STAGE IS A VERTICAL GRADIENT, SO ITS PROFILE IS HEIGHT-DEPENDENT BY CONSTRUCTION. A
+ *    ONE-VIEWPORT MEASUREMENT BASIS UNDER A SIZE-DEPENDENT ARTEFACT IS NOT A NARROW PROOF — IT IS
+ *    AN UNSTATED PREMISE, WHICH IS THE CLASS THAT HAS COST THIS ARC FIVE RULINGS. */
+const [VW, VH] = arg('viewport', '1440x900').split('x').map(Number);
+if (!Number.isFinite(VW) || !Number.isFinite(VH) || VW < 320 || VH < 240) {
+  console.log(`SCORE 0/0 RED — bad --viewport (want WxH, e.g. 1366x768); got "${arg('viewport', '')}"`);
+  process.exit(2);
+}
+/* Column(s) for --mode=profile. The default is the far right edge — the least content-covered
+ * column on studio.html cold — and it is DERIVED FROM THE VIEWPORT, not pinned at 1425.
+ * ⛔ 1425 WAS HARD-CODED, AND AT 1366 WIDE THAT COLUMN DOES NOT EXIST. columnProfile's clamp would
+ *    have sampled x=1365 and PRINTED IT AS x=1425 — a real pixel wearing a coordinate that is not
+ *    its own. Override when a layout puts something at the edge. */
+const COLS = arg('cols', String(VW - 15)).split(',').map(Number);
+/* --yfrac takes heights as FRACTIONS OF THE VIEWPORT rather than absolute pixels, and it exists
+ * because "does the ground drift at another size" is TWO questions with OPPOSITE right answers:
+ *   ABSOLUTE y — the ground MUST differ. A percentage gradient stretches, so y=250 is 27.8% down a
+ *       900px page and 32.6% down a 768px one. Drift here is arithmetic, not a defect.
+ *   FRACTIONAL y — the ground SHOULD be invariant. This is the sampling that can find a real one.
+ * ⭐ THE DEFAULT ROUND-TRIPS TO THE SHIPPED HEIGHTS AT 1440x900 (120/250/550/700 = 13.33% / 27.78%
+ *    / 61.11% / 77.78%), so the committed acceptance test's behaviour at its own viewport is
+ *    UNCHANGED by this flag existing. */
+const YFRAC = arg('yfrac', '');
+const CLOCK = arg('clock', '');
+const APPLY = arg('apply', '');
+const SAVE = arg('save', '');
+const CENTER_EL = arg('center-el', '');
+const CENTER_FRAC = arg('center-frac', '0.62,0.18');
 const TARGET = arg('target', '');
 const TOL = parseInt(arg('tol', '2'), 10);
 
@@ -147,7 +180,6 @@ const TARGETS = {
   proto2: { 120: [6, 10, 17], 250: [4, 10, 18], 550: [5, 11, 20], 700: [5, 12, 22] },
 };
 
-const VW = 1440, VH = 900;
 const PORT_A = 8431;   /* shipped / working tree            */
 const PORT_B = 8432;   /* control  / reverted served bytes  */
 /* PORT DISCIPLINE: 8431-8432 claimed 2026-08-19. 8001 is the SUITE'S shared server and is never
@@ -159,6 +191,23 @@ const PORT_B = 8432;   /* control  / reverted served bytes  */
    THE ARTEFACT." Each entry declares `count` — the number of times it MUST match. Mismatch aborts.
    ⛔ `count` IS NOT DOCUMENTATION. It is the guard that stops a silently-inert control reporting a
       clean 0. Set it from a measurement, never from an expectation. */
+/* ⛔ THE GROUND'S PAINTING TOKENS — ONE LIST, TWO CONSUMERS: the selftest poison aims at these, and
+   L15 in --mode=absolute asserts the page consumes NOTHING ELSE. Keeping them in one place is what
+   stops the two drifting apart, which is exactly how the poison went deaf on 2026-08-19. */
+const POISON_GROUND = ['--stage-field', '--stage-base', '--stage-vignette', '--stage-key',
+  '--stage-fill', '--stage-glow', '--stage-rim', '--stage-sheen', '--stage-grid-minor', '--grid-major',
+  /* ⭐ FOUND BY THE GUARD ON ITS FIRST RUN, WHICH IS THE ONLY REASON IT IS HERE: typography.css:8
+     paints `body { background-color: var(--bg-navy) !important }`, so it IS a ground token — and no
+     poison list had ever mentioned it. Covered transitively (--paint-inkwell -> --bg -> --bg-navy),
+     but "covered by accident" and "covered on purpose" are different states and only one is
+     auditable. */
+  '--bg-navy'];
+/* HOW EACH IS POISONED — DIRECTLY, OR THROUGH ITS PAINT. ⭐ THE PALETTE MADE THE POISON SMALLER:
+   --stage-key / --stage-glow / --stage-rim / --stage-grid-minor ALL derive from --paint-seafoam, so
+   ONE paint poisons four layers. That is the same one-edit property the Captain asked for, showing
+   up in the instrument. --grid-major follows --paint-graphite-blue; --bg-navy follows
+   --paint-inkwell; the rest carry literals and are poisoned where they are declared. */
+
 const REVERTS = {
   /* C3 — THE LIGHT. Strips the two body radials from studio.html so PORT_B renders the UNLIT page.
      Filled in by the commit that introduces them; declared here so the control ships WITH the
@@ -188,11 +237,88 @@ const REVERTS = {
     { file: 'styles/tokens.css', find: '  --stage-vignette: radial-gradient(circle at 50% 50%, transparent 54%, rgba(2,8,15,0.10) 78%, rgba(2,8,15,0.28) 100%);', replace: '  --stage-vignette: none;', count: 1 },
     { file: 'styles/tokens.css', find: '  --stage-base:     linear-gradient(180deg, rgba(4,10,18,0.88), rgba(8,16,28,0.94));', replace: '  --stage-base: none;', count: 1 },
   ],
+  /* ⭐⭐ spelling — THE PROOF THAT PALETTE-SPELLING IS NOT A RECOLOUR (§82.15). Rewrites every token
+     reference in the stage stack back to proto2's OWN LITERALS. The Architect ruled the donor's
+     VALUES verbatim; the Captain ruled they be reachable from the palette. Those two are only
+     compatible if the spellings render identically — SO IT IS MEASURED, NOT ASSERTED.
+     ⚠️ AND THE EXPECTED RESULT IS NOT AUTOMATICALLY ZERO, WHICH IS WHY THIS IS WORTH RUNNING:
+        color-mix() resolves through chromium's `color(srgb …)` path and can round ONE unit
+        differently from an rgba() literal — tokens.css already documents exactly that for
+        --grid-line. 🔑 A NON-ZERO HERE IS A ROUNDING FACT TO REPORT, NOT A FAILURE TO HIDE; a
+        LARGE one would mean the spelling changed the colour and the port is wrong. */
+  spelling: [
+    { file: 'studio.html', find: 'linear-gradient(var(--grid-major) 1px, transparent 1px),\n      linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),\n      linear-gradient(var(--stage-grid-minor) 1px, transparent 1px),\n      linear-gradient(90deg, var(--stage-grid-minor) 1px, transparent 1px),\n      radial-gradient(circle at 62% 18%, var(--stage-key), transparent 29%),\n      radial-gradient(circle at 18% 82%, var(--stage-fill), transparent 24%),',
+      replace: 'linear-gradient(rgba(42,78,104,.16) 1px, transparent 1px),\n      linear-gradient(90deg, rgba(42,78,104,.16) 1px, transparent 1px),\n      linear-gradient(rgba(121,222,199,.045) 1px, transparent 1px),\n      linear-gradient(90deg, rgba(121,222,199,.045) 1px, transparent 1px),\n      radial-gradient(circle at 62% 18%, rgba(121,222,199,.085), transparent 29%),\n      radial-gradient(circle at 18% 82%, rgba(73,110,180,.075), transparent 24%),', count: 1 },
+    { file: 'studio.html', find: 'inset 0 0 0 1px var(--stage-rim)', replace: 'inset 0 0 0 1px rgba(121,222,199,.035)', count: 1 },
+    { file: 'studio.html', find: 'radial-gradient(circle at 50% 48%, var(--stage-glow), transparent 52%),\n      var(--stage-sheen);',
+      replace: 'radial-gradient(circle at 50% 48%, rgba(121,222,199,.055), transparent 52%),\n      linear-gradient(180deg, rgba(255,255,255,.01), transparent 16%, transparent 82%, rgba(0,0,0,.14));', count: 1 },
+  ],
+  /* ⭐ proto2key — STRIPS THE DONOR'S OWN STAGE LIGHT so its falloff can be measured the same way we
+     measure ours. §82's L48 applied to a CURVE instead of a value: ONE measurement of the donor
+     replaces two attribution runs of ours. If proto2's own falloff dips too, the dip is the donor's
+     LOOK and we port it without apology; if it is clean, our dip is ours.
+     ⚠️ SAFE ON THE `background-size` LIST BY ARITHMETIC, NOT BY LUCK: `.right` declares 7 layers and
+        7 sizes (76,76,19,19,auto,auto,auto). Removing the 5th layer leaves 6 layers and the first 6
+        sizes still map correctly; the surplus 7th is ignored per spec. A different layer could NOT
+        be removed this safely — check before reusing this shape. */
+  /* novignette — ATTRIBUTION, ONE VARIABLE. Neutralises ONLY `.canvas-wrapper::after` so the
+     acceptance residual can be attributed to the vignette or exonerated of it. */
+  novignette: [
+    { file: 'styles/tokens.css', find: '  --stage-vignette: radial-gradient(circle at 50% 50%, transparent 54%, rgba(2,8,15,0.10) 78%, rgba(2,8,15,0.28) 100%);', replace: '  --stage-vignette: none;', count: 1 },
+  ],
+  proto2key: [
+    { file: 'proto2.html', find: '    radial-gradient(circle at 62% 18%,rgba(121,222,199,.085),transparent 29%),\n', replace: '', count: 1 },
+  ],
+  /* ⭐ keymove — A PROPOSAL, MEASURED BEFORE IT IS AUTHORED (§82.13 ruling, 2026-08-20). Moves the
+     key radial OFF `body` and INTO `.canvas-wrapper`'s background-image stack ABOVE `--stage-base`,
+     which is the placement the Architect ruled. Used with --apply, never shipped from here.
+     ⛔ LAYER ORDER IS THE WHOLE POINT AND IT IS EASY TO GET BACKWARDS: in a `background-image` list
+        the FIRST layer paints ON TOP. So the key goes FIRST, before the two grid layers and before
+        `--stage-base`. Putting it last would reproduce the exact bug being fixed — the light under
+        the stage — while looking like a fix.
+     ⚠️ THE TWO ENTRIES ARE ONE CHANGE: strip from body, insert into the wrapper. If either fails to
+        match, the landing guard aborts rather than measuring a half-move. */
+  keymove: [
+    { file: 'studio.html', find: '      radial-gradient(circle at 70% 15%, var(--light-key), transparent 24%),\n', replace: '', count: 1 },
+    { file: 'studio.html', find: 'background-image: linear-gradient(rgba(100, 180, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(100, 180, 255, 0.05) 1px, transparent 1px), var(--stage-base);', replace: 'background-image: radial-gradient(circle at 70% 15%, var(--light-key), transparent 24%), linear-gradient(rgba(100, 180, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(100, 180, 255, 0.05) 1px, transparent 1px), var(--stage-base);', count: 1 },
+    /* ⛔⛔ THE THIRD ENTRY IS NOT BOOKKEEPING — WITHOUT IT THIS TRIAL MEASURES A BROKEN PAGE.
+       `background-size` has THREE values for what becomes FOUR layers, and a short list REPEATS
+       CYCLICALLY: the key would take `40px 40px` (tiling the light into a 40px grid of tiny lights)
+       and `--stage-base` would take `40px 40px` too, tiling the stage. The measurement would come
+       back wrong and look like evidence about the POSITION.
+       🔑 THIS IS THE FOUR-PAIR HAZARD §77.6 ALREADY FLAGGED FOR D, ARRIVING EARLY BECAUSE ADDING A
+          LAYER IS WHAT TRIGGERS IT — NOT BECAUSE D STARTED. Any commit that adds a background layer
+          here owes the same edit. */
+    { file: 'studio.html', find: 'background-size: 40px 40px, 40px 40px, auto;', replace: 'background-size: auto, 40px 40px, 40px 40px, auto;', count: 1 },
+  ],
   /* SELFTEST — a deliberate, obvious poison used to prove the diff pipeline BITES. It changes the
      page field itself, so a working differ must report a very large number across many rects. If
      this reports 0, the instrument is broken and every other number it has ever printed is void. */
+  /* ⛔⛔ THIS SET WENT DEAF ON 2026-08-19 AND NOBODY NOTICED FOR A DAY. MEASURED 2026-08-20:
+   *    RECORDED (§81.22): 1,266,102 px, max 150/255.  RE-RUN AT THE SAME COMMIT: 8,132 px cold /
+   *    2,366 px entered — A 99.4% LOSS OF BITE — AND THE MODE'S OWN THRESHOLD (>10,000) THEREFORE
+   *    PRINTED "THE DIFFER IS BROKEN. EVERY NUMBER IT HAS PRINTED IS VOID." THE DIFFER WAS FINE:
+   *    the same run measured the stage revert at 951,717 px (73.44%), reproducing the baton exactly.
+   * 🔑 CAUSE — AND IT IS §81.22's LAW ARRIVING INSIDE THE CONTROL INSTEAD OF THE MEASUREMENT:
+   *    `--paint-inkwell` still reaches the ground (inkwell → --bg → --bg-navy → body
+   *    background-COLOR, via typography.css:8). But `dffdecd` gave body a background-IMAGE
+   *    (`--stage-field`) that is FULLY OPAQUE, and an image paints over a colour. THE POISON STILL
+   *    LANDED AND WAS SIMPLY NO LONGER VISIBLE. A POISON OCCLUDED BY A LAYER IS A CONTROL
+   *    MEASURING THE LAYER — the deafness control had itself gone deaf.
+   * ⛔ THE `count:1` GUARDS COULD NOT SEE THIS. They prove a string was SUBSTITUTED, never that the
+   *    substitution CHANGED A PIXEL. ⇒ LANDING IS NOT THE SAME PROOF AS BITING.
+   * ⇒ THE POISON NOW COVERS EVERY LAYER THAT PAINTS THE GROUND TODAY. The threshold is UNCHANGED at
+   *    10,000 — restoring a control's bite is a repair; lowering the bar it failed would have been
+   *    "a tolerance closed by a nudge" (§82.8), which is the opposite thing. */
   selftest: [
     { file: 'styles/tokens.css', find: '--paint-inkwell:        #091221;', replace: '--paint-inkwell:        #FF0000;', count: 1 },
+    { file: 'styles/tokens.css', find: '--paint-seafoam:        #79DEC7;', replace: '--paint-seafoam:        #FF0000;', count: 1 },
+    { file: 'styles/tokens.css', find: '--paint-graphite-blue: #2A4E68;', replace: '--paint-graphite-blue: #FF0000;', count: 1 },
+    { file: 'styles/tokens.css', find: '  --stage-field:    linear-gradient(180deg, #040a12 0%, #07101b 24%, #091220 100%);', replace: '  --stage-field:    linear-gradient(180deg, #FF0000 0%, #FF0000 24%, #FF0000 100%);', count: 1 },
+    { file: 'styles/tokens.css', find: '  --stage-base:     linear-gradient(180deg, rgba(4,10,18,0.88), rgba(8,16,28,0.94));', replace: '  --stage-base:     linear-gradient(180deg, rgba(255,0,0,0.88), rgba(255,0,0,0.94));', count: 1 },
+    { file: 'styles/tokens.css', find: '  --stage-vignette: radial-gradient(circle at 50% 50%, transparent 54%, rgba(2,8,15,0.10) 78%, rgba(2,8,15,0.28) 100%);', replace: '  --stage-vignette: radial-gradient(circle at 50% 50%, transparent 54%, rgba(255,0,0,0.10) 78%, rgba(255,0,0,0.28) 100%);', count: 1 },
+    { file: 'styles/tokens.css', find: '  --stage-fill:     rgba(73, 110, 180, 0.075);', replace: '  --stage-fill:     rgba(255, 0, 0, 0.075);', count: 1 },
+    { file: 'styles/tokens.css', find: '  --stage-sheen:    linear-gradient(180deg, rgba(255,255,255,0.01), transparent 16%, transparent 82%, rgba(0,0,0,0.14));', replace: '  --stage-sheen:    linear-gradient(180deg, rgba(255,0,0,0.9), transparent 16%, transparent 82%, rgba(255,0,0,0.9));', count: 1 },
   ],
 };
 
@@ -300,6 +426,14 @@ function makeTransform(set) {
 async function capture(port, chromium, pageRel, PROBE_POINTS) {
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: VW, height: VH }, deviceScaleFactor: 1 });
+  /* ⏱️ --clock PINS THE WALL CLOCK. THE STUDIO IS A RETIREMENT CALCULATOR: ITS CANVAS IS DRAWN FROM
+     TODAY'S DATE, SO ITS *GEOMETRY* CAN MOVE OVERNIGHT WITHOUT A BYTE CHANGING — AND `--stage-base`
+     IS A GRADIENT OVER THAT GEOMETRY, SO THE GROUND COLOUR AT A FIXED y MOVES WITH IT.
+     ⛔ MECHANISM REUSED FROM `_gate_moat_winners.js:47-49`, INCLUDING ITS WARNING, WHICH WAS READ
+        BEFORE COPYING (L48 — reuse-don't-fork ASSUMES the donor is correct, so the donor was
+        measured): setFixedTime, NEVER clock.install() — install() also fakes TIMERS and the
+        Studio's settle path never completes. */
+  if (CLOCK) await ctx.clock.setFixedTime(new Date(CLOCK + 'T12:00:00'));
   const page = await ctx.newPage();
   /* OFF-ORIGIN ABORTED. A CDN font or an analytics beacon that answers on one run and not the next
      moves pixels for a reason that has nothing to do with the change under test. */
@@ -360,19 +494,48 @@ async function capture(port, chromium, pageRel, PROBE_POINTS) {
    *    point is FIELD only if every element from the hit-test target up to <body> has a fully
    *    transparent background. Occluded points are PRINTED, never silently dropped and never
    *    scored — an excluded point nobody sees is a population lie. */
+  /* ⛔⛔ AMENDED 2026-08-20 — IT WAS BLIND TO `background-image`, WHICH IS EVERY LAYER THIS ARC ADDED.
+   * It read `backgroundColor` ONLY. `--stage-base`, `--stage-vignette` and the 40px grid are ALL
+   * background-IMAGES, and the vignette is on a `::after` the walk never visited. So it certified
+   * the KEY LIGHT'S OWN CENTRE as "field-valid" while `.canvas-wrapper`'s α-0.88 stage base painted
+   * over it — and the light measured d=(2,3,3) against an authored (15,33,24) with nothing flagged.
+   * 🔑 THE GUARD AGAINST MEASURING THROUGH AN UNDECLARED LAYER COULD NOT SEE THE LAYERS WE DECLARED
+   *    — §61.4's accessibility gate reading the wrong background, one instrument over.
+   *
+   * ⛔ THE FIX IS NOT "BLOCK ON ANY BACKGROUND-IMAGE". THAT WOULD MARK EVERY STAGE POINT OCCLUDED
+   *    AND DESTROY THE ACCEPTANCE TEST, BECAUSE `--stage-base` *IS* THE GROUND — proto2's `.right`
+   *    carries its own base too, so both sides legitimately have a stage layer at those points.
+   *    The defect was never that these points were SCORED. It was that the stack above them was
+   *    INVISIBLE. ⇒ THE VERDICT RULE IS UNCHANGED (an opaque background-COLOUR above <body> still
+   *    refuses to score); WHAT IS NEW IS THAT EVERY PAINTING LAYER IS NAMED.
+   * 🔑 §81.22 EXECUTED LITERALLY: "NAME EVERY LAYER BETWEEN THE PROBE AND THE SURFACE, OR THE NUMBER
+   *    DESCRIBES THE LAYER." Had this printed on the stage commit, the smothered key was one line
+   *    of output away from being obvious. */
   const pointCheck = await page.evaluate((pts) => pts.map(([x, y]) => {
     let el = document.elementFromPoint(x, y);
-    if (!el) return [x, y, 'NO ELEMENT', false];
-    const first = `${el.tagName}${el.id ? '#' + el.id : ''}`;
+    if (!el) return [x, y, 'NO ELEMENT', false, []];
+    const name = (n) => `${n.tagName}${n.id ? '#' + n.id : (n.classList && n.classList[0] ? '.' + n.classList[0] : '')}`;
+    const alphaOf = (c) => { const m = c && c.match(/rgba?\(([^)]+)\)/); if (!m) return 0; const p = m[1].split(','); return p[3] !== undefined ? parseFloat(p[3]) : 1; };
+    const first = name(el);
     let node = el, blocker = null;
+    const stack = [];   /* EVERY painting layer, outermost-in. Named, never silently skipped. */
     while (node && node !== document.documentElement) {
-      const bg = getComputedStyle(node).backgroundColor;
-      const m = bg.match(/rgba?\(([^)]+)\)/);
-      const a = m ? (m[1].split(',')[3] !== undefined ? parseFloat(m[1].split(',')[3]) : 1) : 0;
-      if (a > 0.01 && node !== document.body) { blocker = `${node.tagName}${node.id ? '#' + node.id : ''} bg=${bg}`; break; }
+      for (const pseudo of ['::before', '::after', null]) {
+        const cs = getComputedStyle(node, pseudo);
+        /* A pseudo with no `content` generates no box and paints nothing — skip it, but only for
+           that reason, and say so here so the skip is a stated rule and not an accident. */
+        if (pseudo && (cs.content === 'none' || cs.content === 'normal')) continue;
+        const bi = cs.backgroundImage, bc = cs.backgroundColor, a = alphaOf(bc);
+        if (bi && bi !== 'none') stack.push(`${name(node)}${pseudo || ''} background-image: ${bi.slice(0, 78)}`);
+        if (a > 0.01) stack.push(`${name(node)}${pseudo || ''} background-color: ${bc}`);
+        /* VERDICT RULE — UNCHANGED ON PURPOSE. Only an opaque background-COLOUR above <body> makes a
+           point un-scoreable. Widening this to images is a POPULATION change, not a bug fix, and it
+           would silently retire two of the four acceptance heights. */
+        if (!pseudo && a > 0.01 && node !== document.body && !blocker) blocker = `${name(node)} bg=${bc}`;
+      }
       node = node.parentElement;
     }
-    return [x, y, blocker || first, !blocker];
+    return [x, y, blocker || first, !blocker, stack];
   }), (PROBE_POINTS || []));
   const rects = await page.evaluate(() => {
     const out = [];
@@ -386,8 +549,14 @@ async function capture(port, chromium, pageRel, PROBE_POINTS) {
     });
     return out;
   });
+  /* ⏱️ THE CLOCK'S LANDING PROOF. Read AFTER the capture, per the ordering ruling (§81.18).
+     ⛔ WITHOUT THIS, "--clock CHANGED NOTHING" AND "--clock NEVER APPLIED" ARE THE SAME OBSERVATION,
+        AND THE SECOND ONE WOULD HAVE LET ME RULE OUT A DATE HYPOTHESIS I HAD NEVER ACTUALLY TESTED.
+     🔑 THE ARCHITECT'S OWN DOCTRINE, ONE FLAG OVER: LANDING IS NOT THE SAME PROOF AS BITING. This
+        proves LANDING; only a moved pixel proves BITING, and the two are reported separately. */
+  const pageNow = await page.evaluate(() => new Date().toISOString().slice(0, 10));
   await browser.close();
-  return { shot, rects, offOrigin, pointCheck };
+  return { shot, rects, offOrigin, pointCheck, pageNow };
 }
 
 /* ══ RECT LOCALISATION ══════════════════════════════════════════════════════════════════════════
@@ -515,9 +684,19 @@ function rayProfile(img, cx, cy, dx, dy, steps, stepPx) {
  * point: proto2's rendered ground is DARKER than its own declared gradient because a vignette and a
  * 6px dot texture sit over it. Authoring the gradient alone gets the top right and leaves the edges
  * bright. ⛔ SO THE DECLARATION IS NOT THE DELIVERABLE — THIS CURVE IS. */
+/* ⛔⛔ THIS FUNCTION USED TO CLAMP, SILENTLY, AND THAT WAS SAFE ONLY WHILE THE VIEWPORT WAS A
+ * CONSTANT. `Math.min(y, img.h - 1)` meant a request for y=860 on a 768px-tall capture returned
+ * ROW 767's COLOUR AND PRINTED IT AS y=860 — a real pixel wearing a coordinate that is not its own.
+ * The default no-target height set is [20,120,250,400,550,700,860], so the FIRST run of the very
+ * viewport sweep this flag was added for would have reported three confident numbers for rows that
+ * do not exist. Same for x at 1366 wide against a hard-coded column 1425.
+ * 🔑 IT IS THE ARC'S OWN SIGNATURE ONE MODE OVER — NOT A WRONG NUMBER, A NUMBER MEASURING SOMETHING
+ *    ELSE THAT HAPPENED TO SIT WHERE YOU LOOKED (§82.9), AND A CLAMP IS THE PUREST FORM OF IT
+ *    BECAUSE IT ALWAYS RETURNS A PLAUSIBLE VALUE. ⇒ IT REFUSES NOW. */
 function columnProfile(img, x, ys) {
   return ys.map((y) => {
-    const k = (Math.min(y, img.h - 1) * img.w + Math.min(x, img.w - 1)) * img.chan;
+    if (y < 0 || y >= img.h || x < 0 || x >= img.w) return [y, null];
+    const k = (y * img.w + x) * img.chan;
     return [y, [img.data[k], img.data[k + 1], img.data[k + 2]]];
   });
 }
@@ -584,6 +763,34 @@ function report(title, res) {
         canvasBgImage: (() => { const el = document.querySelector('.canvas-wrapper'); return el ? getComputedStyle(el).backgroundImage : ''; })(),
         canvasShadow: (() => { const el = document.querySelector('.canvas-wrapper'); return el ? getComputedStyle(el).boxShadow : ''; })(),
         afterBg: (() => { const el = document.querySelector('.canvas-wrapper'); return el ? getComputedStyle(el, '::after').backgroundImage : ''; })(),
+        beforeBg: (() => { const el = document.querySelector('.canvas-wrapper'); return el ? getComputedStyle(el, '::before').backgroundImage : ''; })(),
+        canvasBgSize: (() => { const el = document.querySelector('.canvas-wrapper'); return el ? getComputedStyle(el).backgroundSize : ''; })(),
+        stageKey: resolve('var(--stage-key)'),
+        stageKeyDeclared: declared('--stage-key'),
+        paintSeafoam: declared('--paint-seafoam'),
+        /* THE HUD z-ORDER QUESTION, ANSWERED BY THE PAGE RATHER THAN BY REASONING: the highest
+           z-index among the stage's positioned children. ::before/::after are z-index auto, so any
+           child above 0 paints over them. */
+        /* ⛔⛔ THE GROUND'S CONSUMED TOKENS, ASKED OF THE CSSOM RATHER THAN GREPPED (§10.6).
+           Reads DECLARED rule text (rule.style), which still carries `var(--x)` — computed style
+           has already substituted it away and cannot answer this question at all. */
+        groundVars: (() => {
+          const out = new Set();
+          for (const sheet of document.styleSheets) {
+            let rules; try { rules = sheet.cssRules; } catch (e) { continue; }
+            for (const r of rules) {
+              if (!r.selectorText || !r.style) continue;
+              if (!/(^|[\s,])body([\s,{:]|$)|canvas-wrapper/.test(r.selectorText)) continue;
+              const txt = ['background', 'backgroundImage', 'backgroundColor', 'boxShadow']
+                .map((k) => r.style[k] || '').join(' ');
+              for (const m of txt.matchAll(/var\(\s*(--[a-z0-9-]+)/g)) out.add(m[1]);
+            }
+          }
+          return [...out].sort().join(',');
+        })(),
+        hudZ: (() => { const el = document.querySelector('.canvas-wrapper'); if (!el) return '';
+          return [...el.querySelectorAll('*')].map((n) => parseInt(getComputedStyle(n).zIndex, 10))
+            .filter((v) => !isNaN(v)).sort((x, y) => y - x).slice(0, 3).join(','); })(),
       };
     });
     await browser.close(); srv.close();
@@ -598,13 +805,19 @@ function report(title, res) {
        RESOLVED COLOUR, NEVER THE SPELLING — §69 settled that a string difference means nothing. */
     /* RESOLVED colours now, so these match a real rgba()/color() string, never a declaration. */
     const isVerdigris18 = (s) => /(93,\s*202,\s*165|0\.364706)/.test(s) && /0?\.18/.test(s);
-    ok('L1 body carries exactly ONE radial-gradient (the key; the fill is HELD)',
-      (facts.bodyBgImage.match(/radial-gradient/g) || []).length === 1,
+    /* seafoam #79DEC7 = rgb(121,222,199); chromium may spell it color(srgb 0.47451 ...). */
+    const isSeafoam085 = (s) => /(121,\s*222,\s*199|0\.47451)/.test(s) && /0?\.085/.test(s);
+    /* ⛔⛔ L1-L3 RE-AUTHORED 2026-08-20 (§82.15). THEY ASSERTED THE OLD ARCHITECTURE — a key light on
+       `body` at 70% 15% deriving from verdigris — AND THAT ARCHITECTURE IS THE DEFECT THIS COMMIT
+       REMOVES. An assertion kept past the design it describes does not protect anything; it fails
+       on the fix and passes on the bug. 🔑 THE LEGS FOLLOW THE SHIPPED TRUTH, NOT THE OLD ONE. */
+    ok('L1 body carries NO radial-gradient — there is no global light any more',
+      (facts.bodyBgImage.match(/radial-gradient/g) || []).length === 0,
       (facts.bodyBgImage.match(/radial-gradient/g) || []).length + ' found');
-    ok('L2 that radial is positioned at 70% 15%',
-      /at 70% 15%/.test(facts.bodyBgImage), facts.bodyBgImage.slice(0, 60));
-    ok('L3 --light-key resolves to verdigris at 0.18',
-      isVerdigris18(facts.lightKey), facts.lightKey + '   (declared: ' + facts.lightKeyDeclared + ')');
+    ok('L2 --light-key is RETIRED, not merely unused (§76.3: no latent names)',
+      facts.lightKeyDeclared === '', JSON.stringify(facts.lightKeyDeclared));
+    ok('L3 --stage-key resolves to SEAFOAM at 0.085 — the donor value, palette-spelled',
+      isSeafoam085(facts.stageKey), facts.stageKey + '   (declared: ' + facts.stageKeyDeclared + ')');
     ok('L4 --light-fill is ABSENT — a role with no consumer is never declared',
       facts.lightFill === '', JSON.stringify(facts.lightFill));
     ok('L5 --paint-cyanotype is OPAQUE (the repair: alpha moved to each role)',
@@ -618,12 +831,52 @@ function report(title, res) {
     /* ⛔ §11.4 — REGISTRATION AND WIRING ARE TWO PROOFS. The profile proves the ground LOOKS right;
        these prove the layers are actually ATTACHED. A stage that hit the target for some other
        reason would pass the profile and fail here. */
-    ok('L8 body carries the graded stage field beneath the light (2 layers, not 1)',
-      /linear-gradient/.test(facts.bodyBgImage) && (facts.bodyBgImage.match(/gradient/g) || []).length >= 2,
+    ok('L8 body carries EXACTLY ONE layer — the graded field, and nothing else',
+      /linear-gradient/.test(facts.bodyBgImage) && (facts.bodyBgImage.match(/gradient/g) || []).length === 1,
       (facts.bodyBgImage.match(/gradient/g) || []).length + ' gradient layer(s)');
     ok('L9 .canvas-wrapper consumes --stage-base AND keeps its inset shadow',
       /linear-gradient/.test(facts.canvasBgImage) && /rgba\(0,\s*0,\s*0,\s*0?\.26\)|rgb\(0, 0, 0\)/.test(facts.canvasShadow) && facts.canvasShadow !== 'none',
       'bgLayers=' + (facts.canvasBgImage.match(/gradient/g) || []).length + '  shadow=' + facts.canvasShadow.slice(0, 46));
+    /* ⛔⛔ L11 IS THE CYCLIC-REPEAT GUARD AND IT IS THE MOST LOAD-BEARING LEG IN THIS COMMIT.
+       `background-size` is a POSITIONAL list: a SHORT list does not fail, it REPEATS, tiling
+       radials and the base into grid squares while looking entirely plausible. Nothing else here
+       would catch it — the profile samples a column, and a tiled base can still hit the target at
+       four points. 🔑 THE COUNTS MUST MATCH, AND THE COUNT IS THE ASSERTION. */
+    ok('L11 .canvas-wrapper has 7 background layers AND 7 background-size values (no cyclic repeat)',
+      (facts.canvasBgImage.match(/gradient/g) || []).length === 7 &&
+      facts.canvasBgSize.split(',').length === 7,
+      'layers=' + (facts.canvasBgImage.match(/gradient/g) || []).length +
+      '  sizes=' + facts.canvasBgSize.split(',').length);
+    ok('L12 the stage carries BOTH overlays — ::before (glow+sheen) as well as ::after',
+      /radial-gradient/.test(facts.beforeBg) && (facts.beforeBg.match(/gradient/g) || []).length === 2,
+      (facts.beforeBg.match(/gradient/g) || []).length + ' layer(s) on ::before');
+    /* ⚠️ THE HUD QUESTION, MEASURED RATHER THAN REASONED. ::before/::after are z-index AUTO, so any
+       positioned child with z-index >= 1 paints ABOVE them. §82.13 ruled the readouts must stay
+       crisp; this asserts the mechanism that keeps them so, instead of trusting the ruling held. */
+    ok('L13 the HUDs outrank both overlays (z-index >= 1 above auto) — readouts stay crisp',
+      facts.hudZ !== '' && parseInt(facts.hudZ.split(',')[0], 10) >= 1,
+      'top stage z-indexes: ' + facts.hudZ);
+    ok('L14 --paint-seafoam exists as a PAINT and is OPAQUE (a paint is a pigment)',
+      /^#79DEC7$/i.test(facts.paintSeafoam.trim()), facts.paintSeafoam);
+    /* ⛔⛔ L15 — THE ENUMERATION GUARD. THE FAILURE IT EXISTS FOR ALREADY HAPPENED: `dffdecd` added
+       `--stage-field` and `--stage-base` to the ground, the selftest poison still aimed only at
+       `--paint-inkwell`, and THE DEAFNESS CONTROL WENT DEAF — reporting "THE DIFFER IS BROKEN"
+       about a differ that was fine. A `count` guard could not see it: it proves a string was
+       SUBSTITUTED, never that the substitution CHANGED A PIXEL. LANDING IS NOT BITING.
+       🔑 SO THE POISON'S TARGET LIST IS CHECKED AGAINST THE GROUND'S *ACTUAL* CONSUMED TOKENS, AND
+          AN UNLISTED ONE ABORTS BY NAME. This is the GUARDED form; the fully DERIVED poison lands
+          when the stack stops moving. A guard that fails loud is worth more than a list that rots
+          quietly. ⚠️ ADDING A GROUND LAYER MEANS ADDING IT TO POISON_GROUND — that is the point. */
+    const consumed = facts.groundVars ? facts.groundVars.split(',').filter(Boolean) : [];
+    const unlisted = consumed.filter((v) => !POISON_GROUND.includes(v));
+    /* ⚠️ THE LEG NAME SAYS EXACTLY WHAT IT CHECKS — MEMBERSHIP OF POISON_GROUND — AND NOT "the
+       poison bites every one of them", WHICH IT DOES NOT VERIFY. An earlier draft of this line
+       claimed the stronger thing; that would have been a leg whose NAME overstated its ASSERTION,
+       which is the species this arc keeps finding. The BITE proof is --mode=selftest, separately. */
+    ok('L15 every ground-painting token is ENUMERATED in POISON_GROUND (no unlisted layer)',
+      consumed.length > 0 && unlisted.length === 0,
+      unlisted.length ? 'UNLISTED, ADD TO POISON_GROUND: ' + unlisted.join(' ') + '  |  on body/.canvas-wrapper'
+                      : consumed.length + ' consumed, all covered: ' + consumed.join(' '));
     ok('L10 the vignette is on the STAGE as ::after, not on body (§82.8 relocation)',
       /gradient/.test(facts.afterBg) && !/radial-gradient\(circle at 50% 50%/.test(facts.bodyBgImage),
       'after=' + facts.afterBg.slice(0, 42) + '  bodyHasVignette=' + /circle at 50% 50%/.test(facts.bodyBgImage));
@@ -638,23 +891,76 @@ function report(title, res) {
      absolute analogue is used instead: CAPTURE TWICE AND REQUIRE THE TWO TO BE IDENTICAL. Proving
      the instrument is stable before believing a small number is the same discipline either way. */
   if (MODE === 'profile') {
-    const srv = await serve(PORT_A, null, []);
-    const ysAll = TARGET && TARGETS[TARGET] ? Object.keys(TARGETS[TARGET]).map(Number) : [20, 120, 250, 400, 550, 700, 860];
+    /* --apply reaches the ABSOLUTE profile too, so a residual can be ATTRIBUTED by neutralising one
+       layer at a time instead of argued about with arithmetic. A computed delta inherits every
+       assumption in its model; this makes the same question a measurement. */
+    const profLanded = [];
+    const profSet = APPLY ? (REVERTS[APPLY] || null) : null;
+    if (APPLY && !profSet) { console.log(`SCORE 0/0 RED — no set named "${APPLY}" for --apply`); process.exit(2); }
+    const srv = await serve(PORT_A, profSet ? makeTransform(profSet) : null, profLanded);
+    /* HEIGHT SET, IN PRECEDENCE ORDER. --yfrac wins because it is the only one that means the same
+       thing at two viewports; the pinned TARGETS keys are ABSOLUTE and belong to 1440x900 alone. */
+    const ysAll = YFRAC
+      ? YFRAC.split(',').map((f) => Math.round(parseFloat(f) * VH))
+      : (TARGET && TARGETS[TARGET] ? Object.keys(TARGETS[TARGET]).map(Number) : [20, 120, 250, 400, 550, 700, 860]);
+    /* ⛔ A PINNED TARGET TABLE IS A CLAIM ABOUT A VIEWPORT. §82.9's law — "a target from a different
+       instrument is an assumption wearing a number, AND SO IS A TARGET FROM A DIFFERENT HEIGHT" —
+       applies verbatim to a target from a different SIZE. Refuse rather than score against it. */
+    if (TARGET && (VW !== 1440 || VH !== 900)) {
+      console.log(`\n⛔ REFUSING TO SCORE. TARGETS.${TARGET} was measured at 1440x900; you asked for ${VW}x${VH}.`);
+      console.log('   A TARGET FROM A DIFFERENT VIEWPORT IS AN ASSUMPTION WEARING A NUMBER (§82.9).');
+      console.log(`   Re-derive it first:  --mode=profile --page=proto2.html --viewport=${VW}x${VH} --yfrac=<same fractions>`);
+      console.log('SCORE 0/0 RED'); process.exit(2);
+    }
     const pts = [];
     for (const x of COLS) for (const y of ysAll) pts.push([x, y]);
     const c1 = await capture(PORT_A, chromium, PAGE, pts);
     const c2 = await capture(PORT_A, chromium, PAGE, pts);
+    /* LANDING PROOF, PRINTED BESIDE THE NUMBERS RATHER THAN ASSUMED. An unlanded --clock and a
+       --clock that changed nothing are the same observation without this line. */
+    console.log(`\nCLOCK: page sees ${c1.pageNow}${CLOCK ? `  (--clock=${CLOCK} requested)` : '  (real wall clock — no --clock given)'}`);
+    if (CLOCK && c1.pageNow !== CLOCK) {
+      console.log(`⛔ --clock DID NOT LAND. Requested ${CLOCK}, page sees ${c1.pageNow}. REFUSING to report a date conclusion.`);
+      console.log('SCORE 0/1 RED'); process.exit(2);
+    }
     srv.close();
+    /* --save writes the capture to disk. A skin arc whose only output is numbers asks the Captain
+       to approve a look he has never seen; this is the one instrument that answers "what does it
+       actually look like". Same capture the numbers come from, so the picture and the table can
+       never disagree. */
+    if (SAVE) { fs.writeFileSync(SAVE, c1.shot); console.log(`
+SAVED: ${SAVE} (${c1.shot.length} bytes) — the SAME capture the numbers below come from`); }
     const A = decodePNG(c1.shot), A2 = decodePNG(c2.shot);
     let drift = 0;
     for (let i = 0; i < A.data.length; i++) if (A.data[i] !== A2.data[i]) drift++;
     console.log(`\nSTABILITY (the absolute analogue of a null pair): ${drift} of ${A.data.length} subpixels differ between two captures of the SAME page`);
     if (drift !== 0) {
+      /* ⛔⛔ THE VERDICT IS UNCHANGED — ANY DRIFT STILL ABORTS. What changed (2026-08-20) is that the
+         red is now READABLE. This check was the ONE scalar in a file whose second founding ruling is
+         "RECTS, NOT SCALARS", and it fired 19 · 0 · 0 · 0 across four runs of an UNCHANGED tree —
+         so §82.11's "stability 0/3,888,000" is one draw from a distribution that includes 19, and
+         nothing recorded WHERE.
+         🔑 A PRECONDITION THAT FAILS INTERMITTENTLY AND SAYS ONLY "HOW MANY" CANNOT BE DIAGNOSED,
+            ONLY RE-RUN UNTIL IT AGREES — WHICH IS HOW A FLAKE BECOMES A HABIT.
+         ⛔ AND THE ABORT IS DELIBERATELY NOT SCOPED TO "DRIFT NEAR A SAMPLE POINT". That would be a
+            TOLERANCE NOBODY RULED, on the exact instrument whose standing instruction is "do not
+            tune a value to close it" (§82.8). Localise, report, abort — the ruling is the
+            Architect's to make on evidence, not mine to make by loosening. */
+      const st = localise(c1.shot, c2.shot, c1.rects);
       console.log('⛔ THE PAGE DOES NOT RENDER DETERMINISTICALLY. Every number below is unreadable.');
+      report('STABILITY DRIFT — SAME TREE, TWO CAPTURES (this is a RIG/PAGE finding, not a ground one)', st);
       console.log('SCORE 0/1 RED'); process.exit(1);
     }
     const okAt = new Map();
     for (const [x, y, what, isField] of (c1.pointCheck || [])) okAt.set(x + ',' + y, [what, isField]);
+    /* ⛔ THE PAINT STACK AT EVERY SCORED POINT — PRINTED, NOT SUMMARISED. A point can be legitimately
+       scoreable and still be under three layers you forgot about; that is exactly how the key light
+       was smothered in silence. §81.22: name every layer, or the number describes the layer. */
+    console.log('\n──── PAINT STACK AT EACH SAMPLE POINT (outermost first) — scored points included ────');
+    for (const [x, y, , isField, stack] of (c1.pointCheck || [])) {
+      console.log(`   x=${x} y=${y}  ${isField ? 'SCORED' : 'NOT SCORED'}  — ${(stack || []).length} painting layer(s)`);
+      for (const s of (stack || [])) console.log(`      · ${s}`);
+    }
     const occluded = (c1.pointCheck || []).filter((p) => !p[3]);
     if (occluded.length) {
       console.log('\n⛔ OCCLUDED SAMPLE POINTS — NOT THE FIELD, NOT SCORED, NOT HIDDEN:');
@@ -666,6 +972,11 @@ function report(title, res) {
     for (const x of COLS) {
       console.log(`\n──── VERTICAL GROUND PROFILE — ${PAGE}, column x=${x} ────`);
       for (const [y, rgb] of columnProfile(A, x, ys)) {
+        if (rgb === null) {
+          console.log(`   y=${String(y).padStart(4)}  ⛔ OFF-CAPTURE (viewport is ${VW}x${VH}) — NO NUMBER REPORTED`);
+          if (TARGET && TARGETS[TARGET] && TARGETS[TARGET][y]) { legs++; fails++; }
+          continue;
+        }
         let line = `   y=${String(y).padStart(4)}  rgb(${rgb.join(',')})`;
         const chk = okAt.get(x + ',' + y);
         if (chk && !chk[1]) { console.log(line + '   ⛔ OCCLUDED (' + chk[0] + ') — NOT SCORED'); continue; }
@@ -715,14 +1026,25 @@ function report(title, res) {
   }
 
   const landed = [];
-  const srvA = await serve(PORT_A, null, landed);
+  /* ⭐ --apply APPLIES A *FORWARD* SET TO PORT_A — THE SHIPPED SIDE — SO A PROPOSAL CAN BE MEASURED
+     BEFORE IT IS AUTHORED, WITHOUT A BYTE MOVING ON DISK. It exists because `studio.html` is SACRED:
+     trialling a position by editing the file would cost a pin bump and a full build PER TRIAL, which
+     is exactly the tax that makes people trial nothing and author from intuition.
+     ⛔ IT IS NOT A REVERT AND IT IS NOT A SHIP. A number taken under --apply describes a page THAT
+        DOES NOT EXIST YET, and must be quoted with the flag beside it or it is quoted wrong. */
+  const applySet = APPLY ? (REVERTS[APPLY] || null) : null;
+  if (APPLY && !applySet) { console.log(`SCORE 0/0 RED — no set named "${APPLY}" for --apply`); process.exit(2); }
+  const srvA = await serve(PORT_A, applySet ? makeTransform(applySet) : null, landed);
   const srvB = await serve(PORT_B, MODE === 'null' ? null : makeTransform(set), landed);
 
   console.log(`MODE: ${MODE}${MODE === 'null' ? '  (same tree on both ports — this MUST read 0)' : `  revert set "${setName}"`}`);
   console.log(`PROFILE: ${VW}x${VH} · ${ENTER ? 'ENTERED Studio (landing overlay dismissed)' : 'cold Studio (landing overlay UP — it scrims + blurs; see capture())'} · signed-out · headless chromium · off-origin aborted`);
 
-  const A = await capture(PORT_A, chromium);
-  const B = await capture(PORT_B, chromium);
+  /* --page now reaches the DIFFERENTIAL modes too. It did not, so every edge/area/dlit run silently
+     measured studio.html no matter what --page said — an argument accepted and ignored is worse than
+     one rejected, because the report carries the page name you asked for. */
+  const A = await capture(PORT_A, chromium, PAGE);
+  const B = await capture(PORT_B, chromium, PAGE);
   srvA.close(); srvB.close();
 
   /* ⛔ THE POISON MUST PROVE IT LANDED — before any pixel number is believed. */
@@ -766,8 +1088,20 @@ function report(title, res) {
       console.log('\n🔑 %moved separates "a weak light over the whole panel" from "a strong light on one');
       console.log('   corner". A single scalar cannot, and the centre sample could see neither.');
     } else {
-      /* EDGE — walk outward from the light's authored centre and print the falloff as a curve. */
-      const cx = Math.round(VW * 0.70), cy = Math.round(VH * 0.15);
+      /* EDGE — walk outward from the light's authored centre and print the falloff as a curve.
+         ⛔ THE CENTRE MUST BE ELEMENT-RELATIVE WHEN THE LIGHT IS, AND OURS NOW IS. A radial declared
+            `at 62% 18%` resolves against THE BOX IT IS DECLARED ON, so a viewport-relative centre
+            would walk the ray from the wrong pixel and report a curve for a place the light is not.
+         🔑 THAT IS THE SAME LAW THAT MADE `transparent 24%` SHRINK 22% WHEN REPARENTED: A PERCENTAGE
+            IS A CLAIM ABOUT A BOX. The instrument has to honour it or it measures a different light. */
+      let cx = Math.round(VW * 0.70), cy = Math.round(VH * 0.15);
+      if (CENTER_EL) {
+        const r = A.rects.find((q) => q.sel === CENTER_EL);
+        if (!r) { console.log(`\n⛔ --center-el="${CENTER_EL}" HAS NO BOX on ${PAGE}. NO CURVE REPORTED.`); console.log('SCORE 0/1 RED'); process.exit(1); }
+        const [fx, fy] = CENTER_FRAC.split(',').map(Number);
+        cx = Math.round(r.x + fx * r.w); cy = Math.round(r.y + fy * r.h);
+        console.log(`\n   centre resolved against ${CENTER_EL} box (x=${Math.round(r.x)} y=${Math.round(r.y)} w=${Math.round(r.w)} h=${Math.round(r.h)}) at ${fx * 100}%/${fy * 100}%`);
+      }
       console.log(`\n──── FALLOFF ALONG A RAY FROM THE LIGHT CENTRE (${cx},${cy}) ────`);
       console.log('   Answers the "is it a blob" question, which is an EDGE question and not a');
       console.log('   brightness one — an alpha change cannot fix an edge.');
@@ -804,8 +1138,24 @@ function report(title, res) {
   }
   if (MODE === 'selftest') {
     if (res.total > 10000) { console.log('\n✅ SELFTEST — the differ BITES (a field-wide poison moved a large, localised area).'); console.log('SCORE 1/1 GREEN'); process.exit(0); }
-    console.log('\n⛔ SELFTEST FAILED — a poison that repainted the page field moved almost nothing.');
-    console.log('   THE DIFFER IS BROKEN. Every number it has printed is void.');
+    /* ⛔⛔ THIS MESSAGE USED TO SAY, FLATLY, "THE DIFFER IS BROKEN. Every number it has printed is
+       void." IT SAID THAT TO ME ON 2026-08-20 AND IT WAS FALSE — the differ was measuring 951,717
+       px correctly on another revert set in the same session. THE POISON HAD GONE DEAF, NOT THE
+       DIFFER (see the selftest revert set for the mechanism).
+       🔑 A CONTROL THAT FAILS FOR TWO POSSIBLE REASONS AND NAMES ONLY ONE MANUFACTURES A FINDING —
+          the same class as the moat gate's calendar red (§81), which would have sent a wirer
+          investigating a CORRECT mortgage room. AND THIS DIRECTION IS THE EXPENSIVE ONE: it
+          invites you to throw away every good number you hold.
+       ⇒ IT NAMES BOTH CAUSES AND TELLS YOU HOW TO SEPARATE THEM. */
+    console.log('\n⛔ SELFTEST FAILED — a poison aimed at the page ground moved almost nothing.');
+    console.log('   TWO CAUSES PRODUCE THIS, AND THEY NEED OPPOSITE RESPONSES. DO NOT ASSUME EITHER:');
+    console.log('   (a) THE DIFFER IS BROKEN  — every number it has printed is void.');
+    console.log('   (b) THE POISON NO LONGER REACHES THE GROUND — the differ is fine and this set is stale.');
+    console.log('       A `count` guard CANNOT tell you which: it proves a string was SUBSTITUTED,');
+    console.log('       never that the substitution CHANGED A PIXEL. LANDING IS NOT BITING.');
+    console.log('   SEPARATE THEM:  --mode=differential --revert=stage --i-ran-null-first');
+    console.log('       a large diff there = the differ works ⇒ (b), and this set needs re-aiming at');
+    console.log('       whatever layer paints the ground TODAY. Re-aim the poison; never lower the bar.');
     console.log('SCORE 0/1 RED'); process.exit(1);
   }
   console.log('\n⚖️  DIFFERENTIAL ONLY. This is half the proof (§81.12). Pair it with --mode=absolute');
