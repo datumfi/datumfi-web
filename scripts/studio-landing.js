@@ -54,13 +54,29 @@ function _studioPhaseSpine() {
        the behaviour shipped in 8024786. Flagged for a ruling rather than inferred, because the
        inference (upkeep/income/climate/datum all drive the Shape) is plausible and unverified, and
        a plausible unverified default is how this file got its last three defects. */
-    { id: 'data',         numeral: 'I',   letter: 'D', name: 'DATA',         desc: 'Set the Ground.',         sec: 'sec-profile',  canvas: 'shape' },
-    { id: 'architecture', numeral: 'II',  letter: 'A', name: 'ARCHITECTURE', desc: 'Define the Mass.',        sec: 'sec-drafting', canvas: 'estate' },
-    { id: 'tension',      numeral: 'III', letter: 'T', name: 'TENSION',      desc: 'Apply the Pressure.',     sec: 'sec-upkeep' },
-    { id: 'uncertainty',  numeral: 'IV',  letter: 'U', name: 'UNCERTAINTY',  desc: 'Structure the Noise.',    sec: 'sec-income-layer' },
-    { id: 'measurement',  numeral: 'V',   letter: 'M', name: 'MEASUREMENT',  desc: 'Reveal the Range.',       sec: 'sec-climate' },
-    { id: 'alignment',    numeral: 'VI',  letter: 'A', name: 'ALIGNMENT',    desc: 'Order the Estate.',       sec: null },
-    { id: 'endurance',    numeral: 'VII', letter: 'E', name: 'ENDURANCE',    desc: 'Carry the Horizon.',      sec: 'sec-datum' }
+    /* 🖊️ THE THREE-LINE GRAMMAR, CAPTAIN-AUTHORED AND WIRED VERBATIM (§82.4, confirmed 2026-08-20):
+       `name` = THE PHASE (the method's own word) · `desc` = THE VERB (poetic, italic — what the
+       phase DOES to the structure) · `plain` = THE PLAIN NOUN (mono caps — what a cold user will
+       actually find in the room).
+       🔑🔑 BRANDED -> POETIC -> CRYSTAL CLEAR, IN THAT ORDER, EVERY CARD. A user who knows the
+       method reads line 1; a user who has never heard of us reads line 3 and still knows what is
+       behind the card. NOBODY IS EXCLUDED AND NOTHING IS DUMBED DOWN.
+       ⛔ `numeral` IS RETIRED FROM THE CARDS (Captain-ruled 2026-08-20: "too much to have numbers
+       AND roman numerals... lean into only 4, feels less imposing than 7"). It stays in the DATA
+       because the phase's ordinal is a fact about the method, not about this markup — the same
+       reason mv.glyph and mv.expr survived their own removals. THE CARDS RENDER `letter` AS A
+       DROP-CAP INSTEAD.
+       ⚠️ `desc` FOR DATA CHANGED: 'Set the Ground.' -> 'Establish the Baseline.' §82.5 struck the
+       old line because REVEAL was already Measurement's verb and TWO PHASES CANNOT SHARE THE
+       PRODUCT'S STRONGEST VERB; 'baseline' is the truer word for a phase whose job is to fix a
+       starting point. */
+    { id: 'data',         numeral: 'I',   letter: 'D', name: 'DATA',         desc: 'Establish the Baseline.', plain: 'THE STARTING POINT',                sec: 'sec-profile',  canvas: 'shape' },
+    { id: 'architecture', numeral: 'II',  letter: 'A', name: 'ARCHITECTURE', desc: 'Define the Mass.',        plain: 'ACCOUNTS AND ASSETS',               sec: 'sec-drafting', canvas: 'estate' },
+    { id: 'tension',      numeral: 'III', letter: 'T', name: 'TENSION',      desc: 'Apply the Pressure.',     plain: 'SPENDING AND OBLIGATIONS',          sec: 'sec-upkeep' },
+    { id: 'uncertainty',  numeral: 'IV',  letter: 'U', name: 'UNCERTAINTY',  desc: 'Structure the Noise.',    plain: 'SOCIAL SECURITY AND PENSION TIMING', sec: 'sec-income-layer' },
+    { id: 'measurement',  numeral: 'V',   letter: 'M', name: 'MEASUREMENT',  desc: 'Reveal the Range.',       plain: 'THOUSANDS OF POSSIBLE FUTURES',     sec: 'sec-climate' },
+    { id: 'alignment',    numeral: 'VI',  letter: 'A', name: 'ALIGNMENT',    desc: 'Order the Estate.',       plain: 'ACCOUNT WITHDRAWAL STRATEGY',       sec: null },
+    { id: 'endurance',    numeral: 'VII', letter: 'E', name: 'ENDURANCE',    desc: 'Carry the Horizon.',      plain: 'SUSTAINABLE RETIREMENT SPENDING',   sec: 'sec-datum' }
   ];
 }
 
@@ -75,10 +91,25 @@ function _studioMovements() {
        untouched: THE GROUPING IS THE ARGUMENT, THE VERBS ARE THE WAYFINDING.
        ⚠️ All four are caps for consistency — he wrote "Live it" in sentence case, and it is all four
        or none, never mixed. Flagged for him to overrule. */
-    { numeral: 'I',   glyph: '',  expr: '(D + A)', label: 'BUILD IT', phases: ['data', 'architecture'] },
-    { numeral: 'II',  glyph: '×', expr: '(T + U)', label: 'TEST IT',  phases: ['tension', 'uncertainty'] },
-    { numeral: 'III', glyph: '=', expr: 'M',       label: 'KNOW IT',  phases: ['measurement'] },
-    { numeral: 'IV',  glyph: '→', expr: '(A + E)', label: 'LIVE IT',  phases: ['alignment', 'endurance'] }
+    /* 🖊️ CAPTAIN-RULED 2026-08-20 AND THIS IS THE FINAL SET. Two things changed and both are
+       authored copy on a live surface, so neither was inferred:
+       ⛔ 'KNOW IT' IS RETIRED AND DOES NOT RETURN. The brand MEASURES; it does not claim knowledge.
+       ⛔ AND THE MAPPING MOVED: 'TEST IT' returns to (T + U) and 'SHAPE IT' takes M. The product
+          argument is the Captain's: (T + U) is where pressure and timing are APPLIED to the
+          structure — that is testing it — and M PRODUCES THE SHAPE, which is the product's own
+          noun. 🔑 SHAPE IT ON MEASUREMENT IS NOT A METAPHOR; IT IS THE PHASE LABELLED WITH THE
+          THING IT LITERALLY OUTPUTS.
+       ⚠️ THE MOCKUP AND SCREENSHOT SHOW 02 SHAPE / 03 TEST — THE OPPOSITE. They are the
+          tweaking-in-progress; this is the settled answer, confirmed explicitly. THE ARTIFACT WAS
+          OLDER THAN THE DECISION, WHICH IS WHY THIS WAS ASKED RATHER THAN READ OFF THE PICTURE.
+       ⭐ `num` is the pillar's own 01-04, printed. `sub` is its sub-label — Foundation · Forces ·
+          Form · Framework, an F-family escalating from material to system.
+       ⭐ `tone` IS BY POSITION, NOT BY LABEL (§82.2: the gradient runs across the four MOVEMENTS).
+          So swapping the two labels leaves the colours where they are — Captain-confirmed. */
+    { numeral: 'I',   num: '01', glyph: '',  expr: '(D + A)', label: 'BUILD IT', sub: 'FOUNDATION', tone: 'teal',   phases: ['data', 'architecture'] },
+    { numeral: 'II',  num: '02', glyph: '×', expr: '(T + U)', label: 'TEST IT',  sub: 'FORCES',     tone: 'violet', phases: ['tension', 'uncertainty'] },
+    { numeral: 'III', num: '03', glyph: '=', expr: 'M',       label: 'SHAPE IT', sub: 'FORM',       tone: 'blue',   phases: ['measurement'] },
+    { numeral: 'IV',  num: '04', glyph: '→', expr: '(A + E)', label: 'LIVE IT',  sub: 'FRAMEWORK',  tone: 'gold',   phases: ['alignment', 'endurance'] }
   ];
 }
 
@@ -163,6 +194,24 @@ function _phaseAriaLabel(phase, done) {
   return pretty + (done ? ' — answered' : ' — not yet');
 }
 
+/* 🖊️ THE SEVEN ICONS — LIFTED VERBATIM FROM `datumae_studio_framework_v13.html`, THE CAPTAIN'S OWN
+   DESIGN FILE, AND NOT REDRAWN. He named two specifically (the HOURGLASS for Uncertainty, the
+   histogram for Measurement) and an icon redrawn from a description is an icon nobody authored.
+   ⛔ PATHS COPIED CHARACTER FOR CHARACTER. If one ever looks wrong, diff it against v13 before
+      editing it — the mockup is the source and this is the copy. */
+function _studioPhaseIcon(id) {
+  var d = {
+    data: '<path d="M8 18L25 8l17 10-17 10L8 18Z"/><path d="M8 27l17 10 17-10M8 36l17 10 17-10"/>',
+    architecture: '<path d="M5 7h40v36H5zM18 7v36M32 7v36M5 19h40M5 31h40"/>',
+    tension: '<path d="M10 6v19M25 6v19M40 6v19M6 25h8M21 25h8M36 25h8M10 25l-4-4M10 25l4-4M25 25l-4-4M25 25l4-4M40 25l-4-4M40 25l4-4"/><path d="M5 39c11-9 19 8 29-1 5-5 9-3 12-1"/>',
+    uncertainty: '<path d="M12 8h26M14 11h22"/><path d="M12 42h26M14 39h22"/><path d="M16 11c0 7 3 11 9 14-6 4-9 8-9 14"/><path d="M34 11c0 7-3 11-9 14 6 4 9 8 9 14"/><path d="M20 17h10M21 34h8"/><path d="M25 24v4"/><circle cx="25" cy="30" r="1.2"/>',
+    measurement: '<path d="M6 42V10M6 42h38"/><rect x="12" y="28" width="4" height="14"/><rect x="19" y="21" width="4" height="21"/><rect x="26" y="16" width="4" height="26"/><rect x="33" y="24" width="4" height="18"/><path d="M10 34c4-8 9-13 14-13 6 0 8 10 13 10 3 0 6-2 9-6"/>',
+    alignment: '<path d="M12 7v36M25 7v36M38 7v36M6 17h12M19 32h12M32 20h12"/><circle cx="12" cy="17" r="5"/><circle cx="25" cy="32" r="5"/><circle cx="38" cy="20" r="5"/>',
+    endurance: '<path d="M25 5l17 7v13c0 10-7 17-17 21C15 42 8 35 8 25V12l17-7Z"/><path d="M25 14v22M16 25h18"/>'
+  }[id];
+  return d ? '<svg viewBox="0 0 50 50" aria-hidden="true">' + d + '</svg>' : '';
+}
+
 function _studioPhaseRowHTML(phase) {
   var done = _phaseComplete(phase.id);
   /* ⛔ THE "Not built yet" SUB-LINE IS GONE (§12.4 struck, Captain-ruled 2026-08-15) and ALIGNMENT
@@ -177,12 +226,25 @@ function _studioPhaseRowHTML(phase) {
      ⚠️ _phaseComplete STILL RUNS and `is-done` still lands on the row, because the ANSWERED /
      NOT YET state is still spoken through the authored aria-label (§12.5) and the predicate is the
      signal the spine will gate on later. 🔑 THE DOT WAS A RENDERING OF THE STATE, NOT THE STATE. */
+  /* ⛔ THE ROMAN NUMERAL IS GONE FROM THE CARD (Captain-ruled 2026-08-20). The card now opens with
+     the phase's INITIAL as a drop-cap, exactly as the design file does — `D`ATA, `A`RCHITECTURE.
+     Two numbering systems on one panel was the thing being removed; 01-04 stays on the pillars.
+     ⚠️ A11Y NOTE, FLAGGED NOT CHANGED: this button carries an authored `aria-label`, and an
+     aria-label OVERRIDES the element's inner text for a screen reader. So the verb and the plain
+     noun are NOT announced — the reader hears only _phaseAriaLabel's sentence. That was already
+     true of the verb before this commit; the third line joins it rather than creating the problem.
+     ⛔ IT IS NOT SILENTLY "FIXED" HERE: the aria-label is AUTHORED COPY (§12.5) and rewriting it
+     to fold in two more lines is an authoring decision, not a wiring one. Raised, not taken. */
   return '<button type="button" class="sl-phase' + (done ? ' is-done' : '') + '"'
        + ' data-phase="' + phase.id + '" onclick="_studioPhaseGo(\'' + phase.id + '\')"'
        + ' aria-label="' + _phaseAriaLabel(phase, done) + '">'
-       + '<span class="sl-numeral" aria-hidden="true">' + phase.numeral + '</span>'
-       + '<span class="sl-name">' + phase.name + '</span>'
+       + '<span class="sl-icon" aria-hidden="true">' + _studioPhaseIcon(phase.id) + '</span>'
+       + '<span class="sl-copy">'
+       + '<span class="sl-name"><span class="sl-initial">' + phase.letter + '</span>' + phase.name.slice(1) + '</span>'
        + '<span class="sl-desc">' + sub + '</span>'
+       + '<span class="sl-plain">' + phase.plain + '</span>'
+       + '</span>'
+       + '<span class="sl-chev" aria-hidden="true">&rsaquo;</span>'
        + '</button>';
 }
 
@@ -190,8 +252,9 @@ function _studioLandingHTML() {
   var spine = _studioPhaseSpine();
   var byId = {};
   spine.forEach(function (p) { byId[p.id] = p; });
-  var out = '<div class="sl-formula" aria-hidden="true">(D + A) &times; (T + U) = M &rarr; (A + E)</div>';
-  out += '<div class="sl-movements">';
+  /* The formula line is prepended at the END, after the spine wrapper is built around the
+     movements, so it sits ABOVE the spine rather than inside it. */
+  var out = '<div class="sl-movements">';
   _studioMovements().forEach(function (mv) {
     /* ⭐ NO OPERATOR GLYPH — Captain-ruled 2026-08-14 along with the bracket rules. The formula is
        printed in full one line above, so the × + = → restated it a second time in a weaker form.
@@ -203,14 +266,32 @@ function _studioLandingHTML() {
        under the line that already prints it whole. THE FORMULA IS STATED ONCE, AT THE TOP.
        mv.expr stays in the data for exactly the reason mv.glyph did — the movement's identity lives
        in the table, not in this markup, and the labels carry the grouping in words. */
-    out += '<div class="sl-movement">'
+    /* ⭐ data-tone CARRIES THE MOVEMENT'S COLOUR TO THE STYLESHEET RATHER THAN INLINING IT. The
+       gradient runs teal -> violet -> blue -> gold ACROSS THE FOUR MOVEMENTS (§82.2), so the tone
+       belongs to the POSITION and the CSS reads it off the attribute — which is why swapping two
+       labels leaves the colours alone. A colour inlined here would have travelled with the label. */
+    out += '<div class="sl-movement" data-tone="' + mv.tone + '">'
          + '<div class="sl-mv-head">'
-         + '<span class="sl-mv-label">' + mv.label + '</span></div>'
+         + '<span class="sl-mv-num" aria-hidden="true">' + mv.num + '</span>'
+         + '<span class="sl-mv-label">' + mv.label + '</span>'
+         + '<span class="sl-mv-sub">' + mv.sub + '</span></div>'
+         + '<div class="sl-cards">'
          + mv.phases.map(function (pid) { return _studioPhaseRowHTML(byId[pid]); }).join('')
-         + '</div>';
+         + '</div></div>';
   });
   out += '</div>';
-  return out;
+  /* ⛔ THE SPINE IS DECORATION AND IS MARKED AS SUCH — it draws the dependency chain as a line, the
+     single strongest thing in the donor, but it carries no information a screen reader needs that
+     the movement labels do not already speak.
+     ⛔⛔ THE DOT IS STATIC IN THIS COMMIT, DELIBERATELY. §82.7 ruled the ball/scroll mechanic is
+     WIRING, not colour, and lands AFTER the room split. A travelling dot needs scroll observation
+     and a notion of "where you are" that Step 3 is about to redefine — building it now would be
+     building it twice. AND IT MARKS WHERE YOU ARE, NEVER HOW FAR YOU HAVE GOT (§82.2): a dot that
+     implied completion would re-create the retired readiness bar by drawing. */
+  out = '<div class="sl-chain-wrap">'
+      + '<div class="sl-chain" aria-hidden="true"><span class="sl-dot"></span></div>'
+      + out + '</div>';
+  return '<div class="sl-formula" aria-hidden="true">(D + A) &times; (T + U) = M &rarr; (A + E)</div>' + out;
 }
 
 /* ⛔ THE ZERO-STATE LINE SHOWS AT ZERO ANSWERED PHASES AND DISAPPEARS THE MOMENT ANY PHASE IS
@@ -409,6 +490,16 @@ function _studioExitRoom() {
 }
 
 /* The landing's phase rows call this. Kept as the entry point so the markup contract does not move. */
+/* ⛔⛔ THIS NAVIGATION IS SINGLE-DOCUMENT AND IS SUPERSEDED BY REAL ROUTING AT STEP 3.
+ * It works by flipping ONE attribute — `#studio-layout[data-room="<phase>"]` — which the CSS
+ * spotlight in studio.html reads against each section's `[data-phase]`. That is why the spine can
+ * be wired today with no routing work: membership lives in the markup and this sets a flag.
+ * ⚠️⚠️ AND IT ASSUMES ALL SEVEN SECTIONS SHARE ONE DOM. Step 3's plan of record is that each phase
+ * becomes AN ACTUAL PAGE ("do not declare the split done while studio.html is still the host").
+ * SEVEN PAGES DO NOT SHARE ONE DOM, SO setAttribute('data-room') DIES THE DAY THAT LANDS — not by
+ * breaking loudly, but by setting an attribute nothing is listening to any more.
+ * 🔑 A MECHANISM WITH A KNOWN EXPIRY IS FINE; AN UNDATED ONE BECOMES A SURPRISE. This is the note,
+ *    and Step 3 is the date. ⇒ Whoever does that split owns replacing this with real navigation. */
 function _studioPhaseGo(id) { _studioEnterRoom(id); }
 
 /* Repaint. Cheap and idempotent — the landing is derived entirely from live state, so it is safe to

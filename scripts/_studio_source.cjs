@@ -92,7 +92,13 @@ const PARTS = [
   /* ⭐ THE THIRD PART, REGISTERED 2026-08-13 — STEP 1, THE LANDING. Born as a part rather than as
      more inline studio.html because the landing becomes its own surface at Step 3: written from day
      one to be consumed by a page that is not studio.html. */
-  'scripts/studio-landing.js'
+  'scripts/studio-landing.js',
+  /* ⭐ THE FOURTH PART, REGISTERED 2026-08-20 — the panel resizer. Shell infrastructure: it owns the
+     drafting panel's width and its disclosure tier, and it SURVIVES Step 3 unchanged because the
+     shell is what the phase pages will be served from. Registered so the pairing is inspectable by
+     a gate, and tagged in studio.html's head so _gate_parts_wired can prove the page loads it —
+     REGISTRATION IS NOT WIRING, and both halves are reported separately. */
+  'scripts/studio-panel-resize.js'
 ];
 
 const PART_OPEN  = (rel) => '/* ═════ studioSource PART BEGIN · ' + rel + ' ═════ */';

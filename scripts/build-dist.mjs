@@ -27,7 +27,7 @@ const SACRED = {
      CLAUDE.md in this same commit. Sacred on a stricter rule than the rest: its absence removes a
      regulatory disclosure from every page at once. */
   'scripts/datum-footer.js': 'df30b3bd8562fb963d976ea892f94815',   // the paragraph + the three rights links read --text-muted; the 4.51:1 floor-margin is retired and the anchors get the underline the two controls beside them already had (2026-08-16)
-  'studio.html': 'd28b77c4f585c056b7a876173b954957',   // §82.15 THE SURFACE PORT: proto2 `.right` ported to .canvas-wrapper as ONE object — 7 layers, 7 background-sizes, both inset shadows, ::before AND ::after. The key light leaves `body` entirely: a global light with surfaces stacked over it was the defect (12% transmission, d=(2,3,3) vs an authored (15,33,24)). D's 76/19 grid lands inside this port because splitting a positional background-size list is the hazard, not the schedule (2026-08-20)
+  'studio.html': '9d83f06e4526d2490da38a4b365e16af',   // §82.15 THE SURFACE PORT: proto2 `.right` ported to .canvas-wrapper as ONE object — 7 layers, 7 background-sizes, both inset shadows, ::before AND ::after. The key light leaves `body` entirely: a global light with surfaces stacked over it was the defect (12% transmission, d=(2,3,3) vs an authored (15,33,24)). D's 76/19 grid lands inside this port because splitting a positional background-size list is the hazard, not the schedule (2026-08-20)
   'sketch.html': '68e2951ad895b64abca5ff0fa1e6353b',   // (0b) the last --font-serif shadow deleted; Georgia is promoted into styles/typography.css instead (2026-08-16)
   /* §47.3 — SACRED as of 2026-08-13, declared in CLAUDE.md IN THIS SAME COMMIT. The two lists are
      reconciled by this build in BOTH directions, so a host added to one and not the other STOPS
@@ -42,7 +42,7 @@ const SACRED = {
   'scripts/studio-debt-cost.js': 'df016d73c4a45117681577a5b064f9ed',   // the monthly carrying cost of a debt — extracted from studio.html:9487-9504 (2026-08-13)
   /* STEP 1 — the landing. SACRED because it owns the completeness predicate: a wrong answer here
      tells the user a phase of the method is finished when it is not, on the front door. */
-  'scripts/studio-landing.js': '235950924c0f12908df94c9bb769f5b9',   // §28.2 the canvas follows the room's own controls; the ghost plan is retired (2026-08-15)
+  'scripts/studio-landing.js': '38cc2241aad6814cb8b5502fff258903',   // §82.20 THE SPINE LANDING — 7 three-line cards with icons, 4 pillars (BUILD/TEST/SHAPE/LIVE), the gradient spine; roman numerals retired from the cards (2026-08-20)
   'scripts/studio-blueprint.js': 'ff6f3cddc2dc687dcda8aa05657c135f',   // Part 24/25 — readDossier() session-gated at the READ (4 callers) + the boot-draft invariant in _persistDraft (2026-08-15)
   // MISS-5 pre-work guard (2026-07-25). nav.js is a Sacred Host in CLAUDE.md but was absent from THIS map,
   // so a bad edit failed no build. It owns the centralized cross-device restore every page depends on

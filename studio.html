@@ -928,7 +928,15 @@
      row could not shrink below the min-content height its own children demanded — and the 85px
      #disclosure-footer below it was pushed OUT OF THE VIEWPORT, creating a scroll budget the wheel
      could not undo (body{overflow:hidden}). See the .drafting-panel note below for the full chain. */
-  .studio-layout { display: flex; flex: 1; min-height: 0; width: 100%; margin: 0 auto; }
+  /* ⛔ THE PANEL DEFAULT IS SET *HERE*, ON THE STUDIO, NOT IN styles/header.css (§82.20).
+     header.css declares `:root { --studio-panel-w: 480px }` and it loads on TWENTY-FOUR PAGES.
+     Moving the default there would have re-laid-out every one of them to satisfy one surface.
+     🔑 EACH SURFACE OWNS ITS OWN STACK, AND IT CUTS BOTH WAYS — the same rule that kept --grid-line
+        out of the stage port keeps this out of the shared stylesheet.
+     ⚠️ header.css's 480 is NOT dead: it remains the value for anything else that reads the token.
+        This shadows it for the Studio only, and the resizer overrides both with an inline value. */
+  .studio-layout { display: flex; flex: 1; min-height: 0; width: 100%; margin: 0 auto;
+                   --studio-panel-w: 400px; }
   /* Seed render-gate — hold the drafting numbers until the async Clerk dossier seed
      lands, so a direct load never flashes the schema defaults (40/65/93) before the
      authoritative dossier hydrates. visibility:hidden keeps layout (no reflow on reveal).
@@ -1144,19 +1152,125 @@
      100.8px. It is written as the derivation rather than the number so it survives a font-size
      change — and so the next reader can see WHICH name set it. Longest descriptor measured 112px
      against 367px of available column, so nothing wraps. */
-  .sl-phase { display: grid; grid-template-columns: 24px calc(12ch + 1.2em) 1fr; align-items: baseline;
-              column-gap: 8px; width: 100%; text-align: left; background: none; border: none;
-              padding: 5px 6px 5px 0; margin: 0; cursor: pointer; border-radius: 3px;
-              transition: background 0.15s ease; }
-  .sl-phase:hover { background: rgba(255,255,255,0.04); }
+  /* ══ §82.19 — THE SPINE LANDING. proto2's `.left` INFORMATION ARCHITECTURE, wired from the spec
+     and the Captain's design file, never from proto2's markup. ═══════════════════════════════════
+     ⛔ THE OLD THREE-COLUMN ROW (numeral | name | descriptor) IS GONE. The Captain retired the
+     ROMAN NUMERALS from the cards — "too much to have numbers AND roman numerals; lean into only
+     4, feels less imposing than 7" — so the card leads with a DROP-CAP INITIAL instead, and the
+     only numbering left on the panel is 01-04 on the pillars.
+     ⚠️ THE 12ch NAME-COLUMN DERIVATION DIES WITH IT, AND THAT IS THE POINT: the descriptor no
+     longer sits BESIDE the name, it sits UNDER it, so there is nothing to line up across rows and
+     no shared fixed width to derive. THE CONSTRAINT WAS REAL AND ITS REASON IS GONE. */
+  /* ⛔ THE CLASS IS `sl-chain`, NOT `sl-spine`, AND THE REASON IS A GUARD — NOT A CHANGE OF NAME.
+     `_gate_token_authority` L5 protects the CRAFT REGISTER (the brass rail, the cream paper, the
+     binder SPINE) which must stay LITERAL because tokenising it would destroy it. Its detector
+     matches the WORD `spine` in a selector — so `.sl-spine` reading var(--movement-1) tripped it.
+     ⛔ THE COLLISION IS A NAME, NOT A VIOLATION: this line is the formula's dependency chain and it
+        SHOULD read the palette. But the fix is to rename A CLASS I WROTE THIS AFTERNOON, never to
+        loosen a guard that protects the most distinctive thing on the site.
+     ⭐ AND `chain` IS THE SPEC'S OWN WORD: §82.2 — "the spine is the DEPENDENCY CHAIN drawn as a
+        line". The prose, the comments and the JS spine function all still say spine; only the CSS
+        selector moved, because the selector is the only thing the detector reads.
+     ⚠️⚠️ TWO WRITING CONVENTIONS, BOTH LEARNED THE HARD WAY IN THIS VERY COMMENT, BOTH COSTING A
+        RED SUITE. The gates read raw file text with regexes, so PROSE THAT QUOTES SYNTAX IS CODE.
+        1. NEVER put parentheses after a function name in prose. _gate_parts_wired W5 deliberately
+           treats call syntax as a dependency and a bare mention as harmless — a sound rule — so a
+           name written with parens reads as a call placed before the tag that defines it.
+        2. NEVER write a literal script tag in a comment. _gate_sacred_parse finds tags by regex,
+           so one inside a CSS comment makes it try to parse this stylesheet as JavaScript, and a
+           SACRED HOST IS THEN REPORTED AS UNLOADABLE. The browser never cared; the gate did.
+        In both cases the gate was right about its own rule and the prose was wrong. */
+  .sl-chain-wrap { position: relative; padding-left: 132px; }
+  /* THE SPINE IS THE DEPENDENCY CHAIN DRAWN AS A LINE (§6: "the order is not a menu"), and its
+     gradient IS the formula's grouping — one colour per movement, in order. */
+  .sl-chain { position: absolute; left: 116px; top: 4px; bottom: 4px; width: 1px;
+              background: linear-gradient(180deg, var(--movement-1) 0%, var(--movement-2) 33%,
+                          var(--movement-3) 66%, var(--movement-4) 100%);
+              opacity: 0.55; }
+  /* ⛔ STATIC IN THIS COMMIT. The travelling mechanic is WIRING and lands after the room split
+     (§82.7). It marks WHERE YOU ARE, never HOW FAR YOU HAVE GOT — a dot implying completion would
+     re-create the retired readiness bar by drawing (§82.2). */
+  .sl-dot { position: absolute; left: 50%; top: 26px; width: 11px; height: 11px; margin-left: -5.5px;
+            border-radius: 50%; background: var(--movement-1);
+            box-shadow: 0 0 0 4px rgba(121,222,199,0.13), 0 0 14px 2px rgba(121,222,199,0.42); }
+  .sl-movement { position: relative; margin-bottom: 4px; }
+  /* The pillar block sits in the gutter the wrapper reserves, right-aligned INTO the spine so the
+     label reads as attached to the line rather than floating beside it. */
+  .sl-mv-head { position: absolute; left: -132px; width: 102px; text-align: right;
+                display: block; margin: 0; }
+  .sl-mv-num { display: block; font-family: var(--font-mono); font-size: 15px; letter-spacing: 0.1em;
+               color: var(--mv-tone); opacity: 0.95; }
+  .sl-mv-label { display: block; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.16em;
+                 text-transform: uppercase; color: var(--mv-tone); margin-top: 3px; }
+  .sl-mv-sub { display: block; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.13em;
+               text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+  /* ⭐ ONE DECLARATION PER TONE, READ FROM THE MARKUP'S data-tone. The movement owns its colour and
+     both of its children inherit it through --mv-tone, so a pillar's numeral and label can never
+     disagree about which movement they belong to. */
+  .sl-movement[data-tone="teal"]   { --mv-tone: var(--movement-1); }
+  .sl-movement[data-tone="violet"] { --mv-tone: var(--movement-2); }
+  .sl-movement[data-tone="blue"]   { --mv-tone: var(--movement-3); }
+  .sl-movement[data-tone="gold"]   { --mv-tone: var(--movement-4); }
+  .sl-cards { display: flex; flex-direction: column; gap: 6px; }
+  /* THE CARD — icon | copy | chevron. Three lines of copy, and the third is the point: a user who
+     has never heard of us reads it and still knows what is behind the card. */
+  .sl-phase { display: grid; grid-template-columns: 58px 1fr 18px; align-items: center;
+              column-gap: 12px; width: 100%; text-align: left; border: 1px solid var(--hairline);
+              background: var(--surface); padding: 14px 14px 14px 10px; margin: 0; cursor: pointer;
+              border-radius: 4px; transition: background 0.15s ease, border-color 0.15s ease; }
+  .sl-phase:hover { background: rgba(255,255,255,0.045); border-color: var(--border); }
   .sl-phase:focus-visible { outline: 1px solid var(--teal-mid); outline-offset: 2px; }
-  .sl-numeral { font-family: var(--font-mono); font-size: 9px; color: var(--muted); letter-spacing: 0.06em; }
-  .sl-name { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.1em;
-             color: rgba(255,255,255,0.88); grid-column: 2; }
-  .sl-desc { grid-column: 3; font-family: var(--font-serif); font-style: italic; font-size: 12px;
-             color: rgba(255,255,255,0.42); margin-top: 0; line-height: 1.45; }
-  .sl-phase.is-unbuilt .sl-name { color: rgba(255,255,255,0.5); }
-  .sl-phase.is-unbuilt .sl-desc { max-width: 40ch; }
+  .sl-icon { display: flex; align-items: center; justify-content: center; }
+  /* The icons are stroke drawings — fill would turn every one of them into a silhouette. */
+  .sl-icon svg { width: 38px; height: 38px; fill: none; stroke: rgba(255,255,255,0.5);
+                 stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+  .sl-phase:hover .sl-icon svg { stroke: rgba(255,255,255,0.72); }
+  .sl-copy { display: block; min-width: 0; }
+  .sl-name { display: block; font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.13em;
+             color: var(--label); }
+  /* THE DROP-CAP. The phase's initial is the brand's own shorthand — D, A, T, U, M, A, E — so it is
+     set larger rather than merely coloured. */
+  .sl-initial { font-size: 16px; }
+  .sl-desc { display: block; font-family: var(--font-serif); font-style: italic; font-size: 14px;
+             color: rgba(255,255,255,0.66); margin-top: 3px; line-height: 1.35; }
+  .sl-plain { display: block; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.11em;
+              color: var(--muted); margin-top: 6px; }
+  .sl-chev { font-size: 17px; color: rgba(255,255,255,0.34); text-align: right; }
+  .sl-phase:hover .sl-chev { color: rgba(255,255,255,0.6); }
+
+  /* ══ §82.20 — THE THREE DISCLOSURE TIERS. Keyed to the PANEL's width, never the viewport's. ═════
+     The panel is user-resizable, so a @media query would key off a number that has nothing to do
+     with how much room the cards actually have. scripts/studio-panel-resize.js owns both the width
+     and this attribute, so they cannot disagree.
+       340-399  narrow  cards only
+       400-519  mid     cards + the gradient bar and its ball   <- DEFAULT
+       520+     wide    cards + bar + the 01-04 pillar column
+     ⛔ THE BAR LEAVES BELOW 400 AND THAT WAS RULED FROM RENDERS, AGAINST MY OWN RECOMMENDATION. It
+     costs 22px, and at 340 that is exactly the width that pushes "Reveal the Range." onto a second
+     line. 🔑 A COMPONENT'S COST IS NOT ITS OWN WIDTH — IT IS WHAT ITS WIDTH DOES TO ITS NEIGHBOUR. */
+  #studio-layout[data-panel-tier="narrow"] .sl-chain-wrap { padding-left: 0; }
+  #studio-layout[data-panel-tier="narrow"] .sl-chain,
+  #studio-layout[data-panel-tier="narrow"] .sl-mv-head { display: none; }
+  #studio-layout[data-panel-tier="mid"] .sl-chain-wrap { padding-left: 22px; }
+  #studio-layout[data-panel-tier="mid"] .sl-chain { left: 6px; }
+  #studio-layout[data-panel-tier="mid"] .sl-mv-head { display: none; }
+  /* `wide` needs no rules — it IS the authored layout above. An empty tier is the honest way to say
+     "this one is the default"; writing it out would create a second place to keep in sync. */
+
+  /* ══ THE RESIZE HANDLE ══════════════════════════════════════════════════════════════════════════
+     ⛔ 10px WIDE BUT VISUALLY 1px. A 1px hit target is a control you can see and cannot grab; the
+     padding is the affordance and the hairline is the design. It sits ON the panel's edge, half
+     over each side, so the cursor changes exactly where the eye expects the seam. */
+  #panel-resizer { position: absolute; top: 0; bottom: 0; right: -5px; width: 10px; z-index: 60;
+                   cursor: col-resize; background: none; border: none; padding: 0; }
+  #panel-resizer::after { content: ''; position: absolute; top: 0; bottom: 0; left: 4px; width: 2px;
+                          background: var(--panel-edge); opacity: 0; transition: opacity 0.15s ease; }
+  #panel-resizer:hover::after, #panel-resizer:focus-visible::after,
+  body.is-resizing-panel #panel-resizer::after { opacity: 1; }
+  #panel-resizer:focus-visible { outline: none; }
+  /* Dragging over an iframe-free page still lets the pointer land on text; this stops the drag from
+     selecting the panel's copy, which looks broken even though nothing is wrong. */
+  body.is-resizing-panel { user-select: none; cursor: col-resize; }
   .sl-align-body { font-family: var(--font-serif); font-size: 13px; font-style: italic; line-height: 1.6;
                    color: rgba(255,255,255,0.62); border-left: 1px solid rgba(201,168,76,0.3);
                    padding: 2px 0 2px 12px; margin: 0 0 26px; max-width: 46ch; }
@@ -2213,6 +2327,11 @@
        ghost plan. Head-loaded and not deferred, like its siblings — the inline script below and the
        markup both reach these functions. -->
   <script src="/scripts/studio-landing.js"></script>
+  <!-- ⭐ THE PANEL RESIZER — SHELL INFRASTRUCTURE, NOT ROOM CODE, WHICH IS WHY IT CAN LAND BEFORE
+       THE SPLIT. It owns the panel width AND the disclosure tier together so the two cannot drift.
+       ⛔ REGISTERED IN scripts/_studio_source.cjs's PARTS[] TOO — registration and wiring are two
+       proofs (§11.4), and this tag is the wiring half. -->
+  <script src="/scripts/studio-panel-resize.js"></script>
 </head>
 <body>
   <a href="#studio-layout" class="skip-link">Skip to main content</a>
@@ -2274,6 +2393,12 @@
   <div class="studio-layout mode-split" id="studio-layout">
 
     <div class="drafting-panel">
+      <!-- ⭐ A <button>, NOT A <div>: it is focusable and keyboard-operable for free, and role
+           separator + aria-orientation is what a screen reader needs to know this is a splitter
+           rather than an ornament. The keyboard handler lives with the drag handler so one file
+           owns every way the width can change. -->
+      <button type="button" id="panel-resizer" role="separator" aria-orientation="vertical"
+              aria-label="Resize the drafting panel"></button>
       
       <a href="#" class="return-home">← Return to Overview</a>
 

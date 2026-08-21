@@ -56,6 +56,15 @@
    *    (--accent, --border, --hairline) and repointing it would have recoloured surfaces nobody
    *    ruled on. A NEW PAINT HAS A BLAST RADIUS OF EXACTLY ITS CONSUMERS. */
   --paint-seafoam:        #79DEC7;                    /* proto2's stage accent — (121,222,199) */
+  /* 🆕 THE SPINE'S SECOND MOVEMENT COLOUR (§82.19, 2026-08-20). ⛔ ADDED BECAUSE WE OWN NO VIOLET
+   * AT ALL — every other pillar tone maps onto a paint we already have, and this one had nowhere to
+   * land. Value is the design file's own (`--test:#8178d7` in datumae_studio_framework_v13).
+   * ⚠️ AND ITS NAME IN THE DONOR IS A TRAP WORTH RECORDING: `--test` reads as a DEBUG token and was
+   *    ruled "do not port" on that basis. MEASURED: `.stage-label.test{color:var(--test)}` — it is
+   *    the AUTHORED colour of pillar 02, and dropping it would have left that pillar unpainted and
+   *    broken the spine gradient's second stop. THE NAME WAS A LEFTOVER FROM WHEN 02 WAS CALLED
+   *    "TEST IT"; renamed here for what it IS, not what it was called. */
+  --paint-amethyst:       #8178D7;                    /* the spine's second movement — (129,120,215) */
   --paint-inkwell:        #091221;                    /* the page field behind everything */
 
   /* ── ⚙️ ROLE · WHAT THE COLOUR IS FOR ───────────────────────────────────────────────────────
@@ -197,6 +206,21 @@
      ruling the whole panel, so the grid reads as drafting paper near the title and disappears
      behind the content. */
   --panel-grid-mask: linear-gradient(180deg, rgba(0,0,0,0.72), rgba(0,0,0,0.24) 70%, transparent);
+
+  /* ── 🧭 THE FOUR MOVEMENT TONES (§82.19) — THE SPINE'S GRADIENT, BY POSITION ────────────────
+   * teal -> violet -> blue -> gold ACROSS THE FOUR MOVEMENTS (§82.2), so the gradient IS the
+   * formula's grouping. ⛔ THE TONE BELONGS TO THE POSITION, NOT TO THE LABEL — which is why the
+   * Captain's 02/03 label swap left these untouched. The markup carries `data-tone` and the CSS
+   * reads it; a colour inlined beside a label would have travelled with it.
+   * ⚠️ 03 AND 04 REUSE PAINTS WE ALREADY OWN RATHER THAN IMPORTING THE DESIGN FILE'S NEAR-DUPLICATES
+   *    (its blue #7ac0ff vs our cyanotype #64B4FF; its gold #d5ad63 vs our brass #C9A84C). Same
+   *    hues, and importing both would have left the palette with two blues and two golds for no
+   *    design reason. ⛔ STATED SO IT IS A CHOICE, NOT A DRIFT: if the exact screenshot values are
+   *    wanted, that is two more paints and one ruling — it is not a thing to discover later. */
+  --movement-1:  var(--paint-seafoam);
+  --movement-2:  var(--paint-amethyst);
+  --movement-3:  var(--paint-cyanotype);
+  --movement-4:  var(--paint-brass);
 
   /* ⛔ --grid-line IS DELIBERATELY *NOT* REPOINTED AT SEAFOAM, AND THIS IS A RULING COLLISION I AM
    * RESOLVING IN THE OPEN RATHER THAN SILENTLY. proto2's minor grid is teal at 4.5%; ours is

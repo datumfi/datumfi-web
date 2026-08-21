@@ -301,6 +301,48 @@ const REVERTS = {
   nolift: [
     { file: 'studio.html', find: '  .drafting-panel > * { position: relative; z-index: 1; }', replace: '  .drafting-panel > * { }', count: 1 },
   ],
+  /* ⭐ widepanel — A LAYOUT PROPOSAL, MEASURED BEFORE IT IS RULED. The Captain's design file sets
+     its left panel to clamp(620px,38vw,760px); ours is 480px, which is why the card's third line
+     wraps. Widening trades canvas width for panel width and that is a product decision, not a
+     wiring one — so this renders it rather than arguing it. */
+  widepanel: [
+    /* ⛔ AIMED AT header.css, NOT studio.html. The first version poisoned studio.html's
+       \ FALLBACK — which never fires, because header.css:7 DEFINES
+       the token. The guard reported 'expected 1, matched 1' and the render was byte-identical:
+       LANDING IS NOT BITING, caught by an md5 rather than by trust. */
+    { file: 'styles/header.css', find: ':root { --studio-panel-w: 480px; }', replace: ':root { --studio-panel-w: ' + (process.env.PANEL_W || '620') + 'px; }', count: 1 },
+  ],
+  /* ⭐ narrowspine — TESTS THE CAPTAIN'S OWN HYPOTHESIS: at a narrow panel, DROP the 01-04 pillar
+     column and keep the seven cards, so the cards get the whole width instead of ~60% of it.
+     ⛔ THIS IS A PROPOSAL RENDERED, NOT A DESIGN RULED. It exists so the choice is made from a
+     picture rather than from an argument about one. */
+  /* ⭐ romannum — PREVIEW ONLY: the Captain asked to SEE the roman numerals returned to the cards
+     now that the 01-04 pillar column is gone, in a small ring. Nothing here is authored — it is a
+     picture to rule on. Adds the numeral to the MARKUP (a CSS-only preview could not, since the
+     numeral was removed from the render) plus a ring treatment in the movement's own tone. */
+  romannum: [
+    { file: 'scripts/studio-landing.js',
+      find: "       + '<span class=\"sl-icon\" aria-hidden=\"true\">' + _studioPhaseIcon(phase.id) + '</span>'",
+      replace: "       + '<span class=\"sl-rn\" aria-hidden=\"true\">' + phase.numeral + '</span>' + '<span class=\"sl-icon\" aria-hidden=\"true\">' + _studioPhaseIcon(phase.id) + '</span>'", count: 1 },
+    { file: 'studio.html', find: '  .sl-phase:hover .sl-chev { color: rgba(255,255,255,0.6); }', replace: '  .sl-phase:hover .sl-chev { color: rgba(255,255,255,0.6); } .sl-spine-wrap { padding-left: 0; } .sl-mv-head { display: none; } .sl-spine { display: none; } .sl-movement { margin-bottom: 6px; } .sl-phase { grid-template-columns: 26px 46px 1fr 16px; column-gap: 9px; padding-left: 8px; } .sl-rn { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--mv-tone); color: var(--mv-tone); font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.04em; opacity: 0.85; } .sl-icon svg { width: 32px; height: 32px; }', count: 1 },
+    { file: 'styles/header.css', find: ':root { --studio-panel-w: 480px; }', replace: ':root { --studio-panel-w: ' + (process.env.PANEL_W || '340') + 'px; }', count: 1 },
+  ],
+  /* ⭐ barspine — THE MIDDLE TIER. Hides the 01-04 LABELS but KEEPS the gradient bar and its dot,
+     so the four-movement grouping still reads in colour at a narrow panel without the numerals
+     competing with the icons. Costs ~22px of card width against the ring's ~35px, and unlike the
+     ring it carries the gradient itself. PREVIEW ONLY — a picture to rule on. */
+  barspine: [
+    { file: 'studio.html', find: '  .sl-phase:hover .sl-chev { color: rgba(255,255,255,0.6); }', replace: '  .sl-phase:hover .sl-chev { color: rgba(255,255,255,0.6); } .sl-spine-wrap { padding-left: 22px; } .sl-mv-head { display: none; } .sl-spine { left: 6px; } .sl-movement { margin-bottom: 6px; }', count: 1 },
+    { file: 'styles/header.css', find: ':root { --studio-panel-w: 480px; }', replace: ':root { --studio-panel-w: ' + (process.env.PANEL_W || '340') + 'px; }', count: 1 },
+  ],
+  narrowspine: [
+    /* ⛔ INJECTED AT THE *END* OF THE LANDING BLOCK, NOT THE START. The first version anchored on
+       .sl-spine-wrap — EARLIER in source than .sl-mv-head — so at equal specificity the later
+       display:block won and the column rendered CLIPPED at the panel edge instead of hidden.
+       🔑 A CASCADE OVERRIDE THAT LOSES ON SOURCE ORDER LOOKS LIKE A DESIGN OUTCOME. */
+    { file: 'studio.html', find: '  .sl-phase:hover .sl-chev { color: rgba(255,255,255,0.6); }', replace: '  .sl-phase:hover .sl-chev { color: rgba(255,255,255,0.6); } .sl-spine-wrap { padding-left: 0; } .sl-mv-head { display: none; } .sl-spine { display: none; } .sl-movement { margin-bottom: 6px; }', count: 1 },
+    { file: 'styles/header.css', find: ':root { --studio-panel-w: 480px; }', replace: ':root { --studio-panel-w: ' + (process.env.PANEL_W || '400') + 'px; }', count: 1 },
+  ],
   proto2key: [
     { file: 'proto2.html', find: '    radial-gradient(circle at 62% 18%,rgba(121,222,199,.085),transparent 29%),\n', replace: '', count: 1 },
   ],
@@ -843,6 +885,26 @@ function report(title, res) {
           }
           return [...out].sort().join(',');
         })(),
+        /* 🖊️ THE PILLARS, READ FROM THE RENDERED DOM — LABEL, SUB-LABEL, NUMERAL, TONE, AND THE
+           PHASES EACH ONE CONTAINS. ⛔ NOT A COUNT: four pillars would be four either way, and the
+           defect this exists for is a LABEL MOVING BETWEEN MOVEMENTS — which is exactly what
+           happened (TEST IT and SHAPE IT were authored onto the wrong halves, and 'KNOW IT' shipped
+           live after being withdrawn). A COUNT-BASED GATE CANNOT SEE EITHER. */
+        pillars: (() => {
+          return [...document.querySelectorAll('.sl-movement')].map((m) => {
+            const q = (c) => { const e = m.querySelector(c); return e ? e.textContent.trim() : ''; };
+            return [q('.sl-mv-num'), q('.sl-mv-label'), q('.sl-mv-sub'), m.getAttribute('data-tone'),
+              [...m.querySelectorAll('.sl-phase')].map((b) => b.getAttribute('data-phase')).join('+')].join('|');
+          }).join('  ');
+        })(),
+        panelTier: (() => { const l = document.getElementById('studio-layout'); return l ? l.getAttribute('data-panel-tier') : ''; })(),
+        panelW: (() => { const e = document.querySelector('.drafting-panel'); return e ? Math.round(e.getBoundingClientRect().width) : -1; })(),
+        resizer: !!document.getElementById('panel-resizer'),
+        tierFn: (() => { const f = window._studioPanelTierFor; return f ? [339, 340, 399, 400, 519, 520, 760].map((w) => w + ':' + f(w)).join(' ') : 'ABSENT'; })(),
+        cardLines: (() => { const b = document.querySelector('.sl-phase[data-phase="data"]'); if (!b) return '';
+          const q = (c) => { const e = b.querySelector(c); return e ? e.textContent.trim() : ''; };
+          return [q('.sl-name'), q('.sl-desc'), q('.sl-plain')].join(' | '); })(),
+        romanOnCards: document.querySelectorAll('.sl-phase .sl-rn, .sl-phase .sl-numeral').length,
         hudZ: (() => { const el = document.querySelector('.canvas-wrapper'); if (!el) return '';
           return [...el.querySelectorAll('*')].map((n) => parseInt(getComputedStyle(n).zIndex, 10))
             .filter((v) => !isNaN(v)).sort((x, y) => y - x).slice(0, 3).join(','); })(),
@@ -932,6 +994,28 @@ function report(title, res) {
       consumed.length > 0 && unlisted.length === 0,
       unlisted.length ? 'UNLISTED, ADD TO POISON_SURFACES: ' + unlisted.join(' ') + '  |  on body/.canvas-wrapper/.drafting-panel'
                       : consumed.length + ' consumed, all covered: ' + consumed.join(' '));
+    /* ══ §82.20 — THE SPINE LANDING. Authored copy on the front door, asserted as STRINGS. ═════ */
+    const PILLARS = '01|BUILD IT|FOUNDATION|teal|data+architecture  '
+                  + '02|TEST IT|FORCES|violet|tension+uncertainty  '
+                  + '03|SHAPE IT|FORM|blue|measurement  '
+                  + '04|LIVE IT|FRAMEWORK|gold|alignment+endurance';
+    ok('L16 the four pillars — label, sub-label, tone AND their phase pairings, exactly',
+      facts.pillars === PILLARS, facts.pillars || '(none rendered)');
+    ok('L17 "KNOW IT" is retired and appears nowhere on the landing',
+      !/KNOW IT/.test(facts.pillars), facts.pillars.indexOf('KNOW IT') < 0 ? 'absent' : 'STILL PRESENT');
+    ok('L18 the DATA card renders all THREE lines (phase | verb | plain noun)',
+      facts.cardLines === 'DATA | Establish the Baseline. | THE STARTING POINT', facts.cardLines);
+    /* ⛔ THE NUMERALS WERE REMOVED FROM THE CARDS BY RULING, SO THEIR ABSENCE IS AN ASSERTION.
+       A removal nobody guards is a removal somebody re-adds. */
+    ok('L19 no numeral of any kind on the cards (Captain-ruled removal)',
+      facts.romanOnCards === 0, facts.romanOnCards + ' numeral element(s) found');
+    /* ══ THE PANEL TIERS — the width and the tier come from ONE writer, so assert BOTH together. */
+    ok('L20 the panel defaults to 400px and reports the matching tier',
+      facts.panelW === 400 && facts.panelTier === 'mid', 'w=' + facts.panelW + ' tier=' + facts.panelTier);
+    ok('L21 the tier thresholds are exactly 340/400/520 at their boundaries',
+      facts.tierFn === '339:narrow 340:narrow 399:narrow 400:mid 519:mid 520:wide 760:wide', facts.tierFn);
+    ok('L22 the resize handle exists and is a real control',
+      facts.resizer, facts.resizer ? 'present' : 'MISSING');
     ok('L10 the vignette is on the STAGE as ::after, not on body (§82.8 relocation)',
       /gradient/.test(facts.afterBg) && !/radial-gradient\(circle at 50% 50%/.test(facts.bodyBgImage),
       'after=' + facts.afterBg.slice(0, 42) + '  bodyHasVignette=' + /circle at 50% 50%/.test(facts.bodyBgImage));

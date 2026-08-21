@@ -85,7 +85,23 @@ const PAGES = new Set(tracked.filter((f) => /\.html$/i.test(f) && !f.startsWith(
 const STYLES = tracked.filter((f) => /^styles\/.*\.css$/i.test(f));
 
 // ── shared tokens = what the canonical styles file(s) declare ────────────────────────────────
-const rootBlocks = (src) => src.match(/:root\s*\{[^}]*\}/g) || [];
+/* ⛔⛔ COMMENTS ARE STRIPPED FIRST, AND THIS IS THE SECOND HALF OF A SWEEP I LEFT UNFINISHED.
+ * EARLIER THE SAME DAY, L5's craft scan was fixed for exactly this: it read PROSE as CSS. I fixed
+ * that scan and DID NOT SWEEP THE REST OF THIS FILE — and hours later this parser bit, on my own
+ * comment.
+ * THE MECHANISM: `[^}]*` ends the :root block at the FIRST `}`, so ONE BRACE INSIDE A COMMENT
+ * TRUNCATES THE BLOCK AND HIDES EVERY TOKEN BELOW IT. A comment in tokens.css quoting a CSS rule —
+ * `.stage-label.test{color:var(--test)}` — cut the palette from 60+ tokens to 23. --gold, --label
+ * and the movement tones all became INVISIBLE, so L3's chain-walk terminated at --gold, picked a
+ * file that does not declare it, and reported 0/14 pages following a poison that was never rooted.
+ * ⛔ THE PRODUCT WAS NEVER AFFECTED: the browser parses comments correctly, and the CSSOM confirmed
+ *    every token resolving. THE RED WAS ENTIRELY THE INSTRUMENT'S.
+ * 🔑 THE DANGEROUS DIRECTION IS THE OTHER ONE: a truncated block means FEWER tokens seen, so L1
+ *    (one source per token) and L2 (no page re-shadows) both had a SMALLER POPULATION TO JUDGE and
+ *    would have gone green over a token they could no longer see.
+ * ⇒ FIX THE PARSER, NOT THE COMMENT. A gate that a sentence can blind is a gate with a footnote. */
+const stripComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, ' ');
+const rootBlocks = (src) => stripComments(src).match(/:root\s*\{[^}]*\}/g) || [];
 const declsIn = (block) => [...block.matchAll(/(--[A-Za-z0-9_-]+)\s*:\s*([^;]+);/g)]
   .map((m) => [m[1], m[2].trim()]);
 
