@@ -147,6 +147,132 @@ function readParts(rels) {
   });
 }
 
+/* ══ STRIP COMMENTS — A TOKENIZER, BECAUSE A REGEX CANNOT DO THIS ══════════════════════════════
+ * ⛔⛔ THE DEFECT CLASS: every matcher in this harness reads TEXT, and a comment that QUOTES code is
+ * indistinguishable from code to a text matcher. Measured at Move 1a: a part-file header quoting
+ * `window.openAccountModal = function` made extractWindowFn return 217 characters of PROSE.
+ * _gate_extract hit the identical hole in 2026-08-08, and _gate_studio_source's own header records
+ * it flagging THIS FILE twice. 🔑 A RESOLVER THAT READS PROSE AS CODE WILL EVENTUALLY FIND A DEFECT
+ * SOMEBODY ONLY DESCRIBED.
+ *
+ * ── ⭐ WHY ONE SHARED IMPLEMENTATION, MEASURED BEFORE IT WAS WRITTEN ────────────────────────────
+ * THREE private strippers already existed and they were NOT equivalent — the same shape as `$`
+ * defined 23 times. Measured on the composed source (1,775,534 chars):
+ *     _gate_token_authority.js   length NOT preserved, lines NOT kept, 319,094 chars lost
+ *     _gate_studio_source.mjs    length NOT preserved, lines kept,     196,319 chars lost
+ *     _gate_property_18_10.mjs   length preserved,     lines kept,           0 lost
+ * ⛔ THE VIABILITY TEST IS OFFSET PRESERVATION, AND ONLY ONE OF THE THREE PASSED IT. extractWindowFn
+ * and partSurface report POSITIONS; a stripper that shortens the string silently shifts every
+ * position downstream and returns plausible text the whole way. The cheapest-looking of the three
+ * was the only one that could not be used at all.
+ *
+ * ── ⛔ AND THE BEST OF THE THREE WAS STILL WRONG — CHECKED AGAINST A PARSER, NOT AGAINST TASTE ──
+ * Validated against espree's true comment ranges over 2,084 real comments: 0 code bytes altered,
+ * but 12 COMMENTS LEFT STANDING. Three measured causes, all of which this tokenizer handles and a
+ * quote-only state machine cannot:
+ *     1. a REGEX LITERAL containing a quote — `.replace(/"/g, '&quot;')` opened a phantom string
+ *        and swallowed every comment until the next quote (studio.html 7594, 11741)
+ *     2. TEMPLATE `${...}` INTERPOLATION with nested quotes (9424, 9614)
+ *     3. escaped quotes inside concatenated strings (10119)
+ * 🔑 "IT IS THE BEST ONE WE HAVE" AND "IT IS CORRECT" ARE DIFFERENT CLAIMS, AND ONLY AN INDEPENDENT
+ *    ORACLE CAN TELL THEM APART. scripts/_oracle_strip_comments.mjs is that oracle, kept in the repo
+ *    and out of the suite; the fixture battery in _gate_studio_source is the permanent regression.
+ *
+ * ⚠️ TWO RESIDUALS, AND THEY ARE NOT THE SAME KIND OF THING. A comment left standing is a FALSE
+ * POSITIVE — loud, the gate reds, somebody looks. A code byte altered is a FALSE NEGATIVE — the
+ * matcher judges a SMALLER population and goes green over what it can no longer see. Never sum them.
+ *
+ * ⚠️ IT IS A FILTER, NOT THE WHOLE ANSWER. extractWindowFn and partSurface ALSO require a definition
+ * to start a line. Two filters are worth having only because they fail in DIFFERENT places: this one
+ * misses nothing the parser sees but is a tokenizer over HTML+JS; line-start is trivially correct but
+ * blind to a comment whose line begins at column zero. Two filters that fail in the same place are
+ * one filter and a false sense of depth.
+ * @param {string} src any text — HTML, JS, or the composed source
+ * @returns {string} the same text, byte-for-byte in length, with comment interiors blanked
+ */
+const _RX_OK_CHARS = new Set(['(', ',', '=', ':', '[', '!', '&', '|', '?', '{', ';', '+', '-', '*', '%', '^', '~', '\n']);
+const _RX_OK_WORDS = new Set(['return', 'typeof', 'instanceof', 'in', 'of', 'new', 'delete', 'void',
+  'case', 'do', 'else', 'yield', 'await', 'throw']);
+
+/** Is the `/` at `i` the start of a regex literal rather than a division? */
+function _regexAllowedAt(src, i) {
+  let j = i - 1;
+  while (j >= 0 && /\s/.test(src[j])) j--;
+  if (j < 0) return true;
+  const c = src[j];
+  if (/[A-Za-z0-9_$]/.test(c)) {
+    let k = j;
+    while (k >= 0 && /[A-Za-z0-9_$]/.test(src[k])) k--;
+    return _RX_OK_WORDS.has(src.slice(k + 1, j + 1));
+  }
+  /* ⛔ `<` AND `>` ARE EXCLUDED ON PURPOSE. This runs over the COMPOSED source — HTML plus
+     concatenated JS — where `</div>` and `/>` appear on nearly every line of markup. Allowing a
+     regex after `<` would open a phantom regex at every closing tag. The cost is that
+     `a < /re/.test(b)` is missed; that shape does not occur here and is vanishingly rare anywhere. */
+  /* ⭐ BUT `=>` IS AN ARROW, NOT A COMPARISON, AND `(s) => /re/.test(s)` IS EVERYWHERE. Excluding
+     `>` wholesale broke that idiom — caught by the oracle over scripts/, never by the one block. */
+  if (c === '>') return j > 0 && src[j - 1] === '=';
+  if (c === '<') return false;
+  if (c === ')' || c === ']' || c === '}') return false;
+  return _RX_OK_CHARS.has(c);
+}
+
+function stripComments(src) {
+  let out = '';
+  let mode = 'code', quote = null, inClass = false, braceDepth = 0;
+  const tplStack = [];
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i], n = src[i + 1];
+    if (mode === 'code') {
+      if (c === '/' && n === '/') { out += '  '; i++; mode = 'line'; continue; }
+      if (c === '/' && n === '*') { out += '  '; i++; mode = 'block'; continue; }
+      if (c === '/' && _regexAllowedAt(src, i)) { out += c; mode = 'regex'; inClass = false; continue; }
+      if (c === '"' || c === "'") { out += c; mode = 'str'; quote = c; continue; }
+      if (c === '`') { out += c; mode = 'tpl'; continue; }
+      if (c === '{') { braceDepth++; out += c; continue; }
+      if (c === '}') {
+        if (tplStack.length && braceDepth === 0) { braceDepth = tplStack.pop(); out += c; mode = 'tpl'; continue; }
+        braceDepth = Math.max(0, braceDepth - 1); out += c; continue;
+      }
+      out += c; continue;
+    }
+    /* ⛔ `\r` IS A LINE TERMINATOR AND IS **NOT** PART OF THE COMMENT. Blanking it altered a real
+       code byte in every CRLF file in the repo — the SILENT direction, and invisible until the
+       oracle ran over a population wider than one LF-only block. */
+    if (mode === 'line') { if (c === '\n' || c === '\r') { mode = 'code'; out += c; } else out += ' '; continue; }
+    if (mode === 'block') {
+      if (c === '*' && n === '/') { out += '  '; i++; mode = 'code'; continue; }
+      out += (c === '\n' ? '\n' : ' '); continue;
+    }
+    if (mode === 'str') {
+      if (c === '\\') { out += c + (n === undefined ? '' : n); i++; continue; }
+      out += c;
+      /* A string cannot cross a newline. Bailing at the line end BOUNDS the damage of a misread
+         quote to one line instead of letting it swallow the rest of the file — which is exactly
+         what the old stripper did at 7594. */
+      if (c === quote || c === '\n') { mode = 'code'; quote = null; }
+      continue;
+    }
+    if (mode === 'tpl') {
+      if (c === '\\') { out += c + (n === undefined ? '' : n); i++; continue; }
+      if (c === '$' && n === '{') { out += '${'; i++; tplStack.push(braceDepth); braceDepth = 0; mode = 'code'; continue; }
+      out += c;
+      if (c === '`') mode = 'code';
+      continue;
+    }
+    if (mode === 'regex') {
+      if (c === '\\') { out += c + (n === undefined ? '' : n); i++; continue; }
+      if (c === '\n') { out += c; mode = 'code'; inClass = false; continue; }   // a regex cannot span lines
+      out += c;
+      if (c === '[') inClass = true;
+      else if (c === ']') inClass = false;
+      else if (c === '/' && !inClass) mode = 'code';
+      continue;
+    }
+  }
+  return out;
+}
+
 /* ══ EXTRACT A `window.NAME = function` DEFINITION — POSITION-INDEPENDENT BY CONSTRUCTION ═══════
  * ⛔⛔ THE DEFECT THIS EXISTS TO MAKE IMPOSSIBLE, STATED AS THE FAILURE IT PRODUCES:
  * MOVE A FUNCTION INTO A REGISTERED PART AND EVERY GATE THAT SLICED IT BETWEEN TWO ANCHORS GOES
@@ -186,10 +312,18 @@ function extractWindowFn(s, name) {
      ⭐ AND IT IS ASSERTED AS A POPULATION, NOT A FIRST-HIT. Zero throws, two throws — never a silent
      pick between them. That is the `$`-defined-23-times lesson applied one layer down: a name is not
      a population. */
+  /* ⭐ TWO INDEPENDENT FILTERS, AND THEY FAIL IN DIFFERENT PLACES — which is the only reason to have
+     two. The comment stripper is oracle-exact but is a tokenizer over HTML+JS; the line-start rule
+     is trivially correct but blind to a comment whose line begins at column zero. Either alone
+     would have caught the Move-1a header; neither alone is enough for the next one.
+     ⛔ SEARCH THE STRIPPED TEXT, SLICE THE ORIGINAL. stripComments is length-preserving, so every
+     offset found in `scan` is valid in `s`. That is the whole reason length preservation is an
+     asserted invariant (T10) and not a nicety. */
+  const scan = stripComments(s);
   const hits = [];
-  for (let k = s.indexOf(anchor); k >= 0; k = s.indexOf(anchor, k + 1)) {
-    const lineStart = s.lastIndexOf('\n', k) + 1;
-    if (/^[ \t]*$/.test(s.slice(lineStart, k))) hits.push(k);
+  for (let k = scan.indexOf(anchor); k >= 0; k = scan.indexOf(anchor, k + 1)) {
+    const lineStart = scan.lastIndexOf('\n', k) + 1;
+    if (/^[ \t]*$/.test(scan.slice(lineStart, k))) hits.push(k);
   }
   if (hits.length === 0) {
     throw new Error('extractWindowFn: no definition of window.' + name + ' in the Studio source — ' +
@@ -200,10 +334,13 @@ function extractWindowFn(s, name) {
       'refusing to guess which one the caller meant.');
   }
   const i = hits[0];
+  /* ⛔ THE BRACE WALK ALSO RUNS ON THE STRIPPED TEXT. A `{` inside a comment with no matching `}`
+     would otherwise unbalance the walk and run it off the end of the function — a latent defect in
+     the raw-source version that nothing had tripped yet. */
   let depth = 0, opened = false;
-  for (let j = s.indexOf('{', i); j < s.length; j++) {
-    if (s[j] === '{') { depth++; opened = true; }
-    else if (s[j] === '}') {
+  for (let j = scan.indexOf('{', i); j < scan.length; j++) {
+    if (scan[j] === '{') { depth++; opened = true; }
+    else if (scan[j] === '}') {
       depth--;
       if (opened && depth === 0) return s.slice(i, j + 1) + ';';
     }
@@ -240,3 +377,8 @@ exports.readParts = readParts;
    re-open this in four of them. Pure (string in, string out) so a gate can drive it with a
    synthetic composed string and exercise the inversion for real. */
 exports.extractWindowFn = extractWindowFn;
+/* THE ONE STRIPPER. Three private copies preceded it and disagreed; only one of the three preserved
+   offsets, and even that one left 12 real comments standing. Validated by
+   scripts/_oracle_strip_comments.mjs (opt-in, out of the suite) and regression-locked by the
+   fixture battery in _gate_studio_source (in the suite, zero dependencies). */
+exports.stripComments = stripComments;

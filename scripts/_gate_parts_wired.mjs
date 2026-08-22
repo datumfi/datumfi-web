@@ -94,13 +94,21 @@ const ck = (label, cond, note) => {
  *  stayed green. That is this gate's own defect, reproduced on this gate, by a new part shape.
  *  🔑 AN AUDITOR THAT ONLY KNOWS THE SHAPES IT HAS ALREADY SEEN GOES QUIET ON THE FIRST NEW ONE —
  *     and quiet reads exactly like clean.
- *  ⚠️ BOTH PATTERNS ARE TEXT MATCHES AND NEITHER STRIPS COMMENTS, so a comment quoting a definition
- *  at line start would be counted. That exposure is pre-existing and identical for both forms; it
- *  closes with the §82.24 comment-stripping helper, not here. */
+ *  ⭐ ~~"BOTH PATTERNS ARE TEXT MATCHES AND NEITHER STRIPS COMMENTS… that exposure closes with the
+ *  §82.24 helper, not here."~~ CLOSED 2026-08-22 — the helper landed and this is now the SECOND
+ *  filter's call site. Struck rather than deleted so nobody re-derives the gap.
+ *  ⚠️ The two filters are kept BOTH because they fail in different places: the stripper is
+ *  oracle-exact but is a tokenizer over HTML+JS; line-start is trivially correct but blind to a
+ *  comment whose line begins at column zero. Two filters that fail in the same place are one filter
+ *  and a false sense of depth. */
 export function partSurface(text) {
+  /* ⭐ SECOND FILTER (§82.24, 2026-08-22): comments are stripped before matching, so a header that
+     QUOTES a definition cannot be counted as one. The line-start rules below are the FIRST filter
+     and stay — the two fail in different places, which is the only reason to have both. */
+  const src = stripComments(text);
   const out = [];
-  for (const m of text.matchAll(/^[ \t]{0,6}function[ \t]+([A-Za-z_$][\w$]*)[ \t]*\(/gm)) out.push(m[1]);
-  for (const m of text.matchAll(/^[ \t]{0,6}window\.([A-Za-z_$][\w$]*)[ \t]*=[ \t]*(?:async[ \t]+)?function\b/gm)) out.push(m[1]);
+  for (const m of src.matchAll(/^[ \t]{0,6}function[ \t]+([A-Za-z_$][\w$]*)[ \t]*\(/gm)) out.push(m[1]);
+  for (const m of src.matchAll(/^[ \t]{0,6}window\.([A-Za-z_$][\w$]*)[ \t]*=[ \t]*(?:async[ \t]+)?function\b/gm)) out.push(m[1]);
   return [...new Set(out)];
 }
 
@@ -155,7 +163,7 @@ export function auditPages(parts, pages) {
 /* ══ THE REAL REPO ══════════════════════════════════════════════════════════════════════════════ */
 /* pathToFileURL, not a bare path: on Windows an absolute path starts "C:" and the ESM loader reads
    that as an unsupported URL scheme. _gate_studio_source.mjs resolves its own import the same way. */
-const { PART_RELS, readParts } = await import(pathToFileURL(path.join(REPO, 'scripts/_studio_source.cjs')).href);
+const { PART_RELS, readParts, stripComments } = await import(pathToFileURL(path.join(REPO, 'scripts/_studio_source.cjs')).href);
 const REGISTERED = PART_RELS();
 
 /* -z so filenames with non-ASCII survive verbatim — git quotes them otherwise and the read ENOENTs

@@ -54,24 +54,18 @@ const ck = (n, ok, obs) => checks.push([n, !!ok, obs === undefined ? '' : String
    The first matcher skipped only lines STARTING with // or * — so a CONTINUATION line inside a
    block comment (no leading *) that merely DISCUSSED a read was counted as one. It flagged this very
    file twice: first on the POISON fixture, then on the comment explaining the POISON fixture.
-   _gate_extract.mjs fixed the identical hole on 2026-08-08, where a comment quoting "`function X(`"
-   made the walker synthesise a function nobody wrote out of two sentences nobody connected.
+   _gate_extract.mjs fixed the identical hole on 2026-08-08, where a comment quoting a function
+   definition made the walker synthesise a function nobody wrote out of two sentences nobody
+   connected.
    🔑 A RESOLVER THAT READS PROSE AS CODE WILL EVENTUALLY FIND A DEFECT SOMEBODY ONLY DESCRIBED.
-   Strip comments FIRST — quote-aware, so a // inside a string literal is not mistaken for one. */
-function stripComments(src) {
-  let out = '', i = 0, quote = null, block = false, line = false;
-  while (i < src.length) {
-    const c = src[i], d = src[i + 1];
-    if (block) { if (c === '*' && d === '/') { block = false; i += 2; continue; } out += c === '\n' ? '\n' : ' '; i++; continue; }
-    if (line) { if (c === '\n') { line = false; out += '\n'; } i++; continue; }
-    if (quote) { out += c; if (c === '\\') { out += d === undefined ? '' : d; i += 2; continue; } if (c === quote) quote = null; i++; continue; }
-    if (c === '/' && d === '*') { block = true; i += 2; continue; }
-    if (c === '/' && d === '/') { line = true; i += 2; continue; }
-    if (c === '"' || c === "'" || c === '`') { quote = c; out += c; i++; continue; }
-    out += c; i++;
-  }
-  return out;
-}
+   ⭐⭐ THE LOCAL COPY THAT USED TO LIVE HERE IS GONE (2026-08-22, §82.24). It was one of THREE private
+   strippers in scripts/ that disagreed with each other, and measured against espree it left 12 real
+   comments standing — a regex literal containing a quote (`.replace(/"/g, ...)`) opened a phantom
+   string and swallowed everything after it. Those 12 holes were IN THIS GATE. The shared tokenizer
+   in _studio_source.cjs is oracle-validated over 12,553 comments and regression-locked by T1-T11
+   below. ⛔ DO NOT RE-ADD A LOCAL COPY: a stripper per gate is a stripper per opinion. */
+const helperUrl = pathToFileURL(path.join(REPO, HELPER_REL)).href;
+const { studioSource, STUDIO_PATH, compose, PART_RELS, readParts, extractWindowFn, stripComments } = await import(helperUrl);
 
 const isReader = (src) =>
   stripComments(src).split('\n').find((l) => l.includes('studio.html') && READ_VERB.test(l));
@@ -147,8 +141,6 @@ ck('P5 SELF-CHECK — stripping comments does NOT hide a real read on a commente
    The whole safety argument for a 91-file diff is that studioSource() returns EXACTLY what those 90
    call sites used to read. That claim is machine-checked here rather than asserted in a commit
    message. */
-const helperUrl = pathToFileURL(path.join(REPO, HELPER_REL)).href;
-const { studioSource, STUDIO_PATH, compose, PART_RELS, readParts, extractWindowFn } = await import(helperUrl);
 const REGISTERED = PART_RELS();
 /* ⚠️ THE ONE DELIBERATE DIRECT READ IN THE REPO, AND A JUDGEMENT CALL I AM FLAGGING RATHER THAN
    BURYING. This gate CANNOT prove byte-identity by asking the helper twice — it needs an INDEPENDENT
@@ -329,6 +321,78 @@ try { extractWindowFn('window.__dup = function () { return 1; };\nwindow.__dup =
 catch (e) { dupThrew = true; dupMsg = String(e.message).slice(0, 56); }
 ck('R6f two definitions of one name THROW — the extractor refuses to guess',
    dupThrew, dupThrew ? dupMsg + '...' : 'it silently picked one — a name is not a population');
+
+/* ══ T1-T9 · THE COMMENT-STRIPPER FIXTURE BATTERY ══════════════════════════════════════════════
+   THE PERMANENT REGRESSION for stripComments(). scripts/_oracle_strip_comments.mjs proves the
+   tokenizer against espree over 12,553 real comments, but it needs a parser and the suite must stay
+   dependency-free. So the ORACLE proves it once, on demand, and THESE FIXTURES hold the line every
+   run — one per cause the oracle actually found, with zero dependencies.
+   🔑 EVERY FIXTURE BELOW IS A DEFECT THAT REALLY HAPPENED, not a shape somebody imagined. */
+const STRIP_CASES = [
+  /* The Move-1a defect itself: a comment QUOTING a live anchor. Unstripped it matches; stripped it
+     must not. This is the whole reason the helper exists. */
+  ['T1 a comment quoting a live anchor',
+    "/* the header says window.openAccountModal = function(id) is KEPT */\nwindow.realFn = function (a) { return a; };",
+    (s) => (s.match(/window\.\w+ = function/g) || []).length === 1],
+  /* MEASURED at studio.html 7594 and 11741: a regex literal containing a quote opened a phantom
+     string and swallowed every comment after it until the next quote. */
+  ['T2 regex literal containing a double quote',
+    "var v = String(x).replace(/\"/g, '&quot;');\n// this comment MUST be stripped\nvar after = 1;",
+    (s) => !/this comment MUST be stripped/.test(s) && /var after = 1;/.test(s)],
+  ['T3 regex literal containing a single quote',
+    "var v = String(x).replace(/'/g, '&#39;');\n// also MUST be stripped\nvar after = 2;",
+    (s) => !/also MUST be stripped/.test(s) && /var after = 2;/.test(s)],
+  /* MEASURED at 9424 and 9614. */
+  ['T4 template ${…} interpolation with nested quotes',
+    "var h = `<input value=\"${v(a.p)}\" oninput=\"f('${id}', 'p')\">`;\n/* MUST be stripped */\nvar after = 3;",
+    (s) => !/MUST be stripped/.test(s) && /var after = 3;/.test(s)],
+  /* MEASURED at 10119. */
+  ['T5 escaped quotes inside a concatenated string',
+    "var s = '\\\" oninput=\\\"f(\\'' + id + '\\')\\\"';\n/* MUST be stripped */\nvar after = 4;",
+    (s) => !/MUST be stripped/.test(s) && /var after = 4;/.test(s)],
+  /* MEASURED across every CRLF file in scripts/: \r is a terminator OUTSIDE the comment, and
+     blanking it altered a real code byte — the SILENT direction. */
+  ['T6 CRLF — the \\r after a line comment is code, not comment',
+    "// a comment\r\nvar after = 5;\r\n",
+    (s) => s.includes('\r\n') && /var after = 5;/.test(s) && !/a comment/.test(s)],
+  /* MEASURED in scripts/_gate_vehicle_name_map.js: excluding `>` for HTML tolerance also killed
+     the arrow-then-regex idiom, which is everywhere. */
+  ['T7 arrow function returning a regex test',
+    "list.some((s) => /^THE SLIP \\//.test(s));\n// MUST be stripped\nvar after = 6;",
+    (s) => !/MUST be stripped/.test(s) && /var after = 6;/.test(s)],
+  /* The HTML tolerance itself: this runs over the COMPOSED source, and `</div>` must not open a
+     phantom regex that swallows what follows. */
+  ['T8 markup — a closing tag does not open a regex',
+    "var h = '<div>x</div>';\n// MUST be stripped\nvar after = 7;",
+    (s) => !/MUST be stripped/.test(s) && /var after = 7;/.test(s)],
+  /* A // inside a string is NOT a comment — the URL case that makes a naive stripper eat a line. */
+  ['T9 a // inside a string literal is not a comment',
+    "var u = 'https://example.com/x';\nvar after = 8;",
+    (s) => /https:\/\/example\.com\/x/.test(s) && /var after = 8;/.test(s)],
+];
+let stripFails = [];
+for (const [name, input, pred] of STRIP_CASES) {
+  let outS = null, err = '';
+  try { outS = stripComments(input); } catch (e) { err = String(e.message).slice(0, 40); }
+  const lenOK = outS !== null && outS.length === input.length;
+  if (!lenOK || !pred(outS || '')) stripFails.push(name.split(' ')[0] + (err ? '(' + err + ')' : lenOK ? '' : '(LEN)'));
+}
+ck('T1-T9 ⭐ the comment stripper handles every cause the oracle found (9 fixtures)',
+   stripFails.length === 0,
+   stripFails.length ? 'FAILED: ' + stripFails.join(', ') : '9/9 — quoted anchor · regex-with-quote x2 · template interp · escaped concat · CRLF · arrow-regex · markup · url');
+/* ⛔ THE INVARIANT THE WHOLE OFFSET CONTRACT RESTS ON. extractWindowFn and partSurface report
+   POSITIONS; a stripper that changes length silently shifts every position downstream and returns
+   plausible text all the way. Two of the three strippers this replaced failed exactly here. */
+const stripLenOK = STRIP_CASES.every(([, i]) => stripComments(i).length === i.length) &&
+  stripComments(direct).length === direct.length;
+ck('T10 ⭐⭐ stripComments is LENGTH-PRESERVING on every fixture AND on studio.html itself',
+   stripLenOK, 'in === out for all ' + STRIP_CASES.length + ' fixtures and the ' + direct.length + '-char shell');
+/* ⛔ AND IT MUST BE ABLE TO SAY NO. Without this, T1-T9 could pass because the stripper blanks
+   everything, which would also "strip" every comment while destroying the code. */
+const nukeCheck = stripComments("var keepMe = 'literal';\n// gone\nvar alsoKeep = 2;");
+ck('T11 SELF-CHECK — the stripper KEEPS code (it is not passing by blanking everything)',
+   /var keepMe = 'literal';/.test(nukeCheck) && /var alsoKeep = 2;/.test(nukeCheck),
+   JSON.stringify(nukeCheck.replace(/\s+/g, ' ').trim().slice(0, 60)));
 
 /* A registered-but-missing part must THROW, never be skipped. A silently-dropped part hands every
    gate a string missing definitions they assert about. */

@@ -42,7 +42,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { lift } from './_gate_extract.mjs';
-import { studioSource } from './_studio_source.cjs';
+import { studioSource, stripComments } from './_studio_source.cjs';
 
 const argv = process.argv.slice(2);
 const DROPDECL = argv.includes('--dropdecl');
@@ -142,27 +142,15 @@ for (const o of owners) {
  * hard way that a resolver reading comments as code will eventually synthesise something nobody
  * wrote. studio.html discusses these very field names in prose all around their guards. The stripper
  * is then SELF-CHECKED below — if it eats code, the gate reds rather than passing vacuously. */
-function stripComments(s) {
-  let out = '', st = 'code', q = null;
-  for (let i = 0; i < s.length; i++) {
-    const c = s[i], n = s[i + 1];
-    if (st === 'code') {
-      if (c === '/' && n === '/') { st = 'line'; out += '  '; i++; continue; }
-      if (c === '/' && n === '*') { st = 'block'; out += '  '; i++; continue; }
-      if (c === '"' || c === "'" || c === '`') { st = 'str'; q = c; }
-      out += c;
-    } else if (st === 'line') {
-      if (c === '\n') { st = 'code'; out += c; } else out += ' ';
-    } else if (st === 'block') {
-      if (c === '*' && n === '/') { st = 'code'; out += '  '; i++; } else out += (c === '\n' ? c : ' ');
-    } else if (st === 'str') {
-      if (c === '\\') { out += c + (n === undefined ? '' : n); i++; continue; }
-      if (c === q) st = 'code';
-      out += c;
-    }
-  }
-  return out;
-}
+/* ⭐⭐ THE LOCAL STRIPPER THAT USED TO LIVE HERE IS GONE (2026-08-22, §82.24), REPLACED BY THE
+   SHARED TOKENIZER IN _studio_source.cjs. It was the BEST of the three private copies in scripts/ —
+   the only one that preserved length, which is the property this file's position-based span map
+   depends on. It was still wrong: measured against espree it left 12 real comments standing, because
+   a regex literal containing a quote opened a phantom string and swallowed every comment after it.
+   🔑 "IT IS THE BEST ONE WE HAVE" AND "IT IS CORRECT" ARE DIFFERENT CLAIMS, AND ONLY AN INDEPENDENT
+      ORACLE CAN TELL THEM APART — scripts/_oracle_strip_comments.mjs is that oracle.
+   ⚠️ The PRESENCE leg below (length preserved) is unchanged and still load-bearing: it is the
+   invariant the span map rests on, and it is now also asserted centrally as T10. */
 const code = stripComments(src);
 need('[PRESENCE] the comment stripper preserved the source length (positions stay aligned)',
   code.length === src.length, code.length + ' vs ' + src.length);
