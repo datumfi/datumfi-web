@@ -237,6 +237,32 @@ const readTab = (page, id) => page.evaluate((t) => {
   ok(RETIRED.every((r) => !barText.includes(r)),
     `LBL 3: neither retired label survives anywhere in the bar (${RETIRED.join(' / ')})`);
 
+  /* ── THE CONTRACTED BAR'S RHYTHM — Captain-ruled from a render 2026-08-22.
+        HOME · STUDIO · ARCHIVE · SAVE · | · UPGRADE, one spacing value between every pair.
+        ⛔ ASSERTED AS EQUALITY, NOT AS A NUMBER. Pinning "8px" would red the day anyone retunes
+        the rhythm deliberately, and would say nothing about whether the gaps AGREE — which is the
+        actual claim. The defect this replaces was a ZERO gap between two bordered buttons, and a
+        zero among eights is caught by equality just as surely as by a magic number.
+        ⚠️ Sub-pixel tolerance of 0.6px: these are layout gaps from one `gap` property, not text
+        metrics, so they agree exactly in practice — the tolerance is for fractional DPR only. ── */
+  const rhythm = await page.evaluate(() => {
+    const bar = document.getElementById('acct-topbar');
+    if (!bar || !bar.getAttribute('data-acct-nav')) return null;
+    const items = Array.from(bar.querySelectorAll('[data-acct-tab], [data-acct-action], .acct-upgrade, .acct-divider'))
+      .filter((e) => e.getBoundingClientRect().width > 0)
+      .map((e) => e.getBoundingClientRect())
+      .sort((a, b) => a.left - b.left);
+    const gaps = [];
+    for (let i = 1; i < items.length; i++) gaps.push(+(items[i].left - items[i - 1].right).toFixed(1));
+    return { gaps: gaps, dividers: bar.querySelectorAll('.acct-divider').length, count: items.length };
+  });
+  ok(rhythm !== null && rhythm.count === 6,
+    `LBL 3b POSITIVE CONTROL: the contracted Studio bar rendered its six spaced items (got ${rhythm ? rhythm.count : 'no contracted bar'}) — an evenness check over one item passes trivially`);
+  ok(rhythm !== null && rhythm.dividers === 1,
+    `LBL 3c: exactly ONE divider separates Save from Upgrade (got ${rhythm ? rhythm.dividers : '?'}) — they rendered edge to edge at a MEASURED 0px before this`);
+  ok(rhythm !== null && rhythm.gaps.length > 0 && Math.max(...rhythm.gaps) - Math.min(...rhythm.gaps) <= 0.6,
+    `LBL 3d LOAD-BEARING: every gap in the bar is the SAME (got ${rhythm ? JSON.stringify(rhythm.gaps) : '?'})`);
+
   const routed = await routesOn(page, ['myblueprints']);
   ok(routed.myblueprints === '/Blueprint.html',
     `LBL 5 LOAD-BEARING: "${TAB_ARCHIVE}" still opens the archive (went ${routed.myblueprints})`);

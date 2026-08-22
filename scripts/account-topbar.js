@@ -75,6 +75,23 @@
       + '  width:1px;height:24px;background:rgba(255,255,255,.12);'
       + '  margin:0 8px;flex-shrink:0;'
       + '}'
+      /* ══ THE CONTRACTED BARS' EVEN RHYTHM — CAPTAIN-RULED 2026-08-22 FROM A RENDER ═════════════
+         HOME · STUDIO · ARCHIVE · SAVE · | · UPGRADE, one spacing value between every pair.
+         ⛔ MEASURED BEFORE CHANGING ANYTHING, AND IT CORRECTED THE DIAGNOSIS: the tab gaps were
+         ALREADY equal at 2px each — Home->Studio and Studio->Archive were identical. What made the
+         rhythm read uneven is that the LABELS grow (Home 49.6px, Studio 63.4, Archive 70.3) while
+         the gap stays fixed, and that three bare-text tabs then run into two BORDERED buttons, so
+         the same 2px reads completely differently either side of that boundary.
+         ⛔⛔ AND ONE GAP REALLY WAS BROKEN: Save -> Upgrade measured ZERO. .acct-topbar-nav and
+         .acct-topbar-right are flex SIBLINGS and #acct-topbar declared no gap, so the two bordered
+         buttons rendered edge to edge.
+         ⭐ 8px IS NOT INVENTED — it is .acct-divider's own authored margin, already live in this
+         bar, promoted to the row rhythm rather than a new number chosen by a wirer.
+         ⚠️ SCOPED BY ATTRIBUTE, NEVER BY CLASS: .acct-cluster is shared with the out-of-scope
+         branch, so styling it directly would re-space Home too. */
+      + '#acct-topbar[data-acct-nav="contracted"]{gap:8px;}'
+      + '#acct-topbar[data-acct-nav="contracted"] .acct-cluster{gap:8px;}'
+      + '#acct-topbar[data-acct-nav="contracted"] .acct-divider{margin:0;}'
       + '.acct-topbar-right{'
       + '  flex-shrink:0;display:flex;'
       + '  align-items:center;justify-content:flex-end;gap:8px;'
@@ -193,12 +210,17 @@
    * ⛔ AND THE FULL-BAR BRANCH BELOW KEEPS 'The Sketchbook' / 'The Archive' VERBATIM, which is why
    * both spellings are live at once and why that is not a divergence. */
   function navSetFor(active) {
+    /* ⭐ THE TRAILING DIVIDER IS THE SIGNED-OUT BAR'S OWN, NOT A NEW ORNAMENT: #app-nav separates
+       its right-hand actions with the same 1px rule, and without it Save and Upgrade rendered
+       EDGE TO EDGE — MEASURED at a 0px gap, because .acct-topbar-nav and .acct-topbar-right are
+       flex SIBLINGS and #acct-topbar declared no gap between them. */
     if (active === 'studio') {
       return '<div class="acct-cluster">'
         + makeTab('welcome',      'Home',    active)
         + makeTab('studio',       'Studio',  active)
         + makeTab('myblueprints', 'Archive', active)
         + saveAction(active)
+        + '<div class="acct-divider" aria-hidden="true"></div>'
         + '</div>';
     }
     if (active === 'sketch') {
@@ -207,6 +229,7 @@
         + makeTab('sketch',   'Sketch',     active)
         + makeTab('sketches', 'Sketchbook', active)
         + saveAction(active)
+        + '<div class="acct-divider" aria-hidden="true"></div>'
         + '</div>';
     }
     /* THE OTHER FIVE SURFACES — UNCHANGED. Not a fallback in the "whatever is left" sense; it is
@@ -236,8 +259,13 @@
       + '</div>';
   }
 
+  /* The contracted surfaces carry their own spacing rhythm, so the attribute EXISTS TO SCOPE IT.
+     ⛔ The five out-of-scope surfaces must keep today's exact layout, and .acct-cluster is shared
+     by both branches — styling the class directly would have re-spaced Home along with the Studio,
+     which is precisely the leak the contract forbids. */
   function buildHTML(active) {
-    return '<header id="acct-topbar" role="banner">'
+    var contracted = (active === 'studio' || active === 'sketch');
+    return '<header id="acct-topbar" role="banner"' + (contracted ? ' data-acct-nav="contracted"' : '') + '>'
       + '<a href="/index.html" class="acct-brand" aria-label="Datum FI — Home">'
       + '<img class="acct-logo" src="/brand/datumfi-mark-d.svg" alt="" aria-hidden="true">'
       + '<img class="acct-wordmark-img" src="/brand/datumfi-wordmark-atum-fi.svg" alt="DATUM FI">'
