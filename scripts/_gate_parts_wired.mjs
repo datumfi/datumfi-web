@@ -64,8 +64,15 @@ import { execFileSync } from 'node:child_process';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.join(HERE, '..');
 
-const RED = process.argv.includes('--redfirst');
-const MIS = process.argv.includes('--misordered');
+const RED = process.argv.some((a) => a === '--redfirst' || a.startsWith('--redfirst='));
+const MIS = process.argv.some((a) => a === '--misordered' || a.startsWith('--misordered='));
+/* ⛔ WHICH PART THE CONTROL MUTATES USED TO BE HARD-CODED TO REGISTERED[0], SO FOUR OF THE FIVE
+   PARTS WERE NEVER EXERCISED BY ANY CONTROL. That went unnoticed while every part had the same
+   shape; Move 1a added one with a DIFFERENT shape (a `window.X = function` assignment, which
+   partSurface could not see at all until this commit), and a control that never touches the new
+   shape cannot prove the auditor understands it. A CONTROL THAT ONLY EVER BUILDS ONE FIXTURE
+   PROVES THE MECHANISM FOR THAT FIXTURE. Pass --redfirst=<substring> to aim it. */
+const PICK = (process.argv.find((a) => a.startsWith('--redfirst=') || a.startsWith('--misordered=')) || '').split('=')[1] || '';
 
 let pass = 0, fail = 0;
 const ck = (label, cond, note) => {
@@ -75,10 +82,25 @@ const ck = (label, cond, note) => {
 
 /* ══ THE AUDITOR — PURE, SO THE SYNTHETIC DRIVE RUNS THE REAL CODE ══════════════════════════════ */
 
-/** Top-level `function NAME(` declarations in a part — the surface it publishes to the global scope. */
+/** Top-level declarations in a part — the surface it publishes to the global scope.
+ *  ⛔⛔ TWO FORMS, AND THE SECOND WAS ADDED BECAUSE THIS GATE WENT VACUOUS ON A REAL PART.
+ *  Until Move 1a every part published plain `function NAME(` declarations, so that one pattern was
+ *  the whole surface. scripts/studio-account-modal.js publishes `window.openAccountModal = function`
+ *  instead — an assignment, not a declaration — and the form is LOAD-BEARING (five §20 gates anchor
+ *  on that literal), so it cannot be converted to suit the matcher.
+ *  ⇒ THE PART SCORED A SURFACE OF ZERO, W3 CAUGHT IT, and had W3 not existed the entire
+ *  registration↔tag audit for the largest part in the repo would have audited NOTHING: no names in
+ *  the surface means no page is ever found to need the tag, so deleting the <script src> would have
+ *  stayed green. That is this gate's own defect, reproduced on this gate, by a new part shape.
+ *  🔑 AN AUDITOR THAT ONLY KNOWS THE SHAPES IT HAS ALREADY SEEN GOES QUIET ON THE FIRST NEW ONE —
+ *     and quiet reads exactly like clean.
+ *  ⚠️ BOTH PATTERNS ARE TEXT MATCHES AND NEITHER STRIPS COMMENTS, so a comment quoting a definition
+ *  at line start would be counted. That exposure is pre-existing and identical for both forms; it
+ *  closes with the §82.24 comment-stripping helper, not here. */
 export function partSurface(text) {
   const out = [];
   for (const m of text.matchAll(/^[ \t]{0,6}function[ \t]+([A-Za-z_$][\w$]*)[ \t]*\(/gm)) out.push(m[1]);
+  for (const m of text.matchAll(/^[ \t]{0,6}window\.([A-Za-z_$][\w$]*)[ \t]*=[ \t]*(?:async[ \t]+)?function\b/gm)) out.push(m[1]);
   return [...new Set(out)];
 }
 
@@ -153,8 +175,8 @@ function mutatePage(name, fn, label) {
   pages[i] = { name, text: after };
 }
 if (RED || MIS) {
-  const rel = REGISTERED[0];
-  if (!rel) { console.error('--redfirst/--misordered need at least one registered part.'); process.exit(1); }
+  const rel = PICK ? REGISTERED.find((r) => r.includes(PICK)) : REGISTERED[0];
+  if (!rel) { console.error('--redfirst/--misordered: no registered part' + (PICK ? ' matching "' + PICK + '"' : '') + '.'); process.exit(1); }
   const base = rel.split('/').pop();
   const re = new RegExp('[ \\t]*<script[^>]+src\\s*=\\s*["\'][^"\']*' + base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '["\'][^>]*>\\s*</script>\\s*\\n?', 'i');
   mutatePage('studio.html', (t) => {

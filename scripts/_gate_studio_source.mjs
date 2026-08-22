@@ -259,29 +259,33 @@ ck('R6 SELF-CHECK — lift() does NOT find that function in the shell alone (so 
    compose() APPENDS, so after an extraction st > en, both stay >= 0, and slice returns "". Five
    gates would have executed an EMPTY builder and printed green. */
 const OAM = 'openAccountModal';
-const _st = direct.indexOf('window.' + OAM + ' = function(id)');
-const _en = direct.indexOf('window.closeAccountModal');
-let LEGACY = direct.slice(_st, _en); LEGACY = LEGACY.slice(0, LEGACY.lastIndexOf('};') + 2);
+/* ⭐ RE-GROUNDED AT MOVE 1a, AND THE CHANGE IS THE POINT. These three legs used to SIMULATE the move
+   (slice the builder out of `direct`, re-append it with compose()). The builder now REALLY lives in
+   scripts/studio-account-modal.js, so the simulation is retired and the legs observe the live
+   topology instead. A simulated hazard argues; a live one settles. */
 let walked = null, walkErr = '';
-try { walked = extractWindowFn(direct, OAM); } catch (e) { walkErr = String(e && e.message).slice(0, 70); }
-ck('R6a extractWindowFn is BYTE-IDENTICAL to the anchor-pair slice it replaces (pre-move)',
-   !!walked && walked === LEGACY,
-   walked ? `${walked.length} code units / ${Buffer.byteLength(walked)} utf8 bytes, identical` : 'FAILED: ' + walkErr);
-/* ⭐⭐ THE RED-FIRST, AND IT REPRODUCES THE EXACT SYMPTOM RATHER THAN A LIKENESS OF IT: move the
-   real definition into an appended part via the real compose(), then run the real legacy slice. */
-const movedShell = direct.replace(LEGACY, '/* moved to a part */');
-const movedSrc = compose(movedShell, [{ rel: 'scripts/__synthetic_moved_part.js', text: LEGACY }]);
-const mSt = movedSrc.indexOf('window.' + OAM + ' = function(id)');
-const mEn = movedSrc.indexOf('window.closeAccountModal');
-const legacyAfter = movedSrc.slice(mSt, mEn);
-ck('R6b ⛔ NEGATIVE CONTROL — post-move the legacy slice returns EMPTY and its own guard stays silent',
+try { walked = extractWindowFn(viaHelper, OAM); } catch (e) { walkErr = String(e && e.message).slice(0, 70); }
+ck('R6a ⭐ extractWindowFn pulls the modal builder OUT OF ITS PART, from the composed source',
+   !!walked && walked.startsWith('window.' + OAM + ' = function(id) {') && walked.endsWith('\n    };') &&
+   Buffer.byteLength(walked) === 191629,
+   walked ? `${walked.length} code units / ${Buffer.byteLength(walked)} utf8 bytes` : 'FAILED: ' + walkErr);
+/* ⭐⭐ THE NEGATIVE CONTROL, AND IT IS NO LONGER A RECONSTRUCTION — THIS IS THE REAL SOURCE. The
+   legacy anchor-pair slice that five §20 gates used until 1a-pre now genuinely inverts: compose()
+   appends, so the definition sits AFTER `window.closeAccountModal`, which stayed in the shell.
+   Both indices are >= 0, so the old `st < 0 || en < 0` guard stays SILENT and slice returns "". */
+const mSt = viaHelper.indexOf('window.' + OAM + ' = function(id)');
+const mEn = viaHelper.indexOf('window.closeAccountModal');
+const legacyAfter = viaHelper.slice(mSt, mEn);
+ck('R6b ⛔ LIVE — the legacy slice returns EMPTY on the real composed source and its guard stays silent',
    legacyAfter.length === 0 && !(mSt < 0 || mEn < 0) && mSt > mEn,
    `st=${mSt} en=${mEn} st>en=${mSt > mEn} guard_fires=${mSt < 0 || mEn < 0} slice_len=${legacyAfter.length}`);
-let walkedAfter = null;
-try { walkedAfter = extractWindowFn(movedSrc, OAM); } catch (e) { walkedAfter = 'threw: ' + e.message; }
-ck('R6c ⭐ and extractWindowFn returns the SAME text across the move (a brace walk cannot invert)',
-   walkedAfter === LEGACY,
-   walkedAfter === LEGACY ? 'identical before and after the move' : 'DIVERGED: ' + String(walkedAfter).slice(0, 60));
+/* ⛔ AND R6a MUST BE PROVING THE PART, NOT THE SHELL. Same shape as R6 for lift(): without this,
+   R6a could be passing because the builder never moved at all. */
+let ghostBuilder = null;
+try { ghostBuilder = extractWindowFn(direct, OAM); } catch (e) { ghostBuilder = null; }
+ck('R6c SELF-CHECK — the builder is ABSENT from studio.html alone (so R6a proves the PART)',
+   !ghostBuilder,
+   ghostBuilder ? 'still in the shell — the move did not happen, R6a is vacuous' : 'absent from the shell, as required');
 /* ⛔ AND IT MUST BE ABLE TO SAY NO. Without this, R6a/R6c could pass because the walker returns
    something for any name — the same vacuity R6 closes for lift(). A rename must fail LOUD. */
 let absentThrew = false, absentMsg = '';
@@ -289,6 +293,42 @@ try { extractWindowFn(direct, '__definitelyNotAFunction'); }
 catch (e) { absentThrew = true; absentMsg = String(e.message).slice(0, 52); }
 ck('R6d SELF-CHECK — an absent name THROWS (so a future rename fails loud, never empty)',
    absentThrew, absentThrew ? absentMsg + '...' : 'returned without throwing — R6a/R6c are vacuous');
+/* ⛔⛔ R6e — A DEFINITION IS NOT A MENTION, AND THIS DEFECT WAS REAL, NOT IMAGINED. Move 1a's own
+   part-file header quoted the anchor while explaining why the assignment form is kept; indexOf()
+   matched the PROSE, brace-walked into it, and returned 217 characters of comment. A comment that
+   QUOTES code is indistinguishable from code to a text matcher, so the rule is structural: a real
+   definition starts a line. The fixture below is the defect in miniature. */
+const QUOTED = [
+  '/* the header explains that `window.__probeFn = function(x)` is KEPT and not converted,',
+  '   for reasons {1,2,3} that do not matter here. */',
+  'window.__probeFn = function (x) {',
+  '  return (x || 0) + 7;',
+  '};',
+  ''
+].join('\n');
+let quotedPick = null, quotedErr = '';
+try { quotedPick = extractWindowFn(QUOTED, '__probeFn'); } catch (e) { quotedErr = String(e.message).slice(0, 60); }
+/* ⚠️ THE `var window = {}` SHIM IS LOAD-BEARING AND WAS A RIG FAULT FIRST: Node has no `window`, so
+   the first cut of this leg threw ReferenceError and read as a PRODUCT failure. An instrument that
+   fails for its own reasons is indistinguishable from one that caught something. */
+let quotedRan = null;
+try { quotedRan = new Function('var window = {};\n' + quotedPick + '\nreturn window.__probeFn(35);')(); }
+catch (e) { quotedRan = 'threw: ' + e.message.slice(0, 40); }
+ck('R6e ⛔ a comment QUOTING the anchor is NOT mistaken for the definition (it must still INVOKE)',
+   !!quotedPick && quotedPick.startsWith('window.__probeFn = function (x)') && quotedRan === 42,
+   quotedPick ? `picked ${quotedPick.length} chars, invoked -> ${quotedRan}` : 'FAILED: ' + quotedErr);
+/* PRESENCE TWIN for R6e: prove the fixture really does contain the decoy, so R6e is not passing
+   because the comment was silently absent. An exclusion leg needs a presence leg. */
+ck('R6e-twin the fixture really does carry the decoy mention ahead of the definition',
+   QUOTED.indexOf('`window.__probeFn = function') < QUOTED.indexOf('\nwindow.__probeFn = function'),
+   'decoy precedes the real definition, as the defect did');
+/* ⭐ AND TWO DEFINITIONS MUST THROW RATHER THAN PICK. A name is not a population — the same lesson
+   the 23 definitions of `$` taught one layer up. */
+let dupThrew = false, dupMsg = '';
+try { extractWindowFn('window.__dup = function () { return 1; };\nwindow.__dup = function () { return 2; };\n', '__dup'); }
+catch (e) { dupThrew = true; dupMsg = String(e.message).slice(0, 56); }
+ck('R6f two definitions of one name THROW — the extractor refuses to guess',
+   dupThrew, dupThrew ? dupMsg + '...' : 'it silently picked one — a name is not a population');
 
 /* A registered-but-missing part must THROW, never be skipped. A silently-dropped part hands every
    gate a string missing definitions they assert about. */

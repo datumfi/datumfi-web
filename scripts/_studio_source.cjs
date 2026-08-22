@@ -98,7 +98,17 @@ const PARTS = [
      shell is what the phase pages will be served from. Registered so the pairing is inspectable by
      a gate, and tagged in studio.html's head so _gate_parts_wired can prove the page loads it —
      REGISTRATION IS NOT WIRING, and both halves are reported separately. */
-  'scripts/studio-panel-resize.js'
+  'scripts/studio-panel-resize.js',
+  /* ⭐ THE FIFTH PART, REGISTERED 2026-08-22 — STEP 3 · MOVE 1a, and by far the largest: the account
+     modal builder, 191,633 bytes / 1,575 lines / 11.19% of studio.html in ONE function with 22
+     callers. Registered because 23 gate files read openAccountModal out of the Studio source and
+     they must keep resolving it — that is the whole reason this registry exists.
+     ⛔ AND THE REGISTRATION IS WHY 1a-pre HAD TO LAND FIRST. compose() APPENDS, so the moment this
+     line exists the builder sits AFTER anchors that used to follow it, and five §20 gates that
+     sliced it between two anchors would have gone silently EMPTY while printing green. They now
+     brace-walk via extractWindowFn(). REGISTRATION IS NOT WIRING: the <script src> in studio.html's
+     head is the other half, and _gate_parts_wired proves it separately. */
+  'scripts/studio-account-modal.js'
 ];
 
 const PART_OPEN  = (rel) => '/* ═════ studioSource PART BEGIN · ' + rel + ' ═════ */';
@@ -166,11 +176,30 @@ function readParts(rels) {
  */
 function extractWindowFn(s, name) {
   const anchor = 'window.' + name + ' = function';
-  const i = s.indexOf(anchor);
-  if (i < 0) {
-    throw new Error('extractWindowFn: no definition of window.' + name + ' in the Studio source — ' +
-      'if it moved to a part, is that part registered in PARTS[]?');
+  /* ⛔⛔ A DEFINITION, NOT A MENTION — AND THIS IS NOT HYPOTHETICAL. Move 1a's own part-file header
+     quoted this exact anchor while explaining why the assignment form is kept. indexOf() found the
+     PROSE first, brace-walked into it, and returned 217 characters of comment ending at the `}` of
+     "{2,3,4,5,9}". The five §20 gates would have asserted against a paragraph.
+     🔑 A COMMENT STATES INTENT, NEVER BEHAVIOUR — and a comment that QUOTES code is indistinguishable
+     from code to any matcher that only looks for the text. So the population is narrowed
+     STRUCTURALLY: a real definition starts a line (indentation aside); a quoted one never does.
+     ⭐ AND IT IS ASSERTED AS A POPULATION, NOT A FIRST-HIT. Zero throws, two throws — never a silent
+     pick between them. That is the `$`-defined-23-times lesson applied one layer down: a name is not
+     a population. */
+  const hits = [];
+  for (let k = s.indexOf(anchor); k >= 0; k = s.indexOf(anchor, k + 1)) {
+    const lineStart = s.lastIndexOf('\n', k) + 1;
+    if (/^[ \t]*$/.test(s.slice(lineStart, k))) hits.push(k);
   }
+  if (hits.length === 0) {
+    throw new Error('extractWindowFn: no definition of window.' + name + ' in the Studio source — ' +
+      'if it moved to a part, is that part registered in PARTS[]? (mentions in comments do not count)');
+  }
+  if (hits.length > 1) {
+    throw new Error('extractWindowFn: window.' + name + ' is defined ' + hits.length + ' times — ' +
+      'refusing to guess which one the caller meant.');
+  }
+  const i = hits[0];
   let depth = 0, opened = false;
   for (let j = s.indexOf('{', i); j < s.length; j++) {
     if (s[j] === '{') { depth++; opened = true; }

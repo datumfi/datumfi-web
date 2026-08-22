@@ -163,6 +163,26 @@ loosening the parser.
    and a default-active climate option), which would have opened the front door with ENDURANCE
    already answered — the one phase whose whole argument is that the Datum is DERIVED LAST.
    🔑 REUSE-DON'T-FORK ASSUMES THE DONOR IS CORRECT. L48 IS NEVER A VERIFICATION EXEMPTION.
+ · scripts/studio-account-modal.js · THE ACCOUNT MODAL BUILDER — the back of every room's card, and
+   the factory that writes 107 of studio.html's 261 inline `on*=` handlers. The FIFTH `studioSource`
+   part and STEP 3 · MOVE 1a (2026-08-22): 191,633 bytes / 1,575 lines / 11.19% of studio.html, one
+   function, 22 callers. SACRED on the measured rule the upkeep catalogue set — A FILE WHOSE ABSENCE
+   FAILS SILENTLY AND CHANGES MONEY ON SCREEN — and it clears that bar in every room family at once,
+   because this is the only door to every account's editable fields.
+   ⛔ ITS ABSENCE IS SILENT IN BOTH DIRECTIONS, WHICH IS WHY IT IS PINNED RATHER THAN TRUSTED. Drop
+   the `<script src>` and every sandbox gate stays GREEN while ⚙️ DETAILS does nothing on the page
+   (that is `_gate_parts_wired`'s defect). Drop the PARTS[] registration and 23 source-reading gates
+   stop resolving the builder. Neither failure throws at load.
+   ⚠️ IT READS 76 NAMES studio.html STILL OWNS and WRITES TWO of them (`activeModalId`,
+   `_moatLumpWhatIf`). Measured, not assumed: the builder's scope chain is `function -> global` with
+   ZERO intermediate scopes, because studio.html's 1.17MB inline block is NOT an IIFE — top-level
+   `function`/`var` are window properties, top-level `let`/`const` are global-lexical, and a later
+   classic script can read AND write both. ⛔ RENAMING ANY OF THE 76 BREAKS THE MODAL SILENTLY AT
+   CLICK TIME; `scripts/_gate_account_modal_part.mjs` asserts all 76 and both writes.
+   ⚠️ THE FILE DELIBERATELY DOES NOT MATCH ITS FOUR SIBLING PARTS AND MUST NOT BE TIDIED: the
+   `window.X` assignment form and the original 4-space indentation are BOTH load-bearing — five §20
+   gates anchor on the literal, and two of them match 12-space-indented literals in their red-first
+   mutations. A dedent disarms those controls while leaving them green.
  · scripts/datum-footer.js · THE CANONICAL DISCLOSURE FOOTER — the legal text, the two rights links
    and the version string, for the WHOLE SITE (2026-08-14). ⭐ THE FIRST SACRED HOST THAT IS NOT
    STUDIO WORK, AND THE MOST WIDELY LOADED: fifteen pages render from it.
