@@ -24,7 +24,7 @@
  *                                    Operating Upkeep in, which belongs to Tension).
  * R3 · THE WALK IS REAL              the continue control reads "Next: {NEXT PHASE}" for six phases
  *                                    and "Back to The Studio" on the seventh. ⛔ NEVER DISABLED.
- * R4 · BOTH EXITS WORK               ← Dashboard is REACHABLE (elementFromPoint) and CLICKING it
+ * R4 · BOTH EXITS WORK               ← The Studio is REACHABLE (elementFromPoint) and CLICKING it
  *                                    returns to the landing. Driven by a real click: a handler that
  *                                    works behind an unreachable button is the defect we shipped once.
  * R5 · NO DOCUMENT SCROLL            entering a room leaves window.scrollY at 0. The OLD build used
@@ -290,9 +290,9 @@ const eqSet = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
     const d = (e) => (e ? e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (e.className && typeof e.className === 'string' && e.className.trim() ? '.' + e.className.trim().split(/\s+/)[0] : '') : 'NULL(off-viewport)');
     return { present: true, box: true, reachable: hit === b || b.contains(hit), hit: d(hit), text: b.textContent.trim() };
   });
-  if (!back.present) fail('R4 EXIT', 'no ← Dashboard control in the room');
-  else if (!back.box) fail('R4 EXIT', `← Dashboard has a zero box (display:${back.display})`);
-  else if (!back.reachable) fail('R4 EXIT', `← Dashboard is not hit-testable at its own centre — elementFromPoint returned ${back.hit}`);
+  if (!back.present) fail('R4 EXIT', 'no ← The Studio control in the room');
+  else if (!back.box) fail('R4 EXIT', `← The Studio has a zero box (display:${back.display})`);
+  else if (!back.reachable) fail('R4 EXIT', `← The Studio is not hit-testable at its own centre — elementFromPoint returned ${back.hit}`);
   else {
     await page.click('.sl-room-back');
     await page.waitForTimeout(600);
@@ -300,7 +300,7 @@ const eqSet = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
       sections: Array.from(document.querySelectorAll('.drafting-panel > .studio-section')).filter(_vis).length,
       formulaShown: (() => { const f = document.querySelector('.s1-header'); return _vis(f); })(),
     }); }, VIS_FN);
-    if (!afterExit.formulaShown) fail('R4 EXIT', 'clicking ← Dashboard did not restore the Datumae landing');
+    if (!afterExit.formulaShown) fail('R4 EXIT', 'clicking ← The Studio did not restore the Datumae landing');
     if (afterExit.sections) fail('R4 EXIT', `${afterExit.sections} section(s) visible after returning to the landing`);
   }
 
@@ -312,7 +312,7 @@ const eqSet = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
   const mode = NOBOOT ? ' [--noboot]' : LEAK ? ' [--leak]' : TWOHEAD ? ' [--twohead]' : TWOFWD ? ' [--twofwd]' : '';
   console.log('  landing    : sections=' + JSON.stringify(landing.sections) + ' formula=' + landing.formulaShown + ' rows=' + landing.phaseRows);
   seen.forEach((s) => console.log('  ' + s.id.padEnd(13) + JSON.stringify(s.vis) + '  ->  ' + JSON.stringify(s.next)));
-  console.log('  ← Dashboard: ' + (back.present ? (back.reachable ? 'reachable "' + back.text + '"' : 'UNREACHABLE, hit=' + back.hit) : 'ABSENT'));
+  console.log('  ← The Studio: ' + (back.present ? (back.reachable ? 'reachable "' + back.text + '"' : 'UNREACHABLE, hit=' + back.hit) : 'ABSENT'));
   fails.forEach((f) => console.log('  FAIL  ' + f));
   const LEGS = 7;
   console.log(fails.length === 0

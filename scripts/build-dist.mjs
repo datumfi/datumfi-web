@@ -27,7 +27,7 @@ const SACRED = {
      CLAUDE.md in this same commit. Sacred on a stricter rule than the rest: its absence removes a
      regulatory disclosure from every page at once. */
   'scripts/datum-footer.js': 'df30b3bd8562fb963d976ea892f94815',   // the paragraph + the three rights links read --text-muted; the 4.51:1 floor-margin is retired and the anchors get the underline the two controls beside them already had (2026-08-16)
-  'studio.html': '9d83f06e4526d2490da38a4b365e16af',   // §82.15 THE SURFACE PORT: proto2 `.right` ported to .canvas-wrapper as ONE object — 7 layers, 7 background-sizes, both inset shadows, ::before AND ::after. The key light leaves `body` entirely: a global light with surfaces stacked over it was the defect (12% transmission, d=(2,3,3) vs an authored (15,33,24)). D's 76/19 grid lands inside this port because splitting a positional background-size list is the hazard, not the schedule (2026-08-20)
+  'studio.html': '3e72a73920a1cab7759b0994148267ea',   // THE SEAM SCOPE FIX + THE DROPDOWN REFLOW. `.studio-layout`'s --studio-panel-w declaration is DELETED — it scoped the token to one subtree while styles/header.css:143 pinned the Sheet·Split·Structure toggle to it from OUTSIDE that subtree, so the toggle sat 80px off the seam at rest and moved 0px when the seam moved 200px (measured, headed Chrome). scripts/studio-panel-resize.js is now the one writer, on documentElement. `.space-dropdown` leaves position:absolute so opening the picker PUSHES the column instead of burying the Next control (2026-08-22)   // §82.15 THE SURFACE PORT: proto2 `.right` ported to .canvas-wrapper as ONE object — 7 layers, 7 background-sizes, both inset shadows, ::before AND ::after. The key light leaves `body` entirely: a global light with surfaces stacked over it was the defect (12% transmission, d=(2,3,3) vs an authored (15,33,24)). D's 76/19 grid lands inside this port because splitting a positional background-size list is the hazard, not the schedule (2026-08-20)
   'sketch.html': '68e2951ad895b64abca5ff0fa1e6353b',   // (0b) the last --font-serif shadow deleted; Georgia is promoted into styles/typography.css instead (2026-08-16)
   /* §47.3 — SACRED as of 2026-08-13, declared in CLAUDE.md IN THIS SAME COMMIT. The two lists are
      reconciled by this build in BOTH directions, so a host added to one and not the other STOPS
@@ -42,7 +42,7 @@ const SACRED = {
   'scripts/studio-debt-cost.js': 'df016d73c4a45117681577a5b064f9ed',   // the monthly carrying cost of a debt — extracted from studio.html:9487-9504 (2026-08-13)
   /* STEP 1 — the landing. SACRED because it owns the completeness predicate: a wrong answer here
      tells the user a phase of the method is finished when it is not, on the front door. */
-  'scripts/studio-landing.js': '38cc2241aad6814cb8b5502fff258903',   // §82.20 THE SPINE LANDING — 7 three-line cards with icons, 4 pillars (BUILD/TEST/SHAPE/LIVE), the gradient spine; roman numerals retired from the cards (2026-08-20)
+  'scripts/studio-landing.js': '3672f6cced213f6fb93f677c30f84f8b',   // the phase back control is '← The Studio', not '← Dashboard' — Captain-ruled 2026-08-22, reversing the 2026-08-14 ruling that §82.22's reframe (the landing IS the Studio; the seven are phases you travel to) made obsolete. Both rulings are kept in the comment: the second only makes sense against the first. Our own brand doc names the generic-dashboard problem as a failure mode Datumae exists to reject (2026-08-22)   // §82.20 THE SPINE LANDING — 7 three-line cards with icons, 4 pillars (BUILD/TEST/SHAPE/LIVE), the gradient spine; roman numerals retired from the cards (2026-08-20)
   'scripts/studio-blueprint.js': 'ff6f3cddc2dc687dcda8aa05657c135f',   // Part 24/25 — readDossier() session-gated at the READ (4 callers) + the boot-draft invariant in _persistDraft (2026-08-15)
   // MISS-5 pre-work guard (2026-07-25). nav.js is a Sacred Host in CLAUDE.md but was absent from THIS map,
   // so a bad edit failed no build. It owns the centralized cross-device restore every page depends on
@@ -69,7 +69,7 @@ const SACRED = {
   'Dossier.html': '80839874eaf6d2e911fd52dae94793df',   // (0c) links styles/tokens.css; page-local shadows of shared names removed (2026-08-16); 6 var(--teal) reads rewritten to var(--teal-mid)
   'privacy.html': 'a3023bb685a042b55aaf7784aaafdb8e',   // (0a) token authority — 8 identical :root shadows deleted (2026-08-16)
   'terms.html': '8b41d3737b731ae4af84ca75b9b01278',   // (0a) token authority — 8 identical :root shadows deleted (2026-08-16)
-  'scripts/account-topbar.js': '12fb359c789211f27fdfa0f30e431ccf',   // Dossier tab retired; Sign Out is Home-only (2026-08-01)
+  'scripts/account-topbar.js': 'af958aea7dde1a87bdae92b11229c71a',   // SHEET · SPLIT · STRUCTURE in the signed-IN toggle, labels AND tooltips. PART 5 renamed Drafting->SHEET and Blueprint->STRUCTURE and the rename landed in ONLY ONE of the two renderers — studio.html's signed-out #app-nav got it, this one did not, so the same control had two names depending on auth state (§24's nav fork). The tooltips are the signed-out strings ported verbatim, not redrafted (2026-08-22)   // Dossier tab retired; Sign Out is Home-only (2026-08-01)
 };
 const md5 = (p) => createHash('md5').update(readFileSync(p)).digest('hex');
 

@@ -373,13 +373,28 @@ function _studioRoomIntro(id) {
 }
 
 function _studioRoomHeaderHTML(phase) {
-  /* 🖊️ '← Dashboard' — CAPTAIN-RULED 2026-08-14, overruling the Architect's '← The Studio'. His
-     reason: a return control named after the place you are already IN tells the user they have left
-     it. A phase room is inside the Studio; the old label denied that.
+  /* 🖊️ '← The Studio' — CAPTAIN-RULED 2026-08-22. THIS LABEL HAS BEEN RULED TWICE, IN OPPOSITE
+     DIRECTIONS, AND BOTH RULINGS ARE KEPT BECAUSE THE SECOND ONE ONLY MAKES SENSE AGAINST THE FIRST.
+     ⚠️ ~~'← Dashboard' — CAPTAIN-RULED 2026-08-14, overruling the Architect's '← The Studio'. His
+        reason: a return control named after the place you are already IN tells the user they have
+        left it. A phase is inside the Studio; the old label denied that.~~ SUPERSEDED, NOT WRONG.
+     ⭐ WHAT CHANGED IS THE PRODUCT, NOT THE ARGUMENT. §82.22 settled that THE LANDING *IS* THE
+        STUDIO and the seven are PHASES YOU TRAVEL TO. Once that is true you genuinely HAVE left,
+        so the objection the 08-14 ruling raised no longer applies — the label is now honest rather
+        than merely shorter.
+     ⛔ AND 'Dashboard' WAS NEVER NEUTRAL: our own brand doc names THE GENERIC-DASHBOARD PROBLEM as
+        one of four failure modes Datumae exists to reject. We were naming the home of a methodology
+        after the thing the methodology rejects.
+     ⭐ IT COSTS NO NEW VOCABULARY — it is the same word as the landing title, so the user learns
+        ONE name for one place, not two.
+     ⚠️ VOCABULARY, RULED WITH IT: THE SEVEN ARE PHASES, NEVER 'ROOMS'. A room is what a user drafts
+        inside ARCHITECTURE. `data-room` stays as an INTERNAL attribute — renaming it is its own arc
+        and not worth a pin bump — but no user-facing string says room for a phase, and no new code
+        adds one. One word with two meanings is how the two-sketches confusion started.
      ⭐ AND IT SITS FIRST, ABOVE THE PHASE COPY — Captain-ruled the same day. The way out belongs at
      the top left where a back control is looked for, not below the title it returns from. That also
      makes it the first thing keyboard focus reaches inside a room, which is what an exit should be. */
-  return '<button type="button" class="sl-room-back" onclick="_studioExitRoom()">← Dashboard</button>'
+  return '<button type="button" class="sl-room-back" onclick="_studioExitRoom()">← The Studio</button>'
        + '<div class="sl-room-label">PHASE ' + phase.numeral + ' — ' + phase.name + '</div>'
        + '<div class="sl-room-desc">' + phase.desc + '</div>'
        /* ⛔ THE <h1>The Studio</h1> IS GONE (Captain-ruled 2026-08-15). It was a THIRD title

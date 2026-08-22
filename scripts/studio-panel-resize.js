@@ -58,13 +58,31 @@
     return Math.max(MIN, Math.min(MAX, Math.round(w)));
   }
 
-  /* THE ONE WRITER. Everything that changes the width goes through here so the tier cannot drift. */
+  /* THE ONE WRITER. Everything that changes the width goes through here so the tier cannot drift.
+   *
+   * ⛔⛔ THE WIDTH GOES ON documentElement, NOT ON #studio-layout — AND THAT IS A REPAIR, NOT A
+   * PREFERENCE. It used to be written on #studio-layout, which put the value in a scope that only
+   * that element's SUBTREE could see. styles/header.css:143 pins the Sheet · Split · Structure
+   * toggle with `left: var --studio-panel-w`, and #app-nav is a SIBLING of #studio-layout, not a
+   * descendant — so it resolved header.css's :root 480 while the panel rendered at 400.
+   *   MEASURED on real headed Chrome, signed-out, 1440x900: the toggle sat 80px right of the seam
+   *   at rest, and when the seam was driven from 400 to 600 the toggle moved ZERO pixels.
+   * 🔑 A CUSTOM PROPERTY IS ONLY SHARED AS FAR AS THE SUBTREE THAT DECLARES IT. Writing a value two
+   *    independent surfaces must agree on anywhere below the root is a fork with a delay on it.
+   *
+   * ⚠️ THE TIER ATTRIBUTE STAYS ON #studio-layout because the tier RULES are written against it,
+   * and §82.20's law still holds: ONE FUNCTION SETS BOTH, or they eventually disagree. What changed
+   * is only WHERE each half lands, and both still land in this one function.
+   *
+   * ⚠️ THE D14 GUARD MOVED, IT WAS NOT DROPPED. It used to abort the whole function when
+   * #studio-layout was absent — which would now silently skip the WIDTH too, and the width must be
+   * written at parse time when that element does not exist yet. So the guard now covers exactly the
+   * write that needs it: the attribute. documentElement is never null while this file can run. */
   function _spApply(w, persist) {
-    var l = document.getElementById('studio-layout');
-    if (!l) return;                       /* D14 — null-guard, never assume the host exists */
     var v = _spClamp(w);
-    l.style.setProperty('--studio-panel-w', v + 'px');
-    l.setAttribute('data-panel-tier', _spTierFor(v));
+    document.documentElement.style.setProperty('--studio-panel-w', v + 'px');
+    var l = document.getElementById('studio-layout');
+    if (l) l.setAttribute('data-panel-tier', _spTierFor(v));   /* D14 — null-guarded */
     if (persist) { try { localStorage.setItem(KEY, String(v)); } catch (e) { /* private mode */ } }
   }
 
@@ -94,7 +112,10 @@
       if (!_spDragging) return;
       _spDragging = false;
       document.body.classList.remove('is-resizing-panel');
-      var cur = parseInt(getComputedStyle(l).getPropertyValue('--studio-panel-w'), 10);
+      /* READ FROM THE WRITER'S OWN SCOPE. #studio-layout would still INHERIT the right value today,
+         but reading it there means this line quietly depends on nothing ever re-shadowing the token
+         below the root — which is the exact defect this commit repairs. Read where it is written. */
+      var cur = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--studio-panel-w'), 10);
       _spApply(cur, true);                      /* ⭐ persist ONCE, on release — not on every frame */
       window.removeEventListener('pointermove', _spMove);
       window.removeEventListener('pointerup', _spUp);
@@ -109,7 +130,7 @@
     /* ⭐ KEYBOARD, NOT AN AFTERTHOUGHT. A separator you can only reach with a mouse is a control
        half the standard says you have built. 20px steps, Home/End to the bounds. */
     handle.addEventListener('keydown', function (e) {
-      var cur = parseInt(getComputedStyle(l).getPropertyValue('--studio-panel-w'), 10) || DEFAULT_W;
+      var cur = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--studio-panel-w'), 10) || DEFAULT_W;
       var next = null;
       if (e.key === 'ArrowLeft') next = cur - 20;
       else if (e.key === 'ArrowRight') next = cur + 20;
@@ -120,6 +141,18 @@
       e.preventDefault();
     });
   }
+
+  /* ⛔⛔ THE WIDTH LANDS NOW, AT PARSE TIME — BEFORE THE BODY EXISTS. MEASURED, NOT ASSUMED.
+   * The CSS default was deleted from studio.html, so until this line runs the panel resolves
+   * header.css's 480. FIVE OF FIVE cold headed loads painted BEFORE the old DOMContentLoaded write
+   * landed (FCP 352-524ms vs write 377-528ms) — so deferring this would flash 480 and snap to 400
+   * on a 1.7MB document.
+   * ⭐ THIS FILE IS HEAD-LOADED AND NOT DEFERRED (studio.html), so documentElement is open and this
+   *   is safe. The tier attribute cannot be set yet — #studio-layout is not parsed — and _spBind
+   *   below sets it moments later through THE SAME FUNCTION, which is why the tier still cannot
+   *   drift from the width.
+   * ⚠️ IF THIS FILE IS EVER MOVED TO defer OR TO THE END OF BODY, THE FLASH COMES BACK. */
+  _spApply(isFinite(_spStored()) ? _spStored() : DEFAULT_W, false);
 
   /* D15 — bind lifecycle-independently: the script may land before or after DOMContentLoaded. */
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _spBind);

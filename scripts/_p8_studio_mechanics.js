@@ -241,7 +241,7 @@ const readAges = (page) => page.evaluate(() => { const tt = document.getElementB
   check('Item5: _studioOverlayOpen exposed', await page.evaluate(() => typeof window._studioOverlayOpen === 'function'));
   /* ⛔ BACK TO THE DASHBOARD FIRST — '← Return to Overview' is a LANDING control and is hidden
      inside a phase room by design: two back-pointing controls on one screen ('← Return to
-     Overview' above '← Dashboard') is the §13.2 confusion, where the user cannot tell which one
+     Overview' above '← The Studio') is the §13.2 confusion, where the user cannot tell which one
      leaves what. This mirrors the real journey rather than reaching past the design. */
   await page.evaluate(() => { if (window._studioExitRoom) window._studioExitRoom(); });
   await page.waitForTimeout(400);

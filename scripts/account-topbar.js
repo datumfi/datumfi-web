@@ -113,12 +113,27 @@
      any other account page. Buttons drive window.setViewMode (a studio.html global);
      they stand in for the signed-out #app-nav toggles, which nav.js hides once
      authenticated — without this they would silently vanish on signed-in Studio. ── */
+  /* ⛔⛔ SHEET · SPLIT · STRUCTURE — AND THE FORK IS THE POINT, SO IT IS NAMED HERE.
+   * These three controls are rendered by TWO renderers: studio.html's signed-OUT #app-nav emits
+   * one copy, and this function emits the signed-IN copy. PART 5 renamed Drafting -> SHEET and
+   * Blueprint -> STRUCTURE, and the rename LANDED IN ONLY ONE OF THEM — this copy still read
+   * "◼ Drafting" and "◼ Blueprint" for months, so the same control had two names depending on
+   * whether you were logged in.
+   * 🔑 A RENAME THAT "NEVER LANDED" USUALLY LANDED — IN ONE OF TWO PLACES. §24's auth-state nav
+   *    fork exactly: nobody diffs a signed-out page against a signed-in one.
+   * ⛔ THE NEXT RENAME OF THESE STRINGS MUST EDIT BOTH: here AND studio.html's #app-nav block.
+   * ⚠️ TWO TOOLTIPS ARE THE SIGNED-OUT COPY PORTED VERBATIM (studio.html), NOT REDRAFTED — L47.
+   *    They were carrying the retired vocabulary too.
+   * 🖊️ THE THIRD IS NOT A PORT. Both navs read a bare "Split View" against siblings carrying a
+   *    name-then-descriptor grammar, so "Split — inputs and canvas" was AUTHORED 2026-08-22 and
+   *    landed in BOTH renderers in this one commit. Porting the bare string would have shipped a
+   *    set that is two-thirds patterned — the kind of thing noticed once and never fixed. */
   function studioToggles(active) {
     if (active !== 'studio') return '';
     return '<div class="acct-studio-toggle" role="group" aria-label="Studio view">'
-      + '<button type="button" class="view-btn" data-acct-view="draft" title="Drafting Focus">◼ Drafting</button>'
-      + '<button type="button" class="view-btn acct-view-active" data-acct-view="split" title="Split View">◼◻ Split</button>'
-      + '<button type="button" class="view-btn" data-acct-view="blueprint" title="Blueprint Focus">◼ Blueprint</button>'
+      + '<button type="button" class="view-btn" data-acct-view="draft" title="Sheet — full-screen ledger">◼ Sheet</button>'
+      + '<button type="button" class="view-btn acct-view-active" data-acct-view="split" title="Split — inputs and canvas">◼◻ Split</button>'
+      + '<button type="button" class="view-btn" data-acct-view="blueprint" title="Structure — estate blocks">◼ Structure</button>'
       + '</div>';
   }
 

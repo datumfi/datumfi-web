@@ -396,8 +396,11 @@
   .studio-layout[data-room] .privacy-note { display: none; }
   /* ⚠️ .return-home ("← Return to Overview") re-opens the intro overlay and is gated by
      _p8_studio_mechanics Item 5, so it is HIDDEN INSIDE ROOMS, never removed — it stays on the
-     landing where it belongs. Two back-pointing controls in one room ("← Return to Overview" above
-     "← Dashboard") is exactly the §13.2 confusion: the user cannot tell which one leaves what. */
+     landing where it belongs. Two back-pointing controls in one phase ("← Return to Overview" above
+     "← The Studio") is exactly the §13.2 confusion: the user cannot tell which one leaves what.
+     ⭐ AND '← Return to Overview' IS RULED IN, NOT AN OVERSIGHT (Captain, 2026-08-22): it is the
+     tutorial / start-fresh / import-blueprint door, a job §82.1's strike never considered. It stays
+     ON THE LANDING ONLY, which is what the rule above already enforces. */
   .studio-layout[data-room]:not([data-room="landing"]) .return-home { display: none; }
   /* ⛔ AND THE FIRST PASS'S "See the Tension →" CTA — its behaviour moved INTO the Architecture
      room's Next control (see _studioRoomNextHTML), so showing it too would be the same control
@@ -928,15 +931,34 @@
      row could not shrink below the min-content height its own children demanded — and the 85px
      #disclosure-footer below it was pushed OUT OF THE VIEWPORT, creating a scroll budget the wheel
      could not undo (body{overflow:hidden}). See the .drafting-panel note below for the full chain. */
-  /* ⛔ THE PANEL DEFAULT IS SET *HERE*, ON THE STUDIO, NOT IN styles/header.css (§82.20).
-     header.css declares `:root { --studio-panel-w: 480px }` and it loads on TWENTY-FOUR PAGES.
-     Moving the default there would have re-laid-out every one of them to satisfy one surface.
-     🔑 EACH SURFACE OWNS ITS OWN STACK, AND IT CUTS BOTH WAYS — the same rule that kept --grid-line
-        out of the stage port keeps this out of the shared stylesheet.
-     ⚠️ header.css's 480 is NOT dead: it remains the value for anything else that reads the token.
-        This shadows it for the Studio only, and the resizer overrides both with an inline value. */
-  .studio-layout { display: flex; flex: 1; min-height: 0; width: 100%; margin: 0 auto;
-                   --studio-panel-w: 400px; }
+  /* ⛔⛔ THE PANEL DEFAULT IS NO LONGER DECLARED IN CSS AT ALL. scripts/studio-panel-resize.js is
+     the ONE writer and it writes to documentElement, so every consumer resolves ONE value.
+     §82.20 put the default here to keep it out of styles/header.css, which loads on TWENTY-FOUR
+     PAGES — that reasoning was right and header.css is still not touched. What was wrong was the
+     SCOPE, and this file shipped the regression in ac15e30.
+     ⚠️⚠️ ~~"header.css's 480 is NOT dead: it remains the value for anything else that reads the
+        token. This shadows it for the Studio only, and the resizer overrides both with an inline
+        value."~~ STRUCK 2026-08-22 — struck, not deleted, because the sentence is the lesson.
+        IT NAMED THE EXACT HAZARD AND THEN DISMISSED IT. There IS something else that reads the
+        token: styles/header.css:143 pins the Sheet · Split · Structure toggle with
+        `left: var --studio-panel-w`, and #app-nav is NOT a descendant of #studio-layout — so it
+        went on reading header.css's 480 while the panel rendered at 400.
+        MEASURED on real headed Chrome at 1440x900, signed-out: the toggle sat 80px RIGHT of the
+        seam at rest; driven to 600 the seam moved 200px and the toggle moved ZERO. A control whose
+        own comment calls it seam-pinned, which never follows the seam.
+     🔑 A COMMENT THAT NAMES A RISK AND THEN DISMISSES IT IS WORSE THAN ONE THAT NEVER SAW IT —
+        it converts an open question into a settled one without measuring anything.
+     ⛔ AND THE OBVIOUS REPAIR IS FORBIDDEN, CORRECTLY: a page-local :root re-declaring a SHARED
+        token is precisely what _gate_token_authority L2 reds. Declaring it on `body` instead would
+        slip past that leg's regex while committing the identical offence — NOT DONE. A gate whose
+        intent you are violating is not an obstacle to route around.
+     ⭐ SO IT LEAVES CSS ENTIRELY AND header.css's 480 BECOMES THE HONEST NO-JS FALLBACK: if the
+        resizer never loads, BOTH consumers read 480 and stay consistent — the pre-ac15e30 look.
+        Degrading to shipped behaviour beats drawing the seam in two places at once.
+     ⚠️ THE WIDTH IS APPLIED AT PARSE TIME, NOT ON DOMContentLoaded, AND THAT IS MEASURED:
+        5 of 5 cold headed loads painted BEFORE the write landed (FCP 352-524ms vs write 377-528ms),
+        so a DOMContentLoaded apply would flash 480 then snap to 400 on a 1.7MB document. */
+  .studio-layout { display: flex; flex: 1; min-height: 0; width: 100%; margin: 0 auto; }
   /* Seed render-gate — hold the drafting numbers until the async Clerk dossier seed
      lands, so a direct load never flashes the schema defaults (40/65/93) before the
      authoritative dossier hydrates. visibility:hidden keeps layout (no reflow on reveal).
@@ -1083,7 +1105,7 @@
              color: rgba(255,255,255,0.72); margin: 10px 0 26px; max-width: 42ch; }
   /* ── THE ROOM HEADER + ITS TWO NAV CONTROLS ─────────────────────────────────────────────────
      Mirrors .s2-header's proportions, which is the treatment the Captain approved on sight.
-     ⚠️ The two controls are deliberately NOT the same weight: ← Dashboard is a quiet return, the
+     ⚠️ The two controls are deliberately NOT the same weight: ← The Studio is a quiet return, the
      Next control is the forward motion of the walk. Part 1's "the order is not a menu, it is a
      dependency chain" expressed in the interface instead of asserted in a spec. */
   .sl-room-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em;
@@ -1429,7 +1451,19 @@
   .measure-btn:hover { background: rgba(201,168,76,0.1); }
   .measure-btn.active { background: var(--gold); color: var(--bg-navy); }
 
-  .space-dropdown { display: none; position: absolute; top: 45px; left: 0; width: 100%; background: #0c182c; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; z-index: 10; max-height: 250px; overflow-y: auto; margin-top: 5px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+  /* ⛔ IN FLOW, NOT ABSOLUTE — CAPTAIN-RULED: OPENING THE PICKER MUST PUSH THE COLUMN DOWN.
+     It was `position:absolute; top:45px; left:0` with `z-index:10`, so it claimed NO LAYOUT SPACE
+     and simply covered whatever sat beneath it. MEASURED LIVE before the change: the open dropdown
+     spanned y 365-547 while `.sl-room-next` stayed at top=431 both open and closed — the Next
+     button was not pushed anywhere, it was BURIED.
+     ⭐ NO MARGIN IS RESTATED HERE ON PURPOSE. `.add-space-wrapper` is already a flex COLUMN with
+     `gap:10px`, so an in-flow child is spaced by the gap; the old `margin-top:5px` existed only
+     because an absolutely positioned box gets no gap. Keeping it would have double-spaced.
+     ⚠️ `z-index:10` IS KEPT DELIBERATELY. Flex items honour z-index while `position:static`, so
+     dropping it would have been a silent stacking change riding in on a layout fix.
+     ⚠️ AND `width:100%` IS SAFE ONLY BECAUSE styles/typography.css:3 SETS `box-sizing:border-box`
+     GLOBALLY — with the default box model this border would have overflowed the column by 2px. */
+  .space-dropdown { display: none; width: 100%; background: #0c182c; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; z-index: 10; max-height: 250px; overflow-y: auto; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
   .space-dropdown.open { display: block; }
   .dropdown-group-lbl { font-family: var(--font-mono); font-size: 12px; color: var(--gold); padding: 10px 15px 4px 15px; background: rgba(0,0,0,0.2); text-transform: uppercase; letter-spacing: 0.1em;}
   .space-option { padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--white); display: flex; justify-content: space-between; }
@@ -2348,7 +2382,14 @@
     </a>
     <div class="view-toggle studio-seam">
       <button class="view-btn" id="btn-draft" onclick="setViewMode('draft')" title="Sheet — full-screen ledger">◼ Sheet</button>
-      <button class="view-btn active" id="btn-split" onclick="setViewMode('split')" title="Split View">◼◻ Split</button>
+      <!-- 🖊️ "Split — inputs and canvas" is AUTHORED (2026-08-22), not ported: this slot used to
+           read a bare "Split View" while its two siblings carry the name-then-descriptor grammar
+           ("Sheet — full-screen ledger", "Structure — estate blocks"). A set that is two-thirds
+           patterned is the kind of inconsistency noticed once and never fixed.
+           ⛔ THE SAME STRING IS IN scripts/account-topbar.js — these three controls have TWO
+           renderers, and fixing the tooltip in one is how the label fork happened in the first
+           place. Edit both or neither. -->
+      <button class="view-btn active" id="btn-split" onclick="setViewMode('split')" title="Split — inputs and canvas">◼◻ Split</button>
       <button class="view-btn" id="btn-blueprint" onclick="setViewMode('blueprint')" title="Structure — estate blocks">◼ Structure</button>
     </div>
     <div class="nav-links">

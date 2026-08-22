@@ -306,11 +306,21 @@ const REVERTS = {
      wraps. Widening trades canvas width for panel width and that is a product decision, not a
      wiring one — so this renders it rather than arguing it. */
   widepanel: [
-    /* ⛔ AIMED AT header.css, NOT studio.html. The first version poisoned studio.html's
-       \ FALLBACK — which never fires, because header.css:7 DEFINES
-       the token. The guard reported 'expected 1, matched 1' and the render was byte-identical:
-       LANDING IS NOT BITING, caught by an md5 rather than by trust. */
-    { file: 'styles/header.css', find: ':root { --studio-panel-w: 480px; }', replace: ':root { --studio-panel-w: ' + (process.env.PANEL_W || '620') + 'px; }', count: 1 },
+    /* ⛔⛔ AIMED AT THE WRITER, AND THIS IS THE THIRD ADDRESS THESE POISONS HAVE HAD. The history
+       is kept because each move was correct on the day and went stale for a DIFFERENT reason —
+       that is the actual lesson, not the current line number.
+         1. studio.html's `var --studio-panel-w, 480px` FALLBACK — never fires; header.css:7
+            defines the token. 'expected 1, matched 1' and a byte-identical render.
+         2. styles/header.css's :root — correct until ac15e30 declared the default on
+            `.studio-layout`, which SHADOWED :root for the panel. Inert again, silently.
+         3. NOW: scripts/studio-panel-resize.js's DEFAULT_W. The 2026-08-22 seam repair made that
+            file the ONE WRITER for the width (it sets the property on documentElement), so an
+            INLINE value now beats any :root rule — poisoning header.css would have been inert a
+            THIRD time. Poisoning the writer's own default is the only address that cannot be
+            out-specified, because it is the thing every other value flows from.
+       🔑 LANDING IS NOT BITING — and a poison aimed at a DECLARATION dies every time the cascade
+          moves. Aim at the WRITER and it survives the cascade entirely. */
+    { file: 'scripts/studio-panel-resize.js', find: 'var MIN = 340, MAX = 760, DEFAULT_W = 400;', replace: 'var MIN = 340, MAX = 760, DEFAULT_W = ' + (process.env.PANEL_W || '620') + ';', count: 1 },
   ],
   /* ⭐ narrowspine — TESTS THE CAPTAIN'S OWN HYPOTHESIS: at a narrow panel, DROP the 01-04 pillar
      column and keep the seven cards, so the cards get the whole width instead of ~60% of it.
@@ -325,7 +335,8 @@ const REVERTS = {
       find: "       + '<span class=\"sl-icon\" aria-hidden=\"true\">' + _studioPhaseIcon(phase.id) + '</span>'",
       replace: "       + '<span class=\"sl-rn\" aria-hidden=\"true\">' + phase.numeral + '</span>' + '<span class=\"sl-icon\" aria-hidden=\"true\">' + _studioPhaseIcon(phase.id) + '</span>'", count: 1 },
     { file: 'studio.html', find: '  .sl-phase:hover .sl-chev { color: rgba(255,255,255,0.6); }', replace: '  .sl-phase:hover .sl-chev { color: rgba(255,255,255,0.6); } .sl-spine-wrap { padding-left: 0; } .sl-mv-head { display: none; } .sl-spine { display: none; } .sl-movement { margin-bottom: 6px; } .sl-phase { grid-template-columns: 26px 46px 1fr 16px; column-gap: 9px; padding-left: 8px; } .sl-rn { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--mv-tone); color: var(--mv-tone); font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.04em; opacity: 0.85; } .sl-icon svg { width: 32px; height: 32px; }', count: 1 },
-    { file: 'styles/header.css', find: ':root { --studio-panel-w: 480px; }', replace: ':root { --studio-panel-w: ' + (process.env.PANEL_W || '340') + 'px; }', count: 1 },
+    /* Aimed at the WRITER, not at a declaration — see widepanel above for why this moved twice. */
+    { file: 'scripts/studio-panel-resize.js', find: 'var MIN = 340, MAX = 760, DEFAULT_W = 400;', replace: 'var MIN = 340, MAX = 760, DEFAULT_W = ' + (process.env.PANEL_W || '340') + ';', count: 1 },
   ],
   /* ⭐ barspine — THE MIDDLE TIER. Hides the 01-04 LABELS but KEEPS the gradient bar and its dot,
      so the four-movement grouping still reads in colour at a narrow panel without the numerals
@@ -333,7 +344,8 @@ const REVERTS = {
      ring it carries the gradient itself. PREVIEW ONLY — a picture to rule on. */
   barspine: [
     { file: 'studio.html', find: '  .sl-phase:hover .sl-chev { color: rgba(255,255,255,0.6); }', replace: '  .sl-phase:hover .sl-chev { color: rgba(255,255,255,0.6); } .sl-spine-wrap { padding-left: 22px; } .sl-mv-head { display: none; } .sl-spine { left: 6px; } .sl-movement { margin-bottom: 6px; }', count: 1 },
-    { file: 'styles/header.css', find: ':root { --studio-panel-w: 480px; }', replace: ':root { --studio-panel-w: ' + (process.env.PANEL_W || '340') + 'px; }', count: 1 },
+    /* Aimed at the WRITER, not at a declaration — see widepanel above for why this moved twice. */
+    { file: 'scripts/studio-panel-resize.js', find: 'var MIN = 340, MAX = 760, DEFAULT_W = 400;', replace: 'var MIN = 340, MAX = 760, DEFAULT_W = ' + (process.env.PANEL_W || '340') + ';', count: 1 },
   ],
   narrowspine: [
     /* ⛔ INJECTED AT THE *END* OF THE LANDING BLOCK, NOT THE START. The first version anchored on
@@ -341,7 +353,8 @@ const REVERTS = {
        display:block won and the column rendered CLIPPED at the panel edge instead of hidden.
        🔑 A CASCADE OVERRIDE THAT LOSES ON SOURCE ORDER LOOKS LIKE A DESIGN OUTCOME. */
     { file: 'studio.html', find: '  .sl-phase:hover .sl-chev { color: rgba(255,255,255,0.6); }', replace: '  .sl-phase:hover .sl-chev { color: rgba(255,255,255,0.6); } .sl-spine-wrap { padding-left: 0; } .sl-mv-head { display: none; } .sl-spine { display: none; } .sl-movement { margin-bottom: 6px; }', count: 1 },
-    { file: 'styles/header.css', find: ':root { --studio-panel-w: 480px; }', replace: ':root { --studio-panel-w: ' + (process.env.PANEL_W || '400') + 'px; }', count: 1 },
+    /* Aimed at the WRITER, not at a declaration — see widepanel above for why this moved twice. */
+    { file: 'scripts/studio-panel-resize.js', find: 'var MIN = 340, MAX = 760, DEFAULT_W = 400;', replace: 'var MIN = 340, MAX = 760, DEFAULT_W = ' + (process.env.PANEL_W || '400') + ';', count: 1 },
   ],
   proto2key: [
     { file: 'proto2.html', find: '    radial-gradient(circle at 62% 18%,rgba(121,222,199,.085),transparent 29%),\n', replace: '', count: 1 },
