@@ -11,7 +11,7 @@
    --redfirst (a) drops the hasEscrow gate on the trio, (b) derives Total Interest Paid from
    lifeOfLoan − lifetimeInterest instead of the sourced field, (c) restores the pre-§20.6 glance order. */
 import { readFileSync } from 'node:fs';
-import { studioSource } from './_studio_source.cjs';
+import { studioSource, extractWindowFn } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
 let src = studioSource();
 
@@ -22,9 +22,9 @@ if (RED) {
   src = src.replace("if (_lol) _rows.push(['Life-of-Loan Interest'", "if (false) _rows.push(['Life-of-Loan Interest'");
 }
 
-const st = src.indexOf('window.openAccountModal = function(id)');
-const en = src.indexOf('window.closeAccountModal');
-let BUILDER = src.slice(st, en); BUILDER = BUILDER.slice(0, BUILDER.lastIndexOf('};') + 2);
+/* Brace-walked, NOT sliced between two anchors: compose() appends parts, so once the builder moves
+   out of studio.html an anchor-pair slice inverts and returns "" with no guard firing. */
+let BUILDER = extractWindowFn(src, 'openAccountModal');
 function ex(s, n) { const i = s.indexOf('function ' + n + '('); if (i < 0) throw new Error('missing ' + n); let d = 0, b = false; for (let j = s.indexOf('{', i); j < s.length; j++) { if (s[j] === '{') { d++; b = true; } else if (s[j] === '}') { d--; if (b && d === 0) return s.slice(i, j + 1); } } }
 // The REAL engine behind these lines must be present, not auto-stubbed: this gate asserts FIGURES
 // ($900 escrow, $3,650 real monthly, the sourced $31,684), and a stubbed hasEscrow/calculateEscrowMonthly

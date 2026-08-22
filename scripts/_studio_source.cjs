@@ -137,6 +137,51 @@ function readParts(rels) {
   });
 }
 
+/* ══ EXTRACT A `window.NAME = function` DEFINITION — POSITION-INDEPENDENT BY CONSTRUCTION ═══════
+ * ⛔⛔ THE DEFECT THIS EXISTS TO MAKE IMPOSSIBLE, STATED AS THE FAILURE IT PRODUCES:
+ * MOVE A FUNCTION INTO A REGISTERED PART AND EVERY GATE THAT SLICED IT BETWEEN TWO ANCHORS GOES
+ * SILENTLY EMPTY — still green-looking, still "running", asserting over nothing.
+ *
+ * Five gates (_gate_407_20_{2,3,4,5,9}) all did this, identically:
+ *     const st = src.indexOf('window.openAccountModal = function(id)');
+ *     const en = src.indexOf('window.closeAccountModal');
+ *     if (st < 0 || en < 0) throw ...          // <- the guard, and it does NOT fire
+ *     let BUILDER = src.slice(st, en);         // <- "" once the definition moves
+ * compose() APPENDS parts, so after an extraction the definition sits AFTER anchors that used to
+ * follow it. st > en, both are >= 0, the guard passes, and String.slice returns the empty string.
+ *
+ * ⭐ THIS IS THE PARTS-WIRED DEFECT INVERTED. That one is "a registered part is not a loaded part"
+ * — gates green while the PAGE is broken. This one is "a moved part is not an extractable part" —
+ * gates green while the GATE is broken. One root: an instrument encoding the file's topology as an
+ * assumption it never states.
+ *
+ * ⛔ AND THE FIX IS A BRACE WALK, NOT A BETTER REGEX OR A SECOND ANCHOR. Any end-anchor scheme is
+ * still a claim about what follows the definition in source order — exactly the claim the split
+ * keeps falsifying. A brace walk reads only the definition itself, so it CANNOT INVERT. Measured
+ * against the five gates' own slice on the pre-move source: byte-identical output, and identical
+ * again against a composed string with the part appended.
+ * @param {string} s   the (possibly composed) Studio source
+ * @param {string} name  e.g. 'openAccountModal' — matched as `window.<name> = function`
+ * @returns {string} the definition text, through its closing brace, with a trailing ';'
+ */
+function extractWindowFn(s, name) {
+  const anchor = 'window.' + name + ' = function';
+  const i = s.indexOf(anchor);
+  if (i < 0) {
+    throw new Error('extractWindowFn: no definition of window.' + name + ' in the Studio source — ' +
+      'if it moved to a part, is that part registered in PARTS[]?');
+  }
+  let depth = 0, opened = false;
+  for (let j = s.indexOf('{', i); j < s.length; j++) {
+    if (s[j] === '{') { depth++; opened = true; }
+    else if (s[j] === '}') {
+      depth--;
+      if (opened && depth === 0) return s.slice(i, j + 1) + ';';
+    }
+  }
+  throw new Error('extractWindowFn: unbalanced braces walking window.' + name);
+}
+
 /* MEMOISED PER PROCESS. Safe because JS strings are immutable: the many gates that do
    `let s = studioSource(); if (RED) s = s.replace(...)` REBIND their own local, they do not mutate
    the shared value, so a poisoned red-first run cannot leak into anything else. Each gate is its own
@@ -162,3 +207,7 @@ exports.STUDIO_PATH = STUDIO_PATH;
 exports.compose = compose;
 exports.PART_RELS = () => PARTS.slice();
 exports.readParts = readParts;
+/* Exported for the five §20 builder gates — ONE implementation, so the next extraction cannot
+   re-open this in four of them. Pure (string in, string out) so a gate can drive it with a
+   synthetic composed string and exercise the inversion for real. */
+exports.extractWindowFn = extractWindowFn;

@@ -14,16 +14,14 @@
    --redfirst restores the pre-#9 position (notes emitted at the top, before the taxCode branches). The
    gate must then bite on every room that has any content of its own — i.e. the exact live symptom. */
 import { readFileSync } from 'node:fs';
-import { studioSource } from './_studio_source.cjs';
+import { studioSource, extractWindowFn } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
 const src = studioSource();
 
 // ── slice the real builder (brace-counting would trip over the template literals; anchor on the neighbours)
-const st = src.indexOf('window.openAccountModal = function(id)');
-const en = src.indexOf('window.closeAccountModal');
-if (st < 0 || en < 0) throw new Error('openAccountModal anchors not found — re-ground by content');
-let BUILDER = src.slice(st, en);
-BUILDER = BUILDER.slice(0, BUILDER.lastIndexOf('};') + 2);
+/* Brace-walked, NOT sliced between two anchors: compose() appends parts, so once the builder moves
+   out of studio.html an anchor-pair slice inverts and returns "" with no guard firing. */
+let BUILDER = extractWindowFn(src, 'openAccountModal');
 
 const NOTES_BLOCK = `html += \`
         <div style="margin-bottom: 20px;">

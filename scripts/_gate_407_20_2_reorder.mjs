@@ -13,15 +13,13 @@
    travel with the labels during the swap.
    --redfirst restores the pre-#20 layout/labels and every ordering + label assertion must bite. */
 import { readFileSync } from 'node:fs';
-import { studioSource } from './_studio_source.cjs';
+import { studioSource, extractWindowFn } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
 const src = studioSource();
 
-const st = src.indexOf('window.openAccountModal = function(id)');
-const en = src.indexOf('window.closeAccountModal');
-if (st < 0 || en < 0) throw new Error('openAccountModal anchors not found — re-ground by content');
-let BUILDER = src.slice(st, en);
-BUILDER = BUILDER.slice(0, BUILDER.lastIndexOf('};') + 2);
+/* Brace-walked, NOT sliced between two anchors: compose() appends parts, so once the builder moves
+   out of studio.html an anchor-pair slice inverts and returns "" with no guard firing. */
+let BUILDER = extractWindowFn(src, 'openAccountModal');
 // _payoffIntelHTML + _sumLbl live outside the builder; pull them in so the summary block really renders
 function ex(s, n) { const i = s.indexOf('function ' + n + '('); if (i < 0) throw new Error('missing ' + n); let d = 0, b = false; for (let j = s.indexOf('{', i); j < s.length; j++) { if (s[j] === '{') { d++; b = true; } else if (s[j] === '}') { d--; if (b && d === 0) return s.slice(i, j + 1); } } }
 // §20.7 moved the escrow inputs out of the builder into a data-driven renderer, so the REAL escrow

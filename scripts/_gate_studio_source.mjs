@@ -148,7 +148,7 @@ ck('P5 SELF-CHECK — stripping comments does NOT hide a real read on a commente
    call sites used to read. That claim is machine-checked here rather than asserted in a commit
    message. */
 const helperUrl = pathToFileURL(path.join(REPO, HELPER_REL)).href;
-const { studioSource, STUDIO_PATH, compose, PART_RELS, readParts } = await import(helperUrl);
+const { studioSource, STUDIO_PATH, compose, PART_RELS, readParts, extractWindowFn } = await import(helperUrl);
 const REGISTERED = PART_RELS();
 /* ⚠️ THE ONE DELIBERATE DIRECT READ IN THE REPO, AND A JUDGEMENT CALL I AM FLAGGING RATHER THAN
    BURYING. This gate CANNOT prove byte-identity by asking the helper twice — it needs an INDEPENDENT
@@ -248,6 +248,48 @@ let ghost = null;
 try { ghost = lift(direct, '_synthPartFn'); } catch (e) { ghost = null; }
 ck('R6 SELF-CHECK — lift() does NOT find that function in the shell alone (so R4 proves the PART)',
    !ghost, ghost ? 'found it without the part — R4 is vacuous' : 'absent from the shell, as required');
+/* ══ R6a-R6d · extractWindowFn — THE PARTS-WIRED DEFECT INVERTED ═══════════════════════════════
+   Part 10 is "a registered part is not a loaded part": gates green while the PAGE is broken.
+   THIS is "a moved part is not an extractable part": gates green while the GATE is broken. Five
+   §20 builder gates sliced the modal builder between two anchors:
+       st = indexOf('window.openAccountModal = function(id)')
+       en = indexOf('window.closeAccountModal')
+       if (st < 0 || en < 0) throw ...        <- the guard, and it does NOT fire
+       BUILDER = src.slice(st, en)            <- "" the moment the definition moves
+   compose() APPENDS, so after an extraction st > en, both stay >= 0, and slice returns "". Five
+   gates would have executed an EMPTY builder and printed green. */
+const OAM = 'openAccountModal';
+const _st = direct.indexOf('window.' + OAM + ' = function(id)');
+const _en = direct.indexOf('window.closeAccountModal');
+let LEGACY = direct.slice(_st, _en); LEGACY = LEGACY.slice(0, LEGACY.lastIndexOf('};') + 2);
+let walked = null, walkErr = '';
+try { walked = extractWindowFn(direct, OAM); } catch (e) { walkErr = String(e && e.message).slice(0, 70); }
+ck('R6a extractWindowFn is BYTE-IDENTICAL to the anchor-pair slice it replaces (pre-move)',
+   !!walked && walked === LEGACY,
+   walked ? `${walked.length} code units / ${Buffer.byteLength(walked)} utf8 bytes, identical` : 'FAILED: ' + walkErr);
+/* ⭐⭐ THE RED-FIRST, AND IT REPRODUCES THE EXACT SYMPTOM RATHER THAN A LIKENESS OF IT: move the
+   real definition into an appended part via the real compose(), then run the real legacy slice. */
+const movedShell = direct.replace(LEGACY, '/* moved to a part */');
+const movedSrc = compose(movedShell, [{ rel: 'scripts/__synthetic_moved_part.js', text: LEGACY }]);
+const mSt = movedSrc.indexOf('window.' + OAM + ' = function(id)');
+const mEn = movedSrc.indexOf('window.closeAccountModal');
+const legacyAfter = movedSrc.slice(mSt, mEn);
+ck('R6b ⛔ NEGATIVE CONTROL — post-move the legacy slice returns EMPTY and its own guard stays silent',
+   legacyAfter.length === 0 && !(mSt < 0 || mEn < 0) && mSt > mEn,
+   `st=${mSt} en=${mEn} st>en=${mSt > mEn} guard_fires=${mSt < 0 || mEn < 0} slice_len=${legacyAfter.length}`);
+let walkedAfter = null;
+try { walkedAfter = extractWindowFn(movedSrc, OAM); } catch (e) { walkedAfter = 'threw: ' + e.message; }
+ck('R6c ⭐ and extractWindowFn returns the SAME text across the move (a brace walk cannot invert)',
+   walkedAfter === LEGACY,
+   walkedAfter === LEGACY ? 'identical before and after the move' : 'DIVERGED: ' + String(walkedAfter).slice(0, 60));
+/* ⛔ AND IT MUST BE ABLE TO SAY NO. Without this, R6a/R6c could pass because the walker returns
+   something for any name — the same vacuity R6 closes for lift(). A rename must fail LOUD. */
+let absentThrew = false, absentMsg = '';
+try { extractWindowFn(direct, '__definitelyNotAFunction'); }
+catch (e) { absentThrew = true; absentMsg = String(e.message).slice(0, 52); }
+ck('R6d SELF-CHECK — an absent name THROWS (so a future rename fails loud, never empty)',
+   absentThrew, absentThrew ? absentMsg + '...' : 'returned without throwing — R6a/R6c are vacuous');
+
 /* A registered-but-missing part must THROW, never be skipped. A silently-dropped part hands every
    gate a string missing definitions they assert about. */
 /* ⚠️ THE FIRST CUT OF R7 GREPPED THIS HELPER'S OWN SOURCE FOR THE STRING "does not exist" — which

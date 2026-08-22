@@ -18,7 +18,7 @@
    commit must never make) and drops the Mortgage gate on Term; the negative control must then bite. */
 import { readFileSync } from 'node:fs';
 import { extractClosure } from './_gate_extract.mjs';
-import { studioSource } from './_studio_source.cjs';
+import { studioSource, extractWindowFn } from './_studio_source.cjs';
 const RED = process.argv.includes('--redfirst');
 let src = studioSource();
 
@@ -29,9 +29,9 @@ if (RED) {
   src = src.replace("(parseFloat(acc.mortgageOtherCost) || 0) > 0;", "(parseFloat(acc.mortgageOtherCost) || 0) > 0 || (parseFloat(acc.insCoverageAmount) || 0) > 0;");
 }
 
-const st = src.indexOf('window.openAccountModal = function(id)');
-const en = src.indexOf('window.closeAccountModal');
-let BUILDER = src.slice(st, en); BUILDER = BUILDER.slice(0, BUILDER.lastIndexOf('};') + 2);
+/* Brace-walked, NOT sliced between two anchors: compose() appends parts, so once the builder moves
+   out of studio.html an anchor-pair slice inverts and returns "" with no guard firing. */
+let BUILDER = extractWindowFn(src, 'openAccountModal');
 if (RED) BUILDER = BUILDER.replace(/\$\{base\.title === 'Mortgage' \? `<div>\$\{_dLbl\(base, 'Term \(months\)'/, "${true ? `<div>${_dLbl(base, 'Term (months)'");
 
 function ex(s, n) { const i = s.indexOf('function ' + n + '('); if (i < 0) throw new Error('missing ' + n); let d = 0, b = false; for (let j = s.indexOf('{', i); j < s.length; j++) { if (s[j] === '{') { d++; b = true; } else if (s[j] === '}') { d--; if (b && d === 0) return s.slice(i, j + 1); } } }
