@@ -78,14 +78,37 @@ function reorderTiles(src, want) {
   return { out: src.slice(0, found[0].start) + want.map((k) => byKey[k]).join('') + src.slice(found[5].end) };
 }
 
+/* ⛔⛔ RE-AUTHORED 2026-08-22 TO PERMIT AN EDIT THIS GATE WAS BUILT TO BLOCK — SAID PLAINLY,
+ * BECAUSE A GATE CHANGED QUIETLY IS WORSE THAN NO GATE: THE NEXT READER TRUSTS IT MORE.
+ * The Captain ruled the nav CONTEXT-AWARE (2026-08-22): signed-in Studio shows Home · Studio ·
+ * Archive, signed-in Sketch shows Home · Sketch · Sketchbook, and the ARTICLE DROPS on those two
+ * surfaces only. This gate previously pinned 'The Sketchbook' / 'The Archive' as the one true
+ * wording everywhere, so it went red — CORRECTLY, doing exactly its job.
+ * 🔑 ITS BLINDNESS IS THE FEATURE: it cannot tell a Captain ruling from somebody tidying up, which
+ *    is precisely why the ruling had to arrive as a ruling and not as a quiet edit.
+ * ⚠️ WHAT IS NOT WEAKENED: every label is still pinned EXACTLY, every route is still driven by a
+ *    real click, and --oldlabels still serves the superseded wording back. Only the SURFACE each
+ *    claim is made on has changed, because the surfaces now legitimately differ.
+ *
+ * ⛔ TWO VOCABULARIES ARE LIVE AT ONCE AND THAT IS THE CONTRACT, NOT A DIVERGENCE:
+ *    the two CONTRACTED surfaces drop the article; the five OUT-OF-SCOPE surfaces keep it. */
+
+/* Tile + out-of-scope-bar wording. ⛔ DO NOT REPURPOSE THESE FOR THE NAV TABS — LBL 7/8 read them
+   as the HOME TILE headings, which are page copy this contract does not touch. */
 const SKETCHBOOK = 'The Sketchbook';
 const ARCHIVE = 'The Archive';
+/* The contracted nav-tab wording, Studio and Sketch only. */
+const TAB_ARCHIVE = 'Archive';
+const TAB_SKETCHBOOK = 'Sketchbook';
 const RETIRED = ['My Sketches', 'My Blueprints'];
 
-const A_LABELS = "makeTab('sketches',     'The Sketchbook',  active)";
-const M_LABELS = "makeTab('sketches',     'My Sketches',  active)";
-const A_LABELS2 = "makeTab('myblueprints', 'The Archive', active)";
-const M_LABELS2 = "makeTab('myblueprints', 'My Blueprints', active)";
+/* ⚠️ ANCHORS ARE GROUNDED IN THE CONTRACTED BRANCHES, NOT THE OUT-OF-SCOPE ONE. The full-bar
+   branch still contains the articled spellings, so an anchor written against those would land in
+   the wrong branch and mutate a surface this gate is not testing — landing is not biting. */
+const A_LABELS = "makeTab('sketches', 'Sketchbook', active)";
+const M_LABELS = "makeTab('sketches', 'The Sketchbook', active)";
+const A_LABELS2 = "makeTab('myblueprints', 'Archive', active)";
+const M_LABELS2 = "makeTab('myblueprints', 'The Archive', active)";
 const A_ROUTE = "case 'sketches':     _leave('/sketchbook.html');  break;";
 const M_ROUTE = "case 'sketches':     _leave('/Blueprint.html');  break;";
 let jsDiffers = false;
@@ -167,42 +190,77 @@ const readTab = (page, id) => page.evaluate((t) => {
   await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
   const browser = await chromium.launch();
 
-  const { ctx, page } = await boot(browser, '/studio.html');
-
-  /* ── POSITIVE CONTROL. Every label claim below is worthless if the bar never rendered. ───── */
-  const tabCount = await page.evaluate(() => document.querySelectorAll('[data-acct-tab]').length);
-  ok(tabCount >= 5, `LBL 0 POSITIVE CONTROL: the signed-in top bar really rendered (${tabCount} tabs) — a signed-out fixture would find none and pass every absence check against nothing`);
-
-  const sk = await readTab(page, 'sketches');
-  const bp = await readTab(page, 'myblueprints');
-  ok(sk === SKETCHBOOK, `LBL 1 LOAD-BEARING: the sketch archive tab reads "${SKETCHBOOK}" — got "${sk}"`);
-  ok(bp === ARCHIVE, `LBL 2 LOAD-BEARING: the blueprint archive tab reads "${ARCHIVE}" — got "${bp}"`);
-
-  const barText = await page.evaluate(() => {
+  const tabsOn = (pg) => pg.evaluate(() =>
+    Array.from(document.querySelectorAll('[data-acct-tab]')).map((b) => (b.textContent || '').trim()));
+  const barTextOn = (pg) => pg.evaluate(() => {
     const h = document.getElementById('acct-topbar');
     return h ? (h.textContent || '') : '';
   });
-  ok(RETIRED.every((r) => !barText.includes(r)),
-    `LBL 3: neither retired label survives anywhere in the bar (${RETIRED.join(' / ')})`);
-
-  /* ── THE DOORS STILL LEAD WHERE THEY SAY. Driven by real clicks through the page's own
-        chokepoint, so a relabel that swapped two adjacent tabs cannot hide behind good copy. ─ */
-  const routed = await page.evaluate(async () => {
+  /* One click-driven router read, reusable per surface. A relabel that swapped two adjacent tabs
+     reads perfectly on screen, so every label claim is paired with a real click. */
+  const routesOn = (pg, ids) => pg.evaluate(async (list) => {
     const seen = {};
     window._navDrain = function (url) { seen[window.__which] = url; };
-    for (const t of ['sketches', 'myblueprints']) {
+    for (const t of list) {
       window.__which = t;
       const b = document.querySelector('[data-acct-tab="' + t + '"]');
       if (b) b.click();
       await new Promise((r) => setTimeout(r, 150));
     }
     return seen;
-  });
-  ok(routed.sketches === '/sketchbook.html',
-    `LBL 4 LOAD-BEARING: "${SKETCHBOOK}" still opens the sketchbook (went ${routed.sketches}) — renaming two neighbouring tabs is exactly the edit that swaps them, and a swap reads perfectly on screen`);
+  }, ids);
+
+  /* ══ SURFACE 1 · SIGNED-IN STUDIO — the contracted set ══════════════════════════════════════ */
+  const { ctx, page } = await boot(browser, '/studio.html');
+
+  /* ── POSITIVE CONTROL. Every claim below is worthless if the bar never rendered.
+        ⚠️ RE-DERIVED FROM THE CONTRACT, NOT LOOSENED: this asserted `>= 5` when the bar carried six
+        tabs everywhere. The Studio bar is now exactly THREE, so `>= 5` would have failed for
+        ARITHMETIC rather than for intent. Pinned exact — a count that cannot move is a stronger
+        control than a floor, and it doubles as the subtraction assertion. ── */
+  const studioTabs = await tabsOn(page);
+  ok(studioTabs.length === 3,
+    `LBL 0 POSITIVE CONTROL: the signed-in Studio bar rendered exactly 3 tabs (got ${studioTabs.length}) — a signed-out fixture would find none and pass every absence check against nothing`);
+  ok(JSON.stringify(studioTabs) === JSON.stringify(['Home', 'Studio', TAB_ARCHIVE]),
+    `LBL 1 LOAD-BEARING: the Studio bar reads Home · Studio · ${TAB_ARCHIVE} — got ${studioTabs.join(' · ')}`);
+
+  const bp = await readTab(page, 'myblueprints');
+  ok(bp === TAB_ARCHIVE, `LBL 2 LOAD-BEARING: the archive tab reads "${TAB_ARCHIVE}" on the Studio — got "${bp}"`);
+
+  /* THE SUBTRACTION IS ASSERTED, NOT ASSUMED. The contract removes the Sketchbook, Sketch and Shape
+     from this surface; without this leg the set could regrow and only LBL 0's count would notice. */
+  const sketchTabOnStudio = await readTab(page, 'sketches');
+  ok(sketchTabOnStudio === null,
+    `LBL 2b LOAD-BEARING: the Sketchbook tab is ABSENT from the Studio bar (the nav serves the surface you are on) — got ${JSON.stringify(sketchTabOnStudio)}`);
+
+  const barText = await barTextOn(page);
+  ok(RETIRED.every((r) => !barText.includes(r)),
+    `LBL 3: neither retired label survives anywhere in the bar (${RETIRED.join(' / ')})`);
+
+  const routed = await routesOn(page, ['myblueprints']);
   ok(routed.myblueprints === '/Blueprint.html',
-    `LBL 5 LOAD-BEARING: "${ARCHIVE}" still opens the archive (went ${routed.myblueprints})`);
+    `LBL 5 LOAD-BEARING: "${TAB_ARCHIVE}" still opens the archive (went ${routed.myblueprints})`);
   await ctx.close();
+
+  /* ══ SURFACE 2 · SIGNED-IN SKETCH — the other contracted set. ⛔ THIS FIXTURE IS NEW AND IT IS
+     NOT OPTIONAL: the Sketchbook label and route used to be asserted on the Studio, and the
+     contract deleted that tab from the Studio. Without moving the claim to the surface that still
+     carries it, the rename would ship with NOTHING behind it — which is the exact condition this
+     gate's own header says produces a silent revert. ══════════════════════════════════════════ */
+  {
+    const { ctx: c3, page: p3 } = await boot(browser, '/sketch.html');
+    const sketchTabs = await tabsOn(p3);
+    ok(sketchTabs.length === 3,
+      `LBL 4a POSITIVE CONTROL: the signed-in Sketch bar rendered exactly 3 tabs (got ${sketchTabs.length})`);
+    ok(JSON.stringify(sketchTabs) === JSON.stringify(['Home', 'Sketch', TAB_SKETCHBOOK]),
+      `LBL 4b LOAD-BEARING: the Sketch bar reads Home · Sketch · ${TAB_SKETCHBOOK} — got ${sketchTabs.join(' · ')}`);
+    const sk = await readTab(p3, 'sketches');
+    ok(sk === TAB_SKETCHBOOK, `LBL 4c LOAD-BEARING: the sketchbook tab reads "${TAB_SKETCHBOOK}" on the Sketch — got "${sk}"`);
+    const r3 = await routesOn(p3, ['sketches']);
+    ok(r3.sketches === '/sketchbook.html',
+      `LBL 4 LOAD-BEARING: "${TAB_SKETCHBOOK}" still opens the sketchbook (went ${r3.sketches}) — renaming two neighbouring tabs is exactly the edit that swaps them, and a swap reads perfectly on screen`);
+    await c3.close();
+  }
 
   /* ── THE HOME TILE. Same name, same destination. ─────────────────────────────────────────── */
   {
@@ -224,6 +282,17 @@ const readTab = (page, id) => page.evaluate((t) => {
       `LBL 7: the Home tile calls it "${ARCHIVE}" and still opens the archive (name="${tile.archiveName}", route=${tile.archiveRoute})`);
     ok(tile.sketchbookName === SKETCHBOOK && tile.sketchbookRoute === '/sketchbook.html',
       `LBL 8: the Home tile calls it "${SKETCHBOOK}" and still opens the sketchbook (name="${tile.sketchbookName}", route=${tile.sketchbookRoute})`);
+
+    /* ⛔⛔ THE OUT-OF-SCOPE PROOF — THE LEG THAT MAKES THIS A CONTRACT AND NOT A REWRITE.
+       The 2026-08-22 ruling contracts TWO of the seven surfaces and leaves five deliberately
+       untouched. Without this leg, "the other five are unchanged" is a sentence in a commit
+       message with nothing measuring it, and the next edit could quietly context-ise all seven —
+       which is the two-vocabularies fork, one dimension over.
+       🔑 A SCOPE BOUNDARY THAT NOTHING ASSERTS IS A COMMENT, NOT A CONTRACT. */
+    const homeBar = await p2.evaluate(() =>
+      Array.from(document.querySelectorAll('[data-acct-tab]')).map((b) => (b.textContent || '').trim()));
+    ok(JSON.stringify(homeBar) === JSON.stringify(['Home', SKETCHBOOK, ARCHIVE, 'Sketch', 'Studio', 'Shape']),
+      `LBL 8b LOAD-BEARING [out of scope, must NOT change]: Home keeps the full six-tab bar with the ARTICLED labels — got ${homeBar.join(' · ')}`);
 
     /* ── THE ORDER, MEASURED OFF THE SCREEN. ─────────────────────────────────────────────── */
     const seenOrder = (pg) => pg.evaluate(() => {

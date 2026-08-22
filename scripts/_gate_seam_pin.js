@@ -23,15 +23,20 @@
  *   L3  after the width is driven, BOTH scopes still agree AND carry the new value
  *   L4  after the width is driven, the toggle FOLLOWED the seam (the geometric consequence)
  *   L5  population — both elements exist and the toggle has a real box (never a vacuous green)
+ *   L6  SIGNED-IN: #acct-topbar's toggle is pinned to the seam at rest
+ *   L7  SIGNED-IN: it FOLLOWS the seam when the panel is driven
+ * ⚠️ L1-L5 are the SIGNED-OUT bar (#app-nav); L6-L7 are the SIGNED-IN bar (#acct-topbar). Both
+ *    resolve the token from documentElement, and BOTH are asserted, because signed-in is the state
+ *    no local smoke can reach — the one most likely to rot, and so the one least safe to leave bare.
  *
  * RED-FIRST CONTROLS — each names the legs it reds, per the rule that a red-first which reds for a
  * different reason than the leg under test proves nothing:
  *   --reshadow  restores ONLY the deleted `.studio-layout` declaration in the SERVED bytes.
- *               At rest both scopes still read 400, so L1/L2 STAY GREEN and L3/L4 GO RED — the
- *               "does it follow the drag" half, isolated.
+ *               At rest every scope still reads 400, so L1/L2/L6 STAY GREEN and L3/L4/L7 GO RED —
+ *               the "does it follow the drag" half, isolated, in both auth states.
  *   --prefix    restores the declaration AND re-points the writer at #studio-layout, i.e. the
- *               EXACT shipped state of ac15e30. ALL FOUR go red, and L2's failure reproduces the
- *               measured 80px.
+ *               EXACT shipped state of ac15e30. L1,L2,L3,L4,L6,L7 go red, and L2's failure
+ *               reproduces the measured 80px.
  * ⛔ Both poisons PROVE THEY LANDED (replacement counted) and ABORT rather than print a green if
  *    they did not — an unlandable poison that reports green is indistinguishable from a passing
  *    control. And the inert-control guard asserts the EXACT red set, so a control that reds the
@@ -148,7 +153,7 @@ function ok(id, label, cond, detail) {
     rest.present ? `toggle ${Math.round(rest.navW)}x${Math.round(rest.navH)}` : 'AN ELEMENT IS MISSING');
   if (!rest.present) {
     console.log('ABORT: the population is incomplete — every leg below would be vacuous.');
-    console.log('SCORE 0/5 RED');
+    console.log('SCORE 0/7 RED');
     await browser.close(); server.close(); process.exit(1);
   }
 
@@ -171,6 +176,56 @@ function ok(id, label, cond, detail) {
     Math.round(moved.navLeft) === Math.round(moved.panelRight),
     `toggle.left=${moved.navLeft.toFixed(1)}  panel.right=${moved.panelRight.toFixed(1)}  toggle moved ${(moved.navLeft - rest.navLeft).toFixed(1)}px, seam moved ${(moved.panelRight - rest.panelRight).toFixed(1)}px`);
 
+  /* ── L6/L7 · THE SIGNED-IN BAR PINS TOO ──────────────────────────────────────────────────────
+     Added 2026-08-22 with the context-aware nav. #acct-topbar is document.body.prepend-ed and
+     position:fixed, so it is a SIBLING of #studio-layout exactly like #app-nav — it can only read
+     --studio-panel-w because this same commit's predecessor moved the write to documentElement.
+     ⛔ WITHOUT THESE LEGS THE SIGNED-IN PIN WOULD BE A NEW BINDING WITH NOTHING BEHIND IT, on the
+     one auth state no local smoke can reach (Clerk rejects 127.0.0.1) — i.e. the state MOST likely
+     to rot unnoticed, guarded LEAST. Clerk stub copied from _gate_room_labels rather than invented.
+     ⚠️ THE TWO BARS ARE DIFFERENT HEIGHTS (64px signed-in vs 56px signed-out) BY DESIGN, so this
+     asserts the LEFT EDGE only. Normalising the heights is a nav redesign, not this contract. */
+  const ctx2 = await browser.newContext({ viewport: { width: VW, height: VH } });
+  const p2 = await ctx2.newPage();
+  await p2.addInitScript(`(() => {
+    try { sessionStorage.setItem('datum_auth_hint','1'); sessionStorage.setItem('datumfi_skip_entry_overlay','1'); } catch(e){}
+    try { localStorage.setItem('datum-discover-v1','done'); localStorage.removeItem('datum_studio_panel_w'); } catch(e){}
+    window.Clerk = { load: function(){ return Promise.resolve(); },
+      session: { getToken: function(){ return Promise.resolve('tok'); } },
+      user: { id:'u', firstName:'P', primaryEmailAddress:{emailAddress:'q@q.co'}, unsafeMetadata:{},
+              update: function(){ return Promise.resolve(); } } };
+  })();`);
+  await p2.goto(`http://127.0.0.1:${PORT}/studio.html`, { waitUntil: 'commit' });
+  let signedInOk = true;
+  try { await p2.waitForSelector('#acct-topbar .acct-studio-toggle', { timeout: 30000 }); }
+  catch (e) { signedInOk = false; }
+  await p2.waitForTimeout(1500);
+
+  if (!signedInOk) {
+    ok('L6', 'the signed-in Studio bar rendered its pinned toggle', false, 'the signed-in top bar never appeared — fixture failure, NOT a pass');
+    ok('L7', 'the signed-in toggle follows the seam', false, 'not reached');
+  } else {
+    const si = await p2.evaluate(() => {
+      const t = document.querySelector('#acct-topbar .acct-studio-toggle');
+      const panel = document.querySelector('.drafting-panel');
+      return { pos: getComputedStyle(t).position, left: t.getBoundingClientRect().left, panelRight: panel.getBoundingClientRect().right };
+    });
+    ok('L6', 'the signed-in toggle is pinned to the seam at rest',
+      si.pos === 'absolute' && Math.round(si.left) === Math.round(si.panelRight),
+      `position:${si.pos}  toggle.left=${si.left.toFixed(1)}  panel.right=${si.panelRight.toFixed(1)}  delta=${(si.left - si.panelRight).toFixed(1)}px`);
+    await p2.evaluate(() => window._studioPanelApply(600, false));
+    await p2.waitForTimeout(150);
+    const si2 = await p2.evaluate(() => {
+      const t = document.querySelector('#acct-topbar .acct-studio-toggle');
+      const panel = document.querySelector('.drafting-panel');
+      return { left: t.getBoundingClientRect().left, panelRight: panel.getBoundingClientRect().right };
+    });
+    ok('L7', 'the signed-in toggle FOLLOWS the seam when it moves',
+      Math.round(si2.left) === Math.round(si2.panelRight),
+      `toggle.left=${si2.left.toFixed(1)}  panel.right=${si2.panelRight.toFixed(1)}  toggle moved ${(si2.left - si.left).toFixed(1)}px, seam moved ${(si2.panelRight - si.panelRight).toFixed(1)}px`);
+  }
+  await ctx2.close();
+
   await browser.close();
   server.close();
 
@@ -178,21 +233,25 @@ function ok(id, label, cond, detail) {
      others alone. Anything else — including "everything went red" — is a broken control wearing
      the costume of diligence. */
   const redSet = Object.keys(legs).filter((k) => !legs[k]).sort().join(',');
+  /* ⛔ THE EXPECTED SETS ARE REASONED FROM THE MECHANISM, NOT FITTED TO A RUN. Deriving them by
+     running the control and writing down whatever came out is how a control gets retro-fitted to
+     its own bug. Both include the signed-in legs because #acct-topbar resolves the token from the
+     SAME documentElement scope as #app-nav — if it did not, that is a finding, not a tolerance. */
   if (RESHADOW) {
-    const want = 'L3,L4';
+    const want = 'L3,L4,L7';
     if (redSet !== want) { console.log(`ABORT: --reshadow must red exactly ${want}; it red [${redSet || 'nothing'}]`); process.exit(1); }
-    console.log(`  control OK — --reshadow red exactly ${want} (L1/L2 stayed green: at rest both scopes still read 400)`);
-    console.log('SCORE 5/5 GREEN   (red-first control behaved as specified)');
+    console.log(`  control OK — --reshadow red exactly ${want} (L1/L2/L6 stayed green: at rest both scopes still read 400)`);
+    console.log(`SCORE ${total}/${total} GREEN   (red-first control behaved as specified)`);
     process.exit(0);
   }
   if (PREFIX) {
-    const want = 'L1,L2,L3,L4';
+    const want = 'L1,L2,L3,L4,L6,L7';
     if (redSet !== want) { console.log(`ABORT: --prefix must red exactly ${want}; it red [${redSet || 'nothing'}]`); process.exit(1); }
-    console.log(`  control OK — --prefix red exactly ${want} (the shipped ac15e30 state reproduced)`);
-    console.log('SCORE 5/5 GREEN   (red-first control behaved as specified)');
+    console.log(`  control OK — --prefix red exactly ${want} (the shipped ac15e30 state reproduced, both auth states)`);
+    console.log(`SCORE ${total}/${total} GREEN   (red-first control behaved as specified)`);
     process.exit(0);
   }
 
   console.log(`SCORE ${pass}/${total} ${pass === total ? 'GREEN' : 'RED'}`);
   process.exit(pass === total ? 0 : 1);
-})().catch((e) => { console.log('FAIL harness: ' + (e && e.message)); console.log('SCORE 0/5 RED'); process.exit(1); });
+})().catch((e) => { console.log('FAIL harness: ' + (e && e.message)); console.log('SCORE 0/7 RED'); process.exit(1); });

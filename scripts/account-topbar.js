@@ -46,9 +46,14 @@
       + '  height:18px;width:auto;flex-shrink:0;'
       + '  filter:drop-shadow(0 0 8px rgba(255,255,255,.06));'
       + '}'
+      /* ⛔ RIGHT-ORIENTED, NOT CENTRED — CAPTAIN-RULED 2026-08-22, AND IT IS LOAD-BEARING IN THE
+         STUDIO, NOT A PREFERENCE. The toggle is pinned to the seam on the LEFT; centred tabs drift
+         toward the middle of the viewport and collide with it. Right-orienting them reproduces the
+         signed-out feel the Captain asked to keep: pinned toggle, then a wide quiet gap, then the
+         controls gathered in the top right with Upgrade outermost. */
       + '.acct-topbar-nav{'
       + '  flex:1;display:flex;align-items:center;'
-      + '  justify-content:center;gap:4px;height:100%;'
+      + '  justify-content:flex-end;gap:4px;height:100%;'
       + '}'
       + '.acct-cluster{display:flex;align-items:center;gap:2px;}'
       + '.acct-tab{'
@@ -92,7 +97,15 @@
       /* Studio-only toggles (left of nav). .view-btn base comes from header.css, which
          the Studio page always loads; acct-view-active supplies the active style without
          depending on header.css's .view-btn.active. */
-      + '.acct-studio-toggle{display:flex;gap:3px;align-items:center;margin-left:18px;flex-shrink:0;}'
+      /* ⛔⛔ PINNED TO THE SEAM, MIRRORING styles/header.css:143's SIGNED-OUT RULE.
+         #acct-topbar is document.body.prepend-ed and position:fixed, so it is a SIBLING of
+         #studio-layout — it can only see --studio-panel-w because 4b25a49 moved the write to
+         documentElement. Before that commit this pin was impossible, not merely unwritten.
+         ⚠️ SAME MECHANISM AND SAME LEFT EDGE AS SIGNED-OUT, NOT THE SAME VERTICAL POSITION:
+         this bar is 64px tall and #app-nav is 56px. Normalising the two heights is a nav redesign
+         and is deliberately NOT in this contract. */
+      + '.acct-studio-toggle{display:flex;gap:3px;align-items:center;flex-shrink:0;'
+      + '  position:absolute;left:var(--studio-panel-w);top:50%;transform:translateY(-50%);margin-left:0;}'
       + '.acct-view-active{background:rgba(29,158,117,.12)!important;border-color:#3ec3a0!important;color:#3ec3a0!important;}'
       + '@media(max-width:720px){'
       + '  .acct-topbar-nav{display:none;}'
@@ -158,6 +171,71 @@
       + ' data-acct-action="signout" aria-label="Sign out of Datum FI">Sign Out</button>';
   }
 
+  /* ══ THE NAV SERVES THE SURFACE YOU ARE ON ══════════════════════════════════════════════════
+   * CAPTAIN-RULED 2026-08-22, and it is the first time this project has written the principle down:
+   * SIGNED-IN IS A WORKSPACE, AND A WORKSPACE SERVES THE WORK. In the Studio you get Studio
+   * controls; in the Sketch you get Sketch controls.
+   *
+   * ⛔ SIGNED-OUT IS DELIBERATELY NOT THIS, AND THE DIVERGENCE IS THE DECISION, NOT AN OVERSIGHT:
+   * signed-out is a FUNNEL — a visitor who has not committed to a product should still see the
+   * others — so the signed-out navs keep every destination. The two states diverging here is
+   * correct rather than a fork.
+   *
+   * ⛔⛔ SCOPE, STATED SO THE SILENCE IS NOT READ AS COVERAGE. Only TWO of the seven surfaces
+   * getActiveTab can return are contracted: 'studio' and 'sketch'. The other five — welcome,
+   * shape, profile/Dossier and the two archives — KEEP TODAY'S FULL BAR, untouched, until their
+   * own arc. Shipping context-aware nav for two states and silently leaving five would recreate
+   * the two-vocabularies fork closed earlier the same day, in a different dimension.
+   *
+   * ⚠️ THE ARTICLE DROPS FOR DENSITY, IT IS NOT A RENAME. 'Archive' in a five-item bar and
+   * 'The Archive' in a page hero are both correct in their own register — a nav tab is a LABEL and
+   * a hero is a SENTENCE. The heroes are unchanged and _gate_archive_hero_copy still guards them.
+   * ⛔ AND THE FULL-BAR BRANCH BELOW KEEPS 'The Sketchbook' / 'The Archive' VERBATIM, which is why
+   * both spellings are live at once and why that is not a divergence. */
+  function navSetFor(active) {
+    if (active === 'studio') {
+      return '<div class="acct-cluster">'
+        + makeTab('welcome',      'Home',    active)
+        + makeTab('studio',       'Studio',  active)
+        + makeTab('myblueprints', 'Archive', active)
+        + saveAction(active)
+        + '</div>';
+    }
+    if (active === 'sketch') {
+      return '<div class="acct-cluster">'
+        + makeTab('welcome',  'Home',       active)
+        + makeTab('sketch',   'Sketch',     active)
+        + makeTab('sketches', 'Sketchbook', active)
+        + saveAction(active)
+        + '</div>';
+    }
+    /* THE OTHER FIVE SURFACES — UNCHANGED. Not a fallback in the "whatever is left" sense; it is
+       the contract's explicit out-of-scope branch and it must keep behaving exactly as it did.
+       ⚠️ saveAction is NOT called here and that is not an omission: it returns '' for every id
+       except studio and sketch, both of which are handled above, so the old conditional calls in
+       this branch were provably dead code. Removing them changes no rendered byte. */
+    return '<div class="acct-cluster">'
+      /* The Dossier lost its permanent tab (Captain, 2026-08-01) — it is reached from its Home
+         tile instead. getActiveTab still RETURNS 'profile' on Dossier.html and handleTabClick
+         still routes it: the id remains part of the system for active-state and routing, it just
+         no longer has a permanent seat in the bar. Consequence, stated rather than discovered:
+         on the Dossier page no tab highlights, because the tab it would highlight is not there.
+         ⛔ STILL TRUE AND STILL OUT OF SCOPE — a known gap, not one this commit opens. */
+      +   makeTab('welcome',      'Home',         active)
+      + '</div>'
+      + '<div class="acct-divider" aria-hidden="true"></div>'
+      + '<div class="acct-cluster">'
+      +   makeTab('sketches',     'The Sketchbook',  active)
+      +   makeTab('myblueprints', 'The Archive', active)
+      + '</div>'
+      + '<div class="acct-divider" aria-hidden="true"></div>'
+      + '<div class="acct-cluster">'
+      +   makeTab('sketch',  'Sketch',  active)
+      +   makeTab('studio',  'Studio',  active)
+      +   makeTab('shape',   'Shape',   active)
+      + '</div>';
+  }
+
   function buildHTML(active) {
     return '<header id="acct-topbar" role="banner">'
       + '<a href="/index.html" class="acct-brand" aria-label="Datum FI — Home">'
@@ -166,27 +244,7 @@
       + '</a>'
       + studioToggles(active)
       + '<nav class="acct-topbar-nav" aria-label="Account navigation">'
-      +   '<div class="acct-cluster">'
-      /* The Dossier lost its permanent tab (Captain, 2026-08-01) — it is reached from its Home
-         tile instead. getActiveTab() still RETURNS 'profile' on Dossier.html and handleTabClick
-         still routes it: the id remains part of the system for active-state and routing, it just
-         no longer has a permanent seat in the bar. Consequence, stated rather than discovered:
-         on the Dossier page no tab highlights, because the tab it would highlight is not there. */
-      +     makeTab('welcome',      'Home',         active)
-      +   '</div>'
-      +   '<div class="acct-divider" aria-hidden="true"></div>'
-      +   '<div class="acct-cluster">'
-      +     makeTab('sketches',     'The Sketchbook',  active)
-      +     (active === 'sketch' ? saveAction(active) : '')
-      +     makeTab('myblueprints', 'The Archive', active)
-      +     (active === 'studio' ? saveAction(active) : '')
-      +   '</div>'
-      +   '<div class="acct-divider" aria-hidden="true"></div>'
-      +   '<div class="acct-cluster">'
-      +     makeTab('sketch',  'Sketch',  active)
-      +     makeTab('studio',  'Studio',  active)
-      +     makeTab('shape',   'Shape',   active)
-      +   '</div>'
+      +   navSetFor(active)
       + '</nav>'
       + '<div class="acct-topbar-right">'
       +   signOutAction(active)

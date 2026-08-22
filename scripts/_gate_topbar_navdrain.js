@@ -36,8 +36,20 @@ const NOFAILOPEN = process.argv.includes('--nofailopen');
 // --barehref restores the PRE-CHANGE tab, a bare location.href that never reaches the chokepoint. This is
 // the FEATURE red-first: NAV 1 must go red under it, proving the routing is what makes NAV 1 green.
 const BAREHREF = process.argv.includes('--barehref');
-const A_TAB = "      case 'sketches':     _leave('/sketchbook.html');  break;";
-const M_TAB = "      case 'sketches':     window.location.href = '/sketchbook.html';  break;";
+/* ⛔ RE-AIMED 2026-08-22 FROM 'sketches' TO 'myblueprints', AND IT IS A PREMISE REPAIR, NOT A
+   RELABEL. This fixture boots /studio.html and used to click the Sketchbook tab — "the one a
+   signed-in user clicks to leave for their sketchbook". The Captain's context-aware nav ruling
+   REMOVED that tab from the Studio, so the journey this gate drove no longer exists: a signed-in
+   user on the Studio cannot leave for the sketchbook from the top bar, by design.
+   ⭐ THE ARCHIVE HOP IS THE REAL CROSS-SURFACE JOURNEY FROM THE STUDIO NOW, so the chokepoint is
+   proven against a hop a user actually makes. The gate's SUBJECT is unchanged — a topbar tab hop
+   must go through _navDrain and must fail open — only the tab it drives has moved to one that is
+   still there.
+   ⚠️ THE ALTERNATIVE WAS TO BOOT /sketch.html AND KEEP CLICKING 'sketches'. Rejected: the topbar
+   defect this gate was built for was found on the Studio, and moving the fixture off that surface
+   to preserve a tab name would test the chokepoint somewhere the original bug never lived. */
+const A_TAB = "      case 'myblueprints': _leave('/Blueprint.html');   break;";
+const M_TAB = "      case 'myblueprints': window.location.href = '/Blueprint.html';   break;";
 const A_TRY = "    try {\n      if (typeof window._navDrain === 'function') { window._navDrain(url); return; }\n    } catch (e) {}\n    window.location.href = url;";
 const M_TRY = "    if (typeof window._navDrain === 'function') { window._navDrain(url); return; }\n    window.location.href = url;";
 let jsDiffers = false;
@@ -110,9 +122,11 @@ const PORT = 8246; const base = 'http://127.0.0.1:' + PORT;
       window._navDrain = function (url) { window.__drained.push(url); };   // records, deliberately does NOT navigate
     }, mode);
 
-    // Drive a REAL tab button — the one a signed-in user clicks to leave for their sketchbook.
+    // Drive a REAL tab button — the one a signed-in user on the Studio clicks to leave for their
+    // Archive. (Was 'sketches' until 2026-08-22; the context-aware nav removed that tab from this
+    // surface, so clicking it here would be driving a journey the product no longer offers.)
     const clicked = await page.evaluate(() => {
-      const b = document.querySelector('[data-acct-tab="sketches"]');
+      const b = document.querySelector('[data-acct-tab="myblueprints"]');
       if (!b) return false;
       b.click(); return true;
     });
@@ -127,19 +141,19 @@ const PORT = 8246; const base = 'http://127.0.0.1:' + PORT;
   const spy = await run('spy');
   lines.push(`      [chokepoint present] clicked=${spy.clicked} handed=${JSON.stringify(spy.drained)} navigated=${spy.navigated}`);
   ok(spy.clicked, 'NAV 0: the real topbar tab button exists and was clicked');
-  ok(spy.drained.indexOf('/sketchbook.html') >= 0,
+  ok(spy.drained.indexOf('/Blueprint.html') >= 0,
     `NAV 1: a topbar tab hop goes THROUGH the page chokepoint with the right url (handed ${JSON.stringify(spy.drained)})`);
   ok(!spy.navigated,
     'NAV 1b: and it does NOT navigate behind the chokepoint back — the chokepoint owns the hop');
 
   const absent = await run('absent');
   lines.push(`      [chokepoint absent]  navigated=${absent.navigated} -> ${absent.endUrl}`);
-  ok(absent.navigated && /sketchbook\.html$/.test(absent.endUrl),
+  ok(absent.navigated && /Blueprint\.html$/.test(absent.endUrl),
     `NAV 2 FAIL-OPEN: with NO chokepoint on the page, the tab still navigates (landed ${absent.endUrl})`);
 
   const threw = await run('throws');
   lines.push(`      [chokepoint throws]  navigated=${threw.navigated} -> ${threw.endUrl}`);
-  ok(threw.navigated && /sketchbook\.html$/.test(threw.endUrl),
+  ok(threw.navigated && /Blueprint\.html$/.test(threw.endUrl),
     `NAV 3 FAIL-OPEN, LOAD-BEARING: when the chokepoint THROWS, the tab still navigates and the user is not stranded (landed ${threw.endUrl})`);
 
   await browser.close();
