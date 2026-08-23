@@ -2473,12 +2473,25 @@
        proofs (§11.4), and this tag is the wiring half. -->
   <script src="/scripts/studio-panel-resize.js"></script>
   <!-- ⭐ STEP 3 · MOVE 1a — the account modal builder: 191,633 bytes, 11.19% of this file in ONE
-       function, and the factory for 107 of its 261 inline on*= handlers. SYNCHRONOUS AND IN <head>
-       like its four siblings above. `defer` would also work (nothing calls it at parse time) and was
-       REFUSED for 1a on purpose: a first-paint change must not ride along with a byte-pure move.
+       function, and the factory for 107 of its 261 inline on*= handlers.
+       ⭐ NOW `defer`, 2026-08-23. It was deliberately left SYNCHRONOUS for 1a so a first-paint change
+       could not ride along with a byte-pure move; this is that change, landing on its own.
+       ⚠️ IT IS HYGIENE, NOT A PAYOFF, AND THE NUMBER SAYS SO. Nothing calls this at parse time and a
+       331,284-byte parse-blocking script that nobody needs during load should not be one — worth
+       ~150-250ms. It is NOT the split arc's win, and must never be written down as one.
+       ⛔⛔ MEASURED FIRST, ON THE LIVE SIGNED-OUT PAGE, BEFORE THE ATTRIBUTE MOVED: Lighthouse mobile
+       scored 89 with FCP 2.8s, LCP 3.2s and Total Blocking Time THIRTY MILLISECONDS. Its own
+       render-blocking estimate was 260ms for ALL five head scripts AND the CSS — a 9.3% ceiling
+       against a predicted 15-40%. THE PREDICTION WAS FALSIFIED BY THE BASELINE, before a byte moved.
+       🔑 BYTES ARE NOT MILLISECONDS. A size is a HYPOTHESIS about a duration, never a measurement of
+          one, and this file's 331KB bought far less delay than its size implied. TBT 30ms was the
+          tell. ⛔ AND FIRST PAINT WAS NEVER THE CRISIS THE SPLIT ARC WAS WRITTEN TO SOLVE — that
+          goal is CORRECTED, not quietly dropped; the arc's real win is maintainability.
+       ⚠️ 89 IS THE SIGNED-OUT LANDING. Incognito carries no session, so the state where this 324KiB
+          builder actually matters HAS STILL NEVER BEEN MEASURED. Do not cite 89 for signed-in.
        ⛔ THIS TAG IS LOAD-BEARING AND ITS ABSENCE IS SILENT — every sandbox gate stays GREEN without
        it while ⚙️ DETAILS does nothing on the real page. scripts/_gate_parts_wired.mjs is the proof. -->
-  <script src="/scripts/studio-account-modal.js"></script>
+  <script defer src="/scripts/studio-account-modal.js"></script>
 </head>
 <body>
   <a href="#studio-layout" class="skip-link">Skip to main content</a>

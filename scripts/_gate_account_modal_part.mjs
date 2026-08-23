@@ -44,6 +44,52 @@ const NOPART = process.argv.includes('--nopart');
 const URL = 'http://127.0.0.1:8001/studio.html';
 const PART_REL = 'scripts/studio-account-modal.js';
 
+/* ══ THE CONTROL DECLARATION (§82.99) — DECLARED THE DAY ITS ANCHOR EXPIRED ═══════════════════════
+ * ⭐ THIS GATE EARNED ITS DECLARATION THE HARD WAY. On 2026-08-23 adding `defer` to studio.html's
+ *    script tag killed `--nopart`'s literal anchor. The guard fired correctly and the control
+ *    ABORTED — and a CLEAN SUITE STILL PRINTED GREEN, because a poison is a no-op without its flag.
+ *    That is _gate_seam_pin's founding shape, reproduced by an ordinary correct edit. Declaring it
+ *    puts `--nopart` in _gate_controls_still_red.mjs's weekly sweep, which is the only instrument
+ *    that would have caught it the same day.
+ *
+ * ⛔⛔ `--rename=<name>` IS DELIBERATELY NOT DECLARED, AND THAT IS A MEASURED EXCLUSION, NOT AN
+ * OVERSIGHT — record it as the difference between "looked and none" and "nobody looked".
+ * IT IS PARAMETERISED: the declaration format keys controls by a BARE FLAG, and the sweep invokes
+ * that flag verbatim. Invoking `--rename` with no value leaves RENAME = '' , the mutation never
+ * applies, the gate goes GREEN, and the sweep would report INERT — A FALSE RED MANUFACTURED BY THE
+ * INSTRUMENT ITSELF against a control that works perfectly (proven: `--rename=openAccountModal`
+ * bites). Declaring it would be worse than omitting it.
+ * 🔑 SO THE DECLARATION FORMAT HAS A KNOWN GAP: it cannot express a control that takes an argument.
+ *    Filed as a finding rather than papered over here — widening the schema is not this commit's
+ *    cause, and a format change with one known instance is a design call, not a repair. */
+const CONTROLS = {
+  '--nopart': {
+    what: 'removes the <script src> for this part from the SERVED studio.html response',
+    anchors: [{ file: 'studio.html', literal: 'src="/scripts/studio-account-modal.js"', count: 1 }],
+    /* ⛔ MEASURED BY RUNNING THE CONTROL, NOT DERIVED FROM READING IT — and the first draft of this
+       line was WRONG IN BOTH DIRECTIONS. It guessed ['R2','W1','W2']: R2 does not red at all, and
+       R4/D1/D2/D3 do. ⭐ R2 IS THE INSTRUCTIVE ONE: `--nopart` mutates the SERVED RESPONSE through
+       route interception, while R2 reads the COMPOSED SOURCE — so the registration leg correctly
+       still sees the tag. Registration and wiring are two proofs, and this control only attacks one.
+       🔑 A WRONG `reds` LIST PASSES _gate_poison_anchors_resolve.mjs SILENTLY: its L5 asserts only
+          that the array is NON-EMPTY. Nothing in the estate checks a declaration against the run it
+          describes, so this list is exactly as true as the measurement behind it. */
+    reds: ['R4', 'D1', 'D2', 'D3', 'W1', 'W2'],
+    /* ⛔ DECLARED 'red' FIRST, AND THE SWEEP IMMEDIATELY REPORTED IT INERT. This gate SELF-VERIFIES:
+       under `--nopart` it checks that the mutation bit, prints `✅ RED-FIRST OK`, and EXITS 0 — so
+       "invoke the control, expect RED" is backwards here, exactly as it was for the two seam gates.
+       ⭐ THE MIS-SORT WAS CAUGHT BY _gate_controls_still_red.mjs WITHIN MINUTES OF BEING WRITTEN,
+          which is the first time an instrument in this estate has caught a wrong declaration rather
+          than a wrong product. It is also the THIRD gate in the self-verified class — that mechanism
+          is COMMON, not exotic, which is why the contract is an OUTCOME and never a mechanism. */
+    expect: 'self-verified',
+  },
+};
+if (process.argv.includes('--declare-controls')) {
+  console.log(JSON.stringify({ gate: '_gate_account_modal_part.mjs', controls: CONTROLS }));
+  process.exit(0);
+}
+
 /* ⭐ THE 76, FROM A FREE-VARIABLE CENSUS (eslint-scope, selftested against a fixture of known frees
    and known non-frees), NOT FROM A GREP. A grep over identifiers cannot tell a local from a free
    one, and would have produced a list that is wrong in both directions.
@@ -101,8 +147,26 @@ ck('S3 the two outward WRITES are in the manifest', WRITES.every((w) => DEPS.inc
 
 // ── LEG 1 · REGISTRATION (source half) ──────────────────────────────────────────────────────────
 ck('R1 the part is registered in PARTS[]', PART_RELS().includes(PART_REL), PART_RELS().length + ' parts');
+/* ⛔⛔ THIS LEG PINNED THE EXACT TAG TEXT AND WENT RED ON A CORRECT CHANGE (2026-08-23). It asserted
+   `composed.includes('<script src="/' + PART_REL + '"></script>')`, so adding `defer` — which does
+   not affect REGISTRATION at all, the only thing this leg claims to test — turned it red.
+   🔑 ASSERT THE REQUIREMENT, NOT THE ARRANGEMENT. The requirement is "studio.html loads this part";
+      the attribute list is arrangement. A gate that reds on correct code is a gate people switch off.
+   ⭐ THE MATCHER IS scripts/_gate_parts_wired.mjs:171's, NOT A THIRD IDIOM. That gate already had the
+      tolerant form and stayed GREEN through this change; two instruments asserting one claim with two
+      strictnesses is how a correct edit gets a split verdict.
+   ⚠️ COMMENT-EXCLUSION IS DELIBERATELY *NOT* COPIED HERE. `_gate_parts_wired.mjs` owns "the tag is
+      present AND not commented out" for every (page × part) pair, and it runs in the same suite. A
+      second copy of `inHtmlComment` would be a fork of a check that already exists — so if this leg
+      ever needs hardening, POINT AT THAT GATE rather than growing one here.
+   ⛔ AND ITS `observed` STRING WAS A LIE: it was the constant 'tag present', printed whether or not
+      the tag was found, so the FAILING run reported `[observed: tag present]`. An observation field
+      that does not observe is the day's own species — a self-report that is not a measurement. */
+const R2_TAG = new RegExp('<script[^>]+src\\s*=\\s*["\'][^"\']*'
+  + PART_REL.split('/').pop().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '["\']', 'i');
+const r2Hit = R2_TAG.exec(composed);
 ck('R2 studio.html carries the <script src> for it (registration is NOT wiring)',
-   composed.includes('<script src="/' + PART_REL + '"></script>'), 'tag present');
+   !!r2Hit, r2Hit ? r2Hit[0] : 'NO <script src> matching ' + PART_REL + ' anywhere in the composed source');
 /* ⭐ "IN THE PART, NOT THE SHELL" WITHOUT READING TWO FILES: the composed source is shell-then-parts,
    so the single definition must fall BETWEEN this part's markers. extractWindowFn already throws on
    a second definition, so one-and-inside is the whole claim. */
@@ -125,9 +189,25 @@ if (NOPART || RENAME) {
     const resp = await route.fetch();
     let body = await resp.text();
     if (NOPART) {
-      const tag = '  <script src="/' + PART_REL + '"></script>\n';
-      if (body.split(tag).length - 1 !== 1) throw new Error('--nopart anchor not unique');
-      body = body.replace(tag, '');
+      /* ⛔⛔ THIS ANCHOR EXPIRED ON 2026-08-23 AND IT IS THE FOUNDING DEFECT OF THE §82.90 ARC,
+         REPRODUCED. It was the exact literal `  <script src="/…"></script>\n`; adding `defer` to
+         that tag — a correct change that does not touch REGISTRATION at all — made it match ZERO
+         times and this control ABORTED.
+         ⭐ THE GUARD WORKED. Exact-count-or-abort counted, found != 1, and threw rather than
+            silently removing nothing and reporting a green. That is the idiom doing its job.
+         ⛔ BUT A CLEAN SUITE STILL PRINTED GREEN OVER IT, because a poison is a no-op without its
+            flag. Only `--nopart` reaches this line. That is _gate_seam_pin's shape exactly, and it
+            is why scripts/_gate_controls_still_red.mjs exists — it would have caught this the same
+            day, had this gate carried a control declaration. It does now; see CONTROLS below.
+         🔑 ASSERT THE REQUIREMENT, NOT THE ARRANGEMENT — the same repair R2 took above. The tag to
+            remove is "the script that loads this part", not "that string of characters".
+         ⭐ THE PATTERN IS scripts/_gate_parts_wired.mjs:225's, NOT A THIRD IDIOM, and the
+            exact-count guard is KEPT: tolerating attributes must not become tolerating ambiguity. */
+      const base = PART_REL.split('/').pop().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const src = '[ \\t]*<script[^>]+src\\s*=\\s*["\'][^"\']*' + base + '["\'][^>]*>\\s*</script>\\s*\\n?';
+      const n = (body.match(new RegExp(src, 'ig')) || []).length;
+      if (n !== 1) throw new Error('--nopart anchor matched ' + n + ' times, expected exactly 1');
+      body = body.replace(new RegExp(src, 'i'), '');
     }
     if (RENAME) {
       const re = new RegExp('\\b' + RENAME + '\\b', 'g');
