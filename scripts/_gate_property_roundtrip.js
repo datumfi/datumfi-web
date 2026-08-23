@@ -65,8 +65,28 @@ const M_CAP = '/* accounts not carried: --dropfields */';
 const MIME = { '.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml',
   '.json':'application/json','.png':'image/png','.woff2':'font/woff2','.ico':'image/x-icon' };
 
+/* ⛔ EXACT COUNT, NOT MERE PRESENCE (§82.101). This used to read `indexOf(a) === -1`, which detects
+ * only the ZERO case. It could not see an anchor that had grown a SECOND match — and because the
+ * replacement is `split().join()` (all sites), both would have been poisoned silently and the control
+ * would then red for a reason nobody specified. A control that reds for a different reason than the
+ * leg under test proves nothing, and this guard could not tell the difference.
+ *   ⚠️ THE RISK DIRECTION IS OVER-APPLICATION, NOT UNDER. `split().join()` cannot miss occurrences the
+ *      way `.replace(string, …)` silently does — so this was never a partial-landing defect, and it is
+ *      recorded as what it is rather than as the shape that was predicted for it.
+ *   🔑 THE MESSAGE IS REWRITTEN WITH THE CHECK, IN THE SAME COMMIT. The old text said "structure
+ *      moved", which described the only failure it could detect. Leaving that in place while the
+ *      check got stronger would have created a comment explaining away an alarm on the very line that
+ *      just gained the alarm — the §82.87 defect, born the day the instrument improved.
+ * ⚠️ `split().join()` is KEPT even though n===1 makes it equivalent to `.replace()`. Once the count is
+ *    enforced they cannot differ, and the all-sites form is the one that stays safe if the guard is
+ *    ever loosened again. */
 function mutate(src, a, m, label) {
-  if (src.indexOf(a) === -1) throw new Error('anchor missing (' + label + ') — structure moved, re-true this gate');
+  const n = src.split(a).length - 1;
+  if (n !== 1) {
+    throw new Error(`anchor ${label}: expected exactly 1 occurrence, found ${n} — ` +
+      (n === 0 ? 'structure moved, re-true this gate'
+               : 'the anchor has grown a twin; poisoning both would red this gate for an unspecified reason'));
+  }
   return src.split(a).join(m);
 }
 
