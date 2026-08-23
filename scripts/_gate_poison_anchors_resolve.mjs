@@ -153,7 +153,9 @@ for (const d of decls) {
 
 console.log(`\n  POPULATION  ${population.length} gates, from ${popSource}`);
 console.log(`    declared controls (§82.99)   ${declared.length}`);
-console.log(`    carry controls, UNDECLARED   ${undeclaredWithControls.length}   <- the conversion backlog`);
+/* ⚠️ the label is "NOT EXAMINED", not "the backlog". "Backlog" implies these gates hold work THIS
+   gate could do, i.e. that they have anchors — the exact unmeasured claim struck below. */
+console.log(`    carry controls, UNDECLARED   ${undeclaredWithControls.length}   <- NOT EXAMINED by this gate`);
 console.log(`    no controls at all           ${noControls.length}`);
 console.log(`    anchors checked              ${anchorCount}\n`);
 
@@ -165,10 +167,35 @@ ok('L5 ', 'every declared control names a non-empty expected red set', emptyReds
 ok('L6 ', 'the census is non-vacuous (at least one gate has declared)', decls.length > 0, `${decls.length} declaration(s)`);
 
 if (undeclaredWithControls.length) {
-  console.log(`\n  ⚠️  ${undeclaredWithControls.length} gate(s) carry controls that have NOT declared them. NOT a red —`);
-  console.log('      a gate written before the convention is not broken. This is the backlog, printed');
-  console.log('      every run so it drains rather than settles. Nothing verifies those anchors today.');
+  console.log(`\n  ⚠️  ${undeclaredWithControls.length} gate(s) carry a control and have NOT declared it. NOT a red — a gate`);
+  console.log('      written before the convention is not broken. Printed every run so the backlog drains.');
+  console.log('      ⛔ HOW MANY OF THEM HAVE AN ANCHOR THIS GATE COULD CHECK IS **UNMEASURED**.');
 }
+/* ⛔⛔ THE SENTENCE THAT USED TO END THAT BLOCK WAS ~~"Nothing verifies those anchors today."~~ — AND
+ * IT WAS FALSE IN THE DIRECTION THAT GETS ALARMS IGNORED. It asserted that all 165 undeclared gates
+ * HAVE anchors, which was never measured. Struck the same day it shipped, rather than deleted.
+ *
+ * MEASURED 2026-08-23, hours after this gate landed: of the 131 control-carrying gates with no
+ * A_/M_ pair, 104 do not serve bytes at all. They poison IN-PROCESS — lifting a function out of
+ * `studioSource()` and substituting a whole counterfactual implementation — so there is no stored
+ * literal for this gate to re-find. 80 of those 104 verify by asserting THE VERDICT MUST CHANGE
+ * under the flag ("stayed green" => the control failed), a guard this gate cannot see and does not
+ * need to. That guard is not weaker than an anchor count; it is a DIFFERENT filter — it proves the
+ * BEHAVIOUR changed where a count proves only the BYTES did, and it fails where a count does not
+ * (it cannot separate "the poison missed" from "the gate is insensitive").
+ *
+ * ⚠️ AND THE OBVIOUS PARTITION IS *STILL* NOT SOUND, WHICH IS WHY NONE IS PRINTED. "Serves bytes"
+ * looks like the discriminator and is not: `_gate_407_19_1_cents.mjs` serves nothing and mutates
+ * source text against a pattern anyway. A one-way inference in the other direction does not exist
+ * either. So the honest report is the count that WAS measured plus an explicit UNMEASURED, not a
+ * split this file cannot derive.
+ *
+ * 🔑 AN INSTRUMENT'S SCOPE CLAIM IS A MEASUREMENT LIKE ANY OTHER AND MUST BE DERIVED, NEVER ASSERTED.
+ *    "Carries a control" was measured. "Has an anchor" was borrowed from it — and a denominator
+ *    borrowed from an adjacent question is a guess wearing a census's clothes.
+ * ⛔ THE SPECIES SURVIVED ITS OWN DIAGNOSIS. This wording was written hours after the repeatability
+ *    alarm was repaired for overstating ITS scope, by the same hand, inside the arc meant to close
+ *    that family. Recorded because it is evidence of how structural the class is, not of carelessness. */
 
 const expect = STALE ? ['L4 '] : EMPTY ? ['L1 ', 'L6 '] : null;
 if (expect) {
