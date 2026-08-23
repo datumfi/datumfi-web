@@ -1630,3 +1630,1097 @@
         if (base && base.title === 'HELOC') _fetchLivePrime().then(_refreshHelocLiveColor);
         if (base && base.title === 'Mortgage') _fetchLivePrime().then(_refreshMoatLiveColor);
     };
+
+/* ══════════════════════════════════════════════════════════════════════════════════════════════════
+   ── ABSORBED HELPERS · STEP 3 · MOVE 1b (2026-08-22) ───────────────────────────────────────────
+   53 definitions whose ONLY caller is the builder above. They moved here rather than into a part of
+   their own because their caller is already a part: §11.2 — name a part for its CALLERS, never for
+   its origin room. A group that reads coherent is not a module; a module is a group with a caller
+   from outside it, and measured against the call graph none of these has one.
+   ⛔ THEY ARE STILL GLOBALS AND THAT IS DELIBERATE, NOT AN OVERSIGHT. Wrapping them in an IIFE would
+   make them private and would BREAK lift(): the sandbox gates extract a function's TEXT and run it
+   inside new Function(...). Top-level declarations are both liftable AND reachable. 1b is a
+   CO-LOCATION, not a privatisation — the win is 132,541 bytes out of studio.html and the builder's
+   external dependency surface falling from 76 names to 39.
+   ⭐ AND THE AUDIT DEEPENS FOR FREE: _gate_parts_wired computes this file's published surface, which
+   goes from 1 name to ~54. The instrument at the centre of Part 10 now covers fifty-four times what
+   it did before, with no extra code.
+   ══════════════════════════════════════════════════════════════════════════════════════════════════ */
+    function _diIraWhyPanel(acc, base) {
+      var isRoth = base.taxCode === 'roth';
+      var hasWorkplace = (state.accounts || []).some(function (a) { var b = getBaseType(a.baseId); return b && /401k|403|457b/.test(b.id); });
+      var lim = _diMoney((_diIraLimits() || { base: 7500 }).base);
+      var sec = function (h, b, hot) { return '<div class="ira-why-sec' + (hot ? ' hot' : '') + '"><div class="ira-why-h">' + h + '</div><div class="ira-why-b">' + b + '</div></div>'; };
+      var yr = new Date().getFullYear();
+      // S5 · separate-bucket nudge (v3 R8) — verbatim; renders only with a workplace plan (else ⬜), gold .ira-why-nudge
+      var s5 = hasWorkplace
+        ? '<div class="ira-why-nudge">You also hold a workplace plan — good news: this IRA is a SEPARATE bucket. The '
+          + lim + ' you can put here for ' + yr + ' stacks ON TOP of your workplace 401k/403b/457b limit; it doesn’t count against it.</div>'
+        : '';
+      // S4 · contribution-room meter (v3 R7) — {used} = Σ inflow×freq over the estate's IRA lanes (single-owner scan,
+      // same pattern as S5), sourced-or-empty-state (L47 — never fabricate); {limit} = _diIraLimits() LOOKUP (reuse I3).
+      var iraUsed = (state.accounts || []).reduce(function (t, a) {
+        var b = getBaseType(a.baseId); return (b && /ira/.test(b.id)) ? t + (a.inflow || 0) * (a.freq || 0) : t; }, 0);
+      var s4 = sec('Your ' + yr + ' contribution room', (iraUsed > 0
+          ? 'You’ve used ' + _diMoney(iraUsed) + ' of your ' + lim + ' IRA room for ' + yr + '. '
+          : 'Add your ' + yr + ' contributions to track how much of your ' + lim + ' IRA room you’ve used. ')
+        + 'IRA room doesn’t roll over — whatever you don’t use for ' + yr + ' is gone for good once the filing deadline passes.');
+      var body =
+        '<div class="ira-why-hero">Your IRA, your menu — the whole market is your fund list.</div>' +
+        s5 +
+        sec('The one-line answer', 'An IRA is the retirement account YOU open and control — independent of any employer. You’d use one to invest in anything the whole market offers (not just a plan’s short menu), to keep saving after you leave a job, and to choose your own tax treatment: pay tax now (Roth) or later (Traditional).') +
+        sec('Who opens an IRA', 'Anyone with earned income (or a spouse with earned income) can open an IRA at any custodian — Vanguard, Fidelity, Schwab, a robo-advisor. There’s no employer involved, no HR enrollment, no plan menu. You pick the custodian, you pick the funds, and the account follows YOU from job to job for life.') +
+        sec('Roth vs Traditional — the core choice' + (isRoth ? ' (you hold a Roth)' : ' (you hold a Traditional)'), 'A ROTH IRA takes after-tax dollars now, then grows and pays out entirely tax-free in retirement — and never forces a withdrawal. A TRADITIONAL IRA may give you a tax deduction now, grows tax-deferred, and is taxed as ordinary income when you pull it out (with required withdrawals starting at 73). Roth wins if you expect higher future tax rates or want tax-free heirs; Traditional wins if you want the deduction today.') +
+        s4 +
+        sec('Why you’d choose the IRA — the edge', 'The IRA’s defining advantage over a workplace plan is CONTROL: the entire market as your fund list, the lowest-cost share classes available anywhere, and no plan administrator between you and your money. It’s also where money LANDS when you leave a job — a rollover from an old 401(k) keeps that money tax-deferred and in your hands instead of stranded in a former employer’s menu.') +
+        sec('The income-limit trap (worth knowing)', isRoth
+          ? 'Heads up: Roth IRAs have an income ceiling. Above a certain MAGI you can’t contribute directly — but the “backdoor” path (contribute to a Traditional IRA non-deductibly, then convert to Roth) is still open to almost everyone. If your income is near the line, this is the beat to check before you fund.'
+          : 'One honest note: if you’re covered by a workplace plan (401k/403b/457b), your Traditional IRA DEDUCTION phases out at higher income — the contribution is still allowed, but it may not be tax-deductible. When that happens, a non-deductible contribution + Roth conversion (the “backdoor”) is often the cleaner move.') +
+        sec('The 5-year rule (don’t get surprised)', 'A Roth IRA’s EARNINGS come out tax-free only after the account has been open five years AND you’re 59½. Separately, each Roth CONVERSION starts its own five-year clock before that converted money can be withdrawn penalty-free. Contributions (the dollars you put in) can always come out tax- and penalty-free — it’s the growth and conversions that carry the clock.') +
+        sec('Bottom line', 'Your workplace plan is the account your employer gave you; the IRA is the one you own outright. Use it to invest in anything, to consolidate old plans, and to pick your tax treatment. If you have both, treat them as separate buckets and try to feed both — and if your income is high, ask about the backdoor Roth before assuming you’re locked out.');
+      return '<div class="ira-why-panel">' +
+        '<div class="ira-why-toggle" onclick="var n=this.nextElementSibling; var open=n.style.display!==\'block\'; n.style.display=open?\'block\':\'none\'; this.classList.toggle(\'open\', open);">Why you’d use an IRA — and how it differs from your workplace plan <span class="ira-why-caret">▸</span></div>' +
+        '<div class="ira-why-body" style="display:none;">' + body + '</div></div>';
+    }
+    function _diIraColTips(isRoth) {
+      var why = '<br><br><strong>Why it matters for your retirement</strong>';
+      return {
+        'Ticker': { t: 'Ticker', b: 'The symbol of this single holding.' + why + 'Names the bet on this row. In an IRA you picked every one of these off the open market — so each ticker is a choice you made, not a slot a plan handed you.' },
+        'Name': { t: 'Name', b: 'The full security name behind the ticker.' + why + 'Tells you what you actually own — a broad index, a single company, a bond fund. The plainer and broader the name, the more this row is built to be left alone for a long retirement.' },
+        'Price': { t: 'Price', b: 'The latest reference price per share.' + why + 'A reference point, not a live quote — we show it sourced-or-blank, never a stale guess. It only matters paired with shares: price × shares is what this row is worth to your plan.' },
+        'Shares Owned': { t: 'Shares Owned', b: 'How many units of this holding you own.' + why + 'The size of the position. Shares × price = this row\'s value — the number that decides how much weight this single holding carries in your IRA.' },
+        'Position Value': { t: 'Position Value', b: 'Shares × price — what this holding is worth today.' + why + 'This is the dollar weight this row pulls in the account. Every one of the 4 boxes above is VALUE-WEIGHTED — so a big-value row steers the whole account\'s beta, yield, and fee far more than a small one.' },
+        'Cost Basis': { t: 'Cost Basis', b: 'What you paid for this holding (user-entered).' + why + 'Always entered by you — no source publishes your basis. ' +
+          (isRoth ? 'In the Conservatory it never matters for tax — qualified growth is tax-free.' : 'In the Library it barely matters at withdrawal: the whole balance is taxed as ordinary income regardless of basis.') +
+          ' We still track it so Unrealized Gain can show.' },
+        'Unrealized Gain': { t: 'Unrealized Gain', b: 'Value − Cost Basis for THIS row (blank if no basis).' + why +
+          (isRoth ? 'In a Roth this paper gain is yours tax-free forever once qualified — the single best reason to hold your biggest-growth names here.' : 'In a Traditional it\'s tax-DEFERRED, not tax-free: this gain becomes ordinary income on the way out.') +
+          ' Either way, no yearly capital-gains tax like a taxable account — the IRA wrapper shields the gain while it grows. This row feeds the Unrealized Gain box above.' },
+        'Beta': { t: 'Beta', b: 'This holding\'s market sensitivity (sourced-or-blank).' + why + 'How hard this one position swings with the market — 1.00 moves with it, above is jumpier, below is steadier. Left BLANK when no source publishes it (we never fake a beta).' +
+          (isRoth ? ' The Roth is the right home for your highest-beta bets — the violent upside is untaxed.' : '') + ' This row feeds the Weighted Beta box above.' },
+        'Yield': { t: 'Yield', b: 'This holding\'s dividend yield (sourced-or-blank).' + why + 'The income this position throws off as a %. In ANY IRA these dividends reinvest with ZERO yearly tax drag — unlike a taxable account where you\'d owe tax each year. Blank when unpublished. This row feeds the Blended Yield box above.' },
+        'Geography': { t: 'Geography', b: 'Where this holding is invested — at the granular level we track (e.g. US large-blend, foreign developed, emerging markets, global blend, US bonds, real assets, crypto, cash).' + why + 'Tells you how much of this row rides on the rest of the world — and WHICH part of the world. We read the granular tag, not just "US vs international," so a developed-market fund and an emerging-market bet aren\'t blurred into one word. Caveat we keep honest: this reflects published domicile, which isn\'t always true investment exposure.' },
+        'Sector': { t: 'Sector', b: 'The granular industry or theme this holding sits in — broad-market core, or a named tilt like semiconductors, energy, biotech, gold, REITs, or dividend growth.' + why + 'Sectors boom and bust together. Reading the granular sector on each row lets you spot when several tickers quietly stack into ONE theme — the concentration most people never see because it hides across different names.' +
+          (isRoth ? ' A high-risk theme like biotech or crypto is a natural Roth bet — the binary upside comes out untaxed.' : '') },
+        'Exp Ratio': { t: 'Exp Ratio', b: 'The annual fund fee for this holding, as a %.' + why + 'The yearly drag this one fund skims before you see a return. Because you bought it on the open market, a high number here is FIXABLE — a cheaper index equivalent is usually one trade away. This row feeds the Avg Expense box above.' },
+        'Asset Class': { t: 'Asset Class', b: 'Whether this row is equity, bond, cash, or alternative.' + why + 'The job this holding does: equity = growth engine, bond = ballast, cash = buffer, alt = different-drummer hedge. The mix of these across rows is your real risk dial — and in an IRA the whole mix is your design, not a plan\'s glidepath.' },
+        'Instrument': { t: 'Instrument', b: 'Whether this row is an ETF, mutual fund, individual stock, or cash.' + why + 'Funds (ETF/MF) spread your money across many companies so no single failure sinks you; a single stock is where one company\'s bad year becomes YOUR bad year. The wrapper mix across rows tells you how much of your IRA is built to survive being left alone.' }
+      };
+    }
+    function _di457WhyPanel(acc, base) {
+      var L = _di402gLimits();                                  // §8 dated 402(g) LOOKUP(taxYear) — never a baked literal
+      var yr = new Date().getFullYear();
+      var combined = _diMoney(2 * L.base);                      // fill-both figure = 2× base (§8): ~$49,000 in 2026
+      var has403 = (state.accounts || []).some(function (a) { var b = getBaseType(a.baseId); return b && /403/.test(b.id); });
+      var sec = function (h, b, hot) { return '<div class="ira-why-sec' + (hot ? ' hot' : '') + '"><div class="ira-why-h">' + h + '</div><div class="ira-why-b">' + b + '</div></div>'; };
+      var safety = (acc.planFlavor === 'governmental' || acc.govPlan === true)   // §15 gov branch now driven by F-PLANFLAVOR (bank D288); legacy govPlan preserved
+        ? sec('Safety note (governmental vs not)', 'Your GOVERNMENTAL 457(b) assets are held in trust for you — legally separate from the employer, protected if the government entity hits financial trouble. (This is the key reason the non-governmental version is restricted to executives: there, the assets legally belong to the employer and sit with its creditors. The friendly copy here assumes the governmental type — confirm via the govPlan flag, §14/S7.)')
+        : '';
+      var body =
+        sec('The one-line answer', 'You’re offered a 457(b) because you work for a STATE or LOCAL GOVERNMENT — a public school district, city or county, state university, or government agency. The account type follows your employer, not your choice.') +
+        sec('Who gets a 457(b)', 'GOVERNMENTAL 457(b): sponsored by state and local governments and their agencies — municipalities, public school districts, state colleges and universities. This is the common, structurally safer type, and the one you almost certainly have. (A rarer NON-governmental 457(b) exists at some nonprofits, but only for a small group of highly-paid executives — and it carries real creditor risk. See §14/S7.)') +
+        sec('Who gets a 403(b) instead', 'A 403(b) is the parallel plan for §501(c)(3) TAX-EXEMPT employers: public schools, colleges and universities, hospitals, charitable nonprofits, and churches. Same idea — a payroll retirement plan — but it lives under a different slice of the tax code, so its rules differ in a few important ways.') +
+        sec('The big overlap (the part most people miss)', 'Many public-education and government employees — a state-university professor, for example — are offered BOTH a 403(b) AND a governmental 457(b) through the SAME employer. When that happens, their contribution limits are SEPARATE: you can defer the full limit into EACH in the same year (~' + combined + ' pre-tax in ' + yr + ' before any catch-up), sheltering far more than a private-sector worker ever can. If your employer offers both, filling only one leaves a second tax-advantaged bucket on the table.', has403) +
+        sec('Why the rules differ — 457(b) edge', 'The 457(b)’s defining advantage: once you SEPARATE from the employer, withdrawals skip the 10% early-withdrawal penalty entirely — at ANY age. A 52-year-old who leaves a government job can draw on a 457(b) immediately, owing only ordinary income tax. That makes the governmental 457(b) the single best bridge for an early retirement. (A 403(b) keeps the usual 59½ / Rule-of-55 penalty structure.)') +
+        sec('Why the rules differ — 403(b) traits', 'A 403(b) has its own quirks: an overall §415(c) annual-additions cap, and a unique “15-years-of-service” catch-up (up to $3,000/yr extra) for long-tenured employees of schools, hospitals, and churches — something the 457(b) doesn’t have. Its catch-up math and the 457(b)’s special final-3-year catch-up are different tools for different plans.') +
+        sec('Portability trap (worth knowing)', 'When you leave, a governmental 457(b) can roll into an IRA, 401(k), or 403(b) — but the moment it lands anywhere OTHER than another governmental 457(b), it LOSES the penalty-free-before-59½ access. If early retirement is even possible, think twice before rolling a 457(b) into an IRA; keeping it in the 457(b) world preserves the escape hatch.') +
+        safety +
+        sec('Bottom line', 'You didn’t pick 457(b) over 403(b) — your employer’s status as a government body did. What matters now: it’s a high-limit, government-sponsored account whose superpower is penalty-free access the day you leave the job. If you ALSO have a 403(b), treat them as two separate buckets and try to feed both.');
+      return '<div class="ira-why-panel">' +
+        '<div class="ira-why-toggle" onclick="var n=this.nextElementSibling; var open=n.style.display!==\'block\'; n.style.display=open?\'block\':\'none\'; this.classList.toggle(\'open\', open);">Why you’re offered a 457(b) — and how it differs from a 403(b) <span class="ira-why-caret">▸</span></div>' +
+        '<div class="ira-why-body" style="display:none;">' + body + '</div></div>';
+    }
+    function _diWhyPanel(toggleTitle, secList) {
+      var sec = function (h, b, hot) { return '<div class="ira-why-sec' + (hot ? ' hot' : '') + '"><div class="ira-why-h">' + h + '</div><div class="ira-why-b">' + b + '</div></div>'; };
+      var body = secList.map(function (s) { return sec(s[0], s[1], s[2]); }).join('');
+      return '<div class="ira-why-panel">' +
+        '<div class="ira-why-toggle" onclick="var n=this.nextElementSibling; var open=n.style.display!==\'block\'; n.style.display=open?\'block\':\'none\'; this.classList.toggle(\'open\', open);">' + toggleTitle + ' <span class="ira-why-caret">▸</span></div>' +
+        '<div class="ira-why-body" style="display:none;">' + body + '</div></div>';
+    }
+    function _di401kWhyPanel(acc, base) {
+      return _diWhyPanel('Why you have a 401(k) — and how it differs from a 403(b) or an IRA', [
+        ['The one-line answer', 'You have a 401(k) because you work for a PRIVATE-SECTOR EMPLOYER — a company, not a government or a nonprofit. It’s the workplace retirement plan for for-profit America, and for most people it becomes the single biggest account they’ll ever build. The account type follows your employer, not your choice.'],
+        ['Traditional vs Roth — the one choice that IS yours', 'The one real decision inside a 401(k) is WHICH side to feed. The Traditional (pre-tax) side lowers your taxable income today and grows tax-deferred — you pay ordinary income tax later, at withdrawal and via RMDs. The Roth side is funded with already-taxed dollars and grows tax-FREE once qualified (age 59½ + a 5-year clock). Many plans let you split between both in the same year — the shared IRS elective-deferral limit (§15) covers BOTH sides combined, not each separately.'],
+        ['The employer match — the signature edge', 'A 401(k)’s defining superpower: the EMPLOYER MATCH. Many companies add money when you contribute — a classic formula is 50% or 100% of your contributions up to a few percent of pay. That match is an immediate, guaranteed return no other account offers — the closest thing to free money in investing. The rule of thumb: contribute at LEAST enough to capture the full match before funding anything else. (Note: employer-match dollars land on the pre-tax side even if YOUR contributions go Roth.)', true],
+        ['How it differs from a 403(b)', 'A 403(b) is the 401(k)’s near-twin for §501(c)(3) nonprofits — public schools, universities, hospitals, charities. Same payroll-deferral idea, similar limits, but it lives under a different slice of the tax code: a 403(b) carries a unique 15-years-of-service catch-up and an annuity/insurance heritage that can mean higher fees and narrower fund menus. A 401(k) has no 15-year catch-up, is governed by ERISA, and typically offers a broader (though still menu-limited) lineup. Which one you hold is decided entirely by whether your employer is for-profit or nonprofit.'],
+        ['How it differs from an IRA', 'An IRA is the account YOU open on your own, outside any employer. The headline difference is room: a 401(k)’s elective-deferral limit is several times larger than the IRA contribution limit (see §15), so the 401(k) is where the heavy lifting happens. Trade-offs: an IRA gives you the WHOLE market to choose from (a 401(k) is limited to your plan’s menu), but a 401(k) adds the employer match, stronger ERISA creditor protection, and the Rule-of-55. Most plans use both: max the 401(k) match first, then an IRA for choice, then back to the 401(k).'],
+        ['Early-access edge — the Rule of 55', 'A 401(k)’s early-retirement lever: if you leave your job in or after the YEAR you turn 55, you can withdraw from THAT employer’s 401(k) with no 10% early-withdrawal penalty — years before the usual 59½. (An IRA does not have this; rolling a 401(k) into an IRA FORFEITS the Rule-of-55 access.) If early retirement is on the table, think twice before rolling an old 401(k) out — you may be giving up the penalty-free bridge.'],
+        ['The RMD side', 'The Traditional 401(k) has required minimum distributions (RMDs): starting at age 73, the IRS makes you draw the balance down each year whether you need it or not — miss one and the penalty is 25% of the shortfall (§16A). The Roth 401(k) NO LONGER has lifetime RMDs (SECURE 2.0, starting 2024) — but rolling it to a Roth IRA still cleanly removes any doubt and keeps it growing untouched (§16C). RMDs are a pre-tax feature, not a Roth one.'],
+        ['Creditor protection (worth knowing)', 'Because a 401(k) is an ERISA plan, its assets get strong federal protection from creditors and lawsuits — generally stronger and more uniform than an IRA’s (which depends on state law). This is a quiet reason NOT to reflexively roll an old 401(k) into an IRA: beyond the Rule-of-55, you may be trading away creditor protection too.'],
+        ['Missed-RMD penalty — the pre-tax teeth (SECURE 2.0)', 'On the pre-tax side, RMDs aren’t optional — miss one and the IRS penalty is 25% of what you should have taken (down from 50% under SECURE 2.0, and as low as 10% if you fix it quickly). The Roth source has no RMD for you, so this bites only the pre-tax match/rollover portion.'],
+        ['Small-balance force-out — the tiers when you leave', 'If you leave this job with a smaller balance, your old plan can push you out: under ~$1,000 it may be cashed out (taxable), $1,000–$7,000 auto-rolled into an IRA in your name, and above $7,000 it can stay put. Knowing the tier tells you whether to roll it deliberately before they do it for you.'],
+        ['Roth 401(k) → Roth IRA is one-way', 'One quiet asymmetry: a Roth 401(k) can roll into a Roth IRA, but not back into a future employer’s plan — and once it’s in a Roth IRA, RMDs disappear entirely. Pre-tax 401(k) money keeps that two-way flexibility; Roth doesn’t.'],
+        ['Revenue-sharing — the hidden fee inside the expense ratio', 'Watch for ‘revenue-sharing’ funds — options that quietly pay your plan’s recordkeeper out of their expense ratio. They look normal but cost more than an identical index fund; if your menu has a lower-cost equivalent, it’s usually the better pick.'],
+        ['401(k) loan vs. withdrawal — the acceleration trap', 'A 401(k) loan isn’t a withdrawal — you borrow up to half your vested balance (capped at $50,000), repay yourself with interest over ~5 years, and owe no tax if you repay on time. The trap: leave or lose the job and the loan usually accelerates — unpaid, it becomes a taxable distribution plus the 10% penalty. Borrowed dollars also stop compounding while they’re out.'],
+        ['Bottom line', 'You didn’t pick a 401(k) over a 403(b) or IRA — your employer being a private company did. What matters now: it’s your highest-limit workplace account, its superpower is the employer match (capture it in full first), and — if you might retire early — the Rule-of-55 makes it a penalty-free bridge that an IRA can’t match. Feed it to the match, choose your Traditional/Roth split with intent, and don’t roll it out without knowing what you’d give up.'],
+      ]);
+    }
+    function _diTaxableWhyPanel(acc, base) {
+      return _diWhyPanel('Why you’d use a taxable brokerage — the account with no rules, and no shelter', [
+        ['The one-line answer', 'A taxable brokerage is the everyday investment account with NO IRS limits, NO early-withdrawal penalty, and NO required withdrawals — in exchange for no upfront tax break. It’s the most flexible money you own, and the most tax-exposed.'],
+        ['No limits, full liquidity', 'You can add any amount and withdraw any day at any age — no $23,500 cap, no 59½ gate, no 10% penalty, no RMDs. That freedom is the whole reason it exists: it’s money you can actually reach before and during retirement without asking permission from the tax code.'],
+        ['The role — after you max the shelters', 'The classic order: capture your employer match, max your tax-advantaged rooms (401(k), IRA, HSA), THEN the overflow lands here. A taxable account isn’t a consolation prize — it’s the bridge that funds early-retirement years before penalty-free access opens, and the bucket with no ceiling once the sheltered ones are full.'],
+        ['How it’s taxed — gains & dividends', 'You’re taxed on what you REALIZE, when you realize it. Sell after holding over a year and the gain gets the lower LONG-TERM capital-gains rate; sell inside a year and it’s taxed as ordinary income. Qualified dividends also get the preferential rate. You control the timing — which is a lever no tax-deferred account gives you.'],
+        ['Tax-loss harvesting (a taxable-only tool)', 'When a holding is down, you can SELL to book the loss, use it to offset other gains (and up to $3,000 of ordinary income a year), then reinvest in something similar. This turns a market dip into a real tax saving — a move that simply doesn’t exist inside a retirement account. Mind the 30-day wash-sale rule.', true],
+        ['The step-up at death (the quiet superpower)', 'If you hold an appreciated position until death, your heirs’ cost basis “steps up” to the value on that date — the entire lifetime gain can escape capital-gains tax forever. This makes a taxable account a surprisingly strong estate-and-legacy vehicle: the very gains you avoided realizing can pass untaxed.'],
+        ['The foreign tax credit edge', 'International funds pay taxes to foreign governments. In a taxable account those foreign taxes can flow back to you as a Foreign Tax Credit on your return — a dollar-for-dollar benefit you generally CANNOT claim inside an IRA or 401(k). It’s a real, often-missed reason to hold international exposure here rather than in a sheltered room.'],
+        ['The asset-location flip', 'Because bond interest is taxed yearly at ordinary rates, bonds are the LEAST efficient holding here — while tax-favored stocks and international funds fit best. If you also hold retirement rooms, the lesson is “bonds THERE, stocks and foreign HERE.” Datum reads this across all your accounts so the whole book sits in the right homes.'],
+        ['Bottom line', 'You use a taxable account for freedom: no limits, no penalties, full liquidity, and tools — harvesting, timing, step-up, the foreign-tax credit — that no sheltered account offers. The price is an annual tax on dividends and a bill when you sell winners. Fill it AFTER the shelters, hold the tax-efficient stuff here, and it becomes your most versatile money.'],
+      ]);
+    }
+    function _di457ColTips(isRoth) {
+      var why = '<br><br><strong>Why it matters for your retirement</strong>';
+      return {
+        'Ticker': { t: 'Ticker', b: 'The symbol of this single holding.' + why + 'Names the bet on this row. In a 457(b) you picked it from your plan’s fund menu — a shorter list than the open market, so each choice is made within the lineup your employer offers.' },
+        'Name': { t: 'Name', b: 'The full security name behind the ticker.' + why + 'Tells you what you actually own — a broad index fund, a bond fund, a target-date fund. The plainer and broader the name, the more this row is built to be left alone for a long retirement.' },
+        'Price': { t: 'Price', b: 'The latest reference price per share.' + why + 'A reference point, not a live quote — shown sourced-or-blank, never a stale guess. It only matters paired with shares: price × shares is what this row is worth to your plan.' },
+        'Shares Owned': { t: 'Shares Owned', b: 'How many units of this holding you own.' + why + 'The size of the position. Shares × price = this row’s value — the number that decides how much weight this single holding carries in your 457(b).' },
+        'Position Value': { t: 'Position Value', b: 'Shares × price — what this holding is worth today.' + why + 'The dollar weight this row pulls. All 4 boxes above are VALUE-WEIGHTED — a big-value row steers the whole account’s beta, yield, and fee far more than a small one.' },
+        'Cost Basis': { t: 'Cost Basis', b: 'What you paid for this holding (user-entered).' + why + 'Always entered by you — no source publishes your basis. ' +
+          (isRoth ? 'In the Annex it never matters for tax — qualified growth is tax-free.' : 'In the Workshop it barely matters at withdrawal: the whole balance is ordinary income regardless of basis.') +
+          ' We still track it so Unrealized Gain can show.' },
+        'Unrealized Gain': { t: 'Unrealized Gain', b: 'Value − Cost Basis for THIS row (blank if no basis).' + why +
+          (isRoth ? 'In a Roth 457(b) this paper gain is yours tax-free once qualified — and reachable penalty-free the day you separate.' : 'In a Traditional it’s tax-DEFERRED: this gain becomes ordinary income on the way out.') +
+          ' Either way no yearly capital-gains tax — the 457(b) wrapper shields the gain while it grows. Feeds the Unrealized Gain box.' },
+        'Beta': { t: 'Beta', b: 'This holding’s market sensitivity (sourced-or-blank).' + why + 'How hard this one position swings — 1.00 moves with the market, above is jumpier, below steadier. BLANK when no source publishes it (we never fake a beta).' +
+          (isRoth ? ' The Roth 457(b) is a fine home for higher-beta bets — the upside is untaxed.' : '') + ' Feeds the Weighted Beta box.' },
+        'Yield': { t: 'Yield', b: 'This holding’s dividend yield (sourced-or-blank).' + why + 'The income this position throws off as a %. In a 457(b) these dividends reinvest with ZERO yearly tax drag — unlike a taxable account. Blank when unpublished. Feeds the Blended Yield box.' },
+        'Geography': { t: 'Geography', b: 'Where this holding is invested — at the granular level we track (US large-blend, foreign developed, emerging, global blend, US bonds, cash).' + why + 'Tells you how much of this row rides on the rest of the world — and WHICH part. We read the granular tag, not just "US vs international." Honest caveat: reflects published domicile, not always true exposure.' },
+        'Sector': { t: 'Sector', b: 'The granular industry or theme this holding sits in — broad-market core, or a named tilt like semiconductors, energy, REITs, dividend growth.' + why + 'Sectors boom and bust together. Reading the granular sector per row spots when several tickers quietly stack into ONE theme. Broad-market rows (large/total/blend) are NOT a tilt.' +
+          (isRoth ? ' A high-risk theme is a natural Roth bet — binary upside comes out untaxed.' : '') },
+        'Exp Ratio': { t: 'Exp Ratio', b: 'The annual fund fee for this holding, as a %.' + why + 'The yearly drag this one fund skims. In a 457(b) you can’t shop the whole market, but you CAN pick the lowest-cost share class your plan offers — so a high number here is still partly fixable from within the menu.' },
+        'Asset Class': { t: 'Asset Class', b: 'Whether this row is equity, bond, cash, or alternative.' + why + 'The job this holding does: equity = growth engine, bond = ballast, cash = buffer, alt = hedge. The mix across rows is your real risk dial — built from the funds your plan makes available.' },
+        'Instrument': { t: 'Instrument', b: 'Whether this row is an ETF, mutual fund, individual stock, or cash.' + why + 'Funds spread your money across many companies so no single failure sinks you. A governmental 457(b) menu is typically all funds — which is exactly what you want for a bucket meant to be left alone for decades.' }
+      };
+    }
+    function _di401kColTips(isRoth) {
+      var why = '<br><br><strong>Why it matters for your retirement</strong>';
+      var r = !!isRoth;
+      return {
+        'Ticker': { t: 'Ticker', b: 'The symbol of this single holding.' + why + 'Names the bet on this row. In a 401(k) you picked it from your employer’s plan menu — a shorter list than the open market, so each choice is made within the lineup your employer offers.' },
+        'Name': { t: 'Name', b: 'The full security name behind the ticker.' + why + 'Tells you what you actually own — a broad index fund, a bond fund, a target-date fund. The plainer and broader the name, the more this row is built to be left alone for a long retirement.' },
+        'Price': { t: 'Price', b: 'The latest reference price per share.' + why + 'A reference point, not a live quote — shown sourced-or-blank, never a stale guess. It only matters paired with shares: price × shares is what this row is worth to your plan.' },
+        'Shares Owned': { t: 'Shares Owned', b: 'How many units of this holding you own.' + why + 'The size of the position. Shares × price = this row’s value — the number that decides how much weight this single holding carries in your 401(k).' },
+        'Position Value': { t: 'Position Value', b: 'Shares × price — what this holding is worth today.' + why + 'The dollar weight this row pulls. All 4 boxes above are VALUE-WEIGHTED — a big-value row steers the whole account’s beta, yield, and fee far more than a small one.' },
+        'Beta': { t: 'Beta', b: 'This holding’s market sensitivity (sourced-or-blank).' + why + 'How hard this one position swings — 1.00 moves with the market, above is jumpier, below steadier. BLANK when no source publishes it (we never fake a beta).' + (r ? ' The Roth 401(k) is a fine home for higher-beta bets — the upside is untaxed.' : '') + ' Feeds the Weighted Beta box.' },
+        'Yield': { t: 'Yield', b: 'This holding’s dividend yield (sourced-or-blank).' + why + 'The income this position throws off as a %. In a 401(k) these dividends reinvest with ZERO yearly tax drag — unlike a taxable account. Blank when unpublished. Feeds the Blended Yield box.' },
+        'Geography': { t: 'Geography', b: 'Where this holding is invested — at the granular level we track (US large-blend, foreign developed, emerging, global blend, US bonds, cash).' + why + 'Tells you how much of this row rides on the rest of the world — and WHICH part. We read the granular tag, not just “US vs international.” The account’s overall lean rolls up from these rows (see §13 geo map). Honest caveat: reflects published domicile, not always true exposure.' },
+        'Sector': { t: 'Sector', b: 'The granular industry or theme this holding sits in — broad-market core, or a named tilt like semiconductors, energy, REITs, dividend growth.' + why + 'Sectors boom and bust together. Reading the granular sector per row spots when several tickers quietly stack into ONE theme. Broad-market rows (large/total/blend) are NOT a tilt; only a named theme above ~20% of equity surfaces in the account paragraph (see §13 sector map).' + (r ? ' A high-risk theme is a natural Roth bet — binary upside comes out untaxed.' : '') },
+        'Exp Ratio': { t: 'Exp Ratio', b: 'The annual fund fee for this holding, as a %.' + why + 'The yearly drag this one fund skims. In a 401(k) you can’t shop the whole market, but you CAN pick the lowest-cost share class your plan offers — and watch for revenue-sharing funds that quietly pay your plan’s recordkeeper. A high number here is still partly fixable from within the menu.' },
+        'Asset Class': { t: 'Asset Class', b: 'Whether this row is equity, bond, cash, or alternative.' + why + 'The job this holding does: equity = growth engine, bond = ballast, cash = buffer, alt = hedge. The mix across rows is your real risk dial — built from the funds your plan makes available.' },
+        'Instrument': { t: 'Instrument', b: 'Whether this row is an ETF, mutual fund, individual stock, or cash.' + why + 'Funds spread your money across many companies so no single failure sinks you. A 401(k) menu is typically all funds — which is exactly what you want for a bucket meant to be left alone for decades.' },
+      };
+    }
+    function _diTaxColTips() {
+      var why = '<br><br><strong>Why it matters for your retirement</strong>';
+      return {
+        'Ticker': { t: 'Ticker', b: 'The symbol of this single holding.' + why + 'The market symbol for this holding. Type it and we auto-fill everything we can source — every field stays yours to override. In a Taxable Brokerage, you picked every one of these off the open market — so each ticker is a choice you made, not a slot a plan handed you.' },
+        'Name': { t: 'Name', b: 'The full security name behind the ticker.' + why + 'Tells you what you actually own — a broad index, a single company, a bond fund. The plainer and broader the name, the more this row is built to be left alone for a long retirement.' },
+        'Price': { t: 'Price', b: 'The latest reference price per share.' + why + 'What one unit costs. Price × shares is the value doing the work — every signal above is weighted by it.' },
+        'Shares Owned': { t: 'Shares Owned', b: 'How many units of this holding you own.' + why + 'The size of the position. Shares × price = this row’s value — the number that decides how much weight this single holding carries in your account.' },
+        'Position Value': { t: 'Position Value', b: 'Shares × price — what this holding is worth today.' + why + 'This is the dollar weight this row pulls in the account. Every one of the 4 boxes above is VALUE-WEIGHTED — so a big-value row steers the whole account’s beta, yield, and fee far more than a small one.' },
+        'Cost Basis': { t: 'Cost Basis', b: 'What you paid for this holding (user-entered).' + why + 'What you originally paid for this holding — your total cost, including reinvested dividends. We use it to find your real embedded gain, so the capital-gains tax is exact instead of a guess.' },
+        'Unrealized Gain': { t: 'Unrealized Gain', b: 'Value − Cost Basis for THIS row (blank if no basis).' + why + 'Value minus what you paid — growth you haven’t sold yet. In a taxable account this is the slice the capital-gains tax will touch.' },
+        'Beta': { t: 'Beta', b: 'This holding’s market sensitivity (sourced-or-blank).' + why + 'How hard this one position swings with the market — 1.00 moves with it, above is jumpier, below is steadier. Left BLANK when no source publishes it (we never fake a beta). In a taxable account, remember the violent upside on a high-beta bet is also a bigger capital-gains bill when you sell it. This row feeds the Weighted Beta box above.' },
+        'Yield': { t: 'Yield', b: 'This holding’s dividend yield (sourced-or-blank).' + why + 'Cash this holding pays you per year, as a % of its price. In a taxable account this income is taxed the year you receive it — even if you reinvest it — so it’s real money the market hands you, minus a yearly tax bite.' },
+        'Geography': { t: 'Geography', b: 'Where this holding is invested — at the granular level we track (US large-blend, foreign developed, emerging, global blend, US bonds, cash).' + why + 'Tells you how much of this row rides on the rest of the world — and WHICH part of the world. We read the granular tag, not just “US vs international,” so a developed-market fund and an emerging-market bet aren’t blurred into one word. The account’s overall lean rolls up from these rows (see §13 geo map). Caveat we keep honest: this reflects published domicile, which isn’t always true investment exposure.' },
+        'Sector': { t: 'Sector', b: 'The granular industry or theme this holding sits in — broad-market core, or a named tilt like semiconductors, energy, REITs, dividend growth.' + why + 'Sectors boom and bust together. Reading the granular sector on each row lets you spot when several tickers quietly stack into ONE theme — the concentration most people never see because it hides across different names. Broad-market rows (large/total/blend) are NOT a tilt; only a named theme above ~20% of equity surfaces in the account paragraph (see §13 sector map). One theme dominating your equity is a tilt worth knowing about — it shows up in your Datum Intelligence.' },
+        'Exp Ratio': { t: 'Exp Ratio', b: 'The annual fund fee for this holding, as a %.' + why + 'The fund’s yearly fee, quietly subtracted before you see returns. Over decades this is one of the few levers you fully control. Because you bought it on the open market, a high number here is FIXABLE — a cheaper index equivalent is usually one trade away. This row feeds the Avg Expense box above.' },
+        'Asset Class': { t: 'Asset Class', b: 'Whether this row is equity, bond, cash, or alternative.' + why + 'It sets your mix — the single biggest driver of how your account behaves on the way to retirement. The job this holding does: equity = growth engine, bond = ballast, cash = buffer, alt = different-drummer hedge.' },
+        'Instrument': { t: 'Instrument', b: 'Whether this row is an ETF, mutual fund, individual stock, or cash.' + why + 'What kind of wrapper this is — a single stock, a fund, an annuity, a cash sweep. Single names concentrate risk; funds spread it; the cash sweep sits out of the market.' },
+        'Acquisition Date': { t: 'Acquisition Date', b: 'The date you bought or acquired this holding (optional, user-entered; blank until you fill it in).' + why + 'When you actually bought this holding. It’s optional — leave it blank and nothing breaks — but if you enter it, it starts your holding-period clock: in a taxable account, selling inside ~1 year means gains are taxed at your higher ordinary (short-term) rate, while holding past a year qualifies them for the lower long-term capital-gains rate.' }
+      };
+    }
+    function _cbFmt(v) { var n = parseFloat(v); return (v === '' || v === null || v === undefined || !isFinite(n)) ? '' : '$' + Number(n).toLocaleString('en-US'); }
+    function _diLotColTips(baseId) {
+      var shelter = {
+        'Cost Basis': 'Shows "—" here. Cost basis is what you paid for a lot — it only drives a TAX event when you sell inside a taxable account. In this shelter there is no capital-gains tax to size, so per-lot basis has nothing to compute against and stays "—".',
+        'Unrealized Gain': 'Shows "—" here. Per-lot embedded gain matters in a taxable account because selling one lot vs another changes your tax bill. Inside this wrapper rebalancing is a tax non-event and there is no wash-sale, so per-lot gain never renders.',
+        'Acquisition Date': 'Shows "—" here. Acquisition date sets the short-vs-long-term holding clock — but that clock only matters where capital-gains rates apply. Inside this shelter the holding-period clock does not run, so the date is not tracked per lot.'
+      };
+      var k401 = {
+        'Cost Basis': 'Shows "—" in a 401(k). Cost basis is what you paid for a lot, and it drives capital-gains tax — but a 401(k) has no capital-gains tax to drive. Traditional withdrawals are taxed as ordinary income on the FULL amount; Roth qualified withdrawals are tax-free entirely. The IRS never asks what you paid, so there\'s no basis to track.',
+        'Unrealized Gain': 'Shows "—" in a 401(k). Per-lot embedded gain matters in a taxable account because selling triggers a tax bill sized by that gain. Here, selling and rebalancing inside the plan is a tax non-event — you can trade freely without a wash-sale or gains worry — so there\'s no per-lot gain to surface.',
+        'Acquisition Date': 'Shows "—" in a 401(k). Acquisition date sets the short-vs-long-term holding clock that changes your tax rate in a brokerage. That clock doesn\'t run inside a 401(k): the holding period is irrelevant to how withdrawals are taxed, so the date carries no tax meaning here.'
+      };
+      var kHsa = {
+        'Cost Basis': 'Shows "—" in an HSA. Cost basis sizes a capital-gains tax on sale — but qualified HSA growth is tax-free and even non-qualified withdrawals are taxed as ordinary income, never as per-lot gains. Nothing to compute, so it stays "—".',
+        'Unrealized Gain': 'Shows "—" in an HSA. Per-lot gain drives lot-selection tax decisions in a taxable account; inside the HSA rebalancing is a tax non-event, so per-lot embedded gain never renders.',
+        'Acquisition Date': 'Shows "—" in an HSA. The short-vs-long-term clock only matters where capital-gains rates apply. The HSA has no holding-period tax event, so acquisition date is not tracked per lot.'
+      };
+      var kRoll = {   // §RP R190–R192 — Rollover 401(k) "The Conduit" (verbatim); before /401k/ (rollover matches /401k/)
+        'Cost Basis': 'Shows "—" in a Rollover 401(k). Cost basis is what you paid for a lot, and its only job is to size a capital-gains tax — but a Rollover 401(k) has no capital-gains tax to size. Pre-tax dollars are taxed as ordinary income on the FULL amount at withdrawal; any Roth side comes out tax-free. The IRS never asks what you paid, so there is no basis to track.',
+        'Unrealized Gain': 'Shows "—" in a Rollover 401(k). Per-lot embedded gain matters in a brokerage because selling triggers a tax bill sized by that gain. Inside a Rollover 401(k), buying and selling to rebalance is a tax non-event — no wash-sale trap, no gains bill — so there is no per-lot gain to surface.',
+        'Acquisition Date': 'Shows "—" in a Rollover 401(k). Acquisition date sets the short-vs-long-term clock that changes your tax rate in a taxable account. That clock does not run inside a Rollover 401(k): the holding period has no bearing on how withdrawals are taxed, so the date carries no tax meaning here.'
+      };
+      var m = /rollover/.test(baseId) ? kRoll : /401k/.test(baseId) ? k401 : /hsa/.test(baseId) ? kHsa : shelter;
+      var out = {};
+      ['Cost Basis', 'Unrealized Gain', 'Acquisition Date'].forEach(function (k) { out[k] = { t: k, b: m[k] }; });
+      return out;
+    }
+    function _diConduitWhyPanel(acc, base) {
+      return _diWhyPanel('Why you have a Rollover 401(k) — and how to not lose anything in the move', [
+        ['The one-line answer', 'You have a Rollover 401(k) because you left an employer and moved that old plan’s money into an account you control — without cashing it out. It keeps its retirement tax status; it just no longer lives at a former job.'],
+        ['The whole point — consolidation', 'Old 401(k)s scattered across former jobs are easy to lose track of, and each carries its own fees and fund menu. Rolling them into one place lets you actually see the total, control the investment menu, and manage one balance instead of chasing several. That visibility is the main reason this room exists.'],
+        ['Tax status is preserved', 'A direct rollover is not a taxable event. Pre-tax dollars stay pre-tax (taxed as ordinary income at withdrawal); any Roth dollars stay Roth (tax-free when qualified). The retirement clock and character carry over — you did not “cash out,” so no penalty and no tax are triggered by the move itself.'],
+        ['Your 4 choices when you left (why THIS one)', 'When you leave a job you can (1) leave the money in the old plan, (2) roll it to your NEW employer’s plan, (3) roll it to an IRA or a Rollover 401(k) like this one, or (4) cash out (usually the worst — taxes plus a 10% penalty before 59½). This account is choice 3: you kept the tax shelter and gained control of the menu.'],
+        ['The Rule-of-55 trap (the big one)', 'The Rule of 55 lets you tap the plan at your MOST RECENT employer penalty-free if you leave in or after the year you turn 55. Money rolled OUT of that plan into this rollover account generally LOSES that early access — it reverts to the age-59½ gate. If early retirement is even possible, weigh leaving money in the last employer’s plan before rolling it here.', true],
+        ['Direct vs indirect rollover', 'A DIRECT rollover (plan-to-plan, you never touch the check) is clean — nothing withheld, nothing owed. An INDIRECT rollover (the check comes to you) triggers a mandatory 20% withholding and a 60-day deadline to redeposit the FULL amount, or the shortfall is taxed and penalized. Always prefer direct.'],
+        ['Don’t commingle if you might go backdoor', 'Keeping former-employer money in a Rollover 401(k) (rather than a Traditional IRA) keeps your IRA balances clean — which matters if you ever do a Backdoor Roth. Pre-tax dollars sitting in a Traditional IRA trigger the pro-rata rule and tax part of the conversion; the same dollars parked in a 401(k) do not. It is a real reason to choose a 401(k) rollover over an IRA rollover.'],
+        ['Bottom line', 'You didn’t open this to invest new paychecks — you opened it to rescue and consolidate an old plan without losing its tax shelter. Make the transfer DIRECT, watch the Rule-of-55 forfeiture if early retirement is on the table, and remember it usually holds rolled-in money, not fresh contributions.'],
+      ]);
+    }
+    function _lienRank(a) {
+        var id = String(a && a.baseId || '');
+        if (id.indexOf('mortgage') === 0) return 0;   // first lien
+        if (id.indexOf('heloc') === 0) return 1;       // second lien
+        return 2;
+    }
+    function _linkedJumpLine(label, accts, color, removeCtx) {
+        if (!accts || !accts.length) return '';
+        var chips = accts.map(function (a) {
+            var t = _returnNavLabel(getBaseType(a.baseId));
+            var chip = '<span onclick="openAccountModal(\'' + a.id + '\')" style="cursor:pointer; border-bottom:1px dotted currentColor;" title="Open this account">' + t + '</span>';
+            if (removeCtx) {
+                var debtId = removeCtx.selfIsDebt ? removeCtx.selfId : a.id;
+                var assetId = removeCtx.selfIsDebt ? a.id : removeCtx.selfId;
+                chip += '<span onclick="_unlinkSecured(\'' + debtId + '\', \'' + assetId + '\')" style="cursor:pointer; margin-left:5px; opacity:0.55; font-weight:bold;" title="Unlink — separates the two, deletes nothing">✕</span>';
+            }
+            return chip;
+        }).join(' · ');
+        // §18.5 — a healthy link reads as an informational STATUS, not a 10px danger warning: a subtle pill,
+        // readable body size, muted mono label, chips in their semantic color (teal asset / danger debt).
+        return '<div style="margin-bottom:16px; padding:8px 11px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:4px; font-size:12px; line-height:1.5;">'
+             + '<span style="color:rgba(255,255,255,0.55); font-family:var(--font-mono); font-size:10px; letter-spacing:0.05em;">' + label + '</span> '
+             + '<span style="color:' + (color || 'var(--danger)') + ';">' + chips + '</span></div>';
+    }
+    function _linkControlHTML(id, acc, base) {
+        var isDebt = base.taxCode === 'debt';
+        var linkedNow, linkable, canManage, statusColor, statusLabel, triggerLabel, draftLabel, sectionNoun;
+        if (isDebt) {
+            var scope = _securedLinkScope(base);
+            var la = acc.linkedAssetId ? state.accounts.find(function (a) { return a.id === acc.linkedAssetId; }) : null;
+            linkedNow = la ? [la] : [];
+            linkable = la ? [] : state.accounts.filter(function (a) { var b = getBaseType(a.baseId); return b && b.taxCode === 'physical' && scope(b); });
+            canManage = !la;   // single-link: no link/draft while already linked (one-link-of-record)
+            statusColor = 'var(--teal-mid)'; statusLabel = 'Linked Asset';
+            triggerLabel = 'Link or draft a property…'; draftLabel = '+ Draft New Property'; sectionNoun = 'PROPERTY';
+        } else {
+            var rev = _assetReverseScope(base);
+            linkedNow = state.accounts.filter(function (a) { return a.linkedAssetId === id; });
+            linkedNow.sort(function (a, b) { return _lienRank(a) - _lienRank(b); });   // first-lien first
+            // PARKED edge (not built): two escrow-carrying mortgages on ONE property — the §18.2 resolver
+            // (_linkedMortgageWith) picks the FIRST. Rare (1st/2nd mortgage both escrowing tax/ins); disambiguate
+            // only if it's ever hit in real use.
+            linkable = state.accounts.filter(function (a) { var b = getBaseType(a.baseId); return b && b.taxCode === 'debt' && rev(b) && !a.linkedAssetId; });
+            canManage = true;   // multi-link
+            statusColor = 'var(--danger)'; statusLabel = 'Linked Debts';
+            triggerLabel = 'Link or draft a liability…'; draftLabel = '+ Draft New Liability'; sectionNoun = 'LIABILITY';
+        }
+        var out = '';
+        // header label — preserve the HELOC "your collateral" authored hover (L47/L48)
+        out += isDebt
+            ? (base.title === 'HELOC'
+                ? '<div class="input-label modal-tt-wrap" style="color:var(--teal-mid); cursor:help; margin-bottom:4px;">Linked collateral (calculates equity)<div class="modal-tt" style="left:0; right:auto;"><strong>Your collateral</strong>This line is secured by the linked property. Your equity is what backs it — and what\'s at risk if it goes unpaid.</div></div>'
+                : '<div class="input-label" style="color:var(--teal-mid); margin-bottom:4px;">Linked collateral (calculates equity)</div>')
+            /* ⛔ 'PROPERTY' WAS THE WRONG NOUN ON A VEHICLE, AND IT WAS UNCONDITIONAL. Flagged twice
+             * in the bank (§33.0, §33.6 R424) and confirmed live. Same family as the Yard's hardcoded
+             * "The Property" (§19.11): a label written when this control served one room only.
+             * ⭐ SCOPED BY MEASUREMENT, NOT BY ASSUMPTION. I first reported this as hitting vehicles
+             * AND collectibles because the label is unconditional INSIDE this function — but the
+             * function's CALL SITES are not: 7867 is debt-only (which takes the isDebt branch above)
+             * and 7974 is `physical && !collectibles`. COLLECTIBLES NEVER REACH THIS LINE, so there
+             * are exactly TWO rooms here and both have an authored noun. 🔑 "UNCONDITIONAL INSIDE A
+             * FUNCTION" IS A CLAIM ABOUT THE FUNCTION, NEVER ABOUT WHO CALLS IT.
+             * The hover is §33.6 R424 verbatim; it lands with the noun rather than in a later commit,
+             * so this line is edited once. */
+            /* ⚠️ THE HOVER IS VEHICLE-ONLY, AND THE ASYMMETRY IS L47, NOT AN OVERSIGHT. R424 authors
+             * the hover for a VEHICLE. There is NO authored hover for the property side of this
+             * control. My first cut wrote one "by analogy" — a mortgage-and-HELOC sentence shaped
+             * like R424 — and that is exactly the fabrication the standing law forbids: plausible,
+             * house-voiced, and sourced nowhere. The property label keeps today's plain form until
+             * the Architect authors one. FLAGGED, NOT INVENTED. */
+            : (/^auto(_primary|_co)?$/.test(base.id)
+                ? '<div class="input-label modal-tt-wrap" style="color:var(--danger); margin-bottom:4px; cursor:help;">Liabilities secured by this vehicle'
+                  + '<div class="modal-tt" style="left:0; right:auto;"><strong>Linked liabilities</strong>Loans tied to this vehicle &mdash; usually an auto or boat loan. Link one and it shows here automatically; nothing linked, nothing owed.</div></div>'
+                : '<div class="input-label" style="color:var(--danger); margin-bottom:4px;">Liabilities secured by this property</div>');
+        // prominent 🔗 status line — clickable nav + inline ✕ unlink (Commit 2b), at the control, sourced-or-blank
+        if (linkedNow.length) {
+            out += _linkedJumpLine('🔗 ' + statusLabel + ':', linkedNow, statusColor, { selfId: id, selfIsDebt: isDebt });
+            // 🌳 THE YARD — when a property + its lien(s) form a Yard, offer the combined view from the single room
+            // too. propId = the linked property (the asset on a debt; this room itself on the property side).
+            var _yardProp = isDebt ? (linkedNow[0] || null) : { id: id, baseId: base.id };
+            if (_yardProp && String((getBaseType(_yardProp.baseId) || {}).id).indexOf('property') === 0) {
+                /* §19.14 — THE DOOR NAMES THE ROOM IT OPENS. This read "Open The Yard" on every
+                   purpose, so a landlord clicked a control named THE YARD and arrived in THE HOLDING.
+                   Correct history, stale product: Yard §9.5 authored it when THE YARD was the only
+                   combined room that existed. Tokenised on the SAME §12.1 map the room itself uses.
+                   ⛔ THE FALLBACK IS TYPE-FIRST, NEVER A BRAND NOUN. If the name will not resolve we
+                   say "the combined view" — we never name a room the user is not standing in, which
+                   is the exact defect being fixed here. */
+                /* ⚠️ _yardProp is a SYNTHETIC {id, baseId} literal on the property side (see just above)
+                   — it carries no propPurpose, so naming the door off it would resolve to the §12.1
+                   fallback and print "Open The Yard" on every purpose: the exact defect, re-shipped
+                   inside its own fix. Resolve the REAL account before asking it anything. */
+                var _yardAcc = (state.accounts || []).find(function (a) { return a.id === _yardProp.id; }) || null;
+                var _yardDoorName = (typeof _propCombinedName === 'function') ? _propCombinedName(_yardAcc) : '';
+                var _yardDoorCopy = _yardDoorName ? ('Open ' + _yardDoorName + ' — the combined view') : 'Open the combined view';
+                out += '<div onclick="if(typeof closeAccountModal===\'function\')closeAccountModal(); if(typeof openYardModal===\'function\')openYardModal(\'' + _yardProp.id + '\');" style="cursor:pointer; margin:-6px 0 16px; font-size:11px; color:var(--gold); display:inline-block; border-bottom:1px dotted var(--gold);" title="See this property and everything linked against it as one combined room">🌳 ' + _yardDoorCopy + '</div>';
+            }
+        }
+        // the disclosure: link an existing + draft a new (hidden on a single-link debt that's already linked)
+        if (canManage) {
+            var rows = linkable.map(function (a) {
+                var t = _returnNavLabel(getBaseType(a.baseId));
+                var nm = String(a.propName || a.name || '');
+                var extra = (nm && nm !== t) ? ' <span style="opacity:0.55;">— ' + nm.replace(/</g, '&lt;').replace(/"/g, '&quot;') + '</span>' : '';
+                var onclk = isDebt ? "updateAccField('" + id + "', 'linkedAssetId', '" + a.id + "')" : "linkDebtToAsset('" + id + "', '" + a.id + "')";
+                return '<div onclick="' + onclk + '" style="padding:7px 10px; cursor:pointer; color:var(--white); font-size:12px; border-radius:3px;" onmouseover="this.style.background=\'rgba(255,255,255,0.06)\'" onmouseout="this.style.background=\'transparent\'">' + t + extra + '<span style="float:right; opacity:0.45; font-size:10px; font-family:var(--font-mono);">link</span></div>';
+            }).join('');
+            if (!rows) rows = '<div style="padding:7px 10px; color:rgba(255,255,255,0.4); font-size:11px; font-style:italic;">Nothing available to link — draft one below.</div>';
+            var draftOnclk = isDebt ? "createLinkedAsset('" + id + "')" : "_draftLiabilityChooser('" + id + "')";
+            out += '<details style="margin:6px 0 18px;">'
+                 + '<summary style="list-style:none; cursor:pointer; padding:9px 12px; background:var(--bg-navy); border:1px solid rgba(255,255,255,0.14); border-radius:4px; color:rgba(255,255,255,0.75); font-size:12px;">' + triggerLabel + '  ▾</summary>'
+                 + '<div style="border:1px solid rgba(255,255,255,0.10); border-top:none; border-radius:0 0 4px 4px; padding:6px; background:rgba(255,255,255,0.02);">'
+                 + '<div style="font-family:var(--font-mono); font-size:9px; letter-spacing:0.1em; color:var(--gold); padding:5px 10px;">LINK AN EXISTING ' + sectionNoun + '</div>'
+                 + rows
+                 + '<div style="border-top:1px dashed rgba(255,255,255,0.1); margin:6px 0;"></div>'
+                 + '<div onclick="' + draftOnclk + '" style="padding:7px 10px; cursor:pointer; color:' + statusColor + '; font-size:12px; font-weight:bold;">' + draftLabel + '</div>'
+                 + '</div></details>';
+        }
+        return out;
+    }
+    function _helocLimitFieldHTML(id, acc) {
+        var hh = _helocHeadroomHTML(acc);
+        return `
+            <div class="field-row" style="grid-template-columns: 1fr;">
+                <div>${_dLbl(getBaseType(acc.baseId), 'Credit Limit')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.helocCreditLimit||'')}" oninput="updateAccField('${id}', 'helocCreditLimit', this.value)"></div>
+            </div>
+            <div id="modal-heloc-headroom-${id}" style="display:${hh ? 'block' : 'none'}; font-size:11px; color: rgba(255,255,255,0.72); line-height:1.5; margin:-6px 0 14px;">${hh}</div>`;
+    }
+    function _helocPhaseFieldHTML(id, acc) {
+        var pc = _helocPhaseClause(acc);
+        var opts = ['Draw', 'Repayment'].map(function (o) { return '<option ' + (acc.helocPhase === o ? 'selected' : '') + '>' + o + '</option>'; }).join('');
+        return `
+            <div class="field-row" style="grid-template-columns: 1fr;">
+                <div>${_dLbl(getBaseType(acc.baseId), 'Phase')}
+                    <select class="small-field" style="background: var(--bg-navy);" onchange="updateAccField('${id}', 'helocPhase', this.value)">
+                        <option value="">Select phase…</option>${opts}
+                    </select>
+                </div>
+            </div>
+            <div id="modal-heloc-phase-${id}" style="display:${pc ? 'block' : 'none'}; font-size:11px; color: rgba(255,255,255,0.72); line-height:1.5; margin:-6px 0 14px;">${pc}</div>`;
+    }
+    function _helocDrawEndFieldHTML(id, acc) {
+        return `
+            <div class="field-row" style="grid-template-columns: 1fr;">
+                <div>${_dLbl(getBaseType(acc.baseId), 'Draw Period Ends')}<input type="date" class="small-field" value="${acc.drawPeriodEndDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'drawPeriodEndDate', this.value)"></div>
+            </div>`;
+    }
+    var _PROP_TYPE_DI = {
+        'Single-family': 'Your property is a single-family home — the case nearly every homeowners policy is written around. HO-3 is what most single-family owners carry: it covers the structure against anything not specifically excluded, and your belongings against a named list of causes. HO-5 is the broader version — it treats your belongings the same open way it treats the building, which matters most if you own things that are hard to replace. HO-8 exists for older homes where rebuilding would cost far more than the house is worth on the market, and it pays on what things are worth rather than what they cost to replace. Whichever you carry, two things are excluded almost everywhere and are worth knowing about: flood and earthquake. Your own agent can tell you which form your policy actually is — it is written on the first page of your declarations.',
+        'Condo': 'Your property is a condo, and that changes the question from what to insure to WHERE YOUR RESPONSIBILITY STARTS. The association carries a master policy on the building, the roof and the shared spaces. HO-6 is the form written for what is left: your unit’s interior, your belongings, and any improvements you have made inside the walls. The gap that catches people is that master policies differ — some cover the original fixtures, some stop at the bare studs, and the difference can be tens of thousands of dollars in a kitchen. Your association’s master policy declarations will say which. It is worth reading once, and worth asking your agent to read with you.',
+        'Townhouse': 'Your property is a townhouse, and there is no such thing as townhouse insurance — what you need depends on who owns the walls. If you own the structure, you are in ordinary homeowners territory: HO-3 most often, or HO-5 for broader coverage on your belongings. If a condo-style association owns the shell and you own the inside, HO-6 is the form written for that. If you rent, HO-4 covers your belongings and your liability while the owner insures the building. The distinction is not about the shape of the building — it is entirely about the deed. If you are not certain which applies, your closing documents or your association will say, and your agent can confirm it in a phone call.',
+        'Multi-family': 'Your property is a multi-family building, and that puts it in a different insurance family than a single home. If you live in one unit and rent the others, many insurers will still write a homeowners-style policy on it, but the rented portion is a business activity and the policy has to know that. If you live elsewhere and rent all the units, you are in landlord territory — a DP-3 or dwelling-fire policy rather than HO-3. Two things matter here that never come up on an owner-occupied home: LOSS OF RENT, which pays you while the building is unliveable after a covered loss, and LIABILITY, which is broader when tenants and their guests are on your property. Both are worth raising with your agent by name, because a policy written for the wrong occupancy can be the one that does not pay.',
+        'Manufactured': 'Your property is a manufactured or mobile home, and it has its own policy form: HO-7. It works much like the standard homeowners form, but it is written for a structure that was built in a factory and moved to its site — which changes how the building is valued and, in many policies, how it is covered while being transported. Two things are worth checking specifically: whether your home is insured for what it would cost to replace or for what it is currently worth, and whether the policy covers wind separately, which is common in coastal and tornado regions. Your agent can tell you which basis your policy uses — the difference shows up only when you claim.',
+        'Other': 'Your property is recorded as Other, which means the usual policy forms may or may not fit. Homeowners insurance is written around a short list of familiar structures, and anything outside that list — a barn, a converted building, a tiny home, a property held in an unusual way — is usually handled by a specialty or surplus-lines insurer rather than a standard carrier. There is no shortcut here worth taking: the honest step is to describe the structure plainly to an agent and ask which form they would write it on. What stays true regardless is that flood and earthquake are excluded almost everywhere, whatever the building is.'
+    };
+    var _PROP_LAND_DI = 'Your property is land, and land is the one case where a homeowners policy does not apply at all — there is no dwelling to insure. What owners of vacant land usually carry instead is LIABILITY cover: protection if someone is injured on the property. It is typically inexpensive, and it is often available as an endorsement on a policy you already hold rather than as a separate purchase. Property tax is generally the whole of the carrying cost here. If you are holding the land to build on later, tell your agent that too — cover changes the moment construction starts.';
+    function _propTypeInsuranceDI(acc) {
+        if (!acc) return '';
+        var txt = (String(acc.propPurpose || '') === 'Land')
+            ? _PROP_LAND_DI                                   // purpose outranks type (§26c)
+            : _PROP_TYPE_DI[String(acc.propType || '')];      // undefined on blank or unlisted -> silent
+        if (!txt) return '';
+        return '<div class="di-narrative" style="margin:10px 0 14px;">' + txt + '</div>';
+    }
+    function _propInsEducationHTML(acc) {
+        if (!acc) return '';
+        var lines = [
+            ['HO-1 — Basic Form',            'HO-1 (Basic) — bare-bones, named-perils only. Rare today; most lenders won\'t accept it.'],
+            ['HO-2 — Broad Form',            'HO-2 (Broad) — named-perils on both home and belongings. A step up from HO-1, still limited.'],
+            ['HO-3 — Special Form',          'HO-3 (Special) — the standard homeowner policy. Open-perils on the house, named-perils on belongings. If you own a house, this is usually you.', true],
+            ['HO-4 — Renters',               'HO-4 (Renters) — covers YOUR belongings and liability inside a place you rent. The building is the landlord\'s policy, not yours.'],
+            ['HO-5 — Comprehensive',         'HO-5 (Comprehensive) — open-perils on both the home AND your belongings. The broadest common policy; costs more, claims are easier.'],
+            ['HO-6 — Condo/Co-op',           'HO-6 (Condo) — covers your unit\'s interior, belongings, and liability. The association\'s master policy covers the building shell.'],
+            ['HO-7 — Mobile/Manufactured',   'HO-7 — an HO-3-style policy written for a mobile or manufactured home.'],
+            ['HO-8 — Older/Historic Home',   'HO-8 (Older Home) — for homes whose rebuild cost exceeds market value; pays repair cost rather than full replacement. Common for historic houses.']
+        ];
+        /* §17.2 TOWNHOME BRANCH (row 192) — CONDITIONAL on the propType field that ALREADY EXISTS
+           (studio.html ~7713, options include 'Townhouse'), so nothing new is invented to drive it.
+           ⚠️ THE ONE PLACE I RESOLVED A TOKEN RATHER THAN READING IT: the bank writes
+           "{branchLine}", which implies a value resolved from data. There is NO "who owns the walls"
+           field anywhere in this room, and inventing one would be fabricating a sourced value (L47).
+           So the three authored routes are RENDERED FOR THE USER TO SELF-IDENTIFY, in the bank's own
+           routing order. That keeps the GUARD intact — it teaches, it does not choose. */
+        if (String(acc.propType || '') === 'Townhouse') {
+            lines.push(['Townhome — who owns the walls?',
+                'Townhome? It depends who owns the walls — if you own the structure, look at HO-3 or HO-5; if you rent, HO-4; if a condo association owns the shell, HO-6.']);
+        }
+        return _diWhyPanel('Homeowner policy types — HO-1 through HO-8', lines)
+             + '<div class="input-label" style="color:var(--muted); font-size:10px; margin-top:6px;">General education, not a coverage recommendation. Your policy and your agent decide what you actually carry.</div>';
+    }
+    function _propCovFieldHTML(id, acc, key, label, whatsThis, doIHave, align, kind) {
+        var side = align === 'right' ? 'right:0; left:auto;' : 'left:0; right:auto;';
+        var raw = acc[key];
+        /* three kinds now: 'money' (digits + $), 'moneypct' (digits + $ OR a percentage — the three
+           deductibles), and 'text' (free prose, e.g. an endorsement limit that reads "open perils"). */
+        var val = kind === 'money'    ? formatCurrencyDisplay(raw || '')
+                : kind === 'moneypct' ? formatMoneyOrPctDisplay(raw || '')
+                : String(raw === undefined || raw === null ? '' : raw).replace(/"/g, '&quot;');
+        if (kind === 'moneypct') val = String(val).replace(/"/g, '&quot;');
+        var cls = kind === 'money'    ? 'small-field curr-format'
+                : kind === 'moneypct' ? 'small-field moneypct-format'
+                : 'small-field';
+        return '<div><span class="input-label modal-tt-wrap" style="cursor:help;">' + label +
+               '<div class="modal-tt" style="' + side + '"><strong>What\'s this?</strong>' + whatsThis +
+               '<br><br><strong>Do I have enough?</strong>' + doIHave + '</div></span>' +
+               '<input type="text" class="' + cls + '" placeholder="—" value="' + val +
+               '" oninput="updateAccField(\'' + id + '\', \'' + key + '\', this.value)"></div>';
+    }
+    var _HO_NOTES = {
+        'HO-1': 'Older, narrower forms. These cover a NAMED LIST of causes rather than everything not excluded, so what is and is not on that list matters more here than the limits themselves. Your declarations page lists the perils.',
+        'HO-2': 'Older, narrower forms. These cover a NAMED LIST of causes rather than everything not excluded, so what is and is not on that list matters more here than the limits themselves. Your declarations page lists the perils.',
+        'HO-4': 'Renters cover: the building is your landlord’s to insure, so Coverage A — Dwelling usually reads zero or is absent on your policy. Coverage C (your belongings) and E (liability) are the lines doing the work here.',
+        'HO-5': 'The broadest common form. It treats your BELONGINGS the same open way it treats the building, so Coverage C often behaves better than the same number on an HO-3.',
+        'HO-6': 'Condo cover: your association’s master policy insures the building, so Coverage A here is usually a smaller figure covering your unit’s interior and any improvements — not the whole structure. What the master policy stops covering is exactly where yours starts.',
+        'HO-7': 'Written for a factory-built home. The figure to check is whether Coverage A is set to what it would cost to REPLACE the home or to what it is currently WORTH — the two can differ sharply, and the difference only appears at claim time.',
+        'HO-8': 'Written for homes that would cost far more to rebuild than they would sell for. It generally pays ACTUAL CASH VALUE rather than replacement cost, so Coverage A here is not a rebuild estimate — it is a different promise.'
+    };
+    function _hoTypeNoteHTML(acc) {
+        var n = acc && _HO_NOTES[String(acc.hoType || '')];   // HO-3, blank and unlisted all fall through
+        if (!n) return '';
+        return '<div style="margin-top:10px; padding:8px 10px; background:rgba(255,255,255,0.03); border-left:2px solid var(--teal-mid); border-radius:2px; font-size:11.5px; line-height:1.55; color:rgba(255,255,255,0.7);">' + n + '</div>';
+    }
+    function _propCoverageHTML(id, acc) {
+        if (!acc) return '';
+        var F = function (key, label, w, d, align, kind) { return _propCovFieldHTML(id, acc, key, label, w, d, align, kind || 'money'); };
+        /* THE HO-TYPE DROPDOWN (row 195) — the hinge of §17. It switches OFF the §17.2 teach box
+           (which was wired against this exact field name in the previous commit) and row 195 also
+           says it decides "which fields show".
+           ⚠️ "WHICH FIELDS SHOW" IS NOT AUTHORED ANYWHERE — no row states which coverages appear
+           for which HO type, and I am NOT inventing that mapping. Deciding that an HO-4 renter has
+           no Coverage A is an insurance judgement, and hiding a field is a way of telling the user
+           they do not need it, which row 205 forbids ("not advice"). So EVERY field renders on
+           EVERY type until the mapping is authored. Flagged, not silently resolved. */
+        var opts = ['HO-1','HO-2','HO-3','HO-4','HO-5','HO-6','HO-7','HO-8'].map(function (o) {
+            return '<option ' + (acc.hoType === o ? 'selected' : '') + '>' + o + '</option>';
+        }).join('');
+        return `
+                <div class="field-row" style="grid-template-columns:1fr;">
+                    <div><span class="input-label modal-tt-wrap" style="cursor:help;">Homeowner policy type<div class="modal-tt" style="left:0; right:auto;"><strong>Homeowner policy type</strong>Which HO form your policy is written on. The panel above explains each one. We never pick this for you — read it off your declarations page.</div></span><select class="small-field" style="background: var(--bg-navy); color:white;" onchange="updateAccField('${id}', 'hoType', this.value)"><option value="">Select policy type…</option>${opts}</select></div>
+                </div>
+                <div class="field-row">
+                    ${F('covA', 'Coverage A — Dwelling', 'The cost to rebuild your home\'s structure.', 'Should roughly equal REBUILD cost — not market price and not your mortgage.', 'left')}
+                    ${F('covB', 'Coverage B — Other Structures', 'Detached structures — fence, shed, detached garage.', 'Often defaults to ~10% of Coverage A; raise it if you have a big detached structure.', 'right')}
+                </div>
+                <div class="field-row">
+                    ${F('covC', 'Coverage C — Personal Property', 'Your belongings — furniture, clothes, electronics.', 'Often ~50–70% of Coverage A. Do a rough room-by-room tally to sanity-check.', 'left')}
+                    ${F('covD', 'Coverage D — Loss of Use', 'Pays living costs if you can\'t stay home during a covered repair.', 'Often ~20% of Coverage A; think months of rent + meals.', 'right')}
+                </div>
+                <div class="field-row">
+                    ${F('covE', 'Coverage E — Personal Liability', 'Covers you if someone is hurt or their property is damaged and you\'re liable.', 'Common floors are $300k–$500k; a pool, dog, or trampoline argues for more (or an umbrella policy).', 'left')}
+                    ${F('covF', 'Coverage F — Medical Payments', 'Small no-fault medical bills for a guest hurt on your property.', 'Usually $1k–$5k; goodwill coverage, not the big liability line.', 'right')}
+                </div>
+                <div class="field-row">
+                    ${F('dedOther', 'Deductible — Other Perils (standard)', 'What you pay out of pocket before a normal claim (fire, theft) pays.', 'Higher deductible = lower premium; pick what you could cover on short notice.', 'left')}
+                    ${F('dedHurricane', 'Deductible — Hurricane', 'A separate, often PERCENTAGE deductible that applies to named-storm damage.', 'A % deductible on a big Coverage A can be a large dollar figure — do the math for a real storm.', 'right', 'moneypct')}
+                </div>
+                <div class="field-row" style="grid-template-columns:1fr;">
+                    ${F('dedWindHail', 'Deductible — Wind/Hail', 'A separate deductible for wind or hail damage, common in storm-prone regions.', 'Like the hurricane line — a % here can be a big number; know it before a claim.', 'left', 'moneypct')}
+                </div>
+                ${/* §17.3a — the per-form note sits UNDER the fields it describes, not above them:
+                      the hovers explain the FIELD, this explains the FORM, and both render. */''}
+                ${_hoTypeNoteHTML(acc)}`;
+    }
+    function _propEndorseFieldHTML(id, acc, key, suffix, label) {
+        var k = key + suffix;
+        return '<div style="flex:1;"><span class="input-label" style="color:var(--muted);">' + label + '</span>' +
+               '<input type="text" class="small-field curr-format" placeholder="—" value="' +
+               formatCurrencyDisplay((acc && acc[k]) || '') +
+               '" oninput="updateAccField(\'' + id + '\', \'' + k + '\', this.value)"></div>';
+    }
+    function _propPremiumNote(acc) {
+        var hi = _num(_canonHomeIns(acc));
+        var body = hi > 0
+            ? 'Already counted? If this premium is part of your Annual Homeowner Insurance of $' +
+              Math.round(hi).toLocaleString('en-US') +
+              ', leave it blank — it is already in your total. Enter it here only if it is a separate policy or a rider billed on its own.'
+            : 'Already counted? If a premium is part of a homeowner policy you have not recorded yet, leave it blank rather than entering it twice. Enter it here only if it is a separate policy or a rider billed on its own.';
+        return '<div style="margin:6px 0 10px; padding:8px 10px; border-left:2px solid rgba(201,168,76,0.5); background:rgba(201,168,76,0.06); ' +
+               'font-family:var(--font-serif); font-size:12px; line-height:1.5; color:rgba(255,255,255,0.72);">' + body + '</div>';
+    }
+    function _vehCostFieldHTML(id, acc, c) {
+        var f = _vehCostField(c.kind);
+        var n = _vehKindAnnual(id, c.kind);
+        var tt = '<span class="input-label modal-tt-wrap" style="cursor:help;">' + c.label +
+                 (c.hover ? '<div class="modal-tt" style="left:0; right:auto;"><strong>' + c.label + '</strong>' + c.hover +
+                   (n > 0 ? '<br><br>This figure is the line you track in Operating Upkeep. Edit it there; this box shows it.' : '') +
+                   '</div>' : '') + '</span>';
+        if (n > 0) {
+            return '<div>' + tt +
+                '<input type="text" class="small-field curr-format" value="' + formatCurrencyDisplay(Math.round(n)) + '" readonly ' +
+                'style="opacity:0.7; cursor:not-allowed; border-style:dashed;" title="Set in Operating Upkeep — click to open">' +
+                '<div onclick="openUpkeepForProperty(\'' + id + '\', \'' + c.kind + '\')" ' +
+                'style="font-size:10px; color:var(--teal-mid); margin-top:3px; font-family:var(--font-mono); cursor:pointer;">' +
+                '🔗 Tracked in Operating Upkeep</div></div>';
+        }
+        return '<div>' + tt +
+            '<input type="text" class="small-field curr-format" placeholder="$0" value="' + formatCurrencyDisplay((f && acc[f]) || '') +
+            '" oninput="updateAccField(\'' + id + '\', \'' + f + '\', this.value)"></div>';
+    }
+    function _vehCostBlockHTML(id, acc) {
+        var cat = (typeof _upkForScope === 'function') ? _upkForScope('vehicle', (acc && acc.vehicleType) || '') : [];
+        if (!cat.length) return '';
+        var cells = cat.map(function (c) { return _vehCostFieldHTML(id, acc, c); });
+        var rows = '';
+        for (var i = 0; i < cells.length; i += 2) {
+            rows += '<div class="field-row" style="grid-template-columns: 1fr 1fr;">' + cells[i] + (cells[i + 1] || '<div></div>') + '</div>';
+        }
+        return rows;
+    }
+    function _propUpkeepSectionHTML(id, acc, show, scope) {
+        var sc = scope || 'property';
+        /* §47.1 — the vehicle TYPE is a third axis under scope: two rows (insurance, parking) swap
+           their hover for a boat or an RV. Blank type falls through to the base row, which is the CAR
+           case and the COMMON path. ⛔ `undefined` for a property, deliberately: a house has no type
+           and must never resolve one. */
+        var vT = sc === 'vehicle' ? (acc && acc.vehicleType) || '' : '';
+        var cat = (typeof _upkForScope === 'function') ? _upkForScope(sc, vT) : [];
+        var lines = _propUpkeepLines(id, null, sc);
+        var opts = ['<option value="">+ Add an upkeep cost…</option>'];
+        /* ⛔⛔ THE GROUP LIST IS DERIVED FROM THE CATALOGUE, NOT HARD-CODED BESIDE IT, AND THAT IS A
+           MONEY FIX RATHER THAN A TIDY-UP. This loop used to read a literal
+           [['utilities','UTILITIES'],['services','PROPERTY SERVICES']]. A kind whose group was not
+           one of those two would have been INVISIBLE IN THE DROPDOWN WHILE STILL COUNTING IN THE
+           TOTAL — a dollar the user can neither see nor edit but is being charged. That is the same
+           family as the negative-balance defect: not a wrong word, a wrong number about the user's
+           own money. _upkGroupsForScope falls back to the group key upper-cased, so a future group
+           with no authored heading still RENDERS rather than going silent. */
+        ((typeof _upkGroupsForScope === 'function') ? _upkGroupsForScope(sc, vT) : []).forEach(function (g) {
+            opts.push('<optgroup label="' + g[1] + '">');
+            cat.filter(function (c) { return c.group === g[0]; }).forEach(function (c) {
+                /* Already-added kinds are disabled rather than hidden: a user who cannot find
+                   "Electricity" would reasonably conclude it is missing. Annotation over
+                   suppression, the row-195 ruling applied to a dropdown. */
+                var had = lines.some(function (it) { return it.upkeepKind === c.kind; });
+                opts.push('<option value="' + c.kind + '"' + (had ? ' disabled' : '') + '>' + c.label + (had ? ' — added' : '') + '</option>');
+            });
+            opts.push('</optgroup>');
+        });
+        var rows = lines.map(function (it) {
+            var c = _propUpkeepKind(it.upkeepKind, sc, vT) || { label: it.name, hover: '' };
+            var mo = _upkMo(it);
+            var amt = mo > 0 ? '$' + Math.round(mo * 12).toLocaleString('en-US') + '/yr' : '—';
+            return '<div onclick="openUpkeepForProperty(\'' + id + '\', \'' + it.upkeepKind + '\')" ' +
+                   'title="Set in Operating Upkeep — click to open" ' +
+                   'style="display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:7px 0; ' +
+                   'border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer;">' +
+                   '<span class="modal-tt-wrap" style="font-size:12.5px; color:rgba(255,255,255,0.82);">' + c.label +
+                   (c.hover ? '<div class="modal-tt" style="left:0; right:auto;"><strong>' + c.label + '</strong>' + c.hover + '</div>' : '') +
+                   '</span>' +
+                   '<span style="font-family:var(--font-mono); font-size:12.5px; color:' + (mo > 0 ? 'rgba(255,255,255,0.75)' : 'var(--muted)') + ';">' + amt + '</span>' +
+                   '</div>';
+        }).join('');
+        /* ══ §45.6 · THE CHROME IS SCOPED, AND EVERY VEHICLE STRING IS AUTHORED ═══════════════════
+           The property strings below are UNCHANGED — a property room is byte-identical, which is the
+           evidence I trust most on this change (10703's law). The five vehicle strings are §45.6
+           VERBATIM; I flagged them as missing rather than writing five plausible house-voiced lines,
+           and the Architect authored them.
+           ⭐ THE TOGGLE HOVER IS THE LOAD-BEARING ONE AND IT EXISTS TO PREVENT A SPECIFIC MISREADING:
+           a user who meets COSTS inside an ASSET room may fear the costs reduce the asset's VALUE.
+           They do not. Costs and value are separate truths in the same room. */
+        var V = sc === 'vehicle';
+        var C = V ? {
+            toggle: 'Track running costs',
+            /* ⚠️ `&rsquo;` NOT AN ESCAPED APOSTROPHE, AND THIS COST ME A BROKEN PAGE. Written as
+               `doesn\'t` through a scripted edit, the backslash was eaten by two layers of string
+               escaping and shipped as `'It doesn'` + `t change…` — a SYNTAX ERROR that killed the
+               entire inline script block, so `state` and `addInstance` never existed and the Studio
+               rendered nothing at all. The entity has no escaping layer to lose and is what every
+               other authored string in this file already uses. ⛔ NEVER SCRIPT AN EDIT THAT PUTS A
+               RAW APOSTROPHE INSIDE A JS STRING LITERAL — use the entity, or the Edit tool. */
+            toggleTT: 'Turn this on to record what the vehicle actually costs you &mdash; insurance, fuel, upkeep and the rest. It doesn&rsquo;t change what the vehicle is worth.',
+            head: 'What this vehicle costs to run',
+            empty: 'Nothing recorded yet. Add what this vehicle costs you to run and it&rsquo;ll show up here.',
+            tracked: 'Tracked in Operating Upkeep'
+        } : {
+            toggle: 'Show upkeep costs',
+            toggleTT: 'The recurring bills that keep this property running — power, water, waste, connectivity, the yard. Add the ones you pay and they are tracked in your Operating Upkeep ledger, then counted here in the true cost of keeping the place.',
+            head: 'Operating Upkeep',
+            empty: 'Nothing tracked yet. Add the bills you actually pay for this property — each one becomes a line in your Operating Upkeep ledger.',
+            tracked: 'tracked in Operating Upkeep — click to open'
+        };
+        var body = lines.length
+            ? rows + '<div style="margin-top:8px; font-size:11px; color:var(--muted);">🔗 ' + C.tracked + '</div>'
+            : '<div style="font-size:12px; color:var(--muted); line-height:1.5; padding:4px 0 8px;">' + C.empty + '</div>';
+        return `
+            <div class="toggle-row modal-tt-wrap" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
+                <span class="toggle-label" style="color:var(--teal-mid);">${C.toggle}</span>
+                <label class="switch"><input type="checkbox" ${show ? 'checked' : ''} onchange="updateAccToggle('${id}', 'showUpkeep', this.checked)"><span class="slider"></span></label>
+                <div class="modal-tt"><strong>${C.toggle}</strong>${C.toggleTT}</div>
+            </div>` + (show ? `
+            <div style="margin-top:14px; padding:14px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:4px;">
+                <div style="color:var(--teal-mid); font-weight:bold; font-size:13px;">🧰 ${C.head}</div>
+                ${V ? '' : '<div style="font-size:11.5px; color:var(--muted); margin:2px 0 10px;">What it takes to run the place, month to month.</div>'}
+                ${body}
+                <div style="margin-top:12px;">
+                    <select class="small-field" style="background: var(--bg-navy); color:white;" onchange="if(this.value){ createPropertyUpkeep('${id}', this.value); }">${opts.join('')}</select>
+                </div>
+            </div>` : '');
+    }
+    function _propEndorsementsHTML(id, acc) {
+        if (!acc) return '';
+        var anyOn = _propEndorsements().some(function (e) { return !!acc[e[0]]; });
+        var rows = _propEndorsements().map(function (e) {
+            var key = e[0], label = e[1], whatsThis = e[2], doIHave = e[3];
+            var on = !!acc[key];
+            /* THE CONDITIONAL FIELDS (row 206 "show only if selected"). Emitted ONLY on the ON
+               branch — not rendered-then-hidden — so an endorsement the user does not carry leaves no
+               trace in the served bytes for a gate (or a reader) to mistake for a carried one. */
+            var fields = on
+                ? '<div style="display:flex; gap:12px; padding:2px 0 10px 0;">' +
+                  _propEndorseFieldHTML(id, acc, key, 'Limit', 'Coverage limit') +
+                  _propEndorseFieldHTML(id, acc, key, 'Premium', 'Annual premium') +
+                  '</div>'
+                : '';
+            /* Replacement Cost is the only one of the six the bank gave a second hover to, so it is
+               the only one that renders one — the others keep the single authored string rather than
+               getting a fabricated companion (L47). */
+            var tt = '<div class="modal-tt" style="left:0; right:auto;"><strong>What\'s this?</strong>' + whatsThis +
+                     (doIHave ? '<br><br><strong>Do I have enough?</strong>' + doIHave : '') + '</div>';
+            return '<div class="toggle-row modal-tt-wrap" style="padding:8px 0 6px;">' +
+                   '<span class="toggle-label" style="color:var(--white);">' + label + '</span>' +
+                   '<label class="switch"><input type="checkbox" ' + (on ? 'checked' : '') +
+                   ' onchange="updateAccToggle(\'' + id + '\', \'' + key + '\', this.checked)"><span class="slider"></span></label>' +
+                   tt + '</div>' + fields;
+        }).join('');
+        return '<details ' + (anyOn ? 'open' : '') + ' style="margin:12px 0 4px;">' +
+               '<summary style="list-style:none; cursor:pointer; padding:8px 12px; background:var(--bg-navy); border:1px solid rgba(255,255,255,0.14); border-radius:4px; color:rgba(255,255,255,0.75); font-size:12px;">Specialized / endorsement coverages  ▾</summary>' +
+               '<div style="border:1px solid rgba(255,255,255,0.10); border-top:none; border-radius:0 0 4px 4px; padding:4px 12px 8px; background:rgba(255,255,255,0.02);">' +
+               /* ONE instance for the whole group (authored placement) — not repeated per row, which
+                  would turn an instruction into wallpaper and stop being read. */
+               _propPremiumNote(acc) + rows + '</div></details>';
+    }
+    function _propHazardCoverageHTML(id, acc) {
+        if (!acc) return '';
+        var money = function (key, label) {
+            return '<div style="flex:1;"><span class="input-label" style="color:var(--muted);">' + label + '</span>' +
+                   '<input type="text" class="small-field curr-format" placeholder="—" value="' + formatCurrencyDisplay(acc[key] || '') +
+                   '" oninput="updateAccField(\'' + id + '\', \'' + key + '\', this.value)"></div>';
+        };
+        var text = function (key, label) {
+            return '<div style="flex:1;"><span class="input-label" style="color:var(--muted);">' + label + '</span>' +
+                   '<input type="text" class="small-field" placeholder="—" value="' +
+                   String(acc[key] === undefined || acc[key] === null ? '' : acc[key]).replace(/"/g, '&quot;') +
+                   '" oninput="updateAccField(\'' + id + '\', \'' + key + '\', this.value)"></div>';
+        };
+        /* A deductible that may be money OR a percentage. Same seam as money() — only the formatter
+           and the class differ — so the three deductibles are gated identically wherever they live
+           (two in the coverage grid, this one in the earthquake row). The endorsement LIMIT fields
+           keep text(): "open perils" is a real answer there and must stay typeable. */
+        var moneypct = function (key, label) {
+            return '<div style="flex:1;"><span class="input-label" style="color:var(--muted);">' + label + '</span>' +
+                   '<input type="text" class="small-field moneypct-format" placeholder="—" value="' +
+                   String(formatMoneyOrPctDisplay(acc[key] || '')).replace(/"/g, '&quot;') +
+                   '" oninput="updateAccField(\'' + id + '\', \'' + key + '\', this.value)"></div>';
+        };
+        var row = function (key, label, whatsThis, fields) {
+            var on = !!acc[key];
+            return '<div class="toggle-row modal-tt-wrap" style="padding:8px 0 6px;">' +
+                   '<span class="toggle-label" style="color:var(--white);">' + label + '</span>' +
+                   '<label class="switch"><input type="checkbox" ' + (on ? 'checked' : '') +
+                   ' onchange="updateAccToggle(\'' + id + '\', \'' + key + '\', this.checked)"><span class="slider"></span></label>' +
+                   '<div class="modal-tt" style="left:0; right:auto;"><strong>What\'s this?</strong>' + whatsThis + '</div></div>' +
+                   /* flex-WRAP so §27.4's full-width note forces its own line instead of being
+                      squeezed into a column beside the money fields. The flood row has three fields
+                      that already fit on one line, so nothing about it moves. */
+                   (on ? '<div style="display:flex; flex-wrap:wrap; gap:12px; padding:2px 0 10px 0;">' + fields() + '</div>' : '');
+        };
+        return row('coverFlood', 'Flood insurance (NFIP or private)',
+                   'Flood is excluded from essentially every standard home policy — it is bought separately, most often through the National Flood Insurance Program (NFIP) or a private flood insurer. Switch this on to record what you carry.',
+                   function () { return money('floodCovBuilding', 'Flood coverage — building') + money('floodCovContents', 'Flood coverage — contents') + money('floodPremium', 'Annual flood premium'); })
+             + row('endorseQuake', 'Earthquake coverage',
+                   'Earthquake damage is excluded from standard home policies almost everywhere. It is added as an endorsement or bought as a separate policy, and its deductible is usually a PERCENTAGE of the dwelling limit rather than a flat dollar figure. Switch this on to record what you carry.',
+                   /* §27.4 — the earthquake block gets its OWN instance: the group note above is not
+                      adjacent to it, and earthquake carries the identical ambiguity because the bank's
+                      own hover says it is "added as an endorsement OR bought as a separate policy".
+                      Flood is deliberately EXCLUDED — it is genuinely always separate, so a warning
+                      there would be noise, and noise is how real warnings get ignored. */
+                   function () { return '<div style="width:100%;">' + _propPremiumNote(acc) + '</div>' +
+                          '<div style="display:flex; gap:12px; width:100%;">' +
+                          money('endorseQuakeLimit', 'Earthquake coverage limit') + moneypct('quakeDeductible', 'Earthquake deductible') + money('quakePremium', 'Annual earthquake premium') +
+                          '</div>'; });
+    }
+    function _propNfipPanelHTML() {
+        return _diWhyPanel('Flood cover — how it works and where it comes from', [
+            ['Why it is separate', 'Flood is the biggest gap in ordinary home insurance, and it is a gap by design rather than by accident — standard policies exclude it almost universally. Cover comes from two places.'],
+            ['The National Flood Insurance Program (NFIP)', 'The NFIP is run by FEMA and sold through ordinary insurance agents. Its limits are set nationally rather than by your home\'s value: up to $250,000 on the building and $100,000 on contents for a residence. If your home would cost more than that to rebuild, the NFIP alone will not cover it.'],
+            ['Private flood insurers', 'Private flood insurers write above those limits and sometimes price better outside the highest-risk zones. Availability varies by state and by insurer.'],
+            ['Three things that surprise people', 'There is usually a THIRTY-DAY WAITING PERIOD before a new flood policy takes effect, so it cannot be bought when the forecast turns; building and contents are SEPARATE coverages and buying one does not include the other; and roughly a quarter of flood claims come from OUTSIDE high-risk zones, which is why a low-risk zone is a reason to check the price rather than a reason to skip it.', true],
+            ['What your zone does not tell you', 'Your flood zone above is a mapped FEMA reference for your location. What it does not tell you is what a policy would cost — only an agent or the NFIP can price that.']
+        ]);
+    }
+    function _quakeBand(ss) {
+        if (typeof ss !== 'number' || !isFinite(ss)) return null;
+        if (ss < 0.25) return 'very low';
+        if (ss < 0.50) return 'low';
+        if (ss < 1.00) return 'moderate';
+        if (ss < 1.50) return 'high';
+        return 'very high';
+    }
+    function _floodTier(zone, subtype) {
+        var z = String(zone || '').trim().toUpperCase();
+        var sub = String(subtype || '').toUpperCase();
+        if (!z || z === 'D') return { key: 'unmapped', label: 'Not mapped / undetermined', note: 'FEMA has not studied this area, so there is no rating either way. Absence of a rating is not the same as low risk.' };
+        if (/^V/.test(z))  return { key: 'coastal', label: 'High risk — coastal', note: 'High-risk with wave action. Flood insurance is required with a federally-backed mortgage.' };
+        if (/^A/.test(z))  return { key: 'high',    label: 'High risk',           note: 'High-risk. Flood insurance is required with a federally-backed mortgage.' };
+        if (z === 'B')     return { key: 'modlow',  label: 'Moderate to low risk', note: 'Outside the high-risk area. Insurance is not required, and is usually cheaper here.' };
+        if (z === 'C')     return { key: 'minimal', label: 'Minimal risk',         note: 'Lowest mapped risk. Not required — but roughly a quarter of flood claims come from outside high-risk areas.' };
+        if (z === 'X') {
+            if (/0\.2 PCT|SHADED/.test(sub)) return { key: 'modlow',  label: 'Moderate to low risk', note: 'Outside the high-risk area. Insurance is not required, and is usually cheaper here.' };
+            if (/MINIMAL/.test(sub))         return { key: 'minimal', label: 'Minimal risk',         note: 'Lowest mapped risk. Not required — but roughly a quarter of flood claims come from outside high-risk areas.' };
+            return null;    // an X we cannot place — show the letter and FEMA's words, claim no tier
+        }
+        return null;        // an unrecognised zone is a STOP, never a guess
+    }
+    function _hazMonth(iso) {
+        var d = new Date(iso);
+        if (!iso || isNaN(d.getTime())) return '';      // no stamp -> no date claimed (L47)
+        return ['January','February','March','April','May','June','July','August','September','October','November','December'][d.getUTCMonth()] + ' ' + d.getUTCFullYear();
+    }
+    function _propHazardHTML(acc) {
+        if (!acc) return '';
+        var snap = _groundsAvmFor(acc);                 // null once the address stops matching
+        var hz = snap && snap.hazard;
+        if (!hz) return '';
+        var cells = '', srcs = [], stamps = [];
+        /* Each reading is a CELL: label, then the figure on its own line in mono at a fixed size, then
+           the descriptor. Two cells of equal width in a grid, so the two figures share a baseline and
+           a left edge no matter how long the labels are — which is what the old space-between rows
+           could never do. A missing reading drops its cell and the survivor spans the row. */
+        var cell = function (label, tip, figure, descriptor, accent) {
+            return '<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-left:2px solid ' + accent + '; border-radius:3px; padding:10px 12px;">' +
+                   '<span class="input-label modal-tt-wrap" style="cursor:help; color:var(--muted); font-size:10px; letter-spacing:0.04em;">' + label + tip + '</span>' +
+                   '<div style="font-family:var(--font-mono); font-size:20px; line-height:1.25; color:' + accent + '; margin-top:5px;">' + figure + '</div>' +
+                   '<div style="font-size:11px; color:rgba(255,255,255,0.62); margin-top:2px;">' + descriptor + '</div></div>';
+        };
+        // FLOOD (row 215). 'none' (FEMA answered, nothing mapped here) renders NOTHING, like a failure.
+        if (hz.flood && hz.flood.status === 'ok' && hz.flood.zone) {
+            cells += cell('FLOOD ZONE',
+                '<div class="modal-tt" style="left:0; right:auto;"><strong>What\'s this?</strong>Your FEMA flood zone (e.g., AE/VE = high-risk, X = lower). Standard home policies EXCLUDE flood; NFIP or private flood is separate.</div>',
+                String(hz.flood.zone).replace(/</g, '&lt;'),
+                hz.flood.subtype ? String(hz.flood.subtype).replace(/</g, '&lt;').toLowerCase() : '&nbsp;',
+                'var(--teal-mid)');
+            if (hz.flood.source) srcs.push(String(hz.flood.source).replace(/</g, '&lt;'));
+            if (hz.flood.updated) stamps.push(hz.flood.updated);
+        }
+        // EARTHQUAKE (§17.5a) — number and word together or not at all.
+        var ss = hz.quake && hz.quake.status === 'ok' ? hz.quake.ss : null;
+        var band = _quakeBand(ss);
+        if (band) {
+            cells += cell('EARTHQUAKE SHAKING',
+                '<div class="modal-tt" style="left:0; right:auto;"><strong>What\'s this?</strong>How hard the ground is expected to shake here in a rare, severe earthquake — a mapped USGS figure for your location, not a prediction of when. The plain-language rating is ours, not an official category. Standard home policies exclude earthquake damage; cover for it is a separate endorsement.' +
+                '<br><br><strong>Do I have enough?</strong>There is no right answer to compare this to — it describes your ground, not your policy. If it reads moderate or higher, the earthquake endorsement above is the field worth a conversation with your agent.</div>',
+                ss + 'g', band + ' shaking', 'var(--gold)');
+            if (hz.quake.source) srcs.push(String(hz.quake.source).replace(/</g, '&lt;'));
+            if (hz.quake.updated) stamps.push(hz.quake.updated);
+        }
+        if (!cells) return '';
+        /* THE SCALE — five authored bands in order, the user's own marked. Rendered ONLY beside a real
+           reading, so it can never stand in for one. The thresholds are §17.5a's, printed so the
+           number has somewhere to sit rather than floating alone. */
+        /* THE FLOOD KEY — worst to best, the user's tier marked. Rendered only beside a real reading,
+           and only when the tier could be established: the letter and FEMA's own description always
+           show (that is the sourced fact), the tier is our grouping and is allowed to be absent. */
+        var fTier = (hz.flood && hz.flood.status === 'ok' && hz.flood.zone) ? _floodTier(hz.flood.zone, hz.flood.subtype) : null;
+        var fKey = '';
+        if (fTier) {
+            /* ⛔ ORDER REVERSED ON THE CAPTAIN'S SMOKE — BEST ON THE LEFT, WORST ON THE RIGHT, so it
+               reads the same direction as the shaking scale beside it. Two scales in one panel
+               running opposite ways is a misreading waiting to happen: the eye learns "left is
+               better" from the first one and carries it to the second.
+               ⚠️ "NOT MAPPED" IS DELIBERATELY SET APART AT THE END, NOT PLACED IN THE SEQUENCE. It is
+               not a severity, and either extreme lies about it: on the left it reads as the safest
+               thing on the row, on the right as worse than a coastal V zone. It is the flood twin of
+               the sdc inverted signal — silence about an unknown hazard must never read as an answer.
+               The gap and the muted border are what say "this one is not on the scale". */
+            var TIERS = [
+                ['minimal', 'Minimal',             'C, X'],
+                ['modlow',  'Moderate to low',     'B, X shaded'],
+                ['high',    'High risk',           'A, AE, AO, AH'],
+                ['coastal', 'High risk — coastal', 'V, VE']
+            ];
+            /* THE HOVERS ARE THE AUTHORED TIER NOTES (§17.5b), not new copy: each box explains itself
+               with the same sentence the bank wrote for that tier. */
+            var tierNote = function (k) {
+                var t = _floodTier(k === 'unmapped' ? 'D' : (k === 'coastal' ? 'VE' : (k === 'high' ? 'AE' : (k === 'modlow' ? 'B' : 'C'))), '');
+                return t ? t.note : '';
+            };
+            var box = function (t, apart) {
+                var mine = t[0] === fTier.key;
+                return '<div class="modal-tt-wrap" style="flex:1; cursor:help; text-align:center; padding:4px 2px; border-radius:2px;' + (apart ? ' margin-left:10px;' : '') +
+                       ' background:' + (mine ? 'rgba(93,202,165,0.18)' : 'rgba(255,255,255,0.03)') +
+                       '; border:1px ' + (apart ? 'dashed' : 'solid') + ' ' + (mine ? 'var(--teal-mid)' : 'rgba(255,255,255,0.06)') + ';">' +
+                       '<div style="font-size:9.5px; letter-spacing:0.03em; color:' + (mine ? 'var(--teal-mid)' : 'rgba(255,255,255,0.5)') + '; text-transform:uppercase;">' + t[1] + '</div>' +
+                       '<div style="font-family:var(--font-mono); font-size:9px; color:rgba(255,255,255,0.35); margin-top:1px;">' + t[2] + '</div>' +
+                       '<div class="modal-tt" style="left:0; right:auto; text-transform:none;"><strong>' + t[1] + ' (' + t[2] + ')</strong>' + tierNote(t[0]) + '</div></div>';
+            };
+            fKey = '<div style="display:flex; gap:3px; margin-top:10px; align-items:stretch;">' +
+                   TIERS.map(function (t) { return box(t, false); }).join('') +
+                   box(['unmapped', 'Not mapped', 'D'], true) + '</div>' +
+                   '<div style="font-size:11px; color:rgba(255,255,255,0.62); margin-top:6px; line-height:1.5;">' + fTier.note + '</div>';
+        }
+        /* §17.5c — THE FLOOD MAP. Sits with the flood half, under its key, because that is what it
+           shows. Served from OUR Worker (Captain's ruling: proxy, one door) — the page never talks to
+           FEMA, and img-src was widened to the Worker origin only, never to hazards.fema.gov.
+           ⛔ IT FAILS SILENTLY AND THAT IS LOAD-BEARING, NOT TIDINESS. The studio half ships BEFORE
+           the Worker route is deployed, so until that deploy every one of these requests 404s. A
+           broken-image icon in a retirement plan reads as a broken product; onerror removes the
+           element so the panel simply renders as it did yesterday. DEGRADING TO SHIPPED BEHAVIOUR IS
+           SAFE — this is the split-deploy law applied to an image.
+           Only rendered when there is a flood reading AND coordinates: no reading means no map, and
+           without coordinates the request could only be about somewhere else. */
+        /* ⭐ THE CROSSHAIR IS EXACT, NOT APPROXIMATE — and that is why it is honest to draw. The
+           Worker builds the bounding box as the point ± a fixed delta, so THE ADDRESS IS THE
+           GEOMETRIC CENTRE OF THE IMAGE BY CONSTRUCTION. Marking 50%/50% is not an estimate of where
+           the home is; it is the definition of how the tile was requested. The Captain could not
+           tell where he was on the map and assumed he was centred — he was right, and a reader
+           should never have to assume it. `pointer-events:none` so it cannot swallow a click. */
+        var fMap = '';
+        if (fTier && snap && snap.coords) {
+            fMap = '<div style="margin-top:10px; border:1px solid rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; line-height:0; position:relative;">' +
+                   '<img src="' + _AssetIntel.WORKER_URL + '/floodmap?lat=' + encodeURIComponent(snap.coords.lat) + '&lon=' + encodeURIComponent(snap.coords.lon) + '"' +
+                   ' alt="FEMA flood hazard map centred on this address" loading="lazy" style="display:block; width:100%; height:auto;"' +
+                   ' onerror="this.parentNode.style.display=\'none\';">' +
+                   '<div style="position:absolute; left:50%; top:50%; width:26px; height:26px; margin:-13px 0 0 -13px; pointer-events:none;">' +
+                     '<div style="position:absolute; left:50%; top:0; width:2px; height:26px; margin-left:-1px; background:rgba(0,0,0,0.55);"></div>' +
+                     '<div style="position:absolute; top:50%; left:0; height:2px; width:26px; margin-top:-1px; background:rgba(0,0,0,0.55);"></div>' +
+                     '<div style="position:absolute; left:50%; top:50%; width:10px; height:10px; margin:-5px 0 0 -5px; border-radius:50%; background:var(--gold); border:2px solid rgba(0,0,0,0.6);"></div>' +
+                   '</div></div>' +
+                   /* ⚠️ THIS PARAGRAPH IS MINE AND IS FLAGGED FOR THE ARCHITECT TO VOICE. Every FACT
+                      in it is sourced, not remembered:
+                        · Unshaded Zone X is WHITE AND UNLABELLED on a FIRM — FEMA's own convention
+                          (fema.gov "Zone C or X (Unshaded)"). THIS IS THE ANSWER to the Captain's
+                          "my zone says X but the map shows AE everywhere": the white IS his zone, and
+                          FEMA does not print a letter on it. A reading that appears to contradict its
+                          own map will be read as a bug every time, so it has to be said out loud.
+                        · EL figures are Base Flood Elevations. Queried FEMA's OWN records for the
+                          panel in his screenshot (DFIRM_ID 12101C, layer 16): LEN_UNIT = "Feet",
+                          V_DATUM = "NAVD88" on every row. Not assumed from the number's shape.
+                      Bank silence on a label = flattest accurate string + MANDATORY FLAG. */
+                   '<div style="font-size:11px; color:rgba(255,255,255,0.62); margin-top:8px; line-height:1.55;">' +
+                   'The marker is your address — the map is drawn centred on it. Blue areas are mapped flood zones; the white space is Zone X, which FEMA leaves unlabelled, so your own zone shows as absence rather than a letter. “EL” figures are base flood elevations — how high the 1-in-100-year flood is expected to reach at that spot, in feet above the NAVD88 vertical datum.' +
+                   '</div>';
+        }
+        var scale = '';
+        if (band) {
+            var BANDS = [['very low', 'under 0.25g'], ['low', '0.25–0.50g'], ['moderate', '0.50–1.00g'], ['high', '1.00–1.50g'], ['very high', '1.50g +']];
+            scale = '<div style="display:flex; gap:3px; margin-top:10px;">' + BANDS.map(function (b) {
+                var mine = b[0] === band;
+                return '<div style="flex:1; text-align:center; padding:4px 2px; border-radius:2px; background:' + (mine ? 'rgba(212,175,110,0.18)' : 'rgba(255,255,255,0.03)') +
+                       '; border:1px solid ' + (mine ? 'var(--gold)' : 'rgba(255,255,255,0.06)') + ';">' +
+                       '<div style="font-size:9.5px; letter-spacing:0.03em; color:' + (mine ? 'var(--gold)' : 'rgba(255,255,255,0.5)') + '; text-transform:uppercase;">' + b[0] + '</div>' +
+                       '<div style="font-family:var(--font-mono); font-size:9px; color:rgba(255,255,255,0.35); margin-top:1px;">' + b[1] + '</div></div>';
+            }).join('') + '</div>';
+        }
+        /* THE CITATION, AUTHORED (§17.5b). My flat version is superseded.
+           ⛔ NO STAMP = NO DATE CLAIMED. The date clause is DROPPED rather than filled with today's:
+           a provenance stamp records when the DATA WAS READ, never when the page was drawn. */
+        var month = _hazMonth(stamps[0]);
+        var prov = month
+            ? 'Read from FEMA’s National Flood Hazard Layer and the USGS seismic design maps for this address in ' + month + '. These describe the ground your home sits on — not your policy, and not a recommendation.'
+            : 'Read from FEMA’s National Flood Hazard Layer and the USGS seismic design maps for this address. These describe the ground your home sits on — not your policy, and not a recommendation.';
+        return '<div style="margin-top:14px; padding:12px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:4px;">' +
+               '<div style="color:var(--teal-mid); font-weight:bold; font-size:13px; margin-bottom:9px;">🌊 The ground under the house</div>' +
+               '<div style="display:grid; grid-template-columns:repeat(' + (cells.match(/border-left:2px/g) || []).length + ',1fr); gap:10px;">' + cells + '</div>' +
+               fKey + fMap + scale +
+               /* text-transform:none — .input-label uppercases, and a citation set in caps reads as
+                  shouting rather than as a source line. Caught in a screenshot, not in the DOM
+                  assertions: every structural check passed while it looked wrong. */
+               '<div class="input-label" style="color:var(--muted); font-size:10px; margin-top:9px; line-height:1.5; text-transform:none;">' + prov + '</div></div>';
+    }
+    function _helocUsePurposeFieldHTML(id, acc) {
+        var p = acc.helocUsePurpose;
+        return `
+            <div class="field-row" style="grid-template-columns: 1fr;">
+                <div>${_dLbl(getBaseType(acc.baseId), 'Use of Funds')}
+                    <select class="small-field" style="background: var(--bg-navy);" onchange="updateAccField('${id}', 'helocUsePurpose', this.value)">
+                        <option value="">Select… (optional)</option>
+                        <option ${p === 'Home improvement' ? 'selected' : ''}>Home improvement</option>
+                        <option ${p === 'Other' ? 'selected' : ''}>Other</option>
+                    </select>
+                </div>
+            </div>`;
+    }
+    function _moatTaxFieldsHTML(id, acc) {
+        if ((getBaseType(acc.baseId) || {}).title !== 'Mortgage') return '';
+        var it = acc.mortgageItemizes || '';
+        return `
+            <div class="field-row">
+                <div>${_dLbl(getBaseType(acc.baseId), 'Deductions', 'How you file', 'Whether your household itemizes deductions or takes the standard deduction. It decides whether mortgage interest changes your tax bill at all — most households take the standard deduction, and then it does not. Optional; leave it blank and Datum stays quiet on tax.')}
+                    <select class="small-field" style="background: var(--bg-navy);" onchange="updateAccField('${id}', 'mortgageItemizes', this.value)">
+                        <option value="">Select… (optional)</option>
+                        <option value="Itemize" ${it === 'Itemize' ? 'selected' : ''}>We itemize</option>
+                        <option value="Standard" ${it === 'Standard' ? 'selected' : ''}>We take the standard deduction</option>
+                    </select>
+                </div>
+                <div>${_dLbl(getBaseType(acc.baseId), 'Mortgage Interest Paid (last yr)', 'From your 1098', 'The mortgage interest your lender reported for last year — Box 1 of the Form 1098 they send you. Sourced straight off that form, never estimated, because only the statement knows the real figure. It is used solely to describe your deduction; it changes no other number here.', '', 'right')}<input type="text" class="small-field curr-format" placeholder="$0" value="${formatCurrencyDisplay(acc.mortgageInterestPaidYr||'')}" oninput="updateAccField('${id}', 'mortgageInterestPaidYr', this.value)"></div>
+            </div>`;
+    }
+    var _livePrimePending = null;
+    function _normalizeRatesResp(j) {
+        if (!j || (typeof j.prime !== 'number' && !j.rates)) return null;
+        var rates = j.rates || {};
+        if (!rates.Prime && typeof j.prime === 'number' && j.asOf) rates.Prime = { value: j.prime, asOf: j.asOf, source: j.source };
+        return { prime: (typeof j.prime === 'number' ? j.prime : null), asOf: j.asOf || null, source: j.source || null, rates: rates };
+    }
+    function _fetchLivePrime() {
+        if (typeof _livePrimeCache !== 'undefined') return Promise.resolve(_livePrimeCache);
+        if (_livePrimePending) return _livePrimePending;
+        _livePrimePending = fetch('/api/prime', { cache: 'no-store' })   // no-store: never serve a stale cached
+            .then(function (r) { return r.ok ? r.json() : null; })       // rates body (e.g. one missing SOFR)
+            .then(function (j) { _livePrimeCache = _normalizeRatesResp(j); return _livePrimeCache; })
+            .catch(function () { _livePrimeCache = null; return null; });
+        return _livePrimePending;
+    }
+    function _refreshHelocLiveColor() {
+        var subs = document.querySelectorAll('[id^="modal-heloc-liverate-"]');
+        for (var i = 0; i < subs.length; i++) {
+            var id = subs[i].id.replace('modal-heloc-liverate-', '');
+            var acc = (state.accounts || []).find(function (a) { return a.id === id; });
+            if (!acc) continue;
+            subs[i].innerHTML = _helocLiveRateHTML(id, acc);
+            var intel = document.getElementById('modal-cellar-intel-' + id);
+            if (intel) intel.innerHTML = _diIntelligence(acc);
+        }
+    }
+    function _refreshMoatLiveColor() {
+        var subs = document.querySelectorAll('[id^="modal-moat-liverate-"]');
+        for (var i = 0; i < subs.length; i++) {
+            var id = subs[i].id.replace('modal-moat-liverate-', '');
+            var acc = (state.accounts || []).find(function (a) { return a.id === id; });
+            if (!acc) continue;
+            subs[i].innerHTML = _moatLiveRateHTML(id, acc);
+            var di = document.getElementById('modal-moat-di-' + id);
+            if (di) di.innerHTML = _moatDI(acc) || di.innerHTML;
+        }
+    }
+    function _isGrounds(base) { return /^property(_primary|_co)?$/.test(base.id); }
+    function _groundsMaintDefault(acc) { var v = _num(acc.value); return v > 0 ? Math.round(v * 0.01) : 0; }  // §4.3 ~1%-of-value rule-of-thumb (est., placeholder only)
+    function _carryMirrorField(id, acc, moatField, groundField, label, ttTitle, ttBody, align) {
+        var pos = align === 'right' ? 'right:0; left:auto;' : 'left:0; right:auto;';
+        var tt = '<span class="input-label modal-tt-wrap" style="cursor:help;">' + label +
+                 '<div class="modal-tt" style="' + pos + '"><strong>' + ttTitle + '</strong>' + ttBody + '</div></span>';
+        var m = _linkedMortgageWith(id, moatField);
+        if (m) {
+            return '<div>' + tt +
+                '<input type="text" class="small-field curr-format" value="' + formatCurrencyDisplay(m[moatField] || '') + '" readonly ' +
+                'style="opacity:0.7; cursor:not-allowed; border-style:dashed;" title="Set on the linked mortgage (The Moat)">' +
+                '<div style="font-size:10px; color:var(--teal-mid); margin-top:3px; font-family:var(--font-mono);">🔗 mirrored from The Moat</div></div>';
+        }
+        return '<div>' + tt +
+            '<input type="text" class="small-field curr-format" placeholder="$0" value="' + formatCurrencyDisplay(acc[groundField] || '') +
+            '" oninput="updateAccField(\'' + id + '\', \'' + groundField + '\', this.value)"></div>';
+    }
+    function _upkeepMirrorField(id, acc, group, groundField, label, ttTitle, ttBody, align) {
+        var pos = align === 'right' ? 'right:0; left:auto;' : 'left:0; right:auto;';
+        var n = _propUpkeepAnnual(id, group);
+        var tt = '<span class="input-label modal-tt-wrap" style="cursor:help;">' + label +
+                 '<div class="modal-tt" style="' + pos + '"><strong>' + ttTitle + '</strong>' + ttBody +
+                 (n > 0 ? '<br><br>This figure is the sum of the ' + group + ' lines you track in Operating Upkeep above. Edit the individual bills there; this box adds them up.' : '') +
+                 '</div></span>';
+        if (n > 0) {
+            var kinds = _propUpkeepLines(id, group).map(function (it) { return it.upkeepKind; });
+            return '<div>' + tt +
+                '<input type="text" class="small-field curr-format" value="' + formatCurrencyDisplay(n) + '" readonly ' +
+                'style="opacity:0.7; cursor:not-allowed; border-style:dashed;" title="Set in Operating Upkeep — click to open">' +
+                '<div onclick="openUpkeepForProperty(\'' + id + '\', \'' + (kinds[0] || '') + '\')" ' +
+                'style="font-size:10px; color:var(--teal-mid); margin-top:3px; font-family:var(--font-mono); cursor:pointer;">' +
+                '🔗 tracked in Operating Upkeep — click to open</div></div>';
+        }
+        /* THE NOT-TRACKED BRANCH REPRODUCES THE ORIGINAL FIELD BYTE-FOR-BYTE (10703's law), so a
+           property with no upkeep lines renders exactly as it did before §28 existed. */
+        return '<div>' + tt +
+            '<input type="text" class="small-field curr-format" placeholder="$0" value="' + formatCurrencyDisplay(acc[groundField] || '') +
+            '" oninput="updateAccField(\'' + id + '\', \'' + groundField + '\', this.value)"></div>';
+    }
+    function _propInsuranceTotal(acc) {
+        return _num(_canonHomeIns(acc)) + _propInsuranceExtras(acc);
+    }
+    function _variableRateClusterHTML(id, acc) {
+        if (acc.rateType !== 'Variable') return '';
+        var iv = String(acc.rateIndex || '').replace(/"/g, '&quot;');
+        // §2 per-field hover renderer — shared by the HELOC (§2c) and the Mortgage (§2b) clusters (L48 reuse).
+        var _hlF = function (label, ttTitle, ttBody, align) {
+            var pos = align === 'right' ? 'right:0; left:auto;' : 'left:0; right:auto;';
+            return '<span class="input-label modal-tt-wrap" style="cursor:help;">' + label +
+                '<div class="modal-tt" style="' + pos + '"><strong>' + ttTitle + '</strong>' + ttBody + '</div></span>';
+        };
+        if ((getBaseType(acc.baseId) || {}).title === 'HELOC') {
+            // §2c HELOC variable cluster. #390: Rate Index is now a canonical DROPDOWN (kills the free-text
+            // spelling fragility that silently broke the live-index trigger); each field carries its OWN
+            // plain-coach hover (was one shared explainer); the number fields clamp to a sane 0–100 range
+            // (enforceNumRange); and the §20 live-index sub-line renders directly UNDER the Rate Index row.
+            // Prime is fed live; SOFR is a selectable option that lights up once its series is added
+            // (sourced-or-blank until then). Mortgage keeps its own cluster below (untouched — Moat leave-as-is).
+            var _idxU = String(acc.rateIndex || '').trim().toUpperCase();
+            var _idxOpts = ['Prime', 'SOFR'];
+            var _idxKnown = _idxOpts.some(function (o) { return o.toUpperCase() === _idxU; });
+            var _idxSelect =
+                '<select class="small-field" style="background: var(--bg-navy);" onchange="updateAccField(\'' + id + '\', \'rateIndex\', this.value)">' +
+                '<option value="">Select…</option>' +
+                _idxOpts.map(function (o) { return '<option value="' + o + '"' + (o.toUpperCase() === _idxU ? ' selected' : '') + '>' + o + '</option>'; }).join('') +
+                (acc.rateIndex && !_idxKnown ? '<option value="' + iv + '" selected>' + iv + ' (custom)</option>' : '') +
+                '</select>';
+            return `
+            <div class="field-row">
+                <div>${_hlF('Rate Index', 'The benchmark you track', 'The published rate your line follows — usually Prime, sometimes SOFR. Your actual rate is this index plus your margin, and it moves with the index at each reset. Today’s live figure shows just below.')}${_idxSelect}</div>
+                <div>${_hlF('Margin %', 'The lender’s fixed add-on', 'The fixed amount your lender adds on top of the index — set at signing, never changes. Your rate = index + margin, so a lower margin is a better deal for the life of the line.', 'right')}<input type="number" min="0" max="100" step="0.01" class="small-field" placeholder="0" value="${acc.rateMargin||''}" oninput="enforceNumRange(this, 0, 100); updateAccField('${id}', 'rateMargin', this.value)"></div>
+            </div>
+            <div id="modal-heloc-liverate-${id}">${_helocLiveRateHTML(id, acc)}</div>
+            <div class="field-row">
+                <div>${_hlF('Periodic Cap %', 'The most it can jump at once', 'The largest your rate can move at any single reset, up or down. Even if the index spikes, one reset can’t move you more than this.')}<input type="number" min="0" max="100" step="0.01" class="small-field" placeholder="0" value="${acc.capPeriodic||''}" oninput="enforceNumRange(this, 0, 100); updateAccField('${id}', 'capPeriodic', this.value)"></div>
+                <div>${_hlF('Lifetime Cap %', 'The ceiling over the whole loan', 'The most your rate can ever climb above where it started, across the entire line. It sets your worst case — the ceiling the rate can’t cross no matter what the index does.', 'right')}<input type="number" min="0" max="100" step="0.01" class="small-field" placeholder="0" value="${acc.capLifetime||''}" oninput="enforceNumRange(this, 0, 100); updateAccField('${id}', 'capLifetime', this.value)"></div>
+            </div>
+            <div class="field-row" style="grid-template-columns: 1fr;">
+                <div>${_hlF('Next Reset Date', 'When the rate can change next', 'The next date your rate re-prices to the current index plus your margin. Until then today’s rate holds; after it, your payment may shift. Datum re-checks the math when this date arrives.')}<input type="date" class="small-field" value="${acc.rateResetDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'rateResetDate', this.value)"></div>
+            </div>`;
+        }
+        // §18.8 — five per-field hovers (Mortgage Copy Bank R142-147), mirroring the HELOC §2c split (R84-88) via
+        // the shared _hlF (L48). HELOC "line" → mortgage "loan"; Rate Index drops HELOC's "live figure below" line
+        // (the mortgage variable field has no live sub-line — L47, don't promise a figure that isn't there).
+        return `
+            <div class="field-row">
+                <div>${_hlF('Rate Index', 'The benchmark you track', 'The published rate your loan follows — often SOFR, sometimes Prime or a Treasury index. Your actual rate is this index plus your margin, and it moves with the index at each reset.')}<input type="text" class="small-field" placeholder="e.g. SOFR, Prime" value="${iv}" oninput="updateAccField('${id}', 'rateIndex', this.value)"></div>
+                <div>${_hlF('Margin %', 'The lender’s fixed add-on', 'The fixed amount your lender adds on top of the index — set at signing, never changes. Your rate = index + margin, so a lower margin is a better deal for the life of the loan.', 'right')}<input type="number" class="small-field" placeholder="0" value="${acc.rateMargin||''}" oninput="updateAccField('${id}', 'rateMargin', this.value)"></div>
+            </div>
+            <div class="field-row">
+                <div>${_hlF('Periodic Cap %', 'The most it can jump at once', 'The largest your rate can move at any single reset, up or down. Even if the index spikes, one reset can’t move you more than this.')}<input type="number" class="small-field" placeholder="0" value="${acc.capPeriodic||''}" oninput="updateAccField('${id}', 'capPeriodic', this.value)"></div>
+                <div>${_hlF('Lifetime Cap %', 'The ceiling over the whole loan', 'The most your rate can ever climb above where it started, across the entire loan. It sets your worst case — the ceiling the rate can’t cross no matter what the index does.', 'right')}<input type="number" class="small-field" placeholder="0" value="${acc.capLifetime||''}" oninput="updateAccField('${id}', 'capLifetime', this.value)"></div>
+            </div>
+            <div class="field-row" style="grid-template-columns: 1fr;">
+                <div>${_hlF('Next Reset Date', 'When the rate can change next', 'The next date your rate re-prices to the current index plus your margin. Until then today’s rate holds; after it, your payment may shift. Datum re-checks the math when this date arrives.')}<input type="date" class="small-field" value="${acc.rateResetDate||''}" oninput="enforceDateCap(event); updateAccField('${id}', 'rateResetDate', this.value)"></div>
+            </div>`;
+    }
+    function _moatLumpBlockHTML(id, acc) {
+        if ((getBaseType(acc.baseId) || {}).title !== 'Mortgage') return '';
+        return '<div class="moat-lump-panel">' +
+               '<div class="moat-lump-head">What would extra do?</div>' +
+               '<div class="field-row" style="grid-template-columns: 1fr;"><div>' +
+               _dLbl(getBaseType(acc.baseId) || {}, 'One-time extra payment', 'A what-if, not a payment',
+                     'A single lump you could put toward the loan today. This is a what-if — we show what it would buy you and change nothing on your account.') +
+               '<input type="text" class="small-field curr-format" placeholder="$0" value="' +
+               formatCurrencyDisplay(_moatLumpWhatIf === '' ? '' : _moatLumpWhatIf) +
+               '" oninput="_moatLumpEdit(\'' + id + '\', this.value)"></div></div>' +
+               '<div id="modal-moat-lump-out-' + id + '">' + _moatLumpBodyHTML(acc) + '</div></div>';
+    }
+    function _securedLinkScope(debtBase) {
+        var id = String(debtBase && debtBase.id || '');
+        if (id.indexOf('mortgage') === 0 || id.indexOf('heloc') === 0)
+            return function(aB) { return aB.id === 'property' || aB.id === 'property_primary' || aB.id === 'property_co'; };
+        if (id.indexOf('auto_debt') === 0)
+            return function(aB) { return aB.id === 'auto' || aB.id === 'auto_primary' || aB.id === 'auto_co'; };
+        // Other debts (personal / revolving) keep the prior broad physical scope (collectibles excluded).
+        return function(aB) { return aB.taxCode === 'physical' && !String(aB.id).includes('collectibles'); };
+    }

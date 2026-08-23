@@ -47,6 +47,12 @@ const PART_REL = 'scripts/studio-account-modal.js';
 /* ⭐ THE 76, FROM A FREE-VARIABLE CENSUS (eslint-scope, selftested against a fixture of known frees
    and known non-frees), NOT FROM A GREP. A grep over identifiers cannot tell a local from a free
    one, and would have produced a list that is wrong in both directions.
+   ⚠️ MOVE 1b SPLIT WHERE THESE LIVE, AND THE ASSERTION IS UNCHANGED ON PURPOSE. 37 of the 76 were
+   ABSORBED into this same part alongside the builder; 39 still live in studio.html. So D1 now proves
+   37 part→part and 39 part→page resolutions rather than 76 part→page. THAT IS STILL EXACTLY THE
+   RIGHT ASSERTION — the builder needs all 76 to resolve at click time and does not care which file
+   each one came from, and pinning the split would make this leg re-derive on every future move.
+   🔑 ASSERT THE REQUIREMENT, NOT THE CURRENT ARRANGEMENT.
    ⛔ IT IS A MANIFEST, SO IT CAN ROT — and S1/S2 below are what stop it: every name must still be
    REFERENCED in the builder text (so the list cannot contain fiction), and the count must be 76
    (so a name cannot be quietly dropped to make a red go away). */

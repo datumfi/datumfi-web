@@ -112,10 +112,21 @@ export function partSurface(text) {
   return [...new Set(out)];
 }
 
+/* ══ THE FILE'S POPULATION OF TEXT-MATCHERS — SWEPT, NOT SPOT-FIXED (§82.24 continued) ══════════
+   partSurface was converted to the shared stripper and the other three in this file were NOT — the
+   "fixed one parser, left the class open" failure, committed inside the gate whose own header is
+   about a law applied in one direction. Asked the file for its population instead of grepping the
+   ones already noticed: partSurface · pageDefines · firstUse · tagIndex. All four are handled here.
+   ⚠️ tagIndex is the odd one: it matches MARKUP, where the comment syntax is <!-- --> and the JS
+   stripper does not apply. It gets a targeted guard rather than a second general stripper — see
+   below for why that is the cheaper correct answer. */
+
 /** Does this page define the name ITSELF? Then it does not need the part for that name. */
 function pageDefines(text, name) {
   const n = name.replace(/\$/g, '\\$');
-  return new RegExp('(?:function[ \\t]+' + n + '[ \\t]*\\()|(?:\\b' + n + '[ \\t]*=[ \\t]*(?:function|async|\\())').test(text);
+  /* Comments stripped: a page whose only mention of a name is a comment saying "we used to define
+     X here" must not be credited with defining it — that would EXCUSE it from loading the part. */
+  return new RegExp('(?:function[ \\t]+' + n + '[ \\t]*\\()|(?:\\b' + n + '[ \\t]*=[ \\t]*(?:function|async|\\())').test(stripComments(text));
 }
 
 /** Index of the first CALL or typeof-probe of `name`, or -1. */
@@ -127,15 +138,40 @@ function firstUse(text, name) {
      one. CLAUDE.md records exactly that — _propUpkeepCatalogue's typeof guard would have silently
      degraded every property's upkeep window rather than erroring. A SILENT DEGRADE IS THE DEFECT
      THIS GATE IS ABOUT, so a page that typeof-probes a part function still has to load the part. */
-  const m = new RegExp('(?:\\b' + n + '[ \\t]*\\()|(?:typeof[ \\t]+' + n + '\\b)').exec(text);
+  /* ⭐ MATCHED ON THE STRIPPED TEXT, INDEX USED AGAINST THE ORIGINAL — which is only sound because
+     stripComments is LENGTH-PRESERVING (asserted as T10 in _gate_studio_source). This index is
+     compared against tagIndex() to decide ordering, so an index off by even one comment's width
+     would silently mis-rank the tag. THE OFFSET CONTRACT IS LOAD-BEARING HERE, not incidental.
+     ⚠️ AND IT MATTERS FROM 1b ONWARD: studio.html now carries a comment naming 53 helper names that
+     live in the part. Unstripped, that comment would be the FIRST USE of all 53. */
+  const m = new RegExp('(?:\\b' + n + '[ \\t]*\\()|(?:typeof[ \\t]+' + n + '\\b)').exec(stripComments(text));
   return m ? m.index : -1;
+}
+
+/** Is `idx` inside an HTML `<!-- … -->` comment? */
+function inHtmlComment(text, idx) {
+  const open = text.lastIndexOf('<!--', idx);
+  if (open < 0) return false;
+  const close = text.indexOf('-->', open);
+  return close === -1 || close > idx;
 }
 
 /** Index of the `<script src=".../rel">` tag that loads this part, or -1. */
 function tagIndex(text, rel) {
   const base = rel.split('/').pop().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const m = new RegExp('<script[^>]+src\\s*=\\s*["\'][^"\']*' + base + '["\']', 'i').exec(text);
-  return m ? m.index : -1;
+  /* ⛔ A COMMENTED-OUT TAG IS NOT A LOADED TAG, AND THIS IS THE PART-10 DEFECT EXACTLY: comment the
+     <script src> out to debug something, and W4 would go GREEN while the page has an undefined
+     function. MEASURED 2026-08-22: zero tracked HTML pages currently contain a commented-out script
+     tag — so this is a real hazard with no live instance, which is the cheapest possible moment to
+     close it.
+     ⚠️ DELIBERATELY A TARGETED CHECK, NOT A SECOND GENERAL STRIPPER. An HTML-comment stripper would
+     need its own string/attribute awareness and would carry its own SILENT-direction failure modes;
+     buying those to fix a zero-instance hazard is mis-pricing in the other direction. This is
+     correct for well-formed HTML and costs three lines. */
+  const re = new RegExp('<script[^>]+src\\s*=\\s*["\'][^"\']*' + base + '["\']', 'ig');
+  let m;
+  while ((m = re.exec(text)) !== null) if (!inHtmlComment(text, m.index)) return m.index;
+  return -1;
 }
 
 /**
@@ -209,6 +245,29 @@ ck('W2 every registered part is GIT-TRACKED (an untracked part is a green build 
    REGISTERED.filter((r) => !trackedSet.has(r)).join(', ') || 'all tracked');
 
 const surfaces = partObjs.map((p) => ({ rel: p.rel, fns: partSurface(p.text) }));
+/* ══ W3a-W3d · THE SWEEP HAS TO BE PROVEN, NOT PERFORMED ═══════════════════════════════════════
+   Four text-matchers live in this file and all four now ignore comments. A conversion with no leg
+   is a conversion somebody can undo without anything going red. One fixture per matcher, each
+   built from the failure it prevents. */
+ck('W3a partSurface — a comment QUOTING a definition is not a published name',
+   !partSurface('/* the header shows window.__ghost = function(x) as an example */\n').includes('__ghost') &&
+   partSurface('window.__real = function (x) { return x; };\n').includes('__real'),
+   'quoted decoy ignored, real definition seen');
+ck('W3b pageDefines — a comment saying a page USED to define a name does not excuse it',
+   !pageDefines('<script>\n// we used to have function __gone() here, now it is in a part\n</script>', '__gone') &&
+   pageDefines('<script>\nfunction __here() { return 1; }\n</script>', '__here'),
+   'comment does not define; real definition does');
+ck('W3c firstUse — a commented call is not a use, and the index still points into the ORIGINAL text',
+   firstUse('<script>\n// __probe() is described here only\n</script>', '__probe') === -1 &&
+   (() => { const t = '<script>\n/* __probe() in prose */\n__probe();\n</script>';
+            const i = firstUse(t, '__probe');
+            return i > 0 && t.slice(i, i + 8) === '__probe('; })(),
+   'prose ignored; real call found at an index valid in the unstripped text');
+ck('W3d tagIndex — a COMMENTED-OUT <script src> is not a loaded tag (the Part-10 defect itself)',
+   tagIndex('<!-- <script src="/scripts/__x.js"></script> -->\n', 'scripts/__x.js') === -1 &&
+   tagIndex('<script src="/scripts/__x.js"></script>\n', 'scripts/__x.js') === 0,
+   'commented tag rejected, real tag found');
+
 ck('W3 every registered part publishes ≥1 top-level function (an empty surface audits nothing)',
    surfaces.every((s) => s.fns.length > 0),
    surfaces.map((s) => s.rel + ':' + s.fns.length).join(' · '));

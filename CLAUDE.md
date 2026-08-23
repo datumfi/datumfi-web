@@ -163,10 +163,21 @@ loosening the parser.
    and a default-active climate option), which would have opened the front door with ENDURANCE
    already answered — the one phase whose whole argument is that the Datum is DERIVED LAST.
    🔑 REUSE-DON'T-FORK ASSUMES THE DONOR IS CORRECT. L48 IS NEVER A VERIFICATION EXEMPTION.
- · scripts/studio-account-modal.js · THE ACCOUNT MODAL BUILDER — the back of every room's card, and
-   the factory that writes 107 of studio.html's 261 inline `on*=` handlers. The FIFTH `studioSource`
-   part and STEP 3 · MOVE 1a (2026-08-22): 191,633 bytes / 1,575 lines / 11.19% of studio.html, one
-   function, 22 callers. SACRED on the measured rule the upkeep catalogue set — A FILE WHOSE ABSENCE
+ · scripts/studio-account-modal.js · THE ACCOUNT MODAL BUILDER AND ITS 53 SOLE-CONSUMED HELPERS —
+   the back of every room's card, and the factory that writes 107 of studio.html's 261 inline `on*=`
+   handlers. The FIFTH `studioSource` part. MOVE 1a (2026-08-22): the builder itself, 191,633 bytes /
+   1,575 lines / 11.19% of studio.html, one function, 22 callers. MOVE 1b (same day): a further
+   132,541 bytes / 1,078 lines / 53 definitions ABSORBED — every helper whose only caller is that
+   builder, derived by call-graph FIXPOINT (4 rounds; a flat reference count said 31).
+   ⭐ AN ABSORPTION, NOT A SECOND PART, AND THE CALL GRAPH RULED IT: zero of the 53 have any referrer
+   outside the moved set, so none has an entry point of its own. §11.2 — name a part for its CALLERS,
+   never for its origin room; their caller was already here. Coherent-looking groups inside it (~18
+   property-insurance helpers, ~11 DI teaching panels, 5 in the live-Prime chain, 4 HELOC field
+   renderers) ARE NOT MODULES: a module is a group with a caller from OUTSIDE it.
+   ⛔ THE 53 ARE STILL GLOBALS ON PURPOSE. An IIFE would privatise them and BREAK `lift()` — the
+   sandbox gates extract a function's TEXT and run it in `new Function`. 1b is CO-LOCATION, not
+   encapsulation: the win is the byte move and the builder's shell-facing dependency surface falling
+   from 76 names to 39. SACRED on the measured rule the upkeep catalogue set — A FILE WHOSE ABSENCE
    FAILS SILENTLY AND CHANGES MONEY ON SCREEN — and it clears that bar in every room family at once,
    because this is the only door to every account's editable fields.
    ⛔ ITS ABSENCE IS SILENT IN BOTH DIRECTIONS, WHICH IS WHY IT IS PINNED RATHER THAN TRUSTED. Drop
