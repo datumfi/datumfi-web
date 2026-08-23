@@ -958,7 +958,13 @@
      ⚠️ THE WIDTH IS APPLIED AT PARSE TIME, NOT ON DOMContentLoaded, AND THAT IS MEASURED:
         5 of 5 cold headed loads painted BEFORE the write landed (FCP 352-524ms vs write 377-528ms),
         so a DOMContentLoaded apply would flash 480 then snap to 400 on a 1.7MB document. */
-  .studio-layout { display: flex; flex: 1; min-height: 0; width: 100%; margin: 0 auto; }
+  /* ⛔ `position: relative` IS FOR #panel-resizer AND IT IS PROVEN INERT, NOT ASSUMED SO. The seam
+     is a CHILD OF THIS ELEMENT rather than of the panel (see THE SEAM below), so it needs a
+     positioned ancestor here. A new positioned ancestor re-resolves the containing block of every
+     absolutely-positioned descendant, so the render was diffed rather than reasoned about:
+     82 abspos descendants inside #studio-layout, ZERO whose nearest positioned ancestor was further
+     up, and ZERO of 1,874 element rects changed. Measured headed Chrome 1440x900, 2026-08-23. */
+  .studio-layout { display: flex; flex: 1; min-height: 0; width: 100%; margin: 0 auto; position: relative; }
   /* Seed render-gate — hold the drafting numbers until the async Clerk dossier seed
      lands, so a direct load never flashes the schema defaults (40/65/93) before the
      authoritative dossier hydrates. visibility:hidden keeps layout (no reflow on reveal).
@@ -999,8 +1005,11 @@
     /* 🖊️ §82.16 — THE RIM IS THE DONOR'S, NOT A NEUTRAL LINE. proto2 `.left` divides itself from the
        stage with rgba(121,222,199,.10) — a SEAFOAM edge, not the rgba(255,255,255,0.05) grey that
        was here. On a graded dark ground a white hairline reads as a seam; a tinted one reads as an
-       edge lit by the same lights as the surfaces either side of it. */
-    border-right: 1px solid var(--panel-edge);
+       edge lit by the same lights as the surfaces either side of it.
+       ⛔ §82.77 — THE `border-right` THAT USED TO LIVE HERE IS GONE, AND THE RIM IS NOT. It moved
+       ONTO #panel-resizer, which now paints it. THE DONOR'S EDGE IS PRESERVED; WHAT CHANGED IS THAT
+       THE ELEMENT DRAWING IT IS THE ELEMENT YOU CAN GRAB. A rim and a control at the same coordinate
+       are the same object to a user, and this file used to disagree with that in two places. */
     /* ⛔ `position: relative` IS REQUIRED BY THE ::before BELOW, NOT COSMETIC. Without it the
        pseudo-element's `inset: 0` resolves against the nearest POSITIONED ancestor and the grid
        lands somewhere else entirely — proto2 `.left:79` declares it for exactly this reason.
@@ -1279,20 +1288,111 @@
   /* `wide` needs no rules — it IS the authored layout above. An empty tier is the honest way to say
      "this one is the default"; writing it out would create a second place to keep in sync. */
 
-  /* ══ THE RESIZE HANDLE ══════════════════════════════════════════════════════════════════════════
-     ⛔ 10px WIDE BUT VISUALLY 1px. A 1px hit target is a control you can see and cannot grab; the
-     padding is the affordance and the hairline is the design. It sits ON the panel's edge, half
-     over each side, so the cursor changes exactly where the eye expects the seam. */
-  #panel-resizer { position: absolute; top: 0; bottom: 0; right: -5px; width: 10px; z-index: 60;
+  /* ══ THE SEAM — §82.77 · ONE BAR, TWO JOBS ══════════════════════════════════════════════════════
+     THE PANEL'S NATIVE SCROLLBAR IS GONE AND THIS ELEMENT REPLACES IT. One object at the panel's
+     edge: scroll it up and down, drag it left and right. It paints the rim, shows the scroll
+     position, and takes both gestures.
+     ⚖️ CAPTAIN-RULED AFTER ASKING THREE TIMES: "it's confusing to visually have two things so close
+     and not know which does which." He was right and the previous answer was to the wrong question.
+     "A native scrollbar cannot be given a horizontal drag" is TRUE — and it is an argument against
+     USING a native scrollbar here, not an argument for two bars.
+     🔑 A CONSTRAINT ON ONE MECHANISM WAS ALLOWED TO STAND AS A CONSTRAINT ON THE DESIGN. When a user
+        repeats a request after being told it is impossible, the odds are not that they misunderstood
+        — they are that we answered a narrower question than they asked.
+
+     ⛔⛔ IT LIVES IN `.studio-layout`, NOT IN `.drafting-panel`, AND THAT IS THE ORIGINAL FIX —
+     MEASURED, NOT PREFERRED. As a child of the panel it was a descendant of a SCROLL CONTAINER, and
+     a native scrollbar paints above a scroller's own positioned descendants. Real headed Chrome,
+     1440x900, cold landing, shipped bytes:
+        handle 388.25-398.24 · GRABBABLE 388-393, SIX of ten px · PAINTED 392.25-394.24 at opacity 0
+        a real pointer press at the painted hairline's OWN CENTRE moved the panel ZERO px.
+     THE SEAM THE USER WAS TOLD TO GRAB WAS DEAD, AND THE PART THAT WORKED HAD NOTHING DRAWN ON IT.
+     A scrollbar does NOT paint above a higher-z SIBLING of the scroller, so one element moving out
+     of the panel puts the paint and the grab on the same pixels:
+        handle 398.99-408.99 · GRABBABLE 399-408, TEN of ten · PAINTED 398.99-399.99 · press: 400->519.
+     ⭐ AND THE STATE DRIFT GOES WITH IT. The handle used to move 5.9px between the landing and an
+     open phase because its containing block was a padding box that a scrollbar shrank. Keyed to
+     --studio-panel-w on the layout, states (A) and (B) now measure IDENTICAL. Position-independence
+     is TRUE BY CONSTRUCTION, not true because a drawing happens to survive an offset.
+
+     ⚠️ `left: calc(var(--studio-panel-w) - 1px)` IS EXACTLY WHERE THE OLD `border-right` SAT, AND
+     THAT IS THE POINT: the seam does not MOVE, it becomes VISIBLE AND GRABBABLE where the eye
+     already reads it. ZERO visible canvas is lost — the element is transparent apart from its 1px
+     rail. What the canvas gives up is 9px of PAN-START strip out of 1040 (0.87%), and the canvas was
+     the right neighbour to ask: the alternative placement kept 4px more canvas and cost the panel
+     its scroll drag entirely (0->0 against 0->278, measured).
+     🔑 BOTH PLACEMENTS "FIXED" THE DIVIDER. ONLY ONE WAS FREE. A fix is done when you have named who
+        paid, not when the thing you aimed at works.
+
+     ⛔ SPLIT ONLY, AND THAT IS REQUIRED BY THIS COMMIT RATHER THAN TIDYING. Painting the seam at rest
+     is exactly what would make it VISIBLE in states the Captain ruled must not have one. Measured
+     WITHOUT the scoping below: SHEET drew a live hairline at the sheet's right edge, STRUCTURE drew
+     one too, and under 900px it drew down the middle of the screen.
+     ⚠️ THE DOM MOVE IS WHAT PUT STRUCTURE AT RISK — a `display:none` panel takes its CHILD with it
+     and a SIBLING survives. The old arrangement was safe there BY ACCIDENT, and the accident is gone.
+     🔑 THE BUG WAS THE ONLY THING HIDING THIS CONTROL IN THREE STATES. Repairing it without scoping
+        it would have shipped one fix and three new defects. */
+  #panel-resizer { position: absolute; top: 0; bottom: 0; z-index: 60;
+                   left: calc(var(--studio-panel-w, 400px) - 1px); width: 10px;
                    cursor: col-resize; background: none; border: none; padding: 0; }
-  #panel-resizer::after { content: ''; position: absolute; top: 0; bottom: 0; left: 4px; width: 2px;
-                          background: var(--panel-edge); opacity: 0; transition: opacity 0.15s ease; }
-  #panel-resizer:hover::after, #panel-resizer:focus-visible::after,
-  body.is-resizing-panel #panel-resizer::after { opacity: 1; }
+  .studio-layout:not(.mode-split) #panel-resizer { display: none; }
+
+  /* ── THE RAIL (::after) — the panel's edge, painted at rest ──────────────────────────────────
+     ⛔ NO `opacity: 0`. That was the defect the Captain reported in his own words — "what I can't
+     see is where the divider is" — and an invisible control is not a subtle one, it is a missing
+     one. You cannot hover what you do not know is there. */
+  #panel-resizer::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 1px;
+                          background: var(--panel-edge);
+                          transition: width 140ms ease, left 140ms ease, background-color 140ms ease; }
+
+  /* ── THE THUMB (::before) — the panel's scroll position, ON the same bar ─────────────────────
+     ⛔ THE THUMB IS THE GRIP. There are no separate grip ticks and there must not be: a ladder of
+     ticks beside a line is a SECOND object, which is the exact thing this ruling deletes.
+     ⚠️ ITS GEOMETRY IS WRITTEN BY scripts/studio-panel-resize.js INTO THESE TWO CUSTOM PROPERTIES.
+     The default is height 0 — SO A FAILED SCRIPT DRAWS NOTHING RATHER THAN A FULL-HEIGHT THUMB THAT
+     LIES ABOUT THE CONTENT. Degrade to absent, never to confidently wrong (the split-deploy law).
+     🖊️ 3px, rounded, centred on the rail so the two parts read as ONE bar with a brighter section —
+     which is what a scrollbar has always looked like. */
+  #panel-resizer::before { content: ''; position: absolute; left: -1px; width: 3px; border-radius: 2px;
+                           top: var(--seam-thumb-top, 0px); height: var(--seam-thumb-h, 0px);
+                           background: rgba(121, 222, 199, 0.30);
+                           transition: background-color 140ms ease, width 140ms ease, left 140ms ease; }
+
+  /* ── THE FOUR STATES. PAINT ANSWERS "WHICH JOB" DURING THE GESTURE (§82.77) ──────────────────
+     🔑 The Captain's confusion is solved by FEEDBACK, not by SEPARATION: one bar that tells you what
+     it is doing beats two bars that tell you what they are. */
+  /* hover — the whole bar blooms to 3px so rail and thumb become one width */
+  #panel-resizer:hover::after, #panel-resizer:focus-visible::after {
+                          left: -1px; width: 3px; background: rgba(121, 222, 199, 0.34); }
+  #panel-resizer:hover::before, #panel-resizer:focus-visible::before {
+                          background: rgba(121, 222, 199, 0.55); }
+  /* scrolling — the thumb is the live half; the rail stays where hover left it */
+  body.is-scrolling-panel #panel-resizer::before { background: rgba(121, 222, 199, 0.55); }
+  /* resizing — the RAIL is the live half, full height, and the thumb dims out of the way */
+  body.is-resizing-panel #panel-resizer::after {
+                          left: -1px; width: 3px; background: rgba(121, 222, 199, 0.55); }
+  body.is-resizing-panel #panel-resizer::before { background: rgba(121, 222, 199, 0.20); }
   #panel-resizer:focus-visible { outline: none; }
+
+  /* ⛔ THE NATIVE SCROLLBAR IS HIDDEN, AND ONLY IN SPLIT. The bare `::-webkit-scrollbar` rule at the
+     top of this sheet has NO SELECTOR and skins every scrollable surface in the Studio — editing it
+     would be a site-wide change wearing a one-line diff. And the hide is scoped to mode-split for a
+     product reason, not a stylistic one: the seam is `display:none` outside split, so hiding the
+     scrollbar everywhere would leave SHEET with no scroll indicator of any kind.
+     ⚠️ THE GUTTER GOES WITH THE BAR, SO THE CONTENT BOX GROWS — MEASURED, clientWidth 393 -> 399.
+     Of 982 elements in the panel, 68 rects shift and exactly ONE height changes (this handle).
+     NOTHING RE-WRAPPED. Deliberately NOT compensated with padding: the gutter is 6px here, 0px on
+     macOS overlay scrollbars and other values elsewhere, so a hardcoded absorb is correct only on
+     the machine it was measured on and would SHRINK the column everywhere else. */
+  .studio-layout.mode-split .drafting-panel { scrollbar-width: none; }
+  .studio-layout.mode-split .drafting-panel::-webkit-scrollbar { width: 0; height: 0; }
+
   /* Dragging over an iframe-free page still lets the pointer land on text; this stops the drag from
-     selecting the panel's copy, which looks broken even though nothing is wrong. */
-  body.is-resizing-panel { user-select: none; cursor: col-resize; }
+     selecting the panel's copy, which looks broken even though nothing is wrong.
+     ⭐ `grabbing` ONCE LOCKED, not `col-resize`: the cursor is col-resize at rest because that is the
+     invitation, but once the gesture has committed to an axis the cursor should describe what is
+     HAPPENING, and half the time what is happening is a scroll. */
+  body.is-resizing-panel, body.is-scrolling-panel { user-select: none; cursor: grabbing; }
   .sl-align-body { font-family: var(--font-serif); font-size: 13px; font-style: italic; line-height: 1.6;
                    color: rgba(255,255,255,0.62); border-left: 1px solid rgba(201,168,76,0.3);
                    padding: 2px 0 2px 12px; margin: 0 0 26px; max-width: 46ch; }
@@ -1944,6 +2044,12 @@
     body { height: auto; overflow: auto; padding-top: 73px; }
     .studio-layout { flex-direction: column; overflow: auto; }
     .drafting-panel { width: 100%; height: auto; max-height: none; overflow-y: visible; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    /* ⛔ §82.77 — THE SEAM IS GONE BELOW 900px AND THIS LINE IS LOAD-BEARING. The layout stacks, so
+       there is no vertical divide to drag and nothing beside the panel to divide from. It is stated
+       because the seam is now keyed to `left: var(--studio-panel-w)` on .studio-layout rather than
+       to the panel's own edge — MEASURED without this rule, it painted a live teal hairline down the
+       MIDDLE of a 390px screen. The old arrangement was safe here by accident too. */
+    #panel-resizer { display: none; }
     .canvas-wrapper { width: 100%; min-height: 400px; flex: none; }
     .blueprint-svg, .crosshair-layer { width: 100%; height: 100%; }
   }
@@ -2440,14 +2546,23 @@
 
   <div class="studio-layout mode-split" id="studio-layout">
 
+    <!-- ⭐ A <button>, NOT A <div>: it is focusable and keyboard-operable for free, and role
+         separator + aria-orientation is what a screen reader needs to know this is a splitter
+         rather than an ornament. The keyboard handler lives with the drag handler so one file
+         owns every way the width can change.
+         ⛔ §82.77 — IT IS A CHILD OF .studio-layout AND NOT OF .drafting-panel, AND THAT IS THE FIX,
+         NOT A TIDY. Inside the panel it was a descendant of a scroll container, and a native
+         scrollbar paints above a scroller's own positioned descendants — so a real pointer press at
+         the centre of its own painted hairline moved the panel ZERO pixels. See THE SEAM in the
+         stylesheet for the measurement on both sides of the move.
+         ⚠️ IT IS DELIBERATELY THE FIRST CHILD. It used to be the first child of the panel, so
+         placing it first here keeps the keyboard's reach to it essentially unchanged — the 12-Tab
+         path is a MEASURED property of this page, not a guess, and moving a focusable element is
+         exactly how such a path silently becomes 40. -->
+    <button type="button" id="panel-resizer" role="separator" aria-orientation="vertical"
+            aria-label="Resize the drafting panel"></button>
+
     <div class="drafting-panel">
-      <!-- ⭐ A <button>, NOT A <div>: it is focusable and keyboard-operable for free, and role
-           separator + aria-orientation is what a screen reader needs to know this is a splitter
-           rather than an ornament. The keyboard handler lives with the drag handler so one file
-           owns every way the width can change. -->
-      <button type="button" id="panel-resizer" role="separator" aria-orientation="vertical"
-              aria-label="Resize the drafting panel"></button>
-      
       <a href="#" class="return-home">← Return to Overview</a>
 
       <!-- ⭐ STEP 1 · THE LANDING. Replaces the old S1 title-block. THREE STRINGS WERE DELIBERATELY

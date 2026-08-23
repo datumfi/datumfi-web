@@ -64,8 +64,17 @@ const ROOT = process.cwd();
 
 /* The three exact strings the poisons rewrite. Kept beside each other so a source edit that breaks
    a poison breaks it LOUDLY (count !== 1 aborts) instead of quietly making the control inert. */
-const LAYOUT_RULE = '.studio-layout { display: flex; flex: 1; min-height: 0; width: 100%; margin: 0 auto; }';
-const LAYOUT_RULE_SHADOWED = '.studio-layout { display: flex; flex: 1; min-height: 0; width: 100%; margin: 0 auto; --studio-panel-w: 400px; }';
+/* ⛔⛔ THIS ANCHOR WAS THE WHOLE RULE UNTIL 2026-08-23 AND IT BROKE THE FIRST TIME THE RULE GAINED A
+   DECLARATION. §82.77 added `position: relative` to .studio-layout; the anchor matched 0 times and
+   BOTH red-first controls aborted — while a CLEAN suite run stayed 233/0/0, because poison() returns
+   early without a flag. THE CONTROLS WERE DEAD AND THE SCORE WAS GREEN.
+   🔑 ASSERT THE REQUIREMENT, NOT THE ARRANGEMENT: the poison needs a place to INSERT a declaration,
+      which is the rule's OPENING — not its full text. Pinned to the opening, this survives every
+      legitimate addition to the rule and still fails loudly if the selector itself moves.
+   ⚠️ It is still verified to match exactly once (see poison()), so a second `.studio-layout {`
+      rule appearing anywhere would abort rather than poison the wrong one. */
+const LAYOUT_RULE = '.studio-layout { display: flex;';
+const LAYOUT_RULE_SHADOWED = '.studio-layout { --studio-panel-w: 400px; display: flex;';
 const ROOT_WRITE = "document.documentElement.style.setProperty('--studio-panel-w', v + 'px');";
 const ELEMENT_WRITE = "var _l0 = document.getElementById('studio-layout'); if (_l0) _l0.style.setProperty('--studio-panel-w', v + 'px');";
 

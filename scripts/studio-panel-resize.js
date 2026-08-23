@@ -53,6 +53,45 @@
 
   function _spTierFor(w) { return w < 400 ? 'narrow' : (w < 520 ? 'mid' : 'wide'); }
 
+  /* ══ THE SEAM'S THUMB — §82.77 · THE PANEL'S SCROLL POSITION, DRAWN ON THE DIVIDER ══════════════
+   * studio.html hides the panel's native scrollbar in mode-split, so THIS FUNCTION NOW OWNS THE ONLY
+   * VISIBLE SCROLL-POSITION INDICATOR THE PANEL HAS. That is a promotion, not a decoration.
+   *
+   * ⛔ IT IS DRIVEN BY THE PANEL'S OWN `scroll` EVENT, AND THAT CHOICE IS THE WHOLE CORRECTNESS
+   *    ARGUMENT. Wheel, trackpad, PageUp/PageDown, Home/End, focus-driven scrollIntoView and any
+   *    programmatic write all fire it. A thumb wired to the DRAG HANDLER instead would move only when
+   *    dragged — and would therefore be wrong the first time anybody touched the wheel, while still
+   *    looking completely alive. THE NATIVE SCROLLBAR WAS DOING THIS SILENTLY; REPLACING IT MEANS
+   *    INHERITING THE JOB, NOT JUST THE PIXELS.
+   *
+   * ⛔ OVERFLOW HONESTY. A panel with nothing to scroll gets NO thumb — never a full-height one.
+   *    A full-height thumb on a non-scrolling panel says "there is more and you are at the top of
+   *    it", which is false. It is also the failure shape this project keeps meeting: THE CONTROL
+   *    RENDERS, SO IT READS AS WORKING.
+   *
+   * ⚠️ MIN_THUMB EXISTS FOR THE SAME REASON THE HIT TARGET IS 10px WHILE THE PAINT IS 1px: a
+   *    proportional thumb on a very long panel would be a few pixels tall and ungrabbable. The paint
+   *    may shrink with the content; the target may not. */
+  var MIN_THUMB = 28;
+
+  function _spThumb() {
+    var p = document.querySelector('.drafting-panel');
+    var h = document.getElementById('panel-resizer');
+    if (!p || !h) return;                                   /* D14 */
+    var track = h.clientHeight || p.clientHeight;
+    var over  = p.scrollHeight - p.clientHeight;
+    if (over <= 0 || track <= 0) {                          /* nothing to scroll -> no thumb */
+      h.style.setProperty('--seam-thumb-h', '0px');
+      h.style.setProperty('--seam-thumb-top', '0px');
+      return;
+    }
+    var th = Math.max(MIN_THUMB, Math.round(track * p.clientHeight / p.scrollHeight));
+    if (th > track) th = track;
+    var top = Math.round((track - th) * (p.scrollTop / over));
+    h.style.setProperty('--seam-thumb-h', th + 'px');
+    h.style.setProperty('--seam-thumb-top', top + 'px');
+  }
+
   function _spClamp(w) {
     if (!isFinite(w)) return DEFAULT_W;
     return Math.max(MIN, Math.min(MAX, Math.round(w)));
@@ -84,6 +123,11 @@
     var l = document.getElementById('studio-layout');
     if (l) l.setAttribute('data-panel-tier', _spTierFor(v));   /* D14 — null-guarded */
     if (persist) { try { localStorage.setItem(KEY, String(v)); } catch (e) { /* private mode */ } }
+    /* ⚠️ THE WIDTH CHANGES THE SCROLL GEOMETRY, SO THE THUMB IS RECOMPUTED HERE AND NOT ONLY ON
+       `scroll`. A narrower panel re-wraps its copy and gets TALLER, which moves both the thumb's
+       size and its position while scrollTop never changes — so no scroll event fires. Same law the
+       tier follows: ONE FUNCTION SETS BOTH, or they eventually disagree. */
+    _spThumb();
   }
 
   function _spStored() {
@@ -98,31 +142,93 @@
     var w = _spStored();
     _spApply(isFinite(w) ? w : DEFAULT_W, false);
 
+    var panel = document.querySelector('.drafting-panel');
+    /* ⭐ THE THUMB TRACKS EVERY SCROLL, WHICHEVER INPUT CAUSED IT. This one listener is what makes
+       the wheel and the keyboard move the bar — see _spThumb's note on why binding it to the drag
+       handler instead would produce a thumb that is confidently wrong. */
+    if (panel) panel.addEventListener('scroll', _spThumb, { passive: true });
+    /* Content height changes with no scroll event: a phase opens, a room renders, copy re-wraps at a
+       new width. ResizeObserver is the only honest signal for that; guarded because it is the one
+       API here that an older browser may not carry, and a missing thumb update must not take the
+       resizer down with it. */
+    if (panel && typeof ResizeObserver === 'function') {
+      try { new ResizeObserver(_spThumb).observe(panel); } catch (e) { /* non-fatal */ }
+    }
+    window.addEventListener('resize', _spThumb);
+    _spThumb();
+
     var handle = document.getElementById('panel-resizer');
     if (!handle) return;                  /* the tier still works without a handle */
-    var _spDragging = false;
+
+    /* ══ ONE BAR, TWO JOBS, AXIS-LOCKED ON FIRST INTENT — §82.77 ═══════════════════════════════════
+     * `pointerdown` COMMITS TO NOTHING. The first LOCK_PX of travel decides which job this gesture
+     * is, and that decision holds until `pointerup`.
+     *
+     * ⛔ NEVER BOTH IN ONE GESTURE. A bar that resizes a little AND scrolls a little because the
+     *    user's hand was not perfectly straight is a control nobody trusts — and the damage is hard
+     *    to undo, because undoing it requires the same imprecise gesture back.
+     *
+     * ⭐ THE THRESHOLD IS TRAVEL, NOT TIME, AND THAT IS DELIBERATE. A time-based decision makes a
+     *    slow careful drag behave differently from a fast one, which is backwards: the careful user
+     *    is the one who most needs the control to be predictable.
+     *
+     * ⚠️ THE SCROLL MAPPING IS THUMB-RELATIVE, NOT PAGE-JUMP. You may press anywhere on the bar, so
+     *    treating the press point as a grab on the thumb is the only behaviour that is the same
+     *    wherever you started. Travel is scaled by the track-to-content ratio CAPTURED AT LOCK TIME,
+     *    so a re-wrap mid-drag cannot make the page accelerate under the user's hand. */
+    var LOCK_PX = 4;
+    var _spDown = null;                   /* null when idle; the gesture's frozen start state when not */
 
     function _spMove(e) {
-      if (!_spDragging) return;
-      var rect = l.getBoundingClientRect();
-      _spApply(e.clientX - rect.left, false);   /* live, unpersisted — commit on release */
+      if (!_spDown) return;
+      var dx = e.clientX - _spDown.x, dy = e.clientY - _spDown.y;
+
+      if (!_spDown.axis) {
+        if (Math.abs(dx) < LOCK_PX && Math.abs(dy) < LOCK_PX) return;   /* still undecided */
+        _spDown.axis = Math.abs(dx) >= Math.abs(dy) ? 'x' : 'y';
+        document.body.classList.add(_spDown.axis === 'x' ? 'is-resizing-panel' : 'is-scrolling-panel');
+      }
+
+      if (_spDown.axis === 'x') {
+        var rect = l.getBoundingClientRect();
+        _spApply(e.clientX - rect.left, false);   /* live, unpersisted — commit on release */
+      } else if (_spDown.ratio > 0) {
+        panel.scrollTop = _spDown.top0 + dy * _spDown.ratio;
+      }
       e.preventDefault();
     }
+
     function _spUp() {
-      if (!_spDragging) return;
-      _spDragging = false;
+      if (!_spDown) return;
+      var axis = _spDown.axis;
+      _spDown = null;
       document.body.classList.remove('is-resizing-panel');
-      /* READ FROM THE WRITER'S OWN SCOPE. #studio-layout would still INHERIT the right value today,
-         but reading it there means this line quietly depends on nothing ever re-shadowing the token
-         below the root — which is the exact defect this commit repairs. Read where it is written. */
-      var cur = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--studio-panel-w'), 10);
-      _spApply(cur, true);                      /* ⭐ persist ONCE, on release — not on every frame */
+      document.body.classList.remove('is-scrolling-panel');
+      if (axis === 'x') {
+        /* READ FROM THE WRITER'S OWN SCOPE. #studio-layout would still INHERIT the right value today,
+           but reading it there means this line quietly depends on nothing ever re-shadowing the token
+           below the root — which is the exact defect an earlier commit repaired. Read where written. */
+        var cur = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--studio-panel-w'), 10);
+        _spApply(cur, true);                    /* ⭐ persist ONCE, on release — not on every frame */
+      }
+      /* ⚠️ A gesture that locked to 'y' — or locked to nothing at all, i.e. a plain click — MUST NOT
+         persist a width. The old handler persisted on every pointerup because there was only one job;
+         with two, an accidental click would have written the current width to localStorage forever. */
       window.removeEventListener('pointermove', _spMove);
       window.removeEventListener('pointerup', _spUp);
     }
+
     handle.addEventListener('pointerdown', function (e) {
-      _spDragging = true;
-      document.body.classList.add('is-resizing-panel');
+      var over  = panel ? panel.scrollHeight - panel.clientHeight : 0;
+      var track = handle.clientHeight;
+      var th    = parseInt(handle.style.getPropertyValue('--seam-thumb-h'), 10) || 0;
+      _spDown = {
+        x: e.clientX, y: e.clientY, axis: null,
+        top0: panel ? panel.scrollTop : 0,
+        /* pixels of content per pixel of thumb travel; 0 when there is nothing to scroll, which is
+           also exactly when there is no thumb to have grabbed. */
+        ratio: (over > 0 && track - th > 0) ? over / (track - th) : 0
+      };
       window.addEventListener('pointermove', _spMove);
       window.addEventListener('pointerup', _spUp);
       e.preventDefault();
@@ -162,4 +268,8 @@
      ⛔ NOT a second writer — it is the same `_spApply`, which is the point. */
   window._studioPanelApply = _spApply;
   window._studioPanelTierFor = _spTierFor;
+  /* ⭐ EXPOSED SO A GATE CAN FORCE A RECOMPUTE AND THEN READ THE RESULT, rather than sleeping and
+     hoping a ResizeObserver has fired. An instrument that waits for a frame it cannot observe is
+     measuring its own timing. NOT a second writer — it is the same function the listeners call. */
+  window._studioSeamThumb = _spThumb;
 })();
