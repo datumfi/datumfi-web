@@ -56,6 +56,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const SCRIPTS = path.dirname(fileURLToPath(import.meta.url));
@@ -67,6 +68,82 @@ const LIMIT = parseInt(arg('--limit', '0'), 10);
 const SELFTEST_ONLY = argv.includes('--selftest');
 const EXPLAIN = argv.includes('--explain');
 const SABOTAGE = arg('--sabotage', '');
+const REPEAT_SELFTEST = argv.includes('--selftest-repeat');
+
+/* ══ THE REPEATABILITY ALARM — WHAT THIS RUN CHANGED, NOT WHAT IS DIRTY ═══════════════════════════
+ *
+ * ⛔ THE BUG THIS REPLACES, AND IT HAD BEEN RULED FOUR TIMES: the check read `git status` ONCE, at
+ * the END, and reported every tracked row as "this run left it modified". There was no BEFORE, so
+ * ANY file dirty when you started was blamed on the suite. MEASURED 2026-08-23 across two runs from
+ * the same checkout: it named 2 files in the morning and 6 in the afternoon, `--porcelain` byte
+ * identical either side of BOTH runs. EVERY ONE OF THE EIGHT WAS FALSE.
+ *   🔑 ITS LOUDNESS TRACKED HOW BUSY THE DAY WAS, WHICH IS THE SIGNATURE OF AN ALARM MEASURING THE
+ *      WRONG THING. And §13.18 had ALREADY diagnosed exactly this on the untracked half — "an alarm
+ *      that is always on is the same as no alarm" — then applied the reasoning to one side only.
+ *
+ * ⛔ IT ALSO STATED A CAUSE IT WAS NEVER ENTITLED TO. "gate-written receipts" is a CONCLUSION; this
+ * check can only observe that a file DIFFERS. It cannot know who wrote it or why. The wording is now
+ * "modified", full stop — see §82.86.
+ *
+ * ⭐ TWO CAPABILITIES THE BASELINE UNLOCKS, BOTH ABSENT BEFORE:
+ *   1. NEW untracked files are now a REAL SIGNAL. §13.18 had to park the whole untracked half because
+ *      it could not tell a permanent reference file from one a gate had just created. With a BEFORE
+ *      list it can, so a gate that CREATES a file is no longer invisible.
+ *   2. CONTENT is compared, not just status. A file already ` M` that a gate rewrites keeps the SAME
+ *      porcelain row — no new line, no alarm. That is precisely the 2026-08-23 shape: studio.html was
+ *      dirty all afternoon, and a gate writing to it would have left no trace in a status-only diff.
+ *
+ * ⚠️ WHAT IT STILL CANNOT SEE, STATED SO NOBODY BANKS A GREEN IT DID NOT EARN: a gate that writes a
+ * file and RESTORES it before the run ends. Undetectable by any before/after comparison. This alarm
+ * proves the tree ENDED where it started, never that it never moved.
+ */
+function _repeatParse(rows) {
+  /* `--porcelain=v1`: two status chars, a space, then the path. Renames carry ` -> `; the DESTINATION
+     is the path that exists now, so that is the one keyed. Quoted paths keep their quotes — this is
+     an identity, never a filename to open, and both sides quote identically. */
+  const m = new Map();
+  for (const line of (rows || '').split('\n')) {
+    if (!line.trim()) continue;
+    const status = line.slice(0, 2);
+    let p = line.slice(3);
+    const arrow = p.indexOf(' -> ');
+    if (arrow !== -1) p = p.slice(arrow + 4);
+    m.set(p, status);
+  }
+  return m;
+}
+
+/* THE COMPARISON IS A PURE FUNCTION OF TWO SNAPSHOTS, AND THAT IS DELIBERATE: it is the part that was
+   wrong for four rulings, so it is the part that gets a negative control (`--selftest-repeat`).
+   A checker with no test is a comment that costs CPU. */
+function _repeatDelta(before, after) {
+  const changed = [], created = [], vanished = [];
+  for (const [p, st] of after.rows) {
+    const was = before.rows.get(p);
+    if (was === undefined) { (st === '??' ? created : changed).push(`${st} ${p}`); continue; }
+    if (was !== st) { changed.push(`${st} ${p}   (was "${was}")`); continue; }
+    /* same status both sides — only CONTENT can separate "already dirty" from "rewritten by the run" */
+    const h0 = before.hashes.get(p), h1 = after.hashes.get(p);
+    if (h0 && h1 && h0 !== h1) changed.push(`${st} ${p}   (content changed)`);
+  }
+  for (const [p, st] of before.rows) if (!after.rows.has(p)) vanished.push(`${st} ${p}`);
+  return { changed, created, vanished, carriedIn: before.rows.size };
+}
+
+function _repeatSnapshot(repo) {
+  const rows = execSync('git status --porcelain=v1', { cwd: repo }).toString().replace(/\n$/, '');
+  const parsed = _repeatParse(rows);
+  const hashes = new Map();
+  for (const p of parsed.keys()) {
+    /* only tracked rows are hashed: an untracked file's mere EXISTENCE is the signal, and hashing
+       every stray screenshot in the tree would cost more than it proves. */
+    if (parsed.get(p) === '??') continue;
+    const abs = path.join(repo, p.replace(/^"|"$/g, ''));
+    try { hashes.set(p, crypto.createHash('md5').update(fs.readFileSync(abs)).digest('hex')); }
+    catch { hashes.set(p, null); }        /* deleted, or unreadable — status already carries that */
+  }
+  return { rows: parsed, hashes };
+}
 const TIMEOUT_MS = parseInt(arg('--timeout', '180000'), 10);
 const CONC_NODE = parseInt(arg('--concnode', '6'), 10);
 /* 3 is MEASURED (see header): identical per-gate verdicts vs serial, 2.6x faster. Pass
@@ -480,11 +557,65 @@ async function runPool(list, conc, label) {
   });
 }
 
+/* ══ THE ALARM'S OWN NEGATIVE CONTROL ═════════════════════════════════════════════════════════════
+ * Six synthetic pairs, run against the PURE function with no filesystem involved. Case 1 is the
+ * false alarm that survived four rulings; cases 3 and 4 are the two blind spots the baseline closes.
+ * ⛔ IT IS NOT ENOUGH THAT A CHECK FIRES. Case 1 exists to prove it STAYS SILENT when it should —
+ *    an alarm that only ever fires is the state we are leaving, not the one we are arriving at. */
+function selftestRepeat() {
+  const snap = (rows, hashes) => ({ rows: _repeatParse(rows), hashes: new Map(Object.entries(hashes || {})) });
+  const cases = [
+    { name: 'pre-existing dirty tracked file, untouched -> SILENT  (the 2026-08-23 false alarm)',
+      before: snap(' M studio.html', { 'studio.html': 'aaa' }),
+      after:  snap(' M studio.html', { 'studio.html': 'aaa' }),
+      want: { changed: 0, created: 0 } },
+    { name: 'clean file the run MODIFIES -> ALARM',
+      before: snap('', {}),
+      after:  snap(' M scripts/x.out.txt', { 'scripts/x.out.txt': 'bbb' }),
+      want: { changed: 1, created: 0 } },
+    { name: 'ALREADY-DIRTY file the run REWRITES -> ALARM  (status identical; only content differs)',
+      before: snap(' M studio.html', { 'studio.html': 'aaa' }),
+      after:  snap(' M studio.html', { 'studio.html': 'zzz' }),
+      want: { changed: 1, created: 0 } },
+    { name: 'NEW untracked file the run CREATES -> ALARM  (§13.18 could not see this at all)',
+      before: snap('?? proto.html', {}),
+      after:  snap('?? proto.html\n?? scripts/leftover.json', {}),
+      want: { changed: 0, created: 1 } },
+    { name: 'pre-existing untracked files, unchanged -> SILENT',
+      before: snap('?? proto.html\n?? 50%.png', {}),
+      after:  snap('?? proto.html\n?? 50%.png', {}),
+      want: { changed: 0, created: 0 } },
+    { name: 'a deletion staged before the run, untouched -> SILENT',
+      before: snap(' D "Datum Formula.jpg"', { '"Datum Formula.jpg"': null }),
+      after:  snap(' D "Datum Formula.jpg"', { '"Datum Formula.jpg"': null }),
+      want: { changed: 0, created: 0 } },
+  ];
+  let bad = 0;
+  console.log('--selftest-repeat: proving the repeatability comparison, 6 synthetic pairs');
+  for (const c of cases) {
+    const d = _repeatDelta(c.before, c.after);
+    const good = d.changed.length === c.want.changed && d.created.length === c.want.created;
+    if (!good) bad++;
+    console.log(`  ${good ? 'ok  ' : 'FAIL'}  ${c.name}`);
+    if (!good) console.log(`        wanted changed=${c.want.changed} created=${c.want.created}, got changed=${d.changed.length} created=${d.created.length}  ${JSON.stringify(d.changed.concat(d.created))}`);
+  }
+  console.log(bad === 0 ? 'SELFTEST-REPEAT 6/6 GREEN' : `SELFTEST-REPEAT ${6 - bad}/6 — RED`);
+  return bad === 0;
+}
+
 /* ---------------- main ---------------- */
 (async () => {
   if (EXPLAIN) return explain();
+  if (REPEAT_SELFTEST) process.exit(selftestRepeat() ? 0 : 1);
 
   console.log('===== FULL-SUITE BASELINE =====');
+  /* ⛔ THE BASELINE IS TAKEN HERE — BEFORE THE SENTINELS, NOT MERELY BEFORE THE FIRST REAL GATE.
+     The self-check spawns four throwaway gates; they are part of "this run", so anything they leave
+     behind must be attributable. A guard placed after some of the work it guards is not early, it is
+     wrong — the same mistake _gate_seam_reachable made with its poison check on 2026-08-23. */
+  let repeatBefore = null;
+  try { repeatBefore = _repeatSnapshot(REPO); } catch { /* not a git checkout — alarm degrades to off */ }
+
   await selfCheck();
   if (SELFTEST_ONLY) { console.log('--selftest: harness proven, suite not run.'); return; }
 
@@ -658,29 +789,42 @@ async function runPool(list, conc, label) {
   })), null, 1));
   console.log(`\nfull results -> ${outPath}`);
 
-  /* Repeatability check. 16 gates write scripts/*.out.txt receipts into the tree by design, so a
-     suite run can leave the working tree dirty. This REPORTS that; it does not clean it. */
-  try {
-    /* §13.18 FIX (593d) — THIS READ THE UNTRACKED LIST AND CALLED IT THE MODIFIED LIST. `--porcelain=v1`
-       emits `??` rows for untracked files, and every one was counted as "tracked file(s) modified".
-       This repo permanently carries FOUR untracked reference files, so the warning fired on EVERY run,
-       naming files no gate had written — a repeatability alarm that was always on, which is the same
-       as no alarm. Partitioned now: `??` is untracked and is NOT a repeatability signal. */
-    const rows = execSync('git status --porcelain=v1', { cwd: REPO }).toString().trim();
-    const lines = rows ? rows.split('\n') : [];
-    const modified = lines.filter((l) => !l.startsWith('??'));
-    const untracked = lines.filter((l) => l.startsWith('??'));
-    if (modified.length) {
-      console.log(`\n⚠️  REPEATABILITY: this run left ${modified.length} tracked file(s) modified (gate-written receipts).`);
-      console.log('   The suite is not side-effect-free — a clean-tree run does not finish clean-tree.');
-      modified.slice(0, 20).forEach((l) => console.log('   ' + l));
+  /* Repeatability. REPORTS what THIS RUN changed; does not clean it, and does not claim to know who
+     changed it. See _repeatDelta above for the four-times-ruled defect it replaces.
+     ⛔⛔ THE SENTENCE THAT USED TO SIT HERE WAS STALE, AND IT IS WHY THE FALSE ALARM SURVIVED FOUR
+     RULINGS: ~~"16 gates write scripts/*.out.txt receipts into the tree by design, so a suite run can
+     leave the working tree dirty."~~ MEASURED 2026-08-23 — every receipt path in this directory
+     resolves under `.gate-out/`, which is GITIGNORED (.gitignore:11). 55 references, zero of them to
+     a tracked path. The receipts CANNOT dirty the tree and have not been able to for some time.
+     🔑 THE ALARM WAS BELIEVABLE BECAUSE A STALE COMMENT EXPLAINED IT AWAY. Every reader met the
+        warning already holding a reason to accept it — "of course the tree is dirty, gates write
+        receipts" — so nobody asked the warning to prove its claim. A WRONG ALARM WITH A PLAUSIBLE
+        EXCUSE ATTACHED IS HARDER TO KILL THAN A WRONG ALARM ON ITS OWN.
+     ⭐ Struck rather than deleted, per the rule that a recorded guess which has since been measured
+        must be REPLACED BY THE MEASUREMENT so nobody re-derives it. */
+  if (!repeatBefore) {
+    console.log('\n⚠️  REPEATABILITY: NOT MEASURED — no baseline was taken (not a git checkout).');
+  } else try {
+    const d = _repeatDelta(repeatBefore, _repeatSnapshot(REPO));
+    const total = d.changed.length + d.created.length + d.vanished.length;
+    if (total) {
+      /* ⛔ "modified" IS THE OBSERVATION. The old wording said "gate-written receipts", which is a
+         CONCLUSION about authorship this check cannot reach — it compares two snapshots and knows
+         nothing about who wrote what. §82.86: an instrument may report only what it measured. */
+      console.log(`\n⚠️  REPEATABILITY: this run changed ${total} file(s) in the working tree.`);
+      console.log('   The suite is not side-effect-free — a run does not finish where it started.');
+      d.changed.forEach((l) => console.log('   modified  ' + l));
+      d.created.forEach((l) => console.log('   created   ' + l));
+      d.vanished.forEach((l) => console.log('   no longer reported  ' + l));
     } else {
-      console.log('\n✅ REPEATABILITY: no tracked file was modified by this run.');
+      console.log('\n✅ REPEATABILITY: this run changed nothing in the working tree.');
     }
-    /* Reported, never counted. §13.18 stays DEGRADED-NOT-DEAD on purpose: it caught a missing file
-       while parked, so the untracked list is still printed — just no longer mistaken for the alarm. */
-    if (untracked.length) console.log(`   (${untracked.length} untracked file(s) present, not written by this run — not a repeatability signal)`);
-  } catch { /* not a git checkout — skip */ }
+    /* ⭐ THE DENOMINATOR, ALWAYS. A green here means "nothing MOVED", never "the tree is clean", and
+       those read identically unless the carried-in count is stated. [[feedback_population_denominator]] */
+    if (repeatBefore.rows.size) {
+      console.log(`   (${repeatBefore.rows.size} file(s) were already dirty BEFORE the first gate and are excluded — carried in, not caused here)`);
+    }
+  } catch { /* git vanished mid-run — the baseline stands, the comparison does not */ }
 
   /* ⛔ A CRASH FAILS THE RUN, EVEN THOUGH IT IS NOT A RED — AND THE TWO STATEMENTS ARE NOT IN
    * TENSION. Not-red is a claim about THE PRODUCT: a dead process proved nothing about it, so
