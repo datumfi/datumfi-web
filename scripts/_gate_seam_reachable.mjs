@@ -106,6 +106,53 @@ const THUMB_NOOP = "h.style.setProperty('--seam-thumb-h', th + 'px'); return;";
 const AXIS      = "_spDown.axis = Math.abs(dx) >= Math.abs(dy) ? 'x' : 'y';";
 const AXIS_OFF  = "_spDown.axis = 'x';";
 
+/* ══ THE CONTROL DECLARATION (§82.99) — ONE DECLARATION, TWO READERS ══════════════════════════════
+ * `--declare-controls` prints this and exits. Nothing else in the file runs.
+ *   scripts/_gate_poison_anchors_resolve.mjs reads the ANCHORS half and checks each literal still
+ *   resolves in its target file exactly `count` times. It proves ANCHOR FRESHNESS — NOT that the
+ *   control still bites; only actually running the control proves that.
+ *   The periodic control sweep reads the REDS half and asserts the run reds exactly those legs.
+ *
+ * ⛔ IT IS DATA, NOT A COMMENT, AND THAT IS THE POINT. A comment describing an anchor rots silently
+ *    and recruits the reader to its side — measured 2026-08-23 on the repeatability alarm, where a
+ *    stale sentence kept a false alarm alive through four rulings. THIS declaration cannot drift
+ *    from the literals because it holds the SAME const objects the poison uses.
+ * ⚠️ `reds` MUST match what the run actually produced, never what its author expected. Both entries
+ *    below were CORRECTED DOWNWARD-TO-STRICTER after measurement: --reparent was predicted at four
+ *    legs and measured at six. A predicted red set is a hypothesis. */
+const CONTROLS = {
+  '--reparent': {
+    what: 'restores the shipped arrangement: handle back inside the scrolling panel, native scrollbar back',
+    anchors: [
+      { file: 'studio.html', literal: BTN,     count: 1 },
+      { file: 'studio.html', literal: PLACE,   count: 1 },
+      { file: 'studio.html', literal: RAIL,    count: 1 },
+      { file: 'studio.html', literal: HIDE,    count: 1 },
+      { file: 'studio.html', literal: HIDE_WK, count: 1 },
+    ],
+    reds: ['L1 ', 'L2 ', 'L5 ', 'L6 ', 'L8 ', 'L10'],
+  },
+  '--nothumb': {
+    what: 'makes the thumb writer a no-op',
+    anchors: [{ file: 'scripts/studio-panel-resize.js', literal: THUMB_BODY, count: 1 }],
+    reds: ['L12'],
+  },
+  '--noaxis': {
+    what: 'deletes the axis lock so every gesture resizes',
+    anchors: [{ file: 'scripts/studio-panel-resize.js', literal: AXIS, count: 1 }],
+    reds: ['L10', 'L11'],
+  },
+  '--leakhide': {
+    what: 'drops .mode-split from the scrollbar hide so it leaks into Sheet',
+    anchors: [{ file: 'studio.html', literal: HIDE, count: 1 }],
+    reds: ['L3 '],
+  },
+};
+if (process.argv.includes('--declare-controls')) {
+  console.log(JSON.stringify({ gate: '_gate_seam_reachable.mjs', controls: CONTROLS }));
+  process.exit(0);
+}
+
 const landed = [];
 function swap(rel, body, from, to, tag) {
   const n = body.split(from).length - 1;
@@ -327,20 +374,19 @@ async function fresh(browser, vp) {
   server.close();
 
   /* ── the controls declare which legs they own, and are checked against what actually happened ── */
-  /* ⚠️ THE --reparent SET IS DERIVED BY RUNNING IT, NOT PREDICTED. The first version of this line
-     said [L1 L2 L6 L8] because that is what I expected; the shipped arrangement actually reds SIX,
-     and the two I missed are the most informative ones —
-        L5  only 6 of the 10px were ever grabbable (the scrollbar covered the rest)
-        L10 a vertical press lands on the native scrollbar, so there was no one-bar scroll at all
-     Both are real properties of the bytes that shipped, not artefacts of the poison.
-     🔑 A PREDICTED RED SET IS A HYPOTHESIS. Writing the measured one down is the only version that
-        stays true, and correcting the prediction is not the same as loosening the control — the
-        control got STRICTER when the missing rail-offset swap was added. */
-  const expect = REPARENT ? ['L1 ', 'L2 ', 'L5 ', 'L6 ', 'L8 ', 'L10']
-               : NOTHUMB  ? ['L12']
-               : NOAXIS   ? ['L10', 'L11']
-               : LEAKHIDE ? ['L3 ']
-               : null;
+  /* ⛔ THE EXPECTED RED SET IS READ FROM `CONTROLS`, NOT RESTATED HERE. Two copies of the same list
+     is two things to keep in sync, and the whole §82.99 convention exists because a SECOND statement
+     of a fact is where drift lives. The declaration a reader inspects and the list this gate enforces
+     are now the SAME OBJECT — they cannot disagree.
+     ⚠️ THE --reparent SET WAS DERIVED BY RUNNING IT, NOT PREDICTED. The first version said
+     [L1 L2 L6 L8]; the shipped arrangement actually reds SIX, and the two missed were the most
+     informative — L5 (only 6 of the 10px were ever grabbable) and L10 (a vertical press lands on the
+     native scrollbar, so there was no one-bar scroll at all). Both are real properties of the bytes
+     that shipped, not artefacts of the poison.
+     🔑 A PREDICTED RED SET IS A HYPOTHESIS. Correcting the prediction is not loosening the control —
+        the control got STRICTER when the missing rail-offset swap was added. */
+  const activeFlag = process.argv.find((a) => Object.prototype.hasOwnProperty.call(CONTROLS, a));
+  const expect = activeFlag ? CONTROLS[activeFlag].reds : null;
   if (expect) {
     const reds = Object.keys(legs).filter((k) => !legs[k]).sort();
     const want = expect.slice().sort();

@@ -67,6 +67,13 @@ const ONLY = arg('--only', 'all');
 const LIMIT = parseInt(arg('--limit', '0'), 10);
 const SELFTEST_ONLY = argv.includes('--selftest');
 const EXPLAIN = argv.includes('--explain');
+/* ⭐ `--explain-names` EXISTS SO OTHER INSTRUMENTS CAN **ASK THE RUNNER** FOR THE POPULATION INSTEAD
+   OF GLOBBING FOR IT. `--explain` prints counts for a human; this prints the list, as JSON, for a
+   machine. The standing rule is that a second opinion about what the suite runs IS A FORK — and
+   until now the only way to get names was to re-implement census() somewhere else, which is exactly
+   the fork the rule forbids. First consumer: _gate_poison_anchors_resolve.mjs.
+   ⛔ It prints NOTHING but JSON on stdout, so a caller can parse it without stripping banners. */
+const EXPLAIN_NAMES = argv.includes('--explain-names');
 const SABOTAGE = arg('--sabotage', '');
 const REPEAT_SELFTEST = argv.includes('--selftest-repeat');
 
@@ -605,6 +612,15 @@ function selftestRepeat() {
 
 /* ---------------- main ---------------- */
 (async () => {
+  if (EXPLAIN_NAMES) {
+    const c = census();
+    process.stdout.write(JSON.stringify({
+      gates: c.gates.map((g) => g.name),
+      browser: c.gates.filter((g) => g.browser).map((g) => g.name),
+      node: c.gates.filter((g) => !g.browser).map((g) => g.name),
+    }));
+    return;
+  }
   if (EXPLAIN) return explain();
   if (REPEAT_SELFTEST) process.exit(selftestRepeat() ? 0 : 1);
 

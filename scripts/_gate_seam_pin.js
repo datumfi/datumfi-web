@@ -78,6 +78,38 @@ const LAYOUT_RULE_SHADOWED = '.studio-layout { --studio-panel-w: 400px; display:
 const ROOT_WRITE = "document.documentElement.style.setProperty('--studio-panel-w', v + 'px');";
 const ELEMENT_WRITE = "var _l0 = document.getElementById('studio-layout'); if (_l0) _l0.style.setProperty('--studio-panel-w', v + 'px');";
 
+/* ══ THE CONTROL DECLARATION (§82.99) — ONE DECLARATION, TWO READERS ══════════════════════════════
+ * `--declare-controls` prints this and exits; nothing else in this file runs.
+ *   scripts/_gate_poison_anchors_resolve.mjs reads ANCHORS and checks each literal still resolves
+ *   exactly `count` times. That proves ANCHOR FRESHNESS — never that the control still bites.
+ *   The periodic control sweep reads REDS and asserts a real run reds exactly those legs.
+ *
+ * ⛔ THIS GATE IS WHY THE CONVENTION EXISTS. On 2026-08-23 an ordinary edit to `.studio-layout`
+ *    killed LAYOUT_RULE. It matched ZERO times, BOTH controls aborted at exit 1 — and a clean suite
+ *    run still printed 233/0/0, because a poison is a no-op without its flag. The controls were dead
+ *    and the score was green, and it was found by READING this file, not by running anything.
+ * ⚠️ The reds below are quoted from what the controls ACTUALLY produce (see the RESHADOW/PREFIX
+ *    branches at the foot of this file), not from what their author intended. */
+const CONTROLS = {
+  '--reshadow': {
+    what: 'restores only the deleted .studio-layout declaration in the served bytes',
+    anchors: [{ file: 'studio.html', literal: LAYOUT_RULE, count: 1 }],
+    reds: ['L3', 'L4', 'L7'],
+  },
+  '--prefix': {
+    what: 'restores the declaration AND re-points the writer at #studio-layout — the shipped ac15e30 state',
+    anchors: [
+      { file: 'studio.html', literal: LAYOUT_RULE, count: 1 },
+      { file: 'scripts/studio-panel-resize.js', literal: ROOT_WRITE, count: 1 },
+    ],
+    reds: ['L1', 'L2', 'L3', 'L4', 'L6', 'L7'],
+  },
+};
+if (process.argv.includes('--declare-controls')) {
+  console.log(JSON.stringify({ gate: '_gate_seam_pin.js', controls: CONTROLS }));
+  process.exit(0);
+}
+
 let landed = [];
 function poison(rel, body) {
   if (!RESHADOW && !PREFIX) return body;
@@ -247,14 +279,15 @@ function ok(id, label, cond, detail) {
      its own bug. Both include the signed-in legs because #acct-topbar resolves the token from the
      SAME documentElement scope as #app-nav — if it did not, that is a finding, not a tolerance. */
   if (RESHADOW) {
-    const want = 'L3,L4,L7';
+    /* read from the declaration, never restated — two copies of one fact is where drift lives */
+    const want = CONTROLS['--reshadow'].reds.join(',');
     if (redSet !== want) { console.log(`ABORT: --reshadow must red exactly ${want}; it red [${redSet || 'nothing'}]`); process.exit(1); }
     console.log(`  control OK — --reshadow red exactly ${want} (L1/L2/L6 stayed green: at rest both scopes still read 400)`);
     console.log(`SCORE ${total}/${total} GREEN   (red-first control behaved as specified)`);
     process.exit(0);
   }
   if (PREFIX) {
-    const want = 'L1,L2,L3,L4,L6,L7';
+    const want = CONTROLS['--prefix'].reds.join(',');
     if (redSet !== want) { console.log(`ABORT: --prefix must red exactly ${want}; it red [${redSet || 'nothing'}]`); process.exit(1); }
     console.log(`  control OK — --prefix red exactly ${want} (the shipped ac15e30 state reproduced, both auth states)`);
     console.log(`SCORE ${total}/${total} GREEN   (red-first control behaved as specified)`);
