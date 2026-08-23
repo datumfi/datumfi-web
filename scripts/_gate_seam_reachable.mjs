@@ -131,21 +131,25 @@ const CONTROLS = {
       { file: 'studio.html', literal: HIDE_WK, count: 1 },
     ],
     reds: ['L1 ', 'L2 ', 'L5 ', 'L6 ', 'L8 ', 'L10'],
+    expect: 'self-verified',
   },
   '--nothumb': {
     what: 'makes the thumb writer a no-op',
     anchors: [{ file: 'scripts/studio-panel-resize.js', literal: THUMB_BODY, count: 1 }],
     reds: ['L12'],
+    expect: 'self-verified',
   },
   '--noaxis': {
     what: 'deletes the axis lock so every gesture resizes',
     anchors: [{ file: 'scripts/studio-panel-resize.js', literal: AXIS, count: 1 }],
     reds: ['L10', 'L11'],
+    expect: 'self-verified',
   },
   '--leakhide': {
     what: 'drops .mode-split from the scrollbar hide so it leaks into Sheet',
     anchors: [{ file: 'studio.html', literal: HIDE, count: 1 }],
     reds: ['L3 '],
+    expect: 'self-verified',
   },
 };
 if (process.argv.includes('--declare-controls')) {

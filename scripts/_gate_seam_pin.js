@@ -82,7 +82,15 @@ const ELEMENT_WRITE = "var _l0 = document.getElementById('studio-layout'); if (_
  * `--declare-controls` prints this and exits; nothing else in this file runs.
  *   scripts/_gate_poison_anchors_resolve.mjs reads ANCHORS and checks each literal still resolves
  *   exactly `count` times. That proves ANCHOR FRESHNESS — never that the control still bites.
- *   The periodic control sweep reads REDS and asserts a real run reds exactly those legs.
+ *   ~~*"The periodic control sweep reads REDS and asserts a real run reds exactly those legs."*~~
+ *   ⛔ STRUCK 2026-08-23, MEASURED, NOT ARGUED. AN EXTERNAL SWEEP CANNOT SEE THOSE LEGS GO RED,
+ *   because THIS GATE CHECKS THEM ITSELF and then reports `SCORE 7/7 GREEN (red-first control
+ *   behaved as specified)`. Its controls are SELF-VERIFYING: the gate goes GREEN when the control
+ *   bites and RED when it stops. An outside instrument asserting "invoke the control, expect RED"
+ *   would have been exactly backwards on this file — so each control now declares `expect`, and the
+ *   sweep reads THAT rather than assuming a single universal outcome.
+ *   🔑 The sentence above was written before anything ran the controls from outside. It described
+ *      the intended contract, not the observed one, and it survived because nothing had looked.
  *
  * ⛔ THIS GATE IS WHY THE CONVENTION EXISTS. On 2026-08-23 an ordinary edit to `.studio-layout`
  *    killed LAYOUT_RULE. It matched ZERO times, BOTH controls aborted at exit 1 — and a clean suite
@@ -95,6 +103,8 @@ const CONTROLS = {
     what: 'restores only the deleted .studio-layout declaration in the served bytes',
     anchors: [{ file: 'studio.html', literal: LAYOUT_RULE, count: 1 }],
     reds: ['L3', 'L4', 'L7'],
+    /* the gate checks these legs ITSELF and reports GREEN when they red — see the struck line above */
+    expect: 'self-verified',
   },
   '--prefix': {
     what: 'restores the declaration AND re-points the writer at #studio-layout — the shipped ac15e30 state',
@@ -103,6 +113,7 @@ const CONTROLS = {
       { file: 'scripts/studio-panel-resize.js', literal: ROOT_WRITE, count: 1 },
     ],
     reds: ['L1', 'L2', 'L3', 'L4', 'L6', 'L7'],
+    expect: 'self-verified',
   },
 };
 if (process.argv.includes('--declare-controls')) {

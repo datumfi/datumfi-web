@@ -22,6 +22,37 @@ import { dispatch } from '../functions/api/_lib/documents-core.js';
 
 const RF = process.argv.includes('--redfirst');
 const pick = (win, lose) => (RF ? lose : win);
+
+/* ══ THE CONTROL DECLARATION (§82.99) — ONE DECLARATION, TWO READERS ══════════════════════════════
+ * ⭐ DECLARED 2026-08-23 FOR A REASON THAT IS NOT THIS GATE'S OWN HEALTH: it is the sweep's live
+ *    proof that a control must be judged by its VERDICT and never by its EXIT CODE. Measured that
+ *    day: `--redfirst` prints `OVERALL: RED (2 pass / 14 fail)` and then EXITS 0 (see the foot of
+ *    this file). An exit-code reader calls that GREEN and passes the one shape it exists to catch.
+ *    ⛔ THE EXIT CODE IS A REAL DEFECT IN THIS GATE AND IT IS LEFT ON THE FLOOR DELIBERATELY —
+ *    repairing it would destroy the sweep's only live specimen of the incoherent shape. It is
+ *    harmless in the CLEAN run (this gate prints GREEN and exits 0, which agrees), and the runner's
+ *    own INCOHERENT bucket would catch it the day its assertions genuinely broke.
+ *
+ * ⚠️ `anchors: []` IS A CLAIM, NOT AN OMISSION. `pick(win, lose)` swaps WHICH ASSERTION IS EVALUATED
+ *    and never touches the product — so there is NO poison here that could fail to land, and asking
+ *    "did the poison land?" is a CATEGORY ERROR rather than an unanswered question. An empty anchor
+ *    list is the honest way to say that, and it stops a future census counting this gate's silence
+ *    as a missing guard. (It was counted exactly that way once, on 2026-08-23, before anyone ran it.)
+ * ⚠️ `reds` IS COARSE BECAUSE THIS GATE HAS NO LEG IDS — its legs are labelled by description, not
+ *    L1/L2/L3. Recorded as measured (14 failing legs), not invented, and deliberately NOT dressed up
+ *    as an ID list this file cannot actually produce. */
+const CONTROLS = {
+  '--redfirst': {
+    what: 'inverts every [BITE] assertion via pick(win, lose) — the product is never touched',
+    anchors: [],
+    reds: ['all 14 [BITE] assertions (this gate labels legs by description, not by ID)'],
+    expect: 'red',
+  },
+};
+if (process.argv.includes('--declare-controls')) {
+  console.log(JSON.stringify({ gate: '_gate_d1_sketch_parity.mjs', controls: CONTROLS }));
+  process.exit(0);
+}
 let pass = 0, fail = 0; const lines = [];
 const ok = (c, m) => { if (c) pass++; else fail++; lines.push((c ? 'PASS ' : 'FAIL ') + m); };
 

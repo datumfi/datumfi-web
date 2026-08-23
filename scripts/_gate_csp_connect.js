@@ -30,6 +30,36 @@ const RF = process.argv.includes('--redfirst');
 const WORKER = 'https://rentcast-avm.dmerced1.workers.dev';
 const SRC = path.resolve(__dirname, '..', 'studio.html');
 
+/* ══ THE CONTROL DECLARATION (§82.99) — ONE DECLARATION, TWO READERS ══════════════════════════════
+ * `--declare-controls` prints this and exits; nothing else in this file runs.
+ *   _gate_poison_anchors_resolve.mjs  checks the anchor still resolves exactly `count` times.
+ *   _gate_controls_still_red.mjs      INVOKES the control and asserts the declared `expect`.
+ *
+ * ⭐ DECLARED 2026-08-23 BECAUSE THIS IS THE ONLY GATE IN THE ESTATE WHOSE CONTROL CAN GENUINELY GO
+ *    INERT AND WHOSE OUTCOME IS AN ORDINARY RED. The five gates alleged to lack an inert guard were
+ *    re-read that day and the count was ZERO: three are assertion-inversion (nothing to land), one
+ *    guards its population (`clerk_sdk_pinned`'s C0), and THIS one guards its PRECONDITION — the two
+ *    presence legs below fire in the CLEAN run if the CSP or the directive cannot be parsed.
+ *    MEASURED across three synthetic states: no state exists in which the poison goes inert and this
+ *    gate still prints GREEN. It is declared anyway, because `expect: 'red'` is the case the sweep's
+ *    own green would otherwise be untested against.
+ * ⚠️ THE ANCHOR COUNT IS MEASURED, NOT GUESSED: the Worker origin appears THREE times in studio.html
+ *    (the CSP directive plus the WORKER_URL constant and its use). A fourth reference appearing is an
+ *    ABORT, not a pass — that is the exact-count-or-abort idiom, and it is the point of it. */
+const CONTROLS = {
+  '--redfirst': {
+    what: 'strips the Worker origin from the extracted connect-src directive, in memory',
+    anchors: [{ file: 'studio.html', literal: WORKER, count: 3 }],
+    reds: ['connect-src ALLOWS ' + WORKER + ' [BITE]'],
+    /* an ordinary red: this gate does NOT check its own control, so an outside sweep must */
+    expect: 'red',
+  },
+};
+if (process.argv.includes('--declare-controls')) {
+  console.log(JSON.stringify({ gate: '_gate_csp_connect.js', controls: CONTROLS }));
+  process.exit(0);
+}
+
 (async () => {
   if (!fs.existsSync(SRC)) { console.log('[csp_connect] ABORT — studio.html not found at ' + SRC); process.exit(2); }
   const html = fs.readFileSync(SRC, 'utf8');
