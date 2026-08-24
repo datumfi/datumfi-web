@@ -15090,6 +15090,22 @@
        dossier, so a direct load never shows the schema defaults (40/65/93) first. Bounded:
        _seedGateOff runs on EVERY fallback exit plus a setTimeout safety net (init below), so
        the stage can never stay hidden even if Clerk is slow or absent. */
+    /* ⛔⛔ LATCHED AT PARSE, AND THIS IS THE ONLY MOMENT THE ANSWER STILL EXISTS.
+     * `datumfi_skip_entry_overlay` is CONSUMED — removeItem, not just read — by the entry-overlay
+     * block further down this document, and that block runs at PARSE. `init()` below runs at
+     * DOMContentLoaded, by which time this flag is ALWAYS null.
+     *   ⛔ MEASURED 2026-08-24, AND IT FALSIFIED THE FIRST VERSION OF THIS FIX. That version read
+     *      the flag inside init(), looked obviously correct, and skipped NOTHING: the probe
+     *      reported flagAtStart=1, flagAtGate=null, and the gate ran anyway. THE READ WAS RIGHT AND
+     *      THE MOMENT WAS WRONG — a distinction the diff does not show you.
+     *   🔑 A FLAG WITH A CONSUMER IS A MESSAGE, NOT A STATE. Read it before its reader does, or do
+     *      not read it at all. And LINE ORDER IS NOT EXECUTION ORDER the moment a deferred callback
+     *      is involved: this code sits ~1,700 lines ABOVE the overlay block and still ran after it.
+     * ⚠️ THIS STATEMENT MUST STAY ABOVE THE ENTRY-OVERLAY BLOCK IN DOCUMENT ORDER, AND MUST STAY
+     *    OUT OF init(). Either move re-creates the defect silently, with no error and no red. */
+    var _scratchBoot = false;
+    try { _scratchBoot = sessionStorage.getItem('datumfi_skip_entry_overlay') === '1'; } catch (e) {}
+
     function _seedGateOn()  { var _l = document.getElementById('studio-layout'); if (_l) _l.classList.add('seed-gated'); }
     function _seedGateOff() { var _l = document.getElementById('studio-layout'); if (_l) _l.classList.remove('seed-gated'); }
 
@@ -15131,7 +15147,36 @@
         if (!_v15Applied) {
           var _likelySignedIn = false;
           try { _likelySignedIn = sessionStorage.getItem('datum_auth_hint') === '1'; } catch (e) {}
-          if (_likelySignedIn) _seedGateOn();
+          /* ⛔⛔ THE GATE DOES NOT RUN ON THE SCRATCH BOOT, AND THE REASON IS THAT IT IS GUARDING A
+           * RISK THAT CANNOT OCCUR THERE. `datumfi_skip_entry_overlay` is set by `_startScratchFlow`
+           * immediately before `_navDrain('/studio.html')`, so its presence means EXACTLY ONE THING:
+           * this load is the reload that follows START FROM SCRATCH. On that load the user has just
+           * asked for founder defaults and `_scratchReset()` has already cleared the prefill sources
+           * — THERE IS NO REAL ESTATE ARRIVING FOR A SEED TO OVERWRITE.
+           *   🔑 WE WERE HIDING THE PAGE TO PROTECT DATA THE USER HAD JUST ASKED US TO THROW AWAY.
+           * ⛔ MEASURED, NOT ARGUED (production, throttled 40ms/10Mbit/4x CPU, 2026-08-24). Three
+           *    arms, and the third one is the whole point because the Captain's own incognito
+           *    comparison varied the reload AND the gate together and therefore could not say which:
+           *      A cold (no reload, no gate)  -> no blank
+           *      B draft-only (RELOAD, no gate) -> NO BLANK. The reload is EXONERATED.
+           *      C hint+draft (reload + gate) -> layout visibility:hidden 1158ms->1611ms = 453ms of
+           *        BLANK STAGE with nothing in front of it, because this path also suppresses the
+           *        overlay (:16829) that hides the gate on every other load.
+           *   ⚠️ 453ms IS A LOWER BOUND. Arm C reproduces the VISUAL path via sessionStorage with no
+           *      real session, so the resolver settles early; a genuinely signed-in user waits for
+           *      D1/Clerk, up to the 1500ms safety net below.
+           * ⛔ SCOPED TO THIS PATH ONLY, DELIBERATELY. The gate stays fully intact for a returning
+           *    user opening REAL work — the case it was built for and still earns. A returning user
+           *    HAS an estate arriving, and showing them stale or empty numbers first is the exact
+           *    defect this gate prevents.
+           * ⚠️ `_scratchBoot` IS LATCHED AT PARSE TIME BESIDE `_seedGateOn`, NOT READ ON THIS LINE —
+           *    read the note there before touching either. init() runs at DOMContentLoaded, and by
+           *    then the entry-overlay block has already CONSUMED the flag, so a read here skips
+           *    nothing whatsoever. That is not a hypothetical: it is what the first version of this
+           *    fix did, and it changed no behaviour at all.
+           * DEGRADATION: if the latch read throws, `_scratchBoot` stays false and the gate runs
+           * exactly as it shipped — the old behaviour, never a blank screen. */
+          if (_likelySignedIn && !_scratchBoot) _seedGateOn();
           window.addEventListener('load', function () {
             // MISS-5 pre-work item 1 — the Clerk read moved behind the SHARED resolver in nav.js
             // (_datumSeedDossier): D1 preferences/dossier first, Clerk unsafeMetadata.dossier as the silent
