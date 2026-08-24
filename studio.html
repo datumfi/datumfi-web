@@ -16938,9 +16938,30 @@
       }
     }
 
-    // First-entry X = start-from-scratch (founder defaults). Re-opened X = soft dismiss
-    // (hide only, no reset) so returning to the overview mid-work preserves the Blueprint.
-    if (_closeBtn)     _closeBtn.addEventListener('click',     function() { if (_reopened) dismissOverlay(); else _startScratchFlow(); });
+    /* ⛔⛔ THE X SOFT-DISMISSES ON EVERY PATH. IT USED TO CALL _startScratchFlow() ON FIRST ENTRY,
+     * AND THAT DESTROYED UNSAVED WORK — Captain-reproduced 2026-08-24: add a room, reload, the
+     * overlay returns, click X, THE ROOM IS GONE. ⭐ AND THE RELOAD WAS NOT THE CULPRIT: it had
+     * PRESERVED the room (it was sitting in datumfi_blueprint_draft_v1). THE X IS WHAT DELETED IT.
+     *   🔑 A CONSENT DEFECT, NOT A DATA DEFECT. X means "never mind." START FROM SCRATCH means
+     *      "discard my work." While both ran the same function, one of them was taking an action
+     *      the user never authorised — wearing the close button's clothes.
+     *   ⛔ AND IT WAS UNSAFE BY OMISSION, WHICH IS WHY IT SURVIVED REVIEW: `_reopened` was added to
+     *      make RE-ENTRY safe, and its existence silently DEFINED FIRST ENTRY AS THE UNPROTECTED
+     *      PATH. A flag introduced to protect one branch declares the other unprotected without
+     *      ever saying so, and nothing in the diff that added it looked like a deletion.
+     *   ⚠️ COMPOUNDED BY AUTH, WHICH IS WHY IT HIT REAL PEOPLE: the overlay auto-hides only when
+     *      `_hintSignedIn && datum_studio_overlay_seen` (:16829), so a SIGNED-OUT user meets it on
+     *      EVERY reload with `_reopened` false every time. Every signed-out reload armed it.
+     * ⭐ A FIRST VISIT CARRYING A SKETCH NOW KEEPS IT, AND THAT IS THE POINT, NOT A SIDE EFFECT: the
+     *   user carried it in deliberately through the Sketch->Blueprint handoff, and discarding it on
+     *   a DISMISS would destroy the one moment where the two products meet.
+     * ⛔ START FROM SCRATCH REMAINS THE ONLY WAY TO DISCARD. A product may have a delete button. It
+     *   may not have a delete button wearing a close button's clothes.
+     * ⚠️ `_reopened` IS NOW WRITE-ONLY AND IS KEPT ON PURPOSE — it still records whether this was a
+     *   re-entry, and deleting it would only re-open the question of what the X should do. It no
+     *   longer DECIDES anything, and nothing may branch on it again without re-reading this note.
+     * Guarded both directions by scripts/_gate_overlay_x_preserves.js. */
+    if (_closeBtn)     _closeBtn.addEventListener('click',     dismissOverlay);
     if (_startScratch) _startScratch.addEventListener('click', _startScratchFlow);
 
     // Handlers bound ONCE and read the LIVE _signedIn at click time, so a Clerk
