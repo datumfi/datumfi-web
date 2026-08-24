@@ -514,6 +514,37 @@
   }
   function siblingHold() { return _siblingHold; }
 
+  /* ⛔⛔ A STATE WITH TWO SIDES NEEDS TWO ANNOUNCEMENTS — Finding 16, 2026-08-24.
+   * The hold was announced on `datum:draft-sibling-hold` and the release was announced NOWHERE.
+   * This module already KNEW when the hold ended — both sites below cleared `_siblingHold` — it
+   * simply never told the host, so studio.html's banner had no way to learn it was obsolete. The
+   * Captain reloaded repeatedly and it stayed, which is the one thing its own copy promises would
+   * fix. ONE SIDE OF A TWO-SIDED STATE WAS WIRED: not a half-built feature, a ONE-WAY DOOR THAT
+   * LOOKS LIKE A TOGGLE, and it always presents as "stuck" rather than "never finished."
+   *   ⛔ THE COPY WAS NOT THE DEFECT AND WAS NOT TOUCHED. The behaviour it describes is real —
+   *      load() puts this tab back in agreement (`_seenAt`, :1299/:1320). Only the announcement was
+   *      missing. A sentence that under-promises to accommodate a bug is A BUG WITH A BRAND VOICE:
+   *      it reads as design and nobody audits it again.
+   * ⚠️ A SEPARATE EVENT NAME, DELIBERATELY, AND NOT THE `ok`-BOOLEAN SHAPE THE QUOTA NOTICE USES.
+   *   1. `datum:draft-write-state` is a STATE and honestly carries a boolean. THIS one is named for
+   *      an EVENT — dispatching a "hold" to mean "released" would make the name lie. §11.2 one layer
+   *      down: a noun in an event name promises a meaning exactly as a noun in a path promises scope.
+   *   2. MEASURED CONSEQUENCE, NOT A STYLE PREFERENCE: `_gate_studio_draft_crosstab.js:90` asserts
+   *      only that an event OF THIS NAME occurred. Reusing the name for the release would make that
+   *      assertion start passing on a release with NO REFUSAL EVER HAVING HAPPENED —
+   *      THE ASSERTION SURVIVES WHILE THE CLAIM UNDERNEATH IT DIES.
+   * ⚠️ FIRES ONLY ON A TRANSITION. Announcing on every successful write would make "released" mean
+   *    "a write happened", which is not a state change and would train the host to ignore it. */
+  function _releaseSiblingHold() {
+    if (!_siblingHold) return;
+    _siblingHold = null;
+    try {
+      if (typeof global.CustomEvent === 'function' && typeof global.dispatchEvent === 'function') {
+        global.dispatchEvent(new global.CustomEvent('datum:draft-sibling-release'));
+      }
+    } catch (_e) {}
+  }
+
   /* ── HAS A HUMAN DONE ANYTHING IN THIS TAB YET ────────────────────────────────────────────────
    * ONE FACT, DECIDED ONCE, AT THE SINGLE WRITER. Two pages in this product fire FAKE user events
    * while they load, so anything that must tell "the user did this" from "the page did this" hits
@@ -632,7 +663,7 @@
     else if (incumbent && incumbent._boot) { out._boot = incumbent._boot; }
     if (_persistDraft(out)) {
       _seenAt = at;               // this tab is now in agreement with what is stored
-      _siblingHold = null;
+      _releaseSiblingHold();
     }
   }
 
@@ -645,7 +676,7 @@
     try { sessionStorage.removeItem(SESSION_DRAFT_KEY); } catch (_e) {}
     _pendingStaleDraft = null;
     _seenAt = null;            // nothing stored, so nothing to be out of agreement with
-    _siblingHold = null;
+    _releaseSiblingHold();
   }
 
   /* ── WORK STATE ───────────────────────────────────────────────────────────────────────────────────

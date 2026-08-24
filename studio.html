@@ -17425,6 +17425,18 @@
   window.addEventListener('datum:draft-sibling-hold', function () {
     _draftNotice('sibling', true);
   });
+  /* ⛔ THE OTHER SIDE OF THE STATE — Finding 16, 2026-08-24. Without this listener the banner is
+   * STRUCTURALLY UN-CLEARABLE: `_draftNotice`'s show=false branch exists but was UNREACHABLE for
+   * 'sibling', because nothing anywhere passed false for that kind. The module knew the hold had
+   * ended and had no one to tell. Captain-reproduced: reload repeatedly, the banner stays — which
+   * is precisely what its own authored copy promises would clear it.
+   *   🔑 THE COPY WAS ALWAYS TRUE; THE WIRING WAS HALF DONE. Reload -> load() hydrates the sibling
+   *      draft and sets `_seenAt` -> this tab is back in agreement -> the next write releases the
+   *      hold -> this listener removes the banner. Every step but the last already existed.
+   * Guarded BOTH directions by scripts/_gate_studio_sibling_release.js. */
+  window.addEventListener('datum:draft-sibling-release', function () {
+    _draftNotice('sibling', false);
+  });
 
   /* ── OUTSIDE-WINDOW DRAFT RESTORE OFFER (autosave Commit 2) ──────────────────────────────
    * Fires ONLY when load() parked a draft that is NEWER than the saved row but older than the
