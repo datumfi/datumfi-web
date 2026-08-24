@@ -22,10 +22,42 @@ const NOGUARD = process.argv.includes('--noguard');
 let pass = 0, fail = 0; const lines = [];
 const ok = (c, m) => { if (c) pass++; else fail++; lines.push((c ? 'PASS ' : 'FAIL ') + m); };
 
+/* ⛔⛔ THIS ANCHOR EXPIRED AND NOBODY NOTICED — REPAIRED 2026-08-24.
+ * It read `if (!echo && _siblingIsUnseen(incumbent)) {` while the source has carried
+ * `!echo && !isLoad && ...` since 87e9494 ("opening saved work and touching nothing is silent
+ * again"). That commit was correct; it simply moved a literal this control depends on, and nothing
+ * in the estate was watching.
+ *   ⛔ THE CONSEQUENCE IS THE WORST SPECIES WE HAVE A NAME FOR: this gate kept printing 11 passed /
+ *      0 failed, HONESTLY — its legs were real and the product was fine — while its PROOF OF
+ *      SENSITIVITY was dead. `--noguard` threw instead of reddening, so for several commits nobody
+ *      could have demonstrated the clobber guard still bites. A GREEN WHOSE PROOF HAS EXPIRED.
+ *   🔑 AND IT ONLY SURFACES WHEN SOMEBODY RUNS THE CONTROL, WHICH A CLEAN SUITE RUN NEVER DOES.
+ *      That is why the CONTROLS declaration below is the real repair and this literal is only the
+ *      instance: `_gate_poison_anchors_resolve.mjs` already sweeps declared anchors, and this gate
+ *      declared nothing, so the one instrument built to catch exactly this was blind to it.
+ * ⚠️ REPAIRING THE LITERAL WITHOUT DECLARING THE CONTROL WOULD FIX THE INSTANCE AND LEAVE THE
+ *    MECHANISM — the anchor would rot again on the next edit to that line, in silence, exactly as
+ *    it did here. */
 const A_GUARD = `    var incumbent = readSessionDraft();
-    if (!echo && _siblingIsUnseen(incumbent)) {`;
+    if (!echo && !isLoad && _siblingIsUnseen(incumbent)) {`;
 const NOGUARD_SRC = `    var incumbent = readSessionDraft();
     if (false) {`;
+
+/* ── THE DECLARATION — read by _gate_poison_anchors_resolve.mjs and _gate_controls_still_red.mjs.
+ *    `expect: 'red'` because this control is NOT self-verifying: it mutates the module source this
+ *    gate loads into a vm sandbox and the gate simply goes red on the clobber legs. */
+const CONTROLS = {
+  '--noguard': {
+    what: 'removes the sibling refusal so tab B blind-overwrites tab A — reproduces the clobber exactly',
+    anchors: [{ file: 'scripts/studio-blueprint.js', literal: A_GUARD, count: 1 }],
+    reds: ["tab B does NOT clobber tab A's newer unsaved work"],
+    expect: 'red'
+  }
+};
+if (process.argv.includes('--declare-controls')) {
+  console.log(JSON.stringify({ gate: '_gate_studio_draft_crosstab.js', controls: CONTROLS }));
+  process.exit(0);
+}
 
 let src = fs.readFileSync(path.join(ROOT, 'scripts', 'studio-blueprint.js'), 'utf8');
 if (NOGUARD) {
