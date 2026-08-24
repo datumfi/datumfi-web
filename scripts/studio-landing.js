@@ -576,9 +576,39 @@ function _studioLandingBoot() {
  *      every [data-room]-gated child that exists today and every one added later, for free.
  * visibility, not display: the panel keeps its box so nothing reflows when it appears, and the
  * landing paints into it in the same tick that sets data-room. */
+/* ⛔⛔ THE COST OF THE RULE ABOVE — WRITTEN DOWN 2026-08-23 BECAUSE IT NEVER WAS.
+ * Hiding the panel until DCL means the panel is BLANK for exactly (t_DCL - t_firstPaint).
+ *   🔑 SO ANY CHANGE THAT MOVES FIRST PAINT EARLIER WITHOUT MOVING DCL EARLIER CONVERTS THE SAVING
+ *      1:1 INTO BLANK-STAGE TIME. Not hypothetical, MEASURED (throttled 40ms/10Mbit/4x CPU, N=3,
+ *      medians): `defer` on the account-modal script (42187ee) moved first paint 1288ms -> 788ms
+ *      and moved content arrival NOT AT ALL (2600ms both arms), so the blank window GREW
+ *      1310ms -> 1843ms. FCP improved 500ms and the product got 533ms worse.
+ *   ⚠️ EVERY NUMBER ABOVE IS THROTTLED-SYNTHETIC, FROM A LOCAL SERVER. THE PRODUCTION EQUIVALENT
+ *      HAS NEVER BEEN MEASURED — AND IT IS RUNNABLE TODAY: point the filmstrip harness at
+ *      datumfi.com, signed in, and repeat the gesture. That is a NAMED, UNRUN MEASUREMENT, not a
+ *      disclaimer. 🔑 THE CONDITIONS ARE STATED SO THE FIGURE CAN BE RE-RUN AND DISAGREED WITH; a
+ *      softened "roughly half a second" would be HARDER to falsify, not humbler.
+ *   ⛔ AN UNDOCUMENTED INVARIANT IS A TRAP FOR THE NEXT OPTIMISATION. The rule is CORRECT — "show
+ *      nothing" beats "show the wrong thing" — but a constraint living only in one line of CSS is
+ *      one nobody finds before they break it. The next person to shave milliseconds off this page
+ *      pays this cost silently unless they read this paragraph first.
+ *
+ * ⭐ THE SECOND DECLARATION IS THE REPAIR, AND IT IS THE SMALLEST ONE THAT WORKS.
+ * `.s1-header` is the ONLY part of this panel that READS NO STATE — a static <h1>The Studio</h1>
+ * and the authored thesis line. It therefore CANNOT BE WRONG at any point during boot, and that is
+ * precisely what makes it the only thing safe to reveal early. The preboot rule's purpose survives
+ * intact: we are not showing the wrong thing, we are showing the one thing that cannot be.
+ *   ⚠️ visibility (never display) ON BOTH SIDES, ON PURPOSE: a hidden parent keeps its box and a
+ *      child may override back to visible, so the header paints with ZERO reflow when the rest lands.
+ *   ⛔ #sl-movements-host LIVES INSIDE .s1-header AND IS EMPTY until _studioLandingBoot paints it in
+ *      the same tick that sets data-room — so revealing the header cannot expose a half-built phase
+ *      list. §12.3: a phase that reads "answered" because a default was pre-filled is a lie, and one
+ *      painted for 500ms is still a lie. NOTHING STATEFUL MAY EVER JOIN THIS SECOND RULE.
+ * Guarded by scripts/_gate_studio_preboot_paint.js — L1 the panel IS hidden, L3 the header IS NOT. */
 if (typeof document !== 'undefined' && document.head && document.head.insertAdjacentHTML) {
   document.head.insertAdjacentHTML('beforeend',
-    '<style id="sl-preboot">.studio-layout:not([data-room]) .drafting-panel{visibility:hidden}</style>');
+    '<style id="sl-preboot">.studio-layout:not([data-room]) .drafting-panel{visibility:hidden}'
+    + '.studio-layout:not([data-room]) .drafting-panel .s1-header{visibility:visible}</style>');
 }
 
 if (typeof document !== 'undefined' && document.addEventListener) {
