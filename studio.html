@@ -8,7 +8,7 @@
   html,body{background-color:#091221!important}
 </style>
 <meta name="theme-color" content="#091221">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://eu.i.posthog.com https://static.cloudflareinsights.com https://clerk.datumfi.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://rentcast-avm.dmerced1.workers.dev; connect-src 'self' https://api.datumfi.com https://eu.i.posthog.com https://api.stripe.com https://clerk.datumfi.com https://rentcast-avm.dmerced1.workers.dev; worker-src 'self' blob: https://clerk.datumfi.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://eu.i.posthog.com https://static.cloudflareinsights.com https://clerk.datumfi.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://rentcast-avm.dmerced1.workers.dev; connect-src 'self' https://api.datumfi.com https://eu.i.posthog.com https://api.stripe.com https://clerk.datumfi.com https://rentcast-avm.dmerced1.workers.dev https://o4511758659223552.ingest.us.sentry.io; worker-src 'self' blob: https://clerk.datumfi.com;">
 <title>Datum FI — The Studio</title>
 <meta name="description" content="Build your retirement estate. Map every asset, liability, and income stream. Reveal your Range.">
 <link rel="manifest" href="/manifest.json">
@@ -2492,6 +2492,30 @@
        ⛔ THIS TAG IS LOAD-BEARING AND ITS ABSENCE IS SILENT — every sandbox gate stays GREEN without
        it while ⚙️ DETAILS does nothing on the real page. scripts/_gate_parts_wired.mjs is the proof. -->
   <script defer src="/scripts/studio-account-modal.js"></script>
+  <!-- ⭐ THE ERROR MONITOR. TWO TAGS, BOTH `async`, AND THE PAIR IS THE FEATURE — the vendored
+       errors-only SDK and the canonical init that configures it. See scripts/datum-sentry.js for
+       the full argument; the three things that must never be edited without reading it:
+       ⛔ `async`, NEVER `defer`. A deferred script DELAYS DOMContentLoaded, and this page's preboot
+          — AND async IS NOT FREE EITHER, MEASURED n=10 at 40ms RTT / CPU 4x: these two tags cost
+          +97ms on DCL (2808±45 vs a 2711±35 no-Sentry baseline), which the preboot rule turns into
+          +97ms of blank stage. A third arm injecting after window.load read -8ms — it CANNOT move
+          DCL, so it is the control that proves the 97ms is signal and not drift. It is kept because
+          it buys ~1400ms of boot-path error coverage (SDK ready ~1265ms, DCL ~2666ms). See
+          scripts/datum-sentry.js for the full table and the condition that would retire the cost.
+          rule converts DCL delay 1:1 INTO BLANK-STAGE TIME the user sits and looks at. That is
+          42187ee's trap. `async` does not participate in DCL at all.
+       ⛔ THE SDK IS SELF-HOSTED so `script-src` stays untouched and `connect-src` is the ONLY CSP
+          change this feature makes. The CDN loader would need js.sentry-cdn.com in script-src,
+          re-opening D3's unpinned-dependency hole ON THE ONE COMPONENT WHOSE FAILURE IS INVISIBLE.
+       ⛔ THE CSP ABOVE IS HALF OF THIS. Remove the sentry.io ingest host from `connect-src` and the
+          SDK still loads, still captures faithfully, and EVERY EVENT DIES SILENTLY AT THE NETWORK
+          BOUNDARY — and an error monitor that reports nothing looks exactly like an application
+          with no errors. FINDING 17. Both halves are asserted together by
+          scripts/_gate_sentry_wired.js, because either one alone is a green over a dead monitor.
+       ⚠️ THE id ON THE SDK TAG IS LOAD-BEARING, NOT DECORATION: two async scripts have no defined
+          order, so datum-sentry.js waits on THIS tag's load event when it wins the race. -->
+  <script async id="datum-sentry-sdk" src="/scripts/sentry-10.71.0.min.js"></script>
+  <script async src="/scripts/datum-sentry.js"></script>
 </head>
 <body>
   <a href="#studio-layout" class="skip-link">Skip to main content</a>

@@ -209,6 +209,43 @@ loosening the parser.
    why hand-editing fifteen files to match would have recreated the conditions that produced it.
    ⚠️ THE HOST PAGES KEEP AN EMPTY `<div id="disclosure-footer"></div>`. If this file fails to load
    the footer is MISSING, never WRONG — no stale contradictory copy can survive behind it.
+ · scripts/sentry-10.71.0.min.js · THE VENDORED ERRORS-ONLY SDK (2026-08-24). 90,590 bytes, LF, no
+   BOM, byte-identical to what browser.sentry-cdn.com served;
+   SRI `sha384-Z0GeEnLeg0yvo3LU6sdGDESgTZCwpVvZBIgcnddmSR+ovRPe8Esn+19CrZdcxC4Z`.
+   ⭐⭐ SACRED FOR A REASON NO OTHER HOST ON THIS LIST HAS: THE PIN IS WHAT MAKES A POLICY INTO AN
+   ARTEFACT. Replay was ruled out on PII grounds — the Studio's DOM holds real account balances and
+   masking cannot be verified without a signed-in session we do not have. In THIS bundle
+   `Sentry.replayIntegration()` is a `console.warn` STUB: the code is NOT PRESENT.
+   `bundle.tracing.replay.min.js` is 267,756 bytes and does contain it.
+   🔑 A CONFIG FLAG CAN BE FLIPPED BY A FUTURE EDIT; A BUNDLE THAT DOES NOT CONTAIN THE CODE CANNOT.
+   ⛔ SO THE EXCLUSION IS STRUCTURAL, AND THE PIN IS WHAT KEEPS IT STRUCTURAL. Overwrite this
+   filename with the tracing+replay variant and you SILENTLY RESTORE A CAPABILITY WE EXCLUDED ON
+   PRIVACY GROUNDS, with nothing on screen and nothing in a diff review saying so — the version in
+   the filename makes an UPGRADE visible, and this pin is what makes a SWAP visible. They are two
+   different hazards and each needs its own guard.
+   ⚠️ ITS BYTES SHOULD NEVER CHANGE. An upgrade is a NEW FILENAME, a new pin, a new `<script src>`,
+   and a re-read of the replay-stub claim above against the new bundle — never an in-place edit.
+ · scripts/datum-sentry.js · THE ERROR MONITOR'S CANONICAL INIT — DSN, hostname gate, environment
+   tag, and the shipped proof-of-life `window.datumSentryTestError()` (2026-08-24).
+   ⛔ SACRED ON THE SILENT-ABSENCE RULE IN ITS PUREST FORM, AND IT IS THE ONLY HOST HERE WHOSE
+   FAILURE LOOKS IDENTICAL TO ITS SUCCESS: the upkeep catalogue is Sacred because its absence changes
+   money on screen, the footer because its absence removes a disclosure. This one changes NOTHING a
+   user can see either way. AN ERROR MONITOR THAT REPORTS NOTHING LOOKS EXACTLY LIKE AN APPLICATION
+   WITH NO ERRORS — and we would be MORE blind than before it shipped, because we would have had a
+   reason to stop looking.
+   ⛔ IT IS HALF A FEATURE. The other half is `connect-src` in studio.html's `<meta>` CSP, which must
+   name `https://o4511758659223552.ingest.us.sentry.io` — DERIVED FROM THE DSN IN THIS FILE. Change
+   one without the other and the SDK loads, initialises, captures faithfully, and every envelope dies
+   at the network boundary. FINDING 17; D25 one layer up. `scripts/_gate_sentry_wired.js` asserts
+   both halves TOGETHER because either alone is a green over a dead monitor.
+   ⚠️ INIT IS HOSTNAME-GATED AND THAT IS LOAD-BEARING, MEASURED NOT ASSUMED: 173 gates reference
+   studio.html and 56 boot it from 127.0.0.1:8001, so an unconditional init would spray harness
+   errors into the dashboard on every suite run and BURY THE REAL SIGNAL UNDER NOISE FROM A BROWSER
+   NOBODY IS SITTING AT. The `datum_sentry_local` / `?datum_sentry=1` override is equally
+   load-bearing: A GATE THAT SUPPRESSES AN INSTRUMENT MUST LEAVE A DOOR TO TEST IT, OR THE
+   SUPPRESSION ITSELF BECOMES UNMEASURABLE.
+   🗓️ EXPIRY: 1-year GitHub Student Pack term installed ~2026-08, LAPSES ~2027-08. Falsifier — log
+   into Sentry and read the plan. MONITORING THAT LAPSES DOES NOT ALARM; IT STOPS TELLING YOU THINGS.
 <!-- SACRED-LIST-END -->
 
 THIS LIST AND `SACRED{}` IN `scripts/build-dist.mjs` MUST MATCH EXACTLY — every host declared here
