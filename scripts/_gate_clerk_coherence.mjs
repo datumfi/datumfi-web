@@ -28,6 +28,14 @@
  *   · six pages   the clerk-js `src` host
  *   · three pages the <meta> CSP naming a clerk host  (Blueprint/Dossier/sketchbook carry no CSP)
  *   · vault.html  the Account Portal host, accounts.<HOST>
+ *   · my-account.html  the CSP `frame-src` Account Portal host, accounts.<HOST>
+ *                 ⛔ ADDED 2026-08-25, AND ITS ABSENCE WAS THE HOLE THIS GATE WAS WRITTEN TO NOT
+ *                 HAVE. The census counted 16 sites and this was the 17th: flip all 16, leave this
+ *                 one, and the gate reported GREEN OVER A HALF-APPLIED MIGRATION — the exact state
+ *                 it exists to catch. Silent on screen, too, because a blocked frame is console-only.
+ *                 🔑 A CENSUS IS ONLY AS HONEST AS THE LIST IT WAS BUILT FROM. Nothing was broken
+ *                 here; something was never counted, and a gate cannot notice a site it does not know
+ *                 about. The find came from reading the FILES against the gate, not the gate alone.
  *   · auth.js     ISSUERS must CONTAIN https://clerk.<HOST>
  *                 ⚠️ CONTAIN, not equal — the dual-issuer acceptor legitimately lists two while the
  *                 move is in flight. True BEFORE, DURING and AFTER the concession, so this gate
@@ -61,17 +69,35 @@
  *       "auth.js contains the host THE FRONT END NAMES", so a disagreeing front end leaves the claim
  *       with no subject. Measurement corrected this declaration, not the gate.
  *  L3 · the full census is present (6 keys · 6 srcs · 3 CSPs · 1 portal) — no silent gaps
+ *       ⚠️ THE FRAME SITE IS DELIBERATELY NOT IN THIS CENSUS. See L5.
  *  L4 · injecting commentary that quotes the OTHER domain changes NOTHING (immunity to prose)
+ *  L5 · every CSP that frames an Account Portal frames THIS instance's
+ *       ⛔ IT ASKS A RELATIONAL QUESTION, AND MEASUREMENT — NOT TASTE — FORCED THAT SHAPE. The
+ *       obvious build was to extract accounts.<HOST> into L1's agreement set and add `frame` to the
+ *       L3 census. THAT REDS ON A CLEAN TREE: my-account.html's frame-src also names
+ *       https://accounts.google.com, so a bare accounts.<host> scan reads 'google.com' as a rival
+ *       instance host. THE POPULATION IS CONTAMINATED BY THIRD PARTIES — an agreement set cannot
+ *       survive that, so the claim becomes "does this page frame the portal of the instance IT
+ *       ALREADY NAMES", which is immune to however many strangers sit beside it in the directive.
+ *       🔑 A SITE THAT SHARES A PREFIX WITH THIRD-PARTY HOSTS CANNOT JOIN AN AGREEMENT SET.
+ *       ⚠️ Deletion is caught by the SAME leg, not a census count: strip the portal host and Google
+ *       and Apple remain, so the page still frames SOMETHING while framing nothing of ours.
  *
- * ── RED-FIRST · each edits exactly ONE of the eight, in memory ──────────────────────────────────
- *   --skewkey     one page's publishable key -> the other domain   -> L1, L2
- *   --skewsrc     one page's clerk-js src host                     -> L1, L2
- *   --skewcsp     one page's CSP clerk host                        -> L1, L2
- *   --skewvault   vault.html's Account Portal host                 -> L1, L2
+ * ── RED-FIRST · each edits exactly ONE naming site, in memory ───────────────────────────────────
+ *   --skewkey     one page's publishable key -> the other domain   -> L1, L2, L5
+ *   --skewsrc     one page's clerk-js src host                     -> L1, L2, L5
+ *   --skewcsp     one page's CSP clerk host                        -> L1, L2, L5
+ *   --skewvault   vault.html's Account Portal host                 -> L1, L2, L5
  *   --skewissuer  remove the front end's host from auth.js         -> L2
  *   --dropkey     delete one publishable-key attribute entirely    -> L3  (a census GAP)
+ *   --skewframe   my-account.html's frame-src portal host          -> L5  (ISOLATED — L1 stays green)
+ *   --dropframe   delete that host, leaving Google and Apple       -> L5  (ISOLATED)
  *   --nostrip     do not strip comments before matching            -> L4  (prose becomes evidence)
  *   --declare-controls
+ * ⚠️ THE FOUR SKEW CONTROLS GAINED L5 BY MEASUREMENT, DECLARED RATHER THAN FAKED APART, on the same
+ * reasoning L2 already carried: when L1 disagrees there is no single instance to be relational
+ * ABOUT, so L5's claim loses its subject. The two NEW controls are isolated to L5 and that is the
+ * proof the leg reads its own site rather than riding L1's coat-tails.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -94,17 +120,20 @@ const F = {
   skewkey: argv.includes('--skewkey'), skewsrc: argv.includes('--skewsrc'),
   skewcsp: argv.includes('--skewcsp'), skewvault: argv.includes('--skewvault'),
   skewissuer: argv.includes('--skewissuer'), dropkey: argv.includes('--dropkey'),
+  skewframe: argv.includes('--skewframe'), dropframe: argv.includes('--dropframe'),
   nostrip: argv.includes('--nostrip')
 };
 const ANY = Object.values(F).some(Boolean);
 
 const CONTROLS = {
-  '--skewkey': { what: "rewrites ONE page's publishable key to the other domain — the 7-of-8 world", reds: ['L1', 'L2'], expect: 'red' },
-  '--skewsrc': { what: "points ONE page's clerk-js src at the other domain", reds: ['L1', 'L2'], expect: 'red' },
-  '--skewcsp': { what: "names the other domain in ONE page's CSP — the trap that blocks clerk-js silently", reds: ['L1', 'L2'], expect: 'red' },
-  '--skewvault': { what: "flips vault.html's Account Portal host only", reds: ['L1', 'L2'], expect: 'red' },
+  '--skewkey': { what: "rewrites ONE page's publishable key to the other domain — the 7-of-8 world", reds: ['L1', 'L2', 'L5'], expect: 'red' },
+  '--skewsrc': { what: "points ONE page's clerk-js src at the other domain", reds: ['L1', 'L2', 'L5'], expect: 'red' },
+  '--skewcsp': { what: "names the other domain in ONE page's CSP — the trap that blocks clerk-js silently", reds: ['L1', 'L2', 'L5'], expect: 'red' },
+  '--skewvault': { what: "flips vault.html's Account Portal host only", reds: ['L1', 'L2', 'L5'], expect: 'red' },
   '--skewissuer': { what: "removes the front end's host from auth.js ISSUERS — loader != validator", reds: ['L2'], expect: 'red' },
   '--dropkey': { what: 'deletes one publishable-key attribute entirely — a census GAP, not a disagreement', reds: ['L3'], expect: 'red' },
+  '--skewframe': { what: "points my-account.html's CSP frame-src at the OTHER instance's Account Portal — the naming site this gate could not see until 2026-08-25", reds: ['L5'], expect: 'red' },
+  '--dropframe': { what: "deletes the Account Portal host from my-account.html's frame-src, leaving the Google and Apple entries — the portal iframe silently blocked", reds: ['L5'], expect: 'red' },
   '--nostrip': { what: 'skips comment stripping, so prose quoting the other domain becomes evidence', reds: ['L4'], expect: 'red' }
 };
 if (argv.includes('--declare-controls')) {
@@ -143,7 +172,7 @@ function read(rel, noise) {
 
 /* ── ONE EXTRACTION, RUN TWICE: once clean, once with commentary injected. ───────────────────── */
 function extract(noise) {
-  const sites = [], errors = [];
+  const sites = [], errors = [], frames = {};
   for (const f of KEY_PAGES) {
     let t = read(f, noise);
     if (t === null) { errors.push(`${f}: MISSING`); continue; }
@@ -164,11 +193,22 @@ function extract(noise) {
     let t = read(f, noise);
     if (t === null) { errors.push(`${f}: MISSING`); continue; }
     if (F.skewcsp && f === 'my-account.html') { t = t.replace(/https:\/\/clerk\.datumfi\.com/g, 'https://clerk.datumae.com'); if (!noise) poisoned.push('skewed CSP in my-account.html'); }
+    if (F.skewframe && f === 'my-account.html') { t = t.replace(/https:\/\/accounts\.datumfi\.com/g, 'https://accounts.datumae.com'); if (!noise) poisoned.push('skewed CSP frame-src in my-account.html'); }
+    if (F.dropframe && f === 'my-account.html') { t = t.replace(/\s*https:\/\/accounts\.datumfi\.com/g, ''); if (!noise) poisoned.push('dropped the portal host from my-account.html frame-src'); }
     const cm = t.match(/http-equiv="Content-Security-Policy"[^>]*content="([^"]*)"/i);
     if (!cm) { errors.push(`${f}: CSP meta not found`); continue; }
     const hosts = [...new Set((cm[1].match(/https:\/\/clerk\.[a-z0-9.-]+/gi) || []).map((u) => subToHost(u.replace('https://', ''))))].filter(Boolean);
     if (!hosts.length) errors.push(`${f}: CSP names no clerk host`);
     hosts.forEach((h) => sites.push({ file: f, kind: 'csp', host: h }));
+
+    /* ⛔ THE PORTAL IFRAME HOST DOES NOT JOIN `sites`, AND THE REASON IS MEASURED, NOT STYLISTIC.
+       my-account.html's frame-src also names https://accounts.google.com, so a bare accounts.<host>
+       scan reads 'google.com' as an instance host and REDS L1 ON A CLEAN TREE. The population here
+       is CONTAMINATED BY THIRD PARTIES, which is exactly what an agreement set cannot tolerate — so
+       L5 asks a RELATIONAL question instead (does this page frame the portal of the instance IT
+       ALREADY NAMES) and leaves L1's set alone. Pages with no frame-src never enter the map. */
+    const fh = [...new Set((cm[1].match(/https:\/\/accounts\.[a-z0-9.-]+/gi) || []).map((u) => u.replace(/^https:\/\//i, '').toLowerCase()))];
+    if (fh.length) frames[f] = fh;
   }
 
   let t = read(VAULT, noise);
@@ -197,7 +237,7 @@ function extract(noise) {
 
   const census = sites.reduce((m, s) => { m[s.kind] = (m[s.kind] || 0) + 1; return m; }, {});
   const hosts = [...new Set(sites.map((s) => s.host))].sort();
-  return { sites, errors, issuers, census, hosts };
+  return { sites, errors, issuers, census, hosts, frames };
 }
 
 const clean = extract(false);
@@ -233,8 +273,18 @@ ok('L3', 'the full census is present — no naming site silently missing',
   gaps.length === 0, gaps.length ? 'GAPS: ' + gaps.join(', ') : 'all sites accounted for');
 
 ok('L4', 'commentary quoting the OTHER domain changes nothing (immunity to prose)',
-  noisy.hosts.join(',') === clean.hosts.join(',') && noisy.sites.length === clean.sites.length,
+  noisy.hosts.join(',') === clean.hosts.join(',') && noisy.sites.length === clean.sites.length
+    && JSON.stringify(noisy.frames) === JSON.stringify(clean.frames),
   `clean=[${clean.hosts.join(',')}] ${clean.sites.length} sites · with-prose=[${noisy.hosts.join(',')}] ${noisy.sites.length} sites`);
+
+const framePages = Object.keys(clean.frames);
+const wantPortal = chosen ? 'accounts.' + chosen : null;
+ok('L5', 'every CSP that frames an Account Portal frames THIS instance',
+  !!wantPortal && framePages.length > 0 && framePages.every((f) => clean.frames[f].includes(wantPortal)),
+  framePages.length === 0
+    ? 'ABSENT: no CSP names any accounts.<host> — the portal frame allowance is gone entirely'
+    : `want ${wantPortal || '(ambiguous — L1 disagrees)'} · `
+      + framePages.map((f) => f + ' -> [' + clean.frames[f].join(', ') + ']').join(' · '));
 
 const total = pass + fail;
 if (ANY) {
