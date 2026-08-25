@@ -27,9 +27,17 @@
     var dest = mode === 'sign-up'
       ? 'https://accounts.datumfi.com/sign-up'
       : 'https://accounts.datumfi.com/sign-in';
+    /* ⛔ THE RETURN ORIGIN IS THE PAGE'S OWN, NEVER A HARD-CODED HOST. This used to read
+       'https://datumfi.com' + returnTo, which silently RELOCATED a visitor: arrive on
+       datumae.com, sign in, and come back on datumfi.com — a different origin, and therefore
+       a different localStorage, a different sessionStorage and none of your saved work.
+       ⚠️ NOT A CLERK ROW AND NOT PART OF THE AUTH ATOMIC SET. This is the SITE origin, not the
+       instance; it was wrong the moment a second origin existed and it is fixed independently of
+       whatever Clerk's domain turns out to be. `window.location.origin` is correct on BOTH
+       origins, and stays correct after the move without a further edit. */
     var redirectBase = returnTo
-      ? ('https://datumfi.com' + returnTo)
-      : 'https://datumfi.com/my-account.html';
+      ? (window.location.origin + returnTo)
+      : (window.location.origin + '/my-account.html');
     window.location.replace(dest + '?redirect_url=' + encodeURIComponent(redirectBase));
   })();
 </script>
