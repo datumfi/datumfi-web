@@ -13565,6 +13565,29 @@
             if (el) el.classList.add('show');
           }
 
+          /* ⛔ THE COMPUTE PATH REPORTS ITS OWN FAILURES, AND UNTIL NOW IT DID NOT — FINDING 40.
+             Every branch below was swallowed into `null`, and the page then showed an HONEST error
+             to the user. So this product told every affected user that it had failed, and told US
+             nothing. That is why Finding 30 ran undetected: the reference estate has been breaching
+             the 30s client budget in production and the failure was VISIBLE TO EVERYONE IT HAPPENED
+             TO AND INVISIBLE TO THE TEAM. Silence was never evidence of health; it was evidence of
+             a missing call.
+             ⛔ THE `r.ok` TERNARY IS THE BRANCH THAT MATTERED, AND IT IS NOT THE `.catch`. A non-2xx
+             response resolves — it never reaches a rejection handler — so an instrument placed on
+             `.catch` alone would have been written, reviewed, merged and believed while reporting
+             nothing. A CORRECT DIAGNOSIS DOES NOT LOCATE ITS OWN REMEDY.
+             ⚠️ Sentry captures UNHANDLED errors. These are handled, so no event is automatic:
+             the call is explicit here or there is no event at all. */
+          function _reportComputeFailure(stage, detail) {
+            try {
+              var S = window.Sentry;
+              if (!S || typeof S.captureException !== 'function') return;
+              var e = new Error('compute failed (' + stage + '): ' + detail);
+              e.name = 'DatumComputeFailure';
+              S.captureException(e, { tags: { datum_stage: stage }, extra: { detail: detail } });
+            } catch (_) { /* telemetry must never break the reveal it is reporting on */ }
+          }
+
           function resetOverlayState() {
             overlay.classList.remove('active');
             revealBtn.disabled = false;
@@ -13605,10 +13628,16 @@
                 fetch('https://api.datumfi.com/api/calculate', {
                   method: 'POST', headers: {'Content-Type': 'application/json'},
                   body: JSON.stringify(req)
-                }).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
+                }).then(function(r) {
+                  if (!r.ok) { _reportComputeFailure('http_' + r.status, 'HTTP ' + r.status + ' from /api/calculate'); return null; }
+                  return r.json();
+                }).catch(function(err) { _reportComputeFailure('network', (err && err.message) || String(err)); return null; }),
                 new Promise(function(_, reject) { setTimeout(function() { reject(new Error('timeout')); }, 30000); })
               ]);
-            } catch(e) { timedOut = e.message === 'timeout'; }
+            } catch(e) {
+              timedOut = !!(e && e.message === 'timeout');
+              _reportComputeFailure(timedOut ? 'timeout' : 'unexpected', (e && e.message) || String(e));
+            }
 
             if (timedOut) {
               mainLayout.style.display = 'none';
@@ -13665,11 +13694,17 @@
           fetch('https://api.datumfi.com/api/calculate', {
             method: 'POST', headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(req)
-          }).then(function(r) { return r.ok ? r.json() : null; })
-            .catch(function() { return null; })
+          }).then(function(r) {
+              if (!r.ok) { _reportComputeFailure('http_' + r.status, 'HTTP ' + r.status + ' from /api/calculate'); return null; }
+              return r.json();
+            })
+            .catch(function(err) { _reportComputeFailure('network', (err && err.message) || String(err)); return null; })
             .then(function(v) { apiResult = v; apiSettled = true; });
 
-          setTimeout(function() { timedOut = true; }, 30000);
+          setTimeout(function() {
+            if (!apiSettled) { _reportComputeFailure('timeout', 'no response within 30000ms'); }
+            timedOut = true;
+          }, 30000);
 
           // Phase 2 (3.5s checkpoint): wait for minimum theater
           await new Promise(function(r) { setTimeout(r, 3500); });
